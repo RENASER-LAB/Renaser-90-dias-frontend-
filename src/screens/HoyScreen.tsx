@@ -1,25 +1,30 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
+import { useResponsive } from '../theme/responsive';
 import { Card, MicroLabel, ScreenHeader, GoldCircle } from '../components/ui';
 import { Icon } from '../components/Icon';
 
 export default function HoyScreen() {
-  const { c, t, toggle } = useTheme();
+  const { c, t } = useTheme();
+  const { rs } = useResponsive();
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
-      <ScreenHeader title="HOY" right="bell" onPressRight={toggle} />
+      <ScreenHeader title="HOY" right="bell" />
 
-      <View style={styles.content}>
-        <View style={styles.hero}>
-          {[306, 258, 210, 162].map((d, i) => (
-            <View
-              key={d}
-              style={[styles.ring, { width: d, height: d, borderRadius: d / 2, borderColor: [c.ring1, c.ring2, c.ring3, c.ring2][i] }]}
-            />
-          ))}
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={[styles.hero, { minHeight: rs(300) }]}>
+          {[306, 258, 210, 162].map((d, i) => {
+            const size = rs(d);
+            return (
+              <View
+                key={d}
+                style={[styles.ring, { width: size, height: size, borderRadius: size / 2, borderColor: [c.ring1, c.ring2, c.ring3, c.ring2][i] }]}
+              />
+            );
+          })}
           <View style={styles.heroCenter}>
             <Text style={[t.micro, { color: c.textSoft, letterSpacing: 3.2 }]}>TU ÚNICO FOCO</Text>
             <Text style={[t.hero, { color: c.textStrong, marginTop: 14 }]}>AHORA</Text>
@@ -53,14 +58,14 @@ export default function HoyScreen() {
             </View>
           </Card>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { flex: 1, paddingHorizontal: 24, justifyContent: 'space-between' },
-  hero: { flex: 1, minHeight: 300, alignItems: 'center', justifyContent: 'center' },
+  content: { flexGrow: 1, paddingHorizontal: 24, justifyContent: 'space-between' },
+  hero: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   ring: { position: 'absolute', borderWidth: 1 },
   heroCenter: { alignItems: 'center' },
   insight: { flexDirection: 'row', gap: 13, alignItems: 'flex-start', marginTop: 13 },

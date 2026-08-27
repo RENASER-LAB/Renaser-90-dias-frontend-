@@ -19,13 +19,26 @@ export function Card({ children, style }: { children: React.ReactNode; style?: V
 }
 
 export function ScreenHeader({ title, right, onPressRight }: { title: string; right: IconName; onPressRight?: () => void }) {
-  const { c, t } = useTheme();
+  const { c, t, mode, toggle } = useTheme();
   return (
     <View style={styles.header}>
-      <Text style={[t.screenTitle, { color: c.text }]}>{title}</Text>
-      <Pressable hitSlop={12} onPress={onPressRight} style={styles.headerBtn}>
-        <Icon name={right} size={19} color={right === 'dots' ? c.textSoft : c.gold} />
-      </Pressable>
+      <Text style={[t.screenTitle, { color: c.text, flexShrink: 1 }]} numberOfLines={1} adjustsFontSizeToFit>
+        {title}
+      </Text>
+      <View style={styles.headerActions}>
+        <Pressable
+          hitSlop={10}
+          onPress={toggle}
+          accessibilityRole="button"
+          accessibilityLabel={mode === 'light' ? 'Activar modo oscuro' : 'Activar modo claro'}
+          style={[styles.themeBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
+        >
+          <Icon name={mode === 'light' ? 'moon' : 'sun'} size={16} color={c.gold} />
+        </Pressable>
+        <Pressable hitSlop={12} onPress={onPressRight} style={styles.headerBtn}>
+          <Icon name={right} size={19} color={right === 'dots' ? c.textSoft : c.gold} />
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -67,7 +80,9 @@ export function ListRow({ index, label, onPress }: { index?: string; label: stri
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 30, paddingTop: 8 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingHorizontal: 30, paddingTop: 8 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   headerBtn: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
+  themeBtn: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11, borderBottomWidth: 1 },
 });

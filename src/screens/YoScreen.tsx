@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { useTheme } from '../theme/ThemeContext';
+import { useResponsive } from '../theme/responsive';
 import { MicroLabel, ScreenHeader, Placeholder } from '../components/ui';
 import { Icon } from '../components/Icon';
 
@@ -13,13 +14,15 @@ const STATS = [{ k: 'DISCIPLINA', v: '87' }, { k: 'ENFOQUE', v: '92' }, { k: 'EN
 
 export default function YoScreen() {
   const { c, t } = useTheme();
+  const { rs } = useResponsive();
+  const moreSize = rs(56);
   const evoPath = 'M' + EVOLUCION.map(p => p[0] + ' ' + p[1]).join(' L');
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
       <ScreenHeader title="YO" right="dots" />
 
-      <View style={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={{ paddingTop: 18 }}>
           <Text style={[t.micro, { color: c.textSoft }]}>TU EVOLUCIÓN</Text>
           <Text style={[t.micro, { color: c.micro, marginTop: 6 }]}>DÍA 37 DE 90</Text>
@@ -43,8 +46,8 @@ export default function YoScreen() {
         <View style={{ paddingTop: 18 }}>
           <MicroLabel>EVIDENCIA</MicroLabel>
           <View style={{ flexDirection: 'row', gap: 9, marginTop: 11 }}>
-            {[0, 1, 2].map(i => <Placeholder key={i} label="FOTO" style={{ flex: 1, height: 56, borderRadius: 10 }} />)}
-            <View style={[styles.more, { borderColor: c.border, backgroundColor: c.cardBg }]}>
+            {[0, 1, 2].map(i => <Placeholder key={i} label="FOTO" style={{ flex: 1, height: moreSize, borderRadius: 10 }} />)}
+            <View style={[styles.more, { width: moreSize, height: moreSize, borderColor: c.border, backgroundColor: c.cardBg }]}>
               <Text style={[t.small, { color: c.textSoft }]}>+6</Text>
             </View>
           </View>
@@ -78,14 +81,14 @@ export default function YoScreen() {
           </View>
           <Icon name="chevron" size={12} color={c.chevron} />
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { flex: 1, paddingHorizontal: 24 },
+  content: { flexGrow: 1, paddingHorizontal: 24 },
   stat: { flex: 1, borderWidth: 1, borderRadius: 14, paddingVertical: 13, alignItems: 'center' },
-  more: { width: 56, height: 56, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  more: { borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   rowCard: { marginTop: 16, borderWidth: 1, borderRadius: 14, paddingVertical: 13, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
 });

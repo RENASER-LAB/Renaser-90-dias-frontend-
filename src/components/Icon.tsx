@@ -2,7 +2,7 @@ import React from 'react';
 import Svg, { Circle, Path, Rect, Ellipse, G } from 'react-native-svg';
 
 export type IconName =
-  | 'bell' | 'sun' | 'doc' | 'diamond' | 'users' | 'user' | 'dots' | 'info' | 'bulb'
+  | 'bell' | 'sun' | 'moon' | 'doc' | 'diamond' | 'users' | 'user' | 'dots' | 'info' | 'bulb'
   | 'body' | 'brain' | 'heart' | 'spark' | 'briefcase' | 'chevron' | 'arrow' | 'clock' | 'stack';
 
 type Props = { name: IconName; size?: number; color: string; strokeWidth?: number };
@@ -23,6 +23,12 @@ export function Icon({ name, size = 20, color, strokeWidth = 1.1 }: Props) {
         <Svg width={size} height={size} viewBox="0 0 20 20">
           <Circle {...s} cx={10} cy={10} r={3.4} />
           <Path {...s} d="M10 1.8v2.2M10 16v2.2M1.8 10H4M16 10h2.2M4.2 4.2l1.6 1.6M14.2 14.2l1.6 1.6M15.8 4.2l-1.6 1.6M5.8 14.2l-1.6 1.6" />
+        </Svg>
+      );
+    case 'moon':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 20 20">
+          <Path {...s} d="M15.8 12.1A6.6 6.6 0 1 1 7.9 4.2a5.2 5.2 0 0 0 7.9 7.9z" />
         </Svg>
       );
     case 'doc':

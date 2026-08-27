@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { useTheme } from '../theme/ThemeContext';
+import { useResponsive } from '../theme/responsive';
 import { MicroLabel, ScreenHeader, ListRow } from '../components/ui';
 
 const PRIORIDADES = [
@@ -19,19 +20,22 @@ const FASES = [
 
 export default function PlanScreen() {
   const { c, t } = useTheme();
+  const { rs } = useResponsive();
+  const gaugeW = rs(228);
+  const gaugeH = rs(120);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
       <ScreenHeader title="PLAN" right="dots" />
 
-      <View style={styles.content}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={{ alignItems: 'center', paddingTop: 20 }}>
           <Text style={[t.sectionTitle, { color: c.text }]}>TU MAPA DE LOS PRÓXIMOS 90 DÍAS</Text>
           <Text style={[t.sectionSub, { color: c.micro, marginTop: 7 }]}>Enfocado. Estratégico. Real.</Text>
         </View>
 
-        <View style={styles.gauge}>
-          <Svg width={228} height={120} viewBox="0 0 228 120">
+        <View style={[styles.gauge, { height: gaugeH + 8 }]}>
+          <Svg width={gaugeW} height={gaugeH} viewBox="0 0 228 120">
             <Path d="M14 108a100 100 0 0 1 200 0" stroke={c.divider} strokeWidth={5} strokeLinecap="round" fill="none" />
             <Path d="M14 108a100 100 0 0 1 141-93" stroke={c.chevron} strokeWidth={5} strokeLinecap="round" fill="none" />
             <Circle cx={155} cy={15} r={6} fill={c.gold} />
@@ -78,13 +82,13 @@ export default function PlanScreen() {
             ))}
           </View>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { flex: 1, paddingHorizontal: 26 },
+  content: { flexGrow: 1, paddingHorizontal: 26 },
   gauge: { height: 128, alignItems: 'center', justifyContent: 'center', marginVertical: 6 },
   gaugeCenter: { position: 'absolute', top: 44, alignItems: 'center' },
   gaugeLeft: { position: 'absolute', left: 8, bottom: 8 },
