@@ -6,10 +6,13 @@ import PlanScreen from '../screens/PlanScreen';
 import TrainingScreen from '../screens/TrainingScreen';
 import ComunidadScreen from '../screens/ComunidadScreen';
 import YoScreen from '../screens/YoScreen';
+import LoginScreen from '../screens/LoginScreen';
+import { OnboardingFlow } from '../features/onboarding/screens/OnboardingFlow';
+import { useAuth } from '../context/AuthContext';
 
 const Tab = createBottomTabNavigator();
 
-export function RootNavigator() {
+function MainTabs() {
   return (
     <Tab.Navigator screenOptions={{ headerShown: false }} tabBar={props => <TabBar {...props} />}>
       <Tab.Screen name="Hoy" component={HoyScreen} />
@@ -19,4 +22,18 @@ export function RootNavigator() {
       <Tab.Screen name="Yo" component={YoScreen} />
     </Tab.Navigator>
   );
+}
+
+export function RootNavigator() {
+  const { isAuthenticated, isOnboardingCompleted } = useAuth();
+
+  if (!isAuthenticated) {
+    return <LoginScreen />;
+  }
+
+  if (!isOnboardingCompleted) {
+    return <OnboardingFlow />;
+  }
+
+  return <MainTabs />;
 }

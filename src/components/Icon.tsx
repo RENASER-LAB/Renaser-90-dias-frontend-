@@ -3,7 +3,8 @@ import Svg, { Circle, Path, Rect, Ellipse, G } from 'react-native-svg';
 
 export type IconName =
   | 'bell' | 'sun' | 'moon' | 'doc' | 'diamond' | 'users' | 'user' | 'dots' | 'info' | 'bulb'
-  | 'body' | 'brain' | 'heart' | 'spark' | 'briefcase' | 'chevron' | 'arrow' | 'clock' | 'stack';
+  | 'body' | 'brain' | 'heart' | 'spark' | 'briefcase' | 'chevron' | 'arrow' | 'arrowLeft' | 'clock' | 'stack'
+  | 'mail' | 'lock' | 'eye' | 'eyeOff' | 'check' | 'logout' | 'google' | 'apple' | 'key' | 'trophy' | 'zap';
 
 type Props = { name: IconName; size?: number; color: string; strokeWidth?: number };
 
@@ -11,6 +12,106 @@ export function Icon({ name, size = 20, color, strokeWidth = 1.1 }: Props) {
   const s = { stroke: color, strokeWidth, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, fill: "none" };
 
   switch (name) {
+    case 'trophy':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 20 20">
+          <Path {...s} d="M5 3.5h10v4.5a5 5 0 0 1-10 0V3.5z" />
+          <Path {...s} d="M5 5.5H2.5a1.5 1.5 0 0 0-1.5 1.5v1a3 3 0 0 0 3 3H5M15 5.5h2.5a1.5 1.5 0 0 1 1.5 1.5v1a3 3 0 0 1-3 3H15" />
+          <Path {...s} d="M10 13v3.5M6.5 16.5h7" />
+        </Svg>
+      );
+    case 'zap':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 20 20">
+          <Path {...s} d="M11 2L3.5 11h6L8.5 18 16.5 9h-6L11 2z" />
+        </Svg>
+      );
+    case 'google':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path
+            fill={color}
+            d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+          />
+          <Path
+            fill={color}
+            d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+          />
+          <Path
+            fill={color}
+            d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+          />
+          <Path
+            fill={color}
+            d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+          />
+        </Svg>
+      );
+    case 'apple':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path
+            fill={color}
+            d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.63-.78 1.06-1.87.94-2.97-.93.04-2.09.63-2.73 1.38-.56.65-1.06 1.76-.92 2.84 1.04.08 2.09-.54 2.71-1.25z"
+          />
+        </Svg>
+      );
+    case 'key':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 20 20">
+          <Circle {...s} cx={7} cy={7} r={4.5} />
+          <Path {...s} d="M10.2 10.2L16.5 16.5M13.5 13.5l2-0.5M15 15l2-0.5" />
+          <Circle cx={7} cy={7} r={1.5} fill={color} />
+        </Svg>
+      );
+    case 'arrowLeft':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 20 20">
+          <Path {...s} strokeWidth={strokeWidth * 1.2} d="M15.5 10H4.5M9 5.5L4.5 10 9 14.5" />
+        </Svg>
+      );
+    case 'mail':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 20 20">
+          <Rect {...s} x={2.5} y={4.5} width={15} height={11} rx={2} />
+          <Path {...s} d="M3.2 5.5l6.8 5.5 6.8-5.5" />
+        </Svg>
+      );
+    case 'lock':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 20 20">
+          <Rect {...s} x={3.5} y={8.5} width={13} height={9.5} rx={2} />
+          <Path {...s} d="M6.5 8.5V6a3.5 3.5 0 0 1 7 0v2.5" />
+          <Circle cx={10} cy={13} r={1.2} fill={color} />
+        </Svg>
+      );
+    case 'eye':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 20 20">
+          <Path {...s} d="M2 10s3-5.5 8-5.5 8 5.5 8 5.5-3 5.5-8 5.5S2 10 2 10z" />
+          <Circle {...s} cx={10} cy={10} r={2.5} />
+        </Svg>
+      );
+    case 'eyeOff':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 20 20">
+          <Path {...s} d="M3 3l14 14M9.2 9.2a2.5 2.5 0 0 0 3.6 3.6M6.5 6.7C4.6 7.8 3.2 9.4 2 10c0 0 3 5.5 8 5.5 2.1 0 3.9-.9 5.3-2.1M10 4.5c5 0 8 5.5 8 5.5-.7 1.3-1.8 2.6-3.2 3.6" />
+        </Svg>
+      );
+    case 'check':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 20 20">
+          <Path {...s} strokeWidth={strokeWidth * 1.3} d="M4 10.5l4 4 8-9" />
+        </Svg>
+      );
+    case 'logout':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 20 20">
+          <Path {...s} d="M7 16.5H4.5A1.5 1.5 0 0 1 3 15V5a1.5 1.5 0 0 1 1.5-1.5H7" />
+          <Path {...s} d="M12.5 13.5L16 10l-3.5-3.5" />
+          <Path {...s} d="M16 10H7.5" />
+        </Svg>
+      );
     case 'bell':
       return (
         <Svg width={size} height={size} viewBox="0 0 20 20">

@@ -5,6 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { useFonts, Jost_200ExtraLight, Jost_300Light, Jost_400Regular, Jost_500Medium, Jost_700Bold } from '@expo-google-fonts/jost';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
+import { AuthProvider } from './src/context/AuthContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 
 function Shell() {
@@ -21,13 +22,17 @@ function Shell() {
 }
 
 export default function App() {
-  const [loaded] = useFonts({ Jost_200ExtraLight, Jost_300Light, Jost_400Regular, Jost_500Medium, Jost_700Bold });
+  const [loaded, error] = useFonts({ Jost_200ExtraLight, Jost_300Light, Jost_400Regular, Jost_500Medium, Jost_700Bold });
   const scheme = useColorScheme();
-  if (!loaded) return null;
+
+  if (!loaded && !error) return null;
+
   return (
     <SafeAreaProvider>
       <ThemeProvider initial={scheme === 'dark' ? 'dark' : 'light'}>
-        <Shell />
+        <AuthProvider>
+          <Shell />
+        </AuthProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );

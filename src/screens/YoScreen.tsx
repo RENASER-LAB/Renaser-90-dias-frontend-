@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { useTheme } from '../theme/ThemeContext';
 import { useResponsive } from '../theme/responsive';
+import { useAuth } from '../context/AuthContext';
 import { MicroLabel, ScreenHeader, Placeholder } from '../components/ui';
 import { Icon } from '../components/Icon';
 
@@ -15,6 +16,7 @@ const STATS = [{ k: 'DISCIPLINA', v: '87' }, { k: 'ENFOQUE', v: '92' }, { k: 'EN
 export default function YoScreen() {
   const { c, t } = useTheme();
   const { rs } = useResponsive();
+  const { user, logout, restartOnboarding } = useAuth();
   const moreSize = rs(56);
   const evoPath = 'M' + EVOLUCION.map(p => p[0] + ' ' + p[1]).join(' L');
 
@@ -23,7 +25,20 @@ export default function YoScreen() {
       <ScreenHeader title="YO" right="dots" />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={{ paddingTop: 18 }}>
+        {/* User Card */}
+        {user && (
+          <View style={[styles.userCard, { borderColor: c.border, backgroundColor: c.cardBg }]}>
+            <View style={[styles.avatar, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+              <Icon name="user" size={20} color={c.gold} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[t.cardTitle, { color: c.textStrong }]}>{user.name}</Text>
+              <Text style={[t.small, { color: c.micro, marginTop: 2 }]}>{user.email}</Text>
+            </View>
+          </View>
+        )}
+
+        <View style={{ paddingTop: 14 }}>
           <Text style={[t.micro, { color: c.textSoft }]}>TU EVOLUCIÓN</Text>
           <Text style={[t.micro, { color: c.micro, marginTop: 6 }]}>DÍA 37 DE 90</Text>
           <Svg width="100%" height={78} viewBox="0 0 320 78" style={{ marginTop: 12 }}>
@@ -72,7 +87,7 @@ export default function YoScreen() {
           </Svg>
         </View>
 
-        <View style={[styles.rowCard, { borderColor: c.border, backgroundColor: c.cardBg, marginBottom: 12 }]}>
+        <View style={[styles.rowCard, { borderColor: c.border, backgroundColor: c.cardBg }]}>
           <View>
             <MicroLabel>IDENTIDAD</MicroLabel>
             <Text style={[t.body, { color: c.text, marginTop: 8, lineHeight: 21 }]}>
@@ -81,14 +96,40 @@ export default function YoScreen() {
           </View>
           <Icon name="chevron" size={12} color={c.chevron} />
         </View>
+
+        {/* Review Ficha Inicial / Onboarding Button */}
+        <Pressable
+          onPress={restartOnboarding}
+          style={[styles.onboardingBtn, { borderColor: c.borderStrong, backgroundColor: c.cardBg }]}
+        >
+          <Icon name="doc" size={16} color={c.gold} />
+          <Text style={[t.micro, { color: c.textStrong, letterSpacing: 1.6, fontWeight: '600' }]}>
+            MI FICHA INICIAL & PACTO
+          </Text>
+        </Pressable>
+
+        {/* Logout Button */}
+        <Pressable
+          onPress={logout}
+          style={[styles.logoutBtn, { borderColor: c.border, backgroundColor: c.cardBg }]}
+        >
+          <Icon name="logout" size={16} color={c.textSoft} />
+          <Text style={[t.micro, { color: c.textSoft, letterSpacing: 1.8 }]}>
+            CERRAR SESIÓN
+          </Text>
+        </Pressable>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { flexGrow: 1, paddingHorizontal: 24 },
+  content: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 24 },
+  userCard: { marginTop: 14, borderWidth: 1, borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 14 },
+  avatar: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   stat: { flex: 1, borderWidth: 1, borderRadius: 14, paddingVertical: 13, alignItems: 'center' },
   more: { borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   rowCard: { marginTop: 16, borderWidth: 1, borderRadius: 14, paddingVertical: 13, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  onboardingBtn: { marginTop: 18, borderWidth: 1, borderRadius: 14, paddingVertical: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  logoutBtn: { marginTop: 10, marginBottom: 12, borderWidth: 1, borderRadius: 14, paddingVertical: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
 });
