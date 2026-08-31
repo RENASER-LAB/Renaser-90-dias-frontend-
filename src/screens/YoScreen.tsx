@@ -6,7 +6,6 @@ import {
   ScrollView,
   Pressable,
   TextInput,
-  Modal,
   Alert,
   Switch,
 } from 'react-native';
@@ -79,10 +78,10 @@ export default function YoScreen() {
   const evoPath = 'M' + EVOLUCION.map(p => p[0] + ' ' + p[1]).join(' L');
 
   // =========================================================================
-  // ESTADOS DE NAVEGACIÓN Y SUB-MÓDULOS
+  // ESTADOS DE NAVEGACIÓN DENTRO DE LA TARJETA DEL USUARIO
   // =========================================================================
   const [activeView, setActiveView] = useState<
-    'main' | 'hub' | 'editar_perfil' | 'evidencias' | 'logros' | 'onboarding' | 'pacto' | 'espejo' | 'metodo' | 'notificaciones'
+    'main' | 'hub' | 'editar_perfil' | 'info_perfil' | 'evidencias' | 'logros' | 'onboarding' | 'pacto' | 'espejo' | 'metodo' | 'video_activacion' | 'notificaciones'
   >('main');
 
   // Formulario Editar Perfil
@@ -90,8 +89,10 @@ export default function YoScreen() {
   const [profileEmail, setProfileEmail] = useState(user?.email || 'sebastian@renaser.com');
   const [profilePhone, setProfilePhone] = useState('+57 312 849 2011');
   const [profileCity, setProfileCity] = useState('Medellín, Colombia');
+  const [profileBio, setProfileBio] = useState('Empresario enfocado en escala de negocio B2B y reconexión biológica de alto rendimiento.');
+  const [profileInstagram, setProfileInstagram] = useState('@sebastian.arango');
 
-  // Espejo de la sombra
+  // Espejo de la Sombra
   const [catarsisText, setCatarsisText] = useState('');
 
   // Notificaciones
@@ -123,7 +124,7 @@ export default function YoScreen() {
       <ScreenHeader title="YO" right="dots" />
 
       {/* ========================================================================= */}
-      {/* 1. PANTALLA PRINCIPAL "YO" (TU DISEÑO EXACTO INTACTO)                     */}
+      {/* 1. PANTALLA PRINCIPAL "YO" (DISEÑO ORIGINAL 100% INTACTO)                 */}
       {/* ========================================================================= */}
       {activeView === 'main' && (
         <ScrollView
@@ -138,7 +139,7 @@ export default function YoScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-          {/* User Card Interactiva (Al dar clic abre el Centro de Ajustes) */}
+          {/* User Card Interactiva (Al dar clic abre el Centro de Perfil y Ajustes) */}
           <Pressable
             onPress={() => setActiveView('hub')}
             style={[styles.userCard, { borderColor: c.border, backgroundColor: c.cardBg }]}
@@ -263,7 +264,7 @@ export default function YoScreen() {
       )}
 
       {/* ========================================================================= */}
-      {/* 2. MENÚ HUB: CENTRO DE AJUSTES & PERFIL                                    */}
+      {/* 2. CENTRO DE PERFIL ORGANIZADO EN 4 FASES/CAJONES EJECUTIVOS              */}
       {/* ========================================================================= */}
       {activeView === 'hub' && (
         <ScrollView
@@ -301,16 +302,16 @@ export default function YoScreen() {
               <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 15 }]}>{profileName}</Text>
               <Text style={[t.micro, { color: c.gold, fontSize: 11 }]}>{profileEmail}</Text>
               <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5, marginTop: 2 }]}>
-                Célula Fénix 07 · Miembro Activo
+                Célula Fénix 07 · Alumno Activo
               </Text>
             </View>
           </View>
 
           <View style={{ gap: 14, marginTop: 14, paddingBottom: 28 }}>
-            {/* 1. DATOS PERSONALES & PERFIL */}
+            {/* FASE 1: DATOS PERSONALES & PERFIL */}
             <View style={{ gap: 6 }}>
               <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 1 }]}>
-                1. DATOS PERSONALES & PERFIL
+                FASE 1: DATOS PERSONALES & PERFIL
               </Text>
               <View style={[styles.groupedBox, { borderColor: c.border, backgroundColor: c.cardBg }]}>
                 <Pressable
@@ -326,13 +327,27 @@ export default function YoScreen() {
                   </View>
                   <Icon name="chevron" size={12} color={c.gold} />
                 </Pressable>
+
+                <Pressable
+                  onPress={() => setActiveView('info_perfil')}
+                  style={styles.menuOptionRow}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <Text style={{ fontSize: 16 }}>🪪</Text>
+                    <View>
+                      <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>Información de Perfil</Text>
+                      <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>Ubicación, redes y biografía somática</Text>
+                    </View>
+                  </View>
+                  <Icon name="chevron" size={12} color={c.gold} />
+                </Pressable>
               </View>
             </View>
 
-            {/* 2. HISTORIAL & REGISTROS */}
+            {/* FASE 2: HISTORIAL, EVIDENCIAS & ONBOARDING */}
             <View style={{ gap: 6 }}>
               <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 1 }]}>
-                2. HISTORIAL & REGISTROS
+                FASE 2: HISTORIAL, EVIDENCIAS & ONBOARDING
               </Text>
               <View style={[styles.groupedBox, { borderColor: c.border, backgroundColor: c.cardBg }]}>
                 <Pressable
@@ -343,7 +358,7 @@ export default function YoScreen() {
                     <Text style={{ fontSize: 16 }}>🎙️</Text>
                     <View>
                       <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>Mi Onboarding (5 Etapas)</Text>
-                      <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>El Pacto firmado y tus 90 variables</Text>
+                      <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>El Pacto firmado, cuestionario y las 90 variables</Text>
                     </View>
                   </View>
                   <Icon name="chevron" size={12} color={c.gold} />
@@ -357,7 +372,7 @@ export default function YoScreen() {
                     <Text style={{ fontSize: 16 }}>📸</Text>
                     <View>
                       <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>Registro de Evidencias</Text>
-                      <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>37 fotos subidas y verificadas por mentor</Text>
+                      <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>37 fotos subidas y verificadas por tu mentor</Text>
                     </View>
                   </View>
                   <Icon name="chevron" size={12} color={c.gold} />
@@ -379,10 +394,10 @@ export default function YoScreen() {
               </View>
             </View>
 
-            {/* 3. HERRAMIENTAS SOMÁTICAS */}
+            {/* FASE 3: HERRAMIENTAS SOMÁTICAS */}
             <View style={{ gap: 6 }}>
               <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 1 }]}>
-                3. HERRAMIENTAS SOMÁTICAS
+                FASE 3: HERRAMIENTAS SOMÁTICAS
               </Text>
               <View style={[styles.groupedBox, { borderColor: c.border, backgroundColor: c.cardBg }]}>
                 <Pressable
@@ -401,7 +416,7 @@ export default function YoScreen() {
 
                 <Pressable
                   onPress={() => setActiveView('metodo')}
-                  style={styles.menuOptionRow}
+                  style={[styles.menuOptionRow, { borderBottomColor: c.divider }]}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                     <Text style={{ fontSize: 16 }}>✨</Text>
@@ -412,18 +427,32 @@ export default function YoScreen() {
                   </View>
                   <Icon name="chevron" size={12} color={c.gold} />
                 </Pressable>
+
+                <Pressable
+                  onPress={() => setActiveView('video_activacion')}
+                  style={styles.menuOptionRow}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <Text style={{ fontSize: 16 }}>🎬</Text>
+                    <View>
+                      <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>Repetir Activación Inicial</Text>
+                      <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>Video de bienvenida y manifiesto de Macaco</Text>
+                    </View>
+                  </View>
+                  <Icon name="chevron" size={12} color={c.gold} />
+                </Pressable>
               </View>
             </View>
 
-            {/* 4. PREFERENCIAS & SISTEMA */}
+            {/* FASE 4: PREFERENCIAS & SISTEMA */}
             <View style={{ gap: 6 }}>
               <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 1 }]}>
-                4. PREFERENCIAS & SISTEMA
+                FASE 4: PREFERENCIAS & SISTEMA
               </Text>
               <View style={[styles.groupedBox, { borderColor: c.border, backgroundColor: c.cardBg }]}>
                 <Pressable
                   onPress={() => setActiveView('notificaciones')}
-                  style={styles.menuOptionRow}
+                  style={[styles.menuOptionRow, { borderBottomColor: c.divider }]}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                     <Text style={{ fontSize: 16 }}>🔔</Text>
@@ -434,6 +463,17 @@ export default function YoScreen() {
                   </View>
                   <Icon name="chevron" size={12} color={c.gold} />
                 </Pressable>
+
+                <Pressable
+                  onPress={logout}
+                  style={styles.menuOptionRow}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <Text style={{ fontSize: 16 }}>🚪</Text>
+                    <Text style={[t.cardTitle, { color: '#E06A66', fontSize: 13 }]}>Cerrar Sesión</Text>
+                  </View>
+                  <Icon name="chevron" size={12} color="#E06A66" />
+                </Pressable>
               </View>
             </View>
           </View>
@@ -441,7 +481,7 @@ export default function YoScreen() {
       )}
 
       {/* ========================================================================= */}
-      {/* 3. SUB-VISTA: 🎙️ MI ONBOARDING (5 ETAPAS EXACTO A CAPTURAS)               */}
+      {/* 3. SUB-VISTA: 🎙️ MI ONBOARDING (5 ETAPAS EXACTAS)                         */}
       {/* ========================================================================= */}
       {activeView === 'onboarding' && (
         <ScrollView
@@ -502,68 +542,66 @@ export default function YoScreen() {
 
           {/* 5 Etapas */}
           <View style={{ gap: 8, marginTop: 12, paddingBottom: 28 }}>
-            {ONBOARDING_STAGES.map(stage => {
-              return (
-                <Pressable
-                  key={stage.id}
-                  onPress={() => {
-                    if (stage.id === 'st1') {
-                      setActiveView('pacto');
-                    } else if (stage.completed) {
-                      Alert.alert(stage.title, 'Etapa completada con éxito.');
-                    } else if (stage.active) {
-                      Alert.alert(stage.title, 'Continuando etapa activa...');
-                    }
-                  }}
-                  style={[
-                    styles.stageCard,
-                    {
-                      borderColor: stage.active ? c.gold : c.border,
-                      backgroundColor: stage.active ? c.cardBgAlt : c.cardBg,
-                      opacity: stage.locked ? 0.5 : 1,
-                    },
-                  ]}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-                    <View
-                      style={[
-                        styles.stageCheckCircle,
-                        {
-                          backgroundColor: stage.completed
-                            ? '#173429'
-                            : stage.active
-                            ? c.gold
-                            : '#2A2620',
-                        },
-                      ]}
-                    >
-                      {stage.completed ? (
-                        <Text style={{ color: '#70d2a0', fontWeight: 'bold', fontSize: 11 }}>✓</Text>
-                      ) : stage.active ? (
-                        <Text style={{ color: '#1E1B18', fontWeight: 'bold', fontSize: 11 }}>{stage.num}</Text>
-                      ) : (
-                        <Text style={{ color: '#888', fontSize: 10 }}>🔒</Text>
-                      )}
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[t.cardTitle, { color: stage.active ? c.gold : c.textStrong, fontSize: 13 }]}>
-                        {stage.title}
-                      </Text>
-                      <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>
-                        {stage.desc}
-                      </Text>
-                    </View>
+            {ONBOARDING_STAGES.map(stage => (
+              <Pressable
+                key={stage.id}
+                onPress={() => {
+                  if (stage.id === 'st1') {
+                    setActiveView('pacto');
+                  } else if (stage.completed) {
+                    Alert.alert(stage.title, 'Etapa completada con éxito.');
+                  } else if (stage.active) {
+                    Alert.alert(stage.title, 'Continuando etapa activa...');
+                  }
+                }}
+                style={[
+                  styles.stageCard,
+                  {
+                    borderColor: stage.active ? c.gold : c.border,
+                    backgroundColor: stage.active ? c.cardBgAlt : c.cardBg,
+                    opacity: stage.locked ? 0.5 : 1,
+                  },
+                ]}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                  <View
+                    style={[
+                      styles.stageCheckCircle,
+                      {
+                        backgroundColor: stage.completed
+                          ? '#173429'
+                          : stage.active
+                          ? c.gold
+                          : '#2A2620',
+                      },
+                    ]}
+                  >
+                    {stage.completed ? (
+                      <Text style={{ color: '#70d2a0', fontWeight: 'bold', fontSize: 11 }}>✓</Text>
+                    ) : stage.active ? (
+                      <Text style={{ color: '#1E1B18', fontWeight: 'bold', fontSize: 11 }}>{stage.num}</Text>
+                    ) : (
+                      <Text style={{ color: '#888', fontSize: 10 }}>🔒</Text>
+                    )}
                   </View>
-                  <Icon name="chevron" size={12} color={stage.active ? c.gold : c.textSoft} />
-                </Pressable>
-              );
-            })}
+                  <View style={{ flex: 1 }}>
+                    <Text style={[t.cardTitle, { color: stage.active ? c.gold : c.textStrong, fontSize: 13 }]}>
+                      {stage.title}
+                    </Text>
+                    <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>
+                      {stage.desc}
+                    </Text>
+                  </View>
+                </View>
+                <Icon name="chevron" size={12} color={stage.active ? c.gold : c.textSoft} />
+              </Pressable>
+            ))}
           </View>
         </ScrollView>
       )}
 
       {/* ========================================================================= */}
-      {/* 4. SUB-VISTA: 📜 DOCUMENTO DEL PACTO DE RENACIMIENTO                     */}
+      {/* 4. SUB-VISTA: 📜 EL PACTO DE RENACIMIENTO (CON FIRMA)                     */}
       {/* ========================================================================= */}
       {activeView === 'pacto' && (
         <ScrollView
@@ -843,7 +881,6 @@ export default function YoScreen() {
             </Text>
           </View>
 
-          {/* Formulario Catarsis */}
           <View style={[styles.groupedBox, { borderColor: c.border, backgroundColor: c.cardBg, padding: 14, gap: 10, marginTop: 10 }]}>
             <Text style={[t.cardTitle, { color: c.gold, fontSize: 13 }]}>
               DESAHOGO SOMÁTICO DE HOY:
@@ -876,7 +913,6 @@ export default function YoScreen() {
             </View>
           </View>
 
-          {/* Informe Semanal IA */}
           <View style={[styles.goalCard, { borderColor: c.gold, backgroundColor: c.cardBgAlt, marginTop: 12, paddingBottom: 28 }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <Text style={[t.micro, { color: c.gold, fontWeight: '800' }]}>✨ INFORME SEMANAL IA (SEM 06):</Text>
@@ -957,15 +993,6 @@ export default function YoScreen() {
                 style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBg, color: c.text }]}
               />
             </View>
-
-            <View style={{ gap: 4 }}>
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>CIUDAD / PAÍS:</Text>
-              <TextInput
-                value={profileCity}
-                onChangeText={setProfileCity}
-                style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBg, color: c.text }]}
-              />
-            </View>
           </View>
 
           <GoldButton
@@ -980,7 +1007,78 @@ export default function YoScreen() {
       )}
 
       {/* ========================================================================= */}
-      {/* 9. SUB-VISTA: ✨ EL MÉTODO RENASER                                        */}
+      {/* 9. SUB-VISTA: 🪪 INFORMACIÓN DE PERFIL                                     */}
+      {/* ========================================================================= */}
+      {activeView === 'info_perfil' && (
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            {
+              paddingHorizontal: horizontalPadding,
+              maxWidth: isTablet ? 560 : undefined,
+              alignSelf: isTablet ? 'center' : 'stretch',
+              width: isTablet ? '100%' : undefined,
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
+            <Pressable onPress={() => setActiveView('hub')} style={styles.backBtnRow} hitSlop={8}>
+              <Icon name="arrowLeft" size={14} color={c.gold} />
+              <Text style={[t.micro, { color: c.gold, fontWeight: '700', letterSpacing: 1 }]}>
+                VOLVER A AJUSTES
+              </Text>
+            </Pressable>
+            <View style={[styles.categoryPillBadge, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+              <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 9.5 }]}>
+                INFORMACIÓN
+              </Text>
+            </View>
+          </View>
+
+          <View style={{ gap: 12, marginTop: 14 }}>
+            <View style={{ gap: 4 }}>
+              <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>BIOGRAFÍA SOMÁTICA:</Text>
+              <TextInput
+                value={profileBio}
+                onChangeText={setProfileBio}
+                multiline
+                style={[styles.modalInputText, { minHeight: 70, borderColor: c.border, backgroundColor: c.cardBg, color: c.text }]}
+              />
+            </View>
+
+            <View style={{ gap: 4 }}>
+              <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>CIUDAD / PAÍS:</Text>
+              <TextInput
+                value={profileCity}
+                onChangeText={setProfileCity}
+                style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBg, color: c.text }]}
+              />
+            </View>
+
+            <View style={{ gap: 4 }}>
+              <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>INSTAGRAM:</Text>
+              <TextInput
+                value={profileInstagram}
+                onChangeText={setProfileInstagram}
+                style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBg, color: c.text }]}
+              />
+            </View>
+          </View>
+
+          <GoldButton
+            label="✓ GUARDAR INFORMACIÓN"
+            onPress={() => {
+              Alert.alert('Información Guardada 🦅', 'Tus datos de biografía y redes han sido actualizados.');
+              setActiveView('hub');
+            }}
+            style={{ width: '100%', marginTop: 16, marginBottom: 28 }}
+          />
+        </ScrollView>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 10. SUB-VISTA: ✨ EL MÉTODO RENASER                                       */}
       {/* ========================================================================= */}
       {activeView === 'metodo' && (
         <ScrollView
@@ -1035,7 +1133,54 @@ export default function YoScreen() {
       )}
 
       {/* ========================================================================= */}
-      {/* 10. SUB-VISTA: 🔔 NOTIFICACIONES                                          */}
+      {/* 11. SUB-VISTA: 🎬 REPETIR ACTIVACIÓN (VIDEO MACACO)                       */}
+      {/* ========================================================================= */}
+      {activeView === 'video_activacion' && (
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            {
+              paddingHorizontal: horizontalPadding,
+              maxWidth: isTablet ? 560 : undefined,
+              alignSelf: isTablet ? 'center' : 'stretch',
+              width: isTablet ? '100%' : undefined,
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
+            <Pressable onPress={() => setActiveView('hub')} style={styles.backBtnRow} hitSlop={8}>
+              <Icon name="arrowLeft" size={14} color={c.gold} />
+              <Text style={[t.micro, { color: c.gold, fontWeight: '700', letterSpacing: 1 }]}>
+                VOLVER A AJUSTES
+              </Text>
+            </Pressable>
+            <View style={[styles.categoryPillBadge, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+              <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 9.5 }]}>
+                ACTIVACIÓN
+              </Text>
+            </View>
+          </View>
+
+          <View style={[styles.pactoDocumentCard, { borderColor: c.gold, backgroundColor: c.cardBgAlt, marginTop: 14 }]}>
+            <View style={[styles.evidenceImgBox, { height: 160, backgroundColor: '#0C0B09', borderRadius: 14 }]}>
+              <Text style={{ fontSize: 44 }}>▶</Text>
+              <Text style={[t.micro, { color: c.gold, fontWeight: '700', marginTop: 8 }]}>
+                Reproducir Manifiesto Macaco (12:45 min)
+              </Text>
+            </View>
+            <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13, marginTop: 6 }]}>
+              Bienvenida Oficial al Renacimiento Somático
+            </Text>
+            <Text style={[t.body, { color: c.textSoft, fontSize: 11, lineHeight: 16 }]}>
+              "No viniste aquí a probar suerte, viniste a forjar la versión de ti que ya no negocia con la mediocridad."
+            </Text>
+          </View>
+        </ScrollView>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 12. SUB-VISTA: 🔔 NOTIFICACIONES                                          */}
       {/* ========================================================================= */}
       {activeView === 'notificaciones' && (
         <ScrollView
@@ -1134,7 +1279,7 @@ const styles = StyleSheet.create({
   iconShieldCircle: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   pactoDocumentCard: { borderWidth: 1.5, borderRadius: 20, padding: 14, gap: 10, marginTop: 12 },
   signatureBox: { borderWidth: 1, borderRadius: 18, padding: 12, alignItems: 'center', gap: 8, marginTop: 12 },
-  signatureCanvas: { width: '100%', height: 90, borderRadius: 12, borderWidth: 1, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
+  signatureCanvas: { width: '100%', height: 80, borderRadius: 12, borderWidth: 1, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
   createHabitBtn: { borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6 },
   evidenceCard: { borderWidth: 1, borderRadius: 16, padding: 10, gap: 2 },
   evidenceImgBox: { width: '100%', height: 75, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
