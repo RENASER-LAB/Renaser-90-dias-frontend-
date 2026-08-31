@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useResponsive } from '../../../theme/responsive';
+import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { Icon } from '../../../components/Icon';
 import { SignatureCanvas, SignatureData } from '../../../components/SignatureCanvas';
 import { GoldButton } from '../../../components/GoldButton';
@@ -22,6 +23,12 @@ export function PactoScreen({
 }: PactoScreenProps) {
   const { c, t, mode, toggle } = useTheme();
   const { isSmall, isTablet } = useResponsive();
+
+  // Interceptar gestos de retroceso en pantalla táctil (Xiaomi / Android / iOS)
+  useSystemBackHandler(() => {
+    onBack();
+    return true;
+  }, true);
 
   const [signature, setSignature] = useState<SignatureData | null>(savedSignature || null);
   const [hasSigned, setHasSigned] = useState<boolean>(Boolean(savedSignature?.data && savedSignature.data.trim().length > 0));

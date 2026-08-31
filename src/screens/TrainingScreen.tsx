@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { useResponsive } from '../theme/responsive';
+import { useSystemBackHandler } from '../hooks/useSystemBackHandler';
 import { ScreenHeader, MicroLabel } from '../components/ui';
 import { Icon, IconName } from '../components/Icon';
 import { GoldButton } from '../components/GoldButton';
@@ -155,6 +156,23 @@ export default function TrainingScreen() {
   const [newTitle, setNewTitle] = useState('');
   const [newTime, setNewTime] = useState('');
   const [newTag, setNewTag] = useState('INNEGOCIABLE');
+
+  // Interceptar gestos de retroceso en pantalla táctil (Xiaomi / Android / iOS Edge Swipe)
+  useSystemBackHandler(() => {
+    if (addModalVisible) {
+      setAddModalVisible(false);
+      return true;
+    }
+    if (activeEvidenceHabit !== null) {
+      setActiveEvidenceHabit(null);
+      return true;
+    }
+    if (selectedDimension !== null) {
+      setSelectedDimension(null);
+      return true;
+    }
+    return false; // Permite el comportamiento por defecto si está en el menú raíz
+  }, addModalVisible || activeEvidenceHabit !== null || selectedDimension !== null);
 
   const toggleHabitState = (id: string) => {
     setHabits(prev =>

@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../theme/ThemeContext';
 import { useResponsive } from '../theme/responsive';
+import { useSystemBackHandler } from '../hooks/useSystemBackHandler';
 import { useAuth } from '../context/AuthContext';
 import { Icon } from '../components/Icon';
 import { MicroLabel } from '../components/ui';
@@ -83,6 +84,15 @@ export default function LoginScreen() {
     setErrorMessage(null);
     setSuccessMessage(null);
   };
+
+  // Interceptar gestos táctiles de retroceso cuando esté en OTP o Forgot Password
+  useSystemBackHandler(() => {
+    if (step !== 'form') {
+      handleReturnToLogin();
+      return true;
+    }
+    return false;
+  }, step !== 'form');
 
   const handleFormSubmit = async () => {
     setErrorMessage(null);

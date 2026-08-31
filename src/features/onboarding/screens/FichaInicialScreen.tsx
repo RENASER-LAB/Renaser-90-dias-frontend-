@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useResponsive } from '../../../theme/responsive';
+import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { FichaInicialData } from '../types/onboarding.types';
 import { CHAPTERS_CONFIG, INITIAL_FICHA_DATA } from '../data/chaptersConfig';
 import { OnboardingStepBar } from '../components/OnboardingStepBar';
@@ -105,6 +106,12 @@ export function FichaInicialScreen({
       onBack();
     }
   };
+
+  // Interceptar gestos de retroceso en pantalla táctil (Xiaomi / Android / iOS)
+  useSystemBackHandler(() => {
+    handlePrev();
+    return true;
+  }, true);
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: c.bg }]}>
