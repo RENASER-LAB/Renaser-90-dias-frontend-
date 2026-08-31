@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle } from 'react-native-svg';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../theme/ThemeContext';
 import { useResponsive } from '../theme/responsive';
 import { useSystemBackHandler } from '../hooks/useSystemBackHandler';
@@ -182,6 +181,10 @@ export default function PlanScreen() {
   const [editGoalModalVisible, setEditGoalModalVisible] = useState(false);
   const [editingGoalType, setEditingGoalType] = useState<'principal' | 'semanal' | 'diario'>('principal');
 
+  // Modal para Mover Hábito de Momento (Long Press)
+  const [moveMomentModalVisible, setMoveMomentModalVisible] = useState(false);
+  const [selectedHabitForMove, setSelectedHabitForMove] = useState<PlanHabit | null>(null);
+
   // Formulario Crear Hábito
   const [newHabitTitle, setNewHabitTitle] = useState('');
   const [newHabitIcon, setNewHabitIcon] = useState('☀️');
@@ -207,6 +210,10 @@ export default function PlanScreen() {
   // GESTOS TÁCTILES DEL SISTEMA (BACKHANDLER)
   // =========================================================================
   useSystemBackHandler(() => {
+    if (moveMomentModalVisible) {
+      setMoveMomentModalVisible(false);
+      return true;
+    }
     if (createHabitModalVisible) {
       setCreateHabitModalVisible(false);
       return true;
@@ -220,7 +227,7 @@ export default function PlanScreen() {
       return true;
     }
     return false;
-  }, activeSubView !== 'main' || createHabitModalVisible || editGoalModalVisible);
+  }, activeSubView !== 'main' || createHabitModalVisible || editGoalModalVisible || moveMomentModalVisible);
 
   // =========================================================================
   // HANDLERS
@@ -248,17 +255,18 @@ export default function PlanScreen() {
     );
   };
 
-  const cycleHabitMoment = (habitId: string) => {
+  const openMoveMomentDrawer = (habit: PlanHabit) => {
+    setSelectedHabitForMove(habit);
+    setMoveMomentModalVisible(true);
+  };
+
+  const applyMomentChange = (targetMoment: DayMoment) => {
+    if (!selectedHabitForMove) return;
     setHabits(prev =>
-      prev.map(h => {
-        if (h.id === habitId) {
-          const nextMoment: DayMoment =
-            h.moment === 'mañana' ? 'tarde' : h.moment === 'tarde' ? 'noche' : 'mañana';
-          return { ...h, moment: nextMoment };
-        }
-        return h;
-      })
+      prev.map(h => (h.id === selectedHabitForMove.id ? { ...h, moment: targetMoment } : h))
     );
+    setMoveMomentModalVisible(false);
+    setSelectedHabitForMove(null);
   };
 
   const handleSaveNewHabit = () => {
@@ -509,7 +517,7 @@ export default function PlanScreen() {
                 Convertirme en mi mejor versión
               </Text>
               <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5, marginTop: 2 }]}>
-                Edita tus horarios y activa los hábitos para el día
+                Mantén presionado un hábito para mover de momento
               </Text>
             </View>
             <Pressable
@@ -547,7 +555,7 @@ export default function PlanScreen() {
             })}
           </View>
 
-          {/* LISTA DE HÁBITOS POR MOMENTO DEL DÍA */}
+          {/* LISTA DE HÁBITOS POR MOMENTO DEL DÍA (CON LONG-PRESS PARA MOVER) */}
           <View style={{ gap: 14, marginTop: 16, paddingBottom: 28 }}>
             {(['mañana', 'tarde', 'noche'] as DayMoment[]).map(momentName => {
               const momentHabits = habits.filter(h => h.moment === momentName);
@@ -555,16 +563,24 @@ export default function PlanScreen() {
 
               return (
                 <View key={momentName} style={{ gap: 8 }}>
-                  <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 1, fontSize: 10.5 }]}>
-                    {momentLabel} ({momentHabits.length})
-                  </Text>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 1, fontSize: 10.5 }]}>
+                      {momentLabel} ({momentHabits.length})
+                    </Text>
+                    <Text style={[t.micro, { color: c.textSoft, fontSize: 9 }]}>
+                      Toca o mantén presionado para mover
+                    </Text>
+                  </View>
 
                   {momentHabits.map(habit => {
                     const isDayActive = habit.days[selectedDay];
 
                     return (
-                      <View
+                      <Pressable
                         key={habit.id}
+                        onPress={() => openMoveMomentDrawer(habit)}
+                        onLongPress={() => openMoveMomentDrawer(habit)}
+                        delayLongPress={300}
                         style={[
                           styles.habitPlanCard,
                           {
@@ -589,7 +605,7 @@ export default function PlanScreen() {
                                 {habit.title}
                               </Text>
                               {/* Horario Editable Directamente */}
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
                                 <Text style={{ fontSize: 11, color: c.gold, fontWeight: 'bold' }}>⏰</Text>
                                 <TextInput
                                   value={habit.time}
@@ -599,12 +615,15 @@ export default function PlanScreen() {
                                   style={[styles.timeInputDirect, { color: c.gold, borderColor: c.border, backgroundColor: c.cardBgAlt }]}
                                 />
                                 <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>({habit.duration})</Text>
+                                <View style={[styles.momentBadgePill, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
+                                  <Text style={[t.micro, { color: c.textSoft, fontSize: 9 }]}>{momentLabel}</Text>
+                                </View>
                               </View>
                             </View>
                           </View>
 
                           {/* Switch Activar/Pausar para el día */}
-                          <View style={{ alignItems: 'center', gap: 2 }}>
+                          <View style={{ alignItems: 'center', gap: 2 }} onStartShouldSetResponder={() => true}>
                             <Text style={[t.micro, { color: isDayActive ? '#70d2a0' : c.textSoft, fontSize: 8.5, fontWeight: '800' }]}>
                               {isDayActive ? 'ACTIVO' : 'PAUSADO'}
                             </Text>
@@ -620,22 +639,7 @@ export default function PlanScreen() {
                         <Text style={[t.body, { color: c.textSoft, fontSize: 11, marginTop: 6, fontStyle: 'italic' }]}>
                           {habit.desc}
                         </Text>
-
-                        {/* Botón para mover de momento fácilmente */}
-                        <View style={[styles.habitFooterRow, { borderTopColor: c.divider }]}>
-                          <Pressable
-                            onPress={() => cycleHabitMoment(habit.id)}
-                            style={[styles.momentSwitchBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
-                          >
-                            <Text style={[t.micro, { color: c.gold, fontSize: 9.5, fontWeight: '700' }]}>
-                              Momento: {momentLabel} (Toca para mover) ↻
-                            </Text>
-                          </Pressable>
-                          <Text style={[t.micro, { color: '#70d2a0', fontSize: 9.5, fontWeight: '700' }]}>
-                            ✓ Guardado
-                          </Text>
-                        </View>
-                      </View>
+                      </Pressable>
                     );
                   })}
                 </View>
@@ -830,6 +834,101 @@ export default function PlanScreen() {
           </View>
         </ScrollView>
       )}
+
+      {/* ========================================================================= */}
+      {/* DRAWER / MODAL: MOVER HÁBITO A OTRO MOMENTO (LONG PRESS)                  */}
+      {/* ========================================================================= */}
+      <Modal
+        visible={moveMomentModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMoveMomentModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContentCard, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: c.divider, paddingBottom: 8 }}>
+              <View>
+                <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>REUBICAR HÁBITO</Text>
+                <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>
+                  {selectedHabitForMove?.title}
+                </Text>
+              </View>
+              <Pressable onPress={() => setMoveMomentModalVisible(false)}>
+                <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>✕ Cerrar</Text>
+              </Pressable>
+            </View>
+
+            <Text style={[t.micro, { color: c.textSoft, fontSize: 11, marginTop: 10 }]}>
+              ¿En qué momento del día deseas ubicar este hábito?
+            </Text>
+
+            <View style={{ gap: 8, marginTop: 12 }}>
+              {/* Opción 1: Mañana */}
+              <Pressable
+                onPress={() => applyMomentChange('mañana')}
+                style={[
+                  styles.momentMoveOptionBtn,
+                  {
+                    borderColor: selectedHabitForMove?.moment === 'mañana' ? c.gold : c.border,
+                    backgroundColor: selectedHabitForMove?.moment === 'mañana' ? c.cardBgAlt : c.cardBg,
+                  },
+                ]}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <Text style={{ fontSize: 20 }}>🌅</Text>
+                  <View>
+                    <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>BLOQUE DE LA MAÑANA</Text>
+                    <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>05:00 AM – 12:00 PM</Text>
+                  </View>
+                </View>
+                <Text style={[t.micro, { color: c.gold, fontWeight: '800' }]}>Seleccionar ›</Text>
+              </Pressable>
+
+              {/* Opción 2: Tarde */}
+              <Pressable
+                onPress={() => applyMomentChange('tarde')}
+                style={[
+                  styles.momentMoveOptionBtn,
+                  {
+                    borderColor: selectedHabitForMove?.moment === 'tarde' ? c.gold : c.border,
+                    backgroundColor: selectedHabitForMove?.moment === 'tarde' ? c.cardBgAlt : c.cardBg,
+                  },
+                ]}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <Text style={{ fontSize: 20 }}>☀️</Text>
+                  <View>
+                    <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>BLOQUE DE LA TARDE</Text>
+                    <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>12:00 PM – 18:00 PM</Text>
+                  </View>
+                </View>
+                <Text style={[t.micro, { color: c.gold, fontWeight: '800' }]}>Seleccionar ›</Text>
+              </Pressable>
+
+              {/* Opción 3: Noche */}
+              <Pressable
+                onPress={() => applyMomentChange('noche')}
+                style={[
+                  styles.momentMoveOptionBtn,
+                  {
+                    borderColor: selectedHabitForMove?.moment === 'noche' ? c.gold : c.border,
+                    backgroundColor: selectedHabitForMove?.moment === 'noche' ? c.cardBgAlt : c.cardBg,
+                  },
+                ]}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <Text style={{ fontSize: 20 }}>🌙</Text>
+                  <View>
+                    <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>BLOQUE DE LA NOCHE</Text>
+                    <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>18:00 PM – 22:00 PM</Text>
+                  </View>
+                </View>
+                <Text style={[t.micro, { color: c.gold, fontWeight: '800' }]}>Seleccionar ›</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* ========================================================================= */}
       {/* MODAL: CREAR NUEVO HÁBITO CON ICONOS VISUALES (UX 40+)                    */}
@@ -1139,19 +1238,19 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: 'bold',
   },
-  habitFooterRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    paddingTop: 8,
-    marginTop: 4,
-  },
-  momentSwitchBtn: {
+  momentBadgePill: {
     borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    borderRadius: 6,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  momentMoveOptionBtn: {
+    borderWidth: 1.5,
+    borderRadius: 16,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   goalCard: {
     borderWidth: 1.5,
