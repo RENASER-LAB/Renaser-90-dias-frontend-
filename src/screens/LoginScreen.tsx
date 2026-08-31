@@ -23,7 +23,7 @@ type Tab = 'login' | 'register';
 
 export default function LoginScreen() {
   const { c, t, mode, toggle } = useTheme();
-  const { rs, isTablet } = useResponsive();
+  const { rs, isTablet, isShort, isSmall, horizontalPadding } = useResponsive();
   const {
     login,
     register,
@@ -212,13 +212,15 @@ export default function LoginScreen() {
     }
   };
 
-  const ringSizes = [rs(210), rs(170), rs(130), rs(90)];
+  const ringSizes = isShort
+    ? [rs(140), rs(115), rs(90), rs(65)]
+    : [rs(190), rs(155), rs(120), rs(85)];
   const ringColors = [c.ring1, c.ring2, c.ring3, c.ring2];
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: c.bg }]}>
       {/* Barra Superior con botón Volver y Toggle de Modo */}
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { paddingHorizontal: horizontalPadding }]}>
         {step !== 'form' ? (
           <Pressable
             hitSlop={12}
@@ -250,14 +252,35 @@ export default function LoginScreen() {
         <ScrollView
           contentContainerStyle={[
             styles.scrollContent,
-            { maxWidth: isTablet ? 480 : undefined, alignSelf: isTablet ? 'center' : 'stretch', width: isTablet ? '100%' : undefined }
+            {
+              paddingHorizontal: horizontalPadding,
+              maxWidth: isTablet ? 460 : undefined,
+              alignSelf: isTablet ? 'center' : 'stretch',
+              width: isTablet ? '100%' : undefined,
+            },
           ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
           {/* Encabezado y Branding de Anillos Renaser */}
-          <View style={styles.heroSection}>
-            <View style={styles.ringContainer}>
+          <View
+            style={[
+              styles.heroSection,
+              {
+                paddingTop: isShort ? 2 : 10,
+                paddingBottom: isShort ? 12 : 20,
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.ringContainer,
+                {
+                  width: isShort ? rs(100) : rs(130),
+                  height: isShort ? rs(100) : rs(130),
+                },
+              ]}
+            >
               {ringSizes.map((size, index) => (
                 <View
                   key={size}
@@ -272,20 +295,51 @@ export default function LoginScreen() {
                   ]}
                 />
               ))}
-              <View style={[styles.iconDiamond, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
+              <View
+                style={[
+                  styles.iconDiamond,
+                  {
+                    borderColor: c.gold,
+                    backgroundColor: c.cardBg,
+                    width: isShort ? 36 : 44,
+                    height: isShort ? 36 : 44,
+                    borderRadius: isShort ? 18 : 22,
+                  },
+                ]}
+              >
                 <Icon
                   name={step === 'otp' ? 'mail' : step === 'forgot' || step === 'forgot_sent' ? 'key' : 'diamond'}
-                  size={rs(20)}
+                  size={isShort ? rs(16) : rs(20)}
                   color={c.gold}
                   strokeWidth={1.2}
                 />
               </View>
             </View>
 
-            <Text style={[t.hero, { color: c.textStrong, marginTop: 16, letterSpacing: 8 }]}>
+            <Text
+              style={[
+                t.hero,
+                {
+                  color: c.textStrong,
+                  marginTop: isShort ? 8 : 16,
+                  letterSpacing: isSmall ? 5 : 8,
+                  fontSize: isShort ? 28 : 34,
+                },
+              ]}
+            >
               RENASER
             </Text>
-            <Text style={[t.micro, { color: c.textSoft, marginTop: 6, letterSpacing: 3.2 }]}>
+            <Text
+              style={[
+                t.micro,
+                {
+                  color: c.textSoft,
+                  marginTop: 4,
+                  letterSpacing: isSmall ? 2 : 3.2,
+                  fontSize: isSmall ? 9 : 10,
+                },
+              ]}
+            >
               {step === 'otp'
                 ? 'CONFIRMACIÓN DE CORREO'
                 : step === 'forgot' || step === 'forgot_sent'

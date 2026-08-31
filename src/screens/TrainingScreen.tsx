@@ -16,20 +16,31 @@ const DIMENSIONES: { icon: IconName; title: string; sub: string }[] = [
 
 export default function TrainingScreen() {
   const { c, t } = useTheme();
-  const { rs, isTablet } = useResponsive();
+  const { rs, isTablet, horizontalPadding } = useResponsive();
   const medallionSize = rs(42);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
       <ScreenHeader title="TRAINING" right="dots" />
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={{ alignItems: 'center', paddingTop: 22 }}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingHorizontal: horizontalPadding,
+            maxWidth: isTablet ? 560 : undefined,
+            alignSelf: isTablet ? 'center' : 'stretch',
+            width: isTablet ? '100%' : undefined,
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={{ alignItems: 'center', paddingTop: 14 }}>
           <Text style={[t.sectionTitle, { color: c.text }]}>TU ENTRENAMIENTO INTEGRAL</Text>
-          <Text style={[t.sectionSub, { color: c.micro, marginTop: 7 }]}>Cinco dimensiones. Un sistema.</Text>
+          <Text style={[t.sectionSub, { color: c.micro, marginTop: 6 }]}>Cinco dimensiones. Un sistema.</Text>
         </View>
 
-        <View style={{ flex: 1, gap: 9, paddingVertical: 16, maxWidth: isTablet ? 560 : undefined, alignSelf: isTablet ? 'center' : 'stretch', width: isTablet ? '100%' : undefined }}>
+        <View style={{ flex: 1, gap: 10, paddingVertical: 14 }}>
           {DIMENSIONES.map(d => (
             <Pressable key={d.title} style={[styles.card, { borderColor: c.border, backgroundColor: c.cardBg }]}>
               <View style={[styles.medallion, { borderColor: c.gold, width: medallionSize, height: medallionSize, borderRadius: medallionSize / 2 }]}>
@@ -49,7 +60,7 @@ export default function TrainingScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { flexGrow: 1, paddingHorizontal: 24 },
-  card: { flex: 1, minHeight: 78, borderWidth: 1, borderRadius: 18, paddingHorizontal: 17, flexDirection: 'row', alignItems: 'center', gap: 15 },
+  content: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 24 },
+  card: { flex: 1, minHeight: 74, borderWidth: 1, borderRadius: 18, paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 14 },
   medallion: { alignItems: 'center', justifyContent: 'center', opacity: 0.95 },
 });

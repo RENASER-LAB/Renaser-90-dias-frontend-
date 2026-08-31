@@ -20,7 +20,7 @@ const FASES = [
 
 export default function PlanScreen() {
   const { c, t } = useTheme();
-  const { rs } = useResponsive();
+  const { rs, isTablet, horizontalPadding } = useResponsive();
   const gaugeW = rs(228);
   const gaugeH = rs(120);
 
@@ -28,10 +28,21 @@ export default function PlanScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
       <ScreenHeader title="PLAN" right="dots" />
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={{ alignItems: 'center', paddingTop: 20 }}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingHorizontal: horizontalPadding,
+            maxWidth: isTablet ? 560 : undefined,
+            alignSelf: isTablet ? 'center' : 'stretch',
+            width: isTablet ? '100%' : undefined,
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={{ alignItems: 'center', paddingTop: 14 }}>
           <Text style={[t.sectionTitle, { color: c.text }]}>TU MAPA DE LOS PRÓXIMOS 90 DÍAS</Text>
-          <Text style={[t.sectionSub, { color: c.micro, marginTop: 7 }]}>Enfocado. Estratégico. Real.</Text>
+          <Text style={[t.sectionSub, { color: c.micro, marginTop: 6 }]}>Enfocado. Estratégico. Real.</Text>
         </View>
 
         <View style={[styles.gauge, { height: gaugeH + 8 }]}>
@@ -51,7 +62,7 @@ export default function PlanScreen() {
 
         <View style={[styles.section, { borderTopColor: c.divider }]}>
           <MicroLabel>FASE ACTUAL</MicroLabel>
-          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 12, marginTop: 11 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 12, marginTop: 10 }}>
             <Text style={[t.small, { color: c.gold }]}>01</Text>
             <Text style={[t.cardTitle, { color: c.text, flex: 1 }]}>Fundamentación</Text>
             <Text style={[t.small, { color: c.micro }]}>Días 1–30</Text>
@@ -65,7 +76,7 @@ export default function PlanScreen() {
           </View>
         </View>
 
-        <View style={[styles.section, { borderTopColor: c.divider, flex: 1, justifyContent: 'flex-end', paddingBottom: 14 }]}>
+        <View style={[styles.section, { borderTopColor: c.divider, flex: 1, justifyContent: 'flex-end', paddingBottom: 24 }]}>
           <MicroLabel>ARQUITECTURA DE TIEMPO</MicroLabel>
           <Svg width="100%" height={74} viewBox="0 0 300 74" style={{ marginVertical: 10 }}>
             <Path d="M6 62 L64 50 L122 54 L180 34 L238 32 L294 8" stroke={c.gold} strokeWidth={1.6} strokeLinecap="round" fill="none" />
@@ -77,7 +88,7 @@ export default function PlanScreen() {
             {FASES.map((p, i) => (
               <View key={p.n} style={{ flex: 1, alignItems: i === 0 ? 'flex-start' : i === 1 ? 'center' : 'flex-end' }}>
                 <Text style={[t.micro, { color: c.micro }]}>{p.d}</Text>
-                <Text style={[t.micro, { color: c.textSoft, marginTop: 5 }]}>{p.n}</Text>
+                <Text style={[t.micro, { color: c.textSoft, marginTop: 4 }]}>{p.n}</Text>
               </View>
             ))}
           </View>
@@ -88,10 +99,10 @@ export default function PlanScreen() {
 }
 
 const styles = StyleSheet.create({
-  content: { flexGrow: 1, paddingHorizontal: 26 },
+  content: { flexGrow: 1, paddingHorizontal: 24 },
   gauge: { height: 128, alignItems: 'center', justifyContent: 'center', marginVertical: 6 },
   gaugeCenter: { position: 'absolute', top: 44, alignItems: 'center' },
   gaugeLeft: { position: 'absolute', left: 8, bottom: 8 },
   gaugeRight: { position: 'absolute', right: 8, bottom: 8 },
-  section: { borderTopWidth: 1, marginTop: 16, paddingTop: 16 },
+  section: { borderTopWidth: 1, marginTop: 14, paddingTop: 14 },
 });

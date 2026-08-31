@@ -20,7 +20,7 @@ const METRICAS = [
 
 export default function ComunidadScreen() {
   const { c, t } = useTheme();
-  const { rs } = useResponsive();
+  const { rs, isTablet, horizontalPadding } = useResponsive();
   const mentorPhoto = rs(50);
   const avatarSize = rs(42);
   const medallionSize = rs(40);
@@ -29,21 +29,32 @@ export default function ComunidadScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
       <ScreenHeader title="COMUNIDAD" right="info" />
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <View style={{ alignItems: 'center', paddingTop: 20 }}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingHorizontal: horizontalPadding,
+            maxWidth: isTablet ? 560 : undefined,
+            alignSelf: isTablet ? 'center' : 'stretch',
+            width: isTablet ? '100%' : undefined,
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={{ alignItems: 'center', paddingTop: 14 }}>
           <Text style={[t.sectionTitle, { color: c.text, lineHeight: 21, textAlign: "center" }]}>
             TU TRIBU. TU SOPORTE.{"\n"}TU LEGADO.
           </Text>
         </View>
 
-        <View style={{ paddingTop: 18 }}>
+        <View style={{ paddingTop: 16 }}>
           <MicroLabel>MENTOR</MicroLabel>
           <View style={[styles.mentor, { borderColor: c.border, backgroundColor: c.cardBg }]}>
             <Placeholder label="FOTO" style={{ width: mentorPhoto, height: mentorPhoto, borderRadius: mentorPhoto / 2 }} />
             <View style={{ flex: 1 }}>
               <Text style={[t.cardTitle, { color: c.textStrong }]}>Sebastián Arango</Text>
-              <Text style={[t.small, { color: c.micro, marginTop: 3 }]}>Mentor de Alto Rendimiento</Text>
-              <Text style={[t.small, { color: c.textSoft, marginTop: 8, fontStyle: "italic", lineHeight: 18 }]}>
+              <Text style={[t.small, { color: c.micro, marginTop: 2 }]}>Mentor de Alto Rendimiento</Text>
+              <Text style={[t.small, { color: c.textSoft, marginTop: 6, fontStyle: "italic", lineHeight: 18 }]}>
                 “Revisión de tu plan de esta semana.{"\n"}¿Agendamos tu llamada?”
               </Text>
             </View>
@@ -53,7 +64,7 @@ export default function ComunidadScreen() {
 
         <View style={[styles.section, { borderTopColor: c.divider }]}>
           <MicroLabel>TRIBU PRIVADA</MicroLabel>
-          <View style={{ flexDirection: 'row', gap: 10, marginTop: 13 }}>
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
             {[0, 1, 2, 3].map(i => <Placeholder key={i} style={{ width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 }} />)}
             <View style={[styles.more, { width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2, borderColor: c.border, backgroundColor: c.cardBg }]}>
               <Text style={[t.small, { color: c.textSoft }]}>+12</Text>
@@ -63,9 +74,9 @@ export default function ComunidadScreen() {
 
         <View style={[styles.section, { borderTopColor: c.divider }]}>
           <MicroLabel>TU SOPORTE</MicroLabel>
-          <View style={{ flexDirection: 'row', marginTop: 15 }}>
+          <View style={{ flexDirection: 'row', marginTop: 14 }}>
             {SOPORTE.map(s => (
-              <View key={s.label} style={{ flex: 1, alignItems: 'center', gap: 10 }}>
+              <View key={s.label} style={{ flex: 1, alignItems: 'center', gap: 8 }}>
                 <View style={[styles.medallion, { width: medallionSize, height: medallionSize, borderRadius: medallionSize / 2, borderColor: c.gold }]}>
                   <Icon name={s.icon} size={rs(19)} color={c.gold} strokeWidth={1.05} />
                 </View>
@@ -75,13 +86,13 @@ export default function ComunidadScreen() {
           </View>
         </View>
 
-        <View style={[styles.section, { borderTopColor: c.divider, flex: 1, justifyContent: 'flex-end', paddingBottom: 14 }]}>
+        <View style={[styles.section, { borderTopColor: c.divider, flex: 1, justifyContent: 'flex-end', paddingBottom: 24 }]}>
           <MicroLabel>INTERACCIONES CLAVE</MicroLabel>
-          <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
             {METRICAS.map(m => (
               <View key={m.n} style={[styles.metric, { borderColor: c.border, backgroundColor: c.cardBg }]}>
                 <Text style={[t.metric, { color: c.textStrong, fontSize: 22 }]}>{m.n}</Text>
-                <Text style={[t.micro, { color: c.micro, letterSpacing: 0, fontSize: 9, textAlign: "center", marginTop: 6, lineHeight: 13 }]}>{m.label}</Text>
+                <Text style={[t.micro, { color: c.micro, letterSpacing: 0, fontSize: 9, textAlign: "center", marginTop: 4, lineHeight: 13 }]}>{m.label}</Text>
               </View>
             ))}
           </View>
@@ -93,9 +104,9 @@ export default function ComunidadScreen() {
 
 const styles = StyleSheet.create({
   content: { flexGrow: 1, paddingHorizontal: 24 },
-  mentor: { marginTop: 11, borderWidth: 1, borderRadius: 16, padding: 15, flexDirection: 'row', gap: 14, alignItems: 'center' },
-  section: { borderTopWidth: 1, marginTop: 18, paddingTop: 16 },
+  mentor: { marginTop: 10, borderWidth: 1, borderRadius: 16, padding: 14, flexDirection: 'row', gap: 14, alignItems: 'center' },
+  section: { borderTopWidth: 1, marginTop: 16, paddingTop: 14 },
   more: { borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   medallion: { borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  metric: { flex: 1, borderWidth: 1, borderRadius: 14, paddingVertical: 13, alignItems: 'center' },
+  metric: { flex: 1, borderWidth: 1, borderRadius: 14, paddingVertical: 12, alignItems: 'center' },
 });
