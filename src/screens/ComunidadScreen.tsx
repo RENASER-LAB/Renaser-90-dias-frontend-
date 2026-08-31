@@ -115,6 +115,52 @@ export interface LeaderboardUser {
 }
 
 // =========================================================================
+// TIPOS: ATENCIÓN PERSONALIZADA & CHATS (TIPO WHATSAPP)
+// =========================================================================
+export type ChatMessageType = 'text' | 'audio' | 'image_grid' | 'video' | 'gif';
+
+export interface ChatMessage {
+  id: string;
+  sender: string;
+  senderRole?: string;
+  avatar: string;
+  isMe: boolean;
+  time: string;
+  type: ChatMessageType;
+  text?: string;
+  audioDuration?: string;
+  mediaList?: string[];
+  gifTitle?: string;
+  gifIcon?: string;
+  status?: 'sent' | 'delivered' | 'read';
+}
+
+export interface ChatConversation {
+  id: string;
+  type: 'celula' | 'direct' | 'global';
+  title: string;
+  subtitle: string;
+  avatar: string;
+  lastMessage: string;
+  lastTime: string;
+  unreadCount: number;
+  membersCount?: number;
+  isOnline?: boolean;
+  messages: ChatMessage[];
+}
+
+export interface GroupMember {
+  id: string;
+  name: string;
+  role: string;
+  avatar: string;
+  badge: string;
+  streakDays: number;
+  cell: string;
+  focus: string;
+}
+
+// =========================================================================
 // DATOS ESTÁTICOS: CURSOS
 // =========================================================================
 const COURSES_DATA: CourseItem[] = [
@@ -357,6 +403,203 @@ const REACTION_USERS_MOCK: ReactionUser[] = [
   { id: 'r4', name: 'Marcos V.', role: 'Célula 03', avatar: '👤', type: 'dislike' },
 ];
 
+// =========================================================================
+// DATOS ESTÁTICOS: CHATS & INTEGRANTES DE CÉLULA (TIPO WHATSAPP)
+// =========================================================================
+const GROUP_MEMBERS: GroupMember[] = [
+  {
+    id: 'm1',
+    name: 'Sebastián Arango',
+    role: 'Mentor de Alto Rendimiento',
+    avatar: '🦅',
+    badge: 'MENTOR',
+    streakDays: 90,
+    cell: 'Célula 07',
+    focus: 'Gestión Somática & Negocios de Alto Valor',
+  },
+  {
+    id: 'm2',
+    name: 'María Alejandra',
+    role: 'Alumna de Alto Rendimiento',
+    avatar: '👩‍💼',
+    badge: 'ALUMNA',
+    streakDays: 37,
+    cell: 'Célula 07',
+    focus: 'Bloque Deep Work 90m & Ventas',
+  },
+  {
+    id: 'm3',
+    name: 'Carlos Méndez',
+    role: 'Graduado Generación 04',
+    avatar: '👨‍💼',
+    badge: 'GRADUADO',
+    streakDays: 90,
+    cell: 'Célula 04',
+    focus: 'Bioquímica, Sueño Profundo & Flujo de Caja',
+  },
+  {
+    id: 'm4',
+    name: 'Dra. Valeria Ruiz',
+    role: 'Directora Médica & Cirujana',
+    avatar: '👩‍⚕️',
+    badge: 'GRADUADA',
+    streakDays: 90,
+    cell: 'Célula 05',
+    focus: 'Respiración Diafragmática & Regulación Cortisol',
+  },
+];
+
+const INITIAL_CONVERSATIONS: ChatConversation[] = [
+  {
+    id: 'conv_celula',
+    type: 'celula',
+    title: 'Célula Fénix 07',
+    subtitle: '16 Miembros · Célula de Aceleración',
+    avatar: '👥',
+    lastMessage: 'María: ¡Completé el bloque 90m!',
+    lastTime: '08:30 AM',
+    unreadCount: 4,
+    membersCount: 16,
+    messages: [
+      {
+        id: 'msg_c1',
+        sender: 'Sebastián Arango',
+        senderRole: 'Mentor',
+        avatar: '🦅',
+        isMe: false,
+        time: '07:30 AM',
+        type: 'text',
+        text: 'Buenos días Célula 07. Hoy es día de Bloque de Poder innegociable. Reporten su victoria antes de las 12:00.',
+        status: 'read',
+      },
+      {
+        id: 'msg_c2',
+        sender: 'María Alejandra',
+        senderRole: 'Alumna',
+        avatar: '👩‍💼',
+        isMe: false,
+        time: '08:15 AM',
+        type: 'image_grid',
+        text: '¡90 minutos cerrados y 2 contratos firmados! 💪',
+        mediaList: ['📷 Registro_05AM.png', '📷 Contrato_Firmado.png'],
+        status: 'read',
+      },
+      {
+        id: 'msg_c3',
+        sender: 'Kelin Arango',
+        avatar: '🦅',
+        isMe: true,
+        time: '08:22 AM',
+        type: 'text',
+        text: '¡Impresionante María! Yo acabo de terminar mi hidratación alcalina y voy por mis llamadas.',
+        status: 'read',
+      },
+    ],
+  },
+  {
+    id: 'conv_mentor',
+    type: 'direct',
+    title: 'Sebastián Arango',
+    subtitle: 'Mentor de Alto Rendimiento · 1 a 1',
+    avatar: '🦅',
+    lastMessage: 'Revisa las métricas que te envié.',
+    lastTime: '11:42 AM',
+    unreadCount: 1,
+    isOnline: true,
+    messages: [
+      {
+        id: 'msg_m1',
+        sender: 'Sebastián Arango',
+        senderRole: 'Mentor',
+        avatar: '🦅',
+        isMe: false,
+        time: '10:30 AM',
+        type: 'text',
+        text: 'Kelin, excelente ejecución en el Bloque de Poder de 90 minutos de esta mañana. ¿Cómo sentiste la regulación del cortisol al no tocar el celular?',
+        status: 'read',
+      },
+      {
+        id: 'msg_m2',
+        sender: 'Kelin Arango',
+        avatar: '🦅',
+        isMe: true,
+        time: '10:32 AM',
+        type: 'text',
+        text: 'Mucho más enfocada Sebastián. Me costó los primeros 15 minutos pero logré cerrar 2 propuestas por $6,500 USD sin dispersión.',
+        status: 'read',
+      },
+      {
+        id: 'msg_m3',
+        sender: 'Sebastián Arango',
+        senderRole: 'Mentor',
+        avatar: '🦅',
+        isMe: false,
+        time: '10:35 AM',
+        type: 'audio',
+        audioDuration: '0:42',
+        text: 'Nota de voz de Sebastián',
+        status: 'read',
+      },
+    ],
+  },
+  {
+    id: 'conv_carlos',
+    type: 'direct',
+    title: 'Carlos Méndez',
+    subtitle: 'Graduado Gen 04 · CEO',
+    avatar: '👨‍💼',
+    lastMessage: '¡Felicitaciones por tu bloque!',
+    lastTime: 'Ayer',
+    unreadCount: 0,
+    isOnline: false,
+    messages: [
+      {
+        id: 'msg_cm1',
+        sender: 'Carlos Méndez',
+        avatar: '👨‍💼',
+        isMe: false,
+        time: 'Ayer',
+        type: 'text',
+        text: '¡Hermano, felicitaciones por tu bloque de 90m de hoy!',
+        status: 'read',
+      },
+    ],
+  },
+  {
+    id: 'conv_global',
+    type: 'global',
+    title: 'Tribu Global RENASER',
+    subtitle: '148 Alumnos & Mentores',
+    avatar: '🌐',
+    lastMessage: 'Sebastián: Recuerden cierre de Fase 2 hoy.',
+    lastTime: '07:15 AM',
+    unreadCount: 12,
+    membersCount: 148,
+    messages: [
+      {
+        id: 'msg_g1',
+        sender: 'Sebastián Arango',
+        senderRole: 'Mentor',
+        avatar: '🦅',
+        isMe: false,
+        time: '07:15 AM',
+        type: 'text',
+        text: 'Atención a toda la tribu: Hoy a las 20:00 cerramos la Fase 2 de Aceleración. Preparen su reporte somático.',
+        status: 'read',
+      },
+    ],
+  },
+];
+
+const GIF_OPTIONS = [
+  { icon: '🔥', title: 'VICTORIA' },
+  { icon: '👑', title: 'REY SOMÁTICO' },
+  { icon: '💪', title: 'FUERZA' },
+  { icon: '🧘', title: 'PAZ TOTAL' },
+  { icon: '⚡', title: 'ENERGÍA' },
+  { icon: '🎯', title: 'FOCO 100%' },
+];
+
 const SOPORTE: { icon: IconName; label: string }[] = [
   { icon: 'clock', label: 'Eventos &\nExperiencias' },
   { icon: 'stack', label: 'Recursos\nExclusivos' },
@@ -387,6 +630,17 @@ export default function ComunidadScreen() {
   const [inEventosExperiencias, setInEventosExperiencias] = useState(false);
   const [eventosTab, setEventosTab] = useState<'muro' | 'testimonios' | 'ranking'>('muro');
 
+  // Sub-módulo: Atención Personalizada & Chats tipo WhatsApp
+  const [inAtencionPersonalizada, setInAtencionPersonalizada] = useState(false);
+  const [chatCategory, setChatCategory] = useState<'celula' | 'miembros' | 'global'>('celula');
+  const [conversations, setConversations] = useState<ChatConversation[]>(INITIAL_CONVERSATIONS);
+  const [activeChat, setActiveChat] = useState<ChatConversation | null>(null);
+  const [groupInfoVisible, setGroupInfoVisible] = useState(false);
+  const [selectedMemberProfile, setSelectedMemberProfile] = useState<GroupMember | null>(null);
+  const [chatInputText, setChatInputText] = useState('');
+  const [gifSelectorVisible, setGifSelectorVisible] = useState(false);
+  const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
+
   // Estados del Muro Social
   const [posts, setPosts] = useState<PostItem[]>(INITIAL_POSTS);
   const [expandedPosts, setExpandedPosts] = useState<Record<string, boolean>>({});
@@ -411,6 +665,26 @@ export default function ComunidadScreen() {
   // GESTOS TÁCTILES DEL SISTEMA (BACKHANDLER)
   // =========================================================================
   useSystemBackHandler(() => {
+    if (selectedMemberProfile !== null) {
+      setSelectedMemberProfile(null);
+      return true;
+    }
+    if (groupInfoVisible) {
+      setGroupInfoVisible(false);
+      return true;
+    }
+    if (gifSelectorVisible) {
+      setGifSelectorVisible(false);
+      return true;
+    }
+    if (activeChat !== null) {
+      setActiveChat(null);
+      return true;
+    }
+    if (inAtencionPersonalizada) {
+      setInAtencionPersonalizada(false);
+      return true;
+    }
     if (reactionsModalVisible) {
       setReactionsModalVisible(false);
       return true;
@@ -436,21 +710,130 @@ export default function ComunidadScreen() {
       return true;
     }
     return false;
-  }, inEventosExperiencias || inExclusiveResources || selectedCourse !== null || fullScreenLesson !== null || createPostModalVisible || reactionsModalVisible);
+  }, inAtencionPersonalizada || inEventosExperiencias || inExclusiveResources || selectedCourse !== null || fullScreenLesson !== null || createPostModalVisible || reactionsModalVisible || activeChat !== null || groupInfoVisible || selectedMemberProfile !== null);
 
   // =========================================================================
-  // HANDLERS
+  // HANDLERS DE CHAT TIPO WHATSAPP
   // =========================================================================
   const handleSoportePress = (label: string) => {
-    if (label.includes('Eventos')) {
+    if (label.includes('Atención')) {
+      setInAtencionPersonalizada(true);
+    } else if (label.includes('Eventos')) {
       setInEventosExperiencias(true);
     } else if (label.includes('Recursos')) {
       setInExclusiveResources(true);
-    } else {
-      Alert.alert('Atención Personalizada', 'Abriendo canal de soporte prioritario 1 a 1.');
     }
   };
 
+  const handleSendChatMessage = (
+    type: ChatMessageType = 'text',
+    extra?: { text?: string; mediaList?: string[]; gifTitle?: string; gifIcon?: string }
+  ) => {
+    if (!activeChat) return;
+
+    let newMsg: ChatMessage;
+    const nowTime = 'Justo ahora';
+
+    if (type === 'text') {
+      const text = chatInputText.trim();
+      if (!text) return;
+      newMsg = {
+        id: `msg_${Date.now()}`,
+        sender: 'Kelin Arango',
+        avatar: '🦅',
+        isMe: true,
+        time: nowTime,
+        type: 'text',
+        text: text,
+        status: 'read',
+      };
+      setChatInputText('');
+    } else if (type === 'audio') {
+      newMsg = {
+        id: `msg_${Date.now()}`,
+        sender: 'Kelin Arango',
+        avatar: '🦅',
+        isMe: true,
+        time: nowTime,
+        type: 'audio',
+        audioDuration: '0:28',
+        text: 'Nota de voz enviada',
+        status: 'read',
+      };
+    } else if (type === 'gif') {
+      newMsg = {
+        id: `msg_${Date.now()}`,
+        sender: 'Kelin Arango',
+        avatar: '🦅',
+        isMe: true,
+        time: nowTime,
+        type: 'gif',
+        gifTitle: extra?.gifTitle || 'VICTORIA',
+        gifIcon: extra?.gifIcon || '🔥',
+        status: 'read',
+      };
+      setGifSelectorVisible(false);
+    } else if (type === 'image_grid') {
+      newMsg = {
+        id: `msg_${Date.now()}`,
+        sender: 'Kelin Arango',
+        avatar: '🦅',
+        isMe: true,
+        time: nowTime,
+        type: 'image_grid',
+        text: extra?.text || 'Evidencia fotográfica adjunta',
+        mediaList: extra?.mediaList || ['📷 Evidencia_1.png', '📷 Evidencia_2.png'],
+        status: 'read',
+      };
+    } else {
+      newMsg = {
+        id: `msg_${Date.now()}`,
+        sender: 'Kelin Arango',
+        avatar: '🦅',
+        isMe: true,
+        time: nowTime,
+        type: 'video',
+        text: '▶ Video de sesión somática',
+        status: 'read',
+      };
+    }
+
+    const updated = {
+      ...activeChat,
+      messages: [...activeChat.messages, newMsg],
+      lastMessage: newMsg.text || 'Elemento multimedia',
+      lastTime: nowTime,
+    };
+
+    setActiveChat(updated);
+    setConversations(prev => prev.map(cItem => (cItem.id === updated.id ? updated : cItem)));
+  };
+
+  const handleStartDirectChat = (member: GroupMember) => {
+    setSelectedMemberProfile(null);
+    setGroupInfoVisible(false);
+
+    const existing = conversations.find(cItem => cItem.title === member.name);
+    if (existing) {
+      setActiveChat(existing);
+    } else {
+      const newConv: ChatConversation = {
+        id: `conv_${member.id}`,
+        type: 'direct',
+        title: member.name,
+        subtitle: `${member.role} · 1 a 1`,
+        avatar: member.avatar,
+        lastMessage: 'Inicia tu conversación con este integrante',
+        lastTime: 'Ahora',
+        unreadCount: 0,
+        messages: [],
+      };
+      setConversations(prev => [newConv, ...prev]);
+      setActiveChat(newConv);
+    }
+  };
+
+  // Handlers de Muro
   const handleToggleLike = (postId: string) => {
     setPosts(prev =>
       prev.map(p => {
@@ -591,9 +974,10 @@ export default function ComunidadScreen() {
     Alert.alert('¡Publicado con Éxito! 🦅', 'Tu victoria ha sido compartida con la tribu.');
   };
 
-  const filteredReactions = REACTION_USERS_MOCK.filter(r => {
-    if (reactionFilter === 'like') return r.type === 'like';
-    if (reactionFilter === 'dislike') return r.type === 'dislike';
+  const filteredConversations = conversations.filter(conv => {
+    if (chatCategory === 'celula') return conv.type === 'celula';
+    if (chatCategory === 'miembros') return conv.type === 'direct';
+    if (chatCategory === 'global') return conv.type === 'global';
     return true;
   });
 
@@ -604,7 +988,7 @@ export default function ComunidadScreen() {
       {/* ========================================================================= */}
       {/* VISTA 1: PANTALLA PRINCIPAL DE COMUNIDAD (DISEÑO ORIGINAL LIMPIO)         */}
       {/* ========================================================================= */}
-      {!inExclusiveResources && !inEventosExperiencias && (
+      {!inExclusiveResources && !inEventosExperiencias && !inAtencionPersonalizada && (
         <ScrollView
           contentContainerStyle={[
             styles.content,
@@ -668,8 +1052,8 @@ export default function ComunidadScreen() {
                         width: medallionSize,
                         height: medallionSize,
                         borderRadius: medallionSize / 2,
-                        borderColor: s.label.includes('Eventos') || s.label.includes('Recursos') ? c.gold : c.border,
-                        backgroundColor: s.label.includes('Eventos') || s.label.includes('Recursos') ? c.cardBgAlt : c.cardBg,
+                        borderColor: s.label.includes('Atención') || s.label.includes('Eventos') || s.label.includes('Recursos') ? c.gold : c.border,
+                        backgroundColor: s.label.includes('Atención') || s.label.includes('Eventos') || s.label.includes('Recursos') ? c.cardBgAlt : c.cardBg,
                       },
                     ]}
                   >
@@ -700,9 +1084,9 @@ export default function ComunidadScreen() {
       )}
 
       {/* ========================================================================= */}
-      {/* VISTA 2: SUB-MÓDULO: EVENTOS & EXPERIENCIAS (MURO, TESTIMONIOS, RANKING 3D)*/}
+      {/* VISTA 2: SUB-MÓDULO: ATENCIÓN PERSONALIZADA & CHATS TIPO WHATSAPP         */}
       {/* ========================================================================= */}
-      {inEventosExperiencias && (
+      {inAtencionPersonalizada && activeChat === null && (
         <ScrollView
           contentContainerStyle={[
             styles.content,
@@ -715,10 +1099,10 @@ export default function ComunidadScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-          {/* Top Bar para volver a Comunidad */}
+          {/* Top Bar Volver a Comunidad */}
           <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
             <Pressable
-              onPress={() => setInEventosExperiencias(false)}
+              onPress={() => setInAtencionPersonalizada(false)}
               style={styles.backBtnRow}
               hitSlop={8}
             >
@@ -730,649 +1114,384 @@ export default function ComunidadScreen() {
 
             <View style={[styles.categoryPillBadge, { borderColor: c.borderStrong, backgroundColor: c.cardBgAlt }]}>
               <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 9.5 }]}>
-                EVENTOS & EXPERIENCIAS
+                ATENCIÓN & CHATS
               </Text>
             </View>
           </View>
 
-          {/* Selector de las 3 Pestañas Principales */}
+          {/* Selector de las 3 Categorías de Chat (Global, Célula, Miembros 1 a 1) */}
           <View style={[styles.tabsRow, { borderColor: c.border, backgroundColor: c.cardBg }]}>
             <Pressable
-              onPress={() => setEventosTab('muro')}
-              style={[
-                styles.tabBtn,
-                eventosTab === 'muro' && { backgroundColor: c.gold },
-              ]}
+              onPress={() => setChatCategory('celula')}
+              style={[styles.tabBtn, chatCategory === 'celula' && { backgroundColor: c.gold }]}
             >
-              <Text
-                style={[
-                  t.micro,
-                  {
-                    color: eventosTab === 'muro' ? '#1E1B18' : c.textSoft,
-                    fontWeight: '700',
-                    fontSize: 10,
-                  },
-                ]}
-              >
-                📢 MURO
+              <Text style={[t.micro, { color: chatCategory === 'celula' ? '#1E1B18' : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
+                👥 CÉLULA
               </Text>
             </Pressable>
 
             <Pressable
-              onPress={() => setEventosTab('testimonios')}
-              style={[
-                styles.tabBtn,
-                eventosTab === 'testimonios' && { backgroundColor: c.gold },
-              ]}
+              onPress={() => setChatCategory('miembros')}
+              style={[styles.tabBtn, chatCategory === 'miembros' && { backgroundColor: c.gold }]}
             >
-              <Text
-                style={[
-                  t.micro,
-                  {
-                    color: eventosTab === 'testimonios' ? '#1E1B18' : c.textSoft,
-                    fontWeight: '700',
-                    fontSize: 10,
-                  },
-                ]}
-              >
-                ⭐ TESTIMONIOS
+              <Text style={[t.micro, { color: chatCategory === 'miembros' ? '#1E1B18' : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
+                💬 DIRECTOS
               </Text>
             </Pressable>
 
             <Pressable
-              onPress={() => setEventosTab('ranking')}
-              style={[
-                styles.tabBtn,
-                eventosTab === 'ranking' && { backgroundColor: c.gold },
-              ]}
+              onPress={() => setChatCategory('global')}
+              style={[styles.tabBtn, chatCategory === 'global' && { backgroundColor: c.gold }]}
             >
-              <Text
-                style={[
-                  t.micro,
-                  {
-                    color: eventosTab === 'ranking' ? '#1E1B18' : c.textSoft,
-                    fontWeight: '700',
-                    fontSize: 10,
-                  },
-                ]}
-              >
-                🏆 RANKING 3D
+              <Text style={[t.micro, { color: chatCategory === 'global' ? '#1E1B18' : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
+                🌐 GLOBAL
               </Text>
             </Pressable>
           </View>
 
-          {/* ===================================================================== */}
-          {/* PESTAÑA 1: MURO SOCIAL DE LA TRIBU                                    */}
-          {/* ===================================================================== */}
-          {eventosTab === 'muro' && (
-            <View style={{ gap: 14, paddingTop: 10, paddingBottom: 28 }}>
-              {/* Botón que Abre la Ventana Externa de Publicación */}
+          {/* Lista de Conversaciones Activas */}
+          <View style={{ gap: 10, paddingTop: 12, paddingBottom: 28 }}>
+            {filteredConversations.map(conv => (
               <Pressable
-                onPress={() => setCreatePostModalVisible(true)}
-                style={[styles.createPostBar, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}
+                key={conv.id}
+                onPress={() => setActiveChat(conv)}
+                style={[
+                  styles.chatConvCard,
+                  {
+                    borderColor: conv.type === 'celula' ? c.gold : c.border,
+                    backgroundColor: conv.type === 'celula' ? c.cardBgAlt : c.cardBg,
+                  },
+                ]}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-                  <View style={[styles.avatarCircle, { borderColor: c.gold, backgroundColor: c.bg }]}>
-                    <Text style={{ fontSize: 13 }}>🦅</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[t.body, { color: c.textStrong, fontSize: 12.5, fontWeight: '600' }]}>
-                      ¿Qué conquistaste hoy, Kelin?
-                    </Text>
-                    <Text style={[t.micro, { color: c.gold, fontSize: 10 }]}>
-                      Publicación sin límite de caracteres ›
-                    </Text>
-                  </View>
+                <View style={[styles.convAvatarBox, { borderColor: c.gold, backgroundColor: c.bg }]}>
+                  <Text style={{ fontSize: 18 }}>{conv.avatar}</Text>
+                  {conv.isOnline && <View style={styles.onlineBadgeDot} />}
                 </View>
-                <View style={[styles.plusBadge, { backgroundColor: c.gold }]}>
-                  <Text style={{ color: '#1E1B18', fontWeight: '900', fontSize: 14 }}>+</Text>
+
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>{conv.title}</Text>
+                    <Text style={[t.micro, { color: c.gold, fontSize: 9.5, fontWeight: '700' }]}>{conv.lastTime}</Text>
+                  </View>
+                  <Text numberOfLines={1} style={[t.body, { color: c.textSoft, fontSize: 11.5, marginTop: 2 }]}>
+                    {conv.lastMessage}
+                  </Text>
+                  <Text style={[t.micro, { color: c.micro, fontSize: 9.5, marginTop: 1 }]}>
+                    {conv.subtitle}
+                  </Text>
                 </View>
+
+                {conv.unreadCount > 0 && (
+                  <View style={[styles.unreadBadgePill, { backgroundColor: c.gold }]}>
+                    <Text style={{ color: '#1E1B18', fontWeight: '900', fontSize: 9.5 }}>{conv.unreadCount}</Text>
+                  </View>
+                )}
               </Pressable>
+            ))}
+          </View>
+        </ScrollView>
+      )}
 
-              {/* Lista de Publicaciones */}
-              {posts.map(post => {
-                const isExpanded = expandedPosts[post.id];
-                const commentsVisible = openComments[post.id];
+      {/* ========================================================================= */}
+      {/* VISTA 3: SALA DE CHAT ACTIVA (TIPO WHATSAPP)                              */}
+      {/* ========================================================================= */}
+      {inAtencionPersonalizada && activeChat !== null && !groupInfoVisible && (
+        <View style={{ flex: 1 }}>
+          {/* Header del Chat */}
+          <View style={[styles.chatRoomHeader, { borderBottomColor: c.divider, backgroundColor: c.cardBg }]}>
+            <Pressable onPress={() => setActiveChat(null)} hitSlop={8} style={{ paddingRight: 6 }}>
+              <Icon name="arrowLeft" size={16} color={c.gold} />
+            </Pressable>
 
-                return (
+            <Pressable
+              onPress={() => setGroupInfoVisible(true)}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}
+            >
+              <View style={[styles.avatarCircle, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+                <Text style={{ fontSize: 14 }}>{activeChat.avatar}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text numberOfLines={1} style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>
+                  {activeChat.title}
+                </Text>
+                <Text style={[t.micro, { color: '#70d2a0', fontSize: 9.5 }]}>
+                  {activeChat.type === 'celula' ? '16 miembros · Toca para ver info ℹ️' : '● En línea'}
+                </Text>
+              </View>
+            </Pressable>
+
+            <Pressable
+              onPress={() => setGroupInfoVisible(true)}
+              style={[styles.infoBtnPill, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}
+            >
+              <Text style={[t.micro, { color: c.gold, fontWeight: '800', fontSize: 9.5 }]}>ℹ️ INFO</Text>
+            </Pressable>
+          </View>
+
+          {/* Mensajes del Chat */}
+          <ScrollView
+            contentContainerStyle={{ padding: 12, gap: 10 }}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={{ alignItems: 'center', marginVertical: 4 }}>
+              <Text style={[styles.dateDividerPill, { backgroundColor: c.cardBgAlt, color: c.gold, borderColor: c.border }]}>
+                HOY · DÍA 37 DE VERDAD
+              </Text>
+            </View>
+
+            {activeChat.messages.map(msg => (
+              <View
+                key={msg.id}
+                style={[
+                  styles.messageBubbleWrapper,
+                  msg.isMe ? { alignSelf: 'flex-end', alignItems: 'flex-end' } : { alignSelf: 'flex-start', alignItems: 'flex-start' },
+                ]}
+              >
+                {!msg.isMe && (
+                  <Text style={[t.micro, { color: c.gold, fontSize: 9.5, fontWeight: '700', marginBottom: 2, paddingLeft: 4 }]}>
+                    {msg.sender} {msg.senderRole ? `(${msg.senderRole})` : ''}
+                  </Text>
+                )}
+
+                {/* Mensaje de Texto */}
+                {msg.type === 'text' && (
                   <View
-                    key={post.id}
-                    style={[styles.postCard, { borderColor: c.border, backgroundColor: c.cardBg }]}
+                    style={[
+                      styles.chatBubble,
+                      {
+                        backgroundColor: msg.isMe ? c.cardBgAlt : c.cardBg,
+                        borderColor: msg.isMe ? c.gold : c.border,
+                      },
+                    ]}
                   >
-                    {/* Header del Post */}
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                        <View style={[styles.avatarCircle, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-                          <Text style={{ fontSize: 14 }}>{post.avatar}</Text>
-                        </View>
-                        <View>
-                          <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>{post.author}</Text>
-                          <Text style={[t.micro, { color: c.micro, fontSize: 9.5 }]}>
-                            {post.cell} · {post.timeAgo}
-                          </Text>
-                        </View>
-                      </View>
-                      <View style={[styles.dayBadge, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}>
-                        <Text style={[t.micro, { color: c.gold, fontSize: 9.5, fontWeight: '700' }]}>
-                          Día {post.dayStreak}
-                        </Text>
-                      </View>
-                    </View>
+                    <Text style={[t.body, { color: c.text, fontSize: 12.5, lineHeight: 18 }]}>
+                      {msg.text}
+                    </Text>
+                  </View>
+                )}
 
-                    {/* Texto del Post con "Ver más..." */}
-                    <View style={{ marginTop: 8 }}>
-                      <Text
-                        numberOfLines={isExpanded ? undefined : 3}
-                        style={[t.body, { color: c.text, fontSize: 12.5, lineHeight: 18 }]}
-                      >
-                        {post.text}
+                {/* Mensaje de Audio de Voz */}
+                {msg.type === 'audio' && (
+                  <View
+                    style={[
+                      styles.audioBubbleBox,
+                      {
+                        backgroundColor: msg.isMe ? c.cardBgAlt : c.cardBg,
+                        borderColor: c.gold,
+                      },
+                    ]}
+                  >
+                    <Pressable
+                      onPress={() => setPlayingAudioId(prev => (prev === msg.id ? null : msg.id))}
+                      style={[styles.audioPlayBtn, { backgroundColor: c.gold }]}
+                    >
+                      <Text style={{ fontSize: 11, color: '#1E1B18', fontWeight: 'bold' }}>
+                        {playingAudioId === msg.id ? '⏸' : '▶'}
                       </Text>
-                      {post.text.length > 120 && (
-                        <Pressable
-                          onPress={() => setExpandedPosts(prev => ({ ...prev, [post.id]: !prev[post.id] }))}
-                          style={{ marginTop: 2 }}
-                        >
-                          <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 10.5 }]}>
-                            {isExpanded ? 'Ver menos' : 'Ver más...'}
-                          </Text>
-                        </Pressable>
-                      )}
-                    </View>
+                    </Pressable>
 
-                    {/* Galería Autodetectada */}
-                    {post.media.length > 0 && (
-                      <View style={[styles.mediaGridContainer, { marginTop: 10 }]}>
-                        {post.media.length === 1 ? (
-                          <View style={[styles.mediaSingleBox, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}>
-                            <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 11 }]}>
-                              {post.media[0].title}
-                            </Text>
-                          </View>
-                        ) : post.media.length === 2 ? (
-                          <View style={{ flexDirection: 'row', gap: 6 }}>
-                            {post.media.map((m, idx) => (
-                              <View key={idx} style={[styles.mediaHalfBox, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}>
-                                <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 10 }]}>
-                                  {m.title}
-                                </Text>
-                              </View>
-                            ))}
-                          </View>
-                        ) : (
-                          <View style={{ flexDirection: 'row', gap: 6, height: 130 }}>
-                            <View style={[styles.mediaLargeLeft, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}>
-                              <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 11 }]}>
-                                {post.media[0].title}
-                              </Text>
-                            </View>
-                            <View style={{ flex: 1, gap: 6 }}>
-                              {post.media.slice(1, 3).map((m, idx) => (
-                                <View key={idx} style={[styles.mediaSmallRight, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}>
-                                  <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 9.5 }]}>
-                                    {m.title}
-                                  </Text>
-                                </View>
-                              ))}
-                            </View>
-                          </View>
-                        )}
-                      </View>
-                    )}
-
-                    {/* Resumen de Reacciones (Toca para ver quién reaccionó) */}
-                    <View style={[styles.reactionsSummaryRow, { borderTopColor: c.divider }]}>
-                      <Pressable
-                        onPress={() => {
-                          setReactionsModalVisible(true);
-                          setReactionFilter('all');
-                        }}
-                        style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
-                      >
-                        <Text style={[styles.rxCountBadge, { color: '#70d2a0', backgroundColor: '#173429' }]}>
-                          👍 {post.likes}
-                        </Text>
-                        <Text style={[styles.rxCountBadge, { color: '#f28e8e', backgroundColor: '#331a1a' }]}>
-                          👎 {post.dislikes}
-                        </Text>
-                        <Text style={[t.micro, { color: c.gold, fontSize: 9.5 }]}>· Ver quién reaccionó ›</Text>
-                      </Pressable>
-
-                      <Pressable onPress={() => setOpenComments(prev => ({ ...prev, [post.id]: !prev[post.id] }))}>
-                        <Text style={[t.micro, { color: c.textSoft, fontSize: 10 }]}>
-                          {post.comments.length} Comentarios
-                        </Text>
-                      </Pressable>
-                    </View>
-
-                    {/* Botones de Acción: ÚNICAMENTE LIKE 👍 Y DISLIKE 👎 */}
-                    <View style={[styles.actionButtonsRow, { borderTopColor: c.divider }]}>
-                      <Pressable
-                        onPress={() => handleToggleLike(post.id)}
-                        style={[styles.actionBtn, post.userReaction === 'like' && { backgroundColor: c.cardBgAlt }]}
-                      >
-                        <Text style={{ fontSize: 14 }}>👍</Text>
-                        <Text
-                          style={[
-                            t.micro,
-                            {
-                              color: post.userReaction === 'like' ? '#70d2a0' : c.textSoft,
-                              fontWeight: '700',
-                              fontSize: 10.5,
-                            },
-                          ]}
-                        >
-                          Like
-                        </Text>
-                      </Pressable>
-
-                      <Pressable
-                        onPress={() => handleToggleDislike(post.id)}
-                        style={[styles.actionBtn, post.userReaction === 'dislike' && { backgroundColor: c.cardBgAlt }]}
-                      >
-                        <Text style={{ fontSize: 14 }}>👎</Text>
-                        <Text
-                          style={[
-                            t.micro,
-                            {
-                              color: post.userReaction === 'dislike' ? '#f28e8e' : c.textSoft,
-                              fontWeight: '700',
-                              fontSize: 10.5,
-                            },
-                          ]}
-                        >
-                          Dislike
-                        </Text>
-                      </Pressable>
-
-                      <Pressable
-                        onPress={() => setOpenComments(prev => ({ ...prev, [post.id]: !prev[post.id] }))}
-                        style={styles.actionBtn}
-                      >
-                        <Text style={{ fontSize: 13 }}>💬</Text>
-                        <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 10.5 }]}>
-                          Comentar
-                        </Text>
-                      </Pressable>
-                    </View>
-
-                    {/* SECCIÓN DE COMENTARIOS CON FOTOS */}
-                    {commentsVisible && (
-                      <View style={[styles.commentsSection, { borderTopColor: c.divider }]}>
-                        {post.comments.map(cItem => (
-                          <View key={cItem.id} style={[styles.commentCard, { backgroundColor: c.cardBgAlt }]}>
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <Text style={[t.cardTitle, { color: c.gold, fontSize: 11.5 }]}>
-                                {cItem.author} {cItem.role ? `(${cItem.role})` : ''}
-                              </Text>
-                              <Text style={[t.micro, { color: c.textSoft, fontSize: 9 }]}>{cItem.timeAgo}</Text>
-                            </View>
-
-                            <Text style={[t.body, { color: c.text, fontSize: 11.5, marginTop: 4, lineHeight: 16 }]}>
-                              {cItem.text}
-                            </Text>
-
-                            {/* Foto Subida en el Comentario */}
-                            {cItem.photoAttached && (
-                              <View style={[styles.commentPhotoBox, { borderColor: c.gold, backgroundColor: c.bg }]}>
-                                <Text style={[t.micro, { color: c.gold, fontSize: 9.5, fontWeight: '700' }]}>
-                                  {cItem.photoAttached}
-                                </Text>
-                              </View>
-                            )}
-
-                            {/* Reacciones Like/Dislike al Comentario */}
-                            <View style={{ flexDirection: 'row', gap: 12, marginTop: 6, alignItems: 'center' }}>
-                              <Pressable
-                                onPress={() => handleCommentVote(post.id, cItem.id, 'like')}
-                                style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}
-                              >
-                                <Text style={{ fontSize: 11 }}>👍</Text>
-                                <Text style={[t.micro, { color: cItem.userReaction === 'like' ? '#70d2a0' : c.textSoft, fontSize: 9.5 }]}>
-                                  {cItem.likes}
-                                </Text>
-                              </Pressable>
-
-                              <Pressable
-                                onPress={() => handleCommentVote(post.id, cItem.id, 'dislike')}
-                                style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}
-                              >
-                                <Text style={{ fontSize: 11 }}>👎</Text>
-                                <Text style={[t.micro, { color: cItem.userReaction === 'dislike' ? '#f28e8e' : c.textSoft, fontSize: 9.5 }]}>
-                                  {cItem.dislikes}
-                                </Text>
-                              </Pressable>
-                            </View>
-                          </View>
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <View style={{ flexDirection: 'row', gap: 2, alignItems: 'center' }}>
+                        {[8, 14, 10, 16, 12, 14, 8, 12, 10].map((h, i) => (
+                          <View
+                            key={i}
+                            style={{
+                              width: 3,
+                              height: h,
+                              backgroundColor: playingAudioId === msg.id ? c.gold : c.border,
+                              borderRadius: 1.5,
+                            }}
+                          />
                         ))}
-
-                        {/* Input para Nuevo Comentario con Selector de Foto */}
-                        <View style={{ gap: 6, marginTop: 8 }}>
-                          {commentPhotos[post.id] && (
-                            <View style={[styles.commentPhotoPreview, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-                              <Text style={[t.micro, { color: c.gold, fontSize: 9.5, fontWeight: '700' }]}>
-                                📷 foto_adjunta.jpg
-                              </Text>
-                              <Pressable onPress={() => setCommentPhotos(prev => ({ ...prev, [post.id]: false }))}>
-                                <Text style={{ color: '#f28e8e', fontWeight: 'bold', fontSize: 11 }}>✕</Text>
-                              </Pressable>
-                            </View>
-                          )}
-
-                          <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
-                            <Pressable
-                              onPress={() => setCommentPhotos(prev => ({ ...prev, [post.id]: !prev[post.id] }))}
-                              style={[styles.attachPhotoBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
-                            >
-                              <Text style={{ fontSize: 14 }}>📷</Text>
-                            </Pressable>
-
-                            <TextInput
-                              value={commentInputs[post.id] || ''}
-                              onChangeText={val => setCommentInputs(prev => ({ ...prev, [post.id]: val }))}
-                              placeholder="Escribe un comentario..."
-                              placeholderTextColor={c.textSoft}
-                              style={[styles.commentInput, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.text }]}
-                            />
-
-                            <Pressable
-                              onPress={() => handleAddComment(post.id)}
-                              style={[styles.sendCommentBtn, { backgroundColor: c.gold }]}
-                            >
-                              <Text style={{ color: '#1E1B18', fontWeight: '800', fontSize: 11 }}>Enviar</Text>
-                            </Pressable>
-                          </View>
-                        </View>
                       </View>
+                      <Text style={[t.micro, { color: c.textSoft, fontSize: 9 }]}>
+                        {msg.audioDuration || '0:35'}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* Mensaje de Galería de Imágenes */}
+                {msg.type === 'image_grid' && (
+                  <View
+                    style={[
+                      styles.chatBubble,
+                      {
+                        backgroundColor: msg.isMe ? c.cardBgAlt : c.cardBg,
+                        borderColor: c.gold,
+                        gap: 6,
+                      },
+                    ]}
+                  >
+                    <View style={{ flexDirection: 'row', gap: 6 }}>
+                      {msg.mediaList?.map((m, idx) => (
+                        <View key={idx} style={[styles.chatMediaThumbnail, { borderColor: c.border, backgroundColor: c.bg }]}>
+                          <Text style={[t.micro, { color: c.gold, fontSize: 9.5, fontWeight: '700' }]}>{m}</Text>
+                        </View>
+                      ))}
+                    </View>
+                    {msg.text && (
+                      <Text style={[t.body, { color: c.text, fontSize: 12, marginTop: 2 }]}>{msg.text}</Text>
                     )}
                   </View>
-                );
-              })}
-            </View>
-          )}
+                )}
 
-          {/* ===================================================================== */}
-          {/* PESTAÑA 2: TESTIMONIOS CON DISEÑO DE MEDIA LUNA Y AVATAR CENTRADO     */}
-          {/* ===================================================================== */}
-          {eventosTab === 'testimonios' && (
-            <View style={{ gap: 16, paddingTop: 10, paddingBottom: 28 }}>
-              <View style={[styles.headerBannerBox, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-                <Text style={[t.micro, { color: c.gold, fontWeight: '700', letterSpacing: 1.2, textAlign: 'center' }]}>
-                  CASOS DE ÉXITO & TESTIMONIOS
-                </Text>
-                <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 16, textAlign: 'center', marginTop: 2 }]}>
-                  Transformaciones de Alto Rendimiento
-                </Text>
-                <Text style={[t.micro, { color: c.textSoft, textAlign: 'center', marginTop: 2 }]}>
-                  Historias reales de alumnos que completaron el protocolo de 90 días.
-                </Text>
-              </View>
-
-              {/* Tarjetas de Testimonios en Media Luna */}
-              {INITIAL_TESTIMONIALS.map(item => (
-                <View
-                  key={item.id}
-                  style={[styles.testimonialArcCard, { borderColor: c.gold, backgroundColor: c.cardBg }]}
-                >
-                  {/* Aureola Media Luna */}
-                  <View style={styles.arcGlowOverlay} />
-
-                  {/* Badge Superior */}
-                  <View style={[styles.genBadge, { borderColor: c.gold, backgroundColor: 'rgba(0,0,0,0.6)' }]}>
-                    <Text style={[t.micro, { color: c.gold, fontWeight: '800', fontSize: 9.5 }]}>
-                      {item.badge}
+                {/* Mensaje de GIF Somático */}
+                {msg.type === 'gif' && (
+                  <View
+                    style={[
+                      styles.chatBubble,
+                      {
+                        backgroundColor: '#1E1B18',
+                        borderColor: c.gold,
+                        alignItems: 'center',
+                        padding: 12,
+                      },
+                    ]}
+                  >
+                    <Text style={{ fontSize: 32 }}>{msg.gifIcon}</Text>
+                    <Text style={[t.micro, { color: c.gold, fontWeight: '800', fontSize: 10, marginTop: 4 }]}>
+                      {msg.gifTitle}
                     </Text>
                   </View>
+                )}
 
-                  {/* Avatar Centrado */}
-                  <View style={[styles.testimonialAvatarRing, { borderColor: c.gold }]}>
-                    <Text style={{ fontSize: 26 }}>{item.avatar}</Text>
-                    <View style={[styles.daysTag, { backgroundColor: '#173429', borderColor: '#70d2a0' }]}>
-                      <Text style={{ color: '#70d2a0', fontWeight: '800', fontSize: 8 }}>90 DÍAS</Text>
-                    </View>
-                  </View>
-
-                  {/* Nombre y Cargo */}
-                  <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 15, textAlign: 'center', marginTop: 6 }]}>
-                    {item.name}
-                  </Text>
-                  <Text style={[t.micro, { color: c.gold, textAlign: 'center', fontSize: 10 }]}>
-                    {item.role}
-                  </Text>
-
-                  {/* Cita de Transformación */}
-                  <Text style={[t.body, { color: c.text, fontStyle: 'italic', fontSize: 12, lineHeight: 18, textAlign: 'center', marginVertical: 8, paddingHorizontal: 6 }]}>
-                    {item.quote}
-                  </Text>
-
-                  {/* Métricas Cuantificables */}
-                  <View style={{ flexDirection: 'row', gap: 6, marginVertical: 6 }}>
-                    {item.metrics.map((m, idx) => (
-                      <View
-                        key={idx}
-                        style={[styles.metricBoxItem, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
-                      >
-                        <Text style={[t.micro, { color: c.textSoft, fontSize: 8, textAlign: 'center' }]}>
-                          {m.label}
-                        </Text>
-                        <Text style={[t.metric, { color: m.isHighlight ? '#70d2a0' : c.gold, fontSize: 13, textAlign: 'center', marginTop: 2 }]}>
-                          {m.value}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-
-                  {/* Botón de Video Testimonio */}
-                  <GoldButton
-                    label={`▶ VER VIDEO TESTIMONIO HD (${item.videoDuration})`}
-                    onPress={() => Alert.alert('Testimonio en Video', `Reproduciendo historia de ${item.name}`)}
-                    style={{ width: '100%', marginTop: 8 }}
-                  />
-                </View>
-              ))}
-            </View>
-          )}
-
-          {/* ===================================================================== */}
-          {/* PESTAÑA 3: PODIO 3D CON PERSPECTIVA Y BRILLO ORO, PLATA Y BRONCE      */}
-          {/* ===================================================================== */}
-          {eventosTab === 'ranking' && (
-            <View style={{ gap: 14, paddingTop: 10, paddingBottom: 28 }}>
-              {/* Contenedor del Podio 3D */}
-              <View style={[styles.podiumContainerBox, { borderColor: c.gold, backgroundColor: '#11100D' }]}>
-                <View style={[styles.podiumHeaderBadge, { borderColor: c.gold, backgroundColor: 'rgba(0,0,0,0.6)' }]}>
-                  <Text style={[t.micro, { color: c.gold, fontWeight: '800', fontSize: 9.5, letterSpacing: 1 }]}>
-                    PODIO DE COHERENCIA 3D
-                  </Text>
-                </View>
-
-                {/* Los 3 Pedestales 3D */}
-                <View style={styles.podiumRow}>
-                  {/* PUESTO 2: PLATA */}
-                  <View style={[styles.pedestalColumn, { flex: 1 }]}>
-                    <View style={[styles.medalCircle, styles.silverGlow]}>
-                      <Text style={{ fontSize: 16 }}>🥈</Text>
-                    </View>
-                    <Text style={[t.cardTitle, { color: '#FFFFFF', fontSize: 11, textAlign: 'center', marginTop: 4 }]}>
-                      Rodrigo V.
-                    </Text>
-                    <Text style={[t.micro, { color: '#C5BEB3', fontSize: 8.5, textAlign: 'center' }]}>
-                      36d · 96%
-                    </Text>
-                    <LinearGradient
-                      colors={['#FFFFFF', '#A8B1C2', '#3a3f4d']}
-                      style={[styles.pedestalBlock, { height: 75 }]}
-                    >
-                      <Text style={[styles.pedestalRankText, { color: '#1E1B18' }]}>#2</Text>
-                      <Text style={[styles.pedestalLabelText, { color: '#1E1B18' }]}>PLATA</Text>
-                    </LinearGradient>
-                  </View>
-
-                  {/* PUESTO 1: ORO (ELEVADO CON CORONA Y HALO BRILLANTE) */}
-                  <View style={[styles.pedestalColumn, { flex: 1.1, marginTop: -16 }]}>
-                    <View style={[styles.medalCircleLarge, styles.goldGlow]}>
-                      <Text style={{ fontSize: 20 }}>👑 🥇</Text>
-                    </View>
-                    <Text style={[t.cardTitle, { color: c.gold, fontSize: 12.5, fontWeight: '800', textAlign: 'center', marginTop: 4 }]}>
-                      María A.
-                    </Text>
-                    <Text style={[t.micro, { color: '#70d2a0', fontSize: 9.5, fontWeight: '700', textAlign: 'center' }]}>
-                      37d · 99%
-                    </Text>
-                    <LinearGradient
-                      colors={['#FFE29F', '#E5C689', '#9C7A34']}
-                      style={[styles.pedestalBlock, { height: 110 }]}
-                    >
-                      <Text style={[styles.pedestalRankText, { color: '#1E1B18', fontSize: 18 }]}>#1</Text>
-                      <Text style={[styles.pedestalLabelText, { color: '#1E1B18', fontSize: 9 }]}>ORO LÍDER</Text>
-                    </LinearGradient>
-                  </View>
-
-                  {/* PUESTO 3: BRONCE (BRILLO CAFÉ METÁLICO) */}
-                  <View style={[styles.pedestalColumn, { flex: 1 }]}>
-                    <View style={[styles.medalCircle, styles.bronzeGlow]}>
-                      <Text style={{ fontSize: 16 }}>🥉</Text>
-                    </View>
-                    <Text style={[t.cardTitle, { color: '#E29B72', fontSize: 11, textAlign: 'center', marginTop: 4 }]}>
-                      Esteban G.
-                    </Text>
-                    <Text style={[t.micro, { color: '#C5BEB3', fontSize: 8.5, textAlign: 'center' }]}>
-                      35d · 94%
-                    </Text>
-                    <LinearGradient
-                      colors={['#E29B72', '#B86E45', '#4A220F']}
-                      style={[styles.pedestalBlock, { height: 60 }]}
-                    >
-                      <Text style={[styles.pedestalRankText, { color: '#FFFFFF' }]}>#3</Text>
-                      <Text style={[styles.pedestalLabelText, { color: '#FFFFFF' }]}>BRONCE</Text>
-                    </LinearGradient>
-                  </View>
+                {/* Hora y Doble Check */}
+                <View style={{ flexDirection: 'row', gap: 4, alignItems: 'center', marginTop: 2, paddingHorizontal: 4 }}>
+                  <Text style={[t.micro, { color: c.textSoft, fontSize: 8.5 }]}>{msg.time}</Text>
+                  {msg.isMe && <Text style={{ color: c.gold, fontSize: 9, fontWeight: 'bold' }}>✓✓</Text>}
                 </View>
               </View>
+            ))}
+          </ScrollView>
 
-              {/* Tu Posición Personal */}
-              <View style={[styles.myPositionCard, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+          {/* Barra Inferior de Entrada (Tipo WhatsApp) */}
+          <View style={[styles.chatInputBar, { borderTopColor: c.divider, backgroundColor: c.cardBg }]}>
+            <Pressable
+              onPress={() => setGifSelectorVisible(true)}
+              style={[styles.mediaOptionBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
+            >
+              <Text style={{ fontSize: 11, fontWeight: '800', color: c.gold }}>GIF</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() =>
+                handleSendChatMessage('image_grid', {
+                  text: 'Evidencia fotográfica sellada',
+                  mediaList: ['📷 Evidencia_1.jpg', '📷 Evidencia_2.jpg'],
+                })
+              }
+              style={[styles.mediaOptionBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
+            >
+              <Text style={{ fontSize: 13 }}>📷</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => handleSendChatMessage('audio')}
+              style={[styles.mediaOptionBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
+            >
+              <Text style={{ fontSize: 13 }}>🎙</Text>
+            </Pressable>
+
+            <TextInput
+              value={chatInputText}
+              onChangeText={setChatInputText}
+              placeholder="Escribe un mensaje..."
+              placeholderTextColor={c.textSoft}
+              style={[styles.textInputChat, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.text }]}
+            />
+
+            <Pressable
+              onPress={() => handleSendChatMessage('text')}
+              style={[styles.sendBtnGold, { backgroundColor: c.gold }]}
+            >
+              <Text style={{ color: '#1E1B18', fontWeight: '900', fontSize: 13 }}>➤</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
+
+      {/* ========================================================================= */}
+      {/* VISTA 4: INFORMACIÓN DEL GRUPO / INTEGRANTES (TIPO WHATSAPP GROUP INFO)   */}
+      {/* ========================================================================= */}
+      {inAtencionPersonalizada && groupInfoVisible && (
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            {
+              paddingHorizontal: horizontalPadding,
+              maxWidth: isTablet ? 560 : undefined,
+              alignSelf: isTablet ? 'center' : 'stretch',
+              width: isTablet ? '100%' : undefined,
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
+            <Pressable onPress={() => setGroupInfoVisible(false)} style={styles.backBtnRow} hitSlop={8}>
+              <Icon name="arrowLeft" size={14} color={c.gold} />
+              <Text style={[t.micro, { color: c.gold, fontWeight: '700', letterSpacing: 1 }]}>
+                VOLVER AL CHAT
+              </Text>
+            </Pressable>
+
+            <View style={[styles.categoryPillBadge, { borderColor: c.borderStrong, backgroundColor: c.cardBgAlt }]}>
+              <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 9.5 }]}>
+                INFO DEL GRUPO
+              </Text>
+            </View>
+          </View>
+
+          <View style={[styles.groupInfoHeaderCard, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
+            <View style={[styles.groupLargeAvatar, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+              <Text style={{ fontSize: 28 }}>👥</Text>
+            </View>
+            <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 16, marginTop: 6 }]}>
+              Célula Fénix 07
+            </Text>
+            <Text style={[t.micro, { color: c.gold, marginTop: 2 }]}>
+              16 Integrantes de la Tribu RENASER
+            </Text>
+            <Text style={[t.body, { color: c.textSoft, fontSize: 11.5, textAlign: 'center', marginTop: 6 }]}>
+              Célula privada de aceleración somática. Cero quejas, dato puro y verdad biológica.
+            </Text>
+          </View>
+
+          {/* LISTA DE INTEGRANTES */}
+          <View style={{ gap: 8, marginTop: 14, paddingBottom: 28 }}>
+            <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 1 }]}>
+              INTEGRANTES DE LA CÉLULA (16)
+            </Text>
+
+            {GROUP_MEMBERS.map(member => (
+              <Pressable
+                key={member.id}
+                onPress={() => setSelectedMemberProfile(member)}
+                style={[styles.memberRowCard, { borderColor: c.border, backgroundColor: c.cardBg }]}
+              >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <Text style={[t.metric, { color: c.gold, fontSize: 18 }]}>#4</Text>
-                  <View style={[styles.avatarCircle, { borderColor: c.gold, backgroundColor: c.bg }]}>
-                    <Text style={{ fontSize: 14 }}>🦅</Text>
+                  <View style={[styles.avatarCircle, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+                    <Text style={{ fontSize: 14 }}>{member.avatar}</Text>
                   </View>
                   <View>
-                    <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>TÚ (Kelin Arango)</Text>
-                    <Text style={[t.micro, { color: c.micro, fontSize: 9.5 }]}>Célula 07 · Aceleración</Text>
-                  </View>
-                </View>
-
-                <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={[t.micro, { color: c.gold, fontWeight: '800', fontSize: 12 }]}>🔥 37 Días</Text>
-                  <Text style={[t.micro, { color: '#70d2a0', fontWeight: '700', fontSize: 9.5 }]}>94% Evidencias</Text>
-                </View>
-              </View>
-
-              {/* Resto de la Tabla de Posiciones */}
-              <View style={{ gap: 6 }}>
-                {INITIAL_LEADERBOARD.filter(u => u.rank > 4).map(u => (
-                  <View
-                    key={u.id}
-                    style={[styles.leaderboardRow, { borderColor: c.border, backgroundColor: c.cardBg }]}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                      <Text style={[t.micro, { color: c.textSoft, fontSize: 11, fontWeight: '700', width: 20 }]}>
-                        #{u.rank}
-                      </Text>
-                      <Text style={[t.body, { color: c.textStrong, fontSize: 12, fontWeight: '600' }]}>
-                        {u.name}
-                      </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 12.5 }]}>{member.name}</Text>
+                      <View style={[styles.memberBadgePill, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+                        <Text style={[t.micro, { color: c.gold, fontSize: 8.5, fontWeight: '800' }]}>
+                          {member.badge}
+                        </Text>
+                      </View>
                     </View>
-                    <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5 }]}>
-                      {u.streakDays} Días · {u.evidencePercent}%
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
-        </ScrollView>
-      )}
-
-      {/* ========================================================================= */}
-      {/* VISTA 3: RECURSOS EXCLUSIVOS & CURSOS                                      */}
-      {/* ========================================================================= */}
-      {inExclusiveResources && selectedCourse === null && fullScreenLesson === null && (
-        <ScrollView
-          contentContainerStyle={[
-            styles.content,
-            {
-              paddingHorizontal: horizontalPadding,
-              maxWidth: isTablet ? 560 : undefined,
-              alignSelf: isTablet ? 'center' : 'stretch',
-              width: isTablet ? '100%' : undefined,
-            },
-          ]}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
-            <Pressable onPress={() => setInExclusiveResources(false)} style={styles.backBtnRow} hitSlop={8}>
-              <Icon name="arrowLeft" size={14} color={c.gold} />
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700', letterSpacing: 1 }]}>
-                VOLVER A COMUNIDAD
-              </Text>
-            </Pressable>
-
-            <View style={[styles.categoryPillBadge, { borderColor: c.borderStrong, backgroundColor: c.cardBgAlt }]}>
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 9.5 }]}>
-                RECURSOS EXCLUSIVOS
-              </Text>
-            </View>
-          </View>
-
-          <View style={{ paddingTop: 10, gap: 4 }}>
-            <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 18 }]}>CURSOS & PROGRAMAS</Text>
-            <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>
-              Masterclasses y recursos avanzados ofrecidos por Sebastián Arango.
-            </Text>
-          </View>
-
-          <View style={{ gap: 14, paddingTop: 12, paddingBottom: 24 }}>
-            {COURSES_DATA.map(course => (
-              <Pressable
-                key={course.id}
-                onPress={() => setSelectedCourse(course)}
-                style={[styles.courseCard, { borderColor: c.border, backgroundColor: c.cardBg }]}
-              >
-                <View style={[styles.courseCoverHeader, { backgroundColor: c.cardBgAlt }]}>
-                  <View style={[styles.courseCategoryBadge, { backgroundColor: 'rgba(0,0,0,0.7)', borderColor: c.gold }]}>
-                    <Text style={[t.micro, { color: c.gold, fontSize: 9, fontWeight: '800' }]}>
-                      {course.category}
-                    </Text>
-                  </View>
-                  <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 14, marginTop: 14 }]}>
-                    {course.title}
-                  </Text>
-                </View>
-
-                <View style={{ padding: 12, gap: 8 }}>
-                  <Text style={[t.body, { color: c.textSoft, fontSize: 11.5, lineHeight: 16 }]}>
-                    {course.summary}
-                  </Text>
-
-                  <View style={{ gap: 4 }}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                      <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>Tu progreso</Text>
-                      <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 10 }]}>
-                        {course.progressPercent}%
-                      </Text>
-                    </View>
-                    <View style={[styles.progressBarBg, { backgroundColor: c.border }]}>
-                      <View style={[styles.progressBarFill, { backgroundColor: c.gold, width: `${course.progressPercent}%` }]} />
-                    </View>
-                  </View>
-
-                  <View style={[styles.exploreBtn, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-                    <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 10.5 }]}>
-                      EXPLORAR SECCIONES Y RECURSOS ›
-                    </Text>
+                    <Text style={[t.micro, { color: c.micro, fontSize: 9.5 }]}>{member.role}</Text>
                   </View>
                 </View>
+
+                <Pressable
+                  onPress={() => handleStartDirectChat(member)}
+                  style={[styles.chat1a1Btn, { backgroundColor: c.gold }]}
+                >
+                  <Text style={{ color: '#1E1B18', fontWeight: '800', fontSize: 9.5 }}>💬 Chatear</Text>
+                </Pressable>
               </Pressable>
             ))}
           </View>
@@ -1380,344 +1499,102 @@ export default function ComunidadScreen() {
       )}
 
       {/* ========================================================================= */}
-      {/* VISTA 4: DENTRO DEL CURSO — SECCIONES                                     */}
-      {/* ========================================================================= */}
-      {inExclusiveResources && selectedCourse !== null && fullScreenLesson === null && (
-        <ScrollView
-          contentContainerStyle={[
-            styles.content,
-            {
-              paddingHorizontal: horizontalPadding,
-              maxWidth: isTablet ? 560 : undefined,
-              alignSelf: isTablet ? 'center' : 'stretch',
-              width: isTablet ? '100%' : undefined,
-            },
-          ]}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
-            <Pressable onPress={() => setSelectedCourse(null)} style={styles.backBtnRow} hitSlop={8}>
-              <Icon name="arrowLeft" size={14} color={c.gold} />
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700', letterSpacing: 1 }]}>
-                VOLVER A CURSOS
-              </Text>
-            </Pressable>
-
-            <View style={[styles.categoryPillBadge, { borderColor: c.borderStrong, backgroundColor: c.cardBgAlt }]}>
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 9.5 }]}>
-                CONTENIDO DEL CURSO
-              </Text>
-            </View>
-          </View>
-
-          <View style={[styles.courseHeaderBox, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-            <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 16 }]}>{selectedCourse.title}</Text>
-            <Text style={[t.micro, { color: c.micro, marginTop: 2 }]}>
-              Por {selectedCourse.instructor} · {selectedCourse.totalModules} Secciones
-            </Text>
-          </View>
-
-          <View style={{ gap: 14, paddingTop: 10, paddingBottom: 24 }}>
-            {selectedCourse.sections.map(section => (
-              <View key={section.id} style={[styles.sectionCard, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-                <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 10.5, borderBottomWidth: 1, borderBottomColor: c.divider, paddingBottom: 6 }]}>
-                  {section.title}
-                </Text>
-
-                <View style={{ gap: 8, marginTop: 6 }}>
-                  {section.lessons.map(lesson => (
-                    <Pressable
-                      key={lesson.id}
-                      onPress={() => setFullScreenLesson(lesson)}
-                      style={[
-                        styles.lessonItemRow,
-                        {
-                          borderColor: lesson.completed ? '#4E9F76' : c.border,
-                          backgroundColor: lesson.completed ? c.cardBgAlt : c.bg,
-                        },
-                      ]}
-                    >
-                      <View style={[styles.resourceTypeIcon, { borderColor: c.borderStrong, backgroundColor: c.cardBgAlt }]}>
-                        <Icon name={lesson.type === 'video' ? 'play' : 'doc'} size={14} color={c.gold} />
-                      </View>
-
-                      <View style={{ flex: 1, gap: 1 }}>
-                        <Text style={[t.body, { color: c.textStrong, fontSize: 12.5, fontWeight: '600' }]}>
-                          {lesson.title}
-                        </Text>
-                        <Text style={[t.micro, { color: c.textSoft, fontSize: 10 }]}>{lesson.meta}</Text>
-                      </View>
-
-                      <Text style={[t.micro, { color: lesson.completed ? '#4E9F76' : c.gold, fontWeight: '700', fontSize: 10 }]}>
-                        {lesson.completed ? '✓ Visto' : 'Abrir ›'}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-            ))}
-          </View>
-        </ScrollView>
-      )}
-
-      {/* ========================================================================= */}
-      {/* VISTA 5: SESIÓN A PANTALLA COMPLETA                                       */}
-      {/* ========================================================================= */}
-      {inExclusiveResources && fullScreenLesson !== null && (
-        <ScrollView
-          contentContainerStyle={[
-            styles.content,
-            {
-              paddingHorizontal: horizontalPadding,
-              maxWidth: isTablet ? 560 : undefined,
-              alignSelf: isTablet ? 'center' : 'stretch',
-              width: isTablet ? '100%' : undefined,
-            },
-          ]}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
-            <Pressable onPress={() => setFullScreenLesson(null)} style={styles.backBtnRow} hitSlop={8}>
-              <Icon name="arrowLeft" size={14} color={c.gold} />
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700', letterSpacing: 1 }]}>
-                SALIR AL CURSO
-              </Text>
-            </Pressable>
-
-            <View style={[styles.categoryPillBadge, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-              <Text style={[t.micro, { color: c.gold, fontWeight: '800', fontSize: 9.5 }]}>
-                {fullScreenLesson.type === 'video' ? '🎥 VIDEO MASTERCLASS' : '📄 DOCUMENTO'}
-              </Text>
-            </View>
-          </View>
-
-          <View style={{ gap: 14, paddingTop: 10 }}>
-            <View style={[styles.lessonInfoCard, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-              <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 16 }]}>
-                {fullScreenLesson.title}
-              </Text>
-              <Text style={[t.micro, { color: c.gold, marginTop: 2 }]}>
-                {fullScreenLesson.meta}
-              </Text>
-              <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, lineHeight: 18, marginTop: 8 }]}>
-                {fullScreenLesson.desc}
-              </Text>
-            </View>
-
-            <GoldButton
-              label="✓ MARCAR SESIÓN COMO COMPLETADA"
-              onPress={() => {
-                fullScreenLesson.completed = true;
-                Alert.alert('¡Completada!', 'Sesión marcada como vista.');
-                setFullScreenLesson(null);
-              }}
-            />
-          </View>
-        </ScrollView>
-      )}
-
-      {/* ========================================================================= */}
-      {/* MODAL: VENTANA EXTERNA PARA CREAR PUBLICACIÓN (SIN LÍMITE DE CARACTERES)  */}
+      {/* MODAL: SELECTOR DE GIFS SOMÁTICOS                                         */}
       {/* ========================================================================= */}
       <Modal
-        visible={createPostModalVisible}
-        animationType="slide"
-        transparent={false}
-        onRequestClose={() => setCreatePostModalVisible(false)}
-      >
-        <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
-          <View style={[styles.modalHeaderBar, { borderBottomColor: c.divider, paddingHorizontal: horizontalPadding }]}>
-            <Pressable onPress={() => setCreatePostModalVisible(false)} hitSlop={8}>
-              <Text style={[t.micro, { color: c.textSoft, fontWeight: '700', fontSize: 11 }]}>
-                ✕ CANCELAR
-              </Text>
-            </Pressable>
-
-            <Text style={[t.micro, { color: c.gold, fontWeight: '800', fontSize: 10, letterSpacing: 1 }]}>
-              NUEVA PUBLICACIÓN
-            </Text>
-
-            <Pressable
-              onPress={handlePublishPost}
-              style={[styles.publishHeaderBtn, { backgroundColor: c.gold }]}
-            >
-              <Text style={{ color: '#1E1B18', fontWeight: '800', fontSize: 11 }}>PUBLICAR</Text>
-            </Pressable>
-          </View>
-
-          <ScrollView
-            contentContainerStyle={[
-              styles.content,
-              {
-                paddingHorizontal: horizontalPadding,
-                maxWidth: isTablet ? 560 : undefined,
-                alignSelf: isTablet ? 'center' : 'stretch',
-                width: isTablet ? '100%' : undefined,
-                paddingTop: 14,
-              },
-            ]}
-            keyboardShouldPersistTaps="handled"
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <View style={[styles.avatarCircle, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-                <Text style={{ fontSize: 14 }}>🦅</Text>
-              </View>
-              <View>
-                <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13.5 }]}>Kelin Arango</Text>
-                <Text style={[t.micro, { color: c.micro, fontSize: 10 }]}>Célula 07 · Día 37 de Verdad</Text>
-              </View>
-            </View>
-
-            {/* Selector de Etiquetas */}
-            <View style={{ flexDirection: 'row', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
-              {['🔥 VICTORIA SOMÁTICA', '⚡ ALTO RENDIMIENTO', '🧠 REFLEXIÓN'].map(tag => (
-                <Pressable
-                  key={tag}
-                  onPress={() => setNewPostTag(tag)}
-                  style={[
-                    styles.tagPill,
-                    {
-                      borderColor: newPostTag === tag ? c.gold : c.border,
-                      backgroundColor: newPostTag === tag ? c.cardBgAlt : c.bg,
-                    },
-                  ]}
-                >
-                  <Text style={[t.micro, { color: newPostTag === tag ? c.gold : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
-                    {tag}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-
-            {/* Textarea sin Límite */}
-            <TextInput
-              multiline
-              numberOfLines={8}
-              value={newPostText}
-              onChangeText={setNewPostText}
-              placeholder="Escribe aquí tu experiencia, victoria, aprendizaje o reflexión sin límite de espacio..."
-              placeholderTextColor={c.textSoft}
-              style={[
-                styles.largeTextArea,
-                {
-                  borderColor: c.border,
-                  backgroundColor: c.cardBg,
-                  color: c.text,
-                },
-              ]}
-            />
-
-            {/* Galería Autodetectada */}
-            <View style={{ marginTop: 14, gap: 8 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                <Text style={[t.micro, { color: c.textSoft, fontSize: 10 }]}>
-                  Galería Autodetectada ({attachedPhotos.length} fotos adjuntas):
-                </Text>
-                <Pressable onPress={() => Alert.alert('Galería', 'Foto añadida')}>
-                  <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 10 }]}>+ Agregar Foto</Text>
-                </Pressable>
-              </View>
-
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                {attachedPhotos.map((photo, idx) => (
-                  <View key={idx} style={[styles.photoPreviewThumbnail, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
-                    <Text style={[t.micro, { color: c.gold, fontSize: 9.5, fontWeight: '700' }]}>{photo}</Text>
-                    <Pressable
-                      onPress={() => setAttachedPhotos(prev => prev.filter((_, i) => i !== idx))}
-                      style={styles.removePhotoBadge}
-                    >
-                      <Text style={{ color: '#fff', fontSize: 8, fontWeight: 'bold' }}>✕</Text>
-                    </Pressable>
-                  </View>
-                ))}
-              </View>
-            </View>
-          </ScrollView>
-        </SafeAreaView>
-      </Modal>
-
-      {/* ========================================================================= */}
-      {/* MODAL: QUIÉN DIO LIKE / DISLIKE (CON FILTRO POR PESTAÑA)                  */}
-      {/* ========================================================================= */}
-      <Modal
-        visible={reactionsModalVisible}
+        visible={gifSelectorVisible}
         transparent
         animationType="fade"
-        onRequestClose={() => setReactionsModalVisible(false)}
+        onRequestClose={() => setGifSelectorVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.reactionsModalCard, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
+          <View style={[styles.gifModalBox, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: c.divider, paddingBottom: 8 }}>
-              <Text style={[t.cardTitle, { color: c.gold, fontSize: 12, letterSpacing: 1 }]}>
-                REACCIONES DE LA TRIBU
-              </Text>
-              <Pressable onPress={() => setReactionsModalVisible(false)}>
+              <Text style={[t.cardTitle, { color: c.gold, fontSize: 12 }]}>GIFS SOMÁTICOS DE TRIBU</Text>
+              <Pressable onPress={() => setGifSelectorVisible(false)}>
                 <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>✕ Cerrar</Text>
               </Pressable>
             </View>
 
-            {/* Filtro de Reacciones */}
-            <View style={{ flexDirection: 'row', gap: 6, marginVertical: 8 }}>
-              <Pressable
-                onPress={() => setReactionFilter('all')}
-                style={[
-                  styles.filterBtnPill,
-                  reactionFilter === 'all' && { backgroundColor: c.gold },
-                ]}
-              >
-                <Text style={{ color: reactionFilter === 'all' ? '#1E1B18' : c.textSoft, fontWeight: '700', fontSize: 9.5 }}>
-                  TODOS (4)
-                </Text>
-              </Pressable>
-
-              <Pressable
-                onPress={() => setReactionFilter('like')}
-                style={[
-                  styles.filterBtnPill,
-                  reactionFilter === 'like' && { backgroundColor: '#173429', borderColor: '#70d2a0' },
-                ]}
-              >
-                <Text style={{ color: reactionFilter === 'like' ? '#70d2a0' : c.textSoft, fontWeight: '700', fontSize: 9.5 }}>
-                  👍 LIKES (3)
-                </Text>
-              </Pressable>
-
-              <Pressable
-                onPress={() => setReactionFilter('dislike')}
-                style={[
-                  styles.filterBtnPill,
-                  reactionFilter === 'dislike' && { backgroundColor: '#331a1a', borderColor: '#f28e8e' },
-                ]}
-              >
-                <Text style={{ color: reactionFilter === 'dislike' ? '#f28e8e' : c.textSoft, fontWeight: '700', fontSize: 9.5 }}>
-                  👎 DISLIKES (1)
-                </Text>
-              </Pressable>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'center', paddingTop: 10 }}>
+              {GIF_OPTIONS.map((g, idx) => (
+                <Pressable
+                  key={idx}
+                  onPress={() => handleSendChatMessage('gif', { gifTitle: g.title, gifIcon: g.icon })}
+                  style={[styles.gifItemCard, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
+                >
+                  <Text style={{ fontSize: 24 }}>{g.icon}</Text>
+                  <Text style={[t.micro, { color: c.textStrong, fontWeight: '700', fontSize: 9 }]}>
+                    {g.title}
+                  </Text>
+                </Pressable>
+              ))}
             </View>
-
-            {/* Lista de Alumnos */}
-            <ScrollView style={{ maxHeight: 240 }} showsVerticalScrollIndicator={false}>
-              <View style={{ gap: 6 }}>
-                {filteredReactions.map(rItem => (
-                  <View
-                    key={rItem.id}
-                    style={[styles.reactionUserRow, { backgroundColor: c.cardBgAlt }]}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <Text style={{ fontSize: 14 }}>{rItem.avatar}</Text>
-                      <View>
-                        <Text style={[t.body, { color: c.textStrong, fontSize: 11.5, fontWeight: '600' }]}>
-                          {rItem.name}
-                        </Text>
-                        <Text style={[t.micro, { color: c.textSoft, fontSize: 9 }]}>{rItem.role}</Text>
-                      </View>
-                    </View>
-                    <Text style={{ fontSize: 14 }}>{rItem.type === 'like' ? '👍' : '👎'}</Text>
-                  </View>
-                ))}
-              </View>
-            </ScrollView>
           </View>
+        </View>
+      </Modal>
+
+      {/* ========================================================================= */}
+      {/* MODAL: PERFIL DEL INTEGRANTE DE LA CÉLULA                                 */}
+      {/* ========================================================================= */}
+      <Modal
+        visible={selectedMemberProfile !== null}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSelectedMemberProfile(null)}
+      >
+        <View style={styles.modalOverlay}>
+          {selectedMemberProfile && (
+            <View style={[styles.profileModalCard, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: c.divider, paddingBottom: 8 }}>
+                <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 1 }]}>
+                  PERFIL DEL INTEGRANTE
+                </Text>
+                <Pressable onPress={() => setSelectedMemberProfile(null)}>
+                  <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>✕ Cerrar</Text>
+                </Pressable>
+              </View>
+
+              <View style={[styles.profileAvatarLarge, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+                <Text style={{ fontSize: 32 }}>{selectedMemberProfile.avatar}</Text>
+              </View>
+
+              <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 16, textAlign: 'center', marginTop: 4 }]}>
+                {selectedMemberProfile.name}
+              </Text>
+              <Text style={[t.micro, { color: c.gold, textAlign: 'center', fontSize: 10.5 }]}>
+                {selectedMemberProfile.role}
+              </Text>
+
+              <View style={{ flexDirection: 'row', gap: 6, marginVertical: 8 }}>
+                <View style={[styles.metricBoxItem, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
+                  <Text style={[t.micro, { color: c.textSoft, fontSize: 8.5, textAlign: 'center' }]}>RACHA</Text>
+                  <Text style={[t.metric, { color: '#70d2a0', fontSize: 13, textAlign: 'center' }]}>
+                    🔥 {selectedMemberProfile.streakDays} Días
+                  </Text>
+                </View>
+                <View style={[styles.metricBoxItem, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
+                  <Text style={[t.micro, { color: c.textSoft, fontSize: 8.5, textAlign: 'center' }]}>CÉLULA</Text>
+                  <Text style={[t.metric, { color: c.gold, fontSize: 13, textAlign: 'center' }]}>
+                    {selectedMemberProfile.cell}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={[styles.focusCard, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
+                <Text style={[t.micro, { color: c.textSoft, fontSize: 9 }]}>ENFOQUE PRINCIPAL:</Text>
+                <Text style={[t.body, { color: c.textStrong, fontSize: 11.5, fontWeight: '600', marginTop: 2 }]}>
+                  {selectedMemberProfile.focus}
+                </Text>
+              </View>
+
+              <GoldButton
+                label="💬 ENVIAR MENSAJE DIRECTO 1 A 1"
+                onPress={() => handleStartDirectChat(selectedMemberProfile)}
+                style={{ width: '100%', marginTop: 10 }}
+              />
+            </View>
+          )}
         </View>
       </Modal>
     </SafeAreaView>
@@ -1793,13 +1670,47 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  createPostBar: {
+  chatConvCard: {
     borderWidth: 1.2,
     borderRadius: 16,
     padding: 12,
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
+  },
+  convAvatarBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  onlineBadgeDot: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#70d2a0',
+    borderWidth: 1.5,
+    borderColor: '#000',
+  },
+  unreadBadgePill: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chatRoomHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
   },
   avatarCircle: {
     width: 32,
@@ -1809,171 +1720,148 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  plusBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  postCard: {
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 14,
-  },
-  dayBadge: {
+  infoBtnPill: {
     borderWidth: 1,
     borderRadius: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
   },
-  mediaGridContainer: {
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  mediaSingleBox: {
-    height: 100,
-    borderWidth: 1,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mediaHalfBox: {
-    flex: 1,
-    height: 90,
+  dateDividerPill: {
     borderWidth: 1,
     borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mediaLargeLeft: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mediaSmallRight: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  reactionsSummaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    paddingTop: 8,
-    marginTop: 10,
-  },
-  rxCountBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    fontSize: 9.5,
-    fontWeight: '700',
-  },
-  actionButtonsRow: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    paddingTop: 8,
-    marginTop: 6,
-  },
-  actionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    gap: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  commentsSection: {
-    borderTopWidth: 1,
-    paddingTop: 10,
-    marginTop: 8,
-    gap: 8,
-  },
-  commentCard: {
-    padding: 10,
-    borderRadius: 12,
-  },
-  commentPhotoBox: {
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 8,
-    marginTop: 6,
-  },
-  commentPhotoPreview: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 6,
-  },
-  attachPhotoBtn: {
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 8,
-  },
-  commentInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: 8,
     paddingHorizontal: 10,
-    paddingVertical: 6,
-    fontSize: 11.5,
+    paddingVertical: 3,
+    fontSize: 8.5,
+    fontWeight: '800',
   },
-  sendCommentBtn: {
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+  messageBubbleWrapper: {
+    maxWidth: '85%',
   },
-  headerBannerBox: {
+  chatBubble: {
     borderWidth: 1,
     borderRadius: 16,
-    padding: 14,
+    padding: 10,
   },
-  testimonialArcCard: {
+  audioBubbleBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 10,
+    minWidth: 170,
+  },
+  audioPlayBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chatMediaThumbnail: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 8,
+    alignItems: 'center',
+  },
+  chatInputBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+  },
+  mediaOptionBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  textInputChat: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    fontSize: 12,
+  },
+  sendBtnGold: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  groupInfoHeaderCard: {
     borderWidth: 1.5,
-    borderRadius: 24,
+    borderRadius: 20,
     padding: 16,
     alignItems: 'center',
-    overflow: 'hidden',
+    marginTop: 10,
   },
-  arcGlowOverlay: {
-    position: 'absolute',
-    top: -20,
-    width: 140,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(229,198,137,0.2)',
-  },
-  genBadge: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  testimonialAvatarRing: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
+  groupLargeAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
   },
-  daysTag: {
-    position: 'absolute',
-    bottom: -4,
+  memberRowCard: {
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  memberBadgePill: {
     borderWidth: 1,
     borderRadius: 6,
     paddingHorizontal: 4,
     paddingVertical: 1,
+  },
+  chat1a1Btn: {
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  gifModalBox: {
+    borderWidth: 1.5,
+    borderRadius: 20,
+    padding: 16,
+  },
+  gifItemCard: {
+    width: 80,
+    height: 70,
+    borderWidth: 1,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileModalCard: {
+    borderWidth: 1.5,
+    borderRadius: 24,
+    padding: 20,
+    alignItems: 'center',
+  },
+  profileAvatarLarge: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
   },
   metricBoxItem: {
     flex: 1,
@@ -1981,84 +1869,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingVertical: 8,
   },
-  podiumContainerBox: {
-    borderWidth: 1.5,
-    borderRadius: 24,
-    padding: 16,
-    alignItems: 'center',
-  },
-  podiumHeaderBadge: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-  },
-  podiumRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-    gap: 8,
+  focusCard: {
     width: '100%',
-    paddingTop: 16,
-  },
-  pedestalColumn: {
-    alignItems: 'center',
-  },
-  medalCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  medalCircleLarge: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  goldGlow: {
-    backgroundColor: '#FFE29F',
-  },
-  silverGlow: {
-    backgroundColor: '#E0E4EC',
-  },
-  bronzeGlow: {
-    backgroundColor: '#E29B72',
-  },
-  pedestalBlock: {
-    width: '100%',
-    borderTopLeftRadius: 14,
-    borderTopRightRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 6,
-  },
-  pedestalRankText: {
-    fontWeight: '900',
-    fontSize: 14,
-  },
-  pedestalLabelText: {
-    fontWeight: '800',
-    fontSize: 7.5,
-    letterSpacing: 1,
-  },
-  myPositionCard: {
-    borderWidth: 1.5,
-    borderRadius: 16,
-    padding: 14,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  leaderboardRow: {
     borderWidth: 1,
     borderRadius: 12,
     padding: 10,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
   },
   courseCard: {
     borderWidth: 1.2,
@@ -2124,69 +1939,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 16,
     padding: 14,
-  },
-  modalHeaderBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-  },
-  publishHeaderBtn: {
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  tagPill: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  largeTextArea: {
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 12,
-    marginTop: 12,
-    textAlignVertical: 'top',
-    fontSize: 12.5,
-    minHeight: 140,
-  },
-  photoPreviewThumbnail: {
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 8,
-  },
-  removePhotoBadge: {
-    position: 'absolute',
-    top: 2,
-    right: 2,
-    backgroundColor: '#000',
-    borderRadius: 6,
-    paddingHorizontal: 3,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.75)',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  reactionsModalCard: {
-    borderWidth: 1.5,
-    borderRadius: 20,
-    padding: 16,
-  },
-  filterBtnPill: {
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  reactionUserRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 8,
-    borderRadius: 8,
   },
 });
