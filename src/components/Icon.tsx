@@ -6,7 +6,7 @@ export type IconName =
   | 'body' | 'brain' | 'heart' | 'spark' | 'briefcase' | 'chevron' | 'arrow' | 'arrowLeft' | 'clock' | 'stack'
   | 'mail' | 'lock' | 'eye' | 'eyeOff' | 'check' | 'logout' | 'google' | 'apple' | 'key' | 'trophy' | 'zap'
   | 'fire' | 'play' | 'pause' | 'plus' | 'chat' | 'send' | 'calendar' | 'award' | 'share' | 'filter'
-  | 'dumbbell' | 'volume' | 'star' | 'checkCircle';
+  | 'dumbbell' | 'volume' | 'star' | 'checkCircle' | 'camera' | 'image';
 
 type Props = { name: IconName; size?: number; color: string; strokeWidth?: number };
 
@@ -107,6 +107,21 @@ export function Icon({ name, size = 20, color, strokeWidth = 1.1 }: Props) {
         <Svg width={size} height={size} viewBox="0 0 20 20">
           <Circle {...s} cx={10} cy={10} r={8} />
           <Path {...s} strokeWidth={strokeWidth * 1.3} d="M6.5 10.5l2.5 2.5 5-5.5" />
+        </Svg>
+      );
+    case 'camera':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 20 20">
+          <Path {...s} d="M3 6.5h3l1.5-2.5h5L14 6.5h3a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5H3A1.5 1.5 0 0 1 1.5 16V8a1.5 1.5 0 0 1 1.5-1.5z" />
+          <Circle {...s} cx={10} cy={12} r={3.2} />
+        </Svg>
+      );
+    case 'image':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 20 20">
+          <Rect {...s} x={2.5} y={3.5} width={15} height={13} rx={2} />
+          <Circle {...s} cx={6.5} cy={7.5} r={1.5} />
+          <Path {...s} d="M17.5 13.5l-4.5-4.5-6.5 6.5" />
         </Svg>
       );
     case 'trophy':
