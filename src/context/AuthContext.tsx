@@ -21,6 +21,7 @@ type AuthContextType = {
   completeOnboarding: (ficha?: FichaInicialData) => void;
   restartOnboarding: () => void;
   demoLogin: () => void;
+  demoNewUser: () => void;
   logout: () => void;
 };
 
@@ -73,7 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         name: name.trim() || email.split('@')[0] || 'Miembro Renaser',
         email: email.trim(),
       });
-      setIsOnboardingCompleted(false); // New account must complete Onboarding (Términos -> Pacto -> Ficha)
+      setIsOnboardingCompleted(false); // New account must complete Onboarding
       return true;
     }
     throw new Error('Código OTP inválido');
@@ -105,12 +106,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsOnboardingCompleted(false);
   }, []);
 
+  // Demo Login: Usuario ya existente con onboarding culminado (va directo a Home)
   const demoLogin = useCallback(() => {
     setUser({
       name: 'Sebastián Arango',
       email: 'sebastian@renaser.com',
     });
     setIsOnboardingCompleted(true);
+  }, []);
+
+  // Demo New User: Nuevo usuario para probar todo el flujo de Onboarding desde cero
+  const demoNewUser = useCallback(() => {
+    setUser({
+      name: 'Nuevo Guerrero Renaser',
+      email: 'guerrero@renaser.com',
+    });
+    setIsOnboardingCompleted(false);
   }, []);
 
   const logout = useCallback(() => {
@@ -135,6 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       completeOnboarding,
       restartOnboarding,
       demoLogin,
+      demoNewUser,
       logout,
     }),
     [
@@ -151,6 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       completeOnboarding,
       restartOnboarding,
       demoLogin,
+      demoNewUser,
       logout,
     ]
   );

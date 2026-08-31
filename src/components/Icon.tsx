@@ -1,10 +1,12 @@
 import React from 'react';
-import Svg, { Circle, Path, Rect, Ellipse, G } from 'react-native-svg';
+import Svg, { Circle, Path, Rect, Ellipse, Polygon } from 'react-native-svg';
 
 export type IconName =
   | 'bell' | 'sun' | 'moon' | 'doc' | 'diamond' | 'users' | 'user' | 'dots' | 'info' | 'bulb'
   | 'body' | 'brain' | 'heart' | 'spark' | 'briefcase' | 'chevron' | 'arrow' | 'arrowLeft' | 'clock' | 'stack'
-  | 'mail' | 'lock' | 'eye' | 'eyeOff' | 'check' | 'logout' | 'google' | 'apple' | 'key' | 'trophy' | 'zap';
+  | 'mail' | 'lock' | 'eye' | 'eyeOff' | 'check' | 'logout' | 'google' | 'apple' | 'key' | 'trophy' | 'zap'
+  | 'fire' | 'play' | 'pause' | 'plus' | 'chat' | 'send' | 'calendar' | 'award' | 'share' | 'filter'
+  | 'dumbbell' | 'volume' | 'star' | 'checkCircle';
 
 type Props = { name: IconName; size?: number; color: string; strokeWidth?: number };
 
@@ -12,6 +14,101 @@ export function Icon({ name, size = 20, color, strokeWidth = 1.1 }: Props) {
   const s = { stroke: color, strokeWidth, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, fill: "none" };
 
   switch (name) {
+    case 'fire':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 20 20">
+          <Path
+            {...s}
+            d="M10 2c0 3.5-3 5-3 8a5 5 0 0 0 10 0c0-4-3.5-6-3.5-6s.5 2.5-1 3.5c-.8.5-1.5 0-1.5-1.5 0-2 2-3 2-4-1 0-3 1-3 0z"
+          />
+        </Svg>
+      );
+    case 'play':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 20 20">
+          <Polygon points="6,4 16,10 6,16" fill={color} />
+        </Svg>
+      );
+    case 'pause':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 20 20">
+          <Rect x={5} y={4} width={3.5} height={12} fill={color} rx={1} />
+          <Rect x={11.5} y={4} width={3.5} height={12} fill={color} rx={1} />
+        </Svg>
+      );
+    case 'plus':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 20 20">
+          <Path {...s} strokeWidth={strokeWidth * 1.3} d="M10 4v12M4 10h12" />
+        </Svg>
+      );
+    case 'chat':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 20 20">
+          <Path {...s} d="M17 9.5a6.5 6.5 0 0 1-9.5 5.7L3 16.5l1.3-4.5A6.5 6.5 0 1 1 17 9.5z" />
+        </Svg>
+      );
+    case 'send':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 20 20">
+          <Path {...s} d="M18 2L9 11M18 2l-6 16-3-7-7-3 16-6z" />
+        </Svg>
+      );
+    case 'calendar':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 20 20">
+          <Rect {...s} x={3} y={4.5} width={14} height={13} rx={2} />
+          <Path {...s} d="M13.5 2.5v4M6.5 2.5v4M3 8.5h14" />
+        </Svg>
+      );
+    case 'award':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 20 20">
+          <Circle {...s} cx={10} cy={7.5} r={4.5} />
+          <Path {...s} d="M7 11.5L5.5 17.5 10 15l4.5 2.5-1.5-6" />
+        </Svg>
+      );
+    case 'share':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 20 20">
+          <Circle {...s} cx={15} cy={5} r={2.5} />
+          <Circle {...s} cx={5} cy={10} r={2.5} />
+          <Circle {...s} cx={15} cy={15} r={2.5} />
+          <Path {...s} d="M7.3 8.8l5.4-2.6M7.3 11.2l5.4 2.6" />
+        </Svg>
+      );
+    case 'filter':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 20 20">
+          <Polygon points="3,4 17,4 11.5,10.5 11.5,16 8.5,14 8.5,10.5" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+        </Svg>
+      );
+    case 'dumbbell':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 20 20">
+          <Path {...s} d="M2.5 7v6M5.5 5v10M14.5 5v10M17.5 7v6M5.5 10h9M3.5 7.5h2M14.5 7.5h2M3.5 12.5h2M14.5 12.5h2" />
+        </Svg>
+      );
+    case 'volume':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 20 20">
+          <Polygon points="3.5,7 7.5,7 12,3.5 12,16.5 7.5,13 3.5,13" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+          <Path {...s} d="M15 7a4.5 4.5 0 0 1 0 6M16.5 4.5a8 8 0 0 1 0 11" />
+        </Svg>
+      );
+    case 'star':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 20 20">
+          <Polygon points="10,2.5 12.5,7.5 18,8.2 14,12 15,17.5 10,14.8 5,17.5 6,12 2,8.2 7.5,7.5" fill={color} />
+        </Svg>
+      );
+    case 'checkCircle':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 20 20">
+          <Circle {...s} cx={10} cy={10} r={8} />
+          <Path {...s} strokeWidth={strokeWidth * 1.3} d="M6.5 10.5l2.5 2.5 5-5.5" />
+        </Svg>
+      );
     case 'trophy':
       return (
         <Svg width={size} height={size} viewBox="0 0 20 20">

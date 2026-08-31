@@ -33,6 +33,7 @@ export default function LoginScreen() {
     verifyOtp,
     resetPassword,
     demoLogin,
+    demoNewUser,
   } = useAuth();
 
   // Navigation / Step state
@@ -577,14 +578,31 @@ export default function LoginScreen() {
                   style={[
                     styles.demoBtn,
                     {
-                      borderColor: c.borderStrong,
-                      backgroundColor: c.cardBg,
+                      borderColor: c.gold,
+                      backgroundColor: c.cardBgAlt,
                     },
                   ]}
                 >
                   <Icon name="spark" size={16} color={c.gold} />
-                  <Text style={[t.micro, { color: c.text, letterSpacing: 1.6, fontWeight: '600' }]}>
-                    ACCESO DIRECTO (MODO DEMO)
+                  <Text style={[t.micro, { color: c.gold, letterSpacing: 1.6, fontWeight: '700' }]}>
+                    USUARIO EXISTENTE (DIRECTO A HOME)
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={demoNewUser}
+                  style={[
+                    styles.demoBtn,
+                    {
+                      borderColor: c.borderStrong,
+                      backgroundColor: c.cardBg,
+                      marginTop: 8,
+                    },
+                  ]}
+                >
+                  <Icon name="doc" size={16} color={c.textSoft} />
+                  <Text style={[t.micro, { color: c.textSoft, letterSpacing: 1.4, fontWeight: '600' }]}>
+                    PROBAR NUEVA CUENTA (IR A ONBOARDING)
                   </Text>
                 </Pressable>
               </View>
