@@ -713,7 +713,7 @@ export default function ComunidadScreen() {
   }, inAtencionPersonalizada || inEventosExperiencias || inExclusiveResources || selectedCourse !== null || fullScreenLesson !== null || createPostModalVisible || reactionsModalVisible || activeChat !== null || groupInfoVisible || selectedMemberProfile !== null);
 
   // =========================================================================
-  // HANDLERS DE CHAT TIPO WHATSAPP
+  // HANDLERS
   // =========================================================================
   const handleSoportePress = (label: string) => {
     if (label.includes('Atención')) {
@@ -833,7 +833,6 @@ export default function ComunidadScreen() {
     }
   };
 
-  // Handlers de Muro
   const handleToggleLike = (postId: string) => {
     setPosts(prev =>
       prev.map(p => {
@@ -974,6 +973,12 @@ export default function ComunidadScreen() {
     Alert.alert('¡Publicado con Éxito! 🦅', 'Tu victoria ha sido compartida con la tribu.');
   };
 
+  const filteredReactions = REACTION_USERS_MOCK.filter(r => {
+    if (reactionFilter === 'like') return r.type === 'like';
+    if (reactionFilter === 'dislike') return r.type === 'dislike';
+    return true;
+  });
+
   const filteredConversations = conversations.filter(conv => {
     if (chatCategory === 'celula') return conv.type === 'celula';
     if (chatCategory === 'miembros') return conv.type === 'direct';
@@ -1084,7 +1089,767 @@ export default function ComunidadScreen() {
       )}
 
       {/* ========================================================================= */}
-      {/* VISTA 2: SUB-MÓDULO: ATENCIÓN PERSONALIZADA & CHATS TIPO WHATSAPP         */}
+      {/* VISTA 2: SUB-MÓDULO: EVENTOS & EXPERIENCIAS (MURO, TESTIMONIOS, RANKING 3D)*/}
+      {/* ========================================================================= */}
+      {inEventosExperiencias && (
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            {
+              paddingHorizontal: horizontalPadding,
+              maxWidth: isTablet ? 560 : undefined,
+              alignSelf: isTablet ? 'center' : 'stretch',
+              width: isTablet ? '100%' : undefined,
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Top Bar para volver a Comunidad */}
+          <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
+            <Pressable
+              onPress={() => setInEventosExperiencias(false)}
+              style={styles.backBtnRow}
+              hitSlop={8}
+            >
+              <Icon name="arrowLeft" size={14} color={c.gold} />
+              <Text style={[t.micro, { color: c.gold, fontWeight: '700', letterSpacing: 1 }]}>
+                VOLVER A COMUNIDAD
+              </Text>
+            </Pressable>
+
+            <View style={[styles.categoryPillBadge, { borderColor: c.borderStrong, backgroundColor: c.cardBgAlt }]}>
+              <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 9.5 }]}>
+                EVENTOS & EXPERIENCIAS
+              </Text>
+            </View>
+          </View>
+
+          {/* Selector de las 3 Pestañas Principales */}
+          <View style={[styles.tabsRow, { borderColor: c.border, backgroundColor: c.cardBg }]}>
+            <Pressable
+              onPress={() => setEventosTab('muro')}
+              style={[
+                styles.tabBtn,
+                eventosTab === 'muro' && { backgroundColor: c.gold },
+              ]}
+            >
+              <Text
+                style={[
+                  t.micro,
+                  {
+                    color: eventosTab === 'muro' ? '#1E1B18' : c.textSoft,
+                    fontWeight: '700',
+                    fontSize: 10,
+                  },
+                ]}
+              >
+                📢 MURO
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => setEventosTab('testimonios')}
+              style={[
+                styles.tabBtn,
+                eventosTab === 'testimonios' && { backgroundColor: c.gold },
+              ]}
+            >
+              <Text
+                style={[
+                  t.micro,
+                  {
+                    color: eventosTab === 'testimonios' ? '#1E1B18' : c.textSoft,
+                    fontWeight: '700',
+                    fontSize: 10,
+                  },
+                ]}
+              >
+                ⭐ TESTIMONIOS
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => setEventosTab('ranking')}
+              style={[
+                styles.tabBtn,
+                eventosTab === 'ranking' && { backgroundColor: c.gold },
+              ]}
+            >
+              <Text
+                style={[
+                  t.micro,
+                  {
+                    color: eventosTab === 'ranking' ? '#1E1B18' : c.textSoft,
+                    fontWeight: '700',
+                    fontSize: 10,
+                  },
+                ]}
+              >
+                🏆 RANKING 3D
+              </Text>
+            </Pressable>
+          </View>
+
+          {/* PESTAÑA 1: MURO SOCIAL */}
+          {eventosTab === 'muro' && (
+            <View style={{ gap: 14, paddingTop: 10, paddingBottom: 28 }}>
+              {/* Botón Ventana Externa de Publicación */}
+              <Pressable
+                onPress={() => setCreatePostModalVisible(true)}
+                style={[styles.createPostBar, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                  <View style={[styles.avatarCircle, { borderColor: c.gold, backgroundColor: c.bg }]}>
+                    <Text style={{ fontSize: 13 }}>🦅</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[t.body, { color: c.textStrong, fontSize: 12.5, fontWeight: '600' }]}>
+                      ¿Qué conquistaste hoy, Kelin?
+                    </Text>
+                    <Text style={[t.micro, { color: c.gold, fontSize: 10 }]}>
+                      Publicación sin límite de caracteres ›
+                    </Text>
+                  </View>
+                </View>
+                <View style={[styles.plusBadge, { backgroundColor: c.gold }]}>
+                  <Text style={{ color: '#1E1B18', fontWeight: '900', fontSize: 14 }}>+</Text>
+                </View>
+              </Pressable>
+
+              {/* Lista de Publicaciones */}
+              {posts.map(post => {
+                const isExpanded = expandedPosts[post.id];
+                const commentsVisible = openComments[post.id];
+
+                return (
+                  <View
+                    key={post.id}
+                    style={[styles.postCard, { borderColor: c.border, backgroundColor: c.cardBg }]}
+                  >
+                    {/* Header del Post */}
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                        <View style={[styles.avatarCircle, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+                          <Text style={{ fontSize: 14 }}>{post.avatar}</Text>
+                        </View>
+                        <View>
+                          <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>{post.author}</Text>
+                          <Text style={[t.micro, { color: c.micro, fontSize: 9.5 }]}>
+                            {post.cell} · {post.timeAgo}
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={[styles.dayBadge, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}>
+                        <Text style={[t.micro, { color: c.gold, fontSize: 9.5, fontWeight: '700' }]}>
+                          Día {post.dayStreak}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Texto del Post con "Ver más..." */}
+                    <View style={{ marginTop: 8 }}>
+                      <Text
+                        numberOfLines={isExpanded ? undefined : 3}
+                        style={[t.body, { color: c.text, fontSize: 12.5, lineHeight: 18 }]}
+                      >
+                        {post.text}
+                      </Text>
+                      {post.text.length > 120 && (
+                        <Pressable
+                          onPress={() => setExpandedPosts(prev => ({ ...prev, [post.id]: !prev[post.id] }))}
+                          style={{ marginTop: 2 }}
+                        >
+                          <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 10.5 }]}>
+                            {isExpanded ? 'Ver menos' : 'Ver más...'}
+                          </Text>
+                        </Pressable>
+                      )}
+                    </View>
+
+                    {/* Galería Autodetectada */}
+                    {post.media.length > 0 && (
+                      <View style={[styles.mediaGridContainer, { marginTop: 10 }]}>
+                        {post.media.length === 1 ? (
+                          <View style={[styles.mediaSingleBox, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}>
+                            <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 11 }]}>
+                              {post.media[0].title}
+                            </Text>
+                          </View>
+                        ) : post.media.length === 2 ? (
+                          <View style={{ flexDirection: 'row', gap: 6 }}>
+                            {post.media.map((m, idx) => (
+                              <View key={idx} style={[styles.mediaHalfBox, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}>
+                                <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 10 }]}>
+                                  {m.title}
+                                </Text>
+                              </View>
+                            ))}
+                          </View>
+                        ) : (
+                          <View style={{ flexDirection: 'row', gap: 6, height: 130 }}>
+                            <View style={[styles.mediaLargeLeft, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}>
+                              <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 11 }]}>
+                                {post.media[0].title}
+                              </Text>
+                            </View>
+                            <View style={{ flex: 1, gap: 6 }}>
+                              {post.media.slice(1, 3).map((m, idx) => (
+                                <View key={idx} style={[styles.mediaSmallRight, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}>
+                                  <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 9.5 }]}>
+                                    {m.title}
+                                  </Text>
+                                </View>
+                              ))}
+                            </View>
+                          </View>
+                        )}
+                      </View>
+                    )}
+
+                    {/* Resumen de Reacciones */}
+                    <View style={[styles.reactionsSummaryRow, { borderTopColor: c.divider }]}>
+                      <Pressable
+                        onPress={() => {
+                          setReactionsModalVisible(true);
+                          setReactionFilter('all');
+                        }}
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                      >
+                        <Text style={[styles.rxCountBadge, { color: '#70d2a0', backgroundColor: '#173429' }]}>
+                          👍 {post.likes}
+                        </Text>
+                        <Text style={[styles.rxCountBadge, { color: '#f28e8e', backgroundColor: '#331a1a' }]}>
+                          👎 {post.dislikes}
+                        </Text>
+                        <Text style={[t.micro, { color: c.gold, fontSize: 9.5 }]}>· Ver quién reaccionó ›</Text>
+                      </Pressable>
+
+                      <Pressable onPress={() => setOpenComments(prev => ({ ...prev, [post.id]: !prev[post.id] }))}>
+                        <Text style={[t.micro, { color: c.textSoft, fontSize: 10 }]}>
+                          {post.comments.length} Comentarios
+                        </Text>
+                      </Pressable>
+                    </View>
+
+                    {/* Botones Like / Dislike */}
+                    <View style={[styles.actionButtonsRow, { borderTopColor: c.divider }]}>
+                      <Pressable
+                        onPress={() => handleToggleLike(post.id)}
+                        style={[styles.actionBtn, post.userReaction === 'like' && { backgroundColor: c.cardBgAlt }]}
+                      >
+                        <Text style={{ fontSize: 14 }}>👍</Text>
+                        <Text
+                          style={[
+                            t.micro,
+                            {
+                              color: post.userReaction === 'like' ? '#70d2a0' : c.textSoft,
+                              fontWeight: '700',
+                              fontSize: 10.5,
+                            },
+                          ]}
+                        >
+                          Like
+                        </Text>
+                      </Pressable>
+
+                      <Pressable
+                        onPress={() => handleToggleDislike(post.id)}
+                        style={[styles.actionBtn, post.userReaction === 'dislike' && { backgroundColor: c.cardBgAlt }]}
+                      >
+                        <Text style={{ fontSize: 14 }}>👎</Text>
+                        <Text
+                          style={[
+                            t.micro,
+                            {
+                              color: post.userReaction === 'dislike' ? '#f28e8e' : c.textSoft,
+                              fontWeight: '700',
+                              fontSize: 10.5,
+                            },
+                          ]}
+                        >
+                          Dislike
+                        </Text>
+                      </Pressable>
+
+                      <Pressable
+                        onPress={() => setOpenComments(prev => ({ ...prev, [post.id]: !prev[post.id] }))}
+                        style={styles.actionBtn}
+                      >
+                        <Text style={{ fontSize: 13 }}>💬</Text>
+                        <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 10.5 }]}>
+                          Comentar
+                        </Text>
+                      </Pressable>
+                    </View>
+
+                    {/* Comentarios con Fotos */}
+                    {commentsVisible && (
+                      <View style={[styles.commentsSection, { borderTopColor: c.divider }]}>
+                        {post.comments.map(cItem => (
+                          <View key={cItem.id} style={[styles.commentCard, { backgroundColor: c.cardBgAlt }]}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <Text style={[t.cardTitle, { color: c.gold, fontSize: 11.5 }]}>
+                                {cItem.author} {cItem.role ? `(${cItem.role})` : ''}
+                              </Text>
+                              <Text style={[t.micro, { color: c.textSoft, fontSize: 9 }]}>{cItem.timeAgo}</Text>
+                            </View>
+
+                            <Text style={[t.body, { color: c.text, fontSize: 11.5, marginTop: 4, lineHeight: 16 }]}>
+                              {cItem.text}
+                            </Text>
+
+                            {cItem.photoAttached && (
+                              <View style={[styles.commentPhotoBox, { borderColor: c.gold, backgroundColor: c.bg }]}>
+                                <Text style={[t.micro, { color: c.gold, fontSize: 9.5, fontWeight: '700' }]}>
+                                  {cItem.photoAttached}
+                                </Text>
+                              </View>
+                            )}
+
+                            <View style={{ flexDirection: 'row', gap: 12, marginTop: 6, alignItems: 'center' }}>
+                              <Pressable
+                                onPress={() => handleCommentVote(post.id, cItem.id, 'like')}
+                                style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}
+                              >
+                                <Text style={{ fontSize: 11 }}>👍</Text>
+                                <Text style={[t.micro, { color: cItem.userReaction === 'like' ? '#70d2a0' : c.textSoft, fontSize: 9.5 }]}>
+                                  {cItem.likes}
+                                </Text>
+                              </Pressable>
+
+                              <Pressable
+                                onPress={() => handleCommentVote(post.id, cItem.id, 'dislike')}
+                                style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}
+                              >
+                                <Text style={{ fontSize: 11 }}>👎</Text>
+                                <Text style={[t.micro, { color: cItem.userReaction === 'dislike' ? '#f28e8e' : c.textSoft, fontSize: 9.5 }]}>
+                                  {cItem.dislikes}
+                                </Text>
+                              </Pressable>
+                            </View>
+                          </View>
+                        ))}
+
+                        {/* Input de Comentario */}
+                        <View style={{ gap: 6, marginTop: 8 }}>
+                          {commentPhotos[post.id] && (
+                            <View style={[styles.commentPhotoPreview, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+                              <Text style={[t.micro, { color: c.gold, fontSize: 9.5, fontWeight: '700' }]}>
+                                📷 foto_adjunta.jpg
+                              </Text>
+                              <Pressable onPress={() => setCommentPhotos(prev => ({ ...prev, [post.id]: false }))}>
+                                <Text style={{ color: '#f28e8e', fontWeight: 'bold', fontSize: 11 }}>✕</Text>
+                              </Pressable>
+                            </View>
+                          )}
+
+                          <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                            <Pressable
+                              onPress={() => setCommentPhotos(prev => ({ ...prev, [post.id]: !prev[post.id] }))}
+                              style={[styles.attachPhotoBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
+                            >
+                              <Text style={{ fontSize: 14 }}>📷</Text>
+                            </Pressable>
+
+                            <TextInput
+                              value={commentInputs[post.id] || ''}
+                              onChangeText={val => setCommentInputs(prev => ({ ...prev, [post.id]: val }))}
+                              placeholder="Escribe un comentario..."
+                              placeholderTextColor={c.textSoft}
+                              style={[styles.commentInput, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.text }]}
+                            />
+
+                            <Pressable
+                              onPress={() => handleAddComment(post.id)}
+                              style={[styles.sendCommentBtn, { backgroundColor: c.gold }]}
+                            >
+                              <Text style={{ color: '#1E1B18', fontWeight: '800', fontSize: 11 }}>Enviar</Text>
+                            </Pressable>
+                          </View>
+                        </View>
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
+          {/* PESTAÑA 2: TESTIMONIOS EN MEDIA LUNA */}
+          {eventosTab === 'testimonios' && (
+            <View style={{ gap: 14, paddingTop: 10, paddingBottom: 28 }}>
+              {INITIAL_TESTIMONIALS.map(item => (
+                <View key={item.id} style={[styles.mediaLunaCard, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
+                  <View style={[styles.mediaLunaGlow, { backgroundColor: c.cardBgAlt }]} />
+                  <View style={styles.mediaLunaContent}>
+                    <View style={[styles.avatarCrestLarge, { borderColor: c.gold, backgroundColor: c.bg }]}>
+                      <Text style={{ fontSize: 24 }}>{item.avatar}</Text>
+                    </View>
+                    <View style={[styles.badgePill, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+                      <Text style={[t.micro, { color: c.gold, fontSize: 8.5, fontWeight: '800' }]}>
+                        {item.badge}
+                      </Text>
+                    </View>
+                    <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 15, marginTop: 4 }]}>
+                      {item.name}
+                    </Text>
+                    <Text style={[t.micro, { color: c.micro, fontSize: 10 }]}>{item.role}</Text>
+                    <Text style={[t.body, { color: c.text, fontSize: 12.5, textAlign: 'center', fontStyle: 'italic', marginVertical: 8, lineHeight: 18 }]}>
+                      {item.quote}
+                    </Text>
+                    <View style={{ flexDirection: 'row', gap: 8, width: '100%', marginVertical: 6 }}>
+                      {item.metrics.map(m => (
+                        <View key={m.label} style={[styles.metricDeltaBox, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
+                          <Text style={[t.micro, { color: c.textSoft, fontSize: 8.5, textAlign: 'center' }]}>
+                            {m.label}
+                          </Text>
+                          <Text style={[t.metric, { color: '#70d2a0', fontSize: 13, textAlign: 'center' }]}>
+                            {m.value}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                    <GoldButton
+                      label={`▶ VER VIDEO TESTIMONIO (${item.videoDuration})`}
+                      onPress={() => Alert.alert('Testimonio Somático', `Reproduciendo video HD de ${item.name}.`)}
+                      style={{ width: '100%', marginTop: 6 }}
+                    />
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* PESTAÑA 3: PODIO RANKING 3D */}
+          {eventosTab === 'ranking' && (
+            <View style={{ gap: 14, paddingTop: 10, paddingBottom: 28 }}>
+              {/* PODIO 3D */}
+              <View style={[styles.podium3DContainer, { borderColor: c.border, backgroundColor: c.cardBg }]}>
+                {/* #2 PLATA */}
+                <View style={styles.podiumColumn}>
+                  <View style={[styles.avatarMedal, { borderColor: '#E0E0E0', backgroundColor: '#2C2C2C' }]}>
+                    <Text style={{ fontSize: 16 }}>🥈</Text>
+                  </View>
+                  <Text style={[t.cardTitle, { color: '#E0E0E0', fontSize: 11, marginTop: 4 }]}>
+                    Rodrigo V.
+                  </Text>
+                  <Text style={[t.micro, { color: '#BDBDBD', fontSize: 9 }]}>36 Días</Text>
+                  <LinearGradient
+                    colors={['#8C8C8C', '#5C5C5C', '#3A3A3A']}
+                    style={[styles.podiumBlock, { height: 95 }]}
+                  >
+                    <Text style={[styles.podiumRankNum, { color: '#FFF' }]}>2</Text>
+                    <Text style={[t.micro, { color: '#E0E0E0', fontSize: 8.5, fontWeight: '800' }]}>PLATA</Text>
+                  </LinearGradient>
+                </View>
+
+                {/* #1 ORO */}
+                <View style={styles.podiumColumn}>
+                  <View style={[styles.avatarMedal, { borderColor: c.gold, backgroundColor: '#3D3014' }]}>
+                    <Text style={{ fontSize: 20 }}>👑</Text>
+                  </View>
+                  <Text style={[t.cardTitle, { color: c.gold, fontSize: 12, marginTop: 4, fontWeight: '800' }]}>
+                    María A.
+                  </Text>
+                  <Text style={[t.micro, { color: c.gold, fontSize: 9.5, fontWeight: '700' }]}>🔥 37 Días</Text>
+                  <LinearGradient
+                    colors={['#FFE29F', '#E5C689', '#C09A4F', '#9C7A34']}
+                    style={[styles.podiumBlock, { height: 130 }]}
+                  >
+                    <Text style={[styles.podiumRankNum, { color: '#1E1B18' }]}>1</Text>
+                    <Text style={[t.micro, { color: '#1E1B18', fontSize: 9, fontWeight: '900' }]}>ORO LÍDER</Text>
+                  </LinearGradient>
+                </View>
+
+                {/* #3 BRONCE */}
+                <View style={styles.podiumColumn}>
+                  <View style={[styles.avatarMedal, { borderColor: '#CD7F32', backgroundColor: '#2E1E14' }]}>
+                    <Text style={{ fontSize: 16 }}>🥉</Text>
+                  </View>
+                  <Text style={[t.cardTitle, { color: '#E0A96D', fontSize: 11, marginTop: 4 }]}>
+                    Esteban G.
+                  </Text>
+                  <Text style={[t.micro, { color: '#A89E8D', fontSize: 9 }]}>35 Días</Text>
+                  <LinearGradient
+                    colors={['#A86834', '#7A4820', '#4A2A10']}
+                    style={[styles.podiumBlock, { height: 75 }]}
+                  >
+                    <Text style={[styles.podiumRankNum, { color: '#FFF' }]}>3</Text>
+                    <Text style={[t.micro, { color: '#E0A96D', fontSize: 8.5, fontWeight: '800' }]}>BRONCE</Text>
+                  </LinearGradient>
+                </View>
+              </View>
+
+              {/* Tu Posición Personal */}
+              <View style={[styles.myRankCard, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={[styles.rankCircleNumber, { backgroundColor: c.gold }]}>
+                    <Text style={{ color: '#1E1B18', fontWeight: '900', fontSize: 12 }}>#4</Text>
+                  </View>
+                  <View>
+                    <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 12.5 }]}>
+                      Tu Posición (Kelin Arango)
+                    </Text>
+                    <Text style={[t.micro, { color: c.gold, fontSize: 9.5 }]}>
+                      Célula 07 · 🔥 37 Días · 94% Evidencias
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Tabla de Clasificación General */}
+              <View style={[styles.leaderboardList, { borderColor: c.border, backgroundColor: c.cardBg }]}>
+                {INITIAL_LEADERBOARD.map(u => (
+                  <View
+                    key={u.id}
+                    style={[
+                      styles.leaderboardRow,
+                      { borderBottomColor: c.divider },
+                      u.isCurrentUser && { backgroundColor: c.cardBgAlt },
+                    ]}
+                  >
+                    <Text style={[t.micro, { color: u.medal ? c.gold : c.textSoft, fontWeight: '800', width: 24 }]}>
+                      #{u.rank}
+                    </Text>
+                    <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 12, flex: 1 }]}>
+                      {u.name}
+                    </Text>
+                    <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>
+                      🔥 {u.streakDays}d
+                    </Text>
+                    <Text style={[t.micro, { color: '#70d2a0', fontWeight: '700', marginLeft: 8 }]}>
+                      {u.evidencePercent}%
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+        </ScrollView>
+      )}
+
+      {/* ========================================================================= */}
+      {/* VISTA 3: SUB-MÓDULO: RECURSOS EXCLUSIVOS & CATÁLOGO DE CURSOS              */}
+      {/* ========================================================================= */}
+      {inExclusiveResources && selectedCourse === null && fullScreenLesson === null && (
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            {
+              paddingHorizontal: horizontalPadding,
+              maxWidth: isTablet ? 560 : undefined,
+              alignSelf: isTablet ? 'center' : 'stretch',
+              width: isTablet ? '100%' : undefined,
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
+            <Pressable
+              onPress={() => setInExclusiveResources(false)}
+              style={styles.backBtnRow}
+              hitSlop={8}
+            >
+              <Icon name="arrowLeft" size={14} color={c.gold} />
+              <Text style={[t.micro, { color: c.gold, fontWeight: '700', letterSpacing: 1 }]}>
+                VOLVER A COMUNIDAD
+              </Text>
+            </Pressable>
+
+            <View style={[styles.categoryPillBadge, { borderColor: c.borderStrong, backgroundColor: c.cardBgAlt }]}>
+              <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 9.5 }]}>
+                RECURSOS EXCLUSIVOS
+              </Text>
+            </View>
+          </View>
+
+          <View style={{ gap: 14, paddingTop: 10, paddingBottom: 28 }}>
+            {COURSES_DATA.map(course => (
+              <Pressable
+                key={course.id}
+                onPress={() => setSelectedCourse(course)}
+                style={[styles.courseCard, { borderColor: c.border, backgroundColor: c.cardBg }]}
+              >
+                <LinearGradient
+                  colors={['#2A2417', '#1E1B15', '#141310']}
+                  style={styles.courseCoverHeader}
+                >
+                  <View style={[styles.courseCategoryBadge, { borderColor: c.gold, backgroundColor: 'rgba(0,0,0,0.6)' }]}>
+                    <Text style={[t.micro, { color: c.gold, fontSize: 8.5, fontWeight: '800' }]}>
+                      {course.category}
+                    </Text>
+                  </View>
+                  <Text style={[t.screenTitle, { color: '#FFFFFF', fontSize: 16, lineHeight: 21 }]}>
+                    {course.title}
+                  </Text>
+                </LinearGradient>
+
+                <View style={{ padding: 14, gap: 8 }}>
+                  <Text style={[t.micro, { color: c.micro }]}>
+                    Instructor: <Text style={{ color: c.gold, fontWeight: '700' }}>{course.instructor}</Text>
+                  </Text>
+                  <Text style={[t.body, { color: c.textSoft, fontSize: 12, lineHeight: 17 }]}>
+                    {course.summary}
+                  </Text>
+                  <View style={{ gap: 4, marginTop: 4 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                      <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>
+                        {course.totalModules} Módulos · {course.totalResources} Recursos
+                      </Text>
+                      <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 9.5 }]}>
+                        {course.progressPercent}% Completado
+                      </Text>
+                    </View>
+                    <View style={[styles.progressBarBg, { backgroundColor: c.divider }]}>
+                      <View style={[styles.progressBarFill, { width: `${course.progressPercent}%`, backgroundColor: c.gold }]} />
+                    </View>
+                  </View>
+                  <View style={[styles.exploreBtn, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+                    <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 0.5 }]}>
+                      EXPLORAR CONTENIDO ›
+                    </Text>
+                  </View>
+                </View>
+              </Pressable>
+            ))}
+          </View>
+        </ScrollView>
+      )}
+
+      {/* ========================================================================= */}
+      {/* VISTA 3.1: DETALLE DEL CURSO (SECCIONES Y RECURSOS)                       */}
+      {/* ========================================================================= */}
+      {inExclusiveResources && selectedCourse !== null && fullScreenLesson === null && (
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            {
+              paddingHorizontal: horizontalPadding,
+              maxWidth: isTablet ? 560 : undefined,
+              alignSelf: isTablet ? 'center' : 'stretch',
+              width: isTablet ? '100%' : undefined,
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
+            <Pressable
+              onPress={() => setSelectedCourse(null)}
+              style={styles.backBtnRow}
+              hitSlop={8}
+            >
+              <Icon name="arrowLeft" size={14} color={c.gold} />
+              <Text style={[t.micro, { color: c.gold, fontWeight: '700', letterSpacing: 1 }]}>
+                VOLVER A CURSOS
+              </Text>
+            </Pressable>
+          </View>
+
+          <View style={[styles.courseHeaderBox, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
+            <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 16 }]}>
+              {selectedCourse.title}
+            </Text>
+            <Text style={[t.micro, { color: c.gold, marginTop: 4 }]}>
+              Instructor: {selectedCourse.instructor}
+            </Text>
+          </View>
+
+          <View style={{ gap: 14, marginTop: 14, paddingBottom: 28 }}>
+            {selectedCourse.sections.map(section => (
+              <View key={section.id} style={[styles.sectionCard, { borderColor: c.border, backgroundColor: c.cardBg }]}>
+                <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 0.8 }]}>
+                  {section.title}
+                </Text>
+                <View style={{ gap: 8, marginTop: 10 }}>
+                  {section.lessons.map(lesson => (
+                    <Pressable
+                      key={lesson.id}
+                      onPress={() => setFullScreenLesson(lesson)}
+                      style={[styles.lessonItemRow, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
+                    >
+                      <View style={[styles.resourceTypeIcon, { borderColor: c.gold, backgroundColor: c.bg }]}>
+                        <Text style={{ fontSize: 13 }}>
+                          {lesson.type === 'video' ? '🎥' : lesson.type === 'doc' ? '📄' : lesson.type === 'link' ? '🔗' : '✍️'}
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 12.5 }]}>
+                          {lesson.title}
+                        </Text>
+                        <Text style={[t.micro, { color: c.micro, fontSize: 9.5 }]}>{lesson.meta}</Text>
+                      </View>
+                      <Icon name="chevron" size={12} color={c.gold} />
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+      )}
+
+      {/* ========================================================================= */}
+      {/* VISTA 3.2: LECCIÓN A PANTALLA COMPLETA (VIDEO, DOC, LINK, ESCRITO)        */}
+      {/* ========================================================================= */}
+      {inExclusiveResources && fullScreenLesson !== null && (
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            {
+              paddingHorizontal: horizontalPadding,
+              maxWidth: isTablet ? 560 : undefined,
+              alignSelf: isTablet ? 'center' : 'stretch',
+              width: isTablet ? '100%' : undefined,
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
+            <Pressable
+              onPress={() => setFullScreenLesson(null)}
+              style={styles.backBtnRow}
+              hitSlop={8}
+            >
+              <Icon name="arrowLeft" size={14} color={c.gold} />
+              <Text style={[t.micro, { color: c.gold, fontWeight: '700', letterSpacing: 1 }]}>
+                VOLVER A LA SECCIÓN
+              </Text>
+            </Pressable>
+          </View>
+
+          <View style={[styles.lessonInfoCard, { borderColor: c.gold, backgroundColor: c.cardBg, marginTop: 10 }]}>
+            <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 16 }]}>
+              {fullScreenLesson.title}
+            </Text>
+            <Text style={[t.micro, { color: c.gold, marginTop: 4 }]}>
+              {fullScreenLesson.meta}
+            </Text>
+            <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, marginTop: 8, lineHeight: 18 }]}>
+              {fullScreenLesson.desc}
+            </Text>
+
+            {fullScreenLesson.content && (
+              <View style={{ marginTop: 14, padding: 12, borderRadius: 12, backgroundColor: c.cardBgAlt, borderWidth: 1, borderColor: c.border }}>
+                <Text style={[t.body, { color: c.text, fontSize: 13, lineHeight: 20 }]}>
+                  {fullScreenLesson.content}
+                </Text>
+              </View>
+            )}
+
+            <GoldButton
+              label="✓ MARCAR LECCIÓN COMO COMPLETADA"
+              onPress={() => {
+                Alert.alert('¡Excelente Progreso! 🦅', 'Lección completada y registrada en tu racha somática.');
+                setFullScreenLesson(null);
+              }}
+              style={{ width: '100%', marginTop: 16 }}
+            />
+          </View>
+        </ScrollView>
+      )}
+
+      {/* ========================================================================= */}
+      {/* VISTA 4: SUB-MÓDULO: ATENCIÓN PERSONALIZADA & CHATS TIPO WHATSAPP         */}
       {/* ========================================================================= */}
       {inAtencionPersonalizada && activeChat === null && (
         <ScrollView
@@ -1193,7 +1958,7 @@ export default function ComunidadScreen() {
       )}
 
       {/* ========================================================================= */}
-      {/* VISTA 3: SALA DE CHAT ACTIVA (TIPO WHATSAPP)                              */}
+      {/* VISTA 4.1: SALA DE CHAT ACTIVA (TIPO WHATSAPP)                            */}
       {/* ========================================================================= */}
       {inAtencionPersonalizada && activeChat !== null && !groupInfoVisible && (
         <View style={{ flex: 1 }}>
@@ -1412,7 +2177,7 @@ export default function ComunidadScreen() {
       )}
 
       {/* ========================================================================= */}
-      {/* VISTA 4: INFORMACIÓN DEL GRUPO / INTEGRANTES (TIPO WHATSAPP GROUP INFO)   */}
+      {/* VISTA 4.2: INFORMACIÓN DEL GRUPO / INTEGRANTES (TIPO WHATSAPP GROUP INFO) */}
       {/* ========================================================================= */}
       {inAtencionPersonalizada && groupInfoVisible && (
         <ScrollView
@@ -1597,6 +2362,154 @@ export default function ComunidadScreen() {
           )}
         </View>
       </Modal>
+
+      {/* ========================================================================= */}
+      {/* MODAL: VENTANA EXTERNA DE PUBLICACIÓN A PANTALLA COMPLETA                */}
+      {/* ========================================================================= */}
+      <Modal
+        visible={createPostModalVisible}
+        transparent={false}
+        animationType="slide"
+        onRequestClose={() => setCreatePostModalVisible(false)}
+      >
+        <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
+          <View style={[styles.modalHeaderBar, { borderBottomColor: c.divider }]}>
+            <Pressable onPress={() => setCreatePostModalVisible(false)} hitSlop={8}>
+              <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 11 }]}>✕ CANCELAR</Text>
+            </Pressable>
+            <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>NUEVA PUBLICACIÓN</Text>
+            <Pressable onPress={handlePublishPost} style={[styles.publishHeaderBtn, { backgroundColor: c.gold }]}>
+              <Text style={{ color: '#1E1B18', fontWeight: '900', fontSize: 11 }}>PUBLICAR</Text>
+            </Pressable>
+          </View>
+
+          <ScrollView contentContainerStyle={{ padding: 18, gap: 14 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View style={[styles.avatarCircle, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+                <Text style={{ fontSize: 14 }}>🦅</Text>
+              </View>
+              <View>
+                <Text style={[t.cardTitle, { color: c.textStrong }]}>Kelin Arango</Text>
+                <Text style={[t.micro, { color: c.gold, fontSize: 9.5 }]}>Célula 07 · Día 37</Text>
+              </View>
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
+              {['🔥 VICTORIA SOMÁTICA', '⚡ ALTO RENDIMIENTO', '🧠 REFLEXIÓN'].map(tag => (
+                <Pressable
+                  key={tag}
+                  onPress={() => setNewPostTag(tag)}
+                  style={[
+                    styles.tagSelectorPill,
+                    { borderColor: c.border, backgroundColor: c.cardBgAlt },
+                    newPostTag === tag && { borderColor: c.gold, backgroundColor: c.cardBg },
+                  ]}
+                >
+                  <Text style={[t.micro, { color: newPostTag === tag ? c.gold : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
+                    {tag}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <TextInput
+              value={newPostText}
+              onChangeText={setNewPostText}
+              placeholder="Escribe tu reflexión, victoria o experiencia de hoy (sin límite de caracteres)..."
+              placeholderTextColor={c.textSoft}
+              multiline
+              textAlignVertical="top"
+              style={[styles.fullPostInput, { borderColor: c.border, backgroundColor: c.cardBg, color: c.text }]}
+            />
+
+            <View style={{ gap: 8 }}>
+              <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>FOTOS ADJUNTAS (GALERÍA AUTODETECTADA):</Text>
+              <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                {attachedPhotos.map((p, idx) => (
+                  <View key={idx} style={[styles.attachedPhotoCard, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+                    <Text style={[t.micro, { color: c.gold, fontSize: 9.5 }]}>{p}</Text>
+                    <Pressable onPress={() => setAttachedPhotos(prev => prev.filter((_, i) => i !== idx))}>
+                      <Text style={{ color: '#f28e8e', fontWeight: 'bold', fontSize: 12 }}>✕</Text>
+                    </Pressable>
+                  </View>
+                ))}
+                <Pressable
+                  onPress={() => setAttachedPhotos(prev => [...prev, `📷 Foto_${prev.length + 1}.jpg`])}
+                  style={[styles.addMorePhotoBtn, { borderColor: c.border, backgroundColor: c.cardBg }]}
+                >
+                  <Text style={{ fontSize: 16 }}>➕</Text>
+                  <Text style={[t.micro, { color: c.textSoft, fontSize: 9 }]}>Agregar</Text>
+                </Pressable>
+              </View>
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      {/* ========================================================================= */}
+      {/* MODAL: QUIÉN DIO LIKE / DISLIKE                                           */}
+      {/* ========================================================================= */}
+      <Modal
+        visible={reactionsModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setReactionsModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.reactionsModalCard, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: c.divider, paddingBottom: 10 }}>
+              <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>REACCIONES DEL POST</Text>
+              <Pressable onPress={() => setReactionsModalVisible(false)}>
+                <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>✕ Cerrar</Text>
+              </Pressable>
+            </View>
+
+            <View style={[styles.tabsRow, { borderColor: c.border, backgroundColor: c.cardBgAlt, marginVertical: 10 }]}>
+              <Pressable
+                onPress={() => setReactionFilter('all')}
+                style={[styles.tabBtn, reactionFilter === 'all' && { backgroundColor: c.gold }]}
+              >
+                <Text style={[t.micro, { color: reactionFilter === 'all' ? '#1E1B18' : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
+                  TODOS (4)
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setReactionFilter('like')}
+                style={[styles.tabBtn, reactionFilter === 'like' && { backgroundColor: c.gold }]}
+              >
+                <Text style={[t.micro, { color: reactionFilter === 'like' ? '#1E1B18' : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
+                  👍 LIKES (3)
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => setReactionFilter('dislike')}
+                style={[styles.tabBtn, reactionFilter === 'dislike' && { backgroundColor: c.gold }]}
+              >
+                <Text style={[t.micro, { color: reactionFilter === 'dislike' ? '#1E1B18' : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
+                  👎 DISLIKES (1)
+                </Text>
+              </Pressable>
+            </View>
+
+            <ScrollView style={{ maxHeight: 220 }}>
+              {filteredReactions.map(user => (
+                <View key={user.id} style={[styles.reactionUserRow, { borderBottomColor: c.divider }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <View style={[styles.avatarCircle, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+                      <Text style={{ fontSize: 13 }}>{user.avatar}</Text>
+                    </View>
+                    <View>
+                      <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 12 }]}>{user.name}</Text>
+                      <Text style={[t.micro, { color: c.micro, fontSize: 9 }]}>{user.role}</Text>
+                    </View>
+                  </View>
+                  <Text style={{ fontSize: 16 }}>{user.type === 'like' ? '👍' : '👎'}</Text>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1670,6 +2583,310 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  createPostBar: {
+    borderWidth: 1.5,
+    borderRadius: 16,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  plusBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  postCard: {
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 14,
+  },
+  avatarCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dayBadge: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  mediaGridContainer: {
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  mediaSingleBox: {
+    height: 120,
+    borderWidth: 1,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mediaHalfBox: {
+    flex: 1,
+    height: 100,
+    borderWidth: 1,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mediaLargeLeft: {
+    flex: 1.4,
+    height: '100%',
+    borderWidth: 1,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mediaSmallRight: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reactionsSummaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
+  },
+  rxCountBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    fontSize: 10.5,
+    fontWeight: '700',
+  },
+  actionButtonsRow: {
+    flexDirection: 'row',
+    marginTop: 8,
+    paddingTop: 6,
+    borderTopWidth: 1,
+  },
+  actionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  commentsSection: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    gap: 8,
+  },
+  commentCard: {
+    borderRadius: 12,
+    padding: 10,
+  },
+  commentPhotoBox: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 6,
+    marginTop: 4,
+  },
+  commentPhotoPreview: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 6,
+  },
+  attachPhotoBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  commentInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    fontSize: 12,
+  },
+  sendCommentBtn: {
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  mediaLunaCard: {
+    borderWidth: 1.5,
+    borderRadius: 22,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  mediaLunaGlow: {
+    position: 'absolute',
+    top: -50,
+    left: '15%',
+    right: '15%',
+    height: 100,
+    borderRadius: 50,
+    opacity: 0.25,
+  },
+  mediaLunaContent: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  avatarCrestLarge: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgePill: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginTop: 6,
+  },
+  metricDeltaBox: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 6,
+  },
+  podium3DContainer: {
+    borderWidth: 1.5,
+    borderRadius: 22,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-around',
+    height: 220,
+    marginTop: 6,
+  },
+  podiumColumn: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  avatarMedal: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  podiumBlock: {
+    width: '88%',
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 6,
+  },
+  podiumRankNum: {
+    fontSize: 22,
+    fontWeight: '900',
+  },
+  myRankCard: {
+    borderWidth: 1.2,
+    borderRadius: 16,
+    padding: 12,
+  },
+  rankCircleNumber: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  leaderboardList: {
+    borderWidth: 1,
+    borderRadius: 18,
+    overflow: 'hidden',
+  },
+  leaderboardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderBottomWidth: 1,
+  },
+  courseCard: {
+    borderWidth: 1.2,
+    borderRadius: 18,
+    overflow: 'hidden',
+  },
+  courseCoverHeader: {
+    height: 100,
+    padding: 12,
+    justifyContent: 'space-between',
+  },
+  courseCategoryBadge: {
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  progressBarBg: {
+    height: 5,
+    borderRadius: 2.5,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 2.5,
+  },
+  exploreBtn: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 8,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  courseHeaderBox: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 14,
+    marginTop: 10,
+  },
+  sectionCard: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 14,
+  },
+  lessonItemRow: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  resourceTypeIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lessonInfoCard: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 14,
+  },
   chatConvCard: {
     borderWidth: 1.2,
     borderRadius: 16,
@@ -1711,14 +2928,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderBottomWidth: 1,
-  },
-  avatarCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   infoBtnPill: {
     borderWidth: 1,
@@ -1875,69 +3084,60 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 10,
   },
-  courseCard: {
-    borderWidth: 1.2,
-    borderRadius: 18,
-    overflow: 'hidden',
-  },
-  courseCoverHeader: {
-    height: 100,
-    padding: 12,
+  modalHeaderBar: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
-  },
-  courseCategoryBadge: {
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  progressBarBg: {
-    height: 5,
-    borderRadius: 2.5,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: 2.5,
-  },
-  exploreBtn: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingVertical: 8,
     alignItems: 'center',
-    marginTop: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
   },
-  courseHeaderBox: {
+  publishHeaderBtn: {
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  tagSelectorPill: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  fullPostInput: {
+    minHeight: 180,
     borderWidth: 1,
     borderRadius: 16,
     padding: 14,
-    marginTop: 10,
+    fontSize: 13,
+    lineHeight: 19,
   },
-  sectionCard: {
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 14,
-  },
-  lessonItemRow: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 10,
+  attachedPhotoCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-  },
-  resourceTypeIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
+    gap: 8,
     borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  addMorePhotoBtn: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  lessonInfoCard: {
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 14,
+  reactionsModalCard: {
+    borderWidth: 1.5,
+    borderRadius: 22,
+    padding: 16,
+  },
+  reactionUserRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
   },
 });
