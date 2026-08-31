@@ -5,6 +5,9 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
+  TextInput,
+  Modal,
+  Switch,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,7 +30,23 @@ export default function YoScreen() {
   const { user, fichaData, logout, restartOnboarding } = useAuth();
 
   const [fichaExpanded, setFichaExpanded] = useState(true);
-  const [firmasExpanded, setFirmasExpanded] = useState(false);
+  const [firmasExpanded, setFirmasExpanded] = useState(true);
+
+  // Modals state
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [docModalVisible, setDocModalVisible] = useState(false);
+  const [notifModalVisible, setNotifModalVisible] = useState(false);
+
+  // Editable Profile fields
+  const [editName, setEditName] = useState(user?.name || 'Sebastián Arango');
+  const [editWhatsapp, setEditWhatsapp] = useState(fichaData?.identidad.whatsapp || '+51 954 123 456');
+  const [editCiudad, setEditCiudad] = useState(fichaData?.identidad.ciudad || 'Arequipa');
+  const [editOcupacion, setEditOcupacion] = useState(fichaData?.identidad.ocupacion || 'Empresario & Mentor');
+
+  // Notifications toggles
+  const [notifGong, setNotifGong] = useState(true);
+  const [notifDeepWork, setNotifDeepWork] = useState(true);
+  const [notifCelula, setNotifCelula] = useState(true);
 
   const evoPath = 'M' + EVOLUCION.map(p => p[0] + ' ' + p[1]).join(' L');
 
@@ -38,11 +57,9 @@ export default function YoScreen() {
     { k: 'CONSISTENCIA', v: '94' },
   ];
 
-  const handleVerFichaCompleta = () => {
-    Alert.alert(
-      'Ficha Inicial Registrada',
-      'Tus datos de Identidad, Salud y Consentimiento están encriptados y sincronizados con tu mentor.'
-    );
+  const handleSaveProfile = () => {
+    setEditModalVisible(false);
+    Alert.alert('Perfil Actualizado', 'Tus datos de perfil han sido guardados exitosamente en la app.');
   };
 
   return (
@@ -68,7 +85,7 @@ export default function YoScreen() {
 
           <View style={styles.profileInfoBlock}>
             <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 19, textAlign: 'center' }]}>
-              {user?.name || 'Sebastián Arango'}
+              {editName}
             </Text>
             <Text style={[t.micro, { color: c.textSoft, fontSize: 12, marginTop: 2, textAlign: 'center' }]}>
               {user?.email || 'sebastian@renaser.com'}
@@ -90,6 +107,17 @@ export default function YoScreen() {
                 </Text>
               </View>
             </View>
+
+            {/* Edit Button */}
+            <Pressable
+              onPress={() => setEditModalVisible(true)}
+              style={[styles.editProfileBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
+            >
+              <Icon name="user" size={13} color={c.gold} />
+              <Text style={[t.micro, { color: c.textStrong, fontWeight: '700', fontSize: 11 }]}>
+                EDITAR PERFIL
+              </Text>
+            </Pressable>
           </View>
         </View>
 
@@ -107,7 +135,7 @@ export default function YoScreen() {
                 Ficha Somática y de Identidad
               </Text>
             </View>
-            <Icon name={fichaExpanded ? 'chevron' : 'chevron'} size={14} color={c.chevron} />
+            <Icon name="chevron" size={14} color={c.chevron} />
           </Pressable>
 
           {fichaExpanded && (
@@ -116,7 +144,7 @@ export default function YoScreen() {
                 <View style={[styles.dataBlock, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}>
                   <Text style={[t.micro, { color: c.gold, fontSize: 10 }]}>UBICACIÓN</Text>
                   <Text style={[t.body, { color: c.textStrong, fontSize: 13, fontWeight: '600', marginTop: 2 }]}>
-                    {fichaData?.identidad.pais || 'Perú'} · {fichaData?.identidad.ciudad || 'Arequipa'}
+                    {fichaData?.identidad.pais || 'Perú'} · {editCiudad}
                   </Text>
                   <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5, marginTop: 1 }]}>
                     {fichaData?.identidad.distrito || 'Cayma'}
@@ -126,7 +154,7 @@ export default function YoScreen() {
                 <View style={[styles.dataBlock, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}>
                   <Text style={[t.micro, { color: c.gold, fontSize: 10 }]}>WHATSAPP & DOC</Text>
                   <Text style={[t.body, { color: c.textStrong, fontSize: 13, fontWeight: '600', marginTop: 2 }]}>
-                    {fichaData?.identidad.whatsapp || '+51 954 123 456'}
+                    {editWhatsapp}
                   </Text>
                   <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5, marginTop: 1 }]}>
                     Doc: {fichaData?.identidad.numeroDocumento || '48291038'}
@@ -146,19 +174,19 @@ export default function YoScreen() {
                 </View>
 
                 <View style={[styles.dataBlock, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}>
-                  <Text style={[t.micro, { color: c.gold, fontSize: 10 }]}>MEDICACIÓN REGULAR</Text>
+                  <Text style={[t.micro, { color: c.gold, fontSize: 10 }]}>OCUPACIÓN</Text>
                   <Text style={[t.body, { color: c.textStrong, fontSize: 13, fontWeight: '600', marginTop: 2 }]}>
-                    {fichaData?.salud.tomaMedicacionRegular ? 'Sí, declarada' : 'No toma medicación'}
+                    {editOcupacion}
                   </Text>
                   <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5, marginTop: 1 }]}>
-                    {fichaData?.salud.tomaMedicacionRegular ? fichaData.salud.especificacionMedicacion : 'Sin contraindicaciones'}
+                    {fichaData?.salud.tomaMedicacionRegular ? 'Con medicación' : 'Sin medicación'}
                   </Text>
                 </View>
               </View>
 
               <GoldButton
-                label="VER RESUMEN COMPLETO"
-                onPress={handleVerFichaCompleta}
+                label="VER CERTIFICADO Y DETALLE"
+                onPress={() => setDocModalVisible(true)}
                 variant="outline"
                 style={{ marginTop: 4 }}
               />
@@ -183,37 +211,39 @@ export default function YoScreen() {
             <Icon name="doc" size={16} color={c.gold} />
           </Pressable>
 
-          <View style={{ gap: 8, borderTopWidth: 1, borderTopColor: c.divider, paddingTop: 10 }}>
-            {/* Firma 1: Términos y Condiciones */}
-            <View style={[styles.firmaStatusCard, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}>
-              <View style={[styles.firmaIconCircle, { borderColor: c.gold }]}>
-                <Icon name="check" size={12} color={c.gold} strokeWidth={2} />
+          {firmasExpanded && (
+            <View style={{ gap: 8, borderTopWidth: 1, borderTopColor: c.divider, paddingTop: 10 }}>
+              {/* Firma 1: Términos y Condiciones */}
+              <View style={[styles.firmaStatusCard, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}>
+                <View style={[styles.firmaIconCircle, { borderColor: c.gold }]}>
+                  <Icon name="check" size={12} color={c.gold} strokeWidth={2} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[t.body, { color: c.textStrong, fontSize: 13.5, fontWeight: '600' }]}>
+                    Términos y Condiciones (22 Cláusulas)
+                  </Text>
+                  <Text style={[t.micro, { color: c.gold, fontSize: 10.5, marginTop: 1 }]}>
+                    ✓ Firma Digital 1 Registrada y Sellada
+                  </Text>
+                </View>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[t.body, { color: c.textStrong, fontSize: 13.5, fontWeight: '600' }]}>
-                  Términos y Condiciones (22 Cláusulas)
-                </Text>
-                <Text style={[t.micro, { color: c.gold, fontSize: 10.5, marginTop: 1 }]}>
-                  ✓ Firma Digital 1 Registrada y Sellada
-                </Text>
-              </View>
-            </View>
 
-            {/* Firma 2: Código I de Renaser: VERDAD */}
-            <View style={[styles.firmaStatusCard, { backgroundColor: c.cardBgAlt, borderColor: c.gold }]}>
-              <View style={[styles.firmaIconCircle, { borderColor: c.gold, backgroundColor: c.gold }]}>
-                <Icon name="check" size={12} color="#1E1B18" strokeWidth={2} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[t.body, { color: c.textStrong, fontSize: 13.5, fontWeight: '700' }]}>
-                  Código I de Renaser: VERDAD
-                </Text>
-                <Text style={[t.micro, { color: c.gold, fontSize: 10.5, marginTop: 1 }]}>
-                  ✓ Firma Digital 2 Solemne "SER VERDAD"
-                </Text>
+              {/* Firma 2: Código I de Renaser: VERDAD */}
+              <View style={[styles.firmaStatusCard, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}>
+                <View style={[styles.firmaIconCircle, { borderColor: c.gold, backgroundColor: c.gold }]}>
+                  <Icon name="check" size={12} color="#1E1B18" strokeWidth={2} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[t.body, { color: c.textStrong, fontSize: 13.5, fontWeight: '700' }]}>
+                    Código I de Renaser: VERDAD
+                  </Text>
+                  <Text style={[t.micro, { color: c.gold, fontSize: 10.5, marginTop: 1 }]}>
+                    ✓ Firma Digital 2 Solemne "SER VERDAD"
+                  </Text>
+                </View>
               </View>
             </View>
-          </View>
+          )}
         </Card>
 
         {/* ========================================================================= */}
@@ -279,6 +309,25 @@ export default function YoScreen() {
             <Icon name="chevron" size={12} color={c.chevron} />
           </Pressable>
 
+          {/* Notificaciones Modal Trigger */}
+          <Pressable
+            onPress={() => setNotifModalVisible(true)}
+            style={[styles.settingRow, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
+          >
+            <View style={[styles.settingIconBadge, { borderColor: c.borderStrong }]}>
+              <Icon name="bell" size={15} color={c.gold} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[t.body, { color: c.textStrong, fontSize: 13.5, fontWeight: '600' }]}>
+                Notificaciones y Alarmas
+              </Text>
+              <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>
+                Gong diario, check-in y mensajes de célula
+              </Text>
+            </View>
+            <Icon name="chevron" size={12} color={c.chevron} />
+          </Pressable>
+
           {/* Botón de Reiniciar / Probar Onboarding */}
           <Pressable
             onPress={restartOnboarding}
@@ -317,6 +366,198 @@ export default function YoScreen() {
           </Pressable>
         </Card>
       </ScrollView>
+
+      {/* ========================================================================= */}
+      {/* MODAL: EDITAR PERFIL                                                      */}
+      {/* ========================================================================= */}
+      <Modal
+        visible={editModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setEditModalVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalCard, { backgroundColor: c.cardBg, borderColor: c.gold }]}>
+            <View style={styles.modalHeader}>
+              <MicroLabel>ACTUALIZAR DATOS</MicroLabel>
+              <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 18, marginTop: 2 }]}>
+                Editar Perfil del Guerrero
+              </Text>
+            </View>
+
+            <View style={{ gap: 10 }}>
+              <View style={styles.fieldBlock}>
+                <MicroLabel>NOMBRE COMPLETO</MicroLabel>
+                <TextInput
+                  value={editName}
+                  onChangeText={setEditName}
+                  style={[styles.modalInput, { color: c.textStrong, borderColor: c.border, backgroundColor: c.cardBgAlt }]}
+                />
+              </View>
+
+              <View style={styles.fieldBlock}>
+                <MicroLabel>WHATSAPP DE CONTACTO</MicroLabel>
+                <TextInput
+                  value={editWhatsapp}
+                  onChangeText={setEditWhatsapp}
+                  keyboardType="phone-pad"
+                  style={[styles.modalInput, { color: c.textStrong, borderColor: c.border, backgroundColor: c.cardBgAlt }]}
+                />
+              </View>
+
+              <View style={styles.fieldBlock}>
+                <MicroLabel>CIUDAD DE RESIDENCIA</MicroLabel>
+                <TextInput
+                  value={editCiudad}
+                  onChangeText={setEditCiudad}
+                  style={[styles.modalInput, { color: c.textStrong, borderColor: c.border, backgroundColor: c.cardBgAlt }]}
+                />
+              </View>
+
+              <View style={styles.fieldBlock}>
+                <MicroLabel>OCUPACIÓN / NEGOCIO</MicroLabel>
+                <TextInput
+                  value={editOcupacion}
+                  onChangeText={setEditOcupacion}
+                  style={[styles.modalInput, { color: c.textStrong, borderColor: c.border, backgroundColor: c.cardBgAlt }]}
+                />
+              </View>
+            </View>
+
+            <GoldButton
+              label="GUARDAR CAMBIOS"
+              onPress={handleSaveProfile}
+              style={{ marginTop: 6 }}
+            />
+
+            <Pressable
+              onPress={() => setEditModalVisible(false)}
+              style={[styles.closeModalBtn, { borderColor: c.border }]}
+            >
+              <Text style={[t.micro, { color: c.textSoft, fontWeight: '700', fontSize: 11, textAlign: 'center' }]}>
+                CANCELAR
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ========================================================================= */}
+      {/* MODAL: VER CERTIFICADO Y DETALLE DE FIRMAS                                */}
+      {/* ========================================================================= */}
+      <Modal
+        visible={docModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setDocModalVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalCard, { backgroundColor: c.cardBg, borderColor: c.gold, maxHeight: '85%' }]}>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 14 }}>
+              <View style={styles.modalHeader}>
+                <MicroLabel>DOCUMENTO SOLEMNE</MicroLabel>
+                <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 18, marginTop: 2, textAlign: 'center' }]}>
+                  Certificado de Ingreso a Renaser
+                </Text>
+              </View>
+
+              <View style={[styles.certBox, { backgroundColor: c.cardBgAlt, borderColor: c.borderStrong }]}>
+                <Text style={[t.body, { color: c.text, fontSize: 13.5, lineHeight: 20 }]}>
+                  Por medio del presente documento, <Text style={{ color: c.gold, fontWeight: '700' }}>{editName}</Text> declara su ingreso formal al Protocolo de 90 Días de Renaser, ratificando su compromiso innegociable con el Código I: VERDAD y la aceptación íntegra de las 22 cláusulas del sistema.
+                </Text>
+
+                <View style={{ gap: 6, marginTop: 12 }}>
+                  <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>ESTADO DE FIRMAS DIGITALES:</Text>
+                  <Text style={[t.micro, { color: '#4E9F76', fontWeight: '600' }]}>✓ 1. Términos y Condiciones: Sellado Digitalmente</Text>
+                  <Text style={[t.micro, { color: '#4E9F76', fontWeight: '600' }]}>✓ 2. Código Renaser VERDAD: Sellado Digitalmente</Text>
+                </View>
+              </View>
+
+              <GoldButton
+                label="ENTENDIDO"
+                onPress={() => setDocModalVisible(false)}
+              />
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ========================================================================= */}
+      {/* MODAL: CONFIGURACIÓN DE NOTIFICACIONES                                    */}
+      {/* ========================================================================= */}
+      <Modal
+        visible={notifModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setNotifModalVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalCard, { backgroundColor: c.cardBg, borderColor: c.gold }]}>
+            <View style={styles.modalHeader}>
+              <MicroLabel>ALERTAS Y HÁBITOS</MicroLabel>
+              <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 18, marginTop: 2 }]}>
+                Configuración de Alarmas
+              </Text>
+            </View>
+
+            <View style={{ gap: 10 }}>
+              <View style={[styles.notifRow, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[t.body, { color: c.textStrong, fontSize: 13.5, fontWeight: '600' }]}>
+                    Alarma del Gong Diario
+                  </Text>
+                  <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>Recordatorio matutino a las 06:00 AM</Text>
+                </View>
+                <Switch
+                  value={notifGong}
+                  onValueChange={setNotifGong}
+                  trackColor={{ false: '#3A3530', true: c.gold }}
+                  thumbColor="#FFFFFF"
+                />
+              </View>
+
+              <View style={[styles.notifRow, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[t.body, { color: c.textStrong, fontSize: 13.5, fontWeight: '600' }]}>
+                    Bloque de Deep Work
+                  </Text>
+                  <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>Aviso de enfoque sin distracciones</Text>
+                </View>
+                <Switch
+                  value={notifDeepWork}
+                  onValueChange={setNotifDeepWork}
+                  trackColor={{ false: '#3A3530', true: c.gold }}
+                  thumbColor="#FFFFFF"
+                />
+              </View>
+
+              <View style={[styles.notifRow, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}>
+                <View style={{ flex: 1 }}>
+                  <Text style={[t.body, { color: c.textStrong, fontSize: 13.5, fontWeight: '600' }]}>
+                    Mensajes de Mi Célula
+                  </Text>
+                  <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>Evidencias y llamadas con tu mentor</Text>
+                </View>
+                <Switch
+                  value={notifCelula}
+                  onValueChange={setNotifCelula}
+                  trackColor={{ false: '#3A3530', true: c.gold }}
+                  thumbColor="#FFFFFF"
+                />
+              </View>
+            </View>
+
+            <GoldButton
+              label="GUARDAR PREFERENCIAS"
+              onPress={() => {
+                setNotifModalVisible(false);
+                Alert.alert('Preferencias Guardadas', 'Tus alertas diarias han sido actualizadas.');
+              }}
+              style={{ marginTop: 6 }}
+            />
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -362,6 +603,16 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 5,
+  },
+  editProfileBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    marginTop: 12,
   },
   accordionHeaderRow: {
     flexDirection: 'row',
@@ -425,5 +676,52 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 440,
+    borderWidth: 1.5,
+    borderRadius: 22,
+    padding: 20,
+    gap: 12,
+  },
+  modalHeader: {
+    alignItems: 'center',
+  },
+  fieldBlock: {
+    gap: 4,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 46,
+    fontSize: 14,
+  },
+  certBox: {
+    borderWidth: 1.5,
+    borderRadius: 14,
+    padding: 14,
+    gap: 8,
+  },
+  notifRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+  },
+  closeModalBtn: {
+    borderWidth: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
   },
 });
