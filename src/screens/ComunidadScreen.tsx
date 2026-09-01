@@ -24,6 +24,7 @@ import * as wallApi from '../features/community/api/wallApi';
 import { elegirYNormalizarFotoMuro, type FotoMuroNormalizada } from '../features/community/utils/normalizarImagen';
 import { FotoMuro } from '../features/community/components/FotoMuro';
 import { useCursos } from '../features/academy/hooks/useCursos';
+import { CursoPortada } from '../features/academy/components/CursoPortada';
 import { useLeccionDetalle } from '../features/academy/hooks/useLeccionDetalle';
 import { LeccionVideoPlayer } from '../features/academy/components/LeccionVideoPlayer';
 import { useChatConversaciones } from '../features/chat/hooks/useChatConversaciones';
@@ -72,6 +73,15 @@ export interface CourseItem {
   totalModules: number;
   totalResources: number;
   sections: CourseSection[];
+  // --- Campos agregados para portada real + catálogo con bloqueados (ver `academyMappers.ts`) ---
+  /** `MiCursoResponse.portadaFirmada` — URL prefirmada de S3. `null`/`undefined` en cursos bloqueados (no viene firmada) o sin portada cargada; `CursoPortada` cae al degradado de siempre en ese caso. */
+  coverUrl?: string | null;
+  /** `CursoResponse.orden` — con qué se intercalan accesibles y bloqueados en una sola progresión (ver `useCursos`). */
+  orden: number;
+  /** `true` para los cursos de `GET /cursos/bloqueados`: todavía no se pueden abrir. */
+  locked?: boolean;
+  diaDesbloqueo?: number | null;
+  diasFaltantes?: number;
 }
 
 // =========================================================================
@@ -482,6 +492,26 @@ export default function ComunidadScreen() {
     } else if (label.includes('Recursos')) {
       setInExclusiveResources(true);
     }
+  };
+
+  /**
+   * Abre un curso del catálogo (ahora completo — ver `useCursos`). Si es uno de los que todavía
+   * no se desbloquearon por día de programa (`GET /cursos/bloqueados`, `course.locked`) no
+   * navega: mismo criterio que `handleAbrirLeccion` de abajo — se avisa con `Alert.alert` en vez
+   * de inventar una pantalla/modal nueva para "por qué está bloqueado".
+   */
+  const handleAbrirCurso = (course: CourseItem) => {
+    if (course.locked) {
+      const faltan = course.diasFaltantes ?? 0;
+      Alert.alert(
+        'Curso bloqueado 🔒',
+        faltan > 0
+          ? `Se desbloquea en ${faltan} día${faltan === 1 ? '' : 's'} más de tu programa (día ${course.diaDesbloqueo}).`
+          : 'Todavía no está disponible para tu día de programa.'
+      );
+      return;
+    }
+    setSelectedCourseId(course.id);
   };
 
   /**
@@ -1582,13 +1612,23 @@ export default function ComunidadScreen() {
             {courses.map(course => (
               <Pressable
                 key={course.id}
-                onPress={() => setSelectedCourseId(course.id)}
-                style={[styles.courseCard, { borderColor: c.border, backgroundColor: c.cardBg }]}
+                onPress={() => handleAbrirCurso(course)}
+                style={[
+                  styles.courseCard,
+                  { borderColor: c.border, backgroundColor: c.cardBg },
+                  // Mismo valor que ya usa `YoScreen.tsx` para `stage.locked` (opacidad reducida,
+                  // sin colores/bordes/íconos nuevos) — la tarjeta entera se atenúa para marcar
+                  // que todavía no se puede abrir.
+                  course.locked && { opacity: 0.5 },
+                ]}
               >
-                <LinearGradient
-                  colors={['#2A2417', '#1E1B15', '#141310']}
-                  style={styles.courseCoverHeader}
-                >
+                {/* Antes: `LinearGradient` opaco haciendo de portada de relleno (sin `<Image>`).
+                    Ahora: `View` con el mismo alto/padding de siempre (`courseCoverHeader`,
+                    intacto), y `CursoPortada` pintando la foto real como fondo absoluto detrás
+                    del badge y el título — que siguen siendo los mismos hijos de siempre, en el
+                    mismo orden, sin tocar su estilo. */}
+                <View style={styles.courseCoverHeader}>
+                  <CursoPortada url={course.coverUrl} />
                   <View style={[styles.courseCategoryBadge, { borderColor: c.gold, backgroundColor: 'rgba(0,0,0,0.6)' }]}>
                     <Text style={[t.micro, { color: c.gold, fontSize: 8.5, fontWeight: '800' }]}>
                       {course.category}
@@ -1597,7 +1637,7 @@ export default function ComunidadScreen() {
                   <Text style={[t.screenTitle, { color: '#FFFFFF', fontSize: 16, lineHeight: 21 }]}>
                     {course.title}
                   </Text>
-                </LinearGradient>
+                </View>
 
                 <View style={{ padding: 14, gap: 8 }}>
                   <Text style={[t.micro, { color: c.micro }]}>

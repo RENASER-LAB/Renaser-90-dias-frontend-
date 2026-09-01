@@ -1,5 +1,6 @@
 import type { CourseItem, CourseSection, LessonResource, ResourceType } from '../../../screens/ComunidadScreen';
 import type {
+  CursoBloqueadoApi,
   LeccionDetalleApi,
   LeccionLiteApi,
   MiCursoApi,
@@ -105,6 +106,44 @@ export function mapearCursoConSecciones(mc: MiCursoApi, secciones: SeccionConLec
     // el árbol queda vacío — se cae al conteo agregado de `progreso` para no mostrar "0 recursos".
     totalResources: totalLeccionesDelArbol || mc.progreso.totalLecciones,
     sections: secciones.map(mapearSeccion),
+    coverUrl: mc.portadaFirmada,
+    orden: mc.orden,
+    locked: false,
+    diaDesbloqueo: null,
+    diasFaltantes: undefined,
+  };
+}
+
+/**
+ * Curso todavía NO accesible (`GET /cursos/bloqueados`). `CursoBloqueadoResponse` trae muchos
+ * menos campos que `MiCursoResponse` — no tiene instructor, descripción, progreso, `acceso` ni el
+ * árbol de secciones (ver `academy.types.ts`). No se inventan esos valores para "completar" la
+ * tarjeta: quedan vacíos o en cero, tal como el backend los deja de mandar.
+ *
+ * `diasFaltantes` no viaja en este DTO (a diferencia de `LeccionLiteResponse`, que sí lo trae
+ * calculado) — se deriva acá mismo de los dos números que sí llegan (`diaDesbloqueo` y
+ * `programDayActual`), con el mismo signo que usa el backend para lecciones.
+ */
+export function mapearCursoBloqueado(cb: CursoBloqueadoApi): CourseItem {
+  return {
+    id: cb.id,
+    title: cb.titulo,
+    category: 'CURSO BLOQUEADO',
+    instructor: 'Equipo Renaser', // mismo texto genérico que ya usa mapearCursoConSecciones arriba
+    summary: '', // CursoBloqueadoResponse no trae descripción
+    progressPercent: 0,
+    totalModules: 0,
+    totalResources: 0,
+    sections: [],
+    // `portadaUrl` (ruta cruda, sin firmar) no sirve para pintar acá: el bucket es privado y este
+    // endpoint no la firma como sí hace `MiCursoResponse.portadaFirmada`. Se deja sin portada en
+    // vez de intentar cargar una URL que va a fallar siempre — `CursoPortada` ya sabe mostrar el
+    // degradado de siempre cuando `url` es `null`.
+    coverUrl: null,
+    orden: cb.orden,
+    locked: true,
+    diaDesbloqueo: cb.diaDesbloqueo,
+    diasFaltantes: Math.max(0, cb.diaDesbloqueo - cb.programDayActual),
   };
 }
 

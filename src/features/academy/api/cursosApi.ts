@@ -22,12 +22,10 @@ export async function obtenerMisCursos(): Promise<MiCursoApi[]> {
 
 /**
  * GET /api/v1/cursos/bloqueados — los cursos "próximos" que se desbloquean más adelante por día
- * de programa, para pintarlos con candado en una escalera de catálogo.
- *
- * Queda sin conectar a la UI a propósito: la tarjeta de curso de `ComunidadScreen.tsx` no tiene
- * ningún estado visual de "bloqueado" (no hay esa pieza en el diseño actual, y la tarea prohíbe
- * inventar UI nueva para representarlo — ver el informe de la integración). Se deja lista para
- * cuando esa UI exista.
+ * de programa. `useCursos` la combina con `obtenerMisCursos` para que el catálogo de "Recursos
+ * Exclusivos" muestre TODOS los cursos (accesibles y bloqueados) en una sola progresión ordenada
+ * por `orden` — decisión del dueño del producto (2026-09-01): el aprendiz debe ver qué le falta
+ * desbloquear, no solo lo ya accesible. Ver `academyMappers.mapearCursoBloqueado`.
  */
 export async function obtenerCursosBloqueados(): Promise<CursoBloqueadoApi[]> {
   const r = await apiFetch<unknown>('/api/v1/cursos/bloqueados');
