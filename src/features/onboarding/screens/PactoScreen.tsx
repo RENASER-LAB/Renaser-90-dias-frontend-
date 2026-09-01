@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useResponsive } from '../../../theme/responsive';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
+import { mapearPacto, PREGUNTA_FIRMA_PACTO } from '../data/mapaPreguntas';
+import { usePersistenciaOnboarding } from '../hooks/usePersistenciaOnboarding';
 import { Icon } from '../../../components/Icon';
-import { SignatureCanvas, SignatureData } from '../../../components/SignatureCanvas';
+import { SignatureCanvas, SignatureCanvasHandle, SignatureData } from '../../../components/SignatureCanvas';
 import { GoldButton } from '../../../components/GoldButton';
 
 interface PactoScreenProps {
@@ -23,6 +25,9 @@ export function PactoScreen({
 }: PactoScreenProps) {
   const { c, t, mode, toggle } = useTheme();
   const { isSmall, isTablet } = useResponsive();
+  const { guardarCapitulo, avanzarEstado, aceptarHito, guardarFirma } = usePersistenciaOnboarding();
+  // Ref al lienzo para poder capturarlo como PNG al confirmar (ver SignatureCanvas.capturarComoPng).
+  const signatureRef = useRef<SignatureCanvasHandle>(null);
 
   // Interceptar gestos de retroceso en pantalla táctil (Xiaomi / Android / iOS)
   useSystemBackHandler(() => {
@@ -52,12 +57,47 @@ export function PactoScreen({
     setClearTrigger(prev => prev + 1);
   };
 
-  const handleConfirmSignature = () => {
+  const handleConfirmSignature = async () => {
     const finalSignature = signature || savedSignature;
     if (!hasSigned || !finalSignature || !finalSignature.data) {
       Alert.alert('Firma requerida', 'Por favor traza tu firma con el dedo en el recuadro para confirmar.');
       return;
     }
+
+    // Guardar de verdad la aceptación del Pacto. "Leer y firmar" es una sola acción en esta
+    // pantalla — no hay un paso separado de "aceptar" antes de firmar (ver comentario en
+    // mapearPacto sobre accepted_pacto), por eso el hito PACTO se marca acá igual.
+    await guardarCapitulo(mapearPacto(initialName));
+    await aceptarHito('PACTO');
+
+    // Firma con valor legal (decisión del dueño, 2026-09-01): se captura el lienzo ya dibujado
+    // como PNG y se sube a S3 con su referencia guardada en la base (ver mapaPreguntas.ts,
+    // PREGUNTA_FIRMA_PACTO). El hito PACTO_FIRMADO solo se marca si la firma llegó a guardarse de
+    // verdad — un pacto marcado como firmado sin la firma real es peor que uno sin marcar, es
+    // justamente el registro con valor probatorio que se quiere tener. Si falla, no bloquea el
+    // avance de la persona (el trazo ya vive en el estado del flujo vía onAccept más abajo).
+    const pngFirma = await signatureRef.current?.capturarComoPng();
+    let firmaGuardada = false;
+    if (pngFirma) {
+      const resultado = await guardarFirma({
+        flow: 'pacto',
+        questionId: PREGUNTA_FIRMA_PACTO.id,
+        questionKey: PREGUNTA_FIRMA_PACTO.clave,
+        pngUri: pngFirma,
+        trazosOriginales: finalSignature.data,
+      });
+      firmaGuardada = resultado.ok;
+    }
+    if (firmaGuardada) {
+      await aceptarHito('PACTO_FIRMADO');
+    } else {
+      console.warn(
+        'No se marcó el hito PACTO_FIRMADO: la firma no llegó a guardarse en el almacenamiento.'
+      );
+    }
+
+    await avanzarEstado({ flow: 'pacto', section: 'firma', step: 0 });
+
     onAccept(initialName, finalSignature);
   };
 
@@ -169,6 +209,7 @@ export function PactoScreen({
 
           <View style={[styles.signatureCard, { backgroundColor: c.cardBgAlt, borderColor: c.borderStrong }]}>
             <SignatureCanvas
+              ref={signatureRef}
               key={clearTrigger}
               onSignatureChange={handleSignatureChange}
               initialSignature={savedSignature}

@@ -16,10 +16,17 @@ import { useTheme } from '../theme/ThemeContext';
 import { useResponsive } from '../theme/responsive';
 import { useSystemBackHandler } from '../hooks/useSystemBackHandler';
 import { useAuth } from '../context/AuthContext';
+import { mensajeDeError } from '../services/http/apiClient';
 import { Icon } from '../components/Icon';
 import { MicroLabel } from '../components/ui';
+import {
+  useRegistroConOtp,
+  validarDatosRegistro,
+  MIN_CONTRASENA,
+} from '../features/auth/hooks/useRegistroConOtp';
+import { useDisponibilidadCorreo } from '../features/auth/hooks/useDisponibilidadCorreo';
 
-type AuthStep = 'form' | 'otp' | 'forgot' | 'forgot_sent';
+type AuthStep = 'form' | 'otp' | 'forgot' | 'forgot_sent' | 'social_confirmar' | 'solicitud_enviada';
 type Tab = 'login' | 'register';
 
 export default function LoginScreen() {
@@ -30,23 +37,47 @@ export default function LoginScreen() {
     register,
     loginWithGoogle,
     loginWithApple,
-    sendOtp,
-    verifyOtp,
     resetPassword,
     demoLogin,
   } = useAuth();
+
+  // El alta real (OTP + solicitud pendiente de aprobación) vive en su propio hook: la pantalla
+  // solo decide qué mostrar, no en qué orden se llaman los tres endpoints del backend.
+  const {
+    accountRequestId,
+    estadoSolicitud,
+    enviarCodigo,
+    reenviarCodigo,
+    confirmarYRegistrar,
+    confirmarRegistroSocial,
+    consultarEstado,
+  } = useRegistroConOtp();
 
   // Navigation / Step state
   const [step, setStep] = useState<AuthStep>('form');
   const [activeTab, setActiveTab] = useState<Tab>('login');
 
   // Form fields
-  const [name, setName] = useState('');
+  // Nombres y apellidos se piden por separado porque así los lee y corrige la persona; el
+  // backend sigue recibiendo un solo `fullName` y la concatenación la hace el hook del alta.
+  const [nombres, setNombres] = useState('');
+  const [apellidos, setApellidos] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+
+  // Aviso en vivo de disponibilidad del correo, solo en la pestaña de crear cuenta: en login
+  // no ayuda a nadie saber si un correo existe. Se le pasa string vacío fuera de esa pestaña
+  // para que el hook quede en 'idle' sin consultar nada.
+  const disponibilidadCorreo = useDisponibilidadCorreo(activeTab === 'register' ? email : '');
+
+  // Segundo paso del alta social (D-65): credencial de un solo uso, válida 10 minutos, que
+  // llega en el 202 de `POST /auth/social` y hay que reenviar tal cual a `/social/complete`.
+  // Nunca se loguea ni se persiste: si la persona cierra la app en el medio, se pierde el paso
+  // y tiene que rehacer el login con el proveedor — comportamiento correcto, no un bug.
+  const [registroPendienteToken, setRegistroPendienteToken] = useState<string | null>(null);
 
   // OTP state
   const [otpCode, setOtpCode] = useState('');
@@ -83,6 +114,10 @@ export default function LoginScreen() {
     setOtpCode('');
     setErrorMessage(null);
     setSuccessMessage(null);
+    // Es una credencial de un solo uso: si la persona abandona el formulario de confirmación
+    // social, no queda nada creado (el backend lo vence solo a los 10 minutos) y acá tampoco
+    // debería seguir viviendo en memoria.
+    setRegistroPendienteToken(null);
   };
 
   // Interceptar gestos táctiles de retroceso cuando esté en OTP o Forgot Password
@@ -99,35 +134,29 @@ export default function LoginScreen() {
     setSuccessMessage(null);
 
     if (activeTab === 'register') {
-      if (!name.trim()) {
-        setErrorMessage('Por favor ingresa tu nombre completo');
-        return;
-      }
-      if (!email.trim() || !email.includes('@')) {
-        setErrorMessage('Por favor ingresa un correo electrónico válido');
-        return;
-      }
-      if (!password || password.length < 6) {
-        setErrorMessage('La contraseña debe tener al menos 6 caracteres');
-        return;
-      }
-      if (password !== confirmPassword) {
-        setErrorMessage('Las contraseñas no coinciden');
+      // Las mismas reglas que el backend (incluida la contraseña de 12 caracteres), en un solo
+      // lugar: validarlas acá evita un 400 después de haber tipeado el código de 6 dígitos.
+      const errorDeValidacion = validarDatosRegistro(
+        { nombres, apellidos, email, contrasena: password },
+        confirmPassword,
+      );
+      if (errorDeValidacion) {
+        setErrorMessage(errorDeValidacion);
         return;
       }
 
       // Enviar código OTP y pasar a pantalla de verificación
       try {
         setLoading(true);
-        await sendOtp(email);
+        await enviarCodigo(email);
         setStep('otp');
         setResendTimer(45);
         setCanResend(false);
         setOtpCode('');
         setSuccessMessage(`Código enviado a ${email.trim()}`);
         setTimeout(() => otpInputRef.current?.focus(), 300);
-      } catch {
-        setErrorMessage('Error al enviar el código de confirmación');
+      } catch (error) {
+        setErrorMessage(mensajeDeError(error, 'Error al enviar el código de confirmación'));
       } finally {
         setLoading(false);
       }
@@ -145,8 +174,8 @@ export default function LoginScreen() {
       try {
         setLoading(true);
         await login(email, password);
-      } catch {
-        setErrorMessage('Credenciales incorrectas o error de conexión');
+      } catch (error) {
+        setErrorMessage(mensajeDeError(error, 'No pudimos iniciar tu sesión.'));
       } finally {
         setLoading(false);
       }
@@ -162,9 +191,14 @@ export default function LoginScreen() {
 
     try {
       setLoading(true);
-      await verifyOtp(name, email, otpCode);
-    } catch {
-      setErrorMessage('Código inválido o expirado. Inténtalo de nuevo.');
+      // El código verifica el correo y habilita el alta, pero NO abre sesión: la solicitud queda
+      // pendiente de que un ADMIN/ALQUIMISTA la apruebe. Por eso la pantalla siguiente es el
+      // acuse de recibo y no el home.
+      await confirmarYRegistrar({ nombres, apellidos, email, contrasena: password }, otpCode);
+      setSuccessMessage(null);
+      setStep('solicitud_enviada');
+    } catch (error) {
+      setErrorMessage(mensajeDeError(error, 'Código inválido o expirado. Inténtalo de nuevo.'));
     } finally {
       setLoading(false);
     }
@@ -175,12 +209,38 @@ export default function LoginScreen() {
     try {
       setLoading(true);
       setErrorMessage(null);
-      await sendOtp(email);
+      await reenviarCodigo(email);
       setResendTimer(45);
       setCanResend(false);
       setSuccessMessage('Nuevo código enviado a tu correo.');
-    } catch {
-      setErrorMessage('No se pudo reenviar el código. Inténtalo más tarde.');
+    } catch (error) {
+      setErrorMessage(mensajeDeError(error, 'No se pudo reenviar el código. Inténtalo más tarde.'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * El `accountRequestId` es la única credencial para saber cómo viene la solicitud mientras no
+   * haya sesión, así que la pantalla de acuse permite releer el estado sin salir de ahí.
+   */
+  const handleConsultarEstado = async () => {
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    try {
+      setLoading(true);
+      const estado = await consultarEstado();
+      if (estado) {
+        setSuccessMessage(
+          estado.status === 'APPROVED'
+            ? 'Tu solicitud fue aprobada. Ya podés iniciar sesión.'
+            : estado.status === 'REJECTED'
+            ? estado.rejectionReason || 'Tu solicitud fue rechazada.'
+            : 'Tu solicitud sigue en revisión.',
+        );
+      }
+    } catch (error) {
+      setErrorMessage(mensajeDeError(error, 'No pudimos consultar el estado de tu solicitud.'));
     } finally {
       setLoading(false);
     }
@@ -206,19 +266,101 @@ export default function LoginScreen() {
     }
   };
 
+  /**
+   * Google abre el navegador del sistema (Authorization Code + PKCE) y el backend decide qué
+   * pasa: entrar, quedar en solicitud, o mandar a la persona a su contraseña. Solo una de esas
+   * respuestas la saca de esta pantalla, así que las otras hay que contarlas acá o se queda
+   * mirando un botón que dejó de girar sin explicación.
+   */
   const handleSocialLogin = async (provider: 'google' | 'apple') => {
     setErrorMessage(null);
+    setSuccessMessage(null);
     try {
       setSocialLoading(provider);
-      if (provider === 'google') {
-        await loginWithGoogle();
-      } else {
+      if (provider === 'apple') {
         await loginWithApple();
+        return;
       }
-    } catch {
-      setErrorMessage(`Error al conectar con ${provider === 'google' ? 'Google' : 'Apple'}`);
+
+      const resultado = await loginWithGoogle();
+      // `null` = cerró la ventana de Google. Cancelar es una decisión, no un fallo: no se dice nada.
+      if (!resultado) {
+        return;
+      }
+      // 'SESION' ya cambió el usuario en el contexto y la navegación se encarga del resto.
+      if (resultado.tipo === 'REGISTRO_PENDIENTE') {
+        // Identidad nueva (D-65): todavía no existe ninguna solicitud. Prellenamos el formulario
+        // de confirmación con lo que devolvió Google y recién al confirmar se crea la
+        // AccountRequest — el `code` de OAuth ya se gastó, así que no hay otra forma de pedir
+        // estos datos que no sea un segundo paso.
+        // Partimos el nombre completo en nombres/apellidos como en el alta por formulario: es
+        // lo mejor que se puede hacer con un solo campo, y la persona puede corregirlo.
+        const partes = resultado.fullName.trim().split(/\s+/).filter(Boolean);
+        setNombres(partes[0] || '');
+        setApellidos(partes.slice(1).join(' '));
+        setEmail(resultado.email);
+        setRegistroPendienteToken(resultado.registroPendienteToken);
+        setStep('social_confirmar');
+      } else if (resultado.tipo === 'SOLICITUD_EN_REVISION') {
+        setSuccessMessage(
+          'Ya tenías una solicitud en revisión. Te avisamos por correo apenas un administrador la apruebe.',
+        );
+      } else if (resultado.tipo === 'CONFLICTO_CORREO') {
+        // Reintentar con Google nunca va a funcionar, así que el mensaje tiene que decir la
+        // única salida real en vez de un "error al conectar" que la deje probando el mismo botón.
+        setErrorMessage('Ese correo ya tiene una cuenta. Ingresá con tu contraseña.');
+      }
+    } catch (error) {
+      setErrorMessage(
+        mensajeDeError(error, `Error al conectar con ${provider === 'google' ? 'Google' : 'Apple'}`),
+      );
     } finally {
       setSocialLoading(null);
+    }
+  };
+
+  /**
+   * Confirma el formulario que prellenó `handleSocialLogin` y recién ACÁ se crea la
+   * `AccountRequest` (D-65): hasta este punto solo existe una identidad verificada por Google,
+   * retenida 10 minutos en el backend. El correo no se manda —ni se puede editar, ver más
+   * abajo— porque el backend lo toma del registro pendiente, nunca del cuerpo del request.
+   */
+  const handleConfirmarRegistroSocial = async () => {
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    if (!nombres.trim()) {
+      setErrorMessage('Por favor ingresa tus nombres');
+      return;
+    }
+    if (!apellidos.trim()) {
+      setErrorMessage('Por favor ingresa tus apellidos');
+      return;
+    }
+    if (!registroPendienteToken) {
+      // No debería poder pasar (a este paso solo se llega con un token), pero sin él el POST
+      // fallaría igual del lado del backend con un mensaje menos claro que este.
+      setErrorMessage('Tu verificación con Google venció. Volvé a intentar con Google.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await confirmarRegistroSocial({
+        registroPendienteToken,
+        fullName: `${nombres.trim()} ${apellidos.trim()}`,
+      });
+      setRegistroPendienteToken(null);
+      setStep('solicitud_enviada');
+    } catch (error) {
+      // El token es de un solo uso: si venció o ya se usó, el `code` de OAuth original también
+      // está gastado, así que la única salida real es rehacer el login con Google desde cero —
+      // reintentar "Enviar solicitud" con el mismo token nunca va a funcionar. El backend ya
+      // manda ese mensaje exacto en el 400 (`RegistroPendienteSocialInvalidoException`), así que
+      // alcanza con mostrarlo tal cual viene.
+      setErrorMessage(mensajeDeError(error, 'No pudimos completar tu registro. Intentá de nuevo.'));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -318,7 +460,15 @@ export default function LoginScreen() {
                 ]}
               >
                 <Icon
-                  name={step === 'otp' ? 'mail' : step === 'forgot' || step === 'forgot_sent' ? 'key' : 'diamond'}
+                  name={
+                    step === 'otp'
+                      ? 'mail'
+                      : step === 'forgot' || step === 'forgot_sent'
+                      ? 'key'
+                      : step === 'social_confirmar'
+                      ? 'user'
+                      : 'diamond'
+                  }
                   size={isShort ? rs(16) : rs(20)}
                   color={c.gold}
                   strokeWidth={1.2}
@@ -352,8 +502,12 @@ export default function LoginScreen() {
             >
               {step === 'otp'
                 ? 'CONFIRMACIÓN DE CORREO'
+                : step === 'solicitud_enviada'
+                ? 'SOLICITUD EN REVISIÓN'
                 : step === 'forgot' || step === 'forgot_sent'
                 ? 'RECUPERACIÓN DE CUENTA'
+                : step === 'social_confirmar'
+                ? 'CONFIRMÁ TUS DATOS'
                 : '90 DÍAS · SISTEMA INTEGRAL'}
             </Text>
           </View>
@@ -426,23 +580,50 @@ export default function LoginScreen() {
 
                 {activeTab === 'register' && (
                   <View style={styles.inputGroup}>
-                    <MicroLabel>NOMBRE COMPLETO</MicroLabel>
+                    <MicroLabel>NOMBRES</MicroLabel>
                     <View
                       style={[
                         styles.inputWrap,
                         {
-                          borderColor: focusedField === 'name' ? c.gold : c.border,
+                          borderColor: focusedField === 'nombres' ? c.gold : c.border,
                           backgroundColor: c.cardBgAlt,
                         },
                       ]}
                     >
-                      <Icon name="user" size={17} color={focusedField === 'name' ? c.gold : c.tabInactive} />
+                      <Icon name="user" size={17} color={focusedField === 'nombres' ? c.gold : c.tabInactive} />
                       <TextInput
-                        value={name}
-                        onChangeText={setName}
-                        placeholder="Ej. Sebastián Arango"
+                        value={nombres}
+                        onChangeText={setNombres}
+                        placeholder="Ej. Sebastián"
                         placeholderTextColor={c.tabInactive}
-                        onFocus={() => setFocusedField('name')}
+                        onFocus={() => setFocusedField('nombres')}
+                        onBlur={() => setFocusedField(null)}
+                        style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
+                        autoCapitalize="words"
+                      />
+                    </View>
+                  </View>
+                )}
+
+                {activeTab === 'register' && (
+                  <View style={styles.inputGroup}>
+                    <MicroLabel>APELLIDOS</MicroLabel>
+                    <View
+                      style={[
+                        styles.inputWrap,
+                        {
+                          borderColor: focusedField === 'apellidos' ? c.gold : c.border,
+                          backgroundColor: c.cardBgAlt,
+                        },
+                      ]}
+                    >
+                      <Icon name="user" size={17} color={focusedField === 'apellidos' ? c.gold : c.tabInactive} />
+                      <TextInput
+                        value={apellidos}
+                        onChangeText={setApellidos}
+                        placeholder="Ej. Arango"
+                        placeholderTextColor={c.tabInactive}
+                        onFocus={() => setFocusedField('apellidos')}
                         onBlur={() => setFocusedField(null)}
                         style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
                         autoCapitalize="words"
@@ -475,7 +656,24 @@ export default function LoginScreen() {
                       style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
                     />
                   </View>
+                  {/* Aviso en vivo de disponibilidad: solo en registro, y solo cuando hay un
+                      veredicto real. "Verificando" y "idle" no muestran nada para no agregar
+                      ruido visual mientras la persona todavía está escribiendo. */}
+                  {activeTab === 'register' && disponibilidadCorreo === 'verificando' && (
+                    <Text style={[t.micro, { color: c.textSoft }]}>Verificando disponibilidad...</Text>
+                  )}
+                  {activeTab === 'register' && disponibilidadCorreo === 'disponible' && (
+                    <Text style={[t.micro, { color: c.gold }]}>Este correo está disponible.</Text>
+                  )}
+                  {activeTab === 'register' && disponibilidadCorreo === 'tomado' && (
+                    <Text style={[t.micro, { color: '#f28e8e' }]}>
+                      Ese correo ya tiene una cuenta. Podés iniciar sesión.
+                    </Text>
+                  )}
                 </View>
+
+                {/* El teléfono se pide en la Ficha Inicial del onboarding, no acá: el alta tiene
+                    que ser lo más liviana posible para que nadie la abandone a mitad de camino. */}
 
                 <View style={styles.inputGroup}>
                   <View style={styles.passwordHeader}>
@@ -508,7 +706,7 @@ export default function LoginScreen() {
                     <TextInput
                       value={password}
                       onChangeText={setPassword}
-                      placeholder="Mínimo 6 caracteres"
+                      placeholder={activeTab === 'register' ? `Mínimo ${MIN_CONTRASENA} caracteres` : 'Tu contraseña'}
                       placeholderTextColor={c.tabInactive}
                       secureTextEntry={!showPassword}
                       onFocus={() => setFocusedField('password')}
@@ -769,7 +967,7 @@ export default function LoginScreen() {
                     <ActivityIndicator color={c.onGold} size="small" />
                   ) : (
                     <Text style={[t.micro, { color: c.onGold, letterSpacing: 2.5, fontWeight: '700', fontSize: 11 }]}>
-                      CONFIRMAR Y ACTIVAR CUENTA
+                      CONFIRMAR Y ENVIAR SOLICITUD
                     </Text>
                   )}
                 </LinearGradient>
@@ -919,6 +1117,214 @@ export default function LoginScreen() {
                 <Text style={[t.micro, { color: c.micro, letterSpacing: 1.1 }]}>
                   ¿No recibiste el correo? <Text style={{ color: c.gold }}>Enviar de nuevo</Text>
                 </Text>
+              </Pressable>
+            </View>
+          )}
+
+          {/* ========================================================================= */}
+          {/* VISTA 5: CONFIRMAR DATOS DEL ALTA SOCIAL (SEGUNDO PASO, D-65)              */}
+          {/* ========================================================================= */}
+          {step === 'social_confirmar' && (
+            <View style={[styles.card, { backgroundColor: c.cardBg, borderColor: c.border }]}>
+              <View style={{ alignItems: 'center', gap: 6 }}>
+                <MicroLabel>VERIFICADO POR GOOGLE</MicroLabel>
+                <Text style={[t.sectionTitle, { color: c.text, textAlign: 'center', marginTop: 4 }]}>
+                  CONFIRMÁ TUS DATOS
+                </Text>
+                <Text style={[t.small, { color: c.textSoft, textAlign: 'center', lineHeight: 18, marginTop: 4 }]}>
+                  Revisá que tu nombre esté bien y enviá tu solicitud de cuenta.
+                </Text>
+              </View>
+
+              {errorMessage ? (
+                <View style={[styles.alertBox, { backgroundColor: 'rgba(217, 83, 79, 0.08)', borderColor: 'rgba(217, 83, 79, 0.25)' }]}>
+                  <Text style={[t.small, { color: '#E06A66', textAlign: 'center' }]}>{errorMessage}</Text>
+                </View>
+              ) : null}
+
+              <View style={styles.inputGroup}>
+                <MicroLabel>NOMBRES</MicroLabel>
+                <View
+                  style={[
+                    styles.inputWrap,
+                    {
+                      borderColor: focusedField === 'social_nombres' ? c.gold : c.border,
+                      backgroundColor: c.cardBgAlt,
+                    },
+                  ]}
+                >
+                  <Icon name="user" size={17} color={focusedField === 'social_nombres' ? c.gold : c.tabInactive} />
+                  <TextInput
+                    value={nombres}
+                    onChangeText={setNombres}
+                    placeholder="Ej. Sebastián"
+                    placeholderTextColor={c.tabInactive}
+                    onFocus={() => setFocusedField('social_nombres')}
+                    onBlur={() => setFocusedField(null)}
+                    style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
+                    autoCapitalize="words"
+                    autoFocus
+                  />
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <MicroLabel>APELLIDOS</MicroLabel>
+                <View
+                  style={[
+                    styles.inputWrap,
+                    {
+                      borderColor: focusedField === 'social_apellidos' ? c.gold : c.border,
+                      backgroundColor: c.cardBgAlt,
+                    },
+                  ]}
+                >
+                  <Icon name="user" size={17} color={focusedField === 'social_apellidos' ? c.gold : c.tabInactive} />
+                  <TextInput
+                    value={apellidos}
+                    onChangeText={setApellidos}
+                    placeholder="Ej. Arango"
+                    placeholderTextColor={c.tabInactive}
+                    onFocus={() => setFocusedField('social_apellidos')}
+                    onBlur={() => setFocusedField(null)}
+                    style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
+                    autoCapitalize="words"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <MicroLabel>CORREO ELECTRÓNICO</MicroLabel>
+                {/* No editable: lo verificó Google y el backend lo toma de su propio registro
+                    pendiente, nunca del cuerpo del request — dejarlo "editable" haría creer que
+                    cambiarlo tiene efecto, y no lo tiene. La opacidad reducida ya se usa en este
+                    mismo archivo (ver el botón CONFIRMAR de la vista OTP) para marcar algo
+                    inactivo sin agregar un estilo nuevo. */}
+                <View
+                  style={[
+                    styles.inputWrap,
+                    { borderColor: c.border, backgroundColor: c.cardBgAlt, opacity: 0.65 },
+                  ]}
+                >
+                  <Icon name="mail" size={17} color={c.tabInactive} />
+                  <TextInput
+                    value={email}
+                    editable={false}
+                    style={[styles.input, { color: c.textSoft, fontFamily: 'Jost_400Regular' }]}
+                  />
+                </View>
+              </View>
+
+              {/* Botón Confirmar y Enviar Solicitud */}
+              <Pressable
+                onPress={handleConfirmarRegistroSocial}
+                disabled={loading}
+                style={[styles.submitBtn, { shadowColor: c.gold }]}
+              >
+                <LinearGradient
+                  colors={c.goldGrad}
+                  start={{ x: 0.1, y: 0 }}
+                  end={{ x: 0.9, y: 1 }}
+                  style={styles.gradientBtn}
+                >
+                  {loading ? (
+                    <ActivityIndicator color={c.onGold} size="small" />
+                  ) : (
+                    <Text style={[t.micro, { color: c.onGold, letterSpacing: 2.5, fontWeight: '700', fontSize: 11 }]}>
+                      ENVIAR SOLICITUD
+                    </Text>
+                  )}
+                </LinearGradient>
+              </Pressable>
+
+              {/* Botón de Retorno al Login */}
+              <Pressable
+                onPress={handleReturnToLogin}
+                style={[styles.returnLoginBtn, { borderColor: c.border }]}
+              >
+                <Icon name="arrowLeft" size={14} color={c.textSoft} />
+                <Text style={[t.micro, { color: c.textSoft, letterSpacing: 1.5 }]}>
+                  VOLVER AL INICIO DE SESIÓN
+                </Text>
+              </Pressable>
+            </View>
+          )}
+
+          {/* ========================================================================= */}
+          {/* VISTA 6: SOLICITUD DE ALTA ENVIADA (PENDIENTE DE APROBACIÓN)              */}
+          {/* ========================================================================= */}
+          {step === 'solicitud_enviada' && (
+            <View style={[styles.card, { backgroundColor: c.cardBg, borderColor: c.border }]}>
+              <View style={{ alignItems: 'center', gap: 10, paddingVertical: 10 }}>
+                <View style={[styles.successIconWrap, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+                  <Icon name="check" size={26} color={c.gold} strokeWidth={2} />
+                </View>
+
+                <MicroLabel>SOLICITUD RECIBIDA</MicroLabel>
+                <Text style={[t.sectionTitle, { color: c.text, textAlign: 'center' }]}>
+                  TU CUENTA ESTÁ EN REVISIÓN
+                </Text>
+                <Text style={[t.small, { color: c.textSoft, textAlign: 'center', lineHeight: 20 }]}>
+                  Confirmamos tu correo y registramos tu solicitud. Un administrador tiene que
+                  aprobarla antes de que puedas ingresar; te avisaremos a:
+                </Text>
+                <Text style={[t.small, { color: c.gold, fontWeight: '600', textAlign: 'center' }]}>
+                  {email}
+                </Text>
+                {accountRequestId ? (
+                  <Text style={[t.micro, { color: c.micro, textAlign: 'center', letterSpacing: 0.8 }]}>
+                    N.º de solicitud: {accountRequestId}
+                  </Text>
+                ) : null}
+              </View>
+
+              {errorMessage ? (
+                <View style={[styles.alertBox, { backgroundColor: 'rgba(217, 83, 79, 0.08)', borderColor: 'rgba(217, 83, 79, 0.25)' }]}>
+                  <Text style={[t.small, { color: '#E06A66', textAlign: 'center' }]}>{errorMessage}</Text>
+                </View>
+              ) : null}
+
+              {successMessage ? (
+                <View style={[styles.alertBox, { backgroundColor: 'rgba(178, 146, 79, 0.12)', borderColor: c.borderStrong }]}>
+                  <Text style={[t.small, { color: c.gold, textAlign: 'center' }]}>{successMessage}</Text>
+                </View>
+              ) : null}
+
+              {/* Botón Volver al Login */}
+              <Pressable
+                onPress={handleReturnToLogin}
+                style={[styles.submitBtn, { shadowColor: c.gold, marginTop: 10 }]}
+              >
+                <LinearGradient
+                  colors={c.goldGrad}
+                  start={{ x: 0.1, y: 0 }}
+                  end={{ x: 0.9, y: 1 }}
+                  style={styles.gradientBtn}
+                >
+                  <Text style={[t.micro, { color: c.onGold, letterSpacing: 2.5, fontWeight: '700', fontSize: 11 }]}>
+                    VOLVER AL INICIO DE SESIÓN
+                  </Text>
+                </LinearGradient>
+              </Pressable>
+
+              {/* Consulta del estado con el id de la solicitud, la única credencial que hay */}
+              <Pressable
+                onPress={handleConsultarEstado}
+                disabled={loading || !accountRequestId}
+                style={[styles.returnLoginBtn, { borderColor: c.border }]}
+              >
+                {loading ? (
+                  <ActivityIndicator color={c.gold} size="small" />
+                ) : (
+                  <>
+                    <Icon name="clock" size={14} color={c.textSoft} />
+                    <Text style={[t.micro, { color: c.textSoft, letterSpacing: 1.5 }]}>
+                      {estadoSolicitud?.status === 'APPROVED'
+                        ? 'SOLICITUD APROBADA'
+                        : 'CONSULTAR ESTADO DE MI SOLICITUD'}
+                    </Text>
+                  </>
+                )}
               </Pressable>
             </View>
           )}
