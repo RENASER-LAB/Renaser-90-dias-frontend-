@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,11 @@ import { useSystemBackHandler } from '../hooks/useSystemBackHandler';
 import { MicroLabel, ScreenHeader } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { GoldButton } from '../components/GoldButton';
+import { usePlanHabitos } from '../features/habits/hooks/usePlanHabitos';
+import { DIAS_DEL_PROGRAMA, puntoDelMedidor, useProgramaDia } from '../features/programa/hooks/useProgramaDia';
+import { HoraPickerModal } from '../features/habits/components/HoraPickerModal';
+import * as habitsApi from '../features/habits/api/habitsApi';
+import { aMomento } from '../features/habits/api/habitsMappers';
 
 // =========================================================================
 // TIPOS: PLAN, HÁBITOS 7 DÍAS Y OBJETIVOS EN 3 NIVELES
@@ -36,6 +41,12 @@ export interface PlanHabit {
   moment: DayMoment;
   desc: string;
   days: Record<DayOfWeek, boolean>;
+  /** `HH:mm:ss` crudo del backend. `null` = el hábito no vence dentro del día. */
+  limitTime: string | null;
+  /** `false` = obligatorio: el interruptor de activar/pausar se muestra bloqueado en ON. */
+  isOptional: boolean;
+  /** false = el aprendiz no puede sacarlo de su plan; el interruptor queda en ON y bloqueado. */
+  isDeactivatable: boolean;
 }
 
 export interface WeeklyGoalItem {
@@ -59,6 +70,8 @@ export interface PlanGoals {
 // =========================================================================
 // DATOS ESTÁTICOS INICIALES
 // =========================================================================
+// `limitTime: null` y `isOptional: true` en todos: son datos de relleno mientras carga el
+// backend real, no deben aparecer vencidos ni bloqueados por error.
 const INITIAL_HABITS: PlanHabit[] = [
   {
     id: 'h1',
@@ -71,6 +84,9 @@ const INITIAL_HABITS: PlanHabit[] = [
     moment: 'mañana',
     desc: 'Hackeo de cortisol matutino con luz solar directa en los ojos y cero pantallas.',
     days: { LUN: true, MAR: true, MIÉ: true, JUE: true, VIE: true, SÁB: true, DOM: true },
+    limitTime: null,
+    isOptional: true,
+    isDeactivatable: true,
   },
   {
     id: 'h2',
@@ -83,6 +99,9 @@ const INITIAL_HABITS: PlanHabit[] = [
     moment: 'mañana',
     desc: '1 litro de agua con sal marina + 15 min de tensión isométrica para la columna.',
     days: { LUN: true, MAR: true, MIÉ: true, JUE: true, VIE: true, SÁB: false, DOM: false },
+    limitTime: null,
+    isOptional: true,
+    isDeactivatable: true,
   },
   {
     id: 'h3',
@@ -95,6 +114,9 @@ const INITIAL_HABITS: PlanHabit[] = [
     moment: 'mañana',
     desc: '90 minutos en modo avión dedicados exclusivamente a tu mayor meta comercial.',
     days: { LUN: true, MAR: true, MIÉ: true, JUE: true, VIE: true, SÁB: false, DOM: false },
+    limitTime: null,
+    isOptional: true,
+    isDeactivatable: true,
   },
   {
     id: 'h4',
@@ -107,6 +129,9 @@ const INITIAL_HABITS: PlanHabit[] = [
     moment: 'tarde',
     desc: 'Auditar fugas de tiempo y llamadas con prospectos calificados para cerrar contratos.',
     days: { LUN: true, MAR: true, MIÉ: true, JUE: true, VIE: true, SÁB: false, DOM: false },
+    limitTime: null,
+    isOptional: true,
+    isDeactivatable: true,
   },
   {
     id: 'h5',
@@ -119,6 +144,9 @@ const INITIAL_HABITS: PlanHabit[] = [
     moment: 'noche',
     desc: 'Cero pantallas 60m antes de dormir, respiración diafragmática y temperatura fresca.',
     days: { LUN: true, MAR: true, MIÉ: true, JUE: true, VIE: true, SÁB: true, DOM: true },
+    limitTime: null,
+    isOptional: true,
+    isDeactivatable: true,
   },
 ];
 
@@ -140,15 +168,27 @@ const INITIAL_GOALS: PlanGoals = {
 };
 
 const DAY_OPTIONS: DayOfWeek[] = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'];
-const DAY_DATES: Record<DayOfWeek, string> = {
-  LUN: '14',
-  MAR: '15',
-  MIÉ: '16',
-  JUE: '17',
-  VIE: '18',
-  SÁB: '19',
-  DOM: '20',
-};
+/**
+ * Fechas reales de la semana en curso, de lunes a domingo. Antes eran del 14 al 20 escritas a
+ * mano: la pantalla mostraba días que no correspondían a la fecha actual.
+ */
+function fechasDeEstaSemana(): Record<DayOfWeek, string> {
+  const hoy = new Date();
+  // getDay() devuelve 0 para domingo; acá la semana arranca el lunes, así que el domingo cuenta
+  // como el séptimo día y no como el primero.
+  const diaDeLaSemana = (hoy.getDay() + 6) % 7;
+  const lunes = new Date(hoy);
+  lunes.setDate(hoy.getDate() - diaDeLaSemana);
+  const fechas = {} as Record<DayOfWeek, string>;
+  DAY_OPTIONS.forEach((dia, indice) => {
+    const fecha = new Date(lunes);
+    fecha.setDate(lunes.getDate() + indice);
+    fechas[dia] = String(fecha.getDate()).padStart(2, '0');
+  });
+  return fechas;
+}
+
+const DAY_DATES: Record<DayOfWeek, string> = fechasDeEstaSemana();
 
 const ICON_PALETTE = ['☀️', '💧', '⚡', '🏃', '🧘', '📊', '📚', '✍️', '🌙', '👑', '🎯', '🥗'];
 
@@ -157,6 +197,34 @@ const FASES = [
   { d: 'DÍAS 31–60', n: 'ACELERACIÓN' },
   { d: 'DÍAS 61–90', n: 'EXPANSIÓN' },
 ];
+
+/**
+ * `HH:mm` de ahora, en la zona horaria del dispositivo.
+ *
+ * Debería ser la zona del aprendiz (`participantes_programa.timezone`, ej. `America/Lima`), no la
+ * del servidor — eso lo pide el encargo explícitamente. Pero **ningún endpoint la expone hoy**
+ * (verificado con `curl` contra `/api/v1/users/me`, `/api/v1/users/me/trainee-profile` y
+ * `/api/v1/onboarding/activate-program`: ninguno trae `timezone`). Se usa la zona del propio
+ * teléfono como aproximación: el aprendiz completa sus hábitos desde su celular, así que salvo
+ * que tenga mal configurada la hora del equipo, coincide con su zona real — a diferencia de la
+ * hora del servidor, que sí podía estar en otro huso. Ver `## Falta en el backend` en el informe.
+ */
+function horaActualHHmm(): string {
+  const ahora = new Date();
+  return `${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}`;
+}
+
+/**
+ * Un hábito "venció" hoy cuando tiene hora límite (`limitTime`) y esa hora ya pasó. La mayoría de
+ * los hábitos NO tiene hora límite (`limitTime: null`) — esos no vencen nunca dentro del día,
+ * aunque su hora de disparo ya haya pasado: la hora de disparo es solo un recordatorio, no un
+ * cierre. Fuera del día de hoy (ayer ya está bloqueado por el selector de días; mañana todavía no
+ * llega) el vencimiento no aplica — por eso pide `esHoy`.
+ */
+function habitoVencidoHoy(habit: PlanHabit, esHoy: boolean, nowHHmm: string): boolean {
+  if (!esHoy || !habit.limitTime) return false;
+  return nowHHmm > habit.limitTime.slice(0, 5);
+}
 
 export default function PlanScreen() {
   const { c, t } = useTheme();
@@ -170,8 +238,37 @@ export default function PlanScreen() {
   const [activeSubView, setActiveSubView] = useState<'main' | 'habitos' | 'objetivos'>('main');
 
   // Estados de Hábitos
-  const [selectedDay, setSelectedDay] = useState<DayOfWeek>('LUN');
+  // Arranca en el día de hoy, no siempre en lunes: quien abre Plan un miércoles espera ver su
+  // miércoles, no tener que buscarlo. El mismo índice marca hasta dónde se puede planificar.
+  const indiceDeHoy = (new Date().getDay() + 6) % 7;
+  const [selectedDay, setSelectedDay] = useState<DayOfWeek>(DAY_OPTIONS[indiceDeHoy]);
+  // Los hábitos vienen del backend (catálogo + horario propio del aprendiz). Mientras cargan, o
+  // si la llamada falla, se usan los de INITIAL_HABITS para que la pantalla nunca quede vacía —
+  // mismo criterio de degradación que `useCursos` en academy.
+  const { habits: habitsDelBackend } = usePlanHabitos();
+  // Dia real del programa: antes el 37, el arco y la fase estaban escritos a mano.
+  const { diaPrograma } = useProgramaDia();
+  const medidor = puntoDelMedidor(diaPrograma);
   const [habits, setHabits] = useState<PlanHabit[]>(INITIAL_HABITS);
+  const conectadoAlBackend = habitsDelBackend.length > 0;
+  useEffect(() => {
+    if (habitsDelBackend.length > 0) {
+      setHabits(habitsDelBackend);
+    }
+  }, [habitsDelBackend]);
+
+  // Reloj del "ahora" para el sombreado de hábitos vencidos (§2). Se recalcula solo, sin que el
+  // aprendiz tenga que tocar nada: si deja Plan abierto y cruza la hora límite de un hábito, se
+  // sombrea y se bloquea sin necesidad de recargar la pantalla.
+  const [nowHHmm, setNowHHmm] = useState(horaActualHHmm());
+  useEffect(() => {
+    const id = setInterval(() => setNowHHmm(horaActualHHmm()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Selector de hora táctil (§1)
+  const [horaPickerVisible, setHoraPickerVisible] = useState(false);
+  const [habitoParaHora, setHabitoParaHora] = useState<PlanHabit | null>(null);
 
   // Estados de Objetivos
   const [goals, setGoals] = useState<PlanGoals>(INITIAL_GOALS);
@@ -249,10 +346,42 @@ export default function PlanScreen() {
     );
   };
 
+  /**
+   * Cambia la hora Y recalcula el bloque del día (`moment`) a partir de esa hora, con
+   * `aMomento` — la misma función que ya usa el mapeo inicial del backend (§ bug reportado:
+   * antes esto dejaba `moment` intacto y el hábito se quedaba en la sección vieja aunque su
+   * hora ahora fuera de otro bloque).
+   */
   const updateHabitTime = (habitId: string, newTime: string) => {
     setHabits(prev =>
-      prev.map(h => (h.id === habitId ? { ...h, time: newTime } : h))
+      prev.map(h => (h.id === habitId ? { ...h, time: newTime, moment: aMomento(newTime) } : h))
     );
+  };
+
+  const abrirSelectorDeHora = (habit: PlanHabit) => {
+    setHabitoParaHora(habit);
+    setHoraPickerVisible(true);
+  };
+
+  /**
+   * Guarda la nueva hora de disparo. Optimista en pantalla (se ve al toque); si el hábito viene
+   * del backend real se persiste con `PATCH /habit-preferences/{id}`, preservando `limitTime` tal
+   * cual estaba — cambiar la hora de disparo no debe borrar la hora límite del hábito. Los
+   * hábitos de relleno (`INITIAL_HABITS`, mientras el backend no respondió) no existen del otro
+   * lado, así que ahí el cambio queda solo local.
+   */
+  const guardarNuevaHora = async (habitId: string, nuevaHora: string) => {
+    setHoraPickerVisible(false);
+    const anteriores = habits;
+    const habito = habits.find(h => h.id === habitId);
+    updateHabitTime(habitId, nuevaHora);
+    if (!conectadoAlBackend || !habito) return;
+    try {
+      await habitsApi.cambiarHorario(habitId, `${nuevaHora}:00`, habito.limitTime);
+    } catch {
+      setHabits(anteriores);
+      Alert.alert('No pudimos guardar el horario', 'Intenta de nuevo en unos segundos.');
+    }
   };
 
   const openMoveMomentDrawer = (habit: PlanHabit) => {
@@ -286,6 +415,11 @@ export default function PlanScreen() {
       moment: newHabitMoment,
       desc: 'Práctica personalizada agregada a tu plan semanal.',
       days: newHabitDays,
+      // Un hábito personalizado, creado a mano por el aprendiz: nunca es obligatorio del
+      // programa ni tiene hora límite que lo venza.
+      limitTime: null,
+      isOptional: true,
+    isDeactivatable: true,
     };
 
     setHabits(prev => [...prev, newHabit]);
@@ -380,13 +514,13 @@ export default function PlanScreen() {
           <View style={[styles.gauge, { height: gaugeH + 8 }]}>
             <Svg width={gaugeW} height={gaugeH} viewBox="0 0 228 120">
               <Path d="M14 108a100 100 0 0 1 200 0" stroke={c.divider} strokeWidth={5} strokeLinecap="round" fill="none" />
-              <Path d="M14 108a100 100 0 0 1 141-93" stroke={c.chevron} strokeWidth={5} strokeLinecap="round" fill="none" />
-              <Circle cx={155} cy={15} r={6} fill={c.gold} />
+              <Path d={medidor.path} stroke={c.chevron} strokeWidth={5} strokeLinecap="round" fill="none" />
+              <Circle cx={medidor.x} cy={medidor.y} r={6} fill={c.gold} />
             </Svg>
             <View style={styles.gaugeCenter}>
               <Text style={[t.micro, { color: c.micro }]}>DÍA</Text>
-              <Text style={{ fontFamily: 'Jost_300Light', fontSize: 40, color: c.textStrong }}>37</Text>
-              <Text style={[t.small, { color: c.micro }]}>DE 90</Text>
+              <Text style={{ fontFamily: 'Jost_300Light', fontSize: 40, color: c.textStrong }}>{diaPrograma}</Text>
+              <Text style={[t.small, { color: c.micro }]}>DE {DIAS_DEL_PROGRAMA}</Text>
             </View>
             <Text style={[t.small, styles.gaugeLeft, { color: c.textSoft }]}>01</Text>
             <Text style={[t.small, styles.gaugeRight, { color: c.textSoft }]}>90</Text>
@@ -516,9 +650,6 @@ export default function PlanScreen() {
               <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 14 }]}>
                 Convertirme en mi mejor versión
               </Text>
-              <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5, marginTop: 2 }]}>
-                Mantén presionado un hábito para mover de momento
-              </Text>
             </View>
             <Pressable
               onPress={() => setCreateHabitModalVisible(true)}
@@ -530,17 +661,23 @@ export default function PlanScreen() {
 
           {/* Selector de Días Semanales (LUN - DOM) */}
           <View style={{ flexDirection: 'row', gap: 6, marginTop: 14 }}>
-            {DAY_OPTIONS.map(d => {
+            {DAY_OPTIONS.map((d, indice) => {
               const isSelected = selectedDay === d;
+              // Los días ya pasados no se pueden planificar: organizar hábitos de un día que ya
+              // terminó no tiene efecto sobre nada. Quedan visibles pero apagados y sin responder
+              // al toque, para que la semana se siga leyendo completa.
+              const esPasado = indice < indiceDeHoy;
               return (
                 <Pressable
                   key={d}
+                  disabled={esPasado}
                   onPress={() => setSelectedDay(d)}
                   style={[
                     styles.dayPillBtn,
                     {
                       borderColor: isSelected ? c.gold : c.border,
                       backgroundColor: isSelected ? c.cardBgAlt : c.cardBg,
+                      opacity: esPasado ? 0.35 : 1,
                     },
                   ]}
                 >
@@ -567,26 +704,41 @@ export default function PlanScreen() {
                     <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 1, fontSize: 10.5 }]}>
                       {momentLabel} ({momentHabits.length})
                     </Text>
-                    <Text style={[t.micro, { color: c.textSoft, fontSize: 9 }]}>
-                      Toca o mantén presionado para mover
-                    </Text>
                   </View>
 
                   {momentHabits.map(habit => {
                     const isDayActive = habit.days[selectedDay];
+                    // § 2 — solo importa si ya venció HOY: un hábito de mañana o de un día que
+                    // todavía no llega no puede estar "vencido".
+                    const esHoy = selectedDay === DAY_OPTIONS[indiceDeHoy];
+                    const vencido = habitoVencidoHoy(habit, esHoy, nowHHmm);
+                    // § 3 — obligatorio: el interruptor se ve siempre encendido y bloqueado.
+                    const bloqueadoObligatorio = !habit.isDeactivatable;
+                    const switchBloqueado = vencido || bloqueadoObligatorio;
+                    const switchValor = bloqueadoObligatorio ? true : isDayActive;
+
+                    let estadoLabel: string;
+                    let estadoColor: string;
+                    if (vencido) {
+                      estadoLabel = 'VENCIDO';
+                      estadoColor = c.textSoft;
+                    } else if (bloqueadoObligatorio) {
+                      estadoLabel = 'OBLIGATORIO';
+                      estadoColor = c.gold;
+                    } else {
+                      estadoLabel = isDayActive ? 'ACTIVO' : 'PAUSADO';
+                      estadoColor = isDayActive ? '#70d2a0' : c.textSoft;
+                    }
 
                     return (
                       <Pressable
                         key={habit.id}
-                        onPress={() => openMoveMomentDrawer(habit)}
-                        onLongPress={() => openMoveMomentDrawer(habit)}
-                        delayLongPress={300}
                         style={[
                           styles.habitPlanCard,
                           {
-                            borderColor: isDayActive ? c.gold : c.border,
+                            borderColor: vencido ? c.border : isDayActive ? c.gold : c.border,
                             backgroundColor: c.cardBg,
-                            opacity: isDayActive ? 1 : 0.6,
+                            opacity: vencido ? 0.5 : isDayActive ? 1 : 0.6,
                           },
                         ]}
                       >
@@ -596,25 +748,41 @@ export default function PlanScreen() {
                               <Text style={{ fontSize: 18 }}>{habit.icon}</Text>
                             </View>
                             <View style={{ flex: 1 }}>
-                              <View style={[styles.tagPill, { borderColor: c.border, backgroundColor: c.cardBgAlt, alignSelf: 'flex-start' }]}>
-                                <Text style={[t.micro, { color: c.gold, fontSize: 8.5, fontWeight: '800' }]}>
-                                  {habit.tag}
-                                </Text>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                <View style={[styles.tagPill, { borderColor: c.border, backgroundColor: c.cardBgAlt, alignSelf: 'flex-start' }]}>
+                                  <Text style={[t.micro, { color: c.gold, fontSize: 8.5, fontWeight: '800' }]}>
+                                    {habit.tag}
+                                  </Text>
+                                </View>
+                                {bloqueadoObligatorio ? <Icon name="lock" size={10} color={c.gold} /> : null}
                               </View>
                               <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13, marginTop: 2 }]}>
                                 {habit.title}
                               </Text>
-                              {/* Horario Editable Directamente */}
+                              {/* Horario: selector táctil, ya no texto libre (§1). Bloqueado si venció. */}
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
-                                <Text style={{ fontSize: 11, color: c.gold, fontWeight: 'bold' }}>⏰</Text>
-                                <TextInput
-                                  value={habit.time}
-                                  onChangeText={val => updateHabitTime(habit.id, val)}
-                                  placeholder="05:00 AM"
-                                  placeholderTextColor={c.textSoft}
-                                  style={[styles.timeInputDirect, { color: c.gold, borderColor: c.border, backgroundColor: c.cardBgAlt }]}
-                                />
-                                <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>({habit.duration})</Text>
+                                <Icon name="clock" size={11} color={vencido ? c.textSoft : c.gold} />
+                                <Pressable
+                                  disabled={vencido}
+                                  onPress={() => abrirSelectorDeHora(habit)}
+                                  style={[
+                                    styles.timeInputDirect,
+                                    { borderColor: c.border, backgroundColor: c.cardBgAlt },
+                                  ]}
+                                >
+                                  <Text
+                                    style={{
+                                      color: vencido ? c.textSoft : c.gold,
+                                      fontSize: 11,
+                                      fontWeight: 'bold',
+                                    }}
+                                  >
+                                    {habit.time || 'Sin horario'}
+                                  </Text>
+                                </Pressable>
+                                {habit.duration ? (
+                                  <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>({habit.duration})</Text>
+                                ) : null}
                                 <View style={[styles.momentBadgePill, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
                                   <Text style={[t.micro, { color: c.textSoft, fontSize: 9 }]}>{momentLabel}</Text>
                                 </View>
@@ -624,21 +792,19 @@ export default function PlanScreen() {
 
                           {/* Switch Activar/Pausar para el día */}
                           <View style={{ alignItems: 'center', gap: 2 }} onStartShouldSetResponder={() => true}>
-                            <Text style={[t.micro, { color: isDayActive ? '#70d2a0' : c.textSoft, fontSize: 8.5, fontWeight: '800' }]}>
-                              {isDayActive ? 'ACTIVO' : 'PAUSADO'}
+                            <Text style={[t.micro, { color: estadoColor, fontSize: 8.5, fontWeight: '800' }]}>
+                              {estadoLabel}
                             </Text>
                             <Switch
-                              value={isDayActive}
+                              value={switchValor}
+                              disabled={switchBloqueado}
                               onValueChange={() => toggleHabitDayStatus(habit.id)}
                               trackColor={{ false: '#332C20', true: c.gold }}
-                              thumbColor={isDayActive ? '#1E1B18' : '#888'}
+                              thumbColor={switchValor ? '#1E1B18' : '#888'}
                             />
                           </View>
                         </View>
 
-                        <Text style={[t.body, { color: c.textSoft, fontSize: 11, marginTop: 6, fontStyle: 'italic' }]}>
-                          {habit.desc}
-                        </Text>
                       </Pressable>
                     );
                   })}
@@ -790,7 +956,7 @@ export default function PlanScreen() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Text style={{ fontSize: 16 }}>🎯</Text>
                   <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 1 }]}>
-                    3. OBJETIVO DIARIO (HOY · DÍA 37)
+                    3. OBJETIVO DIARIO (HOY · DÍA {diaPrograma})
                   </Text>
                 </View>
                 <Pressable
@@ -1135,6 +1301,19 @@ export default function PlanScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* ========================================================================= */}
+      {/* MODAL: SELECTOR DE HORA TÁCTIL (§1 — reemplaza el TextInput de texto libre) */}
+      {/* ========================================================================= */}
+      <HoraPickerModal
+        visible={horaPickerVisible}
+        tituloHabito={habitoParaHora?.title ?? ''}
+        horaInicial={habitoParaHora?.time ?? ''}
+        onConfirmar={hora => {
+          if (habitoParaHora) void guardarNuevaHora(habitoParaHora.id, hora);
+        }}
+        onCerrar={() => setHoraPickerVisible(false)}
+      />
     </SafeAreaView>
   );
 }
