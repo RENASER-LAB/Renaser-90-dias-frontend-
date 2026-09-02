@@ -48,6 +48,13 @@ type AuthContextType = {
   /** true mientras se rehidrata la sesión guardada. Permite evitar el parpadeo del login. */
   sesionCargando: boolean;
   isOnboardingCompleted: boolean;
+  /**
+   * false mientras `isOnboardingCompleted` todavía no refleja una respuesta confirmada para el
+   * usuario logueado actual (login/rehidratación en curso). `RootNavigator` debe esperar a que
+   * sea `true` antes de decidir entre `OnboardingFlow` y `MainTabs` — ver el comentario junto a
+   * `useState` más abajo.
+   */
+  onboardingResuelto: boolean;
   fichaData: FichaInicialData | null;
   login: (email: string, pass: string) => Promise<boolean>;
   register: (name: string, email: string, pass: string) => Promise<boolean>;
@@ -70,6 +77,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isOnboardingCompleted, setIsOnboardingCompleted] = useState<boolean>(false);
   const [fichaData, setFichaData] = useState<FichaInicialData | null>(null);
   const [sesionCargando, setSesionCargando] = useState<boolean>(true);
+  /**
+   * true solo cuando `isOnboardingCompleted` refleja una respuesta real de
+   * `resolverOnboardingCompletado` para el usuario logueado actual. Existe para que
+   * `RootNavigator` pueda distinguir "todavía no sé" de "ya sé que no está completo": entre
+   * `setUser(...)` y que resuelva la llamada a `/onboarding/state` hay un instante en que `user`
+   * ya está seteado pero `isOnboardingCompleted` todavía arrastra su valor por defecto (`false`).
+   * Sin esta bandera, ese instante se renderiza como "onboarding no completo" (se ve la Ficha
+   * Inicial) y al resolver la promesa, si el valor real es `true`, la pantalla salta a Home — el
+   * parpadeo "aparece la Ficha Inicial y se va sola" reportado en vivo. Se resetea a `false` al
+   * arrancar cada intento de login/rehidratación y a `true` recién cuando el valor está confirmado
+   * (en cualquiera de los dos sentidos).
+   */
+  const [onboardingResuelto, setOnboardingResuelto] = useState<boolean>(false);
 
   /**
    * Rehidrata la sesión al abrir la app: lee el token guardado en el Keychain/Keystore y pregunta
@@ -91,8 +111,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const api = await authApi.perfilActual();
         if (!vigente) return;
         setUser(aUsuario(api));
+        setOnboardingResuelto(false);
         try {
-          setIsOnboardingCompleted(await resolverOnboardingCompletado());
+          const completado = await resolverOnboardingCompletado();
+          if (!vigente) return;
+          setIsOnboardingCompleted(completado);
+          setOnboardingResuelto(true);
         } catch {
           // 403 = cuenta suspendida (ver resolverOnboardingCompletado). Mismo tratamiento que un
           // token vencido: se descarta la sesión y la app arranca en el login, no se deja a la
@@ -123,8 +147,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(async (email: string, pass: string) => {
     const api = await authApi.iniciarSesion(email, pass);
     setUser(aUsuario(api));
+    // Se resetea en el mismo tick que `setUser` (sin ningún `await` entre medio), así que React
+    // los aplica en el mismo render: nunca hay un frame con `user` seteado y `onboardingResuelto`
+    // todavía en `true` de una sesión anterior.
+    setOnboardingResuelto(false);
     try {
-      setIsOnboardingCompleted(await resolverOnboardingCompletado());
+      const completado = await resolverOnboardingCompletado();
+      setIsOnboardingCompleted(completado);
+      setOnboardingResuelto(true);
     } catch (e) {
       // 403 = cuenta suspendida (ver resolverOnboardingCompletado): se deshace el login para que
       // LoginScreen lo trate igual que credenciales rechazadas (mensajeDeError ya sabe mostrar
@@ -149,12 +179,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const resultado = await loginConGoogle();
     if (resultado?.tipo === 'SESION') {
       setUser(aUsuario(resultado.usuario));
+      setOnboardingResuelto(false);
       // El backend solo devuelve sesión si la cuenta ya existe y está aprobada — pero "ya existe"
       // no es lo mismo que "ya completó el onboarding" (pudo haberse creado por invitación de un
       // admin sin pasar por la Ficha Inicial todavía). Mismo bug que tenía `login`, mismo arreglo:
       // se pregunta al backend en vez de asumir. Ver `resolverOnboardingCompletado`.
       try {
-        setIsOnboardingCompleted(await resolverOnboardingCompletado());
+        const completado = await resolverOnboardingCompletado();
+        setIsOnboardingCompleted(completado);
+        setOnboardingResuelto(true);
       } catch (e) {
         setUser(null);
         setTokenSesion(null);
@@ -168,6 +201,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await esperaSimulada(600);
     setUser(USUARIO_DEMO_APPLE);
     setIsOnboardingCompleted(false);
+    setOnboardingResuelto(true);
     return true;
   }, []);
 
@@ -189,6 +223,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         avatarUrl: null,
       });
       setIsOnboardingCompleted(false);
+      setOnboardingResuelto(true);
       return true;
     }
     throw new Error('Código OTP inválido');
@@ -214,6 +249,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       avatarUrl: null,
     });
     setIsOnboardingCompleted(false);
+    setOnboardingResuelto(true);
     return true;
   }, []);
 
@@ -242,12 +278,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const demoLogin = useCallback(() => {
     setUser(USUARIO_DEMO_EXISTENTE);
     setIsOnboardingCompleted(true);
+    setOnboardingResuelto(true);
   }, []);
 
   // Demo New User: para recorrer el Onboarding entero desde cero. Sin backend.
   const demoNewUser = useCallback(() => {
     setUser(USUARIO_DEMO_NUEVO);
     setIsOnboardingCompleted(false);
+    setOnboardingResuelto(true);
   }, []);
 
   const logout = useCallback(() => {
@@ -256,6 +294,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     void authApi.cerrarSesion().catch(() => undefined);
     setUser(null);
     setIsOnboardingCompleted(false);
+    setOnboardingResuelto(false);
     setFichaData(null);
   }, []);
 
@@ -265,6 +304,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isAuthenticated: !!user,
       sesionCargando,
       isOnboardingCompleted,
+      onboardingResuelto,
       fichaData,
       login,
       register,
@@ -283,6 +323,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       sesionCargando,
       isOnboardingCompleted,
+      onboardingResuelto,
       fichaData,
       login,
       register,

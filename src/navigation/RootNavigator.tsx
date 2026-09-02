@@ -25,10 +25,25 @@ function MainTabs() {
 }
 
 export function RootNavigator() {
-  const { isAuthenticated, isOnboardingCompleted } = useAuth();
+  const { isAuthenticated, isOnboardingCompleted, sesionCargando, onboardingResuelto } = useAuth();
+
+  // Mientras se rehidrata la sesión guardada todavía no se sabe si hay usuario: mostrar el login
+  // acá haría que parpadee para alguien que ya estaba logueado.
+  if (sesionCargando) {
+    return null;
+  }
 
   if (!isAuthenticated) {
     return <LoginScreen />;
+  }
+
+  // El bug que esto arregla: se decidía entre Ficha Inicial y home ANTES de que llegara la
+  // respuesta de `GET /onboarding/state`, tratando "todavía no sé" igual que un valor confirmado.
+  // Por eso la Ficha Inicial aparecía un instante y se iba sola al home. Mientras el estado del
+  // onboarding no esté resuelto no se decide nada: no se muestra la ficha para sacarla después,
+  // ni se manda al home por las dudas.
+  if (!onboardingResuelto) {
+    return null;
   }
 
   if (!isOnboardingCompleted) {
