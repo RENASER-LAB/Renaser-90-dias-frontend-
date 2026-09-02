@@ -5,6 +5,7 @@ import type {
   WallCommentsPage,
   WallFeedPage,
   WallPost,
+  WallReactionsPage,
   WallReactionToggleResult,
   WallReactionType,
   WallUrlSubida,
@@ -16,6 +17,7 @@ import {
   wallCommentsPageSchema,
   wallFeedPageSchema,
   wallPostSchema,
+  wallReactionsPageSchema,
   wallReactionToggleSchema,
   validarRespuesta,
 } from './wallSchemas';
@@ -51,6 +53,16 @@ export async function reaccionarPublicacion(
   });
   return validarRespuesta<WallReactionToggleResult>(wallReactionToggleSchema, r,
     'POST /api/v1/wall/{id}/react');
+}
+
+/**
+ * Quién reaccionó a una publicación (modal "Reacciones del post"). Sin paginación: el diseño
+ * no pagina esta lista (`ScrollView` de altura fija), y el backend tampoco la pagina
+ * (`WallReactionsResponse`, ver el informe de esta integración).
+ */
+export async function obtenerReacciones(postId: string): Promise<WallReactionsPage> {
+  const r = await apiFetch<unknown>(`/api/v1/wall/${postId}/reactions`);
+  return validarRespuesta<WallReactionsPage>(wallReactionsPageSchema, r, 'GET /api/v1/wall/{id}/reactions');
 }
 
 export async function obtenerComentarios(postId: string, cursor?: string): Promise<WallCommentsPage> {
@@ -127,17 +139,18 @@ export async function subirImagenAS3(uploadUrl: string, uri: string, mimeType: s
 }
 
 /**
- * La URL permanente del objeto es la misma `uploadUrl` sin la firma (todo lo que sigue a `?`,
- * que es la credencial temporal de escritura — ver `PutObjectPresignRequest` en
- * `S3AlmacenamientoAdapter`). Es lo que espera `MediaItemRequest.url` en `POST /api/v1/wall`: el
- * backend documenta ahí mismo que "la app publicada manda una URL absoluta directa... no
- * bucket+ruta" (CM-06).
+ * `WallController.publicar` (POST /api/v1/wall). `category` es opcional del lado del backend.
+ *
+ * **`media[].url` lleva la RUTA, no una URL** — la `ruta` que devolvió
+ * `solicitarUrlSubidaMuro`, tal cual. El nombre del campo es histórico (la app vieja mandaba una
+ * URL absoluta y el backend sigue aceptando esa forma por compatibilidad), pero lo que se guarda
+ * tiene que ser la clave del objeto en S3: el feed la vuelve a firmar en cada lectura, así que
+ * una URL guardada ahí queda en 404 para siempre aunque el archivo exista.
+ *
+ * Antes acá vivía un helper `urlPermanenteDesdeSubida(uploadUrl)` que cortaba la firma y mandaba
+ * la URL absoluta. Era exactamente el defecto E-79 y por eso se eliminó en vez de dejarlo sin
+ * usar: mientras exista, alguien lo vuelve a llamar.
  */
-export function urlPermanenteDesdeSubida(uploadUrl: string): string {
-  return uploadUrl.split('?')[0];
-}
-
-/** `WallController.publicar` (POST /api/v1/wall). `category` es opcional del lado del backend. */
 export async function publicarEnMuro(
   text: string,
   media: { url: string; mimeType: string }[],

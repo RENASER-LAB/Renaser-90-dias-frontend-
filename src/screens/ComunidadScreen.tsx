@@ -20,6 +20,8 @@ import { Icon, IconName } from '../components/Icon';
 import { GoldButton } from '../components/GoldButton';
 import { useAuth } from '../features/auth/context/AuthContext';
 import { useWallFeed } from '../features/community/hooks/useWallFeed';
+import { useWallReactions } from '../features/community/hooks/useWallReactions';
+import { useMiCelula } from '../features/community/hooks/useMiCelula';
 import * as wallApi from '../features/community/api/wallApi';
 import { elegirYNormalizarFotoMuro, type FotoMuroNormalizada } from '../features/community/utils/normalizarImagen';
 import { FotoMuro } from '../features/community/components/FotoMuro';
@@ -117,6 +119,14 @@ export interface PostItem {
   dislikes: number;
   userReaction?: 'like' | 'dislike' | null;
   comments: CommentItem[];
+  /**
+   * `true` mientras la publicación existe solo en el teléfono y todavía está viajando a S3 y al
+   * backend (UI optimista, ver `useWallFeed.publicarOptimista`). La tarjeta se dibuja igual que
+   * cualquier otra —mismo JSX, mismos estilos— solo que atenuada, para que se note que falta
+   * confirmar sin cambiar el diseño. Al confirmarse se reemplaza por la publicación real y el
+   * campo desaparece; si falla, la tarjeta se quita.
+   */
+  pendiente?: boolean;
 }
 
 export interface ReactionUser {
@@ -245,12 +255,10 @@ const INITIAL_LEADERBOARD: LeaderboardUser[] = [
   { id: 'u6', rank: 6, name: 'Sofía Andrade', cell: 'Célula 07', streakDays: 33, evidencePercent: 89 },
 ];
 
-const REACTION_USERS_MOCK: ReactionUser[] = [
-  { id: 'r1', name: 'Sebastián Arango (Mentor)', role: 'Mentor Principal', avatar: '🦅', type: 'like' },
-  { id: 'r2', name: 'Carlos Méndez', role: 'Célula 04', avatar: '👨‍💼', type: 'like' },
-  { id: 'r3', name: 'Dra. Valeria Ruiz', role: 'Célula 05', avatar: '👩‍⚕️', type: 'like' },
-  { id: 'r4', name: 'Marcos V.', role: 'Célula 03', avatar: '👤', type: 'dislike' },
-];
+// Antes había acá un REACTION_USERS_MOCK: el modal "Reacciones del post" ya usa datos reales
+// (GET /api/v1/wall/{id}/reactions, ver useWallReactions) — quedaba muerto y se sacó, no
+// oculto detrás de una bandera "por si acaso" (mismo criterio que el resto de esta integración:
+// `wallApi.publicarEnMuro`, sección "Antes acá vivía un helper...").
 
 // =========================================================================
 // DATOS ESTÁTICOS: CHATS & INTEGRANTES DE CÉLULA (TIPO WHATSAPP)
@@ -340,6 +348,33 @@ export default function ComunidadScreen() {
   const nombreUsuario = user?.name?.trim() || 'Tú';
   const primerNombreUsuario = nombreUsuario.split(' ')[0];
 
+  // Mentor asignado + integrantes de la célula — datos reales (GET /api/v1/me/cell y
+  // GET /api/v1/me/cell/members), usados en la vista principal (sección MENTOR / TRIBU PRIVADA).
+  const {
+    miCelula,
+    miembros: companerosCelula,
+    loading: celulaCargando,
+    error: celulaError,
+  } = useMiCelula();
+  const tieneMentor = miCelula?.assigned === true && !!miCelula.mentorName;
+  const mentorTitulo = celulaCargando
+    ? 'Cargando tu mentor...'
+    : celulaError
+      ? 'No pudimos cargar tu mentor'
+      : tieneMentor && miCelula?.assigned === true
+        ? miCelula.mentorName!
+        : 'Todavía no tienes un mentor asignado';
+  const mentorSubtitulo = tieneMentor ? 'Mentor de tu célula' : null;
+  const mentorNota =
+    celulaCargando || celulaError
+      ? null
+      : tieneMentor
+        ? 'Escribile para coordinar tu próxima sesión.'
+        : 'Te avisaremos apenas se te asigne uno.';
+  const TRIBU_AVATARES_VISIBLES = 4;
+  const tribuVisibles = companerosCelula.slice(0, TRIBU_AVATARES_VISIBLES);
+  const tribuRestantes = Math.max(companerosCelula.length - TRIBU_AVATARES_VISIBLES, 0);
+
   // =========================================================================
   // ESTADOS DE NAVEGACIÓN
   // =========================================================================
@@ -384,10 +419,13 @@ export default function ComunidadScreen() {
     setPosts,
     loading: muroCargando,
     error: muroError,
-    recargar: recargarMuro,
+    // `recargar` ya no se desestructura acá: la carga inicial la dispara el propio hook y publicar
+    // ya no recarga el feed entero (inserta la publicación nueva). El hook lo sigue exponiendo
+    // para el día que haya un "deslizar para refrescar", que hoy la pantalla no tiene.
     reaccionar: reaccionarPublicacion,
     cargarComentarios,
     agregarComentario: agregarComentarioRemoto,
+    publicarOptimista,
   } = useWallFeed();
   const [expandedPosts, setExpandedPosts] = useState<Record<string, boolean>>({});
   const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
@@ -426,9 +464,16 @@ export default function ComunidadScreen() {
   const [agregandoFoto, setAgregandoFoto] = useState(false);
   const [subiendoPublicacion, setSubiendoPublicacion] = useState(false);
 
-  // Modal Quién dio Like/Dislike
+  // Modal Quién dio Like/Dislike — datos reales (GET /api/v1/wall/{id}/reactions), pedidos al
+  // abrir el modal (ver el `onPress` que lo abre, más abajo).
   const [reactionsModalVisible, setReactionsModalVisible] = useState(false);
   const [reactionFilter, setReactionFilter] = useState<'all' | 'like' | 'dislike'>('all');
+  const {
+    reacciones: reactionUsers,
+    cargando: cargandoReacciones,
+    error: errorReacciones,
+    cargarReacciones,
+  } = useWallReactions();
 
   // =========================================================================
   // GESTOS TÁCTILES DEL SISTEMA (BACKHANDLER)
@@ -838,44 +883,36 @@ export default function ComunidadScreen() {
     }
     if (subiendoPublicacion) return;
 
+    // El modal se cierra YA y la publicación aparece en el muro en el mismo gesto: la subida a S3
+    // y el POST siguen en segundo plano (ver `useWallFeed.publicarOptimista`). Antes esto esperaba
+    // los tres viajes de red y ADEMÁS recargaba el feed entero antes de dejar cerrar — segundos de
+    // pantalla trabada con el botón en "PUBLICANDO...".
+    const texto = newPostText.trim();
+    const fotos = attachedPhotos;
+    setNewPostText('');
+    setAttachedPhotos([]);
+    setCreatePostModalVisible(false);
+
     setSubiendoPublicacion(true);
     try {
-      // Tres pasos por foto, en orden (WallController: media/upload-url → PUT directo a S3 →
-      // POST /wall con la URL ya subida). Se hace de a una: el backend no ofrece un batch, y el
-      // límite (`@Size(max = 10)`) hace que el costo de no paralelizar sea despreciable.
-      const media: { url: string; mimeType: string }[] = [];
-      for (const foto of attachedPhotos) {
-        const urlSubida = await wallApi.solicitarUrlSubidaMuro(foto.mimeType);
-        if (wallApi.almacenamientoSinConfigurar(urlSubida.uploadUrl)) {
-          // Bloqueante externo conocido (D-34): sin `STORAGE_PROVEEDOR=s3` configurado en el
-          // servidor, `uploadUrl` es un marcador (`about:blank#pendiente-s3/...`), no una URL de
-          // S3 real. No tiene sentido intentar el PUT — fallaría con un error de red críptico.
-          throw new Error(
-            'El almacenamiento de fotos (S3) todavía no está configurado en el servidor. Avisale al equipo técnico e intentá de nuevo más tarde.'
-          );
-        }
-        await wallApi.subirImagenAS3(urlSubida.uploadUrl, foto.uri, foto.mimeType);
-        media.push({ url: wallApi.urlPermanenteDesdeSubida(urlSubida.uploadUrl), mimeType: foto.mimeType });
-      }
-
-      await wallApi.publicarEnMuro(newPostText.trim(), media);
-      await recargarMuro(); // trae la publicación real (con su id e reacciones desde el servidor)
-      setNewPostText('');
-      setAttachedPhotos([]);
-      setCreatePostModalVisible(false);
-      Alert.alert('¡Publicado con Éxito! 🦅', 'Tu victoria ha sido compartida con la tribu.');
+      await publicarOptimista(texto, fotos, nombreUsuario);
     } catch (error) {
+      // El post optimista ya se quitó del muro (rollback dentro del hook). Se devuelve el borrador
+      // al modal para que la persona no tenga que volver a escribirlo ni a elegir la foto: perder
+      // lo escrito por un fallo de red es peor que la espera que acabamos de sacar.
+      setNewPostText(texto);
+      setAttachedPhotos(fotos);
+      setCreatePostModalVisible(true);
       Alert.alert('No se pudo publicar', mensajeDeFalloAlPublicar(error));
     } finally {
       setSubiendoPublicacion(false);
     }
   };
 
-  const filteredReactions = REACTION_USERS_MOCK.filter(r => {
-    if (reactionFilter === 'like') return r.type === 'like';
-    if (reactionFilter === 'dislike') return r.type === 'dislike';
-    return true;
-  });
+  const likesReactions = reactionUsers.filter(r => r.type === 'like');
+  const dislikesReactions = reactionUsers.filter(r => r.type === 'dislike');
+  const filteredReactions =
+    reactionFilter === 'like' ? likesReactions : reactionFilter === 'dislike' ? dislikesReactions : reactionUsers;
 
   const filteredConversations = conversations.filter(conv => {
     if (chatCategory === 'celula') return conv.type === 'celula';
@@ -915,11 +952,15 @@ export default function ComunidadScreen() {
             <View style={[styles.mentor, { borderColor: c.border, backgroundColor: c.cardBg }]}>
               <Placeholder label="FOTO" style={{ width: mentorPhoto, height: mentorPhoto, borderRadius: mentorPhoto / 2 }} />
               <View style={{ flex: 1 }}>
-                <Text style={[t.cardTitle, { color: c.textStrong }]}>Sebastián Arango</Text>
-                <Text style={[t.small, { color: c.micro, marginTop: 2 }]}>Mentor de Alto Rendimiento</Text>
-                <Text style={[t.small, { color: c.textSoft, marginTop: 6, fontStyle: 'italic', lineHeight: 18 }]}>
-                  “Revisión de tu plan de esta semana.{"\n"}¿Agendamos tu llamada?”
-                </Text>
+                <Text style={[t.cardTitle, { color: c.textStrong }]}>{mentorTitulo}</Text>
+                {mentorSubtitulo && (
+                  <Text style={[t.small, { color: c.micro, marginTop: 2 }]}>{mentorSubtitulo}</Text>
+                )}
+                {mentorNota && (
+                  <Text style={[t.small, { color: c.textSoft, marginTop: 6, fontStyle: 'italic', lineHeight: 18 }]}>
+                    {mentorNota}
+                  </Text>
+                )}
               </View>
               <Icon name="chevron" size={12} color={c.chevron} />
             </View>
@@ -927,14 +968,29 @@ export default function ComunidadScreen() {
 
           <View style={[styles.section, { borderTopColor: c.divider }]}>
             <MicroLabel>TRIBU PRIVADA</MicroLabel>
-            <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
-              {[0, 1, 2, 3].map(i => (
-                <Placeholder key={i} style={{ width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 }} />
-              ))}
-              <View style={[styles.more, { width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2, borderColor: c.border, backgroundColor: c.cardBg }]}>
-                <Text style={[t.small, { color: c.textSoft }]}>+12</Text>
+            {celulaCargando && companerosCelula.length === 0 && (
+              <Text style={[t.micro, { color: c.textSoft, marginTop: 10 }]}>Cargando tu tribu...</Text>
+            )}
+            {!celulaCargando && !celulaError && companerosCelula.length === 0 && (
+              <Text style={[t.micro, { color: c.textSoft, marginTop: 10 }]}>
+                Todavía no tenés integrantes en tu célula.
+              </Text>
+            )}
+            {companerosCelula.length > 0 && (
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                {tribuVisibles.map(m => (
+                  <Placeholder
+                    key={m.traineeId}
+                    style={{ width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 }}
+                  />
+                ))}
+                {tribuRestantes > 0 && (
+                  <View style={[styles.more, { width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2, borderColor: c.border, backgroundColor: c.cardBg }]}>
+                    <Text style={[t.small, { color: c.textSoft }]}>+{tribuRestantes}</Text>
+                  </View>
+                )}
               </View>
-            </View>
+            )}
           </View>
 
           {/* Sección TU SOPORTE (Los 3 Círculos Originales) */}
@@ -1138,7 +1194,14 @@ export default function ComunidadScreen() {
                 return (
                   <View
                     key={post.id}
-                    style={[styles.postCard, { borderColor: c.border, backgroundColor: c.cardBg }]}
+                    style={[
+                      styles.postCard,
+                      { borderColor: c.border, backgroundColor: c.cardBg },
+                      // Único cambio visual del post optimista: atenuado mientras se confirma. Se
+                      // suma como estilo al lado de los que ya estaban, sin tocar `styles.postCard`
+                      // ni reestructurar el JSX de la tarjeta.
+                      post.pendiente && { opacity: 0.55 },
+                    ]}
                   >
                     {/* Header del Post */}
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1242,6 +1305,7 @@ export default function ComunidadScreen() {
                         onPress={() => {
                           setReactionsModalVisible(true);
                           setReactionFilter('all');
+                          void cargarReacciones(post.id);
                         }}
                         style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
                       >
@@ -2507,7 +2571,7 @@ export default function ComunidadScreen() {
                 style={[styles.tabBtn, reactionFilter === 'all' && { backgroundColor: c.gold }]}
               >
                 <Text style={[t.micro, { color: reactionFilter === 'all' ? '#1E1B18' : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
-                  TODOS (4)
+                  TODOS ({reactionUsers.length})
                 </Text>
               </Pressable>
               <Pressable
@@ -2515,7 +2579,7 @@ export default function ComunidadScreen() {
                 style={[styles.tabBtn, reactionFilter === 'like' && { backgroundColor: c.gold }]}
               >
                 <Text style={[t.micro, { color: reactionFilter === 'like' ? '#1E1B18' : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
-                  👍 LIKES (3)
+                  👍 LIKES ({likesReactions.length})
                 </Text>
               </Pressable>
               <Pressable
@@ -2523,13 +2587,30 @@ export default function ComunidadScreen() {
                 style={[styles.tabBtn, reactionFilter === 'dislike' && { backgroundColor: c.gold }]}
               >
                 <Text style={[t.micro, { color: reactionFilter === 'dislike' ? '#1E1B18' : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
-                  👎 DISLIKES (1)
+                  👎 DISLIKES ({dislikesReactions.length})
                 </Text>
               </Pressable>
             </View>
 
             <ScrollView style={{ maxHeight: 220 }}>
-              {filteredReactions.map(user => (
+              {/* Mismos tokens que los estados del feed real (muroCargando/muroError/lista vacía,
+                  más arriba en esta pantalla) — ningún componente nuevo, solo texto. */}
+              {cargandoReacciones && (
+                <Text style={[t.micro, { color: c.textSoft, textAlign: 'center', paddingVertical: 12 }]}>
+                  Cargando reacciones...
+                </Text>
+              )}
+              {!cargandoReacciones && errorReacciones && (
+                <Text style={[t.micro, { color: '#f28e8e', textAlign: 'center', paddingVertical: 12 }]}>
+                  {errorReacciones}
+                </Text>
+              )}
+              {!cargandoReacciones && !errorReacciones && reactionUsers.length === 0 && (
+                <Text style={[t.micro, { color: c.textSoft, textAlign: 'center', paddingVertical: 12 }]}>
+                  Todavía nadie reaccionó a esta publicación.
+                </Text>
+              )}
+              {!cargandoReacciones && !errorReacciones && reactionUsers.length > 0 && filteredReactions.map(user => (
                 <View key={user.id} style={[styles.reactionUserRow, { borderBottomColor: c.divider }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <View style={[styles.avatarCircle, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>

@@ -74,6 +74,21 @@ export const wallReactionToggleSchema = z
   .object({ reacted: z.boolean(), reactionCounts: z.record(z.string(), z.number()) })
   .passthrough();
 
+/** `GET /api/v1/wall/{id}/reactions` — quién reaccionó (modal "Reacciones del post"). */
+export const wallReactionItemSchema = z
+  .object({
+    userId: z.string(),
+    name: z.string().nullable(),
+    avatarUrl: z.string().nullable(),
+    role: z.string().nullable(),
+    type: z.string(),
+  })
+  .passthrough();
+
+export const wallReactionsPageSchema = z
+  .object({ reactions: z.array(wallReactionItemSchema) })
+  .passthrough();
+
 /** `UrlSubidaMediaResponse` (`WallController.urlDeSubida`, POST /wall/media/upload-url). */
 export const urlSubidaMuroSchema = z
   .object({ uploadUrl: z.string(), bucket: z.string(), ruta: z.string() })

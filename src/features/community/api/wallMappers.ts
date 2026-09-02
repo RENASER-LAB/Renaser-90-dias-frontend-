@@ -1,5 +1,11 @@
-import type { CommentItem, PostItem } from '../../../screens/ComunidadScreen';
-import type { WallComment, WallPost, WallReactionToggleResult, WallReactionType } from '../types/community.types';
+import type { CommentItem, PostItem, ReactionUser } from '../../../screens/ComunidadScreen';
+import type {
+  WallComment,
+  WallPost,
+  WallReactionItem,
+  WallReactionToggleResult,
+  WallReactionType,
+} from '../types/community.types';
 import { tiempoRelativo } from '../utils/tiempoRelativo';
 
 /**
@@ -14,7 +20,18 @@ import { tiempoRelativo } from '../utils/tiempoRelativo';
  * mostrarla ahí imprimiría la URL cruda como texto. Hasta que el diseño sume un `<Image>` para el
  * avatar (fuera de alcance: no se puede tocar el JSX), se usa un emoji neutro por defecto.
  */
-const AVATAR_POR_DEFECTO = '👤';
+export const AVATAR_POR_DEFECTO = '👤';
+
+/** Mismo criterio que `chat/api/chatMappers.ts:ETIQUETA_ROL`: se duplica acá en vez de
+ * importarse de `chat` a propósito (cada feature es dueña de su propia traducción,
+ * AGENTS.md), son 5 líneas y evita acoplar `community` a `chat`. */
+const ETIQUETA_ROL: Record<string, string> = {
+  TRAINEE: 'Aprendiz',
+  MENTOR: 'Mentor',
+  MENTOR_LEAD: 'Líder de Mentores',
+  ADMIN: 'Administrador',
+  ALCHEMIST: 'Alquimista',
+};
 
 function mapearMedia(media: WallPost['media']): PostItem['media'] {
   return media.map((m, idx) => {
@@ -87,5 +104,25 @@ export function aplicarReaccion(
     likes: resultado.reactionCounts.LIKE ?? 0,
     dislikes: resultado.reactionCounts.DISLIKE ?? 0,
     userReaction: resultado.reacted ? (tipo === 'LIKE' ? 'like' : 'dislike') : null,
+  };
+}
+
+/**
+ * Traduce una fila de `GET /api/v1/wall/{id}/reactions` al tipo que ya consume el modal
+ * "Reacciones del post" (`ReactionUser`, definido en `ComunidadScreen.tsx`). El JSX del modal
+ * no se toca: solo cambia de dónde sale `id`/`name`/`role`/`avatar`/`type`.
+ *
+ * El diseño no trae célula (`"Célula 04"`) del backend hoy — `users.api` no expone una
+ * versión en lote de "célula por usuario" y agregarla está fuera del alcance de esta
+ * integración (ver el informe). El subtítulo usa el rol real, traducido con el mismo
+ * criterio que `ETIQUETA_ROL` de `chat/api/chatMappers.ts`, en vez de inventar una célula.
+ */
+export function mapearReaccion(item: WallReactionItem): ReactionUser {
+  return {
+    id: item.userId,
+    name: item.name?.trim() || 'Miembro Renaser',
+    role: item.role ? (ETIQUETA_ROL[item.role] ?? item.role) : '',
+    avatar: AVATAR_POR_DEFECTO,
+    type: item.type === 'DISLIKE' ? 'dislike' : 'like',
   };
 }

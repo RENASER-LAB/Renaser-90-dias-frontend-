@@ -67,3 +67,51 @@ export interface WallUrlSubida {
   bucket: string;
   ruta: string;
 }
+
+/**
+ * Una fila de `GET /api/v1/wall/{id}/reactions` (`WallReactionItemResponse` en el backend
+ * Java) — quién reaccionó a una publicación. `role` viaja tal cual el enum `UserRole` del
+ * backend (TRAINEE/MENTOR/MENTOR_LEAD/ADMIN/ALCHEMIST), sin traducir: la traducción a
+ * español vive en `wallMappers.ts` (mismo criterio que `chat/api/chatMappers.ts:ETIQUETA_ROL`).
+ * `name`/`avatarUrl`/`role` son `null` en el caso raro de que el usuario ya no exista.
+ */
+export interface WallReactionItem {
+  userId: string;
+  name: string | null;
+  avatarUrl: string | null;
+  role: string | null;
+  type: WallReactionType;
+}
+
+export interface WallReactionsPage {
+  reactions: WallReactionItem[];
+}
+
+/**
+ * Formas de `MiCelulaController` (`/api/v1/me/cell`, `/api/v1/me/cell/members`). Ver
+ * `api/celulaSchemas.ts` para el detalle de qué se validó en vivo contra el backend real.
+ */
+export interface CellMember {
+  traineeId: string;
+  fullName: string;
+  avatarUrl: string | null;
+  isSelf: boolean;
+}
+
+/** `MiCelulaResponse` del backend, ya normalizado con el discriminante `assigned` explícito
+ * (el backend no manda `assigned:true`, lo agrega `celulaApi.obtenerMiCelula` al validar). */
+export type MiCelulaInfo =
+  | { assigned: false }
+  | {
+      assigned: true;
+      cellId: string;
+      cellName: string;
+      cohortName: string;
+      cohortStatus: string;
+      mentorName: string | null;
+      mentorAvatarUrl: string | null;
+      memberCount: number;
+      totalCellsInCohort: number;
+      videoCallUrl: string | null;
+      nextSessionAt: string | null;
+    };

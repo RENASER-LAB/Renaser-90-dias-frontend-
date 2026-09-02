@@ -5,6 +5,7 @@ import { mensajeDeError } from '../../../services/http/apiClient';
 import * as wallApi from '../api/wallApi';
 import { aplicarReaccion, mapearComentario, mapearPublicacion } from '../api/wallMappers';
 import type { WallReactionType } from '../types/community.types';
+import type { FotoMuroNormalizada } from '../utils/normalizarImagen';
 
 /**
  * Estado real del Muro contra el backend Java, en un solo lugar — mismo criterio que
@@ -72,6 +73,82 @@ export function useWallFeed() {
     [comentariosCargados]
   );
 
+  /**
+   * Publica con **UI optimista**: la publicación aparece en el muro en el instante en que la
+   * persona toca "Publicar", con la foto que todavía está en su teléfono, y recién después viaja
+   * a la red. Es el patrón que usan Instagram y WhatsApp, y la única forma real de que publicar
+   * "se sienta instantáneo" — el resto de los cambios reduce el tiempo, esto elimina la espera.
+   *
+   * **Por qué no se puede simplemente "hacerlo más rápido":** publicar son tres viajes de red
+   * (pedir URL firmada → `PUT` de los bytes a S3 → `POST /wall`), y solo el `PUT` de una foto de
+   * ~90 KB a us-east-1 mide 0,6–0,7 s desde Perú. No hay optimización de servidor que baje eso:
+   * es distancia física. Lo que sí se puede es dejar de hacer esperar a la persona.
+   *
+   * **El precio, explícito:** una UI optimista miente por un rato. Si la subida falla, hay que
+   * poder deshacer — por eso se guarda el post temporal por su `id` y en el `catch` se lo saca
+   * (rollback) y se devuelve el borrador a quien lo escribió, en vez de dejar en pantalla algo
+   * que el servidor nunca guardó.
+   *
+   * @returns el borrador a restaurar si falló, o `null` si se publicó bien.
+   */
+  const publicarOptimista = useCallback(
+    async (texto: string, fotos: FotoMuroNormalizada[], autor: string) => {
+      const idTemporal = `pendiente-${Date.now()}`;
+      const optimista: PostItem = {
+        id: idTemporal,
+        author: autor,
+        avatar: '👤',
+        // El feed real tampoco trae célula ni racha (ver `mapearPublicacion`): se dejan igual que
+        // ahí para que el post temporal y el definitivo se vean idénticos y el cambio no parpadee.
+        cell: '',
+        dayStreak: 0,
+        timeAgo: 'Ahora',
+        text: texto,
+        media: fotos.map((foto, idx) => ({
+          type: 'image' as const,
+          title: `📷 Foto ${idx + 1}`,
+          // La foto LOCAL del teléfono: se ve al instante, sin esperar a que S3 la reciba.
+          url: foto.uri,
+          mimeType: foto.mimeType,
+        })),
+        likes: 0,
+        dislikes: 0,
+        userReaction: null,
+        comments: [],
+        pendiente: true,
+      };
+      setPosts(prev => [optimista, ...prev]);
+
+      try {
+        const media: { url: string; mimeType: string }[] = [];
+        for (const foto of fotos) {
+          const urlSubida = await wallApi.solicitarUrlSubidaMuro(foto.mimeType);
+          if (wallApi.almacenamientoSinConfigurar(urlSubida.uploadUrl)) {
+            throw new Error(
+              'El almacenamiento de fotos (S3) todavía no está configurado en el servidor. Avisale al equipo técnico e intentá de nuevo más tarde.'
+            );
+          }
+          await wallApi.subirImagenAS3(urlSubida.uploadUrl, foto.uri, foto.mimeType);
+          // Se manda la RUTA que devolvió el backend, no la URL absoluta armada a mano: lo que se
+          // guarda tiene que ser la clave del objeto en S3, porque el feed la vuelve a firmar en
+          // cada lectura. Mandar una URL dejaba la foto en 404 para siempre aunque el archivo
+          // existiera — es el defecto E-79, y este es su lado del cliente.
+          media.push({ url: urlSubida.ruta, mimeType: foto.mimeType });
+        }
+        // La respuesta ya trae la publicación real (id del servidor, conteos, URL firmada), así que
+        // se cambia el temporal por ella. NO se recarga el muro entero: esa recarga era una carga
+        // completa del feed de más por cada publicación.
+        const real = await wallApi.publicarEnMuro(texto, media);
+        setPosts(prev => prev.map(p => (p.id === idTemporal ? mapearPublicacion(real) : p)));
+        return null;
+      } catch (e) {
+        setPosts(prev => prev.filter(p => p.id !== idTemporal)); // rollback: nunca dejar una mentira en pantalla
+        throw e;
+      }
+    },
+    []
+  );
+
   const agregarComentario = useCallback(async (postId: string, texto: string) => {
     const resultado = await wallApi.crearComentario(postId, texto);
     setPosts(prev =>
@@ -82,5 +159,15 @@ export function useWallFeed() {
     setComentariosCargados(prev => ({ ...prev, [postId]: true }));
   }, []);
 
-  return { posts, setPosts, loading, error, recargar, reaccionar, cargarComentarios, agregarComentario };
+  return {
+    posts,
+    setPosts,
+    loading,
+    error,
+    recargar,
+    reaccionar,
+    cargarComentarios,
+    agregarComentario,
+    publicarOptimista,
+  };
 }
