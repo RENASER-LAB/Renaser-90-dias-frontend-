@@ -58,7 +58,10 @@ export type MiCursoApi = CursoApi & {
 export interface CursoBloqueadoApi {
   id: string;
   titulo: string;
+  /** Ruta cruda del objeto en un bucket privado: NO sirve para pintar. Usar `portadaFirmada`. */
   portadaUrl: string | null;
+  /** URL de lectura ya firmada. `null` si el curso no tiene portada cargada en la base. */
+  portadaFirmada: string | null;
   orden: number;
   diaDesbloqueo: number;
   programDayActual: number;

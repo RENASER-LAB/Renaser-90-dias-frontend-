@@ -59,6 +59,7 @@ const cursoBloqueadoSchema = z
     id: z.string(),
     titulo: z.string(),
     portadaUrl: z.string().nullable(),
+    portadaFirmada: z.string().nullable(),
     orden: z.number(),
     diaDesbloqueo: z.number(),
     programDayActual: z.number(),

@@ -135,11 +135,12 @@ export function mapearCursoBloqueado(cb: CursoBloqueadoApi): CourseItem {
     totalModules: 0,
     totalResources: 0,
     sections: [],
-    // `portadaUrl` (ruta cruda, sin firmar) no sirve para pintar acá: el bucket es privado y este
-    // endpoint no la firma como sí hace `MiCursoResponse.portadaFirmada`. Se deja sin portada en
-    // vez de intentar cargar una URL que va a fallar siempre — `CursoPortada` ya sabe mostrar el
-    // degradado de siempre cuando `url` es `null`.
-    coverUrl: null,
+    // Se usa `portadaFirmada`, NUNCA `portadaUrl`: esta última es la ruta cruda del objeto en un
+    // bucket privado y no carga nunca. El backend no firmaba acá porque asumía que el cliente
+    // resolvía las URLs por su cuenta — cierto en la app anterior, falso en esta; se corrigió del
+    // lado del backend (2026-09-02). Los cursos sin portada cargada en la base siguen viniendo en
+    // `null`, y `CursoPortada` ya sabe mostrar el degradado en ese caso.
+    coverUrl: cb.portadaFirmada,
     orden: cb.orden,
     locked: true,
     diaDesbloqueo: cb.diaDesbloqueo,
