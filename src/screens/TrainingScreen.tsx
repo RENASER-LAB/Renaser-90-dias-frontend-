@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { useSystemBackHandler } from '../hooks/useSystemBackHandler';
 import { ScreenHeader, MicroLabel } from '../components/ui';
 import { Icon, IconName } from '../components/Icon';
 import { GoldButton } from '../components/GoldButton';
+import { useTraining } from '../features/training/hooks/useTraining';
 
 export interface HabitItem {
   id: string;
@@ -105,6 +106,8 @@ const DIMENSIONES_CONFIG: DimensionConfig[] = [
   },
 ];
 
+// Datos de relleno: se muestran mientras el backend real (`useTraining`) todavía no respondió, o
+// si la llamada falla. Mismo criterio de degradación que `INITIAL_HABITS` en `PlanScreen`.
 const INITIAL_HABITS: HabitItem[] = [
   // CUERPO
   { id: 'c1', dimension: 'CUERPO', title: 'Entrenamiento Somático / Isométrico', time: '07:00 AM · 45 min', tag: 'INNEGOCIABLE', streak: 37, done: true, hasEvidence: true, note: '45 min con máxima intensidad somática.' },
@@ -144,7 +147,20 @@ export default function TrainingScreen() {
   const [innerTab, setInnerTab] = useState<'habitos' | 'guias'>('habitos');
 
   // Habits State
+  // Los hábitos de CUERPO/MENTE/EMOCIONES/ESPÍRITU (habit-tracks/today) y la roca del día de VIDA
+  // Y NEGOCIO (rocks/today) vienen del backend real. La distinción importante: "todavía no
+  // respondió" y "respondió con cero ítems" NO son lo mismo. Mientras carga, o si falla, se
+  // muestran los de INITIAL_HABITS para que la pantalla nunca quede rota (mismo criterio de
+  // degradación que `PlanScreen`) — pero una vez que responde bien, se usa lo que trajo tal cual,
+  // aunque venga vacío: un aprendiz sin hábitos generados o sin roca del día es un estado legítimo
+  // (día 0, o su plan todavía no se generó), no un error, y no debe disfrazarse con datos de relleno.
+  const { habits: habitsDelBackend, loading: cargandoBackend, error: errorBackend } = useTraining();
   const [habits, setHabits] = useState<HabitItem[]>(INITIAL_HABITS);
+  useEffect(() => {
+    if (!cargandoBackend && !errorBackend) {
+      setHabits(habitsDelBackend);
+    }
+  }, [cargandoBackend, errorBackend, habitsDelBackend]);
 
   // Evidence Upload Modal State
   const [activeEvidenceHabit, setActiveEvidenceHabit] = useState<HabitItem | null>(null);
@@ -248,9 +264,13 @@ export default function TrainingScreen() {
     ? habits.filter(h => h.dimension === selectedDimension.key)
     : [];
 
+  // "CUMPLIDOS" cuenta hábitos/roca marcados como hechos (done); la barra de "Evidencias selladas
+  // hoy" cuenta los que además tienen evidencia sellada (hasEvidence) — son dos métricas reales
+  // distintas, ambas calculables con lo que devuelve el backend.
   const completedEvidencesCount = currentDimensionHabits.filter(h => h.done).length;
+  const sealedEvidencesCount = currentDimensionHabits.filter(h => h.hasEvidence).length;
   const dimensionProgress = currentDimensionHabits.length > 0
-    ? Math.round((completedEvidencesCount / currentDimensionHabits.length) * 100)
+    ? Math.round((sealedEvidencesCount / currentDimensionHabits.length) * 100)
     : 0;
 
   return (
@@ -282,7 +302,9 @@ export default function TrainingScreen() {
             <View style={{ gap: 10, paddingVertical: 8 }}>
               {DIMENSIONES_CONFIG.map(d => {
                 const dimHabits = habits.filter(h => h.dimension === d.key);
-                const doneCount = dimHabits.filter(h => h.done).length;
+                // "EVIDENCIAS" cuenta ítems con evidencia sellada (hasEvidence), no ítems marcados
+                // como hechos (done) — pueden divergir con datos reales.
+                const evidenceCount = dimHabits.filter(h => h.hasEvidence).length;
 
                 return (
                   <Pressable
@@ -314,7 +336,7 @@ export default function TrainingScreen() {
                           {d.title}
                         </Text>
                         <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 10.5 }]}>
-                          {doneCount}/{dimHabits.length} EVIDENCIAS
+                          {evidenceCount}/{dimHabits.length} EVIDENCIAS
                         </Text>
                       </View>
                       <Text style={[t.small, { color: c.micro, marginTop: 2, lineHeight: 16 }]}>

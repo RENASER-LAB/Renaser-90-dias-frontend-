@@ -8,6 +8,7 @@ import {
   TextInput,
   Modal,
   Alert,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,6 +18,19 @@ import { useSystemBackHandler } from '../hooks/useSystemBackHandler';
 import { MicroLabel, ScreenHeader, Placeholder } from '../components/ui';
 import { Icon, IconName } from '../components/Icon';
 import { GoldButton } from '../components/GoldButton';
+import { useAuth } from '../features/auth/context/AuthContext';
+import { useWallFeed } from '../features/community/hooks/useWallFeed';
+import { useWallReactions } from '../features/community/hooks/useWallReactions';
+import { useMiCelula } from '../features/community/hooks/useMiCelula';
+import * as wallApi from '../features/community/api/wallApi';
+import { elegirYNormalizarFotoMuro, type FotoMuroNormalizada } from '../features/community/utils/normalizarImagen';
+import { FotoMuro } from '../features/community/components/FotoMuro';
+import { useCursos } from '../features/academy/hooks/useCursos';
+import { CursoPortada } from '../features/academy/components/CursoPortada';
+import { useLeccionDetalle } from '../features/academy/hooks/useLeccionDetalle';
+import { LeccionVideoPlayer } from '../features/academy/components/LeccionVideoPlayer';
+import { useChatConversaciones } from '../features/chat/hooks/useChatConversaciones';
+import { ApiError, mensajeDeError } from '../services/http/apiClient';
 
 // =========================================================================
 // TIPOS: RECURSOS EXCLUSIVOS & CURSOS
@@ -31,6 +45,18 @@ export interface LessonResource {
   desc: string;
   content?: string;
   completed: boolean;
+  // --- Campos reales del backend (`LeccionLiteResponse`/`LeccionResponse`, ver
+  // `features/academy/types/academy.types.ts`), agregados para poder abrir el reproductor y
+  // resolver el bloqueo por día sin tocar las 7 propiedades de arriba que ya consumía el diseño.
+  // Opcionales: nada rompe si en algún momento vuelve a construirse un `LessonResource` sin ellos.
+  videoTipo?: 'youtube' | 'storage' | null;
+  videoUrl?: string | null;
+  videoMiniaturaUrl?: string | null;
+  videoDuracionMs?: number | null;
+  /** `bloqueada_por_dia` — todavía no llega el día de programa que la desbloquea. */
+  locked?: boolean;
+  diaDesbloqueo?: number | null;
+  diasFaltantes?: number;
 }
 
 export interface CourseSection {
@@ -49,6 +75,15 @@ export interface CourseItem {
   totalModules: number;
   totalResources: number;
   sections: CourseSection[];
+  // --- Campos agregados para portada real + catálogo con bloqueados (ver `academyMappers.ts`) ---
+  /** `MiCursoResponse.portadaFirmada` — URL prefirmada de S3. `null`/`undefined` en cursos bloqueados (no viene firmada) o sin portada cargada; `CursoPortada` cae al degradado de siempre en ese caso. */
+  coverUrl?: string | null;
+  /** `CursoResponse.orden` — con qué se intercalan accesibles y bloqueados en una sola progresión (ver `useCursos`). */
+  orden: number;
+  /** `true` para los cursos de `GET /cursos/bloqueados`: todavía no se pueden abrir. */
+  locked?: boolean;
+  diaDesbloqueo?: number | null;
+  diasFaltantes?: number;
 }
 
 // =========================================================================
@@ -76,11 +111,22 @@ export interface PostItem {
   timeAgo: string;
   tag?: string;
   text: string;
-  media: { type: 'image' | 'video'; title: string; subtitle?: string }[];
+  // `url`/`mimeType`: la URL firmada real de S3 (`WallMedia`, backend) y su tipo MIME. Las agrega
+  // `wallMappers.ts` al traducir la respuesta del feed — es lo que permite pintar la foto real en
+  // vez del `title` como texto plano (ver `FotoMuro`, `features/community/components/`).
+  media: { type: 'image' | 'video'; title: string; subtitle?: string; url: string; mimeType: string }[];
   likes: number;
   dislikes: number;
   userReaction?: 'like' | 'dislike' | null;
   comments: CommentItem[];
+  /**
+   * `true` mientras la publicación existe solo en el teléfono y todavía está viajando a S3 y al
+   * backend (UI optimista, ver `useWallFeed.publicarOptimista`). La tarjeta se dibuja igual que
+   * cualquier otra —mismo JSX, mismos estilos— solo que atenuada, para que se note que falta
+   * confirmar sin cambiar el diseño. Al confirmarse se reemplaza por la publicación real y el
+   * campo desaparece; si falla, la tarjeta se quita.
+   */
+  pendiente?: boolean;
 }
 
 export interface ReactionUser {
@@ -161,198 +207,11 @@ export interface GroupMember {
 }
 
 // =========================================================================
-// DATOS ESTÁTICOS: CURSOS
+// DATOS ESTÁTICOS: TESTIMONIOS Y RANKING
 // =========================================================================
-const COURSES_DATA: CourseItem[] = [
-  {
-    id: 'c1',
-    title: 'Mentalidad Inquebrantable & Coherencia Somática',
-    category: 'PROGRAMA COMPLETO · INCLUIDO',
-    instructor: 'Sebastián Arango',
-    summary: 'Aprende a disociar el hecho objetivo de la reacción emocional y hackear el cortisol matutino.',
-    progressPercent: 65,
-    totalModules: 2,
-    totalResources: 6,
-    sections: [
-      {
-        id: 's1',
-        title: 'SECCIÓN 1: LA FUNDACIÓN SOMÁTICA',
-        lessons: [
-          {
-            id: 'l1',
-            type: 'video',
-            title: '1.1 El Observador Consciente y la Verdad',
-            meta: '🎥 Video Masterclass HD · 14 min',
-            desc: 'Cómo desarticular la narrativa mental automática y responder desde la calma.',
-            completed: true,
-          },
-          {
-            id: 'l2',
-            type: 'doc',
-            title: '1.2 Manual de Tensión Isométrica y Fascia',
-            meta: '📄 Documento PDF · 2.4 MB · 18 págs',
-            desc: 'Guía ilustrada con posturas de tensión isométrica para regular el sistema nervioso.',
-            completed: true,
-          },
-          {
-            id: 'l3',
-            type: 'text',
-            title: '1.3 El Código del No Juicio en Alto Rendimiento',
-            meta: '✍️ Escrito Formativo · 5 min de lectura',
-            desc: 'Ensayo de Sebastián Arango sobre la diferencia entre dolor biológico y sufrimiento mental.',
-            content:
-              'La mayoría de las personas viven atrapadas en su narrativa mental, confundiendo lo que realmente sucedió con la historia que se contaron acerca de lo que sucedió.\n\nEl dolor es un hecho biológico. El sufrimiento es la historia que agregas en tu mente.\n\nEn el protocolo RENASER, tu primera victoria es callar la interpretación y volver al dato puro: ¿Qué pasó realmente? Solo eso. Nada más.',
-            completed: true,
-          },
-        ],
-      },
-      {
-        id: 's2',
-        title: 'SECCIÓN 2: ALTA EJECUCIÓN & HERRAMIENTAS',
-        lessons: [
-          {
-            id: 'l4',
-            type: 'video',
-            title: '2.1 Bloques de Poder Deep Work 90 min',
-            meta: '🎥 Video Masterclass · 22 min',
-            desc: 'Cómo blindar tu agenda matutina sin distracciones ni celular para avanzar tu Roca #1.',
-            completed: false,
-          },
-          {
-            id: 'l5',
-            type: 'link',
-            title: '2.2 Plantilla de Auditoría 80/20 (Notion / Sheets)',
-            meta: '🔗 Enlace a Herramienta Externa',
-            desc: 'Hoja interactiva para auditar tus fugas de tiempo y prioridades de alto apalancamiento.',
-            completed: false,
-          },
-          {
-            id: 'l6',
-            type: 'doc',
-            title: '2.3 Checklist Imprimible de Cierre del Día',
-            meta: '📄 Documento PDF · 1 pág',
-            desc: 'Plantilla para colocar en tu escritorio con los 5 puntos de validación.',
-            completed: false,
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'c2',
-    title: 'Arquitectura Financiera & Alto Apalancamiento',
-    category: 'MASTERCLASS ESTRATÉGICA',
-    instructor: 'Sebastián Arango',
-    summary: 'Sistemas de flujo de caja, ofertas de alto valor y apalancamiento estratégico de tiempo.',
-    progressPercent: 20,
-    totalModules: 1,
-    totalResources: 2,
-    sections: [
-      {
-        id: 's2_1',
-        title: 'SECCIÓN 1: AUDITORÍA DE INGRESOS Y GASTOS',
-        lessons: [
-          {
-            id: 'l2_1',
-            type: 'video',
-            title: '1.1 Flujo de Caja y Desconexión Emocional del Dinero',
-            meta: '🎥 Video Masterclass · 28 min',
-            desc: 'Principios para tratar el dinero como energía circulante y métrica de servicio.',
-            completed: true,
-          },
-          {
-            id: 'l2_2',
-            type: 'link',
-            title: '1.2 Simulador de Proyecciones Financieras',
-            meta: '🔗 Hoja de Cálculo Interactiva',
-            desc: 'Herramienta de proyección de escenarios financieros a 12 meses.',
-            completed: false,
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'c3',
-    title: 'Protocolo 05:00 AM · Bioquímica Matutina',
-    category: 'WORKSHOP SOMÁTICO',
-    instructor: 'Sebastián Arango',
-    summary: 'Rutina de activación biológica, luz solar, hidratación y anclaje de enfoque.',
-    progressPercent: 0,
-    totalModules: 1,
-    totalResources: 1,
-    sections: [
-      {
-        id: 's3_1',
-        title: 'SECCIÓN 1: EL RITUAL DE PODER',
-        lessons: [
-          {
-            id: 'l3_1',
-            type: 'video',
-            title: '1.1 Hackeo del Cortisol Matutino',
-            meta: '🎥 Video Masterclass · 16 min',
-            desc: 'Cómo evitar los picos de estrés y sincronizar el ritmo circadiano.',
-            completed: false,
-          },
-        ],
-      },
-    ],
-  },
-];
-
-// =========================================================================
-// DATOS ESTÁTICOS: MURO SOCIAL, TESTIMONIOS Y RANKING
-// =========================================================================
-const INITIAL_POSTS: PostItem[] = [
-  {
-    id: 'p1',
-    author: 'María Alejandra',
-    avatar: '👩‍💼',
-    cell: 'Célula 07',
-    dayStreak: 37,
-    timeAgo: 'Hace 2 horas',
-    tag: '🔥 VICTORIA SOMÁTICA',
-    text: 'Hoy completé mi Bloque de Poder de 90 minutos sin celular ni distracciones. Durante semanas pospuse terminar la propuesta de expansión por miedo al rechazo, pero el Código de la Verdad me obligó a mirar el dato puro: 4 llamadas, 2 cierres y $6,500 USD facturados sin inventar excusas. ¡La verdad biológica produce resultados inmediatos y medibles en cualquier área!',
-    media: [
-      { type: 'image', title: '🏋️ Bloque de Poder 90m' },
-      { type: 'image', title: '✓ 05:00 AM Sellado' },
-      { type: 'image', title: '📊 Cierre $6.5k' },
-    ],
-    likes: 38,
-    dislikes: 4,
-    userReaction: null,
-    comments: [
-      {
-        id: 'cm1',
-        author: 'Sebastián Arango',
-        avatar: '🦅',
-        role: 'Mentor Principal',
-        text: 'Esa es la postura. La verdad produce resultados tangibles y medibles. Aquí te dejo la métrica de avance de tu célula:',
-        photoAttached: '📷 Metrica_Celula_07.png',
-        likes: 14,
-        dislikes: 0,
-        userReaction: null,
-        timeAgo: 'Hace 1 hora',
-      },
-    ],
-  },
-  {
-    id: 'p2',
-    author: 'Carlos Méndez',
-    avatar: '👨‍💼',
-    cell: 'Célula 04',
-    dayStreak: 90,
-    timeAgo: 'Ayer',
-    tag: '⚡ ALTO RENDIMIENTO',
-    text: 'Graduado oficial de los 90 días. Mi experiencia reduciendo la jornada laboral de 14 a 6 horas diarias manteniendo la facturación más alta del año. El verdadero apalancamiento no es trabajar más, sino eliminar las micro-fugas energéticas y respetar los bloques innegociables.',
-    media: [{ type: 'video', title: '▶ Ver Sesión Grabada (18 min)' }],
-    likes: 52,
-    dislikes: 1,
-    userReaction: null,
-    comments: [],
-  },
-];
-
+// El Muro (pestaña "muro") y "Recursos Exclusivos" (cursos/lecciones) ya no usan datos fijos:
+// salen de `useWallFeed()`/`useCursos()`, contra el backend real. Testimonios y Ranking siguen
+// con datos de mock — quedan fuera del alcance de esta integración.
 const INITIAL_TESTIMONIALS: TestimonialItem[] = [
   {
     id: 't1',
@@ -396,16 +255,19 @@ const INITIAL_LEADERBOARD: LeaderboardUser[] = [
   { id: 'u6', rank: 6, name: 'Sofía Andrade', cell: 'Célula 07', streakDays: 33, evidencePercent: 89 },
 ];
 
-const REACTION_USERS_MOCK: ReactionUser[] = [
-  { id: 'r1', name: 'Sebastián Arango (Mentor)', role: 'Mentor Principal', avatar: '🦅', type: 'like' },
-  { id: 'r2', name: 'Carlos Méndez', role: 'Célula 04', avatar: '👨‍💼', type: 'like' },
-  { id: 'r3', name: 'Dra. Valeria Ruiz', role: 'Célula 05', avatar: '👩‍⚕️', type: 'like' },
-  { id: 'r4', name: 'Marcos V.', role: 'Célula 03', avatar: '👤', type: 'dislike' },
-];
+// Antes había acá un REACTION_USERS_MOCK: el modal "Reacciones del post" ya usa datos reales
+// (GET /api/v1/wall/{id}/reactions, ver useWallReactions) — quedaba muerto y se sacó, no
+// oculto detrás de una bandera "por si acaso" (mismo criterio que el resto de esta integración:
+// `wallApi.publicarEnMuro`, sección "Antes acá vivía un helper...").
 
 // =========================================================================
 // DATOS ESTÁTICOS: CHATS & INTEGRANTES DE CÉLULA (TIPO WHATSAPP)
 // =========================================================================
+// GROUP_MEMBERS queda en mock a propósito: el directorio real (GET /api/v1/chat/members) solo
+// trae {id, fullName, avatarUrl, role} — no `badge`/`streakDays`/`cell`/`focus` ni un emoji de
+// avatar (trae una URL de S3, y este diseño pinta el avatar como `<Text>`, no `<Image>`). Wirear
+// esta lista con datos reales exigiría inventar esos campos o tocar el JSX del perfil/roster, las
+// dos cosas prohibidas por el alcance de esta tarea — se deja documentado como pendiente.
 const GROUP_MEMBERS: GroupMember[] = [
   {
     id: 'm1',
@@ -449,147 +311,9 @@ const GROUP_MEMBERS: GroupMember[] = [
   },
 ];
 
-const INITIAL_CONVERSATIONS: ChatConversation[] = [
-  {
-    id: 'conv_celula',
-    type: 'celula',
-    title: 'Célula Fénix 07',
-    subtitle: '16 Miembros · Célula de Aceleración',
-    avatar: '👥',
-    lastMessage: 'María: ¡Completé el bloque 90m!',
-    lastTime: '08:30 AM',
-    unreadCount: 4,
-    membersCount: 16,
-    messages: [
-      {
-        id: 'msg_c1',
-        sender: 'Sebastián Arango',
-        senderRole: 'Mentor',
-        avatar: '🦅',
-        isMe: false,
-        time: '07:30 AM',
-        type: 'text',
-        text: 'Buenos días Célula 07. Hoy es día de Bloque de Poder innegociable. Reporten su victoria antes de las 12:00.',
-        status: 'read',
-      },
-      {
-        id: 'msg_c2',
-        sender: 'María Alejandra',
-        senderRole: 'Alumna',
-        avatar: '👩‍💼',
-        isMe: false,
-        time: '08:15 AM',
-        type: 'image_grid',
-        text: '¡90 minutos cerrados y 2 contratos firmados! 💪',
-        mediaList: ['📷 Registro_05AM.png', '📷 Contrato_Firmado.png'],
-        status: 'read',
-      },
-      {
-        id: 'msg_c3',
-        sender: 'Kelin Arango',
-        avatar: '🦅',
-        isMe: true,
-        time: '08:22 AM',
-        type: 'text',
-        text: '¡Impresionante María! Yo acabo de terminar mi hidratación alcalina y voy por mis llamadas.',
-        status: 'read',
-      },
-    ],
-  },
-  {
-    id: 'conv_mentor',
-    type: 'direct',
-    title: 'Sebastián Arango',
-    subtitle: 'Mentor de Alto Rendimiento · 1 a 1',
-    avatar: '🦅',
-    lastMessage: 'Revisa las métricas que te envié.',
-    lastTime: '11:42 AM',
-    unreadCount: 1,
-    isOnline: true,
-    messages: [
-      {
-        id: 'msg_m1',
-        sender: 'Sebastián Arango',
-        senderRole: 'Mentor',
-        avatar: '🦅',
-        isMe: false,
-        time: '10:30 AM',
-        type: 'text',
-        text: 'Kelin, excelente ejecución en el Bloque de Poder de 90 minutos de esta mañana. ¿Cómo sentiste la regulación del cortisol al no tocar el celular?',
-        status: 'read',
-      },
-      {
-        id: 'msg_m2',
-        sender: 'Kelin Arango',
-        avatar: '🦅',
-        isMe: true,
-        time: '10:32 AM',
-        type: 'text',
-        text: 'Mucho más enfocada Sebastián. Me costó los primeros 15 minutos pero logré cerrar 2 propuestas por $6,500 USD sin dispersión.',
-        status: 'read',
-      },
-      {
-        id: 'msg_m3',
-        sender: 'Sebastián Arango',
-        senderRole: 'Mentor',
-        avatar: '🦅',
-        isMe: false,
-        time: '10:35 AM',
-        type: 'audio',
-        audioDuration: '0:42',
-        text: 'Nota de voz de Sebastián',
-        status: 'read',
-      },
-    ],
-  },
-  {
-    id: 'conv_carlos',
-    type: 'direct',
-    title: 'Carlos Méndez',
-    subtitle: 'Graduado Gen 04 · CEO',
-    avatar: '👨‍💼',
-    lastMessage: '¡Felicitaciones por tu bloque!',
-    lastTime: 'Ayer',
-    unreadCount: 0,
-    isOnline: false,
-    messages: [
-      {
-        id: 'msg_cm1',
-        sender: 'Carlos Méndez',
-        avatar: '👨‍💼',
-        isMe: false,
-        time: 'Ayer',
-        type: 'text',
-        text: '¡Hermano, felicitaciones por tu bloque de 90m de hoy!',
-        status: 'read',
-      },
-    ],
-  },
-  {
-    id: 'conv_global',
-    type: 'global',
-    title: 'Tribu Global RENASER',
-    subtitle: '148 Alumnos & Mentores',
-    avatar: '🌐',
-    lastMessage: 'Sebastián: Recuerden cierre de Fase 2 hoy.',
-    lastTime: '07:15 AM',
-    unreadCount: 12,
-    membersCount: 148,
-    messages: [
-      {
-        id: 'msg_g1',
-        sender: 'Sebastián Arango',
-        senderRole: 'Mentor',
-        avatar: '🦅',
-        isMe: false,
-        time: '07:15 AM',
-        type: 'text',
-        text: 'Atención a toda la tribu: Hoy a las 20:00 cerramos la Fase 2 de Aceleración. Preparen su reporte somático.',
-        status: 'read',
-      },
-    ],
-  },
-];
+// `INITIAL_CONVERSATIONS` (mock) se retiró: las conversaciones salen del backend real vía
+// `useChatConversaciones` (GET /api/v1/chat/conversations). `GROUP_MEMBERS` sigue mock (ver nota
+// junto a su declaración, más arriba): el backend no expone los campos que ese roster necesita.
 
 const GIF_OPTIONS = [
   { icon: '🔥', title: 'VICTORIA' },
@@ -615,25 +339,71 @@ const METRICAS = [
 export default function ComunidadScreen() {
   const { c, t } = useTheme();
   const { rs, isTablet, horizontalPadding } = useResponsive();
+  const { user } = useAuth();
   const mentorPhoto = rs(50);
   const avatarSize = rs(42);
   const medallionSize = rs(40);
+  // Nombre real de quien está usando la app, para las publicaciones y comentarios propios del
+  // Muro — reemplaza el "Kelin Arango" fijo del mock por el dato de la sesión.
+  const nombreUsuario = user?.name?.trim() || 'Tú';
+  const primerNombreUsuario = nombreUsuario.split(' ')[0];
+
+  // Mentor asignado + integrantes de la célula — datos reales (GET /api/v1/me/cell y
+  // GET /api/v1/me/cell/members), usados en la vista principal (sección MENTOR / TRIBU PRIVADA).
+  const {
+    miCelula,
+    miembros: companerosCelula,
+    loading: celulaCargando,
+    error: celulaError,
+  } = useMiCelula();
+  const tieneMentor = miCelula?.assigned === true && !!miCelula.mentorName;
+  const mentorTitulo = celulaCargando
+    ? 'Cargando tu mentor...'
+    : celulaError
+      ? 'No pudimos cargar tu mentor'
+      : tieneMentor && miCelula?.assigned === true
+        ? miCelula.mentorName!
+        : 'Todavía no tienes un mentor asignado';
+  const mentorSubtitulo = tieneMentor ? 'Mentor de tu célula' : null;
+  const mentorNota =
+    celulaCargando || celulaError
+      ? null
+      : tieneMentor
+        ? 'Escribile para coordinar tu próxima sesión.'
+        : 'Te avisaremos apenas se te asigne uno.';
+  const TRIBU_AVATARES_VISIBLES = 4;
+  const tribuVisibles = companerosCelula.slice(0, TRIBU_AVATARES_VISIBLES);
+  const tribuRestantes = Math.max(companerosCelula.length - TRIBU_AVATARES_VISIBLES, 0);
 
   // =========================================================================
   // ESTADOS DE NAVEGACIÓN
   // =========================================================================
   const [inExclusiveResources, setInExclusiveResources] = useState(false);
-  const [selectedCourse, setSelectedCourse] = useState<CourseItem | null>(null);
+  // Se guarda el ID, no el objeto: `courses` (de `useCursos`) es la única fuente de verdad, así
+  // que `selectedCourse` sale siempre DERIVADO más abajo. Si se guardara el objeto entero (como
+  // hacía el mock) quedaría una copia vieja congelada en el momento del toque, y una acción
+  // posterior (p.ej. completar una lección) no se reflejaría al volver a esa vista.
+  const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [fullScreenLesson, setFullScreenLesson] = useState<LessonResource | null>(null);
 
   // Sub-módulo: Eventos & Experiencias
   const [inEventosExperiencias, setInEventosExperiencias] = useState(false);
   const [eventosTab, setEventosTab] = useState<'muro' | 'testimonios' | 'ranking'>('muro');
 
-  // Sub-módulo: Atención Personalizada & Chats tipo WhatsApp
+  // Sub-módulo: Atención Personalizada & Chats tipo WhatsApp — `conversations` sale del backend
+  // real (GET /api/v1/chat/conversations) a través de `useChatConversaciones`; el historial de
+  // cada una se pide recién al abrirla (ver `handleAbrirChat`), nunca en el listado.
   const [inAtencionPersonalizada, setInAtencionPersonalizada] = useState(false);
   const [chatCategory, setChatCategory] = useState<'celula' | 'miembros' | 'global'>('celula');
-  const [conversations, setConversations] = useState<ChatConversation[]>(INITIAL_CONVERSATIONS);
+  const {
+    conversations,
+    setConversations,
+    loading: conversacionesCargando,
+    error: conversacionesError,
+    mensajesCargando,
+    abrirConversacion,
+    enviarMensajeTexto: enviarMensajeChatRemoto,
+  } = useChatConversaciones(user?.id ?? null);
   const [activeChat, setActiveChat] = useState<ChatConversation | null>(null);
   const [groupInfoVisible, setGroupInfoVisible] = useState(false);
   const [selectedMemberProfile, setSelectedMemberProfile] = useState<GroupMember | null>(null);
@@ -641,25 +411,69 @@ export default function ComunidadScreen() {
   const [gifSelectorVisible, setGifSelectorVisible] = useState(false);
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
 
-  // Estados del Muro Social
-  const [posts, setPosts] = useState<PostItem[]>(INITIAL_POSTS);
+  // Estados del Muro Social — `posts` sale del backend real (GET /api/v1/wall) a través de
+  // `useWallFeed`; `setPosts` queda expuesto para las interacciones que el backend todavía no
+  // soporta (reacciones a comentarios, foto adjunta en un comentario) y que siguen siendo locales.
+  const {
+    posts,
+    setPosts,
+    loading: muroCargando,
+    error: muroError,
+    // `recargar` ya no se desestructura acá: la carga inicial la dispara el propio hook y publicar
+    // ya no recarga el feed entero (inserta la publicación nueva). El hook lo sigue exponiendo
+    // para el día que haya un "deslizar para refrescar", que hoy la pantalla no tiene.
+    reaccionar: reaccionarPublicacion,
+    cargarComentarios,
+    agregarComentario: agregarComentarioRemoto,
+    publicarOptimista,
+  } = useWallFeed();
   const [expandedPosts, setExpandedPosts] = useState<Record<string, boolean>>({});
   const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
   const [commentPhotos, setCommentPhotos] = useState<Record<string, boolean>>({});
 
+  // Estados de "Recursos Exclusivos" (cursos/lecciones) — `courses` sale del backend real
+  // (GET /api/v1/cursos + GET /api/v1/cursos/{id}/secciones) a través de `useCursos`.
+  const { courses, loading: cursosCargando, error: cursosError } = useCursos();
+  const selectedCourse = selectedCourseId ? (courses.find(cu => cu.id === selectedCourseId) ?? null) : null;
+  // Detalle real de la lección abierta (video_url, cuerpo, recursos) — se pide aparte, recién al
+  // tocar una lección, ver `handleAbrirLeccion` más abajo.
+  const {
+    detallePorId: detalleLeccionPorId,
+    cargandoId: cargandoDetalleLeccionId,
+    errorPorId: errorDetalleLeccionPorId,
+    actualizando: actualizandoCompletado,
+    cargarDetalle: cargarDetalleLeccion,
+    alternarCompletada: alternarLeccionCompletada,
+  } = useLeccionDetalle();
+  // La lección que de verdad se pinta en pantalla: lo que ya había en el árbol (título, tipo,
+  // bloqueo) combinado con lo que trajo el detalle real, apenas llega — sin esperar la red para
+  // abrir la pantalla.
+  const leccionMostrada: LessonResource | null = fullScreenLesson
+    ? { ...fullScreenLesson, ...detalleLeccionPorId[fullScreenLesson.id] }
+    : null;
+
   // Ventana Externa de Publicación a Pantalla Completa
   const [createPostModalVisible, setCreatePostModalVisible] = useState(false);
   const [newPostText, setNewPostText] = useState('');
   const [newPostTag, setNewPostTag] = useState('🔥 VICTORIA SOMÁTICA');
-  const [attachedPhotos, setAttachedPhotos] = useState<string[]>([
-    '📷 Bloque_Poder.jpg',
-    '📷 Registro_05AM.png',
-  ]);
+  // Fotos ya elegidas de la galería y normalizadas (`utils/normalizarImagen.ts`), listas para
+  // subir a S3 al publicar. Arranca vacío: el backend exige al menos una (Publicacion.MEDIA_MIN
+  // = 1), así que ya no tiene sentido precargar nombres de archivo falsos.
+  const [attachedPhotos, setAttachedPhotos] = useState<FotoMuroNormalizada[]>([]);
+  const [agregandoFoto, setAgregandoFoto] = useState(false);
+  const [subiendoPublicacion, setSubiendoPublicacion] = useState(false);
 
-  // Modal Quién dio Like/Dislike
+  // Modal Quién dio Like/Dislike — datos reales (GET /api/v1/wall/{id}/reactions), pedidos al
+  // abrir el modal (ver el `onPress` que lo abre, más abajo).
   const [reactionsModalVisible, setReactionsModalVisible] = useState(false);
   const [reactionFilter, setReactionFilter] = useState<'all' | 'like' | 'dislike'>('all');
+  const {
+    reacciones: reactionUsers,
+    cargando: cargandoReacciones,
+    error: errorReacciones,
+    cargarReacciones,
+  } = useWallReactions();
 
   // =========================================================================
   // GESTOS TÁCTILES DEL SISTEMA (BACKHANDLER)
@@ -698,7 +512,7 @@ export default function ComunidadScreen() {
       return true;
     }
     if (selectedCourse !== null) {
-      setSelectedCourse(null);
+      setSelectedCourseId(null);
       return true;
     }
     if (inExclusiveResources) {
@@ -725,30 +539,103 @@ export default function ComunidadScreen() {
     }
   };
 
+  /**
+   * Abre un curso del catálogo (ahora completo — ver `useCursos`). Si es uno de los que todavía
+   * no se desbloquearon por día de programa (`GET /cursos/bloqueados`, `course.locked`) no
+   * navega: mismo criterio que `handleAbrirLeccion` de abajo — se avisa con `Alert.alert` en vez
+   * de inventar una pantalla/modal nueva para "por qué está bloqueado".
+   */
+  const handleAbrirCurso = (course: CourseItem) => {
+    if (course.locked) {
+      const faltan = course.diasFaltantes ?? 0;
+      Alert.alert(
+        'Curso bloqueado 🔒',
+        faltan > 0
+          ? `Se desbloquea en ${faltan} día${faltan === 1 ? '' : 's'} más de tu programa (día ${course.diaDesbloqueo}).`
+          : 'Todavía no está disponible para tu día de programa.'
+      );
+      return;
+    }
+    setSelectedCourseId(course.id);
+  };
+
+  /**
+   * Abre una lección. Si está bloqueada por día de programa (`bloqueada_por_dia`, heredada de la
+   * sección — ver javadoc de `Leccion` en el backend) no navega: el diseño no tiene ningún
+   * indicador visual de "candado" para una lección puntual dentro de un curso ya accesible, así
+   * que en vez de inventar esa UI se avisa con el mismo `Alert.alert` que ya usa el resto de la
+   * pantalla (ver `handleSoportePress`/reacciones del Muro).
+   */
+  const handleAbrirLeccion = (lesson: LessonResource) => {
+    if (lesson.locked) {
+      const faltan = lesson.diasFaltantes ?? 0;
+      Alert.alert(
+        'Lección bloqueada 🔒',
+        faltan > 0
+          ? `Se desbloquea en ${faltan} día${faltan === 1 ? '' : 's'} más de tu programa.`
+          : 'Todavía no está disponible para tu día de programa.'
+      );
+      return;
+    }
+    setFullScreenLesson(lesson);
+    // Se pide en paralelo, no antes: la pantalla ya se abrió con lo que había en el árbol
+    // (título, tipo, meta) — el video/cuerpo real llegan un instante después sin bloquear la
+    // navegación (ver `useLeccionDetalle`).
+    cargarDetalleLeccion(lesson.id);
+  };
+
+  const handleAlternarLeccionCompletada = async (leccion: LessonResource) => {
+    try {
+      await alternarLeccionCompletada(leccion.id, !!leccion.completed);
+      if (!leccion.completed) {
+        Alert.alert('¡Excelente Progreso! 🦅', 'Lección completada y registrada en tu racha somática.');
+      }
+      setFullScreenLesson(null);
+    } catch (e) {
+      Alert.alert('No se pudo actualizar', mensajeDeError(e, 'Intentá de nuevo en un momento.'));
+    }
+  };
+
+  /**
+   * Único tipo que el backend puede persistir de verdad: `POST .../messages` con `type: 'TEXT'`
+   * (ver `chatApi.enviarMensajeTexto`). El mensaje que se agrega al historial es el que devuelve
+   * el servidor (con su `id`/`createdAt` reales), no uno optimista armado acá — si la request
+   * falla, se devuelve el texto al input en vez de dejarlo perdido.
+   */
+  const handleEnviarTextoReal = async () => {
+    if (!activeChat) return;
+    const texto = chatInputText.trim();
+    if (!texto) return;
+    setChatInputText('');
+    try {
+      const actualizada = await enviarMensajeChatRemoto(activeChat, texto);
+      setActiveChat(actualizada);
+    } catch (e) {
+      Alert.alert('No se pudo enviar', mensajeDeError(e, 'Intentá de nuevo en un momento.'));
+      setChatInputText(texto);
+    }
+  };
+
+  /**
+   * Audio/GIF/foto/video quedan SOLO local (como en el diseño original, sin backend detrás): no
+   * existe endpoint de subida de medios para chat (a diferencia del Muro, `POST
+   * /wall/media/upload-url`), así que no hay de dónde sacar un `mediaBucket`/`mediaPath` real —
+   * inventarlo violaría el contrato. El texto SÍ es real, ver `handleEnviarTextoReal`.
+   */
   const handleSendChatMessage = (
     type: ChatMessageType = 'text',
     extra?: { text?: string; mediaList?: string[]; gifTitle?: string; gifIcon?: string }
   ) => {
     if (!activeChat) return;
+    if (type === 'text') {
+      void handleEnviarTextoReal();
+      return;
+    }
 
     let newMsg: ChatMessage;
     const nowTime = 'Justo ahora';
 
-    if (type === 'text') {
-      const text = chatInputText.trim();
-      if (!text) return;
-      newMsg = {
-        id: `msg_${Date.now()}`,
-        sender: 'Kelin Arango',
-        avatar: '🦅',
-        isMe: true,
-        time: nowTime,
-        type: 'text',
-        text: text,
-        status: 'read',
-      };
-      setChatInputText('');
-    } else if (type === 'audio') {
+    if (type === 'audio') {
       newMsg = {
         id: `msg_${Date.now()}`,
         sender: 'Kelin Arango',
@@ -809,6 +696,10 @@ export default function ComunidadScreen() {
     setConversations(prev => prev.map(cItem => (cItem.id === updated.id ? updated : cItem)));
   };
 
+  // Sigue local-only, sin backend: `GROUP_MEMBERS` es mock (ver nota junto a su declaración), así
+  // que su `member.id` no es un UUID real — mandarlo a `POST /chat/conversations/direct` fallaría
+  // o, peor, apuntaría a otro usuario real por coincidencia de id. Pendiente hasta que exista un
+  // selector de integrantes respaldado por el directorio real (`GET /api/v1/chat/members`).
   const handleStartDirectChat = (member: GroupMember) => {
     setSelectedMemberProfile(null);
     setGroupInfoVisible(false);
@@ -833,46 +724,53 @@ export default function ComunidadScreen() {
     }
   };
 
-  const handleToggleLike = (postId: string) => {
-    setPosts(prev =>
-      prev.map(p => {
-        if (p.id === postId) {
-          if (p.userReaction === 'like') {
-            return { ...p, likes: p.likes - 1, userReaction: null };
-          } else {
-            return {
-              ...p,
-              likes: p.likes + 1,
-              dislikes: p.userReaction === 'dislike' ? p.dislikes - 1 : p.dislikes,
-              userReaction: 'like',
-            };
-          }
-        }
-        return p;
-      })
-    );
+  /**
+   * Abre una conversación real: entra de inmediato con lo que ya había en el listado (sin
+   * esperar la red, mismo criterio que `handleAbrirLeccion`) y trae el historial real
+   * (`GET .../messages`) + marca como leída un instante después — ver `useChatConversaciones.
+   * abrirConversacion`. Si falla, se queda en la conversación igual (con lo que ya tenía) y se
+   * avisa con el mismo `Alert` que usa el resto de la pantalla.
+   */
+  const handleAbrirChat = (conversacion: ChatConversation) => {
+    setActiveChat(conversacion);
+    abrirConversacion(conversacion)
+      .then(actualizada => setActiveChat(actualizada))
+      .catch(e => Alert.alert('No se pudo cargar el chat', mensajeDeError(e, 'Intentá de nuevo en un momento.')));
   };
 
-  const handleToggleDislike = (postId: string) => {
-    setPosts(prev =>
-      prev.map(p => {
-        if (p.id === postId) {
-          if (p.userReaction === 'dislike') {
-            return { ...p, dislikes: p.dislikes - 1, userReaction: null };
-          } else {
-            return {
-              ...p,
-              dislikes: p.dislikes + 1,
-              likes: p.userReaction === 'like' ? p.likes - 1 : p.likes,
-              userReaction: 'dislike',
-            };
-          }
-        }
-        return p;
-      })
-    );
+  // Like/Dislike van contra el backend real (POST /api/v1/wall/{id}/react). El propio backend
+  // hace el toggle (ReaccionarUseCase: tocar el mismo tipo lo saca, tocar el otro lo reemplaza) y
+  // devuelve los conteos verdaderos, así que acá no hay aritmética que llevar a mano.
+  const handleToggleLike = async (postId: string) => {
+    try {
+      await reaccionarPublicacion(postId, 'LIKE');
+    } catch (error) {
+      Alert.alert('No se pudo reaccionar', mensajeDeError(error, 'Intentá de nuevo en un momento.'));
+    }
   };
 
+  const handleToggleDislike = async (postId: string) => {
+    try {
+      await reaccionarPublicacion(postId, 'DISLIKE');
+    } catch (error) {
+      Alert.alert('No se pudo reaccionar', mensajeDeError(error, 'Intentá de nuevo en un momento.'));
+    }
+  };
+
+  // El feed (GET /api/v1/wall) no trae comentarios, solo `commentCount`: se piden recién al
+  // abrir la sección, una sola vez por post (useWallFeed ya evita repetir el pedido).
+  const handleToggleComments = (postId: string) => {
+    setOpenComments(prev => {
+      const abriendo = !prev[postId];
+      if (abriendo) {
+        void cargarComentarios(postId);
+      }
+      return { ...prev, [postId]: abriendo };
+    });
+  };
+
+  // El backend NO tiene reacciones a comentarios (solo a publicaciones — ver ReaccionarUseCase);
+  // esto queda como interacción visual local, sin persistir, hasta que exista ese endpoint.
   const handleCommentVote = (postId: string, commentId: string, type: 'like' | 'dislike') => {
     setPosts(prev =>
       prev.map(p => {
@@ -918,66 +816,103 @@ export default function ComunidadScreen() {
     );
   };
 
-  const handleAddComment = (postId: string) => {
+  // Comentar va contra el backend real (POST /api/v1/wall/{postId}/comments). Ese endpoint solo
+  // acepta texto (CreateWallCommentRequest exige @NotBlank): una foto sin texto no tiene forma de
+  // guardarse todavía, así que se avisa en vez de fingir que se publicó.
+  const handleAddComment = async (postId: string) => {
     const text = (commentInputs[postId] || '').trim();
-    if (!text && !commentPhotos[postId]) return;
+    if (!text) {
+      if (commentPhotos[postId]) {
+        Alert.alert(
+          'Falta el texto',
+          'Escribí algo para poder comentar. La foto se adjunta junto con el texto, no sola.'
+        );
+      }
+      return;
+    }
 
-    const newComment: CommentItem = {
-      id: `c_${Date.now()}`,
-      author: 'Kelin Arango (Tú)',
-      avatar: '🦅',
-      text: text,
-      photoAttached: commentPhotos[postId] ? '📷 foto_adjunta.jpg' : undefined,
-      likes: 0,
-      dislikes: 0,
-      userReaction: null,
-      timeAgo: 'Justo ahora',
-    };
-
-    setPosts(prev =>
-      prev.map(p => (p.id === postId ? { ...p, comments: [...p.comments, newComment] } : p))
-    );
-
-    setCommentInputs(prev => ({ ...prev, [postId]: '' }));
-    setCommentPhotos(prev => ({ ...prev, [postId]: false }));
+    try {
+      await agregarComentarioRemoto(postId, text);
+      setCommentInputs(prev => ({ ...prev, [postId]: '' }));
+      setCommentPhotos(prev => ({ ...prev, [postId]: false }));
+    } catch (error) {
+      Alert.alert('No se pudo comentar', mensajeDeError(error, 'Intentá de nuevo en un momento.'));
+    }
   };
 
-  const handlePublishPost = () => {
+  // Agrega una foto de la galería al borrador: pide permiso, abre el selector, normaliza
+  // (orientación EXIF + tamaño + compresión — `utils/normalizarImagen.ts`) y recién ahí la suma
+  // al estado. `agregandoFoto` evita dobles taps mientras el selector nativo está abierto.
+  const handleAgregarFoto = async () => {
+    if (agregandoFoto) return;
+    setAgregandoFoto(true);
+    try {
+      const foto = await elegirYNormalizarFotoMuro();
+      if (foto) {
+        setAttachedPhotos(prev => [...prev, foto]);
+      }
+    } finally {
+      setAgregandoFoto(false);
+    }
+  };
+
+  // `error instanceof ApiError` cubre las dos llamadas reales al backend (pedir la URL de subida,
+  // publicar). Lo que NO es `ApiError` son los `Error` que este mismo handler lanza a mano (foto
+  // sin subir por S3 sin configurar, PUT a S3 fallido) — esos ya traen un mensaje específico y
+  // accionable, así que se muestran tal cual en vez de pisarlos con el genérico de
+  // `mensajeDeError`.
+  const mensajeDeFalloAlPublicar = (error: unknown): string => {
+    const porDefecto = 'No pudimos publicar. Intentá de nuevo en un momento.';
+    if (error instanceof ApiError) {
+      return mensajeDeError(error, porDefecto);
+    }
+    return error instanceof Error && error.message ? error.message : porDefecto;
+  };
+
+  const handlePublishPost = async () => {
     if (!newPostText.trim()) {
       Alert.alert('Campo requerido', 'Por favor escribe tu reflexión o experiencia antes de publicar.');
       return;
     }
+    // El backend exige al menos un archivo por publicación (`Publicacion.MEDIA_MIN = 1` — "una
+    // publicación sin foto rompe la retícula"). Se corta acá, con el motivo a la vista, en vez de
+    // dejar que el backend responda con un 400 genérico.
+    if (attachedPhotos.length === 0) {
+      Alert.alert('Falta una foto', 'Esta publicación necesita al menos una foto para poder compartirse en el Muro.');
+      return;
+    }
+    if (subiendoPublicacion) return;
 
-    const newPost: PostItem = {
-      id: `post_${Date.now()}`,
-      author: 'Kelin Arango',
-      avatar: '🦅',
-      cell: 'Célula 07',
-      dayStreak: 37,
-      timeAgo: 'Justo ahora',
-      tag: newPostTag,
-      text: newPostText.trim(),
-      media: attachedPhotos.map((p, idx) => ({
-        type: 'image',
-        title: `📷 Imagen ${idx + 1}`,
-      })),
-      likes: 1,
-      dislikes: 0,
-      userReaction: 'like',
-      comments: [],
-    };
-
-    setPosts(prev => [newPost, ...prev]);
+    // El modal se cierra YA y la publicación aparece en el muro en el mismo gesto: la subida a S3
+    // y el POST siguen en segundo plano (ver `useWallFeed.publicarOptimista`). Antes esto esperaba
+    // los tres viajes de red y ADEMÁS recargaba el feed entero antes de dejar cerrar — segundos de
+    // pantalla trabada con el botón en "PUBLICANDO...".
+    const texto = newPostText.trim();
+    const fotos = attachedPhotos;
     setNewPostText('');
+    setAttachedPhotos([]);
     setCreatePostModalVisible(false);
-    Alert.alert('¡Publicado con Éxito! 🦅', 'Tu victoria ha sido compartida con la tribu.');
+
+    setSubiendoPublicacion(true);
+    try {
+      await publicarOptimista(texto, fotos, nombreUsuario);
+    } catch (error) {
+      // El post optimista ya se quitó del muro (rollback dentro del hook). Se devuelve el borrador
+      // al modal para que la persona no tenga que volver a escribirlo ni a elegir la foto: perder
+      // lo escrito por un fallo de red es peor que la espera que acabamos de sacar.
+      setNewPostText(texto);
+      setAttachedPhotos(fotos);
+      setCreatePostModalVisible(true);
+      Alert.alert('No se pudo publicar', mensajeDeFalloAlPublicar(error));
+    } finally {
+      setSubiendoPublicacion(false);
+    }
   };
 
-  const filteredReactions = REACTION_USERS_MOCK.filter(r => {
-    if (reactionFilter === 'like') return r.type === 'like';
-    if (reactionFilter === 'dislike') return r.type === 'dislike';
-    return true;
-  });
+  const likesReactions = reactionUsers.filter(r => r.type === 'like');
+  const dislikesReactions = reactionUsers.filter(r => r.type === 'dislike');
+  const filteredReactions =
+    reactionFilter === 'like' ? likesReactions : reactionFilter === 'dislike' ? dislikesReactions : reactionUsers;
 
   const filteredConversations = conversations.filter(conv => {
     if (chatCategory === 'celula') return conv.type === 'celula';
@@ -1017,11 +952,15 @@ export default function ComunidadScreen() {
             <View style={[styles.mentor, { borderColor: c.border, backgroundColor: c.cardBg }]}>
               <Placeholder label="FOTO" style={{ width: mentorPhoto, height: mentorPhoto, borderRadius: mentorPhoto / 2 }} />
               <View style={{ flex: 1 }}>
-                <Text style={[t.cardTitle, { color: c.textStrong }]}>Sebastián Arango</Text>
-                <Text style={[t.small, { color: c.micro, marginTop: 2 }]}>Mentor de Alto Rendimiento</Text>
-                <Text style={[t.small, { color: c.textSoft, marginTop: 6, fontStyle: 'italic', lineHeight: 18 }]}>
-                  “Revisión de tu plan de esta semana.{"\n"}¿Agendamos tu llamada?”
-                </Text>
+                <Text style={[t.cardTitle, { color: c.textStrong }]}>{mentorTitulo}</Text>
+                {mentorSubtitulo && (
+                  <Text style={[t.small, { color: c.micro, marginTop: 2 }]}>{mentorSubtitulo}</Text>
+                )}
+                {mentorNota && (
+                  <Text style={[t.small, { color: c.textSoft, marginTop: 6, fontStyle: 'italic', lineHeight: 18 }]}>
+                    {mentorNota}
+                  </Text>
+                )}
               </View>
               <Icon name="chevron" size={12} color={c.chevron} />
             </View>
@@ -1029,14 +968,29 @@ export default function ComunidadScreen() {
 
           <View style={[styles.section, { borderTopColor: c.divider }]}>
             <MicroLabel>TRIBU PRIVADA</MicroLabel>
-            <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
-              {[0, 1, 2, 3].map(i => (
-                <Placeholder key={i} style={{ width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 }} />
-              ))}
-              <View style={[styles.more, { width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2, borderColor: c.border, backgroundColor: c.cardBg }]}>
-                <Text style={[t.small, { color: c.textSoft }]}>+12</Text>
+            {celulaCargando && companerosCelula.length === 0 && (
+              <Text style={[t.micro, { color: c.textSoft, marginTop: 10 }]}>Cargando tu tribu...</Text>
+            )}
+            {!celulaCargando && !celulaError && companerosCelula.length === 0 && (
+              <Text style={[t.micro, { color: c.textSoft, marginTop: 10 }]}>
+                Todavía no tenés integrantes en tu célula.
+              </Text>
+            )}
+            {companerosCelula.length > 0 && (
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                {tribuVisibles.map(m => (
+                  <Placeholder
+                    key={m.traineeId}
+                    style={{ width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 }}
+                  />
+                ))}
+                {tribuRestantes > 0 && (
+                  <View style={[styles.more, { width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2, borderColor: c.border, backgroundColor: c.cardBg }]}>
+                    <Text style={[t.small, { color: c.textSoft }]}>+{tribuRestantes}</Text>
+                  </View>
+                )}
               </View>
-            </View>
+            )}
           </View>
 
           {/* Sección TU SOPORTE (Los 3 Círculos Originales) */}
@@ -1204,7 +1158,7 @@ export default function ComunidadScreen() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={[t.body, { color: c.textStrong, fontSize: 12.5, fontWeight: '600' }]}>
-                      ¿Qué conquistaste hoy, Kelin?
+                      ¿Qué conquistaste hoy, {primerNombreUsuario}?
                     </Text>
                     <Text style={[t.micro, { color: c.gold, fontSize: 10 }]}>
                       Publicación sin límite de caracteres ›
@@ -1216,6 +1170,22 @@ export default function ComunidadScreen() {
                 </View>
               </Pressable>
 
+              {/* Estados de carga/error del feed real — sin componentes nuevos, solo texto con
+                  los mismos tokens que ya usa el resto de la pantalla. */}
+              {muroCargando && posts.length === 0 && (
+                <Text style={[t.micro, { color: c.textSoft, textAlign: 'center' }]}>
+                  Cargando el muro...
+                </Text>
+              )}
+              {muroError && (
+                <Text style={[t.micro, { color: '#f28e8e', textAlign: 'center' }]}>{muroError}</Text>
+              )}
+              {!muroCargando && !muroError && posts.length === 0 && (
+                <Text style={[t.micro, { color: c.textSoft, textAlign: 'center' }]}>
+                  Todavía no hay publicaciones. ¡Sé el primero en compartir tu victoria!
+                </Text>
+              )}
+
               {/* Lista de Publicaciones */}
               {posts.map(post => {
                 const isExpanded = expandedPosts[post.id];
@@ -1224,7 +1194,14 @@ export default function ComunidadScreen() {
                 return (
                   <View
                     key={post.id}
-                    style={[styles.postCard, { borderColor: c.border, backgroundColor: c.cardBg }]}
+                    style={[
+                      styles.postCard,
+                      { borderColor: c.border, backgroundColor: c.cardBg },
+                      // Único cambio visual del post optimista: atenuado mientras se confirma. Se
+                      // suma como estilo al lado de los que ya estaban, sin tocar `styles.postCard`
+                      // ni reestructurar el JSX de la tarjeta.
+                      post.pendiente && { opacity: 0.55 },
+                    ]}
                   >
                     {/* Header del Post */}
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1274,6 +1251,14 @@ export default function ComunidadScreen() {
                             <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 11 }]}>
                               {post.media[0].title}
                             </Text>
+                            {/* Overlay DESPUÉS del texto a propósito: si la foto carga, lo tapa; si es
+                                video o falla, no dibuja nada y el texto de siempre queda visible. */}
+                            <FotoMuro
+                              url={post.media[0].url}
+                              mimeType={post.media[0].mimeType}
+                              radioBorde={12}
+                              colorFondo={c.cardBgAlt}
+                            />
                           </View>
                         ) : post.media.length === 2 ? (
                           <View style={{ flexDirection: 'row', gap: 6 }}>
@@ -1282,6 +1267,7 @@ export default function ComunidadScreen() {
                                 <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 10 }]}>
                                   {m.title}
                                 </Text>
+                                <FotoMuro url={m.url} mimeType={m.mimeType} radioBorde={10} colorFondo={c.cardBgAlt} />
                               </View>
                             ))}
                           </View>
@@ -1291,6 +1277,12 @@ export default function ComunidadScreen() {
                               <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 11 }]}>
                                 {post.media[0].title}
                               </Text>
+                              <FotoMuro
+                                url={post.media[0].url}
+                                mimeType={post.media[0].mimeType}
+                                radioBorde={10}
+                                colorFondo={c.cardBgAlt}
+                              />
                             </View>
                             <View style={{ flex: 1, gap: 6 }}>
                               {post.media.slice(1, 3).map((m, idx) => (
@@ -1298,6 +1290,7 @@ export default function ComunidadScreen() {
                                   <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 9.5 }]}>
                                     {m.title}
                                   </Text>
+                                  <FotoMuro url={m.url} mimeType={m.mimeType} radioBorde={8} colorFondo={c.cardBgAlt} />
                                 </View>
                               ))}
                             </View>
@@ -1312,6 +1305,7 @@ export default function ComunidadScreen() {
                         onPress={() => {
                           setReactionsModalVisible(true);
                           setReactionFilter('all');
+                          void cargarReacciones(post.id);
                         }}
                         style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
                       >
@@ -1324,7 +1318,7 @@ export default function ComunidadScreen() {
                         <Text style={[t.micro, { color: c.gold, fontSize: 9.5 }]}>· Ver quién reaccionó ›</Text>
                       </Pressable>
 
-                      <Pressable onPress={() => setOpenComments(prev => ({ ...prev, [post.id]: !prev[post.id] }))}>
+                      <Pressable onPress={() => handleToggleComments(post.id)}>
                         <Text style={[t.micro, { color: c.textSoft, fontSize: 10 }]}>
                           {post.comments.length} Comentarios
                         </Text>
@@ -1372,7 +1366,7 @@ export default function ComunidadScreen() {
                       </Pressable>
 
                       <Pressable
-                        onPress={() => setOpenComments(prev => ({ ...prev, [post.id]: !prev[post.id] }))}
+                        onPress={() => handleToggleComments(post.id)}
                         style={styles.actionBtn}
                       >
                         <Text style={{ fontSize: 13 }}>💬</Text>
@@ -1664,16 +1658,41 @@ export default function ComunidadScreen() {
           </View>
 
           <View style={{ gap: 14, paddingTop: 10, paddingBottom: 28 }}>
-            {COURSES_DATA.map(course => (
+            {/* Estados de carga/error/vacío del catálogo real — sin componentes nuevos, mismo
+                patrón de texto plano que ya usa el Muro más arriba en esta pantalla. */}
+            {cursosCargando && courses.length === 0 && (
+              <Text style={[t.micro, { color: c.textSoft, textAlign: 'center' }]}>
+                Cargando tus cursos...
+              </Text>
+            )}
+            {cursosError && (
+              <Text style={[t.micro, { color: '#f28e8e', textAlign: 'center' }]}>{cursosError}</Text>
+            )}
+            {!cursosCargando && !cursosError && courses.length === 0 && (
+              <Text style={[t.micro, { color: c.textSoft, textAlign: 'center' }]}>
+                Todavía no tenés cursos disponibles para tu día de programa.
+              </Text>
+            )}
+            {courses.map(course => (
               <Pressable
                 key={course.id}
-                onPress={() => setSelectedCourse(course)}
-                style={[styles.courseCard, { borderColor: c.border, backgroundColor: c.cardBg }]}
+                onPress={() => handleAbrirCurso(course)}
+                style={[
+                  styles.courseCard,
+                  { borderColor: c.border, backgroundColor: c.cardBg },
+                  // Mismo valor que ya usa `YoScreen.tsx` para `stage.locked` (opacidad reducida,
+                  // sin colores/bordes/íconos nuevos) — la tarjeta entera se atenúa para marcar
+                  // que todavía no se puede abrir.
+                  course.locked && { opacity: 0.5 },
+                ]}
               >
-                <LinearGradient
-                  colors={['#2A2417', '#1E1B15', '#141310']}
-                  style={styles.courseCoverHeader}
-                >
+                {/* Antes: `LinearGradient` opaco haciendo de portada de relleno (sin `<Image>`).
+                    Ahora: `View` con el mismo alto/padding de siempre (`courseCoverHeader`,
+                    intacto), y `CursoPortada` pintando la foto real como fondo absoluto detrás
+                    del badge y el título — que siguen siendo los mismos hijos de siempre, en el
+                    mismo orden, sin tocar su estilo. */}
+                <View style={styles.courseCoverHeader}>
+                  <CursoPortada url={course.coverUrl} />
                   <View style={[styles.courseCategoryBadge, { borderColor: c.gold, backgroundColor: 'rgba(0,0,0,0.6)' }]}>
                     <Text style={[t.micro, { color: c.gold, fontSize: 8.5, fontWeight: '800' }]}>
                       {course.category}
@@ -1682,7 +1701,7 @@ export default function ComunidadScreen() {
                   <Text style={[t.screenTitle, { color: '#FFFFFF', fontSize: 16, lineHeight: 21 }]}>
                     {course.title}
                   </Text>
-                </LinearGradient>
+                </View>
 
                 <View style={{ padding: 14, gap: 8 }}>
                   <Text style={[t.micro, { color: c.micro }]}>
@@ -1734,7 +1753,7 @@ export default function ComunidadScreen() {
         >
           <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
             <Pressable
-              onPress={() => setSelectedCourse(null)}
+              onPress={() => setSelectedCourseId(null)}
               style={styles.backBtnRow}
               hitSlop={8}
             >
@@ -1764,7 +1783,7 @@ export default function ComunidadScreen() {
                   {section.lessons.map(lesson => (
                     <Pressable
                       key={lesson.id}
-                      onPress={() => setFullScreenLesson(lesson)}
+                      onPress={() => handleAbrirLeccion(lesson)}
                       style={[styles.lessonItemRow, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
                     >
                       <View style={[styles.resourceTypeIcon, { borderColor: c.gold, backgroundColor: c.bg }]}>
@@ -1791,7 +1810,7 @@ export default function ComunidadScreen() {
       {/* ========================================================================= */}
       {/* VISTA 3.2: LECCIÓN A PANTALLA COMPLETA (VIDEO, DOC, LINK, ESCRITO)        */}
       {/* ========================================================================= */}
-      {inExclusiveResources && fullScreenLesson !== null && (
+      {inExclusiveResources && leccionMostrada !== null && (
         <ScrollView
           contentContainerStyle={[
             styles.content,
@@ -1819,29 +1838,57 @@ export default function ComunidadScreen() {
 
           <View style={[styles.lessonInfoCard, { borderColor: c.gold, backgroundColor: c.cardBg, marginTop: 10 }]}>
             <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 16 }]}>
-              {fullScreenLesson.title}
+              {leccionMostrada.title}
             </Text>
             <Text style={[t.micro, { color: c.gold, marginTop: 4 }]}>
-              {fullScreenLesson.meta}
+              {leccionMostrada.meta}
             </Text>
-            <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, marginTop: 8, lineHeight: 18 }]}>
-              {fullScreenLesson.desc}
-            </Text>
+            {!!leccionMostrada.desc && (
+              <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, marginTop: 8, lineHeight: 18 }]}>
+                {leccionMostrada.desc}
+              </Text>
+            )}
 
-            {fullScreenLesson.content && (
+            {/* Reproductor — nuevo, el diseño original no tenía ninguno (ver
+                `LeccionVideoPlayer.tsx`). Se monta solo cuando la lección tiene video real; el
+                WebView adentro solo se crea recién al tocar "reproducir". `key` fuerza un
+                componente nuevo por lección, así el estado de reproducción no se arrastra de una
+                lección a la siguiente. */}
+            {!!leccionMostrada.videoUrl && (
+              <View style={{ marginTop: 14 }}>
+                <LeccionVideoPlayer
+                  key={leccionMostrada.id}
+                  videoTipo={leccionMostrada.videoTipo}
+                  videoUrl={leccionMostrada.videoUrl}
+                  videoMiniaturaUrl={leccionMostrada.videoMiniaturaUrl}
+                  videoDuracionMs={leccionMostrada.videoDuracionMs}
+                />
+              </View>
+            )}
+
+            {/* Estados de carga/error del detalle real — mismo patrón de texto plano que el resto
+                de la pantalla, sin componentes nuevos. */}
+            {cargandoDetalleLeccionId === leccionMostrada.id && (
+              <Text style={[t.micro, { color: c.textSoft, marginTop: 12 }]}>Cargando lección...</Text>
+            )}
+            {errorDetalleLeccionPorId[leccionMostrada.id] && (
+              <Text style={[t.micro, { color: '#f28e8e', marginTop: 12 }]}>
+                {errorDetalleLeccionPorId[leccionMostrada.id]}
+              </Text>
+            )}
+
+            {leccionMostrada.content && (
               <View style={{ marginTop: 14, padding: 12, borderRadius: 12, backgroundColor: c.cardBgAlt, borderWidth: 1, borderColor: c.border }}>
                 <Text style={[t.body, { color: c.text, fontSize: 13, lineHeight: 20 }]}>
-                  {fullScreenLesson.content}
+                  {leccionMostrada.content}
                 </Text>
               </View>
             )}
 
             <GoldButton
-              label="✓ MARCAR LECCIÓN COMO COMPLETADA"
-              onPress={() => {
-                Alert.alert('¡Excelente Progreso! 🦅', 'Lección completada y registrada en tu racha somática.');
-                setFullScreenLesson(null);
-              }}
+              label={leccionMostrada.completed ? '↺ QUITAR DE COMPLETADAS' : '✓ MARCAR LECCIÓN COMO COMPLETADA'}
+              loading={actualizandoCompletado}
+              onPress={() => handleAlternarLeccionCompletada(leccionMostrada)}
               style={{ width: '100%', marginTop: 16 }}
             />
           </View>
@@ -1914,12 +1961,30 @@ export default function ComunidadScreen() {
             </Pressable>
           </View>
 
+          {/* Estados de carga/error del listado real — mismo criterio que el Muro (texto con los
+              tokens que ya usa el resto de la pantalla, sin componentes nuevos). */}
+          {conversacionesCargando && conversations.length === 0 && (
+            <Text style={[t.micro, { color: c.textSoft, textAlign: 'center', marginTop: 16 }]}>
+              Cargando tus conversaciones...
+            </Text>
+          )}
+          {conversacionesError && (
+            <Text style={[t.micro, { color: '#f28e8e', textAlign: 'center', marginTop: 16 }]}>
+              {conversacionesError}
+            </Text>
+          )}
+          {!conversacionesCargando && !conversacionesError && filteredConversations.length === 0 && (
+            <Text style={[t.micro, { color: c.textSoft, textAlign: 'center', marginTop: 16 }]}>
+              Todavía no tenés conversaciones acá.
+            </Text>
+          )}
+
           {/* Lista de Conversaciones Activas */}
           <View style={{ gap: 10, paddingTop: 12, paddingBottom: 28 }}>
             {filteredConversations.map(conv => (
               <Pressable
                 key={conv.id}
-                onPress={() => setActiveChat(conv)}
+                onPress={() => handleAbrirChat(conv)}
                 style={[
                   styles.chatConvCard,
                   {
@@ -2003,6 +2068,20 @@ export default function ComunidadScreen() {
                 HOY · DÍA 37 DE VERDAD
               </Text>
             </View>
+
+            {/* Historial real (GET .../messages) — mismo criterio de estados que el resto de la
+                pantalla: con solo 3 conversaciones/5 mensajes en la base, el vacío es el caso
+                común, no una excepción a cubrir "por si acaso". */}
+            {mensajesCargando && activeChat.messages.length === 0 && (
+              <Text style={[t.micro, { color: c.textSoft, textAlign: 'center' }]}>
+                Cargando mensajes...
+              </Text>
+            )}
+            {!mensajesCargando && activeChat.messages.length === 0 && (
+              <Text style={[t.micro, { color: c.textSoft, textAlign: 'center' }]}>
+                Todavía no hay mensajes. ¡Escribí el primero!
+              </Text>
+            )}
 
             {activeChat.messages.map(msg => (
               <View
@@ -2378,8 +2457,14 @@ export default function ComunidadScreen() {
               <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 11 }]}>✕ CANCELAR</Text>
             </Pressable>
             <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>NUEVA PUBLICACIÓN</Text>
-            <Pressable onPress={handlePublishPost} style={[styles.publishHeaderBtn, { backgroundColor: c.gold }]}>
-              <Text style={{ color: '#1E1B18', fontWeight: '900', fontSize: 11 }}>PUBLICAR</Text>
+            <Pressable
+              onPress={handlePublishPost}
+              disabled={subiendoPublicacion}
+              style={[styles.publishHeaderBtn, { backgroundColor: c.gold }, subiendoPublicacion && { opacity: 0.6 }]}
+            >
+              <Text style={{ color: '#1E1B18', fontWeight: '900', fontSize: 11 }}>
+                {subiendoPublicacion ? 'PUBLICANDO...' : 'PUBLICAR'}
+              </Text>
             </Pressable>
           </View>
 
@@ -2389,7 +2474,7 @@ export default function ComunidadScreen() {
                 <Text style={{ fontSize: 14 }}>🦅</Text>
               </View>
               <View>
-                <Text style={[t.cardTitle, { color: c.textStrong }]}>Kelin Arango</Text>
+                <Text style={[t.cardTitle, { color: c.textStrong }]}>{nombreUsuario}</Text>
                 <Text style={[t.micro, { color: c.gold, fontSize: 9.5 }]}>Célula 07 · Día 37</Text>
               </View>
             </View>
@@ -2423,22 +2508,38 @@ export default function ComunidadScreen() {
             />
 
             <View style={{ gap: 8 }}>
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>FOTOS ADJUNTAS (GALERÍA AUTODETECTADA):</Text>
+              <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>FOTOS ADJUNTAS (AL MENOS UNA):</Text>
               <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-                {attachedPhotos.map((p, idx) => (
-                  <View key={idx} style={[styles.attachedPhotoCard, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-                    <Text style={[t.micro, { color: c.gold, fontSize: 9.5 }]}>{p}</Text>
+                {attachedPhotos.map((foto, idx) => (
+                  <View
+                    key={foto.uri}
+                    style={[styles.attachedPhotoCard, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}
+                  >
+                    {/* Miniatura real de la foto ya normalizada — mismo chip del diseño original
+                        (styles.attachedPhotoCard intacto), solo que ahora también muestra la
+                        imagen elegida y no únicamente su nombre. */}
+                    <Image source={{ uri: foto.uri }} style={{ width: 20, height: 20, borderRadius: 4 }} />
+                    <Text style={[t.micro, { color: c.gold, fontSize: 9.5 }]} numberOfLines={1}>
+                      {foto.nombre}
+                    </Text>
                     <Pressable onPress={() => setAttachedPhotos(prev => prev.filter((_, i) => i !== idx))}>
                       <Text style={{ color: '#f28e8e', fontWeight: 'bold', fontSize: 12 }}>✕</Text>
                     </Pressable>
                   </View>
                 ))}
                 <Pressable
-                  onPress={() => setAttachedPhotos(prev => [...prev, `📷 Foto_${prev.length + 1}.jpg`])}
-                  style={[styles.addMorePhotoBtn, { borderColor: c.border, backgroundColor: c.cardBg }]}
+                  onPress={handleAgregarFoto}
+                  disabled={agregandoFoto}
+                  style={[
+                    styles.addMorePhotoBtn,
+                    { borderColor: c.border, backgroundColor: c.cardBg },
+                    agregandoFoto && { opacity: 0.6 },
+                  ]}
                 >
                   <Text style={{ fontSize: 16 }}>➕</Text>
-                  <Text style={[t.micro, { color: c.textSoft, fontSize: 9 }]}>Agregar</Text>
+                  <Text style={[t.micro, { color: c.textSoft, fontSize: 9 }]}>
+                    {agregandoFoto ? 'Abriendo...' : 'Agregar'}
+                  </Text>
                 </Pressable>
               </View>
             </View>
@@ -2470,7 +2571,7 @@ export default function ComunidadScreen() {
                 style={[styles.tabBtn, reactionFilter === 'all' && { backgroundColor: c.gold }]}
               >
                 <Text style={[t.micro, { color: reactionFilter === 'all' ? '#1E1B18' : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
-                  TODOS (4)
+                  TODOS ({reactionUsers.length})
                 </Text>
               </Pressable>
               <Pressable
@@ -2478,7 +2579,7 @@ export default function ComunidadScreen() {
                 style={[styles.tabBtn, reactionFilter === 'like' && { backgroundColor: c.gold }]}
               >
                 <Text style={[t.micro, { color: reactionFilter === 'like' ? '#1E1B18' : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
-                  👍 LIKES (3)
+                  👍 LIKES ({likesReactions.length})
                 </Text>
               </Pressable>
               <Pressable
@@ -2486,13 +2587,30 @@ export default function ComunidadScreen() {
                 style={[styles.tabBtn, reactionFilter === 'dislike' && { backgroundColor: c.gold }]}
               >
                 <Text style={[t.micro, { color: reactionFilter === 'dislike' ? '#1E1B18' : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
-                  👎 DISLIKES (1)
+                  👎 DISLIKES ({dislikesReactions.length})
                 </Text>
               </Pressable>
             </View>
 
             <ScrollView style={{ maxHeight: 220 }}>
-              {filteredReactions.map(user => (
+              {/* Mismos tokens que los estados del feed real (muroCargando/muroError/lista vacía,
+                  más arriba en esta pantalla) — ningún componente nuevo, solo texto. */}
+              {cargandoReacciones && (
+                <Text style={[t.micro, { color: c.textSoft, textAlign: 'center', paddingVertical: 12 }]}>
+                  Cargando reacciones...
+                </Text>
+              )}
+              {!cargandoReacciones && errorReacciones && (
+                <Text style={[t.micro, { color: '#f28e8e', textAlign: 'center', paddingVertical: 12 }]}>
+                  {errorReacciones}
+                </Text>
+              )}
+              {!cargandoReacciones && !errorReacciones && reactionUsers.length === 0 && (
+                <Text style={[t.micro, { color: c.textSoft, textAlign: 'center', paddingVertical: 12 }]}>
+                  Todavía nadie reaccionó a esta publicación.
+                </Text>
+              )}
+              {!cargandoReacciones && !errorReacciones && reactionUsers.length > 0 && filteredReactions.map(user => (
                 <View key={user.id} style={[styles.reactionUserRow, { borderBottomColor: c.divider }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <View style={[styles.avatarCircle, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>

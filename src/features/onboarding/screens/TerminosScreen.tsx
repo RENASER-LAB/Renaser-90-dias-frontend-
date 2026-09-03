@@ -1,12 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useResponsive } from '../../../theme/responsive';
 import { TERMINOS_CLAUSULAS } from '../data/terminosData';
+import { mapearTerminos, PREGUNTA_FIRMA_TERMINOS } from '../data/mapaPreguntas';
+import { usePersistenciaOnboarding } from '../hooks/usePersistenciaOnboarding';
 import { Icon } from '../../../components/Icon';
 import { MicroLabel } from '../../../components/ui';
-import { SignatureCanvas, SignatureData, safeParsePaths } from '../../../components/SignatureCanvas';
+import {
+  SignatureCanvas,
+  SignatureCanvasHandle,
+  SignatureData,
+  safeParsePaths,
+} from '../../../components/SignatureCanvas';
 import { Checkbox } from '../../../components/Checkbox';
 import { GoldButton } from '../../../components/GoldButton';
 
@@ -25,6 +32,9 @@ export function TerminosScreen({
 }: TerminosScreenProps) {
   const { c, t, mode, toggle } = useTheme();
   const { isSmall, isTablet } = useResponsive();
+  const { guardarCapitulo, avanzarEstado, aceptarHito, guardarFirma } = usePersistenciaOnboarding();
+  // Ref al lienzo para poder capturarlo como PNG al confirmar (ver SignatureCanvas.capturarComoPng).
+  const signatureRef = useRef<SignatureCanvasHandle>(null);
 
   const [accepted, setAccepted] = useState(false);
   const [signature, setSignature] = useState<SignatureData | null>(savedSignature || null);
@@ -49,7 +59,7 @@ export function TerminosScreen({
     }
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!accepted) {
       setShowError(true);
       Alert.alert(
@@ -69,6 +79,28 @@ export function TerminosScreen({
     if (signature) {
       onSaveSignature?.(signature);
     }
+
+    // Guardar de verdad la aceptación de los términos.
+    await guardarCapitulo(mapearTerminos(accepted));
+
+    // Firma con valor legal (decisión del dueño, 2026-09-01): se captura el lienzo ya dibujado
+    // como PNG y se sube a S3 con su referencia guardada en la base (ver mapaPreguntas.ts,
+    // PREGUNTA_FIRMA_TERMINOS). Si falla, NO bloquea el avance: el trazo ya quedó en el estado del
+    // flujo (onSaveSignature de arriba), la persona sigue igual — solo no queda además respaldado.
+    const pngFirma = await signatureRef.current?.capturarComoPng();
+    if (pngFirma && signature) {
+      await guardarFirma({
+        flow: 'terminos',
+        questionId: PREGUNTA_FIRMA_TERMINOS.id,
+        questionKey: PREGUNTA_FIRMA_TERMINOS.clave,
+        pngUri: pngFirma,
+        trazosOriginales: signature.data,
+      });
+    }
+
+    await aceptarHito('TERMINOS');
+    await avanzarEstado({ flow: 'terminos', section: 'aceptacion', step: 0 });
+
     onAccept();
   };
 
@@ -152,6 +184,7 @@ export function TerminosScreen({
         {/* Signature Box */}
         <View style={[styles.signatureCard, { backgroundColor: c.cardBg, borderColor: c.border }]}>
           <SignatureCanvas
+            ref={signatureRef}
             onSignatureChange={handleSignatureChange}
             label="FIRMA DE ACEPTACIÓN LEGAL (CON TU DEDO)"
             initialSignature={savedSignature}

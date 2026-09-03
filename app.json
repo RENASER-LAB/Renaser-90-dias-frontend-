@@ -22,7 +22,16 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-font"
+      "expo-font",
+      "expo-web-browser",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Renaser necesita acceder a tus fotos para que puedas adjuntar una imagen a tus publicaciones del Muro."
+        }
+      ],
+      "expo-image"
     ]
   }
 }

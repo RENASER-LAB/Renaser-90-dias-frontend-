@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { forwardRef, useImperativeHandle, useState, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   GestureResponderEvent,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { captureRef } from 'react-native-view-shot';
 import { useTheme } from '../theme/ThemeContext';
 import { Icon } from './Icon';
 import { MicroLabel } from './ui';
@@ -36,14 +37,32 @@ interface SignatureCanvasProps {
   hideHeader?: boolean;
 }
 
-export function SignatureCanvas({
-  initialSignature,
-  onSignatureChange,
-  label = 'FIRMA DIGITAL SOLEMNE (CON TU DEDO)',
-  error,
-  hideControls = false,
-  hideHeader = false,
-}: SignatureCanvasProps) {
+/**
+ * Handle imperativo para capturar el lienzo desde fuera (`TerminosScreen`/`PactoScreen`, al subir
+ * la firma como evidencia legal a S3 — ver CLAUDE.md de la tarea "firmas del onboarding"). No
+ * cambia nada del dibujo ni del estilo: solo agrega la capacidad de "sacarle una foto" al recuadro
+ * ya existente.
+ */
+export interface SignatureCanvasHandle {
+  /**
+   * Captura el recuadro de la firma (el `canvasBox`, con sus trazos ya dibujados) como PNG y
+   * devuelve la URI del archivo temporal. `null` si todavía no hay ningún trazo — capturar un
+   * lienzo vacío no tendría valor legal ninguno.
+   */
+  capturarComoPng: () => Promise<string | null>;
+}
+
+export const SignatureCanvas = forwardRef<SignatureCanvasHandle, SignatureCanvasProps>(function SignatureCanvas(
+  {
+    initialSignature,
+    onSignatureChange,
+    label = 'FIRMA DIGITAL SOLEMNE (CON TU DEDO)',
+    error,
+    hideControls = false,
+    hideHeader = false,
+  },
+  ref
+) {
   const { c, t } = useTheme();
 
   const [paths, setPaths] = useState<string[]>(() => {
@@ -56,8 +75,37 @@ export function SignatureCanvas({
   const currentPathRef = useRef<string>('');
   const pathsRef = useRef<string[]>(paths);
   pathsRef.current = paths;
+  // Ref al recuadro visible (borde + fondo + trazos SVG) — es exactamente lo que se captura como
+  // PNG, ni más ni menos que lo que la persona ve dibujado en pantalla.
+  const canvasBoxRef = useRef<View>(null);
 
   const hasSignature = paths.length > 0;
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      capturarComoPng: async () => {
+        if (pathsRef.current.length === 0 || !canvasBoxRef.current) return null;
+        // PNG, no el SVG vectorial: es evidencia legal y tiene que poder abrirse en cualquier
+        // visor de imágenes, adjuntarse a un correo o pegarse en un PDF sin depender de un
+        // navegador (decisión del dueño del producto, ver CLAUDE.md de la tarea).
+        //
+        // El try/catch NO es defensivo por costumbre: en web `captureRef` usa html2canvas, que
+        // puede fallar por razones ajenas a la firma. Si dejáramos escapar la excepción, tumbaría
+        // la pantalla entera de Términos o del Pacto — o sea que un problema al RESPALDAR la firma
+        // impediría firmar. Devolver `null` es lo que ya declara el contrato del método, y quien
+        // llama sabe qué hacer con eso: seguir sin respaldo, y en el Pacto, no marcar el hito.
+        try {
+          return await captureRef(canvasBoxRef, { format: 'png', quality: 1 });
+        } catch (error) {
+          // Nunca la imagen ni la URL: solo que falló y dónde.
+          console.warn('[firma] no se pudo capturar el lienzo como PNG', error);
+          return null;
+        }
+      },
+    }),
+    []
+  );
 
   // PanResponder with anti-interception flags for Android & Xiaomi
   const panResponder = useMemo(
@@ -129,6 +177,11 @@ export function SignatureCanvas({
 
       {/* Drawing Canvas */}
       <View
+        ref={canvasBoxRef}
+        // `collapsable={false}`: en Android, react-native-view-shot necesita que la vista a
+        // capturar exista de verdad en el árbol nativo (si no, la "optimiza" fuera y la captura
+        // sale vacía). No es un estilo, no cambia nada visual.
+        collapsable={false}
         style={[
           styles.canvasBox,
           {
@@ -187,7 +240,7 @@ export function SignatureCanvas({
       )}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

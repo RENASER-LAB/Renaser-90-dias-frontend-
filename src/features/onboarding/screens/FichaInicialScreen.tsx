@@ -6,6 +6,8 @@ import { useResponsive } from '../../../theme/responsive';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { FichaInicialData } from '../types/onboarding.types';
 import { CHAPTERS_CONFIG, INITIAL_FICHA_DATA } from '../data/chaptersConfig';
+import { mapearIdentidad, mapearSalud, mapearConsentimiento } from '../data/mapaPreguntas';
+import { usePersistenciaOnboarding } from '../hooks/usePersistenciaOnboarding';
 import { OnboardingStepBar } from '../components/OnboardingStepBar';
 import { ChapterIdentidad } from '../components/ChapterIdentidad';
 import { ChapterSalud } from '../components/ChapterSalud';
@@ -13,6 +15,9 @@ import { ChapterConsentimiento } from '../components/ChapterConsentimiento';
 import { Icon } from '../../../components/Icon';
 import { MicroLabel } from '../../../components/ui';
 import { GoldButton } from '../../../components/GoldButton';
+
+/** Clave de sección del catálogo (`renaser.secciones_onboarding`, flujo `ficha_inicial`) por capítulo. */
+const SECCION_POR_CAPITULO = ['identidad_operativa', 'cuerpo', 'compromiso_y_cierre'] as const;
 
 interface FichaInicialScreenProps {
   initialUserName?: string;
@@ -29,6 +34,7 @@ export function FichaInicialScreen({
 }: FichaInicialScreenProps) {
   const { c, t, mode, toggle } = useTheme();
   const { isSmall, isTablet } = useResponsive();
+  const { guardarCapitulo, avanzarEstado } = usePersistenciaOnboarding();
 
   const [currentChapter, setCurrentChapter] = useState(0);
   const [formData, setFormData] = useState<FichaInicialData>({
@@ -89,8 +95,26 @@ export function FichaInicialScreen({
     return true;
   };
 
-  const handleNext = () => {
+  /** Respuestas del capítulo activo, ya traducidas a lo que espera `POST /onboarding/answers`. */
+  const respuestasDelCapitulo = (chapter: number) => {
+    if (chapter === 0) return mapearIdentidad(formData.identidad);
+    if (chapter === 1) return mapearSalud(formData.salud);
+    return mapearConsentimiento(formData.consentimiento);
+  };
+
+  const handleNext = async () => {
     if (!validateChapter()) return;
+
+    // Guardar de verdad, capítulo por capítulo: si la persona abandona después de este punto, lo
+    // que ya llenó no se pierde. Un fallo de red no bloquea el avance (ver usePersistenciaOnboarding).
+    await guardarCapitulo(respuestasDelCapitulo(currentChapter));
+    const porcentaje = Math.round(((currentChapter + 1) / CHAPTERS_CONFIG.length) * 100);
+    await avanzarEstado({
+      flow: 'ficha_inicial',
+      section: SECCION_POR_CAPITULO[currentChapter],
+      step: currentChapter,
+      flowProgress: JSON.stringify({ chapter: currentChapter, totalChapters: CHAPTERS_CONFIG.length, porcentaje }),
+    });
 
     if (isLastChapter) {
       onComplete(formData);
