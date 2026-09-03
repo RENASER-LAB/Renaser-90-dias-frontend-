@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Alert,
   Image,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../theme/ThemeContext';
@@ -337,7 +338,8 @@ const METRICAS = [
 ];
 
 export default function ComunidadScreen() {
-  const { c, t } = useTheme();
+  const { c, t, mode } = useTheme();
+  const isDark = mode === 'dark';
   const { rs, isTablet, horizontalPadding } = useResponsive();
   const { user } = useAuth();
   const mentorPhoto = rs(50);
@@ -460,6 +462,42 @@ export default function ComunidadScreen() {
   }, [allCourseLessons, currentLessonIndex]);
 
   const isLastLesson = currentLessonIndex >= 0 && currentLessonIndex === allCourseLessons.length - 1;
+
+  // Persistencia local de lecciones completadas para sincronía visual en catálogo y detalle
+  const claveStorageCompletadas = `renaser.academy.lecciones_completadas.${user?.id || 'anon'}`;
+  const [completadasLocal, setCompletadasLocal] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    let montado = true;
+    AsyncStorage.getItem(claveStorageCompletadas)
+      .then(raw => {
+        if (raw && montado) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object') {
+              setCompletadasLocal(parsed);
+            }
+          } catch {}
+        }
+      })
+      .catch(() => {});
+    return () => {
+      montado = false;
+    };
+  }, [claveStorageCompletadas]);
+
+  const esLeccionCompletada = (leccionId: string, indexGlobal?: number): boolean => {
+    if (completadasLocal[leccionId] === false) return false;
+    if (completadasLocal[leccionId] === true) return true;
+    if (detalleLeccionPorId[leccionId]?.completed === true) return true;
+    if (selectedCourse && typeof indexGlobal === 'number' && allCourseLessons.length > 0) {
+      const totalCompletadasBackend = Math.round((selectedCourse.progressPercent / 100) * allCourseLessons.length);
+      if (indexGlobal < totalCompletadasBackend) {
+        return true;
+      }
+    }
+    return false;
+  };
 
   // Detalle real de la lección abierta (video_url, cuerpo, recursos) — se pide aparte, recién al
   // tocar una lección, ver `handleAbrirLeccion` más abajo.
@@ -602,6 +640,23 @@ export default function ComunidadScreen() {
       );
       return;
     }
+
+    // Regla de progresión secuencial: no saltarse lecciones
+    const indexEnCurso = allCourseLessons.findIndex(l => l.id === lesson.id);
+    if (indexEnCurso > 0) {
+      const anterior = allCourseLessons[indexEnCurso - 1];
+      const anteriorCompleta = esLeccionCompletada(anterior.id, indexEnCurso - 1);
+      const estaCompleta = esLeccionCompletada(lesson.id, indexEnCurso);
+
+      if (!anteriorCompleta && !estaCompleta) {
+        Alert.alert(
+          'Lección no disponible 🔒',
+          `Para acceder a esta lección primero debes completar la lección anterior:\n\n"${anterior.title}"`
+        );
+        return;
+      }
+    }
+
     setFullScreenLesson(lesson);
     // Se pide en paralelo, no antes: la pantalla ya se abrió con lo que había en el árbol
     // (título, tipo, meta) — el video/cuerpo real llegan un instante después sin bloquear la
@@ -611,8 +666,14 @@ export default function ComunidadScreen() {
 
   const handleAlternarLeccionCompletada = async (leccion: LessonResource) => {
     try {
-      const estabaCompleta = !!leccion.completed;
+      const indexActual = allCourseLessons.findIndex(l => l.id === leccion.id);
+      const estabaCompleta = esLeccionCompletada(leccion.id, indexActual >= 0 ? indexActual : undefined);
       await alternarLeccionCompletada(leccion.id, estabaCompleta);
+
+      // Sincronizar persistencia local
+      const nuevoEstado = { ...completadasLocal, [leccion.id]: !estabaCompleta };
+      setCompletadasLocal(nuevoEstado);
+      void AsyncStorage.setItem(claveStorageCompletadas, JSON.stringify(nuevoEstado)).catch(() => {});
       void recargarCursos();
 
       if (estabaCompleta) {
@@ -1891,26 +1952,80 @@ export default function ComunidadScreen() {
                   {section.title}
                 </Text>
                 <View style={{ gap: 8, marginTop: 10 }}>
-                  {section.lessons.map(lesson => (
-                    <Pressable
-                      key={lesson.id}
-                      onPress={() => handleAbrirLeccion(lesson)}
-                      style={[styles.lessonItemRow, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
-                    >
-                      <View style={[styles.resourceTypeIcon, { borderColor: c.gold, backgroundColor: c.bg }]}>
-                        <Text style={{ fontSize: 13 }}>
-                          {lesson.type === 'video' ? '🎥' : lesson.type === 'doc' ? '📄' : lesson.type === 'link' ? '🔗' : '✍️'}
-                        </Text>
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 12.5 }]}>
-                          {lesson.title}
-                        </Text>
-                        <Text style={[t.micro, { color: c.micro, fontSize: 9.5 }]}>{lesson.meta}</Text>
-                      </View>
-                      <Icon name="chevron" size={12} color={c.gold} />
-                    </Pressable>
-                  ))}
+                  {section.lessons.map(lesson => {
+                    const globalIdx = allCourseLessons.findIndex(l => l.id === lesson.id);
+                    const completada = esLeccionCompletada(lesson.id, globalIdx >= 0 ? globalIdx : undefined);
+                    const anteriorCompleta = globalIdx > 0 ? esLeccionCompletada(allCourseLessons[globalIdx - 1].id, globalIdx - 1) : true;
+                    const bloqueadaPorSecuencia = globalIdx > 0 && !anteriorCompleta && !completada;
+                    const bloqueada = !!lesson.locked || bloqueadaPorSecuencia;
+
+                    return (
+                      <Pressable
+                        key={lesson.id}
+                        onPress={() => handleAbrirLeccion(lesson)}
+                        style={[
+                          styles.lessonItemRow,
+                          {
+                            borderColor: completada ? c.gold : c.border,
+                            backgroundColor: completada
+                              ? (isDark ? 'rgba(212,160,23,0.12)' : 'rgba(212,160,23,0.08)')
+                              : c.cardBgAlt,
+                          },
+                          bloqueada && { opacity: 0.5 },
+                        ]}
+                      >
+                        <View
+                          style={[
+                            styles.resourceTypeIcon,
+                            {
+                              borderColor: completada ? c.gold : c.border,
+                              backgroundColor: completada ? 'rgba(212,160,23,0.18)' : c.bg,
+                            },
+                          ]}
+                        >
+                          <Text style={{ fontSize: 13 }}>
+                            {bloqueada
+                              ? '🔒'
+                              : lesson.type === 'video'
+                              ? '🎥'
+                              : lesson.type === 'doc'
+                              ? '📄'
+                              : lesson.type === 'link'
+                              ? '🔗'
+                              : '✍️'}
+                          </Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text
+                            style={[
+                              t.cardTitle,
+                              {
+                                color: completada ? c.gold : c.textStrong,
+                                fontSize: 12.5,
+                                fontWeight: completada ? '700' : '600',
+                              },
+                            ]}
+                          >
+                            {lesson.title}
+                          </Text>
+                          <Text style={[t.micro, { color: completada ? c.gold : c.micro, fontSize: 9.5 }]}>
+                            {completada ? '✓ Completada' : lesson.meta}
+                          </Text>
+                        </View>
+                        {completada ? (
+                          <View style={[styles.completedBadgePill, { borderColor: c.gold, backgroundColor: 'rgba(212,160,23,0.15)' }]}>
+                            <Text style={[t.micro, { color: c.gold, fontWeight: '800', fontSize: 9 }]}>
+                              ✓ HECHO
+                            </Text>
+                          </View>
+                        ) : bloqueada ? (
+                          <Text style={{ fontSize: 13 }}>🔒</Text>
+                        ) : (
+                          <Icon name="chevron" size={12} color={c.gold} />
+                        )}
+                      </Pressable>
+                    );
+                  })}
                 </View>
               </View>
             ))}
@@ -1997,7 +2112,7 @@ export default function ComunidadScreen() {
             )}
 
             <GoldButton
-              label={leccionMostrada.completed ? '↺ QUITAR DE COMPLETADAS' : '✓ MARCAR LECCIÓN COMO COMPLETADA'}
+              label={esLeccionCompletada(leccionMostrada.id, currentLessonIndex) ? '↺ QUITAR DE COMPLETADAS' : '✓ MARCAR LECCIÓN COMO COMPLETADA'}
               loading={actualizandoCompletado}
               onPress={() => handleAlternarLeccionCompletada(leccionMostrada)}
               style={{ width: '100%', marginTop: 16 }}
@@ -2027,25 +2142,79 @@ export default function ComunidadScreen() {
 
               {nextLesson ? (
                 <Pressable
-                  onPress={() => handleAbrirLeccion(nextLesson)}
-                  style={[styles.exploreBtn, { flex: 1, borderColor: c.gold, backgroundColor: c.cardBgAlt, paddingVertical: 10 }]}
+                  onPress={() => {
+                    const estaCompleta = esLeccionCompletada(leccionMostrada.id, currentLessonIndex);
+                    if (!estaCompleta) {
+                      Alert.alert(
+                        'Lección pendiente 🔒',
+                        'Para poder avanzar debes marcar esta lección como completada.'
+                      );
+                      return;
+                    }
+                    handleAbrirLeccion(nextLesson);
+                  }}
+                  style={[
+                    styles.exploreBtn,
+                    {
+                      flex: 1,
+                      borderColor: esLeccionCompletada(leccionMostrada.id, currentLessonIndex) ? c.gold : c.border,
+                      backgroundColor: c.cardBgAlt,
+                      paddingVertical: 10,
+                      opacity: esLeccionCompletada(leccionMostrada.id, currentLessonIndex) ? 1 : 0.6,
+                    },
+                  ]}
                   hitSlop={6}
                 >
-                  <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>
-                    SIGUIENTE ›
+                  <Text
+                    style={[
+                      t.micro,
+                      {
+                        color: esLeccionCompletada(leccionMostrada.id, currentLessonIndex) ? c.gold : c.textSoft,
+                        fontWeight: '700',
+                      },
+                    ]}
+                  >
+                    {esLeccionCompletada(leccionMostrada.id, currentLessonIndex) ? 'SIGUIENTE ›' : 'SIGUIENTE 🔒'}
                   </Text>
                 </Pressable>
               ) : isLastLesson ? (
                 <Pressable
                   onPress={() => {
+                    const estaCompleta = esLeccionCompletada(leccionMostrada.id, currentLessonIndex);
+                    if (!estaCompleta) {
+                      Alert.alert(
+                        'Última lección pendiente 🔒',
+                        'Debes marcar la última lección como completada para finalizar el curso.'
+                      );
+                      return;
+                    }
                     setFullScreenLesson(null);
                     setSelectedCourseId(null);
                   }}
-                  style={[styles.exploreBtn, { flex: 1, borderColor: c.gold, backgroundColor: 'rgba(212,160,23,0.12)', paddingVertical: 10 }]}
+                  style={[
+                    styles.exploreBtn,
+                    {
+                      flex: 1,
+                      borderColor: esLeccionCompletada(leccionMostrada.id, currentLessonIndex) ? c.gold : c.border,
+                      backgroundColor: esLeccionCompletada(leccionMostrada.id, currentLessonIndex)
+                        ? 'rgba(212,160,23,0.12)'
+                        : c.cardBgAlt,
+                      paddingVertical: 10,
+                      opacity: esLeccionCompletada(leccionMostrada.id, currentLessonIndex) ? 1 : 0.6,
+                    },
+                  ]}
                   hitSlop={6}
                 >
-                  <Text style={[t.micro, { color: c.gold, fontWeight: '800' }]}>
-                    FINALIZAR ›
+                  <Text
+                    style={[
+                      t.micro,
+                      {
+                        color: esLeccionCompletada(leccionMostrada.id, currentLessonIndex) ? c.gold : c.textSoft,
+                        fontWeight: '800',
+                      },
+                    ]}
+                  >
+                    {esLeccionCompletada(leccionMostrada.id, currentLessonIndex) ? 'FINALIZAR ›' : 'FINALIZAR 🔒'}
                   </Text>
                 </Pressable>
               ) : (
@@ -3158,6 +3327,14 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 8,
     borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  completedBadgePill: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
     alignItems: 'center',
     justifyContent: 'center',
   },
