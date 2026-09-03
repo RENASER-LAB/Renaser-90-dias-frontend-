@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -26,6 +26,7 @@ import { useMiCelula } from '../features/community/hooks/useMiCelula';
 import * as wallApi from '../features/community/api/wallApi';
 import { elegirYNormalizarFotoMuro, type FotoMuroNormalizada } from '../features/community/utils/normalizarImagen';
 import { FotoMuro } from '../features/community/components/FotoMuro';
+import { ImageViewerModal, type ImageViewerItem } from '../features/community/components/ImageViewerModal';
 import { useCursos } from '../features/academy/hooks/useCursos';
 import { CursoPortada } from '../features/academy/components/CursoPortada';
 import { useLeccionDetalle } from '../features/academy/hooks/useLeccionDetalle';
@@ -546,6 +547,43 @@ export default function ComunidadScreen() {
     error: errorReacciones,
     cargarReacciones,
   } = useWallReactions();
+
+  // Visor de Fotos a Pantalla Completa estilo Facebook / X
+  const [imageViewerVisible, setImageViewerVisible] = useState(false);
+  const [imageViewerData, setImageViewerData] = useState<{
+    images: ImageViewerItem[];
+    initialIndex: number;
+    authorName?: string;
+    timeAgo?: string;
+    postText?: string;
+  }>({
+    images: [],
+    initialIndex: 0,
+    authorName: '',
+    timeAgo: '',
+    postText: '',
+  });
+
+  const abrirVisorFotos = useCallback((post: PostItem, indexSeleccionado: number = 0) => {
+    const items: ImageViewerItem[] = post.media
+      .filter(m => !m.mimeType?.startsWith('video/'))
+      .map(m => ({
+        url: m.url,
+        mimeType: m.mimeType,
+        title: m.title,
+      }));
+
+    if (items.length === 0) return;
+
+    setImageViewerData({
+      images: items,
+      initialIndex: Math.min(indexSeleccionado, items.length - 1),
+      authorName: post.author,
+      timeAgo: post.timeAgo,
+      postText: post.text,
+    });
+    setImageViewerVisible(true);
+  }, []);
 
   // Sub-módulo: Entorno Renaser (Tickets al Mentor y Chats de Comunidad)
   const tieneGrupo = miCelula?.assigned === true && tieneMentor;
@@ -1422,7 +1460,10 @@ export default function ComunidadScreen() {
                     {post.media.length > 0 && (
                       <View style={[styles.mediaGridContainer, { marginTop: 10 }]}>
                         {post.media.length === 1 ? (
-                          <View style={[styles.mediaSingleBox, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}>
+                          <Pressable
+                            onPress={() => abrirVisorFotos(post, 0)}
+                            style={[styles.mediaSingleBox, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}
+                          >
                             <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 11 }]}>
                               {post.media[0].title}
                             </Text>
@@ -1434,21 +1475,28 @@ export default function ComunidadScreen() {
                               radioBorde={12}
                               colorFondo={c.cardBgAlt}
                             />
-                          </View>
+                          </Pressable>
                         ) : post.media.length === 2 ? (
                           <View style={{ flexDirection: 'row', gap: 6 }}>
                             {post.media.map((m, idx) => (
-                              <View key={idx} style={[styles.mediaHalfBox, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}>
+                              <Pressable
+                                key={idx}
+                                onPress={() => abrirVisorFotos(post, idx)}
+                                style={[styles.mediaHalfBox, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}
+                              >
                                 <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 10 }]}>
                                   {m.title}
                                 </Text>
                                 <FotoMuro url={m.url} mimeType={m.mimeType} radioBorde={10} colorFondo={c.cardBgAlt} />
-                              </View>
+                              </Pressable>
                             ))}
                           </View>
                         ) : (
                           <View style={{ flexDirection: 'row', gap: 6, height: 130 }}>
-                            <View style={[styles.mediaLargeLeft, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}>
+                            <Pressable
+                              onPress={() => abrirVisorFotos(post, 0)}
+                              style={[styles.mediaLargeLeft, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}
+                            >
                               <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 11 }]}>
                                 {post.media[0].title}
                               </Text>
@@ -1458,15 +1506,19 @@ export default function ComunidadScreen() {
                                 radioBorde={10}
                                 colorFondo={c.cardBgAlt}
                               />
-                            </View>
+                            </Pressable>
                             <View style={{ flex: 1, gap: 6 }}>
                               {post.media.slice(1, 3).map((m, idx) => (
-                                <View key={idx} style={[styles.mediaSmallRight, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}>
+                                <Pressable
+                                  key={idx}
+                                  onPress={() => abrirVisorFotos(post, idx + 1)}
+                                  style={[styles.mediaSmallRight, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}
+                                >
                                   <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 9.5 }]}>
                                     {m.title}
                                   </Text>
                                   <FotoMuro url={m.url} mimeType={m.mimeType} radioBorde={8} colorFondo={c.cardBgAlt} />
-                                </View>
+                                </Pressable>
                               ))}
                             </View>
                           </View>
@@ -3308,6 +3360,17 @@ export default function ComunidadScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Visor de Fotos a Pantalla Completa estilo Facebook / X */}
+      <ImageViewerModal
+        visible={imageViewerVisible}
+        onClose={() => setImageViewerVisible(false)}
+        images={imageViewerData.images}
+        initialIndex={imageViewerData.initialIndex}
+        authorName={imageViewerData.authorName}
+        timeAgo={imageViewerData.timeAgo}
+        postText={imageViewerData.postText}
+      />
     </SafeAreaView>
   );
 }
