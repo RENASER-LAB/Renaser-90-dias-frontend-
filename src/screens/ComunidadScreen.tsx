@@ -31,6 +31,7 @@ import { CursoPortada } from '../features/academy/components/CursoPortada';
 import { useLeccionDetalle } from '../features/academy/hooks/useLeccionDetalle';
 import { LeccionVideoPlayer } from '../features/academy/components/LeccionVideoPlayer';
 import { useChatConversaciones } from '../features/chat/hooks/useChatConversaciones';
+import { useTicketsMentor } from '../features/tickets/hooks/useTicketsMentor';
 import { ApiError, mensajeDeError } from '../services/http/apiClient';
 
 // =========================================================================
@@ -328,7 +329,7 @@ const GIF_OPTIONS = [
 const SOPORTE: { icon: IconName; label: string }[] = [
   { icon: 'clock', label: 'Eventos &\nExperiencias' },
   { icon: 'stack', label: 'Recursos\nExclusivos' },
-  { icon: 'user', label: 'Atención\nPersonalizada' },
+  { icon: 'user', label: 'Entorno\nRenaser' },
 ];
 
 const METRICAS = [
@@ -546,10 +547,59 @@ export default function ComunidadScreen() {
     cargarReacciones,
   } = useWallReactions();
 
+  // Sub-módulo: Entorno Renaser (Tickets al Mentor y Chats de Comunidad)
+  const tieneGrupo = miCelula?.assigned === true && tieneMentor;
+  const [entornoTab, setEntornoTab] = useState<'tickets' | 'chats'>('tickets');
+  const [modalNuevoTicketVisible, setModalNuevoTicketVisible] = useState(false);
+  const [ticketBloqueo, setTicketBloqueo] = useState('');
+  const [ticketSoluciones, setTicketSoluciones] = useState('');
+  const [ticketImpactoSmart, setTicketImpactoSmart] = useState('');
+
+  const {
+    tickets: ticketsMentor,
+    loading: ticketsCargando,
+    error: ticketsError,
+    creando: ticketCreando,
+    crearTicket: enviarTicketMentor,
+    recargar: recargarTickets,
+  } = useTicketsMentor(inAtencionPersonalizada);
+
+  const handleEnviarTicket = async () => {
+    if (!ticketBloqueo.trim() || !ticketSoluciones.trim() || !ticketImpactoSmart.trim()) {
+      Alert.alert(
+        'Campos requeridos',
+        'Por favor responde a las 3 preguntas clave para que tu mentor pueda orientarte adecuadamente.'
+      );
+      return;
+    }
+
+    try {
+      await enviarTicketMentor({
+        blockDescription: ticketBloqueo.trim(),
+        attemptedSolutions: ticketSoluciones.trim(),
+        smartGoalImpact: ticketImpactoSmart.trim(),
+      });
+      setTicketBloqueo('');
+      setTicketSoluciones('');
+      setTicketImpactoSmart('');
+      setModalNuevoTicketVisible(false);
+      Alert.alert(
+        '¡Ticket Enviado! 🎫🦅',
+        'Tu mentor asignado ha recibido tu consulta estructurada y te responderá en este mismo espacio.'
+      );
+    } catch (e) {
+      Alert.alert('No se pudo enviar el ticket', mensajeDeError(e, 'Intenta de nuevo en un momento.'));
+    }
+  };
+
   // =========================================================================
   // GESTOS TÁCTILES DEL SISTEMA (BACKHANDLER)
   // =========================================================================
   useSystemBackHandler(() => {
+    if (modalNuevoTicketVisible) {
+      setModalNuevoTicketVisible(false);
+      return true;
+    }
     if (selectedMemberProfile !== null) {
       setSelectedMemberProfile(null);
       return true;
@@ -595,13 +645,13 @@ export default function ComunidadScreen() {
       return true;
     }
     return false;
-  }, inAtencionPersonalizada || inEventosExperiencias || inExclusiveResources || selectedCourse !== null || fullScreenLesson !== null || createPostModalVisible || reactionsModalVisible || activeChat !== null || groupInfoVisible || selectedMemberProfile !== null);
+  }, modalNuevoTicketVisible || inAtencionPersonalizada || inEventosExperiencias || inExclusiveResources || selectedCourse !== null || fullScreenLesson !== null || createPostModalVisible || reactionsModalVisible || activeChat !== null || groupInfoVisible || selectedMemberProfile !== null);
 
   // =========================================================================
   // HANDLERS
   // =========================================================================
   const handleSoportePress = (label: string) => {
-    if (label.includes('Atención')) {
+    if (label.includes('Entorno') || label.includes('Atención')) {
       setInAtencionPersonalizada(true);
     } else if (label.includes('Eventos')) {
       setInEventosExperiencias(true);
@@ -1136,8 +1186,8 @@ export default function ComunidadScreen() {
                         width: medallionSize,
                         height: medallionSize,
                         borderRadius: medallionSize / 2,
-                        borderColor: s.label.includes('Atención') || s.label.includes('Eventos') || s.label.includes('Recursos') ? c.gold : c.border,
-                        backgroundColor: s.label.includes('Atención') || s.label.includes('Eventos') || s.label.includes('Recursos') ? c.cardBgAlt : c.cardBg,
+                        borderColor: s.label.includes('Entorno') || s.label.includes('Atención') || s.label.includes('Eventos') || s.label.includes('Recursos') ? c.gold : c.border,
+                        backgroundColor: s.label.includes('Entorno') || s.label.includes('Atención') || s.label.includes('Eventos') || s.label.includes('Recursos') ? c.cardBgAlt : c.cardBg,
                       },
                     ]}
                   >
@@ -2264,99 +2314,306 @@ export default function ComunidadScreen() {
 
             <View style={[styles.categoryPillBadge, { borderColor: c.borderStrong, backgroundColor: c.cardBgAlt }]}>
               <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 9.5 }]}>
-                ATENCIÓN & CHATS
+                ENTORNO RENASER
               </Text>
             </View>
           </View>
 
-          {/* Selector de las 3 Categorías de Chat (Global, Célula, Miembros 1 a 1) */}
-          <View style={[styles.tabsRow, { borderColor: c.border, backgroundColor: c.cardBg }]}>
+          {/* Selector de Pestaña Principal: TICKETS AL MENTOR vs CHATS */}
+          <View style={[styles.tabsRow, { borderColor: c.border, backgroundColor: c.cardBg, marginBottom: 12 }]}>
             <Pressable
-              onPress={() => setChatCategory('celula')}
-              style={[styles.tabBtn, chatCategory === 'celula' && { backgroundColor: c.gold }]}
+              onPress={() => setEntornoTab('tickets')}
+              style={[styles.tabBtn, entornoTab === 'tickets' && { backgroundColor: c.gold }]}
             >
-              <Text style={[t.micro, { color: chatCategory === 'celula' ? '#1E1B18' : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
-                👥 CÉLULA
+              <Text style={[t.micro, { color: entornoTab === 'tickets' ? '#1E1B18' : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
+                🎫 TICKETS AL MENTOR
               </Text>
             </Pressable>
 
             <Pressable
-              onPress={() => setChatCategory('miembros')}
-              style={[styles.tabBtn, chatCategory === 'miembros' && { backgroundColor: c.gold }]}
+              onPress={() => setEntornoTab('chats')}
+              style={[styles.tabBtn, entornoTab === 'chats' && { backgroundColor: c.gold }]}
             >
-              <Text style={[t.micro, { color: chatCategory === 'miembros' ? '#1E1B18' : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
-                💬 DIRECTOS
-              </Text>
-            </Pressable>
-
-            <Pressable
-              onPress={() => setChatCategory('global')}
-              style={[styles.tabBtn, chatCategory === 'global' && { backgroundColor: c.gold }]}
-            >
-              <Text style={[t.micro, { color: chatCategory === 'global' ? '#1E1B18' : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
-                🌐 GLOBAL
+              <Text style={[t.micro, { color: entornoTab === 'chats' ? '#1E1B18' : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
+                💬 CHATS COMUNIDAD
               </Text>
             </Pressable>
           </View>
 
-          {/* Estados de carga/error del listado real — mismo criterio que el Muro (texto con los
-              tokens que ya usa el resto de la pantalla, sin componentes nuevos). */}
-          {conversacionesCargando && conversations.length === 0 && (
-            <Text style={[t.micro, { color: c.textSoft, textAlign: 'center', marginTop: 16 }]}>
-              Cargando tus conversaciones...
-            </Text>
-          )}
-          {conversacionesError && (
-            <Text style={[t.micro, { color: '#f28e8e', textAlign: 'center', marginTop: 16 }]}>
-              {conversacionesError}
-            </Text>
-          )}
-          {!conversacionesCargando && !conversacionesError && filteredConversations.length === 0 && (
-            <Text style={[t.micro, { color: c.textSoft, textAlign: 'center', marginTop: 16 }]}>
-              Todavía no tenés conversaciones acá.
-            </Text>
-          )}
-
-          {/* Lista de Conversaciones Activas */}
-          <View style={{ gap: 10, paddingTop: 12, paddingBottom: 28 }}>
-            {filteredConversations.map(conv => (
-              <Pressable
-                key={conv.id}
-                onPress={() => handleAbrirChat(conv)}
-                style={[
-                  styles.chatConvCard,
-                  {
-                    borderColor: conv.type === 'celula' ? c.gold : c.border,
-                    backgroundColor: conv.type === 'celula' ? c.cardBgAlt : c.cardBg,
-                  },
-                ]}
-              >
-                <View style={[styles.convAvatarBox, { borderColor: c.gold, backgroundColor: c.bg }]}>
-                  <Text style={{ fontSize: 18 }}>{conv.avatar}</Text>
-                  {conv.isOnline && <View style={styles.onlineBadgeDot} />}
-                </View>
-
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>{conv.title}</Text>
-                    <Text style={[t.micro, { color: c.gold, fontSize: 9.5, fontWeight: '700' }]}>{conv.lastTime}</Text>
+          {/* ========================================================================= */}
+          {/* PESTAÑA 1: TICKETS AL MENTOR (CON VALIDACIÓN DE GRUPO/CÉLULA)             */}
+          {/* ========================================================================= */}
+          {entornoTab === 'tickets' && (
+            <View style={{ gap: 12, paddingBottom: 28 }}>
+              {/* Tarjeta Informativa de Mentor */}
+              <View style={[styles.sectionCard, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <View style={{ flex: 1, paddingRight: 8 }}>
+                    <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 0.8 }]}>
+                      SISTEMA DE TICKETS SMART
+                    </Text>
+                    <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13.5, marginTop: 4 }]}>
+                      {tieneMentor && miCelula?.assigned === true ? `Mentor asignado: ${mentorTitulo}` : 'Sin mentor asignado'}
+                    </Text>
                   </View>
-                  <Text numberOfLines={1} style={[t.body, { color: c.textSoft, fontSize: 11.5, marginTop: 2 }]}>
-                    {conv.lastMessage}
-                  </Text>
-                  <Text style={[t.micro, { color: c.micro, fontSize: 9.5, marginTop: 1 }]}>
-                    {conv.subtitle}
-                  </Text>
-                </View>
-
-                {conv.unreadCount > 0 && (
-                  <View style={[styles.unreadBadgePill, { backgroundColor: c.gold }]}>
-                    <Text style={{ color: '#1E1B18', fontWeight: '900', fontSize: 9.5 }}>{conv.unreadCount}</Text>
+                  <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(212,160,23,0.15)', borderWidth: 1, borderColor: c.gold, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 18 }}>🎫</Text>
                   </View>
-                )}
-              </Pressable>
-            ))}
-          </View>
+                </View>
+                <Text style={[t.body, { color: c.textSoft, fontSize: 11.5, marginTop: 6, lineHeight: 16 }]}>
+                  Envía preguntas estructuradas a tu mentor para desbloquear obstáculos en tus metas y plan de 90 días.
+                </Text>
+              </View>
+
+              {/* Validación de Prerrequisito: Debe pertenecer a un grupo/célula */}
+              {!tieneGrupo ? (
+                <View style={[styles.sectionCard, { borderColor: c.border, backgroundColor: c.cardBgAlt, padding: 18, alignItems: 'center' }]}>
+                  <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(212,160,23,0.12)', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                    <Text style={{ fontSize: 22 }}>🔒</Text>
+                  </View>
+                  <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 15, textAlign: 'center' }]}>
+                    Prerrequisito de Grupo Requerido
+                  </Text>
+                  <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, textAlign: 'center', marginTop: 8, lineHeight: 18 }]}>
+                    Para poder enviar un ticket con preguntas a tu mentor, es necesario pertenecer a una célula (grupo de trabajo) y tener un mentor asignado.
+                  </Text>
+                  <View style={{ marginTop: 14, padding: 10, borderRadius: 10, backgroundColor: isDark ? 'rgba(212,160,23,0.08)' : 'rgba(212,160,23,0.05)', width: '100%', borderWidth: 1, borderColor: c.border }}>
+                    <Text style={[t.micro, { color: c.gold, textAlign: 'center', fontWeight: '600', fontSize: 10.5 }]}>
+                      ℹ️ Tu célula se asignará durante el inicio de tu programa. En cuanto esté lista, este canal se activará para ti.
+                    </Text>
+                  </View>
+                </View>
+              ) : (
+                <>
+                  <GoldButton
+                    label="+ CREAR NUEVO TICKET AL MENTOR"
+                    onPress={() => setModalNuevoTicketVisible(true)}
+                    style={{ width: '100%' }}
+                  />
+
+                  {ticketsCargando && ticketsMentor.length === 0 && (
+                    <Text style={[t.micro, { color: c.textSoft, textAlign: 'center', marginTop: 16 }]}>
+                      Cargando tus tickets...
+                    </Text>
+                  )}
+
+                  {ticketsError && (
+                    <Text style={[t.micro, { color: '#f28e8e', textAlign: 'center', marginTop: 16 }]}>
+                      {ticketsError}
+                    </Text>
+                  )}
+
+                  {!ticketsCargando && !ticketsError && ticketsMentor.length === 0 && (
+                    <View style={[styles.sectionCard, { borderColor: c.border, backgroundColor: c.cardBgAlt, padding: 20, alignItems: 'center', marginTop: 4 }]}>
+                      <Text style={{ fontSize: 26, marginBottom: 8 }}>📝</Text>
+                      <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13.5, textAlign: 'center' }]}>
+                        No tienes tickets creados
+                      </Text>
+                      <Text style={[t.body, { color: c.textSoft, fontSize: 11.5, textAlign: 'center', marginTop: 6, lineHeight: 16 }]}>
+                        Cuando experimentes un obstáculo en tu avance, crea un ticket con las 3 preguntas clave para recibir la guía directa de tu mentor.
+                      </Text>
+                    </View>
+                  )}
+
+                  {ticketsMentor.map(ticket => (
+                    <View
+                      key={ticket.id}
+                      style={[
+                        styles.sectionCard,
+                        {
+                          borderColor: ticket.status === 'ANSWERED' ? c.gold : c.border,
+                          backgroundColor: c.cardBg,
+                        },
+                      ]}
+                    >
+                      {/* Cabecera de Estado y Fecha */}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                        <Text style={[t.micro, { color: c.micro, fontSize: 10 }]}>
+                          {new Date(ticket.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </Text>
+                        <View
+                          style={[
+                            styles.completedBadgePill,
+                            {
+                              borderColor: ticket.status === 'ANSWERED' ? '#4CAF50' : c.gold,
+                              backgroundColor: ticket.status === 'ANSWERED' ? 'rgba(76,175,80,0.15)' : 'rgba(212,160,23,0.15)',
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              t.micro,
+                              {
+                                color: ticket.status === 'ANSWERED' ? '#4CAF50' : c.gold,
+                                fontWeight: '800',
+                                fontSize: 9,
+                              },
+                            ]}
+                          >
+                            {ticket.status === 'ANSWERED' ? '✓ RESPONDIDO' : '⏳ PENDIENTE'}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Pregunta 1: Bloqueo */}
+                      <View style={{ marginBottom: 8 }}>
+                        <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 10 }]}>
+                          1. ¿CUÁL ES TU BLOQUEO O PREGUNTA?
+                        </Text>
+                        <Text style={[t.body, { color: c.textStrong, fontSize: 12.5, marginTop: 2, lineHeight: 17 }]}>
+                          {ticket.blockDescription}
+                        </Text>
+                      </View>
+
+                      {/* Pregunta 2: Soluciones intentadas */}
+                      <View style={{ marginBottom: 8 }}>
+                        <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 10 }]}>
+                          2. ¿QUÉ SOLUCIONES HAS INTENTADO?
+                        </Text>
+                        <Text style={[t.body, { color: c.textSoft, fontSize: 12, marginTop: 2, lineHeight: 17 }]}>
+                          {ticket.attemptedSolutions}
+                        </Text>
+                      </View>
+
+                      {/* Pregunta 3: Impacto SMART */}
+                      <View style={{ marginBottom: 8 }}>
+                        <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 10 }]}>
+                          3. ¿CÓMO IMPACTA EN TU META SMART?
+                        </Text>
+                        <Text style={[t.body, { color: c.textSoft, fontSize: 12, marginTop: 2, lineHeight: 17 }]}>
+                          {ticket.smartGoalImpact}
+                        </Text>
+                      </View>
+
+                      {/* Respuesta del Mentor */}
+                      {ticket.mentorAnswer && (
+                        <View
+                          style={{
+                            marginTop: 10,
+                            padding: 12,
+                            borderRadius: 12,
+                            backgroundColor: isDark ? 'rgba(212,160,23,0.12)' : 'rgba(212,160,23,0.08)',
+                            borderWidth: 1,
+                            borderColor: c.gold,
+                          }}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                            <Text style={[t.micro, { color: c.gold, fontWeight: '800', fontSize: 10.5 }]}>
+                              🦅 RESPUESTA DEL MENTOR
+                            </Text>
+                            {ticket.answeredAt && (
+                              <Text style={[t.micro, { color: c.micro, fontSize: 9.5 }]}>
+                                {new Date(ticket.answeredAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
+                              </Text>
+                            )}
+                          </View>
+                          <Text style={[t.body, { color: c.textStrong, fontSize: 12.5, lineHeight: 18 }]}>
+                            {ticket.mentorAnswer}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  ))}
+                </>
+              )}
+            </View>
+          )}
+
+          {/* ========================================================================= */}
+          {/* PESTAÑA 2: CHATS DE COMUNIDAD (CÉLULA, DIRECTOS, GLOBAL)                  */}
+          {/* ========================================================================= */}
+          {entornoTab === 'chats' && (
+            <>
+              {/* Selector de las 3 Categorías de Chat (Global, Célula, Miembros 1 a 1) */}
+              <View style={[styles.tabsRow, { borderColor: c.border, backgroundColor: c.cardBg }]}>
+                <Pressable
+                  onPress={() => setChatCategory('celula')}
+                  style={[styles.tabBtn, chatCategory === 'celula' && { backgroundColor: c.gold }]}
+                >
+                  <Text style={[t.micro, { color: chatCategory === 'celula' ? '#1E1B18' : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
+                    👥 CÉLULA
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => setChatCategory('miembros')}
+                  style={[styles.tabBtn, chatCategory === 'miembros' && { backgroundColor: c.gold }]}
+                >
+                  <Text style={[t.micro, { color: chatCategory === 'miembros' ? '#1E1B18' : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
+                    💬 DIRECTOS
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => setChatCategory('global')}
+                  style={[styles.tabBtn, chatCategory === 'global' && { backgroundColor: c.gold }]}
+                >
+                  <Text style={[t.micro, { color: chatCategory === 'global' ? '#1E1B18' : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
+                    🌐 GLOBAL
+                  </Text>
+                </Pressable>
+              </View>
+
+              {/* Estados de carga/error del listado real — mismo criterio que el Muro (texto con los
+                  tokens que ya usa el resto de la pantalla, sin componentes nuevos). */}
+              {conversacionesCargando && conversations.length === 0 && (
+                <Text style={[t.micro, { color: c.textSoft, textAlign: 'center', marginTop: 16 }]}>
+                  Cargando tus conversaciones...
+                </Text>
+              )}
+              {conversacionesError && (
+                <Text style={[t.micro, { color: '#f28e8e', textAlign: 'center', marginTop: 16 }]}>
+                  {conversacionesError}
+                </Text>
+              )}
+              {!conversacionesCargando && !conversacionesError && filteredConversations.length === 0 && (
+                <Text style={[t.micro, { color: c.textSoft, textAlign: 'center', marginTop: 16 }]}>
+                  Todavía no tenés conversaciones acá.
+                </Text>
+              )}
+
+              {/* Lista de Conversaciones Activas */}
+              <View style={{ gap: 10, paddingTop: 12, paddingBottom: 28 }}>
+                {filteredConversations.map(conv => (
+                  <Pressable
+                    key={conv.id}
+                    onPress={() => handleAbrirChat(conv)}
+                    style={[
+                      styles.chatConvCard,
+                      {
+                        borderColor: conv.type === 'celula' ? c.gold : c.border,
+                        backgroundColor: conv.type === 'celula' ? c.cardBgAlt : c.cardBg,
+                      },
+                    ]}
+                  >
+                    <View style={[styles.convAvatarBox, { borderColor: c.gold, backgroundColor: c.bg }]}>
+                      <Text style={{ fontSize: 18 }}>{conv.avatar}</Text>
+                      {conv.isOnline && <View style={styles.onlineBadgeDot} />}
+                    </View>
+
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>{conv.title}</Text>
+                        <Text style={[t.micro, { color: c.gold, fontSize: 9.5, fontWeight: '700' }]}>{conv.lastTime}</Text>
+                      </View>
+                      <Text numberOfLines={1} style={[t.body, { color: c.textSoft, fontSize: 11.5, marginTop: 2 }]}>
+                        {conv.lastMessage}
+                      </Text>
+                      <Text style={[t.micro, { color: c.micro, fontSize: 9.5, marginTop: 1 }]}>
+                        {conv.subtitle}
+                      </Text>
+                    </View>
+
+                    {conv.unreadCount > 0 && (
+                      <View style={[styles.unreadBadgePill, { backgroundColor: c.gold }]}>
+                        <Text style={{ color: '#1E1B18', fontWeight: '900', fontSize: 9.5 }}>{conv.unreadCount}</Text>
+                      </View>
+                    )}
+                  </Pressable>
+                ))}
+              </View>
+            </>
+          )}
         </ScrollView>
       )}
 
@@ -2966,6 +3223,91 @@ export default function ComunidadScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Modal: Crear Nuevo Ticket al Mentor (Entorno Renaser) */}
+      <Modal
+        visible={modalNuevoTicketVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setModalNuevoTicketVisible(false)}
+      >
+        <View style={styles.ticketModalOverlay}>
+          <View style={[styles.ticketModalContainer, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 15 }]}>
+                  Nuevo Ticket al Mentor 🎫
+                </Text>
+                <Pressable onPress={() => setModalNuevoTicketVisible(false)} hitSlop={8}>
+                  <Text style={{ fontSize: 18, color: c.textSoft }}>✕</Text>
+                </Pressable>
+              </View>
+
+              <Text style={[t.body, { color: c.textSoft, fontSize: 11.5, marginBottom: 12, lineHeight: 16 }]}>
+                Responde las 3 preguntas clave del método SMART para que tu mentor pueda desbloquear tu avance:
+              </Text>
+
+              {/* Pregunta 1 */}
+              <Text style={[t.micro, { color: c.gold, fontWeight: '700', marginBottom: 4 }]}>
+                1. ¿Cuál es tu bloqueo o pregunta específica? *
+              </Text>
+              <TextInput
+                value={ticketBloqueo}
+                onChangeText={setTicketBloqueo}
+                placeholder="Describe el obstáculo, duda o dificultad..."
+                placeholderTextColor={c.placeholderA}
+                multiline
+                style={[styles.ticketInput, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.text }]}
+              />
+
+              {/* Pregunta 2 */}
+              <Text style={[t.micro, { color: c.gold, fontWeight: '700', marginTop: 10, marginBottom: 4 }]}>
+                2. ¿Qué soluciones has intentado? *
+              </Text>
+              <TextInput
+                value={ticketSoluciones}
+                onChangeText={setTicketSoluciones}
+                placeholder="Indica qué acciones o pruebas realizaste antes..."
+                placeholderTextColor={c.placeholderA}
+                multiline
+                style={[styles.ticketInput, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.text }]}
+              />
+
+              {/* Pregunta 3 */}
+              <Text style={[t.micro, { color: c.gold, fontWeight: '700', marginTop: 10, marginBottom: 4 }]}>
+                3. ¿Cómo impacta en tu Meta SMART? *
+              </Text>
+              <TextInput
+                value={ticketImpactoSmart}
+                onChangeText={setTicketImpactoSmart}
+                placeholder="En qué medida atrasa o afecta tu meta principal..."
+                placeholderTextColor={c.placeholderA}
+                multiline
+                style={[styles.ticketInput, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.text }]}
+              />
+
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
+                <Pressable
+                  onPress={() => setModalNuevoTicketVisible(false)}
+                  style={[styles.exploreBtn, { flex: 1, borderColor: c.border, backgroundColor: c.cardBgAlt, paddingVertical: 12 }]}
+                >
+                  <Text style={[t.micro, { color: c.textSoft, fontWeight: '700' }]}>
+                    CANCELAR
+                  </Text>
+                </Pressable>
+
+                <View style={{ flex: 2 }}>
+                  <GoldButton
+                    label="ENVIAR TICKET"
+                    loading={ticketCreando}
+                    onPress={handleEnviarTicket}
+                  />
+                </View>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -3350,6 +3692,30 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 16,
     padding: 14,
+  },
+  ticketInput: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 13,
+    minHeight: 68,
+    textAlignVertical: 'top',
+    fontFamily: 'Jost_400Regular',
+  },
+  ticketModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.70)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  ticketModalContainer: {
+    width: '100%',
+    maxWidth: 520,
+    borderRadius: 20,
+    borderWidth: 1.2,
+    padding: 18,
+    maxHeight: '90%',
   },
   chatConvCard: {
     borderWidth: 1.2,
