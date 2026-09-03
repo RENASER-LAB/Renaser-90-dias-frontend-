@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -434,8 +434,33 @@ export default function ComunidadScreen() {
 
   // Estados de "Recursos Exclusivos" (cursos/lecciones) — `courses` sale del backend real
   // (GET /api/v1/cursos + GET /api/v1/cursos/{id}/secciones) a través de `useCursos`.
-  const { courses, loading: cursosCargando, error: cursosError } = useCursos();
+  const { courses, loading: cursosCargando, error: cursosError, recargar: recargarCursos } = useCursos();
   const selectedCourse = selectedCourseId ? (courses.find(cu => cu.id === selectedCourseId) ?? null) : null;
+  const [expandedCourseSummaries, setExpandedCourseSummaries] = useState<Record<string, boolean>>({});
+
+  // Cálculo lineal ordenado de todas las lecciones del curso para navegación fluida
+  const allCourseLessons: LessonResource[] = useMemo(() => {
+    if (!selectedCourse) return [];
+    return selectedCourse.sections.flatMap(section => section.lessons);
+  }, [selectedCourse]);
+
+  const currentLessonIndex = useMemo(() => {
+    if (!fullScreenLesson) return -1;
+    return allCourseLessons.findIndex(l => l.id === fullScreenLesson.id);
+  }, [allCourseLessons, fullScreenLesson]);
+
+  const nextLesson: LessonResource | null = useMemo(() => {
+    if (currentLessonIndex < 0 || currentLessonIndex >= allCourseLessons.length - 1) return null;
+    return allCourseLessons[currentLessonIndex + 1];
+  }, [allCourseLessons, currentLessonIndex]);
+
+  const prevLesson: LessonResource | null = useMemo(() => {
+    if (currentLessonIndex <= 0) return null;
+    return allCourseLessons[currentLessonIndex - 1];
+  }, [allCourseLessons, currentLessonIndex]);
+
+  const isLastLesson = currentLessonIndex >= 0 && currentLessonIndex === allCourseLessons.length - 1;
+
   // Detalle real de la lección abierta (video_url, cuerpo, recursos) — se pide aparte, recién al
   // tocar una lección, ver `handleAbrirLeccion` más abajo.
   const {
@@ -586,11 +611,42 @@ export default function ComunidadScreen() {
 
   const handleAlternarLeccionCompletada = async (leccion: LessonResource) => {
     try {
-      await alternarLeccionCompletada(leccion.id, !!leccion.completed);
-      if (!leccion.completed) {
-        Alert.alert('¡Excelente Progreso! 🦅', 'Lección completada y registrada en tu racha somática.');
+      const estabaCompleta = !!leccion.completed;
+      await alternarLeccionCompletada(leccion.id, estabaCompleta);
+      void recargarCursos();
+
+      if (estabaCompleta) {
+        Alert.alert('Lección actualizada', 'La lección se ha marcado como pendiente.');
+        return;
       }
-      setFullScreenLesson(null);
+
+      // La lección fue completada con éxito
+      if (isLastLesson || !nextLesson) {
+        // Última lección del curso -> llevar al panel general donde están todos los cursos (Req 4)
+        setFullScreenLesson(null);
+        setSelectedCourseId(null);
+        Alert.alert(
+          '¡Curso Completado! 🏆🦅',
+          '¡Felicitaciones! Has completado todas las lecciones del curso y finalizado tu recorrido.'
+        );
+      } else {
+        // Lección intermedia -> avanzar a la siguiente lección sucesivamente (Req 3)
+        if (nextLesson.locked) {
+          const faltan = nextLesson.diasFaltantes ?? 0;
+          Alert.alert(
+            '¡Excelente Progreso! 🦅',
+            `Lección completada con éxito.\n\nLa siguiente lección ("${nextLesson.title}") se desbloqueará en ${
+              faltan > 0 ? `${faltan} día${faltan === 1 ? '' : 's'}` : 'tu próximo día de programa'
+            }.`
+          );
+        } else {
+          handleAbrirLeccion(nextLesson);
+          Alert.alert(
+            '¡Excelente Progreso! 🦅',
+            `Lección completada con éxito. Avanzando a: "${nextLesson.title}".`
+          );
+        }
+      }
     } catch (e) {
       Alert.alert('No se pudo actualizar', mensajeDeError(e, 'Intentá de nuevo en un momento.'));
     }
@@ -1693,12 +1749,12 @@ export default function ComunidadScreen() {
                     mismo orden, sin tocar su estilo. */}
                 <View style={styles.courseCoverHeader}>
                   <CursoPortada url={course.coverUrl} />
-                  <View style={[styles.courseCategoryBadge, { borderColor: c.gold, backgroundColor: 'rgba(0,0,0,0.6)' }]}>
+                  <View style={[styles.courseCategoryBadge, { borderColor: c.gold, backgroundColor: 'rgba(0,0,0,0.65)' }]}>
                     <Text style={[t.micro, { color: c.gold, fontSize: 8.5, fontWeight: '800' }]}>
                       {course.category}
                     </Text>
                   </View>
-                  <Text style={[t.screenTitle, { color: '#FFFFFF', fontSize: 16, lineHeight: 21 }]}>
+                  <Text style={[t.screenTitle, { color: '#FFFFFF', fontSize: 16.5, lineHeight: 22 }]} numberOfLines={2}>
                     {course.title}
                   </Text>
                 </View>
@@ -1707,9 +1763,33 @@ export default function ComunidadScreen() {
                   <Text style={[t.micro, { color: c.micro }]}>
                     Instructor: <Text style={{ color: c.gold, fontWeight: '700' }}>{course.instructor}</Text>
                   </Text>
-                  <Text style={[t.body, { color: c.textSoft, fontSize: 12, lineHeight: 17 }]}>
-                    {course.summary}
-                  </Text>
+                  {!!course.summary && (
+                    <View>
+                      <Text
+                        style={[t.body, { color: c.textSoft, fontSize: 12, lineHeight: 17 }]}
+                        numberOfLines={expandedCourseSummaries[course.id] ? undefined : 2}
+                      >
+                        {course.summary}
+                      </Text>
+                      {course.summary.length > 80 && (
+                        <Pressable
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            setExpandedCourseSummaries(prev => ({
+                              ...prev,
+                              [course.id]: !prev[course.id],
+                            }));
+                          }}
+                          hitSlop={8}
+                          style={{ alignSelf: 'flex-start', marginTop: 4 }}
+                        >
+                          <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 11 }]}>
+                            {expandedCourseSummaries[course.id] ? 'Ver menos ▲' : 'Ver más... ▼'}
+                          </Text>
+                        </Pressable>
+                      )}
+                    </View>
+                  )}
                   <View style={{ gap: 4, marginTop: 4 }}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                       <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>
@@ -1764,13 +1844,44 @@ export default function ComunidadScreen() {
             </Pressable>
           </View>
 
-          <View style={[styles.courseHeaderBox, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
+          <View style={[styles.courseHeaderBox, { borderColor: c.gold, backgroundColor: c.cardBg, overflow: 'hidden' }]}>
+            {selectedCourse.coverUrl ? (
+              <View style={{ height: 140, marginHorizontal: -14, marginTop: -14, marginBottom: 12, overflow: 'hidden' }}>
+                <CursoPortada url={selectedCourse.coverUrl} />
+              </View>
+            ) : null}
             <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 16 }]}>
               {selectedCourse.title}
             </Text>
             <Text style={[t.micro, { color: c.gold, marginTop: 4 }]}>
               Instructor: {selectedCourse.instructor}
             </Text>
+            {!!selectedCourse.summary && (
+              <View style={{ marginTop: 8 }}>
+                <Text
+                  style={[t.body, { color: c.textSoft, fontSize: 12, lineHeight: 17 }]}
+                  numberOfLines={expandedCourseSummaries[selectedCourse.id] ? undefined : 2}
+                >
+                  {selectedCourse.summary}
+                </Text>
+                {selectedCourse.summary.length > 80 && (
+                  <Pressable
+                    onPress={() =>
+                      setExpandedCourseSummaries(prev => ({
+                        ...prev,
+                        [selectedCourse.id]: !prev[selectedCourse.id],
+                      }))
+                    }
+                    hitSlop={8}
+                    style={{ alignSelf: 'flex-start', marginTop: 4 }}
+                  >
+                    <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 11 }]}>
+                      {expandedCourseSummaries[selectedCourse.id] ? 'Ver menos ▲' : 'Ver más... ▼'}
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
+            )}
           </View>
 
           <View style={{ gap: 14, marginTop: 14, paddingBottom: 28 }}>
@@ -1891,6 +2002,56 @@ export default function ComunidadScreen() {
               onPress={() => handleAlternarLeccionCompletada(leccionMostrada)}
               style={{ width: '100%', marginTop: 16 }}
             />
+
+            {/* Fila de navegación sucesiva entre lecciones (Req 3 y 4) */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 12 }}>
+              {prevLesson ? (
+                <Pressable
+                  onPress={() => handleAbrirLeccion(prevLesson)}
+                  style={[styles.exploreBtn, { flex: 1, borderColor: c.border, backgroundColor: c.cardBgAlt, paddingVertical: 10 }]}
+                  hitSlop={6}
+                >
+                  <Text style={[t.micro, { color: c.textSoft, fontWeight: '700' }]}>
+                    ‹ ANTERIOR
+                  </Text>
+                </Pressable>
+              ) : (
+                <View style={{ flex: 1 }} />
+              )}
+
+              {allCourseLessons.length > 0 && (
+                <Text style={[t.micro, { color: c.micro, fontSize: 10, textAlign: 'center' }]}>
+                  {currentLessonIndex + 1} / {allCourseLessons.length}
+                </Text>
+              )}
+
+              {nextLesson ? (
+                <Pressable
+                  onPress={() => handleAbrirLeccion(nextLesson)}
+                  style={[styles.exploreBtn, { flex: 1, borderColor: c.gold, backgroundColor: c.cardBgAlt, paddingVertical: 10 }]}
+                  hitSlop={6}
+                >
+                  <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>
+                    SIGUIENTE ›
+                  </Text>
+                </Pressable>
+              ) : isLastLesson ? (
+                <Pressable
+                  onPress={() => {
+                    setFullScreenLesson(null);
+                    setSelectedCourseId(null);
+                  }}
+                  style={[styles.exploreBtn, { flex: 1, borderColor: c.gold, backgroundColor: 'rgba(212,160,23,0.12)', paddingVertical: 10 }]}
+                  hitSlop={6}
+                >
+                  <Text style={[t.micro, { color: c.gold, fontWeight: '800' }]}>
+                    FINALIZAR ›
+                  </Text>
+                </Pressable>
+              ) : (
+                <View style={{ flex: 1 }} />
+              )}
+            </View>
           </View>
         </ScrollView>
       )}
@@ -2946,8 +3107,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   courseCoverHeader: {
-    height: 100,
-    padding: 12,
+    height: 185,
+    padding: 14,
     justifyContent: 'space-between',
   },
   courseCategoryBadge: {

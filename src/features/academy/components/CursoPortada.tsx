@@ -50,20 +50,13 @@ export function CursoPortada({ url }: CursoPortadaProps) {
             onError={() => setFallo(true)}
           />
           {/*
-            EXCEPCIÓN AUTORIZADA (la única de esta tarea): el degradado de relleno deja de ser
-            opaco para que la foto de abajo se vea — se agrega SOLO alfa, los 3 tonos y el orden
-            son los mismos de siempre. Alfa distinto por parada, no plano:
-              - 0.30 arriba: es donde ya está el badge de categoría, que tiene su propio fondo
-                'rgba(0,0,0,0.6)' (sin cambios) y por eso no depende de este velo para leerse.
-              - 0.55 en el medio: transición.
-              - 0.78 abajo: es donde va el título en texto blanco plano, sin fondo propio detrás —
-                necesita el velo más oscuro de los tres para seguir siendo legible sobre una foto
-                clara.
-            Si la foto falla después de haberse mostrado, este bloque entero deja de renderizarse
-            (hayFoto pasa a false) y vuelve a quedar solo la base opaca de arriba.
+            Degradado con centro transparente: permite evidenciar con total nitidez y brillo el
+            arte y fotografía de la portada en la zona central, manteniendo contraste sutil
+            arriba para el badge de categoría y un velo oscuro abajo para la legibilidad del título.
           */}
           <LinearGradient
-            colors={['rgba(42,36,23,0.30)', 'rgba(30,27,21,0.55)', 'rgba(20,19,16,0.78)']}
+            colors={['rgba(0,0,0,0.30)', 'transparent', 'rgba(14,13,11,0.85)']}
+            locations={[0, 0.42, 1]}
             style={StyleSheet.absoluteFill}
           />
         </>
