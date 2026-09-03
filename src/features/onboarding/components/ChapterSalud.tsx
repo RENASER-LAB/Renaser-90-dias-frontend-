@@ -33,15 +33,30 @@ function SleepQualitySlider({
     onChange(clamped);
   };
 
+  /**
+   * BUG REPORTADO (2026-09-03): mover el dedo para hacer scroll del formulario, si el toque
+   * arrancaba sobre esta franja, "reiniciaba" el valor de calidad — porque los handlers de abajo
+   * devolvían `true` incondicionalmente y además se negaban a soltar el gesto
+   * (`onPanResponderTerminationRequest: () => false`) y bloqueaban al respondedor nativo
+   * (`onShouldBlockNativeResponder: () => true`). Resultado: CUALQUIER toque que empezara acá
+   * — aunque la intención fuera scrollear la pantalla, no arrastrar el slider — quedaba
+   * secuestrado por este PanResponder, que fijaba un valor según la posición X del dedo en ese
+   * instante. Arreglo: solo reclamar el gesto cuando el movimiento es claramente horizontal
+   * (`dx` domina sobre `dy`, con un umbral mínimo para no reaccionar a un simple temblor del
+   * dedo); un scroll vertical nunca cumple esa condición y pasa de largo hacia el `ScrollView`.
+   */
+  const esArrastreHorizontal = (gestureState: { dx: number; dy: number }) =>
+    Math.abs(gestureState.dx) > 3 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+
   const panResponder = useMemo(
     () =>
       PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onStartShouldSetPanResponderCapture: () => true,
-        onMoveShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponderCapture: () => true,
-        onPanResponderTerminationRequest: () => false,
-        onShouldBlockNativeResponder: () => true,
+        onStartShouldSetPanResponder: () => false,
+        onStartShouldSetPanResponderCapture: () => false,
+        onMoveShouldSetPanResponder: (_evt, gestureState) => esArrastreHorizontal(gestureState),
+        onMoveShouldSetPanResponderCapture: (_evt, gestureState) => esArrastreHorizontal(gestureState),
+        onPanResponderTerminationRequest: () => true,
+        onShouldBlockNativeResponder: () => false,
         onPanResponderGrant: evt => {
           calculateValueFromX(evt.nativeEvent.locationX);
         },

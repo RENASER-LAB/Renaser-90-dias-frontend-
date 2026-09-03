@@ -26,6 +26,32 @@ export type EstadoOnboardingApi = {
 export type HitoOnboarding = 'TERMINOS' | 'PACTO' | 'PACTO_FIRMADO' | 'ROCAS_SYNC';
 
 /**
+ * Espejo de `EstadoActivacionProgramaResponse` (backend, `GET /onboarding/activate-program`,
+ * SOLO LECTURA). `validStartDates` en formato `yyyy-MM-dd`, siempre mañana/+2/+3 en la zona del
+ * aprendiz — nunca hoy (ver `ParticipacionPrograma.activarPrograma`, backend). Vacío cuando
+ * `activated` ya es `true`.
+ */
+export type EstadoActivacionProgramaApi = {
+  activated: boolean;
+  validStartDates: string[];
+};
+
+/** Espejo de `ActivarProgramaRequest` (backend, `POST /onboarding/activate-program`). */
+export type ActivarProgramaInput = {
+  /** Formato `yyyy-MM-dd`, una de las fechas devueltas por `EstadoActivacionProgramaApi`. */
+  startDate: string;
+};
+
+/** Espejo de `ActivarProgramaResponse` (backend, respuesta de `POST /onboarding/activate-program`). */
+export type ActivarProgramaApi = {
+  traineeProfileId: string;
+  programDay: number;
+  programActivatedAt: string;
+  startDate: string;
+  expectedGraduationDate: string;
+};
+
+/**
  * Espejo de `GuardarRespuestaRequest` (backend, `POST /onboarding/answers`) — una respuesta por
  * llamada. El tipo de pregunta decide en qué campo va el valor (ver `data/mapaPreguntas.ts`):
  * solo uno de los 4 debe venir con valor a la vez, el resto queda `undefined`.

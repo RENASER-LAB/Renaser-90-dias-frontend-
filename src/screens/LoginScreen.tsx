@@ -1271,11 +1271,6 @@ export default function LoginScreen() {
                 <Text style={[t.small, { color: c.gold, fontWeight: '600', textAlign: 'center' }]}>
                   {email}
                 </Text>
-                {accountRequestId ? (
-                  <Text style={[t.micro, { color: c.micro, textAlign: 'center', letterSpacing: 0.8 }]}>
-                    N.º de solicitud: {accountRequestId}
-                  </Text>
-                ) : null}
               </View>
 
               {errorMessage ? (

@@ -1,8 +1,11 @@
 import {
   FichaIdentidadData,
+  FichaInicialData,
   FichaSaludData,
   FichaConsentimientoData,
   GuardarRespuestaInput,
+  RespuestaAgrupadaApi,
+  RespuestasAgrupadasApi,
 } from '../types/onboarding.types';
 
 /**
@@ -36,42 +39,45 @@ interface PreguntaCatalogo {
 }
 
 // ---- flujo: ficha_inicial · sección: identidad_operativa --------------------------------------
-const P_FULL_NAME: PreguntaCatalogo = { id: 28, clave: 'full_name', tipo: 'TEXTO' };
-const P_SEX: PreguntaCatalogo = { id: 7, clave: 'sex', tipo: 'SELECCION_UNICA' };
-const P_CHILDREN_INFO: PreguntaCatalogo = { id: 22, clave: 'children_info', tipo: 'TEXTO' };
-const P_PROFESSION: PreguntaCatalogo = { id: 32, clave: 'profession', tipo: 'TEXTO' };
-const P_IDENTITY_DOCUMENT: PreguntaCatalogo = { id: 16, clave: 'identity_document', tipo: 'TEXTO' };
-const P_BIRTH_DATE: PreguntaCatalogo = { id: 14, clave: 'birth_date', tipo: 'FECHA' };
-const P_WHATSAPP: PreguntaCatalogo = { id: 29, clave: 'whatsapp', tipo: 'TEXTO' };
-const P_EMAIL: PreguntaCatalogo = { id: 27, clave: 'email', tipo: 'TEXTO' };
-const P_COUNTRY: PreguntaCatalogo = { id: 33, clave: 'country', tipo: 'TEXTO' };
-const P_CITY: PreguntaCatalogo = { id: 26, clave: 'city', tipo: 'TEXTO' };
-const P_DISTRICT: PreguntaCatalogo = { id: 13, clave: 'district', tipo: 'TEXTO' };
-const P_ADDRESS_REFERENCE: PreguntaCatalogo = { id: 8, clave: 'address_reference', tipo: 'AREA_TEXTO' };
-const P_EXPECTATIONS: PreguntaCatalogo = { id: 31, clave: 'expectations', tipo: 'AREA_TEXTO' };
-const P_FEARS: PreguntaCatalogo = { id: 30, clave: 'fears', tipo: 'AREA_TEXTO' };
+// Actualizado 2026-09-03: los IDs de acá abajo se corrieron en +1 respecto a los de 2026-09-01
+// (reseed de `preguntas_onboarding` — ver E-88 en BITACORA_ERRORES.md del backend). Vueltos a
+// consultar en vivo contra la base local con la misma query del comentario de arriba del archivo.
+const P_FULL_NAME: PreguntaCatalogo = { id: 27, clave: 'full_name', tipo: 'TEXTO' };
+const P_SEX: PreguntaCatalogo = { id: 6, clave: 'sex', tipo: 'SELECCION_UNICA' };
+const P_CHILDREN_INFO: PreguntaCatalogo = { id: 21, clave: 'children_info', tipo: 'TEXTO' };
+const P_PROFESSION: PreguntaCatalogo = { id: 31, clave: 'profession', tipo: 'TEXTO' };
+const P_IDENTITY_DOCUMENT: PreguntaCatalogo = { id: 15, clave: 'identity_document', tipo: 'TEXTO' };
+const P_BIRTH_DATE: PreguntaCatalogo = { id: 13, clave: 'birth_date', tipo: 'FECHA' };
+const P_WHATSAPP: PreguntaCatalogo = { id: 28, clave: 'whatsapp', tipo: 'TEXTO' };
+const P_EMAIL: PreguntaCatalogo = { id: 26, clave: 'email', tipo: 'TEXTO' };
+const P_COUNTRY: PreguntaCatalogo = { id: 32, clave: 'country', tipo: 'TEXTO' };
+const P_CITY: PreguntaCatalogo = { id: 25, clave: 'city', tipo: 'TEXTO' };
+const P_DISTRICT: PreguntaCatalogo = { id: 12, clave: 'district', tipo: 'TEXTO' };
+const P_ADDRESS_REFERENCE: PreguntaCatalogo = { id: 7, clave: 'address_reference', tipo: 'AREA_TEXTO' };
+const P_EXPECTATIONS: PreguntaCatalogo = { id: 30, clave: 'expectations', tipo: 'AREA_TEXTO' };
+const P_FEARS: PreguntaCatalogo = { id: 29, clave: 'fears', tipo: 'AREA_TEXTO' };
 
 // ---- flujo: ficha_inicial · sección: cuerpo ----------------------------------------------------
-const P_SLEEP_HOURS: PreguntaCatalogo = { id: 37, clave: 'sleep_hours', tipo: 'NUMERO' };
-const P_SLEEP_QUALITY: PreguntaCatalogo = { id: 36, clave: 'sleep_quality', tipo: 'ESCALA' };
-const P_MEDICATION: PreguntaCatalogo = { id: 35, clave: 'medication', tipo: 'AREA_TEXTO' };
+const P_SLEEP_HOURS: PreguntaCatalogo = { id: 36, clave: 'sleep_hours', tipo: 'NUMERO' };
+const P_SLEEP_QUALITY: PreguntaCatalogo = { id: 35, clave: 'sleep_quality', tipo: 'ESCALA' };
+const P_MEDICATION: PreguntaCatalogo = { id: 34, clave: 'medication', tipo: 'AREA_TEXTO' };
 
 // ---- flujo: ficha_inicial · sección: compromiso_y_cierre ---------------------------------------
-const P_DATA_CONSENT: PreguntaCatalogo = { id: 60, clave: 'data_consent', tipo: 'SELECCION_UNICA' };
-const P_COMMITMENT_90DAYS: PreguntaCatalogo = { id: 66, clave: 'commitment_90days', tipo: 'CASILLA' };
+const P_DATA_CONSENT: PreguntaCatalogo = { id: 59, clave: 'data_consent', tipo: 'SELECCION_UNICA' };
+const P_COMMITMENT_90DAYS: PreguntaCatalogo = { id: 65, clave: 'commitment_90days', tipo: 'CASILLA' };
 
 // ---- flujo: terminos · sección: aceptacion ------------------------------------------------------
-const P_ACCEPTED_TERMS: PreguntaCatalogo = { id: 3, clave: 'accepted_terms', tipo: 'CASILLA' };
+const P_ACCEPTED_TERMS: PreguntaCatalogo = { id: 2, clave: 'accepted_terms', tipo: 'CASILLA' };
 // FIRMA: no se mapea acá (esta función solo arma valores tipados texto/número/casilla/escala). Se
 // guarda aparte, vía el flujo de media de `usePersistenciaOnboarding.guardarFirma` — ver
 // PREGUNTA_FIRMA_TERMINOS más abajo y CLAUDE.md de la tarea "firmas del onboarding".
-const P_TERMS_SIGNATURE: PreguntaCatalogo = { id: 2, clave: 'terms_signature', tipo: 'FIRMA' };
+const P_TERMS_SIGNATURE: PreguntaCatalogo = { id: 1, clave: 'terms_signature', tipo: 'FIRMA' };
 
 // ---- flujo: pacto · sección: firma ---------------------------------------------------------------
-const P_PARTICIPANT_NAME: PreguntaCatalogo = { id: 6, clave: 'participant_name', tipo: 'TEXTO' };
-const P_ACCEPTED_PACTO: PreguntaCatalogo = { id: 4, clave: 'accepted_pacto', tipo: 'CASILLA' };
+const P_PARTICIPANT_NAME: PreguntaCatalogo = { id: 5, clave: 'participant_name', tipo: 'TEXTO' };
+const P_ACCEPTED_PACTO: PreguntaCatalogo = { id: 3, clave: 'accepted_pacto', tipo: 'CASILLA' };
 // FIRMA: ídem P_TERMS_SIGNATURE — ver PREGUNTA_FIRMA_PACTO más abajo.
-const P_SIGNATURE: PreguntaCatalogo = { id: 5, clave: 'signature', tipo: 'FIRMA' };
+const P_SIGNATURE: PreguntaCatalogo = { id: 4, clave: 'signature', tipo: 'FIRMA' };
 
 /**
  * Id + clave de las 2 preguntas tipo FIRMA del catálogo, para que `TerminosScreen`/`PactoScreen`
@@ -91,14 +97,14 @@ export const CAMPOS_SIN_MAPEAR = [
   {
     campo: 'FichaIdentidadData.tipoNegocio',
     motivo:
-      'Ambiguo entre business_name (20, "Nombre del negocio") y business_industry (9, "Industria / Sector"). ' +
+      'Ambiguo entre business_name (19, "Nombre del negocio") y business_industry (8, "Industria / Sector"). ' +
       'El campo de la app pide "Nombre de tu negocio o rubro" (ambas cosas a la vez) — mapear a una sola ' +
       'pregunta del catálogo sería adivinar cuál de las dos quiso responder la persona.',
   },
   {
     campo: 'FichaIdentidadData.tipoDocumento',
     motivo:
-      'El catálogo solo tiene identity_document (16) para el NÚMERO de documento. No existe una pregunta ' +
+      'El catálogo solo tiene identity_document (15) para el NÚMERO de documento. No existe una pregunta ' +
       'separada para el TIPO (DNI/Pasaporte/Extranjería); tipoDocumento solo cambia el placeholder/validación ' +
       'del campo numeroDocumento en la UI, no tiene destino propio.',
   },
@@ -111,13 +117,13 @@ export const CAMPOS_SIN_MAPEAR = [
   {
     campo: 'FichaIdentidadData.departamento',
     motivo:
-      'El catálogo de identidad_operativa solo tiene city (26) y district (13); no existe un nivel ' +
+      'El catálogo de identidad_operativa solo tiene city (25) y district (12); no existe un nivel ' +
       '"departamento/provincia" en las 62 preguntas de ficha_inicial.',
   },
   {
     campo: 'FichaIdentidadData.estadoCivil',
     motivo:
-      'Existe family_status (25, SELECCION_UNICA) y el concepto coincide, pero las opciones NO calzan 1:1: ' +
+      'Existe family_status (24, SELECCION_UNICA) y el concepto coincide, pero las opciones NO calzan 1:1: ' +
       'la UI ofrece 5 valores que no distinguen hijos ("Soltero(a)", "Casado(a)", "Conviviente", ' +
       '"Divorciado(a)", "Viudo(a)"), mientras que las opciones reales en BD sí distinguen ' +
       '("Soltero/a sin hijos" vs "Soltero/a con hijos", "En pareja sin hijos", "Casado/a con hijos", ' +
@@ -127,7 +133,7 @@ export const CAMPOS_SIN_MAPEAR = [
   {
     campo: 'FichaSaludData.peso / estatura / objetivoSmartSalud / condicionesSalud',
     motivo:
-      'weight_kg (39), height_cm (38) y body_smart_goal (34) SÍ existen en el catálogo (y son REQUERIDAS en ' +
+      'weight_kg (38), height_cm (37) y body_smart_goal (33) SÍ existen en el catálogo (y son REQUERIDAS en ' +
       'BD), pero el capítulo "DESCANSO Y SALUD" de la app (ChapterSalud.tsx) nunca los pregunta — solo pide ' +
       'horas de sueño, calidad de sueño y medicación. No hay valor real que enviar. Reportado como brecha ' +
       'aparte: el catálogo espera estas 3 respuestas y la UI actual no las va a producir nunca.',
@@ -136,13 +142,13 @@ export const CAMPOS_SIN_MAPEAR = [
     campo: 'FichaSaludData.motivoMedicacion',
     motivo:
       'Duplica especificacionMedicacion (ChapterSalud los setea juntos, mismo texto) — ya cubierto al mapear ' +
-      'especificacionMedicacion a medication (35). Mandarlo también sería la misma respuesta dos veces.',
+      'especificacionMedicacion a medication (34). Mandarlo también sería la misma respuesta dos veces.',
   },
   {
     campo: 'FichaConsentimientoData.dispuestoSoltar / firmaDigital',
     motivo:
       'ChapterConsentimiento.tsx no renderiza estos dos campos (solo el toggle único de autorizaUsoDatos + ' +
-      'compromiso90Dias). willing_to_release (57) existe en el catálogo pero no hay valor real que enviar.',
+      'compromiso90Dias). willing_to_release (56) existe en el catálogo pero no hay valor real que enviar.',
   },
 ] as const;
 
@@ -167,6 +173,14 @@ function fechaDdMmAaaaAIso(fecha: string): string | null {
   if (!m) return null;
   const [, dd, mm, aaaa] = m;
   return `${aaaa}-${mm}-${dd}`;
+}
+
+/** Inversa de `fechaDdMmAaaaAIso`, para rehidratar `birth_date` (ISO) de vuelta a lo que espera DatePickerField. */
+function fechaIsoADdMmAaaa(fechaIso: string): string | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(fechaIso.trim());
+  if (!m) return null;
+  const [, aaaa, mm, dd] = m;
+  return `${dd}/${mm}/${aaaa}`;
 }
 
 function texto(questionId: number, valor: string | undefined | null): GuardarRespuestaInput | null {
@@ -267,4 +281,75 @@ export function mapearPacto(nombreParticipante: string): GuardarRespuestaInput[]
     texto(P_PARTICIPANT_NAME.id, nombreParticipante),
     casilla(P_ACCEPTED_PACTO.id, true),
   ]);
+}
+
+// ------------------------------------------------------------------------------------------------
+// Rehidratación — inversa de mapearIdentidad/mapearSalud/mapearConsentimiento, para reconstruir la
+// Ficha Inicial a partir de lo que ya está guardado en el backend (GET /onboarding/answers). Se usa
+// cuando no hay borrador local (AsyncStorage) — ver FichaInicialScreen y almacenamientoLocal.ts.
+// ------------------------------------------------------------------------------------------------
+
+/**
+ * Solo reconstruye los campos que SÍ tienen pregunta propia en el catálogo (ver `mapearIdentidad`/
+ * `mapearSalud`/`mapearConsentimiento` arriba y `CAMPOS_SIN_MAPEAR`). Los que nunca se mandaron
+ * (tipoNegocio, tipoDocumento, codigoPais, departamento, peso, estatura, etc.) quedan tal como
+ * venían en `base` — no hay de dónde recuperarlos, y no es este el lugar para inventarlos.
+ */
+export function reconstruirFichaDesdeRespuestas(
+  respuestas: RespuestasAgrupadasApi,
+  base: FichaInicialData
+): FichaInicialData {
+  const porClave = new Map<string, RespuestaAgrupadaApi>();
+  for (const seccion of respuestas.sections) {
+    for (const r of seccion.answers) {
+      porClave.set(r.questionKey, r);
+    }
+  }
+  const texto = (clave: string): string | undefined => porClave.get(clave)?.textValue ?? undefined;
+  const numero = (clave: string): number | undefined => porClave.get(clave)?.numberValue ?? undefined;
+  const booleano = (clave: string): boolean | undefined => porClave.get(clave)?.booleanValue ?? undefined;
+  const escala = (clave: string): number | undefined => porClave.get(clave)?.scaleValue ?? undefined;
+
+  const fechaNacimientoIso = texto(P_BIRTH_DATE.clave);
+  const fechaNacimiento = fechaNacimientoIso ? fechaIsoADdMmAaaa(fechaNacimientoIso) : null;
+
+  // medication (34) es requerida en BD: mapearSalud manda 'Ninguna' cuando la persona respondió
+  // "No" a la medicación regular — hay que deshacer esa codificación acá.
+  const medicacion = texto(P_MEDICATION.clave);
+  const tomaMedicacionRegular = medicacion !== undefined ? medicacion !== 'Ninguna' : undefined;
+
+  const consentimientoTexto = texto(P_DATA_CONSENT.clave);
+
+  return {
+    identidad: {
+      ...base.identidad,
+      nombre: texto(P_FULL_NAME.clave) ?? base.identidad.nombre,
+      sexo: (texto(P_SEX.clave) as FichaIdentidadData['sexo'] | undefined) ?? base.identidad.sexo,
+      cantidadHijos: texto(P_CHILDREN_INFO.clave) ?? base.identidad.cantidadHijos,
+      ocupacion: texto(P_PROFESSION.clave) ?? base.identidad.ocupacion,
+      numeroDocumento: texto(P_IDENTITY_DOCUMENT.clave) ?? base.identidad.numeroDocumento,
+      fechaNacimiento: fechaNacimiento ?? base.identidad.fechaNacimiento,
+      whatsapp: texto(P_WHATSAPP.clave) ?? base.identidad.whatsapp,
+      email: texto(P_EMAIL.clave) ?? base.identidad.email,
+      pais: texto(P_COUNTRY.clave) ?? base.identidad.pais,
+      ciudad: texto(P_CITY.clave) ?? base.identidad.ciudad,
+      distrito: texto(P_DISTRICT.clave) ?? base.identidad.distrito,
+      direccion: texto(P_ADDRESS_REFERENCE.clave) ?? base.identidad.direccion,
+      expectativa: texto(P_EXPECTATIONS.clave) ?? base.identidad.expectativa,
+      temor: texto(P_FEARS.clave) ?? base.identidad.temor,
+    },
+    salud: {
+      ...base.salud,
+      horasSueno: numero(P_SLEEP_HOURS.clave) !== undefined ? String(numero(P_SLEEP_HOURS.clave)) : base.salud.horasSueno,
+      calidadSueno: escala(P_SLEEP_QUALITY.clave) ?? base.salud.calidadSueno,
+      tomaMedicacionRegular: tomaMedicacionRegular ?? base.salud.tomaMedicacionRegular,
+      especificacionMedicacion:
+        tomaMedicacionRegular && medicacion !== undefined ? medicacion : base.salud.especificacionMedicacion,
+    },
+    consentimiento: {
+      ...base.consentimiento,
+      autorizaUsoDatos: consentimientoTexto !== undefined ? consentimientoTexto.startsWith('Sí') : base.consentimiento.autorizaUsoDatos,
+      compromiso90Dias: booleano(P_COMMITMENT_90DAYS.clave) ?? base.consentimiento.compromiso90Dias,
+    },
+  };
 }

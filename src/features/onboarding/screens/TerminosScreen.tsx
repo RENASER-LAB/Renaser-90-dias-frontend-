@@ -40,6 +40,7 @@ export function TerminosScreen({
   const [signature, setSignature] = useState<SignatureData | null>(savedSignature || null);
   const [hasSigned, setHasSigned] = useState<boolean>(Boolean(savedSignature?.data && savedSignature.data.trim().length > 0));
   const [showError, setShowError] = useState(false);
+  const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
     if (savedSignature && savedSignature.data && savedSignature.data.trim().length > 0) {
@@ -79,29 +80,48 @@ export function TerminosScreen({
     if (signature) {
       onSaveSignature?.(signature);
     }
+    if (guardando) return;
 
-    // Guardar de verdad la aceptación de los términos.
-    await guardarCapitulo(mapearTerminos(accepted));
+    // Decisión 2026-09-03 (reemplaza la de 2026-09-01): ni la respuesta de aceptación ni la firma
+    // pueden fallar en silencio acá — es un compromiso legal, así que si no se pudo respaldar, la
+    // persona se entera y no avanza creyendo que quedó firmado.
+    setGuardando(true);
+    try {
+      const resultadoRespuesta = await guardarCapitulo(mapearTerminos(accepted));
+      if (resultadoRespuesta.pendientes > 0) {
+        Alert.alert('No se pudo guardar', 'No pudimos registrar tu aceptación. Revisá tu conexión e intentá de nuevo.');
+        return;
+      }
 
-    // Firma con valor legal (decisión del dueño, 2026-09-01): se captura el lienzo ya dibujado
-    // como PNG y se sube a S3 con su referencia guardada en la base (ver mapaPreguntas.ts,
-    // PREGUNTA_FIRMA_TERMINOS). Si falla, NO bloquea el avance: el trazo ya quedó en el estado del
-    // flujo (onSaveSignature de arriba), la persona sigue igual — solo no queda además respaldado.
-    const pngFirma = await signatureRef.current?.capturarComoPng();
-    if (pngFirma && signature) {
-      await guardarFirma({
+      // Firma con valor legal: se captura el lienzo ya dibujado como PNG y se sube a S3 con su
+      // referencia guardada en la base (ver mapaPreguntas.ts, PREGUNTA_FIRMA_TERMINOS).
+      const pngFirma = await signatureRef.current?.capturarComoPng();
+      if (!pngFirma || !signature) {
+        Alert.alert('No se pudo capturar la firma', 'Volvé a dibujar tu firma e intentá de nuevo.');
+        return;
+      }
+      const resultadoFirma = await guardarFirma({
         flow: 'terminos',
         questionId: PREGUNTA_FIRMA_TERMINOS.id,
         questionKey: PREGUNTA_FIRMA_TERMINOS.clave,
         pngUri: pngFirma,
         trazosOriginales: signature.data,
       });
+      if (!resultadoFirma.ok) {
+        Alert.alert(
+          'No se pudo guardar tu firma',
+          'No pudimos respaldar tu firma en el almacenamiento. Revisá tu conexión e intentá de nuevo.'
+        );
+        return;
+      }
+
+      await aceptarHito('TERMINOS');
+      await avanzarEstado({ flow: 'terminos', section: 'aceptacion', step: 0 });
+
+      onAccept();
+    } finally {
+      setGuardando(false);
     }
-
-    await aceptarHito('TERMINOS');
-    await avanzarEstado({ flow: 'terminos', section: 'aceptacion', step: 0 });
-
-    onAccept();
   };
 
   return (
@@ -205,9 +225,10 @@ export function TerminosScreen({
 
         {/* Continue Action */}
         <GoldButton
-          label="CONTINUAR AL PACTO"
+          label="CONTINUAR"
           onPress={handleContinue}
           disabled={!canContinue}
+          loading={guardando}
           icon="arrow"
           style={{ marginTop: 4, marginBottom: 16 }}
         />

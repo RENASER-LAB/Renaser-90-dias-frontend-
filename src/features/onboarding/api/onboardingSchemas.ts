@@ -101,6 +101,27 @@ export const mediaOnboardingSchema = z
   })
   .passthrough();
 
+/** `GET /api/v1/onboarding/activate-program` — espejo de `EstadoActivacionProgramaResponse` (backend). */
+export const estadoActivacionProgramaSchema = z
+  .object({
+    activated: z.boolean(),
+    // Formato `yyyy-MM-dd` (LocalDate del backend, ver ActivarProgramaRequest). Vacío cuando
+    // `activated` es `true` — no queda nada por elegir.
+    validStartDates: z.array(z.string()),
+  })
+  .passthrough();
+
+/** `POST /api/v1/onboarding/activate-program` — espejo de `ActivarProgramaResponse` (backend). */
+export const activarProgramaSchema = z
+  .object({
+    traineeProfileId: z.string(),
+    programDay: z.number(),
+    programActivatedAt: z.string(),
+    startDate: z.string(),
+    expectedGraduationDate: z.string(),
+  })
+  .passthrough();
+
 /**
  * Valida y devuelve el dato con el tipo que el resto del código ya espera. Si la forma no coincide
  * se lanza un error que dice QUÉ campo falló y en qué endpoint.
