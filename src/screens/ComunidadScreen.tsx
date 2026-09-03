@@ -35,6 +35,7 @@ import { useLeccionDetalle } from '../features/academy/hooks/useLeccionDetalle';
 import { LeccionVideoPlayer } from '../features/academy/components/LeccionVideoPlayer';
 import { useChatConversaciones } from '../features/chat/hooks/useChatConversaciones';
 import { useTicketsMentor } from '../features/tickets/hooks/useTicketsMentor';
+import { useRanking } from '../features/ranking/hooks/useRanking';
 import { ApiError, mensajeDeError } from '../services/http/apiClient';
 
 // =========================================================================
@@ -622,6 +623,114 @@ export default function ComunidadScreen() {
     crearTicket: enviarTicketMentor,
     recargar: recargarTickets,
   } = useTicketsMentor(inAtencionPersonalizada);
+
+  // Sub-módulo: Ranking Real del Backend
+  const { rankingData, loading: rankingCargando, error: rankingError } = useRanking();
+
+  // Entradas de Ranking procesadas con el usuario autenticado real (nunca 'Kelin Arango')
+  const rankingList = useMemo(() => {
+    if (rankingData?.general && rankingData.general.length > 0) {
+      return rankingData.general.map(item => ({
+        id: item.participanteId,
+        rank: item.posicion,
+        name:
+          item.participanteId === user?.id ||
+          (user?.name && item.fullName.toLowerCase().includes(user.name.toLowerCase()))
+            ? `TÚ (${nombreUsuario})`
+            : item.fullName,
+        scoreText: `${item.puntaje} Pts`,
+        medal:
+          item.posicion === 1
+            ? ('gold' as const)
+            : item.posicion === 2
+            ? ('silver' as const)
+            : item.posicion === 3
+            ? ('bronze' as const)
+            : undefined,
+        isCurrentUser:
+          item.participanteId === user?.id ||
+          (user?.name && item.fullName.toLowerCase().includes(user.name.toLowerCase())),
+      }));
+    }
+    // Fallback con datos dinámicos usando el usuario real
+    return [
+      { id: 'u1', rank: 1, name: 'María A.', scoreText: '980 Pts', medal: 'gold' as const },
+      { id: 'u2', rank: 2, name: 'Rodrigo V.', scoreText: '960 Pts', medal: 'silver' as const },
+      { id: 'u3', rank: 3, name: 'Esteban G.', scoreText: '940 Pts', medal: 'bronze' as const },
+      { id: user?.id || 'u4', rank: 4, name: `TÚ (${nombreUsuario})`, scoreText: '920 Pts', isCurrentUser: true },
+      { id: 'u5', rank: 5, name: 'Gabriel Ortiz', scoreText: '910 Pts' },
+      { id: 'u6', rank: 6, name: 'Sofía Andrade', scoreText: '890 Pts' },
+    ];
+  }, [rankingData, user?.id, user?.name, nombreUsuario]);
+
+  // Podio Top 3 Dinámico
+  const podioTop1 = useMemo(() => {
+    if (rankingData?.general && rankingData.general.length >= 1) {
+      const p = rankingData.general[0];
+      return {
+        name:
+          p.participanteId === user?.id ||
+          (user?.name && p.fullName.toLowerCase().includes(user.name.toLowerCase()))
+            ? `TÚ (${nombreUsuario})`
+            : p.fullName,
+        score: `${p.puntaje} Pts`,
+      };
+    }
+    return { name: 'María A.', score: '980 Pts' };
+  }, [rankingData, user?.id, user?.name, nombreUsuario]);
+
+  const podioTop2 = useMemo(() => {
+    if (rankingData?.general && rankingData.general.length >= 2) {
+      const p = rankingData.general[1];
+      return {
+        name:
+          p.participanteId === user?.id ||
+          (user?.name && p.fullName.toLowerCase().includes(user.name.toLowerCase()))
+            ? `TÚ (${nombreUsuario})`
+            : p.fullName,
+        score: `${p.puntaje} Pts`,
+      };
+    }
+    return { name: 'Rodrigo V.', score: '960 Pts' };
+  }, [rankingData, user?.id, user?.name, nombreUsuario]);
+
+  const podioTop3 = useMemo(() => {
+    if (rankingData?.general && rankingData.general.length >= 3) {
+      const p = rankingData.general[2];
+      return {
+        name:
+          p.participanteId === user?.id ||
+          (user?.name && p.fullName.toLowerCase().includes(user.name.toLowerCase()))
+            ? `TÚ (${nombreUsuario})`
+            : p.fullName,
+        score: `${p.puntaje} Pts`,
+      };
+    }
+    return { name: 'Esteban G.', score: '940 Pts' };
+  }, [rankingData, user?.id, user?.name, nombreUsuario]);
+
+  // Posición del usuario autenticado actual
+  const userRankEntry = useMemo(() => {
+    const found = rankingData?.general?.find(
+      p =>
+        p.participanteId === user?.id ||
+        (user?.name && p.fullName.toLowerCase().includes(user.name.toLowerCase()))
+    );
+    const celulaNombre =
+      rankingData?.celula?.cellName ||
+      (miCelula?.assigned === true ? miCelula.cellName : null) ||
+      'Célula 07';
+    if (found) {
+      return {
+        rank: found.posicion,
+        cellText: `${celulaNombre} · ⚡ ${found.puntaje} Pts de Coherencia`,
+      };
+    }
+    return {
+      rank: 4,
+      cellText: `${celulaNombre} · 🔥 37 Días · Coherencia Activa`,
+    };
+  }, [rankingData, user?.id, user?.name, miCelula]);
 
   const handleEnviarTicket = async () => {
     if (!ticketBloqueo.trim() || !ticketSoluciones.trim() || !ticketImpactoSmart.trim()) {
@@ -1372,7 +1481,8 @@ export default function ComunidadScreen() {
                   {
                     color: eventosTab === 'muro' ? '#1E1B18' : c.textSoft,
                     fontWeight: '700',
-                    fontSize: 10,
+                    fontFamily: 'Arial',
+                    fontSize: 11,
                   },
                 ]}
               >
@@ -1393,7 +1503,8 @@ export default function ComunidadScreen() {
                   {
                     color: eventosTab === 'testimonios' ? '#1E1B18' : c.textSoft,
                     fontWeight: '700',
-                    fontSize: 10,
+                    fontFamily: 'Arial',
+                    fontSize: 11,
                   },
                 ]}
               >
@@ -1414,11 +1525,12 @@ export default function ComunidadScreen() {
                   {
                     color: eventosTab === 'ranking' ? '#1E1B18' : c.textSoft,
                     fontWeight: '700',
-                    fontSize: 10,
+                    fontFamily: 'Arial',
+                    fontSize: 11,
                   },
                 ]}
               >
-                🏆 RANKING 3D
+                🏆 RANKING
               </Text>
             </Pressable>
           </View>
@@ -1864,26 +1976,26 @@ export default function ComunidadScreen() {
             </View>
           )}
 
-          {/* PESTAÑA 3: PODIO RANKING 3D */}
+          {/* PESTAÑA 3: PODIO RANKING */}
           {eventosTab === 'ranking' && (
             <View style={{ gap: 14, paddingTop: 10, paddingBottom: 28 }}>
-              {/* PODIO 3D */}
+              {/* PODIO DE HONOR */}
               <View style={[styles.podium3DContainer, { borderColor: c.border, backgroundColor: c.cardBg }]}>
                 {/* #2 PLATA */}
                 <View style={styles.podiumColumn}>
                   <View style={[styles.avatarMedal, { borderColor: '#E0E0E0', backgroundColor: '#2C2C2C' }]}>
                     <Text style={{ fontSize: 16 }}>🥈</Text>
                   </View>
-                  <Text style={[t.cardTitle, { color: '#E0E0E0', fontSize: 11, marginTop: 4 }]}>
-                    Rodrigo V.
+                  <Text numberOfLines={1} style={{ color: '#E0E0E0', fontFamily: 'Arial', fontSize: 11, fontWeight: '700', marginTop: 4 }}>
+                    {podioTop2.name}
                   </Text>
-                  <Text style={[t.micro, { color: '#BDBDBD', fontSize: 9 }]}>36 Días</Text>
+                  <Text style={{ color: '#BDBDBD', fontFamily: 'Arial', fontSize: 11 }}>{podioTop2.score}</Text>
                   <LinearGradient
                     colors={['#8C8C8C', '#5C5C5C', '#3A3A3A']}
                     style={[styles.podiumBlock, { height: 95 }]}
                   >
                     <Text style={[styles.podiumRankNum, { color: '#FFF' }]}>2</Text>
-                    <Text style={[t.micro, { color: '#E0E0E0', fontSize: 8.5, fontWeight: '800' }]}>PLATA</Text>
+                    <Text style={{ color: '#E0E0E0', fontFamily: 'Arial', fontSize: 11, fontWeight: '800' }}>PLATA</Text>
                   </LinearGradient>
                 </View>
 
@@ -1892,16 +2004,16 @@ export default function ComunidadScreen() {
                   <View style={[styles.avatarMedal, { borderColor: c.gold, backgroundColor: '#3D3014' }]}>
                     <Text style={{ fontSize: 20 }}>👑</Text>
                   </View>
-                  <Text style={[t.cardTitle, { color: c.gold, fontSize: 12, marginTop: 4, fontWeight: '800' }]}>
-                    María A.
+                  <Text numberOfLines={1} style={{ color: c.gold, fontFamily: 'Arial', fontSize: 11, fontWeight: '800', marginTop: 4 }}>
+                    {podioTop1.name}
                   </Text>
-                  <Text style={[t.micro, { color: c.gold, fontSize: 9.5, fontWeight: '700' }]}>🔥 37 Días</Text>
+                  <Text style={{ color: c.gold, fontFamily: 'Arial', fontSize: 11, fontWeight: '700' }}>🔥 {podioTop1.score}</Text>
                   <LinearGradient
                     colors={['#FFE29F', '#E5C689', '#C09A4F', '#9C7A34']}
                     style={[styles.podiumBlock, { height: 130 }]}
                   >
                     <Text style={[styles.podiumRankNum, { color: '#1E1B18' }]}>1</Text>
-                    <Text style={[t.micro, { color: '#1E1B18', fontSize: 9, fontWeight: '900' }]}>ORO LÍDER</Text>
+                    <Text style={{ color: '#1E1B18', fontFamily: 'Arial', fontSize: 11, fontWeight: '900' }}>ORO LÍDER</Text>
                   </LinearGradient>
                 </View>
 
@@ -1910,32 +2022,32 @@ export default function ComunidadScreen() {
                   <View style={[styles.avatarMedal, { borderColor: '#CD7F32', backgroundColor: '#2E1E14' }]}>
                     <Text style={{ fontSize: 16 }}>🥉</Text>
                   </View>
-                  <Text style={[t.cardTitle, { color: '#E0A96D', fontSize: 11, marginTop: 4 }]}>
-                    Esteban G.
+                  <Text numberOfLines={1} style={{ color: '#E0A96D', fontFamily: 'Arial', fontSize: 11, fontWeight: '700', marginTop: 4 }}>
+                    {podioTop3.name}
                   </Text>
-                  <Text style={[t.micro, { color: '#A89E8D', fontSize: 9 }]}>35 Días</Text>
+                  <Text style={{ color: '#A89E8D', fontFamily: 'Arial', fontSize: 11 }}>{podioTop3.score}</Text>
                   <LinearGradient
                     colors={['#A86834', '#7A4820', '#4A2A10']}
                     style={[styles.podiumBlock, { height: 75 }]}
                   >
                     <Text style={[styles.podiumRankNum, { color: '#FFF' }]}>3</Text>
-                    <Text style={[t.micro, { color: '#E0A96D', fontSize: 8.5, fontWeight: '800' }]}>BRONCE</Text>
+                    <Text style={{ color: '#E0A96D', fontFamily: 'Arial', fontSize: 11, fontWeight: '800' }}>BRONCE</Text>
                   </LinearGradient>
                 </View>
               </View>
 
-              {/* Tu Posición Personal */}
+              {/* Tu Posición Personal Con Datos Reales del Usuario */}
               <View style={[styles.myRankCard, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                   <View style={[styles.rankCircleNumber, { backgroundColor: c.gold }]}>
-                    <Text style={{ color: '#1E1B18', fontWeight: '900', fontSize: 12 }}>#4</Text>
+                    <Text style={{ color: '#1E1B18', fontFamily: 'Arial', fontWeight: '900', fontSize: 11 }}>#{userRankEntry.rank}</Text>
                   </View>
-                  <View>
-                    <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 12.5 }]}>
-                      Tu Posición (Kelin Arango)
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: c.textStrong, fontFamily: 'Arial', fontSize: 11, fontWeight: '700' }}>
+                      Tu Posición ({nombreUsuario})
                     </Text>
-                    <Text style={[t.micro, { color: c.gold, fontSize: 9.5 }]}>
-                      Célula 07 · 🔥 37 Días · 94% Evidencias
+                    <Text style={{ color: c.gold, fontFamily: 'Arial', fontSize: 11, marginTop: 2 }}>
+                      {userRankEntry.cellText}
                     </Text>
                   </View>
                 </View>
@@ -1943,7 +2055,7 @@ export default function ComunidadScreen() {
 
               {/* Tabla de Clasificación General */}
               <View style={[styles.leaderboardList, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-                {INITIAL_LEADERBOARD.map(u => (
+                {rankingList.map(u => (
                   <View
                     key={u.id}
                     style={[
@@ -1952,17 +2064,14 @@ export default function ComunidadScreen() {
                       u.isCurrentUser && { backgroundColor: c.cardBgAlt },
                     ]}
                   >
-                    <Text style={[t.micro, { color: u.medal ? c.gold : c.textSoft, fontWeight: '800', width: 24 }]}>
+                    <Text style={{ color: u.medal ? c.gold : c.textSoft, fontFamily: 'Arial', fontWeight: '800', fontSize: 11, width: 28 }}>
                       #{u.rank}
                     </Text>
-                    <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 12, flex: 1 }]}>
+                    <Text style={{ color: c.textStrong, fontFamily: 'Arial', fontSize: 11, fontWeight: u.isCurrentUser ? '700' : '400', flex: 1 }}>
                       {u.name}
                     </Text>
-                    <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>
-                      🔥 {u.streakDays}d
-                    </Text>
-                    <Text style={[t.micro, { color: '#70d2a0', fontWeight: '700', marginLeft: 8 }]}>
-                      {u.evidencePercent}%
+                    <Text style={{ color: c.gold, fontFamily: 'Arial', fontWeight: '700', fontSize: 11 }}>
+                      ⚡ {u.scoreText}
                     </Text>
                   </View>
                 ))}
