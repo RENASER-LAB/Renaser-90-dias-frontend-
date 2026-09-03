@@ -18,6 +18,11 @@ import { useSystemBackHandler } from '../hooks/useSystemBackHandler';
 import { MicroLabel, ScreenHeader, Placeholder } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { GoldButton } from '../components/GoldButton';
+import {
+  useResumenHome,
+  rotuloDeFase,
+  DIAS_DEL_PROGRAMA,
+} from '../features/home/hooks/useResumenHome';
 
 // =========================================================================
 // DATOS ESTÁTICOS
@@ -74,6 +79,7 @@ export default function YoScreen() {
   const { c, t } = useTheme();
   const { rs, isTablet, horizontalPadding } = useResponsive();
   const { user, logout } = useAuth();
+  const { resumen } = useResumenHome();
   const moreSize = rs(56);
   const evoPath = 'M' + EVOLUCION.map(p => p[0] + ' ' + p[1]).join(' L');
 
@@ -159,24 +165,46 @@ export default function YoScreen() {
 
           {/* TU EVOLUCIÓN */}
           <View style={{ paddingTop: 14 }}>
-            <Text style={[t.micro, { color: c.textSoft }]}>TU EVOLUCIÓN</Text>
-            <Text style={[t.micro, { color: c.micro, marginTop: 4 }]}>DÍA 37 DE 90</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={[t.micro, { color: c.textSoft }]}>TU EVOLUCIÓN</Text>
+              <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 9.5 }]}>
+                {rotuloDeFase(resumen?.fase)?.toUpperCase() || 'PROGRAMA ACTIVO'}
+              </Text>
+            </View>
+            <Text style={[t.micro, { color: c.micro, marginTop: 4 }]}>
+              DÍA {resumen?.diaPrograma ?? 1} DE {DIAS_DEL_PROGRAMA}
+            </Text>
             <Svg width="100%" height={78} viewBox="0 0 320 78" style={{ marginTop: 10 }}>
               <Path d={evoPath} stroke={c.gold} strokeWidth={1.5} strokeLinecap="round" fill="none" />
               {EVOLUCION.map(([x, y]) => <Circle key={x} cx={x} cy={y} r={2.8} fill={c.gold} />)}
             </Svg>
           </View>
 
-          {/* STATS */}
+          {/* STATS REALES CALCULADOS POR EL BACKEND */}
           <View style={{ flexDirection: 'row', gap: 10, paddingTop: 12 }}>
-            {STATS.map(s => (
-              <View key={s.k} style={[styles.stat, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-                <Text style={[t.micro, { color: c.micro, fontSize: 8 }]}>{s.k}</Text>
-                <Text style={{ fontFamily: 'Jost_300Light', fontSize: 24, color: c.textStrong, marginTop: 6 }}>
-                  {s.v}<Text style={{ fontSize: 12, color: c.micro }}>%</Text>
-                </Text>
-              </View>
-            ))}
+            {/* Coherencia */}
+            <View style={[styles.stat, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
+              <Text style={[t.micro, { color: c.gold, fontSize: 8, fontWeight: '700' }]}>COHERENCIA</Text>
+              <Text style={{ fontFamily: 'Jost_500Medium', fontSize: 24, color: c.gold, marginTop: 6 }}>
+                {Math.round(resumen?.coherencia ?? 100)}<Text style={{ fontSize: 12, color: c.gold }}>%</Text>
+              </Text>
+            </View>
+
+            {/* Puntos Liga */}
+            <View style={[styles.stat, { borderColor: c.border, backgroundColor: c.cardBg }]}>
+              <Text style={[t.micro, { color: c.micro, fontSize: 8, fontWeight: '700' }]}>PUNTOS LIGA</Text>
+              <Text style={{ fontFamily: 'Jost_500Medium', fontSize: 24, color: c.textStrong, marginTop: 6 }}>
+                {resumen?.puntosLiga ?? 100}
+              </Text>
+            </View>
+
+            {/* Racha */}
+            <View style={[styles.stat, { borderColor: c.border, backgroundColor: c.cardBg }]}>
+              <Text style={[t.micro, { color: c.micro, fontSize: 8, fontWeight: '700' }]}>RACHA DÍAS</Text>
+              <Text style={{ fontFamily: 'Jost_500Medium', fontSize: 24, color: c.textStrong, marginTop: 6 }}>
+                {resumen?.rachaActual ?? 0}<Text style={{ fontSize: 12, color: c.micro }}>d</Text>
+              </Text>
+            </View>
           </View>
 
           {/* EVIDENCIA */}
@@ -302,7 +330,7 @@ export default function YoScreen() {
               <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 15 }]}>{profileName}</Text>
               <Text style={[t.micro, { color: c.gold, fontSize: 11 }]}>{profileEmail}</Text>
               <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5, marginTop: 2 }]}>
-                Célula Fénix 07 · Alumno Activo
+                Día {resumen?.diaPrograma ?? 1} · {rotuloDeFase(resumen?.fase) ?? 'Alumno Activo'}
               </Text>
             </View>
           </View>

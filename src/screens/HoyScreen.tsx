@@ -1,17 +1,75 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  RefreshControl,
+  Pressable,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
 import { useResponsive } from '../theme/responsive';
 import { Card, MicroLabel, ScreenHeader, GoldCircle } from '../components/ui';
 import { Icon } from '../components/Icon';
+import {
+  useResumenHome,
+  rotuloDeFase,
+  DIAS_DEL_PROGRAMA,
+} from '../features/home/hooks/useResumenHome';
+import { obtenerRocasDeHoy } from '../features/training/api/trainingApi';
+import type { RocaDiariaApi } from '../features/training/types/training.types';
 
 export default function HoyScreen() {
-  const { c, t } = useTheme();
+  const { c, t, mode } = useTheme();
+  const isDark = mode === 'dark';
   const { rs, isShort, isTablet, horizontalPadding } = useResponsive();
+  const navigation = useNavigation();
+
+  const { resumen, cargando: cargandoResumen, error: errorResumen, recargar: recargarResumen } = useResumenHome();
+
+  const [rocas, setRocas] = useState<RocaDiariaApi[]>([]);
+  const [cargandoRocas, setCargandoRocas] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const cargarRocas = useCallback(async () => {
+    setCargandoRocas(true);
+    try {
+      const data = await obtenerRocasDeHoy();
+      setRocas(data);
+    } catch {
+      // Degrada amigablemente si aún no hay rocas planificadas
+      setRocas([]);
+    } finally {
+      setCargandoRocas(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      cargarRocas();
+    }, [cargarRocas])
+  );
+
+  const recargarTodo = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([recargarResumen(), cargarRocas()]);
+    setRefreshing(false);
+  }, [recargarResumen, cargarRocas]);
+
+  // Roca Prioritaria de Hoy: Posición 1 (Pareto Verde) o la primera disponible
+  const rocaPrioritaria = rocas.find(r => r.posicion === 1) || rocas[0] || null;
 
   const ringDiameters = isShort ? [220, 180, 140, 100] : [306, 258, 210, 162];
   const ringColors = [c.ring1, c.ring2, c.ring3, c.ring2];
+
+  const faseNombre = rotuloDeFase(resumen?.fase)?.toUpperCase() || 'PROGRAMA ACTIVO';
+  const diaNumero = resumen?.diaPrograma ?? 1;
+  const coherenciaScore = Math.round(resumen?.coherencia ?? 100);
+  const puntosLiga = resumen?.puntosLiga ?? 100;
+  const rachaActual = resumen?.rachaActual ?? 0;
+  const rachaMaxima = resumen?.rachaMaxima ?? 0;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
@@ -28,8 +86,91 @@ export default function HoyScreen() {
           },
         ]}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing || cargandoResumen}
+            onRefresh={recargarTodo}
+            tintColor={c.gold}
+            colors={[c.gold]}
+          />
+        }
       >
-        <View style={[styles.hero, { minHeight: isShort ? rs(210) : rs(280) }]}>
+        {/* ========================================================================= */}
+        {/* 1. BARRA DE ESTADO DEL PROGRAMA & PUNTOS                                  */}
+        {/* ========================================================================= */}
+        <View style={[styles.programStatusBar, { borderColor: c.border, backgroundColor: c.cardBg }]}>
+          <View style={{ flex: 1 }}>
+            <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 1 }]}>
+              {faseNombre}
+            </Text>
+            <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13.5, marginTop: 2 }]}>
+              DÍA {diaNumero} DE {DIAS_DEL_PROGRAMA}
+            </Text>
+          </View>
+
+          <View style={[styles.metricPill, { borderColor: c.gold, backgroundColor: isDark ? 'rgba(212,160,23,0.12)' : 'rgba(212,160,23,0.08)' }]}>
+            <Text style={{ fontSize: 12 }}>⚡</Text>
+            <Text style={[t.micro, { color: c.gold, fontWeight: '800', fontSize: 11 }]}>
+              {puntosLiga} PTS
+            </Text>
+          </View>
+        </View>
+
+        {/* ========================================================================= */}
+        {/* 2. MÉTRICAS CLAVE REALES: COHERENCIA Y RACHA                              */}
+        {/* ========================================================================= */}
+        <View style={styles.metricsRow}>
+          {/* Tarjeta Coherencia Real */}
+          <View style={[styles.metricCard, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5, fontWeight: '700' }]}>
+                COHERENCIA
+              </Text>
+              <Text style={{ fontSize: 13 }}>🎯</Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 2, marginTop: 4 }}>
+              <Text style={{ fontFamily: 'Jost_500Medium', fontSize: 26, color: c.gold }}>
+                {coherenciaScore}
+              </Text>
+              <Text style={{ fontFamily: 'Jost_500Medium', fontSize: 13, color: c.gold }}>%</Text>
+            </View>
+            <Text style={[t.micro, { color: c.micro, fontSize: 9, marginTop: 2 }]}>
+              {coherenciaScore >= 80 ? 'Nivel de excelencia' : 'Consistencia del día'}
+            </Text>
+          </View>
+
+          {/* Tarjeta Racha Real */}
+          <View style={[styles.metricCard, { borderColor: c.border, backgroundColor: c.cardBg }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5, fontWeight: '700' }]}>
+                RACHA ACTUAL
+              </Text>
+              <Text style={{ fontSize: 13 }}>🔥</Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4, marginTop: 4 }}>
+              <Text style={{ fontFamily: 'Jost_500Medium', fontSize: 26, color: c.textStrong }}>
+                {rachaActual}
+              </Text>
+              <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>DÍAS</Text>
+            </View>
+            <Text style={[t.micro, { color: c.micro, fontSize: 9, marginTop: 2 }]}>
+              Récord histórico: {rachaMaxima} d
+            </Text>
+          </View>
+        </View>
+
+        {errorResumen && (
+          <View style={[styles.errorBox, { borderColor: '#E06A66', backgroundColor: isDark ? 'rgba(224,106,102,0.1)' : 'rgba(224,106,102,0.05)' }]}>
+            <Text style={[t.micro, { color: '#E06A66', textAlign: 'center' }]}>
+              {errorResumen}
+            </Text>
+          </View>
+        )}
+
+        {/* ========================================================================= */}
+        {/* 3. HERO: CÍRCULOS CONCÉNTRICOS & TU ÚNICO FOCO (ROCA PRIORITARIA DE HOY)  */}
+        {/* ========================================================================= */}
+        <View style={[styles.hero, { minHeight: isShort ? rs(220) : rs(290) }]}>
           {ringDiameters.map((d, i) => {
             const size = rs(d);
             return (
@@ -48,39 +189,160 @@ export default function HoyScreen() {
             );
           })}
           <View style={styles.heroCenter}>
-            <Text style={[t.micro, { color: c.textSoft, letterSpacing: 3.2 }]}>TU ÚNICO FOCO</Text>
-            <Text style={[t.hero, { color: c.textStrong, marginTop: isShort ? 8 : 14, fontSize: isShort ? 28 : 34 }]}>
-              AHORA
-            </Text>
-            <View style={{ marginTop: isShort ? 16 : 26 }}>
-              <GoldCircle size={isShort ? 44 : 52} icon="chevron" />
+            <View
+              style={[
+                styles.focoBadgePill,
+                {
+                  borderColor: c.gold,
+                  backgroundColor: isDark ? 'rgba(212,160,23,0.15)' : 'rgba(212,160,23,0.08)',
+                },
+              ]}
+            >
+              <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 2, fontSize: 9 }]}>
+                {rocaPrioritaria ? 'PRIORIDAD #1 · FOCO DEL DÍA' : 'TU ÚNICO FOCO'}
+              </Text>
             </View>
+
+            <Text
+              numberOfLines={2}
+              style={[
+                t.hero,
+                {
+                  color: c.textStrong,
+                  marginTop: isShort ? 8 : 12,
+                  fontSize: isShort ? (rocaPrioritaria ? 17 : 26) : (rocaPrioritaria ? 19 : 32),
+                  textAlign: 'center',
+                  paddingHorizontal: 20,
+                  lineHeight: isShort ? 22 : 26,
+                },
+              ]}
+            >
+              {rocaPrioritaria ? rocaPrioritaria.titulo : 'AHORA'}
+            </Text>
+
+            {rocaPrioritaria ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 }}>
+                <View
+                  style={[
+                    styles.statusPill,
+                    {
+                      borderColor: rocaPrioritaria.completada ? '#4CAF50' : c.gold,
+                      backgroundColor: rocaPrioritaria.completada ? 'rgba(76,175,80,0.15)' : 'rgba(212,160,23,0.15)',
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      t.micro,
+                      {
+                        color: rocaPrioritaria.completada ? '#4CAF50' : c.gold,
+                        fontWeight: '800',
+                        fontSize: 9.5,
+                      },
+                    ]}
+                  >
+                    {rocaPrioritaria.completada ? '✓ ROCA COMPLETADA' : '⏳ EN PROCESO'}
+                  </Text>
+                </View>
+              </View>
+            ) : (
+              <Pressable
+                onPress={() => (navigation as any).navigate('Plan')}
+                style={{ marginTop: 6 }}
+                hitSlop={8}
+              >
+                <Text style={[t.micro, { color: c.gold, textAlign: 'center', fontWeight: '600' }]}>
+                  Define tu Roca Verde en Plan ➜
+                </Text>
+              </Pressable>
+            )}
+
+            <Pressable
+              onPress={() => (navigation as any).navigate('Plan')}
+              style={{ marginTop: isShort ? 14 : 20 }}
+              hitSlop={8}
+            >
+              <GoldCircle size={isShort ? 44 : 50} icon={rocaPrioritaria?.completada ? 'check' : 'chevron'} />
+            </Pressable>
           </View>
         </View>
 
-        <View style={{ gap: 14, paddingBottom: 16 }}>
+        {/* ========================================================================= */}
+        {/* 4. TARJETAS DE PROGRESO Y CONTADORES REALES DEL DÍA                       */}
+        {/* ========================================================================= */}
+        <View style={{ gap: 12, paddingBottom: 24 }}>
+          {/* Tarjeta Hábitos de Hoy */}
           <Card>
-            <MicroLabel>INSIGHT INTELIGENTE</MicroLabel>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <MicroLabel>HÁBITOS DE HOY</MicroLabel>
+              <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>
+                {resumen?.habitosHoy ? `${resumen.habitosHoy.completados}/${resumen.habitosHoy.total}` : 'Al día'}
+              </Text>
+            </View>
             <View style={styles.insight}>
               <Icon name="sun" size={19} color={c.gold} />
               <View style={{ gap: 4, flex: 1 }}>
-                <Text style={[t.cardTitle, { color: c.text }]}>Lidera tu energía.</Text>
-                <Text style={[t.body, { color: c.textSoft }]}>Todo lo demás se alinea.</Text>
+                <Text style={[t.cardTitle, { color: c.text }]}>
+                  {resumen?.habitosHoy && resumen.habitosHoy.completados === resumen.habitosHoy.total && resumen.habitosHoy.total > 0
+                    ? '¡Todos los hábitos completados!'
+                    : 'Lidera tu energía diaria.'}
+                </Text>
+                <Text style={[t.body, { color: c.textSoft, fontSize: 12 }]}>
+                  {resumen?.habitosHoy
+                    ? `${resumen.habitosHoy.completados} de ${resumen.habitosHoy.total} hábitos cumplidos en esta jornada.`
+                    : 'Todo lo demás se alinea cuando cumples tu disciplina.'}
+                </Text>
               </View>
             </View>
           </Card>
 
+          {/* Tarjeta Rocas y Objetivos */}
           <Card>
-            <View style={styles.between}>
+            <Pressable
+              onPress={() => (navigation as any).navigate('Plan')}
+              style={styles.between}
+            >
               <View style={{ flex: 1 }}>
-                <MicroLabel>PREPARAR MAÑANA</MicroLabel>
-                <Text style={[t.body, { color: c.text, marginTop: 10, lineHeight: 21 }]}>
-                  Define tu prioridad #1{"\n"}y visualiza tu día ideal.
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <MicroLabel>ROCAS Y OBJETIVOS</MicroLabel>
+                  <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>
+                    {resumen?.rocasHoy ? `${resumen.rocasHoy.completados}/${resumen.rocasHoy.total}` : 'Pareto 80/20'}
+                  </Text>
+                </View>
+                <Text style={[t.cardTitle, { color: c.text, fontSize: 13.5 }]}>
+                  {resumen?.rocasHoy && resumen.rocasHoy.completados > 0
+                    ? `${resumen.rocasHoy.completados} de ${resumen.rocasHoy.total} rocas selladas hoy.`
+                    : 'Prioridad #1 del día'}
+                </Text>
+                <Text style={[t.body, { color: c.textSoft, marginTop: 4, fontSize: 12, lineHeight: 18 }]}>
+                  {rocaPrioritaria
+                    ? `Foco: "${rocaPrioritaria.titulo}"`
+                    : 'Define tu Roca Verde en Plan para sostener la dirección.'}
                 </Text>
               </View>
               <Icon name="chevron" size={14} color={c.chevron} />
-            </View>
+            </Pressable>
           </Card>
+
+          {/* Próximo Evento / Mentoría (si el backend lo devuelve) */}
+          {resumen?.proximoEvento && (
+            <Card>
+              <MicroLabel>PRÓXIMO EVENTO</MicroLabel>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 6 }}>
+                <View style={[styles.eventIconBox, { borderColor: c.gold, backgroundColor: isDark ? 'rgba(212,160,23,0.12)' : 'rgba(212,160,23,0.08)' }]}>
+                  <Text style={{ fontSize: 16 }}>📅</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>
+                    {resumen.proximoEvento.titulo}
+                  </Text>
+                  <Text style={[t.micro, { color: c.gold, fontSize: 10, marginTop: 2 }]}>
+                    {new Date(resumen.proximoEvento.iniciaEn).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })}
+                  </Text>
+                </View>
+              </View>
+            </Card>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -91,11 +353,44 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    justifyContent: 'space-between',
     paddingBottom: 24,
+    gap: 12,
+  },
+  programStatusBar: {
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
+  },
+  metricPill: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  metricsRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  metricCard: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 12,
+  },
+  errorBox: {
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 10,
   },
   hero: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 12,
@@ -107,16 +402,36 @@ const styles = StyleSheet.create({
   heroCenter: {
     alignItems: 'center',
   },
+  focoBadgePill: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  statusPill: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
   insight: {
     flexDirection: 'row',
     gap: 13,
     alignItems: 'flex-start',
-    marginTop: 13,
+    marginTop: 10,
   },
   between: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
     gap: 12,
+  },
+  eventIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
