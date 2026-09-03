@@ -499,6 +499,14 @@ export default function ComunidadScreen() {
     return false;
   };
 
+  const obtenerProgresoCurso = (course: CourseItem): number => {
+    const lecciones = course.sections.flatMap(s => s.lessons);
+    if (lecciones.length === 0) return course.progressPercent;
+    const completadas = lecciones.filter((l, idx) => esLeccionCompletada(l.id, idx)).length;
+    const porcLocal = Math.round((completadas / lecciones.length) * 100);
+    return Math.min(100, Math.max(course.progressPercent, porcLocal));
+  };
+
   // Detalle real de la lección abierta (video_url, cuerpo, recursos) — se pide aparte, recién al
   // tocar una lección, ver `handleAbrirLeccion` más abajo.
   const {
@@ -1857,11 +1865,11 @@ export default function ComunidadScreen() {
                         {course.totalModules} Módulos · {course.totalResources} Recursos
                       </Text>
                       <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 9.5 }]}>
-                        {course.progressPercent}% Completado
+                        {obtenerProgresoCurso(course)}% Completado
                       </Text>
                     </View>
                     <View style={[styles.progressBarBg, { backgroundColor: c.divider }]}>
-                      <View style={[styles.progressBarFill, { width: `${course.progressPercent}%`, backgroundColor: c.gold }]} />
+                      <View style={[styles.progressBarFill, { width: `${obtenerProgresoCurso(course)}%`, backgroundColor: c.gold }]} />
                     </View>
                   </View>
                   <View style={[styles.exploreBtn, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>

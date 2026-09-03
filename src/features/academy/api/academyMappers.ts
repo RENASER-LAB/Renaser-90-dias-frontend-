@@ -88,9 +88,10 @@ function mapearSeccion(s: SeccionConLeccionesApi): CourseSection {
  */
 export function mapearCursoConSecciones(mc: MiCursoApi, secciones: SeccionConLeccionesApi[]): CourseItem {
   const totalLeccionesDelArbol = secciones.reduce((acc, s) => acc + s.lecciones.length, 0);
+  const totalRecursos = totalLeccionesDelArbol > 0 ? totalLeccionesDelArbol : mc.progreso.totalLecciones;
   const progressPercent =
-    mc.progreso.totalLecciones > 0
-      ? Math.round((mc.progreso.completadas / mc.progreso.totalLecciones) * 100)
+    totalRecursos > 0
+      ? Math.min(100, Math.round((mc.progreso.completadas / totalRecursos) * 100))
       : 0;
   return {
     id: mc.id,
@@ -102,9 +103,7 @@ export function mapearCursoConSecciones(mc: MiCursoApi, secciones: SeccionConLec
     summary: mc.descripcion || '',
     progressPercent,
     totalModules: secciones.length,
-    // Si por lo que sea `obtenerSeccionesCurso` falló para este curso puntual (ver `useCursos`),
-    // el árbol queda vacío — se cae al conteo agregado de `progreso` para no mostrar "0 recursos".
-    totalResources: totalLeccionesDelArbol || mc.progreso.totalLecciones,
+    totalResources: totalRecursos,
     sections: secciones.map(mapearSeccion),
     coverUrl: mc.portadaFirmada,
     orden: mc.orden,
