@@ -15,6 +15,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Share,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -57,6 +58,7 @@ export interface ImageViewerModalProps {
   onToggleDislike?: (postId: string) => void;
   onCommentVote?: (postId: string, commentId: string, type: 'like' | 'dislike') => void;
   onAddComment?: (postId: string, text: string) => Promise<void> | void;
+  onShare?: (postId: string) => void;
 }
 
 const EMOJIS_RAPIDOS = ['🔥', '👏', '💪', '⚡', '❤️', '🦅', '🎯', '🙌'];
@@ -82,6 +84,7 @@ export function ImageViewerModal({
   onToggleDislike,
   onCommentVote,
   onAddComment,
+  onShare,
 }: ImageViewerModalProps) {
   const insets = useSafeAreaInsets();
   const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -238,6 +241,26 @@ export function ImageViewerModal({
       setEnviandoComentario(false);
     }
   };
+
+  // Compartir publicación nativamente
+  const handleShare = useCallback(async () => {
+    if (onShare && postId) {
+      onShare(postId);
+      return;
+    }
+    try {
+      const shareUrl = images[currentIndex]?.url || images[0]?.url || '';
+      const textToShare = postText ? `"${postText}"` : '';
+      const byAuthor = authorName ? `Publicado por ${authorName} en Renaser` : 'Comunidad Renaser';
+
+      await Share.share({
+        title: 'Renaser Muro',
+        message: `${byAuthor}\n${textToShare}\n${shareUrl ? `\nVer foto: ${shareUrl}` : ''}`.trim(),
+      });
+    } catch {
+      // Ignorar cancelación de compartir
+    }
+  }, [authorName, postText, images, currentIndex, onShare, postId]);
 
   if (!visible || images.length === 0) {
     return null;
@@ -424,58 +447,47 @@ export function ImageViewerModal({
               </View>
             ) : null}
 
-            {/* BOTONES DE REACCIÓN Y COMENTARIOS ESTILO RED SOCIAL */}
+            {/* BOTONES TRANSPARENTES: ME GUSTA, COMENTAR Y COMPARTIR */}
             {postId && (
               <View style={styles.actionsBar}>
-                {/* Botón Like */}
+                {/* Botón Me Gusta */}
                 <Pressable
                   onPress={() => onToggleLike?.(postId)}
-                  style={[
-                    styles.actionChip,
-                    userReaction === 'like' && styles.actionChipActiveLike,
-                  ]}
-                  hitSlop={6}
+                  style={styles.actionBtnTransparent}
+                  hitSlop={8}
                 >
-                  <Text style={{ fontSize: 13 }}>👍</Text>
+                  <Text style={{ fontSize: 16 }}>👍</Text>
                   <Text
                     style={[
-                      styles.actionChipText,
+                      styles.actionBtnText,
                       userReaction === 'like' && { color: '#70d2a0', fontWeight: '800' },
                     ]}
                   >
-                    {likes}
+                    {likes > 0 ? `${likes} ` : ''}Me gusta
                   </Text>
                 </Pressable>
 
-                {/* Botón Dislike */}
-                <Pressable
-                  onPress={() => onToggleDislike?.(postId)}
-                  style={[
-                    styles.actionChip,
-                    userReaction === 'dislike' && styles.actionChipActiveDislike,
-                  ]}
-                  hitSlop={6}
-                >
-                  <Text style={{ fontSize: 13 }}>👎</Text>
-                  <Text
-                    style={[
-                      styles.actionChipText,
-                      userReaction === 'dislike' && { color: '#f28e8e', fontWeight: '800' },
-                    ]}
-                  >
-                    {dislikes}
-                  </Text>
-                </Pressable>
-
-                {/* Botón Abrir Comentarios */}
+                {/* Botón Comentar */}
                 <Pressable
                   onPress={() => setShowCommentsSheet(true)}
-                  style={[styles.actionChip, { flex: 1.6, borderColor: 'rgba(212,160,23,0.4)' }]}
-                  hitSlop={6}
+                  style={styles.actionBtnTransparent}
+                  hitSlop={8}
                 >
-                  <Text style={{ fontSize: 13 }}>💬</Text>
-                  <Text style={[styles.actionChipText, { color: '#E5C689', fontWeight: '700' }]}>
-                    {comments.length} Comentarios
+                  <Text style={{ fontSize: 16 }}>💬</Text>
+                  <Text style={[styles.actionBtnText, { color: '#E5C689' }]}>
+                    {comments.length > 0 ? `${comments.length} ` : ''}Comentar
+                  </Text>
+                </Pressable>
+
+                {/* Botón Compartir */}
+                <Pressable
+                  onPress={handleShare}
+                  style={styles.actionBtnTransparent}
+                  hitSlop={8}
+                >
+                  <Text style={{ fontSize: 16 }}>↗️</Text>
+                  <Text style={styles.actionBtnText}>
+                    Compartir
                   </Text>
                 </Pressable>
               </View>
@@ -801,36 +813,25 @@ const styles = StyleSheet.create({
   actionsBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-around',
     marginTop: 6,
     paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.12)',
   },
-  actionChip: {
+  actionBtnTransparent: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 5,
-    paddingVertical: 7,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    gap: 6,
+    paddingVertical: 8,
+    backgroundColor: 'transparent',
   },
-  actionChipActiveLike: {
-    backgroundColor: 'rgba(112,210,160,0.2)',
-    borderColor: '#70d2a0',
-  },
-  actionChipActiveDislike: {
-    backgroundColor: 'rgba(242,142,142,0.2)',
-    borderColor: '#f28e8e',
-  },
-  actionChipText: {
+  actionBtnText: {
     color: '#FFFFFF',
     fontFamily: 'Jost_500Medium',
-    fontSize: 11,
+    fontSize: 12.5,
   },
 
   // Estilos del Bottom Sheet de Comentarios

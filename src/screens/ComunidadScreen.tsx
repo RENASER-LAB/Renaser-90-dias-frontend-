@@ -9,6 +9,7 @@ import {
   Modal,
   Alert,
   Image,
+  Share,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -986,6 +987,24 @@ export default function ComunidadScreen() {
     }
   };
 
+  const handleSharePost = async (postId: string) => {
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+
+    try {
+      const shareUrl = post.media[0]?.url || '';
+      const textToShare = post.text ? `"${post.text}"` : '';
+      const byAuthor = post.author ? `Publicado por ${post.author} en Renaser` : 'Comunidad Renaser';
+
+      await Share.share({
+        title: 'Renaser Muro',
+        message: `${byAuthor}\n${textToShare}\n${shareUrl ? `\nVer foto: ${shareUrl}` : ''}`.trim(),
+      });
+    } catch {
+      // Diálogo de compartir cancelado
+    }
+  };
+
   // El feed (GET /api/v1/wall) no trae comentarios, solo `commentCount`: se piden recién al
   // abrir la sección, una sola vez por post (useWallFeed ya evita repetir el pedido).
   const handleToggleComments = (postId: string) => {
@@ -1568,11 +1587,11 @@ export default function ComunidadScreen() {
                       </Pressable>
                     </View>
 
-                    {/* Botones Like / Dislike */}
+                    {/* Botones de Acción: Like, Dislike, Comentar, Compartir */}
                     <View style={[styles.actionButtonsRow, { borderTopColor: c.divider }]}>
                       <Pressable
                         onPress={() => handleToggleLike(post.id)}
-                        style={[styles.actionBtn, post.userReaction === 'like' && { backgroundColor: c.cardBgAlt }]}
+                        style={styles.actionBtn}
                       >
                         <Text style={{ fontSize: 14 }}>👍</Text>
                         <Text
@@ -1591,7 +1610,7 @@ export default function ComunidadScreen() {
 
                       <Pressable
                         onPress={() => handleToggleDislike(post.id)}
-                        style={[styles.actionBtn, post.userReaction === 'dislike' && { backgroundColor: c.cardBgAlt }]}
+                        style={styles.actionBtn}
                       >
                         <Text style={{ fontSize: 14 }}>👎</Text>
                         <Text
@@ -1615,6 +1634,16 @@ export default function ComunidadScreen() {
                         <Text style={{ fontSize: 13 }}>💬</Text>
                         <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 10.5 }]}>
                           Comentar
+                        </Text>
+                      </Pressable>
+
+                      <Pressable
+                        onPress={() => handleSharePost(post.id)}
+                        style={styles.actionBtn}
+                      >
+                        <Text style={{ fontSize: 13 }}>↗️</Text>
+                        <Text style={[t.micro, { color: c.textSoft, fontWeight: '700', fontSize: 10.5 }]}>
+                          Compartir
                         </Text>
                       </Pressable>
                     </View>
@@ -3445,6 +3474,7 @@ export default function ComunidadScreen() {
             onToggleDislike={handleToggleDislike}
             onCommentVote={handleCommentVote}
             onAddComment={(pid, txt) => handleAddComment(pid, txt)}
+            onShare={handleSharePost}
           />
         );
       })()}
