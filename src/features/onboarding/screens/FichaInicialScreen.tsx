@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useResponsive } from '../../../theme/responsive';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { FichaInicialData } from '../types/onboarding.types';
 import { CHAPTERS_CONFIG, INITIAL_FICHA_DATA } from '../data/chaptersConfig';
-import { mapearIdentidad, mapearSalud, mapearConsentimiento } from '../data/mapaPreguntas';
+import { mapearIdentidad, mapearSalud, mapearConsentimiento, reconstruirFichaDesdeRespuestas } from '../data/mapaPreguntas';
 import { usePersistenciaOnboarding } from '../hooks/usePersistenciaOnboarding';
+import * as onboardingApi from '../api/onboardingApi';
+import { almacenamientoLocal } from '../../../services/storage/almacenamientoLocal';
 import { OnboardingStepBar } from '../components/OnboardingStepBar';
 import { ChapterIdentidad } from '../components/ChapterIdentidad';
 import { ChapterSalud } from '../components/ChapterSalud';
@@ -19,14 +21,30 @@ import { GoldButton } from '../../../components/GoldButton';
 /** Clave de sección del catálogo (`renaser.secciones_onboarding`, flujo `ficha_inicial`) por capítulo. */
 const SECCION_POR_CAPITULO = ['identidad_operativa', 'cuerpo', 'compromiso_y_cierre'] as const;
 
+/** Cuánto esperar sin nuevos cambios antes de escribir el borrador a disco (evita golpear AsyncStorage en cada tecla). */
+const DEBOUNCE_BORRADOR_MS = 800;
+
 interface FichaInicialScreenProps {
+  userId?: string;
   initialUserName?: string;
   initialUserEmail?: string;
   onComplete: (data: FichaInicialData) => void;
   onBack: () => void;
 }
 
+function fichaInicialConDatosDeSesion(initialUserName: string, initialUserEmail: string): FichaInicialData {
+  return {
+    ...INITIAL_FICHA_DATA,
+    identidad: {
+      ...INITIAL_FICHA_DATA.identidad,
+      nombre: initialUserName || INITIAL_FICHA_DATA.identidad.nombre,
+      email: initialUserEmail || INITIAL_FICHA_DATA.identidad.email,
+    },
+  };
+}
+
 export function FichaInicialScreen({
+  userId,
   initialUserName = '',
   initialUserEmail = '',
   onComplete,
@@ -37,14 +55,73 @@ export function FichaInicialScreen({
   const { guardarCapitulo, avanzarEstado } = usePersistenciaOnboarding();
 
   const [currentChapter, setCurrentChapter] = useState(0);
-  const [formData, setFormData] = useState<FichaInicialData>({
-    ...INITIAL_FICHA_DATA,
-    identidad: {
-      ...INITIAL_FICHA_DATA.identidad,
-      nombre: initialUserName || INITIAL_FICHA_DATA.identidad.nombre,
-      email: initialUserEmail || INITIAL_FICHA_DATA.identidad.email,
-    },
-  });
+  const [guardando, setGuardando] = useState(false);
+  const [formData, setFormData] = useState<FichaInicialData>(() =>
+    fichaInicialConDatosDeSesion(initialUserName, initialUserEmail)
+  );
+
+  /**
+   * Restaura el progreso al entrar a la pantalla, para que apagar el teléfono o cerrar la app a
+   * mitad del formulario no obligue a rellenarlo de nuevo (pedido explícito, 2026-09-03):
+   *
+   * 1. Borrador local (AsyncStorage) — cubre lo que todavía NO se mandó al backend (nada se manda
+   *    hasta tocar "Siguiente"). Es la fuente más reciente posible: se autoguarda con cada cambio.
+   * 2. Si no hay borrador local, lo ya guardado en el backend (`GET /onboarding/answers`) — cubre
+   *    los capítulos que sí se llegaron a mandar en una sesión anterior, aunque el borrador local
+   *    se haya perdido (datos borrados de la app, otro dispositivo, etc.). Sin cambios de backend:
+   *    ambos endpoints ya existían.
+   *
+   * `cargandoBorrador` evita dos cosas: mostrar el formulario vacío por un instante antes de que
+   * la restauración termine, y que el efecto de autoguardado (más abajo) pise el borrador leído
+   * con el estado inicial todavía sin restaurar.
+   */
+  const [cargandoBorrador, setCargandoBorrador] = useState(true);
+
+  useEffect(() => {
+    let vigente = true;
+    (async () => {
+      if (!userId) {
+        setCargandoBorrador(false);
+        return;
+      }
+      const borrador = await almacenamientoLocal.leerBorradorFicha(userId);
+      if (!vigente) return;
+      if (borrador) {
+        setFormData(borrador.formData);
+        setCurrentChapter(borrador.currentChapter);
+        setCargandoBorrador(false);
+        return;
+      }
+      try {
+        const respuestas = await onboardingApi.obtenerRespuestas('ficha_inicial');
+        if (!vigente) return;
+        setFormData(prev => reconstruirFichaDesdeRespuestas(respuestas, prev));
+      } catch (e) {
+        // Sin borrador local y sin poder consultar el backend (sin red, primera vez): se sigue
+        // con el formulario vacío/con los datos de sesión — no hay nada más de dónde recuperarlo.
+        console.warn('No se pudo consultar el progreso previo del onboarding:', e);
+      } finally {
+        if (vigente) setCargandoBorrador(false);
+      }
+    })();
+    return () => {
+      vigente = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
+  /** Autoguardado debounced: cubre lo que se está tipeando AHORA, antes de tocar "Siguiente". */
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!userId || cargandoBorrador) return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      void almacenamientoLocal.guardarBorradorFicha(userId, formData, currentChapter);
+    }, DEBOUNCE_BORRADOR_MS);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [userId, cargandoBorrador, formData, currentChapter]);
 
   const activeConfig = CHAPTERS_CONFIG[currentChapter];
   const isLastChapter = currentChapter === CHAPTERS_CONFIG.length - 1;
@@ -104,22 +181,43 @@ export function FichaInicialScreen({
 
   const handleNext = async () => {
     if (!validateChapter()) return;
+    if (guardando) return;
 
     // Guardar de verdad, capítulo por capítulo: si la persona abandona después de este punto, lo
-    // que ya llenó no se pierde. Un fallo de red no bloquea el avance (ver usePersistenciaOnboarding).
-    await guardarCapitulo(respuestasDelCapitulo(currentChapter));
-    const porcentaje = Math.round(((currentChapter + 1) / CHAPTERS_CONFIG.length) * 100);
-    await avanzarEstado({
-      flow: 'ficha_inicial',
-      section: SECCION_POR_CAPITULO[currentChapter],
-      step: currentChapter,
-      flowProgress: JSON.stringify({ chapter: currentChapter, totalChapters: CHAPTERS_CONFIG.length, porcentaje }),
-    });
+    // que ya llenó no se pierde. Decisión 2026-09-03: a diferencia del resto de
+    // `usePersistenciaOnboarding` (que reintenta en silencio), ACÁ si el guardado falla NO se
+    // avanza de capítulo — evita que la persona crea que su respuesta quedó guardada cuando en
+    // realidad sigue pendiente de reintento.
+    setGuardando(true);
+    try {
+      const resultado = await guardarCapitulo(respuestasDelCapitulo(currentChapter));
+      if (resultado.pendientes > 0) {
+        Alert.alert(
+          'No se pudo guardar',
+          'No pudimos guardar tus respuestas de este capítulo. Revisá tu conexión e intentá de nuevo.'
+        );
+        return;
+      }
 
-    if (isLastChapter) {
-      onComplete(formData);
-    } else {
-      setCurrentChapter(prev => prev + 1);
+      const porcentaje = Math.round(((currentChapter + 1) / CHAPTERS_CONFIG.length) * 100);
+      await avanzarEstado({
+        flow: 'ficha_inicial',
+        section: SECCION_POR_CAPITULO[currentChapter],
+        step: currentChapter,
+        flowProgress: JSON.stringify({ chapter: currentChapter, totalChapters: CHAPTERS_CONFIG.length, porcentaje }),
+      });
+
+      if (isLastChapter) {
+        // Los 3 capítulos ya están guardados en el backend a esta altura — el borrador local ya
+        // no protege nada y solo podría resucitar datos viejos si esta cuenta vuelve a onboarding
+        // (no debería pasar, pero es una fila huérfana que no cuesta nada limpiar).
+        if (userId) void almacenamientoLocal.borrarBorradorFicha(userId);
+        onComplete(formData);
+      } else {
+        setCurrentChapter(prev => prev + 1);
+      }
+    } finally {
+      setGuardando(false);
     }
   };
 
@@ -136,6 +234,14 @@ export function FichaInicialScreen({
     handlePrev();
     return true;
   }, true);
+
+  if (cargandoBorrador) {
+    return (
+      <SafeAreaView style={[styles.safeArea, styles.loadingContainer, { backgroundColor: c.bg }]}>
+        <ActivityIndicator color={c.gold} size="large" />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: c.bg }]}>
@@ -230,6 +336,7 @@ export function FichaInicialScreen({
             label={isLastChapter ? 'CONTINUAR A TÉRMINOS' : 'SIGUIENTE'}
             variant="primary"
             onPress={handleNext}
+            loading={guardando}
             icon="arrow"
             style={{ flex: currentChapter > 0 ? 1.5 : 1 }}
           />
@@ -242,6 +349,10 @@ export function FichaInicialScreen({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   topBar: {
     flexDirection: 'row',

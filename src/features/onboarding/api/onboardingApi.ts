@@ -1,5 +1,8 @@
 import { apiFetch } from '../../../services/http/apiClient';
 import type {
+  ActivarProgramaApi,
+  ActivarProgramaInput,
+  EstadoActivacionProgramaApi,
   EstadoOnboardingApi,
   AvanzarEstadoInput,
   GuardarRespuestaInput,
@@ -12,6 +15,8 @@ import type {
   UrlSubidaMediaOnboardingApi,
 } from '../types/onboarding.types';
 import {
+  activarProgramaSchema,
+  estadoActivacionProgramaSchema,
   estadoOnboardingSchema,
   mediaOnboardingSchema,
   respuestaSchema,
@@ -43,6 +48,30 @@ export async function obtenerEstado(): Promise<EstadoOnboardingApi> {
  * del lado del servidor (completar dos veces conserva la primera fecha), así que no hace falta
  * guardia acá contra llamadas repetidas.
  */
+/**
+ * GET /api/v1/onboarding/activate-program — las fechas válidas para arrancar el Día 1 (mañana,
+ * +2 o +3 en la zona del aprendiz — nunca hoy, ver `ParticipacionPrograma.activarPrograma` en el
+ * backend). `validStartDates` viene vacío si el programa ya está activado.
+ */
+export async function consultarActivacionPrograma(): Promise<EstadoActivacionProgramaApi> {
+  const r = await apiFetch<unknown>('/api/v1/onboarding/activate-program');
+  return validarRespuesta<EstadoActivacionProgramaApi>(
+    estadoActivacionProgramaSchema,
+    r,
+    'GET /api/v1/onboarding/activate-program'
+  );
+}
+
+/**
+ * POST /api/v1/onboarding/activate-program — confirma el Día 1 con una de las fechas devueltas por
+ * `consultarActivacionPrograma`. Reintentar con la MISMA fecha ya activada es un no-op (200); con
+ * una fecha distinta el backend responde 409 (`ApiError.esConflicto`).
+ */
+export async function activarPrograma(input: ActivarProgramaInput): Promise<ActivarProgramaApi> {
+  const r = await apiFetch<unknown>('/api/v1/onboarding/activate-program', { method: 'POST', body: input });
+  return validarRespuesta<ActivarProgramaApi>(activarProgramaSchema, r, 'POST /api/v1/onboarding/activate-program');
+}
+
 export async function completarOnboarding(): Promise<EstadoOnboardingApi> {
   const r = await apiFetch<unknown>('/api/v1/onboarding/complete', { method: 'POST' });
   return validarRespuesta<EstadoOnboardingApi>(estadoOnboardingSchema, r, 'POST /api/v1/onboarding/complete');
@@ -113,10 +142,24 @@ export function almacenamientoOnboardingSinConfigurar(uploadUrl: string): boolea
  * `PUT` directo a S3 con la URL prefirmada — nunca pasa por este backend. Por eso NO usa
  * `apiFetch`: ni la `BASE_URL` del backend Java ni el header de sesión `X-Auth-Token`
  * corresponden acá, y el `Content-Type` tiene que ser EXACTAMENTE el que se firmó del lado del
- * servidor o S3 rechaza la firma (mismo motivo que `wallApi.subirImagenAS3`).
+ * servidor o S3 rechaza la firma con 403 (mismo motivo que `wallApi.subirImagenAS3`).
+ *
+ * <p>Bug encontrado 2026-09-03: usar `.blob()` para leer el archivo local y mandar ESE `Blob`
+ * como body deja que React Native decida el `Content-Type` real a partir del `type` propio del
+ * Blob (a veces vacío, a veces distinto de lo firmado) — pisando el header explícito de abajo.
+ * `.arrayBuffer()` no carga ningún metadato de tipo, así que RN no tiene de dónde inferir un
+ * `Content-Type` propio y respeta el header explícito, que es el que S3 espera.
  */
 export async function subirArchivoOnboardingAS3(uploadUrl: string, uri: string, mimeType: string): Promise<void> {
-  const bytes = await (await fetch(uri)).blob();
+  let bytes: ArrayBuffer;
+  try {
+    bytes = await (await fetch(uri)).arrayBuffer();
+  } catch (error) {
+    // Distingue "no se pudo leer el archivo local" (uri de captureRef, problema del dispositivo)
+    // de "S3 rechazó la subida" (problema de red/credenciales) — mismo mensaje genérico en la
+    // pantalla, pero el `cause` deja el diagnóstico correcto en el warning de la consola.
+    throw new Error('No se pudo leer el archivo de la firma en el dispositivo.', { cause: error });
+  }
   const respuesta = await fetch(uploadUrl, {
     method: 'PUT',
     headers: { 'Content-Type': mimeType },

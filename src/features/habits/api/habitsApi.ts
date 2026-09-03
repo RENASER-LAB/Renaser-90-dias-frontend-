@@ -31,7 +31,18 @@ export async function obtenerTracksDeHoy(): Promise<TrackDelDiaApi[]> {
   return validarRespuesta(habitsSchemas.tracksDeHoy, r, 'GET /api/v1/habit-tracks/today');
 }
 
-/** PATCH /api/v1/habit-preferences/{habitId} — cambia la hora de disparo/límite de un hábito. */
+/**
+ * PATCH /api/v1/habit-preferences/{habitId} — cambia la hora de disparo/límite de un hábito.
+ *
+ * Bug encontrado 2026-09-03: el backend espera SIEMPRE los 4 campos del PATCH (`triggerTime`,
+ * `limitTime`, `reminderEnabled`, `reminderMinutesBefore`) — `reminderEnabled` es un `boolean`
+ * primitivo del lado del backend, así que si no viaja en el JSON, Jackson no puede construir el
+ * DTO y el PATCH entero falla con 400 (`"El cuerpo de la solicitud es invalido o esta mal
+ * formado"`), para CUALQUIER hábito. Como todavía no hay ninguna pantalla de recordatorios en la
+ * app (ni el `GET` de este mismo endpoint devuelve el estado actual del recordatorio, así que no
+ * habría forma de preservarlo aunque quisiéramos), se manda explícito "sin recordatorio" — no
+ * apaga nada real porque hoy nada en la app prende un recordatorio.
+ */
 export async function cambiarHorario(
   habitId: string,
   triggerTime: string | null,
@@ -39,6 +50,6 @@ export async function cambiarHorario(
 ): Promise<void> {
   await apiFetch<unknown>(`/api/v1/habit-preferences/${habitId}`, {
     method: 'PATCH',
-    body: { triggerTime, limitTime },
+    body: { triggerTime, limitTime, reminderEnabled: false, reminderMinutesBefore: null },
   });
 }

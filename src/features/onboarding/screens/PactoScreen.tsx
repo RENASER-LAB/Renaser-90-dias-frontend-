@@ -38,6 +38,7 @@ export function PactoScreen({
   const [signature, setSignature] = useState<SignatureData | null>(savedSignature || null);
   const [hasSigned, setHasSigned] = useState<boolean>(Boolean(savedSignature?.data && savedSignature.data.trim().length > 0));
   const [clearTrigger, setClearTrigger] = useState(0);
+  const [guardando, setGuardando] = useState(false);
 
   useEffect(() => {
     if (savedSignature && savedSignature.data && savedSignature.data.trim().length > 0) {
@@ -64,21 +65,34 @@ export function PactoScreen({
       return;
     }
 
-    // Guardar de verdad la aceptación del Pacto. "Leer y firmar" es una sola acción en esta
-    // pantalla — no hay un paso separado de "aceptar" antes de firmar (ver comentario en
-    // mapearPacto sobre accepted_pacto), por eso el hito PACTO se marca acá igual.
-    await guardarCapitulo(mapearPacto(initialName));
-    await aceptarHito('PACTO');
+    if (guardando) return;
 
-    // Firma con valor legal (decisión del dueño, 2026-09-01): se captura el lienzo ya dibujado
-    // como PNG y se sube a S3 con su referencia guardada en la base (ver mapaPreguntas.ts,
-    // PREGUNTA_FIRMA_PACTO). El hito PACTO_FIRMADO solo se marca si la firma llegó a guardarse de
-    // verdad — un pacto marcado como firmado sin la firma real es peor que uno sin marcar, es
-    // justamente el registro con valor probatorio que se quiere tener. Si falla, no bloquea el
-    // avance de la persona (el trazo ya vive en el estado del flujo vía onAccept más abajo).
-    const pngFirma = await signatureRef.current?.capturarComoPng();
-    let firmaGuardada = false;
-    if (pngFirma) {
+    // Decisión 2026-09-03 (reemplaza la de 2026-09-01): el Pacto de Sangre es el compromiso legal
+    // más importante del onboarding, así que ni la aceptación ni la firma pueden fallar en
+    // silencio acá — si no se pudo respaldar, la persona se entera y no avanza creyendo que quedó
+    // firmado.
+    setGuardando(true);
+    try {
+      // "Leer y firmar" es una sola acción en esta pantalla — no hay un paso separado de
+      // "aceptar" antes de firmar (ver comentario en mapearPacto sobre accepted_pacto), por eso
+      // el hito PACTO se marca acá igual.
+      const resultadoRespuesta = await guardarCapitulo(mapearPacto(initialName));
+      if (resultadoRespuesta.pendientes > 0) {
+        Alert.alert('No se pudo guardar', 'No pudimos registrar tu aceptación del Pacto. Revisá tu conexión e intentá de nuevo.');
+        return;
+      }
+      await aceptarHito('PACTO');
+
+      // Firma con valor legal: se captura el lienzo ya dibujado como PNG y se sube a S3 con su
+      // referencia guardada en la base (ver mapaPreguntas.ts, PREGUNTA_FIRMA_PACTO). El hito
+      // PACTO_FIRMADO solo se marca si la firma llegó a guardarse de verdad — un pacto marcado
+      // como firmado sin la firma real es peor que uno sin marcar, es justamente el registro con
+      // valor probatorio que se quiere tener.
+      const pngFirma = await signatureRef.current?.capturarComoPng();
+      if (!pngFirma) {
+        Alert.alert('No se pudo capturar la firma', 'Volvé a dibujar tu firma e intentá de nuevo.');
+        return;
+      }
       const resultado = await guardarFirma({
         flow: 'pacto',
         questionId: PREGUNTA_FIRMA_PACTO.id,
@@ -86,19 +100,21 @@ export function PactoScreen({
         pngUri: pngFirma,
         trazosOriginales: finalSignature.data,
       });
-      firmaGuardada = resultado.ok;
-    }
-    if (firmaGuardada) {
+      if (!resultado.ok) {
+        Alert.alert(
+          'No se pudo guardar tu firma',
+          'No pudimos respaldar tu firma en el almacenamiento. Revisá tu conexión e intentá de nuevo.'
+        );
+        return;
+      }
       await aceptarHito('PACTO_FIRMADO');
-    } else {
-      console.warn(
-        'No se marcó el hito PACTO_FIRMADO: la firma no llegó a guardarse en el almacenamiento.'
-      );
+
+      await avanzarEstado({ flow: 'pacto', section: 'firma', step: 0 });
+
+      onAccept(initialName, finalSignature);
+    } finally {
+      setGuardando(false);
     }
-
-    await avanzarEstado({ flow: 'pacto', section: 'firma', step: 0 });
-
-    onAccept(initialName, finalSignature);
   };
 
   return (
@@ -244,6 +260,7 @@ export function PactoScreen({
           label="Confirmar mi firma"
           onPress={handleConfirmSignature}
           disabled={!hasSigned}
+          loading={guardando}
           icon="check"
           style={{ marginTop: 8, marginBottom: 20 }}
         />

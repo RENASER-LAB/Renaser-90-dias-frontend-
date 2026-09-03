@@ -146,11 +146,14 @@ export function usePersistenciaOnboarding() {
         }
 
         return { ok: true, mediaId: media.id };
-      } catch {
-        // No se loguea el error crudo acá: en el paso "subir-a-s3" podría traer la URL prefirmada
-        // en el mensaje (CLAUDE.md: "Nunca loguees... la URL prefirmada"). Con el nombre del paso
-        // alcanza para diagnosticar sin exponer nada sensible.
-        console.warn(`No se pudo guardar la firma "${params.questionKey}" (falló en el paso "${paso}").`);
+      } catch (error) {
+        // No se loguea el error CRUDO acá: en el paso "subir-a-s3" podría traer la URL prefirmada
+        // en el mensaje (CLAUDE.md: "Nunca loguees... la URL prefirmada"). `error.message` sí es
+        // seguro de mostrar: `onboardingApi.subirArchivoOnboardingAS3` arma mensajes propios sin
+        // datos sensibles precisamente para poder distinguir acá "no se pudo leer el archivo
+        // local" de "S3 rechazó la subida" sin exponer nada.
+        const detalle = error instanceof Error ? error.message : String(error);
+        console.warn(`No se pudo guardar la firma "${params.questionKey}" (falló en el paso "${paso}"): ${detalle}`);
         return { ok: false };
       }
     },
