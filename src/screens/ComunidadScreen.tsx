@@ -434,7 +434,20 @@ export default function ComunidadScreen() {
   const [expandedPosts, setExpandedPosts] = useState<Record<string, boolean>>({});
   const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
-  const [commentPhotos, setCommentPhotos] = useState<Record<string, boolean>>({});
+  const [commentPhotos, setCommentPhotos] = useState<Record<string, FotoMuroNormalizada | null>>({});
+  const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
+  const EMOJIS_RAPIDOS = ['🔥', '👏', '💪', '⚡', '❤️', '🦅', '🎯', '🙌'];
+
+  const handlePickCommentPhoto = async (postId: string) => {
+    try {
+      const foto = await elegirYNormalizarFotoMuro();
+      if (foto) {
+        setCommentPhotos(prev => ({ ...prev, [postId]: foto }));
+      }
+    } catch {
+      Alert.alert('Foto', 'No se pudo seleccionar la foto.');
+    }
+  };
 
   // Estados de "Recursos Exclusivos" (cursos/lecciones) — `courses` sale del backend real
   // (GET /api/v1/cursos + GET /api/v1/cursos/{id}/secciones) a través de `useCursos`.
@@ -551,12 +564,14 @@ export default function ComunidadScreen() {
   // Visor de Fotos a Pantalla Completa estilo Facebook / X
   const [imageViewerVisible, setImageViewerVisible] = useState(false);
   const [imageViewerData, setImageViewerData] = useState<{
+    postId?: string;
     images: ImageViewerItem[];
     initialIndex: number;
     authorName?: string;
     timeAgo?: string;
     postText?: string;
   }>({
+    postId: '',
     images: [],
     initialIndex: 0,
     authorName: '',
@@ -576,6 +591,7 @@ export default function ComunidadScreen() {
     if (items.length === 0) return;
 
     setImageViewerData({
+      postId: post.id,
       images: items,
       initialIndex: Math.min(indexSeleccionado, items.length - 1),
       authorName: post.author,
@@ -1032,8 +1048,8 @@ export default function ComunidadScreen() {
   // Comentar va contra el backend real (POST /api/v1/wall/{postId}/comments). Ese endpoint solo
   // acepta texto (CreateWallCommentRequest exige @NotBlank): una foto sin texto no tiene forma de
   // guardarse todavía, así que se avisa en vez de fingir que se publicó.
-  const handleAddComment = async (postId: string) => {
-    const text = (commentInputs[postId] || '').trim();
+  const handleAddComment = async (postId: string, textParam?: string) => {
+    const text = (textParam ?? commentInputs[postId] ?? '').trim();
     if (!text) {
       if (commentPhotos[postId]) {
         Alert.alert(
@@ -1047,7 +1063,7 @@ export default function ComunidadScreen() {
     try {
       await agregarComentarioRemoto(postId, text);
       setCommentInputs(prev => ({ ...prev, [postId]: '' }));
-      setCommentPhotos(prev => ({ ...prev, [postId]: false }));
+      setCommentPhotos(prev => ({ ...prev, [postId]: null }));
     } catch (error) {
       Alert.alert('No se pudo comentar', mensajeDeError(error, 'Intentá de nuevo en un momento.'));
     }
@@ -1606,68 +1622,115 @@ export default function ComunidadScreen() {
                     {/* Comentarios con Fotos */}
                     {commentsVisible && (
                       <View style={[styles.commentsSection, { borderTopColor: c.divider }]}>
-                        {post.comments.map(cItem => (
-                          <View key={cItem.id} style={[styles.commentCard, { backgroundColor: c.cardBgAlt }]}>
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <Text style={[t.cardTitle, { color: c.gold, fontSize: 11.5 }]}>
-                                {cItem.author} {cItem.role ? `(${cItem.role})` : ''}
+                        {post.comments.map(cItem => {
+                          const isLong = cItem.text.length > 90;
+                          const isExpanded = !!expandedComments[cItem.id];
+                          const displayText = isLong && !isExpanded ? cItem.text.slice(0, 90) + '...' : cItem.text;
+
+                          return (
+                            <View key={cItem.id} style={[styles.commentCard, { backgroundColor: c.cardBgAlt }]}>
+                              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Text style={[t.cardTitle, { color: c.gold, fontSize: 11.5 }]}>
+                                  {cItem.author} {cItem.role ? `(${cItem.role})` : ''}
+                                </Text>
+                                <Text style={[t.micro, { color: c.textSoft, fontSize: 9 }]}>{cItem.timeAgo}</Text>
+                              </View>
+
+                              <Text style={[t.body, { color: c.text, fontSize: 11.5, marginTop: 4, lineHeight: 16 }]}>
+                                {displayText}
                               </Text>
-                              <Text style={[t.micro, { color: c.textSoft, fontSize: 9 }]}>{cItem.timeAgo}</Text>
+
+                              {isLong && (
+                                <Pressable
+                                  onPress={() => setExpandedComments(prev => ({ ...prev, [cItem.id]: !prev[cItem.id] }))}
+                                  hitSlop={6}
+                                  style={{ marginTop: 2 }}
+                                >
+                                  <Text style={[t.micro, { color: c.gold, fontSize: 9.5, fontWeight: '700' }]}>
+                                    {isExpanded ? 'Ver menos' : 'Ver más...'}
+                                  </Text>
+                                </Pressable>
+                              )}
+
+                              {cItem.photoAttached && (
+                                <View style={[styles.commentPhotoBox, { borderColor: c.gold, backgroundColor: c.bg }]}>
+                                  <Text style={[t.micro, { color: c.gold, fontSize: 9.5, fontWeight: '700' }]}>
+                                    {cItem.photoAttached}
+                                  </Text>
+                                </View>
+                              )}
+
+                              <View style={{ flexDirection: 'row', gap: 12, marginTop: 6, alignItems: 'center' }}>
+                                <Pressable
+                                  onPress={() => handleCommentVote(post.id, cItem.id, 'like')}
+                                  style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}
+                                >
+                                  <Text style={{ fontSize: 11 }}>👍</Text>
+                                  <Text style={[t.micro, { color: cItem.userReaction === 'like' ? '#70d2a0' : c.textSoft, fontSize: 9.5 }]}>
+                                    {cItem.likes}
+                                  </Text>
+                                </Pressable>
+
+                                <Pressable
+                                  onPress={() => handleCommentVote(post.id, cItem.id, 'dislike')}
+                                  style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}
+                                >
+                                  <Text style={{ fontSize: 11 }}>👎</Text>
+                                  <Text style={[t.micro, { color: cItem.userReaction === 'dislike' ? '#f28e8e' : c.textSoft, fontSize: 9.5 }]}>
+                                    {cItem.dislikes}
+                                  </Text>
+                                </Pressable>
+                              </View>
                             </View>
+                          );
+                        })}
 
-                            <Text style={[t.body, { color: c.text, fontSize: 11.5, marginTop: 4, lineHeight: 16 }]}>
-                              {cItem.text}
-                            </Text>
+                        {/* Input de Comentario con Emojis y Foto Real */}
+                        <View style={{ gap: 6, marginTop: 8 }}>
+                          {/* Tira de Emojis Rápidos */}
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4, paddingHorizontal: 6 }}>
+                            {EMOJIS_RAPIDOS.map(emoji => (
+                              <Pressable
+                                key={emoji}
+                                onPress={() => setCommentInputs(prev => ({ ...prev, [post.id]: (prev[post.id] || '') + emoji }))}
+                                hitSlop={4}
+                                style={{ padding: 4 }}
+                              >
+                                <Text style={{ fontSize: 14 }}>{emoji}</Text>
+                              </Pressable>
+                            ))}
+                          </View>
 
-                            {cItem.photoAttached && (
-                              <View style={[styles.commentPhotoBox, { borderColor: c.gold, backgroundColor: c.bg }]}>
-                                <Text style={[t.micro, { color: c.gold, fontSize: 9.5, fontWeight: '700' }]}>
-                                  {cItem.photoAttached}
+                          {/* Previsualización compacta de foto seleccionada */}
+                          {commentPhotos[post.id] && (
+                            <View style={[styles.commentPhotoPreview, { borderColor: c.gold, backgroundColor: c.cardBgAlt, flexDirection: 'row', alignItems: 'center', padding: 6, gap: 8 }]}>
+                              <Image
+                                source={{ uri: commentPhotos[post.id]!.uri }}
+                                style={{ width: 38, height: 38, borderRadius: 6 }}
+                                resizeMode="cover"
+                              />
+                              <View style={{ flex: 1 }}>
+                                <Text style={[t.micro, { color: c.gold, fontSize: 10, fontWeight: '700' }]}>
+                                  📷 Foto adjunta
+                                </Text>
+                                <Text style={[t.micro, { color: c.textSoft, fontSize: 8.5 }]}>
+                                  Lista para enviar con tu comentario
                                 </Text>
                               </View>
-                            )}
-
-                            <View style={{ flexDirection: 'row', gap: 12, marginTop: 6, alignItems: 'center' }}>
                               <Pressable
-                                onPress={() => handleCommentVote(post.id, cItem.id, 'like')}
-                                style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}
+                                onPress={() => setCommentPhotos(prev => ({ ...prev, [post.id]: null }))}
+                                hitSlop={6}
                               >
-                                <Text style={{ fontSize: 11 }}>👍</Text>
-                                <Text style={[t.micro, { color: cItem.userReaction === 'like' ? '#70d2a0' : c.textSoft, fontSize: 9.5 }]}>
-                                  {cItem.likes}
-                                </Text>
-                              </Pressable>
-
-                              <Pressable
-                                onPress={() => handleCommentVote(post.id, cItem.id, 'dislike')}
-                                style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}
-                              >
-                                <Text style={{ fontSize: 11 }}>👎</Text>
-                                <Text style={[t.micro, { color: cItem.userReaction === 'dislike' ? '#f28e8e' : c.textSoft, fontSize: 9.5 }]}>
-                                  {cItem.dislikes}
-                                </Text>
-                              </Pressable>
-                            </View>
-                          </View>
-                        ))}
-
-                        {/* Input de Comentario */}
-                        <View style={{ gap: 6, marginTop: 8 }}>
-                          {commentPhotos[post.id] && (
-                            <View style={[styles.commentPhotoPreview, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-                              <Text style={[t.micro, { color: c.gold, fontSize: 9.5, fontWeight: '700' }]}>
-                                📷 foto_adjunta.jpg
-                              </Text>
-                              <Pressable onPress={() => setCommentPhotos(prev => ({ ...prev, [post.id]: false }))}>
-                                <Text style={{ color: '#f28e8e', fontWeight: 'bold', fontSize: 11 }}>✕</Text>
+                                <Text style={{ color: '#f28e8e', fontWeight: 'bold', fontSize: 12 }}>✕</Text>
                               </Pressable>
                             </View>
                           )}
 
                           <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
                             <Pressable
-                              onPress={() => setCommentPhotos(prev => ({ ...prev, [post.id]: !prev[post.id] }))}
+                              onPress={() => handlePickCommentPhoto(post.id)}
                               style={[styles.attachPhotoBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
+                              hitSlop={6}
                             >
                               <Text style={{ fontSize: 14 }}>📷</Text>
                             </Pressable>
@@ -3362,15 +3425,29 @@ export default function ComunidadScreen() {
       </Modal>
 
       {/* Visor de Fotos a Pantalla Completa estilo Facebook / X */}
-      <ImageViewerModal
-        visible={imageViewerVisible}
-        onClose={() => setImageViewerVisible(false)}
-        images={imageViewerData.images}
-        initialIndex={imageViewerData.initialIndex}
-        authorName={imageViewerData.authorName}
-        timeAgo={imageViewerData.timeAgo}
-        postText={imageViewerData.postText}
-      />
+      {(() => {
+        const activeViewerPost = posts.find(p => p.id === imageViewerData.postId) || null;
+        return (
+          <ImageViewerModal
+            visible={imageViewerVisible}
+            onClose={() => setImageViewerVisible(false)}
+            images={imageViewerData.images}
+            initialIndex={imageViewerData.initialIndex}
+            authorName={activeViewerPost?.author || imageViewerData.authorName}
+            timeAgo={activeViewerPost?.timeAgo || imageViewerData.timeAgo}
+            postText={activeViewerPost?.text || imageViewerData.postText}
+            postId={activeViewerPost?.id}
+            likes={activeViewerPost?.likes}
+            dislikes={activeViewerPost?.dislikes}
+            userReaction={activeViewerPost?.userReaction}
+            comments={activeViewerPost?.comments}
+            onToggleLike={handleToggleLike}
+            onToggleDislike={handleToggleDislike}
+            onCommentVote={handleCommentVote}
+            onAddComment={(pid, txt) => handleAddComment(pid, txt)}
+          />
+        );
+      })()}
     </SafeAreaView>
   );
 }

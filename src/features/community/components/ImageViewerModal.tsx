@@ -10,15 +10,34 @@ import {
   PanResponder,
   FlatList,
   StatusBar,
+  TextInput,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
+import { elegirYNormalizarFotoMuro, type FotoMuroNormalizada } from '../utils/normalizarImagen';
 
 export interface ImageViewerItem {
   url: string;
   mimeType?: string;
   title?: string;
+}
+
+export interface ImageViewerCommentItem {
+  id: string;
+  author: string;
+  avatar?: string;
+  role?: string;
+  text: string;
+  photoAttached?: string;
+  likes: number;
+  dislikes: number;
+  userReaction?: 'like' | 'dislike' | null;
+  timeAgo: string;
 }
 
 export interface ImageViewerModalProps {
@@ -29,7 +48,18 @@ export interface ImageViewerModalProps {
   authorName?: string;
   timeAgo?: string;
   postText?: string;
+  postId?: string;
+  likes?: number;
+  dislikes?: number;
+  userReaction?: 'like' | 'dislike' | null;
+  comments?: ImageViewerCommentItem[];
+  onToggleLike?: (postId: string) => void;
+  onToggleDislike?: (postId: string) => void;
+  onCommentVote?: (postId: string, commentId: string, type: 'like' | 'dislike') => void;
+  onAddComment?: (postId: string, text: string) => Promise<void> | void;
 }
+
+const EMOJIS_RAPIDOS = ['🔥', '👏', '💪', '⚡', '❤️', '🦅', '🎯', '🙌'];
 
 function cacheKeyEstable(url: string): string {
   return url.split('?')[0];
@@ -43,6 +73,15 @@ export function ImageViewerModal({
   authorName,
   timeAgo,
   postText,
+  postId,
+  likes = 0,
+  dislikes = 0,
+  userReaction = null,
+  comments = [],
+  onToggleLike,
+  onToggleDislike,
+  onCommentVote,
+  onAddComment,
 }: ImageViewerModalProps) {
   const insets = useSafeAreaInsets();
   const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -50,6 +89,14 @@ export function ImageViewerModal({
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [controlsVisible, setControlsVisible] = useState(true);
   const [isZoomed, setIsZoomed] = useState(false);
+  const [isTextExpanded, setIsTextExpanded] = useState(false);
+
+  // Panel inferior de comentarios (Bottom Sheet estilo Facebook)
+  const [showCommentsSheet, setShowCommentsSheet] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [commentPhoto, setCommentPhoto] = useState<FotoMuroNormalizada | null>(null);
+  const [enviandoComentario, setEnviandoComentario] = useState(false);
+  const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
 
   const flatListRef = useRef<FlatList>(null);
   const lastTapRef = useRef<number>(0);
@@ -58,15 +105,27 @@ export function ImageViewerModal({
   const translateY = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
-  // Soporte para gestos nativos de Android / Xiaomi: volver atrás cierra el visor
-  useSystemBackHandler(onClose, visible);
+  // Soporte de navegación por gestos Android / Xiaomi:
+  // Si el panel de comentarios está abierto, atrás lo cierra; si no, cierra el visor
+  useSystemBackHandler(() => {
+    if (showCommentsSheet) {
+      setShowCommentsSheet(false);
+      return true;
+    }
+    onClose();
+    return true;
+  }, visible);
 
-  // Sincronizar índice inicial cuando se abre el modal
+  // Sincronizar estado inicial cuando se abre el modal
   useEffect(() => {
     if (visible) {
       setCurrentIndex(initialIndex);
       setIsZoomed(false);
       setControlsVisible(true);
+      setShowCommentsSheet(false);
+      setIsTextExpanded(false);
+      setCommentText('');
+      setCommentPhoto(null);
       translateY.setValue(0);
       scaleAnim.setValue(1);
 
@@ -78,13 +137,18 @@ export function ImageViewerModal({
     }
   }, [visible, initialIndex, images.length, translateY, scaleAnim]);
 
-  // Manejo de toque simple (modo cine / controles) y doble toque (zoom 1x ⇄ 2x)
+  // Manejo de toque simple y doble toque (zoom 1x ⇄ 2.2x)
   const handleImagePress = useCallback(() => {
+    if (showCommentsSheet) {
+      setShowCommentsSheet(false);
+      return;
+    }
+
     const now = Date.now();
     const DOUBLE_TAP_DELAY = 300;
 
     if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
-      // Doble toque: alterna zoom
+      // Doble toque: zoom toggle
       const targetScale = isZoomed ? 1 : 2.2;
       setIsZoomed(!isZoomed);
       Animated.spring(scaleAnim, {
@@ -94,13 +158,13 @@ export function ImageViewerModal({
         useNativeDriver: true,
       }).start();
     } else {
-      // Toque simple: oculta/muestra controles si no está en zoom
+      // Toque simple: alternar controles
       if (!isZoomed) {
         setControlsVisible(prev => !prev);
       }
     }
     lastTapRef.current = now;
-  }, [isZoomed, scaleAnim]);
+  }, [isZoomed, scaleAnim, showCommentsSheet]);
 
   // PanResponder para arrastrar hacia abajo y cerrar estilo Facebook
   const panResponder = useRef(
@@ -109,6 +173,7 @@ export function ImageViewerModal({
       onMoveShouldSetPanResponder: (_, gestureState) => {
         return (
           !isZoomed &&
+          !showCommentsSheet &&
           gestureState.dy > 8 &&
           Math.abs(gestureState.dy) > Math.abs(gestureState.dx) * 1.5
         );
@@ -138,6 +203,41 @@ export function ImageViewerModal({
       },
     })
   ).current;
+
+  // Seleccionar foto para el comentario
+  const handlePickCommentPhoto = async () => {
+    try {
+      const foto = await elegirYNormalizarFotoMuro();
+      if (foto) {
+        setCommentPhoto(foto);
+      }
+    } catch {
+      Alert.alert('Foto', 'No se pudo seleccionar la foto.');
+    }
+  };
+
+  // Enviar comentario desde el visor
+  const handleSubmitComment = async () => {
+    if (!postId || !onAddComment) return;
+    const text = commentText.trim();
+    if (!text) {
+      if (commentPhoto) {
+        Alert.alert('Falta el texto', 'Escribe algo para acompañar tu foto.');
+      }
+      return;
+    }
+
+    setEnviandoComentario(true);
+    try {
+      await onAddComment(postId, text);
+      setCommentText('');
+      setCommentPhoto(null);
+    } catch {
+      Alert.alert('Error', 'No se pudo publicar el comentario.');
+    } finally {
+      setEnviandoComentario(false);
+    }
+  };
 
   if (!visible || images.length === 0) {
     return null;
@@ -239,7 +339,7 @@ export function ImageViewerModal({
         {/* ========================================================================= */}
         {/* BARRA SUPERIOR (HEADER ESTILO FACEBOOK / X)                                */}
         {/* ========================================================================= */}
-        {controlsVisible && (
+        {controlsVisible && !showCommentsSheet && (
           <View
             style={[
               styles.topBar,
@@ -258,7 +358,7 @@ export function ImageViewerModal({
               <Text style={styles.closeBtnText}>✕</Text>
             </Pressable>
 
-            {/* Contador de fotos (si hay más de 1) */}
+            {/* Contador de fotos */}
             {images.length > 1 && (
               <View style={styles.counterBadge}>
                 <Text style={styles.counterText}>
@@ -284,15 +384,15 @@ export function ImageViewerModal({
         )}
 
         {/* ========================================================================= */}
-        {/* PIE CON TEXTO DEL POST (FOOTER OVERLAY)                                   */}
+        {/* BARRA INFERIOR FLOTANTE CON ACCIONES Y TEXTO DEL POST                     */}
         {/* ========================================================================= */}
-        {controlsVisible && (postText || authorName) && (
+        {controlsVisible && !showCommentsSheet && (
           <View
             style={[
               styles.bottomOverlay,
               {
-                paddingBottom: Math.max(insets.bottom, 20),
-                paddingHorizontal: 20,
+                paddingBottom: Math.max(insets.bottom, 16),
+                paddingHorizontal: 18,
               },
             ]}
           >
@@ -303,11 +403,288 @@ export function ImageViewerModal({
             )}
 
             {postText ? (
-              <Text numberOfLines={4} style={styles.captionText}>
-                {postText}
-              </Text>
+              <View>
+                <Text
+                  numberOfLines={isTextExpanded ? undefined : 3}
+                  style={styles.captionText}
+                >
+                  {postText}
+                </Text>
+                {postText.length > 90 && (
+                  <Pressable
+                    onPress={() => setIsTextExpanded(prev => !prev)}
+                    hitSlop={6}
+                    style={{ marginTop: 2 }}
+                  >
+                    <Text style={styles.verMasBtnText}>
+                      {isTextExpanded ? 'Ver menos' : 'Ver más...'}
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
             ) : null}
+
+            {/* BOTONES DE REACCIÓN Y COMENTARIOS ESTILO RED SOCIAL */}
+            {postId && (
+              <View style={styles.actionsBar}>
+                {/* Botón Like */}
+                <Pressable
+                  onPress={() => onToggleLike?.(postId)}
+                  style={[
+                    styles.actionChip,
+                    userReaction === 'like' && styles.actionChipActiveLike,
+                  ]}
+                  hitSlop={6}
+                >
+                  <Text style={{ fontSize: 13 }}>👍</Text>
+                  <Text
+                    style={[
+                      styles.actionChipText,
+                      userReaction === 'like' && { color: '#70d2a0', fontWeight: '800' },
+                    ]}
+                  >
+                    {likes}
+                  </Text>
+                </Pressable>
+
+                {/* Botón Dislike */}
+                <Pressable
+                  onPress={() => onToggleDislike?.(postId)}
+                  style={[
+                    styles.actionChip,
+                    userReaction === 'dislike' && styles.actionChipActiveDislike,
+                  ]}
+                  hitSlop={6}
+                >
+                  <Text style={{ fontSize: 13 }}>👎</Text>
+                  <Text
+                    style={[
+                      styles.actionChipText,
+                      userReaction === 'dislike' && { color: '#f28e8e', fontWeight: '800' },
+                    ]}
+                  >
+                    {dislikes}
+                  </Text>
+                </Pressable>
+
+                {/* Botón Abrir Comentarios */}
+                <Pressable
+                  onPress={() => setShowCommentsSheet(true)}
+                  style={[styles.actionChip, { flex: 1.6, borderColor: 'rgba(212,160,23,0.4)' }]}
+                  hitSlop={6}
+                >
+                  <Text style={{ fontSize: 13 }}>💬</Text>
+                  <Text style={[styles.actionChipText, { color: '#E5C689', fontWeight: '700' }]}>
+                    {comments.length} Comentarios
+                  </Text>
+                </Pressable>
+              </View>
+            )}
           </View>
+        )}
+
+        {/* ========================================================================= */}
+        {/* PANEL DESPLEGABLE / BOTTOM SHEET DE COMENTARIOS (ESTILO FACEBOOK)         */}
+        {/* ========================================================================= */}
+        {showCommentsSheet && (
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.commentsSheetWrapper}
+          >
+            <View style={[styles.commentsSheetBox, { maxHeight: screenHeight * 0.72 }]}>
+              {/* Cabecera del Panel de Comentarios */}
+              <View style={styles.commentsSheetHeader}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={{ fontSize: 15 }}>💬</Text>
+                  <Text style={styles.commentsSheetTitle}>
+                    Comentarios ({comments.length})
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={() => setShowCommentsSheet(false)}
+                  style={styles.closeSheetBtn}
+                  hitSlop={8}
+                >
+                  <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: 'bold' }}>✕</Text>
+                </Pressable>
+              </View>
+
+              {/* Lista de Comentarios con scroll independiente */}
+              <ScrollView
+                style={styles.commentsListScroll}
+                contentContainerStyle={{ padding: 14, gap: 10 }}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+              >
+                {comments.length === 0 ? (
+                  <View style={{ alignItems: 'center', paddingVertical: 24, gap: 4 }}>
+                    <Text style={{ fontSize: 24 }}>💭</Text>
+                    <Text style={styles.emptyCommentsTitle}>Sé el primero en comentar</Text>
+                    <Text style={styles.emptyCommentsSub}>Comparte tu perspectiva con la tribu.</Text>
+                  </View>
+                ) : (
+                  comments.map(cItem => {
+                    const isLong = cItem.text.length > 90;
+                    const isExpanded = !!expandedComments[cItem.id];
+                    const displayText = isLong && !isExpanded ? cItem.text.slice(0, 90) + '...' : cItem.text;
+
+                    return (
+                      <View key={cItem.id} style={styles.commentItemCard}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Text style={styles.commentAuthorName}>
+                            {cItem.author} {cItem.role ? `(${cItem.role})` : ''}
+                          </Text>
+                          <Text style={styles.commentTimeText}>{cItem.timeAgo}</Text>
+                        </View>
+
+                        <Text style={styles.commentItemBody}>{displayText}</Text>
+
+                        {isLong && (
+                          <Pressable
+                            onPress={() => setExpandedComments(prev => ({ ...prev, [cItem.id]: !prev[cItem.id] }))}
+                            hitSlop={6}
+                            style={{ marginTop: 2 }}
+                          >
+                            <Text style={styles.commentVerMasText}>
+                              {isExpanded ? 'Ver menos' : 'Ver más...'}
+                            </Text>
+                          </Pressable>
+                        )}
+
+                        {/* Foto adjunta en comentario si existe */}
+                        {cItem.photoAttached && (
+                          <View style={styles.commentPhotoAttachBox}>
+                            <Text style={styles.commentPhotoAttachText}>
+                              📷 {cItem.photoAttached}
+                            </Text>
+                          </View>
+                        )}
+
+                        {/* Votos Like / Dislike en cada comentario */}
+                        {postId && onCommentVote && (
+                          <View style={styles.commentVoteRow}>
+                            <Pressable
+                              onPress={() => onCommentVote(postId, cItem.id, 'like')}
+                              style={styles.commentVoteBtn}
+                              hitSlop={6}
+                            >
+                              <Text style={{ fontSize: 11 }}>👍</Text>
+                              <Text
+                                style={[
+                                  styles.commentVoteCount,
+                                  cItem.userReaction === 'like' && { color: '#70d2a0', fontWeight: '800' },
+                                ]}
+                              >
+                                {cItem.likes}
+                              </Text>
+                            </Pressable>
+
+                            <Pressable
+                              onPress={() => onCommentVote(postId, cItem.id, 'dislike')}
+                              style={styles.commentVoteBtn}
+                              hitSlop={6}
+                            >
+                              <Text style={{ fontSize: 11 }}>👎</Text>
+                              <Text
+                                style={[
+                                  styles.commentVoteCount,
+                                  cItem.userReaction === 'dislike' && { color: '#f28e8e', fontWeight: '800' },
+                                ]}
+                              >
+                                {cItem.dislikes}
+                              </Text>
+                            </Pressable>
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })
+                )}
+              </ScrollView>
+
+              {/* Tira de Emojis Rápidos */}
+              <View style={styles.emojisStrip}>
+                {EMOJIS_RAPIDOS.map(emoji => (
+                  <Pressable
+                    key={emoji}
+                    onPress={() => setCommentText(prev => prev + emoji)}
+                    style={styles.emojiChip}
+                    hitSlop={4}
+                  >
+                    <Text style={{ fontSize: 14 }}>{emoji}</Text>
+                  </Pressable>
+                ))}
+              </View>
+
+              {/* Previsualización compacta de foto adjunta en comentario */}
+              {commentPhoto && (
+                <View style={styles.photoCompactPreview}>
+                  <Image
+                    source={{ uri: commentPhoto.uri }}
+                    style={styles.photoCompactImg}
+                    contentFit="cover"
+                  />
+                  <View style={{ flex: 1, paddingLeft: 8 }}>
+                    <Text style={styles.photoCompactTitle}>Foto lista</Text>
+                    <Text style={styles.photoCompactSub}>Se adjuntará al enviar</Text>
+                  </View>
+                  <Pressable
+                    onPress={() => setCommentPhoto(null)}
+                    style={styles.removePhotoCompactBtn}
+                    hitSlop={6}
+                  >
+                    <Text style={{ color: '#f28e8e', fontSize: 11, fontWeight: 'bold' }}>✕</Text>
+                  </Pressable>
+                </View>
+              )}
+
+              {/* Input y botón enviar */}
+              <View
+                style={[
+                  styles.commentInputRow,
+                  {
+                    paddingBottom: Math.max(insets.bottom, 12),
+                  },
+                ]}
+              >
+                <Pressable
+                  onPress={handlePickCommentPhoto}
+                  style={styles.attachBtn}
+                  hitSlop={6}
+                >
+                  <Text style={{ fontSize: 14 }}>📷</Text>
+                </Pressable>
+
+                <TextInput
+                  value={commentText}
+                  onChangeText={setCommentText}
+                  placeholder="Escribe un comentario..."
+                  placeholderTextColor="rgba(255,255,255,0.4)"
+                  style={styles.sheetInput}
+                  multiline
+                />
+
+                <Pressable
+                  onPress={handleSubmitComment}
+                  disabled={enviandoComentario}
+                  style={[
+                    styles.sendBtn,
+                    commentText.trim().length > 0 && { backgroundColor: '#E5C689' },
+                  ]}
+                  hitSlop={6}
+                >
+                  <Text
+                    style={[
+                      styles.sendBtnText,
+                      commentText.trim().length > 0 && { color: '#1E1B18' },
+                    ]}
+                  >
+                    {enviandoComentario ? '...' : 'Enviar'}
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
         )}
       </Animated.View>
     </Modal>
@@ -344,14 +721,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingBottom: 14,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.55)',
     zIndex: 10,
   },
   circleBtn: {
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -362,7 +739,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   counterBadge: {
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.65)',
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderRadius: 14,
@@ -394,10 +771,10 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    paddingTop: 16,
-    backgroundColor: 'rgba(0,0,0,0.65)',
+    paddingTop: 14,
+    backgroundColor: 'rgba(0,0,0,0.75)',
     zIndex: 10,
-    gap: 4,
+    gap: 6,
   },
   captionAuthor: {
     color: '#E5C689',
@@ -412,7 +789,246 @@ const styles = StyleSheet.create({
   captionText: {
     color: '#FFFFFF',
     fontFamily: 'Jost_400Regular',
+    fontSize: 13.5,
+    lineHeight: 19,
+  },
+  verMasBtnText: {
+    color: '#E5C689',
+    fontFamily: 'Jost_500Medium',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  actionsBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 6,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.12)',
+  },
+  actionChip: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 7,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  actionChipActiveLike: {
+    backgroundColor: 'rgba(112,210,160,0.2)',
+    borderColor: '#70d2a0',
+  },
+  actionChipActiveDislike: {
+    backgroundColor: 'rgba(242,142,142,0.2)',
+    borderColor: '#f28e8e',
+  },
+  actionChipText: {
+    color: '#FFFFFF',
+    fontFamily: 'Jost_500Medium',
+    fontSize: 11,
+  },
+
+  // Estilos del Bottom Sheet de Comentarios
+  commentsSheetWrapper: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 20,
+  },
+  commentsSheetBox: {
+    backgroundColor: '#1E1B18',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(212,160,23,0.3)',
+    overflow: 'hidden',
+  },
+  commentsSheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+  },
+  commentsSheetTitle: {
+    color: '#FFFFFF',
+    fontFamily: 'Jost_700Bold',
     fontSize: 14,
-    lineHeight: 20,
+  },
+  closeSheetBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  commentsListScroll: {
+    flexGrow: 0,
+  },
+  emptyCommentsTitle: {
+    color: '#FFFFFF',
+    fontFamily: 'Jost_700Bold',
+    fontSize: 13,
+    marginTop: 4,
+  },
+  emptyCommentsSub: {
+    color: 'rgba(255,255,255,0.6)',
+    fontFamily: 'Jost_400Regular',
+    fontSize: 11,
+  },
+  commentItemCard: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 12,
+    padding: 10,
+    gap: 4,
+  },
+  commentAuthorName: {
+    color: '#E5C689',
+    fontFamily: 'Jost_500Medium',
+    fontSize: 11.5,
+  },
+  commentTimeText: {
+    color: 'rgba(255,255,255,0.5)',
+    fontFamily: 'Jost_400Regular',
+    fontSize: 9.5,
+  },
+  commentItemBody: {
+    color: '#FFFFFF',
+    fontFamily: 'Jost_400Regular',
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  commentVerMasText: {
+    color: '#E5C689',
+    fontFamily: 'Jost_500Medium',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  commentPhotoAttachBox: {
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    borderWidth: 1,
+    borderColor: 'rgba(212,160,23,0.3)',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginTop: 4,
+    alignSelf: 'flex-start',
+  },
+  commentPhotoAttachText: {
+    color: '#E5C689',
+    fontFamily: 'Jost_400Regular',
+    fontSize: 10,
+  },
+  commentVoteRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 4,
+    alignItems: 'center',
+  },
+  commentVoteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  commentVoteCount: {
+    color: 'rgba(255,255,255,0.6)',
+    fontFamily: 'Jost_400Regular',
+    fontSize: 10,
+  },
+  emojisStrip: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
+  emojiChip: {
+    padding: 4,
+  },
+  photoCompactPreview: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 14,
+    marginBottom: 6,
+    padding: 6,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(212,160,23,0.4)',
+  },
+  photoCompactImg: {
+    width: 36,
+    height: 36,
+    borderRadius: 6,
+  },
+  photoCompactTitle: {
+    color: '#E5C689',
+    fontFamily: 'Jost_500Medium',
+    fontSize: 10.5,
+  },
+  photoCompactSub: {
+    color: 'rgba(255,255,255,0.5)',
+    fontFamily: 'Jost_400Regular',
+    fontSize: 9,
+  },
+  removePhotoCompactBtn: {
+    padding: 4,
+  },
+  commentInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingTop: 6,
+    gap: 6,
+    backgroundColor: '#1E1B18',
+  },
+  attachBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  sheetInput: {
+    flex: 1,
+    minHeight: 36,
+    maxHeight: 70,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    color: '#FFFFFF',
+    fontFamily: 'Jost_400Regular',
+    fontSize: 12,
+  },
+  sendBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sendBtnText: {
+    color: 'rgba(255,255,255,0.6)',
+    fontFamily: 'Jost_700Bold',
+    fontSize: 11,
   },
 });
+
