@@ -252,15 +252,6 @@ const INITIAL_TESTIMONIALS: TestimonialItem[] = [
   },
 ];
 
-const INITIAL_LEADERBOARD: LeaderboardUser[] = [
-  { id: 'u1', rank: 1, name: 'María A.', cell: 'Célula 07', streakDays: 37, evidencePercent: 99, medal: 'gold' },
-  { id: 'u2', rank: 2, name: 'Rodrigo V.', cell: 'Célula 03', streakDays: 36, evidencePercent: 96, medal: 'silver' },
-  { id: 'u3', rank: 3, name: 'Esteban G.', cell: 'Célula 05', streakDays: 35, evidencePercent: 94, medal: 'bronze' },
-  { id: 'u4', rank: 4, name: 'TÚ (Kelin Arango)', cell: 'Célula 07', streakDays: 37, evidencePercent: 94, isCurrentUser: true },
-  { id: 'u5', rank: 5, name: 'Gabriel Ortiz', cell: 'Célula 02', streakDays: 34, evidencePercent: 91 },
-  { id: 'u6', rank: 6, name: 'Sofía Andrade', cell: 'Célula 07', streakDays: 33, evidencePercent: 89 },
-];
-
 // Antes había acá un REACTION_USERS_MOCK: el modal "Reacciones del post" ya usa datos reales
 // (GET /api/v1/wall/{id}/reactions, ver useWallReactions) — quedaba muerto y se sacó, no
 // oculto detrás de una bandera "por si acaso" (mismo criterio que el resto de esta integración:
@@ -627,46 +618,44 @@ export default function ComunidadScreen() {
   // Sub-módulo: Ranking Real del Backend
   const { rankingData, loading: rankingCargando, error: rankingError } = useRanking();
 
-  // Entradas de Ranking procesadas con el usuario autenticado real (nunca 'Kelin Arango')
-  const rankingList = useMemo(() => {
-    if (rankingData?.general && rankingData.general.length > 0) {
-      return rankingData.general.map(item => ({
-        id: item.participanteId,
-        rank: item.posicion,
-        name:
-          item.participanteId === user?.id ||
-          (user?.name && item.fullName.toLowerCase().includes(user.name.toLowerCase()))
-            ? `TÚ (${nombreUsuario})`
-            : item.fullName,
-        scoreText: `${item.puntaje} Pts`,
-        medal:
-          item.posicion === 1
-            ? ('gold' as const)
-            : item.posicion === 2
-            ? ('silver' as const)
-            : item.posicion === 3
-            ? ('bronze' as const)
-            : undefined,
-        isCurrentUser:
-          item.participanteId === user?.id ||
-          (user?.name && item.fullName.toLowerCase().includes(user.name.toLowerCase())),
-      }));
-    }
-    // Fallback con datos dinámicos usando el usuario real
-    return [
-      { id: 'u1', rank: 1, name: 'María A.', scoreText: '980 Pts', medal: 'gold' as const },
-      { id: 'u2', rank: 2, name: 'Rodrigo V.', scoreText: '960 Pts', medal: 'silver' as const },
-      { id: 'u3', rank: 3, name: 'Esteban G.', scoreText: '940 Pts', medal: 'bronze' as const },
-      { id: user?.id || 'u4', rank: 4, name: `TÚ (${nombreUsuario})`, scoreText: '920 Pts', isCurrentUser: true },
-      { id: 'u5', rank: 5, name: 'Gabriel Ortiz', scoreText: '910 Pts' },
-      { id: 'u6', rank: 6, name: 'Sofía Andrade', scoreText: '890 Pts' },
-    ];
-  }, [rankingData, user?.id, user?.name, nombreUsuario]);
+  // Obtener lista 100% real de la API (general, coherencia o liga)
+  const apiRankingEntries = useMemo(() => {
+    if (!rankingData) return [];
+    if (rankingData.general && rankingData.general.length > 0) return rankingData.general;
+    if (rankingData.coherenciaIndividual && rankingData.coherenciaIndividual.length > 0) return rankingData.coherenciaIndividual;
+    if (rankingData.liga && rankingData.liga.length > 0) return rankingData.liga;
+    return [];
+  }, [rankingData]);
 
-  // Podio Top 3 Dinámico
+  // Entradas de Ranking 100% de la API (cero datos inventados)
+  const rankingList = useMemo(() => {
+    return apiRankingEntries.map(item => ({
+      id: item.participanteId,
+      rank: item.posicion,
+      name:
+        item.participanteId === user?.id ||
+        (user?.name && item.fullName.toLowerCase().includes(user.name.toLowerCase()))
+          ? `TÚ (${nombreUsuario})`
+          : item.fullName,
+      scoreText: `${item.puntaje} Pts`,
+      medal:
+        item.posicion === 1
+          ? ('gold' as const)
+          : item.posicion === 2
+          ? ('silver' as const)
+          : item.posicion === 3
+          ? ('bronze' as const)
+          : undefined,
+      isCurrentUser:
+        item.participanteId === user?.id ||
+        (user?.name && item.fullName.toLowerCase().includes(user.name.toLowerCase())),
+    }));
+  }, [apiRankingEntries, user?.id, user?.name, nombreUsuario]);
+
+  // Podio Top 3 100% Real de la API (null si no hay datos)
   const podioTop1 = useMemo(() => {
-    if (rankingData?.general && rankingData.general.length >= 1) {
-      const p = rankingData.general[0];
+    if (apiRankingEntries.length >= 1) {
+      const p = apiRankingEntries[0];
       return {
         name:
           p.participanteId === user?.id ||
@@ -676,12 +665,12 @@ export default function ComunidadScreen() {
         score: `${p.puntaje} Pts`,
       };
     }
-    return { name: 'María A.', score: '980 Pts' };
-  }, [rankingData, user?.id, user?.name, nombreUsuario]);
+    return null;
+  }, [apiRankingEntries, user?.id, user?.name, nombreUsuario]);
 
   const podioTop2 = useMemo(() => {
-    if (rankingData?.general && rankingData.general.length >= 2) {
-      const p = rankingData.general[1];
+    if (apiRankingEntries.length >= 2) {
+      const p = apiRankingEntries[1];
       return {
         name:
           p.participanteId === user?.id ||
@@ -691,12 +680,12 @@ export default function ComunidadScreen() {
         score: `${p.puntaje} Pts`,
       };
     }
-    return { name: 'Rodrigo V.', score: '960 Pts' };
-  }, [rankingData, user?.id, user?.name, nombreUsuario]);
+    return null;
+  }, [apiRankingEntries, user?.id, user?.name, nombreUsuario]);
 
   const podioTop3 = useMemo(() => {
-    if (rankingData?.general && rankingData.general.length >= 3) {
-      const p = rankingData.general[2];
+    if (apiRankingEntries.length >= 3) {
+      const p = apiRankingEntries[2];
       return {
         name:
           p.participanteId === user?.id ||
@@ -706,12 +695,12 @@ export default function ComunidadScreen() {
         score: `${p.puntaje} Pts`,
       };
     }
-    return { name: 'Esteban G.', score: '940 Pts' };
-  }, [rankingData, user?.id, user?.name, nombreUsuario]);
+    return null;
+  }, [apiRankingEntries, user?.id, user?.name, nombreUsuario]);
 
-  // Posición del usuario autenticado actual
+  // Posición del usuario autenticado actual desde la API
   const userRankEntry = useMemo(() => {
-    const found = rankingData?.general?.find(
+    const found = apiRankingEntries.find(
       p =>
         p.participanteId === user?.id ||
         (user?.name && p.fullName.toLowerCase().includes(user.name.toLowerCase()))
@@ -719,18 +708,18 @@ export default function ComunidadScreen() {
     const celulaNombre =
       rankingData?.celula?.cellName ||
       (miCelula?.assigned === true ? miCelula.cellName : null) ||
-      'Célula 07';
+      'Comunidad Renaser';
     if (found) {
       return {
-        rank: found.posicion,
+        rank: `${found.posicion}`,
         cellText: `${celulaNombre} · ⚡ ${found.puntaje} Pts de Coherencia`,
       };
     }
     return {
-      rank: 4,
-      cellText: `${celulaNombre} · 🔥 37 Días · Coherencia Activa`,
+      rank: '-',
+      cellText: `${celulaNombre} · Sin puntajes en este corte del ranking`,
     };
-  }, [rankingData, user?.id, user?.name, miCelula]);
+  }, [apiRankingEntries, rankingData?.celula?.cellName, user?.id, user?.name, miCelula]);
 
   const handleEnviarTicket = async () => {
     if (!ticketBloqueo.trim() || !ticketSoluciones.trim() || !ticketImpactoSmart.trim()) {
@@ -1994,62 +1983,76 @@ export default function ComunidadScreen() {
           {/* PESTAÑA 3: PODIO RANKING */}
           {eventosTab === 'ranking' && (
             <View style={{ gap: 14, paddingTop: 10, paddingBottom: 28 }}>
-              {/* PODIO DE HONOR */}
-              <View style={[styles.podium3DContainer, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-                {/* #2 PLATA */}
-                <View style={styles.podiumColumn}>
-                  <View style={[styles.avatarMedal, { borderColor: '#E0E0E0', backgroundColor: '#2C2C2C' }]}>
-                    <Text style={{ fontSize: 16 }}>🥈</Text>
+              {podioTop1 ? (
+                /* PODIO DE HONOR */
+                <View style={[styles.podium3DContainer, { borderColor: c.border, backgroundColor: c.cardBg }]}>
+                  {/* #2 PLATA */}
+                  <View style={styles.podiumColumn}>
+                    <View style={[styles.avatarMedal, { borderColor: '#E0E0E0', backgroundColor: '#2C2C2C' }]}>
+                      <Text style={{ fontSize: 16 }}>🥈</Text>
+                    </View>
+                    <Text numberOfLines={1} style={{ color: '#E0E0E0', fontFamily: 'Arial', fontSize: 11, fontWeight: '700', marginTop: 4 }}>
+                      {podioTop2?.name || '-'}
+                    </Text>
+                    <Text style={{ color: '#BDBDBD', fontFamily: 'Arial', fontSize: 11 }}>{podioTop2?.score || '0 Pts'}</Text>
+                    <LinearGradient
+                      colors={['#8C8C8C', '#5C5C5C', '#3A3A3A']}
+                      style={[styles.podiumBlock, { height: 95 }]}
+                    >
+                      <Text style={[styles.podiumRankNum, { color: '#FFF' }]}>2</Text>
+                      <Text style={{ color: '#E0E0E0', fontFamily: 'Arial', fontSize: 11, fontWeight: '800' }}>PLATA</Text>
+                    </LinearGradient>
                   </View>
-                  <Text numberOfLines={1} style={{ color: '#E0E0E0', fontFamily: 'Arial', fontSize: 11, fontWeight: '700', marginTop: 4 }}>
-                    {podioTop2.name}
-                  </Text>
-                  <Text style={{ color: '#BDBDBD', fontFamily: 'Arial', fontSize: 11 }}>{podioTop2.score}</Text>
-                  <LinearGradient
-                    colors={['#8C8C8C', '#5C5C5C', '#3A3A3A']}
-                    style={[styles.podiumBlock, { height: 95 }]}
-                  >
-                    <Text style={[styles.podiumRankNum, { color: '#FFF' }]}>2</Text>
-                    <Text style={{ color: '#E0E0E0', fontFamily: 'Arial', fontSize: 11, fontWeight: '800' }}>PLATA</Text>
-                  </LinearGradient>
-                </View>
 
-                {/* #1 ORO */}
-                <View style={styles.podiumColumn}>
-                  <View style={[styles.avatarMedal, { borderColor: c.gold, backgroundColor: '#3D3014' }]}>
-                    <Text style={{ fontSize: 20 }}>👑</Text>
+                  {/* #1 ORO */}
+                  <View style={styles.podiumColumn}>
+                    <View style={[styles.avatarMedal, { borderColor: c.gold, backgroundColor: '#3D3014' }]}>
+                      <Text style={{ fontSize: 20 }}>👑</Text>
+                    </View>
+                    <Text numberOfLines={1} style={{ color: c.gold, fontFamily: 'Arial', fontSize: 11, fontWeight: '800', marginTop: 4 }}>
+                      {podioTop1.name}
+                    </Text>
+                    <Text style={{ color: c.gold, fontFamily: 'Arial', fontSize: 11, fontWeight: '700' }}>🔥 {podioTop1.score}</Text>
+                    <LinearGradient
+                      colors={['#FFE29F', '#E5C689', '#C09A4F', '#9C7A34']}
+                      style={[styles.podiumBlock, { height: 130 }]}
+                    >
+                      <Text style={[styles.podiumRankNum, { color: '#1E1B18' }]}>1</Text>
+                      <Text style={{ color: '#1E1B18', fontFamily: 'Arial', fontSize: 11, fontWeight: '900' }}>ORO LÍDER</Text>
+                    </LinearGradient>
                   </View>
-                  <Text numberOfLines={1} style={{ color: c.gold, fontFamily: 'Arial', fontSize: 11, fontWeight: '800', marginTop: 4 }}>
-                    {podioTop1.name}
-                  </Text>
-                  <Text style={{ color: c.gold, fontFamily: 'Arial', fontSize: 11, fontWeight: '700' }}>🔥 {podioTop1.score}</Text>
-                  <LinearGradient
-                    colors={['#FFE29F', '#E5C689', '#C09A4F', '#9C7A34']}
-                    style={[styles.podiumBlock, { height: 130 }]}
-                  >
-                    <Text style={[styles.podiumRankNum, { color: '#1E1B18' }]}>1</Text>
-                    <Text style={{ color: '#1E1B18', fontFamily: 'Arial', fontSize: 11, fontWeight: '900' }}>ORO LÍDER</Text>
-                  </LinearGradient>
-                </View>
 
-                {/* #3 BRONCE */}
-                <View style={styles.podiumColumn}>
-                  <View style={[styles.avatarMedal, { borderColor: '#CD7F32', backgroundColor: '#2E1E14' }]}>
-                    <Text style={{ fontSize: 16 }}>🥉</Text>
+                  {/* #3 BRONCE */}
+                  <View style={styles.podiumColumn}>
+                    <View style={[styles.avatarMedal, { borderColor: '#CD7F32', backgroundColor: '#2E1E14' }]}>
+                      <Text style={{ fontSize: 16 }}>🥉</Text>
+                    </View>
+                    <Text numberOfLines={1} style={{ color: '#E0A96D', fontFamily: 'Arial', fontSize: 11, fontWeight: '700', marginTop: 4 }}>
+                      {podioTop3?.name || '-'}
+                    </Text>
+                    <Text style={{ color: '#A89E8D', fontFamily: 'Arial', fontSize: 11 }}>{podioTop3?.score || '0 Pts'}</Text>
+                    <LinearGradient
+                      colors={['#A86834', '#7A4820', '#4A2A10']}
+                      style={[styles.podiumBlock, { height: 75 }]}
+                    >
+                      <Text style={[styles.podiumRankNum, { color: '#FFF' }]}>3</Text>
+                      <Text style={{ color: '#E0A96D', fontFamily: 'Arial', fontSize: 11, fontWeight: '800' }}>BRONCE</Text>
+                    </LinearGradient>
                   </View>
-                  <Text numberOfLines={1} style={{ color: '#E0A96D', fontFamily: 'Arial', fontSize: 11, fontWeight: '700', marginTop: 4 }}>
-                    {podioTop3.name}
-                  </Text>
-                  <Text style={{ color: '#A89E8D', fontFamily: 'Arial', fontSize: 11 }}>{podioTop3.score}</Text>
-                  <LinearGradient
-                    colors={['#A86834', '#7A4820', '#4A2A10']}
-                    style={[styles.podiumBlock, { height: 75 }]}
-                  >
-                    <Text style={[styles.podiumRankNum, { color: '#FFF' }]}>3</Text>
-                    <Text style={{ color: '#E0A96D', fontFamily: 'Arial', fontSize: 11, fontWeight: '800' }}>BRONCE</Text>
-                  </LinearGradient>
                 </View>
-              </View>
+              ) : (
+                <View style={[styles.myRankCard, { borderColor: c.border, backgroundColor: c.cardBg, alignItems: 'center', paddingVertical: 20 }]}>
+                  <Text style={{ fontSize: 26, marginBottom: 8 }}>🏆</Text>
+                  <Text style={{ color: c.textStrong, fontFamily: 'Arial', fontSize: 13, fontWeight: '700', textAlign: 'center' }}>
+                    {rankingCargando ? 'Cargando ranking oficial...' : 'Ranking Oficial en Espera de Puntos'}
+                  </Text>
+                  <Text style={{ color: c.textSoft, fontFamily: 'Arial', fontSize: 11, textAlign: 'center', marginTop: 4, paddingHorizontal: 16, lineHeight: 16 }}>
+                    {rankingCargando
+                      ? 'Conectando con el servidor...'
+                      : 'El backend aún no ha registrado posiciones en este corte diario. Los puntos se calculan automáticamente con el avance de hábitos, rocas y lecciones de la tribu.'}
+                  </Text>
+                </View>
+              )}
 
               {/* Tu Posición Personal Con Datos Reales del Usuario */}
               <View style={[styles.myRankCard, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
@@ -2069,28 +2072,30 @@ export default function ComunidadScreen() {
               </View>
 
               {/* Tabla de Clasificación General */}
-              <View style={[styles.leaderboardList, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-                {rankingList.map(u => (
-                  <View
-                    key={u.id}
-                    style={[
-                      styles.leaderboardRow,
-                      { borderBottomColor: c.divider },
-                      u.isCurrentUser && { backgroundColor: c.cardBgAlt },
-                    ]}
-                  >
-                    <Text style={{ color: u.medal ? c.gold : c.textSoft, fontFamily: 'Arial', fontWeight: '800', fontSize: 11, width: 28 }}>
-                      #{u.rank}
-                    </Text>
-                    <Text style={{ color: c.textStrong, fontFamily: 'Arial', fontSize: 11, fontWeight: u.isCurrentUser ? '700' : '400', flex: 1 }}>
-                      {u.name}
-                    </Text>
-                    <Text style={{ color: c.gold, fontFamily: 'Arial', fontWeight: '700', fontSize: 11 }}>
-                      ⚡ {u.scoreText}
-                    </Text>
-                  </View>
-                ))}
-              </View>
+              {rankingList.length > 0 && (
+                <View style={[styles.leaderboardList, { borderColor: c.border, backgroundColor: c.cardBg }]}>
+                  {rankingList.map(u => (
+                    <View
+                      key={u.id}
+                      style={[
+                        styles.leaderboardRow,
+                        { borderBottomColor: c.divider },
+                        u.isCurrentUser && { backgroundColor: c.cardBgAlt },
+                      ]}
+                    >
+                      <Text style={{ color: u.medal ? c.gold : c.textSoft, fontFamily: 'Arial', fontWeight: '800', fontSize: 11, width: 28 }}>
+                        #{u.rank}
+                      </Text>
+                      <Text style={{ color: c.textStrong, fontFamily: 'Arial', fontSize: 11, fontWeight: u.isCurrentUser ? '700' : '400', flex: 1 }}>
+                        {u.name}
+                      </Text>
+                      <Text style={{ color: c.gold, fontFamily: 'Arial', fontWeight: '700', fontSize: 11 }}>
+                        ⚡ {u.scoreText}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
             </View>
           )}
         </ScrollView>
