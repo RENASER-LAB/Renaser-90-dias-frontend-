@@ -1207,20 +1207,21 @@ export default function ComunidadScreen() {
   // Comentar va contra el backend real (POST /api/v1/wall/{postId}/comments). Ese endpoint solo
   // acepta texto (CreateWallCommentRequest exige @NotBlank): una foto sin texto no tiene forma de
   // guardarse todavía, así que se avisa en vez de fingir que se publicó.
-  const handleAddComment = async (postId: string, textParam?: string) => {
+  const handleAddComment = async (postId: string, textParam?: string, photoUriParam?: string) => {
     const text = (textParam ?? commentInputs[postId] ?? '').trim();
+    const photoUri = photoUriParam ?? commentPhotos[postId]?.uri;
     if (!text) {
-      if (commentPhotos[postId]) {
+      if (photoUri) {
         Alert.alert(
           'Falta el texto',
-          'Escribí algo para poder comentar. La foto se adjunta junto con el texto, no sola.'
+          'Escribe algo para poder comentar. La foto se adjunta junto con el texto, no sola.'
         );
       }
       return;
     }
 
     try {
-      await agregarComentarioRemoto(postId, text);
+      await agregarComentarioRemoto(postId, text, photoUri);
       setCommentInputs(prev => ({ ...prev, [postId]: '' }));
       setCommentPhotos(prev => ({ ...prev, [postId]: null }));
     } catch (error) {
@@ -1825,11 +1826,25 @@ export default function ComunidadScreen() {
                               )}
 
                               {cItem.photoAttached && (
-                                <View style={[styles.commentPhotoBox, { borderColor: c.gold, backgroundColor: c.bg }]}>
-                                  <Text style={[t.micro, { color: c.gold, fontSize: 9.5, fontWeight: '700' }]}>
-                                    {cItem.photoAttached}
-                                  </Text>
-                                </View>
+                                <Pressable
+                                  onPress={() => {
+                                    setImageViewerData({
+                                      authorName: cItem.author,
+                                      timeAgo: cItem.timeAgo,
+                                      postText: cItem.text,
+                                      images: [{ url: cItem.photoAttached! }],
+                                      initialIndex: 0,
+                                    });
+                                    setImageViewerVisible(true);
+                                  }}
+                                  style={[styles.commentPhotoBox, { borderColor: c.gold }]}
+                                >
+                                  <Image
+                                    source={{ uri: cItem.photoAttached }}
+                                    style={styles.commentPhotoImage}
+                                    resizeMode="cover"
+                                  />
+                                </Pressable>
                               )}
 
                               <View style={{ flexDirection: 'row', gap: 12, marginTop: 6, alignItems: 'center' }}>
@@ -3613,7 +3628,7 @@ export default function ComunidadScreen() {
             onToggleLike={handleToggleLike}
             onToggleDislike={handleToggleDislike}
             onCommentVote={handleCommentVote}
-            onAddComment={(pid, txt) => handleAddComment(pid, txt)}
+            onAddComment={(pid, txt, photoUri) => handleAddComment(pid, txt, photoUri)}
             onShare={handleSharePost}
             conversations={conversations}
             tieneCelula={tieneGrupo}
@@ -3838,8 +3853,14 @@ const styles = StyleSheet.create({
   commentPhotoBox: {
     borderWidth: 1,
     borderRadius: 8,
-    padding: 6,
-    marginTop: 4,
+    marginTop: 6,
+    overflow: 'hidden',
+    maxWidth: 220,
+  },
+  commentPhotoImage: {
+    width: '100%',
+    height: 130,
+    borderRadius: 7,
   },
   commentPhotoPreview: {
     flexDirection: 'row',

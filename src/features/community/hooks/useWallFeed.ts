@@ -149,15 +149,45 @@ export function useWallFeed() {
     []
   );
 
-  const agregarComentario = useCallback(async (postId: string, texto: string) => {
-    const resultado = await wallApi.crearComentario(postId, texto);
-    setPosts(prev =>
-      prev.map(p =>
-        p.id === postId ? { ...p, comments: [...p.comments, mapearComentario(resultado.comment)] } : p
-      )
-    );
-    setComentariosCargados(prev => ({ ...prev, [postId]: true }));
-  }, []);
+  const agregarComentario = useCallback(
+    async (postId: string, texto: string, photoUri?: string) => {
+      let textoParaEnviar = texto;
+      let urlSubidaFinal = photoUri;
+
+      if (photoUri) {
+        try {
+          const mimeType = photoUri.endsWith('.png') ? 'image/png' : 'image/jpeg';
+          const urlSubida = await wallApi.solicitarUrlSubidaMuro(mimeType);
+          if (!wallApi.almacenamientoSinConfigurar(urlSubida.uploadUrl)) {
+            await wallApi.subirImagenAS3(urlSubida.uploadUrl, photoUri, mimeType);
+            urlSubidaFinal = urlSubida.ruta;
+          }
+        } catch {
+          // Si falla o no está configurado S3 en el entorno, se preserva el photoUri local
+        }
+
+        if (urlSubidaFinal) {
+          const etiqueta = ` [📷:${urlSubidaFinal}]`;
+          if (textoParaEnviar.length + etiqueta.length <= 500) {
+            textoParaEnviar = `${textoParaEnviar}${etiqueta}`;
+          }
+        }
+      }
+
+      const resultado = await wallApi.crearComentario(postId, textoParaEnviar);
+      const nuevoComentario = mapearComentario(resultado.comment);
+      if (photoUri) {
+        nuevoComentario.photoAttached = photoUri;
+      }
+      setPosts(prev =>
+        prev.map(p =>
+          p.id === postId ? { ...p, comments: [...p.comments, nuevoComentario] } : p
+        )
+      );
+      setComentariosCargados(prev => ({ ...prev, [postId]: true }));
+    },
+    []
+  );
 
   return {
     posts,

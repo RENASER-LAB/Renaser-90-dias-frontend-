@@ -59,7 +59,7 @@ export interface ImageViewerModalProps {
   onToggleLike?: (postId: string) => void;
   onToggleDislike?: (postId: string) => void;
   onCommentVote?: (postId: string, commentId: string, type: 'like' | 'dislike') => void;
-  onAddComment?: (postId: string, text: string) => Promise<void> | void;
+  onAddComment?: (postId: string, text: string, photoUri?: string) => Promise<void> | void;
   onShare?: (postId: string) => void;
   conversations?: ChatConversation[];
   tieneCelula?: boolean;
@@ -247,7 +247,7 @@ export function ImageViewerModal({
 
     setEnviandoComentario(true);
     try {
-      await onAddComment(postId, text);
+      await onAddComment(postId, text, commentPhoto?.uri);
       setCommentText('');
       setCommentPhoto(null);
     } catch {
@@ -564,12 +564,15 @@ export function ImageViewerModal({
                           </Pressable>
                         )}
 
-                        {/* Foto adjunta en comentario si existe */}
+                        {/* Foto adjunta en comentario */}
                         {cItem.photoAttached && (
                           <View style={styles.commentPhotoAttachBox}>
-                            <Text style={styles.commentPhotoAttachText}>
-                              📷 {cItem.photoAttached}
-                            </Text>
+                            <Image
+                              source={{ uri: cItem.photoAttached }}
+                              style={styles.commentPhotoAttachImage}
+                              contentFit="cover"
+                              transition={200}
+                            />
                           </View>
                         )}
 
@@ -959,19 +962,18 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   commentPhotoAttachBox: {
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    marginTop: 6,
+    borderRadius: 8,
+    overflow: 'hidden',
+    maxWidth: 220,
     borderWidth: 1,
-    borderColor: 'rgba(212,160,23,0.3)',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    marginTop: 4,
-    alignSelf: 'flex-start',
+    borderColor: 'rgba(212,160,23,0.4)',
+    backgroundColor: '#1E1B18',
   },
-  commentPhotoAttachText: {
-    color: '#E5C689',
-    fontFamily: 'Jost_400Regular',
-    fontSize: 10,
+  commentPhotoAttachImage: {
+    width: '100%',
+    height: 130,
+    borderRadius: 7,
   },
   commentVoteRow: {
     flexDirection: 'row',

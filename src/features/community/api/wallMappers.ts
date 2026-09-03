@@ -74,11 +74,16 @@ export function mapearPublicacion(post: WallPost): PostItem {
 }
 
 export function mapearComentario(comment: WallComment): CommentItem {
+  const match = comment.text.match(/\[📷:(.+?)\]/);
+  const photoAttached = match ? match[1] : undefined;
+  const cleanText = match ? comment.text.replace(/\[📷:(.+?)\]/, '').trim() : comment.text;
+
   return {
     id: comment.id,
     author: comment.authorName?.trim() || 'Miembro Renaser',
     avatar: AVATAR_POR_DEFECTO,
-    text: comment.text,
+    text: cleanText,
+    photoAttached,
     // El backend no tiene reacciones a comentarios (solo a publicaciones, ver ReaccionarUseCase):
     // quedan en 0, sin interacción real posible desde este mapeo.
     likes: 0,
