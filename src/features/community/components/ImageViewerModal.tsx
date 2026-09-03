@@ -21,6 +21,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { elegirYNormalizarFotoMuro, type FotoMuroNormalizada } from '../utils/normalizarImagen';
+import { SharePostSheet } from './SharePostSheet';
+import type { ChatConversation } from '../../../screens/ComunidadScreen';
 
 export interface ImageViewerItem {
   url: string;
@@ -59,6 +61,9 @@ export interface ImageViewerModalProps {
   onCommentVote?: (postId: string, commentId: string, type: 'like' | 'dislike') => void;
   onAddComment?: (postId: string, text: string) => Promise<void> | void;
   onShare?: (postId: string) => void;
+  conversations?: ChatConversation[];
+  tieneCelula?: boolean;
+  onShareToConversation?: (conv: ChatConversation) => Promise<void> | void;
 }
 
 const EMOJIS_RAPIDOS = ['🔥', '👏', '💪', '⚡', '❤️', '🦅', '🎯', '🙌'];
@@ -85,6 +90,9 @@ export function ImageViewerModal({
   onCommentVote,
   onAddComment,
   onShare,
+  conversations = [],
+  tieneCelula = false,
+  onShareToConversation,
 }: ImageViewerModalProps) {
   const insets = useSafeAreaInsets();
   const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -101,6 +109,9 @@ export function ImageViewerModal({
   const [enviandoComentario, setEnviandoComentario] = useState(false);
   const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
 
+  // Panel inferior de compartir (Apps externas, Global, Célula, Directos)
+  const [showShareSheet, setShowShareSheet] = useState(false);
+
   const flatListRef = useRef<FlatList>(null);
   const lastTapRef = useRef<number>(0);
 
@@ -109,8 +120,12 @@ export function ImageViewerModal({
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   // Soporte de navegación por gestos Android / Xiaomi:
-  // Si el panel de comentarios está abierto, atrás lo cierra; si no, cierra el visor
+  // Si el panel de compartir o comentarios está abierto, atrás lo cierra; si no, cierra el visor
   useSystemBackHandler(() => {
+    if (showShareSheet) {
+      setShowShareSheet(false);
+      return true;
+    }
     if (showCommentsSheet) {
       setShowCommentsSheet(false);
       return true;
@@ -242,25 +257,11 @@ export function ImageViewerModal({
     }
   };
 
-  // Compartir publicación nativamente
-  const handleShare = useCallback(async () => {
-    if (onShare && postId) {
-      onShare(postId);
-      return;
-    }
-    try {
-      const shareUrl = images[currentIndex]?.url || images[0]?.url || '';
-      const textToShare = postText ? `"${postText}"` : '';
-      const byAuthor = authorName ? `Publicado por ${authorName} en Renaser` : 'Comunidad Renaser';
-
-      await Share.share({
-        title: 'Renaser Muro',
-        message: `${byAuthor}\n${textToShare}\n${shareUrl ? `\nVer foto: ${shareUrl}` : ''}`.trim(),
-      });
-    } catch {
-      // Ignorar cancelación de compartir
-    }
-  }, [authorName, postText, images, currentIndex, onShare, postId]);
+  // Abrir panel inferior de compartir (Apps externas, Global, Célula, Directos)
+  const handleShare = useCallback(() => {
+    setShowCommentsSheet(false);
+    setShowShareSheet(true);
+  }, []);
 
   if (!visible || images.length === 0) {
     return null;
@@ -362,7 +363,7 @@ export function ImageViewerModal({
         {/* ========================================================================= */}
         {/* BARRA SUPERIOR (HEADER ESTILO FACEBOOK / X)                                */}
         {/* ========================================================================= */}
-        {controlsVisible && !showCommentsSheet && (
+        {controlsVisible && !showCommentsSheet && !showShareSheet && (
           <View
             style={[
               styles.topBar,
@@ -409,7 +410,7 @@ export function ImageViewerModal({
         {/* ========================================================================= */}
         {/* BARRA INFERIOR FLOTANTE CON ACCIONES Y TEXTO DEL POST                     */}
         {/* ========================================================================= */}
-        {controlsVisible && !showCommentsSheet && (
+        {controlsVisible && !showCommentsSheet && !showShareSheet && (
           <View
             style={[
               styles.bottomOverlay,
@@ -698,6 +699,42 @@ export function ImageViewerModal({
             </View>
           </KeyboardAvoidingView>
         )}
+
+        {/* ========================================================================= */}
+        {/* BOTTOM SHEET DE COMPARTIR (EXTERNO, GLOBAL, CÉLULA, DIRECTOS)             */}
+        {/* ========================================================================= */}
+        {showShareSheet && (
+          <View style={styles.shareSheetWrapper}>
+            <SharePostSheet
+              post={{
+                id: postId || 'unknown',
+                author: authorName,
+                text: postText,
+                media: images.map(img => ({ url: img.url })),
+              }}
+              conversations={conversations}
+              tieneCelula={tieneCelula}
+              onClose={() => setShowShareSheet(false)}
+              onShareExternal={async () => {
+                try {
+                  const shareUrl = images[currentIndex]?.url || images[0]?.url || '';
+                  const textToShare = postText ? `"${postText}"` : '';
+                  const byAuthor = authorName ? `Publicado por ${authorName} en Renaser` : 'Comunidad Renaser';
+                  await Share.share({
+                    title: 'Renaser Muro',
+                    message: `${byAuthor}\n${textToShare}\n${shareUrl ? `\nVer foto: ${shareUrl}` : ''}`.trim(),
+                  });
+                } catch {}
+              }}
+              onShareToConversation={async conv => {
+                if (onShareToConversation) {
+                  await onShareToConversation(conv);
+                }
+                setShowShareSheet(false);
+              }}
+            />
+          </View>
+        )}
       </Animated.View>
     </Modal>
   );
@@ -841,6 +878,13 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 20,
+  },
+  shareSheetWrapper: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 25,
   },
   commentsSheetBox: {
     backgroundColor: '#1E1B18',

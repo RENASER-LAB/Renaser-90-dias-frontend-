@@ -28,6 +28,7 @@ import * as wallApi from '../features/community/api/wallApi';
 import { elegirYNormalizarFotoMuro, type FotoMuroNormalizada } from '../features/community/utils/normalizarImagen';
 import { FotoMuro } from '../features/community/components/FotoMuro';
 import { ImageViewerModal, type ImageViewerItem } from '../features/community/components/ImageViewerModal';
+import { SharePostSheet } from '../features/community/components/SharePostSheet';
 import { useCursos } from '../features/academy/hooks/useCursos';
 import { CursoPortada } from '../features/academy/components/CursoPortada';
 import { useLeccionDetalle } from '../features/academy/hooks/useLeccionDetalle';
@@ -602,6 +603,9 @@ export default function ComunidadScreen() {
     setImageViewerVisible(true);
   }, []);
 
+  // Modal / Bottom Sheet de Compartir Publicación (Feed y Visor)
+  const [shareSheetPost, setShareSheetPost] = useState<PostItem | null>(null);
+
   // Sub-módulo: Entorno Renaser (Tickets al Mentor y Chats de Comunidad)
   const tieneGrupo = miCelula?.assigned === true && tieneMentor;
   const [entornoTab, setEntornoTab] = useState<'tickets' | 'chats'>('tickets');
@@ -651,6 +655,10 @@ export default function ComunidadScreen() {
   // GESTOS TÁCTILES DEL SISTEMA (BACKHANDLER)
   // =========================================================================
   useSystemBackHandler(() => {
+    if (shareSheetPost !== null) {
+      setShareSheetPost(null);
+      return true;
+    }
     if (modalNuevoTicketVisible) {
       setModalNuevoTicketVisible(false);
       return true;
@@ -700,7 +708,7 @@ export default function ComunidadScreen() {
       return true;
     }
     return false;
-  }, modalNuevoTicketVisible || inAtencionPersonalizada || inEventosExperiencias || inExclusiveResources || selectedCourse !== null || fullScreenLesson !== null || createPostModalVisible || reactionsModalVisible || activeChat !== null || groupInfoVisible || selectedMemberProfile !== null);
+  }, shareSheetPost !== null || modalNuevoTicketVisible || inAtencionPersonalizada || inEventosExperiencias || inExclusiveResources || selectedCourse !== null || fullScreenLesson !== null || createPostModalVisible || reactionsModalVisible || activeChat !== null || groupInfoVisible || selectedMemberProfile !== null);
 
   // =========================================================================
   // HANDLERS
@@ -987,10 +995,13 @@ export default function ComunidadScreen() {
     }
   };
 
-  const handleSharePost = async (postId: string) => {
+  const handleSharePost = (postId: string) => {
     const post = posts.find(p => p.id === postId);
     if (!post) return;
+    setShareSheetPost(post);
+  };
 
+  const handleShareExternal = async (post: PostItem) => {
     try {
       const shareUrl = post.media[0]?.url || '';
       const textToShare = post.text ? `"${post.text}"` : '';
@@ -1001,7 +1012,27 @@ export default function ComunidadScreen() {
         message: `${byAuthor}\n${textToShare}\n${shareUrl ? `\nVer foto: ${shareUrl}` : ''}`.trim(),
       });
     } catch {
-      // Diálogo de compartir cancelado
+      // Diálogo cancelado
+    }
+  };
+
+  const handleShareToConversation = async (post: PostItem, conv: ChatConversation) => {
+    try {
+      const autor = post.author ? post.author : 'Comunidad Renaser';
+      const texto = post.text ? `"${post.text}"` : '';
+      const foto = post.media && post.media[0]?.url ? post.media[0].url : '';
+
+      let mensaje = `📌 [Compartido del Muro por ${autor}]`;
+      if (texto) mensaje += `\n${texto}`;
+      if (foto) mensaje += `\n📷 Ver foto: ${foto}`;
+
+      await enviarMensajeChatRemoto(conv, mensaje);
+      Alert.alert(
+        '¡Publicación Compartida! 🦅',
+        `Se ha compartido con éxito en "${conv.title}".`
+      );
+    } catch (e) {
+      Alert.alert('No se pudo compartir', mensajeDeError(e, 'Intenta de nuevo en un momento.'));
     }
   };
 
@@ -3475,9 +3506,45 @@ export default function ComunidadScreen() {
             onCommentVote={handleCommentVote}
             onAddComment={(pid, txt) => handleAddComment(pid, txt)}
             onShare={handleSharePost}
+            conversations={conversations}
+            tieneCelula={tieneGrupo}
+            onShareToConversation={async conv => {
+              if (activeViewerPost) {
+                await handleShareToConversation(activeViewerPost, conv);
+              }
+            }}
           />
         );
       })()}
+
+      {/* Modal de Compartir para Publicaciones del Feed */}
+      {shareSheetPost && (
+        <Modal
+          visible={!!shareSheetPost}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShareSheetPost(null)}
+        >
+          <Pressable
+            style={styles.shareModalBackdrop}
+            onPress={() => setShareSheetPost(null)}
+          >
+            <Pressable style={{ width: '100%' }} onPress={e => e.stopPropagation()}>
+              <SharePostSheet
+                post={shareSheetPost}
+                conversations={conversations}
+                tieneCelula={tieneGrupo}
+                onClose={() => setShareSheetPost(null)}
+                onShareExternal={() => handleShareExternal(shareSheetPost)}
+                onShareToConversation={async conv => {
+                  await handleShareToConversation(shareSheetPost, conv);
+                  setShareSheetPost(null);
+                }}
+              />
+            </Pressable>
+          </Pressable>
+        </Modal>
+      )}
     </SafeAreaView>
   );
 }
@@ -4139,5 +4206,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
+  },
+  shareModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    justifyContent: 'flex-end',
   },
 });
