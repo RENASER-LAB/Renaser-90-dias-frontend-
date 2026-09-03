@@ -106,36 +106,11 @@ const DIMENSIONES_CONFIG: DimensionConfig[] = [
   },
 ];
 
-// Datos de relleno: se muestran mientras el backend real (`useTraining`) todavía no respondió, o
-// si la llamada falla. Mismo criterio de degradación que `INITIAL_HABITS` en `PlanScreen`.
-const INITIAL_HABITS: HabitItem[] = [
-  // CUERPO
-  { id: 'c1', dimension: 'CUERPO', title: 'Entrenamiento Somático / Isométrico', time: '07:00 AM · 45 min', tag: 'INNEGOCIABLE', streak: 37, done: true, hasEvidence: true, note: '45 min con máxima intensidad somática.' },
-  { id: 'c2', dimension: 'CUERPO', title: 'Hidratación Alcalina (1L con electrolitos)', time: 'Al despertar · Mañana', tag: 'SALUD', streak: 37, done: true, hasEvidence: true, note: '1L con sal marina y limón.' },
-  { id: 'c3', dimension: 'CUERPO', title: 'Movilidad Articular & Descompresión', time: '13:00 PM · 15 min', tag: 'ENERGÍA', streak: 34, done: true, hasEvidence: true },
-  { id: 'c4', dimension: 'CUERPO', title: 'Ventana de Sueño e Higiene Lumínica', time: '22:00 PM · 8 hrs', tag: 'DESCANSO', streak: 29, done: false, hasEvidence: false },
-
-  // MENTE
-  { id: 'm1', dimension: 'MENTE', title: 'Bloque de Poder Deep Work (Sin Celular)', time: '09:00 AM · 90 min', tag: 'INNEGOCIABLE', streak: 37, done: true, hasEvidence: true, note: 'Propuesta estratégica terminada.' },
-  { id: 'm2', dimension: 'MENTE', title: 'Audio Clase RENASER del Día', time: '12:00 PM · 12 min', tag: 'APRENDIZAJE', streak: 37, done: true, hasEvidence: true },
-  { id: 'm3', dimension: 'MENTE', title: 'Bitácora de Auto-Observación y Verdad', time: '21:30 PM · 10 min', tag: 'REGISTRO', streak: 35, done: false, hasEvidence: false },
-  { id: 'm4', dimension: 'MENTE', title: 'Lectura Estratégica de Alto Valor', time: '15:00 PM · 20 min', tag: 'ENFOQUE', streak: 28, done: false, hasEvidence: false },
-
-  // EMOCIONES
-  { id: 'e1', dimension: 'EMOCIONES', title: 'Respiración Diafragmática de Regulación', time: '11:11 AM · 7 min', tag: 'INNEGOCIABLE', streak: 37, done: true, hasEvidence: true },
-  { id: 'e2', dimension: 'EMOCIONES', title: 'Escucha Activa y Presencia en Célula', time: '18:00 PM · 20 min', tag: 'RELACIONES', streak: 31, done: true, hasEvidence: true },
-  { id: 'e3', dimension: 'EMOCIONES', title: 'Anclaje de Paz y Cierre Emocional', time: '20:30 PM · 10 min', tag: 'PAZ', streak: 26, done: false, hasEvidence: false },
-
-  // ESPÍRITU
-  { id: 's1', dimension: 'ESPÍRITU', title: 'Ritual de Gratitud y Certeza Matutino', time: '06:30 AM · 10 min', tag: 'INNEGOCIABLE', streak: 37, done: true, hasEvidence: true },
-  { id: 's2', dimension: 'ESPÍRITU', title: 'Visualización de Victoria del Día 90', time: '12:30 PM · 5 min', tag: 'PROPÓSITO', streak: 37, done: true, hasEvidence: true },
-  { id: 's3', dimension: 'ESPÍRITU', title: 'Cierre en Silencio y Desconexión', time: '21:45 PM · 15 min', tag: 'FE', streak: 33, done: false, hasEvidence: false },
-
-  // VIDA Y NEGOCIO
-  { id: 'b1', dimension: 'VIDA Y NEGOCIO', title: 'Seguimientos Comerciales y Ventas', time: '10:30 AM · 60 min', tag: 'INNEGOCIABLE', streak: 37, done: true, hasEvidence: true },
-  { id: 'b2', dimension: 'VIDA Y NEGOCIO', title: 'Revisión de Métricas Financieras', time: '17:00 PM · 15 min', tag: 'ESTRATEGIA', streak: 30, done: true, hasEvidence: true },
-  { id: 'b3', dimension: 'VIDA Y NEGOCIO', title: 'Planificación del Día de Mañana con Verdad', time: '21:00 PM · 15 min', tag: 'HÁBITOS', streak: 37, done: false, hasEvidence: false },
-];
+// `INITIAL_HABITS` se eliminó: eran 17 hábitos inventados que no existen en el catálogo, y 11 de
+// ellos venían con `done: true`, `hasEvidence: true` y `streak: 37` — es decir, la pantalla
+// mostraba hábitos ya marcados como hechos y con evidencia que nadie había hecho ni subido.
+// `useTraining` ya distingue "todavía no respondió" de "respondió vacío", así que la pantalla
+// arranca en [] y dibuja esqueleto / error / estado vacío según corresponda.
 
 export default function TrainingScreen() {
   const { c, t } = useTheme();
@@ -149,13 +124,18 @@ export default function TrainingScreen() {
   // Habits State
   // Los hábitos de CUERPO/MENTE/EMOCIONES/ESPÍRITU (habit-tracks/today) y la roca del día de VIDA
   // Y NEGOCIO (rocks/today) vienen del backend real. La distinción importante: "todavía no
-  // respondió" y "respondió con cero ítems" NO son lo mismo. Mientras carga, o si falla, se
-  // muestran los de INITIAL_HABITS para que la pantalla nunca quede rota (mismo criterio de
-  // degradación que `PlanScreen`) — pero una vez que responde bien, se usa lo que trajo tal cual,
-  // aunque venga vacío: un aprendiz sin hábitos generados o sin roca del día es un estado legítimo
-  // (día 0, o su plan todavía no se generó), no un error, y no debe disfrazarse con datos de relleno.
-  const { habits: habitsDelBackend, loading: cargandoBackend, error: errorBackend } = useTraining();
-  const [habits, setHabits] = useState<HabitItem[]>(INITIAL_HABITS);
+  // respondió" y "respondió con cero ítems" NO son lo mismo. Mientras carga se dibuja un
+  // esqueleto y si falla un mensaje con reintento — nunca hábitos de relleno, que además venían
+  // premarcados como hechos y con evidencia. Una vez que responde bien se usa lo que trajo tal
+  // cual, aunque venga vacío: un aprendiz sin hábitos generados o sin roca del día es un estado
+  // legítimo (día 0, o su plan todavía no se generó), no un error.
+  const {
+    habits: habitsDelBackend,
+    loading: cargandoBackend,
+    error: errorBackend,
+    recargar: recargarEntrenamiento,
+  } = useTraining();
+  const [habits, setHabits] = useState<HabitItem[]>([]);
   useEffect(() => {
     if (!cargandoBackend && !errorBackend) {
       setHabits(habitsDelBackend);
@@ -299,8 +279,58 @@ export default function TrainingScreen() {
               <Text style={[t.sectionSub, { color: c.micro, marginTop: 4 }]}>Cinco dimensiones. Un sistema.</Text>
             </View>
 
+            {/* Mientras carga o si falla. Antes se dibujaban 17 hábitos inventados, 11 de ellos
+                ya marcados como hechos y con evidencia. */}
+            {cargandoBackend && (
+              <View style={{ gap: 10, paddingVertical: 8 }} accessibilityLabel="Cargando tu entrenamiento">
+                {[0, 1, 2, 3, 4].map(i => (
+                  <View
+                    key={i}
+                    style={[
+                      styles.dimensionCard,
+                      { borderColor: c.border, backgroundColor: c.cardBg, opacity: 0.45, minHeight: 72 },
+                    ]}
+                  />
+                ))}
+              </View>
+            )}
+
+            {!cargandoBackend && errorBackend !== null && (
+              <View
+                style={{
+                  gap: 10,
+                  padding: 18,
+                  marginVertical: 8,
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  borderColor: '#E06A66',
+                  backgroundColor: c.cardBg,
+                }}
+              >
+                <Text style={[t.cardTitle, { color: c.text, fontSize: 15 }]}>
+                  No pudimos cargar tu entrenamiento
+                </Text>
+                <Text style={[t.body, { color: c.micro, fontSize: 13.5 }]}>{errorBackend}</Text>
+                <Pressable
+                  onPress={() => {
+                    void recargarEntrenamiento();
+                  }}
+                  style={{
+                    minHeight: 48,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: c.gold,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text style={[t.cardTitle, { color: c.gold, fontSize: 14.5 }]}>Reintentar</Text>
+                </Pressable>
+              </View>
+            )}
+
             <View style={{ gap: 10, paddingVertical: 8 }}>
-              {DIMENSIONES_CONFIG.map(d => {
+              {!cargandoBackend && errorBackend === null && DIMENSIONES_CONFIG.map(d => {
                 const dimHabits = habits.filter(h => h.dimension === d.key);
                 // "EVIDENCIAS" cuenta ítems con evidencia sellada (hasEvidence), no ítems marcados
                 // como hechos (done) — pueden divergir con datos reales.
@@ -474,6 +504,28 @@ export default function TrainingScreen() {
                     </Text>
                   </Pressable>
                 </View>
+
+                {/* Sin hábitos en esta dimensión: es un estado legítimo (día 0, plan sin
+                    generar), no un hueco que haya que tapar con datos de relleno. */}
+                {currentDimensionHabits.length === 0 && (
+                  <View
+                    style={{
+                      gap: 6,
+                      padding: 20,
+                      borderRadius: 14,
+                      borderWidth: 1,
+                      borderColor: c.border,
+                      backgroundColor: c.cardBg,
+                    }}
+                  >
+                    <Text style={[t.cardTitle, { color: c.text, fontSize: 15 }]}>
+                      Todavía no hay hábitos en {selectedDimension.title}
+                    </Text>
+                    <Text style={[t.body, { color: c.micro, fontSize: 13.5 }]}>
+                      Cuando tu plan del día se genere, los vas a ver acá con su evidencia.
+                    </Text>
+                  </View>
+                )}
 
                 {/* Multiple Habits Card List */}
                 {currentDimensionHabits.map(habit => (

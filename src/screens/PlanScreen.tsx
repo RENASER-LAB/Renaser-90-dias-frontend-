@@ -70,85 +70,12 @@ export interface PlanGoals {
 // =========================================================================
 // DATOS ESTÁTICOS INICIALES
 // =========================================================================
-// `limitTime: null` y `isOptional: true` en todos: son datos de relleno mientras carga el
-// backend real, no deben aparecer vencidos ni bloqueados por error.
-const INITIAL_HABITS: PlanHabit[] = [
-  {
-    id: 'h1',
-    title: 'Protocolo 05:00 AM & Luz Solar',
-    icon: '☀️',
-    tag: 'INNEGOCIABLE',
-    tagColor: '#FFE29F',
-    time: '05:00 AM',
-    duration: '45 min',
-    moment: 'mañana',
-    desc: 'Hackeo de cortisol matutino con luz solar directa en los ojos y cero pantallas.',
-    days: { LUN: true, MAR: true, MIÉ: true, JUE: true, VIE: true, SÁB: true, DOM: true },
-    limitTime: null,
-    isOptional: true,
-    isDeactivatable: true,
-  },
-  {
-    id: 'h2',
-    title: 'Hidratación Somática & Fascia',
-    icon: '💧',
-    tag: 'CUERPO',
-    tagColor: '#90CAF9',
-    time: '06:00 AM',
-    duration: '20 min',
-    moment: 'mañana',
-    desc: '1 litro de agua con sal marina + 15 min de tensión isométrica para la columna.',
-    days: { LUN: true, MAR: true, MIÉ: true, JUE: true, VIE: true, SÁB: false, DOM: false },
-    limitTime: null,
-    isOptional: true,
-    isDeactivatable: true,
-  },
-  {
-    id: 'h3',
-    title: 'Bloque de Poder Deep Work 90m',
-    icon: '⚡',
-    tag: 'ENFOQUE PURO',
-    tagColor: '#A5D6A7',
-    time: '08:30 AM',
-    duration: '90 min',
-    moment: 'mañana',
-    desc: '90 minutos en modo avión dedicados exclusivamente a tu mayor meta comercial.',
-    days: { LUN: true, MAR: true, MIÉ: true, JUE: true, VIE: true, SÁB: false, DOM: false },
-    limitTime: null,
-    isOptional: true,
-    isDeactivatable: true,
-  },
-  {
-    id: 'h4',
-    title: 'Auditoría 80/20 & Llamadas de Alto Valor',
-    icon: '📊',
-    tag: 'NEGOCIO',
-    tagColor: '#FFE082',
-    time: '16:00 PM',
-    duration: '60 min',
-    moment: 'tarde',
-    desc: 'Auditar fugas de tiempo y llamadas con prospectos calificados para cerrar contratos.',
-    days: { LUN: true, MAR: true, MIÉ: true, JUE: true, VIE: true, SÁB: false, DOM: false },
-    limitTime: null,
-    isOptional: true,
-    isDeactivatable: true,
-  },
-  {
-    id: 'h5',
-    title: 'Cierre Somático & Desconexión Digital',
-    icon: '🛌',
-    tag: 'SUEÑO',
-    tagColor: '#CE93D8',
-    time: '21:30 PM',
-    duration: '30 min',
-    moment: 'noche',
-    desc: 'Cero pantallas 60m antes de dormir, respiración diafragmática y temperatura fresca.',
-    days: { LUN: true, MAR: true, MIÉ: true, JUE: true, VIE: true, SÁB: true, DOM: true },
-    limitTime: null,
-    isOptional: true,
-    isDeactivatable: true,
-  },
-];
+// `INITIAL_HABITS` se eliminó: eran 5 hábitos inventados (Protocolo 05:00 AM, Hidratación
+// Somática, Deep Work 90m, Auditoría 80/20, Cierre Somático) que no existen en el catálogo y
+// que se mostraban como si fueran el plan del aprendiz. Peor: el reemplazo por los reales solo
+// ocurría con `habitsDelBackend.length > 0`, así que un aprendiz con catálogo vacío se quedaba
+// con ellos para siempre. Ahora la pantalla arranca vacía y dibuja esqueleto / error / estado
+// vacío según lo que diga `usePlanHabitos` — ver el bloque de estados más abajo.
 
 const INITIAL_GOALS: PlanGoals = {
   principalTitle: 'Facturar $30,000 USD en Contratos High-Ticket',
@@ -242,20 +169,26 @@ export default function PlanScreen() {
   // miércoles, no tener que buscarlo. El mismo índice marca hasta dónde se puede planificar.
   const indiceDeHoy = (new Date().getDay() + 6) % 7;
   const [selectedDay, setSelectedDay] = useState<DayOfWeek>(DAY_OPTIONS[indiceDeHoy]);
-  // Los hábitos vienen del backend (catálogo + horario propio del aprendiz). Mientras cargan, o
-  // si la llamada falla, se usan los de INITIAL_HABITS para que la pantalla nunca quede vacía —
-  // mismo criterio de degradación que `useCursos` en academy.
-  const { habits: habitsDelBackend } = usePlanHabitos();
+  // Los hábitos vienen del backend (catálogo + horario propio del aprendiz). "Todavía no
+  // respondió" y "respondió con cero hábitos" NO son lo mismo: lo primero es un esqueleto, lo
+  // segundo es un estado legítimo (día 0, plan sin generar) que hay que mostrar tal cual. Por eso
+  // se mira `loading`/`error` y no `length > 0` — mismo criterio que ya usa `TrainingScreen`.
+  const {
+    habits: habitsDelBackend,
+    loading: cargandoHabitos,
+    error: errorHabitos,
+    recargar: recargarHabitos,
+  } = usePlanHabitos();
   // Dia real del programa: antes el 37, el arco y la fase estaban escritos a mano.
   const { diaPrograma } = useProgramaDia();
   const medidor = puntoDelMedidor(diaPrograma);
-  const [habits, setHabits] = useState<PlanHabit[]>(INITIAL_HABITS);
-  const conectadoAlBackend = habitsDelBackend.length > 0;
+  const [habits, setHabits] = useState<PlanHabit[]>([]);
+  const conectadoAlBackend = !cargandoHabitos && !errorHabitos;
   useEffect(() => {
-    if (habitsDelBackend.length > 0) {
+    if (!cargandoHabitos && !errorHabitos) {
       setHabits(habitsDelBackend);
     }
-  }, [habitsDelBackend]);
+  }, [cargandoHabitos, errorHabitos, habitsDelBackend]);
 
   // Reloj del "ahora" para el sombreado de hábitos vencidos (§2). Se recalcula solo, sin que el
   // aprendiz tenga que tocar nada: si deja Plan abierto y cruza la hora límite de un hábito, se
@@ -694,7 +627,81 @@ export default function PlanScreen() {
 
           {/* LISTA DE HÁBITOS POR MOMENTO DEL DÍA (CON LONG-PRESS PARA MOVER) */}
           <View style={{ gap: 14, marginTop: 16, paddingBottom: 28 }}>
-            {(['mañana', 'tarde', 'noche'] as DayMoment[]).map(momentName => {
+            {/* Mientras carga, si falla, o si de verdad no hay hábitos. Antes de esto se
+                dibujaban 5 hábitos inventados que no existen en el catálogo. */}
+            {cargandoHabitos && (
+              <View style={{ gap: 10 }} accessibilityLabel="Cargando tus hábitos">
+                {[0, 1, 2, 3].map(i => (
+                  <View
+                    key={i}
+                    style={{
+                      height: 76,
+                      borderRadius: 14,
+                      borderWidth: 1,
+                      borderColor: c.border,
+                      backgroundColor: c.cardBg,
+                      opacity: 0.45,
+                    }}
+                  />
+                ))}
+              </View>
+            )}
+
+            {!cargandoHabitos && errorHabitos !== null && (
+              <View
+                style={{
+                  gap: 10,
+                  padding: 18,
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  borderColor: '#E06A66',
+                  backgroundColor: c.cardBg,
+                }}
+              >
+                <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 15 }]}>
+                  No pudimos cargar tus hábitos
+                </Text>
+                <Text style={[t.body, { color: c.textSoft, fontSize: 13.5 }]}>{errorHabitos}</Text>
+                <Pressable
+                  onPress={() => {
+                    void recargarHabitos();
+                  }}
+                  style={{
+                    minHeight: 48,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: c.gold,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text style={[t.cardTitle, { color: c.gold, fontSize: 14.5 }]}>Reintentar</Text>
+                </Pressable>
+              </View>
+            )}
+
+            {conectadoAlBackend && habits.length === 0 && (
+              <View
+                style={{
+                  gap: 6,
+                  padding: 20,
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  borderColor: c.border,
+                  backgroundColor: c.cardBg,
+                }}
+              >
+                <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 15 }]}>
+                  Tu plan todavía no se generó
+                </Text>
+                <Text style={[t.body, { color: c.textSoft, fontSize: 13.5 }]}>
+                  Cuando tu programa arranque vas a ver acá tus hábitos repartidos en mañana, tarde
+                  y noche.
+                </Text>
+              </View>
+            )}
+
+            {conectadoAlBackend && habits.length > 0 && (['mañana', 'tarde', 'noche'] as DayMoment[]).map(momentName => {
               const momentHabits = habits.filter(h => h.moment === momentName);
               const momentLabel = momentName === 'mañana' ? '🌅 MAÑANA' : momentName === 'tarde' ? '☀️ TARDE' : '🌙 NOCHE';
 
