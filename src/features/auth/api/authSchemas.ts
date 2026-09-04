@@ -32,6 +32,12 @@ export const disponibilidadEmailSchema = z.object({ available: z.boolean() }).pa
 
 export const verificacionEmailSchema = z.object({ verificationToken: z.string() }).passthrough();
 
+/**
+ * `CodigoResetVerificadoResponse` (200 de `POST /auth/password/verify-code`, D-102): el token de
+ * un solo uso que después acepta `POST /auth/password/reset-confirm` junto con la contraseña nueva.
+ */
+export const codigoResetVerificadoSchema = z.object({ resetToken: z.string() }).passthrough();
+
 export const solicitudCreadaSchema = z.object({ accountRequestId: z.string() }).passthrough();
 
 /**

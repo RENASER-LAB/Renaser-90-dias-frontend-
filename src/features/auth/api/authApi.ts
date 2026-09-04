@@ -1,6 +1,7 @@
 import { apiFetch, setTokenSesion } from '../../../services/http/apiClient';
 import type { DatosAlta, DatosConfirmacionSocial, EstadoSolicitud, UsuarioApi } from '../types/auth.types';
 import {
+  codigoResetVerificadoSchema,
   disponibilidadEmailSchema,
   estadoSolicitudSchema,
   solicitudCreadaSchema,
@@ -141,10 +142,41 @@ export async function consultarEstadoSolicitud(accountRequestId: string): Promis
 
 // ---------------------------------------------------------------- recuperar contraseña
 
-export function solicitarResetContrasena(email: string): Promise<void> {
-  return apiFetch<void>('/api/v1/auth/password/reset-request', {
+/**
+ * Tres llamadas encadenadas, mismo molde que el alta (D-102):
+ *   1. `password/forgot`        → manda un código de 6 dígitos al correo. 202 exista o no la
+ *                                  cuenta, a propósito: si respondiera distinto serviría para
+ *                                  averiguar qué correos están registrados.
+ *   2. `password/verify-code`   → canjea el código por un `resetToken` de un solo uso.
+ *   3. `password/reset-confirm` → fija la contraseña nueva con ese token y cierra todas las
+ *                                  sesiones. Después la persona vuelve al login y entra.
+ *
+ * El backend también tiene `password/reset-request`, que manda un LINK por correo hacia un
+ * frontend web que todavía no existe; la app no lo usa.
+ */
+export function solicitarCodigoResetContrasena(email: string): Promise<void> {
+  return apiFetch<void>('/api/v1/auth/password/forgot', {
     method: 'POST',
     body: { email: email.trim() },
+    conSesion: false,
+  });
+}
+
+/** Devuelve el `resetToken`: el código no cambia nada por sí solo, habilita el paso 3. */
+export async function verificarCodigoResetContrasena(email: string, codigo: string): Promise<string> {
+  const r = await apiFetch<unknown>('/api/v1/auth/password/verify-code', {
+    method: 'POST',
+    body: { email: email.trim(), codigo },
+    conSesion: false,
+  });
+  return validarRespuesta<{ resetToken: string }>(codigoResetVerificadoSchema, r,
+    'POST /api/v1/auth/password/verify-code').resetToken;
+}
+
+export function confirmarResetContrasena(resetToken: string, contrasenaNueva: string): Promise<void> {
+  return apiFetch<void>('/api/v1/auth/password/reset-confirm', {
+    method: 'POST',
+    body: { token: resetToken, contrasenaNueva },
     conSesion: false,
   });
 }

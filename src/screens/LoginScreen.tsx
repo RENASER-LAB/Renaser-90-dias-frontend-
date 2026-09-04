@@ -22,11 +22,27 @@ import { MicroLabel } from '../components/ui';
 import {
   useRegistroConOtp,
   validarDatosRegistro,
+  validarContrasenaNueva,
   MIN_CONTRASENA,
 } from '../features/auth/hooks/useRegistroConOtp';
+import { useRecuperacionContrasena } from '../features/auth/hooks/useRecuperacionContrasena';
 import { useDisponibilidadCorreo } from '../features/auth/hooks/useDisponibilidadCorreo';
+import { CodigoOtpInput, LARGO_CODIGO } from '../features/auth/components/CodigoOtpInput';
 
-type AuthStep = 'form' | 'otp' | 'forgot' | 'forgot_sent' | 'social_confirmar' | 'solicitud_enviada';
+/**
+ * `forgot` → `forgot_otp` → `forgot_new_password` es la recuperación de contraseña dentro de la
+ * app (D-102): correo, código de 6 dígitos, contraseña nueva, y de vuelta al login. Reemplaza al
+ * `forgot_sent` de antes, que solo decía "revisá tu bandeja" y esperaba un link hacia un
+ * frontend web que no existe.
+ */
+type AuthStep =
+  | 'form'
+  | 'otp'
+  | 'forgot'
+  | 'forgot_otp'
+  | 'forgot_new_password'
+  | 'social_confirmar'
+  | 'solicitud_enviada';
 type Tab = 'login' | 'register';
 
 export default function LoginScreen() {
@@ -37,7 +53,6 @@ export default function LoginScreen() {
     register,
     loginWithGoogle,
     loginWithApple,
-    resetPassword,
     demoLogin,
   } = useAuth();
 
@@ -53,9 +68,14 @@ export default function LoginScreen() {
     consultarEstado,
   } = useRegistroConOtp();
 
+  // La recuperación de contraseña (código + contraseña nueva, D-102) sigue el mismo criterio:
+  // el hook conoce el orden de los tres endpoints, la pantalla solo decide qué mostrar.
+  const recuperacion = useRecuperacionContrasena();
+
   // Navigation / Step state
   const [step, setStep] = useState<AuthStep>('form');
   const [activeTab, setActiveTab] = useState<Tab>('login');
+  const enRecuperacion = step === 'forgot' || step === 'forgot_otp' || step === 'forgot_new_password';
 
   // Form fields
   // Nombres y apellidos se piden por separado porque así los lee y corrige la persona; el
@@ -91,10 +111,10 @@ export default function LoginScreen() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Timer for OTP resend
+  // Timer for OTP resend — el mismo para el código del alta y el de la recuperación.
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
-    if (step === 'otp' && resendTimer > 0) {
+    if ((step === 'otp' || step === 'forgot_otp') && resendTimer > 0) {
       interval = setInterval(() => {
         setResendTimer(prev => {
           if (prev <= 1) {
@@ -118,12 +138,37 @@ export default function LoginScreen() {
     // social, no queda nada creado (el backend lo vence solo a los 10 minutos) y acá tampoco
     // debería seguir viviendo en memoria.
     setRegistroPendienteToken(null);
+    // Mismo criterio para el token de reset (D-102), y los campos de contraseña se comparten
+    // entre el alta y la contraseña nueva: no deben quedar cargados al volver al login.
+    recuperacion.reiniciar();
+    setPassword('');
+    setConfirmPassword('');
   };
 
-  // Interceptar gestos táctiles de retroceso cuando esté en OTP o Forgot Password
+  /**
+   * El gesto lateral del sistema retrocede UN paso y nunca cierra la app (AGENTS.md §6). En la
+   * recuperación, "un paso atrás" desde el código o desde la contraseña nueva es volver a pedir
+   * el código: el que se tipeó ya quedó consumido en el backend, así que mostrar de nuevo las
+   * casillas sería mentir. Para el resto de subpantallas, atrás es el login.
+   */
+  const handleBack = () => {
+    if (step === 'forgot_otp' || step === 'forgot_new_password') {
+      setErrorMessage(null);
+      setSuccessMessage(null);
+      setOtpCode('');
+      setPassword('');
+      setConfirmPassword('');
+      recuperacion.reiniciar();
+      setStep('forgot');
+      return;
+    }
+    handleReturnToLogin();
+  };
+
+  // Interceptar gestos táctiles de retroceso en cualquier subpantalla (OTP, recuperación, etc.)
   useSystemBackHandler(() => {
     if (step !== 'form') {
-      handleReturnToLogin();
+      handleBack();
       return true;
     }
     return false;
@@ -246,6 +291,7 @@ export default function LoginScreen() {
     }
   };
 
+  /** Paso 1 de la recuperación (D-102): pedir el código de 6 dígitos al correo. */
   const handleForgotPasswordSubmit = async () => {
     setErrorMessage(null);
     setSuccessMessage(null);
@@ -257,10 +303,84 @@ export default function LoginScreen() {
 
     try {
       setLoading(true);
-      await resetPassword(email);
-      setStep('forgot_sent');
-    } catch {
-      setErrorMessage('Ocurrió un error al enviar las instrucciones');
+      await recuperacion.enviarCodigo(email);
+      setStep('forgot_otp');
+      setResendTimer(45);
+      setCanResend(false);
+      setOtpCode('');
+      // El backend responde 202 exista o no la cuenta; el mensaje tiene que decir lo mismo en
+      // los dos casos, si no la pantalla revelaría qué correos están registrados.
+      setSuccessMessage(`Si ${email.trim()} tiene cuenta, te enviamos un código.`);
+      setTimeout(() => otpInputRef.current?.focus(), 300);
+    } catch (error) {
+      setErrorMessage(mensajeDeError(error, 'No pudimos enviar el código. Intentá más tarde.'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendForgotOtp = async () => {
+    if (!canResend || loading) return;
+    try {
+      setLoading(true);
+      setErrorMessage(null);
+      await recuperacion.enviarCodigo(email);
+      setResendTimer(45);
+      setCanResend(false);
+      setSuccessMessage('Nuevo código enviado a tu correo.');
+    } catch (error) {
+      setErrorMessage(mensajeDeError(error, 'No se pudo reenviar el código. Inténtalo más tarde.'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Paso 2: canjear el código por el token de reset. El código no cambia nada por sí solo —
+   * recién con el token en mano se pide la contraseña nueva, así que la persona no tipea una
+   * contraseña que después no se va a poder guardar.
+   */
+  const handleVerifyForgotOtp = async () => {
+    setErrorMessage(null);
+    if (otpCode.length !== LARGO_CODIGO) {
+      setErrorMessage('Por favor ingresa los 6 dígitos del código');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await recuperacion.verificarCodigo(email, otpCode);
+      setSuccessMessage(null);
+      setPassword('');
+      setConfirmPassword('');
+      setShowPassword(false);
+      setStep('forgot_new_password');
+    } catch (error) {
+      setErrorMessage(mensajeDeError(error, 'Código inválido o expirado. Inténtalo de nuevo.'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /** Paso 3: la misma regla de contraseña que el alta, validada antes de gastar la llamada. */
+  const handleChangePassword = async () => {
+    setErrorMessage(null);
+    const errorDeValidacion = validarContrasenaNueva(password, confirmPassword);
+    if (errorDeValidacion) {
+      setErrorMessage(errorDeValidacion);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await recuperacion.cambiarContrasena(password);
+      // De vuelta al login con el correo ya cargado: solo falta tipear la contraseña nueva.
+      handleReturnToLogin();
+      setSuccessMessage('Tu contraseña se actualizó. Iniciá sesión con la nueva.');
+    } catch (error) {
+      // El token es de un solo uso: si venció o ya se usó, reintentar con la misma contraseña
+      // nunca va a funcionar. El mensaje tiene que decir la única salida real.
+      setErrorMessage(mensajeDeError(error, 'No pudimos cambiar tu contraseña. Volvé a pedir un código.'));
     } finally {
       setLoading(false);
     }
@@ -463,7 +583,7 @@ export default function LoginScreen() {
                   name={
                     step === 'otp'
                       ? 'mail'
-                      : step === 'forgot' || step === 'forgot_sent'
+                      : enRecuperacion
                       ? 'key'
                       : step === 'social_confirmar'
                       ? 'user'
@@ -504,7 +624,7 @@ export default function LoginScreen() {
                 ? 'CONFIRMACIÓN DE CORREO'
                 : step === 'solicitud_enviada'
                 ? 'SOLICITUD EN REVISIÓN'
-                : step === 'forgot' || step === 'forgot_sent'
+                : enRecuperacion
                 ? 'RECUPERACIÓN DE CUENTA'
                 : step === 'social_confirmar'
                 ? 'CONFIRMÁ TUS DATOS'
@@ -575,6 +695,14 @@ export default function LoginScreen() {
                 {errorMessage ? (
                   <View style={[styles.alertBox, { backgroundColor: 'rgba(217, 83, 79, 0.08)', borderColor: 'rgba(217, 83, 79, 0.25)' }]}>
                     <Text style={[t.small, { color: '#E06A66', textAlign: 'center' }]}>{errorMessage}</Text>
+                  </View>
+                ) : null}
+
+                {/* Avisos que llegan al login desde otro paso: "contraseña actualizada" (D-102) o
+                    "ya tenías una solicitud en revisión" (login social). Antes no se mostraban. */}
+                {successMessage ? (
+                  <View style={[styles.alertBox, { backgroundColor: 'rgba(178, 146, 79, 0.12)', borderColor: c.borderStrong }]}>
+                    <Text style={[t.small, { color: c.gold, textAlign: 'center' }]}>{successMessage}</Text>
                   </View>
                 ) : null}
 
@@ -881,80 +1009,29 @@ export default function LoginScreen() {
                 </View>
               ) : null}
 
-              {/* Casillas Interactivas OTP */}
-              <Pressable
-                onPress={() => otpInputRef.current?.focus()}
-                style={styles.otpBoxesContainer}
-              >
-                {[0, 1, 2, 3, 4, 5].map(index => {
-                  const digit = otpCode[index] || '';
-                  const isCurrent = otpCode.length === index;
-                  const isFilled = digit.length > 0;
-
-                  return (
-                    <View
-                      key={index}
-                      style={[
-                        styles.otpBox,
-                        {
-                          borderColor: isCurrent ? c.gold : isFilled ? c.borderStrong : c.border,
-                          backgroundColor: c.cardBgAlt,
-                          transform: [{ scale: isCurrent ? 1.05 : 1 }],
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={{
-                          fontSize: 22,
-                          fontFamily: 'Jost_500Medium',
-                          color: isFilled ? c.textStrong : c.tabInactive,
-                        }}
-                      >
-                        {digit}
-                      </Text>
-                    </View>
-                  );
-                })}
-              </Pressable>
-
-              <TextInput
-                ref={otpInputRef}
-                value={otpCode}
-                onChangeText={text => {
-                  const cleanText = text.replace(/[^0-9]/g, '').slice(0, 6);
-                  setOtpCode(cleanText);
-                  if (cleanText.length === 6) {
+              {/* Casillas del código + reenvío: el mismo componente que usa la recuperación */}
+              <CodigoOtpInput
+                codigo={otpCode}
+                onChange={codigo => {
+                  setOtpCode(codigo);
+                  if (codigo.length === LARGO_CODIGO) {
                     setErrorMessage(null);
                   }
                 }}
-                keyboardType="number-pad"
-                maxLength={6}
-                style={styles.hiddenInput}
-                autoFocus
+                inputRef={otpInputRef}
+                segundosParaReenviar={resendTimer}
+                puedeReenviar={canResend}
+                onReenviar={handleResendOtp}
+                deshabilitado={loading}
               />
-
-              {/* Reenviar código */}
-              <View style={styles.resendContainer}>
-                {canResend ? (
-                  <Pressable onPress={handleResendOtp} disabled={loading} hitSlop={10}>
-                    <Text style={[t.micro, { color: c.gold, letterSpacing: 1.2, fontWeight: '600' }]}>
-                      ¿NO RECIBISTE EL CÓDIGO? REENVIAR
-                    </Text>
-                  </Pressable>
-                ) : (
-                  <Text style={[t.micro, { color: c.tabInactive, letterSpacing: 1.1 }]}>
-                    Reenviar nuevo código en {resendTimer}s
-                  </Text>
-                )}
-              </View>
 
               {/* Botón Confirmar Código OTP */}
               <Pressable
                 onPress={handleVerifyOtp}
-                disabled={loading || otpCode.length !== 6}
+                disabled={loading || otpCode.length !== LARGO_CODIGO}
                 style={[
                   styles.submitBtn,
-                  { shadowColor: c.gold, opacity: otpCode.length === 6 ? 1 : 0.65 }
+                  { shadowColor: c.gold, opacity: otpCode.length === LARGO_CODIGO ? 1 : 0.65 }
                 ]}
               >
                 <LinearGradient
@@ -997,7 +1074,7 @@ export default function LoginScreen() {
                   ¿OLVIDASTE TU CONTRASEÑA?
                 </Text>
                 <Text style={[t.small, { color: c.textSoft, textAlign: 'center', lineHeight: 19, marginTop: 4 }]}>
-                  Ingresa tu correo y te enviaremos las instrucciones para restablecer tu contraseña.
+                  Ingresa tu correo y te enviaremos un código de 6 dígitos para elegir una contraseña nueva.
                 </Text>
               </View>
 
@@ -1050,7 +1127,7 @@ export default function LoginScreen() {
                     <ActivityIndicator color={c.onGold} size="small" />
                   ) : (
                     <Text style={[t.micro, { color: c.onGold, letterSpacing: 2.5, fontWeight: '700', fontSize: 11 }]}>
-                      ENVIAR ENLACE DE RECUPERACIÓN
+                      ENVIARME UN CÓDIGO
                     </Text>
                   )}
                 </LinearGradient>
@@ -1070,31 +1147,56 @@ export default function LoginScreen() {
           )}
 
           {/* ========================================================================= */}
-          {/* VISTA 4: RECUPERACIÓN ENVIADA CON ÉXITO                                   */}
+          {/* VISTA 4: RECUPERACIÓN — CÓDIGO DE 6 DÍGITOS (D-102)                        */}
           {/* ========================================================================= */}
-          {step === 'forgot_sent' && (
+          {step === 'forgot_otp' && (
             <View style={[styles.card, { backgroundColor: c.cardBg, borderColor: c.border }]}>
-              <View style={{ alignItems: 'center', gap: 10, paddingVertical: 10 }}>
-                <View style={[styles.successIconWrap, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-                  <Icon name="check" size={26} color={c.gold} strokeWidth={2} />
-                </View>
-
-                <MicroLabel>INSTRUCCIONES ENVIADAS</MicroLabel>
-                <Text style={[t.sectionTitle, { color: c.text, textAlign: 'center' }]}>
-                  REVISA TU BANDEJA DE ENTRADA
+              <View style={{ alignItems: 'center', gap: 6 }}>
+                <MicroLabel>RECUPERACIÓN DE CONTRASEÑA</MicroLabel>
+                <Text style={[t.sectionTitle, { color: c.text, textAlign: 'center', marginTop: 4 }]}>
+                  INGRESA TU CÓDIGO
                 </Text>
-                <Text style={[t.small, { color: c.textSoft, textAlign: 'center', lineHeight: 20 }]}>
-                  Hemos enviado las instrucciones para restablecer tu contraseña a:
+                {/* "Si tiene cuenta": el backend no dice si el correo existe, y la pantalla tampoco. */}
+                <Text style={[t.small, { color: c.textSoft, textAlign: 'center', lineHeight: 18, marginTop: 4 }]}>
+                  Si el correo tiene cuenta, te enviamos un código de 6 dígitos a:
                 </Text>
-                <Text style={[t.small, { color: c.gold, fontWeight: '600', textAlign: 'center' }]}>
-                  {email}
-                </Text>
+                <Text style={[t.small, { color: c.gold, fontWeight: '600' }]}>{email}</Text>
               </View>
 
-              {/* Botón Volver al Login */}
+              {errorMessage ? (
+                <View style={[styles.alertBox, { backgroundColor: 'rgba(217, 83, 79, 0.08)', borderColor: 'rgba(217, 83, 79, 0.25)' }]}>
+                  <Text style={[t.small, { color: '#E06A66', textAlign: 'center' }]}>{errorMessage}</Text>
+                </View>
+              ) : null}
+
+              {successMessage ? (
+                <View style={[styles.alertBox, { backgroundColor: 'rgba(178, 146, 79, 0.12)', borderColor: c.borderStrong }]}>
+                  <Text style={[t.small, { color: c.gold, textAlign: 'center' }]}>{successMessage}</Text>
+                </View>
+              ) : null}
+
+              <CodigoOtpInput
+                codigo={otpCode}
+                onChange={codigo => {
+                  setOtpCode(codigo);
+                  if (codigo.length === LARGO_CODIGO) {
+                    setErrorMessage(null);
+                  }
+                }}
+                inputRef={otpInputRef}
+                segundosParaReenviar={resendTimer}
+                puedeReenviar={canResend}
+                onReenviar={handleResendForgotOtp}
+                deshabilitado={loading}
+              />
+
               <Pressable
-                onPress={handleReturnToLogin}
-                style={[styles.submitBtn, { shadowColor: c.gold, marginTop: 10 }]}
+                onPress={handleVerifyForgotOtp}
+                disabled={loading || otpCode.length !== LARGO_CODIGO}
+                style={[
+                  styles.submitBtn,
+                  { shadowColor: c.gold, opacity: otpCode.length === LARGO_CODIGO ? 1 : 0.65 }
+                ]}
               >
                 <LinearGradient
                   colors={c.goldGrad}
@@ -1102,20 +1204,138 @@ export default function LoginScreen() {
                   end={{ x: 0.9, y: 1 }}
                   style={styles.gradientBtn}
                 >
-                  <Text style={[t.micro, { color: c.onGold, letterSpacing: 2.5, fontWeight: '700', fontSize: 11 }]}>
-                    VOLVER AL INICIO DE SESIÓN
-                  </Text>
+                  {loading ? (
+                    <ActivityIndicator color={c.onGold} size="small" />
+                  ) : (
+                    <Text style={[t.micro, { color: c.onGold, letterSpacing: 2.5, fontWeight: '700', fontSize: 11 }]}>
+                      VERIFICAR CÓDIGO
+                    </Text>
+                  )}
                 </LinearGradient>
               </Pressable>
 
-              {/* Opción de reenvío */}
+              {/* Un paso atrás: cambiar el correo (mismo destino que el gesto lateral) */}
               <Pressable
-                onPress={handleForgotPasswordSubmit}
-                hitSlop={10}
-                style={{ alignItems: 'center', paddingVertical: 8 }}
+                onPress={handleBack}
+                style={[styles.returnLoginBtn, { borderColor: c.border }]}
               >
-                <Text style={[t.micro, { color: c.micro, letterSpacing: 1.1 }]}>
-                  ¿No recibiste el correo? <Text style={{ color: c.gold }}>Enviar de nuevo</Text>
+                <Icon name="arrowLeft" size={14} color={c.textSoft} />
+                <Text style={[t.micro, { color: c.textSoft, letterSpacing: 1.5 }]}>
+                  CAMBIAR DE CORREO
+                </Text>
+              </Pressable>
+            </View>
+          )}
+
+          {/* ========================================================================= */}
+          {/* VISTA 4b: RECUPERACIÓN — CONTRASEÑA NUEVA (D-102)                          */}
+          {/* ========================================================================= */}
+          {step === 'forgot_new_password' && (
+            <View style={[styles.card, { backgroundColor: c.cardBg, borderColor: c.border }]}>
+              <View style={{ alignItems: 'center', gap: 6 }}>
+                <MicroLabel>CÓDIGO VERIFICADO</MicroLabel>
+                <Text style={[t.sectionTitle, { color: c.text, textAlign: 'center', marginTop: 4 }]}>
+                  ELEGÍ TU NUEVA CONTRASEÑA
+                </Text>
+                <Text style={[t.small, { color: c.textSoft, textAlign: 'center', lineHeight: 19, marginTop: 4 }]}>
+                  Mínimo {MIN_CONTRASENA} caracteres. Al guardarla se cierran todas tus sesiones abiertas.
+                </Text>
+              </View>
+
+              {errorMessage ? (
+                <View style={[styles.alertBox, { backgroundColor: 'rgba(217, 83, 79, 0.08)', borderColor: 'rgba(217, 83, 79, 0.25)' }]}>
+                  <Text style={[t.small, { color: '#E06A66', textAlign: 'center' }]}>{errorMessage}</Text>
+                </View>
+              ) : null}
+
+              <View style={styles.inputGroup}>
+                <MicroLabel>NUEVA CONTRASEÑA</MicroLabel>
+                <View
+                  style={[
+                    styles.inputWrap,
+                    {
+                      borderColor: focusedField === 'forgot_password' ? c.gold : c.border,
+                      backgroundColor: c.cardBgAlt,
+                    },
+                  ]}
+                >
+                  <Icon name="lock" size={17} color={focusedField === 'forgot_password' ? c.gold : c.tabInactive} />
+                  <TextInput
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder={`Mínimo ${MIN_CONTRASENA} caracteres`}
+                    placeholderTextColor={c.tabInactive}
+                    secureTextEntry={!showPassword}
+                    onFocus={() => setFocusedField('forgot_password')}
+                    onBlur={() => setFocusedField(null)}
+                    style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
+                    autoFocus
+                  />
+                  <Pressable hitSlop={8} onPress={() => setShowPassword(!showPassword)}>
+                    <Icon
+                      name={showPassword ? 'eyeOff' : 'eye'}
+                      size={17}
+                      color={c.tabInactive}
+                    />
+                  </Pressable>
+                </View>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <MicroLabel>CONFIRMAR CONTRASEÑA</MicroLabel>
+                <View
+                  style={[
+                    styles.inputWrap,
+                    {
+                      borderColor: focusedField === 'forgot_confirm' ? c.gold : c.border,
+                      backgroundColor: c.cardBgAlt,
+                    },
+                  ]}
+                >
+                  <Icon name="lock" size={17} color={focusedField === 'forgot_confirm' ? c.gold : c.tabInactive} />
+                  <TextInput
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    placeholder="Repite tu contraseña nueva"
+                    placeholderTextColor={c.tabInactive}
+                    secureTextEntry={!showPassword}
+                    onFocus={() => setFocusedField('forgot_confirm')}
+                    onBlur={() => setFocusedField(null)}
+                    onSubmitEditing={handleChangePassword}
+                    style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
+                  />
+                </View>
+              </View>
+
+              <Pressable
+                onPress={handleChangePassword}
+                disabled={loading}
+                style={[styles.submitBtn, { shadowColor: c.gold }]}
+              >
+                <LinearGradient
+                  colors={c.goldGrad}
+                  start={{ x: 0.1, y: 0 }}
+                  end={{ x: 0.9, y: 1 }}
+                  style={styles.gradientBtn}
+                >
+                  {loading ? (
+                    <ActivityIndicator color={c.onGold} size="small" />
+                  ) : (
+                    <Text style={[t.micro, { color: c.onGold, letterSpacing: 2.5, fontWeight: '700', fontSize: 11 }]}>
+                      GUARDAR Y VOLVER AL LOGIN
+                    </Text>
+                  )}
+                </LinearGradient>
+              </Pressable>
+
+              {/* El código ya se consumió: "atrás" es pedir otro, no volver a las casillas */}
+              <Pressable
+                onPress={handleBack}
+                style={[styles.returnLoginBtn, { borderColor: c.border }]}
+              >
+                <Icon name="arrowLeft" size={14} color={c.textSoft} />
+                <Text style={[t.micro, { color: c.textSoft, letterSpacing: 1.5 }]}>
+                  PEDIR OTRO CÓDIGO
                 </Text>
               </Pressable>
             </View>
@@ -1493,32 +1713,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 14,
     paddingVertical: 13,
-  },
-  otpBoxesContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginVertical: 10,
-    gap: 6,
-  },
-  otpBox: {
-    flex: 1,
-    height: 52,
-    borderWidth: 1.5,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  hiddenInput: {
-    position: 'absolute',
-    width: 1,
-    height: 1,
-    opacity: 0,
-  },
-  resendContainer: {
-    alignItems: 'center',
-    marginTop: 4,
-    marginBottom: 4,
   },
   returnLoginBtn: {
     flexDirection: 'row',
