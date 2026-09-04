@@ -56,11 +56,30 @@ const trackDelDiaSchema = z
   })
   .passthrough();
 
+/**
+ * `PATCH /api/v1/habit-preferences/{id}` — lo que el backend responde al cambiar un horario.
+ *
+ * `deferred` es la parte que importa: si la ventana del hábito YA arrancó hoy, el backend
+ * NO rechaza el cambio, lo programa para `deferredEffectiveDate` ("no se improvisa el día").
+ * Hasta ahora el front descartaba esta respuesta entera y no tenía forma de saberlo.
+ */
+export const cambioHorarioSchema = z
+  .object({
+    habitId: z.string(),
+    triggerTime: z.string().nullable(),
+    limitTime: z.string().nullable(),
+    deferred: z.boolean(),
+    /** `yyyy-MM-dd`: desde cuándo rige. Null cuando `deferred` es false (rige ya). */
+    deferredEffectiveDate: z.string().nullish(),
+  })
+  .passthrough();
+
 export const habitsSchemas = {
   catalogo: z.array(habitoCatalogoSchema),
   /** El backend envuelve las preferencias en `{habits: [...]}`, no las devuelve sueltas. */
   preferencias: z.object({ habits: z.array(preferenciaHabitoSchema) }).passthrough(),
   tracksDeHoy: z.array(trackDelDiaSchema),
+  cambioHorario: cambioHorarioSchema,
 };
 
 export function validarRespuesta<T>(esquema: z.ZodType<T>, datos: unknown, origen: string): T {

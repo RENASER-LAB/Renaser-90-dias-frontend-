@@ -43,13 +43,49 @@ export async function obtenerTracksDeHoy(): Promise<TrackDelDiaApi[]> {
  * habría forma de preservarlo aunque quisiéramos), se manda explícito "sin recordatorio" — no
  * apaga nada real porque hoy nada en la app prende un recordatorio.
  */
+export type CambioHorarioResultado = {
+  deferred: boolean;
+  deferredEffectiveDate?: string | null;
+};
+
+/**
+ * Devuelve el resultado en vez de descartarlo: el backend responde `deferred: true` cuando la
+ * ventana del hábito ya arrancó hoy y el cambio rige recién mañana. Sin ese dato la pantalla
+ * mostraba la hora nueva como si aplicara hoy — o sea, mentía.
+ */
 export async function cambiarHorario(
   habitId: string,
   triggerTime: string | null,
   limitTime: string | null,
-): Promise<void> {
-  await apiFetch<unknown>(`/api/v1/habit-preferences/${habitId}`, {
+): Promise<CambioHorarioResultado> {
+  const r = await apiFetch<unknown>(`/api/v1/habit-preferences/${habitId}`, {
     method: 'PATCH',
     body: { triggerTime, limitTime, reminderEnabled: false, reminderMinutesBefore: null },
   });
+  return validarRespuesta(habitsSchemas.cambioHorario, r, 'PATCH /api/v1/habit-preferences/{id}');
+}
+
+/**
+ * `PATCH /api/v1/habit-unlocks/{habitId}` — el interruptor ACTIVO/PAUSADO del aprendiz (D-87).
+ *
+ * Es el endpoint que ese botón nunca tuvo: hasta ahora el cambio vivía solo en el estado de
+ * React y se perdía al cerrar la app. NO es el mismo que `PATCH /api/v1/admin/habits/{id}` del
+ * panel admin — ese escribe `habitos.activo`, que es del catálogo COMPARTIDO y afecta a todos
+ * los aprendices a la vez. Este solo afecta a quien lo llama.
+ */
+export async function cambiarEstadoHabito(habitId: string, active: boolean): Promise<void> {
+  await apiFetch<unknown>(`/api/v1/habit-unlocks/${habitId}`, {
+    method: 'PATCH',
+    body: { active },
+  });
+}
+
+/** `PUT /api/v1/habit-unlocks/{habitId}` — agrega el hábito al plan del aprendiz. Idempotente. */
+export async function agregarHabitoAlPlan(habitId: string): Promise<void> {
+  await apiFetch<unknown>(`/api/v1/habit-unlocks/${habitId}`, { method: 'PUT' });
+}
+
+/** `DELETE /api/v1/habit-unlocks/{habitId}` — lo saca del plan. Idempotente (D-87). */
+export async function quitarHabitoDelPlan(habitId: string): Promise<void> {
+  await apiFetch<unknown>(`/api/v1/habit-unlocks/${habitId}`, { method: 'DELETE' });
 }
