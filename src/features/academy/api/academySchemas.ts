@@ -166,7 +166,30 @@ const completarLeccionSchema = z
   })
   .passthrough();
 
+const claseDiariaSchema = z
+  .object({
+    status: z.enum(['available', 'not_started', 'coming_soon']),
+    programDay: z.number(),
+    // Opcionales, no `.nullable()`: el backend usa `@JsonInclude(NON_NULL)` y directamente NO
+    // manda estas claves cuando `status` no es `available`.
+    cursoId: z.string().optional(),
+    cursoTitulo: z.string().optional(),
+    leccionId: z.string().optional(),
+    leccionTitulo: z.string().optional(),
+  })
+  .passthrough();
+
+const completarClaseDiariaSchema = z
+  .object({
+    leccionId: z.string(),
+    registroHabitoId: z.string(),
+    puntosOtorgados: z.number(),
+  })
+  .passthrough();
+
 export const academySchemas = {
+  claseDiaria: claseDiariaSchema,
+  completarClaseDiaria: completarClaseDiariaSchema,
   misCursos: z.array(miCursoSchema),
   cursosBloqueados: z.array(cursoBloqueadoSchema),
   motivoBloqueo: motivoBloqueoSchema,
