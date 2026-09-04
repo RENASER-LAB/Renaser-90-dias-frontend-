@@ -2,7 +2,15 @@ import { fetch as expoFetch } from 'expo/fetch';
 
 import { API_CONFIG } from '../../../config/apiConfig';
 import { getTokenSesion } from '../../../services/http/apiClient';
-import type { RenasiaEvento, RenasiaEventoFuentes, RenasiaEventoTexto } from '../types/renasia.types';
+import { nombreVisible } from '../data/agentes';
+import type {
+  AgenteRenasia,
+  PreguntarRenasiaBody,
+  RenasiaEvento,
+  RenasiaEventoError,
+  RenasiaEventoFuentes,
+  RenasiaEventoTexto,
+} from '../types/renasia.types';
 import { renasiaSchemas, validarRespuesta } from './renasiaSchemas';
 
 const HEADER_SESION = 'X-Auth-Token';
@@ -24,10 +32,33 @@ export type CallbacksMensajeRenasia = {
   onTexto: (fragmento: string) => void;
   onFuentes: (lecciones: string[]) => void;
   onFin: () => void;
+  /** D-100: el backend avisa que el modelo no pudo responder. */
+  onError?: (mensaje: string) => void;
+};
+
+/**
+ * D-102: con quién se habla y, si es el tutor de cursos, sobre qué. `courseId` y `scope` solo
+ * viajan con `COURSE_TUTOR` — el acompañante no tiene curso ni ámbito, y el backend los
+ * descartaría igual.
+ */
+export type OpcionesEnvioRenasia = {
+  agent: AgenteRenasia;
+  courseId?: string | null;
+  /** D-100: "el curso X, lección Y". Va al prompt de sistema del backend, nunca dentro de la pregunta. */
+  scope?: string | null;
 };
 
 function esAbort(error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError';
+}
+
+function armarCuerpo(question: string, opciones: OpcionesEnvioRenasia): PreguntarRenasiaBody {
+  const body: PreguntarRenasiaBody = { question, agent: opciones.agent };
+  if (opciones.agent === 'COURSE_TUTOR') {
+    if (opciones.courseId) body.courseId = opciones.courseId;
+    if (opciones.scope) body.scope = opciones.scope;
+  }
+  return body;
 }
 
 /**
@@ -65,9 +96,11 @@ async function leerMensajeDeError(respuesta: Awaited<ReturnType<typeof expoFetch
  */
 export async function enviarMensajeRenasia(
   question: string,
+  opciones: OpcionesEnvioRenasia,
   callbacks: CallbacksMensajeRenasia,
   signal?: AbortSignal
 ): Promise<void> {
+  const nombre = nombreVisible(opciones.agent);
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     Accept: 'text/event-stream',
@@ -82,19 +115,19 @@ export async function enviarMensajeRenasia(
     respuesta = await expoFetch(`${API_CONFIG.BASE_URL}${RUTA_MENSAJES}`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ question }),
+      body: JSON.stringify(armarCuerpo(question, opciones)),
       signal: signal ?? null,
     });
   } catch (error) {
     if (esAbort(error)) throw error;
-    throw new Error('No se pudo conectar con RENASIA. Revisá tu conexión.');
+    throw new Error(`No se pudo conectar con ${nombre}. Revisá tu conexión.`);
   }
 
   if (!respuesta.ok) {
     const mensaje = await leerMensajeDeError(respuesta);
     if (respuesta.status === 429) {
       throw new RenasiaCuotaExcedidaError(
-        mensaje || 'Ya usaste todas tus preguntas a RENASIA por hoy. Volvé mañana.'
+        mensaje || `Ya usaste todas tus preguntas a ${nombre} por hoy. Volvé mañana.`
       );
     }
     throw new Error(mensaje);
@@ -102,7 +135,7 @@ export async function enviarMensajeRenasia(
 
   const body = respuesta.body;
   if (!body) {
-    throw new Error('RENASIA no devolvió una respuesta que se pueda leer.');
+    throw new Error(`${nombre} no devolvió una respuesta que se pueda leer.`);
   }
 
   const reader = body.getReader();
@@ -145,6 +178,9 @@ export async function enviarMensajeRenasia(
       callbacks.onTexto((evento as RenasiaEventoTexto).valor);
     } else if (evento.tipo === 'fuentes') {
       callbacks.onFuentes((evento as RenasiaEventoFuentes).lecciones);
+    } else if (evento.tipo === 'error') {
+      // D-100: antes esto no existia y un fallo del modelo llegaba como un `fin` sin texto.
+      callbacks.onError?.((evento as RenasiaEventoError).valor);
     } else if (evento.tipo === 'fin') {
       recibioFin = true;
       callbacks.onFin();
@@ -167,7 +203,7 @@ export async function enviarMensajeRenasia(
     }
   } catch (error) {
     if (esAbort(error)) throw error;
-    throw new Error('La conexión con RENASIA se interrumpió a mitad de la respuesta.');
+    throw new Error(`La conexión con ${nombre} se interrumpió a mitad de la respuesta.`);
   } finally {
     try {
       reader.releaseLock();
@@ -186,6 +222,6 @@ export async function enviarMensajeRenasia(
     // El contrato dice que "fin" siempre llega al final. Si el stream se cerró sin él es un corte
     // anormal (conexión perdida, backend caído a mitad de respuesta) y hay que decirlo en vez de
     // dejar la respuesta como si hubiera terminado bien.
-    throw new Error('La respuesta de RENASIA se cortó antes de terminar. Probá de nuevo.');
+    throw new Error(`La respuesta de ${nombre} se cortó antes de terminar. Probá de nuevo.`);
   }
 }

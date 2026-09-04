@@ -1,14 +1,33 @@
 /**
- * Espejo del contrato de RENASIA (el asistente conversacional del programa), endpoints bajo
+ * Espejo del contrato de los asistentes conversacionales del programa, endpoints bajo
  * `/api/v1/renasia`.
+ *
+ * D-102: son DOS asistentes sobre el mismo endpoint, separados por `agent`:
+ * - `COMPANION`: el acompañante de los 90 días (botón flotante, saludo de arranque).
+ * - `COURSE_TUTOR`: Sparkie, el tutor de cursos (al pie del curso y de la lección).
+ * Cada uno tiene su historial (`GET ...?agent=`) y su prompt de sistema en el backend; nunca se
+ * mezclan. Los nombres visibles viven en `data/agentes.ts`.
  *
  * Dos formas de mensaje conviven a propósito:
  * - `MensajeRenasiaApi`: la fila tal cual la devuelve `GET /api/v1/renasia/mensajes` (historial).
  * - `RenasiaMensajeUI`: el modelo que arma `useRenasiaChat` para la pantalla — une el historial
  *   cargado con los mensajes que se van completando en vivo desde el stream de
  *   `POST /api/v1/renasia/mensajes`, que llegan de a fragmentos y no tienen un `id` de servidor
- *   hasta que el backend los persiste (algo que este contrato ni siquiera confirma que pase).
+ *   hasta que el backend los persiste.
  */
+
+/** Con cuál de los dos asistentes se habla. Mismos valores que `agent` en el wire. */
+export type AgenteRenasia = 'COMPANION' | 'COURSE_TUTOR';
+
+/** Cuerpo de `POST /api/v1/renasia/mensajes` (`PreguntarRenasiaRequest`). */
+export type PreguntarRenasiaBody = {
+  question: string;
+  agent: AgenteRenasia;
+  /** Solo `COURSE_TUTOR`: acota el contexto recuperado a las lecciones visibles de ese curso. */
+  courseId?: string;
+  /** Solo `COURSE_TUTOR` (D-100): "el curso X, lección Y". Va al prompt de sistema, nunca dentro de la pregunta. */
+  scope?: string;
+};
 
 export type RenasiaRoleApi = 'USER' | 'ASSISTANT';
 
@@ -35,6 +54,8 @@ export type RenasiaEventoTexto = { tipo: 'texto'; valor: string };
 export type RenasiaEventoFuentes = { tipo: 'fuentes'; lecciones: string[] };
 /** Siempre el último evento del stream. */
 export type RenasiaEventoFin = { tipo: 'fin' };
+/** `{"tipo":"error","valor":"..."}` — D-100: el modelo no pudo responder; `valor` es apto para mostrar. */
+export type RenasiaEventoError = { tipo: 'error'; valor: string };
 
 /**
  * Cualquier evento que esta versión de la app todavía no conoce.
@@ -50,6 +71,7 @@ export type RenasiaEvento =
   | RenasiaEventoTexto
   | RenasiaEventoFuentes
   | RenasiaEventoFin
+  | RenasiaEventoError
   | RenasiaEventoDesconocido;
 
 /** Un mensaje listo para dibujar en el panel, venga del historial o se esté armando en vivo. */

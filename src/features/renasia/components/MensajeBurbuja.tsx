@@ -7,15 +7,18 @@ import type { RenasiaMensajeUI } from '../types/renasia.types';
 
 type Props = {
   mensaje: RenasiaMensajeUI;
+  /** D-102: el nombre del asistente de ESTE panel (RENASIA o SPARKIE), para "X está escribiendo…". */
+  nombreAsistente: string;
   onReintentar: (idMensajeAsistente: string) => void;
 };
 
 /**
- * Una burbuja del panel de RENASIA — de la persona o del asistente, con sus propios estados de
- * "escribiendo…", error (con reintentar) y lecciones citadas. Separada de `RenasiaPanel` para no
- * repetir esta lógica visual por cada mensaje de la lista.
+ * Una burbuja del panel de un asistente — de la persona o del asistente, con sus propios estados
+ * de "escribiendo…", error (con reintentar) y lecciones citadas. Separada de `RenasiaPanel` para
+ * no repetir esta lógica visual por cada mensaje de la lista. No sabe qué agente es: recibe el
+ * nombre por props, así la burbuja es la misma para los dos.
  */
-export function MensajeBurbuja({ mensaje, onReintentar }: Props) {
+export function MensajeBurbuja({ mensaje, nombreAsistente, onReintentar }: Props) {
   const { c, t } = useTheme();
   const { rs, isSmall } = useResponsive();
   const esPersona = mensaje.autor === 'persona';
@@ -49,7 +52,7 @@ export function MensajeBurbuja({ mensaje, onReintentar }: Props) {
           <View style={styles.filaEscribiendo}>
             <ActivityIndicator size="small" color={esPersona ? c.onGold : c.gold} />
             <Text style={[t.small, { color: esPersona ? c.onGold : c.textSoft, fontSize: 12.5 }]}>
-              RENASIA está escribiendo…
+              {nombreAsistente} está escribiendo…
             </Text>
           </View>
         )}
