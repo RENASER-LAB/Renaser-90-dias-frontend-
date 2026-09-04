@@ -17,6 +17,13 @@ import {
  *   FROM renaser.preguntas_onboarding p JOIN renaser.secciones_onboarding s ON s.id = p.seccion_id
  *   WHERE s.flujo = 'ficha_inicial' ORDER BY s.orden, p.orden;
  *
+ * RESTAURADA el 2026-09-04 (E-93): el commit 9ab4f6f del 2026-09-02 le resto 1 a los 24 ids y desde
+ * entonces cada respuesta se guardaba bajo la pregunta equivocada ("Una respuesta de tipo FIRMA
+ * requiere mediaId" al firmar el Pacto: el nombre viajaba con el id de la firma). Los numeros de
+ * abajo son los de la version anterior a ese commit, verificados uno por uno contra el catalogo
+ * real (`renaser.preguntas_onboarding`) el 2026-09-04. Si algun dia no calzan, el problema es la
+ * base, no este archivo: el catalogo se lee con GET /api/v1/onboarding/questionnaire?flow=...
+ *
  * REGLA (CLAUDE.md §0.6): ningún campo se mapea "a ojo". Si la correspondencia no es evidente
  * (el texto de la pregunta no coincide con lo que pide el campo, o las opciones no calzan),
  * el campo se deja SIN mapear acá y se documenta el motivo en `mapaPreguntas.README` más abajo
@@ -42,42 +49,42 @@ interface PreguntaCatalogo {
 // Actualizado 2026-09-03: los IDs de acá abajo se corrieron en +1 respecto a los de 2026-09-01
 // (reseed de `preguntas_onboarding` — ver E-88 en BITACORA_ERRORES.md del backend). Vueltos a
 // consultar en vivo contra la base local con la misma query del comentario de arriba del archivo.
-const P_FULL_NAME: PreguntaCatalogo = { id: 27, clave: 'full_name', tipo: 'TEXTO' };
-const P_SEX: PreguntaCatalogo = { id: 6, clave: 'sex', tipo: 'SELECCION_UNICA' };
-const P_CHILDREN_INFO: PreguntaCatalogo = { id: 21, clave: 'children_info', tipo: 'TEXTO' };
-const P_PROFESSION: PreguntaCatalogo = { id: 31, clave: 'profession', tipo: 'TEXTO' };
-const P_IDENTITY_DOCUMENT: PreguntaCatalogo = { id: 15, clave: 'identity_document', tipo: 'TEXTO' };
-const P_BIRTH_DATE: PreguntaCatalogo = { id: 13, clave: 'birth_date', tipo: 'FECHA' };
-const P_WHATSAPP: PreguntaCatalogo = { id: 28, clave: 'whatsapp', tipo: 'TEXTO' };
-const P_EMAIL: PreguntaCatalogo = { id: 26, clave: 'email', tipo: 'TEXTO' };
-const P_COUNTRY: PreguntaCatalogo = { id: 32, clave: 'country', tipo: 'TEXTO' };
-const P_CITY: PreguntaCatalogo = { id: 25, clave: 'city', tipo: 'TEXTO' };
-const P_DISTRICT: PreguntaCatalogo = { id: 12, clave: 'district', tipo: 'TEXTO' };
-const P_ADDRESS_REFERENCE: PreguntaCatalogo = { id: 7, clave: 'address_reference', tipo: 'AREA_TEXTO' };
-const P_EXPECTATIONS: PreguntaCatalogo = { id: 30, clave: 'expectations', tipo: 'AREA_TEXTO' };
-const P_FEARS: PreguntaCatalogo = { id: 29, clave: 'fears', tipo: 'AREA_TEXTO' };
+const P_FULL_NAME: PreguntaCatalogo = { id: 28, clave: 'full_name', tipo: 'TEXTO' };
+const P_SEX: PreguntaCatalogo = { id: 7, clave: 'sex', tipo: 'SELECCION_UNICA' };
+const P_CHILDREN_INFO: PreguntaCatalogo = { id: 22, clave: 'children_info', tipo: 'TEXTO' };
+const P_PROFESSION: PreguntaCatalogo = { id: 32, clave: 'profession', tipo: 'TEXTO' };
+const P_IDENTITY_DOCUMENT: PreguntaCatalogo = { id: 16, clave: 'identity_document', tipo: 'TEXTO' };
+const P_BIRTH_DATE: PreguntaCatalogo = { id: 14, clave: 'birth_date', tipo: 'FECHA' };
+const P_WHATSAPP: PreguntaCatalogo = { id: 29, clave: 'whatsapp', tipo: 'TEXTO' };
+const P_EMAIL: PreguntaCatalogo = { id: 27, clave: 'email', tipo: 'TEXTO' };
+const P_COUNTRY: PreguntaCatalogo = { id: 33, clave: 'country', tipo: 'TEXTO' };
+const P_CITY: PreguntaCatalogo = { id: 26, clave: 'city', tipo: 'TEXTO' };
+const P_DISTRICT: PreguntaCatalogo = { id: 13, clave: 'district', tipo: 'TEXTO' };
+const P_ADDRESS_REFERENCE: PreguntaCatalogo = { id: 8, clave: 'address_reference', tipo: 'AREA_TEXTO' };
+const P_EXPECTATIONS: PreguntaCatalogo = { id: 31, clave: 'expectations', tipo: 'AREA_TEXTO' };
+const P_FEARS: PreguntaCatalogo = { id: 30, clave: 'fears', tipo: 'AREA_TEXTO' };
 
 // ---- flujo: ficha_inicial · sección: cuerpo ----------------------------------------------------
-const P_SLEEP_HOURS: PreguntaCatalogo = { id: 36, clave: 'sleep_hours', tipo: 'NUMERO' };
-const P_SLEEP_QUALITY: PreguntaCatalogo = { id: 35, clave: 'sleep_quality', tipo: 'ESCALA' };
-const P_MEDICATION: PreguntaCatalogo = { id: 34, clave: 'medication', tipo: 'AREA_TEXTO' };
+const P_SLEEP_HOURS: PreguntaCatalogo = { id: 37, clave: 'sleep_hours', tipo: 'NUMERO' };
+const P_SLEEP_QUALITY: PreguntaCatalogo = { id: 36, clave: 'sleep_quality', tipo: 'ESCALA' };
+const P_MEDICATION: PreguntaCatalogo = { id: 35, clave: 'medication', tipo: 'AREA_TEXTO' };
 
 // ---- flujo: ficha_inicial · sección: compromiso_y_cierre ---------------------------------------
-const P_DATA_CONSENT: PreguntaCatalogo = { id: 59, clave: 'data_consent', tipo: 'SELECCION_UNICA' };
-const P_COMMITMENT_90DAYS: PreguntaCatalogo = { id: 65, clave: 'commitment_90days', tipo: 'CASILLA' };
+const P_DATA_CONSENT: PreguntaCatalogo = { id: 60, clave: 'data_consent', tipo: 'SELECCION_UNICA' };
+const P_COMMITMENT_90DAYS: PreguntaCatalogo = { id: 66, clave: 'commitment_90days', tipo: 'CASILLA' };
 
 // ---- flujo: terminos · sección: aceptacion ------------------------------------------------------
-const P_ACCEPTED_TERMS: PreguntaCatalogo = { id: 2, clave: 'accepted_terms', tipo: 'CASILLA' };
+const P_ACCEPTED_TERMS: PreguntaCatalogo = { id: 3, clave: 'accepted_terms', tipo: 'CASILLA' };
 // FIRMA: no se mapea acá (esta función solo arma valores tipados texto/número/casilla/escala). Se
 // guarda aparte, vía el flujo de media de `usePersistenciaOnboarding.guardarFirma` — ver
 // PREGUNTA_FIRMA_TERMINOS más abajo y CLAUDE.md de la tarea "firmas del onboarding".
-const P_TERMS_SIGNATURE: PreguntaCatalogo = { id: 1, clave: 'terms_signature', tipo: 'FIRMA' };
+const P_TERMS_SIGNATURE: PreguntaCatalogo = { id: 2, clave: 'terms_signature', tipo: 'FIRMA' };
 
 // ---- flujo: pacto · sección: firma ---------------------------------------------------------------
-const P_PARTICIPANT_NAME: PreguntaCatalogo = { id: 5, clave: 'participant_name', tipo: 'TEXTO' };
-const P_ACCEPTED_PACTO: PreguntaCatalogo = { id: 3, clave: 'accepted_pacto', tipo: 'CASILLA' };
+const P_PARTICIPANT_NAME: PreguntaCatalogo = { id: 6, clave: 'participant_name', tipo: 'TEXTO' };
+const P_ACCEPTED_PACTO: PreguntaCatalogo = { id: 4, clave: 'accepted_pacto', tipo: 'CASILLA' };
 // FIRMA: ídem P_TERMS_SIGNATURE — ver PREGUNTA_FIRMA_PACTO más abajo.
-const P_SIGNATURE: PreguntaCatalogo = { id: 4, clave: 'signature', tipo: 'FIRMA' };
+const P_SIGNATURE: PreguntaCatalogo = { id: 5, clave: 'signature', tipo: 'FIRMA' };
 
 /**
  * Id + clave de las 2 preguntas tipo FIRMA del catálogo, para que `TerminosScreen`/`PactoScreen`
