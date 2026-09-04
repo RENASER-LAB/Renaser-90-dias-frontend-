@@ -17,6 +17,31 @@ import { ScreenHeader, MicroLabel } from '../components/ui';
 import { Icon, IconName } from '../components/Icon';
 import { GoldButton } from '../components/GoldButton';
 import { useTraining } from '../features/training/hooks/useTraining';
+import { EvidenciaHabitoModal } from '../features/habits/components/EvidenciaHabitoModal';
+import { completarRegistro } from '../features/habits/api/evidenciaHabitoApi';
+import { mensajeDeError } from '../services/http/apiClient';
+import { useAuth } from '../features/auth/context/AuthContext';
+import { CLAVE_SISTEMA_PASTILLA_RENACER } from '../features/spirit/api/spiritApi';
+import { PastillaRenacerModal } from '../features/spirit/components/PastillaRenacerModal';
+import { useEspiritu } from '../features/spirit/hooks/useEspiritu';
+import { ClaseDiariaModal } from '../features/academy/components/ClaseDiariaModal';
+import { useClaseDiaria } from '../features/academy/hooks/useClaseDiaria';
+import type { ClaseDiariaApi } from '../features/academy/types/academy.types';
+import { irAPestana } from '../navigation/navegacionRef';
+import { borradorEspiritu } from '../features/spirit/storage/borradorEspiritu';
+
+/**
+ * Habitos con FLUJO PROPIO: no se cierran con el checkbox ni subiendo un archivo. Se ramifica por
+ * `clave_sistema` del catalogo y NUNCA por titulo — el titulo es editable desde el panel admin, y
+ * emparejar por texto haria desaparecer la funcion en silencio el dia que alguien lo renombre.
+ */
+const CLAVE_SISTEMA_CLASE_DIARIA = 'DAILY_CLASS';
+const CLAVE_SISTEMA_POST_COMUNIDAD = 'COMMUNITY_POST';
+/**
+ * D-97: en estos dos la evidencia ES el instante en que se toca el boton (queda en
+ * `completado_en`). No hay archivo que subir ni texto que escribir: se completa directo.
+ */
+const CLAVES_SOLO_HORA: ReadonlySet<string> = new Set(['WAKE_UP', 'SLEEP']);
 
 export interface HabitItem {
   id: string;
@@ -28,6 +53,14 @@ export interface HabitItem {
   done: boolean;
   hasEvidence: boolean;
   note?: string;
+  /**
+   * Clave FUNCIONAL del hábito de catálogo (`DAILY_CLASS`, `PASTILLA_RENACER`…), `null` en las
+   * rocas y en los hábitos personales. Es lo que ya emite `useTraining` y lo único estable para
+   * reconocer un hábito puntual: el título lo puede renombrar el propio aprendiz.
+   */
+  systemKey?: string | null;
+  /** Lo que la persona escribió al completar el registro (`RegistroHabito.respuestaTexto`). */
+  respuestaTexto?: string | null;
 }
 
 interface DimensionConfig {
@@ -143,9 +176,38 @@ export default function TrainingScreen() {
   }, [cargandoBackend, errorBackend, habitsDelBackend]);
 
   // Evidence Upload Modal State
+  // El estado de la subida en sí (archivo elegido, nota, error, envío en curso) vive dentro de
+  // `EvidenciaHabitoModal`. Acá solo queda CUÁL hábito tiene el modal abierto.
   const [activeEvidenceHabit, setActiveEvidenceHabit] = useState<HabitItem | null>(null);
-  const [evidencePhotoUploaded, setEvidencePhotoUploaded] = useState(false);
-  const [evidenceNote, setEvidenceNote] = useState('');
+
+  /**
+   * "Pastilla Renacer" (modulo Espiritu). Es un habito con FLUJO PROPIO: no se cierra subiendo
+   * evidencia sino escuchando el audio del dia y contestando, y su estado vive en otra tabla del
+   * backend. Todo el flujo esta en `features/spirit/`; aca solo queda si el modal esta abierto.
+   *
+   * El estado se pide al MONTAR la pantalla, no al tocar la tarjeta, y eso es a proposito: la
+   * respuesta trae la URL firmada del audio, asi que cuando la persona abre el modal ya no hay que
+   * esperar ninguna llamada de red antes de empezar a bajar el mp3 (requisito: que suene en menos
+   * de 3 segundos). Ver el javadoc de `useEspiritu`.
+   */
+  const [pastillaVisible, setPastillaVisible] = useState(false);
+  const { user } = useAuth();
+  const espiritu = useEspiritu();
+  /** El dia en curso, o el ya entregado de hoy para poder releer lo que escribio. */
+  const diaDePastilla = espiritu.diaEnCurso ?? espiritu.diaEntregadoHoy;
+
+  /**
+   * "Clase diaria". Tampoco se cierra subiendo evidencia: hay que ver la leccion del dia y escribir
+   * que se entendio. El backend hace las DOS escrituras (cerrar el registro y marcar la leccion
+   * vista) dentro del mismo POST, asi que no existe un estado intermedio "completado sin resumen":
+   * si el modal se cierra sin querer, el habito sigue pendiente y se reintenta desde aca.
+   *
+   * A diferencia de Pastilla, la clase se pide BAJO DEMANDA (`abrir()`): Training se abre muchas
+   * veces al dia y esta llamada solo hace falta cuando la persona toca ese habito puntual.
+   */
+  const [claseDiariaVisible, setClaseDiariaVisible] = useState(false);
+  const [habitoClaseDiaria, setHabitoClaseDiaria] = useState<HabitItem | null>(null);
+  const claseDiaria = useClaseDiaria();
 
   // New Custom Habit Modal State
   const [addModalVisible, setAddModalVisible] = useState(false);
@@ -159,6 +221,20 @@ export default function TrainingScreen() {
       setAddModalVisible(false);
       return true;
     }
+    // `PastillaRenacerModal` ya cablea su propio retroceso (para poder guardar el borrador antes
+    // de cerrar). Esta rama es la red de seguridad por si el orden de registro de los dos
+    // handlers cambia: el gesto lateral tiene que cerrar el modal, nunca la app.
+    if (pastillaVisible) {
+      setPastillaVisible(false);
+      return true;
+    }
+    // Cerrar es SIEMPRE gratis y nunca completa: el registro solo se cierra con el POST del
+    // resumen. Por eso el gesto lateral puede cerrar sin miedo a perder nada guardado.
+    if (claseDiariaVisible) {
+      setClaseDiariaVisible(false);
+      claseDiaria.limpiar();
+      return true;
+    }
     if (activeEvidenceHabit !== null) {
       setActiveEvidenceHabit(null);
       return true;
@@ -168,9 +244,76 @@ export default function TrainingScreen() {
       return true;
     }
     return false; // Permite el comportamiento por defecto si está en el menú raíz
-  }, addModalVisible || activeEvidenceHabit !== null || selectedDimension !== null);
+  }, addModalVisible || pastillaVisible || claseDiariaVisible || activeEvidenceHabit !== null || selectedDimension !== null);
+
+  /** Lleva al muro con el compositor abierto. Reusa el parametro que ComunidadScreen ya entiende. */
+  const abrirMuroParaPublicar = () => {
+    irAPestana('Comunidad', { abrirComposerMuro: true });
+  };
+
+  /** Abre el modal de la Clase Diaria y pide, recien ahi, cual es la clase de hoy. */
+  const abrirClaseDiaria = (habit: HabitItem) => {
+    setHabitoClaseDiaria(habit);
+    setClaseDiariaVisible(true);
+    void claseDiaria.abrir();
+  };
+
+  const cerrarClaseDiaria = () => {
+    setClaseDiariaVisible(false);
+    claseDiaria.limpiar();
+  };
+
+  /**
+   * El habito queda completado con ESTE POST, no con un segundo `/complete`. Si el envio falla el
+   * modal sigue abierto con el texto escrito, y nada se marca de forma optimista: la tarjeta se
+   * actualiza recargando desde el backend, que es la unica fuente de verdad.
+   */
+  const handleEnviarResumen = async (leccionId: string, resumen: string) => {
+    const enviado = await claseDiaria.enviarResumen(leccionId, resumen);
+    if (!enviado) return;
+    cerrarClaseDiaria();
+    await recargarEntrenamiento();
+  };
+
+  /** Deep-link a la leccion del dia dentro de Cursos, por el mismo camino que usa Comunidad. */
+  const irALaLeccionDelDia = (clase: ClaseDiariaApi) => {
+    if (!clase.cursoId || !clase.leccionId) return;
+    setClaseDiariaVisible(false);
+    irAPestana('Comunidad', { abrirCursoId: clase.cursoId, abrirLeccionId: clase.leccionId });
+  };
+
+  /**
+   * DESPERTAR / DORMIR: registrar la hora de la accion y nada mas. Sin marcado optimista — la
+   * tarjeta se actualiza recargando del backend, que ademas es quien calcula los puntos con
+   * la hora real del servidor (no la del telefono).
+   */
+  const registrarSoloHora = async (habit: HabitItem) => {
+    try {
+      await completarRegistro(habit.id, null);
+      await recargarEntrenamiento();
+    } catch (e) {
+      Alert.alert('No pudimos registrar la hora', mensajeDeError(e, 'Intenta de nuevo en unos segundos.'));
+    }
+  };
 
   const toggleHabitState = (id: string) => {
+    // Los habitos con flujo propio NO se marcan con el checkbox: hacerlo mentiria, porque el
+    // backend exige la publicacion o el resumen para cerrarlos. Se desvia al flujo que corresponde.
+    const habit = habits.find(h => h.id === id);
+    if (habit && !habit.done) {
+      if (habit.systemKey === CLAVE_SISTEMA_CLASE_DIARIA) {
+        abrirClaseDiaria(habit);
+        return;
+      }
+      if (habit.systemKey === CLAVE_SISTEMA_POST_COMUNIDAD) {
+        abrirMuroParaPublicar();
+        return;
+      }
+      if (habit.systemKey && CLAVES_SOLO_HORA.has(habit.systemKey)) {
+        void registrarSoloHora(habit);
+        return;
+      }
+    }
     setHabits(prev =>
       prev.map(h => {
         if (h.id !== id) return h;
@@ -186,32 +329,65 @@ export default function TrainingScreen() {
   };
 
   const openEvidenceModal = (habit: HabitItem) => {
+    // Se ramifica por `systemKey` (la `clave_sistema` del catalogo) y NUNCA por titulo: el titulo
+    // es editable desde el panel admin, y emparejar por texto haria desaparecer la funcion en
+    // silencio el dia que alguien lo renombre.
+    if (habit.systemKey === CLAVE_SISTEMA_PASTILLA_RENACER) {
+      setPastillaVisible(true);
+      return;
+    }
+    if (habit.systemKey === CLAVE_SISTEMA_CLASE_DIARIA) {
+      abrirClaseDiaria(habit);
+      return;
+    }
+    // El post diario no se evidencia con un archivo: se evidencia publicando. El backend lo
+    // verifica del lado del servidor, asi que mandar al muro es el unico camino que cierra.
+    if (habit.systemKey === CLAVE_SISTEMA_POST_COMUNIDAD) {
+      abrirMuroParaPublicar();
+      return;
+    }
+    if (habit.systemKey && CLAVES_SOLO_HORA.has(habit.systemKey)) {
+      void registrarSoloHora(habit);
+      return;
+    }
     setActiveEvidenceHabit(habit);
-    setEvidencePhotoUploaded(habit.hasEvidence);
-    setEvidenceNote(habit.note || '');
   };
 
-  const handleSealEvidence = () => {
-    if (!activeEvidenceHabit) return;
+  /**
+   * Entrega la respuesta de la Pastilla del dia. El backend cierra el habito con ESTA misma
+   * llamada (`EspirituService` refleja la entrega en el registro de "Pastilla Renacer"), asi que
+   * no hace falta un segundo POST a `/habit-tracks/{id}/complete`.
+   *
+   * Si el envio falla, el modal SIGUE ABIERTO con lo escrito: nada se marca de forma optimista.
+   */
+  const handleEntregarPastilla = async (dia: number, texto: string) => {
+    const enviado = await espiritu.entregar(dia, texto);
+    if (!enviado) return;
+    // El borrador ya no representa nada: la respuesta esta en el servidor.
+    if (user?.id) {
+      await borradorEspiritu.borrar(user.id, dia);
+    }
+    setPastillaVisible(false);
+    await Promise.all([espiritu.recargar(), recargarEntrenamiento()]);
+    Alert.alert('Pastilla Renacer registrada 🦅', 'Tu respuesta quedo guardada y el habito, completado.');
+  };
 
-    setHabits(prev =>
-      prev.map(h => {
-        if (h.id !== activeEvidenceHabit.id) return h;
-        return {
-          ...h,
-          done: true,
-          hasEvidence: true,
-          note: evidenceNote.trim() || h.note,
-          streak: h.done ? h.streak : h.streak + 1,
-        };
-      })
-    );
-
+  /**
+   * Lo llama `EvidenciaHabitoModal` cuando el BACKEND ya cerró el registro. No marca la tarjeta a
+   * mano: recarga desde el servidor, para que "completado" en pantalla siempre signifique
+   * completado en el servidor. Los puntos son los que otorgó el backend (`puntosOtorgados` de la
+   * respuesta de `/complete`), nunca un número calculado acá.
+   */
+  const handleEvidenciaCompletada = async (puntosOtorgados: number) => {
+    const nombre = activeEvidenceHabit?.title ?? 'tu hábito';
+    setActiveEvidenceHabit(null);
+    await recargarEntrenamiento();
     Alert.alert(
       '¡Evidencia de Verdad Sellada! 🦅',
-      `Has registrado tu prueba fotográfica y cumplido tu palabra en "${activeEvidenceHabit.title}".`
+      puntosOtorgados > 0
+        ? `Cumpliste tu palabra en "${nombre}". +${puntosOtorgados} puntos.`
+        : `Cumpliste tu palabra en "${nombre}".`
     );
-    setActiveEvidenceHabit(null);
   };
 
   const handleCreateHabit = () => {
@@ -719,97 +895,68 @@ export default function TrainingScreen() {
       </ScrollView>
 
       {/* ========================================================================= */}
-      {/* MODAL: SUBIR EVIDENCIA FOTOGRÁFICA Y REGISTRO DE VERDAD                   */}
+      {/* MODAL: SUBIR EVIDENCIA (FOTO / TEXTO / AUDIO / VIDEO) — camino GENÉRICO   */}
       {/* ========================================================================= */}
-      <Modal
-        visible={activeEvidenceHabit !== null}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setActiveEvidenceHabit(null)}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={[styles.modalCard, { backgroundColor: c.cardBg, borderColor: c.gold }]}>
-            {activeEvidenceHabit && (
-              <View style={{ gap: 12 }}>
-                <View style={{ alignItems: 'center', gap: 2 }}>
-                  <View style={[styles.sessionTagBadge, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-                    <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 10 }]}>
-                      {activeEvidenceHabit.dimension} · {activeEvidenceHabit.tag}
-                    </Text>
-                  </View>
-                  <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 17, textAlign: 'center', marginTop: 2 }]}>
-                    {activeEvidenceHabit.title}
-                  </Text>
-                  <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5 }]}>
-                    {activeEvidenceHabit.time} · Racha: 🔥 {activeEvidenceHabit.streak} días
-                  </Text>
-                </View>
+      {/*
+        Antes esto era una maqueta: el recuadro de "foto" solo hacía
+        `setEvidencePhotoUploaded(true)` y "SELLAR" marcaba la tarjeta en memoria — no se elegía
+        ningún archivo, no se subía nada y el backend nunca se enteraba. Ahora todo el flujo real
+        (elegir/grabar, subir a S3 con URL prefirmada, confirmar la evidencia y completar el
+        registro) vive en `features/habits/components/EvidenciaHabitoModal`, para no seguir
+        engordando esta pantalla y para no chocar con los flujos ESPECIALES de evidencia que se
+        están construyendo en paralelo sobre este mismo archivo.
+      */}
+      <EvidenciaHabitoModal
+        registroId={activeEvidenceHabit?.id ?? null}
+        titulo={activeEvidenceHabit?.title ?? ''}
+        contexto={
+          activeEvidenceHabit
+            ? `${activeEvidenceHabit.dimension} · ${activeEvidenceHabit.tag}`
+            : undefined
+        }
+        notaInicial={activeEvidenceHabit?.respuestaTexto ?? activeEvidenceHabit?.note ?? ''}
+        onCerrar={() => setActiveEvidenceHabit(null)}
+        onCompletado={handleEvidenciaCompletada}
+      />
 
-                {/* Recuadro de Foto de Evidencia */}
-                <Pressable
-                  onPress={() => setEvidencePhotoUploaded(true)}
-                  style={[
-                    styles.photoUploadBox,
-                    {
-                      borderColor: evidencePhotoUploaded ? '#4E9F76' : c.borderStrong,
-                      backgroundColor: c.cardBgAlt,
-                    },
-                  ]}
-                >
-                  {evidencePhotoUploaded ? (
-                    <View style={{ alignItems: 'center', gap: 4 }}>
-                      <Icon name="checkCircle" size={26} color="#4E9F76" />
-                      <Text style={[t.micro, { color: '#4E9F76', fontWeight: '700', fontSize: 11 }]}>
-                        ✓ FOTO DE EVIDENCIA CARGADA
-                      </Text>
-                      <Text style={[t.micro, { color: c.textSoft, fontSize: 10 }]}>
-                        Sello automático: Día 37 · 07:45 AM
-                      </Text>
-                    </View>
-                  ) : (
-                    <View style={{ alignItems: 'center', gap: 6 }}>
-                      <Icon name="camera" size={24} color={c.gold} />
-                      <Text style={[t.micro, { color: c.textStrong, fontWeight: '700', fontSize: 11 }]}>
-                        TOCAR PARA TOMAR FOTO O SUBIR
-                      </Text>
-                      <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>
-                        Se estampará sello de fecha: Día 37 · 07:45 AM
-                      </Text>
-                    </View>
-                  )}
-                </Pressable>
+      {/* ========================================================================= */}
+      {/* MODAL: PASTILLA RENACER (audio del día + preguntas)                       */}
+      {/* ========================================================================= */}
+      <PastillaRenacerModal
+        visible={pastillaVisible}
+        userId={user?.id ?? 'anon'}
+        dia={diaDePastilla}
+        cargando={espiritu.cargando}
+        error={espiritu.error}
+        enviando={espiritu.enviando}
+        errorEnvio={espiritu.errorEnvio}
+        onEntregar={(dia, texto) => {
+          void handleEntregarPastilla(dia, texto);
+        }}
+        onCerrar={() => {
+          espiritu.limpiarError();
+          setPastillaVisible(false);
+        }}
+      />
 
-                {/* Registro de Verdad */}
-                <View style={{ gap: 4 }}>
-                  <MicroLabel>REGISTRO DE VERDAD (OPCIONAL)</MicroLabel>
-                  <TextInput
-                    value={evidenceNote}
-                    onChangeText={setEvidenceNote}
-                    placeholder="¿Cómo cumpliste tu palabra hoy?"
-                    placeholderTextColor={c.tabInactive}
-                    style={[styles.modalInput, { color: c.textStrong, borderColor: c.border, backgroundColor: c.cardBgAlt }]}
-                  />
-                </View>
-
-                <GoldButton
-                  label="✓ SELLAR EVIDENCIA Y COMPLETAR"
-                  onPress={handleSealEvidence}
-                  style={{ marginTop: 4 }}
-                />
-
-                <Pressable
-                  onPress={() => setActiveEvidenceHabit(null)}
-                  style={[styles.closeModalBtn, { borderColor: c.border }]}
-                >
-                  <Text style={[t.micro, { color: c.textSoft, fontWeight: '700', fontSize: 11, textAlign: 'center' }]}>
-                    CANCELAR
-                  </Text>
-                </Pressable>
-              </View>
-            )}
-          </View>
-        </View>
-      </Modal>
+      {/* MODAL: CLASE DIARIA (leccion del dia + que entendiste)                    */}
+      {/* `resumenGuardado` sale de `respuestaTexto` del registro: si el habito ya se cerro, el
+          modal se abre en solo lectura mostrando lo que la persona escribio, en vez de volver a
+          pedirselo. Es la lectura de "ya no debe salir el modal" que dejo el flujo original. */}
+      <ClaseDiariaModal
+        visible={claseDiariaVisible}
+        clase={claseDiaria.clase}
+        cargando={claseDiaria.cargando}
+        error={claseDiaria.error}
+        resumenGuardado={habitoClaseDiaria?.respuestaTexto ?? null}
+        enviando={claseDiaria.enviando}
+        errorEnvio={claseDiaria.errorEnvio}
+        onEnviar={(leccionId, resumen) => {
+          void handleEnviarResumen(leccionId, resumen);
+        }}
+        onIrALaLeccion={irALaLeccionDelDia}
+        onCerrar={cerrarClaseDiaria}
+      />
 
       {/* ========================================================================= */}
       {/* MODAL: AGREGAR NUEVO HÁBITO PERSONALIZADO                                 */}
