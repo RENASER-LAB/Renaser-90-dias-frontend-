@@ -41,3 +41,9 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+### Grafo de conocimiento de graphify (graphify-out/) ###
+# Artefactos derivados: se reconstruyen solos via el hook post-commit
+# (`graphify update .`, solo AST, sin coste de API). No se versionan.
+graphify-out/
+.claude/settings.json.graphify-bak
