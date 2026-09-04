@@ -21,6 +21,11 @@ const habitoCatalogoSchema = z
     isOptional: z.boolean(),
     isSystemHabit: z.boolean(),
     isDeactivatable: z.boolean(),
+    // Identidad FUNCIONAL del hábito de catálogo (`DAILY_CLASS`, `PASTILLA_RENACER`...); null en
+    // los hábitos personales. Es el único criterio estable para reconocer un hábito puntual: el
+    // título es renombrable por el propio aprendiz. `.optional()` además de `.nullable()` para no
+    // romper contra un backend viejo que todavía no manda el campo.
+    systemKey: z.string().nullable().optional(),
   })
   .passthrough();
 
@@ -31,7 +36,17 @@ const preferenciaHabitoSchema = z
     triggerTime: z.string().nullable(),
     limitTime: z.string().nullable(),
     customized: z.boolean(),
-    pendingChange: z.unknown().nullable(),
+    // Se valida de verdad en vez de `z.unknown()`: es el dato que sostiene el aviso "desde
+    // cuándo rige el horario nuevo", así que si el backend cambia su forma conviene enterarse
+    // acá y no con un `undefined` silencioso dentro de la tarjeta.
+    pendingChange: z
+      .object({
+        triggerTime: z.string().nullable(),
+        limitTime: z.string().nullable(),
+        effectiveDate: z.string(),
+      })
+      .passthrough()
+      .nullable(),
   })
   .passthrough();
 

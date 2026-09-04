@@ -26,6 +26,32 @@ export type ArranquePrograma =
   | { estado: 'PENDIENTE_ELEGIR' }
   | { estado: 'ESPERANDO_INICIO'; fechaInicio: string };
 
+/**
+ * `true` si `yyyyMmDd` todavia no llegó, en el día civil del dispositivo. Se comparan cadenas
+ * `YYYY-MM-DD` en vez de objetos `Date` por la misma razón que documenta `formatearFechaLarga`:
+ * `new Date('2026-09-05')` se interpreta como UTC y en Lima devolvería el día anterior. El
+ * formato ISO ordena lexicográficamente igual que cronológicamente, así que `>` alcanza.
+ */
+/**
+ * D-103: `true` si el programa empieza DESPUES de manana. Con la regla "hoy se organiza manana"
+ * (D-91/D-98), quien eligio empezar manana tiene que poder armar su plan hoy: para esa persona el
+ * programa ya esta "en curso" a efectos de planificar, aunque el contador diga dia 0. Solo se
+ * bloquea a quien empieza pasado manana o mas tarde — y a esa persona se le dice desde que dia
+ * va a poder organizar (el anterior al inicio), no "ese dia".
+ */
+function empiezaDespuesDeManana(yyyyMmDd: string): boolean {
+  const manana = new Date();
+  manana.setDate(manana.getDate() + 1);
+  return yyyyMmDd > fechaCivil(manana);
+}
+
+/** Fecha civil del dispositivo como `YYYY-MM-DD`, sin pasar por UTC (ver `formatearFechaLarga`). */
+function fechaCivil(fecha: Date): string {
+  return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(
+    fecha.getDate(),
+  ).padStart(2, '0')}`;
+}
+
 export function useArranqueDelPrograma(habilitado: boolean): ArranquePrograma {
   const [arranque, setArranque] = useState<ArranquePrograma>({ estado: 'CARGANDO' });
 
@@ -37,7 +63,13 @@ export function useArranqueDelPrograma(habilitado: boolean): ArranquePrograma {
     setArranque({ estado: 'CARGANDO' });
     try {
       const estado = await onboardingApi.consultarActivacionPrograma();
-      if (estado.activated && estado.startDate) {
+      // D-90: se compara la fecha contra HOY. Antes bastaba con que existiera `startDate` para
+      // declarar ESPERANDO_INICIO, y una fecha de inicio YA PASADA dejaba la pantalla anunciando
+      // "empezás el jueves 3 de septiembre" el viernes 4 — con las 7 pildoras de dia apagadas y
+      // la lista de habitos en `display: none`. Ese era el reclamo de "estando en el dia no
+      // puedo editar mis habitos": no habia nada que tocar. Una fecha de arranque en el pasado
+      // no puede significar "todavia no arranco", diga lo que diga el contador de dias.
+      if (estado.activated && estado.startDate && empiezaDespuesDeManana(estado.startDate)) {
         setArranque({ estado: 'ESPERANDO_INICIO', fechaInicio: estado.startDate });
       } else if (estado.activated) {
         // Activado pero sin fecha: backend viejo, o staff con seguimiento personal. No hay
@@ -80,4 +112,13 @@ export function formatearFechaLarga(yyyyMmDd: string): string {
   const h = (dia + Math.floor((13 * (m + 1)) / 5) + k + Math.floor(k / 4) + Math.floor(j / 4) + 5 * j) % 7;
   const diaSemana = DIAS[(h + 6) % 7];
   return `${diaSemana} ${dia} de ${MESES[mes - 1]}`;
+}
+
+/** `2026-09-08` → `2026-09-07`: el dia desde el que se puede organizar un programa que empieza esa fecha. */
+export function diaAnterior(yyyyMmDd: string): string {
+  const [anio, mes, dia] = yyyyMmDd.split('-').map(Number);
+  if (!anio || !mes || !dia) return yyyyMmDd;
+  const d = new Date(anio, mes - 1, dia);
+  d.setDate(d.getDate() - 1);
+  return fechaCivil(d);
 }

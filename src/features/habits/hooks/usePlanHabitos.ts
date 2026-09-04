@@ -31,7 +31,14 @@ export function usePlanHabitos() {
         habitsApi.obtenerCatalogo(),
         // Si las preferencias fallan, se muestran los hábitos sin horario en vez de una pantalla
         // de error: el catálogo por sí solo ya es útil.
-        habitsApi.obtenerPreferencias().catch(() => []),
+        //
+        // D-98: pero se DEJA RASTRO. Antes el catch era mudo, y cuando el dueño vio "Sin horario"
+        // en los 18 hábitos no había forma de saber si era un 404, un 500 o el schema — el
+        // servidor respondía bien y la pantalla no decía por qué lo descartaba.
+        habitsApi.obtenerPreferencias().catch((e: unknown) => {
+          console.warn('[Plan] no se pudieron cargar los horarios; se muestran sin hora:', e);
+          return [];
+        }),
       ]);
       const porHabito = new Map(preferencias.map(p => [p.habitId, p]));
       const mapeados = catalogo

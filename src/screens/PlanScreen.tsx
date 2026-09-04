@@ -21,6 +21,7 @@ import { GoldButton } from '../components/GoldButton';
 import { usePlanHabitos } from '../features/habits/hooks/usePlanHabitos';
 import { DIAS_DEL_PROGRAMA, puntoDelMedidor, useProgramaDia } from '../features/programa/hooks/useProgramaDia';
 import {
+  diaAnterior,
   formatearFechaLarga,
   useArranqueDelPrograma,
 } from '../features/programa/hooks/useArranqueDelPrograma';
@@ -51,6 +52,15 @@ export interface PlanHabit {
   isOptional: boolean;
   /** false = el aprendiz no puede sacarlo de su plan; el interruptor queda en ON y bloqueado. */
   isDeactivatable: boolean;
+  /**
+   * Horario ya guardado que empieza a regir MAÑANA, no hoy. `null` = nada pendiente.
+   *
+   * Existe porque el backend nunca rechaza un cambio sobre un hábito cuya ventana ya arrancó:
+   * lo difiere. Sin este campo la pantalla revertía la hora y el aprendiz leía "no se guardó"
+   * cuando en realidad sí se había guardado — el reclamo de "estando en el día no puedo editar
+   * mis hábitos".
+   */
+  cambioProgramado: { time: string; desde: string } | null;
 }
 
 export interface WeeklyGoalItem {
@@ -157,6 +167,16 @@ function habitoVencidoHoy(habit: PlanHabit, esHoy: boolean, nowHHmm: string): bo
   return nowHHmm > habit.limitTime.slice(0, 5);
 }
 
+/**
+ * Texto del aviso "esto ya está guardado, pero empieza a regir tal día". Se arma acá y no en el
+ * JSX para que la tarjeta se lea de un vistazo, y devuelve algo útil incluso si el backend no
+ * mandó la fecha: el dato que de verdad importa es la hora nueva.
+ */
+function textoCambioProgramado(cambio: { time: string; desde: string }): string {
+  const cuando = cambio.desde ? formatearFechaLarga(cambio.desde) : 'mañana';
+  return `Desde el ${cuando}: ${cambio.time}`;
+}
+
 export default function PlanScreen() {
   const { c, t } = useTheme();
   const { rs, isTablet, horizontalPadding } = useResponsive();
@@ -172,7 +192,11 @@ export default function PlanScreen() {
   // Arranca en el día de hoy, no siempre en lunes: quien abre Plan un miércoles espera ver su
   // miércoles, no tener que buscarlo. El mismo índice marca hasta dónde se puede planificar.
   const indiceDeHoy = (new Date().getDay() + 6) % 7;
-  const [selectedDay, setSelectedDay] = useState<DayOfWeek>(DAY_OPTIONS[indiceDeHoy]);
+  // D-98: arranca en el primer día planificable, que es MAÑANA (hoy está bloqueado). Un domingo
+  // no tiene mañana dentro de esta semana: ahí se queda en domingo, apagado, y la persona ve la
+  // semana entera cerrada — que es la verdad de ese momento.
+  const indiceInicial = Math.min(indiceDeHoy + 1, DAY_OPTIONS.length - 1);
+  const [selectedDay, setSelectedDay] = useState<DayOfWeek>(DAY_OPTIONS[indiceInicial]);
   // Los hábitos vienen del backend (catálogo + horario propio del aprendiz). "Todavía no
   // respondió" y "respondió con cero hábitos" NO son lo mismo: lo primero es un esqueleto, lo
   // segundo es un estado legítimo (día 0, plan sin generar) que hay que mostrar tal cual. Por eso
@@ -184,11 +208,15 @@ export default function PlanScreen() {
     recargar: recargarHabitos,
   } = usePlanHabitos();
   // Dia real del programa: antes el 37, el arco y la fase estaban escritos a mano.
-  const { diaPrograma } = useProgramaDia();
+  const { diaPrograma, loading: cargandoDiaPrograma } = useProgramaDia();
   const medidor = puntoDelMedidor(diaPrograma);
   // D-84: el dia 0 no es "un plan vacio", es "el programa todavia no arranco". Se consulta
   // el porque solo en ese caso — quien ya esta en el dia 5 no paga la llamada.
-  const arranque = useArranqueDelPrograma(diaPrograma === 0);
+  //
+  // D-90: y solo cuando el dia YA SE SABE. `useProgramaDia` arranca en 0 mientras `/api/v1/home`
+  // viaja, asi que sin `!cargandoDiaPrograma` esta consulta salia siempre en el primer render y
+  // el aprendiz veia parpadear el cartel de "todavia no arrancaste" antes de su propio plan.
+  const arranque = useArranqueDelPrograma(!cargandoDiaPrograma && diaPrograma === 0);
   const programaSinArrancar = arranque.estado === 'PENDIENTE_ELEGIR' || arranque.estado === 'ESPERANDO_INICIO';
   const [habits, setHabits] = useState<PlanHabit[]>([]);
   const conectadoAlBackend = !cargandoHabitos && !errorHabitos;
@@ -289,6 +317,13 @@ export default function PlanScreen() {
     );
     if (!conectadoAlBackend) return;
     try {
+      // D-99: el PATCH del interruptor exige que el habito YA este en el plan del aprendiz
+      // (`desbloqueos_habito`), y esa tabla arranca vacia para todo el mundo — la generacion
+      // diaria no la necesita (D-87: sin fila, el habito se genera igual). Resultado: el boton
+      // devolvia 404 "Este habito no esta en tu plan" en TODOS los habitos de una cuenta nueva
+      // y la pantalla revertia con "Intenta de nuevo". Se asegura la fila primero con el PUT
+      // (idempotente: si ya existe no hace nada) y recien despues se cambia el estado.
+      await habitsApi.agregarHabitoAlPlan(habitId);
       await habitsApi.cambiarEstadoHabito(habitId, nuevoValor);
     } catch {
       setHabits(anteriores);
@@ -333,19 +368,42 @@ export default function PlanScreen() {
     if (!conectadoAlBackend || !habito) return;
     try {
       const resultado = await habitsApi.cambiarHorario(habitId, `${nuevaHora}:00`, habito.limitTime);
-      // D-85: si la ventana del hábito ya arrancó hoy, el backend NO rechaza el cambio — lo
-      // programa para mañana ("no se improvisa el día"). Mostrar la hora nueva en el día de hoy
-      // sería mentir, así que se revierte lo optimista y se dice desde cuándo rige.
+      // D-91: el backend YA NO aplica ningún cambio en el día en curso — todos se difieren a
+      // mañana, arranque o no arranque la ventana del hábito. `deferred` es hoy siempre true;
+      // la rama de abajo se deja igual porque el contrato del campo no cambió y no queremos
+      // depender de que siempre lo sea.
+      //
+      // D-90: antes acá se hacía `setHabits(anteriores)`. Revertir era correcto en un sentido
+      // (la hora de HOY no cambió, mostrarla cambiada sería mentir) y desastroso en otro: el
+      // aprendiz veía la hora volver sola al valor viejo y concluía que estando en el día no
+      // podía editar sus hábitos — cuando el cambio SÍ había quedado guardado. Ahora la hora de
+      // hoy se restaura pero el hábito queda marcado con su cambio programado, que la tarjeta
+      // pinta como "desde mañana 09:00". Editar deja rastro visible en vez de parecer un no-op.
       if (resultado.deferred) {
-        setHabits(anteriores);
-        const desde = resultado.deferredEffectiveDate
-          ? formatearFechaLarga(resultado.deferredEffectiveDate)
-          : 'mañana';
-        Alert.alert(
-          'Se aplica desde mañana',
-          `Hoy este hábito ya arrancó, así que el horario de hoy no se toca. Desde el ${desde} va a ser a las ${nuevaHora}.`,
+        const desde = resultado.deferredEffectiveDate;
+        setHabits(prev =>
+          prev.map(h =>
+            h.id === habitId
+              ? {
+                  ...h,
+                  time: habito.time,
+                  moment: habito.moment,
+                  cambioProgramado: { time: nuevaHora, desde: desde ?? '' },
+                }
+              : h,
+          ),
         );
+        Alert.alert(
+          'Guardado, se aplica desde mañana',
+          `El día en curso no se reacomoda: lo que planificaste para hoy se respeta hasta la medianoche. Desde el ${
+            desde ? formatearFechaLarga(desde) : 'día siguiente'
+          } este hábito va a ser a las ${nuevaHora}. Lo vas a ver anotado en la tarjeta.`,
+        );
+        return;
       }
+      // Cambio inmediato: si había uno programado de antes, el backend lo borró
+      // (`saveCambioPendientePort.borrar`), así que la tarjeta no debe seguir anunciándolo.
+      setHabits(prev => prev.map(h => (h.id === habitId ? { ...h, cambioProgramado: null } : h)));
     } catch {
       setHabits(anteriores);
       Alert.alert('No pudimos guardar el horario', 'Intenta de nuevo en unos segundos.');
@@ -386,6 +444,9 @@ export default function PlanScreen() {
       // Un hábito personalizado, creado a mano por el aprendiz: nunca es obligatorio del
       // programa ni tiene hora límite que lo venza.
       limitTime: null,
+      // Un hábito recién creado a mano nunca tiene un cambio de horario diferido esperando:
+      // se crea con la hora que el aprendiz acaba de elegir, y esa rige desde ya.
+      cambioProgramado: null,
       isOptional: true,
     isDeactivatable: true,
     };
@@ -634,7 +695,12 @@ export default function PlanScreen() {
               // Los días ya pasados no se pueden planificar: organizar hábitos de un día que ya
               // terminó no tiene efecto sobre nada. Quedan visibles pero apagados y sin responder
               // al toque, para que la semana se siga leyendo completa.
-              const esPasado = indice < indiceDeHoy;
+              //
+              // D-98: HOY también queda apagado. El día en curso no se reacomoda (D-91, el
+              // backend difiere todo a mañana), y el dueño pidió que se VEA así — sombreado como
+              // los días pasados — en vez de dejar tocar y avisar después. Lo que se planifica es
+              // de mañana en adelante.
+              const esPasado = indice <= indiceDeHoy;
               // D-84: con el programa sin arrancar NINGUN dia es planificable, ni los futuros
               // — no hay plan que organizar todavia.
               const bloqueado = esPasado || programaSinArrancar;
@@ -690,7 +756,7 @@ export default function PlanScreen() {
               <Text style={[t.small, { color: c.textSoft, lineHeight: 18 }]}>
                 {arranque.estado === 'PENDIENTE_ELEGIR'
                   ? 'Elegí en qué día querés empezar tus 90 días. Hasta entonces no hay plan que organizar.'
-                  : `Empezás el ${formatearFechaLarga(arranque.fechaInicio)}. Ese día vas a poder organizar tus hábitos; hasta entonces no hay nada que hacer acá.`}
+                  : `Empezás el ${formatearFechaLarga(arranque.fechaInicio)}. Desde el ${formatearFechaLarga(diaAnterior(arranque.fechaInicio))} vas a poder organizar los hábitos de tu primer día; hasta entonces no hay nada que hacer acá.`}
               </Text>
             </View>
           )}
@@ -881,6 +947,25 @@ export default function PlanScreen() {
                                   <Text style={[t.micro, { color: c.textSoft, fontSize: 9 }]}>{momentLabel}</Text>
                                 </View>
                               </View>
+
+                              {/* D-90: el horario que YA se guardó pero todavía no rige. Sin esto,
+                                  cambiar la hora de un hábito que hoy ya arrancó se veía como si
+                                  no hubiera pasado nada — la hora volvía sola al valor viejo y el
+                                  aprendiz concluía que no podía editar. `flexWrap` porque el
+                                  texto crece con el nombre del día (AGENTS.md §2). */}
+                              {habit.cambioProgramado ? (
+                                <View
+                                  style={[
+                                    styles.cambioProgramadoPill,
+                                    { borderColor: c.gold, backgroundColor: c.cardBgAlt },
+                                  ]}
+                                >
+                                  <Icon name="clock" size={9} color={c.gold} />
+                                  <Text style={[t.micro, { color: c.gold, fontSize: 9.5, flexShrink: 1 }]}>
+                                    {textoCambioProgramado(habit.cambioProgramado)}
+                                  </Text>
+                                </View>
+                              ) : null}
                             </View>
                           </View>
 
@@ -1510,6 +1595,19 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     fontSize: 11,
     fontWeight: 'bold',
+  },
+  cambioProgramadoPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    flexWrap: 'wrap',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    marginTop: 5,
+    maxWidth: '100%',
   },
   momentBadgePill: {
     borderWidth: 1,
