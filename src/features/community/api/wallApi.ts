@@ -11,6 +11,7 @@ import type {
   WallUrlSubida,
 } from '../types/community.types';
 import {
+  conteoMisPublicacionesSchema,
   urlSubidaMuroSchema,
   wallCategoriesResponseSchema,
   wallCommentCreadoSchema,
@@ -41,6 +42,21 @@ export async function obtenerFeedMuro(cursor?: string, category?: string): Promi
   const query = params.toString();
   const r = await apiFetch<unknown>(`/api/v1/wall${query ? `?${query}` : ''}`);
   return validarRespuesta<WallFeedPage>(wallFeedPageSchema, r, 'GET /api/v1/wall');
+}
+
+/**
+ * `GET /api/v1/wall/mine` → cuántas publicaciones propias tiene el actor, de toda su historia
+ * (`WallController.mine` → `PublicacionPersistenceAdapter.contarMisPublicaciones` →
+ * `countByAutorId`). No pagina ni filtra por `oculta`.
+ *
+ * Existe para el arranque guiado (`features/sparkie`): "¿este aprendiz ya publicó su primer post?"
+ * es un hecho del PARTICIPANTE, no del teléfono — tiene que sobrevivir a cerrar la app y a cambiar
+ * de dispositivo. Por eso se pregunta al servidor en vez de guardar un flag local, y por eso no
+ * hizo falta ninguna migración: el endpoint y el índice (`muro_autor_idx`, V1) ya estaban.
+ */
+export async function contarMisPublicaciones(): Promise<number> {
+  const r = await apiFetch<unknown>('/api/v1/wall/mine');
+  return validarRespuesta<{ count: number }>(conteoMisPublicacionesSchema, r, 'GET /api/v1/wall/mine').count;
 }
 
 export async function reaccionarPublicacion(
@@ -127,7 +143,9 @@ export function almacenamientoSinConfigurar(uploadUrl: string): boolean {
  * (ver `S3AlmacenamientoAdapter.firmarSubida`, comentario sobre el `contentType` firmado).
  */
 export async function subirImagenAS3(uploadUrl: string, uri: string, mimeType: string): Promise<void> {
-  const bytes = await (await fetch(uri)).blob();
+  // D-104: `.arrayBuffer()` y no `.blob()` — con un Blob de RN el `Content-Type` real puede no
+  // coincidir con el firmado y S3 devuelve 403. Mismo arreglo que el onboarding y evidencias.
+  const bytes = await (await fetch(uri)).arrayBuffer();
   const respuesta = await fetch(uploadUrl, {
     method: 'PUT',
     headers: { 'Content-Type': mimeType },
