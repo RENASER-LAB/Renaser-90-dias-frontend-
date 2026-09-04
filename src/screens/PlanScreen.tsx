@@ -20,6 +20,10 @@ import { Icon } from '../components/Icon';
 import { GoldButton } from '../components/GoldButton';
 import { usePlanHabitos } from '../features/habits/hooks/usePlanHabitos';
 import { DIAS_DEL_PROGRAMA, puntoDelMedidor, useProgramaDia } from '../features/programa/hooks/useProgramaDia';
+import {
+  formatearFechaLarga,
+  useArranqueDelPrograma,
+} from '../features/programa/hooks/useArranqueDelPrograma';
 import { HoraPickerModal } from '../features/habits/components/HoraPickerModal';
 import * as habitsApi from '../features/habits/api/habitsApi';
 import { aMomento } from '../features/habits/api/habitsMappers';
@@ -182,6 +186,10 @@ export default function PlanScreen() {
   // Dia real del programa: antes el 37, el arco y la fase estaban escritos a mano.
   const { diaPrograma } = useProgramaDia();
   const medidor = puntoDelMedidor(diaPrograma);
+  // D-84: el dia 0 no es "un plan vacio", es "el programa todavia no arranco". Se consulta
+  // el porque solo en ese caso — quien ya esta en el dia 5 no paga la llamada.
+  const arranque = useArranqueDelPrograma(diaPrograma === 0);
+  const programaSinArrancar = arranque.estado === 'PENDIENTE_ELEGIR' || arranque.estado === 'ESPERANDO_INICIO';
   const [habits, setHabits] = useState<PlanHabit[]>([]);
   const conectadoAlBackend = !cargandoHabitos && !errorHabitos;
   useEffect(() => {
@@ -262,21 +270,35 @@ export default function PlanScreen() {
   // =========================================================================
   // HANDLERS
   // =========================================================================
-  const toggleHabitDayStatus = (habitId: string) => {
+  /**
+   * D-87: ahora PERSISTE. Antes esto era solo `setHabits(...)` — estado local de React: apagabas
+   * un hábito, cerrabas la app, y volvía encendido. La causa de fondo era que no existía un flag
+   * "activo para MÍ": `habitos.activo` es del catálogo compartido y solo lo escribe el panel
+   * admin, así que este botón no tenía ningún endpoint propio al que llamar.
+   *
+   * Optimista y con vuelta atrás: se ve al toque, y si el backend rechaza (por ejemplo un hábito
+   * obligatorio, que no se puede pausar) se revierte y se dice por qué.
+   */
+  const toggleHabitDayStatus = async (habitId: string) => {
+    const habito = habits.find(h => h.id === habitId);
+    if (!habito) return;
+    const anteriores = habits;
+    const nuevoValor = !habito.days[selectedDay];
     setHabits(prev =>
-      prev.map(h => {
-        if (h.id === habitId) {
-          return {
-            ...h,
-            days: {
-              ...h.days,
-              [selectedDay]: !h.days[selectedDay],
-            },
-          };
-        }
-        return h;
-      })
+      prev.map(h => (h.id === habitId ? { ...h, days: { ...h.days, [selectedDay]: nuevoValor } } : h))
     );
+    if (!conectadoAlBackend) return;
+    try {
+      await habitsApi.cambiarEstadoHabito(habitId, nuevoValor);
+    } catch {
+      setHabits(anteriores);
+      Alert.alert(
+        'No pudimos guardar el cambio',
+        habito.isDeactivatable
+          ? 'Intenta de nuevo en unos segundos.'
+          : 'Este hábito es obligatorio del programa y no se puede pausar.',
+      );
+    }
   };
 
   /**
@@ -310,7 +332,20 @@ export default function PlanScreen() {
     updateHabitTime(habitId, nuevaHora);
     if (!conectadoAlBackend || !habito) return;
     try {
-      await habitsApi.cambiarHorario(habitId, `${nuevaHora}:00`, habito.limitTime);
+      const resultado = await habitsApi.cambiarHorario(habitId, `${nuevaHora}:00`, habito.limitTime);
+      // D-85: si la ventana del hábito ya arrancó hoy, el backend NO rechaza el cambio — lo
+      // programa para mañana ("no se improvisa el día"). Mostrar la hora nueva en el día de hoy
+      // sería mentir, así que se revierte lo optimista y se dice desde cuándo rige.
+      if (resultado.deferred) {
+        setHabits(anteriores);
+        const desde = resultado.deferredEffectiveDate
+          ? formatearFechaLarga(resultado.deferredEffectiveDate)
+          : 'mañana';
+        Alert.alert(
+          'Se aplica desde mañana',
+          `Hoy este hábito ya arrancó, así que el horario de hoy no se toca. Desde el ${desde} va a ser a las ${nuevaHora}.`,
+        );
+      }
     } catch {
       setHabits(anteriores);
       Alert.alert('No pudimos guardar el horario', 'Intenta de nuevo en unos segundos.');
@@ -600,17 +635,20 @@ export default function PlanScreen() {
               // terminó no tiene efecto sobre nada. Quedan visibles pero apagados y sin responder
               // al toque, para que la semana se siga leyendo completa.
               const esPasado = indice < indiceDeHoy;
+              // D-84: con el programa sin arrancar NINGUN dia es planificable, ni los futuros
+              // — no hay plan que organizar todavia.
+              const bloqueado = esPasado || programaSinArrancar;
               return (
                 <Pressable
                   key={d}
-                  disabled={esPasado}
+                  disabled={bloqueado}
                   onPress={() => setSelectedDay(d)}
                   style={[
                     styles.dayPillBtn,
                     {
                       borderColor: isSelected ? c.gold : c.border,
                       backgroundColor: isSelected ? c.cardBgAlt : c.cardBg,
-                      opacity: esPasado ? 0.35 : 1,
+                      opacity: bloqueado ? 0.35 : 1,
                     },
                   ]}
                 >
@@ -625,8 +663,45 @@ export default function PlanScreen() {
             })}
           </View>
 
+          {/* D-84 — Por qué no se puede planificar todavía. Antes de esto, el día 0 mostraba un
+              plan vacío sin una palabra: el aprendiz no tenía forma de saber si estaba roto, si
+              le faltaba hacer algo, o si simplemente no había llegado su fecha. */}
+          {programaSinArrancar && (
+            <View
+              style={{
+                marginTop: 16,
+                padding: 16,
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor: c.border,
+                backgroundColor: c.cardBgAlt,
+                gap: 8,
+              }}
+              accessibilityLabel="Tu programa todavía no arrancó"
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Icon name="lock" size={13} color={c.gold} />
+                <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>
+                  {arranque.estado === 'PENDIENTE_ELEGIR'
+                    ? 'Todavía no elegiste tu Día 1'
+                    : 'Tu programa arranca pronto'}
+                </Text>
+              </View>
+              <Text style={[t.small, { color: c.textSoft, lineHeight: 18 }]}>
+                {arranque.estado === 'PENDIENTE_ELEGIR'
+                  ? 'Elegí en qué día querés empezar tus 90 días. Hasta entonces no hay plan que organizar.'
+                  : `Empezás el ${formatearFechaLarga(arranque.fechaInicio)}. Ese día vas a poder organizar tus hábitos; hasta entonces no hay nada que hacer acá.`}
+              </Text>
+            </View>
+          )}
+
           {/* LISTA DE HÁBITOS POR MOMENTO DEL DÍA (CON LONG-PRESS PARA MOVER) */}
-          <View style={{ gap: 14, marginTop: 16, paddingBottom: 28 }}>
+          {/* D-84: con el programa sin arrancar la lista NO se dibuja. No es un detalle
+              estetico: Plan lee el catalogo completo (`GET /api/v1/habits`), no los habitos
+              del dia, asi que en dia 0 mostraba los 23 habitos del programa como si
+              aplicaran hoy — incluidos los que recien arrancan en el dia 8. El aviso de
+              arriba ya explica que pasa; la lista solo agregaba ruido y confusion. */}
+          <View style={{ gap: 14, marginTop: 16, paddingBottom: 28, display: programaSinArrancar ? 'none' : 'flex' }}>
             {/* Mientras carga, si falla, o si de verdad no hay hábitos. Antes de esto se
                 dibujaban 5 hábitos inventados que no existen en el catálogo. */}
             {cargandoHabitos && (
@@ -702,7 +777,14 @@ export default function PlanScreen() {
             )}
 
             {conectadoAlBackend && habits.length > 0 && (['mañana', 'tarde', 'noche'] as DayMoment[]).map(momentName => {
-              const momentHabits = habits.filter(h => h.moment === momentName);
+              // D-86: ordenados por hora. Antes salian en el orden en que vino el catalogo, asi
+              // que editar la hora de un habito lo dejaba donde estaba — la seccion NOCHE podia
+              // leerse 22:30, 18:00, 20:00, 21:00. Los que no tienen hora ("Sin horario") van al
+              // final: no compiten por un lugar en la linea de tiempo, se hacen cuando se pueda.
+              const momentHabits = habits
+                .filter(h => h.moment === momentName)
+                .slice()
+                .sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
               const momentLabel = momentName === 'mañana' ? '🌅 MAÑANA' : momentName === 'tarde' ? '☀️ TARDE' : '🌙 NOCHE';
 
               return (
@@ -766,11 +848,16 @@ export default function PlanScreen() {
                               <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13, marginTop: 2 }]}>
                                 {habit.title}
                               </Text>
-                              {/* Horario: selector táctil, ya no texto libre (§1). Bloqueado si venció. */}
+                              {/* Horario: selector táctil, ya no texto libre (§1).
+                                  D-85: ya NO se bloquea cuando el hábito venció hoy. Que hoy se
+                                  haya pasado su hora no impide reprogramarlo — el backend acepta
+                                  el cambio y lo aplica mañana (`deferred: true`). Bloquearlo acá
+                                  impedía justo lo que uno quiere hacer de noche: acomodar el día
+                                  siguiente. El hábito vencido se sigue viendo apagado, pero se
+                                  puede tocar. */}
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
                                 <Icon name="clock" size={11} color={vencido ? c.textSoft : c.gold} />
                                 <Pressable
-                                  disabled={vencido}
                                   onPress={() => abrirSelectorDeHora(habit)}
                                   style={[
                                     styles.timeInputDirect,

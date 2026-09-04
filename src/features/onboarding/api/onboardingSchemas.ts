@@ -108,6 +108,11 @@ export const estadoActivacionProgramaSchema = z
     // Formato `yyyy-MM-dd` (LocalDate del backend, ver ActivarProgramaRequest). Vacío cuando
     // `activated` es `true` — no queda nada por elegir.
     validStartDates: z.array(z.string()),
+    // D-84: el Día 1 ya elegido, `yyyy-MM-dd`. Ausente/null mientras no eligió. Lo necesita
+    // Plan para poder decir "arrancás el 5 de septiembre" en vez de mostrar un plan vacío sin
+    // explicación. `.nullish()` y no `.string()` a secas: los clientes viejos que hablan con un
+    // backend nuevo no deben romperse, y al revés tampoco.
+    startDate: z.string().nullish(),
   })
   .passthrough();
 

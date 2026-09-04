@@ -34,6 +34,8 @@ export type HitoOnboarding = 'TERMINOS' | 'PACTO' | 'PACTO_FIRMADO' | 'ROCAS_SYN
 export type EstadoActivacionProgramaApi = {
   activated: boolean;
   validStartDates: string[];
+  /** El Día 1 ya elegido (`yyyy-MM-dd`), o null/ausente si todavía no eligió (D-84). */
+  startDate?: string | null;
 };
 
 /** Espejo de `ActivarProgramaRequest` (backend, `POST /onboarding/activate-program`). */
