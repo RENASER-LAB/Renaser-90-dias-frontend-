@@ -116,11 +116,27 @@ export function LeccionVideoPlayer({
             )
           ) : (
             <WebView
+              /*
+               * D-98 — Error 153 de YouTube ("Error de configuración del reproductor de video").
+               * Cargar la URL del embed DIRECTO como documento principal del WebView hace que la
+               * petición salga sin `Referer`, y desde julio de 2025 el reproductor rechaza los
+               * embeds sin origen con ese código (doc oficial: "153 — the request does not
+               * include the HTTP Referer header"). La salida es envolver el reproductor en un
+               * HTML propio con un `<iframe>` y darle `baseUrl`, para que el WebView mande
+               * `Referer`. Es el mismo iframe que ya usa la rama web de arriba.
+               *
+               * El origen NO puede ser youtube.com: se probó y YouTube lo rechaza con 152-4
+               * ("este video no está disponible"), que es la familia de 101/150 — el embed viene
+               * de un sitio que no acepta. Tiene que ser un origen PROPIO; el patrón confirmado
+               * por varias personas en react-native-webview#3889 es un dominio ficticio del
+               * estilo `https://miapp.local`. Ver ORIGEN_EMBED_YOUTUBE.
+               */
               source={
                 videoTipo === 'youtube'
-                  ? { uri: `https://www.youtube.com/embed/${idYoutube}?autoplay=1&playsinline=1` }
+                  ? { html: htmlYoutubeEmbebido(idYoutube), baseUrl: ORIGEN_EMBED_YOUTUBE }
                   : { html: htmlVideoDirecto(videoUrl) }
               }
+              originWhitelist={['*']}
               style={styles.webview}
               allowsFullscreenVideo
               mediaPlaybackRequiresUserAction={false}
@@ -139,6 +155,30 @@ export function LeccionVideoPlayer({
 }
 
 /** `videoTipo === 'storage'`: mp4 propio en S3, sin iframe de por medio — un `<video>` HTML5 nativo alcanza. */
+/**
+ * Página mínima que envuelve el reproductor de YouTube en un iframe a pantalla completa. Ver la
+ * nota sobre el Error 153 en el `<WebView>` de abajo: existe solo para que la petición del embed
+ * lleve un origen, no como "diseño".
+ */
+/**
+ * Origen con el que la app se identifica ante YouTube al embeber un video (es lo que viaja en el
+ * `Referer` y en el parámetro `origin` del embed). No es un dominio real y no hace falta que lo
+ * sea: YouTube exige que HAYA un origen y que no sea el suyo, no que resuelva en DNS — es el
+ * patrón `https://miapp.local` confirmado en react-native-webview#3889. Si algún día Renaser
+ * tiene dominio web propio, conviene poner ese acá: si el dueño de un video restringe el embed
+ * a dominios concretos, este es el que tendría que autorizar.
+ */
+const ORIGEN_EMBED_YOUTUBE = 'https://renaser.local';
+
+function htmlYoutubeEmbebido(idYoutube: string | null): string {
+  const origen = encodeURIComponent(ORIGEN_EMBED_YOUTUBE);
+  const src = `https://www.youtube.com/embed/${idYoutube ?? ''}?autoplay=1&playsinline=1&rel=0&origin=${origen}`;
+  return `<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<style>html,body{margin:0;height:100%;background:#000}iframe{width:100%;height:100%;border:0}</style></head>
+<body><iframe src="${src}" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></body></html>`;
+}
+
 function htmlVideoDirecto(url: string): string {
   return `<!doctype html><html><body style="margin:0;background:#000">
 <video src="${url}" controls autoplay playsinline style="width:100%;height:100vh;background:#000"></video>
