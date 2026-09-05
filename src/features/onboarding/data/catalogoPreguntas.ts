@@ -31,12 +31,20 @@ import type { TipoPreguntaOnboarding } from '../types/onboarding.types';
  */
 
 /**
- * Los 3 flujos cuyas respuestas manda esta app hoy (ver los builders de `mapaPreguntas.ts`). El
- * catálogo tiene 6 flujos en total; los otros 3 (`cuestionario_profundo`, `diseno_destino`,
- * `cierre_dia_1`) todavía no tienen pantalla que los responda, así que no se piden — cada flujo es
- * una request más al abrir el onboarding.
+ * Los flujos cuyas respuestas manda esta app hoy (ver los builders de `mapaPreguntas.ts`). El
+ * catálogo tiene 6 flujos en total; los otros 2 (`diseno_destino`, `cierre_dia_1`) todavía no
+ * tienen pantalla que los responda, así que no se piden — cada flujo es una request más al abrir
+ * el onboarding.
+ *
+ * `cuestionario_profundo` se agregó el 2026-09-05 junto con la etapa 2 del onboarding del perfil
+ * (`screens/CuestionarioProfundoScreen.tsx`). **Sin esta línea esa pantalla no puede guardar
+ * nada**: sus bloques 6, 7 y 8 (Energía Vital, Los 3 Guardianes, Estado Mental Profundo) viven en
+ * ese flujo, y una clave que no está en ningún flujo cargado acá no resuelve su `id` —
+ * `usePersistenciaOnboarding` la deja pendiente para siempre en vez de mandarla con un id
+ * inventado. Los bloques 1-5 de la misma pantalla sí resolvían, porque sus preguntas están bajo
+ * `ficha_inicial` (ver el comentario largo de `data/bloquesCuestionarioProfundo.ts`).
  */
-const FLUJOS_QUE_RESPONDE_LA_APP = ['terminos', 'pacto', 'ficha_inicial'] as const;
+const FLUJOS_QUE_RESPONDE_LA_APP = ['terminos', 'pacto', 'ficha_inicial', 'cuestionario_profundo'] as const;
 
 interface PreguntaResuelta {
   readonly id: number;
