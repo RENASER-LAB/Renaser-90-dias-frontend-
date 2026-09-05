@@ -41,9 +41,10 @@ export function usePlanHabitos() {
         }),
       ]);
       const porHabito = new Map(preferencias.map(p => [p.habitId, p]));
-      const mapeados = catalogo
-        .map(h => mapearPlanHabit(h, porHabito.get(h.id)))
-        .sort((a, b) => a.time.localeCompare(b.time));
+      // SIN reordenar: el backend ya los devuelve en el orden del catálogo curado
+      // (`habitos.orden`), y ese es el que se respeta en la pantalla. Antes acá se ordenaba por
+      // hora, lo que descartaba ese orden antes de que el plan pudiera usarlo.
+      const mapeados = catalogo.map((h, i) => mapearPlanHabit(h, porHabito.get(h.id), i));
       setHabits(mapeados);
     } catch (e) {
       setError(mensajeDeError(e, 'No pudimos cargar tus hábitos'));

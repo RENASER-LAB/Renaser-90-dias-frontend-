@@ -73,10 +73,19 @@ export async function cambiarHorario(
  * panel admin — ese escribe `habitos.activo`, que es del catálogo COMPARTIDO y afecta a todos
  * los aprendices a la vez. Este solo afecta a quien lo llama.
  */
-export async function cambiarEstadoHabito(habitId: string, active: boolean): Promise<void> {
+export async function cambiarEstadoHabito(
+  habitId: string,
+  active: boolean,
+  /**
+   * Último día (INCLUSIVE) en que sigue pausado, `yyyy-MM-dd` — "pausalo hasta el domingo" (V31).
+   * Omitirlo pausa de forma indefinida, que es como se comportaba antes. Se ignora del lado del
+   * servidor cuando `active` es `true`: reactivar limpia la pausa entera.
+   */
+  pausedUntil?: string
+): Promise<void> {
   await apiFetch<unknown>(`/api/v1/habit-unlocks/${habitId}`, {
     method: 'PATCH',
-    body: { active },
+    body: pausedUntil ? { active, pausedUntil } : { active },
   });
 }
 

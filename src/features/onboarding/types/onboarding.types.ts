@@ -54,6 +54,73 @@ export type ActivarProgramaApi = {
 };
 
 /**
+ * Espejo de `TipoPreguntaOnboarding` (backend, enum de dominio + `tipo_pregunta_onboarding` en
+ * Postgres, SOLO LECTURA). El tipo decide en qué slot de valor va la respuesta — ver
+ * `Respuesta.slotEsperado` en el backend y `SLOT_POR_TIPO` en `data/catalogoPreguntas.ts`.
+ */
+export type TipoPreguntaOnboarding =
+  | 'TEXTO'
+  | 'AREA_TEXTO'
+  | 'NUMERO'
+  | 'ESCALA'
+  | 'SELECCION_UNICA'
+  | 'SELECCION_MULTIPLE'
+  | 'AUDIO'
+  | 'FIRMA'
+  | 'CASILLA'
+  | 'FECHA'
+  | 'ARCHIVO';
+
+/** Espejo de `CuestionarioResponse.OpcionResponse` (backend, `GET /onboarding/questionnaire`). */
+export interface OpcionPreguntaApi {
+  order: number;
+  value: string;
+  label: string;
+}
+
+/**
+ * Espejo de `CuestionarioResponse.PreguntaResponse` (backend). `id` es el que viaja en
+ * `GuardarRespuestaInput.questionId`, y `questionKey` es la clave estable con la que lo pide el
+ * cliente — ver `data/catalogoPreguntas.ts` para por qué NUNCA se hardcodea el `id`.
+ */
+export interface PreguntaCuestionarioApi {
+  id: number;
+  questionKey: string;
+  text: string;
+  type: TipoPreguntaOnboarding;
+  required: boolean;
+  order: number;
+  options: OpcionPreguntaApi[];
+}
+
+/** Espejo de `CuestionarioResponse` (backend, `GET /onboarding/questionnaire?flow=...`). */
+export interface CuestionarioApi {
+  flow: string;
+  sections: {
+    sectionKey: string;
+    title: string;
+    order: number;
+    questions: PreguntaCuestionarioApi[];
+  }[];
+}
+
+/**
+ * Una respuesta lista para mandar, pero identificada por la CLAVE de la pregunta en vez de por su
+ * `id` numérico. Es lo que devuelven los builders de `data/mapaPreguntas.ts`; el `id` lo resuelve
+ * `usePersistenciaOnboarding` contra el catálogo real justo antes de enviar.
+ *
+ * El motivo está explicado a fondo en `data/catalogoPreguntas.ts`: los `id` los asigna una
+ * columna IDENTITY en un `INSERT ... SELECT` sin `ORDER BY` (`V10__catalogo_onboarding_default.sql`),
+ * así que NO son reproducibles entre bases de datos. La clave sí: tiene `UNIQUE` en la tabla.
+ */
+export type RespuestaPorClaveInput = Omit<GuardarRespuestaInput, 'questionId'> & {
+  /** `preguntas_onboarding.clave_pregunta` — estable y única en toda la tabla. */
+  clave: string;
+  /** Tipo que el cliente ESPERA que tenga esa pregunta; se verifica contra el catálogo al enviar. */
+  tipoEsperado: TipoPreguntaOnboarding;
+};
+
+/**
  * Espejo de `GuardarRespuestaRequest` (backend, `POST /onboarding/answers`) — una respuesta por
  * llamada. El tipo de pregunta decide en qué campo va el valor (ver `data/mapaPreguntas.ts`):
  * solo uno de los 4 debe venir con valor a la vez, el resto queda `undefined`.

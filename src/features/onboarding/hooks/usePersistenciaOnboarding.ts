@@ -1,6 +1,7 @@
 import { useCallback, useRef } from 'react';
 import * as onboardingApi from '../api/onboardingApi';
-import { AvanzarEstadoInput, GuardarRespuestaInput, HitoOnboarding } from '../types/onboarding.types';
+import { obtenerCatalogoPreguntas } from '../data/catalogoPreguntas';
+import { AvanzarEstadoInput, HitoOnboarding, RespuestaPorClaveInput } from '../types/onboarding.types';
 
 /**
  * Guardado incremental del onboarding: "guardá este capítulo" en vez de guardar todo recién al
@@ -15,37 +16,78 @@ import { AvanzarEstadoInput, GuardarRespuestaInput, HitoOnboarding } from '../ty
  *   el próximo capítulo (o con `reintentarPendientes`), en vez de perderse.
  * - Ninguna función de este hook rechaza (throw): las pantallas pueden `await` sin `try/catch` y
  *   seguir de largo pase lo que pase con la red.
+ *
+ * Las respuestas entran identificadas por `clave` (no por `id` numérico) y el `id` real se resuelve
+ * acá contra el catálogo del backend — ver `data/catalogoPreguntas.ts` para por qué. Una respuesta
+ * que no se puede resolver NUNCA se manda con un id adivinado: queda pendiente, que es lo que hace
+ * que la pantalla avise en vez de dar por guardado algo que no lo está.
  */
 export function usePersistenciaOnboarding() {
   // Respuestas que fallaron y todavía no se confirmaron guardadas.
-  const pendientesRef = useRef<GuardarRespuestaInput[]>([]);
+  const pendientesRef = useRef<RespuestaPorClaveInput[]>([]);
 
   /** Manda una tanda de respuestas; las que fallan quedan en `pendientesRef` para el próximo intento. */
-  const enviarRespuestas = useCallback(async (respuestas: GuardarRespuestaInput[]) => {
+  const enviarRespuestas = useCallback(async (respuestas: RespuestaPorClaveInput[]) => {
     const aEnviar = [...pendientesRef.current, ...respuestas];
     pendientesRef.current = [];
     if (aEnviar.length === 0) {
       return { guardadas: 0, pendientes: 0 };
     }
 
-    const resultados = await Promise.allSettled(aEnviar.map(r => onboardingApi.guardarRespuesta(r)));
+    // Sin catálogo no hay ids: se deja TODO pendiente en vez de inventar uno. Es un fallo
+    // transitorio típico (sin red al abrir el flujo), y el próximo intento vuelve a pedirlo.
+    let catalogo;
+    try {
+      catalogo = await obtenerCatalogoPreguntas();
+    } catch (error) {
+      console.warn(
+        `No se pudo cargar el catálogo de preguntas del onboarding; quedan ${aEnviar.length} respuesta(s) pendientes de reintento:`,
+        error
+      );
+      pendientesRef.current = aEnviar;
+      return { guardadas: 0, pendientes: aEnviar.length };
+    }
 
+    // Resolver clave -> id. Una clave que no existe, o cuyo tipo no coincide con el que la app
+    // asume, es un desajuste de código contra catálogo: no se manda (guardar bajo la pregunta
+    // equivocada es peor que no guardar) y queda pendiente para que la pantalla lo reporte.
+    const resueltas: { entrada: RespuestaPorClaveInput; id: number }[] = [];
+    const sinResolver: RespuestaPorClaveInput[] = [];
+    for (const entrada of aEnviar) {
+      const resolucion = catalogo.idDe(entrada.clave, entrada.tipoEsperado);
+      if (resolucion.ok) {
+        resueltas.push({ entrada, id: resolucion.id });
+      } else {
+        console.error(`Respuesta de onboarding NO enviada — ${resolucion.motivo}`);
+        sinResolver.push(entrada);
+      }
+    }
+
+    const resultados = await Promise.allSettled(
+      resueltas.map(({ entrada, id }) => {
+        const { clave: _clave, tipoEsperado: _tipoEsperado, ...valores } = entrada;
+        return onboardingApi.guardarRespuesta({ questionId: id, ...valores });
+      })
+    );
+
+    const fallidas: RespuestaPorClaveInput[] = [];
     resultados.forEach((resultado, i) => {
       if (resultado.status === 'rejected') {
         console.warn(
-          `No se pudo guardar la respuesta de onboarding (questionId=${aEnviar[i].questionId}), se reintentará más tarde:`,
+          `No se pudo guardar la respuesta de onboarding ("${resueltas[i].entrada.clave}"), se reintentará más tarde:`,
           resultado.reason
         );
-        pendientesRef.current.push(aEnviar[i]);
+        fallidas.push(resueltas[i].entrada);
       }
     });
 
+    pendientesRef.current = [...sinResolver, ...fallidas];
     return { guardadas: aEnviar.length - pendientesRef.current.length, pendientes: pendientesRef.current.length };
   }, []);
 
   /** Guarda las respuestas de un capítulo recién completado. Nunca lanza. */
   const guardarCapitulo = useCallback(
-    async (respuestas: GuardarRespuestaInput[]) => {
+    async (respuestas: RespuestaPorClaveInput[]) => {
       try {
         return await enviarRespuestas(respuestas);
       } catch (error) {
@@ -83,7 +125,7 @@ export function usePersistenciaOnboarding() {
   }, []);
 
   /**
-   * Sube una firma (capturada como PNG por `SignatureCanvas.capturarComoPng`) a S3 y guarda la
+   * Sube una firma (capturada como PNG por `SignatureCanvas.capturarComoPngBase64`) a S3 y guarda la
    * respuesta correspondiente con su `mediaId` — los 3 pasos de CLAUDE.md ("firmas del
    * onboarding"): `POST /media/upload-url` -> `PUT` a S3 -> `POST /media` -> `POST /answers` con
    * el `mediaId`.
@@ -97,10 +139,10 @@ export function usePersistenciaOnboarding() {
   const guardarFirma = useCallback(
     async (params: {
       flow: string;
-      questionId: number;
+      /** `clave_pregunta` de la pregunta FIRMA — su `id` lo resuelve `enviarRespuestas`. */
       questionKey: string;
-      /** URI local (file://…) del PNG ya capturado — ver `SignatureCanvasHandle.capturarComoPng`. */
-      pngUri: string;
+      /** PNG ya capturado, en base64 — ver `SignatureCanvasHandle.capturarComoPngBase64`. */
+      pngBase64: string;
       /** JSON de los trazos SVG originales (`SignatureData.data`) — viaja tal cual en `metadata`:
        * es el vector exacto, útil el día que haga falta reproducir la firma en alta resolución o
        * verificar que el PNG no fue alterado (no cuesta nada y el campo ya existe en el backend). */
@@ -123,7 +165,7 @@ export function usePersistenciaOnboarding() {
         }
 
         paso = 'subir-a-s3';
-        await onboardingApi.subirArchivoOnboardingAS3(urlSubida.uploadUrl, params.pngUri, 'image/png');
+        await onboardingApi.subirArchivoOnboardingAS3(urlSubida.uploadUrl, params.pngBase64, 'image/png');
 
         paso = 'registrar-media';
         const media = await onboardingApi.registrarMediaOnboarding({
@@ -137,7 +179,9 @@ export function usePersistenciaOnboarding() {
         });
 
         paso = 'guardar-respuesta';
-        const resultado = await enviarRespuestas([{ questionId: params.questionId, mediaId: media.id }]);
+        const resultado = await enviarRespuestas([
+          { clave: params.questionKey, tipoEsperado: 'FIRMA', mediaId: media.id },
+        ]);
         if (resultado.pendientes > 0) {
           console.warn(
             `La firma "${params.questionKey}" se subió a S3 pero la respuesta con el mediaId quedó pendiente de reintento.`

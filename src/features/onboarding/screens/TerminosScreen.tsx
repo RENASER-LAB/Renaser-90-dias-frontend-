@@ -33,7 +33,7 @@ export function TerminosScreen({
   const { c, t, mode, toggle } = useTheme();
   const { isSmall, isTablet } = useResponsive();
   const { guardarCapitulo, avanzarEstado, aceptarHito, guardarFirma } = usePersistenciaOnboarding();
-  // Ref al lienzo para poder capturarlo como PNG al confirmar (ver SignatureCanvas.capturarComoPng).
+  // Ref al lienzo para poder capturarlo como PNG al confirmar (ver SignatureCanvas.capturarComoPngBase64).
   const signatureRef = useRef<SignatureCanvasHandle>(null);
 
   const [accepted, setAccepted] = useState(false);
@@ -95,16 +95,15 @@ export function TerminosScreen({
 
       // Firma con valor legal: se captura el lienzo ya dibujado como PNG y se sube a S3 con su
       // referencia guardada en la base (ver mapaPreguntas.ts, PREGUNTA_FIRMA_TERMINOS).
-      const pngFirma = await signatureRef.current?.capturarComoPng();
+      const pngFirma = await signatureRef.current?.capturarComoPngBase64();
       if (!pngFirma || !signature) {
         Alert.alert('No se pudo capturar la firma', 'Volvé a dibujar tu firma e intentá de nuevo.');
         return;
       }
       const resultadoFirma = await guardarFirma({
         flow: 'terminos',
-        questionId: PREGUNTA_FIRMA_TERMINOS.id,
         questionKey: PREGUNTA_FIRMA_TERMINOS.clave,
-        pngUri: pngFirma,
+        pngBase64: pngFirma,
         trazosOriginales: signature.data,
       });
       if (!resultadoFirma.ok) {

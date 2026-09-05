@@ -79,6 +79,44 @@ export const respuestasAgrupadasSchema = z
   })
   .passthrough();
 
+/**
+ * `GET /api/v1/onboarding/questionnaire?flow=...` — espejo de `CuestionarioResponse` (backend).
+ *
+ * Solo se valida lo que el cliente de verdad consume (`id`, `questionKey`, `type`): el resto viaja
+ * y se ignora gracias a `passthrough()`. `type` se valida como string libre a propósito — si el
+ * backend agrega un tipo de pregunta nuevo, el catálogo debe seguir cargando (la pregunta nueva
+ * simplemente no la mapea nadie todavía), no romper el onboarding entero.
+ */
+const preguntaCuestionarioSchema = z
+  .object({
+    id: z.number(),
+    questionKey: z.string(),
+    text: z.string(),
+    type: z.string(),
+    required: z.boolean(),
+    order: z.number(),
+    options: z
+      .array(z.object({ order: z.number(), value: z.string(), label: z.string() }).passthrough())
+      .default([]),
+  })
+  .passthrough();
+
+export const cuestionarioSchema = z
+  .object({
+    flow: z.string(),
+    sections: z.array(
+      z
+        .object({
+          sectionKey: z.string(),
+          title: z.string(),
+          order: z.number(),
+          questions: z.array(preguntaCuestionarioSchema),
+        })
+        .passthrough()
+    ),
+  })
+  .passthrough();
+
 /** `UrlSubidaMediaResponse` (backend, `POST /onboarding/media/upload-url`). */
 export const urlSubidaMediaOnboardingSchema = z
   .object({ uploadUrl: z.string(), bucket: z.string(), path: z.string() })

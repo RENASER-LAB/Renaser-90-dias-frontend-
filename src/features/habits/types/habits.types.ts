@@ -18,6 +18,18 @@ export interface HabitoCatalogoApi {
   /** false = el aprendiz NO puede sacarlo de su plan. Distinto de isOptional, que es de puntaje. */
   isDeactivatable: boolean;
   /**
+   * Dias de la semana en que aplica (`"MONDAY"`..`"SUNDAY"`), como los devuelve el backend desde
+   * V28. Ausente contra un backend anterior; en ese caso el plan asume los 7 dias, que es lo que
+   * hacia siempre antes de que este campo existiera.
+   */
+  activeWeekdays?: string[];
+  /** Día de programa en que se desbloquea (1 = desde el arranque). */
+  unlockDay?: number;
+  /** Días que le faltan al aprendiz para llegar a `unlockDay`. 0 = ya disponible. */
+  daysUntilUnlock?: number;
+  /** `true` = todavía no le toca: se muestra con candado y no se puede marcar ni pausar. */
+  locked?: boolean;
+  /**
    * `Habito.claveSistema` del backend — la identidad FUNCIONAL de un hábito de catálogo
    * (`DAILY_CLASS`, `PASTILLA_RENACER`, `AUDIO_THERAPY_WEEKLY`...); `null` en los personales.
    *

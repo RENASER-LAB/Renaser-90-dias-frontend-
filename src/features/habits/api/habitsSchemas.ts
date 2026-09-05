@@ -26,6 +26,15 @@ const habitoCatalogoSchema = z
     // título es renombrable por el propio aprendiz. `.optional()` además de `.nullable()` para no
     // romper contra un backend viejo que todavía no manda el campo.
     systemKey: z.string().nullable().optional(),
+    // Dias de la semana en que el habito aplica (`"MONDAY"`..`"SUNDAY"`), derivados del TipoDia de
+    // sus horarios. `.optional()` para no romper contra un backend anterior a V28, que no lo manda.
+    activeWeekdays: z.array(z.string()).optional(),
+    // Día de programa en que el hábito se desbloquea, y cuántos le faltan al aprendiz. El servidor
+    // los calcula porque es donde vive el día de programa (mismo criterio que `academy`).
+    // `.optional()` para no romper contra un backend anterior a este cambio.
+    unlockDay: z.number().optional(),
+    daysUntilUnlock: z.number().optional(),
+    locked: z.boolean().optional(),
   })
   .passthrough();
 

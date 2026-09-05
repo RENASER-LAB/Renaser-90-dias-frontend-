@@ -34,7 +34,7 @@ export function PactoScreen({
   const { c, t, mode, toggle } = useTheme();
   const { isSmall, isTablet } = useResponsive();
   const { guardarCapitulo, avanzarEstado, aceptarHito, guardarFirma } = usePersistenciaOnboarding();
-  // Ref al lienzo para poder capturarlo como PNG al confirmar (ver SignatureCanvas.capturarComoPng).
+  // Ref al lienzo para poder capturarlo como PNG al confirmar (ver SignatureCanvas.capturarComoPngBase64).
   const signatureRef = useRef<SignatureCanvasHandle>(null);
 
   // Interceptar gestos de retroceso en pantalla táctil (Xiaomi / Android / iOS)
@@ -96,16 +96,15 @@ export function PactoScreen({
       // PACTO_FIRMADO solo se marca si la firma llegó a guardarse de verdad — un pacto marcado
       // como firmado sin la firma real es peor que uno sin marcar, es justamente el registro con
       // valor probatorio que se quiere tener.
-      const pngFirma = await signatureRef.current?.capturarComoPng();
+      const pngFirma = await signatureRef.current?.capturarComoPngBase64();
       if (!pngFirma) {
         Alert.alert('No se pudo capturar la firma', 'Volvé a dibujar tu firma e intentá de nuevo.');
         return;
       }
       const resultado = await guardarFirma({
         flow: 'pacto',
-        questionId: PREGUNTA_FIRMA_PACTO.id,
         questionKey: PREGUNTA_FIRMA_PACTO.clave,
-        pngUri: pngFirma,
+        pngBase64: pngFirma,
         trazosOriginales: finalSignature.data,
       });
       if (!resultado.ok) {
@@ -231,7 +230,9 @@ export function PactoScreen({
             FIRMA PARA CONTINUAR
           </Text>
 
-          <View style={[styles.signatureCard, { backgroundColor: c.cardBgAlt, borderColor: c.borderStrong }]}>
+          {/* Wrapper SIN caja propia: el recuadro visible lo dibuja `canvasBox` dentro de
+              SignatureCanvas. Solo queda como contenedor relativo para el watermark absoluto. */}
+          <View style={styles.signatureCard}>
             <SignatureCanvas
               ref={signatureRef}
               key={clearTrigger}
@@ -351,12 +352,15 @@ const styles = StyleSheet.create({
     width: '100%',
     marginTop: 4,
   },
+  /**
+   * BUG DE MAQUETADO (2026-09-04): esto tenía `height: 180`, `borderWidth: 1.5` y `borderRadius: 18`
+   * mientras que el `canvasBox` de `SignatureCanvas` ya trae su propio recuadro de 145 de alto con
+   * borde. Se veían DOS marcos anidados y quedaba una franja muerta de 35 px debajo de la firma.
+   * Ahora es solo un contenedor relativo (lo necesita el watermark, que es absoluto): el único
+   * recuadro visible es el del lienzo, y el área dibujable no cambia — los 145 de siempre.
+   */
   signatureCard: {
     width: '100%',
-    height: 180,
-    borderWidth: 1.5,
-    borderRadius: 18,
-    overflow: 'hidden',
     position: 'relative',
   },
   watermarkBox: {

@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
 
+import { TextoAsistente } from './TextoAsistente';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useResponsive } from '../../../theme/responsive';
 import type { RenasiaMensajeUI } from '../types/renasia.types';
@@ -38,14 +39,25 @@ export function MensajeBurbuja({ mensaje, nombreAsistente, onReintentar }: Props
         ]}
       >
         {mensaje.texto ? (
-          <Text
-            style={[
-              t.body,
-              { color: esPersona ? c.onGold : c.text, fontSize: rs(14.5), lineHeight: rs(21) },
-            ]}
-          >
-            {mensaje.texto}
-          </Text>
+          esPersona ? (
+            // Lo que escribe la persona se muestra literal: si tecleó asteriscos, quiso asteriscos.
+            <Text
+              style={[
+                t.body,
+                { color: c.onGold, fontSize: rs(14.5), lineHeight: rs(21) },
+              ]}
+            >
+              {mensaje.texto}
+            </Text>
+          ) : (
+            // La respuesta del asistente viene con markdown básico (negritas, listas numeradas):
+            // sin esto se leían los `**` en pantalla. Ver `TextoAsistente`.
+            <TextoAsistente
+              texto={mensaje.texto}
+              estilo={[t.body, { color: c.text, fontSize: rs(14.5), lineHeight: rs(21) }]}
+              colorAcento={c.gold}
+            />
+          )
         ) : null}
 
         {mensaje.enProgreso && (

@@ -2,6 +2,7 @@ import { apiFetch } from '../../../services/http/apiClient';
 import type {
   ActivarProgramaApi,
   ActivarProgramaInput,
+  CuestionarioApi,
   EstadoActivacionProgramaApi,
   EstadoOnboardingApi,
   AvanzarEstadoInput,
@@ -16,6 +17,7 @@ import type {
 } from '../types/onboarding.types';
 import {
   activarProgramaSchema,
+  cuestionarioSchema,
   estadoActivacionProgramaSchema,
   estadoOnboardingSchema,
   mediaOnboardingSchema,
@@ -97,6 +99,18 @@ export async function obtenerRespuestas(flow: string): Promise<RespuestasAgrupad
 }
 
 /**
+ * GET /api/v1/onboarding/questionnaire?flow=... — el catálogo REAL de preguntas de un flujo, con
+ * el `id` que hoy tiene cada `questionKey` en esta base de datos.
+ *
+ * Es la única fuente válida de esos `id`: ver `data/catalogoPreguntas.ts` para por qué no se
+ * pueden hardcodear.
+ */
+export async function obtenerCuestionario(flow: string): Promise<CuestionarioApi> {
+  const r = await apiFetch<unknown>(`/api/v1/onboarding/questionnaire?flow=${encodeURIComponent(flow)}`);
+  return validarRespuesta<CuestionarioApi>(cuestionarioSchema, r, 'GET /api/v1/onboarding/questionnaire');
+}
+
+/**
  * PUT /api/v1/onboarding/state — mueve el cursor de reanudación (flujo/sección/paso). Todos los
  * campos son opcionales: el backend deja sin tocar lo que no se manda (ver `EstadoOnboarding.avanzar`).
  */
@@ -138,32 +152,82 @@ export function almacenamientoOnboardingSinConfigurar(uploadUrl: string): boolea
   return !uploadUrl.startsWith('http://') && !uploadUrl.startsWith('https://');
 }
 
+/** Cabecera de 8 bytes que TODO archivo PNG tiene al inicio (PNG
+
+
+). */
+const FIRMA_PNG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+
+/**
+ * Un PNG real del lienzo de firma pesa varios KB. Este piso solo existe para descartar una captura
+ * degenerada (lienzo de tamaño cero): en el bucket apareció un PNG válido de 67 bytes, de 1 píxel.
+ */
+const MINIMO_BYTES_PNG_FIRMA = 100;
+
+/**
+ * base64 -> bytes, sin depender de `atob`/`Buffer` (ninguno garantizado en React Native).
+ *
+ * El `?? 0` del último grupo no es cosmético: cuando el largo del PNG no es múltiplo de 3, el
+ * base64 termina con relleno `=` que la limpieza de arriba descarta, y el grupo final queda con 2
+ * o 3 caracteres. Sin ese `?? 0`, `indexOf(undefined)` devuelve **-1** y contamina los bits del
+ * último byte — probado: un PNG de 67 bytes se decodificaba con el largo correcto pero con bytes
+ * distintos del original.
+ */
+function base64ABytes(base64: string): Uint8Array {
+  const abc = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  const limpio = base64.replace(/[^A-Za-z0-9+/]/g, '');
+  const seis = (posicion: number) => {
+    const indice = abc.indexOf(limpio[posicion] ?? '');
+    return indice < 0 ? 0 : indice;
+  };
+  const bytes = new Uint8Array(Math.floor((limpio.length * 3) / 4));
+  let salida = 0;
+  for (let i = 0; i < limpio.length; i += 4) {
+    const n = (seis(i) << 18) | (seis(i + 1) << 12) | (seis(i + 2) << 6) | seis(i + 3);
+    bytes[salida++] = (n >> 16) & 0xff;
+    if (salida < bytes.length) bytes[salida++] = (n >> 8) & 0xff;
+    if (salida < bytes.length) bytes[salida++] = n & 0xff;
+  }
+  return bytes;
+}
+
 /**
  * `PUT` directo a S3 con la URL prefirmada — nunca pasa por este backend. Por eso NO usa
  * `apiFetch`: ni la `BASE_URL` del backend Java ni el header de sesión `X-Auth-Token`
  * corresponden acá, y el `Content-Type` tiene que ser EXACTAMENTE el que se firmó del lado del
  * servidor o S3 rechaza la firma con 403 (mismo motivo que `wallApi.subirImagenAS3`).
  *
- * <p>Bug encontrado 2026-09-03: usar `.blob()` para leer el archivo local y mandar ESE `Blob`
- * como body deja que React Native decida el `Content-Type` real a partir del `type` propio del
- * Blob (a veces vacío, a veces distinto de lo firmado) — pisando el header explícito de abajo.
- * `.arrayBuffer()` no carga ningún metadato de tipo, así que RN no tiene de dónde inferir un
- * `Content-Type` propio y respeta el header explícito, que es el que S3 espera.
+ * <p>Recibe el PNG en **base64**, no una URI de archivo. Bug encontrado 2026-09-04 (E-97): con una
+ * URI, en Android `fetch(uri).arrayBuffer()` devolvía —con status OK— 14 bytes con el texto
+ * "File not found", y eso se subía a S3 como si fuera la firma. Ver el comentario largo en
+ * `SignatureCanvas.capturarComoPngBase64`.
+ *
+ * <p>Antes de subir se verifica que los bytes sean de verdad un PNG y no una cáscara vacía. Es
+ * barato y es lo que convierte "se guardó basura en silencio" en un error visible: una firma es
+ * evidencia con valor probatorio, y subir algo que no se puede abrir es peor que no subir nada.
  */
-export async function subirArchivoOnboardingAS3(uploadUrl: string, uri: string, mimeType: string): Promise<void> {
-  let bytes: ArrayBuffer;
-  try {
-    bytes = await (await fetch(uri)).arrayBuffer();
-  } catch (error) {
-    // Distingue "no se pudo leer el archivo local" (uri de captureRef, problema del dispositivo)
-    // de "S3 rechazó la subida" (problema de red/credenciales) — mismo mensaje genérico en la
-    // pantalla, pero el `cause` deja el diagnóstico correcto en el warning de la consola.
-    throw new Error('No se pudo leer el archivo de la firma en el dispositivo.', { cause: error });
+export async function subirArchivoOnboardingAS3(
+  uploadUrl: string,
+  pngBase64: string,
+  mimeType: string
+): Promise<void> {
+  const bytes = base64ABytes(pngBase64);
+
+  if (bytes.length < MINIMO_BYTES_PNG_FIRMA || !FIRMA_PNG.every((b, i) => bytes[i] === b)) {
+    // El mensaje no lleva los bytes ni la URL: solo el tamaño, que es lo único que sirve para
+    // diagnosticar y no expone nada.
+    throw new Error(
+      `La captura de la firma no es un PNG válido (${bytes.length} bytes) — no se subió nada al almacenamiento.`
+    );
   }
+
   const respuesta = await fetch(uploadUrl, {
     method: 'PUT',
     headers: { 'Content-Type': mimeType },
-    body: bytes,
+    // `bytes.buffer` (ArrayBuffer) y no el Uint8Array: es lo que acepta el tipo `BodyInit` de RN,
+    // y es además lo que ya se mandaba antes de E-97 — el `Content-Type` explícito se respeta
+    // igual, que es el motivo por el que no se usa un Blob (ver el comentario de arriba).
+    body: bytes.buffer as ArrayBuffer,
   });
   if (!respuesta.ok) {
     throw new Error(`No se pudo subir el archivo al almacenamiento (S3 respondió ${respuesta.status}).`);

@@ -72,15 +72,8 @@ export function aDuracion(horaDisparo: string | null, horaLimite: string | null)
 }
 
 /**
- * TODOS los días en true.
- *
- * PENDIENTE REAL, no una simplificación cómoda: el backend guarda los días en
- * `renaser.dias_semanales_habito` y el tipo de día en `horarios_habito.tipo_dia`
- * (TODOS / DISCIPLINA / DOMINGO), pero **ningún endpoint expone esa información hoy** — ni
- * `GET /api/v1/habits` ni `GET /api/v1/habit-preferences` la devuelven. Inventar acá un mapeo
- * (por ejemplo "DISCIPLINA = lunes a sábado") sería adivinar una regla de negocio que nadie
- * confirmó. Hasta que el backend exponga los días, el selector semanal del diseño se muestra con
- * todos activos.
+ * Todos los días en true. Es el valor por defecto cuando el backend no informa los días — ver
+ * `diasDeHabito`.
  */
 const TODOS_LOS_DIAS: Record<DayOfWeek, boolean> = {
   LUN: true,
@@ -92,10 +85,55 @@ const TODOS_LOS_DIAS: Record<DayOfWeek, boolean> = {
   DOM: true,
 };
 
+/** `java.time.DayOfWeek` -> la abreviatura que usa el selector semanal del plan. */
+const DIA_POR_NOMBRE: Record<string, DayOfWeek> = {
+  MONDAY: 'LUN',
+  TUESDAY: 'MAR',
+  WEDNESDAY: 'MIÉ',
+  THURSDAY: 'JUE',
+  FRIDAY: 'VIE',
+  SATURDAY: 'SÁB',
+  SUNDAY: 'DOM',
+};
+
+/**
+ * En qué días de la semana aplica el hábito.
+ *
+ * Hasta 2026-09-04 esto devolvía SIEMPRE los 7 días, y con razón: el backend guardaba el tipo de
+ * día en `horarios_habito.tipo_dia` pero ningún endpoint lo exponía, así que mapearlo acá habría
+ * sido adivinar una regla de negocio. Ahora `GET /api/v1/habits` manda `activeWeekdays` ya
+ * resuelto por el dominio (`TipoDia.diasDeLaSemana`), así que se usa tal cual — la regla sigue
+ * viviendo del lado del backend, acá solo se traduce el nombre del día.
+ *
+ * El efecto visible: los tres hábitos de DOMINGO (`DESCANSO PROFUNDO`, `RITUAL DE MAÑANA`,
+ * `AGUA E HIDRATACIÓN`) dejan de aparecer activos de lunes a sábado.
+ *
+ * Sin el campo (backend anterior a V28) se conserva el comportamiento viejo: los 7 días. Un array
+ * vacío también cae ahí a propósito — significa que el backend no supo decidir, y esconder el
+ * hábito los 7 días sería peor que mostrarlo de más.
+ */
+function diasDeHabito(activeWeekdays: string[] | undefined): Record<DayOfWeek, boolean> {
+  if (!activeWeekdays?.length) return { ...TODOS_LOS_DIAS };
+  const dias: Record<DayOfWeek, boolean> = {
+    LUN: false, MAR: false, MIÉ: false, JUE: false, VIE: false, SÁB: false, DOM: false,
+  };
+  for (const nombre of activeWeekdays) {
+    const dia = DIA_POR_NOMBRE[nombre];
+    if (dia) dias[dia] = true;
+  }
+  return dias;
+}
+
 /** Combina catálogo (qué es el hábito) y preferencias (a qué hora lo hace este aprendiz). */
 export function mapearPlanHabit(
   habito: HabitoCatalogoApi,
   preferencia: PreferenciaHabitoApi | undefined,
+  /**
+   * Posición del hábito dentro de la respuesta de `GET /api/v1/habits`. El backend la devuelve ya
+   * ordenada por `habitos.orden` (V28/V30 + el `ORDER BY` del repositorio), así que el índice del
+   * array ES el orden del catálogo — no hace falta que el campo viaje aparte.
+   */
+  ordenCatalogo: number,
 ): PlanHabit {
   const categoria = CATEGORIA[habito.category] ?? CATEGORIA_POR_DEFECTO;
   const horaDisparo = preferencia?.triggerTime ?? null;
@@ -109,7 +147,11 @@ export function mapearPlanHabit(
     duration: aDuracion(horaDisparo, preferencia?.limitTime ?? null),
     moment: aMomento(horaDisparo),
     desc: habito.description ?? '',
-    days: { ...TODOS_LOS_DIAS },
+    ordenCatalogo,
+    locked: habito.locked ?? false,
+    unlockDay: habito.unlockDay ?? 1,
+    daysUntilUnlock: habito.daysUntilUnlock ?? 0,
+    days: diasDeHabito(habito.activeWeekdays),
     // `HH:mm:ss` crudo, sin recortar: hace falta tal cual para (a) decidir si ya venció hoy y
     // (b) reenviarlo al PATCH de horario sin borrarlo cuando lo único que cambia es la hora de
     // disparo (ver `cambiarHorario` en `habitsApi.ts`).

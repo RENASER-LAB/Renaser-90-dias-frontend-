@@ -46,10 +46,10 @@ interface SignatureCanvasProps {
 export interface SignatureCanvasHandle {
   /**
    * Captura el recuadro de la firma (el `canvasBox`, con sus trazos ya dibujados) como PNG y
-   * devuelve la URI del archivo temporal. `null` si todavía no hay ningún trazo — capturar un
+   * devuelve sus bytes en **base64**. `null` si todavía no hay ningún trazo — capturar un
    * lienzo vacío no tendría valor legal ninguno.
    */
-  capturarComoPng: () => Promise<string | null>;
+  capturarComoPngBase64: () => Promise<string | null>;
 }
 
 export const SignatureCanvas = forwardRef<SignatureCanvasHandle, SignatureCanvasProps>(function SignatureCanvas(
@@ -84,11 +84,23 @@ export const SignatureCanvas = forwardRef<SignatureCanvasHandle, SignatureCanvas
   useImperativeHandle(
     ref,
     () => ({
-      capturarComoPng: async () => {
+      capturarComoPngBase64: async () => {
         if (pathsRef.current.length === 0 || !canvasBoxRef.current) return null;
         // PNG, no el SVG vectorial: es evidencia legal y tiene que poder abrirse en cualquier
         // visor de imágenes, adjuntarse a un correo o pegarse en un PDF sin depender de un
         // navegador (decisión del dueño del producto, ver CLAUDE.md de la tarea).
+        //
+        // BUG ENCONTRADO 2026-09-04 (E-97): esto usaba el `result: 'tmpfile'` por defecto de
+        // `captureRef` y devolvía una RUTA de archivo temporal, que después se leía con
+        // `fetch(uri).arrayBuffer()`. En Android esa ruta viene SIN el esquema `file://`, así que
+        // el `fetch` no la resolvía y devolvía —con status OK— un cuerpo de 14 bytes con el texto
+        // literal "File not found". Como la respuesta era "exitosa", nada fallaba y esos 14 bytes
+        // se subían a S3 como si fueran la firma. Verificado en el bucket real: los objetos
+        // pesaban 14 bytes y contenían ese texto.
+        //
+        // `result: 'base64'` devuelve los bytes directamente, sin pasar por el sistema de archivos
+        // ni por `fetch` — elimina la clase entera de fallo, que en una firma con valor probatorio
+        // no se puede permitir.
         //
         // El try/catch NO es defensivo por costumbre: en web `captureRef` usa html2canvas, que
         // puede fallar por razones ajenas a la firma. Si dejáramos escapar la excepción, tumbaría
@@ -96,7 +108,7 @@ export const SignatureCanvas = forwardRef<SignatureCanvasHandle, SignatureCanvas
         // impediría firmar. Devolver `null` es lo que ya declara el contrato del método, y quien
         // llama sabe qué hacer con eso: seguir sin respaldo, y en el Pacto, no marcar el hito.
         try {
-          return await captureRef(canvasBoxRef, { format: 'png', quality: 1 });
+          return await captureRef(canvasBoxRef, { format: 'png', quality: 1, result: 'base64' });
         } catch (error) {
           // Nunca la imagen ni la URL: solo que falló y dónde.
           console.warn('[firma] no se pudo capturar el lienzo como PNG', error);

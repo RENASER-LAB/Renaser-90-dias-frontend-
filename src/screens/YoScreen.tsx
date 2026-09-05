@@ -87,7 +87,7 @@ export default function YoScreen() {
   // ESTADOS DE NAVEGACIÓN DENTRO DE LA TARJETA DEL USUARIO
   // =========================================================================
   const [activeView, setActiveView] = useState<
-    'main' | 'hub' | 'editar_perfil' | 'info_perfil' | 'evidencias' | 'logros' | 'onboarding' | 'pacto' | 'espejo' | 'metodo' | 'video_activacion' | 'notificaciones'
+    'main' | 'hub' | 'editar_perfil' | 'info_perfil' | 'evidencias' | 'logros' | 'onboarding' | 'pacto' | 'metodo' | 'video_activacion' | 'notificaciones'
   >('main');
 
   // Formulario Editar Perfil
@@ -97,9 +97,6 @@ export default function YoScreen() {
   const [profileCity, setProfileCity] = useState('Medellín, Colombia');
   const [profileBio, setProfileBio] = useState('Empresario enfocado en escala de negocio B2B y reconexión biológica de alto rendimiento.');
   const [profileInstagram, setProfileInstagram] = useState('@sebastian.arango');
-
-  // Espejo de la Sombra
-  const [catarsisText, setCatarsisText] = useState('');
 
   // Notificaciones
   const [notifAlarm, setNotifAlarm] = useState(true);
@@ -427,21 +424,12 @@ export default function YoScreen() {
               <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 1 }]}>
                 FASE 3: HERRAMIENTAS SOMÁTICAS
               </Text>
+              {/* Decisión del cliente (2026-09-04): "Espejo de la Sombra" (catarsis privada +
+                  informe semanal con IA) YA NO VA. Se quitaron la entrada del menú y su sub-vista
+                  completa, más el estado `catarsisText` y el valor 'espejo' de `activeView`, que
+                  quedaban sin uso. El módulo `rag` del backend (InformeEspejoSombra) NO se tocó:
+                  esto es solo el acceso desde la app. Recuperable del historial de git si vuelve. */}
               <View style={[styles.groupedBox, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-                <Pressable
-                  onPress={() => setActiveView('espejo')}
-                  style={[styles.menuOptionRow, { borderBottomColor: c.divider }]}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                    <Text style={{ fontSize: 16 }}>🪞</Text>
-                    <View>
-                      <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>Espejo de la Sombra</Text>
-                      <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>Catarsis privada + Informe semanal con IA</Text>
-                    </View>
-                  </View>
-                  <Icon name="chevron" size={12} color={c.gold} />
-                </Pressable>
-
                 <Pressable
                   onPress={() => setActiveView('metodo')}
                   style={[styles.menuOptionRow, { borderBottomColor: c.divider }]}
@@ -868,87 +856,6 @@ export default function YoScreen() {
                 </View>
               </View>
             ))}
-          </View>
-        </ScrollView>
-      )}
-
-      {/* ========================================================================= */}
-      {/* 7. SUB-VISTA: 🪞 ESPEJO DE LA SOMBRA (CON IA)                             */}
-      {/* ========================================================================= */}
-      {activeView === 'espejo' && (
-        <ScrollView
-          contentContainerStyle={[
-            styles.content,
-            {
-              paddingHorizontal: horizontalPadding,
-              maxWidth: isTablet ? 560 : undefined,
-              alignSelf: isTablet ? 'center' : 'stretch',
-              width: isTablet ? '100%' : undefined,
-            },
-          ]}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
-            <Pressable onPress={() => setActiveView('hub')} style={styles.backBtnRow} hitSlop={8}>
-              <Icon name="arrowLeft" size={14} color={c.gold} />
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700', letterSpacing: 1 }]}>
-                VOLVER A AJUSTES
-              </Text>
-            </Pressable>
-            <View style={[styles.categoryPillBadge, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 9.5 }]}>
-                ESPEJO DE LA SOMBRA
-              </Text>
-            </View>
-          </View>
-
-          <View style={[styles.windowBanner, { borderColor: c.border, backgroundColor: c.cardBgAlt, marginTop: 10 }]}>
-            <Text style={{ fontSize: 18 }}>🔒</Text>
-            <Text style={[t.micro, { color: c.textSoft, flex: 1, fontSize: 10.5 }]}>
-              Espacio privado y confidencial cifrado. Solo tú y el informe IA tienen acceso.
-            </Text>
-          </View>
-
-          <View style={[styles.groupedBox, { borderColor: c.border, backgroundColor: c.cardBg, padding: 14, gap: 10, marginTop: 10 }]}>
-            <Text style={[t.cardTitle, { color: c.gold, fontSize: 13 }]}>
-              DESAHOGO SOMÁTICO DE HOY:
-            </Text>
-            <TextInput
-              value={catarsisText}
-              onChangeText={setCatarsisText}
-              placeholder="Escribe o graba lo que estás sintiendo hoy sin filtros ni juicios..."
-              placeholderTextColor={c.textSoft}
-              multiline
-              style={[styles.modalInputText, { minHeight: 90, borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.text }]}
-            />
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Pressable
-                onPress={() => Alert.alert('Grabando...', 'Audio somático de 60s en curso...')}
-                style={[styles.momentSwitchBtn, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}
-              >
-                <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>🎙️ Grabar Audio</Text>
-              </Pressable>
-
-              <Pressable
-                onPress={() => {
-                  Alert.alert('Catarsis Liberada 🕊️', 'Tu registro ha sido procesado por el modelo de IA Somática.');
-                  setCatarsisText('');
-                }}
-                style={[styles.createHabitBtn, { backgroundColor: c.gold }]}
-              >
-                <Text style={{ color: '#1E1B18', fontWeight: '800', fontSize: 11 }}>Liberar 🕊️</Text>
-              </Pressable>
-            </View>
-          </View>
-
-          <View style={[styles.goalCard, { borderColor: c.gold, backgroundColor: c.cardBgAlt, marginTop: 12, paddingBottom: 28 }]}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={[t.micro, { color: c.gold, fontWeight: '800' }]}>✨ INFORME SEMANAL IA (SEM 06):</Text>
-              <Text style={[t.micro, { color: '#70d2a0', fontWeight: '800', fontSize: 9 }]}>GENERADO HOY</Text>
-            </View>
-            <Text style={[t.body, { color: c.text, fontSize: 11, lineHeight: 17, marginTop: 6 }]}>
-              "Sebastián: Detectamos una reducción del 60% en la ansiedad nocturna gracias al protocolo de desconexión. Mantén el foco en delegar tareas operativas de ventas."
-            </Text>
           </View>
         </ScrollView>
       )}

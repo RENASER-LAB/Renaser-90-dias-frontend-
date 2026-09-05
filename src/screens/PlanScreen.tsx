@@ -48,6 +48,20 @@ export interface PlanHabit {
   days: Record<DayOfWeek, boolean>;
   /** `HH:mm:ss` crudo del backend. `null` = el hábito no vence dentro del día. */
   limitTime: string | null;
+  /**
+   * Posición del hábito en el catálogo curado del panel admin (`habitos.orden`, V28/V30). Es el
+   * orden en que el dueño del producto los acomodó y el que manda en la lista del plan.
+   */
+  ordenCatalogo: number;
+  /**
+   * `true` = el hábito todavía no se desbloqueó para este aprendiz (su `dia_inicio` es posterior
+   * al día de programa en que está). Se muestra con candado, sin poder marcarlo ni pausarlo.
+   */
+  locked: boolean;
+  /** Día de programa en que se desbloquea. */
+  unlockDay: number;
+  /** Días que faltan para eso. 0 cuando ya está disponible. */
+  daysUntilUnlock: number;
   /** `false` = obligatorio: el interruptor de activar/pausar se muestra bloqueado en ON. */
   isOptional: boolean;
   /** false = el aprendiz no puede sacarlo de su plan; el interruptor queda en ON y bloqueado. */
@@ -130,6 +144,38 @@ function fechasDeEstaSemana(): Record<DayOfWeek, string> {
 }
 
 const DAY_DATES: Record<DayOfWeek, string> = fechasDeEstaSemana();
+
+/** `Date` -> `yyyy-MM-dd` en hora LOCAL. `toISOString()` no sirve: pasa a UTC y corre el día. */
+function aFechaIso(fecha: Date): string {
+  const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+  const dia = String(fecha.getDate()).padStart(2, '0');
+  return `${fecha.getFullYear()}-${mes}-${dia}`;
+}
+
+/**
+ * Las opciones de "¿hasta cuándo lo pauso?". Fechas del dispositivo, que es la zona en la que la
+ * persona está pensando cuando dice "hasta el domingo"; el backend las compara contra el calendario
+ * del aprendiz, nunca contra el reloj del servidor.
+ *
+ * El domingo se ofrece solo si todavía no llegó: un domingo, "hasta el domingo" sería lo mismo que
+ * "solo hoy" y tener dos botones que hacen lo mismo confunde.
+ */
+function opcionesDePausa(): { etiqueta: string; hasta?: string }[] {
+  const hoy = new Date();
+  const diasHastaDomingo = (7 - hoy.getDay()) % 7; // getDay(): 0 = domingo
+  const opciones: { etiqueta: string; hasta?: string }[] = [
+    { etiqueta: 'Solo hoy', hasta: aFechaIso(hoy) },
+  ];
+  if (diasHastaDomingo > 0) {
+    const domingo = new Date(hoy);
+    domingo.setDate(hoy.getDate() + diasHastaDomingo);
+    opciones.push({ etiqueta: 'Hasta el domingo', hasta: aFechaIso(domingo) });
+  }
+  // Sin fecha: el comportamiento de siempre. Va último a propósito — es el que deja el hábito
+  // apagado indefinidamente, y en un programa de 90 días conviene que sea la opción deliberada.
+  opciones.push({ etiqueta: 'Hasta que yo lo reactive' });
+  return opciones;
+}
 
 const ICON_PALETTE = ['☀️', '💧', '⚡', '🏃', '🧘', '📊', '📚', '✍️', '🌙', '👑', '🎯', '🥗'];
 
@@ -307,11 +353,41 @@ export default function PlanScreen() {
    * Optimista y con vuelta atrás: se ve al toque, y si el backend rechaza (por ejemplo un hábito
    * obligatorio, que no se puede pausar) se revierte y se dice por qué.
    */
-  const toggleHabitDayStatus = async (habitId: string) => {
+  /**
+   * Al PAUSAR se pregunta hasta cuándo (V31). Al REACTIVAR no se pregunta nada: volver a encender
+   * es siempre un toque.
+   *
+   * Es la separación que evita que esta función choque con el interruptor, que era el riesgo que
+   * planteó el dueño del producto: el switch sigue diciendo una sola cosa —está encendido o
+   * apagado— y la fecha solo agrega "hasta cuándo" al apagarlo.
+   */
+  const toggleHabitDayStatus = (habitId: string) => {
     const habito = habits.find(h => h.id === habitId);
     if (!habito) return;
+    const vaAPausar = habito.days[selectedDay];
+    if (!vaAPausar) {
+      void aplicarEstadoHabito(habito, true);
+      return;
+    }
+    if (!habito.isDeactivatable) {
+      Alert.alert('Hábito obligatorio', 'Este hábito es parte del programa y no se puede pausar.');
+      return;
+    }
+    const opciones = opcionesDePausa();
+    Alert.alert(
+      `Pausar "${habito.title}"`,
+      '¿Hasta cuándo lo pausamos? Vuelve solo cuando termine el plazo.',
+      [
+        ...opciones.map(o => ({ text: o.etiqueta, onPress: () => void aplicarEstadoHabito(habito, false, o.hasta) })),
+        { text: 'Cancelar', style: 'cancel' as const },
+      ],
+    );
+  };
+
+  const aplicarEstadoHabito = async (habito: PlanHabit, activo: boolean, pausadoHasta?: string) => {
+    const habitId = habito.id;
     const anteriores = habits;
-    const nuevoValor = !habito.days[selectedDay];
+    const nuevoValor = activo;
     setHabits(prev =>
       prev.map(h => (h.id === habitId ? { ...h, days: { ...h.days, [selectedDay]: nuevoValor } } : h))
     );
@@ -324,7 +400,7 @@ export default function PlanScreen() {
       // y la pantalla revertia con "Intenta de nuevo". Se asegura la fila primero con el PUT
       // (idempotente: si ya existe no hace nada) y recien despues se cambia el estado.
       await habitsApi.agregarHabitoAlPlan(habitId);
-      await habitsApi.cambiarEstadoHabito(habitId, nuevoValor);
+      await habitsApi.cambiarEstadoHabito(habitId, nuevoValor, pausadoHasta);
     } catch {
       setHabits(anteriores);
       Alert.alert(
@@ -436,6 +512,12 @@ export default function PlanScreen() {
       icon: newHabitIcon,
       tag: 'PERSONALIZADO',
       tagColor: '#FFE29F',
+      locked: false,
+      unlockDay: 1,
+      daysUntilUnlock: 0,
+      // Los personales van DETRAS del catálogo: el orden curado solo cubre los de sistema, y un
+      // hábito propio recién creado no tiene lugar asignado en esa secuencia.
+      ordenCatalogo: Number.MAX_SAFE_INTEGER,
       time: newHabitTime.trim() || '07:00 AM',
       duration: newHabitDuration.trim() || '30 min',
       moment: newHabitMoment,
@@ -843,14 +925,19 @@ export default function PlanScreen() {
             )}
 
             {conectadoAlBackend && habits.length > 0 && (['mañana', 'tarde', 'noche'] as DayMoment[]).map(momentName => {
-              // D-86: ordenados por hora. Antes salian en el orden en que vino el catalogo, asi
-              // que editar la hora de un habito lo dejaba donde estaba — la seccion NOCHE podia
-              // leerse 22:30, 18:00, 20:00, 21:00. Los que no tienen hora ("Sin horario") van al
-              // final: no compiten por un lugar en la linea de tiempo, se hacen cuando se pueda.
+              // Orden del CATALOGO (`habitos.orden`), no por hora.
+              //
+              // > **Corregido 2026-09-04.** Esto ordenaba por hora desde D-86, que buscaba que la
+              // > seccion no se leyera 22:30, 18:00, 21:00. El dueño del producto pidio despues que
+              // > el plan respete el orden que el mismo curo en el panel de checklist, y esa es la
+              // > decision que manda. En la practica casi no se pierde la lectura cronologica: el
+              // > catalogo ya viene ordenado a mano de forma sensata (NOCHE queda 18:00, 21:00,
+              // > 21:30, 22:00, 22:30) y ademas arregla un caso que la hora hacia peor — DESPERTAR
+              // > no tiene horario y con el orden por hora caia al FINAL de la mañana.
               const momentHabits = habits
                 .filter(h => h.moment === momentName)
                 .slice()
-                .sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99'));
+                .sort((a, b) => a.ordenCatalogo - b.ordenCatalogo);
               const momentLabel = momentName === 'mañana' ? '🌅 MAÑANA' : momentName === 'tarde' ? '☀️ TARDE' : '🌙 NOCHE';
 
               return (
@@ -872,14 +959,32 @@ export default function PlanScreen() {
                     const switchBloqueado = vencido || bloqueadoObligatorio;
                     const switchValor = bloqueadoObligatorio ? true : isDayActive;
 
+                    // Los OPCIONALES se muestran atenuados y sobre un fondo hundido, para que
+                    // se distingan de un vistazo de los que sí suman a la coherencia del día. Se
+                    // usa `c.canvas` porque es el tono "por detrás de la tarjeta" del sistema de
+                    // diseño: queda más oscuro que la tarjeta en modo oscuro y más gris en modo
+                    // claro, así el efecto lee igual en los dos temas (a diferencia de un gris
+                    // fijo, que en oscuro aclararía en vez de hundir).
+                    const esOpcional = habit.isOptional;
+                    // El candado manda sobre vencido/pausado/opcional: si el hábito todavía no
+                    // existe para este aprendiz, cualquier otro estado es ruido.
+                    const bloqueado = habit.locked;
+
                     let estadoLabel: string;
                     let estadoColor: string;
-                    if (vencido) {
+                    if (bloqueado) {
+                      estadoLabel =
+                        habit.daysUntilUnlock === 1 ? 'FALTA 1 DÍA' : `FALTAN ${habit.daysUntilUnlock} DÍAS`;
+                      estadoColor = c.tabInactive;
+                    } else if (vencido) {
                       estadoLabel = 'VENCIDO';
                       estadoColor = c.textSoft;
                     } else if (bloqueadoObligatorio) {
                       estadoLabel = 'OBLIGATORIO';
                       estadoColor = c.gold;
+                    } else if (esOpcional && isDayActive) {
+                      estadoLabel = 'OPCIONAL';
+                      estadoColor = c.textSoft;
                     } else {
                       estadoLabel = isDayActive ? 'ACTIVO' : 'PAUSADO';
                       estadoColor = isDayActive ? '#70d2a0' : c.textSoft;
@@ -891,9 +996,13 @@ export default function PlanScreen() {
                         style={[
                           styles.habitPlanCard,
                           {
-                            borderColor: vencido ? c.border : isDayActive ? c.gold : c.border,
-                            backgroundColor: c.cardBg,
-                            opacity: vencido ? 0.5 : isDayActive ? 1 : 0.6,
+                            // El opcional activo NO lleva el borde dorado: el dorado marca lo
+                            // que de verdad sostiene el día.
+                            borderColor: vencido || esOpcional || bloqueado ? c.border : isDayActive ? c.gold : c.border,
+                            backgroundColor: esOpcional || bloqueado ? c.canvas : c.cardBg,
+                            // Un solo valor, no opacidades encadenadas: vencido y pausado mandan
+                            // sobre "opcional" porque dicen algo más urgente sobre el hábito.
+                            opacity: bloqueado ? 0.55 : vencido ? 0.5 : !isDayActive ? 0.6 : esOpcional ? 0.78 : 1,
                           },
                         ]}
                       >
@@ -924,7 +1033,8 @@ export default function PlanScreen() {
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
                                 <Icon name="clock" size={11} color={vencido ? c.textSoft : c.gold} />
                                 <Pressable
-                                  onPress={() => abrirSelectorDeHora(habit)}
+                                  onPress={() => (bloqueado ? undefined : abrirSelectorDeHora(habit))}
+                                  disabled={bloqueado}
                                   style={[
                                     styles.timeInputDirect,
                                     { borderColor: c.border, backgroundColor: c.cardBgAlt },
@@ -969,18 +1079,39 @@ export default function PlanScreen() {
                             </View>
                           </View>
 
-                          {/* Switch Activar/Pausar para el día */}
+                          {/* Switch Activar/Pausar para el día — o el candado si todavía no le toca */}
                           <View style={{ alignItems: 'center', gap: 2 }} onStartShouldSetResponder={() => true}>
                             <Text style={[t.micro, { color: estadoColor, fontSize: 8.5, fontWeight: '800' }]}>
                               {estadoLabel}
                             </Text>
-                            <Switch
-                              value={switchValor}
-                              disabled={switchBloqueado}
-                              onValueChange={() => toggleHabitDayStatus(habit.id)}
-                              trackColor={{ false: '#332C20', true: c.gold }}
-                              thumbColor={switchValor ? '#1E1B18' : '#888'}
-                            />
+                            {bloqueado ? (
+                              // Candado en lugar del interruptor, y no un Switch deshabilitado: un
+                              // switch apagado se lee como "yo lo pausé", que es otra cosa. Acá el
+                              // hábito todavía no existe para este aprendiz.
+                              <Pressable
+                                onPress={() =>
+                                  Alert.alert(
+                                    habit.title,
+                                    `Se desbloquea el día ${habit.unlockDay} de tu programa. ` +
+                                      (habit.daysUntilUnlock === 1
+                                        ? 'Falta 1 día.'
+                                        : `Faltan ${habit.daysUntilUnlock} días.`),
+                                  )
+                                }
+                                hitSlop={10}
+                                style={{ paddingVertical: 6, paddingHorizontal: 4 }}
+                              >
+                                <Icon name="lock" size={16} color={c.tabInactive} />
+                              </Pressable>
+                            ) : (
+                              <Switch
+                                value={switchValor}
+                                disabled={switchBloqueado}
+                                onValueChange={() => toggleHabitDayStatus(habit.id)}
+                                trackColor={{ false: '#332C20', true: c.gold }}
+                                thumbColor={switchValor ? '#1E1B18' : '#888'}
+                              />
+                            )}
                           </View>
                         </View>
 

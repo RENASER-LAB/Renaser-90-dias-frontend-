@@ -20,7 +20,17 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
   const maxBarWidth = isTablet ? 480 : undefined;
 
   return (
-    <View style={[styles.barOuter, { backgroundColor: c.cardBg, borderTopColor: c.divider, paddingBottom: Math.max(insets.bottom, 14) }]}>
+    /* BUG (2026-09-04): en modo oscuro esta barra se veía BLANCA. `c.cardBg` es translúcido en la
+       paleta oscura (`rgba(255,255,255,0.04)`): está pensado para apoyarse sobre `c.bg` y dar una
+       tarjeta apenas más clara. Pero la TabBar la dibuja el navegador FUERA del `SafeAreaView` de
+       la pantalla, así que detrás no había fondo del tema sino la vista raíz de React Native, que
+       es BLANCA por defecto — y 4% de blanco sobre blanco da blanco puro. Por eso también el aro
+       del botón central salía blanco.
+       Arreglo: se pinta `c.bg` opaco de base y `c.cardBg` como capa encima, reproduciendo
+       exactamente la composición "tarjeta sobre página" que el token asume. En modo claro no
+       cambia nada visible (`bg` #FCFBF9 y `cardBg` #FDFCFA son opacos y casi idénticos). */
+    <View style={[styles.barOuter, { backgroundColor: c.bg, borderTopColor: c.divider, paddingBottom: Math.max(insets.bottom, 14) }]}>
+      <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: c.cardBg }]} />
       <View style={[styles.bar, { maxWidth: maxBarWidth, alignSelf: 'center', width: '100%' }]}>
         {state.routes.map((route, i) => {
           const focused = state.index === i;
@@ -30,7 +40,10 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
           if (isCenter) {
             return (
               <Pressable key={route.key} onPress={onPress} style={styles.item} hitSlop={8}>
-                <View style={[styles.centerWrap, { shadowColor: c.gold, borderColor: c.cardBg }]}>
+                {/* `c.bg` y no `c.cardBg`: el aro es opaco a propósito (mismo bug de arriba) y
+                    además separa el círculo tanto de la barra como del contenido de la pantalla,
+                    contra el que también se recorta por el `marginTop` negativo. */}
+                <View style={[styles.centerWrap, { shadowColor: c.gold, borderColor: c.bg }]}>
                   <LinearGradient
                     colors={c.goldGrad}
                     start={{ x: 0.2, y: 0 }}

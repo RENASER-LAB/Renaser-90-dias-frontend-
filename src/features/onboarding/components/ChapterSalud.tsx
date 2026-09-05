@@ -25,6 +25,11 @@ function SleepQualitySlider({
   const { c, t } = useTheme();
   const [trackWidth, setTrackWidth] = useState(240);
 
+  /**
+   * `x` DEBE venir medido desde el borde izquierdo del riel. Ver el segundo bug documentado abajo:
+   * `locationX` se mide contra el elemento que recibio el toque, asi que solo sirve acá mientras
+   * los hijos decorativos del riel lleven `pointerEvents="none"`.
+   */
   const calculateValueFromX = (x: number) => {
     if (trackWidth <= 0) return;
     const ratio = Math.max(0, Math.min(1, x / trackWidth));
@@ -44,6 +49,16 @@ function SleepQualitySlider({
    * instante. Arreglo: solo reclamar el gesto cuando el movimiento es claramente horizontal
    * (`dx` domina sobre `dy`, con un umbral mínimo para no reaccionar a un simple temblor del
    * dedo); un scroll vertical nunca cumple esa condición y pasa de largo hacia el `ScrollView`.
+   *
+   * SEGUNDO BUG REPORTADO (2026-09-04): arrastrar el thumb tiraba el valor al mínimo — se veía
+   * como "la calidad se reinicia sola al tocarla". Causa: `evt.nativeEvent.locationX` se mide
+   * respecto del ELEMENTO QUE RECIBIÓ EL TOQUE, no del riel. El thumb es un hijo absoluto de
+   * 20×20 y, al arrastrarlo, era él el target: `locationX` salía medido desde el borde del thumb
+   * (≈10 en el centro) en vez de desde el inicio del riel, así que con el valor en 7 el primer
+   * contacto calculaba `round(1 + (10/290)*9) = 1`. Arreglo: los tres hijos decorativos
+   * (línea base, línea de progreso y thumb) llevan `pointerEvents="none"`, de modo que el target
+   * es SIEMPRE `sliderTrackTouchArea` y `locationX` queda medido contra el riel, que es lo que
+   * `calculateValueFromX` asume. No se cambió la aritmética: estaba bien, le llegaba mal el dato.
    */
   const esArrastreHorizontal = (gestureState: { dx: number; dy: number }) =>
     Math.abs(gestureState.dx) > 3 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
@@ -82,10 +97,11 @@ function SleepQualitySlider({
           {...panResponder.panHandlers}
         >
           {/* Base Track Line */}
-          <View style={[styles.sliderBaseLine, { backgroundColor: c.borderStrong }]} />
+          <View pointerEvents="none" style={[styles.sliderBaseLine, { backgroundColor: c.borderStrong }]} />
 
           {/* Active Progress Line */}
           <View
+            pointerEvents="none"
             style={[
               styles.sliderActiveLine,
               {
@@ -97,6 +113,7 @@ function SleepQualitySlider({
 
           {/* Clean Flat Thumb (No Shadows) */}
           <View
+            pointerEvents="none"
             style={[
               styles.sliderThumb,
               {
