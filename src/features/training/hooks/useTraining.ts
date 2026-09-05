@@ -91,6 +91,12 @@ export function useTraining() {
             // resumen de la Clase Diaria (`RegistroHabito.respuestaTexto`), así que sirve para
             // mostrar lo que la persona ya escribió en vez de pedírselo de nuevo.
             respuestaTexto: track.respuestaTexto,
+            // Puntos en juego y vencimiento, tal cual los manda el backend desde el 2026-09-05.
+            // `?? null` y no un default numérico: si el backend es viejo y no los manda, la
+            // pantalla tiene que mostrarse sin esa información, no inventar un 10.
+            pointsAtStake: track.puntosEnJuego ?? null,
+            maxPoints: track.puntosMaximos ?? null,
+            deadline: track.plazoEvidencia ?? null,
           };
         })
         .filter((h): h is HabitItem => h !== null);
@@ -107,6 +113,11 @@ export function useTraining() {
         // Una roca no es un hábito de catálogo: no tiene clave de sistema ni resumen.
         systemKey: null,
         respuestaTexto: null,
+        // Una roca no pasa por la escala de puntos de hábitos ni tiene plazo de evidencia
+        // expuesto por su endpoint: se deja explícito en null en vez de fingir un valor.
+        pointsAtStake: null,
+        maxPoints: null,
+        deadline: null,
         note: roca.descripcion ?? undefined,
       }));
 

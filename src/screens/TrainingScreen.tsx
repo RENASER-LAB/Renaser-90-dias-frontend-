@@ -17,6 +17,7 @@ import { ScreenHeader, MicroLabel } from '../components/ui';
 import { Icon, IconName } from '../components/Icon';
 import { GoldButton } from '../components/GoldButton';
 import { useTraining } from '../features/training/hooks/useTraining';
+import { ProximoAVencerCard } from '../features/training/components/ProximoAVencerCard';
 import { EvidenciaHabitoModal } from '../features/habits/components/EvidenciaHabitoModal';
 import { completarRegistro } from '../features/habits/api/evidenciaHabitoApi';
 import { mensajeDeError } from '../services/http/apiClient';
@@ -61,6 +62,18 @@ export interface HabitItem {
   systemKey?: string | null;
   /** Lo que la persona escribió al completar el registro (`RegistroHabito.respuestaTexto`). */
   respuestaTexto?: string | null;
+  /**
+   * Puntos que paga completarlo AHORA, tal como los calcula el backend (D-97). `null` cuando el
+   * hábito ya está en estado terminal o cuando el backend todavía no manda el campo.
+   *
+   * No se calcula acá a propósito: la escala es una regla de negocio del servidor, y si el
+   * cliente la reimplementa, el día que cambie el aprendiz ve un número y cobra otro.
+   */
+  pointsAtStake?: number | null;
+  /** Techo de la escala (hoy 10), para poder decir "6 de 10" sin hardcodear la constante. */
+  maxPoints?: number | null;
+  /** Instante ISO en que se bloquea. `null` si no vence — es el que ordena "el próximo a vencer". */
+  deadline?: string | null;
 }
 
 interface DimensionConfig {
@@ -454,6 +467,14 @@ export default function TrainingScreen() {
               <Text style={[t.sectionTitle, { color: c.text }]}>TU ENTRENAMIENTO INTEGRAL</Text>
               <Text style={[t.sectionSub, { color: c.micro, marginTop: 4 }]}>Cinco dimensiones. Un sistema.</Text>
             </View>
+
+            {/* El habito mas proximo a vencer, ARRIBA de las cinco dimensiones (pedido del dueno,
+                2026-09-05). Se dibuja solo si hay alguno vivo con plazo: cuando el dia esta
+                cerrado, la tarjeta simplemente no aparece. Tocarla abre ese habito directamente,
+                sin obligar a adivinar en que dimension estaba. */}
+            {!cargandoBackend && errorBackend === null && (
+              <ProximoAVencerCard habits={habits} onAbrir={openEvidenceModal} />
+            )}
 
             {/* Mientras carga o si falla. Antes se dibujaban 17 hábitos inventados, 11 de ellos
                 ya marcados como hechos y con evidencia. */}

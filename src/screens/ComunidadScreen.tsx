@@ -40,6 +40,7 @@ import { LeccionVideoPlayer } from '../features/academy/components/LeccionVideoP
 import { useChatConversaciones } from '../features/chat/hooks/useChatConversaciones';
 import { useEnvioMediaChat } from '../features/chat/hooks/useEnvioMediaChat';
 import { BurbujaAudioChat } from '../features/chat/components/BurbujaAudioChat';
+import { EvidenciaDesdeChatModal } from '../features/habits/components/EvidenciaDesdeChatModal';
 import { mapearMensaje } from '../features/chat/api/chatMappers';
 import type { WireMensaje } from '../features/chat/types/chat.types';
 import { marcarChatMontado } from '../features/renasia/state/chatEnPantalla';
@@ -1097,6 +1098,35 @@ export default function ComunidadScreen() {
       { text: 'Galería', onPress: () => void enviarFoto('galeria') },
       { text: 'Cancelar', style: 'cancel' },
     ]);
+  };
+
+  /**
+   * Subir la evidencia de un hábito desde el chat (pedido del dueño, 2026-09-05).
+   *
+   * Es una acción SEPARADA del botón de foto de arriba, y a propósito: una foto de chat y una
+   * evidencia sellada son cosas distintas — distinto bucket, distinta validación, distintas
+   * consecuencias (la evidencia otorga puntos). Nunca se infiere que una foto normal "era" la
+   * evidencia de algo; el aprendiz elige explícitamente qué hábito está evidenciando.
+   */
+  const [evidenciaVisible, setEvidenciaVisible] = useState(false);
+
+  /**
+   * Después de sellar la evidencia se manda un mensaje NORMAL de texto a la conversación, para
+   * que quede constancia. Es un mensaje aparte y no un efecto de la subida: si falla, la
+   * evidencia ya está registrada igual y no se le avisa de un error que no cambia nada — el
+   * hábito quedó cerrado, que es lo que importaba.
+   */
+  const handleEvidenciaSubida = async (resultado: { tituloHabito: string; puntosOtorgados: number }) => {
+    if (!activeChat) return;
+    try {
+      const actualizada = await enviarMensajeChatRemoto(
+        activeChat,
+        `Subí mi evidencia de "${resultado.tituloHabito}" (+${resultado.puntosOtorgados} pts).`,
+      );
+      setActiveChat(actualizada);
+    } catch {
+      // Silencio deliberado: ver el comentario de arriba.
+    }
   };
 
   // Sigue local-only, sin backend: `GROUP_MEMBERS` es mock (ver nota junto a su declaración), así
@@ -3216,6 +3246,21 @@ export default function ComunidadScreen() {
                   <Text style={{ fontSize: 15 }}>📷</Text>
                 </Pressable>
 
+                {/* Acción aparte del botón de foto: acá la imagen se sella como EVIDENCIA de un
+                    hábito (otro endpoint, otro bucket, otorga puntos), no como una foto de chat. */}
+                <Pressable
+                  onPress={() => setEvidenciaVisible(true)}
+                  disabled={enviandoMedia}
+                  style={[styles.mediaOptionBtn, {
+                    borderColor: c.gold,
+                    backgroundColor: c.cardBgAlt,
+                    opacity: enviandoMedia ? 0.4 : 1,
+                  }]}
+                  accessibilityLabel="Subir evidencia de un hábito"
+                >
+                  <Text style={{ fontSize: 15 }}>✅</Text>
+                </Pressable>
+
                 <TextInput
                   value={chatInputText}
                   onChangeText={setChatInputText}
@@ -3253,6 +3298,15 @@ export default function ComunidadScreen() {
               </>
             )}
           </View>
+
+          {/* Subir la evidencia de un hábito desde el chat. Vive dentro de la vista de
+              conversación porque solo tiene sentido con un chat abierto: al terminar deja un
+              mensaje aparte en ESTA conversación. */}
+          <EvidenciaDesdeChatModal
+            visible={evidenciaVisible}
+            onCerrar={() => setEvidenciaVisible(false)}
+            onSubida={handleEvidenciaSubida}
+          />
         </View>
       )}
 
