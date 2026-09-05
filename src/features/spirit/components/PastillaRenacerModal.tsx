@@ -453,7 +453,7 @@ function Reproductor({
     return (
       <View style={[styles.reproductor, { backgroundColor: c.bg, borderColor: c.border }]}>
         <Text style={[t.small, { color: c.textSoft }]}>
-          El audio de este día todavía no está publicado. Podés contestar igual cuando esté
+          El audio de este día todavía no está publicado. Puedes contestar igual cuando esté
           disponible.
         </Text>
       </View>

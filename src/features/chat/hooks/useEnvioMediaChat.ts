@@ -53,7 +53,7 @@ export function useEnvioMediaChat(conversationId: string | null,
         if (almacenamientoSinConfigurar(url.uploadUrl)) {
           Alert.alert(
             'Todavía no se pueden mandar archivos',
-            'El almacenamiento del servidor no está configurado. Podés seguir escribiendo por texto.',
+            'El almacenamiento del servidor no está configurado. Puedes seguir escribiendo por texto.',
           );
           return false;
         }

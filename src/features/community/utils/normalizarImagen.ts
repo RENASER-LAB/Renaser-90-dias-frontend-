@@ -41,7 +41,7 @@ export async function elegirYNormalizarFotoMuro(): Promise<FotoMuroNormalizada |
   if (!permiso.granted) {
     Alert.alert(
       'Permiso de galería requerido',
-      'Para adjuntar una foto a tu publicación, Renaser necesita acceso a tu galería. Podés habilitarlo desde los ajustes del teléfono e intentar de nuevo.'
+      'Para adjuntar una foto a tu publicación, Renaser necesita acceso a tu galería. Puedes habilitarlo desde los ajustes del teléfono e intentar de nuevo.'
     );
     return null;
   }

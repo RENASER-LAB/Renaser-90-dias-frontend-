@@ -184,7 +184,7 @@ export function EvidenciaHabitoModal({
         const url = await solicitarUrlSubidaEvidencia(registroId, archivo.mimeType);
         if (almacenamientoSinConfigurar(url.uploadUrl)) {
           throw new Error(
-            'El almacenamiento de archivos (S3) todavía no está configurado en el servidor, así que la foto, el audio o el video no se pueden guardar. Podés dejar tu evidencia por escrito mientras tanto, o avisarle al equipo técnico.',
+            'El almacenamiento de archivos (S3) todavía no está configurado en el servidor, así que la foto, el audio o el video no se pueden guardar. Puedes dejar tu evidencia por escrito mientras tanto, o avisarle al equipo técnico.',
           );
         }
         await subirArchivoAS3(url.uploadUrl, archivo.uri, archivo.mimeType);
