@@ -100,4 +100,11 @@ export interface TrackDelDiaApi {
   triggerTime?: string | null;
   horaDisparo: string | null;
   horaLimite: string | null;
+  /** Puntos que paga completarlo ahora. Null si ya está en estado terminal, o si el backend es
+   * anterior al 2026-09-05 y todavía no manda el campo. */
+  puntosEnJuego?: number | null;
+  /** Techo de la escala de puntos (hoy 10). Ver `puntosEnJuego`. */
+  puntosMaximos?: number | null;
+  /** Instante ISO en que el hábito se bloquea; null si no vence. */
+  plazoEvidencia?: string | null;
 }

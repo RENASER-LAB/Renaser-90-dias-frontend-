@@ -77,6 +77,22 @@ const trackDelDiaSchema = z
     tipoHabito: z.string(),
     horaDisparo: z.string().nullable(),
     horaLimite: z.string().nullable(),
+    /**
+     * Agregados por el backend el 2026-09-05. `nullish()` y no `nullable()` a propósito: un
+     * backend anterior a ese cambio no manda estos campos y la pantalla tiene que seguir
+     * funcionando igual, sin puntos en juego ni cuenta regresiva.
+     *
+     * - `puntosEnJuego`: lo que paga completarlo AHORA. Null si el track ya está en estado
+     *   terminal (hecho, vencido o fallido) — no hay nada en juego en lo que ya pasó.
+     * - `puntosMaximos`: el techo de la escala, para poder decir "6 de 10" sin que el cliente
+     *   tenga que conocer la constante (que es del backend, D-97, y puede cambiar).
+     * - `plazoEvidencia`: instante ISO en que el hábito se bloquea. Es lo que permite la cuenta
+     *   regresiva y ordenar "el próximo a vencer" sin recalcular ninguna ventana ni conocer la
+     *   zona horaria del aprendiz. Null si el hábito no vence.
+     */
+    puntosEnJuego: z.number().nullish(),
+    puntosMaximos: z.number().nullish(),
+    plazoEvidencia: z.string().nullish(),
   })
   .passthrough();
 
