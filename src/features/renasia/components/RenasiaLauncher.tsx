@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GoldCircle } from '../../../components/ui';
 import { useAuth } from '../../auth/context/AuthContext';
 import { RenasiaPanel } from '../screens/RenasiaPanel';
-import { useChatDeCursoVisible } from '../state/chatDeCursoVisible';
+import { useHayChatEnPantalla } from '../state/chatEnPantalla';
 
 /**
  * Botón flotante que abre al ACOMPAÑANTE de los 90 días (`agent: 'COMPANION'`, D-102), más el
@@ -27,12 +27,15 @@ export function RenasiaLauncher() {
   const { isAuthenticated } = useAuth();
   const insets = useSafeAreaInsets();
   const [visible, setVisible] = useState(false);
-  const hayChatDeCurso = useChatDeCursoVisible();
+  const hayChatEnPantalla = useHayChatEnPantalla();
 
   if (!isAuthenticated) return null;
-  // D-101: con un curso abierto, la entrada visible es la de Sparkie al pie del curso. Se esconde
-  // el boton pero NO el panel: si la persona ya tenia abierto al acompanante, no se le cierra en
-  // la cara.
+  // D-101: con un chat abierto —el de un curso, o una conversacion de Comunidad— el flotante se
+  // esconde. En el curso porque la entrada que corresponde es la de Sparkie; en Comunidad porque
+  // se monta justo encima de la barra de escribir y tapa el boton de enviar, y porque una burbuja
+  // de IA flotando sobre una conversacion entre personas no tiene por que estar ahi.
+  // Se esconde el boton pero NO el panel: si la persona ya tenia abierto al acompanante, no se le
+  // cierra en la cara.
 
   return (
     <>
@@ -40,7 +43,7 @@ export function RenasiaLauncher() {
         Una sola vista absoluta del tamaño del botón, no una capa a pantalla completa: así no hay
         nada que pueda comerse los toques de la pantalla que esté debajo.
       */}
-      {!hayChatDeCurso && (
+      {!hayChatEnPantalla && (
         <View style={[styles.posicion, { bottom: insets.bottom + ALTO_TAB_BAR + SEPARACION }]}>
           <GoldCircle size={52} icon="chat" onPress={() => setVisible(true)} />
         </View>

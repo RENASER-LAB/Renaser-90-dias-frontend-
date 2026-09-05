@@ -1,6 +1,7 @@
 import { apiFetch } from '../../../services/http/apiClient';
-import type { WireConversacion, WireConversacionResumen, WireMensaje, WireMensajesPage, WireMiembrosPage } from '../types/chat.types';
+import type { ChatUrlSubida, WireConversacion, WireConversacionResumen, WireMensaje, WireMensajesPage, WireMiembrosPage } from '../types/chat.types';
 import {
+  urlSubidaChatSchema,
   validarRespuesta,
   wireConversacionesListSchema,
   wireConversacionSchema,
@@ -15,10 +16,12 @@ import {
  *
  * Lo que NO está acá, a propósito (backend real, no inventado):
  * - `PATCH /conversations/global/name`: requiere `RENAME_GLOBAL_CHAT`, que el aprendiz no tiene.
- * - Envío de audio/imagen/video/gif: `EnviarMensajeRequest` acepta `mediaBucket`/`mediaPath`, pero
- *   no existe ningún endpoint de subida (`upload-url`) para medios de chat — a diferencia del Muro
- *   (`POST /wall/media/upload-url`), acá no hay dónde conseguir esas referencias. Solo se manda
- *   `type: 'TEXT'`.
+ *
+ * Fotos y audios SÍ están, desde que el backend expone `POST /conversations/{id}/media/upload-url`
+ * (antes `chat` era el único módulo sin endpoint de subida, y por eso acá decía que solo se podía
+ * mandar `type: 'TEXT'`). El patrón es el mismo de tres pasos que usa el Muro: pedir la URL
+ * firmada, `PUT` de los bytes directo a S3, y recién entonces crear el mensaje con `mediaBucket`
+ * y `mediaPath`. Los bytes nunca pasan por el backend.
  */
 
 export async function obtenerConversaciones(): Promise<WireConversacionResumen[]> {
@@ -47,8 +50,7 @@ export async function obtenerMensajes(conversationId: string, cursor?: string): 
     'GET /api/v1/chat/conversations/{id}/messages');
 }
 
-/** Solo texto (ver nota de arriba): el resto de `EnviarMensajeRequest` queda sin usar porque no
- * hay forma real de conseguir esos valores desde la app. */
+/** Mensaje de solo texto. Para foto o audio va `enviarMensajeConMedia`, después de subir. */
 export async function enviarMensajeTexto(conversationId: string, text: string): Promise<WireMensaje> {
   const r = await apiFetch<unknown>(`/api/v1/chat/conversations/${conversationId}/messages`, {
     method: 'POST',
@@ -56,6 +58,92 @@ export async function enviarMensajeTexto(conversationId: string, text: string): 
   });
   return validarRespuesta<WireMensaje>(wireMensajeSchema, r,
     'POST /api/v1/chat/conversations/{id}/messages');
+}
+
+/**
+ * Paso 1 de 3 — `POST /conversations/{id}/media/upload-url`. Devuelve `{uploadUrl, bucket, ruta}`.
+ * `tipoContenido` es el MIME real del archivo y tiene que ser EXACTAMENTE el mismo que después se
+ * manda en el `PUT`: S3 firma incluyendo el `Content-Type`, y si no coincide responde 403.
+ *
+ * El backend solo acepta `image/*`, `audio/*` y `video/*`; cualquier otro MIME lo rechaza ahí
+ * mismo para no dejar un archivo huérfano en el bucket que ningún mensaje podría referenciar.
+ */
+export async function solicitarUrlSubidaChat(conversationId: string,
+                                              tipoContenido: string): Promise<ChatUrlSubida> {
+  const r = await apiFetch<unknown>(`/api/v1/chat/conversations/${conversationId}/media/upload-url`, {
+    method: 'POST',
+    body: { tipoContenido },
+  });
+  return validarRespuesta<ChatUrlSubida>(urlSubidaChatSchema, r,
+    'POST /api/v1/chat/conversations/{id}/media/upload-url');
+}
+
+/**
+ * Mientras el backend no tenga `STORAGE_PROVEEDOR=s3` configurado (D-34), el adaptador NoOp
+ * devuelve `about:blank#pendiente-s3/<ruta>` como `uploadUrl`. Un `PUT` ahí no sube nada y falla
+ * con un error de red críptico, así que se detecta ANTES de intentarlo para poder avisar claro.
+ */
+export function almacenamientoSinConfigurar(uploadUrl: string): boolean {
+  return !uploadUrl.startsWith('http://') && !uploadUrl.startsWith('https://');
+}
+
+/**
+ * Paso 2 de 3 — `PUT` directo a S3, nunca a este backend (CLAUDE.MD "STORAGE": "el backend nunca
+ * toca los bytes"). Por eso NO usa `apiFetch`: aquél antepone la `BASE_URL` del backend Java y
+ * agrega el header de sesión, y ninguna de las dos cosas corresponde acá — mandarle el token de
+ * sesión a S3 no tiene sentido, y el `Content-Type` tiene que ser EXACTAMENTE el que se firmó del
+ * lado del servidor o S3 rechaza la firma.
+ *
+ * Es gemelo de `wallApi.subirImagenAS3` y está duplicado a propósito, con el mismo criterio con
+ * el que `habits/utils/capturarEvidencia.ts` replicó al del Muro en vez de importarlo: `chat` no
+ * debe depender de `community`. Son doce líneas; la dependencia entre features costaría más.
+ */
+export async function subirMediaChatAS3(uploadUrl: string, uri: string,
+                                          mimeType: string): Promise<void> {
+  // D-104: `.arrayBuffer()` y no `.blob()` — con un Blob de RN el `Content-Type` real puede no
+  // coincidir con el firmado y S3 devuelve 403. Mismo arreglo que el Muro y las evidencias.
+  const bytes = await (await fetch(uri)).arrayBuffer();
+  const respuesta = await fetch(uploadUrl, {
+    method: 'PUT',
+    headers: { 'Content-Type': mimeType },
+    body: bytes,
+  });
+  if (!respuesta.ok) {
+    throw new Error(`No se pudo subir el archivo al almacenamiento (S3 respondió ${respuesta.status}).`);
+  }
+}
+
+/**
+ * Paso 3 de 3 — crea el mensaje ya con la referencia al objeto subido.
+ *
+ * `mediaPath` lleva la RUTA que devolvió el paso 1, no una URL: la URL firmada vence, así que
+ * guardarla dejaría la foto en 403 para siempre. El backend vuelve a firmar en cada lectura y
+ * devuelve `mediaUrl` lista para mostrar (mismo criterio y mismo defecto ya cometido en el Muro,
+ * E-79).
+ *
+ * `durationSeconds` solo se manda para audio; el backend exige que sea positivo si viene.
+ */
+export async function enviarMensajeConMedia(conversationId: string, params: {
+  tipo: 'IMAGE' | 'AUDIO' | 'VIDEO';
+  bucket: string;
+  ruta: string;
+  mime: string;
+  durationSeconds?: number;
+  text?: string;
+}): Promise<WireMensaje> {
+  const r = await apiFetch<unknown>(`/api/v1/chat/conversations/${conversationId}/messages`, {
+    method: 'POST',
+    body: {
+      type: params.tipo,
+      text: params.text ?? null,
+      mediaBucket: params.bucket,
+      mediaPath: params.ruta,
+      mediaMime: params.mime,
+      mediaDurationSeconds: params.durationSeconds ?? null,
+    },
+  });
+  return validarRespuesta<WireMensaje>(wireMensajeSchema, r,
+    'POST /api/v1/chat/conversations/{id}/messages (media)');
 }
 
 /** `GET /chat/members` — a quién se le puede escribir (#27). Directorio completo: todo usuario

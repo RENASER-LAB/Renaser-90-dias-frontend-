@@ -48,6 +48,10 @@ export interface WireMensaje {
   mediaMime: string | null;
   mediaBytes: number | null;
   mediaDurationSeconds: number | null;
+  /** URL de lectura ya firmada del adjunto; `null` si el mensaje no lleva media. Solo viene
+   * resuelta en `GET .../messages` — en el "último mensaje" de `GET /conversations` viaja `null`
+   * a propósito, igual que `senderName` (ver javadoc de `MensajeResponse` en el backend). */
+  mediaUrl: string | null;
   hidden: boolean;
   replyToId: string | null;
   replyTo: WireReplyPreview | null;
@@ -67,6 +71,18 @@ export interface WireMensajesPage {
   messages: WireMensaje[];
   nextCursor: string | null;
   hasMore: boolean;
+}
+
+/**
+ * `UrlSubidaMediaChatResponse` — `POST /conversations/{id}/media/upload-url`.
+ *
+ * `ruta` es la clave del objeto en S3 y es lo que hay que devolver después en
+ * `mediaPath` al crear el mensaje. `uploadUrl` es la URL firmada del `PUT` y NO se guarda: vence.
+ */
+export interface ChatUrlSubida {
+  uploadUrl: string;
+  bucket: string;
+  ruta: string;
 }
 
 /** `MiembroResponse` — fila del directorio (`GET /chat/members`) o del roster GLOBAL

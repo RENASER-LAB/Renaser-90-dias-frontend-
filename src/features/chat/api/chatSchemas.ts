@@ -45,6 +45,7 @@ export const wireMensajeSchema = z
     mediaMime: z.string().nullable(),
     mediaBytes: z.number().nullable(),
     mediaDurationSeconds: z.number().nullable(),
+    mediaUrl: z.string().nullable(),
     hidden: z.boolean(),
     replyToId: z.string().nullable(),
     replyTo: wireReplyPreviewSchema.nullable(),
@@ -84,6 +85,11 @@ export const wireMiembrosPageSchema = z
     members: z.array(wireMiembroSchema),
     nextCursor: z.string().nullable(),
   })
+  .passthrough();
+
+/** `UrlSubidaMediaChatResponse` (`ChatMediaController.urlDeSubida`). */
+export const urlSubidaChatSchema = z
+  .object({ uploadUrl: z.string(), bucket: z.string(), ruta: z.string() })
   .passthrough();
 
 /**

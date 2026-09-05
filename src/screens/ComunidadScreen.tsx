@@ -38,6 +38,11 @@ import { CursoPortada } from '../features/academy/components/CursoPortada';
 import { useLeccionDetalle } from '../features/academy/hooks/useLeccionDetalle';
 import { LeccionVideoPlayer } from '../features/academy/components/LeccionVideoPlayer';
 import { useChatConversaciones } from '../features/chat/hooks/useChatConversaciones';
+import { useEnvioMediaChat } from '../features/chat/hooks/useEnvioMediaChat';
+import { BurbujaAudioChat } from '../features/chat/components/BurbujaAudioChat';
+import { mapearMensaje } from '../features/chat/api/chatMappers';
+import type { WireMensaje } from '../features/chat/types/chat.types';
+import { marcarChatMontado } from '../features/renasia/state/chatEnPantalla';
 import { useTicketsMentor } from '../features/tickets/hooks/useTicketsMentor';
 import { useRanking } from '../features/ranking/hooks/useRanking';
 import { ApiError, mensajeDeError } from '../services/http/apiClient';
@@ -173,7 +178,19 @@ export interface LeaderboardUser {
 // =========================================================================
 // TIPOS: ATENCIÓN PERSONALIZADA & CHATS (TIPO WHATSAPP)
 // =========================================================================
-export type ChatMessageType = 'text' | 'audio' | 'image_grid' | 'video' | 'gif';
+/**
+ * Los mismos cinco tipos que `tipo_mensaje` en la base, menos SISTEMA (que se pinta como texto).
+ * `gif` se retiró: no existía del lado del backend — era una burbuja local con un emoji grande
+ * que solo veía quien la mandaba y desaparecía al recargar. El chat ahora manda fotos y notas de
+ * voz reales, que es lo que se esperaba de esos botones.
+ */
+export type ChatMessageType = 'text' | 'audio' | 'image_grid' | 'video';
+
+/** "0:07", "1:24" — el cronómetro de la grabación en curso, sin depender de una librería. */
+function formatearSegundos(segundos: number): string {
+  const enteros = Math.max(0, Math.floor(segundos));
+  return `${Math.floor(enteros / 60)}:${(enteros % 60).toString().padStart(2, '0')}`;
+}
 
 export interface ChatMessage {
   id: string;
@@ -186,8 +203,9 @@ export interface ChatMessage {
   text?: string;
   audioDuration?: string;
   mediaList?: string[];
-  gifTitle?: string;
-  gifIcon?: string;
+  /** URL de lectura ya firmada del adjunto (`MensajeResponse.mediaUrl`). Es lo que se le pasa a
+   * `<Image>` o al reproductor: la ruta cruda de S3 que se guarda en la base no se puede abrir. */
+  mediaUrl?: string;
   status?: 'sent' | 'delivered' | 'read';
 }
 
@@ -316,15 +334,6 @@ const GROUP_MEMBERS: GroupMember[] = [
 // `useChatConversaciones` (GET /api/v1/chat/conversations). `GROUP_MEMBERS` sigue mock (ver nota
 // junto a su declaración, más arriba): el backend no expone los campos que ese roster necesita.
 
-const GIF_OPTIONS = [
-  { icon: '🔥', title: 'VICTORIA' },
-  { icon: '👑', title: 'REY SOMÁTICO' },
-  { icon: '💪', title: 'FUERZA' },
-  { icon: '🧘', title: 'PAZ TOTAL' },
-  { icon: '⚡', title: 'ENERGÍA' },
-  { icon: '🎯', title: 'FOCO 100%' },
-];
-
 const SOPORTE: { icon: IconName; label: string }[] = [
   { icon: 'clock', label: 'Eventos &\nExperiencias' },
   { icon: 'stack', label: 'Recursos\nExclusivos' },
@@ -412,8 +421,9 @@ export default function ComunidadScreen() {
   const [groupInfoVisible, setGroupInfoVisible] = useState(false);
   const [selectedMemberProfile, setSelectedMemberProfile] = useState<GroupMember | null>(null);
   const [chatInputText, setChatInputText] = useState('');
-  const [gifSelectorVisible, setGifSelectorVisible] = useState(false);
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
+  /** Foto de chat abierta a pantalla completa; `null` si no hay ninguna. */
+  const [fotoChatAmpliada, setFotoChatAmpliada] = useState<string | null>(null);
 
   // Estados del Muro Social — `posts` sale del backend real (GET /api/v1/wall) a través de
   // `useWallFeed`; `setPosts` queda expuesto para las interacciones que el backend todavía no
@@ -773,12 +783,12 @@ export default function ComunidadScreen() {
       setSelectedMemberProfile(null);
       return true;
     }
-    if (groupInfoVisible) {
-      setGroupInfoVisible(false);
+    if (fotoChatAmpliada) {
+      setFotoChatAmpliada(null);
       return true;
     }
-    if (gifSelectorVisible) {
-      setGifSelectorVisible(false);
+    if (groupInfoVisible) {
+      setGroupInfoVisible(false);
       return true;
     }
     if (activeChat !== null) {
@@ -814,7 +824,17 @@ export default function ComunidadScreen() {
       return true;
     }
     return false;
-  }, shareSheetPost !== null || modalNuevoTicketVisible || inAtencionPersonalizada || inEventosExperiencias || inExclusiveResources || selectedCourse !== null || fullScreenLesson !== null || createPostModalVisible || reactionsModalVisible || activeChat !== null || groupInfoVisible || selectedMemberProfile !== null);
+  }, shareSheetPost !== null || modalNuevoTicketVisible || inAtencionPersonalizada || inEventosExperiencias || inExclusiveResources || selectedCourse !== null || fullScreenLesson !== null || createPostModalVisible || reactionsModalVisible || activeChat !== null || groupInfoVisible || selectedMemberProfile !== null || fotoChatAmpliada !== null);
+
+  /**
+   * Mientras la sala de chat esté abierta, se esconde el botón flotante del acompañante: se monta
+   * justo encima de la barra de escribir y tapa el botón de enviar. Es la misma señal que ya usaba
+   * `ChatDelCurso` (ver `renasia/state/chatEnPantalla.ts`), no un mecanismo nuevo.
+   */
+  useEffect(() => {
+    if (!inAtencionPersonalizada || activeChat === null || groupInfoVisible) return;
+    return marcarChatMontado();
+  }, [inAtencionPersonalizada, activeChat, groupInfoVisible]);
 
   // =========================================================================
   // HANDLERS
@@ -1031,83 +1051,52 @@ export default function ComunidadScreen() {
   };
 
   /**
-   * Audio/GIF/foto/video quedan SOLO local (como en el diseño original, sin backend detrás): no
-   * existe endpoint de subida de medios para chat (a diferencia del Muro, `POST
-   * /wall/media/upload-url`), así que no hay de dónde sacar un `mediaBucket`/`mediaPath` real —
-   * inventarlo violaría el contrato. El texto SÍ es real, ver `handleEnviarTextoReal`.
+   * Un mensaje recién creado por el backend entra a la conversación abierta y al resumen de la
+   * lista. Se usa para foto y audio; el texto tiene su propio camino (`handleEnviarTextoReal`),
+   * que ya venía resuelto.
+   *
+   * <p>Antes acá vivía un `handleSendChatMessage` que, para todo lo que no fuera texto, fabricaba
+   * una burbuja local con contenido inventado ("Evidencia_1.jpg", "0:28", emisor "Kelin Arango")
+   * y la agregaba a la pantalla sin hablar con nadie: se veía enviado, no llegaba a ningún lado y
+   * desaparecía al recargar. No era un defecto del cliente — el backend era el único módulo sin
+   * endpoint de subida, y esto era el parche. Con `POST /conversations/{id}/media/upload-url` ya
+   * no hace falta parche.
    */
-  const handleSendChatMessage = (
-    type: ChatMessageType = 'text',
-    extra?: { text?: string; mediaList?: string[]; gifTitle?: string; gifIcon?: string }
-  ) => {
-    if (!activeChat) return;
-    if (type === 'text') {
-      void handleEnviarTextoReal();
-      return;
-    }
-
-    let newMsg: ChatMessage;
-    const nowTime = 'Justo ahora';
-
-    if (type === 'audio') {
-      newMsg = {
-        id: `msg_${Date.now()}`,
-        sender: 'Kelin Arango',
-        avatar: '🦅',
-        isMe: true,
-        time: nowTime,
-        type: 'audio',
-        audioDuration: '0:28',
-        text: 'Nota de voz enviada',
-        status: 'read',
+  const agregarMensajeEnviado = useCallback((wire: WireMensaje) => {
+    const mensaje = mapearMensaje(wire, user?.id ?? null);
+    setActiveChat(prev => {
+      if (!prev) return prev;
+      const actualizada = {
+        ...prev,
+        messages: [...prev.messages, mensaje],
+        lastMessage: mensaje.text || 'Elemento multimedia',
+        lastTime: mensaje.time,
       };
-    } else if (type === 'gif') {
-      newMsg = {
-        id: `msg_${Date.now()}`,
-        sender: 'Kelin Arango',
-        avatar: '🦅',
-        isMe: true,
-        time: nowTime,
-        type: 'gif',
-        gifTitle: extra?.gifTitle || 'VICTORIA',
-        gifIcon: extra?.gifIcon || '🔥',
-        status: 'read',
-      };
-      setGifSelectorVisible(false);
-    } else if (type === 'image_grid') {
-      newMsg = {
-        id: `msg_${Date.now()}`,
-        sender: 'Kelin Arango',
-        avatar: '🦅',
-        isMe: true,
-        time: nowTime,
-        type: 'image_grid',
-        text: extra?.text || 'Evidencia fotográfica adjunta',
-        mediaList: extra?.mediaList || ['📷 Evidencia_1.png', '📷 Evidencia_2.png'],
-        status: 'read',
-      };
-    } else {
-      newMsg = {
-        id: `msg_${Date.now()}`,
-        sender: 'Kelin Arango',
-        avatar: '🦅',
-        isMe: true,
-        time: nowTime,
-        type: 'video',
-        text: '▶ Video de sesión somática',
-        status: 'read',
-      };
-    }
+      setConversations(anteriores =>
+        anteriores.map(cItem => (cItem.id === actualizada.id ? actualizada : cItem)));
+      return actualizada;
+    });
+  }, [user?.id]);
 
-    const updated = {
-      ...activeChat,
-      messages: [...activeChat.messages, newMsg],
-      lastMessage: newMsg.text || 'Elemento multimedia',
-      lastTime: nowTime,
-    };
+  const {
+    enviando: enviandoMedia,
+    grabando,
+    segundosGrabados,
+    enviarFoto,
+    alternarGrabacion,
+  } = useEnvioMediaChat(activeChat?.id ?? null, agregarMensajeEnviado);
 
-    setActiveChat(updated);
-    setConversations(prev => prev.map(cItem => (cItem.id === updated.id ? updated : cItem)));
+  /**
+   * La cámara y la galería son dos permisos distintos y dos intenciones distintas, así que se
+   * pregunta en vez de elegir por la persona — igual que hace WhatsApp con el clip.
+   */
+  const handleAdjuntarFoto = () => {
+    if (enviandoMedia || grabando) return;
+    Alert.alert('Enviar una foto', '¿De dónde la sacamos?', [
+      { text: 'Cámara', onPress: () => void enviarFoto('camara') },
+      { text: 'Galería', onPress: () => void enviarFoto('galeria') },
+      { text: 'Cancelar', style: 'cancel' },
+    ]);
   };
 
   // Sigue local-only, sin backend: `GROUP_MEMBERS` es mock (ver nota junto a su declaración), así
@@ -3107,48 +3096,46 @@ export default function ComunidadScreen() {
                   </View>
                 )}
 
-                {/* Mensaje de Audio de Voz */}
+                {/*
+                  Nota de voz. `mediaUrl` es la URL firmada que devuelve el backend; sin ella
+                  (mensajes viejos, o un adjunto que no se pudo firmar) se muestra la burbuja
+                  apagada en vez de un botón que no haría nada al tocarlo.
+                */}
                 {msg.type === 'audio' && (
-                  <View
-                    style={[
-                      styles.audioBubbleBox,
-                      {
-                        backgroundColor: msg.isMe ? c.cardBgAlt : c.cardBg,
-                        borderColor: c.gold,
-                      },
-                    ]}
-                  >
-                    <Pressable
-                      onPress={() => setPlayingAudioId(prev => (prev === msg.id ? null : msg.id))}
-                      style={[styles.audioPlayBtn, { backgroundColor: c.gold }]}
+                  msg.mediaUrl ? (
+                    <BurbujaAudioChat
+                      uri={msg.mediaUrl}
+                      duracion={msg.audioDuration}
+                      esMio={msg.isMe}
+                      colores={c}
+                      estilos={{ caja: styles.audioBubbleBox, boton: styles.audioPlayBtn }}
+                      activo={playingAudioId === msg.id}
+                      alActivar={() => setPlayingAudioId(msg.id)}
+                    />
+                  ) : (
+                    <View
+                      style={[
+                        styles.audioBubbleBox,
+                        { backgroundColor: msg.isMe ? c.cardBgAlt : c.cardBg, borderColor: c.border },
+                      ]}
                     >
-                      <Text style={{ fontSize: 11, color: '#1E1B18', fontWeight: 'bold' }}>
-                        {playingAudioId === msg.id ? '⏸' : '▶'}
-                      </Text>
-                    </Pressable>
-
-                    <View style={{ flex: 1, gap: 2 }}>
-                      <View style={{ flexDirection: 'row', gap: 2, alignItems: 'center' }}>
-                        {[8, 14, 10, 16, 12, 14, 8, 12, 10].map((h, i) => (
-                          <View
-                            key={i}
-                            style={{
-                              width: 3,
-                              height: h,
-                              backgroundColor: playingAudioId === msg.id ? c.gold : c.border,
-                              borderRadius: 1.5,
-                            }}
-                          />
-                        ))}
+                      <View style={[styles.audioPlayBtn, { backgroundColor: c.border }]}>
+                        <Text style={{ fontSize: 11, color: c.textSoft }}>▶</Text>
                       </View>
-                      <Text style={[t.micro, { color: c.textSoft, fontSize: 9 }]}>
-                        {msg.audioDuration || '0:35'}
+                      <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5, flex: 1 }]}>
+                        Audio no disponible
                       </Text>
                     </View>
-                  </View>
+                  )
                 )}
 
-                {/* Mensaje de Galería de Imágenes */}
+                {/*
+                  Foto. Antes acá se pintaba un recuadro con el NOMBRE del archivo dentro
+                  ("📷 Evidencia_1.jpg"): no había ninguna imagen que mostrar, porque el backend
+                  devolvía la clave del objeto en S3 y no una URL que se pudiera abrir. Ahora
+                  viene `mediaUrl` ya firmada y se muestra la foto. El recuadro con texto queda
+                  solo como respaldo para los mensajes viejos, que sí tienen ese contenido.
+                */}
                 {msg.type === 'image_grid' && (
                   <View
                     style={[
@@ -3160,36 +3147,27 @@ export default function ComunidadScreen() {
                       },
                     ]}
                   >
-                    <View style={{ flexDirection: 'row', gap: 6 }}>
-                      {msg.mediaList?.map((m, idx) => (
-                        <View key={idx} style={[styles.chatMediaThumbnail, { borderColor: c.border, backgroundColor: c.bg }]}>
-                          <Text style={[t.micro, { color: c.gold, fontSize: 9.5, fontWeight: '700' }]}>{m}</Text>
-                        </View>
-                      ))}
-                    </View>
+                    {msg.mediaUrl ? (
+                      <Pressable onPress={() => setFotoChatAmpliada(msg.mediaUrl ?? null)}>
+                        <Image
+                          source={{ uri: msg.mediaUrl }}
+                          style={styles.chatFoto}
+                          resizeMode="cover"
+                          accessibilityLabel="Foto enviada por chat"
+                        />
+                      </Pressable>
+                    ) : (
+                      <View style={{ flexDirection: 'row', gap: 6 }}>
+                        {msg.mediaList?.map((m, idx) => (
+                          <View key={idx} style={[styles.chatMediaThumbnail, { borderColor: c.border, backgroundColor: c.bg }]}>
+                            <Text style={[t.micro, { color: c.gold, fontSize: 9.5, fontWeight: '700' }]}>{m}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
                     {msg.text && (
                       <Text style={[t.body, { color: c.text, fontSize: 12, marginTop: 2 }]}>{msg.text}</Text>
                     )}
-                  </View>
-                )}
-
-                {/* Mensaje de GIF Somático */}
-                {msg.type === 'gif' && (
-                  <View
-                    style={[
-                      styles.chatBubble,
-                      {
-                        backgroundColor: '#1E1B18',
-                        borderColor: c.gold,
-                        alignItems: 'center',
-                        padding: 12,
-                      },
-                    ]}
-                  >
-                    <Text style={{ fontSize: 32 }}>{msg.gifIcon}</Text>
-                    <Text style={[t.micro, { color: c.gold, fontWeight: '800', fontSize: 10, marginTop: 4 }]}>
-                      {msg.gifTitle}
-                    </Text>
                   </View>
                 )}
 
@@ -3202,48 +3180,78 @@ export default function ComunidadScreen() {
             ))}
           </ScrollView>
 
-          {/* Barra Inferior de Entrada (Tipo WhatsApp) */}
+          {/*
+            Barra de escribir, con la gramática de WhatsApp: mientras se graba, la barra entera
+            pasa a ser el estado de la grabación (cronómetro corriendo y un solo botón para
+            cortar y enviar) en vez de seguir mostrando controles que en ese momento no hacen
+            nada. Es lo que separa "grabar" de "escribir" sin explicárselo a nadie.
+          */}
           <View style={[styles.chatInputBar, { borderTopColor: c.divider, backgroundColor: c.cardBg }]}>
-            <Pressable
-              onPress={() => setGifSelectorVisible(true)}
-              style={[styles.mediaOptionBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
-            >
-              <Text style={{ fontSize: 11, fontWeight: '800', color: c.gold }}>GIF</Text>
-            </Pressable>
+            {grabando ? (
+              <>
+                <View style={[styles.grabandoPunto, { backgroundColor: '#f28e8e' }]} />
+                <Text style={[t.body, { color: c.text, fontSize: 12.5, flex: 1 }]}>
+                  Grabando… {formatearSegundos(segundosGrabados)}
+                </Text>
+                <Pressable
+                  onPress={() => void alternarGrabacion()}
+                  style={[styles.sendBtnGold, { backgroundColor: c.gold }]}
+                  accessibilityLabel="Terminar y enviar la nota de voz"
+                >
+                  <Text style={{ color: '#1E1B18', fontWeight: '900', fontSize: 13 }}>➤</Text>
+                </Pressable>
+              </>
+            ) : (
+              <>
+                <Pressable
+                  onPress={handleAdjuntarFoto}
+                  disabled={enviandoMedia}
+                  style={[styles.mediaOptionBtn, {
+                    borderColor: c.border,
+                    backgroundColor: c.cardBgAlt,
+                    opacity: enviandoMedia ? 0.4 : 1,
+                  }]}
+                  accessibilityLabel="Enviar una foto"
+                >
+                  <Text style={{ fontSize: 15 }}>📷</Text>
+                </Pressable>
 
-            <Pressable
-              onPress={() =>
-                handleSendChatMessage('image_grid', {
-                  text: 'Evidencia fotográfica sellada',
-                  mediaList: ['📷 Evidencia_1.jpg', '📷 Evidencia_2.jpg'],
-                })
-              }
-              style={[styles.mediaOptionBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
-            >
-              <Text style={{ fontSize: 13 }}>📷</Text>
-            </Pressable>
+                <TextInput
+                  value={chatInputText}
+                  onChangeText={setChatInputText}
+                  placeholder="Escribe un mensaje..."
+                  placeholderTextColor={c.textSoft}
+                  style={[styles.textInputChat, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.text }]}
+                />
 
-            <Pressable
-              onPress={() => handleSendChatMessage('audio')}
-              style={[styles.mediaOptionBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
-            >
-              <Text style={{ fontSize: 13 }}>🎙</Text>
-            </Pressable>
-
-            <TextInput
-              value={chatInputText}
-              onChangeText={setChatInputText}
-              placeholder="Escribe un mensaje..."
-              placeholderTextColor={c.textSoft}
-              style={[styles.textInputChat, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.text }]}
-            />
-
-            <Pressable
-              onPress={() => handleSendChatMessage('text')}
-              style={[styles.sendBtnGold, { backgroundColor: c.gold }]}
-            >
-              <Text style={{ color: '#1E1B18', fontWeight: '900', fontSize: 13 }}>➤</Text>
-            </Pressable>
+                {/*
+                  Un solo botón a la derecha, como en WhatsApp: micrófono cuando no hay nada
+                  escrito, flecha de enviar en cuanto hay texto. Así el gesto de mandar es
+                  siempre el mismo y no hay dos botones compitiendo por el mismo lugar.
+                */}
+                {chatInputText.trim() ? (
+                  <Pressable
+                    onPress={() => void handleEnviarTextoReal()}
+                    style={[styles.sendBtnGold, { backgroundColor: c.gold }]}
+                    accessibilityLabel="Enviar mensaje"
+                  >
+                    <Text style={{ color: '#1E1B18', fontWeight: '900', fontSize: 13 }}>➤</Text>
+                  </Pressable>
+                ) : (
+                  <Pressable
+                    onPress={() => void alternarGrabacion()}
+                    disabled={enviandoMedia}
+                    style={[styles.sendBtnGold, {
+                      backgroundColor: c.gold,
+                      opacity: enviandoMedia ? 0.4 : 1,
+                    }]}
+                    accessibilityLabel="Grabar una nota de voz"
+                  >
+                    <Text style={{ fontSize: 14 }}>🎙</Text>
+                  </Pressable>
+                )}
+              </>
+            )}
           </View>
         </View>
       )}
@@ -3336,39 +3344,29 @@ export default function ComunidadScreen() {
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL: SELECTOR DE GIFS SOMÁTICOS                                         */}
+      {/* MODAL: FOTO DE CHAT A PANTALLA COMPLETA                                   */}
       {/* ========================================================================= */}
+      {/*
+        Modal propio y no `ImageViewerModal`: aquél es del Muro y arrastra reacciones, comentarios
+        y `postId`, nada de lo cual existe en un mensaje de chat. Acá alcanza con ver la foto
+        grande y cerrar, que es exactamente lo que hace WhatsApp.
+      */}
       <Modal
-        visible={gifSelectorVisible}
+        visible={fotoChatAmpliada !== null}
         transparent
         animationType="fade"
-        onRequestClose={() => setGifSelectorVisible(false)}
+        onRequestClose={() => setFotoChatAmpliada(null)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.gifModalBox, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: c.divider, paddingBottom: 8 }}>
-              <Text style={[t.cardTitle, { color: c.gold, fontSize: 12 }]}>GIFS SOMÁTICOS DE TRIBU</Text>
-              <Pressable onPress={() => setGifSelectorVisible(false)}>
-                <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>✕ Cerrar</Text>
-              </Pressable>
-            </View>
-
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'center', paddingTop: 10 }}>
-              {GIF_OPTIONS.map((g, idx) => (
-                <Pressable
-                  key={idx}
-                  onPress={() => handleSendChatMessage('gif', { gifTitle: g.title, gifIcon: g.icon })}
-                  style={[styles.gifItemCard, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
-                >
-                  <Text style={{ fontSize: 24 }}>{g.icon}</Text>
-                  <Text style={[t.micro, { color: c.textStrong, fontWeight: '700', fontSize: 9 }]}>
-                    {g.title}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-        </View>
+        <Pressable style={styles.visorFotoFondo} onPress={() => setFotoChatAmpliada(null)}>
+          {fotoChatAmpliada && (
+            <Image
+              source={{ uri: fotoChatAmpliada }}
+              style={styles.visorFotoImagen}
+              resizeMode="contain"
+              accessibilityLabel="Foto del chat a pantalla completa"
+            />
+          )}
+        </Pressable>
       </Modal>
 
       {/* ========================================================================= */}
@@ -4263,6 +4261,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  /** El punto que late al lado del cronómetro mientras se graba. */
+  grabandoPunto: {
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
+  },
+  /** Foto recibida por chat. Alto fijo y `cover`: una tira de fotos de alturas distintas hace
+   * saltar el scroll cada vez que carga una, y es lo que evita WhatsApp con el mismo recurso. */
+  chatFoto: {
+    width: 200,
+    height: 200,
+    borderRadius: 12,
+  },
+  visorFotoFondo: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  visorFotoImagen: {
+    width: '100%',
+    height: '80%',
+  },
   chatMediaThumbnail: {
     borderWidth: 1,
     borderRadius: 8,
@@ -4339,19 +4360,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.8)',
     justifyContent: 'center',
     padding: 20,
-  },
-  gifModalBox: {
-    borderWidth: 1.5,
-    borderRadius: 20,
-    padding: 16,
-  },
-  gifItemCard: {
-    width: 80,
-    height: 70,
-    borderWidth: 1,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   profileModalCard: {
     borderWidth: 1.5,

@@ -99,7 +99,15 @@ export function mapearMensaje(wire: WireMensaje, actorId: string | null | undefi
     type: mapearTipoMensaje(wire.type),
     text: textoPorTipo(wire),
     audioDuration: wire.mediaDurationSeconds != null ? formatearDuracion(wire.mediaDurationSeconds) : undefined,
-    mediaList: wire.type === 'IMAGE' ? [wire.text?.trim() || '📷 Imagen adjunta'] : undefined,
+    // La URL firmada es lo que hace que la foto se vea y el audio suene. Puede venir `null` en el
+    // "último mensaje" de la lista de conversaciones (ahí el backend no la firma a propósito),
+    // así que la burbuja tiene que saber vivir sin ella — no es un error.
+    mediaUrl: wire.mediaUrl ?? undefined,
+    // Respaldo para los mensajes sin URL firmada: se sigue rotulando el adjunto en vez de dejar
+    // la burbuja vacía. Con `mediaUrl` presente la burbuja muestra la foto y esto no se usa.
+    mediaList: wire.type === 'IMAGE' && !wire.mediaUrl
+      ? [wire.text?.trim() || '📷 Imagen adjunta']
+      : undefined,
     status: 'read',
   };
 }

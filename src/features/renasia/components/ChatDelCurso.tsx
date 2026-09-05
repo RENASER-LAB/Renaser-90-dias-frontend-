@@ -5,7 +5,7 @@ import { Icon } from '../../../components/Icon';
 import { useTheme } from '../../../theme/ThemeContext';
 import { NOMBRE_TUTOR_CURSOS } from '../data/agentes';
 import { RenasiaPanel } from '../screens/RenasiaPanel';
-import { marcarChatDeCursoMontado } from '../state/chatDeCursoVisible';
+import { marcarChatMontado } from '../state/chatEnPantalla';
 
 /**
  * SPARKIE, el tutor de cursos, DENTRO de un curso de "Recursos Exclusivos" (D-99, D-102): un
@@ -38,7 +38,7 @@ export function ChatDelCurso({ cursoId, cursoTitulo, leccionTitulo, diaPrograma 
 
   // D-101: mientras este boton exista en pantalla, el flotante del acompanante se esconde. Dos
   // entradas a dos asistentes en la misma vista confunden, y dentro de un curso la correcta es esta.
-  useEffect(() => marcarChatDeCursoMontado(), []);
+  useEffect(() => marcarChatMontado(), []);
 
   // D-100: solo el QUE (curso, leccion, dia). El COMO responder vive en el prompt de sistema del
   // backend, que es donde el ambito termina — no se manda como parte de la pregunta.
