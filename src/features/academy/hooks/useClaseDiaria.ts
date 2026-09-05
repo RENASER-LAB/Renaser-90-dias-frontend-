@@ -24,15 +24,26 @@ export function useClaseDiaria() {
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
 
   /** Pide la clase de hoy. Se llama al abrir el modal. */
-  const abrir = useCallback(async () => {
+  /**
+   * Devuelve la clase ADEMÁS de guardarla en el estado.
+   *
+   * El estado sirve para pintar el modal; el valor devuelto sirve para DECIDIR. Quien abre el
+   * hábito necesita saber, en ese mismo instante, si la lección ya se vio — para llevar a la clase
+   * en vez de pedir un resumen de algo que la persona no miró. Leerlo del estado no sirve: en el
+   * render siguiente todavía es el valor viejo.
+   */
+  const abrir = useCallback(async (): Promise<ClaseDiariaApi | null> => {
     setCargando(true);
     setError(null);
     setErrorEnvio(null);
     try {
-      setClase(await claseDiariaApi.obtenerClaseDiaria());
+      const recibida = await claseDiariaApi.obtenerClaseDiaria();
+      setClase(recibida);
+      return recibida;
     } catch (e) {
       setClase(null);
       setError(mensajeDeError(e, 'No pudimos encontrar tu clase de hoy'));
+      return null;
     } finally {
       setCargando(false);
     }

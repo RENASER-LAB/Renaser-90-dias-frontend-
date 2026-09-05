@@ -176,6 +176,8 @@ const claseDiariaSchema = z
     cursoTitulo: z.string().optional(),
     leccionId: z.string().optional(),
     leccionTitulo: z.string().optional(),
+    // Solo viene con status 'available'; en las otras ramas el backend lo omite.
+    leccionCompletada: z.boolean().optional(),
   })
   .passthrough();
 

@@ -178,6 +178,17 @@ export interface ClaseDiariaApi {
   cursoTitulo?: string;
   leccionId?: string;
   leccionTitulo?: string;
+  /**
+   * ¿El aprendiz YA vio la clase de hoy?
+   *
+   * Viene solo con `status: 'available'` — en las otras ramas no hay lección de la cual preguntar,
+   * y el backend omite el campo en vez de mentir un `false` (`@JsonInclude(NON_NULL)`). Por eso es
+   * opcional: `undefined` significa "no aplica", no "no la vio".
+   *
+   * Decide el flujo del hábito de Clase Diaria: sin ver, se lleva a la lección; ya vista, se pide
+   * el resumen.
+   */
+  leccionCompletada?: boolean;
 }
 
 /** `CompletarClaseDiariaResponse` — POST /api/v1/classroom/clase-diaria. */

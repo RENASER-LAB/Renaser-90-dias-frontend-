@@ -264,11 +264,31 @@ export default function TrainingScreen() {
     irAPestana('Comunidad', { abrirComposerMuro: true });
   };
 
-  /** Abre el modal de la Clase Diaria y pide, recien ahi, cual es la clase de hoy. */
-  const abrirClaseDiaria = (habit: HabitItem) => {
+  /**
+   * Tocar el hábito de la Clase Diaria lleva PRIMERO a ver la clase, no a escribir sobre ella.
+   *
+   * Antes abría directo el formulario "¿qué entendiste de la clase?" con la lección reducida a un
+   * enlace arriba. O sea, pedía el resumen de algo que la persona todavía no había visto: bastaba
+   * escribir quince letras para completar el hábito sin mirar nada, y quien sí quería verla tenía
+   * que descubrir que ese recuadro era un enlace.
+   *
+   * Ahora decide con `leccionCompletada`, que el backend expone desde 2026-09-05:
+   *  - lección sin ver  -> se navega a la lección; el resumen no se pide todavía;
+   *  - lección ya vista -> se abre el resumen, porque el paso 1 ya está cumplido;
+   *  - hábito ya cerrado -> el modal muestra en solo lectura lo que escribió (no se lo manda de
+   *    vuelta a la clase por algo que ya terminó).
+   *
+   * El modal se abre igual antes del `await` para que el toque tenga respuesta inmediata: si la
+   * decisión es ir a la lección, `irALaLeccionDelDia` lo cierra.
+   */
+  const abrirClaseDiaria = async (habit: HabitItem) => {
     setHabitoClaseDiaria(habit);
     setClaseDiariaVisible(true);
-    void claseDiaria.abrir();
+    const clase = await claseDiaria.abrir();
+    const yaEscribioElResumen = Boolean(habit.respuestaTexto?.trim());
+    if (!yaEscribioElResumen && clase?.status === 'available' && clase.leccionCompletada === false) {
+      irALaLeccionDelDia(clase);
+    }
   };
 
   const cerrarClaseDiaria = () => {
@@ -315,7 +335,7 @@ export default function TrainingScreen() {
     const habit = habits.find(h => h.id === id);
     if (habit && !habit.done) {
       if (habit.systemKey === CLAVE_SISTEMA_CLASE_DIARIA) {
-        abrirClaseDiaria(habit);
+        void abrirClaseDiaria(habit);
         return;
       }
       if (habit.systemKey === CLAVE_SISTEMA_POST_COMUNIDAD) {
@@ -350,7 +370,7 @@ export default function TrainingScreen() {
       return;
     }
     if (habit.systemKey === CLAVE_SISTEMA_CLASE_DIARIA) {
-      abrirClaseDiaria(habit);
+      void abrirClaseDiaria(habit);
       return;
     }
     // El post diario no se evidencia con un archivo: se evidencia publicando. El backend lo

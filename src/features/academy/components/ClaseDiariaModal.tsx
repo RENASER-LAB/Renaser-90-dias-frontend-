@@ -176,7 +176,9 @@ export function ClaseDiariaModal({
 
             {!cargando && !error && disponible && clase && (
               <>
-                {/* Paso 1: ir a verla. La clase se mira en Cursos, no acá dentro. */}
+                {/* La clase ya se vio: al tocar el habito sin verla, TrainingScreen navega
+                    directo a la leccion y este modal no llega a abrirse (ver `abrirClaseDiaria`).
+                    Este enlace queda como acceso para repasarla, no como el paso previo. */}
                 <Pressable
                   onPress={() => onIrALaLeccion(clase)}
                   style={[
@@ -194,7 +196,7 @@ export function ClaseDiariaModal({
                       {clase.leccionTitulo}
                     </Text>
                     <Text style={[t.micro, { color: c.textSoft, fontSize: 12 }]}>
-                      Tocá para ver la clase en Cursos
+                      Toca para volver a ver la clase
                     </Text>
                   </View>
                   <Text style={[t.cardTitle, { color: c.gold, fontSize: 20 }]}>›</Text>
@@ -224,7 +226,7 @@ export function ClaseDiariaModal({
                       ¿QUÉ ENTENDISTE DE LA CLASE?
                     </Text>
                     <Text style={[t.body, { color: c.textSoft, fontSize: 13 }]}>
-                      Escribí con tus palabras lo que te llevás de hoy. Mínimo{' '}
+                      Escribe con tus palabras lo que te llevas de hoy. Mínimo{' '}
                       {RESUMEN_MIN_LENGTH} letras.
                     </Text>
                     <TextInput
