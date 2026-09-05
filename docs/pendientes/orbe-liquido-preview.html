@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Orbe IA — Glass Liquid (vista previa)</title>
+<style>
+  :root {
+    --bg: #0C0B09; --panel: rgba(255,255,255,0.04); --bd: rgba(198,164,92,0.20);
+    --tx: #F6F4EE; --tx2: #C5BEB3; --gold: #C6A45C;
+  }
+  body.claro {
+    --bg: #FCFBF9; --panel: #FDFCFA; --bd: #E2DCD2;
+    --tx: #1E1B18; --tx2: #4A453D; --gold: #B2924F;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--tx);
+    font: 14px/1.5 -apple-system, "Segoe UI", system-ui, sans-serif;
+    padding: 24px; transition: background .3s;
+  }
+  h1 { font-size: 17px; font-weight: 600; margin: 0 0 2px; letter-spacing: .2px; }
+  .sub { color: var(--tx2); font-size: 12.5px; margin: 0 0 20px; max-width: 720px; }
+  .wrap { display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-start; }
+  .card {
+    background: var(--panel); border: 1px solid var(--bd); border-radius: 16px;
+    padding: 16px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .cap { font-size: 10.5px; letter-spacing: 1.6px; color: var(--gold); font-weight: 600; text-transform: uppercase; }
+  canvas { display: block; }
+  #grande { width: 320px; height: 320px; }
+  #real   { width: 34px;  height: 34px; }
+  .burbuja {
+    border: 1px solid var(--bd); border-radius: 16px; padding: 10px 14px;
+    display: flex; align-items: center; gap: 8px; max-width: 280px;
+    background: var(--panel);
+  }
+  .burbuja span { font-size: 12.5px; color: var(--tx2); }
+  .ctrls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 18px; }
+  button {
+    font: inherit; font-size: 12.5px; padding: 9px 15px; border-radius: 10px; cursor: pointer;
+    border: 1px solid var(--bd); background: transparent; color: var(--tx); transition: all .15s;
+  }
+  button:hover { border-color: var(--gold); }
+  button.on { background: var(--gold); border-color: var(--gold); color: #1A1509; font-weight: 600; }
+  body.claro button.on { color: #fff; }
+  .hud { font-size: 11.5px; color: var(--tx2); font-variant-numeric: tabular-nums; }
+  .hud b { color: var(--gold); font-weight: 600; }
+  .nota {
+    margin-top: 22px; font-size: 12px; color: var(--tx2); max-width: 720px;
+    border-left: 2px solid var(--bd); padding-left: 12px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Orbe IA — "Glass Liquid" / cinta de partículas</h1>
+<p class="sub">
+  Vista previa del shader que se integra en la app. Es el <b>mismo shader</b> que corre en React&nbsp;Native vía Skia
+  (SkSL); acá está traducido a GLSL&nbsp;ES&nbsp;3.0 para poder verlo en el navegador.
+  Transición <b>idle → thinking 220&nbsp;ms</b> (ease-out cúbico) y <b>thinking → idle 650&nbsp;ms</b> (smoothstep),
+  con los colores interpolados en <b>espacio lineal</b>.
+</p>
+
+<div class="ctrls">
+  <button id="bIdle">idle</button>
+  <button id="bThink">thinking</button>
+  <button id="bAuto" class="on">auto (alterna solo)</button>
+  <button id="bTema">tema claro / oscuro</button>
+  <span class="hud">estado&nbsp;<b id="hEstado">0.00</b> &nbsp;·&nbsp; <b id="hFps">– fps</b> &nbsp;·&nbsp; <b id="hBack">–</b></span>
+</div>
+
+<div class="wrap">
+  <div class="card">
+    <div class="cap">Ampliado ×9</div>
+    <canvas id="grande"></canvas>
+  </div>
+  <div class="card">
+    <div class="cap">Tamaño real en el chat</div>
+    <div class="burbuja">
+      <canvas id="real"></canvas>
+      <span>RENASIA está escribiendo…</span>
+    </div>
+    <div class="cap" style="margin-top:8px">Estados</div>
+    <div class="hud" style="line-height:1.9">
+      <b>idle</b> — flujo lento, cinta recogida, dorado apagado<br>
+      <b>thinking</b> — flujo rápido, cinta abierta, turbulencia y brillo altos
+    </div>
+  </div>
+</div>
+
+<p class="nota">
+  <b>Aviso de honestidad:</b> el código fuente original (WGSL + Metal) no llegó al agente que generó este archivo —
+  no estaba en el disco. Este shader es una <b>reconstrucción</b> a partir de la descripción escrita
+  ("Glass Liquid", estilo 24 <code>glsParticleRibbonFluid</code>, cinta de partículas, dos estados, tiempos y easing
+  de la transición, interpolación lineal de color). Si se aporta el archivo original, se reemplaza el cuerpo del
+  shader en un solo archivo (<code>orbeShader.ts</code>) y todo lo demás sigue igual.
+</p>
+
+<script>
+// =============================================================================
+//  Shader del orbe — fuente única de verdad de la MATEMÁTICA.
+//  Este GLSL y el SkSL de la app (src/features/renasia/components/orbe/orbeShader.ts)
+//  deben coincidir siempre. Diferencias de sintaxis, no de fórmula:
+//     GLSL: vec2/vec3/vec4, "#version 300 es", out fragColor
+//     SkSL: float2/float3/float4, half4 main(float2 fragCoord)
+// =============================================================================
+const FS = `#version 300 es
+precision highp float;
+
+uniform vec2  uPix;          // tamaño del lienzo en píxeles
+uniform float uFase;         // fase acumulada en JS (NO time*vel: evita saltos al cambiar de estado)
+uniform float uEstado;       // 0 = idle, 1 = thinking (ya suavizado por la transición)
+uniform vec3  uIdleA;        // color idle  A — ESPACIO LINEAL
+uniform vec3  uIdleB;        // color idle  B — ESPACIO LINEAL
+uniform vec3  uThinkA;       // color think A — ESPACIO LINEAL
+uniform vec3  uThinkB;       // color think B — ESPACIO LINEAL
+
+out vec4 fragColor;
+
+const float TAU = 6.28318530718;
+const float PI  = 3.14159265359;
+
+// --- parámetros de cada estado (no dependen del tema, por eso son constantes) ---
+const float I_DISP = 0.38, T_DISP = 1.00;   // apertura de la cinta
+const float I_TURB = 0.18, T_TURB = 0.85;   // turbulencia
+const float I_GRO  = 0.058, T_GRO = 0.078;  // grosor de partícula
+const float I_UMB  = 0.50, T_UMB  = 0.34;   // umbral de la superficie (metaball)
+const float I_BRI  = 0.62, T_BRI  = 1.00;   // brillo
+const float I_ESC  = 0.88, T_ESC  = 1.00;   // escala del orbe
+
+// El radio de influencia (gro*2.6) debe superar la separacion entre particulas
+// consecutivas (perimetro ~2.8 / POR_HEBRA = 0.078) o la cinta se abolla.
+const int   HEBRAS = 3;
+const int   POR_HEBRA = 36;
+const float GANANCIA = 0.60;                // lleva el pico del campo a ~1.0
+
+// sRGB -> lineal se hace en JS. Acá solo la vuelta.
+vec3 aSrgb(vec3 c) {
+  c = clamp(c, 0.0, 1.0);
+  return mix(c * 12.92, 1.055 * pow(c, vec3(1.0 / 2.4)) - 0.055, step(vec3(0.0031308), c));
+}
+
+// Posición 3D de una partícula sobre una hebra de la cinta.
+// k = 0..1 recorre la hebra; t = fase; h = índice de hebra.
+// Se devuelve xyz: z se usa como profundidad dentro del cristal.
+vec3 posCinta(float k, float t, float h, float disp, float turb) {
+  // El angulo incluye t: las particulas FLUYEN a lo largo del lazo, no giran en bloque.
+  float a = k * TAU + t;
+
+  // Lazo base: círculo sobre un plano inclinado. Una inclinación distinta por
+  // hebra hace que las cintas se CRUCEN. (Una Lissajous que recorre toda la
+  // esfera, en cambio, proyecta sobre el disco entero y lo rellena.)
+  float incl = 0.55 + 0.42 * h;
+  vec3 p = vec3(cos(a), sin(a) * cos(incl), sin(a) * sin(incl));
+
+  // Giro lento del plano: el lazo da vueltas en 3D dentro del cristal.
+  float g = t * 0.35 + h * 2.1;
+  p = vec3(p.x * cos(g) - p.z * sin(g), p.y, p.x * sin(g) + p.z * cos(g));
+
+  // Radio ondulado: fluido, no un anillo rígido.
+  float radio = 0.46 + disp * 0.18 * sin(a * 3.0 - t * 1.4 + h * 1.7);
+  p *= radio;
+
+  p.xy += turb * 0.07 * vec2(
+    sin(a * 5.0 + t * 2.1 + h),
+    cos(a * 4.0 - t * 1.7 + h)
+  );
+  return p;
+}
+
+void main() {
+  float s = clamp(uEstado, 0.0, 1.0);
+
+  float disp = mix(I_DISP, T_DISP, s);
+  float turb = mix(I_TURB, T_TURB, s);
+  float gro  = mix(I_GRO,  T_GRO,  s);
+  float umb  = mix(I_UMB,  T_UMB,  s);
+  float bri  = mix(I_BRI,  T_BRI,  s);
+  float esc  = mix(I_ESC,  T_ESC,  s);
+
+  vec2 uv = (gl_FragCoord.xy / uPix) * 2.0 - 1.0;
+  uv.y = -uv.y;               // Y hacia abajo, como en Skia
+  uv /= esc;
+
+  float r = length(uv);
+  float vidrio = 1.0 - smoothstep(0.90, 1.0, r);   // recorte esférico del cristal
+
+  // Refracción: pellizca las UV cerca del borde para que el fluido se vea DENTRO del vidrio.
+  float z = sqrt(max(0.0, 1.0 - min(r * r, 1.0)));
+  vec2 uvr = uv * (1.0 + 0.22 * (1.0 - z));
+
+  // --- campo de metaballs de la cinta de partículas ---
+  // Acumula también la profundidad ponderada, para sombrear por delante/por detrás.
+  float campo = 0.0;
+  float profAcum = 0.0;
+  for (int h = 0; h < HEBRAS; h++) {
+    float fase = uFase + float(h) * 0.7;
+    for (int i = 0; i < POR_HEBRA; i++) {
+      float k = (float(i) + 0.5) / float(POR_HEBRA);
+      vec3 p = posCinta(k, fase, float(h), disp, turb);
+      float prof = clamp(0.5 + 0.72 * p.z, 0.0, 1.0);   // 0 = al fondo, 1 = al frente
+      float w = gro * (0.78 + 0.22 * sin(k * PI)) * (0.80 + 0.20 * prof);
+      vec2 d = uvr - p.xy;
+      // Núcleo de SOPORTE COMPACTO (tipo Wyvill): vale exactamente 0 más allá de rad.
+      // Con el clásico w²/(d²+εw²) la cola 1/d² de 120 partículas suma un fondo
+      // constante que inunda el orbe entero y lo vuelve un disco lleno.
+      float rad = w * 2.6;
+      float q = max(0.0, 1.0 - dot(d, d) / (rad * rad));
+      float c = q * q * q;
+      c *= 0.45 + 0.55 * prof;                          // lo de atrás aporta menos
+      campo += c;
+      profAcum += c * prof;
+    }
+  }
+  profAcum /= max(campo, 1e-4);
+  campo *= GANANCIA;
+
+  float m      = smoothstep(umb - 0.18, umb + 0.18, campo);        // superficie del fluido
+  float filo   = smoothstep(umb + 0.42, umb + 0.02, campo) * m;    // realce del borde interno
+  float nucleo = smoothstep(umb + 0.30, umb + 0.85, campo);        // corazon denso: casi blanco
+  float aura   = smoothstep(umb * 0.10, umb, campo) * (1.0 - m);   // bloom alrededor de la cinta
+
+  // --- color: SIEMPRE en espacio lineal ---
+  float g = clamp(0.5 + 0.5 * (uvr.y * 0.75 + uvr.x * 0.35), 0.0, 1.0);
+  vec3 cA = mix(uIdleA, uThinkA, s);
+  vec3 cB = mix(uIdleB, uThinkB, s);
+  vec3 base = mix(cA, cB, g);
+
+  // --- vidrio: especular + fresnel sobre la normal de la esfera ---
+  vec3 N = vec3(uv, z);
+  vec3 L = normalize(vec3(-0.45, -0.62, 0.65));
+  float esp  = pow(max(dot(normalize(N), L), 0.0), 26.0);
+  float fres = pow(1.0 - z, 2.8);
+
+  // Cuerpo del cristal: un velo tenue y constante dentro de la esfera. Es lo que
+  // hace que se lea como "vidrio con líquido adentro" y no como partículas sueltas.
+  float cuerpo = 0.13 * bri;
+
+  // Profundidad: lo que va por detrás del cristal se apaga y se enfría.
+  float sombra = 0.42 + 0.58 * profAcum;
+
+  vec3 col = base * cuerpo * 0.45;                       // ambiente del interior
+  col += base * aura * 0.55 * sombra * bri;              // bloom: da cuerpo a la cinta
+  col += base * m * (0.90 + 0.70 * filo) * sombra * bri; // el fluido: lo dominante
+  col += mix(base, vec3(1.0), 0.30) * nucleo * 0.50 * bri; // corazon incandescente
+  col += vec3(1.0) * esp * 0.75;                         // especular del cristal
+  col += cB * fres * 0.35 * bri;                         // aro de Fresnel tenido
+
+  float alfa = clamp(cuerpo + m * 0.92 * sombra + aura * 0.28 * bri + nucleo * 0.30
+                   + filo * 0.20 + esp * 0.55 + fres * 0.30, 0.0, 1.0);
+  alfa *= vidrio;
+  col  *= vidrio;
+
+  vec3 srgb = aSrgb(col);
+  fragColor = vec4(srgb * alfa, alfa);   // premultiplicado, igual que exige Skia
+}`;
+
+const VS = `#version 300 es
+void main() {
+  vec2 p = vec2((gl_VertexID << 1) & 2, gl_VertexID & 2);
+  gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
+}`;
+
+// ---------------------------------------------------------------------------
+//  Color: sRGB (#hex) -> lineal. Igual que hará el componente RN.
+// ---------------------------------------------------------------------------
+function aLineal(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return [16, 8, 0].map(sh => {
+    const c = ((n >> sh) & 255) / 255;
+    return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  });
+}
+
+// Paleta tomada de src/theme/tokens.ts
+const TEMA = {
+  oscuro: { idleA: '#8A7340', idleB: '#C6A45C', thinkA: '#C09A4F', thinkB: '#E5C689' },
+  claro:  { idleA: '#9C7C3C', idleB: '#B2924F', thinkA: '#B2924F', thinkB: '#D8BE85' },
+};
+
+// ---------------------------------------------------------------------------
+//  Transición idle <-> thinking — misma lógica que useTransicionOrbe.ts
+// ---------------------------------------------------------------------------
+const MS_ENTRADA = 220, MS_SALIDA = 650;
+const easeOutCubico = k => 1 - Math.pow(1 - k, 3);
+const smoothstep    = k => k * k * (3 - 2 * k);
+
+const tr = { desde: 0, hasta: 0, t0: 0, dur: 1, easing: smoothstep, valor: 0 };
+function pedirEstado(destino, ahora) {
+  if (tr.hasta === destino) return;
+  tr.desde = tr.valor;
+  tr.hasta = destino;
+  tr.t0 = ahora;
+  tr.dur = destino === 1 ? MS_ENTRADA : MS_SALIDA;
+  tr.easing = destino === 1 ? easeOutCubico : smoothstep;
+}
+function leerEstado(ahora) {
+  const k = Math.min(1, (ahora - tr.t0) / tr.dur);
+  tr.valor = tr.desde + (tr.hasta - tr.desde) * tr.easing(k);
+  return tr.valor;
+}
+
+// ---------------------------------------------------------------------------
+//  Configuración WebGL2
+// ---------------------------------------------------------------------------
+function crear(canvas) {
+  const gl = canvas.getContext('webgl2', {
+    alpha: true, premultipliedAlpha: true, antialias: false,
+  });
+  if (!gl) return null;
+  const compilar = (tipo, src) => {
+    const sh = gl.createShader(tipo);
+    gl.shaderSource(sh, src); gl.compileShader(sh);
+    if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(sh));
+    return sh;
+  };
+  const prog = gl.createProgram();
+  gl.attachShader(prog, compilar(gl.VERTEX_SHADER, VS));
+  gl.attachShader(prog, compilar(gl.FRAGMENT_SHADER, FS));
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+  gl.useProgram(prog);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);   // premultiplicado
+  const u = n => gl.getUniformLocation(prog, n);
+  return {
+    gl, vao: gl.createVertexArray(),
+    loc: { pix: u('uPix'), fase: u('uFase'), estado: u('uEstado'),
+           idleA: u('uIdleA'), idleB: u('uIdleB'), thinkA: u('uThinkA'), thinkB: u('uThinkB') },
+  };
+}
+
+const cvGrande = document.getElementById('grande');
+const cvReal   = document.getElementById('real');
+let ctxs = [];
+try {
+  ctxs = [crear(cvGrande), crear(cvReal)].filter(Boolean);
+  document.getElementById('hBack').textContent = ctxs.length ? 'WebGL2' : 'sin WebGL2';
+} catch (e) {
+  document.getElementById('hBack').textContent = 'error: ' + e.message;
+  console.error(e);
+}
+
+function medir(cv) {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = Math.round(cv.clientWidth * dpr), h = Math.round(cv.clientHeight * dpr);
+  if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+}
+
+// ---------------------------------------------------------------------------
+//  Controles
+// ---------------------------------------------------------------------------
+let modo = 'auto';        // 'idle' | 'thinking' | 'auto'
+let proxCambio = 0, autoDestino = 1;
+const bs = { idle: document.getElementById('bIdle'), thinking: document.getElementById('bThink'), auto: document.getElementById('bAuto') };
+function setModo(m) {
+  modo = m;
+  for (const k in bs) bs[k].classList.toggle('on', k === m);
+  if (m === 'auto') { proxCambio = 0; autoDestino = 1; }
+}
+bs.idle.onclick     = () => setModo('idle');
+bs.thinking.onclick = () => setModo('thinking');
+bs.auto.onclick     = () => setModo('auto');
+
+let claro = false;
+document.getElementById('bTema').onclick = () => {
+  claro = !claro;
+  document.body.classList.toggle('claro', claro);
+};
+
+// ---------------------------------------------------------------------------
+//  Bucle
+// ---------------------------------------------------------------------------
+const VEL_IDLE = 0.30, VEL_THINK = 1.15;   // rad/s de la fase
+let fase = 0, tPrev = performance.now(), fps = 0, acumF = 0, nF = 0;
+const hEstado = document.getElementById('hEstado'), hFps = document.getElementById('hFps');
+
+function frame(ahora) {
+  const dt = Math.min(0.05, (ahora - tPrev) / 1000);
+  tPrev = ahora;
+
+  if (modo === 'auto') {
+    if (ahora >= proxCambio) {
+      pedirEstado(autoDestino, ahora);
+      proxCambio = ahora + (autoDestino === 1 ? 2600 : 2000);
+      autoDestino = 1 - autoDestino;
+    }
+  } else {
+    pedirEstado(modo === 'thinking' ? 1 : 0, ahora);
+  }
+
+  const s = leerEstado(ahora);
+  // La fase se ACUMULA con la velocidad actual: al cambiar de estado la cinta
+  // acelera, pero no salta de posición.
+  fase += dt * (VEL_IDLE + (VEL_THINK - VEL_IDLE) * s);
+
+  const pal = claro ? TEMA.claro : TEMA.oscuro;
+  const lin = {
+    idleA: aLineal(pal.idleA), idleB: aLineal(pal.idleB),
+    thinkA: aLineal(pal.thinkA), thinkB: aLineal(pal.thinkB),
+  };
+
+  [cvGrande, cvReal].forEach((cv, i) => {
+    const c = ctxs[i]; if (!c) return;
+    medir(cv);
+    const { gl, loc } = c;
+    gl.viewport(0, 0, cv.width, cv.height);
+    gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.uniform2f(loc.pix, cv.width, cv.height);
+    gl.uniform1f(loc.fase, fase);
+    gl.uniform1f(loc.estado, s);
+    gl.uniform3fv(loc.idleA, lin.idleA);   gl.uniform3fv(loc.idleB, lin.idleB);
+    gl.uniform3fv(loc.thinkA, lin.thinkA); gl.uniform3fv(loc.thinkB, lin.thinkB);
+    gl.bindVertexArray(c.vao);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  });
+
+  acumF += dt; nF++;
+  if (acumF >= 0.5) { fps = nF / acumF; acumF = 0; nF = 0; hFps.textContent = fps.toFixed(0) + ' fps'; }
+  hEstado.textContent = s.toFixed(2);
+
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
