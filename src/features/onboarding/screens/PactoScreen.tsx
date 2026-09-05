@@ -13,6 +13,13 @@ import { GoldButton } from '../../../components/GoldButton';
 interface PactoScreenProps {
   initialName?: string;
   savedSignature?: SignatureData | null;
+  /**
+   * Texto del botón de volver. Por defecto `TÉRMINOS`, que es de dónde se llegaba acá cuando el
+   * Pacto era un paso del onboarding inicial. Desde el arranque guiado (`features/sparkie`) el
+   * Pacto se abre como modal después del primer post del Muro, y ahí atrás no hay ningún
+   * "Términos": mentirle a la persona sobre a dónde la lleva un botón es peor que un texto feo.
+   */
+  etiquetaVolver?: string;
   onAccept: (name: string, signature: SignatureData) => void;
   onBack: () => void;
 }
@@ -20,6 +27,7 @@ interface PactoScreenProps {
 export function PactoScreen({
   initialName = '',
   savedSignature,
+  etiquetaVolver = 'TÉRMINOS',
   onAccept,
   onBack,
 }: PactoScreenProps) {
@@ -128,7 +136,7 @@ export function PactoScreen({
         >
           <Icon name="arrowLeft" size={16} color={c.gold} />
           <Text style={[t.micro, { color: c.text, letterSpacing: 1.2, fontSize: 11, fontWeight: '700' }]}>
-            TÉRMINOS
+            {etiquetaVolver}
           </Text>
         </Pressable>
 

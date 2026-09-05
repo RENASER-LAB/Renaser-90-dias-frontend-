@@ -53,6 +53,11 @@ export function useTraining() {
       ]);
 
       const categoriaPorHabito = new Map(catalogo.map(h => [h.id, h.category]));
+      // `systemKey` es lo que deja reconocer un hábito puntual del catálogo (hoy: la Clase
+      // Diaria, que tiene su propio flujo de cierre con resumen). Se toma del CATÁLOGO y no del
+      // track porque es un atributo del hábito, no del registro del día — el track ya se une al
+      // catálogo por `habitoId` unas líneas más abajo, así que no cuesta ninguna llamada extra.
+      const claveSistemaPorHabito = new Map(catalogo.map(h => [h.id, h.systemKey ?? null]));
       // La evidencia apunta a su origen con un campo distinto segun de qué sea: `registroHabitoId`
       // para un hábito, `rocaDiariaId` para una roca. Se indexan por separado para no cruzar ids
       // de dos módulos que no comparten espacio de identidad.
@@ -64,7 +69,10 @@ export function useTraining() {
       );
 
       const deHabitos: HabitItem[] = tracks
-        .map(track => {
+        // El tipo de retorno es explícito porque `HabitItem` tiene campos opcionales
+        // (`systemKey`, `respuestaTexto`): sin anotarlo, TypeScript infiere del objeto literal un
+        // tipo MÁS ESTRECHO que `HabitItem` y el `filter` de abajo deja de compilar.
+        .map((track): HabitItem | null => {
           const dimension = DIMENSION_POR_CATEGORIA[categoriaPorHabito.get(track.habitoId) ?? ''];
           if (!dimension) {
             return null;
@@ -78,6 +86,11 @@ export function useTraining() {
             streak: 0,
             done: track.estado === 'COMPLETADO',
             hasEvidence: habitosConEvidencia.has(track.id),
+            systemKey: claveSistemaPorHabito.get(track.habitoId) ?? null,
+            // `respuestaTexto` ya venía en el track y nadie lo leía. Es donde el backend guarda el
+            // resumen de la Clase Diaria (`RegistroHabito.respuestaTexto`), así que sirve para
+            // mostrar lo que la persona ya escribió en vez de pedírselo de nuevo.
+            respuestaTexto: track.respuestaTexto,
           };
         })
         .filter((h): h is HabitItem => h !== null);
@@ -91,6 +104,9 @@ export function useTraining() {
         streak: 0,
         done: roca.completada,
         hasEvidence: rocasConEvidencia.has(roca.id),
+        // Una roca no es un hábito de catálogo: no tiene clave de sistema ni resumen.
+        systemKey: null,
+        respuestaTexto: null,
         note: roca.descripcion ?? undefined,
       }));
 

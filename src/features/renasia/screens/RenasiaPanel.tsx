@@ -19,25 +19,42 @@ import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { Icon } from '../../../components/Icon';
 import { useRenasiaChat } from '../hooks/useRenasiaChat';
 import { MensajeBurbuja } from '../components/MensajeBurbuja';
+import { AGENTES, nombreVisible } from '../data/agentes';
+import type { AgenteRenasia } from '../types/renasia.types';
 
 export interface RenasiaPanelProps {
+  /**
+   * D-102: con cuál de los dos asistentes habla este panel. Decide el nombre en el header, el
+   * historial que se carga y el prompt que usa el backend. `RenasiaLauncher` monta el
+   * acompañante (`COMPANION`); `ChatDelCurso` monta a Sparkie (`COURSE_TUTOR`).
+   */
+  agent: AgenteRenasia;
   visible: boolean;
   onClose: () => void;
+  /**
+   * Solo para `COURSE_TUTOR`: el curso/lección sobre el que se pregunta. `etiqueta` se muestra
+   * bajo el nombre para que la persona sepa sobre qué está preguntando; `ambito` viaja al backend
+   * en un campo aparte (`scope`, D-100) y va al prompt de sistema, nunca dentro de la pregunta;
+   * `cursoId` acota el contexto que el backend recupera a las lecciones de ese curso.
+   */
+  contexto?: { etiqueta: string; ambito: string; cursoId?: string | null };
 }
 
 /** Altura mínima de controles táctiles (AGENTS.md: 48–52px para pulsación cómoda con una mano). */
 const ALTURA_MIN_CONTROL = 50;
 
 /**
- * Panel de conversación con RENASIA, el asistente del programa. Autocontenido: se monta donde se
- * decida (botón flotante, entrada de menú, etc.) pasándole `visible`/`onClose`. A propósito NO
- * está conectado a ninguna pantalla de tab — AGENTS.md prohíbe tocar `HoyScreen`, `PlanScreen`,
- * `TrainingScreen`, `ComunidadScreen`, `YoScreen` o `RootNavigator.tsx`; el dueño decide dónde
- * cuelga la entrada.
+ * Panel de conversación con uno de los dos asistentes del programa (D-102). Autocontenido: se
+ * monta donde se decida pasándole `agent`, `visible` y `onClose`. A propósito NO está conectado
+ * a ninguna pantalla de tab — AGENTS.md prohíbe tocar `HoyScreen`, `PlanScreen`, `TrainingScreen`,
+ * `ComunidadScreen`, `YoScreen` o `RootNavigator.tsx`; la entrada la cuelgan `RenasiaLauncher`
+ * (flotante, acompañante) y `ChatDelCurso` (al pie del curso, Sparkie).
  */
-export function RenasiaPanel({ visible, onClose }: RenasiaPanelProps) {
+export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanelProps) {
   const { c, t } = useTheme();
-  const { isSmall, isTablet, horizontalPadding, rs } = useResponsive();
+  const { isTablet, horizontalPadding, rs } = useResponsive();
+  const perfil = AGENTES[agent];
+  const nombre = nombreVisible(agent);
   const {
     mensajes,
     cargandoHistorial,
@@ -49,7 +66,7 @@ export function RenasiaPanel({ visible, onClose }: RenasiaPanelProps) {
     cargarMasAntiguos,
     enviarPregunta,
     reintentarMensaje,
-  } = useRenasiaChat();
+  } = useRenasiaChat({ agent, courseId: contexto?.cursoId, ambito: contexto?.ambito });
 
   const [texto, setTexto] = useState('');
   const scrollRef = useRef<ScrollView>(null);
@@ -90,9 +107,9 @@ export function RenasiaPanel({ visible, onClose }: RenasiaPanelProps) {
               <Icon name="chat" size={18} color={c.gold} />
             </View>
             <View style={{ flexShrink: 1 }}>
-              <Text style={[t.sectionTitle, { color: c.textStrong, fontSize: 13 }]}>RENASIA</Text>
+              <Text style={[t.sectionTitle, { color: c.textStrong, fontSize: 13 }]}>{nombre}</Text>
               <Text style={[t.small, { color: c.textSoft, fontSize: 12.5 }]} numberOfLines={1}>
-                Tu guía del programa, siempre disponible
+                {contexto ? `Sobre: ${contexto.etiqueta}` : perfil.subtitulo}
               </Text>
             </View>
           </View>
@@ -100,7 +117,7 @@ export function RenasiaPanel({ visible, onClose }: RenasiaPanelProps) {
             onPress={onClose}
             hitSlop={12}
             accessibilityRole="button"
-            accessibilityLabel="Cerrar RENASIA"
+            accessibilityLabel={`Cerrar ${nombre}`}
             style={[styles.cerrarBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
           >
             <Text style={{ color: c.text, fontSize: 16, fontWeight: '700' }}>✕</Text>
@@ -154,7 +171,7 @@ export function RenasiaPanel({ visible, onClose }: RenasiaPanelProps) {
                   <Icon name="chat" size={28} color={c.gold} />
                 </View>
                 <Text style={[t.cardTitle, { color: c.textStrong, textAlign: 'center', marginTop: 14 }]}>
-                  Hablá con RENASIA
+                  {perfil.vacioTitulo}
                 </Text>
                 <Text
                   style={[
@@ -162,8 +179,7 @@ export function RenasiaPanel({ visible, onClose }: RenasiaPanelProps) {
                     { color: c.textSoft, textAlign: 'center', marginTop: 8, fontSize: 14.5, lineHeight: 21 },
                   ]}
                 >
-                  Preguntale sobre tus lecciones, tus hábitos o cualquier duda del programa. Cada
-                  respuesta cita las lecciones exactas de las que sale, para que puedas ir a leerlas.
+                  {perfil.vacioParrafo}
                 </Text>
               </View>
             ) : (
@@ -184,7 +200,12 @@ export function RenasiaPanel({ visible, onClose }: RenasiaPanelProps) {
                   </Pressable>
                 )}
                 {mensajes.map(m => (
-                  <MensajeBurbuja key={m.id} mensaje={m} onReintentar={reintentarMensaje} />
+                  <MensajeBurbuja
+                    key={m.id}
+                    mensaje={m}
+                    nombreAsistente={nombre}
+                    onReintentar={reintentarMensaje}
+                  />
                 ))}
               </>
             )}
@@ -197,7 +218,7 @@ export function RenasiaPanel({ visible, onClose }: RenasiaPanelProps) {
             <TextInput
               value={texto}
               onChangeText={setTexto}
-              placeholder="Escribile a RENASIA…"
+              placeholder={`Escribile a ${nombre}…`}
               placeholderTextColor={c.textSoft}
               style={[
                 styles.input,

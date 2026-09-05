@@ -62,7 +62,6 @@ type AuthContextType = {
   loginWithApple: () => Promise<boolean>;
   sendOtp: (email: string) => Promise<boolean>;
   verifyOtp: (name: string, email: string, otp: string) => Promise<boolean>;
-  resetPassword: (email: string) => Promise<boolean>;
   completeOnboarding: (ficha?: FichaInicialData) => void;
   restartOnboarding: () => void;
   demoLogin: () => void;
@@ -229,15 +228,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     throw new Error('Código OTP inválido');
   }, []);
 
-  /**
-   * POST /api/v1/auth/password/reset-request. El backend responde 202 exista o no la cuenta,
-   * a propósito: si respondiera distinto, serviría para averiguar qué correos están registrados.
-   */
-  const resetPassword = useCallback(async (email: string) => {
-    await authApi.solicitarResetContrasena(email);
-    return true;
-  }, []);
-
   const register = useCallback(async (name: string, email: string, _pass: string) => {
     await esperaSimulada(500);
     setUser({
@@ -312,7 +302,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loginWithApple,
       sendOtp,
       verifyOtp,
-      resetPassword,
       completeOnboarding,
       restartOnboarding,
       demoLogin,
@@ -331,7 +320,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loginWithApple,
       sendOtp,
       verifyOtp,
-      resetPassword,
       completeOnboarding,
       restartOnboarding,
       demoLogin,

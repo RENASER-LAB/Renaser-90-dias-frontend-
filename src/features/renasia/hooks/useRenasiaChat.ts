@@ -3,7 +3,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { mensajeDeError } from '../../../services/http/apiClient';
 import { obtenerHistorialRenasia } from '../api/renasiaApi';
 import { enviarMensajeRenasia, RenasiaCuotaExcedidaError } from '../api/renasiaStream';
-import type { MensajeRenasiaApi, RenasiaMensajeUI } from '../types/renasia.types';
+import { nombreVisible } from '../data/agentes';
+import type { AgenteRenasia, MensajeRenasiaApi, RenasiaMensajeUI } from '../types/renasia.types';
 
 let contadorIdLocal = 0;
 /** Ids para mensajes que todavía no existen en el servidor (la pregunta optimista, la respuesta en curso). */
@@ -37,16 +38,30 @@ export type EstadoRenasiaChat = {
 };
 
 /**
- * Estado real del panel de RENASIA: historial paginado (`GET /api/v1/renasia/mensajes`) más la
- * conversación en vivo (`POST /api/v1/renasia/mensajes`, streaming). Mismo criterio que
+ * D-102: con quién se habla. `courseId` y `ambito` solo tienen sentido para `COURSE_TUTOR`
+ * (Sparkie): el curso acota el contexto que el backend recupera, y `ambito` ("el curso X, lección
+ * Y") va al prompt de sistema en un campo aparte (`scope`, D-100) — la pregunta se guarda tal cual
+ * la escribió la persona. El primer intento (D-99) lo concatenaba al texto y el contexto terminaba
+ * guardado como mensaje del aprendiz y visible al recargar.
+ */
+export type OpcionesRenasiaChat = {
+  agent: AgenteRenasia;
+  courseId?: string | null;
+  ambito?: string | null;
+};
+
+/**
+ * Estado real de un panel de asistente: historial paginado (`GET /api/v1/renasia/mensajes?agent=`)
+ * más la conversación en vivo (`POST /api/v1/renasia/mensajes`, streaming). Mismo criterio que
  * `useWallFeed` en `community`: la pantalla no arma llamadas de red sueltas, las pide acá.
+ *
+ * Cada instancia del hook es de UN agente: el panel del acompañante carga y escribe el historial
+ * del acompañante, el de Sparkie el de Sparkie. Nunca se mezclan (D-102).
  *
  * El historial llega del backend con la página más reciente primero — mismo criterio de
  * paginación por cursor que `GET /api/v1/wall` — así que acá se invierte cada página antes de
  * guardarla, para dibujar la conversación de más vieja arriba a más nueva abajo, como se lee un
- * chat. Si el backend en realidad pagina al revés, lo único que se ve mal es el orden de los
- * mensajes (no hay ningún crash ni pérdida de datos), pero vale la pena confirmarlo contra el
- * backend real.
+ * chat.
  *
  * Publica con **UI optimista**, igual que `publicarOptimista` en `useWallFeed`: la pregunta de
  * la persona y una burbuja vacía del asistente aparecen en el instante en que se toca "enviar",
@@ -55,7 +70,12 @@ export type EstadoRenasiaChat = {
  * NUNCA se saca de la lista, porque a diferencia de una publicación del Muro, perder de vista lo
  * que uno preguntó sería peor que ver una respuesta fallida.
  */
-export function useRenasiaChat(): EstadoRenasiaChat {
+export function useRenasiaChat(opciones: OpcionesRenasiaChat): EstadoRenasiaChat {
+  const { agent } = opciones;
+  const courseId = opciones.courseId?.trim() || null;
+  const ambito = opciones.ambito?.trim() || null;
+  const nombre = nombreVisible(agent);
+
   const [mensajes, setMensajes] = useState<RenasiaMensajeUI[]>([]);
   const [cargandoHistorial, setCargandoHistorial] = useState(true);
   const [errorHistorial, setErrorHistorial] = useState<string | null>(null);
@@ -83,24 +103,24 @@ export function useRenasiaChat(): EstadoRenasiaChat {
     setCargandoHistorial(true);
     setErrorHistorial(null);
     try {
-      const pagina = await obtenerHistorialRenasia();
+      const pagina = await obtenerHistorialRenasia(agent);
       if (!montadoRef.current) return;
       setMensajes([...pagina.messages].reverse().map(mapearMensajeApi));
       cursorRef.current = pagina.nextCursor;
       setHayMasAntiguos(pagina.hasMore);
     } catch (e) {
       if (!montadoRef.current) return;
-      setErrorHistorial(mensajeDeError(e, 'No pudimos cargar tu conversación con RENASIA.'));
+      setErrorHistorial(mensajeDeError(e, `No pudimos cargar tu conversación con ${nombre}.`));
     } finally {
       if (montadoRef.current) setCargandoHistorial(false);
     }
-  }, []);
+  }, [agent, nombre]);
 
   const cargarMasAntiguos = useCallback(async () => {
     if (!cursorRef.current || cargandoMasAntiguos) return;
     setCargandoMasAntiguos(true);
     try {
-      const pagina = await obtenerHistorialRenasia(cursorRef.current);
+      const pagina = await obtenerHistorialRenasia(agent, cursorRef.current);
       if (!montadoRef.current) return;
       setMensajes(prev => [...[...pagina.messages].reverse().map(mapearMensajeApi), ...prev]);
       cursorRef.current = pagina.nextCursor;
@@ -112,57 +132,69 @@ export function useRenasiaChat(): EstadoRenasiaChat {
     } finally {
       if (montadoRef.current) setCargandoMasAntiguos(false);
     }
-  }, [cargandoMasAntiguos]);
+  }, [agent, cargandoMasAntiguos]);
 
   /** El motor común de "mandar una pregunta y volcar el stream sobre un mensaje ya en la lista". */
-  const ejecutarEnvio = useCallback(async (idAsistente: string, textoPregunta: string) => {
-    const controller = new AbortController();
-    abortRef.current = controller;
-    setEnviando(true);
+  const ejecutarEnvio = useCallback(
+    async (idAsistente: string, textoPregunta: string) => {
+      const controller = new AbortController();
+      abortRef.current = controller;
+      setEnviando(true);
 
-    try {
-      await enviarMensajeRenasia(
-        textoPregunta,
-        {
-          onTexto: fragmento => {
-            if (!montadoRef.current) return;
-            setMensajes(prev =>
-              prev.map(m => (m.id === idAsistente ? { ...m, texto: m.texto + fragmento } : m))
-            );
+      try {
+        await enviarMensajeRenasia(
+          textoPregunta,
+          { agent, courseId, scope: ambito },
+          {
+            onTexto: fragmento => {
+              if (!montadoRef.current) return;
+              setMensajes(prev =>
+                prev.map(m => (m.id === idAsistente ? { ...m, texto: m.texto + fragmento } : m))
+              );
+            },
+            onFuentes: lecciones => {
+              if (!montadoRef.current) return;
+              setMensajes(prev => prev.map(m => (m.id === idAsistente ? { ...m, lecciones } : m)));
+            },
+            onFin: () => {
+              if (!montadoRef.current) return;
+              setMensajes(prev =>
+                prev.map(m => (m.id === idAsistente ? { ...m, enProgreso: false } : m))
+              );
+            },
+            onError: mensaje => {
+              // D-100: el modelo fallo del lado del servidor. Se muestra en la burbuja, con
+              // reintento, igual que un error de red — antes quedaba una burbuja vacia y muda.
+              if (!montadoRef.current) return;
+              setMensajes(prev =>
+                prev.map(m => (m.id === idAsistente ? { ...m, enProgreso: false, error: mensaje } : m))
+              );
+            },
           },
-          onFuentes: lecciones => {
-            if (!montadoRef.current) return;
-            setMensajes(prev => prev.map(m => (m.id === idAsistente ? { ...m, lecciones } : m)));
-          },
-          onFin: () => {
-            if (!montadoRef.current) return;
-            setMensajes(prev =>
-              prev.map(m => (m.id === idAsistente ? { ...m, enProgreso: false } : m))
-            );
-          },
-        },
-        controller.signal
-      );
-    } catch (e) {
-      if (e instanceof Error && e.name === 'AbortError') return;
-      if (!montadoRef.current) return;
-      const esCuota = e instanceof RenasiaCuotaExcedidaError;
-      const mensajeError = mensajeDeError(
-        e,
-        'No pudimos obtener respuesta de RENASIA. Revisá tu conexión e intentá de nuevo.'
-      );
-      setMensajes(prev =>
-        prev.map(m =>
-          m.id === idAsistente
-            ? { ...m, enProgreso: false, error: mensajeError, cuotaAgotada: esCuota }
-            : m
-        )
-      );
-    } finally {
-      if (montadoRef.current) setEnviando(false);
-      abortRef.current = null;
-    }
-  }, []);
+          controller.signal
+        );
+      } catch (e) {
+        if (e instanceof Error && e.name === 'AbortError') return;
+        if (!montadoRef.current) return;
+        const esCuota = e instanceof RenasiaCuotaExcedidaError;
+        const mensajeError = mensajeDeError(
+          e,
+          `No pudimos obtener respuesta de ${nombre}. Revisá tu conexión e intentá de nuevo.`
+        );
+        setMensajes(prev =>
+          prev.map(m =>
+            m.id === idAsistente
+              ? { ...m, enProgreso: false, error: mensajeError, cuotaAgotada: esCuota }
+              : m
+          )
+        );
+      } finally {
+        if (montadoRef.current) setEnviando(false);
+        abortRef.current = null;
+      }
+    },
+    [agent, courseId, ambito, nombre]
+  );
 
   const enviarPregunta = useCallback(
     async (textoCrudo: string) => {

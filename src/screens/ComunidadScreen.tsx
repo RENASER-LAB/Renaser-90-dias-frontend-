@@ -13,8 +13,11 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../theme/ThemeContext';
+import { ChatDelCurso } from '../features/renasia/components/ChatDelCurso';
+import { useProgramaDia } from '../features/programa/hooks/useProgramaDia';
 import { useResponsive } from '../theme/responsive';
 import { useSystemBackHandler } from '../hooks/useSystemBackHandler';
 import { MicroLabel, ScreenHeader, Placeholder } from '../components/ui';
@@ -27,6 +30,7 @@ import { useMiCelula } from '../features/community/hooks/useMiCelula';
 import * as wallApi from '../features/community/api/wallApi';
 import { elegirYNormalizarFotoMuro, type FotoMuroNormalizada } from '../features/community/utils/normalizarImagen';
 import { FotoMuro } from '../features/community/components/FotoMuro';
+import { avisarPostPublicado } from '../features/sparkie/events/avisoPrimerPost';
 import { ImageViewerModal, type ImageViewerItem } from '../features/community/components/ImageViewerModal';
 import { SharePostSheet } from '../features/community/components/SharePostSheet';
 import { useCursos } from '../features/academy/hooks/useCursos';
@@ -335,6 +339,8 @@ const METRICAS = [
 
 export default function ComunidadScreen() {
   const { c, t, mode } = useTheme();
+  // D-99: el chat dentro de un curso le dice a Sparkie en que dia del programa va la persona.
+  const { diaPrograma } = useProgramaDia();
   const isDark = mode === 'dark';
   const { rs, isTablet, horizontalPadding } = useResponsive();
   const { user } = useAuth();
@@ -445,6 +451,8 @@ export default function ComunidadScreen() {
 
   // Estados de "Recursos Exclusivos" (cursos/lecciones) — `courses` sale del backend real
   // (GET /api/v1/cursos + GET /api/v1/cursos/{id}/secciones) a través de `useCursos`.
+  const navigation = useNavigation();
+  const route = useRoute();
   const { courses, loading: cursosCargando, error: cursosError, recargar: recargarCursos } = useCursos();
   const selectedCourse = selectedCourseId ? (courses.find(cu => cu.id === selectedCourseId) ?? null) : null;
   const [expandedCourseSummaries, setExpandedCourseSummaries] = useState<Record<string, boolean>>({});
@@ -883,6 +891,76 @@ export default function ComunidadScreen() {
     cargarDetalleLeccion(lesson.id);
   };
 
+  // -------------------------------------------------------------------------------------------
+  // ENTRADA DESDE OTRA PESTAÑA — hoy la usa la Clase Diaria desde Training
+  // -------------------------------------------------------------------------------------------
+  // Training necesita "llevar a la lección del día". El reproductor vive acá dentro, y esta
+  // pantalla no tiene rutas propias (el navegador es un tab navigator plano, sin stack), así que
+  // el punto de entrada son parámetros de ruta sobre la pestaña `Comunidad`.
+  //
+  // Deliberadamente NO se saltea `handleAbrirLeccion`: la lección se abre por el mismo camino que
+  // si la persona hubiera navegado a mano, con sus mismas reglas (bloqueo por día de programa y
+  // progresión secuencial). Entrar por un atajo que ignore esas reglas sería inventarle una
+  // excepción a la Clase Diaria que nadie pidió.
+  const [leccionPedidaDeOtraPestana, setLeccionPedidaDeOtraPestana] = useState<
+    { cursoId: string; leccionId: string } | null
+  >(null);
+
+  useEffect(() => {
+    const params = route.params as
+      | { abrirCursoId?: string; abrirLeccionId?: string }
+      | undefined;
+    if (!params?.abrirCursoId || !params?.abrirLeccionId) return;
+
+    setInExclusiveResources(true);
+    setSelectedCourseId(params.abrirCursoId);
+    setLeccionPedidaDeOtraPestana({
+      cursoId: params.abrirCursoId,
+      leccionId: params.abrirLeccionId,
+    });
+    // Se consumen una sola vez: sin esto, volver a esta pestaña reabriría la misma lección.
+    // El tab navigator no está tipado (no hay `ParamList`), así que `setParams` no acepta claves
+    // conocidas. Mismo cast que ya usa `HoyScreen` para navegar entre pestañas.
+    (navigation as any).setParams({ abrirCursoId: undefined, abrirLeccionId: undefined });
+  }, [route.params, navigation]);
+
+  /**
+   * Segunda entrada desde afuera, con la misma forma que la de arriba: el arranque guiado
+   * (`features/sparkie`) manda al aprendiz recién llegado a escribir su primer post.
+   *
+   * Deja la pantalla exactamente donde la dejaría alguien navegando a mano — Eventos y
+   * Experiencias → pestaña "muro" → botón de publicar — en vez de saltarse pasos: si mañana el
+   * Muro cambia de reglas, este atajo las hereda solas.
+   */
+  useEffect(() => {
+    const params = route.params as { abrirComposerMuro?: boolean } | undefined;
+    if (!params?.abrirComposerMuro) return;
+
+    setInEventosExperiencias(true);
+    setEventosTab('muro');
+    setCreatePostModalVisible(true);
+    // Se consume una sola vez, igual que `abrirCursoId`: sin esto, volver a esta pestaña
+    // reabriría el composer aunque la persona lo hubiera cerrado a propósito.
+    (navigation as any).setParams({ abrirComposerMuro: undefined });
+  }, [route.params, navigation]);
+
+  useEffect(() => {
+    if (!leccionPedidaDeOtraPestana) return;
+    // El árbol del curso llega asincrónico (`useCursos` → secciones): se espera a que la lección
+    // exista en `allCourseLessons` en vez de abrir con un objeto armado a mano, que no tendría ni
+    // el video ni el estado de bloqueo. Si nunca aparece, la persona queda en el detalle del curso
+    // — un final razonable, no una pantalla rota.
+    if (selectedCourseId !== leccionPedidaDeOtraPestana.cursoId) return;
+    const leccion = allCourseLessons.find(l => l.id === leccionPedidaDeOtraPestana.leccionId);
+    if (!leccion) return;
+
+    setLeccionPedidaDeOtraPestana(null);
+    handleAbrirLeccion(leccion);
+    // `handleAbrirLeccion` se recrea en cada render y no se incluye a propósito: el efecto ya se
+    // desarma solo limpiando `leccionPedidaDeOtraPestana` antes de llamarla.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leccionPedidaDeOtraPestana, selectedCourseId, allCourseLessons]);
+
   const handleAlternarLeccionCompletada = async (leccion: LessonResource) => {
     try {
       const indexActual = allCourseLessons.findIndex(l => l.id === leccion.id);
@@ -1274,6 +1352,11 @@ export default function ComunidadScreen() {
     setSubiendoPublicacion(true);
     try {
       await publicarOptimista(texto, fotos, nombreUsuario);
+      // El arranque guiado espera este momento para pasar al Pacto. Se avisa DESPUÉS del `await`,
+      // con la publicación ya confirmada por el backend, y nunca en el `catch`: un post que falló
+      // y se revirtió no es un primer post. El aviso solo adelanta lo que igual se confirma contra
+      // `GET /wall/mine` (ver `sparkie/events/avisoPrimerPost.ts`).
+      avisarPostPublicado();
     } catch (error) {
       // El post optimista ya se quitó del muro (rollback dentro del hook). Se devuelve el borrador
       // al modal para que la persona no tenga que volver a escribirlo ni a elegir la foto: perder
@@ -2392,6 +2475,9 @@ export default function ComunidadScreen() {
               </View>
             ))}
           </View>
+
+          {/* D-99: preguntarle a Sparkie sobre ESTE curso, al pie de la lista de lecciones. */}
+          <ChatDelCurso cursoId={selectedCourse.id} cursoTitulo={selectedCourse.title} diaPrograma={diaPrograma} />
         </ScrollView>
       )}
 
@@ -2584,6 +2670,14 @@ export default function ComunidadScreen() {
               )}
             </View>
           </View>
+
+          {/* D-99: preguntarle a Sparkie sobre ESTA leccion, al pie, despues del contenido. */}
+          <ChatDelCurso
+            cursoId={selectedCourse?.id ?? null}
+            cursoTitulo={selectedCourse?.title ?? 'este curso'}
+            leccionTitulo={leccionMostrada.title}
+            diaPrograma={diaPrograma}
+          />
         </ScrollView>
       )}
 

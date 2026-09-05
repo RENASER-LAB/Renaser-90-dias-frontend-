@@ -89,6 +89,13 @@ export const wallReactionsPageSchema = z
   .object({ reactions: z.array(wallReactionItemSchema) })
   .passthrough();
 
+/**
+ * `WallController.mine` (GET /wall/mine) — `{"count": n}`, cuántas publicaciones propias tiene el
+ * actor en toda su historia. Es el ÚNICO dato de servidor que responde "¿ya publicó alguna vez?"
+ * sin inventar una columna nueva (lo usa el arranque guiado, `features/sparkie`).
+ */
+export const conteoMisPublicacionesSchema = z.object({ count: z.number() }).passthrough();
+
 /** `UrlSubidaMediaResponse` (`WallController.urlDeSubida`, POST /wall/media/upload-url). */
 export const urlSubidaMuroSchema = z
   .object({ uploadUrl: z.string(), bucket: z.string(), ruta: z.string() })

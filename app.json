@@ -28,10 +28,18 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Renaser necesita acceder a tus fotos para que puedas adjuntar una imagen a tus publicaciones del Muro."
+          "photosPermission": "Renaser necesita acceder a tus fotos y videos para que puedas adjuntar una imagen a tus publicaciones del Muro y subir la evidencia de tus hábitos.",
+          "cameraPermission": "Renaser necesita la cámara para que puedas tomar la foto o grabar el video con el que registrás la evidencia de tus hábitos.",
+          "microphonePermission": "Renaser necesita el micrófono para grabar el audio de los videos con los que registrás la evidencia de tus hábitos."
         }
       ],
-      "expo-image"
+      "expo-image",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Renaser necesita el micrófono para que puedas grabar en audio la evidencia de tus hábitos."
+        }
+      ]
     ]
   }
 }

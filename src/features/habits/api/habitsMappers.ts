@@ -121,5 +121,14 @@ export function mapearPlanHabit(
     // hábitos que el dueño marcó (audioterapia, pastilla, clase diaria, post diario) vienen en
     // false desde V18__habitos_desactivable.sql. Usar isOptional acá bloquearía 21 de 22.
     isDeactivatable: habito.isDeactivatable,
+    // Se lee del backend y no solo de la respuesta del PATCH: si no, el aviso "desde mañana a
+    // las 09:00" duraba lo que durara la pantalla abierta y desaparecía al recargar la app,
+    // que es justo cuando el aprendiz vuelve a dudar de si su cambio se guardó.
+    cambioProgramado: preferencia?.pendingChange
+      ? {
+          time: aHoraCorta(preferencia.pendingChange.triggerTime),
+          desde: preferencia.pendingChange.effectiveDate,
+        }
+      : null,
   };
 }

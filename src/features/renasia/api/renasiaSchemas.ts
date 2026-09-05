@@ -39,6 +39,8 @@ const eventoFuentesSchema = z
   .passthrough();
 /** `{"tipo":"fin"}` — siempre el último evento del stream. */
 const eventoFinSchema = z.object({ tipo: z.literal('fin') }).passthrough();
+/** `{"tipo":"error","valor":"..."}` — D-100: falla del modelo, apta para mostrar. */
+const eventoErrorSchema = z.object({ tipo: z.literal('error'), valor: z.string() }).passthrough();
 
 /**
  * Rama de escape para tipos de evento que esta versión de la app no conoce.
@@ -57,6 +59,7 @@ const eventoRenasiaSchema = z.union([
   eventoTextoSchema,
   eventoFuentesSchema,
   eventoFinSchema,
+  eventoErrorSchema,
   eventoDesconocidoSchema,
 ]);
 

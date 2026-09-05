@@ -7,7 +7,9 @@ import { useFonts, Jost_200ExtraLight, Jost_300Light, Jost_400Regular, Jost_500M
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import { AuthProvider } from './src/context/AuthContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
+import { navegacionRef } from './src/navigation/navegacionRef';
 import { RenasiaLauncher } from './src/features/renasia/components/RenasiaLauncher';
+import { SparkieOverlay } from './src/features/sparkie/components/SparkieOverlay';
 
 function Shell() {
   const { mode, c } = useTheme();
@@ -15,12 +17,17 @@ function Shell() {
     ? { ...DefaultTheme, colors: { ...DefaultTheme.colors, background: c.bg } }
     : { ...DarkTheme, colors: { ...DarkTheme.colors, background: c.bg } };
   return (
-    <NavigationContainer theme={navTheme}>
+    /* La `ref` la usa el arranque guiado para llevar al Muro desde fuera del arbol de navegacion
+       (ver `navigation/navegacionRef.ts`). No cambia nada del comportamiento del contenedor. */
+    <NavigationContainer ref={navegacionRef} theme={navTheme}>
       <StatusBar style={mode === 'light' ? 'dark' : 'light'} />
       <RootNavigator />
       {/* RENASIA vive por encima del navegador para poder abrirse desde cualquier tab sin tocar
           ninguna de las cinco pantallas. Se quita borrando esta linea. */}
       <RenasiaLauncher />
+      {/* El arranque guiado (saludo -> primer post en el Muro -> Pacto), por el mismo motivo y
+          con la misma forma. Se apaga solo cuando el Pacto queda firmado. */}
+      <SparkieOverlay />
     </NavigationContainer>
   );
 }

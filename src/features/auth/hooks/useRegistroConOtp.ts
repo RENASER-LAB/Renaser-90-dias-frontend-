@@ -18,7 +18,7 @@ import { almacenamientoSeguro } from '../../../services/storage/almacenamientoSe
  * así que la app no debe entrar al home al verificar el código.
  */
 
-/** El backend exige `@Size(min = 12, max = 200)` en la contraseña del alta. */
+/** El backend exige `@Size(min = 12, max = 200)` en la contraseña del alta y del reset. */
 export const MIN_CONTRASENA = 12;
 export const MAX_CONTRASENA = 200;
 
@@ -43,9 +43,26 @@ function nombreCompleto(datos: DatosRegistro): string {
 }
 
 /**
+ * La regla de la contraseña, una sola vez: la usan el alta y la recuperación (D-102). Vive acá y
+ * no en la pantalla para que los 12 caracteres tengan un solo dueño: si el backend la cambia, se
+ * toca un archivo. Devuelve el mensaje a mostrar o `null` si está todo bien.
+ */
+export function validarContrasenaNueva(contrasena: string, confirmacion: string): string | null {
+  if (contrasena.length < MIN_CONTRASENA) {
+    return `La contraseña debe tener al menos ${MIN_CONTRASENA} caracteres`;
+  }
+  if (contrasena.length > MAX_CONTRASENA) {
+    return `La contraseña no puede superar los ${MAX_CONTRASENA} caracteres`;
+  }
+  if (contrasena !== confirmacion) {
+    return 'Las contraseñas no coinciden';
+  }
+  return null;
+}
+
+/**
  * Valida lo mismo que el backend, antes de gastar una llamada de red. Devuelve el mensaje a
- * mostrar o `null` si está todo bien. Vive acá y no en la pantalla para que la regla de los 12
- * caracteres tenga un solo dueño: si el backend la cambia, se toca un archivo.
+ * mostrar o `null` si está todo bien.
  */
 export function validarDatosRegistro(datos: DatosRegistro, confirmacion: string): string | null {
   if (!datos.nombres.trim()) {
@@ -58,24 +75,15 @@ export function validarDatosRegistro(datos: DatosRegistro, confirmacion: string)
     return 'Por favor ingresa un correo electrónico válido';
   }
   // El teléfono ya no se valida acá: se pide en la Ficha Inicial del onboarding.
-  if (datos.contrasena.length < MIN_CONTRASENA) {
-    return `La contraseña debe tener al menos ${MIN_CONTRASENA} caracteres`;
-  }
-  if (datos.contrasena.length > MAX_CONTRASENA) {
-    return `La contraseña no puede superar los ${MAX_CONTRASENA} caracteres`;
-  }
-  if (datos.contrasena !== confirmacion) {
-    return 'Las contraseñas no coinciden';
-  }
-  return null;
+  return validarContrasenaNueva(datos.contrasena, confirmacion);
 }
 
 /**
  * Reemplaza el mensaje por defecto de un error conservando su código HTTP. Sin esto, los dos
  * pasos del alta fallan con el mismo texto genérico y no se sabe si el problema fue el código
- * o la solicitud.
+ * o la solicitud. Exportada porque la recuperación de contraseña tiene el mismo problema.
  */
-function conMensaje(error: unknown, porDefecto: string): ApiError {
+export function conMensaje(error: unknown, porDefecto: string): ApiError {
   const texto = mensajeDeError(error, porDefecto);
   if (error instanceof ApiError) {
     return new ApiError(error.status, texto, error.body);

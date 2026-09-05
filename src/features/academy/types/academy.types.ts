@@ -160,3 +160,29 @@ export interface CompletarLeccionApi {
   leccionId: string;
   completadaEn: string;
 }
+
+/**
+ * `ClaseDiariaResponse` — GET /api/v1/classroom/clase-diaria. camelCase (nunca fue una fila de
+ * tabla, siempre fue un estado calculado: ver `docs/api/CONTRATO_CONTENIDO_IA.md` §1.11).
+ *
+ * `status` decide qué campos vienen; con `@JsonInclude(NON_NULL)` el backend los OMITE en las
+ * ramas que no aplican, por eso son opcionales acá y no `| null`:
+ *   - `available`   → trae curso y lección de hoy.
+ *   - `not_started` → `programDay: 0`, el aprendiz todavía no arrancó el reloj de 90 días.
+ *   - `coming_soon` → día con programa activo pero sin clase resuelta para ese día.
+ */
+export interface ClaseDiariaApi {
+  status: 'available' | 'not_started' | 'coming_soon';
+  programDay: number;
+  cursoId?: string;
+  cursoTitulo?: string;
+  leccionId?: string;
+  leccionTitulo?: string;
+}
+
+/** `CompletarClaseDiariaResponse` — POST /api/v1/classroom/clase-diaria. */
+export interface CompletarClaseDiariaApi {
+  leccionId: string;
+  registroHabitoId: string;
+  puntosOtorgados: number;
+}
