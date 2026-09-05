@@ -8,6 +8,7 @@ import {
   RespuestasAgrupadasApi,
   TipoPreguntaOnboarding,
 } from '../types/onboarding.types';
+import { CuestionarioProfundoData } from './bloquesCuestionarioProfundo';
 
 /**
  * Correspondencia entre los campos que YA llena el formulario (React) y las preguntas del catálogo
@@ -362,5 +363,203 @@ export function reconstruirFichaDesdeRespuestas(
       autorizaUsoDatos: consentimientoTexto !== undefined ? consentimientoTexto.startsWith('Sí') : base.consentimiento.autorizaUsoDatos,
       compromiso90Dias: booleano(P_COMMITMENT_90DAYS.clave) ?? base.consentimiento.compromiso90Dias,
     },
+  };
+}
+
+// ================================================================================================
+// ETAPA 2 DEL ONBOARDING — CUESTIONARIO PROFUNDO (8 bloques)
+// ================================================================================================
+//
+// Las 29 preguntas de los 8 bloques YA existen en el catálogo (`V10__catalogo_onboarding_default.sql`).
+// Ninguna hizo falta crearla: esta sección solo declara la correspondencia campo -> clave.
+//
+// Los `tipo` de acá NO son decorativos y NO se eligieron por cómo se ve el campo en pantalla: son
+// los que la base tiene en `preguntas_onboarding.tipo`, y `catalogoPreguntas.idDe` RECHAZA el envío
+// si no coinciden. El caso que más confunde: `energy_drains` y `energy_recharges` se dibujan como
+// input de una línea (así están en las capturas del dueño) pero en la base son AREA_TEXTO — manda
+// la base, porque es lo que decide el slot EAV donde se guarda el valor.
+//
+// Recordatorio de por qué el `flujo` no aparece acá: `clave_pregunta` es UNIQUE en toda la tabla,
+// así que el mapa plano de `catalogoPreguntas` resuelve la clave sin importar de qué flujo vino.
+// Ver el comentario largo de `data/bloquesCuestionarioProfundo.ts` sobre los dos flujos.
+
+// ---- Bloque 1 · Cuerpo (flujo ficha_inicial · sección cuerpo) ----------------------------------
+const P_BODY_SMART_GOAL: PreguntaCatalogo = { clave: 'body_smart_goal', tipo: 'AREA_TEXTO' };
+
+// ---- Bloque 2 · Mente y Patrones (ficha_inicial · mente_y_patrones) ----------------------------
+const P_INNER_CRITIC_VOICE: PreguntaCatalogo = { clave: 'inner_critic_voice', tipo: 'AREA_TEXTO' };
+const P_LIMITING_BELIEF: PreguntaCatalogo = { clave: 'limiting_belief', tipo: 'AREA_TEXTO' };
+const P_SELF_DEFINITION_TODAY: PreguntaCatalogo = { clave: 'self_definition_today', tipo: 'TEXTO' };
+
+// ---- Bloque 3 · Alma, Heridas y Vínculos (ficha_inicial · alma_heridas_vinculos) ---------------
+const P_PARENTAL_PHRASE: PreguntaCatalogo = { clave: 'parental_phrase', tipo: 'TEXTO' };
+const P_BOND_FATHER: PreguntaCatalogo = { clave: 'bond_father', tipo: 'ESCALA' };
+const P_BOND_MOTHER: PreguntaCatalogo = { clave: 'bond_mother', tipo: 'ESCALA' };
+const P_MONEY_CHILDHOOD_PHRASE: PreguntaCatalogo = { clave: 'money_childhood_phrase', tipo: 'TEXTO' };
+const P_MONEY_DESERVING_SCORE: PreguntaCatalogo = { clave: 'money_deserving_score', tipo: 'ESCALA' };
+const P_MONEY_DESERVING_REASON: PreguntaCatalogo = { clave: 'money_deserving_reason', tipo: 'AREA_TEXTO' };
+
+// ---- Bloque 4 · Negocio y Dinero (ficha_inicial · negocio_y_dinero) ----------------------------
+const P_REVENUE_TARGET_90D_USD: PreguntaCatalogo = { clave: 'revenue_target_90d_usd', tipo: 'NUMERO' };
+const P_FLAGSHIP_PRODUCT: PreguntaCatalogo = { clave: 'flagship_product', tipo: 'AREA_TEXTO' };
+const P_IDEAL_CLIENT: PreguntaCatalogo = { clave: 'ideal_client', tipo: 'AREA_TEXTO' };
+const P_BUSINESS_ENEMY: PreguntaCatalogo = { clave: 'business_enemy', tipo: 'AREA_TEXTO' };
+const P_BUSINESS_SMART_GOAL: PreguntaCatalogo = { clave: 'business_smart_goal', tipo: 'AREA_TEXTO' };
+
+// ---- Bloque 5 · Compromiso (ficha_inicial · compromiso_y_cierre) -------------------------------
+const P_ONE_SUCCESS_METRIC: PreguntaCatalogo = { clave: 'one_success_metric', tipo: 'AREA_TEXTO' };
+const P_PROCESS_BAPTISM: PreguntaCatalogo = { clave: 'process_baptism', tipo: 'TEXTO' };
+
+// ---- Bloque 6 · Energía Vital (cuestionario_profundo · energia_vital) --------------------------
+const P_ENERGY_DRAINS: PreguntaCatalogo = { clave: 'energy_drains', tipo: 'AREA_TEXTO' };
+const P_ENERGY_RECHARGES: PreguntaCatalogo = { clave: 'energy_recharges', tipo: 'AREA_TEXTO' };
+const P_LAST_FULLY_ALIVE: PreguntaCatalogo = { clave: 'last_fully_alive', tipo: 'AREA_TEXTO' };
+
+// ---- Bloque 7 · Los 3 Guardianes (cuestionario_profundo · guardianes_emocionales) --------------
+const P_FEAR_INTENSITY: PreguntaCatalogo = { clave: 'fear_intensity', tipo: 'ESCALA' };
+const P_FEAR_ABOUT: PreguntaCatalogo = { clave: 'fear_about', tipo: 'AREA_TEXTO' };
+const P_GUILT_INTENSITY: PreguntaCatalogo = { clave: 'guilt_intensity', tipo: 'ESCALA' };
+const P_GUILT_ABOUT: PreguntaCatalogo = { clave: 'guilt_about', tipo: 'AREA_TEXTO' };
+const P_SHAME_INTENSITY: PreguntaCatalogo = { clave: 'shame_intensity', tipo: 'ESCALA' };
+const P_SHAME_ABOUT: PreguntaCatalogo = { clave: 'shame_about', tipo: 'AREA_TEXTO' };
+
+// ---- Bloque 8 · Estado Mental Profundo (cuestionario_profundo · estado_mental) -----------------
+const P_ANXIETY_LEVEL: PreguntaCatalogo = { clave: 'anxiety_level', tipo: 'ESCALA' };
+const P_POSTPONED_DECISION: PreguntaCatalogo = { clave: 'postponed_decision', tipo: 'AREA_TEXTO' };
+const P_POSTPONED_REASON: PreguntaCatalogo = { clave: 'postponed_reason', tipo: 'AREA_TEXTO' };
+
+/**
+ * Respuestas de UN bloque del Cuestionario Profundo, listas para `POST /onboarding/answers`.
+ *
+ * Se mapea bloque por bloque (no los 8 juntos) porque el guardado es incremental: la pantalla
+ * llama a esto en cada "Continuar", así que abandonar en el bloque 5 deja los 4 anteriores ya
+ * guardados. Mismo criterio que `FichaInicialScreen` con sus capítulos.
+ *
+ * Un campo vacío devuelve `null` y se descarta (`soloDefinidos`): no se manda cadena vacía a la
+ * base. Los obligatorios ya los frenó la validación de la pantalla antes de llegar acá.
+ */
+export function mapearBloqueCuestionarioProfundo(
+  numeroDeBloque: number,
+  data: CuestionarioProfundoData
+): RespuestaPorClaveInput[] {
+  switch (numeroDeBloque) {
+    case 1:
+      return soloDefinidos([texto(P_BODY_SMART_GOAL, data.objetivoSmartCuerpo)]);
+    case 2:
+      return soloDefinidos([
+        texto(P_INNER_CRITIC_VOICE, data.criticoInterno),
+        texto(P_LIMITING_BELIEF, data.creenciaLimitante),
+        texto(P_SELF_DEFINITION_TODAY, data.definicionHoy),
+      ]);
+    case 3:
+      return soloDefinidos([
+        texto(P_PARENTAL_PHRASE, data.fraseParental),
+        escala(P_BOND_FATHER, data.vinculoPadre),
+        escala(P_BOND_MOTHER, data.vinculoMadre),
+        texto(P_MONEY_CHILDHOOD_PHRASE, data.fraseDineroInfancia),
+        escala(P_MONEY_DESERVING_SCORE, data.mereceDinero),
+        texto(P_MONEY_DESERVING_REASON, data.porqueMereceDinero),
+      ]);
+    case 4:
+      return soloDefinidos([
+        numero(P_REVENUE_TARGET_90D_USD, data.metaFacturacion),
+        texto(P_FLAGSHIP_PRODUCT, data.productoEstrella),
+        texto(P_IDEAL_CLIENT, data.clienteIdeal),
+        texto(P_BUSINESS_ENEMY, data.enemigoPublico),
+        texto(P_BUSINESS_SMART_GOAL, data.objetivoSmartNegocio),
+      ]);
+    case 5:
+      return soloDefinidos([
+        texto(P_ONE_SUCCESS_METRIC, data.unaSolaCosa),
+        texto(P_PROCESS_BAPTISM, data.bautizoProceso),
+      ]);
+    case 6:
+      return soloDefinidos([
+        texto(P_ENERGY_DRAINS, data.actividadDrena),
+        texto(P_ENERGY_RECHARGES, data.actividadRecarga),
+        texto(P_LAST_FULLY_ALIVE, data.ultimaVezVivo),
+      ]);
+    case 7:
+      return soloDefinidos([
+        escala(P_FEAR_INTENSITY, data.miedoIntensidad),
+        texto(P_FEAR_ABOUT, data.miedoDetalle),
+        escala(P_GUILT_INTENSITY, data.culpaIntensidad),
+        texto(P_GUILT_ABOUT, data.culpaDetalle),
+        escala(P_SHAME_INTENSITY, data.verguenzaIntensidad),
+        texto(P_SHAME_ABOUT, data.verguenzaDetalle),
+      ]);
+    case 8:
+      return soloDefinidos([
+        escala(P_ANXIETY_LEVEL, data.nivelAnsiedad),
+        texto(P_POSTPONED_DECISION, data.decisionPostergada),
+        texto(P_POSTPONED_REASON, data.porqueNoLaTomaste),
+      ]);
+    default:
+      // Un número de bloque fuera de 1..8 es un error de programación, no un dato del usuario.
+      // Devolver [] en silencio haría que el bloque "se guarde" sin mandar nada.
+      throw new Error(`Bloque de Cuestionario Profundo inexistente: ${numeroDeBloque}`);
+  }
+}
+
+/**
+ * Inversa de `mapearBloqueCuestionarioProfundo`: reconstruye el formulario con lo que ya está
+ * guardado en el backend, para que volver a entrar a la etapa 2 muestre lo respondido y no un
+ * formulario en blanco.
+ *
+ * Recibe las respuestas de los DOS flujos (bloques 1-5 viven en `ficha_inicial` y 6-8 en
+ * `cuestionario_profundo`, ver `bloquesCuestionarioProfundo.ts`), así que la pantalla hace dos
+ * `GET /onboarding/answers` y pasa las dos acá.
+ *
+ * Un campo sin respuesta guardada conserva el valor de `base` — en particular, los sliders se
+ * quedan en su 5 por defecto en vez de caer a 0 o a NaN.
+ */
+export function reconstruirCuestionarioProfundoDesdeRespuestas(
+  respuestasPorFlujo: readonly RespuestasAgrupadasApi[],
+  base: CuestionarioProfundoData
+): CuestionarioProfundoData {
+  const porClave = new Map<string, RespuestaAgrupadaApi>();
+  for (const respuestas of respuestasPorFlujo) {
+    for (const seccion of respuestas.sections) {
+      for (const r of seccion.answers) {
+        porClave.set(r.questionKey, r);
+      }
+    }
+  }
+  const valorTexto = (clave: string): string | undefined => porClave.get(clave)?.textValue ?? undefined;
+  const valorEscala = (clave: string): number | undefined => porClave.get(clave)?.scaleValue ?? undefined;
+  const valorNumero = (clave: string): number | undefined => porClave.get(clave)?.numberValue ?? undefined;
+
+  const metaFacturacion = valorNumero(P_REVENUE_TARGET_90D_USD.clave);
+
+  return {
+    objetivoSmartCuerpo: valorTexto(P_BODY_SMART_GOAL.clave) ?? base.objetivoSmartCuerpo,
+    criticoInterno: valorTexto(P_INNER_CRITIC_VOICE.clave) ?? base.criticoInterno,
+    creenciaLimitante: valorTexto(P_LIMITING_BELIEF.clave) ?? base.creenciaLimitante,
+    definicionHoy: valorTexto(P_SELF_DEFINITION_TODAY.clave) ?? base.definicionHoy,
+    fraseParental: valorTexto(P_PARENTAL_PHRASE.clave) ?? base.fraseParental,
+    vinculoPadre: valorEscala(P_BOND_FATHER.clave) ?? base.vinculoPadre,
+    vinculoMadre: valorEscala(P_BOND_MOTHER.clave) ?? base.vinculoMadre,
+    fraseDineroInfancia: valorTexto(P_MONEY_CHILDHOOD_PHRASE.clave) ?? base.fraseDineroInfancia,
+    mereceDinero: valorEscala(P_MONEY_DESERVING_SCORE.clave) ?? base.mereceDinero,
+    porqueMereceDinero: valorTexto(P_MONEY_DESERVING_REASON.clave) ?? base.porqueMereceDinero,
+    metaFacturacion: metaFacturacion !== undefined ? String(metaFacturacion) : base.metaFacturacion,
+    productoEstrella: valorTexto(P_FLAGSHIP_PRODUCT.clave) ?? base.productoEstrella,
+    clienteIdeal: valorTexto(P_IDEAL_CLIENT.clave) ?? base.clienteIdeal,
+    enemigoPublico: valorTexto(P_BUSINESS_ENEMY.clave) ?? base.enemigoPublico,
+    objetivoSmartNegocio: valorTexto(P_BUSINESS_SMART_GOAL.clave) ?? base.objetivoSmartNegocio,
+    unaSolaCosa: valorTexto(P_ONE_SUCCESS_METRIC.clave) ?? base.unaSolaCosa,
+    bautizoProceso: valorTexto(P_PROCESS_BAPTISM.clave) ?? base.bautizoProceso,
+    actividadDrena: valorTexto(P_ENERGY_DRAINS.clave) ?? base.actividadDrena,
+    actividadRecarga: valorTexto(P_ENERGY_RECHARGES.clave) ?? base.actividadRecarga,
+    ultimaVezVivo: valorTexto(P_LAST_FULLY_ALIVE.clave) ?? base.ultimaVezVivo,
+    miedoIntensidad: valorEscala(P_FEAR_INTENSITY.clave) ?? base.miedoIntensidad,
+    miedoDetalle: valorTexto(P_FEAR_ABOUT.clave) ?? base.miedoDetalle,
+    culpaIntensidad: valorEscala(P_GUILT_INTENSITY.clave) ?? base.culpaIntensidad,
+    culpaDetalle: valorTexto(P_GUILT_ABOUT.clave) ?? base.culpaDetalle,
+    verguenzaIntensidad: valorEscala(P_SHAME_INTENSITY.clave) ?? base.verguenzaIntensidad,
+    verguenzaDetalle: valorTexto(P_SHAME_ABOUT.clave) ?? base.verguenzaDetalle,
+    nivelAnsiedad: valorEscala(P_ANXIETY_LEVEL.clave) ?? base.nivelAnsiedad,
+    decisionPostergada: valorTexto(P_POSTPONED_DECISION.clave) ?? base.decisionPostergada,
+    porqueNoLaTomaste: valorTexto(P_POSTPONED_REASON.clave) ?? base.porqueNoLaTomaste,
   };
 }

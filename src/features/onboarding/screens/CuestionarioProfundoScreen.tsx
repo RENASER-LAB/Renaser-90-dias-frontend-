@@ -1,146 +1,196 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useResponsive } from '../../../theme/responsive';
-import { Icon, IconName } from '../../../components/Icon';
+import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
+import { Icon } from '../../../components/Icon';
 import { MicroLabel } from '../../../components/ui';
 import { FormField } from '../../../components/FormField';
 import { SliderRating } from '../../../components/SliderRating';
 import { GoldButton } from '../../../components/GoldButton';
+import {
+  BLOQUES_CUESTIONARIO_PROFUNDO,
+  CAMPOS_OBLIGATORIOS,
+  CuestionarioProfundoData,
+  DATOS_INICIALES_CUESTIONARIO_PROFUNDO,
+  TOTAL_BLOQUES,
+  metaFacturacionEsValida,
+  porcentajeDelBloque,
+} from '../data/bloquesCuestionarioProfundo';
+import {
+  mapearBloqueCuestionarioProfundo,
+  reconstruirCuestionarioProfundoDesdeRespuestas,
+} from '../data/mapaPreguntas';
+import { usePersistenciaOnboarding } from '../hooks/usePersistenciaOnboarding';
+import * as onboardingApi from '../api/onboardingApi';
 
+/**
+ * Etapa 2 del onboarding — **Cuestionario Profundo**, 8 bloques.
+ *
+ * Se llega desde el perfil: YO -> MI ONBOARDING -> "Tu proceso completo" -> etapa 2.
+ *
+ * ── Qué cambió el 2026-09-05 (leer si esta pantalla te resulta distinta a como la recordabas) ──
+ *
+ * La versión anterior de este archivo tenía 6 bloques (Energía Vital, Guardianes, Estado Mental,
+ * Estado Somático, Estado Emocional, Manifestación), **no guardaba nada** (todo vivía en
+ * `useState` y `onComplete()` no persistía) y además **no estaba enchufada a ninguna navegación**:
+ * el componente no se importaba desde ningún lado. Se reemplazó por los 8 bloques que confirmó el
+ * dueño del proyecto, ahora sí guardando contra el backend bloque por bloque.
+ *
+ * Los 3 bloques que se fueron (Somático, Emocional, Manifestación) siguen existiendo como
+ * secciones y preguntas en el catálogo de la base; simplemente ya no forman parte de esta etapa.
+ * No se borró nada de la base.
+ *
+ * ── Guardado ──
+ *
+ * Incremental, un `POST /onboarding/answers` por respuesta al tocar "Continuar" (vía
+ * `usePersistenciaOnboarding.guardarCapitulo`). Si el guardado no se confirma NO se avanza de
+ * bloque: es la misma decisión ya tomada en `FichaInicialScreen` — dejar avanzar mostraría un
+ * progreso que en el servidor no existe. Cada respuesta es un upsert por (usuario, pregunta), así
+ * que reintentar nunca duplica.
+ */
 interface CuestionarioProfundoScreenProps {
+  /** Se llama al terminar el bloque 8, ya con todo guardado. */
   onComplete: () => void;
+  /** Se llama con "Anterior" desde el bloque 1. */
   onBack: () => void;
 }
-
-interface DeepFormData {
-  energiaGeneral: number;
-  energiaManana: number;
-  energiaTarde: number;
-  actividadDrena: string;
-  actividadRecarga: string;
-  miedoIntensidad: number;
-  miedoQue: string;
-  culpaIntensidad: number;
-  culpaQue: string;
-  verguenzaIntensidad: number;
-  verguenzaQue: string;
-  nivelAnsiedad: number;
-  decisionPostergada: string;
-  avisoEstres: string;
-  medidaCintura: string;
-  medidaCadera: string;
-  medidaPecho: string;
-  dueloNoResuelto: string;
-  conversacionPadres: string;
-  yoDia90: string;
-  practica1: string;
-  practica2: string;
-  practica3: string;
-}
-
-const BLOQUES: { id: number; title: string; subtitle: string; icon: IconName }[] = [
-  { id: 1, title: 'ENERGÍA VITAL', subtitle: 'Bloque 1 · Tu nivel y mapa de energía', icon: 'zap' },
-  { id: 2, title: 'LOS 3 GUARDIANES', subtitle: 'Bloque 2 · Miedo, Culpa y Vergüenza', icon: 'lock' },
-  { id: 3, title: 'ESTADO MENTAL', subtitle: 'Bloque 3 · Ansiedad y decisiones postergadas', icon: 'brain' },
-  { id: 4, title: 'ESTADO SOMÁTICO', subtitle: 'Bloque 4 · Tu cuerpo y medidas base', icon: 'body' },
-  { id: 5, title: 'ESTADO EMOCIONAL', subtitle: 'Bloque 5 · Duelos y ciclos abiertos', icon: 'heart' },
-  { id: 6, title: 'MANIFESTACIÓN DÍA 90', subtitle: 'Bloque 6 · Tu yo del futuro y 3 prácticas', icon: 'spark' },
-];
 
 export function CuestionarioProfundoScreen({ onComplete, onBack }: CuestionarioProfundoScreenProps) {
   const { c, t, mode, toggle } = useTheme();
   const { isTablet } = useResponsive();
+  const { guardarCapitulo, avanzarEstado } = usePersistenciaOnboarding();
 
-  const [currentBlock, setCurrentBlock] = useState(0);
-  const [formData, setFormData] = useState<DeepFormData>({
-    energiaGeneral: 6,
-    energiaManana: 6,
-    energiaTarde: 5,
-    actividadDrena: '',
-    actividadRecarga: '',
-    miedoIntensidad: 5,
-    miedoQue: '',
-    culpaIntensidad: 4,
-    culpaQue: '',
-    verguenzaIntensidad: 3,
-    verguenzaQue: '',
-    nivelAnsiedad: 5,
-    decisionPostergada: '',
-    avisoEstres: '',
-    medidaCintura: '',
-    medidaCadera: '',
-    medidaPecho: '',
-    dueloNoResuelto: '',
-    conversacionPadres: '',
-    yoDia90: '',
-    practica1: '',
-    practica2: '',
-    practica3: '',
+  const [indiceBloque, setIndiceBloque] = useState(0);
+  const [guardando, setGuardando] = useState(false);
+  const [hidratando, setHidratando] = useState(true);
+  const [formData, setFormData] = useState<CuestionarioProfundoData>(DATOS_INICIALES_CUESTIONARIO_PROFUNDO);
+
+  const bloque = BLOQUES_CUESTIONARIO_PROFUNDO[indiceBloque];
+  const esUltimo = indiceBloque === TOTAL_BLOQUES - 1;
+  const porcentaje = porcentajeDelBloque(bloque.numero);
+
+  /**
+   * Rehidratación: los 8 bloques abarcan DOS flujos del catálogo, así que hacen falta las dos
+   * consultas (ver `data/bloquesCuestionarioProfundo.ts`). Si falla, se sigue con el formulario
+   * vacío — nunca se bloquea a la persona por no poder leer lo previo.
+   */
+  useEffect(() => {
+    let vigente = true;
+    (async () => {
+      try {
+        const [ficha, profundo] = await Promise.all([
+          onboardingApi.obtenerRespuestas('ficha_inicial'),
+          onboardingApi.obtenerRespuestas('cuestionario_profundo'),
+        ]);
+        if (!vigente) return;
+        setFormData(prev => reconstruirCuestionarioProfundoDesdeRespuestas([ficha, profundo], prev));
+      } catch (error) {
+        console.warn('No se pudieron cargar tus respuestas previas del Cuestionario Profundo:', error);
+      } finally {
+        if (vigente) setHidratando(false);
+      }
+    })();
+    return () => {
+      vigente = false;
+    };
+  }, []);
+
+  useSystemBackHandler(() => {
+    irAlBloqueAnterior();
+    return true;
   });
 
-  const activeBloque = BLOQUES[currentBlock];
-  const isLast = currentBlock === BLOQUES.length - 1;
-
-  const updateField = (key: keyof DeepFormData, value: any) => {
-    setFormData(prev => ({ ...prev, [key]: value }));
+  const actualizar = <K extends keyof CuestionarioProfundoData>(
+    campo: K,
+    valor: CuestionarioProfundoData[K]
+  ) => {
+    setFormData(prev => ({ ...prev, [campo]: valor }));
   };
 
-  const validateBloque = (): boolean => {
-    if (currentBlock === 0) {
-      if (!formData.actividadDrena.trim()) {
-        Alert.alert('Respuesta requerida', 'Por favor describe qué actividad te drena más energía.');
-        return false;
-      }
-      if (!formData.actividadRecarga.trim()) {
-        Alert.alert('Respuesta requerida', 'Por favor describe qué actividad te recarga el alma.');
-        return false;
-      }
-    } else if (currentBlock === 2) {
-      if (!formData.decisionPostergada.trim()) {
-        Alert.alert('Respuesta requerida', 'Por favor comparte qué decisión importante llevas postergando.');
-        return false;
-      }
-    } else if (currentBlock === 5) {
-      if (!formData.practica1.trim() || !formData.practica2.trim() || !formData.practica3.trim()) {
-        Alert.alert('Prácticas requeridas', 'Por favor define tus 3 prácticas no negociables diarias.');
-        return false;
-      }
+  /** Devuelve el aviso del primer campo obligatorio vacío del bloque activo, o `null` si está completo. */
+  const primerFaltante = (): string | null => {
+    for (const { campo, aviso } of CAMPOS_OBLIGATORIOS[bloque.numero] ?? []) {
+      const valor = formData[campo];
+      if (typeof valor === 'string' && !valor.trim()) return aviso;
+      // Un slider sin tocar vale `null`, no 0: se le pide igual que a un campo de texto vacío.
+      if (valor === null) return aviso;
     }
-    return true;
-  };
-
-  const handleNext = () => {
-    if (!validateBloque()) return;
-
-    if (isLast) {
-      onComplete();
-    } else {
-      setCurrentBlock(prev => prev + 1);
+    // La meta de facturación es la única pregunta NUMERO: si no se puede parsear, el mapeo la
+    // descartaría y una respuesta obligatoria nunca llegaría a la base.
+    if (bloque.numero === 4 && !metaFacturacionEsValida(formData.metaFacturacion)) {
+      return 'La meta de facturación tiene que ser un número específico (sin rangos ni texto).';
     }
+    return null;
   };
 
-  const handlePrev = () => {
-    if (currentBlock > 0) {
-      setCurrentBlock(prev => prev - 1);
+  const irAlBloqueAnterior = () => {
+    if (indiceBloque > 0) {
+      setIndiceBloque(prev => prev - 1);
     } else {
       onBack();
     }
   };
 
+  const continuar = async () => {
+    if (guardando) return;
+    const faltante = primerFaltante();
+    if (faltante) {
+      Alert.alert('Falta responder', faltante);
+      return;
+    }
+
+    setGuardando(true);
+    try {
+      const resultado = await guardarCapitulo(mapearBloqueCuestionarioProfundo(bloque.numero, formData));
+      if (resultado.pendientes > 0) {
+        Alert.alert(
+          'No se pudo guardar',
+          'No pudimos guardar las respuestas de este bloque. Revisá tu conexión e intentá de nuevo.'
+        );
+        return;
+      }
+
+      await avanzarEstado({
+        flow: bloque.flujo,
+        section: bloque.seccion,
+        step: indiceBloque,
+        flowProgress: JSON.stringify({ bloque: bloque.numero, totalBloques: TOTAL_BLOQUES, porcentaje }),
+      });
+
+      if (esUltimo) {
+        onComplete();
+      } else {
+        setIndiceBloque(prev => prev + 1);
+      }
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  if (hidratando) {
+    return (
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: c.bg }]}>
+        <View style={styles.centrado}>
+          <ActivityIndicator color={c.gold} size="large" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: c.bg }]}>
-      {/* Top Header */}
       <View style={styles.topBar}>
         <Pressable
           hitSlop={12}
-          onPress={handlePrev}
+          onPress={irAlBloqueAnterior}
+          accessibilityRole="button"
           style={[styles.backBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
         >
           <Icon name="arrowLeft" size={16} color={c.gold} />
           <Text style={[t.micro, { color: c.text, letterSpacing: 1.2 }]}>
-            {currentBlock === 0 ? 'FICHA INICIAL' : 'ANTERIOR'}
+            {indiceBloque === 0 ? 'SALIR' : 'ANTERIOR'}
           </Text>
         </Pressable>
 
@@ -157,274 +207,315 @@ export function CuestionarioProfundoScreen({ onComplete, onBack }: CuestionarioP
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
-          { maxWidth: isTablet ? 540 : undefined, alignSelf: isTablet ? 'center' : 'stretch', width: isTablet ? '100%' : undefined }
+          {
+            maxWidth: isTablet ? 540 : undefined,
+            alignSelf: isTablet ? 'center' : 'stretch',
+            width: isTablet ? '100%' : undefined,
+          },
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Header */}
         <View style={styles.header}>
           <View style={[styles.iconMedallion, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
-            <Icon name={activeBloque.icon} size={22} color={c.gold} />
+            <Icon name={bloque.icono} size={22} color={c.gold} />
           </View>
-          <MicroLabel>{activeBloque.subtitle}</MicroLabel>
           <Text style={[t.screenTitle, { color: c.textStrong, marginTop: 4, textAlign: 'center' }]}>
-            {activeBloque.title}
+            Cuestionario Profundo
+          </Text>
+          <Text style={[t.body, { color: c.textSoft, fontSize: 12, marginTop: 4, textAlign: 'center' }]}>
+            Bloque {bloque.numero} de {TOTAL_BLOQUES}: {bloque.titulo}
           </Text>
         </View>
 
-        {/* Progress Pills */}
-        <View style={styles.pillsRow}>
-          {BLOQUES.map((b, idx) => (
-            <View
-              key={b.id}
-              style={[
-                styles.pill,
-                {
-                  backgroundColor: idx <= currentBlock ? c.gold : c.cardBgAlt,
-                  borderColor: idx === currentBlock ? c.gold : c.border,
-                  opacity: idx === currentBlock ? 1 : idx < currentBlock ? 0.7 : 0.35,
-                },
-              ]}
-            >
-              <Text
-                style={{
-                  fontSize: 9,
-                  color: idx <= currentBlock ? c.onGold : c.tabInactive,
-                  fontFamily: 'Jost_700Bold',
-                }}
-              >
-                {b.id}
-              </Text>
-            </View>
-          ))}
+        {/* Progreso */}
+        <View style={{ gap: 6 }}>
+          <View style={[styles.progressBg, { backgroundColor: c.cardBg, borderColor: c.border }]}>
+            <View style={[styles.progressFill, { width: `${porcentaje}%`, backgroundColor: c.gold }]} />
+          </View>
+          <Text style={[t.micro, { color: c.textSoft, textAlign: 'right', fontSize: 11, fontWeight: '600' }]}>
+            {porcentaje}% completado
+          </Text>
         </View>
 
-        {/* Bloques de Preguntas */}
+        {bloque.encabezado && (
+          <Text style={[t.body, { color: c.textSoft, fontSize: 12, fontStyle: 'italic', textAlign: 'center' }]}>
+            {bloque.encabezado}
+          </Text>
+        )}
+
         <View style={[styles.card, { backgroundColor: c.cardBg, borderColor: c.border }]}>
-          {currentBlock === 0 && (
-            <View style={{ gap: 16 }}>
-              <SliderRating
-                label="TU NIVEL DE ENERGÍA VITAL PROMEDIO HOY"
-                value={formData.energiaGeneral}
-                onChange={val => updateField('energiaGeneral', val)}
-                minLabel="Baja (1)"
-                maxLabel="Poderosa (10)"
+          {/* ── Bloque 1: Cuerpo ─────────────────────────────────────────────────────────── */}
+          {bloque.numero === 1 && (
+            <View style={styles.campos}>
+              <FormField
+                label="OBJETIVO SMART DE CUERPO A 90 DÍAS *"
+                helperText="Debe incluir: qué exactamente, cuánto, para cuándo."
+                value={formData.objetivoSmartCuerpo}
+                onChangeText={v => actualizar('objetivoSmartCuerpo', v)}
+                multiline
+                numberOfLines={4}
               />
-              <SliderRating
-                label="ENERGÍA AL DESPERTAR (6-8 AM)"
-                value={formData.energiaManana}
-                onChange={val => updateField('energiaManana', val)}
-              />
-              <SliderRating
-                label="ENERGÍA EN LA TARDE (4-6 PM)"
-                value={formData.energiaTarde}
-                onChange={val => updateField('energiaTarde', val)}
+            </View>
+          )}
+
+          {/* ── Bloque 2: Mente y Patrones ───────────────────────────────────────────────── */}
+          {bloque.numero === 2 && (
+            <View style={styles.campos}>
+              <FormField
+                label="CUANDO FALLAS, ¿QUÉ TE DICE TU CRÍTICO INTERNO? *"
+                helperText="La frase exacta. Sin filtros."
+                placeholder="Cuando fallo, una voz dentro de mí me dice…"
+                value={formData.criticoInterno}
+                onChangeText={v => actualizar('criticoInterno', v)}
+                multiline
+                numberOfLines={3}
               />
               <FormField
-                label="¿QUÉ ACTIVIDAD TE DRENA MÁS ENERGÍA?"
+                label="TU CREENCIA LIMITANTE #1 — LA QUE CARGAS HACE AÑOS *"
+                placeholder="Hace años creo que…"
+                value={formData.creenciaLimitante}
+                onChangeText={v => actualizar('creenciaLimitante', v)}
+                multiline
+                numberOfLines={3}
+              />
+              <FormField
+                label="¿CÓMO TE DEFINES HOY, EN UNA SOLA FRASE? *"
+                placeholder="Hoy soy…"
+                value={formData.definicionHoy}
+                onChangeText={v => actualizar('definicionHoy', v)}
+              />
+            </View>
+          )}
+
+          {/* ── Bloque 3: Alma, Heridas y Vínculos ───────────────────────────────────────── */}
+          {bloque.numero === 3 && (
+            <View style={styles.campos}>
+              <FormField
+                label="FRASE DE TU PADRE O MADRE QUE AÚN HOY TE MARCA *"
+                placeholder="Mi padre/madre solía decirme…"
+                value={formData.fraseParental}
+                onChangeText={v => actualizar('fraseParental', v)}
+              />
+              <SliderRating
+                label="TU VÍNCULO HOY CON TU PADRE (1-10)"
+                value={formData.vinculoPadre}
+                onChange={v => actualizar('vinculoPadre', v)}
+              />
+              <SliderRating
+                label="TU VÍNCULO HOY CON TU MADRE (1-10)"
+                value={formData.vinculoMadre}
+                onChange={v => actualizar('vinculoMadre', v)}
+              />
+              <FormField
+                label="FRASE SOBRE EL DINERO EN TU INFANCIA *"
+                placeholder="En mi casa siempre se decía sobre el dinero…"
+                value={formData.fraseDineroInfancia}
+                onChangeText={v => actualizar('fraseDineroInfancia', v)}
+              />
+              <SliderRating
+                label="¿SIENTES QUE MERECES GANAR MUCHO DINERO? (1-10)"
+                value={formData.mereceDinero}
+                onChange={v => actualizar('mereceDinero', v)}
+              />
+              <FormField
+                label="¿POR QUÉ?"
+                placeholder="Explica brevemente…"
+                value={formData.porqueMereceDinero}
+                onChangeText={v => actualizar('porqueMereceDinero', v)}
+                multiline
+                numberOfLines={3}
+              />
+            </View>
+          )}
+
+          {/* ── Bloque 4: Negocio y Dinero ───────────────────────────────────────────────── */}
+          {bloque.numero === 4 && (
+            <View style={styles.campos}>
+              <FormField
+                label="META DE FACTURACIÓN A 90 DÍAS (USD) *"
+                helperText="Número específico, no rango."
+                value={formData.metaFacturacion}
+                onChangeText={v => actualizar('metaFacturacion', v)}
+                keyboardType="numeric"
+              />
+              <FormField
+                label="TU PRODUCTO / SERVICIO ESTRELLA *"
+                placeholder="2-3 líneas"
+                value={formData.productoEstrella}
+                onChangeText={v => actualizar('productoEstrella', v)}
+                multiline
+                numberOfLines={3}
+              />
+              <FormField
+                label="TU CLIENTE IDEAL *"
+                placeholder="2-3 líneas"
+                value={formData.clienteIdeal}
+                onChangeText={v => actualizar('clienteIdeal', v)}
+                multiline
+                numberOfLines={3}
+              />
+              <FormField
+                label="TU ENEMIGO PÚBLICO #1 DEL NEGOCIO *"
+                helperText="La conducta tuya que más sabotea tu meta."
+                placeholder="Lo que más sabotea mi meta es…"
+                value={formData.enemigoPublico}
+                onChangeText={v => actualizar('enemigoPublico', v)}
+                multiline
+                numberOfLines={3}
+              />
+              <FormField
+                label="OBJETIVO SMART DE NEGOCIO A 90 DÍAS *"
+                helperText="Debe incluir números y fecha."
+                placeholder="Mi objetivo concreto de negocio a 90 días es…"
+                value={formData.objetivoSmartNegocio}
+                onChangeText={v => actualizar('objetivoSmartNegocio', v)}
+                multiline
+                numberOfLines={3}
+              />
+            </View>
+          )}
+
+          {/* ── Bloque 5: Compromiso ─────────────────────────────────────────────────────── */}
+          {bloque.numero === 5 && (
+            <View style={styles.campos}>
+              <FormField
+                label="SI LOGRARAS UNA SOLA COSA QUE HAGA DE ESTA FORMACIÓN UN ÉXITO, ¿CUÁL SERÍA? *"
+                value={formData.unaSolaCosa}
+                onChangeText={v => actualizar('unaSolaCosa', v)}
+                multiline
+                numberOfLines={4}
+              />
+              <FormField
+                label="BAUTIZO DEL PROCESO *"
+                helperText="Ponle nombre a tu reto personal de 90 días."
+                placeholder={'Ej: "Operación Soberanía"'}
+                value={formData.bautizoProceso}
+                onChangeText={v => actualizar('bautizoProceso', v)}
+              />
+            </View>
+          )}
+
+          {/* ── Bloque 6: Energía Vital ──────────────────────────────────────────────────── */}
+          {bloque.numero === 6 && (
+            <View style={styles.campos}>
+              {/*
+                Dos líneas, no una ni cuatro. En la base son AREA_TEXTO y la respuesta honesta rara
+                vez entra en un renglón ("las reuniones de la tarde y discutir con mi hermano"),
+                pero una caja de cuatro líneas frente a una pregunta que se contesta en una frase
+                intimida y hace scrollear de más. Dos líneas se ven cómodas para una frase y crecen
+                solas si la persona escribe más.
+              */}
+              <FormField
+                label="¿QUÉ ACTIVIDAD TE DRENA MÁS ENERGÍA HOY? *"
+                placeholder="Lo que más me deja vací@ es…"
                 value={formData.actividadDrena}
-                onChangeText={val => updateField('actividadDrena', val)}
-                placeholder="Lo que más me agota es..."
+                onChangeText={v => actualizar('actividadDrena', v)}
                 multiline
                 numberOfLines={2}
               />
               <FormField
-                label="¿QUÉ ACTIVIDAD TE RECARGA EL ALMA?"
+                label="¿QUÉ ACTIVIDAD TE RECARGA MÁS? *"
+                placeholder="Lo que me devuelve el alma es…"
                 value={formData.actividadRecarga}
-                onChangeText={val => updateField('actividadRecarga', val)}
-                placeholder="Lo que más me devuelve la vitalidad es..."
+                onChangeText={v => actualizar('actividadRecarga', v)}
                 multiline
                 numberOfLines={2}
+              />
+              <FormField
+                label="¿CUÁNDO FUE LA ÚLTIMA VEZ QUE TE SENTISTE PLENAMENTE VIV@? *"
+                placeholder="Describe el momento. Dónde, con quién, qué hacías…"
+                value={formData.ultimaVezVivo}
+                onChangeText={v => actualizar('ultimaVezVivo', v)}
+                multiline
+                numberOfLines={4}
               />
             </View>
           )}
 
-          {currentBlock === 1 && (
-            <View style={{ gap: 16 }}>
-              <SliderRating
-                label="¿QUÉ TAN PRESENTE ESTÁ EL MIEDO EN TU DÍA?"
-                value={formData.miedoIntensidad}
-                onChange={val => updateField('miedoIntensidad', val)}
-                minLabel="Leve (1)"
-                maxLabel="Intenso (10)"
+          {/* ── Bloque 7: Los 3 Guardianes ───────────────────────────────────────────────── */}
+          {bloque.numero === 7 && (
+            <View style={styles.campos}>
+              <TarjetaGuardian
+                titulo="MIEDO"
+                intensidad={formData.miedoIntensidad}
+                onIntensidad={v => actualizar('miedoIntensidad', v)}
+                detalle={formData.miedoDetalle}
+                onDetalle={v => actualizar('miedoDetalle', v)}
+                placeholder="¿De qué tienes más miedo en este momento?"
               />
-              <FormField
-                label="¿DE QUÉ TIENES MÁS MIEDO EN ESTE MOMENTO?"
-                value={formData.miedoQue}
-                onChangeText={val => updateField('miedoQue', val)}
-                placeholder="Mi mayor miedo es..."
-                multiline
-                numberOfLines={2}
+              <TarjetaGuardian
+                titulo="CULPA"
+                intensidad={formData.culpaIntensidad}
+                onIntensidad={v => actualizar('culpaIntensidad', v)}
+                detalle={formData.culpaDetalle}
+                onDetalle={v => actualizar('culpaDetalle', v)}
+                placeholder="¿Por qué cargas culpa? ¿Con quién o por qué?"
               />
-              <SliderRating
-                label="¿QUÉ TAN PRESENTE ESTÁ LA CULPA?"
-                value={formData.culpaIntensidad}
-                onChange={val => updateField('culpaIntensidad', val)}
-              />
-              <FormField
-                label="¿POR QUÉ O CON QUIÉN CARGAS CULPA?"
-                value={formData.culpaQue}
-                onChangeText={val => updateField('culpaQue', val)}
-                placeholder="Siento culpa respecto a..."
-                multiline
-                numberOfLines={2}
-              />
-              <SliderRating
-                label="¿QUÉ TAN PRESENTE ESTÁ LA VERGÜENZA?"
-                value={formData.verguenzaIntensidad}
-                onChange={val => updateField('verguenzaIntensidad', val)}
+              <TarjetaGuardian
+                titulo="VERGÜENZA"
+                intensidad={formData.verguenzaIntensidad}
+                onIntensidad={v => actualizar('verguenzaIntensidad', v)}
+                detalle={formData.verguenzaDetalle}
+                onDetalle={v => actualizar('verguenzaDetalle', v)}
+                placeholder="¿De qué te avergüenzas?"
               />
             </View>
           )}
 
-          {currentBlock === 2 && (
-            <View style={{ gap: 16 }}>
+          {/* ── Bloque 8: Estado Mental Profundo ─────────────────────────────────────────── */}
+          {bloque.numero === 8 && (
+            <View style={styles.campos}>
               <SliderRating
-                label="NIVEL DE ANSIEDAD DIARIA"
+                label="NIVEL DE ANSIEDAD DIARIA (1-10)"
                 value={formData.nivelAnsiedad}
-                onChange={val => updateField('nivelAnsiedad', val)}
-                minLabel="Tranquilo (1)"
+                onChange={v => actualizar('nivelAnsiedad', v)}
+                minLabel="Tranquil@ (1)"
                 maxLabel="Muy alta (10)"
               />
               <FormField
-                label="DECISIÓN IMPORTANTE QUE LLEVAS POSTERGANDO HACE MESES"
-                helperText="Sé honesto/a"
+                label="DECISIÓN IMPORTANTE QUE LLEVAS POSTERGANDO HACE MESES *"
+                placeholder="La decisión que llevo postergando es…"
                 value={formData.decisionPostergada}
-                onChangeText={val => updateField('decisionPostergada', val)}
-                placeholder="La decisión que he evitado tomar es..."
+                onChangeText={v => actualizar('decisionPostergada', v)}
                 multiline
-                numberOfLines={3}
-              />
-            </View>
-          )}
-
-          {currentBlock === 3 && (
-            <View style={{ gap: 16 }}>
-              <FormField
-                label="¿CÓMO TE AVISA TU CUERPO CUANDO ESTÁS ESTRESADO/A?"
-                helperText="Síntomas y tensión física"
-                value={formData.avisoEstres}
-                onChangeText={val => updateField('avisoEstres', val)}
-                placeholder="Mi cuerpo reacciona en..."
-                multiline
-                numberOfLines={3}
-              />
-              <View style={{ gap: 10 }}>
-                <MicroLabel>MEDIDAS CORPORALES BASE (CM)</MicroLabel>
-                <View style={{ flexDirection: 'row', gap: 10 }}>
-                  <View style={{ flex: 1 }}>
-                    <FormField
-                      label="CINTURA"
-                      value={formData.medidaCintura}
-                      onChangeText={val => updateField('medidaCintura', val)}
-                      placeholder="cm"
-                      keyboardType="numeric"
-                    />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <FormField
-                      label="CADERA"
-                      value={formData.medidaCadera}
-                      onChangeText={val => updateField('medidaCadera', val)}
-                      placeholder="cm"
-                      keyboardType="numeric"
-                    />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <FormField
-                      label="PECHO"
-                      value={formData.medidaPecho}
-                      onChangeText={val => updateField('medidaPecho', val)}
-                      placeholder="cm"
-                      keyboardType="numeric"
-                    />
-                  </View>
-                </View>
-              </View>
-            </View>
-          )}
-
-          {currentBlock === 4 && (
-            <View style={{ gap: 16 }}>
-              <FormField
-                label="DUELOS O CAPÍTULOS NO RESUELTOS"
-                helperText="Relaciones o etapas sin cerrar"
-                value={formData.dueloNoResuelto}
-                onChangeText={val => updateField('dueloNoResuelto', val)}
-                placeholder="Lo que aún no termino de soltar es..."
-                multiline
-                numberOfLines={3}
+                numberOfLines={4}
               />
               <FormField
-                label="CONVERSACIÓN PENDIENTE CON TUS PADRES"
-                value={formData.conversacionPadres}
-                onChangeText={val => updateField('conversacionPadres', val)}
-                placeholder="Lo que nunca les he dicho es..."
+                label="¿POR QUÉ NO LA HAS TOMADO?"
+                placeholder="Sé honest@…"
+                value={formData.porqueNoLaTomaste}
+                onChangeText={v => actualizar('porqueNoLaTomaste', v)}
                 multiline
                 numberOfLines={3}
               />
-            </View>
-          )}
-
-          {currentBlock === 5 && (
-            <View style={{ gap: 16 }}>
-              <FormField
-                label="¿QUÉ TE DIRÁ TU YO DEL DÍA 90?"
-                helperText="Tu versión renovada y triunfante"
-                value={formData.yoDia90}
-                onChangeText={val => updateField('yoDia90', val)}
-                placeholder="Frente a ti en el Día 90, te dirá..."
-                multiline
-                numberOfLines={3}
-              />
-              <View style={{ gap: 10 }}>
-                <MicroLabel>3 PRÁCTICAS NO NEGOCIABLES DIARIAS</MicroLabel>
-                <FormField
-                  label="PRÁCTICA #1"
-                  value={formData.practica1}
-                  onChangeText={val => updateField('practica1', val)}
-                  placeholder="Ej. 20 min de lectura de alto valor"
-                  icon="spark"
-                />
-                <FormField
-                  label="PRÁCTICA #2"
-                  value={formData.practica2}
-                  onChangeText={val => updateField('practica2', val)}
-                  placeholder="Ej. Entrenamiento físico sin excusas"
-                  icon="body"
-                />
-                <FormField
-                  label="PRÁCTICA #3"
-                  value={formData.practica3}
-                  onChangeText={val => updateField('practica3', val)}
-                  placeholder="Ej. 1 hora de trabajo profundo en mi negocio"
-                  icon="briefcase"
-                />
-              </View>
             </View>
           )}
         </View>
 
-        {/* Bottom Actions */}
         <View style={styles.actionsRow}>
-          {currentBlock > 0 && (
+          {indiceBloque > 0 && (
             <GoldButton
               label="ANTERIOR"
               variant="secondary"
-              onPress={handlePrev}
+              onPress={irAlBloqueAnterior}
               icon="arrowLeft"
               iconPosition="left"
               style={{ flex: 1 }}
             />
           )}
-
           <GoldButton
-            label={isLast ? 'FINALIZAR CUESTIONARIO' : 'SIGUIENTE'}
+            label={
+              guardando
+                ? 'GUARDANDO…'
+                : esUltimo
+                ? 'CONTINUAR AL SIGUIENTE MÓDULO'
+                : 'CONTINUAR'
+            }
             variant="primary"
-            onPress={handleNext}
+            onPress={continuar}
             icon="arrow"
-            style={{ flex: currentBlock > 0 ? 1.5 : 1 }}
+            style={{ flex: indiceBloque > 0 ? 1.5 : 1 }}
           />
         </View>
       </ScrollView>
@@ -432,9 +523,51 @@ export function CuestionarioProfundoScreen({ onComplete, onBack }: CuestionarioP
   );
 }
 
+/**
+ * Una de las 3 sub-tarjetas del bloque 7. Las tres tienen exactamente la misma forma (un slider de
+ * presencia + un textarea propio), así que existen como un componente y no como tres copias: la
+ * única diferencia real es el placeholder de la pregunta abierta.
+ */
+function TarjetaGuardian({
+  titulo,
+  intensidad,
+  onIntensidad,
+  detalle,
+  onDetalle,
+  placeholder,
+}: {
+  titulo: string;
+  intensidad: number | null;
+  onIntensidad: (valor: number) => void;
+  detalle: string;
+  onDetalle: (valor: string) => void;
+  placeholder: string;
+}) {
+  const { c } = useTheme();
+  return (
+    <View style={[styles.guardianCard, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
+      <MicroLabel>{titulo}</MicroLabel>
+      <SliderRating label="¿QUÉ TAN PRESENTE ESTÁ? (1-10)" value={intensidad} onChange={onIntensidad} />
+      <FormField
+        label=""
+        placeholder={placeholder}
+        value={detalle}
+        onChangeText={onDetalle}
+        multiline
+        numberOfLines={3}
+      />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+  },
+  centrado: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   topBar: {
     flexDirection: 'row',
@@ -479,23 +612,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 8,
   },
-  pillsRow: {
-    flexDirection: 'row',
-    gap: 6,
-    marginVertical: 6,
-  },
-  pill: {
-    flex: 1,
-    height: 18,
-    borderRadius: 9,
+  progressBg: {
+    height: 8,
+    borderRadius: 4,
     borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 4,
   },
   card: {
     borderWidth: 1,
     borderRadius: 20,
     padding: 20,
+  },
+  campos: {
+    gap: 16,
+  },
+  guardianCard: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 14,
+    gap: 12,
   },
   actionsRow: {
     flexDirection: 'row',

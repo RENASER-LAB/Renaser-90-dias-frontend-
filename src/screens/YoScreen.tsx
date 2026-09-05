@@ -23,6 +23,8 @@ import {
   rotuloDeFase,
   DIAS_DEL_PROGRAMA,
 } from '../features/home/hooks/useResumenHome';
+import { CuestionarioProfundoScreen } from '../features/onboarding/screens/CuestionarioProfundoScreen';
+import { useEtapasOnboarding } from '../features/onboarding/hooks/useEtapasOnboarding';
 
 // =========================================================================
 // DATOS ESTÁTICOS
@@ -54,13 +56,21 @@ const LOGROS_DATA = [
   { id: 'l4', title: 'REY SOMÁTICO (90 DÍAS)', icon: '👑', desc: 'Graduación oficial del programa. Llevas 37 de 90 días.', unlocked: false, progress: '41%' },
 ];
 
+/**
+ * Las 5 etapas: solo el título y el orden son fijos. El estado de cada una lo decide
+ * `useEtapasOnboarding` con datos reales — antes estaba escrito acá con `completed: true` en tres
+ * de ellas, así que un aprendiz que no había hecho nada veía tres tildes verdes.
+ *
+ * Hoy solo El Pacto tiene marca en el backend (`pactSignedAt`). Las otras cuatro se muestran
+ * pendientes hasta que exista una marca por etapa; ver la nota de `useEtapasOnboarding`.
+ */
 const ONBOARDING_STAGES = [
-  { id: 'st1', num: 1, title: 'El Pacto', desc: 'Completada · toca para revisar', completed: true },
-  { id: 'st2', num: 2, title: 'Cuestionario Profundo', desc: 'Completada · toca para revisar', completed: true },
-  { id: 'st3', num: 3, title: 'Las 90 Variables', desc: 'Completada · toca para revisar', completed: true },
-  { id: 'st4', num: 4, title: 'Diseño de Destino', desc: 'Hacia dónde vas y en quién te conviertes', active: true },
-  { id: 'st5', num: 5, title: 'Cierre de tu primera fase', desc: 'El sello final de tu onboarding', locked: true },
-];
+  { id: 'st1', num: 1, title: 'El Pacto', descPendiente: 'Tu acto fundacional' },
+  { id: 'st2', num: 2, title: 'Cuestionario Profundo', descPendiente: 'Quién eras y quién estás siendo' },
+  { id: 'st3', num: 3, title: 'Las 90 Variables', descPendiente: 'El mapa completo de tu punto de partida' },
+  { id: 'st4', num: 4, title: 'Diseño de Destino', descPendiente: 'Hacia dónde vas y en quién te conviertes' },
+  { id: 'st5', num: 5, title: 'Cierre de tu primera fase', descPendiente: 'El sello final de tu onboarding' },
+] as const;
 
 const PACTO_CLAUSULAS = [
   '1. Cumplir mis 3 Objetivos diarios sin negociarlos conmigo.',
@@ -77,6 +87,7 @@ const PACTO_CLAUSULAS = [
 
 export default function YoScreen() {
   const { c, t } = useTheme();
+  const etapasOnboarding = useEtapasOnboarding();
   const { rs, isTablet, horizontalPadding } = useResponsive();
   const { user, logout } = useAuth();
   const { resumen } = useResumenHome();
@@ -87,7 +98,7 @@ export default function YoScreen() {
   // ESTADOS DE NAVEGACIÓN DENTRO DE LA TARJETA DEL USUARIO
   // =========================================================================
   const [activeView, setActiveView] = useState<
-    'main' | 'hub' | 'editar_perfil' | 'info_perfil' | 'evidencias' | 'logros' | 'onboarding' | 'pacto' | 'metodo' | 'video_activacion' | 'notificaciones'
+    'main' | 'hub' | 'editar_perfil' | 'info_perfil' | 'evidencias' | 'logros' | 'onboarding' | 'pacto' | 'cuestionario_profundo' | 'metodo' | 'video_activacion' | 'notificaciones'
   >('main');
 
   // Formulario Editar Perfil
@@ -120,7 +131,23 @@ export default function YoScreen() {
       return true;
     }
     return false;
-  }, activeView !== 'main');
+    // Con el Cuestionario Profundo abierto manda SU handler (registrado después): tiene que poder
+    // retroceder bloque por bloque, no salir de la etapa entera de un toque.
+  }, activeView !== 'main' && activeView !== 'cuestionario_profundo');
+
+  /**
+   * Etapa 2 del onboarding ("Cuestionario Profundo", 8 bloques). Se devuelve ANTES del
+   * `SafeAreaView` de esta pantalla porque la pantalla trae el suyo propio: anidarlos duplicaría
+   * los márgenes de seguridad del sistema.
+   */
+  if (activeView === 'cuestionario_profundo') {
+    return (
+      <CuestionarioProfundoScreen
+        onComplete={() => setActiveView('onboarding')}
+        onBack={() => setActiveView('onboarding')}
+      />
+    );
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
@@ -533,49 +560,73 @@ export default function YoScreen() {
             </Text>
           </View>
 
-          {/* Banner Ventana 24h */}
-          <View style={[styles.windowBanner, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
-            <Text style={{ fontSize: 18 }}>🕒</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 12 }]}>
-                Tu ventana de 24 horas está abierta
-              </Text>
-              <Text style={[t.micro, { color: c.textSoft, fontSize: 10 }]}>
-                Te quedan 1 h 18 min — cierra a las 6:00 pm y no vuelve a abrirse.
-              </Text>
-            </View>
-          </View>
+          {/*
+            Acá vivía el banner "Tu ventana de 24 horas está abierta · Te quedan 1 h 18 min —
+            cierra a las 6:00 pm". Retirado el 2026-09-05 a pedido del dueño: no había ningún
+            reloj detrás. Era texto fijo — decía "1 h 18 min" a cualquier hora del día, para
+            siempre, y anunciaba un cierre que nunca ocurría. Vuelve cuando esté definido qué es
+            esa ventana y el backend pueda decir cuándo abre y cuándo cierra de verdad.
+          */}
 
           {/* Barra de Progreso */}
           <View style={{ gap: 4, marginTop: 12 }}>
             <View style={[styles.progressBarBg, { backgroundColor: c.cardBg, borderColor: c.border }]}>
-              <View style={[styles.progressBarFill, { width: '60%', backgroundColor: c.gold }]} />
+              {/* El ancho sale del conteo real. Estaba fijo en 60%, así que la barra decía una
+                  cosa y el texto de abajo otra apenas el conteo dejara de ser tres. */}
+              <View
+                style={[
+                  styles.progressBarFill,
+                  {
+                    width: `${Math.round((etapasOnboarding.completadas / ONBOARDING_STAGES.length) * 100)}%`,
+                    backgroundColor: c.gold,
+                  },
+                ]}
+              />
             </View>
             <Text style={[t.micro, { color: c.textSoft, textAlign: 'center', fontSize: 10 }]}>
-              3 de 5 etapas completadas
+              {etapasOnboarding.completadas} de {ONBOARDING_STAGES.length} etapas completadas
             </Text>
           </View>
 
           {/* 5 Etapas */}
           <View style={{ gap: 8, marginTop: 12, paddingBottom: 28 }}>
-            {ONBOARDING_STAGES.map(stage => (
+            {ONBOARDING_STAGES.map(stage => {
+              // El estado de cada etapa sale de datos reales, no del array. Solo El Pacto tiene
+              // marca en el backend; las demás quedan pendientes hasta que exista una por etapa.
+              const estado =
+                stage.id === 'st1' ? etapasOnboarding.pacto
+                : stage.id === 'st2' ? etapasOnboarding.cuestionarioProfundo
+                : 'pendiente';
+              const completada = estado === 'completada';
+              const enProgreso = estado === 'en_progreso';
+              const descripcion = completada
+                ? 'Completada · toca para revisar'
+                : enProgreso
+                ? 'Empezada · toca para continuar'
+                : stage.descPendiente;
+
+              return (
               <Pressable
                 key={stage.id}
                 onPress={() => {
                   if (stage.id === 'st1') {
                     setActiveView('pacto');
-                  } else if (stage.completed) {
-                    Alert.alert(stage.title, 'Etapa completada con éxito.');
-                  } else if (stage.active) {
-                    Alert.alert(stage.title, 'Continuando etapa activa...');
+                  } else if (stage.id === 'st2') {
+                    // Etapa 2 — Cuestionario Profundo. Se entra siempre (no solo si está
+                    // pendiente): la pantalla rehidrata lo ya respondido, así que "toca para
+                    // revisar" y "continuar donde quedaste" son la misma acción.
+                    setActiveView('cuestionario_profundo');
+                  } else {
+                    // Etapas 3, 4 y 5: todavía no existen. Se dice eso, en vez de un
+                    // "Continuando etapa activa..." que no continúa nada.
+                    Alert.alert(stage.title, 'Esta etapa todavía no está disponible.');
                   }
                 }}
                 style={[
                   styles.stageCard,
                   {
-                    borderColor: stage.active ? c.gold : c.border,
-                    backgroundColor: stage.active ? c.cardBgAlt : c.cardBg,
-                    opacity: stage.locked ? 0.5 : 1,
+                    borderColor: enProgreso ? c.gold : c.border,
+                    backgroundColor: enProgreso ? c.cardBgAlt : c.cardBg,
                   },
                 ]}
               >
@@ -584,34 +635,37 @@ export default function YoScreen() {
                     style={[
                       styles.stageCheckCircle,
                       {
-                        backgroundColor: stage.completed
-                          ? '#173429'
-                          : stage.active
-                          ? c.gold
-                          : '#2A2620',
+                        backgroundColor: completada ? '#173429' : enProgreso ? c.gold : '#2A2620',
                       },
                     ]}
                   >
-                    {stage.completed ? (
+                    {completada ? (
                       <Text style={{ color: '#70d2a0', fontWeight: 'bold', fontSize: 11 }}>✓</Text>
-                    ) : stage.active ? (
-                      <Text style={{ color: '#1E1B18', fontWeight: 'bold', fontSize: 11 }}>{stage.num}</Text>
                     ) : (
-                      <Text style={{ color: '#888', fontSize: 10 }}>🔒</Text>
+                      <Text
+                        style={{
+                          color: enProgreso ? '#1E1B18' : '#888',
+                          fontWeight: enProgreso ? 'bold' : 'normal',
+                          fontSize: 11,
+                        }}
+                      >
+                        {stage.num}
+                      </Text>
                     )}
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[t.cardTitle, { color: stage.active ? c.gold : c.textStrong, fontSize: 13 }]}>
+                    <Text style={[t.cardTitle, { color: enProgreso ? c.gold : c.textStrong, fontSize: 13 }]}>
                       {stage.title}
                     </Text>
                     <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>
-                      {stage.desc}
+                      {descripcion}
                     </Text>
                   </View>
                 </View>
-                <Icon name="chevron" size={12} color={stage.active ? c.gold : c.textSoft} />
+                <Icon name="chevron" size={12} color={enProgreso ? c.gold : c.textSoft} />
               </Pressable>
-            ))}
+              );
+            })}
           </View>
         </ScrollView>
       )}
@@ -1206,7 +1260,6 @@ const styles = StyleSheet.create({
   categoryPillBadge: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
   groupedBox: { borderWidth: 1, borderRadius: 18, overflow: 'hidden' },
   menuOptionRow: { padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1 },
-  windowBanner: { borderWidth: 1, borderRadius: 16, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10 },
   progressBarBg: { height: 6, borderRadius: 3, borderWidth: 1, overflow: 'hidden' },
   progressBarFill: { height: '100%', borderRadius: 3 },
   stageCard: { borderWidth: 1, borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
