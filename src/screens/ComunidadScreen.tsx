@@ -27,6 +27,7 @@ import { useAuth } from '../features/auth/context/AuthContext';
 import { useWallFeed } from '../features/community/hooks/useWallFeed';
 import { useWallReactions } from '../features/community/hooks/useWallReactions';
 import { useMiCelula } from '../features/community/hooks/useMiCelula';
+import { useCategoriasMuro } from '../features/community/hooks/useCategoriasMuro';
 import * as wallApi from '../features/community/api/wallApi';
 import { elegirYNormalizarFotoMuro, type FotoMuroNormalizada } from '../features/community/utils/normalizarImagen';
 import { FotoMuro } from '../features/community/components/FotoMuro';
@@ -571,7 +572,27 @@ export default function ComunidadScreen() {
   // Ventana Externa de Publicación a Pantalla Completa
   const [createPostModalVisible, setCreatePostModalVisible] = useState(false);
   const [newPostText, setNewPostText] = useState('');
-  const [newPostTag, setNewPostTag] = useState('🔥 VICTORIA SOMÁTICA');
+  /**
+   * Clave de la categoría elegida (`REVELACIONES`, `AGRADECIMIENTO`, …) o `null` si la persona no
+   * eligió ninguna — `category` es opcional en `POST /api/v1/wall`, así que "sin categoría" es una
+   * publicación perfectamente válida y es lo que se guarda si no se toca ninguna pastilla.
+   *
+   * Se guarda la CLAVE, no el texto visible: el texto (emoji + etiqueta) lo puede cambiar un
+   * administrador desde el panel cuando quiera, la clave es la identidad y es lo único que el
+   * backend acepta (`categorias_muro.clave`, `PublicacionMuroService.publicar` valida que exista).
+   *
+   * Antes acá vivía `newPostTag`, con `'🔥 VICTORIA SOMÁTICA'` de valor inicial y otras dos
+   * pastillas escritas a mano más abajo. Ninguna de las tres existe en el catálogo del backend, y
+   * además el valor **nunca se mandaba al publicar** — se elegía una etiqueta que no iba a ningún
+   * lado. Ver `useCategoriasMuro`.
+   */
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<string | null>(null);
+  const {
+    categorias: categoriasMuro,
+    cargando: cargandoCategoriasMuro,
+    error: errorCategoriasMuro,
+    recargar: recargarCategoriasMuro,
+  } = useCategoriasMuro();
   // Fotos ya elegidas de la galería y normalizadas (`utils/normalizarImagen.ts`), listas para
   // subir a S3 al publicar. Arranca vacío: el backend exige al menos una (Publicacion.MEDIA_MIN
   // = 1), así que ya no tiene sentido precargar nombres de archivo falsos.
@@ -1424,13 +1445,17 @@ export default function ComunidadScreen() {
     // pantalla trabada con el botón en "PUBLICANDO...".
     const texto = newPostText.trim();
     const fotos = attachedPhotos;
+    // La categoría viaja igual que el texto y las fotos: se limpia al cerrar y se devuelve al
+    // compositor si la publicación falla, para no obligar a volver a elegirla.
+    const categoria = categoriaSeleccionada;
     setNewPostText('');
     setAttachedPhotos([]);
+    setCategoriaSeleccionada(null);
     setCreatePostModalVisible(false);
 
     setSubiendoPublicacion(true);
     try {
-      await publicarOptimista(texto, fotos, nombreUsuario);
+      await publicarOptimista(texto, fotos, nombreUsuario, categoria);
       // El arranque guiado espera este momento para pasar al Pacto. Se avisa DESPUÉS del `await`,
       // con la publicación ya confirmada por el backend, y nunca en el `catch`: un post que falló
       // y se revirtió no es un primer post. El aviso solo adelanta lo que igual se confirma contra
@@ -1448,6 +1473,7 @@ export default function ComunidadScreen() {
       // lo escrito por un fallo de red es peor que la espera que acabamos de sacar.
       setNewPostText(texto);
       setAttachedPhotos(fotos);
+      setCategoriaSeleccionada(categoria);
       setCreatePostModalVisible(true);
       Alert.alert('No se pudo publicar', mensajeDeFalloAlPublicar(error));
     } finally {
@@ -3584,22 +3610,61 @@ export default function ComunidadScreen() {
               </View>
             </View>
 
-            <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
-              {['🔥 VICTORIA SOMÁTICA', '⚡ ALTO RENDIMIENTO', '🧠 REFLEXIÓN'].map(tag => (
-                <Pressable
-                  key={tag}
-                  onPress={() => setNewPostTag(tag)}
-                  style={[
-                    styles.tagSelectorPill,
-                    { borderColor: c.border, backgroundColor: c.cardBgAlt },
-                    newPostTag === tag && { borderColor: c.gold, backgroundColor: c.cardBg },
-                  ]}
-                >
-                  <Text style={[t.micro, { color: newPostTag === tag ? c.gold : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
-                    {tag}
+            {/* Categorías del catálogo del servidor (`GET /api/v1/wall/categories`), no una lista
+                escrita a mano: el administrador las da de alta y les cambia emoji/nombre desde el
+                panel, y eso tiene que llegar a la app sin publicar una versión nueva.
+                Elegir una es OPCIONAL — `category` es opcional en el backend — así que ninguna
+                viene preseleccionada y volver a tocar la elegida la desmarca. Los tres estados de
+                red se resuelven acá abajo y en ninguno el compositor queda inutilizable: sin
+                catálogo se publica igual, sin categoría. */}
+            <View style={{ gap: 6 }}>
+              {cargandoCategoriasMuro && categoriasMuro.length === 0 && (
+                <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>CARGANDO CATEGORÍAS...</Text>
+              )}
+
+              {!cargandoCategoriasMuro && errorCategoriasMuro && categoriasMuro.length === 0 && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5, flexShrink: 1 }]}>
+                    No pudimos cargar las categorías. Podés publicar igual, sin categoría.
                   </Text>
-                </Pressable>
-              ))}
+                  <Pressable
+                    onPress={() => void recargarCategoriasMuro()}
+                    hitSlop={8}
+                    style={[styles.tagSelectorPill, { borderColor: c.gold, backgroundColor: c.cardBg }]}
+                  >
+                    <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 9.5 }]}>REINTENTAR</Text>
+                  </Pressable>
+                </View>
+              )}
+
+              {!cargandoCategoriasMuro && !errorCategoriasMuro && categoriasMuro.length === 0 && (
+                <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>
+                  Todavía no hay categorías configuradas. Tu publicación se guarda igual.
+                </Text>
+              )}
+
+              {categoriasMuro.length > 0 && (
+                <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
+                  {categoriasMuro.map(categoria => {
+                    const elegida = categoriaSeleccionada === categoria.key;
+                    return (
+                      <Pressable
+                        key={categoria.key}
+                        onPress={() => setCategoriaSeleccionada(elegida ? null : categoria.key)}
+                        style={[
+                          styles.tagSelectorPill,
+                          { borderColor: c.border, backgroundColor: c.cardBgAlt },
+                          elegida && { borderColor: c.gold, backgroundColor: c.cardBg },
+                        ]}
+                      >
+                        <Text style={[t.micro, { color: elegida ? c.gold : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
+                          {`${categoria.emoji} ${categoria.label.toUpperCase()}`}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )}
             </View>
 
             <TextInput

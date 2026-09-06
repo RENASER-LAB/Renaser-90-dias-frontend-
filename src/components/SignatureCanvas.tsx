@@ -203,7 +203,27 @@ export const SignatureCanvas = forwardRef<SignatureCanvasHandle, SignatureCanvas
         ]}
         {...panResponder.panHandlers}
       >
-        <Svg style={StyleSheet.absoluteFill}>
+        {/*
+          BUG ENCONTRADO 2026-09-06 (E-136): `width`/`height` al 100% NO son decorativos, son EL
+          arreglo. Acá decía solo `<Svg style={StyleSheet.absoluteFill}>`, y en WEB eso deja un
+          `<svg>` del DOM con `position:absolute` y los cuatro lados en 0 pero SIN ancho. Un
+          `<svg>` es un elemento reemplazado: con `width:auto` el navegador ignora `right`/`bottom`
+          y cae al tamaño de objeto por defecto de CSS, **300 × 150 px**. O sea que el área
+          dibujable quedaba clavada en 300 px pegada a la izquierda, midiera lo que midiera el
+          recuadro visible — el trazo se cortaba a media caja. Medido en Chrome: recuadro de 462 px
+          → `<svg>` de 300 px; con estos dos props → 460 px, la caja entera.
+
+          En nativo no se veía porque Yoga sí estira un hijo absoluto con los cuatro lados en 0.
+          De hecho `react-native-svg` omite a propósito su default de `100%` cuando la posición es
+          `absolute` (`elements/Svg.js`), contando con ese estirado — y en web ese default es
+          justamente el que faltaba.
+
+          Porcentaje y no píxeles medidos: así el lienzo sigue al recuadro en cualquier ancho
+          (móvil angosto, tablet, web) sin `onLayout` ni números mágicos, y sin el frame en blanco
+          que tendría una medición. Sin `viewBox` a propósito: 1 unidad = 1 px, que es la escala en
+          la que `locationX/locationY` graba los trazos.
+        */}
+        <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
           {paths.map((p, index) => (
             <Path
               key={index}

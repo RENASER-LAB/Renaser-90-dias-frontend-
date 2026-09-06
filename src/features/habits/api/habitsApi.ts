@@ -1,5 +1,10 @@
 import { apiFetch } from '../../../services/http/apiClient';
-import type { HabitoCatalogoApi, PreferenciaHabitoApi, TrackDelDiaApi } from '../types/habits.types';
+import type {
+  AltaHabitoPersonal,
+  HabitoCatalogoApi,
+  PreferenciaHabitoApi,
+  TrackDelDiaApi,
+} from '../types/habits.types';
 import { habitsSchemas, validarRespuesta } from './habitsSchemas';
 
 /**
@@ -11,6 +16,25 @@ import { habitsSchemas, validarRespuesta } from './habitsSchemas';
 export async function obtenerCatalogo(): Promise<HabitoCatalogoApi[]> {
   const r = await apiFetch<unknown>('/api/v1/habits');
   return validarRespuesta(habitsSchemas.catalogo, r, 'GET /api/v1/habits');
+}
+
+/**
+ * `POST /api/v1/habits` — da de alta un hábito PROPIO del aprendiz (ámbito PERSONAL).
+ *
+ * > **Agregado 2026-09-06 (E-137).** El endpoint existe en el backend desde el 2026-09-02, pero
+ * > la app nunca lo llamaba: "➕ Crear Hábito" armaba un objeto en memoria con un id inventado
+ * > (`habit_<timestamp>`), lo metía en el estado de React y anunciaba "¡Hábito Creado! 🦅". El
+ * > hábito no existía en ninguna parte: desaparecía al recargar, y cualquier toque sobre él
+ * > mandaba ese id al servidor, que respondía `400 "El valor de 'habitId' no tiene el formato
+ * > esperado"` (visto en los logs de producción el 2026-09-06 a las 12:55 UTC).
+ *
+ * `participantId` y `scope` NO viajan a propósito: el backend fuerza PERSONAL y el actor
+ * autenticado (blindaje de mass-assignment). `triggerTime` es obligatorio — sin él el hábito no
+ * genera nada que hacer; `limitTime` es opcional (un hábito propio no vence dentro del día).
+ */
+export async function crearHabitoPersonal(alta: AltaHabitoPersonal): Promise<HabitoCatalogoApi> {
+  const r = await apiFetch<unknown>('/api/v1/habits', { method: 'POST', body: alta });
+  return validarRespuesta(habitsSchemas.habitoCreado, r, 'POST /api/v1/habits');
 }
 
 /** GET /api/v1/habit-preferences — horario de cada hábito, propio si el aprendiz lo cambió. */
