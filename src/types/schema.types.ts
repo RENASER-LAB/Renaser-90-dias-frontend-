@@ -139,11 +139,18 @@ export interface CourseItem {
 // =========================================================================
 // 4. EVENTOS & EXPERIENCIAS: MURO SOCIAL DE LA TRIBU
 // =========================================================================
-export type PostTag =
-  | '🔥 VICTORIA SOMÁTICA'
-  | '⚡ ALTO RENDIMIENTO'
-  | '🧠 REFLEXIÓN'
-  | '👑 OFICIAL';
+/**
+ * Clave de la categoría del Muro (`REVELACIONES`, `AGRADECIMIENTO`, …). Es un `string` a
+ * propósito: el catálogo lo administra ADMIN/ALCHEMIST en caliente desde el panel
+ * (`categorias_muro`, `GET /api/v1/wall/categories`), así que ninguna unión de literales lo puede
+ * describir sin quedar desactualizada en cuanto alguien dé de alta una categoría nueva.
+ *
+ * > **Corregido 2026-09-06.** Antes era la unión `'🔥 VICTORIA SOMÁTICA' | '⚡ ALTO RENDIMIENTO' |
+ * > '🧠 REFLEXIÓN' | '👑 OFICIAL'` — cuatro valores que no existen en el catálogo del backend y
+ * > que, mandados al publicar, dan 400 `"Categoria desconocida"`. De ahí salían las pastillas del
+ * > compositor. Ver `docs/BITACORA_ERRORES.md` E-135.
+ */
+export type PostTag = string;
 
 export type PostReactionType = 'like' | 'dislike';
 

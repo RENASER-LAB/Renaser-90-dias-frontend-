@@ -27,7 +27,9 @@ import {
 } from '../features/programa/hooks/useArranqueDelPrograma';
 import { HoraPickerModal } from '../features/habits/components/HoraPickerModal';
 import * as habitsApi from '../features/habits/api/habitsApi';
-import { aMomento } from '../features/habits/api/habitsMappers';
+import { aMomento, mapearPlanHabit } from '../features/habits/api/habitsMappers';
+import type { CategoriaHabitoApi } from '../features/habits/types/habits.types';
+import { mensajeDeError } from '../services/http/apiClient';
 
 // =========================================================================
 // TIPOS: PLAN, HÁBITOS 7 DÍAS Y OBJETIVOS EN 3 NIVELES
@@ -123,17 +125,38 @@ const INITIAL_GOALS: PlanGoals = {
 };
 
 const DAY_OPTIONS: DayOfWeek[] = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'];
+
+/** Índice de HOY dentro de una semana que arranca en lunes (0 = lunes … 6 = domingo). */
+const INDICE_DE_HOY = (new Date().getDay() + 6) % 7;
+
 /**
- * Fechas reales de la semana en curso, de lunes a domingo. Antes eran del 14 al 20 escritas a
- * mano: la pantalla mostraba días que no correspondían a la fecha actual.
+ * `true` cuando la semana que hay que mostrar es la SIGUIENTE, no la que está corriendo.
+ *
+ * > **Corregido 2026-09-06 (E-137).** D-98 dejó la regla "lo que se planifica es de mañana en
+ * > adelante" y apagó la pestaña de hoy — correcto. Pero un **domingo** no tiene mañana dentro de
+ * > su propia semana: `indiceDeHoy` valía 6, los 7 días quedaban apagados y la pestaña inicial se
+ * > quedaba en el propio domingo, también apagado. El comentario de entonces asumía que esa
+ * > semana cerrada "era la verdad de ese momento", y no lo es: mañana existe, es el lunes
+ * > siguiente, y simplemente no se estaba dibujando. Efecto real, reportado por el dueño el
+ * > 2026-09-06 tras registrarse un domingo: *"quiero ordenar mis hábitos para mañana, no me deja
+ * > porque no tengo la opción de ver"*. Cuando hoy es domingo se muestra la semana siguiente
+ * > entera (lunes a domingo), con todos sus días planificables — que es exactamente lo que D-98
+ * > quería decir con "la pestaña inicial pasa a ser MAÑANA".
  */
-function fechasDeEstaSemana(): Record<DayOfWeek, string> {
+const MOSTRAR_SEMANA_SIGUIENTE = INDICE_DE_HOY === DAY_OPTIONS.length - 1;
+
+/**
+ * Fechas reales de la semana que se está mostrando, de lunes a domingo. Antes eran del 14 al 20
+ * escritas a mano: la pantalla mostraba días que no correspondían a la fecha actual.
+ *
+ * @param semanasAdelante 0 = la semana en curso; 1 = la siguiente (ver `MOSTRAR_SEMANA_SIGUIENTE`).
+ */
+function fechasDeLaSemana(semanasAdelante: number): Record<DayOfWeek, string> {
   const hoy = new Date();
+  const lunes = new Date(hoy);
   // getDay() devuelve 0 para domingo; acá la semana arranca el lunes, así que el domingo cuenta
   // como el séptimo día y no como el primero.
-  const diaDeLaSemana = (hoy.getDay() + 6) % 7;
-  const lunes = new Date(hoy);
-  lunes.setDate(hoy.getDate() - diaDeLaSemana);
+  lunes.setDate(hoy.getDate() - INDICE_DE_HOY + semanasAdelante * 7);
   const fechas = {} as Record<DayOfWeek, string>;
   DAY_OPTIONS.forEach((dia, indice) => {
     const fecha = new Date(lunes);
@@ -143,7 +166,14 @@ function fechasDeEstaSemana(): Record<DayOfWeek, string> {
   return fechas;
 }
 
-const DAY_DATES: Record<DayOfWeek, string> = fechasDeEstaSemana();
+const DAY_DATES: Record<DayOfWeek, string> = fechasDeLaSemana(MOSTRAR_SEMANA_SIGUIENTE ? 1 : 0);
+
+/**
+ * Último índice de la semana mostrada que YA NO se puede planificar (hoy y todo lo anterior).
+ * En la semana siguiente no hay ninguno: ni siquiera su lunes llegó todavía, así que vale -1 y
+ * los 7 días quedan abiertos.
+ */
+const ULTIMO_INDICE_NO_PLANIFICABLE = MOSTRAR_SEMANA_SIGUIENTE ? -1 : INDICE_DE_HOY;
 
 /** `Date` -> `yyyy-MM-dd` en hora LOCAL. `toISOString()` no sirve: pasa a UTC y corre el día. */
 function aFechaIso(fecha: Date): string {
@@ -177,7 +207,47 @@ function opcionesDePausa(): { etiqueta: string; hasta?: string }[] {
   return opciones;
 }
 
-const ICON_PALETTE = ['☀️', '💧', '⚡', '🏃', '🧘', '📊', '📚', '✍️', '🌙', '👑', '🎯', '🥗'];
+/**
+ * Las cuatro categorías reales (`renaser.categorias_habito`) con la etiqueta y el icono que la
+ * tarjeta va a mostrar de verdad — los mismos que `habitsMappers.CATEGORIA` aplica al leer el
+ * catálogo, para que lo que se elige al crear sea exactamente lo que después se ve.
+ *
+ * > **Corregido 2026-09-06 (E-137).** Antes acá había un `ICON_PALETTE` de 12 emojis sueltos y el
+ * > formulario dejaba elegir uno. El backend no tiene dónde guardarlo (`CreatePersonalHabitRequest`
+ * > no lleva icono; `mapearPlanHabit` lo deriva de la CATEGORÍA), así que el emoji elegido se
+ * > perdía en la primera recarga. La categoría, en cambio, es obligatoria del lado del servidor y
+ * > nunca se pedía.
+ */
+const CATEGORIAS_HABITO: { valor: CategoriaHabitoApi; etiqueta: string; icono: string }[] = [
+  { valor: 'BODY', etiqueta: 'Cuerpo', icono: '💪' },
+  { valor: 'MIND', etiqueta: 'Mente', icono: '🧘' },
+  { valor: 'SPIRIT', etiqueta: 'Espíritu', icono: '✨' },
+  { valor: 'CONSCIENCE', etiqueta: 'Emociones', icono: '❤️' },
+];
+
+/**
+ * `"06:30 AM"` / `"6:30 pm"` / `"18:30"` → `"18:30"` (24 h). `null` si no se entiende.
+ *
+ * El campo de hora del formulario es texto libre y su valor por defecto venía en formato 12 h con
+ * sufijo, que el backend no acepta (`triggerTime` viaja como `HH:mm:ss`). Sin esta traducción el
+ * alta se caía con un 400 de formato — y con el alta rota de antes (E-137) nunca se había notado.
+ */
+function aHora24(texto: string): string | null {
+  const limpio = texto.trim().toUpperCase();
+  const partes = /^(\d{1,2}):(\d{2})\s*(AM|PM)?$/.exec(limpio);
+  if (!partes) return null;
+  let hora = Number(partes[1]);
+  const minuto = Number(partes[2]);
+  const sufijo = partes[3];
+  if (minuto > 59) return null;
+  if (sufijo) {
+    if (hora < 1 || hora > 12) return null;
+    hora = (hora % 12) + (sufijo === 'PM' ? 12 : 0);
+  } else if (hora > 23) {
+    return null;
+  }
+  return `${String(hora).padStart(2, '0')}:${String(minuto).padStart(2, '0')}`;
+}
 
 const FASES = [
   { d: 'DÍAS 1–30', n: 'FUNDACIÓN' },
@@ -235,13 +305,10 @@ export default function PlanScreen() {
   const [activeSubView, setActiveSubView] = useState<'main' | 'habitos' | 'objetivos'>('main');
 
   // Estados de Hábitos
-  // Arranca en el día de hoy, no siempre en lunes: quien abre Plan un miércoles espera ver su
-  // miércoles, no tener que buscarlo. El mismo índice marca hasta dónde se puede planificar.
-  const indiceDeHoy = (new Date().getDay() + 6) % 7;
-  // D-98: arranca en el primer día planificable, que es MAÑANA (hoy está bloqueado). Un domingo
-  // no tiene mañana dentro de esta semana: ahí se queda en domingo, apagado, y la persona ve la
-  // semana entera cerrada — que es la verdad de ese momento.
-  const indiceInicial = Math.min(indiceDeHoy + 1, DAY_OPTIONS.length - 1);
+  // D-98: arranca en el primer día planificable, que es MAÑANA (hoy está bloqueado). Quien abre
+  // Plan un miércoles cae en el jueves, no en el lunes. Un domingo, ese "mañana" es el lunes de
+  // la semana siguiente, que es la que se dibuja (ver `MOSTRAR_SEMANA_SIGUIENTE`, E-137).
+  const indiceInicial = ULTIMO_INDICE_NO_PLANIFICABLE + 1;
   const [selectedDay, setSelectedDay] = useState<DayOfWeek>(DAY_OPTIONS[indiceInicial]);
   // Los hábitos vienen del backend (catálogo + horario propio del aprendiz). "Todavía no
   // respondió" y "respondió con cero hábitos" NO son lo mismo: lo primero es un esqueleto, lo
@@ -297,21 +364,14 @@ export default function PlanScreen() {
   const [moveMomentModalVisible, setMoveMomentModalVisible] = useState(false);
   const [selectedHabitForMove, setSelectedHabitForMove] = useState<PlanHabit | null>(null);
 
-  // Formulario Crear Hábito
+  // Formulario Crear Hábito. Solo se piden los tres datos que el backend guarda de verdad
+  // (`POST /api/v1/habits`): nombre, categoría y hora de disparo. El momento del día lo deriva el
+  // servidor de la hora, el icono sale de la categoría y un hábito propio aplica los 7 días
+  // (`TipoDia.TODOS`) — ver E-137 y el aviso dentro del modal.
   const [newHabitTitle, setNewHabitTitle] = useState('');
-  const [newHabitIcon, setNewHabitIcon] = useState('☀️');
-  const [newHabitMoment, setNewHabitMoment] = useState<DayMoment>('mañana');
-  const [newHabitTime, setNewHabitTime] = useState('06:30 AM');
-  const [newHabitDuration, setNewHabitDuration] = useState('30 min');
-  const [newHabitDays, setNewHabitDays] = useState<Record<DayOfWeek, boolean>>({
-    LUN: true,
-    MAR: true,
-    MIÉ: true,
-    JUE: true,
-    VIE: true,
-    SÁB: false,
-    DOM: false,
-  });
+  const [newHabitCategory, setNewHabitCategory] = useState<CategoriaHabitoApi>('BODY');
+  const [newHabitTime, setNewHabitTime] = useState('06:30');
+  const [guardandoNuevoHabito, setGuardandoNuevoHabito] = useState(false);
 
   // Formulario Editar Objetivos
   const [editGoalTitle, setEditGoalTitle] = useState('');
@@ -500,43 +560,65 @@ export default function PlanScreen() {
     setSelectedHabitForMove(null);
   };
 
-  const handleSaveNewHabit = () => {
-    if (!newHabitTitle.trim()) {
+  /**
+   * Da de alta el hábito propio contra `POST /api/v1/habits` y lo agrega al plan con la forma que
+   * devolvió el servidor.
+   *
+   * > **Corregido 2026-09-06 (E-137).** Esto NO llamaba al backend. Construía un `PlanHabit` en
+   * > memoria con un id inventado (`habit_<timestamp>`), lo empujaba al estado de React y avisaba
+   * > "¡Hábito Creado! 🦅". El hábito no existía en ninguna parte: se perdía al recargar, y en
+   * > cuanto el aprendiz tocaba su interruptor el id falso viajaba al servidor, que respondía
+   * > `400 "El valor de 'habitId' no tiene el formato esperado"` (visto en producción el
+   * > 2026-09-06). Además nacía con `SÁB`/`DOM` en `false`, así que a quien lo creaba un domingo
+   * > le aparecía en `PAUSADO` recién nacido — el segundo síntoma que reportó el dueño.
+   *
+   * La tarjeta se arma con `mapearPlanHabit` sobre la respuesta real, no a mano: así el icono, la
+   * categoría, los días y el momento del día son exactamente los que va a devolver la próxima
+   * lectura del catálogo, y no hay dos verdades conviviendo en la pantalla.
+   */
+  const handleSaveNewHabit = async () => {
+    const titulo = newHabitTitle.trim();
+    if (!titulo) {
       Alert.alert('Campo requerido', 'Por favor ingresa un nombre para tu hábito.');
       return;
     }
+    const hora = aHora24(newHabitTime);
+    if (!hora) {
+      Alert.alert('Hora inválida', 'Escribe la hora como 06:30 (o 06:30 AM). No pudimos entenderla.');
+      return;
+    }
 
-    const newHabit: PlanHabit = {
-      id: `habit_${Date.now()}`,
-      title: newHabitTitle.trim(),
-      icon: newHabitIcon,
-      tag: 'PERSONALIZADO',
-      tagColor: '#FFE29F',
-      locked: false,
-      unlockDay: 1,
-      daysUntilUnlock: 0,
-      // Los personales van DETRAS del catálogo: el orden curado solo cubre los de sistema, y un
-      // hábito propio recién creado no tiene lugar asignado en esa secuencia.
-      ordenCatalogo: Number.MAX_SAFE_INTEGER,
-      time: newHabitTime.trim() || '07:00 AM',
-      duration: newHabitDuration.trim() || '30 min',
-      moment: newHabitMoment,
-      desc: 'Práctica personalizada agregada a tu plan semanal.',
-      days: newHabitDays,
-      // Un hábito personalizado, creado a mano por el aprendiz: nunca es obligatorio del
-      // programa ni tiene hora límite que lo venza.
-      limitTime: null,
-      // Un hábito recién creado a mano nunca tiene un cambio de horario diferido esperando:
-      // se crea con la hora que el aprendiz acaba de elegir, y esa rige desde ya.
-      cambioProgramado: null,
-      isOptional: true,
-    isDeactivatable: true,
-    };
-
-    setHabits(prev => [...prev, newHabit]);
-    setNewHabitTitle('');
-    setCreateHabitModalVisible(false);
-    Alert.alert('¡Hábito Creado! 🦅', 'Se ha programado correctamente en tu plan semanal.');
+    setGuardandoNuevoHabito(true);
+    try {
+      const creado = await habitsApi.crearHabitoPersonal({
+        title: titulo,
+        habitType: 'CHECKBOX',
+        category: newHabitCategory,
+        template: 'OTRO',
+        goalLabel: null,
+        triggerTime: `${hora}:00`,
+        // Un hábito propio no vence dentro del día: la hora es un recordatorio, no un cierre.
+        limitTime: null,
+      });
+      // Los personales van DETRÁS del catálogo: el orden curado (`habitos.orden`) solo cubre los
+      // de sistema, y un hábito propio recién creado no tiene lugar asignado en esa secuencia.
+      const nuevo = mapearPlanHabit(
+        creado,
+        { habitId: creado.id, title: creado.title, triggerTime: `${hora}:00`, limitTime: null,
+          customized: true, pendingChange: null },
+        Number.MAX_SAFE_INTEGER,
+      );
+      setHabits(prev => [...prev, nuevo]);
+      setNewHabitTitle('');
+      setCreateHabitModalVisible(false);
+      Alert.alert('¡Hábito Creado! 🦅', 'Se ha programado correctamente en tu plan semanal.');
+    } catch (e) {
+      // Nunca más un "creado" que no se creó: si el servidor lo rechaza, se dice y el modal queda
+      // abierto con lo que el aprendiz escribió.
+      Alert.alert('No pudimos crear el hábito', mensajeDeError(e, 'Intenta de nuevo en unos segundos.'));
+    } finally {
+      setGuardandoNuevoHabito(false);
+    }
   };
 
   const toggleWeeklyItem = (itemId: string) => {
@@ -781,8 +863,9 @@ export default function PlanScreen() {
               // D-98: HOY también queda apagado. El día en curso no se reacomoda (D-91, el
               // backend difiere todo a mañana), y el dueño pidió que se VEA así — sombreado como
               // los días pasados — en vez de dejar tocar y avisar después. Lo que se planifica es
-              // de mañana en adelante.
-              const esPasado = indice <= indiceDeHoy;
+              // de mañana en adelante. En la semana siguiente (domingo, E-137) no hay ninguno:
+              // `ULTIMO_INDICE_NO_PLANIFICABLE` vale -1 y los 7 quedan abiertos.
+              const esPasado = indice <= ULTIMO_INDICE_NO_PLANIFICABLE;
               // D-84: con el programa sin arrancar NINGUN dia es planificable, ni los futuros
               // — no hay plan que organizar todavia.
               const bloqueado = esPasado || programaSinArrancar;
@@ -951,8 +1034,9 @@ export default function PlanScreen() {
                   {momentHabits.map(habit => {
                     const isDayActive = habit.days[selectedDay];
                     // § 2 — solo importa si ya venció HOY: un hábito de mañana o de un día que
-                    // todavía no llega no puede estar "vencido".
-                    const esHoy = selectedDay === DAY_OPTIONS[indiceDeHoy];
+                    // todavía no llega no puede estar "vencido". Si lo que se está mirando es la
+                    // semana siguiente (domingo, E-137), ninguno de sus días es hoy.
+                    const esHoy = !MOSTRAR_SEMANA_SIGUIENTE && selectedDay === DAY_OPTIONS[INDICE_DE_HOY];
                     const vencido = habitoVencidoHoy(habit, esHoy, nowHHmm);
                     // § 3 — obligatorio: el interruptor se ve siempre encendido y bloqueado.
                     const bloqueadoObligatorio = !habit.isDeactivatable;
@@ -1438,108 +1522,57 @@ export default function PlanScreen() {
                   />
                 </View>
 
-                {/* 2. Paleta de Iconos */}
+                {/* 2. Categoría — obligatoria del lado del servidor, y de ella salen la etiqueta y
+                    el icono que va a mostrar la tarjeta (E-137). */}
                 <View style={{ gap: 4 }}>
-                  <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>2. ELIGE UN ICONO VISUAL:</Text>
+                  <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>2. ÁREA DEL HÁBITO:</Text>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                    {ICON_PALETTE.map(iconItem => (
-                      <Pressable
-                        key={iconItem}
-                        onPress={() => setNewHabitIcon(iconItem)}
-                        style={[
-                          styles.iconPickBtn,
-                          {
-                            borderColor: newHabitIcon === iconItem ? c.gold : c.border,
-                            backgroundColor: newHabitIcon === iconItem ? c.cardBgAlt : c.cardBg,
-                          },
-                        ]}
-                      >
-                        <Text style={{ fontSize: 20 }}>{iconItem}</Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                </View>
-
-                {/* 3. Momento del Día */}
-                <View style={{ gap: 4 }}>
-                  <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>3. MOMENTO DEL DÍA:</Text>
-                  <View style={{ flexDirection: 'row', gap: 6 }}>
-                    {(['mañana', 'tarde', 'noche'] as DayMoment[]).map(m => (
-                      <Pressable
-                        key={m}
-                        onPress={() => setNewHabitMoment(m)}
-                        style={[
-                          styles.momentSelectPill,
-                          {
-                            borderColor: newHabitMoment === m ? c.gold : c.border,
-                            backgroundColor: newHabitMoment === m ? c.cardBgAlt : c.cardBg,
-                          },
-                        ]}
-                      >
-                        <Text style={[t.micro, { color: newHabitMoment === m ? c.gold : c.textSoft, fontWeight: '800' }]}>
-                          {m === 'mañana' ? '🌅 Mañana' : m === 'tarde' ? '☀️ Tarde' : '🌙 Noche'}
-                        </Text>
-                      </Pressable>
-                    ))}
-                  </View>
-                </View>
-
-                {/* 4. Hora y Duración */}
-                <View style={{ flexDirection: 'row', gap: 8 }}>
-                  <View style={{ flex: 1, gap: 4 }}>
-                    <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>HORA:</Text>
-                    <TextInput
-                      value={newHabitTime}
-                      onChangeText={setNewHabitTime}
-                      placeholder="06:30 AM"
-                      placeholderTextColor={c.textSoft}
-                      style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.text }]}
-                    />
-                  </View>
-                  <View style={{ flex: 1, gap: 4 }}>
-                    <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>DURACIÓN:</Text>
-                    <TextInput
-                      value={newHabitDuration}
-                      onChangeText={setNewHabitDuration}
-                      placeholder="30 min"
-                      placeholderTextColor={c.textSoft}
-                      style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.text }]}
-                    />
-                  </View>
-                </View>
-
-                {/* 5. Días de Repetición */}
-                <View style={{ gap: 4 }}>
-                  <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>5. DÍAS QUE DESEAS HACERLO:</Text>
-                  <View style={{ flexDirection: 'row', gap: 4 }}>
-                    {DAY_OPTIONS.map(d => {
-                      const isDayOn = newHabitDays[d];
+                    {CATEGORIAS_HABITO.map(cat => {
+                      const elegida = newHabitCategory === cat.valor;
                       return (
                         <Pressable
-                          key={d}
-                          onPress={() => setNewHabitDays(prev => ({ ...prev, [d]: !prev[d] }))}
+                          key={cat.valor}
+                          onPress={() => setNewHabitCategory(cat.valor)}
                           style={[
-                            styles.dayTogglePill,
+                            styles.categoryPickPill,
                             {
-                              borderColor: isDayOn ? c.gold : c.border,
-                              backgroundColor: isDayOn ? c.gold : c.cardBgAlt,
+                              borderColor: elegida ? c.gold : c.border,
+                              backgroundColor: elegida ? c.cardBgAlt : c.cardBg,
                             },
                           ]}
                         >
-                          <Text style={[t.micro, { color: isDayOn ? '#1E1B18' : c.textSoft, fontWeight: '900', fontSize: 9.5 }]}>
-                            {d}
+                          <Text style={[t.micro, { color: elegida ? c.gold : c.textSoft, fontWeight: '800' }]}>
+                            {cat.icono} {cat.etiqueta}
                           </Text>
                         </Pressable>
                       );
                     })}
                   </View>
                 </View>
+
+                {/* 3. Hora de disparo. El bloque del día (mañana/tarde/noche) sale de esta hora, no
+                    de un selector aparte: antes había uno y lo que eligiera se perdía al recargar. */}
+                <View style={{ gap: 4 }}>
+                  <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>3. HORA DEL DÍA:</Text>
+                  <TextInput
+                    value={newHabitTime}
+                    onChangeText={setNewHabitTime}
+                    placeholder="06:30"
+                    placeholderTextColor={c.textSoft}
+                    style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.text }]}
+                  />
+                  <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5, lineHeight: 14 }]}>
+                    Tu hábito propio se repite los 7 días y no vence: la hora es un recordatorio, y con
+                    ella queda en el bloque de mañana, tarde o noche.
+                  </Text>
+                </View>
               </View>
             </ScrollView>
 
             <GoldButton
-              label="✓ GUARDAR HÁBITO"
-              onPress={handleSaveNewHabit}
+              label={guardandoNuevoHabito ? 'GUARDANDO…' : '✓ GUARDAR HÁBITO'}
+              onPress={() => void handleSaveNewHabit()}
+              disabled={guardandoNuevoHabito}
               style={{ width: '100%', marginTop: 8 }}
             />
           </View>
@@ -1827,27 +1860,14 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     fontSize: 12,
   },
-  iconPickBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  momentSelectPill: {
-    flex: 1,
+  // Sin `flex: 1` a proposito: las 4 areas del habito viven en un contenedor con `flexWrap`, y
+  // estirarlas las obligaria a entrar todas en una sola fila apretada en un telefono angosto.
+  // Asi caen en dos filas de dos cuando no entran.
+  categoryPickPill: {
     borderWidth: 1,
     borderRadius: 8,
     paddingVertical: 7,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dayTogglePill: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },

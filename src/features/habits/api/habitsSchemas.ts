@@ -130,6 +130,13 @@ export const cambioHorarioSchema = z
 
 export const habitsSchemas = {
   catalogo: z.array(habitoCatalogoSchema),
+  /**
+   * `POST /api/v1/habits` devuelve el hábito recién creado con la MISMA forma que un ítem del
+   * catálogo (`MiHabitoResponse`), así que se valida con el mismo esquema y se mapea con el mismo
+   * `mapearPlanHabit` — la tarjeta que se dibuja después de crear es la que va a volver del
+   * servidor en la próxima recarga, no una versión inventada del cliente.
+   */
+  habitoCreado: habitoCatalogoSchema,
   /** El backend envuelve las preferencias en `{habits: [...]}`, no las devuelve sueltas. */
   preferencias: z.object({ habits: z.array(preferenciaHabitoSchema) }).passthrough(),
   tracksDeHoy: z.array(trackDelDiaSchema),

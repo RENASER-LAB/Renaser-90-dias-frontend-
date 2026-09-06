@@ -59,6 +59,36 @@ export const CLAVE_SISTEMA_CLASE_DIARIA = 'DAILY_CLASS';
  */
 export const CLAVE_SISTEMA_POST_DIARIO_COMUNIDAD = 'COMMUNITY_POST';
 
+/**
+ * Las 4 categorías reales de `renaser.categorias_habito`, con el nombre que la API usa en el
+ * cable. Están acá y no sueltas en la pantalla porque el backend las exige (`category` es
+ * `@NotNull`) y porque son las mismas que `habitsMappers.CATEGORIA` traduce a etiqueta e icono:
+ * si algún día aparece una quinta, este es el único lugar que hay que tocar.
+ */
+export type CategoriaHabitoApi = 'BODY' | 'MIND' | 'SPIRIT' | 'CONSCIENCE';
+
+/**
+ * Cuerpo de `POST /api/v1/habits` (`CreatePersonalHabitRequest` del backend).
+ *
+ * `scope`/`participantId` NO existen a propósito: el backend fuerza ámbito PERSONAL y el actor
+ * autenticado. Un `habitType` distinto de `CHECKBOX` es aceptado por el DTO pero el propio
+ * informe del backend (`docs/informes/habits-eleccion-y-personales.md`, pregunta abierta 5)
+ * advierte que no está verificado que `JOURNALING`/`RATING`/`BLOCKING` funcionen sobre un hábito
+ * PERSONAL, así que la app manda solo `CHECKBOX` — un hábito propio que se marca y listo.
+ */
+export interface AltaHabitoPersonal {
+  title: string;
+  habitType: 'CHECKBOX';
+  category: CategoriaHabitoApi;
+  /** `GIMNASIO` | `CORRER` | `OTRO`. La app manda siempre `OTRO`: no hay pantalla que elija. */
+  template: 'OTRO';
+  goalLabel: string | null;
+  /** `HH:mm:ss` — obligatorio: sin hora de disparo el hábito no genera nada que hacer. */
+  triggerTime: string;
+  /** `HH:mm:ss` o null. Null = no vence dentro del día, que es el caso de un hábito propio. */
+  limitTime: string | null;
+}
+
 /** Un ítem de `GET /api/v1/habit-preferences` — el horario, propio o el del catálogo. */
 export interface PreferenciaHabitoApi {
   habitId: string;

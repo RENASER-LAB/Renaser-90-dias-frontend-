@@ -100,9 +100,18 @@ export async function crearComentario(
 }
 
 /**
- * Sin UI que la use hoy: la pestaña "muro" no tiene selector de categorías (no hay pills en el
- * diseño actual, `git grep -ni categor` sobre `ComunidadScreen.tsx` no encuentra ninguna en esa
- * pestaña). Se deja lista para el día que se agregue esa UI, en vez de no escribirla.
+ * Catálogo de categorías del Muro. Devuelve **solo las activas**, ya ordenadas por `orden`
+ * (`CategoriaMuroPersistenceAdapter.listarActivas`), y sin `isActive`/`isSystem` — esos dos
+ * campos son del CRUD de administración (`GET /api/v1/admin/wall-categories`), no de este.
+ *
+ * Lo consume el compositor del Muro vía `useCategoriasMuro`. Es lo que hace cierta la promesa del
+ * panel de administración ("los cambios llegan a la app sin publicar una versión nueva"): las
+ * pastillas son lo que hay en `categorias_muro` en ese momento, no una lista compilada.
+ *
+ * > **Corregido 2026-09-06.** Este comentario decía *"Sin UI que la use hoy: la pestaña muro no
+ * > tiene selector de categorías"*. Sí lo tenía — tres pastillas escritas a mano
+ * > (`🔥 VICTORIA SOMÁTICA`, `⚡ ALTO RENDIMIENTO`, `🧠 REFLEXIÓN`) que no existen en el catálogo
+ * > y que además nunca se mandaban al publicar. Ver `docs/BITACORA_ERRORES.md` E-135.
  */
 export async function obtenerCategoriasMuro(): Promise<WallCategory[]> {
   const r = await apiFetch<unknown>('/api/v1/wall/categories');

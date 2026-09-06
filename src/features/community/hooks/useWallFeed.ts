@@ -92,7 +92,15 @@ export function useWallFeed() {
    * @returns el borrador a restaurar si falló, o `null` si se publicó bien.
    */
   const publicarOptimista = useCallback(
-    async (texto: string, fotos: FotoMuroNormalizada[], autor: string) => {
+    async (
+      texto: string,
+      fotos: FotoMuroNormalizada[],
+      autor: string,
+      // Clave del catálogo (`GET /api/v1/wall/categories`) o `null` si la persona no eligió
+      // ninguna — `category` es opcional en `POST /api/v1/wall`. Antes este parámetro no existía y
+      // la categoría elegida en el compositor no llegaba nunca al backend.
+      categoria: string | null = null
+    ) => {
       const idTemporal = `pendiente-${Date.now()}`;
       const optimista: PostItem = {
         id: idTemporal,
@@ -138,7 +146,7 @@ export function useWallFeed() {
         // La respuesta ya trae la publicación real (id del servidor, conteos, URL firmada), así que
         // se cambia el temporal por ella. NO se recarga el muro entero: esa recarga era una carga
         // completa del feed de más por cada publicación.
-        const real = await wallApi.publicarEnMuro(texto, media);
+        const real = await wallApi.publicarEnMuro(texto, media, categoria);
         setPosts(prev => prev.map(p => (p.id === idTemporal ? mapearPublicacion(real) : p)));
         return null;
       } catch (e) {

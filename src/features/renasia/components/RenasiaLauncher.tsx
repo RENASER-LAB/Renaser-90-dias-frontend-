@@ -24,12 +24,20 @@ import { useHayChatEnPantalla } from '../state/chatEnPantalla';
  * el resto de la app. No hay un solo color ni medida inventada acá.
  */
 export function RenasiaLauncher() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isOnboardingCompleted } = useAuth();
   const insets = useSafeAreaInsets();
   const [visible, setVisible] = useState(false);
   const hayChatEnPantalla = useHayChatEnPantalla();
 
-  if (!isAuthenticated) return null;
+  // El javadoc de esta clase ya decia "en el login y durante el onboarding no tiene sentido",
+  // pero solo estaba implementada la mitad del login: durante la ficha inicial la sesion YA esta
+  // iniciada, asi que `isAuthenticated` es true y el flotante aparecia encima del formulario
+  // (2026-09-06, reportado por el dueno del proyecto).
+  //
+  // `isOnboardingCompleted` arranca en false y solo pasa a true con una respuesta confirmada del
+  // servidor, asi que sirve tal cual: mientras no se sepa, el boton no esta. Preferir eso al
+  // orden inverso — un flotante que aparece y desaparece al resolverse la consulta se ve roto.
+  if (!isAuthenticated || !isOnboardingCompleted) return null;
   // D-101: con un chat abierto —el de un curso, o una conversacion de Comunidad— el flotante se
   // esconde. En el curso porque la entrada que corresponde es la de Sparkie; en Comunidad porque
   // se monta justo encima de la barra de escribir y tapa el boton de enviar, y porque una burbuja
