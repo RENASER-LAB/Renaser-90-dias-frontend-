@@ -8,7 +8,6 @@ import type {
   PreguntarRenasiaBody,
   RenasiaEvento,
   RenasiaEventoError,
-  RenasiaEventoFuentes,
   RenasiaEventoTexto,
 } from '../types/renasia.types';
 import { renasiaSchemas, validarRespuesta } from './renasiaSchemas';
@@ -28,9 +27,13 @@ export class RenasiaCuotaExcedidaError extends Error {
   }
 }
 
+/**
+ * No hay `onFuentes` (2026-09-06, E-141). El backend sigue emitiendo `{"tipo":"fuentes",...}`, pero
+ * la pantalla ya no dibuja las lecciones citadas, así que no hay nada que notificar. Ver
+ * `procesarBloque`.
+ */
 export type CallbacksMensajeRenasia = {
   onTexto: (fragmento: string) => void;
-  onFuentes: (lecciones: string[]) => void;
   onFin: () => void;
   /** D-100: el backend avisa que el modelo no pudo responder. */
   onError?: (mensaje: string) => void;
@@ -177,7 +180,12 @@ export async function enviarMensajeRenasia(
     if (evento.tipo === 'texto') {
       callbacks.onTexto((evento as RenasiaEventoTexto).valor);
     } else if (evento.tipo === 'fuentes') {
-      callbacks.onFuentes((evento as RenasiaEventoFuentes).lecciones);
+      // E-141: se recibe y se descarta, a propósito. La pantalla ya no muestra las lecciones
+      // citadas (pedido del dueño, "no citar las referencias mejor, por seguridad"), y el backend
+      // no se tocó: sigue mandando este evento. La rama existe en vez de dejar que caiga en "lo
+      // desconocido se ignora" para que quede escrito que el evento SE CONOCE y la decisión de no
+      // usarlo es deliberada — si no, el próximo que lea esto lo toma por un tipo sin soporte y
+      // "arregla" el bug que no existe.
     } else if (evento.tipo === 'error') {
       // D-100: antes esto no existia y un fallo del modelo llegaba como un `fin` sin texto.
       callbacks.onError?.((evento as RenasiaEventoError).valor);

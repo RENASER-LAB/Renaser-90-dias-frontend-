@@ -18,6 +18,8 @@ const mensajeRenasiaSchema = z
     id: z.string(),
     role: z.enum(['USER', 'ASSISTANT']),
     content: z.string(),
+    // E-141: se valida pero no se muestra. El backend no se tocó y lo sigue mandando; sacarlo del
+    // esquema no dejaría de recibirlo, solo dejaría de documentar que llega.
     sourceLessonIds: z.array(z.string()).nullable(),
     createdAt: z.string(),
   })
@@ -33,7 +35,13 @@ const historialRenasiaSchema = z
 
 /** `{"tipo":"texto","valor":"..."}` — puede repetirse muchas veces por respuesta. */
 const eventoTextoSchema = z.object({ tipo: z.literal('texto'), valor: z.string() }).passthrough();
-/** `{"tipo":"fuentes","lecciones":[...]}` — a lo sumo una vez por respuesta. */
+/**
+ * `{"tipo":"fuentes","lecciones":[...]}` — a lo sumo una vez por respuesta.
+ *
+ * E-141: se valida y se descarta. Sigue en la unión a propósito, y no se deja caer en
+ * `eventoDesconocidoSchema`: mientras el backend emita este evento, el esquema es la única
+ * documentación de su forma real.
+ */
 const eventoFuentesSchema = z
   .object({ tipo: z.literal('fuentes'), lecciones: z.array(z.string()) })
   .passthrough();

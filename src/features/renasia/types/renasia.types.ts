@@ -36,7 +36,15 @@ export type MensajeRenasiaApi = {
   id: string;
   role: RenasiaRoleApi;
   content: string;
-  /** Ids de lecciones citadas. `null` (o vacío) en mensajes de la persona y en los que no citaron ninguna. */
+  /**
+   * Ids de lecciones citadas. `null` (o vacío) en mensajes de la persona y en los que no citaron
+   * ninguna.
+   *
+   * SE RECIBE PERO NO SE MUESTRA (2026-09-06, E-141). El campo se deja declarado porque el backend
+   * lo sigue mandando y este archivo es el espejo del contrato: borrarlo del tipo no lo haría
+   * desaparecer del wire, solo escondería que llega. Lo que se quitó es su renderizado — ver
+   * `MensajeBurbuja`.
+   */
   sourceLessonIds: string[] | null;
   /** ISO-8601. */
   createdAt: string;
@@ -50,7 +58,12 @@ export type HistorialRenasiaApi = {
 
 /** Eventos de `POST /api/v1/renasia/mensajes` (`text/event-stream`), uno por línea `data:`. */
 export type RenasiaEventoTexto = { tipo: 'texto'; valor: string };
-/** A lo sumo un evento de este tipo por respuesta. */
+/**
+ * A lo sumo un evento de este tipo por respuesta.
+ *
+ * SE RECIBE PERO NO SE MUESTRA (2026-09-06, E-141): el tipo describe el evento que el backend
+ * sigue emitiendo; el cliente ya no lo consume. Ver `renasiaStream.ts`.
+ */
 export type RenasiaEventoFuentes = { tipo: 'fuentes'; lecciones: string[] };
 /** Siempre el último evento del stream. */
 export type RenasiaEventoFin = { tipo: 'fin' };
@@ -74,13 +87,19 @@ export type RenasiaEvento =
   | RenasiaEventoError
   | RenasiaEventoDesconocido;
 
-/** Un mensaje listo para dibujar en el panel, venga del historial o se esté armando en vivo. */
+/**
+ * Un mensaje listo para dibujar en el panel, venga del historial o se esté armando en vivo.
+ *
+ * Ya NO tiene campo `lecciones` (2026-09-06, E-141). A diferencia de `sourceLessonIds` y
+ * `RenasiaEventoFuentes` —que son el contrato del backend y se dejan declarados— este tipo es el
+ * modelo de PANTALLA, y existía solo para alimentar los chips de "LECCIONES CITADAS". Sin ese
+ * bloque nadie lo lee: dejarlo sería estado muerto arrastrado por el hook y las dos burbujas
+ * optimistas.
+ */
 export type RenasiaMensajeUI = {
   id: string;
   autor: 'persona' | 'asistente';
   texto: string;
-  /** `null` mientras no llegó (o no hubo) evento de fuentes para este mensaje. */
-  lecciones: string[] | null;
   creadoEn: string;
   /** `true` mientras el asistente todavía está emitiendo texto para este mensaje. */
   enProgreso?: boolean;

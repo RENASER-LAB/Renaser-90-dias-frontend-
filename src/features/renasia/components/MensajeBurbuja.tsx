@@ -15,9 +15,21 @@ type Props = {
 
 /**
  * Una burbuja del panel de un asistente — de la persona o del asistente, con sus propios estados
- * de "escribiendo…", error (con reintentar) y lecciones citadas. Separada de `RenasiaPanel` para
- * no repetir esta lógica visual por cada mensaje de la lista. No sabe qué agente es: recibe el
- * nombre por props, así la burbuja es la misma para los dos.
+ * de "escribiendo…" y de error (con reintentar). Separada de `RenasiaPanel` para no repetir esta
+ * lógica visual por cada mensaje de la lista. No sabe qué agente es: recibe el nombre por props,
+ * así la burbuja es la misma para los dos.
+ *
+ * NO SE MUESTRAN LAS FUENTES CITADAS (2026-09-06, E-141). Acá había un bloque "LECCIONES CITADAS"
+ * que dibujaba un chip por cada id de lección recuperado, tanto para el acompañante como para
+ * Sparkie. Pedido del dueño, textual: "no citar las referencias mejor, por seguridad. solo quita
+ * eso en los 2 chats". Lo que se exponía era el id interno de cada lección de la base de
+ * conocimiento — un identificador del backend, no algo que le sirva al aprendiz.
+ *
+ * El backend NO se tocó: sigue mandando `sourceLessonIds` en el historial y el evento
+ * `{"tipo":"fuentes"}` en el stream. Se ignoran del lado del cliente a propósito (ver
+ * `renasiaStream.ts`). La atribución que el prompt de sistema sí exige ("en esta lección...",
+ * "esto no es parte del curso") viaja dentro del TEXTO de la respuesta y se sigue mostrando
+ * entera: quitar los chips no deja al modelo hablando de fuentes invisibles.
  */
 export function MensajeBurbuja({ mensaje, nombreAsistente, onReintentar }: Props) {
   const { c, t } = useTheme();
@@ -69,24 +81,6 @@ export function MensajeBurbuja({ mensaje, nombreAsistente, onReintentar }: Props
           </View>
         )}
 
-        {!!mensaje.lecciones?.length && !mensaje.enProgreso && (
-          <View style={[styles.fuentesBox, { borderTopColor: c.divider }]}>
-            <Text style={[t.micro, { color: c.micro, fontSize: 10 }]}>LECCIONES CITADAS</Text>
-            <View style={styles.fuentesLista}>
-              {mensaje.lecciones.map(id => (
-                <View
-                  key={id}
-                  style={[styles.fuenteChip, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
-                >
-                  <Text style={[t.small, { color: c.textSoft, fontSize: 11.5 }]} numberOfLines={1}>
-                    {id}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
-
         {mensaje.error && (
           <View style={styles.errorBox}>
             <Text style={[t.small, { color: '#E06A66', fontSize: 12.5 }]}>{mensaje.error}</Text>
@@ -112,9 +106,6 @@ const styles = StyleSheet.create({
   fila: { flexDirection: 'row', width: '100%', marginTop: 10 },
   burbuja: { maxWidth: '86%', borderWidth: 1, borderRadius: 16, paddingVertical: 10, gap: 6 },
   filaEscribiendo: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 20 },
-  fuentesBox: { borderTopWidth: 1, paddingTop: 8, marginTop: 2, gap: 6 },
-  fuentesLista: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  fuenteChip: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4, maxWidth: 160 },
   errorBox: { gap: 2, marginTop: 2 },
   reintentarBtn: { alignSelf: 'flex-start', justifyContent: 'center' },
 });

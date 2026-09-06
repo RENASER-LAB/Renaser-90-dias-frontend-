@@ -13,12 +13,15 @@ function idLocal(prefijo: string): string {
   return `${prefijo}-${Date.now()}-${contadorIdLocal}`;
 }
 
+/**
+ * `m.sourceLessonIds` se descarta a propósito (2026-09-06, E-141): el historial lo sigue trayendo,
+ * pero la pantalla ya no muestra las fuentes citadas. Ver `MensajeBurbuja`.
+ */
 function mapearMensajeApi(m: MensajeRenasiaApi): RenasiaMensajeUI {
   return {
     id: m.id,
     autor: m.role === 'USER' ? 'persona' : 'asistente',
     texto: m.content,
-    lecciones: m.sourceLessonIds && m.sourceLessonIds.length > 0 ? m.sourceLessonIds : null,
     creadoEn: m.createdAt,
   };
 }
@@ -152,10 +155,6 @@ export function useRenasiaChat(opciones: OpcionesRenasiaChat): EstadoRenasiaChat
                 prev.map(m => (m.id === idAsistente ? { ...m, texto: m.texto + fragmento } : m))
               );
             },
-            onFuentes: lecciones => {
-              if (!montadoRef.current) return;
-              setMensajes(prev => prev.map(m => (m.id === idAsistente ? { ...m, lecciones } : m)));
-            },
             onFin: () => {
               if (!montadoRef.current) return;
               setMensajes(prev =>
@@ -207,12 +206,11 @@ export function useRenasiaChat(opciones: OpcionesRenasiaChat): EstadoRenasiaChat
 
       setMensajes(prev => [
         ...prev,
-        { id: idPersona, autor: 'persona', texto, lecciones: null, creadoEn: ahora },
+        { id: idPersona, autor: 'persona', texto, creadoEn: ahora },
         {
           id: idAsistente,
           autor: 'asistente',
           texto: '',
-          lecciones: null,
           creadoEn: ahora,
           enProgreso: true,
           preguntaOriginal: texto,
