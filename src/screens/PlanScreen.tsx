@@ -29,8 +29,8 @@ import { HoraPickerModal } from '../features/habits/components/HoraPickerModal';
 import * as habitsApi from '../features/habits/api/habitsApi';
 import { aMomento, mapearPlanHabit } from '../features/habits/api/habitsMappers';
 import {
-  aFechaIso,
   diasDelMesDeLaSemana,
+  fechasIsoDeLaSemana,
   INDICE_DE_HOY,
   MOSTRAR_SEMANA_SIGUIENTE,
 } from '../features/habits/utils/semanaDelPlan';
@@ -160,24 +160,54 @@ const DAY_DATES: Record<DayOfWeek, string> = diasDelMesDeLaSemana();
 const ULTIMO_INDICE_NO_PLANIFICABLE = MOSTRAR_SEMANA_SIGUIENTE ? -1 : INDICE_DE_HOY;
 
 
+/** Para escribir "Solo el lunes" en vez de "Solo hoy" — ver `opcionesDePausa`. */
+const NOMBRE_LARGO_DEL_DIA: Record<DayOfWeek, string> = {
+  LUN: 'lunes', MAR: 'martes', 'MIÉ': 'miércoles', JUE: 'jueves',
+  VIE: 'viernes', 'SÁB': 'sábado', DOM: 'domingo',
+};
+
 /**
- * Las opciones de "¿hasta cuándo lo pauso?". Fechas del dispositivo, que es la zona en la que la
- * persona está pensando cuando dice "hasta el domingo"; el backend las compara contra el calendario
- * del aprendiz, nunca contra el reloj del servidor.
+ * Las opciones de "¿hasta cuándo lo pauso?", **relativas al día que la persona está mirando**, no
+ * al día de hoy.
  *
- * El domingo se ofrece solo si todavía no llegó: un domingo, "hasta el domingo" sería lo mismo que
- * "solo hoy" y tener dos botones que hacen lo mismo confunde.
+ * > **Corregido 2026-09-06 (E-146).** Antes la primera opción decía "Solo hoy" y mandaba la fecha
+ * > del dispositivo. Estaba mal por lo que esta pantalla ES: acá no se registra el día que uno
+ * > está viviendo, se PLANIFICA hacia adelante — hoy y todo lo anterior no son editables
+ * > (`ULTIMO_INDICE_NO_PLANIFICABLE`). Así que "hoy" nunca es un día que se pueda tocar, y la
+ * > opción mandaba una fecha que no correspondía a ninguna de las pestañas.
+ * >
+ * > **El síntoma con el que apareció**, reportado por el dueño: un **domingo**, la semana que se
+ * > dibuja es la siguiente (E-137), del lunes 7 al domingo 13. "Solo hoy" mandaba el **6**, que no
+ * > está en esa semana: el backend guardaba la pausa y la pantalla no apagaba ningún día, porque
+ * > ninguno caía dentro del plazo. "Hasta que yo lo reactive" sí funcionaba — no lleva fecha.
+ * >
+ * > Ahora la opción se llama por el día elegido ("Solo el lunes", "Solo el martes") y manda **la
+ * > fecha real de esa pestaña**, que es lo que la persona está mirando cuando decide.
+ *
+ * **POR QUÉ DICE "Hasta el lunes" Y NO "Solo el lunes".** Es la etiqueta que el dueño pidió, y se
+ * cambió al verificarla: sería mentira. La pausa que el backend sabe guardar es un **rango que
+ * arranca cuando tocás el botón** — `desbloqueos_habito.pausado_en` es `clock.now()` y
+ * `estaPausadoEl` solo compara contra el extremo de arriba (`fecha <= pausadoHasta`). No hay forma
+ * de expresar "salteá ESE día y ninguno más". Comprobado: elegir el martes con la etiqueta vieja
+ * apagaba **lunes y martes**, porque el lunes también cae dentro de "desde ahora hasta el martes".
+ *
+ * Pausar un solo día suelto a mitad de semana **no se puede hoy**, y arreglarlo no es de esta
+ * pantalla: haría falta que el backend acepte un `pausadoDesde` además del `pausadoHasta`. Queda
+ * planteado, sin tocar.
+ *
+ * Las fechas salen del dispositivo, que es la zona en la que la persona piensa cuando dice "hasta
+ * el domingo"; el backend las compara contra el calendario del aprendiz, nunca contra el reloj del
+ * servidor.
  */
-function opcionesDePausa(): { etiqueta: string; hasta?: string }[] {
-  const hoy = new Date();
-  const diasHastaDomingo = (7 - hoy.getDay()) % 7; // getDay(): 0 = domingo
+function opcionesDePausa(diaElegido: DayOfWeek): { etiqueta: string; hasta?: string }[] {
+  const fechas = fechasIsoDeLaSemana();
   const opciones: { etiqueta: string; hasta?: string }[] = [
-    { etiqueta: 'Solo hoy', hasta: aFechaIso(hoy) },
+    { etiqueta: `Hasta el ${NOMBRE_LARGO_DEL_DIA[diaElegido]}`, hasta: fechas[diaElegido] },
   ];
-  if (diasHastaDomingo > 0) {
-    const domingo = new Date(hoy);
-    domingo.setDate(hoy.getDate() + diasHastaDomingo);
-    opciones.push({ etiqueta: 'Hasta el domingo', hasta: aFechaIso(domingo) });
+  // "Hasta el domingo" solo si el día elegido no ES el domingo: ahí las dos opciones harían
+  // exactamente lo mismo y tener dos botones idénticos confunde.
+  if (diaElegido !== 'DOM') {
+    opciones.push({ etiqueta: 'Hasta el domingo', hasta: fechas.DOM });
   }
   // Sin fecha: el comportamiento de siempre. Va último a propósito — es el que deja el hábito
   // apagado indefinidamente, y en un programa de 90 días conviene que sea la opción deliberada.
@@ -411,7 +441,7 @@ export default function PlanScreen() {
       Alert.alert('Hábito obligatorio', 'Este hábito es parte del programa y no se puede pausar.');
       return;
     }
-    const opciones = opcionesDePausa();
+    const opciones = opcionesDePausa(selectedDay);
     Alert.alert(
       `Pausar "${habito.title}"`,
       '¿Hasta cuándo lo pausamos? Vuelve solo cuando termine el plazo.',
