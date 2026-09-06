@@ -10,6 +10,7 @@ import { RootNavigator } from './src/navigation/RootNavigator';
 import { navegacionRef } from './src/navigation/navegacionRef';
 import { RenasiaLauncher } from './src/features/renasia/components/RenasiaLauncher';
 import { SparkieOverlay } from './src/features/sparkie/components/SparkieOverlay';
+import { AnfitrionAlerta } from './src/components/Alerta';
 
 function Shell() {
   const { mode, c } = useTheme();
@@ -28,6 +29,9 @@ function Shell() {
       {/* El arranque guiado (saludo -> primer post en el Muro -> Pacto), por el mismo motivo y
           con la misma forma. Se apaga solo cuando el Pacto queda firmado. */}
       <SparkieOverlay />
+      {/* Dibuja los Alert en el build web, donde el Alert de react-native-web es un metodo vacio
+          que nunca ejecuta los onPress de sus botones (E-144). En movil no pinta nada. */}
+      <AnfitrionAlerta />
     </NavigationContainer>
   );
 }

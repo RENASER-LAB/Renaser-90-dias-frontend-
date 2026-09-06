@@ -7,8 +7,8 @@ import {
   ScrollView,
   TextInput,
   Modal,
-  Alert,
 } from 'react-native';
+import { Alert } from '../components/Alerta';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { useResponsive } from '../theme/responsive';

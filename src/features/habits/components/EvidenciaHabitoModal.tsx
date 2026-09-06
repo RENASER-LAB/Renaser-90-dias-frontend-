@@ -8,8 +8,8 @@ import {
   TextInput,
   StyleSheet,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
+import { Alert } from '../../../components/Alerta';
 import {
   useAudioRecorder,
   useAudioRecorderState,

@@ -1,4 +1,4 @@
-import { Alert } from 'react-native';
+import { Alert } from '../../../components/Alerta';
 import * as ImagePicker from 'expo-image-picker';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 
