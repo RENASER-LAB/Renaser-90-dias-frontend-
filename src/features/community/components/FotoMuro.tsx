@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
 
+import { acotarProporcion } from '../utils/proporcionImagen';
+
 /**
  * Pinta la foto real de una publicación del Muro dentro de la caja de media que ya existe en
  * `ComunidadScreen.tsx` (`styles.mediaSingleBox`/`mediaHalfBox`/`mediaLargeLeft`/`mediaSmallRight`).
@@ -26,9 +28,35 @@ interface FotoMuroProps {
   radioBorde: number;
   /** Color de fondo mientras la foto está cargando — el mismo `c.cardBgAlt` que ya pinta la caja hoy. */
   colorFondo: string;
+  /**
+   * Cómo se acomoda la foto dentro de su caja. Por defecto `'cover'` (llena recortando el
+   * sobrante), que es lo correcto para las cajas de la retícula de 2 y 3+ fotos: ahí la caja
+   * tiene una forma propia y recortar para llenarla es exactamente lo que hacen Instagram y
+   * Facebook en sus mosaicos.
+   *
+   * Para la foto sola se pasa `'contain'`, porque ahí la caja ya adopta la proporción real de la
+   * foto (ver `onProporcion` y `utils/proporcionImagen.ts`): con la caja y la foto en la misma
+   * proporción `contain` y `cover` se ven igual, y en los extremos acotados `contain` es lo que
+   * evita el recorte que se pidió corregir.
+   */
+  ajuste?: 'cover' | 'contain';
+  /**
+   * Se llama una vez, cuando la foto termina de cargar, con su proporción real ya acotada
+   * (`acotarProporcion`). Es el "autodetectar": el tamaño de la foto no viaja en el feed
+   * (`WallMedia` solo trae `url` y `mimeType`), así que la única forma de conocerlo del lado del
+   * cliente es preguntárselo al decodificador cuando ya la abrió.
+   */
+  onProporcion?: (proporcion: number) => void;
 }
 
-export function FotoMuro({ url, mimeType, radioBorde, colorFondo }: FotoMuroProps) {
+export function FotoMuro({
+  url,
+  mimeType,
+  radioBorde,
+  colorFondo,
+  ajuste = 'cover',
+  onProporcion,
+}: FotoMuroProps) {
   const [fallo, setFallo] = useState(false);
 
   // Reproducción de video queda fuera de alcance de esta tarea (no hay librería de video
@@ -43,8 +71,16 @@ export function FotoMuro({ url, mimeType, radioBorde, colorFondo }: FotoMuroProp
     <Image
       source={{ uri: url, cacheKey: cacheKeyEstable(url) }}
       style={[styles.overlay, { borderRadius: radioBorde, backgroundColor: colorFondo }]}
-      contentFit="cover" // llena la caja recortando el sobrante, nunca 'fill' (deformaría la foto)
+      contentFit={ajuste} // nunca 'fill': deformaría la foto. Ver el javadoc de `ajuste`.
       transition={150}
+      // El tamaño real de la foto no viaja en el feed, así que se lee acá, del propio
+      // decodificador, en cuanto la imagen abre. Con eso la caja de la foto sola deja de tener
+      // alto fijo y toma la proporción de la foto — el "autodetectar" que se pidió.
+      onLoad={evento => {
+        const fuente = evento.source;
+        if (!onProporcion || !fuente) return;
+        onProporcion(acotarProporcion(fuente.width, fuente.height));
+      }}
       // Declarado a propósito, no el default implícito de la librería (memoria + disco cachean
       // ambos): 'memory' sola hace el scroll fluido pero se pierde al cerrar la app y vuelve a
       // gastar datos móviles del aprendiz en el próximo refresco del feed; 'disk' sola evita ese

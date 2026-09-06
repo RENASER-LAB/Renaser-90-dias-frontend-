@@ -31,6 +31,7 @@ import { useCategoriasMuro } from '../features/community/hooks/useCategoriasMuro
 import * as wallApi from '../features/community/api/wallApi';
 import { elegirYNormalizarFotoMuro, type FotoMuroNormalizada } from '../features/community/utils/normalizarImagen';
 import { FotoMuro } from '../features/community/components/FotoMuro';
+import { PROPORCION_POR_DEFECTO } from '../features/community/utils/proporcionImagen';
 import { avisarPostPublicado } from '../features/sparkie/events/avisoPrimerPost';
 import { cerrarHabitoPostDiarioComunidad } from '../features/habits/api/postDiarioComunidad';
 import { avisarPostDiarioCerrado } from '../features/habits/events/avisoPostDiarioCerrado';
@@ -116,8 +117,8 @@ export interface CommentItem {
   text: string;
   photoAttached?: string;
   likes: number;
-  dislikes: number;
-  userReaction?: 'like' | 'dislike' | null;
+  /** Única reacción posible desde que se retiró el dislike del producto. */
+  userReaction?: 'like' | null;
   timeAgo: string;
 }
 
@@ -135,8 +136,12 @@ export interface PostItem {
   // vez del `title` como texto plano (ver `FotoMuro`, `features/community/components/`).
   media: { type: 'image' | 'video'; title: string; subtitle?: string; url: string; mimeType: string }[];
   likes: number;
-  dislikes: number;
-  userReaction?: 'like' | 'dislike' | null;
+  /**
+   * Única reacción posible desde que se retiró el dislike del producto. Si esta persona había
+   * dejado un `DISLIKE` antes del cambio, acá llega `null`: la reacción sigue guardada en el
+   * backend pero ya no tiene forma de mostrarse ni de deshacerse desde la app (ver `wallMappers`).
+   */
+  userReaction?: 'like' | null;
   comments: CommentItem[];
   /**
    * `true` mientras la publicación existe solo en el teléfono y todavía está viajando a S3 y al
@@ -153,7 +158,12 @@ export interface ReactionUser {
   name: string;
   role: string;
   avatar: string;
-  type: 'like' | 'dislike';
+  /**
+   * Siempre `'like'`: el modal "quién reaccionó" solo lista los "me gusta" desde que se retiró el
+   * dislike. Las filas `DISLIKE` que el backend todavía devuelva se descartan en
+   * `useWallReactions`, para no mostrar a alguien con un pulgar arriba que nunca dio.
+   */
+  type: 'like';
 }
 
 export interface TestimonialItem {
@@ -600,10 +610,23 @@ export default function ComunidadScreen() {
   const [agregandoFoto, setAgregandoFoto] = useState(false);
   const [subiendoPublicacion, setSubiendoPublicacion] = useState(false);
 
-  // Modal Quién dio Like/Dislike — datos reales (GET /api/v1/wall/{id}/reactions), pedidos al
+  // Proporción real (ancho ÷ alto) de la foto de cada publicación que tiene UNA sola, indexada por
+  // id de publicación. El feed no manda el tamaño de la foto (`WallMedia` es solo `url` +
+  // `mimeType`), así que se descubre al cargarla: cada `FotoMuro` avisa por `onProporcion` y acá
+  // se guarda para que la caja adopte esa forma en vez del alto fijo que recortaba la foto.
+  // Ver `features/community/utils/proporcionImagen.ts`.
+  const [proporcionesFoto, setProporcionesFoto] = useState<Record<string, number>>({});
+  const recordarProporcion = useCallback((postId: string, proporcion: number) => {
+    setProporcionesFoto(prev =>
+      // Se ignora el aviso repetido con el mismo valor: `onLoad` vuelve a dispararse en cada
+      // remonte de la lista y un `setState` por foto visible en cada scroll es re-render de balde.
+      prev[postId] === proporcion ? prev : { ...prev, [postId]: proporcion }
+    );
+  }, []);
+
+  // Modal Quién reaccionó — datos reales (GET /api/v1/wall/{id}/reactions), pedidos al
   // abrir el modal (ver el `onPress` que lo abre, más abajo).
   const [reactionsModalVisible, setReactionsModalVisible] = useState(false);
-  const [reactionFilter, setReactionFilter] = useState<'all' | 'like' | 'dislike'>('all');
   const {
     reacciones: reactionUsers,
     cargando: cargandoReacciones,
@@ -1232,20 +1255,16 @@ export default function ComunidadScreen() {
       .catch(e => Alert.alert('No se pudo cargar el chat', mensajeDeError(e, 'Intentá de nuevo en un momento.')));
   };
 
-  // Like/Dislike van contra el backend real (POST /api/v1/wall/{id}/react). El propio backend
-  // hace el toggle (ReaccionarUseCase: tocar el mismo tipo lo saca, tocar el otro lo reemplaza) y
-  // devuelve los conteos verdaderos, así que acá no hay aritmética que llevar a mano.
+  // El "me gusta" va contra el backend real (POST /api/v1/wall/{id}/react). El propio backend
+  // hace el toggle (ReaccionarUseCase: tocar el mismo tipo lo saca) y devuelve los conteos
+  // verdaderos, así que acá no hay aritmética que llevar a mano.
+  //
+  // Ya no existe el dislike: el cliente pidió sacarlo del producto. El backend sigue aceptando
+  // `DISLIKE` (el enum no se tocó), pero ninguna pantalla lo manda. Ver el informe de este cambio
+  // para las reacciones negativas que quedaron guardadas de antes.
   const handleToggleLike = async (postId: string) => {
     try {
       await reaccionarPublicacion(postId, 'LIKE');
-    } catch (error) {
-      Alert.alert('No se pudo reaccionar', mensajeDeError(error, 'Intentá de nuevo en un momento.'));
-    }
-  };
-
-  const handleToggleDislike = async (postId: string) => {
-    try {
-      await reaccionarPublicacion(postId, 'DISLIKE');
     } catch (error) {
       Alert.alert('No se pudo reaccionar', mensajeDeError(error, 'Intentá de nuevo en un momento.'));
     }
@@ -1306,47 +1325,23 @@ export default function ComunidadScreen() {
 
   // El backend NO tiene reacciones a comentarios (solo a publicaciones — ver ReaccionarUseCase);
   // esto queda como interacción visual local, sin persistir, hasta que exista ese endpoint.
-  const handleCommentVote = (postId: string, commentId: string, type: 'like' | 'dislike') => {
+  //
+  // Sin dislike, el voto de un comentario es un simple interruptor: si ya estaba puesto se saca,
+  // y si no, se pone. Por eso ya no recibe el tipo de reacción como parámetro.
+  const handleCommentVote = (postId: string, commentId: string) => {
     setPosts(prev =>
       prev.map(p => {
-        if (p.id === postId) {
-          const updatedComments: CommentItem[] = p.comments.map(cItem => {
-            if (cItem.id === commentId) {
-              const nextReaction: 'like' | 'dislike' | null =
-                type === 'like'
-                  ? cItem.userReaction === 'like'
-                    ? null
-                    : 'like'
-                  : cItem.userReaction === 'dislike'
-                  ? null
-                  : 'dislike';
-
-              return {
-                ...cItem,
-                likes:
-                  type === 'like'
-                    ? cItem.userReaction === 'like'
-                      ? cItem.likes - 1
-                      : cItem.likes + 1
-                    : cItem.userReaction === 'like'
-                    ? cItem.likes - 1
-                    : cItem.likes,
-                dislikes:
-                  type === 'dislike'
-                    ? cItem.userReaction === 'dislike'
-                      ? cItem.dislikes - 1
-                      : cItem.dislikes + 1
-                    : cItem.userReaction === 'dislike'
-                    ? cItem.dislikes - 1
-                    : cItem.dislikes,
-                userReaction: nextReaction,
-              };
-            }
-            return cItem;
-          });
-          return { ...p, comments: updatedComments };
-        }
-        return p;
+        if (p.id !== postId) return p;
+        const updatedComments: CommentItem[] = p.comments.map(cItem => {
+          if (cItem.id !== commentId) return cItem;
+          const yaLeGustaba = cItem.userReaction === 'like';
+          return {
+            ...cItem,
+            likes: yaLeGustaba ? cItem.likes - 1 : cItem.likes + 1,
+            userReaction: yaLeGustaba ? null : 'like',
+          };
+        });
+        return { ...p, comments: updatedComments };
       })
     );
   };
@@ -1480,11 +1475,6 @@ export default function ComunidadScreen() {
       setSubiendoPublicacion(false);
     }
   };
-
-  const likesReactions = reactionUsers.filter(r => r.type === 'like');
-  const dislikesReactions = reactionUsers.filter(r => r.type === 'dislike');
-  const filteredReactions =
-    reactionFilter === 'like' ? likesReactions : reactionFilter === 'dislike' ? dislikesReactions : reactionUsers;
 
   const filteredConversations = conversations.filter(conv => {
     if (chatCategory === 'celula') return conv.type === 'celula';
@@ -1824,7 +1814,13 @@ export default function ComunidadScreen() {
                         {post.media.length === 1 ? (
                           <Pressable
                             onPress={() => abrirVisorFotos(post, 0)}
-                            style={[styles.mediaSingleBox, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}
+                            style={[
+                              styles.mediaSingleBox,
+                              // La forma de la caja la da la foto, no un alto fijo: mientras no se
+                              // sabe, cuadrada; al cargar, la proporción real que avisó `FotoMuro`.
+                              { aspectRatio: proporcionesFoto[post.id] ?? PROPORCION_POR_DEFECTO },
+                              { backgroundColor: c.cardBgAlt, borderColor: c.border },
+                            ]}
                           >
                             <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 11 }]}>
                               {post.media[0].title}
@@ -1836,6 +1832,8 @@ export default function ComunidadScreen() {
                               mimeType={post.media[0].mimeType}
                               radioBorde={12}
                               colorFondo={c.cardBgAlt}
+                              ajuste="contain"
+                              onProporcion={proporcion => recordarProporcion(post.id, proporcion)}
                             />
                           </Pressable>
                         ) : post.media.length === 2 ? (
@@ -1854,7 +1852,10 @@ export default function ComunidadScreen() {
                             ))}
                           </View>
                         ) : (
-                          <View style={{ flexDirection: 'row', gap: 6, height: 130 }}>
+                          // Mosaico de 3 o más: proporción en vez de alto fijo, para que crezca con
+                          // el ancho de la tarjeta igual que en Instagram/Facebook. Con 130 px
+                          // fijos las tres fotos quedaban en una tira demasiado baja.
+                          <View style={{ flexDirection: 'row', gap: 6, aspectRatio: 1.5 }}>
                             <Pressable
                               onPress={() => abrirVisorFotos(post, 0)}
                               style={[styles.mediaLargeLeft, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}
@@ -1893,16 +1894,12 @@ export default function ComunidadScreen() {
                       <Pressable
                         onPress={() => {
                           setReactionsModalVisible(true);
-                          setReactionFilter('all');
                           void cargarReacciones(post.id);
                         }}
                         style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
                       >
                         <Text style={[styles.rxCountBadge, { color: '#70d2a0', backgroundColor: '#173429' }]}>
                           👍 {post.likes}
-                        </Text>
-                        <Text style={[styles.rxCountBadge, { color: '#f28e8e', backgroundColor: '#331a1a' }]}>
-                          👎 {post.dislikes}
                         </Text>
                         <Text style={[t.micro, { color: c.gold, fontSize: 9.5 }]}>· Ver quién reaccionó ›</Text>
                       </Pressable>
@@ -1914,7 +1911,7 @@ export default function ComunidadScreen() {
                       </Pressable>
                     </View>
 
-                    {/* Botones de Acción: Like, Dislike, Comentar, Compartir */}
+                    {/* Botones de Acción: Like, Comentar, Compartir */}
                     <View style={[styles.actionButtonsRow, { borderTopColor: c.divider }]}>
                       <Pressable
                         onPress={() => handleToggleLike(post.id)}
@@ -1932,25 +1929,6 @@ export default function ComunidadScreen() {
                           ]}
                         >
                           Like
-                        </Text>
-                      </Pressable>
-
-                      <Pressable
-                        onPress={() => handleToggleDislike(post.id)}
-                        style={styles.actionBtn}
-                      >
-                        <Text style={{ fontSize: 14 }}>👎</Text>
-                        <Text
-                          style={[
-                            t.micro,
-                            {
-                              color: post.userReaction === 'dislike' ? '#f28e8e' : c.textSoft,
-                              fontWeight: '700',
-                              fontSize: 10.5,
-                            },
-                          ]}
-                        >
-                          Dislike
                         </Text>
                       </Pressable>
 
@@ -2032,22 +2010,12 @@ export default function ComunidadScreen() {
 
                               <View style={{ flexDirection: 'row', gap: 12, marginTop: 6, alignItems: 'center' }}>
                                 <Pressable
-                                  onPress={() => handleCommentVote(post.id, cItem.id, 'like')}
+                                  onPress={() => handleCommentVote(post.id, cItem.id)}
                                   style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}
                                 >
                                   <Text style={{ fontSize: 11 }}>👍</Text>
                                   <Text style={[t.micro, { color: cItem.userReaction === 'like' ? '#70d2a0' : c.textSoft, fontSize: 9.5 }]}>
                                     {cItem.likes}
-                                  </Text>
-                                </Pressable>
-
-                                <Pressable
-                                  onPress={() => handleCommentVote(post.id, cItem.id, 'dislike')}
-                                  style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}
-                                >
-                                  <Text style={{ fontSize: 11 }}>👎</Text>
-                                  <Text style={[t.micro, { color: cItem.userReaction === 'dislike' ? '#f28e8e' : c.textSoft, fontSize: 9.5 }]}>
-                                    {cItem.dislikes}
                                   </Text>
                                 </Pressable>
                               </View>
@@ -3718,7 +3686,7 @@ export default function ComunidadScreen() {
       </Modal>
 
       {/* ========================================================================= */}
-      {/* MODAL: QUIÉN DIO LIKE / DISLIKE                                           */}
+      {/* MODAL: QUIÉN REACCIONÓ (solo "me gusta")                                  */}
       {/* ========================================================================= */}
       <Modal
         visible={reactionsModalVisible}
@@ -3735,32 +3703,12 @@ export default function ComunidadScreen() {
               </Pressable>
             </View>
 
-            <View style={[styles.tabsRow, { borderColor: c.border, backgroundColor: c.cardBgAlt, marginVertical: 10 }]}>
-              <Pressable
-                onPress={() => setReactionFilter('all')}
-                style={[styles.tabBtn, reactionFilter === 'all' && { backgroundColor: c.gold }]}
-              >
-                <Text style={[t.micro, { color: reactionFilter === 'all' ? '#1E1B18' : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
-                  TODOS ({reactionUsers.length})
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={() => setReactionFilter('like')}
-                style={[styles.tabBtn, reactionFilter === 'like' && { backgroundColor: c.gold }]}
-              >
-                <Text style={[t.micro, { color: reactionFilter === 'like' ? '#1E1B18' : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
-                  👍 LIKES ({likesReactions.length})
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={() => setReactionFilter('dislike')}
-                style={[styles.tabBtn, reactionFilter === 'dislike' && { backgroundColor: c.gold }]}
-              >
-                <Text style={[t.micro, { color: reactionFilter === 'dislike' ? '#1E1B18' : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
-                  👎 DISLIKES ({dislikesReactions.length})
-                </Text>
-              </Pressable>
-            </View>
+            {/* Sin pestañas de filtro: con el dislike retirado del producto queda un solo tipo de
+                reacción, así que "TODOS / LIKES / DISLIKES" filtraba entre una opción y ella
+                misma. En su lugar, el conteo directo de quiénes dieron "me gusta". */}
+            <Text style={[t.micro, { color: c.textSoft, fontSize: 10, marginVertical: 10 }]}>
+              👍 {reactionUsers.length} me gusta
+            </Text>
 
             <ScrollView style={{ maxHeight: 220 }}>
               {/* Mismos tokens que los estados del feed real (muroCargando/muroError/lista vacía,
@@ -3780,7 +3728,7 @@ export default function ComunidadScreen() {
                   Todavía nadie reaccionó a esta publicación.
                 </Text>
               )}
-              {!cargandoReacciones && !errorReacciones && reactionUsers.length > 0 && filteredReactions.map(user => (
+              {!cargandoReacciones && !errorReacciones && reactionUsers.length > 0 && reactionUsers.map(user => (
                 <View key={user.id} style={[styles.reactionUserRow, { borderBottomColor: c.divider }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <View style={[styles.avatarCircle, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
@@ -3791,7 +3739,7 @@ export default function ComunidadScreen() {
                       <Text style={[t.micro, { color: c.micro, fontSize: 9 }]}>{user.role}</Text>
                     </View>
                   </View>
-                  <Text style={{ fontSize: 16 }}>{user.type === 'like' ? '👍' : '👎'}</Text>
+                  <Text style={{ fontSize: 16 }}>👍</Text>
                 </View>
               ))}
             </ScrollView>
@@ -3898,11 +3846,9 @@ export default function ComunidadScreen() {
             postText={activeViewerPost?.text || imageViewerData.postText}
             postId={activeViewerPost?.id}
             likes={activeViewerPost?.likes}
-            dislikes={activeViewerPost?.dislikes}
             userReaction={activeViewerPost?.userReaction}
             comments={activeViewerPost?.comments}
             onToggleLike={handleToggleLike}
-            onToggleDislike={handleToggleDislike}
             onCommentVote={handleCommentVote}
             onAddComment={(pid, txt, photoUri) => handleAddComment(pid, txt, photoUri)}
             onShare={handleSharePost}
@@ -4056,24 +4002,32 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
   },
+  // SIN `height`: el alto sale del `aspectRatio` que se pasa en línea con la proporción real de la
+  // foto (ver `proporcionesFoto` en esta pantalla). El `height: 120` que había acá era la causa de
+  // que toda foto vertical apareciera recortada.
   mediaSingleBox: {
-    height: 120,
+    width: '100%',
     borderWidth: 1,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
+  // Dos fotos: una al lado de la otra y cuadradas, como el mosaico de Instagram. Antes eran de
+  // 100 px de alto con el ancho de media tarjeta, o sea apaisadas a la fuerza.
   mediaHalfBox: {
     flex: 1,
-    height: 100,
+    aspectRatio: 1,
     borderWidth: 1,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Sin `height: '100%'`: la fila que lo contiene ya no tiene alto en píxeles sino `aspectRatio`,
+  // y un porcentaje contra un alto derivado es justo el caso frágil de Yoga. El estirado vertical
+  // lo da el `alignItems: 'stretch'` que la fila trae por defecto.
   mediaLargeLeft: {
     flex: 1.4,
-    height: '100%',
     borderWidth: 1,
     borderRadius: 10,
     alignItems: 'center',

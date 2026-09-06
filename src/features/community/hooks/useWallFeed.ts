@@ -120,7 +120,6 @@ export function useWallFeed() {
           mimeType: foto.mimeType,
         })),
         likes: 0,
-        dislikes: 0,
         userReaction: null,
         comments: [],
         pendiente: true,

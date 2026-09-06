@@ -61,12 +61,12 @@ export function mapearPublicacion(post: WallPost): PostItem {
     text: post.text,
     media: mapearMedia(post.media),
     likes: post.reactionCounts.LIKE ?? 0,
-    dislikes: post.reactionCounts.DISLIKE ?? 0,
-    userReaction: post.myReactions.includes('LIKE')
-      ? 'like'
-      : post.myReactions.includes('DISLIKE')
-        ? 'dislike'
-        : null,
+    // `reactionCounts.DISLIKE` se ignora a propósito: el cliente pidió sacar el dislike del
+    // producto. El backend sigue devolviéndolo (el enum `WallReactionType` no se tocó, así que las
+    // reacciones negativas viejas siguen contadas ahí), pero ninguna pantalla lo muestra.
+    // Quien había dejado un DISLIKE ve la publicación como si no hubiera reaccionado; en cuanto
+    // toque "me gusta", el backend reemplaza una reacción por la otra y el rastro desaparece solo.
+    userReaction: post.myReactions.includes('LIKE') ? 'like' : null,
     // Se cargan aparte, al abrir la sección de comentarios (GET /wall/{id}/comments) — el feed
     // solo trae `commentCount`, no la lista.
     comments: [],
@@ -87,7 +87,6 @@ export function mapearComentario(comment: WallComment): CommentItem {
     // El backend no tiene reacciones a comentarios (solo a publicaciones, ver ReaccionarUseCase):
     // quedan en 0, sin interacción real posible desde este mapeo.
     likes: 0,
-    dislikes: 0,
     userReaction: null,
     timeAgo: tiempoRelativo(comment.createdAt),
   };
@@ -107,8 +106,9 @@ export function aplicarReaccion(
   return {
     ...post,
     likes: resultado.reactionCounts.LIKE ?? 0,
-    dislikes: resultado.reactionCounts.DISLIKE ?? 0,
-    userReaction: resultado.reacted ? (tipo === 'LIKE' ? 'like' : 'dislike') : null,
+    // `tipo` siempre llega como 'LIKE' desde que se retiró el dislike (la app no tiene otro botón
+    // que dispare esto). El parámetro se conserva porque el endpoint sigue aceptando los dos.
+    userReaction: resultado.reacted && tipo === 'LIKE' ? 'like' : null,
   };
 }
 
@@ -128,6 +128,8 @@ export function mapearReaccion(item: WallReactionItem): ReactionUser {
     name: item.name?.trim() || 'Miembro Renaser',
     role: item.role ? (ETIQUETA_ROL[item.role] ?? item.role) : '',
     avatar: AVATAR_POR_DEFECTO,
-    type: item.type === 'DISLIKE' ? 'dislike' : 'like',
+    // Siempre 'like': quien llama ya descartó las filas DISLIKE (`useWallReactions`), porque el
+    // modal "quién reaccionó" dejó de mostrar reacciones negativas.
+    type: 'like',
   };
 }

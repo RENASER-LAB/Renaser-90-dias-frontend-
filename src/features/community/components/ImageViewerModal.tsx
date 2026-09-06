@@ -38,8 +38,8 @@ export interface ImageViewerCommentItem {
   text: string;
   photoAttached?: string;
   likes: number;
-  dislikes: number;
-  userReaction?: 'like' | 'dislike' | null;
+  /** Única reacción posible desde que se retiró el dislike del producto. */
+  userReaction?: 'like' | null;
   timeAgo: string;
 }
 
@@ -53,12 +53,11 @@ export interface ImageViewerModalProps {
   postText?: string;
   postId?: string;
   likes?: number;
-  dislikes?: number;
-  userReaction?: 'like' | 'dislike' | null;
+  userReaction?: 'like' | null;
   comments?: ImageViewerCommentItem[];
   onToggleLike?: (postId: string) => void;
-  onToggleDislike?: (postId: string) => void;
-  onCommentVote?: (postId: string, commentId: string, type: 'like' | 'dislike') => void;
+  /** Interruptor de "me gusta" de un comentario: sin dislike ya no hace falta decir de qué tipo. */
+  onCommentVote?: (postId: string, commentId: string) => void;
   onAddComment?: (postId: string, text: string, photoUri?: string) => Promise<void> | void;
   onShare?: (postId: string) => void;
   conversations?: ChatConversation[];
@@ -82,11 +81,9 @@ export function ImageViewerModal({
   postText,
   postId,
   likes = 0,
-  dislikes = 0,
   userReaction = null,
   comments = [],
   onToggleLike,
-  onToggleDislike,
   onCommentVote,
   onAddComment,
   onShare,
@@ -576,11 +573,11 @@ export function ImageViewerModal({
                           </View>
                         )}
 
-                        {/* Votos Like / Dislike en cada comentario */}
+                        {/* "Me gusta" del comentario. El dislike se retiró del producto. */}
                         {postId && onCommentVote && (
                           <View style={styles.commentVoteRow}>
                             <Pressable
-                              onPress={() => onCommentVote(postId, cItem.id, 'like')}
+                              onPress={() => onCommentVote(postId, cItem.id)}
                               style={styles.commentVoteBtn}
                               hitSlop={6}
                             >
@@ -592,22 +589,6 @@ export function ImageViewerModal({
                                 ]}
                               >
                                 {cItem.likes}
-                              </Text>
-                            </Pressable>
-
-                            <Pressable
-                              onPress={() => onCommentVote(postId, cItem.id, 'dislike')}
-                              style={styles.commentVoteBtn}
-                              hitSlop={6}
-                            >
-                              <Text style={{ fontSize: 11 }}>👎</Text>
-                              <Text
-                                style={[
-                                  styles.commentVoteCount,
-                                  cItem.userReaction === 'dislike' && { color: '#f28e8e', fontWeight: '800' },
-                                ]}
-                              >
-                                {cItem.dislikes}
                               </Text>
                             </Pressable>
                           </View>

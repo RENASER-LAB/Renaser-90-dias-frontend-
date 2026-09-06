@@ -6,6 +6,12 @@
  * `api/wallMappers.ts` traduce de uno a otro.
  */
 
+/**
+ * Los dos valores que sigue aceptando y devolviendo el backend. `DISLIKE` se conserva acá porque
+ * es lo que hay del otro lado del cable —el enum de Java no cambió y las reacciones negativas
+ * viejas siguen guardadas—, pero **la app ya no lo produce ni lo muestra**: el cliente pidió sacar
+ * el dislike del producto. Quien filtre reacciones se queda solo con `LIKE`.
+ */
 export type WallReactionType = 'LIKE' | 'DISLIKE';
 
 export interface WallMedia {
