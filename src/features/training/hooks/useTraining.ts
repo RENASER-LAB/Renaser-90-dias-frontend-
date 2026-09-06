@@ -45,11 +45,22 @@ export function useTraining() {
       // Las cuatro llamadas son independientes entre sí: se piden en paralelo. Las dos que no son
       // imprescindibles degradan solas en vez de tirar abajo la pantalla entera — si falla la
       // roca, se ven las cuatro dimensiones de hábitos igual.
-      const [tracks, catalogo, rocas, evidencias] = await Promise.all([
+      //
+      // Degradan, pero ya no en silencio (2026-09-05): antes eran `.catch(() => [])` a secas, así
+      // que un endpoint caído se veía igual que "no hay nada que mostrar" y el contador se quedaba
+      // en cero sin que nadie se enterara. Se sigue devolviendo `[]` a propósito — la pantalla
+      // tiene que abrirse igual —, pero el fallo queda escrito.
+      const [tracks, catalogo, rocas, evidenciasDeRocas] = await Promise.all([
         habitsApi.obtenerTracksDeHoy(),
         habitsApi.obtenerCatalogo(),
-        trainingApi.obtenerRocasDeHoy().catch(() => []),
-        trainingApi.obtenerEvidencias().catch(() => []),
+        trainingApi.obtenerRocasDeHoy().catch(e => {
+          console.warn('[Training] no se pudo cargar la roca del día; la dimensión sale vacía:', e);
+          return [];
+        }),
+        trainingApi.obtenerEvidenciasDeRocas().catch(e => {
+          console.warn('[Training] no se pudo cargar la evidencia de rocas; se muestran sin sellar:', e);
+          return [];
+        }),
       ]);
 
       const categoriaPorHabito = new Map(catalogo.map(h => [h.id, h.category]));
@@ -58,14 +69,18 @@ export function useTraining() {
       // track porque es un atributo del hábito, no del registro del día — el track ya se une al
       // catálogo por `habitoId` unas líneas más abajo, así que no cuesta ninguna llamada extra.
       const claveSistemaPorHabito = new Map(catalogo.map(h => [h.id, h.systemKey ?? null]));
-      // La evidencia apunta a su origen con un campo distinto segun de qué sea: `registroHabitoId`
-      // para un hábito, `rocaDiariaId` para una roca. Se indexan por separado para no cruzar ids
-      // de dos módulos que no comparten espacio de identidad.
-      const habitosConEvidencia = new Set(
-        evidencias.map(e => e.registroHabitoId).filter((id): id is string => Boolean(id)),
-      );
+      // Para las ROCAS todavía hay que cruzar contra el listado de evidencia. Para los HÁBITOS ya
+      // no: desde el 2026-09-05 (D-113) cada track de `habit-tracks/today` trae `tieneEvidencia`
+      // resuelto por el backend.
+      //
+      // El cruce se retiró del lado de los hábitos porque estaba roto por construcción, no por
+      // prolijidad: `GET /api/v1/evidence` devuelve UNA página de 20 filas, ordenada por fecha de
+      // creación descendente y sin filtro de día, así que apenas el aprendiz superaba esas 20
+      // filas la evidencia de un hábito de hoy quedaba afuera y el chip decía "SUBIR" sobre un
+      // archivo que ya estaba guardado. No se notaba porque `renaser.evidencias` tenía una sola
+      // fila. La misma limitación sigue viva para rocas — ver `trainingApi.obtenerEvidenciasDeRocas`.
       const rocasConEvidencia = new Set(
-        evidencias.map(e => e.rocaDiariaId).filter((id): id is string => Boolean(id)),
+        evidenciasDeRocas.map(e => e.rocaDiariaId).filter((id): id is string => Boolean(id)),
       );
 
       const deHabitos: HabitItem[] = tracks
@@ -85,7 +100,9 @@ export function useTraining() {
             tag: track.esOpcional ? 'Opcional' : 'Innegociable',
             streak: 0,
             done: track.estado === 'COMPLETADO',
-            hasEvidence: habitosConEvidencia.has(track.id),
+            // Dato del servidor, no reconstruido acá: es exacto y no depende de cuántas filas
+            // entren en una página. `?? false` cubre a un backend anterior a D-113.
+            hasEvidence: track.tieneEvidencia ?? false,
             systemKey: claveSistemaPorHabito.get(track.habitoId) ?? null,
             // `respuestaTexto` ya venía en el track y nadie lo leía. Es donde el backend guarda el
             // resumen de la Clase Diaria (`RegistroHabito.respuestaTexto`), así que sirve para

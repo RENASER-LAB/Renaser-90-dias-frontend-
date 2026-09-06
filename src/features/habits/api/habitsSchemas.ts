@@ -93,6 +93,20 @@ const trackDelDiaSchema = z
     puntosEnJuego: z.number().nullish(),
     puntosMaximos: z.number().nullish(),
     plazoEvidencia: z.string().nullish(),
+    /**
+     * Agregado por el backend el 2026-09-05 (D-113): si ese track ya tiene al menos una evidencia
+     * subida, en cualquier estado de validación.
+     *
+     * Reemplaza el cruce que hacía `useTraining` contra `GET /api/v1/evidence`, que estaba roto
+     * por construcción: ese listado devuelve UNA página de 20 filas sin filtro de día y mezclando
+     * evidencia de hábito, de roca y de espíritu, así que en cuanto hay más de 20 filas la
+     * evidencia de un hábito de hoy queda fuera de la página y el chip dice "SUBIR" sobre un
+     * archivo ya guardado. El servidor responde exacto y sin depender de ninguna paginación.
+     *
+     * `optional()` y no `nullish()`: es un boolean, nunca viene null. Contra un backend anterior
+     * a este cambio llega `undefined` y el hook lo trata como `false`.
+     */
+    tieneEvidencia: z.boolean().optional(),
   })
   .passthrough();
 

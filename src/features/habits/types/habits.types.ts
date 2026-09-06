@@ -48,7 +48,14 @@ export const CLAVE_SISTEMA_CLASE_DIARIA = 'DAILY_CLASS';
  *
  * El backend NO lo deja completar por `POST /habit-tracks/{id}/complete` mientras no exista una
  * publicación de esa persona ese día (`PoliticaPostDiarioComunidad`): responde 400. Por eso el
- * móvil no puede "marcarlo y listo" — lo único que puede hacer es llevar a publicar.
+ * móvil no puede "marcarlo y listo" antes de publicar — lo único que puede hacer es llevar al Muro.
+ *
+ * > **Corregido 2026-09-05 (E-117).** Acá decía que lo ÚNICO que el móvil puede hacer es llevar a
+ * > publicar. Esa media frase de más fue el bug: DESPUÉS de publicar, el móvil no solo puede
+ * > llamar a `/complete`, tiene que hacerlo — el backend implementó la mitad guardiana de la regla
+ * > ("no lo cierres si no publicó") y nunca la mitad que dispara el cierre, así que el hábito
+ * > quedaba pendiente para siempre. Lo dispara `cerrarHabitoPostDiarioComunidad`
+ * > (`api/postDiarioComunidad.ts`), llamado desde el compositor del Muro.
  */
 export const CLAVE_SISTEMA_POST_DIARIO_COMUNIDAD = 'COMMUNITY_POST';
 
@@ -107,4 +114,7 @@ export interface TrackDelDiaApi {
   puntosMaximos?: number | null;
   /** Instante ISO en que el hábito se bloquea; null si no vence. */
   plazoEvidencia?: string | null;
+  /** Si el track ya tiene al menos una evidencia subida, en cualquier estado de validación.
+   * `undefined` contra un backend anterior al 2026-09-05 (D-113), y ahí se trata como `false`. */
+  tieneEvidencia?: boolean;
 }
