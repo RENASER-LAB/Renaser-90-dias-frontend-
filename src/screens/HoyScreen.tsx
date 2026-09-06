@@ -75,8 +75,13 @@ export default function HoyScreen() {
   // Mapa de Renacimiento (Día 7). Aparece desde el Día 7 y se queda hasta activarse: quien se
   // salte ese día no lo pierde. En builds de desarrollo se muestra siempre, marcado como vista
   // previa, para poder probarlo sin esperar una semana de programa — en producción no.
+  // Interruptor de salida a producción: en desarrollo siempre; en un build de producción SOLO si
+  // EXPO_PUBLIC_MAPA_DIA7=on (variable de Vercel/EAS, inlined al compilar). Así mergear la rama
+  // no expone el flujo a las cohortes en curso mientras no exista su backend
+  // (docs/MAPA_RENACIMIENTO_DIA7.md §4): encenderlo es un acto deliberado, no un efecto del merge.
+  const MAPA_DIA7_HABILITADO = __DEV__ || process.env.EXPO_PUBLIC_MAPA_DIA7 === 'on';
   const esVistaPreviaMapa = __DEV__ && diaNumero < 7;
-  const mostrarMapa = !!user && (diaNumero >= 7 || __DEV__);
+  const mostrarMapa = MAPA_DIA7_HABILITADO && !!user && (diaNumero >= 7 || __DEV__);
   const tituloMapa = estadoMapa === 'activo'
     ? 'Tu mapa está activo'
     : estadoMapa === 'en_progreso' || estadoMapa === 'listo_para_revision' ? 'Continúa tu mapa' : 'Diseña tu mapa';
