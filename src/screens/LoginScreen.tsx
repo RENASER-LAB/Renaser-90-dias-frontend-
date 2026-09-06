@@ -18,6 +18,7 @@ import { useSystemBackHandler } from '../hooks/useSystemBackHandler';
 import { useAuth } from '../context/AuthContext';
 import { mensajeDeError } from '../services/http/apiClient';
 import { Icon } from '../components/Icon';
+import { FondoAnillos } from '../components/FondoAnillos';
 import { MicroLabel } from '../components/ui';
 import {
   useRegistroConOtp,
@@ -52,8 +53,9 @@ export default function LoginScreen() {
     login,
     register,
     loginWithGoogle,
+    // Sigue en el destructure aunque el boton de Apple este retirado: `handleSocialLogin`
+    // conserva su rama 'apple' para cuando vuelva (ver el comentario del bloque quitado).
     loginWithApple,
-    demoLogin,
   } = useAuth();
 
   // El alta real (OTP + solicitud pendiente de aprobación) vive en su propio hook: la pantalla
@@ -484,13 +486,18 @@ export default function LoginScreen() {
     }
   };
 
-  const ringSizes = isShort
-    ? [rs(140), rs(115), rs(90), rs(65)]
-    : [rs(190), rs(155), rs(120), rs(85)];
-  const ringColors = [c.ring1, c.ring2, c.ring3, c.ring2];
-
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: c.bg }]}>
+      {/*
+        Los anillos van de FONDO, no de cabecera (2026-09-05, pedido del dueno del proyecto).
+        Antes vivian dentro del ScrollView y ocupaban ~180 px de alto, asi que para llenar el
+        correo y la contrasena habia que arrastrar con el dedo. Al pasarlos al fondo se recupera
+        ese alto y la marca queda mas presente. `icono={null}` porque la cabecera ya dibuja el
+        suyo, que ademas cambia segun el paso (correo / llave / usuario) — dos iconos encimados
+        se verian como un error.
+      */}
+      <FondoAnillos icono={null} />
+
       {/* Barra Superior con botón Volver y Toggle de Modo */}
       <View style={[styles.topBar, { paddingHorizontal: horizontalPadding }]}>
         {step !== 'form' ? (
@@ -547,26 +554,14 @@ export default function LoginScreen() {
             <View
               style={[
                 styles.ringContainer,
+                // Ya no contiene anillos, solo el icono del paso: se encoge a su medida. Este
+                // es el alto que recupera el formulario para no necesitar scroll.
                 {
-                  width: isShort ? rs(100) : rs(130),
-                  height: isShort ? rs(100) : rs(130),
+                  width: isShort ? rs(44) : rs(52),
+                  height: isShort ? rs(44) : rs(52),
                 },
               ]}
             >
-              {ringSizes.map((size, index) => (
-                <View
-                  key={size}
-                  style={[
-                    styles.ring,
-                    {
-                      width: size,
-                      height: size,
-                      borderRadius: size / 2,
-                      borderColor: ringColors[index],
-                    },
-                  ]}
-                />
-              ))}
               <View
                 style={[
                   styles.iconDiamond,
@@ -913,28 +908,20 @@ export default function LoginScreen() {
                   <View style={[styles.divLine, { backgroundColor: c.divider }]} />
                 </View>
 
-                {/* Botón de Apple en iOS y Web (Obligatorio por Apple HIG en iOS) */}
-                {(Platform.OS === 'ios' || Platform.OS === 'web') && (
-                  <Pressable
-                    onPress={() => handleSocialLogin('apple')}
-                    disabled={socialLoading !== null}
-                    style={[
-                      styles.bigSocialBtn,
-                      { borderColor: c.border, backgroundColor: c.cardBgAlt }
-                    ]}
-                  >
-                    {socialLoading === 'apple' ? (
-                      <ActivityIndicator color={c.gold} size="small" />
-                    ) : (
-                      <>
-                        <Icon name="apple" size={20} color={c.gold} />
-                        <Text style={[t.micro, { color: c.textStrong, letterSpacing: 1.6, fontWeight: '700', fontSize: 11 }]}>
-                          {activeTab === 'login' ? 'CONTINUAR CON APPLE' : 'REGISTRARME CON APPLE'}
-                        </Text>
-                      </>
-                    )}
-                  </Pressable>
-                )}
+                {/*
+                  Ingreso con Apple retirado (2026-09-05, pedido del dueno del proyecto): todavia
+                  no hay cuenta de Apple Developer, asi que el boton llevaba a un flujo que no
+                  puede completarse.
+
+                  OJO PARA CUANDO VUELVA: en iOS, si la app ofrece cualquier otro login social
+                  (aca hay Google), las reglas de la App Store EXIGEN ofrecer tambien "Sign in with
+                  Apple". Mientras Apple no este, publicar en iOS con el boton de Google visible es
+                  motivo de rechazo. En Android y en web no aplica.
+
+                  El backend ya tiene su lado resuelto (`renaser.auth.apple.*` en application.yaml)
+                  y `loginWithApple` sigue en AuthContext: volver a prenderlo es restaurar este
+                  bloque, no rehacer nada.
+                */}
 
                 {/* Botón de Google en Android, iOS y Web */}
                 {(Platform.OS === 'android' || Platform.OS === 'ios' || Platform.OS === 'web') && (
@@ -960,24 +947,19 @@ export default function LoginScreen() {
                 )}
               </View>
 
-              {/* Modo Demo / Acceso Rápido */}
-              <View style={styles.demoSection}>
-                <Pressable
-                  onPress={demoLogin}
-                  style={[
-                    styles.demoBtn,
-                    {
-                      borderColor: c.borderStrong,
-                      backgroundColor: c.cardBg,
-                    },
-                  ]}
-                >
-                  <Icon name="spark" size={16} color={c.gold} />
-                  <Text style={[t.micro, { color: c.text, letterSpacing: 1.6, fontWeight: '600' }]}>
-                    ACCESO DIRECTO (MODO DEMO)
-                  </Text>
-                </Pressable>
-              </View>
+              {/*
+                "ACCESO DIRECTO (MODO DEMO)" retirado (2026-09-05, pedido del dueno del proyecto).
+
+                No era un atajo de UI: `demoLogin` (AuthContext) entraba a la app SIN ninguna
+                llamada al servidor — fijaba USUARIO_DEMO_EXISTENTE en estado local y marcaba el
+                onboarding como completo. Cualquiera que abriera la app quedaba adentro con esa
+                identidad, y como el actor viaja hoy en el header X-Actor-Id, el backend lo
+                atendia como a ese usuario.
+
+                `demoLogin`/`demoNewUser` siguen declarados en AuthContext y ya no los llama
+                nadie. Conviene borrarlos antes de publicar: sin caller son inertes, pero es un
+                bypass de autenticacion esperando a que alguien lo vuelva a cablear.
+              */}
             </>
           )}
 
