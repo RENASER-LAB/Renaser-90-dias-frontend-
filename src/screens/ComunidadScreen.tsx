@@ -31,6 +31,8 @@ import * as wallApi from '../features/community/api/wallApi';
 import { elegirYNormalizarFotoMuro, type FotoMuroNormalizada } from '../features/community/utils/normalizarImagen';
 import { FotoMuro } from '../features/community/components/FotoMuro';
 import { avisarPostPublicado } from '../features/sparkie/events/avisoPrimerPost';
+import { cerrarHabitoPostDiarioComunidad } from '../features/habits/api/postDiarioComunidad';
+import { avisarPostDiarioCerrado } from '../features/habits/events/avisoPostDiarioCerrado';
 import { ImageViewerModal, type ImageViewerItem } from '../features/community/components/ImageViewerModal';
 import { SharePostSheet } from '../features/community/components/SharePostSheet';
 import { useCursos } from '../features/academy/hooks/useCursos';
@@ -241,39 +243,6 @@ export interface GroupMember {
 // El Muro (pestaña "muro") y "Recursos Exclusivos" (cursos/lecciones) ya no usan datos fijos:
 // salen de `useWallFeed()`/`useCursos()`, contra el backend real. Testimonios y Ranking siguen
 // con datos de mock — quedan fuera del alcance de esta integración.
-const INITIAL_TESTIMONIALS: TestimonialItem[] = [
-  {
-    id: 't1',
-    name: 'Carlos Méndez',
-    role: 'CEO & Fundador Tecnológico',
-    badge: '👑 GRADUADO GENERACIÓN 04',
-    avatar: '👨‍💼',
-    daysCompleted: 90,
-    quote:
-      '“Trabajaba 14 horas al día al borde del colapso. Gracias a los Bloques de Poder y el reseteo biológico de RENASER, reduje mi jornada a 6 horas y mi facturación se disparó un 140%.”',
-    metrics: [
-      { label: 'TIEMPO', value: '-50% Horas', isHighlight: true },
-      { label: 'FACTURACIÓN', value: '+140% USD', isHighlight: true },
-      { label: 'CONSISTENCIA', value: '98% Racha', isHighlight: true },
-    ],
-    videoDuration: '3 MIN',
-  },
-  {
-    id: 't2',
-    name: 'Dra. Valeria Ruiz',
-    role: 'Directora Médica & Cirujana',
-    badge: '👑 GRADUADA GENERACIÓN 05',
-    avatar: '👩‍⚕️',
-    daysCompleted: 90,
-    quote:
-      '“El hackeo de cortisol matutino y la respiración diafragmática me devolvieron la calma. Duermo 8 horas profundas y mi velocidad de respuesta clínica es inquebrantable.”',
-    metrics: [
-      { label: 'CALIDAD SUEÑO', value: '8 hrs Profundas', isHighlight: true },
-      { label: 'CLARIDAD', value: '100% Sin Ansiedad', isHighlight: true },
-    ],
-    videoDuration: '4 MIN',
-  },
-];
 
 // Antes había acá un REACTION_USERS_MOCK: el modal "Reacciones del post" ya usa datos reales
 // (GET /api/v1/wall/{id}/reactions, ver useWallReactions) — quedaba muerto y se sacó, no
@@ -347,6 +316,20 @@ const METRICAS = [
   { n: '2', label: 'Mentorías\nprogramadas' },
 ];
 
+/**
+ * En qué sección de Comunidad está parada la pantalla. Las cuatro son EXCLUYENTES entre sí: solo
+ * una se pinta a la vez.
+ *
+ * Es un único valor y no tres booleanos a propósito (corregido 2026-09-05, E-116). Antes había
+ * `inEventosExperiencias`, `inExclusiveResources` e `inAtencionPersonalizada` sueltos, y cada
+ * camino de entrada prendía el suyo sin apagar los otros. Los dos atajos que entran desde la
+ * pestaña Training (`abrirCursoId`/`abrirLeccionId` de la Clase Diaria, y `abrirComposerMuro` del
+ * hábito de post en comunidad) hacían justamente eso, así que quien tocaba primero un hábito y
+ * después el otro terminaba con el Muro y el catálogo de Cursos apilados uno encima del otro en
+ * el mismo scroll. Con un solo valor ese estado no se puede ni escribir.
+ */
+type SeccionComunidad = 'inicio' | 'eventos' | 'recursos' | 'atencion';
+
 export default function ComunidadScreen() {
   const { c, t, mode } = useTheme();
   // D-99: el chat dentro de un curso le dice a Sparkie en que dia del programa va la persona.
@@ -392,7 +375,16 @@ export default function ComunidadScreen() {
   // =========================================================================
   // ESTADOS DE NAVEGACIÓN
   // =========================================================================
-  const [inExclusiveResources, setInExclusiveResources] = useState(false);
+  // Única fuente de verdad de "en qué sección estoy" (ver `SeccionComunidad`). Nunca se escribe a
+  // mano: se pasa siempre por `irASeccion`, que además limpia el sub-estado de la sección que se
+  // deja.
+  const [seccionActiva, setSeccionActiva] = useState<SeccionComunidad>('inicio');
+  // Derivados, no estados. Se mantienen con el mismo nombre que tenían cuando eran `useState`
+  // para que las ~15 condiciones de render y el manejador del botón "atrás" sigan leyéndose igual;
+  // lo que cambió es que ya no se pueden prender dos a la vez.
+  const inExclusiveResources = seccionActiva === 'recursos';
+  const inEventosExperiencias = seccionActiva === 'eventos';
+  const inAtencionPersonalizada = seccionActiva === 'atencion';
   // Se guarda el ID, no el objeto: `courses` (de `useCursos`) es la única fuente de verdad, así
   // que `selectedCourse` sale siempre DERIVADO más abajo. Si se guardara el objeto entero (como
   // hacía el mock) quedaría una copia vieja congelada en el momento del toque, y una acción
@@ -401,13 +393,11 @@ export default function ComunidadScreen() {
   const [fullScreenLesson, setFullScreenLesson] = useState<LessonResource | null>(null);
 
   // Sub-módulo: Eventos & Experiencias
-  const [inEventosExperiencias, setInEventosExperiencias] = useState(false);
   const [eventosTab, setEventosTab] = useState<'muro' | 'testimonios' | 'ranking'>('muro');
 
   // Sub-módulo: Atención Personalizada & Chats tipo WhatsApp — `conversations` sale del backend
   // real (GET /api/v1/chat/conversations) a través de `useChatConversaciones`; el historial de
   // cada una se pide recién al abrirla (ver `handleAbrirChat`), nunca en el listado.
-  const [inAtencionPersonalizada, setInAtencionPersonalizada] = useState(false);
   const [chatCategory, setChatCategory] = useState<'celula' | 'miembros' | 'global'>('celula');
   const {
     conversations,
@@ -421,6 +411,32 @@ export default function ComunidadScreen() {
   const [activeChat, setActiveChat] = useState<ChatConversation | null>(null);
   const [groupInfoVisible, setGroupInfoVisible] = useState(false);
   const [selectedMemberProfile, setSelectedMemberProfile] = useState<GroupMember | null>(null);
+
+  /**
+   * Único camino para cambiar de sección. Además de mover `seccionActiva`, limpia el sub-estado de
+   * las secciones que se dejan atrás.
+   *
+   * Esa limpieza importa por lo mismo que existe `SeccionComunidad`: navegando a mano el botón
+   * "atrás" ya va cerrando el sub-estado de a un nivel por vez (lección → curso → sección), así
+   * que al salir queda todo en `null` solo. Los atajos que entran desde Training se saltean esos
+   * pasos, y sin la limpieza alguien que dejó una lección abierta a pantalla completa volvía a
+   * caer dentro de ESA lección la próxima vez que entraba a Recursos por su cuenta.
+   *
+   * Ojo con el orden al entrar a `recursos` desde un atajo: `irASeccion('recursos')` NO toca
+   * `selectedCourseId`/`fullScreenLesson` (el `if` de abajo lo excluye), justamente para que el
+   * `setSelectedCourseId(...)` que viene después en el mismo efecto no se pise.
+   */
+  const irASeccion = useCallback((seccion: SeccionComunidad) => {
+    setSeccionActiva(seccion);
+    if (seccion !== 'recursos') {
+      setFullScreenLesson(null);
+      setSelectedCourseId(null);
+    }
+    if (seccion !== 'atencion') {
+      setActiveChat(null);
+      setGroupInfoVisible(false);
+    }
+  }, []);
   const [chatInputText, setChatInputText] = useState('');
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
   /** Foto de chat abierta a pantalla completa; `null` si no hay ninguna. */
@@ -797,7 +813,7 @@ export default function ComunidadScreen() {
       return true;
     }
     if (inAtencionPersonalizada) {
-      setInAtencionPersonalizada(false);
+      irASeccion('inicio');
       return true;
     }
     if (reactionsModalVisible) {
@@ -817,11 +833,11 @@ export default function ComunidadScreen() {
       return true;
     }
     if (inExclusiveResources) {
-      setInExclusiveResources(false);
+      irASeccion('inicio');
       return true;
     }
     if (inEventosExperiencias) {
-      setInEventosExperiencias(false);
+      irASeccion('inicio');
       return true;
     }
     return false;
@@ -842,11 +858,11 @@ export default function ComunidadScreen() {
   // =========================================================================
   const handleSoportePress = (label: string) => {
     if (label.includes('Entorno') || label.includes('Atención')) {
-      setInAtencionPersonalizada(true);
+      irASeccion('atencion');
     } else if (label.includes('Eventos')) {
-      setInEventosExperiencias(true);
+      irASeccion('eventos');
     } else if (label.includes('Recursos')) {
-      setInExclusiveResources(true);
+      irASeccion('recursos');
     }
   };
 
@@ -877,7 +893,7 @@ export default function ComunidadScreen() {
    * que en vez de inventar esa UI se avisa con el mismo `Alert.alert` que ya usa el resto de la
    * pantalla (ver `handleSoportePress`/reacciones del Muro).
    */
-  const handleAbrirLeccion = (lesson: LessonResource) => {
+  const handleAbrirLeccion = (lesson: LessonResource, omitirProgresionSecuencial = false) => {
     if (lesson.locked) {
       const faltan = lesson.diasFaltantes ?? 0;
       Alert.alert(
@@ -889,9 +905,17 @@ export default function ComunidadScreen() {
       return;
     }
 
-    // Regla de progresión secuencial: no saltarse lecciones
+    // Regla de progresión secuencial: no saltarse lecciones.
+    //
+    // `omitirProgresionSecuencial` la saltea SOLO para la Clase Diaria (ver el efecto de entrada
+    // desde otra pestaña). El motivo no es de comodidad: esa lección la elige el BACKEND a partir
+    // del día de programa, y ese día avanza con el calendario haya o no completado el aprendiz la
+    // clase de ayer. Exigirle además "primero completá la anterior" dejaba el hábito de Clase
+    // Diaria imposible de cerrar apenas alguien se saltaba un solo día: el día avanza, la lección
+    // de hoy cambia, y la anterior sigue sin completarse. Las dos reglas se contradecían; para la
+    // Clase Diaria manda el día de programa.
     const indexEnCurso = allCourseLessons.findIndex(l => l.id === lesson.id);
-    if (indexEnCurso > 0) {
+    if (!omitirProgresionSecuencial && indexEnCurso > 0) {
       const anterior = allCourseLessons[indexEnCurso - 1];
       const anteriorCompleta = esLeccionCompletada(anterior.id, indexEnCurso - 1);
       const estaCompleta = esLeccionCompletada(lesson.id, indexEnCurso);
@@ -919,10 +943,16 @@ export default function ComunidadScreen() {
   // pantalla no tiene rutas propias (el navegador es un tab navigator plano, sin stack), así que
   // el punto de entrada son parámetros de ruta sobre la pestaña `Comunidad`.
   //
-  // Deliberadamente NO se saltea `handleAbrirLeccion`: la lección se abre por el mismo camino que
-  // si la persona hubiera navegado a mano, con sus mismas reglas (bloqueo por día de programa y
-  // progresión secuencial). Entrar por un atajo que ignore esas reglas sería inventarle una
-  // excepción a la Clase Diaria que nadie pidió.
+  // Se sigue entrando por `handleAbrirLeccion` —la lección se abre por el mismo camino que si la
+  // persona hubiera navegado a mano— pero SIN la regla de progresión secuencial.
+  //
+  // Corregido 2026-09-05. Acá decía que tampoco se salteaba el secuencial, porque "sería
+  // inventarle una excepción a la Clase Diaria que nadie pidió". La excepción sí hacía falta, y
+  // el dueño del proyecto la pidió: la Clase Diaria la elige el backend por día de programa, que
+  // avanza con el calendario haya o no completado el aprendiz la clase de ayer. Con el gate
+  // secuencial puesto, quien se saltaba un día tocaba el hábito, comía un
+  // "Lección no disponible 🔒" y ya no podía cerrar el hábito nunca más. El bloqueo por
+  // día de programa (`lesson.locked`) SÍ se mantiene: ese lo decide el backend.
   const [leccionPedidaDeOtraPestana, setLeccionPedidaDeOtraPestana] = useState<
     { cursoId: string; leccionId: string } | null
   >(null);
@@ -933,7 +963,10 @@ export default function ComunidadScreen() {
       | undefined;
     if (!params?.abrirCursoId || !params?.abrirLeccionId) return;
 
-    setInExclusiveResources(true);
+    // `irASeccion` y no `setSeccionActiva`: apaga la sección que estuviera abierta. Entrar acá
+    // dejando prendida "Eventos & Experiencias" pintaba el Muro y el catálogo de Cursos apilados
+    // en el mismo scroll (E-116).
+    irASeccion('recursos');
     setSelectedCourseId(params.abrirCursoId);
     setLeccionPedidaDeOtraPestana({
       cursoId: params.abrirCursoId,
@@ -957,7 +990,11 @@ export default function ComunidadScreen() {
     const params = route.params as { abrirComposerMuro?: boolean } | undefined;
     if (!params?.abrirComposerMuro) return;
 
-    setInEventosExperiencias(true);
+    // Misma razón que el atajo de la Clase Diaria de arriba: `irASeccion` apaga "Recursos
+    // Exclusivos" si el aprendiz venía de ahí. Este era el camino con el que el dueño del proyecto
+    // encontró el bug — tocaba el hábito de Clase Diaria y después el de post en comunidad, y le
+    // quedaban las dos secciones una encima de la otra (E-116).
+    irASeccion('eventos');
     setEventosTab('muro');
     setCreatePostModalVisible(true);
     // Se consume una sola vez, igual que `abrirCursoId`: sin esto, volver a esta pestaña
@@ -976,7 +1013,10 @@ export default function ComunidadScreen() {
     if (!leccion) return;
 
     setLeccionPedidaDeOtraPestana(null);
-    handleAbrirLeccion(leccion);
+    // `true` = sin la regla de progresión secuencial (ver `handleAbrirLeccion`). El bloqueo por
+    // día de programa SÍ se mantiene: ese lo decide el backend y es el que de verdad ordena el
+    // curso; el secuencial era una regla que solo vivía en el cliente.
+    handleAbrirLeccion(leccion, true);
     // `handleAbrirLeccion` se recrea en cada render y no se incluye a propósito: el efecto ya se
     // desarma solo limpiando `leccionPedidaDeOtraPestana` antes de llamarla.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1344,6 +1384,26 @@ export default function ComunidadScreen() {
     return error instanceof Error && error.message ? error.message : porDefecto;
   };
 
+  /**
+   * Pide el cierre del hábito de post diario y, solo si de verdad se cerró recién, se lo dice a la
+   * persona. El aviso es lo que el dueño del proyecto pidió que cerrara el flujo: *"luego que
+   * salga un mensaje su habito de post en comunidad se completo con exito"*.
+   *
+   * Nunca lanza (ver `cerrarHabitoPostDiarioComunidad`): publicar ya salió bien y un fallo al
+   * cerrar el hábito no puede terminar mostrando "No se pudo publicar".
+   */
+  const avisarSiSeCerroElHabitoDePostDiario = async () => {
+    const resultado = await cerrarHabitoPostDiarioComunidad();
+    if (resultado !== 'completado') return;
+    // Training muestra la tarjeta del hábito y carga una sola vez al montarse: sin este aviso, la
+    // persona lee "completado" acá y vuelve a encontrar la tarjeta sin tildar.
+    avisarPostDiarioCerrado();
+    Alert.alert(
+      '¡Hábito completado! 🦅',
+      'Tu hábito "Post diario en comunidad" se completó con éxito.'
+    );
+  };
+
   const handlePublishPost = async () => {
     if (!newPostText.trim()) {
       Alert.alert('Campo requerido', 'Por favor escribe tu reflexión o experiencia antes de publicar.');
@@ -1376,6 +1436,12 @@ export default function ComunidadScreen() {
       // y se revirtió no es un primer post. El aviso solo adelanta lo que igual se confirma contra
       // `GET /wall/mine` (ver `sparkie/events/avisoPrimerPost.ts`).
       avisarPostPublicado();
+      // El hábito "POST DIARIO EN COMUNIDAD" se cierra ACÁ, con la publicación ya confirmada.
+      // Antes no se cerraba en ningún lado: el backend solo tenía la mitad guardiana de la regla
+      // (rechaza `/complete` si no publicaste) y nadie disparaba la otra mitad, así que el hábito
+      // quedaba pendiente hasta que el cron lo expiraba (E-117). No se pone en el `catch` por lo
+      // mismo que `avisarPostPublicado`: un post que falló y se revirtió no cierra nada.
+      void avisarSiSeCerroElHabitoDePostDiario();
     } catch (error) {
       // El post optimista ya se quitó del muro (rollback dentro del hook). Se devuelve el borrador
       // al modal para que la persona no tenga que volver a escribirlo ni a elegir la foto: perder
@@ -1408,7 +1474,7 @@ export default function ComunidadScreen() {
       {/* ========================================================================= */}
       {/* VISTA 1: PANTALLA PRINCIPAL DE COMUNIDAD (DISEÑO ORIGINAL LIMPIO)         */}
       {/* ========================================================================= */}
-      {!inExclusiveResources && !inEventosExperiencias && !inAtencionPersonalizada && (
+      {seccionActiva === 'inicio' && (
         <ScrollView
           contentContainerStyle={[
             styles.content,
@@ -1541,7 +1607,7 @@ export default function ComunidadScreen() {
           {/* Top Bar para volver a Comunidad */}
           <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
             <Pressable
-              onPress={() => setInEventosExperiencias(false)}
+              onPress={() => irASeccion('inicio')}
               style={styles.backBtnRow}
               hitSlop={8}
             >
@@ -2040,45 +2106,39 @@ export default function ComunidadScreen() {
           {/* PESTAÑA 2: TESTIMONIOS EN MEDIA LUNA */}
           {eventosTab === 'testimonios' && (
             <View style={{ gap: 14, paddingTop: 10, paddingBottom: 28 }}>
-              {INITIAL_TESTIMONIALS.map(item => (
-                <View key={item.id} style={[styles.mediaLunaCard, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
-                  <View style={[styles.mediaLunaGlow, { backgroundColor: c.cardBgAlt }]} />
-                  <View style={styles.mediaLunaContent}>
-                    <View style={[styles.avatarCrestLarge, { borderColor: c.gold, backgroundColor: c.bg }]}>
-                      <Text style={{ fontSize: 24 }}>{item.avatar}</Text>
-                    </View>
-                    <View style={[styles.badgePill, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-                      <Text style={[t.micro, { color: c.gold, fontSize: 8.5, fontWeight: '800' }]}>
-                        {item.badge}
-                      </Text>
-                    </View>
-                    <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 15, marginTop: 4 }]}>
-                      {item.name}
+              {/*
+                PROXIMAMENTE (2026-09-05, decision del dueno del proyecto): "no hay verdaderos".
+
+                Aca habia dos testimonios INVENTADOS presentados como reales, con nombre y
+                apellido, profesion ("CEO & Fundador Tecnologico", "Directora Medica & Cirujana"),
+                insignia de generacion, cifras de resultado ("+140% USD", "-50% Horas",
+                "100% Sin Ansiedad") y un boton de "VER VIDEO TESTIMONIO" que no existia. Un
+                testimonio falso atribuido a una persona con nombre no es contenido de relleno:
+                es una afirmacion sobre resultados de un producto real.
+
+                Se borraron los datos, no solo el render — mismo criterio que INITIAL_HABITS y que
+                las guias de audio de TrainingScreen: si las cadenas quedan en el archivo, alguien
+                las vuelve a colgar de una pantalla.
+
+                El backend YA tiene testimonios (`TestimonioResponse`), pero el movil todavia no
+                los pide. Cuando se conecten, esto pasa a ser la lista real con su estado vacio.
+              */}
+              <View style={[styles.mediaLunaCard, { borderColor: c.border, backgroundColor: c.cardBg }]}>
+                <View style={styles.mediaLunaContent}>
+                  <View style={[styles.badgePill, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+                    <Text style={[t.micro, { color: c.gold, fontSize: 8.5, fontWeight: '800' }]}>
+                      PRÓXIMAMENTE
                     </Text>
-                    <Text style={[t.micro, { color: c.micro, fontSize: 10 }]}>{item.role}</Text>
-                    <Text style={[t.body, { color: c.text, fontSize: 12.5, textAlign: 'center', fontStyle: 'italic', marginVertical: 8, lineHeight: 18 }]}>
-                      {item.quote}
-                    </Text>
-                    <View style={{ flexDirection: 'row', gap: 8, width: '100%', marginVertical: 6 }}>
-                      {item.metrics.map(m => (
-                        <View key={m.label} style={[styles.metricDeltaBox, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
-                          <Text style={[t.micro, { color: c.textSoft, fontSize: 8.5, textAlign: 'center' }]}>
-                            {m.label}
-                          </Text>
-                          <Text style={[t.metric, { color: '#70d2a0', fontSize: 13, textAlign: 'center' }]}>
-                            {m.value}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                    <GoldButton
-                      label={`▶ VER VIDEO TESTIMONIO (${item.videoDuration})`}
-                      onPress={() => Alert.alert('Testimonio Somático', `Reproduciendo video HD de ${item.name}.`)}
-                      style={{ width: '100%', marginTop: 6 }}
-                    />
                   </View>
+                  <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 16, marginTop: 10 }]}>
+                    Historias de la tribu
+                  </Text>
+                  <Text style={[t.body, { color: c.textSoft, fontSize: 13, lineHeight: 19, marginTop: 6, textAlign: 'center' }]}>
+                    Todavía no hay testimonios publicados. Cuando los primeros graduados compartan
+                    su historia, van a aparecer acá.
+                  </Text>
                 </View>
-              ))}
+              </View>
             </View>
           )}
 
@@ -2221,7 +2281,7 @@ export default function ComunidadScreen() {
         >
           <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
             <Pressable
-              onPress={() => setInExclusiveResources(false)}
+              onPress={() => irASeccion('inicio')}
               style={styles.backBtnRow}
               hitSlop={8}
             >
@@ -2719,7 +2779,7 @@ export default function ComunidadScreen() {
           {/* Top Bar Volver a Comunidad */}
           <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
             <Pressable
-              onPress={() => setInAtencionPersonalizada(false)}
+              onPress={() => irASeccion('inicio')}
               style={styles.backBtnRow}
               hitSlop={8}
             >

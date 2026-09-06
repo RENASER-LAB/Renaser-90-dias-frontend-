@@ -23,6 +23,7 @@ import { completarRegistro } from '../features/habits/api/evidenciaHabitoApi';
 import { mensajeDeError } from '../services/http/apiClient';
 import { useAuth } from '../features/auth/context/AuthContext';
 import { CLAVE_SISTEMA_PASTILLA_RENACER } from '../features/spirit/api/spiritApi';
+import { escucharPostDiarioCerrado } from '../features/habits/events/avisoPostDiarioCerrado';
 import { PastillaRenacerModal } from '../features/spirit/components/PastillaRenacerModal';
 import { useEspiritu } from '../features/spirit/hooks/useEspiritu';
 import { ClaseDiariaModal } from '../features/academy/components/ClaseDiariaModal';
@@ -81,12 +82,6 @@ interface DimensionConfig {
   title: string;
   sub: string;
   icon: IconName;
-  recommendedClass: {
-    title: string;
-    duration: string;
-    desc: string;
-    macacoTip: string;
-  };
 }
 
 const DIMENSIONES_CONFIG: DimensionConfig[] = [
@@ -95,60 +90,30 @@ const DIMENSIONES_CONFIG: DimensionConfig[] = [
     title: 'CUERPO',
     sub: 'Fuerza somática · Movilidad · Energía',
     icon: 'body',
-    recommendedClass: {
-      title: 'Activación Fascial y Postura de Poder',
-      duration: '25 min · Alta Intensidad',
-      desc: 'Despierta la máxima tensión isométrica y presencia somática para liderar tu día.',
-      macacoTip: 'La energía corporal no se negocia: 15 min de tensión activa cambian tu química mental.',
-    },
   },
   {
     key: 'MENTE',
     title: 'MENTE',
     sub: 'Enfoque · Mentalidad · Aprendizaje',
     icon: 'brain',
-    recommendedClass: {
-      title: 'Clase 08 · Observa sin juzgar',
-      duration: '12 min · Audio Guía',
-      desc: 'Diferencia hecho, interpretación y reacción antes de intentar cambiarla.',
-      macacoTip: 'Hoy registraste frustración dos veces. Escucha pensando: ¿qué hecho ocurrió y qué historia añadiste?',
-    },
   },
   {
     key: 'EMOCIONES',
     title: 'EMOCIONES',
     sub: 'Gestión Emocional · Relaciones · Propósito',
     icon: 'heart',
-    recommendedClass: {
-      title: 'Regulación Nerviosa y Coherencia Cardíaca',
-      duration: '15 min · Respiración',
-      desc: 'Técnica de anclaje de paz y presencia somática ante momentos de alta presión o reactividad.',
-      macacoTip: 'No reprimas la emoción: dale 90 segundos de respiración diafragmática para que se disipe.',
-    },
   },
   {
     key: 'ESPÍRITU',
     title: 'ESPÍRITU',
     sub: 'Propósito · Fe · Gratitud',
     icon: 'spark',
-    recommendedClass: {
-      title: 'Visualización de Victoria y Certeza Interior',
-      duration: '10 min · Audio Inmersivo',
-      desc: 'Alinea tu mente subconsciente con el propósito innegociable de tu protocolo de 90 días.',
-      macacoTip: 'La certeza no nace de los resultados externos, sino de la fidelidad a tu palabra cada día.',
-    },
   },
   {
     key: 'VIDA Y NEGOCIO',
     title: 'VIDA Y NEGOCIO',
     sub: 'Hábitos · Entorno · Estilo de Vida · Estrategia',
     icon: 'briefcase',
-    recommendedClass: {
-      title: 'Arquitectura del Tiempo y Alto Apalancamiento',
-      duration: '30 min · Estratégico',
-      desc: 'Identificación de tu Única Prioridad de Alto Impacto y eliminación de micro-distracciones.',
-      macacoTip: 'Antes de llenar tu agenda, elimina lo que no requiere tu genialidad (Filtro 80/20 Pareto).',
-    },
   },
 ];
 
@@ -187,6 +152,12 @@ export default function TrainingScreen() {
       setHabits(habitsDelBackend);
     }
   }, [cargandoBackend, errorBackend, habitsDelBackend]);
+
+  // El habito de post diario lo cierra el compositor del Muro, en OTRA pestana (E-117). Sin esto,
+  // la persona lee "hábito completado" alla y vuelve a encontrar la tarjeta sin tildar, porque
+  // `useTraining` carga una sola vez al montarse. No se marca nada a mano: se recarga del backend,
+  // que es la unica fuente de verdad.
+  useEffect(() => escucharPostDiarioCerrado(() => void recargarEntrenamiento()), [recargarEntrenamiento]);
 
   // Evidence Upload Modal State
   // El estado de la subida en sí (archivo elegido, nota, error, envío en curso) vive dentro de
@@ -375,6 +346,10 @@ export default function TrainingScreen() {
     }
     // El post diario no se evidencia con un archivo: se evidencia publicando. El backend lo
     // verifica del lado del servidor, asi que mandar al muro es el unico camino que cierra.
+    //
+    // Corregido 2026-09-05 (E-117): "mandar al muro cierra" era falso — navegar no cerraba nada.
+    // Quien cierra el habito es `cerrarHabitoPostDiarioComunidad`, que el compositor del Muro
+    // llama con la publicacion ya confirmada. Desde aca se sigue navegando y nada mas.
     if (habit.systemKey === CLAVE_SISTEMA_POST_COMUNIDAD) {
       abrirMuroParaPublicar();
       return;
@@ -453,11 +428,12 @@ export default function TrainingScreen() {
     ? habits.filter(h => h.dimension === selectedDimension.key)
     : [];
 
-  // "CUMPLIDOS" cuenta hábitos/roca marcados como hechos (done); la barra de "Evidencias selladas
-  // hoy" cuenta los que además tienen evidencia sellada (hasEvidence) — son dos métricas reales
-  // distintas, ambas calculables con lo que devuelve el backend.
+  // "CUMPLIDOS" cuenta hábitos/roca marcados como hechos (done). La barra de "Evidencias selladas
+  // hoy" usa el MISMO criterio que el badge de la lista de dimensiones (ver ahí el porqué, E-118):
+  // la prueba entregada en la forma que cada hábito acepta, no solo la fila de `evidencias`. Si no,
+  // la lista decía "1/1 EVIDENCIAS" y el detalle "Evidencias selladas hoy 0%" del mismo hábito.
   const completedEvidencesCount = currentDimensionHabits.filter(h => h.done).length;
-  const sealedEvidencesCount = currentDimensionHabits.filter(h => h.hasEvidence).length;
+  const sealedEvidencesCount = currentDimensionHabits.filter(h => h.done || h.hasEvidence).length;
   const dimensionProgress = currentDimensionHabits.length > 0
     ? Math.round((sealedEvidencesCount / currentDimensionHabits.length) * 100)
     : 0;
@@ -549,9 +525,25 @@ export default function TrainingScreen() {
             <View style={{ gap: 10, paddingVertical: 8 }}>
               {!cargandoBackend && errorBackend === null && DIMENSIONES_CONFIG.map(d => {
                 const dimHabits = habits.filter(h => h.dimension === d.key);
-                // "EVIDENCIAS" cuenta ítems con evidencia sellada (hasEvidence), no ítems marcados
-                // como hechos (done) — pueden divergir con datos reales.
-                const evidenceCount = dimHabits.filter(h => h.hasEvidence).length;
+                // Dice "CUMPLIDOS" y no "EVIDENCIAS" (2026-09-05, pedido del dueño: que se
+                // distingan). El número cuenta ítems del día ya dados por hechos — y la mitad
+                // de ellos (DESPERTAR, DORMIR, Clase Diaria, Post en Comunidad, Pastilla)
+                // NUNCA genera un archivo de evidencia, porque su prueba es la acción misma.
+                // Llamarlo "EVIDENCIAS" hacía que EMOCIONES mostrara "0/1" para siempre.
+                // "Evidencia" queda reservado para donde sí hay un archivo entregado: el chip
+                // VER/SUBIR de cada hábito.
+                // "EVIDENCIAS" cuenta los ítems del día cuya prueba YA está entregada, en la forma
+                // que cada hábito acepta. Mirar SOLO `hasEvidence` (= una fila en
+                // `renaser.evidencias`) dejaba el numerador clavado en 0: en el backend solo tres
+                // caminos crean esa fila —la subida genérica de archivo/texto, el Santuario y las
+                // rocas—, así que los hábitos cuya prueba ES la acción (DESPERTAR/DORMIR registran
+                // la hora, la Clase Diaria el resumen, el Post Diario la publicación, la Pastilla
+                // la respuesta) cierran el registro en COMPLETADO sin fila de evidencia. En
+                // EMOCIONES, cuyo único hábito es el Post Diario, ese 0 era permanente. El
+                // denominador es "todos los hábitos de la dimensión", así que el numerador tiene
+                // que poder alcanzarlo (E-118). `||` y no solo `done`: una evidencia subida sobre
+                // un registro que después venció sigue siendo una evidencia entregada.
+                const evidenceCount = dimHabits.filter(h => h.done || h.hasEvidence).length;
 
                 return (
                   <Pressable
@@ -583,7 +575,7 @@ export default function TrainingScreen() {
                           {d.title}
                         </Text>
                         <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 10.5 }]}>
-                          {evidenceCount}/{dimHabits.length} EVIDENCIAS
+                          {evidenceCount}/{dimHabits.length} CUMPLIDOS
                         </Text>
                       </View>
                       <Text style={[t.small, { color: c.micro, marginTop: 2, lineHeight: 16 }]}>
@@ -648,7 +640,7 @@ export default function TrainingScreen() {
               {/* Dimension Progress Bar */}
               <View style={{ gap: 4, marginTop: 8 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>Evidencias selladas hoy</Text>
+                  <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>Cumplidos hoy</Text>
                   <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 10 }]}>{dimensionProgress}%</Text>
                 </View>
                 <View style={[styles.progressBarBg, { backgroundColor: c.border }]}>
@@ -863,71 +855,38 @@ export default function TrainingScreen() {
             {/* =================================================================== */}
             {innerTab === 'guias' && (
               <View style={{ gap: 12 }}>
-                {/* Featured Class Card */}
-                <View style={[styles.guideHeroCard, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-                  <View style={styles.guideTopRow}>
-                    <View style={[styles.guideTag, { backgroundColor: c.gold }]}>
-                      <Text style={[t.micro, { color: '#1E1B18', fontWeight: '800', fontSize: 9.5 }]}>
-                        AUDIO GUÍA RECOMENDADA
-                      </Text>
-                    </View>
-                    <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>
-                      {selectedDimension.recommendedClass.duration}
+                {/*
+                  EN DESARROLLO (2026-09-05, decision del dueno del proyecto).
+
+                  Aca habia una maqueta entera presentada como contenido real: una "AUDIO GUIA
+                  RECOMENDADA" distinta por dimension, un boton "ESCUCHAR SESION GUIADA" que solo
+                  abria un Alert, y una "RUTA DE CLASES" de cinco clases inventadas de las cuales
+                  tres decian "Completada" sin que el aprendiz hubiera hecho ninguna. El peor era
+                  el tip de MACACO de MENTE: "Hoy registraste frustracion dos veces", una constante
+                  igual para todos, presentada como una observacion sobre el dia de la persona.
+
+                  Es el mismo problema que ya se corrigio con INITIAL_HABITS (ver el comentario
+                  arriba de DIMENSIONES_CONFIG): datos inventados con estado de "hecho". Por eso no
+                  se dejo el render apagado con los textos todavia en el archivo — se borraron los
+                  datos, para que nadie los vuelva a colgar de una pantalla.
+
+                  Cuando se implemente de verdad, va la Pastilla Renacer y las audioterapias
+                  (`/api/v1/spirit-audio/status`). Falta definir que muestra cada dimension: las
+                  audioterapias del backend son de Espiritu, y esta pestana existe en las cinco.
+                */}
+                <View style={[styles.guideHeroCard, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
+                  <View style={[styles.guideTag, { backgroundColor: c.gold, alignSelf: 'flex-start' }]}>
+                    <Text style={[t.micro, { color: '#1E1B18', fontWeight: '800', fontSize: 9.5 }]}>
+                      EN DESARROLLO
                     </Text>
                   </View>
-
-                  <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 16, marginTop: 4 }]}>
-                    {selectedDimension.recommendedClass.title}
+                  <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 16, marginTop: 8 }]}>
+                    Guías y audios de {selectedDimension.title}
                   </Text>
-                  <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, lineHeight: 18 }]}>
-                    {selectedDimension.recommendedClass.desc}
+                  <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, lineHeight: 18, marginTop: 6 }]}>
+                    Estamos preparando esta sección. Cuando esté lista vas a encontrar acá la
+                    Pastilla Renacer y las audioterapias de tu programa.
                   </Text>
-
-                  <GoldButton
-                    label="▶ ESCUCHAR SESIÓN GUIADA"
-                    onPress={() => Alert.alert('Reproductor de Audio', `Iniciando: ${selectedDimension.recommendedClass.title}`)}
-                    style={{ marginTop: 6 }}
-                  />
-                </View>
-
-                {/* Macaco Context Note */}
-                <View style={[styles.macacoContextCard, { borderColor: c.borderStrong, backgroundColor: c.cardBg }]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Text style={{ fontSize: 16 }}>🐒</Text>
-                    <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>
-                      MACACO · ANTES DE ESCUCHAR
-                    </Text>
-                  </View>
-                  <Text style={[t.body, { color: c.text, fontSize: 12.5, lineHeight: 18 }]}>
-                    {selectedDimension.recommendedClass.macacoTip}
-                  </Text>
-                </View>
-
-                {/* Progressive Phase Pathway */}
-                <View style={{ gap: 6 }}>
-                  <MicroLabel>RUTA DE CLASES (FASE 2 · ACELERACIÓN)</MicroLabel>
-                  {[
-                    { num: '01', title: 'Fundamentos y Ser Verdad', status: '✓ Completada' },
-                    { num: '02', title: 'Qué haces cuando nadie te mira', status: '✓ Completada' },
-                    { num: '03', title: 'El observador consciente', status: '✓ Completada' },
-                    { num: '04', title: 'Pensamiento ≠ Realidad', status: '▶ Disponible' },
-                    { num: '05', title: 'El patrón repetido', status: '🔒 Día 40' },
-                  ].map(cls => (
-                    <View
-                      key={cls.num}
-                      style={[styles.classItemRow, { borderColor: c.border, backgroundColor: c.cardBg }]}
-                    >
-                      <Text style={[t.micro, { color: c.gold, fontWeight: '700', width: 22 }]}>
-                        {cls.num}
-                      </Text>
-                      <Text style={[t.body, { color: c.textStrong, flex: 1, fontSize: 13 }]}>
-                        {cls.title}
-                      </Text>
-                      <Text style={[t.micro, { color: cls.status.includes('✓') ? '#4E9F76' : cls.status.includes('▶') ? c.gold : c.textSoft, fontWeight: '700' }]}>
-                        {cls.status}
-                      </Text>
-                    </View>
-                  ))}
                 </View>
               </View>
             )}

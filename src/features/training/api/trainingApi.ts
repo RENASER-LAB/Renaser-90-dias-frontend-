@@ -21,8 +21,24 @@ export async function obtenerRocasDeHoy(): Promise<RocaDiariaApi[]> {
   return validarRespuesta(trainingSchemas.rocasDeHoy, r, 'GET /api/v1/rocks/today');
 }
 
-/** GET /api/v1/evidence — evidencias ya subidas, para saber qué ítems de hoy ya la tienen. */
-export async function obtenerEvidencias(): Promise<EvidenciaApi[]> {
-  const r = await apiFetch<unknown>('/api/v1/evidence');
+/**
+ * GET /api/v1/evidence?tipoDestino=ROCA_DIARIA — evidencias de ROCAS ya subidas.
+ *
+ * Acotado a rocas el 2026-09-05 (D-113). Antes pedía el listado entero y de ahí salían dos cosas:
+ * qué hábitos tenían evidencia y qué rocas la tenían. Lo de los hábitos ya no se reconstruye acá —
+ * lo publica el backend en `tieneEvidencia` de cada track de `GET /api/v1/habit-tracks/today` —,
+ * así que traer la evidencia de hábito y la de espíritu era ocupar la página con filas que nadie
+ * mira.
+ *
+ * **Lo que este filtro NO arregla, y conviene saberlo antes de tocar esto:** la respuesta sigue
+ * siendo UNA página de 20 filas, ordenada por fecha de creación descendente y **sin filtro de
+ * día**, y `nextCursor` se sigue ignorando. Con una roca por día y sus evidencias, esas 20 filas
+ * cubren varias semanas hacia atrás, así que la roca de hoy entra con holgura; pero es una
+ * holgura, no una garantía. La solución de fondo es la misma que se aplicó a los hábitos —
+ * publicar el dato por roca en `GET /api/v1/rocks/today` — y quedó fuera del alcance de D-113 por
+ * decisión explícita.
+ */
+export async function obtenerEvidenciasDeRocas(): Promise<EvidenciaApi[]> {
+  const r = await apiFetch<unknown>('/api/v1/evidence?tipoDestino=ROCA_DIARIA');
   return validarRespuesta(trainingSchemas.evidencePage, r, 'GET /api/v1/evidence').evidencias;
 }

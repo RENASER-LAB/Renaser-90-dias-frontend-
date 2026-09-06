@@ -47,3 +47,6 @@ yarn-error.*
 # (`graphify update .`, solo AST, sin coste de API). No se versionan.
 graphify-out/
 .claude/settings.json.graphify-bak
+
+# Configuracion local del IDE (JetBrains): es de cada maquina, no del proyecto.
+.idea/

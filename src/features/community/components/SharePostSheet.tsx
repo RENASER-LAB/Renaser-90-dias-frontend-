@@ -61,6 +61,7 @@ export function SharePostSheet({
     }
   };
 
+  // Sin usar mientras la opcion externa este retirada (ver el bloque comentado abajo).
   const handleShareExt = async () => {
     if (enviandoId) return;
     await onShareExternal();
@@ -109,24 +110,13 @@ export function SharePostSheet({
         contentContainerStyle={{ gap: 10, paddingBottom: 16 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* 1. WHATSAPP Y OTRAS APPS (EXTERNO NATIVO) */}
-        <Pressable
-          onPress={handleShareExt}
-          style={({ pressed }) => [styles.optionCard, pressed && styles.optionCardPressed]}
-        >
-          <View style={[styles.optionIconBox, { backgroundColor: 'rgba(37, 211, 102, 0.15)' }]}>
-            <Text style={{ fontSize: 20 }}>📱</Text>
-          </View>
-          <View style={styles.optionTextBox}>
-            <Text style={styles.optionTitle}>WhatsApp y Otras Apps</Text>
-            <Text style={styles.optionDesc}>
-              Compartir con contactos externos, redes o copiar enlace
-            </Text>
-          </View>
-          <View style={styles.actionPill}>
-            <Text style={styles.actionPillText}>Abrir ↗</Text>
-          </View>
-        </Pressable>
+        {/*
+          "WhatsApp y Otras Apps" retirado por pedido del dueno del proyecto (2026-09-05),
+          POR AHORA: compartir hacia afuera saca la publicacion de un aprendiz del circulo
+          cerrado de la tribu, y eso todavia no esta decidido. `handleShareExt` y la prop
+          `onShareExternal` se dejan en su lugar a proposito — la opcion vuelve prendiendo
+          este bloque de nuevo, sin rehacer nada.
+        */}
 
         {/* 2. CHAT GLOBAL DE LA COMUNIDAD */}
         <Pressable
