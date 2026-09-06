@@ -15,7 +15,7 @@ import Svg, { Path, Circle } from 'react-native-svg';
 import { useTheme } from '../theme/ThemeContext';
 import { useResponsive } from '../theme/responsive';
 import { useSystemBackHandler } from '../hooks/useSystemBackHandler';
-import { MicroLabel, ScreenHeader } from '../components/ui';
+import { MicroLabel, Row, RowBetween, ScreenHeader } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { GoldButton } from '../components/GoldButton';
 import { usePlanHabitos } from '../features/habits/hooks/usePlanHabitos';
@@ -846,7 +846,7 @@ export default function PlanScreen() {
             </View>
           </View>
 
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
+          <RowBetween style={{ marginTop: 10 }}>
             <View style={{ flex: 1 }}>
               <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 14 }]}>
                 Convertirme en mi mejor versión
@@ -858,7 +858,7 @@ export default function PlanScreen() {
             >
               <Text style={{ color: '#1E1B18', fontWeight: '800', fontSize: 10.5 }}>➕ Crear Hábito</Text>
             </Pressable>
-          </View>
+          </RowBetween>
 
           {/* Selector de Días Semanales (LUN - DOM) */}
           <View style={{ flexDirection: 'row', gap: 6, marginTop: 14 }}>
@@ -918,14 +918,14 @@ export default function PlanScreen() {
               }}
               accessibilityLabel="Tu programa todavía no arrancó"
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Row gap={8}>
                 <Icon name="lock" size={13} color={c.gold} />
                 <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>
                   {arranque.estado === 'PENDIENTE_ELEGIR'
                     ? 'Todavía no elegiste tu Día 1'
                     : 'Tu programa arranca pronto'}
                 </Text>
-              </View>
+              </Row>
               <Text style={[t.small, { color: c.textSoft, lineHeight: 18 }]}>
                 {arranque.estado === 'PENDIENTE_ELEGIR'
                   ? 'Elegí en qué día querés empezar tus 90 días. Hasta entonces no hay plan que organizar.'
@@ -1033,11 +1033,11 @@ export default function PlanScreen() {
 
               return (
                 <View key={momentName} style={{ gap: 8 }}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <RowBetween>
                     <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 1, fontSize: 10.5 }]}>
                       {momentLabel} ({momentHabits.length})
                     </Text>
-                  </View>
+                  </RowBetween>
 
                   {momentHabits.map(habit => {
                     const isDayActive = habit.days[selectedDay];
@@ -1098,20 +1098,20 @@ export default function PlanScreen() {
                           },
                         ]}
                       >
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                        <RowBetween>
+                          <Row gap={10} style={{ flex: 1 }}>
                             <View style={[styles.habitIconBox, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
                               <Text style={{ fontSize: 18 }}>{habit.icon}</Text>
                             </View>
                             <View style={{ flex: 1 }}>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                              <Row gap={4}>
                                 <View style={[styles.tagPill, { borderColor: c.border, backgroundColor: c.cardBgAlt, alignSelf: 'flex-start' }]}>
                                   <Text style={[t.micro, { color: c.gold, fontSize: 8.5, fontWeight: '800' }]}>
                                     {habit.tag}
                                   </Text>
                                 </View>
                                 {bloqueadoObligatorio ? <Icon name="lock" size={10} color={c.gold} /> : null}
-                              </View>
+                              </Row>
                               <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13, marginTop: 2 }]}>
                                 {habit.title}
                               </Text>
@@ -1122,7 +1122,7 @@ export default function PlanScreen() {
                                   impedía justo lo que uno quiere hacer de noche: acomodar el día
                                   siguiente. El hábito vencido se sigue viendo apagado, pero se
                                   puede tocar. */}
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
+                              <Row gap={6} style={{ marginTop: 3 }}>
                                 <Icon name="clock" size={11} color={vencido ? c.textSoft : c.gold} />
                                 <Pressable
                                   onPress={() => (bloqueado ? undefined : abrirSelectorDeHora(habit))}
@@ -1148,7 +1148,7 @@ export default function PlanScreen() {
                                 <View style={[styles.momentBadgePill, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
                                   <Text style={[t.micro, { color: c.textSoft, fontSize: 9 }]}>{momentLabel}</Text>
                                 </View>
-                              </View>
+                              </Row>
 
                               {/* D-90: el horario que YA se guardó pero todavía no rige. Sin esto,
                                   cambiar la hora de un hábito que hoy ya arrancó se veía como si
@@ -1169,7 +1169,7 @@ export default function PlanScreen() {
                                 </View>
                               ) : null}
                             </View>
-                          </View>
+                          </Row>
 
                           {/* Switch Activar/Pausar para el día — o el candado si todavía no le toca */}
                           <View style={{ alignItems: 'center', gap: 2 }} onStartShouldSetResponder={() => true}>
@@ -1205,7 +1205,7 @@ export default function PlanScreen() {
                               />
                             )}
                           </View>
-                        </View>
+                        </RowBetween>
 
                       </Pressable>
                     );
@@ -1259,20 +1259,20 @@ export default function PlanScreen() {
           <View style={{ gap: 14, marginTop: 14, paddingBottom: 28 }}>
             {/* 1. 👑 OBJETIVO PRINCIPAL (90 DÍAS) */}
             <View style={[styles.goalCard, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <RowBetween>
+                <Row gap={6}>
                   <Text style={{ fontSize: 16 }}>👑</Text>
                   <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 1 }]}>
                     1. OBJETIVO PRINCIPAL (90 DÍAS)
                   </Text>
-                </View>
+                </Row>
                 <Pressable
                   onPress={() => openEditGoalModal('principal')}
                   style={[styles.editGoalBtn, { borderColor: c.gold, backgroundColor: c.cardBg }]}
                 >
                   <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>✏️ Editar</Text>
                 </Pressable>
-              </View>
+              </RowBetween>
 
               <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13.5, marginTop: 6 }]}>
                 {goals.principalTitle}
@@ -1301,20 +1301,20 @@ export default function PlanScreen() {
 
             {/* 2. ⚡ OBJETIVO SEMANAL (SPRINT DE 7 DÍAS) */}
             <View style={[styles.goalCard, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <RowBetween>
+                <Row gap={6}>
                   <Text style={{ fontSize: 16 }}>⚡</Text>
                   <Text style={[t.micro, { color: '#70d2a0', fontWeight: '800', letterSpacing: 1 }]}>
                     2. OBJETIVO SEMANAL (SEM 06)
                   </Text>
-                </View>
+                </Row>
                 <Pressable
                   onPress={() => openEditGoalModal('semanal')}
                   style={[styles.editGoalBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
                 >
                   <Text style={[t.micro, { color: c.textSoft, fontWeight: '700' }]}>✏️ Editar</Text>
                 </Pressable>
-              </View>
+              </RowBetween>
 
               <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13, marginTop: 4 }]}>
                 {goals.weeklyTitle}
@@ -1354,20 +1354,20 @@ export default function PlanScreen() {
 
             {/* 3. 🎯 OBJETIVO DIARIO (ROCA DE HOY) */}
             <View style={[styles.goalCard, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <RowBetween>
+                <Row gap={6}>
                   <Text style={{ fontSize: 16 }}>🎯</Text>
                   <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 1 }]}>
                     3. OBJETIVO DIARIO (HOY · DÍA {diaPrograma})
                   </Text>
-                </View>
+                </Row>
                 <Pressable
                   onPress={() => openEditGoalModal('diario')}
                   style={[styles.editGoalBtn, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}
                 >
                   <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>✏️ Cambiar</Text>
                 </Pressable>
-              </View>
+              </RowBetween>
 
               <View style={[styles.dailyGoalBox, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
                 <View style={{ flex: 1 }}>
@@ -1442,13 +1442,13 @@ export default function PlanScreen() {
                   },
                 ]}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <Row gap={10}>
                   <Text style={{ fontSize: 20 }}>🌅</Text>
                   <View>
                     <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>BLOQUE DE LA MAÑANA</Text>
                     <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>05:00 AM – 12:00 PM</Text>
                   </View>
-                </View>
+                </Row>
                 <Text style={[t.micro, { color: c.gold, fontWeight: '800' }]}>Seleccionar ›</Text>
               </Pressable>
 
@@ -1463,13 +1463,13 @@ export default function PlanScreen() {
                   },
                 ]}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <Row gap={10}>
                   <Text style={{ fontSize: 20 }}>☀️</Text>
                   <View>
                     <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>BLOQUE DE LA TARDE</Text>
                     <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>12:00 PM – 18:00 PM</Text>
                   </View>
-                </View>
+                </Row>
                 <Text style={[t.micro, { color: c.gold, fontWeight: '800' }]}>Seleccionar ›</Text>
               </Pressable>
 
@@ -1484,13 +1484,13 @@ export default function PlanScreen() {
                   },
                 ]}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <Row gap={10}>
                   <Text style={{ fontSize: 20 }}>🌙</Text>
                   <View>
                     <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>BLOQUE DE LA NOCHE</Text>
                     <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>18:00 PM – 22:00 PM</Text>
                   </View>
-                </View>
+                </Row>
                 <Text style={[t.micro, { color: c.gold, fontWeight: '800' }]}>Seleccionar ›</Text>
               </Pressable>
             </View>

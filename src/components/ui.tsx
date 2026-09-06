@@ -86,3 +86,51 @@ const styles = StyleSheet.create({
   themeBtn: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11, borderBottomWidth: 1 },
 });
+/**
+ * Primitivas de LAYOUT (auditoría de estilos 2026-09-06).
+ *
+ * Salieron de contar: `flexDirection: 'row', alignItems: 'center', gap: N` escrito a mano 16
+ * veces y `flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'` otras
+ * 12, repartidos por las pantallas. No es que `StyleSheet` esté mal —es lo idiomático en React
+ * Native— sino que la MISMA idea se reescribía en cada archivo y ninguna copia sabía de las
+ * otras. Con una primitiva, cambiar el criterio (un `gap` por defecto, una alineación) es un
+ * solo lugar.
+ *
+ * Por qué NO Tailwind/NativeWind: habría sido migrar 24.000 líneas de TSX en 51 archivos con
+ * estilos, sin suite de pruebas visuales, en un producto que ya está en manos de usuarios. El
+ * problema real no era la herramienta, era la duplicación; esto la ataca sin reescribir nada.
+ *
+ * `style` se aplica DESPUÉS de los defaults, así que cualquier propiedad extra (`flex: 1`,
+ * `marginTop`) se pasa ahí y gana. `gap` en `undefined` es inofensivo: RN lo ignora.
+ */
+type AlineacionFila = 'center' | 'flex-start' | 'flex-end' | 'baseline' | 'stretch';
+
+export function Row({
+  children,
+  gap,
+  align = 'center',
+  style,
+}: {
+  children?: React.ReactNode;
+  gap?: number;
+  align?: AlineacionFila;
+  style?: ViewStyle;
+}) {
+  return <View style={[{ flexDirection: 'row', alignItems: align, gap }, style]}>{children}</View>;
+}
+
+export function RowBetween({
+  children,
+  align = 'center',
+  style,
+}: {
+  children?: React.ReactNode;
+  align?: AlineacionFila;
+  style?: ViewStyle;
+}) {
+  return (
+    <View style={[{ flexDirection: 'row', justifyContent: 'space-between', alignItems: align }, style]}>
+      {children}
+    </View>
+  );
+}
