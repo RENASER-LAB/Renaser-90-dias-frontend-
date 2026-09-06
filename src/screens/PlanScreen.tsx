@@ -28,13 +28,25 @@ import {
 import { HoraPickerModal } from '../features/habits/components/HoraPickerModal';
 import * as habitsApi from '../features/habits/api/habitsApi';
 import { aMomento, mapearPlanHabit } from '../features/habits/api/habitsMappers';
+import {
+  aFechaIso,
+  diasDelMesDeLaSemana,
+  INDICE_DE_HOY,
+  MOSTRAR_SEMANA_SIGUIENTE,
+} from '../features/habits/utils/semanaDelPlan';
+import type { DiaDelPlan } from '../features/habits/utils/semanaDelPlan';
 import type { CategoriaHabitoApi } from '../features/habits/types/habits.types';
 import { mensajeDeError } from '../services/http/apiClient';
 
 // =========================================================================
 // TIPOS: PLAN, HÁBITOS 7 DÍAS Y OBJETIVOS EN 3 NIVELES
 // =========================================================================
-export type DayOfWeek = 'LUN' | 'MAR' | 'MIÉ' | 'JUE' | 'VIE' | 'SÁB' | 'DOM';
+/**
+ * Se reexporta desde `semanaDelPlan`, que es donde vive el concepto de "los días del plan", en vez
+ * de declararse acá otra vez. La dirección de la dependencia es a propósito: ese archivo no importa
+ * nada, para que esta pantalla pueda importarlo sin armar un ciclo (ver su cabecera).
+ */
+export type DayOfWeek = DiaDelPlan;
 export type DayMoment = 'mañana' | 'tarde' | 'noche';
 
 export interface PlanHabit {
@@ -126,47 +138,19 @@ const INITIAL_GOALS: PlanGoals = {
 
 const DAY_OPTIONS: DayOfWeek[] = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'];
 
-/** Índice de HOY dentro de una semana que arranca en lunes (0 = lunes … 6 = domingo). */
-const INDICE_DE_HOY = (new Date().getDay() + 6) % 7;
+/**
+ * `INDICE_DE_HOY`, `MOSTRAR_SEMANA_SIGUIENTE` y las fechas ya NO se calculan acá: viven en
+ * `features/habits/utils/semanaDelPlan`, porque el mapeo de hábitos necesita exactamente la misma
+ * semana para saber sobre qué días cae una pausa (E-145). Dos copias de esta cuenta que se
+ * separaran un día pintarían la pausa en la casilla equivocada, sin que ninguna de las dos
+ * pareciera rota.
+ */
 
 /**
- * `true` cuando la semana que hay que mostrar es la SIGUIENTE, no la que está corriendo.
- *
- * > **Corregido 2026-09-06 (E-137).** D-98 dejó la regla "lo que se planifica es de mañana en
- * > adelante" y apagó la pestaña de hoy — correcto. Pero un **domingo** no tiene mañana dentro de
- * > su propia semana: `indiceDeHoy` valía 6, los 7 días quedaban apagados y la pestaña inicial se
- * > quedaba en el propio domingo, también apagado. El comentario de entonces asumía que esa
- * > semana cerrada "era la verdad de ese momento", y no lo es: mañana existe, es el lunes
- * > siguiente, y simplemente no se estaba dibujando. Efecto real, reportado por el dueño el
- * > 2026-09-06 tras registrarse un domingo: *"quiero ordenar mis hábitos para mañana, no me deja
- * > porque no tengo la opción de ver"*. Cuando hoy es domingo se muestra la semana siguiente
- * > entera (lunes a domingo), con todos sus días planificables — que es exactamente lo que D-98
- * > quería decir con "la pestaña inicial pasa a ser MAÑANA".
+ * Día del mes de cada pestaña (`07`, `08`…). Antes eran del 14 al 20 escritas a mano: la pantalla
+ * mostraba días que no correspondían a la fecha actual.
  */
-const MOSTRAR_SEMANA_SIGUIENTE = INDICE_DE_HOY === DAY_OPTIONS.length - 1;
-
-/**
- * Fechas reales de la semana que se está mostrando, de lunes a domingo. Antes eran del 14 al 20
- * escritas a mano: la pantalla mostraba días que no correspondían a la fecha actual.
- *
- * @param semanasAdelante 0 = la semana en curso; 1 = la siguiente (ver `MOSTRAR_SEMANA_SIGUIENTE`).
- */
-function fechasDeLaSemana(semanasAdelante: number): Record<DayOfWeek, string> {
-  const hoy = new Date();
-  const lunes = new Date(hoy);
-  // getDay() devuelve 0 para domingo; acá la semana arranca el lunes, así que el domingo cuenta
-  // como el séptimo día y no como el primero.
-  lunes.setDate(hoy.getDate() - INDICE_DE_HOY + semanasAdelante * 7);
-  const fechas = {} as Record<DayOfWeek, string>;
-  DAY_OPTIONS.forEach((dia, indice) => {
-    const fecha = new Date(lunes);
-    fecha.setDate(lunes.getDate() + indice);
-    fechas[dia] = String(fecha.getDate()).padStart(2, '0');
-  });
-  return fechas;
-}
-
-const DAY_DATES: Record<DayOfWeek, string> = fechasDeLaSemana(MOSTRAR_SEMANA_SIGUIENTE ? 1 : 0);
+const DAY_DATES: Record<DayOfWeek, string> = diasDelMesDeLaSemana();
 
 /**
  * Último índice de la semana mostrada que YA NO se puede planificar (hoy y todo lo anterior).
@@ -175,12 +159,6 @@ const DAY_DATES: Record<DayOfWeek, string> = fechasDeLaSemana(MOSTRAR_SEMANA_SIG
  */
 const ULTIMO_INDICE_NO_PLANIFICABLE = MOSTRAR_SEMANA_SIGUIENTE ? -1 : INDICE_DE_HOY;
 
-/** `Date` -> `yyyy-MM-dd` en hora LOCAL. `toISOString()` no sirve: pasa a UTC y corre el día. */
-function aFechaIso(fecha: Date): string {
-  const mes = String(fecha.getMonth() + 1).padStart(2, '0');
-  const dia = String(fecha.getDate()).padStart(2, '0');
-  return `${fecha.getFullYear()}-${mes}-${dia}`;
-}
 
 /**
  * Las opciones de "¿hasta cuándo lo pauso?". Fechas del dispositivo, que es la zona en la que la

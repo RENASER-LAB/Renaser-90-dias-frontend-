@@ -148,3 +148,25 @@ export interface TrackDelDiaApi {
    * `undefined` contra un backend anterior al 2026-09-05 (D-113), y ahí se trata como `false`. */
   tieneEvidencia?: boolean;
 }
+
+/**
+ * Un hábito dentro del plan de ESTE aprendiz — `GET /api/v1/habit-unlocks` (E-145).
+ *
+ * Es la única fuente de la pausa: `habitos.activo` es del catálogo compartido y lo escribe solo
+ * el panel admin, así que no puede expresar "yo lo pausé hasta el domingo".
+ */
+export interface DesbloqueoHabitoApi {
+  habitId: string;
+  unlockDay: number;
+  chosenAt: string | null;
+  /** Hay una pausa REGISTRADA. Si además sigue vigente hoy lo decide quien lee, con `pausedUntil`. */
+  paused: boolean;
+  /** Último día INCLUSIVE de la pausa (`yyyy-MM-dd`), o `null` si es indefinida. */
+  pausedUntil: string | null;
+}
+
+/** La respuesta completa de `GET /api/v1/habit-unlocks`. */
+export interface PlanDesbloqueosApi {
+  enabled: boolean;
+  items: DesbloqueoHabitoApi[];
+}

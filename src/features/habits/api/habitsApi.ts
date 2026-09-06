@@ -2,6 +2,7 @@ import { apiFetch } from '../../../services/http/apiClient';
 import type {
   AltaHabitoPersonal,
   HabitoCatalogoApi,
+  PlanDesbloqueosApi,
   PreferenciaHabitoApi,
   TrackDelDiaApi,
 } from '../types/habits.types';
@@ -87,6 +88,20 @@ export async function cambiarHorario(
     body: { triggerTime, limitTime, reminderEnabled: false, reminderMinutesBefore: null },
   });
   return validarRespuesta(habitsSchemas.cambioHorario, r, 'PATCH /api/v1/habit-preferences/{id}');
+}
+
+/**
+ * `GET /api/v1/habit-unlocks` — el plan de ESTE aprendiz, con el estado de pausa de cada hábito.
+ *
+ * > **Agregado 2026-09-06 (E-145).** El backend expone `paused`/`pausedUntil` desde V31, pero la
+ * > app nunca los leía: hacía el PATCH que pausa y después reconstruía el interruptor únicamente
+ * > con `activeWeekdays` del catálogo compartido, que no sabe nada de la pausa personal. El efecto
+ * > era que pausar "funcionaba" hasta recargar la pantalla, y ahí el hábito volvía a verse
+ * > encendido. Se escribía y no se leía de vuelta.
+ */
+export async function obtenerPlanDesbloqueos(): Promise<PlanDesbloqueosApi> {
+  const r = await apiFetch<unknown>('/api/v1/habit-unlocks');
+  return validarRespuesta(habitsSchemas.planDesbloqueos, r, 'GET /api/v1/habit-unlocks');
 }
 
 /**

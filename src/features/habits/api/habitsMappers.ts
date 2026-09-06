@@ -1,5 +1,5 @@
 import type { DayMoment, DayOfWeek, PlanHabit } from '../../../screens/PlanScreen';
-import type { HabitoCatalogoApi, PreferenciaHabitoApi } from '../types/habits.types';
+import type { DesbloqueoHabitoApi, HabitoCatalogoApi, PreferenciaHabitoApi } from '../types/habits.types';
 
 /**
  * Traduce lo que responde el backend a la forma que ya usa `PlanScreen`. El diseño manda: acá se
@@ -124,6 +124,39 @@ function diasDeHabito(activeWeekdays: string[] | undefined): Record<DayOfWeek, b
   return dias;
 }
 
+/**
+ * Apaga los días en que el hábito está PAUSADO por este aprendiz (E-145).
+ *
+ * `diasDeHabito` de arriba responde una pregunta distinta —qué días aplica el hábito según el
+ * catálogo COMPARTIDO— y es la única que se contestaba hasta ahora. Por eso pausar se veía bien
+ * hasta recargar: la pausa se guardaba en `desbloqueos_habito` y después nadie la leía.
+ *
+ * **Solo se apagan días de HOY en adelante, nunca los ya pasados.** La respuesta trae `pausedUntil`
+ * (hasta cuándo) pero no desde cuándo, así que apagar hacia atrás inventaría un pasado que no
+ * ocurrió: si alguien pausa el jueves "hasta el domingo", el lunes de esa semana el hábito estuvo
+ * activo de verdad y su registro lo demuestra. Ante la duda, no se reescribe la historia.
+ */
+function apagarDiasPausados(
+  dias: Record<DayOfWeek, boolean>,
+  desbloqueo: DesbloqueoHabitoApi | undefined,
+  fechasDeLaSemana: Record<DayOfWeek, string>,
+  hoyIso: string,
+): Record<DayOfWeek, boolean> {
+  if (!desbloqueo?.paused) return dias;
+  const resultado = { ...dias };
+  for (const dia of Object.keys(resultado) as DayOfWeek[]) {
+    const fecha = fechasDeLaSemana[dia];
+    if (!fecha || fecha < hoyIso) continue;
+    // Sin `pausedUntil` la pausa es indefinida ("hasta que yo lo reactive"): apaga todo lo que
+    // viene. Con fecha, apaga hasta ese día INCLUSIVE — comparar `yyyy-MM-dd` como texto es
+    // correcto porque ese formato ordena igual como cadena que como fecha.
+    if (desbloqueo.pausedUntil === null || fecha <= desbloqueo.pausedUntil) {
+      resultado[dia] = false;
+    }
+  }
+  return resultado;
+}
+
 /** Combina catálogo (qué es el hábito) y preferencias (a qué hora lo hace este aprendiz). */
 export function mapearPlanHabit(
   habito: HabitoCatalogoApi,
@@ -134,6 +167,14 @@ export function mapearPlanHabit(
    * array ES el orden del catálogo — no hace falta que el campo viaje aparte.
    */
   ordenCatalogo: number,
+  /**
+   * Fila de `GET /api/v1/habit-unlocks` para este hábito, si el aprendiz ya lo tiene en su plan.
+   * `undefined` cuando no la tiene (o cuando esa lectura falló): ahí no hay pausa que aplicar y
+   * el hábito se pinta con el calendario del catálogo, que es como se comportaba antes.
+   */
+  desbloqueo?: DesbloqueoHabitoApi,
+  /** Fecha real de cada día de la semana mostrada, y hoy — para saber sobre qué días cae la pausa. */
+  calendario?: { fechasDeLaSemana: Record<DayOfWeek, string>; hoyIso: string },
 ): PlanHabit {
   const categoria = CATEGORIA[habito.category] ?? CATEGORIA_POR_DEFECTO;
   const horaDisparo = preferencia?.triggerTime ?? null;
@@ -151,7 +192,10 @@ export function mapearPlanHabit(
     locked: habito.locked ?? false,
     unlockDay: habito.unlockDay ?? 1,
     daysUntilUnlock: habito.daysUntilUnlock ?? 0,
-    days: diasDeHabito(habito.activeWeekdays),
+    days: calendario
+      ? apagarDiasPausados(diasDeHabito(habito.activeWeekdays), desbloqueo,
+          calendario.fechasDeLaSemana, calendario.hoyIso)
+      : diasDeHabito(habito.activeWeekdays),
     // `HH:mm:ss` crudo, sin recortar: hace falta tal cual para (a) decidir si ya venció hoy y
     // (b) reenviarlo al PATCH de horario sin borrarlo cuando lo único que cambia es la hora de
     // disparo (ver `cambiarHorario` en `habitsApi.ts`).
