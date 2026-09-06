@@ -32,7 +32,30 @@ Además:
 - `hooks/useMapaRenacimiento.ts` — estado, autoguardado y **activación**: crea las acciones como hábitos personales (`POST /api/v1/habits`) recordando `accionId → habitId`, así que un segundo toque no duplica (AC-07).
 - Entrada desde Home (`HoyScreen`): tarjeta *"Diseña tu mapa"* desde el Día 7, que pasa a *"Continúa tu mapa"* y *"Tu mapa está activo"*.
 
-**Verificado:** `tsc --noEmit` en cero. **Sin verificar:** el render visual y el recorrido completo — está detrás del login y esta sesión no tiene una cuenta. Queda para la prueba con el dueño.
+**Verificado** (`tsc --noEmit` en cero, y un recorrido real en el navegador con un arnés temporal que
+rendía el flujo sin sesión, ya retirado):
+
+- V01–V10 renderizan con la cabecera "Día 7 · Paso X de 10" y la acción principal fija abajo.
+- La redacción SMART sale con el formato del diseño: *"Al Día 90 pesaré 68 kg, partiendo de 78 kg,
+  con evidencia en fotos y mediciones, porque quiero más energía y confianza en mi día a día."*
+- V05: *"que mi pareja me valore más y me entienda"* **se bloquea** (`THIRD_PARTY_CONTROL`, AC-04) y
+  con una conducta propia avanza.
+- V06: *"esforzarme más"* muestra el aviso de acción vaga; con tres acciones válidas habilita
+  "Confirmar mi sistema".
+- V07: las frases quedan *"Cuando termino de almorzar, en lugar de abrir Instagram 30 minutos,
+  haré…"*.
+- V08: hitos sugeridos 74 → 70,5 → 68 kg; USD 9.000 → 12.500 → 15.000; 6 → 7 → 8/10.
+- V09: sugerencias derivadas de las acciones elegidas. V10: los seis bloques con "Editar" y el
+  compromiso de seguimiento.
+
+**Sin verificar:** la activación **exitosa** y V11 con datos reales (necesitan sesión y backend
+alcanzable). Observación del recorrido: sin backend alcanzable, "Activar mi mapa" quedó en estado de
+carga en vez de fallar rápido — `apiFetch` no tiene timeout del lado del cliente. Es un pendiente
+chico y general de la app, no de este módulo.
+
+**Detalle de redacción a pulir:** si la persona escribe la respuesta alternativa en infinitivo
+("hacer 10 minutos de…"), la frase del manual queda *"haré hacer 10 minutos"*. El formato es el del
+manual; conviene un placeholder que pida el sustantivo ("10 minutos de seguimiento comercial").
 
 ## 2. Decisiones que tuve que tomar (y que el manual no fija)
 
