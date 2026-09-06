@@ -7,9 +7,9 @@ import {
   Pressable,
   TextInput,
   Modal,
-  Alert,
   Switch,
 } from 'react-native';
+import { Alert } from '../components/Alerta';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { useTheme } from '../theme/ThemeContext';

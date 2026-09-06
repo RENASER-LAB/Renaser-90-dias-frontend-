@@ -14,9 +14,9 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   Share,
 } from 'react-native';
+import { Alert } from '../../../components/Alerta';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';

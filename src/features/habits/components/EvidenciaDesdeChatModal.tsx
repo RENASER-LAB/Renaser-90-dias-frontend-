@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, Modal, Pressable, ScrollView, ActivityIndicator, Alert, StyleSheet } from 'react-native';
+import { View, Text, Modal, Pressable, ScrollView, ActivityIndicator, StyleSheet } from 'react-native';
+import { Alert } from '../../../components/Alerta';
 
 import { Icon } from '../../../components/Icon';
 import { useTheme } from '../../../theme/ThemeContext';
