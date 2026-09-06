@@ -4,15 +4,21 @@ import type { PlanHabit } from '../../../screens/PlanScreen';
 import { mensajeDeError } from '../../../services/http/apiClient';
 import * as habitsApi from '../api/habitsApi';
 import { aMomento, mapearPlanHabit } from '../api/habitsMappers';
+import { aFechaIso, fechasIsoDeLaSemana } from '../utils/semanaDelPlan';
 
 /**
  * Los hábitos de Plan contra el backend Java, en un solo lugar — mismo criterio que `useCursos`
  * en `academy` y `useWallFeed` en `community`.
  *
- * Combina dos endpoints porque ninguno alcanza solo:
+ * Combina tres endpoints porque ninguno alcanza solo:
  *   - `GET /api/v1/habits` — qué es cada hábito (título, descripción, categoría).
  *   - `GET /api/v1/habit-preferences` — a qué hora lo hace ESTE aprendiz, propia o la del catálogo.
+ *   - `GET /api/v1/habit-unlocks` — cuáles tiene en su plan y **cuáles están pausados** (E-145).
  * Se piden en paralelo: son independientes y ninguno depende del resultado del otro.
+ *
+ * > **El tercero se agregó 2026-09-06 (E-145).** Faltaba, y por eso pausar un hábito parecía no
+ * > guardarse: el PATCH escribía la pausa, pero al recargar el interruptor se reconstruía solo con
+ * > `activeWeekdays` del catálogo compartido, que no sabe nada de la pausa personal de nadie.
  *
  * El orden final es por hora de disparo, que es como el diseño ya agrupa el día (mañana, tarde,
  * noche). Los hábitos sin hora quedan al principio, no al final: son los que el aprendiz todavía
@@ -27,7 +33,7 @@ export function usePlanHabitos() {
     setLoading(true);
     setError(null);
     try {
-      const [catalogo, preferencias] = await Promise.all([
+      const [catalogo, preferencias, plan] = await Promise.all([
         habitsApi.obtenerCatalogo(),
         // Si las preferencias fallan, se muestran los hábitos sin horario en vez de una pantalla
         // de error: el catálogo por sí solo ya es útil.
@@ -39,12 +45,26 @@ export function usePlanHabitos() {
           console.warn('[Plan] no se pudieron cargar los horarios; se muestran sin hora:', e);
           return [];
         }),
+        // E-145: de acá sale el estado de PAUSA de cada hábito. Mismo criterio que los horarios:
+        // si falla, se muestran los hábitos con el calendario del catálogo en vez de una pantalla
+        // de error — pero se deja rastro, porque el síntoma (el interruptor vuelve a encenderse
+        // solo) es idéntico al bug que este endpoint vino a cerrar y conviene poder distinguirlos.
+        habitsApi.obtenerPlanDesbloqueos().catch((e: unknown) => {
+          console.warn('[Plan] no se pudo leer el estado de pausa; los hábitos se muestran sin ella:', e);
+          return null;
+        }),
       ]);
       const porHabito = new Map(preferencias.map(p => [p.habitId, p]));
+      const desbloqueoPorHabito = new Map((plan?.items ?? []).map(d => [d.habitId, d]));
+      // Se calcula UNA vez para los ~22 hábitos, no dentro del map: la semana es la misma para
+      // todos y `new Date()` en cada vuelta podría cruzar la medianoche a mitad del recorrido.
+      const calendario = { fechasDeLaSemana: fechasIsoDeLaSemana(), hoyIso: aFechaIso(new Date()) };
       // SIN reordenar: el backend ya los devuelve en el orden del catálogo curado
       // (`habitos.orden`), y ese es el que se respeta en la pantalla. Antes acá se ordenaba por
       // hora, lo que descartaba ese orden antes de que el plan pudiera usarlo.
-      const mapeados = catalogo.map((h, i) => mapearPlanHabit(h, porHabito.get(h.id), i));
+      const mapeados = catalogo.map((h, i) =>
+        mapearPlanHabit(h, porHabito.get(h.id), i, desbloqueoPorHabito.get(h.id), calendario),
+      );
       setHabits(mapeados);
     } catch (e) {
       setError(mensajeDeError(e, 'No pudimos cargar tus hábitos'));

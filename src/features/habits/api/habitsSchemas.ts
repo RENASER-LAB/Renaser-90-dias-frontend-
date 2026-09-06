@@ -128,8 +128,31 @@ export const cambioHorarioSchema = z
   })
   .passthrough();
 
+/**
+ * `GET /api/v1/habit-unlocks` — qué hábitos lleva este aprendiz en su plan y, sobre todo, **cuáles
+ * están pausados** (E-145).
+ *
+ * `paused` dice que hay una pausa REGISTRADA; `pausedUntil` es su último día INCLUSIVE, o `null`
+ * si es indefinida ("hasta que yo lo reactive"). Los dos los agregó V31 del lado del backend —
+ * hasta entonces ninguna respuesta de lectura exponía la pausa, que es exactamente por lo que el
+ * interruptor volvía a verse encendido al recargar.
+ */
+const desbloqueoHabitoSchema = z
+  .object({
+    habitId: z.string(),
+    unlockDay: z.number(),
+    chosenAt: z.string().nullable(),
+    paused: z.boolean(),
+    pausedUntil: z.string().nullable(),
+  })
+  .passthrough();
+
 export const habitsSchemas = {
   catalogo: z.array(habitoCatalogoSchema),
+  /** `enabled` es del programa entero, no de un hábito: si viene `false`, no hay plan que leer. */
+  planDesbloqueos: z
+    .object({ enabled: z.boolean(), items: z.array(desbloqueoHabitoSchema) })
+    .passthrough(),
   /**
    * `POST /api/v1/habits` devuelve el hábito recién creado con la MISMA forma que un ítem del
    * catálogo (`MiHabitoResponse`), así que se valida con el mismo esquema y se mapea con el mismo
