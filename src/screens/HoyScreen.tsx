@@ -19,6 +19,9 @@ import {
   DIAS_DEL_PROGRAMA,
 } from '../features/home/hooks/useResumenHome';
 import { obtenerRocasDeHoy } from '../features/training/api/trainingApi';
+import { useAuth } from '../context/AuthContext';
+import { useMapaRenacimientoAbierto } from '../features/mapa-renacimiento/MapaRenacimientoContext';
+import { useEstadoMapa } from '../features/mapa-renacimiento/hooks/useEstadoMapa';
 import type { RocaDiariaApi } from '../features/training/types/training.types';
 
 export default function HoyScreen() {
@@ -28,6 +31,9 @@ export default function HoyScreen() {
   const navigation = useNavigation();
 
   const { resumen, cargando: cargandoResumen, error: errorResumen, recargar: recargarResumen } = useResumenHome();
+  const { user } = useAuth();
+  const { abrir: abrirMapa, abierto: mapaAbierto } = useMapaRenacimientoAbierto();
+  const estadoMapa = useEstadoMapa(user?.id ?? null, mapaAbierto);
 
   const [rocas, setRocas] = useState<RocaDiariaApi[]>([]);
   const [cargandoRocas, setCargandoRocas] = useState(false);
@@ -66,6 +72,17 @@ export default function HoyScreen() {
 
   const faseNombre = rotuloDeFase(resumen?.fase)?.toUpperCase() || 'PROGRAMA ACTIVO';
   const diaNumero = resumen?.diaPrograma ?? 1;
+  // Mapa de Renacimiento (Día 7). Aparece desde el Día 7 y se queda hasta activarse: quien se
+  // salte ese día no lo pierde. En builds de desarrollo se muestra siempre, marcado como vista
+  // previa, para poder probarlo sin esperar una semana de programa — en producción no.
+  const esVistaPreviaMapa = __DEV__ && diaNumero < 7;
+  const mostrarMapa = !!user && (diaNumero >= 7 || __DEV__);
+  const tituloMapa = estadoMapa === 'activo'
+    ? 'Tu mapa está activo'
+    : estadoMapa === 'en_progreso' || estadoMapa === 'listo_para_revision' ? 'Continúa tu mapa' : 'Diseña tu mapa';
+  const detalleMapa = estadoMapa === 'activo'
+    ? 'Tus objetivos, acciones y protocolo de retorno para los 83 días.'
+    : 'Convierte lo aprendido en un plan claro para los próximos 83 días. 15–20 min.';
   const coherenciaScore = Math.round(resumen?.coherencia ?? 100);
   const puntosLiga = resumen?.puntosLiga ?? 100;
   const rachaActual = resumen?.rachaActual ?? 0;
@@ -271,6 +288,26 @@ export default function HoyScreen() {
         {/* 4. TARJETAS DE PROGRESO Y CONTADORES REALES DEL DÍA                       */}
         {/* ========================================================================= */}
         <View style={{ gap: 12, paddingBottom: 24 }}>
+          {/* Tarjeta Mapa de Renacimiento (Día 7) */}
+          {mostrarMapa ? (
+            <Pressable onPress={abrirMapa} accessibilityRole="button">
+              <Card style={{ borderColor: c.gold }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <MicroLabel>DÍA 7 · MAPA DE RENACIMIENTO</MicroLabel>
+                  {esVistaPreviaMapa ? <Text style={[t.micro, { color: c.textSoft }]}>VISTA PREVIA</Text> : null}
+                </View>
+                <View style={styles.insight}>
+                  <Icon name="spark" size={19} color={c.gold} />
+                  <View style={{ gap: 4, flex: 1 }}>
+                    <Text style={[t.cardTitle, { color: c.text }]}>{tituloMapa}</Text>
+                    <Text style={[t.body, { color: c.textSoft, fontSize: 12 }]}>{detalleMapa}</Text>
+                  </View>
+                  <GoldCircle size={40} icon="chevron" />
+                </View>
+              </Card>
+            </Pressable>
+          ) : null}
+
           {/* Tarjeta Hábitos de Hoy */}
           <Card>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>

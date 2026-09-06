@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet, ViewStyle } from 'react-native';
+import { View, Text, Pressable, StyleSheet, StyleProp, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../theme/ThemeContext';
 import { Icon, IconName } from './Icon';
@@ -114,7 +114,7 @@ export function Row({
   children?: React.ReactNode;
   gap?: number;
   align?: AlineacionFila;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 }) {
   return <View style={[{ flexDirection: 'row', alignItems: align, gap }, style]}>{children}</View>;
 }
@@ -126,7 +126,7 @@ export function RowBetween({
 }: {
   children?: React.ReactNode;
   align?: AlineacionFila;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 }) {
   return (
     <View style={[{ flexDirection: 'row', justifyContent: 'space-between', alignItems: align }, style]}>

@@ -11,6 +11,7 @@ import { navegacionRef } from './src/navigation/navegacionRef';
 import { RenasiaLauncher } from './src/features/renasia/components/RenasiaLauncher';
 import { SparkieOverlay } from './src/features/sparkie/components/SparkieOverlay';
 import { AnfitrionAlerta } from './src/components/Alerta';
+import { MapaRenacimientoProvider } from './src/features/mapa-renacimiento/MapaRenacimientoContext';
 
 function Shell() {
   const { mode, c } = useTheme();
@@ -46,7 +47,11 @@ export default function App() {
     <SafeAreaProvider>
       <ThemeProvider initial={scheme === 'dark' ? 'dark' : 'light'}>
         <AuthProvider>
-          <Shell />
+          {/* El Mapa de Renacimiento (Día 7) se abre a pantalla completa por encima de las
+              pestañas; este proveedor guarda si está abierto. Ver RootNavigator. */}
+          <MapaRenacimientoProvider>
+            <Shell />
+          </MapaRenacimientoProvider>
         </AuthProvider>
       </ThemeProvider>
     </SafeAreaProvider>
