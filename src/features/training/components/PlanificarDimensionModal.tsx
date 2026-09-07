@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Alert } from '../../../components/Alerta';
@@ -28,7 +28,7 @@ import {
   type MomentoDelDia,
   type RangosDelDia,
 } from '../../habits/utils/momentosDelDia';
-import type { PreferenciaHabitoApi } from '../../habits/types/habits.types';
+import type { CategoriaHabitoApi, PreferenciaHabitoApi } from '../../habits/types/habits.types';
 import type { HabitItem } from '../../../screens/TrainingScreen';
 
 /**
@@ -99,6 +99,25 @@ type HabitoPlanificable = HabitItem & { habitoId: string };
 /** Cuánto mueve cada toque de − / + el comienzo de un bloque. */
 const PASO_DE_AJUSTE = 15;
 
+/**
+ * Los hábitos sin hora van en su propia sección, arriba de todo. No se reparten en un bloque
+ * porque no están en ninguno todavía, y esconderlos abajo dejaría lo único que hay que hacer —
+ * ponerles hora — en el último lugar donde se mira.
+ */
+type SeccionDeLista = MomentoDelDia | 'sinHora';
+
+/**
+ * La dimensión de Training → la categoría que el backend entiende. Las cuatro que existen de
+ * verdad en `renaser.categorias_habito`; VIDA Y NEGOCIO no es una categoría de hábito (son rocas,
+ * de otro módulo), así que ahí no se puede crear y el botón no aparece.
+ */
+const CATEGORIA_POR_DIMENSION: Readonly<Record<string, CategoriaHabitoApi>> = {
+  CUERPO: 'BODY',
+  MENTE: 'MIND',
+  EMOCIONES: 'CONSCIENCE',
+  'ESPÍRITU': 'SPIRIT',
+};
+
 function aDosDigitos(n: number): string {
   return String(n).padStart(2, '0');
 }
@@ -132,8 +151,6 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
    * pasarían a mover OTRO corte sin que la persona hiciera nada.
    */
   const [bloqueEnEdicion, setBloqueEnEdicion] = useState<MomentoDelDia>('mañana');
-  /** Filtro de la lista (paso 1). `null` = todos los de la dimensión. */
-  const [filtroMomento, setFiltroMomento] = useState<MomentoDelDia | null>(null);
 
   /**
    * EL PASO EN QUE ESTAMOS. `null` = la lista; con hábito = su editor de hora.
@@ -142,6 +159,12 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
    * editando pero no se sabe qué".
    */
   const [habitoEnEdicion, setHabitoEnEdicion] = useState<HabitoPlanificable | null>(null);
+  /** Secciones plegadas. Arrancan TODAS abiertas: llegar a una lista vacía es el problema que esta
+   *  pantalla vino a resolver, no uno que convenga reintroducir por prolijidad. */
+  const [plegadas, setPlegadas] = useState<Set<SeccionDeLista>>(new Set());
+  /** `true` = el formulario de hábito nuevo (paso 3). */
+  const [creando, setCreando] = useState(false);
+  const [tituloNuevo, setTituloNuevo] = useState('');
   const [hora, setHora] = useState(6);
   const [minuto, setMinuto] = useState(0);
   /**
@@ -170,8 +193,10 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
     if (!visible) return;
     setEstado('cargando');
     setHabitoEnEdicion(null);
-    setFiltroMomento(null);
     setEditandoBloques(false);
+    setPlegadas(new Set());
+    setCreando(false);
+    setTituloNuevo('');
     setGuardados({});
     setHuboEscritura(false);
     (async () => {
@@ -213,15 +238,6 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
     return minutos === null ? null : momentoDeMinutos(minutos, rangos);
   };
 
-  /**
-   * Lo que la lista muestra. Los hábitos SIN hora aparecen siempre, filtre lo que filtre: son
-   * justamente los que hace falta ubicar, y esconderlos detrás de un bloque que todavía no tienen
-   * los volvería inalcanzables.
-   */
-  const visibles = planificables.filter(
-    h => filtroMomento === null || (bloqueDe(h.habitoId, h.time) ?? filtroMomento) === filtroMomento,
-  );
-
   const minutosElegidos = hora * 60 + minuto;
   // El bloque NO es estado propio: se deriva de la hora, siempre.
   const momentoActual = momentoDeMinutos(minutosElegidos, rangos);
@@ -245,9 +261,6 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
     setHabitoEnEdicion(h);
   };
 
-  /** En la lista, tocar un bloque filtra; tocar el que ya filtra, apaga el filtro. */
-  const alternarFiltro = (m: MomentoDelDia) => setFiltroMomento(prev => (prev === m ? null : m));
-
   /** En el editor, tocar un bloque lleva la rueda a donde ese bloque empieza. */
   const irAlBloque = (m: MomentoDelDia) => {
     const desde = limitesDelMomento(m, rangos).desde % (24 * 60);
@@ -259,7 +272,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
   /** Abre o cierra el panel de cortes, arrancando por el bloque que se está mirando. */
   const alternarEdicionDeBloques = () => {
     if (!editandoBloques) {
-      setBloqueEnEdicion(habitoEnEdicion ? momentoActual : (filtroMomento ?? 'mañana'));
+      setBloqueEnEdicion(habitoEnEdicion ? momentoActual : 'mañana');
     }
     setEditandoBloques(v => !v);
   };
@@ -383,6 +396,126 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
   /** Los días en que corre ESTE hábito — informativo: es el alcance del cambio. */
   const diasDe = (h: HabitoPlanificable) => h.diasCatalogo ?? todosLosDias();
 
+  /**
+   * Los hábitos repartidos por bloque, en orden del día. Se calcula acá y no se guarda: el bloque
+   * de un hábito sale de su hora, y la hora cambia mientras la hoja está abierta.
+   */
+  const porSeccion = (): { seccion: SeccionDeLista; habitos: HabitoPlanificable[] }[] => {
+    const vacio: Record<SeccionDeLista, HabitoPlanificable[]> = {
+      sinHora: [], madrugada: [], mañana: [], tarde: [], noche: [],
+    };
+    for (const h of planificables) {
+      const bloque = bloqueDe(h.habitoId, h.time);
+      vacio[bloque ?? 'sinHora'].push(h);
+    }
+    const orden: SeccionDeLista[] = ['sinHora', ...MOMENTOS];
+    // Las secciones vacías NO se dibujan: un encabezado con cero filas es ruido, no información.
+    return orden.filter(sec => vacio[sec].length > 0).map(sec => ({ seccion: sec, habitos: vacio[sec] }));
+  };
+
+  const alternarSeccion = (sec: SeccionDeLista) =>
+    setPlegadas(prev => {
+      const siguiente = new Set(prev);
+      if (siguiente.has(sec)) siguiente.delete(sec);
+      else siguiente.add(sec);
+      return siguiente;
+    });
+
+  const categoriaDeLaDimension = CATEGORIA_POR_DIMENSION[dimension];
+
+  /**
+   * Da de alta un hábito PROPIO del aprendiz, en el backend.
+   *
+   * > Ojo con el antecedente: el "➕ Crear Hábito" de Training arma hoy un objeto en memoria con un
+   * > id inventado y anuncia que lo creó. El hábito no existe en ninguna parte y desaparece al
+   * > recargar — es el mismo bug que E-137 ya corrigió en Plan llamando a este endpoint. Acá se
+   * > llama de entrada.
+   */
+  const crearHabito = async () => {
+    const titulo = tituloNuevo.trim();
+    if (!titulo) {
+      Alert.alert('Falta el nombre', 'Escribí cómo se llama el hábito.');
+      return;
+    }
+    if (!categoriaDeLaDimension) return;
+    setGuardando(true);
+    try {
+      await habitsApi.crearHabitoPersonal({
+        title: titulo,
+        habitType: 'CHECKBOX',
+        category: categoriaDeLaDimension,
+        template: 'OTRO',
+        goalLabel: null,
+        triggerTime: `${horaTexto}:00`,
+        // Un hábito propio no vence dentro del día: sin hora límite.
+        limitTime: null,
+      });
+      setHuboEscritura(true);
+      setCreando(false);
+      setTituloNuevo('');
+      // Acá SÍ se recarga todo: el hábito nuevo no está en `habits`, que viene de la pantalla de
+      // atrás, así que la única forma de verlo es que Training vuelva a pedir su lista.
+      onGuardado();
+      Alert.alert('Hábito creado', `“${titulo}” queda a las ${horaTexto}, todos los días.`);
+    } catch (e) {
+      Alert.alert('No pudimos crear el hábito', mensajeDeError(e, 'Intenta de nuevo en unos segundos.'));
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  /** Una fila de la lista. Tocarla abre su hora; el interruptor de la derecha la prende o apaga. */
+  const filaDeHabito = (h: HabitoPlanificable) => {
+    const horaGuardada = guardados[h.habitoId];
+    const horaActual = horaDe(h.habitoId, h.time);
+    const bloqueDelHabito = bloqueDe(h.habitoId, h.time);
+    const activo = !pausados.has(h.habitoId);
+    return (
+      <Pressable
+        key={h.habitoId}
+        onPress={() => abrirHabito(h)}
+        style={[styles.filaHabito, { borderColor: c.border, opacity: activo ? 1 : 0.55 }]}
+      >
+        <View style={styles.iconoHabito}>
+          <Text style={styles.emojiHabito}>{h.icon ?? '🎯'}</Text>
+        </View>
+
+        <View style={{ flex: 1, flexShrink: 1, gap: 1 }}>
+          <Text style={[t.body, { color: c.text, fontSize: 13.5 }]} numberOfLines={2}>
+            {h.title}
+          </Text>
+          <View style={styles.filaMeta}>
+            <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5 }]}>
+              {bloqueDelHabito === null ? 'Tocá para ponerle hora' : horaActual}
+            </Text>
+            {horaGuardada && (
+              <Text style={[t.micro, { color: '#4E9F76', fontSize: 10, fontWeight: '700' }]}>✓ GUARDADO</Text>
+            )}
+            {!activo && (
+              <Text style={[t.micro, { color: '#E06A66', fontSize: 10, fontWeight: '700' }]}>PAUSADO</Text>
+            )}
+          </View>
+        </View>
+
+        <Icon name="chevron" size={14} color={c.chevron} />
+
+        {h.isDeactivatable === false ? (
+          <Pressable onPress={() => alternarActivo(h)} hitSlop={10} style={styles.candado}>
+            <Icon name="lock" size={16} color={c.tabInactive} />
+          </Pressable>
+        ) : (
+          <Switch
+            value={activo}
+            disabled={enVuelo.has(h.habitoId)}
+            onValueChange={() => alternarActivo(h)}
+            trackColor={{ false: '#332C20', true: c.gold }}
+            thumbColor={activo ? '#1E1B18' : '#888'}
+          />
+        )}
+      </Pressable>
+    );
+  };
+
   const pastillasDeBloque = (activo: (m: MomentoDelDia) => boolean, alTocar: (m: MomentoDelDia) => void) => (
     <View style={styles.filaMomentos}>
       {MOMENTOS.map(m => {
@@ -447,7 +580,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
       visible={visible}
       transparent
       animationType="slide"
-      onRequestClose={habitoEnEdicion ? volverALaLista : cerrar}
+      onRequestClose={creando ? () => setCreando(false) : habitoEnEdicion ? volverALaLista : cerrar}
     >
       <View style={styles.overlay}>
         <Pressable style={{ flex: 1 }} onPress={cerrar} />
@@ -468,8 +601,12 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
           <View style={[styles.agarre, { backgroundColor: c.border }]} />
 
           <View style={[styles.encabezado, { borderBottomColor: c.divider }]}>
-            {habitoEnEdicion ? (
-              <Pressable onPress={volverALaLista} hitSlop={12} style={styles.volver}>
+            {habitoEnEdicion || creando ? (
+              <Pressable
+                onPress={creando ? () => setCreando(false) : volverALaLista}
+                hitSlop={12}
+                style={styles.volver}
+              >
                 <Icon name="arrowLeft" size={14} color={c.gold} />
                 <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 11 }]}>VOLVER</Text>
               </Pressable>
@@ -501,16 +638,17 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
           {/* =================================================================== */}
           {/* PASO 1 — LA LISTA. Encontrar el hábito y, si hace falta, apagarlo.  */}
           {/* =================================================================== */}
-          {estado === 'listo' && habitoEnEdicion === null && (
+          {estado === 'listo' && habitoEnEdicion === null && !creando && (
             <>
               <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, marginTop: 10, lineHeight: 17 }]}>
                 Tocá un hábito para cambiarle la hora. El interruptor de la derecha lo prende o lo apaga.
               </Text>
 
+              {/* Las pastillas ya no filtran: la lista viene agrupada por bloque, que dice lo
+                  mismo sin ocupar media pantalla ni pedir un toque para ver el resto. Quedan solo
+                  para elegir QUÉ corte mueven los − / +, y por eso aparecen únicamente al ajustar. */}
               <View style={styles.filaTituloCompacta}>
-                <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>
-                  {filtroMomento === null ? 'TODO EL DÍA' : ETIQUETA_MOMENTO[filtroMomento]}
-                </Text>
+                <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>TU DÍA</Text>
                 <Pressable onPress={alternarEdicionDeBloques} hitSlop={10}>
                   <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 10.5 }]}>
                     {editandoBloques ? 'LISTO' : '✎ AJUSTAR BLOQUES'}
@@ -518,86 +656,74 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                 </Pressable>
               </View>
 
-              {pastillasDeBloque(
-                m => (editandoBloques ? m === bloqueEnEdicion : m === filtroMomento),
-                m => (editandoBloques ? setBloqueEnEdicion(m) : alternarFiltro(m)),
+              {editandoBloques && (
+                <>
+                  {pastillasDeBloque(
+                    m => m === bloqueEnEdicion,
+                    m => setBloqueEnEdicion(m),
+                  )}
+                  {panelDeCortes}
+                </>
               )}
-              {editandoBloques && panelDeCortes}
 
               <ScrollView
-                style={{ flexShrink: 1, marginTop: 12 }}
-                contentContainerStyle={{ gap: 8, paddingBottom: 6 }}
+                style={{ flexShrink: 1, marginTop: 10 }}
+                contentContainerStyle={{ gap: 10, paddingBottom: 6 }}
                 showsVerticalScrollIndicator={false}
               >
                 {planificables.length === 0 && (
                   <Text style={[t.body, { color: c.textSoft, fontSize: 13, paddingVertical: 16 }]}>
-                    Esta dimensión no tiene hábitos que se puedan planificar.
+                    Todavía no hay hábitos en esta dimensión.
                   </Text>
                 )}
 
-                {planificables.length > 0 && visibles.length === 0 && (
-                  <Text style={[t.body, { color: c.textSoft, fontSize: 13, paddingVertical: 16 }]}>
-                    Ninguno cae en {filtroMomento ? ETIQUETA_MOMENTO[filtroMomento] : 'este bloque'}. Tocá el
-                    bloque de nuevo para verlos todos.
-                  </Text>
-                )}
-
-                {visibles.map(h => {
-                  const horaGuardada = guardados[h.habitoId];
-                  const horaActual = horaDe(h.habitoId, h.time);
-                  const bloqueDelHabito = bloqueDe(h.habitoId, h.time);
-                  const activo = !pausados.has(h.habitoId);
+                {porSeccion().map(({ seccion, habitos }) => {
+                  const plegada = plegadas.has(seccion);
+                  const esSinHora = seccion === 'sinHora';
                   return (
-                    <Pressable
-                      key={h.habitoId}
-                      onPress={() => abrirHabito(h)}
-                      style={[styles.filaHabito, { borderColor: c.border, opacity: activo ? 1 : 0.55 }]}
-                    >
-                      <View style={styles.iconoHabito}>
-                        <Text style={styles.emojiHabito}>{h.icon ?? '🎯'}</Text>
-                      </View>
-
-                      <View style={{ flex: 1, flexShrink: 1, gap: 1 }}>
-                        <Text style={[t.body, { color: c.text, fontSize: 13.5 }]} numberOfLines={2}>
-                          {h.title}
-                        </Text>
-                        <View style={styles.filaMeta}>
-                          <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5 }]}>
-                            {bloqueDelHabito === null
-                              ? 'Sin hora todavía'
-                              : `${horaActual} · ${ETIQUETA_MOMENTO[bloqueDelHabito]}`}
+                    <View key={seccion} style={{ gap: 8 }}>
+                      <Pressable
+                        onPress={() => alternarSeccion(seccion)}
+                        style={[styles.cabezaSeccion, { borderBottomColor: c.divider }]}
+                      >
+                        <View style={{ flex: 1, flexShrink: 1 }}>
+                          <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 11 }]}>
+                            {esSinHora ? '⏳ SIN HORA TODAVÍA' : ETIQUETA_MOMENTO[seccion]} ({habitos.length})
                           </Text>
-                          {horaGuardada && (
-                            <Text style={[t.micro, { color: '#4E9F76', fontSize: 10, fontWeight: '700' }]}>
-                              ✓ GUARDADO
-                            </Text>
-                          )}
-                          {!activo && (
-                            <Text style={[t.micro, { color: '#E06A66', fontSize: 10, fontWeight: '700' }]}>
-                              PAUSADO
+                          {!esSinHora && (
+                            <Text style={[t.micro, { color: c.textSoft, fontSize: 10 }]}>
+                              {rangoTexto(seccion, rangos)}
                             </Text>
                           )}
                         </View>
-                      </View>
+                        <Text style={[t.micro, { color: c.gold, fontSize: 12 }]}>{plegada ? '▸' : '▾'}</Text>
+                      </Pressable>
 
-                      <Icon name="chevron" size={14} color={c.chevron} />
-
-                      {h.isDeactivatable === false ? (
-                        <Pressable onPress={() => alternarActivo(h)} hitSlop={10} style={styles.candado}>
-                          <Icon name="lock" size={16} color={c.tabInactive} />
-                        </Pressable>
-                      ) : (
-                        <Switch
-                          value={activo}
-                          disabled={enVuelo.has(h.habitoId)}
-                          onValueChange={() => alternarActivo(h)}
-                          trackColor={{ false: '#332C20', true: c.gold }}
-                          thumbColor={activo ? '#1E1B18' : '#888'}
-                        />
-                      )}
-                    </Pressable>
+                      {!plegada && habitos.map(h => filaDeHabito(h))}
+                    </View>
                   );
                 })}
+
+                {/* Crear un hábito propio, en la dimensión que está abierta. Solo en las cuatro que
+                    son categorías de verdad: VIDA Y NEGOCIO son rocas, de otro módulo. */}
+                {categoriaDeLaDimension && (
+                  <Pressable
+                    onPress={() => {
+                      const inicio = rangos.inicioManana;
+                      setHora(Math.floor(inicio / 60));
+                      setMinuto(inicio % 60);
+                      setSemillaRueda(n => n + 1);
+                      setTituloNuevo('');
+                      setCreando(true);
+                    }}
+                    style={[styles.crearHabito, { borderColor: c.gold }]}
+                  >
+                    <Icon name="plus" size={14} color={c.gold} />
+                    <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 11 }]}>
+                      CREAR UN HÁBITO EN {dimension}
+                    </Text>
+                  </Pressable>
+                )}
               </ScrollView>
             </>
           )}
@@ -689,6 +815,54 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                 onPress={() => intentarGuardar(habitoEnEdicion)}
                 disabled={guardando}
                 style={{ width: '100%', marginTop: 14 }}
+              />
+            </View>
+          )}
+
+          {/* =================================================================== */}
+          {/* PASO 3 — HÁBITO NUEVO. Nombre y hora, nada más: la categoría sale de */}
+          {/* la dimensión que ya está abierta y los días son todos.               */}
+          {/* =================================================================== */}
+          {estado === 'listo' && creando && (
+            <View style={{ flexShrink: 1 }}>
+              <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 15, marginTop: 12 }]}>
+                Hábito nuevo en {dimension}
+              </Text>
+              <Text style={[t.micro, { color: c.textSoft, fontSize: 11, marginTop: 2, marginBottom: 10 }]}>
+                Es tuyo: podés pausarlo o sacarlo cuando quieras.
+              </Text>
+
+              <TextInput
+                value={tituloNuevo}
+                onChangeText={setTituloNuevo}
+                placeholder="Caminar 30 minutos"
+                placeholderTextColor={c.tabInactive}
+                style={[styles.campoTitulo, { borderColor: c.border, color: c.text, backgroundColor: c.cardBgAlt }]}
+                maxLength={80}
+                returnKeyType="done"
+              />
+
+              <Text style={[t.micro, { color: c.gold, fontWeight: '700', marginTop: 14 }]}>¿A QUÉ HORA?</Text>
+              <View style={{ paddingTop: 4 }}>
+                <RuedaHoraPicker
+                  key={`rueda-nuevo-${semillaRueda}`}
+                  horaInicial={hora}
+                  minutoInicial={minuto}
+                  onCambiar={(h, m) => {
+                    setHora(h);
+                    setMinuto(m);
+                  }}
+                />
+              </View>
+              <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5, textAlign: 'center' }]}>
+                {horaTexto} cae en {ETIQUETA_MOMENTO[momentoActual]} · todos los días
+              </Text>
+
+              <GoldButton
+                label={guardando ? 'CREANDO…' : `CREAR A LAS ${horaTexto}`}
+                onPress={() => void crearHabito()}
+                disabled={guardando}
+                style={{ width: '100%', marginTop: 16 }}
               />
             </View>
           )}
@@ -816,6 +990,34 @@ const styles = StyleSheet.create({
     borderWidth: 1.2,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  cabezaSeccion: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    paddingBottom: 6,
+    minHeight: 40,
+    gap: 10,
+  },
+  crearHabito: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1.2,
+    borderStyle: 'dashed',
+    borderRadius: 12,
+    minHeight: 52,
+    marginTop: 4,
+  },
+  campoTitulo: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    minHeight: 52,
+    fontSize: 15,
+    fontFamily: 'Jost_400Regular',
   },
   filaHabito: {
     flexDirection: 'row',
