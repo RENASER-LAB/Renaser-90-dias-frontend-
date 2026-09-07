@@ -114,6 +114,8 @@ export interface DiaDeLaSemanaApi {
   triggerTime: string | null;
   limitTime: string | null;
   custom: boolean;
+  /** `false` = ese día está apagado, todas las semanas (V40). Ausente contra un backend viejo. */
+  active?: boolean;
 }
 
 /** Un ítem de `GET /api/v1/habit-preferences` — el horario, propio o el del catálogo. */

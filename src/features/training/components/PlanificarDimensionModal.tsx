@@ -201,7 +201,8 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
    */
   const [diasEnEdicion, setDiasEnEdicion] = useState<DiaDelPlan[]>([]);
   /** La hora de cada día, tal cual la resolvió el servidor. `propio` = tiene hora propia. */
-  const [horarioSemanal, setHorarioSemanal] = useState<Record<string, { hora: string | null; propio: boolean }>>({});
+  const [horarioSemanal, setHorarioSemanal] =
+    useState<Record<string, { hora: string | null; propio: boolean; activo: boolean }>>({});
   /**
    * Los avisos del hábito abierto, en minutos antes. Vacío = sin aviso.
    *
@@ -315,7 +316,12 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
           Object.fromEntries(
             DIAS_DEL_PLAN.map(dia => {
               const d = porNombre.get(NOMBRE_ISO_DEL_DIA[dia]);
-              return [dia, { hora: d?.triggerTime?.slice(0, 5) ?? null, propio: d?.custom ?? false }];
+              return [dia, {
+                hora: d?.triggerTime?.slice(0, 5) ?? null,
+                propio: d?.custom ?? false,
+                // `?? true` para un backend anterior a V40, donde todos los días estaban encendidos.
+                activo: d?.active ?? true,
+              }];
             }),
           ),
         );
@@ -474,7 +480,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
     if (guardados.length > 0) {
       setHorarioSemanal(prev => ({
         ...prev,
-        ...Object.fromEntries(guardados.map(d => [d, { hora: horaTexto, propio: true }])),
+        ...Object.fromEntries(guardados.map(d => [d, { hora: horaTexto, propio: true, activo: true }])),
       }));
       setHuboEscritura(true);
     }
@@ -511,12 +517,44 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
       const general = horaDe(h.habitoId, h.time);
       setHorarioSemanal(prev => ({
         ...prev,
-        ...Object.fromEntries(dias.map(d => [d, { hora: general || null, propio: false }])),
+        ...Object.fromEntries(dias.map(d => [d, { hora: general || null, propio: false, activo: true }])),
       }));
       setHuboEscritura(true);
       volverATodos();
     } catch (e) {
       Alert.alert('No pudimos quitarlo', mensajeDeError(e, 'Intenta de nuevo en unos segundos.'));
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  /**
+   * "Los martes no": apaga el hábito esos días de la semana, todas las semanas (V40).
+   *
+   * NO le toca la hora: el día queda apagado, no sin horario, así que volver a encenderlo lo
+   * devuelve a la que regía.
+   */
+  const apagarDias = async (h: HabitoPlanificable, dias: DiaDelPlan[]) => {
+    setGuardando(true);
+    try {
+      for (const dia of dias) {
+        await habitsApi.apagarDiaDeLaSemana(h.habitoId, NOMBRE_ISO_DEL_DIA[dia]);
+      }
+      setHorarioSemanal(prev => ({
+        ...prev,
+        ...Object.fromEntries(dias.map(d => [d, { ...prev[d], propio: true, activo: false }])),
+      }));
+      setHuboEscritura(true);
+      setDiasEnEdicion([]);
+      Alert.alert(
+        'Listo',
+        `“${h.title}” no va los ${dias.join(', ').toLowerCase()}. El resto de la semana sigue igual.`,
+      );
+    } catch (e) {
+      Alert.alert(
+        'No pudimos apagarlo',
+        mensajeDeError(e, 'Si es un hábito obligatorio del programa, no se puede sacar.'),
+      );
     } finally {
       setGuardando(false);
     }
@@ -1049,13 +1087,19 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                             t.micro,
                             {
                               fontSize: 8.5,
-                              color: editando ? c.onGold : delDia?.propio ? c.gold : c.textSoft,
+                              color: editando
+                                ? c.onGold
+                                : delDia?.activo === false
+                                  ? '#E06A66'
+                                  : delDia?.propio
+                                    ? c.gold
+                                    : c.textSoft,
                               fontWeight: delDia?.propio ? '700' : '400',
                             },
                           ]}
                           numberOfLines={1}
                         >
-                          {delDia?.hora ?? '·'}
+                          {delDia?.activo === false ? 'no va' : (delDia?.hora ?? '·')}
                         </Text>
                       )}
                     </Pressable>
@@ -1068,9 +1112,36 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                   : `Solo ${diasEnEdicion.join(', ').toLowerCase()}, todas las semanas. El día en curso no se reacomoda.`}
               </Text>
 
-              {/* Solo cuando TODOS los marcados tienen hora propia: ofrecer "quitar" con alguno que
-                  no la tiene sería prometer deshacer algo que no está puesto. */}
-              {diasEnEdicion.length > 0 && diasEnEdicion.every(d => horarioSemanal[d]?.propio) && (
+              {/* Apagar esos días, o volver a encenderlos. Se ofrece una cosa o la otra según cómo
+                  estén los marcados: mostrar las dos sería pedir que la persona adivine cuál aplica. */}
+              {diasEnEdicion.length > 0 && diasEnEdicion.every(d => horarioSemanal[d]?.activo !== false) && (
+                <Pressable
+                  onPress={() => void apagarDias(habitoEnEdicion, diasEnEdicion)}
+                  hitSlop={8}
+                  style={{ marginTop: 8, minHeight: 36, justifyContent: 'center' }}
+                >
+                  <Text style={[t.micro, { color: '#E06A66', fontSize: 10.5 }]}>
+                    ⊘ No hacer este hábito los {diasEnEdicion.join(', ').toLowerCase()}
+                  </Text>
+                </Pressable>
+              )}
+
+              {diasEnEdicion.length > 0 && diasEnEdicion.every(d => horarioSemanal[d]?.activo === false) && (
+                <Pressable
+                  onPress={() => void quitarDias(habitoEnEdicion, diasEnEdicion)}
+                  hitSlop={8}
+                  style={{ marginTop: 8, minHeight: 36, justifyContent: 'center' }}
+                >
+                  <Text style={[t.micro, { color: c.gold, fontSize: 10.5, fontWeight: '700' }]}>
+                    ↺ Volver a hacerlo los {diasEnEdicion.join(', ').toLowerCase()}
+                  </Text>
+                </Pressable>
+              )}
+
+              {/* Solo cuando TODOS los marcados tienen hora propia Y están encendidos: ofrecer
+                  "quitar la hora" de un día apagado no significa nada. */}
+              {diasEnEdicion.length > 0
+                && diasEnEdicion.every(d => horarioSemanal[d]?.propio && horarioSemanal[d]?.activo !== false) && (
                 <Pressable
                   onPress={() => void quitarDias(habitoEnEdicion, diasEnEdicion)}
                   hitSlop={8}

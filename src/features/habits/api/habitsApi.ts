@@ -139,6 +139,18 @@ export async function fijarHorarioDelDia(
   });
 }
 
+/**
+ * `DELETE .../weekdays/{weekday}/active` — apaga el hábito ESE día de la semana, siempre.
+ *
+ * Distinto de apagar por fecha (`/days/{date}`), que vale para un día y no se repite. Devuelve 409
+ * si el hábito es obligatorio del programa.
+ */
+export async function apagarDiaDeLaSemana(habitId: string, weekday: string): Promise<void> {
+  await apiFetch<unknown>(`/api/v1/habit-preferences/${habitId}/weekdays/${weekday}/active`, {
+    method: 'DELETE',
+  });
+}
+
 /** `DELETE .../weekdays/{weekday}` — ese día vuelve al horario general. Idempotente. */
 export async function quitarHorarioDelDia(habitId: string, weekday: string): Promise<void> {
   await apiFetch<unknown>(`/api/v1/habit-preferences/${habitId}/weekdays/${weekday}`, { method: 'DELETE' });

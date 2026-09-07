@@ -53,6 +53,9 @@ const horarioSemanalSchema = z
         limitTime: z.string().nullable(),
         // `true` = ese día tiene hora propia; `false` = hereda la general.
         custom: z.boolean(),
+        // V40: `false` = el aprendiz apagó ese día de la semana. `.optional()` para no romper
+        // contra un backend anterior, donde todos los días estaban encendidos.
+        active: z.boolean().optional(),
       }).passthrough(),
     ),
   })
