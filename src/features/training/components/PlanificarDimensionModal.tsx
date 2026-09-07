@@ -15,7 +15,12 @@ import { rangosDelDia as almacenRangos } from '../../habits/storage/rangosDelDia
 import { ICONOS_ELEGIBLES } from '../../habits/utils/iconosDeHabito';
 import * as recordatorios from '../../habits/notificaciones/recordatoriosDeHabito';
 import { formatearFechaLarga } from '../../programa/hooks/useArranqueDelPrograma';
-import { aFechaIso, DIAS_DEL_PLAN, type DiaDelPlan } from '../../habits/utils/semanaDelPlan';
+import {
+  aFechaIso,
+  DIAS_DEL_PLAN,
+  NOMBRE_ISO_DEL_DIA,
+  type DiaDelPlan,
+} from '../../habits/utils/semanaDelPlan';
 import {
   ETIQUETA_MOMENTO,
   MOMENTO_ESPERADO,
@@ -81,8 +86,13 @@ import type { HabitItem } from '../../../screens/TrainingScreen';
  * mandar la fecha de HOY lo apaga hoy y lo devuelve mañana, que es lo que hace falta en una
  * pantalla del día. Un día suelto a futuro necesitaría un `pausadoDesde` (ver `PlanScreen`).
  *
- * Y la hora que se guarda es **una sola para todos los días** en que el hábito corre, desde mañana.
- * Por eso la fila de días es informativa y se titula "ESTE CAMBIO AFECTA": describe, no promete.
+ * **La hora puede ser distinta por día de la semana** desde V39 (`.../weekdays/{weekday}`). La fila
+ * de días es el control: tocar un día pasa a editar SU hora, tocarlo de nuevo vuelve al horario
+ * general, y cada pastilla muestra la hora que rige ese día. Un día en que el hábito no corre no se
+ * puede tocar — eso lo decide el catálogo, no el aprendiz.
+ *
+ * Lo que se guarda rige **desde mañana**: el día en curso no se reacomoda (D-91), y por eso esta
+ * pantalla organiza la semana y no el día de hoy.
  */
 
 interface Props {
@@ -181,6 +191,17 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
   const [creando, setCreando] = useState(false);
   const [tituloNuevo, setTituloNuevo] = useState('');
   const [iconoNuevo, setIconoNuevo] = useState<string | null>(null);
+  /**
+   * QUÉ SE ESTÁ EDITANDO: `null` = el horario general, que rige todos los días; un día = la hora
+   * propia de ESE día, todas las semanas (V39).
+   *
+   * Es un solo estado y no un conjunto de días marcados: volver a la selección múltiple sería
+   * volver al problema que esta pantalla vino a resolver. Una decisión por vez — o todos los días,
+   * o uno.
+   */
+  const [diaEnEdicion, setDiaEnEdicion] = useState<DiaDelPlan | null>(null);
+  /** La hora de cada día, tal cual la resolvió el servidor. `propio` = tiene hora propia. */
+  const [horarioSemanal, setHorarioSemanal] = useState<Record<string, { hora: string | null; propio: boolean }>>({});
   /** Antelación del recordatorio del hábito abierto. `null` = sin aviso. */
   const [antelacion, setAntelacion] = useState<number | null>(null);
   const [hora, setHora] = useState(6);
@@ -277,11 +298,47 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
     setSemillaRueda(n => n + 1);
     setBloqueEnEdicion(momentoDeMinutos(inicial, rangos));
     setEditandoBloques(false);
+    setDiaEnEdicion(null);
+    setHorarioSemanal({});
+    // Se pide DESPUÉS de abrir, no antes: el toque tiene que responder ya. Mientras llega, las
+    // pastillas muestran el día sin hora, que es lo honesto.
+    void (async () => {
+      try {
+        const dias = await habitsApi.obtenerHorarioSemanal(h.habitoId);
+        const porNombre = new Map(dias.map(d => [d.weekday, d]));
+        setHorarioSemanal(
+          Object.fromEntries(
+            DIAS_DEL_PLAN.map(dia => {
+              const d = porNombre.get(NOMBRE_ISO_DEL_DIA[dia]);
+              return [dia, { hora: d?.triggerTime?.slice(0, 5) ?? null, propio: d?.custom ?? false }];
+            }),
+          ),
+        );
+      } catch {
+        // Sin horario semanal la pantalla sigue sirviendo para el horario general, que es el caso
+        // de siempre. No se rompe nada: las pastillas quedan sin hora.
+      }
+    })();
     const previa = preferencias.get(h.habitoId);
     // El recordatorio guardado en el servidor. Ahora se puede leer: hasta 2026-09-07 el GET no lo
     // devolvía y no había forma de saber si estaba puesto.
     setAntelacion(previa?.reminderEnabled ? (previa.reminderMinutesBefore ?? 0) : null);
     setHabitoEnEdicion(h);
+  };
+
+  /**
+   * Tocar un día pasa a editar SU hora; tocarlo de nuevo vuelve al horario general. La rueda sigue
+   * a lo que se está editando, que es lo que hace que no haya dos verdades en pantalla.
+   */
+  const elegirDia = (dia: DiaDelPlan | null) => {
+    setDiaEnEdicion(dia);
+    const hhmm = dia === null
+      ? horaDe(habitoEnEdicion?.habitoId ?? '', habitoEnEdicion?.time ?? '')
+      : horarioSemanal[dia]?.hora ?? null;
+    const minutos = aMinutos(hhmm) ?? rangos.inicioManana;
+    setHora(Math.floor(minutos / 60));
+    setMinuto(minutos % 60);
+    setSemillaRueda(n => n + 1);
   };
 
   /** En el editor, tocar un bloque lleva la rueda a donde ese bloque empieza. */
@@ -360,7 +417,41 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
     ]);
   };
 
-  /** Guarda la hora del hábito abierto y vuelve a la lista. */
+  /**
+   * Guarda la hora de UN día de la semana (V39) y se queda en la pantalla: lo normal es configurar
+   * varios días seguidos, y volver a la lista despues de cada uno seria hacerlo entrar de nuevo.
+   */
+  const guardarDia = async (h: HabitoPlanificable, dia: DiaDelPlan) => {
+    setGuardando(true);
+    try {
+      await habitsApi.fijarHorarioDelDia(h.habitoId, NOMBRE_ISO_DEL_DIA[dia], `${horaTexto}:00`,
+        preferencias.get(h.habitoId)?.limitTime ?? null);
+      setHorarioSemanal(prev => ({ ...prev, [dia]: { hora: horaTexto, propio: true } }));
+      setHuboEscritura(true);
+    } catch (e) {
+      Alert.alert('No pudimos guardar ese día', mensajeDeError(e, 'Intenta de nuevo en unos segundos.'));
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  /** Devuelve un día al horario general. */
+  const quitarDia = async (h: HabitoPlanificable, dia: DiaDelPlan) => {
+    setGuardando(true);
+    try {
+      await habitsApi.quitarHorarioDelDia(h.habitoId, NOMBRE_ISO_DEL_DIA[dia]);
+      const general = horaDe(h.habitoId, h.time);
+      setHorarioSemanal(prev => ({ ...prev, [dia]: { hora: general || null, propio: false } }));
+      setHuboEscritura(true);
+      elegirDia(null);
+    } catch (e) {
+      Alert.alert('No pudimos quitarlo', mensajeDeError(e, 'Intenta de nuevo en unos segundos.'));
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  /** Guarda la hora GENERAL del hábito —todos los días— y vuelve a la lista. */
   const guardarHora = async (h: HabitoPlanificable) => {
     setGuardando(true);
     try {
@@ -439,6 +530,10 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
           { text: 'Guardar igual', onPress: () => void guardarHora(h) },
         ],
       );
+      return;
+    }
+    if (diaEnEdicion !== null) {
+      void guardarDia(h, diaEnEdicion);
       return;
     }
     void guardarHora(h);
@@ -833,36 +928,86 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
 
               {/* El alcance real del guardado. Describe, no promete: la hora es una sola para todos
                   los días en que el hábito corre. */}
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700', marginTop: 12 }]}>
-                ESTE CAMBIO AFECTA
-              </Text>
-              <View style={styles.filaDias} pointerEvents="none">
+              {/* LOS DÍAS, ahora sí tocables (V39). Tocar uno pasa a editar SU hora; tocarlo de
+                  nuevo vuelve al horario general. Cada pastilla muestra la hora que rige ese día,
+                  así que la fila entera se lee de un vistazo: "los lunes 05:00, el resto 09:00". */}
+              <View style={styles.filaTituloCompacta}>
+                <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>
+                  {diaEnEdicion === null ? 'TODOS LOS DÍAS' : `SOLO LOS ${diaEnEdicion}`}
+                </Text>
+                {diaEnEdicion !== null && (
+                  <Pressable onPress={() => elegirDia(null)} hitSlop={10}>
+                    <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 10.5 }]}>
+                      ← TODOS
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
+              <View style={styles.filaDias}>
                 {DIAS_DEL_PLAN.map(dia => {
-                  const on = diasDe(habitoEnEdicion)[dia];
+                  const corre = diasDe(habitoEnEdicion)[dia];
+                  const editando = diaEnEdicion === dia;
+                  const delDia = horarioSemanal[dia];
                   return (
-                    <View
+                    <Pressable
                       key={dia}
+                      // Un día en que el hábito NO corre no se puede editar: la hora de un día que
+                      // no existe no significa nada. Eso lo decide el catálogo, no el aprendiz.
+                      onPress={() => corre && elegirDia(editando ? null : dia)}
+                      disabled={!corre}
                       style={[
                         styles.pastillaDia,
                         {
-                          borderColor: on ? c.gold : c.border,
-                          backgroundColor: on ? c.gold : 'transparent',
-                          opacity: on ? 1 : 0.4,
+                          borderColor: editando ? c.gold : c.border,
+                          backgroundColor: editando ? c.gold : 'transparent',
+                          opacity: corre ? 1 : 0.35,
                         },
                       ]}
                     >
                       <Text
-                        style={[t.micro, { fontSize: 12.5, fontWeight: '700', color: on ? c.onGold : c.textSoft }]}
+                        style={[
+                          t.micro,
+                          { fontSize: 12, fontWeight: '700', color: editando ? c.onGold : c.textSoft },
+                        ]}
                       >
                         {dia.charAt(0)}
                       </Text>
-                    </View>
+                      {corre && (
+                        <Text
+                          style={[
+                            t.micro,
+                            {
+                              fontSize: 8.5,
+                              color: editando ? c.onGold : delDia?.propio ? c.gold : c.textSoft,
+                              fontWeight: delDia?.propio ? '700' : '400',
+                            },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {delDia?.hora ?? '·'}
+                        </Text>
+                      )}
+                    </Pressable>
                   );
                 })}
               </View>
               <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5, marginTop: 5, lineHeight: 14 }]}>
-                Todos esos días, desde mañana — el día en curso no se reacomoda.
+                {diaEnEdicion === null
+                  ? 'Tocá un día para darle una hora propia. Lo que guardes acá rige el resto, desde mañana.'
+                  : `Solo los ${diaEnEdicion.toLowerCase()}, todas las semanas. El día en curso no se reacomoda.`}
               </Text>
+
+              {diaEnEdicion !== null && horarioSemanal[diaEnEdicion]?.propio && (
+                <Pressable
+                  onPress={() => void quitarDia(habitoEnEdicion, diaEnEdicion)}
+                  hitSlop={8}
+                  style={{ marginTop: 8, minHeight: 36, justifyContent: 'center' }}
+                >
+                  <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5 }]}>
+                    ✕ Quitar la hora propia de los {diaEnEdicion.toLowerCase()} y volver al horario general
+                  </Text>
+                </Pressable>
+              )}
 
               {/* No se ofrece donde no se puede cumplir: web (la librería no soporta esa
                   plataforma) ni Expo Go (el push salió de ahí en el SDK 53). Ver
@@ -901,7 +1046,13 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
               )}
 
               <GoldButton
-                label={guardando ? 'GUARDANDO…' : `GUARDAR ${horaTexto}`}
+                label={
+                  guardando
+                    ? 'GUARDANDO…'
+                    : diaEnEdicion === null
+                      ? `GUARDAR ${horaTexto} · TODOS LOS DÍAS`
+                      : `GUARDAR ${horaTexto} · SOLO ${diaEnEdicion}`
+                }
                 onPress={() => intentarGuardar(habitoEnEdicion)}
                 disabled={guardando}
                 style={{ width: '100%', marginTop: 14 }}
@@ -1104,9 +1255,11 @@ const styles = StyleSheet.create({
     gap: 6,
     marginTop: 6,
   },
+  // Alto para dos renglones: la letra del día y la hora que rige ese día.
   pastillaDia: {
     flex: 1,
-    height: 42,
+    minHeight: 48,
+    paddingVertical: 4,
     borderRadius: 10,
     borderWidth: 1.2,
     alignItems: 'center',

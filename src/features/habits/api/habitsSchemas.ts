@@ -42,6 +42,22 @@ const habitoCatalogoSchema = z
   })
   .passthrough();
 
+/** `GET /api/v1/habit-preferences/{habitId}/weekdays` — los 7 días ya resueltos (V39). */
+const horarioSemanalSchema = z
+  .object({
+    weekdays: z.array(
+      z.object({
+        // Nombre de `DayOfWeek`: MONDAY..SUNDAY, mismo vocabulario que `activeWeekdays`.
+        weekday: z.string(),
+        triggerTime: z.string().nullable(),
+        limitTime: z.string().nullable(),
+        // `true` = ese día tiene hora propia; `false` = hereda la general.
+        custom: z.boolean(),
+      }).passthrough(),
+    ),
+  })
+  .passthrough();
+
 const preferenciaHabitoSchema = z
   .object({
     habitId: z.string(),
@@ -157,6 +173,7 @@ const desbloqueoHabitoSchema = z
 
 export const habitsSchemas = {
   catalogo: z.array(habitoCatalogoSchema),
+  horarioSemanal: horarioSemanalSchema,
   /** `enabled` es del programa entero, no de un hábito: si viene `false`, no hay plan que leer. */
   planDesbloqueos: z
     .object({ enabled: z.boolean(), items: z.array(desbloqueoHabitoSchema) })

@@ -1,6 +1,7 @@
 import { apiFetch } from '../../../services/http/apiClient';
 import type {
   AltaHabitoPersonal,
+  DiaDeLaSemanaApi,
   HabitoCatalogoApi,
   PlanDesbloqueosApi,
   PreferenciaHabitoApi,
@@ -106,6 +107,41 @@ export async function cambiarHorario(
     },
   });
   return validarRespuesta(habitsSchemas.cambioHorario, r, 'PATCH /api/v1/habit-preferences/{id}');
+}
+
+/**
+ * `GET /api/v1/habit-preferences/{habitId}/weekdays` — los SIETE días con su hora (V39).
+ *
+ * Es la respuesta a "los lunes a las 5 y los martes a las 4". Antes de esto la hora era una sola
+ * para toda la semana: editar el jueves cambiaba los siete días.
+ */
+export async function obtenerHorarioSemanal(habitId: string): Promise<DiaDeLaSemanaApi[]> {
+  const r = await apiFetch<unknown>(`/api/v1/habit-preferences/${habitId}/weekdays`);
+  return validarRespuesta(habitsSchemas.horarioSemanal, r, 'GET /api/v1/habit-preferences/{id}/weekdays')
+    .weekdays;
+}
+
+/**
+ * `PUT .../weekdays/{weekday}` — fija la hora de UN día, todas las semanas.
+ *
+ * `weekday` es el nombre de `DayOfWeek` (`MONDAY`..`SUNDAY`); `NOMBRE_ISO_DEL_DIA` lo traduce
+ * desde el día que dibuja la pantalla.
+ */
+export async function fijarHorarioDelDia(
+  habitId: string,
+  weekday: string,
+  triggerTime: string,
+  limitTime: string | null,
+): Promise<void> {
+  await apiFetch<unknown>(`/api/v1/habit-preferences/${habitId}/weekdays/${weekday}`, {
+    method: 'PUT',
+    body: { triggerTime, limitTime },
+  });
+}
+
+/** `DELETE .../weekdays/{weekday}` — ese día vuelve al horario general. Idempotente. */
+export async function quitarHorarioDelDia(habitId: string, weekday: string): Promise<void> {
+  await apiFetch<unknown>(`/api/v1/habit-preferences/${habitId}/weekdays/${weekday}`, { method: 'DELETE' });
 }
 
 /**

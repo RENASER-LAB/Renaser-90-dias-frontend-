@@ -100,6 +100,22 @@ export interface AltaHabitoPersonal {
   limitTime: string | null;
 }
 
+/**
+ * Un día de `GET /api/v1/habit-preferences/{habitId}/weekdays` — la hora de ESE día (V39).
+ *
+ * Vienen los siete siempre, resueltos por el servidor: `custom` dice si ese día tiene hora propia
+ * o si hereda la general. La pantalla no mezcla nada — esa mezcla es la precedencia y vive en el
+ * backend, para que no existan dos implementaciones de la misma regla.
+ */
+export interface DiaDeLaSemanaApi {
+  /** Nombre de `DayOfWeek`: `MONDAY`..`SUNDAY`. */
+  weekday: string;
+  /** `HH:mm:ss`, ya resuelta para ese día. */
+  triggerTime: string | null;
+  limitTime: string | null;
+  custom: boolean;
+}
+
 /** Un ítem de `GET /api/v1/habit-preferences` — el horario, propio o el del catálogo. */
 export interface PreferenciaHabitoApi {
   habitId: string;

@@ -21,6 +21,23 @@ export type DiaDelPlan = 'LUN' | 'MAR' | 'MIÉ' | 'JUE' | 'VIE' | 'SÁB' | 'DOM'
 
 export const DIAS_DEL_PLAN: DiaDelPlan[] = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'];
 
+/**
+ * El nombre que el backend usa para cada día (`java.time.DayOfWeek`), que es el mismo vocabulario
+ * de `activeWeekdays` en `GET /api/v1/habits` y de las rutas `/weekdays/{weekday}`.
+ *
+ * Va acá y no en la pantalla porque es una propiedad del día, no de quién lo dibuja: el día que
+ * otro módulo tenga que hablar de días con el servidor, la traducción ya existe y es una sola.
+ */
+export const NOMBRE_ISO_DEL_DIA: Record<DiaDelPlan, string> = {
+  LUN: 'MONDAY',
+  MAR: 'TUESDAY',
+  'MIÉ': 'WEDNESDAY',
+  JUE: 'THURSDAY',
+  VIE: 'FRIDAY',
+  'SÁB': 'SATURDAY',
+  DOM: 'SUNDAY',
+};
+
 /** Indice de HOY dentro de una semana que arranca en lunes (0 = lunes … 6 = domingo). */
 export const INDICE_DE_HOY = (new Date().getDay() + 6) % 7;
 
