@@ -61,6 +61,25 @@ import type * as TipoNotificaciones from 'expo-notifications';
 
 const PREFIJO_CLAVE = 'renaser.habitos.recordatorio.';
 
+/** El repaso semanal es UNO por persona, no uno por hábito: clave aparte. */
+const CLAVE_REPASO = 'renaser.habitos.repasoSemanal.';
+
+/**
+ * Domingo a las 19:00.
+ *
+ * **`1` es DOMINGO, no lunes.** El trigger `WEEKLY` de expo-notifications numera los días con
+ * `1 = domingo` (está en sus propios tipos: *"Weekdays are specified with a number from 1 through
+ * 7, with 1 indicating Sunday"*), o sea al revés que ISO-8601, que es lo que usa el resto de este
+ * proyecto (`NOMBRE_ISO_DEL_DIA`, `dia_semana` en la base). Poner 7 acá mandaría el aviso los
+ * sábados y nadie se daría cuenta hasta que alguien lo reportara.
+ *
+ * Las 19:00 del domingo: la tarde en que ya se sabe cómo viene la semana y todavía se puede
+ * acomodar. Más temprano nadie está pensando en el lunes; más tarde ya no hay ganas de tocar nada.
+ */
+const DOMINGO_EN_EXPO = 1;
+const HORA_REPASO = 19;
+const MINUTO_REPASO = 0;
+
 /** Canal de Android. Sin uno propio, el sistema agrupa estos avisos con cualquier otro. */
 const CANAL_ANDROID = 'recordatorios-habitos';
 
@@ -207,4 +226,57 @@ export async function programar(
     await AsyncStorage.setItem(claveDe(userId, habitoId), id);
     return true;
   }, false);
+}
+
+/** `true` si esta persona tiene puesto el repaso semanal en ESTE teléfono. */
+export async function tieneRepasoSemanal(userId: string): Promise<boolean> {
+  if (!HAY_RECORDATORIOS) return false;
+  return sinRomper(async () => (await AsyncStorage.getItem(CLAVE_REPASO + userId)) !== null, false);
+}
+
+/**
+ * El aviso de los domingos para armar la semana.
+ *
+ * Es del PROGRAMA y no de un hábito: uno solo por persona, con su propio texto y su propio
+ * disparador. Por eso no vive en la hoja de un hábito ni se multiplica por dimensión.
+ *
+ * Devuelve `false` si no se pudo (sin permiso, web o Expo Go).
+ */
+export async function programarRepasoSemanal(userId: string): Promise<boolean> {
+  const N = notificaciones();
+  if (!N) return false;
+  await cancelarRepasoSemanal(userId);
+  return sinRomper(async () => {
+    if (!(await pedirPermiso())) return false;
+    await asegurarCanal();
+    const id = await N.scheduleNotificationAsync({
+      content: {
+        title: 'Armá tu semana',
+        body: 'Revisá a qué hora va cada hábito de lunes a domingo. Lo que dejes hoy rige desde mañana.',
+        sound: true,
+      },
+      trigger: {
+        type: N.SchedulableTriggerInputTypes.WEEKLY,
+        weekday: DOMINGO_EN_EXPO,
+        hour: HORA_REPASO,
+        minute: MINUTO_REPASO,
+        channelId: CANAL_ANDROID,
+      },
+    });
+    await AsyncStorage.setItem(CLAVE_REPASO + userId, id);
+    return true;
+  }, false);
+}
+
+/** Quita el aviso de los domingos. Idempotente. */
+export async function cancelarRepasoSemanal(userId: string): Promise<void> {
+  const N = notificaciones();
+  if (!N) return;
+  await sinRomper(async () => {
+    const id = await AsyncStorage.getItem(CLAVE_REPASO + userId);
+    if (id) {
+      await N.cancelScheduledNotificationAsync(id);
+      await AsyncStorage.removeItem(CLAVE_REPASO + userId);
+    }
+  }, undefined);
 }

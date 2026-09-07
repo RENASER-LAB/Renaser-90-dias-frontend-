@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Switch } from 'react-native';
 import { Alert } from '../components/Alerta';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
@@ -23,6 +23,7 @@ import { useClaseDiaria } from '../features/academy/hooks/useClaseDiaria';
 import type { ClaseDiariaApi } from '../features/academy/types/academy.types';
 import { irAPestana } from '../navigation/navegacionRef';
 import { useProgramaDia } from '../features/programa/hooks/useProgramaDia';
+import * as recordatorios from '../features/habits/notificaciones/recordatoriosDeHabito';
 import {
   diaAnterior,
   formatearFechaLarga,
@@ -243,6 +244,40 @@ export default function TrainingScreen() {
    */
   const [pastillaVisible, setPastillaVisible] = useState(false);
   const { user } = useAuth();
+
+  /**
+   * El aviso de los domingos para armar la semana (pedido del dueño 2026-09-07).
+   *
+   * Vive acá y no en la hoja de planificar porque es del PROGRAMA, no de un hábito ni de una
+   * dimensión: uno solo por persona. Ponerlo en la hoja lo habría multiplicado por cuatro y habría
+   * dado a entender que es del hábito que estás mirando.
+   *
+   * `null` mientras no se sabe: en web y en Expo Go no hay alarmas locales y la tarjeta no aparece,
+   * en vez de ofrecer un aviso que nunca sonaría.
+   */
+  const [repasoSemanal, setRepasoSemanal] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!user?.id || !recordatorios.HAY_RECORDATORIOS) return;
+    void recordatorios.tieneRepasoSemanal(user.id).then(setRepasoSemanal);
+  }, [user?.id]);
+
+  const alternarRepasoSemanal = async (querido: boolean) => {
+    if (!user?.id) return;
+    setRepasoSemanal(querido);
+    if (!querido) {
+      await recordatorios.cancelarRepasoSemanal(user.id);
+      return;
+    }
+    const ok = await recordatorios.programarRepasoSemanal(user.id);
+    if (!ok) {
+      // Sin permiso no se promete nada: el interruptor vuelve solo y se dice por qué.
+      setRepasoSemanal(false);
+      Alert.alert(
+        'Falta el permiso de notificaciones',
+        'Habilitá las notificaciones de la app para que podamos avisarte los domingos.',
+      );
+    }
+  };
   const espiritu = useEspiritu();
   /** El dia en curso, o el ya entregado de hoy para poder releer lo que escribio. */
   const diaDePastilla = espiritu.diaEnCurso ?? espiritu.diaEntregadoHoy;
@@ -560,6 +595,27 @@ export default function TrainingScreen() {
               <Text style={[t.sectionTitle, { color: c.text }]}>TU ENTRENAMIENTO INTEGRAL</Text>
               <Text style={[t.sectionSub, { color: c.micro, marginTop: 4 }]}>Cinco dimensiones. Un sistema.</Text>
             </View>
+
+            {/* Aviso de los domingos. Solo donde puede sonar de verdad. */}
+            {recordatorios.HAY_RECORDATORIOS && repasoSemanal !== null && !programaSinArrancar && (
+              <View style={[styles.repasoSemanal, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
+                <Icon name="calendar" size={16} color={c.gold} />
+                <View style={{ flex: 1, flexShrink: 1 }}>
+                  <Text style={[t.body, { color: c.textStrong, fontSize: 13, fontWeight: '600' }]}>
+                    Armá tu semana los domingos
+                  </Text>
+                  <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5, lineHeight: 14 }]}>
+                    Te avisamos a las 19:00 para revisar a qué hora va cada hábito
+                  </Text>
+                </View>
+                <Switch
+                  value={repasoSemanal}
+                  onValueChange={valor => void alternarRepasoSemanal(valor)}
+                  trackColor={{ false: '#332C20', true: c.gold }}
+                  thumbColor={repasoSemanal ? '#1E1B18' : '#888'}
+                />
+              </View>
+            )}
 
             {/* El habito mas proximo a vencer, ARRIBA de las cinco dimensiones (pedido del dueno,
                 2026-09-05). Se dibuja solo si hay alguno vivo con plazo: cuando el dia esta
@@ -1114,6 +1170,16 @@ export default function TrainingScreen() {
 }
 
 const styles = StyleSheet.create({
+  repasoSemanal: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    minHeight: 56,
+  },
   // Aviso de "tu programa todavía no arrancó". Mismo lenguaje visual que el de Plan: recuadro
   // tenue con candado, no una alerta roja — no es un error, es que todavía no es el momento.
   avisoSinArrancar: {
