@@ -864,8 +864,9 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                 Todos esos días, desde mañana — el día en curso no se reacomoda.
               </Text>
 
-              {/* En web no se ofrece: `expo-notifications` no soporta esa plataforma, así que
-                  mostrarlo sería prometer un aviso que nunca va a sonar. */}
+              {/* No se ofrece donde no se puede cumplir: web (la librería no soporta esa
+                  plataforma) ni Expo Go (el push salió de ahí en el SDK 53). Ver
+                  `recordatoriosDeHabito`. Mostrarlo igual sería prometer un aviso que no suena. */}
               {recordatorios.HAY_RECORDATORIOS && (
                 <>
                   <Text style={[t.micro, { color: c.gold, fontWeight: '700', marginTop: 12 }]}>

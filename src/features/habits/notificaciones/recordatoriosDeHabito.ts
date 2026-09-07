@@ -1,6 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-import * as Notifications from 'expo-notifications';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
+// SOLO tipos: `import type` se borra al compilar, así que esto NO carga el módulo en runtime. Ver
+// el bloque "POR QUÉ NO SE IMPORTA ARRIBA" más abajo — importarlo de verdad rompe Expo Go.
+import type * as TipoNotificaciones from 'expo-notifications';
 
 /**
  * Las alarmas de los hábitos, en el teléfono.
@@ -18,6 +21,25 @@ import * as Notifications from 'expo-notifications';
  * recordatorio y cuántos minutos antes) se guarda en el backend, en los campos que
  * `habit-preferences` ya tiene. El día que el push del servidor exista, el dato ya está donde
  * tiene que estar y esto pasa a ser el respaldo sin conexión.
+ *
+ * ## POR QUÉ NO SE IMPORTA ARRIBA (y por qué en Expo Go no hay recordatorios)
+ *
+ * `expo-notifications` tiene un módulo de efecto secundario —`DevicePushTokenAutoRegistration.fx`—
+ * que llama a `addPushTokenListener` **al importarse**. Y el push remoto salió de Expo Go en el
+ * SDK 53, así que ese registro tira:
+ *
+ *     Android Push notifications (remote notifications) functionality provided by
+ *     expo-notifications was removed from Expo Go with the release of SDK 53.
+ *
+ * No es cómo se use la librería: **alcanza con importarla** para que la app no arranque en Expo Go.
+ * Y como el import es estático, pasa aunque nadie toque un recordatorio.
+ *
+ * Por eso acá el módulo se carga con `require` PEREZOSO y solo cuando la plataforma lo soporta. Los
+ * tipos entran por `import type`, que se borra al compilar y no carga nada.
+ *
+ * Consecuencia, dicha sin vueltas: **en Expo Go no hay recordatorios**. La pantalla no ofrece el
+ * control, igual que en web. Funcionan en un development build y en la app publicada, que es donde
+ * el aprendiz la va a usar. Lo que NO pasa es que la app se caiga por probarla en Expo Go.
  *
  * ## WEB
  *
@@ -44,8 +66,40 @@ const CANAL_ANDROID = 'recordatorios-habitos';
 
 const MINUTOS_POR_DIA = 24 * 60;
 
-/** `true` cuando la plataforma puede programar alarmas locales. Web no puede. */
-export const HAY_RECORDATORIOS = Platform.OS !== 'web';
+/**
+ * Expo Go se reconoce por `executionEnvironment`, que es el criterio que Expo documenta —
+ * `appOwnership` está deprecado. En un development build o en la app publicada da `Bare`/`Standalone`.
+ */
+const ES_EXPO_GO = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+
+/** `true` cuando la plataforma puede programar alarmas locales. Web y Expo Go no pueden. */
+export const HAY_RECORDATORIOS = Platform.OS !== 'web' && !ES_EXPO_GO;
+
+let modulo: typeof TipoNotificaciones | null = null;
+
+/**
+ * Carga `expo-notifications` la primera vez que hace falta, y nunca donde no se puede.
+ *
+ * El `require` es a propósito y no un `import()` dinámico: Metro resuelve el `require` en el
+ * bundle igual, pero solo EJECUTA el módulo cuando esta función corre — que es exactamente lo que
+ * hace falta para que el efecto secundario del push no se dispare en Expo Go.
+ */
+function notificaciones(): typeof TipoNotificaciones | null {
+  if (!HAY_RECORDATORIOS) return null;
+  if (modulo === null) {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    modulo = require('expo-notifications') as typeof TipoNotificaciones;
+    modulo.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+      }),
+    });
+  }
+  return modulo;
+}
 
 /** Ninguna operación de almacenamiento debe poder tumbar la app. */
 async function sinRomper<T>(operacion: () => Promise<T>, porDefecto: T): Promise<T> {
@@ -56,31 +110,19 @@ async function sinRomper<T>(operacion: () => Promise<T>, porDefecto: T): Promise
   }
 }
 
-if (HAY_RECORDATORIOS) {
-  // Cómo se presenta el aviso si llega con la app abierta. Va al importar el módulo y no dentro de
-  // una función: Expo lo quiere configurado antes de que llegue la primera notificación.
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowBanner: true,
-      shouldShowList: true,
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-    }),
-  });
-}
-
 /**
  * Pide permiso, si hace falta. Devuelve `false` en web y cuando la persona lo niega — el llamador
  * tiene que respetar ese `false` y no prometer un aviso que no va a llegar.
  */
 export async function pedirPermiso(): Promise<boolean> {
-  if (!HAY_RECORDATORIOS) return false;
+  const N = notificaciones();
+  if (!N) return false;
   return sinRomper(async () => {
-    const actual = await Notifications.getPermissionsAsync();
+    const actual = await N.getPermissionsAsync();
     if (actual.granted) return true;
     // `canAskAgain === false` = ya lo negó y iOS no vuelve a preguntar: insistir no hace nada.
     if (!actual.canAskAgain) return false;
-    const pedido = await Notifications.requestPermissionsAsync({
+    const pedido = await N.requestPermissionsAsync({
       ios: { allowAlert: true, allowBadge: false, allowSound: true },
     });
     return pedido.granted;
@@ -89,10 +131,11 @@ export async function pedirPermiso(): Promise<boolean> {
 
 /** El canal de Android tiene que existir antes de programar contra él. Idempotente. */
 async function asegurarCanal(): Promise<void> {
-  if (Platform.OS !== 'android') return;
-  await Notifications.setNotificationChannelAsync(CANAL_ANDROID, {
+  const N = notificaciones();
+  if (!N || Platform.OS !== 'android') return;
+  await N.setNotificationChannelAsync(CANAL_ANDROID, {
     name: 'Recordatorios de hábitos',
-    importance: Notifications.AndroidImportance.HIGH,
+    importance: N.AndroidImportance.HIGH,
     sound: 'default',
   });
 }
@@ -103,12 +146,13 @@ function claveDe(userId: string, habitoId: string): string {
 
 /** Cancela la alarma de ese hábito, si había una. Idempotente. */
 export async function cancelar(userId: string, habitoId: string): Promise<void> {
-  if (!HAY_RECORDATORIOS) return;
+  const N = notificaciones();
+  if (!N) return;
   await sinRomper(async () => {
     const clave = claveDe(userId, habitoId);
     const id = await AsyncStorage.getItem(clave);
     if (id) {
-      await Notifications.cancelScheduledNotificationAsync(id);
+      await N.cancelScheduledNotificationAsync(id);
       await AsyncStorage.removeItem(clave);
     }
   }, undefined);
@@ -130,7 +174,8 @@ export async function programar(
   horaHHmm: string,
   minutosAntes: number,
 ): Promise<boolean> {
-  if (!HAY_RECORDATORIOS) return false;
+  const N = notificaciones();
+  if (!N) return false;
   const [h, m] = horaHHmm.split(':').map(Number);
   if (!Number.isFinite(h) || !Number.isFinite(m)) return false;
 
@@ -142,14 +187,14 @@ export async function programar(
     // 00:30 con 45 son las 23:45 del anterior). El módulo se normaliza para que nunca quede
     // negativo, que es el caso en que `DAILY` recibiría una hora inválida.
     const minutos = ((h * 60 + m - minutosAntes) % MINUTOS_POR_DIA + MINUTOS_POR_DIA) % MINUTOS_POR_DIA;
-    const id = await Notifications.scheduleNotificationAsync({
+    const id = await N.scheduleNotificationAsync({
       content: {
         title: minutosAntes > 0 ? `En ${minutosAntes} min: ${titulo}` : titulo,
         body: `Te toca a las ${horaHHmm}.`,
         sound: 'default',
       },
       trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.DAILY,
+        type: N.SchedulableTriggerInputTypes.DAILY,
         hour: Math.floor(minutos / 60),
         minute: minutos % 60,
         channelId: CANAL_ANDROID,
