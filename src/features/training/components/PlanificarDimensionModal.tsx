@@ -117,11 +117,10 @@ const PASO_DE_AJUSTE = 15;
  * Cuatro y no un campo libre: elegir entre cuatro es un toque, escribir un número son cinco y una
  * decisión que nadie tiene ganas de tomar. Si alguien necesita 7 minutos, no necesita 7 minutos.
  */
-const ANTELACIONES: readonly { minutos: number | null; etiqueta: string }[] = [
-  { minutos: null, etiqueta: 'Sin aviso' },
-  { minutos: 0, etiqueta: 'A la hora' },
-  { minutos: 10, etiqueta: '10 min antes' },
+const ANTELACIONES: readonly { minutos: number; etiqueta: string }[] = [
   { minutos: 30, etiqueta: '30 min antes' },
+  { minutos: 10, etiqueta: '10 min antes' },
+  { minutos: 0, etiqueta: 'A la hora' },
 ];
 
 /**
@@ -203,8 +202,13 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
   const [diasEnEdicion, setDiasEnEdicion] = useState<DiaDelPlan[]>([]);
   /** La hora de cada día, tal cual la resolvió el servidor. `propio` = tiene hora propia. */
   const [horarioSemanal, setHorarioSemanal] = useState<Record<string, { hora: string | null; propio: boolean }>>({});
-  /** Antelación del recordatorio del hábito abierto. `null` = sin aviso. */
-  const [antelacion, setAntelacion] = useState<number | null>(null);
+  /**
+   * Los avisos del hábito abierto, en minutos antes. Vacío = sin aviso.
+   *
+   * Es un conjunto porque se puede querer más de uno — "30 min antes Y a la hora" —, y cada uno es
+   * una alarma diaria propia en el teléfono.
+   */
+  const [antelaciones, setAntelaciones] = useState<number[]>([]);
   const [hora, setHora] = useState(6);
   const [minuto, setMinuto] = useState(0);
   /**
@@ -321,9 +325,16 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
       }
     })();
     const previa = preferencias.get(h.habitoId);
-    // El recordatorio guardado en el servidor. Ahora se puede leer: hasta 2026-09-07 el GET no lo
-    // devolvía y no había forma de saber si estaba puesto.
-    setAntelacion(previa?.reminderEnabled ? (previa.reminderMinutesBefore ?? 0) : null);
+    // El conjunto vive en el teléfono (`minutos_recordatorio` del backend es UN solo número). Si
+    // no hay nada guardado ahí, se cae al campo del servidor, que sí tiene el aviso principal:
+    // así quien ya lo tenía puesto no lo pierde.
+    void recordatorios.antelacionesDe(claveUsuario, h.habitoId).then(locales => {
+      if (locales.length > 0) {
+        setAntelaciones(locales);
+        return;
+      }
+      setAntelaciones(previa?.reminderEnabled ? [previa.reminderMinutesBefore ?? 0] : []);
+    });
     setHabitoEnEdicion(h);
   };
 
@@ -518,7 +529,12 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
       // El `limitTime` que ya tenía: el PATCH reemplaza los dos campos a la vez y mandar `null`
       // le borraría la hora límite a hábitos que sí vencen dentro del día.
       const previa = preferencias.get(h.habitoId);
-      const recordatorio = { activo: antelacion !== null, minutosAntes: antelacion };
+      // Al servidor va la antelación MÁS TEMPRANA: es lo que ese campo puede representar, y la
+      // que mejor describe "cuándo hay que empezar a avisar" si algún día el push sale de ahí.
+      const recordatorio = {
+        activo: antelaciones.length > 0,
+        minutosAntes: antelaciones.length > 0 ? Math.max(...antelaciones) : null,
+      };
       const resultado = await habitsApi.cambiarHorario(
         h.habitoId,
         `${horaTexto}:00`,
@@ -528,15 +544,10 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
       // La PREFERENCIA vive en el servidor (viaja entre dispositivos); la ALARMA la dispara este
       // teléfono. Si la persona niega el permiso, `programar` devuelve false y se lo decimos en vez
       // de dejarla creyendo que va a sonar.
-      let avisoImposible = false;
-      if (antelacion === null) {
-        await recordatorios.cancelar(claveUsuario, h.habitoId);
-      } else {
-        const ok = await recordatorios.programar(
-          claveUsuario, h.habitoId, h.title, horaTexto, antelacion,
-        );
-        avisoImposible = !ok;
-      }
+      const ok = await recordatorios.programar(
+        claveUsuario, h.habitoId, h.title, horaTexto, antelaciones,
+      );
+      const avisoImposible = antelaciones.length > 0 && !ok;
       // El horario local se actualiza acá y no recargando todo: recargar con la hoja abierta
       // reordenaría la lista debajo del dedo.
       setPreferencias(prev => {
@@ -1077,15 +1088,47 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
               {recordatorios.HAY_RECORDATORIOS && (
                 <>
                   <Text style={[t.micro, { color: c.gold, fontWeight: '700', marginTop: 12 }]}>
-                    RECORDATORIO
+                    RECORDATORIO {antelaciones.length > 1 ? `(${antelaciones.length} avisos)` : ''}
                   </Text>
                   <View style={styles.filaAntelaciones}>
+                    {/* "Sin aviso" no es una opción más: es el conjunto vacío, y por eso va aparte
+                        y no compite con las otras tres. */}
+                    <Pressable
+                      onPress={() => setAntelaciones([])}
+                      style={[
+                        styles.pastillaAntelacion,
+                        {
+                          borderColor: antelaciones.length === 0 ? c.gold : c.border,
+                          backgroundColor: antelaciones.length === 0 ? c.cardBgAlt : 'transparent',
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          t.micro,
+                          {
+                            fontSize: 10.5,
+                            fontWeight: '700',
+                            color: antelaciones.length === 0 ? c.gold : c.textSoft,
+                          },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        Sin aviso
+                      </Text>
+                    </Pressable>
                     {ANTELACIONES.map(({ minutos, etiqueta }) => {
-                      const on = antelacion === minutos;
+                      const on = antelaciones.includes(minutos);
                       return (
                         <Pressable
                           key={etiqueta}
-                          onPress={() => setAntelacion(minutos)}
+                          onPress={() =>
+                            setAntelaciones(prev =>
+                              prev.includes(minutos)
+                                ? prev.filter(x => x !== minutos)
+                                : [...prev, minutos].sort((a, b) => b - a),
+                            )
+                          }
                           style={[
                             styles.pastillaAntelacion,
                             {

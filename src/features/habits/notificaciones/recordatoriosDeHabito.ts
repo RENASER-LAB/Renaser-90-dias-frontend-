@@ -65,6 +65,20 @@ const PREFIJO_CLAVE = 'renaser.habitos.recordatorio.';
 const CLAVE_REPASO = 'renaser.habitos.repasoSemanal.';
 
 /**
+ * QUÉ antelaciones eligió, por hábito.
+ *
+ * **Por qué acá y no en el backend.** `preferencias_horario.minutos_recordatorio` es UN solo
+ * número, y desde que se puede pedir "30 min antes Y a la hora" el dato es un conjunto. Antes de
+ * inventarle al servidor una semántica que nadie pidió —o de guardar solo uno y perder el resto en
+ * silencio—, el conjunto vive donde viven las alarmas: en este teléfono.
+ *
+ * Al backend se le sigue mandando la antelación MÁS TEMPRANA en `reminderMinutesBefore`, que es la
+ * que un push del servidor usaría el día que exista. No es una mentira a medias: es el dato que ese
+ * campo puede representar, y el que mejor describe "cuándo hay que empezar a avisar".
+ */
+const CLAVE_ANTELACIONES = 'renaser.habitos.antelaciones.';
+
+/**
  * Domingo a las 19:00.
  *
  * **`1` es DOMINGO, no lunes.** El trigger `WEEKLY` de expo-notifications numera los días con
@@ -165,65 +179,104 @@ function claveDe(userId: string, habitoId: string): string {
   return `${PREFIJO_CLAVE}${userId}.${habitoId}`;
 }
 
-/** Cancela la alarma de ese hábito, si había una. Idempotente. */
+/** Cancela TODAS las alarmas de ese hábito. Idempotente. */
 export async function cancelar(userId: string, habitoId: string): Promise<void> {
   const N = notificaciones();
   if (!N) return;
   await sinRomper(async () => {
     const clave = claveDe(userId, habitoId);
-    const id = await AsyncStorage.getItem(clave);
-    if (id) {
+    const guardado = await AsyncStorage.getItem(clave);
+    if (!guardado) return;
+    for (const id of leerIds(guardado)) {
       await N.cancelScheduledNotificationAsync(id);
-      await AsyncStorage.removeItem(clave);
     }
+    await AsyncStorage.removeItem(clave);
   }, undefined);
 }
 
 /**
- * Programa el aviso diario de un hábito, `minutosAntes` antes de su hora.
+ * Los ids guardados. Tolera el formato VIEJO —un id suelto, de cuando había un solo recordatorio
+ * por hábito— para no dejar alarmas huérfanas sonando en los teléfonos que ya lo tenían puesto.
+ */
+function leerIds(guardado: string): string[] {
+  try {
+    const leido = JSON.parse(guardado);
+    return Array.isArray(leido) ? leido.filter((x): x is string => typeof x === 'string') : [];
+  } catch {
+    return [guardado];
+  }
+}
+
+/** Las antelaciones elegidas para un hábito, en minutos. Vacío = sin aviso. */
+export async function antelacionesDe(userId: string, habitoId: string): Promise<number[]> {
+  if (!HAY_RECORDATORIOS) return [];
+  return sinRomper(async () => {
+    const crudo = await AsyncStorage.getItem(CLAVE_ANTELACIONES + `${userId}.${habitoId}`);
+    if (!crudo) return [];
+    const leido = JSON.parse(crudo);
+    return Array.isArray(leido) ? leido.filter((x): x is number => typeof x === 'number') : [];
+  }, []);
+}
+
+/**
+ * Programa los avisos diarios de un hábito: uno por cada antelación elegida.
  *
  * Cancela primero el anterior: si no, cambiar la hora dejaría sonando la alarma vieja y sumaría
  * una nueva cada vez. Devuelve `false` si no se pudo (sin permiso, o web).
  *
  * @param horaHHmm hora del hábito, `HH:mm`.
- * @param minutosAntes cuánto antes avisar. 0 = a la hora exacta.
+ * @param antelaciones cuántos minutos antes avisar, uno por aviso. `0` = a la hora exacta;
+ *                     vacío = sin aviso. Se programa una alarma diaria por cada uno.
  */
 export async function programar(
   userId: string,
   habitoId: string,
   titulo: string,
   horaHHmm: string,
-  minutosAntes: number,
+  antelaciones: number[],
 ): Promise<boolean> {
   const N = notificaciones();
   if (!N) return false;
   const [h, m] = horaHHmm.split(':').map(Number);
   if (!Number.isFinite(h) || !Number.isFinite(m)) return false;
 
+  // Cancela TODAS las anteriores antes de programar: sin esto, cambiar de "10 min" a "30 min"
+  // dejaría las dos sonando, y cada guardado sumaría una más.
   await cancelar(userId, habitoId);
+  const claveSet = CLAVE_ANTELACIONES + `${userId}.${habitoId}`;
+  if (antelaciones.length === 0) {
+    await sinRomper(() => AsyncStorage.removeItem(claveSet), undefined);
+    return true;
+  }
   return sinRomper(async () => {
     if (!(await pedirPermiso())) return false;
     await asegurarCanal();
-    // Restar puede cruzar la medianoche (07:00 con 90 de antelación son las 05:30 del mismo día;
-    // 00:30 con 45 son las 23:45 del anterior). El módulo se normaliza para que nunca quede
-    // negativo, que es el caso en que `DAILY` recibiría una hora inválida.
-    const minutos = ((h * 60 + m - minutosAntes) % MINUTOS_POR_DIA + MINUTOS_POR_DIA) % MINUTOS_POR_DIA;
-    const id = await N.scheduleNotificationAsync({
-      content: {
-        title: minutosAntes > 0 ? `En ${minutosAntes} min: ${titulo}` : titulo,
-        body: `Te toca a las ${horaHHmm}.`,
-        // `true` y no `'default'`: la cadena se interpreta como el nombre de un archivo de sonido
-        // propio, y la librería se queja de no encontrarlo. El booleano pide el del sistema.
-        sound: true,
-      },
-      trigger: {
-        type: N.SchedulableTriggerInputTypes.DAILY,
-        hour: Math.floor(minutos / 60),
-        minute: minutos % 60,
-        channelId: CANAL_ANDROID,
-      },
-    });
-    await AsyncStorage.setItem(claveDe(userId, habitoId), id);
+    const ids: string[] = [];
+    // De la más temprana a la más tardía, que es el orden en que van a sonar.
+    for (const minutosAntes of [...antelaciones].sort((a, b) => b - a)) {
+      // Restar puede cruzar la medianoche (07:00 con 90 de antelación son las 05:30 del mismo día;
+      // 00:30 con 45 son las 23:45 del anterior). El módulo se normaliza para que nunca quede
+      // negativo, que es el caso en que `DAILY` recibiría una hora inválida.
+      const minutos = ((h * 60 + m - minutosAntes) % MINUTOS_POR_DIA + MINUTOS_POR_DIA) % MINUTOS_POR_DIA;
+      const id = await N.scheduleNotificationAsync({
+        content: {
+          title: minutosAntes > 0 ? `En ${minutosAntes} min: ${titulo}` : titulo,
+          body: `Te toca a las ${horaHHmm}.`,
+          // `true` y no `'default'`: la cadena se interpreta como el nombre de un archivo de sonido
+          // propio, y la librería se queja de no encontrarlo. El booleano pide el del sistema.
+          sound: true,
+        },
+        trigger: {
+          type: N.SchedulableTriggerInputTypes.DAILY,
+          hour: Math.floor(minutos / 60),
+          minute: minutos % 60,
+          channelId: CANAL_ANDROID,
+        },
+      });
+      ids.push(id);
+    }
+    await AsyncStorage.setItem(claveDe(userId, habitoId), JSON.stringify(ids));
+    await AsyncStorage.setItem(claveSet, JSON.stringify(antelaciones));
     return true;
   }, false);
 }
