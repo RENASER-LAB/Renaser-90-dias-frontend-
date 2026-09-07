@@ -470,12 +470,24 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
     setGuardando(false);
     // Quedan marcados SOLO los que fallaron: reintentar es volver a tocar el botón.
     setDiasEnEdicion(fallidos);
+
+    // Confirmar SIEMPRE, no solo cuando algo sale mal.
+    //
+    // > Reportado por el dueño: guardó cinco días, la pantalla no dijo nada y tuvo que ir a mirar
+    // > la base para saber si había pasado algo. Guardar el horario general sí avisaba; guardar
+    // > días era mudo. Un guardado silencioso se siente igual que uno que falló.
     if (fallidos.length > 0) {
       Alert.alert(
         'Se guardó a medias',
         `${guardados.join(', ') || 'Ninguno'} quedaron a las ${horaTexto}. No pudimos con ${fallidos.join(', ')}.`,
       );
+      return;
     }
+    Alert.alert(
+      'Horario guardado',
+      `“${h.title}” queda a las ${horaTexto} los ${guardados.join(', ').toLowerCase()}, todas las semanas.` +
+        '\n\nEmpieza a regir mañana: el día en curso no se reacomoda.',
+    );
   };
 
   /** Devuelve un día al horario general. */
