@@ -31,6 +31,12 @@ import { ClaseDiariaModal } from '../features/academy/components/ClaseDiariaModa
 import { useClaseDiaria } from '../features/academy/hooks/useClaseDiaria';
 import type { ClaseDiariaApi } from '../features/academy/types/academy.types';
 import { irAPestana } from '../navigation/navegacionRef';
+import { useProgramaDia } from '../features/programa/hooks/useProgramaDia';
+import {
+  diaAnterior,
+  formatearFechaLarga,
+  useArranqueDelPrograma,
+} from '../features/programa/hooks/useArranqueDelPrograma';
 import { borradorEspiritu } from '../features/spirit/storage/borradorEspiritu';
 import type { DayOfWeek } from './PlanScreen';
 
@@ -171,6 +177,24 @@ export default function TrainingScreen() {
     error: errorBackend,
     recargar: recargarEntrenamiento,
   } = useTraining();
+  /**
+   * ¿El programa de esta persona ya arrancó?
+   *
+   * > **Hueco cerrado 2026-09-07.** Plan ya tenía esta compuerta desde D-84 y Training NO, así que
+   * > antes del Día 1 esta pantalla mostraba las cinco dimensiones con sus hábitos y el botón de
+   * > subir evidencia habilitado, como si el programa estuviera corriendo. Es el mismo problema
+   * > que D-84 describe para Plan: la pantalla no mentía por un texto, mentía por dejar hacer.
+   *
+   * Se reusa el hook de Plan tal cual, sin reglas propias — incluida la de D-103: quien eligió
+   * empezar MAÑANA sí puede organizar hoy ("hoy se organiza mañana"), y solo se bloquea a quien
+   * empieza pasado mañana o más tarde. Si esa regla cambia, tiene que cambiar en un solo lugar y
+   * valer para las dos pantallas.
+   */
+  const { diaPrograma, loading: cargandoDiaPrograma } = useProgramaDia();
+  const arranque = useArranqueDelPrograma(!cargandoDiaPrograma && diaPrograma === 0);
+  const programaSinArrancar =
+    arranque.estado === 'PENDIENTE_ELEGIR' || arranque.estado === 'ESPERANDO_INICIO';
+
   const [habits, setHabits] = useState<HabitItem[]>([]);
   useEffect(() => {
     if (!cargandoBackend && !errorBackend) {
@@ -509,6 +533,34 @@ export default function TrainingScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
+        {/* =================================================================== */}
+        {/* PROGRAMA SIN ARRANCAR — la misma compuerta que Plan tiene desde D-84.  */}
+        {/* Va arriba de las dos vistas porque el motivo no depende de si estás    */}
+        {/* mirando el catálogo de dimensiones o el detalle de una.                */}
+        {/* =================================================================== */}
+        {programaSinArrancar && (
+          <View
+            style={[styles.avisoSinArrancar, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
+            accessibilityLabel="Tu programa todavía no arrancó"
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Icon name="lock" size={13} color={c.gold} />
+              <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>
+                {arranque.estado === 'PENDIENTE_ELEGIR'
+                  ? 'Todavía no elegiste tu Día 1'
+                  : 'Tu programa arranca pronto'}
+              </Text>
+            </View>
+            <Text style={[t.body, { color: c.textSoft, fontSize: 13, lineHeight: 18 }]}>
+              {arranque.estado === 'PENDIENTE_ELEGIR'
+                ? 'Elegí en qué día querés empezar tus 90 días. Hasta entonces no hay evidencia que entregar.'
+                : `Empezás el ${formatearFechaLarga(arranque.fechaInicio)}. Desde el ${formatearFechaLarga(
+                    diaAnterior(arranque.fechaInicio),
+                  )} vas a poder organizar tus hábitos y entregar evidencia; hasta entonces no hay nada que hacer acá.`}
+            </Text>
+          </View>
+        )}
+
         {/* ========================================================================= */}
         {/* VISTA 1: CATÁLOGO DE LAS 5 DIMENSIONES PRINCIPALES                        */}
         {/* ========================================================================= */}
@@ -763,7 +815,7 @@ export default function TrainingScreen() {
                 {/* Solo aparece si hay algo que planificar: las rocas de VIDA Y      */}
                 {/* NEGOCIO no son hábitos de este módulo y no traen `habitoId`.      */}
                 {/* =============================================================== */}
-                {habitosPlanificables > 0 && (
+                {habitosPlanificables > 0 && !programaSinArrancar && (
                   <Pressable
                     onPress={() => setPlanificarVisible(true)}
                     style={[styles.planificarBigBtn, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}
@@ -836,14 +888,14 @@ export default function TrainingScreen() {
                     {/* Checkbox circular interactivo — deshabilitado sin track de hoy: no hay
                         ningún registro real que marcar (ver `tieneTrackHoy` en HabitItem). */}
                     <Pressable
-                      onPress={() => habit.tieneTrackHoy && toggleHabitState(habit.id)}
-                      disabled={!habit.tieneTrackHoy}
+                      onPress={() => habit.tieneTrackHoy && !programaSinArrancar && toggleHabitState(habit.id)}
+                      disabled={!habit.tieneTrackHoy || programaSinArrancar}
                       style={[
                         styles.habitCheckCircle,
                         {
                           borderColor: habit.done ? '#4E9F76' : c.tabInactive,
                           backgroundColor: habit.done ? '#4E9F76' : 'transparent',
-                          opacity: habit.tieneTrackHoy ? 1 : 0.35,
+                          opacity: habit.tieneTrackHoy && !programaSinArrancar ? 1 : 0.35,
                         },
                       ]}
                     >
@@ -852,7 +904,7 @@ export default function TrainingScreen() {
 
                     {/* Habit Info & Tap to open Evidence */}
                     <Pressable
-                      onPress={() => habit.tieneTrackHoy && openEvidenceModal(habit)}
+                      onPress={() => habit.tieneTrackHoy && !programaSinArrancar && openEvidenceModal(habit)}
                       style={{ flex: 1, gap: 2 }}
                     >
                       <View style={styles.habitMetaRow}>
@@ -903,14 +955,14 @@ export default function TrainingScreen() {
                         lo único que la tarjeta tiene que hacer fácil, que es entregar la prueba. */}
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 8 }}>
                       <Pressable
-                        onPress={() => habit.tieneTrackHoy && openEvidenceModal(habit)}
-                        disabled={!habit.tieneTrackHoy}
+                        onPress={() => habit.tieneTrackHoy && !programaSinArrancar && openEvidenceModal(habit)}
+                        disabled={!habit.tieneTrackHoy || programaSinArrancar}
                         style={[
                           styles.evidenceBtn,
                           {
                             borderColor: habit.hasEvidence ? '#4E9F76' : c.border,
                             backgroundColor: habit.hasEvidence ? 'rgba(78, 159, 118, 0.12)' : c.cardBgAlt,
-                            opacity: habit.tieneTrackHoy ? 1 : 0.35,
+                            opacity: habit.tieneTrackHoy && !programaSinArrancar ? 1 : 0.35,
                           },
                         ]}
                         hitSlop={8}
@@ -1170,6 +1222,15 @@ export default function TrainingScreen() {
 }
 
 const styles = StyleSheet.create({
+  // Aviso de "tu programa todavía no arrancó". Mismo lenguaje visual que el de Plan: recuadro
+  // tenue con candado, no una alerta roja — no es un error, es que todavía no es el momento.
+  avisoSinArrancar: {
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 14,
+    gap: 8,
+  },
   // "PLANIFICAR <DIMENSIÓN>": la opción grande del encabezado de la categoría. Alto mínimo 56
   // para que se pulse cómodo con una mano (AGENTS.md §4) y `flexShrink` en el texto para que en
   // pantallas angostas envuelva en vez de empujar el chevrón fuera de la tarjeta (§2).

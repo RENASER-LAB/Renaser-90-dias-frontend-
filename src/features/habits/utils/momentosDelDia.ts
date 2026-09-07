@@ -24,7 +24,7 @@
  * validarlo a mano en cada pantalla que los tocara.
  *
  * La noche es el bloque que envuelve la medianoche: va desde `inicioNoche` hasta `inicioMañana`
- * del día siguiente. Por eso 00:30 con la mañana empezando 05:00 es NOCHE, que es la corrección
+ * del día siguiente. Por eso 00:30 con la mañana empezando 03:00 es NOCHE, que es la corrección
  * que se pidió.
  */
 
@@ -50,11 +50,20 @@ const MINUTOS_POR_DIA = 24 * 60;
 
 /**
  * Los cortes de fábrica. `inicioTarde` (12:00) e `inicioNoche` (18:00) son EXACTAMENTE los de
- * `aMomento`, para que quien no toque nada vea lo mismo que veía. `inicioManana` en 05:00 es el
- * único valor nuevo: antes ese corte no existía porque la madrugada se hundía en "mañana".
+ * `aMomento`, para que quien no toque nada vea lo mismo que veía. `inicioManana` es el único valor
+ * nuevo: antes ese corte no existía porque la madrugada se hundía en "mañana".
+ *
+ * **03:00 y no 05:00** (pedido del dueño 2026-09-07): hay aprendices reales que se levantan a esa
+ * hora, y con la mañana empezando 05:00 su despertar caía en NOCHE — el mismo error que este
+ * archivo vino a corregir, solo que del otro lado. El corte de fábrica tiene que dejar adentro al
+ * que madruga más, porque quien no madruga puede correrlo y no le cambia nada.
+ *
+ * La NOCHE queda entonces de 18:00 a 03:00. No es que "termine a las 00:00": termina donde empieza
+ * la mañana, porque los tres bloques cubren el círculo entero — si la noche cerrara a medianoche,
+ * las 01:00 no serían de ningún bloque.
  */
 export const RANGOS_POR_DEFECTO: RangosDelDia = {
-  inicioManana: 5 * 60,
+  inicioManana: 3 * 60,
   inicioTarde: 12 * 60,
   inicioNoche: 18 * 60,
 };
@@ -105,7 +114,7 @@ export function limitesDelMomento(
   return { desde: rangos.inicioNoche, hasta: rangos.inicioManana + MINUTOS_POR_DIA };
 }
 
-/** `05:00 – 12:00`, para pintar el rango de un bloque. */
+/** `03:00 – 12:00`, para pintar el rango de un bloque. */
 export function rangoTexto(momento: MomentoDelDia, rangos: RangosDelDia): string {
   const { desde, hasta } = limitesDelMomento(momento, rangos);
   return `${aHoraTexto(desde)} – ${aHoraTexto(hasta)}`;

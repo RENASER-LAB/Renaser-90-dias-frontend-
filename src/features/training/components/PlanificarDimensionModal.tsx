@@ -62,7 +62,7 @@ import type { HabitItem } from '../../../screens/TrainingScreen';
  *
  * **2. Dónde empieza cada bloque lo decide la persona** (`utils/momentosDelDia.ts`), y se guarda en
  * el teléfono (`storage/rangosDelDia.ts`) porque el backend no tiene dónde ponerlo todavía. Esto
- * es lo que arregla el "dormir aparece en la mañana": con la mañana empezando 05:00, las 00:30 son
+ * es lo que arregla el "dormir aparece en la mañana": con la mañana empezando 03:00, las 00:30 son
  * NOCHE. Con los cortes viejos —clavados en `hora < 12`— eran mañana.
  *
  * **3. Guardar uno NO cierra la hoja ni pisa a los demás.** Cada hábito guardado se marca con su
@@ -220,6 +220,19 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
   // y eso es justo el bug que había en Plan (hábito de las 21:00 rotulado "MAÑANA").
   const momentoActual = momentoDeMinutos(minutosElegidos, rangos);
   const horaTexto = `${aDosDigitos(hora)}:${aDosDigitos(minuto)}`;
+
+  // Los dos ayudantes van ANTES de `visibles`, que los usa. Declarados debajo eran `const` en
+  // zona muerta temporal: la hoja reventaba con "undefined is not a function" en el filtro.
+  /** La hora que rige HOY para un hábito: la recién guardada, la del backend, o la de la lista. */
+  const horaDe = (habitoId: string, porDefecto: string) =>
+    guardados[habitoId] ?? preferencias.get(habitoId)?.triggerTime?.slice(0, 5) ?? porDefecto;
+
+  /** En qué bloque cae hoy. `null` = todavía no tiene hora, y esos NO se filtran nunca. */
+  const bloqueDe = (habitoId: string, porDefecto: string): MomentoDelDia | null => {
+    const minutos = aMinutos(horaDe(habitoId, porDefecto));
+    return minutos === null ? null : momentoDeMinutos(minutos, rangos);
+  };
+
   /**
    * Lo que la lista muestra. Los hábitos SIN hora aparecen siempre, filtre lo que filtre: son
    * justamente los que hace falta ubicar, y esconderlos detrás de un bloque que todavía no
@@ -253,16 +266,6 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
     setHora(Math.floor(desde / 60));
     setMinuto(desde % 60);
     setSemillaRueda(n => n + 1);
-  };
-
-  /** La hora que rige HOY para un hábito: la recién guardada, la del backend, o la de la lista. */
-  const horaDe = (habitoId: string, porDefecto: string) =>
-    guardados[habitoId] ?? preferencias.get(habitoId)?.triggerTime?.slice(0, 5) ?? porDefecto;
-
-  /** En qué bloque cae hoy. `null` = todavía no tiene hora, y esos NO se filtran nunca. */
-  const bloqueDe = (habitoId: string, porDefecto: string): MomentoDelDia | null => {
-    const minutos = aMinutos(horaDe(habitoId, porDefecto));
-    return minutos === null ? null : momentoDeMinutos(minutos, rangos);
   };
 
   /** Abre o cierra el panel de cortes, arrancando siempre por el bloque que se está mirando. */
