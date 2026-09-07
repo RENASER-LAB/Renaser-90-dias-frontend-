@@ -71,7 +71,17 @@ export default function HoyScreen() {
   const ringColors = [c.ring1, c.ring2, c.ring3, c.ring2];
 
   const faseNombre = rotuloDeFase(resumen?.fase)?.toUpperCase() || 'PROGRAMA ACTIVO';
-  const diaNumero = resumen?.diaPrograma ?? 1;
+  /**
+   * `null` = todavía no sabemos en qué día está, porque la carga falló o no terminó.
+   *
+   * > **Corregido 2026-09-07.** Acá había `?? 1`, y con el backend caído la pantalla anunciaba
+   * > "DÍA 1 DE 90" a alguien que se acababa de registrar y estaba en el día 0. No es un redondeo
+   * > inocente: el número de día es el dato que ordena todo el programa, y rellenarlo con uno
+   * > inventado es peor que no mostrarlo. Reportado por el dueño el día que se registró.
+   */
+  const diaConocido = resumen?.diaPrograma ?? null;
+  /** Para los cálculos derivados, que necesitan un número. `0` es el día real de quien recién entra. */
+  const diaNumero = diaConocido ?? 0;
   // Mapa de Renacimiento (Día 7). Aparece desde el Día 7 y se queda hasta activarse: quien se
   // salte ese día no lo pierde. En builds de desarrollo se muestra siempre, marcado como vista
   // previa, para poder probarlo sin esperar una semana de programa — en producción no.
@@ -126,7 +136,7 @@ export default function HoyScreen() {
               {faseNombre}
             </Text>
             <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13.5, marginTop: 2 }]}>
-              DÍA {diaNumero} DE {DIAS_DEL_PROGRAMA}
+              DÍA {diaConocido ?? '—'} DE {DIAS_DEL_PROGRAMA}
             </Text>
           </View>
 
