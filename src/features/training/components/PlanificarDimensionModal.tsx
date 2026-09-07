@@ -62,8 +62,9 @@ import type { HabitItem } from '../../../screens/TrainingScreen';
  *
  * **2. Dónde empieza cada bloque lo decide la persona** (`utils/momentosDelDia.ts`), y se guarda en
  * el teléfono (`storage/rangosDelDia.ts`) porque el backend no tiene dónde ponerlo todavía. Esto
- * es lo que arregla el "dormir aparece en la mañana": con la mañana empezando 03:00, las 00:30 son
- * NOCHE. Con los cortes viejos —clavados en `hora < 12`— eran mañana.
+ * es lo que arregla el "dormir aparece en la mañana": las 00:30 son MADRUGADA, un bloque propio.
+ * Con los cortes viejos —clavados en `hora < 12`— eran mañana, y con tres bloques habrían sido "la
+ * noche de ayer", que también miente: a esa hora ya es otro día.
  *
  * **3. Guardar uno NO cierra la hoja ni pisa a los demás.** Cada hábito guardado se marca con su
  * hora nueva, se desmarca de la selección y su horario local se actualiza en el acto. Así se puede
@@ -423,8 +424,8 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
   const aplicar = () => {
     if (elegidos.length === 0) return;
     const enConflicto = elegidos.filter(h => {
-      const esperado = h.systemKey ? MOMENTO_ESPERADO[h.systemKey] : undefined;
-      return esperado !== undefined && esperado !== momentoActual;
+      const aceptables = h.systemKey ? MOMENTO_ESPERADO[h.systemKey] : undefined;
+      return aceptables !== undefined && !aceptables.includes(momentoActual);
     });
     if (enConflicto.length > 0) {
       Alert.alert(
@@ -534,7 +535,11 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                   <Pressable
                     onPress={() => ajustarBloque(-PASO_DE_AJUSTE)}
                     hitSlop={10}
-                    style={[styles.botonAjuste, { borderColor: c.gold }]}
+                    disabled={bloqueEnEdicion === 'madrugada'}
+                    style={[
+                      styles.botonAjuste,
+                      { borderColor: c.gold, opacity: bloqueEnEdicion === 'madrugada' ? 0.3 : 1 },
+                    ]}
                   >
                     <Text style={[t.cardTitle, { color: c.gold, fontSize: 18 }]}>−</Text>
                   </Pressable>
@@ -542,14 +547,20 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                     <Text style={[t.body, { color: c.textStrong, fontSize: 13, fontWeight: '600' }]} numberOfLines={1}>
                       {ETIQUETA_MOMENTO[bloqueEnEdicion]} empieza {aHoraTexto(limitesDelMomento(bloqueEnEdicion, rangos).desde)}
                     </Text>
-                    <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]} numberOfLines={1}>
-                      Tocá otro bloque para moverlo · se guarda en este teléfono
+                    <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]} numberOfLines={2}>
+                      {bloqueEnEdicion === 'madrugada'
+                        ? 'Empieza a las 00:00 siempre: es el cambio de día. Movés dónde termina desde MAÑANA.'
+                        : 'Tocá otro bloque para moverlo · se guarda en este teléfono'}
                     </Text>
                   </View>
                   <Pressable
                     onPress={() => ajustarBloque(PASO_DE_AJUSTE)}
                     hitSlop={10}
-                    style={[styles.botonAjuste, { borderColor: c.gold }]}
+                    disabled={bloqueEnEdicion === 'madrugada'}
+                    style={[
+                      styles.botonAjuste,
+                      { borderColor: c.gold, opacity: bloqueEnEdicion === 'madrugada' ? 0.3 : 1 },
+                    ]}
                   >
                     <Text style={[t.cardTitle, { color: c.gold, fontSize: 18 }]}>+</Text>
                   </Pressable>
@@ -782,11 +793,16 @@ const styles = StyleSheet.create({
   },
   filaMomentos: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 6,
   },
+  // Con cuatro bloques, cuatro pastillas en una sola fila dejarian el rango ("00:00 – 03:00")
+  // ilegible en un telefono angosto. `minWidth: 47%` las acomoda en 2x2 y en tablet vuelven a
+  // entrar de a cuatro solas.
   pastillaMomento: {
-    flex: 1,
+    flexGrow: 1,
     flexShrink: 1,
+    minWidth: '47%',
     minHeight: 48,
     borderWidth: 1.2,
     borderRadius: 12,
