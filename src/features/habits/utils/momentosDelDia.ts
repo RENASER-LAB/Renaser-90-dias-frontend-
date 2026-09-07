@@ -73,15 +73,17 @@ const MINUTOS_POR_DIA = 24 * 60;
  * `aMomento`, para que quien no toque nada vea lo mismo que veía. `inicioManana` es el único valor
  * nuevo: antes ese corte no existía porque la madrugada se hundía en "mañana".
  *
- * **03:00 y no 05:00** (pedido del dueño 2026-09-07): hay aprendices reales que se levantan a esa
- * hora, y con la mañana empezando 05:00 su despertar caía fuera de MAÑANA. El corte de fábrica
- * tiene que dejar adentro al que madruga más, porque quien no madruga puede correrlo.
+ * **Cuartos de seis horas** (decisión del dueño 2026-09-07): madrugada 00:00–06:00, mañana
+ * 06:00–12:00, tarde 12:00–18:00, noche 18:00–00:00. Cuatro tramos iguales, cada uno arrancando en
+ * hora redonda.
  *
- * Con esto los cuatro bloques de fábrica son: madrugada 00:00–03:00, mañana 03:00–12:00,
- * tarde 12:00–18:00 y noche 18:00–00:00.
+ * Que sean regulares no es estética: un corte de fábrica que nadie tiene que explicar es un corte
+ * que nadie va a tocar por error, y quien de verdad necesite otro —el que se levanta 04:00— lo
+ * mueve y se le guarda. La madrugada es el único que no se mueve, porque su comienzo es el cambio
+ * de día.
  */
 export const RANGOS_POR_DEFECTO: RangosDelDia = {
-  inicioManana: 3 * 60,
+  inicioManana: 6 * 60,
   inicioTarde: 12 * 60,
   inicioNoche: 18 * 60,
 };
@@ -134,7 +136,7 @@ export function limitesDelMomento(
   return { desde: rangos.inicioNoche, hasta: MINUTOS_POR_DIA };
 }
 
-/** `03:00 – 12:00`, para pintar el rango de un bloque. La noche cierra en `00:00`. */
+/** `06:00 – 12:00`, para pintar el rango de un bloque. La noche cierra en `00:00`. */
 export function rangoTexto(momento: MomentoDelDia, rangos: RangosDelDia): string {
   const { desde, hasta } = limitesDelMomento(momento, rangos);
   return `${aHoraTexto(desde)} – ${aHoraTexto(hasta)}`;

@@ -14,7 +14,7 @@ import { RANGOS_POR_DEFECTO, rangosValidos, type RangosDelDia } from '../utils/m
  * para que la configuración viaje entre dispositivos.
  *
  * Consecuencia honesta, que la pantalla dice: **los cortes son de este teléfono.** Reinstalar la
- * app o entrar desde otro equipo los devuelve a los de fábrica (03:00 / 12:00 / 18:00).
+ * app o entrar desde otro equipo los devuelve a los de fábrica (06:00 / 12:00 / 18:00).
  *
  * AsyncStorage y no `almacenamientoSeguro` (SecureStore): son tres números de preferencia visual,
  * no una credencial.
