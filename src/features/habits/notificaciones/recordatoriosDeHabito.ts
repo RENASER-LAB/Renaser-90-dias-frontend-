@@ -133,10 +133,12 @@ export async function pedirPermiso(): Promise<boolean> {
 async function asegurarCanal(): Promise<void> {
   const N = notificaciones();
   if (!N || Platform.OS !== 'android') return;
+  // SIN `sound`: en un canal de Android ese campo es el NOMBRE DE ARCHIVO de un sonido propio
+  // empaquetado en la app, no la palabra "el de siempre". Poniendo 'default' la librería avisa que
+  // no encuentra un archivo llamado así. Omitirlo es lo que deja el sonido del sistema.
   await N.setNotificationChannelAsync(CANAL_ANDROID, {
     name: 'Recordatorios de hábitos',
     importance: N.AndroidImportance.HIGH,
-    sound: 'default',
   });
 }
 
@@ -191,7 +193,9 @@ export async function programar(
       content: {
         title: minutosAntes > 0 ? `En ${minutosAntes} min: ${titulo}` : titulo,
         body: `Te toca a las ${horaHHmm}.`,
-        sound: 'default',
+        // `true` y no `'default'`: la cadena se interpreta como el nombre de un archivo de sonido
+        // propio, y la librería se queja de no encontrarlo. El booleano pide el del sistema.
+        sound: true,
       },
       trigger: {
         type: N.SchedulableTriggerInputTypes.DAILY,
