@@ -89,6 +89,11 @@ export interface AltaHabitoPersonal {
   /** `GIMNASIO` | `CORRER` | `OTRO`. La app manda siempre `OTRO`: no hay pantalla que elija. */
   template: 'OTRO';
   goalLabel: string | null;
+  /**
+   * Icono elegido por el aprendiz (`SLEEP`, `WATER`…). Opcional: sin él, el hábito nace sin icono
+   * propio y el móvil le pone el de su categoría, que es como nacían todos hasta 2026-09-07.
+   */
+  iconKey?: string | null;
   /** `HH:mm:ss` — obligatorio: sin hora de disparo el hábito no genera nada que hacer. */
   triggerTime: string;
   /** `HH:mm:ss` o null. Null = no vence dentro del día, que es el caso de un hábito propio. */

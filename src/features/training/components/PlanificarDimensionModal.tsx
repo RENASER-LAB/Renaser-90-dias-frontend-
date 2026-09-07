@@ -12,6 +12,7 @@ import { useAuth } from '../../auth/context/AuthContext';
 import * as habitsApi from '../../habits/api/habitsApi';
 import { RuedaHoraPicker } from '../../habits/components/RuedaHoraPicker';
 import { rangosDelDia as almacenRangos } from '../../habits/storage/rangosDelDia';
+import { ICONOS_ELEGIBLES } from '../../habits/utils/iconosDeHabito';
 import { formatearFechaLarga } from '../../programa/hooks/useArranqueDelPrograma';
 import { aFechaIso, DIAS_DEL_PLAN, type DiaDelPlan } from '../../habits/utils/semanaDelPlan';
 import {
@@ -165,6 +166,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
   /** `true` = el formulario de hábito nuevo (paso 3). */
   const [creando, setCreando] = useState(false);
   const [tituloNuevo, setTituloNuevo] = useState('');
+  const [iconoNuevo, setIconoNuevo] = useState<string | null>(null);
   const [hora, setHora] = useState(6);
   const [minuto, setMinuto] = useState(0);
   /**
@@ -197,6 +199,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
     setPlegadas(new Set());
     setCreando(false);
     setTituloNuevo('');
+    setIconoNuevo(null);
     setGuardados({});
     setHuboEscritura(false);
     (async () => {
@@ -446,6 +449,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
         category: categoriaDeLaDimension,
         template: 'OTRO',
         goalLabel: null,
+        iconKey: iconoNuevo,
         triggerTime: `${horaTexto}:00`,
         // Un hábito propio no vence dentro del día: sin hora límite.
         limitTime: null,
@@ -453,6 +457,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
       setHuboEscritura(true);
       setCreando(false);
       setTituloNuevo('');
+      setIconoNuevo(null);
       // Acá SÍ se recarga todo: el hábito nuevo no está en `habits`, que viene de la pantalla de
       // atrás, así que la única forma de verlo es que Training vuelva a pedir su lista.
       onGuardado();
@@ -714,6 +719,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                       setMinuto(inicio % 60);
                       setSemillaRueda(n => n + 1);
                       setTituloNuevo('');
+                      setIconoNuevo(null);
                       setCreando(true);
                     }}
                     style={[styles.crearHabito, { borderColor: c.gold }]}
@@ -842,7 +848,37 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                 returnKeyType="done"
               />
 
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700', marginTop: 14 }]}>¿A QUÉ HORA?</Text>
+              <Text style={[t.micro, { color: c.gold, fontWeight: '700', marginTop: 16 }]}>ELEGÍ UN ICONO</Text>
+              {/* Los mismos iconos del catálogo, no una lista aparte: así un hábito propio se ve
+                  igual de curado que uno del programa. Sin elegir ninguno se guarda `null` y el
+                  hábito hereda el de su categoría, que es como nacían todos hasta ahora. */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.grillaIconos}
+                keyboardShouldPersistTaps="handled"
+              >
+                {ICONOS_ELEGIBLES.map(({ clave, emoji }) => {
+                  const elegido = iconoNuevo === clave;
+                  return (
+                    <Pressable
+                      key={clave}
+                      onPress={() => setIconoNuevo(elegido ? null : clave)}
+                      style={[
+                        styles.opcionIcono,
+                        {
+                          borderColor: elegido ? c.gold : c.border,
+                          backgroundColor: elegido ? c.cardBgAlt : 'transparent',
+                        },
+                      ]}
+                    >
+                      <Text style={styles.emojiHabito}>{emoji}</Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+
+              <Text style={[t.micro, { color: c.gold, fontWeight: '700', marginTop: 16 }]}>¿A QUÉ HORA?</Text>
               <View style={{ paddingTop: 4 }}>
                 <RuedaHoraPicker
                   key={`rueda-nuevo-${semillaRueda}`}
@@ -854,8 +890,9 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                   }}
                 />
               </View>
-              <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5, textAlign: 'center' }]}>
-                {horaTexto} cae en {ETIQUETA_MOMENTO[momentoActual]} · todos los días
+              <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5, textAlign: 'center', lineHeight: 15 }]}>
+                {horaTexto} cae en {ETIQUETA_MOMENTO[momentoActual]}
+                {'\n'}Un hábito propio corre los 7 días y no vence: la hora lo ubica en tu jornada.
               </Text>
 
               <GoldButton
@@ -999,6 +1036,23 @@ const styles = StyleSheet.create({
     paddingBottom: 6,
     minHeight: 40,
     gap: 10,
+  },
+  // Tira HORIZONTAL y no una grilla que envuelve: 17 iconos en dos o tres filas empujaban la rueda
+  // fuera de la hoja, y un ScrollView vertical acá adentro se pelearía con las ruedas por el dedo
+  // (AGENTS.md §2). En horizontal no compiten: cada uno se lleva su propio eje.
+  grillaIconos: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingVertical: 8,
+    paddingRight: 8,
+  },
+  opcionIcono: {
+    width: 46,
+    height: 46,
+    borderRadius: 13,
+    borderWidth: 1.2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   crearHabito: {
     flexDirection: 'row',

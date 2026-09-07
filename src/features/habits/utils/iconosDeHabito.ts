@@ -65,3 +65,14 @@ export function iconoDeHabito(iconoClave: string | null | undefined, porDefecto:
   if (!iconoClave) return porDefecto;
   return ICONO_POR_CLAVE[iconoClave] ?? porDefecto;
 }
+
+/**
+ * Las claves que se le pueden ofrecer a alguien que crea un hábito propio, con su emoji.
+ *
+ * Son las MISMAS del catálogo y no una lista aparte: así un hábito propio se ve igual de curado
+ * que uno del programa, y el día que se agregue un icono nuevo aparece en los dos lados sin que
+ * nadie tenga que acordarse de sincronizar dos listas.
+ */
+export const ICONOS_ELEGIBLES: readonly { clave: string; emoji: string }[] = Object.entries(
+  ICONO_POR_CLAVE,
+).map(([clave, emoji]) => ({ clave, emoji }));
