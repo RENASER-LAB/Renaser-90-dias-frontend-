@@ -26,6 +26,10 @@ const habitoCatalogoSchema = z
     // título es renombrable por el propio aprendiz. `.optional()` además de `.nullable()` para no
     // romper contra un backend viejo que todavía no manda el campo.
     systemKey: z.string().nullable().optional(),
+    // Icono CURADO del hábito (`SLEEP`, `WATER`, `RITUAL_MORNING`...), que la base guarda desde el
+    // baseline y hasta 2026-09-07 ninguna API exponía. `.optional()` para no romper contra un
+    // backend anterior a ese cambio; ahí se sigue usando el icono de la categoría.
+    iconKey: z.string().nullable().optional(),
     // Dias de la semana en que el habito aplica (`"MONDAY"`..`"SUNDAY"`), derivados del TipoDia de
     // sus horarios. `.optional()` para no romper contra un backend anterior a V28, que no lo manda.
     activeWeekdays: z.array(z.string()).optional(),

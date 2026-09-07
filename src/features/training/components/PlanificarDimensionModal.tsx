@@ -665,16 +665,21 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                         },
                       ]}
                     >
+                      {/* El icono PROPIO del hábito, no una casilla. Lo que estaba marcado ya se
+                          ve por el borde dorado de la fila y por el "→ 06:30" de abajo, así que la
+                          casilla no agregaba información y sí ocupaba el lugar donde un icono
+                          distingue una fila de otra de un vistazo. El anillo dorado alrededor del
+                          icono es el que confirma la selección. */}
                       <View
                         style={[
-                          styles.casilla,
+                          styles.iconoHabito,
                           {
-                            borderColor: marcado ? c.gold : c.tabInactive,
-                            backgroundColor: marcado ? c.gold : 'transparent',
+                            borderColor: marcado ? c.gold : 'transparent',
+                            backgroundColor: marcado ? c.cardBg : 'transparent',
                           },
                         ]}
                       >
-                        {marcado && <Icon name="check" size={13} color={c.onGold} strokeWidth={2.4} />}
+                        <Text style={styles.emojiHabito}>{h.icon ?? '🎯'}</Text>
                       </View>
 
                       <View style={{ flex: 1, flexShrink: 1, gap: 1 }}>
@@ -861,13 +866,19 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     minHeight: 56,
   },
-  casilla: {
-    width: 24,
-    height: 24,
-    borderRadius: 7,
+  iconoHabito: {
+    width: 36,
+    height: 36,
+    borderRadius: 11,
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // `lineHeight` explícito: sin él, en Android un emoji de 20px se recorta por arriba dentro de
+  // un contenedor de 36 (AGENTS.md §2 — cero desbordamientos, también hacia adentro).
+  emojiHabito: {
+    fontSize: 20,
+    lineHeight: 26,
   },
   filaMeta: {
     flexDirection: 'row',

@@ -143,6 +143,7 @@ export function useTraining() {
           // lo necesita el botón "Planificar" para llamar a `habit-preferences`/`habit-unlocks`.
           habitoId: habito.id,
           isDeactivatable: habito.isDeactivatable,
+          icon: habito.icon,
           // Mismos días que ya pinta Plan (catálogo + pausa aplicada) — se reusan tal cual para
           // sembrar la fila decorativa de "Planificar", en vez de recalcularlos desde
           // `activeWeekdays` crudo.

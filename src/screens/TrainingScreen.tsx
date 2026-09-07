@@ -87,6 +87,12 @@ export interface HabitItem {
   /** `false` = obligatorio del programa, el interruptor de Planificar queda bloqueado en ON. */
   isDeactivatable?: boolean;
   /**
+   * Emoji propio del hábito, ya resuelto por `mapearPlanHabit` a partir de `iconKey` del backend
+   * (`SLEEP` → 😴, `WATER` → 💧…). Distingue una fila de otra dentro de la misma dimensión, cosa
+   * que el icono de categoría no podía: ahí los seis de CUERPO eran el mismo símbolo.
+   */
+  icon?: string;
+  /**
    * Los mismos 7 días que ya pinta Plan para este hábito (catálogo + pausa aplicada,
    * `PlanHabit.days`) — solo para sembrar la fila decorativa de días en "Planificar", sin
    * recalcular nada acá.

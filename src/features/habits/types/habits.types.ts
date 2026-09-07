@@ -38,6 +38,12 @@ export interface HabitoCatalogoApi {
    * texto se rompe en silencio. Opcional para tolerar un backend anterior a este campo.
    */
   systemKey?: string | null;
+  /**
+   * `Habito.iconoClave` — el icono curado de ESTE hábito (`SLEEP`, `WATER`, `PHONE_OFF`...), no el
+   * de su categoría. Distingue una fila de otra dentro de la misma dimensión, que es lo que el
+   * icono de categoría no podía hacer. `null` en los personales; ausente contra un backend viejo.
+   */
+  iconKey?: string | null;
 }
 
 /** La Clase Diaria: el hábito que abre la lección del día y pide un resumen para cerrarse. */
