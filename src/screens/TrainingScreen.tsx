@@ -19,6 +19,7 @@ import { GoldButton } from '../components/GoldButton';
 import { useTraining } from '../features/training/hooks/useTraining';
 import { ProximoAVencerCard } from '../features/training/components/ProximoAVencerCard';
 import { EvidenciaHabitoModal } from '../features/habits/components/EvidenciaHabitoModal';
+import { PlanificarDimensionModal } from '../features/training/components/PlanificarDimensionModal';
 import { completarRegistro } from '../features/habits/api/evidenciaHabitoApi';
 import { mensajeDeError } from '../services/http/apiClient';
 import { useAuth } from '../features/auth/context/AuthContext';
@@ -31,6 +32,7 @@ import { useClaseDiaria } from '../features/academy/hooks/useClaseDiaria';
 import type { ClaseDiariaApi } from '../features/academy/types/academy.types';
 import { irAPestana } from '../navigation/navegacionRef';
 import { borradorEspiritu } from '../features/spirit/storage/borradorEspiritu';
+import type { DayOfWeek } from './PlanScreen';
 
 /**
  * Habitos con FLUJO PROPIO: no se cierran con el checkbox ni subiendo un archivo. Se ramifica por
@@ -54,6 +56,14 @@ export interface HabitItem {
   streak: number;
   done: boolean;
   hasEvidence: boolean;
+  /**
+   * `false` = el catálogo ya desbloqueó este hábito pero todavía no existe su registro de HOY
+   * (`habit-tracks/today` no lo generó — bug de backend real, ver nota grande en
+   * `useTraining.ts`). Con `false`, el check y "Subir evidencia" se deshabilitan: no hay ningún
+   * id de registro real al que atarlos. "Planificar" sigue funcionando igual, porque solo
+   * necesita `habitoId`.
+   */
+  tieneTrackHoy: boolean;
   note?: string;
   /**
    * Clave FUNCIONAL del hábito de catálogo (`DAILY_CLASS`, `PASTILLA_RENACER`…), `null` en las
@@ -61,6 +71,21 @@ export interface HabitItem {
    * reconocer un hábito puntual: el título lo puede renombrar el propio aprendiz.
    */
   systemKey?: string | null;
+  /**
+   * Id real del hábito de catálogo (`habitos.id`), distinto de `id` (que acá es el id del
+   * *track* del día). Lo usa el botón "Planificar" para llamar a `habit-preferences` y
+   * `habit-unlocks` — mismos endpoints que ya usa Plan. `null` en las rocas (VIDA Y NEGOCIO no
+   * es un hábito de este módulo, así que ahí no hay nada que planificar por acá).
+   */
+  habitoId?: string | null;
+  /** `false` = obligatorio del programa, el interruptor de Planificar queda bloqueado en ON. */
+  isDeactivatable?: boolean;
+  /**
+   * Los mismos 7 días que ya pinta Plan para este hábito (catálogo + pausa aplicada,
+   * `PlanHabit.days`) — solo para sembrar la fila decorativa de días en "Planificar", sin
+   * recalcular nada acá.
+   */
+  diasCatalogo?: Record<DayOfWeek, boolean>;
   /** Lo que la persona escribió al completar el registro (`RegistroHabito.respuestaTexto`). */
   respuestaTexto?: string | null;
   /**
@@ -165,6 +190,19 @@ export default function TrainingScreen() {
   const [activeEvidenceHabit, setActiveEvidenceHabit] = useState<HabitItem | null>(null);
 
   /**
+   * "Planificar" — ahora es UNA opción grande de la dimensión entera, no un botón chico por
+   * hábito (pedido del dueño 2026-09-07).
+   *
+   * > Antes cada tarjeta tenía un "PLAN" al costado de "SUBIR", en la misma fila angosta. Eso era
+   * > el estorbo: la tarjeta tiene un solo trabajo, que es entregar la evidencia, y competía con
+   * > un botón que se usa una vez cada tanto. Planificar subió al encabezado de la categoría y la
+   * > hoja deja elegir a qué hábitos aplicar — a todos o a uno solo, que es el mismo caso de antes.
+   *
+   * Acá solo vive si la hoja está abierta; la edición en sí es de `PlanificarDimensionModal`.
+   */
+  const [planificarVisible, setPlanificarVisible] = useState(false);
+
+  /**
    * "Pastilla Renacer" (modulo Espiritu). Es un habito con FLUJO PROPIO: no se cierra subiendo
    * evidencia sino escuchando el audio del dia y contestando, y su estado vive en otra tabla del
    * backend. Todo el flujo esta en `features/spirit/`; aca solo queda si el modal esta abierto.
@@ -223,12 +261,19 @@ export default function TrainingScreen() {
       setActiveEvidenceHabit(null);
       return true;
     }
+    // La hoja de planificar también tiene que cerrarse con el gesto lateral, no minimizar la app
+    // (AGENTS.md §6). Va después de la evidencia y antes de la dimensión: es una capa por encima
+    // del detalle de categoría y por debajo de un modal de evidencia abierto sobre ella.
+    if (planificarVisible) {
+      setPlanificarVisible(false);
+      return true;
+    }
     if (selectedDimension !== null) {
       setSelectedDimension(null);
       return true;
     }
     return false; // Permite el comportamiento por defecto si está en el menú raíz
-  }, addModalVisible || pastillaVisible || claseDiariaVisible || activeEvidenceHabit !== null || selectedDimension !== null);
+  }, addModalVisible || pastillaVisible || claseDiariaVisible || activeEvidenceHabit !== null || planificarVisible || selectedDimension !== null);
 
   /** Lleva al muro con el compositor abierto. Reusa el parametro que ComunidadScreen ya entiende. */
   const abrirMuroParaPublicar = () => {
@@ -407,6 +452,10 @@ export default function TrainingScreen() {
 
     const newHabit: HabitItem = {
       id: Date.now().toString(),
+      // Alta local (sin backend, ver el resto de esta función): no depende de ningún track
+      // real, así que no aplica la restricción de `tieneTrackHoy` — se mantiene interactivo
+      // como ya lo era antes de que ese campo existiera.
+      tieneTrackHoy: true,
       dimension: selectedDimension.key,
       title: newTitle.trim(),
       time: newTime.trim() || 'Horario flexible · 15 min',
@@ -427,6 +476,12 @@ export default function TrainingScreen() {
   const currentDimensionHabits = selectedDimension
     ? habits.filter(h => h.dimension === selectedDimension.key)
     : [];
+
+  // Cuántos de esos se pueden planificar de verdad: solo los hábitos de catálogo tienen
+  // `habitoId`, que es lo que piden `habit-preferences` y `habit-unlocks`. Las rocas de VIDA Y
+  // NEGOCIO vienen de otro módulo y no lo traen — por eso ahí el botón grande no aparece, en vez
+  // de abrir una hoja vacía.
+  const habitosPlanificables = currentDimensionHabits.filter(h => h.habitoId).length;
 
   // "CUMPLIDOS" cuenta hábitos/roca marcados como hechos (done). La barra de "Evidencias selladas
   // hoy" usa el MISMO criterio que el badge de la lista de dimensiones (ver ahí el porqué, E-118):
@@ -699,6 +754,36 @@ export default function TrainingScreen() {
             {/* =================================================================== */}
             {innerTab === 'habitos' && (
               <View style={{ gap: 10 }}>
+                {/* =============================================================== */}
+                {/* PLANIFICAR LA CATEGORÍA — una sola opción, grande, arriba de     */}
+                {/* todo. Antes esto era un botón chico dentro de cada tarjeta, al   */}
+                {/* costado de "SUBIR": estorbaba lo único que la tarjeta tiene que  */}
+                {/* hacer fácil, que es entregar la evidencia. Acá arriba no compite */}
+                {/* con nada, y la hoja permite aplicar a todos o a uno solo.        */}
+                {/* Solo aparece si hay algo que planificar: las rocas de VIDA Y      */}
+                {/* NEGOCIO no son hábitos de este módulo y no traen `habitoId`.      */}
+                {/* =============================================================== */}
+                {habitosPlanificables > 0 && (
+                  <Pressable
+                    onPress={() => setPlanificarVisible(true)}
+                    style={[styles.planificarBigBtn, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}
+                  >
+                    <View style={[styles.planificarIconBox, { borderColor: c.gold }]}>
+                      <Icon name="clock" size={20} color={c.gold} />
+                    </View>
+                    <View style={{ flex: 1, flexShrink: 1, gap: 2 }}>
+                      <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 15 }]}>
+                        PLANIFICAR {selectedDimension.title}
+                      </Text>
+                      <Text style={[t.micro, { color: c.textSoft, fontSize: 11, lineHeight: 15 }]}>
+                        Hora, días y estado de tus {habitosPlanificables}{' '}
+                        {habitosPlanificables === 1 ? 'hábito' : 'hábitos'} · a todos o uno por uno
+                      </Text>
+                    </View>
+                    <Icon name="chevron" size={16} color={c.gold} />
+                  </Pressable>
+                )}
+
                 {/* Action bar to add new custom habit */}
                 <View style={styles.habitsActionRow}>
                   <MicroLabel>PRÁCTICAS ACTIVAS ({currentDimensionHabits.length})</MicroLabel>
@@ -748,14 +833,17 @@ export default function TrainingScreen() {
                       },
                     ]}
                   >
-                    {/* Checkbox circular interactivo */}
+                    {/* Checkbox circular interactivo — deshabilitado sin track de hoy: no hay
+                        ningún registro real que marcar (ver `tieneTrackHoy` en HabitItem). */}
                     <Pressable
-                      onPress={() => toggleHabitState(habit.id)}
+                      onPress={() => habit.tieneTrackHoy && toggleHabitState(habit.id)}
+                      disabled={!habit.tieneTrackHoy}
                       style={[
                         styles.habitCheckCircle,
                         {
                           borderColor: habit.done ? '#4E9F76' : c.tabInactive,
                           backgroundColor: habit.done ? '#4E9F76' : 'transparent',
+                          opacity: habit.tieneTrackHoy ? 1 : 0.35,
                         },
                       ]}
                     >
@@ -764,7 +852,7 @@ export default function TrainingScreen() {
 
                     {/* Habit Info & Tap to open Evidence */}
                     <Pressable
-                      onPress={() => openEvidenceModal(habit)}
+                      onPress={() => habit.tieneTrackHoy && openEvidenceModal(habit)}
                       style={{ flex: 1, gap: 2 }}
                     >
                       <View style={styles.habitMetaRow}>
@@ -802,35 +890,46 @@ export default function TrainingScreen() {
                             📷 Evidencia Sellada
                           </Text>
                         )}
+                        {!habit.tieneTrackHoy && (
+                          <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5, fontStyle: 'italic' }]}>
+                            Aún sin registro de hoy
+                          </Text>
+                        )}
                       </View>
                     </Pressable>
 
-                    {/* Dedicated Evidence Button */}
-                    <Pressable
-                      onPress={() => openEvidenceModal(habit)}
-                      style={[
-                        styles.evidenceBtn,
-                        {
-                          borderColor: habit.hasEvidence ? '#4E9F76' : c.border,
-                          backgroundColor: habit.hasEvidence ? 'rgba(78, 159, 118, 0.12)' : c.cardBgAlt,
-                        },
-                      ]}
-                      hitSlop={8}
-                    >
-                      <Icon name="camera" size={13} color={habit.hasEvidence ? '#4E9F76' : c.gold} />
-                      <Text
+                    {/* Botón de evidencia, SOLO. El de "PLAN" que lo acompañaba se movió al
+                        encabezado de la categoría (2026-09-07): en esta fila angosta competía con
+                        lo único que la tarjeta tiene que hacer fácil, que es entregar la prueba. */}
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 8 }}>
+                      <Pressable
+                        onPress={() => habit.tieneTrackHoy && openEvidenceModal(habit)}
+                        disabled={!habit.tieneTrackHoy}
                         style={[
-                          t.micro,
+                          styles.evidenceBtn,
                           {
-                            color: habit.hasEvidence ? '#4E9F76' : c.gold,
-                            fontSize: 9,
-                            fontWeight: '700',
+                            borderColor: habit.hasEvidence ? '#4E9F76' : c.border,
+                            backgroundColor: habit.hasEvidence ? 'rgba(78, 159, 118, 0.12)' : c.cardBgAlt,
+                            opacity: habit.tieneTrackHoy ? 1 : 0.35,
                           },
                         ]}
+                        hitSlop={8}
                       >
-                        {habit.hasEvidence ? 'VER' : 'SUBIR'}
-                      </Text>
-                    </Pressable>
+                        <Icon name="camera" size={13} color={habit.hasEvidence ? '#4E9F76' : c.gold} />
+                        <Text
+                          style={[
+                            t.micro,
+                            {
+                              color: habit.hasEvidence ? '#4E9F76' : c.gold,
+                              fontSize: 9,
+                              fontWeight: '700',
+                            },
+                          ]}
+                        >
+                          {habit.hasEvidence ? 'VER' : 'SUBIR'}
+                        </Text>
+                      </Pressable>
+                    </View>
                   </View>
                 ))}
 
@@ -917,6 +1016,23 @@ export default function TrainingScreen() {
         notaInicial={activeEvidenceHabit?.respuestaTexto ?? activeEvidenceHabit?.note ?? ''}
         onCerrar={() => setActiveEvidenceHabit(null)}
         onCompletado={handleEvidenciaCompletada}
+      />
+
+      {/* ========================================================================= */}
+      {/* HOJA: PLANIFICAR LA CATEGORÍA                                             */}
+      {/* Hora y minutos, días, los hábitos que se marcan y el interruptor          */}
+      {/* activo/pausado, en ese orden. Aplica a lo seleccionado: a todos o a uno    */}
+      {/* solo. Sin backend nuevo — ver PlanificarDimensionModal.                    */}
+      {/* ========================================================================= */}
+      <PlanificarDimensionModal
+        visible={planificarVisible}
+        dimension={selectedDimension?.title ?? ''}
+        habits={currentDimensionHabits}
+        onCerrar={() => setPlanificarVisible(false)}
+        onGuardado={() => {
+          setPlanificarVisible(false);
+          void recargarEntrenamiento();
+        }}
       />
 
       {/* ========================================================================= */}
@@ -1054,6 +1170,28 @@ export default function TrainingScreen() {
 }
 
 const styles = StyleSheet.create({
+  // "PLANIFICAR <DIMENSIÓN>": la opción grande del encabezado de la categoría. Alto mínimo 56
+  // para que se pulse cómodo con una mano (AGENTS.md §4) y `flexShrink` en el texto para que en
+  // pantallas angostas envuelva en vez de empujar el chevrón fuera de la tarjeta (§2).
+  planificarBigBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    minHeight: 56,
+    width: '100%',
+    borderWidth: 1.5,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  planificarIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    borderWidth: 1.2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   content: {
     flexGrow: 1,
     paddingHorizontal: 24,
