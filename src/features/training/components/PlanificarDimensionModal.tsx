@@ -13,6 +13,7 @@ import * as habitsApi from '../../habits/api/habitsApi';
 import { RuedaHoraPicker } from '../../habits/components/RuedaHoraPicker';
 import { rangosDelDia as almacenRangos } from '../../habits/storage/rangosDelDia';
 import { ICONOS_ELEGIBLES } from '../../habits/utils/iconosDeHabito';
+import * as recordatorios from '../../habits/notificaciones/recordatoriosDeHabito';
 import { formatearFechaLarga } from '../../programa/hooks/useArranqueDelPrograma';
 import { aFechaIso, DIAS_DEL_PLAN, type DiaDelPlan } from '../../habits/utils/semanaDelPlan';
 import {
@@ -101,6 +102,19 @@ type HabitoPlanificable = HabitItem & { habitoId: string };
 const PASO_DE_AJUSTE = 15;
 
 /**
+ * Las antelaciones que se ofrecen. `null` = sin aviso; `0` = a la hora exacta.
+ *
+ * Cuatro y no un campo libre: elegir entre cuatro es un toque, escribir un número son cinco y una
+ * decisión que nadie tiene ganas de tomar. Si alguien necesita 7 minutos, no necesita 7 minutos.
+ */
+const ANTELACIONES: readonly { minutos: number | null; etiqueta: string }[] = [
+  { minutos: null, etiqueta: 'Sin aviso' },
+  { minutos: 0, etiqueta: 'A la hora' },
+  { minutos: 10, etiqueta: '10 min antes' },
+  { minutos: 30, etiqueta: '30 min antes' },
+];
+
+/**
  * Los hábitos sin hora van en su propia sección, arriba de todo. No se reparten en un bloque
  * porque no están en ninguno todavía, y esconderlos abajo dejaría lo único que hay que hacer —
  * ponerles hora — en el último lugar donde se mira.
@@ -167,6 +181,8 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
   const [creando, setCreando] = useState(false);
   const [tituloNuevo, setTituloNuevo] = useState('');
   const [iconoNuevo, setIconoNuevo] = useState<string | null>(null);
+  /** Antelación del recordatorio del hábito abierto. `null` = sin aviso. */
+  const [antelacion, setAntelacion] = useState<number | null>(null);
   const [hora, setHora] = useState(6);
   const [minuto, setMinuto] = useState(0);
   /**
@@ -261,6 +277,10 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
     setSemillaRueda(n => n + 1);
     setBloqueEnEdicion(momentoDeMinutos(inicial, rangos));
     setEditandoBloques(false);
+    const previa = preferencias.get(h.habitoId);
+    // El recordatorio guardado en el servidor. Ahora se puede leer: hasta 2026-09-07 el GET no lo
+    // devolvía y no había forma de saber si estaba puesto.
+    setAntelacion(previa?.reminderEnabled ? (previa.reminderMinutesBefore ?? 0) : null);
     setHabitoEnEdicion(h);
   };
 
@@ -347,13 +367,38 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
       // El `limitTime` que ya tenía: el PATCH reemplaza los dos campos a la vez y mandar `null`
       // le borraría la hora límite a hábitos que sí vencen dentro del día.
       const previa = preferencias.get(h.habitoId);
-      const resultado = await habitsApi.cambiarHorario(h.habitoId, `${horaTexto}:00`, previa?.limitTime ?? null);
+      const recordatorio = { activo: antelacion !== null, minutosAntes: antelacion };
+      const resultado = await habitsApi.cambiarHorario(
+        h.habitoId,
+        `${horaTexto}:00`,
+        previa?.limitTime ?? null,
+        recordatorio,
+      );
+      // La PREFERENCIA vive en el servidor (viaja entre dispositivos); la ALARMA la dispara este
+      // teléfono. Si la persona niega el permiso, `programar` devuelve false y se lo decimos en vez
+      // de dejarla creyendo que va a sonar.
+      let avisoImposible = false;
+      if (antelacion === null) {
+        await recordatorios.cancelar(claveUsuario, h.habitoId);
+      } else {
+        const ok = await recordatorios.programar(
+          claveUsuario, h.habitoId, h.title, horaTexto, antelacion,
+        );
+        avisoImposible = !ok;
+      }
       // El horario local se actualiza acá y no recargando todo: recargar con la hoja abierta
       // reordenaría la lista debajo del dedo.
       setPreferencias(prev => {
         const siguiente = new Map(prev);
         const base = prev.get(h.habitoId);
-        if (base) siguiente.set(h.habitoId, { ...base, triggerTime: `${horaTexto}:00` });
+        if (base) {
+          siguiente.set(h.habitoId, {
+            ...base,
+            triggerTime: `${horaTexto}:00`,
+            reminderEnabled: recordatorio.activo,
+            reminderMinutesBefore: recordatorio.minutosAntes,
+          });
+        }
         return siguiente;
       });
       setGuardados(prev => ({ ...prev, [h.habitoId]: horaTexto }));
@@ -365,7 +410,10 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
       Alert.alert(
         'Listo',
         `“${h.title}” queda a las ${horaTexto} (${ETIQUETA_MOMENTO[momentoActual]}).` +
-          (resultado.deferred ? `\n\nEmpieza a regir ${cuando}: el día en curso no se reacomoda.` : ''),
+          (resultado.deferred ? `\n\nEmpieza a regir ${cuando}: el día en curso no se reacomoda.` : '') +
+          (avisoImposible
+            ? '\n\nEl recordatorio quedó guardado, pero este teléfono no tiene permiso para avisarte. Habilitá las notificaciones de la app.'
+            : ''),
       );
     } catch (e) {
       Alert.alert('No pudimos guardar la hora', mensajeDeError(e, 'Intenta de nuevo en unos segundos.'));
@@ -816,6 +864,41 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                 Todos esos días, desde mañana — el día en curso no se reacomoda.
               </Text>
 
+              {/* En web no se ofrece: `expo-notifications` no soporta esa plataforma, así que
+                  mostrarlo sería prometer un aviso que nunca va a sonar. */}
+              {recordatorios.HAY_RECORDATORIOS && (
+                <>
+                  <Text style={[t.micro, { color: c.gold, fontWeight: '700', marginTop: 12 }]}>
+                    RECORDATORIO
+                  </Text>
+                  <View style={styles.filaAntelaciones}>
+                    {ANTELACIONES.map(({ minutos, etiqueta }) => {
+                      const on = antelacion === minutos;
+                      return (
+                        <Pressable
+                          key={etiqueta}
+                          onPress={() => setAntelacion(minutos)}
+                          style={[
+                            styles.pastillaAntelacion,
+                            {
+                              borderColor: on ? c.gold : c.border,
+                              backgroundColor: on ? c.cardBgAlt : 'transparent',
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[t.micro, { fontSize: 10.5, fontWeight: '700', color: on ? c.gold : c.textSoft }]}
+                            numberOfLines={1}
+                          >
+                            {etiqueta}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </>
+              )}
+
               <GoldButton
                 label={guardando ? 'GUARDANDO…' : `GUARDAR ${horaTexto}`}
                 onPress={() => intentarGuardar(habitoEnEdicion)}
@@ -1040,6 +1123,22 @@ const styles = StyleSheet.create({
   // Tira HORIZONTAL y no una grilla que envuelve: 17 iconos en dos o tres filas empujaban la rueda
   // fuera de la hoja, y un ScrollView vertical acá adentro se pelearía con las ruedas por el dedo
   // (AGENTS.md §2). En horizontal no compiten: cada uno se lleva su propio eje.
+  filaAntelaciones: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 6,
+  },
+  pastillaAntelacion: {
+    flexGrow: 1,
+    minWidth: '47%',
+    minHeight: 44,
+    borderWidth: 1.2,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
   grillaIconos: {
     flexDirection: 'row',
     gap: 8,

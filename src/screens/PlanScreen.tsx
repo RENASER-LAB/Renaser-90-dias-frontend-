@@ -56,6 +56,8 @@ export interface PlanHabit {
   id: string;
   title: string;
   icon: string;
+  /** El recordatorio guardado, para poder preservarlo al cambiar la hora (ver `cambiarHorario`). */
+  recordatorio: { activo: boolean; minutosAntes: number | null };
   tag: string;
   tagColor: string;
   time: string;
@@ -542,7 +544,8 @@ export default function PlanScreen() {
     updateHabitTime(habitId, nuevaHora);
     if (!conectadoAlBackend || !habito) return;
     try {
-      const resultado = await habitsApi.cambiarHorario(habitId, `${nuevaHora}:00`, habito.limitTime);
+      const resultado = await habitsApi.cambiarHorario(habitId, `${nuevaHora}:00`, habito.limitTime,
+        habito.recordatorio);
       // D-91: el backend YA NO aplica ningún cambio en el día en curso — todos se difieren a
       // mañana, arranque o no arranque la ventana del hábito. `deferred` es hoy siempre true;
       // la rama de abajo se deja igual porque el contrato del campo no cambió y no queremos

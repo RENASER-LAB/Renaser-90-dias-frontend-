@@ -185,6 +185,12 @@ export function mapearPlanHabit(
     // El icono propio del hábito manda; el de la categoría es el respaldo. Antes solo existía el
     // segundo, y por eso los seis hábitos de CUERPO se pintaban con el mismo símbolo.
     icon: iconoDeHabito(habito.iconKey, categoria.icon),
+    // Se arrastra tal cual para poder devolverlo intacto en el próximo PATCH de horario: ese PATCH
+    // reemplaza los cuatro campos a la vez, así que no mandarlo es apagarlo.
+    recordatorio: {
+      activo: preferencia?.reminderEnabled ?? false,
+      minutosAntes: preferencia?.reminderMinutesBefore ?? null,
+    },
     tag: categoria.tag,
     tagColor: categoria.tagColor,
     time: aHoraCorta(horaDisparo),

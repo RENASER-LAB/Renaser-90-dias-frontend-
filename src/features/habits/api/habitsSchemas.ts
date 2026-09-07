@@ -47,6 +47,10 @@ const preferenciaHabitoSchema = z
     habitId: z.string(),
     title: z.string(),
     triggerTime: z.string().nullable(),
+    // El recordatorio, que el PATCH ya escribía y este GET no devolvía hasta 2026-09-07.
+    // `.optional()` para no romper contra un backend anterior a ese cambio.
+    reminderEnabled: z.boolean().optional(),
+    reminderMinutesBefore: z.number().nullable().optional(),
     limitTime: z.string().nullable(),
     customized: z.boolean(),
     // Se valida de verdad en vez de `z.unknown()`: es el dato que sostiene el aviso "desde

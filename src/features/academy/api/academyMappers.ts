@@ -84,7 +84,8 @@ function mapearSeccion(s: SeccionConLeccionesApi): CourseSection {
 /**
  * Compone la tarjeta de curso (`CourseItem`) a partir de `MiCursoResponse` (progreso real) +
  * `SeccionConLeccionesResponse[]` (árbol real, pedido aparte por `useCursos` en paralelo para
- * los 25 cursos). `totalModules`/`totalResources` salen del árbol real, no de un número fijo.
+ * los 25 cursos). `totalResources` —la cantidad de LECCIONES, que es lo único que la tarjeta
+ * muestra— sale del árbol real, no de un número fijo.
  */
 export function mapearCursoConSecciones(mc: MiCursoApi, secciones: SeccionConLeccionesApi[]): CourseItem {
   const totalLeccionesDelArbol = secciones.reduce((acc, s) => acc + s.lecciones.length, 0);
@@ -97,12 +98,8 @@ export function mapearCursoConSecciones(mc: MiCursoApi, secciones: SeccionConLec
     id: mc.id,
     title: mc.titulo,
     category: mc.acceso === 'abierto' ? 'CURSO ABIERTO' : 'CURSO RESTRINGIDO',
-    // `CursoResponse` no tiene un campo "instructor" (el mock lo inventaba). Se deja un texto
-    // genérico en vez de inventar un nombre que no existe en el backend.
-    instructor: 'Equipo Renaser',
     summary: mc.descripcion || '',
     progressPercent,
-    totalModules: secciones.length,
     totalResources: totalRecursos,
     sections: secciones.map(mapearSeccion),
     coverUrl: mc.portadaFirmada,
@@ -115,7 +112,7 @@ export function mapearCursoConSecciones(mc: MiCursoApi, secciones: SeccionConLec
 
 /**
  * Curso todavía NO accesible (`GET /cursos/bloqueados`). `CursoBloqueadoResponse` trae muchos
- * menos campos que `MiCursoResponse` — no tiene instructor, descripción, progreso, `acceso` ni el
+ * menos campos que `MiCursoResponse` — no tiene descripción, progreso, `acceso` ni el
  * árbol de secciones (ver `academy.types.ts`). No se inventan esos valores para "completar" la
  * tarjeta: quedan vacíos o en cero, tal como el backend los deja de mandar.
  *
@@ -128,10 +125,8 @@ export function mapearCursoBloqueado(cb: CursoBloqueadoApi): CourseItem {
     id: cb.id,
     title: cb.titulo,
     category: 'CURSO BLOQUEADO',
-    instructor: 'Equipo Renaser', // mismo texto genérico que ya usa mapearCursoConSecciones arriba
     summary: '', // CursoBloqueadoResponse no trae descripción
     progressPercent: 0,
-    totalModules: 0,
     totalResources: 0,
     sections: [],
     // Se usa `portadaFirmada`, NUNCA `portadaUrl`: esta última es la ruta cruda del objeto en un

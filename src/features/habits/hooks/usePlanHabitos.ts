@@ -97,7 +97,10 @@ export function usePlanHabitos() {
         actuales.map(h => (h.id === habitId ? { ...h, time: hora, moment: aMomento(hora) } : h)),
       );
       try {
-        await habitsApi.cambiarHorario(habitId, `${hora}:00`, limiteActual);
+        // El recordatorio que ese hábito ya tenía: sin esto el PATCH lo apagaría.
+        const recordatorio = anterior.find(h => h.id === habitId)?.recordatorio
+          ?? { activo: false, minutosAntes: null };
+        await habitsApi.cambiarHorario(habitId, `${hora}:00`, limiteActual, recordatorio);
       } catch (e) {
         setHabits(anterior);
         setError(mensajeDeError(e, 'No pudimos guardar el horario'));

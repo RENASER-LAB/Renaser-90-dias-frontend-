@@ -63,10 +63,12 @@ export async function obtenerTracksDeHoy(): Promise<TrackDelDiaApi[]> {
  * `limitTime`, `reminderEnabled`, `reminderMinutesBefore`) — `reminderEnabled` es un `boolean`
  * primitivo del lado del backend, así que si no viaja en el JSON, Jackson no puede construir el
  * DTO y el PATCH entero falla con 400 (`"El cuerpo de la solicitud es invalido o esta mal
- * formado"`), para CUALQUIER hábito. Como todavía no hay ninguna pantalla de recordatorios en la
- * app (ni el `GET` de este mismo endpoint devuelve el estado actual del recordatorio, así que no
- * habría forma de preservarlo aunque quisiéramos), se manda explícito "sin recordatorio" — no
- * apaga nada real porque hoy nada en la app prende un recordatorio.
+ * formado"`), para CUALQUIER hábito. Por eso los cuatro viajan siempre.
+ *
+ * > **Corregido 2026-09-07.** Acá decía que mandar "sin recordatorio" clavado no apagaba nada real
+ * > porque ninguna pantalla los prendía. Eso valió hasta que la pantalla existió: desde entonces,
+ * > cambiar la hora de un hábito le borraba la alarma en silencio. El recordatorio actual ahora
+ * > entra por parámetro y el GET lo devuelve, así que se preserva.
  */
 export type CambioHorarioResultado = {
   deferred: boolean;
@@ -82,10 +84,26 @@ export async function cambiarHorario(
   habitId: string,
   triggerTime: string | null,
   limitTime: string | null,
+  /**
+   * El recordatorio que el hábito YA tenía. Es obligatorio y no opcional a propósito: el PATCH
+   * reemplaza los cuatro campos a la vez, así que omitirlo no es "no tocarlo", es APAGARLO.
+   *
+   * > Hasta 2026-09-07 acá viajaba `{ reminderEnabled: false, reminderMinutesBefore: null }`
+   * > clavado, con el argumento de que ninguna pantalla prendía recordatorios y por lo tanto no
+   * > apagaba nada real. Dejó de ser cierto el día que la pantalla de recordatorios existió: sin
+   * > este parámetro, cambiar la hora de un hábito le borraba la alarma en silencio. El GET ahora
+   * > devuelve los dos campos, así que preservarlos ya es posible.
+   */
+  recordatorio: { activo: boolean; minutosAntes: number | null },
 ): Promise<CambioHorarioResultado> {
   const r = await apiFetch<unknown>(`/api/v1/habit-preferences/${habitId}`, {
     method: 'PATCH',
-    body: { triggerTime, limitTime, reminderEnabled: false, reminderMinutesBefore: null },
+    body: {
+      triggerTime,
+      limitTime,
+      reminderEnabled: recordatorio.activo,
+      reminderMinutesBefore: recordatorio.minutosAntes,
+    },
   });
   return validarRespuesta(habitsSchemas.cambioHorario, r, 'PATCH /api/v1/habit-preferences/{id}');
 }

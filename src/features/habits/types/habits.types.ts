@@ -111,6 +111,14 @@ export interface PreferenciaHabitoApi {
   /** true si el aprendiz cambió el horario respecto del catálogo. */
   customized: boolean;
   /**
+   * El recordatorio de este hábito. Ausente contra un backend anterior al 2026-09-07: hasta
+   * entonces el PATCH los escribía y el GET no los devolvía, así que no había forma de leerlos de
+   * vuelta y el móvil los mandaba en `false`/`null` en cada guardado — apagando el recordatorio
+   * cada vez que alguien tocaba la hora.
+   */
+  reminderEnabled?: boolean;
+  reminderMinutesBefore?: number | null;
+  /**
    * Cambio de horario ya guardado que todavía NO rige: el backend lo programa para el día
    * siguiente cuando la ventana del hábito ya arrancó hoy ("no se improvisa el día").
    * `null` cuando no hay nada pendiente.
