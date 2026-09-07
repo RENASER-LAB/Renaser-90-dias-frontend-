@@ -1,11 +1,13 @@
-import React, { forwardRef, useImperativeHandle, useState, useRef, useMemo } from 'react';
+import React, { forwardRef, useImperativeHandle, useState, useRef, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Pressable,
   PanResponder,
+  Platform,
   GestureResponderEvent,
+  ViewStyle,
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { captureRef } from 'react-native-view-shot';
@@ -27,6 +29,43 @@ export function safeParsePaths(data: string | undefined | null): string[] {
     return [];
   }
 }
+
+/**
+ * BUG ENCONTRADO 2026-09-07 (E-152): la firma sale torcida en el build web abierto desde un iPhone.
+ * En web el gesto del dedo lo negocia el NAVEGADOR antes que nosotros, y sin `touch-action` Safari
+ * de iOS lo interpreta como un scroll de la pagina. Se lleva el gesto, y pasan dos cosas:
+ *
+ * 1) La pagina se desplaza junto con el dedo, asi que el recuadro se mueve CON el. Como los trazos
+ *    se graban relativos al recuadro (`locationX/locationY` = clientX/Y menos el borde del recuadro,
+ *    ver `createResponderEvent` de react-native-web), el movimiento vertical del dedo se cancela
+ *    con el de la pagina y solo sobrevive el horizontal: la firma queda aplastada contra una franja,
+ *    un puñado de rayas casi rectas que no se parecen a lo que la persona dibujo.
+ * 2) Al quedarse con el gesto, Safari emite `touchcancel`. Eso NO es soltar el dedo:
+ *    react-native-web lo trata como terminacion y, a diferencia de `scroll`, NO la puede vetar
+ *    `onPanResponderTerminationRequest` — solo puede con `contextmenu`, `scroll` y
+ *    `selectionchange` (ver `ResponderSystem`). Por eso los flags anti-intercepcion que alcanzan
+ *    en Android nativo aca no alcanzan: hay que impedir que el navegador considere el gesto.
+ *
+ * `touchAction: 'none'` es exactamente eso, y es la unica palanca que sirve: los listeners de
+ * `touchmove` que react-native-web instala sobre `document` son pasivos, asi que un
+ * `preventDefault()` desde el PanResponder no haria nada.
+ *
+ * Contrapartida aceptada: sobre el recuadro ya no se puede arrastrar para scrollear la pagina. Es
+ * lo correcto para un pad de firma — el recuadro existe para dibujar — y el resto de la pantalla
+ * sigue scrolleando normal.
+ *
+ * `userSelect: 'none'` va de la mano: sin el, arrastrar el dedo sobre el recuadro empieza a
+ * seleccionar texto y iOS levanta la lupa encima de la firma.
+ *
+ * En nativo no aplica nada de esto (no hay navegador negociando), de ahi el `Platform.OS`.
+ * `touchAction` no existe en los tipos de React Native — es una propiedad solo de web que
+ * react-native-web si entiende y usa internamente (`ScrollViewBase`, `Pressable`) —, de ahi el
+ * casteo.
+ */
+const estiloGestoWeb =
+  Platform.OS === 'web'
+    ? ({ touchAction: 'none', userSelect: 'none' } as unknown as ViewStyle)
+    : null;
 
 interface SignatureCanvasProps {
   initialSignature?: SignatureData | null;
@@ -119,6 +158,22 @@ export const SignatureCanvas = forwardRef<SignatureCanvasHandle, SignatureCanvas
     []
   );
 
+  /**
+   * Publica los trazos hacia arriba. Se llama al soltar el dedo y TAMBIEN cuando el gesto se
+   * cancela: un `touchcancel` del navegador no dispara `onPanResponderRelease` sino
+   * `onPanResponderTerminate` (ver el comentario de `estiloGestoWeb`). Si solo escucharamos el
+   * release, un trazo interrumpido quedaria dibujado en pantalla pero jamas llegaria al estado de
+   * Terminos o del Pacto: la persona veria su firma y el pie seguiria diciendo "SIN FIRMAR", o peor,
+   * se guardaria como evidencia legal una firma a la que le falta el ultimo trazo.
+   */
+  const publicarTrazos = useCallback(() => {
+    if (!onSignatureChange) return;
+    onSignatureChange(pathsRef.current.length > 0, {
+      type: 'drawn',
+      data: JSON.stringify(pathsRef.current),
+    });
+  }, [onSignatureChange]);
+
   // PanResponder with anti-interception flags for Android & Xiaomi
   const panResponder = useMemo(
     () =>
@@ -149,17 +204,13 @@ export const SignatureCanvas = forwardRef<SignatureCanvasHandle, SignatureCanvas
           }
         },
 
-        onPanResponderRelease: () => {
-          const serialized = JSON.stringify(pathsRef.current);
-          if (onSignatureChange) {
-            onSignatureChange(pathsRef.current.length > 0, {
-              type: 'drawn',
-              data: serialized,
-            });
-          }
-        },
+        onPanResponderRelease: publicarTrazos,
+
+        // El unico aviso que llega cuando el navegador se queda con el gesto. Sin esta linea, en
+        // web el trazo cancelado se pierde para quien nos usa.
+        onPanResponderTerminate: publicarTrazos,
       }),
-    [onSignatureChange]
+    [publicarTrazos]
   );
 
   const handleClear = () => {
@@ -196,6 +247,9 @@ export const SignatureCanvas = forwardRef<SignatureCanvasHandle, SignatureCanvas
         collapsable={false}
         style={[
           styles.canvasBox,
+          // Solo tiene efecto en web: le saca el gesto al navegador para que el dedo dibuje en vez
+          // de scrollear. Ver `estiloGestoWeb`.
+          estiloGestoWeb,
           {
             borderColor: error ? '#E06A66' : hasSignature ? c.gold : c.borderStrong,
             backgroundColor: c.cardBgAlt,
