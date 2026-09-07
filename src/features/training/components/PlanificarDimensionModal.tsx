@@ -152,7 +152,6 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
    */
   const [semillaRueda, setSemillaRueda] = useState(0);
   const [dias, setDias] = useState<Record<DiaDelPlan, boolean>>(todosLosDias);
-  const [diasSemilla, setDiasSemilla] = useState<Record<DiaDelPlan, boolean>>(todosLosDias);
   const [seleccion, setSeleccion] = useState<Record<string, boolean>>({});
   /** `habitoId` -> hora que YA se guardó en esta sesión de la hoja. Es la marca de "listo". */
   const [guardados, setGuardados] = useState<Record<string, string>>({});
@@ -180,7 +179,6 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
     }, Object.fromEntries(DIAS_DEL_PLAN.map(d => [d, false])) as Record<DiaDelPlan, boolean>);
     const inicial = DIAS_DEL_PLAN.some(d => semilla[d]) ? semilla : todosLosDias();
     setDias(inicial);
-    setDiasSemilla(inicial);
     (async () => {
       try {
         // Los cortes del día salen del teléfono y los otros dos del backend; son independientes,
@@ -243,7 +241,6 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
     h => filtroMomento === null || (bloqueDe(h.habitoId, h.time) ?? filtroMomento) === filtroMomento,
   );
   const elegidos = visibles.filter(h => seleccion[h.habitoId]);
-  const diasCambiados = DIAS_DEL_PLAN.some(d => dias[d] !== diasSemilla[d]);
 
   const cerrar = () => (huboEscritura ? onGuardado() : onCerrar());
 
@@ -404,9 +401,6 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
           fechaDiferida ? formatearFechaLarga(fechaDiferida) : 'día siguiente'
         }: el día en curso no se reacomoda.`,
       );
-    }
-    if (diasCambiados) {
-      partes.push('Los días que tocaste NO se guardaron: el servidor solo sabe de activo y pausado.');
     }
     if (fallidos.length > 0) {
       partes.push(`No pudimos guardar: ${fallidos.map(f => f.title).join(', ')}. Quedaron marcados para reintentar.`);
@@ -587,30 +581,40 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                   : ''}
               </Text>
 
-              {/* 3. DÍAS */}
-              <View style={styles.filaDias}>
+              {/* 3. A QUÉ DÍAS LE PEGA ESTE CAMBIO.
+                  Antes acá había 7 pastillas tocables que no hacían NADA: el guardado las ignoraba
+                  por completo. Es la peor clase de control — promete una decisión que no existe, y
+                  encima tapa cuál es el alcance de verdad. Ahora la fila NO se toca y dice lo que
+                  realmente pasa: la hora es una sola para todos los días en que ese hábito corre,
+                  y rige desde mañana. */}
+              <Text style={[t.micro, { color: c.gold, fontWeight: '700', marginTop: 8 }]}>
+                ESTE CAMBIO AFECTA
+              </Text>
+              <View style={styles.filaDias} pointerEvents="none">
                 {DIAS_DEL_PLAN.map(dia => {
                   const on = dias[dia];
                   return (
-                    <Pressable
+                    <View
                       key={dia}
-                      onPress={() => setDias(prev => ({ ...prev, [dia]: !prev[dia] }))}
                       style={[
                         styles.pastillaDia,
-                        { borderColor: on ? c.gold : c.border, backgroundColor: on ? c.gold : c.cardBgAlt },
+                        {
+                          borderColor: on ? c.gold : c.border,
+                          backgroundColor: on ? c.gold : 'transparent',
+                          opacity: on ? 1 : 0.4,
+                        },
                       ]}
                     >
                       <Text style={[t.micro, { fontSize: 12.5, fontWeight: '700', color: on ? c.onGold : c.textSoft }]}>
                         {dia.charAt(0)}
                       </Text>
-                    </Pressable>
+                    </View>
                   );
                 })}
               </View>
-              <Text style={[t.micro, { color: c.textSoft, fontSize: 10, marginTop: 4, lineHeight: 13 }]}>
-                {diasCambiados
-                  ? '⚠ Los días todavía no se guardan. Para apagar un hábito usá su interruptor.'
-                  : 'Días en que corren. Para apagar uno hoy, usá su interruptor de la derecha.'}
+              <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5, marginTop: 5, lineHeight: 14 }]}>
+                Todos esos días, desde mañana — el día en curso no se reacomoda. Para apagar un
+                hábito solo hoy, usá su interruptor de la derecha.
               </Text>
 
               {/* 4. HÁBITOS: casilla para la hora, interruptor propio para activo / pausado. */}
