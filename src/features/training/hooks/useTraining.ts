@@ -107,6 +107,9 @@ export function useTraining() {
   const habits = useMemo(() => {
     const categoriaPorHabito = new Map(catalogo.map(h => [h.id, h.category]));
     const claveSistemaPorHabito = new Map(catalogo.map(h => [h.id, h.systemKey ?? null]));
+    // La exigencia de evidencia solo está en el catálogo, y la necesita el check: sin ella la
+    // pantalla no puede distinguir un hábito que se cierra con un toque de uno que necesita prueba.
+    const exigenciaPorHabito = new Map(catalogo.map(h => [h.id, h.evidenceRequirement]));
     const tracksPorHabito = new Map(tracks.map(t => [t.habitoId, t]));
 
     const deHabitos: HabitItem[] = plan.habits
@@ -144,6 +147,7 @@ export function useTraining() {
           habitoId: habito.id,
           isDeactivatable: habito.isDeactivatable,
           icon: habito.icon,
+          evidenceRequirement: exigenciaPorHabito.get(habito.id),
           // Mismos días que ya pinta Plan (catálogo + pausa aplicada) — se reusan tal cual para
           // sembrar la fila decorativa de "Planificar", en vez de recalcularlos desde
           // `activeWeekdays` crudo.

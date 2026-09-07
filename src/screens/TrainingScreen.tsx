@@ -1,13 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  ScrollView,
-  TextInput,
-  Modal,
-} from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
 import { Alert } from '../components/Alerta';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
@@ -15,7 +7,6 @@ import { useResponsive } from '../theme/responsive';
 import { useSystemBackHandler } from '../hooks/useSystemBackHandler';
 import { ScreenHeader, MicroLabel } from '../components/ui';
 import { Icon, IconName } from '../components/Icon';
-import { GoldButton } from '../components/GoldButton';
 import { useTraining } from '../features/training/hooks/useTraining';
 import { ProximoAVencerCard } from '../features/training/components/ProximoAVencerCard';
 import { EvidenciaHabitoModal } from '../features/habits/components/EvidenciaHabitoModal';
@@ -86,6 +77,14 @@ export interface HabitItem {
   habitoId?: string | null;
   /** `false` = obligatorio del programa, el interruptor de Planificar queda bloqueado en ON. */
   isDeactivatable?: boolean;
+  /**
+   * `REQUIRED` = este hábito no se puede dar por cumplido sin subir la prueba.
+   *
+   * Lo decide la APP, no el servidor: `POST /habit-tracks/{id}/complete` **no mira la exigencia**
+   * —`OBLIGATORIA` solo aparece en mapeos de DTO y de persistencia, en ningún guard del cierre—,
+   * así que si el check llamara directo cerraría hábitos de evidencia obligatoria sin evidencia.
+   */
+  evidenceRequirement?: string;
   /**
    * Emoji propio del hábito, ya resuelto por `mapearPlanHabit` a partir de `iconKey` del backend
    * (`SLEEP` → 😴, `WATER` → 💧…). Distingue una fila de otra dentro de la misma dimensión, cosa
@@ -262,17 +261,9 @@ export default function TrainingScreen() {
   const claseDiaria = useClaseDiaria();
 
   // New Custom Habit Modal State
-  const [addModalVisible, setAddModalVisible] = useState(false);
-  const [newTitle, setNewTitle] = useState('');
-  const [newTime, setNewTime] = useState('');
-  const [newTag, setNewTag] = useState('INNEGOCIABLE');
 
   // Interceptar gestos de retroceso en pantalla táctil (Xiaomi / Android / iOS Edge Swipe)
   useSystemBackHandler(() => {
-    if (addModalVisible) {
-      setAddModalVisible(false);
-      return true;
-    }
     // `PastillaRenacerModal` ya cablea su propio retroceso (para poder guardar el borrador antes
     // de cerrar). Esta rama es la red de seguridad por si el orden de registro de los dos
     // handlers cambia: el gesto lateral tiene que cerrar el modal, nunca la app.
@@ -303,7 +294,7 @@ export default function TrainingScreen() {
       return true;
     }
     return false; // Permite el comportamiento por defecto si está en el menú raíz
-  }, addModalVisible || pastillaVisible || claseDiariaVisible || activeEvidenceHabit !== null || planificarVisible || selectedDimension !== null);
+  }, pastillaVisible || claseDiariaVisible || activeEvidenceHabit !== null || planificarVisible || selectedDimension !== null);
 
   /** Lleva al muro con el compositor abierto. Reusa el parametro que ComunidadScreen ya entiende. */
   const abrirMuroParaPublicar = () => {
@@ -379,6 +370,12 @@ export default function TrainingScreen() {
     // Los habitos con flujo propio NO se marcan con el checkbox: hacerlo mentiria, porque el
     // backend exige la publicacion o el resumen para cerrarlos. Se desvia al flujo que corresponde.
     const habit = habits.find(h => h.id === id);
+    // Deshacer no existe en el backend: no hay endpoint que reabra un registro cerrado. Antes esto
+    // lo "deshacía" en memoria, o sea que mostraba algo que el servidor no iba a confirmar.
+    if (habit?.done) {
+      Alert.alert('Ya está cumplido', 'Un hábito cerrado no se puede deshacer desde acá.');
+      return;
+    }
     if (habit && !habit.done) {
       if (habit.systemKey === CLAVE_SISTEMA_CLASE_DIARIA) {
         void abrirClaseDiaria(habit);
@@ -393,18 +390,33 @@ export default function TrainingScreen() {
         return;
       }
     }
-    setHabits(prev =>
-      prev.map(h => {
-        if (h.id !== id) return h;
-        const newDone = !h.done;
-        return {
-          ...h,
-          done: newDone,
-          hasEvidence: newDone,
-          streak: newDone ? h.streak + 1 : Math.max(h.streak - 1, 0),
-        };
-      })
-    );
+    // Si NO exige evidencia, se cierra contra el backend igual que Despertar/Dormir. Si la exige,
+    // se manda al modal de evidencia: cerrarlo a secas sería posible (el servidor no lo impide) y
+    // vaciaría de sentido la palabra "obligatoria".
+    if (habit) {
+      if (habit.evidenceRequirement === 'REQUIRED') {
+        openEvidenceModal(habit);
+        return;
+      }
+      void completarHabitoSimple(habit);
+    }
+  };
+
+  /**
+   * Cierra un hábito que no exige evidencia. Sin marcado optimista: la tarjeta se actualiza
+   * recargando del backend, que además es quien calcula los puntos con la hora del servidor.
+   *
+   * > **Corregido 2026-09-07.** Acá antes había un `setHabits` y nada más: el check tachaba el
+   * > hábito en el estado de React, sin llamar a nadie, y al recargar la pantalla volvía sin
+   * > marcar. La interacción principal de Training no guardaba nada.
+   */
+  const completarHabitoSimple = async (habit: HabitItem) => {
+    try {
+      await completarRegistro(habit.id, null);
+      await recargarEntrenamiento();
+    } catch (e) {
+      Alert.alert('No pudimos marcarlo', mensajeDeError(e, 'Intenta de nuevo en unos segundos.'));
+    }
   };
 
   const openEvidenceModal = (habit: HabitItem) => {
@@ -473,34 +485,6 @@ export default function TrainingScreen() {
     );
   };
 
-  const handleCreateHabit = () => {
-    if (!newTitle.trim()) {
-      Alert.alert('Título requerido', 'Por favor ingresa el nombre de tu nuevo hábito.');
-      return;
-    }
-    if (!selectedDimension) return;
-
-    const newHabit: HabitItem = {
-      id: Date.now().toString(),
-      // Alta local (sin backend, ver el resto de esta función): no depende de ningún track
-      // real, así que no aplica la restricción de `tieneTrackHoy` — se mantiene interactivo
-      // como ya lo era antes de que ese campo existiera.
-      tieneTrackHoy: true,
-      dimension: selectedDimension.key,
-      title: newTitle.trim(),
-      time: newTime.trim() || 'Horario flexible · 15 min',
-      tag: newTag,
-      streak: 1,
-      done: false,
-      hasEvidence: false,
-    };
-
-    setHabits(prev => [newHabit, ...prev]);
-    setNewTitle('');
-    setNewTime('');
-    setAddModalVisible(false);
-    Alert.alert('¡Hábito Creado! 🦅', `"${newHabit.title}" ha sido añadido a tu dimensión ${selectedDimension.title}.`);
-  };
 
   // Filter habits for selected dimension
   const currentDimensionHabits = selectedDimension
@@ -842,19 +826,12 @@ export default function TrainingScreen() {
                   </Pressable>
                 )}
 
-                {/* Action bar to add new custom habit */}
+                {/* El "AGREGAR HÁBITO" que vivía acá se eliminó (2026-09-07): armaba un objeto en
+                    memoria con un id inventado, anunciaba "¡Hábito Creado! 🦅" y desaparecía al
+                    recargar — el mismo bug que E-137 corrigió en Plan. Crear un hábito ahora vive
+                    en la hoja de Planificar y llama a `POST /api/v1/habits` de verdad. */}
                 <View style={styles.habitsActionRow}>
                   <MicroLabel>PRÁCTICAS ACTIVAS ({currentDimensionHabits.length})</MicroLabel>
-                  <Pressable
-                    onPress={() => setAddModalVisible(true)}
-                    style={styles.addHabitLink}
-                    hitSlop={8}
-                  >
-                    <Icon name="plus" size={12} color={c.gold} />
-                    <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 10.5 }]}>
-                      AGREGAR HÁBITO
-                    </Text>
-                  </Pressable>
                 </View>
 
                 {/* Sin hábitos en esta dimensión: es un estado legítimo (día 0, plan sin
@@ -1132,97 +1109,6 @@ export default function TrainingScreen() {
         onCerrar={cerrarClaseDiaria}
       />
 
-      {/* ========================================================================= */}
-      {/* MODAL: AGREGAR NUEVO HÁBITO PERSONALIZADO                                 */}
-      {/* ========================================================================= */}
-      <Modal
-        visible={addModalVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setAddModalVisible(false)}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={[styles.modalCard, { backgroundColor: c.cardBg, borderColor: c.gold }]}>
-            <View style={{ alignItems: 'center', gap: 2 }}>
-              <MicroLabel>NUEVA PRÁCTICA</MicroLabel>
-              <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 18 }]}>
-                Agregar Hábito a {selectedDimension?.title}
-              </Text>
-            </View>
-
-            <View style={{ gap: 10, marginTop: 10 }}>
-              <View style={{ gap: 4 }}>
-                <MicroLabel>NOMBRE DEL HÁBITO / PRÁCTICA</MicroLabel>
-                <TextInput
-                  value={newTitle}
-                  onChangeText={setNewTitle}
-                  placeholder="Ej. Caminar 10,000 pasos / Ducha fría"
-                  placeholderTextColor={c.tabInactive}
-                  style={[styles.modalInput, { color: c.textStrong, borderColor: c.border, backgroundColor: c.cardBgAlt }]}
-                />
-              </View>
-
-              <View style={{ gap: 4 }}>
-                <MicroLabel>HORARIO / FRECUENCIA / TIEMPO</MicroLabel>
-                <TextInput
-                  value={newTime}
-                  onChangeText={setNewTime}
-                  placeholder="Ej. 17:00 PM · 20 min"
-                  placeholderTextColor={c.tabInactive}
-                  style={[styles.modalInput, { color: c.textStrong, borderColor: c.border, backgroundColor: c.cardBgAlt }]}
-                />
-              </View>
-
-              <View style={{ gap: 4 }}>
-                <MicroLabel>ETIQUETA DE PRIORIDAD</MicroLabel>
-                <View style={styles.tagPickerRow}>
-                  {['INNEGOCIABLE', 'SALUD', 'ENERGÍA', 'APRENDIZAJE', 'ESTRATEGIA'].map(tagOption => (
-                    <Pressable
-                      key={tagOption}
-                      onPress={() => setNewTag(tagOption)}
-                      style={[
-                        styles.tagOptionBtn,
-                        {
-                          borderColor: newTag === tagOption ? c.gold : c.border,
-                          backgroundColor: newTag === tagOption ? c.cardBgAlt : 'transparent',
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          t.micro,
-                          {
-                            color: newTag === tagOption ? c.gold : c.textSoft,
-                            fontWeight: newTag === tagOption ? '700' : '500',
-                            fontSize: 9.5,
-                          },
-                        ]}
-                      >
-                        {tagOption}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-            </View>
-
-            <GoldButton
-              label="✓ CREAR HÁBITO EN ESTA DIMENSIÓN"
-              onPress={handleCreateHabit}
-              style={{ marginTop: 8 }}
-            />
-
-            <Pressable
-              onPress={() => setAddModalVisible(false)}
-              style={[styles.closeModalBtn, { borderColor: c.border }]}
-            >
-              <Text style={[t.micro, { color: c.textSoft, fontWeight: '700', fontSize: 11, textAlign: 'center' }]}>
-                CANCELAR
-              </Text>
-            </Pressable>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -1352,11 +1238,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 2,
   },
-  addHabitLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
   habitCard: {
     borderWidth: 1.2,
     borderRadius: 16,
@@ -1480,10 +1361,5 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 3,
-  },
-  closeModalBtn: {
-    borderWidth: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
   },
 });
