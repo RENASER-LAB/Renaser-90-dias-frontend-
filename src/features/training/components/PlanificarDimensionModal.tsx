@@ -192,14 +192,15 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
   const [tituloNuevo, setTituloNuevo] = useState('');
   const [iconoNuevo, setIconoNuevo] = useState<string | null>(null);
   /**
-   * QUÉ SE ESTÁ EDITANDO: `null` = el horario general, que rige todos los días; un día = la hora
-   * propia de ESE día, todas las semanas (V39).
+   * QUÉ DÍAS se están editando. Vacío = el horario general, que rige todos los días; con días = la
+   * hora propia de ESOS días, todas las semanas (V39).
    *
-   * Es un solo estado y no un conjunto de días marcados: volver a la selección múltiple sería
-   * volver al problema que esta pantalla vino a resolver. Una decisión por vez — o todos los días,
-   * o uno.
+   * **Sí es selección múltiple, y no contradice lo de sacarla del paso 1.** Allá se marcaban
+   * HÁBITOS, que es el modelo de administrador que hacía perder a la gente. Acá son días del mismo
+   * hábito, y "lunes, miércoles y viernes a las 6" es una sola decisión: obligar a repetirla tres
+   * veces sería el trabajo tonto que la pantalla tiene que evitar.
    */
-  const [diaEnEdicion, setDiaEnEdicion] = useState<DiaDelPlan | null>(null);
+  const [diasEnEdicion, setDiasEnEdicion] = useState<DiaDelPlan[]>([]);
   /** La hora de cada día, tal cual la resolvió el servidor. `propio` = tiene hora propia. */
   const [horarioSemanal, setHorarioSemanal] = useState<Record<string, { hora: string | null; propio: boolean }>>({});
   /** Antelación del recordatorio del hábito abierto. `null` = sin aviso. */
@@ -298,7 +299,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
     setSemillaRueda(n => n + 1);
     setBloqueEnEdicion(momentoDeMinutos(inicial, rangos));
     setEditandoBloques(false);
-    setDiaEnEdicion(null);
+    setDiasEnEdicion([]);
     setHorarioSemanal({});
     // Se pide DESPUÉS de abrir, no antes: el toque tiene que responder ya. Mientras llega, las
     // pastillas muestran el día sin hora, que es lo honesto.
@@ -330,15 +331,38 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
    * Tocar un día pasa a editar SU hora; tocarlo de nuevo vuelve al horario general. La rueda sigue
    * a lo que se está editando, que es lo que hace que no haya dos verdades en pantalla.
    */
-  const elegirDia = (dia: DiaDelPlan | null) => {
-    setDiaEnEdicion(dia);
-    const hhmm = dia === null
-      ? horaDe(habitoEnEdicion?.habitoId ?? '', habitoEnEdicion?.time ?? '')
-      : horarioSemanal[dia]?.hora ?? null;
+  /** Lleva la rueda a una hora concreta. `null` cae en el comienzo de la mañana. */
+  const moverRueda = (hhmm: string | null) => {
     const minutos = aMinutos(hhmm) ?? rangos.inicioManana;
     setHora(Math.floor(minutos / 60));
     setMinuto(minutos % 60);
     setSemillaRueda(n => n + 1);
+  };
+
+  /** Vuelve a editar el horario general: todos los días. */
+  const volverATodos = () => {
+    setDiasEnEdicion([]);
+    moverRueda(horaDe(habitoEnEdicion?.habitoId ?? '', habitoEnEdicion?.time ?? ''));
+  };
+
+  /**
+   * Marca o desmarca un día. La rueda se mueve SOLO al marcar el primero: a partir de ahí es la
+   * hora que se va a poner, no la que había — si siguiera saltando con cada día que se suma,
+   * borraría lo que la persona acaba de elegir.
+   */
+  const alternarDia = (dia: DiaDelPlan) => {
+    setDiasEnEdicion(prev => {
+      if (prev.includes(dia)) {
+        const quedan = prev.filter(d => d !== dia);
+        if (quedan.length === 0) {
+          moverRueda(horaDe(habitoEnEdicion?.habitoId ?? '', habitoEnEdicion?.time ?? ''));
+        }
+        return quedan;
+      }
+      if (prev.length === 0) moverRueda(horarioSemanal[dia]?.hora ?? null);
+      // En el orden de la semana, no en el orden en que se tocaron: "L M V" se lee mejor que "V L M".
+      return DIAS_DEL_PLAN.filter(d => d === dia || prev.includes(d));
+    });
   };
 
   /** En el editor, tocar un bloque lleva la rueda a donde ese bloque empieza. */
@@ -421,29 +445,53 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
    * Guarda la hora de UN día de la semana (V39) y se queda en la pantalla: lo normal es configurar
    * varios días seguidos, y volver a la lista despues de cada uno seria hacerlo entrar de nuevo.
    */
-  const guardarDia = async (h: HabitoPlanificable, dia: DiaDelPlan) => {
+  const guardarDias = async (h: HabitoPlanificable, dias: DiaDelPlan[]) => {
     setGuardando(true);
-    try {
-      await habitsApi.fijarHorarioDelDia(h.habitoId, NOMBRE_ISO_DEL_DIA[dia], `${horaTexto}:00`,
-        preferencias.get(h.habitoId)?.limitTime ?? null);
-      setHorarioSemanal(prev => ({ ...prev, [dia]: { hora: horaTexto, propio: true } }));
+    const limite = preferencias.get(h.habitoId)?.limitTime ?? null;
+    const fallidos: DiaDelPlan[] = [];
+    const guardados: DiaDelPlan[] = [];
+    // En serie y no en paralelo: son escrituras sobre las mismas filas del aprendiz, y así un
+    // fallo suelto queda identificado por día en vez de tumbar la tanda entera.
+    for (const dia of dias) {
+      try {
+        await habitsApi.fijarHorarioDelDia(h.habitoId, NOMBRE_ISO_DEL_DIA[dia], `${horaTexto}:00`, limite);
+        guardados.push(dia);
+      } catch {
+        fallidos.push(dia);
+      }
+    }
+    if (guardados.length > 0) {
+      setHorarioSemanal(prev => ({
+        ...prev,
+        ...Object.fromEntries(guardados.map(d => [d, { hora: horaTexto, propio: true }])),
+      }));
       setHuboEscritura(true);
-    } catch (e) {
-      Alert.alert('No pudimos guardar ese día', mensajeDeError(e, 'Intenta de nuevo en unos segundos.'));
-    } finally {
-      setGuardando(false);
+    }
+    setGuardando(false);
+    // Quedan marcados SOLO los que fallaron: reintentar es volver a tocar el botón.
+    setDiasEnEdicion(fallidos);
+    if (fallidos.length > 0) {
+      Alert.alert(
+        'Se guardó a medias',
+        `${guardados.join(', ') || 'Ninguno'} quedaron a las ${horaTexto}. No pudimos con ${fallidos.join(', ')}.`,
+      );
     }
   };
 
   /** Devuelve un día al horario general. */
-  const quitarDia = async (h: HabitoPlanificable, dia: DiaDelPlan) => {
+  const quitarDias = async (h: HabitoPlanificable, dias: DiaDelPlan[]) => {
     setGuardando(true);
     try {
-      await habitsApi.quitarHorarioDelDia(h.habitoId, NOMBRE_ISO_DEL_DIA[dia]);
+      for (const dia of dias) {
+        await habitsApi.quitarHorarioDelDia(h.habitoId, NOMBRE_ISO_DEL_DIA[dia]);
+      }
       const general = horaDe(h.habitoId, h.time);
-      setHorarioSemanal(prev => ({ ...prev, [dia]: { hora: general || null, propio: false } }));
+      setHorarioSemanal(prev => ({
+        ...prev,
+        ...Object.fromEntries(dias.map(d => [d, { hora: general || null, propio: false }])),
+      }));
       setHuboEscritura(true);
-      elegirDia(null);
+      volverATodos();
     } catch (e) {
       Alert.alert('No pudimos quitarlo', mensajeDeError(e, 'Intenta de nuevo en unos segundos.'));
     } finally {
@@ -532,8 +580,8 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
       );
       return;
     }
-    if (diaEnEdicion !== null) {
-      void guardarDia(h, diaEnEdicion);
+    if (diasEnEdicion.length > 0) {
+      void guardarDias(h, diasEnEdicion);
       return;
     }
     void guardarHora(h);
@@ -932,11 +980,11 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                   nuevo vuelve al horario general. Cada pastilla muestra la hora que rige ese día,
                   así que la fila entera se lee de un vistazo: "los lunes 05:00, el resto 09:00". */}
               <View style={styles.filaTituloCompacta}>
-                <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>
-                  {diaEnEdicion === null ? 'TODOS LOS DÍAS' : `SOLO LOS ${diaEnEdicion}`}
+                <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]} numberOfLines={1}>
+                  {diasEnEdicion.length === 0 ? 'TODOS LOS DÍAS' : `SOLO ${diasEnEdicion.join(' · ')}`}
                 </Text>
-                {diaEnEdicion !== null && (
-                  <Pressable onPress={() => elegirDia(null)} hitSlop={10}>
+                {diasEnEdicion.length > 0 && (
+                  <Pressable onPress={volverATodos} hitSlop={10}>
                     <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 10.5 }]}>
                       ← TODOS
                     </Text>
@@ -946,14 +994,14 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
               <View style={styles.filaDias}>
                 {DIAS_DEL_PLAN.map(dia => {
                   const corre = diasDe(habitoEnEdicion)[dia];
-                  const editando = diaEnEdicion === dia;
+                  const editando = diasEnEdicion.includes(dia);
                   const delDia = horarioSemanal[dia];
                   return (
                     <Pressable
                       key={dia}
                       // Un día en que el hábito NO corre no se puede editar: la hora de un día que
                       // no existe no significa nada. Eso lo decide el catálogo, no el aprendiz.
-                      onPress={() => corre && elegirDia(editando ? null : dia)}
+                      onPress={() => corre && alternarDia(dia)}
                       disabled={!corre}
                       style={[
                         styles.pastillaDia,
@@ -992,19 +1040,21 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                 })}
               </View>
               <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5, marginTop: 5, lineHeight: 14 }]}>
-                {diaEnEdicion === null
-                  ? 'Tocá un día para darle una hora propia. Lo que guardes acá rige el resto, desde mañana.'
-                  : `Solo los ${diaEnEdicion.toLowerCase()}, todas las semanas. El día en curso no se reacomoda.`}
+                {diasEnEdicion.length === 0
+                  ? 'Tocá uno o varios días para darles su propia hora. Lo que guardes acá rige el resto, desde mañana.'
+                  : `Solo ${diasEnEdicion.join(', ').toLowerCase()}, todas las semanas. El día en curso no se reacomoda.`}
               </Text>
 
-              {diaEnEdicion !== null && horarioSemanal[diaEnEdicion]?.propio && (
+              {/* Solo cuando TODOS los marcados tienen hora propia: ofrecer "quitar" con alguno que
+                  no la tiene sería prometer deshacer algo que no está puesto. */}
+              {diasEnEdicion.length > 0 && diasEnEdicion.every(d => horarioSemanal[d]?.propio) && (
                 <Pressable
-                  onPress={() => void quitarDia(habitoEnEdicion, diaEnEdicion)}
+                  onPress={() => void quitarDias(habitoEnEdicion, diasEnEdicion)}
                   hitSlop={8}
                   style={{ marginTop: 8, minHeight: 36, justifyContent: 'center' }}
                 >
                   <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5 }]}>
-                    ✕ Quitar la hora propia de los {diaEnEdicion.toLowerCase()} y volver al horario general
+                    ✕ Quitar la hora propia de {diasEnEdicion.join(', ').toLowerCase()} y volver al horario general
                   </Text>
                 </Pressable>
               )}
@@ -1049,9 +1099,9 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                 label={
                   guardando
                     ? 'GUARDANDO…'
-                    : diaEnEdicion === null
+                    : diasEnEdicion.length === 0
                       ? `GUARDAR ${horaTexto} · TODOS LOS DÍAS`
-                      : `GUARDAR ${horaTexto} · SOLO ${diaEnEdicion}`
+                      : `GUARDAR ${horaTexto} · ${diasEnEdicion.join(' ')}`
                 }
                 onPress={() => intentarGuardar(habitoEnEdicion)}
                 disabled={guardando}
