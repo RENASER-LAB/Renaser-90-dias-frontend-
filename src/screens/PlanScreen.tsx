@@ -37,6 +37,9 @@ import {
 import type { DiaDelPlan } from '../features/habits/utils/semanaDelPlan';
 import type { CategoriaHabitoApi } from '../features/habits/types/habits.types';
 import { mensajeDeError } from '../services/http/apiClient';
+import { useRocasMaestras } from '../features/objetivos/hooks/useRocasMaestras';
+import type { EjeObjetivo } from '../features/objetivos/types/objetivos.types';
+import { etiquetaDelMes, mesDe, semanaDe } from '../features/objetivos/utils/periodoDelPrograma';
 
 // =========================================================================
 // TIPOS: PLAN, HÁBITOS 7 DÍAS Y OBJETIVOS EN 3 NIVELES
@@ -98,10 +101,10 @@ export interface WeeklyGoalItem {
 }
 
 export interface PlanGoals {
-  principalTitle: string;
-  principalCurrentVal: number;
-  principalTargetVal: number;
-  principalUnit: string;
+  // Los campos `principal*` se eliminaron: el objetivo de 90 días ya no vive acá sino en el
+  // backend (`useRocasMaestras`). Eran datos inventados —"Facturar $30,000 USD en Contratos
+  // High-Ticket", 19.500 de 30.000— que se le mostraban igual a todos los aprendices como si
+  // fueran su plan, y que al editarse solo cambiaban este estado y se perdían al recargar.
   weeklyTitle: string;
   weeklySubtitle: string;
   weeklyItems: WeeklyGoalItem[];
@@ -119,22 +122,34 @@ export interface PlanGoals {
 // con ellos para siempre. Ahora la pantalla arranca vacía y dibuja esqueleto / error / estado
 // vacío según lo que diga `usePlanHabitos` — ver el bloque de estados más abajo.
 
+/**
+ * El objetivo semanal y el diario arrancan **vacíos**.
+ *
+ * Antes venían con datos inventados —"Sprint de Cierre", "Enviar propuesta a Corporación Delta
+ * ($8,500 USD)", "Cerrar contrato Grupo Sol", tres de cuatro ya tildados— que se le mostraban
+ * igual a **todos** los aprendices como si fueran su plan de la semana. Es el mismo problema que
+ * ya se corrigió con `INITIAL_HABITS` y con el objetivo de 90 días: mostrar el plan inventado de
+ * nadie es peor que mostrar que todavía no hay plan.
+ *
+ * Siguen viviendo solo en memoria y se pierden al recargar: sus endpoints existen en el backend
+ * (`/api/v1/rocks/weekly` y `/api/v1/rocks`), pero el modelo real —título, obstáculo,
+ * contingencia, autoevaluación 1-10, acciones críticas— no coincide con esta lista de tildes, así
+ * que conectarlos es un rediseño de la tarjeta, no un cableado. Queda pendiente y documentado.
+ */
 const INITIAL_GOALS: PlanGoals = {
-  principalTitle: 'Facturar $30,000 USD en Contratos High-Ticket',
-  principalCurrentVal: 19500,
-  principalTargetVal: 30000,
-  principalUnit: 'USD',
-  weeklyTitle: 'Sprint de Cierre: 3 Propuestas Comerciales & Cero Dolor Lumbar',
-  weeklySubtitle: 'Semana del 14 al 20 de Agosto · Foco en Ventas y Estabilidad',
-  weeklyItems: [
-    { id: 'w1', text: 'Enviar propuesta a Corporación Delta ($8,500 USD)', completed: true },
-    { id: 'w2', text: 'Completar 5 sesiones de tensión isométrica lumbar', completed: true },
-    { id: 'w3', text: 'Cerrar contrato Grupo Sol ($11,000 USD)', completed: true },
-    { id: 'w4', text: 'Auditoría financiera del viernes 18:00', completed: false },
-  ],
-  dailyTitle: 'Cerrar el Bloque de 90m y sellar la evidencia fotográfica antes de las 12:00',
-  dailyCompleted: true,
+  weeklyTitle: '',
+  weeklySubtitle: '',
+  weeklyItems: [],
+  dailyTitle: '',
+  dailyCompleted: false,
 };
+
+/**
+ * Eje al que pertenece esta sub-pantalla. Es la de "Diseñar libertad financiera", o sea TRABAJO.
+ * Los otros dos ejes del programa (CUERPO, RELACIONES) ya existen en el backend pero todavía no
+ * tienen pantalla propia; cuando la tengan, esto pasa a ser un parámetro y no una constante.
+ */
+const EJE_DE_ESTA_PANTALLA: EjeObjetivo = 'TRABAJO';
 
 const DAY_OPTIONS: DayOfWeek[] = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'];
 
@@ -385,6 +400,22 @@ export default function PlanScreen() {
   const [editGoalTitle, setEditGoalTitle] = useState('');
   const [editGoalCurrentVal, setEditGoalCurrentVal] = useState('');
   const [editGoalTargetVal, setEditGoalTargetVal] = useState('');
+  /** Unidad de la meta (USD, kg, clientes...). El backend la exige junto con los dos números. */
+  const [editGoalUnidad, setEditGoalUnidad] = useState('');
+
+  /**
+   * El objetivo de 90 días real del aprendiz, traído del backend.
+   *
+   * Esta sub-pantalla es la de "Diseñar libertad financiera", así que el eje es TRABAJO. Los otros
+   * dos ejes (CUERPO, RELACIONES) existen en el backend pero todavía no tienen pantalla propia.
+   *
+   * Reemplaza a `INITIAL_GOALS.principal*`, que eran datos inventados escritos a mano en este
+   * archivo —los mismos para todos los aprendices— y que al editarse solo cambiaban un estado de
+   * React que se perdía al recargar. Mismo problema, y misma corrección, que la que ya se hizo con
+   * `INITIAL_HABITS`.
+   */
+  const objetivos = useRocasMaestras();
+  const rocaDeTrabajo = objetivos.deEje(EJE_DE_ESTA_PANTALLA);
 
   // =========================================================================
   // GESTOS TÁCTILES DEL SISTEMA (BACKHANDLER)
@@ -645,15 +676,68 @@ export default function PlanScreen() {
   const openEditGoalModal = (type: 'principal' | 'semanal' | 'diario') => {
     setEditingGoalType(type);
     if (type === 'principal') {
-      setEditGoalTitle(goals.principalTitle);
-      setEditGoalCurrentVal(goals.principalCurrentVal.toString());
-      setEditGoalTargetVal(goals.principalTargetVal.toString());
+      // Prellena con lo que hay guardado. Si el aprendiz todavía no definió su objetivo, los
+      // campos arrancan vacíos: es su primera vez, no hay nada que corregir.
+      setEditGoalTitle(rocaDeTrabajo?.objetivo ?? '');
+      setEditGoalCurrentVal(rocaDeTrabajo?.avance != null ? String(rocaDeTrabajo.avance) : '');
+      setEditGoalTargetVal(rocaDeTrabajo?.meta != null ? String(rocaDeTrabajo.meta) : '');
+      setEditGoalUnidad(rocaDeTrabajo?.unidad ?? '');
     } else if (type === 'semanal') {
       setEditGoalTitle(goals.weeklyTitle);
     } else {
       setEditGoalTitle(goals.dailyTitle);
     }
     setEditGoalModalVisible(true);
+  };
+
+  /**
+   * Guarda el objetivo de 90 días contra el backend (`PUT /api/v1/rocks/master/{eje}`).
+   *
+   * La parte medible es opcional pero va entera: si la persona escribió una meta, se le exigen
+   * también el avance y la unidad, porque el backend rechaza media meta con un 400 y es mejor
+   * decírselo acá, en su idioma, que dejar que rebote el servidor. Si no escribió ninguna de las
+   * tres, se guarda un objetivo cualitativo, que es perfectamente válido.
+   */
+  const guardarObjetivoPrincipal = async () => {
+    const meta = editGoalTargetVal.trim() === '' ? undefined : Number(editGoalTargetVal);
+    const avance = editGoalCurrentVal.trim() === '' ? undefined : Number(editGoalCurrentVal);
+    const unidad = editGoalUnidad.trim() === '' ? undefined : editGoalUnidad.trim();
+    const algunNumero = meta !== undefined || avance !== undefined || unidad !== undefined;
+
+    if (algunNumero) {
+      if (meta === undefined || avance === undefined || unidad === undefined) {
+        Alert.alert(
+          'Falta un dato de la meta',
+          'Para medir tu objetivo hacen falta las tres cosas: cuánto llevas, cuánto querés llegar y en qué se mide (USD, kg, clientes...). Si no querés medirlo con un número, dejá los tres campos vacíos.'
+        );
+        return;
+      }
+      if (!Number.isFinite(meta) || !Number.isFinite(avance)) {
+        Alert.alert('Número inválido', 'Revisá los valores: tienen que ser números.');
+        return;
+      }
+      if (meta <= 0) {
+        Alert.alert('Meta inválida', 'La meta tiene que ser mayor que cero.');
+        return;
+      }
+      if (avance < 0) {
+        Alert.alert('Avance inválido', 'El avance no puede ser negativo.');
+        return;
+      }
+    }
+
+    const resultado = await objetivos.definir(EJE_DE_ESTA_PANTALLA, {
+      objetivo: editGoalTitle.trim(),
+      meta,
+      avance,
+      unidad,
+    });
+    if (!resultado.ok) {
+      Alert.alert('No se pudo guardar', resultado.mensaje);
+      return;
+    }
+    setEditGoalModalVisible(false);
+    Alert.alert('¡Objetivo actualizado! 🎯', 'Tu objetivo de 90 días quedó guardado.');
   };
 
   const handleSaveGoal = () => {
@@ -663,15 +747,10 @@ export default function PlanScreen() {
     }
 
     if (editingGoalType === 'principal') {
-      const cur = parseFloat(editGoalCurrentVal) || goals.principalCurrentVal;
-      const tar = parseFloat(editGoalTargetVal) || goals.principalTargetVal;
-      setGoals(prev => ({
-        ...prev,
-        principalTitle: editGoalTitle.trim(),
-        principalCurrentVal: cur,
-        principalTargetVal: tar,
-      }));
-    } else if (editingGoalType === 'semanal') {
+      void guardarObjetivoPrincipal();
+      return;
+    }
+    if (editingGoalType === 'semanal') {
       setGoals(prev => ({ ...prev, weeklyTitle: editGoalTitle.trim() }));
     } else {
       setGoals(prev => ({ ...prev, dailyTitle: editGoalTitle.trim() }));
@@ -681,10 +760,8 @@ export default function PlanScreen() {
     Alert.alert('¡Objetivo Actualizado! 🎯', 'Los cambios han sido guardados en tu plan.');
   };
 
-  const principalPercent = Math.min(
-    100,
-    Math.round((goals.principalCurrentVal / (goals.principalTargetVal || 1)) * 100)
-  );
+  // `principalPercent` se eliminó: el porcentaje ahora lo calcula el backend y viaja en la
+  // respuesta, para que no haya dos versiones de la misma regla (incluido el tope al 100 %).
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
@@ -1274,29 +1351,62 @@ export default function PlanScreen() {
                 </Pressable>
               </RowBetween>
 
-              <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13.5, marginTop: 6 }]}>
-                {goals.principalTitle}
-              </Text>
+              {objetivos.cargando && !rocaDeTrabajo ? (
+                <Text style={[t.micro, { color: c.textSoft, marginTop: 8 }]}>Cargando tu objetivo...</Text>
+              ) : objetivos.error && !rocaDeTrabajo ? (
+                <Text style={[t.micro, { color: '#f28e8e', marginTop: 8 }]}>{objetivos.error}</Text>
+              ) : !rocaDeTrabajo ? (
+                // Estado vacío real: antes acá se mostraba un objetivo inventado ("Facturar
+                // $30.000 USD") que no era de nadie. Es preferible una invitación honesta.
+                <Text style={[t.micro, { color: c.textSoft, marginTop: 8, lineHeight: 16 }]}>
+                  Todavía no definiste tu objetivo de 90 días. Tocá Editar y escribí a dónde querés
+                  llegar. Si se puede medir con un número, agregalo: vas a ver tu avance acá.
+                </Text>
+              ) : (
+                <>
+                  <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13.5, marginTop: 6 }]}>
+                    {rocaDeTrabajo.objetivo}
+                  </Text>
 
-              <View style={{ gap: 4, marginTop: 8 }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <Text style={[t.micro, { color: c.textSoft, fontSize: 10 }]}>Avance cuantitativo:</Text>
-                  <Text style={[t.micro, { color: c.gold, fontWeight: '800', fontSize: 11 }]}>
-                    {principalPercent}% CUMPLIDO
-                  </Text>
-                </View>
-                <View style={[styles.progressBarBg, { backgroundColor: c.cardBg, borderColor: c.border }]}>
-                  <View style={[styles.progressBarFill, { width: `${principalPercent}%`, backgroundColor: c.gold }]} />
-                </View>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 }}>
-                  <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>
-                    Llevas: <Text style={{ color: c.gold, fontWeight: '700' }}>${goals.principalCurrentVal} {goals.principalUnit}</Text>
-                  </Text>
-                  <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>
-                    Meta: ${goals.principalTargetVal} {goals.principalUnit}
-                  </Text>
-                </View>
-              </View>
+                  {/* La barra solo aparece si el objetivo tiene meta medible. Un objetivo
+                      cualitativo es válido y no tiene nada que graficar. */}
+                  {rocaDeTrabajo.porcentaje != null && (
+                    <View style={{ gap: 4, marginTop: 8 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                        <Text style={[t.micro, { color: c.textSoft, fontSize: 10 }]}>Avance cuantitativo:</Text>
+                        <Text style={[t.micro, { color: c.gold, fontWeight: '800', fontSize: 11 }]}>
+                          {rocaDeTrabajo.porcentaje}% CUMPLIDO
+                        </Text>
+                      </View>
+                      <View style={[styles.progressBarBg, { backgroundColor: c.cardBg, borderColor: c.border }]}>
+                        <View style={[styles.progressBarFill, { width: `${rocaDeTrabajo.porcentaje}%`, backgroundColor: c.gold }]} />
+                      </View>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 }}>
+                        <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>
+                          Llevas: <Text style={{ color: c.gold, fontWeight: '700' }}>{rocaDeTrabajo.avance} {rocaDeTrabajo.unidad}</Text>
+                        </Text>
+                        <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>
+                          Meta: {rocaDeTrabajo.meta} {rocaDeTrabajo.unidad}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+                </>
+              )}
+            </View>
+
+            {/* Dónde está parado dentro del programa. Se deriva del día, de corrido: el "mes" es un
+                bloque de 4 semanas contado desde que arrancó, no un mes del calendario. */}
+            <View style={[styles.goalCard, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
+              <Row gap={6}>
+                <Text style={{ fontSize: 15 }}>🗓️</Text>
+                <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 1 }]}>
+                  {etiquetaDelMes(mesDe(diaPrograma))}
+                </Text>
+              </Row>
+              <Text style={[t.micro, { color: c.textSoft, fontSize: 10, marginTop: 4 }]}>
+                Vas por la semana {semanaDe(diaPrograma)} de 12 · día {diaPrograma} de 90
+              </Text>
             </View>
 
             {/* 2. ⚡ OBJETIVO SEMANAL (SPRINT DE 7 DÍAS) */}
@@ -1316,12 +1426,22 @@ export default function PlanScreen() {
                 </Pressable>
               </RowBetween>
 
-              <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13, marginTop: 4 }]}>
-                {goals.weeklyTitle}
-              </Text>
-              <Text style={[t.micro, { color: c.micro, fontSize: 9.5 }]}>
-                {goals.weeklySubtitle}
-              </Text>
+              {goals.weeklyTitle ? (
+                <>
+                  <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13, marginTop: 4 }]}>
+                    {goals.weeklyTitle}
+                  </Text>
+                  {!!goals.weeklySubtitle && (
+                    <Text style={[t.micro, { color: c.micro, fontSize: 9.5 }]}>
+                      {goals.weeklySubtitle}
+                    </Text>
+                  )}
+                </>
+              ) : (
+                <Text style={[t.micro, { color: c.textSoft, fontSize: 10, marginTop: 4, lineHeight: 15 }]}>
+                  Todavía no definiste tu foco de esta semana. Tocá Editar para escribirlo.
+                </Text>
+              )}
 
               {/* Checklist de Metas Semanales */}
               <View style={{ gap: 6, marginTop: 8 }}>
@@ -1376,8 +1496,13 @@ export default function PlanScreen() {
                       ROCA INNEGOCIABLE
                     </Text>
                   </View>
-                  <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13, marginTop: 4 }]}>
-                    {goals.dailyTitle}
+                  <Text
+                    style={[
+                      t.cardTitle,
+                      { color: goals.dailyTitle ? c.textStrong : c.textSoft, fontSize: 13, marginTop: 4 },
+                    ]}
+                  >
+                    {goals.dailyTitle || 'Todavía no elegiste tu roca innegociable de hoy.'}
                   </Text>
                 </View>
 
@@ -1621,25 +1746,48 @@ export default function PlanScreen() {
               </View>
 
               {editingGoalType === 'principal' && (
-                <View style={{ flexDirection: 'row', gap: 8 }}>
-                  <View style={{ flex: 1, gap: 4 }}>
-                    <Text style={[t.micro, { color: c.textSoft }]}>VALOR ACTUAL ($):</Text>
-                    <TextInput
-                      value={editGoalCurrentVal}
-                      onChangeText={setEditGoalCurrentVal}
-                      keyboardType="numeric"
-                      style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.gold }]}
-                    />
+                <View style={{ gap: 8 }}>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <View style={{ flex: 1, gap: 4 }}>
+                      <Text style={[t.micro, { color: c.textSoft }]}>LLEVAS:</Text>
+                      <TextInput
+                        value={editGoalCurrentVal}
+                        onChangeText={setEditGoalCurrentVal}
+                        keyboardType="numeric"
+                        placeholder="0"
+                        placeholderTextColor={c.micro}
+                        style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.gold }]}
+                      />
+                    </View>
+                    <View style={{ flex: 1, gap: 4 }}>
+                      <Text style={[t.micro, { color: c.textSoft }]}>META:</Text>
+                      <TextInput
+                        value={editGoalTargetVal}
+                        onChangeText={setEditGoalTargetVal}
+                        keyboardType="numeric"
+                        placeholder="30000"
+                        placeholderTextColor={c.micro}
+                        style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.text }]}
+                      />
+                    </View>
+                    {/* La unidad dejó de estar fija en dólares: el objetivo puede medirse en kg,
+                        horas o clientes. El backend la exige junto con los dos números. */}
+                    <View style={{ flex: 1, gap: 4 }}>
+                      <Text style={[t.micro, { color: c.textSoft }]}>UNIDAD:</Text>
+                      <TextInput
+                        value={editGoalUnidad}
+                        onChangeText={setEditGoalUnidad}
+                        placeholder="USD"
+                        placeholderTextColor={c.micro}
+                        maxLength={20}
+                        autoCapitalize="none"
+                        style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.text }]}
+                      />
+                    </View>
                   </View>
-                  <View style={{ flex: 1, gap: 4 }}>
-                    <Text style={[t.micro, { color: c.textSoft }]}>META TOTAL ($):</Text>
-                    <TextInput
-                      value={editGoalTargetVal}
-                      onChangeText={setEditGoalTargetVal}
-                      keyboardType="numeric"
-                      style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.text }]}
-                    />
-                  </View>
+                  <Text style={[t.micro, { color: c.micro, fontSize: 9.5, lineHeight: 14 }]}>
+                    Si tu objetivo no se mide con un número, dejá los tres campos vacíos.
+                  </Text>
                 </View>
               )}
             </View>
