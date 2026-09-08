@@ -49,8 +49,8 @@ export const light: Palette = {
 export const dark: Palette = {
   canvas: '#0A0908',
   bg: '#0C0B09',
-  cardBg: 'rgba(255,255,255,0.04)',
-  cardBgAlt: 'rgba(255,255,255,0.07)',
+  cardBg: '#161513',
+  cardBgAlt: '#201F1C',
   border: 'rgba(198,164,92,0.20)',
   borderStrong: 'rgba(198,164,92,0.38)',
   divider: 'rgba(255,255,255,0.08)',
