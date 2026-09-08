@@ -93,22 +93,32 @@ export default function HoyScreen() {
   const diaConocido = resumen?.diaPrograma ?? null;
   /** Para los cálculos derivados, que necesitan un número. `0` es el día real de quien recién entra. */
   const diaNumero = diaConocido ?? 0;
-  // Mapa de Renacimiento (Día 7). Aparece desde el Día 7 y se queda hasta activarse: quien se
-  // salte ese día no lo pierde. En builds de desarrollo se muestra siempre, marcado como vista
-  // previa, para poder probarlo sin esperar una semana de programa — en producción no.
+  // Mapa de Renacimiento. **Disponible desde el Día 0 y opcional** (decisión del dueño,
+  // 2026-09-08). Antes aparecía recién el Día 7; se adelanta por dos razones:
+  //
+  //   1. En Día 0 se PLANIFICA, no se ejecuta — el mismo criterio ya aplicado a los hábitos
+  //      (D-103, E-137). Definir el objetivo de los 90 días es planificar, y quien quiere
+  //      hacerlo el primer día no tiene por qué esperar una semana.
+  //   2. Al activarlo se escriben las tres Rocas Maestras, que son la llave de TODA la cadena de
+  //      Rocas: sin ellas el backend responde `403 ROCKS_LOCKED` y la pestaña Plan queda
+  //      bloqueada. Adelantar el Mapa adelanta el desbloqueo del plan.
+  //
+  // Sigue siendo opcional: nadie queda trabado por no llenarlo.
+  //
   // Interruptor de salida a producción: en desarrollo siempre; en un build de producción SOLO si
-  // EXPO_PUBLIC_MAPA_DIA7=on (variable de Vercel/EAS, inlined al compilar). Así mergear la rama
-  // no expone el flujo a las cohortes en curso mientras no exista su backend
-  // (docs/MAPA_RENACIMIENTO_DIA7.md §4): encenderlo es un acto deliberado, no un efecto del merge.
+  // EXPO_PUBLIC_MAPA_DIA7=on (variable de Vercel/EAS, inlined al compilar). Se conserva — encender
+  // el flujo sigue siendo un acto deliberado y no un efecto del merge.
   const MAPA_DIA7_HABILITADO = __DEV__ || process.env.EXPO_PUBLIC_MAPA_DIA7 === 'on';
-  const esVistaPreviaMapa = __DEV__ && diaNumero < 7;
-  const mostrarMapa = MAPA_DIA7_HABILITADO && !!user && (diaNumero >= 7 || __DEV__);
+  // Decía "83 días", que era 90 − 7 y valía mientras el Mapa vivía en el Día 7. Desde que arranca
+  // en el Día 0 ese número miente: quien lo abre el primer día tiene 90 por delante, no 83.
+  const diasQueQuedan = Math.max(1, 90 - diaNumero);
+  const mostrarMapa = MAPA_DIA7_HABILITADO && !!user;
   const tituloMapa = estadoMapa === 'activo'
     ? 'Tu mapa está activo'
     : estadoMapa === 'en_progreso' || estadoMapa === 'listo_para_revision' ? 'Continúa tu mapa' : 'Diseña tu mapa';
   const detalleMapa = estadoMapa === 'activo'
-    ? 'Tus objetivos, acciones y protocolo de retorno para los 83 días.'
-    : 'Convierte lo aprendido en un plan claro para los próximos 83 días. 15–20 min.';
+    ? `Tus objetivos, acciones y protocolo de retorno para los ${diasQueQuedan} días.`
+    : `Convierte lo aprendido en un plan claro para los próximos ${diasQueQuedan} días. 15–20 min.`;
   const coherenciaScore = Math.round(resumen?.coherencia ?? 100);
   const puntosLiga = resumen?.puntosLiga ?? 100;
   const rachaActual = resumen?.rachaActual ?? 0;
@@ -319,8 +329,10 @@ export default function HoyScreen() {
             <Pressable onPress={abrirMapa} accessibilityRole="button">
               <Card style={{ borderColor: c.gold }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <MicroLabel>DÍA 7 · MAPA DE RENACIMIENTO</MicroLabel>
-                  {esVistaPreviaMapa ? <Text style={[t.micro, { color: c.textSoft }]}>VISTA PREVIA</Text> : null}
+                  {/* Ya no dice "DÍA 7": está disponible desde el Día 0. El badge de VISTA PREVIA
+                      se fue con él — existía para marcar que en desarrollo se veía antes de tiempo,
+                      y ahora no hay "antes de tiempo". */}
+                  <MicroLabel>MAPA DE RENACIMIENTO</MicroLabel>
                 </View>
                 <View style={styles.insight}>
                   <Icon name="spark" size={19} color={c.gold} />

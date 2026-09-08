@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import * as habitsApi from '../../habits/api/habitsApi';
+import * as objetivosApi from '../../objetivos/api/objetivosApi';
+import type { DefinicionRocaMaestra, EjeObjetivo } from '../../objetivos/types/objetivos.types';
 import type { AltaHabitoPersonal, CategoriaHabitoApi, DiaSemanaApi } from '../../habits/types/habits.types';
 import { almacenMapa } from '../almacen';
 import { completarHitos, definicionDeTerminado, redactar } from '../reglas';
-import type { AccionMotora, Area, BloqueDia, DiaSemana, MapaRenacimiento, PasoMapa } from '../tipos';
+import type { AccionMotora, Area, BloqueDia, DiaSemana, MapaRenacimiento, Objetivo, PasoMapa } from '../tipos';
+import { AREAS, objetivoDe } from '../tipos';
 import { mapaVacio } from '../tipos';
 
 /**
@@ -31,6 +34,52 @@ const HORA_POR_BLOQUE: Record<BloqueDia, string> = {
   tarde: '15:00:00',
   noche: '20:00:00',
 };
+
+/**
+ * El eje de Rocas al que corresponde cada área del Mapa. Es una traducción 1 a 1 y por eso vive
+ * acá, en el único lugar que conoce los dos vocabularios: el Mapa habla de áreas (`salud`,
+ * `negocio_dinero`, `relaciones`) y `rocks` habla de ejes (`CUERPO`, `TRABAJO`, `RELACIONES`).
+ */
+const EJE_POR_AREA: Record<Area, EjeObjetivo> = {
+  salud: 'CUERPO',
+  negocio_dinero: 'TRABAJO',
+  relaciones: 'RELACIONES',
+};
+
+/**
+ * Convierte un objetivo del Mapa en la definición que espera `PUT /rocks/master/{eje}`.
+ *
+ * **`meta`, `avance` y `unidad` van los tres o ninguno**: el backend rechaza media meta con un 400
+ * (regla en tres capas — el command, `MetaCuantitativa` y un CHECK de V35). Por eso solo se mandan
+ * cuando la línea base y el resultado son números de verdad.
+ *
+ * `avance` arranca en la línea base y no en cero: el aprendiz que baja de 82 a 75 kg NO empieza con
+ * 0 de avance, empieza en 82 — y con cero la barra mostraría un progreso que no es.
+ *
+ * **Relaciones va siempre sin meta cuantitativa.** Su escala es 1-10, que no es una unidad de
+ * negocio; mandarla como tal haría que la barra de avance mezclara peras con puntajes.
+ */
+function definicionDesde(objetivo: Objetivo): DefinicionRocaMaestra {
+  const texto = (objetivo.metaRedactada || '').trim().slice(0, 500);
+  if (objetivo.area === 'relaciones') {
+    return { objetivo: texto };
+  }
+  const base = aNumeroDeMeta(objetivo.lineaBase);
+  const meta = aNumeroDeMeta(objetivo.resultadoDia90);
+  const unidad = (objetivo.area === 'salud' ? objetivo.unidad : objetivo.moneda).trim().slice(0, 20);
+  if (base === null || meta === null || meta <= 0 || !unidad) {
+    return { objetivo: texto };
+  }
+  return { objetivo: texto, meta, avance: base, unidad };
+}
+
+/** `"78,5 kg"` → `78.5`. `null` si no hay ningún número: entonces el objetivo es cualitativo. */
+function aNumeroDeMeta(crudo: string): number | null {
+  const limpio = (crudo || '').replace(',', '.').replace(/[^0-9.]/g, '');
+  if (!limpio) return null;
+  const n = Number(limpio);
+  return Number.isFinite(n) ? n : null;
+}
 
 /**
  * Los días de la acción con el vocabulario del backend (`java.time.DayOfWeek`). La V06 del mapa los
@@ -165,15 +214,31 @@ export function useMapaRenacimiento(userId: string): EstadoMapaRenacimiento {
 
   /**
    * Activación (§5.3, AC-07). Idempotente: cada acción recuerda el id del hábito que creó, así
-   * que un segundo toque —o un reintento tras un fallo a mitad— no duplica nada. Lo que hoy
-   * puede automatizarse desde el cliente es crear los hábitos (`POST /api/v1/habits`); hitos,
-   * recordatorios, control semanal y aviso al mentor esperan al backend del mapa.
+   * que un segundo toque —o un reintento tras un fallo a mitad— no duplica nada.
+   *
+   * **Primero las tres Rocas Maestras, después los hábitos** (2026-09-08). Son el objetivo de 90
+   * días que el aprendiz acaba de escribir, y hasta hoy no salían del teléfono: se usaban solo
+   * como etiqueta del hábito y `rocas_maestras` quedaba vacía — con la pantalla de Objetivos del
+   * Plan bloqueada por eso mismo (D-119/RK-9).
+   *
+   * Y no es solo mostrarlas: **las tres maestras son la llave de toda la cadena de Rocas.** Sin
+   * ellas, `POST /rocks/weekly` responde `403 ROCKS_LOCKED`, y sin la semanal no hay roca diaria
+   * (`NO_WEEKLY_ROCK`). Escribirlas acá es lo que destraba el plan completo.
+   *
+   * Van ANTES que los hábitos a propósito: si algo falla, es preferible un mapa sin activar que
+   * uno con hábitos creados y sin objetivos. `PUT` hace upsert por `(participante, eje)`, así que
+   * reintentar es seguro — la misma garantía que ya tienen los hábitos por otro camino.
+   *
+   * Los hitos, los recordatorios y el aviso al mentor siguen esperando al backend del mapa.
    */
   const activar = useCallback(async (): Promise<boolean> => {
     setActivando(true);
     setErrorActivacion(null);
     let creados = { ...mapa.habitosCreados };
     try {
+      for (const area of AREAS) {
+        await objetivosApi.definirRocaMaestra(EJE_POR_AREA[area], definicionDesde(objetivoDe(mapa, area)));
+      }
       for (const accion of mapa.acciones) {
         if (creados[accion.id]) continue;
         const objetivo = accion.area === 'salud' ? mapa.salud : accion.area === 'negocio_dinero' ? mapa.negocio : mapa.relaciones;
