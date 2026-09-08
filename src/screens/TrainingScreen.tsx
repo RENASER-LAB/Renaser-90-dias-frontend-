@@ -179,6 +179,7 @@ export default function TrainingScreen() {
   // legítimo (día 0, o su plan todavía no se generó), no un error.
   const {
     habits: habitsDelBackend,
+    planHabits: planHabitsDelBackend,
     loading: cargandoBackend,
     error: errorBackend,
     recargar: recargarEntrenamiento,
@@ -202,11 +203,13 @@ export default function TrainingScreen() {
     arranque.estado === 'PENDIENTE_ELEGIR' || arranque.estado === 'ESPERANDO_INICIO';
 
   const [habits, setHabits] = useState<HabitItem[]>([]);
+  const [planHabits, setPlanHabits] = useState<HabitItem[]>([]);
   useEffect(() => {
     if (!cargandoBackend && !errorBackend) {
       setHabits(habitsDelBackend);
+      setPlanHabits(planHabitsDelBackend);
     }
-  }, [cargandoBackend, errorBackend, habitsDelBackend]);
+  }, [cargandoBackend, errorBackend, habitsDelBackend, planHabitsDelBackend]);
 
   // El habito de post diario lo cierra el compositor del Muro, en OTRA pestana (E-117). Sin esto,
   // la persona lee "hábito completado" alla y vuelve a encontrar la tarjeta sin tildar, porque
@@ -257,7 +260,7 @@ export default function TrainingScreen() {
    */
   const [repasoSemanal, setRepasoSemanal] = useState<boolean | null>(null);
   useEffect(() => {
-    if (!user?.id || !recordatorios.HAY_RECORDATORIOS) return;
+    if (!user?.id || !recordatorios.HAY_RECORDATORIOS_LOCALES) return;
     void recordatorios.tieneRepasoSemanal(user.id).then(setRepasoSemanal);
   }, [user?.id]);
 
@@ -597,7 +600,7 @@ export default function TrainingScreen() {
             </View>
 
             {/* Aviso de los domingos. Solo donde puede sonar de verdad. */}
-            {recordatorios.HAY_RECORDATORIOS && repasoSemanal !== null && !programaSinArrancar && (
+            {recordatorios.HAY_RECORDATORIOS_LOCALES && repasoSemanal !== null && !programaSinArrancar && (
               <View style={[styles.repasoSemanal, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
                 <Icon name="calendar" size={16} color={c.gold} />
                 <View style={{ flex: 1, flexShrink: 1 }}>
@@ -974,7 +977,7 @@ export default function TrainingScreen() {
 
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 1 }}>
                         <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5 }]}>
-                          {habit.time}
+                          {habit.time || 'Durante el día'}
                         </Text>
                         {habit.hasEvidence && (
                           <Text style={[t.micro, { color: '#4E9F76', fontSize: 9.5, fontWeight: '700' }]}>
@@ -1118,7 +1121,9 @@ export default function TrainingScreen() {
       <PlanificarDimensionModal
         visible={planificarVisible}
         dimension={selectedDimension?.title ?? ''}
-        habits={currentDimensionHabits}
+        // Planificar necesita el inventario completo de la dimensión para poder reactivar un
+        // hábito pausado que, correctamente, no tiene track en Training hoy.
+        habits={planHabits.filter(h => h.dimension === selectedDimension?.key)}
         onCerrar={() => setPlanificarVisible(false)}
         onGuardado={() => {
           setPlanificarVisible(false);

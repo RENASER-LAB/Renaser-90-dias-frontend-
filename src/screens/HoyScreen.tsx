@@ -19,6 +19,9 @@ import {
   DIAS_DEL_PROGRAMA,
 } from '../features/home/hooks/useResumenHome';
 import { obtenerRocasDeHoy } from '../features/training/api/trainingApi';
+import { useUltimaPublicacionMuro } from '../features/community/hooks/useUltimaPublicacionMuro';
+import { tiempoRelativo } from '../features/community/utils/tiempoRelativo';
+import { FotoMuro } from '../features/community/components/FotoMuro';
 import { useAuth } from '../context/AuthContext';
 import { useMapaRenacimientoAbierto } from '../features/mapa-renacimiento/MapaRenacimientoContext';
 import { useEstadoMapa } from '../features/mapa-renacimiento/hooks/useEstadoMapa';
@@ -34,6 +37,11 @@ export default function HoyScreen() {
   const { user } = useAuth();
   const { abrir: abrirMapa, abierto: mapaAbierto } = useMapaRenacimientoAbierto();
   const estadoMapa = useEstadoMapa(user?.id ?? null, mapaAbierto);
+  const {
+    publicacion: ultimaPublicacion,
+    cargando: cargandoUltimaPublicacion,
+    recargar: recargarUltimaPublicacion,
+  } = useUltimaPublicacionMuro();
 
   const [rocas, setRocas] = useState<RocaDiariaApi[]>([]);
   const [cargandoRocas, setCargandoRocas] = useState(false);
@@ -60,12 +68,15 @@ export default function HoyScreen() {
 
   const recargarTodo = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([recargarResumen(), cargarRocas()]);
+    await Promise.all([recargarResumen(), cargarRocas(), recargarUltimaPublicacion()]);
     setRefreshing(false);
-  }, [recargarResumen, cargarRocas]);
+  }, [recargarResumen, cargarRocas, recargarUltimaPublicacion]);
 
   // Roca Prioritaria de Hoy: Posición 1 (Pareto Verde) o la primera disponible
   const rocaPrioritaria = rocas.find(r => r.posicion === 1) || rocas[0] || null;
+  const evidenciasUltimaPublicacion = ultimaPublicacion?.media ?? [];
+  const evidenciasVisibles = evidenciasUltimaPublicacion.slice(0, 3);
+  const evidenciasRestantes = Math.max(evidenciasUltimaPublicacion.length - evidenciasVisibles.length, 0);
 
   const ringDiameters = isShort ? [220, 180, 140, 100] : [306, 258, 210, 162];
   const ringColors = [c.ring1, c.ring2, c.ring3, c.ring2];
@@ -376,6 +387,77 @@ export default function HoyScreen() {
             </Pressable>
           </Card>
 
+          {/* Última evidencia real del Muro: se omiten publicaciones de texto sin evidencia. */}
+          {(ultimaPublicacion || cargandoUltimaPublicacion) && (
+            <Card style={{ borderColor: c.gold }}>
+              {ultimaPublicacion ? (
+                <Pressable
+                  onPress={() =>
+                    (navigation as any).navigate('Comunidad', {
+                      abrirPublicacionId: ultimaPublicacion.id,
+                    })
+                  }
+                  accessibilityRole="button"
+                  accessibilityLabel={`Abrir la última evidencia de ${ultimaPublicacion.authorName || 'la comunidad'}`}
+                  style={styles.between}
+                >
+                  <View style={{ flex: 1 }}>
+                    <View style={styles.wallActivityHeader}>
+                      <MicroLabel>ÚLTIMA EVIDENCIA DEL MURO</MicroLabel>
+                      <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>
+                        {tiempoRelativo(ultimaPublicacion.createdAt)}
+                      </Text>
+                    </View>
+                    <View style={styles.insight}>
+                      <View style={[styles.wallAvatar, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+                        <Text style={{ fontSize: 16 }}>👤</Text>
+                      </View>
+                      <View style={{ flex: 1, gap: 4 }}>
+                        <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13.5 }]}>
+                          {ultimaPublicacion.authorName?.trim() || 'Miembro Renaser'}
+                        </Text>
+                        <Text style={[t.body, { color: c.textSoft, fontSize: 12, lineHeight: 18 }]}>
+                          Subió {evidenciasUltimaPublicacion.length === 1 ? 'una evidencia' : `${evidenciasUltimaPublicacion.length} evidencias`}
+                        </Text>
+                      </View>
+                    </View>
+                    {evidenciasUltimaPublicacion.length > 0 && (
+                      <View style={styles.wallEvidence}>
+                        <MicroLabel>EVIDENCIA</MicroLabel>
+                        <View style={[styles.wallEvidenceRow, { height: rs(62) }]}>
+                          {evidenciasVisibles.map((media, index) => (
+                            <View
+                              key={`${media.url}-${index}`}
+                              style={[styles.wallEvidenceThumb, { backgroundColor: c.cardBgAlt }]}
+                            >
+                              <Text style={[t.micro, { color: c.micro, fontSize: 9 }]}>FOTO</Text>
+                              <FotoMuro
+                                url={media.url}
+                                mimeType={media.mimeType}
+                                radioBorde={9}
+                                colorFondo={c.cardBgAlt}
+                              />
+                            </View>
+                          ))}
+                          {evidenciasRestantes > 0 && (
+                            <View style={[styles.wallEvidenceThumb, styles.wallEvidenceMore, { borderColor: c.border }]}>
+                              <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 14 }]}>+{evidenciasRestantes}</Text>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                    )}
+                  </View>
+                  <Icon name="chevron" size={14} color={c.chevron} />
+                </Pressable>
+              ) : (
+                <View style={styles.wallLoadingRow}>
+                  <MicroLabel>CARGANDO ACTIVIDAD DEL MURO...</MicroLabel>
+                </View>
+              )}
+            </Card>
+          )}
+
           {/* Próximo Evento / Mentoría (si el backend lo devuelve) */}
           {resumen?.proximoEvento && (
             <Card>
@@ -485,5 +567,46 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  wallActivityHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 2,
+  },
+  wallAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  wallLoadingRow: {
+    minHeight: 48,
+    justifyContent: 'center',
+  },
+  wallEvidence: {
+    marginTop: 12,
+    gap: 7,
+  },
+  wallEvidenceRow: {
+    flexDirection: 'row',
+    gap: 8,
+    width: '100%',
+  },
+  wallEvidenceThumb: {
+    flex: 1,
+    minWidth: 0,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  wallEvidenceMore: {
+    backgroundColor: 'transparent',
   },
 });

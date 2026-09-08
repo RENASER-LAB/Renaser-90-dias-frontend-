@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
+import { registrarSuscripcionWebPush } from './webPush';
 // SOLO tipos: `import type` se borra al compilar, así que esto NO carga el módulo en runtime. Ver
 // el bloque "POR QUÉ NO SE IMPORTA ARRIBA" más abajo — importarlo de verdad rompe Expo Go.
 import type * as TipoNotificaciones from 'expo-notifications';
@@ -43,14 +44,10 @@ import type * as TipoNotificaciones from 'expo-notifications';
  *
  * ## WEB
  *
- * `expo-notifications` **no soporta web**: sus plataformas son `android` e `ios` y nada más
- * (docs de Expo SDK 57). Esta app sí se despliega a web (`build:web`, `vercel.json`), así que
- * llamar a la librería ahí rompería el build en runtime. Por eso CADA función de este archivo
- * corta en seco con `Platform.OS === 'web'` y devuelve un valor inocuo.
- *
- * Un recordatorio en web de verdad —que suene con la pestaña cerrada— necesita un service worker
- * y Web Push con VAPID, que es otro trabajo entero. Mientras tanto, en web la pantalla no ofrece
- * la alarma en vez de ofrecerla y no cumplirla.
+ * `expo-notifications` no programa alarmas locales en web. La alternativa correcta es Web Push:
+ * el navegador registra una suscripción por usuario, el backend conserva esa suscripción y el
+ * scheduler existente envía los DOS avisos automáticos del hábito (inicio y vencimiento). La
+ * alarma no depende de que la pestaña siga abierta.
  *
  * ## POR QUÉ SE GUARDA EL IDENTIFICADOR
  *
@@ -105,8 +102,19 @@ const MINUTOS_POR_DIA = 24 * 60;
  */
 const ES_EXPO_GO = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 
-/** `true` cuando la plataforma puede programar alarmas locales. Web y Expo Go no pueden. */
-export const HAY_RECORDATORIOS = Platform.OS !== 'web' && !ES_EXPO_GO;
+/** Alarmas locales: solo development build/app instalada en Android o iOS. */
+export const HAY_RECORDATORIOS_LOCALES = Platform.OS !== 'web' && !ES_EXPO_GO;
+
+/** Web Push: requiere navegador compatible, HTTPS y la clave publica VAPID del despliegue. */
+export const HAY_RECORDATORIOS_WEB = Platform.OS === 'web';
+
+/** La pantalla puede ofrecer recordatorios cuando alguno de los dos canales esta disponible. */
+export const HAY_RECORDATORIOS = HAY_RECORDATORIOS_LOCALES || HAY_RECORDATORIOS_WEB;
+
+/** Pide el permiso web durante el gesto de guardar, antes de cualquier request de red. */
+export async function prepararWebPush(): Promise<boolean> {
+  return HAY_RECORDATORIOS_WEB ? registrarSuscripcionWebPush() : false;
+}
 
 let modulo: typeof TipoNotificaciones | null = null;
 
@@ -118,7 +126,7 @@ let modulo: typeof TipoNotificaciones | null = null;
  * hace falta para que el efecto secundario del push no se dispare en Expo Go.
  */
 function notificaciones(): typeof TipoNotificaciones | null {
-  if (!HAY_RECORDATORIOS) return null;
+  if (!HAY_RECORDATORIOS_LOCALES) return null;
   if (modulo === null) {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     modulo = require('expo-notifications') as typeof TipoNotificaciones;
@@ -235,6 +243,12 @@ export async function programar(
   horaHHmm: string,
   antelaciones: number[],
 ): Promise<boolean> {
+  if (HAY_RECORDATORIOS_WEB) {
+    // Web no tiene scheduler local: la suscripción se registra una vez y los dos avisos los
+    // despacha el backend para esta persona. Con antelaciones vacías no hay nada que habilitar.
+    if (antelaciones.length === 0) return true;
+    return registrarSuscripcionWebPush();
+  }
   const N = notificaciones();
   if (!N) return false;
   const [h, m] = horaHHmm.split(':').map(Number);
