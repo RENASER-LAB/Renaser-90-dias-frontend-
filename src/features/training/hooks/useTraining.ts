@@ -14,8 +14,8 @@ import type { EvidenciaApi, RocaDiariaApi } from '../types/training.types';
  * Las CINCO dimensiones de la pantalla NO salen todas del mismo lado, y esa es la parte que hay
  * que entender antes de tocar este archivo:
  *
- *   - `CUERPO`, `MENTE`, `EMOCIONES`, `ESPÍRITU` ← hábitos, uno por cada fila de
- *     `usePlanHabitos()` (el MISMO hook que usa Plan), agrupados por categoría.
+ *   - `CUERPO`, `MENTE`, `EMOCIONES`, `ESPÍRITU` ← tracks de hábitos de HOY, enriquecidos con
+ *     el catálogo y el plan personal del aprendiz, agrupados por categoría.
  *   - `VIDA Y NEGOCIO` ← la roca del día (`rocks/today`). Es el objetivo diario de "Diseñar
  *     libertad financiera", no un hábito.
  *
@@ -23,15 +23,11 @@ import type { EvidenciaApi, RocaDiariaApi } from '../types/training.types';
  * las categorías de hábito son `BODY`/`MIND`/`SPIRIT`/`CONSCIENCE`; los ejes de roca son
  * `CUERPO`/`TRABAJO`/`RELACIONES`. No unificarlos.
  *
- * **Por qué `usePlanHabitos()` y no `habit-tracks/today` para decidir la lista (2026-09-07).**
- * Antes esto armaba la lista desde los tracks de hoy, y esos tracks dependen de que
- * `GET /api/v1/habit-tracks/today` ya haya generado el registro del día — cosa que el backend NO
- * hace en el día 0 (compara `diaPrograma` crudo contra `dia_inicio`, sin el mismo ajuste "día
- * 0 = día 1" que sí aplica `GET /api/v1/habits`). Reimplementar esa regla acá hubiera significado
- * mantener DOS copias de "cuándo se desbloquea un hábito" que podrían desalinearse. En vez de
- * eso, se reusa el hook de Plan tal cual: mismas reglas de desbloqueo, mismo horario, misma
- * pausa. Lo único que se le suma acá es el cruce con el track de HOY (`tracks`, más abajo), que
- * es lo único que Plan no necesita y Training sí (el check y la evidencia son de HOY).
+ * **Dos listas con responsabilidades distintas.** `plan.habits` conserva el inventario que la hoja
+ * de Planificar necesita para editar o reactivar hábitos, incluso cuando alguno no corre hoy.
+ * `habits` se construye únicamente recorriendo `tracks`, porque el backend ya resolvió fecha,
+ * zona horaria, desbloqueo, pausa y horario por día. Así Training no pinta una tarjeta fantasma
+ * cuando un hábito está pausado o apagado para la fecha actual.
  */
 
 /** Categoría del catálogo (no la trae `PlanHabit`) → la dimensión que le corresponde acá. */
@@ -100,22 +96,13 @@ export function useTraining() {
     void recargar();
   }, [recargar]);
 
-  // `useMemo` y no estado propio: `plan.habits` vive en OTRA instancia de estado (la de
-  // `usePlanHabitos`, adentro de este mismo hook) y se actualiza en su propio momento — armar la
-  // lista final acá adentro de `recargar` la habría dejado, la mitad de las veces, un paso atrás
-  // de lo que `plan.habits` ya tenía.
-  const habits = useMemo(() => {
+  /** Inventario completo para la hoja Planificar, incluidos hábitos sin track de hoy. */
+  const planHabits = useMemo(() => {
     const categoriaPorHabito = new Map(catalogo.map(h => [h.id, h.category]));
     const claveSistemaPorHabito = new Map(catalogo.map(h => [h.id, h.systemKey ?? null]));
-    // La exigencia de evidencia solo está en el catálogo, y la necesita el check: sin ella la
-    // pantalla no puede distinguir un hábito que se cierra con un toque de uno que necesita prueba.
     const exigenciaPorHabito = new Map(catalogo.map(h => [h.id, h.evidenceRequirement]));
-    const tracksPorHabito = new Map(tracks.map(t => [t.habitoId, t]));
 
-    const deHabitos: HabitItem[] = plan.habits
-      // El tipo de retorno es explícito porque `HabitItem` tiene campos opcionales
-      // (`systemKey`, `respuestaTexto`): sin anotarlo, TypeScript infiere del objeto literal un
-      // tipo MÁS ESTRECHO que `HabitItem` y el `filter` de abajo deja de compilar.
+    return plan.habits
       .map((habito): HabitItem | null => {
         const dimension = DIMENSION_POR_CATEGORIA[categoriaPorHabito.get(habito.id) ?? ''];
         if (!dimension) {
@@ -126,47 +113,63 @@ export function useTraining() {
         if (habito.locked) {
           return null;
         }
-        const track = tracksPorHabito.get(habito.id);
         return {
-          // Sin track todavía (el backend no lo generó — ver la nota grande de arriba): se usa
-          // el id del hábito con un prefijo, único y estable para la `key` de la lista, pero que
-          // nunca se manda a ningún endpoint de registro. El check y "Subir evidencia" quedan
-          // deshabilitados mientras `tieneTrackHoy` sea `false` (ver `TrainingScreen`).
-          id: track?.id ?? `sin-track-${habito.id}`,
-          tieneTrackHoy: track != null,
+          id: habito.id,
+          tieneTrackHoy: false,
           dimension,
-          title: track?.tituloHabito ?? habito.title,
-          // La MISMA hora que ya muestra Plan (`usePlanHabitos` ya resolvió catálogo + horario
-          // propio + cambio programado): no se recalcula acá.
+          title: habito.title,
           time: habito.time,
-          tag: (track?.esOpcional ?? habito.isOptional) ? 'Opcional' : 'Innegociable',
+          tag: habito.isOptional ? 'Opcional' : 'Innegociable',
           streak: 0,
-          done: track?.estado === 'COMPLETADO',
-          // Id real del hábito de catálogo (distinto de `track.id`, el id del registro de HOY):
-          // lo necesita el botón "Planificar" para llamar a `habit-preferences`/`habit-unlocks`.
+          done: false,
           habitoId: habito.id,
           isDeactivatable: habito.isDeactivatable,
           icon: habito.icon,
           evidenceRequirement: exigenciaPorHabito.get(habito.id),
-          // Mismos días que ya pinta Plan (catálogo + pausa aplicada) — se reusan tal cual para
-          // sembrar la fila decorativa de "Planificar", en vez de recalcularlos desde
-          // `activeWeekdays` crudo.
           diasCatalogo: habito.days,
-          // Dato del servidor, no reconstruido acá: es exacto y no depende de cuántas filas
-          // entren en una página. `?? false` cubre a un backend anterior a D-113 y el caso sin
-          // track todavía.
-          hasEvidence: track?.tieneEvidencia ?? false,
+          hasEvidence: false,
           systemKey: claveSistemaPorHabito.get(habito.id) ?? null,
-          // `respuestaTexto` ya venía en el track y nadie lo leía. Es donde el backend guarda el
-          // resumen de la Clase Diaria (`RegistroHabito.respuestaTexto`), así que sirve para
-          // mostrar lo que la persona ya escribió en vez de pedírselo de nuevo.
-          respuestaTexto: track?.respuestaTexto ?? null,
-          // Puntos en juego y vencimiento, tal cual los manda el backend desde el 2026-09-05.
-          // `?? null` y no un default numérico: si el backend es viejo y no los manda, o si
-          // todavía no hay track, la pantalla tiene que mostrarse sin esa información.
-          pointsAtStake: track?.puntosEnJuego ?? null,
-          maxPoints: track?.puntosMaximos ?? null,
-          deadline: track?.plazoEvidencia ?? null,
+          respuestaTexto: null,
+          pointsAtStake: null,
+          maxPoints: null,
+          deadline: null,
+        };
+      })
+      .filter((h): h is HabitItem => h !== null);
+  }, [plan.habits, catalogo]);
+
+  // `useMemo` y no estado propio: `plan.habits` vive en OTRA instancia de estado (la de
+  // `usePlanHabitos`, adentro de este mismo hook) y se actualiza en su propio momento. Los tracks
+  // son la única fuente de verdad para las tarjetas operables de HOY.
+  const habits = useMemo(() => {
+    const planPorHabito = new Map(
+      planHabits
+        .filter((h): h is HabitItem & { habitoId: string } => Boolean(h.habitoId))
+        .map(h => [h.habitoId, h] as const),
+    );
+
+    const deHabitos: HabitItem[] = tracks
+      .map((track): HabitItem | null => {
+        const planHabit = planPorHabito.get(track.habitoId);
+        // Si el catálogo/plan todavía no resolvió el hábito, no se puede construir una tarjeta
+        // segura: faltan la dimensión y el id de catálogo que usa Planificar.
+        if (!planHabit) return null;
+        return {
+          ...planHabit,
+          id: track.id,
+          tieneTrackHoy: true,
+          title: track.tituloHabito || planHabit.title,
+          // `horaDisparo` es el horario resuelto para ESTA fecha por el backend. Usar la hora
+          // general del plan aquí volvería a mostrar una hora distinta cuando existe una regla
+          // semanal o por fecha.
+          time: track.horaDisparo?.slice(0, 5) ?? '',
+          tag: track.esOpcional ? 'Opcional' : 'Innegociable',
+          done: track.estado === 'COMPLETADO',
+          hasEvidence: track.tieneEvidencia ?? false,
+          respuestaTexto: track.respuestaTexto ?? null,
+          pointsAtStake: track.puntosEnJuego ?? null,
+          maxPoints: track.puntosMaximos ?? null,
+          deadline: track.plazoEvidencia ?? null,
         };
       })
       .filter((h): h is HabitItem => h !== null);
@@ -197,10 +200,11 @@ export function useTraining() {
     }));
 
     return [...deHabitos, ...deRocas];
-  }, [plan.habits, catalogo, tracks, rocas, rocasConEvidencia]);
+  }, [planHabits, tracks, rocas, rocasConEvidencia]);
 
   return {
     habits,
+    planHabits,
     loading: loadingPropio || plan.loading,
     error: errorPropio ?? plan.error,
     recargar,
