@@ -1,7 +1,13 @@
 # Objetivos del Plan: qué se conectó, qué quedó vacío y por qué
 
-**Fecha:** 2026-09-07 · **Pantalla:** Plan → prioridad 02 "Diseñar libertad financiera" → Objetivos.
-**Estado:** el objetivo de 90 días es real y editable. El semanal y el diario **no**, a propósito.
+**Fecha:** 2026-09-07 · **Pantalla:** Plan → PRIORIDADES CLAVE → Objetivos.
+**Estado:** superado el 2026-09-08. Ver `docs/PLAN_TRES_NIVELES_2026-09-08.md`.
+
+> **Corregido 2026-09-08.** Este documento describía un estado intermedio: solo el objetivo de 90
+> días estaba conectado, y solo para el eje TRABAJO. Ya no es así — los tres niveles y los tres ejes
+> están contra el backend. Las secciones 3 y 4 quedaron obsoletas y están marcadas abajo. Se
+> conserva el resto porque explica **por qué** se borraron los datos inventados, que sigue siendo la
+> decisión de fondo.
 
 ---
 
@@ -31,7 +37,9 @@ Del lado del backend la causa era más profunda: `rocas_maestras` **solo se pod�
 
 Endpoints: `GET /api/v1/rocks/master` y `PUT /api/v1/rocks/master/{eje}`.
 
-**El eje de esta pantalla es `TRABAJO`**, porque es la de "Diseñar libertad financiera". Los otros dos (`CUERPO`, `RELACIONES`) existen en el backend y todavía no tienen pantalla; cuando la tengan, `EJE_DE_ESTA_PANTALLA` deja de ser constante.
+~~**El eje de esta pantalla es `TRABAJO`**, porque es la de "Diseñar libertad financiera". Los otros dos (`CUERPO`, `RELACIONES`) existen en el backend y todavía no tienen pantalla; cuando la tengan, `EJE_DE_ESTA_PANTALLA` deja de ser constante.~~
+
+> **Corregido 2026-09-08.** Ya la tienen: es esta misma pantalla, y el eje lo fija la tarjeta que se toca. `EJE_DE_ESTA_PANTALLA` pasó a ser `EJE_POR_DEFECTO`, solo el valor inicial.
 
 ### La meta medible
 
@@ -50,20 +58,26 @@ Si faltara una de las tres, el backend responde 400, así que la pantalla avisa 
 
 > **Ojo con esta diferencia**, que es real y está asumida: el backend cuenta el mes **de a 30 días** (mes 1 cierra el día 30, mes 2 el 60, mes 3 el 90), porque así los tres meses cubren los 90 exactos y ningún día queda fuera. Esta utilidad del frontend agrupa **de a 4 semanas** (28 días) para la etiqueta "Mes N · Semanas X a Y". Sirven a cosas distintas —una es el hito del plan, la otra es cómo se rotula la pantalla— pero si algún día se muestran juntas hay que unificarlas.
 
-## 3. Lo que quedó vacío, a propósito
+## 3. Lo que quedó vacío, a propósito  ·  ⚠️ obsoleto desde el 2026-09-08
 
 El objetivo **semanal** y el **diario** arrancan sin contenido, con un texto que invita a escribirlo, en vez de los datos inventados.
 
-Siguen viviendo solo en memoria y se pierden al recargar. Sus endpoints existen en el backend (`/api/v1/rocks/weekly`, `/api/v1/rocks`, y desde el 7/9 también `/api/v1/rocks/monthly`), **pero el modelo real no coincide con lo que dibuja hoy la tarjeta**: la semanal del backend tiene título, obstáculo, contingencia, autoevaluación del 1 al 10 y hasta tres acciones críticas, mientras que la pantalla muestra una lista de tildes. Conectarlas es rediseñar la tarjeta, no cablearla.
+~~Siguen viviendo solo en memoria y se pierden al recargar.~~ Sus endpoints existen en el backend (`/api/v1/rocks/weekly`, `/api/v1/rocks`, y desde el 7/9 también `/api/v1/rocks/monthly`), **pero el modelo real no coincide con lo que dibuja hoy la tarjeta**: la semanal del backend tiene título, obstáculo, contingencia, autoevaluación del 1 al 10 y hasta tres acciones críticas, mientras que la pantalla muestra una lista de tildes. Conectarlas es rediseñar la tarjeta, no cablearla.
 
 Se prefirió dejarlas vacías antes que seguir mostrando el plan inventado de nadie.
 
+> **Corregido 2026-09-08.** Ya no viven en memoria. El rediseño que este párrafo pedía —"conectarlas
+> es rediseñar la tarjeta, no cablearla"— se hizo: `features/objetivos/components/NivelesDelPlan`.
+
 ## 4. Lo que falta
 
-1. **Rediseñar la tarjeta semanal** contra el modelo real, y recién ahí conectarla.
-2. **El nivel mensual**, que el backend ya expone desde el 7/9 (`GET /rocks/monthly`, `PUT /rocks/monthly/{eje}/{numeroMes}`) y la pantalla todavía no muestra.
-3. **Las tres actividades diarias**: el backend pide 3 por día y da puntaje por puntualidad; la tarjeta muestra una sola "roca innegociable".
-4. **Los otros dos ejes.** Hoy solo hay pantalla para Trabajo.
+> **Corregido 2026-09-08.** Tres de los cuatro puntos están hechos. Se dejan tachados en vez de
+> borrados para que se vea qué se cerró y cuándo.
+
+1. ~~**Rediseñar la tarjeta semanal** contra el modelo real, y recién ahí conectarla.~~ Hecho.
+2. **El nivel mensual**, que el backend ya expone desde el 7/9 (`GET /rocks/monthly`, `PUT /rocks/monthly/{eje}/{numeroMes}`) y la pantalla todavía no muestra. **Sigue pendiente.**
+3. ~~**Las tres actividades diarias**: el backend pide 3 por día y da puntaje por puntualidad; la tarjeta muestra una sola "roca innegociable".~~ Hecho: hasta 3 por eje, con hora.
+4. ~~**Los otros dos ejes.** Hoy solo hay pantalla para Trabajo.~~ Hecho: la vista se abre en el eje de la tarjeta que se toca.
 
 ## 5. Cómo verificarlo
 

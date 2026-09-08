@@ -7,11 +7,18 @@
  * calendario obligaría a preguntar en qué día del mes empezó cada uno y a decidir qué pasa con
  * quien arrancó un 29 — problemas que no existen si se cuenta de corrido.
  *
- * **Por qué 12 semanas y no 13.** El programa dura 90 días, que son 12 semanas y 6 días. La tabla
- * del backend admite hasta 13 (`numero_semana BETWEEN 1 AND 13`), pero 13 no se divide en meses
- * de cuatro: quedarían tres meses y una semana suelta. Con 12 son exactamente tres meses de
- * cuatro semanas, sin sobrantes ni casos especiales. Los últimos días del programa caen dentro de
- * la semana 12.
+ * **Por qué 12 semanas y no 13.** Confirmado por el dueño del programa el 2026-09-08. El backend
+ * admite hasta 13 (`numero_semana BETWEEN 1 AND 13`) porque 90 ÷ 7 = 12,86, y a primera vista
+ * parece que la app se queda corta. No es así: **la planificación no arranca el día 1**. Arranca
+ * cuando el aprendiz llena su Mapa de Renacimiento, que se desbloquea el día 7. Del día 8 al 90 hay
+ * 83 días ≈ 12 semanas, y la primera se va en el onboarding.
+ *
+ * > **Corregido 2026-09-08.** Acá decía que eran 12 porque "13 no se divide en meses de cuatro".
+ * > Esa es una consecuencia cómoda, no el motivo, y dejaba la puerta abierta a que alguien viera
+ * > el `BETWEEN 1 AND 13` del backend y "corrigiera" este archivo a 13.
+ *
+ * Que además den tres meses exactos de cuatro semanas es un efecto colateral bueno: no hay
+ * sobrantes ni casos especiales. Los últimos días del programa caen dentro de la semana 12.
  *
  * Todo esto es aritmética pura y sin fechas: se puede probar sin reloj y sin zona horaria, que es
  * justo lo que evitó el error del día del programa registrado como E-91 en el backend.

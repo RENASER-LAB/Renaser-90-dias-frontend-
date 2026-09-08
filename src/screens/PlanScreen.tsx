@@ -20,6 +20,7 @@ import { Icon } from '../components/Icon';
 import { GoldButton } from '../components/GoldButton';
 import { usePlanHabitos } from '../features/habits/hooks/usePlanHabitos';
 import { DIAS_DEL_PROGRAMA, puntoDelMedidor, useProgramaDia } from '../features/programa/hooks/useProgramaDia';
+import { descripcionDeFase } from '../features/home/hooks/useResumenHome';
 import {
   diaAnterior,
   formatearFechaLarga,
@@ -37,8 +38,11 @@ import {
 import type { DiaDelPlan } from '../features/habits/utils/semanaDelPlan';
 import type { CategoriaHabitoApi } from '../features/habits/types/habits.types';
 import { mensajeDeError } from '../services/http/apiClient';
+import { useMapaRenacimientoAbierto } from '../features/mapa-renacimiento/MapaRenacimientoContext';
+import { NivelesDelPlan } from '../features/objetivos/components/NivelesDelPlan';
 import { useRocasMaestras } from '../features/objetivos/hooks/useRocasMaestras';
 import type { EjeObjetivo } from '../features/objetivos/types/objetivos.types';
+import { EJES, ETIQUETA_EJE } from '../features/objetivos/types/objetivos.types';
 import { etiquetaDelMes, mesDe, semanaDe } from '../features/objetivos/utils/periodoDelPrograma';
 
 // =========================================================================
@@ -96,24 +100,6 @@ export interface PlanHabit {
   cambioProgramado: { time: string; desde: string } | null;
 }
 
-export interface WeeklyGoalItem {
-  id: string;
-  text: string;
-  completed: boolean;
-}
-
-export interface PlanGoals {
-  // Los campos `principal*` se eliminaron: el objetivo de 90 días ya no vive acá sino en el
-  // backend (`useRocasMaestras`). Eran datos inventados —"Facturar $30,000 USD en Contratos
-  // High-Ticket", 19.500 de 30.000— que se le mostraban igual a todos los aprendices como si
-  // fueran su plan, y que al editarse solo cambiaban este estado y se perdían al recargar.
-  weeklyTitle: string;
-  weeklySubtitle: string;
-  weeklyItems: WeeklyGoalItem[];
-  dailyTitle: string;
-  dailyCompleted: boolean;
-}
-
 // =========================================================================
 // DATOS ESTÁTICOS INICIALES
 // =========================================================================
@@ -124,34 +110,27 @@ export interface PlanGoals {
 // con ellos para siempre. Ahora la pantalla arranca vacía y dibuja esqueleto / error / estado
 // vacío según lo que diga `usePlanHabitos` — ver el bloque de estados más abajo.
 
-/**
- * El objetivo semanal y el diario arrancan **vacíos**.
+/*
+ * `WeeklyGoalItem`, `PlanGoals` e `INITIAL_GOALS` se eliminaron.
  *
- * Antes venían con datos inventados —"Sprint de Cierre", "Enviar propuesta a Corporación Delta
- * ($8,500 USD)", "Cerrar contrato Grupo Sol", tres de cuatro ya tildados— que se le mostraban
- * igual a **todos** los aprendices como si fueran su plan de la semana. Es el mismo problema que
- * ya se corrigió con `INITIAL_HABITS` y con el objetivo de 90 días: mostrar el plan inventado de
- * nadie es peor que mostrar que todavía no hay plan.
- *
- * Siguen viviendo solo en memoria y se pierden al recargar: sus endpoints existen en el backend
- * (`/api/v1/rocks/weekly` y `/api/v1/rocks`), pero el modelo real —título, obstáculo,
- * contingencia, autoevaluación 1-10, acciones críticas— no coincide con esta lista de tildes, así
- * que conectarlos es un rediseño de la tarjeta, no un cableado. Queda pendiente y documentado.
+ * Eran el objetivo semanal y el diario viviendo en `useState`: una lista de tildes que se perdía al
+ * recargar mientras el Alert aseguraba "Los cambios han sido guardados en tu plan". El comentario
+ * que estaba acá ya lo decía —"conectarlos es un rediseño de la tarjeta, no un cableado"—, y ese
+ * rediseño es `features/objetivos/components/NivelesDelPlan`, contra el modelo real del backend:
+ * tres rocas por semana con tres acciones críticas cada una, obstáculo, contingencia,
+ * autoevaluación de entrada y de salida, y un cierre con bloqueo y corrección.
  */
-const INITIAL_GOALS: PlanGoals = {
-  weeklyTitle: '',
-  weeklySubtitle: '',
-  weeklyItems: [],
-  dailyTitle: '',
-  dailyCompleted: false,
-};
 
 /**
- * Eje al que pertenece esta sub-pantalla. Es la de "Diseñar libertad financiera", o sea TRABAJO.
- * Los otros dos ejes del programa (CUERPO, RELACIONES) ya existen en el backend pero todavía no
- * tienen pantalla propia; cuando la tengan, esto pasa a ser un parámetro y no una constante.
+ * Con qué eje se abre la vista de Objetivos cuando nadie eligió todavía.
+ *
+ * > **Corregido 2026-09-08.** Acá había un `EJE_DE_ESTA_PANTALLA = 'TRABAJO'` fijo: la vista servía
+ * > solo para "Diseñar libertad financiera" y los otros dos ejes no tenían por dónde entrar. Su
+ * > propio comentario ya anticipaba el arreglo — *"cuando la tengan, esto pasa a ser un parámetro y
+ * > no una constante"*. Es exactamente lo que se hizo: el eje entra por estado, lo fija la tarjeta
+ * > que se toca, y esto queda solo como valor inicial.
  */
-const EJE_DE_ESTA_PANTALLA: EjeObjetivo = 'TRABAJO';
+const EJE_POR_DEFECTO: EjeObjetivo = 'CUERPO';
 
 const DAY_OPTIONS: DayOfWeek[] = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'];
 
@@ -274,7 +253,16 @@ function aHora24(texto: string): string | null {
   return `${String(hora).padStart(2, '0')}:${String(minuto).padStart(2, '0')}`;
 }
 
-const FASES = [
+/**
+ * Los tres tramos del gráfico "ARQUITECTURA DE TIEMPO".
+ *
+ * > **Corregido 2026-09-08.** Esto se llamaba `FASES` y alimentaba también el rótulo "FASE ACTUAL",
+ * > que por eso contradecía a Hoy y a Yo. **Las fases del programa son cuatro y las define el
+ * > backend** (`descripcionDeFase`); esto es el arco de la curva de arriba —tres tramos parejos de
+ * > 30 días— y nada más. Se le sacó el nombre "fase" para que la palabra tenga un solo significado
+ * > en toda la app.
+ */
+const TRAMOS_DEL_RECORRIDO = [
   { d: 'DÍAS 1–30', n: 'FUNDACIÓN' },
   { d: 'DÍAS 31–60', n: 'ACELERACIÓN' },
   { d: 'DÍAS 61–90', n: 'EXPANSIÓN' },
@@ -346,7 +334,23 @@ export default function PlanScreen() {
     recargar: recargarHabitos,
   } = usePlanHabitos();
   // Dia real del programa: antes el 37, el arco y la fase estaban escritos a mano.
-  const { diaPrograma, loading: cargandoDiaPrograma } = useProgramaDia();
+  const { diaPrograma, fase, loading: cargandoDiaPrograma } = useProgramaDia();
+
+  /**
+   * La fase del aprendiz, **la que dice el backend**, no una calculada acá.
+   *
+   * > **Corregido 2026-09-08.** Esto derivaba del día contra un arreglo local de TRES fases
+   * > (FUNDACIÓN 1-30 / ACELERACIÓN 31-60 / EXPANSIÓN 61-90) inventado en esta pantalla. El
+   * > programa tiene **cuatro**, con contrato firmado cada una, y **Hoy y Yo ya las mostraban**
+   * > (`rotuloDeFase`): un aprendiz en el día 40 leía "GUERRERO ALQUIMISTA" en Hoy y "ACELERACIÓN ·
+   * > Fase 2" en Plan, el mismo día. Ahora las tres pantallas dicen lo mismo porque leen lo mismo.
+   *
+   * `fase` ya viajaba en `GET /api/v1/home` y esta pantalla la estaba tirando a la basura.
+   *
+   * Es `null` mientras la respuesta viaja, y también ante una fase que esta versión de la app no
+   * conozca. En los dos casos no se dibuja el rótulo: mejor nada que un dato inventado.
+   */
+  const faseActual = descripcionDeFase(fase);
   const medidor = puntoDelMedidor(diaPrograma);
   // D-84: el dia 0 no es "un plan vacio", es "el programa todavia no arranco". Se consulta
   // el porque solo en ese caso — quien ya esta en el dia 5 no paga la llamada.
@@ -378,12 +382,10 @@ export default function PlanScreen() {
   const [habitoParaHora, setHabitoParaHora] = useState<PlanHabit | null>(null);
 
   // Estados de Objetivos
-  const [goals, setGoals] = useState<PlanGoals>(INITIAL_GOALS);
 
   // Modales
   const [createHabitModalVisible, setCreateHabitModalVisible] = useState(false);
   const [editGoalModalVisible, setEditGoalModalVisible] = useState(false);
-  const [editingGoalType, setEditingGoalType] = useState<'principal' | 'semanal' | 'diario'>('principal');
 
   // Modal para Mover Hábito de Momento (Long Press)
   const [moveMomentModalVisible, setMoveMomentModalVisible] = useState(false);
@@ -408,16 +410,33 @@ export default function PlanScreen() {
   /**
    * El objetivo de 90 días real del aprendiz, traído del backend.
    *
-   * Esta sub-pantalla es la de "Diseñar libertad financiera", así que el eje es TRABAJO. Los otros
-   * dos ejes (CUERPO, RELACIONES) existen en el backend pero todavía no tienen pantalla propia.
+   * Los tres ejes, no uno: la tarjeta que se toca en PRIORIDADES CLAVE fija cuál se está editando.
    *
-   * Reemplaza a `INITIAL_GOALS.principal*`, que eran datos inventados escritos a mano en este
+   * > **Corregido 2026-09-08.** Acá decía que esta sub-pantalla era la de "Diseñar libertad
+   * > financiera" y que CUERPO y RELACIONES "todavía no tienen pantalla propia". Ya la tienen: es
+   * > esta misma, parametrizada por eje.
+   *
+   * Reemplaza a los objetivos inventados que estaban escritos a mano en este
    * archivo —los mismos para todos los aprendices— y que al editarse solo cambiaban un estado de
    * React que se perdía al recargar. Mismo problema, y misma corrección, que la que ya se hizo con
    * `INITIAL_HABITS`.
    */
   const objetivos = useRocasMaestras();
-  const rocaDeTrabajo = objetivos.deEje(EJE_DE_ESTA_PANTALLA);
+
+  // Sin las tres rocas maestras, el backend cierra la planificación semanal con 403 ROCKS_LOCKED, y
+  // quien las escribe es el Mapa de Renacimiento. Por eso ese estado no ofrece "reintentar" sino la
+  // puerta al Mapa: es lo único que destraba la cadena.
+  const { abrir: abrirMapa } = useMapaRenacimientoAbierto();
+  /** El eje que se está mirando. Lo fija la tarjeta que se tocó en PRIORIDADES CLAVE. */
+  const [ejeAbierto, setEjeAbierto] = useState<EjeObjetivo>(EJE_POR_DEFECTO);
+  const rocaDeEje = (eje: EjeObjetivo) => objetivos.deEje(eje);
+  const rocaAbierta = objetivos.deEje(ejeAbierto);
+
+  /** Abre la vista de Objetivos en el eje pedido. Un solo camino para las tres tarjetas. */
+  const abrirObjetivoDe = (eje: EjeObjetivo) => {
+    setEjeAbierto(eje);
+    setActiveSubView('objetivos');
+  };
 
   // =========================================================================
   // GESTOS TÁCTILES DEL SISTEMA (BACKHANDLER)
@@ -663,33 +682,22 @@ export default function PlanScreen() {
     }
   };
 
-  const toggleWeeklyItem = (itemId: string) => {
-    setGoals(prev => ({
-      ...prev,
-      weeklyItems: prev.weeklyItems.map(item =>
-        item.id === itemId ? { ...item, completed: !item.completed } : item
-      ),
-    }));
-  };
-
-  const toggleDailyGoal = () => {
-    setGoals(prev => ({ ...prev, dailyCompleted: !prev.dailyCompleted }));
-  };
-
-  const openEditGoalModal = (type: 'principal' | 'semanal' | 'diario') => {
-    setEditingGoalType(type);
-    if (type === 'principal') {
-      // Prellena con lo que hay guardado. Si el aprendiz todavía no definió su objetivo, los
-      // campos arrancan vacíos: es su primera vez, no hay nada que corregir.
-      setEditGoalTitle(rocaDeTrabajo?.objetivo ?? '');
-      setEditGoalCurrentVal(rocaDeTrabajo?.avance != null ? String(rocaDeTrabajo.avance) : '');
-      setEditGoalTargetVal(rocaDeTrabajo?.meta != null ? String(rocaDeTrabajo.meta) : '');
-      setEditGoalUnidad(rocaDeTrabajo?.unidad ?? '');
-    } else if (type === 'semanal') {
-      setEditGoalTitle(goals.weeklyTitle);
-    } else {
-      setEditGoalTitle(goals.dailyTitle);
-    }
+  /**
+   * Abre el editor del objetivo de 90 días del eje que se tocó.
+   *
+   * > **Corregido 2026-09-08.** Antes recibía un `type: 'principal' | 'semanal' | 'diario'` y los
+   * > dos últimos escribían en un `useState` que se perdía al recargar, mientras el Alert decía
+   * > "Los cambios han sido guardados en tu plan". El semanal y el diario ahora tienen su propio
+   * > modelo contra el backend (`NivelesDelPlan`), así que este editor quedó donde correspondía:
+   * > solo el objetivo de 90 días.
+   */
+  const openEditGoalModal = () => {
+    // Prellena con lo que hay guardado. Si el aprendiz todavía no definió su objetivo, los
+    // campos arrancan vacíos: es su primera vez, no hay nada que corregir.
+    setEditGoalTitle(rocaAbierta?.objetivo ?? '');
+    setEditGoalCurrentVal(rocaAbierta?.avance != null ? String(rocaAbierta.avance) : '');
+    setEditGoalTargetVal(rocaAbierta?.meta != null ? String(rocaAbierta.meta) : '');
+    setEditGoalUnidad(rocaAbierta?.unidad ?? '');
     setEditGoalModalVisible(true);
   };
 
@@ -711,12 +719,12 @@ export default function PlanScreen() {
       if (meta === undefined || avance === undefined || unidad === undefined) {
         Alert.alert(
           'Falta un dato de la meta',
-          'Para medir tu objetivo hacen falta las tres cosas: cuánto llevas, cuánto querés llegar y en qué se mide (USD, kg, clientes...). Si no querés medirlo con un número, dejá los tres campos vacíos.'
+          'Para medir tu objetivo hacen falta las tres cosas: cuánto llevas, cuánto quieres llegar y en qué se mide (USD, kg, clientes...). Si no quieres medirlo con un número, deja los tres campos vacíos.'
         );
         return;
       }
       if (!Number.isFinite(meta) || !Number.isFinite(avance)) {
-        Alert.alert('Número inválido', 'Revisá los valores: tienen que ser números.');
+        Alert.alert('Número inválido', 'Revisa los valores: tienen que ser números.');
         return;
       }
       if (meta <= 0) {
@@ -729,7 +737,7 @@ export default function PlanScreen() {
       }
     }
 
-    const resultado = await objetivos.definir(EJE_DE_ESTA_PANTALLA, {
+    const resultado = await objetivos.definir(ejeAbierto, {
       objetivo: editGoalTitle.trim(),
       meta,
       avance,
@@ -749,18 +757,7 @@ export default function PlanScreen() {
       return;
     }
 
-    if (editingGoalType === 'principal') {
-      void guardarObjetivoPrincipal();
-      return;
-    }
-    if (editingGoalType === 'semanal') {
-      setGoals(prev => ({ ...prev, weeklyTitle: editGoalTitle.trim() }));
-    } else {
-      setGoals(prev => ({ ...prev, dailyTitle: editGoalTitle.trim() }));
-    }
-
-    setEditGoalModalVisible(false);
-    Alert.alert('¡Objetivo Actualizado! 🎯', 'Los cambios han sido guardados en tu plan.');
+    void guardarObjetivoPrincipal();
   };
 
   // `principalPercent` se eliminó: el porcentaje ahora lo calcula el backend y viaja en la
@@ -807,74 +804,59 @@ export default function PlanScreen() {
             <Text style={[t.small, styles.gaugeRight, { color: c.textSoft }]}>90</Text>
           </View>
 
-          {/* FASE ACTUAL */}
+          {/* FASE ACTUAL — derivada del día, no escrita a mano.
+              Decía "01 · Fundamentación · Días 1–30" fijo: seguía diciendo lo mismo en el día 75. */}
           <View style={[styles.section, { borderTopColor: c.divider }]}>
             <MicroLabel>FASE ACTUAL</MicroLabel>
-            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 12, marginTop: 10 }}>
-              <Text style={[t.small, { color: c.gold }]}>01</Text>
-              <Text style={[t.cardTitle, { color: c.text, flex: 1 }]}>Fundamentación</Text>
-              <Text style={[t.small, { color: c.micro }]}>Días 1–30</Text>
-            </View>
+            {faseActual ? (
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 12, marginTop: 10 }}>
+                <Text style={[t.small, { color: c.gold }]}>{String(faseActual.numero).padStart(2, '0')}</Text>
+                <Text style={[t.cardTitle, { color: c.text, flex: 1, fontSize: 16 }]}>{faseActual.nombre}</Text>
+                <Text style={[t.small, { color: c.micro }]}>{faseActual.rango}</Text>
+              </View>
+            ) : (
+              <Text style={[t.small, { color: c.textSoft, fontSize: 14, marginTop: 10 }]}>
+                {cargandoDiaPrograma ? 'Cargando tu fase…' : 'Tu fase va a aparecer cuando arranque tu programa.'}
+              </Text>
+            )}
           </View>
 
           {/* PRIORIDADES CLAVE (INTERACTIVAS) */}
           <View style={[styles.section, { borderTopColor: c.divider }]}>
             <MicroLabel>PRIORIDADES CLAVE</MicroLabel>
             <View style={{ marginTop: 8, gap: 8 }}>
-              {/* Las prioridades quedan visibles como referencia, pero bloqueadas hasta cerrar
-                  la definición funcional con el usuario en la próxima actualización. */}
-              <Pressable
-                disabled
-                accessibilityState={{ disabled: true }}
-                style={[styles.priorityCard, { borderColor: c.border, backgroundColor: c.cardBg, opacity: 0.62 }]}
-              >
-                <Text style={[t.small, { color: c.gold }]}>01</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>
-                    Convertirme en mi mejor versión
-                  </Text>
-                  <Text style={[t.micro, { color: c.gold, fontSize: 9.5, marginTop: 2 }]}>
-                    Disponible en la próxima actualización
-                  </Text>
-                </View>
-                <Icon name="lock" size={13} color={c.textSoft} />
-              </Pressable>
+              {/* Una sola lista sobre los tres ejes, en vez de tres tarjetas casi idénticas
+                  repetidas a mano. Estuvieron con candado y "Disponible en la próxima
+                  actualización" desde el commit 8b78a00; se liberan el 2026-09-08.
 
-              {/* 02. Diseñar libertad financiera */}
-              <Pressable
-                disabled
-                accessibilityState={{ disabled: true }}
-                style={[styles.priorityCard, { borderColor: c.border, backgroundColor: c.cardBg, opacity: 0.62 }]}
-              >
-                <Text style={[t.small, { color: c.gold }]}>02</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>
-                    Diseñar libertad financiera
-                  </Text>
-                  <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5, marginTop: 2 }]}>
-                    Disponible en la próxima actualización
-                  </Text>
-                </View>
-                <Icon name="lock" size={13} color={c.textSoft} />
-              </Pressable>
-
-              {/* 03. Impactar y servir a más personas */}
-              <Pressable
-                disabled
-                accessibilityState={{ disabled: true }}
-                style={[styles.priorityCard, { borderColor: c.border, backgroundColor: c.cardBg, opacity: 0.62 }]}
-              >
-                <Text style={[t.small, { color: c.textSoft }]}>03</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>
-                    Impactar y servir a más personas
-                  </Text>
-                  <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5, marginTop: 2 }]}>
-                    Disponible en la próxima actualización
-                  </Text>
-                </View>
-                <Icon name="lock" size={13} color={c.textSoft} />
-              </Pressable>
+                  **Lo que se lee es el objetivo del aprendiz, no un título de catálogo.** Los tres
+                  nombres de eje quedan solo como estado vacío, para quien todavía no definió el
+                  suyo. Nunca un dato inventado: es lo que D-120 corrigió cuando la pantalla
+                  mostraba "Facturar $30.000 USD" igual para todos. */}
+              {EJES.map((eje, indice) => {
+                const roca = rocaDeEje(eje);
+                const definido = Boolean(roca?.objetivo?.trim());
+                return (
+                  <Pressable
+                    key={eje}
+                    onPress={() => abrirObjetivoDe(eje)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${ETIQUETA_EJE[eje]}. ${definido ? roca!.objetivo : 'Todavía sin definir'}`}
+                    style={[styles.priorityCard, { borderColor: definido ? c.gold : c.border, backgroundColor: c.cardBg }]}
+                  >
+                    <Text style={[t.small, { color: c.gold }]}>{String(indice + 1).padStart(2, '0')}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 15 }]} numberOfLines={3}>
+                        {definido ? roca!.objetivo : ETIQUETA_EJE[eje]}
+                      </Text>
+                      <Text style={[t.micro, { color: definido ? c.gold : c.textSoft, fontSize: 12, marginTop: 3 }]}>
+                        {definido ? ETIQUETA_EJE[eje] : 'Todavía sin definir · toca para escribirlo'}
+                      </Text>
+                    </View>
+                    <Icon name="chevron" size={15} color={c.gold} />
+                  </Pressable>
+                );
+              })}
             </View>
           </View>
 
@@ -888,7 +870,7 @@ export default function PlanScreen() {
               ))}
             </Svg>
             <View style={{ flexDirection: 'row' }}>
-              {FASES.map((p, i) => (
+              {TRAMOS_DEL_RECORRIDO.map((p, i) => (
                 <View key={p.n} style={{ flex: 1, alignItems: i === 0 ? 'flex-start' : i === 1 ? 'center' : 'flex-end' }}>
                   <Text style={[t.micro, { color: c.micro }]}>{p.d}</Text>
                   <Text style={[t.micro, { color: c.textSoft, marginTop: 4 }]}>{p.n}</Text>
@@ -1012,7 +994,7 @@ export default function PlanScreen() {
               </Row>
               <Text style={[t.small, { color: c.textSoft, lineHeight: 18 }]}>
                 {arranque.estado === 'PENDIENTE_ELEGIR'
-                  ? 'Elegí en qué día querés empezar tus 90 días. Hasta entonces no hay plan que organizar.'
+                  ? 'Elige en qué día quieres empezar tus 90 días. Hasta entonces no hay plan que organizar.'
                   : `Empezás el ${formatearFechaLarga(arranque.fechaInicio)}. Desde el ${formatearFechaLarga(diaAnterior(arranque.fechaInicio))} vas a poder organizar los hábitos de tu primer día; hasta entonces no hay nada que hacer acá.`}
               </Text>
             </View>
@@ -1333,10 +1315,11 @@ export default function PlanScreen() {
 
           <View style={{ marginTop: 10 }}>
             <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 14 }]}>
-              Diseñar libertad financiera & Metas
+              Tus objetivos, de los 90 días al día de hoy
             </Text>
-            <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5, marginTop: 2 }]}>
-              Tu pirámide de metas: 90 Días, Semanal y Diario
+            <Text style={[t.small, { color: c.textSoft, fontSize: 14, marginTop: 4, lineHeight: 20 }]}>
+              Tres niveles encadenados: el objetivo de 90 días manda sobre la semana, y la semana
+              sobre lo que hacés hoy.
             </Text>
           </View>
 
@@ -1351,49 +1334,49 @@ export default function PlanScreen() {
                   </Text>
                 </Row>
                 <Pressable
-                  onPress={() => openEditGoalModal('principal')}
+                  onPress={() => openEditGoalModal()}
                   style={[styles.editGoalBtn, { borderColor: c.gold, backgroundColor: c.cardBg }]}
                 >
                   <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>✏️ Editar</Text>
                 </Pressable>
               </RowBetween>
 
-              {objetivos.cargando && !rocaDeTrabajo ? (
-                <Text style={[t.micro, { color: c.textSoft, marginTop: 8 }]}>Cargando tu objetivo...</Text>
-              ) : objetivos.error && !rocaDeTrabajo ? (
-                <Text style={[t.micro, { color: '#f28e8e', marginTop: 8 }]}>{objetivos.error}</Text>
-              ) : !rocaDeTrabajo ? (
+              {objetivos.cargando && !rocaAbierta ? (
+                <Text style={[t.small, { color: c.textSoft, fontSize: 15, marginTop: 8 }]}>Cargando tu objetivo…</Text>
+              ) : objetivos.error && !rocaAbierta ? (
+                <Text style={[t.small, { color: '#f28e8e', fontSize: 15, marginTop: 8 }]}>{objetivos.error}</Text>
+              ) : !rocaAbierta ? (
                 // Estado vacío real: antes acá se mostraba un objetivo inventado ("Facturar
                 // $30.000 USD") que no era de nadie. Es preferible una invitación honesta.
-                <Text style={[t.micro, { color: c.textSoft, marginTop: 8, lineHeight: 16 }]}>
-                  Todavía no definiste tu objetivo de 90 días. Tocá Editar y escribí a dónde querés
-                  llegar. Si se puede medir con un número, agregalo: vas a ver tu avance acá.
+                <Text style={[t.body, { color: c.textSoft, fontSize: 15, marginTop: 8, lineHeight: 22 }]}>
+                  Todavía no definiste tu objetivo de 90 días. Toca Editar y escribe a dónde quieres
+                  llegar. Si se puede medir con un número, agrégalo: vas a ver tu avance acá.
                 </Text>
               ) : (
                 <>
-                  <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13.5, marginTop: 6 }]}>
-                    {rocaDeTrabajo.objetivo}
+                  <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 17, marginTop: 6, lineHeight: 24 }]}>
+                    {rocaAbierta.objetivo}
                   </Text>
 
                   {/* La barra solo aparece si el objetivo tiene meta medible. Un objetivo
                       cualitativo es válido y no tiene nada que graficar. */}
-                  {rocaDeTrabajo.porcentaje != null && (
+                  {rocaAbierta.porcentaje != null && (
                     <View style={{ gap: 4, marginTop: 8 }}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                        <Text style={[t.micro, { color: c.textSoft, fontSize: 10 }]}>Avance cuantitativo:</Text>
-                        <Text style={[t.micro, { color: c.gold, fontWeight: '800', fontSize: 11 }]}>
-                          {rocaDeTrabajo.porcentaje}% CUMPLIDO
+                        <Text style={[t.small, { color: c.textSoft, fontSize: 14 }]}>Avance cuantitativo:</Text>
+                        <Text style={[t.small, { color: c.gold, fontWeight: '800', fontSize: 15 }]}>
+                          {rocaAbierta.porcentaje}% CUMPLIDO
                         </Text>
                       </View>
                       <View style={[styles.progressBarBg, { backgroundColor: c.cardBg, borderColor: c.border }]}>
-                        <View style={[styles.progressBarFill, { width: `${rocaDeTrabajo.porcentaje}%`, backgroundColor: c.gold }]} />
+                        <View style={[styles.progressBarFill, { width: `${rocaAbierta.porcentaje}%`, backgroundColor: c.gold }]} />
                       </View>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 }}>
-                        <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>
-                          Llevas: <Text style={{ color: c.gold, fontWeight: '700' }}>{rocaDeTrabajo.avance} {rocaDeTrabajo.unidad}</Text>
+                        <Text style={[t.small, { color: c.textSoft, fontSize: 14 }]}>
+                          Llevas: <Text style={{ color: c.gold, fontWeight: '700' }}>{rocaAbierta.avance} {rocaAbierta.unidad}</Text>
                         </Text>
-                        <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>
-                          Meta: {rocaDeTrabajo.meta} {rocaDeTrabajo.unidad}
+                        <Text style={[t.small, { color: c.textSoft, fontSize: 14 }]}>
+                          Meta: {rocaAbierta.meta} {rocaAbierta.unidad}
                         </Text>
                       </View>
                     </View>
@@ -1411,126 +1394,21 @@ export default function PlanScreen() {
                   {etiquetaDelMes(mesDe(diaPrograma))}
                 </Text>
               </Row>
-              <Text style={[t.micro, { color: c.textSoft, fontSize: 10, marginTop: 4 }]}>
+              <Text style={[t.small, { color: c.textSoft, fontSize: 14, marginTop: 4 }]}>
                 Vas por la semana {semanaDe(diaPrograma)} de 12 · día {diaPrograma} de 90
               </Text>
             </View>
 
-            {/* 2. ⚡ OBJETIVO SEMANAL (SPRINT DE 7 DÍAS) */}
-            <View style={[styles.goalCard, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-              <RowBetween>
-                <Row gap={6}>
-                  <Text style={{ fontSize: 16 }}>⚡</Text>
-                  <Text style={[t.micro, { color: '#70d2a0', fontWeight: '800', letterSpacing: 1 }]}>
-                    2. OBJETIVO SEMANAL (SEM 06)
-                  </Text>
-                </Row>
-                <Pressable
-                  onPress={() => openEditGoalModal('semanal')}
-                  style={[styles.editGoalBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
-                >
-                  <Text style={[t.micro, { color: c.textSoft, fontWeight: '700' }]}>✏️ Editar</Text>
-                </Pressable>
-              </RowBetween>
-
-              {goals.weeklyTitle ? (
-                <>
-                  <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13, marginTop: 4 }]}>
-                    {goals.weeklyTitle}
-                  </Text>
-                  {!!goals.weeklySubtitle && (
-                    <Text style={[t.micro, { color: c.micro, fontSize: 9.5 }]}>
-                      {goals.weeklySubtitle}
-                    </Text>
-                  )}
-                </>
-              ) : (
-                <Text style={[t.micro, { color: c.textSoft, fontSize: 10, marginTop: 4, lineHeight: 15 }]}>
-                  Todavía no definiste tu foco de esta semana. Tocá Editar para escribirlo.
-                </Text>
-              )}
-
-              {/* Checklist de Metas Semanales */}
-              <View style={{ gap: 6, marginTop: 8 }}>
-                {goals.weeklyItems.map(item => (
-                  <Pressable
-                    key={item.id}
-                    onPress={() => toggleWeeklyItem(item.id)}
-                    style={[styles.weeklyCheckRow, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
-                  >
-                    <View style={[styles.checkBoxSquare, { borderColor: item.completed ? c.gold : c.border, backgroundColor: item.completed ? c.gold : 'transparent' }]}>
-                      {item.completed && <Text style={{ color: '#1E1B18', fontSize: 10, fontWeight: 'bold' }}>✓</Text>}
-                    </View>
-                    <Text
-                      style={[
-                        t.body,
-                        {
-                          color: item.completed ? c.textSoft : c.textStrong,
-                          fontSize: 12,
-                          textDecorationLine: item.completed ? 'line-through' : 'none',
-                          flex: 1,
-                        },
-                      ]}
-                    >
-                      {item.text}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-
-            {/* 3. 🎯 OBJETIVO DIARIO (ROCA DE HOY) */}
-            <View style={[styles.goalCard, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
-              <RowBetween>
-                <Row gap={6}>
-                  <Text style={{ fontSize: 16 }}>🎯</Text>
-                  <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 1 }]}>
-                    3. OBJETIVO DIARIO (HOY · DÍA {diaPrograma})
-                  </Text>
-                </Row>
-                <Pressable
-                  onPress={() => openEditGoalModal('diario')}
-                  style={[styles.editGoalBtn, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}
-                >
-                  <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>✏️ Cambiar</Text>
-                </Pressable>
-              </RowBetween>
-
-              <View style={[styles.dailyGoalBox, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-                <View style={{ flex: 1 }}>
-                  <View style={[styles.tagPill, { borderColor: c.border, backgroundColor: '#173429', alignSelf: 'flex-start' }]}>
-                    <Text style={[t.micro, { color: '#70d2a0', fontSize: 8.5, fontWeight: '800' }]}>
-                      ROCA INNEGOCIABLE
-                    </Text>
-                  </View>
-                  <Text
-                    style={[
-                      t.cardTitle,
-                      { color: goals.dailyTitle ? c.textStrong : c.textSoft, fontSize: 13, marginTop: 4 },
-                    ]}
-                  >
-                    {goals.dailyTitle || 'Todavía no elegiste tu roca innegociable de hoy.'}
-                  </Text>
-                </View>
-
-                {/* Botón de Victoria Diaria */}
-                <Pressable
-                  onPress={toggleDailyGoal}
-                  style={[
-                    styles.dailyVictoryBtn,
-                    {
-                      borderColor: goals.dailyCompleted ? '#70d2a0' : c.border,
-                      backgroundColor: goals.dailyCompleted ? '#173429' : c.cardBg,
-                    },
-                  ]}
-                >
-                  <Text style={{ fontSize: 14 }}>{goals.dailyCompleted ? '✓' : '○'}</Text>
-                  <Text style={[t.micro, { color: goals.dailyCompleted ? '#70d2a0' : c.textSoft, fontSize: 8.5, fontWeight: '900' }]}>
-                    {goals.dailyCompleted ? 'LOGRADO' : 'PENDIENTE'}
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
+            {/* 2 y 3: la semana y el día. Viven en `features/objetivos/components` y no acá porque
+                son un ciclo con estados propios (bloqueada / sin planificar / en curso / cerrada) y
+                dos formularios de varios pasos: inline sumaban ~400 líneas a una pantalla que ya
+                pasa las 2000. Además así solo se piden al backend cuando esta vista está abierta. */}
+            <NivelesDelPlan
+              maestras={objetivos.rocas}
+              numeroSemana={semanaDe(diaPrograma)}
+              diaPrograma={diaPrograma}
+              onIrAlMapa={abrirMapa}
+            />
           </View>
         </ScrollView>
       )}
@@ -1732,7 +1610,7 @@ export default function PlanScreen() {
           <View style={[styles.modalContentCard, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: c.divider, paddingBottom: 8 }}>
               <Text style={[t.cardTitle, { color: c.gold, fontSize: 13 }]}>
-                EDITAR OBJETIVO {editingGoalType.toUpperCase()}
+                EDITAR OBJETIVO DE 90 DÍAS
               </Text>
               <Pressable onPress={() => setEditGoalModalVisible(false)}>
                 <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>✕ Cerrar</Text>
@@ -1752,7 +1630,7 @@ export default function PlanScreen() {
                 />
               </View>
 
-              {editingGoalType === 'principal' && (
+              {(
                 <View style={{ gap: 8 }}>
                   <View style={{ flexDirection: 'row', gap: 8 }}>
                     <View style={{ flex: 1, gap: 4 }}>
@@ -1793,7 +1671,7 @@ export default function PlanScreen() {
                     </View>
                   </View>
                   <Text style={[t.micro, { color: c.micro, fontSize: 9.5, lineHeight: 14 }]}>
-                    Si tu objetivo no se mide con un número, dejá los tres campos vacíos.
+                    Si tu objetivo no se mide con un número, deja los tres campos vacíos.
                   </Text>
                 </View>
               )}

@@ -1,0 +1,135 @@
+import React, { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+
+import { Alert } from '../../../components/Alerta';
+import { useTheme } from '../../../theme/ThemeContext';
+import type { useRocasDiarias } from '../hooks/useRocasDiarias';
+import type { useRocasSemanales } from '../hooks/useRocasSemanales';
+import type { ItemPlanDiario, RocaDiariaApi } from '../types/objetivos.types';
+import { ETIQUETA_EJE } from '../types/objetivos.types';
+import { AgendarAccionesModal } from './AgendarAccionesModal';
+
+/**
+ * Parte 3 del plan: el día.
+ *
+ * **Acá cierra el circuito.** Las acciones que se agendan desde esta tarjeta son las mismas que
+ * Training muestra en la dimensión **VIDA Y NEGOCIO** — que hoy marca `0/0 CUMPLIDOS` justamente
+ * porque nadie planifica rocas. El recorrido completo: objetivo de 90 días → roca de la semana →
+ * tres acciones críticas → agendadas con hora → aparecen en el entrenamiento del día.
+ *
+ * **No se ofrece antes que la parte 2.** `POST /rocks/plan` exige la roca semanal del eje: sin ella
+ * responde `400 NO_WEEKLY_ROCK`. Ofrecer el botón igual sería ofrecer un error.
+ */
+
+interface TarjetaAccionesDelDiaProps {
+  diaria: ReturnType<typeof useRocasDiarias>;
+  semanal: ReturnType<typeof useRocasSemanales>;
+  diaPrograma: number;
+}
+
+export function TarjetaAccionesDelDia({ diaria, semanal, diaPrograma }: TarjetaAccionesDelDiaProps) {
+  const { c, t } = useTheme();
+  const [agendando, setAgendando] = useState(false);
+
+  const hayPlanSemanal = semanal.estado === 'planificada' || semanal.estado === 'cerrada';
+  const agendadas: RocaDiariaApi[] = diaria.objetivo.esManana ? diaria.manana : diaria.hoy;
+
+  const guardar = async (items: ItemPlanDiario[]) => {
+    const resultado = await diaria.planificar(diaria.objetivo.fecha, items);
+    setAgendando(false);
+    if (!resultado.ok) {
+      Alert.alert('Tus acciones del día', resultado.mensaje);
+    }
+  };
+
+  return (
+    <View style={[estilos.tarjeta, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
+      <View style={estilos.encabezado}>
+        <Text style={{ fontSize: 18 }}>🎯</Text>
+        <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 1, fontSize: 12 }]}>
+          3. {diaria.objetivo.esManana ? 'TUS ACCIONES DE MAÑANA' : `TUS ACCIONES DE HOY · DÍA ${diaPrograma}`}
+        </Text>
+      </View>
+
+      {!hayPlanSemanal ? (
+        <Text style={[t.body, { color: c.textSoft, fontSize: 15, marginTop: 8, lineHeight: 22 }]}>
+          Primero arma tu semana. Las acciones del día salen de las acciones críticas que definís
+          ahí, no se escriben sueltas.
+        </Text>
+      ) : agendadas.length > 0 ? (
+        <View style={{ gap: 10, marginTop: 10 }}>
+          {agendadas.map(roca => (
+            <View key={roca.id} style={[estilos.fila, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
+              {/* El color es la regla de Pareto, no decoración: la VERDE va primero y desbloquea
+                  a las otras dos de su eje. */}
+              <View style={[estilos.marca, { backgroundColor: colorDePareto(roca.color) }]} />
+              <View style={{ flex: 1 }}>
+                <Text style={[t.body, { color: c.textStrong, fontSize: 16, lineHeight: 22 }]}>{roca.titulo}</Text>
+                <Text style={[t.small, { color: c.textSoft, fontSize: 14, marginTop: 2 }]}>
+                  {ETIQUETA_EJE[roca.eje]}
+                  {roca.horaInicio ? ` · ${roca.horaInicio.slice(0, 5)}` : ''}
+                  {roca.bloqueada ? ' · se abre al completar la primera' : ''}
+                </Text>
+              </View>
+              {roca.completada && (
+                <Text style={[t.small, { color: '#70d2a0', fontWeight: '700', fontSize: 14 }]}>✓</Text>
+              )}
+            </View>
+          ))}
+          <Text style={[t.small, { color: c.textSoft, fontSize: 14, lineHeight: 20 }]}>
+            Las marcas con evidencia desde Entrenamiento, en Vida y Negocio.
+          </Text>
+        </View>
+      ) : (
+        <View style={{ gap: 12, marginTop: 8 }}>
+          <Text style={[t.body, { color: c.textSoft, fontSize: 15, lineHeight: 22 }]}>
+            {diaria.objetivo.esManana
+              ? 'Todavía no agendaste nada para mañana. Desde las 18:00 se planifica el día siguiente.'
+              : 'Todavía no agendaste tus acciones de hoy. Elige cuáles de tu semana caen hoy, y a qué hora.'}
+          </Text>
+          <Pressable
+            onPress={() => setAgendando(true)}
+            style={[estilos.boton, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}
+          >
+            <Text style={[t.body, { color: c.gold, fontWeight: '700', fontSize: 15 }]}>
+              {diaria.objetivo.esManana ? 'Agendar para mañana' : 'Agendar mis acciones'}
+            </Text>
+          </Pressable>
+        </View>
+      )}
+
+      {!!diaria.error && (
+        <Text style={[t.small, { color: '#f28e8e', fontSize: 14, marginTop: 8 }]}>{diaria.error}</Text>
+      )}
+
+      <AgendarAccionesModal
+        visible={agendando}
+        semanal={semanal}
+        fecha={diaria.objetivo.fecha}
+        esManana={diaria.objetivo.esManana}
+        guardando={diaria.guardando}
+        onGuardar={guardar}
+        onCerrar={() => setAgendando(false)}
+      />
+    </View>
+  );
+}
+
+function colorDePareto(color: RocaDiariaApi['color']): string {
+  switch (color) {
+    case 'VERDE':
+      return '#70d2a0';
+    case 'AMARILLA':
+      return '#d8be85';
+    default:
+      return '#d98e8e';
+  }
+}
+
+const estilos = StyleSheet.create({
+  tarjeta: { borderWidth: 1, borderRadius: 14, padding: 16 },
+  encabezado: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  fila: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 12, padding: 14 },
+  marca: { width: 6, height: 34, borderRadius: 3 },
+  boton: { minHeight: 48, borderWidth: 1, borderRadius: 10, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 },
+});
