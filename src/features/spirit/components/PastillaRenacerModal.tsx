@@ -273,7 +273,7 @@ export function PastillaRenacerModal({
           >
             <View style={styles.encabezado}>
               <View style={styles.tituloBloque}>
-                <Text style={[t.micro, { color: c.gold }]}>PASTILLA RENACER</Text>
+                <Text style={[t.micro, { color: c.gold }]}>PASTILLA RENASER</Text>
                 <Text style={[t.cardTitle, { color: c.text, marginTop: 4 }]}>
                   {dia?.title ?? 'Tu audio de hoy'}
                 </Text>
@@ -301,7 +301,7 @@ export function PastillaRenacerModal({
               <Text style={[t.body, { color: ROJO_ERROR }]}>{error}</Text>
             ) : !dia ? (
               <Text style={[t.body, { color: c.textSoft }]}>
-                Todavía no tenés una Pastilla disponible. Aparece a partir del día 8 de tu programa.
+                Todavía no tienes una Pastilla disponible. Aparece a partir del día 8 de tu programa.
               </Text>
             ) : (
               <>
@@ -347,7 +347,7 @@ export function PastillaRenacerModal({
                       multiline
                       maxLength={RESPUESTA_MAX_LENGTH}
                       textAlignVertical="top"
-                      placeholder="Escribí lo que te dejó este audio…"
+                      placeholder="Escribe lo que te dejó este audio…"
                       placeholderTextColor={c.textSoft}
                       style={[
                         styles.campo,
@@ -370,7 +370,7 @@ export function PastillaRenacerModal({
                       ]}
                     >
                       {intentoDeEnvio && actualMuyCorta
-                        ? `Escribí al menos ${RESPUESTA_MIN_LENGTH} caracteres.`
+                        ? `Escribe al menos ${RESPUESTA_MIN_LENGTH} caracteres.`
                         : `${largoActual}/${RESPUESTA_MAX_LENGTH}`}
                     </Text>
 

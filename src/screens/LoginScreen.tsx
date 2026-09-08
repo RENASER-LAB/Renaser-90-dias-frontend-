@@ -280,7 +280,7 @@ export default function LoginScreen() {
       if (estado) {
         setSuccessMessage(
           estado.status === 'APPROVED'
-            ? 'Tu solicitud fue aprobada. Ya podés iniciar sesión.'
+            ? 'Tu solicitud fue aprobada. Ya puedes iniciar sesión.'
             : estado.status === 'REJECTED'
             ? estado.rejectionReason || 'Tu solicitud fue rechazada.'
             : 'Tu solicitud sigue en revisión.',
@@ -382,7 +382,7 @@ export default function LoginScreen() {
     } catch (error) {
       // El token es de un solo uso: si venció o ya se usó, reintentar con la misma contraseña
       // nunca va a funcionar. El mensaje tiene que decir la única salida real.
-      setErrorMessage(mensajeDeError(error, 'No pudimos cambiar tu contraseña. Volvé a pedir un código.'));
+      setErrorMessage(mensajeDeError(error, 'No pudimos cambiar tu contraseña. Vuelve a pedir un código.'));
     } finally {
       setLoading(false);
     }
@@ -462,7 +462,7 @@ export default function LoginScreen() {
     if (!registroPendienteToken) {
       // No debería poder pasar (a este paso solo se llega con un token), pero sin él el POST
       // fallaría igual del lado del backend con un mensaje menos claro que este.
-      setErrorMessage('Tu verificación con Google venció. Volvé a intentar con Google.');
+      setErrorMessage('Tu verificación con Google venció. Vuelve a intentar con Google.');
       return;
     }
 
@@ -790,7 +790,7 @@ export default function LoginScreen() {
                   )}
                   {activeTab === 'register' && disponibilidadCorreo === 'tomado' && (
                     <Text style={[t.micro, { color: '#f28e8e' }]}>
-                      Ese correo ya tiene una cuenta. Podés iniciar sesión.
+                      Ese correo ya tiene una cuenta. Puedes iniciar sesión.
                     </Text>
                   )}
                 </View>
@@ -1334,7 +1334,7 @@ export default function LoginScreen() {
                   CONFIRMÁ TUS DATOS
                 </Text>
                 <Text style={[t.small, { color: c.textSoft, textAlign: 'center', lineHeight: 18, marginTop: 4 }]}>
-                  Revisá que tu nombre esté bien y enviá tu solicitud de cuenta.
+                  Revisa que tu nombre esté bien y enviá tu solicitud de cuenta.
                 </Text>
               </View>
 

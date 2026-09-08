@@ -130,7 +130,7 @@ export function EvidenciaDesdeChatModal({ visible, onCerrar, onSubida }: Props) 
           </View>
 
           <Text style={[t.small, { color: c.micro }]}>
-            Elegí cuál estás evidenciando. La foto se sella como evidencia del hábito, no como una
+            Elige cuál estás evidenciando. La foto se sella como evidencia del hábito, no como una
             foto del chat.
           </Text>
 

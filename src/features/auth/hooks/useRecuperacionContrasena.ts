@@ -55,12 +55,12 @@ export function useRecuperacionContrasena() {
     if (!resetToken) {
       // No debería poder pasar (a este paso solo se llega con un token), pero sin él el POST
       // fallaría igual del lado del backend con un mensaje menos claro que este.
-      throw new ApiError(0, 'Tu código venció. Volvé a pedir uno nuevo.');
+      throw new ApiError(0, 'Tu código venció. Vuelve a pedir uno nuevo.');
     }
     try {
       await authApi.confirmarResetContrasena(resetToken, contrasenaNueva);
     } catch (error) {
-      throw conMensaje(error, 'No pudimos cambiar tu contraseña. Volvé a pedir un código.');
+      throw conMensaje(error, 'No pudimos cambiar tu contraseña. Vuelve a pedir un código.');
     } finally {
       setResetToken(null);
     }

@@ -163,7 +163,7 @@ export function useRegistroConOtp() {
       setEstadoSolicitud({ status: 'PENDING', rejectionReason: null });
       return id;
     } catch (error) {
-      throw conMensaje(error, 'No pudimos registrar tu solicitud. Revisá tus datos e intentá de nuevo.');
+      throw conMensaje(error, 'No pudimos registrar tu solicitud. Revisa tus datos e intentá de nuevo.');
     }
   }, []);
 

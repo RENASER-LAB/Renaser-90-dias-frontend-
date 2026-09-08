@@ -123,7 +123,7 @@ export async function apiFetch<T>(ruta: string, opciones: OpcionesPeticion = {})
   } catch (error) {
     // fetch solo rechaza cuando no hubo respuesta: backend apagado, IP mal puesta, sin red.
     // Un 4xx/5xx SÍ resuelve, y se maneja más abajo.
-    throw new ApiError(0, 'No se pudo conectar con el servidor. Revisá que el backend esté corriendo.', error);
+    throw new ApiError(0, 'No se pudo conectar con el servidor. Revisa que el backend esté corriendo.', error);
   }
 
   // El backend renueva el identificador de sesión al iniciarla; si viene, se guarda.

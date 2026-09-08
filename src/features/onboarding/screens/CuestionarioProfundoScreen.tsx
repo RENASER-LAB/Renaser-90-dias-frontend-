@@ -148,7 +148,7 @@ export function CuestionarioProfundoScreen({ onComplete, onBack }: CuestionarioP
       if (resultado.pendientes > 0) {
         Alert.alert(
           'No se pudo guardar',
-          'No pudimos guardar las respuestas de este bloque. Revisá tu conexión e intentá de nuevo.'
+          'No pudimos guardar las respuestas de este bloque. Revisa tu conexión e intentá de nuevo.'
         );
         return;
       }

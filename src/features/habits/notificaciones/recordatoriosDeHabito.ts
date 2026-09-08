@@ -319,7 +319,7 @@ export async function programarRepasoSemanal(userId: string): Promise<boolean> {
     const id = await N.scheduleNotificationAsync({
       content: {
         title: 'Armá tu semana',
-        body: 'Revisá a qué hora va cada hábito de lunes a domingo. Lo que dejes hoy rige desde mañana.',
+        body: 'Revisa a qué hora va cada hábito de lunes a domingo. Lo que dejes hoy rige desde mañana.',
         sound: true,
       },
       trigger: {

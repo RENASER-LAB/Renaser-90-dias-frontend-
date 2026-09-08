@@ -123,14 +123,14 @@ export async function enviarMensajeRenasia(
     });
   } catch (error) {
     if (esAbort(error)) throw error;
-    throw new Error(`No se pudo conectar con ${nombre}. Revisá tu conexión.`);
+    throw new Error(`No se pudo conectar con ${nombre}. Revisa tu conexión.`);
   }
 
   if (!respuesta.ok) {
     const mensaje = await leerMensajeDeError(respuesta);
     if (respuesta.status === 429) {
       throw new RenasiaCuotaExcedidaError(
-        mensaje || `Ya usaste todas tus preguntas a ${nombre} por hoy. Volvé mañana.`
+        mensaje || `Ya usaste todas tus preguntas a ${nombre} por hoy. Vuelve mañana.`
       );
     }
     throw new Error(mensaje);

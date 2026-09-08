@@ -79,7 +79,7 @@ export function ActivarProgramaScreen({ onActivated }: ActivarProgramaScreenProp
         setSeleccionada(estado.validStartDates[0] ?? null);
       } catch (e) {
         if (!vigente) return;
-        setError(mensajeDeError(e, 'No pudimos cargar las fechas disponibles. Revisá tu conexión.'));
+        setError(mensajeDeError(e, 'No pudimos cargar las fechas disponibles. Revisa tu conexión.'));
       } finally {
         if (vigente) setCargando(false);
       }
@@ -97,7 +97,7 @@ export function ActivarProgramaScreen({ onActivated }: ActivarProgramaScreenProp
       await onboardingApi.activarPrograma({ startDate: seleccionada });
       onActivated();
     } catch (e) {
-      setError(mensajeDeError(e, 'No pudimos activar tu programa. Revisá tu conexión e intentá de nuevo.'));
+      setError(mensajeDeError(e, 'No pudimos activar tu programa. Revisa tu conexión e intentá de nuevo.'));
     } finally {
       setConfirmando(false);
     }
@@ -144,7 +144,7 @@ export function ActivarProgramaScreen({ onActivated }: ActivarProgramaScreenProp
           </Text>
           <View style={[styles.goldDivider, { backgroundColor: c.gold }]} />
           <Text style={[t.body, { color: c.textSoft, fontSize: 14, lineHeight: 21, textAlign: 'center', marginTop: 12 }]}>
-            Tu programa de 90 días arranca el día que elijas. Nunca puede ser hoy: así tenés tiempo
+            Tu programa de 90 días arranca el día que elijas. Nunca puede ser hoy: así tienes tiempo
             de programar tus hábitos antes de que empiece a correr la cuenta.
           </Text>
         </View>

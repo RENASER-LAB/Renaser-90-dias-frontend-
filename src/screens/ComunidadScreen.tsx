@@ -1233,7 +1233,7 @@ export default function ComunidadScreen() {
     try {
       const actualizada = await enviarMensajeChatRemoto(
         activeChat,
-        `Subí mi evidencia de "${resultado.tituloHabito}" (+${resultado.puntosOtorgados} pts).`,
+        `Sube mi evidencia de "${resultado.tituloHabito}" (+${resultado.puntosOtorgados} pts).`,
       );
       setActiveChat(actualizada);
     } catch {
@@ -2194,7 +2194,7 @@ export default function ComunidadScreen() {
             )}
             {!cursosCargando && !cursosError && courses.length === 0 && (
               <Text style={[t.micro, { color: c.textSoft, textAlign: 'center' }]}>
-                Todavía no tenés cursos disponibles para tu día de programa.
+                Todavía no tienes cursos disponibles para tu día de programa.
               </Text>
             )}
             {courses.map(course => (
@@ -2689,7 +2689,7 @@ export default function ComunidadScreen() {
               )}
               {!celulaCargando && !celulaError && companerosCelula.length === 0 && (
                 <Text style={[t.micro, { color: c.textSoft, marginTop: 10 }]}>
-                  Todavía no tenés integrantes en tu célula.
+                  Todavía no tienes integrantes en tu célula.
                 </Text>
               )}
               {companerosCelula.length > 0 && (
@@ -2781,7 +2781,7 @@ export default function ComunidadScreen() {
               )}
               {!conversacionesCargando && !conversacionesError && filteredConversations.length === 0 && (
                 <Text style={[t.micro, { color: c.textSoft, textAlign: 'center', marginTop: 16 }]}>
-                  Todavía no tenés conversaciones acá.
+                  Todavía no tienes conversaciones acá.
                 </Text>
               )}
 
@@ -2886,7 +2886,7 @@ export default function ComunidadScreen() {
             )}
             {!mensajesCargando && activeChat.messages.length === 0 && (
               <Text style={[t.micro, { color: c.textSoft, textAlign: 'center' }]}>
-                Todavía no hay mensajes. ¡Escribí el primero!
+                Todavía no hay mensajes. ¡Escribe el primero!
               </Text>
             )}
 
@@ -3334,7 +3334,7 @@ export default function ComunidadScreen() {
               {!cargandoCategoriasMuro && errorCategoriasMuro && categoriasMuro.length === 0 && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5, flexShrink: 1 }]}>
-                    No pudimos cargar las categorías. Podés publicar igual, sin categoría.
+                    No pudimos cargar las categorías. Puedes publicar igual, sin categoría.
                   </Text>
                   <Pressable
                     onPress={() => void recargarCategoriasMuro()}

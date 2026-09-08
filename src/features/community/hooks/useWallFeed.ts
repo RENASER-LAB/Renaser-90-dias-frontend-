@@ -29,7 +29,7 @@ export function useWallFeed() {
       const pagina = await wallApi.obtenerFeedMuro();
       setPosts(pagina.posts.map(mapearPublicacion));
     } catch (e) {
-      setError(mensajeDeError(e, 'No pudimos cargar el muro. Revisá tu conexión e intentá de nuevo.'));
+      setError(mensajeDeError(e, 'No pudimos cargar el muro. Revisa tu conexión e intentá de nuevo.'));
     } finally {
       setLoading(false);
     }

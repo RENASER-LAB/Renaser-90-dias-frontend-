@@ -48,8 +48,8 @@ export function saludoDeBienvenida(nombre?: string | null): { titulo: string; pa
 export const GUIA_PRIMER_POST = {
   titulo: 'Tu primera publicación',
   parrafos: [
-    'Escribí unas líneas contando quién sos y qué venís a cambiar. No tiene que ser perfecto: tiene que ser verdad.',
-    'Necesitás sumarle una foto — el Muro pide al menos una por publicación.',
+    'Escribe unas líneas contando quién eres y qué venís a cambiar. No tiene que ser perfecto: tiene que ser verdad.',
+    'Necesitas sumarle una foto — el Muro pide al menos una por publicación.',
   ],
   botonPrincipal: 'Llevame al Muro',
   botonSecundario: 'Ahora no',
@@ -63,7 +63,7 @@ export const ESPERANDO_PRIMER_POST = {
 
 /** Antesala del Pacto, ya con el primer post publicado. */
 export const ANTESALA_PACTO = {
-  titulo: 'Ya sos parte.',
+  titulo: 'Ya eres parte.',
   parrafos: [
     'Publicaste. Con eso dejaste de ser alguien que mira y pasaste a ser alguien que está.',
     'Queda una sola cosa antes de que la app sea tuya: el Pacto.',
