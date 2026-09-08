@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { NativeScrollEvent, NativeSyntheticEvent, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { NativeScrollEvent, NativeSyntheticEvent, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useTheme } from '../../../theme/ThemeContext';
 
@@ -37,12 +37,13 @@ function aDosDigitos(n: number): string {
 }
 
 interface RuedaProps {
+  etiqueta: string;
   valores: number[];
   valorInicial: number;
   onCambiar: (valor: number) => void;
 }
 
-function Rueda({ valores, valorInicial, onCambiar }: RuedaProps) {
+function Rueda({ etiqueta, valores, valorInicial, onCambiar }: RuedaProps) {
   const { c, t } = useTheme();
   const scrollRef = useRef<ScrollView>(null);
   const [seleccionado, setSeleccionado] = useState(valorInicial);
@@ -54,6 +55,26 @@ function Rueda({ valores, valorInicial, onCambiar }: RuedaProps) {
     setSeleccionado(valor);
     onCambiar(valor);
   };
+
+  // En web, el ratón y el teclado no garantizan los eventos de fin de arrastre de RN.
+  // El select mantiene visible exactamente el valor que se comunica al formulario.
+  if (Platform.OS === 'web') {
+    return React.createElement('select', {
+      'aria-label': etiqueta,
+      value: seleccionado,
+      onChange: (event: React.ChangeEvent<HTMLSelectElement>) => {
+        const valor = Number(event.target.value);
+        setSeleccionado(valor);
+        onCambiar(valor);
+      },
+      style: {
+        flex: 1, minWidth: 0, minHeight: 52, width: '100%',
+        color: c.textStrong, backgroundColor: c.cardBgAlt,
+        border: `1px solid ${c.gold}`, borderRadius: 12,
+        fontFamily: 'Jost_500Medium', fontSize: 24, padding: 10,
+      },
+    }, valores.map(valor => React.createElement('option', { key: valor, value: valor }, aDosDigitos(valor))));
+  }
 
   return (
     <ScrollView
@@ -110,14 +131,15 @@ export function RuedaHoraPicker({ horaInicial, minutoInicial, onCambiar }: Rueda
   return (
     <View style={styles.contenedor}>
       {/* Franja central resaltada, fija, no scrollea — marca el valor elegido. */}
-      <View
+      {Platform.OS !== 'web' && <View
         pointerEvents="none"
         style={[
           styles.franjaCentral,
           { top: ALTO_ITEM, height: ALTO_ITEM, borderColor: c.gold },
         ]}
-      />
+      />}
       <Rueda
+        etiqueta="Hora (formato de 24 horas)"
         valores={HORAS}
         valorInicial={horaInicial}
         onCambiar={h => {
@@ -134,6 +156,7 @@ export function RuedaHoraPicker({ horaInicial, minutoInicial, onCambiar }: Rueda
       <Rueda
         // `Rueda` es no controlada: solo se reposiciona al montarse. La key la remonta cuando la
         // lista de minutos cambia de largo, que es lo único que la puede dejar desincronizada.
+        etiqueta="Minutos"
         key={`minutos-${minutosDisponibles.length}`}
         valores={minutosDisponibles}
         valorInicial={minutoRef.current}

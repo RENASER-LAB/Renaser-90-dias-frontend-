@@ -342,42 +342,13 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
     setHabitoEnEdicion(h);
   };
 
-  /**
-   * Tocar un día pasa a editar SU hora; tocarlo de nuevo vuelve al horario general. La rueda sigue
-   * a lo que se está editando, que es lo que hace que no haya dos verdades en pantalla.
-   */
-  /** Lleva la rueda a una hora concreta. `null` cae en el comienzo de la jornada. */
-  const moverRueda = (hhmm: string | null) => {
-    const minutos = aMinutos(hhmm) ?? INICIO_DE_JORNADA_MIN;
-    setHora(Math.floor(minutos / 60));
-    setMinuto(minutos % 60);
-    setSemillaRueda(n => n + 1);
-  };
+  /** Cambiar el alcance conserva la hora elegida, tanto al añadir días como al volver a todos. */
+  const volverATodos = () => setDiasEnEdicion([]);
 
-  /** Vuelve a editar el horario general: todos los días. */
-  const volverATodos = () => {
-    setDiasEnEdicion([]);
-    moverRueda(horaDe(habitoEnEdicion?.habitoId ?? '', habitoEnEdicion?.time ?? ''));
-  };
-
-  /**
-   * Marca o desmarca un día. La rueda se mueve SOLO al marcar el primero: a partir de ahí es la
-   * hora que se va a poner, no la que había — si siguiera saltando con cada día que se suma,
-   * borraría lo que la persona acaba de elegir.
-   */
   const alternarDia = (dia: DiaDelPlan) => {
-    setDiasEnEdicion(prev => {
-      if (prev.includes(dia)) {
-        const quedan = prev.filter(d => d !== dia);
-        if (quedan.length === 0) {
-          moverRueda(horaDe(habitoEnEdicion?.habitoId ?? '', habitoEnEdicion?.time ?? ''));
-        }
-        return quedan;
-      }
-      if (prev.length === 0) moverRueda(horarioSemanal[dia]?.hora ?? null);
-      // En el orden de la semana, no en el orden en que se tocaron: "L M V" se lee mejor que "V L M".
-      return DIAS_DEL_PLAN.filter(d => d === dia || prev.includes(d));
-    });
+    setDiasEnEdicion(prev => prev.includes(dia)
+      ? prev.filter(d => d !== dia)
+      : DIAS_DEL_PLAN.filter(d => d === dia || prev.includes(d)));
   };
 
   /**
@@ -683,7 +654,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
   const crearHabito = async () => {
     const titulo = tituloNuevo.trim();
     if (!titulo) {
-      Alert.alert('Falta el nombre', 'Escribí cómo se llama el hábito.');
+      Alert.alert('Falta el nombre', 'Escribe cómo se llama el hábito.');
       return;
     }
     if (!categoriaDeLaDimension) return;
@@ -746,7 +717,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
           </Text>
           <View style={styles.filaMeta}>
             <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5 }]}>
-              {tieneHora ? horaActual : 'Tocá para ponerle hora'}
+              {tieneHora ? horaActual : 'Toca para ponerle hora'}
             </Text>
             {horaGuardada && (
               <Text style={[t.micro, { color: '#4E9F76', fontSize: 10, fontWeight: '700' }]}>✓ GUARDADO</Text>
@@ -848,7 +819,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
           {estado === 'listo' && habitoEnEdicion === null && !creando && (
             <>
               <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, marginTop: 10, lineHeight: 17 }]}>
-                Tocá un hábito para cambiarle la hora. El interruptor de la derecha lo prende o lo apaga.
+                Toca un hábito para cambiarle la hora. El interruptor de la derecha lo prende o lo apaga.
               </Text>
 
               <ScrollView
@@ -1037,7 +1008,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
               </View>
               <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5, marginTop: 5, lineHeight: 14 }]}>
                 {diasEnEdicion.length === 0
-                  ? 'Tocá uno o varios días para darles su propia hora. Lo de hoy y lo que ya pasó va con candado: se planifica de mañana en adelante.'
+                  ? 'Toca uno o varios días para darles su propia hora. Lo de hoy y lo que ya pasó va con candado: se planifica de mañana en adelante.'
                   : `Solo ${diasEnEdicion.join(', ').toLowerCase()}, todas las semanas. El día en curso no se reacomoda.`}
               </Text>
 
@@ -1077,7 +1048,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                 <View style={[styles.accionApagar, { borderColor: c.border, flexDirection: 'row', gap: 8 }]}>
                   <Icon name="lock" size={13} color={c.tabInactive} />
                   <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5 }]}>
-                    Obligatorio del programa: podés cambiarle la hora, no sacarlo
+                    Obligatorio del programa: puedes cambiarle la hora, no sacarlo
                   </Text>
                 </View>
               )}
@@ -1189,7 +1160,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                 Hábito nuevo en {dimension}
               </Text>
               <Text style={[t.micro, { color: c.textSoft, fontSize: 11, marginTop: 2, marginBottom: 10 }]}>
-                Es tuyo: podés pausarlo o sacarlo cuando quieras.
+                Es tuyo: puedes pausarlo o sacarlo cuando quieras.
               </Text>
 
               <TextInput
@@ -1279,7 +1250,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
               </View>
               <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5, textAlign: 'center', lineHeight: 15 }]}>
                 {diasNuevo.size === DIAS_DEL_PLAN.length
-                  ? 'Corre los 7 días. Tocá un día para sacarlo.'
+                  ? 'Corre los 7 días. Toca un día para sacarlo.'
                   : `Corre ${diasNuevo.size} ${diasNuevo.size === 1 ? 'día' : 'días'} por semana.`}
                 {'\n'}Un hábito propio no vence: la hora lo ubica en tu jornada.
               </Text>
