@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { NativeScrollEvent, NativeSyntheticEvent, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useTheme } from '../../../theme/ThemeContext';
@@ -47,6 +47,23 @@ function Rueda({ etiqueta, valores, valorInicial, onCambiar }: RuedaProps) {
   const { c, t } = useTheme();
   const scrollRef = useRef<ScrollView>(null);
   const [seleccionado, setSeleccionado] = useState(valorInicial);
+
+  /**
+   * Posiciona la rueda en el valor que ya rige.
+   *
+   * **`contentOffset` NO alcanza: es una prop de iOS y Android la ignora.** El síntoma en el
+   * teléfono era una rueda mostrando `00` mientras el botón decía `GUARDAR 05:00` — la rueda no
+   * "volvía" a otra hora, nunca se había movido, y lo que se veía arriba era mentira. Peor que un
+   * error: la pantalla afirmaba una cosa y el formulario tenía otra.
+   *
+   * `animated: false` porque esto es la posición INICIAL, no un movimiento que la persona pidió.
+   * Depende de `valorInicial` para que remontar la rueda —cambiar de hábito, o el recorte de
+   * minutos al pasar a las 23— también la reubique.
+   */
+  useEffect(() => {
+    const indice = Math.max(0, valores.indexOf(valorInicial));
+    scrollRef.current?.scrollTo({ y: indice * ALTO_ITEM, animated: false });
+  }, [valorInicial, valores]);
 
   const onFinDeScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offsetY = e.nativeEvent.contentOffset.y;
