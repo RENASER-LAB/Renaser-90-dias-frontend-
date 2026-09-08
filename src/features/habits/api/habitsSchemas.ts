@@ -26,6 +26,10 @@ const habitoCatalogoSchema = z
     // título es renombrable por el propio aprendiz. `.optional()` además de `.nullable()` para no
     // romper contra un backend viejo que todavía no manda el campo.
     systemKey: z.string().nullable().optional(),
+    // Icono CURADO del hábito (`SLEEP`, `WATER`, `RITUAL_MORNING`...), que la base guarda desde el
+    // baseline y hasta 2026-09-07 ninguna API exponía. `.optional()` para no romper contra un
+    // backend anterior a ese cambio; ahí se sigue usando el icono de la categoría.
+    iconKey: z.string().nullable().optional(),
     // Dias de la semana en que el habito aplica (`"MONDAY"`..`"SUNDAY"`), derivados del TipoDia de
     // sus horarios. `.optional()` para no romper contra un backend anterior a V28, que no lo manda.
     activeWeekdays: z.array(z.string()).optional(),
@@ -38,11 +42,34 @@ const habitoCatalogoSchema = z
   })
   .passthrough();
 
+/** `GET /api/v1/habit-preferences/{habitId}/weekdays` — los 7 días ya resueltos (V39). */
+const horarioSemanalSchema = z
+  .object({
+    weekdays: z.array(
+      z.object({
+        // Nombre de `DayOfWeek`: MONDAY..SUNDAY, mismo vocabulario que `activeWeekdays`.
+        weekday: z.string(),
+        triggerTime: z.string().nullable(),
+        limitTime: z.string().nullable(),
+        // `true` = ese día tiene hora propia; `false` = hereda la general.
+        custom: z.boolean(),
+        // V40: `false` = el aprendiz apagó ese día de la semana. `.optional()` para no romper
+        // contra un backend anterior, donde todos los días estaban encendidos.
+        active: z.boolean().optional(),
+      }).passthrough(),
+    ),
+  })
+  .passthrough();
+
 const preferenciaHabitoSchema = z
   .object({
     habitId: z.string(),
     title: z.string(),
     triggerTime: z.string().nullable(),
+    // El recordatorio, que el PATCH ya escribía y este GET no devolvía hasta 2026-09-07.
+    // `.optional()` para no romper contra un backend anterior a ese cambio.
+    reminderEnabled: z.boolean().optional(),
+    reminderMinutesBefore: z.number().nullable().optional(),
     limitTime: z.string().nullable(),
     customized: z.boolean(),
     // Se valida de verdad en vez de `z.unknown()`: es el dato que sostiene el aviso "desde
@@ -149,6 +176,7 @@ const desbloqueoHabitoSchema = z
 
 export const habitsSchemas = {
   catalogo: z.array(habitoCatalogoSchema),
+  horarioSemanal: horarioSemanalSchema,
   /** `enabled` es del programa entero, no de un hábito: si viene `false`, no hay plan que leer. */
   planDesbloqueos: z
     .object({ enabled: z.boolean(), items: z.array(desbloqueoHabitoSchema) })

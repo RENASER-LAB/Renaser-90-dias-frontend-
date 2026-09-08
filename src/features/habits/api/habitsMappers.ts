@@ -1,5 +1,6 @@
 import type { DayMoment, DayOfWeek, PlanHabit } from '../../../screens/PlanScreen';
 import type { DesbloqueoHabitoApi, HabitoCatalogoApi, PreferenciaHabitoApi } from '../types/habits.types';
+import { iconoDeHabito } from '../utils/iconosDeHabito';
 
 /**
  * Traduce lo que responde el backend a la forma que ya usa `PlanScreen`. El diseño manda: acá se
@@ -181,7 +182,15 @@ export function mapearPlanHabit(
   return {
     id: habito.id,
     title: habito.title,
-    icon: categoria.icon,
+    // El icono propio del hábito manda; el de la categoría es el respaldo. Antes solo existía el
+    // segundo, y por eso los seis hábitos de CUERPO se pintaban con el mismo símbolo.
+    icon: iconoDeHabito(habito.iconKey, categoria.icon),
+    // Se arrastra tal cual para poder devolverlo intacto en el próximo PATCH de horario: ese PATCH
+    // reemplaza los cuatro campos a la vez, así que no mandarlo es apagarlo.
+    recordatorio: {
+      activo: preferencia?.reminderEnabled ?? false,
+      minutosAntes: preferencia?.reminderMinutesBefore ?? null,
+    },
     tag: categoria.tag,
     tagColor: categoria.tagColor,
     time: aHoraCorta(horaDisparo),

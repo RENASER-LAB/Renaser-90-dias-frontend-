@@ -1,10 +1,18 @@
+import type { DiaSemanaApi } from '../types/habits.types';
+
 /**
  * Los siete días, y la semana que el Plan dibuja, en un solo lugar.
  *
- * **Este archivo no importa NADA, y conviene que siga así.** `PlanScreen` lo importa; si acá se
- * importara de vuelta algo de la pantalla quedaría un ciclo. Por eso el tipo del día se define ACÁ
- * y `PlanScreen` lo reexporta como `DayOfWeek`, y no al revés — la dependencia apunta en un solo
- * sentido, del que sabe poco (los días) al que sabe mucho (la pantalla).
+ * **Este archivo no importa nada que exista en tiempo de ejecución, y conviene que siga así.**
+ * `PlanScreen` lo importa; si acá se importara de vuelta algo de la pantalla quedaría un ciclo. Por
+ * eso el tipo del día se define ACÁ y `PlanScreen` lo reexporta como `DayOfWeek`, y no al revés —
+ * la dependencia apunta en un solo sentido, del que sabe poco (los días) al que sabe mucho (la
+ * pantalla).
+ *
+ * > **Precisado el 2026-09-08.** Antes decía "no importa NADA". El único import es un `import type`
+ * > de `DiaSemanaApi`, que TypeScript borra al compilar: no crea módulo ni ciclo en runtime, y a
+ * > cambio hace que `NOMBRE_ISO_DEL_DIA` devuelva el tipo exacto que espera el backend en vez de un
+ * > `string` cualquiera. Un import de valor sí rompería la regla y sigue prohibido.
  *
  * POR QUE ESTO NO VIVE EN `PlanScreen`
  *
@@ -20,6 +28,23 @@
 export type DiaDelPlan = 'LUN' | 'MAR' | 'MIÉ' | 'JUE' | 'VIE' | 'SÁB' | 'DOM';
 
 export const DIAS_DEL_PLAN: DiaDelPlan[] = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'];
+
+/**
+ * El nombre que el backend usa para cada día (`java.time.DayOfWeek`), que es el mismo vocabulario
+ * de `activeWeekdays` en `GET /api/v1/habits` y de las rutas `/weekdays/{weekday}`.
+ *
+ * Va acá y no en la pantalla porque es una propiedad del día, no de quién lo dibuja: el día que
+ * otro módulo tenga que hablar de días con el servidor, la traducción ya existe y es una sola.
+ */
+export const NOMBRE_ISO_DEL_DIA: Record<DiaDelPlan, DiaSemanaApi> = {
+  LUN: 'MONDAY',
+  MAR: 'TUESDAY',
+  'MIÉ': 'WEDNESDAY',
+  JUE: 'THURSDAY',
+  VIE: 'FRIDAY',
+  'SÁB': 'SATURDAY',
+  DOM: 'SUNDAY',
+};
 
 /** Indice de HOY dentro de una semana que arranca en lunes (0 = lunes … 6 = domingo). */
 export const INDICE_DE_HOY = (new Date().getDay() + 6) % 7;
@@ -41,6 +66,29 @@ export const INDICE_DE_HOY = (new Date().getDay() + 6) % 7;
  * > "la pestaña inicial pasa a ser MAÑANA".
  */
 export const MOSTRAR_SEMANA_SIGUIENTE = INDICE_DE_HOY === DIAS_DEL_PLAN.length - 1;
+
+/**
+ * `true` si a ese día se le puede planificar el horario.
+ *
+ * Es D-98 —"lo que se planifica es de mañana en adelante"— dicho como pregunta: **el día en curso
+ * y los ya pasados no se tocan**. No es una decisión de pantalla, es la regla del backend: D-91,
+ * `el dia en curso NO se toca, sin excepciones`. `PreferenciaHorarioService` arranca a contar en
+ * `hoy.plusDays(1)` tanto para el horario general como para el semanal, así que pedir "los lunes"
+ * un lunes NO cambia hoy: rige desde el lunes siguiente.
+ *
+ * Vive acá y no en una pantalla porque ya son dos las que la necesitan (`PlanScreen` y el modal de
+ * Planificar), y es exactamente el tipo de regla que, copiada, se separa un día y deja la casilla
+ * pintada donde no va — el mismo motivo por el que `fechasIsoDeLaSemana` bajó hasta este archivo.
+ *
+ * > `PlanScreen` todavía tiene su propia copia (`ULTIMO_INDICE_NO_PLANIFICABLE`), idéntica. Queda
+ * > anotado para unificarlas; no se tocó en el mismo cambio para no mezclarse con el remodelado
+ * > visual que está corriendo sobre esa pantalla.
+ */
+export function esPlanificable(dia: DiaDelPlan): boolean {
+  // Un domingo se muestra la semana SIGUIENTE entera, así que ahí los siete días son futuros.
+  if (MOSTRAR_SEMANA_SIGUIENTE) return true;
+  return DIAS_DEL_PLAN.indexOf(dia) > INDICE_DE_HOY;
+}
 
 /**
  * `Date` -> `yyyy-MM-dd` en hora LOCAL.

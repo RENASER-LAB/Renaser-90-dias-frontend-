@@ -38,6 +38,12 @@ export interface HabitoCatalogoApi {
    * texto se rompe en silencio. Opcional para tolerar un backend anterior a este campo.
    */
   systemKey?: string | null;
+  /**
+   * `Habito.iconoClave` — el icono curado de ESTE hábito (`SLEEP`, `WATER`, `PHONE_OFF`...), no el
+   * de su categoría. Distingue una fila de otra dentro de la misma dimensión, que es lo que el
+   * icono de categoría no podía hacer. `null` en los personales; ausente contra un backend viejo.
+   */
+  iconKey?: string | null;
 }
 
 /** La Clase Diaria: el hábito que abre la lección del día y pide un resumen para cerrarse. */
@@ -76,6 +82,10 @@ export type CategoriaHabitoApi = 'BODY' | 'MIND' | 'SPIRIT' | 'CONSCIENCE';
  * advierte que no está verificado que `JOURNALING`/`RATING`/`BLOCKING` funcionen sobre un hábito
  * PERSONAL, así que la app manda solo `CHECKBOX` — un hábito propio que se marca y listo.
  */
+/** Los nombres de `DayOfWeek` del backend, que es el vocabulario de `/weekdays/{weekday}`. */
+export type DiaSemanaApi =
+  | 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
+
 export interface AltaHabitoPersonal {
   title: string;
   habitType: 'CHECKBOX';
@@ -83,10 +93,41 @@ export interface AltaHabitoPersonal {
   /** `GIMNASIO` | `CORRER` | `OTRO`. La app manda siempre `OTRO`: no hay pantalla que elija. */
   template: 'OTRO';
   goalLabel: string | null;
+  /**
+   * Icono elegido por el aprendiz (`SLEEP`, `WATER`…). Opcional: sin él, el hábito nace sin icono
+   * propio y el móvil le pone el de su categoría, que es como nacían todos hasta 2026-09-07.
+   */
+  iconKey?: string | null;
   /** `HH:mm:ss` — obligatorio: sin hora de disparo el hábito no genera nada que hacer. */
   triggerTime: string;
+  /**
+   * Los días de la semana en que corre, con los nombres de `DayOfWeek`: `MONDAY`…`SUNDAY`.
+   *
+   * Omitirlo o mandarlo vacío significa **los siete**, que es como nacían todos los hábitos propios
+   * hasta el 2026-09-08. El backend no cambia el `tipoDia` del catálogo: apaga los días que no
+   * están en la lista para ESE participante (`horario_semanal_habito.activo`).
+   */
+  activeWeekdays?: DiaSemanaApi[];
   /** `HH:mm:ss` o null. Null = no vence dentro del día, que es el caso de un hábito propio. */
   limitTime: string | null;
+}
+
+/**
+ * Un día de `GET /api/v1/habit-preferences/{habitId}/weekdays` — la hora de ESE día (V39).
+ *
+ * Vienen los siete siempre, resueltos por el servidor: `custom` dice si ese día tiene hora propia
+ * o si hereda la general. La pantalla no mezcla nada — esa mezcla es la precedencia y vive en el
+ * backend, para que no existan dos implementaciones de la misma regla.
+ */
+export interface DiaDeLaSemanaApi {
+  /** Nombre de `DayOfWeek`: `MONDAY`..`SUNDAY`. */
+  weekday: string;
+  /** `HH:mm:ss`, ya resuelta para ese día. */
+  triggerTime: string | null;
+  limitTime: string | null;
+  custom: boolean;
+  /** `false` = ese día está apagado, todas las semanas (V40). Ausente contra un backend viejo. */
+  active?: boolean;
 }
 
 /** Un ítem de `GET /api/v1/habit-preferences` — el horario, propio o el del catálogo. */
@@ -99,6 +140,14 @@ export interface PreferenciaHabitoApi {
   limitTime: string | null;
   /** true si el aprendiz cambió el horario respecto del catálogo. */
   customized: boolean;
+  /**
+   * El recordatorio de este hábito. Ausente contra un backend anterior al 2026-09-07: hasta
+   * entonces el PATCH los escribía y el GET no los devolvía, así que no había forma de leerlos de
+   * vuelta y el móvil los mandaba en `false`/`null` en cada guardado — apagando el recordatorio
+   * cada vez que alguien tocaba la hora.
+   */
+  reminderEnabled?: boolean;
+  reminderMinutesBefore?: number | null;
   /**
    * Cambio de horario ya guardado que todavía NO rige: el backend lo programa para el día
    * siguiente cuando la ventana del hábito ya arrancó hoy ("no se improvisa el día").

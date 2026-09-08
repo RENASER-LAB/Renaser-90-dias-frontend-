@@ -18,13 +18,12 @@ import type { AgenteRenasia } from '../types/renasia.types';
  * Cada uno tiene su historial en el backend (`GET /api/v1/renasia/mensajes?agent=`), su prompt de
  * sistema y su nombre. Nunca se mezclan.
  *
- * El nombre del acompañante TODAVÍA NO LO CONFIRMÓ EL DUEÑO: vuelve a ser "Renasia", el que
- * siempre tuvo, hasta que diga otra cosa. Por eso es una constante: cambiar el nombre es cambiar
- * una línea acá, sin tocar tablas, rutas ni clases (que siguen diciendo `renasia` a propósito).
+ * El dueño confirmó "SER, la inteligencia de RENASER" para el acompañante (2026-09-07).
+ * Solo cambia su nombre visible; las rutas, historiales y el tutor Sparkie siguen separados.
  */
 
-/** Nombre visible del acompañante de los 90 días. PENDIENTE de confirmación del dueño. */
-export const NOMBRE_ACOMPANANTE = 'Renasia';
+/** Nombre visible del acompañante de los 90 días. */
+export const NOMBRE_ACOMPANANTE = 'SER';
 
 /** Nombre visible del tutor de cursos. Confirmado por el dueño. */
 export const NOMBRE_TUTOR_CURSOS = 'Sparkie';

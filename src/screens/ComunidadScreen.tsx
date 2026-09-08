@@ -28,6 +28,7 @@ import { useWallFeed } from '../features/community/hooks/useWallFeed';
 import { useWallReactions } from '../features/community/hooks/useWallReactions';
 import { useMiCelula } from '../features/community/hooks/useMiCelula';
 import { useCategoriasMuro } from '../features/community/hooks/useCategoriasMuro';
+import { PodioRanking, EntradaEscalonada } from '../features/community/components/PodioRanking';
 import * as wallApi from '../features/community/api/wallApi';
 import { elegirYNormalizarFotoMuro, type FotoMuroNormalizada } from '../features/community/utils/normalizarImagen';
 import { FotoMuro } from '../features/community/components/FotoMuro';
@@ -48,7 +49,6 @@ import { EvidenciaDesdeChatModal } from '../features/habits/components/Evidencia
 import { mapearMensaje } from '../features/chat/api/chatMappers';
 import type { WireMensaje } from '../features/chat/types/chat.types';
 import { marcarChatMontado } from '../features/renasia/state/chatEnPantalla';
-import { useTicketsMentor } from '../features/tickets/hooks/useTicketsMentor';
 import { useRanking } from '../features/ranking/hooks/useRanking';
 import { ApiError, mensajeDeError } from '../services/http/apiClient';
 
@@ -89,10 +89,15 @@ export interface CourseItem {
   id: string;
   title: string;
   category: string;
-  instructor: string;
   summary: string;
   progressPercent: number;
-  totalModules: number;
+  /**
+   * Cantidad de LECCIONES del curso (`totalResources` por herencia del nombre del diseño
+   * original). Es lo unico que la tarjeta muestra desde 2026-09-07: antes decia
+   * "N Modulos - M Recursos" y el dueño del proyecto pidio hablarle a la persona de lecciones,
+   * que es la unidad con la que de verdad avanza. `totalModules` (cantidad de secciones) se
+   * elimino junto con ese texto: nadie mas lo leia.
+   */
   totalResources: number;
   sections: CourseSection[];
   // --- Campos agregados para portada real + catálogo con bloqueados (ver `academyMappers.ts`) ---
@@ -315,10 +320,47 @@ const GROUP_MEMBERS: GroupMember[] = [
 // `useChatConversaciones` (GET /api/v1/chat/conversations). `GROUP_MEMBERS` sigue mock (ver nota
 // junto a su declaración, más arriba): el backend no expone los campos que ese roster necesita.
 
-const SOPORTE: { icon: IconName; label: string }[] = [
-  { icon: 'clock', label: 'Eventos &\nExperiencias' },
-  { icon: 'stack', label: 'Recursos\nExclusivos' },
-  { icon: 'user', label: 'Entorno\nRenaser' },
+/**
+ * En qué sección de Comunidad está parada la pantalla. Las seis son EXCLUYENTES entre sí: solo
+ * una se pinta a la vez, y la fila de medallones de arriba es el único modo de cambiar de una a
+ * otra (más los dos atajos que entran desde Training, ver los efectos de `route.params`).
+ *
+ * Es un único valor y no un booleano por sección a propósito (corregido 2026-09-05, E-116). Antes
+ * había `inEventosExperiencias`, `inExclusiveResources` e `inAtencionPersonalizada` sueltos, y
+ * cada camino de entrada prendía el suyo sin apagar los otros, así que quien tocaba primero el
+ * hábito de Clase Diaria y después el de post en comunidad terminaba con el Muro y el catálogo de
+ * Cursos apilados uno encima del otro en el mismo scroll. Con un solo valor ese estado no se puede
+ * ni escribir.
+ *
+ * REDISEÑO 2026-09-07: antes eran cuatro (`inicio` | `eventos` | `recursos` | `atencion`) y
+ * `inicio` era una portada desde la que había que entrar a un sub-módulo y, ya adentro, elegir una
+ * pestaña — el Muro quedaba a dos toques de profundidad. Ahora las seis están al mismo nivel,
+ * arriba, y `muro` es la que abre. Lo que era una pestaña dentro de "Eventos & Experiencias"
+ * (`muro`, `testimonios`, `ranking`) y lo que era una categoría de chat (`celula`, `miembros`) son
+ * secciones de pleno derecho; "Recursos Exclusivos" pasó a llamarse `classroom`.
+ */
+export type SeccionComunidad =
+  | 'muro'
+  | 'classroom'
+  | 'celula'
+  | 'miembros'
+  | 'ranking'
+  | 'testimonios';
+
+/**
+ * Las seis secciones, en el orden en que se pintan en la fila de medallones. Es la única fuente de
+ * verdad de esa fila: agregar una sección es agregar una entrada acá y su bloque de contenido.
+ *
+ * Los tickets al mentor no están, y no es que se hayan movido: el apartado entero se retiró de la
+ * app el 2026-09-07 a pedido del dueño del proyecto (ver la nota junto a `tieneGrupo`).
+ */
+const SECCIONES: { id: SeccionComunidad; icon: IconName; label: string }[] = [
+  { id: 'muro', icon: 'chat', label: 'Muro' },
+  { id: 'classroom', icon: 'stack', label: 'Classroom' },
+  { id: 'celula', icon: 'users', label: 'Célula' },
+  { id: 'miembros', icon: 'user', label: 'Miembros' },
+  { id: 'ranking', icon: 'trophy', label: 'Ranking' },
+  { id: 'testimonios', icon: 'star', label: 'Testimonios' },
 ];
 
 const METRICAS = [
@@ -326,20 +368,6 @@ const METRICAS = [
   { n: '3', label: 'Eventos\npróximos' },
   { n: '2', label: 'Mentorías\nprogramadas' },
 ];
-
-/**
- * En qué sección de Comunidad está parada la pantalla. Las cuatro son EXCLUYENTES entre sí: solo
- * una se pinta a la vez.
- *
- * Es un único valor y no tres booleanos a propósito (corregido 2026-09-05, E-116). Antes había
- * `inEventosExperiencias`, `inExclusiveResources` e `inAtencionPersonalizada` sueltos, y cada
- * camino de entrada prendía el suyo sin apagar los otros. Los dos atajos que entran desde la
- * pestaña Training (`abrirCursoId`/`abrirLeccionId` de la Clase Diaria, y `abrirComposerMuro` del
- * hábito de post en comunidad) hacían justamente eso, así que quien tocaba primero un hábito y
- * después el otro terminaba con el Muro y el catálogo de Cursos apilados uno encima del otro en
- * el mismo scroll. Con un solo valor ese estado no se puede ni escribir.
- */
-type SeccionComunidad = 'inicio' | 'eventos' | 'recursos' | 'atencion';
 
 export default function ComunidadScreen() {
   const { c, t, mode } = useTheme();
@@ -389,13 +417,23 @@ export default function ComunidadScreen() {
   // Única fuente de verdad de "en qué sección estoy" (ver `SeccionComunidad`). Nunca se escribe a
   // mano: se pasa siempre por `irASeccion`, que además limpia el sub-estado de la sección que se
   // deja.
-  const [seccionActiva, setSeccionActiva] = useState<SeccionComunidad>('inicio');
-  // Derivados, no estados. Se mantienen con el mismo nombre que tenían cuando eran `useState`
-  // para que las ~15 condiciones de render y el manejador del botón "atrás" sigan leyéndose igual;
-  // lo que cambió es que ya no se pueden prender dos a la vez.
-  const inExclusiveResources = seccionActiva === 'recursos';
-  const inEventosExperiencias = seccionActiva === 'eventos';
-  const inAtencionPersonalizada = seccionActiva === 'atencion';
+  const [seccionActiva, setSeccionActiva] = useState<SeccionComunidad>('muro');
+  // Derivados, no estados: agrupan las secciones que comparten un mismo contenedor de scroll o un
+  // mismo sub-estado. Nunca se pueden prender dos a la vez, porque salen todos de `seccionActiva`.
+  const inExclusiveResources = seccionActiva === 'classroom';
+  /**
+   * Las tres que se pintan dentro del mismo `ScrollView` (el que hasta 2026-09-07 era el
+   * sub-módulo "Eventos & Experiencias" con sus tres pestañas). Comparten contenedor y padding;
+   * el contenido de cada una se elige más abajo con `seccionActiva`.
+   */
+  const enMuroTestimoniosORanking =
+    seccionActiva === 'muro' || seccionActiva === 'testimonios' || seccionActiva === 'ranking';
+  /**
+   * Célula y Miembros comparten el listado de conversaciones, la sala de chat y la ficha del
+   * grupo: lo único que cambia entre las dos es qué conversaciones se filtran y qué va arriba de
+   * la lista.
+   */
+  const inChatsComunidad = seccionActiva === 'celula' || seccionActiva === 'miembros';
   // Se guarda el ID, no el objeto: `courses` (de `useCursos`) es la única fuente de verdad, así
   // que `selectedCourse` sale siempre DERIVADO más abajo. Si se guardara el objeto entero (como
   // hacía el mock) quedaría una copia vieja congelada en el momento del toque, y una acción
@@ -403,13 +441,14 @@ export default function ComunidadScreen() {
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [fullScreenLesson, setFullScreenLesson] = useState<LessonResource | null>(null);
 
-  // Sub-módulo: Eventos & Experiencias
-  const [eventosTab, setEventosTab] = useState<'muro' | 'testimonios' | 'ranking'>('muro');
-
   // Sub-módulo: Atención Personalizada & Chats tipo WhatsApp — `conversations` sale del backend
   // real (GET /api/v1/chat/conversations) a través de `useChatConversaciones`; el historial de
   // cada una se pide recién al abrirla (ver `handleAbrirChat`), nunca en el listado.
-  const [chatCategory, setChatCategory] = useState<'celula' | 'miembros' | 'global'>('celula');
+  /**
+   * Qué se lista dentro de Miembros. La célula dejó de ser una opción acá porque pasó a ser su
+   * propia sección: quedan las conversaciones uno a uno y el canal global.
+   */
+  const [miembrosTab, setMiembrosTab] = useState<'directos' | 'global'>('directos');
   const {
     conversations,
     setConversations,
@@ -433,17 +472,19 @@ export default function ComunidadScreen() {
    * pasos, y sin la limpieza alguien que dejó una lección abierta a pantalla completa volvía a
    * caer dentro de ESA lección la próxima vez que entraba a Recursos por su cuenta.
    *
-   * Ojo con el orden al entrar a `recursos` desde un atajo: `irASeccion('recursos')` NO toca
+   * Ojo con el orden al entrar a `classroom` desde un atajo: `irASeccion('classroom')` NO toca
    * `selectedCourseId`/`fullScreenLesson` (el `if` de abajo lo excluye), justamente para que el
    * `setSelectedCourseId(...)` que viene después en el mismo efecto no se pise.
    */
   const irASeccion = useCallback((seccion: SeccionComunidad) => {
     setSeccionActiva(seccion);
-    if (seccion !== 'recursos') {
+    if (seccion !== 'classroom') {
       setFullScreenLesson(null);
       setSelectedCourseId(null);
     }
-    if (seccion !== 'atencion') {
+    // Célula y Miembros comparten la sala de chat abierta: pasar de una a otra no la cierra, salir
+    // de las dos sí.
+    if (seccion !== 'celula' && seccion !== 'miembros') {
       setActiveChat(null);
       setGroupInfoVisible(false);
     }
@@ -677,22 +718,17 @@ export default function ComunidadScreen() {
   // Modal / Bottom Sheet de Compartir Publicación (Feed y Visor)
   const [shareSheetPost, setShareSheetPost] = useState<PostItem | null>(null);
 
-  // Sub-módulo: Entorno Renaser (Tickets al Mentor y Chats de Comunidad)
+  /**
+   * Pertenece a una célula CON mentor asignado. Lo lee el compositor del Muro para saber si puede
+   * ofrecer compartir en la célula.
+   *
+   * Acá vivían además los tickets al mentor (estado del formulario, `useTicketsMentor`, listado y
+   * modal de alta). Se retiraron enteros el 2026-09-07 a pedido del dueño del proyecto: el
+   * apartado ya no va en la app. No quedó escondido detrás de una bandera ni comentado "por si
+   * acaso" — mismo criterio que el resto de esta pantalla. El backend y el hook
+   * (`features/tickets`) siguen ahí intactos para el día que se quiera volver a colgar.
+   */
   const tieneGrupo = miCelula?.assigned === true && tieneMentor;
-  const [entornoTab, setEntornoTab] = useState<'tickets' | 'chats'>('tickets');
-  const [modalNuevoTicketVisible, setModalNuevoTicketVisible] = useState(false);
-  const [ticketBloqueo, setTicketBloqueo] = useState('');
-  const [ticketSoluciones, setTicketSoluciones] = useState('');
-  const [ticketImpactoSmart, setTicketImpactoSmart] = useState('');
-
-  const {
-    tickets: ticketsMentor,
-    loading: ticketsCargando,
-    error: ticketsError,
-    creando: ticketCreando,
-    crearTicket: enviarTicketMentor,
-    recargar: recargarTickets,
-  } = useTicketsMentor(inAtencionPersonalizada);
 
   // Sub-módulo: Ranking Real del Backend
   const { rankingData, loading: rankingCargando, error: rankingError } = useRanking();
@@ -794,39 +830,13 @@ export default function ComunidadScreen() {
         cellText: `${celulaNombre} · ⚡ ${found.puntaje} Pts de Coherencia`,
       };
     }
+    // Sin posición todavía. El texto habla de lo que falta hacer y no de lo que falta en la base,
+    // igual que la invitación del podio vacío: es el mismo momento del recorrido.
     return {
       rank: '-',
-      cellText: `${celulaNombre} · Sin puntajes en este corte del ranking`,
+      cellText: `${celulaNombre} · Tu primer avance te pone en la tabla`,
     };
   }, [apiRankingEntries, rankingData?.celula?.cellName, user?.id, user?.name, miCelula]);
-
-  const handleEnviarTicket = async () => {
-    if (!ticketBloqueo.trim() || !ticketSoluciones.trim() || !ticketImpactoSmart.trim()) {
-      Alert.alert(
-        'Campos requeridos',
-        'Por favor responde a las 3 preguntas clave para que tu mentor pueda orientarte adecuadamente.'
-      );
-      return;
-    }
-
-    try {
-      await enviarTicketMentor({
-        blockDescription: ticketBloqueo.trim(),
-        attemptedSolutions: ticketSoluciones.trim(),
-        smartGoalImpact: ticketImpactoSmart.trim(),
-      });
-      setTicketBloqueo('');
-      setTicketSoluciones('');
-      setTicketImpactoSmart('');
-      setModalNuevoTicketVisible(false);
-      Alert.alert(
-        '¡Ticket Enviado! 🎫🦅',
-        'Tu mentor asignado ha recibido tu consulta estructurada y te responderá en este mismo espacio.'
-      );
-    } catch (e) {
-      Alert.alert('No se pudo enviar el ticket', mensajeDeError(e, 'Intenta de nuevo en un momento.'));
-    }
-  };
 
   // =========================================================================
   // GESTOS TÁCTILES DEL SISTEMA (BACKHANDLER)
@@ -834,10 +844,6 @@ export default function ComunidadScreen() {
   useSystemBackHandler(() => {
     if (shareSheetPost !== null) {
       setShareSheetPost(null);
-      return true;
-    }
-    if (modalNuevoTicketVisible) {
-      setModalNuevoTicketVisible(false);
       return true;
     }
     if (selectedMemberProfile !== null) {
@@ -856,8 +862,8 @@ export default function ComunidadScreen() {
       setActiveChat(null);
       return true;
     }
-    if (inAtencionPersonalizada) {
-      irASeccion('inicio');
+    if (inChatsComunidad) {
+      irASeccion('muro');
       return true;
     }
     if (reactionsModalVisible) {
@@ -876,16 +882,15 @@ export default function ComunidadScreen() {
       setSelectedCourseId(null);
       return true;
     }
-    if (inExclusiveResources) {
-      irASeccion('inicio');
-      return true;
-    }
-    if (inEventosExperiencias) {
-      irASeccion('inicio');
+    // Cualquier sección que no sea el Muro vuelve al Muro, que es la que abre la pestaña. Estando
+    // ya en el Muro se devuelve `false` a propósito: ahí el gesto le toca al sistema (salir de la
+    // app), que es lo que la persona espera en la raíz de una pestaña.
+    if (seccionActiva !== 'muro') {
+      irASeccion('muro');
       return true;
     }
     return false;
-  }, shareSheetPost !== null || modalNuevoTicketVisible || inAtencionPersonalizada || inEventosExperiencias || inExclusiveResources || selectedCourse !== null || fullScreenLesson !== null || createPostModalVisible || reactionsModalVisible || activeChat !== null || groupInfoVisible || selectedMemberProfile !== null || fotoChatAmpliada !== null);
+  }, shareSheetPost !== null || seccionActiva !== 'muro' || selectedCourse !== null || fullScreenLesson !== null || createPostModalVisible || reactionsModalVisible || activeChat !== null || groupInfoVisible || selectedMemberProfile !== null || fotoChatAmpliada !== null);
 
   /**
    * Mientras la sala de chat esté abierta, se esconde el botón flotante del acompañante: se monta
@@ -893,23 +898,13 @@ export default function ComunidadScreen() {
    * `ChatDelCurso` (ver `renasia/state/chatEnPantalla.ts`), no un mecanismo nuevo.
    */
   useEffect(() => {
-    if (!inAtencionPersonalizada || activeChat === null || groupInfoVisible) return;
+    if (!inChatsComunidad || activeChat === null || groupInfoVisible) return;
     return marcarChatMontado();
-  }, [inAtencionPersonalizada, activeChat, groupInfoVisible]);
+  }, [inChatsComunidad, activeChat, groupInfoVisible]);
 
   // =========================================================================
   // HANDLERS
   // =========================================================================
-  const handleSoportePress = (label: string) => {
-    if (label.includes('Entorno') || label.includes('Atención')) {
-      irASeccion('atencion');
-    } else if (label.includes('Eventos')) {
-      irASeccion('eventos');
-    } else if (label.includes('Recursos')) {
-      irASeccion('recursos');
-    }
-  };
-
   /**
    * Abre un curso del catálogo (ahora completo — ver `useCursos`). Si es uno de los que todavía
    * no se desbloquearon por día de programa (`GET /cursos/bloqueados`, `course.locked`) no
@@ -935,7 +930,7 @@ export default function ComunidadScreen() {
    * sección — ver javadoc de `Leccion` en el backend) no navega: el diseño no tiene ningún
    * indicador visual de "candado" para una lección puntual dentro de un curso ya accesible, así
    * que en vez de inventar esa UI se avisa con el mismo `Alert.alert` que ya usa el resto de la
-   * pantalla (ver `handleSoportePress`/reacciones del Muro).
+   * pantalla (ver `handleAbrirCurso` acá arriba y las reacciones del Muro).
    */
   const handleAbrirLeccion = (lesson: LessonResource, omitirProgresionSecuencial = false) => {
     if (lesson.locked) {
@@ -1008,9 +1003,9 @@ export default function ComunidadScreen() {
     if (!params?.abrirCursoId || !params?.abrirLeccionId) return;
 
     // `irASeccion` y no `setSeccionActiva`: apaga la sección que estuviera abierta. Entrar acá
-    // dejando prendida "Eventos & Experiencias" pintaba el Muro y el catálogo de Cursos apilados
-    // en el mismo scroll (E-116).
-    irASeccion('recursos');
+    // dejando prendida otra sección pintaba el Muro y el catálogo de Cursos apilados en el mismo
+    // scroll (E-116).
+    irASeccion('classroom');
     setSelectedCourseId(params.abrirCursoId);
     setLeccionPedidaDeOtraPestana({
       cursoId: params.abrirCursoId,
@@ -1026,20 +1021,19 @@ export default function ComunidadScreen() {
    * Segunda entrada desde afuera, con la misma forma que la de arriba: el arranque guiado
    * (`features/sparkie`) manda al aprendiz recién llegado a escribir su primer post.
    *
-   * Deja la pantalla exactamente donde la dejaría alguien navegando a mano — Eventos y
-   * Experiencias → pestaña "muro" → botón de publicar — en vez de saltarse pasos: si mañana el
-   * Muro cambia de reglas, este atajo las hereda solas.
+   * Deja la pantalla exactamente donde la dejaría alguien navegando a mano — sección Muro →
+   * botón de publicar — en vez de saltarse pasos: si mañana el Muro cambia de reglas, este atajo
+   * las hereda solas.
    */
   useEffect(() => {
     const params = route.params as { abrirComposerMuro?: boolean } | undefined;
     if (!params?.abrirComposerMuro) return;
 
-    // Misma razón que el atajo de la Clase Diaria de arriba: `irASeccion` apaga "Recursos
-    // Exclusivos" si el aprendiz venía de ahí. Este era el camino con el que el dueño del proyecto
-    // encontró el bug — tocaba el hábito de Clase Diaria y después el de post en comunidad, y le
-    // quedaban las dos secciones una encima de la otra (E-116).
-    irASeccion('eventos');
-    setEventosTab('muro');
+    // Misma razón que el atajo de la Clase Diaria de arriba: `irASeccion` apaga Classroom si el
+    // aprendiz venía de ahí. Este era el camino con el que el dueño del proyecto encontró el bug
+    // — tocaba el hábito de Clase Diaria y después el de post en comunidad, y le quedaban las dos
+    // secciones una encima de la otra (E-116).
+    irASeccion('muro');
     setCreatePostModalVisible(true);
     // Se consume una sola vez, igual que `abrirCursoId`: sin esto, volver a esta pestaña
     // reabriría el composer aunque la persona lo hubiera cerrado a propósito.
@@ -1476,11 +1470,14 @@ export default function ComunidadScreen() {
     }
   };
 
+  /**
+   * Qué conversaciones se listan. Sale de la sección activa, no de un estado aparte: en Célula son
+   * siempre las de la célula, y en Miembros las elige `miembrosTab`.
+   */
   const filteredConversations = conversations.filter(conv => {
-    if (chatCategory === 'celula') return conv.type === 'celula';
-    if (chatCategory === 'miembros') return conv.type === 'direct';
-    if (chatCategory === 'global') return conv.type === 'global';
-    return true;
+    if (seccionActiva === 'celula') return conv.type === 'celula';
+    if (miembrosTab === 'global') return conv.type === 'global';
+    return conv.type === 'direct';
   });
 
   return (
@@ -1488,126 +1485,96 @@ export default function ComunidadScreen() {
       <ScreenHeader title="COMUNIDAD" right="info" />
 
       {/* ========================================================================= */}
-      {/* VISTA 1: PANTALLA PRINCIPAL DE COMUNIDAD (DISEÑO ORIGINAL LIMPIO)         */}
+      {/* FILA DE SECCIONES: LAS SEIS, SIEMPRE A LA VISTA                           */}
       {/* ========================================================================= */}
-      {seccionActiva === 'inicio' && (
-        <ScrollView
-          contentContainerStyle={[
-            styles.content,
-            {
-              paddingHorizontal: horizontalPadding,
-              maxWidth: isTablet ? 560 : undefined,
-              alignSelf: isTablet ? 'center' : 'stretch',
-              width: isTablet ? '100%' : undefined,
-            },
+      {/*
+        REDISEÑO 2026-09-07. Antes acá vivía una portada ("TU TRIBU. TU SOPORTE. TU LEGADO.") con
+        tres medallones que abrían sub-módulos, y recién adentro de cada uno había pestañas. El
+        Muro —lo que la gente viene a ver— quedaba a dos toques y detrás de un nombre que no lo
+        anunciaba. Ahora las seis secciones están acá arriba, siempre visibles, y el contenido de
+        la elegida se pinta abajo: un solo toque para cualquiera de ellas.
+
+        Los medallones son EXACTAMENTE los de la portada que reemplazan (`styles.medallion`, mismo
+        tamaño `medallionSize`, mismo oro, misma tipografía micro) — se movieron de lugar y se les
+        agregó el estado activo, no se rediseñaron.
+
+        Scroll horizontal y no seis columnas repartidas: en un teléfono angosto seis medallones a
+        `flex: 1` dejan las etiquetas partidas en tres renglones. Con scroll cada una entra en uno.
+      */}
+      {/*
+        Se esconde en las tres vistas que se toman la pantalla entera y traen su propio "atrás":
+        la lección a pantalla completa, la sala de chat y la ficha del grupo. Ahí la fila no sirve
+        para navegar —tocar otra sección haría abandonar lo que se está leyendo o escribiendo— y
+        encima le come sesenta píxeles de alto a un reproductor de video o a un teclado abierto.
+      */}
+      {fullScreenLesson === null && activeChat === null && !groupInfoVisible && (
+      <View style={[styles.seccionesBar, { borderBottomColor: c.divider }]}>
+        {/* El lema de la casa. Estaba en la portada que se retiró y se conserva acá, en un solo
+            renglón: es la voz de la marca, no un adorno de esa pantalla en particular. */}
+        <Text
+          style={[
+            t.micro,
+            { color: c.textSoft, textAlign: 'center', fontSize: 9.5, letterSpacing: 1.4, marginBottom: 10 },
           ]}
-          showsVerticalScrollIndicator={false}
         >
-          <View style={{ alignItems: 'center', paddingTop: 14 }}>
-            <Text style={[t.sectionTitle, { color: c.text, lineHeight: 21, textAlign: 'center' }]}>
-              TU TRIBU. TU SOPORTE.{"\n"}TU LEGADO.
-            </Text>
-          </View>
+          TU TRIBU. TU SOPORTE. TU LEGADO.
+        </Text>
 
-          <View style={{ paddingTop: 16 }}>
-            <MicroLabel>MENTOR</MicroLabel>
-            <View style={[styles.mentor, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-              <Placeholder label="FOTO" style={{ width: mentorPhoto, height: mentorPhoto, borderRadius: mentorPhoto / 2 }} />
-              <View style={{ flex: 1 }}>
-                <Text style={[t.cardTitle, { color: c.textStrong }]}>{mentorTitulo}</Text>
-                {mentorSubtitulo && (
-                  <Text style={[t.small, { color: c.micro, marginTop: 2 }]}>{mentorSubtitulo}</Text>
-                )}
-                {mentorNota && (
-                  <Text style={[t.small, { color: c.textSoft, marginTop: 6, fontStyle: 'italic', lineHeight: 18 }]}>
-                    {mentorNota}
-                  </Text>
-                )}
-              </View>
-              <Icon name="chevron" size={12} color={c.chevron} />
-            </View>
-          </View>
-
-          <View style={[styles.section, { borderTopColor: c.divider }]}>
-            <MicroLabel>TRIBU PRIVADA</MicroLabel>
-            {celulaCargando && companerosCelula.length === 0 && (
-              <Text style={[t.micro, { color: c.textSoft, marginTop: 10 }]}>Cargando tu tribu...</Text>
-            )}
-            {!celulaCargando && !celulaError && companerosCelula.length === 0 && (
-              <Text style={[t.micro, { color: c.textSoft, marginTop: 10 }]}>
-                Todavía no tenés integrantes en tu célula.
-              </Text>
-            )}
-            {companerosCelula.length > 0 && (
-              <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
-                {tribuVisibles.map(m => (
-                  <Placeholder
-                    key={m.traineeId}
-                    style={{ width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 }}
-                  />
-                ))}
-                {tribuRestantes > 0 && (
-                  <View style={[styles.more, { width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2, borderColor: c.border, backgroundColor: c.cardBg }]}>
-                    <Text style={[t.small, { color: c.textSoft }]}>+{tribuRestantes}</Text>
-                  </View>
-                )}
-              </View>
-            )}
-          </View>
-
-          {/* Sección TU SOPORTE (Los 3 Círculos Originales) */}
-          <View style={[styles.section, { borderTopColor: c.divider }]}>
-            <MicroLabel>TU SOPORTE</MicroLabel>
-            <View style={{ flexDirection: 'row', marginTop: 14 }}>
-              {SOPORTE.map(s => (
-                <Pressable
-                  key={s.label}
-                  onPress={() => handleSoportePress(s.label)}
-                  style={{ flex: 1, alignItems: 'center', gap: 8 }}
-                  hitSlop={6}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: horizontalPadding, gap: 12, alignItems: 'flex-start' }}
+        >
+          {SECCIONES.map(s => {
+            const activa = seccionActiva === s.id;
+            return (
+              <Pressable
+                key={s.id}
+                onPress={() => irASeccion(s.id)}
+                hitSlop={6}
+                style={{ alignItems: 'center', gap: 6, width: medallionSize + 26 }}
+              >
+                <View
+                  style={[
+                    styles.medallion,
+                    {
+                      width: medallionSize,
+                      height: medallionSize,
+                      borderRadius: medallionSize / 2,
+                      borderColor: c.gold,
+                      borderWidth: activa ? 1.6 : 1,
+                      backgroundColor: activa ? c.gold : c.cardBgAlt,
+                    },
+                  ]}
                 >
-                  <View
-                    style={[
-                      styles.medallion,
-                      {
-                        width: medallionSize,
-                        height: medallionSize,
-                        borderRadius: medallionSize / 2,
-                        borderColor: s.label.includes('Entorno') || s.label.includes('Atención') || s.label.includes('Eventos') || s.label.includes('Recursos') ? c.gold : c.border,
-                        backgroundColor: s.label.includes('Entorno') || s.label.includes('Atención') || s.label.includes('Eventos') || s.label.includes('Recursos') ? c.cardBgAlt : c.cardBg,
-                      },
-                    ]}
-                  >
-                    <Icon name={s.icon} size={rs(19)} color={c.gold} strokeWidth={1.05} />
-                  </View>
-                  <Text style={[t.micro, { color: c.textSoft, textAlign: 'center', letterSpacing: 0, fontSize: 9, lineHeight: 13 }]}>
-                    {s.label}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
-
-          <View style={[styles.section, { borderTopColor: c.divider, flex: 1, justifyContent: 'flex-end', paddingBottom: 24 }]}>
-            <MicroLabel>INTERACCIONES CLAVE</MicroLabel>
-            <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
-              {METRICAS.map(m => (
-                <View key={m.n} style={[styles.metric, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-                  <Text style={[t.metric, { color: c.textStrong, fontSize: 22 }]}>{m.n}</Text>
-                  <Text style={[t.micro, { color: c.micro, letterSpacing: 0, fontSize: 9, textAlign: 'center', marginTop: 4, lineHeight: 13 }]}>
-                    {m.label}
-                  </Text>
+                  <Icon name={s.icon} size={rs(18)} color={activa ? '#1E1B18' : c.gold} strokeWidth={1.15} />
                 </View>
-              ))}
-            </View>
-          </View>
+                <Text
+                  numberOfLines={1}
+                  style={[
+                    t.micro,
+                    {
+                      color: activa ? c.gold : c.textSoft,
+                      textAlign: 'center',
+                      letterSpacing: 0,
+                      fontSize: 9.5,
+                      fontWeight: activa ? '700' : '400',
+                    },
+                  ]}
+                >
+                  {s.label}
+                </Text>
+              </Pressable>
+            );
+          })}
         </ScrollView>
+      </View>
       )}
 
       {/* ========================================================================= */}
-      {/* VISTA 2: SUB-MÓDULO: EVENTOS & EXPERIENCIAS (MURO, TESTIMONIOS, RANKING 3D)*/}
+      {/* SECCIONES MURO, TESTIMONIOS Y RANKING (comparten contenedor de scroll)     */}
       {/* ========================================================================= */}
-      {inEventosExperiencias && (
+      {enMuroTestimoniosORanking && (
         <ScrollView
           contentContainerStyle={[
             styles.content,
@@ -1620,97 +1587,7 @@ export default function ComunidadScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-          {/* Top Bar para volver a Comunidad */}
-          <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
-            <Pressable
-              onPress={() => irASeccion('inicio')}
-              style={styles.backBtnRow}
-              hitSlop={8}
-            >
-              <Icon name="arrowLeft" size={14} color={c.gold} />
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700', letterSpacing: 1 }]}>
-                VOLVER A COMUNIDAD
-              </Text>
-            </Pressable>
-
-            <View style={[styles.categoryPillBadge, { borderColor: c.borderStrong, backgroundColor: c.cardBgAlt }]}>
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 9.5 }]}>
-                EVENTOS & EXPERIENCIAS
-              </Text>
-            </View>
-          </View>
-
-          {/* Selector de las 3 Pestañas Principales */}
-          <View style={[styles.tabsRow, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-            <Pressable
-              onPress={() => setEventosTab('muro')}
-              style={[
-                styles.tabBtn,
-                eventosTab === 'muro' && { backgroundColor: c.gold },
-              ]}
-            >
-              <Text
-                style={[
-                  t.micro,
-                  {
-                    color: eventosTab === 'muro' ? '#1E1B18' : c.textSoft,
-                    fontWeight: '700',
-                    fontFamily: 'Arial',
-                    fontSize: 11,
-                  },
-                ]}
-              >
-                📢 MURO
-              </Text>
-            </Pressable>
-
-            <Pressable
-              onPress={() => setEventosTab('testimonios')}
-              style={[
-                styles.tabBtn,
-                eventosTab === 'testimonios' && { backgroundColor: c.gold },
-              ]}
-            >
-              <Text
-                style={[
-                  t.micro,
-                  {
-                    color: eventosTab === 'testimonios' ? '#1E1B18' : c.textSoft,
-                    fontWeight: '700',
-                    fontFamily: 'Arial',
-                    fontSize: 11,
-                  },
-                ]}
-              >
-                ⭐ TESTIMONIOS
-              </Text>
-            </Pressable>
-
-            <Pressable
-              onPress={() => setEventosTab('ranking')}
-              style={[
-                styles.tabBtn,
-                eventosTab === 'ranking' && { backgroundColor: c.gold },
-              ]}
-            >
-              <Text
-                style={[
-                  t.micro,
-                  {
-                    color: eventosTab === 'ranking' ? '#1E1B18' : c.textSoft,
-                    fontWeight: '700',
-                    fontFamily: 'Arial',
-                    fontSize: 11,
-                  },
-                ]}
-              >
-                🏆 RANKING
-              </Text>
-            </Pressable>
-          </View>
-
-          {/* PESTAÑA 1: MURO SOCIAL */}
-          {eventosTab === 'muro' && (
+          {seccionActiva === 'muro' && (
             <View style={{ gap: 14, paddingTop: 10, paddingBottom: 28 }}>
               {/* Botón Ventana Externa de Publicación */}
               <Pressable
@@ -2098,7 +1975,7 @@ export default function ComunidadScreen() {
           )}
 
           {/* PESTAÑA 2: TESTIMONIOS EN MEDIA LUNA */}
-          {eventosTab === 'testimonios' && (
+          {seccionActiva === 'testimonios' && (
             <View style={{ gap: 14, paddingTop: 10, paddingBottom: 28 }}>
               {/*
                 PROXIMAMENTE (2026-09-05, decision del dueno del proyecto): "no hay verdaderos".
@@ -2137,84 +2014,69 @@ export default function ComunidadScreen() {
           )}
 
           {/* PESTAÑA 3: PODIO RANKING */}
-          {eventosTab === 'ranking' && (
+          {seccionActiva === 'ranking' && (
             <View style={{ gap: 14, paddingTop: 10, paddingBottom: 28 }}>
-              {podioTop1 ? (
-                /* PODIO DE HONOR */
-                <View style={[styles.podium3DContainer, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-                  {/* #2 PLATA */}
-                  <View style={styles.podiumColumn}>
-                    <View style={[styles.avatarMedal, { borderColor: '#E0E0E0', backgroundColor: '#2C2C2C' }]}>
-                      <Text style={{ fontSize: 16 }}>🥈</Text>
-                    </View>
-                    <Text numberOfLines={1} style={{ color: '#E0E0E0', fontFamily: 'Arial', fontSize: 11, fontWeight: '700', marginTop: 4 }}>
-                      {podioTop2?.name || '-'}
-                    </Text>
-                    <Text style={{ color: '#BDBDBD', fontFamily: 'Arial', fontSize: 11 }}>{podioTop2?.score || '0 Pts'}</Text>
-                    <LinearGradient
-                      colors={['#8C8C8C', '#5C5C5C', '#3A3A3A']}
-                      style={[styles.podiumBlock, { height: 95 }]}
-                    >
-                      <Text style={[styles.podiumRankNum, { color: '#FFF' }]}>2</Text>
-                      <Text style={{ color: '#E0E0E0', fontFamily: 'Arial', fontSize: 11, fontWeight: '800' }}>PLATA</Text>
-                    </LinearGradient>
-                  </View>
+              {/*
+                El podio se pinta SIEMPRE, con puntos o sin ellos (decisión del dueño del proyecto,
+                2026-09-07). Antes, un corte sin posiciones dejaba la sección con una tarjeta gris
+                que decía "Ranking Oficial en Espera de Puntos" y explicaba que el backend todavía
+                no había registrado nada: la primera vez que alguien entraba al Ranking —que es
+                justo cuando hay que engancharlo— se encontraba con un aviso de sistema.
 
-                  {/* #1 ORO */}
-                  <View style={styles.podiumColumn}>
-                    <View style={[styles.avatarMedal, { borderColor: c.gold, backgroundColor: '#3D3014' }]}>
-                      <Text style={{ fontSize: 20 }}>👑</Text>
-                    </View>
-                    <Text numberOfLines={1} style={{ color: c.gold, fontFamily: 'Arial', fontSize: 11, fontWeight: '800', marginTop: 4 }}>
-                      {podioTop1.name}
-                    </Text>
-                    <Text style={{ color: c.gold, fontFamily: 'Arial', fontSize: 11, fontWeight: '700' }}>🔥 {podioTop1.score}</Text>
-                    <LinearGradient
-                      colors={['#FFE29F', '#E5C689', '#C09A4F', '#9C7A34']}
-                      style={[styles.podiumBlock, { height: 130 }]}
-                    >
-                      <Text style={[styles.podiumRankNum, { color: '#1E1B18' }]}>1</Text>
-                      <Text style={{ color: '#1E1B18', fontFamily: 'Arial', fontSize: 11, fontWeight: '900' }}>ORO LÍDER</Text>
-                    </LinearGradient>
-                  </View>
-
-                  {/* #3 BRONCE */}
-                  <View style={styles.podiumColumn}>
-                    <View style={[styles.avatarMedal, { borderColor: '#CD7F32', backgroundColor: '#2E1E14' }]}>
-                      <Text style={{ fontSize: 16 }}>🥉</Text>
-                    </View>
-                    <Text numberOfLines={1} style={{ color: '#E0A96D', fontFamily: 'Arial', fontSize: 11, fontWeight: '700', marginTop: 4 }}>
-                      {podioTop3?.name || '-'}
-                    </Text>
-                    <Text style={{ color: '#A89E8D', fontFamily: 'Arial', fontSize: 11 }}>{podioTop3?.score || '0 Pts'}</Text>
-                    <LinearGradient
-                      colors={['#A86834', '#7A4820', '#4A2A10']}
-                      style={[styles.podiumBlock, { height: 75 }]}
-                    >
-                      <Text style={[styles.podiumRankNum, { color: '#FFF' }]}>3</Text>
-                      <Text style={{ color: '#E0A96D', fontFamily: 'Arial', fontSize: 11, fontWeight: '800' }}>BRONCE</Text>
-                    </LinearGradient>
-                  </View>
-                </View>
-              ) : (
+                Ahora el escenario está armado desde el primer día y los tres lugares se muestran
+                libres. `PodioRanking` sabe pintar cada puesto vacío (ver ahí); acá solo se decide
+                cuándo mostrarlo, que es siempre salvo mientras se está cargando por primera vez —
+                mostrar un podio vacío que un segundo después se llena sería mentirle a quien mira.
+              */}
+              {rankingCargando && !podioTop1 ? (
                 <View style={[styles.myRankCard, { borderColor: c.border, backgroundColor: c.cardBg, alignItems: 'center', paddingVertical: 20 }]}>
                   <Text style={{ fontSize: 26, marginBottom: 8 }}>🏆</Text>
-                  <Text style={{ color: c.textStrong, fontFamily: 'Arial', fontSize: 13, fontWeight: '700', textAlign: 'center' }}>
-                    {rankingCargando ? 'Cargando ranking oficial...' : 'Ranking Oficial en Espera de Puntos'}
-                  </Text>
-                  <Text style={{ color: c.textSoft, fontFamily: 'Arial', fontSize: 11, textAlign: 'center', marginTop: 4, paddingHorizontal: 16, lineHeight: 16 }}>
-                    {rankingCargando
-                      ? 'Conectando con el servidor...'
-                      : 'El backend aún no ha registrado posiciones en este corte diario. Los puntos se calculan automáticamente con el avance de hábitos, rocas y lecciones de la tribu.'}
+                  <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13, textAlign: 'center' }]}>
+                    Cargando el ranking oficial...
                   </Text>
                 </View>
+              ) : (
+                <>
+                  {/* Podio de honor, en 3D y animado (ver `PodioRanking`). Lo que había acá era
+                      este mismo podio pero plano y quieto: mismos colores, mismos altos, mismas
+                      medallas. Se movió a su propio componente para que la animación viva junto al
+                      dibujo y no le sume estado a esta pantalla, que ya es larga. */}
+                  <PodioRanking
+                    top1={podioTop1}
+                    top2={podioTop2}
+                    top3={podioTop3}
+                    activo={seccionActiva === 'ranking'}
+                  />
+
+                  {/* La invitación reemplaza al aviso de sistema que había antes. Dice lo mismo que
+                      hay que decir —todavía no hay posiciones en este corte, y de dónde salen los
+                      puntos— pero desde lo que la persona puede hacer, no desde lo que al servidor
+                      le falta. Solo aparece con el podio entero vacío: con un líder ya puesto,
+                      "podés ser el próximo" deja de ser cierto para el primer puesto. */}
+                  {!podioTop1 && (
+                    <View style={[styles.myRankCard, { borderColor: c.gold, backgroundColor: c.cardBgAlt, alignItems: 'center', paddingVertical: 18 }]}>
+                      <Text style={{ fontSize: 24, marginBottom: 8 }}>🏆</Text>
+                      <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 14, textAlign: 'center', lineHeight: 20 }]}>
+                        Tú puedes ser el próximo{'\n'}líder del ranking
+                      </Text>
+                      <Text style={[t.body, { color: c.textSoft, fontSize: 12, textAlign: 'center', marginTop: 8, paddingHorizontal: 12, lineHeight: 17 }]}>
+                        Todavía nadie sumó puntos en este corte diario. Se cuentan solos con tus
+                        hábitos, tus rocas y tus lecciones: el primero que avance, encabeza.
+                      </Text>
+                    </View>
+                  )}
+                </>
               )}
 
               {/* Tu Posición Personal Con Datos Reales del Usuario */}
               <View style={[styles.myRankCard, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                   <View style={[styles.rankCircleNumber, { backgroundColor: c.gold }]}>
-                    <Text style={{ color: '#1E1B18', fontFamily: 'Arial', fontWeight: '900', fontSize: 11 }}>#{userRankEntry.rank}</Text>
+                    {/* Sin posición se pinta una raya sola: el "#-" que salía antes se leía como
+                        un dato roto, no como un lugar todavía sin ocupar. */}
+                    <Text style={{ color: '#1E1B18', fontFamily: 'Arial', fontWeight: '900', fontSize: 11 }}>
+                      {userRankEntry.rank === '-' ? '—' : `#${userRankEntry.rank}`}
+                    </Text>
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: c.textStrong, fontFamily: 'Arial', fontSize: 11, fontWeight: '700' }}>
@@ -2230,9 +2092,13 @@ export default function ComunidadScreen() {
               {/* Tabla de Clasificación General */}
               {rankingList.length > 0 && (
                 <View style={[styles.leaderboardList, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-                  {rankingList.map(u => (
-                    <View
+                  {/* Las filas entran escalonadas detrás del podio (ver `EntradaEscalonada`): la
+                      tabla se lee de arriba hacia abajo, que es el orden en el que importa. */}
+                  {rankingList.map((u, indice) => (
+                    <EntradaEscalonada
                       key={u.id}
+                      indice={indice}
+                      activo={seccionActiva === 'ranking'}
                       style={[
                         styles.leaderboardRow,
                         { borderBottomColor: c.divider },
@@ -2248,7 +2114,7 @@ export default function ComunidadScreen() {
                       <Text style={{ color: c.gold, fontFamily: 'Arial', fontWeight: '700', fontSize: 11 }}>
                         ⚡ {u.scoreText}
                       </Text>
-                    </View>
+                    </EntradaEscalonada>
                   ))}
                 </View>
               )}
@@ -2258,7 +2124,7 @@ export default function ComunidadScreen() {
       )}
 
       {/* ========================================================================= */}
-      {/* VISTA 3: SUB-MÓDULO: RECURSOS EXCLUSIVOS & CATÁLOGO DE CURSOS              */}
+      {/* SECCIÓN CLASSROOM: CATÁLOGO DE CURSOS                                     */}
       {/* ========================================================================= */}
       {inExclusiveResources && selectedCourse === null && fullScreenLesson === null && (
         <ScrollView
@@ -2273,25 +2139,6 @@ export default function ComunidadScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-          <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
-            <Pressable
-              onPress={() => irASeccion('inicio')}
-              style={styles.backBtnRow}
-              hitSlop={8}
-            >
-              <Icon name="arrowLeft" size={14} color={c.gold} />
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700', letterSpacing: 1 }]}>
-                VOLVER A COMUNIDAD
-              </Text>
-            </Pressable>
-
-            <View style={[styles.categoryPillBadge, { borderColor: c.borderStrong, backgroundColor: c.cardBgAlt }]}>
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 9.5 }]}>
-                RECURSOS EXCLUSIVOS
-              </Text>
-            </View>
-          </View>
-
           <View style={{ gap: 14, paddingTop: 10, paddingBottom: 28 }}>
             {/* Estados de carga/error/vacío del catálogo real — sin componentes nuevos, mismo
                 patrón de texto plano que ya usa el Muro más arriba en esta pantalla. */}
@@ -2339,9 +2186,6 @@ export default function ComunidadScreen() {
                 </View>
 
                 <View style={{ padding: 14, gap: 8 }}>
-                  <Text style={[t.micro, { color: c.micro }]}>
-                    Instructor: <Text style={{ color: c.gold, fontWeight: '700' }}>{course.instructor}</Text>
-                  </Text>
                   {!!course.summary && (
                     <View>
                       <Text
@@ -2372,7 +2216,7 @@ export default function ComunidadScreen() {
                   <View style={{ gap: 4, marginTop: 4 }}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                       <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>
-                        {course.totalModules} Módulos · {course.totalResources} Recursos
+                        {course.totalResources} {course.totalResources === 1 ? 'Lección' : 'Lecciones'}
                       </Text>
                       <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 9.5 }]}>
                         {obtenerProgresoCurso(course)}% Completado
@@ -2431,9 +2275,6 @@ export default function ComunidadScreen() {
             ) : null}
             <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 16 }]}>
               {selectedCourse.title}
-            </Text>
-            <Text style={[t.micro, { color: c.gold, marginTop: 4 }]}>
-              Instructor: {selectedCourse.instructor}
             </Text>
             {!!selectedCourse.summary && (
               <View style={{ marginTop: 8 }}>
@@ -2755,9 +2596,9 @@ export default function ComunidadScreen() {
       )}
 
       {/* ========================================================================= */}
-      {/* VISTA 4: SUB-MÓDULO: ATENCIÓN PERSONALIZADA & CHATS TIPO WHATSAPP         */}
+      {/* SECCIONES CÉLULA Y MIEMBROS: CHATS TIPO WHATSAPP                          */}
       {/* ========================================================================= */}
-      {inAtencionPersonalizada && activeChat === null && (
+      {inChatsComunidad && activeChat === null && (
         <ScrollView
           contentContainerStyle={[
             styles.content,
@@ -2770,261 +2611,120 @@ export default function ComunidadScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-          {/* Top Bar Volver a Comunidad */}
-          <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
-            <Pressable
-              onPress={() => irASeccion('inicio')}
-              style={styles.backBtnRow}
-              hitSlop={8}
-            >
-              <Icon name="arrowLeft" size={14} color={c.gold} />
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700', letterSpacing: 1 }]}>
-                VOLVER A COMUNIDAD
-              </Text>
-            </Pressable>
-
-            <View style={[styles.categoryPillBadge, { borderColor: c.borderStrong, backgroundColor: c.cardBgAlt }]}>
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 9.5 }]}>
-                ENTORNO RENASER
-              </Text>
-            </View>
-          </View>
-
-          {/* Selector de Pestaña Principal: TICKETS AL MENTOR vs CHATS */}
-          <View style={[styles.tabsRow, { borderColor: c.border, backgroundColor: c.cardBg, marginBottom: 12 }]}>
-            <Pressable
-              onPress={() => setEntornoTab('tickets')}
-              style={[styles.tabBtn, entornoTab === 'tickets' && { backgroundColor: c.gold }]}
-            >
-              <Text style={[t.micro, { color: entornoTab === 'tickets' ? '#1E1B18' : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
-                🎫 TICKETS AL MENTOR
-              </Text>
-            </Pressable>
-
-            <Pressable
-              onPress={() => setEntornoTab('chats')}
-              style={[styles.tabBtn, entornoTab === 'chats' && { backgroundColor: c.gold }]}
-            >
-              <Text style={[t.micro, { color: entornoTab === 'chats' ? '#1E1B18' : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
-                💬 CHATS COMUNIDAD
-              </Text>
-            </Pressable>
-          </View>
-
           {/* ========================================================================= */}
-          {/* PESTAÑA 1: TICKETS AL MENTOR (CON VALIDACIÓN DE GRUPO/CÉLULA)             */}
+          {/* SECCIÓN CÉLULA: MENTOR, TRIBU, MÉTRICAS Y CHAT DE LA CÉLULA               */}
           {/* ========================================================================= */}
-          {entornoTab === 'tickets' && (
-            <View style={{ gap: 12, paddingBottom: 28 }}>
-              {/* Tarjeta Informativa de Mentor */}
-              <View style={[styles.sectionCard, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <View style={{ flex: 1, paddingRight: 8 }}>
-                    <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 0.8 }]}>
-                      SISTEMA DE TICKETS SMART
+          {/*
+            Acá aterrizó lo que antes era la portada de Comunidad. El dueño del proyecto lo pidió
+            así: la tarjeta del mentor y los dos bloques de datos de la tribu se manejan dentro de
+            Célula, que es de lo que hablan.
+          */}
+          {seccionActiva === 'celula' && (
+            <>
+            <View style={{ paddingTop: 16 }}>
+              <MicroLabel>MENTOR</MicroLabel>
+              <View style={[styles.mentor, { borderColor: c.border, backgroundColor: c.cardBg }]}>
+                <Placeholder label="FOTO" style={{ width: mentorPhoto, height: mentorPhoto, borderRadius: mentorPhoto / 2 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[t.cardTitle, { color: c.textStrong }]}>{mentorTitulo}</Text>
+                  {mentorSubtitulo && (
+                    <Text style={[t.small, { color: c.micro, marginTop: 2 }]}>{mentorSubtitulo}</Text>
+                  )}
+                  {mentorNota && (
+                    <Text style={[t.small, { color: c.textSoft, marginTop: 6, fontStyle: 'italic', lineHeight: 18 }]}>
+                      {mentorNota}
                     </Text>
-                    <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13.5, marginTop: 4 }]}>
-                      {tieneMentor && miCelula?.assigned === true ? `Mentor asignado: ${mentorTitulo}` : 'Sin mentor asignado'}
-                    </Text>
-                  </View>
-                  <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(212,160,23,0.15)', borderWidth: 1, borderColor: c.gold, alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ fontSize: 18 }}>🎫</Text>
-                  </View>
+                  )}
                 </View>
-                <Text style={[t.body, { color: c.textSoft, fontSize: 11.5, marginTop: 6, lineHeight: 16 }]}>
-                  Envía preguntas estructuradas a tu mentor para desbloquear obstáculos en tus metas y plan de 90 días.
-                </Text>
+                <Icon name="chevron" size={12} color={c.chevron} />
               </View>
+            </View>
 
-              {/* Validación de Prerrequisito: Debe pertenecer a un grupo/célula */}
-              {!tieneGrupo ? (
-                <View style={[styles.sectionCard, { borderColor: c.border, backgroundColor: c.cardBgAlt, padding: 18, alignItems: 'center' }]}>
-                  <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(212,160,23,0.12)', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-                    <Text style={{ fontSize: 22 }}>🔒</Text>
-                  </View>
-                  <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 15, textAlign: 'center' }]}>
-                    Prerrequisito de Grupo Requerido
-                  </Text>
-                  <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, textAlign: 'center', marginTop: 8, lineHeight: 18 }]}>
-                    Para poder enviar un ticket con preguntas a tu mentor, es necesario pertenecer a una célula (grupo de trabajo) y tener un mentor asignado.
-                  </Text>
-                  <View style={{ marginTop: 14, padding: 10, borderRadius: 10, backgroundColor: isDark ? 'rgba(212,160,23,0.08)' : 'rgba(212,160,23,0.05)', width: '100%', borderWidth: 1, borderColor: c.border }}>
-                    <Text style={[t.micro, { color: c.gold, textAlign: 'center', fontWeight: '600', fontSize: 10.5 }]}>
-                      ℹ️ Tu célula se asignará durante el inicio de tu programa. En cuanto esté lista, este canal se activará para ti.
-                    </Text>
-                  </View>
-                </View>
-              ) : (
-                <>
-                  <GoldButton
-                    label="+ CREAR NUEVO TICKET AL MENTOR"
-                    onPress={() => setModalNuevoTicketVisible(true)}
-                    style={{ width: '100%' }}
-                  />
-
-                  {ticketsCargando && ticketsMentor.length === 0 && (
-                    <Text style={[t.micro, { color: c.textSoft, textAlign: 'center', marginTop: 16 }]}>
-                      Cargando tus tickets...
-                    </Text>
-                  )}
-
-                  {ticketsError && (
-                    <Text style={[t.micro, { color: '#f28e8e', textAlign: 'center', marginTop: 16 }]}>
-                      {ticketsError}
-                    </Text>
-                  )}
-
-                  {!ticketsCargando && !ticketsError && ticketsMentor.length === 0 && (
-                    <View style={[styles.sectionCard, { borderColor: c.border, backgroundColor: c.cardBgAlt, padding: 20, alignItems: 'center', marginTop: 4 }]}>
-                      <Text style={{ fontSize: 26, marginBottom: 8 }}>📝</Text>
-                      <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13.5, textAlign: 'center' }]}>
-                        No tienes tickets creados
-                      </Text>
-                      <Text style={[t.body, { color: c.textSoft, fontSize: 11.5, textAlign: 'center', marginTop: 6, lineHeight: 16 }]}>
-                        Cuando experimentes un obstáculo en tu avance, crea un ticket con las 3 preguntas clave para recibir la guía directa de tu mentor.
-                      </Text>
-                    </View>
-                  )}
-
-                  {ticketsMentor.map(ticket => (
-                    <View
-                      key={ticket.id}
-                      style={[
-                        styles.sectionCard,
-                        {
-                          borderColor: ticket.status === 'ANSWERED' ? c.gold : c.border,
-                          backgroundColor: c.cardBg,
-                        },
-                      ]}
-                    >
-                      {/* Cabecera de Estado y Fecha */}
-                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                        <Text style={[t.micro, { color: c.micro, fontSize: 10 }]}>
-                          {new Date(ticket.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
-                        </Text>
-                        <View
-                          style={[
-                            styles.completedBadgePill,
-                            {
-                              borderColor: ticket.status === 'ANSWERED' ? '#4CAF50' : c.gold,
-                              backgroundColor: ticket.status === 'ANSWERED' ? 'rgba(76,175,80,0.15)' : 'rgba(212,160,23,0.15)',
-                            },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              t.micro,
-                              {
-                                color: ticket.status === 'ANSWERED' ? '#4CAF50' : c.gold,
-                                fontWeight: '800',
-                                fontSize: 9,
-                              },
-                            ]}
-                          >
-                            {ticket.status === 'ANSWERED' ? '✓ RESPONDIDO' : '⏳ PENDIENTE'}
-                          </Text>
-                        </View>
-                      </View>
-
-                      {/* Pregunta 1: Bloqueo */}
-                      <View style={{ marginBottom: 8 }}>
-                        <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 10 }]}>
-                          1. ¿CUÁL ES TU BLOQUEO O PREGUNTA?
-                        </Text>
-                        <Text style={[t.body, { color: c.textStrong, fontSize: 12.5, marginTop: 2, lineHeight: 17 }]}>
-                          {ticket.blockDescription}
-                        </Text>
-                      </View>
-
-                      {/* Pregunta 2: Soluciones intentadas */}
-                      <View style={{ marginBottom: 8 }}>
-                        <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 10 }]}>
-                          2. ¿QUÉ SOLUCIONES HAS INTENTADO?
-                        </Text>
-                        <Text style={[t.body, { color: c.textSoft, fontSize: 12, marginTop: 2, lineHeight: 17 }]}>
-                          {ticket.attemptedSolutions}
-                        </Text>
-                      </View>
-
-                      {/* Pregunta 3: Impacto SMART */}
-                      <View style={{ marginBottom: 8 }}>
-                        <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 10 }]}>
-                          3. ¿CÓMO IMPACTA EN TU META SMART?
-                        </Text>
-                        <Text style={[t.body, { color: c.textSoft, fontSize: 12, marginTop: 2, lineHeight: 17 }]}>
-                          {ticket.smartGoalImpact}
-                        </Text>
-                      </View>
-
-                      {/* Respuesta del Mentor */}
-                      {ticket.mentorAnswer && (
-                        <View
-                          style={{
-                            marginTop: 10,
-                            padding: 12,
-                            borderRadius: 12,
-                            backgroundColor: isDark ? 'rgba(212,160,23,0.12)' : 'rgba(212,160,23,0.08)',
-                            borderWidth: 1,
-                            borderColor: c.gold,
-                          }}
-                        >
-                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                            <Text style={[t.micro, { color: c.gold, fontWeight: '800', fontSize: 10.5 }]}>
-                              🦅 RESPUESTA DEL MENTOR
-                            </Text>
-                            {ticket.answeredAt && (
-                              <Text style={[t.micro, { color: c.micro, fontSize: 9.5 }]}>
-                                {new Date(ticket.answeredAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
-                              </Text>
-                            )}
-                          </View>
-                          <Text style={[t.body, { color: c.textStrong, fontSize: 12.5, lineHeight: 18 }]}>
-                            {ticket.mentorAnswer}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                  ))}
-                </>
+            <View style={[styles.section, { borderTopColor: c.divider }]}>
+              <MicroLabel>TRIBU PRIVADA</MicroLabel>
+              {celulaCargando && companerosCelula.length === 0 && (
+                <Text style={[t.micro, { color: c.textSoft, marginTop: 10 }]}>Cargando tu tribu...</Text>
               )}
+              {!celulaCargando && !celulaError && companerosCelula.length === 0 && (
+                <Text style={[t.micro, { color: c.textSoft, marginTop: 10 }]}>
+                  Todavía no tenés integrantes en tu célula.
+                </Text>
+              )}
+              {companerosCelula.length > 0 && (
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                  {tribuVisibles.map(m => (
+                    <Placeholder
+                      key={m.traineeId}
+                      style={{ width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 }}
+                    />
+                  ))}
+                  {tribuRestantes > 0 && (
+                    <View style={[styles.more, { width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2, borderColor: c.border, backgroundColor: c.cardBg }]}>
+                      <Text style={[t.small, { color: c.textSoft }]}>+{tribuRestantes}</Text>
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
+
+            <View style={[styles.section, { borderTopColor: c.divider, paddingBottom: 24 }]}>
+              <MicroLabel>INTERACCIONES CLAVE</MicroLabel>
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                {METRICAS.map(m => (
+                  <View key={m.n} style={[styles.metric, { borderColor: c.border, backgroundColor: c.cardBg }]}>
+                    <Text style={[t.metric, { color: c.textStrong, fontSize: 22 }]}>{m.n}</Text>
+                    <Text style={[t.micro, { color: c.micro, letterSpacing: 0, fontSize: 9, textAlign: 'center', marginTop: 4, lineHeight: 13 }]}>
+                      {m.label}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+              <View style={[styles.section, { borderTopColor: c.divider }]}>
+                <MicroLabel>CHAT DE TU CÉLULA</MicroLabel>
+              </View>
+            </>
+          )}
+
+          {/* ========================================================================= */}
+          {/* SECCIÓN MIEMBROS: CONVERSACIONES UNO A UNO Y CANAL GLOBAL                 */}
+          {/* ========================================================================= */}
+          {/*
+            El selector perdió la opción "CÉLULA" porque la célula pasó a ser su propia sección
+            (con su propio medallón arriba). Las otras dos categorías que ya existían —directos y
+            global— se quedaron acá, que es donde la persona busca a alguien puntual.
+          */}
+          {seccionActiva === 'miembros' && (
+            <View style={[styles.tabsRow, { borderColor: c.border, backgroundColor: c.cardBg }]}>
+              <Pressable
+                onPress={() => setMiembrosTab('directos')}
+                style={[styles.tabBtn, miembrosTab === 'directos' && { backgroundColor: c.gold }]}
+              >
+                <Text style={[t.micro, { color: miembrosTab === 'directos' ? '#1E1B18' : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
+                  💬 DIRECTOS
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => setMiembrosTab('global')}
+                style={[styles.tabBtn, miembrosTab === 'global' && { backgroundColor: c.gold }]}
+              >
+                <Text style={[t.micro, { color: miembrosTab === 'global' ? '#1E1B18' : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
+                  🌐 GLOBAL
+                </Text>
+              </Pressable>
             </View>
           )}
 
           {/* ========================================================================= */}
-          {/* PESTAÑA 2: CHATS DE COMUNIDAD (CÉLULA, DIRECTOS, GLOBAL)                  */}
+          {/* LISTADO DE CONVERSACIONES — COMPARTIDO POR CÉLULA Y MIEMBROS              */}
           {/* ========================================================================= */}
-          {entornoTab === 'chats' && (
-            <>
-              {/* Selector de las 3 Categorías de Chat (Global, Célula, Miembros 1 a 1) */}
-              <View style={[styles.tabsRow, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-                <Pressable
-                  onPress={() => setChatCategory('celula')}
-                  style={[styles.tabBtn, chatCategory === 'celula' && { backgroundColor: c.gold }]}
-                >
-                  <Text style={[t.micro, { color: chatCategory === 'celula' ? '#1E1B18' : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
-                    👥 CÉLULA
-                  </Text>
-                </Pressable>
-
-                <Pressable
-                  onPress={() => setChatCategory('miembros')}
-                  style={[styles.tabBtn, chatCategory === 'miembros' && { backgroundColor: c.gold }]}
-                >
-                  <Text style={[t.micro, { color: chatCategory === 'miembros' ? '#1E1B18' : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
-                    💬 DIRECTOS
-                  </Text>
-                </Pressable>
-
-                <Pressable
-                  onPress={() => setChatCategory('global')}
-                  style={[styles.tabBtn, chatCategory === 'global' && { backgroundColor: c.gold }]}
-                >
-                  <Text style={[t.micro, { color: chatCategory === 'global' ? '#1E1B18' : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
-                    🌐 GLOBAL
-                  </Text>
-                </Pressable>
-              </View>
-
+          {/*
+            Un solo listado para las dos secciones, no dos copias: lo único que cambia entre ellas
+            es el filtro, y eso ya lo resuelve `filteredConversations` leyendo `seccionActiva`.
+          */}
+          <>
               {/* Estados de carga/error del listado real — mismo criterio que el Muro (texto con los
                   tokens que ya usa el resto de la pantalla, sin componentes nuevos). */}
               {conversacionesCargando && conversations.length === 0 && (
@@ -3084,14 +2784,13 @@ export default function ComunidadScreen() {
                 ))}
               </View>
             </>
-          )}
         </ScrollView>
       )}
 
       {/* ========================================================================= */}
       {/* VISTA 4.1: SALA DE CHAT ACTIVA (TIPO WHATSAPP)                            */}
       {/* ========================================================================= */}
-      {inAtencionPersonalizada && activeChat !== null && !groupInfoVisible && (
+      {inChatsComunidad && activeChat !== null && !groupInfoVisible && (
         <View style={{ flex: 1 }}>
           {/* Header del Chat */}
           <View style={[styles.chatRoomHeader, { borderBottomColor: c.divider, backgroundColor: c.cardBg }]}>
@@ -3367,7 +3066,7 @@ export default function ComunidadScreen() {
       {/* ========================================================================= */}
       {/* VISTA 4.2: INFORMACIÓN DEL GRUPO / INTEGRANTES (TIPO WHATSAPP GROUP INFO) */}
       {/* ========================================================================= */}
-      {inAtencionPersonalizada && groupInfoVisible && (
+      {inChatsComunidad && groupInfoVisible && (
         <ScrollView
           contentContainerStyle={[
             styles.content,
@@ -3747,91 +3446,6 @@ export default function ComunidadScreen() {
         </View>
       </Modal>
 
-      {/* Modal: Crear Nuevo Ticket al Mentor (Entorno Renaser) */}
-      <Modal
-        visible={modalNuevoTicketVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setModalNuevoTicketVisible(false)}
-      >
-        <View style={styles.ticketModalOverlay}>
-          <View style={[styles.ticketModalContainer, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
-            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 15 }]}>
-                  Nuevo Ticket al Mentor 🎫
-                </Text>
-                <Pressable onPress={() => setModalNuevoTicketVisible(false)} hitSlop={8}>
-                  <Text style={{ fontSize: 18, color: c.textSoft }}>✕</Text>
-                </Pressable>
-              </View>
-
-              <Text style={[t.body, { color: c.textSoft, fontSize: 11.5, marginBottom: 12, lineHeight: 16 }]}>
-                Responde las 3 preguntas clave del método SMART para que tu mentor pueda desbloquear tu avance:
-              </Text>
-
-              {/* Pregunta 1 */}
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700', marginBottom: 4 }]}>
-                1. ¿Cuál es tu bloqueo o pregunta específica? *
-              </Text>
-              <TextInput
-                value={ticketBloqueo}
-                onChangeText={setTicketBloqueo}
-                placeholder="Describe el obstáculo, duda o dificultad..."
-                placeholderTextColor={c.placeholderA}
-                multiline
-                style={[styles.ticketInput, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.text }]}
-              />
-
-              {/* Pregunta 2 */}
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700', marginTop: 10, marginBottom: 4 }]}>
-                2. ¿Qué soluciones has intentado? *
-              </Text>
-              <TextInput
-                value={ticketSoluciones}
-                onChangeText={setTicketSoluciones}
-                placeholder="Indica qué acciones o pruebas realizaste antes..."
-                placeholderTextColor={c.placeholderA}
-                multiline
-                style={[styles.ticketInput, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.text }]}
-              />
-
-              {/* Pregunta 3 */}
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700', marginTop: 10, marginBottom: 4 }]}>
-                3. ¿Cómo impacta en tu Meta SMART? *
-              </Text>
-              <TextInput
-                value={ticketImpactoSmart}
-                onChangeText={setTicketImpactoSmart}
-                placeholder="En qué medida atrasa o afecta tu meta principal..."
-                placeholderTextColor={c.placeholderA}
-                multiline
-                style={[styles.ticketInput, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.text }]}
-              />
-
-              <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
-                <Pressable
-                  onPress={() => setModalNuevoTicketVisible(false)}
-                  style={[styles.exploreBtn, { flex: 1, borderColor: c.border, backgroundColor: c.cardBgAlt, paddingVertical: 12 }]}
-                >
-                  <Text style={[t.micro, { color: c.textSoft, fontWeight: '700' }]}>
-                    CANCELAR
-                  </Text>
-                </Pressable>
-
-                <View style={{ flex: 2 }}>
-                  <GoldButton
-                    label="ENVIAR TICKET"
-                    loading={ticketCreando}
-                    onPress={handleEnviarTicket}
-                  />
-                </View>
-              </View>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
       {/* Visor de Fotos a Pantalla Completa estilo Facebook / X */}
       {(() => {
         const activeViewerPost = posts.find(p => p.id === imageViewerData.postId) || null;
@@ -3924,6 +3538,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  /**
+   * Franja de la fila de secciones. Va FUERA de los `ScrollView` de contenido a propósito: es lo
+   * que la deja fija mientras el Muro (o el catálogo, o el ranking) scrollea debajo.
+   */
+  seccionesBar: {
+    borderBottomWidth: 1,
+    paddingTop: 4,
+    paddingBottom: 10,
   },
   metric: {
     flex: 1,
@@ -4161,39 +3784,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingVertical: 6,
   },
-  podium3DContainer: {
-    borderWidth: 1.5,
-    borderRadius: 22,
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-around',
-    height: 220,
-    marginTop: 6,
-  },
-  podiumColumn: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  avatarMedal: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  podiumBlock: {
-    width: '88%',
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 6,
-  },
-  podiumRankNum: {
-    fontSize: 22,
-    fontWeight: '900',
-  },
+  // Los estilos del podio (`podium3DContainer`, `podiumColumn`, `avatarMedal`, `podiumBlock`,
+  // `podiumRankNum`) se mudaron con él a `features/community/components/PodioRanking.tsx`.
   myRankCard: {
     borderWidth: 1.2,
     borderRadius: 16,
@@ -4289,30 +3881,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 16,
     padding: 14,
-  },
-  ticketInput: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    fontSize: 13,
-    minHeight: 68,
-    textAlignVertical: 'top',
-    fontFamily: 'Jost_400Regular',
-  },
-  ticketModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.70)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
-  },
-  ticketModalContainer: {
-    width: '100%',
-    maxWidth: 520,
-    borderRadius: 20,
-    borderWidth: 1.2,
-    padding: 18,
-    maxHeight: '90%',
   },
   chatConvCard: {
     borderWidth: 1.2,

@@ -44,7 +44,7 @@ import { useArranqueGuiado } from '../hooks/useArranqueGuiado';
  * discreta, y reaparece en el próximo arranque mientras el Pacto siga sin firmar.
  */
 export function SparkieOverlay() {
-  const { c, t } = useTheme();
+  const { c, t, mode } = useTheme();
   const { isSmall, isTablet } = useResponsive();
   const insets = useSafeAreaInsets();
   const { user, isAuthenticated, isOnboardingCompleted } = useAuth();
@@ -92,8 +92,9 @@ export function SparkieOverlay() {
   }
 
   const saludo = saludoDeBienvenida(user?.name);
-  const anchoTarjeta = isTablet ? 560 : undefined;
-  const padding = isSmall ? 16 : isTablet ? 32 : 20;
+  const padding = isSmall ? 14 : isTablet ? 32 : 18;
+  // Los colores de tarjetas del tema oscuro tienen alfa: un modal necesita una superficie opaca.
+  const fondoTarjeta = mode === 'dark' ? '#1B1915' : '#FFFFFF';
 
   return (
     <>
@@ -110,7 +111,7 @@ export function SparkieOverlay() {
             styles.burbuja,
             {
               bottom: insets.bottom + ALTO_TAB_BAR + SEPARACION,
-              backgroundColor: c.cardBgAlt,
+              backgroundColor: fondoTarjeta,
               borderColor: c.gold,
             },
           ]}
@@ -127,17 +128,26 @@ export function SparkieOverlay() {
       {/* ---------------------------------------------------------------------------------- */}
       <Modal visible={tarjetaVisible} transparent animationType="fade" onRequestClose={() => setMinimizado(true)}>
         {/* Tocar el velo minimiza: una capa que no se puede sacar de encima es una trampa. */}
-        <Pressable style={styles.velo} onPress={() => setMinimizado(true)}>
+        <Pressable
+          style={[
+            styles.velo,
+            {
+              paddingHorizontal: padding,
+              paddingTop: insets.top + 18,
+              paddingBottom: insets.bottom + 18,
+            },
+          ]}
+          onPress={() => setMinimizado(true)}
+        >
           {/* El `Pressable` interno frena el toque para que tocar la tarjeta no la cierre. */}
           <Pressable
             onPress={() => {}}
             style={[
               styles.tarjeta,
               {
-                backgroundColor: c.cardBgAlt,
+                backgroundColor: fondoTarjeta,
                 borderColor: c.borderStrong,
                 paddingHorizontal: padding,
-                maxWidth: anchoTarjeta,
               },
             ]}
           >
@@ -162,8 +172,11 @@ export function SparkieOverlay() {
                   <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 20, textAlign: 'center' }]}>
                     {saludo.titulo}
                   </Text>
-                  {saludo.parrafos.map(parrafo => (
-                    <Text key={parrafo} style={[t.body, { color: c.textSoft, fontSize: 15, lineHeight: 23, textAlign: 'center' }]}>
+                  {saludo.parrafos.map((parrafo, indice) => (
+                    <Text key={parrafo} style={[t.body, styles.parrafo, {
+                      color: indice === 0 ? c.text : c.textSoft,
+                      fontFamily: indice === 0 ? 'Jost_500Medium' : 'Jost_400Regular',
+                    }]}>
                       {parrafo}
                     </Text>
                   ))}
@@ -190,7 +203,7 @@ export function SparkieOverlay() {
                       {GUIA_PRIMER_POST.botonSecundario}
                     </Text>
                   </Pressable>
-                  <Text style={[t.micro, { color: c.tabInactive, fontSize: 11, textAlign: 'center' }]}>
+                  <Text style={[t.micro, { color: c.textSoft, fontSize: 11, textAlign: 'center' }]}>
                     {ESPERANDO_PRIMER_POST.parrafo}
                   </Text>
                 </>
@@ -250,20 +263,29 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.62)',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 16,
   },
   tarjeta: {
     width: '100%',
-    maxHeight: '82%',
+    maxWidth: 560,
+    maxHeight: '100%',
+    flexShrink: 1,
     borderWidth: 1.5,
     borderRadius: 22,
-    paddingVertical: 22,
+    overflow: 'hidden',
   },
   contenido: {
     flexGrow: 1,
     gap: 12,
     alignItems: 'center',
-    paddingBottom: 4,
+    paddingTop: 22,
+    paddingBottom: 36,
+  },
+  parrafo: {
+    width: '100%',
+    flexShrink: 1,
+    fontSize: 15,
+    lineHeight: 23,
+    textAlign: 'center',
   },
   encabezado: {
     alignItems: 'center',

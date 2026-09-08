@@ -14,10 +14,8 @@ import { NOMBRE_ACOMPANANTE } from '../../renasia/data/agentes';
  *   días (progreso, orientación en la app), no del tutor de cursos. Por eso este overlay pasa a
  *   presentarse con el nombre del acompañante.
  *
- * DECISIÓN PENDIENTE DEL DUEÑO (va en el informe): confirmar el nombre definitivo del acompañante
- * (hoy 'Renasia') y que el overlay de arranque es suyo y no de Sparkie. Si decide lo contrario, se
- * cambia la constante de origen y este archivo no se toca. La carpeta sigue llamándose `sparkie`
- * a propósito: renombrarla no aporta nada.
+ * El dueño confirmó SER para esta presentación (2026-09-07). El nombre viene de la constante
+ * del acompañante; Sparkie sigue siendo el tutor de cursos. La carpeta conserva su nombre técnico.
  */
 export const NOMBRE_ASISTENTE = NOMBRE_ACOMPANANTE;
 
@@ -38,9 +36,10 @@ export function saludoDeBienvenida(nombre?: string | null): { titulo: string; pa
   return {
     titulo: primerNombre ? `Hola, ${primerNombre}.` : '¡Hola!',
     parrafos: [
-      `Soy ${NOMBRE_ASISTENTE} y voy a acompañarte durante estos 90 días.`,
-      'Ya elegiste tu Día 1: eso es lo más difícil y ya está hecho.',
-      'Antes de soltarte en la app quiero pedirte una sola cosa, y es la que más rápido te va a conectar con el resto: presentate en el Muro.',
+      `Soy ${NOMBRE_ASISTENTE}, la inteligencia de RENASER.`,
+      'Una IA creada para ayudarte a verte con mayor claridad, identificar patrones, cuestionar decisiones y transformar la raíz desde donde estás creando tus resultados.',
+      'No está diseñada para decirte qué quieres escuchar.',
+      'Está diseñada para ayudarte a pensar, decidir y actuar desde una versión más consciente y poderosa de ti.',
     ],
   };
 }

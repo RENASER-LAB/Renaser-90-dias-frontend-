@@ -15,7 +15,13 @@ import { mapaVacio } from './tipos';
  * una credencial, y SecureStore tiene un tope de ~2 KB que un mapa con nueve textos supera.
  * Clave por usuario: en un mismo dispositivo pueden pasar cuentas distintas.
  */
-const PREFIJO_CLAVE = 'renaser.mapa-renacimiento.v1.';
+/**
+ * v2 reinicia los borradores locales creados durante la integración inicial. El mapa todavía no
+ * tiene persistencia en backend; mantener un `v1` de pruebas con `estado: "activo"` haría que una
+ * cuenta que recién entra aparezca como si ya hubiera terminado el flujo. La clave sigue estando
+ * separada por usuario para que una cuenta no herede el mapa de otra.
+ */
+const PREFIJO_CLAVE = 'renaser.mapa-renacimiento.v2.';
 
 async function sinRomper<T>(operacion: () => Promise<T>, porDefecto: T): Promise<T> {
   try {
