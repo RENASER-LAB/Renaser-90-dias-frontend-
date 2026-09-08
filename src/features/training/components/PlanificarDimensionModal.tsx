@@ -1114,14 +1114,19 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
 
               {/* Apagar esos días, o volver a encenderlos. Se ofrece una cosa o la otra según cómo
                   estén los marcados: mostrar las dos sería pedir que la persona adivine cuál aplica. */}
-              {diasEnEdicion.length > 0 && diasEnEdicion.every(d => horarioSemanal[d]?.activo !== false) && (
+              {/* "No hacer" es una decisión de peso y estaba como un renglón de texto perdido entre
+                  otros dos. Ahora es un botón con borde y alto de toque cómodo (AGENTS.md §4): se
+                  ve, se entiende que es una acción, y no se toca sin querer.
+                  En un hábito OBLIGATORIO no aparece: esos se pueden mover de hora pero no sacar. */}
+              {diasEnEdicion.length > 0
+                && habitoEnEdicion.isDeactivatable !== false
+                && diasEnEdicion.every(d => horarioSemanal[d]?.activo !== false) && (
                 <Pressable
                   onPress={() => void apagarDias(habitoEnEdicion, diasEnEdicion)}
-                  hitSlop={8}
-                  style={{ marginTop: 8, minHeight: 36, justifyContent: 'center' }}
+                  style={[styles.accionApagar, { borderColor: '#E06A66' }]}
                 >
-                  <Text style={[t.micro, { color: '#E06A66', fontSize: 10.5 }]}>
-                    ⊘ No hacer este hábito los {diasEnEdicion.join(', ').toLowerCase()}
+                  <Text style={[t.micro, { color: '#E06A66', fontSize: 11.5, fontWeight: '700' }]}>
+                    ⊘ NO HACERLO LOS {diasEnEdicion.join(', ')}
                   </Text>
                 </Pressable>
               )}
@@ -1129,13 +1134,23 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
               {diasEnEdicion.length > 0 && diasEnEdicion.every(d => horarioSemanal[d]?.activo === false) && (
                 <Pressable
                   onPress={() => void quitarDias(habitoEnEdicion, diasEnEdicion)}
-                  hitSlop={8}
-                  style={{ marginTop: 8, minHeight: 36, justifyContent: 'center' }}
+                  style={[styles.accionApagar, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}
                 >
-                  <Text style={[t.micro, { color: c.gold, fontSize: 10.5, fontWeight: '700' }]}>
-                    ↺ Volver a hacerlo los {diasEnEdicion.join(', ').toLowerCase()}
+                  <Text style={[t.micro, { color: c.gold, fontSize: 11.5, fontWeight: '700' }]}>
+                    ↺ VOLVER A HACERLO LOS {diasEnEdicion.join(', ')}
                   </Text>
                 </Pressable>
+              )}
+
+              {/* Los obligatorios se pueden mover de hora, no sacar. Decirlo evita que alguien
+                  busque un botón que no está. */}
+              {diasEnEdicion.length > 0 && habitoEnEdicion.isDeactivatable === false && (
+                <View style={[styles.accionApagar, { borderColor: c.border, flexDirection: 'row', gap: 8 }]}>
+                  <Icon name="lock" size={13} color={c.tabInactive} />
+                  <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5 }]}>
+                    Obligatorio del programa: podés cambiarle la hora, no sacarlo
+                  </Text>
+                </View>
               )}
 
               {/* Solo cuando TODOS los marcados tienen hora propia Y están encendidos: ofrecer
@@ -1501,6 +1516,17 @@ const styles = StyleSheet.create({
     minHeight: 52,
     fontSize: 15,
     fontFamily: 'Jost_400Regular',
+  },
+  // Alto de toque cómodo y borde propio: "no hacerlo" es una decisión de peso y tiene que verse
+  // como una acción, no como una nota al pie (AGENTS.md §4).
+  accionApagar: {
+    minHeight: 48,
+    borderWidth: 1.2,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    marginTop: 10,
   },
   filaHabito: {
     flexDirection: 'row',
