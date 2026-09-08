@@ -1,10 +1,18 @@
+import type { DiaSemanaApi } from '../types/habits.types';
+
 /**
  * Los siete días, y la semana que el Plan dibuja, en un solo lugar.
  *
- * **Este archivo no importa NADA, y conviene que siga así.** `PlanScreen` lo importa; si acá se
- * importara de vuelta algo de la pantalla quedaría un ciclo. Por eso el tipo del día se define ACÁ
- * y `PlanScreen` lo reexporta como `DayOfWeek`, y no al revés — la dependencia apunta en un solo
- * sentido, del que sabe poco (los días) al que sabe mucho (la pantalla).
+ * **Este archivo no importa nada que exista en tiempo de ejecución, y conviene que siga así.**
+ * `PlanScreen` lo importa; si acá se importara de vuelta algo de la pantalla quedaría un ciclo. Por
+ * eso el tipo del día se define ACÁ y `PlanScreen` lo reexporta como `DayOfWeek`, y no al revés —
+ * la dependencia apunta en un solo sentido, del que sabe poco (los días) al que sabe mucho (la
+ * pantalla).
+ *
+ * > **Precisado el 2026-09-08.** Antes decía "no importa NADA". El único import es un `import type`
+ * > de `DiaSemanaApi`, que TypeScript borra al compilar: no crea módulo ni ciclo en runtime, y a
+ * > cambio hace que `NOMBRE_ISO_DEL_DIA` devuelva el tipo exacto que espera el backend en vez de un
+ * > `string` cualquiera. Un import de valor sí rompería la regla y sigue prohibido.
  *
  * POR QUE ESTO NO VIVE EN `PlanScreen`
  *
@@ -28,7 +36,7 @@ export const DIAS_DEL_PLAN: DiaDelPlan[] = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 
  * Va acá y no en la pantalla porque es una propiedad del día, no de quién lo dibuja: el día que
  * otro módulo tenga que hablar de días con el servidor, la traducción ya existe y es una sola.
  */
-export const NOMBRE_ISO_DEL_DIA: Record<DiaDelPlan, string> = {
+export const NOMBRE_ISO_DEL_DIA: Record<DiaDelPlan, DiaSemanaApi> = {
   LUN: 'MONDAY',
   MAR: 'TUESDAY',
   'MIÉ': 'WEDNESDAY',

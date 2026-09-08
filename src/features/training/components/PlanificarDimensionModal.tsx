@@ -177,6 +177,14 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
   /** Secciones plegadas. Arrancan TODAS abiertas: llegar a una lista vacía es el problema que esta
    *  pantalla vino a resolver, no uno que convenga reintroducir por prolijidad. */
   const [plegadas, setPlegadas] = useState<Set<SeccionDeLista>>(new Set());
+  /**
+   * Los días en que va a correr el hábito que se está creando. **Los siete por defecto**: es lo que
+   * hacían todos los hábitos propios hasta el 2026-09-08, así que quien no toque nada obtiene el
+   * mismo resultado de siempre. Se sacó del modal en E-137 porque el backend fijaba `TipoDia.TODOS`
+   * y el selector era un campo muerto — un campo que el servidor no guarda es un bug esperando.
+   * Vuelve ahora que `POST /api/v1/habits` acepta `activeWeekdays`.
+   */
+  const [diasNuevo, setDiasNuevo] = useState<Set<DiaDelPlan>>(new Set(DIAS_DEL_PLAN));
   /** `true` = el formulario de hábito nuevo (paso 3). */
   const [creando, setCreando] = useState(false);
   const [tituloNuevo, setTituloNuevo] = useState('');
@@ -530,6 +538,12 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
   const guardarHora = async (h: HabitoPlanificable) => {
     setGuardando(true);
     try {
+      // El navegador solo permite abrir el permiso Web Push dentro de una accion del usuario.
+      // Se hace antes del PATCH para conservar ese gesto; el backend se actualiza igual aunque
+      // la persona rechace el permiso y la alerta final lo deja claro.
+      const webPushPreparado = antelaciones.length > 0 && recordatorios.HAY_RECORDATORIOS_WEB
+        ? await recordatorios.prepararWebPush()
+        : null;
       // El `limitTime` que ya tenía: el PATCH reemplaza los dos campos a la vez y mandar `null`
       // le borraría la hora límite a hábitos que sí vencen dentro del día.
       const previa = preferencias.get(h.habitoId);
@@ -545,12 +559,11 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
         previa?.limitTime ?? null,
         recordatorio,
       );
-      // La PREFERENCIA vive en el servidor (viaja entre dispositivos); la ALARMA la dispara este
-      // teléfono. Si la persona niega el permiso, `programar` devuelve false y se lo decimos en vez
-      // de dejarla creyendo que va a sonar.
-      const ok = await recordatorios.programar(
-        claveUsuario, h.habitoId, h.title, horaTexto, antelaciones,
-      );
+      // Android programa la alarma en el dispositivo. Web registra la suscripción del navegador
+      // y los dos avisos los envía el scheduler del backend para esta misma persona.
+      const ok = recordatorios.HAY_RECORDATORIOS_WEB
+        ? (antelaciones.length === 0 || webPushPreparado === true)
+        : await recordatorios.programar(claveUsuario, h.habitoId, h.title, horaTexto, antelaciones);
       const avisoImposible = antelaciones.length > 0 && !ok;
       // El horario local se actualiza acá y no recargando todo: recargar con la hoja abierta
       // reordenaría la lista debajo del dedo.
@@ -578,7 +591,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
         `“${h.title}” queda a las ${horaTexto}.` +
           (resultado.deferred ? `\n\nEmpieza a regir ${cuando}: el día en curso no se reacomoda.` : '') +
           (avisoImposible
-            ? '\n\nEl recordatorio quedó guardado, pero este teléfono no tiene permiso para avisarte. Habilitá las notificaciones de la app.'
+            ? `\n\nEl recordatorio quedó guardado, pero ${recordatorios.HAY_RECORDATORIOS_WEB ? 'este navegador no tiene el permiso Web Push' : 'este teléfono no tiene permiso para avisarte'}. Habilitá las notificaciones para recibir las dos alertas.`
             : ''),
       );
     } catch (e) {
@@ -650,6 +663,23 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
    * > recargar — es el mismo bug que E-137 ya corrigió en Plan llamando a este endpoint. Acá se
    * > llama de entrada.
    */
+  /**
+   * Prender y apagar un día del hábito que se está creando. **No se puede dejar ninguno**: un
+   * hábito que no corre ningún día no es un hábito, es una fila que no genera nada.
+   */
+  const alternarDiaNuevo = (dia: DiaDelPlan) => {
+    setDiasNuevo(prev => {
+      const siguiente = new Set(prev);
+      if (siguiente.has(dia)) {
+        if (siguiente.size === 1) return prev;
+        siguiente.delete(dia);
+      } else {
+        siguiente.add(dia);
+      }
+      return siguiente;
+    });
+  };
+
   const crearHabito = async () => {
     const titulo = tituloNuevo.trim();
     if (!titulo) {
@@ -669,15 +699,24 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
         triggerTime: `${horaTexto}:00`,
         // Un hábito propio no vence dentro del día: sin hora límite.
         limitTime: null,
+        // Los siete no se mandan: omitirlo ya significa "todos" del lado del servidor, y así el
+        // cuerpo dice lo mismo que decía antes cuando el aprendiz no eligió nada.
+        activeWeekdays: diasNuevo.size === DIAS_DEL_PLAN.length
+          ? undefined
+          : DIAS_DEL_PLAN.filter(d => diasNuevo.has(d)).map(d => NOMBRE_ISO_DEL_DIA[d]),
       });
       setHuboEscritura(true);
       setCreando(false);
       setTituloNuevo('');
       setIconoNuevo(null);
+      setDiasNuevo(new Set(DIAS_DEL_PLAN));
       // Acá SÍ se recarga todo: el hábito nuevo no está en `habits`, que viene de la pantalla de
       // atrás, así que la única forma de verlo es que Training vuelva a pedir su lista.
       onGuardado();
-      Alert.alert('Hábito creado', `“${titulo}” queda a las ${horaTexto}, todos los días.`);
+      const cuando = diasNuevo.size === DIAS_DEL_PLAN.length
+        ? 'todos los días'
+        : DIAS_DEL_PLAN.filter(d => diasNuevo.has(d)).join(' · ');
+      Alert.alert('Hábito creado', `“${titulo}” queda a las ${horaTexto}, ${cuando}.`);
     } catch (e) {
       Alert.alert('No pudimos crear el hábito', mensajeDeError(e, 'Intenta de nuevo en unos segundos.'));
     } finally {
@@ -856,6 +895,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                       setSemillaRueda(n => n + 1);
                       setTituloNuevo('');
                       setIconoNuevo(null);
+                      setDiasNuevo(new Set(DIAS_DEL_PLAN));
                       setCreando(true);
                     }}
                     style={[styles.crearHabito, { borderColor: c.gold }]}
@@ -1057,9 +1097,8 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                 </Pressable>
               )}
 
-              {/* No se ofrece donde no se puede cumplir: web (la librería no soporta esa
-                  plataforma) ni Expo Go (el push salió de ahí en el SDK 53). Ver
-                  `recordatoriosDeHabito`. Mostrarlo igual sería prometer un aviso que no suena. */}
+              {/* En Android es alarma local; en web es Web Push y los dos avisos salen del
+                  scheduler del backend. Expo Go sigue sin ofrecer el canal remoto. */}
               {recordatorios.HAY_RECORDATORIOS && (
                 <>
                   <Text style={[t.micro, { color: c.gold, fontWeight: '700', marginTop: 12 }]}>
@@ -1205,8 +1244,44 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                   }}
                 />
               </View>
+              {/* Los días en que corre. Volvió el 2026-09-08, cuando el backend pasó a aceptar
+                  `activeWeekdays`: antes era un campo que la app mostraba y el servidor tiraba a la
+                  basura, y por eso E-137 lo sacó del modal. */}
+              <Text style={[t.micro, { color: c.gold, fontWeight: '700', marginTop: 16 }]}>¿QUÉ DÍAS?</Text>
+              <View style={styles.filaDias}>
+                {DIAS_DEL_PLAN.map(dia => {
+                  const corre = diasNuevo.has(dia);
+                  return (
+                    <Pressable
+                      key={dia}
+                      onPress={() => alternarDiaNuevo(dia)}
+                      style={[
+                        styles.pastillaDia,
+                        {
+                          borderColor: corre ? c.gold : c.border,
+                          backgroundColor: corre ? c.cardBgAlt : 'transparent',
+                          minHeight: 40,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[t.micro, {
+                          fontSize: 11,
+                          fontWeight: '700',
+                          color: corre ? c.gold : c.textSoft,
+                        }]}
+                      >
+                        {dia}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
               <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5, textAlign: 'center', lineHeight: 15 }]}>
-                Un hábito propio corre los 7 días y no vence: la hora lo ubica en tu jornada.
+                {diasNuevo.size === DIAS_DEL_PLAN.length
+                  ? 'Corre los 7 días. Tocá un día para sacarlo.'
+                  : `Corre ${diasNuevo.size} ${diasNuevo.size === 1 ? 'día' : 'días'} por semana.`}
+                {'\n'}Un hábito propio no vence: la hora lo ubica en tu jornada.
               </Text>
 
               <GoldButton

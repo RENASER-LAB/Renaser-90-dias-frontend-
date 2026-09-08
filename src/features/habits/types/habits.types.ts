@@ -82,6 +82,10 @@ export type CategoriaHabitoApi = 'BODY' | 'MIND' | 'SPIRIT' | 'CONSCIENCE';
  * advierte que no está verificado que `JOURNALING`/`RATING`/`BLOCKING` funcionen sobre un hábito
  * PERSONAL, así que la app manda solo `CHECKBOX` — un hábito propio que se marca y listo.
  */
+/** Los nombres de `DayOfWeek` del backend, que es el vocabulario de `/weekdays/{weekday}`. */
+export type DiaSemanaApi =
+  | 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
+
 export interface AltaHabitoPersonal {
   title: string;
   habitType: 'CHECKBOX';
@@ -96,6 +100,14 @@ export interface AltaHabitoPersonal {
   iconKey?: string | null;
   /** `HH:mm:ss` — obligatorio: sin hora de disparo el hábito no genera nada que hacer. */
   triggerTime: string;
+  /**
+   * Los días de la semana en que corre, con los nombres de `DayOfWeek`: `MONDAY`…`SUNDAY`.
+   *
+   * Omitirlo o mandarlo vacío significa **los siete**, que es como nacían todos los hábitos propios
+   * hasta el 2026-09-08. El backend no cambia el `tipoDia` del catálogo: apaga los días que no
+   * están en la lista para ESE participante (`horario_semanal_habito.activo`).
+   */
+  activeWeekdays?: DiaSemanaApi[];
   /** `HH:mm:ss` o null. Null = no vence dentro del día, que es el caso de un hábito propio. */
   limitTime: string | null;
 }

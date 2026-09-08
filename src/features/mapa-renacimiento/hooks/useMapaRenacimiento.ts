@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import * as habitsApi from '../../habits/api/habitsApi';
-import type { AltaHabitoPersonal, CategoriaHabitoApi } from '../../habits/types/habits.types';
+import type { AltaHabitoPersonal, CategoriaHabitoApi, DiaSemanaApi } from '../../habits/types/habits.types';
 import { almacenMapa } from '../almacen';
 import { completarHitos, definicionDeTerminado, redactar } from '../reglas';
-import type { AccionMotora, Area, BloqueDia, MapaRenacimiento, PasoMapa } from '../tipos';
+import type { AccionMotora, Area, BloqueDia, DiaSemana, MapaRenacimiento, PasoMapa } from '../tipos';
 import { mapaVacio } from '../tipos';
 
 /**
@@ -32,6 +32,30 @@ const HORA_POR_BLOQUE: Record<BloqueDia, string> = {
   noche: '20:00:00',
 };
 
+/**
+ * Los días de la acción con el vocabulario del backend (`java.time.DayOfWeek`). La V06 del mapa los
+ * guarda como iniciales en castellano, y esa traducción vive acá porque es lo único que sabe de las
+ * dos puntas.
+ */
+const NOMBRE_ISO: Record<DiaSemana, DiaSemanaApi> = {
+  L: 'MONDAY',
+  M: 'TUESDAY',
+  X: 'WEDNESDAY',
+  J: 'THURSDAY',
+  V: 'FRIDAY',
+  S: 'SATURDAY',
+  D: 'SUNDAY',
+};
+
+/**
+ * **Los días de la acción viajan al hábito** (2026-09-08). Hasta hoy no lo hacían y todo hábito
+ * creado al activar corría los siete: quien había elegido "3 veces por semana" en V06 terminaba con
+ * un hábito diario. `MAPA_RENACIMIENTO_DIA7.md` §2.6 lo llamaba *"la limitación más visible para el
+ * aprendiz"*, y se resolvió del lado del servidor con `activeWeekdays`.
+ *
+ * Sin días elegidos se omite el campo, que del lado del servidor significa los siete — el mismo
+ * comportamiento de antes para una acción que no los declaró.
+ */
 function altaDesde(accion: AccionMotora, metaCorta: string): AltaHabitoPersonal {
   return {
     title: accion.texto.trim(),
@@ -41,6 +65,7 @@ function altaDesde(accion: AccionMotora, metaCorta: string): AltaHabitoPersonal 
     goalLabel: metaCorta || null,
     triggerTime: accion.momento ? HORA_POR_BLOQUE[accion.momento] : '09:00:00',
     limitTime: null,
+    activeWeekdays: accion.dias.length > 0 ? accion.dias.map(d => NOMBRE_ISO[d]) : undefined,
   };
 }
 
