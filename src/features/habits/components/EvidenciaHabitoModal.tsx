@@ -25,6 +25,7 @@ import { Icon, IconName } from '../../../components/Icon';
 import { MicroLabel } from '../../../components/ui';
 import { mensajeDeError } from '../../../services/http/apiClient';
 import {
+  ALMACENAMIENTO_SIN_CONFIGURAR,
   almacenamientoSinConfigurar,
   completarRegistro,
   confirmarEvidencia,
@@ -54,9 +55,25 @@ import {
  * backend) y hay otros flujos de evidencia construyéndose en paralelo sobre esa misma pantalla.
  */
 
+/**
+ * Camino de subida alternativo. Devuelve los puntos que otorgó el servidor.
+ *
+ * **Por qué una función y no un `destino: 'habito' | 'roca'`.** Las acciones del día (rocas) usan
+ * otros endpoints —`/rocks/{id}/...`, y con tres pasos en vez de cuatro, porque ahí `/evidence`
+ * cierra y premia de una— pero conocerlos sería atar `habits` a `objetivos`. Este archivo se queda
+ * sabiendo de hábitos; quien compone las dos cosas es la pantalla de Training, que ya importa las
+ * dos. Mismo criterio con el que este módulo evita depender de `community`.
+ */
+export type SellarEvidencia = (datos: {
+  archivo: ArchivoEvidencia | null;
+  texto: string;
+}) => Promise<number>;
+
 export interface EvidenciaHabitoModalProps {
   /** `null` = cerrado. Es el id del REGISTRO del día (`habit-tracks`), no el del hábito. */
   registroId: string | null;
+  /** Cuando viene, reemplaza el camino de hábitos entero. Ver {@link SellarEvidencia}. */
+  sellarPersonalizado?: SellarEvidencia;
   titulo: string;
   /** Línea chica de contexto: "CUERPO · INNEGOCIABLE". */
   contexto?: string;
@@ -81,6 +98,7 @@ const ROJO_ERROR = '#E06A66';
 
 export function EvidenciaHabitoModal({
   registroId,
+  sellarPersonalizado,
   titulo,
   contexto,
   notaInicial,
@@ -149,6 +167,8 @@ export function EvidenciaHabitoModal({
         uri,
         mimeType: mimeDeAudio(uri),
         tipo: 'AUDIO',
+        // Solo las FOTO llevan instante de captura (Ley VI); un audio no.
+        tomadaEn: null,
         etiqueta: `Audio de ${duracionLegible(estadoGrabador.durationMillis / 1000)}`,
       });
       return;
@@ -180,12 +200,14 @@ export function EvidenciaHabitoModal({
     setEnviando(true);
     setError(null);
     try {
+      if (sellarPersonalizado) {
+        await onCompletado(await sellarPersonalizado({ archivo, texto: textoUtil }));
+        return;
+      }
       if (archivo) {
         const url = await solicitarUrlSubidaEvidencia(registroId, archivo.mimeType);
         if (almacenamientoSinConfigurar(url.uploadUrl)) {
-          throw new Error(
-            'El almacenamiento de archivos (S3) todavía no está configurado en el servidor, así que la foto, el audio o el video no se pueden guardar. Puedes dejar tu evidencia por escrito mientras tanto, o avisarle al equipo técnico.',
-          );
+          throw new Error(ALMACENAMIENTO_SIN_CONFIGURAR);
         }
         await subirArchivoAS3(url.uploadUrl, archivo.uri, archivo.mimeType);
         await confirmarEvidencia(registroId, {
@@ -336,7 +358,7 @@ export function EvidenciaHabitoModal({
                   onPress={() => void alternarGrabacion()}
                 />
                 <Text style={[t.micro, { color: c.textSoft, fontSize: 12 }]}>
-                  Contá con tus palabras cómo cumpliste hoy. Tocá otra vez para detener.
+                  Cuenta con tus palabras cómo cumpliste hoy. Toca otra vez para detener.
                 </Text>
               </View>
             ) : null}
@@ -399,7 +421,7 @@ export function EvidenciaHabitoModal({
             />
             {!puedeSellar ? (
               <Text style={[t.micro, { color: c.textSoft, fontSize: 12, textAlign: 'center' }]}>
-                Subí una foto, un audio o un video — o escribí tu registro. Con uno alcanza.
+                Sube una foto, un audio o un video — o escribe tu registro. Con uno alcanza.
               </Text>
             ) : null}
 

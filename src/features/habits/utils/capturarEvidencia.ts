@@ -19,6 +19,41 @@ export interface ArchivoEvidencia {
   tipo: TipoEvidencia;
   /** Para mostrar en la tarjeta ("foto_1234.jpg", "audio de 0:12"). */
   etiqueta: string;
+  /**
+   * Cuándo se tomó la foto, en ISO, o `null` si no se puede saber.
+   *
+   * **Para qué.** Las rocas diarias exigen este dato para las FOTO y lo comparan contra el
+   * instante de subida con ±15 min de margen (Ley VI, `RocaDiariaService.requireExifDentroDeMargen`).
+   * Es antifraude: evita subir hoy la foto de la semana pasada.
+   *
+   * **De dónde sale, y por qué no siempre se puede.** De la cámara sale del momento en que la app
+   * vio la captura, que es un dato que la app sí puede atestiguar. De la galería sale del EXIF
+   * `DateTimeOriginal` — y muchas imágenes no lo tienen: capturas de pantalla, fotos reenviadas por
+   * WhatsApp, imágenes ya editadas. En ese caso vale `null` y **no se inventa**: quien decide qué
+   * hacer con la falta es quien va a mandar la evidencia.
+   *
+   * Los hábitos no lo usan (su backend acepta `null`), así que para ellos es informativo.
+   */
+  tomadaEn: string | null;
+}
+
+/**
+ * El EXIF viene como `"2026:09:08 14:32:10"` — con dos puntos también en la fecha, que `new Date()`
+ * no entiende, y sin zona horaria (es hora local del teléfono que la sacó).
+ *
+ * Devuelve `null` ante cualquier cosa rara en vez de una fecha inventada: una fecha equivocada acá
+ * termina en un `EXIF_MISMATCH` del servidor que el aprendiz no puede interpretar.
+ */
+function instanteDelExif(exif: Record<string, unknown> | null | undefined): string | null {
+  const crudo = exif?.DateTimeOriginal ?? exif?.DateTime ?? exif?.DateTimeDigitized;
+  if (typeof crudo !== 'string') return null;
+  const partes = crudo.trim().match(/^(\d{4}):(\d{2}):(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/);
+  if (!partes) return null;
+  const [, anio, mes, dia, hora, minuto, segundo] = partes;
+  const fecha = new Date(
+    Number(anio), Number(mes) - 1, Number(dia), Number(hora), Number(minuto), Number(segundo)
+  );
+  return Number.isNaN(fecha.getTime()) ? null : fecha.toISOString();
 }
 
 /**
@@ -45,7 +80,10 @@ function nombreDe(uri: string, porDefecto: string): string {
  *  - una foto de 12 MP de un teléfono moderno son varios MB por una ducha fría;
  *  - pasar por el manipulador aplica la rotación EXIF, así que la evidencia no queda de costado.
  */
-async function normalizarFoto(asset: ImagePicker.ImagePickerAsset): Promise<ArchivoEvidencia> {
+async function normalizarFoto(
+  asset: ImagePicker.ImagePickerAsset,
+  tomadaEn: string | null,
+): Promise<ArchivoEvidencia> {
   const anchoDestino = asset.width > 0 ? Math.min(asset.width, 1440) : 1440;
   // API contextual de `expo-image-manipulator@57`: la vieja `manipulateAsync` está deprecada.
   const renderizada = await ImageManipulator.manipulate(asset.uri)
@@ -57,6 +95,7 @@ async function normalizarFoto(asset: ImagePicker.ImagePickerAsset): Promise<Arch
     mimeType: 'image/jpeg',
     tipo: 'FOTO',
     etiqueta: asset.fileName?.trim() || nombreDe(resultado.uri, `foto_${Date.now()}.jpg`),
+    tomadaEn,
   };
 }
 
@@ -74,10 +113,13 @@ export async function elegirFotoDeGaleria(): Promise<ArchivoEvidencia | null> {
     mediaTypes: ['images'],
     quality: 1,
     allowsMultipleSelection: false,
+    // El reencodeo de abajo borra el EXIF, así que hay que leerlo ACÁ, del asset original.
+    exif: true,
   });
   if (resultado.canceled || !resultado.assets?.[0]) return null;
   try {
-    return await normalizarFoto(resultado.assets[0]);
+    const asset = resultado.assets[0];
+    return await normalizarFoto(asset, instanteDelExif(asset.exif));
   } catch {
     Alert.alert('No se pudo procesar la foto', 'Probá con otra imagen.');
     return null;
@@ -94,10 +136,13 @@ export async function tomarFotoConCamara(): Promise<ArchivoEvidencia | null> {
     );
     return null;
   }
-  const resultado = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 1 });
+  const resultado = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 1, exif: true });
   if (resultado.canceled || !resultado.assets?.[0]) return null;
   try {
-    return await normalizarFoto(resultado.assets[0]);
+    const asset = resultado.assets[0];
+    // Se prefiere el EXIF de la cámara; si el teléfono no lo escribió, vale el instante en que la
+    // app recibió la captura, que acaba de pasar y la app sí puede atestiguar.
+    return await normalizarFoto(asset, instanteDelExif(asset.exif) ?? new Date().toISOString());
   } catch {
     Alert.alert('No se pudo procesar la foto', 'Probá sacarla de nuevo.');
     return null;
@@ -128,6 +173,8 @@ export async function elegirVideoDeGaleria(): Promise<ArchivoEvidencia | null> {
     mimeType: mimeDeVideo(asset.uri, asset.mimeType),
     tipo: 'VIDEO',
     etiqueta: asset.fileName?.trim() || nombreDe(asset.uri, `video_${Date.now()}.mp4`),
+    // Solo las FOTO tienen exigencia de instante (Ley VI). Un video no la tiene.
+    tomadaEn: null,
   };
 }
 
@@ -149,6 +196,8 @@ export async function grabarVideoConCamara(): Promise<ArchivoEvidencia | null> {
     mimeType: mimeDeVideo(asset.uri, asset.mimeType),
     tipo: 'VIDEO',
     etiqueta: asset.fileName?.trim() || nombreDe(asset.uri, `video_${Date.now()}.mp4`),
+    // Solo las FOTO tienen exigencia de instante (Ley VI). Un video no la tiene.
+    tomadaEn: null,
   };
 }
 

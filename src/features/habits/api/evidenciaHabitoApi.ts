@@ -88,6 +88,9 @@ export async function solicitarUrlSubidaEvidencia(
  * Es la misma guardia que ya usa el Muro (`wallApi.almacenamientoSinConfigurar`); se replica en
  * vez de importarse para no atar `habits` a `community`.
  */
+export const ALMACENAMIENTO_SIN_CONFIGURAR =
+  'El almacenamiento de archivos (S3) todavía no está configurado en el servidor, así que la foto, el audio o el video no se pueden guardar. Puedes dejar tu evidencia por escrito mientras tanto, o avisarle al equipo técnico.';
+
 export function almacenamientoSinConfigurar(uploadUrl: string): boolean {
   return !uploadUrl.startsWith('http://') && !uploadUrl.startsWith('https://');
 }

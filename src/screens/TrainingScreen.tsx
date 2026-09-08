@@ -10,6 +10,7 @@ import { Icon, IconName } from '../components/Icon';
 import { useTraining } from '../features/training/hooks/useTraining';
 import { ProximoAVencerCard } from '../features/training/components/ProximoAVencerCard';
 import { EvidenciaHabitoModal } from '../features/habits/components/EvidenciaHabitoModal';
+import { sellarRocaDiaria } from '../features/objetivos/utils/sellarRocaDiaria';
 import { PlanificarDimensionModal } from '../features/training/components/PlanificarDimensionModal';
 import { completarRegistro } from '../features/habits/api/evidenciaHabitoApi';
 import { mensajeDeError } from '../services/http/apiClient';
@@ -502,7 +503,7 @@ export default function TrainingScreen() {
     }
     setPastillaVisible(false);
     await Promise.all([espiritu.recargar(), recargarEntrenamiento()]);
-    Alert.alert('Pastilla Renacer registrada 🦅', 'Tu respuesta quedo guardada y el habito, completado.');
+    Alert.alert('Pastilla Renaser registrada 🦅', 'Tu respuesta quedo guardada y el habito, completado.');
   };
 
   /**
@@ -581,7 +582,7 @@ export default function TrainingScreen() {
             </View>
             <Text style={[t.body, { color: c.textSoft, fontSize: 13, lineHeight: 18 }]}>
               {arranque.estado === 'PENDIENTE_ELEGIR'
-                ? 'Elegí en qué día querés empezar tus 90 días. Hasta entonces no hay evidencia que entregar.'
+                ? 'Elige en qué día quieres empezar tus 90 días. Hasta entonces no hay evidencia que entregar.'
                 : `Empezás el ${formatearFechaLarga(arranque.fechaInicio)}. Desde el ${formatearFechaLarga(
                     diaAnterior(arranque.fechaInicio),
                   )} vas a poder organizar tus hábitos y entregar evidencia; hasta entonces no hay nada que hacer acá.`}
@@ -1078,7 +1079,7 @@ export default function TrainingScreen() {
                   </Text>
                   <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, lineHeight: 18, marginTop: 6 }]}>
                     Estamos preparando esta sección. Cuando esté lista vas a encontrar acá la
-                    Pastilla Renacer y las audioterapias de tu programa.
+                    Pastilla Renaser y las audioterapias de tu programa.
                   </Text>
                 </View>
               </View>
@@ -1101,6 +1102,18 @@ export default function TrainingScreen() {
       */}
       <EvidenciaHabitoModal
         registroId={activeEvidenceHabit?.id ?? null}
+        /*
+         * VIDA Y NEGOCIO no son hábitos: son las acciones del día que salen del plan semanal, y
+         * viven en otras tablas y otros endpoints (`/api/v1/rocks/...`). Antes esto no se notaba
+         * porque la dimensión estaba siempre vacía; ahora que se pueden agendar, mandar su id
+         * contra `habit-tracks` daría un 404. El modal no conoce rocas a propósito — se le pasa el
+         * camino ya armado, y quien compone las dos cosas es esta pantalla.
+         */
+        sellarPersonalizado={
+          activeEvidenceHabit?.dimension === 'VIDA Y NEGOCIO' && activeEvidenceHabit
+            ? datos => sellarRocaDiaria(activeEvidenceHabit.id, datos)
+            : undefined
+        }
         titulo={activeEvidenceHabit?.title ?? ''}
         contexto={
           activeEvidenceHabit
