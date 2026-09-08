@@ -245,11 +245,15 @@ EXIF y `normalizarFoto` lo borra al reencodear. Ahora `ArchivoEvidencia` lleva `
 - **Galería** → el EXIF `DateTimeOriginal`, y `null` si la imagen no lo tiene (una captura de
   pantalla, una foto reenviada por WhatsApp, una ya editada).
 
-Con `null` **no se manda igual**: se corta antes con un mensaje que dice qué hacer. Mandarlo haría
-estallar al servidor — ver abajo.
+Con `null` **no se manda igual**: se corta antes con un mensaje que la persona pueda entender.
 
-> **Bug del backend, reportado y no arreglado acá.**
-> `RocaDiariaService.requireExifDentroDeMargen` hace `Duration.between(timestampExif, ahora)` sin
-> comprobar null, así que un `POST /rocks/{id}/evidence` con `tipo: "FOTO"` y `timestampExif: null`
-> responde **500** en vez de un 400 que se entienda. El frontend ya no lo dispara, pero cualquier
-> otro cliente sí puede.
+> **Corregido 2026-09-08.** Acá decía que mandar `null` hacía estallar al servidor con un **500**, y
+> que era un bug del backend pendiente de arreglar. **Es falso.** El constructor compacto de
+> `CompletarRocaDiariaCommand` ya rechaza ese caso y el cliente recibe un **400** limpio:
+> `timestampExif es obligatorio para evidencia de tipo FOTO (Ley VI)`. El diagnóstico salió de leer
+> `requireExifDentroDeMargen` en aislamiento, sin seguir a quién construye el comando; lo destapó el
+> test de regresión al fallar por un motivo distinto del esperado. Queda registrado como E-165.
+>
+> La guardia del cliente **se mantiene igual**, pero por otro motivo: el mensaje del backend es
+> correcto y está escrito para quien programa. "timestampExif es obligatorio" no le dice nada a un
+> aprendiz de 55 años; "sacá la foto con la cámara desde aquí" sí.

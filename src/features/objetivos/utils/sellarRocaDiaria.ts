@@ -33,8 +33,8 @@ export async function sellarRocaDiaria(
 
   if (archivo) {
     // Ley VI: una FOTO tiene que traer cuándo fue tomada, y el servidor lo compara con el instante
-    // de subida (±15 min). Sin ese dato no se manda `null` a la buena de Dios —el backend responde
-    // un 500, no un mensaje— sino que se corta acá diciendo qué hacer.
+    // de subida (±15 min). El backend rechaza el null con un 400 correcto pero ilegible para el
+    // aprendiz ("timestampExif es obligatorio..."), así que se corta acá diciendo qué hacer.
     if (archivo.tipo === 'FOTO' && !archivo.tomadaEn) {
       throw new Error(
         'Esta imagen no guarda la fecha en que fue tomada, y tus acciones del día la necesitan como prueba. Saca la foto con la cámara desde aquí, o deja tu evidencia por escrito.'

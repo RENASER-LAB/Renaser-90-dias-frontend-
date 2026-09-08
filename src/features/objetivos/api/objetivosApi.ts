@@ -175,9 +175,9 @@ export async function solicitarUrlSubidaEvidenciaRoca(
  * puntos). Una roca se cierra y se premia acá mismo. Llamarlo dos veces da `409 ALREADY_COMPLETED`.
  *
  * `timestampExif` es **obligatorio para FOTO** y se compara contra el instante de subida con ±15 min
- * de margen (Ley VI). Mandarlo en `null` con `tipo: 'FOTO'` hace estallar al servidor con un 500 —
- * ver la anotación en `docs/BITACORA_ERRORES.md`. Por eso quien llama tiene que resolver antes qué
- * hacer si no hay instante, en vez de mandar `null` y ver qué pasa.
+ * de margen (Ley VI). Con `null` el backend responde `400 timestampExif es obligatorio para
+ * evidencia de tipo FOTO`, que es correcto pero está escrito para quien programa, no para un
+ * aprendiz de 55 años. Por eso quien llama resuelve antes qué hacer si no hay instante.
  */
 export async function registrarEvidenciaRoca(
   rocaId: string,
