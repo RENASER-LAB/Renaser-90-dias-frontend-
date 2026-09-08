@@ -172,7 +172,7 @@ export function TerminosScreen({
             TÉRMINOS Y CONDICIONES
           </Text>
           <Text style={[t.body, { color: c.textSoft, textAlign: 'center', marginTop: 4, fontSize: 13.5 }]}>
-            Lee atentamente las 22 cláusulas y sella tu aceptación
+            Lee atentamente las 23 cláusulas y sella tu aceptación
           </Text>
         </View>
 

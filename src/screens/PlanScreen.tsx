@@ -821,10 +821,12 @@ export default function PlanScreen() {
           <View style={[styles.section, { borderTopColor: c.divider }]}>
             <MicroLabel>PRIORIDADES CLAVE</MicroLabel>
             <View style={{ marginTop: 8, gap: 8 }}>
-              {/* 01. Convertirme en mi mejor versión -> HÁBITOS 7D */}
+              {/* Las prioridades quedan visibles como referencia, pero bloqueadas hasta cerrar
+                  la definición funcional con el usuario en la próxima actualización. */}
               <Pressable
-                onPress={() => setActiveSubView('habitos')}
-                style={[styles.priorityCard, { borderColor: c.border, backgroundColor: c.cardBg }]}
+                disabled
+                accessibilityState={{ disabled: true }}
+                style={[styles.priorityCard, { borderColor: c.border, backgroundColor: c.cardBg, opacity: 0.62 }]}
               >
                 <Text style={[t.small, { color: c.gold }]}>01</Text>
                 <View style={{ flex: 1 }}>
@@ -832,33 +834,35 @@ export default function PlanScreen() {
                     Convertirme en mi mejor versión
                   </Text>
                   <Text style={[t.micro, { color: c.gold, fontSize: 9.5, marginTop: 2 }]}>
-                    Gestión y Horario de Hábitos (7 Días) ›
+                    Disponible en la próxima actualización
                   </Text>
                 </View>
-                <Icon name="chevron" size={12} color={c.gold} />
+                <Icon name="lock" size={13} color={c.textSoft} />
               </Pressable>
 
-              {/* 02. Diseñar libertad financiera -> OBJETIVOS 3 NIVELES */}
+              {/* 02. Diseñar libertad financiera */}
               <Pressable
-                onPress={() => setActiveSubView('objetivos')}
-                style={[styles.priorityCard, { borderColor: c.border, backgroundColor: c.cardBg }]}
+                disabled
+                accessibilityState={{ disabled: true }}
+                style={[styles.priorityCard, { borderColor: c.border, backgroundColor: c.cardBg, opacity: 0.62 }]}
               >
                 <Text style={[t.small, { color: c.gold }]}>02</Text>
                 <View style={{ flex: 1 }}>
                   <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>
                     Diseñar libertad financiera
                   </Text>
-                  <Text style={[t.micro, { color: '#70d2a0', fontSize: 9.5, marginTop: 2 }]}>
-                    Objetivo Principal (90D), Semanal y Diario ›
+                  <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5, marginTop: 2 }]}>
+                    Disponible en la próxima actualización
                   </Text>
                 </View>
-                <Icon name="chevron" size={12} color={c.gold} />
+                <Icon name="lock" size={13} color={c.textSoft} />
               </Pressable>
 
               {/* 03. Impactar y servir a más personas */}
               <Pressable
-                onPress={() => Alert.alert('Propósito y Servicio', 'Módulo de Liderazgo y Expansión en construcción (Próximamente).')}
-                style={[styles.priorityCard, { borderColor: c.border, backgroundColor: c.cardBg, opacity: 0.8 }]}
+                disabled
+                accessibilityState={{ disabled: true }}
+                style={[styles.priorityCard, { borderColor: c.border, backgroundColor: c.cardBg, opacity: 0.62 }]}
               >
                 <Text style={[t.small, { color: c.textSoft }]}>03</Text>
                 <View style={{ flex: 1 }}>
@@ -866,10 +870,10 @@ export default function PlanScreen() {
                     Impactar y servir a más personas
                   </Text>
                   <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5, marginTop: 2 }]}>
-                    Legado y Red de Tribu ›
+                    Disponible en la próxima actualización
                   </Text>
                 </View>
-                <Icon name="chevron" size={12} color={c.textSoft} />
+                <Icon name="lock" size={13} color={c.textSoft} />
               </Pressable>
             </View>
           </View>

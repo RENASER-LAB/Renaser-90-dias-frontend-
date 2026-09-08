@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -511,6 +511,10 @@ export default function ComunidadScreen() {
     publicarOptimista,
   } = useWallFeed();
   const [expandedPosts, setExpandedPosts] = useState<Record<string, boolean>>({});
+  const [postOffsets, setPostOffsets] = useState<Record<string, number>>({});
+  const [publicacionPedida, setPublicacionPedida] = useState<string | null>(null);
+  const [publicacionDestacada, setPublicacionDestacada] = useState<string | null>(null);
+  const muroScrollRef = useRef<ScrollView | null>(null);
   const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
   const [commentPhotos, setCommentPhotos] = useState<Record<string, FotoMuroNormalizada | null>>({});
@@ -1039,6 +1043,36 @@ export default function ComunidadScreen() {
     // reabriría el composer aunque la persona lo hubiera cerrado a propósito.
     (navigation as any).setParams({ abrirComposerMuro: undefined });
   }, [route.params, navigation]);
+
+  /**
+   * Entrada desde Hoy al post exacto. Se consume el parámetro una sola vez, pero se conserva el
+   * id en estado hasta que el feed y el layout de esa tarjeta estén listos para desplazar el
+   * ScrollView. Así el enlace funciona aunque Comunidad todavía esté esperando el GET /wall.
+   */
+  useEffect(() => {
+    const params = route.params as { abrirPublicacionId?: string } | undefined;
+    const postId = params?.abrirPublicacionId;
+    if (!postId) return;
+
+    irASeccion('muro');
+    setPublicacionPedida(postId);
+    setPublicacionDestacada(postId);
+    setExpandedPosts(prev => ({ ...prev, [postId]: true }));
+    (navigation as any).setParams({ abrirPublicacionId: undefined });
+  }, [route.params, navigation, irASeccion]);
+
+  useEffect(() => {
+    if (!publicacionPedida || seccionActiva !== 'muro') return;
+    if (!posts.some(post => post.id === publicacionPedida)) return;
+
+    const offset = postOffsets[publicacionPedida];
+    if (offset === undefined) return;
+
+    requestAnimationFrame(() => {
+      muroScrollRef.current?.scrollTo({ y: Math.max(offset - 12, 0), animated: true });
+    });
+    setPublicacionPedida(null);
+  }, [postOffsets, posts, publicacionPedida, seccionActiva]);
 
   useEffect(() => {
     if (!leccionPedidaDeOtraPestana) return;
@@ -1576,6 +1610,7 @@ export default function ComunidadScreen() {
       {/* ========================================================================= */}
       {enMuroTestimoniosORanking && (
         <ScrollView
+          ref={muroScrollRef}
           contentContainerStyle={[
             styles.content,
             {
@@ -1636,9 +1671,16 @@ export default function ComunidadScreen() {
                 return (
                   <View
                     key={post.id}
+                    onLayout={event => {
+                      const y = event.nativeEvent.layout.y;
+                      setPostOffsets(prev => (prev[post.id] === y ? prev : { ...prev, [post.id]: y }));
+                    }}
                     style={[
                       styles.postCard,
-                      { borderColor: c.border, backgroundColor: c.cardBg },
+                      {
+                        borderColor: publicacionDestacada === post.id ? c.gold : c.border,
+                        backgroundColor: c.cardBg,
+                      },
                       // Único cambio visual del post optimista: atenuado mientras se confirma. Se
                       // suma como estilo al lado de los que ya estaban, sin tocar `styles.postCard`
                       // ni reestructurar el JSX de la tarjeta.

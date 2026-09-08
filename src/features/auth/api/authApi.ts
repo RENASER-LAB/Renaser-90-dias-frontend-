@@ -1,4 +1,5 @@
 import { apiFetch, setTokenSesion } from '../../../services/http/apiClient';
+import { z } from 'zod';
 import type { DatosAlta, DatosConfirmacionSocial, EstadoSolicitud, UsuarioApi } from '../types/auth.types';
 import {
   codigoResetVerificadoSchema,
@@ -9,6 +10,12 @@ import {
   validarRespuesta,
   verificacionEmailSchema,
 } from './authSchemas';
+
+const avatarUrlResponseSchema = z.object({
+  url: z.string(),
+  bucket: z.string(),
+  ruta: z.string(),
+}).passthrough();
 
 /**
  * Endpoints de autenticación del backend Java. Acá solo vive el "cómo se llama": las reglas de
@@ -39,6 +46,65 @@ export async function iniciarSesion(email: string, contrasena: string): Promise<
 export async function perfilActual(): Promise<UsuarioApi> {
   const r = await apiFetch<unknown>('/api/v1/auth/me');
   return validarRespuesta<UsuarioApi>(usuarioApiSchema, r, 'GET /api/v1/auth/me');
+}
+
+/** Perfil enriquecido del usuario autenticado (`POST /users/me`). */
+export async function miPerfil(): Promise<UsuarioApi> {
+  const r = await apiFetch<unknown>('/api/v1/users/me', { method: 'POST' });
+  return validarRespuesta<UsuarioApi>(usuarioApiSchema, r, 'POST /api/v1/users/me');
+}
+
+export type DatosActualizarPerfil = {
+  fullName: string;
+  avatarUrl?: string | null;
+  bio?: string | null;
+  department?: string | null;
+};
+
+/** Actualiza únicamente los campos de perfil que el backend permite editar. */
+export async function actualizarMiPerfil(datos: DatosActualizarPerfil): Promise<void> {
+  await apiFetch<void>('/api/v1/users/me', {
+    method: 'PATCH',
+    body: {
+      fullName: datos.fullName.trim(),
+      avatarUrl: datos.avatarUrl ?? null,
+      bio: datos.bio?.trim() || null,
+      department: datos.department?.trim() || null,
+    },
+  });
+}
+
+/** Paso 1 del avatar: URL PUT prefirmada + ruta propia del usuario. */
+export async function solicitarUrlAvatar(tipoContenido: string): Promise<{ url: string; bucket: string; ruta: string }> {
+  const r = await apiFetch<unknown>('/api/v1/users/me/avatar/upload-url', {
+    method: 'POST',
+    body: { tipoContenido },
+  });
+  return validarRespuesta<{ url: string; bucket: string; ruta: string }>(
+    avatarUrlResponseSchema,
+    r,
+    'POST /api/v1/users/me/avatar/upload-url',
+  );
+}
+
+/** Sube los bytes directamente al almacenamiento, sin pasar la foto por el backend. */
+export async function subirAvatarAS3(url: string, uri: string, tipoContenido: string): Promise<void> {
+  const respuesta = await fetch(url, {
+    method: 'PUT',
+    headers: { 'Content-Type': tipoContenido },
+    body: await (await fetch(uri)).arrayBuffer(),
+  });
+  if (!respuesta.ok) {
+    throw new Error(`No se pudo subir la foto de perfil (S3 respondió ${respuesta.status}).`);
+  }
+}
+
+/** Paso 3 del avatar: persiste la URL pública permanente en `usuarios.avatar_url`. */
+export async function confirmarAvatar(bucket: string, ruta: string): Promise<void> {
+  await apiFetch<void>('/api/v1/users/me/avatar', {
+    method: 'PATCH',
+    body: { bucket, ruta },
+  });
 }
 
 export async function cerrarSesion(): Promise<void> {

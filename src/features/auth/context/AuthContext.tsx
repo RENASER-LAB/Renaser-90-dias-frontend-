@@ -62,6 +62,8 @@ type AuthContextType = {
   loginWithApple: () => Promise<boolean>;
   sendOtp: (email: string) => Promise<boolean>;
   verifyOtp: (name: string, email: string, otp: string) => Promise<boolean>;
+  actualizarPerfil: (datos: authApi.DatosActualizarPerfil) => Promise<void>;
+  refrescarPerfil: () => Promise<void>;
   completeOnboarding: (ficha?: FichaInicialData) => void;
   restartOnboarding: () => void;
   demoLogin: () => void;
@@ -243,6 +245,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return true;
   }, []);
 
+  const refrescarPerfil = useCallback(async () => {
+    const api = await authApi.miPerfil();
+    setUser(aUsuario(api));
+  }, []);
+
+  const actualizarPerfil = useCallback(async (datos: authApi.DatosActualizarPerfil) => {
+    await authApi.actualizarMiPerfil(datos);
+    await refrescarPerfil();
+  }, [refrescarPerfil]);
+
   const completeOnboarding = useCallback((data?: FichaInicialData) => {
     if (data) {
       setFichaData(data);
@@ -302,6 +314,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loginWithApple,
       sendOtp,
       verifyOtp,
+      actualizarPerfil,
+      refrescarPerfil,
       completeOnboarding,
       restartOnboarding,
       demoLogin,
@@ -320,6 +334,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loginWithApple,
       sendOtp,
       verifyOtp,
+      actualizarPerfil,
+      refrescarPerfil,
       completeOnboarding,
       restartOnboarding,
       demoLogin,

@@ -87,4 +87,8 @@ export const TERMINOS_CLAUSULAS = [
     num: 22,
     texto: 'Acepto que cualquier controversia derivada de este acuerdo será resuelta mediante mecanismos de mediación directa.',
   },
+  {
+    num: 23,
+    texto: 'Entiendo que las herramientas de inteligencia artificial de RENASER son de apoyo e información general, pueden equivocarse y no sustituyen la orientación profesional médica, psicológica, legal o financiera. Las decisiones y acciones que tome a partir de sus respuestas son de mi exclusiva responsabilidad.',
+  },
 ];

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import * as onboardingApi from '../api/onboardingApi';
 
 /**
- * El estado real de las 5 etapas del onboarding, para la pantalla "Tu proceso completo" (YO).
+ * El estado real de las 2 etapas actuales del onboarding, para la pantalla "Tu proceso completo" (YO).
  *
  * Antes esas cinco etapas eran data escrita a mano con `completed: true` en tres de ellas: un
  * aprendiz que no había hecho nada veía tres tildes verdes, y uno que sí había terminado veía
@@ -11,18 +11,14 @@ import * as onboardingApi from '../api/onboardingApi';
  * si había que seguir o ya estaba.
  *
  * Hoy solo **El Pacto** se puede responder con certeza: `GET /api/v1/onboarding/state` devuelve
- * `pactSignedAt`, que es el instante real de la firma. El backend guarda cuatro marcas
- * (`termsAcceptedAt`, `pactAcceptedAt`, `pactSignedAt`, `rocksSyncAcceptedAt`) y **ninguna
- * corresponde a "terminó el Cuestionario Profundo"** ni a las etapas 3, 4 y 5.
+ * `pactSignedAt`, que es el instante real de la firma. El backend todavía no tiene una marca
+ * específica para "terminó el Mapa de Renacimiento".
  *
- * Por eso las otras cuatro se muestran como pendientes en vez de completadas: **preferimos decir
- * "no sé" antes que decir "listo" sin dato** (es el mismo criterio con el que el backend deja
- * `streak` en `null` en `GetLogrosUseCase` en vez de fabricarlo). La única excepción es la etapa 2,
- * que sí puede decir "en progreso" cuando el cursor de reanudación está parado en ella.
+ * Por eso la segunda etapa se muestra como pendiente o en progreso en vez de completada: **preferimos
+ * decir "no sé" antes que decir "listo" sin dato** (es el mismo criterio con el que el backend deja
+ * `streak` en `null` en `GetLogrosUseCase` en vez de fabricarlo).
  *
- * Queda pendiente una marca por etapa en el backend. No se agregó todavía a propósito: las etapas
- * 3, 4 y 5 aún no existen y van a necesitar exactamente el mismo mecanismo — hacerlo una vez, con
- * la forma ya conocida, es mejor que cuatro parches sueltos.
+ * Queda pendiente una marca específica de finalización del Mapa de Renacimiento en el backend.
  */
 
 export type EstadoEtapa = 'completada' | 'en_progreso' | 'pendiente' | 'desconocido';

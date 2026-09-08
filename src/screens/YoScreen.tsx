@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Animated,
+  Image,
+  Easing,
   View,
   Text,
   StyleSheet,
@@ -16,15 +19,17 @@ import { useResponsive } from '../theme/responsive';
 import { useAuth } from '../context/AuthContext';
 import { useSystemBackHandler } from '../hooks/useSystemBackHandler';
 import { MicroLabel, ScreenHeader, Placeholder } from '../components/ui';
-import { Icon } from '../components/Icon';
+import { Icon, type IconName } from '../components/Icon';
 import { GoldButton } from '../components/GoldButton';
 import {
   useResumenHome,
   rotuloDeFase,
   DIAS_DEL_PROGRAMA,
 } from '../features/home/hooks/useResumenHome';
-import { CuestionarioProfundoScreen } from '../features/onboarding/screens/CuestionarioProfundoScreen';
 import { useEtapasOnboarding } from '../features/onboarding/hooks/useEtapasOnboarding';
+import { MapaRenacimientoFlow } from '../features/mapa-renacimiento/MapaRenacimientoFlow';
+import { elegirFotoDeGaleria } from '../features/habits/utils/capturarEvidencia';
+import * as authApi from '../features/auth/api/authApi';
 
 // =========================================================================
 // DATOS ESTÁTICOS
@@ -56,20 +61,77 @@ const LOGROS_DATA = [
   { id: 'l4', title: 'REY SOMÁTICO (90 DÍAS)', icon: '👑', desc: 'Graduación oficial del programa. Llevas 37 de 90 días.', unlocked: false, progress: '41%' },
 ];
 
+const METODO_FASES: ReadonlyArray<{
+  phase: string;
+  title: string;
+  icon: IconName;
+  color: string;
+  quote: string;
+  summary: string;
+  bullets: string[];
+}> = [
+  {
+    phase: 'FASE 1',
+    title: 'Comprender tu mente',
+    icon: 'brain',
+    color: '#90CAF9',
+    quote: 'No puedes transformar lo que no comprendes.',
+    summary: 'Reconoce tu mapa mental, emocional y energético para dejar de repetir en automático.',
+    bullets: [
+      'Identidad, creencias y patrones',
+      'Miedos, culpa y vergüenza',
+      'Heridas de infancia',
+      'Ansiedad y autosabotaje',
+    ],
+  },
+  {
+    phase: 'FASE 2',
+    title: 'Autoterapia Renaser',
+    icon: 'heart',
+    color: '#CE93D8',
+    quote: 'Aprendes a transformarte a ti mismo.',
+    summary: 'Regula tus emociones y cambia el diálogo interno con herramientas que puedes practicar cada día.',
+    bullets: [
+      'Reprogramación subconsciente',
+      'Meditación y respiración',
+      'Reencuadre profundo',
+      'Sanación emocional',
+    ],
+  },
+  {
+    phase: 'FASE 3',
+    title: 'Alto rendimiento personal',
+    icon: 'zap',
+    color: '#FFE082',
+    quote: 'Transformarte no basta: debes sostenerlo.',
+    summary: 'Convierte claridad en hábitos, foco y resultados sostenibles sin quemarte en el proceso.',
+    bullets: [
+      'Hábitos desde tu esencia',
+      'Rituales de enfoque profundo',
+      'Plan de energía y descanso',
+      'Libertad financiera con equilibrio',
+    ],
+  },
+];
+
+function inicialesDe(nombre: string): string {
+  const partes = nombre.trim().split(/\s+/).filter(Boolean);
+  if (!partes.length) return 'R';
+  if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
+  return `${partes[0][0]}${partes[partes.length - 1][0]}`.toUpperCase();
+}
+
 /**
- * Las 5 etapas: solo el título y el orden son fijos. El estado de cada una lo decide
+ * Las 2 etapas actuales: solo el título y el orden son fijos. El estado de cada una lo decide
  * `useEtapasOnboarding` con datos reales — antes estaba escrito acá con `completed: true` en tres
  * de ellas, así que un aprendiz que no había hecho nada veía tres tildes verdes.
  *
- * Hoy solo El Pacto tiene marca en el backend (`pactSignedAt`). Las otras cuatro se muestran
- * pendientes hasta que exista una marca por etapa; ver la nota de `useEtapasOnboarding`.
+ * Hoy solo El Pacto tiene marca en el backend (`pactSignedAt`). El Mapa de Renacimiento reúne
+ * el formulario completo de esta fase y se muestra como una única segunda etapa.
  */
 const ONBOARDING_STAGES = [
   { id: 'st1', num: 1, title: 'El Pacto', descPendiente: 'Tu acto fundacional' },
-  { id: 'st2', num: 2, title: 'Cuestionario Profundo', descPendiente: 'Quién eras y quién estás siendo' },
-  { id: 'st3', num: 3, title: 'Las 90 Variables', descPendiente: 'El mapa completo de tu punto de partida' },
-  { id: 'st4', num: 4, title: 'Diseño de Destino', descPendiente: 'Hacia dónde vas y en quién te conviertes' },
-  { id: 'st5', num: 5, title: 'Cierre de tu primera fase', descPendiente: 'El sello final de tu onboarding' },
+  { id: 'st2', num: 2, title: 'Mapa de Renacimiento', descPendiente: 'Tu mapa completo de transformación' },
 ] as const;
 
 const PACTO_CLAUSULAS = [
@@ -89,7 +151,7 @@ export default function YoScreen() {
   const { c, t } = useTheme();
   const etapasOnboarding = useEtapasOnboarding();
   const { rs, isTablet, horizontalPadding } = useResponsive();
-  const { user, logout } = useAuth();
+  const { user, logout, actualizarPerfil, refrescarPerfil } = useAuth();
   const { resumen } = useResumenHome();
   const moreSize = rs(56);
   const evoPath = 'M' + EVOLUCION.map(p => p[0] + ' ' + p[1]).join(' L');
@@ -98,16 +160,56 @@ export default function YoScreen() {
   // ESTADOS DE NAVEGACIÓN DENTRO DE LA TARJETA DEL USUARIO
   // =========================================================================
   const [activeView, setActiveView] = useState<
-    'main' | 'hub' | 'editar_perfil' | 'info_perfil' | 'evidencias' | 'logros' | 'onboarding' | 'pacto' | 'cuestionario_profundo' | 'metodo' | 'video_activacion' | 'notificaciones'
+    'main' | 'hub' | 'editar_perfil' | 'info_perfil' | 'evidencias' | 'logros' | 'onboarding' | 'pacto' | 'mapa_renacimiento' | 'metodo' | 'video_activacion' | 'notificaciones'
   >('main');
+  const [metodoFase, setMetodoFase] = useState(0);
+  const metodoAnim = useRef(new Animated.Value(1)).current;
+
+  const cambiarMetodoFase = useCallback((next: number) => {
+    const clamped = Math.max(0, Math.min(METODO_FASES.length - 1, next));
+    if (clamped === metodoFase) return;
+
+    Animated.sequence([
+      Animated.timing(metodoAnim, {
+        toValue: 0,
+        duration: 130,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }),
+      Animated.timing(metodoAnim, {
+        toValue: 1,
+        duration: 260,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }),
+    ]).start();
+    setMetodoFase(clamped);
+  }, [metodoAnim, metodoFase]);
 
   // Formulario Editar Perfil
-  const [profileName, setProfileName] = useState(user?.name || 'Sebastián Arango');
-  const [profileEmail, setProfileEmail] = useState(user?.email || 'sebastian@renaser.com');
-  const [profilePhone, setProfilePhone] = useState('+57 312 849 2011');
-  const [profileCity, setProfileCity] = useState('Medellín, Colombia');
-  const [profileBio, setProfileBio] = useState('Empresario enfocado en escala de negocio B2B y reconexión biológica de alto rendimiento.');
-  const [profileInstagram, setProfileInstagram] = useState('@sebastian.arango');
+  const [profileName, setProfileName] = useState(user?.name ?? '');
+  const [profileEmail, setProfileEmail] = useState(user?.email ?? '');
+  const profilePhone = '';
+  const [profileDepartment, setProfileDepartment] = useState(user?.department ?? '');
+  const [profileBio, setProfileBio] = useState(user?.bio ?? '');
+  const profileInstagram = '';
+  const [profileAvatar, setProfileAvatar] = useState<string | null>(user?.avatarUrl ?? null);
+  const [guardandoPerfil, setGuardandoPerfil] = useState(false);
+  const [subiendoAvatar, setSubiendoAvatar] = useState(false);
+
+  useEffect(() => {
+    setProfileName(user?.name ?? '');
+    setProfileEmail(user?.email ?? '');
+    setProfileDepartment(user?.department ?? '');
+    setProfileBio(user?.bio ?? '');
+    setProfileAvatar(user?.avatarUrl ?? null);
+  }, [user?.avatarUrl, user?.bio, user?.department, user?.email, user?.name]);
+
+  useEffect(() => {
+    void refrescarPerfil().catch(() => undefined);
+  }, [refrescarPerfil]);
+
+  const profileInitials = inicialesDe(profileName);
 
   // Notificaciones
   const [notifAlarm, setNotifAlarm] = useState(true);
@@ -131,22 +233,22 @@ export default function YoScreen() {
       return true;
     }
     return false;
-    // Con el Cuestionario Profundo abierto manda SU handler (registrado después): tiene que poder
-    // retroceder bloque por bloque, no salir de la etapa entera de un toque.
-  }, activeView !== 'main' && activeView !== 'cuestionario_profundo');
+    // Con el Mapa de Renacimiento abierto manda SU handler (registrado después): tiene que poder
+    // retroceder paso por paso, no salir de la etapa entera de un toque.
+  }, activeView !== 'main' && activeView !== 'mapa_renacimiento');
 
   /**
-   * Etapa 2 del onboarding ("Cuestionario Profundo", 8 bloques). Se devuelve ANTES del
+   * Etapa 2 del onboarding (Mapa de Renacimiento). Se devuelve ANTES del
    * `SafeAreaView` de esta pantalla porque la pantalla trae el suyo propio: anidarlos duplicaría
    * los márgenes de seguridad del sistema.
    */
-  if (activeView === 'cuestionario_profundo') {
-    return (
-      <CuestionarioProfundoScreen
-        onComplete={() => setActiveView('onboarding')}
-        onBack={() => setActiveView('onboarding')}
+  if (activeView === 'mapa_renacimiento') {
+    return user ? (
+      <MapaRenacimientoFlow
+        userId={user.id}
+        onSalir={() => setActiveView('onboarding')}
       />
-    );
+    ) : null;
   }
 
   return (
@@ -175,7 +277,11 @@ export default function YoScreen() {
             style={[styles.userCard, { borderColor: c.border, backgroundColor: c.cardBg }]}
           >
             <View style={[styles.avatar, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-              <Icon name="user" size={20} color={c.gold} />
+              {profileAvatar ? (
+                <Image source={{ uri: profileAvatar }} style={styles.avatarImage} accessibilityLabel="Foto de perfil" />
+              ) : (
+                <Text style={styles.avatarInitials}>{profileInitials}</Text>
+              )}
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[t.cardTitle, { color: c.textStrong }]}>{profileName}</Text>
@@ -348,7 +454,11 @@ export default function YoScreen() {
           {/* Banner de Usuario */}
           <View style={[styles.profileBanner, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
             <View style={[styles.avatarLg, { borderColor: c.gold, backgroundColor: '#292215' }]}>
-              <Text style={{ color: '#E5C689', fontSize: 18, fontWeight: '900' }}>SA</Text>
+              {profileAvatar ? (
+                <Image source={{ uri: profileAvatar }} style={styles.avatarImageLarge} accessibilityLabel="Foto de perfil" />
+              ) : (
+                <Text style={{ color: '#E5C689', fontSize: 18, fontWeight: '900' }}>{profileInitials}</Text>
+              )}
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 15 }]}>{profileName}</Text>
@@ -458,14 +568,18 @@ export default function YoScreen() {
                   esto es solo el acceso desde la app. Recuperable del historial de git si vuelve. */}
               <View style={[styles.groupedBox, { borderColor: c.border, backgroundColor: c.cardBg }]}>
                 <Pressable
-                  onPress={() => setActiveView('metodo')}
+                  onPress={() => {
+                    setMetodoFase(0);
+                    metodoAnim.setValue(1);
+                    setActiveView('metodo');
+                  }}
                   style={[styles.menuOptionRow, { borderBottomColor: c.divider }]}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                     <Text style={{ fontSize: 16 }}>✨</Text>
                     <View>
                       <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>El Método Renaser</Text>
-                      <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>Las 5 dimensiones y principios de vida</Text>
+                      <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>3 fases para comprenderte y sostener tu transformación</Text>
                     </View>
                   </View>
                   <Icon name="chevron" size={12} color={c.gold} />
@@ -524,7 +638,7 @@ export default function YoScreen() {
       )}
 
       {/* ========================================================================= */}
-      {/* 3. SUB-VISTA: 🎙️ MI ONBOARDING (5 ETAPAS EXACTAS)                         */}
+      {/* 3. SUB-VISTA: 🎙️ MI ONBOARDING (2 ETAPAS)                                */}
       {/* ========================================================================= */}
       {activeView === 'onboarding' && (
         <ScrollView
@@ -556,7 +670,7 @@ export default function YoScreen() {
           <View style={{ alignItems: 'center', marginTop: 10 }}>
             <Text style={[t.sectionTitle, { color: c.textStrong, fontSize: 18 }]}>Tu proceso completo</Text>
             <Text style={[t.body, { color: c.textSoft, fontSize: 11, textAlign: 'center', marginTop: 4, lineHeight: 16 }]}>
-              Cinco etapas para poner por escrito quién eras, quién eres y en quién te estás convirtiendo. Cada etapa se guarda al terminarla.
+              Dos etapas para poner por escrito quién eras, quién eres y en quién te estás convirtiendo. Cada etapa se guarda al terminarla.
             </Text>
           </View>
 
@@ -588,7 +702,7 @@ export default function YoScreen() {
             </Text>
           </View>
 
-          {/* 5 Etapas */}
+          {/* 2 Etapas */}
           <View style={{ gap: 8, marginTop: 12, paddingBottom: 28 }}>
             {ONBOARDING_STAGES.map(stage => {
               // El estado de cada etapa sale de datos reales, no del array. Solo El Pacto tiene
@@ -611,15 +725,10 @@ export default function YoScreen() {
                 onPress={() => {
                   if (stage.id === 'st1') {
                     setActiveView('pacto');
-                  } else if (stage.id === 'st2') {
-                    // Etapa 2 — Cuestionario Profundo. Se entra siempre (no solo si está
-                    // pendiente): la pantalla rehidrata lo ya respondido, así que "toca para
-                    // revisar" y "continuar donde quedaste" son la misma acción.
-                    setActiveView('cuestionario_profundo');
                   } else {
-                    // Etapas 3, 4 y 5: todavía no existen. Se dice eso, en vez de un
-                    // "Continuando etapa activa..." que no continúa nada.
-                    Alert.alert(stage.title, 'Esta etapa todavía no está disponible.');
+                    // Etapa 2 — el Mapa de Renacimiento contiene el formulario completo y
+                    // reanuda automáticamente desde el paso donde la persona quedó.
+                    setActiveView('mapa_renacimiento');
                   }
                 }}
                 style={[
@@ -946,10 +1055,33 @@ export default function YoScreen() {
 
           <View style={{ alignItems: 'center', marginTop: 14 }}>
             <View style={[styles.avatarLg, { borderColor: c.gold, backgroundColor: '#292215', width: 70, height: 70, borderRadius: 35 }]}>
-              <Text style={{ color: '#E5C689', fontSize: 24, fontWeight: '900' }}>SA</Text>
+              {profileAvatar ? (
+                <Image source={{ uri: profileAvatar }} style={styles.avatarImageLarge} accessibilityLabel="Foto de perfil" />
+              ) : (
+                <Text style={{ color: '#E5C689', fontSize: 24, fontWeight: '900' }}>{profileInitials}</Text>
+              )}
             </View>
-            <Pressable onPress={() => Alert.alert('Cambiar Foto', 'Selecciona una foto desde tu galería.')} style={{ marginTop: 6 }}>
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>Cambiar Foto 📷</Text>
+            <Pressable
+              disabled={subiendoAvatar}
+              onPress={async () => {
+                const archivo = await elegirFotoDeGaleria();
+                if (!archivo) return;
+                setSubiendoAvatar(true);
+                try {
+                  const subida = await authApi.solicitarUrlAvatar(archivo.mimeType);
+                  await authApi.subirAvatarAS3(subida.url, archivo.uri, archivo.mimeType);
+                  await authApi.confirmarAvatar(subida.bucket, subida.ruta);
+                  await refrescarPerfil();
+                  Alert.alert('Foto actualizada', 'Tu foto de perfil ya está guardada en tu cuenta.');
+                } catch (error) {
+                  Alert.alert('No se pudo actualizar la foto', error instanceof Error ? error.message : 'Inténtalo de nuevo.');
+                } finally {
+                  setSubiendoAvatar(false);
+                }
+              }}
+              style={{ marginTop: 6 }}
+            >
+              <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>{subiendoAvatar ? 'Subiendo…' : 'Cambiar Foto 📷'}</Text>
             </Pressable>
           </View>
 
@@ -967,8 +1099,9 @@ export default function YoScreen() {
               <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>CORREO ELECTRÓNICO:</Text>
               <TextInput
                 value={profileEmail}
-                onChangeText={setProfileEmail}
                 keyboardType="email-address"
+                editable={false}
+                placeholder="Correo de la cuenta"
                 style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBg, color: c.text }]}
               />
             </View>
@@ -977,19 +1110,40 @@ export default function YoScreen() {
               <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>TELÉFONO / WHATSAPP:</Text>
               <TextInput
                 value={profilePhone}
-                onChangeText={setProfilePhone}
                 keyboardType="phone-pad"
+                editable={false}
+                placeholder="No registrado en tu cuenta"
+                placeholderTextColor={c.micro}
                 style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBg, color: c.text }]}
               />
+              <Text style={[t.micro, { color: c.micro, fontSize: 10 }]}>El teléfono se habilitará cuando exista en el perfil del servidor.</Text>
             </View>
           </View>
 
           <GoldButton
-            label="✓ GUARDAR CAMBIOS"
-            onPress={() => {
-              Alert.alert('¡Perfil Guardado! 🦅', 'Tus datos han sido actualizados con éxito.');
-              setActiveView('hub');
+            label={guardandoPerfil ? 'GUARDANDO…' : '✓ GUARDAR CAMBIOS'}
+            onPress={async () => {
+              if (!profileName.trim()) {
+                Alert.alert('Falta tu nombre', 'Escribe tu nombre completo para guardar el perfil.');
+                return;
+              }
+              setGuardandoPerfil(true);
+              try {
+                await actualizarPerfil({
+                  fullName: profileName,
+                  avatarUrl: profileAvatar,
+                  bio: profileBio,
+                  department: profileDepartment,
+                });
+                Alert.alert('Perfil guardado', 'Tus datos reales ya están actualizados en tu cuenta.');
+                setActiveView('hub');
+              } catch (error) {
+                Alert.alert('No se pudo guardar', error instanceof Error ? error.message : 'Inténtalo de nuevo.');
+              } finally {
+                setGuardandoPerfil(false);
+              }
             }}
+            disabled={guardandoPerfil}
             style={{ width: '100%', marginTop: 16, marginBottom: 28 }}
           />
         </ScrollView>
@@ -1037,10 +1191,10 @@ export default function YoScreen() {
             </View>
 
             <View style={{ gap: 4 }}>
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>CIUDAD / PAÍS:</Text>
+              <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>DEPARTAMENTO / ÁREA:</Text>
               <TextInput
-                value={profileCity}
-                onChangeText={setProfileCity}
+                value={profileDepartment}
+                onChangeText={setProfileDepartment}
                 style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBg, color: c.text }]}
               />
             </View>
@@ -1049,18 +1203,35 @@ export default function YoScreen() {
               <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>INSTAGRAM:</Text>
               <TextInput
                 value={profileInstagram}
-                onChangeText={setProfileInstagram}
+                editable={false}
+                placeholder="No registrado en tu cuenta"
+                placeholderTextColor={c.micro}
                 style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBg, color: c.text }]}
               />
+              <Text style={[t.micro, { color: c.micro, fontSize: 10 }]}>Instagram se habilitará cuando exista en el perfil del servidor.</Text>
             </View>
           </View>
 
           <GoldButton
-            label="✓ GUARDAR INFORMACIÓN"
-            onPress={() => {
-              Alert.alert('Información Guardada 🦅', 'Tus datos de biografía y redes han sido actualizados.');
-              setActiveView('hub');
+            label={guardandoPerfil ? 'GUARDANDO…' : '✓ GUARDAR INFORMACIÓN'}
+            onPress={async () => {
+              setGuardandoPerfil(true);
+              try {
+                await actualizarPerfil({
+                  fullName: profileName,
+                  avatarUrl: profileAvatar,
+                  bio: profileBio,
+                  department: profileDepartment,
+                });
+                Alert.alert('Información guardada', 'Tu biografía y departamento ya están actualizados en tu cuenta.');
+                setActiveView('hub');
+              } catch (error) {
+                Alert.alert('No se pudo guardar', error instanceof Error ? error.message : 'Inténtalo de nuevo.');
+              } finally {
+                setGuardandoPerfil(false);
+              }
             }}
+            disabled={guardandoPerfil}
             style={{ width: '100%', marginTop: 16, marginBottom: 28 }}
           />
         </ScrollView>
@@ -1096,28 +1267,118 @@ export default function YoScreen() {
             </View>
           </View>
 
-          <View style={{ gap: 10, marginTop: 14, paddingBottom: 28 }}>
-            <View style={[styles.groupedBox, { borderColor: c.border, backgroundColor: c.cardBg, padding: 14, gap: 6 }]}>
-              <Text style={[t.cardTitle, { color: '#90CAF9', fontSize: 13 }]}>1. CUERPO: BIOLOGÍA & HORMONAS</Text>
-              <Text style={[t.body, { color: c.textSoft, fontSize: 11, lineHeight: 16 }]}>
-                Hackeo del ritmo circadiano, desinflamación fascial con tensión isométrica y nutrición celular sin picos de cortisol.
-              </Text>
-            </View>
+          {(() => {
+            const fase = METODO_FASES[metodoFase];
+            const rotateY = metodoAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: ['-8deg', '0deg'],
+            });
+            const scale = metodoAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0.96, 1],
+            });
+            const opacity = metodoAnim.interpolate({
+              inputRange: [0, 0.2, 1],
+              outputRange: [0.25, 0.9, 1],
+            });
 
-            <View style={[styles.groupedBox, { borderColor: c.border, backgroundColor: c.cardBg, padding: 14, gap: 6 }]}>
-              <Text style={[t.cardTitle, { color: '#CE93D8', fontSize: 13 }]}>2. MENTE: FOCO & DEEP WORK</Text>
-              <Text style={[t.body, { color: c.textSoft, fontSize: 11, lineHeight: 16 }]}>
-                Eliminación de la fatiga por decisión y bloques ininterrumpidos de 90 minutos de máximo enfoque comercial.
-              </Text>
-            </View>
+            return (
+              <View style={styles.metodoContent}>
+                <View style={styles.metodoHero}>
+                  <View style={[styles.metodoOrb, { borderColor: fase.color, backgroundColor: c.cardBgAlt }]}>
+                    <Icon name="spark" size={24} color={fase.color} />
+                  </View>
+                  <Text style={[t.sectionTitle, styles.metodoHeroTitle, { color: c.textStrong }]}>El Método Renaser</Text>
+                  <Text style={[t.body, styles.metodoHeroSubtitle, { color: c.textSoft }]}>3 fases para comprenderte, transformarte y sostener tu evolución.</Text>
+                </View>
 
-            <View style={[styles.groupedBox, { borderColor: c.border, backgroundColor: c.cardBg, padding: 14, gap: 6 }]}>
-              <Text style={[t.cardTitle, { color: '#FFE082', fontSize: 13 }]}>3. NEGOCIO: LIBERTAD FINANCIERA</Text>
-              <Text style={[t.body, { color: c.textSoft, fontSize: 11, lineHeight: 16 }]}>
-                Estrategia 80/20, ofertas de alto valor y escala de liderazgo sin quemarse biológicamente.
-              </Text>
-            </View>
-          </View>
+                <Animated.View
+                  style={[
+                    styles.metodoPhaseCard,
+                    {
+                      borderColor: fase.color,
+                      backgroundColor: c.cardBg,
+                      opacity,
+                      transform: [{ perspective: 900 }, { rotateY }, { scale }],
+                    },
+                  ]}
+                >
+                  <View style={styles.metodoPhaseHeader}>
+                    <View style={[styles.metodoPhaseIcon, { borderColor: fase.color, backgroundColor: c.cardBgAlt }]}>
+                      <Icon name={fase.icon} size={23} color={fase.color} />
+                    </View>
+                    <View style={styles.metodoPhaseHeading}>
+                      <Text style={[t.micro, { color: fase.color, fontWeight: '700', letterSpacing: 1 }]}>{fase.phase}</Text>
+                      <Text style={[t.cardTitle, styles.metodoPhaseTitle, { color: c.textStrong }]}>{fase.title}</Text>
+                    </View>
+                  </View>
+
+                  <Text style={[styles.metodoQuote, { color: fase.color }]}>{`“${fase.quote}”`}</Text>
+                  <Text style={[t.body, styles.metodoSummary, { color: c.textSoft }]}>{fase.summary}</Text>
+
+                  <View style={styles.metodoBullets}>
+                    {fase.bullets.map((bullet) => (
+                      <View key={bullet} style={styles.metodoBulletRow}>
+                        <View style={[styles.metodoBulletDot, { backgroundColor: fase.color }]} />
+                        <Text style={[t.body, styles.metodoBulletText, { color: c.textSoft }]}>{bullet}</Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  <View style={[styles.metodoProgressTrack, { backgroundColor: c.divider }]}>
+                    <View style={[styles.metodoProgressFill, { width: `${((metodoFase + 1) / METODO_FASES.length) * 100}%`, backgroundColor: fase.color }]} />
+                  </View>
+                  <Text style={[t.micro, styles.metodoProgressLabel, { color: c.micro }]}>FASE {metodoFase + 1} DE {METODO_FASES.length}</Text>
+                </Animated.View>
+
+                <View style={styles.metodoNav}>
+                  <Pressable
+                    accessibilityLabel="Ver fase anterior"
+                    disabled={metodoFase === 0}
+                    onPress={() => cambiarMetodoFase(metodoFase - 1)}
+                    style={[styles.metodoNavButton, { borderColor: c.border, backgroundColor: c.cardBg }, metodoFase === 0 && styles.metodoNavButtonDisabled]}
+                  >
+                    <View style={{ transform: [{ rotate: '180deg' }] }}>
+                      <Icon name="chevron" size={18} color={metodoFase === 0 ? c.micro : c.gold} />
+                    </View>
+                  </Pressable>
+
+                  <View style={styles.metodoDots}>
+                    {METODO_FASES.map((item, index) => (
+                      <Pressable
+                        key={item.phase}
+                        accessibilityLabel={`Ir a ${item.phase.toLowerCase()}`}
+                        onPress={() => cambiarMetodoFase(index)}
+                        style={[styles.metodoDot, { backgroundColor: index === metodoFase ? item.color : c.divider }, index === metodoFase && styles.metodoDotActive]}
+                      />
+                    ))}
+                  </View>
+
+                  <Pressable
+                    accessibilityLabel="Ver fase siguiente"
+                    disabled={metodoFase === METODO_FASES.length - 1}
+                    onPress={() => cambiarMetodoFase(metodoFase + 1)}
+                    style={[styles.metodoNavButton, { borderColor: c.gold, backgroundColor: c.cardBgAlt }, metodoFase === METODO_FASES.length - 1 && styles.metodoNavButtonDisabled]}
+                  >
+                    <Icon name="chevron" size={18} color={metodoFase === METODO_FASES.length - 1 ? c.micro : c.gold} />
+                  </Pressable>
+                </View>
+
+                <Pressable
+                  disabled={metodoFase === METODO_FASES.length - 1}
+                  onPress={() => cambiarMetodoFase(metodoFase + 1)}
+                  style={[styles.metodoNextButton, { borderColor: fase.color, backgroundColor: c.cardBgAlt }, metodoFase === METODO_FASES.length - 1 && styles.metodoNextButtonDisabled]}
+                >
+                  <Text style={[t.cardTitle, { color: metodoFase === METODO_FASES.length - 1 ? c.micro : fase.color, fontSize: 13 }]}>
+                    {metodoFase === METODO_FASES.length - 1 ? 'Método completo' : 'Explorar siguiente fase'}
+                  </Text>
+                  {metodoFase < METODO_FASES.length - 1 && <Icon name="arrow" size={16} color={fase.color} />}
+                </Pressable>
+
+                <Text style={[t.micro, styles.metodoHint, { color: c.micro }]}>Lee una fase en 20 segundos y vuelve cuando quieras.</Text>
+              </View>
+            );
+          })()}
         </ScrollView>
       )}
 
@@ -1246,9 +1507,40 @@ export default function YoScreen() {
 
 const styles = StyleSheet.create({
   content: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 28 },
+  metodoContent: { gap: 14, paddingTop: 16, paddingBottom: 34 },
+  metodoHero: { alignItems: 'center', gap: 8, paddingHorizontal: 12 },
+  metodoOrb: { width: 58, height: 58, borderRadius: 29, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
+  metodoHeroTitle: { fontSize: 24, textAlign: 'center' },
+  metodoHeroSubtitle: { fontSize: 14, lineHeight: 20, textAlign: 'center', maxWidth: 340 },
+  metodoPhaseCard: { borderWidth: 1.5, borderRadius: 22, padding: 18, gap: 13, minHeight: 330 },
+  metodoPhaseHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  metodoPhaseIcon: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  metodoPhaseHeading: { flex: 1, gap: 3 },
+  metodoPhaseTitle: { fontSize: 19, lineHeight: 24 },
+  metodoQuote: { fontSize: 15, lineHeight: 21, fontStyle: 'italic' },
+  metodoSummary: { fontSize: 14.5, lineHeight: 21 },
+  metodoBullets: { gap: 8, paddingTop: 2 },
+  metodoBulletRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 9 },
+  metodoBulletDot: { width: 6, height: 6, borderRadius: 3, marginTop: 7 },
+  metodoBulletText: { flex: 1, fontSize: 14, lineHeight: 19 },
+  metodoProgressTrack: { height: 5, borderRadius: 3, overflow: 'hidden', marginTop: 2 },
+  metodoProgressFill: { height: '100%', borderRadius: 3 },
+  metodoProgressLabel: { fontSize: 10, letterSpacing: 1.2, textAlign: 'right' },
+  metodoNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 },
+  metodoNavButton: { width: 50, height: 50, borderRadius: 25, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  metodoNavButtonDisabled: { opacity: 0.4 },
+  metodoDots: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  metodoDot: { width: 8, height: 8, borderRadius: 4 },
+  metodoDotActive: { width: 24, borderRadius: 5 },
+  metodoNextButton: { minHeight: 50, borderWidth: 1, borderRadius: 15, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
+  metodoNextButtonDisabled: { opacity: 0.65 },
+  metodoHint: { fontSize: 12, lineHeight: 17, textAlign: 'center' },
   userCard: { marginTop: 12, borderWidth: 1, borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 14 },
   avatar: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   avatarLg: { width: 50, height: 50, borderRadius: 25, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  avatarImage: { width: '100%', height: '100%', borderRadius: 22 },
+  avatarImageLarge: { width: '100%', height: '100%', borderRadius: 35 },
+  avatarInitials: { color: '#E5C689', fontSize: 15, fontWeight: '900' },
   profileBanner: { marginTop: 12, borderWidth: 1.5, borderRadius: 20, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 14 },
   stat: { flex: 1, borderWidth: 1, borderRadius: 14, paddingVertical: 12, alignItems: 'center' },
   more: { borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },

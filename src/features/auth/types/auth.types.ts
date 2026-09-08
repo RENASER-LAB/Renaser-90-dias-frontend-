@@ -78,4 +78,6 @@ export type User = {
   role: string;
   status: string;
   avatarUrl: string | null;
+  bio?: string | null;
+  department?: string | null;
 };

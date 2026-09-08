@@ -14,5 +14,7 @@ export function aUsuario(api: UsuarioApi): User {
     role: api.role,
     status: api.status,
     avatarUrl: api.avatarUrl,
+    bio: api.bio ?? null,
+    department: api.department ?? null,
   };
 }
