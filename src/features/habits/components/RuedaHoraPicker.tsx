@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { NativeScrollEvent, NativeSyntheticEvent, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { NativeScrollEvent, NativeSyntheticEvent, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useTheme } from '../../../theme/ThemeContext';
 
@@ -12,6 +12,9 @@ import { useTheme } from '../../../theme/ThemeContext';
  * Sin dependencias nuevas: dos `ScrollView` con `snapToInterval`, igual criterio que
  * `HoraPickerModal` (nada de paquetes nativos nuevos mientras se prueba por Expo Go).
  */
+
+/** Cuanto tiene que quedarse quieta la rueda antes de avisarle al formulario. */
+const MS_QUIETO = 140;
 
 const ALTO_ITEM = 44;
 const FILAS_VISIBLES = 3;
@@ -46,7 +49,13 @@ interface RuedaProps {
 function Rueda({ etiqueta, valores, valorInicial, onCambiar }: RuedaProps) {
   const { c, t } = useTheme();
   const scrollRef = useRef<ScrollView>(null);
+  const temporizador = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [seleccionado, setSeleccionado] = useState(valorInicial);
+
+  // Un timeout vivo despues de desmontar avisaria de un valor que ya no se esta editando.
+  useEffect(() => () => {
+    if (temporizador.current) clearTimeout(temporizador.current);
+  }, []);
 
   /**
    * Posiciona la rueda en el valor que ya rige.
@@ -65,33 +74,33 @@ function Rueda({ etiqueta, valores, valorInicial, onCambiar }: RuedaProps) {
     scrollRef.current?.scrollTo({ y: indice * ALTO_ITEM, animated: false });
   }, [valorInicial, valores]);
 
-  const onFinDeScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const offsetY = e.nativeEvent.contentOffset.y;
+  const valorEnOffset = (offsetY: number) => {
     const indice = Math.max(0, Math.min(valores.length - 1, Math.round(offsetY / ALTO_ITEM)));
-    const valor = valores[indice];
+    return valores[indice];
+  };
+
+  const onFinDeScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const valor = valorEnOffset(e.nativeEvent.contentOffset.y);
     setSeleccionado(valor);
     onCambiar(valor);
   };
 
-  // En web, el ratón y el teclado no garantizan los eventos de fin de arrastre de RN.
-  // El select mantiene visible exactamente el valor que se comunica al formulario.
-  if (Platform.OS === 'web') {
-    return React.createElement('select', {
-      'aria-label': etiqueta,
-      value: seleccionado,
-      onChange: (event: React.ChangeEvent<HTMLSelectElement>) => {
-        const valor = Number(event.target.value);
-        setSeleccionado(valor);
-        onCambiar(valor);
-      },
-      style: {
-        flex: 1, minWidth: 0, minHeight: 52, width: '100%',
-        color: c.textStrong, backgroundColor: c.cardBgAlt,
-        border: `1px solid ${c.gold}`, borderRadius: 12,
-        fontFamily: 'Jost_500Medium', fontSize: 24, padding: 10,
-      },
-    }, valores.map(valor => React.createElement('option', { key: valor, value: valor }, aDosDigitos(valor))));
-  }
+  /**
+   * En WEB este es el unico evento que llega. `onMomentumScrollEnd` y `onScrollEndDrag` son de la
+   * gesture de RN: con rueda de mouse o teclado no se disparan nunca, asi que la rueda se movia y
+   * el formulario se quedaba con el valor viejo — el sintoma que llevo a reemplazarla por un
+   * `<select>` y perder el diseño.
+   *
+   * Se resuelve sin tirar la rueda: `onScroll` marca el valor visible en el acto, y el aviso al
+   * formulario se manda cuando el scroll se queda quieto {@link MS_QUIETO} ms. Ese respiro es lo
+   * que evita mandar cincuenta valores intermedios mientras el dedo o la rueda todavia se mueven.
+   */
+  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const valor = valorEnOffset(e.nativeEvent.contentOffset.y);
+    setSeleccionado(valor);
+    if (temporizador.current) clearTimeout(temporizador.current);
+    temporizador.current = setTimeout(() => onCambiar(valor), MS_QUIETO);
+  };
 
   return (
     <ScrollView
@@ -102,6 +111,8 @@ function Rueda({ etiqueta, valores, valorInicial, onCambiar }: RuedaProps) {
       decelerationRate="fast"
       contentContainerStyle={{ paddingVertical: PADDING_VERTICAL }}
       contentOffset={{ x: 0, y: valorInicial * ALTO_ITEM }}
+      onScroll={onScroll}
+      scrollEventThrottle={16}
       onMomentumScrollEnd={onFinDeScroll}
       onScrollEndDrag={onFinDeScroll}
     >
@@ -147,14 +158,16 @@ export function RuedaHoraPicker({ horaInicial, minutoInicial, onCambiar }: Rueda
 
   return (
     <View style={styles.contenedor}>
-      {/* Franja central resaltada, fija, no scrollea — marca el valor elegido. */}
-      {Platform.OS !== 'web' && <View
+      {/* Franja central resaltada, fija, no scrollea — marca el valor elegido. En web tambien:
+          se habia apagado cuando la rueda se reemplazo por un `<select>`, y sin ella el diseño
+          pierde justo la pieza que dice cual de los tres numeros visibles es el elegido. */}
+      <View
         pointerEvents="none"
         style={[
           styles.franjaCentral,
           { top: ALTO_ITEM, height: ALTO_ITEM, borderColor: c.gold },
         ]}
-      />}
+      />
       <Rueda
         etiqueta="Hora (formato de 24 horas)"
         valores={HORAS}
