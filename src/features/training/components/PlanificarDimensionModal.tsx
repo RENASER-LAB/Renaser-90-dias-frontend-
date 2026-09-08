@@ -19,6 +19,8 @@ import {
   aFechaIso,
   DIAS_DEL_PLAN,
   NOMBRE_ISO_DEL_DIA,
+  diasDelMesDeLaSemana,
+  esPlanificable,
   type DiaDelPlan,
 } from '../../habits/utils/semanaDelPlan';
 import {
@@ -233,6 +235,16 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
   const [huboEscritura, setHuboEscritura] = useState(false);
 
   const hoyIso = aFechaIso(new Date());
+
+  /**
+   * El día del mes (`09`) de cada día de la semana que se está mostrando, para que la pastilla diga
+   * "M 09" y no solo "M": sin el número no se sabe a qué martes le está pegando el cambio.
+   *
+   * `useMemo` atado a `visible` y no suelto en cada render: se construye a partir de `new Date()`,
+   * así que recalcularlo dejaría que la semana se corriera a mitad de una interacción si el reloj
+   * cruza la medianoche.
+   */
+  const diasDelMes = useMemo(() => diasDelMesDeLaSemana(), [visible]);
 
   useEffect(() => {
     if (!visible) return;
@@ -757,7 +769,13 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
         <Icon name="chevron" size={14} color={c.chevron} />
 
         {h.isDeactivatable === false ? (
-          <Pressable onPress={() => alternarActivo(h)} hitSlop={10} style={styles.candado}>
+          // SIN `hitSlop`: el candado ya mide 48×48, de sobra para el dedo (AGENTS.md §4), y el
+          // hitSlop de 10px le agregaba área hacia la IZQUIERDA — se comía los 8px de `gap` y
+          // llegaba a tapar el chevron. Como un Pressable anidado se queda con el toque, tocar la
+          // flecha de "abrir" en un hábito OBLIGATORIO disparaba "no se puede pausar" en vez de
+          // abrir el editor: la hora de los obligatorios no había forma de cambiarla desde acá.
+          // Los no obligatorios llevan un Switch en ese lugar, sin hitSlop, y por eso no fallaban.
+          <Pressable onPress={() => alternarActivo(h)} style={styles.candado}>
             <Icon name="lock" size={16} color={c.tabInactive} />
           </Pressable>
         ) : (
@@ -1057,19 +1075,24 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                   const corre = diasDe(habitoEnEdicion)[dia];
                   const editando = diasEnEdicion.includes(dia);
                   const delDia = horarioSemanal[dia];
+                  // D-98/D-91: el día en curso y los ya pasados no se planifican. El servidor
+                  // empieza a contar en `hoy.plusDays(1)`, así que guardar sobre hoy no cambiaría
+                  // hoy — dejarlo tocable sería ofrecer algo que el backend no va a hacer.
+                  const planificable = esPlanificable(dia);
+                  const bloqueado = !corre || !planificable;
                   return (
                     <Pressable
                       key={dia}
                       // Un día en que el hábito NO corre no se puede editar: la hora de un día que
                       // no existe no significa nada. Eso lo decide el catálogo, no el aprendiz.
-                      onPress={() => corre && alternarDia(dia)}
-                      disabled={!corre}
+                      onPress={() => !bloqueado && alternarDia(dia)}
+                      disabled={bloqueado}
                       style={[
                         styles.pastillaDia,
                         {
                           borderColor: editando ? c.gold : c.border,
                           backgroundColor: editando ? c.gold : 'transparent',
-                          opacity: corre ? 1 : 0.35,
+                          opacity: bloqueado ? 0.35 : 1,
                         },
                       ]}
                     >
@@ -1081,7 +1104,22 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                       >
                         {dia.charAt(0)}
                       </Text>
-                      {corre && (
+                      {/* El día del mes: convierte "el martes" en "el martes 09". */}
+                      <Text
+                        style={[
+                          t.micro,
+                          { fontSize: 9.5, fontWeight: '700', color: editando ? c.onGold : c.textSoft },
+                        ]}
+                      >
+                        {diasDelMes[dia]}
+                      </Text>
+                      {/* Un candado en vez de la hora cuando el día ya no se puede planificar:
+                          atenuarlo solo diría "algo pasa acá", y el candado dice qué pasa. Mismo
+                          criterio que el interruptor bloqueado de `PlanScreen`. */}
+                      {corre && !planificable && (
+                        <Icon name="lock" size={11} color={c.tabInactive} />
+                      )}
+                      {corre && planificable && (
                         <Text
                           style={[
                             t.micro,
@@ -1108,7 +1146,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
               </View>
               <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5, marginTop: 5, lineHeight: 14 }]}>
                 {diasEnEdicion.length === 0
-                  ? 'Tocá uno o varios días para darles su propia hora. Lo que guardes acá rige el resto, desde mañana.'
+                  ? 'Tocá uno o varios días para darles su propia hora. Lo de hoy y lo que ya pasó va con candado: se planifica de mañana en adelante.'
                   : `Solo ${diasEnEdicion.join(', ').toLowerCase()}, todas las semanas. El día en curso no se reacomoda.`}
               </Text>
 
@@ -1446,10 +1484,12 @@ const styles = StyleSheet.create({
     gap: 6,
     marginTop: 6,
   },
-  // Alto para dos renglones: la letra del día y la hora que rige ese día.
+  // Alto para TRES renglones: la letra del día, su número del mes y la hora que rige ese día.
+  // Subió de 48 a 58 al agregarse el número: con 48 los tres se apretaban y el de la hora quedaba
+  // recortado en pantallas compactas. Sigue por encima del mínimo de AGENTS.md §4.
   pastillaDia: {
     flex: 1,
-    minHeight: 48,
+    minHeight: 58,
     paddingVertical: 4,
     borderRadius: 10,
     borderWidth: 1.2,
@@ -1556,9 +1596,11 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
   },
+  // 48×48 y no 44: es el mínimo cómodo de AGENTS.md §4, y hace innecesario el `hitSlop` que le
+  // robaba el toque al chevron de la fila. Crece 2px por lado, que caben en el `gap` de 8.
   candado: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
   },

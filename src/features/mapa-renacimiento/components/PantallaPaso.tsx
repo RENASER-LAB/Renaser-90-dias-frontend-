@@ -8,6 +8,23 @@ import { useTheme } from '../../../theme/ThemeContext';
 import { PasoCabecera } from './Piezas';
 
 /**
+ * Modo recorrido libre: deja avanzar sin completar los campos.
+ *
+ * Cada vista calcula su propio `valido` con las reglas del manual (§3, §4) y con eso apaga el
+ * botón. Eso es correcto para el aprendiz, pero impide **recorrer** el flujo para ver qué pide
+ * cada paso — que es justo lo que hace falta mientras el mapa se está revisando.
+ *
+ * Mismo criterio que `MAPA_DIA7_HABILITADO` en `HoyScreen`: suelto en desarrollo, y en un build
+ * publicado solo si alguien lo enciende a propósito con `EXPO_PUBLIC_MAPA_LIBRE=on`. Por defecto,
+ * en producción, las reglas siguen exigiéndose igual que antes.
+ *
+ * Las reglas **no se tocaron**: `objetivoValido`, `definicionDeTerminado` y las demás siguen
+ * calculándose y los avisos de calidad se siguen mostrando. Lo único que cambia es que el botón
+ * deja de estar bloqueado — se ve lo que falta, pero no frena.
+ */
+const RECORRIDO_LIBRE = __DEV__ || process.env.EXPO_PUBLIC_MAPA_LIBRE === 'on';
+
+/**
  * Esqueleto común de V01–V10: cabecera con el paso, contenido que se desplaza, y la acción
  * principal FUERA del scroll — fija abajo, así queda visible cuando se abre el teclado
  * (manual §2.1 "Teclado"). `onAtras` conserva los datos; nunca reinicia nada.
@@ -43,7 +60,15 @@ export function PantallaPaso({
           {children}
         </ScrollView>
         <View style={[styles.pie, { paddingHorizontal: horizontalPadding, borderTopColor: c.divider, backgroundColor: c.bg }]}>
-          <GoldButton label={boton.label} onPress={boton.onPress} disabled={boton.disabled} loading={boton.loading} icon="arrow" />
+          {/* En recorrido libre el botón nunca se bloquea por campos incompletos. `loading` sí
+              se respeta siempre: eso no es una regla de negocio, es que hay algo en vuelo. */}
+          <GoldButton
+            label={boton.label}
+            onPress={boton.onPress}
+            disabled={RECORRIDO_LIBRE ? false : boton.disabled}
+            loading={boton.loading}
+            icon="arrow"
+          />
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

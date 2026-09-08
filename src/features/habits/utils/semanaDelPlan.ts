@@ -60,6 +60,29 @@ export const INDICE_DE_HOY = (new Date().getDay() + 6) % 7;
 export const MOSTRAR_SEMANA_SIGUIENTE = INDICE_DE_HOY === DIAS_DEL_PLAN.length - 1;
 
 /**
+ * `true` si a ese día se le puede planificar el horario.
+ *
+ * Es D-98 —"lo que se planifica es de mañana en adelante"— dicho como pregunta: **el día en curso
+ * y los ya pasados no se tocan**. No es una decisión de pantalla, es la regla del backend: D-91,
+ * `el dia en curso NO se toca, sin excepciones`. `PreferenciaHorarioService` arranca a contar en
+ * `hoy.plusDays(1)` tanto para el horario general como para el semanal, así que pedir "los lunes"
+ * un lunes NO cambia hoy: rige desde el lunes siguiente.
+ *
+ * Vive acá y no en una pantalla porque ya son dos las que la necesitan (`PlanScreen` y el modal de
+ * Planificar), y es exactamente el tipo de regla que, copiada, se separa un día y deja la casilla
+ * pintada donde no va — el mismo motivo por el que `fechasIsoDeLaSemana` bajó hasta este archivo.
+ *
+ * > `PlanScreen` todavía tiene su propia copia (`ULTIMO_INDICE_NO_PLANIFICABLE`), idéntica. Queda
+ * > anotado para unificarlas; no se tocó en el mismo cambio para no mezclarse con el remodelado
+ * > visual que está corriendo sobre esa pantalla.
+ */
+export function esPlanificable(dia: DiaDelPlan): boolean {
+  // Un domingo se muestra la semana SIGUIENTE entera, así que ahí los siete días son futuros.
+  if (MOSTRAR_SEMANA_SIGUIENTE) return true;
+  return DIAS_DEL_PLAN.indexOf(dia) > INDICE_DE_HOY;
+}
+
+/**
  * `Date` -> `yyyy-MM-dd` en hora LOCAL.
  *
  * `toISOString()` NO sirve acá: convierte a UTC y, para cualquier zona al oeste de Greenwich
