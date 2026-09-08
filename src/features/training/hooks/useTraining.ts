@@ -142,18 +142,23 @@ export function useTraining() {
   // `usePlanHabitos`, adentro de este mismo hook) y se actualiza en su propio momento. Los tracks
   // son la única fuente de verdad para las tarjetas operables de HOY.
   const habits = useMemo(() => {
-    const planPorHabito = new Map(
-      planHabits
-        .filter((h): h is HabitItem & { habitoId: string } => Boolean(h.habitoId))
-        .map(h => [h.habitoId, h] as const),
-    );
+    const trackPorHabito = new Map(tracks.map(t => [t.habitoId, t] as const));
 
-    const deHabitos: HabitItem[] = tracks
-      .map((track): HabitItem | null => {
-        const planHabit = planPorHabito.get(track.habitoId);
-        // Si el catálogo/plan todavía no resolvió el hábito, no se puede construir una tarjeta
-        // segura: faltan la dimensión y el id de catálogo que usa Planificar.
-        if (!planHabit) return null;
+    // Se recorre el INVENTARIO y se le adosa el track cuando existe, en vez de recorrer los
+    // tracks. La diferencia importa el Día 0: `GET /api/v1/habit-tracks/today` no genera ningún
+    // registro ahí —`RegistroService` compara `diaPrograma` crudo contra `dia_desbloqueo`, sin el
+    // ajuste "día 0 = día 1" que sí aplican `GET /api/v1/habits` y D-103—, así que armar la lista
+    // desde `tracks` deja Training VACÍO para toda cuenta recién aprobada. Y el Día 0 no es un
+    // caso de borde: es el estado inicial de todas (E-137).
+    //
+    // Un hábito sin track viaja con `tieneTrackHoy: false`, que es lo que `TrainingScreen` ya usa
+    // para deshabilitar el check y "Subir evidencia": se ve el plan, no se puede operar sobre él.
+    const deHabitos: HabitItem[] = planHabits
+      .map((planHabit): HabitItem | null => {
+        const track = planHabit.habitoId ? trackPorHabito.get(planHabit.habitoId) : undefined;
+        if (!track) {
+          return planHabit;
+        }
         return {
           ...planHabit,
           id: track.id,
