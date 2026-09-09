@@ -25,6 +25,13 @@ type Props = {
 };
 
 const POR_FALLO: Record<FalloCelula, { icono: IconName; titulo: string; texto: string; reintentar: boolean }> = {
+  sin_celula: {
+    icono: 'users',
+    titulo: 'Todavía no lideras ninguna célula',
+    texto:
+      'Cuando se te asigne una, verás aquí a tus aprendices con su avance y qué necesita cada uno.',
+    reintentar: false,
+  },
   no_disponible: {
     icono: 'clock',
     titulo: 'El seguimiento de células todavía no está disponible',

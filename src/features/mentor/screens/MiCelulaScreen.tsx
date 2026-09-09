@@ -181,11 +181,13 @@ const estilos = StyleSheet.create({
   insignia: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
   contenido: { flexGrow: 1, paddingTop: 8, paddingBottom: ESPACIO_PARA_LANZADOR },
   cifras: { flexDirection: 'row', flexWrap: 'wrap', gap: 9, marginTop: 16 },
-  /* `flexBasis` con `flexGrow`: cuatro caben en una fila ancha y se reparten de dos en dos
-     cuando no. `minWidth` evita que un valor largo (100%) parta la caja. */
+  /* `flexBasis: 132` es lo que hace que escale sola, sin puntos de ruptura escritos a mano:
+     a 375px de ancho no caben cuatro, asi que se reparten 2x2 y cada etiqueta tiene sitio; en
+     tablet (560 de contenido) las cuatro entran en una fila. Con 74 cabian las cuatro y
+     "cumplimiento" se partia por la mitad. */
   cifra: {
-    flexGrow: 1, flexBasis: 74, minWidth: 74,
-    borderWidth: 1, borderRadius: 13, paddingVertical: 11, paddingHorizontal: 8, alignItems: 'center',
+    flexGrow: 1, flexBasis: 132, minWidth: 132,
+    borderWidth: 1, borderRadius: 13, paddingVertical: 12, paddingHorizontal: 10, alignItems: 'center',
   },
   cifraValor: {
     fontFamily: 'Jost_500Medium', fontSize: 23, lineHeight: 27,

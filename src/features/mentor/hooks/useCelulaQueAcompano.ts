@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { esDeRed, esNoDisponible, esProhibido, obtenerMiCelula } from '../api/mentorApi';
+import { esDeRed, esNoDisponible, esProhibido, esSinCelula, obtenerMiCelula } from '../api/mentorApi';
 import { repartirAlumnos, resumenDe } from '../reglas';
 import type { MiCelula } from '../types/mentor.types';
 
@@ -27,7 +27,7 @@ import type { MiCelula } from '../types/mentor.types';
  * - `sin_red` — no hubo respuesta. Reintentar sí sirve.
  * - `error` — cualquier otra cosa, incluida una respuesta con forma inesperada.
  */
-export type FalloCelula = 'no_disponible' | 'sin_permiso' | 'sin_red' | 'error';
+export type FalloCelula = 'sin_celula' | 'no_disponible' | 'sin_permiso' | 'sin_red' | 'error';
 
 /** Lo que la pantalla y la tarjeta consumen. Se deriva; nunca se guarda en estado. */
 export type VistaCelula = NonNullable<ReturnType<typeof useCelulaQueAcompano>['vista']>;
@@ -55,7 +55,8 @@ export function useCelulaQueAcompano(activo: boolean) {
       setDatos(null);
       noDesplegado.current = esNoDisponible(e);
       setFallo(
-        esNoDisponible(e) ? 'no_disponible'
+        esSinCelula(e) ? 'sin_celula'
+        : esNoDisponible(e) ? 'no_disponible'
         : esProhibido(e) ? 'sin_permiso'
         : esDeRed(e) ? 'sin_red'
         : 'error',
