@@ -32,6 +32,9 @@ export function ChapterConsentimiento({ data, onChange }: ChapterConsentimientoP
 
       {/* Tarjeta de Consentimiento y Compromiso a 90 Días */}
       <Pressable
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: isChecked }}
+        accessibilityLabel="Consentimiento y compromiso de 90 días"
         onPress={handleToggle}
         style={[
           styles.consentCard,

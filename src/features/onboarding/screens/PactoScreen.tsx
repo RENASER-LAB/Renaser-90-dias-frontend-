@@ -33,7 +33,7 @@ export function PactoScreen({
   onBack,
 }: PactoScreenProps) {
   const { c, t, mode, toggle } = useTheme();
-  const { isSmall, isTablet, contentMaxWidth } = useResponsive();
+  const { isSmall, isTablet, contentMaxWidth, horizontalPadding } = useResponsive();
   const { guardarCapitulo, avanzarEstado, aceptarHito, guardarFirma } = usePersistenciaOnboarding();
   // Ref al lienzo para poder capturarlo como PNG al confirmar (ver SignatureCanvas.capturarComoPngBase64).
   const signatureRef = useRef<SignatureCanvasHandle>(null);
@@ -128,9 +128,11 @@ export function PactoScreen({
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: c.bg }]}>
       {/* Top Header Bar */}
-      <View style={[styles.topBar, { paddingHorizontal: isSmall ? 14 : isTablet ? 32 : 18 }]}>
+      <View style={[styles.topBar, { paddingHorizontal: horizontalPadding }]}>
         <Pressable
           hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Volver al paso anterior"
           onPress={onBack}
           style={[styles.backBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
         >
@@ -254,7 +256,12 @@ export function PactoScreen({
 
           {/* Signature Action Bar below canvas */}
           <View style={styles.signatureFooterRow}>
-            <Pressable onPress={handleClearSignature} style={styles.clearBtn}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Borrar la firma y volver a firmar"
+              onPress={handleClearSignature}
+              style={styles.clearBtn}
+            >
               <Text style={{ color: c.textSoft, fontSize: 13 }}>⟲</Text>
               <Text style={[t.micro, { color: c.textSoft, fontSize: 12 }]}>Limpiar firma</Text>
             </Pressable>

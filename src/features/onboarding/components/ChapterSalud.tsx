@@ -235,6 +235,9 @@ export function ChapterSalud({ data, onChange }: ChapterSaludProps) {
         <View style={styles.radioOptionsGroup}>
           {/* Opción Sí */}
           <Pressable
+            accessibilityRole="radio"
+            accessibilityState={{ selected: data.tomaMedicacionRegular === true }}
+            accessibilityLabel="Sí, tomo medicación regular"
             onPress={() => handleToggleMedicacion(true)}
             style={[
               styles.radioCard,
@@ -262,6 +265,9 @@ export function ChapterSalud({ data, onChange }: ChapterSaludProps) {
 
           {/* Opción No */}
           <Pressable
+            accessibilityRole="radio"
+            accessibilityState={{ selected: data.tomaMedicacionRegular === false }}
+            accessibilityLabel="No tomo medicación regular"
             onPress={() => handleToggleMedicacion(false)}
             style={[
               styles.radioCard,

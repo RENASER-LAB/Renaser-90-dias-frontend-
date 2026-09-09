@@ -503,6 +503,8 @@ export default function LoginScreen() {
         {step !== 'form' ? (
           <Pressable
             hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Volver a iniciar sesión"
             onPress={handleReturnToLogin}
             style={[styles.backBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
           >
@@ -635,6 +637,9 @@ export default function LoginScreen() {
               {/* Selector de Pestañas: Iniciar Sesión / Registro */}
               <View style={[styles.tabSelector, { backgroundColor: c.cardBg, borderColor: c.border }]}>
                 <Pressable
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: activeTab === 'login' }}
+                  accessibilityLabel="Iniciar sesión"
                   onPress={() => {
                     setActiveTab('login');
                     setErrorMessage(null);
@@ -660,6 +665,9 @@ export default function LoginScreen() {
                 </Pressable>
 
                 <Pressable
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: activeTab === 'register' }}
+                  accessibilityLabel="Crear cuenta"
                   onPress={() => {
                     setActiveTab('register');
                     setErrorMessage(null);
@@ -716,6 +724,7 @@ export default function LoginScreen() {
                       <Icon name="user" size={17} color={focusedField === 'nombres' ? c.goldInk : c.tabInactive} />
                       <TextInput
                         value={nombres}
+                        accessibilityLabel="Nombres"
                         onChangeText={setNombres}
                         placeholder="Ej. Sebastián"
                         placeholderTextColor={c.tabInactive}
@@ -743,6 +752,7 @@ export default function LoginScreen() {
                       <Icon name="user" size={17} color={focusedField === 'apellidos' ? c.goldInk : c.tabInactive} />
                       <TextInput
                         value={apellidos}
+                        accessibilityLabel="Apellidos"
                         onChangeText={setApellidos}
                         placeholder="Ej. Arango"
                         placeholderTextColor={c.tabInactive}
@@ -769,6 +779,7 @@ export default function LoginScreen() {
                     <Icon name="mail" size={17} color={focusedField === 'email' ? c.goldInk : c.tabInactive} />
                     <TextInput
                       value={email}
+                      accessibilityLabel="Correo electrónico"
                       onChangeText={setEmail}
                       placeholder="tucorreo@ejemplo.com"
                       placeholderTextColor={c.tabInactive}
@@ -804,6 +815,8 @@ export default function LoginScreen() {
                     {activeTab === 'login' && (
                       <Pressable
                         hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel="Recuperar la contraseña"
                         onPress={() => {
                           setErrorMessage(null);
                           setSuccessMessage(null);
@@ -828,6 +841,7 @@ export default function LoginScreen() {
                     <Icon name="lock" size={17} color={focusedField === 'password' ? c.goldInk : c.tabInactive} />
                     <TextInput
                       value={password}
+                      accessibilityLabel="Contraseña"
                       onChangeText={setPassword}
                       placeholder={activeTab === 'register' ? `Mínimo ${MIN_CONTRASENA} caracteres` : 'Tu contraseña'}
                       placeholderTextColor={c.tabInactive}
@@ -836,7 +850,12 @@ export default function LoginScreen() {
                       onBlur={() => setFocusedField(null)}
                       style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
                     />
-                    <Pressable hitSlop={8} onPress={() => setShowPassword(!showPassword)}>
+                    <Pressable
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel={showPassword ? 'Ocultar la contraseña' : 'Mostrar la contraseña'}
+                      onPress={() => setShowPassword(!showPassword)}
+                    >
                       <Icon
                         name={showPassword ? 'eyeOff' : 'eye'}
                         size={17}
@@ -861,6 +880,7 @@ export default function LoginScreen() {
                       <Icon name="lock" size={17} color={focusedField === 'confirmPassword' ? c.goldInk : c.tabInactive} />
                       <TextInput
                         value={confirmPassword}
+                        accessibilityLabel="Confirmar contraseña"
                         onChangeText={setConfirmPassword}
                         placeholder="Repite tu contraseña"
                         placeholderTextColor={c.tabInactive}
@@ -875,6 +895,8 @@ export default function LoginScreen() {
 
                 {/* Botón Principal */}
                 <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Continuar"
                   onPress={handleFormSubmit}
                   disabled={loading}
                   style={[styles.submitBtn, { shadowColor: c.gold }]}
@@ -926,6 +948,8 @@ export default function LoginScreen() {
                 {/* Botón de Google en Android, iOS y Web */}
                 {(Platform.OS === 'android' || Platform.OS === 'ios' || Platform.OS === 'web') && (
                   <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Continuar con Google"
                     onPress={() => handleSocialLogin('google')}
                     disabled={socialLoading !== null}
                     style={[
@@ -1009,6 +1033,8 @@ export default function LoginScreen() {
 
               {/* Botón Confirmar Código OTP */}
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Verificar el código"
                 onPress={handleVerifyOtp}
                 disabled={loading || otpCode.length !== LARGO_CODIGO}
                 style={[
@@ -1034,6 +1060,8 @@ export default function LoginScreen() {
 
               {/* Botón de Retorno al Login */}
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Volver a iniciar sesión"
                 onPress={handleReturnToLogin}
                 style={[styles.returnLoginBtn, { borderColor: c.border }]}
               >
@@ -1080,6 +1108,7 @@ export default function LoginScreen() {
                   <Icon name="mail" size={17} color={focusedField === 'forgot_email' ? c.goldInk : c.tabInactive} />
                   <TextInput
                     value={email}
+                    accessibilityLabel="Correo electrónico"
                     onChangeText={setEmail}
                     placeholder="tucorreo@ejemplo.com"
                     placeholderTextColor={c.tabInactive}
@@ -1095,6 +1124,8 @@ export default function LoginScreen() {
 
               {/* Botón Enviar Enlace */}
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Enviar el código de recuperación"
                 onPress={handleForgotPasswordSubmit}
                 disabled={loading}
                 style={[styles.submitBtn, { shadowColor: c.gold }]}
@@ -1117,6 +1148,8 @@ export default function LoginScreen() {
 
               {/* Botón de Retorno al Login */}
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Volver a iniciar sesión"
                 onPress={handleReturnToLogin}
                 style={[styles.returnLoginBtn, { borderColor: c.border }]}
               >
@@ -1173,6 +1206,8 @@ export default function LoginScreen() {
               />
 
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Verificar el código de recuperación"
                 onPress={handleVerifyForgotOtp}
                 disabled={loading || otpCode.length !== LARGO_CODIGO}
                 style={[
@@ -1198,6 +1233,8 @@ export default function LoginScreen() {
 
               {/* Un paso atrás: cambiar el correo (mismo destino que el gesto lateral) */}
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Volver al paso anterior"
                 onPress={handleBack}
                 style={[styles.returnLoginBtn, { borderColor: c.border }]}
               >
@@ -1244,6 +1281,7 @@ export default function LoginScreen() {
                   <Icon name="lock" size={17} color={focusedField === 'forgot_password' ? c.goldInk : c.tabInactive} />
                   <TextInput
                     value={password}
+                    accessibilityLabel="Contraseña"
                     onChangeText={setPassword}
                     placeholder={`Mínimo ${MIN_CONTRASENA} caracteres`}
                     placeholderTextColor={c.tabInactive}
@@ -1253,7 +1291,12 @@ export default function LoginScreen() {
                     style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
                     autoFocus
                   />
-                  <Pressable hitSlop={8} onPress={() => setShowPassword(!showPassword)}>
+                  <Pressable
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel={showPassword ? 'Ocultar la contraseña' : 'Mostrar la contraseña'}
+                      onPress={() => setShowPassword(!showPassword)}
+                    >
                     <Icon
                       name={showPassword ? 'eyeOff' : 'eye'}
                       size={17}
@@ -1277,6 +1320,7 @@ export default function LoginScreen() {
                   <Icon name="lock" size={17} color={focusedField === 'forgot_confirm' ? c.goldInk : c.tabInactive} />
                   <TextInput
                     value={confirmPassword}
+                    accessibilityLabel="Confirmar contraseña"
                     onChangeText={setConfirmPassword}
                     placeholder="Repite tu contraseña nueva"
                     placeholderTextColor={c.tabInactive}
@@ -1290,6 +1334,8 @@ export default function LoginScreen() {
               </View>
 
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Cambiar la contraseña"
                 onPress={handleChangePassword}
                 disabled={loading}
                 style={[styles.submitBtn, { shadowColor: c.gold }]}
@@ -1312,6 +1358,8 @@ export default function LoginScreen() {
 
               {/* El código ya se consumió: "atrás" es pedir otro, no volver a las casillas */}
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Volver al paso anterior"
                 onPress={handleBack}
                 style={[styles.returnLoginBtn, { borderColor: c.border }]}
               >
@@ -1358,6 +1406,7 @@ export default function LoginScreen() {
                   <Icon name="user" size={17} color={focusedField === 'social_nombres' ? c.goldInk : c.tabInactive} />
                   <TextInput
                     value={nombres}
+                    accessibilityLabel="Nombres"
                     onChangeText={setNombres}
                     placeholder="Ej. Sebastián"
                     placeholderTextColor={c.tabInactive}
@@ -1384,6 +1433,7 @@ export default function LoginScreen() {
                   <Icon name="user" size={17} color={focusedField === 'social_apellidos' ? c.goldInk : c.tabInactive} />
                   <TextInput
                     value={apellidos}
+                    accessibilityLabel="Apellidos"
                     onChangeText={setApellidos}
                     placeholder="Ej. Arango"
                     placeholderTextColor={c.tabInactive}
@@ -1411,6 +1461,7 @@ export default function LoginScreen() {
                   <Icon name="mail" size={17} color={c.tabInactive} />
                   <TextInput
                     value={email}
+                    accessibilityLabel="Correo electrónico"
                     editable={false}
                     style={[styles.input, { color: c.textSoft, fontFamily: 'Jost_400Regular' }]}
                   />
@@ -1419,6 +1470,8 @@ export default function LoginScreen() {
 
               {/* Botón Confirmar y Enviar Solicitud */}
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Confirmar el registro con Google"
                 onPress={handleConfirmarRegistroSocial}
                 disabled={loading}
                 style={[styles.submitBtn, { shadowColor: c.gold }]}
@@ -1441,6 +1494,8 @@ export default function LoginScreen() {
 
               {/* Botón de Retorno al Login */}
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Volver a iniciar sesión"
                 onPress={handleReturnToLogin}
                 style={[styles.returnLoginBtn, { borderColor: c.border }]}
               >
@@ -1489,6 +1544,8 @@ export default function LoginScreen() {
 
               {/* Botón Volver al Login */}
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Volver a iniciar sesión"
                 onPress={handleReturnToLogin}
                 style={[styles.submitBtn, { shadowColor: c.gold, marginTop: 10 }]}
               >
@@ -1506,6 +1563,8 @@ export default function LoginScreen() {
 
               {/* Consulta del estado con el id de la solicitud, la única credencial que hay */}
               <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Consultar el estado de tu solicitud"
                 onPress={handleConsultarEstado}
                 disabled={loading || !accountRequestId}
                 style={[styles.returnLoginBtn, { borderColor: c.border }]}

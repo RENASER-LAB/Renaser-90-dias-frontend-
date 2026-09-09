@@ -52,7 +52,7 @@ export function FichaInicialScreen({
   onBack,
 }: FichaInicialScreenProps) {
   const { c, t, mode, toggle } = useTheme();
-  const { isSmall, isTablet, contentMaxWidth } = useResponsive();
+  const { isSmall, isTablet, contentMaxWidth, horizontalPadding } = useResponsive();
   const { guardarCapitulo, avanzarEstado } = usePersistenciaOnboarding();
 
   const [currentChapter, setCurrentChapter] = useState(0);
@@ -247,9 +247,11 @@ export function FichaInicialScreen({
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: c.bg }]}>
       {/* Top Header */}
-      <View style={[styles.topBar, { paddingHorizontal: isSmall ? 14 : isTablet ? 32 : 18 }]}>
+      <View style={[styles.topBar, { paddingHorizontal: horizontalPadding }]}>
         <Pressable
           hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Volver al paso anterior"
           onPress={handlePrev}
           style={[styles.backBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
         >
@@ -273,7 +275,7 @@ export function FichaInicialScreen({
         contentContainerStyle={[
           styles.scrollContent,
           {
-            paddingHorizontal: isSmall ? 14 : isTablet ? 32 : 18,
+            paddingHorizontal: horizontalPadding,
             maxWidth: contentMaxWidth,
             alignSelf: isTablet ? 'center' : 'stretch',
             width: isTablet ? '100%' : undefined,

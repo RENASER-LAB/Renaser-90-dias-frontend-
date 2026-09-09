@@ -45,7 +45,7 @@ import { useArranqueGuiado } from '../hooks/useArranqueGuiado';
  */
 export function SparkieOverlay() {
   const { c, t, mode } = useTheme();
-  const { isSmall, isTablet } = useResponsive();
+  const { isSmall, isTablet, horizontalPadding } = useResponsive();
   const insets = useSafeAreaInsets();
   const { user, isAuthenticated, isOnboardingCompleted } = useAuth();
 
@@ -92,7 +92,7 @@ export function SparkieOverlay() {
   }
 
   const saludo = saludoDeBienvenida(user?.name);
-  const padding = isSmall ? 14 : isTablet ? 32 : 18;
+  const padding = horizontalPadding;
   // Los colores de tarjetas del tema oscuro tienen alfa: un modal necesita una superficie opaca.
   const fondoTarjeta = mode === 'dark' ? '#1B1915' : '#FFFFFF';
 

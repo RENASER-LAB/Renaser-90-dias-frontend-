@@ -32,7 +32,7 @@ export function TerminosScreen({
   onSaveSignature,
 }: TerminosScreenProps) {
   const { c, t, mode, toggle } = useTheme();
-  const { isSmall, isTablet, contentMaxWidth } = useResponsive();
+  const { isSmall, isTablet, contentMaxWidth, horizontalPadding } = useResponsive();
   const { guardarCapitulo, avanzarEstado, aceptarHito, guardarFirma } = usePersistenciaOnboarding();
   // Ref al lienzo para poder capturarlo como PNG al confirmar (ver SignatureCanvas.capturarComoPngBase64).
   const signatureRef = useRef<SignatureCanvasHandle>(null);
@@ -127,9 +127,11 @@ export function TerminosScreen({
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: c.bg }]}>
       {/* Top Header Bar */}
-      <View style={[styles.topBar, { paddingHorizontal: isSmall ? 14 : isTablet ? 32 : 18 }]}>
+      <View style={[styles.topBar, { paddingHorizontal: horizontalPadding }]}>
         <Pressable
           hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Volver al paso anterior"
           onPress={onBack}
           style={[styles.backBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
         >
@@ -153,7 +155,7 @@ export function TerminosScreen({
         contentContainerStyle={[
           styles.scrollContent,
           {
-            paddingHorizontal: isSmall ? 14 : isTablet ? 32 : 18,
+            paddingHorizontal: horizontalPadding,
             maxWidth: contentMaxWidth,
             alignSelf: isTablet ? 'center' : 'stretch',
             width: isTablet ? '100%' : undefined,

@@ -51,7 +51,7 @@ function formatearFecha(iso: string): string {
 
 export function ActivarProgramaScreen({ onActivated }: ActivarProgramaScreenProps) {
   const { c, t, mode, toggle } = useTheme();
-  const { isSmall, isTablet, contentMaxWidth } = useResponsive();
+  const { isSmall, isTablet, contentMaxWidth, horizontalPadding } = useResponsive();
 
   const [cargando, setCargando] = useState(true);
   const [fechas, setFechas] = useState<string[]>([]);
@@ -105,7 +105,7 @@ export function ActivarProgramaScreen({ onActivated }: ActivarProgramaScreenProp
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: c.bg }]}>
-      <View style={[styles.topBar, { paddingHorizontal: isSmall ? 14 : isTablet ? 32 : 18 }]}>
+      <View style={[styles.topBar, { paddingHorizontal: horizontalPadding }]}>
         <View />
         <Pressable
           hitSlop={10}
@@ -160,6 +160,8 @@ export function ActivarProgramaScreen({ onActivated }: ActivarProgramaScreenProp
               return (
                 <Pressable
                   key={fecha}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: seleccionada === fecha }}
                   onPress={() => setSeleccionada(fecha)}
                   style={[
                     styles.dateCard,

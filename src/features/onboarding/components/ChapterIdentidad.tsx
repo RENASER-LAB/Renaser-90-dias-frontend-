@@ -134,6 +134,9 @@ export function ChapterIdentidad({ data, onChange }: ChapterIdentidadProps) {
             return (
               <Pressable
                 key={sex}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: isSelected }}
+                accessibilityLabel={sex}
                 onPress={() => updateField('sexo', sex)}
                 style={[
                   styles.optionBtn,
@@ -172,6 +175,9 @@ export function ChapterIdentidad({ data, onChange }: ChapterIdentidadProps) {
             return (
               <Pressable
                 key={ec}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: isSelected }}
+                accessibilityLabel={ec}
                 onPress={() => updateField('estadoCivil', ec)}
                 style={[
                   styles.chipBtn,
@@ -208,6 +214,9 @@ export function ChapterIdentidad({ data, onChange }: ChapterIdentidadProps) {
             return (
               <Pressable
                 key={hijos}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: isSelected }}
+                accessibilityLabel={`${hijos} hijos`}
                 onPress={() => updateField('cantidadHijos', hijos)}
                 style={[
                   styles.numCircleBtn,
@@ -263,6 +272,9 @@ export function ChapterIdentidad({ data, onChange }: ChapterIdentidadProps) {
             return (
               <Pressable
                 key={tipo.id}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: isSelected }}
+                accessibilityLabel={tipo.label ?? tipo.id}
                 onPress={() => {
                   onChange({
                     ...data,
