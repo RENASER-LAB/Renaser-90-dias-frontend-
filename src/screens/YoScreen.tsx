@@ -771,11 +771,13 @@ export default function YoScreen() {
           {/* 2 Etapas */}
           <View style={{ gap: 8, marginTop: 12, paddingBottom: 28 }}>
             {ONBOARDING_STAGES.map(stage => {
-              // El estado de cada etapa sale de datos reales, no del array. Solo El Pacto tiene
-              // marca en el backend; las demás quedan pendientes hasta que exista una por etapa.
+              // El estado de cada etapa sale de datos reales, no del array: `pactSignedAt` para
+              // el Pacto y `stageCompleted` para el Mapa. La etapa 2 leia el estado del
+              // Cuestionario Profundo, que es otro flujo — por eso quien ya habia terminado su
+              // mapa seguia viendo "1 de 2 etapas completadas".
               const estado =
                 stage.id === 'st1' ? etapasOnboarding.pacto
-                : stage.id === 'st2' ? etapasOnboarding.cuestionarioProfundo
+                : stage.id === 'st2' ? etapasOnboarding.mapaRenacimiento
                 : 'pendiente';
               const completada = estado === 'completada';
               const enProgreso = estado === 'en_progreso';
