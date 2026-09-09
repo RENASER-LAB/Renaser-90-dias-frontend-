@@ -19,6 +19,8 @@ const rocaMaestraSchema = z
     meta: z.number().nullable(),
     avance: z.number().nullable(),
     unidad: z.string().nullable(),
+    // Agregada por V43 (E-166). Nullable también hacia adelante: las rocas viejas no la tienen.
+    lineaBase: z.number().nullable(),
     porcentaje: z.number().nullable(),
     creadoEn: z.string(),
     actualizadoEn: z.string(),

@@ -67,10 +67,16 @@ function definicionDesde(objetivo: Objetivo): DefinicionRocaMaestra {
   const base = aNumeroDeMeta(objetivo.lineaBase);
   const meta = aNumeroDeMeta(objetivo.resultadoDia90);
   const unidad = (objetivo.area === 'salud' ? objetivo.unidad : objetivo.moneda).trim().slice(0, 20);
-  if (base === null || meta === null || meta <= 0 || !unidad) {
+  if (base === null || meta === null || meta <= 0 || !unidad || base === meta) {
     return { objetivo: texto };
   }
-  return { objetivo: texto, meta, avance: base, unidad };
+  // `lineaBase` va SIEMPRE que haya meta, y es lo que hace que el porcentaje sirva en las dos
+  // direcciones. Sin ella el backend cae en la fórmula vieja `avance / meta`, que asume que más es
+  // mejor: "pesaré 75 partiendo de 82" daba 109 % → 100 % CUMPLIDO el primer día (E-166).
+  //
+  // `avance` arranca igual que la línea base porque el día 1 todavía no se recorrió nada; después
+  // el avance se mueve y la base se queda quieta, que es justo el punto de tenerla aparte.
+  return { objetivo: texto, meta, avance: base, unidad, lineaBase: base };
 }
 
 /** `"78,5 kg"` → `78.5`. `null` si no hay ningún número: entonces el objetivo es cualitativo. */

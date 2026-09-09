@@ -1373,12 +1373,20 @@ export default function PlanScreen() {
                       </View>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 }}>
                         <Text style={[t.small, { color: c.textSoft, fontSize: 14 }]}>
-                          Llevas: <Text style={{ color: c.gold, fontWeight: '700' }}>{rocaAbierta.avance} {rocaAbierta.unidad}</Text>
+                          Vas en: <Text style={{ color: c.gold, fontWeight: '700' }}>{rocaAbierta.avance} {rocaAbierta.unidad}</Text>
                         </Text>
                         <Text style={[t.small, { color: c.textSoft, fontSize: 14 }]}>
                           Meta: {rocaAbierta.meta} {rocaAbierta.unidad}
                         </Text>
                       </View>
+                      {/* El punto de partida se muestra porque sin él el porcentaje no se entiende:
+                          con "vas en 82, meta 75" y 0 %, la pregunta obvia es "¿0 % de qué?". Solo
+                          aparece en las rocas que lo tienen — las anteriores a V43 no (E-166). */}
+                      {rocaAbierta.lineaBase != null && (
+                        <Text style={[t.small, { color: c.micro, fontSize: 13, marginTop: 2 }]}>
+                          Partiste de {rocaAbierta.lineaBase} {rocaAbierta.unidad}
+                        </Text>
+                      )}
                     </View>
                   )}
                 </>

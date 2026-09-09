@@ -36,6 +36,8 @@ export interface RocaMaestraApi {
   meta: number | null;
   avance: number | null;
   unidad: string | null;
+  /** Desde dónde arrancó. `null` en las rocas anteriores a V43. Ver `DefinicionRocaMaestra`. */
+  lineaBase: number | null;
   porcentaje: number | null;
   creadoEn: string;
   actualizadoEn: string;
@@ -48,6 +50,17 @@ export interface DefinicionRocaMaestra {
   meta?: number;
   avance?: number;
   unidad?: string;
+  /**
+   * Desde dónde arrancó. **Opcional en el cable, obligatorio en la práctica** (E-166).
+   *
+   * Con este dato el porcentaje mide el camino recorrido —`|avance − base| / |meta − base|`— y por
+   * eso funciona igual para una meta que sube que para una que baja. Sin él, el backend usa la
+   * fórmula vieja `avance / meta`, que da 100 % el primer día a cualquiera que quiera bajar de peso
+   * o de deuda. Se dejó opcional solo para no romper las filas anteriores a la migración V43.
+   *
+   * No puede ser igual a `meta`: sin distancia no hay avance que medir, y el backend lo rechaza.
+   */
+  lineaBase?: number;
 }
 
 /* ------------------------------------------------------------------------------------------------
