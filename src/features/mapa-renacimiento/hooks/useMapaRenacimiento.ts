@@ -179,6 +179,10 @@ export function useMapaRenacimiento(userId: string): EstadoMapaRenacimiento {
         if (!vigente || !servidor.stageCompleted) return;
         const confirmado: MapaRenacimiento = { ...base, estado: 'activo', pasoActual: 11 };
         setMapa(confirmado);
+        /* Se escribe aqui ademas del autoguardado, y no sobra: aquel espera 250 ms y su
+           limpieza cancela el temporizador al desmontar. Si la confirmacion del servidor llega
+           y la persona cierra el mapa en ese cuarto de segundo, la escritura no ocurriria y en
+           el proximo arranque volveria a preguntarle al servidor. Esta es inmediata. */
         void almacenMapa.guardar(userId, confirmado);
       } catch {
         // Sin red o con el endpoint caido se sigue con el borrador local: el mapa tiene que
