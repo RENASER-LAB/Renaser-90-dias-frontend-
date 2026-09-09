@@ -22,7 +22,6 @@ import {
 import { obtenerRocasDeHoy } from '../features/training/api/trainingApi';
 import { useUltimaPublicacionMuro } from '../features/community/hooks/useUltimaPublicacionMuro';
 import { tiempoRelativo } from '../features/community/utils/tiempoRelativo';
-import { FotoMuro } from '../features/community/components/FotoMuro';
 import { useAuth } from '../context/AuthContext';
 import { useMapaRenacimientoAbierto } from '../features/mapa-renacimiento/MapaRenacimientoContext';
 import { useEstadoMapa } from '../features/mapa-renacimiento/hooks/useEstadoMapa';
@@ -77,8 +76,6 @@ export default function HoyScreen() {
   // Roca Prioritaria de Hoy: Posición 1 (Pareto Verde) o la primera disponible
   const rocaPrioritaria = rocas.find(r => r.posicion === 1) || rocas[0] || null;
   const evidenciasUltimaPublicacion = ultimaPublicacion?.media ?? [];
-  const evidenciasVisibles = evidenciasUltimaPublicacion.slice(0, 3);
-  const evidenciasRestantes = Math.max(evidenciasUltimaPublicacion.length - evidenciasVisibles.length, 0);
 
   /* Los anillos son decorado: se derivan del hueco REAL que queda, no de medidas fijas.
      Antes eran [306, 258, 210, 162] pasados por `rs()`, asi que en pantallas anchas crecian
@@ -437,45 +434,42 @@ export default function HoyScreen() {
                         {tiempoRelativo(ultimaPublicacion.createdAt)}
                       </Text>
                     </View>
+                    {/* Lo que se lee primero es QUIEN y QUE dijo, no una miniatura. Antes esta
+                        tarjeta decia "Subio una evidencia" y debajo abria una rejilla de recuadros
+                        con el rotulo FOTO: cuando la imagen no cargaba —que en el Muro pasa— eran
+                        tres cajas vacias ocupando media tarjeta, y el texto de la publicacion, que
+                        es lo unico que de verdad cuenta algo, no se mostraba en ningun sitio. */}
                     <View style={styles.insight}>
                       <View style={[styles.wallAvatar, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
                         <Icon name="user" size={16} color={c.goldInk} />
                       </View>
-                      <View style={{ flex: 1, gap: 4 }}>
-                        <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13.5 }]}>
+                      <View style={{ flex: 1, gap: 3 }}>
+                        <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13.5 }]} numberOfLines={1}>
                           {ultimaPublicacion.authorName?.trim() || 'Miembro Renaser'}
                         </Text>
-                        <Text style={[t.body, { color: c.textSoft, fontSize: 12, lineHeight: 18 }]}>
-                          Subió {evidenciasUltimaPublicacion.length === 1 ? 'una evidencia' : `${evidenciasUltimaPublicacion.length} evidencias`}
-                        </Text>
+                        {ultimaPublicacion.text?.trim() ? (
+                          <Text
+                            style={[t.body, { color: c.text, fontSize: 13, lineHeight: 19 }]}
+                            numberOfLines={3}
+                          >
+                            {ultimaPublicacion.text.trim()}
+                          </Text>
+                        ) : (
+                          <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, lineHeight: 18 }]}>
+                            Compartió una evidencia sin texto.
+                          </Text>
+                        )}
+                        {evidenciasUltimaPublicacion.length > 0 && (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
+                            <Icon name="camera" size={12} color={c.goldInk} />
+                            <Text style={[t.micro, { color: c.goldInk, fontSize: 10.5, fontFamily: 'Jost_500Medium' }]}>
+                              {evidenciasUltimaPublicacion.length}
+                              {evidenciasUltimaPublicacion.length === 1 ? ' evidencia' : ' evidencias'}
+                            </Text>
+                          </View>
+                        )}
                       </View>
                     </View>
-                    {evidenciasUltimaPublicacion.length > 0 && (
-                      <View style={styles.wallEvidence}>
-                        <MicroLabel>EVIDENCIA</MicroLabel>
-                        <View style={[styles.wallEvidenceRow, { height: rs(62) }]}>
-                          {evidenciasVisibles.map((media, index) => (
-                            <View
-                              key={`${media.url}-${index}`}
-                              style={[styles.wallEvidenceThumb, { backgroundColor: c.cardBgAlt }]}
-                            >
-                              <Text style={[t.micro, { color: c.micro, fontSize: 10.5 }]}>FOTO</Text>
-                              <FotoMuro
-                                url={media.url}
-                                mimeType={media.mimeType}
-                                radioBorde={9}
-                                colorFondo={c.cardBgAlt}
-                              />
-                            </View>
-                          ))}
-                          {evidenciasRestantes > 0 && (
-                            <View style={[styles.wallEvidenceThumb, styles.wallEvidenceMore, { borderColor: c.border }]}>
-                              <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 14 }]}>+{evidenciasRestantes}</Text>
-                            </View>
-                          )}
-                        </View>
-                      </View>
-                    )}
                   </View>
                   <Icon name="chevron" size={14} color={c.chevron} />
                 </Pressable>
@@ -618,27 +612,5 @@ const styles = StyleSheet.create({
   wallLoadingRow: {
     minHeight: 48,
     justifyContent: 'center',
-  },
-  wallEvidence: {
-    marginTop: 12,
-    gap: 7,
-  },
-  wallEvidenceRow: {
-    flexDirection: 'row',
-    gap: 8,
-    width: '100%',
-  },
-  wallEvidenceThumb: {
-    flex: 1,
-    minWidth: 0,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'transparent',
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  wallEvidenceMore: {
-    backgroundColor: 'transparent',
   },
 });

@@ -1,24 +1,28 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import { consultarMapa } from '../../mapa-renacimiento/api/mapaApi';
 import * as onboardingApi from '../api/onboardingApi';
 
 /**
- * El estado real de las 2 etapas actuales del onboarding, para la pantalla "Tu proceso completo" (YO).
+ * El estado real de las 2 etapas del onboarding, para la pantalla "Tu proceso completo" (YO).
  *
- * Antes esas cinco etapas eran data escrita a mano con `completed: true` en tres de ellas: un
- * aprendiz que no había hecho nada veía tres tildes verdes, y uno que sí había terminado veía
- * exactamente lo mismo. La pantalla mentía en las dos direcciones, y además no servía para saber
- * si había que seguir o ya estaba.
+ * Antes esas etapas eran data escrita a mano con `completed: true`: un aprendiz que no había
+ * hecho nada veía tildes verdes, y uno que sí había terminado veía exactamente lo mismo. La
+ * pantalla mentía en las dos direcciones.
  *
- * Hoy solo **El Pacto** se puede responder con certeza: `GET /api/v1/onboarding/state` devuelve
- * `pactSignedAt`, que es el instante real de la firma. El backend todavía no tiene una marca
- * específica para "terminó el Mapa de Renacimiento".
+ * Las dos salen ahora de datos reales:
  *
- * Por eso la segunda etapa se muestra como pendiente o en progreso en vez de completada: **preferimos
- * decir "no sé" antes que decir "listo" sin dato** (es el mismo criterio con el que el backend deja
- * `streak` en `null` en `GetLogrosUseCase` en vez de fabricarlo).
+ * - **El Pacto** — `pactSignedAt` de `GET /api/v1/onboarding/state`, el instante real de la firma.
+ * - **Mapa de Renacimiento** — `stageCompleted` de `GET /api/v1/mapa-renacimiento`.
  *
- * Queda pendiente una marca específica de finalización del Mapa de Renacimiento en el backend.
+ * La segunda estaba mal conectada: la fila decía "Mapa de Renacimiento" pero leía el estado del
+ * **Cuestionario Profundo**, que es otro flujo y que por como estaba escrito no podia dar
+ * "completada" nunca. Asi que alguien que ya habia terminado su mapa seguia viendo "1 de 2".
+ * El comentario de este archivo decia que el backend no tenia marca para el mapa; si la tiene
+ * (`etapas_onboarding_completadas`, flujo `mapa_dia7`), solo no se estaba consultando.
+ *
+ * Se mantiene el criterio de siempre: ante la duda, **pendiente**. Un tilde verde falso es peor
+ * que ninguno.
  */
 
 export type EstadoEtapa = 'completada' | 'en_progreso' | 'pendiente' | 'desconocido';
@@ -26,15 +30,15 @@ export type EstadoEtapa = 'completada' | 'en_progreso' | 'pendiente' | 'desconoc
 export type EtapasOnboarding = {
   /** Firmó el Pacto. Dato real: `pactSignedAt`. */
   pacto: EstadoEtapa;
-  /** Cuestionario Profundo. `en_progreso` si el cursor está ahí; nunca `completada` (no hay marca). */
-  cuestionarioProfundo: EstadoEtapa;
+  /** Terminó el Mapa de Renacimiento. Dato real: `stageCompleted`. */
+  mapaRenacimiento: EstadoEtapa;
   /** Cuántas etapas se pueden dar por completadas con datos reales. */
   completadas: number;
 };
 
 const SIN_DATOS: EtapasOnboarding = {
   pacto: 'desconocido',
-  cuestionarioProfundo: 'desconocido',
+  mapaRenacimiento: 'desconocido',
   completadas: 0,
 };
 
@@ -45,18 +49,31 @@ export function useEtapasOnboarding() {
   const recargar = useCallback(async () => {
     setLoading(true);
     try {
-      const estado = await onboardingApi.obtenerEstado();
-      const pacto: EstadoEtapa = estado.pactSignedAt ? 'completada' : 'pendiente';
-      const cuestionarioProfundo: EstadoEtapa =
-        estado.currentFlow === 'cuestionario_profundo' ? 'en_progreso' : 'pendiente';
+      /* Las dos lecturas van en paralelo y se resuelven por separado: que el mapa falle no debe
+         borrar el tilde del Pacto, ni al revés. */
+      const [estado, mapa] = await Promise.all([
+        onboardingApi.obtenerEstado().catch(() => null),
+        consultarMapa().catch(() => null),
+      ]);
+
+      const pacto: EstadoEtapa =
+        estado === null ? 'desconocido' : estado.pactSignedAt ? 'completada' : 'pendiente';
+
+      const mapaRenacimiento: EstadoEtapa =
+        mapa === null
+          ? 'desconocido'
+          : mapa.stageCompleted
+            ? 'completada'
+            : estado?.currentFlow === 'mapa_dia7'
+              ? 'en_progreso'
+              : 'pendiente';
+
       setEtapas({
         pacto,
-        cuestionarioProfundo,
-        completadas: pacto === 'completada' ? 1 : 0,
+        mapaRenacimiento,
+        completadas: [pacto, mapaRenacimiento].filter(e => e === 'completada').length,
       });
     } catch {
-      // Sin respuesta se deja "desconocido", que la pantalla pinta como pendiente. Nunca dar una
-      // etapa por completada porque falló la red: un tilde verde falso es peor que ninguno.
       setEtapas(SIN_DATOS);
     } finally {
       setLoading(false);
