@@ -4,7 +4,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { GoldButton } from '../../../components/GoldButton';
 import { Icon, type IconName } from '../../../components/Icon';
 import { useTheme } from '../../../theme/ThemeContext';
-import type { FalloCelula } from '../hooks/useMiCelula';
+import type { FalloCelula } from '../hooks/useCelulaQueAcompano';
 
 /**
  * Los estados en los que la pantalla NO tiene una célula que mostrar.

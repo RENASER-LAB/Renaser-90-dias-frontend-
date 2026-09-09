@@ -4,7 +4,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Icon } from '../../../components/Icon';
 import { MicroLabel } from '../../../components/ui';
 import { useTheme } from '../../../theme/ThemeContext';
-import { useMiCelula } from '../hooks/useMiCelula';
+import type { FalloCelula } from '../hooks/useCelulaQueAcompano';
+import type { VistaCelula } from '../hooks/useCelulaQueAcompano';
 
 /**
  * La entrada al grupo desde Hoy, solo para quien acompaña una célula.
@@ -13,12 +14,23 @@ import { useMiCelula } from '../hooks/useMiCelula';
  * razón — el mentor sigue siendo un aprendiz, y meterle una pestaña permanente cambiaría la
  * app para él en todas las pantallas, no solo donde acompaña.
  *
- * El resumen que muestra sale de los mismos datos que la pantalla del grupo, del mismo hook.
- * Si dijera un número calculado aparte, tarde o temprano diría uno distinto.
+ * NO pide los datos: los recibe. La pantalla del grupo y esta tarjeta se pintan desde la MISMA
+ * lectura, hecha una sola vez en Hoy. Cuando cada una llamaba a su propio hook había dos
+ * peticiones y, peor, dos verdades: bastaba que una fallara para que la tarjeta dijera una cosa
+ * y el grupo otra.
  */
-export function TarjetaMentorHoy({ onAbrir }: { onAbrir: () => void }) {
+export function TarjetaMentorHoy({
+  onAbrir,
+  vista,
+  cargando,
+  fallo,
+}: {
+  onAbrir: () => void;
+  vista: VistaCelula | null;
+  cargando: boolean;
+  fallo: FalloCelula | null;
+}) {
   const { c, t } = useTheme();
-  const { vista, cargando, fallo } = useMiCelula(true);
 
   const pendientes = vista?.resumen.requierenSeguimiento ?? 0;
   const sinDatos = Boolean(fallo) || !vista;

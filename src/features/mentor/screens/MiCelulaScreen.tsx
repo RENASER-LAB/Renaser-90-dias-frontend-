@@ -11,7 +11,7 @@ import { useTheme } from '../../../theme/ThemeContext';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
 import { CargandoCelula, EstadoCelula } from '../components/EstadoCelula';
 import { FilaAlumno } from '../components/FilaAlumno';
-import { useMiCelula } from '../hooks/useMiCelula';
+import type { FalloCelula, VistaCelula } from '../hooks/useCelulaQueAcompano';
 import type { AlumnoConEstado } from '../types/mentor.types';
 
 /**
@@ -25,13 +25,22 @@ import type { AlumnoConEstado } from '../types/mentor.types';
 export function MiCelulaScreen({
   onSalir,
   onAbrirAlumno,
+  vista,
+  cargando,
+  fallo,
+  detalle,
+  recargar,
 }: {
   onSalir: () => void;
   onAbrirAlumno: (alumno: AlumnoConEstado) => void;
+  vista: VistaCelula | null;
+  cargando: boolean;
+  fallo: FalloCelula | null;
+  detalle: string | null;
+  recargar: () => void;
 }) {
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth, isTablet } = useResponsive();
-  const { vista, cargando, fallo, detalle, recargar } = useMiCelula(true);
 
   useSystemBackHandler(() => {
     onSalir();

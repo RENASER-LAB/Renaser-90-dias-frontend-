@@ -15,6 +15,7 @@ import { Card, MicroLabel, ScreenHeader, GoldCircle } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { Aparicion } from '../components/Aparicion';
 import { useEsMentor } from '../features/mentor/hooks/useEsMentor';
+import { useCelulaQueAcompano } from '../features/mentor/hooks/useCelulaQueAcompano';
 import { TarjetaMentorHoy } from '../features/mentor/components/TarjetaMentorHoy';
 import { MiCelulaScreen } from '../features/mentor/screens/MiCelulaScreen';
 import { AlumnoScreen } from '../features/mentor/screens/AlumnoScreen';
@@ -44,6 +45,9 @@ export default function HoyScreen() {
   /* Rol Mentor. Se monta DENTRO de Hoy y no como sexta pestaña: AGENTS.md 1 prohibe tocar los
      cinco tabs, y ademas el mentor sigue siendo aprendiz — su propio programa no cambia. */
   const esMentor = useEsMentor();
+  /* UNA sola lectura de la celula, repartida a la tarjeta y a la pantalla. Si cada una
+     llamara al hook por su cuenta habria dos peticiones y dos verdades. */
+  const celula = useCelulaQueAcompano(esMentor);
   const [vistaMentor, setVistaMentor] = useState<'ninguna' | 'celula' | 'alumno'>('ninguna');
   const [alumnoAbierto, setAlumnoAbierto] = useState<AlumnoConEstado | null>(null);
   const { abrir: abrirMapa, abierto: mapaAbierto } = useMapaRenacimientoAbierto();
@@ -155,6 +159,11 @@ export default function HoyScreen() {
           setAlumnoAbierto(alumno);
           setVistaMentor('alumno');
         }}
+        vista={celula.vista}
+        cargando={celula.cargando}
+        fallo={celula.fallo}
+        detalle={celula.detalle}
+        recargar={celula.recargar}
       />
     );
   }
@@ -367,7 +376,14 @@ export default function HoyScreen() {
         <Aparicion retardo={210} style={{ gap: 12, paddingBottom: 24 }}>
         <View style={{ gap: 12 }}>
           {/* Solo para quien acompana una celula. El resto de Hoy no cambia. */}
-          {esMentor ? <TarjetaMentorHoy onAbrir={() => setVistaMentor('celula')} /> : null}
+          {esMentor ? (
+            <TarjetaMentorHoy
+              onAbrir={() => setVistaMentor('celula')}
+              vista={celula.vista}
+              cargando={celula.cargando}
+              fallo={celula.fallo}
+            />
+          ) : null}
 
           {/* Tarjeta Mapa de Renacimiento (Día 7) */}
           {mostrarMapa ? (
