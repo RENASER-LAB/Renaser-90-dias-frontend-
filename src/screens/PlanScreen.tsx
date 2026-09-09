@@ -353,6 +353,10 @@ export default function PlanScreen() {
    */
   const faseActual = descripcionDeFase(fase);
   const medidor = puntoDelMedidor(diaPrograma);
+  /* `null` mientras la carga no termina o el programa no arranco (dia 0): la arquitectura de
+     tiempo no debe mostrar avance inventado, igual que Hoy no muestra un dia que no sabe. */
+  const diaConocido = cargandoDiaPrograma || diaPrograma <= 0 ? null : diaPrograma;
+  const tramoActual = diaConocido === null ? -1 : Math.min(2, Math.floor((diaConocido - 1) / 30));
   // D-84: el dia 0 no es "un plan vacio", es "el programa todavia no arranco". Se consulta
   // el porque solo en ese caso — quien ya esta en el dia 5 no paga la llamada.
   //
@@ -855,6 +859,15 @@ export default function PlanScreen() {
           {/* PRIORIDADES CLAVE (INTERACTIVAS) */}
           <View style={[styles.section, { borderTopColor: c.divider }]}>
             <MicroLabel>PRIORIDADES CLAVE</MicroLabel>
+            {/* La invitacion vivia dentro de cada tarjeta, asi que "Todavía sin definir · toca
+                para escribirlo" se leia tres veces seguidas. Dicha una sola vez arriba, y solo
+                mientras quede algo por definir, las tarjetas recuperan el nombre del eje como
+                lo primero que se lee. */}
+            {EJES.some(eje => !rocaDeEje(eje)?.objetivo?.trim()) && (
+              <Text style={[t.small, { color: c.textSoft, fontSize: 13, marginTop: 4 }]}>
+                Toca cada una para escribir tu objetivo.
+              </Text>
+            )}
             <View style={{ marginTop: 8, gap: 8 }}>
               {/* Una sola lista sobre los tres ejes, en vez de tres tarjetas casi idénticas
                   repetidas a mano. Estuvieron con candado y "Disponible en la próxima
@@ -881,7 +894,7 @@ export default function PlanScreen() {
                         {definido ? roca!.objetivo : ETIQUETA_EJE[eje]}
                       </Text>
                       <Text style={[t.micro, { color: definido ? c.goldInk : c.textSoft, fontSize: 12, marginTop: 3 }]}>
-                        {definido ? ETIQUETA_EJE[eje] : 'Todavía sin definir · toca para escribirlo'}
+                        {definido ? ETIQUETA_EJE[eje] : 'Sin definir'}
                       </Text>
                     </View>
                     <Icon name="chevron" size={15} color={c.goldInk} />
@@ -894,19 +907,57 @@ export default function PlanScreen() {
           {/* ARQUITECTURA DE TIEMPO */}
           <View style={[styles.section, { borderTopColor: c.divider, flex: 1, justifyContent: 'flex-end', paddingBottom: 24 }]}>
             <MicroLabel>ARQUITECTURA DE TIEMPO</MicroLabel>
-            <Svg width="100%" height={74} viewBox="0 0 300 74" style={{ marginVertical: 10 }}>
-              <Path d="M6 62 L64 50 L122 54 L180 34 L238 32 L294 8" stroke={c.gold} strokeWidth={1.6} strokeLinecap="round" fill="none" />
-              {[[6, 62], [64, 50], [122, 54], [180, 34], [238, 32], [294, 8]].map(([x, y]) => (
-                <Circle key={x} cx={x} cy={y} r={3.4} fill={c.gold} />
-              ))}
-            </Svg>
-            <View style={{ flexDirection: 'row' }}>
-              {TRAMOS_DEL_RECORRIDO.map((p, i) => (
-                <View key={p.n} style={{ flex: 1, alignItems: i === 0 ? 'flex-start' : i === 1 ? 'center' : 'flex-end' }}>
-                  <Text style={[t.micro, { color: c.micro }]}>{p.d}</Text>
-                  <Text style={[t.micro, { color: c.textSoft, marginTop: 4 }]}>{p.n}</Text>
-                </View>
-              ))}
+            {/* Antes aqui habia una linea ascendente con seis puntos en coordenadas FIJAS
+                ("M6 62 L64 50 ... L294 8"). Parecia el progreso del aprendiz y no medía nada:
+                subia igual el dia 2 que el 89. Ahora los tres tramos se rellenan con el dia
+                real que devuelve `useProgramaDia`, y mientras ese dato no se sabe (o el
+                programa no arranco) no se pinta ningun avance en vez de inventarlo. */}
+            <View style={{ flexDirection: 'row', gap: 6, marginTop: 12 }}>
+              {TRAMOS_DEL_RECORRIDO.map((tramo, i) => {
+                const primerDia = i * 30 + 1;
+                const avance = diaConocido === null
+                  ? 0
+                  : Math.max(0, Math.min(1, (diaConocido - i * 30) / 30));
+                return (
+                  <View key={tramo.n} style={{ flex: 1 }}>
+                    <View style={[estiloTramo.riel, { backgroundColor: c.border }]}>
+                      <View
+                        style={[
+                          estiloTramo.relleno,
+                          { backgroundColor: c.gold, width: `${avance * 100}%` },
+                        ]}
+                      />
+                    </View>
+                    <Text
+                      style={[
+                        t.micro,
+                        { color: i === tramoActual ? c.goldInk : c.micro, marginTop: 8 },
+                      ]}
+                    >
+                      {tramo.d}
+                    </Text>
+                    <Text
+                      style={[
+                        t.micro,
+                        {
+                          color: i === tramoActual ? c.textStrong : c.textSoft,
+                          fontFamily: i === tramoActual ? 'Jost_700Bold' : 'Jost_400Regular',
+                          marginTop: 3,
+                        },
+                      ]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                    >
+                      {tramo.n}
+                    </Text>
+                    <Text style={[t.micro, { color: c.chevron, fontSize: 10, marginTop: 2 }]}>
+                      {i === tramoActual && diaConocido !== null
+                        ? `vas por el ${diaConocido}`
+                        : `desde el ${primerDia}`}
+                    </Text>
+                  </View>
+                );
+              })}
             </View>
           </View>
         </ScrollView>
@@ -1765,6 +1816,11 @@ export default function PlanScreen() {
     </SafeAreaView>
   );
 }
+
+const estiloTramo = StyleSheet.create({
+  riel: { height: 6, borderRadius: 3, overflow: 'hidden' },
+  relleno: { height: '100%', borderRadius: 3 },
+});
 
 const styles = StyleSheet.create({
   content: {

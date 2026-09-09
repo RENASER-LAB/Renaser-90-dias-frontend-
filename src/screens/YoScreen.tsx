@@ -31,6 +31,8 @@ import { MapaRenacimientoFlow } from '../features/mapa-renacimiento/MapaRenacimi
 import { elegirFotoDeGaleria } from '../features/habits/utils/capturarEvidencia';
 import * as authApi from '../features/auth/api/authApi';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
+import { useMisEvidencias } from '../features/evidence/hooks/useMisEvidencias';
+import { ESTADO_EVIDENCIA, iconoDeTipo } from '../features/evidence/api/evidenceSchemas';
 
 // =========================================================================
 // DATOS ESTÁTICOS
@@ -42,24 +44,42 @@ const EVOLUCION = [
 
 const PATRONES = [[6, 34], [90, 30], [174, 34], [258, 20], [314, 18]];
 
-const STATS = [
-  { k: 'DISCIPLINA', v: '87' },
-  { k: 'ENFOQUE', v: '92' },
-  { k: 'ENERGÍA', v: '81' },
-];
+/* Etiquetas legibles de los enums del backend. Antes las tarjetas decian siempre
+   "✓ VERIFICADO" aunque la evidencia estuviera pendiente o rechazada. */
+const ETIQUETA_TIPO_EVIDENCIA: Record<string, string> = {
+  FOTO: 'Foto', VIDEO: 'Video', AUDIO: 'Audio', TEXTO: 'Texto', CAPTURA: 'Captura',
+};
 
-const EVIDENCIAS_DATA = [
-  { id: 'ev1', title: 'Protocolo 05:00 AM', time: '05:04 AM · Hoy', icon: '☀️', desc: 'Luz solar directa y respiración diafragmática', verified: true },
-  { id: 'ev2', title: 'Hidratación Somática', time: '06:15 AM · Hoy', icon: '💧', desc: '1L de agua alcalina con sal marina', verified: true },
-  { id: 'ev3', title: 'Bloque Deep Work 90m', time: '08:30 AM · Ayer', icon: '⚡', desc: '90m modo avión sin interrupciones', verified: true },
-  { id: 'ev4', title: 'Cierre Somático', time: '21:30 PM · Ayer', icon: '🛌', desc: '0 pantallas y temperatura fresca', verified: true },
-];
+const ETIQUETA_ESTADO_EVIDENCIA: Record<string, string> = {
+  PENDIENTE: 'EN REVISIÓN',
+  VALIDA: 'VERIFICADA',
+  RECHAZADA: 'RECHAZADA',
+  REVISION_MANUAL: 'REVISIÓN MANUAL',
+  ANULADA_ADMIN: 'ANULADA',
+};
 
-const LOGROS_DATA = [
-  { id: 'l1', title: 'FUNDADOR SOMÁTICO', icon: '🥇', desc: 'Completaste con éxito la Fase 1: Días 1 al 30 sin fallar.', unlocked: true },
-  { id: 'l2', title: 'RACHA DE FUEGO (30 DÍAS)', icon: '🔥', desc: '30 amaneceres consecutivos subiendo evidencia.', unlocked: true },
-  { id: 'l3', title: 'MAESTRO DEL FOCO', icon: '⚡', desc: '50 bloques de Deep Work completados en modo avión.', unlocked: true },
-  { id: 'l4', title: 'REY SOMÁTICO (90 DÍAS)', icon: '👑', desc: 'Graduación oficial del programa. Llevas 37 de 90 días.', unlocked: false, progress: '41%' },
+/** Fecha corta en la zona del dispositivo. `null` cuando el backend no la trae. */
+function fechaDeEvidencia(iso: string | null): string {
+  if (!iso) return 'Sin fecha';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return 'Sin fecha';
+  return d.toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+
+/**
+ * Catalogo de metas del programa: lo que se PUEDE conseguir, no lo que el aprendiz consiguio.
+ *
+ * Antes esto era `LOGROS_DATA` y tres de los cuatro venian con `unlocked: true` fijo, mas un
+ * "Llevas 37 de 90 dias" escrito a mano. A alguien en el dia 2 se le afirmaba que habia
+ * encadenado 30 amaneceres y 50 bloques de trabajo profundo. No hay endpoint de logros en el
+ * backend (existe /api/v1/evidence, no /api/v1/logros), asi que no hay forma de saber cuales
+ * consiguio: se muestran todos como metas, sin marcar ninguna, hasta que exista ese dato.
+ */
+const LOGROS_DEL_PROGRAMA: ReadonlyArray<{ id: string; title: string; icon: IconName; desc: string }> = [
+  { id: 'l1', title: 'FUNDADOR SOMÁTICO', icon: 'award', desc: 'Completar la Fase 1: días 1 al 30 sin fallar.' },
+  { id: 'l2', title: 'RACHA DE FUEGO (30 DÍAS)', icon: 'fire', desc: '30 amaneceres consecutivos subiendo evidencia.' },
+  { id: 'l3', title: 'MAESTRO DEL FOCO', icon: 'zap', desc: '50 bloques de trabajo profundo en modo avión.' },
+  { id: 'l4', title: 'REY SOMÁTICO (90 DÍAS)', icon: 'trophy', desc: 'Graduación oficial del programa: los 90 días.' },
 ];
 
 const METODO_FASES: ReadonlyArray<{
@@ -150,6 +170,13 @@ const PACTO_CLAUSULAS = [
 
 export default function YoScreen() {
   const { c, t } = useTheme();
+  const {
+    evidencias,
+    verificadas: verificadasEvidencias,
+    cargando: cargandoEvidencias,
+    error: errorEvidencias,
+    recargar: recargarEvidencias,
+  } = useMisEvidencias();
   const etapasOnboarding = useEtapasOnboarding();
   const { rs, isTablet, horizontalPadding, contentMaxWidth } = useResponsive();
   const { user, logout, actualizarPerfil, refrescarPerfil } = useAuth();
@@ -342,23 +369,58 @@ export default function YoScreen() {
           {/* EVIDENCIA */}
           <View style={{ paddingTop: 16 }}>
             <MicroLabel>EVIDENCIA</MicroLabel>
-            <View style={{ flexDirection: 'row', gap: 9, marginTop: 10 }}>
-              {[0, 1, 2].map(i => (
-                <Pressable
-                  key={i}
-                  onPress={() => setActiveView('evidencias')}
-                  style={{ flex: 1 }}
-                >
-                  <Placeholder label="FOTO" style={{ height: moreSize, borderRadius: 10 }} />
-                </Pressable>
-              ))}
+            {/* Antes: tres cajas "FOTO" fijas y un "+6" escrito a mano, que daban a entender
+                nueve evidencias a cualquiera. Ahora sale del mismo listado real que la
+                sub-pantalla, y cuando no hay ninguna se dice, no se rellena. */}
+            {cargandoEvidencias ? (
+              <Text style={[t.small, { color: c.textSoft, fontSize: 12.5, marginTop: 10 }]}>
+                Cargando tus evidencias…
+              </Text>
+            ) : evidencias.length === 0 ? (
               <Pressable
                 onPress={() => setActiveView('evidencias')}
-                style={[styles.more, { width: moreSize, height: moreSize, borderColor: c.border, backgroundColor: c.cardBg }]}
+                accessibilityRole="button"
+                accessibilityLabel="Ver tus evidencias"
+                style={[styles.rowCard, { borderColor: c.border, backgroundColor: c.cardBg, marginTop: 10 }]}
               >
-                <Text style={[t.small, { color: c.textSoft }]}>+6</Text>
+                <Icon name="camera" size={18} color={c.chevron} />
+                <Text style={[t.small, { color: c.textSoft, fontSize: 12.5, flex: 1 }]}>
+                  {errorEvidencias ? 'No se pudieron cargar tus evidencias.' : 'Todavía no subiste evidencias.'}
+                </Text>
+                <Icon name="chevron" size={12} color={c.chevron} />
               </Pressable>
-            </View>
+            ) : (
+              <View style={{ flexDirection: 'row', gap: 9, marginTop: 10 }}>
+                {evidencias.slice(0, 3).map(ev => (
+                  <Pressable
+                    key={ev.id}
+                    onPress={() => setActiveView('evidencias')}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Ver evidencia del ${fechaDeEvidencia(ev.subidaEn ?? ev.timestampExif)}`}
+                    style={{ flex: 1 }}
+                  >
+                    <View
+                      style={[
+                        styles.more,
+                        { height: moreSize, borderRadius: 10, borderColor: c.border, backgroundColor: c.cardBg },
+                      ]}
+                    >
+                      <Icon name={iconoDeTipo(ev.tipo)} size={18} color={c.goldInk} />
+                    </View>
+                  </Pressable>
+                ))}
+                {evidencias.length > 3 && (
+                  <Pressable
+                    onPress={() => setActiveView('evidencias')}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Ver las otras ${evidencias.length - 3} evidencias`}
+                    style={[styles.more, { width: moreSize, height: moreSize, borderColor: c.border, backgroundColor: c.cardBg }]}
+                  >
+                    <Text style={[t.small, { color: c.textSoft }]}>+{evidencias.length - 3}</Text>
+                  </Pressable>
+                )}
+              </View>
+            )}
           </View>
 
           {/* REFLEXIÓN DIARIA */}
@@ -918,7 +980,16 @@ export default function YoScreen() {
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
             <View>
               <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 14 }]}>Tus Evidencias Somáticas</Text>
-              <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5 }]}>37 fotos subidas · 100% verificadas</Text>
+              {/* Decia "37 fotos subidas · 100% verificadas", escrito a mano, a cualquiera. */}
+              <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5 }]}>
+                {cargandoEvidencias
+                  ? 'Cargando tus evidencias…'
+                  : errorEvidencias
+                    ? 'No se pudo cargar el conteo'
+                    : evidencias.length === 0
+                      ? 'Todavía no subiste ninguna'
+                      : `${evidencias.length} ${evidencias.length === 1 ? 'evidencia' : 'evidencias'} · ${verificadasEvidencias} verificada${verificadasEvidencias === 1 ? '' : 's'}`}
+              </Text>
             </View>
             <Pressable
               onPress={() => Alert.alert('Subir Evidencia', 'Abriendo selector de cámara para subir evidencia fotográfica...')}
@@ -929,37 +1000,72 @@ export default function YoScreen() {
           </View>
 
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 14, paddingBottom: 28 }}>
-            {EVIDENCIAS_DATA.map(ev => (
-              <View
-                key={ev.id}
-                style={[
-                  styles.evidenceCard,
-                  {
-                    borderColor: c.border,
-                    backgroundColor: c.cardBg,
-                    width: isTablet ? '31%' : '47.5%',
-                  },
-                ]}
-              >
-                <View style={[styles.evidenceImgBox, { backgroundColor: c.cardBgAlt }]}>
-                  <Text style={{ fontSize: 28 }}>{ev.icon}</Text>
-                </View>
-                <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 12, marginTop: 4 }]}>
-                  {ev.title}
-                </Text>
-                <Text style={[t.micro, { color: c.goldInk, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>
-                  {ev.time}
-                </Text>
-                <Text style={[t.body, { color: c.textSoft, fontSize: 11, marginTop: 2 }]} numberOfLines={2}>
-                  {ev.desc}
-                </Text>
-                <View style={[styles.tagPill, { borderColor: c.success, backgroundColor: '#173429', marginTop: 4, alignSelf: 'flex-start' }]}>
-                  <Text style={[t.micro, { color: c.success, fontSize: 10.5, fontFamily: 'Jost_700Bold' }]}>
-                    ✓ VERIFICADO
+            {evidencias.map(ev => {
+              const validada = ev.estadoValidacion === ESTADO_EVIDENCIA.VALIDA;
+              const rechazada = ev.estadoValidacion === ESTADO_EVIDENCIA.RECHAZADA
+                || ev.estadoValidacion === ESTADO_EVIDENCIA.ANULADA_ADMIN;
+              const colorEstado = validada ? c.success : rechazada ? c.danger : c.goldInk;
+              return (
+                <View
+                  key={ev.id}
+                  style={[
+                    styles.evidenceCard,
+                    {
+                      borderColor: c.border,
+                      backgroundColor: c.cardBg,
+                      width: isTablet ? '31%' : '47.5%',
+                    },
+                  ]}
+                >
+                  <View style={[styles.evidenceImgBox, { backgroundColor: c.cardBgAlt }]}>
+                    <Icon name={iconoDeTipo(ev.tipo)} size={26} color={c.goldInk} />
+                  </View>
+                  <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 12, marginTop: 4 }]} numberOfLines={2}>
+                    {ev.contenidoTexto?.trim() || ETIQUETA_TIPO_EVIDENCIA[ev.tipo] || 'Evidencia'}
                   </Text>
+                  <Text style={[t.micro, { color: c.goldInk, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>
+                    {fechaDeEvidencia(ev.subidaEn ?? ev.timestampExif)}
+                  </Text>
+                  <View
+                    style={[
+                      styles.tagPill,
+                      { borderColor: colorEstado, marginTop: 6, alignSelf: 'flex-start' },
+                    ]}
+                  >
+                    <Text style={[t.micro, { color: colorEstado, fontSize: 10.5, fontFamily: 'Jost_700Bold' }]}>
+                      {ETIQUETA_ESTADO_EVIDENCIA[ev.estadoValidacion] ?? ev.estadoValidacion}
+                    </Text>
+                  </View>
                 </View>
+              );
+            })}
+
+            {/* Los tres estados se dicen distinto porque no significan lo mismo: todavia no se
+                sabe, no se pudo preguntar, o se pregunto y no hay ninguna. */}
+            {cargandoEvidencias && (
+              <Text style={[t.body, { color: c.textSoft, fontSize: 13, width: '100%', paddingVertical: 20, textAlign: 'center' }]}>
+                Cargando tus evidencias…
+              </Text>
+            )}
+            {!cargandoEvidencias && errorEvidencias && (
+              <View style={{ width: '100%', paddingVertical: 20, alignItems: 'center', gap: 10 }}>
+                <Text style={[t.body, { color: c.danger, fontSize: 13, textAlign: 'center' }]}>
+                  {errorEvidencias}
+                </Text>
+                <GoldButton label="REINTENTAR" variant="outline" onPress={recargarEvidencias} />
               </View>
-            ))}
+            )}
+            {!cargandoEvidencias && !errorEvidencias && evidencias.length === 0 && (
+              <View style={{ width: '100%', paddingVertical: 24, alignItems: 'center', gap: 6 }}>
+                <Icon name="camera" size={26} color={c.chevron} />
+                <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 14, marginTop: 4 }]}>
+                  Todavía no subiste evidencias
+                </Text>
+                <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, textAlign: 'center' }]}>
+                  Cada foto que selles queda aquí, con la fecha y su estado de validación.
+                </Text>
+              </View>
+            )}
           </View>
         </ScrollView>
       )}
@@ -996,30 +1102,24 @@ export default function YoScreen() {
           </View>
 
           <View style={{ gap: 10, marginTop: 14, paddingBottom: 28 }}>
-            {LOGROS_DATA.map(logro => (
+            {/* Sin endpoint de logros no se puede decir cuales estan conseguidos, asi que no se
+                marca ninguno: se listan como metas del programa. */}
+            <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, marginBottom: 4 }]}>
+              Estas son las metas del programa. Tu avance aparecerá aquí cuando el registro de
+              logros esté disponible.
+            </Text>
+            {LOGROS_DEL_PROGRAMA.map(logro => (
               <View
                 key={logro.id}
-                style={[
-                  styles.logroCard,
-                  {
-                    borderColor: logro.unlocked ? c.gold : c.border,
-                    backgroundColor: logro.unlocked ? c.cardBgAlt : c.cardBg,
-                    opacity: logro.unlocked ? 1 : 0.7,
-                  },
-                ]}
+                style={[styles.logroCard, { borderColor: c.border, backgroundColor: c.cardBg }]}
               >
-                <View style={[styles.logroIconCircle, { borderColor: logro.unlocked ? c.gold : c.border, backgroundColor: logro.unlocked ? c.gold : c.cardBg }]}>
-                  <Text style={{ fontSize: 22 }}>{logro.icon}</Text>
+                <View style={[styles.logroIconCircle, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
+                  <Icon name={logro.icon} size={20} color={c.goldInk} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text style={[t.cardTitle, { color: logro.unlocked ? c.goldInk : c.textStrong, fontSize: 12.5 }]}>
-                      {logro.title}
-                    </Text>
-                    <Text style={[t.micro, { color: logro.unlocked ? c.success : c.textSoft, fontSize: 10.5, fontFamily: 'Jost_700Bold' }]}>
-                      {logro.unlocked ? 'DESBLOQUEADO' : logro.progress || 'EN CURSO'}
-                    </Text>
-                  </View>
+                  <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 12.5 }]}>
+                    {logro.title}
+                  </Text>
                   <Text style={[t.body, { color: c.textSoft, fontSize: 10.5, marginTop: 2 }]}>
                     {logro.desc}
                   </Text>
