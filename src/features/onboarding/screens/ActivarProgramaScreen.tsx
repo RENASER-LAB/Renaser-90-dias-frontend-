@@ -180,7 +180,7 @@ export function ActivarProgramaScreen({ onActivated }: ActivarProgramaScreenProp
                       },
                     ]}
                   >
-                    {activa && <View style={styles.radioInnerWhite} />}
+                    {activa && <View style={[styles.radioInnerDot, { backgroundColor: c.onGold }]} />}
                   </View>
                   <Text style={[t.body, { color: c.textStrong, fontSize: 15, fontFamily: 'Jost_500Medium', textTransform: 'capitalize' }]}>
                     {formatearFecha(fecha)}
@@ -282,11 +282,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  radioInnerWhite: {
+  /* El punto era blanco sobre el relleno dorado del circulo: 2.95:1 en modo claro, y en el
+     elemento mas pequeno de la pantalla (7px). `onGold` es la tinta pensada para ir encima del
+     dorado, la misma que usa el boton principal. */
+  radioInnerDot: {
     width: 7,
     height: 7,
     borderRadius: 3.5,
-    backgroundColor: '#FFFFFF',
   },
   alertBox: {
     width: '100%',

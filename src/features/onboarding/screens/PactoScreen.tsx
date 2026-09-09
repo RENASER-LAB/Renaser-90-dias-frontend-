@@ -304,6 +304,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 7,
+    minHeight: 48,
+    justifyContent: 'center',
     borderRadius: 12,
   },
   themeBtn: {
@@ -395,5 +397,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     paddingVertical: 4,
+    minHeight: 44,
+    justifyContent: 'center',
   },
 });

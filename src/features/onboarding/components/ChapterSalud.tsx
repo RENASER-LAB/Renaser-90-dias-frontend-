@@ -256,7 +256,7 @@ export function ChapterSalud({ data, onChange }: ChapterSaludProps) {
                 },
               ]}
             >
-              {data.tomaMedicacionRegular === true && <View style={styles.radioInnerWhite} />}
+              {data.tomaMedicacionRegular === true && <View style={[styles.radioInnerDot, { backgroundColor: c.onGold }]} />}
             </View>
             <Text style={[t.body, { color: c.textStrong, fontSize: 14.5, fontFamily: 'Jost_500Medium' }]}>
               Sí
@@ -286,7 +286,7 @@ export function ChapterSalud({ data, onChange }: ChapterSaludProps) {
                 },
               ]}
             >
-              {data.tomaMedicacionRegular === false && <View style={styles.radioInnerWhite} />}
+              {data.tomaMedicacionRegular === false && <View style={[styles.radioInnerDot, { backgroundColor: c.onGold }]} />}
             </View>
             <Text style={[t.body, { color: c.textStrong, fontSize: 14.5, fontFamily: 'Jost_500Medium' }]}>
               No
@@ -409,11 +409,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  radioInnerWhite: {
+  /* El punto era blanco sobre el relleno dorado del circulo: 2.95:1 en modo claro, y en el
+     elemento mas pequeno de la pantalla (7px). `onGold` es la tinta pensada para ir encima del
+     dorado, la misma que usa el boton principal. */
+  radioInnerDot: {
     width: 7,
     height: 7,
     borderRadius: 3.5,
-    backgroundColor: '#FFFFFF',
   },
   textareaWrap: {
     borderWidth: 1.5,

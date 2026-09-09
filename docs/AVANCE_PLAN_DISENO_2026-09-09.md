@@ -94,6 +94,12 @@ estaban a propósito**: tienen texto a medio escribir o firmas sin guardar, y ce
 toque accidental sería peor que obligar a buscar la ✕. Cerrar ese hueco del todo exige cambiar
 el aspecto de todos los modales o añadir dependencia: es decisión de producto.
 
+**Onboarding, pase de diseño.** El punto interior de los selectores de opción era **blanco
+sobre el relleno dorado del círculo**: 2.95:1 en claro y **2.37:1 en oscuro**, en el elemento
+más pequeño de la pantalla (7 px). Pasa a `onGold`, la misma tinta del botón principal: **6.16**
+y **7.68**. Y ocho controles estaban por debajo del mínimo táctil — los botones de volver de
+cuatro pantallas medían ~25 px de alto, y el de borrar la firma del Pacto ~19 px.
+
 **Accesibilidad.** Login tenía 21 controles pulsables con **1** rol declarado y 12 campos con
 **1** etiqueta. Ahora 21/21 y 12/12. En el onboarding, los selectores de sexo, estado civil,
 hijos, documento, medicación y fecha eran `Pressable` sin rol: se leían como texto plano, sin
