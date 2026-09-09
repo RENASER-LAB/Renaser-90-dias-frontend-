@@ -39,7 +39,24 @@ export function PantallaPaso({
   paso: number | null;
   onAtras?: () => void;
   etiquetaAtras?: string;
-  boton: { label: string; onPress: () => void; disabled?: boolean; loading?: boolean };
+  boton: {
+    label: string;
+    onPress: () => void;
+    disabled?: boolean;
+    loading?: boolean;
+    /**
+     * Qué falta para poder seguir. Se muestra **arriba del botón** cuando está bloqueado.
+     *
+     * > **Por qué existe (2026-09-09).** Probando el Mapa entero, el botón se quedó mudo dos veces:
+     * > en el paso 6 faltaba elegir la evidencia de cada acción, y en el paso 10 marcar el
+     * > compromiso. En los dos casos no pasaba nada al tocarlo —sin mensaje, sin señalar el campo—
+     * > y solo se descubría por prueba y error. Con 50-60 años, de ahí no se sale pensando "me
+     * > falta un campo": se sale pensando que la app está rota.
+     *
+     * Va acá y no en cada pantalla para que ninguna se olvide, y para que las diez se vean igual.
+     */
+    faltan?: string[];
+  };
   children: React.ReactNode;
 }) {
   const { c, t } = useTheme();
@@ -60,6 +77,17 @@ export function PantallaPaso({
           {children}
         </ScrollView>
         <View style={[styles.pie, { paddingHorizontal: horizontalPadding, borderTopColor: c.divider, backgroundColor: c.bg }]}>
+          {/* El aviso se muestra aunque el recorrido libre desbloquee el botón: ahí sirve para ver
+              qué le va a pedir el mapa a un aprendiz de verdad. */}
+          {boton.disabled && boton.faltan && boton.faltan.length > 0 ? (
+            <View style={[styles.faltan, { borderColor: c.borderStrong, backgroundColor: c.cardBgAlt }]}>
+              <Text style={[t.small, { color: c.text, fontSize: 15, lineHeight: 21 }]}>
+                {boton.faltan.length === 1
+                  ? `Para seguir falta ${boton.faltan[0]}.`
+                  : `Para seguir falta: ${boton.faltan.join('; ')}.`}
+              </Text>
+            </View>
+          ) : null}
           {/* En recorrido libre el botón nunca se bloquea por campos incompletos. `loading` sí
               se respeta siempre: eso no es una regla de negocio, es que hay algo en vuelo. */}
           <GoldButton
@@ -79,4 +107,5 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   atras: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start', marginBottom: 4 },
   pie: { paddingTop: 12, paddingBottom: 14, borderTopWidth: 1 },
+  faltan: { borderWidth: 1, borderRadius: 12, padding: 12, marginBottom: 10 },
 });

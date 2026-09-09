@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../../../theme/ThemeContext';
 import { PantallaPaso } from '../components/PantallaPaso';
 import { Apoyo, Entrada, Etiqueta, PastillasMultiples, Pregunta } from '../components/Piezas';
-import { LIMITES, PATRONES, esVago, frasearReemplazo, reemplazoValido, reemplazosValidos } from '../reglas';
+import { LIMITES, PATRONES, esVago, faltantesDeReemplazos, frasearReemplazo, reemplazoValido, reemplazosValidos } from '../reglas';
 import type { ProtocoloReemplazo } from '../tipos';
 import { idLocal, type PropsPaso } from './props';
 
@@ -32,7 +32,7 @@ export function ReemplazosScreen({ estado }: PropsPaso) {
     <PantallaPaso
       paso={7}
       onAtras={anterior}
-      boton={{ label: 'Guardar mis reemplazos', onPress: siguiente, disabled: !valido }}
+      boton={{ label: 'Guardar mis reemplazos', onPress: siguiente, disabled: !valido, faltan: faltantesDeReemplazos(mapa.reemplazos) }}
     >
       <Pregunta>¿Qué comportamientos actuales podrían impedir que cumplas tu mapa?</Pregunta>
       <Apoyo>Elige solo los que realmente aparecen en tu vida. Máximo tres.</Apoyo>

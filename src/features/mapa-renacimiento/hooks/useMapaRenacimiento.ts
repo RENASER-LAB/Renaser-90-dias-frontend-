@@ -112,6 +112,9 @@ function altaDesde(accion: AccionMotora, metaCorta: string): AltaHabitoPersonal 
     category: CATEGORIA_POR_AREA[accion.area],
     template: 'OTRO',
     goalLabel: metaCorta || null,
+    // 09:00 es solo el punto de partida: la hora real la elige la persona desde su plan, con
+    // libertad total (hay aprendices que entrenan a las 5 y otros que cierran el día a la 1 AM).
+    // Antes salía del bloque del día, que se quitó del Mapa el 2026-09-09.
     triggerTime: accion.momento ? HORA_POR_BLOQUE[accion.momento] : '09:00:00',
     limitTime: null,
     activeWeekdays: accion.dias.length > 0 ? accion.dias.map(d => NOMBRE_ISO[d]) : undefined,

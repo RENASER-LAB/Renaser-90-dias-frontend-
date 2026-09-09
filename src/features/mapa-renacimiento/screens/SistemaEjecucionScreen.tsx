@@ -7,8 +7,8 @@ import { useTheme } from '../../../theme/ThemeContext';
 import { PantallaPaso } from '../components/PantallaPaso';
 import { Apoyo, Avisos, Entrada, Etiqueta, Pastillas, Pregunta } from '../components/Piezas';
 import {
-  BLOQUES, DIAS_SEMANA, ETIQUETA_AREA, EVIDENCIAS_ACCION, LIMITES, accionValida, accionesPorArea,
-  ajustarDias, avisosDeCarga, esVago, sistemaEjecucionValido,
+  DIAS_SEMANA, ETIQUETA_AREA, EVIDENCIAS_ACCION, LIMITES, accionValida, accionesPorArea,
+  ajustarDias, avisosDeCarga, esVago, faltantesDelSistema, sistemaEjecucionValido,
 } from '../reglas';
 import type { AccionMotora, Area, DiaSemana } from '../tipos';
 import { AREAS } from '../tipos';
@@ -41,7 +41,7 @@ export function SistemaEjecucionScreen({ estado }: PropsPaso) {
     <PantallaPaso
       paso={6}
       onAtras={anterior}
-      boton={{ label: 'Confirmar mi sistema', onPress: siguiente, disabled: !valido }}
+      boton={{ label: 'Confirmar mi sistema', onPress: siguiente, disabled: !valido, faltan: faltantesDelSistema(mapa.acciones) }}
     >
       <Pregunta>Los resultados no se ejecutan; se ejecutan acciones.</Pregunta>
       <Apoyo>Elige las acciones que, sostenidas cada semana, harán más probable cada objetivo. Puedes definir hasta 6 acciones (máximo 2 por objetivo).</Apoyo>
@@ -137,9 +137,17 @@ function EditorAccion({ accion, onCambiar, onQuitar }: {
         })}
       </Row>
 
-      <Etiqueta>Momento (opcional)</Etiqueta>
-      <Pastillas opciones={BLOQUES} valor={accion.momento} onCambiar={m => onCambiar({ momento: accion.momento === m ? null : m })} />
-
+      {/*
+        Acá había "Momento (opcional): Mañana / Tarde / Noche".
+        > **Quitado 2026-09-09.** Es el mismo bloque del día que ya se sacó de Entrenamiento porque
+        > el cliente no lo quiere ver: hay aprendices que trabajan de noche y de madrugada, y el
+        > horario tiene que ser libre. El hábito se crea a las 09:00 y la hora exacta se elige
+        > después, con el selector de hora del plan, que permite cualquier minuto del día.
+        >
+        > La columna `momento` de `acciones_mapa` (V41) **sigue existiendo y queda sin usar**: se
+        > deja así a propósito para no pedir una migración por un campo que solo se dejó de mostrar.
+        > `AccionMotora.momento` se manda siempre en `null`.
+      */}
       <Etiqueta>Evidencia</Etiqueta>
       <Pastillas opciones={EVIDENCIAS_ACCION} valor={accion.evidencia} onCambiar={e => onCambiar({ evidencia: e })} />
 

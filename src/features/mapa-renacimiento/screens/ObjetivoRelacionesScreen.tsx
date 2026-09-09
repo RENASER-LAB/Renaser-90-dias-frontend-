@@ -32,6 +32,8 @@ export function ObjetivoRelacionesScreen({ estado }: PropsPaso) {
         label: 'Revisar mi meta',
         onPress: () => { setIntentado(true); if (valido) siguiente(); },
         disabled: intentado && !valido,
+        // Los avisos bloqueantes ya dicen qué falta; se reusan en vez de escribirlos dos veces.
+        faltan: avisos.filter(a => a.bloquea).map(a => a.mensaje),
       }}
     >
       <Pregunta>¿Qué relación quieres fortalecer o transformar durante los próximos 83 días?</Pregunta>

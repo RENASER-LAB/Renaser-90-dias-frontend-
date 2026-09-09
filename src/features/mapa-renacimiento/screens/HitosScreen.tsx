@@ -6,7 +6,7 @@ import { Row } from '../../../components/ui';
 import { useTheme } from '../../../theme/ThemeContext';
 import { PantallaPaso } from '../components/PantallaPaso';
 import { Apoyo, Entrada, Pregunta } from '../components/Piezas';
-import { DIAS_HITO, ETIQUETA_AREA, hitosCompletos, hitosSugeridos } from '../reglas';
+import { DIAS_HITO, ETIQUETA_AREA, faltantesDeHitos, hitosCompletos, hitosSugeridos } from '../reglas';
 import type { Area, DiaHito } from '../tipos';
 import { AREAS, objetivoDe } from '../tipos';
 import type { PropsPaso } from './props';
@@ -35,7 +35,7 @@ export function HitosScreen({ estado }: PropsPaso) {
   }));
 
   return (
-    <PantallaPaso paso={8} onAtras={anterior} boton={{ label: 'Confirmar hitos', onPress: siguiente, disabled: !valido }}>
+    <PantallaPaso paso={8} onAtras={anterior} boton={{ label: 'Confirmar hitos', onPress: siguiente, disabled: !valido, faltan: faltantesDeHitos(mapa.hitos) }}>
       <Pregunta>No esperarás hasta el final para saber si avanzas.</Pregunta>
       <Apoyo>Revisa los hitos propuestos y ajústalos si no representan un progreso real. El del Día 90 es tu meta.</Apoyo>
 

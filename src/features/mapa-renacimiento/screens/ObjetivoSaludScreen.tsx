@@ -35,6 +35,8 @@ export function ObjetivoSaludScreen({ estado }: PropsPaso) {
         label: 'Revisar mi meta',
         onPress: () => { setIntentado(true); if (valido) siguiente(); },
         disabled: intentado && !valido,
+        // Los avisos bloqueantes ya dicen qué falta; se reusan en vez de escribirlos dos veces.
+        faltan: avisos.filter(a => a.bloquea).map(a => a.mensaje),
       }}
     >
       <Pregunta>¿Qué cambio concreto quieres demostrar en tu cuerpo o salud al llegar al Día 90?</Pregunta>

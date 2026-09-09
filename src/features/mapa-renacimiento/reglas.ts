@@ -147,6 +147,9 @@ const MENSAJE: Record<AvisoCalidad['codigo'], string> = {
   UNSAFE_HEALTH: 'Ajusta esta meta con acompañamiento profesional y define una conducta segura.',
   UNIT_MISMATCH: 'Usa la misma unidad para tu situación actual y tu meta.',
   UNREALISTIC_LOAD: 'Revisa si esta frecuencia puede sostenerse durante 83 días.',
+  MISSING_TYPE: 'Elige primero qué vas a medir, arriba.',
+  MISSING_PERIOD: 'Indica cada cuánto se mide: semanal, mensual o acumulado al Día 90.',
+  MISSING_LINK: 'Elige con quién es el vínculo que quieres fortalecer.',
 };
 
 function aviso(codigo: AvisoCalidad['codigo'], bloquea: boolean): AvisoCalidad {
@@ -155,7 +158,7 @@ function aviso(codigo: AvisoCalidad['codigo'], bloquea: boolean): AvisoCalidad {
 
 export function calidadSalud(o: ObjetivoSalud): AvisoCalidad[] {
   const avisos: AvisoCalidad[] = [];
-  if (!o.tipoResultado) avisos.push(aviso('MISSING_TARGET', true));
+  if (!o.tipoResultado) avisos.push(aviso('MISSING_TYPE', true));
   const base = aNumero(o.lineaBase);
   const meta = aNumero(o.resultadoDia90);
   if (base === null) avisos.push(aviso('MISSING_BASELINE', true));
@@ -172,14 +175,14 @@ export function calidadSalud(o: ObjetivoSalud): AvisoCalidad[] {
 
 export function calidadNegocio(o: ObjetivoNegocio): AvisoCalidad[] {
   const avisos: AvisoCalidad[] = [];
-  if (!o.tipoResultado) avisos.push(aviso('MISSING_TARGET', true));
+  if (!o.tipoResultado) avisos.push(aviso('MISSING_TYPE', true));
   const base = aNumero(o.lineaBase);
   const meta = aNumero(o.resultadoDia90);
   // Admite 0 como línea base (manual): lo que no admite es que falte.
   if (base === null) avisos.push(aviso('MISSING_BASELINE', true));
   if (meta === null) avisos.push(aviso('MISSING_TARGET', true));
   else if (base !== null && meta === base) avisos.push(aviso('VAGUE_RESULT', true));
-  if (!o.periodo) avisos.push(aviso('MISSING_TARGET', true));
+  if (!o.periodo) avisos.push(aviso('MISSING_PERIOD', true));
   if (!o.moneda.trim()) avisos.push(aviso('UNIT_MISMATCH', true));
   if (!o.evidencia.trim()) avisos.push(aviso('MISSING_EVIDENCE', true));
   if (!largoEntre(o.motivo, LIMITES.motivo.min, LIMITES.motivo.max)) avisos.push(aviso('VAGUE_RESULT', true));
@@ -188,7 +191,7 @@ export function calidadNegocio(o: ObjetivoNegocio): AvisoCalidad[] {
 
 export function calidadRelaciones(o: ObjetivoRelaciones): AvisoCalidad[] {
   const avisos: AvisoCalidad[] = [];
-  if (!o.vinculo) avisos.push(aviso('MISSING_TARGET', true));
+  if (!o.vinculo) avisos.push(aviso('MISSING_LINK', true));
   if (o.situacionActual === null) avisos.push(aviso('MISSING_BASELINE', true));
   if (o.resultadoDia90 === null) avisos.push(aviso('MISSING_TARGET', true));
   if (!largoEntre(o.cambioObservable, LIMITES.cambioObservable.min, LIMITES.cambioObservable.max)) {
@@ -385,6 +388,68 @@ export function retornoValido(texto: string): boolean {
 
 export function hitosCompletos(hitos: Hito[]): boolean {
   return hitos.length === 9 && hitos.every(h => h.valor.trim().length > 0);
+}
+
+/**
+ * Qué le falta a UNA acción para ser válida, en las palabras del aprendiz.
+ *
+ * Es el compañero de `accionValida`: aquélla decide, ésta explica. Se escriben juntas a propósito —
+ * si alguien agrega una condición allá y no acá, el botón vuelve a quedarse mudo.
+ */
+export function faltantesDeAccion(a: AccionMotora): string[] {
+  const faltan: string[] = [];
+  if (a.texto.trim().length < LIMITES.accion.min) faltan.push('escribir la acción');
+  else if (a.texto.trim().length > LIMITES.accion.max) faltan.push('acortar la acción');
+  else if (esVago(a.texto)) faltan.push('decir la acción con un verbo concreto');
+  if (a.frecuenciaSemanal < 1 || a.frecuenciaSemanal > 7) faltan.push('una frecuencia de 1 a 7 veces');
+  else if (a.dias.length !== a.frecuenciaSemanal) faltan.push(`marcar ${a.frecuenciaSemanal} días`);
+  if (a.evidencia === null) faltan.push('elegir con qué evidencia la vas a probar');
+  return faltan;
+}
+
+/** Qué falta en el paso 6, nombrando el área para que se sepa dónde mirar. */
+export function faltantesDelSistema(acciones: AccionMotora[]): string[] {
+  const faltan: string[] = [];
+  for (const area of AREAS) {
+    const propias = accionesPorArea(acciones, area);
+    if (propias.length < 1) {
+      faltan.push(`al menos una acción en ${ETIQUETA_AREA[area].toLowerCase()}`);
+      continue;
+    }
+    if (propias.length > LIMITES.accionesPorObjetivo) {
+      faltan.push(`dejar como máximo ${LIMITES.accionesPorObjetivo} acciones en ${ETIQUETA_AREA[area].toLowerCase()}`);
+      continue;
+    }
+    // Se nombra el área y no el número de acción: "la segunda" no le dice nada a nadie.
+    const suyos = propias.flatMap(faltantesDeAccion);
+    for (const f of [...new Set(suyos)]) {
+      faltan.push(`${f} en ${ETIQUETA_AREA[area].toLowerCase()}`);
+    }
+  }
+  if (acciones.length > LIMITES.accionesTotales) {
+    faltan.push(`dejar como máximo ${LIMITES.accionesTotales} acciones en total`);
+  }
+  return faltan;
+}
+
+/** Qué falta en el paso 7. */
+export function faltantesDeReemplazos(reemplazos: ProtocoloReemplazo[]): string[] {
+  if (reemplazos.length === 0) return ['elegir al menos un comportamiento'];
+  if (reemplazos.length > LIMITES.reemplazos) return [`dejar como máximo ${LIMITES.reemplazos} comportamientos`];
+  return reemplazos.every(reemplazoValido) ? [] : ['completar los tres campos de cada comportamiento'];
+}
+
+/** Qué falta en el paso 8. */
+export function faltantesDeHitos(hitos: Hito[]): string[] {
+  return hitosCompletos(hitos) ? [] : ['completar los nueve hitos (30, 60 y 90 de cada objetivo)'];
+}
+
+/** Qué falta en el paso 9. */
+export function faltantesDelRetorno(texto: string): string[] {
+  const limpio = texto.trim();
+  if (limpio.length < LIMITES.retorno.min) return ['escribir tu acción de retorno'];
+  if (limpio.length > LIMITES.retorno.max) return ['acortar tu acción de retorno'];
+  return esVago(limpio) ? ['decir el retorno con una acción concreta'] : [];
 }
 
 /** §1.2: lo que tiene que existir, confirmado, para que el mapa pueda activarse. */

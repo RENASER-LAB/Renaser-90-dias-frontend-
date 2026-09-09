@@ -21,11 +21,31 @@ export function ActivacionScreen({ estado }: PropsPaso) {
   const { listo, faltantes } = definicionDeTerminado(mapa);
   const puedeActivar = listo && mapa.compromisoSeguimiento && !activando;
 
+  /**
+   * Lo que falta para activar, **incluido el compromiso**.
+   *
+   * > **Corregido 2026-09-09.** `definicionDeTerminado` no lo incluye —y hace bien: es el §1.2 del
+   * > manual, lo que el mapa tiene que *contener*, no lo que la persona tiene que *firmar*—. Pero
+   * > acá se usaba su lista tal cual, así que con todo lleno y el compromiso sin marcar el cartel
+   * > "Falta completar" no aparecía y el botón quedaba apagado sin explicación. Probando el mapa
+   * > entero, ése fue el punto donde se trabó el recorrido.
+   */
+  const faltaParaActivar = [
+    ...faltantes,
+    ...(mapa.compromisoSeguimiento ? [] : ['marcar el compromiso de seguimiento, acá abajo']),
+  ];
+
   return (
     <PantallaPaso
       paso={10}
       onAtras={anterior}
-      boton={{ label: 'Activar mi mapa', onPress: () => { void activar(); }, disabled: !puedeActivar, loading: activando }}
+      boton={{
+        label: 'Activar mi mapa',
+        onPress: () => { void activar(); },
+        disabled: !puedeActivar,
+        loading: activando,
+        faltan: faltaParaActivar,
+      }}
     >
       <Pregunta>Este es tu Mapa de Renacimiento.</Pregunta>
       <Apoyo>No tiene que ser perfecto; tiene que ser claro, medible y sostenible. Revisa cada sección antes de activarlo.</Apoyo>
@@ -90,9 +110,11 @@ export function ActivacionScreen({ estado }: PropsPaso) {
         </Row>
       </Pressable>
 
-      {!listo ? (
+      {faltaParaActivar.length > 0 ? (
         <View style={{ marginTop: 14 }}>
-          <Text style={[t.small, { color: c.textSoft }]}>Falta completar: {faltantes.join('; ')}.</Text>
+          <Text style={[t.small, { color: c.textSoft, lineHeight: 19 }]}>
+            Falta completar: {faltaParaActivar.join('; ')}.
+          </Text>
         </View>
       ) : null}
       {errorActivacion ? (

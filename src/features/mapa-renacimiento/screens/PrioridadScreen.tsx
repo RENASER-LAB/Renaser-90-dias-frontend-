@@ -23,7 +23,7 @@ export function PrioridadScreen({ estado }: PropsPaso) {
     <PantallaPaso
       paso={2}
       onAtras={anterior}
-      boton={{ label: 'Continuar', onPress: siguiente, disabled: !mapa.prioridad }}
+      boton={{ label: 'Continuar', onPress: siguiente, disabled: !mapa.prioridad, faltan: ['elegir el área que más impacto tendría'] }}
     >
       <Pregunta>Si durante estos 83 días solo pudieras transformar profundamente un área, ¿cuál tendría mayor impacto en tu vida?</Pregunta>
       <Apoyo>Trabajarás las tres. Esta elección solo define cuál tendrá prioridad cuando debas decidir.</Apoyo>

@@ -24,7 +24,12 @@ export type DiaHito = 30 | 60 | 90;
 /** §4.3 del manual. Los que bloquean impiden "Continuar"; los demás solo avisan. */
 export type CodigoCalidad =
   | 'MISSING_BASELINE' | 'MISSING_TARGET' | 'VAGUE_RESULT' | 'MISSING_EVIDENCE'
-  | 'THIRD_PARTY_CONTROL' | 'UNSAFE_HEALTH' | 'UNIT_MISMATCH' | 'UNREALISTIC_LOAD';
+  | 'THIRD_PARTY_CONTROL' | 'UNSAFE_HEALTH' | 'UNIT_MISMATCH' | 'UNREALISTIC_LOAD'
+  // Agregados el 2026-09-09. Los tres usaban MISSING_TARGET —"¿A qué número concreto quieres
+  // llegar?"— aunque lo que faltaba no era un número: era el tipo de resultado, el periodo o el
+  // vínculo. El aviso señalaba un campo que estaba bien lleno y se perdían minutos buscando el
+  // error donde no estaba. Cada cosa que falta necesita su propio código, o el mensaje miente.
+  | 'MISSING_TYPE' | 'MISSING_PERIOD' | 'MISSING_LINK';
 
 export interface AvisoCalidad {
   codigo: CodigoCalidad;

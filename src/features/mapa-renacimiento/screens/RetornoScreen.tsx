@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../../../theme/ThemeContext';
 import { PantallaPaso } from '../components/PantallaPaso';
 import { Apoyo, Entrada, Etiqueta, Nota, Pregunta } from '../components/Piezas';
-import { LIMITES, esVago, retornoValido, sugerenciasDeRetorno } from '../reglas';
+import { LIMITES, esVago, faltantesDelRetorno, retornoValido, sugerenciasDeRetorno } from '../reglas';
 import type { PropsPaso } from './props';
 
 /** V09 · Protocolo de retorno (§3 V09): una acción mínima, observable, ejecutable en menos de 24 h. */
@@ -16,7 +16,7 @@ export function RetornoScreen({ estado }: PropsPaso) {
   const sugerencias = sugerenciasDeRetorno(mapa);
 
   return (
-    <PantallaPaso paso={9} onAtras={anterior} boton={{ label: 'Definir mi retorno', onPress: siguiente, disabled: !valido }}>
+    <PantallaPaso paso={9} onAtras={anterior} boton={{ label: 'Definir mi retorno', onPress: siguiente, disabled: !valido, faltan: faltantesDelRetorno(mapa.retorno) }}>
       <Pregunta>Habrá días imperfectos. Lo importante es cuánto tardas en volver.</Pregunta>
       <Apoyo>Cuando pierdas el ritmo, ¿qué acción mínima realizarás para regresar al plan en menos de 24 horas?</Apoyo>
 
