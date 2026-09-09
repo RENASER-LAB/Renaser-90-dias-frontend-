@@ -50,18 +50,27 @@ export function useRocasDiarias() {
   }, [cargar]);
 
   /**
-   * Qué día toca planificar y si ya está armado.
+   * Qué fecha se propone. **Es una propuesta del dispositivo, no la verdad.**
    *
-   * Se calcula en cada render **sin memoizar**, y es a propósito: depende de la hora, no de los
-   * datos. Con un `useMemo` sobre `[hoy, manana]`, la app abierta a las 17:59 seguiría proponiendo
-   * "hoy" pasadas las 18:00 —una fecha que el backend rechaza con `INVALID_DATE`— hasta que algo
-   * más la hiciera recargar. Son tres comparaciones: no hay nada que ahorrar.
+   * > **Corregido 2026-09-09.** Antes esto decidía además si lo agendado era "de hoy" o "de
+   * > mañana", y con eso la tarjeta elegía qué mostrar. Probándolo en el desplegado a las 00:41 el
+   * > reloj del teléfono decía 9 de septiembre y el backend —que cuenta con **la zona del
+   * > participante**— todavía estaba en el 8: las tres acciones se crearon (201) y cayeron en
+   * > `/rocks/tomorrow`, mientras la pantalla seguía diciendo "todavía no agendaste tus acciones de
+   * > hoy". Se agendó bien y no se veía en ningún lado.
+   *
+   * La regla que sale de ahí, y que ya costó cara en el backend (E-91): **el día de una persona lo
+   * decide su zona horaria, y el dispositivo no la conoce.** Por eso la fecha propuesta sigue
+   * saliendo del reloj local —es lo único que hay para armar el POST— pero **el rótulo ya no**: la
+   * pantalla muestra los dos cubos que devuelve el servidor, `hoy` y `manana`, y cada acción se ve
+   * donde el servidor la puso.
    */
   const { fecha, esManana } = fechaAPlanificar();
   const objetivo = {
     fecha,
     esManana,
-    yaPlanificado: (esManana ? manana : hoy).length > 0,
+    /** Ya hay algo agendado en cualquiera de los dos días: no se ofrece volver a planificar. */
+    yaPlanificado: hoy.length > 0 || manana.length > 0,
   };
 
   /**

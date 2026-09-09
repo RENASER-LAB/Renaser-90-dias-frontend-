@@ -41,9 +41,11 @@ interface AccionElegida {
 interface AgendarAccionesModalProps {
   visible: boolean;
   semanal: ReturnType<typeof useRocasSemanales>;
-  /** `YYYY-MM-DD`. La decide el hook según la hora: después de las 18:00, mañana. */
+  /**
+   * `YYYY-MM-DD` que se va a mandar. Sale del reloj del dispositivo, que es lo único que hay, y
+   * **puede no coincidir con el día del participante**: el servidor decide en qué día cae.
+   */
   fecha: string;
-  esManana: boolean;
   guardando: boolean;
   onGuardar: (items: ItemPlanDiario[]) => void;
   onCerrar: () => void;
@@ -53,7 +55,6 @@ export function AgendarAccionesModal({
   visible,
   semanal,
   fecha,
-  esManana,
   guardando,
   onGuardar,
   onCerrar,
@@ -94,7 +95,9 @@ export function AgendarAccionesModal({
   };
 
   const abrirRueda = (clave: string, horaActual: string) => {
-    const [h, m] = horaActual.split(':').map(Number);
+    // `''.split(':')` da `['']` y `Number('')` es 0, no NaN: sin este corte la rueda abría en 00:00
+    // para una acción sin hora en vez de en un horario razonable. Se vio probando en el desplegado.
+    const [h, m] = horaActual ? horaActual.split(':').map(Number) : [NaN, NaN];
     setHoraEnCurso({
       hora: Number.isFinite(h) ? h : 6,
       // Los pasos de la rueda son de 5 minutos: se redondea al más cercano para no arrancar en un
@@ -137,7 +140,7 @@ export function AgendarAccionesModal({
           <View style={[estilos.encabezado, { borderBottomColor: c.divider }]}>
             <View style={{ flex: 1 }}>
               <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 1, fontSize: 12 }]}>
-                {eligiendoHoraDe ? 'ELEGIR HORA' : esManana ? 'AGENDAR PARA MAÑANA' : 'AGENDAR PARA HOY'}
+                {eligiendoHoraDe ? 'ELEGIR HORA' : 'AGENDAR MIS ACCIONES'}
               </Text>
               <Text style={[t.small, { color: c.textSoft, fontSize: 14, marginTop: 2 }]} numberOfLines={2}>
                 {eligiendoHoraDe ? eligiendoHoraDe.split('|')[1] : 'Elige hasta tres por eje. La hora es opcional.'}
@@ -236,7 +239,9 @@ export function AgendarAccionesModal({
             )}
             {!eligiendoHoraDe && (
               <Text style={[t.small, { color: c.textSoft, fontSize: 13, marginTop: 8, textAlign: 'center' }]}>
-                Van a aparecer en Entrenamiento, en Vida y Negocio · {fecha}
+                {/* Se muestra la fecha exacta que se va a mandar, en vez de decir "hoy": el
+                  dispositivo puede estar en otro día que el participante. */}
+              Se agendan para el {fecha} y aparecen en Entrenamiento, en Vida y Negocio
               </Text>
             )}
           </View>

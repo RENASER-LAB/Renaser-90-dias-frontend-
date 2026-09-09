@@ -32,7 +32,11 @@ export function TarjetaAccionesDelDia({ diaria, semanal, diaPrograma }: TarjetaA
   const [agendando, setAgendando] = useState(false);
 
   const hayPlanSemanal = semanal.estado === 'planificada' || semanal.estado === 'cerrada';
-  const agendadas: RocaDiariaApi[] = diaria.objetivo.esManana ? diaria.manana : diaria.hoy;
+  // Los dos cubos vienen del servidor, que es el único que sabe en qué día está el participante.
+  const cubos: { titulo: string; rocas: RocaDiariaApi[] }[] = [
+    { titulo: 'Hoy', rocas: diaria.hoy },
+    { titulo: 'Mañana', rocas: diaria.manana },
+  ].filter(cubo => cubo.rocas.length > 0);
 
   const guardar = async (items: ItemPlanDiario[]) => {
     const resultado = await diaria.planificar(diaria.objetivo.fecha, items);
@@ -47,7 +51,7 @@ export function TarjetaAccionesDelDia({ diaria, semanal, diaPrograma }: TarjetaA
       <View style={estilos.encabezado}>
         <Text style={{ fontSize: 18 }}>🎯</Text>
         <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 1, fontSize: 12 }]}>
-          3. {diaria.objetivo.esManana ? 'TUS ACCIONES DE MAÑANA' : `TUS ACCIONES DE HOY · DÍA ${diaPrograma}`}
+          3. TUS ACCIONES · DÍA {diaPrograma}
         </Text>
       </View>
 
@@ -56,9 +60,16 @@ export function TarjetaAccionesDelDia({ diaria, semanal, diaPrograma }: TarjetaA
           Primero arma tu semana. Las acciones del día salen de las acciones críticas que definís
           ahí, no se escriben sueltas.
         </Text>
-      ) : agendadas.length > 0 ? (
+      ) : cubos.length > 0 ? (
         <View style={{ gap: 10, marginTop: 10 }}>
-          {agendadas.map(roca => (
+          {cubos.map(cubo => (
+            <View key={cubo.titulo} style={{ gap: 10 }}>
+              {/* El rótulo sale de en qué cubo lo puso el servidor, no del reloj del teléfono:
+                  a las 00:41 el dispositivo puede estar un día adelante del participante. */}
+              <Text style={[t.micro, { color: c.gold, fontWeight: '800', fontSize: 11 }]}>
+                {cubo.titulo.toUpperCase()}
+              </Text>
+              {cubo.rocas.map(roca => (
             <View key={roca.id} style={[estilos.fila, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
               {/* El color es la regla de Pareto, no decoración: la VERDE va primero y desbloquea
                   a las otras dos de su eje. */}
@@ -74,6 +85,8 @@ export function TarjetaAccionesDelDia({ diaria, semanal, diaPrograma }: TarjetaA
               {roca.completada && (
                 <Text style={[t.small, { color: '#70d2a0', fontWeight: '700', fontSize: 14 }]}>✓</Text>
               )}
+                </View>
+              ))}
             </View>
           ))}
           <Text style={[t.small, { color: c.textSoft, fontSize: 14, lineHeight: 20 }]}>
@@ -83,16 +96,15 @@ export function TarjetaAccionesDelDia({ diaria, semanal, diaPrograma }: TarjetaA
       ) : (
         <View style={{ gap: 12, marginTop: 8 }}>
           <Text style={[t.body, { color: c.textSoft, fontSize: 15, lineHeight: 22 }]}>
-            {diaria.objetivo.esManana
-              ? 'Todavía no agendaste nada para mañana. Desde las 18:00 se planifica el día siguiente.'
-              : 'Todavía no agendaste tus acciones de hoy. Elige cuáles de tu semana caen hoy, y a qué hora.'}
+            Todavía no agendaste acciones. Elige cuáles de tu semana caen ahora, y a qué hora. Desde
+            las 18:00 el programa planifica el día siguiente.
           </Text>
           <Pressable
             onPress={() => setAgendando(true)}
             style={[estilos.boton, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}
           >
             <Text style={[t.body, { color: c.gold, fontWeight: '700', fontSize: 15 }]}>
-              {diaria.objetivo.esManana ? 'Agendar para mañana' : 'Agendar mis acciones'}
+              Agendar mis acciones
             </Text>
           </Pressable>
         </View>
@@ -106,7 +118,6 @@ export function TarjetaAccionesDelDia({ diaria, semanal, diaPrograma }: TarjetaA
         visible={agendando}
         semanal={semanal}
         fecha={diaria.objetivo.fecha}
-        esManana={diaria.objetivo.esManana}
         guardando={diaria.guardando}
         onGuardar={guardar}
         onCerrar={() => setAgendando(false)}
