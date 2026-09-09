@@ -14,6 +14,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { Icon } from './Icon';
 import { MicroLabel } from './ui';
 import { LocationService, CountryOption, GooglePlaceResult } from '../services/locationService';
+import { VeloModal } from './VeloModal';
 
 export interface LocationData {
   pais: string;
@@ -426,7 +427,15 @@ export function LocationCascadePicker({
           setGoogleResults([]);
         }}
       >
-        <View style={styles.modalBackdrop}>
+        <VeloModal
+          onCerrar={() => {
+            setActiveModal(null);
+            setSearchQuery('');
+            setGoogleResults([]);
+          }}
+          style={styles.modalBackdrop}
+          etiqueta="Cerrar el selector de ubicacion"
+        >
           <View style={[styles.modalCard, { backgroundColor: c.cardBg, borderColor: c.gold }]}>
             <View style={styles.modalHeader}>
               <MicroLabel>UBICACIÓN RENASER</MicroLabel>
@@ -524,7 +533,7 @@ export function LocationCascadePicker({
               </Text>
             </Pressable>
           </View>
-        </View>
+        </VeloModal>
       </Modal>
     </View>
   );

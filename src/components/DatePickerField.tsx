@@ -12,6 +12,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { Icon } from './Icon';
 import { MicroLabel } from './ui';
 import { GoldButton } from './GoldButton';
+import { VeloModal } from './VeloModal';
 
 interface DatePickerFieldProps {
   label: string;
@@ -124,7 +125,11 @@ export function DatePickerField({
         animationType="fade"
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={styles.modalBackdrop}>
+        <VeloModal
+          onCerrar={() => setModalVisible(false)}
+          style={styles.modalBackdrop}
+          etiqueta="Cerrar el selector de fecha"
+        >
           <View style={[styles.modalCard, { backgroundColor: c.cardBg, borderColor: c.gold }]}>
             <View style={styles.modalHeader}>
               <View style={[styles.modalIcon, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
@@ -259,7 +264,7 @@ export function DatePickerField({
               />
             </View>
           </View>
-        </View>
+        </VeloModal>
       </Modal>
     </View>
   );

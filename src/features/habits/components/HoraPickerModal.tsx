@@ -4,6 +4,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { useTheme } from '../../../theme/ThemeContext';
 import { GoldButton } from '../../../components/GoldButton';
 import { Icon } from '../../../components/Icon';
+import { VeloModal } from '../../../components/VeloModal';
 
 /**
  * Selector de hora táctil, pensado para un público de 40+ años (palabras del dueño del
@@ -62,7 +63,7 @@ export function HoraPickerModal({
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCerrar}>
-      <View style={styles.overlay}>
+      <VeloModal onCerrar={onCerrar} style={styles.overlay} etiqueta="Cerrar el selector de hora">
         <View style={[styles.card, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
           <View style={[styles.header, { borderBottomColor: c.divider }]}>
             <View style={{ flex: 1 }}>
@@ -158,7 +159,7 @@ export function HoraPickerModal({
             style={{ width: '100%', marginTop: 16 }}
           />
         </View>
-      </View>
+      </VeloModal>
     </Modal>
   );
 }

@@ -11,6 +11,7 @@ import {
 import { useTheme } from '../theme/ThemeContext';
 import { Icon } from './Icon';
 import { MicroLabel } from './ui';
+import { VeloModal } from './VeloModal';
 import {
   PhoneCountry,
   ALL_WORLD_PHONE_COUNTRIES,
@@ -198,7 +199,14 @@ export function PhoneCountryInput({
           setSearchQuery('');
         }}
       >
-        <View style={styles.modalBackdrop}>
+        <VeloModal
+          onCerrar={() => {
+            setModalVisible(false);
+            setSearchQuery('');
+          }}
+          style={styles.modalBackdrop}
+          etiqueta="Cerrar el selector de pais"
+        >
           <View style={[styles.modalCard, { backgroundColor: c.cardBg, borderColor: c.gold }]}>
             <View style={styles.modalHeader}>
               <MicroLabel>PAÍS Y PREFIJO TELEFÓNICO (TODOS LOS PAÍSES)</MicroLabel>
@@ -247,7 +255,7 @@ export function PhoneCountryInput({
               </Text>
             </Pressable>
           </View>
-        </View>
+        </VeloModal>
       </Modal>
     </View>
   );
