@@ -5,6 +5,7 @@ import * as objetivosApi from '../../objetivos/api/objetivosApi';
 import type { DefinicionRocaMaestra, EjeObjetivo } from '../../objetivos/types/objetivos.types';
 import type { AltaHabitoPersonal, CategoriaHabitoApi, DiaSemanaApi } from '../../habits/types/habits.types';
 import { almacenMapa } from '../almacen';
+import { completarEtapaMapa, consultarMapa } from '../api/mapaApi';
 import { completarHitos, definicionDeTerminado, redactar } from '../reglas';
 import type { AccionMotora, Area, BloqueDia, DiaSemana, MapaRenacimiento, Objetivo, PasoMapa } from '../tipos';
 import { AREAS, objetivoDe } from '../tipos';
@@ -151,14 +152,39 @@ export function useMapaRenacimiento(userId: string): EstadoMapaRenacimiento {
   const temporizador = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cargado = useRef(false);
 
+  /**
+   * Carga en dos tiempos: primero el borrador local (instantaneo, y lo unico que hay sin red) y
+   * despues la confirmacion del servidor.
+   *
+   * El servidor solo puede CONFIRMAR que la etapa esta terminada, nunca desmarcarla. Si dijera
+   * `false` y el dispositivo tiene `activo`, gana el dispositivo: puede que `POST /completar`
+   * fallara despues de haber creado ya las rocas y los habitos, y en ese caso obligar a
+   * recorrer el mapa otra vez es exactamente el bug que esto viene a cerrar — se volverian a
+   * crear duplicados. Al reves si: servidor `true` manda sobre un borrador local vacio, que es
+   * el caso de reinstalar o cambiar de telefono.
+   */
   useEffect(() => {
     let vigente = true;
-    almacenMapa.leer(userId).then(guardado => {
+    (async () => {
+      const guardado = await almacenMapa.leer(userId);
       if (!vigente) return;
+      const base = guardado ?? mapaVacio();
       if (guardado) setMapa(guardado);
       cargado.current = true;
       setCargando(false);
-    });
+
+      if (base.estado === 'activo') return;
+      try {
+        const servidor = await consultarMapa();
+        if (!vigente || !servidor.stageCompleted) return;
+        const confirmado: MapaRenacimiento = { ...base, estado: 'activo', pasoActual: 11 };
+        setMapa(confirmado);
+        void almacenMapa.guardar(userId, confirmado);
+      } catch {
+        // Sin red o con el endpoint caido se sigue con el borrador local: el mapa tiene que
+        // poder recorrerse sin conexion (manual 5.4). No se bloquea ni se avisa por esto.
+      }
+    })();
     return () => {
       vigente = false;
     };
@@ -265,6 +291,16 @@ export function useMapaRenacimiento(userId: string): EstadoMapaRenacimiento {
         habitosCreados: creados,
         pasoActual: 11,
       }));
+
+      /* Se avisa al servidor DESPUES de que las rocas y los habitos ya existen, y su fallo no
+         revierte nada: lo importante (lo que se creo) ya esta. Si esta llamada no llega, el
+         dispositivo igual recuerda que esta activo; lo que se pierde es la memoria entre
+         dispositivos, no el trabajo. */
+      try {
+        await completarEtapaMapa();
+      } catch {
+        // Silencioso a proposito: no hay nada que la persona pueda hacer al respecto aqui.
+      }
       return true;
     } catch (e) {
       setErrorActivacion(e instanceof Error ? e.message : 'No pudimos activar tu mapa. Intenta de nuevo.');

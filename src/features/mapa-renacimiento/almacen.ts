@@ -6,10 +6,14 @@ import { mapaVacio } from './tipos';
  * Borrador local del Mapa de Renacimiento, por usuario.
  *
  * El manual (§2.1 "Guardado", §5.4 "Sin conexión") pide autoguardado local inmediato y
- * sincronización al servidor después. Hoy existe solo la mitad local: el backend todavía no
- * tiene las entidades del mapa (`docs/MAPA_RENACIMIENTO_DIA7.md`). Cuando exista, este archivo
- * sigue siendo la primera capa —lo que se escribe antes de que la red responda— y la
- * sincronización se agrega encima, sin cambiar las pantallas.
+ * sincronización al servidor después. Este archivo es la primera capa: lo que se escribe antes
+ * de que la red responda, y lo único que hay sin conexión.
+ *
+ * La segunda capa ya existe (`api/mapaApi.ts`, contra `/api/v1/mapa-renacimiento`). Solo se
+ * sincroniza el hecho de haber TERMINADO la etapa, que es lo que no puede vivir únicamente en
+ * el dispositivo: al reinstalar o cambiar de teléfono, este borrador desaparece y el mapa se
+ * podía recorrer de nuevo, creando rocas y hábitos duplicados. El contenido del borrador
+ * (los nueve textos) sigue siendo local.
  *
  * AsyncStorage y no SecureStore, por el mismo motivo que el borrador de la Ficha Inicial: no es
  * una credencial, y SecureStore tiene un tope de ~2 KB que un mapa con nueve textos supera.
