@@ -50,3 +50,7 @@ graphify-out/
 
 # Configuracion local del IDE (JetBrains): es de cada maquina, no del proyecto.
 .idea/
+
+# Worktrees que crea Claude Code dentro del proyecto: son checkouts completos
+# del repo. Estaba solo en .git/info/exclude, que no se comparte con el equipo.
+.claude/worktrees/
