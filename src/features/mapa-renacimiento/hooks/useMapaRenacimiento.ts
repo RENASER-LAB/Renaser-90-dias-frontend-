@@ -67,7 +67,9 @@ function definicionDesde(objetivo: Objetivo): DefinicionRocaMaestra {
   const base = aNumeroDeMeta(objetivo.lineaBase);
   const meta = aNumeroDeMeta(objetivo.resultadoDia90);
   const unidad = (objetivo.area === 'salud' ? objetivo.unidad : objetivo.moneda).trim().slice(0, 20);
-  if (base === null || meta === null || meta <= 0 || !unidad || base === meta) {
+  // `meta === 0` es válido desde V44: saldar una deuda es una meta legítima, y con línea base el
+  // avance se puede medir. Lo que se sigue rechazando es una meta negativa y una sin distancia.
+  if (base === null || meta === null || meta < 0 || !unidad || base === meta) {
     return { objetivo: texto };
   }
   // `lineaBase` va SIEMPRE que haya meta, y es lo que hace que el porcentaje sirva en las dos
