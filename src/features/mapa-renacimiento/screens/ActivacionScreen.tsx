@@ -59,7 +59,7 @@ export function ActivacionScreen({ estado }: PropsPaso) {
           const o = objetivoDe(mapa, area);
           return (
             <View key={area} style={{ marginBottom: 8 }}>
-              <Text style={[t.micro, { color: c.gold, letterSpacing: 1 }]}>{ETIQUETA_AREA[area].toUpperCase()}</Text>
+              <Text style={[t.micro, { color: c.goldInk, letterSpacing: 1 }]}>{ETIQUETA_AREA[area].toUpperCase()}</Text>
               <Text style={[t.small, { color: c.text, lineHeight: 18, marginTop: 2 }]}>{o.metaRedactada || 'Sin meta'}</Text>
             </View>
           );
@@ -118,7 +118,7 @@ export function ActivacionScreen({ estado }: PropsPaso) {
         </View>
       ) : null}
       {errorActivacion ? (
-        <Text style={[t.small, { color: '#E06A66', marginTop: 12, lineHeight: 18 }]}>
+        <Text style={[t.small, { color: c.danger, marginTop: 12, lineHeight: 18 }]}>
           {errorActivacion} Lo que ya se creó no se duplica al reintentar.
         </Text>
       ) : null}

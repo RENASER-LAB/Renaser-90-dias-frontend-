@@ -147,9 +147,9 @@ export function ChapterIdentidad({ data, onChange }: ChapterIdentidadProps) {
                   style={[
                     t.micro,
                     {
-                      color: isSelected ? c.gold : c.text,
+                      color: isSelected ? c.goldInk : c.text,
                       fontSize: 12,
-                      fontWeight: isSelected ? '700' : '500',
+                      fontFamily: isSelected ? 'Jost_700Bold' : 'Jost_500Medium',
                       letterSpacing: 0.5,
                       textAlign: 'center',
                     },
@@ -185,9 +185,9 @@ export function ChapterIdentidad({ data, onChange }: ChapterIdentidadProps) {
                   style={[
                     t.micro,
                     {
-                      color: isSelected ? c.gold : c.text,
+                      color: isSelected ? c.goldInk : c.text,
                       fontSize: 11,
-                      fontWeight: isSelected ? '700' : '500',
+                      fontFamily: isSelected ? 'Jost_700Bold' : 'Jost_500Medium',
                     },
                   ]}
                 >
@@ -223,7 +223,7 @@ export function ChapterIdentidad({ data, onChange }: ChapterIdentidadProps) {
                     {
                       color: isSelected ? c.onGold : c.text,
                       fontSize: 14,
-                      fontWeight: '700',
+                      fontFamily: 'Jost_700Bold',
                     },
                   ]}
                 >
@@ -282,9 +282,9 @@ export function ChapterIdentidad({ data, onChange }: ChapterIdentidadProps) {
                   style={[
                     t.micro,
                     {
-                      color: isSelected ? c.gold : c.text,
+                      color: isSelected ? c.goldInk : c.text,
                       fontSize: 11,
-                      fontWeight: isSelected ? '700' : '500',
+                      fontFamily: isSelected ? 'Jost_700Bold' : 'Jost_500Medium',
                       letterSpacing: 0.5,
                       textAlign: 'center',
                     },
@@ -361,7 +361,7 @@ export function ChapterIdentidad({ data, onChange }: ChapterIdentidadProps) {
           numberOfLines={4}
           maxLength={2000}
         />
-        <Text style={[t.micro, styles.counterText, { color: c.gold }]}>
+        <Text style={[t.micro, styles.counterText, { color: c.goldInk }]}>
           {data.expectativa.length} / 2000 caracteres
         </Text>
       </View>
@@ -381,7 +381,7 @@ export function ChapterIdentidad({ data, onChange }: ChapterIdentidadProps) {
           numberOfLines={4}
           maxLength={2000}
         />
-        <Text style={[t.micro, styles.counterText, { color: c.gold }]}>
+        <Text style={[t.micro, styles.counterText, { color: c.goldInk }]}>
           {data.temor.length} / 2000 caracteres
         </Text>
       </View>
@@ -435,7 +435,7 @@ const styles = StyleSheet.create({
   counterText: {
     alignSelf: 'flex-end',
     fontSize: 10.5,
-    fontWeight: '700',
+    fontFamily: 'Jost_700Bold',
     marginTop: 4,
     marginRight: 2,
   },

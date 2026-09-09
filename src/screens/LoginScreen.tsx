@@ -506,7 +506,7 @@ export default function LoginScreen() {
             onPress={handleReturnToLogin}
             style={[styles.backBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
           >
-            <Icon name="arrowLeft" size={16} color={c.gold} />
+            <Icon name="arrowLeft" size={16} color={c.goldInk} />
             <Text style={[t.micro, { color: c.text, letterSpacing: 1.2 }]}>VOLVER AL LOGIN</Text>
           </Pressable>
         ) : (
@@ -520,7 +520,7 @@ export default function LoginScreen() {
           accessibilityLabel={mode === 'light' ? 'Activar modo oscuro' : 'Activar modo claro'}
           style={[styles.themeBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
         >
-          <Icon name={mode === 'light' ? 'moon' : 'sun'} size={15} color={c.gold} />
+          <Icon name={mode === 'light' ? 'moon' : 'sun'} size={15} color={c.goldInk} />
         </Pressable>
       </View>
 
@@ -585,7 +585,7 @@ export default function LoginScreen() {
                       : 'diamond'
                   }
                   size={isShort ? rs(16) : rs(20)}
-                  color={c.gold}
+                  color={c.goldInk}
                   strokeWidth={1.2}
                 />
               </View>
@@ -649,9 +649,9 @@ export default function LoginScreen() {
                     style={[
                       t.micro,
                       {
-                        color: activeTab === 'login' ? c.gold : c.textSoft,
+                        color: activeTab === 'login' ? c.goldInk : c.textSoft,
                         letterSpacing: 1.8,
-                        fontWeight: activeTab === 'login' ? '600' : '400',
+                        fontFamily: activeTab === 'login' ? 'Jost_500Medium' : 'Jost_400Regular',
                       },
                     ]}
                   >
@@ -674,9 +674,9 @@ export default function LoginScreen() {
                     style={[
                       t.micro,
                       {
-                        color: activeTab === 'register' ? c.gold : c.textSoft,
+                        color: activeTab === 'register' ? c.goldInk : c.textSoft,
                         letterSpacing: 1.8,
-                        fontWeight: activeTab === 'register' ? '600' : '400',
+                        fontFamily: activeTab === 'register' ? 'Jost_500Medium' : 'Jost_400Regular',
                       },
                     ]}
                   >
@@ -689,15 +689,15 @@ export default function LoginScreen() {
               <View style={[styles.card, { backgroundColor: c.cardBg, borderColor: c.border }]}>
                 {errorMessage ? (
                   <View style={[styles.alertBox, { backgroundColor: 'rgba(217, 83, 79, 0.08)', borderColor: 'rgba(217, 83, 79, 0.25)' }]}>
-                    <Text style={[t.small, { color: '#E06A66', textAlign: 'center' }]}>{errorMessage}</Text>
+                    <Text style={[t.small, { color: c.danger, textAlign: 'center' }]}>{errorMessage}</Text>
                   </View>
                 ) : null}
 
                 {/* Avisos que llegan al login desde otro paso: "contraseña actualizada" (D-102) o
                     "ya tenías una solicitud en revisión" (login social). Antes no se mostraban. */}
                 {successMessage ? (
-                  <View style={[styles.alertBox, { backgroundColor: 'rgba(178, 146, 79, 0.12)', borderColor: c.borderStrong }]}>
-                    <Text style={[t.small, { color: c.gold, textAlign: 'center' }]}>{successMessage}</Text>
+                  <View style={[styles.alertBox, { backgroundColor: c.goldWash, borderColor: c.borderStrong }]}>
+                    <Text style={[t.small, { color: c.goldInk, textAlign: 'center' }]}>{successMessage}</Text>
                   </View>
                 ) : null}
 
@@ -713,7 +713,7 @@ export default function LoginScreen() {
                         },
                       ]}
                     >
-                      <Icon name="user" size={17} color={focusedField === 'nombres' ? c.gold : c.tabInactive} />
+                      <Icon name="user" size={17} color={focusedField === 'nombres' ? c.goldInk : c.tabInactive} />
                       <TextInput
                         value={nombres}
                         onChangeText={setNombres}
@@ -740,7 +740,7 @@ export default function LoginScreen() {
                         },
                       ]}
                     >
-                      <Icon name="user" size={17} color={focusedField === 'apellidos' ? c.gold : c.tabInactive} />
+                      <Icon name="user" size={17} color={focusedField === 'apellidos' ? c.goldInk : c.tabInactive} />
                       <TextInput
                         value={apellidos}
                         onChangeText={setApellidos}
@@ -766,7 +766,7 @@ export default function LoginScreen() {
                       },
                     ]}
                   >
-                    <Icon name="mail" size={17} color={focusedField === 'email' ? c.gold : c.tabInactive} />
+                    <Icon name="mail" size={17} color={focusedField === 'email' ? c.goldInk : c.tabInactive} />
                     <TextInput
                       value={email}
                       onChangeText={setEmail}
@@ -786,10 +786,10 @@ export default function LoginScreen() {
                     <Text style={[t.micro, { color: c.textSoft }]}>Verificando disponibilidad...</Text>
                   )}
                   {activeTab === 'register' && disponibilidadCorreo === 'disponible' && (
-                    <Text style={[t.micro, { color: c.gold }]}>Este correo está disponible.</Text>
+                    <Text style={[t.micro, { color: c.goldInk }]}>Este correo está disponible.</Text>
                   )}
                   {activeTab === 'register' && disponibilidadCorreo === 'tomado' && (
-                    <Text style={[t.micro, { color: '#f28e8e' }]}>
+                    <Text style={[t.micro, { color: c.danger }]}>
                       Ese correo ya tiene una cuenta. Puedes iniciar sesión.
                     </Text>
                   )}
@@ -810,7 +810,7 @@ export default function LoginScreen() {
                           setStep('forgot');
                         }}
                       >
-                        <Text style={[t.micro, { color: c.gold, letterSpacing: 0.8, fontWeight: '600' }]}>
+                        <Text style={[t.micro, { color: c.goldInk, letterSpacing: 0.8, fontFamily: 'Jost_500Medium' }]}>
                           ¿Olvidaste tu contraseña?
                         </Text>
                       </Pressable>
@@ -825,7 +825,7 @@ export default function LoginScreen() {
                       },
                     ]}
                   >
-                    <Icon name="lock" size={17} color={focusedField === 'password' ? c.gold : c.tabInactive} />
+                    <Icon name="lock" size={17} color={focusedField === 'password' ? c.goldInk : c.tabInactive} />
                     <TextInput
                       value={password}
                       onChangeText={setPassword}
@@ -858,7 +858,7 @@ export default function LoginScreen() {
                         },
                       ]}
                     >
-                      <Icon name="lock" size={17} color={focusedField === 'confirmPassword' ? c.gold : c.tabInactive} />
+                      <Icon name="lock" size={17} color={focusedField === 'confirmPassword' ? c.goldInk : c.tabInactive} />
                       <TextInput
                         value={confirmPassword}
                         onChangeText={setConfirmPassword}
@@ -888,7 +888,7 @@ export default function LoginScreen() {
                     {loading ? (
                       <ActivityIndicator color={c.onGold} size="small" />
                     ) : (
-                      <Text style={[t.micro, { color: c.onGold, letterSpacing: 2.5, fontWeight: '700', fontSize: 11 }]}>
+                      <Text style={[t.micro, { color: c.onGold, letterSpacing: 2.5, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                         {activeTab === 'login' ? 'ACCEDER AL PROGRAMA' : 'CONTINUAR Y RECIBIR CÓDIGO'}
                       </Text>
                     )}
@@ -934,11 +934,11 @@ export default function LoginScreen() {
                     ]}
                   >
                     {socialLoading === 'google' ? (
-                      <ActivityIndicator color={c.gold} size="small" />
+                      <ActivityIndicator color={c.goldInk} size="small" />
                     ) : (
                       <>
-                        <Icon name="google" size={20} color={c.gold} />
-                        <Text style={[t.micro, { color: c.textStrong, letterSpacing: 1.6, fontWeight: '700', fontSize: 11 }]}>
+                        <Icon name="google" size={20} color={c.goldInk} />
+                        <Text style={[t.micro, { color: c.textStrong, letterSpacing: 1.6, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                           {activeTab === 'login' ? 'CONTINUAR CON GOOGLE' : 'REGISTRARME CON GOOGLE'}
                         </Text>
                       </>
@@ -976,18 +976,18 @@ export default function LoginScreen() {
                 <Text style={[t.small, { color: c.textSoft, textAlign: 'center', lineHeight: 18, marginTop: 4 }]}>
                   Hemos enviado un código de 6 dígitos a:
                 </Text>
-                <Text style={[t.small, { color: c.gold, fontWeight: '600' }]}>{email}</Text>
+                <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_500Medium' }]}>{email}</Text>
               </View>
 
               {errorMessage ? (
                 <View style={[styles.alertBox, { backgroundColor: 'rgba(217, 83, 79, 0.08)', borderColor: 'rgba(217, 83, 79, 0.25)' }]}>
-                  <Text style={[t.small, { color: '#E06A66', textAlign: 'center' }]}>{errorMessage}</Text>
+                  <Text style={[t.small, { color: c.danger, textAlign: 'center' }]}>{errorMessage}</Text>
                 </View>
               ) : null}
 
               {successMessage ? (
-                <View style={[styles.alertBox, { backgroundColor: 'rgba(178, 146, 79, 0.12)', borderColor: c.borderStrong }]}>
-                  <Text style={[t.small, { color: c.gold, textAlign: 'center' }]}>{successMessage}</Text>
+                <View style={[styles.alertBox, { backgroundColor: c.goldWash, borderColor: c.borderStrong }]}>
+                  <Text style={[t.small, { color: c.goldInk, textAlign: 'center' }]}>{successMessage}</Text>
                 </View>
               ) : null}
 
@@ -1025,7 +1025,7 @@ export default function LoginScreen() {
                   {loading ? (
                     <ActivityIndicator color={c.onGold} size="small" />
                   ) : (
-                    <Text style={[t.micro, { color: c.onGold, letterSpacing: 2.5, fontWeight: '700', fontSize: 11 }]}>
+                    <Text style={[t.micro, { color: c.onGold, letterSpacing: 2.5, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                       CONFIRMAR Y ENVIAR SOLICITUD
                     </Text>
                   )}
@@ -1062,7 +1062,7 @@ export default function LoginScreen() {
 
               {errorMessage ? (
                 <View style={[styles.alertBox, { backgroundColor: 'rgba(217, 83, 79, 0.08)', borderColor: 'rgba(217, 83, 79, 0.25)' }]}>
-                  <Text style={[t.small, { color: '#E06A66', textAlign: 'center' }]}>{errorMessage}</Text>
+                  <Text style={[t.small, { color: c.danger, textAlign: 'center' }]}>{errorMessage}</Text>
                 </View>
               ) : null}
 
@@ -1077,7 +1077,7 @@ export default function LoginScreen() {
                     },
                   ]}
                 >
-                  <Icon name="mail" size={17} color={focusedField === 'forgot_email' ? c.gold : c.tabInactive} />
+                  <Icon name="mail" size={17} color={focusedField === 'forgot_email' ? c.goldInk : c.tabInactive} />
                   <TextInput
                     value={email}
                     onChangeText={setEmail}
@@ -1108,7 +1108,7 @@ export default function LoginScreen() {
                   {loading ? (
                     <ActivityIndicator color={c.onGold} size="small" />
                   ) : (
-                    <Text style={[t.micro, { color: c.onGold, letterSpacing: 2.5, fontWeight: '700', fontSize: 11 }]}>
+                    <Text style={[t.micro, { color: c.onGold, letterSpacing: 2.5, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                       ENVIARME UN CÓDIGO
                     </Text>
                   )}
@@ -1142,18 +1142,18 @@ export default function LoginScreen() {
                 <Text style={[t.small, { color: c.textSoft, textAlign: 'center', lineHeight: 18, marginTop: 4 }]}>
                   Si el correo tiene cuenta, te enviamos un código de 6 dígitos a:
                 </Text>
-                <Text style={[t.small, { color: c.gold, fontWeight: '600' }]}>{email}</Text>
+                <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_500Medium' }]}>{email}</Text>
               </View>
 
               {errorMessage ? (
                 <View style={[styles.alertBox, { backgroundColor: 'rgba(217, 83, 79, 0.08)', borderColor: 'rgba(217, 83, 79, 0.25)' }]}>
-                  <Text style={[t.small, { color: '#E06A66', textAlign: 'center' }]}>{errorMessage}</Text>
+                  <Text style={[t.small, { color: c.danger, textAlign: 'center' }]}>{errorMessage}</Text>
                 </View>
               ) : null}
 
               {successMessage ? (
-                <View style={[styles.alertBox, { backgroundColor: 'rgba(178, 146, 79, 0.12)', borderColor: c.borderStrong }]}>
-                  <Text style={[t.small, { color: c.gold, textAlign: 'center' }]}>{successMessage}</Text>
+                <View style={[styles.alertBox, { backgroundColor: c.goldWash, borderColor: c.borderStrong }]}>
+                  <Text style={[t.small, { color: c.goldInk, textAlign: 'center' }]}>{successMessage}</Text>
                 </View>
               ) : null}
 
@@ -1189,7 +1189,7 @@ export default function LoginScreen() {
                   {loading ? (
                     <ActivityIndicator color={c.onGold} size="small" />
                   ) : (
-                    <Text style={[t.micro, { color: c.onGold, letterSpacing: 2.5, fontWeight: '700', fontSize: 11 }]}>
+                    <Text style={[t.micro, { color: c.onGold, letterSpacing: 2.5, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                       VERIFICAR CÓDIGO
                     </Text>
                   )}
@@ -1226,7 +1226,7 @@ export default function LoginScreen() {
 
               {errorMessage ? (
                 <View style={[styles.alertBox, { backgroundColor: 'rgba(217, 83, 79, 0.08)', borderColor: 'rgba(217, 83, 79, 0.25)' }]}>
-                  <Text style={[t.small, { color: '#E06A66', textAlign: 'center' }]}>{errorMessage}</Text>
+                  <Text style={[t.small, { color: c.danger, textAlign: 'center' }]}>{errorMessage}</Text>
                 </View>
               ) : null}
 
@@ -1241,7 +1241,7 @@ export default function LoginScreen() {
                     },
                   ]}
                 >
-                  <Icon name="lock" size={17} color={focusedField === 'forgot_password' ? c.gold : c.tabInactive} />
+                  <Icon name="lock" size={17} color={focusedField === 'forgot_password' ? c.goldInk : c.tabInactive} />
                   <TextInput
                     value={password}
                     onChangeText={setPassword}
@@ -1274,7 +1274,7 @@ export default function LoginScreen() {
                     },
                   ]}
                 >
-                  <Icon name="lock" size={17} color={focusedField === 'forgot_confirm' ? c.gold : c.tabInactive} />
+                  <Icon name="lock" size={17} color={focusedField === 'forgot_confirm' ? c.goldInk : c.tabInactive} />
                   <TextInput
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
@@ -1303,7 +1303,7 @@ export default function LoginScreen() {
                   {loading ? (
                     <ActivityIndicator color={c.onGold} size="small" />
                   ) : (
-                    <Text style={[t.micro, { color: c.onGold, letterSpacing: 2.5, fontWeight: '700', fontSize: 11 }]}>
+                    <Text style={[t.micro, { color: c.onGold, letterSpacing: 2.5, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                       GUARDAR Y VOLVER AL LOGIN
                     </Text>
                   )}
@@ -1340,7 +1340,7 @@ export default function LoginScreen() {
 
               {errorMessage ? (
                 <View style={[styles.alertBox, { backgroundColor: 'rgba(217, 83, 79, 0.08)', borderColor: 'rgba(217, 83, 79, 0.25)' }]}>
-                  <Text style={[t.small, { color: '#E06A66', textAlign: 'center' }]}>{errorMessage}</Text>
+                  <Text style={[t.small, { color: c.danger, textAlign: 'center' }]}>{errorMessage}</Text>
                 </View>
               ) : null}
 
@@ -1355,7 +1355,7 @@ export default function LoginScreen() {
                     },
                   ]}
                 >
-                  <Icon name="user" size={17} color={focusedField === 'social_nombres' ? c.gold : c.tabInactive} />
+                  <Icon name="user" size={17} color={focusedField === 'social_nombres' ? c.goldInk : c.tabInactive} />
                   <TextInput
                     value={nombres}
                     onChangeText={setNombres}
@@ -1381,7 +1381,7 @@ export default function LoginScreen() {
                     },
                   ]}
                 >
-                  <Icon name="user" size={17} color={focusedField === 'social_apellidos' ? c.gold : c.tabInactive} />
+                  <Icon name="user" size={17} color={focusedField === 'social_apellidos' ? c.goldInk : c.tabInactive} />
                   <TextInput
                     value={apellidos}
                     onChangeText={setApellidos}
@@ -1432,7 +1432,7 @@ export default function LoginScreen() {
                   {loading ? (
                     <ActivityIndicator color={c.onGold} size="small" />
                   ) : (
-                    <Text style={[t.micro, { color: c.onGold, letterSpacing: 2.5, fontWeight: '700', fontSize: 11 }]}>
+                    <Text style={[t.micro, { color: c.onGold, letterSpacing: 2.5, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                       ENVIAR SOLICITUD
                     </Text>
                   )}
@@ -1459,7 +1459,7 @@ export default function LoginScreen() {
             <View style={[styles.card, { backgroundColor: c.cardBg, borderColor: c.border }]}>
               <View style={{ alignItems: 'center', gap: 10, paddingVertical: 10 }}>
                 <View style={[styles.successIconWrap, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-                  <Icon name="check" size={26} color={c.gold} strokeWidth={2} />
+                  <Icon name="check" size={26} color={c.goldInk} strokeWidth={2} />
                 </View>
 
                 <MicroLabel>SOLICITUD RECIBIDA</MicroLabel>
@@ -1470,20 +1470,20 @@ export default function LoginScreen() {
                   Confirmamos tu correo y registramos tu solicitud. Un administrador tiene que
                   aprobarla antes de que puedas ingresar; te avisaremos a:
                 </Text>
-                <Text style={[t.small, { color: c.gold, fontWeight: '600', textAlign: 'center' }]}>
+                <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_500Medium', textAlign: 'center' }]}>
                   {email}
                 </Text>
               </View>
 
               {errorMessage ? (
                 <View style={[styles.alertBox, { backgroundColor: 'rgba(217, 83, 79, 0.08)', borderColor: 'rgba(217, 83, 79, 0.25)' }]}>
-                  <Text style={[t.small, { color: '#E06A66', textAlign: 'center' }]}>{errorMessage}</Text>
+                  <Text style={[t.small, { color: c.danger, textAlign: 'center' }]}>{errorMessage}</Text>
                 </View>
               ) : null}
 
               {successMessage ? (
-                <View style={[styles.alertBox, { backgroundColor: 'rgba(178, 146, 79, 0.12)', borderColor: c.borderStrong }]}>
-                  <Text style={[t.small, { color: c.gold, textAlign: 'center' }]}>{successMessage}</Text>
+                <View style={[styles.alertBox, { backgroundColor: c.goldWash, borderColor: c.borderStrong }]}>
+                  <Text style={[t.small, { color: c.goldInk, textAlign: 'center' }]}>{successMessage}</Text>
                 </View>
               ) : null}
 
@@ -1498,7 +1498,7 @@ export default function LoginScreen() {
                   end={{ x: 0.9, y: 1 }}
                   style={styles.gradientBtn}
                 >
-                  <Text style={[t.micro, { color: c.onGold, letterSpacing: 2.5, fontWeight: '700', fontSize: 11 }]}>
+                  <Text style={[t.micro, { color: c.onGold, letterSpacing: 2.5, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                     VOLVER AL INICIO DE SESIÓN
                   </Text>
                 </LinearGradient>
@@ -1511,7 +1511,7 @@ export default function LoginScreen() {
                 style={[styles.returnLoginBtn, { borderColor: c.border }]}
               >
                 {loading ? (
-                  <ActivityIndicator color={c.gold} size="small" />
+                  <ActivityIndicator color={c.goldInk} size="small" />
                 ) : (
                   <>
                     <Icon name="clock" size={14} color={c.textSoft} />

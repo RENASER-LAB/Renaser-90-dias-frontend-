@@ -174,7 +174,7 @@ export function CuestionarioProfundoScreen({ onComplete, onBack }: CuestionarioP
     return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor: c.bg }]}>
         <View style={styles.centrado}>
-          <ActivityIndicator color={c.gold} size="large" />
+          <ActivityIndicator color={c.goldInk} size="large" />
         </View>
       </SafeAreaView>
     );
@@ -189,7 +189,7 @@ export function CuestionarioProfundoScreen({ onComplete, onBack }: CuestionarioP
           accessibilityRole="button"
           style={[styles.backBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
         >
-          <Icon name="arrowLeft" size={16} color={c.gold} />
+          <Icon name="arrowLeft" size={16} color={c.goldInk} />
           <Text style={[t.micro, { color: c.text, letterSpacing: 1.2 }]}>
             {indiceBloque === 0 ? 'SALIR' : 'ANTERIOR'}
           </Text>
@@ -201,7 +201,7 @@ export function CuestionarioProfundoScreen({ onComplete, onBack }: CuestionarioP
           accessibilityRole="button"
           style={[styles.themeBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
         >
-          <Icon name={mode === 'light' ? 'moon' : 'sun'} size={15} color={c.gold} />
+          <Icon name={mode === 'light' ? 'moon' : 'sun'} size={15} color={c.goldInk} />
         </Pressable>
       </View>
 
@@ -219,7 +219,7 @@ export function CuestionarioProfundoScreen({ onComplete, onBack }: CuestionarioP
       >
         <View style={styles.header}>
           <View style={[styles.iconMedallion, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
-            <Icon name={bloque.icono} size={22} color={c.gold} />
+            <Icon name={bloque.icono} size={22} color={c.goldInk} />
           </View>
           <Text style={[t.screenTitle, { color: c.textStrong, marginTop: 4, textAlign: 'center' }]}>
             Cuestionario Profundo
@@ -234,7 +234,7 @@ export function CuestionarioProfundoScreen({ onComplete, onBack }: CuestionarioP
           <View style={[styles.progressBg, { backgroundColor: c.cardBg, borderColor: c.border }]}>
             <View style={[styles.progressFill, { width: `${porcentaje}%`, backgroundColor: c.gold }]} />
           </View>
-          <Text style={[t.micro, { color: c.textSoft, textAlign: 'right', fontSize: 11, fontWeight: '600' }]}>
+          <Text style={[t.micro, { color: c.textSoft, textAlign: 'right', fontSize: 11, fontFamily: 'Jost_500Medium' }]}>
             {porcentaje}% completado
           </Text>
         </View>

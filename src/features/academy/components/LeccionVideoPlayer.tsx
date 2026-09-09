@@ -79,11 +79,11 @@ export function LeccionVideoPlayer({
             <View style={[styles.thumb, { backgroundColor: c.cardBgAlt }]} />
           )}
           <View style={[styles.playBadge, { borderColor: c.gold, backgroundColor: 'rgba(0,0,0,0.55)' }]}>
-            <Icon name="play" size={22} color={c.gold} />
+            <Icon name="play" size={22} color={c.goldInk} />
           </View>
           {!!duracionTexto && (
             <View style={styles.durBadge}>
-              <Text style={[t.micro, { color: '#FFFFFF', fontSize: 9.5 }]}>{duracionTexto}</Text>
+              <Text style={[t.micro, { color: '#FFFFFF', fontSize: 11 }]}>{duracionTexto}</Text>
             </View>
           )}
         </Pressable>
@@ -146,7 +146,7 @@ export function LeccionVideoPlayer({
             />
           )}
           <Pressable onPress={() => setReproduciendo(false)} style={styles.closeBtn} hitSlop={8}>
-            <Text style={styles.closeBtnText}>✕</Text>
+            <Icon name="close" size={16} color="#FFFFFF" />
           </Pressable>
         </>
       )}
@@ -240,6 +240,6 @@ const styles = StyleSheet.create({
   closeBtnText: {
     color: '#FFFFFF',
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: 'Jost_700Bold',
   },
 });

@@ -96,8 +96,8 @@ export function ProximoAVencerCard({ habits, onAbrir }: Props) {
       style={[styles.card, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}
     >
       <View style={styles.encabezado}>
-        <Icon name="spark" size={14} color={c.gold} />
-        <Text style={[t.micro, { color: c.gold }]}>PRÓXIMO A VENCER</Text>
+        <Icon name="spark" size={14} color={c.goldInk} />
+        <Text style={[t.micro, { color: c.goldInk }]}>PRÓXIMO A VENCER</Text>
       </View>
 
       <Text style={[t.cardTitle, { color: c.text, fontSize: 15.5 }]} numberOfLines={2}>
@@ -111,7 +111,7 @@ export function ProximoAVencerCard({ habits, onAbrir }: Props) {
         {/* Sin puntos informados (backend viejo, o hábito ya terminal) no se inventa un número:
             simplemente no se muestra la parte de puntos. */}
         {typeof puntos === 'number' && (
-          <Text style={[t.cardTitle, { color: c.gold, fontSize: 13.5 }]}>
+          <Text style={[t.cardTitle, { color: c.goldInk, fontSize: 13.5 }]}>
             {puntos}
             {typeof maximo === 'number' ? ` / ${maximo}` : ''} pts en juego
           </Text>

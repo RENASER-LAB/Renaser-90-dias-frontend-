@@ -262,7 +262,7 @@ export function LocationCascadePicker({
       <Text style={[t.body, { color: c.textStrong, fontSize: 14.5, flex: 1 }]}>
         {item.label}
       </Text>
-      <Text style={[t.micro, { color: c.gold }]}>SELECCIONAR ›</Text>
+      <Text style={[t.micro, { color: c.goldInk }]}>SELECCIONAR ›</Text>
     </Pressable>
   ), [activeModal, currentCountry, currentDept, data, onChange, c.border, c.gold, c.textStrong, t.body, t.micro]);
 
@@ -272,7 +272,7 @@ export function LocationCascadePicker({
       style={[styles.googleItemRow, { borderColor: c.border }]}
     >
       <View style={{ flex: 1 }}>
-        <Text style={[t.body, { color: c.textStrong, fontSize: 14.5, fontWeight: '700' }]}>
+        <Text style={[t.body, { color: c.textStrong, fontSize: 14.5, fontFamily: 'Jost_700Bold' }]}>
           {item.mainText}
         </Text>
         {Boolean(item.secondaryText) && (
@@ -281,7 +281,7 @@ export function LocationCascadePicker({
           </Text>
         )}
       </View>
-      <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>SELECCIONAR ›</Text>
+      <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>SELECCIONAR ›</Text>
     </Pressable>
   ), [c.border, c.gold, c.textSoft, c.textStrong, t.body, t.micro]);
 
@@ -295,15 +295,15 @@ export function LocationCascadePicker({
           disabled={isDetectingGPS}
           style={[
             styles.gpsBtn,
-            { borderColor: c.gold, backgroundColor: isDetectingGPS ? c.cardBg : 'rgba(178,146,79,0.12)' },
+            { borderColor: c.gold, backgroundColor: isDetectingGPS ? c.cardBg : c.goldWash },
           ]}
         >
           {isDetectingGPS ? (
-            <ActivityIndicator size="small" color={c.gold} />
+            <ActivityIndicator size="small" color={c.goldInk} />
           ) : (
-            <Icon name="spark" size={13} color={c.gold} />
+            <Icon name="spark" size={13} color={c.goldInk} />
           )}
-          <Text style={[t.micro, { color: c.gold, fontSize: 10.5, fontWeight: '700' }]}>
+          <Text style={[t.micro, { color: c.goldInk, fontSize: 10.5, fontFamily: 'Jost_700Bold' }]}>
             {isDetectingGPS ? 'DETECTANDO...' : '📍 MI UBICACIÓN'}
           </Text>
         </Pressable>
@@ -324,7 +324,7 @@ export function LocationCascadePicker({
             <Text style={[t.body, { color: data.pais ? c.textStrong : c.tabInactive, fontSize: 14 }]} numberOfLines={1}>
               {selectedCountryObj.flag} {data.pais || 'Perú'}
             </Text>
-            <Text style={[t.micro, { color: c.gold }]}>▾</Text>
+            <Text style={[t.micro, { color: c.goldInk }]}>▾</Text>
           </Pressable>
         </View>
 
@@ -341,7 +341,7 @@ export function LocationCascadePicker({
             <Text style={[t.body, { color: data.departamento ? c.textStrong : c.tabInactive, fontSize: 14 }]} numberOfLines={1}>
               {data.departamento || availableStates[0] || 'Seleccionar'}
             </Text>
-            <Text style={[t.micro, { color: c.gold }]}>▾</Text>
+            <Text style={[t.micro, { color: c.goldInk }]}>▾</Text>
           </Pressable>
         </View>
       </View>
@@ -361,7 +361,7 @@ export function LocationCascadePicker({
             <Text style={[t.body, { color: data.ciudad ? c.textStrong : c.tabInactive, fontSize: 14 }]} numberOfLines={1}>
               {data.ciudad || availableCities[0] || 'Seleccionar'}
             </Text>
-            <Text style={[t.micro, { color: c.gold }]}>▾</Text>
+            <Text style={[t.micro, { color: c.goldInk }]}>▾</Text>
           </Pressable>
         </View>
 
@@ -387,14 +387,14 @@ export function LocationCascadePicker({
                 {
                   color: data.distrito ? c.textStrong : c.tabInactive,
                   fontSize: 14,
-                  fontWeight: data.distrito ? '600' : '400',
+                  fontFamily: data.distrito ? 'Jost_500Medium' : 'Jost_400Regular',
                 },
               ]}
               numberOfLines={1}
             >
               {data.distrito || availableDistricts[0] || 'Seleccionar ▾'}
             </Text>
-            <Text style={[t.micro, { color: c.gold }]}>▾</Text>
+            <Text style={[t.micro, { color: c.goldInk }]}>▾</Text>
           </Pressable>
         </View>
       </View>
@@ -413,7 +413,7 @@ export function LocationCascadePicker({
         </View>
       </View>
 
-      {error && <Text style={[t.small, { color: '#E06A66', fontSize: 11.5 }]}>{error}</Text>}
+      {error && <Text style={[t.small, { color: c.danger, fontSize: 11.5 }]}>{error}</Text>}
 
       {/* Modal Interactivo con Virtualized FlatList (0ms) */}
       <Modal
@@ -437,7 +437,7 @@ export function LocationCascadePicker({
 
             {/* Input de Búsqueda */}
             <View style={[styles.searchBox, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
-              <Icon name="spark" size={16} color={c.gold} />
+              <Icon name="spark" size={16} color={c.goldInk} />
               <TextInput
                 value={searchQuery}
                 onChangeText={activeModal === 'distrito' ? handleDistrictSearchChange : setSearchQuery}
@@ -453,7 +453,7 @@ export function LocationCascadePicker({
                 autoCapitalize="words"
                 autoFocus
               />
-              {isSearchingGoogle && <ActivityIndicator size="small" color={c.gold} />}
+              {isSearchingGoogle && <ActivityIndicator size="small" color={c.goldInk} />}
             </View>
 
             {/* Opción Manual de Distrito */}
@@ -468,13 +468,13 @@ export function LocationCascadePicker({
                   setSearchQuery('');
                   setGoogleResults([]);
                 }}
-                style={[styles.customOptionBtn, { borderColor: c.gold, backgroundColor: 'rgba(178,146,79,0.1)' }]}
+                style={[styles.customOptionBtn, { borderColor: c.gold, backgroundColor: c.goldWash }]}
               >
-                <Icon name="check" size={14} color={c.gold} />
-                <Text style={[t.body, { color: c.gold, fontSize: 13.5, fontWeight: '700', flex: 1 }]}>
+                <Icon name="check" size={14} color={c.goldInk} />
+                <Text style={[t.body, { color: c.goldInk, fontSize: 13.5, fontFamily: 'Jost_700Bold', flex: 1 }]}>
                   USAR: "{searchQuery.trim()}"
                 </Text>
-                <Text style={[t.micro, { color: c.gold }]}>SELECCIONAR</Text>
+                <Text style={[t.micro, { color: c.goldInk }]}>SELECCIONAR</Text>
               </Pressable>
             )}
 
@@ -482,8 +482,8 @@ export function LocationCascadePicker({
             {googleResults.length > 0 && activeModal === 'distrito' && (
               <View style={styles.googleSection}>
                 <View style={styles.googleHeader}>
-                  <Icon name="spark" size={12} color={c.gold} />
-                  <Text style={[t.micro, { color: c.gold, fontSize: 9.5, fontWeight: '700' }]}>
+                  <Icon name="spark" size={12} color={c.goldInk} />
+                  <Text style={[t.micro, { color: c.goldInk, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>
                     SUGERENCIAS EN VIVO (GOOGLE PLACES)
                   </Text>
                 </View>
@@ -519,7 +519,7 @@ export function LocationCascadePicker({
               }}
               style={[styles.closeBtn, { borderColor: c.border }]}
             >
-              <Text style={[t.micro, { color: c.textSoft, fontSize: 11, fontWeight: '700', textAlign: 'center' }]}>
+              <Text style={[t.micro, { color: c.textSoft, fontSize: 11, fontFamily: 'Jost_700Bold', textAlign: 'center' }]}>
                 CERRAR
               </Text>
             </Pressable>

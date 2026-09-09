@@ -74,8 +74,8 @@ export function Pastillas<T extends string>({
               { borderColor: activa ? c.gold : c.border, backgroundColor: activa ? c.cardBgAlt : c.cardBg },
             ]}
           >
-            {activa ? <Icon name="check" size={11} color={c.gold} /> : null}
-            <Text style={[t.small, { color: activa ? c.gold : c.text }]}>{o.etiqueta}</Text>
+            {activa ? <Icon name="check" size={11} color={c.goldInk} /> : null}
+            <Text style={[t.small, { color: activa ? c.goldInk : c.text }]}>{o.etiqueta}</Text>
           </Pressable>
         );
       })}
@@ -116,8 +116,8 @@ export function PastillasMultiples<T extends string>({
               { borderColor: activa ? c.gold : c.border, backgroundColor: activa ? c.cardBgAlt : c.cardBg, opacity: bloqueada ? 0.45 : 1 },
             ]}
           >
-            <Text style={[t.small, { color: activa ? c.gold : c.text }]}>{o.etiqueta}</Text>
-            {activa ? <Icon name="check" size={11} color={c.gold} /> : null}
+            <Text style={[t.small, { color: activa ? c.goldInk : c.text }]}>{o.etiqueta}</Text>
+            {activa ? <Icon name="check" size={11} color={c.goldInk} /> : null}
           </Pressable>
         );
       })}
@@ -159,11 +159,11 @@ export function Entrada({
         style={[
           t.body,
           styles.entrada,
-          { color: c.textStrong, borderColor: corto ? '#E06A66' : c.border, backgroundColor: c.cardBg, minHeight: multilinea ? 72 : ALTO_TACTIL },
+          { color: c.textStrong, borderColor: corto ? c.danger : c.border, backgroundColor: c.cardBg, minHeight: multilinea ? 72 : ALTO_TACTIL },
         ]}
       />
       {(maximo || minimo) ? (
-        <Text style={[t.micro, { color: corto ? '#E06A66' : c.micro, marginTop: 4, alignSelf: 'flex-end', letterSpacing: 0.4 }]}>
+        <Text style={[t.micro, { color: corto ? c.danger : c.micro, marginTop: 4, alignSelf: 'flex-end', letterSpacing: 0.4 }]}>
           {minimo && largo < minimo ? `mínimo ${minimo} · ` : ''}{largo}{maximo ? `/${maximo}` : ''}
         </Text>
       ) : null}
@@ -219,8 +219,8 @@ export function TarjetaMeta({
     <View style={[styles.tarjetaMeta, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
       <RowBetween>
         <Row gap={6}>
-          <Icon name="spark" size={12} color={c.gold} />
-          <Text style={[t.micro, { color: c.gold, letterSpacing: 1 }]}>TU META REDACTADA</Text>
+          <Icon name="spark" size={12} color={c.goldInk} />
+          <Text style={[t.micro, { color: c.goldInk, letterSpacing: 1 }]}>TU META REDACTADA</Text>
         </Row>
         <Pressable onPress={onEditar} hitSlop={8} accessibilityRole="button">
           <Text style={[t.micro, { color: c.textSoft }]}>{editando ? 'LISTO' : 'EDITAR'}</Text>
@@ -247,8 +247,8 @@ export function Avisos({ avisos, soloBloqueantes }: { avisos: AvisoCalidad[]; so
   return (
     <View style={{ marginTop: 12, gap: 6 }}>
       {visibles.map(a => (
-        <Row key={a.codigo} gap={8} align="flex-start" style={[styles.aviso, { borderColor: a.bloquea ? '#E06A66' : c.border, backgroundColor: c.cardBg }]}>
-          <Icon name="info" size={13} color={a.bloquea ? '#E06A66' : c.gold} />
+        <Row key={a.codigo} gap={8} align="flex-start" style={[styles.aviso, { borderColor: a.bloquea ? c.danger : c.border, backgroundColor: c.cardBg }]}>
+          <Icon name="info" size={13} color={a.bloquea ? c.danger : c.goldInk} />
           <Text style={[t.small, { color: c.text, flex: 1, lineHeight: 18 }]}>{a.mensaje}</Text>
         </Row>
       ))}
@@ -260,7 +260,7 @@ export function Nota({ children }: { children: React.ReactNode }) {
   const { c, t } = useTheme();
   return (
     <Row gap={8} align="flex-start" style={[styles.aviso, { borderColor: c.border, backgroundColor: c.cardBg, marginTop: 14 }]}>
-      <Icon name="info" size={13} color={c.gold} />
+      <Icon name="info" size={13} color={c.goldInk} />
       <Text style={[t.small, { color: c.textSoft, flex: 1, lineHeight: 18 }]}>{children}</Text>
     </Row>
   );
@@ -277,7 +277,7 @@ export function TarjetaSeccion({ titulo, icono, onEditar, children }: {
     <View style={[styles.seccion, { borderColor: c.border, backgroundColor: c.cardBg }]}>
       <RowBetween>
         <Row gap={8}>
-          <Icon name={icono} size={14} color={c.gold} />
+          <Icon name={icono} size={14} color={c.goldInk} />
           <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 14 }]}>{titulo}</Text>
         </Row>
         {onEditar ? (

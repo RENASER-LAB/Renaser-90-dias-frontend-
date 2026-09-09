@@ -38,7 +38,7 @@ export function MapaRenacimientoFlow({ userId, onSalir }: { userId: string; onSa
   if (cargando) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.bg }}>
-        <ActivityIndicator color={c.gold} />
+        <ActivityIndicator color={c.goldInk} />
       </View>
     );
   }

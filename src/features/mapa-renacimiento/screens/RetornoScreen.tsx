@@ -29,7 +29,7 @@ export function RetornoScreen({ estado }: PropsPaso) {
         minimo={LIMITES.retorno.min}
         maximo={LIMITES.retorno.max}
       />
-      {vago ? <Text style={[t.small, { color: '#E06A66', marginTop: 4 }]}>"Ponerme las pilas" o "motivarme" no se pueden ejecutar. Elige algo que puedas hacer en 2–30 minutos.</Text> : null}
+      {vago ? <Text style={[t.small, { color: c.danger, marginTop: 4 }]}>"Ponerme las pilas" o "motivarme" no se pueden ejecutar. Elige algo que puedas hacer en 2–30 minutos.</Text> : null}
 
       <Etiqueta>Sugerencias (según tus acciones)</Etiqueta>
       <View style={styles.sugerencias}>

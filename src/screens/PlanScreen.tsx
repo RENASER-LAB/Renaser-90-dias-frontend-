@@ -44,6 +44,7 @@ import { useRocasMaestras } from '../features/objetivos/hooks/useRocasMaestras';
 import type { EjeObjetivo } from '../features/objetivos/types/objetivos.types';
 import { EJES, ETIQUETA_EJE } from '../features/objetivos/types/objetivos.types';
 import { etiquetaDelMes, mesDe, semanaDe } from '../features/objetivos/utils/periodoDelPrograma';
+import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
 
 // =========================================================================
 // TIPOS: PLAN, HÁBITOS 7 DÍAS Y OBJETIVOS EN 3 NIVELES
@@ -308,7 +309,7 @@ function textoCambioProgramado(cambio: { time: string; desde: string }): string 
 
 export default function PlanScreen() {
   const { c, t } = useTheme();
-  const { rs, isTablet, horizontalPadding } = useResponsive();
+  const { rs, isTablet, horizontalPadding, contentMaxWidth } = useResponsive();
   const gaugeW = rs(228);
   const gaugeH = rs(120);
 
@@ -801,11 +802,12 @@ export default function PlanScreen() {
       {/* ========================================================================= */}
       {activeSubView === 'main' && (
         <ScrollView
+          keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.content,
             {
               paddingHorizontal: horizontalPadding,
-              maxWidth: isTablet ? 560 : undefined,
+              maxWidth: contentMaxWidth,
               alignSelf: isTablet ? 'center' : 'stretch',
               width: isTablet ? '100%' : undefined,
             },
@@ -826,7 +828,7 @@ export default function PlanScreen() {
             </Svg>
             <View style={styles.gaugeCenter}>
               <Text style={[t.micro, { color: c.micro }]}>DÍA</Text>
-              <Text style={{ fontFamily: 'Jost_300Light', fontSize: 40, color: c.textStrong }}>{diaPrograma}</Text>
+              <Text style={{ fontFamily: 'Jost_400Regular', fontSize: 40, color: c.textStrong }}>{diaPrograma}</Text>
               <Text style={[t.small, { color: c.micro }]}>DE {DIAS_DEL_PROGRAMA}</Text>
             </View>
             <Text style={[t.small, styles.gaugeLeft, { color: c.textSoft }]}>01</Text>
@@ -839,7 +841,7 @@ export default function PlanScreen() {
             <MicroLabel>FASE ACTUAL</MicroLabel>
             {faseActual ? (
               <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 12, marginTop: 10 }}>
-                <Text style={[t.small, { color: c.gold }]}>{String(faseActual.numero).padStart(2, '0')}</Text>
+                <Text style={[t.small, { color: c.goldInk }]}>{String(faseActual.numero).padStart(2, '0')}</Text>
                 <Text style={[t.cardTitle, { color: c.text, flex: 1, fontSize: 16 }]}>{faseActual.nombre}</Text>
                 <Text style={[t.small, { color: c.micro }]}>{faseActual.rango}</Text>
               </View>
@@ -873,16 +875,16 @@ export default function PlanScreen() {
                     accessibilityLabel={`${ETIQUETA_EJE[eje]}. ${definido ? roca!.objetivo : 'Todavía sin definir'}`}
                     style={[styles.priorityCard, { borderColor: definido ? c.gold : c.border, backgroundColor: c.cardBg }]}
                   >
-                    <Text style={[t.small, { color: c.gold }]}>{String(indice + 1).padStart(2, '0')}</Text>
+                    <Text style={[t.small, { color: c.goldInk }]}>{String(indice + 1).padStart(2, '0')}</Text>
                     <View style={{ flex: 1 }}>
                       <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 15 }]} numberOfLines={3}>
                         {definido ? roca!.objetivo : ETIQUETA_EJE[eje]}
                       </Text>
-                      <Text style={[t.micro, { color: definido ? c.gold : c.textSoft, fontSize: 12, marginTop: 3 }]}>
+                      <Text style={[t.micro, { color: definido ? c.goldInk : c.textSoft, fontSize: 12, marginTop: 3 }]}>
                         {definido ? ETIQUETA_EJE[eje] : 'Todavía sin definir · toca para escribirlo'}
                       </Text>
                     </View>
-                    <Icon name="chevron" size={15} color={c.gold} />
+                    <Icon name="chevron" size={15} color={c.goldInk} />
                   </Pressable>
                 );
               })}
@@ -915,11 +917,12 @@ export default function PlanScreen() {
       {/* ========================================================================= */}
       {activeSubView === 'habitos' && (
         <ScrollView
+          keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.content,
             {
               paddingHorizontal: horizontalPadding,
-              maxWidth: isTablet ? 560 : undefined,
+              maxWidth: contentMaxWidth,
               alignSelf: isTablet ? 'center' : 'stretch',
               width: isTablet ? '100%' : undefined,
             },
@@ -929,13 +932,13 @@ export default function PlanScreen() {
           {/* Top Bar */}
           <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
             <Pressable onPress={() => setActiveSubView('main')} style={styles.backBtnRow} hitSlop={8}>
-              <Icon name="arrowLeft" size={14} color={c.gold} />
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700', letterSpacing: 1 }]}>
+              <Icon name="arrowLeft" size={14} color={c.goldInk} />
+              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
                 VOLVER A PLAN
               </Text>
             </Pressable>
             <View style={[styles.categoryPillBadge, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 9.5 }]}>
+              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                 01. HÁBITOS (7 DÍAS)
               </Text>
             </View>
@@ -951,7 +954,7 @@ export default function PlanScreen() {
               onPress={() => setCreateHabitModalVisible(true)}
               style={[styles.createHabitBtn, { backgroundColor: c.gold }]}
             >
-              <Text style={{ color: '#1E1B18', fontWeight: '800', fontSize: 10.5 }}>➕ Crear Hábito</Text>
+              <Text style={{ color: '#1E1B18', fontFamily: 'Jost_700Bold', fontSize: 10.5 }}>➕ Crear Hábito</Text>
             </Pressable>
           </RowBetween>
 
@@ -986,10 +989,10 @@ export default function PlanScreen() {
                     },
                   ]}
                 >
-                  <Text style={[t.micro, { color: isSelected ? c.gold : c.textSoft, fontSize: 8.5, fontWeight: '700' }]}>
+                  <Text style={[t.micro, { color: isSelected ? c.goldInk : c.textSoft, fontSize: 10.5, fontFamily: 'Jost_700Bold' }]}>
                     {d}
                   </Text>
-                  <Text style={[t.cardTitle, { color: isSelected ? c.gold : c.textStrong, fontSize: 13, marginTop: 2 }]}>
+                  <Text style={[t.cardTitle, { color: isSelected ? c.goldInk : c.textStrong, fontSize: 13, marginTop: 2 }]}>
                     {DAY_DATES[d]}
                   </Text>
                 </Pressable>
@@ -1014,7 +1017,7 @@ export default function PlanScreen() {
               accessibilityLabel="Tu programa todavía no arrancó"
             >
               <Row gap={8}>
-                <Icon name="lock" size={13} color={c.gold} />
+                <Icon name="lock" size={13} color={c.goldInk} />
                 <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>
                   {arranque.estado === 'PENDIENTE_ELEGIR'
                     ? 'Todavía no elegiste tu Día 1'
@@ -1063,7 +1066,7 @@ export default function PlanScreen() {
                   padding: 18,
                   borderRadius: 14,
                   borderWidth: 1,
-                  borderColor: '#E06A66',
+                  borderColor: c.danger,
                   backgroundColor: c.cardBg,
                 }}
               >
@@ -1084,7 +1087,7 @@ export default function PlanScreen() {
                     justifyContent: 'center',
                   }}
                 >
-                  <Text style={[t.cardTitle, { color: c.gold, fontSize: 14.5 }]}>Reintentar</Text>
+                  <Text style={[t.cardTitle, { color: c.goldInk, fontSize: 14.5 }]}>Reintentar</Text>
                 </Pressable>
               </View>
             )}
@@ -1129,7 +1132,7 @@ export default function PlanScreen() {
               return (
                 <View key={momentName} style={{ gap: 8 }}>
                   <RowBetween>
-                    <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 1, fontSize: 10.5 }]}>
+                    <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1, fontSize: 10.5 }]}>
                       {momentLabel} ({momentHabits.length})
                     </Text>
                   </RowBetween>
@@ -1168,13 +1171,13 @@ export default function PlanScreen() {
                       estadoColor = c.textSoft;
                     } else if (bloqueadoObligatorio) {
                       estadoLabel = 'OBLIGATORIO';
-                      estadoColor = c.gold;
+                      estadoColor = c.goldInk;
                     } else if (esOpcional && isDayActive) {
                       estadoLabel = 'OPCIONAL';
                       estadoColor = c.textSoft;
                     } else {
                       estadoLabel = isDayActive ? 'ACTIVO' : 'PAUSADO';
-                      estadoColor = isDayActive ? '#70d2a0' : c.textSoft;
+                      estadoColor = isDayActive ? c.success : c.textSoft;
                     }
 
                     return (
@@ -1201,11 +1204,11 @@ export default function PlanScreen() {
                             <View style={{ flex: 1 }}>
                               <Row gap={4}>
                                 <View style={[styles.tagPill, { borderColor: c.border, backgroundColor: c.cardBgAlt, alignSelf: 'flex-start' }]}>
-                                  <Text style={[t.micro, { color: c.gold, fontSize: 8.5, fontWeight: '800' }]}>
+                                  <Text style={[t.micro, { color: c.goldInk, fontSize: 10.5, fontFamily: 'Jost_700Bold' }]}>
                                     {habit.tag}
                                   </Text>
                                 </View>
-                                {bloqueadoObligatorio ? <Icon name="lock" size={10} color={c.gold} /> : null}
+                                {bloqueadoObligatorio ? <Icon name="lock" size={10} color={c.goldInk} /> : null}
                               </Row>
                               <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13, marginTop: 2 }]}>
                                 {habit.title}
@@ -1218,7 +1221,7 @@ export default function PlanScreen() {
                                   siguiente. El hábito vencido se sigue viendo apagado, pero se
                                   puede tocar. */}
                               <Row gap={6} style={{ marginTop: 3 }}>
-                                <Icon name="clock" size={11} color={vencido ? c.textSoft : c.gold} />
+                                <Icon name="clock" size={11} color={vencido ? c.textSoft : c.goldInk} />
                                 <Pressable
                                   onPress={() => (bloqueado ? undefined : abrirSelectorDeHora(habit))}
                                   disabled={bloqueado}
@@ -1229,19 +1232,19 @@ export default function PlanScreen() {
                                 >
                                   <Text
                                     style={{
-                                      color: vencido ? c.textSoft : c.gold,
+                                      color: vencido ? c.textSoft : c.goldInk,
                                       fontSize: 11,
-                                      fontWeight: 'bold',
+                                      fontFamily: 'Jost_700Bold',
                                     }}
                                   >
                                     {habit.time || 'Sin horario'}
                                   </Text>
                                 </Pressable>
                                 {habit.duration ? (
-                                  <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>({habit.duration})</Text>
+                                  <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>({habit.duration})</Text>
                                 ) : null}
                                 <View style={[styles.momentBadgePill, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
-                                  <Text style={[t.micro, { color: c.textSoft, fontSize: 9 }]}>{momentLabel}</Text>
+                                  <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5 }]}>{momentLabel}</Text>
                                 </View>
                               </Row>
 
@@ -1257,8 +1260,8 @@ export default function PlanScreen() {
                                     { borderColor: c.gold, backgroundColor: c.cardBgAlt },
                                   ]}
                                 >
-                                  <Icon name="clock" size={9} color={c.gold} />
-                                  <Text style={[t.micro, { color: c.gold, fontSize: 9.5, flexShrink: 1 }]}>
+                                  <Icon name="clock" size={9} color={c.goldInk} />
+                                  <Text style={[t.micro, { color: c.goldInk, fontSize: 11, flexShrink: 1 }]}>
                                     {textoCambioProgramado(habit.cambioProgramado)}
                                   </Text>
                                 </View>
@@ -1268,7 +1271,7 @@ export default function PlanScreen() {
 
                           {/* Switch Activar/Pausar para el día — o el candado si todavía no le toca */}
                           <View style={{ alignItems: 'center', gap: 2 }} onStartShouldSetResponder={() => true}>
-                            <Text style={[t.micro, { color: estadoColor, fontSize: 8.5, fontWeight: '800' }]}>
+                            <Text style={[t.micro, { color: estadoColor, fontSize: 10.5, fontFamily: 'Jost_700Bold' }]}>
                               {estadoLabel}
                             </Text>
                             {bloqueado ? (
@@ -1317,11 +1320,12 @@ export default function PlanScreen() {
       {/* ========================================================================= */}
       {activeSubView === 'objetivos' && (
         <ScrollView
+          keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.content,
             {
               paddingHorizontal: horizontalPadding,
-              maxWidth: isTablet ? 560 : undefined,
+              maxWidth: contentMaxWidth,
               alignSelf: isTablet ? 'center' : 'stretch',
               width: isTablet ? '100%' : undefined,
             },
@@ -1330,13 +1334,13 @@ export default function PlanScreen() {
         >
           <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
             <Pressable onPress={() => setActiveSubView('main')} style={styles.backBtnRow} hitSlop={8}>
-              <Icon name="arrowLeft" size={14} color={c.gold} />
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700', letterSpacing: 1 }]}>
+              <Icon name="arrowLeft" size={14} color={c.goldInk} />
+              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
                 VOLVER A PLAN
               </Text>
             </Pressable>
             <View style={[styles.categoryPillBadge, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 9.5 }]}>
+              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                 02. OBJETIVOS (3 NIVELES)
               </Text>
             </View>
@@ -1357,8 +1361,8 @@ export default function PlanScreen() {
             <View style={[styles.goalCard, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
               <RowBetween>
                 <Row gap={6}>
-                  <Text style={{ fontSize: 16 }}>👑</Text>
-                  <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 1 }]}>
+                  <Icon name="trophy" size={16} color={c.goldInk} />
+                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
                     1. OBJETIVO PRINCIPAL (90 DÍAS)
                   </Text>
                 </Row>
@@ -1366,14 +1370,14 @@ export default function PlanScreen() {
                   onPress={() => openEditGoalModal()}
                   style={[styles.editGoalBtn, { borderColor: c.gold, backgroundColor: c.cardBg }]}
                 >
-                  <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>✏️ Editar</Text>
+                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>✏️ Editar</Text>
                 </Pressable>
               </RowBetween>
 
               {objetivos.cargando && !rocaAbierta ? (
                 <Text style={[t.small, { color: c.textSoft, fontSize: 15, marginTop: 8 }]}>Cargando tu objetivo…</Text>
               ) : objetivos.error && !rocaAbierta ? (
-                <Text style={[t.small, { color: '#f28e8e', fontSize: 15, marginTop: 8 }]}>{objetivos.error}</Text>
+                <Text style={[t.small, { color: c.danger, fontSize: 15, marginTop: 8 }]}>{objetivos.error}</Text>
               ) : !rocaAbierta ? (
                 // Estado vacío real: antes acá se mostraba un objetivo inventado ("Facturar
                 // $30.000 USD") que no era de nadie. Es preferible una invitación honesta.
@@ -1393,7 +1397,7 @@ export default function PlanScreen() {
                     <View style={{ gap: 4, marginTop: 8 }}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                         <Text style={[t.small, { color: c.textSoft, fontSize: 14 }]}>Avance cuantitativo:</Text>
-                        <Text style={[t.small, { color: c.gold, fontWeight: '800', fontSize: 15 }]}>
+                        <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 15 }]}>
                           {rocaAbierta.porcentaje}% CUMPLIDO
                         </Text>
                       </View>
@@ -1402,7 +1406,7 @@ export default function PlanScreen() {
                       </View>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 }}>
                         <Text style={[t.small, { color: c.textSoft, fontSize: 14 }]}>
-                          Vas en: <Text style={{ color: c.gold, fontWeight: '700' }}>{rocaAbierta.avance} {rocaAbierta.unidad}</Text>
+                          Vas en: <Text style={{ color: c.goldInk, fontFamily: 'Jost_700Bold' }}>{rocaAbierta.avance} {rocaAbierta.unidad}</Text>
                         </Text>
                         <Text style={[t.small, { color: c.textSoft, fontSize: 14 }]}>
                           Meta: {rocaAbierta.meta} {rocaAbierta.unidad}
@@ -1426,8 +1430,8 @@ export default function PlanScreen() {
                 bloque de 4 semanas contado desde que arrancó, no un mes del calendario. */}
             <View style={[styles.goalCard, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
               <Row gap={6}>
-                <Text style={{ fontSize: 15 }}>🗓️</Text>
-                <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 1 }]}>
+                <Icon name="calendar" size={15} color={c.goldInk} />
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
                   {etiquetaDelMes(mesDe(diaPrograma))}
                 </Text>
               </Row>
@@ -1463,13 +1467,16 @@ export default function PlanScreen() {
           <View style={[styles.modalContentCard, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: c.divider, paddingBottom: 8 }}>
               <View>
-                <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>REUBICAR HÁBITO</Text>
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>REUBICAR HÁBITO</Text>
                 <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>
                   {selectedHabitForMove?.title}
                 </Text>
               </View>
               <Pressable onPress={() => setMoveMomentModalVisible(false)}>
-                <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>✕ Cerrar</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <Icon name="close" size={12} color={c.goldInk} />
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>Cerrar</Text>
+              </View>
               </Pressable>
             </View>
 
@@ -1490,13 +1497,13 @@ export default function PlanScreen() {
                 ]}
               >
                 <Row gap={10}>
-                  <Text style={{ fontSize: 20 }}>🌅</Text>
+                  <Icon name="sun" size={20} color={c.goldInk} />
                   <View>
                     <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>BLOQUE DE LA MAÑANA</Text>
-                    <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>05:00 AM – 12:00 PM</Text>
+                    <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>05:00 AM – 12:00 PM</Text>
                   </View>
                 </Row>
-                <Text style={[t.micro, { color: c.gold, fontWeight: '800' }]}>Seleccionar ›</Text>
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>Seleccionar ›</Text>
               </Pressable>
 
               {/* Opción 2: Tarde */}
@@ -1511,13 +1518,13 @@ export default function PlanScreen() {
                 ]}
               >
                 <Row gap={10}>
-                  <Text style={{ fontSize: 20 }}>☀️</Text>
+                  <Icon name="clock" size={20} color={c.goldInk} />
                   <View>
                     <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>BLOQUE DE LA TARDE</Text>
-                    <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>12:00 PM – 18:00 PM</Text>
+                    <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>12:00 PM – 18:00 PM</Text>
                   </View>
                 </Row>
-                <Text style={[t.micro, { color: c.gold, fontWeight: '800' }]}>Seleccionar ›</Text>
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>Seleccionar ›</Text>
               </Pressable>
 
               {/* Opción 3: Noche */}
@@ -1532,13 +1539,13 @@ export default function PlanScreen() {
                 ]}
               >
                 <Row gap={10}>
-                  <Text style={{ fontSize: 20 }}>🌙</Text>
+                  <Icon name="moon" size={20} color={c.goldInk} />
                   <View>
                     <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>BLOQUE DE LA NOCHE</Text>
-                    <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>18:00 PM – 22:00 PM</Text>
+                    <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>18:00 PM – 22:00 PM</Text>
                   </View>
                 </Row>
-                <Text style={[t.micro, { color: c.gold, fontWeight: '800' }]}>Seleccionar ›</Text>
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>Seleccionar ›</Text>
               </Pressable>
             </View>
           </View>
@@ -1557,17 +1564,21 @@ export default function PlanScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContentCard, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: c.divider, paddingBottom: 8 }}>
-              <Text style={[t.cardTitle, { color: c.gold, fontSize: 13 }]}>CREAR NUEVO HÁBITO</Text>
+              <Text style={[t.cardTitle, { color: c.goldInk, fontSize: 13 }]}>CREAR NUEVO HÁBITO</Text>
               <Pressable onPress={() => setCreateHabitModalVisible(false)}>
-                <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>✕ Cerrar</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <Icon name="close" size={12} color={c.goldInk} />
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>Cerrar</Text>
+              </View>
               </Pressable>
             </View>
 
-            <ScrollView style={{ maxHeight: 440 }} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              keyboardShouldPersistTaps="handled" style={{ maxHeight: 440 }} showsVerticalScrollIndicator={false}>
               <View style={{ gap: 12, paddingVertical: 8 }}>
                 {/* 1. Nombre */}
                 <View style={{ gap: 4 }}>
-                  <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>1. NOMBRE DEL HÁBITO:</Text>
+                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>1. NOMBRE DEL HÁBITO:</Text>
                   <TextInput
                     value={newHabitTitle}
                     onChangeText={setNewHabitTitle}
@@ -1580,7 +1591,7 @@ export default function PlanScreen() {
                 {/* 2. Categoría — obligatoria del lado del servidor, y de ella salen la etiqueta y
                     el icono que va a mostrar la tarjeta (E-137). */}
                 <View style={{ gap: 4 }}>
-                  <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>2. ÁREA DEL HÁBITO:</Text>
+                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>2. ÁREA DEL HÁBITO:</Text>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                     {CATEGORIAS_HABITO.map(cat => {
                       const elegida = newHabitCategory === cat.valor;
@@ -1596,7 +1607,7 @@ export default function PlanScreen() {
                             },
                           ]}
                         >
-                          <Text style={[t.micro, { color: elegida ? c.gold : c.textSoft, fontWeight: '800' }]}>
+                          <Text style={[t.micro, { color: elegida ? c.goldInk : c.textSoft, fontFamily: 'Jost_700Bold' }]}>
                             {cat.icono} {cat.etiqueta}
                           </Text>
                         </Pressable>
@@ -1608,7 +1619,7 @@ export default function PlanScreen() {
                 {/* 3. Hora de disparo. El bloque del día (mañana/tarde/noche) sale de esta hora, no
                     de un selector aparte: antes había uno y lo que eligiera se perdía al recargar. */}
                 <View style={{ gap: 4 }}>
-                  <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>3. HORA DEL DÍA:</Text>
+                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>3. HORA DEL DÍA:</Text>
                   <TextInput
                     value={newHabitTime}
                     onChangeText={setNewHabitTime}
@@ -1616,7 +1627,7 @@ export default function PlanScreen() {
                     placeholderTextColor={c.textSoft}
                     style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.text }]}
                   />
-                  <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5, lineHeight: 14 }]}>
+                  <Text style={[t.micro, { color: c.textSoft, fontSize: 11, lineHeight: 14 }]}>
                     Tu hábito propio se repite los 7 días y no vence: la hora es un recordatorio, y con
                     ella queda en el bloque de mañana, tarde o noche.
                   </Text>
@@ -1646,17 +1657,20 @@ export default function PlanScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContentCard, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: c.divider, paddingBottom: 8 }}>
-              <Text style={[t.cardTitle, { color: c.gold, fontSize: 13 }]}>
+              <Text style={[t.cardTitle, { color: c.goldInk, fontSize: 13 }]}>
                 EDITAR OBJETIVO DE 90 DÍAS
               </Text>
               <Pressable onPress={() => setEditGoalModalVisible(false)}>
-                <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>✕ Cerrar</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <Icon name="close" size={12} color={c.goldInk} />
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>Cerrar</Text>
+              </View>
               </Pressable>
             </View>
 
             <View style={{ gap: 10, paddingVertical: 10 }}>
               <View style={{ gap: 4 }}>
-                <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>DECLARACIÓN DEL OBJETIVO:</Text>
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>DECLARACIÓN DEL OBJETIVO:</Text>
                 <TextInput
                   value={editGoalTitle}
                   onChangeText={setEditGoalTitle}
@@ -1691,7 +1705,7 @@ export default function PlanScreen() {
                         keyboardType="numeric"
                         placeholder="0"
                         placeholderTextColor={c.micro}
-                        style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.gold }]}
+                        style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.goldInk }]}
                       />
                     </View>
                     <View style={{ flex: 1, gap: 4 }}>
@@ -1720,7 +1734,7 @@ export default function PlanScreen() {
                       />
                     </View>
                   </View>
-                  <Text style={[t.micro, { color: c.micro, fontSize: 9.5, lineHeight: 14 }]}>
+                  <Text style={[t.micro, { color: c.micro, fontSize: 11, lineHeight: 14 }]}>
                     Si tu objetivo no se mide con un número, deja los tres campos vacíos.
                   </Text>
                 </View>
@@ -1756,7 +1770,7 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingBottom: 28,
+    paddingBottom: ESPACIO_PARA_LANZADOR,
   },
   gauge: {
     alignItems: 'center',
@@ -1849,7 +1863,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     fontSize: 11,
-    fontWeight: 'bold',
+    fontFamily: 'Jost_700Bold',
   },
   cambioProgramadoPill: {
     flexDirection: 'row',

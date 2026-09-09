@@ -56,7 +56,7 @@ export function ChapterConsentimiento({ data, onChange }: ChapterConsentimientoP
 
         {/* Textos de la tarjeta */}
         <View style={styles.textColumn}>
-          <Text style={[t.body, { color: c.textStrong, fontSize: 14.5, fontWeight: '700', lineHeight: 20 }]}>
+          <Text style={[t.body, { color: c.textStrong, fontSize: 14.5, fontFamily: 'Jost_700Bold', lineHeight: 20 }]}>
             Autorizo el uso de mis datos y me comprometo a los 90 días
           </Text>
           <Text style={[t.micro, { color: c.textSoft, fontSize: 12.5, lineHeight: 17, marginTop: 2 }]}>

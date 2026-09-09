@@ -123,9 +123,9 @@ function Rueda({ etiqueta, valores, valorInicial, onCambiar }: RuedaProps) {
               t.cardTitle,
               {
                 fontSize: v === seleccionado ? 30 : 20,
-                color: v === seleccionado ? c.gold : c.textSoft,
+                color: v === seleccionado ? c.goldInk : c.textSoft,
                 opacity: v === seleccionado ? 1 : 0.5,
-                fontWeight: v === seleccionado ? '700' : '400',
+                fontFamily: v === seleccionado ? 'Jost_700Bold' : 'Jost_400Regular',
               },
             ]}
           >

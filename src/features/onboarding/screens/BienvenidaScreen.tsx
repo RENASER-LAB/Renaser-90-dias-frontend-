@@ -36,7 +36,7 @@ export function BienvenidaScreen({ onContinue }: BienvenidaScreenProps) {
           accessibilityRole="button"
           style={[styles.themeBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
         >
-          <Icon name={mode === 'light' ? 'moon' : 'sun'} size={15} color={c.gold} />
+          <Icon name={mode === 'light' ? 'moon' : 'sun'} size={15} color={c.goldInk} />
         </Pressable>
       </View>
 
@@ -65,7 +65,7 @@ export function BienvenidaScreen({ onContinue }: BienvenidaScreenProps) {
               />
             ))}
             <View style={[styles.iconMedallion, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
-              <Icon name="spark" size={rs(22)} color={c.gold} strokeWidth={1.2} />
+              <Icon name="spark" size={rs(22)} color={c.goldInk} strokeWidth={1.2} />
             </View>
           </View>
 
@@ -97,12 +97,12 @@ export function BienvenidaScreen({ onContinue }: BienvenidaScreenProps) {
                 ]}
               >
                 <View style={[styles.stageIconWrap, { borderColor: c.gold }]}>
-                  <Icon name={stage.icon} size={16} color={c.gold} />
+                  <Icon name={stage.icon} size={16} color={c.goldInk} />
                 </View>
-                <Text style={[t.micro, { color: c.gold, letterSpacing: 1.2, marginTop: 8, fontSize: 10.5, fontWeight: '700' }]}>
+                <Text style={[t.micro, { color: c.goldInk, letterSpacing: 1.2, marginTop: 8, fontSize: 10.5, fontFamily: 'Jost_700Bold' }]}>
                   {stage.day}
                 </Text>
-                <Text style={[t.body, { color: c.textStrong, fontWeight: '700', marginTop: 2, fontSize: 13.5 }]}>
+                <Text style={[t.body, { color: c.textStrong, fontFamily: 'Jost_700Bold', marginTop: 2, fontSize: 13.5 }]}>
                   {stage.title}
                 </Text>
                 <Text style={[t.small, { color: c.textSoft, fontSize: 10.5, textAlign: 'center', marginTop: 2 }]}>
@@ -112,8 +112,8 @@ export function BienvenidaScreen({ onContinue }: BienvenidaScreenProps) {
             ))}
           </View>
 
-          <View style={[styles.quoteBox, { backgroundColor: 'rgba(178,146,79,0.06)', borderColor: c.borderStrong }]}>
-            <Icon name="diamond" size={16} color={c.gold} />
+          <View style={[styles.quoteBox, { backgroundColor: c.goldWash, borderColor: c.borderStrong }]}>
+            <Icon name="diamond" size={16} color={c.goldInk} />
             <Text style={[t.body, { color: c.text, flex: 1, lineHeight: 20, fontSize: 13.5 }]}>
               90 días de compromiso, disciplina innegociable y evolución en 5 dimensiones.
             </Text>

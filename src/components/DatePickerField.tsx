@@ -85,18 +85,18 @@ export function DatePickerField({
         style={[
           styles.inputBox,
           {
-            borderColor: error ? '#E06A66' : c.borderStrong,
+            borderColor: error ? c.danger : c.borderStrong,
             backgroundColor: c.cardBgAlt,
           },
         ]}
       >
         <View style={styles.iconWrap}>
-          <Icon name="clock" size={18} color={c.gold} />
+          <Icon name="clock" size={18} color={c.goldInk} />
         </View>
 
         <View style={{ flex: 1 }}>
           {value ? (
-            <Text style={[t.body, { color: c.textStrong, fontSize: 15, fontWeight: '500' }]}>
+            <Text style={[t.body, { color: c.textStrong, fontSize: 15, fontFamily: 'Jost_500Medium' }]}>
               {value}
             </Text>
           ) : (
@@ -107,14 +107,14 @@ export function DatePickerField({
         </View>
 
         <View style={[styles.badge, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-          <Text style={[t.micro, { color: c.gold, fontSize: 10, fontWeight: '700' }]}>
+          <Text style={[t.micro, { color: c.goldInk, fontSize: 10, fontFamily: 'Jost_700Bold' }]}>
             CALENDARIO ▾
           </Text>
         </View>
       </Pressable>
 
       {error && (
-        <Text style={[t.small, { color: '#E06A66', fontSize: 11.5 }]}>{error}</Text>
+        <Text style={[t.small, { color: c.danger, fontSize: 11.5 }]}>{error}</Text>
       )}
 
       {/* Modern Date Selection Modal */}
@@ -128,7 +128,7 @@ export function DatePickerField({
           <View style={[styles.modalCard, { backgroundColor: c.cardBg, borderColor: c.gold }]}>
             <View style={styles.modalHeader}>
               <View style={[styles.modalIcon, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-                <Icon name="clock" size={20} color={c.gold} />
+                <Icon name="clock" size={20} color={c.goldInk} />
               </View>
               <MicroLabel>FECHA DE NACIMIENTO</MicroLabel>
               <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 18, marginTop: 4 }]}>
@@ -140,7 +140,7 @@ export function DatePickerField({
             <View style={styles.columnsRow}>
               {/* Día */}
               <View style={[styles.colContainer, { borderColor: c.border }]}>
-                <Text style={[t.micro, styles.colHeader, { color: c.gold }]}>DÍA</Text>
+                <Text style={[t.micro, styles.colHeader, { color: c.goldInk }]}>DÍA</Text>
                 <ScrollView style={styles.colScroll} showsVerticalScrollIndicator={false}>
                   {DAYS.map(day => {
                     const isSel = selectedDay === day;
@@ -159,7 +159,7 @@ export function DatePickerField({
                             {
                               color: isSel ? c.onGold : c.text,
                               fontSize: 14,
-                              fontWeight: isSel ? '700' : '400',
+                              fontFamily: isSel ? 'Jost_700Bold' : 'Jost_400Regular',
                             },
                           ]}
                         >
@@ -173,7 +173,7 @@ export function DatePickerField({
 
               {/* Mes */}
               <View style={[styles.colContainer, { borderColor: c.border, flex: 1.4 }]}>
-                <Text style={[t.micro, styles.colHeader, { color: c.gold }]}>MES</Text>
+                <Text style={[t.micro, styles.colHeader, { color: c.goldInk }]}>MES</Text>
                 <ScrollView style={styles.colScroll} showsVerticalScrollIndicator={false}>
                   {MONTHS.map((m, idx) => {
                     const monthNum = String(idx + 1);
@@ -193,7 +193,7 @@ export function DatePickerField({
                             {
                               color: isSel ? c.onGold : c.text,
                               fontSize: 13,
-                              fontWeight: isSel ? '700' : '400',
+                              fontFamily: isSel ? 'Jost_700Bold' : 'Jost_400Regular',
                             },
                           ]}
                           numberOfLines={1}
@@ -208,7 +208,7 @@ export function DatePickerField({
 
               {/* Año */}
               <View style={[styles.colContainer, { borderColor: c.border, flex: 1.1 }]}>
-                <Text style={[t.micro, styles.colHeader, { color: c.gold }]}>AÑO</Text>
+                <Text style={[t.micro, styles.colHeader, { color: c.goldInk }]}>AÑO</Text>
                 <ScrollView style={styles.colScroll} showsVerticalScrollIndicator={false}>
                   {YEARS.map(yr => {
                     const isSel = selectedYear === yr;
@@ -227,7 +227,7 @@ export function DatePickerField({
                             {
                               color: isSel ? c.onGold : c.text,
                               fontSize: 14,
-                              fontWeight: isSel ? '700' : '400',
+                              fontFamily: isSel ? 'Jost_700Bold' : 'Jost_400Regular',
                             },
                           ]}
                         >
@@ -246,7 +246,7 @@ export function DatePickerField({
                 onPress={() => setModalVisible(false)}
                 style={[styles.cancelBtn, { borderColor: c.border }]}
               >
-                <Text style={[t.micro, { color: c.textSoft, fontSize: 11, fontWeight: '700' }]}>
+                <Text style={[t.micro, { color: c.textSoft, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>
                   CANCELAR
                 </Text>
               </Pressable>
@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: 6,
     fontSize: 10,
-    fontWeight: '700',
+    fontFamily: 'Jost_700Bold',
     letterSpacing: 1,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(178,146,79,0.2)',

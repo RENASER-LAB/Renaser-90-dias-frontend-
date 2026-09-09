@@ -67,14 +67,14 @@ export function MensajeBurbuja({ mensaje, nombreAsistente, onReintentar }: Props
             <TextoAsistente
               texto={mensaje.texto}
               estilo={[t.body, { color: c.text, fontSize: rs(14.5), lineHeight: rs(21) }]}
-              colorAcento={c.gold}
+              colorAcento={c.goldInk}
             />
           )
         ) : null}
 
         {mensaje.enProgreso && (
           <View style={styles.filaEscribiendo}>
-            <ActivityIndicator size="small" color={esPersona ? c.onGold : c.gold} />
+            <ActivityIndicator size="small" color={esPersona ? c.onGold : c.goldInk} />
             <Text style={[t.small, { color: esPersona ? c.onGold : c.textSoft, fontSize: 12.5 }]}>
               {nombreAsistente} está escribiendo…
             </Text>
@@ -83,14 +83,14 @@ export function MensajeBurbuja({ mensaje, nombreAsistente, onReintentar }: Props
 
         {mensaje.error && (
           <View style={styles.errorBox}>
-            <Text style={[t.small, { color: '#E06A66', fontSize: 12.5 }]}>{mensaje.error}</Text>
+            <Text style={[t.small, { color: c.danger, fontSize: 12.5 }]}>{mensaje.error}</Text>
             {!mensaje.cuotaAgotada && (
               <Pressable
                 onPress={() => onReintentar(mensaje.id)}
                 hitSlop={{ top: 14, bottom: 14, left: 10, right: 10 }}
                 style={styles.reintentarBtn}
               >
-                <Text style={[t.micro, { color: c.gold, fontSize: 11, fontWeight: '700' }]}>
+                <Text style={[t.micro, { color: c.goldInk, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>
                   REINTENTAR
                 </Text>
               </Pressable>

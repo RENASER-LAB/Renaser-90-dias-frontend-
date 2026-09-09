@@ -130,7 +130,7 @@ function SleepQualitySlider({
         <Text
           style={[
             t.screenTitle,
-            { color: c.textStrong, fontSize: 20, fontWeight: '700', width: 28, textAlign: 'right' },
+            { color: c.textStrong, fontSize: 20, fontFamily: 'Jost_700Bold', width: 28, textAlign: 'right' },
           ]}
         >
           {currentVal}
@@ -181,11 +181,11 @@ export function ChapterSalud({ data, onChange }: ChapterSaludProps) {
       {/* Campo 1: Horas promedio de sueño */}
       <View style={styles.fieldBlock}>
         <View style={styles.labelRow}>
-          <Text style={[t.body, { color: c.textStrong, fontSize: 14.5, fontWeight: '600' }]}>
+          <Text style={[t.body, { color: c.textStrong, fontSize: 14.5, fontFamily: 'Jost_500Medium' }]}>
             Horas promedio de sueño
           </Text>
           {isValidHoras && (
-            <Text style={{ color: '#4E9F76', fontSize: 14, fontWeight: '700' }}>✓</Text>
+            <Text style={{ color: c.success, fontSize: 14, fontFamily: 'Jost_700Bold' }}>✓</Text>
           )}
         </View>
 
@@ -193,7 +193,7 @@ export function ChapterSalud({ data, onChange }: ChapterSaludProps) {
           style={[
             styles.inputWrap,
             {
-              borderColor: isValidHoras ? '#4E9F76' : c.borderStrong,
+              borderColor: isValidHoras ? c.success : c.borderStrong,
               backgroundColor: c.cardBgAlt,
             },
           ]}
@@ -214,7 +214,7 @@ export function ChapterSalud({ data, onChange }: ChapterSaludProps) {
       {/* Campo 2: Calidad de tu sueño (Opcional) */}
       <View style={styles.fieldBlock}>
         <View style={styles.labelRow}>
-          <Text style={[t.body, { color: c.textStrong, fontSize: 14.5, fontWeight: '600' }]}>
+          <Text style={[t.body, { color: c.textStrong, fontSize: 14.5, fontFamily: 'Jost_500Medium' }]}>
             Calidad de tu sueño
           </Text>
           <Text style={[t.micro, { color: c.tabInactive, fontSize: 12 }]}>Opcional</Text>
@@ -228,7 +228,7 @@ export function ChapterSalud({ data, onChange }: ChapterSaludProps) {
 
       {/* Campo 3: ¿Tomas alguna medicación de forma regular? */}
       <View style={styles.fieldBlock}>
-        <Text style={[t.body, { color: c.textStrong, fontSize: 14.5, fontWeight: '600' }]}>
+        <Text style={[t.body, { color: c.textStrong, fontSize: 14.5, fontFamily: 'Jost_500Medium' }]}>
           ¿Tomas alguna medicación de forma regular?
         </Text>
 
@@ -255,7 +255,7 @@ export function ChapterSalud({ data, onChange }: ChapterSaludProps) {
             >
               {data.tomaMedicacionRegular === true && <View style={styles.radioInnerWhite} />}
             </View>
-            <Text style={[t.body, { color: c.textStrong, fontSize: 14.5, fontWeight: '500' }]}>
+            <Text style={[t.body, { color: c.textStrong, fontSize: 14.5, fontFamily: 'Jost_500Medium' }]}>
               Sí
             </Text>
           </Pressable>
@@ -282,7 +282,7 @@ export function ChapterSalud({ data, onChange }: ChapterSaludProps) {
             >
               {data.tomaMedicacionRegular === false && <View style={styles.radioInnerWhite} />}
             </View>
-            <Text style={[t.body, { color: c.textStrong, fontSize: 14.5, fontWeight: '500' }]}>
+            <Text style={[t.body, { color: c.textStrong, fontSize: 14.5, fontFamily: 'Jost_500Medium' }]}>
               No
             </Text>
           </Pressable>
@@ -292,7 +292,7 @@ export function ChapterSalud({ data, onChange }: ChapterSaludProps) {
       {/* Campo 4: Especifica tu medicación (SOLO VISIBLE CUANDO ES "SÍ") */}
       {data.tomaMedicacionRegular === true && (
         <View style={styles.fieldBlock}>
-          <Text style={[t.body, { color: c.textStrong, fontSize: 14.5, fontWeight: '600' }]}>
+          <Text style={[t.body, { color: c.textStrong, fontSize: 14.5, fontFamily: 'Jost_500Medium' }]}>
             Especifica tu medicación y motivo de la toma
           </Text>
 

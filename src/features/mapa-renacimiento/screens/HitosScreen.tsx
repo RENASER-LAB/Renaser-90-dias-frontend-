@@ -42,7 +42,7 @@ export function HitosScreen({ estado }: PropsPaso) {
       {AREAS.map(area => (
         <View key={area} style={[styles.bloque, { borderColor: c.border, backgroundColor: c.cardBg }]}>
           <Row gap={8}>
-            <Icon name={ICONO[area]} size={14} color={c.gold} />
+            <Icon name={ICONO[area]} size={14} color={c.goldInk} />
             <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 14 }]}>{ETIQUETA_AREA[area]}</Text>
           </Row>
           <Row gap={8} align="flex-start" style={{ marginTop: 12 }}>

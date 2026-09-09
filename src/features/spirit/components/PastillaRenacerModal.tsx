@@ -89,7 +89,7 @@ export function PastillaRenacerModal({
   onCerrar,
 }: PastillaRenacerModalProps) {
   const { c, t } = useTheme();
-  const { isTablet, horizontalPadding } = useResponsive();
+  const { isTablet, horizontalPadding, contentMaxWidth } = useResponsive();
 
   const yaEntregado = dia?.state === 'submitted';
   const fuente = dia?.audioUrl ?? null;
@@ -242,7 +242,7 @@ export function PastillaRenacerModal({
     onEntregar(dia.day, textoAEntregar);
   }, [actualMuyCorta, esUltima, todasCompletas, dia, onEntregar, textoAEntregar]);
 
-  const anchoTarjeta = isTablet ? 560 : undefined;
+  const anchoTarjeta = contentMaxWidth;
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={cerrar}>
@@ -273,7 +273,7 @@ export function PastillaRenacerModal({
           >
             <View style={styles.encabezado}>
               <View style={styles.tituloBloque}>
-                <Text style={[t.micro, { color: c.gold }]}>PASTILLA RENASER</Text>
+                <Text style={[t.micro, { color: c.goldInk }]}>PASTILLA RENASER</Text>
                 <Text style={[t.cardTitle, { color: c.text, marginTop: 4 }]}>
                   {dia?.title ?? 'Tu audio de hoy'}
                 </Text>
@@ -289,16 +289,16 @@ export function PastillaRenacerModal({
                 hitSlop={12}
                 accessibilityLabel="Cerrar"
               >
-                <Text style={[t.cardTitle, { color: c.textSoft }]}>✕</Text>
+                <Icon name="close" size={17} color={c.textSoft} />
               </Pressable>
             </View>
 
             {cargando ? (
               <View style={styles.centrado}>
-                <ActivityIndicator color={c.gold} />
+                <ActivityIndicator color={c.goldInk} />
               </View>
             ) : error ? (
-              <Text style={[t.body, { color: ROJO_ERROR }]}>{error}</Text>
+              <Text style={[t.body, { color: c.danger }]}>{error}</Text>
             ) : !dia ? (
               <Text style={[t.body, { color: c.textSoft }]}>
                 Todavía no tienes una Pastilla disponible. Aparece a partir del día 8 de tu programa.
@@ -317,8 +317,8 @@ export function PastillaRenacerModal({
                 {yaEntregado ? (
                   <View style={styles.bloque}>
                     <View style={styles.filaHecho}>
-                      <Icon name="checkCircle" size={18} color={VERDE_HECHO} />
-                      <Text style={[t.small, { color: VERDE_HECHO, marginLeft: 8 }]}>
+                      <Icon name="checkCircle" size={18} color={c.success} />
+                      <Text style={[t.small, { color: c.success, marginLeft: 8 }]}>
                         Registrado. Ya contestaste este audio.
                       </Text>
                     </View>
@@ -328,7 +328,7 @@ export function PastillaRenacerModal({
                   </View>
                 ) : !borradorListo ? (
                   <View style={styles.centrado}>
-                    <ActivityIndicator color={c.gold} />
+                    <ActivityIndicator color={c.goldInk} />
                   </View>
                 ) : (
                   <View style={styles.bloque}>
@@ -356,7 +356,7 @@ export function PastillaRenacerModal({
                           color: c.text,
                           backgroundColor: c.bg,
                           borderColor:
-                            intentoDeEnvio && actualMuyCorta ? ROJO_ERROR : c.border,
+                            intentoDeEnvio && actualMuyCorta ? c.danger : c.border,
                         },
                       ]}
                     />
@@ -364,7 +364,7 @@ export function PastillaRenacerModal({
                       style={[
                         t.small,
                         {
-                          color: intentoDeEnvio && actualMuyCorta ? ROJO_ERROR : c.textSoft,
+                          color: intentoDeEnvio && actualMuyCorta ? c.danger : c.textSoft,
                           marginTop: 6,
                         },
                       ]}
@@ -375,7 +375,7 @@ export function PastillaRenacerModal({
                     </Text>
 
                     {errorEnvio ? (
-                      <Text style={[t.small, { color: ROJO_ERROR, marginTop: 8 }]}>{errorEnvio}</Text>
+                      <Text style={[t.small, { color: c.danger, marginTop: 8 }]}>{errorEnvio}</Text>
                     ) : null}
 
                     <View style={styles.acciones}>
@@ -412,9 +412,6 @@ export function PastillaRenacerModal({
   );
 }
 
-/** Verde de "hecho" y rojo de error: los mismos literales que ya usa Training (no están en tokens). */
-const VERDE_HECHO = '#4E9F76';
-const ROJO_ERROR = '#E06A66';
 
 function segundosAReloj(segundos: number): string {
   if (!Number.isFinite(segundos) || segundos < 0) return '0:00';
@@ -472,9 +469,9 @@ function Reproductor({
         hitSlop={8}
       >
         {cargandoAudio && !reproduciendo ? (
-          <ActivityIndicator color={c.gold} />
+          <ActivityIndicator color={c.goldInk} />
         ) : (
-          <Icon name={reproduciendo ? 'pause' : 'play'} size={22} color={c.gold} />
+          <Icon name={reproduciendo ? 'pause' : 'play'} size={22} color={c.goldInk} />
         )}
       </Pressable>
 

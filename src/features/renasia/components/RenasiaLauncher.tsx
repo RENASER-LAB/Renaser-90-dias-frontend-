@@ -53,7 +53,7 @@ export function RenasiaLauncher() {
       */}
       {!hayChatEnPantalla && (
         <View style={[styles.posicion, { bottom: insets.bottom + ALTO_TAB_BAR + SEPARACION }]}>
-          <GoldCircle size={52} icon="chat" onPress={() => setVisible(true)} />
+          <GoldCircle size={DIAMETRO} icon="chat" onPress={() => setVisible(true)} />
         </View>
       )}
 
@@ -68,6 +68,17 @@ export function RenasiaLauncher() {
  */
 const ALTO_TAB_BAR = 62;
 const SEPARACION = 16;
+const DIAMETRO = 52;
+
+/**
+ * Hueco que cada pantalla con scroll debe dejar al final de su contenido para que este boton
+ * flotante no tape la ultima tarjeta ni, peor, un control pulsable (pasaba con "Compartir" en
+ * el Muro). Se exporta desde aqui para que el dia que el boton cambie de tamano o de
+ * separacion no haya que perseguir el numero por cinco pantallas.
+ *
+ * Cubre el minimo de 36 que pide AGENTS.md 2 con holgura.
+ */
+export const ESPACIO_PARA_LANZADOR = DIAMETRO + SEPARACION + 20;
 
 const styles = StyleSheet.create({
   posicion: { position: 'absolute', right: 18 },

@@ -32,7 +32,7 @@ export function TerminosScreen({
   onSaveSignature,
 }: TerminosScreenProps) {
   const { c, t, mode, toggle } = useTheme();
-  const { isSmall, isTablet } = useResponsive();
+  const { isSmall, isTablet, contentMaxWidth } = useResponsive();
   const { guardarCapitulo, avanzarEstado, aceptarHito, guardarFirma } = usePersistenciaOnboarding();
   // Ref al lienzo para poder capturarlo como PNG al confirmar (ver SignatureCanvas.capturarComoPngBase64).
   const signatureRef = useRef<SignatureCanvasHandle>(null);
@@ -133,8 +133,8 @@ export function TerminosScreen({
           onPress={onBack}
           style={[styles.backBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
         >
-          <Icon name="arrowLeft" size={16} color={c.gold} />
-          <Text style={[t.micro, { color: c.text, letterSpacing: 1.2, fontSize: 11, fontWeight: '700' }]}>
+          <Icon name="arrowLeft" size={16} color={c.goldInk} />
+          <Text style={[t.micro, { color: c.text, letterSpacing: 1.2, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>
             FICHA
           </Text>
         </Pressable>
@@ -145,7 +145,7 @@ export function TerminosScreen({
           accessibilityRole="button"
           style={[styles.themeBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
         >
-          <Icon name={mode === 'light' ? 'moon' : 'sun'} size={15} color={c.gold} />
+          <Icon name={mode === 'light' ? 'moon' : 'sun'} size={15} color={c.goldInk} />
         </Pressable>
       </View>
 
@@ -154,7 +154,7 @@ export function TerminosScreen({
           styles.scrollContent,
           {
             paddingHorizontal: isSmall ? 14 : isTablet ? 32 : 18,
-            maxWidth: isTablet ? 560 : undefined,
+            maxWidth: contentMaxWidth,
             alignSelf: isTablet ? 'center' : 'stretch',
             width: isTablet ? '100%' : undefined,
           },
@@ -165,7 +165,7 @@ export function TerminosScreen({
         {/* Header Medallion */}
         <View style={styles.header}>
           <View style={[styles.iconMedallion, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
-            <Icon name="doc" size={22} color={c.gold} />
+            <Icon name="doc" size={22} color={c.goldInk} />
           </View>
           <MicroLabel>ACUERDO DE TRANSFORMACIÓN</MicroLabel>
           <Text style={[t.screenTitle, { color: c.textStrong, marginTop: 4, textAlign: 'center' }]}>
@@ -178,9 +178,9 @@ export function TerminosScreen({
 
         {/* Legal Clauses Container */}
         <View style={[styles.termsCard, { backgroundColor: c.cardBg, borderColor: c.border }]}>
-          <View style={[styles.preambleBox, { backgroundColor: 'rgba(178,146,79,0.06)', borderColor: c.borderStrong }]}>
-            <Icon name="diamond" size={16} color={c.gold} />
-            <Text style={[t.body, { color: c.textStrong, fontWeight: '600', flex: 1, fontSize: 14, lineHeight: 21 }]}>
+          <View style={[styles.preambleBox, { backgroundColor: c.goldWash, borderColor: c.borderStrong }]}>
+            <Icon name="diamond" size={16} color={c.goldInk} />
+            <Text style={[t.body, { color: c.textStrong, fontFamily: 'Jost_500Medium', flex: 1, fontSize: 14, lineHeight: 21 }]}>
               Al inscribirme en el programa Renaser, declaro que lo hago de manera libre y voluntaria, y acepto íntegramente los siguientes términos:
             </Text>
           </View>
@@ -189,7 +189,7 @@ export function TerminosScreen({
             {TERMINOS_CLAUSULAS.map(item => (
               <View key={item.num} style={styles.clauseRow}>
                 <View style={[styles.numBadge, { borderColor: c.borderStrong, backgroundColor: c.cardBgAlt }]}>
-                  <Text style={[t.micro, { color: c.gold, fontSize: 10, fontWeight: '700' }]}>
+                  <Text style={[t.micro, { color: c.goldInk, fontSize: 10, fontFamily: 'Jost_700Bold' }]}>
                     {item.num < 10 ? `0${item.num}` : item.num}
                   </Text>
                 </View>

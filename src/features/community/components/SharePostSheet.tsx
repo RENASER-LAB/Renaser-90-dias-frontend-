@@ -11,6 +11,7 @@ import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import type { ChatConversation } from '../../../screens/ComunidadScreen';
+import { Icon } from '../../../components/Icon';
 
 export interface SharePostTargetPost {
   id: string;
@@ -82,7 +83,7 @@ export function SharePostSheet({
           </Text>
         </View>
         <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={10}>
-          <Text style={styles.closeBtnText}>✕</Text>
+          <Icon name="close" size={16} color="#FFFFFF" />
         </Pressable>
       </View>
 
@@ -129,7 +130,7 @@ export function SharePostSheet({
           ]}
         >
           <View style={[styles.optionIconBox, { backgroundColor: 'rgba(52, 152, 219, 0.15)' }]}>
-            <Text style={{ fontSize: 20 }}>🌐</Text>
+            <Icon name="share" size={20} color="#E5C689" />
           </View>
           <View style={styles.optionTextBox}>
             <Text style={styles.optionTitle}>Chat Global Renaser</Text>
@@ -157,8 +158,8 @@ export function SharePostSheet({
               pressed && styles.optionCardPressed,
             ]}
           >
-            <View style={[styles.optionIconBox, { backgroundColor: 'rgba(212, 160, 23, 0.15)' }]}>
-              <Text style={{ fontSize: 20 }}>👥</Text>
+            <View style={[styles.optionIconBox, { backgroundColor: 'rgba(198,164,92,0.12)' }]}>
+              <Icon name="users" size={20} color="#E5C689" />
             </View>
             <View style={styles.optionTextBox}>
               <Text style={styles.optionTitle}>Chat de mi Célula</Text>
@@ -272,7 +273,7 @@ const styles = StyleSheet.create({
   closeBtnText: {
     color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Jost_700Bold',
   },
   previewBox: {
     flexDirection: 'row',

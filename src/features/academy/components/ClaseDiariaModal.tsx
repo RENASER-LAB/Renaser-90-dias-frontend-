@@ -15,6 +15,7 @@ import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
 import { RESUMEN_MAX_LENGTH, RESUMEN_MIN_LENGTH } from '../api/claseDiariaApi';
 import type { ClaseDiariaApi } from '../types/academy.types';
+import { Icon } from '../../../components/Icon';
 
 /**
  * Cierre de la Clase Diaria: la persona escribe qué entendió de la clase de hoy y recién con eso
@@ -70,7 +71,7 @@ export function ClaseDiariaModal({
   onCerrar,
 }: ClaseDiariaModalProps) {
   const { c, t } = useTheme();
-  const { isTablet } = useResponsive();
+  const { isTablet, contentMaxWidth } = useResponsive();
   const [resumen, setResumen] = useState('');
   // Solo se pinta el borde de error DESPUÉS de un intento de envío: marcar en rojo un campo que
   // todavía está vacío porque recién se abrió el modal es hostil, no informativo.
@@ -108,7 +109,7 @@ export function ClaseDiariaModal({
             {
               borderColor: c.gold,
               backgroundColor: c.cardBg,
-              maxWidth: isTablet ? 560 : undefined,
+              maxWidth: contentMaxWidth,
               width: isTablet ? '100%' : undefined,
               alignSelf: 'center',
             },
@@ -116,7 +117,7 @@ export function ClaseDiariaModal({
         >
           <View style={[styles.header, { borderBottomColor: c.divider }]}>
             <View style={{ flex: 1, flexShrink: 1 }}>
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>
+              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
                 {yaCompletada ? 'TU RESUMEN DE HOY' : 'CLASE DIARIA'}
               </Text>
               <Text
@@ -127,7 +128,10 @@ export function ClaseDiariaModal({
               </Text>
             </View>
             <Pressable onPress={onCerrar} hitSlop={12} style={styles.cerrar}>
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>✕ Cerrar</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <Icon name="close" size={12} color={c.goldInk} />
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>Cerrar</Text>
+              </View>
             </Pressable>
           </View>
 
@@ -142,7 +146,7 @@ export function ClaseDiariaModal({
           >
             {cargando && (
               <View style={styles.centrado}>
-                <ActivityIndicator color={c.gold} />
+                <ActivityIndicator color={c.goldInk} />
                 <Text style={[t.body, { color: c.textSoft, fontSize: 14, marginTop: 10 }]}>
                   Buscando tu clase de hoy…
                 </Text>
@@ -187,11 +191,11 @@ export function ClaseDiariaModal({
                   ]}
                 >
                   <View style={{ flex: 1, flexShrink: 1, gap: 2 }}>
-                    <Text style={[t.micro, { color: c.micro, fontWeight: '700', fontSize: 10.5 }]}>
+                    <Text style={[t.micro, { color: c.micro, fontFamily: 'Jost_700Bold', fontSize: 10.5 }]}>
                       DÍA {clase.programDay} · {clase.cursoTitulo ?? 'TU CURSO'}
                     </Text>
                     <Text
-                      style={[t.body, { color: c.textStrong, fontSize: 14.5, fontWeight: '600' }]}
+                      style={[t.body, { color: c.textStrong, fontSize: 14.5, fontFamily: 'Jost_500Medium' }]}
                     >
                       {clase.leccionTitulo}
                     </Text>
@@ -199,13 +203,13 @@ export function ClaseDiariaModal({
                       Toca para volver a ver la clase
                     </Text>
                   </View>
-                  <Text style={[t.cardTitle, { color: c.gold, fontSize: 20 }]}>›</Text>
+                  <Text style={[t.cardTitle, { color: c.goldInk, fontSize: 20 }]}>›</Text>
                 </Pressable>
 
                 {yaCompletada ? (
                   /* Paso 2, ya hecho: se muestra lo que escribió, sin volver a pedirlo. */
                   <View style={{ marginTop: 16, gap: 8 }}>
-                    <Text style={[t.micro, { color: '#4E9F76', fontWeight: '700', fontSize: 11 }]}>
+                    <Text style={[t.micro, { color: c.success, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                       ✓ CLASE COMPLETADA
                     </Text>
                     <View
@@ -222,7 +226,7 @@ export function ClaseDiariaModal({
                 ) : (
                   /* Paso 2: contar qué entendió. Sin esto, el hábito NO se cierra. */
                   <View style={{ marginTop: 16, gap: 8 }}>
-                    <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 11 }]}>
+                    <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                       ¿QUÉ ENTENDISTE DE LA CLASE?
                     </Text>
                     <Text style={[t.body, { color: c.textSoft, fontSize: 13 }]}>
@@ -243,7 +247,7 @@ export function ClaseDiariaModal({
                       style={[
                         styles.input,
                         {
-                          borderColor: mostrarErrorDeLargo ? '#E06A66' : c.border,
+                          borderColor: mostrarErrorDeLargo ? c.danger : c.border,
                           backgroundColor: c.cardBgAlt,
                           color: c.text,
                         },
@@ -254,7 +258,7 @@ export function ClaseDiariaModal({
                         style={[
                           t.micro,
                           {
-                            color: mostrarErrorDeLargo ? '#E06A66' : c.textSoft,
+                            color: mostrarErrorDeLargo ? c.danger : c.textSoft,
                             fontSize: 11.5,
                             flexShrink: 1,
                           },
@@ -267,7 +271,7 @@ export function ClaseDiariaModal({
                     </View>
 
                     {errorEnvio && (
-                      <Text style={[t.body, { color: '#E06A66', fontSize: 13.5 }]}>
+                      <Text style={[t.body, { color: c.danger, fontSize: 13.5 }]}>
                         {errorEnvio}
                       </Text>
                     )}

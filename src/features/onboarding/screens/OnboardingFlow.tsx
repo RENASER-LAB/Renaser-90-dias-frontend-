@@ -83,7 +83,7 @@ export function OnboardingFlow() {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <ActivityIndicator color={c.gold} size="large" />
+          <ActivityIndicator color={c.goldInk} size="large" />
         </View>
       </SafeAreaView>
     );

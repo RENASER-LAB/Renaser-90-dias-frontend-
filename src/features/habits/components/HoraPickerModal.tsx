@@ -3,6 +3,7 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 
 import { useTheme } from '../../../theme/ThemeContext';
 import { GoldButton } from '../../../components/GoldButton';
+import { Icon } from '../../../components/Icon';
 
 /**
  * Selector de hora táctil, pensado para un público de 40+ años (palabras del dueño del
@@ -65,24 +66,27 @@ export function HoraPickerModal({
         <View style={[styles.card, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
           <View style={[styles.header, { borderBottomColor: c.divider }]}>
             <View style={{ flex: 1 }}>
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>ELEGIR HORA</Text>
+              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>ELEGIR HORA</Text>
               <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]} numberOfLines={1}>
                 {tituloHabito}
               </Text>
             </View>
             <Pressable onPress={onCerrar} hitSlop={10}>
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>✕ Cerrar</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <Icon name="close" size={12} color={c.goldInk} />
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>Cerrar</Text>
+              </View>
             </Pressable>
           </View>
 
           <View style={styles.horaGrande}>
-            <Text style={{ fontFamily: 'Jost_300Light', fontSize: 44, color: c.textStrong }}>
+            <Text style={{ fontFamily: 'Jost_400Regular', fontSize: 44, color: c.textStrong }}>
               {aDosDigitos(hora)}:{aDosDigitos(minuto)}
             </Text>
             <Text style={[t.micro, { color: c.textSoft, marginTop: 2 }]}>{momentoDelDia}</Text>
           </View>
 
-          <Text style={[t.micro, { color: c.gold, fontWeight: '700', marginTop: 6 }]}>HORA</Text>
+          <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', marginTop: 6 }]}>HORA</Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -115,7 +119,7 @@ export function HoraPickerModal({
             })}
           </ScrollView>
 
-          <Text style={[t.micro, { color: c.gold, fontWeight: '700', marginTop: 12 }]}>MINUTOS</Text>
+          <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', marginTop: 12 }]}>MINUTOS</Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}

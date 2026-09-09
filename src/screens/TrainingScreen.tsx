@@ -32,6 +32,7 @@ import {
 } from '../features/programa/hooks/useArranqueDelPrograma';
 import { borradorEspiritu } from '../features/spirit/storage/borradorEspiritu';
 import type { DayOfWeek } from './PlanScreen';
+import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
 
 /**
  * Habitos con FLUJO PROPIO: no se cierran con el checkbox ni subiendo un archivo. Se ramifica por
@@ -163,7 +164,7 @@ const DIMENSIONES_CONFIG: DimensionConfig[] = [
 
 export default function TrainingScreen() {
   const { c, t } = useTheme();
-  const { rs, isTablet, horizontalPadding } = useResponsive();
+  const { rs, isTablet, horizontalPadding, contentMaxWidth } = useResponsive();
   const medallionSize = rs(42);
 
   // Selected Dimension State
@@ -555,7 +556,7 @@ export default function TrainingScreen() {
           styles.content,
           {
             paddingHorizontal: horizontalPadding,
-            maxWidth: isTablet ? 560 : undefined,
+            maxWidth: contentMaxWidth,
             alignSelf: isTablet ? 'center' : 'stretch',
             width: isTablet ? '100%' : undefined,
           },
@@ -573,7 +574,7 @@ export default function TrainingScreen() {
             accessibilityLabel="Tu programa todavía no arrancó"
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Icon name="lock" size={13} color={c.gold} />
+              <Icon name="lock" size={13} color={c.goldInk} />
               <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>
                 {arranque.estado === 'PENDIENTE_ELEGIR'
                   ? 'Todavía no elegiste tu Día 1'
@@ -603,9 +604,9 @@ export default function TrainingScreen() {
             {/* Aviso de los domingos. Solo donde puede sonar de verdad. */}
             {recordatorios.HAY_RECORDATORIOS_LOCALES && repasoSemanal !== null && !programaSinArrancar && (
               <View style={[styles.repasoSemanal, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
-                <Icon name="calendar" size={16} color={c.gold} />
+                <Icon name="calendar" size={16} color={c.goldInk} />
                 <View style={{ flex: 1, flexShrink: 1 }}>
-                  <Text style={[t.body, { color: c.textStrong, fontSize: 13, fontWeight: '600' }]}>
+                  <Text style={[t.body, { color: c.textStrong, fontSize: 13, fontFamily: 'Jost_500Medium' }]}>
                     Armá tu semana los domingos
                   </Text>
                   <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5, lineHeight: 14 }]}>
@@ -653,7 +654,7 @@ export default function TrainingScreen() {
                   marginVertical: 8,
                   borderRadius: 14,
                   borderWidth: 1,
-                  borderColor: '#E06A66',
+                  borderColor: c.danger,
                   backgroundColor: c.cardBg,
                 }}
               >
@@ -674,7 +675,7 @@ export default function TrainingScreen() {
                     justifyContent: 'center',
                   }}
                 >
-                  <Text style={[t.cardTitle, { color: c.gold, fontSize: 14.5 }]}>Reintentar</Text>
+                  <Text style={[t.cardTitle, { color: c.goldInk, fontSize: 14.5 }]}>Reintentar</Text>
                 </Pressable>
               </View>
             )}
@@ -723,15 +724,30 @@ export default function TrainingScreen() {
                         },
                       ]}
                     >
-                      <Icon name={d.icon} size={rs(20)} color={c.gold} strokeWidth={1.1} />
+                      <Icon name={d.icon} size={rs(20)} color={c.goldInk} strokeWidth={1.1} />
                     </View>
 
                     <View style={{ flex: 1 }}>
                       <View style={styles.dimensionHeaderRow}>
-                        <Text style={{ fontFamily: 'Jost_700Bold', color: c.text, letterSpacing: 1.5, fontSize: 14 }}>
+                        <Text
+                          numberOfLines={2}
+                          style={{
+                            fontFamily: 'Jost_700Bold',
+                            color: c.text,
+                            letterSpacing: 1,
+                            fontSize: 14,
+                            flexShrink: 1,
+                          }}
+                        >
                           {d.title}
                         </Text>
-                        <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 10.5 }]}>
+                        <Text
+                          numberOfLines={1}
+                          style={[
+                            t.micro,
+                            { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 10.5, flexShrink: 0 },
+                          ]}
+                        >
                           {evidenceCount}/{dimHabits.length} CUMPLIDOS
                         </Text>
                       </View>
@@ -760,14 +776,14 @@ export default function TrainingScreen() {
                 style={styles.backTrainingBtn}
                 hitSlop={8}
               >
-                <Icon name="arrowLeft" size={14} color={c.gold} />
-                <Text style={[t.micro, { color: c.gold, fontWeight: '700', letterSpacing: 1 }]}>
+                <Icon name="arrowLeft" size={14} color={c.goldInk} />
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
                   VOLVER A TRAINING
                 </Text>
               </Pressable>
 
               <View style={[styles.categoryPillBadge, { borderColor: c.borderStrong, backgroundColor: c.cardBgAlt }]}>
-                <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 9.5 }]}>
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                   DIMENSIÓN · {selectedDimension.title}
                 </Text>
               </View>
@@ -777,14 +793,14 @@ export default function TrainingScreen() {
             <View style={[styles.dimSummaryCard, { borderColor: c.border, backgroundColor: c.cardBg }]}>
               <View style={styles.dimSummaryHeader}>
                 <View style={[styles.dimAvatarMedallion, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-                  <Icon name={selectedDimension.icon} size={22} color={c.gold} />
+                  <Icon name={selectedDimension.icon} size={22} color={c.goldInk} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 17 }]}>
                       {selectedDimension.title}
                     </Text>
-                    <Text style={[t.micro, { color: c.gold, fontWeight: '800', fontSize: 11 }]}>
+                    <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                       {completedEvidencesCount}/{currentDimensionHabits.length} CUMPLIDOS
                     </Text>
                   </View>
@@ -797,8 +813,8 @@ export default function TrainingScreen() {
               {/* Dimension Progress Bar */}
               <View style={{ gap: 4, marginTop: 8 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>Cumplidos hoy</Text>
-                  <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 10 }]}>{dimensionProgress}%</Text>
+                  <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>Cumplidos hoy</Text>
+                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 10 }]}>{dimensionProgress}%</Text>
                 </View>
                 <View style={[styles.progressBarBg, { backgroundColor: c.border }]}>
                   <View style={[styles.progressBarFill, { backgroundColor: c.gold, width: `${dimensionProgress}%` }]} />
@@ -819,8 +835,8 @@ export default function TrainingScreen() {
                   style={[
                     t.micro,
                     {
-                      color: innerTab === 'habitos' ? c.gold : c.textSoft,
-                      fontWeight: innerTab === 'habitos' ? '700' : '500',
+                      color: innerTab === 'habitos' ? c.goldInk : c.textSoft,
+                      fontFamily: innerTab === 'habitos' ? 'Jost_700Bold' : 'Jost_500Medium',
                       fontSize: 10.5,
                     },
                   ]}
@@ -840,8 +856,8 @@ export default function TrainingScreen() {
                   style={[
                     t.micro,
                     {
-                      color: innerTab === 'guias' ? c.gold : c.textSoft,
-                      fontWeight: innerTab === 'guias' ? '700' : '500',
+                      color: innerTab === 'guias' ? c.goldInk : c.textSoft,
+                      fontFamily: innerTab === 'guias' ? 'Jost_700Bold' : 'Jost_500Medium',
                       fontSize: 10.5,
                     },
                   ]}
@@ -871,7 +887,7 @@ export default function TrainingScreen() {
                     style={[styles.planificarBigBtn, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}
                   >
                     <View style={[styles.planificarIconBox, { borderColor: c.gold }]}>
-                      <Icon name="clock" size={20} color={c.gold} />
+                      <Icon name="clock" size={20} color={c.goldInk} />
                     </View>
                     <View style={{ flex: 1, flexShrink: 1, gap: 2 }}>
                       <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 15 }]}>
@@ -882,7 +898,7 @@ export default function TrainingScreen() {
                         {habitosPlanificables === 1 ? 'hábito' : 'hábitos'} · a todos o uno por uno
                       </Text>
                     </View>
-                    <Icon name="chevron" size={16} color={c.gold} />
+                    <Icon name="chevron" size={16} color={c.goldInk} />
                   </Pressable>
                 )}
 
@@ -923,7 +939,7 @@ export default function TrainingScreen() {
                     style={[
                       styles.habitCard,
                       {
-                        borderColor: habit.done ? '#4E9F76' : c.border,
+                        borderColor: habit.done ? c.success : c.border,
                         backgroundColor: habit.done ? c.cardBgAlt : c.cardBg,
                       },
                     ]}
@@ -936,8 +952,8 @@ export default function TrainingScreen() {
                       style={[
                         styles.habitCheckCircle,
                         {
-                          borderColor: habit.done ? '#4E9F76' : c.tabInactive,
-                          backgroundColor: habit.done ? '#4E9F76' : 'transparent',
+                          borderColor: habit.done ? c.success : c.tabInactive,
+                          backgroundColor: habit.done ? c.success : 'transparent',
                           opacity: habit.tieneTrackHoy && !programaSinArrancar ? 1 : 0.35,
                         },
                       ]}
@@ -952,13 +968,16 @@ export default function TrainingScreen() {
                     >
                       <View style={styles.habitMetaRow}>
                         <View style={[styles.habitTagBadge, { backgroundColor: c.cardBgAlt, borderColor: c.borderStrong }]}>
-                          <Text style={[t.micro, { color: c.gold, fontSize: 9, fontWeight: '700' }]}>
+                          <Text style={[t.micro, { color: c.goldInk, fontSize: 10.5, fontFamily: 'Jost_700Bold' }]}>
                             {habit.tag}
                           </Text>
                         </View>
-                        <Text style={[t.micro, { color: c.textSoft, fontSize: 10, fontWeight: '700' }]}>
-                          🔥 {habit.streak} DÍAS
-                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <Icon name="fire" size={11} color={habit.streak > 0 ? c.goldInk : c.chevron} />
+                          <Text style={[t.micro, { color: c.textSoft, fontSize: 10, fontFamily: 'Jost_700Bold' }]}>
+                            {habit.streak} DÍAS
+                          </Text>
+                        </View>
                       </View>
 
                       <Text
@@ -967,7 +986,7 @@ export default function TrainingScreen() {
                           {
                             color: habit.done ? c.textStrong : c.text,
                             fontSize: 13.5,
-                            fontWeight: habit.done ? '600' : '400',
+                            fontFamily: habit.done ? 'Jost_500Medium' : 'Jost_400Regular',
                             textDecorationLine: habit.done ? 'line-through' : 'none',
                             opacity: habit.done ? 0.85 : 1,
                           },
@@ -981,12 +1000,15 @@ export default function TrainingScreen() {
                           {habit.time || 'Durante el día'}
                         </Text>
                         {habit.hasEvidence && (
-                          <Text style={[t.micro, { color: '#4E9F76', fontSize: 9.5, fontWeight: '700' }]}>
-                            📷 Evidencia Sellada
-                          </Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                            <Icon name="camera" size={12} color={c.success} />
+                            <Text style={[t.micro, { color: c.success, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>
+                              Evidencia Sellada
+                            </Text>
+                          </View>
                         )}
                         {!habit.tieneTrackHoy && (
-                          <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5, fontStyle: 'italic' }]}>
+                          <Text style={[t.micro, { color: c.textSoft, fontSize: 11, fontStyle: 'italic' }]}>
                             Aún sin registro de hoy
                           </Text>
                         )}
@@ -1003,21 +1025,21 @@ export default function TrainingScreen() {
                         style={[
                           styles.evidenceBtn,
                           {
-                            borderColor: habit.hasEvidence ? '#4E9F76' : c.border,
+                            borderColor: habit.hasEvidence ? c.success : c.border,
                             backgroundColor: habit.hasEvidence ? 'rgba(78, 159, 118, 0.12)' : c.cardBgAlt,
                             opacity: habit.tieneTrackHoy && !programaSinArrancar ? 1 : 0.35,
                           },
                         ]}
                         hitSlop={8}
                       >
-                        <Icon name="camera" size={13} color={habit.hasEvidence ? '#4E9F76' : c.gold} />
+                        <Icon name="camera" size={13} color={habit.hasEvidence ? c.success : c.goldInk} />
                         <Text
                           style={[
                             t.micro,
                             {
-                              color: habit.hasEvidence ? '#4E9F76' : c.gold,
-                              fontSize: 9,
-                              fontWeight: '700',
+                              color: habit.hasEvidence ? c.success : c.goldInk,
+                              fontSize: 10.5,
+                              fontFamily: 'Jost_700Bold',
                             },
                           ]}
                         >
@@ -1030,16 +1052,16 @@ export default function TrainingScreen() {
 
                 {/* Consistency Banner */}
                 <View style={[styles.consistencyBanner, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
-                  <Icon name="spark" size={16} color={c.gold} />
+                  <Icon name="spark" size={16} color={c.goldInk} />
                   <View style={{ flex: 1 }}>
-                    <Text style={[t.body, { color: c.textStrong, fontSize: 12.5, fontWeight: '600' }]}>
+                    <Text style={[t.body, { color: c.textStrong, fontSize: 12.5, fontFamily: 'Jost_500Medium' }]}>
                       Consistencia de la Dimensión
                     </Text>
                     <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5 }]}>
                       37 días consecutivos cumpliendo al menos el 70% de tus evidencias
                     </Text>
                   </View>
-                  <Text style={[t.micro, { color: c.gold, fontWeight: '800', fontSize: 13 }]}>94%</Text>
+                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 13 }]}>94%</Text>
                 </View>
               </View>
             )}
@@ -1070,7 +1092,7 @@ export default function TrainingScreen() {
                 */}
                 <View style={[styles.guideHeroCard, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
                   <View style={[styles.guideTag, { backgroundColor: c.gold, alignSelf: 'flex-start' }]}>
-                    <Text style={[t.micro, { color: '#1E1B18', fontWeight: '800', fontSize: 9.5 }]}>
+                    <Text style={[t.micro, { color: '#1E1B18', fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                       EN DESARROLLO
                     </Text>
                   </View>
@@ -1232,7 +1254,7 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingBottom: 28,
+    paddingBottom: ESPACIO_PARA_LANZADOR,
   },
   dimensionCard: {
     flex: 1,
@@ -1253,7 +1275,11 @@ const styles = StyleSheet.create({
   dimensionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    /* `flex-start` y no `center`: si el titulo llega a dos lineas ("VIDA Y NEGOCIO" en
+       pantallas estrechas), el contador se queda arriba alineado con la primera, en vez de
+       flotar a media altura. El `gap` evita que se toquen al encogerse (AGENTS.md 2). */
+    alignItems: 'flex-start',
+    gap: 8,
   },
   detailTopBar: {
     flexDirection: 'row',

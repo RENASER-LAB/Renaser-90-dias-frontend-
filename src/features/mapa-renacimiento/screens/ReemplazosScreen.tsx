@@ -45,7 +45,7 @@ export function ReemplazosScreen({ estado }: PropsPaso) {
         const completo = reemplazoValido(r);
         return (
           <View key={r.id} style={[styles.editor, { borderColor: completo ? c.gold : c.border, backgroundColor: c.cardBg }]}>
-            <Text style={[t.micro, { color: c.gold, letterSpacing: 1 }]}>{etiqueta.toUpperCase()}</Text>
+            <Text style={[t.micro, { color: c.goldInk, letterSpacing: 1 }]}>{etiqueta.toUpperCase()}</Text>
 
             <Etiqueta>Disparador</Etiqueta>
             <Entrada valor={r.disparador} onCambiar={v => cambiar(r.id, { disparador: v })} placeholder="Cuándo, dónde o ante qué ocurre" maximo={LIMITES.textoCorto.max} />
@@ -56,7 +56,7 @@ export function ReemplazosScreen({ estado }: PropsPaso) {
             <Etiqueta>Respuesta alternativa</Etiqueta>
             <Entrada valor={r.respuestaAlternativa} onCambiar={v => cambiar(r.id, { respuestaAlternativa: v })} placeholder="Acción de 2–30 minutos, ejecutable de inmediato" maximo={LIMITES.textoCorto.max} />
             {r.respuestaAlternativa.trim() && esVago(r.respuestaAlternativa) ? (
-              <Text style={[t.small, { color: '#E06A66', marginTop: 4 }]}>Necesita un verbo observable: algo que puedas hacer ahora mismo.</Text>
+              <Text style={[t.small, { color: c.danger, marginTop: 4 }]}>Necesita un verbo observable: algo que puedas hacer ahora mismo.</Text>
             ) : null}
 
             {completo ? (

@@ -39,7 +39,8 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
 
           if (isCenter) {
             return (
-              <Pressable key={route.key} onPress={onPress} style={styles.item} hitSlop={8}>
+              <Pressable key={route.key} onPress={onPress} style={styles.item} hitSlop={8}
+              accessibilityRole="tab" accessibilityState={{ selected: focused }} accessibilityLabel={LABELS[route.name]}>
                 {/* `c.bg` y no `c.cardBg`: el aro es opaco a propósito (mismo bug de arriba) y
                     además separa el círculo tanto de la barra como del contenido de la pantalla,
                     contra el que también se recorta por el `marginTop` negativo. */}
@@ -53,7 +54,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
                     <Icon name="diamond" size={rs(18)} color={c.onGold} />
                   </LinearGradient>
                 </View>
-                <Text style={[t.tab, { color: focused ? c.gold : c.tabInactive }]} numberOfLines={1} adjustsFontSizeToFit>
+                <Text style={[t.tab, { color: focused ? c.goldInk : c.tabInactive }]} numberOfLines={1} adjustsFontSizeToFit>
                   {LABELS[route.name]}
                 </Text>
               </Pressable>
@@ -61,9 +62,10 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
           }
 
           return (
-            <Pressable key={route.key} onPress={onPress} style={styles.item} hitSlop={8}>
-              <Icon name={ICONS[route.name]} size={iconSize} color={focused ? c.gold : c.tabInactive} />
-              <Text style={[t.tab, { color: focused ? c.gold : c.tabInactive }]} numberOfLines={1} adjustsFontSizeToFit>
+            <Pressable key={route.key} onPress={onPress} style={styles.item} hitSlop={8}
+              accessibilityRole="tab" accessibilityState={{ selected: focused }} accessibilityLabel={LABELS[route.name]}>
+              <Icon name={ICONS[route.name]} size={iconSize} color={focused ? c.goldInk : c.tabInactive} />
+              <Text style={[t.tab, { color: focused ? c.goldInk : c.tabInactive }]} numberOfLines={1} adjustsFontSizeToFit>
                 {LABELS[route.name]}
               </Text>
             </Pressable>
@@ -75,9 +77,13 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
 }
 
 const styles = StyleSheet.create({
-  barOuter: { borderTopWidth: 1, paddingTop: 12, paddingHorizontal: 14 },
+  /* 10 y no 14: con cinco pestanas, cada 4px de padding le quita ~0.8px de ancho util a
+     cada etiqueta, y "COMUNIDAD" es la que va justa. */
+  barOuter: { borderTopWidth: 1, paddingTop: 12, paddingHorizontal: 10 },
   bar: { flexDirection: 'row', alignItems: 'flex-end' },
-  item: { flex: 1, alignItems: 'center', gap: 7 },
+  /* 48px minimos de zona pulsable por pestana (AGENTS.md 4); antes el alto lo definia el
+     contenido (icono 20 + gap + etiqueta) y se quedaba en ~38. */
+  item: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 48, gap: 7 },
   centerWrap: { marginTop: -22, borderRadius: 29, borderWidth: 6, shadowOpacity: 0.45, shadowRadius: 12, shadowOffset: { width: 0, height: 8 }, elevation: 6 },
   center: { alignItems: 'center', justifyContent: 'center' },
 });

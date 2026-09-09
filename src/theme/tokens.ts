@@ -11,12 +11,26 @@ export type Palette = {
   textSoft: string;
   micro: string;
   gold: string;
+  /* Acento dorado seguro para TEXTO e ICONOS. `gold` se mantiene para superficies
+     (rellenos, barras, sombras, bordes), donde puede ser mas claro sin penalizar la
+     lectura. Separarlos es lo que permite subir el contraste en claro sin apagar la marca. */
+  goldInk: string;
   goldGrad: [string, string, string];
   onGold: string;
   tabInactive: string;
   ring1: string;
   ring2: string;
   ring3: string;
+  /* Estado semantico. Antes eran literales repartidos por las pantallas ('#E06A66',
+     '#70d2a0', '#4E9F76'...), elegidos mirando el tema oscuro y reutilizados igual en el
+     claro, donde TODOS caian por debajo de AA (medido: 1.79-3.19 sobre #FDFCFA). */
+  success: string;
+  successWash: string;
+  danger: string;
+  dangerWash: string;
+  /* Lavado dorado para superficies suaves; sustituye a los 'rgba(212,160,23,0.0x)' sueltos,
+     que ademas usaban un dorado (#D4A017) que no esta en la paleta. */
+  goldWash: string;
   chevron: string;
   placeholderA: string;
   placeholderB: string;
@@ -33,15 +47,21 @@ export const light: Palette = {
   text: '#1E1B18',
   textStrong: '#11100D',
   textSoft: '#4A453D',
-  micro: '#8F753C',
+  micro: '#856C35',
   gold: '#B2924F',
-  goldGrad: ['#D8BE85', '#B2924F', '#9C7C3C'],
-  onGold: '#FFFFFF',
-  tabInactive: '#8A8275',
+  goldInk: '#856C35',
+  goldGrad: ['#D8BE85', '#C2A263', '#A8873F'],
+  onGold: '#1A1509',
+  tabInactive: '#736C60',
+  success: '#2E7D52',
+  successWash: 'rgba(46,125,82,0.10)',
+  danger: '#C0392B',
+  dangerWash: 'rgba(192,57,43,0.08)',
+  goldWash: 'rgba(178,146,79,0.10)',
   ring1: 'rgba(178,146,79,0.10)',
   ring2: 'rgba(178,146,79,0.14)',
   ring3: 'rgba(178,146,79,0.20)',
-  chevron: '#A89E8D',
+  chevron: '#847A68',
   placeholderA: '#EFEAE1',
   placeholderB: '#F7F3EC',
 };
@@ -59,9 +79,15 @@ export const dark: Palette = {
   textSoft: '#C5BEB3',
   micro: '#D4AF37',
   gold: '#C6A45C',
+  goldInk: '#C6A45C',
   goldGrad: ['#E5C689', '#C09A4F', '#9C7A34'],
   onGold: '#1A1509',
   tabInactive: '#968E82',
+  success: '#70D2A0',
+  successWash: 'rgba(112,210,160,0.12)',
+  danger: '#E06A66',
+  dangerWash: 'rgba(224,106,102,0.12)',
+  goldWash: 'rgba(198,164,92,0.12)',
   ring1: 'rgba(198,164,92,0.08)',
   ring2: 'rgba(198,164,92,0.14)',
   ring3: 'rgba(198,164,92,0.22)',
@@ -79,8 +105,8 @@ export const type = {
   body: { fontFamily: 'Jost_400Regular', fontSize: 15 },
   small: { fontFamily: 'Jost_400Regular', fontSize: 13 },
   metric: { fontFamily: 'Jost_400Regular', fontSize: 26 },
-  hero: { fontFamily: 'Jost_300Light', fontSize: 34, letterSpacing: 8 },
-  tab: { fontFamily: 'Jost_500Medium', fontSize: 9.5, letterSpacing: 0.8 },
+  hero: { fontFamily: 'Jost_400Regular', fontSize: 34, letterSpacing: 8 },
+  tab: { fontFamily: 'Jost_500Medium', fontSize: 11, letterSpacing: 0 },
 };
 
 export const space = { screenX: 24, cardPad: 17, gap: 16, radius: 16, radiusSm: 14 };

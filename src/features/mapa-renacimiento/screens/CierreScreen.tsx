@@ -19,7 +19,7 @@ export function CierreScreen({ estado, onSalir }: PropsPaso) {
   ];
   return (
     <PantallaPaso paso={null} boton={{ label: 'Comenzar mis 83 días', onPress: onSalir }}>
-      <Text style={[t.micro, { color: c.gold, letterSpacing: 2, marginTop: 24 }]}>FELICIDADES</Text>
+      <Text style={[t.micro, { color: c.goldInk, letterSpacing: 2, marginTop: 24 }]}>FELICIDADES</Text>
       <Text style={[t.hero, { color: c.textStrong, fontSize: 28, letterSpacing: 0.5, marginTop: 8, fontFamily: 'Jost_400Regular' }]}>
         Tu mapa está activo.
       </Text>
@@ -34,7 +34,7 @@ export function CierreScreen({ estado, onSalir }: PropsPaso) {
         {filas.map(f => (
           <Row key={f.titulo} gap={12} style={{ marginVertical: 8 }}>
             <View style={[styles.icono, { borderColor: c.gold }]}>
-              <Icon name={f.icono} size={14} color={c.gold} />
+              <Icon name={f.icono} size={14} color={c.goldInk} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 14 }]}>{f.titulo}</Text>

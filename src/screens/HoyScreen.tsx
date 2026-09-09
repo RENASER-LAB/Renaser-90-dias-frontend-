@@ -13,6 +13,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { useResponsive } from '../theme/responsive';
 import { Card, MicroLabel, ScreenHeader, GoldCircle } from '../components/ui';
 import { Icon } from '../components/Icon';
+import { Aparicion } from '../components/Aparicion';
 import {
   useResumenHome,
   rotuloDeFase,
@@ -26,11 +27,12 @@ import { useAuth } from '../context/AuthContext';
 import { useMapaRenacimientoAbierto } from '../features/mapa-renacimiento/MapaRenacimientoContext';
 import { useEstadoMapa } from '../features/mapa-renacimiento/hooks/useEstadoMapa';
 import type { RocaDiariaApi } from '../features/training/types/training.types';
+import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
 
 export default function HoyScreen() {
   const { c, t, mode } = useTheme();
   const isDark = mode === 'dark';
-  const { rs, isShort, isTablet, horizontalPadding } = useResponsive();
+  const { rs, isShort, isTablet, horizontalPadding, width, contentMaxWidth } = useResponsive();
   const navigation = useNavigation();
 
   const { resumen, cargando: cargandoResumen, error: errorResumen, recargar: recargarResumen } = useResumenHome();
@@ -78,7 +80,15 @@ export default function HoyScreen() {
   const evidenciasVisibles = evidenciasUltimaPublicacion.slice(0, 3);
   const evidenciasRestantes = Math.max(evidenciasUltimaPublicacion.length - evidenciasVisibles.length, 0);
 
-  const ringDiameters = isShort ? [220, 180, 140, 100] : [306, 258, 210, 162];
+  /* Los anillos son decorado: se derivan del hueco REAL que queda, no de medidas fijas.
+     Antes eran [306, 258, 210, 162] pasados por `rs()`, asi que en pantallas anchas crecian
+     por encima de la columna de contenido y en todas se comian mas de un tercio del alto
+     visible, dejando las tarjetas utiles (Mapa, Habitos) por debajo del pliegue.
+     Ahora el anillo mayor nunca excede el ancho de contenido y el hero mide lo que miden
+     los anillos, sin `minHeight` suelto que sobresalga. */
+  const anchoContenido = (isTablet ? Math.min(560, width) : width) - horizontalPadding * 2;
+  const heroSize = Math.min(anchoContenido, rs(isShort ? 206 : 252));
+  const ringDiameters = [heroSize, heroSize * 0.82, heroSize * 0.64, heroSize * 0.46].map(Math.round);
   const ringColors = [c.ring1, c.ring2, c.ring3, c.ring2];
 
   const faseNombre = rotuloDeFase(resumen?.fase)?.toUpperCase() || 'PROGRAMA ACTIVO';
@@ -133,7 +143,7 @@ export default function HoyScreen() {
           styles.content,
           {
             paddingHorizontal: horizontalPadding,
-            maxWidth: isTablet ? 560 : undefined,
+            maxWidth: contentMaxWidth,
             alignSelf: isTablet ? 'center' : 'stretch',
             width: isTablet ? '100%' : undefined,
           },
@@ -143,17 +153,18 @@ export default function HoyScreen() {
           <RefreshControl
             refreshing={refreshing || cargandoResumen}
             onRefresh={recargarTodo}
-            tintColor={c.gold}
-            colors={[c.gold]}
+            tintColor={c.goldInk}
+            colors={[c.goldInk]}
           />
         }
       >
         {/* ========================================================================= */}
         {/* 1. BARRA DE ESTADO DEL PROGRAMA & PUNTOS                                  */}
         {/* ========================================================================= */}
+        <Aparicion>
         <View style={[styles.programStatusBar, { borderColor: c.border, backgroundColor: c.cardBg }]}>
           <View style={{ flex: 1 }}>
-            <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 1 }]}>
+            <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
               {faseNombre}
             </Text>
             <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13.5, marginTop: 2 }]}>
@@ -161,9 +172,9 @@ export default function HoyScreen() {
             </Text>
           </View>
 
-          <View style={[styles.metricPill, { borderColor: c.gold, backgroundColor: isDark ? 'rgba(212,160,23,0.12)' : 'rgba(212,160,23,0.08)' }]}>
-            <Text style={{ fontSize: 12 }}>⚡</Text>
-            <Text style={[t.micro, { color: c.gold, fontWeight: '800', fontSize: 11 }]}>
+          <View style={[styles.metricPill, { borderColor: c.gold, backgroundColor: c.goldWash }]}>
+            <Icon name="zap" size={12} color={c.goldInk} />
+            <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
               {puntosLiga} PTS
             </Text>
           </View>
@@ -172,22 +183,25 @@ export default function HoyScreen() {
         {/* ========================================================================= */}
         {/* 2. MÉTRICAS CLAVE REALES: COHERENCIA Y RACHA                              */}
         {/* ========================================================================= */}
+        </Aparicion>
+
+        <Aparicion retardo={70}>
         <View style={styles.metricsRow}>
           {/* Tarjeta Coherencia Real */}
           <View style={[styles.metricCard, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5, fontWeight: '700' }]}>
+              <Text style={[t.micro, { color: c.textSoft, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>
                 COHERENCIA
               </Text>
-              <Text style={{ fontSize: 13 }}>🎯</Text>
+              <Icon name="target" size={14} color={c.goldInk} />
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 2, marginTop: 4 }}>
-              <Text style={{ fontFamily: 'Jost_500Medium', fontSize: 26, color: c.gold }}>
+              <Text style={{ fontFamily: 'Jost_500Medium', fontSize: 26, color: c.goldInk }}>
                 {coherenciaScore}
               </Text>
-              <Text style={{ fontFamily: 'Jost_500Medium', fontSize: 13, color: c.gold }}>%</Text>
+              <Text style={{ fontFamily: 'Jost_500Medium', fontSize: 13, color: c.goldInk }}>%</Text>
             </View>
-            <Text style={[t.micro, { color: c.micro, fontSize: 9, marginTop: 2 }]}>
+            <Text style={[t.micro, { color: c.micro, fontSize: 10.5, marginTop: 2 }]}>
               {coherenciaScore >= 80 ? 'Nivel de excelencia' : 'Consistencia del día'}
             </Text>
           </View>
@@ -195,10 +209,10 @@ export default function HoyScreen() {
           {/* Tarjeta Racha Real */}
           <View style={[styles.metricCard, { borderColor: c.border, backgroundColor: c.cardBg }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5, fontWeight: '700' }]}>
+              <Text style={[t.micro, { color: c.textSoft, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>
                 RACHA ACTUAL
               </Text>
-              <Text style={{ fontSize: 13 }}>🔥</Text>
+              <Icon name="fire" size={14} color={rachaActual > 0 ? c.goldInk : c.chevron} />
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4, marginTop: 4 }}>
               <Text style={{ fontFamily: 'Jost_500Medium', fontSize: 26, color: c.textStrong }}>
@@ -206,15 +220,15 @@ export default function HoyScreen() {
               </Text>
               <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>DÍAS</Text>
             </View>
-            <Text style={[t.micro, { color: c.micro, fontSize: 9, marginTop: 2 }]}>
+            <Text style={[t.micro, { color: c.micro, fontSize: 10.5, marginTop: 2 }]}>
               Récord histórico: {rachaMaxima} d
             </Text>
           </View>
         </View>
 
         {errorResumen && (
-          <View style={[styles.errorBox, { borderColor: '#E06A66', backgroundColor: isDark ? 'rgba(224,106,102,0.1)' : 'rgba(224,106,102,0.05)' }]}>
-            <Text style={[t.micro, { color: '#E06A66', textAlign: 'center' }]}>
+          <View style={[styles.errorBox, { borderColor: c.danger, backgroundColor: isDark ? 'rgba(224,106,102,0.1)' : 'rgba(224,106,102,0.05)' }]}>
+            <Text style={[t.micro, { color: c.danger, textAlign: 'center' }]}>
               {errorResumen}
             </Text>
           </View>
@@ -223,9 +237,12 @@ export default function HoyScreen() {
         {/* ========================================================================= */}
         {/* 3. HERO: CÍRCULOS CONCÉNTRICOS & TU ÚNICO FOCO (ROCA PRIORITARIA DE HOY)  */}
         {/* ========================================================================= */}
-        <View style={[styles.hero, { minHeight: isShort ? rs(220) : rs(290) }]}>
+        </Aparicion>
+
+        <Aparicion retardo={140}>
+        <View style={[styles.hero, { height: heroSize }]}>
           {ringDiameters.map((d, i) => {
-            const size = rs(d);
+            const size = d;
             return (
               <View
                 key={d}
@@ -242,19 +259,9 @@ export default function HoyScreen() {
             );
           })}
           <View style={styles.heroCenter}>
-            <View
-              style={[
-                styles.focoBadgePill,
-                {
-                  borderColor: c.gold,
-                  backgroundColor: isDark ? 'rgba(212,160,23,0.15)' : 'rgba(212,160,23,0.08)',
-                },
-              ]}
-            >
-              <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 2, fontSize: 9 }]}>
-                {rocaPrioritaria ? 'PRIORIDAD #1 · FOCO DEL DÍA' : 'TU ÚNICO FOCO'}
-              </Text>
-            </View>
+            <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_500Medium', letterSpacing: 2, fontSize: 10.5, textAlign: 'center' }]}>
+              {rocaPrioritaria ? 'PRIORIDAD #1 · FOCO DEL DÍA' : 'TU ÚNICO FOCO'}
+            </Text>
 
             <Text
               numberOfLines={2}
@@ -279,34 +286,41 @@ export default function HoyScreen() {
                   style={[
                     styles.statusPill,
                     {
-                      borderColor: rocaPrioritaria.completada ? '#4CAF50' : c.gold,
-                      backgroundColor: rocaPrioritaria.completada ? 'rgba(76,175,80,0.15)' : 'rgba(212,160,23,0.15)',
+                      borderColor: rocaPrioritaria.completada ? c.success : c.gold,
+                      backgroundColor: rocaPrioritaria.completada ? 'rgba(76,175,80,0.15)' : c.goldWash,
                     },
                   ]}
                 >
+                  <Icon
+                    name={rocaPrioritaria.completada ? 'check' : 'clock'}
+                    size={12}
+                    color={rocaPrioritaria.completada ? c.success : c.goldInk}
+                  />
                   <Text
                     style={[
                       t.micro,
                       {
-                        color: rocaPrioritaria.completada ? '#4CAF50' : c.gold,
-                        fontWeight: '800',
-                        fontSize: 9.5,
+                        color: rocaPrioritaria.completada ? c.success : c.goldInk,
+                        fontFamily: 'Jost_700Bold',
+                        fontSize: 11,
                       },
                     ]}
                   >
-                    {rocaPrioritaria.completada ? '✓ ROCA COMPLETADA' : '⏳ EN PROCESO'}
+                    {rocaPrioritaria.completada ? 'ROCA COMPLETADA' : 'EN PROCESO'}
                   </Text>
                 </View>
               </View>
             ) : (
               <Pressable
                 onPress={() => (navigation as any).navigate('Plan')}
-                style={{ marginTop: 6 }}
+                accessibilityRole="button"
+                style={({ pressed }) => [styles.definirRocaEnlace, { opacity: pressed ? 0.6 : 1 }]}
                 hitSlop={8}
               >
-                <Text style={[t.micro, { color: c.gold, textAlign: 'center', fontWeight: '600' }]}>
-                  Define tu Roca Verde en Plan ➜
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_500Medium' }]}>
+                  Define tu Roca Verde en Plan
                 </Text>
+                <Icon name="arrow" size={12} color={c.goldInk} />
               </Pressable>
             )}
 
@@ -323,7 +337,10 @@ export default function HoyScreen() {
         {/* ========================================================================= */}
         {/* 4. TARJETAS DE PROGRESO Y CONTADORES REALES DEL DÍA                       */}
         {/* ========================================================================= */}
-        <View style={{ gap: 12, paddingBottom: 24 }}>
+        </Aparicion>
+
+        <Aparicion retardo={210} style={{ gap: 12, paddingBottom: 24 }}>
+        <View style={{ gap: 12 }}>
           {/* Tarjeta Mapa de Renacimiento (Día 7) */}
           {mostrarMapa ? (
             <Pressable onPress={abrirMapa} accessibilityRole="button">
@@ -335,7 +352,7 @@ export default function HoyScreen() {
                   <MicroLabel>MAPA DE RENACIMIENTO</MicroLabel>
                 </View>
                 <View style={styles.insight}>
-                  <Icon name="spark" size={19} color={c.gold} />
+                  <Icon name="spark" size={19} color={c.goldInk} />
                   <View style={{ gap: 4, flex: 1 }}>
                     <Text style={[t.cardTitle, { color: c.text }]}>{tituloMapa}</Text>
                     <Text style={[t.body, { color: c.textSoft, fontSize: 12 }]}>{detalleMapa}</Text>
@@ -350,12 +367,12 @@ export default function HoyScreen() {
           <Card>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
               <MicroLabel>HÁBITOS DE HOY</MicroLabel>
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>
+              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
                 {resumen?.habitosHoy ? `${resumen.habitosHoy.completados}/${resumen.habitosHoy.total}` : 'Al día'}
               </Text>
             </View>
             <View style={styles.insight}>
-              <Icon name="sun" size={19} color={c.gold} />
+              <Icon name="sun" size={19} color={c.goldInk} />
               <View style={{ gap: 4, flex: 1 }}>
                 <Text style={[t.cardTitle, { color: c.text }]}>
                   {resumen?.habitosHoy && resumen.habitosHoy.completados === resumen.habitosHoy.total && resumen.habitosHoy.total > 0
@@ -380,7 +397,7 @@ export default function HoyScreen() {
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                   <MicroLabel>ROCAS Y OBJETIVOS</MicroLabel>
-                  <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>
+                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
                     {resumen?.rocasHoy ? `${resumen.rocasHoy.completados}/${resumen.rocasHoy.total}` : 'Pareto 80/20'}
                   </Text>
                 </View>
@@ -416,13 +433,13 @@ export default function HoyScreen() {
                   <View style={{ flex: 1 }}>
                     <View style={styles.wallActivityHeader}>
                       <MicroLabel>ÚLTIMA EVIDENCIA DEL MURO</MicroLabel>
-                      <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>
+                      <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
                         {tiempoRelativo(ultimaPublicacion.createdAt)}
                       </Text>
                     </View>
                     <View style={styles.insight}>
                       <View style={[styles.wallAvatar, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-                        <Text style={{ fontSize: 16 }}>👤</Text>
+                        <Icon name="user" size={16} color={c.goldInk} />
                       </View>
                       <View style={{ flex: 1, gap: 4 }}>
                         <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13.5 }]}>
@@ -442,7 +459,7 @@ export default function HoyScreen() {
                               key={`${media.url}-${index}`}
                               style={[styles.wallEvidenceThumb, { backgroundColor: c.cardBgAlt }]}
                             >
-                              <Text style={[t.micro, { color: c.micro, fontSize: 9 }]}>FOTO</Text>
+                              <Text style={[t.micro, { color: c.micro, fontSize: 10.5 }]}>FOTO</Text>
                               <FotoMuro
                                 url={media.url}
                                 mimeType={media.mimeType}
@@ -475,14 +492,14 @@ export default function HoyScreen() {
             <Card>
               <MicroLabel>PRÓXIMO EVENTO</MicroLabel>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 6 }}>
-                <View style={[styles.eventIconBox, { borderColor: c.gold, backgroundColor: isDark ? 'rgba(212,160,23,0.12)' : 'rgba(212,160,23,0.08)' }]}>
-                  <Text style={{ fontSize: 16 }}>📅</Text>
+                <View style={[styles.eventIconBox, { borderColor: c.gold, backgroundColor: c.goldWash }]}>
+                  <Icon name="calendar" size={16} color={c.goldInk} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>
                     {resumen.proximoEvento.titulo}
                   </Text>
-                  <Text style={[t.micro, { color: c.gold, fontSize: 10, marginTop: 2 }]}>
+                  <Text style={[t.micro, { color: c.goldInk, fontSize: 10, marginTop: 2 }]}>
                     {new Date(resumen.proximoEvento.iniciaEn).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })}
                   </Text>
                 </View>
@@ -490,6 +507,7 @@ export default function HoyScreen() {
             </Card>
           )}
         </View>
+        </Aparicion>
       </ScrollView>
     </SafeAreaView>
   );
@@ -499,7 +517,7 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingBottom: 24,
+    paddingBottom: ESPACIO_PARA_LANZADOR,
     gap: 12,
   },
   programStatusBar: {
@@ -548,11 +566,13 @@ const styles = StyleSheet.create({
   heroCenter: {
     alignItems: 'center',
   },
-  focoBadgePill: {
-    borderWidth: 1,
-    borderRadius: 8,
+  definirRocaEnlace: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    minHeight: 44,
     paddingHorizontal: 8,
-    paddingVertical: 3,
   },
   statusPill: {
     borderWidth: 1,

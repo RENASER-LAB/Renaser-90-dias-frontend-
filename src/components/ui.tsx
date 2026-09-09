@@ -33,10 +33,10 @@ export function ScreenHeader({ title, right, onPressRight }: { title: string; ri
           accessibilityLabel={mode === 'light' ? 'Activar modo oscuro' : 'Activar modo claro'}
           style={[styles.themeBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
         >
-          <Icon name={mode === 'light' ? 'moon' : 'sun'} size={16} color={c.gold} />
+          <Icon name={mode === 'light' ? 'moon' : 'sun'} size={16} color={c.goldInk} />
         </Pressable>
         <Pressable hitSlop={12} onPress={onPressRight} style={styles.headerBtn}>
-          <Icon name={right} size={19} color={right === 'dots' ? c.textSoft : c.gold} />
+          <Icon name={right} size={19} color={right === 'dots' ? c.textSoft : c.goldInk} />
         </Pressable>
       </View>
     </View>
@@ -63,7 +63,17 @@ export function Placeholder({ style, label }: { style?: ViewStyle; label?: strin
   const { c } = useTheme();
   return (
     <View style={[{ backgroundColor: c.placeholderA, borderWidth: 1, borderColor: c.border, alignItems: "center", justifyContent: "center" }, style]}>
-      {label ? <Text style={{ fontSize: 6, color: c.micro }}>{label}</Text> : null}
+      {/* Era 6px: ilegible. 10px es el minimo de micro-etiqueta (AGENTS.md 4); el ajuste
+          automatico solo entra si la caja del placeholder es realmente diminuta. */}
+      {label ? (
+        <Text
+          style={{ fontFamily: 'Jost_500Medium', fontSize: 10, letterSpacing: 1.2, color: c.micro }}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+        >
+          {label}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -72,7 +82,7 @@ export function ListRow({ index, label, onPress }: { index?: string; label: stri
   const { c, t } = useTheme();
   return (
     <Pressable onPress={onPress} style={[styles.row, { borderBottomColor: c.divider }]}>
-      {index ? <Text style={[t.small, { color: c.gold, width: 22 }]}>{index}</Text> : null}
+      {index ? <Text style={[t.small, { color: c.goldInk, width: 22 }]}>{index}</Text> : null}
       <Text style={[t.body, { color: c.text, flex: 1 }]}>{label}</Text>
       <Icon name="chevron" size={12} color={c.chevron} />
     </Pressable>

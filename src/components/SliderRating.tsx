@@ -34,7 +34,7 @@ export function SliderRating({
     <View style={[styles.container, style]}>
       <View style={styles.header}>
         <MicroLabel>{label}</MicroLabel>
-        <Text style={[t.screenTitle, { color: value === null ? c.textSoft : c.gold, fontSize: 20 }]}>
+        <Text style={[t.screenTitle, { color: value === null ? c.textSoft : c.goldInk, fontSize: 20 }]}>
           {value === null ? '—' : value}
         </Text>
       </View>
@@ -76,8 +76,8 @@ export function SliderRating({
       </View>
 
       <View style={styles.labelsRow}>
-        <Text style={[t.micro, { color: c.textSoft, fontSize: 11, fontWeight: '500' }]}>{minLabel}</Text>
-        <Text style={[t.micro, { color: c.gold, fontSize: 11, fontWeight: '700' }]}>{maxLabel}</Text>
+        <Text style={[t.micro, { color: c.textSoft, fontSize: 11, fontFamily: 'Jost_500Medium' }]}>{minLabel}</Text>
+        <Text style={[t.micro, { color: c.goldInk, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>{maxLabel}</Text>
       </View>
     </View>
   );

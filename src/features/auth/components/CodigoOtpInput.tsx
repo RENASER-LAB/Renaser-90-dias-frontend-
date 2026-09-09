@@ -82,7 +82,7 @@ export function CodigoOtpInput({
       <View style={styles.reenvio}>
         {puedeReenviar ? (
           <Pressable onPress={onReenviar} disabled={deshabilitado} hitSlop={10}>
-            <Text style={[t.micro, { color: c.gold, letterSpacing: 1.2, fontWeight: '600' }]}>
+            <Text style={[t.micro, { color: c.goldInk, letterSpacing: 1.2, fontFamily: 'Jost_500Medium' }]}>
               ¿NO RECIBISTE EL CÓDIGO? REENVIAR
             </Text>
           </Pressable>

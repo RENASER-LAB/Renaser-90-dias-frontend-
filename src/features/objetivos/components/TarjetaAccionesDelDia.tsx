@@ -3,11 +3,13 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Alert } from '../../../components/Alerta';
 import { useTheme } from '../../../theme/ThemeContext';
+import type { Palette } from '../../../theme/tokens';
 import type { useRocasDiarias } from '../hooks/useRocasDiarias';
 import type { useRocasSemanales } from '../hooks/useRocasSemanales';
 import type { ItemPlanDiario, RocaDiariaApi } from '../types/objetivos.types';
 import { ETIQUETA_EJE } from '../types/objetivos.types';
 import { AgendarAccionesModal } from './AgendarAccionesModal';
+import { Icon } from '../../../components/Icon';
 
 /**
  * Parte 3 del plan: el día.
@@ -49,8 +51,8 @@ export function TarjetaAccionesDelDia({ diaria, semanal, diaPrograma }: TarjetaA
   return (
     <View style={[estilos.tarjeta, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
       <View style={estilos.encabezado}>
-        <Text style={{ fontSize: 18 }}>🎯</Text>
-        <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 1, fontSize: 12 }]}>
+        <Icon name="target" size={18} color={c.goldInk} />
+        <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1, fontSize: 12 }]}>
           3. TUS ACCIONES · DÍA {diaPrograma}
         </Text>
       </View>
@@ -66,14 +68,14 @@ export function TarjetaAccionesDelDia({ diaria, semanal, diaPrograma }: TarjetaA
             <View key={cubo.titulo} style={{ gap: 10 }}>
               {/* El rótulo sale de en qué cubo lo puso el servidor, no del reloj del teléfono:
                   a las 00:41 el dispositivo puede estar un día adelante del participante. */}
-              <Text style={[t.micro, { color: c.gold, fontWeight: '800', fontSize: 11 }]}>
+              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                 {cubo.titulo.toUpperCase()}
               </Text>
               {cubo.rocas.map(roca => (
             <View key={roca.id} style={[estilos.fila, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
               {/* El color es la regla de Pareto, no decoración: la VERDE va primero y desbloquea
                   a las otras dos de su eje. */}
-              <View style={[estilos.marca, { backgroundColor: colorDePareto(roca.color) }]} />
+              <View style={[estilos.marca, { backgroundColor: colorDePareto(roca.color, c) }]} />
               <View style={{ flex: 1 }}>
                 <Text style={[t.body, { color: c.textStrong, fontSize: 16, lineHeight: 22 }]}>{roca.titulo}</Text>
                 <Text style={[t.small, { color: c.textSoft, fontSize: 14, marginTop: 2 }]}>
@@ -83,7 +85,7 @@ export function TarjetaAccionesDelDia({ diaria, semanal, diaPrograma }: TarjetaA
                 </Text>
               </View>
               {roca.completada && (
-                <Text style={[t.small, { color: '#70d2a0', fontWeight: '700', fontSize: 14 }]}>✓</Text>
+                <Text style={[t.small, { color: c.success, fontFamily: 'Jost_700Bold', fontSize: 14 }]}>✓</Text>
               )}
                 </View>
               ))}
@@ -103,7 +105,7 @@ export function TarjetaAccionesDelDia({ diaria, semanal, diaPrograma }: TarjetaA
             onPress={() => setAgendando(true)}
             style={[estilos.boton, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}
           >
-            <Text style={[t.body, { color: c.gold, fontWeight: '700', fontSize: 15 }]}>
+            <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 15 }]}>
               Agendar mis acciones
             </Text>
           </Pressable>
@@ -111,7 +113,7 @@ export function TarjetaAccionesDelDia({ diaria, semanal, diaPrograma }: TarjetaA
       )}
 
       {!!diaria.error && (
-        <Text style={[t.small, { color: '#f28e8e', fontSize: 14, marginTop: 8 }]}>{diaria.error}</Text>
+        <Text style={[t.small, { color: c.danger, fontSize: 14, marginTop: 8 }]}>{diaria.error}</Text>
       )}
 
       <AgendarAccionesModal
@@ -126,14 +128,16 @@ export function TarjetaAccionesDelDia({ diaria, semanal, diaPrograma }: TarjetaA
   );
 }
 
-function colorDePareto(color: RocaDiariaApi['color']): string {
+/* Recibe la paleta en vez de leer colores fijos: el verde y el rojo cambian con el tema
+   (el verde claro fallaba AA sobre fondo crema) y el ambar sale del degradado dorado. */
+function colorDePareto(color: RocaDiariaApi['color'], c: Palette): string {
   switch (color) {
     case 'VERDE':
-      return '#70d2a0';
+      return c.success;
     case 'AMARILLA':
-      return '#d8be85';
+      return c.goldGrad[0];
     default:
-      return '#d98e8e';
+      return c.danger;
   }
 }
 

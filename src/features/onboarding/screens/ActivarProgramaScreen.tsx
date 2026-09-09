@@ -51,7 +51,7 @@ function formatearFecha(iso: string): string {
 
 export function ActivarProgramaScreen({ onActivated }: ActivarProgramaScreenProps) {
   const { c, t, mode, toggle } = useTheme();
-  const { isSmall, isTablet } = useResponsive();
+  const { isSmall, isTablet, contentMaxWidth } = useResponsive();
 
   const [cargando, setCargando] = useState(true);
   const [fechas, setFechas] = useState<string[]>([]);
@@ -113,7 +113,7 @@ export function ActivarProgramaScreen({ onActivated }: ActivarProgramaScreenProp
           accessibilityRole="button"
           style={[styles.themeBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
         >
-          <Icon name={mode === 'light' ? 'moon' : 'sun'} size={15} color={c.gold} />
+          <Icon name={mode === 'light' ? 'moon' : 'sun'} size={15} color={c.goldInk} />
         </Pressable>
       </View>
 
@@ -122,7 +122,7 @@ export function ActivarProgramaScreen({ onActivated }: ActivarProgramaScreenProp
           styles.scrollContent,
           {
             paddingHorizontal: isSmall ? 16 : isTablet ? 32 : 20,
-            maxWidth: isTablet ? 560 : undefined,
+            maxWidth: contentMaxWidth,
             alignSelf: isTablet ? 'center' : 'stretch',
             width: isTablet ? '100%' : undefined,
           },
@@ -131,7 +131,7 @@ export function ActivarProgramaScreen({ onActivated }: ActivarProgramaScreenProp
       >
         <View style={styles.logoSection}>
           <View style={[styles.goldLogoBadge, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-            <Icon name="calendar" size={24} color={c.gold} />
+            <Icon name="calendar" size={24} color={c.goldInk} />
           </View>
         </View>
 
@@ -139,7 +139,7 @@ export function ActivarProgramaScreen({ onActivated }: ActivarProgramaScreenProp
           <Text style={[t.micro, { color: c.textSoft, fontSize: 11, letterSpacing: 1.5, textAlign: 'center' }]}>
             UN ÚLTIMO PASO
           </Text>
-          <Text style={[t.screenTitle, { color: c.gold, fontSize: 22, fontWeight: '700', letterSpacing: 0.5, marginTop: 4, textAlign: 'center' }]}>
+          <Text style={[t.screenTitle, { color: c.goldInk, fontSize: 22, fontFamily: 'Jost_700Bold', letterSpacing: 0.5, marginTop: 4, textAlign: 'center' }]}>
             ELEGÍ TU DÍA 1
           </Text>
           <View style={[styles.goldDivider, { backgroundColor: c.gold }]} />
@@ -151,7 +151,7 @@ export function ActivarProgramaScreen({ onActivated }: ActivarProgramaScreenProp
 
         {cargando ? (
           <View style={styles.loadingBox}>
-            <ActivityIndicator color={c.gold} />
+            <ActivityIndicator color={c.goldInk} />
           </View>
         ) : (
           <View style={styles.dateOptionsGroup}>
@@ -180,7 +180,7 @@ export function ActivarProgramaScreen({ onActivated }: ActivarProgramaScreenProp
                   >
                     {activa && <View style={styles.radioInnerWhite} />}
                   </View>
-                  <Text style={[t.body, { color: c.textStrong, fontSize: 15, fontWeight: '600', textTransform: 'capitalize' }]}>
+                  <Text style={[t.body, { color: c.textStrong, fontSize: 15, fontFamily: 'Jost_500Medium', textTransform: 'capitalize' }]}>
                     {formatearFecha(fecha)}
                   </Text>
                 </Pressable>
@@ -191,7 +191,7 @@ export function ActivarProgramaScreen({ onActivated }: ActivarProgramaScreenProp
 
         {error ? (
           <View style={[styles.alertBox, { backgroundColor: 'rgba(217, 83, 79, 0.08)', borderColor: 'rgba(217, 83, 79, 0.25)' }]}>
-            <Text style={[t.small, { color: '#E06A66', textAlign: 'center' }]}>{error}</Text>
+            <Text style={[t.small, { color: c.danger, textAlign: 'center' }]}>{error}</Text>
           </View>
         ) : null}
 

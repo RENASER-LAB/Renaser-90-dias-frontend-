@@ -74,7 +74,7 @@ export function BurbujaAudioChat({
         style={[estilos.boton, { backgroundColor: colores.gold }]}
         accessibilityLabel={estado.playing ? 'Pausar la nota de voz' : 'Reproducir la nota de voz'}
       >
-        <Text style={{ fontSize: 11, color: '#1E1B18', fontWeight: 'bold' }}>
+        <Text style={{ fontSize: 11, color: '#1E1B18', fontFamily: 'Jost_700Bold' }}>
           {estado.playing ? '⏸' : '▶'}
         </Text>
       </Pressable>
@@ -97,7 +97,7 @@ export function BurbujaAudioChat({
             />
           ))}
         </View>
-        <Text style={{ color: colores.textSoft, fontSize: 9 }}>
+        <Text style={{ color: colores.textSoft, fontSize: 10.5 }}>
           {estado.playing || avance > 0 ? formatear(estado.currentTime) : duracion ?? formatear(total)}
         </Text>
       </View>

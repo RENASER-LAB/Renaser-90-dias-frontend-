@@ -116,7 +116,7 @@ export function FondoAnillos({ centroY = 0.32, animado = true, icono = 'spark' }
 
       {icono && (
         <View style={[styles.centro, { top: cy - 22, left: cx - 22, borderColor: c.borderStrong }]}>
-          <Icon name={icono} size={20} color={c.gold} strokeWidth={1.2} />
+          <Icon name={icono} size={20} color={c.goldInk} strokeWidth={1.2} />
         </View>
       )}
     </View>

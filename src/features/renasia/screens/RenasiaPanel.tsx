@@ -52,7 +52,7 @@ const ALTURA_MIN_CONTROL = 50;
  */
 export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanelProps) {
   const { c, t } = useTheme();
-  const { isTablet, horizontalPadding, rs } = useResponsive();
+  const { isTablet, horizontalPadding, rs, contentMaxWidth } = useResponsive();
   const perfil = AGENTES[agent];
   const nombre = nombreVisible(agent);
   const {
@@ -104,7 +104,7 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
         >
           <View style={styles.headerTitulo}>
             <View style={[styles.medallion, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
-              <Icon name="chat" size={18} color={c.gold} />
+              <Icon name="chat" size={18} color={c.goldInk} />
             </View>
             <View style={{ flexShrink: 1 }}>
               <Text style={[t.sectionTitle, { color: c.textStrong, fontSize: 13 }]}>{nombre}</Text>
@@ -120,7 +120,7 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
             accessibilityLabel={`Cerrar ${nombre}`}
             style={[styles.cerrarBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
           >
-            <Text style={{ color: c.text, fontSize: 16, fontWeight: '700' }}>✕</Text>
+            <Icon name="close" size={16} color={c.text} />
           </Pressable>
         </View>
 
@@ -138,7 +138,7 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
                 flexGrow: 1,
                 paddingBottom: 36,
                 paddingHorizontal: horizontalPadding,
-                maxWidth: isTablet ? 560 : undefined,
+                maxWidth: contentMaxWidth,
                 alignSelf: isTablet ? 'center' : 'stretch',
                 width: isTablet ? '100%' : undefined,
               },
@@ -149,7 +149,7 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
           >
             {cargandoHistorial ? (
               <View style={styles.centro}>
-                <ActivityIndicator color={c.gold} />
+                <ActivityIndicator color={c.goldInk} />
               </View>
             ) : errorHistorial ? (
               <View style={styles.centro}>
@@ -160,7 +160,7 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
                   onPress={() => void cargarHistorialInicial()}
                   style={[styles.reintentarHistorialBtn, { borderColor: c.gold }]}
                 >
-                  <Text style={[t.micro, { color: c.gold, fontSize: 11.5, fontWeight: '700' }]}>
+                  <Text style={[t.micro, { color: c.goldInk, fontSize: 11.5, fontFamily: 'Jost_700Bold' }]}>
                     REINTENTAR
                   </Text>
                 </Pressable>
@@ -168,7 +168,7 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
             ) : mensajes.length === 0 ? (
               <View style={styles.centro}>
                 <View style={[styles.medallionGrande, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
-                  <Icon name="chat" size={28} color={c.gold} />
+                  <Icon name="chat" size={28} color={c.goldInk} />
                 </View>
                 <Text style={[t.cardTitle, { color: c.textStrong, textAlign: 'center', marginTop: 14 }]}>
                   {perfil.vacioTitulo}
@@ -191,9 +191,9 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
                     style={styles.cargarMasBtn}
                   >
                     {cargandoMasAntiguos ? (
-                      <ActivityIndicator size="small" color={c.gold} />
+                      <ActivityIndicator size="small" color={c.goldInk} />
                     ) : (
-                      <Text style={[t.micro, { color: c.gold, fontSize: 11, fontWeight: '700' }]}>
+                      <Text style={[t.micro, { color: c.goldInk, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>
                         VER MENSAJES ANTERIORES
                       </Text>
                     )}

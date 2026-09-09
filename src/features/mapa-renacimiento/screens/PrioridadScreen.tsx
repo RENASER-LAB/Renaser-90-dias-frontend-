@@ -41,14 +41,14 @@ export function PrioridadScreen({ estado }: PropsPaso) {
               <RowBetween>
                 <Row gap={14} style={{ flex: 1 }}>
                   <View style={[styles.icono, { borderColor: activa ? c.gold : c.border }]}>
-                    <Icon name={ICONO[area]} size={20} color={activa ? c.gold : c.textSoft} />
+                    <Icon name={ICONO[area]} size={20} color={activa ? c.goldInk : c.textSoft} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={[t.cardTitle, { color: c.textStrong }]}>{ETIQUETA_AREA[area]}</Text>
                     <Text style={[t.small, { color: c.textSoft, marginTop: 2 }]}>{SUBTITULO_AREA[area]}</Text>
                   </View>
                 </Row>
-                {activa ? <Icon name="check" size={16} color={c.gold} /> : null}
+                {activa ? <Icon name="check" size={16} color={c.goldInk} /> : null}
               </RowBetween>
             </Pressable>
           );

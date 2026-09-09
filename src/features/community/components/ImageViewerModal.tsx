@@ -23,6 +23,7 @@ import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { elegirYNormalizarFotoMuro, type FotoMuroNormalizada } from '../utils/normalizarImagen';
 import { SharePostSheet } from './SharePostSheet';
 import type { ChatConversation } from '../../../screens/ComunidadScreen';
+import { Icon } from '../../../components/Icon';
 
 export interface ImageViewerItem {
   url: string;
@@ -66,6 +67,12 @@ export interface ImageViewerModalProps {
 }
 
 const EMOJIS_RAPIDOS = ['🔥', '👏', '💪', '⚡', '❤️', '🦅', '🎯', '🙌'];
+
+/* Esta vista es un visor a pantalla completa con fondo negro SIEMPRE, en los dos temas
+   de la app, asi que aqui no valen los tokens (`c.success` seria el verde oscuro del
+   tema claro sobre negro). Se fijan los valores de la paleta oscura a proposito. */
+const VERDE_SOBRE_NEGRO = '#70D2A0';
+const ROJO_SOBRE_NEGRO = '#E06A66';
 
 function cacheKeyEstable(url: string): string {
   return url.split('?')[0];
@@ -376,7 +383,7 @@ export function ImageViewerModal({
               style={styles.circleBtn}
               hitSlop={12}
             >
-              <Text style={styles.closeBtnText}>✕</Text>
+              <Icon name="close" size={17} color="#FFFFFF" />
             </Pressable>
 
             {/* Contador de fotos */}
@@ -454,11 +461,11 @@ export function ImageViewerModal({
                   style={styles.actionBtnTransparent}
                   hitSlop={8}
                 >
-                  <Text style={{ fontSize: 16 }}>👍</Text>
+                  <Icon name="thumbsUp" size={16} color={userReaction === 'like' ? VERDE_SOBRE_NEGRO : '#FFFFFF'} />
                   <Text
                     style={[
                       styles.actionBtnText,
-                      userReaction === 'like' && { color: '#70d2a0', fontWeight: '800' },
+                      userReaction === 'like' && { color: VERDE_SOBRE_NEGRO, fontFamily: 'Jost_700Bold' },
                     ]}
                   >
                     {likes > 0 ? `${likes} ` : ''}Me gusta
@@ -471,7 +478,7 @@ export function ImageViewerModal({
                   style={styles.actionBtnTransparent}
                   hitSlop={8}
                 >
-                  <Text style={{ fontSize: 16 }}>💬</Text>
+                  <Icon name="chat" size={16} color="#FFFFFF" />
                   <Text style={[styles.actionBtnText, { color: '#E5C689' }]}>
                     {comments.length > 0 ? `${comments.length} ` : ''}Comentar
                   </Text>
@@ -505,7 +512,7 @@ export function ImageViewerModal({
               {/* Cabecera del Panel de Comentarios */}
               <View style={styles.commentsSheetHeader}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={{ fontSize: 15 }}>💬</Text>
+                  <Icon name="chat" size={15} color="#FFFFFF" />
                   <Text style={styles.commentsSheetTitle}>
                     Comentarios ({comments.length})
                   </Text>
@@ -515,7 +522,7 @@ export function ImageViewerModal({
                   style={styles.closeSheetBtn}
                   hitSlop={8}
                 >
-                  <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: 'bold' }}>✕</Text>
+                  <Icon name="close" size={14} color="#FFFFFF" />
                 </Pressable>
               </View>
 
@@ -528,7 +535,7 @@ export function ImageViewerModal({
               >
                 {comments.length === 0 ? (
                   <View style={{ alignItems: 'center', paddingVertical: 24, gap: 4 }}>
-                    <Text style={{ fontSize: 24 }}>💭</Text>
+                    <Icon name="chat" size={24} color="#8F8678" />
                     <Text style={styles.emptyCommentsTitle}>Sé el primero en comentar</Text>
                     <Text style={styles.emptyCommentsSub}>Comparte tu perspectiva con la tribu.</Text>
                   </View>
@@ -581,11 +588,11 @@ export function ImageViewerModal({
                               style={styles.commentVoteBtn}
                               hitSlop={6}
                             >
-                              <Text style={{ fontSize: 11 }}>👍</Text>
+                              <Icon name="thumbsUp" size={11} color="#8F8678" />
                               <Text
                                 style={[
                                   styles.commentVoteCount,
-                                  cItem.userReaction === 'like' && { color: '#70d2a0', fontWeight: '800' },
+                                  cItem.userReaction === 'like' && { color: VERDE_SOBRE_NEGRO, fontFamily: 'Jost_700Bold' },
                                 ]}
                               >
                                 {cItem.likes}
@@ -630,7 +637,7 @@ export function ImageViewerModal({
                     style={styles.removePhotoCompactBtn}
                     hitSlop={6}
                   >
-                    <Text style={{ color: '#f28e8e', fontSize: 11, fontWeight: 'bold' }}>✕</Text>
+                    <Icon name="close" size={11} color={ROJO_SOBRE_NEGRO} />
                   </Pressable>
                 </View>
               )}
@@ -649,7 +656,7 @@ export function ImageViewerModal({
                   style={styles.attachBtn}
                   hitSlop={6}
                 >
-                  <Text style={{ fontSize: 14 }}>📷</Text>
+                  <Icon name="camera" size={14} color="#E5C689" />
                 </Pressable>
 
                 <TextInput
@@ -768,7 +775,7 @@ const styles = StyleSheet.create({
   closeBtnText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Jost_700Bold',
     lineHeight: 18,
   },
   counterBadge: {
@@ -827,9 +834,8 @@ const styles = StyleSheet.create({
   },
   verMasBtnText: {
     color: '#E5C689',
-    fontFamily: 'Jost_500Medium',
+    fontFamily: 'Jost_700Bold',
     fontSize: 11,
-    fontWeight: '700',
   },
   actionsBar: {
     flexDirection: 'row',
@@ -928,7 +934,7 @@ const styles = StyleSheet.create({
   commentTimeText: {
     color: 'rgba(255,255,255,0.5)',
     fontFamily: 'Jost_400Regular',
-    fontSize: 9.5,
+    fontSize: 11,
   },
   commentItemBody: {
     color: '#FFFFFF',
@@ -938,9 +944,8 @@ const styles = StyleSheet.create({
   },
   commentVerMasText: {
     color: '#E5C689',
-    fontFamily: 'Jost_500Medium',
+    fontFamily: 'Jost_700Bold',
     fontSize: 10,
-    fontWeight: '700',
   },
   commentPhotoAttachBox: {
     marginTop: 6,
@@ -1008,7 +1013,7 @@ const styles = StyleSheet.create({
   photoCompactSub: {
     color: 'rgba(255,255,255,0.5)',
     fontFamily: 'Jost_400Regular',
-    fontSize: 9,
+    fontSize: 10.5,
   },
   removePhotoCompactBtn: {
     padding: 4,

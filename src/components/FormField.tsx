@@ -43,7 +43,7 @@ export function FormField({
         style={[
           styles.inputWrap,
           {
-            borderColor: error ? '#E06A66' : isFocused ? c.gold : c.border,
+            borderColor: error ? c.danger : isFocused ? c.gold : c.border,
             backgroundColor: c.cardBgAlt,
             minHeight: multiline ? Math.max(90, numberOfLines * 24) : 52,
             alignItems: multiline ? 'flex-start' : 'center',
@@ -56,7 +56,7 @@ export function FormField({
             <Icon
               name={icon}
               size={18}
-              color={error ? '#E06A66' : isFocused ? c.gold : c.tabInactive}
+              color={error ? c.danger : isFocused ? c.goldInk : c.tabInactive}
             />
           </View>
         )}
@@ -87,7 +87,7 @@ export function FormField({
       </View>
 
       {error ? (
-        <Text style={[t.small, { color: '#E06A66', marginTop: 2, fontSize: 12 }]}>{error}</Text>
+        <Text style={[t.small, { color: c.danger, marginTop: 2, fontSize: 12 }]}>{error}</Text>
       ) : null}
     </View>
   );

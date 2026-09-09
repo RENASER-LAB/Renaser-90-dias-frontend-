@@ -5,6 +5,7 @@ import { GoldButton } from '../../../components/GoldButton';
 import { useTheme } from '../../../theme/ThemeContext';
 import type { CierreRocaSemanal, EjeObjetivo, RocaSemanalApi } from '../types/objetivos.types';
 import { ETIQUETA_EJE } from '../types/objetivos.types';
+import { Icon } from '../../../components/Icon';
 
 /**
  * Cerrar la semana de un eje: la mitad que casi siempre se saltea.
@@ -58,7 +59,7 @@ export function RevisionSemanalModal({
         <View style={[estilos.tarjeta, { backgroundColor: c.cardBg, borderColor: c.border }]}>
           <View style={[estilos.encabezado, { borderBottomColor: c.divider }]}>
             <View style={{ flex: 1 }}>
-              <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 1, fontSize: 12 }]}>
+              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1, fontSize: 12 }]}>
                 CERRAR LA SEMANA {eje ? `· ${ETIQUETA_EJE[eje].toUpperCase()}` : ''}
               </Text>
               {!!roca && (
@@ -66,13 +67,13 @@ export function RevisionSemanalModal({
               )}
             </View>
             <Pressable onPress={onCerrar} hitSlop={16} style={estilos.botonCerrar}>
-              <Text style={[t.body, { color: c.textSoft, fontSize: 20 }]}>✕</Text>
+              <Icon name="close" size={18} color={c.textSoft} />
             </Pressable>
           </View>
 
           <ScrollView contentContainerStyle={{ padding: 18, gap: 18 }} keyboardShouldPersistTaps="handled">
             <View style={{ gap: 8 }}>
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 12 }]}>
+              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 12 }]}>
                 ¿CÓMO TE FUE, DEL 1 AL 10?
               </Text>
               {roca?.autoevaluacionInicio != null && (
@@ -92,7 +93,7 @@ export function RevisionSemanalModal({
                         { borderColor: elegido ? c.gold : c.border, backgroundColor: elegido ? c.gold : c.cardBgAlt },
                       ]}
                     >
-                      <Text style={[t.body, { color: elegido ? c.onGold : c.textSoft, fontWeight: '700', fontSize: 15 }]}>
+                      <Text style={[t.body, { color: elegido ? c.onGold : c.textSoft, fontFamily: 'Jost_700Bold', fontSize: 15 }]}>
                         {valor}
                       </Text>
                     </Pressable>
@@ -102,7 +103,7 @@ export function RevisionSemanalModal({
             </View>
 
             <View style={{ gap: 6 }}>
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 12 }]}>
+              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 12 }]}>
                 ¿QUÉ TE FRENÓ MÁS?
               </Text>
               <TextInput
@@ -114,7 +115,7 @@ export function RevisionSemanalModal({
             </View>
 
             <View style={{ gap: 6 }}>
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 12 }]}>
+              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 12 }]}>
                 ¿QUÉ VAS A HACER DISTINTO?
               </Text>
               <TextInput

@@ -6,6 +6,7 @@ import { useTheme } from '../../../theme/ThemeContext';
 import type { EjeObjetivo, ItemPlanSemanal, RocaMaestraApi } from '../types/objetivos.types';
 import { EJES, ETIQUETA_EJE } from '../types/objetivos.types';
 import { textoVentanaSemanal } from '../utils/ventanasDePlanificacion';
+import { Icon } from '../../../components/Icon';
 
 /**
  * Armar el plan de la semana: **un eje por pantalla**.
@@ -121,7 +122,7 @@ export function PlanSemanalModal({
     opciones: { ayuda?: string; largo?: boolean; obligatorio?: boolean } = {}
   ) => (
     <View style={{ gap: 6 }} key={etiqueta}>
-      <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 12 }]}>
+      <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 12 }]}>
         {etiqueta}
         {opciones.obligatorio ? '' : '  ·  opcional'}
       </Text>
@@ -154,7 +155,7 @@ export function PlanSemanalModal({
         <View style={[estilos.tarjeta, { backgroundColor: c.cardBg, borderColor: c.border }]}>
           <View style={[estilos.encabezado, { borderBottomColor: c.divider }]}>
             <View style={{ flex: 1 }}>
-              <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 1, fontSize: 12 }]}>
+              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1, fontSize: 12 }]}>
                 PLAN DE LA SEMANA {String(numeroSemana).padStart(2, '0')}
               </Text>
               <Text style={[t.small, { color: c.textSoft, fontSize: 14, marginTop: 2 }]}>
@@ -162,7 +163,7 @@ export function PlanSemanalModal({
               </Text>
             </View>
             <Pressable onPress={onCerrar} hitSlop={16} style={estilos.botonCerrar}>
-              <Text style={[t.body, { color: c.textSoft, fontSize: 20 }]}>✕</Text>
+              <Icon name="close" size={18} color={c.textSoft} />
             </Pressable>
           </View>
 
@@ -186,7 +187,7 @@ export function PlanSemanalModal({
                   const b = borradores[eje];
                   return (
                     <View key={eje} style={[estilos.bloqueResumen, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
-                      <Text style={[t.micro, { color: c.gold, fontWeight: '800', fontSize: 12 }]}>
+                      <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 12 }]}>
                         {ETIQUETA_EJE[eje].toUpperCase()}
                       </Text>
                       <Text style={[t.body, { color: c.textStrong, fontSize: 16, marginTop: 4 }]}>
@@ -199,7 +200,7 @@ export function PlanSemanalModal({
                       ))}
                       {!completo(b) && (
                         <Pressable onPress={() => setPaso(EJES.indexOf(eje))} style={estilos.enlaceCompletar} hitSlop={12}>
-                          <Text style={[t.small, { color: c.gold, fontWeight: '700', fontSize: 15 }]}>
+                          <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 15 }]}>
                             Falta completarlo · toca para volver
                           </Text>
                         </Pressable>
@@ -228,7 +229,7 @@ export function PlanSemanalModal({
                 })}
 
                 <View style={{ gap: 10 }}>
-                  <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 12 }]}>
+                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 12 }]}>
                     LAS TRES ACCIONES CRÍTICAS
                   </Text>
                   <Text style={[t.small, { color: c.textSoft, fontSize: 14, lineHeight: 20 }]}>
@@ -260,7 +261,7 @@ export function PlanSemanalModal({
                 })}
 
                 <View style={{ gap: 8 }}>
-                  <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 12 }]}>
+                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 12 }]}>
                     ¿QUÉ TAN CAPAZ TE VES DE CUMPLIRLA?  ·  opcional
                   </Text>
                   <View style={estilos.escala}>
@@ -278,7 +279,7 @@ export function PlanSemanalModal({
                           <Text
                             style={[
                               t.body,
-                              { color: elegido ? c.onGold : c.textSoft, fontWeight: '700', fontSize: 15 },
+                              { color: elegido ? c.onGold : c.textSoft, fontFamily: 'Jost_700Bold', fontSize: 15 },
                             ]}
                           >
                             {valor}
@@ -295,7 +296,7 @@ export function PlanSemanalModal({
           <View style={[estilos.pie, { borderTopColor: c.divider }]}>
             {paso > 0 && (
               <Pressable onPress={() => setPaso(p => p - 1)} style={estilos.botonAtras} hitSlop={8}>
-                <Text style={[t.body, { color: c.textSoft, fontWeight: '700', fontSize: 15 }]}>Atrás</Text>
+                <Text style={[t.body, { color: c.textSoft, fontFamily: 'Jost_700Bold', fontSize: 15 }]}>Atrás</Text>
               </Pressable>
             )}
             <View style={{ flex: 1 }}>

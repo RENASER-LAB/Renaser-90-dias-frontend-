@@ -53,10 +53,10 @@ export function OnboardingStepBar({ currentStep, totalSteps = 6 }: OnboardingSte
 
       {/* Progress percentage label */}
       <View style={styles.textRow}>
-        <Text style={[t.micro, { color: c.gold, letterSpacing: 1.2, fontSize: 11, fontWeight: '700' }]}>
+        <Text style={[t.micro, { color: c.goldInk, letterSpacing: 1.2, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>
           CAPÍTULO {currentStep + 1} DE {totalSteps}
         </Text>
-        <Text style={[t.micro, { color: c.textSoft, letterSpacing: 1, fontSize: 11, fontWeight: '600' }]}>
+        <Text style={[t.micro, { color: c.textSoft, letterSpacing: 1, fontSize: 11, fontFamily: 'Jost_500Medium' }]}>
           {percentage}% COMPLETADO
         </Text>
       </View>

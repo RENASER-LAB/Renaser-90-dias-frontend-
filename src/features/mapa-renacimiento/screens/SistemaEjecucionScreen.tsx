@@ -52,7 +52,7 @@ export function SistemaEjecucionScreen({ estado }: PropsPaso) {
         return (
           <View key={area} style={[styles.bloque, { borderColor: c.border, backgroundColor: c.cardBg }]}>
             <Row gap={8}>
-              <Icon name={ICONO[area]} size={14} color={c.gold} />
+              <Icon name={ICONO[area]} size={14} color={c.goldInk} />
               <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 14 }]}>{ETIQUETA_AREA[area]}</Text>
             </Row>
             {propias.map(a => (
@@ -61,8 +61,8 @@ export function SistemaEjecucionScreen({ estado }: PropsPaso) {
             {puedeAgregar ? (
               <Pressable onPress={() => agregar(area)} accessibilityRole="button" style={[styles.agregar, { borderColor: c.border }]}>
                 <Row gap={8}>
-                  <Icon name="plus" size={12} color={c.gold} />
-                  <Text style={[t.small, { color: c.gold }]}>Agregar acción ({propias.length}/{LIMITES.accionesPorObjetivo})</Text>
+                  <Icon name="plus" size={12} color={c.goldInk} />
+                  <Text style={[t.small, { color: c.goldInk }]}>Agregar acción ({propias.length}/{LIMITES.accionesPorObjetivo})</Text>
                 </Row>
               </Pressable>
             ) : (
@@ -109,7 +109,7 @@ function EditorAccion({ accion, onCambiar, onQuitar }: {
         minimo={LIMITES.accion.min}
         maximo={LIMITES.accion.max}
       />
-      {vaga ? <Text style={[t.small, { color: '#E06A66', marginTop: 4 }]}>Pensar, intentar, mejorar o esforzarme no son acciones. Usa un verbo observable.</Text> : null}
+      {vaga ? <Text style={[t.small, { color: c.danger, marginTop: 4 }]}>Pensar, intentar, mejorar o esforzarme no son acciones. Usa un verbo observable.</Text> : null}
 
       <Etiqueta>Frecuencia</Etiqueta>
       <RowBetween>
@@ -131,7 +131,7 @@ function EditorAccion({ accion, onCambiar, onQuitar }: {
           return (
             <Pressable key={d} onPress={() => alternarDia(d)} accessibilityRole="button" accessibilityState={{ selected: activo }}
               style={[styles.dia, { borderColor: activo ? c.gold : c.border, backgroundColor: activo ? c.cardBg : 'transparent' }]}>
-              <Text style={[t.micro, { color: activo ? c.gold : c.textSoft }]}>{d}</Text>
+              <Text style={[t.micro, { color: activo ? c.goldInk : c.textSoft }]}>{d}</Text>
             </Pressable>
           );
         })}

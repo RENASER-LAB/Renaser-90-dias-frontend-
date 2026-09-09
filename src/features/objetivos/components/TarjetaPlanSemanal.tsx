@@ -9,6 +9,7 @@ import { EJES, ETIQUETA_EJE } from '../types/objetivos.types';
 import { textoVentanaSemanal } from '../utils/ventanasDePlanificacion';
 import { PlanSemanalModal } from './PlanSemanalModal';
 import { RevisionSemanalModal } from './RevisionSemanalModal';
+import { Icon } from '../../../components/Icon';
 
 /**
  * Parte 2 del plan: la semana.
@@ -57,8 +58,8 @@ export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, onIrAlMapa
   return (
     <View style={[estilos.tarjeta, { borderColor: c.border, backgroundColor: c.cardBg }]}>
       <View style={estilos.encabezado}>
-        <Text style={{ fontSize: 18 }}>⚡</Text>
-        <Text style={[t.micro, { color: '#70d2a0', fontWeight: '800', letterSpacing: 1, fontSize: 12 }]}>
+        <Icon name="zap" size={18} color={c.goldInk} />
+        <Text style={[t.micro, { color: c.success, fontFamily: 'Jost_700Bold', letterSpacing: 1, fontSize: 12 }]}>
           2. TU SEMANA {String(numeroSemana).padStart(2, '0')}
         </Text>
       </View>
@@ -75,7 +76,7 @@ export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, onIrAlMapa
           </Text>
           {!!onIrAlMapa && (
             <Pressable onPress={onIrAlMapa} style={[estilos.boton, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-              <Text style={[t.body, { color: c.gold, fontWeight: '700', fontSize: 15 }]}>
+              <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 15 }]}>
                 Ir al Mapa de Renacimiento
               </Text>
             </Pressable>
@@ -93,7 +94,7 @@ export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, onIrAlMapa
             onPress={() => setPlanificando(true)}
             style={[estilos.boton, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}
           >
-            <Text style={[t.body, { color: c.gold, fontWeight: '700', fontSize: 15 }]}>Armar mi semana</Text>
+            <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 15 }]}>Armar mi semana</Text>
           </Pressable>
         </View>
       )}
@@ -106,7 +107,7 @@ export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, onIrAlMapa
             const cerrada = roca.autoevaluacionFin != null;
             return (
               <View key={eje} style={[estilos.bloqueEje, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
-                <Text style={[t.micro, { color: c.gold, fontWeight: '800', fontSize: 11 }]}>
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                   {ETIQUETA_EJE[eje].toUpperCase()}
                 </Text>
                 <Text style={[t.body, { color: c.textStrong, fontSize: 16, marginTop: 4, lineHeight: 22 }]}>
@@ -118,12 +119,12 @@ export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, onIrAlMapa
                   </Text>
                 ))}
                 {cerrada ? (
-                  <Text style={[t.small, { color: '#70d2a0', fontSize: 14, marginTop: 8, fontWeight: '700' }]}>
+                  <Text style={[t.small, { color: c.success, fontSize: 14, marginTop: 8, fontFamily: 'Jost_700Bold' }]}>
                     Revisada · te pusiste {roca.autoevaluacionFin} de 10
                   </Text>
                 ) : (
                   <Pressable onPress={() => setRevisando(eje)} style={estilos.enlace} hitSlop={12}>
-                    <Text style={[t.small, { color: c.gold, fontWeight: '700', fontSize: 15 }]}>
+                    <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 15 }]}>
                       Cerrar esta roca con mi revisión
                     </Text>
                   </Pressable>
@@ -139,7 +140,7 @@ export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, onIrAlMapa
       )}
 
       {!!semanal.error && (
-        <Text style={[t.small, { color: '#f28e8e', fontSize: 14, marginTop: 8 }]}>{semanal.error}</Text>
+        <Text style={[t.small, { color: c.danger, fontSize: 14, marginTop: 8 }]}>{semanal.error}</Text>
       )}
 
       <PlanSemanalModal

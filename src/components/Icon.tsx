@@ -6,7 +6,8 @@ export type IconName =
   | 'body' | 'brain' | 'heart' | 'spark' | 'briefcase' | 'chevron' | 'arrow' | 'arrowLeft' | 'clock' | 'stack'
   | 'mail' | 'lock' | 'eye' | 'eyeOff' | 'check' | 'logout' | 'google' | 'apple' | 'key' | 'trophy' | 'zap'
   | 'fire' | 'play' | 'pause' | 'plus' | 'chat' | 'send' | 'calendar' | 'award' | 'share' | 'filter'
-  | 'dumbbell' | 'volume' | 'star' | 'checkCircle' | 'camera' | 'image';
+  | 'dumbbell' | 'volume' | 'star' | 'checkCircle' | 'camera' | 'image'
+  | 'close' | 'target' | 'thumbsUp';
 
 type Props = { name: IconName; size?: number; color: string; strokeWidth?: number };
 
@@ -214,6 +215,30 @@ export function Icon({ name, size = 20, color, strokeWidth = 1.1 }: Props) {
       return (
         <Svg width={size} height={size} viewBox="0 0 20 20">
           <Path {...s} strokeWidth={strokeWidth * 1.3} d="M4 10.5l4 4 8-9" />
+        </Svg>
+      );
+    /* `close`, `target` y `thumbsUp` sustituyen a los emojis que se usaban como iconos
+       (✕, 🎯, 👍). Un emoji lo dibuja la fuente del sistema: cambia de forma y de color
+       entre Android, iOS y web, ignora el color del tema y no escala con `size`. */
+    case 'close':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 20 20">
+          <Path {...s} strokeWidth={strokeWidth * 1.3} d="M5.5 5.5l9 9M14.5 5.5l-9 9" />
+        </Svg>
+      );
+    case 'target':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 20 20">
+          <Circle {...s} cx={10} cy={10} r={7} />
+          <Circle {...s} cx={10} cy={10} r={3.2} />
+          <Circle cx={10} cy={10} r={1.2} fill={color} />
+        </Svg>
+      );
+    case 'thumbsUp':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 20 20">
+          <Path {...s} d="M6 9.5v7h8.2a1.6 1.6 0 0 0 1.6-1.3l1-4.6a1.2 1.2 0 0 0-1.2-1.5h-3.4l.5-2.6a1.7 1.7 0 0 0-1.7-2.1L9 8.2 6 9.5z" />
+          <Rect {...s} x={2.6} y={9.2} width={3.4} height={7.6} rx={1} />
         </Svg>
       );
     case 'logout':

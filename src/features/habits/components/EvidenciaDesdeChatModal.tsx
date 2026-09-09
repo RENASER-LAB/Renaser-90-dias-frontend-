@@ -134,10 +134,10 @@ export function EvidenciaDesdeChatModal({ visible, onCerrar, onSubida }: Props) 
             foto del chat.
           </Text>
 
-          {cargando && <ActivityIndicator color={c.gold} style={{ marginVertical: 20 }} />}
+          {cargando && <ActivityIndicator color={c.goldInk} style={{ marginVertical: 20 }} />}
 
           {error !== null && (
-            <Text style={[t.small, { color: '#E06A66' }]}>{error}</Text>
+            <Text style={[t.small, { color: c.danger }]}>{error}</Text>
           )}
 
           {!cargando && pendientes.length === 0 && error === null && (
@@ -171,7 +171,7 @@ export function EvidenciaDesdeChatModal({ visible, onCerrar, onSubida }: Props) 
                   )}
                 </View>
                 {subiendo === track.id ? (
-                  <ActivityIndicator color={c.gold} />
+                  <ActivityIndicator color={c.goldInk} />
                 ) : (
                   <Icon name="chevron" size={14} color={c.chevron} />
                 )}

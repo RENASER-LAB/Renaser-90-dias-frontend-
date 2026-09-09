@@ -58,7 +58,7 @@ const CountryRow = React.memo(
         <Text style={[bodyStyle, { color: themeColors.textStrong, flex: 1, fontSize: 14.5 }]}>
           {item.name}
         </Text>
-        <Text style={[microStyle, { color: themeColors.gold, fontWeight: '700', fontSize: 13 }]}>
+        <Text style={[microStyle, { color: themeColors.gold, fontFamily: 'Jost_700Bold', fontSize: 13 }]}>
           {item.code}
         </Text>
       </Pressable>
@@ -154,7 +154,7 @@ export function PhoneCountryInput({
           ]}
         >
           <Text style={styles.flagText}>{selectedCountry.flag}</Text>
-          <Text style={[t.body, { color: c.gold, fontWeight: '700', fontSize: 14 }]}>
+          <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 14 }]}>
             {selectedCountry.code}
           </Text>
           <Text style={[t.micro, { color: c.tabInactive, fontSize: 10 }]}>▾</Text>
@@ -165,7 +165,7 @@ export function PhoneCountryInput({
           style={[
             styles.phoneInputWrap,
             {
-              borderColor: error ? '#E06A66' : c.borderStrong,
+              borderColor: error ? c.danger : c.borderStrong,
               backgroundColor: c.cardBgAlt,
             },
           ]}
@@ -183,7 +183,7 @@ export function PhoneCountryInput({
       </View>
 
       {error && (
-        <Text style={[t.small, { color: '#E06A66', fontSize: 11.5, marginTop: 2 }]}>
+        <Text style={[t.small, { color: c.danger, fontSize: 11.5, marginTop: 2 }]}>
           {error}
         </Text>
       )}
@@ -209,7 +209,7 @@ export function PhoneCountryInput({
 
             {/* Search input */}
             <View style={[styles.searchBox, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
-              <Icon name="spark" size={16} color={c.gold} />
+              <Icon name="spark" size={16} color={c.goldInk} />
               <TextInput
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -242,7 +242,7 @@ export function PhoneCountryInput({
               }}
               style={[styles.closeBtn, { borderColor: c.border }]}
             >
-              <Text style={[t.micro, { color: c.textSoft, fontSize: 11, fontWeight: '700', textAlign: 'center' }]}>
+              <Text style={[t.micro, { color: c.textSoft, fontSize: 11, fontFamily: 'Jost_700Bold', textAlign: 'center' }]}>
                 CERRAR
               </Text>
             </Pressable>

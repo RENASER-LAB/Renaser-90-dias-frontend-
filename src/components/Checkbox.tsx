@@ -17,11 +17,15 @@ export function Checkbox({ checked, onToggle, title, subtitle, style }: Checkbox
   return (
     <Pressable
       onPress={() => onToggle(!checked)}
-      style={[
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked }}
+      accessibilityLabel={subtitle ? `${title}. ${subtitle}` : title}
+      style={({ pressed }) => [
         styles.container,
         {
           borderColor: checked ? c.gold : c.border,
           backgroundColor: checked ? c.cardBgAlt : c.cardBg,
+          opacity: pressed ? 0.8 : 1,
         },
         style,
       ]}
@@ -39,7 +43,7 @@ export function Checkbox({ checked, onToggle, title, subtitle, style }: Checkbox
       </View>
 
       <View style={{ flex: 1 }}>
-        <Text style={[t.body, { color: c.textStrong, fontWeight: checked ? '700' : '500', fontSize: 15.5 }]}>
+        <Text style={[t.body, { color: c.textStrong, fontFamily: checked ? 'Jost_700Bold' : 'Jost_500Medium', fontSize: 15.5 }]}>
           {title}
         </Text>
         {subtitle && (
@@ -60,6 +64,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 16,
     padding: 16,
+    /* La tarjeta entera es el area pulsable, no solo la casilla: con 16 de padding y una
+       casilla de 24 ya supera los 48px que pide AGENTS.md 4, pero el minimo lo deja fijo
+       aunque el titulo sea de una sola linea corta. */
+    minHeight: 56,
   },
   box: {
     width: 24,

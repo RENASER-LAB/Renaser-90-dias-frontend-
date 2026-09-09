@@ -51,6 +51,7 @@ import type { WireMensaje } from '../features/chat/types/chat.types';
 import { marcarChatMontado } from '../features/renasia/state/chatEnPantalla';
 import { useRanking } from '../features/ranking/hooks/useRanking';
 import { ApiError, mensajeDeError } from '../services/http/apiClient';
+import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
 
 // =========================================================================
 // TIPOS: RECURSOS EXCLUSIVOS & CURSOS
@@ -374,7 +375,7 @@ export default function ComunidadScreen() {
   // D-99: el chat dentro de un curso le dice a Sparkie en que dia del programa va la persona.
   const { diaPrograma } = useProgramaDia();
   const isDark = mode === 'dark';
-  const { rs, isTablet, horizontalPadding } = useResponsive();
+  const { rs, isTablet, horizontalPadding, contentMaxWidth } = useResponsive();
   const { user } = useAuth();
   const mentorPhoto = rs(50);
   const avatarSize = rs(42);
@@ -1548,13 +1549,14 @@ export default function ComunidadScreen() {
         <Text
           style={[
             t.micro,
-            { color: c.textSoft, textAlign: 'center', fontSize: 9.5, letterSpacing: 1.4, marginBottom: 10 },
+            { color: c.textSoft, textAlign: 'center', fontSize: 11, letterSpacing: 1.4, marginBottom: 10 },
           ]}
         >
           TU TRIBU. TU SOPORTE. TU LEGADO.
         </Text>
 
         <ScrollView
+          keyboardShouldPersistTaps="handled"
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={{ paddingHorizontal: horizontalPadding, gap: 12, alignItems: 'flex-start' }}
@@ -1581,18 +1583,18 @@ export default function ComunidadScreen() {
                     },
                   ]}
                 >
-                  <Icon name={s.icon} size={rs(18)} color={activa ? '#1E1B18' : c.gold} strokeWidth={1.15} />
+                  <Icon name={s.icon} size={rs(18)} color={activa ? '#1E1B18' : c.goldInk} strokeWidth={1.15} />
                 </View>
                 <Text
                   numberOfLines={1}
                   style={[
                     t.micro,
                     {
-                      color: activa ? c.gold : c.textSoft,
+                      color: activa ? c.goldInk : c.textSoft,
                       textAlign: 'center',
                       letterSpacing: 0,
-                      fontSize: 9.5,
-                      fontWeight: activa ? '700' : '400',
+                      fontSize: 11,
+                      fontFamily: activa ? 'Jost_700Bold' : 'Jost_400Regular',
                     },
                   ]}
                 >
@@ -1610,12 +1612,13 @@ export default function ComunidadScreen() {
       {/* ========================================================================= */}
       {enMuroTestimoniosORanking && (
         <ScrollView
+          keyboardShouldPersistTaps="handled"
           ref={muroScrollRef}
           contentContainerStyle={[
             styles.content,
             {
               paddingHorizontal: horizontalPadding,
-              maxWidth: isTablet ? 560 : undefined,
+              maxWidth: contentMaxWidth,
               alignSelf: isTablet ? 'center' : 'stretch',
               width: isTablet ? '100%' : undefined,
             },
@@ -1634,16 +1637,16 @@ export default function ComunidadScreen() {
                     <Text style={{ fontSize: 13 }}>🦅</Text>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[t.body, { color: c.textStrong, fontSize: 12.5, fontWeight: '600' }]}>
+                    <Text style={[t.body, { color: c.textStrong, fontSize: 12.5, fontFamily: 'Jost_500Medium' }]}>
                       ¿Qué conquistaste hoy, {primerNombreUsuario}?
                     </Text>
-                    <Text style={[t.micro, { color: c.gold, fontSize: 10 }]}>
+                    <Text style={[t.micro, { color: c.goldInk, fontSize: 10 }]}>
                       Publicación sin límite de caracteres ›
                     </Text>
                   </View>
                 </View>
                 <View style={[styles.plusBadge, { backgroundColor: c.gold }]}>
-                  <Text style={{ color: '#1E1B18', fontWeight: '900', fontSize: 14 }}>+</Text>
+                  <Text style={{ color: '#1E1B18', fontFamily: 'Jost_700Bold', fontSize: 14 }}>+</Text>
                 </View>
               </Pressable>
 
@@ -1655,7 +1658,7 @@ export default function ComunidadScreen() {
                 </Text>
               )}
               {muroError && (
-                <Text style={[t.micro, { color: '#f28e8e', textAlign: 'center' }]}>{muroError}</Text>
+                <Text style={[t.micro, { color: c.danger, textAlign: 'center' }]}>{muroError}</Text>
               )}
               {!muroCargando && !muroError && posts.length === 0 && (
                 <Text style={[t.micro, { color: c.textSoft, textAlign: 'center' }]}>
@@ -1695,13 +1698,13 @@ export default function ComunidadScreen() {
                         </View>
                         <View>
                           <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>{post.author}</Text>
-                          <Text style={[t.micro, { color: c.micro, fontSize: 9.5 }]}>
+                          <Text style={[t.micro, { color: c.micro, fontSize: 11 }]}>
                             {post.cell} · {post.timeAgo}
                           </Text>
                         </View>
                       </View>
                       <View style={[styles.dayBadge, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}>
-                        <Text style={[t.micro, { color: c.gold, fontSize: 9.5, fontWeight: '700' }]}>
+                        <Text style={[t.micro, { color: c.goldInk, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>
                           Día {post.dayStreak}
                         </Text>
                       </View>
@@ -1720,7 +1723,7 @@ export default function ComunidadScreen() {
                           onPress={() => setExpandedPosts(prev => ({ ...prev, [post.id]: !prev[post.id] }))}
                           style={{ marginTop: 2 }}
                         >
-                          <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 10.5 }]}>
+                          <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 10.5 }]}>
                             {isExpanded ? 'Ver menos' : 'Ver más...'}
                           </Text>
                         </Pressable>
@@ -1741,7 +1744,7 @@ export default function ComunidadScreen() {
                               { backgroundColor: c.cardBgAlt, borderColor: c.border },
                             ]}
                           >
-                            <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 11 }]}>
+                            <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                               {post.media[0].title}
                             </Text>
                             {/* Overlay DESPUÉS del texto a propósito: si la foto carga, lo tapa; si es
@@ -1763,7 +1766,7 @@ export default function ComunidadScreen() {
                                 onPress={() => abrirVisorFotos(post, idx)}
                                 style={[styles.mediaHalfBox, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}
                               >
-                                <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 10 }]}>
+                                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 10 }]}>
                                   {m.title}
                                 </Text>
                                 <FotoMuro url={m.url} mimeType={m.mimeType} radioBorde={10} colorFondo={c.cardBgAlt} />
@@ -1779,7 +1782,7 @@ export default function ComunidadScreen() {
                               onPress={() => abrirVisorFotos(post, 0)}
                               style={[styles.mediaLargeLeft, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}
                             >
-                              <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 11 }]}>
+                              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                                 {post.media[0].title}
                               </Text>
                               <FotoMuro
@@ -1796,7 +1799,7 @@ export default function ComunidadScreen() {
                                   onPress={() => abrirVisorFotos(post, idx + 1)}
                                   style={[styles.mediaSmallRight, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}
                                 >
-                                  <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 9.5 }]}>
+                                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                                     {m.title}
                                   </Text>
                                   <FotoMuro url={m.url} mimeType={m.mimeType} radioBorde={8} colorFondo={c.cardBgAlt} />
@@ -1817,10 +1820,11 @@ export default function ComunidadScreen() {
                         }}
                         style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
                       >
-                        <Text style={[styles.rxCountBadge, { color: '#70d2a0', backgroundColor: '#173429' }]}>
-                          👍 {post.likes}
-                        </Text>
-                        <Text style={[t.micro, { color: c.gold, fontSize: 9.5 }]}>· Ver quién reaccionó ›</Text>
+                        <View style={[styles.rxCountBadge, { backgroundColor: c.successWash }]}>
+                          <Icon name="thumbsUp" size={11} color={c.success} />
+                          <Text style={[styles.rxCountTexto, { color: c.success }]}>{post.likes}</Text>
+                        </View>
+                        <Text style={[t.micro, { color: c.goldInk, fontSize: 11 }]}>· Ver quién reaccionó ›</Text>
                       </Pressable>
 
                       <Pressable onPress={() => handleToggleComments(post.id)}>
@@ -1834,15 +1838,23 @@ export default function ComunidadScreen() {
                     <View style={[styles.actionButtonsRow, { borderTopColor: c.divider }]}>
                       <Pressable
                         onPress={() => handleToggleLike(post.id)}
-                        style={styles.actionBtn}
+                        accessibilityRole="button"
+                        accessibilityLabel={post.userReaction === 'like' ? 'Quitar reaccion' : 'Reaccionar a la publicacion'}
+                        accessibilityState={{ selected: post.userReaction === 'like' }}
+                        style={({ pressed }) => [styles.actionBtn, pressed && { backgroundColor: c.goldWash }]}
                       >
-                        <Text style={{ fontSize: 14 }}>👍</Text>
+                        <Icon
+                          name="thumbsUp"
+                          size={14}
+                          color={post.userReaction === 'like' ? c.success : c.textSoft}
+                        />
                         <Text
+                          numberOfLines={1}
                           style={[
                             t.micro,
                             {
-                              color: post.userReaction === 'like' ? '#70d2a0' : c.textSoft,
-                              fontWeight: '700',
+                              color: post.userReaction === 'like' ? c.success : c.textSoft,
+                              fontFamily: 'Jost_700Bold',
                               fontSize: 10.5,
                             },
                           ]}
@@ -1853,20 +1865,24 @@ export default function ComunidadScreen() {
 
                       <Pressable
                         onPress={() => handleToggleComments(post.id)}
-                        style={styles.actionBtn}
+                        accessibilityRole="button"
+                        accessibilityLabel="Ver y escribir comentarios"
+                        style={({ pressed }) => [styles.actionBtn, pressed && { backgroundColor: c.goldWash }]}
                       >
-                        <Text style={{ fontSize: 13 }}>💬</Text>
-                        <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 10.5 }]}>
+                        <Icon name="chat" size={14} color={c.goldInk} />
+                        <Text numberOfLines={1} style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 10.5 }]}>
                           Comentar
                         </Text>
                       </Pressable>
 
                       <Pressable
                         onPress={() => handleSharePost(post.id)}
-                        style={styles.actionBtn}
+                        accessibilityRole="button"
+                        accessibilityLabel="Compartir la publicacion"
+                        style={({ pressed }) => [styles.actionBtn, pressed && { backgroundColor: c.goldWash }]}
                       >
-                        <Text style={{ fontSize: 13 }}>↗️</Text>
-                        <Text style={[t.micro, { color: c.textSoft, fontWeight: '700', fontSize: 10.5 }]}>
+                        <Icon name="share" size={14} color={c.textSoft} />
+                        <Text numberOfLines={1} style={[t.micro, { color: c.textSoft, fontFamily: 'Jost_700Bold', fontSize: 10.5 }]}>
                           Compartir
                         </Text>
                       </Pressable>
@@ -1883,10 +1899,10 @@ export default function ComunidadScreen() {
                           return (
                             <View key={cItem.id} style={[styles.commentCard, { backgroundColor: c.cardBgAlt }]}>
                               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <Text style={[t.cardTitle, { color: c.gold, fontSize: 11.5 }]}>
+                                <Text style={[t.cardTitle, { color: c.goldInk, fontSize: 11.5 }]}>
                                   {cItem.author} {cItem.role ? `(${cItem.role})` : ''}
                                 </Text>
-                                <Text style={[t.micro, { color: c.textSoft, fontSize: 9 }]}>{cItem.timeAgo}</Text>
+                                <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5 }]}>{cItem.timeAgo}</Text>
                               </View>
 
                               <Text style={[t.body, { color: c.text, fontSize: 11.5, marginTop: 4, lineHeight: 16 }]}>
@@ -1899,7 +1915,7 @@ export default function ComunidadScreen() {
                                   hitSlop={6}
                                   style={{ marginTop: 2 }}
                                 >
-                                  <Text style={[t.micro, { color: c.gold, fontSize: 9.5, fontWeight: '700' }]}>
+                                  <Text style={[t.micro, { color: c.goldInk, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>
                                     {isExpanded ? 'Ver menos' : 'Ver más...'}
                                   </Text>
                                 </Pressable>
@@ -1932,8 +1948,8 @@ export default function ComunidadScreen() {
                                   onPress={() => handleCommentVote(post.id, cItem.id)}
                                   style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}
                                 >
-                                  <Text style={{ fontSize: 11 }}>👍</Text>
-                                  <Text style={[t.micro, { color: cItem.userReaction === 'like' ? '#70d2a0' : c.textSoft, fontSize: 9.5 }]}>
+                                  <Icon name="thumbsUp" size={11} color={c.success} />
+                                  <Text style={[t.micro, { color: cItem.userReaction === 'like' ? c.success : c.textSoft, fontSize: 11 }]}>
                                     {cItem.likes}
                                   </Text>
                                 </Pressable>
@@ -1967,10 +1983,10 @@ export default function ComunidadScreen() {
                                 resizeMode="cover"
                               />
                               <View style={{ flex: 1 }}>
-                                <Text style={[t.micro, { color: c.gold, fontSize: 10, fontWeight: '700' }]}>
+                                <Text style={[t.micro, { color: c.goldInk, fontSize: 10, fontFamily: 'Jost_700Bold' }]}>
                                   📷 Foto adjunta
                                 </Text>
-                                <Text style={[t.micro, { color: c.textSoft, fontSize: 8.5 }]}>
+                                <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5 }]}>
                                   Lista para enviar con tu comentario
                                 </Text>
                               </View>
@@ -1978,7 +1994,7 @@ export default function ComunidadScreen() {
                                 onPress={() => setCommentPhotos(prev => ({ ...prev, [post.id]: null }))}
                                 hitSlop={6}
                               >
-                                <Text style={{ color: '#f28e8e', fontWeight: 'bold', fontSize: 12 }}>✕</Text>
+                                <Icon name="close" size={12} color={c.danger} />
                               </Pressable>
                             </View>
                           )}
@@ -1989,7 +2005,7 @@ export default function ComunidadScreen() {
                               style={[styles.attachPhotoBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
                               hitSlop={6}
                             >
-                              <Text style={{ fontSize: 14 }}>📷</Text>
+                              <Icon name="camera" size={14} color={c.goldInk} />
                             </Pressable>
 
                             <TextInput
@@ -2004,7 +2020,7 @@ export default function ComunidadScreen() {
                               onPress={() => handleAddComment(post.id)}
                               style={[styles.sendCommentBtn, { backgroundColor: c.gold }]}
                             >
-                              <Text style={{ color: '#1E1B18', fontWeight: '800', fontSize: 11 }}>Enviar</Text>
+                              <Text style={{ color: '#1E1B18', fontFamily: 'Jost_700Bold', fontSize: 11 }}>Enviar</Text>
                             </Pressable>
                           </View>
                         </View>
@@ -2039,7 +2055,7 @@ export default function ComunidadScreen() {
               <View style={[styles.mediaLunaCard, { borderColor: c.border, backgroundColor: c.cardBg }]}>
                 <View style={styles.mediaLunaContent}>
                   <View style={[styles.badgePill, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-                    <Text style={[t.micro, { color: c.gold, fontSize: 8.5, fontWeight: '800' }]}>
+                    <Text style={[t.micro, { color: c.goldInk, fontSize: 10.5, fontFamily: 'Jost_700Bold' }]}>
                       PRÓXIMAMENTE
                     </Text>
                   </View>
@@ -2116,15 +2132,15 @@ export default function ComunidadScreen() {
                   <View style={[styles.rankCircleNumber, { backgroundColor: c.gold }]}>
                     {/* Sin posición se pinta una raya sola: el "#-" que salía antes se leía como
                         un dato roto, no como un lugar todavía sin ocupar. */}
-                    <Text style={{ color: '#1E1B18', fontFamily: 'Arial', fontWeight: '900', fontSize: 11 }}>
+                    <Text style={{ color: '#1E1B18', fontFamily: 'Jost_700Bold', fontSize: 11, fontVariant: ['tabular-nums'] }}>
                       {userRankEntry.rank === '-' ? '—' : `#${userRankEntry.rank}`}
                     </Text>
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ color: c.textStrong, fontFamily: 'Arial', fontSize: 11, fontWeight: '700' }}>
+                    <Text style={{ color: c.textStrong, fontFamily: 'Jost_700Bold', fontSize: 11, fontVariant: ['tabular-nums'] }}>
                       Tu Posición ({nombreUsuario})
                     </Text>
-                    <Text style={{ color: c.gold, fontFamily: 'Arial', fontSize: 11, marginTop: 2 }}>
+                    <Text style={{ color: c.goldInk, fontFamily: 'Jost_400Regular', fontSize: 11, marginTop: 2, fontVariant: ['tabular-nums'] }}>
                       {userRankEntry.cellText}
                     </Text>
                   </View>
@@ -2147,13 +2163,13 @@ export default function ComunidadScreen() {
                         u.isCurrentUser && { backgroundColor: c.cardBgAlt },
                       ]}
                     >
-                      <Text style={{ color: u.medal ? c.gold : c.textSoft, fontFamily: 'Arial', fontWeight: '800', fontSize: 11, width: 28 }}>
+                      <Text style={{ color: u.medal ? c.goldInk : c.textSoft, fontFamily: 'Jost_700Bold', fontSize: 11, width: 28, fontVariant: ['tabular-nums'] }}>
                         #{u.rank}
                       </Text>
-                      <Text style={{ color: c.textStrong, fontFamily: 'Arial', fontSize: 11, fontWeight: u.isCurrentUser ? '700' : '400', flex: 1 }}>
+                      <Text style={{ color: c.textStrong, fontFamily: u.isCurrentUser ? 'Jost_700Bold' : 'Jost_400Regular', fontSize: 11, flex: 1 }}>
                         {u.name}
                       </Text>
-                      <Text style={{ color: c.gold, fontFamily: 'Arial', fontWeight: '700', fontSize: 11 }}>
+                      <Text style={{ color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11, fontVariant: ['tabular-nums'] }}>
                         ⚡ {u.scoreText}
                       </Text>
                     </EntradaEscalonada>
@@ -2170,11 +2186,12 @@ export default function ComunidadScreen() {
       {/* ========================================================================= */}
       {inExclusiveResources && selectedCourse === null && fullScreenLesson === null && (
         <ScrollView
+          keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.content,
             {
               paddingHorizontal: horizontalPadding,
-              maxWidth: isTablet ? 560 : undefined,
+              maxWidth: contentMaxWidth,
               alignSelf: isTablet ? 'center' : 'stretch',
               width: isTablet ? '100%' : undefined,
             },
@@ -2190,7 +2207,7 @@ export default function ComunidadScreen() {
               </Text>
             )}
             {cursosError && (
-              <Text style={[t.micro, { color: '#f28e8e', textAlign: 'center' }]}>{cursosError}</Text>
+              <Text style={[t.micro, { color: c.danger, textAlign: 'center' }]}>{cursosError}</Text>
             )}
             {!cursosCargando && !cursosError && courses.length === 0 && (
               <Text style={[t.micro, { color: c.textSoft, textAlign: 'center' }]}>
@@ -2218,7 +2235,7 @@ export default function ComunidadScreen() {
                 <View style={styles.courseCoverHeader}>
                   <CursoPortada url={course.coverUrl} />
                   <View style={[styles.courseCategoryBadge, { borderColor: c.gold, backgroundColor: 'rgba(0,0,0,0.65)' }]}>
-                    <Text style={[t.micro, { color: c.gold, fontSize: 8.5, fontWeight: '800' }]}>
+                    <Text style={[t.micro, { color: c.goldInk, fontSize: 10.5, fontFamily: 'Jost_700Bold' }]}>
                       {course.category}
                     </Text>
                   </View>
@@ -2248,7 +2265,7 @@ export default function ComunidadScreen() {
                           hitSlop={8}
                           style={{ alignSelf: 'flex-start', marginTop: 4 }}
                         >
-                          <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 11 }]}>
+                          <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                             {expandedCourseSummaries[course.id] ? 'Ver menos ▲' : 'Ver más... ▼'}
                           </Text>
                         </Pressable>
@@ -2257,10 +2274,10 @@ export default function ComunidadScreen() {
                   )}
                   <View style={{ gap: 4, marginTop: 4 }}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                      <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>
+                      <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>
                         {course.totalResources} {course.totalResources === 1 ? 'Lección' : 'Lecciones'}
                       </Text>
-                      <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 9.5 }]}>
+                      <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                         {obtenerProgresoCurso(course)}% Completado
                       </Text>
                     </View>
@@ -2269,7 +2286,7 @@ export default function ComunidadScreen() {
                     </View>
                   </View>
                   <View style={[styles.exploreBtn, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-                    <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 0.5 }]}>
+                    <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 0.5 }]}>
                       EXPLORAR CONTENIDO ›
                     </Text>
                   </View>
@@ -2285,11 +2302,12 @@ export default function ComunidadScreen() {
       {/* ========================================================================= */}
       {inExclusiveResources && selectedCourse !== null && fullScreenLesson === null && (
         <ScrollView
+          keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.content,
             {
               paddingHorizontal: horizontalPadding,
-              maxWidth: isTablet ? 560 : undefined,
+              maxWidth: contentMaxWidth,
               alignSelf: isTablet ? 'center' : 'stretch',
               width: isTablet ? '100%' : undefined,
             },
@@ -2302,8 +2320,8 @@ export default function ComunidadScreen() {
               style={styles.backBtnRow}
               hitSlop={8}
             >
-              <Icon name="arrowLeft" size={14} color={c.gold} />
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700', letterSpacing: 1 }]}>
+              <Icon name="arrowLeft" size={14} color={c.goldInk} />
+              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
                 VOLVER A CURSOS
               </Text>
             </Pressable>
@@ -2337,7 +2355,7 @@ export default function ComunidadScreen() {
                     hitSlop={8}
                     style={{ alignSelf: 'flex-start', marginTop: 4 }}
                   >
-                    <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 11 }]}>
+                    <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                       {expandedCourseSummaries[selectedCourse.id] ? 'Ver menos ▲' : 'Ver más... ▼'}
                     </Text>
                   </Pressable>
@@ -2349,7 +2367,7 @@ export default function ComunidadScreen() {
           <View style={{ gap: 14, marginTop: 14, paddingBottom: 28 }}>
             {selectedCourse.sections.map(section => (
               <View key={section.id} style={[styles.sectionCard, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-                <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 0.8 }]}>
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 0.8 }]}>
                   {section.title}
                 </Text>
                 <View style={{ gap: 8, marginTop: 10 }}>
@@ -2369,7 +2387,7 @@ export default function ComunidadScreen() {
                           {
                             borderColor: completada ? c.gold : c.border,
                             backgroundColor: completada
-                              ? (isDark ? 'rgba(212,160,23,0.12)' : 'rgba(212,160,23,0.08)')
+                              ? (c.goldWash)
                               : c.cardBgAlt,
                           },
                           bloqueada && { opacity: 0.5 },
@@ -2380,7 +2398,7 @@ export default function ComunidadScreen() {
                             styles.resourceTypeIcon,
                             {
                               borderColor: completada ? c.gold : c.border,
-                              backgroundColor: completada ? 'rgba(212,160,23,0.18)' : c.bg,
+                              backgroundColor: completada ? c.goldWash : c.bg,
                             },
                           ]}
                         >
@@ -2401,28 +2419,28 @@ export default function ComunidadScreen() {
                             style={[
                               t.cardTitle,
                               {
-                                color: completada ? c.gold : c.textStrong,
+                                color: completada ? c.goldInk : c.textStrong,
                                 fontSize: 12.5,
-                                fontWeight: completada ? '700' : '600',
+                                fontFamily: completada ? 'Jost_700Bold' : 'Jost_500Medium',
                               },
                             ]}
                           >
                             {lesson.title}
                           </Text>
-                          <Text style={[t.micro, { color: completada ? c.gold : c.micro, fontSize: 9.5 }]}>
+                          <Text style={[t.micro, { color: completada ? c.goldInk : c.micro, fontSize: 11 }]}>
                             {completada ? '✓ Completada' : lesson.meta}
                           </Text>
                         </View>
                         {completada ? (
-                          <View style={[styles.completedBadgePill, { borderColor: c.gold, backgroundColor: 'rgba(212,160,23,0.15)' }]}>
-                            <Text style={[t.micro, { color: c.gold, fontWeight: '800', fontSize: 9 }]}>
+                          <View style={[styles.completedBadgePill, { borderColor: c.gold, backgroundColor: c.goldWash }]}>
+                            <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 10.5 }]}>
                               ✓ HECHO
                             </Text>
                           </View>
                         ) : bloqueada ? (
-                          <Text style={{ fontSize: 13 }}>🔒</Text>
+                          <Icon name="lock" size={13} color={c.textSoft} />
                         ) : (
-                          <Icon name="chevron" size={12} color={c.gold} />
+                          <Icon name="chevron" size={12} color={c.goldInk} />
                         )}
                       </Pressable>
                     );
@@ -2442,11 +2460,12 @@ export default function ComunidadScreen() {
       {/* ========================================================================= */}
       {inExclusiveResources && leccionMostrada !== null && (
         <ScrollView
+          keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.content,
             {
               paddingHorizontal: horizontalPadding,
-              maxWidth: isTablet ? 560 : undefined,
+              maxWidth: contentMaxWidth,
               alignSelf: isTablet ? 'center' : 'stretch',
               width: isTablet ? '100%' : undefined,
             },
@@ -2459,8 +2478,8 @@ export default function ComunidadScreen() {
               style={styles.backBtnRow}
               hitSlop={8}
             >
-              <Icon name="arrowLeft" size={14} color={c.gold} />
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700', letterSpacing: 1 }]}>
+              <Icon name="arrowLeft" size={14} color={c.goldInk} />
+              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
                 VOLVER A LA SECCIÓN
               </Text>
             </Pressable>
@@ -2470,7 +2489,7 @@ export default function ComunidadScreen() {
             <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 16 }]}>
               {leccionMostrada.title}
             </Text>
-            <Text style={[t.micro, { color: c.gold, marginTop: 4 }]}>
+            <Text style={[t.micro, { color: c.goldInk, marginTop: 4 }]}>
               {leccionMostrada.meta}
             </Text>
             {!!leccionMostrada.desc && (
@@ -2502,7 +2521,7 @@ export default function ComunidadScreen() {
               <Text style={[t.micro, { color: c.textSoft, marginTop: 12 }]}>Cargando lección...</Text>
             )}
             {errorDetalleLeccionPorId[leccionMostrada.id] && (
-              <Text style={[t.micro, { color: '#f28e8e', marginTop: 12 }]}>
+              <Text style={[t.micro, { color: c.danger, marginTop: 12 }]}>
                 {errorDetalleLeccionPorId[leccionMostrada.id]}
               </Text>
             )}
@@ -2530,7 +2549,7 @@ export default function ComunidadScreen() {
                   style={[styles.exploreBtn, { flex: 1, borderColor: c.border, backgroundColor: c.cardBgAlt, paddingVertical: 10 }]}
                   hitSlop={6}
                 >
-                  <Text style={[t.micro, { color: c.textSoft, fontWeight: '700' }]}>
+                  <Text style={[t.micro, { color: c.textSoft, fontFamily: 'Jost_700Bold' }]}>
                     ‹ ANTERIOR
                   </Text>
                 </Pressable>
@@ -2573,8 +2592,8 @@ export default function ComunidadScreen() {
                     style={[
                       t.micro,
                       {
-                        color: esLeccionCompletada(leccionMostrada.id, currentLessonIndex) ? c.gold : c.textSoft,
-                        fontWeight: '700',
+                        color: esLeccionCompletada(leccionMostrada.id, currentLessonIndex) ? c.goldInk : c.textSoft,
+                        fontFamily: 'Jost_700Bold',
                       },
                     ]}
                   >
@@ -2601,7 +2620,7 @@ export default function ComunidadScreen() {
                       flex: 1,
                       borderColor: esLeccionCompletada(leccionMostrada.id, currentLessonIndex) ? c.gold : c.border,
                       backgroundColor: esLeccionCompletada(leccionMostrada.id, currentLessonIndex)
-                        ? 'rgba(212,160,23,0.12)'
+                        ? c.goldWash
                         : c.cardBgAlt,
                       paddingVertical: 10,
                       opacity: esLeccionCompletada(leccionMostrada.id, currentLessonIndex) ? 1 : 0.6,
@@ -2613,8 +2632,8 @@ export default function ComunidadScreen() {
                     style={[
                       t.micro,
                       {
-                        color: esLeccionCompletada(leccionMostrada.id, currentLessonIndex) ? c.gold : c.textSoft,
-                        fontWeight: '800',
+                        color: esLeccionCompletada(leccionMostrada.id, currentLessonIndex) ? c.goldInk : c.textSoft,
+                        fontFamily: 'Jost_700Bold',
                       },
                     ]}
                   >
@@ -2642,11 +2661,12 @@ export default function ComunidadScreen() {
       {/* ========================================================================= */}
       {inChatsComunidad && activeChat === null && (
         <ScrollView
+          keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.content,
             {
               paddingHorizontal: horizontalPadding,
-              maxWidth: isTablet ? 560 : undefined,
+              maxWidth: contentMaxWidth,
               alignSelf: isTablet ? 'center' : 'stretch',
               width: isTablet ? '100%' : undefined,
             },
@@ -2715,7 +2735,7 @@ export default function ComunidadScreen() {
                 {METRICAS.map(m => (
                   <View key={m.n} style={[styles.metric, { borderColor: c.border, backgroundColor: c.cardBg }]}>
                     <Text style={[t.metric, { color: c.textStrong, fontSize: 22 }]}>{m.n}</Text>
-                    <Text style={[t.micro, { color: c.micro, letterSpacing: 0, fontSize: 9, textAlign: 'center', marginTop: 4, lineHeight: 13 }]}>
+                    <Text style={[t.micro, { color: c.micro, letterSpacing: 0, fontSize: 10.5, textAlign: 'center', marginTop: 4, lineHeight: 13 }]}>
                       {m.label}
                     </Text>
                   </View>
@@ -2743,7 +2763,7 @@ export default function ComunidadScreen() {
                 onPress={() => setMiembrosTab('directos')}
                 style={[styles.tabBtn, miembrosTab === 'directos' && { backgroundColor: c.gold }]}
               >
-                <Text style={[t.micro, { color: miembrosTab === 'directos' ? '#1E1B18' : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
+                <Text style={[t.micro, { color: miembrosTab === 'directos' ? '#1E1B18' : c.textSoft, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                   💬 DIRECTOS
                 </Text>
               </Pressable>
@@ -2752,7 +2772,7 @@ export default function ComunidadScreen() {
                 onPress={() => setMiembrosTab('global')}
                 style={[styles.tabBtn, miembrosTab === 'global' && { backgroundColor: c.gold }]}
               >
-                <Text style={[t.micro, { color: miembrosTab === 'global' ? '#1E1B18' : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
+                <Text style={[t.micro, { color: miembrosTab === 'global' ? '#1E1B18' : c.textSoft, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                   🌐 GLOBAL
                 </Text>
               </Pressable>
@@ -2775,7 +2795,7 @@ export default function ComunidadScreen() {
                 </Text>
               )}
               {conversacionesError && (
-                <Text style={[t.micro, { color: '#f28e8e', textAlign: 'center', marginTop: 16 }]}>
+                <Text style={[t.micro, { color: c.danger, textAlign: 'center', marginTop: 16 }]}>
                   {conversacionesError}
                 </Text>
               )}
@@ -2801,25 +2821,27 @@ export default function ComunidadScreen() {
                   >
                     <View style={[styles.convAvatarBox, { borderColor: c.gold, backgroundColor: c.bg }]}>
                       <Text style={{ fontSize: 18 }}>{conv.avatar}</Text>
-                      {conv.isOnline && <View style={styles.onlineBadgeDot} />}
+                      {conv.isOnline && (
+                        <View style={[styles.onlineBadgeDot, { backgroundColor: c.success, borderColor: c.cardBg }]} />
+                      )}
                     </View>
 
                     <View style={{ flex: 1, minWidth: 0 }}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                         <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>{conv.title}</Text>
-                        <Text style={[t.micro, { color: c.gold, fontSize: 9.5, fontWeight: '700' }]}>{conv.lastTime}</Text>
+                        <Text style={[t.micro, { color: c.goldInk, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>{conv.lastTime}</Text>
                       </View>
                       <Text numberOfLines={1} style={[t.body, { color: c.textSoft, fontSize: 11.5, marginTop: 2 }]}>
                         {conv.lastMessage}
                       </Text>
-                      <Text style={[t.micro, { color: c.micro, fontSize: 9.5, marginTop: 1 }]}>
+                      <Text style={[t.micro, { color: c.micro, fontSize: 11, marginTop: 1 }]}>
                         {conv.subtitle}
                       </Text>
                     </View>
 
                     {conv.unreadCount > 0 && (
                       <View style={[styles.unreadBadgePill, { backgroundColor: c.gold }]}>
-                        <Text style={{ color: '#1E1B18', fontWeight: '900', fontSize: 9.5 }}>{conv.unreadCount}</Text>
+                        <Text style={{ color: '#1E1B18', fontFamily: 'Jost_700Bold', fontSize: 11 }}>{conv.unreadCount}</Text>
                       </View>
                     )}
                   </Pressable>
@@ -2837,7 +2859,7 @@ export default function ComunidadScreen() {
           {/* Header del Chat */}
           <View style={[styles.chatRoomHeader, { borderBottomColor: c.divider, backgroundColor: c.cardBg }]}>
             <Pressable onPress={() => setActiveChat(null)} hitSlop={8} style={{ paddingRight: 6 }}>
-              <Icon name="arrowLeft" size={16} color={c.gold} />
+              <Icon name="arrowLeft" size={16} color={c.goldInk} />
             </Pressable>
 
             <Pressable
@@ -2851,7 +2873,7 @@ export default function ComunidadScreen() {
                 <Text numberOfLines={1} style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>
                   {activeChat.title}
                 </Text>
-                <Text style={[t.micro, { color: '#70d2a0', fontSize: 9.5 }]}>
+                <Text style={[t.micro, { color: c.success, fontSize: 11 }]}>
                   {activeChat.type === 'celula' ? '16 miembros · Toca para ver info ℹ️' : '● En línea'}
                 </Text>
               </View>
@@ -2861,17 +2883,18 @@ export default function ComunidadScreen() {
               onPress={() => setGroupInfoVisible(true)}
               style={[styles.infoBtnPill, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}
             >
-              <Text style={[t.micro, { color: c.gold, fontWeight: '800', fontSize: 9.5 }]}>ℹ️ INFO</Text>
+              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>ℹ️ INFO</Text>
             </Pressable>
           </View>
 
           {/* Mensajes del Chat */}
           <ScrollView
+            keyboardShouldPersistTaps="handled"
             contentContainerStyle={{ padding: 12, gap: 10 }}
             showsVerticalScrollIndicator={false}
           >
             <View style={{ alignItems: 'center', marginVertical: 4 }}>
-              <Text style={[styles.dateDividerPill, { backgroundColor: c.cardBgAlt, color: c.gold, borderColor: c.border }]}>
+              <Text style={[styles.dateDividerPill, { backgroundColor: c.cardBgAlt, color: c.goldInk, borderColor: c.border }]}>
                 HOY · DÍA 37 DE VERDAD
               </Text>
             </View>
@@ -2899,7 +2922,7 @@ export default function ComunidadScreen() {
                 ]}
               >
                 {!msg.isMe && (
-                  <Text style={[t.micro, { color: c.gold, fontSize: 9.5, fontWeight: '700', marginBottom: 2, paddingLeft: 4 }]}>
+                  <Text style={[t.micro, { color: c.goldInk, fontSize: 11, fontFamily: 'Jost_700Bold', marginBottom: 2, paddingLeft: 4 }]}>
                     {msg.sender} {msg.senderRole ? `(${msg.senderRole})` : ''}
                   </Text>
                 )}
@@ -2947,7 +2970,7 @@ export default function ComunidadScreen() {
                       <View style={[styles.audioPlayBtn, { backgroundColor: c.border }]}>
                         <Text style={{ fontSize: 11, color: c.textSoft }}>▶</Text>
                       </View>
-                      <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5, flex: 1 }]}>
+                      <Text style={[t.micro, { color: c.textSoft, fontSize: 11, flex: 1 }]}>
                         Audio no disponible
                       </Text>
                     </View>
@@ -2985,7 +3008,7 @@ export default function ComunidadScreen() {
                       <View style={{ flexDirection: 'row', gap: 6 }}>
                         {msg.mediaList?.map((m, idx) => (
                           <View key={idx} style={[styles.chatMediaThumbnail, { borderColor: c.border, backgroundColor: c.bg }]}>
-                            <Text style={[t.micro, { color: c.gold, fontSize: 9.5, fontWeight: '700' }]}>{m}</Text>
+                            <Text style={[t.micro, { color: c.goldInk, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>{m}</Text>
                           </View>
                         ))}
                       </View>
@@ -2998,8 +3021,8 @@ export default function ComunidadScreen() {
 
                 {/* Hora y Doble Check */}
                 <View style={{ flexDirection: 'row', gap: 4, alignItems: 'center', marginTop: 2, paddingHorizontal: 4 }}>
-                  <Text style={[t.micro, { color: c.textSoft, fontSize: 8.5 }]}>{msg.time}</Text>
-                  {msg.isMe && <Text style={{ color: c.gold, fontSize: 9, fontWeight: 'bold' }}>✓✓</Text>}
+                  <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5 }]}>{msg.time}</Text>
+                  {msg.isMe && <Text style={{ color: c.goldInk, fontSize: 10.5, fontFamily: 'Jost_700Bold' }}>✓✓</Text>}
                 </View>
               </View>
             ))}
@@ -3014,7 +3037,7 @@ export default function ComunidadScreen() {
           <View style={[styles.chatInputBar, { borderTopColor: c.divider, backgroundColor: c.cardBg }]}>
             {grabando ? (
               <>
-                <View style={[styles.grabandoPunto, { backgroundColor: '#f28e8e' }]} />
+                <View style={[styles.grabandoPunto, { backgroundColor: c.danger }]} />
                 <Text style={[t.body, { color: c.text, fontSize: 12.5, flex: 1 }]}>
                   Grabando… {formatearSegundos(segundosGrabados)}
                 </Text>
@@ -3023,7 +3046,7 @@ export default function ComunidadScreen() {
                   style={[styles.sendBtnGold, { backgroundColor: c.gold }]}
                   accessibilityLabel="Terminar y enviar la nota de voz"
                 >
-                  <Text style={{ color: '#1E1B18', fontWeight: '900', fontSize: 13 }}>➤</Text>
+                  <Text style={{ color: '#1E1B18', fontFamily: 'Jost_700Bold', fontSize: 13 }}>➤</Text>
                 </Pressable>
               </>
             ) : (
@@ -3038,7 +3061,7 @@ export default function ComunidadScreen() {
                   }]}
                   accessibilityLabel="Enviar una foto"
                 >
-                  <Text style={{ fontSize: 15 }}>📷</Text>
+                  <Icon name="camera" size={15} color={c.goldInk} />
                 </Pressable>
 
                 {/* Acción aparte del botón de foto: acá la imagen se sella como EVIDENCIA de un
@@ -3053,7 +3076,7 @@ export default function ComunidadScreen() {
                   }]}
                   accessibilityLabel="Subir evidencia de un hábito"
                 >
-                  <Text style={{ fontSize: 15 }}>✅</Text>
+                  <Icon name="checkCircle" size={15} color={c.success} />
                 </Pressable>
 
                 <TextInput
@@ -3075,7 +3098,7 @@ export default function ComunidadScreen() {
                     style={[styles.sendBtnGold, { backgroundColor: c.gold }]}
                     accessibilityLabel="Enviar mensaje"
                   >
-                    <Text style={{ color: '#1E1B18', fontWeight: '900', fontSize: 13 }}>➤</Text>
+                    <Text style={{ color: '#1E1B18', fontFamily: 'Jost_700Bold', fontSize: 13 }}>➤</Text>
                   </Pressable>
                 ) : (
                   <Pressable
@@ -3087,7 +3110,7 @@ export default function ComunidadScreen() {
                     }]}
                     accessibilityLabel="Grabar una nota de voz"
                   >
-                    <Text style={{ fontSize: 14 }}>🎙</Text>
+                    <Icon name="volume" size={14} color={c.goldInk} />
                   </Pressable>
                 )}
               </>
@@ -3110,11 +3133,12 @@ export default function ComunidadScreen() {
       {/* ========================================================================= */}
       {inChatsComunidad && groupInfoVisible && (
         <ScrollView
+          keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.content,
             {
               paddingHorizontal: horizontalPadding,
-              maxWidth: isTablet ? 560 : undefined,
+              maxWidth: contentMaxWidth,
               alignSelf: isTablet ? 'center' : 'stretch',
               width: isTablet ? '100%' : undefined,
             },
@@ -3123,14 +3147,14 @@ export default function ComunidadScreen() {
         >
           <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
             <Pressable onPress={() => setGroupInfoVisible(false)} style={styles.backBtnRow} hitSlop={8}>
-              <Icon name="arrowLeft" size={14} color={c.gold} />
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700', letterSpacing: 1 }]}>
+              <Icon name="arrowLeft" size={14} color={c.goldInk} />
+              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
                 VOLVER AL CHAT
               </Text>
             </Pressable>
 
             <View style={[styles.categoryPillBadge, { borderColor: c.borderStrong, backgroundColor: c.cardBgAlt }]}>
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 9.5 }]}>
+              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                 INFO DEL GRUPO
               </Text>
             </View>
@@ -3138,12 +3162,12 @@ export default function ComunidadScreen() {
 
           <View style={[styles.groupInfoHeaderCard, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
             <View style={[styles.groupLargeAvatar, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-              <Text style={{ fontSize: 28 }}>👥</Text>
+              <Icon name="users" size={28} color={c.goldInk} />
             </View>
             <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 16, marginTop: 6 }]}>
               Célula Fénix 07
             </Text>
-            <Text style={[t.micro, { color: c.gold, marginTop: 2 }]}>
+            <Text style={[t.micro, { color: c.goldInk, marginTop: 2 }]}>
               16 Integrantes de la Tribu RENASER
             </Text>
             <Text style={[t.body, { color: c.textSoft, fontSize: 11.5, textAlign: 'center', marginTop: 6 }]}>
@@ -3153,7 +3177,7 @@ export default function ComunidadScreen() {
 
           {/* LISTA DE INTEGRANTES */}
           <View style={{ gap: 8, marginTop: 14, paddingBottom: 28 }}>
-            <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 1 }]}>
+            <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
               INTEGRANTES DE LA CÉLULA (16)
             </Text>
 
@@ -3171,12 +3195,12 @@ export default function ComunidadScreen() {
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 12.5 }]}>{member.name}</Text>
                       <View style={[styles.memberBadgePill, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-                        <Text style={[t.micro, { color: c.gold, fontSize: 8.5, fontWeight: '800' }]}>
+                        <Text style={[t.micro, { color: c.goldInk, fontSize: 10.5, fontFamily: 'Jost_700Bold' }]}>
                           {member.badge}
                         </Text>
                       </View>
                     </View>
-                    <Text style={[t.micro, { color: c.micro, fontSize: 9.5 }]}>{member.role}</Text>
+                    <Text style={[t.micro, { color: c.micro, fontSize: 11 }]}>{member.role}</Text>
                   </View>
                 </View>
 
@@ -3184,7 +3208,7 @@ export default function ComunidadScreen() {
                   onPress={() => handleStartDirectChat(member)}
                   style={[styles.chat1a1Btn, { backgroundColor: c.gold }]}
                 >
-                  <Text style={{ color: '#1E1B18', fontWeight: '800', fontSize: 9.5 }}>💬 Chatear</Text>
+                  <Text style={{ color: '#1E1B18', fontFamily: 'Jost_700Bold', fontSize: 11 }}>💬 Chatear</Text>
                 </Pressable>
               </Pressable>
             ))}
@@ -3231,11 +3255,14 @@ export default function ComunidadScreen() {
           {selectedMemberProfile && (
             <View style={[styles.profileModalCard, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: c.divider, paddingBottom: 8 }}>
-                <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 1 }]}>
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
                   PERFIL DEL INTEGRANTE
                 </Text>
                 <Pressable onPress={() => setSelectedMemberProfile(null)}>
-                  <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>✕ Cerrar</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <Icon name="close" size={12} color={c.goldInk} />
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>Cerrar</Text>
+              </View>
                 </Pressable>
               </View>
 
@@ -3246,28 +3273,28 @@ export default function ComunidadScreen() {
               <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 16, textAlign: 'center', marginTop: 4 }]}>
                 {selectedMemberProfile.name}
               </Text>
-              <Text style={[t.micro, { color: c.gold, textAlign: 'center', fontSize: 10.5 }]}>
+              <Text style={[t.micro, { color: c.goldInk, textAlign: 'center', fontSize: 10.5 }]}>
                 {selectedMemberProfile.role}
               </Text>
 
               <View style={{ flexDirection: 'row', gap: 6, marginVertical: 8 }}>
                 <View style={[styles.metricBoxItem, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
-                  <Text style={[t.micro, { color: c.textSoft, fontSize: 8.5, textAlign: 'center' }]}>RACHA</Text>
-                  <Text style={[t.metric, { color: '#70d2a0', fontSize: 13, textAlign: 'center' }]}>
+                  <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5, textAlign: 'center' }]}>RACHA</Text>
+                  <Text style={[t.metric, { color: c.success, fontSize: 13, textAlign: 'center' }]}>
                     🔥 {selectedMemberProfile.streakDays} Días
                   </Text>
                 </View>
                 <View style={[styles.metricBoxItem, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
-                  <Text style={[t.micro, { color: c.textSoft, fontSize: 8.5, textAlign: 'center' }]}>CÉLULA</Text>
-                  <Text style={[t.metric, { color: c.gold, fontSize: 13, textAlign: 'center' }]}>
+                  <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5, textAlign: 'center' }]}>CÉLULA</Text>
+                  <Text style={[t.metric, { color: c.goldInk, fontSize: 13, textAlign: 'center' }]}>
                     {selectedMemberProfile.cell}
                   </Text>
                 </View>
               </View>
 
               <View style={[styles.focusCard, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
-                <Text style={[t.micro, { color: c.textSoft, fontSize: 9 }]}>ENFOQUE PRINCIPAL:</Text>
-                <Text style={[t.body, { color: c.textStrong, fontSize: 11.5, fontWeight: '600', marginTop: 2 }]}>
+                <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5 }]}>ENFOQUE PRINCIPAL:</Text>
+                <Text style={[t.body, { color: c.textStrong, fontSize: 11.5, fontFamily: 'Jost_500Medium', marginTop: 2 }]}>
                   {selectedMemberProfile.focus}
                 </Text>
               </View>
@@ -3294,7 +3321,10 @@ export default function ComunidadScreen() {
         <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
           <View style={[styles.modalHeaderBar, { borderBottomColor: c.divider }]}>
             <Pressable onPress={() => setCreatePostModalVisible(false)} hitSlop={8}>
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 11 }]}>✕ CANCELAR</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <Icon name="close" size={12} color={c.goldInk} />
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>CANCELAR</Text>
+              </View>
             </Pressable>
             <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>NUEVA PUBLICACIÓN</Text>
             <Pressable
@@ -3302,20 +3332,21 @@ export default function ComunidadScreen() {
               disabled={subiendoPublicacion}
               style={[styles.publishHeaderBtn, { backgroundColor: c.gold }, subiendoPublicacion && { opacity: 0.6 }]}
             >
-              <Text style={{ color: '#1E1B18', fontWeight: '900', fontSize: 11 }}>
+              <Text style={{ color: '#1E1B18', fontFamily: 'Jost_700Bold', fontSize: 11 }}>
                 {subiendoPublicacion ? 'PUBLICANDO...' : 'PUBLICAR'}
               </Text>
             </Pressable>
           </View>
 
-          <ScrollView contentContainerStyle={{ padding: 18, gap: 14 }}>
+          <ScrollView
+            keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 18, gap: 14 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <View style={[styles.avatarCircle, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
                 <Text style={{ fontSize: 14 }}>🦅</Text>
               </View>
               <View>
                 <Text style={[t.cardTitle, { color: c.textStrong }]}>{nombreUsuario}</Text>
-                <Text style={[t.micro, { color: c.gold, fontSize: 9.5 }]}>Célula 07 · Día 37</Text>
+                <Text style={[t.micro, { color: c.goldInk, fontSize: 11 }]}>Célula 07 · Día 37</Text>
               </View>
             </View>
 
@@ -3328,12 +3359,12 @@ export default function ComunidadScreen() {
                 catálogo se publica igual, sin categoría. */}
             <View style={{ gap: 6 }}>
               {cargandoCategoriasMuro && categoriasMuro.length === 0 && (
-                <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>CARGANDO CATEGORÍAS...</Text>
+                <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>CARGANDO CATEGORÍAS...</Text>
               )}
 
               {!cargandoCategoriasMuro && errorCategoriasMuro && categoriasMuro.length === 0 && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5, flexShrink: 1 }]}>
+                  <Text style={[t.micro, { color: c.textSoft, fontSize: 11, flexShrink: 1 }]}>
                     No pudimos cargar las categorías. Puedes publicar igual, sin categoría.
                   </Text>
                   <Pressable
@@ -3341,13 +3372,13 @@ export default function ComunidadScreen() {
                     hitSlop={8}
                     style={[styles.tagSelectorPill, { borderColor: c.gold, backgroundColor: c.cardBg }]}
                   >
-                    <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 9.5 }]}>REINTENTAR</Text>
+                    <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>REINTENTAR</Text>
                   </Pressable>
                 </View>
               )}
 
               {!cargandoCategoriasMuro && !errorCategoriasMuro && categoriasMuro.length === 0 && (
-                <Text style={[t.micro, { color: c.textSoft, fontSize: 9.5 }]}>
+                <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>
                   Todavía no hay categorías configuradas. Tu publicación se guarda igual.
                 </Text>
               )}
@@ -3366,7 +3397,7 @@ export default function ComunidadScreen() {
                           elegida && { borderColor: c.gold, backgroundColor: c.cardBg },
                         ]}
                       >
-                        <Text style={[t.micro, { color: elegida ? c.gold : c.textSoft, fontWeight: '700', fontSize: 9.5 }]}>
+                        <Text style={[t.micro, { color: elegida ? c.goldInk : c.textSoft, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                           {`${categoria.emoji} ${categoria.label.toUpperCase()}`}
                         </Text>
                       </Pressable>
@@ -3387,7 +3418,7 @@ export default function ComunidadScreen() {
             />
 
             <View style={{ gap: 8 }}>
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>FOTOS ADJUNTAS (AL MENOS UNA):</Text>
+              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>FOTOS ADJUNTAS (AL MENOS UNA):</Text>
               <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
                 {attachedPhotos.map((foto, idx) => (
                   <View
@@ -3398,11 +3429,11 @@ export default function ComunidadScreen() {
                         (styles.attachedPhotoCard intacto), solo que ahora también muestra la
                         imagen elegida y no únicamente su nombre. */}
                     <Image source={{ uri: foto.uri }} style={{ width: 20, height: 20, borderRadius: 4 }} />
-                    <Text style={[t.micro, { color: c.gold, fontSize: 9.5 }]} numberOfLines={1}>
+                    <Text style={[t.micro, { color: c.goldInk, fontSize: 11 }]} numberOfLines={1}>
                       {foto.nombre}
                     </Text>
                     <Pressable onPress={() => setAttachedPhotos(prev => prev.filter((_, i) => i !== idx))}>
-                      <Text style={{ color: '#f28e8e', fontWeight: 'bold', fontSize: 12 }}>✕</Text>
+                      <Icon name="close" size={12} color={c.danger} />
                     </Pressable>
                   </View>
                 ))}
@@ -3415,8 +3446,8 @@ export default function ComunidadScreen() {
                     agregandoFoto && { opacity: 0.6 },
                   ]}
                 >
-                  <Text style={{ fontSize: 16 }}>➕</Text>
-                  <Text style={[t.micro, { color: c.textSoft, fontSize: 9 }]}>
+                  <Icon name="plus" size={16} color={c.textSoft} />
+                  <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5 }]}>
                     {agregandoFoto ? 'Abriendo...' : 'Agregar'}
                   </Text>
                 </Pressable>
@@ -3440,18 +3471,25 @@ export default function ComunidadScreen() {
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: c.divider, paddingBottom: 10 }}>
               <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>REACCIONES DEL POST</Text>
               <Pressable onPress={() => setReactionsModalVisible(false)}>
-                <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>✕ Cerrar</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <Icon name="close" size={12} color={c.goldInk} />
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>Cerrar</Text>
+              </View>
               </Pressable>
             </View>
 
             {/* Sin pestañas de filtro: con el dislike retirado del producto queda un solo tipo de
                 reacción, así que "TODOS / LIKES / DISLIKES" filtraba entre una opción y ella
                 misma. En su lugar, el conteo directo de quiénes dieron "me gusta". */}
-            <Text style={[t.micro, { color: c.textSoft, fontSize: 10, marginVertical: 10 }]}>
-              👍 {reactionUsers.length} me gusta
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginVertical: 10 }}>
+              <Icon name="thumbsUp" size={12} color={c.textSoft} />
+              <Text style={[t.micro, { color: c.textSoft, fontSize: 10 }]}>
+                {reactionUsers.length} me gusta
+              </Text>
+            </View>
 
-            <ScrollView style={{ maxHeight: 220 }}>
+            <ScrollView
+              keyboardShouldPersistTaps="handled" style={{ maxHeight: 220 }}>
               {/* Mismos tokens que los estados del feed real (muroCargando/muroError/lista vacía,
                   más arriba en esta pantalla) — ningún componente nuevo, solo texto. */}
               {cargandoReacciones && (
@@ -3460,7 +3498,7 @@ export default function ComunidadScreen() {
                 </Text>
               )}
               {!cargandoReacciones && errorReacciones && (
-                <Text style={[t.micro, { color: '#f28e8e', textAlign: 'center', paddingVertical: 12 }]}>
+                <Text style={[t.micro, { color: c.danger, textAlign: 'center', paddingVertical: 12 }]}>
                   {errorReacciones}
                 </Text>
               )}
@@ -3477,10 +3515,10 @@ export default function ComunidadScreen() {
                     </View>
                     <View>
                       <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 12 }]}>{user.name}</Text>
-                      <Text style={[t.micro, { color: c.micro, fontSize: 9 }]}>{user.role}</Text>
+                      <Text style={[t.micro, { color: c.micro, fontSize: 10.5 }]}>{user.role}</Text>
                     </View>
                   </View>
-                  <Text style={{ fontSize: 16 }}>👍</Text>
+                  <Icon name="thumbsUp" size={16} color={c.goldInk} />
                 </View>
               ))}
             </ScrollView>
@@ -3555,7 +3593,7 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingBottom: 28,
+    paddingBottom: ESPACIO_PARA_LANZADOR,
   },
   mentor: {
     marginTop: 10,
@@ -3714,11 +3752,16 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
   },
   rxCountBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
     borderRadius: 6,
+  },
+  rxCountTexto: {
     fontSize: 10.5,
-    fontWeight: '700',
+    fontFamily: 'Jost_700Bold',
   },
   actionButtonsRow: {
     flexDirection: 'row',
@@ -3731,8 +3774,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    /* 48px minimos (AGENTS.md 4): con `paddingVertical: 6` la fila medía ~26 y era la accion
+       mas usada del Muro. `flexShrink` en la etiqueta evita que "Compartir" empuje la fila. */
+    minHeight: 48,
+    gap: 5,
     paddingVertical: 6,
+    paddingHorizontal: 4,
     borderRadius: 8,
   },
   commentsSection: {
@@ -3947,9 +3994,7 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#70d2a0',
     borderWidth: 1.5,
-    borderColor: '#000',
   },
   unreadBadgePill: {
     width: 20,
@@ -3977,8 +4022,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 3,
-    fontSize: 8.5,
-    fontWeight: '800',
+    fontSize: 10.5,
+    fontFamily: 'Jost_700Bold',
   },
   messageBubbleWrapper: {
     maxWidth: '85%',

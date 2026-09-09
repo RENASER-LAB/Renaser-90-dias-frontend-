@@ -165,7 +165,7 @@ export function AnfitrionAlerta() {
                   <Text
                     style={[
                       t.sectionTitle,
-                      { color: esDestructivo ? '#E06A66' : esCancelar ? c.textSoft : c.micro },
+                      { color: esDestructivo ? c.danger : esCancelar ? c.textSoft : c.micro },
                     ]}
                     numberOfLines={1}
                   >

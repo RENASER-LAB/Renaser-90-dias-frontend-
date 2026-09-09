@@ -19,7 +19,7 @@ export function AperturaScreen({ estado, onSalir }: PropsPaso) {
       etiquetaAtras="Volver"
       boton={{ label: hayProgreso ? 'Continuar mi mapa' : 'Diseñar mi mapa', onPress: siguiente }}
     >
-      <Text style={[t.micro, { color: c.gold, letterSpacing: 2, marginTop: 24 }]}>DÍA 7</Text>
+      <Text style={[t.micro, { color: c.goldInk, letterSpacing: 2, marginTop: 24 }]}>DÍA 7</Text>
       <Text style={[t.hero, { color: c.textStrong, fontSize: 30, letterSpacing: 0.5, marginTop: 8, fontFamily: 'Jost_400Regular' }]}>
         Diseña tu mapa
       </Text>

@@ -116,8 +116,8 @@ export function SparkieOverlay() {
             },
           ]}
         >
-          <Icon name="spark" size={18} color={c.gold} />
-          <Text style={[t.micro, { color: c.textStrong, fontSize: 11.5, fontWeight: '700' }]}>
+          <Icon name="spark" size={18} color={c.goldInk} />
+          <Text style={[t.micro, { color: c.textStrong, fontSize: 11.5, fontFamily: 'Jost_700Bold' }]}>
             {NOMBRE_ASISTENTE.toUpperCase()}
           </Text>
         </Pressable>
@@ -160,9 +160,9 @@ export function SparkieOverlay() {
             >
               <View style={styles.encabezado}>
                 <View style={[styles.medalla, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
-                  <Icon name="spark" size={22} color={c.gold} />
+                  <Icon name="spark" size={22} color={c.goldInk} />
                 </View>
-                <Text style={[t.micro, { color: c.micro, fontSize: 11, letterSpacing: 1.5, fontWeight: '700' }]}>
+                <Text style={[t.micro, { color: c.micro, fontSize: 11, letterSpacing: 1.5, fontFamily: 'Jost_700Bold' }]}>
                   {NOMBRE_ASISTENTE.toUpperCase()}
                 </Text>
               </View>
@@ -183,7 +183,7 @@ export function SparkieOverlay() {
 
                   <View style={[styles.separador, { backgroundColor: c.gold }]} />
 
-                  <Text style={[t.sectionTitle, { color: c.gold, fontSize: 12.5, textAlign: 'center', fontWeight: '700' }]}>
+                  <Text style={[t.sectionTitle, { color: c.goldInk, fontSize: 12.5, textAlign: 'center', fontFamily: 'Jost_700Bold' }]}>
                     {GUIA_PRIMER_POST.titulo.toUpperCase()}
                   </Text>
                   {GUIA_PRIMER_POST.parrafos.map(parrafo => (

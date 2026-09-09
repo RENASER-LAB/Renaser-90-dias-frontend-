@@ -36,25 +36,28 @@ export function GoldButton({
       <Pressable
         onPress={onPress}
         disabled={isDisabled}
-        style={[
+        accessibilityRole="button"
+        accessibilityState={{ disabled: isDisabled, busy: loading }}
+        style={({ pressed }) => [
           styles.outlineBtn,
           {
             borderColor: c.borderStrong,
             backgroundColor: c.cardBg,
-            opacity: isDisabled ? 0.6 : 1,
+            opacity: isDisabled ? 0.6 : pressed ? 0.72 : 1,
+            transform: [{ scale: pressed && !isDisabled ? 0.985 : 1 }],
           },
           style,
         ]}
       >
         {loading ? (
-          <ActivityIndicator color={c.gold} size="small" />
+          <ActivityIndicator color={c.goldInk} size="small" />
         ) : (
           <>
-            {icon && iconPosition === 'left' && <Icon name={icon} size={16} color={c.gold} />}
+            {icon && iconPosition === 'left' && <Icon name={icon} size={16} color={c.goldInk} />}
             <Text style={[t.micro, styles.outlineText, { color: c.text }, textStyle]}>
               {label}
             </Text>
-            {icon && iconPosition === 'right' && <Icon name={icon} size={16} color={c.gold} />}
+            {icon && iconPosition === 'right' && <Icon name={icon} size={16} color={c.goldInk} />}
           </>
         )}
       </Pressable>
@@ -66,12 +69,15 @@ export function GoldButton({
       <Pressable
         onPress={onPress}
         disabled={isDisabled}
-        style={[
+        accessibilityRole="button"
+        accessibilityState={{ disabled: isDisabled, busy: loading }}
+        style={({ pressed }) => [
           styles.outlineBtn,
           {
             borderColor: c.border,
             backgroundColor: c.cardBgAlt,
-            opacity: isDisabled ? 0.6 : 1,
+            opacity: isDisabled ? 0.6 : pressed ? 0.72 : 1,
+            transform: [{ scale: pressed && !isDisabled ? 0.985 : 1 }],
           },
           style,
         ]}
@@ -95,11 +101,14 @@ export function GoldButton({
     <Pressable
       onPress={onPress}
       disabled={isDisabled}
-      style={[
+      accessibilityRole="button"
+      accessibilityState={{ disabled: isDisabled, busy: loading }}
+      style={({ pressed }) => [
         styles.primaryBtn,
         {
           shadowColor: c.gold,
-          opacity: isDisabled ? 0.65 : 1,
+          opacity: isDisabled ? 0.65 : pressed ? 0.88 : 1,
+          transform: [{ scale: pressed && !isDisabled ? 0.985 : 1 }],
         },
         style,
       ]}
@@ -136,6 +145,8 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   gradient: {
+    /* AGENTS.md 4 pide 48-52px de area tactil; con 15 de padding el boton medía ~45. */
+    minHeight: 52,
     paddingVertical: 15,
     paddingHorizontal: 20,
     flexDirection: 'row',
@@ -144,13 +155,16 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   primaryText: {
+    /* `fontFamily` explicito en vez de `fontWeight`: sobre una familia personalizada Android
+       sintetiza la negrita y deforma la Jost en lugar de usar el corte real. */
+    fontFamily: 'Jost_700Bold',
     letterSpacing: 2.2,
-    fontWeight: '700',
     fontSize: 11,
   },
   outlineBtn: {
     borderWidth: 1,
     borderRadius: 14,
+    minHeight: 52,
     paddingVertical: 14,
     paddingHorizontal: 20,
     flexDirection: 'row',
@@ -159,8 +173,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   outlineText: {
+    fontFamily: 'Jost_500Medium',
     letterSpacing: 1.6,
-    fontWeight: '600',
     fontSize: 11,
   },
 });

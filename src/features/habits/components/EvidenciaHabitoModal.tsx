@@ -93,8 +93,6 @@ const PESTANIAS: { clave: Pestania; etiqueta: string; icono: IconName }[] = [
   { clave: 'VIDEO', etiqueta: 'VIDEO', icono: 'play' },
 ];
 
-const VERDE_OK = '#4E9F76';
-const ROJO_ERROR = '#E06A66';
 
 export function EvidenciaHabitoModal({
   registroId,
@@ -106,7 +104,7 @@ export function EvidenciaHabitoModal({
   onCompletado,
 }: EvidenciaHabitoModalProps) {
   const { c, t } = useTheme();
-  const { rs, horizontalPadding, isTablet } = useResponsive();
+  const { rs, horizontalPadding, isTablet, contentMaxWidth } = useResponsive();
 
   const [pestania, setPestania] = useState<Pestania>('FOTO');
   const [archivo, setArchivo] = useState<ArchivoEvidencia | null>(null);
@@ -228,7 +226,7 @@ export function EvidenciaHabitoModal({
     }
   };
 
-  const anchoTarjeta = isTablet ? 560 : undefined;
+  const anchoTarjeta = contentMaxWidth;
 
   return (
     <Modal
@@ -260,7 +258,7 @@ export function EvidenciaHabitoModal({
             <View style={{ alignItems: 'center', gap: 2 }}>
               {contexto ? (
                 <View style={[estilos.insignia, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-                  <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 10.5 }]}>
+                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 10.5 }]}>
                     {contexto}
                   </Text>
                 </View>
@@ -292,18 +290,18 @@ export function EvidenciaHabitoModal({
                     style={[
                       estilos.pestania,
                       {
-                        borderColor: cumplida ? VERDE_OK : activa ? c.gold : c.border,
+                        borderColor: cumplida ? c.success : activa ? c.gold : c.border,
                         backgroundColor: activa ? c.cardBgAlt : 'transparent',
                       },
                     ]}
                   >
-                    <Icon name={p.icono} size={16} color={cumplida ? VERDE_OK : activa ? c.gold : c.textSoft} />
+                    <Icon name={p.icono} size={16} color={cumplida ? c.success : activa ? c.goldInk : c.textSoft} />
                     <Text
                       style={[
                         t.micro,
                         {
-                          color: cumplida ? VERDE_OK : activa ? c.textStrong : c.textSoft,
-                          fontWeight: '700',
+                          color: cumplida ? c.success : activa ? c.textStrong : c.textSoft,
+                          fontFamily: 'Jost_700Bold',
                           fontSize: 10.5,
                         },
                       ]}
@@ -386,8 +384,8 @@ export function EvidenciaHabitoModal({
 
             {/* Resumen de lo cargado */}
             {archivo ? (
-              <View style={[estilos.adjunto, { borderColor: VERDE_OK, backgroundColor: c.cardBgAlt }]}>
-                <Icon name="checkCircle" size={20} color={VERDE_OK} />
+              <View style={[estilos.adjunto, { borderColor: c.success, backgroundColor: c.cardBgAlt }]}>
+                <Icon name="checkCircle" size={20} color={c.success} />
                 <Text
                   style={[t.micro, { color: c.textStrong, fontSize: 12.5, flexShrink: 1 }]}
                   numberOfLines={2}
@@ -399,7 +397,7 @@ export function EvidenciaHabitoModal({
                   hitSlop={10}
                   style={[estilos.quitar, { borderColor: c.border }]}
                 >
-                  <Text style={[t.micro, { color: c.textSoft, fontWeight: '700', fontSize: 10.5 }]}>
+                  <Text style={[t.micro, { color: c.textSoft, fontFamily: 'Jost_700Bold', fontSize: 10.5 }]}>
                     QUITAR
                   </Text>
                 </Pressable>
@@ -407,8 +405,8 @@ export function EvidenciaHabitoModal({
             ) : null}
 
             {error ? (
-              <View style={[estilos.error, { borderColor: ROJO_ERROR }]}>
-                <Text style={[t.micro, { color: ROJO_ERROR, fontSize: 12.5 }]}>{error}</Text>
+              <View style={[estilos.error, { borderColor: c.danger }]}>
+                <Text style={[t.micro, { color: c.danger, fontSize: 12.5 }]}>{error}</Text>
               </View>
             ) : null}
 
@@ -438,7 +436,7 @@ export function EvidenciaHabitoModal({
                 <Text
                   style={[
                     t.micro,
-                    { color: c.textSoft, fontWeight: '700', fontSize: 11.5, textAlign: 'center' },
+                    { color: c.textSoft, fontFamily: 'Jost_700Bold', fontSize: 11.5, textAlign: 'center' },
                   ]}
                 >
                   CANCELAR
@@ -471,16 +469,16 @@ function BotonAccion({
       style={[
         estilos.accion,
         {
-          borderColor: destacado ? ROJO_ERROR : c.borderStrong,
+          borderColor: destacado ? c.danger : c.borderStrong,
           backgroundColor: c.cardBgAlt,
         },
       ]}
     >
-      <Icon name={icono} size={18} color={destacado ? ROJO_ERROR : c.gold} />
+      <Icon name={icono} size={18} color={destacado ? c.danger : c.goldInk} />
       <Text
         style={[
           t.micro,
-          { color: c.textStrong, fontWeight: '700', fontSize: 12.5, flexShrink: 1 },
+          { color: c.textStrong, fontFamily: 'Jost_700Bold', fontSize: 12.5, flexShrink: 1 },
         ]}
       >
         {etiqueta}

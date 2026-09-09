@@ -230,7 +230,7 @@ export const SignatureCanvas = forwardRef<SignatureCanvasHandle, SignatureCanvas
           {hasSignature && (
             <View style={styles.signedBadge}>
               <Icon name="check" size={12} color="#4E9F76" />
-              <Text style={[t.micro, { color: '#4E9F76', fontWeight: '700', fontSize: 10 }]}>
+              <Text style={[t.micro, { color: c.success, fontFamily: 'Jost_700Bold', fontSize: 10 }]}>
                 TRAZADO
               </Text>
             </View>
@@ -251,7 +251,7 @@ export const SignatureCanvas = forwardRef<SignatureCanvasHandle, SignatureCanvas
           // de scrollear. Ver `estiloGestoWeb`.
           estiloGestoWeb,
           {
-            borderColor: error ? '#E06A66' : hasSignature ? c.gold : c.borderStrong,
+            borderColor: error ? c.danger : hasSignature ? c.gold : c.borderStrong,
             backgroundColor: c.cardBgAlt,
           },
         ]}
@@ -306,7 +306,7 @@ export const SignatureCanvas = forwardRef<SignatureCanvasHandle, SignatureCanvas
       {!hideControls && (
         <View style={styles.footerRow}>
           <View style={{ flex: 1, paddingRight: 8 }}>
-            <Text style={[t.small, { color: error ? '#E06A66' : c.textSoft, fontSize: 11.5 }]}>
+            <Text style={[t.small, { color: error ? c.danger : c.textSoft, fontSize: 11.5 }]}>
               {error || 'Trazo requerido para sellar tu compromiso legal'}
             </Text>
           </View>
@@ -317,7 +317,7 @@ export const SignatureCanvas = forwardRef<SignatureCanvasHandle, SignatureCanvas
               hitSlop={10}
               style={[styles.clearBtn, { borderColor: c.border, backgroundColor: c.cardBg }]}
             >
-              <Text style={[t.micro, { color: '#E06A66', fontSize: 10.5, fontWeight: '700' }]}>
+              <Text style={[t.micro, { color: c.danger, fontSize: 10.5, fontFamily: 'Jost_700Bold' }]}>
                 LIMPIAR FIRMA
               </Text>
             </Pressable>

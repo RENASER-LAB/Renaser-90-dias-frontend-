@@ -311,8 +311,8 @@ export function PodioRanking({ top1, top2, top3, activo }: PodioRankingProps) {
           destacado
           frente={['#FFE9AE', '#E8C97F', '#C29A48', '#8E6D2A']}
           tapa={['#FFF6DC', '#F0D89A']}
-          frenteVacio={['rgba(212,160,23,0.34)', 'rgba(212,160,23,0.08)']}
-          tapaVacia={['rgba(212,160,23,0.40)', 'rgba(212,160,23,0.14)']}
+          frenteVacio={[c.goldWash, c.goldWash]}
+          tapaVacia={[c.goldWash, c.goldWash]}
           bordeMedalla={c.gold}
           colorNumero="#1E1B18"
           colorEtiqueta="#1E1B18"
@@ -340,7 +340,7 @@ export function PodioRanking({ top1, top2, top3, activo }: PodioRankingProps) {
 
       {/* Canto del escenario: la línea de luz donde termina el piso. */}
       <LinearGradient
-        colors={['rgba(212,160,23,0)', 'rgba(212,160,23,0.55)', 'rgba(212,160,23,0)']}
+        colors={['rgba(212,160,23,0)', c.goldWash, 'rgba(212,160,23,0)']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
         style={styles.cantoPiso}
@@ -483,12 +483,12 @@ function ColumnaPodio({
         style={[
           t.micro,
           styles.nombre,
-          { color: vacio ? '#B8AE9E' : destacado ? c.gold : '#F0EDE6', fontWeight: destacado ? '800' : '700' },
+          { color: vacio ? '#B8AE9E' : destacado ? c.goldInk : '#F0EDE6', fontFamily: destacado ? 'Jost_700Bold' : 'Jost_700Bold' },
         ]}
       >
         {vacio ? nombreVacio : puesto.name}
       </Text>
-      <Text style={[t.micro, styles.puntaje, { color: vacio ? '#8A8073' : destacado ? c.gold : '#B8AE9E' }]}>
+      <Text style={[t.micro, styles.puntaje, { color: vacio ? '#8A8073' : destacado ? c.goldInk : '#B8AE9E' }]}>
         {vacio ? '—' : destacado ? `🔥 ${puesto.score}` : puesto.score}
       </Text>
 
@@ -529,7 +529,7 @@ function ColumnaPodio({
               t.micro,
               styles.etiqueta,
               { color: vacio ? '#C3BAAA' : colorEtiqueta },
-              destacado && !vacio && { fontWeight: '900' },
+              destacado && !vacio && { fontFamily: 'Jost_700Bold' },
             ]}
           >
             {vacio ? etiquetaVacia : etiqueta}
@@ -730,14 +730,14 @@ const styles = StyleSheet.create({
   },
   numero: {
     fontSize: 24,
-    fontWeight: '900',
+    fontFamily: 'Jost_700Bold',
   },
   numeroGrande: {
     fontSize: 30,
   },
   etiqueta: {
     fontSize: 10.5,
-    fontWeight: '800',
+    fontFamily: 'Jost_700Bold',
     letterSpacing: 0.4,
   },
   brillo: {

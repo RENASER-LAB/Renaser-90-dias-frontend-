@@ -8,6 +8,7 @@ import type { useRocasSemanales } from '../hooks/useRocasSemanales';
 import type { EjeObjetivo, ItemPlanDiario } from '../types/objetivos.types';
 import { EJES, ETIQUETA_EJE } from '../types/objetivos.types';
 import { posicionarPorEje } from '../hooks/useRocasDiarias';
+import { Icon } from '../../../components/Icon';
 
 /**
  * Elegir qué acciones críticas van hoy, y a qué hora.
@@ -139,7 +140,7 @@ export function AgendarAccionesModal({
         <View style={[estilos.tarjeta, { backgroundColor: c.cardBg, borderColor: c.border }]}>
           <View style={[estilos.encabezado, { borderBottomColor: c.divider }]}>
             <View style={{ flex: 1 }}>
-              <Text style={[t.micro, { color: c.gold, fontWeight: '800', letterSpacing: 1, fontSize: 12 }]}>
+              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1, fontSize: 12 }]}>
                 {eligiendoHoraDe ? 'ELEGIR HORA' : 'AGENDAR MIS ACCIONES'}
               </Text>
               <Text style={[t.small, { color: c.textSoft, fontSize: 14, marginTop: 2 }]} numberOfLines={2}>
@@ -151,7 +152,7 @@ export function AgendarAccionesModal({
               hitSlop={16}
               style={estilos.botonCerrar}
             >
-              <Text style={[t.body, { color: c.textSoft, fontSize: 20 }]}>✕</Text>
+              <Icon name="close" size={18} color={c.textSoft} />
             </Pressable>
           </View>
 
@@ -173,7 +174,7 @@ export function AgendarAccionesModal({
             <ScrollView contentContainerStyle={{ padding: 18, gap: 18 }}>
               {disponibles.map(({ eje, roca }) => (
                 <View key={eje} style={{ gap: 10 }}>
-                  <Text style={[t.micro, { color: c.gold, fontWeight: '800', fontSize: 12 }]}>
+                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 12 }]}>
                     {ETIQUETA_EJE[eje].toUpperCase()}  ·  {cuantasDe(eje)}/{MAXIMO_POR_EJE}
                   </Text>
                   <Text style={[t.small, { color: c.textSoft, fontSize: 14, lineHeight: 20 }]}>{roca.titulo}</Text>
@@ -203,7 +204,7 @@ export function AgendarAccionesModal({
                               { borderColor: elegida ? c.gold : c.border, backgroundColor: elegida ? c.gold : 'transparent' },
                             ]}
                           >
-                            {elegida && <Text style={{ color: c.onGold, fontSize: 14, fontWeight: '700' }}>✓</Text>}
+                            {elegida && <Text style={{ color: c.onGold, fontSize: 14, fontFamily: 'Jost_700Bold' }}>✓</Text>}
                           </View>
                           <Text style={[t.body, { color: c.textStrong, fontSize: 15, flex: 1, lineHeight: 21 }]}>
                             {accion}
@@ -214,7 +215,7 @@ export function AgendarAccionesModal({
                             onPress={() => abrirRueda(clave, hora)}
                             style={[estilos.botonHora, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
                           >
-                            <Text style={[t.body, { color: hora ? c.gold : c.textSoft, fontSize: 15, fontWeight: '700' }]}>
+                            <Text style={[t.body, { color: hora ? c.goldInk : c.textSoft, fontSize: 15, fontFamily: 'Jost_700Bold' }]}>
                               {hora ? `A las ${hora}` : 'Ponerle hora (opcional)'}
                             </Text>
                           </Pressable>

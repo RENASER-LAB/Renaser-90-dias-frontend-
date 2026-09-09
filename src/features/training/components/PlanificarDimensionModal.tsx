@@ -146,7 +146,7 @@ function todosLosDias(): Record<DiaDelPlan, boolean> {
 
 export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar, onGuardado }: Props) {
   const { c, t } = useTheme();
-  const { isTablet } = useResponsive();
+  const { isTablet, contentMaxWidth } = useResponsive();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const claveUsuario = user?.id ?? 'anon';
@@ -720,10 +720,10 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
               {tieneHora ? horaActual : 'Toca para ponerle hora'}
             </Text>
             {horaGuardada && (
-              <Text style={[t.micro, { color: '#4E9F76', fontSize: 10, fontWeight: '700' }]}>✓ GUARDADO</Text>
+              <Text style={[t.micro, { color: c.success, fontSize: 10, fontFamily: 'Jost_700Bold' }]}>✓ GUARDADO</Text>
             )}
             {!activo && (
-              <Text style={[t.micro, { color: '#E06A66', fontSize: 10, fontWeight: '700' }]}>PAUSADO</Text>
+              <Text style={[t.micro, { color: c.danger, fontSize: 10, fontFamily: 'Jost_700Bold' }]}>PAUSADO</Text>
             )}
           </View>
         </View>
@@ -770,7 +770,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
               backgroundColor: c.cardBg,
               borderColor: c.gold,
               paddingBottom: Math.max(insets.bottom, 12),
-              maxWidth: isTablet ? 560 : undefined,
+              maxWidth: contentMaxWidth,
               alignSelf: isTablet ? 'center' : 'stretch',
               width: isTablet ? '100%' : undefined,
             },
@@ -785,19 +785,22 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                 hitSlop={12}
                 style={styles.volver}
               >
-                <Icon name="arrowLeft" size={14} color={c.gold} />
-                <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 11 }]}>VOLVER</Text>
+                <Icon name="arrowLeft" size={14} color={c.goldInk} />
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>VOLVER</Text>
               </Pressable>
             ) : (
               <View style={{ flex: 1 }}>
-                <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]}>PLANIFICAR</Text>
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>PLANIFICAR</Text>
                 <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 15 }]} numberOfLines={1}>
                   {dimension}
                 </Text>
               </View>
             )}
             <Pressable onPress={cerrar} hitSlop={12} style={styles.cerrar}>
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 11 }]}>✕ CERRAR</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <Icon name="close" size={12} color={c.goldInk} />
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>CERRAR</Text>
+              </View>
             </Pressable>
           </View>
 
@@ -823,6 +826,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
               </Text>
 
               <ScrollView
+                keyboardShouldPersistTaps="handled"
                 style={{ flexShrink: 1, marginTop: 10 }}
                 contentContainerStyle={{ gap: 10, paddingBottom: 6 }}
                 showsVerticalScrollIndicator={false}
@@ -843,11 +847,11 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                         style={[styles.cabezaSeccion, { borderBottomColor: c.divider }]}
                       >
                         <View style={{ flex: 1, flexShrink: 1 }}>
-                          <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 11 }]}>
+                          <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                             {esSinHora ? '⏳ SIN HORA TODAVÍA' : '🕗 TU DÍA'} ({habitos.length})
                           </Text>
                         </View>
-                        <Text style={[t.micro, { color: c.gold, fontSize: 12 }]}>{plegada ? '▸' : '▾'}</Text>
+                        <Text style={[t.micro, { color: c.goldInk, fontSize: 12 }]}>{plegada ? '▸' : '▾'}</Text>
                       </Pressable>
 
                       {!plegada && habitos.map(h => filaDeHabito(h))}
@@ -871,8 +875,8 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                     }}
                     style={[styles.crearHabito, { borderColor: c.gold }]}
                   >
-                    <Icon name="plus" size={14} color={c.gold} />
-                    <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 11 }]}>
+                    <Icon name="plus" size={14} color={c.goldInk} />
+                    <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                       CREAR UN HÁBITO EN {dimension}
                     </Text>
                   </Pressable>
@@ -921,12 +925,12 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                   nuevo vuelve al horario general. Cada pastilla muestra la hora que rige ese día,
                   así que la fila entera se lee de un vistazo: "los lunes 05:00, el resto 09:00". */}
               <View style={styles.filaTituloCompacta}>
-                <Text style={[t.micro, { color: c.gold, fontWeight: '700' }]} numberOfLines={1}>
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]} numberOfLines={1}>
                   {diasEnEdicion.length === 0 ? 'TODOS LOS DÍAS' : `SOLO ${diasEnEdicion.join(' · ')}`}
                 </Text>
                 {diasEnEdicion.length > 0 && (
                   <Pressable onPress={volverATodos} hitSlop={10}>
-                    <Text style={[t.micro, { color: c.gold, fontWeight: '700', fontSize: 10.5 }]}>
+                    <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 10.5 }]}>
                       ← TODOS
                     </Text>
                   </Pressable>
@@ -961,7 +965,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                       <Text
                         style={[
                           t.micro,
-                          { fontSize: 12, fontWeight: '700', color: editando ? c.onGold : c.textSoft },
+                          { fontSize: 12, fontFamily: 'Jost_700Bold', color: editando ? c.onGold : c.textSoft },
                         ]}
                       >
                         {dia.charAt(0)}
@@ -970,7 +974,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                       <Text
                         style={[
                           t.micro,
-                          { fontSize: 9.5, fontWeight: '700', color: editando ? c.onGold : c.textSoft },
+                          { fontSize: 11, fontFamily: 'Jost_700Bold', color: editando ? c.onGold : c.textSoft },
                         ]}
                       >
                         {diasDelMes[dia]}
@@ -986,15 +990,15 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                           style={[
                             t.micro,
                             {
-                              fontSize: 8.5,
+                              fontSize: 10.5,
                               color: editando
                                 ? c.onGold
                                 : delDia?.activo === false
-                                  ? '#E06A66'
+                                  ? c.danger
                                   : delDia?.propio
-                                    ? c.gold
+                                    ? c.goldInk
                                     : c.textSoft,
-                              fontWeight: delDia?.propio ? '700' : '400',
+                              fontFamily: delDia?.propio ? 'Jost_700Bold' : 'Jost_400Regular',
                             },
                           ]}
                           numberOfLines={1}
@@ -1023,9 +1027,9 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                 && diasEnEdicion.every(d => horarioSemanal[d]?.activo !== false) && (
                 <Pressable
                   onPress={() => void apagarDias(habitoEnEdicion, diasEnEdicion)}
-                  style={[styles.accionApagar, { borderColor: '#E06A66' }]}
+                  style={[styles.accionApagar, { borderColor: c.danger }]}
                 >
-                  <Text style={[t.micro, { color: '#E06A66', fontSize: 11.5, fontWeight: '700' }]}>
+                  <Text style={[t.micro, { color: c.danger, fontSize: 11.5, fontFamily: 'Jost_700Bold' }]}>
                     ⊘ NO HACERLO LOS {diasEnEdicion.join(', ')}
                   </Text>
                 </Pressable>
@@ -1036,7 +1040,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                   onPress={() => void quitarDias(habitoEnEdicion, diasEnEdicion)}
                   style={[styles.accionApagar, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}
                 >
-                  <Text style={[t.micro, { color: c.gold, fontSize: 11.5, fontWeight: '700' }]}>
+                  <Text style={[t.micro, { color: c.goldInk, fontSize: 11.5, fontFamily: 'Jost_700Bold' }]}>
                     ↺ VOLVER A HACERLO LOS {diasEnEdicion.join(', ')}
                   </Text>
                 </Pressable>
@@ -1063,7 +1067,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                   style={{ marginTop: 8, minHeight: 36, justifyContent: 'center' }}
                 >
                   <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5 }]}>
-                    ✕ Quitar la hora propia de {diasEnEdicion.join(', ').toLowerCase()} y volver al horario general
+                    Quitar la hora propia de {diasEnEdicion.join(', ').toLowerCase()} y volver al horario general
                   </Text>
                 </Pressable>
               )}
@@ -1072,7 +1076,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                   scheduler del backend. Expo Go sigue sin ofrecer el canal remoto. */}
               {recordatorios.HAY_RECORDATORIOS && (
                 <>
-                  <Text style={[t.micro, { color: c.gold, fontWeight: '700', marginTop: 12 }]}>
+                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', marginTop: 12 }]}>
                     RECORDATORIO {antelaciones.length > 1 ? `(${antelaciones.length} avisos)` : ''}
                   </Text>
                   <View style={styles.filaAntelaciones}>
@@ -1093,8 +1097,8 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                           t.micro,
                           {
                             fontSize: 10.5,
-                            fontWeight: '700',
-                            color: antelaciones.length === 0 ? c.gold : c.textSoft,
+                            fontFamily: 'Jost_700Bold',
+                            color: antelaciones.length === 0 ? c.goldInk : c.textSoft,
                           },
                         ]}
                         numberOfLines={1}
@@ -1123,7 +1127,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                           ]}
                         >
                           <Text
-                            style={[t.micro, { fontSize: 10.5, fontWeight: '700', color: on ? c.gold : c.textSoft }]}
+                            style={[t.micro, { fontSize: 10.5, fontFamily: 'Jost_700Bold', color: on ? c.goldInk : c.textSoft }]}
                             numberOfLines={1}
                           >
                             {etiqueta}
@@ -1173,7 +1177,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                 returnKeyType="done"
               />
 
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700', marginTop: 16 }]}>ELEGÍ UN ICONO</Text>
+              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', marginTop: 16 }]}>ELEGÍ UN ICONO</Text>
               {/* Los mismos iconos del catálogo, no una lista aparte: así un hábito propio se ve
                   igual de curado que uno del programa. Sin elegir ninguno se guarda `null` y el
                   hábito hereda el de su categoría, que es como nacían todos hasta ahora. */}
@@ -1203,7 +1207,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                 })}
               </ScrollView>
 
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700', marginTop: 16 }]}>¿A QUÉ HORA?</Text>
+              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', marginTop: 16 }]}>¿A QUÉ HORA?</Text>
               <View style={{ paddingTop: 4 }}>
                 <RuedaHoraPicker
                   key={`rueda-nuevo-${semillaRueda}`}
@@ -1218,7 +1222,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
               {/* Los días en que corre. Volvió el 2026-09-08, cuando el backend pasó a aceptar
                   `activeWeekdays`: antes era un campo que la app mostraba y el servidor tiraba a la
                   basura, y por eso E-137 lo sacó del modal. */}
-              <Text style={[t.micro, { color: c.gold, fontWeight: '700', marginTop: 16 }]}>¿QUÉ DÍAS?</Text>
+              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', marginTop: 16 }]}>¿QUÉ DÍAS?</Text>
               <View style={styles.filaDias}>
                 {DIAS_DEL_PLAN.map(dia => {
                   const corre = diasNuevo.has(dia);
@@ -1238,8 +1242,8 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                       <Text
                         style={[t.micro, {
                           fontSize: 11,
-                          fontWeight: '700',
-                          color: corre ? c.gold : c.textSoft,
+                          fontFamily: 'Jost_700Bold',
+                          color: corre ? c.goldInk : c.textSoft,
                         }]}
                       >
                         {dia}

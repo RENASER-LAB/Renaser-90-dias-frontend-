@@ -11,7 +11,11 @@ export function useResponsive() {
   const isShort = height < 720;
   const isTablet = width >= 768;
   const rs = (size: number) => Math.round(size * scale);
-  const horizontalPadding = isSmall ? 14 : isTablet ? 32 : 20;
+  /* Margenes por tramo segun AGENTS.md 2. El tramo 360-440 (donde caen la mayoria de
+     Xiaomi y los Android estandar) pedia 18 y estaba recibiendo 20; 441-767 se queda en 20. */
+  const horizontalPadding = isSmall ? 14 : isTablet ? 32 : width <= 440 ? 18 : 20;
+  /* Ancho maximo de tarjeta en tablet, centrada (AGENTS.md 2). */
+  const contentMaxWidth = isTablet ? 560 : undefined;
 
   return {
     width,
@@ -22,5 +26,6 @@ export function useResponsive() {
     isTablet,
     rs,
     horizontalPadding,
+    contentMaxWidth,
   };
 }

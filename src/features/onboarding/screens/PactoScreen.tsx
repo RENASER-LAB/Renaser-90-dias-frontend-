@@ -33,7 +33,7 @@ export function PactoScreen({
   onBack,
 }: PactoScreenProps) {
   const { c, t, mode, toggle } = useTheme();
-  const { isSmall, isTablet } = useResponsive();
+  const { isSmall, isTablet, contentMaxWidth } = useResponsive();
   const { guardarCapitulo, avanzarEstado, aceptarHito, guardarFirma } = usePersistenciaOnboarding();
   // Ref al lienzo para poder capturarlo como PNG al confirmar (ver SignatureCanvas.capturarComoPngBase64).
   const signatureRef = useRef<SignatureCanvasHandle>(null);
@@ -134,8 +134,8 @@ export function PactoScreen({
           onPress={onBack}
           style={[styles.backBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
         >
-          <Icon name="arrowLeft" size={16} color={c.gold} />
-          <Text style={[t.micro, { color: c.text, letterSpacing: 1.2, fontSize: 11, fontWeight: '700' }]}>
+          <Icon name="arrowLeft" size={16} color={c.goldInk} />
+          <Text style={[t.micro, { color: c.text, letterSpacing: 1.2, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>
             {etiquetaVolver}
           </Text>
         </Pressable>
@@ -146,7 +146,7 @@ export function PactoScreen({
           accessibilityRole="button"
           style={[styles.themeBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
         >
-          <Icon name={mode === 'light' ? 'moon' : 'sun'} size={15} color={c.gold} />
+          <Icon name={mode === 'light' ? 'moon' : 'sun'} size={15} color={c.goldInk} />
         </Pressable>
       </View>
 
@@ -155,7 +155,7 @@ export function PactoScreen({
           styles.scrollContent,
           {
             paddingHorizontal: isSmall ? 16 : isTablet ? 32 : 20,
-            maxWidth: isTablet ? 560 : undefined,
+            maxWidth: contentMaxWidth,
             alignSelf: isTablet ? 'center' : 'stretch',
             width: isTablet ? '100%' : undefined,
           },
@@ -165,7 +165,7 @@ export function PactoScreen({
         {/* Top Gold Medallion Logo */}
         <View style={styles.logoSection}>
           <View style={[styles.goldLogoBadge, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-            <Icon name="spark" size={26} color={c.gold} />
+            <Icon name="spark" size={26} color={c.goldInk} />
           </View>
         </View>
 
@@ -174,7 +174,7 @@ export function PactoScreen({
           <Text style={[t.micro, { color: c.textSoft, fontSize: 11, letterSpacing: 1.5, textAlign: 'center' }]}>
             BIENVENIDO OFICIALMENTE A LA
           </Text>
-          <Text style={[t.screenTitle, { color: c.gold, fontSize: 17, fontWeight: '700', letterSpacing: 1.5, marginTop: 4, textAlign: 'center' }]}>
+          <Text style={[t.screenTitle, { color: c.goldInk, fontSize: 17, fontFamily: 'Jost_700Bold', letterSpacing: 1.5, marginTop: 4, textAlign: 'center' }]}>
             FAMILIA RENASER
           </Text>
 
@@ -184,10 +184,10 @@ export function PactoScreen({
           <Text style={[t.body, { color: c.textSoft, fontSize: 13.5, textAlign: 'center', marginTop: 10 }]}>
             A partir de hoy, empieza a regir tu vida el
           </Text>
-          <Text style={[t.micro, { color: c.gold, fontSize: 11.5, letterSpacing: 1.5, fontWeight: '700', marginTop: 4, textAlign: 'center' }]}>
+          <Text style={[t.micro, { color: c.goldInk, fontSize: 11.5, letterSpacing: 1.5, fontFamily: 'Jost_700Bold', marginTop: 4, textAlign: 'center' }]}>
             CÓDIGO I DE RENASER
           </Text>
-          <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 38, letterSpacing: 4, fontWeight: '800', marginTop: 6, textAlign: 'center' }]}>
+          <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 38, letterSpacing: 4, fontFamily: 'Jost_700Bold', marginTop: 6, textAlign: 'center' }]}>
             VERDAD
           </Text>
 
@@ -197,7 +197,7 @@ export function PactoScreen({
 
         {/* Philosophy & Creed Block */}
         <View style={styles.creedBlock}>
-          <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontWeight: '700', textAlign: 'center' }]}>
+          <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_700Bold', textAlign: 'center' }]}>
             Sé verdad. Actúa con la VERDAD.
           </Text>
 
@@ -220,14 +220,14 @@ export function PactoScreen({
 
         {/* Statement Box */}
         <View style={[styles.statementBox, { backgroundColor: c.cardBgAlt, borderColor: c.borderStrong }]}>
-          <Text style={[t.body, { color: c.textStrong, fontSize: 15, textAlign: 'center', fontWeight: '500' }]}>
-            A partir de hoy, me comprometo a <Text style={{ color: c.gold, fontWeight: '800' }}>SER VERDAD.</Text>
+          <Text style={[t.body, { color: c.textStrong, fontSize: 15, textAlign: 'center', fontFamily: 'Jost_500Medium' }]}>
+            A partir de hoy, me comprometo a <Text style={{ color: c.goldInk, fontFamily: 'Jost_700Bold' }}>SER VERDAD.</Text>
           </Text>
         </View>
 
         {/* Signature Box Section */}
         <View style={styles.signatureSection}>
-          <Text style={[t.micro, { color: c.textSoft, fontSize: 11, letterSpacing: 1.5, textAlign: 'center', fontWeight: '700', marginBottom: 8 }]}>
+          <Text style={[t.micro, { color: c.textSoft, fontSize: 11, letterSpacing: 1.5, textAlign: 'center', fontFamily: 'Jost_700Bold', marginBottom: 8 }]}>
             FIRMA PARA CONTINUAR
           </Text>
 
@@ -245,7 +245,7 @@ export function PactoScreen({
             {!hasSigned && (
               <View pointerEvents="none" style={styles.watermarkBox}>
                 <View style={[styles.watermarkLine, { backgroundColor: c.border }]} />
-                <Text style={[t.micro, { color: c.tabInactive, letterSpacing: 2, fontSize: 11, fontWeight: '700' }]}>
+                <Text style={[t.micro, { color: c.tabInactive, letterSpacing: 2, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>
                   FIRMA AQUÍ
                 </Text>
               </View>
@@ -259,7 +259,7 @@ export function PactoScreen({
               <Text style={[t.micro, { color: c.textSoft, fontSize: 12 }]}>Limpiar firma</Text>
             </Pressable>
 
-            <Text style={[t.micro, { color: hasSigned ? '#4E9F76' : c.tabInactive, fontWeight: '700', fontSize: 11.5 }]}>
+            <Text style={[t.micro, { color: hasSigned ? c.success : c.tabInactive, fontFamily: 'Jost_700Bold', fontSize: 11.5 }]}>
               {hasSigned ? '✓ FIRMADO' : 'SIN FIRMAR'}
             </Text>
           </View>

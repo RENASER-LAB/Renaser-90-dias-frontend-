@@ -52,7 +52,7 @@ export function FichaInicialScreen({
   onBack,
 }: FichaInicialScreenProps) {
   const { c, t, mode, toggle } = useTheme();
-  const { isSmall, isTablet } = useResponsive();
+  const { isSmall, isTablet, contentMaxWidth } = useResponsive();
   const { guardarCapitulo, avanzarEstado } = usePersistenciaOnboarding();
 
   const [currentChapter, setCurrentChapter] = useState(0);
@@ -239,7 +239,7 @@ export function FichaInicialScreen({
   if (cargandoBorrador) {
     return (
       <SafeAreaView style={[styles.safeArea, styles.loadingContainer, { backgroundColor: c.bg }]}>
-        <ActivityIndicator color={c.gold} size="large" />
+        <ActivityIndicator color={c.goldInk} size="large" />
       </SafeAreaView>
     );
   }
@@ -253,8 +253,8 @@ export function FichaInicialScreen({
           onPress={handlePrev}
           style={[styles.backBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
         >
-          <Icon name="arrowLeft" size={16} color={c.gold} />
-          <Text style={[t.micro, { color: c.text, letterSpacing: 1.2, fontSize: 11, fontWeight: '700' }]}>
+          <Icon name="arrowLeft" size={16} color={c.goldInk} />
+          <Text style={[t.micro, { color: c.text, letterSpacing: 1.2, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>
             {currentChapter === 0 ? 'SALIR' : 'ANTERIOR'}
           </Text>
         </Pressable>
@@ -265,7 +265,7 @@ export function FichaInicialScreen({
           accessibilityRole="button"
           style={[styles.themeBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
         >
-          <Icon name={mode === 'light' ? 'moon' : 'sun'} size={15} color={c.gold} />
+          <Icon name={mode === 'light' ? 'moon' : 'sun'} size={15} color={c.goldInk} />
         </Pressable>
       </View>
 
@@ -274,7 +274,7 @@ export function FichaInicialScreen({
           styles.scrollContent,
           {
             paddingHorizontal: isSmall ? 14 : isTablet ? 32 : 18,
-            maxWidth: isTablet ? 560 : undefined,
+            maxWidth: contentMaxWidth,
             alignSelf: isTablet ? 'center' : 'stretch',
             width: isTablet ? '100%' : undefined,
           },
@@ -285,7 +285,7 @@ export function FichaInicialScreen({
         {/* Chapter Header */}
         <View style={styles.header}>
           <View style={[styles.iconMedallion, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
-            <Icon name={activeConfig.icon} size={22} color={c.gold} />
+            <Icon name={activeConfig.icon} size={22} color={c.goldInk} />
           </View>
           <MicroLabel>{activeConfig.subtitle}</MicroLabel>
           <Text style={[t.screenTitle, { color: c.textStrong, marginTop: 4, textAlign: 'center' }]}>
