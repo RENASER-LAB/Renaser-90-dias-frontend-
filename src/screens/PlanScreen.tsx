@@ -406,6 +406,13 @@ export default function PlanScreen() {
   const [editGoalTargetVal, setEditGoalTargetVal] = useState('');
   /** Unidad de la meta (USD, kg, clientes...). El backend la exige junto con los dos números. */
   const [editGoalUnidad, setEditGoalUnidad] = useState('');
+  /**
+   * Desde dónde arrancó. **Sin este campo, editar el objetivo borraba el punto de partida** y el
+   * porcentaje volvía a la fórmula vieja: alguien que baja de peso pasaba de 0 % a 100 % por haber
+   * corregido una palabra de su meta (E-166). Además es lo único que permite arreglar las rocas
+   * creadas antes de la migración V43, que no lo tienen.
+   */
+  const [editGoalBase, setEditGoalBase] = useState('');
 
   /**
    * El objetivo de 90 días real del aprendiz, traído del backend.
@@ -698,6 +705,15 @@ export default function PlanScreen() {
     setEditGoalCurrentVal(rocaAbierta?.avance != null ? String(rocaAbierta.avance) : '');
     setEditGoalTargetVal(rocaAbierta?.meta != null ? String(rocaAbierta.meta) : '');
     setEditGoalUnidad(rocaAbierta?.unidad ?? '');
+    // Si la roca ya tiene punto de partida se conserva; si es de las viejas, se propone el avance
+    // actual, que es lo más cercano a la verdad que hay sin preguntarle a la persona.
+    setEditGoalBase(
+      rocaAbierta?.lineaBase != null
+        ? String(rocaAbierta.lineaBase)
+        : rocaAbierta?.avance != null
+          ? String(rocaAbierta.avance)
+          : ''
+    );
     setEditGoalModalVisible(true);
   };
 
@@ -713,6 +729,7 @@ export default function PlanScreen() {
     const meta = editGoalTargetVal.trim() === '' ? undefined : Number(editGoalTargetVal);
     const avance = editGoalCurrentVal.trim() === '' ? undefined : Number(editGoalCurrentVal);
     const unidad = editGoalUnidad.trim() === '' ? undefined : editGoalUnidad.trim();
+    const lineaBase = editGoalBase.trim() === '' ? undefined : Number(editGoalBase);
     const algunNumero = meta !== undefined || avance !== undefined || unidad !== undefined;
 
     if (algunNumero) {
@@ -737,11 +754,23 @@ export default function PlanScreen() {
       }
     }
 
+    if (lineaBase !== undefined && (!Number.isFinite(lineaBase) || lineaBase < 0)) {
+      Alert.alert('Punto de partida inválido', 'Tiene que ser un número, y no puede ser negativo.');
+      return;
+    }
+    if (lineaBase !== undefined && meta !== undefined && lineaBase === meta) {
+      Alert.alert(
+        'Punto de partida igual a la meta',
+        'Si arrancás justo en tu meta no hay avance que medir. Revisá los dos números.'
+      );
+      return;
+    }
     const resultado = await objetivos.definir(ejeAbierto, {
       objetivo: editGoalTitle.trim(),
       meta,
       avance,
       unidad,
+      lineaBase,
     });
     if (!resultado.ok) {
       Alert.alert('No se pudo guardar', resultado.mensaje);
@@ -1641,8 +1670,21 @@ export default function PlanScreen() {
               {(
                 <View style={{ gap: 8 }}>
                   <View style={{ flexDirection: 'row', gap: 8 }}>
+                    {/* PARTISTE DE es lo que hace que el porcentaje sirva en las dos direcciones:
+                        sin él, "bajar de 82 a 75 kg" marca 100 % el primer día (E-166). */}
                     <View style={{ flex: 1, gap: 4 }}>
-                      <Text style={[t.micro, { color: c.textSoft }]}>LLEVAS:</Text>
+                      <Text style={[t.micro, { color: c.textSoft }]}>PARTISTE DE:</Text>
+                      <TextInput
+                        value={editGoalBase}
+                        onChangeText={setEditGoalBase}
+                        keyboardType="numeric"
+                        placeholder="82"
+                        placeholderTextColor={c.micro}
+                        style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.text }]}
+                      />
+                    </View>
+                    <View style={{ flex: 1, gap: 4 }}>
+                      <Text style={[t.micro, { color: c.textSoft }]}>VAS EN:</Text>
                       <TextInput
                         value={editGoalCurrentVal}
                         onChangeText={setEditGoalCurrentVal}
