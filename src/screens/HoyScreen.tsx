@@ -14,6 +14,11 @@ import { useResponsive } from '../theme/responsive';
 import { Card, MicroLabel, ScreenHeader, GoldCircle } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { Aparicion } from '../components/Aparicion';
+import { useEsMentor } from '../features/mentor/hooks/useEsMentor';
+import { TarjetaMentorHoy } from '../features/mentor/components/TarjetaMentorHoy';
+import { MiCelulaScreen } from '../features/mentor/screens/MiCelulaScreen';
+import { AlumnoScreen } from '../features/mentor/screens/AlumnoScreen';
+import type { AlumnoConEstado } from '../features/mentor/types/mentor.types';
 import {
   useResumenHome,
   rotuloDeFase,
@@ -36,6 +41,11 @@ export default function HoyScreen() {
 
   const { resumen, cargando: cargandoResumen, error: errorResumen, recargar: recargarResumen } = useResumenHome();
   const { user } = useAuth();
+  /* Rol Mentor. Se monta DENTRO de Hoy y no como sexta pestaña: AGENTS.md 1 prohibe tocar los
+     cinco tabs, y ademas el mentor sigue siendo aprendiz — su propio programa no cambia. */
+  const esMentor = useEsMentor();
+  const [vistaMentor, setVistaMentor] = useState<'ninguna' | 'celula' | 'alumno'>('ninguna');
+  const [alumnoAbierto, setAlumnoAbierto] = useState<AlumnoConEstado | null>(null);
   const { abrir: abrirMapa, abierto: mapaAbierto } = useMapaRenacimientoAbierto();
   const estadoMapa = useEstadoMapa(user?.id ?? null, mapaAbierto);
   const {
@@ -130,6 +140,24 @@ export default function HoyScreen() {
   const puntosLiga = resumen?.puntosLiga ?? 100;
   const rachaActual = resumen?.rachaActual ?? 0;
   const rachaMaxima = resumen?.rachaMaxima ?? 0;
+
+  /* Las vistas del mentor toman la pantalla completa, como el Mapa: son otro contexto de
+     trabajo, no una tarjeta mas dentro del dia propio. El retroceso del sistema las cierra
+     paso a paso (cada una registra su `useSystemBackHandler`). */
+  if (esMentor && vistaMentor === 'alumno' && alumnoAbierto) {
+    return <AlumnoScreen alumno={alumnoAbierto} onVolver={() => setVistaMentor('celula')} />;
+  }
+  if (esMentor && vistaMentor === 'celula') {
+    return (
+      <MiCelulaScreen
+        onSalir={() => setVistaMentor('ninguna')}
+        onAbrirAlumno={alumno => {
+          setAlumnoAbierto(alumno);
+          setVistaMentor('alumno');
+        }}
+      />
+    );
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
@@ -338,6 +366,9 @@ export default function HoyScreen() {
 
         <Aparicion retardo={210} style={{ gap: 12, paddingBottom: 24 }}>
         <View style={{ gap: 12 }}>
+          {/* Solo para quien acompana una celula. El resto de Hoy no cambia. */}
+          {esMentor ? <TarjetaMentorHoy onAbrir={() => setVistaMentor('celula')} /> : null}
+
           {/* Tarjeta Mapa de Renacimiento (Día 7) */}
           {mostrarMapa ? (
             <Pressable onPress={abrirMapa} accessibilityRole="button">
