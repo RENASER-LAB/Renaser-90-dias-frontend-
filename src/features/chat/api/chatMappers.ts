@@ -127,6 +127,16 @@ function resolverOtroParticipante(
   actorId: string | null | undefined,
   directorio: Record<string, WireMiembro>
 ): WireMiembro | undefined {
+  /* El servidor dice con quién es el chat (`otherParticipantId`). Antes había que adivinarlo por
+     el remitente del último mensaje, y eso solo funcionaba si el último lo había mandado el otro:
+     si lo mandabas tú, o si la conversación estaba vacía, la fila decía "Conversación directa".
+     Con dos chats así, la bandeja mostraba dos filas idénticas y no se podía usar. */
+  const declarado = resumen.otherParticipantId;
+  if (declarado) {
+    return directorio[declarado];
+  }
+  /* Sin el campo —backend viejo— se conserva la heurística de antes. Es peor, pero es lo que
+     había, y quitarla dejaría SIN nombre también los casos que hoy sí lo resuelven. */
   const ultimo = resumen.lastMessage;
   if (!ultimo || !actorId || ultimo.senderId === actorId) {
     return undefined;

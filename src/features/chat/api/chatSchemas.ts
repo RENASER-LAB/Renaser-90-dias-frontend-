@@ -58,6 +58,15 @@ export const wireConversacionResumenSchema = z
     conversation: wireConversacionSchema,
     lastMessage: wireMensajeSchema.nullable(),
     unreadCount: z.number(),
+    /**
+     * Con quién es el chat, cuando es 1 a 1. `null` en grupos.
+     *
+     * `.nullish()` y no `.nullable()`: un backend anterior a este campo no lo manda, y con
+     * `.nullable()` la respuesta entera fallaría la validación y la bandeja quedaría vacía. Un
+     * nombre genérico es un defecto; una pantalla en blanco por desplegar en distinto orden es
+     * otra cosa.
+     */
+    otherParticipantId: z.string().nullish(),
   })
   .passthrough();
 
