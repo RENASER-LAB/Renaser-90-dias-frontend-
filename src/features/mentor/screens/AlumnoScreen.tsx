@@ -6,6 +6,7 @@ import { Icon } from '../../../components/Icon';
 import { Aparicion } from '../../../components/Aparicion';
 import { MicroLabel } from '../../../components/ui';
 import { RejillaSemanal } from '../components/RejillaSemanal';
+import { irAPestana } from '../../../navigation/navegacionRef';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
@@ -87,14 +88,32 @@ export function AlumnoScreen({
    * explícito: escribirle es una decisión del mentor, no un efecto de tocar un botón — así que
    * acá termina en una conversación lista y vacía, y el mensaje lo escribe él.
    */
+  /**
+   * Abre el chat PRIVADO con este aprendiz, no el del grupo: `POST /chat/conversations/direct`,
+   * que es idempotente — si ya existe, devuelve la misma.
+   *
+   * <p>Y lleva hasta ella. Antes creaba la conversación y mostraba un aviso que decía dónde
+   * buscarla; el mentor tenía que salir, entrar a Comunidad, elegir Miembros y encontrarla a mano.
+   * Se usa el mismo mecanismo con el que Training abre la Clase Diaria dentro de Comunidad
+   * (`irAPestana` con parámetros), en vez de inventar una ruta nueva para el chat.
+   *
+   * <p>No se envía ningún mensaje: el mentor escribe y manda él. Eso es a propósito y no una
+   * funcionalidad a medias — un botón que manda algo en nombre de alguien es otra cosa.
+   */
   const escribirle = async () => {
     setAbriendoChat(true);
     try {
-      await abrirConversacionDirecta(alumno.participanteId);
-      Alert.alert(
-        'Conversación lista',
-        `Tu chat con ${nombre} está abierto en Comunidad → Miembros. No se envió ningún mensaje.`,
-      );
+      const conversacion = await abrirConversacionDirecta(alumno.participanteId);
+      const navego = irAPestana('Comunidad', { abrirChatConversacionId: conversacion.id });
+      if (!navego) {
+        /* `irAPestana` devuelve false cuando el navegador todavía no montó. Es raro, pero si
+           pasa hay que decir algo: la conversación SÍ quedó creada, y callarse dejaría al mentor
+           creyendo que el botón no hizo nada. */
+        Alert.alert(
+          'Conversación lista',
+          `Tu chat con ${nombre} está en Comunidad → Miembros. No se envió ningún mensaje.`,
+        );
+      }
     } catch {
       Alert.alert('No se pudo abrir el chat', 'Revisá tu conexión e intentá de nuevo.');
     } finally {

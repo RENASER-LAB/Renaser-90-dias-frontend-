@@ -473,6 +473,8 @@ export default function ComunidadScreen() {
     loading: conversacionesCargando,
     error: conversacionesError,
     mensajesCargando,
+    // Lo usa la entrada desde "Escribirle": la conversación puede acabar de crearse.
+    recargar: recargarConversaciones,
     abrirConversacion,
     enviarMensajeTexto: enviarMensajeChatRemoto,
   } = useChatConversaciones(user?.id ?? null);
@@ -1018,6 +1020,15 @@ export default function ComunidadScreen() {
     { cursoId: string; leccionId: string } | null
   >(null);
 
+  /**
+   * Chat pedido desde otra pantalla: hoy, el botón "Escribirle" de la ficha del aprendiz.
+   *
+   * Se guarda el id y NO se abre en el acto porque la conversación puede acabar de crearse y no
+   * estar todavía en `conversations` — `POST /chat/conversations/direct` la devuelve, pero el
+   * listado de esta pantalla se cargó antes. El efecto de más abajo la abre en cuanto aparece.
+   */
+  const [chatPedidoDeOtraPestana, setChatPedidoDeOtraPestana] = useState<string | null>(null);
+
   useEffect(() => {
     const params = route.params as
       | { abrirCursoId?: string; abrirLeccionId?: string }
@@ -1038,6 +1049,23 @@ export default function ComunidadScreen() {
     // conocidas. Mismo cast que ya usa `HoyScreen` para navegar entre pestañas.
     (navigation as any).setParams({ abrirCursoId: undefined, abrirLeccionId: undefined });
   }, [route.params, navigation]);
+
+  /**
+   * Tercera entrada desde afuera: "Escribirle" en la ficha de un aprendiz abre el chat PRIVADO
+   * con esa persona. Misma forma que las otras dos — parámetro de pestaña, consumido una vez.
+   */
+  useEffect(() => {
+    const params = route.params as { abrirChatConversacionId?: string } | undefined;
+    const id = params?.abrirChatConversacionId;
+    if (!id) return;
+
+    irASeccion('miembros');
+    setMiembrosTab('directos');
+    setChatPedidoDeOtraPestana(id);
+    // Recién creada, puede no estar en el listado: se pide de nuevo para que aparezca.
+    void recargarConversaciones();
+    (navigation as any).setParams({ abrirChatConversacionId: undefined });
+  }, [route.params, navigation, recargarConversaciones]);
 
   /**
    * Segunda entrada desde afuera, con la misma forma que la de arriba: el arranque guiado
@@ -1300,6 +1328,29 @@ export default function ComunidadScreen() {
       .then(actualizada => setActiveChat(actualizada))
       .catch(e => Alert.alert('No se pudo cargar el chat', mensajeDeError(e, 'Intentá de nuevo en un momento.')));
   };
+
+  /**
+   * Abre el chat que pidió otra pantalla, en cuanto el listado lo tenga.
+   *
+   * Va DESPUÉS de `handleAbrirChat` a propósito: reutiliza exactamente el mismo camino que un
+   * toque en la lista —entrar con lo que hay y traer el historial detrás—, en vez de repetir esa
+   * lógica con una variante que tarde o temprano se desincroniza.
+   *
+   * Si la conversación no está todavía, no hace nada y espera al siguiente render: `recargar()`
+   * ya salió a buscarla. No se reintenta ni se pone un temporizador — si nunca llega, la persona
+   * queda en Miembros, que es exactamente donde está su chat.
+   */
+  useEffect(() => {
+    if (!chatPedidoDeOtraPestana) return;
+    const conversacion = conversations.find(c => c.id === chatPedidoDeOtraPestana);
+    if (!conversacion) return;
+    setChatPedidoDeOtraPestana(null);
+    handleAbrirChat(conversacion);
+    // `handleAbrirChat` se redefine en cada render y meterlo como dependencia dispararía el
+    // efecto en bucle. Lo que decide es el par (id pedido, listado), que sí está declarado.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatPedidoDeOtraPestana, conversations]);
+
 
   // El "me gusta" va contra el backend real (POST /api/v1/wall/{id}/react). El propio backend
   // hace el toggle (ReaccionarUseCase: tocar el mismo tipo lo saca) y devuelve los conteos
