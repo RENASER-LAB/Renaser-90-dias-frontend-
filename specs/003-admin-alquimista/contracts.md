@@ -74,3 +74,27 @@ E-06. Lectura administrativa de mapa/objetivos/contratos: solo después de inven
 USE_APP, TRACK_PROGRAM_AS_STAFF, FOLLOW_OWN_PROGRAM, APPROVE_ACCOUNT_REQUEST, MANAGE_COHORTS, MANAGE_CELLS, MANAGE_TRAINEES, MANAGE_HABIT_CATALOG, MANAGE_EVIDENCE, VIEW_ONBOARDING_DASHBOARD, MANAGE_SUPPORT_TICKETS, VIEW_ALL_MENTOR_TICKETS, MANAGE_STAFF, MANAGE_ROLES, MANAGE_MENTOR_PROFILE, MANAGE_WALL_CATEGORIES y MANAGE_KNOWLEDGE_BASE.
 
 No existen VIEW_OPERATIONS_HUB ni VIEW_PERSONAL_HABITS en el enum inspeccionado. Una capacidad de UI puede ser derivada sin añadir un permiso de dominio. Cualquier nueva regla por rol necesita respaldo en este alcance y prueba negativa.
+
+
+---
+
+## Ampliaciones REALES tras la implementación del 2026-09-10
+
+Ya no son propuestas: están en el código de la rama `admin-alquimista` de los dos repositorios.
+
+| Operación | Método y ruta | Qué cambió |
+|---|---|---|
+| Semana administrativa | `GET /api/v1/admin/trainees/{traineeId}/weekly-progress?weekStart=` | **Nueva.** Guard propio (`MANAGE_TRAINEES` + rol activo), sin exigir relación con el alumno. Devuelve el MISMO `SemanaDelAlumno` que la del mentor, armado por el mismo método. El guard del mentor no se tocó. |
+| Crear grupo | `POST /api/v1/admin/cells` | `CrearCelulaRequest` admite ahora `type` (`REGULAR`/`RECEPTION`) y `capacity` (10–15). Sin `type` no había forma de crear la bienvenida que el ingreso automático necesita. |
+| Editar grupo | `PATCH /api/v1/admin/cells/{id}` | `ActualizarCelulaRequest` admite `capacity` y `resetCapacity`, con la misma disciplina que el período: si el PATCH no dice nada, no se toca. |
+| Leer grupo | `GET /api/v1/admin/cells` y `/{id}` | La respuesta suma `status` (`VIGENTE`/`PROGRAMADO`/`CERRADO`/`SIN_PERIODO`), `type`, `learnerCount` (ocupación real del historial) y `capacity`. `status` lo calcula el servidor en la zona del programa: si lo decidiera el teléfono, dos administradores en husos distintos verían cerrar el mismo grupo en días distintos. |
+| Candidatos a mentor | `GET /api/v1/admin/cells/mentores` y `/mentores-disponibles` | `MentorCandidatoResponse` suma `specialty` (`NEGOCIO`/`MENTE`/`RELACIONES`/`null`). Se lee vía `users.api.PerfilMentorFinder`, en lote, no con SQL contra `perfiles_mentor`. |
+| Retirar aprendiz | `DELETE /api/v1/admin/cells/{id}/trainees/{traineeId}` | El `{id}` del grupo **dejó de ser decorativo**: el caso de uso comprueba que el aprendiz pertenezca a ESE grupo. Pedir la baja desde el grupo equivocado devuelve 4xx en vez de borrarle la pertenencia real. |
+| Listado de aprendices | `GET /api/v1/admin/trainees` | Suma `q` (nombre o correo) y `withoutGroup`, resueltos **en la base**. El `total` viene con los mismos filtros aplicados. |
+| Contexto | `GET /api/v1/mentor/context` | `capabilities` suma `canAdminister`. Sale de la misma condición que ya exigen los guards administrativos, **no** de `UserRole.can`, que para ADMIN/ALCHEMIST sigue respondiendo `true` a todo. |
+
+### Lo que NO se agregó, y por qué
+
+- No hay `GET /api/v1/admin/context`: la ampliación compatible de `/mentor/context` alcanzó, y una ruta nueva habría duplicado la lectura de asignaciones.
+- No hay filtro por grupo en `GET /api/v1/admin/evidence`: la bandeja de evidencias no entró en la app en este alcance, así que ampliar el contrato sería trabajo sin consumidor.
+- No se tocó `UpdateHabitRequest` ni se inventó `effectiveFrom`: el catálogo se edita desde el panel web.

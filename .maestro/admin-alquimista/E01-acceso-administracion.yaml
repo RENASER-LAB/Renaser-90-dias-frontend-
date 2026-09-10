@@ -1,0 +1,37 @@
+# E01 — Entrar a Administración y volver, en el dispositivo.
+#
+# Lo que este recorrido agrega frente al de Playwright NO es repetir las mismas aserciones en otro
+# runner: es lo que un navegador no puede certificar. El gesto lateral del sistema, el teclado
+# nativo y el ciclo de vida de la app son de Android/iOS, y un viewport de 360 px no los emula.
+appId: ${MAESTRO_APP_ID}
+env:
+  MAESTRO_APP_ID: com.renaser.app
+  E2E_ADMIN_EMAIL: ${E2E_ADMIN_EMAIL}
+  E2E_ADMIN_PASSWORD: ${E2E_ADMIN_PASSWORD}
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "campo-email"
+    optional: true
+- inputText: ${E2E_ADMIN_EMAIL}
+- tapOn:
+    id: "campo-password"
+    optional: true
+- inputText: ${E2E_ADMIN_PASSWORD}
+- hideKeyboard
+- tapOn: "Entrar"
+- assertVisible: "Hoy"
+
+# Los cinco tabs siguen siendo cinco.
+- assertVisible: "Plan"
+- assertVisible: "Training"
+- assertVisible: "Comunidad"
+- assertVisible: "Yo"
+
+- tapOn: "Administración"
+- assertVisible: "Pendientes"
+
+# El gesto de volver del sistema sube UN nivel: no cierra la app.
+- back
+- assertVisible: "Hoy"

@@ -19,6 +19,8 @@ import { useResponsive } from '../theme/responsive';
 import { useAuth } from '../context/AuthContext';
 import { useSystemBackHandler } from '../hooks/useSystemBackHandler';
 import { MicroLabel, ScreenHeader, Placeholder } from '../components/ui';
+import { AdminScreen } from '../features/admin/screens/AdminScreen';
+import { useCapacidades } from '../features/admin/hooks/useCapacidades';
 import { Icon, type IconName } from '../components/Icon';
 import { GoldButton } from '../components/GoldButton';
 import {
@@ -190,6 +192,10 @@ export default function YoScreen() {
   const [activeView, setActiveView] = useState<
     'main' | 'hub' | 'editar_perfil' | 'info_perfil' | 'evidencias' | 'logros' | 'onboarding' | 'pacto' | 'mapa_renacimiento' | 'metodo' | 'video_activacion' | 'notificaciones'
   >('main');
+  /* Segunda puerta a Administracion, ademas de la de Hoy. Dos entradas y ningun sexto tab: el
+     administrador llega desde donde este, y los cinco tabs quedan como estaban (SDD 003, ARF-01). */
+  const { capacidades } = useCapacidades();
+  const [enAdministracion, setEnAdministracion] = useState(false);
   const [metodoFase, setMetodoFase] = useState(0);
   const metodoAnim = useRef(new Animated.Value(1)).current;
 
@@ -278,6 +284,11 @@ export default function YoScreen() {
       />
     ) : null;
   }
+
+  if (enAdministracion && capacidades.administrar) {
+    return <AdminScreen onSalir={() => setEnAdministracion(false)} />;
+  }
+
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
@@ -461,6 +472,24 @@ export default function YoScreen() {
             <Icon name="chevron" size={12} color={c.chevron} />
           </Pressable>
 
+          {/* ADMINISTRACIÓN — solo si el servidor dice que esta cuenta puede */}
+          {capacidades.administrar ? (
+            <Pressable
+              onPress={() => setEnAdministracion(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Abrir Administración"
+              style={[styles.rowCard, { borderColor: c.border, backgroundColor: c.cardBg }]}
+            >
+              <View style={{ flex: 1 }}>
+                <MicroLabel>ADMINISTRACIÓN</MicroLabel>
+                <Text style={[t.body, { color: c.text, marginTop: 6 }]}>
+                  Grupos, personas y solicitudes
+                </Text>
+              </View>
+              <Icon name="chevron" size={12} color={c.chevron} />
+            </Pressable>
+          ) : null}
+
           {/* BOTÓN: MI FICHA INICIAL & PACTO */}
           <Pressable
             onPress={() => setActiveView('onboarding')}
@@ -475,6 +504,8 @@ export default function YoScreen() {
           {/* Logout */}
           <Pressable
             onPress={logout}
+            accessibilityRole="button"
+            accessibilityLabel="Cerrar sesión"
             style={[styles.logoutBtn, { borderColor: c.border, backgroundColor: c.cardBg }]}
           >
             <Icon name="logout" size={16} color={c.textSoft} />
@@ -688,6 +719,8 @@ export default function YoScreen() {
 
                 <Pressable
                   onPress={logout}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cerrar sesión"
                   style={styles.menuOptionRow}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>

@@ -43,3 +43,23 @@ El SDD 001 aporta dominio de asignaciones, seguimiento y métricas; sus reglas a
 [Entrada backend](../../../Renaser-90-dias-backend/docs/spec/SDD_ADMIN_ALQUIMISTA.md)
 
 Ampliación solicitada: [E2E](e2e.md), con 17 recorridos y tareas T28–T33. El agente debe implementar y ejecutar la suite, además de frontend/backend. El reporte previo conserva su foto histórica de 27 tareas; el plan ahora contiene 33.
+
+---
+
+## Estado del 2026-09-10 — implementado
+
+Rama `admin-alquimista` en los dos repositorios. **Empezá por [E2E_RESULTADOS.md](E2E_RESULTADOS.md)**:
+dice, comprobación por comprobación, qué corrió de verdad y qué no.
+
+- **Qué hay:** Administración desde Hoy y Yo (grupos con período y composición, personas con
+  búsqueda real, solicitudes, ficha del aprendiz con la semana), la operación de composición del
+  grupo escribiendo historial y avisando al chat, la semana administrativa, y los contratos de fase
+  para el staff que cursa.
+- **Qué corrió:** 2953 pruebas unitarias, ArchitectureTest, EndpointAuthorizationDeclarationTest,
+  `ComposicionDeCelulaIT` contra Postgres real y `npx tsc --noEmit`. Más una pasada manual contra el
+  backend en vivo que encontró dos defectos, ya corregidos.
+- **Qué NO corrió:** los 17 recorridos E01–E17. La suite está escrita y el runner la recoge, pero
+  falta navegador en esta shell, entorno aislado y cuentas de prueba. Los tres bloqueos, con su
+  salida real, en `E2E_RESULTADOS.md` §3.
+- **Qué sigue abierto:** la regla de ingreso tardío a la bienvenida (`clarifications.md`), y el
+  catálogo y la bandeja de evidencias, que este alcance dejó en el panel web a propósito.

@@ -19,6 +19,9 @@ import { useCelulaQueAcompano } from '../features/mentor/hooks/useCelulaQueAcomp
 import { useProgramaPersonal } from '../features/mentor/hooks/useProgramaPersonal';
 import { TarjetaMentorHoy } from '../features/mentor/components/TarjetaMentorHoy';
 import { alAbrirAviso, consumirRutaPendiente } from '../features/mentor/notificaciones/rutaDeAviso';
+import { AdminScreen } from '../features/admin/screens/AdminScreen';
+import { TarjetaAdminHoy } from '../features/admin/components/TarjetaAdminHoy';
+import { useCapacidades } from '../features/admin/hooks/useCapacidades';
 import { MiCelulaScreen } from '../features/mentor/screens/MiCelulaScreen';
 import { AlumnoScreen } from '../features/mentor/screens/AlumnoScreen';
 import type { AlumnoConEstado } from '../features/mentor/types/mentor.types';
@@ -50,7 +53,18 @@ export default function HoyScreen() {
   /* UNA sola lectura de la celula, repartida a la tarjeta y a la pantalla. Si cada una
      llamara al hook por su cuenta habria dos peticiones y dos verdades. */
   const celula = useCelulaQueAcompano(esMentor);
-  const programaPersonal = useProgramaPersonal(esMentor);
+  /* Quien puede administrar lo dice el SERVIDOR, no el rol leido en el telefono. Un rol nuevo
+     manana no dejaria la entrada colgada, y una capacidad falseada abre pantallas vacias: cada
+     endpoint vuelve a autorizar (SDD 003, ARF-15). */
+  const { capacidades } = useCapacidades();
+  /* Ya no `esMentor`: la invitacion al programa propio es para todo el staff, ADMIN y ALQUIMISTA
+     incluidos. Atarla a "es mentor" los dejaba fuera de un programa que el backend si les
+     permitia iniciar — el bloqueo estaba aca, no en el permiso (ARF-16). */
+  const programaPersonal = useProgramaPersonal(
+    esMentor || capacidades.administrar || capacidades.puedeIniciarPrograma,
+    user?.id ?? null,
+  );
+  const [enAdministracion, setEnAdministracion] = useState(false);
   const [vistaMentor, setVistaMentor] = useState<'ninguna' | 'celula' | 'alumno'>('ninguna');
   const [alumnoAbierto, setAlumnoAbierto] = useState<AlumnoConEstado | null>(null);
 
@@ -181,6 +195,11 @@ export default function HoyScreen() {
   /* Las vistas del mentor toman la pantalla completa, como el Mapa: son otro contexto de
      trabajo, no una tarjeta mas dentro del dia propio. El retroceso del sistema las cierra
      paso a paso (cada una registra su `useSystemBackHandler`). */
+  /* Administracion toma la pantalla completa, como las vistas del mentor y como el Mapa: es otro
+     contexto de trabajo, no una tarjeta mas dentro del dia propio. */
+  if (enAdministracion && capacidades.administrar) {
+    return <AdminScreen onSalir={() => setEnAdministracion(false)} />;
+  }
   if (esMentor && vistaMentor === 'alumno' && alumnoAbierto) {
     return (
       <AlumnoScreen
@@ -414,6 +433,9 @@ export default function HoyScreen() {
 
         <Aparicion retardo={210} style={{ gap: 12, paddingBottom: 24 }}>
         <View style={{ gap: 12 }}>
+          {/* Solo para ADMIN/ALQUIMISTA. El resto de Hoy no cambia para nadie. */}
+          {capacidades.administrar ? <TarjetaAdminHoy onAbrir={() => setEnAdministracion(true)} /> : null}
+
           {/* Solo para quien acompana una celula. El resto de Hoy no cambia. */}
           {esMentor ? (
             <TarjetaMentorHoy
