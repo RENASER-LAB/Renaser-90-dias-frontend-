@@ -1,0 +1,20 @@
+# E04 — Crear un grupo con el teclado nativo abierto.
+#
+# El caso del teclado es el motivo de que esto viva en Maestro: en el navegador el campo nunca
+# queda tapado, y en un teléfono el botón de guardar puede terminar debajo del teclado. Eso es
+# exactamente lo que `keyboardShouldPersistTaps` y el scroll único vienen a evitar.
+appId: ${MAESTRO_APP_ID}
+env:
+  MAESTRO_APP_ID: com.renaser.app
+---
+- launchApp
+- tapOn: "Administración"
+- tapOn: "Grupos"
+- tapOn: "Crear"
+- tapOn: "NOMBRE DEL GRUPO"
+- inputText: "Grupo Maestro"
+- hideKeyboard
+# El botón tiene que seguir alcanzable después de escribir: si el teclado lo empujó fuera, acá falla.
+- assertVisible: "Crear grupo"
+- back
+- assertVisible: "Grupos"
