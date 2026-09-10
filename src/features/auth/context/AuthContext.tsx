@@ -1,4 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
+
+import { registrarTokenPushNativo, escucharRotacionDeToken } from '../../mentor/notificaciones/pushNativo';
+import { escucharAperturaDeAviso, olvidarRutaPendiente } from '../../mentor/notificaciones/rutaDeAviso';
 import { FichaInicialData } from '../../onboarding/types/onboarding.types';
 import * as authApi from '../api/authApi';
 import * as onboardingApi from '../../onboarding/api/onboardingApi';
@@ -170,6 +173,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   /**
+   * El push nativo vive y muere con la sesion (RF-25).
+   *
+   * Se registra **cuando ya hay usuario**, no al arrancar la app: `POST /api/v1/push-tokens`
+   * identifica al dueño del telefono por la sesion, asi que pedirlo antes lo ataria a nadie. Y se
+   * suelta al salir, junto con cualquier ruta que un aviso hubiera dejado esperando — el aviso
+   * era para la persona que se fue, y aplicarlo a la que entra despues en el mismo telefono
+   * intentaria abrir la ficha de un alumno ajeno.
+   *
+   * El registro no bloquea nada ni muestra errores: si falla —sin permiso, sin credenciales del
+   * proyecto, sin red— el aviso igual queda en la bandeja de la aplicacion. El push es el atajo,
+   * no el canal.
+   */
+  useEffect(() => {
+    if (!user) {
+      olvidarRutaPendiente();
+      return;
+    }
+    void registrarTokenPushNativo();
+    const dejarDeEscucharToken = escucharRotacionDeToken();
+    const dejarDeEscucharAvisos = escucharAperturaDeAviso();
+    return () => {
+      dejarDeEscucharToken();
+      dejarDeEscucharAvisos();
+    };
+  }, [user]);
+
+  /**
    * Login real contra POST /api/v1/auth/login. El backend responde el perfil y devuelve el
    * identificador de sesión en el header X-Auth-Token, que apiClient guarda solo.
    *
@@ -330,6 +360,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsOnboardingCompleted(false);
     setOnboardingResuelto(false);
     setFichaData(null);
+    olvidarRutaPendiente();
   }, []);
 
   const value = useMemo(

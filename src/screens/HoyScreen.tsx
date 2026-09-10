@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { useEsMentor } from '../features/mentor/hooks/useEsMentor';
 import { useCelulaQueAcompano } from '../features/mentor/hooks/useCelulaQueAcompano';
 import { useProgramaPersonal } from '../features/mentor/hooks/useProgramaPersonal';
 import { TarjetaMentorHoy } from '../features/mentor/components/TarjetaMentorHoy';
+import { alAbrirAviso, consumirRutaPendiente } from '../features/mentor/notificaciones/rutaDeAviso';
 import { MiCelulaScreen } from '../features/mentor/screens/MiCelulaScreen';
 import { AlumnoScreen } from '../features/mentor/screens/AlumnoScreen';
 import type { AlumnoConEstado } from '../features/mentor/types/mentor.types';
@@ -52,6 +53,36 @@ export default function HoyScreen() {
   const programaPersonal = useProgramaPersonal(esMentor);
   const [vistaMentor, setVistaMentor] = useState<'ninguna' | 'celula' | 'alumno'>('ninguna');
   const [alumnoAbierto, setAlumnoAbierto] = useState<AlumnoConEstado | null>(null);
+
+  /* Un aviso tocado desde la bandeja del sistema abre la ficha de ese alumno (RF-25).
+     La ruta la deja `rutaDeAviso` y se atiende ACA porque las vistas del mentor son estado de
+     esta pantalla, no rutas del navegador (AGENTS.md 1: los cinco tabs no se tocan).
+
+     Se espera al padron antes de abrir. No es una demora evitable: `AlumnoScreen` necesita al
+     alumno entero —dia de programa, habitos, evidencias—, y eso llega con el grupo. Mientras
+     tanto la ruta queda pendiente; `alAbrirAviso` reentrega lo que ya estuviera esperando, asi
+     que un toque con la app cerrada no se pierde por llegar antes que los datos.
+
+     Si el alumno NO esta en el padron, se abre el grupo y nada mas. Un aviso viejo de alguien
+     que ya roto no debe llevar a su ficha: sus datos ya no son de este mentor. */
+  useEffect(() => {
+    if (!esMentor) return;
+    const abrir = () => {
+      const vista = celula.vista;
+      if (!vista) return;
+      const ruta = consumirRutaPendiente();
+      if (!ruta) return;
+      const alumno = vista.todos.find(a => a.participanteId === ruta.alumnoId);
+      if (alumno) {
+        setAlumnoAbierto(alumno);
+        setVistaMentor('alumno');
+      } else {
+        setVistaMentor('celula');
+      }
+    };
+    abrir();
+    return alAbrirAviso(abrir);
+  }, [esMentor, celula.vista]);
   const { abrir: abrirMapa, abierto: mapaAbierto } = useMapaRenacimientoAbierto();
   const estadoMapa = useEstadoMapa(user?.id ?? null, mapaAbierto);
   const {
