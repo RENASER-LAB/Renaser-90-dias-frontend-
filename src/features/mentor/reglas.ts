@@ -60,12 +60,27 @@ export function motivosDe(alumno: AlumnoCelula, ahora: Date = new Date()): Motiv
   return motivos;
 }
 
+/**
+ * Si hay AL MENOS UNA señal para juzgar a esta persona.
+ *
+ * Sin esto, "no tengo datos" y "está todo bien" colapsan en lo mismo, y la lista termina
+ * mostrando una insignia verde de "Al día" sobre alguien que hace cuatro días no registra nada.
+ * Pasó de verdad: la pantalla del alumno decía "0 cumplidos · 2 sin cumplir" y justo abajo
+ * "Va al día. No hay nada pendiente esta semana".
+ */
+export function esEvaluable(alumno: AlumnoCelula): boolean {
+  return alumno.ultimaActividadEn !== null
+    || alumno.habitosProgramados !== null
+    || alumno.evidenciasPendientes !== null;
+}
+
 export function conEstado(alumno: AlumnoCelula, ahora: Date = new Date()): AlumnoConEstado {
   const motivos = motivosDe(alumno, ahora);
   return {
     ...alumno,
     motivos,
     requiereSeguimiento: motivos.length > 0,
+    evaluable: esEvaluable(alumno),
     cumplimiento: cumplimientoDe(alumno),
   };
 }
@@ -89,9 +104,12 @@ export function repartirAlumnos(alumnos: AlumnoCelula[], ahora: Date = new Date(
   const porNombre = (a: AlumnoConEstado, b: AlumnoConEstado) =>
     (a.nombre ?? '').localeCompare(b.nombre ?? '', 'es');
 
+  /* Tres grupos, no dos. "Al día" es una afirmación: solo entra quien tiene datos que la
+     respalden. El resto va a `sinDatos`, que no dice nada sobre esa persona. */
   return {
     requierenSeguimiento: todos.filter(a => a.requiereSeguimiento).sort(porUrgencia),
-    alDia: todos.filter(a => !a.requiereSeguimiento).sort(porNombre),
+    alDia: todos.filter(a => !a.requiereSeguimiento && a.evaluable).sort(porNombre),
+    sinDatos: todos.filter(a => !a.requiereSeguimiento && !a.evaluable).sort(porNombre),
     todos,
   };
 }
@@ -112,7 +130,10 @@ export function resumenDe(alumnos: AlumnoConEstado[]) {
   return {
     total: alumnos.length,
     requierenSeguimiento: alumnos.filter(a => a.requiereSeguimiento).length,
-    alDia: alumnos.filter(a => !a.requiereSeguimiento).length,
+    /* Solo quien tiene datos que respalden la afirmación. Contar acá a los que no se pueden
+       juzgar convertía "no sé" en "va bien" en la cifra de cabecera. */
+    alDia: alumnos.filter(a => !a.requiereSeguimiento && a.evaluable).length,
+    sinDatos: alumnos.filter(a => !a.requiereSeguimiento && !a.evaluable).length,
     cumplimiento: programados > 0 ? cumplidos / programados : null,
     evidenciasPendientes: alumnos.some(a => a.evidenciasPendientes !== null) ? evidencias : null,
   };

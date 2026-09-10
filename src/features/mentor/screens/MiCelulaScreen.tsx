@@ -6,6 +6,10 @@ import { Icon } from '../../../components/Icon';
 import { Aparicion } from '../../../components/Aparicion';
 import { MicroLabel } from '../../../components/ui';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
+import { destinoDe } from '../api/avisosApi';
+import { useAvisosDeAcompanamiento } from '../hooks/useAvisosDeAcompanamiento';
+import { useEvaluacionPropia } from '../hooks/useEvaluacionPropia';
+import { useRankingDeGrupos } from '../hooks/useRankingDeGrupos';
 import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
@@ -48,11 +52,21 @@ export function MiCelulaScreen({
   });
 
   const resumen = vista?.resumen;
+  const { evaluacion, disponible: hayEvaluacion } = useEvaluacionPropia(vista != null);
+  const { avisos, disponible: hayAvisos, marcarLeido } = useAvisosDeAcompanamiento(vista != null);
+  const { miFila, total: gruposEnCohorte, disponible: hayRanking } = useRankingDeGrupos(
+    vista?.celula.cohorteId ?? null,
+    vista?.celula.id ?? null,
+  );
   /** `—` y no `0`: que no se sepa no es que valga cero. */
   const pct = resumen?.cumplimiento;
   const cifras: Array<{ valor: string; etiqueta: string }> = [
     { valor: String(resumen?.total ?? '—'), etiqueta: 'aprendices' },
     { valor: String(resumen?.alDia ?? '—'), etiqueta: 'al día' },
+    // Solo cuando hay alguien sin juzgar: en el caso normal la cabecera queda en cuatro cifras.
+    ...(resumen && resumen.sinDatos > 0
+      ? [{ valor: String(resumen.sinDatos), etiqueta: 'sin datos' }]
+      : []),
     { valor: pct === null || pct === undefined ? '—' : `${Math.round(pct * 100)}%`, etiqueta: 'cumplimiento' },
     { valor: resumen?.evidenciasPendientes === null || resumen?.evidenciasPendientes === undefined
         ? '—' : String(resumen.evidenciasPendientes), etiqueta: 'por revisar' },
@@ -99,9 +113,44 @@ export function MiCelulaScreen({
           </Text>
           <Text style={[t.body, { color: c.textSoft, fontSize: 13, marginTop: 4 }]}>
             {vista
-              ? [vista.celula.cohorte, `${vista.resumen.total} aprendices`].filter(Boolean).join(' · ')
+              ? [
+                  vista.celula.cohorte,
+                  vista.celula.tipo === 'recepcion' ? 'Recepción' : null,
+                  ocupacion(vista.resumen.total, vista.celula.cupo),
+                ]
+                  .filter(Boolean)
+                  .join(' · ')
               : 'Acompañamiento de tu grupo'}
           </Text>
+
+          {/* Que falte mentor no borra el grupo: se dice quién lo cubre, no "no tienes grupo"
+              (plan.md §10). Con mentor presente no se muestra nada: sería ruido. */}
+          {vista && vista.celula.cobertura !== 'con_mentor' ? (
+            <View
+              style={[
+                estilos.avisoCobertura,
+                {
+                  backgroundColor: vista.celula.cobertura === 'soporte' ? c.goldWash : c.dangerWash,
+                  borderColor: vista.celula.cobertura === 'soporte' ? c.goldInk : c.danger,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  t.body,
+                  {
+                    color: vista.celula.cobertura === 'soporte' ? c.goldInk : c.danger,
+                    fontSize: 12.5,
+                    fontFamily: 'Jost_500Medium',
+                  },
+                ]}
+              >
+                {vista.celula.cobertura === 'soporte'
+                  ? 'Grupo acompañado por soporte'
+                  : 'Este grupo todavía no tiene quien lo acompañe'}
+              </Text>
+            </View>
+          ) : null}
         </Aparicion>
 
         {cargando ? <CargandoCelula /> : null}
@@ -117,6 +166,98 @@ export function MiCelulaScreen({
 
         {!cargando && vista && vista.todos.length > 0 ? (
           <>
+            {/* Avisos sin leer. Salen de la bandeja general filtrada por tipo: no hay lista
+                paralela de alertas. Cada uno dice su causa y lleva al alumno. */}
+            {hayAvisos ? (
+              <Aparicion retardo={20} style={{ marginBottom: 4 }}>
+                <MicroLabel>
+                  {avisos.length === 1 ? '1 AVISO' : `${avisos.length} AVISOS`}
+                </MicroLabel>
+                <View style={[estilos.evaluacion, { borderColor: c.border, backgroundColor: c.cardBg,
+                  paddingVertical: 6 }]}>
+                  {avisos.map((aviso, i) => {
+                    const destino = destinoDe(aviso);
+                    const alumno = destino
+                      ? vista.todos.find(a => a.participanteId === destino.alumnoId)
+                      : undefined;
+                    return (
+                      <Pressable
+                        key={aviso.id}
+                        onPress={() => {
+                          void marcarLeido(aviso.id);
+                          /* Solo se abre si el alumno sigue en el grupo. Un aviso viejo de
+                             alguien que ya rotó queda legible pero no lleva a ningún lado:
+                             sus datos ya no son de este mentor (plan.md §10). */
+                          if (alumno) onAbrirAlumno(alumno);
+                        }}
+                        accessibilityRole="button"
+                        accessibilityLabel={aviso.body}
+                        style={[estilos.aviso, i > 0 ? { borderTopWidth: 1, borderTopColor: c.border } : null]}
+                      >
+                        <Icon name="clock" size={15} color={c.goldInk} />
+                        <Text style={[t.body, { color: c.text, fontSize: 13.5, flex: 1 }]}>
+                          {aviso.body}
+                        </Text>
+                        {alumno ? <Icon name="chevron" size={14} color={c.chevron} /> : null}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </Aparicion>
+            ) : null}
+
+            {/* Mi evaluación. El porcentaje llega calculado del servidor: la app no lo
+                recalcula, para que nunca diga un número distinto del que ve el administrador. */}
+            {hayEvaluacion && evaluacion ? (
+              <Aparicion retardo={40} style={{ marginBottom: 4 }}>
+                <MicroLabel>MI EVALUACIÓN</MicroLabel>
+                <View style={[estilos.evaluacion, { borderColor: c.border, backgroundColor: c.cardBg }]}>
+                  <View style={estilos.filaEvaluacion}>
+                    <Text style={[estilos.cifraValor, { color: c.textStrong, fontSize: 28 }]}>
+                      {evaluacion.porcentaje === null
+                        ? '—'
+                        : `${Math.round(evaluacion.porcentaje)}%`}
+                    </Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[t.body, { color: c.text, fontSize: 13, fontFamily: 'Jost_500Medium' }]}>
+                        {textoDeEstado(evaluacion.estado)}
+                      </Text>
+                      {evaluacion.estado === 'CALCULADA' ? (
+                        <Text style={[t.micro, { color: c.textSoft, fontSize: 11.5, marginTop: 2 }]}>
+                          {evaluacion.entregadas} de {evaluacion.esperadas} evidencias ·{' '}
+                          {evaluacion.alumnosEvaluados}{' '}
+                          {evaluacion.alumnosEvaluados === 1 ? 'aprendiz' : 'aprendices'}
+                        </Text>
+                      ) : null}
+                    </View>
+                  </View>
+                  {/* La posición del grupo es OTRA medida: cubre todo el mes sin filtrar por
+                      quién acompañaba, así que puede no coincidir con la nota de arriba si el
+                      mentor entró a mitad de mes. Se dice, no se disimula (plan.md §8). */}
+                  {hayRanking && miFila ? (
+                    <View style={[estilos.posicion, { borderTopColor: c.border }]}>
+                      <Text style={[t.body, { color: c.text, fontSize: 13 }]}>
+                        Tu grupo va en el puesto {miFila.posicion} de {gruposEnCohorte} en la cohorte
+                      </Text>
+                      <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>
+                        {miFila.porcentaje === null
+                          ? 'Sin muestra suficiente este mes'
+                          : `${Math.round(miFila.porcentaje)}% del grupo · ${miFila.muestra} ${
+                              miFila.muestra === 1 ? 'aprendiz medido' : 'aprendices medidos'
+                            }`}
+                      </Text>
+                    </View>
+                  ) : null}
+
+                  <Text style={[t.micro, { color: c.chevron, fontSize: 10.5, marginTop: 10, lineHeight: 15 }]}>
+                    Se promedia el porcentaje de cada aprendiz, no el total de evidencias. Cuenta la
+                    entrega dentro de tu período; la verificación se informa aparte
+                    {evaluacion.verificadas > 0 ? ` (${evaluacion.verificadas} verificadas)` : ''}.
+                  </Text>
+                </View>
+              </Aparicion>
+            ) : null}
+
             <Aparicion retardo={70}>
               {/* `flexWrap` y un ancho minimo: cuatro en linea donde cabe, 2x2 en pantallas
                   estrechas. Sin puntos de ruptura escritos a mano — la caja decide. */}
@@ -144,7 +285,7 @@ export function MiCelulaScreen({
                   ))}
                 </View>
               </Aparicion>
-            ) : (
+            ) : vista.alDia.length > 0 ? (
               <Aparicion retardo={140} style={{ marginTop: 22 }}>
                 <View style={[estilos.todoBien, { borderColor: c.border, backgroundColor: c.successWash }]}>
                   <Icon name="checkCircle" size={17} color={c.success} />
@@ -153,7 +294,24 @@ export function MiCelulaScreen({
                   </Text>
                 </View>
               </Aparicion>
-            )}
+            ) : null}
+
+            {/* Sin una sola señal no se afirma nada. El verde de "todo bien" solo aparece
+                cuando hay datos que lo respalden; si no, se dice que faltan. */}
+            {vista.sinDatos.length > 0 ? (
+              <Aparicion retardo={175} style={{ marginTop: 22 }}>
+                <MicroLabel>SIN AVANCE REGISTRADO</MicroLabel>
+                <View style={[estilos.lista, { borderColor: c.border, backgroundColor: c.cardBg }]}>
+                  {vista.sinDatos.map(a => (
+                    <FilaAlumno key={a.participanteId} alumno={a} onPress={() => onAbrirAlumno(a)} />
+                  ))}
+                </View>
+                <Text style={[t.micro, { color: c.chevron, fontSize: 10.5, marginTop: 8, lineHeight: 15 }]}>
+                  Todavía no hay actividad registrada de estas personas. Abre a cada una para ver
+                  su semana: que falte el resumen no significa que no haya cumplido.
+                </Text>
+              </Aparicion>
+            ) : null}
 
             {vista.alDia.length > 0 ? (
               <Aparicion retardo={210} style={{ marginTop: 22 }}>
@@ -172,7 +330,39 @@ export function MiCelulaScreen({
   );
 }
 
+/**
+ * "8 de 10 aprendices" cuando hay tope, "8 aprendices" cuando no. La recepción no tiene tope
+ * (D-05) y escribir "8 de null" o inventar un 15 sería peor que no decir nada.
+ */
+/** Por qué puede faltar el número. Ninguno de los tres casos es "0 %". */
+function textoDeEstado(estado: string): string {
+  switch (estado) {
+    case 'CALCULADA':
+      return 'Cumplimiento de tus aprendices este mes';
+    case 'SIN_MUESTRA':
+      return 'Este mes todavía no vencieron evidencias que medir';
+    default:
+      return 'Sin historial evaluable en este período';
+  }
+}
+
+function ocupacion(total: number, cupo: number | null): string {
+  return cupo === null ? `${total} aprendices` : `${total} de ${cupo} aprendices`;
+}
+
 const estilos = StyleSheet.create({
+  evaluacion: { borderWidth: 1, borderRadius: 16, padding: 16, marginTop: 8 },
+  // 48 px de alto: pulsable con el pulgar (AGENTS.md §4).
+  posicion: { borderTopWidth: 1, marginTop: 12, paddingTop: 10, gap: 2 },
+  aviso: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 48, paddingVertical: 10 },
+  filaEvaluacion: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  avisoCobertura: {
+    marginTop: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderLeftWidth: 3,
+  },
   barra: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingTop: 10, paddingBottom: 6,
