@@ -19,11 +19,14 @@ test('E08 · la semana administrativa y la del mentor devuelven el mismo día', 
   test.skip(contexto.assignments.length === 0, 'El mentor de prueba no acompaña ningún grupo.');
   const grupo = contexto.assignments[0].groupId;
 
-  const roster = await mentor.pedir<{ content: Array<{ participanteId: string }> }>(
+  /* El contrato real es `learners[].userId`, no `content[].participanteId`. La primera versión
+     inventó esos nombres y `roster.content` llegaba `undefined`: el fallo salía en la línea del
+     `test.skip`, que es el peor sitio para leerlo — parece un problema de datos y es de contrato. */
+  const roster = await mentor.pedir<{ learners: Array<{ userId: string }> }>(
     `/api/v1/mentor/groups/${grupo}/learners`,
   );
-  test.skip(roster.content.length === 0, 'El grupo del mentor está vacío.');
-  const alumno = roster.content[0].participanteId;
+  test.skip(roster.learners.length === 0, 'El grupo del mentor está vacío.');
+  const alumno = roster.learners[0].userId;
 
   const delMentor = await mentor.pedir<{ dias: unknown[]; resumen: { obligaciones: number } }>(
     `/api/v1/mentor/groups/${grupo}/learners/${alumno}/progress`,

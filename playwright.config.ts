@@ -56,7 +56,16 @@ export default defineConfig({
   },
   projects: [
     {
+      /* Corre ANTES que todo y deja el entorno en un estado conocido. Es un proyecto y no un
+         `globalSetup` porque así aparece en el reporte: cuando la limpieza falla conviene verlo,
+         no que se pierda en la consola. */
+      name: 'limpieza',
+      testMatch: /limpieza\.setup\.ts/,
+      use: { ...devices['Desktop Chrome'], launchOptions: { executablePath: CHROME_BIN } },
+    },
+    {
       name: 'movil-360',
+      dependencies: ['limpieza'],
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 360, height: 760 },
