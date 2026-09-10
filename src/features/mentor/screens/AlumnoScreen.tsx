@@ -213,7 +213,10 @@ export function AlumnoScreen({
                       recortados y casillas de 8 px (AGENTS.md §2, plan.md §10). No es
                       simplificar el movil, es que ahi la rejilla miente por ilegible.
                     */}
-                    {isTablet ? <RejillaSemanal dias={semana.dias} /> : null}
+                    {/* Sin condicion de ancho: la rejilla ya trae su forma compacta para
+                        movil. Antes esto era `isTablet ? ... : null` y en telefono la semana
+                        entera desaparecia -- que es donde mas se mira. */}
+                    <RejillaSemanal dias={semana.dias} />
 
                     <View style={estilos.chips}>
                       {diasConContenido.map(dia => {
