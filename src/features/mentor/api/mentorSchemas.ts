@@ -31,6 +31,12 @@ export const contextoMentorSchema = z
         /** Tiene rol para iniciar el programa y todavía no lo hizo. */
         canStartProgram: z.boolean(),
         canAccompany: z.boolean(),
+        /**
+         * Si la app muestra la entrada a Administración (SDD 003). `.nullish()` porque durante el
+         * despliegue una app nueva puede hablar con un backend anterior que todavía no lo manda:
+         * sin capacidad declarada la entrada no aparece, que es el lado seguro del error.
+         */
+        canAdminister: z.boolean().nullish(),
       })
       .passthrough(),
     assignments: z.array(
@@ -86,7 +92,13 @@ export const aprendicesGrupoSchema = z
  */
 export const semanaAlumnoSchema = z
   .object({
-    grupoId: z.string(),
+    /**
+     * `null` cuando el alumno no tiene grupo vigente. Al mentor nunca le llega así —él pregunta
+     * por un grupo que acompaña—, pero la misma respuesta la sirve la lectura administrativa, que
+     * mira a la persona y no al grupo: un aprendiz recién aprobado, o uno cuyo grupo cerró, tiene
+     * semana igual. Es dato, no ausencia de datos.
+     */
+    grupoId: z.string().nullable(),
     alumnoId: z.string(),
     nombre: z.string().nullable(),
     inicioDeSemana: z.string(),
