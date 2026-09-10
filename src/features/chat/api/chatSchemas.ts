@@ -67,6 +67,9 @@ export const wireConversacionResumenSchema = z
      * otra cosa.
      */
     otherParticipantId: z.string().nullish(),
+    /** Su nombre, ya resuelto por el servidor. Ver `resolverOtroParticipante`. */
+    otherParticipantName: z.string().nullish(),
+    otherParticipantAvatarUrl: z.string().nullish(),
   })
   .passthrough();
 

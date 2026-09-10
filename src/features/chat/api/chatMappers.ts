@@ -127,12 +127,26 @@ function resolverOtroParticipante(
   actorId: string | null | undefined,
   directorio: Record<string, WireMiembro>
 ): WireMiembro | undefined {
-  /* El servidor dice con quién es el chat (`otherParticipantId`). Antes había que adivinarlo por
-     el remitente del último mensaje, y eso solo funcionaba si el último lo había mandado el otro:
-     si lo mandabas tú, o si la conversación estaba vacía, la fila decía "Conversación directa".
-     Con dos chats así, la bandeja mostraba dos filas idénticas y no se podía usar. */
+  /* El servidor manda el NOMBRE ya resuelto. Primero se intentó que mandara solo el id y que el
+     móvil lo buscara en el directorio (`GET /chat/members`), pero ese directorio exige que exista
+     la conversación GLOBAL y donde no existe responde 404: la bandeja de mensajes directos se
+     quedaba sin nombres por culpa de otra conversación que no tiene nada que ver.
+
+     Antes de eso había que adivinarlo por el remitente del último mensaje, y eso solo funcionaba
+     si el último lo había mandado el otro: si lo mandabas tú, o si el chat estaba vacío, la fila
+     decía "Conversación directa". */
   const declarado = resumen.otherParticipantId;
-  if (declarado) {
+  if (declarado && resumen.otherParticipantName) {
+    return {
+      id: declarado,
+      fullName: resumen.otherParticipantName,
+      avatarUrl: resumen.otherParticipantAvatarUrl ?? null,
+      /* El rol no viaja en el resumen. Se toma del directorio SI está; si no, el subtítulo cae en
+         el genérico. Un nombre correcto con subtítulo genérico es mejor que ningún nombre. */
+      role: directorio[declarado]?.role ?? 'TRAINEE',
+    } as WireMiembro;
+  }
+  if (declarado && directorio[declarado]) {
     return directorio[declarado];
   }
   /* Sin el campo —backend viejo— se conserva la heurística de antes. Es peor, pero es lo que
