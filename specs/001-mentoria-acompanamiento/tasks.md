@@ -9,13 +9,13 @@ T02/T03 son aclaraciones específicas, no una solicitud genérica de reaprobar t
 | [x] T01 | Registrar HEAD, estado y reglas de ambos repositorios | — | RF-30 | Inventario actualizado; cambios locales preservados. |
 | [x] T02 | Cerrar P-01 a P-04 con decisiones registradas | T01 | RF-05, RF-07, RF-09, RF-10, RF-11 | Anclaje temporal, provisión y fallback explícitos, sin asumir aprobación. |
 | [x] T03 | Cerrar P-05 a P-08 y ejemplos de evaluación/avisos | T01 | RF-18, RF-21, RF-22, RF-23, RF-24, RF-25 | Casos tardíos, promedio, umbral y permisos históricos acordados. |
-| [~] T04 | Contrastar DTOs y permisos de contratos propuestos | T01 | RF-01, RF-04, RF-14, RF-25 | Mapa existente/nuevo revisado; sin endpoints equivalentes duplicados. |
+| [x] T04 | Contrastar DTOs y permisos de contratos propuestos | T01 | RF-01, RF-04, RF-14, RF-25 | Mapa existente/nuevo revisado; sin endpoints equivalentes duplicados. |
 | [x] T05 | Definir extensión de puertos públicos entre módulos | T04 | RF-12, RF-15, RF-21 | Firmas y responsables claros, ninguna dependencia de internals. |
 | [x] T06 | Escribir pruebas de intervalos y capacidad | T02, T05 | RF-08, RF-12, RF-28 | Pruebas rojas cubren cupo, roles que no cuentan e intervalos. |
 | [x] T07 | Implementar invariantes de asignación temporal | T06 | RF-08, RF-12 | Pruebas de dominio verdes con Clock/IdGenerator inyectados. |
 | [x] T08 | Preparar migración aditiva e índices justificados | T07 | RF-12, RF-30 | Versión libre elegida; datos actuales conservados; no historia inventada. |
 | [x] T09 | Probar persistencia temporal y carreras | T08 | RF-08, RF-29, RF-30 | Integration tests Cloud demuestran restricciones y repetición segura. |
-| [~] T10 | Implementar repositorios/puertos de asignación | T09 | RF-12, RF-29 | Pruebas anteriores pasan; proyecciones actuales no sustituyen historial. |
+| [x] T10 | Implementar repositorios/puertos de asignación | T09 | RF-12, RF-29 | Pruebas anteriores pasan; proyecciones actuales no sustituyen historial. |
 | [x] T11 | Probar resolución de guías y política | T04, T07 | RF-04, RF-28 | Email/UUID, inactivo, sin permiso y reducción de cupo cubiertos. |
 | [x] T12 | Extender administración de política y guías | T10, T11 | RF-04, RF-28 | Rutas compatibles, control de versión, reemplazo atómico sin cambio de rol. |
 | [x] T13 | Probar programa opcional y evidencias propias del mentor | T04 | RF-01, RF-02, RF-17 | Casos mentor sin participación y autoconsulta cubiertos sin elevar permisos. |
@@ -48,7 +48,7 @@ T02/T03 son aclaraciones específicas, no una solicitud genérica de reaprobar t
 | [x] T40 | Extender cliente y schemas FE de mentor | T30, T33 | RF-14, RF-15, RF-21 | Contratos validados, null y errores diferenciados, sin datos simulados. |
 | [x] T41 | Adaptar gate y activar programa personal opcional | T14, T40 | RF-01, RF-02 | Mentor omite programa sin bloqueo; aprendiz conserva onboarding obligatorio. |
 | [x] T42 | Integrar entradas visibles Hoy y Comunidad | T40, T41 | RF-26 | Mi grupo accesible; cinco tabs y flujos propios conservados. |
-| [~] T43 | Extender MiCelulaScreen con roster y cobertura | T26, T40 | RF-11, RF-14, RF-26 | Recepción/grupo explícitos; ausencia de mentor no oculta grupo. |
+| [x] T43 | Extender MiCelulaScreen con roster y cobertura | T26, T40 | RF-11, RF-14, RF-26 | Recepción/grupo explícitos; ausencia de mentor no oculta grupo. |
 | [x] T44 | Extender AlumnoScreen con semana y día adaptables | T40 | RF-15, RF-16, RF-27 | Una columna en móvil; estados textuales y fechas sin recortes. |
 | [x] T45 | Conectar detalle de evidencia y mensaje existente | T27, T44 | RF-17, RF-20, RF-25 | Archivo autorizado y chat canónico; ningún envío automático. |
 | [x] T46 | Integrar evaluación y ranking entre grupos | T33, T34, T40 | RF-21, RF-22, RF-24 | Períodos/muestras visibles; rankings personales intactos. |
@@ -627,3 +627,72 @@ una prueba con fechas fijas alcanzadas por el calendario, no un defecto (ver com
 Las 6 que quedan dependen de cosas que no están en este entorno: credenciales de push de Expo y
 un teléfono (T39 recibos, T48 verificación), volumen real de datos (T50), y alcance que quedó
 corto (T04, T43).
+
+---
+
+## Registro de ejecución 12 — Cierre de T04, T10 y T43
+
+Las tres que quedaban sin depender de credenciales externas.
+
+### T04 — Contraste de contratos
+
+Los siete endpoints del SDD, con su permiso declarado:
+
+| Ruta | Permiso |
+|---|---|
+| `GET /api/v1/mentor/context` | `USE_APP` |
+| `GET /api/v1/mentor/groups/{g}/learners` | `USE_APP` |
+| `GET /api/v1/mentor/groups/{g}/learners/{u}/progress` | `USE_APP` |
+| `GET /api/v1/mentor/me/evaluation` | `USE_APP` |
+| `GET /api/v1/ranking/groups` | `USE_APP` |
+| `GET /api/v1/me/cell` | `USE_APP` |
+| `GET|PATCH /api/v1/admin/cohorts/{id}/mentoring-policy` | `MANAGE_COHORTS` |
+
+Ninguno sin permiso declarado — `EndpointAuthorizationDeclarationTest` ya lo exige, y aquí se
+confirma uno por uno. La autorización **real** de los de mentor no la da el permiso sino el guard
+del servicio: `USE_APP` solo dice "cuenta activa", y quién puede ver a qué alumno lo decide la
+relación vigente. Eso es correcto y es lo que la prueba de extremo a extremo verificó.
+
+**Un choque de rutas que hay que dejar escrito.** `RankingController` mapea `/api/v1/ranking/{tipo}`
+y el nuevo mapea `/api/v1/ranking/groups`. **No se pisan hoy**: `TipoRanking` solo acepta
+`GENERAL`, `COHORT` y `CELL`, así que `groups` nunca fue una ruta válida por ahí, y Spring prefiere
+el segmento literal sobre la variable de ruta. Pero la convivencia es frágil por una razón concreta:
+**el día que alguien agregue un valor al enum que coincida con un literal, la ruta cambia de
+controlador sin que ninguna prueba falle.** Si se añaden más rutas literales bajo `/ranking`,
+conviene moverlas a un prefijo propio.
+
+**Sin endpoints duplicados.** `/me/cell` y `/mentor/context` parecen solaparse y no lo hacen:
+el primero responde "cuál es MI célula como aprendiz", el segundo "qué acompaño como mentor". Un
+mentor que además cursa usa los dos y significan cosas distintas.
+
+### T10 — Repositorios y puertos de asignación
+
+El criterio era "pruebas anteriores pasan; proyecciones actuales no sustituyen historial". Las dos
+mitades están:
+
+- Las pruebas de T09 ejercitan estos adaptadores contra Postgres real — y encontraron **E-175**, un
+  defecto que los dejaba inservibles: mandaban `creado_en` en NULL y fallaba toda escritura.
+  Estaba ahí desde que se escribieron, y ninguna prueba lo veía porque los casos de uso corren
+  contra un doble en memoria.
+- La proyección no sustituye al historial: el guard del chat revalida la pertenencia **viva** en
+  `asignaciones_celula` en vez de confiar en `participantes_conversacion`, que es la proyección.
+  Un exmentor con el token válido recibe 403.
+
+### T43 — MiCelulaScreen
+
+"Ausencia de mentor no oculta grupo" ya estaba: cuando la cobertura no es `con_mentor` se muestra
+quién lo cubre —soporte, o nadie todavía— y el grupo sigue ahí.
+
+"Recepción/grupo explícitos" estaba a medias: se etiquetaba la recepción y el grupo estable no
+llevaba nada. **La ausencia de etiqueta no dice "estable", solo dice nada** — y un mentor que
+acompaña los dos no podía distinguirlos. Ahora los dos se nombran.
+
+**Estado final: 50 hechas, 3 parciales, 0 sin empezar.**
+
+Las 3 que quedan dependen de cosas que no están en este entorno, y ninguna es código pendiente:
+
+| Tarea | Qué falta |
+|---|---|
+| T39 | Recibos de Expo — credenciales del proyecto |
+| T48 | Verificar el push en un dispositivo — `eas init` y un teléfono |
+| T50 | Validar la migración con volumen real de datos |

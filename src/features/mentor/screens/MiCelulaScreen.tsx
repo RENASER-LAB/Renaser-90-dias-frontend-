@@ -115,7 +115,10 @@ export function MiCelulaScreen({
             {vista
               ? [
                   vista.celula.cohorte,
-                  vista.celula.tipo === 'recepcion' ? 'Recepción' : null,
+                  /* Los DOS se nombran, no solo la recepción. Antes el grupo estable no
+                     llevaba etiqueta, y un mentor que acompaña los dos no podía distinguirlos:
+                     la ausencia de etiqueta no dice "estable", solo dice nada. */
+                  vista.celula.tipo === 'recepcion' ? 'Recepción' : 'Grupo estable',
                   ocupacion(vista.resumen.total, vista.celula.cupo),
                 ]
                   .filter(Boolean)
