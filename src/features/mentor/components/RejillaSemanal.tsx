@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '../../../components/Icon';
 import { useResponsive } from '../../../theme/responsive';
@@ -14,8 +14,14 @@ import type { DiaAlumnoApi, ObligacionDiaApi } from '../api/mentorSchemas';
  *
  * **Ancha (tablet, web):** título a la izquierda y los siete días a la derecha, como una tabla.
  *
- * **Compacta (móvil):** el título ocupa su propia línea y debajo van los siete días repartidos a
- * lo ancho. Antes acá no se dibujaba NADA, y el motivo era real: los siete días se llevan 266 px
+ * **Compacta (móvil):** plegada por defecto, y el título de cada hábito ocupa su propia línea con
+ * los siete días repartidos debajo.
+ *
+ * **Por qué plegada, y por qué eso NO es volver a esconderla.** Con datos reales son 15 hábitos,
+ * no los 3 de la semilla: eso son ~1000 px de rejilla empujando el detalle del día y "Escribirle"
+ * fuera de la pantalla. Antes no había NADA y nadie sabía que la semana existía; ahora hay un
+ * botón que la nombra y dice cuántos hábitos trae. La diferencia entre esconder y plegar es que
+ * lo segundo se anuncia. Antes acá no se dibujaba NADA, y el motivo era real: los siete días se llevan 266 px
  * fijos, así que en 360 px al título le quedaban 58 y "RITUAL TIERRA - AGUA - FUEGO (mediodía)"
  * era ilegible. Pero esconder la semana entera es una respuesta peor que reacomodarla — el
  * selector de día muestra UN día, y lo que el mentor necesita ver es el patrón: dónde están los
@@ -27,6 +33,10 @@ export function RejillaSemanal({ dias }: { dias: DiaAlumnoApi[] }) {
   const { c, t } = useTheme();
   const { isTablet } = useResponsive();
   const apilada = !isTablet;
+  /* Solo manda en compacto. En tablet la rejilla entra entera y plegarla seria esconder algo que
+     cabe -- el ancho ya es la razon por la que ahi se ve todo de un vistazo. */
+  const [abierta, setAbierta] = useState(false);
+  const visible = !apilada || abierta;
 
   /**
    * Filas = hábitos distintos de la semana, en el orden en que aparecen. Se arma una sola vez:
@@ -81,39 +91,70 @@ export function RejillaSemanal({ dias }: { dias: DiaAlumnoApi[] }) {
 
   return (
     <View style={{ marginTop: 14 }}>
-      <View style={estilos.fila}>
-        {apilada ? null : <View style={estilos.celdaHabito} />}
-        {cabecera}
-      </View>
+      {apilada ? (
+        <Pressable
+          onPress={() => setAbierta(v => !v)}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: abierta }}
+          accessibilityLabel={`${abierta ? 'Ocultar' : 'Ver'} la semana completa, ${habitos.length} ${
+            habitos.length === 1 ? 'hábito' : 'hábitos'
+          }`}
+          style={({ pressed }) => [
+            estilos.plegable,
+            { borderColor: c.border, opacity: pressed ? 0.6 : 1 },
+          ]}
+        >
+          <Text style={[t.body, { color: c.text, fontSize: 13.5 }]}>
+            Semana completa · {habitos.length} {habitos.length === 1 ? 'hábito' : 'hábitos'}
+          </Text>
+          {/* El chevron apunta a la derecha cuando esta cerrada y hacia abajo cuando esta
+              abierta: la forma dice el estado, no solo el texto. */}
+          <View style={{ transform: [{ rotate: abierta ? '90deg' : '0deg' }] }}>
+            <Icon name="chevron" size={15} color={c.textSoft} />
+          </View>
+        </Pressable>
+      ) : null}
 
-      {habitos.map(titulo =>
-        apilada ? (
-          <View key={titulo} style={[estilos.bloque, { borderTopWidth: 1, borderTopColor: c.border }]}>
-            <Text style={[t.body, { color: c.text, fontSize: 12.5 }]} numberOfLines={2}>
-              {titulo}
-            </Text>
-            <View style={estilos.fila}>{celdasDe(titulo)}</View>
-          </View>
-        ) : (
-          <View key={titulo} style={[estilos.fila, { borderTopWidth: 1, borderTopColor: c.border }]}>
-            <View style={estilos.celdaHabito}>
-              <Text style={[t.body, { color: c.text, fontSize: 12.5 }]} numberOfLines={2}>
-                {titulo}
-              </Text>
-            </View>
-            {celdasDe(titulo)}
-          </View>
-        ),
-      )}
+      {visible ? (
+        <View style={estilos.fila}>
+          {apilada ? null : <View style={estilos.celdaHabito} />}
+          {cabecera}
+        </View>
+      ) : null}
+
+      {visible
+        ? habitos.map(titulo =>
+            apilada ? (
+              <View key={titulo} style={[estilos.bloque, { borderTopWidth: 1, borderTopColor: c.border }]}>
+                <Text style={[t.body, { color: c.text, fontSize: 12.5 }]} numberOfLines={2}>
+                  {titulo}
+                </Text>
+                <View style={estilos.fila}>{celdasDe(titulo)}</View>
+              </View>
+            ) : (
+              <View key={titulo} style={[estilos.fila, { borderTopWidth: 1, borderTopColor: c.border }]}>
+                <View style={estilos.celdaHabito}>
+                  <Text style={[t.body, { color: c.text, fontSize: 12.5 }]} numberOfLines={2}>
+                    {titulo}
+                  </Text>
+                </View>
+                {celdasDe(titulo)}
+              </View>
+            ),
+          )
+        : null}
 
       {/* Leyenda obligatoria: el color no puede ser el único portador del significado
-          (AGENTS.md §4). Quien no distingue verde de rojo tiene que poder leerla igual. */}
-      <View style={estilos.leyenda}>
-        <ItemLeyenda icono="checkCircle" color={c.success} texto="Cumplido" />
-        <ItemLeyenda icono="clock" color={c.danger} texto="No cumplido" />
-        <ItemLeyenda icono="circle" color={c.textSoft} texto="Pendiente" />
-        <ItemLeyenda icono="minus" color={c.chevron} texto="No programado" />
-      </View>
+          (AGENTS.md §4). Quien no distingue verde de rojo tiene que poder leerla igual.
+          Va DENTRO del plegado: una leyenda sin rejilla no explica nada y solo ocupa sitio. */}
+      {visible ? (
+        <View style={estilos.leyenda}>
+          <ItemLeyenda icono="checkCircle" color={c.success} texto="Cumplido" />
+          <ItemLeyenda icono="clock" color={c.danger} texto="No cumplido" />
+          <ItemLeyenda icono="circle" color={c.textSoft} texto="Pendiente" />
+          <ItemLeyenda icono="minus" color={c.chevron} texto="No programado" />
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -191,6 +232,17 @@ const estilos = StyleSheet.create({
   // Compacta: los siete se reparten el ancho disponible en vez de medir fijo.
   celdaDiaFluida: { flex: 1, minHeight: 40, alignItems: 'center', justifyContent: 'center', gap: 1 },
   bloque: { paddingTop: 8, paddingBottom: 2 },
+  // 48 px de alto: pulsable comodo con una mano (AGENTS.md sec. 4).
+  plegable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 48,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderRadius: 10,
+    gap: 10,
+  },
   pendiente: { width: 11, height: 11, borderRadius: 6, borderWidth: 1.5 },
   leyenda: { flexDirection: 'row', flexWrap: 'wrap', gap: 14, marginTop: 12 },
   itemLeyenda: { flexDirection: 'row', alignItems: 'center', gap: 5 },
