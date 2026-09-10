@@ -504,6 +504,8 @@ export default function YoScreen() {
           {/* Logout */}
           <Pressable
             onPress={logout}
+            accessibilityRole="button"
+            accessibilityLabel="Cerrar sesión"
             style={[styles.logoutBtn, { borderColor: c.border, backgroundColor: c.cardBg }]}
           >
             <Icon name="logout" size={16} color={c.textSoft} />
@@ -717,6 +719,8 @@ export default function YoScreen() {
 
                 <Pressable
                   onPress={logout}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cerrar sesión"
                   style={styles.menuOptionRow}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>

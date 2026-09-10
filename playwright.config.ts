@@ -17,6 +17,17 @@ import { defineConfig, devices } from '@playwright/test';
  */
 const APP_URL = (process.env.E2E_APP_URL ?? 'http://localhost:8081').replace(/\/+$/, '');
 
+/**
+ * Navegador propio, cuando `npx playwright install` no puede correr.
+ *
+ * En una shell de contenedor donde `node` es del contenedor y `npx` viene del host, el descargador
+ * de Playwright —que se lanza en un proceso hijo— muere con "invalid ELF header". Pero el binario
+ * puede estar ya en la caché por otra vía. `E2E_CHROME_BIN` deja apuntarlo sin tocar nada más.
+ *
+ * Vacío = comportamiento normal: Playwright usa el navegador que él mismo instaló.
+ */
+const CHROME_BIN = process.env.E2E_CHROME_BIN?.trim() || undefined;
+
 export default defineConfig({
   testDir: './e2e/admin-alquimista',
   outputDir: './artifacts/e2e/resultados',
@@ -46,14 +57,22 @@ export default defineConfig({
   projects: [
     {
       name: 'movil-360',
-      use: { ...devices['Desktop Chrome'], viewport: { width: 360, height: 760 } },
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 360, height: 760 },
+        launchOptions: { executablePath: CHROME_BIN },
+      },
     },
     {
       /* Solo los casos de layout, seleccionados por TÍTULO y no por nombre de archivo: los E16
          viven junto a los de permisos, y un `testMatch` por archivo no encontraba ninguno. */
       name: 'responsive-tablet',
       grep: /E16/,
-      use: { ...devices['Desktop Chrome'], viewport: { width: 768, height: 1024 } },
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 768, height: 1024 },
+        launchOptions: { executablePath: CHROME_BIN },
+      },
     },
   ],
   webServer: {

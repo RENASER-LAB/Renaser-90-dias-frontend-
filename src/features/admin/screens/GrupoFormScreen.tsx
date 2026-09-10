@@ -13,6 +13,7 @@ import { actualizarGrupo, crearGrupo, listarCohortes, obtenerGrupo } from '../ap
 import type { CohorteAdminApi } from '../api/adminSchemas';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
 import { esFechaValida, hoyIso, sumarDias } from '../utils/fechas';
+import { mensajeDeFallo } from '../utils/mensajes';
 
 const CAPACIDAD_MINIMA = 10;
 const CAPACIDAD_MAXIMA = 15;
@@ -83,7 +84,7 @@ export function GrupoFormScreen({
           if (grupo.capacity) setCapacidad(String(grupo.capacity));
         }
       } catch (e) {
-        if (vivo) setFallo(e instanceof Error ? e.message : 'No se pudo cargar el grupo.');
+        if (vivo) setFallo(mensajeDeFallo(e, 'No se pudo cargar el grupo.'));
       }
     })();
     return () => {
@@ -146,7 +147,7 @@ export function GrupoFormScreen({
         onGuardado(grupo.id);
       }
     } catch (e) {
-      const mensaje = e instanceof Error ? e.message : 'No se pudo guardar el grupo.';
+      const mensaje = mensajeDeFallo(e, 'No se pudo guardar el grupo.');
       setFallo(mensaje);
       Alert.alert('No se guardó', mensaje);
     } finally {

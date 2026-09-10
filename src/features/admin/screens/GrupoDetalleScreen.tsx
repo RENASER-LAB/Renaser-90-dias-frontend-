@@ -21,6 +21,7 @@ import type { AprendizCandidatoApi, GrupoDetalleApi, MentorCandidatoApi } from '
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
 import { EstadoDeGrupo } from '../components/EstadoDeGrupo';
 import { rangoDeFechas } from '../utils/fechas';
+import { mensajeDeFallo } from '../utils/mensajes';
 
 const ESPECIALIDADES: Record<string, string> = {
   NEGOCIO: 'Negocio',
@@ -76,7 +77,7 @@ export function GrupoDetalleScreen({
     try {
       setGrupo(await obtenerGrupo(grupoId));
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo cargar el grupo.');
+      setError(mensajeDeFallo(e, 'No se pudo cargar el grupo.'));
     } finally {
       setCargando(false);
     }
@@ -93,7 +94,7 @@ export function GrupoDetalleScreen({
       await cargar();
       setEligiendo(null);
     } catch (e) {
-      Alert.alert(queFalla, e instanceof Error ? e.message : 'Probá de nuevo en un momento.');
+      Alert.alert(queFalla, mensajeDeFallo(e, 'Probá de nuevo en un momento.'));
     } finally {
       setTrabajando(false);
     }
@@ -104,7 +105,7 @@ export function GrupoDetalleScreen({
     try {
       setMentores(await mentoresDisponibles());
     } catch (e) {
-      Alert.alert('No se pudo traer la lista de mentores', e instanceof Error ? e.message : '');
+      Alert.alert('No se pudo traer la lista de mentores', mensajeDeFallo(e, ''));
       setEligiendo(null);
     }
   };
@@ -114,7 +115,7 @@ export function GrupoDetalleScreen({
     try {
       setCandidatos(await aprendicesDisponibles());
     } catch (e) {
-      Alert.alert('No se pudo traer la lista de aprendices', e instanceof Error ? e.message : '');
+      Alert.alert('No se pudo traer la lista de aprendices', mensajeDeFallo(e, ''));
       setEligiendo(null);
     }
   };

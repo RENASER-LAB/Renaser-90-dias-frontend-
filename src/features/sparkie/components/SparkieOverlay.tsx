@@ -198,7 +198,13 @@ export function SparkieOverlay() {
                     icon="send"
                     style={{ marginTop: 6, width: '100%' }}
                   />
-                  <Pressable onPress={() => setMinimizado(true)} style={styles.botonSecundario} hitSlop={8}>
+                  <Pressable
+                    onPress={() => setMinimizado(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Posponer la guía de ${NOMBRE_ASISTENTE}`}
+                    style={styles.botonSecundario}
+                    hitSlop={8}
+                  >
                     <Text style={[t.small, { color: c.textSoft, fontSize: 14 }]}>
                       {GUIA_PRIMER_POST.botonSecundario}
                     </Text>
@@ -226,7 +232,13 @@ export function SparkieOverlay() {
                     icon="doc"
                     style={{ marginTop: 6, width: '100%' }}
                   />
-                  <Pressable onPress={() => setMinimizado(true)} style={styles.botonSecundario} hitSlop={8}>
+                  <Pressable
+                    onPress={() => setMinimizado(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Posponer la guía de ${NOMBRE_ASISTENTE}`}
+                    style={styles.botonSecundario}
+                    hitSlop={8}
+                  >
                     <Text style={[t.small, { color: c.textSoft, fontSize: 14 }]}>Más tarde</Text>
                   </Pressable>
                 </>

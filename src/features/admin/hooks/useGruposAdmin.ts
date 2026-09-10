@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { listarCohortes, listarGruposDeCohorte } from '../api/adminApi';
 import type { CohorteAdminApi, GrupoResumenApi } from '../api/adminSchemas';
 import type { GrupoAdmin } from '../types/admin.types';
+import { mensajeDeFallo } from '../utils/mensajes';
 
 export type FiltroGrupos = 'vigentes' | 'programados' | 'cerrados' | 'todos';
 
@@ -33,7 +34,7 @@ export function useGruposAdmin() {
       const porCohorte = await Promise.all(listaDeCohortes.map(co => listarGruposDeCohorte(co.id)));
       setGrupos(porCohorte.flat().map(aGrupoAdmin));
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudieron cargar los grupos.');
+      setError(mensajeDeFallo(e, 'No se pudieron cargar los grupos.'));
     } finally {
       setCargando(false);
     }

@@ -10,6 +10,7 @@ import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher'
 import { listarAprendices } from '../api/adminApi';
 import type { AprendizAdminApi } from '../api/adminSchemas';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
+import { mensajeDeFallo } from '../utils/mensajes';
 
 const POR_PAGINA = 20;
 
@@ -40,7 +41,14 @@ export function PersonasAdminScreen({
   const [busquedaAplicada, setBusquedaAplicada] = useState('');
   const [soloSinGrupo, setSoloSinGrupo] = useState(soloSinGrupoAlEntrar);
   const [personas, setPersonas] = useState<AprendizAdminApi[]>([]);
-  const [total, setTotal] = useState(0);
+  /**
+   * `null` mientras no haya una lectura REAL, y no 0.
+   *
+   * <blockquote>Con la consulta caída, la cabecera decía "0 en total": afirmaba que el padrón
+   * está vacío cuando lo cierto es que no se pudo leer. Es justo lo que ARF-02 prohíbe —un error
+   * convertido en cero—, y lo peor es que suena creíble: nadie sospecha de un contador.</blockquote>
+   */
+  const [total, setTotal] = useState<number | null>(null);
   const [pagina, setPagina] = useState(0);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -75,7 +83,7 @@ export function PersonasAdminScreen({
       setPersonas(previas => (pagina === 0 ? respuesta.content : [...previas, ...respuesta.content]));
       setTotal(respuesta.total);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo cargar el padrón.');
+      setError(mensajeDeFallo(e, 'No se pudo cargar el padrón.'));
     } finally {
       setCargando(false);
     }
@@ -85,11 +93,15 @@ export function PersonasAdminScreen({
     void cargar();
   }, [cargar]);
 
-  const hayMas = personas.length < total;
+  const hayMas = total !== null && personas.length < total;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
-      <CabeceraAdmin titulo="Personas" subtitulo={`${total} en total`} onVolver={onVolver} />
+      <CabeceraAdmin
+        titulo="Personas"
+        subtitulo={total === null ? 'Sin datos todavía' : `${total} en total`}
+        onVolver={onVolver}
+      />
       <ScrollView
         style={{ flex: 1 }}
         keyboardShouldPersistTaps="handled"
@@ -185,7 +197,7 @@ export function PersonasAdminScreen({
             style={[estilos.boton, { borderColor: c.border }]}
           >
             <Text style={[t.body, { color: c.textStrong, fontSize: 14, fontWeight: '500' }]}>
-              Ver más ({personas.length} de {total})
+              Ver más ({personas.length} de {total ?? '—'})
             </Text>
           </Pressable>
         ) : null}

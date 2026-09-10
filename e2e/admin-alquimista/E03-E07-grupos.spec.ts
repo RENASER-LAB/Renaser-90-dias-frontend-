@@ -1,4 +1,4 @@
-import { abrirAdministracion, expect, test } from './soporte/fixtures';
+import { abrirAdministracion, abrirSeccion, expect, test } from './soporte/fixtures';
 import { ENTORNO } from './soporte/entorno';
 import { nombreDePrueba } from './soporte/api';
 
@@ -21,7 +21,7 @@ test('E04 · crear un grupo con fechas, elegir mentor y agregar aprendices persi
 }) => {
   const page = await entrarComo(ENTORNO.admin);
   await abrirAdministracion(page);
-  await page.getByRole('button', { name: /^grupos$/i }).click();
+  await abrirSeccion(page, /^grupos$/i);
   await page.getByRole('button', { name: /^crear$/i }).click();
 
   const nombre = nombreDePrueba('Fénix');
@@ -41,13 +41,22 @@ test('E04 · crear un grupo con fechas, elegir mentor y agregar aprendices persi
   await expect(page.getByRole('button', { name: /cambiar mentor/i })).toBeVisible();
 
   await page.getByRole('button', { name: /agregar aprendiz/i }).click();
-  await page.getByTestId('candidato-aprendiz').first().click();
+  const candidatos = page.getByTestId('candidato-aprendiz');
+  /* Si el entorno no tiene aprendices libres, la lista sale vacía y la pantalla lo dice. Eso no
+     es un fallo del panel: es que no hay a quién agregar. Se comprueba el mensaje y se sigue, en
+     vez de esperar 15 segundos por un elemento que nadie va a dibujar. */
+  if ((await candidatos.count()) === 0) {
+    await expect(page.getByText(/no hay aprendices activos sin grupo/i)).toBeVisible();
+    await page.getByRole('button', { name: /cerrar la lista/i }).click();
+  } else {
+    await candidatos.first().click();
+  }
 
   /* La comprobación de verdad: se recarga y se vuelve a entrar. Un estado que solo vive en la
      memoria del componente pasaría todas las aserciones anteriores y fallaría acá. */
   await page.reload();
   await abrirAdministracion(page);
-  await page.getByRole('button', { name: /^grupos$/i }).click();
+  await abrirSeccion(page, /^grupos$/i);
   await expect(page.getByText(nombre)).toBeVisible();
 
   const grupos = await api(ENTORNO.admin).pedir<Array<{ name: string; periodStart: string | null }>>(
@@ -108,13 +117,29 @@ test('E06 · renombrar NO borra las fechas; quitar el período se pide aparte', 
 
   const page = await entrarComo(ENTORNO.admin);
   await abrirAdministracion(page);
-  await page.getByRole('button', { name: /^grupos$/i }).click();
+  await abrirSeccion(page, /^grupos$/i);
   await page.getByText(nombreDePrueba('Renombrar')).click();
   await page.getByRole('button', { name: /^editar$/i }).click();
 
+  /* Se espera a que el formulario TERMINE de hidratarse antes de escribir. La pantalla carga el
+     grupo con una petición y después hace `setNombre(grupo.name)`: si se teclea antes, esa
+     respuesta pisa lo escrito y el guardado manda el nombre viejo. Le pasa igual a una persona
+     que escriba rápido, así que la espera no es un truco de la prueba. */
+  const campoNombre = page.getByLabel('NOMBRE DEL GRUPO', { exact: true });
+  await expect(campoNombre).toHaveValue(nombreDePrueba('Renombrar'), { timeout: 20_000 });
+
   const nuevoNombre = nombreDePrueba('Renombrado');
-  await page.getByLabel(/nombre del grupo/i).fill(nuevoNombre);
+  await campoNombre.fill(nuevoNombre);
   await page.getByRole('button', { name: /guardar cambios/i }).click();
+
+  /* Se espera a que el guardado ATERRICE antes de preguntarle al servidor.
+​
+     Sin esto la prueba consultaba la API en el mismo instante del clic y leía el nombre viejo:
+     el PATCH todavía estaba en vuelo. Fallaba con "Expected: Renombrado / Received: Renombrar",
+     que parece un fallo de la app y era una carrera de la prueba. La señal de que terminó es que
+     el formulario se cierra y vuelve el detalle, con el botón "Editar" en la cabecera. */
+  await expect(page.getByRole('button', { name: /^editar$/i })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText(nuevoNombre)).toBeVisible({ timeout: 20_000 });
 
   const despues = await admin.pedir<{ name: string; periodStart: string | null }>(
     `/api/v1/admin/cells/${grupo.id}`,

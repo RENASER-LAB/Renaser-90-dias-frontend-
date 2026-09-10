@@ -1,4 +1,4 @@
-import { abrirAdministracion, expect, test } from './soporte/fixtures';
+import { abrirAdministracion, abrirSeccion, expect, test } from './soporte/fixtures';
 import { ENTORNO } from './soporte/entorno';
 
 /**
@@ -42,7 +42,7 @@ test('E08b · la ficha muestra la semana y NO ofrece completar por el alumno', a
 }) => {
   const page = await entrarComo(ENTORNO.admin);
   await abrirAdministracion(page);
-  await page.getByRole('button', { name: /^personas$/i }).click();
+  await abrirSeccion(page, /^personas$/i);
 
   const primera = page.getByRole('button', { name: /abrir ficha de/i }).first();
   await expect(primera).toBeVisible();
@@ -77,12 +77,12 @@ test('E11 · abrir el chat con un aprendiz crea la conversación y NO envía nad
 }) => {
   const page = await entrarComo(ENTORNO.admin);
   await abrirAdministracion(page);
-  await page.getByRole('button', { name: /^personas$/i }).click();
+  await abrirSeccion(page, /^personas$/i);
   await page.getByRole('button', { name: /abrir ficha de/i }).first().click();
 
   await page.getByRole('button', { name: /escribirle/i }).click();
   // Llega a Comunidad con el hilo abierto; ningún mensaje automático se envió.
-  await expect(page.getByRole('button', { name: /^comunidad$/i }).first()).toBeVisible();
+  await expect(page.getByRole('tab', { name: /^comunidad$/i }).first()).toBeVisible();
 });
 
 test('E13 · un grupo CERRADO se consulta desde administración y deja de dar acceso', async ({
@@ -112,6 +112,13 @@ test('E14 · el ranking sale del motor único; el cliente no lo recalcula', asyn
   const cohortes = await admin.pedir<Array<{ id: string }>>('/api/v1/admin/cohorts');
   test.skip(cohortes.length === 0, 'Sin cohortes no hay ranking.');
 
-  const codigo = await admin.codigoDe(`/api/v1/ranking/groups?cohortId=${cohortes[0].id}`);
+  /* `month` NO es opcional: el controller lo declara `@RequestParam String month` y sin él
+     responde 400. La primera versión de esta prueba lo omitía y leía ese 400 como si el endpoint
+     estuviera roto. */
+  const ahora = new Date();
+  const mes = `${ahora.getUTCFullYear()}-${String(ahora.getUTCMonth() + 1).padStart(2, '0')}`;
+  const codigo = await admin.codigoDe(
+    `/api/v1/ranking/groups?cohortId=${cohortes[0].id}&month=${mes}`,
+  );
   expect([200, 404]).toContain(codigo);
 });

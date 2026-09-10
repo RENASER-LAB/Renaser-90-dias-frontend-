@@ -1,4 +1,4 @@
-import { abrirAdministracion, expect, test } from './soporte/fixtures';
+import { abrirAdministracion, abrirSeccion, expect, test } from './soporte/fixtures';
 import { ENTORNO } from './soporte/entorno';
 
 /**
@@ -9,13 +9,13 @@ import { ENTORNO } from './soporte/entorno';
  * alguien deje el endpoint abierto.
  */
 
-test('E15 · un aprendiz no ve Administración y tampoco la alcanza por API', async ({
-  entrarComo,
-  api,
-}) => {
-  const page = await entrarComo(ENTORNO.aprendiz);
-  expect(await abrirAdministracion(page)).toBe(false);
-
+test('E15 · un aprendiz no alcanza Administración por API', async ({ api }) => {
+  /* La parte de INTERFAZ de este caso quedó fuera a propósito, y conviene que se lea el motivo:
+     un aprendiz recién dado de alta entra al onboarding y no llega a la barra de pestañas hasta
+     completarlo. Comprobar ahí que "no ve Administración" sería trampa —no ve NADA— y montar un
+     onboarding completo como fixture es otro trabajo, no este.
+     Lo que sí se comprueba es lo único que de verdad protege: que la API le diga que no. Falsear
+     la pantalla no concede acceso. */
   const aprendiz = api(ENTORNO.aprendiz);
   for (const ruta of [
     '/api/v1/admin/cells/dashboard',
@@ -26,10 +26,12 @@ test('E15 · un aprendiz no ve Administración y tampoco la alcanza por API', as
   }
 });
 
-test('E15b · una cuenta suspendida no entra a Administración', async ({ api }) => {
-  const suspendido = api(ENTORNO.suspendido);
-  const codigo = await suspendido.codigoDe('/api/v1/admin/cells/dashboard');
-  expect([401, 403]).toContain(codigo);
+test('E15b · una cuenta suspendida ni siquiera consigue sesión', async ({ api }) => {
+  /* Se comprueba en el LOGIN y no en una ruta administrativa, porque la respuesta real llega
+     antes: el backend rechaza la autenticación de una cuenta suspendida con 401, así que nunca
+     hay token con el que pedir nada. Escribir el caso contra `/admin/cells/dashboard` habría
+     dado un falso verde: fallaría por no tener sesión, no por el guard. */
+  await expect(api(ENTORNO.suspendido).iniciarSesion()).rejects.toThrow(/401/);
 });
 
 test('E15c · el guard del mentor sigue negando fuera de su relación vigente', async ({ api }) => {
@@ -77,7 +79,7 @@ test('E16 · la lista pagina de verdad y la búsqueda encuentra fuera de la prim
 
   const page = await entrarComo(ENTORNO.admin);
   await abrirAdministracion(page);
-  await page.getByRole('button', { name: /^personas$/i }).click();
+  await abrirSeccion(page, /^personas$/i);
   await page.getByLabel(/buscar personas/i).fill(objetivo!.fullName as string);
 
   /* La aserción entera: alguien que NO estaba en la primera página aparece. Con un filtro sobre
@@ -90,7 +92,7 @@ test('E16b · un solo scroll: el cuerpo no se desplaza en horizontal a 360 px', 
 }) => {
   const page = await entrarComo(ENTORNO.admin);
   await abrirAdministracion(page);
-  await page.getByRole('button', { name: /^grupos$/i }).click();
+  await abrirSeccion(page, /^grupos$/i);
 
   const desbordamiento = await page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
@@ -105,11 +107,23 @@ test('E17 · sin red, la pantalla dice qué pasó y no convierte el error en cer
   const page = await entrarComo(ENTORNO.admin);
   await abrirAdministracion(page);
 
-  // Inyección de fallo ETIQUETADA: solo para el caso de resiliencia, nunca en los de aceptación.
-  await page.route('**/api/v1/admin/trainees**', ruta => ruta.abort());
-  await page.getByRole('button', { name: /^personas$/i }).click();
+  /* Inyección de fallo ETIQUETADA: solo para el caso de resiliencia, nunca en los de aceptación.
+     Se usa una expresión regular y no un patrón con comodines: la app pide contra otro origen
+     —el 8080— y un glob anclado al principio no siempre casa con una URL absoluta de otro host. */
+  await page.route(/\/api\/v1\/admin\/trainees/, ruta => ruta.abort());
+  await abrirSeccion(page, /^personas$/i);
 
-  /* Lo que NO puede pasar: mostrar "0 en total" como si el padrón estuviera vacío. Un error de
-     red no es un dato medido. */
-  await expect(page.getByText(/no se pudo cargar el padrón/i)).toBeVisible({ timeout: 20_000 });
+  /* Se acepta cualquiera de los dos textos posibles, y es a propósito.
+​
+     `mensajeDeFallo` distingue el fallo de RED —"Sin conexión con el servidor"— del genérico
+     "No se pudo cargar el padrón". Esta prueba fijaba el genérico y empezó a fallar el día que se
+     mejoró el mensaje: estaba atada a la redacción, no al comportamiento. Lo que el caso mide es
+     que la pantalla DIGA algo accionable, no cuál de las dos frases sea. */
+  await expect(
+    page.getByText(/no se pudo cargar el padrón|sin conexión con el servidor/i).first(),
+  ).toBeVisible({ timeout: 20_000 });
+
+  /* Y la mitad que de verdad importa: un error de red NO se convierte en un cero medido. La
+     cabecera no puede anunciar "0 en total" como si el padrón estuviera vacío. */
+  await expect(page.getByText(/^0 en total$/)).toHaveCount(0);
 });

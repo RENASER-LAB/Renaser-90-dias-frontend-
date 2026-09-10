@@ -10,6 +10,7 @@ import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher'
 import { aprobarSolicitud, listarAprendices, listarSolicitudes, rechazarSolicitud } from '../api/adminApi';
 import type { SolicitudApi } from '../api/adminSchemas';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
+import { mensajeDeFallo } from '../utils/mensajes';
 
 /**
  * Las altas pendientes de decidir, y qué pasó después de aprobarlas.
@@ -51,7 +52,7 @@ export function SolicitudesAdminScreen({
       const pagina = await listarSolicitudes('PENDING', 0);
       setSolicitudes(pagina.content);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudieron cargar las solicitudes.');
+      setError(mensajeDeFallo(e, 'No se pudieron cargar las solicitudes.'));
     } finally {
       setCargando(false);
     }
@@ -82,7 +83,7 @@ export function SolicitudesAdminScreen({
       );
       await cargar();
     } catch (e) {
-      Alert.alert('No se pudo aprobar', e instanceof Error ? e.message : 'Probá de nuevo.');
+      Alert.alert('No se pudo aprobar', mensajeDeFallo(e, 'Probá de nuevo.'));
     } finally {
       setTrabajando(null);
     }
@@ -103,7 +104,7 @@ export function SolicitudesAdminScreen({
               await rechazarSolicitud(solicitud.id, 'Rechazada desde el panel de administración');
               await cargar();
             } catch (e) {
-              Alert.alert('No se pudo rechazar', e instanceof Error ? e.message : 'Probá de nuevo.');
+              Alert.alert('No se pudo rechazar', mensajeDeFallo(e, 'Probá de nuevo.'));
             } finally {
               setTrabajando(null);
             }

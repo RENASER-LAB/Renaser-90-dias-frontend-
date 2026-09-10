@@ -63,6 +63,17 @@ export function FormField({
 
         <TextInput
           {...inputProps}
+          /*
+           * El campo se anuncia con su propia etiqueta.
+           *
+           * El texto visible lo dibuja el `MicroLabel` de arriba, que es un nodo SUELTO: no está
+           * asociado al input por nada. Un lector de pantalla llegaba al campo y no decía qué era
+           * — leía "cuadro de edición" y nada más, en cada formulario de la app.
+           *
+           * Se respeta la etiqueta que mande quien llama: LoginScreen ya pasaba la suya, y
+           * pisársela cambiaría lo que hoy se anuncia ahí.
+           */
+          accessibilityLabel={inputProps.accessibilityLabel ?? label}
           multiline={multiline}
           numberOfLines={numberOfLines}
           placeholderTextColor={c.tabInactive}
