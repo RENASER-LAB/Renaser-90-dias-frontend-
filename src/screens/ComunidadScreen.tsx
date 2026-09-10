@@ -20,6 +20,11 @@ import { ChatDelCurso } from '../features/renasia/components/ChatDelCurso';
 import { useProgramaDia } from '../features/programa/hooks/useProgramaDia';
 import { useResponsive } from '../theme/responsive';
 import { useSystemBackHandler } from '../hooks/useSystemBackHandler';
+import { useCelulaQueAcompano } from '../features/mentor/hooks/useCelulaQueAcompano';
+import { useEsMentor } from '../features/mentor/hooks/useEsMentor';
+import { AlumnoScreen } from '../features/mentor/screens/AlumnoScreen';
+import { MiCelulaScreen } from '../features/mentor/screens/MiCelulaScreen';
+import type { AlumnoConEstado } from '../features/mentor/types/mentor.types';
 import { MicroLabel, ScreenHeader, Placeholder } from '../components/ui';
 import { Icon, IconName } from '../components/Icon';
 import { GoldButton } from '../components/GoldButton';
@@ -419,6 +424,18 @@ export default function ComunidadScreen() {
   // mano: se pasa siempre por `irASeccion`, que además limpia el sub-estado de la sección que se
   // deja.
   const [seccionActiva, setSeccionActiva] = useState<SeccionComunidad>('muro');
+
+  /*
+   * El grupo que acompaña un mentor se llega desde Hoy y también desde acá: son los dos lugares
+   * donde alguien lo busca (RF-26). Es la MISMA pantalla, no una copia — si fueran dos, la
+   * próxima corrección tocaría una sola y nadie se enteraría de la otra.
+   *
+   * El hook se activa solo para mentores: para el resto no hace ni una llamada.
+   */
+  const esMentor = useEsMentor();
+  const celulaQueAcompano = useCelulaQueAcompano(esMentor);
+  const [vistaMentor, setVistaMentor] = useState<'ninguna' | 'celula' | 'alumno'>('ninguna');
+  const [alumnoAbierto, setAlumnoAbierto] = useState<AlumnoConEstado | null>(null);
   // Derivados, no estados: agrupan las secciones que comparten un mismo contenedor de scroll o un
   // mismo sub-estado. Nunca se pueden prender dos a la vez, porque salen todos de `seccionActiva`.
   const inExclusiveResources = seccionActiva === 'classroom';
@@ -1514,6 +1531,37 @@ export default function ComunidadScreen() {
     if (miembrosTab === 'global') return conv.type === 'global';
     return conv.type === 'direct';
   });
+
+  /*
+   * Las vistas del mentor toman la pantalla completa, igual que en Hoy: son otro contexto de
+   * trabajo, no una tarjeta más dentro de Comunidad. Cada una registra su `useSystemBackHandler`,
+   * así que el gesto del sistema las cierra paso a paso en vez de salir de la app.
+   */
+  if (esMentor && vistaMentor === 'alumno' && alumnoAbierto) {
+    return (
+      <AlumnoScreen
+        alumno={alumnoAbierto}
+        grupoId={celulaQueAcompano.vista?.celula.id ?? null}
+        onVolver={() => setVistaMentor('celula')}
+      />
+    );
+  }
+  if (esMentor && vistaMentor === 'celula') {
+    return (
+      <MiCelulaScreen
+        onSalir={() => setVistaMentor('ninguna')}
+        onAbrirAlumno={alumno => {
+          setAlumnoAbierto(alumno);
+          setVistaMentor('alumno');
+        }}
+        vista={celulaQueAcompano.vista}
+        cargando={celulaQueAcompano.cargando}
+        fallo={celulaQueAcompano.fallo}
+        detalle={celulaQueAcompano.detalle}
+        recargar={celulaQueAcompano.recargar}
+      />
+    );
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
@@ -2683,6 +2731,36 @@ export default function ComunidadScreen() {
           */}
           {seccionActiva === 'celula' && (
             <>
+            {/* Para quien ACOMPAÑA. Va arriba de todo porque es lo que viene a hacer; el resto
+                de Célula —su mentor, su tribu, su chat— sigue igual para todos, incluido él. */}
+            {esMentor ? (
+              <View style={{ paddingTop: 16 }}>
+                <MicroLabel>ACOMPAÑAMIENTO</MicroLabel>
+                <Pressable
+                  onPress={() => setVistaMentor('celula')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Abrir el grupo que acompañas"
+                  style={[styles.entradaMentor, { borderColor: c.goldInk, backgroundColor: c.goldWash }]}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={[t.cardTitle, { color: c.textStrong }]} numberOfLines={1}>
+                      {celulaQueAcompano.vista?.celula.nombre ?? 'Mi grupo'}
+                    </Text>
+                    <Text style={[t.small, { color: c.textSoft, marginTop: 2 }]}>
+                      {celulaQueAcompano.cargando
+                        ? 'Cargando…'
+                        : celulaQueAcompano.vista
+                          ? `${celulaQueAcompano.vista.resumen.total} ${
+                              celulaQueAcompano.vista.resumen.total === 1 ? 'aprendiz' : 'aprendices'
+                            }`
+                          : 'Ver el grupo que acompañas'}
+                    </Text>
+                  </View>
+                  <Icon name="chevron" size={16} color={c.goldInk} />
+                </Pressable>
+              </View>
+            ) : null}
+
             <View style={{ paddingTop: 16 }}>
               <MicroLabel>MENTOR</MicroLabel>
               <View style={[styles.mentor, { borderColor: c.border, backgroundColor: c.cardBg }]}>
@@ -3590,6 +3668,18 @@ export default function ComunidadScreen() {
 }
 
 const styles = StyleSheet.create({
+  // 56 px de alto: entrada principal, pulsable sin apuntar (AGENTS.md §4).
+  entradaMentor: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    minHeight: 56,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginTop: 8,
+  },
   content: {
     flexGrow: 1,
     paddingHorizontal: 24,

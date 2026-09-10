@@ -16,6 +16,7 @@ import { Icon } from '../components/Icon';
 import { Aparicion } from '../components/Aparicion';
 import { useEsMentor } from '../features/mentor/hooks/useEsMentor';
 import { useCelulaQueAcompano } from '../features/mentor/hooks/useCelulaQueAcompano';
+import { useProgramaPersonal } from '../features/mentor/hooks/useProgramaPersonal';
 import { TarjetaMentorHoy } from '../features/mentor/components/TarjetaMentorHoy';
 import { MiCelulaScreen } from '../features/mentor/screens/MiCelulaScreen';
 import { AlumnoScreen } from '../features/mentor/screens/AlumnoScreen';
@@ -48,6 +49,7 @@ export default function HoyScreen() {
   /* UNA sola lectura de la celula, repartida a la tarjeta y a la pantalla. Si cada una
      llamara al hook por su cuenta habria dos peticiones y dos verdades. */
   const celula = useCelulaQueAcompano(esMentor);
+  const programaPersonal = useProgramaPersonal(esMentor);
   const [vistaMentor, setVistaMentor] = useState<'ninguna' | 'celula' | 'alumno'>('ninguna');
   const [alumnoAbierto, setAlumnoAbierto] = useState<AlumnoConEstado | null>(null);
   const { abrir: abrirMapa, abierto: mapaAbierto } = useMapaRenacimientoAbierto();
@@ -149,7 +151,13 @@ export default function HoyScreen() {
      trabajo, no una tarjeta mas dentro del dia propio. El retroceso del sistema las cierra
      paso a paso (cada una registra su `useSystemBackHandler`). */
   if (esMentor && vistaMentor === 'alumno' && alumnoAbierto) {
-    return <AlumnoScreen alumno={alumnoAbierto} onVolver={() => setVistaMentor('celula')} />;
+    return (
+      <AlumnoScreen
+        alumno={alumnoAbierto}
+        grupoId={celula.vista?.celula.id ?? null}
+        onVolver={() => setVistaMentor('celula')}
+      />
+    );
   }
   if (esMentor && vistaMentor === 'celula') {
     return (
@@ -383,6 +391,53 @@ export default function HoyScreen() {
               cargando={celula.cargando}
               fallo={celula.fallo}
             />
+          ) : null}
+
+          {/*
+            Invitación secundaria, no un bloqueo. Acompañar no exige cursar (D-07), así que esto
+            es una oferta: quien dice "Ahora no" sigue trabajando igual y no pierde ningún dato —
+            posponer no llama a nada, y menos al DELETE, que borraría la participación entera.
+          */}
+          {programaPersonal.visible ? (
+            <Card>
+              <MicroLabel>TU PROGRAMA</MicroLabel>
+              <Text style={[t.cardTitle, { color: c.textStrong, marginTop: 6 }]}>
+                Hacer mi programa de 90 días
+              </Text>
+              <Text style={[t.body, { color: c.textSoft, fontSize: 13, marginTop: 6, lineHeight: 19 }]}>
+                Podés recorrerlo vos también: tus hábitos, tus objetivos y tu Mapa, con tu propio
+                día. No cambia nada de lo que ves como acompañante.
+              </Text>
+              {programaPersonal.error ? (
+                <Text style={[t.body, { color: c.danger, fontSize: 12.5, marginTop: 8 }]}>
+                  {programaPersonal.error}
+                </Text>
+              ) : null}
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
+                <Pressable
+                  onPress={() => void programaPersonal.activar()}
+                  disabled={programaPersonal.activando}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: programaPersonal.activando }}
+                  style={[
+                    estilosPrograma.principal,
+                    { backgroundColor: c.gold, opacity: programaPersonal.activando ? 0.6 : 1 },
+                  ]}
+                >
+                  <Text style={[t.body, { color: c.onGold, fontSize: 13.5, fontFamily: 'Jost_700Bold' }]}>
+                    {programaPersonal.activando ? 'Activando…' : 'Empezar'}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => void programaPersonal.posponer()}
+                  accessibilityRole="button"
+                  accessibilityLabel="Ahora no. No se borra nada."
+                  style={[estilosPrograma.secundario, { borderColor: c.border }]}
+                >
+                  <Text style={[t.body, { color: c.textSoft, fontSize: 13.5 }]}>Ahora no</Text>
+                </Pressable>
+              </View>
+            </Card>
           ) : null}
 
           {/* Tarjeta Mapa de Renacimiento (Día 7) */}
@@ -659,5 +714,22 @@ const styles = StyleSheet.create({
   wallLoadingRow: {
     minHeight: 48,
     justifyContent: 'center',
+  },
+});
+
+/** Botones de la invitación al programa personal. 48 px: pulsables con una sola mano. */
+const estilosPrograma = StyleSheet.create({
+  principal: {
+    minHeight: 48,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    borderRadius: 12,
+  },
+  secundario: {
+    minHeight: 48,
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+    borderRadius: 12,
+    borderWidth: 1,
   },
 });

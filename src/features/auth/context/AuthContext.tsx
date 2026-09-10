@@ -4,6 +4,10 @@ import * as authApi from '../api/authApi';
 import * as onboardingApi from '../../onboarding/api/onboardingApi';
 import { aUsuario } from '../api/usuarioMapper';
 import { loginConGoogle } from '../api/googleAuth';
+/* `mentorApi` es el único dueño del cliente de `/mentor/context`, así que la pregunta se hace
+   ahí y no se duplica acá. No hay ciclo: ese archivo solo depende de `apiClient` y de sus
+   propios schemas — el que mira hacia auth es `useEsMentor`, que es otro módulo. */
+import { capacidadesDePrograma } from '../../mentor/api/mentorApi';
 import { ApiError, cargarTokenPersistido, setTokenSesion } from '../../../services/http/apiClient';
 import {
   USUARIO_DEMO_APPLE,
@@ -38,6 +42,34 @@ async function resolverOnboardingCompletado(): Promise<boolean> {
     }
     return false;
   }
+}
+
+/**
+ * Si esta persona puede entrar a la app sin haber completado el onboarding.
+ *
+ * El programa de 90 días es obligatorio para el aprendiz y opcional para quien acompaña (D-07).
+ * Hasta ahora el gate no hacía esa distinción: un mentor que nunca activó su programa quedaba
+ * atrapado en la Ficha Inicial, sin forma de llegar a su grupo.
+ *
+ * Quien lo decide es el servidor, no el rol que viaja en el perfil. Deducirlo en el móvil es lo
+ * que ya falló una vez: los roles existen en dos idiomas y comprobar solo uno manda a un mentor
+ * por la rama del aprendiz sin que nada avise.
+ *
+ * Ante la duda, el gate se CIERRA. Si no se pudo averiguar —endpoint sin desplegar, sin red— se
+ * exige el onboarding, que es el comportamiento de siempre: un gate que se abre cuando no sabe
+ * deja pasar justo a quien tenía que completarlo.
+ */
+async function resolverPuedeEntrarSinOnboarding(): Promise<boolean> {
+  const capacidades = await capacidadesDePrograma();
+  return capacidades?.programRequired === false;
+}
+
+/** Onboarding completo, o exento de completarlo. */
+async function resolverGateDeIngreso(): Promise<boolean> {
+  if (await resolverOnboardingCompletado()) {
+    return true;
+  }
+  return resolverPuedeEntrarSinOnboarding();
 }
 
 export type { User } from '../types/auth.types';
@@ -114,7 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(aUsuario(api));
         setOnboardingResuelto(false);
         try {
-          const completado = await resolverOnboardingCompletado();
+          const completado = await resolverGateDeIngreso();
           if (!vigente) return;
           setIsOnboardingCompleted(completado);
           setOnboardingResuelto(true);
@@ -153,7 +185,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // todavía en `true` de una sesión anterior.
     setOnboardingResuelto(false);
     try {
-      const completado = await resolverOnboardingCompletado();
+      const completado = await resolverGateDeIngreso();
       setIsOnboardingCompleted(completado);
       setOnboardingResuelto(true);
     } catch (e) {
@@ -186,7 +218,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // admin sin pasar por la Ficha Inicial todavía). Mismo bug que tenía `login`, mismo arreglo:
       // se pregunta al backend en vez de asumir. Ver `resolverOnboardingCompletado`.
       try {
-        const completado = await resolverOnboardingCompletado();
+        const completado = await resolverGateDeIngreso();
         setIsOnboardingCompleted(completado);
         setOnboardingResuelto(true);
       } catch (e) {
