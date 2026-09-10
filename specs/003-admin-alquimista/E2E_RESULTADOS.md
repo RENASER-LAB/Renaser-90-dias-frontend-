@@ -14,12 +14,12 @@
 | Comprobación | Comando | Resultado |
 |---|---|---|
 | TypeScript del frontend, con la feature admin y las specs | `npx tsc --noEmit` | **PASA**, 0 errores |
-| Pruebas unitarias del backend | `./mvnw surefire:test` | **PASA** — `Tests run: 2951, Failures: 0, Errors: 0` |
+| Pruebas unitarias del backend | `./mvnw verify` | **PASA** — `Tests run: 2955, Failures: 0, Errors: 0` |
 | Reglas de arquitectura | `./mvnw surefire:test -Dtest=ArchitectureTest` | **PASA** — 8 de 8 |
 | Declaración de autorización por endpoint | `./mvnw surefire:test -Dtest=EndpointAuthorizationDeclarationTest` | **PASA** — 4 de 4 |
 | La suite E2E compila y se recoge | `npx playwright test --list` | **PASA** — `Total: 24 tests in 4 files` |
 | Integración del backend, la nueva | `./mvnw failsafe:integration-test -Dit.test=ComposicionDeCelulaIT` | **PASA** — 8 de 8 contra Postgres real |
-| Integración completa del backend | `./mvnw verify` | ver §1.1 |
+| Integración completa del backend | `./mvnw verify` | **PASA** — 50 pruebas de integración, 0 fallos, BUILD SUCCESS en 9:00 min |
 | `./scripts/test-cloud.sh` (envoltorio de Cloud) | — | **BLOQUEADO** — ver §3.1 |
 | Administración contra el backend en vivo | navegador, sesión real de ADMIN | **PASA en parte** — ver §1.2 |
 | Recorridos E01–E17 en navegador | `npm run test:e2e` | **BLOQUEADA** — ver §3.2 |
@@ -30,6 +30,21 @@ Que el typecheck pase y que el runner recoja los casos **no certifica ningún re
 ### 1.1 Corrección sobre las pruebas de integración
 
 Una versión anterior de este documento daba las pruebas de integración por bloqueadas. **Estaba mal.** El envoltorio `./scripts/test-cloud.sh` sí se detiene —exige un token de Testcontainers Cloud que en esta shell está vacío—, pero los contenedores funcionan igual a través del agente local (`~/.testcontainers.properties` apunta a `tcp://127.0.0.1:34125`). Invocando failsafe directamente, `ComposicionDeCelulaIT` corrió y pasó sus 8 casos contra un Postgres real.
+
+### 1.1b Un BUILD SUCCESS con un fallo adentro
+
+El `verify` terminó en verde y su log traía un `PSQLException: type "tipocelula" does not exist`.
+No hacía fallar nada, y por eso importa: era el **ingreso automático a la bienvenida**, que no metía
+a nadie en ningún grupo desde que existe.
+
+`recepcionesVigentesEn` era JPQL con un literal de enum sobre una columna `NAMED_ENUM`; Hibernate
+generaba `cast(? as tipocelula)` cuando el tipo de Postgres se llama `renaser.tipo_celula`. El único
+consumidor trata "no hay recepción vigente" como un caso legítimo, así que la excepción producía
+exactamente la misma consecuencia observable que la ausencia real de una bienvenida abierta.
+
+Corregido con consulta nativa y CAST explícito, documentado como **E-180**, y cubierto por
+`RecepcionVigenteIT` — que existe justamente porque el servicio se prueba con un doble del puerto y
+ese doble nunca ejecuta el SQL.
 
 ### 1.2 Lo que se comprobó en el navegador, contra el backend en vivo
 
