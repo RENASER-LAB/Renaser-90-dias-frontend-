@@ -79,16 +79,34 @@ SELECT 'e2e22220-0000-4000-8000-000000000002', 'Grupo cerrado E2E', c.id,
 FROM renaser.cohortes c WHERE c.estado = 'ACTIVA' ORDER BY c.creado_en DESC LIMIT 1
 ON CONFLICT (id) DO NOTHING;
 
--- ── 5. Devolver a ADMIN y ALQUIMISTA al estado "sin programa" ──────────────
--- E02 mide la invitación al programa propio, que SOLO existe para quien no lo activó. Y activarlo
--- es irreversible por diseño: la contraparte sería un DELETE que borra progreso, y el cliente se
--- niega a usarlo. Como E02b lo activa a propósito en cada corrida, sin este reinicio E02 se
--- saltea para siempre a partir de la segunda ejecución.
+-- ── 5. Dos cuentas administrativas que NUNCA iniciaron su programa ────────
+-- Las necesita E02, que mide la invitación al programa propio: esa invitación solo existe para
+-- quien todavía puede iniciarlo, y E02b activa el de la cuenta principal a propósito.
 --
--- Se borra la PARTICIPACIÓN, no la cuenta, y solo de las dos cuentas `e2e-`. Ninguna persona real
--- se toca: esto no se ejecuta jamás fuera de una base local de pruebas.
+-- Antes esto se resolvía BORRÁNDOLE la participación a `e2e-admin` en cada siembra. Funcionaba
+-- para la prueba y arruinaba todo lo demás: sin fila de programa, cada carga de Hoy pedía datos
+-- inexistentes y el log del backend se llenaba de 404 que no eran un fallo de nada. Mutar la
+-- cuenta principal para satisfacer un caso era el error; el caso se trae las suyas.
+--
+-- Nacen SIN fila en `participantes_programa`: eso es justo lo que las hace útiles.
+INSERT INTO renaser.usuarios (id, email, nombre_completo, rol, estado, hash_contrasena) VALUES
+  ('e2e44440-0000-4000-8000-000000000001', 'e2e-nuevo-admin@renaser.test', 'E2E Admin sin programa',
+   CAST('ADMIN' AS renaser.rol_usuario), 'ACTIVO', :hash),
+  ('e2e44440-0000-4000-8000-000000000002', 'e2e-nuevo-alq@renaser.test', 'E2E Alquimista sin programa',
+   CAST('ALQUIMISTA' AS renaser.rol_usuario), 'ACTIVO', :hash)
+ON CONFLICT (id) DO NOTHING;
+
+-- Y se les quita el programa si alguna corrida anterior se lo activó: son de un solo uso.
 DELETE FROM renaser.participantes_programa
-WHERE usuario_id IN ('e2e00000-0000-4000-8000-000000000001',
-                     'e2e00000-0000-4000-8000-000000000002');
+WHERE usuario_id IN ('e2e44440-0000-4000-8000-000000000001',
+                     'e2e44440-0000-4000-8000-000000000002');
+
+-- ── 6. Devolverle la participación a las cuentas principales ──────────────
+-- Reparación de la versión anterior de este archivo, que se la borraba. Sin esto, `e2e-admin`
+-- sigue generando 404 en cada pantalla que consulta el programa.
+INSERT INTO renaser.participantes_programa (usuario_id, fecha_inicio, dia_programa, programa_activado_en)
+VALUES ('e2e00000-0000-4000-8000-000000000001', CURRENT_DATE - 10, 10, now()),
+       ('e2e00000-0000-4000-8000-000000000002', CURRENT_DATE - 10, 10, now())
+ON CONFLICT (usuario_id) DO NOTHING;
 
 COMMIT;

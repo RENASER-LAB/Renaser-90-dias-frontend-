@@ -27,6 +27,19 @@ function requerida(nombre: string): string {
   return valor.trim();
 }
 
+/**
+ * Un actor que puede no estar configurado.
+ *
+ * Se usa para las cuentas que solo necesita UN caso: exigirlas como obligatorias haría que la
+ * suite entera se negara a arrancar en un entorno donde ese caso no interesa. Quien las use se
+ * saltea con un motivo explícito si faltan.
+ */
+function actorOpcional(prefijo: string, rol: Actor['rol']): Actor | null {
+  const email = process.env[`${prefijo}_EMAIL`]?.trim();
+  const password = process.env[`${prefijo}_PASSWORD`]?.trim();
+  return email && password ? { email, password, rol } : null;
+}
+
 function actor(prefijo: string, rol: Actor['rol']): Actor {
   return {
     email: requerida(`${prefijo}_EMAIL`),
@@ -65,6 +78,22 @@ export const ENTORNO = {
   },
   get suspendido(): Actor {
     return actor('E2E_SUSPENDED', 'SUSPENDED');
+  },
+  /**
+   * Dos cuentas administrativas que NO iniciaron su programa de 90 días.
+   *
+   * <blockquote>Existen porque E02 mide la invitación a ese programa, y esa invitación solo
+   * aparece para quien todavía puede iniciarlo. La primera versión reutilizaba las cuentas
+   * principales y les borraba la participación en cada siembra — funcionaba, pero dejaba a
+   * `e2e-admin` sin programa, y entonces cada carga de Hoy pedía datos que ya no existían y el
+   * log del backend se llenaba de 404 que no eran un fallo de nada. Mutar la cuenta principal
+   * para satisfacer un caso fue un error de diseño: el caso se trae las suyas.</blockquote>
+   */
+  get adminSinPrograma(): Actor | null {
+    return actorOpcional('E2E_FRESH_ADMIN', 'ADMIN');
+  },
+  get alquimistaSinPrograma(): Actor | null {
+    return actorOpcional('E2E_FRESH_ALCHEMIST', 'ALCHEMIST');
   },
 };
 

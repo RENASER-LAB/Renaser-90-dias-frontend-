@@ -1,5 +1,5 @@
 import { abrirAdministracion, cerrarGuiaDelAsistente, cerrarSesion, expect, test } from './soporte/fixtures';
-import { ENTORNO, rolesAdministrativos } from './soporte/entorno';
+import { ENTORNO, rolesAdministrativos, type Actor } from './soporte/entorno';
 
 /**
  * E01 — Entrar a Administración y volver, sin que se toquen los cinco tabs.
@@ -48,31 +48,26 @@ for (const rol of rolesAdministrativos()) {
 
     test('E02 · "Ahora no" es de esta cuenta y no esconde la invitación a la otra', async ({
       entrarComo,
-      api,
     }) => {
-      /* La invitación solo existe para quien TODAVÍA puede iniciar su programa. Si esta cuenta ya
-         lo activó —lo hace E02b— no hay nada que posponer, y seguir daría un fallo que habla de
-         un botón ausente en vez de decir la verdad. */
-      const capacidades = await api(rol.actor()).pedir<{ capabilities: { canStartProgram: boolean } }>(
-        '/api/v1/mentor/context',
-      );
-      /* Se comprueban las DOS cuentas, no solo la propia: el caso cambia de sesión a mitad de
-         camino y espera ver la invitación en la otra. Mirar solo la primera dejaba pasar el
-         escenario que de hecho fallaba —E02b activa el programa del ADMIN, y al saltar a esa
-         cuenta ya no hay nada que ofrecer—. */
-      const otraCuenta = rol.nombre === 'ADMIN' ? ENTORNO.alquimista : ENTORNO.admin;
-      const deLaOtra = await api(otraCuenta).pedir<{ capabilities: { canStartProgram: boolean } }>(
-        '/api/v1/mentor/context',
-      );
+      /* Este caso usa cuentas PROPIAS, no las principales.
+​
+         La invitación al programa solo existe para quien todavía puede iniciarlo, y E02b activa
+         el de la cuenta principal a propósito. La primera versión resolvía eso borrándole la
+         participación a `e2e-admin` en cada siembra: la prueba pasaba, pero esa cuenta quedaba
+         sin programa y cada carga de Hoy pedía datos inexistentes, llenando el log del backend de
+         404 que no eran un fallo de nada. Un caso que necesita un estado particular se trae sus
+         propias cuentas. */
+      const propia = rol.nombre === 'ADMIN' ? ENTORNO.adminSinPrograma : ENTORNO.alquimistaSinPrograma;
+      const otraCuenta = rol.nombre === 'ADMIN' ? ENTORNO.alquimistaSinPrograma : ENTORNO.adminSinPrograma;
       test.skip(
-        !capacidades.capabilities.canStartProgram || !deLaOtra.capabilities.canStartProgram,
-        'Alguna de las dos cuentas ya inició su programa: no queda invitación que posponer. ' +
-          'Activarlo es irreversible por diseño, así que esto se salta en vez de fallar.',
+        !propia || !otraCuenta,
+        'Faltan E2E_FRESH_ADMIN_* y E2E_FRESH_ALCHEMIST_*: son dos cuentas administrativas que ' +
+          'nunca iniciaron su programa, y sin ellas no hay invitación que posponer.',
       );
 
       // Sesión limpia: el "Ahora no" vive en `localStorage` y una sesión reutilizada lo traería
       // ya puesto desde la ejecución anterior.
-      const page = await entrarComo(rol.actor(), { sesionLimpia: true });
+      const page = await entrarComo(propia as Actor, { sesionLimpia: true });
 
       const invitacion = page.getByText(/hacer mi programa de 90 días/i);
       await expect(invitacion).toBeVisible();
@@ -80,16 +75,11 @@ for (const rol of rolesAdministrativos()) {
       await expect(invitacion).toBeHidden();
 
       await cerrarSesion(page);
-      // Otra cuenta con la misma capacidad: la invitación tiene que volver a aparecer. Con la
-      // clave global anterior, esta aserción fallaba.
-      await page.getByLabel('Correo electrónico', { exact: true }).fill(otraCuenta.email);
-      await page.getByLabel('Contraseña', { exact: true }).fill(otraCuenta.password);
+      // La otra cuenta tiene la misma capacidad: la invitación TIENE que volver a aparecer. Con la
+      // clave global anterior —una sola para todo el dispositivo— esta aserción fallaba.
+      await page.getByLabel('Correo electrónico', { exact: true }).fill((otraCuenta as Actor).email);
+      await page.getByLabel('Contraseña', { exact: true }).fill((otraCuenta as Actor).password);
       await page.getByRole('button', { name: 'Continuar', exact: true }).click();
-      await expect(page.getByRole('tab', { name: /^hoy$/i }).first()).toBeVisible({ timeout: 45_000 });
-      /* La otra cuenta también estrena sesión, así que le sale la guía de SER a pantalla completa
-         y tapa la invitación. `entrarComo` la cierra, pero este login es manual —el caso necesita
-         cambiar de cuenta SIN reutilizar sesión— y hay que cerrarla a mano. */
-      await cerrarGuiaDelAsistente(page);
 
       await expect(page.getByText(/hacer mi programa de 90 días/i)).toBeVisible({ timeout: 30_000 });
     });

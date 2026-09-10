@@ -64,8 +64,16 @@ type Fixtures = {
   api: (actor: Actor) => ApiDePruebas;
 };
 
+/**
+ * El archivo se nombra por CORREO y no por rol.
+ *
+ * Con el rol, dos cuentas ADMIN distintas —la principal y la que E02 necesita sin programa—
+ * escriben y leen el MISMO archivo: la segunda hereda la sesión de la primera y la prueba mide
+ * la cuenta equivocada sin que nada falle. Es el peor tipo de error: silencioso y verde.
+ */
 function rutaDeSesion(actor: Actor): string {
-  return path.join(CARPETA_SESIONES, `${actor.rol.toLowerCase()}.json`);
+  const nombre = actor.email.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+  return path.join(CARPETA_SESIONES, `${nombre}.json`);
 }
 
 export const test = base.extend<Fixtures>({
