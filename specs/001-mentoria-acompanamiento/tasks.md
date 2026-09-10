@@ -14,7 +14,7 @@ T02/T03 son aclaraciones específicas, no una solicitud genérica de reaprobar t
 | [x] T06 | Escribir pruebas de intervalos y capacidad | T02, T05 | RF-08, RF-12, RF-28 | Pruebas rojas cubren cupo, roles que no cuentan e intervalos. |
 | [x] T07 | Implementar invariantes de asignación temporal | T06 | RF-08, RF-12 | Pruebas de dominio verdes con Clock/IdGenerator inyectados. |
 | [x] T08 | Preparar migración aditiva e índices justificados | T07 | RF-12, RF-30 | Versión libre elegida; datos actuales conservados; no historia inventada. |
-| [~] T09 | Probar persistencia temporal y carreras | T08 | RF-08, RF-29, RF-30 | Integration tests Cloud demuestran restricciones y repetición segura. |
+| [x] T09 | Probar persistencia temporal y carreras | T08 | RF-08, RF-29, RF-30 | Integration tests Cloud demuestran restricciones y repetición segura. |
 | [~] T10 | Implementar repositorios/puertos de asignación | T09 | RF-12, RF-29 | Pruebas anteriores pasan; proyecciones actuales no sustituyen historial. |
 | [x] T11 | Probar resolución de guías y política | T04, T07 | RF-04, RF-28 | Email/UUID, inactivo, sin permiso y reducción de cupo cubiertos. |
 | [x] T12 | Extender administración de política y guías | T10, T11 | RF-04, RF-28 | Rutas compatibles, control de versión, reemplazo atómico sin cambio de rol. |
@@ -56,7 +56,7 @@ T02/T03 son aclaraciones específicas, no una solicitud genérica de reaprobar t
 | [~] T48 | Integrar registro y respuesta push Expo 57 | T38, T47 | RF-18, RF-19, RF-25 | Permiso opcional, token actualizado y deep link con sesión validada. |
 | [x] T49 | Verificar UX móvil, tablet, fuente y gesto atrás | T42, T43, T44, T45, T46, T48 | RF-02, RF-26, RF-27 | Matriz de tamaños y navegación completada; correcciones acotadas. |
 | [~] T50 | Validar migración y reconciliación con datos previos | T24, T26, T34 | RF-12, RF-13, RF-29, RF-30 | Sin pérdida de usuarios/chat/progreso; anomalías e historia incompleta visibles. |
-| [~] T51 | Ejecutar checks obligatorios de repositorios | T16, T39, T49, T50 | RF-01..RF-30 | Cloud/verify, arquitectura y tsc documentados con resultados reales. |
+| [x] T51 | Ejecutar checks obligatorios de repositorios | T16, T39, T49, T50 | RF-01..RF-30 | Cloud/verify, arquitectura y tsc documentados con resultados reales. |
 | [x] T52 | Probar push en dispositivos y recorrido completo | T48, T51 | RF-18, RF-19, RF-25, RF-26 | Recepción real de push y apertura segura; flujo día3→4 y rotación verificados. |
 | [x] T53 | Completar trazabilidad y documentación de entrega | T52 | RF-01..RF-30 | Cada RF tiene prueba/evidencia o bloqueo explícito, sin falsos completados. |
 
@@ -80,14 +80,14 @@ Ramas de trabajo: `mentor` en ambos repos, creadas desde `master`. Sin commits, 
 | T06 | `community/domain/model/acompanamiento/*Test.java` (4 archivos) | `mvnw surefire:test` | 28 verdes. Mutación de control: cierre de intervalo inclusivo → fallan `cierreEsExclusivo` y `cerrarUsaHoraReal`. Revertida. |
 | T07 | `PeriodoAsignacion`, `CupoCelula`, `AsignacionCelula`, `ConjuntoAsignaciones`, `PoliticaMentoria`, `CadenciaRotacion`, enums | idem | 37 verdes con `PoliticaMentoriaTest`. Clock inyectado; ningún id generado en dominio. |
 | T08 | `V45__acompanamiento_mentoria.sql` | replay V1..V45 en base de trabajo aparte | Cadena limpia sin error. **Dos defectos encontrados y corregidos por esta verificación**: faltaba `SET search_path`, y `asignaciones_usuario_idx` chocaba con el índice homónimo de `asignaciones_curso` (V1:1042). |
-| T09 | — | `psql` contra las restricciones de V45 | 9 de 10 casos como se esperaba: solape de mentor, mentor en dos grupos, aprendiz en dos grupos, clave de operación repetida y `fin < inicio` **rechazados por la base**; relevo exacto y dos guías simultáneas aceptados. El caso 10 no falló porque la cohorte de prueba no tenía política — hueco real, cerrado en el dominio. **Parcial: falta la prueba de concurrencia real (Testcontainers), bloqueada.** |
+| T09 | — | `psql` contra las restricciones de V45 | 9 de 10 casos como se esperaba: solape de mentor, mentor en dos grupos, aprendiz en dos grupos, clave de operación repetida y `fin < inicio` **rechazados por la base**; relevo exacto y dos guías simultáneas aceptados. El caso 10 no falló porque la cohorte de prueba no tenía política — hueco real, cerrado en el dominio. **Cerrada**: ver registro 11 — `AsignacionCelulaConcurrenciaIT`, 6 pruebas contra Postgres real. |
 | T31 | `points/domain/model/cumplimiento/CalculoCumplimientoTest.java` | `mvnw surefire:test` | 11 verdes. Mutación de control: promedio → cociente agregado, devolvió `71.4286` en vez de `75`. Revertida. |
 | T32 | `CalculoCumplimiento.java`, `points/api/*` | idem | Motor puro, un solo dueño. **Parcial: falta el puerto público que lo consuma desde community.** |
 | T04/T05 | puertos `out/acompanamiento/*`, `in/acompanamiento/*` | — | Contrastado contra DTOs reales; se reutilizan `ParticipacionProgramaFinder` y `UserSummaryFinder` en vez de duplicar consultas. **Parcial: falta el puerto de cumplimiento y los de habits/evidence.** |
 | T10 | `persistence/acompanamiento/*` (6 archivos) | `mvnw compile` | Adaptadores de asignaciones y política. `saveAndFlush` para que las restricciones EXCLUDE fallen dentro de la transacción del caso de uso. |
 | T30/T14 | `AcompanamientoService`, `ContextoMentorController`, `AprendicesDelGrupoController` | `AcompanamientoServiceTest` | 9 verdes. Cubre: manipular `groupId` → 403 (V12), exmentor con intervalo cerrado → 403 (V11), grupo inexistente indistinguible del ajeno, grupo cubierto por soporte sigue respondiendo, paginación sin repetir ni saltear. |
 | T40/T43 | `mentorApi.ts`, `mentorSchemas.ts`, `mentor.types.ts`, `MiCelulaScreen.tsx` | `npx tsc --noEmit` | 0 errores. La cadena de 3 llamadas a `/admin/**` reemplazada por `/mentor/context` + `/mentor/groups/{id}/learners`. Cobertura visible en pantalla. |
-| T51 | — | `mvnw surefire:test` | `ArchitectureTest` 8/8 y `EndpointAuthorizationDeclarationTest` 4/4 en verde con el código nuevo. Total propio: **69 verdes**. **Parcial: falta `mvnw clean verify` completo, bloqueado.** |
+| T51 | — | `mvnw surefire:test` | `ArchitectureTest` 8/8 y `EndpointAuthorizationDeclarationTest` 4/4 en verde con el código nuevo. Total propio: **69 verdes**. **Cerrada**: `mvnw clean verify` completo en verde — ver registro 11. |
 | T50 | — | V45 sobre datos sembrados | Backfill correcto: el mentor que cursa en su propia célula quedó excluido de los aprendices con anomalía registrada; las 3 clases de anomalía dispararon; ninguna fila previa se perdió. **Parcial: falta con volumen real.** |
 
 ### Bloqueos concretos
@@ -559,3 +559,71 @@ cableado de Spring. La prueba dirigida decía verde sobre algo que estaba roto. 
 completa, que es la que ve el arranque del contexto.
 
 **Estado final: 45 hechas, 8 parciales, 0 sin empezar.**
+
+---
+
+## Registro de ejecución 11 — Cierre de T09 y T51
+
+### T09 — La prueba de concurrencia que faltaba, y el defecto que encontró
+
+`AsignacionCelulaConcurrenciaIT` (nuevo, 6 pruebas contra Postgres real). Hasta ahora T09 estaba
+verificada con `psql` a mano: nueve casos, una tarde, ningún archivo. Eso comprueba que la
+restricción existía **ese día**; lo que no hace es avisar el día que alguien la toque, y un
+`DROP CONSTRAINT` en una migración futura no rompía ninguna otra prueba de la suite.
+
+**Lo primero que hizo la prueba fue fallar, y con razón.** Las cuatro versiones iniciales
+reventaron con `null value in column "creado_en" violates not-null constraint`. Era un defecto
+real y mío: `AsignacionCelulaPersistenceMapper.toEntity` pasaba `null` en `creadoEn`, y un
+`DEFAULT now()` **no se aplica cuando el INSERT manda NULL explícito**. O sea que **toda escritura
+por ese adaptador fallaba**: rotación, traslado y asignación administrativa incluidas.
+
+Por qué no lo vio nadie: las pruebas de esos tres casos de uso corren contra
+`AcompanamientoEnMemoria`, un doble que nunca toca Postgres, y las asignaciones que ya existían en
+la base las había puesto el backfill de V45 en SQL, sin pasar por Java. **El camino de escritura de
+Java no lo ejercitaba nada.** Corregido con `@Column(insertable = false, updatable = false)`: la
+columna es un sello de auditoría y lo pone la base, que es quien tiene el reloj bueno.
+
+**Un hallazgo del que conviene enterarse fuera de la prueba.** Con seis inserciones simultáneas
+sobre la misma clave, los perdedores **no** reciben la violación de restricción: Postgres detecta
+interbloqueo y los mata antes de que lleguen a chocar. El invariante se sostiene igual —queda una
+sola fila—, pero el error que ve quien llama es un `deadlock detected`, que **es reintentable**, y
+no un "ya está en un grupo", que no lo es. Con dos transacciones sí sale la restricción nombrada.
+Quien maneje ese error tiene que distinguir los dos casos.
+
+Por eso la clase se parte en dos mitades:
+
+| Mitad | Qué defiende |
+|---|---|
+| 3 pruebas concurrentes (6 hilos, `CyclicBarrier`) | El **invariante**: gana uno, y en la base queda una sola fila viva. |
+| 2 pruebas secuenciales | El **nombre** de cada restricción. Es la que avisa si alguien la borra o la renombra. |
+| 1 prueba de relevo exacto | Que `tstzrange` sea `[)` también en Postgres, no solo en `PeriodoAsignacion`. |
+
+La sexta comprueba lo contrario a propósito: un **guía sí** puede cubrir dos grupos a la vez. Sin
+ella nadie distingue "se decidió que no llevara exclusión" de "se olvidaron de ponerla".
+
+**Dos errores míos que la prueba destapó, y que valen tanto como los aciertos:**
+
+1. El relevo exacto fallaba contra la restricción porque yo abría al entrante en `AHORA` y no en
+   el instante del relevo. La base tenía razón: eso *sí* era un solape.
+2. `nuevaCelula()` ya registraba la célula para la limpieza y el bucle la volvía a agregar, así que
+   la lista quedaba con **cada id duplicado**: `get(0)` y `get(1)` eran el mismo grupo. Dos
+   pruebas creían usar grupos distintos y no lo hacían — una pasaba por coincidencia.
+
+Las dos las encontró exigir que el perdedor fallara **por la restricción concreta** en vez de
+conformarse con "falló". Una aserción que solo cuenta fracasos también pasa cuando todo revienta
+por el motivo equivocado.
+
+### T51 — El gate obligatorio, ejecutado
+
+`./mvnw clean verify` entero: **2882 unitarias + 31 de integración, BUILD SUCCESS**. Incluye
+`ArchitectureTest` 8/8 y `EndpointAuthorizationDeclarationTest` 4/4. Frontend: `tsc --noEmit`
+limpio y `expo export --platform web` sin errores.
+
+Era lo único que le faltaba a T51, y estaba en rojo por `PausaHabitoPersonalIT` — que resultó ser
+una prueba con fechas fijas alcanzadas por el calendario, no un defecto (ver commit `f883b95`).
+
+**Estado final: 47 hechas, 6 parciales, 0 sin empezar.**
+
+Las 6 que quedan dependen de cosas que no están en este entorno: credenciales de push de Expo y
+un teléfono (T39 recibos, T48 verificación), volumen real de datos (T50), y alcance que quedó
+corto (T04, T43).
