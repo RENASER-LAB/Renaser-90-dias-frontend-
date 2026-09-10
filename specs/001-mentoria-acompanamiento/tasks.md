@@ -53,7 +53,7 @@ T02/T03 son aclaraciones específicas, no una solicitud genérica de reaprobar t
 | [x] T45 | Conectar detalle de evidencia y mensaje existente | T27, T44 | RF-17, RF-20, RF-25 | Archivo autorizado y chat canónico; ningún envío automático. |
 | [x] T46 | Integrar evaluación y ranking entre grupos | T33, T34, T40 | RF-21, RF-22, RF-24 | Períodos/muestras visibles; rankings personales intactos. |
 | [x] T47 | Integrar lista de avisos y navegación contextual | T36, T43 | RF-18, RF-25 | Destino revocado muestra estado seguro; avisos no son datos ficticios. |
-| [ ] T48 | Integrar registro y respuesta push Expo 57 | T38, T47 | RF-18, RF-19, RF-25 | Permiso opcional, token actualizado y deep link con sesión validada. |
+| [~] T48 | Integrar registro y respuesta push Expo 57 | T38, T47 | RF-18, RF-19, RF-25 | Permiso opcional, token actualizado y deep link con sesión validada. |
 | [x] T49 | Verificar UX móvil, tablet, fuente y gesto atrás | T42, T43, T44, T45, T46, T48 | RF-02, RF-26, RF-27 | Matriz de tamaños y navegación completada; correcciones acotadas. |
 | [~] T50 | Validar migración y reconciliación con datos previos | T24, T26, T34 | RF-12, RF-13, RF-29, RF-30 | Sin pérdida de usuarios/chat/progreso; anomalías e historia incompleta visibles. |
 | [~] T51 | Ejecutar checks obligatorios de repositorios | T16, T39, T49, T50 | RF-01..RF-30 | Cloud/verify, arquitectura y tsc documentados con resultados reales. |
@@ -436,3 +436,126 @@ no se le firma nada (se verifica que el almacenamiento ni se llama).
   En nativo sí. Cosmético.
 - Ajenos a este SDD, vistos en la consola: `GET /api/v1/chat/members` → 404 y
   `GET /api/v1/rocks/today` → 403 para un mentor con programa activo.
+
+---
+
+## Registro de ejecución 10 — Push nativo (T48) y reintentos (T39)
+
+Cierre del sprint. Se atacó lo único que quedaba sin empezar y la mitad implementable de un
+parcial; el resto sigue bloqueado por credenciales que no me corresponde crear.
+
+### T48 — Registro y respuesta push de Expo
+
+| Archivo | Qué hace |
+|---|---|
+| `src/features/mentor/notificaciones/pushNativo.ts` | Permiso, token de Expo, alta en `POST /api/v1/push-tokens` y escucha de rotación. |
+| `src/features/mentor/notificaciones/rutaDeAviso.ts` | Toque sobre el aviso → ruta pendiente → ficha del alumno. |
+| `AuthContext.tsx` | Ata las dos cosas al ciclo de sesión. |
+| `HoyScreen.tsx` | Consume la ruta pendiente cuando el padrón ya está cargado. |
+| `avisosApi.ts` | `destinoDeRuta()` extraído; lo comparten la bandeja y el push. |
+
+Cuatro decisiones que el diff no explica solo:
+
+1. **El registro se hace con sesión, no al arrancar.** `POST /api/v1/push-tokens` identifica al
+   dueño del teléfono por `X-Auth-Token`; pedirlo antes lo ataría a nadie. Y al cerrar sesión se
+   descarta cualquier ruta pendiente: el aviso era para quien se fue, y aplicarlo a quien entra
+   después en el mismo teléfono intentaría abrir la ficha de un alumno ajeno. El servidor
+   respondería 403, pero el intento no debería ni ocurrir.
+2. **Expo Go queda fuera.** Desde SDK 53 no entrega push remoto. Pedir el token ahí devuelve uno
+   que nunca recibe nada — peor que no registrar: el backend creería tener un destino vivo.
+3. **La rotación del token se escucha.** El token de Expo cambia solo al reinstalar o restaurar un
+   respaldo. Sin `addPushTokenListener`, el backend se queda con el viejo y los avisos dejan de
+   llegar **sin que el envío falle**: van a un destino que ya no existe.
+4. **No se duplicó el parser de la ruta.** `avisosApi.ts` ya tenía la expresión para la bandeja
+   dentro de la app. Con una copia en cada lado, el día que el backend cambie la ruta uno de los
+   dos deja de abrir, y el que falla es justo el que casi nunca se prueba a mano. Se extrajo
+   `destinoDeRuta()` y ahora la comparten; de paso ganó `decodeURIComponent` y rechazo de
+   identificadores vacíos, porque desde el push llega `data` crudo que no pasó por Zod.
+
+**Queda parcial, y por dos cosas concretas, no por falta de código:**
+
+- **Falta `extra.eas.projectId` en `app.json`** (y no hay `eas.json`). Sin él,
+  `getExpoPushTokenAsync` no puede emitir token. No lo inventé: un valor falso produce tokens que
+  Expo rechaza *al enviar*, no al pedirlos, o sea que el fallo aparecería semanas después y lejos
+  de acá. Lo genera `eas init` contra la cuenta de Expo del proyecto — es una decisión de quien
+  tiene esa cuenta. El código devuelve `sin_project_id` y no rompe nada mientras tanto.
+- **No hay dispositivo ni emulador en este entorno**, así que los cuatro escenarios que pide
+  `validation.md` (primer plano, segundo plano, app cerrada, permiso denegado) no se ejecutaron.
+
+Verificado sí: `npx tsc --noEmit` limpio y `npx expo export --platform web` sin errores — el bundle
+web sigue construyendo con los módulos nuevos, que quedan inertes ahí (`HAY_PUSH_NATIVO` es
+`false` y `require('expo-notifications')` nunca llega a ejecutarse).
+
+### T39 — El reintento, y por qué antes no se podía
+
+Al ir a implementarlo apareció el motivo real de que faltara: **`intentarPush` corría dentro de
+`@Transactional emitir(...)`**. Un reintento con esperas ahí retiene una conexión del pool todo
+ese rato, y bajo un pico del proveedor, tantas conexiones como avisos haya en vuelo. El pool se
+agota por una notificación, que es lo menos crítico del sistema.
+
+Así que primero se movió el envío a después del commit (`TransactionSynchronization.afterCommit`),
+que además arregla la llamada HTTP dentro de la transacción, y recién entonces se agregó el
+reintento en `DespachadorPush`: **dos**, con esperas de 250 ms y 750 ms.
+
+Qué NO se reintenta, que es la parte que importa:
+
+- `TOKEN_INVALIDO` — la app se desinstaló; insistir tira trabajo para siempre y encima retrasa la
+  desactivación del token.
+- `SIN_TRANSPORTE` — es configuración, no red. Reintentar no la arregla.
+- `ENTREGADO` — serían dos banners en el teléfono, peor que el fallo original.
+
+Dos y no más: el tercer reintento cuesta más hilo del que recupera. Cerrar el hueco de verdad pide
+guardar el pendiente y reentregarlo desde un job, no esperar más ahí; queda dicho en el javadoc.
+
+`DespachadorPushTest` pasa de 7 a **12 pruebas**. La espera se inyecta para que probar dos
+reintentos no cueste un segundo de reloj por prueba. `NotificacionServiceTest` sigue en 11 sin
+tocarse: sin transacción activa el envío es inmediato, que es el camino que ya ejercitaban.
+
+**Sigue parcial:** los recibos de Expo (`/push/getReceipts`) necesitan credenciales del proyecto
+para probarse contra algo real, y son las mismas que faltan en T48.
+
+### Lo que queda bloqueado, y qué lo desbloquea
+
+| Tareas | Bloqueo | Qué hace falta |
+|---|---|---|
+| T39 (recibos), T48 (verificación) | Sin credenciales de push de Expo ni `projectId`. | `eas init` y las credenciales, desde la cuenta de Expo del proyecto. |
+| T48 (los 4 escenarios) | Sin dispositivo ni emulador. | Un development build instalado en un teléfono. |
+| T04 | Contraste de contratos contra el inventario completo. | Nada externo; quedó corto de alcance, no bloqueado. |
+
+### Corrección: los contenedores SÍ funcionan, y T51 se ejecutó
+
+Escribí más arriba que T09/T10/T50/T51 estaban bloqueadas por el token vacío. **Era falso** y lo
+descubrí al ejecutarlas: `~/.config/renaser/testcontainers-cloud.token` sigue en 0 bytes, pero el
+agente de Testcontainers Cloud está configurado en `~/.testcontainers.properties`
+(`docker.host=tcp://127.0.0.1:40343`) con `testcontainers.reuse.enable=true`, y las pruebas de
+integración corren. Miré el archivo del token en vez de intentar la ejecución, y eso convirtió una
+suposición en un "bloqueado" escrito en un documento.
+
+**Se ejecutó `./mvnw clean verify` completo.** Resultado real:
+
+| Fase | Resultado |
+|---|---|
+| Surefire (unitarias) | **2881 en verde**, 0 fallos, 0 errores |
+| Failsafe (integración) | **25 ejecutadas, 2 fallan** |
+
+Las dos que fallan son `PausaHabitoPersonalIT.pausarElHabitoPersonalLoSacaDelDiaYLuegoVuelveSolo`
+y `.reactivarElHabitoPersonalLoDevuelveAlDia`: un hábito pausado sigue apareciendo en la
+generación del día.
+
+**No son de este SDD.** Se comprobó, no se supuso: se creó un worktree en `e2150ae` —el commit
+base de la rama, anterior a todo este trabajo— y ahí fallan **exactamente las mismas dos, con el
+mismo mensaje**. `mvnw clean verify` ya estaba en rojo en `mentor` antes de empezar. Queda
+señalado como defecto aparte; arreglarlo es tocar la pausa de hábitos, que no es de esta entrega.
+
+### Un defecto que me metí yo, y qué lo dejó pasar
+
+Al agregar el constructor de pruebas a `DespachadorPush` quedaron dos constructores y ninguno
+marcado con `@Autowired`. Spring entonces no elige: busca el vacío, no lo encuentra, y **no levanta
+el contexto**. Rompió 413 pruebas de integración de una sola vez.
+
+Lo que importa es por qué no lo vi: corrí `-Dtest=DespachadorPushTest,NotificacionServiceTest` y
+pasaron las 23, porque **las dos clases construyen el objeto a mano** y ninguna ejercita el
+cableado de Spring. La prueba dirigida decía verde sobre algo que estaba roto. Lo encontró la suite
+completa, que es la que ve el arranque del contexto.
+
+**Estado final: 45 hechas, 8 parciales, 0 sin empezar.**
