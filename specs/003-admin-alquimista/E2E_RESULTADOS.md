@@ -6,11 +6,12 @@
 **Runner:** Playwright 1.49.1 · Chromium 153 · viewport 360 px · 1 worker · 0 reintentos.
 
 ```
-15 pasaron · 0 fallaron · 7 salteadas    (25,2 s)
+23 pasaron · 0 fallaron · 0 salteadas    (33,6 s)
 ```
 
-> Los 7 salteados **no son verdes disfrazados**: cada uno se saltea con un motivo explícito que
-> se lee en la salida. Lo que no se pudo ejecutar se dice, no se esconde.
+Los 17 recorridos, con sus variantes, corriendo contra backend y base reales. Se llegó acá
+sembrando los escenarios que faltaban (`soporte/escenarios.sql`) y corrigiendo un defecto real
+que la propia suite destapó: un grupo lleno devolvía **500** en vez de 409.
 
 ---
 
@@ -35,8 +36,29 @@ historial ni cumplimiento.
 | E16 | La búsqueda encuentra a alguien que **no** está en la primera página |
 | E16b | Un solo scroll: sin desbordamiento horizontal en 360 px |
 | E17 | Sin red, la pantalla lo dice y **no** convierte el error en «0 en total» |
+| E02 ×2 | «Ahora no» es de esa cuenta y no le esconde la invitación a la otra |
+| E05 | El cupo lo sostiene el **servidor**: el doceavo se rechaza con **409**, no con 500 |
+| E07 | Retirar desde el grupo equivocado se rechaza y no toca la pertenencia real |
+| E08 | La semana administrativa y la del mentor devuelven el mismo día |
+| E13 | Un grupo cerrado se consulta desde administración y deja de dar acceso |
+| E15c | El guard del mentor sigue negando fuera de su relación vigente |
 
-## 2. Lo salteado, con su motivo
+## 2. Lo que hizo falta para dejar de saltear
+
+Nada de esto era opcional, y por eso quedó versionado en `soporte/escenarios.sql`:
+
+- **Veinte aprendices libres.** E05 llena un grupo de diez y necesita uno más para forzar el
+  rechazo. El script **libera** a los aprendices antes de sembrar: cada corrida los asigna a los
+  grupos que crea, así que sin eso la reserva se agotaba y la prueba se salteaba desde la tercera
+  ejecución. Una prueba que solo funciona la primera vez no es una prueba.
+- **Un grupo del mentor con dos alumnos**, escritos en el **historial** y no solo en el puntero
+  —que es de donde leen el chat y el seguimiento, exactamente lo que causó E-177—.
+- **Un grupo con el período ya cerrado**, para E13.
+- **Dos cuentas administrativas que nunca iniciaron su programa**, solo para E02. La primera
+  versión le borraba la participación a la cuenta principal: la prueba pasaba y el log del
+  backend se llenaba de 404 que no eran un fallo de nada.
+
+## 2b. Motivos históricos de salteo (ya resueltos)
 
 | ID | Por qué no corrió |
 |---|---|
