@@ -18,11 +18,40 @@
 | Reglas de arquitectura | `./mvnw surefire:test -Dtest=ArchitectureTest` | **PASA** — 8 de 8 |
 | Declaración de autorización por endpoint | `./mvnw surefire:test -Dtest=EndpointAuthorizationDeclarationTest` | **PASA** — 4 de 4 |
 | La suite E2E compila y se recoge | `npx playwright test --list` | **PASA** — `Total: 24 tests in 4 files` |
-| Pruebas de integración del backend | `./scripts/test-cloud.sh` | **BLOQUEADA** — ver §3.1 |
+| Integración del backend, la nueva | `./mvnw failsafe:integration-test -Dit.test=ComposicionDeCelulaIT` | **PASA** — 8 de 8 contra Postgres real |
+| Integración completa del backend | `./mvnw verify` | ver §1.1 |
+| `./scripts/test-cloud.sh` (envoltorio de Cloud) | — | **BLOQUEADO** — ver §3.1 |
+| Administración contra el backend en vivo | navegador, sesión real de ADMIN | **PASA en parte** — ver §1.2 |
 | Recorridos E01–E17 en navegador | `npm run test:e2e` | **BLOQUEADA** — ver §3.2 |
 | Smoke nativo Maestro | `npm run test:e2e:native` | **BLOQUEADA** — ver §3.3 |
 
 Que el typecheck pase y que el runner recoja los casos **no certifica ningún recorrido**. Lo dice e2e.md y se respeta acá: sin navegador y sin entorno de pruebas aislado, lo que hay es código de prueba, no evidencia.
+
+### 1.1 Corrección sobre las pruebas de integración
+
+Una versión anterior de este documento daba las pruebas de integración por bloqueadas. **Estaba mal.** El envoltorio `./scripts/test-cloud.sh` sí se detiene —exige un token de Testcontainers Cloud que en esta shell está vacío—, pero los contenedores funcionan igual a través del agente local (`~/.testcontainers.properties` apunta a `tcp://127.0.0.1:34125`). Invocando failsafe directamente, `ComposicionDeCelulaIT` corrió y pasó sus 8 casos contra un Postgres real.
+
+### 1.2 Lo que se comprobó en el navegador, contra el backend en vivo
+
+Se abrió la app web (`npx expo start --web --port 8081`) contra el backend que el dueño del proyecto tiene corriendo, con su sesión de ADMIN ya iniciada. **Solo lecturas y navegación: no se creó, editó ni borró nada.** Lo observado:
+
+| Qué | Resultado |
+|---|---|
+| `GET /api/v1/mentor/context` | `"capabilities":{...,"canAdminister":true}` — la capacidad llega del servidor |
+| Tarjeta "OPERACIÓN · Administración" en Hoy | Visible. Los cinco tabs, intactos |
+| Tarjeta "TU PROGRAMA · Hacer mi programa de 90 días" | Visible para un ADMIN — que es justo lo que antes no pasaba (ARF-16) |
+| Inicio de Administración | "Grupos por vencer: 0", "Solicitudes: 0" y, con un panel caído, **"Personas sin grupo · —"** con la etiqueta accesible *"Personas sin grupo. Sin datos"*. Los otros dos paneles siguieron mostrando sus números: un panel que falla no borra a los demás (ARF-02) |
+| Lista de Grupos | "Célula Aurora (PRUEBA) · **SIN PERÍODO** · 4 de 10 aprendices · Mentor: Ricardo Palomino". El `status` y el `learnerCount` (ocupación leída del historial) llegan del servidor |
+| Detalle del grupo | Mentor con Quitar/Cambiar, cuatro aprendices con "Retirar a &lt;nombre&gt;" cada uno, "Agregar aprendiz", y "4 de 10 plazas ocupadas" |
+| Selector de mentor | "Ricardo Palomino — **Sin especialidad definida** · ya lidera este grupo". El `null` de especialidad se muestra, no se inventa (ARF-05) |
+| Volver | Detalle → lista → inicio, un nivel por vez |
+
+**Dos defectos salieron de esta pasada y están corregidos:**
+
+1. `ParameterLabelException: Ordinal parameter labels start from '?3'` en `GET /api/v1/admin/trainees?withoutGroup=true`. El WHERE compartido entre listado y conteo numeraba los filtros como `?3`/`?4`; al pegarlo detrás de un `SELECT COUNT(*)` sin LIMIT ni OFFSET, la consulta se quedaba sin `?1`. Había prueba de `listarAprendices` y ninguna de `contarAprendices`, y por eso pasó. Se corrigió la numeración y se agregaron dos casos al test del adaptador.
+2. El selector de mentor decía *"ya lidera otro grupo"* al mentor de ESE grupo. Falso, y además asusta: parece que reasignarlo se lo quitaría a alguien.
+
+Nada de esto convierte los recorridos E01–E17 en ejecutados. Es verificación manual, y se declara como tal.
 
 ---
 
@@ -54,7 +83,7 @@ Que el typecheck pase y que el runner recoja los casos **no certifica ningún re
 
 ## 3. Bloqueos, con su salida real
 
-### 3.1 Sin Testcontainers Cloud y sin Docker
+### 3.1 El envoltorio de Testcontainers Cloud no arranca (los contenedores sí)
 
 ```
 $ ./scripts/test-cloud.sh failsafe:integration-test -Dit.test=ComposicionDeCelulaIT
@@ -62,7 +91,9 @@ Falta el token. Guardalo en /home/ricardo/.config/renaser/testcontainers-cloud.t
 No se iniciaron Maven ni contenedores locales.
 ```
 
-El archivo del token existe pero está **vacío** (0 bytes) y no hay Docker en esta shell. La constitución del SDD prohíbe caer a Docker local, así que no se intentó. `ComposicionDeCelulaIT` **compila** (`./mvnw test-compile` limpio, tras borrar `target/test-classes`) pero **no se ejecutó**.
+El archivo del token existe pero está **vacío** (0 bytes), así que el script sale antes de invocar a Maven.
+
+**Lo que NO significa:** que las pruebas de integración no se puedan correr. El agente de Testcontainers está activo y `~/.testcontainers.properties` apunta a `tcp://127.0.0.1:34125`, así que llamando a failsafe directamente los contenedores se crean sin problema. `ComposicionDeCelulaIT` corrió así y pasó 8 de 8. Lo que falta es solo el token para que el envoltorio —que además comprueba que el motor sea Cloud y no Docker local— haga su verificación.
 
 **Qué falta:** el token en `~/.config/renaser/testcontainers-cloud.token`.
 

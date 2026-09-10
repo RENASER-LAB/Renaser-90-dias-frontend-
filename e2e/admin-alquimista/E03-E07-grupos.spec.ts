@@ -34,14 +34,14 @@ test('E04 · crear un grupo con fechas, elegir mentor y agregar aprendices persi
   await expect(page.getByText(nombre)).toBeVisible();
   await expect(page.getByText(/vigente/i).first()).toBeVisible();
 
+  /* Los candidatos se apuntan por testID y no por su nombre: el nombre es el de cada persona del
+     entorno, así que cualquier regex genérico terminaría enganchando "Volver" o "Cerrar". */
   await page.getByRole('button', { name: /asignar mentor/i }).click();
-  await page.getByRole('button', { name: /.+/ }).nth(0);
-  const primerMentor = page.getByText(/sin especialidad definida|negocio|mente|relaciones/i).first();
-  await primerMentor.click();
+  await page.getByTestId('candidato-mentor').first().click();
   await expect(page.getByRole('button', { name: /cambiar mentor/i })).toBeVisible();
 
   await page.getByRole('button', { name: /agregar aprendiz/i }).click();
-  await page.getByRole('button', { name: /^(?!cerrar$).+/i }).nth(0).click();
+  await page.getByTestId('candidato-aprendiz').first().click();
 
   /* La comprobación de verdad: se recarga y se vuelve a entrar. Un estado que solo vive en la
      memoria del componente pasaría todas las aserciones anteriores y fallaría acá. */

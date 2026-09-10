@@ -54,3 +54,44 @@ Frontend: npx tsc --noEmit y validación manual de flujos en compacto, Android/X
 Implementar y ejecutar [e2e.md](e2e.md): E01–E17 recorren la app y el backend reales, con smoke nativo para las funciones de dispositivo. Relacionar sus resultados con V01–V30 sin confundir pruebas de API con pruebas de interfaz.
 
 La implementación entrega E2E_RESULTADOS.md con estado PASADO/FALLIDO/BLOQUEADO por escenario, comandos exactos, fecha, HEAD de ambos repos, runId y evidencias. Estado actual: E2E planificado, todavía no implementado ni ejecutado. El typecheck de la auditoría previa no cubre este agregado.
+
+---
+
+## Estado real de V01–V30 tras la implementación del 2026-09-10
+
+`PASA` significa que hay una prueba automática que lo sostiene y que **corrió**. `IMPLEMENTADO`
+significa que el comportamiento está y la prueba existe, pero no se ejecutó por el bloqueo de
+entorno que detalla `E2E_RESULTADOS.md`. `PENDIENTE` es lo que no se hizo.
+
+| Caso | Estado | Dónde |
+|---|---|---|
+| V01 · ADMIN/ALCHEMIST sin programa opera | **PASA** | Verificado en vivo: `canAdminister:true` con `personalProgram.enrolled:false` |
+| V02 · Aprendiz/suspendido pide admin | IMPLEMENTADO | `E15`, `E15b`. Los guards ya existían y `AcompanamientoServiceTest` los cubre |
+| V03 · Iniciar programa como staff | **PASA en parte** | La invitación aparece para un ADMIN (verificado en vivo). El recorrido completo es `E02b` |
+| V04 · Contratos de fase del staff activo | **PASA** | `ContratoServiceTest`: firma con programa activado, 403 sin activar |
+| V05 · "Ahora no" y cambio de cuenta | IMPLEMENTADO | Clave por `userId` en `useProgramaPersonal`; recorrido `E02` |
+| V06 · Aprobar dos veces | IMPLEMENTADO | Guard preexistente; `SolicitudesAdminScreen` informa el estado real |
+| V07 · Ingreso a bienvenida vigente | **PASA** | `IngresoARecepcionServiceTest` (preexistente) |
+| V08 · Sin bienvenida o varias candidatas | **PASA** | `IngresoARecepcionServiceTest`: WARN y sin selección arbitraria. La UI lo dice al aprobar |
+| V09 · Crear grupo con período | **PASA** | `CelulaServiceTest` + `Celula.periodoDe`: las dos fechas o ninguna |
+| V10 · Renombrar / clearPeriod | **PASA** | `CelulaServiceTest`: un PATCH que solo renombra no borra el período |
+| V11 · Cupo 10 y ampliado a 15 | **PASA** | `ComposicionDeCelulaIT.elCupoSeSostieneEnElServidor` y `elMentorNoOcupaLugar` |
+| V12 · Alta manual coherente | **PASA** | `ComposicionDeCelulaIT.elAltaDejaHistorialPunteroYPertenencia` |
+| V13 · Retirar de otro grupo | **PASA** | `ComposicionDeCelulaIT.retirarDesdeOtroGrupoNoLoSacaDelSuyo` |
+| V14 · Dos asignaciones concurrentes | **PASA** | `AsignacionCelulaConcurrenciaIT` (preexistente) + `elAltaRepetidaNoDuplica` |
+| V15 · Grupo futuro | **PASA** | `ComposicionDeCelulaIT.elGrupoFuturoNoDaAccesoTodavia` |
+| V16 · Último día / madrugada | **PASA** | `PeriodoGrupoTest` y `Celula.vencidoEn` con día por parámetro |
+| V17 · Cierre con caída/reintento | **PASA** | `ComposicionDeCelulaIT.elGrupoCerradoRevocaElAccesoSinJob`: las filas siguen abiertas y el acceso ya no existe |
+| V18 · Grupo cerrado | **PASA en parte** | Administración lo consulta (`E13`); el aprendiz no lo ve (`CelulaService.miCelula`, preexistente) |
+| V19 · Cambio manual de mentor | **PASA** | `ComposicionDeCelulaServiceTest.cambioDeMentorCierraAlSaliente` |
+| V20 · Aviso por vencer repetido | **PASA** | `AvisoDeGrupoPorVencerIT` (preexistente): misma clave de dedupe en dos barridos |
+| V21 · Push tras perder acceso | IMPLEMENTADO | La revalidación sale del período (V17); el recorrido `E12` no se implementó |
+| V22 · Semana admin y semana mentor | **PASA en parte** | Comparten `armarSemana`; el guard del mentor no se relajó. El contraste vivo es `E08` |
+| V23 · Sin registros / futuro | IMPLEMENTADO | `SIN_DATOS` viaja y la ficha lo dice con palabras; recorrido `E08c` |
+| V24 · Hábitos personalizados | IMPLEMENTADO | Lectura del endpoint existente; la ficha no ofrece completar ni firmar (`E08b`) |
+| V25 · Cambio de catálogo | PENDIENTE | El catálogo no entró en la app en este alcance |
+| V26 · Evidencias | **PASA en parte** | La ficha abre la evidencia con URL firmada al momento. La bandeja con `review`/`void` no entró |
+| V27 · Ranking y evaluación parcial | IMPLEMENTADO | Motor único reutilizado; no se recalcula en el cliente |
+| V28 · Búsqueda paginada y fallo de panel | **PASA en parte** | El fallo de panel se verificó en vivo: "—" y "Sin datos", sin tocar los otros. La búsqueda es `E16` |
+| V29 · Navegación móvil/tablet | **PASA en parte** | Cinco tabs y vuelta por niveles, verificados en vivo. Tablet y gestos nativos: `E16b` y Maestro |
+| V30 · Período/especialidad legacy null | **PASA** | Verificado en vivo: "SIN PERÍODO" y "Sin especialidad definida", ninguno inventado |

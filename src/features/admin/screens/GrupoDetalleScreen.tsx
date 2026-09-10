@@ -291,6 +291,7 @@ export function GrupoDetalleScreen({
                   ? mentores.map(m => (
                       <Pressable
                         key={m.userId}
+                        testID="candidato-mentor"
                         disabled={trabajando}
                         onPress={() => void conAviso(() => asignarMentor(grupoId, m.userId), 'No se pudo asignar')}
                         accessibilityRole="button"
@@ -305,7 +306,10 @@ export function GrupoDetalleScreen({
                             {/* Null NO se rellena con ninguna de las tres: el administrador elige
                                 por esto, y adivinarla sería decidir por él. */}
                             {m.specialty ? ESPECIALIDADES[m.specialty] ?? m.specialty : 'Sin especialidad definida'}
-                            {m.cellId ? ' · ya lidera otro grupo' : ''}
+                            {/* "Otro" solo si de verdad es otro: el mentor de ESTE grupo aparece en
+                                la lista y decirle que lidera otro es falso, y ademas asusta —
+                                parece que reasignarlo se lo quitaria a alguien. */}
+                            {m.cellId ? (m.cellId === grupoId ? ' · ya lidera este grupo' : ' · ya lidera otro grupo') : ''}
                           </Text>
                         </View>
                         <Icon name="chevron" size={16} color={c.chevron} />
@@ -314,6 +318,7 @@ export function GrupoDetalleScreen({
                   : candidatos.map(a => (
                       <Pressable
                         key={a.userId}
+                        testID="candidato-aprendiz"
                         disabled={trabajando}
                         onPress={() => void conAviso(() => agregarAprendiz(grupoId, a.userId), 'No se pudo agregar')}
                         accessibilityRole="button"
