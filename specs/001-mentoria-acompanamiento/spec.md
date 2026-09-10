@@ -19,7 +19,7 @@ Historias: como mentor quiero cursar opcionalmente y acompañar sin perder mi pr
 | RF-07 | CUANDO el aprendiz alcanza día 4, EL SISTEMA tramita una única asignación a grupo estable de su cohorte, conservando acceso de acompañamiento ante fallos. |
 | RF-08 | CUANDO se asigna un aprendiz, EL SISTEMA aplica capacidad configurable, inicialmente 10 y ampliable hasta 15; personal de soporte y mentor no consume cupos. |
 | RF-09 | CUANDO se completan cupos, EL SISTEMA aplica la política de provisión acordada y muestra cualquier espera operativa; nunca duplica membresía estable ni deja al aprendiz sin acompañamiento. |
-| RF-10 | CUANDO vence el período de rotación, EL SISTEMA cambia automáticamente solo al mentor, por defecto mensualmente y opcionalmente semanalmente. |
+| RF-10 | ~~CUANDO vence el período de rotación, EL SISTEMA cambia automáticamente solo al mentor…~~ **SUPERADO el 2026-09-11** — ver `decisions.md`. Los grupos los arma el administrador con nombre y período; no hay rotación automática. El código de rotación queda apagado por configuración, no borrado. |
 | RF-11 | SI falta sustituto o falla una rotación, ENTONCES EL SISTEMA conserva cobertura, registra el estado recuperable y avisa a soporte sin simular una asignación exitosa. |
 | RF-12 | CUANDO cambia una asignación, EL SISTEMA conserva intervalos reales e identidad del grupo/chat, mantiene alumnos y soporte y sincroniza punteros actuales. |
 | RF-13 | CUANDO se actualiza la composición de un grupo, EL SISTEMA sincroniza integrantes del chat con reintentos idempotentes y revoca acceso del mentor saliente incluso ante proyecciones atrasadas. |

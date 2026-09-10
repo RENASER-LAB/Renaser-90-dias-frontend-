@@ -75,3 +75,56 @@ administrador recibe la señal.
    con un doble; el envío real queda bloqueado.
 3. **Historial anterior a la migración.** No es reconstruible: `mentor_id` es un puntero.
    Los períodos previos se marcan `SIN_HISTORIAL` y no se fabrican.
+
+---
+
+## Cambio de modelo de agrupación — 2026-09-11
+
+El cliente cambió cómo se arman los grupos. **Esto invalida parte de la especificación**, y conviene
+que quede escrito aquí y no solo en los commits: quien lea `spec.md` mañana va a encontrar RF-10 y
+RF-11 describiendo un sistema que ya no es el que corre.
+
+### Lo que decía el SDD
+
+| | |
+|---|---|
+| **RF-10** | Al vencer el período, el sistema cambia **automáticamente** al mentor (mensual, opción semanal). |
+| **D-02 / P-02** | Rotación mensual el primer día del mes, semanal el lunes, en la zona de la cohorte. |
+| **D-06** | Rotan los mentores; alumnos, identidad del grupo y chat permanecen. |
+
+### Lo que pidió el cliente
+
+Nada de eso es automático. **El administrador arma cada grupo a mano**, desde un CRUD web que ya
+existía casi entero (`/api/v1/admin/cells`):
+
+1. Crea el grupo con **nombre y período**: *"septiembre, del 1 al 30, se llama Fénix"*.
+2. Elige el mentor. Los mentores ahora tienen **especialidad**: NEGOCIO, MENTE o RELACIONES.
+3. Mete a los alumnos.
+4. Al terminar el período el grupo **se cierra y deja de verse desde la app del alumno**; solo queda
+   para el administrador.
+5. Antes de vencer, **le llega un aviso** para que mueva a la gente o programe el siguiente.
+
+Sigue habiendo dos fases, y esa parte no cambió: un grupo de **bienvenida de 7 días** para recién
+registrados —a ese la entrada sí es automática, al que esté vigente— y después el **grupo mensual**.
+
+### Cómo se aplicó
+
+- **Los dos schedulers quedan apagados por configuración, no borrados**
+  (`renaser.scheduling.rotacion-mentores.enabled`, `…traslado-aprendices.enabled`). El código y sus
+  pruebas siguen ahí. Es una decisión, no una limpieza pendiente: la lógica está probada y volver a
+  pedirla es plausible — ya cambiaron de idea una vez. Se apagaron **antes** de construir lo nuevo
+  porque, mientras corran, mueven a gente que el administrador colocó a mano.
+- `V48` agrega el período a `celulas` y la especialidad a `perfiles_mentor`, **ambos nulables**: las
+  células que ya existen no deben empezar a vencerse por una migración.
+- `V49` agrega `GRUPO_POR_VENCER` a `tipo_notificacion` — un valor más, no una tabla de alertas
+  propia, misma decisión que tomó V46.
+
+### Lo que NO se tocó, y por qué
+
+`ConjuntoAsignaciones` y las tres restricciones `EXCLUDE` de V45 **siguen valiendo**: un aprendiz en
+un grupo vivo, un mentor por grupo, un grupo por mentor. Que las asignaciones las haga un humano en
+vez de un job no cambia las invariantes — de hecho las hace más necesarias, porque un humano
+armando grupos a mano se equivoca de maneras que un job no.
+
+La evaluación mensual, el ranking y los avisos de acompañamiento tampoco cambian: se apoyan en el
+historial de `asignaciones_celula`, que se sigue escribiendo igual venga de un job o del admin.
