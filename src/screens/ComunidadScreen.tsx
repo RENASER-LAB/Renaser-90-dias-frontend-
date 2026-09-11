@@ -25,7 +25,7 @@ import { useEsMentor } from '../features/mentor/hooks/useEsMentor';
 import { AlumnoScreen } from '../features/mentor/screens/AlumnoScreen';
 import { MiCelulaScreen } from '../features/mentor/screens/MiCelulaScreen';
 import type { AlumnoConEstado } from '../features/mentor/types/mentor.types';
-import { MicroLabel, ScreenHeader, Placeholder } from '../components/ui';
+import { MicroLabel, ScreenHeader, AvatarPersona } from '../components/ui';
 import { Icon, IconName } from '../components/Icon';
 import { GoldButton } from '../components/GoldButton';
 import { useAuth } from '../features/auth/context/AuthContext';
@@ -52,6 +52,7 @@ import { useEnvioMediaChat } from '../features/chat/hooks/useEnvioMediaChat';
 import { BurbujaAudioChat } from '../features/chat/components/BurbujaAudioChat';
 import { EvidenciaDesdeChatModal } from '../features/habits/components/EvidenciaDesdeChatModal';
 import { mapearMensaje } from '../features/chat/api/chatMappers';
+import { abrirConversacionDirecta } from '../features/chat/api/chatApi';
 import type { WireMensaje } from '../features/chat/types/chat.types';
 import { marcarChatMontado } from '../features/renasia/state/chatEnPantalla';
 import { useRanking } from '../features/ranking/hooks/useRanking';
@@ -416,6 +417,28 @@ export default function ComunidadScreen() {
   const TRIBU_AVATARES_VISIBLES = 4;
   const tribuVisibles = companerosCelula.slice(0, TRIBU_AVATARES_VISIBLES);
   const tribuRestantes = Math.max(companerosCelula.length - TRIBU_AVATARES_VISIBLES, 0);
+
+  /**
+   * Los integrantes reales del grupo para la pantalla "INFO DEL GRUPO", que antes mostraba una
+   * lista inventada (Sebastián Arango, María Alejandra…). El mentor va primero —sin botón de
+   * chatear, porque `/me/cell` no trae su id de usuario, y sin id no hay DM—; después los
+   * compañeros de `/me/cell/members`, que sí lo traen (`traineeId`).
+   */
+  const integrantesDelGrupo = useMemo(() => {
+    const filas: { id: string; nombre: string; avatarUrl: string | null; badge: string | null; chateable: boolean }[] = [];
+    if (miCelula?.assigned === true && miCelula.mentorName) {
+      filas.push({ id: 'mentor', nombre: miCelula.mentorName, avatarUrl: miCelula.mentorAvatarUrl, badge: 'MENTOR', chateable: false });
+    }
+    for (const m of companerosCelula) {
+      filas.push({ id: m.traineeId, nombre: m.fullName, avatarUrl: m.avatarUrl, badge: m.isSelf ? 'TÚ' : null, chateable: !m.isSelf });
+    }
+    return filas;
+  }, [miCelula, companerosCelula]);
+  const nombreDelGrupo = miCelula?.assigned === true ? miCelula.cellName : 'Tu grupo';
+  const subtituloDelGrupo =
+    miCelula?.assigned === true
+      ? `${miCelula.memberCount} ${miCelula.memberCount === 1 ? 'integrante' : 'integrantes'} · Cohorte ${miCelula.cohortName}`
+      : null;
 
   // =========================================================================
   // ESTADOS DE NAVEGACIÓN
@@ -1312,6 +1335,25 @@ export default function ComunidadScreen() {
       };
       setConversations(prev => [newConv, ...prev]);
       setActiveChat(newConv);
+    }
+  };
+
+  /**
+   * DM REAL con un integrante del grupo, por su id de usuario. Abre (o reutiliza) la
+   * conversacion en el backend (`abrirConversacionDirecta`) y la muestra con el MISMO mecanismo
+   * que ya usa la navegacion entre pestanas: dejar el id "pedido" y recargar el listado. Sin
+   * conversaciones fabricadas a mano.
+   */
+  const abrirDMConIntegrante = async (usuarioId: string) => {
+    setGroupInfoVisible(false);
+    try {
+      const conv = await abrirConversacionDirecta(usuarioId);
+      irASeccion('miembros');
+      setMiembrosTab('directos');
+      setChatPedidoDeOtraPestana(conv.id);
+      void recargarConversaciones();
+    } catch {
+      // Si falla, el usuario se queda donde estaba: no se inventa una conversacion local.
     }
   };
 
@@ -2826,7 +2868,11 @@ export default function ComunidadScreen() {
             <View style={{ paddingTop: 16 }}>
               <MicroLabel>MENTOR</MicroLabel>
               <View style={[styles.mentor, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-                <Placeholder label="FOTO" style={{ width: mentorPhoto, height: mentorPhoto, borderRadius: mentorPhoto / 2 }} />
+                <AvatarPersona
+                  nombre={tieneMentor && miCelula?.assigned === true ? miCelula.mentorName : null}
+                  avatarUrl={tieneMentor && miCelula?.assigned === true ? miCelula.mentorAvatarUrl : null}
+                  size={mentorPhoto}
+                />
                 <View style={{ flex: 1 }}>
                   <Text style={[t.cardTitle, { color: c.textStrong }]}>{mentorTitulo}</Text>
                   {mentorSubtitulo && (
@@ -2855,9 +2901,11 @@ export default function ComunidadScreen() {
               {companerosCelula.length > 0 && (
                 <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
                   {tribuVisibles.map(m => (
-                    <Placeholder
+                    <AvatarPersona
                       key={m.traineeId}
-                      style={{ width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2 }}
+                      nombre={m.fullName}
+                      avatarUrl={m.avatarUrl}
+                      size={avatarSize}
                     />
                   ))}
                   {tribuRestantes > 0 && (
@@ -3033,12 +3081,6 @@ export default function ComunidadScreen() {
             contentContainerStyle={{ padding: 12, gap: 10 }}
             showsVerticalScrollIndicator={false}
           >
-            <View style={{ alignItems: 'center', marginVertical: 4 }}>
-              <Text style={[styles.dateDividerPill, { backgroundColor: c.cardBgAlt, color: c.goldInk, borderColor: c.border }]}>
-                HOY · DÍA 37 DE VERDAD
-              </Text>
-            </View>
-
             {/* Historial real (GET .../messages) — mismo criterio de estados que el resto de la
                 pantalla: con solo 3 conversaciones/5 mensajes en la base, el vacío es el caso
                 común, no una excepción a cubrir "por si acaso". */}
@@ -3305,52 +3347,61 @@ export default function ComunidadScreen() {
               <Icon name="users" size={28} color={c.goldInk} />
             </View>
             <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 16, marginTop: 6 }]}>
-              Grupo Fénix 07
+              {nombreDelGrupo}
             </Text>
-            <Text style={[t.micro, { color: c.goldInk, marginTop: 2 }]}>
-              16 Integrantes de la Tribu RENASER
-            </Text>
-            <Text style={[t.body, { color: c.textSoft, fontSize: 11.5, textAlign: 'center', marginTop: 6 }]}>
-              Grupo privado de aceleración somática. Cero quejas, dato puro y verdad biológica.
-            </Text>
+            {subtituloDelGrupo && (
+              <Text style={[t.micro, { color: c.goldInk, marginTop: 2, textAlign: 'center' }]}>
+                {subtituloDelGrupo}
+              </Text>
+            )}
           </View>
 
           {/* LISTA DE INTEGRANTES */}
           <View style={{ gap: 8, marginTop: 14, paddingBottom: 28 }}>
             <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
-              INTEGRANTES DEL GRUPO (16)
+              INTEGRANTES DEL GRUPO ({integrantesDelGrupo.length})
             </Text>
 
-            {GROUP_MEMBERS.map(member => (
-              <Pressable
-                key={member.id}
-                onPress={() => setSelectedMemberProfile(member)}
+            {integrantesDelGrupo.length === 0 && (
+              <Text style={[t.micro, { color: c.textSoft, marginTop: 6 }]}>
+                Todavía no hay integrantes en tu grupo.
+              </Text>
+            )}
+
+            {integrantesDelGrupo.map(m => (
+              <View
+                key={m.id}
                 style={[styles.memberRowCard, { borderColor: c.border, backgroundColor: c.cardBg }]}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <View style={[styles.avatarCircle, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-                    <Text style={{ fontSize: 14 }}>{member.avatar}</Text>
-                  </View>
-                  <View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 12.5 }]}>{member.name}</Text>
-                      <View style={[styles.memberBadgePill, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-                        <Text style={[t.micro, { color: c.goldInk, fontSize: 10.5, fontFamily: 'Jost_700Bold' }]}>
-                          {member.badge}
-                        </Text>
-                      </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, flexShrink: 1 }}>
+                  <AvatarPersona nombre={m.nombre} avatarUrl={m.avatarUrl} size={38} />
+                  <View style={{ flexShrink: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 12.5 }]} numberOfLines={1}>
+                        {m.nombre}
+                      </Text>
+                      {m.badge && (
+                        <View style={[styles.memberBadgePill, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+                          <Text style={[t.micro, { color: c.goldInk, fontSize: 10.5, fontFamily: 'Jost_700Bold' }]}>
+                            {m.badge}
+                          </Text>
+                        </View>
+                      )}
                     </View>
-                    <Text style={[t.micro, { color: c.micro, fontSize: 11 }]}>{member.role}</Text>
                   </View>
                 </View>
 
-                <Pressable
-                  onPress={() => handleStartDirectChat(member)}
-                  style={[styles.chat1a1Btn, { backgroundColor: c.gold }]}
-                >
-                  <Text style={{ color: '#1E1B18', fontFamily: 'Jost_700Bold', fontSize: 11 }}>💬 Chatear</Text>
-                </Pressable>
-              </Pressable>
+                {m.chateable && (
+                  <Pressable
+                    onPress={() => void abrirDMConIntegrante(m.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Chatear con ${m.nombre}`}
+                    style={[styles.chat1a1Btn, { backgroundColor: c.gold }]}
+                  >
+                    <Text style={{ color: '#1E1B18', fontFamily: 'Jost_700Bold', fontSize: 11 }}>💬 Chatear</Text>
+                  </Pressable>
+                )}
+              </View>
             ))}
           </View>
         </ScrollView>

@@ -1,8 +1,54 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet, StyleProp, ViewStyle } from 'react-native';
+import { View, Text, Image, Pressable, StyleSheet, StyleProp, ViewStyle, ImageStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../theme/ThemeContext';
 import { Icon, IconName } from './Icon';
+
+/** Las iniciales de un nombre: "Ana López" → "AL", "Kelin" → "KE", vacío → "·". */
+function inicialesDe(nombre?: string | null): string {
+  const partes = (nombre ?? '').trim().split(/\s+/).filter(Boolean);
+  if (partes.length === 0) return '·';
+  if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
+  return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
+}
+
+/**
+ * Avatar de una persona: su foto si la tiene, o sus iniciales sobre un círculo si no.
+ *
+ * Reemplaza al `Placeholder` gris en las listas de gente (tribu, mentor). Antes, aunque los
+ * integrantes fueran reales, se veían como círculos vacíos y parecía que no había datos.
+ */
+export function AvatarPersona({
+  nombre,
+  avatarUrl,
+  size,
+  style,
+}: {
+  nombre?: string | null;
+  avatarUrl?: string | null;
+  size: number;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const { c } = useTheme();
+  const dim = { width: size, height: size, borderRadius: size / 2 } as const;
+  if (avatarUrl) {
+    return <Image source={{ uri: avatarUrl }} style={[dim, style] as StyleProp<ImageStyle>} />;
+  }
+  return (
+    <View
+      style={[
+        dim,
+        { backgroundColor: c.cardBgAlt, borderWidth: 1, borderColor: c.border, alignItems: 'center', justifyContent: 'center' },
+        style,
+      ]}
+      accessibilityLabel={nombre ?? undefined}
+    >
+      <Text style={{ fontFamily: 'Jost_700Bold', color: c.goldInk, fontSize: Math.max(11, Math.round(size * 0.38)) }}>
+        {inicialesDe(nombre)}
+      </Text>
+    </View>
+  );
+}
 
 export function MicroLabel({ children }: { children: React.ReactNode }) {
   const { c, t } = useTheme();
