@@ -60,6 +60,16 @@ export function GrupoDetalleScreen({
   const [eligiendo, setEligiendo] = useState<'mentor' | 'aprendiz' | null>(null);
   const [mentores, setMentores] = useState<MentorCandidatoApi[]>([]);
   const [candidatos, setCandidatos] = useState<AprendizCandidatoApi[]>([]);
+  /**
+   * Si la lista de candidatos se está trayendo todavía.
+   *
+   * Sin esto, el selector se abría con la lista vacía y el cartel «No hay aprendices activos sin
+   * grupo» aparecía ANTES de que llegara la respuesta: la pantalla afirmaba que no hay nadie
+   * cuando lo cierto es que todavía no lo sabía. Es el mismo error que ARF-02 prohíbe —una carga
+   * convertida en cero—, y el más creíble de todos: nadie sospecha de una lista vacía. Lo destapó
+   * E04, que tomaba esa rama y luego no encontraba el cartel porque ya habían llegado los veinte.
+   */
+  const [cargandoLista, setCargandoLista] = useState(false);
 
   useSystemBackHandler(() => {
     // El selector abierto se cierra primero: el gesto sube un nivel, no sale de la pantalla.
@@ -102,21 +112,27 @@ export function GrupoDetalleScreen({
 
   const abrirSelectorDeMentor = async () => {
     setEligiendo('mentor');
+    setCargandoLista(true);
     try {
       setMentores(await mentoresDisponibles());
     } catch (e) {
       Alert.alert('No se pudo traer la lista de mentores', mensajeDeFallo(e, ''));
       setEligiendo(null);
+    } finally {
+      setCargandoLista(false);
     }
   };
 
   const abrirSelectorDeAprendiz = async () => {
     setEligiendo('aprendiz');
+    setCargandoLista(true);
     try {
       setCandidatos(await aprendicesDisponibles());
     } catch (e) {
       Alert.alert('No se pudo traer la lista de aprendices', mensajeDeFallo(e, ''));
       setEligiendo(null);
+    } finally {
+      setCargandoLista(false);
     }
   };
 
@@ -332,7 +348,11 @@ export function GrupoDetalleScreen({
                         <Icon name="chevron" size={16} color={c.chevron} />
                       </Pressable>
                     ))}
-                {(eligiendo === 'mentor' ? mentores : candidatos).length === 0 ? (
+                {cargandoLista ? <ActivityIndicator color={c.goldInk} style={{ marginVertical: 12 }} /> : null}
+                {/* El cartel de «no hay nadie» SOLO cuando ya se sabe. Mientras la consulta viaja
+                    se muestra el indicador: decir "no hay" antes de la respuesta es afirmar algo
+                    que no se sabe, y suena igual de creíble que la verdad. */}
+                {!cargandoLista && (eligiendo === 'mentor' ? mentores : candidatos).length === 0 ? (
                   <Text style={[t.body, { color: c.textSoft, fontSize: 14 }]}>
                     {eligiendo === 'mentor'
                       ? 'No hay mentores activos con perfil creado.'

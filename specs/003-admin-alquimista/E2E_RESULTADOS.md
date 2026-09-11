@@ -5,7 +5,7 @@
 **Runner:** Playwright 1.49.1 · viewport 360 px · 1 worker · 0 reintentos.
 
 ```
-28 pasaron · 0 fallaron · 0 salteadas    (38,9 s)
+28 pasaron · 0 fallaron · 0 salteadas    (32,4 s)
 ```
 
 Las tres nuevas son **E18**, que cubre el cambio de rol (`StaffRolesScreen`).
@@ -133,6 +133,32 @@ Y una quinta, de método: restaurar `usuarios` desde un respaldo **sin sus tabla
 deja un estado a medias que no falla al restaurar, sino tres pasos después. Faltaban
 `perfiles_mentor` —a la que apunta `participantes_programa.mentor_id`, y no a `usuarios`— y las
 participaciones. El sembrado ahora repone ambas.
+
+## 5c. Un defecto REAL que destapó E04
+
+No todo lo que falló era del entorno. E04 moría pidiendo el cartel «No hay aprendices activos sin
+grupo» habiendo veinte libres, y la causa estaba en la pantalla:
+
+```tsx
+const abrirSelectorDeAprendiz = async () => {
+  setEligiendo('aprendiz');            // abre la lista YA
+  setCandidatos(await aprendicesDisponibles());   // …y pide los datos después
+};
+```
+
+Entre una línea y otra, `candidatos` vale `[]` y el cartel de «no hay nadie» se dibuja. **La
+pantalla afirmaba que no hay aprendices cuando lo cierto es que todavía no lo sabía**, y un
+segundo después aparecían los veinte.
+
+Es lo mismo que ARF-02 prohíbe —una carga o un error convertidos en cero— y es el más creíble de
+la familia: nadie sospecha de una lista vacía. Un administrador que abriera el selector con la red
+lenta concluiría que no le queda gente a quien asignar.
+
+**Corregido en `GrupoDetalleScreen`**: un `cargandoLista` separa «todavía no sé» de «no hay».
+Mientras la consulta viaja se muestra el indicador; el cartel solo aparece cuando ya hay respuesta.
+
+Vale la pena subrayar cómo salió: **no lo reportó nadie**. Lo destapó una prueba que tomó la rama
+equivocada y después no encontró lo que esa rama prometía. El síntoma apuntaba a la suite.
 
 ## 6. El riesgo que estaba aceptado — CERRADO el 2026-09-11
 

@@ -1910,23 +1910,10 @@ export default function ComunidadScreen() {
                       </View>
                     )}
 
-                    {/* Resumen de Reacciones */}
+                    {/* Solo el recuento de comentarios. Las reacciones bajaron a la fila de
+                        acciones, al MISMO nivel que Like, Comentar y Compartir. */}
                     <View style={[styles.reactionsSummaryRow, { borderTopColor: c.divider }]}>
-                      <Pressable
-                        onPress={() => {
-                          setReactionsModalVisible(true);
-                          void cargarReacciones(post.id);
-                        }}
-                        style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
-                      >
-                        <View style={[styles.rxCountBadge, { backgroundColor: c.successWash }]}>
-                          <Icon name="thumbsUp" size={11} color={c.success} />
-                          <Text style={[styles.rxCountTexto, { color: c.success }]}>{post.likes}</Text>
-                        </View>
-                        <Text style={[t.micro, { color: c.goldInk, fontSize: 11 }]}>· Ver quién reaccionó ›</Text>
-                      </Pressable>
-
-                      <Pressable onPress={() => handleToggleComments(post.id)}>
+                      <Pressable onPress={() => handleToggleComments(post.id)} hitSlop={8}>
                         <Text style={[t.micro, { color: c.textSoft, fontSize: 10 }]}>
                           {post.comments.length} Comentarios
                         </Text>
@@ -1984,6 +1971,30 @@ export default function ComunidadScreen() {
                         <Text numberOfLines={1} style={[t.micro, { color: c.textSoft, fontFamily: 'Jost_700Bold', fontSize: 10.5 }]}>
                           Compartir
                         </Text>
+                      </Pressable>
+
+                      {/* Las reacciones, a la derecha y en la MISMA fila que las tres acciones.
+                          `marginLeft: 'auto'` las empuja al borde sin estirar los botones.
+                          La chapa ES el botón: ya no hay un "Ver quién reaccionó ›" que lo
+                          explique, así que lleva su propia etiqueta para el lector de pantalla. */}
+                      <Pressable
+                        onPress={() => {
+                          setReactionsModalVisible(true);
+                          void cargarReacciones(post.id);
+                        }}
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                          post.likes === 1
+                            ? 'Una reacción. Tocá para ver quién reaccionó'
+                            : `${post.likes} reacciones. Tocá para ver quién reaccionó`
+                        }
+                        hitSlop={10}
+                        style={styles.rxCountBotonFila}
+                      >
+                        <View style={[styles.rxCountBadge, { backgroundColor: c.successWash }]}>
+                          <Icon name="thumbsUp" size={11} color={c.success} />
+                          <Text style={[styles.rxCountTexto, { color: c.success }]}>{post.likes}</Text>
+                        </View>
                       </Pressable>
                     </View>
 
@@ -3672,6 +3683,10 @@ export default function ComunidadScreen() {
             userReaction={activeViewerPost?.userReaction}
             comments={activeViewerPost?.comments}
             onToggleLike={handleToggleLike}
+            onVerReacciones={pid => {
+              setReactionsModalVisible(true);
+              void cargarReacciones(pid);
+            }}
             onCommentVote={handleCommentVote}
             onAddComment={(pid, txt, photoUri) => handleAddComment(pid, txt, photoUri)}
             onShare={handleSharePost}
@@ -3906,12 +3921,18 @@ const styles = StyleSheet.create({
   },
   actionButtonsRow: {
     flexDirection: 'row',
+    /* Alineadas a la IZQUIERDA, no repartidas. Con `flex: 1` en cada botón la fila se estiraba de
+       borde a borde y "Like" quedaba pegado al margen, lejos del pulgar en un teléfono de 360 px.
+       Agrupadas a la izquierda, las tres caen dentro del arco natural del dedo. */
+    justifyContent: 'flex-start',
     marginTop: 8,
     paddingTop: 6,
     borderTopWidth: 1,
   },
   actionBtn: {
-    flex: 1,
+    /* Sin `flex: 1`: cada botón mide lo que su contenido. `flexShrink` evita que los tres juntos
+       desborden en 360 px, que es el ancho de referencia (AGENTS.md §2). */
+    flexShrink: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -3920,8 +3941,22 @@ const styles = StyleSheet.create({
     minHeight: 48,
     gap: 5,
     paddingVertical: 6,
-    paddingHorizontal: 4,
+    /* 8, no 4 ni 12. Sin `flex: 1` el respiro lateral es lo único que separa "Like" de
+       "Comentar", así que 4 los pegaba. Pero con 12 los tres botones sumaban 280 px y llenaban
+       justo la tarjeta de 281: quedaban agrupados a la izquierda y no se notaba, porque no
+       sobraba sitio. Con 8 sobran ~25 px a la derecha y el agrupamiento SE VE. */
+    paddingHorizontal: 8,
     borderRadius: 8,
+  },
+  rxCountBotonFila: {
+    /* Empuja la chapa al borde derecho sin estirar los botones, que siguen agrupados a la
+       izquierda. Misma altura de toque que ellos. */
+    marginLeft: 'auto',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+    paddingLeft: 8,
   },
   commentsSection: {
     marginTop: 8,
