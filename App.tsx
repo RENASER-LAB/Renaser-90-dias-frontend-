@@ -12,6 +12,8 @@ import { RenasiaLauncher } from './src/features/renasia/components/RenasiaLaunch
 import { SparkieOverlay } from './src/features/sparkie/components/SparkieOverlay';
 import { AnfitrionAlerta } from './src/components/Alerta';
 import { MapaRenacimientoProvider } from './src/features/mapa-renacimiento/MapaRenacimientoContext';
+import { RadarProvider } from './src/features/radar/RadarContext';
+import { CodigoRenaserOverlay } from './src/features/radar/components/CodigoRenaserOverlay';
 
 function Shell() {
   const { mode, c } = useTheme();
@@ -30,6 +32,9 @@ function Shell() {
       {/* El arranque guiado (saludo -> primer post en el Muro -> Pacto), por el mismo motivo y
           con la misma forma. Se apaga solo cuando el Pacto queda firmado. */}
       <SparkieOverlay />
+      {/* El Codigo Renaser de esta hora (dias 1-7). Aca arriba y no dentro de Hoy porque para el
+          aprendiz es innegociable: dentro de una pestaña se esquivaria tocando otra. */}
+      <CodigoRenaserOverlay />
       {/* Dibuja los Alert en el build web, donde el Alert de react-native-web es un metodo vacio
           que nunca ejecuta los onPress de sus botones (E-144). En movil no pinta nada. */}
       <AnfitrionAlerta />
@@ -52,7 +57,11 @@ export default function App() {
           {/* El Mapa de Renacimiento (Día 7) se abre a pantalla completa por encima de las
               pestañas; este proveedor guarda si está abierto. Ver RootNavigator. */}
           <MapaRenacimientoProvider>
-            <Shell />
+            {/* Una sola lectura del Codigo Renaser para toda la app: la tarjeta de Hoy y el
+                formulario a pantalla completa comparten estado. Ver RadarContext. */}
+            <RadarProvider>
+              <Shell />
+            </RadarProvider>
           </MapaRenacimientoProvider>
         </AuthProvider>
       </ThemeProvider>

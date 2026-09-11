@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -30,6 +30,9 @@ import {
   rotuloDeFase,
   DIAS_DEL_PROGRAMA,
 } from '../features/home/hooks/useResumenHome';
+import { useHabitoDelMomento } from '../features/habits/hooks/useHabitoDelMomento';
+import { useRadar } from '../features/radar/RadarContext';
+import { TarjetaCodigoRenaser } from '../features/radar/components/TarjetaCodigoRenaser';
 import { obtenerRocasDeHoy } from '../features/training/api/trainingApi';
 import { useUltimaPublicacionMuro } from '../features/community/hooks/useUltimaPublicacionMuro';
 import { tiempoRelativo } from '../features/community/utils/tiempoRelativo';
@@ -46,6 +49,13 @@ export default function HoyScreen() {
   const navigation = useNavigation();
 
   const { resumen, cargando: cargandoResumen, error: errorResumen, recargar: recargarResumen } = useResumenHome();
+  /* El hábito de ESTA hora para la primera tarjeta. Vive acá y no dentro de la tarjeta porque
+     `useFocusEffect` tiene que correr con la pantalla montada, y porque el pull-to-refresh de
+     Hoy también lo recarga. */
+  const { habito: habitoAhora, recargar: recargarHabitoAhora } = useHabitoDelMomento();
+  /* Código Renaser. El estado vive en `RadarProvider` (App.tsx) porque el formulario se dibuja
+     por encima del navegador: acá sólo se lee para pintar la tarjeta y poder reabrirlo. */
+  const radar = useRadar();
   const { user } = useAuth();
   /* Rol Mentor. Se monta DENTRO de Hoy y no como sexta pestaña: AGENTS.md 1 prohibe tocar los
      cinco tabs, y ademas el mentor sigue siendo aprendiz — su propio programa no cambia. */
@@ -130,9 +140,14 @@ export default function HoyScreen() {
 
   const recargarTodo = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([recargarResumen(), cargarRocas(), recargarUltimaPublicacion()]);
+    await Promise.all([
+      recargarResumen(),
+      cargarRocas(),
+      recargarUltimaPublicacion(),
+      recargarHabitoAhora(),
+    ]);
     setRefreshing(false);
-  }, [recargarResumen, cargarRocas, recargarUltimaPublicacion]);
+  }, [recargarResumen, cargarRocas, recargarUltimaPublicacion, recargarHabitoAhora]);
 
   // Roca Prioritaria de Hoy: Posición 1 (Pareto Verde) o la primera disponible
   const rocaPrioritaria = rocas.find(r => r.posicion === 1) || rocas[0] || null;
@@ -187,6 +202,33 @@ export default function HoyScreen() {
   const detalleMapa = estadoMapa === 'activo'
     ? `Tus objetivos, acciones y protocolo de retorno para los ${diasQueQuedan} días.`
     : `Convierte lo aprendido en un plan claro para los próximos ${diasQueQuedan} días. 15–20 min.`;
+  /* Los dos textos de la primera tarjeta. El estado lo decide `habitoDelMomento`; acá solo se
+     redacta. `sin-datos` cae al texto genérico de siempre —Día 0, cuenta recién aprobada, o el
+     endpoint falló— porque inventar un hábito sería peor que no decir nada. */
+  const tituloHabitoAhora = useMemo(() => {
+    if (habitoAhora.titulo) return habitoAhora.titulo;
+    if (habitoAhora.estado === 'todo-hecho') return '¡Todos los hábitos completados!';
+    return 'Lidera tu energía diaria.';
+  }, [habitoAhora]);
+
+  const detalleHabitoAhora = useMemo(() => {
+    const quedan = habitoAhora.pendientes === 1 ? 'queda 1 pendiente' : `quedan ${habitoAhora.pendientes} pendientes`;
+    if (habitoAhora.estado === 'ahora') {
+      return habitoAhora.hora ? `Te toca ahora · ${habitoAhora.hora} · ${quedan}` : `Te toca ahora · ${quedan}`;
+    }
+    if (habitoAhora.estado === 'proximo') {
+      return `Empieza a las ${habitoAhora.hora} · ${quedan}`;
+    }
+    if (habitoAhora.estado === 'todo-hecho') {
+      return resumen?.habitosHoy
+        ? `${resumen.habitosHoy.completados} de ${resumen.habitosHoy.total} hábitos cumplidos en esta jornada.`
+        : 'No queda nada pendiente en esta jornada.';
+    }
+    return resumen?.habitosHoy
+      ? `${resumen.habitosHoy.completados} de ${resumen.habitosHoy.total} hábitos cumplidos en esta jornada.`
+      : 'Todo lo demás se alinea cuando cumples tu disciplina.';
+  }, [habitoAhora, resumen]);
+
   const coherenciaScore = Math.round(resumen?.coherencia ?? 100);
   const puntosLiga = resumen?.puntosLiga ?? 100;
   const rachaActual = resumen?.rachaActual ?? 0;
@@ -493,6 +535,17 @@ export default function HoyScreen() {
             </Card>
           ) : null}
 
+          {/* Código Renaser. Va PRIMERO durante los días 1-7 y sólo entonces: es lo único de esta
+              pantalla con un plazo de una hora, y el día 8 desaparece por completo (mismo corte
+              que el traslado fuera del grupo de bienvenida). A partir de ahí la primera tarjeta
+              vuelve a ser la de hábitos. */}
+          <TarjetaCodigoRenaser
+            estado={radar.estado}
+            obligatorio={radar.obligatorio}
+            minutosParaAbrir={radar.minutosParaAbrir}
+            onResponder={radar.abrir}
+          />
+
           {/* Tarjeta Mapa de Renacimiento (Día 7) */}
           {mostrarMapa ? (
             <Pressable onPress={abrirMapa} accessibilityRole="button">
@@ -515,30 +568,38 @@ export default function HoyScreen() {
             </Pressable>
           ) : null}
 
-          {/* Tarjeta Hábitos de Hoy */}
-          <Card>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <MicroLabel>HÁBITOS DE HOY</MicroLabel>
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
-                {resumen?.habitosHoy ? `${resumen.habitosHoy.completados}/${resumen.habitosHoy.total}` : 'Al día'}
-              </Text>
-            </View>
-            <View style={styles.insight}>
-              <Icon name="sun" size={19} color={c.goldInk} />
-              <View style={{ gap: 4, flex: 1 }}>
-                <Text style={[t.cardTitle, { color: c.text }]}>
-                  {resumen?.habitosHoy && resumen.habitosHoy.completados === resumen.habitosHoy.total && resumen.habitosHoy.total > 0
-                    ? '¡Todos los hábitos completados!'
-                    : 'Lidera tu energía diaria.'}
-                </Text>
-                <Text style={[t.body, { color: c.textSoft, fontSize: 12 }]}>
-                  {resumen?.habitosHoy
-                    ? `${resumen.habitosHoy.completados} de ${resumen.habitosHoy.total} hábitos cumplidos en esta jornada.`
-                    : 'Todo lo demás se alinea cuando cumples tu disciplina.'}
+          {/* Tarjeta Hábitos de Hoy — EL HÁBITO DE ESTA HORA, no una frase fija.
+              Antes decía siempre "Lidera tu energía diaria" con el contador al lado: el contador
+              dice cuánto falta, nunca QUÉ toca. Ahora el título es el hábito que la persona tiene
+              delante (`useHabitoDelMomento`) y toca lleva a Training, que es donde se opera. */}
+          <Pressable
+            onPress={() => (navigation as any).navigate('Training')}
+            accessibilityRole="button"
+            accessibilityLabel={
+              habitoAhora.titulo ? `Abrir Training: ${habitoAhora.titulo}` : 'Abrir Training'
+            }
+          >
+            <Card>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <MicroLabel>HÁBITOS DE HOY</MicroLabel>
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
+                  {resumen?.habitosHoy ? `${resumen.habitosHoy.completados}/${resumen.habitosHoy.total}` : 'Al día'}
                 </Text>
               </View>
-            </View>
-          </Card>
+              <View style={styles.insight}>
+                <Icon name="sun" size={19} color={c.goldInk} />
+                <View style={{ gap: 4, flex: 1 }}>
+                  <Text style={[t.cardTitle, { color: c.text }]} numberOfLines={2}>
+                    {tituloHabitoAhora}
+                  </Text>
+                  <Text style={[t.body, { color: c.textSoft, fontSize: 12 }]}>
+                    {detalleHabitoAhora}
+                  </Text>
+                </View>
+                <Icon name="chevron" size={14} color={c.chevron} />
+              </View>
+            </Card>
+          </Pressable>
 
           {/* Tarjeta Rocas y Objetivos */}
           <Card>
