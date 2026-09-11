@@ -27,14 +27,14 @@ type Props = {
 const POR_FALLO: Record<FalloCelula, { icono: IconName; titulo: string; texto: string; reintentar: boolean }> = {
   sin_celula: {
     icono: 'users',
-    titulo: 'Todavía no lideras ninguna célula',
+    titulo: 'Todavía no lideras ningun grupo',
     texto:
       'Cuando se te asigne una, verás aquí a tus aprendices con su avance y qué necesita cada uno.',
     reintentar: false,
   },
   no_disponible: {
     icono: 'clock',
-    titulo: 'El seguimiento de células todavía no está disponible',
+    titulo: 'El seguimiento de grupos todavía no está disponible',
     texto:
       'La pantalla está lista y el modelo de datos existe, pero el servidor aún no expone el ' +
       'listado del grupo. Aparecerá aquí en cuanto se publique, sin que tengas que hacer nada.',
@@ -42,8 +42,8 @@ const POR_FALLO: Record<FalloCelula, { icono: IconName; titulo: string; texto: s
   },
   sin_permiso: {
     icono: 'lock',
-    titulo: 'Tu cuenta no figura como mentora de esta célula',
-    texto: 'Si crees que es un error, escríbelo por soporte indicando el nombre de tu célula.',
+    titulo: 'Tu cuenta no figura como mentora de este grupo',
+    texto: 'Si crees que es un error, escríbelo por soporte indicando el nombre de tu grupo.',
     reintentar: false,
   },
   sin_red: {
@@ -54,7 +54,7 @@ const POR_FALLO: Record<FalloCelula, { icono: IconName; titulo: string; texto: s
   },
   error: {
     icono: 'info',
-    titulo: 'No pudimos cargar tu célula',
+    titulo: 'No pudimos cargar tu grupo',
     texto: 'Vuelve a intentarlo. Si sigue pasando, avísanos por soporte.',
     reintentar: true,
   },
@@ -68,7 +68,7 @@ export function EstadoCelula({ fallo, vacia, detalle, onReintentar }: Props) {
       <View style={estilos.caja}>
         <Icon name="users" size={26} color={c.chevron} />
         <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 15, marginTop: 10, textAlign: 'center' }]}>
-          Tu célula todavía no tiene aprendices
+          Tu grupo todavía no tiene aprendices
         </Text>
         <Text style={[t.body, { color: c.textSoft, fontSize: 13, textAlign: 'center', marginTop: 6 }]}>
           Cuando se asignen, los verás aquí con su día de programa y qué necesita cada uno.
@@ -112,7 +112,7 @@ export function CargandoCelula() {
     <View style={estilos.caja}>
       <ActivityIndicator color={c.goldInk} />
       <Text style={[t.body, { color: c.textSoft, fontSize: 13, marginTop: 12 }]}>
-        Cargando tu célula…
+        Cargando tu grupo…
       </Text>
     </View>
   );

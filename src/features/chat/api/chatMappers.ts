@@ -165,14 +165,14 @@ function construirTitulo(tipo: ChatConversation['type'], nombre: string | null, 
   if (tipo === 'celula') {
     // La célula real (`community.Celula`) no se resuelve acá: `chat` solo expone `celulaId`
     // (UUID), sin nombre — `community` no está en el alcance de esta integración.
-    return 'Mi Célula';
+    return 'Mi Grupo';
   }
   return otro?.fullName?.trim() || 'Conversación directa';
 }
 
 function construirSubtitulo(tipo: ChatConversation['type'], otro?: WireMiembro): string {
   if (tipo === 'global') return 'Comunidad completa RENASER';
-  if (tipo === 'celula') return 'Chat de tu célula';
+  if (tipo === 'celula') return 'Chat de tu grupo';
   return otro ? `${traducirRol(otro.role)} · 1 a 1` : 'Conversación directa';
 }
 

@@ -3,7 +3,7 @@ export const PACTO_COMPROMISOS = [
   'Subir las evidencias que el sistema me exija, en el momento que me las exija.',
   'Aceptar la disciplina como camino, no como castigo.',
   'Hablarme con respeto, especialmente cuando falle.',
-  'No abandonar la célula ni huir cuando aparezca la incomodidad.',
+  'No abandonar el grupo ni huir cuando aparezca la incomodidad.',
   'Cuidar mi cuerpo como el templo que es.',
   'Sanar mis heridas en lugar de defenderlas.',
   'Cobrar lo que valgo y dejar de subpreciarme.',

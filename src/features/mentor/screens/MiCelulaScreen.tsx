@@ -109,7 +109,7 @@ export function MiCelulaScreen({
       >
         <Aparicion>
           <Text style={[t.screenTitle, { color: c.text, fontSize: 21 }]} numberOfLines={2}>
-            {vista?.celula.nombre ?? 'Mi célula'}
+            {vista?.celula.nombre ?? 'Mi grupo'}
           </Text>
           <Text style={[t.body, { color: c.textSoft, fontSize: 13, marginTop: 4 }]}>
             {vista
@@ -293,7 +293,7 @@ export function MiCelulaScreen({
                 <View style={[estilos.todoBien, { borderColor: c.border, backgroundColor: c.successWash }]}>
                   <Icon name="checkCircle" size={17} color={c.success} />
                   <Text style={[t.body, { color: c.text, fontSize: 13, flex: 1 }]}>
-                    Nadie de tu célula necesita seguimiento hoy.
+                    Nadie de tu grupo necesita seguimiento hoy.
                   </Text>
                 </View>
               </Aparicion>

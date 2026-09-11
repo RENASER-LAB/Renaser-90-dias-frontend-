@@ -41,9 +41,9 @@ export function TarjetaMentorHoy({
   const sinDatos = Boolean(fallo) || !vista;
 
   const detalle =
-    cargando ? 'Cargando tu célula…'
+    cargando ? 'Cargando tu grupo…'
     : fallo === 'no_disponible' ? 'El seguimiento del grupo aún no está disponible.'
-    : fallo ? 'No pudimos cargar tu célula.'
+    : fallo ? 'No pudimos cargar tu grupo.'
     : !vista || vista.todos.length === 0 ? 'Todavía no tienes aprendices asignados.'
     : pendientes === 0 && sinJuzgar === total
       ? `${total} ${total === 1 ? 'aprendiz' : 'aprendices'} · sin avance registrado todavía`
@@ -55,7 +55,7 @@ export function TarjetaMentorHoy({
     <Pressable
       onPress={onAbrir}
       accessibilityRole="button"
-      accessibilityLabel={`Abrir mi célula. ${detalle}`}
+      accessibilityLabel={`Abrir mi grupo. ${detalle}`}
       style={({ pressed }) => [
         estilos.tarjeta,
         {
@@ -67,7 +67,7 @@ export function TarjetaMentorHoy({
       ]}
     >
       <View style={{ flex: 1 }}>
-        <MicroLabel>MI CÉLULA</MicroLabel>
+        <MicroLabel>MI GRUPO</MicroLabel>
         <Text style={[t.cardTitle, { color: c.textStrong, marginTop: 5 }]} numberOfLines={1}>
           {vista?.celula.nombre ?? 'Acompañamiento'}
         </Text>

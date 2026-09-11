@@ -719,7 +719,7 @@ export function ImageViewerModal({
         )}
 
         {/* ========================================================================= */}
-        {/* BOTTOM SHEET DE COMPARTIR (EXTERNO, GLOBAL, CÉLULA, DIRECTOS)             */}
+        {/* BOTTOM SHEET DE COMPARTIR (EXTERNO, GLOBAL, GRUPO, DIRECTOS)             */}
         {/* ========================================================================= */}
         {showShareSheet && (
           <View style={styles.shareSheetWrapper}>

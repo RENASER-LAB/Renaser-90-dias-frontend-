@@ -63,7 +63,7 @@ export function ChapterConsentimiento({ data, onChange }: ChapterConsentimientoP
             Autorizo el uso de mis datos y me comprometo a los 90 días
           </Text>
           <Text style={[t.micro, { color: c.textSoft, fontSize: 12.5, lineHeight: 17, marginTop: 2 }]}>
-            Acepto las exigencias del sistema y respeto el código de honor de la célula.
+            Acepto las exigencias del sistema y respeto el código de honor del grupo.
           </Text>
         </View>
       </Pressable>
