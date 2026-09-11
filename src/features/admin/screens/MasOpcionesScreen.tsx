@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { MicroLabel } from '../../../components/ui';
@@ -8,6 +8,7 @@ import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
+import { avisar } from '../utils/dialogo';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
 
 /**
@@ -45,7 +46,7 @@ export function MasOpcionesScreen({
       detalle: 'El catálogo vive en Comunidad, con el reproductor y el muro',
       onPress: () => {
         if (!irAPestana('Comunidad')) {
-          Alert.alert('Comunidad', 'Abrí la pestaña Comunidad desde la barra de abajo.');
+          avisar('Comunidad', 'Abrí la pestaña Comunidad desde la barra de abajo.');
         }
       },
     },

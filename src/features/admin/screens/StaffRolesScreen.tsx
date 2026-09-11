@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { MicroLabel } from '../../../components/ui';
@@ -10,6 +10,7 @@ import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher'
 import { cambiarRolDeUsuario, listarAprendices, mentoresDisponibles } from '../api/adminApi';
 import type { RolAsignable } from '../api/adminApi';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
+import { confirmar, avisar } from '../utils/dialogo';
 import { mensajeDeFallo } from '../utils/mensajes';
 
 const POR_PAGINA = 20;
@@ -212,7 +213,7 @@ export function StaffRolesScreen({ onVolver }: { onVolver: () => void }) {
   const aprendicesVisibles = aprendices.filter(p => !idsCambiados.has(p.id));
   const mentoresVisibles = mentores.filter(p => !idsCambiados.has(p.id));
 
-  const aplicar = (persona: Persona, nuevo: RolAsignable) => {
+  const aplicar = async (persona: Persona, nuevo: RolAsignable) => {
     if (nuevo === persona.rol) {
       setAbierta(null);
       return;
@@ -225,31 +226,26 @@ export function StaffRolesScreen({ onVolver }: { onVolver: () => void }) {
       : 'El panel no lista ese rol, así que va a salir de estas listas. Mientras no salgas de esta '
         + 'pantalla la vas a seguir viendo arriba, en «Cambios de esta sesión», por si te arrepentís.';
 
-    Alert.alert(
+    const acepto = await confirmar(
       `¿Hacer ${etiqueta} a ${persona.nombre}?`,
       `${persona.nombre} pasa de ${ETIQUETA.get(persona.rol) ?? persona.rol} a ${etiqueta}.\n\n${donde}`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: `Sí, hacer ${etiqueta}`,
-          onPress: async () => {
-            setGuardando(persona.id);
-            try {
-              await cambiarRolDeUsuario(persona.id, nuevo);
-              setCambiados(previos => [
-                { ...persona, rol: nuevo },
-                ...previos.filter(p => p.id !== persona.id),
-              ]);
-              setAbierta(null);
-            } catch (e) {
-              Alert.alert('No se pudo cambiar el rol', mensajeDeFallo(e, 'Probá de nuevo.'));
-            } finally {
-              setGuardando(null);
-            }
-          },
-        },
-      ],
+      { ok: `Sí, hacer ${etiqueta}` },
     );
+    if (!acepto) return;
+
+    setGuardando(persona.id);
+    try {
+      await cambiarRolDeUsuario(persona.id, nuevo);
+      setCambiados(previos => [
+        { ...persona, rol: nuevo },
+        ...previos.filter(p => p.id !== persona.id),
+      ]);
+      setAbierta(null);
+    } catch (e) {
+      avisar('No se pudo cambiar el rol', mensajeDeFallo(e, 'Probá de nuevo.'));
+    } finally {
+      setGuardando(null);
+    }
   };
 
   const hayMas = totalAprendices !== null && aprendices.length < totalAprendices;

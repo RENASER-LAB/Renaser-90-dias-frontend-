@@ -257,7 +257,10 @@ export type RolAsignable = 'TRAINEE' | 'MENTOR' | 'MENTOR_LEAD' | 'ADMIN' | 'ALC
 export async function cambiarRolDeUsuario(usuarioId: string, nuevoRol: RolAsignable): Promise<void> {
   await apiFetch<unknown>(`/api/v1/users/${encodeURIComponent(usuarioId)}/role`, {
     method: 'PATCH',
-    body: JSON.stringify({ newRole: nuevoRol }),
+    // `apiFetch` ya hace `JSON.stringify(body)`: acá va el objeto crudo, como el resto de este
+    // archivo. Pasar un string lo codificaba dos veces y el backend respondía 400 «cuerpo
+    // malformado». E18 no lo vio porque probó la API directa, no esta función.
+    body: { newRole: nuevoRol },
   });
 }
 

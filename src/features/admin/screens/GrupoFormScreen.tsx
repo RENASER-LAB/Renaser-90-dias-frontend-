@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FormField } from '../../../components/FormField';
@@ -9,6 +9,7 @@ import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
+import { avisar } from '../utils/dialogo';
 import { actualizarGrupo, crearGrupo, listarCohortes, obtenerGrupo } from '../api/adminApi';
 import type { CohorteAdminApi } from '../api/adminSchemas';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
@@ -149,7 +150,7 @@ export function GrupoFormScreen({
     } catch (e) {
       const mensaje = mensajeDeFallo(e, 'No se pudo guardar el grupo.');
       setFallo(mensaje);
-      Alert.alert('No se guardó', mensaje);
+      avisar('No se guardó', mensaje);
     } finally {
       setGuardando(false);
     }

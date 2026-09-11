@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { MicroLabel } from '../../../components/ui';
@@ -10,6 +10,7 @@ import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher'
 import { aprobarSolicitud, listarAprendices, listarSolicitudes, rechazarSolicitud } from '../api/adminApi';
 import type { SolicitudApi } from '../api/adminSchemas';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
+import { confirmar, avisar } from '../utils/dialogo';
 import { mensajeDeFallo } from '../utils/mensajes';
 
 /**
@@ -75,7 +76,7 @@ export function SolicitudesAdminScreen({
       // lo que efectivamente pasó y no lo que se esperaba que pasara.
       const despues = await listarAprendices({ pagina: 0, tamano: 1, soloSinGrupo: true });
       const entroSolo = sinGrupo !== null && despues.total <= sinGrupo;
-      Alert.alert(
+      avisar(
         'Cuenta aprobada',
         entroSolo
           ? `${solicitud.fullName ?? 'La persona'} ya tiene su cuenta y entró al grupo de bienvenida.`
@@ -83,35 +84,28 @@ export function SolicitudesAdminScreen({
       );
       await cargar();
     } catch (e) {
-      Alert.alert('No se pudo aprobar', mensajeDeFallo(e, 'Probá de nuevo.'));
+      avisar('No se pudo aprobar', mensajeDeFallo(e, 'Probá de nuevo.'));
     } finally {
       setTrabajando(null);
     }
   };
 
-  const rechazar = (solicitud: SolicitudApi) => {
-    Alert.alert(
+  const rechazar = async (solicitud: SolicitudApi) => {
+    const acepto = await confirmar(
       'Rechazar solicitud',
       `${solicitud.fullName ?? 'Esta persona'} no podrá entrar con este correo. ¿Confirmás?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Rechazar',
-          style: 'destructive',
-          onPress: async () => {
-            setTrabajando(solicitud.id);
-            try {
-              await rechazarSolicitud(solicitud.id, 'Rechazada desde el panel de administración');
-              await cargar();
-            } catch (e) {
-              Alert.alert('No se pudo rechazar', mensajeDeFallo(e, 'Probá de nuevo.'));
-            } finally {
-              setTrabajando(null);
-            }
-          },
-        },
-      ],
+      { ok: 'Rechazar', destructivo: true },
     );
+    if (!acepto) return;
+    setTrabajando(solicitud.id);
+    try {
+      await rechazarSolicitud(solicitud.id, 'Rechazada desde el panel de administración');
+      await cargar();
+    } catch (e) {
+      avisar('No se pudo rechazar', mensajeDeFallo(e, 'Probá de nuevo.'));
+    } finally {
+      setTrabajando(null);
+    }
   };
 
   return (

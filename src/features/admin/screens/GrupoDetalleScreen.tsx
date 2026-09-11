@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon } from '../../../components/Icon';
@@ -21,6 +21,7 @@ import type { AprendizCandidatoApi, GrupoDetalleApi, MentorCandidatoApi } from '
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
 import { EstadoDeGrupo } from '../components/EstadoDeGrupo';
 import { rangoDeFechas } from '../utils/fechas';
+import { confirmar, avisar } from '../utils/dialogo';
 import { mensajeDeFallo } from '../utils/mensajes';
 
 const ESPECIALIDADES: Record<string, string> = {
@@ -104,7 +105,7 @@ export function GrupoDetalleScreen({
       await cargar();
       setEligiendo(null);
     } catch (e) {
-      Alert.alert(queFalla, mensajeDeFallo(e, 'Probá de nuevo en un momento.'));
+      avisar(queFalla, mensajeDeFallo(e, 'Probá de nuevo en un momento.'));
     } finally {
       setTrabajando(false);
     }
@@ -116,7 +117,7 @@ export function GrupoDetalleScreen({
     try {
       setMentores(await mentoresDisponibles());
     } catch (e) {
-      Alert.alert('No se pudo traer la lista de mentores', mensajeDeFallo(e, ''));
+      avisar('No se pudo traer la lista de mentores', mensajeDeFallo(e, ''));
       setEligiendo(null);
     } finally {
       setCargandoLista(false);
@@ -129,7 +130,7 @@ export function GrupoDetalleScreen({
     try {
       setCandidatos(await aprendicesDisponibles());
     } catch (e) {
-      Alert.alert('No se pudo traer la lista de aprendices', mensajeDeFallo(e, ''));
+      avisar('No se pudo traer la lista de aprendices', mensajeDeFallo(e, ''));
       setEligiendo(null);
     } finally {
       setCargandoLista(false);
@@ -207,16 +208,11 @@ export function GrupoDetalleScreen({
                   </Text>
                   {!cerrado ? (
                     <Pressable
-                      onPress={() =>
-                        Alert.alert('Quitar mentor', '¿Dejar el grupo sin mentor asignado?', [
-                          { text: 'Cancelar', style: 'cancel' },
-                          {
-                            text: 'Quitar',
-                            style: 'destructive',
-                            onPress: () => void conAviso(() => quitarMentor(grupoId), 'No se pudo quitar'),
-                          },
-                        ])
-                      }
+                      onPress={async () => {
+                        if (await confirmar('Quitar mentor', '¿Dejar el grupo sin mentor asignado?', { ok: 'Quitar', destructivo: true })) {
+                          void conAviso(() => quitarMentor(grupoId), 'No se pudo quitar');
+                        }
+                      }}
                       accessibilityRole="button"
                       accessibilityLabel="Quitar mentor"
                       style={estilos.accionTexto}
@@ -260,21 +256,17 @@ export function GrupoDetalleScreen({
                   </Text>
                   {!cerrado ? (
                     <Pressable
-                      onPress={() =>
-                        Alert.alert(
-                          'Retirar del grupo',
-                          `${persona.fullName ?? 'Esta persona'} dejará de pertenecer a ${grupo.name}. Su historial se conserva.`,
-                          [
-                            { text: 'Cancelar', style: 'cancel' },
-                            {
-                              text: 'Retirar',
-                              style: 'destructive',
-                              onPress: () =>
-                                void conAviso(() => retirarAprendiz(grupoId, persona.id), 'No se pudo retirar'),
-                            },
-                          ],
-                        )
-                      }
+                      onPress={async () => {
+                        if (
+                          await confirmar(
+                            'Retirar del grupo',
+                            `${persona.fullName ?? 'Esta persona'} dejará de pertenecer a ${grupo.name}. Su historial se conserva.`,
+                            { ok: 'Retirar', destructivo: true },
+                          )
+                        ) {
+                          void conAviso(() => retirarAprendiz(grupoId, persona.id), 'No se pudo retirar');
+                        }
+                      }}
                       accessibilityRole="button"
                       accessibilityLabel={`Retirar a ${persona.fullName ?? 'esta persona'}`}
                       style={estilos.accionTexto}
