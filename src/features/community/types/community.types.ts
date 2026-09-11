@@ -32,6 +32,8 @@ export interface WallPost {
   reactionCounts: Record<string, number>;
   myReactions: string[];
   commentCount: number;
+  /** Día de programa del autor al publicar (1..90). `null`/ausente = no tenía programa activo. */
+  programDay?: number | null;
 }
 
 export interface WallFeedPage {

@@ -106,10 +106,12 @@ export function useWallFeed() {
         id: idTemporal,
         author: autor,
         avatar: '👤',
-        // El feed real tampoco trae célula ni racha (ver `mapearPublicacion`): se dejan igual que
-        // ahí para que el post temporal y el definitivo se vean idénticos y el cambio no parpadee.
+        // El feed real no trae célula (ver `mapearPublicacion`): se deja igual para que el post
+        // temporal y el definitivo se vean idénticos y el cambio no parpadee.
         cell: '',
-        dayStreak: 0,
+        // Sin insignia mientras está pendiente: el día lo sella el servidor al guardar, y
+        // adivinarlo acá sería mostrar un número que puede no coincidir con el definitivo.
+        diaPrograma: null,
         timeAgo: 'Ahora',
         text: texto,
         media: fotos.map((foto, idx) => ({
