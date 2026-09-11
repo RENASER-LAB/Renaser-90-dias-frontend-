@@ -42,11 +42,19 @@ test('E04 · crear un grupo con fechas, elegir mentor y agregar aprendices persi
 
   await page.getByRole('button', { name: /agregar aprendiz/i }).click();
   const candidatos = page.getByTestId('candidato-aprendiz');
+  const listaVacia = page.getByText(/no hay aprendices activos sin grupo/i);
   /* Si el entorno no tiene aprendices libres, la lista sale vacía y la pantalla lo dice. Eso no
      es un fallo del panel: es que no hay a quién agregar. Se comprueba el mensaje y se sigue, en
-     vez de esperar 15 segundos por un elemento que nadie va a dibujar. */
+     vez de esperar 15 segundos por un elemento que nadie va a dibujar.
+
+     PRIMERO se espera a que la lista SE DEFINA, y recién después se cuenta. `count()` no espera:
+     devuelve lo que haya dibujado en ese instante. Mientras la petición viaja eso son cero
+     candidatos, la rama del "no hay" se toma por error, y el caso muere pidiendo un cartel de
+     lista vacía que nunca iba a aparecer porque la lista sí tenía gente. El síntoma apuntaba al
+     panel y el defecto estaba acá (2026-09-11). */
+  await expect(candidatos.first().or(listaVacia)).toBeVisible();
   if ((await candidatos.count()) === 0) {
-    await expect(page.getByText(/no hay aprendices activos sin grupo/i)).toBeVisible();
+    await expect(listaVacia).toBeVisible();
     await page.getByRole('button', { name: /cerrar la lista/i }).click();
   } else {
     await candidatos.first().click();

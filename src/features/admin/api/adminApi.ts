@@ -243,6 +243,24 @@ export async function aprobarSolicitud(id: string): Promise<void> {
   await apiFetch<unknown>(`/api/v1/account-requests/${encodeURIComponent(id)}/approve`, { method: 'POST' });
 }
 
+/** Los cinco roles que el backend acepta en `PATCH /users/{id}/role`. `ASSISTANT` existe en el
+ * enum de la base pero el contrato de la API lo rechaza con 400: no se ofrece. */
+export type RolAsignable = 'TRAINEE' | 'MENTOR' | 'MENTOR_LEAD' | 'ADMIN' | 'ALCHEMIST';
+
+/**
+ * `PATCH /api/v1/users/{id}/role`.
+ *
+ * El guard real es `User.requireRoleManager` dentro del caso de uso: solo ADMIN y ALQUIMISTA.
+ * Al promover a MENTOR el backend crea el perfil de mentor si falta, asi que no hace falta un
+ * segundo paso desde aca.
+ */
+export async function cambiarRolDeUsuario(usuarioId: string, nuevoRol: RolAsignable): Promise<void> {
+  await apiFetch<unknown>(`/api/v1/users/${encodeURIComponent(usuarioId)}/role`, {
+    method: 'PATCH',
+    body: JSON.stringify({ newRole: nuevoRol }),
+  });
+}
+
 export async function rechazarSolicitud(id: string, motivo: string): Promise<void> {
   await apiFetch<unknown>(`/api/v1/account-requests/${encodeURIComponent(id)}/reject`, {
     method: 'POST',

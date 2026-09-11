@@ -97,10 +97,20 @@ Cada uno con su motivo, no por olvido:
 
 ## 4. Alcance que se dejó fuera a propósito
 
-No son olvidos; están listados en «Más opciones» de la app diciendo dónde viven:
+**Cambiar el rol ya NO está acá: entró el 2026-09-11** (`StaffRolesScreen`, vía «Más opciones»).
+Era lo que bloqueaba tener mentores sin entrar a la base: al aprobar una solicitud el backend
+fuerza APRENDIZ —`approve(id, actor)` ni siquiera recibe un rol—, así que sin esta pantalla un
+mentor solo nacía con un `UPDATE` a mano.
+
+Su límite, que conviene tener presente: el panel solo sabe LISTAR dos roles (aprendices desde
+`/admin/trainees`, mentores desde `/admin/cells/mentores`). Promover a administrador, alquimista o
+líder saca a la persona de las dos listas. Por eso lo cambiado queda fijado en «Cambios de esta
+sesión» mientras no se salga de la pantalla, y la confirmación dice **dónde va a quedar** la
+persona. Un listado por rol arbitrario necesitaría un endpoint nuevo.
+
+Lo que sigue fuera, listado en «Más opciones» diciendo dónde vive:
 
 - **Catálogo de hábitos** (crear, editar, guías, horarios, audioterapias)
-- **Staff y roles**
 - **Soporte y tickets**
 - **Categorías del muro y base de conocimiento**
 

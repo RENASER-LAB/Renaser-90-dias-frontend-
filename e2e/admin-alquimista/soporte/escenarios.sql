@@ -22,6 +22,25 @@ UPDATE renaser.participantes_programa
 SET celula_id = NULL, mentor_id = NULL
 WHERE usuario_id IN (SELECT id FROM renaser.usuarios WHERE email LIKE 'e2e-libre%');
 
+-- ── 1b. Devolverle el rol APRENDIZ a los veinte de reserva ────────────────
+-- E18 promueve a uno para comprobar el cambio de rol y lo devuelve al terminar. Si el caso se
+-- corta a la mitad, ese aprendiz queda MENTOR para siempre y desaparece del padrón: la reserva
+-- se va gastando de a uno sin que nadie lo note. Mismo criterio que liberar a los aprendices de
+-- sus grupos en el paso 1 — el escenario se PONE en su sitio, no se supone intacto.
+UPDATE renaser.usuarios
+SET rol = CAST('APRENDIZ' AS renaser.rol_usuario)
+WHERE email LIKE 'e2e-libre%' AND rol <> CAST('APRENDIZ' AS renaser.rol_usuario);
+
+-- ── 1c. El perfil de mentor de la cuenta de pruebas ────────────────────────
+-- `participantes_programa.mentor_id` apunta a `perfiles_mentor`, NO a `usuarios`: sin esta fila
+-- el paso 4 muere con `participantes_programa_mentor_id_fkey`. Se siembra acá y no se da por
+-- supuesta porque la fila se pierde en cuanto alguien borra y recrea la cuenta del mentor —
+-- pasó el 2026-09-11 al restaurar las cuentas desde un respaldo que no incluía esta tabla.
+INSERT INTO renaser.perfiles_mentor (usuario_id, nivel, estado_operativo, bio, creado_en, actualizado_en)
+SELECT id, 'N1', 'VERDE', 'Perfil de mentor para la suite E2E.', now(), now()
+FROM renaser.usuarios WHERE rol = 'MENTOR' AND email LIKE 'e2e-%'
+ON CONFLICT (usuario_id) DO NOTHING;
+
 -- ── 2. Veinte aprendices activos y sin grupo ───────────────────────────────
 INSERT INTO renaser.usuarios (id, email, nombre_completo, rol, estado, hash_contrasena)
 SELECT ('e2e1' || lpad(i::text, 4, '0') || '-0000-4000-8000-00000000' || lpad(i::text, 4, '0'))::uuid,
@@ -104,9 +123,16 @@ WHERE usuario_id IN ('e2e44440-0000-4000-8000-000000000001',
 -- ── 6. Devolverle la participación a las cuentas principales ──────────────
 -- Reparación de la versión anterior de este archivo, que se la borraba. Sin esto, `e2e-admin`
 -- sigue generando 404 en cada pantalla que consulta el programa.
+--
+-- Van por CORREO y no por UUID, y son CUATRO y no dos. El mentor y el aprendiz principal también
+-- la necesitan: `POST /admin/cells/{id}/trainees` responde 404 a un aprendiz sin fila de programa,
+-- y `aprendices-disponibles` lo ofrece igual —así que E04 lo elegía de la lista y moría—. Las dos
+-- cuentas «nuevo» quedan fuera a propósito: no tener programa es justo lo que las hace útiles.
 INSERT INTO renaser.participantes_programa (usuario_id, fecha_inicio, dia_programa, programa_activado_en)
-VALUES ('e2e00000-0000-4000-8000-000000000001', CURRENT_DATE - 10, 10, now()),
-       ('e2e00000-0000-4000-8000-000000000002', CURRENT_DATE - 10, 10, now())
+SELECT id, CURRENT_DATE - 10, 10, now()
+FROM renaser.usuarios
+WHERE email IN ('e2e-admin@renaser.test', 'e2e-alquimista@renaser.test',
+                'e2e-mentor@renaser.test', 'e2e-aprendiz@renaser.test')
 ON CONFLICT (usuario_id) DO NOTHING;
 
 COMMIT;

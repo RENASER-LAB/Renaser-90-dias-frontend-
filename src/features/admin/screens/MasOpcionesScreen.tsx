@@ -14,12 +14,18 @@ import { CabeceraAdmin } from '../components/CabeceraAdmin';
  * Lo institucional que se usa de vez en cuando.
  *
  * Acá está lo que HOY se puede hacer desde el teléfono y, con la misma claridad, lo que no. Los
- * paneles de catálogo, staff, roles y soporte existen en el backend pero su edición es un
+ * paneles de catálogo, alta manual y soporte existen en el backend pero su edición es un
  * formulario largo, pensado para pantalla grande: prometer una entrada que lleva a una pantalla a
  * medias es peor que decir dónde está. El acceso a cursos no se duplica: sigue en Comunidad, que
  * es donde ya vive (ARF-14).
  */
-export function MasOpcionesScreen({ onVolver }: { onVolver: () => void }) {
+export function MasOpcionesScreen({
+  onVolver,
+  onAbrirStaff,
+}: {
+  onVolver: () => void;
+  onAbrirStaff: () => void;
+}) {
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
 
@@ -29,6 +35,11 @@ export function MasOpcionesScreen({ onVolver }: { onVolver: () => void }) {
   });
 
   const enLaApp: Array<{ titulo: string; detalle: string; onPress: () => void }> = [
+    {
+      titulo: 'Staff y roles',
+      detalle: 'Cambiar el rol de una cuenta: aprendiz, mentor, líder, administrador o alquimista',
+      onPress: onAbrirStaff,
+    },
     {
       titulo: 'Cursos y comunidad',
       detalle: 'El catálogo vive en Comunidad, con el reproductor y el muro',
@@ -42,7 +53,7 @@ export function MasOpcionesScreen({ onVolver }: { onVolver: () => void }) {
 
   const enLaWeb = [
     { titulo: 'Catálogo de hábitos', detalle: 'Crear, editar, guías, horarios y audioterapias' },
-    { titulo: 'Staff y roles', detalle: 'Invitar, editar y cambiar el rol de una cuenta' },
+    { titulo: 'Invitar y editar cuentas', detalle: 'Dar de alta a mano y editar los datos de una persona' },
     { titulo: 'Soporte y tickets', detalle: 'Bandeja de soporte y tickets de mentoría' },
     { titulo: 'Categorías del muro y conocimiento', detalle: 'Moderación y base de conocimiento' },
   ];

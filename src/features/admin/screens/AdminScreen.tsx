@@ -9,6 +9,7 @@ import { GruposAdminScreen } from './GruposAdminScreen';
 import { MasOpcionesScreen } from './MasOpcionesScreen';
 import { PersonasAdminScreen } from './PersonasAdminScreen';
 import { SolicitudesAdminScreen } from './SolicitudesAdminScreen';
+import { StaffRolesScreen } from './StaffRolesScreen';
 
 /**
  * Administración entera, como una pila de vistas dentro de Hoy.
@@ -17,7 +18,7 @@ import { SolicitudesAdminScreen } from './SolicitudesAdminScreen';
  * rol Mentor ya resolvió esto mismo así: sus pantallas son estado de `HoyScreen`. Repetir ese
  * patrón deja una sola forma de entrar y salir en toda la app.
  *
- * La pila se lleva en una variable y no con un router: son siete vistas con un solo camino de ida
+ * La pila se lleva en una variable y no con un router: son ocho vistas con un solo camino de ida
  * y vuelta. Cada una registra su `useSystemBackHandler`, así que el gesto lateral sube un nivel —
  * ficha → personas → inicio → Mi programa— en vez de cerrar la app (AGENTS.md §6).
  */
@@ -29,6 +30,7 @@ type Vista =
   | { nombre: 'personas'; soloSinGrupo: boolean }
   | { nombre: 'ficha'; aprendiz: AprendizAdminApi }
   | { nombre: 'solicitudes' }
+  | { nombre: 'staff' }
   | { nombre: 'mas' };
 
 export function AdminScreen({ onSalir }: { onSalir: () => void }) {
@@ -83,8 +85,10 @@ export function AdminScreen({ onSalir }: { onSalir: () => void }) {
       return (
         <SolicitudesAdminScreen onVolver={volver} onIrAGrupos={() => entrar({ nombre: 'grupos' })} />
       );
+    case 'staff':
+      return <StaffRolesScreen onVolver={volver} />;
     case 'mas':
-      return <MasOpcionesScreen onVolver={volver} />;
+      return <MasOpcionesScreen onVolver={volver} onAbrirStaff={() => entrar({ nombre: 'staff' })} />;
     default:
       return (
         <AdminInicioScreen

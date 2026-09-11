@@ -48,6 +48,18 @@ function actor(prefijo: string, rol: Actor['rol']): Actor {
   };
 }
 
+/**
+ * Se calcula UNA vez, al cargar el módulo, y no en cada lectura.
+ *
+ * <blockquote>Era un getter con `Date.now()` adentro. Sin `E2E_RUN_ID` en el entorno, cada lectura
+ * devolvía un identificador distinto: E06 creaba «Renombrar [e2e-mtx3qcee]» y un instante después
+ * buscaba en pantalla «Renombrar [e2e-mtx3qdsu]», que no existía. El caso moría por timeout
+ * señalando a la interfaz, cuando el defecto estaba acá. Funcionaba solo si quien lanzaba la suite
+ * se acordaba de exportar la variable — y una prueba que depende de que alguien recuerde algo es
+ * una prueba que va a fallar el día que no esté esa persona.</blockquote>
+ */
+const RUN_ID = process.env.E2E_RUN_ID?.trim() || `e2e-${Date.now().toString(36)}`;
+
 export const ENTORNO = {
   /** URL del backend de PRUEBAS. Nunca la de producción. */
   get apiUrl(): string {
@@ -62,7 +74,7 @@ export const ENTORNO = {
    * ejecuciones simultáneas no se pisan y la limpieza sabe qué es suyo — nunca se trunca nada.
    */
   get runId(): string {
-    return process.env.E2E_RUN_ID ?? `e2e-${Date.now().toString(36)}`;
+    return RUN_ID;
   },
   get admin(): Actor {
     return actor('E2E_ADMIN', 'ADMIN');

@@ -1,13 +1,14 @@
 # E2E — resultados de ejecución
 
-**Última corrida:** 2026-09-10, contra backend y base LOCALES.
-**Frontend:** `Renaser-90-dias-frontend-`, rama `admin-alquimista`.
-**Backend:** `Renaser-90-dias-backend`, rama `admin-alquimista`.
-**Runner:** Playwright 1.49.1 · Chromium 153 · viewport 360 px · 1 worker · 0 reintentos.
+**Última corrida:** 2026-09-11, contra backend y base LOCALES.
+**Frontend y backend:** rama `mentor`.
+**Runner:** Playwright 1.49.1 · viewport 360 px · 1 worker · 0 reintentos.
 
 ```
-23 pasaron · 0 fallaron · 0 salteadas    (33,6 s)
+28 pasaron · 0 fallaron · 0 salteadas    (38,9 s)
 ```
+
+Las tres nuevas son **E18**, que cubre el cambio de rol (`StaffRolesScreen`).
 
 Los 17 recorridos, con sus variantes, corriendo contra backend y base reales. Se llegó acá
 sembrando los escenarios que faltaban (`soporte/escenarios.sql`) y corrigiendo un defecto real
@@ -42,6 +43,9 @@ historial ni cumplimiento.
 | E08 | La semana administrativa y la del mentor devuelven el mismo día |
 | E13 | Un grupo cerrado se consulta desde administración y deja de dar acceso |
 | E15c | El guard del mentor sigue negando fuera de su relación vigente |
+| E18 | Promover a mentor y devolver el rol: la persona vuelve al padrón, no se pierde |
+| E18b | `ASSISTANT` da 400: por eso la pantalla ofrece cinco roles y no siete |
+| E18c | Un aprendiz no le cambia el rol a nadie |
 
 ## 2. Lo que hizo falta para dejar de saltear
 
@@ -112,6 +116,23 @@ pena dejarlos escritos porque todos son trampas reutilizables:
 | Prueba que pasa una vez y nunca más | Contaminación entre corridas: otra prueba dejaba el dato cambiado |
 
 ---
+
+## 5b. Cuatro trampas de la corrida del 2026-09-11
+
+Ninguna era un defecto del panel. Las cuatro son del entorno o de la propia suite, y las cuatro
+apuntaban con el dedo a la pantalla equivocada:
+
+| Síntoma | Causa real |
+|---|---|
+| E06 busca «Renombrar [e2e-mtx3q**dsu**]» y había creado «[e2e-mtx3q**cee**]» | `ENTORNO.runId` era un **getter** con `Date.now()` adentro: cada lectura devolvía un id distinto. Solo funcionaba si quien lanzaba la suite recordaba exportar `E2E_RUN_ID`. **Corregido**: se calcula una vez al cargar el módulo |
+| E04 pide el cartel de «no hay aprendices» habiendo veinte libres | `locator.count()` **no espera**. Mientras la petición viajaba contaba cero, tomaba la rama del vacío y moría pidiendo un cartel que nunca iba a aparecer. **Corregido**: se espera a que la lista se defina —un candidato *o* el cartel— y recién ahí se cuenta |
+| `POST /admin/cells/{id}/trainees` → 404 | El aprendiz no tenía fila en `participantes_programa`. `aprendices-disponibles` lo ofrecía igual, así que la interfaz mostraba un candidato que el `POST` rechazaba. **Corregido en el sembrado**, que ahora la repone para las cuatro cuentas principales |
+| «Login de ADMIN falló con 429» a la sexta corrida | El límite es por correo (10/h) **y por IP (50/h)**. Las ~8 sesiones de cada corrida salen todas de `127.0.0.1`. Limpiar solo los contadores por correo no alcanza |
+
+Y una quinta, de método: restaurar `usuarios` desde un respaldo **sin sus tablas dependientes**
+deja un estado a medias que no falla al restaurar, sino tres pasos después. Faltaban
+`perfiles_mentor` —a la que apunta `participantes_programa.mentor_id`, y no a `usuarios`— y las
+participaciones. El sembrado ahora repone ambas.
 
 ## 6. El riesgo que estaba aceptado — CERRADO el 2026-09-11
 
