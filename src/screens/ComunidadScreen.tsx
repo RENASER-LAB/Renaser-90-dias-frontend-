@@ -1622,7 +1622,9 @@ export default function ComunidadScreen() {
   const filteredConversations = conversations.filter(conv => {
     if (seccionActiva === 'celula') return conv.type === 'celula';
     if (miembrosTab === 'global') return conv.type === 'global';
-    return conv.type === 'direct';
+    // Directos: los 1-a-1 y TAMBIÉN el chat del grupo, para que no quede escondido solo en la
+    // pestaña Grupo y se encuentre acá, donde la persona busca sus conversaciones (pedido del dueño).
+    return conv.type === 'direct' || conv.type === 'celula';
   });
 
   /*
