@@ -113,25 +113,27 @@ pena dejarlos escritos porque todos son trampas reutilizables:
 
 ---
 
-## 6. Riesgo conocido y ACEPTADO por el dueño del proyecto
+## 6. El riesgo que estaba aceptado — CERRADO el 2026-09-11
 
-`SecurityConfig` deja `/api/v1/account-requests/**` en `permitAll()`, y
-`ActorAutenticadoArgumentResolver` resuelve el actor desde el header `X-Actor-Id` cuando no hay
-sesión. El patrón cubre también `GET /account-requests`, `/{id}/approve`, `/{id}/reject` y
-`DELETE /{id}`, que son operaciones de ADMIN: con el UUID de un administrador se pueden aprobar
-cuentas sin credenciales.
+`SecurityConfig` dejaba `/api/v1/account-requests/**` entero en `permitAll()`, y
+`ActorAutenticadoArgumentResolver` resuelve el actor desde `X-Actor-Id` cuando no hay sesión. El
+patrón cubría también listar, aprobar, rechazar y borrar, que son operaciones de ADMIN.
 
-```bash
-curl -X POST -H "X-Actor-Id: <uuid-de-un-admin>" .../api/v1/account-requests/<id>/approve
+**Se comprobó explotándolo** contra el backend local, no se dedujo del código:
+
+```
+GET  /api/v1/account-requests?status=PENDING   -H "X-Actor-Id: <uuid-admin>"  -> 200
+POST /api/v1/account-requests/{id}/approve     -H "X-Actor-Id: <uuid-admin>"  -> 204
 ```
 
-**Decisión (2026-09-10):** se deja como está. El motivo dado es que la versión desplegada no
-expone panel administrativo.
+El 204 dejó una cuenta creada y `ACTIVO` en la base, sin sesión ni contraseña. Los UUID no son
+secretos: el propio login devuelve el `id` en el cuerpo.
 
-**Matiz que conviene no perder:** que no haya pantalla no cierra la ruta — el endpoint responde
-igual, exista o no una interfaz que lo llame, y los UUID viajan en respuestas de la API. La
-corrección son cuatro líneas: separar del matcher las operaciones públicas (solicitar cuenta,
-`check-email`, `verify-email`, consultar el estado propio) y exigir `authenticated()` en listar,
-aprobar, rechazar y borrar.
+El riesgo se había aceptado el 10/09 con un motivo cierto entonces —*"la versión desplegada no tiene
+panel administrativo"*— y la premisa caducó al entrar el panel en el despliegue.
 
-Se registra acá para que la decisión sea rastreable, no para discutirla de nuevo.
+**Cerrado con matchers por método**, porque `POST /account-requests` (alta, pública) y
+`GET /account-requests` (bandeja, de ADMIN) comparten la ruta entera. Tras el arreglo: las cuatro
+operaciones de ADMIN dan **403** sin sesión y el registro completo sigue funcionando
+(**alta 202 → bandeja 200 → aprobar 204 → entrar 200**). Fijado por
+`AccountRequestControllerAutenticacionTest`; detalle y lecciones en **E-181** de la bitácora.

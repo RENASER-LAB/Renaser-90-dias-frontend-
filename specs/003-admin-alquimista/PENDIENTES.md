@@ -28,28 +28,36 @@ aws ssm get-parameter --name /renaser/prod/RESET_PASSWORD_URL
 aws ssm get-parameter --name /renaser/prod/ACTIVATE_ACCOUNT_URL
 ```
 
-### 1.2 La decisión sobre `account-requests`
+### 1.2 `account-requests` — CERRADO el 2026-09-11
 
-`/api/v1/account-requests/**` está en `permitAll()` y el actor sale del header `X-Actor-Id` cuando
-no hay sesión. El patrón cubre también listar, aprobar, rechazar y borrar — operaciones de ADMIN.
-Con el UUID de un administrador se aprueban cuentas sin credenciales, y los UUID viajan en
-respuestas de la API.
+Estaba en `permitAll()` para todo el recurso, y el actor salía del header `X-Actor-Id` cuando no
+había sesión. **No era teoría: se explotó contra el backend local.** Con el UUID de un
+administrador —que el propio login devuelve en el cuerpo— y sin credencial alguna:
 
-Se **aceptó el riesgo** el 2026-09-10 con este motivo: la versión desplegada no expone panel
-administrativo.
+```
+GET  /api/v1/account-requests?status=PENDING   -> 200
+POST /api/v1/account-requests/{id}/approve     -> 204   (cuenta creada y ACTIVA)
+```
 
-> **Ese motivo cambia con este despliegue**, que sí incluye Administración. No se reabre la
-> discusión: se deja anotado para que la decisión sea rastreable con su contexto real. La
-> corrección son cuatro líneas en `SecurityConfig` —separar del matcher lo que debe ser público
-> (solicitar cuenta, `check-email`, `verify-email`, consultar el estado propio) y exigir
-> `authenticated()` en el resto— y no toca ningún controller.
+Se aceptó el riesgo el 10/09 porque *"la versión desplegada no tiene panel administrativo"*. Ese
+despliegue sí lo tiene, así que la premisa caducó y se cerró.
 
-### 1.3 Limpiar los datos de prueba de la base LOCAL
+**Corrección:** matchers por método en `SecurityConfig` — el alta, `check-email`, `exists`,
+`verify-email` y `GET /{id}/status` siguen públicos; listar, aprobar, rechazar y borrar exigen
+`authenticated()`. El caso difícil es que `POST /account-requests` y `GET /account-requests`
+comparten ruta entera: un único matcher por patrón no puede separarlos.
 
-La suite dejó en la base local unas 60 células con `[e2e-…]` en el nombre, veinte cuentas
-`e2e-libre*` y siete cuentas `e2e-*`. **Solo afecta a local**, pero conviene no confundirlas con
-datos reales. El paso de limpieza de la suite borra los grupos; las cuentas hay que quitarlas a
-mano cuando ya no se usen.
+Verificado en vivo tras el arreglo: las cuatro de ADMIN dan **403** sin sesión; el registro
+completo (alta → bandeja → aprobar → entrar) sigue en **200/204/200**. Fijado por
+`AccountRequestControllerAutenticacionTest` (6 casos) y documentado como **E-181** en la bitácora.
+
+### 1.3 Datos de prueba de la base LOCAL — LIMPIADO el 2026-09-11
+
+Se borraron 27 cuentas `e2e-*`, 6 células `[e2e-…]`, 24 participaciones y 15 asignaciones. Quedan
+6 cuentas: la real del dueño, `admin.local@ejemplo.test` y los cuatro `prueba.*` que dan gente a la
+vista de mentor. Respaldo en CSV antes de borrar.
+
+Para volver a tener el escenario de pruebas basta `soporte/escenarios.sql`, que es idempotente.
 
 ---
 
