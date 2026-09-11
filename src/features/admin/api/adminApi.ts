@@ -37,6 +37,24 @@ export async function listarCohortes(): Promise<CohorteAdminApi[]> {
   );
 }
 
+/**
+ * `POST /api/v1/admin/cohorts`. Crea la generación a la que pertenecen los grupos.
+ *
+ * `startDate` es obligatoria en el backend; si no se pasa una, va la de hoy. `endDate` es
+ * opcional —una cohorte puede no tener fin— y se omite.
+ */
+export async function crearCohorte(nombre: string, fechaInicio?: string): Promise<CohorteAdminApi> {
+  const startDate = fechaInicio ?? new Date().toISOString().slice(0, 10);
+  return validarRespuesta<CohorteAdminApi>(
+    cohorteAdminSchema,
+    await apiFetch<unknown>('/api/v1/admin/cohorts', {
+      method: 'POST',
+      body: { name: nombre, startDate },
+    }),
+    'POST /api/v1/admin/cohorts',
+  );
+}
+
 /** `GET /api/v1/admin/cells?cohortId=…`. El backend EXIGE la cohorte: no hay listado suelto. */
 export async function listarGruposDeCohorte(cohorteId: string): Promise<GrupoResumenApi[]> {
   return validarRespuesta<GrupoResumenApi[]>(
