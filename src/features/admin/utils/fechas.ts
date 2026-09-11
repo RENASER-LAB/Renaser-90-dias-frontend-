@@ -60,3 +60,21 @@ export function esFechaValida(iso: string): boolean {
   const d = new Date(Date.UTC(p.anio, p.mes - 1, p.dia));
   return d.getUTCFullYear() === p.anio && d.getUTCMonth() === p.mes - 1 && d.getUTCDate() === p.dia;
 }
+
+/**
+ * Endereza lo que una persona escribe a mano: `2026-09-1` → `2026-09-01`, `2026/9/1` → `2026-09-01`.
+ *
+ * Existe porque el campo de período es texto libre y `esFechaValida` exige los diez caracteres
+ * exactos. Quien escribía el día sin el cero delante —que es como se escribe una fecha en
+ * castellano— sólo se enteraba al guardar, con un error de formato que no explica que falta un
+ * cero. Rechazar eso es correcto pero inútil: el dato se entiende perfecto.
+ *
+ * NO inventa nada. Si no reconoce tres números separados por `-` o `/`, devuelve el texto tal cual
+ * y que `esFechaValida` haga su trabajo: es preferible un error claro a una fecha adivinada. El
+ * 31 de febrero sigue sin pasar, porque esto normaliza la FORMA, no valida el calendario.
+ */
+export function normalizarFechaIso(texto: string): string {
+  const m = /^\s*(\d{4})[-/](\d{1,2})[-/](\d{1,2})\s*$/.exec(texto);
+  if (!m) return texto;
+  return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+}

@@ -13,7 +13,7 @@ import { avisar } from '../utils/dialogo';
 import { actualizarGrupo, crearCohorte, crearGrupo, listarCohortes, obtenerGrupo } from '../api/adminApi';
 import type { CohorteAdminApi } from '../api/adminSchemas';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
-import { esFechaValida } from '../utils/fechas';
+import { esFechaValida, normalizarFechaIso } from '../utils/fechas';
 import { mensajeDeFallo } from '../utils/mensajes';
 
 const CAPACIDAD_MINIMA = 10;
@@ -325,6 +325,7 @@ export function GrupoFormScreen({
               helperText="AAAA-MM-DD. Las dos fechas o ninguna."
               value={inicio}
               onChangeText={setInicio}
+              onBlur={() => setInicio(normalizarFechaIso(inicio))}
               error={errores.inicio}
               placeholder="2026-09-01"
               keyboardType="numbers-and-punctuation"
@@ -335,6 +336,7 @@ export function GrupoFormScreen({
               helperText="El último día entra entero."
               value={fin}
               onChangeText={setFin}
+              onBlur={() => setFin(normalizarFechaIso(fin))}
               error={errores.fin}
               placeholder="2026-09-30"
               keyboardType="numbers-and-punctuation"
