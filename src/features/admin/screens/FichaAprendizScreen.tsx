@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { MicroLabel } from '../../../components/ui';
@@ -11,6 +11,7 @@ import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher'
 import { abrirConversacionDirecta } from '../../chat/api/chatApi';
 import { urlDeEvidencia } from '../../evidence/api/evidenceApi';
 import { RejillaSemanal } from '../../mentor/components/RejillaSemanal';
+import { avisar } from '../utils/dialogo';
 import type { AprendizAdminApi } from '../api/adminSchemas';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
 import { useSemanaAdministrativa } from '../hooks/useSemanaAdministrativa';
@@ -63,12 +64,12 @@ export function FichaAprendizScreen({
     try {
       const url = await urlDeEvidencia(evidenciaId);
       if (!url) {
-        Alert.alert('Sin archivo', 'Esta evidencia es de texto: no hay archivo que abrir.');
+        avisar('Sin archivo', 'Esta evidencia es de texto: no hay archivo que abrir.');
         return;
       }
       await Linking.openURL(url);
     } catch {
-      Alert.alert('No se pudo abrir', 'Revisá tu conexión e intentá de nuevo.');
+      avisar('No se pudo abrir', 'Revisá tu conexión e intentá de nuevo.');
     } finally {
       setAbriendoEvidencia(null);
     }
@@ -81,13 +82,13 @@ export function FichaAprendizScreen({
       const conversacion = await abrirConversacionDirecta(aprendiz.id);
       const navego = irAPestana('Comunidad', { abrirChatConversacionId: conversacion.id });
       if (!navego) {
-        Alert.alert(
+        avisar(
           'Conversación lista',
           `Tu chat con ${nombre} está en Comunidad → Miembros. No se envió ningún mensaje.`,
         );
       }
     } catch {
-      Alert.alert('No se pudo abrir el chat', 'Revisá tu conexión e intentá de nuevo.');
+      avisar('No se pudo abrir el chat', 'Revisá tu conexión e intentá de nuevo.');
     } finally {
       setAbriendoChat(false);
     }
