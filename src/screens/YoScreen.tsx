@@ -162,7 +162,7 @@ const PACTO_CLAUSULAS = [
   '2. Subir las evidencias que el sistema me exija.',
   '3. Aceptar la disciplina como camino, no como castigo.',
   '4. Hablarme con respeto, especialmente cuando falle.',
-  '5. No abandonar la célula ni huir cuando aparezca la incomodidad.',
+  '5. No abandonar el grupo ni huir cuando aparezca la incomodidad.',
   '6. Cuidar mi cuerpo como el templo que es.',
   '7. Sanar mis heridas en lugar de defenderlas.',
   '8. Cobrar lo que valgo y dejar de subvalorarme.',
@@ -711,7 +711,7 @@ export default function YoScreen() {
                     <Icon name="bell" size={16} color={c.goldInk} />
                     <View>
                       <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>Notificaciones & Alarmas</Text>
-                      <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>Recordatorio 05:00 AM y célula</Text>
+                      <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>Recordatorio 05:00 AM y grupo</Text>
                     </View>
                   </View>
                   <Icon name="chevron" size={12} color={c.goldInk} />
@@ -1622,7 +1622,7 @@ export default function YoScreen() {
 
             <View style={[styles.menuOptionRow, { borderBottomColor: c.divider }]}>
               <View style={{ flex: 1 }}>
-                <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>Avisos de Célula Fénix</Text>
+                <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>Avisos de Grupo Fénix</Text>
                 <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>Mensajes y victorias de tu tribu</Text>
               </View>
               <Switch

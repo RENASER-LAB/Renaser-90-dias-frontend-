@@ -23,8 +23,8 @@ export interface UserProfile {
   role: UserRole;
   currentDay: number; // Día 1 al 90
   currentPhase: 1 | 2 | 3; // 1: Fundación, 2: Aceleración, 3: Maestría
-  cellId: string; // ID de la Célula asignada (ej. 'cell_07')
-  cellName: string; // ej. 'Célula Fénix 07'
+  cellId: string; // ID del Grupo asignado (ej. 'cell_07')
+  cellName: string; // ej. 'Grupo Fénix 07'
   mentorId: string;
   mentorName: string;
   onboardingCompleted: boolean;

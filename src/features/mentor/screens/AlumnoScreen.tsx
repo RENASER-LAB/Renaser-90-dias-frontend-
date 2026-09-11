@@ -128,12 +128,12 @@ export function AlumnoScreen({
           onPress={onVolver}
           hitSlop={12}
           accessibilityRole="button"
-          accessibilityLabel="Volver a mi célula"
+          accessibilityLabel="Volver a mi grupo"
           style={estilos.volver}
         >
           <Icon name="arrowLeft" size={15} color={c.goldInk} />
           <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
-            MI CÉLULA
+            MI GRUPO
           </Text>
         </Pressable>
       </View>

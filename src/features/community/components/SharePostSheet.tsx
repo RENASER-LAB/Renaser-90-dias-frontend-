@@ -147,7 +147,7 @@ export function SharePostSheet({
           )}
         </Pressable>
 
-        {/* 3. CHAT DE MI CÉLULA (SOLO SI TIENE CÉLULA) */}
+        {/* 3. CHAT DE MI GRUPO (SOLO SI TIENE GRUPO) */}
         {tieneCelula && (
           <Pressable
             onPress={() => celulaConv && handleSendToConv(celulaConv)}
@@ -162,7 +162,7 @@ export function SharePostSheet({
               <Icon name="users" size={20} color="#E5C689" />
             </View>
             <View style={styles.optionTextBox}>
-              <Text style={styles.optionTitle}>Chat de mi Célula</Text>
+              <Text style={styles.optionTitle}>Chat de mi Grupo</Text>
               <Text style={styles.optionDesc}>
                 {celulaConv ? `Enviar a ${celulaConv.title}` : 'Compartir con tu grupo íntimo y mentor'}
               </Text>

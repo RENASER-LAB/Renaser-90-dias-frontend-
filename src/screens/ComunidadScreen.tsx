@@ -287,7 +287,7 @@ const GROUP_MEMBERS: GroupMember[] = [
     avatar: '🦅',
     badge: 'MENTOR',
     streakDays: 90,
-    cell: 'Célula 07',
+    cell: 'Grupo 07',
     focus: 'Gestión Somática & Negocios de Alto Valor',
   },
   {
@@ -297,7 +297,7 @@ const GROUP_MEMBERS: GroupMember[] = [
     avatar: '👩‍💼',
     badge: 'ALUMNA',
     streakDays: 37,
-    cell: 'Célula 07',
+    cell: 'Grupo 07',
     focus: 'Bloque Deep Work 90m & Ventas',
   },
   {
@@ -307,7 +307,7 @@ const GROUP_MEMBERS: GroupMember[] = [
     avatar: '👨‍💼',
     badge: 'GRADUADO',
     streakDays: 90,
-    cell: 'Célula 04',
+    cell: 'Grupo 04',
     focus: 'Bioquímica, Sueño Profundo & Flujo de Caja',
   },
   {
@@ -317,7 +317,7 @@ const GROUP_MEMBERS: GroupMember[] = [
     avatar: '👩‍⚕️',
     badge: 'GRADUADA',
     streakDays: 90,
-    cell: 'Célula 05',
+    cell: 'Grupo 05',
     focus: 'Respiración Diafragmática & Regulación Cortisol',
   },
 ];
@@ -363,7 +363,7 @@ export type SeccionComunidad =
 const SECCIONES: { id: SeccionComunidad; icon: IconName; label: string }[] = [
   { id: 'muro', icon: 'chat', label: 'Muro' },
   { id: 'classroom', icon: 'stack', label: 'Classroom' },
-  { id: 'celula', icon: 'users', label: 'Célula' },
+  { id: 'celula', icon: 'users', label: 'Grupo' },
   { id: 'miembros', icon: 'user', label: 'Miembros' },
   { id: 'ranking', icon: 'trophy', label: 'Ranking' },
   { id: 'testimonios', icon: 'star', label: 'Testimonios' },
@@ -406,7 +406,7 @@ export default function ComunidadScreen() {
       : tieneMentor && miCelula?.assigned === true
         ? miCelula.mentorName!
         : 'Todavía no tienes un mentor asignado';
-  const mentorSubtitulo = tieneMentor ? 'Mentor de tu célula' : null;
+  const mentorSubtitulo = tieneMentor ? 'Mentor de tu grupo' : null;
   const mentorNota =
     celulaCargando || celulaError
       ? null
@@ -2767,7 +2767,7 @@ export default function ComunidadScreen() {
       )}
 
       {/* ========================================================================= */}
-      {/* SECCIONES CÉLULA Y MIEMBROS: CHATS TIPO WHATSAPP                          */}
+      {/* SECCIONES GRUPO Y MIEMBROS: CHATS TIPO WHATSAPP                          */}
       {/* ========================================================================= */}
       {inChatsComunidad && activeChat === null && (
         <ScrollView
@@ -2784,17 +2784,17 @@ export default function ComunidadScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* ========================================================================= */}
-          {/* SECCIÓN CÉLULA: MENTOR, TRIBU, MÉTRICAS Y CHAT DE LA CÉLULA               */}
+          {/* SECCIÓN GRUPO: MENTOR, TRIBU, MÉTRICAS Y CHAT DEL GRUPO               */}
           {/* ========================================================================= */}
           {/*
             Acá aterrizó lo que antes era la portada de Comunidad. El dueño del proyecto lo pidió
             así: la tarjeta del mentor y los dos bloques de datos de la tribu se manejan dentro de
-            Célula, que es de lo que hablan.
+            Grupo, que es de lo que hablan.
           */}
           {seccionActiva === 'celula' && (
             <>
             {/* Para quien ACOMPAÑA. Va arriba de todo porque es lo que viene a hacer; el resto
-                de Célula —su mentor, su tribu, su chat— sigue igual para todos, incluido él. */}
+                de Grupo —su mentor, su tribu, su chat— sigue igual para todos, incluido él. */}
             {esMentor ? (
               <View style={{ paddingTop: 16 }}>
                 <MicroLabel>ACOMPAÑAMIENTO</MicroLabel>
@@ -2849,7 +2849,7 @@ export default function ComunidadScreen() {
               )}
               {!celulaCargando && !celulaError && companerosCelula.length === 0 && (
                 <Text style={[t.micro, { color: c.textSoft, marginTop: 10 }]}>
-                  Todavía no tienes integrantes en tu célula.
+                  Todavía no tienes integrantes en tu grupo.
                 </Text>
               )}
               {companerosCelula.length > 0 && (
@@ -2884,7 +2884,7 @@ export default function ComunidadScreen() {
             </View>
 
               <View style={[styles.section, { borderTopColor: c.divider }]}>
-                <MicroLabel>CHAT DE TU CÉLULA</MicroLabel>
+                <MicroLabel>CHAT DE TU GRUPO</MicroLabel>
               </View>
             </>
           )}
@@ -2893,7 +2893,7 @@ export default function ComunidadScreen() {
           {/* SECCIÓN MIEMBROS: CONVERSACIONES UNO A UNO Y CANAL GLOBAL                 */}
           {/* ========================================================================= */}
           {/*
-            El selector perdió la opción "CÉLULA" porque la célula pasó a ser su propia sección
+            El selector perdió la opción "GRUPO" porque el grupo pasó a ser su propia sección
             (con su propio medallón arriba). Las otras dos categorías que ya existían —directos y
             global— se quedaron acá, que es donde la persona busca a alguien puntual.
           */}
@@ -2920,7 +2920,7 @@ export default function ComunidadScreen() {
           )}
 
           {/* ========================================================================= */}
-          {/* LISTADO DE CONVERSACIONES — COMPARTIDO POR CÉLULA Y MIEMBROS              */}
+          {/* LISTADO DE CONVERSACIONES — COMPARTIDO POR GRUPO Y MIEMBROS              */}
           {/* ========================================================================= */}
           {/*
             Un solo listado para las dos secciones, no dos copias: lo único que cambia entre ellas
@@ -3305,20 +3305,20 @@ export default function ComunidadScreen() {
               <Icon name="users" size={28} color={c.goldInk} />
             </View>
             <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 16, marginTop: 6 }]}>
-              Célula Fénix 07
+              Grupo Fénix 07
             </Text>
             <Text style={[t.micro, { color: c.goldInk, marginTop: 2 }]}>
               16 Integrantes de la Tribu RENASER
             </Text>
             <Text style={[t.body, { color: c.textSoft, fontSize: 11.5, textAlign: 'center', marginTop: 6 }]}>
-              Célula privada de aceleración somática. Cero quejas, dato puro y verdad biológica.
+              Grupo privado de aceleración somática. Cero quejas, dato puro y verdad biológica.
             </Text>
           </View>
 
           {/* LISTA DE INTEGRANTES */}
           <View style={{ gap: 8, marginTop: 14, paddingBottom: 28 }}>
             <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
-              INTEGRANTES DE LA CÉLULA (16)
+              INTEGRANTES DEL GRUPO (16)
             </Text>
 
             {GROUP_MEMBERS.map(member => (
@@ -3383,7 +3383,7 @@ export default function ComunidadScreen() {
       </Modal>
 
       {/* ========================================================================= */}
-      {/* MODAL: PERFIL DEL INTEGRANTE DE LA CÉLULA                                 */}
+      {/* MODAL: PERFIL DEL INTEGRANTE DEL GRUPO                                 */}
       {/* ========================================================================= */}
       <Modal
         visible={selectedMemberProfile !== null}
@@ -3425,7 +3425,7 @@ export default function ComunidadScreen() {
                   </Text>
                 </View>
                 <View style={[styles.metricBoxItem, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
-                  <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5, textAlign: 'center' }]}>CÉLULA</Text>
+                  <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5, textAlign: 'center' }]}>GRUPO</Text>
                   <Text style={[t.metric, { color: c.goldInk, fontSize: 13, textAlign: 'center' }]}>
                     {selectedMemberProfile.cell}
                   </Text>
@@ -3486,7 +3486,7 @@ export default function ComunidadScreen() {
               </View>
               <View>
                 <Text style={[t.cardTitle, { color: c.textStrong }]}>{nombreUsuario}</Text>
-                <Text style={[t.micro, { color: c.goldInk, fontSize: 11 }]}>Célula 07 · Día 37</Text>
+                <Text style={[t.micro, { color: c.goldInk, fontSize: 11 }]}>Grupo 07 · Día 37</Text>
               </View>
             </View>
 
