@@ -63,14 +63,23 @@ Para volver a tener el escenario de pruebas basta `soporte/escenarios.sql`, que 
 
 ## 2. Lo que quedó sin verificar
 
-### 2.1 Smoke nativo (Maestro) — **el hueco más grande**
+### 2.1 Smoke nativo — **EJECUTADO el 2026-09-11**
 
-Los tres recorridos están escritos en `.maestro/admin-alquimista/` y **nunca se ejecutaron**: hace
-falta emulador o dispositivo y una build nativa.
+Corrido en el emulador `Pixel_6` (Android 17) con el APK de depuración y el JS de hoy servido por
+Metro. **9 recorridos, 9 en verde.** Detalle en [SMOKE_NATIVO.md](SMOKE_NATIVO.md).
 
-**Consecuencia concreta:** el **gesto lateral del sistema** y el **teclado** no están certificados.
-La suite web corre en Chromium con viewport de 360 px, y eso no emula ninguna de las dos cosas. Es
-justamente lo que AGENTS.md §6 exige y lo único del alcance que sigue sin comprobarse.
+Lo que importaba y estaba sin comprobar: **el gesto lateral del sistema** —el deslizamiento real
+desde el borde, no el botón— sube un nivel, y desde la raíz de Administración lleva a Mi programa
+sin cerrar la app. Es lo que exige AGENTS.md §6 y la suite web no podía tocar. **El teclado**
+también: abre, escribe, deja desplazar sin cerrarse, y los campos del fondo se rellenan.
+
+Un hallazgo menor, anotado y no corregido: `GrupoFormScreen` no desplaza solo el campo enfocado
+por encima del teclado. No bloquea —el manifiesto declara `adjustResize` y desplazando se llega,
+comprobado—, pero la app ya resuelve esto con `KeyboardAvoidingView` en otras cuatro pantallas y
+esta no lo usa. Con público de 40–60 años pesa más de lo que parece.
+
+Los tres `.yaml` de Maestro siguen sin ejecutarse (la herramienta no está instalada); lo que
+cubrían quedó cubierto conduciendo con `adb` y `uiautomator`.
 
 ### 2.2 Push real e iOS
 
@@ -79,6 +88,7 @@ justamente lo que AGENTS.md §6 exige y lo único del alcance que sigue sin comp
 - **iOS:** `useSystemBackHandler` es una API de Android. El hueco está documentado en el propio
   hook; cerrarlo es decisión de producto (cambiar `presentationStyle` de los modales, o agregar
   `react-native-gesture-handler`).
+- **Dispositivo físico:** el emulador no reproduce la capa propia de un Xiaomi.
 
 ---
 
