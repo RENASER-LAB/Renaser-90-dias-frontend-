@@ -1,0 +1,21 @@
+# E16 — Bajar tres niveles y volver con el gesto del sistema, sin salir de la app.
+#
+# Es la comprobación de `useSystemBackHandler` en cadena: ficha → personas → inicio → Mi programa.
+# Un nivel que se olvide de registrarlo cierra la aplicación, y eso solo se ve en el dispositivo.
+appId: ${MAESTRO_APP_ID}
+env:
+  MAESTRO_APP_ID: com.renaser.app
+---
+- launchApp
+- tapOn: "Administración"
+- tapOn: "Personas"
+- assertVisible: "Buscar por nombre o correo"
+- tapOn:
+    index: 0
+    text: ".*"
+- back
+- assertVisible: "Buscar por nombre o correo"
+- back
+- assertVisible: "Pendientes"
+- back
+- assertVisible: "Hoy"

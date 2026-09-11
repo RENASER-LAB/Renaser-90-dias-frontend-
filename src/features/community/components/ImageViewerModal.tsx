@@ -57,6 +57,8 @@ export interface ImageViewerModalProps {
   userReaction?: 'like' | null;
   comments?: ImageViewerCommentItem[];
   onToggleLike?: (postId: string) => void;
+  /** Abre la lista de quién reaccionó. Opcional: sin ella la chapa es solo un contador. */
+  onVerReacciones?: (postId: string) => void;
   /** Interruptor de "me gusta" de un comentario: sin dislike ya no hace falta decir de qué tipo. */
   onCommentVote?: (postId: string, commentId: string) => void;
   onAddComment?: (postId: string, text: string, photoUri?: string) => Promise<void> | void;
@@ -91,6 +93,7 @@ export function ImageViewerModal({
   userReaction = null,
   comments = [],
   onToggleLike,
+  onVerReacciones,
   onCommentVote,
   onAddComment,
   onShare,
@@ -468,7 +471,7 @@ export function ImageViewerModal({
                       userReaction === 'like' && { color: VERDE_SOBRE_NEGRO, fontFamily: 'Jost_700Bold' },
                     ]}
                   >
-                    {likes > 0 ? `${likes} ` : ''}Me gusta
+                    Me gusta
                   </Text>
                 </Pressable>
 
@@ -494,6 +497,30 @@ export function ImageViewerModal({
                   <Text style={styles.actionBtnText}>
                     Compartir
                   </Text>
+                </Pressable>
+
+                {/* Reacciones a la derecha, igual que en el Muro. Se dibuja SIEMPRE, también con
+                    cero: en el Muro la chapa está, y que aparezca y desaparezca al abrir la foto
+                    haría dudar de si se perdió algo.
+
+                    Toca y abre quién reaccionó, como en el Muro. Se puede porque React Native
+                    apila los Modal por el momento en que se ABREN, no por el orden en que están
+                    declarados —comprobado el 2026-09-11 en el build web—; el de reacciones se
+                    abre después, así que queda encima de este visor y no debajo. */}
+                <Pressable
+                  onPress={() => onVerReacciones?.(postId)}
+                  disabled={!onVerReacciones}
+                  accessibilityRole={onVerReacciones ? 'button' : undefined}
+                  accessibilityLabel={
+                    onVerReacciones
+                      ? `${likes} ${likes === 1 ? 'reacción' : 'reacciones'}. Tocá para ver quién reaccionó`
+                      : `${likes} ${likes === 1 ? 'reacción' : 'reacciones'}`
+                  }
+                  hitSlop={10}
+                  style={styles.rxChipVisor}
+                >
+                  <Icon name="thumbsUp" size={12} color={VERDE_SOBRE_NEGRO} />
+                  <Text style={styles.rxChipVisorTexto}>{likes}</Text>
                 </Pressable>
               </View>
             )}
@@ -840,20 +867,40 @@ const styles = StyleSheet.create({
   actionsBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
+    /* Acciones agrupadas a la IZQUIERDA; la chapa de reacciones se va sola a la derecha con su
+       `marginLeft: 'auto'`. Mismo reparto que el Muro, para que abrir la foto no reordene lo que
+       el dedo ya aprendió dónde está. */
+    justifyContent: 'flex-start',
     marginTop: 6,
     paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.12)',
   },
   actionBtnTransparent: {
-    flex: 1,
+    /* Sin `flex: 1`: cada botón mide su contenido y los tres quedan juntos a la izquierda. */
+    flexShrink: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
     paddingVertical: 8,
+    paddingHorizontal: 10,
     backgroundColor: 'transparent',
+  },
+  rxChipVisor: {
+    marginLeft: 'auto',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+  },
+  rxChipVisorTexto: {
+    color: '#FFFFFF',
+    fontFamily: 'Jost_700Bold',
+    fontSize: 11.5,
   },
   actionBtnText: {
     color: '#FFFFFF',

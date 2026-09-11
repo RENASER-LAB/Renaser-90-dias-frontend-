@@ -33,6 +33,11 @@ export function TarjetaMentorHoy({
   const { c, t } = useTheme();
 
   const pendientes = vista?.resumen.requierenSeguimiento ?? 0;
+  const total = vista?.resumen.total ?? 0;
+  /* Cuántos no se pueden juzgar. Si son todos, la tarjeta NO dice que estén bien: dice cuántos
+     acompaña y nada más. Afirmar "nadie necesita seguimiento" sin un solo dato es la clase de
+     frase que hace que un mentor no mire a alguien que sí lo necesitaba. */
+  const sinJuzgar = vista?.resumen.sinDatos ?? 0;
   const sinDatos = Boolean(fallo) || !vista;
 
   const detalle =
@@ -40,6 +45,8 @@ export function TarjetaMentorHoy({
     : fallo === 'no_disponible' ? 'El seguimiento del grupo aún no está disponible.'
     : fallo ? 'No pudimos cargar tu célula.'
     : !vista || vista.todos.length === 0 ? 'Todavía no tienes aprendices asignados.'
+    : pendientes === 0 && sinJuzgar === total
+      ? `${total} ${total === 1 ? 'aprendiz' : 'aprendices'} · sin avance registrado todavía`
     : pendientes === 0 ? 'Nadie necesita seguimiento hoy.'
     : pendientes === 1 ? '1 aprendiz necesita seguimiento.'
     : `${pendientes} aprendices necesitan seguimiento.`;

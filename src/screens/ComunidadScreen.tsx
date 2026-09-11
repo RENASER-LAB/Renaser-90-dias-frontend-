@@ -20,6 +20,11 @@ import { ChatDelCurso } from '../features/renasia/components/ChatDelCurso';
 import { useProgramaDia } from '../features/programa/hooks/useProgramaDia';
 import { useResponsive } from '../theme/responsive';
 import { useSystemBackHandler } from '../hooks/useSystemBackHandler';
+import { useCelulaQueAcompano } from '../features/mentor/hooks/useCelulaQueAcompano';
+import { useEsMentor } from '../features/mentor/hooks/useEsMentor';
+import { AlumnoScreen } from '../features/mentor/screens/AlumnoScreen';
+import { MiCelulaScreen } from '../features/mentor/screens/MiCelulaScreen';
+import type { AlumnoConEstado } from '../features/mentor/types/mentor.types';
 import { MicroLabel, ScreenHeader, Placeholder } from '../components/ui';
 import { Icon, IconName } from '../components/Icon';
 import { GoldButton } from '../components/GoldButton';
@@ -419,6 +424,18 @@ export default function ComunidadScreen() {
   // mano: se pasa siempre por `irASeccion`, que además limpia el sub-estado de la sección que se
   // deja.
   const [seccionActiva, setSeccionActiva] = useState<SeccionComunidad>('muro');
+
+  /*
+   * El grupo que acompaña un mentor se llega desde Hoy y también desde acá: son los dos lugares
+   * donde alguien lo busca (RF-26). Es la MISMA pantalla, no una copia — si fueran dos, la
+   * próxima corrección tocaría una sola y nadie se enteraría de la otra.
+   *
+   * El hook se activa solo para mentores: para el resto no hace ni una llamada.
+   */
+  const esMentor = useEsMentor();
+  const celulaQueAcompano = useCelulaQueAcompano(esMentor);
+  const [vistaMentor, setVistaMentor] = useState<'ninguna' | 'celula' | 'alumno'>('ninguna');
+  const [alumnoAbierto, setAlumnoAbierto] = useState<AlumnoConEstado | null>(null);
   // Derivados, no estados: agrupan las secciones que comparten un mismo contenedor de scroll o un
   // mismo sub-estado. Nunca se pueden prender dos a la vez, porque salen todos de `seccionActiva`.
   const inExclusiveResources = seccionActiva === 'classroom';
@@ -456,6 +473,8 @@ export default function ComunidadScreen() {
     loading: conversacionesCargando,
     error: conversacionesError,
     mensajesCargando,
+    // Lo usa la entrada desde "Escribirle": la conversación puede acabar de crearse.
+    recargar: recargarConversaciones,
     abrirConversacion,
     enviarMensajeTexto: enviarMensajeChatRemoto,
   } = useChatConversaciones(user?.id ?? null);
@@ -1001,6 +1020,15 @@ export default function ComunidadScreen() {
     { cursoId: string; leccionId: string } | null
   >(null);
 
+  /**
+   * Chat pedido desde otra pantalla: hoy, el botón "Escribirle" de la ficha del aprendiz.
+   *
+   * Se guarda el id y NO se abre en el acto porque la conversación puede acabar de crearse y no
+   * estar todavía en `conversations` — `POST /chat/conversations/direct` la devuelve, pero el
+   * listado de esta pantalla se cargó antes. El efecto de más abajo la abre en cuanto aparece.
+   */
+  const [chatPedidoDeOtraPestana, setChatPedidoDeOtraPestana] = useState<string | null>(null);
+
   useEffect(() => {
     const params = route.params as
       | { abrirCursoId?: string; abrirLeccionId?: string }
@@ -1021,6 +1049,23 @@ export default function ComunidadScreen() {
     // conocidas. Mismo cast que ya usa `HoyScreen` para navegar entre pestañas.
     (navigation as any).setParams({ abrirCursoId: undefined, abrirLeccionId: undefined });
   }, [route.params, navigation]);
+
+  /**
+   * Tercera entrada desde afuera: "Escribirle" en la ficha de un aprendiz abre el chat PRIVADO
+   * con esa persona. Misma forma que las otras dos — parámetro de pestaña, consumido una vez.
+   */
+  useEffect(() => {
+    const params = route.params as { abrirChatConversacionId?: string } | undefined;
+    const id = params?.abrirChatConversacionId;
+    if (!id) return;
+
+    irASeccion('miembros');
+    setMiembrosTab('directos');
+    setChatPedidoDeOtraPestana(id);
+    // Recién creada, puede no estar en el listado: se pide de nuevo para que aparezca.
+    void recargarConversaciones();
+    (navigation as any).setParams({ abrirChatConversacionId: undefined });
+  }, [route.params, navigation, recargarConversaciones]);
 
   /**
    * Segunda entrada desde afuera, con la misma forma que la de arriba: el arranque guiado
@@ -1284,6 +1329,29 @@ export default function ComunidadScreen() {
       .catch(e => Alert.alert('No se pudo cargar el chat', mensajeDeError(e, 'Intentá de nuevo en un momento.')));
   };
 
+  /**
+   * Abre el chat que pidió otra pantalla, en cuanto el listado lo tenga.
+   *
+   * Va DESPUÉS de `handleAbrirChat` a propósito: reutiliza exactamente el mismo camino que un
+   * toque en la lista —entrar con lo que hay y traer el historial detrás—, en vez de repetir esa
+   * lógica con una variante que tarde o temprano se desincroniza.
+   *
+   * Si la conversación no está todavía, no hace nada y espera al siguiente render: `recargar()`
+   * ya salió a buscarla. No se reintenta ni se pone un temporizador — si nunca llega, la persona
+   * queda en Miembros, que es exactamente donde está su chat.
+   */
+  useEffect(() => {
+    if (!chatPedidoDeOtraPestana) return;
+    const conversacion = conversations.find(c => c.id === chatPedidoDeOtraPestana);
+    if (!conversacion) return;
+    setChatPedidoDeOtraPestana(null);
+    handleAbrirChat(conversacion);
+    // `handleAbrirChat` se redefine en cada render y meterlo como dependencia dispararía el
+    // efecto en bucle. Lo que decide es el par (id pedido, listado), que sí está declarado.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatPedidoDeOtraPestana, conversations]);
+
+
   // El "me gusta" va contra el backend real (POST /api/v1/wall/{id}/react). El propio backend
   // hace el toggle (ReaccionarUseCase: tocar el mismo tipo lo saca) y devuelve los conteos
   // verdaderos, así que acá no hay aritmética que llevar a mano.
@@ -1514,6 +1582,37 @@ export default function ComunidadScreen() {
     if (miembrosTab === 'global') return conv.type === 'global';
     return conv.type === 'direct';
   });
+
+  /*
+   * Las vistas del mentor toman la pantalla completa, igual que en Hoy: son otro contexto de
+   * trabajo, no una tarjeta más dentro de Comunidad. Cada una registra su `useSystemBackHandler`,
+   * así que el gesto del sistema las cierra paso a paso en vez de salir de la app.
+   */
+  if (esMentor && vistaMentor === 'alumno' && alumnoAbierto) {
+    return (
+      <AlumnoScreen
+        alumno={alumnoAbierto}
+        grupoId={celulaQueAcompano.vista?.celula.id ?? null}
+        onVolver={() => setVistaMentor('celula')}
+      />
+    );
+  }
+  if (esMentor && vistaMentor === 'celula') {
+    return (
+      <MiCelulaScreen
+        onSalir={() => setVistaMentor('ninguna')}
+        onAbrirAlumno={alumno => {
+          setAlumnoAbierto(alumno);
+          setVistaMentor('alumno');
+        }}
+        vista={celulaQueAcompano.vista}
+        cargando={celulaQueAcompano.cargando}
+        fallo={celulaQueAcompano.fallo}
+        detalle={celulaQueAcompano.detalle}
+        recargar={celulaQueAcompano.recargar}
+      />
+    );
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
@@ -1811,23 +1910,10 @@ export default function ComunidadScreen() {
                       </View>
                     )}
 
-                    {/* Resumen de Reacciones */}
+                    {/* Solo el recuento de comentarios. Las reacciones bajaron a la fila de
+                        acciones, al MISMO nivel que Like, Comentar y Compartir. */}
                     <View style={[styles.reactionsSummaryRow, { borderTopColor: c.divider }]}>
-                      <Pressable
-                        onPress={() => {
-                          setReactionsModalVisible(true);
-                          void cargarReacciones(post.id);
-                        }}
-                        style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
-                      >
-                        <View style={[styles.rxCountBadge, { backgroundColor: c.successWash }]}>
-                          <Icon name="thumbsUp" size={11} color={c.success} />
-                          <Text style={[styles.rxCountTexto, { color: c.success }]}>{post.likes}</Text>
-                        </View>
-                        <Text style={[t.micro, { color: c.goldInk, fontSize: 11 }]}>· Ver quién reaccionó ›</Text>
-                      </Pressable>
-
-                      <Pressable onPress={() => handleToggleComments(post.id)}>
+                      <Pressable onPress={() => handleToggleComments(post.id)} hitSlop={8}>
                         <Text style={[t.micro, { color: c.textSoft, fontSize: 10 }]}>
                           {post.comments.length} Comentarios
                         </Text>
@@ -1885,6 +1971,30 @@ export default function ComunidadScreen() {
                         <Text numberOfLines={1} style={[t.micro, { color: c.textSoft, fontFamily: 'Jost_700Bold', fontSize: 10.5 }]}>
                           Compartir
                         </Text>
+                      </Pressable>
+
+                      {/* Las reacciones, a la derecha y en la MISMA fila que las tres acciones.
+                          `marginLeft: 'auto'` las empuja al borde sin estirar los botones.
+                          La chapa ES el botón: ya no hay un "Ver quién reaccionó ›" que lo
+                          explique, así que lleva su propia etiqueta para el lector de pantalla. */}
+                      <Pressable
+                        onPress={() => {
+                          setReactionsModalVisible(true);
+                          void cargarReacciones(post.id);
+                        }}
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                          post.likes === 1
+                            ? 'Una reacción. Tocá para ver quién reaccionó'
+                            : `${post.likes} reacciones. Tocá para ver quién reaccionó`
+                        }
+                        hitSlop={10}
+                        style={styles.rxCountBotonFila}
+                      >
+                        <View style={[styles.rxCountBadge, { backgroundColor: c.successWash }]}>
+                          <Icon name="thumbsUp" size={11} color={c.success} />
+                          <Text style={[styles.rxCountTexto, { color: c.success }]}>{post.likes}</Text>
+                        </View>
                       </Pressable>
                     </View>
 
@@ -2683,6 +2793,36 @@ export default function ComunidadScreen() {
           */}
           {seccionActiva === 'celula' && (
             <>
+            {/* Para quien ACOMPAÑA. Va arriba de todo porque es lo que viene a hacer; el resto
+                de Célula —su mentor, su tribu, su chat— sigue igual para todos, incluido él. */}
+            {esMentor ? (
+              <View style={{ paddingTop: 16 }}>
+                <MicroLabel>ACOMPAÑAMIENTO</MicroLabel>
+                <Pressable
+                  onPress={() => setVistaMentor('celula')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Abrir el grupo que acompañas"
+                  style={[styles.entradaMentor, { borderColor: c.goldInk, backgroundColor: c.goldWash }]}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={[t.cardTitle, { color: c.textStrong }]} numberOfLines={1}>
+                      {celulaQueAcompano.vista?.celula.nombre ?? 'Mi grupo'}
+                    </Text>
+                    <Text style={[t.small, { color: c.textSoft, marginTop: 2 }]}>
+                      {celulaQueAcompano.cargando
+                        ? 'Cargando…'
+                        : celulaQueAcompano.vista
+                          ? `${celulaQueAcompano.vista.resumen.total} ${
+                              celulaQueAcompano.vista.resumen.total === 1 ? 'aprendiz' : 'aprendices'
+                            }`
+                          : 'Ver el grupo que acompañas'}
+                    </Text>
+                  </View>
+                  <Icon name="chevron" size={16} color={c.goldInk} />
+                </Pressable>
+              </View>
+            ) : null}
+
             <View style={{ paddingTop: 16 }}>
               <MicroLabel>MENTOR</MicroLabel>
               <View style={[styles.mentor, { borderColor: c.border, backgroundColor: c.cardBg }]}>
@@ -3543,6 +3683,10 @@ export default function ComunidadScreen() {
             userReaction={activeViewerPost?.userReaction}
             comments={activeViewerPost?.comments}
             onToggleLike={handleToggleLike}
+            onVerReacciones={pid => {
+              setReactionsModalVisible(true);
+              void cargarReacciones(pid);
+            }}
             onCommentVote={handleCommentVote}
             onAddComment={(pid, txt, photoUri) => handleAddComment(pid, txt, photoUri)}
             onShare={handleSharePost}
@@ -3590,6 +3734,18 @@ export default function ComunidadScreen() {
 }
 
 const styles = StyleSheet.create({
+  // 56 px de alto: entrada principal, pulsable sin apuntar (AGENTS.md §4).
+  entradaMentor: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    minHeight: 56,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginTop: 8,
+  },
   content: {
     flexGrow: 1,
     paddingHorizontal: 24,
@@ -3765,12 +3921,18 @@ const styles = StyleSheet.create({
   },
   actionButtonsRow: {
     flexDirection: 'row',
+    /* Alineadas a la IZQUIERDA, no repartidas. Con `flex: 1` en cada botón la fila se estiraba de
+       borde a borde y "Like" quedaba pegado al margen, lejos del pulgar en un teléfono de 360 px.
+       Agrupadas a la izquierda, las tres caen dentro del arco natural del dedo. */
+    justifyContent: 'flex-start',
     marginTop: 8,
     paddingTop: 6,
     borderTopWidth: 1,
   },
   actionBtn: {
-    flex: 1,
+    /* Sin `flex: 1`: cada botón mide lo que su contenido. `flexShrink` evita que los tres juntos
+       desborden en 360 px, que es el ancho de referencia (AGENTS.md §2). */
+    flexShrink: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -3779,8 +3941,22 @@ const styles = StyleSheet.create({
     minHeight: 48,
     gap: 5,
     paddingVertical: 6,
-    paddingHorizontal: 4,
+    /* 8, no 4 ni 12. Sin `flex: 1` el respiro lateral es lo único que separa "Like" de
+       "Comentar", así que 4 los pegaba. Pero con 12 los tres botones sumaban 280 px y llenaban
+       justo la tarjeta de 281: quedaban agrupados a la izquierda y no se notaba, porque no
+       sobraba sitio. Con 8 sobran ~25 px a la derecha y el agrupamiento SE VE. */
+    paddingHorizontal: 8,
     borderRadius: 8,
+  },
+  rxCountBotonFila: {
+    /* Empuja la chapa al borde derecho sin estirar los botones, que siguen agrupados a la
+       izquierda. Misma altura de toque que ellos. */
+    marginLeft: 'auto',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+    paddingLeft: 8,
   },
   commentsSection: {
     marginTop: 8,

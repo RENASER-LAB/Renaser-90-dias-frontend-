@@ -161,7 +161,12 @@ export function mensajeDeError(error: unknown, porDefecto: string): string {
     return 'Correo o contraseña incorrectos.';
   }
   if (error.esProhibido) {
-    return 'Tu cuenta no está habilitada para ingresar.';
+    /* El mensaje del backend gana. Antes se descartaba y TODO 403 decía lo mismo — que es el
+       texto del login. A un mentor que rotó le anunciaba que su cuenta está bloqueada cuando
+       lo único que cambió fue su grupo, y a cualquiera que tocara algo ajeno le sugería un
+       problema de cuenta que no existe. `GlobalExceptionHandler` responde siempre con el
+       mensaje de la excepción, así que siempre hay un texto pensado para leerse. */
+    return error.message || 'Tu cuenta no está habilitada para ingresar.';
   }
   // El backend manda un texto pensado para leerse (ApiErrorResponse.message); si vino, se usa.
   return error.message || porDefecto;

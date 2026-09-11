@@ -108,8 +108,16 @@ export function FondoAnillos({ centroY = 0.32, animado = true, icono = 'spark' }
     >
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: opacidad }]}>
         <Svg width={width} height={height}>
+          {/* La clave es el ÍNDICE y no el radio. Con `key={r}` los cinco anillos comparten
+              clave en cuanto `radioMayor` vale 0 —el primer render, antes de que el contenedor
+              tenga tamaño—, porque los cinco radios se derivan de él multiplicándolo: 0 × 0.79
+              sigue siendo 0. React lo grita en cada montaje de la pantalla de acceso.
+
+              Aquí el índice SÍ es la identidad correcta, al revés que en una lista de datos:
+              estos anillos son decorativos, son siempre cinco y nunca se reordenan. Lo que
+              distingue al tercero del cuarto es su posición, no su valor. */}
           {radios.map((r, i) => (
-            <Circle key={r} cx={cx} cy={cy} r={r} stroke={colores[i]} strokeWidth={1} fill="none" />
+            <Circle key={i} cx={cx} cy={cy} r={r} stroke={colores[i]} strokeWidth={1} fill="none" />
           ))}
         </Svg>
       </Animated.View>

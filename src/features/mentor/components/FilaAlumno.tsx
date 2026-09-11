@@ -43,7 +43,7 @@ export function FilaAlumno({ alumno, onPress }: { alumno: AlumnoConEstado; onPre
       accessibilityRole="button"
       accessibilityLabel={
         `${nombre}. ${dia}.` +
-        (principal ? ` ${etiquetaDeMotivo(principal)}.` : ' Al día.') +
+        (principal ? ` ${etiquetaDeMotivo(principal)}.` : alumno.evaluable ? ' Al día.' : ' Sin datos.') +
         (alumno.motivos.length > 1 ? ` Y ${alumno.motivos.length - 1} señal más.` : '')
       }
       style={({ pressed }) => [
@@ -76,10 +76,18 @@ export function FilaAlumno({ alumno, onPress }: { alumno: AlumnoConEstado; onPre
               {etiquetaDeMotivo(principal)}
             </Text>
           </View>
-        ) : (
+        ) : alumno.evaluable ? (
           <View style={[estilos.capsula, { backgroundColor: c.successWash }]}>
             <Text style={[t.micro, { color: c.success, fontSize: 10.5, fontFamily: 'Jost_700Bold' }]}>
               Al día
+            </Text>
+          </View>
+        ) : (
+          /* Sin datos NO es verde. "Al día" es una afirmación sobre una persona y hay que
+             poder respaldarla; sin una sola señal, lo honesto es decir que no se sabe. */
+          <View style={[estilos.capsula, { backgroundColor: c.border }]}>
+            <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5, fontFamily: 'Jost_500Medium' }]}>
+              Sin datos
             </Text>
           </View>
         )}

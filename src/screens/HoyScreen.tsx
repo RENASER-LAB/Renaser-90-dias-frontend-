@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -16,7 +16,12 @@ import { Icon } from '../components/Icon';
 import { Aparicion } from '../components/Aparicion';
 import { useEsMentor } from '../features/mentor/hooks/useEsMentor';
 import { useCelulaQueAcompano } from '../features/mentor/hooks/useCelulaQueAcompano';
+import { useProgramaPersonal } from '../features/mentor/hooks/useProgramaPersonal';
 import { TarjetaMentorHoy } from '../features/mentor/components/TarjetaMentorHoy';
+import { alAbrirAviso, consumirRutaPendiente } from '../features/mentor/notificaciones/rutaDeAviso';
+import { AdminScreen } from '../features/admin/screens/AdminScreen';
+import { TarjetaAdminHoy } from '../features/admin/components/TarjetaAdminHoy';
+import { useCapacidades } from '../features/admin/hooks/useCapacidades';
 import { MiCelulaScreen } from '../features/mentor/screens/MiCelulaScreen';
 import { AlumnoScreen } from '../features/mentor/screens/AlumnoScreen';
 import type { AlumnoConEstado } from '../features/mentor/types/mentor.types';
@@ -48,8 +53,50 @@ export default function HoyScreen() {
   /* UNA sola lectura de la celula, repartida a la tarjeta y a la pantalla. Si cada una
      llamara al hook por su cuenta habria dos peticiones y dos verdades. */
   const celula = useCelulaQueAcompano(esMentor);
+  /* Quien puede administrar lo dice el SERVIDOR, no el rol leido en el telefono. Un rol nuevo
+     manana no dejaria la entrada colgada, y una capacidad falseada abre pantallas vacias: cada
+     endpoint vuelve a autorizar (SDD 003, ARF-15). */
+  const { capacidades } = useCapacidades();
+  /* Ya no `esMentor`: la invitacion al programa propio es para todo el staff, ADMIN y ALQUIMISTA
+     incluidos. Atarla a "es mentor" los dejaba fuera de un programa que el backend si les
+     permitia iniciar — el bloqueo estaba aca, no en el permiso (ARF-16). */
+  const programaPersonal = useProgramaPersonal(
+    esMentor || capacidades.administrar || capacidades.puedeIniciarPrograma,
+    user?.id ?? null,
+  );
+  const [enAdministracion, setEnAdministracion] = useState(false);
   const [vistaMentor, setVistaMentor] = useState<'ninguna' | 'celula' | 'alumno'>('ninguna');
   const [alumnoAbierto, setAlumnoAbierto] = useState<AlumnoConEstado | null>(null);
+
+  /* Un aviso tocado desde la bandeja del sistema abre la ficha de ese alumno (RF-25).
+     La ruta la deja `rutaDeAviso` y se atiende ACA porque las vistas del mentor son estado de
+     esta pantalla, no rutas del navegador (AGENTS.md 1: los cinco tabs no se tocan).
+
+     Se espera al padron antes de abrir. No es una demora evitable: `AlumnoScreen` necesita al
+     alumno entero —dia de programa, habitos, evidencias—, y eso llega con el grupo. Mientras
+     tanto la ruta queda pendiente; `alAbrirAviso` reentrega lo que ya estuviera esperando, asi
+     que un toque con la app cerrada no se pierde por llegar antes que los datos.
+
+     Si el alumno NO esta en el padron, se abre el grupo y nada mas. Un aviso viejo de alguien
+     que ya roto no debe llevar a su ficha: sus datos ya no son de este mentor. */
+  useEffect(() => {
+    if (!esMentor) return;
+    const abrir = () => {
+      const vista = celula.vista;
+      if (!vista) return;
+      const ruta = consumirRutaPendiente();
+      if (!ruta) return;
+      const alumno = vista.todos.find(a => a.participanteId === ruta.alumnoId);
+      if (alumno) {
+        setAlumnoAbierto(alumno);
+        setVistaMentor('alumno');
+      } else {
+        setVistaMentor('celula');
+      }
+    };
+    abrir();
+    return alAbrirAviso(abrir);
+  }, [esMentor, celula.vista]);
   const { abrir: abrirMapa, abierto: mapaAbierto } = useMapaRenacimientoAbierto();
   const estadoMapa = useEstadoMapa(user?.id ?? null, mapaAbierto);
   const {
@@ -148,8 +195,19 @@ export default function HoyScreen() {
   /* Las vistas del mentor toman la pantalla completa, como el Mapa: son otro contexto de
      trabajo, no una tarjeta mas dentro del dia propio. El retroceso del sistema las cierra
      paso a paso (cada una registra su `useSystemBackHandler`). */
+  /* Administracion toma la pantalla completa, como las vistas del mentor y como el Mapa: es otro
+     contexto de trabajo, no una tarjeta mas dentro del dia propio. */
+  if (enAdministracion && capacidades.administrar) {
+    return <AdminScreen onSalir={() => setEnAdministracion(false)} />;
+  }
   if (esMentor && vistaMentor === 'alumno' && alumnoAbierto) {
-    return <AlumnoScreen alumno={alumnoAbierto} onVolver={() => setVistaMentor('celula')} />;
+    return (
+      <AlumnoScreen
+        alumno={alumnoAbierto}
+        grupoId={celula.vista?.celula.id ?? null}
+        onVolver={() => setVistaMentor('celula')}
+      />
+    );
   }
   if (esMentor && vistaMentor === 'celula') {
     return (
@@ -375,6 +433,9 @@ export default function HoyScreen() {
 
         <Aparicion retardo={210} style={{ gap: 12, paddingBottom: 24 }}>
         <View style={{ gap: 12 }}>
+          {/* Solo para ADMIN/ALQUIMISTA. El resto de Hoy no cambia para nadie. */}
+          {capacidades.administrar ? <TarjetaAdminHoy onAbrir={() => setEnAdministracion(true)} /> : null}
+
           {/* Solo para quien acompana una celula. El resto de Hoy no cambia. */}
           {esMentor ? (
             <TarjetaMentorHoy
@@ -383,6 +444,53 @@ export default function HoyScreen() {
               cargando={celula.cargando}
               fallo={celula.fallo}
             />
+          ) : null}
+
+          {/*
+            Invitación secundaria, no un bloqueo. Acompañar no exige cursar (D-07), así que esto
+            es una oferta: quien dice "Ahora no" sigue trabajando igual y no pierde ningún dato —
+            posponer no llama a nada, y menos al DELETE, que borraría la participación entera.
+          */}
+          {programaPersonal.visible ? (
+            <Card>
+              <MicroLabel>TU PROGRAMA</MicroLabel>
+              <Text style={[t.cardTitle, { color: c.textStrong, marginTop: 6 }]}>
+                Hacer mi programa de 90 días
+              </Text>
+              <Text style={[t.body, { color: c.textSoft, fontSize: 13, marginTop: 6, lineHeight: 19 }]}>
+                Podés recorrerlo vos también: tus hábitos, tus objetivos y tu Mapa, con tu propio
+                día. No cambia nada de lo que ves como acompañante.
+              </Text>
+              {programaPersonal.error ? (
+                <Text style={[t.body, { color: c.danger, fontSize: 12.5, marginTop: 8 }]}>
+                  {programaPersonal.error}
+                </Text>
+              ) : null}
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
+                <Pressable
+                  onPress={() => void programaPersonal.activar()}
+                  disabled={programaPersonal.activando}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: programaPersonal.activando }}
+                  style={[
+                    estilosPrograma.principal,
+                    { backgroundColor: c.gold, opacity: programaPersonal.activando ? 0.6 : 1 },
+                  ]}
+                >
+                  <Text style={[t.body, { color: c.onGold, fontSize: 13.5, fontFamily: 'Jost_700Bold' }]}>
+                    {programaPersonal.activando ? 'Activando…' : 'Empezar'}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => void programaPersonal.posponer()}
+                  accessibilityRole="button"
+                  accessibilityLabel="Ahora no. No se borra nada."
+                  style={[estilosPrograma.secundario, { borderColor: c.border }]}
+                >
+                  <Text style={[t.body, { color: c.textSoft, fontSize: 13.5 }]}>Ahora no</Text>
+                </Pressable>
+              </View>
+            </Card>
           ) : null}
 
           {/* Tarjeta Mapa de Renacimiento (Día 7) */}
@@ -659,5 +767,22 @@ const styles = StyleSheet.create({
   wallLoadingRow: {
     minHeight: 48,
     justifyContent: 'center',
+  },
+});
+
+/** Botones de la invitación al programa personal. 48 px: pulsables con una sola mano. */
+const estilosPrograma = StyleSheet.create({
+  principal: {
+    minHeight: 48,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    borderRadius: 12,
+  },
+  secundario: {
+    minHeight: 48,
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+    borderRadius: 12,
+    borderWidth: 1,
   },
 });

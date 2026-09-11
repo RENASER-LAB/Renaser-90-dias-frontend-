@@ -63,6 +63,11 @@ export interface WireConversacionResumen {
   conversation: WireConversacion;
   lastMessage: WireMensaje | null;
   unreadCount: number;
+  /** Con quién es el chat, cuando es 1 a 1. `null`/ausente en grupos y en backends anteriores. */
+  otherParticipantId?: string | null;
+  /** Su nombre, ya resuelto por el servidor. */
+  otherParticipantName?: string | null;
+  otherParticipantAvatarUrl?: string | null;
 }
 
 /** `MensajesPageResponse` — `GET /conversations/{id}/messages`. Paginación keyset por
