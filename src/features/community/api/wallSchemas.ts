@@ -31,6 +31,10 @@ export const wallPostSchema = z
     reactionCounts: z.record(z.string(), z.number()),
     myReactions: z.array(z.string()),
     commentCount: z.number(),
+    // Día de programa del AUTOR al publicar (V51). `.optional()` para no romper contra un backend
+    // anterior, y `.nullable()` porque quien publica sin programa activo no tiene día: ahí la
+    // insignia no se dibuja, en vez de pintar el "Día 0" que se mostraba en TODAS las publicaciones.
+    programDay: z.number().nullable().optional(),
   })
   .passthrough();
 

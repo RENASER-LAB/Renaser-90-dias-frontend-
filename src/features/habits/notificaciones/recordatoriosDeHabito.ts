@@ -125,6 +125,16 @@ let modulo: typeof TipoNotificaciones | null = null;
  * bundle igual, pero solo EJECUTA el módulo cuando esta función corre — que es exactamente lo que
  * hace falta para que el efecto secundario del push no se dispare en Expo Go.
  */
+/**
+ * Se exporta (2026-09-11) porque el Código Renaser necesita el MISMO cargador perezoso: importar
+ * `expo-notifications` arriba rompe Expo Go, y ese detalle vale una sola implementación. Se
+ * exporta con nombre propio en vez de mudar el archivo para no tocar los recordatorios de hábitos,
+ * que hoy funcionan y solo se pueden probar en un teléfono.
+ */
+export function cargarNotificaciones(): typeof TipoNotificaciones | null {
+  return notificaciones();
+}
+
 function notificaciones(): typeof TipoNotificaciones | null {
   if (!HAY_RECORDATORIOS_LOCALES) return null;
   if (modulo === null) {

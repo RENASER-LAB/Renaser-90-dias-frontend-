@@ -55,8 +55,10 @@ export function mapearPublicacion(post: WallPost): PostItem {
     // El feed del Muro (WallPostResponse) no trae la célula del autor: no existe ese dato en
     // esta respuesta, así que se deja vacío en vez de inventar uno.
     cell: '',
-    // Tampoco trae la racha de días del autor: mismo motivo.
-    dayStreak: 0,
+    // El día de programa del autor CUANDO publicó, sellado por el backend al crear la
+    // publicación (V51). Antes acá había un `dayStreak: 0` fijo, y por eso el Muro entero
+    // mostraba "Día 0". `null` cuando el autor no tenía programa activo: la insignia no se pinta.
+    diaPrograma: post.programDay ?? null,
     timeAgo: tiempoRelativo(post.createdAt),
     text: post.text,
     media: mapearMedia(post.media),

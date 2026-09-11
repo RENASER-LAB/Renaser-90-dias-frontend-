@@ -139,7 +139,14 @@ export interface PostItem {
   author: string;
   avatar: string;
   cell: string;
-  dayStreak: number;
+  /**
+   * Día de programa del autor CUANDO publicó. `null` = no corresponde mostrarlo.
+   *
+   * Antes se llamaba `dayStreak` (racha) y valía `0` siempre, escrito a mano en los dos mapeadores:
+   * ni era una racha ni era un dato: el Muro entero decía "Día 0". Ahora viene de
+   * `WallPostResponse.programDay`, que lo guarda al publicar (V51).
+   */
+  diaPrograma: number | null;
   timeAgo: string;
   tag?: string;
   text: string;
@@ -1846,11 +1853,14 @@ export default function ComunidadScreen() {
                           </Text>
                         </View>
                       </View>
-                      <View style={[styles.dayBadge, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}>
-                        <Text style={[t.micro, { color: c.goldInk, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>
-                          Día {post.dayStreak}
-                        </Text>
-                      </View>
+                      {/* Sin día no hay insignia. Dibujar "Día 0" era peor que no dibujar nada. */}
+                      {post.diaPrograma !== null ? (
+                        <View style={[styles.dayBadge, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}>
+                          <Text style={[t.micro, { color: c.goldInk, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>
+                            Día {post.diaPrograma}
+                          </Text>
+                        </View>
+                      ) : null}
                     </View>
 
                     {/* Texto del Post con "Ver más..." */}
