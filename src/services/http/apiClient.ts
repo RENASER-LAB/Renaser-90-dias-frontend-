@@ -1,5 +1,6 @@
 import { API_CONFIG } from '../../config/apiConfig';
 import { almacenamientoSeguro } from '../storage/almacenamientoSeguro';
+import { registrarHoraDelServidor } from './relojServidor';
 
 /**
  * Cliente HTTP contra el backend Java (Spring Boot).
@@ -125,6 +126,10 @@ export async function apiFetch<T>(ruta: string, opciones: OpcionesPeticion = {})
     // Un 4xx/5xx SÍ resuelve, y se maneja más abajo.
     throw new ApiError(0, 'No se pudo conectar con el servidor. Revisa que el backend esté corriendo.', error);
   }
+
+  // La hora del servidor viaja en CADA respuesta. De acá sale el desfase con el reloj del
+  // teléfono, que el Código Renaser necesita para no abrir y cerrar sus franjas a destiempo.
+  registrarHoraDelServidor(respuesta.headers.get('Date'));
 
   // El backend renueva el identificador de sesión al iniciarla; si viene, se guarda.
   const tokenNuevo = respuesta.headers.get(HEADER_SESION);
