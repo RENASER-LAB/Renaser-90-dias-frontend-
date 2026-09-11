@@ -10,16 +10,14 @@ import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
 import { avisar } from '../utils/dialogo';
-import { actualizarGrupo, crearGrupo, listarCohortes, obtenerGrupo } from '../api/adminApi';
+import { actualizarGrupo, crearCohorte, crearGrupo, listarCohortes, obtenerGrupo } from '../api/adminApi';
 import type { CohorteAdminApi } from '../api/adminSchemas';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
-import { esFechaValida, hoyIso, sumarDias } from '../utils/fechas';
+import { esFechaValida } from '../utils/fechas';
 import { mensajeDeFallo } from '../utils/mensajes';
 
 const CAPACIDAD_MINIMA = 10;
 const CAPACIDAD_MAXIMA = 15;
-/** Bienvenida: siete días contando el primero, la decisión del cliente. */
-const DIAS_DE_BIENVENIDA = 7;
 
 /**
  * Alta y edición de un grupo: nombre, cohorte, período, tipo y cupo.
@@ -56,6 +54,9 @@ export function GrupoFormScreen({
   const [guardando, setGuardando] = useState(false);
   const [errores, setErrores] = useState<Record<string, string>>({});
   const [fallo, setFallo] = useState<string | null>(null);
+  /** Alta de la primera cohorte, cuando no hay ninguna: sin ella no se puede crear ningún grupo. */
+  const [nuevaCohorte, setNuevaCohorte] = useState('');
+  const [creandoCohorte, setCreandoCohorte] = useState(false);
 
   useSystemBackHandler(() => {
     onVolver();
@@ -156,10 +157,23 @@ export function GrupoFormScreen({
     }
   };
 
-  const proponerBienvenida = () => {
-    const desde = hoyIso();
-    setInicio(desde);
-    setFin(sumarDias(desde, DIAS_DE_BIENVENIDA - 1));
+  const crearNuevaCohorte = async () => {
+    if (!nuevaCohorte.trim()) {
+      setErrores(e => ({ ...e, cohorte: 'Poné un nombre para la cohorte.' }));
+      return;
+    }
+    setCreandoCohorte(true);
+    try {
+      const co = await crearCohorte(nuevaCohorte.trim());
+      setCohortes(prev => [...prev, co]);
+      setCohorteId(co.id);
+      setNuevaCohorte('');
+      setErrores(e => ({ ...e, cohorte: '' }));
+    } catch (e) {
+      avisar('No se pudo crear la cohorte', mensajeDeFallo(e, 'Probá de nuevo.'));
+    } finally {
+      setCreandoCohorte(false);
+    }
   };
 
   const nombreDeCohorte = useMemo(
@@ -199,29 +213,62 @@ export function GrupoFormScreen({
         {!grupoId ? (
           <View style={{ gap: 8, marginTop: 4 }}>
             <MicroLabel>COHORTE</MicroLabel>
-            <View style={estilos.opciones}>
-              {cohortes.map(co => {
-                const activa = cohorteId === co.id;
-                return (
-                  <Pressable
-                    key={co.id}
-                    onPress={() => setCohorteId(co.id)}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: activa }}
-                    accessibilityLabel={co.name}
-                    style={[
-                      estilos.opcion,
-                      { borderColor: activa ? c.goldInk : c.border, backgroundColor: activa ? c.goldWash : 'transparent' },
-                    ]}
-                  >
-                    <Text style={[t.body, { color: activa ? c.goldInk : c.text, fontSize: 14 }]}>{co.name}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-            {errores.cohorte ? (
-              <Text style={[t.body, { color: c.danger, fontSize: 12.5 }]}>{errores.cohorte}</Text>
-            ) : null}
+            {cohortes.length === 0 ? (
+              /* Sin ninguna cohorte no se puede crear ningún grupo, y el panel no tenía por dónde
+                 crearla: era un huevo-y-gallina que dejaba el formulario trabado. Acá se crea la
+                 primera en el sitio. */
+              <View style={{ gap: 8 }}>
+                <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, lineHeight: 17 }]}>
+                  La cohorte es la generación a la que pertenece el grupo (por ejemplo «Generación
+                  Septiembre»). Todavía no hay ninguna: creá la primera para poder seguir.
+                </Text>
+                <FormField
+                  label="NOMBRE DE LA COHORTE"
+                  value={nuevaCohorte}
+                  onChangeText={setNuevaCohorte}
+                  error={errores.cohorte || undefined}
+                  placeholder="Generación Septiembre 2026"
+                  autoCapitalize="words"
+                />
+                <Pressable
+                  onPress={crearNuevaCohorte}
+                  disabled={creandoCohorte}
+                  accessibilityRole="button"
+                  accessibilityLabel="Crear la cohorte"
+                  style={[estilos.opcion, { borderColor: c.goldInk, alignItems: 'center', opacity: creandoCohorte ? 0.6 : 1 }]}
+                >
+                  <Text style={[t.body, { color: c.goldInk, fontSize: 14, fontWeight: '500' }]}>
+                    {creandoCohorte ? 'Creando…' : 'Crear cohorte'}
+                  </Text>
+                </Pressable>
+              </View>
+            ) : (
+              <>
+                <View style={estilos.opciones}>
+                  {cohortes.map(co => {
+                    const activa = cohorteId === co.id;
+                    return (
+                      <Pressable
+                        key={co.id}
+                        onPress={() => setCohorteId(co.id)}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: activa }}
+                        accessibilityLabel={co.name}
+                        style={[
+                          estilos.opcion,
+                          { borderColor: activa ? c.goldInk : c.border, backgroundColor: activa ? c.goldWash : 'transparent' },
+                        ]}
+                      >
+                        <Text style={[t.body, { color: activa ? c.goldInk : c.text, fontSize: 14 }]}>{co.name}</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+                {errores.cohorte ? (
+                  <Text style={[t.body, { color: c.danger, fontSize: 12.5 }]}>{errores.cohorte}</Text>
+                ) : null}
+              </>
+            )}
           </View>
         ) : null}
 
@@ -232,7 +279,7 @@ export function GrupoFormScreen({
               {(
                 [
                   { clave: 'REGULAR' as const, etiqueta: 'Grupo estable' },
-                  { clave: 'RECEPTION' as const, etiqueta: 'Bienvenida (7 días)' },
+                  { clave: 'RECEPTION' as const, etiqueta: 'Bienvenida (permanente)' },
                 ]
               ).map(op => {
                 const activa = tipo === op.clave;
@@ -241,7 +288,12 @@ export function GrupoFormScreen({
                     key={op.clave}
                     onPress={() => {
                       setTipo(op.clave);
-                      if (op.clave === 'RECEPTION') proponerBienvenida();
+                      // La bienvenida es permanente: sin fechas. El corte lo pone el día de
+                      // programa de cada persona, no el calendario del grupo.
+                      if (op.clave === 'RECEPTION') {
+                        setInicio('');
+                        setFin('');
+                      }
                     }}
                     accessibilityRole="button"
                     accessibilityState={{ selected: activa }}
@@ -257,39 +309,44 @@ export function GrupoFormScreen({
               })}
             </View>
             <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, lineHeight: 17 }]}>
-              La bienvenida es el grupo al que entra sola la gente que se registra. No tiene tope de
-              plazas.
+              {esBienvenida
+                ? 'La bienvenida no lleva fechas ni tope de plazas: recibe sola a cada persona que se registra durante sus primeros días de programa y la suelta cuando le toca pasar a un grupo estable. Con una alcanza — no hace falta crear una nueva cada semana.'
+                : 'El grupo estable tiene fechas (suele ser por mes) y un tope de plazas. Acá aterriza la gente cuando sale de la bienvenida.'}
             </Text>
           </View>
         ) : null}
 
-        <View style={{ marginTop: 10 }}>
-          <FormField
-            label="COMIENZA"
-            helperText="AAAA-MM-DD. Las dos fechas o ninguna."
-            value={inicio}
-            onChangeText={setInicio}
-            error={errores.inicio}
-            placeholder="2026-09-01"
-            keyboardType="numbers-and-punctuation"
-            autoCapitalize="none"
-          />
-          <FormField
-            label="CIERRA"
-            helperText="El último día entra entero."
-            value={fin}
-            onChangeText={setFin}
-            error={errores.fin}
-            placeholder="2026-09-30"
-            keyboardType="numbers-and-punctuation"
-            autoCapitalize="none"
-          />
-          {teniaPeriodo && !inicio.trim() && !fin.trim() ? (
-            <Text style={[t.body, { color: c.danger, fontSize: 12.5, marginTop: -4, marginBottom: 8 }]}>
-              Al guardar se le quita el período: el grupo dejará de cerrarse solo.
-            </Text>
-          ) : null}
-        </View>
+        {/* La bienvenida es permanente: no muestra fechas. El resto sí, porque un grupo estable
+            se cierra por calendario. */}
+        {!esBienvenida ? (
+          <View style={{ marginTop: 10 }}>
+            <FormField
+              label="COMIENZA"
+              helperText="AAAA-MM-DD. Las dos fechas o ninguna."
+              value={inicio}
+              onChangeText={setInicio}
+              error={errores.inicio}
+              placeholder="2026-09-01"
+              keyboardType="numbers-and-punctuation"
+              autoCapitalize="none"
+            />
+            <FormField
+              label="CIERRA"
+              helperText="El último día entra entero."
+              value={fin}
+              onChangeText={setFin}
+              error={errores.fin}
+              placeholder="2026-09-30"
+              keyboardType="numbers-and-punctuation"
+              autoCapitalize="none"
+            />
+            {teniaPeriodo && !inicio.trim() && !fin.trim() ? (
+              <Text style={[t.body, { color: c.danger, fontSize: 12.5, marginTop: -4, marginBottom: 8 }]}>
+                Al guardar se le quita el período: el grupo dejará de cerrarse solo.
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
 
         {!esBienvenida ? (
           <FormField
