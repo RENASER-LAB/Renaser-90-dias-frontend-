@@ -5,10 +5,16 @@ import * as objetivosApi from '../../objetivos/api/objetivosApi';
 import type { DefinicionRocaMaestra, EjeObjetivo } from '../../objetivos/types/objetivos.types';
 import type { AltaHabitoPersonal, CategoriaHabitoApi, DiaSemanaApi } from '../../habits/types/habits.types';
 import { almacenMapa } from '../almacen';
-import { completarEtapaMapa, consultarMapa } from '../api/mapaApi';
+import {
+  completarEtapaMapa,
+  consultarMapa,
+  guardarAccionesDelMapa,
+  guardarProtocolosDelMapa,
+} from '../api/mapaApi';
+import { guardarPrioridad } from '../api/prioridadDelMapa';
 import { completarHitos, definicionDeTerminado, redactar } from '../reglas';
 import type { AccionMotora, Area, BloqueDia, DiaSemana, MapaRenacimiento, Objetivo, PasoMapa } from '../tipos';
-import { AREAS, objetivoDe } from '../tipos';
+import { AREAS, EJE_POR_AREA, objetivoDe } from '../tipos';
 import { mapaVacio } from '../tipos';
 
 /**
@@ -36,16 +42,9 @@ const HORA_POR_BLOQUE: Record<BloqueDia, string> = {
   noche: '20:00:00',
 };
 
-/**
- * El eje de Rocas al que corresponde cada área del Mapa. Es una traducción 1 a 1 y por eso vive
- * acá, en el único lugar que conoce los dos vocabularios: el Mapa habla de áreas (`salud`,
- * `negocio_dinero`, `relaciones`) y `rocks` habla de ejes (`CUERPO`, `TRABAJO`, `RELACIONES`).
- */
-const EJE_POR_AREA: Record<Area, EjeObjetivo> = {
-  salud: 'CUERPO',
-  negocio_dinero: 'TRABAJO',
-  relaciones: 'RELACIONES',
-};
+/* `EJE_POR_AREA` se mudó a `../tipos` el 2026-09-14: importarla desde acá arrastraba este hook
+   entero —y con él AsyncStorage— a cualquiera que solo quisiera la traducción. Ver el comentario
+   en su nueva casa. */
 
 /**
  * Convierte un objetivo del Mapa en la definición que espera `PUT /rocks/master/{eje}`.
@@ -151,6 +150,8 @@ export function useMapaRenacimiento(userId: string): EstadoMapaRenacimiento {
   const [errorActivacion, setErrorActivacion] = useState<string | null>(null);
   const temporizador = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cargado = useRef(false);
+  /** La última prioridad que el servidor confirmó, para no repetir el POST en cada render. */
+  const prioridadGuardada = useRef<Area | null>(null);
 
   /**
    * Carga en dos tiempos: primero el borrador local (instantaneo, y lo unico que hay sin red) y
@@ -205,6 +206,29 @@ export function useMapaRenacimiento(userId: string): EstadoMapaRenacimiento {
       if (temporizador.current) clearTimeout(temporizador.current);
     };
   }, [mapa, userId]);
+
+  /**
+   * La prioridad, al servidor apenas se elige — no al activar.
+   *
+   * **Por qué no esperar a la activación.** Entre elegir la prioridad (paso 2) y activar (paso 11)
+   * hay nueve pantallas y, en la práctica, días: el Mapa se puede dejar a medias y retomar. Quien
+   * abandone después del paso 2 y vuelva desde otro equipo ya tendría su prioridad, y Objetivos
+   * puede usarla aunque el Mapa nunca llegue a activarse.
+   *
+   * `ultimaGuardada` evita repetir el POST en cada render y, sobre todo, al cargar el borrador: sin
+   * él, abrir el Mapa mandaría una respuesta idéntica cada vez. Es un upsert, así que repetirlo no
+   * rompe nada — pero es una request por gusto.
+   */
+  useEffect(() => {
+    if (!cargado.current) return;
+    const prioridad = mapa.prioridad;
+    if (!prioridad || prioridadGuardada.current === prioridad) return;
+    prioridadGuardada.current = prioridad;
+    void guardarPrioridad(prioridad).then(ok => {
+      // Si falló, se olvida para que el próximo cambio —o la activación— lo vuelva a intentar.
+      if (!ok) prioridadGuardada.current = null;
+    });
+  }, [mapa.prioridad]);
 
   const actualizar = useCallback((cambio: (previo: MapaRenacimiento) => MapaRenacimiento) => {
     setMapa(previo => {
@@ -299,7 +323,32 @@ export function useMapaRenacimiento(userId: string): EstadoMapaRenacimiento {
       /* Se avisa al servidor DESPUES de que las rocas y los habitos ya existen, y su fallo no
          revierte nada: lo importante (lo que se creo) ya esta. Si esta llamada no llega, el
          dispositivo igual recuerda que esta activo; lo que se pierde es la memoria entre
-         dispositivos, no el trabajo. */
+         dispositivos, no el trabajo.
+
+         Desde el 2026-09-14 viajan tambien las acciones, los protocolos y la prioridad. Los dos
+         primeros endpoints existian desde la V41 y NADIE los llamaba: `acciones_mapa`,
+         `dias_accion_mapa` y `protocolos_reemplazo_mapa` estaban vacias en toda la base, asi que
+         el panel del mentor no podia leer un solo protocolo y el mapa de quien reinstalaba se
+         perdia entero salvo por las tres Rocas.
+
+         Van en cuatro `catch` separados y no en uno solo a proposito: que falle el guardado de los
+         protocolos no debe impedir que se guarde la prioridad. Son hechos independientes. */
+      try {
+        await guardarAccionesDelMapa(mapa.acciones);
+      } catch {
+        // Silencioso: el borrador local sigue teniendolas y no hay accion posible para la persona.
+      }
+      try {
+        await guardarProtocolosDelMapa(mapa.reemplazos);
+      } catch {
+        // Idem.
+      }
+      /* Red de seguridad de la prioridad: ya se guarda en cuanto la persona la elige (ver el efecto
+         mas abajo), pero si aquel intento cayo por red, este es el ultimo momento util para
+         reintentar — sin ella, Objetivos no sabe cual de los tres ejes manda. No lanza por si sola. */
+      if (mapa.prioridad) {
+        await guardarPrioridad(mapa.prioridad);
+      }
       try {
         await completarEtapaMapa();
       } catch {
