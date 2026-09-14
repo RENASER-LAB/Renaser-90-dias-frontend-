@@ -153,6 +153,14 @@ export function AnfitrionAlerta() {
                 <Pressable
                   key={`${boton.text ?? 'boton'}-${i}`}
                   onPress={() => pulsar(boton)}
+                  /* Sin `accessibilityRole` un Pressable sale como un `div` pelado en
+                     react-native-web: ningún lector de pantalla lo anuncia como botón, y tampoco
+                     se puede alcanzar por rol. Lo destapó una prueba E2E que no encontraba el OK
+                     de este mismo diálogo — el mismo agujero que tiene una persona usando
+                     TalkBack o VoiceOver. La etiqueta va explícita porque el texto se muestra en
+                     MAYÚSCULAS y lo que se anuncia debe ser la palabra, no el grito. */
+                  accessibilityRole="button"
+                  accessibilityLabel={boton.text ?? 'OK'}
                   style={[
                     styles.boton,
                     enColumna ? styles.botonAncho : styles.botonFlexible,

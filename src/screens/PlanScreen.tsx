@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -43,6 +43,8 @@ import { NivelesDelPlan } from '../features/objetivos/components/NivelesDelPlan'
 import { useRocasMaestras } from '../features/objetivos/hooks/useRocasMaestras';
 import type { EjeObjetivo } from '../features/objetivos/types/objetivos.types';
 import { EJES, ETIQUETA_EJE } from '../features/objetivos/types/objetivos.types';
+import { conPrincipalPrimero, usePrioridadPrincipal } from '../features/objetivos/hooks/usePrioridadPrincipal';
+import { cifraDeEscala, cifraDelObjetivo, primeraClausula } from '../features/objetivos/utils/cifraDelObjetivo';
 import { etiquetaDelMes, mesDe, semanaDe } from '../features/objetivos/utils/periodoDelPrograma';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
 
@@ -444,6 +446,16 @@ export default function PlanScreen() {
   const rocaDeEje = (eje: EjeObjetivo) => objetivos.deEje(eje);
   const rocaAbierta = objetivos.deEje(ejeAbierto);
 
+  /**
+   * El eje que la persona eligió como principal en el paso 2 del Mapa, y los tres con ese adelante.
+   *
+   * Pedido del cliente el 2026-09-14: los tres objetivos se llenan igual, pero **el principal va
+   * primero**. Mientras no haya prioridad guardada, `conPrincipalPrimero` devuelve el orden de
+   * siempre, así que quien hizo el Mapa antes de que esto existiera no ve ningún cambio raro.
+   */
+  const { ejePrincipal, relacionesBase, relacionesMeta } = usePrioridadPrincipal();
+  const ejesOrdenados = useMemo(() => conPrincipalPrimero(EJES, ejePrincipal), [ejePrincipal]);
+
   /** Abre la vista de Objetivos en el eje pedido. Un solo camino para las tres tarjetas. */
   const abrirObjetivoDe = (eje: EjeObjetivo) => {
     setEjeAbierto(eje);
@@ -749,8 +761,28 @@ export default function PlanScreen() {
         Alert.alert('Número inválido', 'Revisa los valores: tienen que ser números.');
         return;
       }
-      if (meta <= 0) {
-        Alert.alert('Meta inválida', 'La meta tiene que ser mayor que cero.');
+      /**
+       * **Una meta de CERO es válida.** Saldar una deuda, llegar a cero cigarrillos: el destino es
+       * el cero y eso se mide perfecto mientras se sepa de dónde se arrancó —
+       * `|avance − base| / |0 − base|`. El backend lo admite desde la V44 y el Mapa ya lo respeta
+       * (`meta < 0` en `definicionDesde`); esta pantalla se había quedado con la regla vieja.
+       *
+       * El efecto era feo y silencioso: quien ponía "bajar mi deuda a 0" desde el Mapa lo guardaba
+       * bien, y después quedaba ENCERRADO — el modal se precarga con meta 0 y cualquier intento de
+       * guardar rebotaba contra este aviso, sin más salida que cambiar su objetivo de verdad.
+       *
+       * Lo que sí se rechaza es lo mismo que rechaza `MetaCuantitativa`: una meta negativa, y una
+       * meta de cero sin punto de partida (ahí el porcentaje sería una división por cero).
+       */
+      if (meta < 0) {
+        Alert.alert('Meta inválida', 'La meta no puede ser un número negativo.');
+        return;
+      }
+      if (meta === 0 && lineaBase === undefined) {
+        Alert.alert(
+          'Falta tu punto de partida',
+          'Llegar a cero es una meta válida, pero para medirla hace falta saber desde dónde arrancas. Escribe tu punto de partida.'
+        );
         return;
       }
       if (avance < 0) {
@@ -877,25 +909,101 @@ export default function PlanScreen() {
                   nombres de eje quedan solo como estado vacío, para quien todavía no definió el
                   suyo. Nunca un dato inventado: es lo que D-120 corrigió cuando la pantalla
                   mostraba "Facturar $30.000 USD" igual para todos. */}
-              {EJES.map((eje, indice) => {
+              {ejesOrdenados.map((eje, indice) => {
                 const roca = rocaDeEje(eje);
                 const definido = Boolean(roca?.objetivo?.trim());
+                const esPrincipal = eje === ejePrincipal;
+                /* Relaciones no tiene meta cuantitativa en su Roca —su escala 1-10 no es una
+                   unidad de negocio— asi que su cifra sale de las respuestas del Mapa. Sin ellas
+                   (quien lo recorrio antes del 2026-09-14) cae al texto, como antes. */
+                const cifra =
+                  eje === 'RELACIONES' ? cifraDeEscala(relacionesBase, relacionesMeta) : cifraDelObjetivo(roca);
+                const avance = roca?.porcentaje ?? null;
                 return (
                   <Pressable
                     key={eje}
                     onPress={() => abrirObjetivoDe(eje)}
                     accessibilityRole="button"
-                    accessibilityLabel={`${ETIQUETA_EJE[eje]}. ${definido ? roca!.objetivo : 'Todavía sin definir'}`}
-                    style={[styles.priorityCard, { borderColor: definido ? c.gold : c.border, backgroundColor: c.cardBg }]}
+                    accessibilityLabel={`${ETIQUETA_EJE[eje]}${esPrincipal ? ', tu prioridad principal' : ''}. ${
+                      definido ? cifra ?? roca!.objetivo : 'Todavía sin definir'
+                    }`}
+                    style={[
+                      styles.priorityCard,
+                      {
+                        borderColor: esPrincipal ? c.gold : definido ? c.border : c.border,
+                        borderWidth: esPrincipal ? 1.5 : 1,
+                        backgroundColor: esPrincipal ? c.cardBgAlt : c.cardBg,
+                      },
+                    ]}
                   >
                     <Text style={[t.small, { color: c.goldInk }]}>{String(indice + 1).padStart(2, '0')}</Text>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 15 }]} numberOfLines={3}>
-                        {definido ? roca!.objetivo : ETIQUETA_EJE[eje]}
-                      </Text>
-                      <Text style={[t.micro, { color: definido ? c.goldInk : c.textSoft, fontSize: 12, marginTop: 3 }]}>
-                        {definido ? ETIQUETA_EJE[eje] : 'Sin definir'}
-                      </Text>
+                    <View style={{ flex: 1, gap: 3 }}>
+                      {/* El eje primero y el distintivo a su lado: es lo que la persona busca al
+                          barrer la lista con la vista, y antes quedaba sepultado bajo la frase. */}
+                      <Row gap={6}>
+                        <Text
+                          style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1, fontSize: 11 }]}
+                        >
+                          {ETIQUETA_EJE[eje].toUpperCase()}
+                        </Text>
+                        {esPrincipal && (
+                          <View style={[styles.insigniaPrincipal, { borderColor: c.gold }]}>
+                            <Text style={[t.micro, { color: c.goldInk, fontSize: 9.5, fontFamily: 'Jost_700Bold', letterSpacing: 0.8 }]}>
+                              PRINCIPAL
+                            </Text>
+                          </View>
+                        )}
+                      </Row>
+
+                      {!definido ? (
+                        <Text style={[t.body, { color: c.textSoft, fontSize: 13.5 }]}>Todavía sin definir</Text>
+                      ) : cifra ? (
+                        /* Con meta medible manda el NÚMERO: de dónde partió y a dónde va. La frase
+                           redactada completa sigue estando, a un toque, en el modal de edición. */
+                        /* `flexShrink` + dos líneas: una cifra grande con unidad larga
+                           ("1 000 000 → 2 000 000 dólares") antes se cortaba con puntos
+                           suspensivos justo donde está el dato. El porcentaje no encoge: es corto
+                           y es lo que ancla la lectura a la derecha. */
+                        <Row gap={8} style={{ alignItems: 'baseline' }}>
+                          <Text
+                            style={[
+                              t.cardTitle,
+                              { color: c.textStrong, fontSize: 19, fontFamily: 'Jost_700Bold', flexShrink: 1 },
+                            ]}
+                            numberOfLines={2}
+                          >
+                            {cifra}
+                          </Text>
+                          {avance !== null && (
+                            <Text
+                              style={[
+                                t.micro,
+                                { color: c.goldInk, fontSize: 12, fontFamily: 'Jost_500Medium', flexShrink: 0 },
+                              ]}
+                            >
+                              {avance}%
+                            </Text>
+                          )}
+                        </Row>
+                      ) : (
+                        /* Sin números —Relaciones, que se mide en una escala 1-10 y no en unidades de
+                           negocio— se muestra el objetivo en dos líneas. Decisión del dueño el
+                           2026-09-14: antes que inventar una barra de avance sin con qué medirla. */
+                        <Text style={[t.body, { color: c.textStrong, fontSize: 13.5, lineHeight: 19 }]} numberOfLines={2}>
+                          {primeraClausula(roca!.objetivo)}
+                        </Text>
+                      )}
+
+                      {cifra && avance !== null && (
+                        <View style={[styles.barraObjetivo, { backgroundColor: c.border }]}>
+                          <View
+                            style={[
+                              styles.barraObjetivoRelleno,
+                              { backgroundColor: c.gold, width: `${Math.max(0, Math.min(100, avance))}%` },
+                            ]}
+                          />
+                        </View>
+                      )}
                     </View>
                     <Icon name="chevron" size={15} color={c.goldInk} />
                   </Pressable>
@@ -1861,6 +1969,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+  },
+  /** El distintivo del eje principal. Contorno y no relleno: marca sin gritar. */
+  insigniaPrincipal: {
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  barraObjetivo: {
+    height: 4,
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginTop: 3,
+  },
+  barraObjetivoRelleno: {
+    height: '100%',
+    borderRadius: 2,
   },
   detailTopBar: {
     flexDirection: 'row',

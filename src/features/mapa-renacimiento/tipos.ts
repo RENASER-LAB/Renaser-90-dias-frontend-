@@ -7,6 +7,8 @@
  * `map_version` del manual): ver `docs/MAPA_RENACIMIENTO_DIA7.md` para el contrato que falta.
  */
 
+import type { EjeObjetivo } from '../objetivos/types/objetivos.types';
+
 export type Area = 'salud' | 'negocio_dinero' | 'relaciones';
 export const AREAS: readonly Area[] = ['salud', 'negocio_dinero', 'relaciones'] as const;
 
@@ -179,3 +181,20 @@ export function objetivoDe(mapa: MapaRenacimiento, area: Area): Objetivo {
   if (area === 'negocio_dinero') return mapa.negocio;
   return mapa.relaciones;
 }
+
+/**
+ * El eje de Rocas al que corresponde cada área del Mapa. Traducción 1 a 1 entre los dos únicos
+ * vocabularios que conviven acá: el Mapa habla de áreas (`salud`, `negocio_dinero`, `relaciones`)
+ * y el módulo de Rocas habla de ejes (`CUERPO`, `TRABAJO`, `RELACIONES`).
+ *
+ * **Vive en este archivo y no en `hooks/useMapaRenacimiento.ts`, donde estaba.** Importarla desde
+ * ahí arrastraba el hook entero y, con él, `almacen.ts` y AsyncStorage — un módulo nativo que no
+ * existe fuera de la app. La consecuencia concreta: cualquier test que necesitara solo esta tabla
+ * de traducción reventaba al importarla. Un `Record` de tres entradas no tiene por qué obligar a
+ * cargar el almacenamiento del dispositivo.
+ */
+export const EJE_POR_AREA: Record<Area, EjeObjetivo> = {
+  salud: 'CUERPO',
+  negocio_dinero: 'TRABAJO',
+  relaciones: 'RELACIONES',
+};
