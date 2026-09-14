@@ -27,8 +27,18 @@ function resolverUrlBase(): string {
   return 'http://localhost:8080';
 }
 
+/**
+ * `GOOGLE_PLACES_API_KEY` se quito el 2026-09-14, antes del primer build para Play Store.
+ *
+ * Era una CREDENCIAL con prefijo `EXPO_PUBLIC_`, o sea incrustada en el bundle y extraible de un
+ * `.aab` con `unzip` y `strings`. Sin restringir por huella SHA-1 mas nombre de paquete, cualquiera
+ * que descargue la app puede usarla y el consumo lo paga el dueno de la cuenta de Google.
+ *
+ * Nunca estuvo configurada, asi que no se perdio ninguna funcion que estuviera andando; lo que se
+ * quita es la posibilidad de agregarla y publicarla sin darse cuenta. Ver `locationService.ts`
+ * para que se pierde exactamente y como volver a encenderlo bien.
+ */
 export const API_CONFIG = {
-  GOOGLE_PLACES_API_KEY: process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY || '',
   BASE_URL: resolverUrlBase(),
   GOOGLE_OAUTH_CLIENT_ID: process.env.EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID || '',
 };

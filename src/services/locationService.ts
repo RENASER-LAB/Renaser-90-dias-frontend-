@@ -550,112 +550,49 @@ export class LocationService {
   }
 
   /**
-   * Reverse Geocode GPS Coordinates to Exact District, City, State, Country via Google Geocoding API
+   * Reverse geocode de coordenadas GPS. **Desactivado a proposito desde el 2026-09-14.**
+   *
+   * ── Por que se saco ──
+   *
+   * Esto llamaba a la API de Google con `EXPO_PUBLIC_GOOGLE_PLACES_API_KEY`, y todo lo que lleva
+   * el prefijo `EXPO_PUBLIC_` queda INCRUSTADO en el bundle de JavaScript: se saca de un `.aab`
+   * con `unzip` y `strings` en dos minutos. Una clave de Google sin restringir que cualquiera
+   * puede extraer es una factura abierta a nombre del dueno de la cuenta.
+   *
+   * La clave nunca estuvo configurada -ni en `.env`, ni en `eas.json`, ni en el entorno de EAS-,
+   * asi que esto ya devolvia `null` en la practica. Lo que se quita es la POSIBILIDAD de que
+   * alguien la agregue mas adelante y la publique sin darse cuenta.
+   *
+   * ── Que se pierde, y que no ──
+   *
+   * Nada se rompe: quien llama (`LocationCascadePicker`) ya trataba el `null` como un caso
+   * normal y cae a `fallbackIPDetection()`. Se pierde la precision del GPS al nivel de distrito;
+   * la persona sigue pudiendo elegir su ubicacion a mano en el selector en cascada.
+   *
+   * ── Como volver a encenderlo ──
+   *
+   * 1. Restringir la clave en Google Cloud Console por huella SHA-1 del certificado de firma
+   *    MAS nombre de paquete (`com.renaser.app`). Sin las dos cosas, extraerla sigue sirviendo.
+   * 2. Recien entonces devolver el cuerpo original, que esta en el historial de git.
+   *
+   * La alternativa sana es que esta llamada la haga el BACKEND, que si puede guardar una clave
+   * de verdad: el movil manda lat/lng y recibe el distrito ya resuelto.
    */
-  static async reverseGeocodeGPS(latitude: number, longitude: number): Promise<GooglePlaceResult | null> {
-    const apiKey = API_CONFIG.GOOGLE_PLACES_API_KEY;
-    if (!apiKey) return null;
-
-    try {
-      const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&language=es&key=${apiKey}`;
-      const res = await fetch(url);
-      if (res.ok) {
-        const json = await res.json();
-        if (json.results && json.results.length > 0) {
-          const first = json.results[0];
-          let distrito = '';
-          let ciudad = '';
-          let departamento = '';
-          let pais = '';
-
-          first.address_components.forEach((comp: any) => {
-            const types: string[] = comp.types || [];
-            if (types.includes('sublocality') || types.includes('sublocality_level_1') || types.includes('neighborhood')) {
-              distrito = comp.long_name;
-            } else if (types.includes('locality')) {
-              ciudad = comp.long_name;
-              if (!distrito) distrito = comp.long_name;
-            } else if (types.includes('administrative_area_level_2')) {
-              if (!ciudad) ciudad = comp.long_name;
-            } else if (types.includes('administrative_area_level_1')) {
-              departamento = comp.long_name;
-            } else if (types.includes('country')) {
-              pais = comp.long_name;
-            }
-          });
-
-          return {
-            placeId: first.place_id,
-            description: first.formatted_address,
-            mainText: distrito || ciudad || first.formatted_address.split(',')[0],
-            secondaryText: `${ciudad ? ciudad + ', ' : ''}${departamento}, ${pais}`,
-            distrito: distrito || ciudad || 'Centro',
-            ciudad: ciudad || departamento || 'Ciudad Principal',
-            departamento: departamento || pais || 'Región',
-            pais: pais || 'Perú',
-          };
-        }
-      }
-    } catch {
-      // Ignore network errors
-    }
-
+  static async reverseGeocodeGPS(_latitude: number, _longitude: number): Promise<GooglePlaceResult | null> {
     return null;
   }
 
   /**
-   * Search Google Places Autocomplete API live in real-time
+   * Busqueda de lugares con autocompletado. **Desactivada a proposito desde el 2026-09-14.**
+   *
+   * Mismo motivo que {@link reverseGeocodeGPS}: usaba la clave de Google incrustada en el bundle.
+   * Ver alli el razonamiento completo y los pasos para volver a encenderla.
+   *
+   * Devolver `[]` es el mismo valor que ya devolvia sin clave configurada, y
+   * `LocationCascadePicker` lo trata como "sin sugerencias": el selector en cascada de pais,
+   * departamento, ciudad y distrito sigue funcionando igual.
    */
-  static async searchGooglePlaces(query: string, countryIso?: string): Promise<GooglePlaceResult[]> {
-    const apiKey = API_CONFIG.GOOGLE_PLACES_API_KEY;
-    const cleanQuery = query.trim();
-    if (!apiKey || cleanQuery.length < 2) return [];
-
-    const cacheKey = `${countryIso || 'GLOBAL'}___${cleanQuery.toLowerCase()}`;
-    if (searchCache.has(cacheKey)) {
-      return searchCache.get(cacheKey)!;
-    }
-
-    try {
-      let url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
-        cleanQuery
-      )}&types=(regions)&language=es&key=${apiKey}`;
-
-      if (countryIso && countryIso.length === 2) {
-        url += `&components=country:${countryIso.toLowerCase()}`;
-      }
-
-      const res = await fetch(url);
-      if (res.ok) {
-        const json = await res.json();
-        if (json.predictions && Array.isArray(json.predictions)) {
-          const results: GooglePlaceResult[] = json.predictions.map((p: any) => {
-            const terms: string[] = p.terms?.map((t: any) => t.value) || [];
-            const termLen = terms.length;
-
-            const mainText = p.structured_formatting?.main_text || terms[0] || p.description;
-            const secondaryText = p.structured_formatting?.secondary_text || '';
-
-            return {
-              placeId: p.place_id,
-              description: p.description,
-              mainText,
-              secondaryText,
-              distrito: terms[0] || mainText,
-              ciudad: termLen >= 3 ? terms[1] : (terms[0] || mainText),
-              departamento: termLen >= 3 ? terms[termLen - 2] : (terms[1] || terms[0] || ''),
-              pais: termLen > 0 ? terms[termLen - 1] : 'Perú',
-            };
-          });
-
-          searchCache.set(cacheKey, results);
-          return results;
-        }
-      }
-    } catch {
-      // Handle network interruption
-    }
-
+  static async searchGooglePlaces(_query: string, _countryIso?: string): Promise<GooglePlaceResult[]> {
     return [];
   }
 }
