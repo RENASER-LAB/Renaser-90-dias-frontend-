@@ -2,12 +2,13 @@
   "expo": {
     "name": "renaser",
     "slug": "renaser",
-    "version": "1.0.0",
+    "version": "1.5.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.renaser.app"
     },
     "android": {
       "adaptiveIcon": {
@@ -23,7 +24,7 @@
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
       ],
-      "package": "com.anonymous.renaser"
+      "package": "com.renaser.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -47,6 +48,11 @@
           "microphonePermission": "Renaser necesita el micrófono para que puedas grabar en audio la evidencia de tus hábitos."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "390944e9-a787-4479-90c8-cae078bc9d59"
+      }
+    }
   }
 }
