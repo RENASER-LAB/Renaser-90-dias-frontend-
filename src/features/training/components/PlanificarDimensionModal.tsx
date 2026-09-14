@@ -27,6 +27,11 @@ import {
 import { aMinutos } from '../../habits/utils/momentosDelDia';
 import type { CategoriaHabitoApi, PreferenciaHabitoApi } from '../../habits/types/habits.types';
 import type { HabitItem } from '../../../screens/TrainingScreen';
+import {
+  antelacionesAMostrar,
+  etiquetaDeAntelacion,
+  minutosDesdeTexto,
+} from '../../habits/utils/etiquetaDeAntelacion';
 
 /**
  * PLANIFICAR los hábitos de una dimensión: a qué hora va cada uno, y prenderlo o apagarlo.
@@ -98,16 +103,17 @@ interface Props {
 type HabitoPlanificable = HabitItem & { habitoId: string };
 
 /**
- * Las antelaciones que se ofrecen. `null` = sin aviso; `0` = a la hora exacta.
+ * Las antelaciones SUGERIDAS. `[]` = sin aviso; `0` = a la hora exacta.
  *
- * Cuatro y no un campo libre: elegir entre cuatro es un toque, escribir un número son cinco y una
- * decisión que nadie tiene ganas de tomar. Si alguien necesita 7 minutos, no necesita 7 minutos.
+ * > **Corregido el 2026-09-14.** Acá decía que cuatro fijas bastaban, con el argumento de que
+ * > "si alguien necesita 7 minutos, no necesita 7 minutos". El dueño pidió lo contrario: que se
+ * > pueda escribir la propia. Así que estas dejan de ser el límite y pasan a ser el atajo — el que
+ * > las quiera usa un toque, el que necesita 45 escribe 45.
+ *
+ * Nada cambia aguas abajo: el conjunto siempre viajó como `number[]` hasta el programador de
+ * alarmas, que calcula `(hora - minutos) mod 1440` y **ya aceptaba cualquier valor**.
  */
-const ANTELACIONES: readonly { minutos: number; etiqueta: string }[] = [
-  { minutos: 30, etiqueta: '30 min antes' },
-  { minutos: 10, etiqueta: '10 min antes' },
-  { minutos: 0, etiqueta: 'A la hora' },
-];
+const ANTELACIONES_SUGERIDAS: readonly number[] = [30, 10];
 
 /**
  * Los hábitos sin hora van en su propia sección, arriba de todo. No se reparten en un bloque
@@ -209,6 +215,8 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
    * una alarma diaria propia en el teléfono.
    */
   const [antelaciones, setAntelaciones] = useState<number[]>([]);
+  /** Lo que la persona está escribiendo en el campo "otra". Se limpia al añadirla. */
+  const [antelacionPropia, setAntelacionPropia] = useState('');
   const [hora, setHora] = useState(6);
   const [minuto, setMinuto] = useState(0);
   /**
@@ -503,6 +511,27 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
     } finally {
       setGuardando(false);
     }
+  };
+
+  /**
+   * Prende o apaga un aviso. El conjunto se mantiene ordenado de la antelación mayor a la menor,
+   * que es el orden en que los avisos llegan y también en el que el programador los recorre.
+   */
+  const alternarAntelacion = (minutos: number) => {
+    setAntelaciones(prev =>
+      prev.includes(minutos) ? prev.filter(x => x !== minutos) : [...prev, minutos].sort((a, b) => b - a),
+    );
+  };
+
+  /**
+   * Añade la antelación escrita a mano. Queda ENCENDIDA al añadirla: nadie escribe un número para
+   * después tener que tocarlo, y una pastilla nueva apagada parece que no se guardó.
+   */
+  const agregarAntelacionPropia = () => {
+    const minutos = minutosDesdeTexto(antelacionPropia);
+    if (minutos === null) return;
+    setAntelaciones(prev => (prev.includes(minutos) ? prev : [...prev, minutos].sort((a, b) => b - a)));
+    setAntelacionPropia('');
   };
 
   /** Guarda la hora GENERAL del hábito —todos los días— y vuelve a la lista. */
@@ -1106,18 +1135,18 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                         Sin aviso
                       </Text>
                     </Pressable>
-                    {ANTELACIONES.map(({ minutos, etiqueta }) => {
+                    {/* Las sugeridas MAS las que la persona haya escrito, en orden de tiempo:
+                        primero el aviso que llega antes. "A la hora" va al final, aparte, porque
+                        no es una antelacion sino el momento exacto. */}
+                    {antelacionesAMostrar(ANTELACIONES_SUGERIDAS, antelaciones).map(minutos => {
                       const on = antelaciones.includes(minutos);
                       return (
                         <Pressable
-                          key={etiqueta}
-                          onPress={() =>
-                            setAntelaciones(prev =>
-                              prev.includes(minutos)
-                                ? prev.filter(x => x !== minutos)
-                                : [...prev, minutos].sort((a, b) => b - a),
-                            )
-                          }
+                          key={minutos}
+                          onPress={() => alternarAntelacion(minutos)}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: on }}
+                          accessibilityLabel={`${etiquetaDeAntelacion(minutos)}${on ? ', activado' : ''}`}
                           style={[
                             styles.pastillaAntelacion,
                             {
@@ -1130,11 +1159,85 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                             style={[t.micro, { fontSize: 10.5, fontFamily: 'Jost_700Bold', color: on ? c.goldInk : c.textSoft }]}
                             numberOfLines={1}
                           >
-                            {etiqueta}
+                            {etiquetaDeAntelacion(minutos)}
                           </Text>
                         </Pressable>
                       );
                     })}
+                    <Pressable
+                      onPress={() => alternarAntelacion(0)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: antelaciones.includes(0) }}
+                      accessibilityLabel={`A la hora exacta${antelaciones.includes(0) ? ', activado' : ''}`}
+                      style={[
+                        styles.pastillaAntelacion,
+                        {
+                          borderColor: antelaciones.includes(0) ? c.gold : c.border,
+                          backgroundColor: antelaciones.includes(0) ? c.cardBgAlt : 'transparent',
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          t.micro,
+                          {
+                            fontSize: 10.5,
+                            fontFamily: 'Jost_700Bold',
+                            color: antelaciones.includes(0) ? c.goldInk : c.textSoft,
+                          },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        A la hora
+                      </Text>
+                    </Pressable>
+                    {/* El campo propio va DENTRO de la misma fila que envuelve, no en un renglón
+                        aparte. La hoja no tiene scroll a propósito —un ScrollView acá se pelearía
+                        con las ruedas de hora por el dedo (AGENTS.md §2)— así que cada píxel de
+                        alto que se añade empuja el botón de guardar fuera de la pantalla. Pasó:
+                        la primera versión lo dejó invisible. */}
+                    <TextInput
+                      value={antelacionPropia}
+                      onChangeText={setAntelacionPropia}
+                      onSubmitEditing={agregarAntelacionPropia}
+                      keyboardType="number-pad"
+                      returnKeyType="done"
+                      placeholder="Otra"
+                      placeholderTextColor={c.micro}
+                      maxLength={4}
+                      accessibilityLabel="Minutos de antelación propios"
+                      style={[
+                        styles.campoAntelacionPropia,
+                        { borderColor: c.border, color: c.text, backgroundColor: c.cardBg },
+                      ]}
+                    />
+                    <Pressable
+                      onPress={agregarAntelacionPropia}
+                      disabled={minutosDesdeTexto(antelacionPropia) === null}
+                      accessibilityRole="button"
+                      accessibilityLabel="Añadir esa antelación"
+                      style={[
+                        styles.pastillaAntelacion,
+                        {
+                          borderColor: minutosDesdeTexto(antelacionPropia) === null ? c.border : c.gold,
+                          backgroundColor: 'transparent',
+                          opacity: minutosDesdeTexto(antelacionPropia) === null ? 0.5 : 1,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          t.micro,
+                          {
+                            fontSize: 10.5,
+                            fontFamily: 'Jost_700Bold',
+                            color: minutosDesdeTexto(antelacionPropia) === null ? c.textSoft : c.goldInk,
+                          },
+                        ]}
+                      >
+                        + Añadir
+                      </Text>
+                    </Pressable>
                   </View>
                 </>
               )}
@@ -1378,9 +1481,26 @@ const styles = StyleSheet.create({
     gap: 6,
     marginTop: 6,
   },
+  /* Del ancho de una pastilla, para convivir en la misma fila que envuelve. Cuatro dígitos es
+     todo lo que acepta (el tope es 1440), así que no necesita más. */
+  campoAntelacionPropia: {
+    flexGrow: 1,
+    minWidth: '31%',
+    minHeight: 44,
+    borderWidth: 1.2,
+    borderRadius: 11,
+    paddingHorizontal: 6,
+    textAlign: 'center',
+    fontFamily: 'Jost_700Bold',
+    fontSize: 10.5,
+  },
+  /* 31 % y no 47 %: desde que se puede escribir una antelación propia hay hasta siete elementos
+     en esta fila, y a dos por renglón el botón de guardar quedaba fuera de la hoja —que no tiene
+     scroll a propósito—. A tres por renglón entran en el mismo alto de antes. La altura de 44 no
+     se toca: es el mínimo cómodo para el dedo (AGENTS.md §4). */
   pastillaAntelacion: {
     flexGrow: 1,
-    minWidth: '47%',
+    minWidth: '31%',
     minHeight: 44,
     borderWidth: 1.2,
     borderRadius: 11,
