@@ -152,6 +152,8 @@ export function useMapaRenacimiento(userId: string): EstadoMapaRenacimiento {
   const cargado = useRef(false);
   /** La última prioridad que el servidor confirmó, para no repetir el POST en cada render. */
   const prioridadGuardada = useRef<Area | null>(null);
+  /** El rescate de un mapa ya activo corre UNA vez por sesión, no en cada render. */
+  const sincronizado = useRef(false);
 
   /**
    * Carga en dos tiempos: primero el borrador local (instantaneo, y lo unico que hay sin red) y
@@ -229,6 +231,49 @@ export function useMapaRenacimiento(userId: string): EstadoMapaRenacimiento {
       if (!ok) prioridadGuardada.current = null;
     });
   }, [mapa.prioridad]);
+
+  /**
+   * Rescate de quien YA activó su Mapa antes de que esto se cableara.
+   *
+   * ── El agujero que esto tapa ──
+   *
+   * Toda la persistencia colgaba de {@link activar}, y activar ocurre UNA sola vez en la vida. Al
+   * abrir un mapa ya activo, la carga de arriba lo lleva derecho al paso 11 y `activar` no se
+   * vuelve a llamar nunca. Resultado: para toda la cohorte que ya pasó el Día 7 —es decir, casi
+   * todos— las respuestas no iban a salir del teléfono jamás. Lo detectó el dueño probándolo:
+   * recorrió el Mapa y la base seguía vacía.
+   *
+   * Así que se sincroniza también al abrir, una vez por sesión, cuando el mapa está activo y el
+   * borrador del dispositivo tiene algo que mandar. Es un upsert por `(usuario, pregunta)`, así
+   * que repetirlo no duplica nada.
+   *
+   * **Solo puede rescatar lo que siga en ESE dispositivo.** Quien ya reinstaló perdió su borrador
+   * y no hay nada que recuperar: esto salva a quien todavía lo tiene, que es el caso normal.
+   */
+  useEffect(() => {
+    if (!cargado.current || sincronizado.current) return;
+    if (mapa.estado !== 'activo') return;
+    // Sin contenido no hay nada que rescatar: es el caso de un dispositivo nuevo, donde el mapa
+    // quedó marcado como activo por el servidor pero el borrador está vacío. Mandar eso sería
+    // pisar con nada lo que el servidor pudiera tener.
+    const hayContenido =
+      Boolean(mapa.prioridad) || mapa.acciones.length > 0 || mapa.reemplazos.length > 0;
+    if (!hayContenido) return;
+    sincronizado.current = true;
+    void (async () => {
+      await guardarRespuestasDelMapa(mapa);
+      try {
+        await guardarAccionesDelMapa(mapa.acciones);
+      } catch {
+        /* Silencioso: no hay acción posible para la persona y el borrador local sigue intacto. */
+      }
+      try {
+        await guardarProtocolosDelMapa(mapa.reemplazos);
+      } catch {
+        /* Idem. */
+      }
+    })();
+  }, [mapa]);
 
   const actualizar = useCallback((cambio: (previo: MapaRenacimiento) => MapaRenacimiento) => {
     setMapa(previo => {
