@@ -1,11 +1,11 @@
 import { obtenerCatalogoPreguntas } from '../../onboarding/data/catalogoPreguntas';
 import * as onboardingApi from '../../onboarding/api/onboardingApi';
-import type { Area } from '../tipos';
+import type { Area, DiaHito, Hito } from '../tipos';
 import { AREAS } from '../tipos';
 
 /**
- * La prioridad principal del Mapa (V02, `¿Qué área manda en tus próximos 90 días?`), guardada en
- * el servidor en vez de solo en el teléfono.
+ * Las respuestas del Mapa que van al servidor por la maquinaria del onboarding: la prioridad
+ * principal (V02) y los nueve hitos (V08).
  *
  * ── Por qué existe este archivo ──
  *
@@ -83,4 +83,68 @@ export async function leerPrioridad(): Promise<Area | null> {
   } catch {
     return null;
   }
+}
+
+/* ------------------------------------------------------------------------------------------------
+ * Los nueve hitos (V08)
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * El segmento que usa la clave del catálogo para cada área. **No coincide con el nombre del área**
+ * y por eso vive en una tabla explícita: la V41 nombró las preguntas en inglés
+ * (`map_milestone_health_30`) mientras el modelo de pantalla habla en castellano (`salud`).
+ * Derivarlo con un `slice` o un `replace` sería adivinar; `negocio_dinero` → `business` no sale de
+ * ninguna regla.
+ */
+const SEGMENTO_POR_AREA: Record<Area, string> = {
+  salud: 'health',
+  negocio_dinero: 'business',
+  relaciones: 'relations',
+};
+
+/** `map_milestone_business_60`. Las nueve claves se arman, no se escriben a mano nueve veces. */
+function claveDeHito(area: Area, dia: DiaHito): string {
+  return `map_milestone_${SEGMENTO_POR_AREA[area]}_${dia}`;
+}
+
+/**
+ * Guarda los hitos que tengan texto. Son nueve respuestas independientes —tres días por cada una
+ * de las tres áreas— y por eso van en `POST /onboarding/answers` una por una: el endpoint guarda
+ * de a una, y así un fallo en el séptimo no se lleva puestos los seis anteriores.
+ *
+ * **Se saltean los vacíos.** Un hito en blanco no es un dato: es una casilla que la persona no
+ * llenó. Mandar la cadena vacía escribiría una respuesta que dice "respondió: nada", que es
+ * distinto de no haber respondido y ensucia cualquier lectura posterior.
+ *
+ * No lanza, por el mismo motivo que {@link guardarPrioridad}: se la llama al activar, cuando las
+ * Rocas y los hábitos ya se crearon, y un fallo de red acá no debe hacer parecer que la activación
+ * falló. Devuelve cuántos se guardaron, para quien quiera registrarlo.
+ */
+export async function guardarHitos(hitos: Hito[]): Promise<number> {
+  const conTexto = hitos.filter(h => h.valor.trim().length > 0);
+  if (conTexto.length === 0) return 0;
+
+  let catalogo;
+  try {
+    catalogo = await obtenerCatalogoPreguntas();
+  } catch {
+    return 0;
+  }
+
+  let guardados = 0;
+  for (const hito of conTexto) {
+    const clave = claveDeHito(hito.area, hito.dia);
+    const resolucion = catalogo.idDe(clave, 'TEXTO');
+    if (!resolucion.ok) {
+      console.warn(`[mapa] no se pudo guardar el hito ${clave}: ${resolucion.motivo}`);
+      continue;
+    }
+    try {
+      await onboardingApi.guardarRespuesta({ questionId: resolucion.id, textValue: hito.valor.trim() });
+      guardados += 1;
+    } catch {
+      // Se sigue con el resto: nueve hitos son nueve hechos sueltos, no una transacción.
+    }
+  }
+  return guardados;
 }

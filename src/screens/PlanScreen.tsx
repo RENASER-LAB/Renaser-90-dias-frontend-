@@ -956,15 +956,27 @@ export default function PlanScreen() {
                       ) : cifra ? (
                         /* Con meta medible manda el NÚMERO: de dónde partió y a dónde va. La frase
                            redactada completa sigue estando, a un toque, en el modal de edición. */
+                        /* `flexShrink` + dos líneas: una cifra grande con unidad larga
+                           ("1 000 000 → 2 000 000 dólares") antes se cortaba con puntos
+                           suspensivos justo donde está el dato. El porcentaje no encoge: es corto
+                           y es lo que ancla la lectura a la derecha. */
                         <Row gap={8} style={{ alignItems: 'baseline' }}>
                           <Text
-                            style={[t.cardTitle, { color: c.textStrong, fontSize: 19, fontFamily: 'Jost_700Bold' }]}
-                            numberOfLines={1}
+                            style={[
+                              t.cardTitle,
+                              { color: c.textStrong, fontSize: 19, fontFamily: 'Jost_700Bold', flexShrink: 1 },
+                            ]}
+                            numberOfLines={2}
                           >
                             {cifra}
                           </Text>
                           {avance !== null && (
-                            <Text style={[t.micro, { color: c.goldInk, fontSize: 12, fontFamily: 'Jost_500Medium' }]}>
+                            <Text
+                              style={[
+                                t.micro,
+                                { color: c.goldInk, fontSize: 12, fontFamily: 'Jost_500Medium', flexShrink: 0 },
+                              ]}
+                            >
                               {avance}%
                             </Text>
                           )}

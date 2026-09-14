@@ -11,7 +11,7 @@ import {
   guardarAccionesDelMapa,
   guardarProtocolosDelMapa,
 } from '../api/mapaApi';
-import { guardarPrioridad } from '../api/prioridadDelMapa';
+import { guardarHitos, guardarPrioridad } from '../api/respuestasDelMapa';
 import { completarHitos, definicionDeTerminado, redactar } from '../reglas';
 import type { AccionMotora, Area, BloqueDia, DiaSemana, MapaRenacimiento, Objetivo, PasoMapa } from '../tipos';
 import { AREAS, EJE_POR_AREA, objetivoDe } from '../tipos';
@@ -349,6 +349,8 @@ export function useMapaRenacimiento(userId: string): EstadoMapaRenacimiento {
       if (mapa.prioridad) {
         await guardarPrioridad(mapa.prioridad);
       }
+      /* Los nueve hitos (V08). Tampoco lanza: guarda los que puede y devuelve cuantos fueron. */
+      await guardarHitos(mapa.hitos);
       try {
         await completarEtapaMapa();
       } catch {

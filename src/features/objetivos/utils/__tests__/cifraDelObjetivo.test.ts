@@ -27,7 +27,7 @@ describe('cifraDelObjetivo', () => {
 
   it('funciona igual con una meta que sube', () => {
     expect(cifraDelObjetivo(roca({ meta: 15000, avance: 5000, unidad: 'S/', lineaBase: 5000 }))).toBe(
-      '5000 → 15000 S/'
+      '5\u00a0000 → 15\u00a0000 S/'
     );
   });
 
@@ -46,7 +46,19 @@ describe('cifraDelObjetivo', () => {
   });
 
   it('una meta de cero es válida desde V44: saldar una deuda se puede medir con línea base', () => {
-    expect(cifraDelObjetivo(roca({ meta: 0, avance: 8000, unidad: 'S/', lineaBase: 8000 }))).toBe('8000 → 0 S/');
+    expect(cifraDelObjetivo(roca({ meta: 0, avance: 8000, unidad: 'S/', lineaBase: 8000 }))).toBe(
+      '8\u00a0000 → 0 S/'
+    );
+  });
+
+  it('agrupa los miles con espacio duro, nunca con coma: la app lee la coma como decimal', () => {
+    const cifra = cifraDelObjetivo(roca({ meta: 1000000, avance: 250000, unidad: 'USD', lineaBase: 250000 }));
+    expect(cifra).toBe('250\u00a0000 → 1\u00a0000\u00a0000 USD');
+    expect(cifra).not.toContain(',');
+  });
+
+  it('no agrupa cuando no hay miles', () => {
+    expect(cifraDelObjetivo(roca({ meta: 999, avance: 100, unidad: 'km', lineaBase: 100 }))).toBe('100 → 999 km');
   });
 
   it('devuelve null en un objetivo cualitativo — Relaciones, que se mide 1-10 y va sin meta', () => {

@@ -33,11 +33,30 @@ export function cifraDelObjetivo(roca: RocaMaestraApi | null | undefined): strin
 }
 
 /**
+ * Separador de miles: un espacio duro (U+00A0), no una coma ni un punto.
+ *
+ * **Por qué un espacio y no lo de siempre.** Esta app ya trata la coma como separador DECIMAL: el
+ * Mapa acepta "78,5 kg" y lo normaliza con `.replace(',', '.')`. Si la cifra mostrara "15,000",
+ * alguien que escribe así leería quince, no quince mil. El punto tiene el problema espejo. El
+ * espacio no es ambiguo con ninguna de las dos convenciones y además es lo que recomienda la RAE.
+ *
+ * Duro (` `) y no un espacio normal para que el número nunca se parta en dos renglones.
+ */
+const SEPARADOR_MILES = ' ';
+
+/**
  * Sin decimales cuando el número es entero: `78.00` viene así del backend (es un `BigDecimal` con
  * la escala de la columna) y "78 kg" se lee mejor que "78.00 kg". Los decimales de verdad se
  * conservan —hay quien mide 78,5 kg— y se recortan a dos, que es la escala de la columna.
+ *
+ * Los miles se agrupan a mano y no con `toLocaleString`: en Android el motor de JS se compila sin
+ * los datos de ICU completos, así que el resultado depende del dispositivo — el mismo objetivo se
+ * vería distinto en dos teléfonos.
  */
 function formatearNumero(valor: number): string {
-  if (Number.isInteger(valor)) return String(valor);
-  return String(Number(valor.toFixed(2)));
+  const redondeado = Number.isInteger(valor) ? valor : Number(valor.toFixed(2));
+  const [entera, decimal] = String(Math.abs(redondeado)).split('.');
+  const signo = redondeado < 0 ? '-' : '';
+  const conMiles = entera.replace(/\B(?=(\d{3})+(?!\d))/g, SEPARADOR_MILES);
+  return decimal ? `${signo}${conMiles}.${decimal}` : `${signo}${conMiles}`;
 }

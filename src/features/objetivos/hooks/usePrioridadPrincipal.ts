@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { leerPrioridad } from '../../mapa-renacimiento/api/prioridadDelMapa';
+import { leerPrioridad } from '../../mapa-renacimiento/api/respuestasDelMapa';
 import { EJE_POR_AREA } from '../../mapa-renacimiento/tipos';
 import type { EjeObjetivo } from '../types/objetivos.types';
 
