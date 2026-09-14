@@ -308,10 +308,16 @@ export function GrupoFormScreen({
                 );
               })}
             </View>
+            {/* Este texto decía que la bienvenida "suelta" sola a la persona cuando le toca
+                pasar a un grupo estable. No es cierto desde el 2026-09-11: el job que trasladaba
+                aprendices (`TrasladarAprendicesScheduler`) está apagado por configuración porque
+                el cliente pasó al armado manual. Prometerlo acá hacía que el administrador diera
+                por hecho que el sistema se ordena solo, y la gente se quedaba en la bienvenida
+                para siempre. */}
             <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, lineHeight: 17 }]}>
               {esBienvenida
-                ? 'La bienvenida no lleva fechas ni tope de plazas: recibe sola a cada persona que se registra durante sus primeros días de programa y la suelta cuando le toca pasar a un grupo estable. Con una alcanza — no hace falta crear una nueva cada semana.'
-                : 'El grupo estable tiene fechas (suele ser por mes) y un tope de plazas. Acá aterriza la gente cuando sale de la bienvenida.'}
+                ? 'La bienvenida no lleva fechas ni tope de plazas: recibe sola a cada persona que se registra. Con una alcanza — no hace falta crear una nueva cada semana. Salir de ella no es automático: cuando alguien tiene que pasar a un grupo estable, se le mueve a mano desde ese grupo.'
+                : 'El grupo estable tiene fechas (suele ser por mes) y un tope de plazas. Acá se coloca a la gente cuando sale de la bienvenida.'}
             </Text>
           </View>
         ) : null}
