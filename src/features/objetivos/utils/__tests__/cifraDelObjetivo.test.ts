@@ -1,7 +1,7 @@
 import { describe, expect, it } from '@jest/globals';
 
 import type { RocaMaestraApi } from '../../types/objetivos.types';
-import { cifraDelObjetivo } from '../cifraDelObjetivo';
+import { cifraDeEscala, cifraDelObjetivo, primeraClausula } from '../cifraDelObjetivo';
 
 /** Una roca maestra con lo mínimo, para no repetir los campos que no importan en cada caso. */
 function roca(parcial: Partial<RocaMaestraApi>): RocaMaestraApi {
@@ -72,5 +72,35 @@ describe('cifraDelObjetivo', () => {
   it('tolera que todavía no haya roca', () => {
     expect(cifraDelObjetivo(null)).toBeNull();
     expect(cifraDelObjetivo(undefined)).toBeNull();
+  });
+});
+
+describe('cifraDeEscala', () => {
+  it('muestra la escala de Relaciones en las dos puntas', () => {
+    expect(cifraDeEscala(5, 8)).toBe('5/10 → 8/10');
+  });
+
+  it('media escala no dice nada: sin una de las dos puntas, null', () => {
+    expect(cifraDeEscala(5, null)).toBeNull();
+    expect(cifraDeEscala(null, 8)).toBeNull();
+    expect(cifraDeEscala(null, null)).toBeNull();
+  });
+});
+
+describe('primeraClausula', () => {
+  it('se queda con la primera frase de una meta redactada', () => {
+    expect(
+      primeraClausula(
+        'Al Día 90 mi conexión con pareja pasará de 5/10 a 8/10, Una conversacion sin pantallas, con evidencia en la agenda, porque lo elijo'
+      )
+    ).toBe('Al Día 90 mi conexión con pareja pasará de 5/10 a 8/10');
+  });
+
+  it('sin coma devuelve el texto entero: no hay nada mejor que hacer', () => {
+    expect(primeraClausula('  Recuperar la confianza con mi hijo  ')).toBe('Recuperar la confianza con mi hijo');
+  });
+
+  it('una coma al inicio no deja la tarjeta vacía', () => {
+    expect(primeraClausula(', algo raro')).toBe(', algo raro');
   });
 });

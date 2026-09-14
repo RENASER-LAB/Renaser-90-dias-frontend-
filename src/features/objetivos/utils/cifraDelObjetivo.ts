@@ -60,3 +60,37 @@ function formatearNumero(valor: number): string {
   const conMiles = entera.replace(/\B(?=(\d{3})+(?!\d))/g, SEPARADOR_MILES);
   return decimal ? `${signo}${conMiles}.${decimal}` : `${signo}${conMiles}`;
 }
+
+/**
+ * La cifra de Relaciones: `"5/10 → 8/10"`.
+ *
+ * Su objetivo se mide en una escala de 1 a 10 y por eso viaja a la Roca Maestra SIN meta
+ * cuantitativa — un puntaje no es una unidad de negocio. Sus dos números viven en las respuestas
+ * del Mapa (`map_relations_baseline_scale` / `_target_scale`), que es de donde salen acá.
+ *
+ * `null` mientras no estén las dos puntas: media escala no dice nada. Es el caso de quien recorrió
+ * el Mapa antes del 2026-09-14, cuando esos números todavía no salían del teléfono.
+ */
+export function cifraDeEscala(base: number | null, meta: number | null): string | null {
+  if (base === null || meta === null || !Number.isFinite(base) || !Number.isFinite(meta)) return null;
+  return `${base}/10 → ${meta}/10`;
+}
+
+/**
+ * La primera cláusula de una meta redactada, sin el resto.
+ *
+ * **Para qué.** La redacción SMART encadena cuatro cosas con comas: "Al Día 90 mi conexión con
+ * pareja pasará de 5/10 a 8/10, una conversación sin pantallas cada noche, con evidencia en la
+ * agenda, porque no quiero llegar al día 90 igual". En una tarjeta entra la primera y el resto se
+ * corta con puntos suspensivos justo donde deja de entenderse. Quedarse con la primera cláusula da
+ * una línea completa en vez de un párrafo mutilado.
+ *
+ * Se corta en la primera coma y no en un largo fijo: el largo corta a mitad de palabra, la coma
+ * corta donde la frase ya dijo algo. Si no hay coma, se devuelve tal cual y que la tarjeta la
+ * recorte — no hay nada mejor que hacer con un texto que la persona escribió de una sola tirada.
+ */
+export function primeraClausula(texto: string): string {
+  const limpio = texto.trim();
+  const coma = limpio.indexOf(',');
+  return coma > 0 ? limpio.slice(0, coma) : limpio;
+}

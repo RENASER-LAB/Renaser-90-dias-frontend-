@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { leerPrioridad } from '../../mapa-renacimiento/api/respuestasDelMapa';
+import { leerResumenDelMapa } from '../../mapa-renacimiento/api/respuestasDelMapa';
 import { EJE_POR_AREA } from '../../mapa-renacimiento/tipos';
 import type { EjeObjetivo } from '../types/objetivos.types';
 
@@ -20,15 +20,31 @@ import type { EjeObjetivo } from '../types/objetivos.types';
  * Es una sola lectura al montar y no se refresca sola: la prioridad cambia dentro del Mapa, que es
  * una pantalla completa, y al volver de ahí el Plan se recarga entero.
  */
-export function usePrioridadPrincipal(): { ejePrincipal: EjeObjetivo | null; cargando: boolean } {
-  const [ejePrincipal, setEjePrincipal] = useState<EjeObjetivo | null>(null);
+export interface PrioridadYEscala {
+  ejePrincipal: EjeObjetivo | null;
+  /** La escala 1-10 de Relaciones. Viaja acá porque sale de la MISMA lectura que la prioridad. */
+  relacionesBase: number | null;
+  relacionesMeta: number | null;
+  cargando: boolean;
+}
+
+export function usePrioridadPrincipal(): PrioridadYEscala {
+  const [estado, setEstado] = useState<Omit<PrioridadYEscala, 'cargando'>>({
+    ejePrincipal: null,
+    relacionesBase: null,
+    relacionesMeta: null,
+  });
   const [cargando, setCargando] = useState(true);
 
   useEffect(() => {
     let vigente = true;
-    void leerPrioridad().then(area => {
+    void leerResumenDelMapa().then(resumen => {
       if (!vigente) return;
-      setEjePrincipal(area ? EJE_POR_AREA[area] : null);
+      setEstado({
+        ejePrincipal: resumen.prioridad ? EJE_POR_AREA[resumen.prioridad] : null,
+        relacionesBase: resumen.relacionesBase,
+        relacionesMeta: resumen.relacionesMeta,
+      });
       setCargando(false);
     });
     return () => {
@@ -36,7 +52,7 @@ export function usePrioridadPrincipal(): { ejePrincipal: EjeObjetivo | null; car
     };
   }, []);
 
-  return { ejePrincipal, cargando };
+  return { ...estado, cargando };
 }
 
 /**

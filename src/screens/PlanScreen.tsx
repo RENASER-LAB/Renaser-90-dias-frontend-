@@ -44,7 +44,7 @@ import { useRocasMaestras } from '../features/objetivos/hooks/useRocasMaestras';
 import type { EjeObjetivo } from '../features/objetivos/types/objetivos.types';
 import { EJES, ETIQUETA_EJE } from '../features/objetivos/types/objetivos.types';
 import { conPrincipalPrimero, usePrioridadPrincipal } from '../features/objetivos/hooks/usePrioridadPrincipal';
-import { cifraDelObjetivo } from '../features/objetivos/utils/cifraDelObjetivo';
+import { cifraDeEscala, cifraDelObjetivo, primeraClausula } from '../features/objetivos/utils/cifraDelObjetivo';
 import { etiquetaDelMes, mesDe, semanaDe } from '../features/objetivos/utils/periodoDelPrograma';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
 
@@ -453,7 +453,7 @@ export default function PlanScreen() {
    * primero**. Mientras no haya prioridad guardada, `conPrincipalPrimero` devuelve el orden de
    * siempre, así que quien hizo el Mapa antes de que esto existiera no ve ningún cambio raro.
    */
-  const { ejePrincipal } = usePrioridadPrincipal();
+  const { ejePrincipal, relacionesBase, relacionesMeta } = usePrioridadPrincipal();
   const ejesOrdenados = useMemo(() => conPrincipalPrimero(EJES, ejePrincipal), [ejePrincipal]);
 
   /** Abre la vista de Objetivos en el eje pedido. Un solo camino para las tres tarjetas. */
@@ -913,7 +913,11 @@ export default function PlanScreen() {
                 const roca = rocaDeEje(eje);
                 const definido = Boolean(roca?.objetivo?.trim());
                 const esPrincipal = eje === ejePrincipal;
-                const cifra = cifraDelObjetivo(roca);
+                /* Relaciones no tiene meta cuantitativa en su Roca —su escala 1-10 no es una
+                   unidad de negocio— asi que su cifra sale de las respuestas del Mapa. Sin ellas
+                   (quien lo recorrio antes del 2026-09-14) cae al texto, como antes. */
+                const cifra =
+                  eje === 'RELACIONES' ? cifraDeEscala(relacionesBase, relacionesMeta) : cifraDelObjetivo(roca);
                 const avance = roca?.porcentaje ?? null;
                 return (
                   <Pressable
@@ -986,7 +990,7 @@ export default function PlanScreen() {
                            negocio— se muestra el objetivo en dos líneas. Decisión del dueño el
                            2026-09-14: antes que inventar una barra de avance sin con qué medirla. */
                         <Text style={[t.body, { color: c.textStrong, fontSize: 13.5, lineHeight: 19 }]} numberOfLines={2}>
-                          {roca!.objetivo}
+                          {primeraClausula(roca!.objetivo)}
                         </Text>
                       )}
 

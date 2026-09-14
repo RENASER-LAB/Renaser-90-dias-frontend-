@@ -71,18 +71,47 @@ export async function guardarPrioridad(area: Area): Promise<boolean> {
  * prioridad no es una falla.
  */
 export async function leerPrioridad(): Promise<Area | null> {
+  return (await leerResumenDelMapa()).prioridad;
+}
+
+/** Lo que Plan necesita del Mapa. Ver {@link leerResumenDelMapa}. */
+export interface ResumenDelMapa {
+  prioridad: Area | null;
+  /** La escala 1-10 de Relaciones: de dónde partió y a dónde va. `null` si no la contestó. */
+  relacionesBase: number | null;
+  relacionesMeta: number | null;
+}
+
+/**
+ * Lo que Plan necesita del Mapa, en **una sola lectura**.
+ *
+ * Son dos cosas que no tienen nada que ver entre sí —la prioridad y la escala de Relaciones— y
+ * viajan juntas por un motivo práctico: salen del mismo `GET /onboarding/answers?flow=mapa_dia7`.
+ * Pedirlas por separado serían dos requests idénticas cada vez que alguien abre el Plan.
+ *
+ * **Por qué la escala de Relaciones sale de acá y no de la Roca Maestra.** Ese objetivo viaja a
+ * `rocks` sin meta cuantitativa a propósito (un puntaje de 1 a 10 no es una unidad de negocio, y
+ * mezclarlo con kilos o soles rompería el porcentaje). Así que este es el **único** lugar donde
+ * sus dos números quedan guardados — y solo desde que el Mapa los manda, el 2026-09-14.
+ *
+ * Todo `null` ante cualquier fallo: no tener estos datos no es un error, es el estado normal de
+ * quien recorrió el Mapa antes de que esto se cableara.
+ */
+export async function leerResumenDelMapa(): Promise<ResumenDelMapa> {
+  const vacio: ResumenDelMapa = { prioridad: null, relacionesBase: null, relacionesMeta: null };
   try {
     const agrupadas = await onboardingApi.obtenerRespuestas(FLUJO);
+    const resumen = { ...vacio };
     for (const seccion of agrupadas.sections) {
-      for (const respuesta of seccion.answers) {
-        if (respuesta.questionKey === CLAVE_PRIORIDAD && esArea(respuesta.textValue)) {
-          return respuesta.textValue;
-        }
+      for (const r of seccion.answers) {
+        if (r.questionKey === CLAVE_PRIORIDAD && esArea(r.textValue)) resumen.prioridad = r.textValue;
+        if (r.questionKey === 'map_relations_baseline_scale') resumen.relacionesBase = r.scaleValue;
+        if (r.questionKey === 'map_relations_target_scale') resumen.relacionesMeta = r.scaleValue;
       }
     }
-    return null;
+    return resumen;
   } catch {
-    return null;
+    return vacio;
   }
 }
 
