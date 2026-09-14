@@ -1,6 +1,7 @@
 import { obtenerCatalogoPreguntas } from '../../onboarding/data/catalogoPreguntas';
 import * as onboardingApi from '../../onboarding/api/onboardingApi';
-import type { Area, DiaHito, Hito } from '../tipos';
+import type { TipoPreguntaOnboarding } from '../../onboarding/types/onboarding.types';
+import type { Area, DiaHito, MapaRenacimiento } from '../tipos';
 import { AREAS } from '../tipos';
 
 /**
@@ -85,44 +86,131 @@ export async function leerPrioridad(): Promise<Area | null> {
   }
 }
 
+
 /* ------------------------------------------------------------------------------------------------
- * Los nueve hitos (V08)
+ * El resto del Mapa: los tres objetivos completos, los nueve hitos y el cierre
+ *
+ * Son 36 respuestas que hasta el 2026-09-14 morían en el AsyncStorage del teléfono. Las preguntas
+ * estaban sembradas por la V41 desde el primer día; lo que faltaba era que alguien las contestara.
  * ---------------------------------------------------------------------------------------------- */
 
+/** Una respuesta lista para resolver su id y salir. El `tipo` se verifica contra el catálogo. */
+interface Entrada {
+  clave: string;
+  tipo: TipoPreguntaOnboarding;
+  textValue?: string;
+  scaleValue?: number;
+  booleanValue?: boolean;
+}
+
+/** Texto y selección única: en blanco NO se manda. Una casilla sin llenar no es "respondió: nada". */
+function texto(clave: string, tipo: TipoPreguntaOnboarding, valor: string | null | undefined): Entrada | null {
+  const v = (valor ?? '').trim();
+  return v ? { clave, tipo, textValue: v } : null;
+}
+
+/** Escala 1-10 (Relaciones). `null` es "todavía no eligió", y eso tampoco se manda. */
+function escala(clave: string, valor: number | null | undefined): Entrada | null {
+  if (valor === null || valor === undefined || !Number.isFinite(valor)) return null;
+  return { clave, tipo: 'ESCALA', scaleValue: Math.round(Math.max(1, Math.min(10, valor))) };
+}
+
 /**
- * El segmento que usa la clave del catálogo para cada área. **No coincide con el nombre del área**
- * y por eso vive en una tabla explícita: la V41 nombró las preguntas en inglés
- * (`map_milestone_health_30`) mientras el modelo de pantalla habla en castellano (`salud`).
- * Derivarlo con un `slice` o un `replace` sería adivinar; `negocio_dinero` → `business` no sale de
- * ninguna regla.
+ * Casilla. **`false` SÍ se manda**, y es la diferencia importante con las de arriba.
+ *
+ * "No edité la meta a mano" y "no me comprometo al seguimiento" son respuestas de verdad, no
+ * campos vacíos. Saltearlas dejaría a `map_health_goal_edited` sin fila y nadie podría distinguir
+ * "dijo que no" de "nunca llegó a esa pantalla".
  */
+function casilla(clave: string, valor: boolean | null | undefined): Entrada | null {
+  return valor === null || valor === undefined ? null : { clave, tipo: 'CASILLA', booleanValue: valor };
+}
+
 const SEGMENTO_POR_AREA: Record<Area, string> = {
   salud: 'health',
   negocio_dinero: 'business',
   relaciones: 'relations',
 };
 
-/** `map_milestone_business_60`. Las nueve claves se arman, no se escriben a mano nueve veces. */
+/** `map_milestone_business_60`. Las nueve claves se arman; no se escriben a mano nueve veces. */
 function claveDeHito(area: Area, dia: DiaHito): string {
   return `map_milestone_${SEGMENTO_POR_AREA[area]}_${dia}`;
 }
 
 /**
- * Guarda los hitos que tengan texto. Son nueve respuestas independientes —tres días por cada una
- * de las tres áreas— y por eso van en `POST /onboarding/answers` una por una: el endpoint guarda
- * de a una, y así un fallo en el séptimo no se lleva puestos los seis anteriores.
+ * Todas las respuestas del Mapa, en el orden en que la persona las fue dando.
  *
- * **Se saltean los vacíos.** Un hito en blanco no es un dato: es una casilla que la persona no
- * llenó. Mandar la cadena vacía escribiría una respuesta que dice "respondió: nada", que es
- * distinto de no haber respondido y ensucia cualquier lectura posterior.
- *
- * No lanza, por el mismo motivo que {@link guardarPrioridad}: se la llama al activar, cuando las
- * Rocas y los hábitos ya se crearon, y un fallo de red acá no debe hacer parecer que la activación
- * falló. Devuelve cuántos se guardaron, para quien quiera registrarlo.
+ * Los valores de las cuatro preguntas de selección única (`result_type`, `period`, `bond`) son
+ * **exactamente** las mismas cadenas que los tipos de `tipos.ts`. Verificado contra
+ * `opciones_pregunta` el 2026-09-14: los cuatro juegos coinciden uno a uno. Importa porque el
+ * backend NO valida que el valor esté entre las opciones — un valor de más se guardaría callado.
  */
-export async function guardarHitos(hitos: Hito[]): Promise<number> {
-  const conTexto = hitos.filter(h => h.valor.trim().length > 0);
-  if (conTexto.length === 0) return 0;
+function entradasDelMapa(mapa: MapaRenacimiento): Entrada[] {
+  const s = mapa.salud;
+  const n = mapa.negocio;
+  const r = mapa.relaciones;
+
+  const posibles: (Entrada | null)[] = [
+    texto('map_priority_area', 'SELECCION_UNICA', mapa.prioridad),
+
+    // V03 · cuerpo y salud
+    texto('map_health_result_type', 'SELECCION_UNICA', s.tipoResultado),
+    texto('map_health_baseline', 'TEXTO', s.lineaBase),
+    texto('map_health_target_day90', 'TEXTO', s.resultadoDia90),
+    texto('map_health_unit', 'TEXTO', s.unidad),
+    texto('map_health_evidence', 'TEXTO', s.evidencia),
+    texto('map_health_reason', 'AREA_TEXTO', s.motivo),
+    texto('map_health_goal_text', 'AREA_TEXTO', s.metaRedactada),
+    casilla('map_health_goal_edited', s.metaEditadaAMano),
+
+    // V04 · negocio y dinero
+    texto('map_business_result_type', 'SELECCION_UNICA', n.tipoResultado),
+    texto('map_business_baseline', 'TEXTO', n.lineaBase),
+    texto('map_business_target_day90', 'TEXTO', n.resultadoDia90),
+    texto('map_business_currency', 'TEXTO', n.moneda),
+    texto('map_business_period', 'SELECCION_UNICA', n.periodo),
+    texto('map_business_evidence', 'TEXTO', n.evidencia),
+    texto('map_business_reason', 'AREA_TEXTO', n.motivo),
+    texto('map_business_goal_text', 'AREA_TEXTO', n.metaRedactada),
+    casilla('map_business_goal_edited', n.metaEditadaAMano),
+
+    // V05 · relaciones. Su línea base y su meta son una ESCALA de 1 a 10, no un texto con unidad:
+    // por eso este objetivo viaja sin meta cuantitativa a la Roca Maestra y acá sí conserva sus
+    // dos números, que es el único lugar donde quedan guardados.
+    texto('map_relations_bond', 'SELECCION_UNICA', r.vinculo),
+    escala('map_relations_baseline_scale', r.situacionActual),
+    escala('map_relations_target_scale', r.resultadoDia90),
+    texto('map_relations_observable_change', 'AREA_TEXTO', r.cambioObservable),
+    texto('map_relations_evidence', 'TEXTO', r.evidencia),
+    texto('map_relations_reason', 'AREA_TEXTO', r.motivo),
+    texto('map_relations_goal_text', 'AREA_TEXTO', r.metaRedactada),
+    casilla('map_relations_goal_edited', r.metaEditadaAMano),
+
+    // V08 · los nueve hitos
+    ...mapa.hitos.map(h => texto(claveDeHito(h.area, h.dia), 'TEXTO', h.valor)),
+
+    // V09 · retorno, y V10 · compromiso de seguimiento
+    texto('map_return_protocol', 'AREA_TEXTO', mapa.retorno),
+    casilla('map_followup_commitment', mapa.compromisoSeguimiento),
+  ];
+
+  return posibles.filter((e): e is Entrada => e !== null);
+}
+
+/**
+ * Manda las respuestas una por una y devuelve cuántas entraron.
+ *
+ * **Una por una y no en lote** porque el endpoint guarda de a una, y porque son hechos sueltos: un
+ * fallo en la respuesta 20 no tiene por qué llevarse puestas las 19 anteriores. Cada una es un
+ * upsert por `(usuario, pregunta)`, así que reintentar la tanda completa es seguro.
+ *
+ * **No lanza nunca.** Se la llama al activar, después de que las Rocas Maestras y los hábitos ya
+ * se crearon: un fallo de red acá no debe hacer parecer que la activación falló, porque lo que
+ * importaba ya está hecho. Lo que se pierde es la memoria entre dispositivos, no el trabajo.
+ */
+export async function guardarRespuestasDelMapa(mapa: MapaRenacimiento): Promise<number> {
+  const entradas = entradasDelMapa(mapa);
+  if (entradas.length === 0) return 0;
 
   let catalogo;
   try {
@@ -131,20 +219,26 @@ export async function guardarHitos(hitos: Hito[]): Promise<number> {
     return 0;
   }
 
-  let guardados = 0;
-  for (const hito of conTexto) {
-    const clave = claveDeHito(hito.area, hito.dia);
-    const resolucion = catalogo.idDe(clave, 'TEXTO');
+  let guardadas = 0;
+  for (const entrada of entradas) {
+    const resolucion = catalogo.idDe(entrada.clave, entrada.tipo);
     if (!resolucion.ok) {
-      console.warn(`[mapa] no se pudo guardar el hito ${clave}: ${resolucion.motivo}`);
+      // Mandarla con un id inventado la guardaría bajo OTRA pregunta sin dar error, que es el
+      // fallo silencioso que `catalogoPreguntas` existe para impedir.
+      console.warn(`[mapa] no se pudo guardar ${entrada.clave}: ${resolucion.motivo}`);
       continue;
     }
     try {
-      await onboardingApi.guardarRespuesta({ questionId: resolucion.id, textValue: hito.valor.trim() });
-      guardados += 1;
+      await onboardingApi.guardarRespuesta({
+        questionId: resolucion.id,
+        textValue: entrada.textValue,
+        scaleValue: entrada.scaleValue,
+        booleanValue: entrada.booleanValue,
+      });
+      guardadas += 1;
     } catch {
-      // Se sigue con el resto: nueve hitos son nueve hechos sueltos, no una transacción.
+      // Se sigue con el resto.
     }
   }
-  return guardados;
+  return guardadas;
 }
