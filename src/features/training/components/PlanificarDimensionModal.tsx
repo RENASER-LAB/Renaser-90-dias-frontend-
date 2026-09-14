@@ -30,6 +30,7 @@ import type { HabitItem } from '../../../screens/TrainingScreen';
 import {
   antelacionesAMostrar,
   etiquetaDeAntelacion,
+  MAXIMO_MINUTOS_ANTELACION,
   minutosDesdeTexto,
 } from '../../habits/utils/etiquetaDeAntelacion';
 
@@ -522,6 +523,21 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
       prev.includes(minutos) ? prev.filter(x => x !== minutos) : [...prev, minutos].sort((a, b) => b - a),
     );
   };
+
+  /**
+   * Qué decirle a la persona sobre lo que escribió, o `null` si no hay nada que decir.
+   *
+   * Vacío no es un error: es el estado de reposo del campo. Lo que sí se explica es un número
+   * fuera de rango, porque el botón deshabilitado por sí solo no dice por qué — y esa fue la queja
+   * concreta del dueño. Las letras no aparecen acá: se filtran al escribir y no pueden existir.
+   */
+  const avisoAntelacion: string | null = (() => {
+    const texto = antelacionPropia.trim();
+    if (!texto) return null;
+    if (minutosDesdeTexto(texto) !== null) return null;
+    if (Number(texto) === 0) return 'Para avisar a la hora exacta usa la pastilla "A la hora".';
+    return `Escribe entre 1 y ${MAXIMO_MINUTOS_ANTELACION} minutos (${MAXIMO_MINUTOS_ANTELACION / 60} h).`;
+  })();
 
   /**
    * Añade la antelación escrita a mano. Queda ENCENDIDA al añadirla: nadie escribe un número para
@@ -1198,7 +1214,11 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                         la primera versión lo dejó invisible. */}
                     <TextInput
                       value={antelacionPropia}
-                      onChangeText={setAntelacionPropia}
+                      /* Se filtran los no-dígitos al escribir en vez de avisar después: en WEB
+                         —donde están los usuarios de iOS— `number-pad` no impide nada, es solo
+                         una sugerencia de teclado al móvil. Así una letra no llega ni a existir y
+                         no hace falta un mensaje para algo que no puede pasar. */
+                      onChangeText={texto => setAntelacionPropia(texto.replace(/[^0-9]/g, ''))}
                       onSubmitEditing={agregarAntelacionPropia}
                       keyboardType="number-pad"
                       returnKeyType="done"
@@ -1239,6 +1259,16 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                       </Text>
                     </Pressable>
                   </View>
+                  {/* El aviso solo existe cuando HAY error. Una línea permanente de ayuda robaría
+                      alto al botón de guardar, que ya se quedó fuera de la hoja una vez. */}
+                  {avisoAntelacion !== null && (
+                    <Text
+                      accessibilityRole="alert"
+                      style={[t.micro, { color: c.danger, fontSize: 10.5, marginTop: 6 }]}
+                    >
+                      {avisoAntelacion}
+                    </Text>
+                  )}
                 </>
               )}
 

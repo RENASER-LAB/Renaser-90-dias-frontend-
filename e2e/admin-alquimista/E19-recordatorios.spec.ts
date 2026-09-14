@@ -39,10 +39,16 @@ type Preferencia = {
 type Preferencias = { habits: Preferencia[] };
 
 async function abrirPlanificadorDe(page: import('@playwright/test').Page, habito: RegExp) {
-  /* La guía de SER se cierra ANTES de pulsar y no después: es un overlay a pantalla completa que
-     puede volver a montarse cuando terminan de cargar los datos, y tapa la barra de pestañas. El
-     elemento se encontraba y el clic nunca llegaba a "visible, enabled and stable" — el mismo
-     síntoma que documentan `abrirSeccion` y `abrirAdministracion`. */
+  /* Dos cosas pueden estar tapando la barra de pestañas, y las dos dan el MISMO síntoma —el
+     elemento se encuentra y el clic nunca llega a "visible, enabled and stable"—:
+       1. La hoja del planificador, si quedó abierta de una vuelta anterior. Guardar no la cierra.
+       2. La guía de SER, un overlay a pantalla completa que puede re-montarse al cargar los datos.
+     Se quitan las dos antes de pulsar, igual que hacen `abrirSeccion` y `abrirAdministracion`. */
+  const cerrarHoja = page.getByText(/^cerrar$/i).first();
+  if (await cerrarHoja.isVisible({ timeout: 2_000 }).catch(() => false)) {
+    await cerrarHoja.click();
+    await expect(cerrarHoja).toBeHidden({ timeout: 10_000 });
+  }
   await cerrarGuiaDelAsistente(page);
   await page.getByRole('tab', { name: /^training$/i }).click();
   const dimension = page.getByText(/^cuerpo$/i).first();
@@ -56,23 +62,7 @@ async function abrirPlanificadorDe(page: import('@playwright/test').Page, habito
   await fila.click();
 }
 
-/*
- * SIN TERMINAR — marcado `fixme` a propósito, no borrado.
- *
- * Lo que YA demuestra (verificado en la captura de su propio fallo, `test-failed-1.png`): el
- * recorrido llega hasta el final y el guardado FUNCIONA — la app responde "DESPERTAR queda a las
- * 06:00 … El recordatorio quedó guardado".
- *
- * Dónde se atasca: ese diálogo de confirmación se queda encima de todo y su botón OK no responde
- * a `getByRole('button', { name: /ok/i })`, así que no hay forma de cerrarlo y el clic siguiente
- * —volver a abrir el planificador— caduca. Hace falta mirar cómo expone ese botón el componente
- * de diálogo en react-native-web y darle una etiqueta accesible estable.
- *
- * Se deja en `fixme` y no en rojo porque un caso que falla por su propio andamiaje, y no por lo
- * que mide, entrena al equipo a ignorar la suite. Y no se borra porque lo que mide —que el
- * servidor se quede con la antelación MAYOR— es un invariante real y sin cubrir.
- */
-test.fixme('E19 · una antelación escrita a mano se guarda, y el servidor se queda con la mayor', async ({
+test('E19 · una antelación escrita a mano se guarda, y el servidor se queda con la mayor', async ({
   entrarComo,
   api,
 }) => {
@@ -120,10 +110,9 @@ test.fixme('E19 · una antelación escrita a mano se guarda, y el servidor se qu
        texto cambia según si el horario se difiere al día siguiente o no. Exigirlo convertiría un
        cambio de copy en un fallo de los recordatorios. */
     const ok = page.getByRole('button', { name: /^ok$/i }).first();
-    if (await ok.isVisible({ timeout: 10_000 }).catch(() => false)) {
-      await ok.click();
-      await expect(ok).toBeHidden({ timeout: 10_000 });
-    }
+    await expect(ok).toBeVisible({ timeout: 15_000 });
+    await ok.click();
+    await expect(ok).toBeHidden({ timeout: 10_000 });
 
     /* El servidor se queda con la MAYOR de las antelaciones. 45 es mayor que las sugeridas, así
        que si el guardado mandara otra cosa —la primera, la última, la que se tocó— este número
