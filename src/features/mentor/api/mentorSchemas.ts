@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { radarSchemas } from '../../radar/api/radarSchemas';
+
 /**
  * Validación de los endpoints que YA existen y que un mentor puede llamar hoy.
  *
@@ -144,6 +146,100 @@ export const semanaAlumnoSchema = z
   })
   .passthrough();
 
+/**
+ * `HabitosDelAprendiz` — `GET /api/v1/mentor/groups/{g}/learners/{u}/habits`.
+ *
+ * Es la MISMA forma que devuelve `GET /api/v1/admin/trainees/{traineeId}/habits`: la lectura
+ * administrativa mira a la persona y ésta mira al grupo, pero el cuerpo es idéntico. No hay
+ * todavía ningún esquema para esa respuesta en la app —ninguna pantalla la consumía—, así que
+ * éste es el primero; si mañana se conecta la vista de administración, se reusa desde acá en
+ * vez de escribir un segundo.
+ *
+ * ## Qué es nullable y por qué
+ *
+ * `personalTitle`, `pendingScheduleChange`, `unlock`, `reminderEnabled`, `reminderMinutesBefore`
+ * y `chosenWeeklyDate` los declara nulos el propio contrato.
+ *
+ * `triggerTime` y `limitTime` se aceptan nulos aunque el contrato los muestre con valor: el
+ * endpoint hermano que la app ya consume (`GET /api/v1/habit-preferences`, ver
+ * `habits/api/habitsSchemas.ts`) los devuelve `nullable`, y un hábito sin hora de cierre es un
+ * caso real —no vence dentro del día—. Un esquema que los exigiera tiraría la sección entera
+ * por un campo que la pantalla ya sabe mostrar como "—".
+ */
+export const habitosDelAlumnoSchema = z
+  .object({
+    traineeId: z.string(),
+    /** Día de programa del APRENDIZ, calculado en su zona. No es el del mentor ni el del server. */
+    programDay: z.number(),
+    /** `yyyy-MM-dd`: qué día es hoy PARA ÉL. */
+    localDate: z.string(),
+    /** Zona IANA del aprendiz (`America/Lima`). Las horas de abajo se leen en ESA zona. */
+    timeZone: z.string(),
+    /** Cuántos cambios de horario le quedan en el período. `remaining` lo calcula el servidor. */
+    scheduleEdits: z
+      .object({
+        used: z.number(),
+        remaining: z.number(),
+        limit: z.number(),
+        /** DAY | WEEK | MONTH — el período sobre el que se cuenta el cupo. */
+        period: z.string(),
+      })
+      .passthrough(),
+    habits: z.array(
+      z
+        .object({
+          habitId: z.string(),
+          catalogTitle: z.string(),
+          /** El nombre que le puso el aprendiz. `null` = no lo renombró. */
+          personalTitle: z.string().nullish(),
+          isPersonal: z.boolean(),
+          /** CHECKBOX | JOURNALING | RATING | BLOCKING. Se valida; hoy no se muestra. */
+          habitType: z.string(),
+          /** BODY | MIND | SPIRIT | CONSCIENCE. */
+          category: z.string(),
+          triggerTime: z.string().nullish(),
+          limitTime: z.string().nullish(),
+          /** `true` = tiene horario propio; `false` = el del catálogo. */
+          customSchedule: z.boolean(),
+          reminderEnabled: z.boolean().nullish(),
+          reminderMinutesBefore: z.number().nullish(),
+          /**
+           * El horario nuevo que YA pidió y todavía no rige: cuando la ventana del día ya
+           * arrancó, el backend no rechaza el cambio, lo difiere ("no se improvisa el día").
+           */
+          pendingScheduleChange: z
+            .object({
+              triggerTime: z.string().nullish(),
+              limitTime: z.string().nullish(),
+              effectiveDate: z.string(),
+            })
+            .passthrough()
+            .nullish(),
+          /** En qué día de programa se le abre este hábito, y si ese día lo eligió él. */
+          unlock: z
+            .object({ programDay: z.number(), chosenByTrainee: z.boolean() })
+            .passthrough()
+            .nullish(),
+          /** `true` = es semanal y el día lo elige el aprendiz. */
+          weeklyDayChoice: z.boolean(),
+          /** `yyyy-MM-dd` del día que eligió, o `null` si todavía no eligió ninguno. */
+          chosenWeeklyDate: z.string().nullish(),
+        })
+        .passthrough(),
+    ),
+  })
+  .passthrough();
+
+/**
+ * `GET /api/v1/mentor/groups/{g}/learners/{u}/radar` — el Código Renaser de un aprendiz.
+ *
+ * **No se escribe un esquema nuevo a propósito.** La respuesta es exactamente la de
+ * `GET /api/v1/radar/history`, que la app ya consume en `features/radar`, así que se reusa el
+ * suyo: dos esquemas para la misma forma es la manera de que dentro de seis meses uno valide
+ * un campo que el otro no, y que nadie sepa cuál de los dos está bien.
+ */
+export const radarDelAlumnoSchema = radarSchemas.historial;
+
 /** `EvaluacionPropia` — `GET /api/v1/mentor/me/evaluation?month=YYYY-MM`. */
 export const evaluacionPropiaSchema = z
   .object({
@@ -254,6 +350,8 @@ export type ContextoMentorApi = z.infer<typeof contextoMentorSchema>;
 export type SemanaAlumnoApi = z.infer<typeof semanaAlumnoSchema>;
 export type DiaAlumnoApi = SemanaAlumnoApi['dias'][number];
 export type ObligacionDiaApi = DiaAlumnoApi['obligaciones'][number];
+export type HabitosAlumnoApi = z.infer<typeof habitosDelAlumnoSchema>;
+export type HabitoDelAlumnoApi = HabitosAlumnoApi['habits'][number];
 export type EvaluacionPropiaApi = z.infer<typeof evaluacionPropiaSchema>;
 export type RankingGruposApi = z.infer<typeof rankingGruposSchema>;
 export type AsignacionMentorApi = ContextoMentorApi['assignments'][number];

@@ -5,6 +5,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Icon } from '../../../components/Icon';
 import { Aparicion } from '../../../components/Aparicion';
 import { MicroLabel } from '../../../components/ui';
+import { CodigoRenaserDelAlumno } from '../components/CodigoRenaserDelAlumno';
+import { HabitosDelAlumno } from '../components/HabitosDelAlumno';
 import { RejillaSemanal } from '../components/RejillaSemanal';
 import { irAPestana } from '../../../navigation/navegacionRef';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
@@ -391,6 +393,19 @@ export function AlumnoScreen({
             )}
           </View>
         </Aparicion>
+
+        {/*
+          Las dos lecturas que explican lo de arriba, en el orden en que se necesitan: primero
+          CÓMO tiene armado su plan (horarios, recordatorios, desbloqueos), después QUÉ escribió
+          hora por hora en sus primeros días.
+
+          Cada una se dibuja sola o no se dibuja: piden sus datos por su cuenta y, mientras el
+          backend no las sirva, devuelven `null` sin tocar nada de lo que ya funciona en esta
+          pantalla. Van al final a propósito — son lectura larga, y lo que el mentor necesita
+          para decidir a quién escribirle ya está resuelto más arriba.
+        */}
+        <HabitosDelAlumno grupoId={grupoId} alumnoId={alumno.participanteId} />
+        <CodigoRenaserDelAlumno grupoId={grupoId} alumnoId={alumno.participanteId} />
 
       </ScrollView>
     </SafeAreaView>

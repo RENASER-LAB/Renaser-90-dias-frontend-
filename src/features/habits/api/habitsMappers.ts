@@ -30,6 +30,22 @@ const CATEGORIA: Record<string, { tag: string; tagColor: string; icon: string }>
 
 const CATEGORIA_POR_DEFECTO = { tag: 'Hábito', tagColor: '#94A3B8', icon: '🎯' };
 
+/**
+ * El nombre en castellano de una categoría, o `null` si no es ninguna de las cuatro.
+ *
+ * Sale del MISMO `CATEGORIA` de acá arriba a propósito: cuando la pantalla del mentor necesitó
+ * mostrar la dimensión de cada hábito, la alternativa era copiar las cuatro etiquetas a otro
+ * archivo — y esa copia es la forma exacta en que una quinta categoría termina traducida en un
+ * lado y en inglés en el otro.
+ *
+ * Devuelve `null` y no `'Hábito'` para una categoría desconocida: quien pregunta por la etiqueta
+ * puede decidir no mostrar nada, que es mejor que rotular con una palabra que no significa nada.
+ */
+export function etiquetaDeCategoria(categoria: string | null | undefined): string | null {
+  if (!categoria) return null;
+  return CATEGORIA[categoria]?.tag ?? null;
+}
+
 /** `HH:mm:ss` → `HH:mm`. Nulo o vacío quedan como cadena vacía: el diseño ya contempla ese caso. */
 export function aHoraCorta(hora: string | null | undefined): string {
   if (!hora) {

@@ -1,9 +1,12 @@
 import { ApiError, apiFetch } from '../../../services/http/apiClient';
+import type { HistorialRadarApi } from '../../radar/types/radar.types';
 import type { AlumnoCelula, MiCelula } from '../types/mentor.types';
 import {
   aprendicesGrupoSchema,
   contextoMentorSchema,
   evaluacionPropiaSchema,
+  habitosDelAlumnoSchema,
+  radarDelAlumnoSchema,
   rankingGruposSchema,
   semanaAlumnoSchema,
   validarRespuesta,
@@ -11,6 +14,7 @@ import {
   type AsignacionMentorApi,
   type ContextoMentorApi,
   type EvaluacionPropiaApi,
+  type HabitosAlumnoApi,
   type RankingGruposApi,
   type SemanaAlumnoApi,
 } from './mentorSchemas';
@@ -179,6 +183,59 @@ export async function obtenerSemanaDeAlumno(
     await apiFetch<unknown>(ruta),
     'GET /api/v1/mentor/groups/{g}/learners/{u}/progress',
   );
+}
+
+/**
+ * Cómo tiene configurados sus hábitos este aprendiz: horarios, recordatorios, desbloqueos y el
+ * cupo de cambios de horario que le queda.
+ *
+ * Es la foto de su PLAN, no de su cumplimiento — eso lo dice `obtenerSemanaDeAlumno`. Las dos
+ * cosas se miran juntas y significan distinto: un hábito sin cumplir a las 6 de la mañana no es
+ * lo mismo si su hora de disparo son las 05:00 que si son las 22:00.
+ *
+ * Las horas vienen en la zona del APRENDIZ (`timeZone` de la respuesta), no en la del mentor.
+ * Por eso la pantalla las muestra tal cual llegan y dice de quién es esa zona, en vez de
+ * convertirlas al huso del teléfono y correrlas una o dos horas sin avisar.
+ */
+export async function obtenerHabitosDeAlumno(
+  grupoId: string,
+  alumnoId: string,
+): Promise<HabitosAlumnoApi> {
+  const ruta =
+    `/api/v1/mentor/groups/${encodeURIComponent(grupoId)}/learners/${encodeURIComponent(alumnoId)}/habits`;
+
+  return validarRespuesta<HabitosAlumnoApi>(
+    habitosDelAlumnoSchema,
+    await apiFetch<unknown>(ruta),
+    'GET /api/v1/mentor/groups/{g}/learners/{u}/habits',
+  );
+}
+
+/**
+ * El Código Renaser de un aprendiz: sus registros horarios de los días 1 al 7.
+ *
+ * Paginado por cursor, de lo más nuevo a lo más viejo, igual que `/api/v1/radar/history`.
+ * `nextCursor` se normaliza a `null` —nunca `undefined`— para que quien llame tenga una sola
+ * forma de preguntar si hay más páginas.
+ *
+ * Pasado el día 7 lo normal es que no haya nada: el Código Renaser se apaga el día 8 y no
+ * vuelve (`radar/config/configRadar.ts`). Una lista vacía acá es el caso esperado, no un fallo.
+ */
+export async function obtenerRadarDeAlumno(
+  grupoId: string,
+  alumnoId: string,
+  cursor?: string | null,
+): Promise<HistorialRadarApi> {
+  const ruta =
+    `/api/v1/mentor/groups/${encodeURIComponent(grupoId)}/learners/${encodeURIComponent(alumnoId)}/radar` +
+    (cursor ? `?cursor=${encodeURIComponent(cursor)}` : '');
+
+  const datos = validarRespuesta<HistorialRadarApi>(
+    radarDelAlumnoSchema,
+    await apiFetch<unknown>(ruta),
+    'GET /api/v1/mentor/groups/{g}/learners/{u}/radar',
+  );
+  return { entries: datos.entries, nextCursor: datos.nextCursor ?? null };
 }
 
 /**
