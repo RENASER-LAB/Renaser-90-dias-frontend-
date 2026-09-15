@@ -9,10 +9,16 @@ import { useTheme } from '../../../theme/ThemeContext';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
 import { cambiarRolDeUsuario, listarAprendices, listarStaff, mentoresDisponibles } from '../api/adminApi';
 import type { RolAsignable } from '../api/adminApi';
+import type { UsuarioStaffApi } from '../api/adminSchemas';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
 import { confirmar, avisar } from '../utils/dialogo';
 import { mensajeDeFallo } from '../utils/mensajes';
-import { personaDeStaff, ROLES_SOLO_EN_STAFF, type PersonaDelPadron } from '../utils/staff';
+import {
+  mentoresQueFaltan,
+  personaDeStaff,
+  ROLES_SOLO_EN_STAFF,
+  type PersonaDelPadron,
+} from '../utils/staff';
 
 const POR_PAGINA = 20;
 
@@ -24,6 +30,17 @@ const POR_PAGINA = 20;
  * sección dice cuántos hay en total, que es el aviso de que falta paginar.
  */
 const STAFF_POR_PAGINA = 50;
+
+/**
+ * Cuántos mentores se le piden al listado de staff.
+ *
+ * Más que los roles de conducción, y por una razón concreta: de esta consulta solo interesan los
+ * que `/admin/cells/mentores` no trajo —las cuentas que no están activas—, y vienen mezclados y
+ * ordenados por nombre entre todos los mentores. Una página corta podría dejar afuera justo al
+ * que se está buscando. 200 es el techo que valida el backend (`ListStaffCommand`: «size debe
+ * estar entre 1 y 200»); pasado eso, la sección avisa en vez de mostrarse completa.
+ */
+const MENTORES_POR_PAGINA = 200;
 
 /** Los cinco, con el nombre que usa la gente y no el del enum. */
 const ROLES: Array<{ clave: RolAsignable; etiqueta: string }> = [
@@ -147,7 +164,7 @@ function FilaDePersona({
  * | Sección | De dónde sale | Qué rol muestra |
  * |---|---|---|
  * | Staff | `GET /admin/staff?role=` (líder, admin, alquimista) | El que manda el servidor |
- * | Mentores | `GET /admin/cells/mentores` | MENTOR, deducido de la lista de origen |
+ * | Mentores | `GET /admin/cells/mentores` + `GET /admin/staff?role=MENTOR` | MENTOR |
  * | Aprendices | `GET /admin/trainees` | TRAINEE, deducido de la lista de origen |
  *
  * > **Corregido 2026-09-15.** Acá decía que *«el panel solo sabe listar dos roles»* y que ascender
@@ -157,9 +174,16 @@ function FilaDePersona({
  * > `role` de verdad y lista los cuatro roles de staff. La sección «Staff» lo consume y cierra la
  * > puerta. Las otras dos listas quedaron **intactas**.
  *
- * Las tres secciones son **disjuntas**: Staff pide solo los tres roles que ninguna otra trae, así
- * que nadie aparece dos veces con dos rótulos distintos — la forma más rápida de que alguien deje
- * de creerle a esta pantalla.
+ * > **Corregido 2026-09-15 (segunda vuelta).** La fila «Mentores» de la tabla decía solo
+ * > `GET /admin/cells/mentores`, y con eso la puerta seguía abierta por otro lado: ese listado
+ * > devuelve **únicamente mentores ACTIVOS**, así que suspender a un mentor lo borraba del panel
+ * > entero —Personas lista solo aprendices— y no había fila desde donde devolverle el rol. Ahora
+ * > la sección suma los que ese listado no trae, pedidos con `role=MENTOR` y sin filtro de estado.
+ *
+ * Las secciones siguen siendo **disjuntas**, pero ya no por rol: Staff pide los tres roles que
+ * ninguna otra trae, y en Mentores el cruce es por id (`mentoresQueFaltan`). Nadie aparece dos
+ * veces con dos rótulos distintos — la forma más rápida de que alguien deje de creerle a esta
+ * pantalla.
  *
  * Quedan además dos defensas, y ninguna es decorativa:
  *
@@ -182,6 +206,11 @@ export function StaffRolesScreen({ onVolver }: { onVolver: () => void }) {
   const [pagina, setPagina] = useState(0);
   const [aprendices, setAprendices] = useState<Persona[]>([]);
   const [mentores, setMentores] = useState<Persona[]>([]);
+  /* Crudo, sin mapear: recién al cruzarlo con `mentores` se sabe a quién falta mostrar, y ese
+     cruce necesita la respuesta entera, no una fila ya armada. */
+  const [mentoresDeStaff, setMentoresDeStaff] = useState<UsuarioStaffApi[]>([]);
+  /** Cuántos mentores dice el servidor que hay, para saber si la única página alcanzó. */
+  const [totalMentoresDeStaff, setTotalMentoresDeStaff] = useState<number | null>(null);
   const [staff, setStaff] = useState<Persona[]>([]);
   /** Cuántos hay en el servidor, para saber si la única página alcanzó. `null` = no se sabe. */
   const [totalStaff, setTotalStaff] = useState<number | null>(null);
@@ -247,27 +276,39 @@ export function StaffRolesScreen({ onVolver }: { onVolver: () => void }) {
   }, [pagina, busquedaAplicada]);
 
   /**
-   * Los tres roles de conducción, cada uno con su propia consulta.
+   * Todo lo que sale de `/admin/staff`: los tres roles de conducción **y** los mentores.
    *
-   * Son tres llamadas y no una sin filtro porque sin `role=` el endpoint devuelve **también** a
-   * los mentores, que ya tienen su sección: la persona aparecería dos veces en la misma pantalla.
+   * Una consulta por rol y no una sola sin filtro: sin `role=` la respuesta mezcla los cuatro
+   * roles en una misma página, y con `size` fijo un rol podría quedar cortado por otro. Cada
+   * consulta acota lo suyo, y la de MENTOR alimenta otra sección, no esta.
    *
-   * Va aparte de `cargar` a propósito. Si este listado falla, las otras dos secciones se ven
-   * igual y el error se dice **dentro de la sección Staff** — un fallo de un panel no puede
-   * arrastrar a los demás, que es el criterio que el resto de Administración ya sigue.
+   * Ninguna de las cuatro manda `status`, y de eso depende el arreglo: el backend aplica el
+   * filtro de estado **solo si el parámetro viene**, así que sin él trae también a las cuentas
+   * suspendidas — las que ningún otro listado del panel muestra.
+   *
+   * Va aparte de `cargar` a propósito. Si este listado falla, las otras secciones se ven igual y
+   * el error se dice **dentro de la sección que quedó incompleta** — un fallo de un panel no
+   * puede arrastrar a los demás, que es el criterio que el resto de Administración ya sigue.
    */
   const cargarStaff = useCallback(async () => {
     setCargandoStaff(true);
     setErrorStaff(null);
     try {
-      const paginas = await Promise.all(
-        ROLES_SOLO_EN_STAFF.map(rol => listarStaff({ rol, tamano: STAFF_POR_PAGINA })),
-      );
+      const [paginas, paginaMentores] = await Promise.all([
+        Promise.all(ROLES_SOLO_EN_STAFF.map(rol => listarStaff({ rol, tamano: STAFF_POR_PAGINA }))),
+        listarStaff({ rol: 'MENTOR', tamano: MENTORES_POR_PAGINA }),
+      ]);
       setStaff(paginas.flatMap(p => p.content).map(personaDeStaff));
+      /* Solo los tres de conducción: el total que se muestra abajo es el de la sección Staff, y
+         sumarle los mentores diría que faltan filas que están en otra sección. */
       setTotalStaff(paginas.reduce((suma, p) => suma + p.total, 0));
+      setMentoresDeStaff(paginaMentores.content);
+      setTotalMentoresDeStaff(paginaMentores.total);
     } catch (e) {
       setStaff([]);
       setTotalStaff(null);
+      setMentoresDeStaff([]);
+      setTotalMentoresDeStaff(null);
       setErrorStaff(mensajeDeFallo(e, 'No se pudo cargar el staff.'));
     } finally {
       setCargandoStaff(false);
@@ -284,12 +325,25 @@ export function StaffRolesScreen({ onVolver }: { onVolver: () => void }) {
     void cargar();
   }, [cargar]);
 
+  /**
+   * Los mentores de los grupos primero, y detrás los que ese listado no trae.
+   *
+   * El orden no es casual: lo habitual —mentores activos, con su grupo— se lee primero, y las
+   * cuentas suspendidas quedan al final, que es donde no estorban y donde igual se encuentran.
+   * Las dos fuentes llegan en momentos distintos, así que esto se recalcula cuando cambia
+   * cualquiera de las dos.
+   */
+  const todosLosMentores = useMemo(
+    () => [...mentores, ...mentoresQueFaltan(mentores.map(m => m.id), mentoresDeStaff)],
+    [mentores, mentoresDeStaff],
+  );
+
   /* Quien ya se cambió en esta visita se muestra ARRIBA y no repetido abajo: la lista de origen
      todavía puede traerlo mientras no se recargue, y verlo dos veces con roles distintos es la
      forma más rápida de perder la confianza en la pantalla. */
   const idsCambiados = useMemo(() => new Set(cambiados.map(p => p.id)), [cambiados]);
   const aprendicesVisibles = aprendices.filter(p => !idsCambiados.has(p.id));
-  const mentoresVisibles = mentores.filter(p => !idsCambiados.has(p.id));
+  const mentoresVisibles = todosLosMentores.filter(p => !idsCambiados.has(p.id));
   const staffVisible = staff.filter(p => !idsCambiados.has(p.id));
 
   const aplicar = async (persona: Persona, nuevo: RolAsignable) => {
@@ -370,9 +424,13 @@ export function StaffRolesScreen({ onVolver }: { onVolver: () => void }) {
               sobre una lista de 4 es la clase de detalle que hace dudar de toda la pantalla. Lo
               que el servidor dice que hay va abajo, y solo si no entró todo. */}
           <MicroLabel>Staff ({staffVisible.length})</MicroLabel>
+          {/* > **Corregido 2026-09-15.** Esto decía «Los mentores están más abajo, con su grupo».
+              La sección de abajo ahora también trae mentores suspendidos, que no salen del listado
+              de grupos y por lo tanto no tienen grupo que mostrar: la promesa dejó de valer para
+              todas sus filas, y prometer de más es lo que hace dudar del resto de la pantalla. */}
           <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, lineHeight: 18 }]}>
             Líderes de mentores, administradores y alquimistas, con el rol que dice el servidor.
-            Los mentores están más abajo, con su grupo.
+            Los mentores están más abajo.
           </Text>
           {errorStaff ? (
             <Text style={[t.body, { color: c.danger, fontSize: 13.5 }]}>{errorStaff}</Text>
@@ -402,9 +460,27 @@ export function StaffRolesScreen({ onVolver }: { onVolver: () => void }) {
           ) : null}
         </View>
 
+        {/* Los mentores de los grupos, más los que ese listado no devuelve por no estar activos.
+            Una cuenta suspendida se reconoce en su propia línea —«Mentor · Cuenta suspendida ·
+            correo»—, así que no hace falta una sección aparte para explicar por qué está ahí. */}
         <View style={{ gap: 10 }}>
           <MicroLabel>Mentores ({mentoresVisibles.length})</MicroLabel>
-          {mentoresVisibles.length === 0 && !cargando ? (
+          {/* El listado de staff falló: se dice acá también. Callarlo dejaría esta sección
+              mostrando solo los activos con cara de estar completa. */}
+          {errorStaff ? (
+            <Text style={[t.body, { color: c.micro, fontSize: 12.5, lineHeight: 18 }]}>
+              No se pudo comprobar si hay mentores con la cuenta suspendida: estos son los activos.
+            </Text>
+          ) : null}
+          {/* La página de mentores no alcanzó. Se dice, en vez de dejar la sección con cara de
+              completa: el que falte va a ser justo el que alguien vino a buscar. */}
+          {totalMentoresDeStaff !== null && totalMentoresDeStaff > mentoresDeStaff.length ? (
+            <Text style={[t.body, { color: c.micro, fontSize: 12.5, lineHeight: 18 }]}>
+              El servidor dice que hay {totalMentoresDeStaff} mentores y acá entraron{' '}
+              {mentoresDeStaff.length}: puede faltar alguno con la cuenta suspendida.
+            </Text>
+          ) : null}
+          {mentoresVisibles.length === 0 && !cargando && !cargandoStaff ? (
             <Text style={[t.body, { color: c.textSoft, fontSize: 13.5 }]}>
               Todavía no hay mentores. Hacé mentor a alguien de la lista de abajo.
             </Text>

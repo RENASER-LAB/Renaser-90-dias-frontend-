@@ -141,7 +141,8 @@ pantalla del mentor cambiando de aspecto por primera vez.
 
 ## 5. Lo que apareció mientras se arreglaba lo de arriba
 
-Tres cosas vistas al tocar este código, **no arregladas**, porque cada una es otro cambio:
+Tres cosas vistas al tocar este código. La 2 **ya está arreglada** (ver abajo); las otras dos
+siguen sin arreglar, porque cada una es otro cambio:
 
 1. **Un mentor sin grupo lee «No pudimos cargar tu grupo», que es falso.** En
    `TarjetaMentorHoy.tsx:43-52` el fallo `sin_celula` cae en la rama genérica de error. No falló
@@ -154,6 +155,17 @@ Tres cosas vistas al tocar este código, **no arregladas**, porque cada una es o
    los tres roles de conducción, para no duplicar a cada mentor activo. Un mentor suspendido, por
    lo tanto, no se puede devolver a aprendiz desde la app. Se arregla el día que se decida cómo
    mostrar mentores en dos secciones sin repetirlos.
+
+   > **Corregido 2026-09-15 (mismo día).** **Hecho, solo en el frontend.** Lo de arriba describe
+   > bien el bug; lo que estaba de más era el «se arregla el día que se decida»: no hacía falta
+   > decidir nada nuevo. La sección «Mentores» ahora pide también
+   > `GET /admin/staff?role=MENTOR` **sin** `status` —el backend aplica el filtro de estado solo
+   > si el parámetro viene, así que esa consulta trae cualquier estado— y suma los que
+   > `/admin/cells/mentores` no devolvió. **El cruce entre las dos listas es por id**
+   > (`utils/staff.ts`, `mentoresQueFaltan`), que es «mostrarlos sin repetirlos» sin tener que
+   > razonar sobre estados. El suspendido queda al final de la sección, con «Cuenta suspendida» en
+   > su línea, y con el mismo menú de roles que cualquier otra fila. Sin tocar el backend.
+
 3. **La bandeja de tickets no dice de quién es cada ticket.** `TicketMentorResponse` trae
    `traineeProfileId` y ningún nombre. La pantalla nueva lo dice con todas las letras en vez de
    mostrar un UUID o de resolverlo con una consulta que el líder quizá no tenga permitida. Si el

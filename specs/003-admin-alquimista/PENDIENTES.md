@@ -118,6 +118,18 @@ líder saca a la persona de las dos listas. Por eso lo cambiado queda fijado en 
 sesión» mientras no se salga de la pantalla, y la confirmación dice **dónde va a quedar** la
 persona. Un listado por rol arbitrario necesitaría un endpoint nuevo.
 
+> **Corregido 2026-09-15.** Ese párrafo ya no describe la pantalla, y su última frase era falsa:
+> **no hacía falta ningún endpoint nuevo.** `GET /api/v1/admin/staff` existe desde el gap #6, trae
+> el campo `role` de verdad y filtra por `?role=`. `StaffRolesScreen` lo consume desde entonces,
+> así que hoy lista los cinco roles: líderes, administradores y alquimistas en la sección «Staff»,
+> y los mentores en la suya. «Cambios de esta sesión» sigue existiendo, pero ya no es la única
+> forma de deshacer un cambio de rol.
+>
+> Se corrige el mismo día, además, un segundo agujero del mismo tipo: `/admin/cells/mentores`
+> devuelve **solo mentores ACTIVOS**, así que suspender a un mentor lo borraba del panel entero
+> (Personas lista únicamente aprendices). La sección «Mentores» ahora suma los que ese listado no
+> trae, pedidos con `role=MENTOR` y sin `status`, cruzados por id para no repetir a los activos.
+
 Lo que sigue fuera, listado en «Más opciones» diciendo dónde vive:
 
 - **Catálogo de hábitos** (crear, editar, guías, horarios, audioterapias)
