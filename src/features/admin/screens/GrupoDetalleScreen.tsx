@@ -71,6 +71,17 @@ export function GrupoDetalleScreen({
    * E04, que tomaba esa rama y luego no encontraba el cartel porque ya habían llegado los veinte.
    */
   const [cargandoLista, setCargandoLista] = useState(false);
+  /**
+   * Por qué falló la lista del selector, o `null` si no falló.
+   *
+   * Antes, cualquier fallo al traer candidatos hacía dos cosas malas juntas: cerraba el selector
+   * y avisaba con `mensajeDeFallo(e, '')`, que para un 500 o un 404 devuelve CADENA VACÍA. O sea
+   * que el aviso salía sin texto —y en el build web, con los diálogos silenciados, no salía nada—
+   * y lo único que veía el administrador era que la lista no aparecía. Indistinguible de "no hay
+   * aprendices disponibles", que es justo lo que se reportó. Mismo error que ARF-02 prohíbe: un
+   * fallo convertido en vacío.
+   */
+  const [errorLista, setErrorLista] = useState<string | null>(null);
 
   useSystemBackHandler(() => {
     // El selector abierto se cierra primero: el gesto sube un nivel, no sale de la pantalla.
@@ -111,31 +122,36 @@ export function GrupoDetalleScreen({
     }
   };
 
-  const abrirSelectorDeMentor = async () => {
-    setEligiendo('mentor');
+  /** Trae los candidatos del selector. El fallo se QUEDA en pantalla, con su motivo y un
+   *  reintento, igual que la carga del grupo — no se cierra el selector ni se pierde el error. */
+  const traerCandidatos = async (tipo: 'mentor' | 'aprendiz') => {
+    setEligiendo(tipo);
     setCargandoLista(true);
+    setErrorLista(null);
     try {
-      setMentores(await mentoresDisponibles());
+      if (tipo === 'mentor') {
+        setMentores(await mentoresDisponibles());
+      } else {
+        setCandidatos(await aprendicesDisponibles());
+      }
     } catch (e) {
-      avisar('No se pudo traer la lista de mentores', mensajeDeFallo(e, ''));
-      setEligiendo(null);
+      // El texto por defecto NO puede ser vacío: es el que se usa justamente cuando el error no
+      // trae nada legible (un 500, un 404), que es el caso en que más falta hace decir algo.
+      setErrorLista(
+        mensajeDeFallo(
+          e,
+          tipo === 'mentor'
+            ? 'No pudimos traer la lista de mentores. Probá de nuevo.'
+            : 'No pudimos traer la lista de aprendices. Probá de nuevo.',
+        ),
+      );
     } finally {
       setCargandoLista(false);
     }
   };
 
-  const abrirSelectorDeAprendiz = async () => {
-    setEligiendo('aprendiz');
-    setCargandoLista(true);
-    try {
-      setCandidatos(await aprendicesDisponibles());
-    } catch (e) {
-      avisar('No se pudo traer la lista de aprendices', mensajeDeFallo(e, ''));
-      setEligiendo(null);
-    } finally {
-      setCargandoLista(false);
-    }
-  };
+  const abrirSelectorDeMentor = () => void traerCandidatos('mentor');
+  const abrirSelectorDeAprendiz = () => void traerCandidatos('aprendiz');
 
   const cerrado = grupo?.status === 'CERRADO';
   const cupo = grupo?.capacity ?? null;
@@ -344,7 +360,22 @@ export function GrupoDetalleScreen({
                 {/* El cartel de «no hay nadie» SOLO cuando ya se sabe. Mientras la consulta viaja
                     se muestra el indicador: decir "no hay" antes de la respuesta es afirmar algo
                     que no se sabe, y suena igual de creíble que la verdad. */}
-                {!cargandoLista && (eligiendo === 'mentor' ? mentores : candidatos).length === 0 ? (
+                {!cargandoLista && errorLista ? (
+                  <View style={{ gap: 4 }}>
+                    <Text style={[t.body, { color: c.danger, fontSize: 14 }]}>{errorLista}</Text>
+                    <Pressable
+                      onPress={() => void traerCandidatos(eligiendo === 'mentor' ? 'mentor' : 'aprendiz')}
+                      accessibilityRole="button"
+                      style={estilos.accionTexto}
+                    >
+                      <Text style={[t.body, { color: c.goldInk, fontSize: 14, fontWeight: '500' }]}>Reintentar</Text>
+                    </Pressable>
+                  </View>
+                ) : null}
+                {/* "No hay nadie" SOLO si de verdad no hay nadie. Si la consulta falló, lo que
+                    corresponde decir es que falló — afirmar que la lista está vacía sería
+                    convertir un error en un dato. */}
+                {!cargandoLista && !errorLista && (eligiendo === 'mentor' ? mentores : candidatos).length === 0 ? (
                   <Text style={[t.body, { color: c.textSoft, fontSize: 14 }]}>
                     {eligiendo === 'mentor'
                       ? 'No hay mentores activos con perfil creado.'
