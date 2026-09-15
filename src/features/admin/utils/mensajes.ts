@@ -51,10 +51,20 @@ export function mensajeDeAltaAprobada(
       + 'miralo en Grupos antes de dar por hecho que quedó ubicada.';
   }
 
-  /* La cola de "sin grupo" no crece ⇒ el alta entró en una bienvenida. No se compara con
-     igualdad estricta porque entre las dos consultas puede haberse ubicado a alguien más a
-     mano, y eso no debe leerse como que esta persona quedó afuera. */
-  if (sinGrupoDespues <= sinGrupoAntes) {
+  /* La cola de "sin grupo" BAJÓ ⇒ el alta entró en una bienvenida.
+     >  **Corregido 2026-09-15.** Acá decía `sinGrupoDespues <= sinGrupoAntes`, razonando que "no
+     >  crece ⇒ entró" para tolerar que entre las dos consultas se ubicara a alguien más a mano.
+     >  Con ese `<=` la tercera rama era **inalcanzable** y el aviso afirmaba SIEMPRE que la
+     >  persona entró a un grupo. El motivo: quien se aprueba **ya contaba** como "sin grupo"
+     >  antes de aprobarla — el usuario se crea al registrarse, no al aprobar
+     >  (`AccountRequestService.approve`: "El usuario YA existe desde el alta, en estado
+     >  INACTIVE"), y el conteo incluye a los aprendices sin fila de `participantes_programa`.
+     >  Aprobar a alguien nunca puede hacer crecer esa cola, así que `> ` no pasaba jamás.
+     >  Con `<` los dos casos reales quedan bien: si se la ubicó, la cola baja; si no, queda igual
+     >  y ahora sí se avisa. Queda la carrera que el comentario viejo temía —otro ubicado a mano
+     >  entre las dos consultas— y ahí se sigue diciendo "entró", que es el mismo lado optimista
+     >  de antes. */
+  if (sinGrupoDespues < sinGrupoAntes) {
     return `${quien} ya tiene su cuenta y entró al grupo de bienvenida.`;
   }
 
