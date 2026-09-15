@@ -1,0 +1,58 @@
+# Integracion continua del frontend: comprobar tipos y correr las pruebas de Jest.
+#
+# Deliberadamente corto. NO corre el E2E de Playwright ni el smoke nativo de Maestro: los dos
+# necesitan un backend de pruebas levantado y siete pares de credenciales que viven fuera de Git
+# (`specs/003-admin-alquimista/e2e.md` §8). Un CI que necesita secretos que no existen es un CI
+# que nace rojo y que todo el mundo aprende a ignorar. Cuando exista un entorno de pruebas
+# desplegado, el E2E entra como workflow aparte, no metido acá.
+#
+# Tampoco construye el bundle web: eso lo hace Vercel en cada push por su cuenta, y duplicarlo acá
+# solo agrega minutos sin agregar informacion.
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verificar:
+    name: Tipos y pruebas
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v4
+
+      # Node 20 LTS. La maquina de desarrollo corre 18.20.4 (fuera de soporte desde abril de 2025);
+      # si alguna vez algo pasa acá y falla localmente, o al reves, esta es la primera diferencia
+      # que hay que mirar.
+      - name: Instalar Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      # `npm ci` y no `npm install`: instala exactamente lo que dice el lock y falla si el lock y
+      # el package.json no coinciden. Esa comprobacion no es un detalle — el 2026-09-15 el
+      # typecheck estaba roto en la rama porque `@expo-google-fonts/fraunces` estaba declarado en
+      # los dos archivos y nunca se habia instalado, y nadie se entero hasta que alguien miro.
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Comprobar tipos
+        run: npm run typecheck
+
+      # `--ci` hace fallar los snapshots nuevos en vez de escribirlos: en CI, un snapshot que no
+      # existia no es algo para crear al vuelo.
+      - name: Pruebas unitarias
+        run: npm test -- --ci
