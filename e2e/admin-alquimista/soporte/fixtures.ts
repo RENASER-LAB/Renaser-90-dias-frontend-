@@ -144,8 +144,18 @@ export async function cerrarGuiaDelAsistente(page: Page): Promise<void> {
   const posponer = page.getByRole('button', { name: /posponer la guía/i }).first();
   /* La espera es de 8 s y no de 3 porque el overlay aparece DESPUÉS de que cargan los datos de
      Hoy. Con la sonda corta el chequeo pasaba antes de que existiera, devolvía "no está" y el
-     overlay se abría un segundo más tarde, justo encima del botón que la prueba iba a pulsar. */
-  if (await posponer.isVisible({ timeout: 8_000 }).catch(() => false)) {
+     overlay se abría un segundo más tarde, justo encima del botón que la prueba iba a pulsar.
+
+     Se espera con `waitFor` y NO con `isVisible({ timeout })` (2026-09-15): esa opción de
+     `isVisible` está deprecada y Playwright la IGNORA — la comprobación resuelve al instante, así
+     que los 8 s de arriba nunca se aplicaban y volvía el mismo fallo que el comentario decía haber
+     resuelto. Lo cazó E04: el arranque guiado quedó a pantalla completa sobre Administración y
+     `scrollIntoViewIfNeeded` esperó 15 s por un botón tapado. */
+  const aparecio = await posponer
+    .waitFor({ state: 'visible', timeout: 8_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (aparecio) {
     await posponer.click();
     await expect(posponer).toBeHidden({ timeout: 10_000 });
   }
