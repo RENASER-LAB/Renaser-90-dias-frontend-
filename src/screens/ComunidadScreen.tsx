@@ -800,20 +800,26 @@ export default function ComunidadScreen() {
    * > otras dos **no se veían nunca**: el ranking por coherencia existía en el servidor, se
    * > calculaba y se guardaba, y ninguna pantalla lo mostraba.
    */
-  const [tipoRanking, setTipoRanking] = useState<'general' | 'coherencia' | 'liga'>('general');
+  const [tipoRanking, setTipoRanking] = useState<'general' | 'coherencia'>('general');
 
   const apiRankingEntries = useMemo(() => {
     if (!rankingData) return [];
     if (tipoRanking === 'coherencia') return rankingData.coherenciaIndividual ?? [];
-    if (tipoRanking === 'liga') return rankingData.liga ?? [];
     return rankingData.general ?? [];
   }, [rankingData, tipoRanking]);
 
-  /** Qué mide cada tabla, en una línea. Sin esto, tres listas de números no se distinguen. */
+  /**
+   * Qué mide cada tabla, en una línea. Sin esto, dos listas de números no se distinguen.
+   *
+   * > **La tabla de "Puntos" (la liga) se retiró el 2026-09-15**, por decisión del dueño: iba a
+   * > ordenar por el hábito de correr, y ese hábito —`KILÓMETROS DIARIOS`— está desactivado en
+   * > producción y sin clave de sistema, así que la tabla no medía lo que decía medir. El backend
+   * > la sigue calculando y guardando en el corte (`TipoRanking.LEAGUE`): lo que se quita es la
+   * > pestaña, no el dato, así que volver a mostrarla es agregar una línea acá.
+   */
   const TABLAS_DE_RANKING = [
     { clave: 'general' as const, titulo: 'General', explica: 'Hábitos, acciones y lecciones, todo junto' },
     { clave: 'coherencia' as const, titulo: 'Coherencia', explica: 'Acciones diarias cumplidas de tu semana' },
-    { clave: 'liga' as const, titulo: 'Puntos', explica: 'Los puntos que fuiste sumando' },
   ];
 
   // Entradas de Ranking 100% de la API (cero datos inventados)
