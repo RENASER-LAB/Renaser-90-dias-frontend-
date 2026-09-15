@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
 
 import { TextoAsistente } from './TextoAsistente';
+import { useSegundosEsperando } from '../hooks/useSegundosEsperando';
+import { avisoDeEspera } from '../utils/esperaDelAsistente';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useResponsive } from '../../../theme/responsive';
 import type { RenasiaMensajeUI } from '../types/renasia.types';
@@ -35,6 +37,10 @@ export function MensajeBurbuja({ mensaje, nombreAsistente, onReintentar }: Props
   const { c, t } = useTheme();
   const { rs, isSmall } = useResponsive();
   const esPersona = mensaje.autor === 'persona';
+  // Medido contra el backend real: un turno que consulta los habitos tardo 38 s en dar el primer
+  // caracter. Un spinner quieto todo ese rato se lee como una app trabada, asi que el texto
+  // acompana la espera. Ver `utils/esperaDelAsistente.ts`.
+  const segundosEsperando = useSegundosEsperando(mensaje.enProgreso === true);
 
   return (
     <View style={[styles.fila, { justifyContent: esPersona ? 'flex-end' : 'flex-start' }]}>
@@ -76,7 +82,7 @@ export function MensajeBurbuja({ mensaje, nombreAsistente, onReintentar }: Props
           <View style={styles.filaEscribiendo}>
             <ActivityIndicator size="small" color={esPersona ? c.onGold : c.goldInk} />
             <Text style={[t.small, { color: esPersona ? c.onGold : c.textSoft, fontSize: 12.5 }]}>
-              {nombreAsistente} está escribiendo…
+              {avisoDeEspera(segundosEsperando, nombreAsistente, Boolean(mensaje.texto))}
             </Text>
           </View>
         )}
