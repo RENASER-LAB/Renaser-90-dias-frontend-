@@ -15,7 +15,6 @@ import { sellarRocaDiaria } from '../features/objetivos/utils/sellarRocaDiaria';
 import { PlanificarDimensionModal } from '../features/training/components/PlanificarDimensionModal';
 import { completarRegistro } from '../features/habits/api/evidenciaHabitoApi';
 import { mensajeDeError } from '../services/http/apiClient';
-import { useAuth } from '../features/auth/context/AuthContext';
 import { CLAVE_SISTEMA_PASTILLA_RENACER } from '../features/spirit/api/spiritApi';
 import { escucharPostDiarioCerrado } from '../features/habits/events/avisoPostDiarioCerrado';
 import { PastillaRenacerModal } from '../features/spirit/components/PastillaRenacerModal';
@@ -34,6 +33,10 @@ import {
 import { borradorEspiritu } from '../features/spirit/storage/borradorEspiritu';
 import type { DayOfWeek } from './PlanScreen';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
+import { RenombrarHabitoModal } from '../features/habits/components/RenombrarHabitoModal';
+import { useRenombreLocal } from '../features/habits/hooks/useRenombreDeHabito';
+import { esRenombrable, tituloVisible } from '../features/habits/utils/renombreDeHabito';
+import { useAuth } from '../features/auth/context/AuthContext';
 
 /**
  * Habitos con FLUJO PROPIO: no se cierran con el checkbox ni subiendo un archivo. Se ramifica por
@@ -238,6 +241,7 @@ export default function TrainingScreen() {
    */
   const [planificarVisible, setPlanificarVisible] = useState(false);
 
+
   /**
    * "Pastilla Renacer" (modulo Espiritu). Es un habito con FLUJO PROPIO: no se cierra subiendo
    * evidencia sino escuchando el audio del dia y contestando, y su estado vive en otra tabla del
@@ -250,6 +254,12 @@ export default function TrainingScreen() {
    */
   const [pastillaVisible, setPastillaVisible] = useState(false);
   const { user } = useAuth();
+  // Renombrar las dos bebidas (D-127). Va ACA y no solo en Plan: la subvista de habitos de Plan
+  // no tiene quien la abra --`setActiveSubView('habitos')` no se llama desde ningun lado--, asi
+  // que el boton que vivia alla era inalcanzable. Esta lista, en cambio, es la que la persona
+  // mira todos los dias. Comprobado en pantalla el 2026-09-15.
+  const renombre = useRenombreLocal(user?.id ?? null);
+  const [habitoARenombrar, setHabitoARenombrar] = useState<HabitItem | null>(null);
 
   /**
    * El aviso de los domingos para armar la semana (pedido del dueño 2026-09-07).
@@ -955,8 +965,8 @@ export default function TrainingScreen() {
 
                   {/* Multiple Habits Card List */}
                   {currentDimensionHabits.map(habit => (
+                    <View key={habit.id} style={{ gap: 6 }}>
                     <View
-                      key={habit.id}
                       style={[
                         styles.habitCard,
                         {
@@ -1017,7 +1027,7 @@ export default function TrainingScreen() {
                             },
                           ]}
                         >
-                          {habit.title}
+                          {tituloVisible({ id: habit.habitoId ?? habit.id, title: habit.title }, renombre.titulos)}
                         </Text>
 
                         {/* `flexWrap`: a tamaño de lectura, "Durante el día" + "Evidencia
@@ -1073,6 +1083,37 @@ export default function TrainingScreen() {
                           {habit.hasEvidence ? 'VER' : 'SUBIR'}
                         </Text>
                       </Pressable>
+                    </View>
+
+                    {/* Cambiarle el nombre a las dos bebidas (D-127). Fuera de la tarjeta y no
+                        adentro: la tarjeta entera ya es un Pressable que abre la evidencia, y un
+                        boton dentro de otro boton se traga el toque en nativo aunque en web
+                        parezca andar. Se dibuja solo en los dos habitos reemplazables.
+
+                        Opera con `habitoId` (el id del CATALOGO) y nunca con `id`, que aca es el
+                        id del track del dia: con ese, el backend responde "Habito no encontrado".
+                        Pasó el 2026-09-15 al escribir esto. */}
+                    {esRenombrable(habit.systemKey) && habit.habitoId && (
+                      <Pressable
+                        onPress={() => setHabitoARenombrar(habit)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Cambiarle el nombre a ${tituloVisible({ id: habit.habitoId, title: habit.title }, renombre.titulos)}`}
+                        hitSlop={8}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 6,
+                          alignSelf: 'flex-start',
+                          paddingVertical: 4,
+                          paddingHorizontal: 2,
+                        }}
+                      >
+                        <Icon name="spark" size={11} color={c.goldInk} />
+                        <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_500Medium' }]}>
+                          {renombre.titulos[habit.habitoId] ? 'CAMBIAR O QUITAR EL NOMBRE' : 'PONERLE OTRO NOMBRE'}
+                        </Text>
+                      </Pressable>
+                    )}
                     </View>
                   ))}
                 </View>
@@ -1231,6 +1272,24 @@ export default function TrainingScreen() {
         onIrALaLeccion={irALaLeccionDelDia}
         onCerrar={cerrarClaseDiaria}
       />
+
+      {/* El mismo modal que abre el aviso del agente, montado tambien aca: el acceso permanente
+          al renombre tiene que existir despues de que la persona responde el aviso, que no vuelve
+          a aparecer nunca (D-127). */}
+      {habitoARenombrar?.habitoId && (
+        <RenombrarHabitoModal
+          visible
+          tituloCatalogo={habitoARenombrar.title}
+          tituloActual={renombre.titulos[habitoARenombrar.habitoId] ?? null}
+          onGuardar={(titulo, motivo) => renombre.renombrar(habitoARenombrar.habitoId!, titulo, motivo)}
+          onQuitar={
+            renombre.titulos[habitoARenombrar.habitoId]
+              ? () => renombre.quitarRenombre(habitoARenombrar.habitoId!)
+              : undefined
+          }
+          onCerrar={() => setHabitoARenombrar(null)}
+        />
+      )}
 
     </SafeAreaView>
   );
