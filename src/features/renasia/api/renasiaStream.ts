@@ -1,7 +1,7 @@
 import { fetch as expoFetch } from 'expo/fetch';
 
 import { API_CONFIG } from '../../../config/apiConfig';
-import { getTokenSesion } from '../../../services/http/apiClient';
+import { getTokenSesion, notificarSesionVencida } from '../../../services/http/apiClient';
 import { nombreVisible } from '../data/agentes';
 import type {
   AgenteRenasia,
@@ -132,6 +132,13 @@ export async function enviarMensajeRenasia(
       throw new RenasiaCuotaExcedidaError(
         mensaje || `Ya usaste todas tus preguntas a ${nombre} por hoy. Vuelve mañana.`
       );
+    }
+    // Este archivo no pasa por `apiFetch` (lee SSE con fetch a mano), así que el vencimiento de
+    // sesión hay que reportarlo acá o el chat queda mostrando un `Error 401` sin que nadie lleve
+    // a la persona al login. Solo el 401: un 403 acá es cuenta suspendida o permiso, no sesión.
+    if (respuesta.status === 401 && token) {
+      notificarSesionVencida();
+      throw new Error('Tu sesión venció. Volvé a entrar.');
     }
     throw new Error(mensaje);
   }

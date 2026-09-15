@@ -17,12 +17,21 @@ const HEADER_SESION = 'X-Auth-Token';
 export class ApiError extends Error {
   readonly status: number;
   readonly body: unknown;
+  /**
+   * `true` solo cuando el 401 llegó en una request que SÍ mandó sesión — o sea, el token murió.
+   *
+   * Un 401 del login (que va sin sesión) significa algo completamente distinto: credenciales mal.
+   * Distinguirlos es lo que evita anunciarle "Correo o contraseña incorrectos" a alguien que ya
+   * estaba adentro y lo único que le pasó fue que se le venció la sesión.
+   */
+  readonly sesionVencida: boolean;
 
-  constructor(status: number, message: string, body?: unknown) {
+  constructor(status: number, message: string, body?: unknown, sesionVencida = false) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.body = body;
+    this.sesionVencida = sesionVencida;
   }
 
   /** Credenciales inválidas o sesión vencida. */
@@ -48,6 +57,46 @@ export class ApiError extends Error {
 
 let tokenSesion: string | null = null;
 
+/**
+ * Quién quiere enterarse de que la sesión se murió. Hoy lo escucha `AuthContext`, que limpia el
+ * estado y con eso la app cae sola en el login.
+ *
+ * Es una lista y no un callback suelto para que registrarse no pueda pisar al anterior en
+ * silencio: dos suscriptores conviviendo es raro, pero perder el único que había es un bug mudo.
+ */
+type OyenteSesionVencida = () => void;
+const oyentesSesionVencida = new Set<OyenteSesionVencida>();
+
+/** Evita encadenar varios cierres por un solo hecho. Ver `notificarSesionVencida`. */
+let yaSeAvisoElVencimiento = false;
+
+/** Se registra el oyente y se devuelve cómo darlo de baja (sirve de cleanup de `useEffect`). */
+export function suscribirSesionVencida(oyente: OyenteSesionVencida): () => void {
+  oyentesSesionVencida.add(oyente);
+  return () => {
+    oyentesSesionVencida.delete(oyente);
+  };
+}
+
+/**
+ * "El token ya no vale": descarta la sesión y avisa a quien escuche.
+ *
+ * Lo llama `apiFetch` solo, pero es público porque el chat NO pasa por `apiFetch` —lee SSE con
+ * `fetch` a mano (`renasia/api/renasiaStream.ts`)— y era justamente la pantalla donde el
+ * vencimiento se veía peor: un `Error 403` pelado y nada más.
+ *
+ * Se avisa **una sola vez por sesión**: al abrir la app varias pantallas piden datos a la vez y
+ * pueden recibir 401 todas juntas, y eso es un único hecho —el token murió—, no cinco.
+ */
+export function notificarSesionVencida(): void {
+  if (yaSeAvisoElVencimiento) {
+    return;
+  }
+  yaSeAvisoElVencimiento = true;
+  setTokenSesion(null);
+  oyentesSesionVencida.forEach(oyente => oyente());
+}
+
 export function getTokenSesion(): string | null {
   return tokenSesion;
 }
@@ -60,6 +109,8 @@ export function getTokenSesion(): string | null {
 export function setTokenSesion(token: string | null): void {
   tokenSesion = token;
   if (token) {
+    // Sesión nueva: el próximo vencimiento tiene que volver a avisar.
+    yaSeAvisoElVencimiento = false;
     void almacenamientoSeguro.guardarToken(token);
   } else {
     void almacenamientoSeguro.borrarToken();
@@ -110,8 +161,10 @@ export async function apiFetch<T>(ruta: string, opciones: OpcionesPeticion = {})
   if (body !== undefined) {
     headers['Content-Type'] = 'application/json';
   }
-  if (conSesion && tokenSesion) {
-    headers[HEADER_SESION] = tokenSesion;
+  // Se guarda si la request LLEVÓ sesión: de eso depende qué significa un 401 más abajo.
+  const tokenEnviado = conSesion ? tokenSesion : null;
+  if (tokenEnviado) {
+    headers[HEADER_SESION] = tokenEnviado;
   }
 
   let respuesta: Response;
@@ -139,7 +192,17 @@ export async function apiFetch<T>(ruta: string, opciones: OpcionesPeticion = {})
 
   if (!respuesta.ok) {
     const { mensaje, cuerpo } = await leerMensajeDeError(respuesta);
-    throw new ApiError(respuesta.status, mensaje, cuerpo);
+    // Un 401 en una request que mandó sesión no es "credenciales mal": es el token vencido. Se
+    // cierra en UN lugar para que la app mande al login, en vez de que cada pantalla falle por su
+    // cuenta y la persona concluya que la app se rompió.
+    //
+    // Deliberadamente NO incluye al 403: ahí el backend también responde "cuenta suspendida", y
+    // tratarlo como vencimiento mandaría a loguearse una y otra vez a quien no puede entrar.
+    const sesionVencida = respuesta.status === 401 && tokenEnviado !== null;
+    if (sesionVencida) {
+      notificarSesionVencida();
+    }
+    throw new ApiError(respuesta.status, mensaje, cuerpo, sesionVencida);
   }
 
   if (respuesta.status === 204) {
@@ -163,7 +226,10 @@ export function mensajeDeError(error: unknown, porDefecto: string): string {
     return error.message;
   }
   if (error.esNoAutenticado) {
-    return 'Correo o contraseña incorrectos.';
+    /* Dos situaciones muy distintas comparten el 401. Con sesión mandada, el token venció y lo
+       único que hay que decir es que vuelva a entrar; sin sesión es el login, y ahí sí son las
+       credenciales. Antes las dos decían lo mismo. */
+    return error.sesionVencida ? 'Tu sesión venció. Volvé a entrar.' : 'Correo o contraseña incorrectos.';
   }
   if (error.esProhibido) {
     /* El mensaje del backend gana. Antes se descartaba y TODO 403 decía lo mismo — que es el

@@ -11,7 +11,12 @@ import { loginConGoogle } from '../api/googleAuth';
    ahí y no se duplica acá. No hay ciclo: ese archivo solo depende de `apiClient` y de sus
    propios schemas — el que mira hacia auth es `useEsMentor`, que es otro módulo. */
 import { capacidadesDePrograma } from '../../mentor/api/mentorApi';
-import { ApiError, cargarTokenPersistido, setTokenSesion } from '../../../services/http/apiClient';
+import {
+  ApiError,
+  cargarTokenPersistido,
+  setTokenSesion,
+  suscribirSesionVencida,
+} from '../../../services/http/apiClient';
 import {
   USUARIO_DEMO_APPLE,
   USUARIO_DEMO_EXISTENTE,
@@ -171,6 +176,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       vigente = false;
     };
   }, []);
+
+  /**
+   * La sesión también puede morir con la app ABIERTA: el token vence en Redis, o se cierra desde
+   * otro lado. `apiClient` lo detecta en un solo lugar —un 401 en una request que sí mandó
+   * sesión— y avisa acá.
+   *
+   * Sin esto, cada pantalla fallaba por su cuenta y nadie llevaba a la persona al login: se
+   * quedaba adentro de una app que no respondía. En el chat se veía peor que en ningún lado,
+   * porque lo único que aparecía era un `Error 403` sin explicación.
+   *
+   * No se reusa `logout()` a propósito: ese le pide al backend cerrar una sesión que ya no
+   * existe. Acá alcanza con limpiar lo local — el token ya lo descartó `apiClient` antes de
+   * avisar.
+   */
+  useEffect(() => suscribirSesionVencida(() => {
+    setUser(null);
+    setIsOnboardingCompleted(false);
+    setOnboardingResuelto(false);
+    setFichaData(null);
+    olvidarRutaPendiente();
+  }), []);
 
   /**
    * El push nativo vive y muere con la sesion (RF-25).
