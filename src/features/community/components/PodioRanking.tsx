@@ -105,8 +105,18 @@ const CHISPAS = [30, 42, 50, 58, 70];
  * portadas de los cursos ya son bloques oscuros dentro del modo claro— y el borde sigue siendo el
  * oro del tema.
  */
+/**
+ * El fondo del escenario, por tema. En oscuro son los tres marrones originales, sin tocar; en
+ * claro, su equivalente en la familia cálida de la paleta clara (`bg` #FCFBF9 / `border` #E2DCD2).
+ * Un solo lugar: si mañana cambia la paleta, cambia acá y no en medio del JSX.
+ */
+const COLORES_ESCENARIO: Record<'light' | 'dark', readonly [string, string, string]> = {
+  dark: ['#241D14', '#14100B', '#0B0908'],
+  light: ['#FDFBF7', '#F4EFE6', '#E8E1D5'],
+};
+
 export function PodioRanking({ top1, top2, top3, activo }: PodioRankingProps) {
-  const { c } = useTheme();
+  const { c, mode } = useTheme();
 
   // Un valor por columna, de 0 (bajo el piso) a 1 (apoyada).
   const oro = useRef(new Animated.Value(0)).current;
@@ -211,7 +221,18 @@ export function PodioRanking({ top1, top2, top3, activo }: PodioRankingProps) {
 
   return (
     <View style={[styles.marco, { borderColor: c.gold }]}>
-      <LinearGradient colors={['#241D14', '#14100B', '#0B0908']} style={StyleSheet.absoluteFill} />
+      {/*
+        El escenario del podio. Los tres marrones oscuros estaban clavados a mano y se pintaban
+        IGUAL en los dos temas: en modo claro quedaba un bloque negro en medio de una pantalla
+        blanca, que es lo que reporto la clienta (2026-09-15). En oscuro se conservan exactos —no
+        se toca lo que ya se veia bien—; en claro entra su equivalente cálido, tomado de la misma
+        familia de la paleta (`bg`/`border`), para que el podio se lea como una tarjeta más y no
+        como un agujero.
+
+        El foco de luz de abajo sigue siendo dorado en los dos: sobre fondo claro se ve como un
+        halo tenue, que es justo lo que tiene que hacer.
+      */}
+      <LinearGradient colors={COLORES_ESCENARIO[mode]} style={StyleSheet.absoluteFill} />
 
       {/*
         Foco de luz. `width`/`height` al 100% NO son decorativos: en web react-native-svg emite un
@@ -483,12 +504,14 @@ function ColumnaPodio({
         style={[
           t.micro,
           styles.nombre,
-          { color: vacio ? '#B8AE9E' : destacado ? c.goldInk : '#F0EDE6', fontFamily: destacado ? 'Jost_700Bold' : 'Jost_700Bold' },
+          // Sobre el escenario: con el fondo ahora claro en modo claro, un '#F0EDE6' fijo
+          // quedaba ilegible. Sale de la paleta, que ya resuelve los dos temas.
+          { color: vacio ? c.micro : destacado ? c.goldInk : c.textStrong, fontFamily: 'Jost_700Bold' },
         ]}
       >
         {vacio ? nombreVacio : puesto.name}
       </Text>
-      <Text style={[t.micro, styles.puntaje, { color: vacio ? '#8A8073' : destacado ? c.goldInk : '#B8AE9E' }]}>
+      <Text style={[t.micro, styles.puntaje, { color: vacio ? c.micro : destacado ? c.goldInk : c.textSoft }]}>
         {vacio ? '—' : destacado ? `🔥 ${puesto.score}` : puesto.score}
       </Text>
 
