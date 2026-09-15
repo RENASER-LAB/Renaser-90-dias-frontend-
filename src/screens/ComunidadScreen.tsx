@@ -790,14 +790,31 @@ export default function ComunidadScreen() {
   // Sub-módulo: Ranking Real del Backend
   const { rankingData, loading: rankingCargando, error: rankingError } = useRanking();
 
-  // Obtener lista 100% real de la API (general, coherencia o liga)
+  /**
+   * Qué tabla se está mirando. El backend manda las TRES en la misma respuesta
+   * (`general`, `coherenciaIndividual`, `liga`), así que cambiar de una a otra no cuesta una
+   * llamada más: ya están acá.
+   *
+   * > **Corregido el 2026-09-15.** Antes esto tomaba "la primera lista que no viniera vacía",
+   * > en el orden general → coherencia → liga. Como `general` casi siempre tiene datos, las
+   * > otras dos **no se veían nunca**: el ranking por coherencia existía en el servidor, se
+   * > calculaba y se guardaba, y ninguna pantalla lo mostraba.
+   */
+  const [tipoRanking, setTipoRanking] = useState<'general' | 'coherencia' | 'liga'>('general');
+
   const apiRankingEntries = useMemo(() => {
     if (!rankingData) return [];
-    if (rankingData.general && rankingData.general.length > 0) return rankingData.general;
-    if (rankingData.coherenciaIndividual && rankingData.coherenciaIndividual.length > 0) return rankingData.coherenciaIndividual;
-    if (rankingData.liga && rankingData.liga.length > 0) return rankingData.liga;
-    return [];
-  }, [rankingData]);
+    if (tipoRanking === 'coherencia') return rankingData.coherenciaIndividual ?? [];
+    if (tipoRanking === 'liga') return rankingData.liga ?? [];
+    return rankingData.general ?? [];
+  }, [rankingData, tipoRanking]);
+
+  /** Qué mide cada tabla, en una línea. Sin esto, tres listas de números no se distinguen. */
+  const TABLAS_DE_RANKING = [
+    { clave: 'general' as const, titulo: 'General', explica: 'Hábitos, acciones y lecciones, todo junto' },
+    { clave: 'coherencia' as const, titulo: 'Coherencia', explica: 'Acciones diarias cumplidas de tu semana' },
+    { clave: 'liga' as const, titulo: 'Puntos', explica: 'Los puntos que fuiste sumando' },
+  ];
 
   // Entradas de Ranking 100% de la API (cero datos inventados)
   const rankingList = useMemo(() => {
@@ -2270,6 +2287,51 @@ export default function ComunidadScreen() {
                 cuándo mostrarlo, que es siempre salvo mientras se está cargando por primera vez —
                 mostrar un podio vacío que un segundo después se llena sería mentirle a quien mira.
               */}
+              {/* Qué tabla se mira. Las tres vienen en la misma respuesta del backend, así que
+                  cambiar de una a otra no pide nada al servidor. Antes solo se veía la general:
+                  la de coherencia se calculaba, se guardaba, y no la mostraba ninguna pantalla. */}
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
+                {TABLAS_DE_RANKING.map(tabla => {
+                  const activa = tipoRanking === tabla.clave;
+                  return (
+                    <Pressable
+                      key={tabla.clave}
+                      onPress={() => setTipoRanking(tabla.clave)}
+                      accessibilityRole="tab"
+                      accessibilityState={{ selected: activa }}
+                      accessibilityLabel={`${tabla.titulo}: ${tabla.explica}`}
+                      style={{
+                        flex: 1,
+                        paddingVertical: 8,
+                        paddingHorizontal: 6,
+                        borderRadius: space.radius,
+                        borderWidth: 1,
+                        borderColor: activa ? c.gold : c.border,
+                        backgroundColor: activa ? c.goldWash : 'transparent',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <Text
+                        style={[
+                          t.micro,
+                          {
+                            color: activa ? c.goldInk : c.textSoft,
+                            fontFamily: activa ? 'Jost_700Bold' : 'Jost_500Medium',
+                          },
+                        ]}
+                      >
+                        {tabla.titulo}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              {/* Qué mide la tabla que se está mirando: tres listas de números sin rótulo no se
+                  distinguen entre sí. */}
+              <Text style={[t.small, { color: c.textSoft, marginBottom: 12 }]}>
+                {TABLAS_DE_RANKING.find(tabla => tabla.clave === tipoRanking)?.explica}
+              </Text>
+
               {rankingCargando && !podioTop1 ? (
                 <View style={[styles.myRankCard, { borderColor: c.border, backgroundColor: c.cardBg }]}>
                   <Text style={{ fontSize: 26, marginBottom: 8 }}>🏆</Text>
