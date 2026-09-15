@@ -36,6 +36,7 @@ function contexto(parcial: Partial<ContextoDelOfrecimiento> = {}): ContextoDelOf
     respondidoEn: null,
     catalogo: [AGUA_LIMON, JUGO_VERDE, CLASE_DIARIA],
     titulos: {},
+    rol: 'APRENDIZ',
     ...parcial,
   };
 }
@@ -76,6 +77,24 @@ describe('soloRenombrables', () => {
 describe('habitoAOfrecerParaRenombrar', () => {
   it('en el día 0, sin haber respondido nunca, ofrece la primera bebida del catálogo', () => {
     expect(habitoAOfrecerParaRenombrar(contexto())).toBe(AGUA_LIMON);
+  });
+
+  /* 2026-09-15. El aviso vive en `App.tsx`, o sea por encima del navegador: se dibuja sobre
+     CUALQUIER pantalla. Para una cuenta de staff eso incluye el panel de administración, y ahí la
+     tarjeta quedaba tapando "Guardar cambios" del formulario de grupos — el botón se veía pero no
+     recibía el clic. Lo cazó la prueba E2E `E06`, con captura. */
+  it('a una cuenta de staff no se le ofrece: su aviso taparía el panel de administración', () => {
+    for (const rol of ['ADMIN', 'ALQUIMISTA', 'MENTOR']) {
+      expect(habitoAOfrecerParaRenombrar(contexto({ rol }))).toBeNull();
+    }
+  });
+
+  it('sin rol todavía resuelto tampoco ofrece: se espera a saber quién es', () => {
+    expect(habitoAOfrecerParaRenombrar(contexto({ rol: null }))).toBeNull();
+  });
+
+  it('al aprendiz se le sigue ofreciendo igual que antes', () => {
+    expect(habitoAOfrecerParaRenombrar(contexto({ rol: 'APRENDIZ' }))).toBe(AGUA_LIMON);
   });
 
   it('después de responder —sí o no— no vuelve a preguntar nunca', () => {

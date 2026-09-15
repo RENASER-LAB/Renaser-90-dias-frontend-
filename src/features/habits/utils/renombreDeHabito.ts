@@ -92,13 +92,28 @@ export interface ContextoDelOfrecimiento {
   catalogo: readonly HabitoRenombrable[];
   /** Espejo local de los títulos propios, por `habitId`. */
   titulos: Readonly<Record<string, string>>;
+  /**
+   * `role` de `GET /api/v1/users/me`. Solo se le ofrece a un `APRENDIZ` — ver
+   * {@link habitoAOfrecerParaRenombrar} para el bug concreto que eso evita.
+   */
+  rol: string | null;
 }
+
+/** El único rol al que se le ofrece: el aviso es parte del programa de 90 días. */
+export const ROL_APRENDIZ = 'APRENDIZ';
 
 /**
  * Qué hábito ofrecer renombrar, o `null` si no corresponde preguntar.
  *
  * Se pregunta UNA sola vez en la vida de la cuenta. Las cinco razones para no preguntar:
  *
+ *  - **No es un aprendiz.** El aviso flota por encima del navegador (vive en `App.tsx`), así que
+ *    se dibuja sobre CUALQUIER pantalla — y para una cuenta de staff eso incluye el panel de
+ *    administración, donde termina tapando los botones de sus formularios. Verificado el
+ *    2026-09-15 con la prueba E2E `E06`: "Guardar cambios" quedaba visible pero sin recibir el
+ *    clic, con la tarjeta del aviso encima (hay captura en `artifacts/e2e/resultados/`). Quien es
+ *    staff y además lleva su programa sigue pudiendo renombrar desde Plan: lo que se quita es el
+ *    ofrecimiento, no la función.
  *  - **Ya respondió** (aceptó, dijo "ahora no", o cerró el aviso — cerrar cuenta como "no").
  *  - **No está inscrito** en un programa: no hay participante al que renombrarle nada.
  *  - **No hay ningún hábito renombrable** en su catálogo.
@@ -111,6 +126,7 @@ export interface ContextoDelOfrecimiento {
  * no hacer.
  */
 export function habitoAOfrecerParaRenombrar(ctx: ContextoDelOfrecimiento): HabitoRenombrable | null {
+  if (ctx.rol !== ROL_APRENDIZ) return null;
   if (ctx.respondidoEn !== null) return null;
   if (!ctx.inscrito) return null;
   const candidatos = soloRenombrables(ctx.catalogo).filter(h => !tieneTituloPropio(ctx.titulos, h.id));

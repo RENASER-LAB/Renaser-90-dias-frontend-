@@ -73,6 +73,7 @@ export function RenombrarHabitoOverlay() {
       {local.respondidoEn === null && (
         <BuscadorDeOfrecimiento
           titulos={local.titulos}
+          rol={user?.role ?? null}
           onAceptar={aceptar}
           onDescartar={responder}
         />
@@ -99,14 +100,17 @@ export function RenombrarHabitoOverlay() {
  */
 function BuscadorDeOfrecimiento({
   titulos,
+  rol,
   onAceptar,
   onDescartar,
 }: {
   titulos: Readonly<Record<string, string>>;
+  /** `role` de la sesion: el aviso es solo para aprendices (ver `habitoAOfrecerParaRenombrar`). */
+  rol: string | null;
   onAceptar: (habito: HabitoRenombrable) => void;
   onDescartar: () => void;
 }) {
-  const { habito } = useOfrecimientoDeRenombre(true, null, titulos);
+  const { habito } = useOfrecimientoDeRenombre(true, null, titulos, rol);
   if (!habito) return null;
 
   return (

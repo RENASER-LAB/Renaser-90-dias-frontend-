@@ -6,6 +6,7 @@ import { quitarRenombreHabito, renombrarHabito } from '../api/renombreHabitoApi'
 import { renombreDeHabitoLocal, type EstadoRenombreDeHabito } from '../storage/renombreDeHabito';
 import {
   habitoAOfrecerParaRenombrar,
+  ROL_APRENDIZ,
   type HabitoRenombrable,
 } from '../utils/renombreDeHabito';
 
@@ -116,6 +117,7 @@ export function useOfrecimientoDeRenombre(
   habilitado: boolean,
   respondidoEn: string | null,
   titulos: Readonly<Record<string, string>>,
+  rol: string | null,
 ): Ofrecimiento {
   const [habito, setHabito] = useState<HabitoRenombrable | null>(null);
   const { inscrito, loading: cargandoDia } = useProgramaDia();
@@ -124,7 +126,7 @@ export function useOfrecimientoDeRenombre(
     // Sin condicion de dia desde D-127: se puede reemplazar cualquier dia del programa. Se
     // sigue esperando a `cargandoDia` porque de ahi sale `inscrito`, que si importa: a quien no
     // tiene programa no hay nada que ofrecerle.
-    habilitado && respondidoEn === null && !cargandoDia && inscrito;
+    habilitado && respondidoEn === null && !cargandoDia && inscrito && rol === ROL_APRENDIZ;
 
   useEffect(() => {
     if (!puedePreguntar) {
@@ -137,7 +139,7 @@ export function useOfrecimientoDeRenombre(
         const catalogo = await habitsApi.obtenerCatalogo();
         if (!vivo) return;
         setHabito(
-          habitoAOfrecerParaRenombrar({ inscrito, respondidoEn, catalogo, titulos }),
+          habitoAOfrecerParaRenombrar({ inscrito, respondidoEn, catalogo, titulos, rol }),
         );
       } catch (error) {
         if (!vivo) return;
@@ -152,7 +154,7 @@ export function useOfrecimientoDeRenombre(
     // almacenamiento y volvería a disparar la llamada de red sin que haya cambiado nada que
     // importe. Lo que de verdad cierra el ofrecimiento es `respondidoEn`, que sí está.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [puedePreguntar, inscrito, respondidoEn]);
+  }, [puedePreguntar, inscrito, respondidoEn, rol]);
 
   return { habito };
 }
