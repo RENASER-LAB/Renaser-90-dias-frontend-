@@ -241,5 +241,8 @@ export function mapearPlanHabit(
           desde: preferencia.pendingChange.effectiveDate,
         }
       : null,
+    // Se arrastra tal cual. Es la identidad FUNCIONAL del hábito y el único criterio estable para
+    // reconocer uno puntual desde la pantalla: el título de al lado es renombrable.
+    systemKey: habito.systemKey ?? null,
   };
 }

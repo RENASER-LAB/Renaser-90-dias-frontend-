@@ -15,6 +15,7 @@ import { AnfitrionAlerta } from './src/components/Alerta';
 import { MapaRenacimientoProvider } from './src/features/mapa-renacimiento/MapaRenacimientoContext';
 import { RadarProvider } from './src/features/radar/RadarContext';
 import { CodigoRenaserOverlay } from './src/features/radar/components/CodigoRenaserOverlay';
+import { RenombrarHabitoOverlay } from './src/features/habits/components/RenombrarHabitoOverlay';
 
 function Shell() {
   const { mode, c } = useTheme();
@@ -36,6 +37,10 @@ function Shell() {
       {/* El Codigo Renaser de esta hora (dias 1-7). Aca arriba y no dentro de Hoy porque para el
           aprendiz es innegociable: dentro de una pestaña se esquivaria tocando otra. */}
       <CodigoRenaserOverlay />
+      {/* Ofrece UNA sola vez cambiarle el nombre a las bebidas del catalogo (jugo verde / agua con
+          limon), para quien no las puede tomar. Aca arriba por el mismo motivo que los otros tres:
+          ninguna de las cinco pantallas cambia. No es un Modal — no bloquea lo que hay debajo. */}
+      <RenombrarHabitoOverlay />
       {/* Dibuja los Alert en el build web, donde el Alert de react-native-web es un metodo vacio
           que nunca ejecuta los onPress de sus botones (E-144). En movil no pinta nada. */}
       <AnfitrionAlerta />

@@ -28,6 +28,13 @@ import {
   useArranqueDelPrograma,
 } from '../features/programa/hooks/useArranqueDelPrograma';
 import { HoraPickerModal } from '../features/habits/components/HoraPickerModal';
+import { RenombrarHabitoModal } from '../features/habits/components/RenombrarHabitoModal';
+import { useRenombreLocal } from '../features/habits/hooks/useRenombreDeHabito';
+import {
+  esRenombrable,
+  tituloVisible,
+} from '../features/habits/utils/renombreDeHabito';
+import { useAuth } from '../features/auth/context/AuthContext';
 import * as habitsApi from '../features/habits/api/habitsApi';
 import { aMomento, mapearPlanHabit } from '../features/habits/api/habitsMappers';
 import {
@@ -102,6 +109,15 @@ export interface PlanHabit {
    * mis hábitos".
    */
   cambioProgramado: { time: string; desde: string } | null;
+  /**
+   * `Habito.claveSistema` del backend (`DAILY_CLASS`, `GREEN_JUICE`…), `null` en los personales.
+   *
+   * Se arrastra hasta acá para poder reconocer un hábito puntual sin mirar su título — hoy lo usa
+   * el cambio de nombre de las bebidas (`utils/renombreDeHabito.ts`). `TrainingScreen` ya lo traía
+   * por el mismo motivo, y la razón es la misma que documenta ahí: el título es editable, así que
+   * emparejar por texto hace desaparecer la función en silencio el día que alguien lo renombre.
+   */
+  systemKey?: string | null;
 }
 
 // =========================================================================
@@ -402,6 +418,28 @@ export default function PlanScreen() {
   const [horaPickerVisible, setHoraPickerVisible] = useState(false);
   const [habitoParaHora, setHabitoParaHora] = useState<PlanHabit | null>(null);
 
+  // =========================================================================
+  // CAMBIARLE EL NOMBRE A UNA BEBIDA (jugo verde / agua con limón)
+  // =========================================================================
+  /**
+   * Quien no puede tomar esas bebidas —gastritis, reflujo, diabetes— puede ponerles el nombre de
+   * lo que sí va a hacer, en vez de incumplirlas 90 días. El cambio es SUYO: nadie más lo ve.
+   *
+   * Solo se ofrece sobre los dos hábitos que el backend acepta (por `systemKey`, nunca por título)
+   * y **solo hasta el día 0**: desde el día 1 `RenombreHabitoService` rechaza tanto el cambio como
+   * el quitarlo. Mostrar el botón después sería mostrar un botón que siempre falla.
+   *
+   * El nombre propio sale del almacenamiento del teléfono y no del servidor porque **ninguna
+   * lectura del aprendiz devuelve `personalTitle`** — ver la cabecera de
+   * `features/habits/storage/renombreDeHabito.ts`.
+   */
+  const { user } = useAuth();
+  const renombre = useRenombreLocal(user?.id ?? null);
+  // D-127: cualquier dia del programa. Ya no depende del dia, solo de que el habito sea uno
+  // de los dos reemplazables (lo decide `esRenombrable` en cada tarjeta).
+  const puedeRenombrar = true;
+  const [habitoARenombrar, setHabitoARenombrar] = useState<PlanHabit | null>(null);
+
   // Estados de Objetivos
 
   // Modales
@@ -480,6 +518,11 @@ export default function PlanScreen() {
   // GESTOS TÁCTILES DEL SISTEMA (BACKHANDLER)
   // =========================================================================
   useSystemBackHandler(() => {
+    // El de arriba de todo va primero: el cambio de nombre se abre POR ENCIMA de la lista.
+    if (habitoARenombrar !== null) {
+      setHabitoARenombrar(null);
+      return true;
+    }
     if (moveMomentModalVisible) {
       setMoveMomentModalVisible(false);
       return true;
@@ -497,7 +540,8 @@ export default function PlanScreen() {
       return true;
     }
     return false;
-  }, activeSubView !== 'main' || createHabitModalVisible || editGoalModalVisible || moveMomentModalVisible);
+  }, activeSubView !== 'main' || createHabitModalVisible || editGoalModalVisible || moveMomentModalVisible
+     || habitoARenombrar !== null);
 
   // =========================================================================
   // HANDLERS
@@ -1415,9 +1459,32 @@ export default function PlanScreen() {
                                 </View>
                                 {bloqueadoObligatorio ? <Icon name="lock" size={11} color={c.goldInk} /> : null}
                               </Row>
+                              {/* El nombre que puso la persona gana al del catálogo. Sin renombre
+                                  devuelve `habit.title` tal cual, así que para los ~20 hábitos
+                                  que no son bebidas no cambia absolutamente nada. */}
                               <Text style={[t.cardTitle, { color: c.textStrong, marginTop: 4 }]}>
-                                {habit.title}
+                                {tituloVisible(habit, renombre.titulos)}
                               </Text>
+
+                              {/* Cambiar el nombre de la bebida — solo en los dos hábitos que el
+                                  backend acepta y solo mientras la ventana sigue abierta (día 0).
+                                  Se reconoce por `systemKey`, nunca por el texto del título. */}
+                              {esRenombrable(habit.systemKey) && puedeRenombrar && !bloqueado ? (
+                                <Pressable
+                                  onPress={() => setHabitoARenombrar(habit)}
+                                  accessibilityRole="button"
+                                  accessibilityLabel={`Cambiarle el nombre a ${tituloVisible(habit, renombre.titulos)}`}
+                                  hitSlop={8}
+                                  style={styles.renombrarBtn}
+                                >
+                                  <Icon name="spark" size={11} color={c.goldInk} />
+                                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_500Medium', flexShrink: 1 }]}>
+                                    {renombre.titulos[habit.id]
+                                      ? 'CAMBIAR O QUITAR EL NOMBRE'
+                                      : 'PONERLE OTRO NOMBRE'}
+                                  </Text>
+                                </Pressable>
+                              ) : null}
                               {/* Horario: selector táctil, ya no texto libre (§1).
                                   D-85: ya NO se bloquea cuando el hábito venció hoy. Que hoy se
                                   haya pasado su hora no impide reprogramarlo — el backend acepta
@@ -1998,6 +2065,26 @@ export default function PlanScreen() {
         }}
         onCerrar={() => setHoraPickerVisible(false)}
       />
+
+      {/* ========================================================================= */}
+      {/* MODAL: OTRO NOMBRE PARA LA BEBIDA (solo para quien lo pide, solo día 0)    */}
+      {/* ========================================================================= */}
+      {habitoARenombrar !== null && (
+        <RenombrarHabitoModal
+          visible
+          tituloCatalogo={habitoARenombrar.title}
+          tituloActual={renombre.titulos[habitoARenombrar.id] ?? null}
+          onGuardar={(titulo, motivo) => renombre.renombrar(habitoARenombrar.id, titulo, motivo)}
+          // Solo se ofrece quitar si hay algo que quitar: el `DELETE` sobre un hábito sin renombre
+          // no falla, pero un botón que no hace nada visible es peor que no tenerlo.
+          onQuitar={
+            renombre.titulos[habitoARenombrar.id]
+              ? () => renombre.quitarRenombre(habitoARenombrar.id)
+              : undefined
+          }
+          onCerrar={() => setHabitoARenombrar(null)}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -2149,6 +2236,21 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     marginTop: 7,
     maxWidth: '100%',
+  },
+  /* "Cambiarle el nombre" de las bebidas. Sin relleno ni borde: es una acción de texto dentro de
+     una tarjeta que ya tiene medallón, etiqueta y píldora de hora — una caja más ahí sería ruido.
+     `minHeight` de 40 con `hitSlop` de 8 para llegar al área de pulsación de AGENTS.md §4 sin
+     separar visualmente la línea del título. `flexWrap` porque la etiqueta es larga y en 360 px
+     no entra en una sola línea. */
+  renombrarBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 5,
+    alignSelf: 'flex-start',
+    minHeight: 40,
+    maxWidth: '100%',
+    paddingRight: 6,
   },
   momentMoveOptionBtn: {
     borderWidth: 1,
