@@ -1118,19 +1118,13 @@ export default function TrainingScreen() {
                   ))}
                 </View>
 
-                {/* Consistency Banner */}
-                <View style={[styles.consistencyBanner, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-                  <Icon name="spark" size={18} color={c.goldInk} />
-                  <View style={{ flex: 1, gap: 2 }}>
-                    <Text style={[t.body, { color: c.textStrong, fontFamily: 'Jost_500Medium' }]}>
-                      Consistencia de la Dimensión
-                    </Text>
-                    <Text style={[t.small, { color: c.textSoft }]}>
-                      37 días consecutivos cumpliendo al menos el 70% de tus evidencias
-                    </Text>
-                  </View>
-                  <Text style={[t.metric, { color: c.goldInk, fontSize: 20 }]}>94%</Text>
-                </View>
+                {/* Acá vivía "Consistencia de la Dimensión · 37 días consecutivos · 94 %".
+                    Se retira el 2026-09-15: las dos cifras estaban escritas a mano en el archivo,
+                    iguales para las cinco dimensiones y para cualquier persona. Se veían incluso
+                    en una dimensión con CERO hábitos, al lado de su propio "0/0 cumplidos" — que
+                    es como lo encontró el dueño. Vuelve cuando exista el dato: hoy nada calcula
+                    consistencia por dimensión, y el porcentaje real del día ya está arriba, en
+                    "Cumplidos hoy". */}
               </View>
             )}
 
