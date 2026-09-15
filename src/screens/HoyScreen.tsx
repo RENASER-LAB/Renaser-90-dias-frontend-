@@ -256,7 +256,13 @@ export default function HoyScreen() {
       : 'Todo lo demás se alinea cuando cumples tu disciplina.';
   }, [habitoAhora, resumen]);
 
-  const coherenciaScore = Math.round(resumen?.coherencia ?? 100);
+  // `null` = todavía no planificó ninguna acción diaria esta semana, y eso NO es un 100 (D-128).
+  // Hasta el 2026-09-15 acá había `?? 100`: con el backend caído, sin datos, o sin haber hecho
+  // nada, la pantalla decía "100 % · Nivel de excelencia". Ahora dice "—".
+  const coherenciaScore =
+    resumen?.coherencia === null || resumen?.coherencia === undefined
+      ? null
+      : Math.round(resumen.coherencia);
   const puntosLiga = resumen?.puntosLiga ?? 100;
   const rachaActual = resumen?.rachaActual ?? 0;
   const rachaMaxima = resumen?.rachaMaxima ?? 0;
@@ -377,12 +383,18 @@ export default function HoyScreen() {
             </View>
             <View style={styles.metricCifra}>
               <Text style={[t.metric, { color: c.goldInk }]}>
-                {coherenciaScore}
+                {coherenciaScore ?? '—'}
               </Text>
-              <Text style={{ fontFamily: 'Jost_500Medium', fontSize: 15, color: c.goldInk }}>%</Text>
+              {coherenciaScore !== null && (
+                <Text style={{ fontFamily: 'Jost_500Medium', fontSize: 15, color: c.goldInk }}>%</Text>
+              )}
             </View>
             <Text style={[t.small, { color: c.micro, fontSize: 12, marginTop: 4 }]}>
-              {coherenciaScore >= 80 ? 'Nivel de excelencia' : 'Consistencia del día'}
+              {coherenciaScore === null
+                ? 'Planificá tu semana para verla'
+                : coherenciaScore >= 80
+                  ? 'Nivel de excelencia'
+                  : 'Consistencia del día'}
             </Text>
           </View>
 

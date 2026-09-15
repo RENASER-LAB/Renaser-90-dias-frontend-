@@ -390,7 +390,10 @@ export default function YoScreen() {
             <View style={styles.statBloque}>
               <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>COHERENCIA</Text>
               <View style={styles.statCifra}>
-                <Text style={[t.metric, { color: c.goldInk }]}>{Math.round(resumen?.coherencia ?? 100)}</Text>
+                <Text style={[t.metric, { color: c.goldInk }]}>
+                  {/* Sin acciones planificadas no hay coherencia: un guion, no un 100 (D-128). */}
+                  {resumen?.coherencia == null ? '—' : Math.round(resumen.coherencia)}
+                </Text>
                 <Text style={{ fontFamily: 'Jost_500Medium', fontSize: 15, color: c.goldInk }}>%</Text>
               </View>
             </View>
