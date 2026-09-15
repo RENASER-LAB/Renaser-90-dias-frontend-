@@ -7,24 +7,52 @@ Dos temas investigados hoy y aparcados a propósito. Todo verificado contra el c
 
 # A · Unificar el vocabulario de las fases
 
-**Decisión: anotado para después.** No urge y es de bajo riesgo, pero hay una trampa que hay que
-conocer antes de tocarlo.
+> **HECHO el 2026-09-14** (rama `fases/vocabulario-del-cliente`, frontend). Esta sección decía
+> *"Decisión: anotado para después. No urge y es de bajo riesgo…"*. Se hizo, y se hizo siguiendo al
+> pie de la letra las cinco instrucciones de *"Cómo hacerlo cuando toque"* que están más abajo —
+> valían, y se dejan a la vista porque son la explicación de por qué el cambio salió sin romper
+> nada. Lo que se movió:
+>
+> - `useResumenHome.ts` pasó a llamarse la **única definición de fase de la app**: los cuatro
+>   nombres son ahora los del documento del cliente y se exporta `FASES_EN_ORDEN` para recorrerlas.
+> - `YoScreen` **ya no tiene su propia lista**. Su carrusel deriva nombre, número y rango de
+>   `FASES_EN_ORDEN`, y sólo conserva lo editorial (ícono, color, frase, viñetas) en un
+>   `Record<ClaveDeFase, …>` — un tipo que convierte en **error de compilación** olvidarse de una
+>   fase. Pasó de tres fases a cuatro.
+> - `YoScreen.tsx:81`: *"Completar la Fase 1: días 1 al 30"* → *"los días 1 al 7"*.
+> - `schema.types.ts`: se borró `currentPhase: 1 | 2 | 3`.
+> - **Las claves del enum no se tocaron.** Ninguna llamada al backend cambió.
+> - Test nuevo: `features/home/hooks/__tests__/fasesDelPrograma.test.ts`. Verificado que **falla
+>   contra el código viejo** (3 de sus 5 casos), incluida una prueba de que los cuatro rangos
+>   cubren los 90 días sin huecos — que es la que atrapa un *"días 1 al 30"*.
+>
+> Sigue abierto el punto 5 (los cortes de día duplicados en los dos enums del backend): **no se
+> tocó ningún corte**, así que nada se desincronizó, pero la trampa sigue ahí para el día que
+> alguien mueva un día.
 
-## Lo que hay hoy: cinco vocabularios
+## Lo que había: cinco vocabularios
 
-| Dónde | Qué dice | ¿Vivo? |
+| Dónde | Qué decía | ¿Vivo? |
 |---|---|---|
-| backend `users.api.FasePrograma` | `PHASE_1_REBIRTH`, `PHASE_2_DEVELOPMENT`, `PHASE_3_ALCHEMIST_WARRIOR`, `PHASE_4_ASCENSION` | Sí — es la clave que viaja por el cable |
-| backend `phasecontracts…FasePrograma` | "Fase I · El Renacimiento", "Fase II · El Desarrollo", … | Sí |
-| `useResumenHome.ts:22-25` | Renaser · Desarrollo · Guerrero Alquimista · Ascensión | Sí — es lo que se ve en Plan |
-| `YoScreen.tsx:97-125` | Comprender tu mente · Autoterapia Renaser · … | Sí — y son **tres** fases, no cuatro |
-| `schema.types.ts:25` | Fundación · Aceleración · Maestría | **Muerto** — cero consumidores |
+| backend `users.api.FasePrograma` | `PHASE_1_REBIRTH`, `PHASE_2_DEVELOPMENT`, `PHASE_3_ALCHEMIST_WARRIOR`, `PHASE_4_ASCENSION` | Sí — es la clave que viaja por el cable. **Intacta** |
+| backend `phasecontracts…FasePrograma` | "Fase I · El Renacimiento", "Fase II · El Desarrollo", … | Sí. **Sin tocar** (es backend) |
+| `useResumenHome.ts:22-25` | Renaser · Desarrollo · Guerrero Alquimista · Ascensión | ✅ **Renombrado** a los nombres del cliente |
+| `YoScreen.tsx:97-125` | Comprender tu mente · Autoterapia Renaser · … (**tres** fases) | ✅ **Eliminado**: ahora deriva de `FASES_EN_ORDEN` |
+| `schema.types.ts:25` | Fundación · Aceleración · Maestría | ✅ **Borrado** — era muerto, cero consumidores |
 
-El documento del cliente pide un sexto: **El Espejo · El Ciclo Alquímico · El Maestro Interno ·
-Sistema de Alto Rendimiento**.
+El documento del cliente pedía un sexto, y es el que quedó: **El Espejo · El Ciclo Alquímico ·
+El Maestro Interno · Sistema de Alto Rendimiento**.
 
-Súmese `YoScreen.tsx:81`, que promete un logro por *"Completar la Fase 1: días 1 al 30"* cuando
-la Fase 1 son 7 días.
+Quedan **dos** vocabularios vivos, no cinco: la clave del backend (contrato) y el rótulo del
+cliente (texto). Y el del backend `phasecontracts`, que es castellano interno del servidor y no
+llega a la pantalla.
+
+> **Lo que NO se tocó, y es la misma familia de problema:**
+> `onboarding/screens/BienvenidaScreen.tsx:15-17` tiene todavía otro juego de rótulos (SEMILLA ·
+> *"Fundación & Consciencia"*, FORTALEZA · *"Aceleración & Enfoque"*). Es una línea de tiempo de los
+> 90 días, no las cuatro fases, y la pantalla **no tiene ningún llamador** — es parte de las 1.041
+> líneas de onboarding muerto. Se deja anotado en vez de corregido para no ampliar el alcance sobre
+> código que nadie ejecuta.
 
 ## Qué NO se rompe
 

@@ -146,6 +146,34 @@ export async function enviarMensajeConMedia(conversationId: string, params: {
     'POST /api/v1/chat/conversations/{id}/messages (media)');
 }
 
+/**
+ * `POST /conversations/{id}/messages/share-wall-post` — comparte una publicación del Muro dentro
+ * de una conversación. Devuelve el MISMO `MensajeResponse` que `POST .../messages`, así que se
+ * valida con `wireMensajeSchema` y el mensaje creado entra al historial como cualquier otro.
+ *
+ * Por qué existe un endpoint propio en vez de componer el mensaje acá: la foto que trae el feed
+ * del Muro es una URL prefirmada de S3 con `X-Amz-Expires=900` — **quince minutos**. Pegarla como
+ * texto deja un enlace que muere a los quince minutos y queda roto para siempre en el historial
+ * de la conversación, que es exactamente el defecto que E-79 ya dejó anotado para el Muro. Acá
+ * viaja solo el `postId`: el servidor arma el texto y adjunta la foto como media de verdad
+ * (`mediaBucket`/`mediaPath`), y la vuelve a firmar en cada lectura.
+ *
+ * Ojo, el `postId` es el de la PUBLICACIÓN, no el de su media: el servidor resuelve las fotos
+ * solo. Y tiene que ser un id REAL: una publicación todavía optimista (`PostItem.pendiente`, con id
+ * `pendiente-<timestamp>`) no existe en el backend, así que compartirla falla. Eso es correcto — no
+ * hay nada guardado que compartir — y además falla a la vista, en vez de mandar un mensaje con la
+ * ruta local del teléfono adentro, que es lo que pasaba antes.
+ */
+export async function compartirPublicacionDelMuro(conversationId: string,
+                                                  postId: string): Promise<WireMensaje> {
+  const r = await apiFetch<unknown>(
+    `/api/v1/chat/conversations/${conversationId}/messages/share-wall-post`,
+    { method: 'POST', body: { postId } }
+  );
+  return validarRespuesta<WireMensaje>(wireMensajeSchema, r,
+    'POST /api/v1/chat/conversations/{id}/messages/share-wall-post');
+}
+
 /** `GET /chat/members` — a quién se le puede escribir (#27). Directorio completo: todo usuario
  * activo está auto-unido al chat GLOBAL, así que no hace falta una consulta aparte a `users`. */
 export async function obtenerDirectorioMiembros(query?: string, cursor?: string): Promise<WireMiembrosPage> {

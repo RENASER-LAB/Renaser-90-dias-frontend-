@@ -169,7 +169,7 @@ export function TerminosScreen({
           <View style={[styles.iconMedallion, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
             <Icon name="doc" size={22} color={c.goldInk} />
           </View>
-          <MicroLabel>ACUERDO DE TRANSFORMACIÓN</MicroLabel>
+          <MicroLabel>Acuerdo de transformación</MicroLabel>
           <Text style={[t.screenTitle, { color: c.textStrong, marginTop: 4, textAlign: 'center' }]}>
             TÉRMINOS Y CONDICIONES
           </Text>

@@ -200,7 +200,7 @@ export function GrupoDetalleScreen({
 
             {/* ── Mentor ─────────────────────────────────────────────────── */}
             <View style={{ gap: 10 }}>
-              <MicroLabel>MENTOR</MicroLabel>
+              <MicroLabel>Mentor</MicroLabel>
               {grupo.mentor ? (
                 <View style={[estilos.fila, { backgroundColor: c.cardBg, borderColor: c.border }]}>
                   <Text style={[t.body, { color: c.textStrong, fontSize: 15, flex: 1, flexShrink: 1 }]}>
@@ -242,7 +242,7 @@ export function GrupoDetalleScreen({
 
             {/* ── Aprendices ─────────────────────────────────────────────── */}
             <View style={{ gap: 10 }}>
-              <MicroLabel>APRENDICES</MicroLabel>
+              <MicroLabel>Aprendices</MicroLabel>
               {grupo.members.length === 0 ? (
                 <Text style={[t.body, { color: c.textSoft, fontSize: 14 }]}>Todavía no hay nadie.</Text>
               ) : null}

@@ -209,7 +209,7 @@ export function PhoneCountryInput({
         >
           <View style={[styles.modalCard, { backgroundColor: c.cardBg, borderColor: c.gold }]}>
             <View style={styles.modalHeader}>
-              <MicroLabel>PAÍS Y PREFIJO TELEFÓNICO (TODOS LOS PAÍSES)</MicroLabel>
+              <MicroLabel>País y prefijo telefónico (todos los países)</MicroLabel>
               <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 18, marginTop: 2 }]}>
                 Selecciona tu País
               </Text>

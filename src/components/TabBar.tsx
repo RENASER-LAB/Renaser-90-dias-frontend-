@@ -10,6 +10,30 @@ import { Icon, IconName } from './Icon';
 const ICONS: Record<string, IconName> = { Hoy: 'sun', Plan: 'doc', Training: 'diamond', Comunidad: 'users', Yo: 'user' };
 const LABELS: Record<string, string> = { Hoy: 'HOY', Plan: 'PLAN', Training: 'TRAINING', Comunidad: 'COMUNIDAD', Yo: 'YO' };
 
+/**
+ * El nombre se ve SOLO en la pestaña activa (pedido del dueño, 2026-09-14) — antes se veían los
+ * cinco a la vez y la barra era la franja más cargada de la app.
+ *
+ * ## Por qué `opacity` y no dejar de renderizar el texto
+ *
+ * Dos motivos, ninguno de gusto:
+ *
+ * 1. **El ícono saltaría.** `item` centra su contenido con `minHeight: 48`: sin la etiqueta, el
+ *    ícono se recentra y se corre ~9 px hacia abajo. Eso pasaría en las cinco pestañas en cada
+ *    cambio de pantalla — un tirón visible en el gesto más frecuente de la app. Reservando el
+ *    hueco, lo único que cambia es qué texto se ve.
+ * 2. **El nombre sigue existiendo para quien no ve.** El lector de pantalla no lee este texto sino
+ *    el `accessibilityLabel` del `Pressable`, que se mantiene en las cinco — y es también de donde
+ *    las 24 pruebas E2E toman la pestaña (`getByRole('tab', { name: /^hoy$/i })`). Por eso esconder
+ *    el texto visible no rompe ni la accesibilidad ni la suite.
+ *
+ * Se descartó quitar los nombres del todo, como pide la referencia del dueño (Facebook): esos
+ * íconos se aprendieron hace quince años, y acá un diamante para "Training" o una hoja para "Plan"
+ * no son evidentes para un público de 40 a 60 años — el mismo criterio por el que `AGENTS.md` §4
+ * fija tamaños mínimos de lectura.
+ */
+const OCULTO = { opacity: 0 } as const;
+
 export function TabBar({ state, navigation }: BottomTabBarProps) {
   const { c, t } = useTheme();
   const insets = useSafeAreaInsets();
@@ -54,7 +78,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
                     <Icon name="diamond" size={rs(18)} color={c.onGold} />
                   </LinearGradient>
                 </View>
-                <Text style={[t.tab, { color: focused ? c.goldInk : c.tabInactive }]} numberOfLines={1} adjustsFontSizeToFit>
+                <Text style={[t.tab, { color: c.goldInk }, !focused && OCULTO]} numberOfLines={1} adjustsFontSizeToFit>
                   {LABELS[route.name]}
                 </Text>
               </Pressable>
@@ -65,7 +89,7 @@ export function TabBar({ state, navigation }: BottomTabBarProps) {
             <Pressable key={route.key} onPress={onPress} style={styles.item} hitSlop={8}
               accessibilityRole="tab" accessibilityState={{ selected: focused }} accessibilityLabel={LABELS[route.name]}>
               <Icon name={ICONS[route.name]} size={iconSize} color={focused ? c.goldInk : c.tabInactive} />
-              <Text style={[t.tab, { color: focused ? c.goldInk : c.tabInactive }]} numberOfLines={1} adjustsFontSizeToFit>
+              <Text style={[t.tab, { color: c.goldInk }, !focused && OCULTO]} numberOfLines={1} adjustsFontSizeToFit>
                 {LABELS[route.name]}
               </Text>
             </Pressable>

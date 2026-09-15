@@ -150,7 +150,7 @@ export function SolicitudesAdminScreen({
           </Text>
         ) : null}
 
-        {solicitudes.length > 0 ? <MicroLabel>PENDIENTES</MicroLabel> : null}
+        {solicitudes.length > 0 ? <MicroLabel>Pendientes</MicroLabel> : null}
 
         {solicitudes.map(solicitud => (
           <View

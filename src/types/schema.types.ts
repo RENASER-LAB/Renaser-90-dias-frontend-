@@ -22,7 +22,12 @@ export interface UserProfile {
   avatarUrl?: string;
   role: UserRole;
   currentDay: number; // Día 1 al 90
-  currentPhase: 1 | 2 | 3; // 1: Fundación, 2: Aceleración, 3: Maestría
+  // Acá vivía `currentPhase: 1 | 2 | 3` con el comentario "1: Fundación, 2: Aceleración,
+  // 3: Maestría" — un quinto vocabulario de fases, con tres fases en vez de cuatro y nombres que
+  // no existen en ninguna otra parte del producto. No tenía un solo consumidor (verificado: cero
+  // referencias en `src` y en `e2e`, y nadie importa este archivo). Se borra porque leerlo
+  // confundía sobre cuántas fases tiene el programa; las fases son cuatro y las define
+  // `FASES_EN_ORDEN` en `features/home/hooks/useResumenHome`.
   cellId: string; // ID del Grupo asignado (ej. 'cell_07')
   cellName: string; // ej. 'Grupo Fénix 07'
   mentorId: string;

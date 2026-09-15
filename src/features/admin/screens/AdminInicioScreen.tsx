@@ -91,7 +91,7 @@ export function AdminInicioScreen({
         }}
       >
         <View style={{ gap: 10 }}>
-          <MicroLabel>PENDIENTES</MicroLabel>
+          <MicroLabel>Pendientes</MicroLabel>
           {colas.map(cola => (
             <Pressable
               key={`cola-${cola.clave}-${cola.titulo}`}
@@ -122,7 +122,7 @@ export function AdminInicioScreen({
         </View>
 
         <View style={{ gap: 10 }}>
-          <MicroLabel>SECCIONES</MicroLabel>
+          <MicroLabel>Secciones</MicroLabel>
           {secciones.map(seccion => (
             <Pressable
               key={seccion.clave}

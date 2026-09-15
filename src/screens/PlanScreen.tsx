@@ -13,6 +13,7 @@ import { Alert } from '../components/Alerta';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { useTheme } from '../theme/ThemeContext';
+import { space } from '../theme/tokens';
 import { useResponsive } from '../theme/responsive';
 import { useSystemBackHandler } from '../hooks/useSystemBackHandler';
 import { MicroLabel, Row, RowBetween, ScreenHeader } from '../components/ui';
@@ -264,11 +265,24 @@ function aHora24(texto: string): string | null {
  * > backend** (`descripcionDeFase`); esto es el arco de la curva de arriba —tres tramos parejos de
  * > 30 días— y nada más. Se le sacó el nombre "fase" para que la palabra tenga un solo significado
  * > en toda la app.
+ *
+ * > **Corregido 2026-09-14.** Ese arreglo no alcanzó: el bloque seguía mostrando los nombres
+ * > **FUNDACIÓN / ACELERACIÓN / EXPANSIÓN**, y el dueño del producto lo leyó como una
+ * > contradicción con la fase real que la misma pantalla muestra arriba. Tenía razón por dos
+ * > motivos: **esos tres nombres no existen en ningún documento del método** —están inventados en
+ * > esta pantalla, y `.claude/rules/00` prohíbe rellenar vocabulario de producto con supuestos—, y
+ * > dos particiones distintas de los mismos 90 días en una sola pantalla (1–7/8–34/35–64/65–90
+ * > arriba, 1–30/31–60/61–90 acá) se leen como que una de las dos está mal.
+ * >
+ * > Quitarle la palabra "fase" hizo el problema más silencioso, no lo resolvió. **Ahora se
+ * > dibujan solo los rangos de días y el avance real**: el arco sigue contando los 90 días sin
+ * > afirmar que son etapas del método. Si alguna vez el cliente define nombres para estos tres
+ * > tramos, se agregan acá y salen de su documento, no de esta pantalla.
  */
 const TRAMOS_DEL_RECORRIDO = [
-  { d: 'DÍAS 1–30', n: 'FUNDACIÓN' },
-  { d: 'DÍAS 31–60', n: 'ACELERACIÓN' },
-  { d: 'DÍAS 61–90', n: 'EXPANSIÓN' },
+  { d: 'DÍAS 1–30' },
+  { d: 'DÍAS 31–60' },
+  { d: 'DÍAS 61–90' },
 ];
 
 /**
@@ -850,9 +864,13 @@ export default function PlanScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-          <View style={{ alignItems: 'center', paddingTop: 14 }}>
-            <Text style={[t.sectionTitle, { color: c.text }]}>TU MAPA DE LOS PRÓXIMOS 90 DÍAS</Text>
-            <Text style={[t.sectionSub, { color: c.micro, marginTop: 6 }]}>Enfocado. Estratégico. Real.</Text>
+          {/* Alineado a la IZQUIERDA (2026-09-14). Antes iba centrado, y el par "versalitas
+              chicas centradas + subtítulo centrado" es el gesto de plantilla que esta pasada
+              viene a quitar: además obliga al ojo a volver al centro en cada línea. El rótulo
+              queda de antetítulo y la frase pasa a tamaño de lectura. */}
+          <View style={{ paddingTop: 6, gap: 6 }}>
+            <Text style={[t.sectionTitle, { color: c.micro }]}>TU MAPA DE LOS PRÓXIMOS 90 DÍAS</Text>
+            <Text style={[t.body, { color: c.text }]}>Enfocado. Estratégico. Real.</Text>
           </View>
 
           {/* GAUGE DE 90 DÍAS */}
@@ -864,7 +882,10 @@ export default function PlanScreen() {
             </Svg>
             <View style={styles.gaugeCenter}>
               <Text style={[t.micro, { color: c.micro }]}>DÍA</Text>
-              <Text style={{ fontFamily: 'Jost_400Regular', fontSize: 40, color: c.textStrong }}>{diaPrograma}</Text>
+              {/* `t.metric` y no un `fontFamily` suelto: trae las cifras tabulares que pide
+                  AGENTS.md §4 para todo número que cambia en pantalla. Sin eso, pasar del día 9
+                  al 10 corría de lugar el número dentro del medidor. */}
+              <Text style={[t.metric, { fontSize: 40, lineHeight: 46, color: c.textStrong }]}>{diaPrograma}</Text>
               <Text style={[t.small, { color: c.micro }]}>DE {DIAS_DEL_PROGRAMA}</Text>
             </View>
             <Text style={[t.small, styles.gaugeLeft, { color: c.textSoft }]}>01</Text>
@@ -873,34 +894,49 @@ export default function PlanScreen() {
 
           {/* FASE ACTUAL — derivada del día, no escrita a mano.
               Decía "01 · Fundamentación · Días 1–30" fijo: seguía diciendo lo mismo en el día 75. */}
-          <View style={[styles.section, { borderTopColor: c.divider }]}>
-            <MicroLabel>FASE ACTUAL</MicroLabel>
+          <View style={styles.section}>
+            <MicroLabel>Fase actual</MicroLabel>
+            {/* Apilado, ya no en tres columnas (2026-09-14). Los nombres de fase del cliente son
+                largos —"Sistema de Alto Rendimiento" son 27 caracteres, contra los 7 de
+                "Renaser"— y en la fila de antes el nombre quedaba espachurrado entre el número y
+                el rango: con `alignItems: 'baseline'` se partía en dos líneas mientras el rango
+                seguía pegado a la primera, o se comía el aire de los costados. Ahora el nombre
+                tiene el ancho entero de la pantalla y no se corta ni se trunca; el número y el
+                rango bajan a una línea de contexto arriba, que es además el orden en que se leen.
+                Sin `numberOfLines` a propósito: si algún día hay un nombre más largo todavía,
+                preferimos que baje a dos líneas antes que perder letras en puntos suspensivos. */}
             {faseActual ? (
-              <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 12, marginTop: 10 }}>
-                <Text style={[t.small, { color: c.goldInk }]}>{String(faseActual.numero).padStart(2, '0')}</Text>
-                <Text style={[t.cardTitle, { color: c.text, flex: 1, fontSize: 16 }]}>{faseActual.nombre}</Text>
-                <Text style={[t.small, { color: c.micro }]}>{faseActual.rango}</Text>
+              <View style={{ marginTop: 12, gap: 4 }}>
+                <Row gap={10} align="baseline">
+                  <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
+                    {String(faseActual.numero).padStart(2, '0')}
+                  </Text>
+                  <Text style={[t.small, { color: c.micro }]}>{faseActual.rango}</Text>
+                </Row>
+                <Text style={[t.cardTitle, { color: c.text, fontSize: 20, lineHeight: 27 }]}>
+                  {faseActual.nombre}
+                </Text>
               </View>
             ) : (
-              <Text style={[t.small, { color: c.textSoft, fontSize: 14, marginTop: 10 }]}>
+              <Text style={[t.body, { color: c.textSoft, marginTop: 12 }]}>
                 {cargandoDiaPrograma ? 'Cargando tu fase…' : 'Tu fase va a aparecer cuando arranque tu programa.'}
               </Text>
             )}
           </View>
 
           {/* PRIORIDADES CLAVE (INTERACTIVAS) */}
-          <View style={[styles.section, { borderTopColor: c.divider }]}>
-            <MicroLabel>PRIORIDADES CLAVE</MicroLabel>
+          <View style={styles.section}>
+            <MicroLabel>Prioridades clave</MicroLabel>
             {/* La invitacion vivia dentro de cada tarjeta, asi que "Todavía sin definir · toca
                 para escribirlo" se leia tres veces seguidas. Dicha una sola vez arriba, y solo
                 mientras quede algo por definir, las tarjetas recuperan el nombre del eje como
                 lo primero que se lee. */}
             {EJES.some(eje => !rocaDeEje(eje)?.objetivo?.trim()) && (
-              <Text style={[t.small, { color: c.textSoft, fontSize: 13, marginTop: 4 }]}>
+              <Text style={[t.small, { color: c.textSoft, marginTop: 6 }]}>
                 Toca cada una para escribir tu objetivo.
               </Text>
             )}
-            <View style={{ marginTop: 8, gap: 8 }}>
+            <View style={{ marginTop: 12, gap: 10 }}>
               {/* Una sola lista sobre los tres ejes, en vez de tres tarjetas casi idénticas
                   repetidas a mano. Estuvieron con candado y "Disponible en la próxima
                   actualización" desde el commit 8b78a00; se liberan el 2026-09-08.
@@ -930,8 +966,11 @@ export default function PlanScreen() {
                     style={[
                       styles.priorityCard,
                       {
-                        borderColor: esPrincipal ? c.gold : definido ? c.border : c.border,
-                        borderWidth: esPrincipal ? 1.5 : 1,
+                        // Un solo grosor de borde para las tres: lo que distingue a la principal
+                        // es el color del contorno y su distintivo, no una línea más gorda. (El
+                        // ternario de antes, `definido ? c.border : c.border`, devolvía lo mismo
+                        // en las dos ramas.)
+                        borderColor: esPrincipal ? c.gold : c.border,
                         backgroundColor: esPrincipal ? c.cardBgAlt : c.cardBg,
                       },
                     ]}
@@ -947,8 +986,8 @@ export default function PlanScreen() {
                           {ETIQUETA_EJE[eje].toUpperCase()}
                         </Text>
                         {esPrincipal && (
-                          <View style={[styles.insigniaPrincipal, { borderColor: c.gold }]}>
-                            <Text style={[t.micro, { color: c.goldInk, fontSize: 9.5, fontFamily: 'Jost_700Bold', letterSpacing: 0.8 }]}>
+                          <View style={[styles.insigniaPrincipal, { backgroundColor: c.goldWash }]}>
+                            <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 0.8 }]}>
                               PRINCIPAL
                             </Text>
                           </View>
@@ -956,7 +995,7 @@ export default function PlanScreen() {
                       </Row>
 
                       {!definido ? (
-                        <Text style={[t.body, { color: c.textSoft, fontSize: 13.5 }]}>Todavía sin definir</Text>
+                        <Text style={[t.body, { color: c.textSoft }]}>Todavía sin definir</Text>
                       ) : cifra ? (
                         /* Con meta medible manda el NÚMERO: de dónde partió y a dónde va. La frase
                            redactada completa sigue estando, a un toque, en el modal de edición. */
@@ -965,9 +1004,12 @@ export default function PlanScreen() {
                            suspensivos justo donde está el dato. El porcentaje no encoge: es corto
                            y es lo que ancla la lectura a la derecha. */
                         <Row gap={8} style={{ alignItems: 'baseline' }}>
+                          {/* `t.metric` de base para que la cifra lleve dígitos tabulares: es un
+                              número que se mueve con cada avance, y sin ancho fijo el porcentaje
+                              de al lado bailaba al pasar de 9 a 10 (AGENTS.md §4). */}
                           <Text
                             style={[
-                              t.cardTitle,
+                              t.metric,
                               { color: c.textStrong, fontSize: 19, fontFamily: 'Jost_700Bold', flexShrink: 1 },
                             ]}
                             numberOfLines={2}
@@ -977,7 +1019,7 @@ export default function PlanScreen() {
                           {avance !== null && (
                             <Text
                               style={[
-                                t.micro,
+                                t.metric,
                                 { color: c.goldInk, fontSize: 12, fontFamily: 'Jost_500Medium', flexShrink: 0 },
                               ]}
                             >
@@ -989,7 +1031,7 @@ export default function PlanScreen() {
                         /* Sin números —Relaciones, que se mide en una escala 1-10 y no en unidades de
                            negocio— se muestra el objetivo en dos líneas. Decisión del dueño el
                            2026-09-14: antes que inventar una barra de avance sin con qué medirla. */
-                        <Text style={[t.body, { color: c.textStrong, fontSize: 13.5, lineHeight: 19 }]} numberOfLines={2}>
+                        <Text style={[t.body, { color: c.textStrong }]} numberOfLines={2}>
                           {primeraClausula(roca!.objetivo)}
                         </Text>
                       )}
@@ -1013,21 +1055,21 @@ export default function PlanScreen() {
           </View>
 
           {/* ARQUITECTURA DE TIEMPO */}
-          <View style={[styles.section, { borderTopColor: c.divider, flex: 1, justifyContent: 'flex-end', paddingBottom: 24 }]}>
-            <MicroLabel>ARQUITECTURA DE TIEMPO</MicroLabel>
+          <View style={[styles.section, { flex: 1, justifyContent: 'flex-end', paddingBottom: 24 }]}>
+            <MicroLabel>Arquitectura de tiempo</MicroLabel>
             {/* Antes aqui habia una linea ascendente con seis puntos en coordenadas FIJAS
                 ("M6 62 L64 50 ... L294 8"). Parecia el progreso del aprendiz y no medía nada:
                 subia igual el dia 2 que el 89. Ahora los tres tramos se rellenan con el dia
                 real que devuelve `useProgramaDia`, y mientras ese dato no se sabe (o el
                 programa no arranco) no se pinta ningun avance en vez de inventarlo. */}
-            <View style={{ flexDirection: 'row', gap: 6, marginTop: 12 }}>
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
               {TRAMOS_DEL_RECORRIDO.map((tramo, i) => {
                 const primerDia = i * 30 + 1;
                 const avance = diaConocido === null
                   ? 0
                   : Math.max(0, Math.min(1, (diaConocido - i * 30) / 30));
                 return (
-                  <View key={tramo.n} style={{ flex: 1 }}>
+                  <View key={tramo.d} style={{ flex: 1 }}>
                     <View style={[estiloTramo.riel, { backgroundColor: c.border }]}>
                       <View
                         style={[
@@ -1044,21 +1086,9 @@ export default function PlanScreen() {
                     >
                       {tramo.d}
                     </Text>
-                    <Text
-                      style={[
-                        t.micro,
-                        {
-                          color: i === tramoActual ? c.textStrong : c.textSoft,
-                          fontFamily: i === tramoActual ? 'Jost_700Bold' : 'Jost_400Regular',
-                          marginTop: 3,
-                        },
-                      ]}
-                      numberOfLines={1}
-                      adjustsFontSizeToFit
-                    >
-                      {tramo.n}
-                    </Text>
-                    <Text style={[t.micro, { color: c.chevron, fontSize: 10, marginTop: 2 }]}>
+                    {/* Sin `fontSize: 10`: 10.5 es el piso de micro para este público
+                        (AGENTS.md §4), y lo da el propio token. */}
+                    <Text style={[t.micro, styles.cifras, { color: c.chevron, marginTop: 3 }]}>
                       {i === tramoActual && diaConocido !== null
                         ? `vas por el ${diaConocido}`
                         : `desde el ${primerDia}`}
@@ -1090,35 +1120,40 @@ export default function PlanScreen() {
         >
           {/* Top Bar */}
           <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
-            <Pressable onPress={() => setActiveSubView('main')} style={styles.backBtnRow} hitSlop={8}>
-              <Icon name="arrowLeft" size={14} color={c.goldInk} />
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
+            <Pressable onPress={() => setActiveSubView('main')} style={styles.backBtnRow} hitSlop={12}>
+              <Icon name="arrowLeft" size={16} color={c.goldInk} />
+              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 12 }]}>
                 VOLVER A PLAN
               </Text>
             </Pressable>
-            <View style={[styles.categoryPillBadge, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+            {/* Relleno tenue en lugar de contorno dorado (2026-09-14): la píldora vivía pegada a
+                la línea del encabezado, así que eran dos trazos discutiendo el mismo borde. */}
+            <View style={[styles.categoryPillBadge, { backgroundColor: c.goldWash }]}>
               <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                 01. HÁBITOS (7 DÍAS)
               </Text>
             </View>
           </View>
 
-          <RowBetween style={{ marginTop: 10 }}>
+          <RowBetween style={{ marginTop: space.gap, gap: 12 }}>
             <View style={{ flex: 1 }}>
-              <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 14 }]}>
+              <Text style={[t.cardTitle, { color: c.textStrong }]}>
                 Convertirme en mi mejor versión
               </Text>
             </View>
+            {/* 48 px de alto y etiqueta de 13: era un botón de ~25 px con texto de 10.5, por
+                debajo del mínimo de pulsación cómoda de AGENTS.md §4. El color del texto sale
+                del token `onGold` en vez del literal '#1E1B18' que estaba escrito a mano. */}
             <Pressable
               onPress={() => setCreateHabitModalVisible(true)}
               style={[styles.createHabitBtn, { backgroundColor: c.gold }]}
             >
-              <Text style={{ color: '#1E1B18', fontFamily: 'Jost_700Bold', fontSize: 10.5 }}>➕ Crear Hábito</Text>
+              <Text style={{ color: c.onGold, fontFamily: 'Jost_700Bold', fontSize: 13 }}>➕ Crear Hábito</Text>
             </Pressable>
           </RowBetween>
 
           {/* Selector de Días Semanales (LUN - DOM) */}
-          <View style={{ flexDirection: 'row', gap: 6, marginTop: 14 }}>
+          <View style={{ flexDirection: 'row', gap: 6, marginTop: space.gap }}>
             {DAY_OPTIONS.map((d, indice) => {
               const isSelected = selectedDay === d;
               // Los días ya pasados no se pueden planificar: organizar hábitos de un día que ya
@@ -1148,10 +1183,16 @@ export default function PlanScreen() {
                     },
                   ]}
                 >
-                  <Text style={[t.micro, { color: isSelected ? c.goldInk : c.textSoft, fontSize: 10.5, fontFamily: 'Jost_700Bold' }]}>
+                  <Text style={[t.micro, { color: isSelected ? c.goldInk : c.textSoft, fontFamily: 'Jost_700Bold' }]}>
                     {d}
                   </Text>
-                  <Text style={[t.cardTitle, { color: isSelected ? c.goldInk : c.textStrong, fontSize: 13, marginTop: 2 }]}>
+                  <Text
+                    style={[
+                      t.cardTitle,
+                      styles.cifras,
+                      { color: isSelected ? c.goldInk : c.textStrong, fontSize: 14, marginTop: 3 },
+                    ]}
+                  >
                     {DAY_DATES[d]}
                   </Text>
                 </Pressable>
@@ -1165,9 +1206,9 @@ export default function PlanScreen() {
           {programaSinArrancar && (
             <View
               style={{
-                marginTop: 16,
-                padding: 16,
-                borderRadius: 14,
+                marginTop: space.gapLg,
+                padding: space.cardPad,
+                borderRadius: space.radius,
                 borderWidth: 1,
                 borderColor: c.border,
                 backgroundColor: c.cardBgAlt,
@@ -1176,14 +1217,14 @@ export default function PlanScreen() {
               accessibilityLabel="Tu programa todavía no arrancó"
             >
               <Row gap={8}>
-                <Icon name="lock" size={13} color={c.goldInk} />
-                <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>
+                <Icon name="lock" size={15} color={c.goldInk} />
+                <Text style={[t.cardTitle, { color: c.textStrong, flexShrink: 1 }]}>
                   {arranque.estado === 'PENDIENTE_ELEGIR'
                     ? 'Todavía no elegiste tu Día 1'
                     : 'Tu programa arranca pronto'}
                 </Text>
               </Row>
-              <Text style={[t.small, { color: c.textSoft, lineHeight: 18 }]}>
+              <Text style={[t.body, { color: c.textSoft }]}>
                 {arranque.estado === 'PENDIENTE_ELEGIR'
                   ? 'Elige en qué día quieres empezar tus 90 días. Hasta entonces no hay plan que organizar.'
                   : `Empezás el ${formatearFechaLarga(arranque.fechaInicio)}. Desde el ${formatearFechaLarga(diaAnterior(arranque.fechaInicio))} vas a poder organizar los hábitos de tu primer día; hasta entonces no hay nada que hacer acá.`}
@@ -1197,17 +1238,17 @@ export default function PlanScreen() {
               del dia, asi que en dia 0 mostraba los 23 habitos del programa como si
               aplicaran hoy — incluidos los que recien arrancan en el dia 8. El aviso de
               arriba ya explica que pasa; la lista solo agregaba ruido y confusion. */}
-          <View style={{ gap: 14, marginTop: 16, paddingBottom: 28, display: programaSinArrancar ? 'none' : 'flex' }}>
+          <View style={{ gap: space.gapLg, marginTop: space.gapLg, paddingBottom: 28, display: programaSinArrancar ? 'none' : 'flex' }}>
             {/* Mientras carga, si falla, o si de verdad no hay hábitos. Antes de esto se
                 dibujaban 5 hábitos inventados que no existen en el catálogo. */}
             {cargandoHabitos && (
-              <View style={{ gap: 10 }} accessibilityLabel="Cargando tus hábitos">
+              <View style={{ gap: 12 }} accessibilityLabel="Cargando tus hábitos">
                 {[0, 1, 2, 3].map(i => (
                   <View
                     key={i}
                     style={{
-                      height: 76,
-                      borderRadius: 14,
+                      height: 84,
+                      borderRadius: space.radius,
                       borderWidth: 1,
                       borderColor: c.border,
                       backgroundColor: c.cardBg,
@@ -1221,32 +1262,33 @@ export default function PlanScreen() {
             {!cargandoHabitos && errorHabitos !== null && (
               <View
                 style={{
-                  gap: 10,
-                  padding: 18,
-                  borderRadius: 14,
+                  gap: 12,
+                  padding: space.cardPad,
+                  borderRadius: space.radius,
                   borderWidth: 1,
                   borderColor: c.danger,
                   backgroundColor: c.cardBg,
                 }}
               >
-                <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 15 }]}>
+                <Text style={[t.cardTitle, { color: c.textStrong }]}>
                   No pudimos cargar tus hábitos
                 </Text>
-                <Text style={[t.body, { color: c.textSoft, fontSize: 13.5 }]}>{errorHabitos}</Text>
+                <Text style={[t.body, { color: c.textSoft }]}>{errorHabitos}</Text>
+                {/* Relleno sólido y sin contorno: es la única acción de la tarjeta y ya vive
+                    DENTRO de un recuadro. Un botón con borde acá era caja dentro de caja. */}
                 <Pressable
                   onPress={() => {
                     void recargarHabitos();
                   }}
                   style={{
                     minHeight: 48,
-                    borderRadius: 12,
-                    borderWidth: 1,
-                    borderColor: c.gold,
+                    borderRadius: space.radiusSm,
+                    backgroundColor: c.gold,
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
                 >
-                  <Text style={[t.cardTitle, { color: c.goldInk, fontSize: 14.5 }]}>Reintentar</Text>
+                  <Text style={[t.cardTitle, { color: c.onGold }]}>Reintentar</Text>
                 </Pressable>
               </View>
             )}
@@ -1254,18 +1296,18 @@ export default function PlanScreen() {
             {conectadoAlBackend && habits.length === 0 && (
               <View
                 style={{
-                  gap: 6,
-                  padding: 20,
-                  borderRadius: 14,
+                  gap: 8,
+                  padding: space.cardPad,
+                  borderRadius: space.radius,
                   borderWidth: 1,
                   borderColor: c.border,
                   backgroundColor: c.cardBg,
                 }}
               >
-                <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 15 }]}>
+                <Text style={[t.cardTitle, { color: c.textStrong }]}>
                   Tu plan todavía no se generó
                 </Text>
-                <Text style={[t.body, { color: c.textSoft, fontSize: 13.5 }]}>
+                <Text style={[t.body, { color: c.textSoft }]}>
                   Cuando tu programa arranque vas a ver acá tus hábitos repartidos en mañana, tarde
                   y noche.
                 </Text>
@@ -1289,9 +1331,9 @@ export default function PlanScreen() {
               const momentLabel = momentName === 'mañana' ? '🌅 MAÑANA' : momentName === 'tarde' ? '☀️ TARDE' : '🌙 NOCHE';
 
               return (
-                <View key={momentName} style={{ gap: 8 }}>
+                <View key={momentName} style={{ gap: 12 }}>
                   <RowBetween>
-                    <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1, fontSize: 10.5 }]}>
+                    <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
                       {momentLabel} ({momentHabits.length})
                     </Text>
                   </RowBetween>
@@ -1357,19 +1399,23 @@ export default function PlanScreen() {
                       >
                         <RowBetween>
                           <Row gap={10} style={{ flex: 1 }}>
-                            <View style={[styles.habitIconBox, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+                            {/* Disco dorado tenue, sin anillo: el borde de este medallón vivía
+                                dentro del borde de la tarjeta. `goldWash` es el token que existe
+                                justo para esto y lo distingue sin dibujar una segunda caja.
+                                Mismo criterio para la etiqueta de categoría de abajo. */}
+                            <View style={[styles.habitIconBox, { backgroundColor: c.goldWash }]}>
                               <Text style={{ fontSize: 18 }}>{habit.icon}</Text>
                             </View>
                             <View style={{ flex: 1 }}>
-                              <Row gap={4}>
-                                <View style={[styles.tagPill, { borderColor: c.border, backgroundColor: c.cardBgAlt, alignSelf: 'flex-start' }]}>
-                                  <Text style={[t.micro, { color: c.goldInk, fontSize: 10.5, fontFamily: 'Jost_700Bold' }]}>
+                              <Row gap={6}>
+                                <View style={[styles.tagPill, { backgroundColor: c.goldWash, alignSelf: 'flex-start' }]}>
+                                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
                                     {habit.tag}
                                   </Text>
                                 </View>
-                                {bloqueadoObligatorio ? <Icon name="lock" size={10} color={c.goldInk} /> : null}
+                                {bloqueadoObligatorio ? <Icon name="lock" size={11} color={c.goldInk} /> : null}
                               </Row>
-                              <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13, marginTop: 2 }]}>
+                              <Text style={[t.cardTitle, { color: c.textStrong, marginTop: 4 }]}>
                                 {habit.title}
                               </Text>
                               {/* Horario: selector táctil, ya no texto libre (§1).
@@ -1379,32 +1425,42 @@ export default function PlanScreen() {
                                   impedía justo lo que uno quiere hacer de noche: acomodar el día
                                   siguiente. El hábito vencido se sigue viendo apagado, pero se
                                   puede tocar. */}
-                              <Row gap={6} style={{ marginTop: 3 }}>
-                                <Icon name="clock" size={11} color={vencido ? c.textSoft : c.goldInk} />
+                              {/* `flexWrap` (2026-09-14): son cuatro piezas —reloj, hora,
+                                  duración y momento del día— en la columna angosta que queda a la
+                                  derecha del medallón y a la izquierda del interruptor. En un
+                                  teléfono de 360 px no entran en una sola línea, y sin envolver se
+                                  salían de la tarjeta (AGENTS.md §2, cero desbordamientos). */}
+                              <Row gap={8} style={{ marginTop: 6, flexWrap: 'wrap' }}>
+                                <Icon name="clock" size={12} color={vencido ? c.textSoft : c.goldInk} />
                                 <Pressable
                                   onPress={() => (bloqueado ? undefined : abrirSelectorDeHora(habit))}
                                   disabled={bloqueado}
-                                  style={[
-                                    styles.timeInputDirect,
-                                    { borderColor: c.border, backgroundColor: c.cardBgAlt },
-                                  ]}
+                                  hitSlop={10}
+                                  style={[styles.timeInputDirect, { backgroundColor: c.goldWash }]}
                                 >
                                   <Text
-                                    style={{
-                                      color: vencido ? c.textSoft : c.goldInk,
-                                      fontSize: 11,
-                                      fontFamily: 'Jost_700Bold',
-                                    }}
+                                    style={[
+                                      t.micro,
+                                      styles.cifras,
+                                      {
+                                        color: vencido ? c.textSoft : c.goldInk,
+                                        fontSize: 12,
+                                        fontFamily: 'Jost_700Bold',
+                                        letterSpacing: 0,
+                                      },
+                                    ]}
                                   >
                                     {habit.time || 'Sin horario'}
                                   </Text>
                                 </Pressable>
                                 {habit.duration ? (
-                                  <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>({habit.duration})</Text>
+                                  <Text style={[t.micro, { color: c.textSoft }]}>({habit.duration})</Text>
                                 ) : null}
-                                <View style={[styles.momentBadgePill, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
-                                  <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5 }]}>{momentLabel}</Text>
-                                </View>
+                                {/* El momento del día deja de ser una píldora con borde: ya lo
+                                    dice el rótulo de la sección justo arriba, así que repetirlo
+                                    dentro de un recuadro era una caja de más para un dato que el
+                                    ojo ya tiene. Queda como texto apagado. */}
+                                <Text style={[t.micro, { color: c.textSoft }]}>{momentLabel}</Text>
                               </Row>
 
                               {/* D-90: el horario que YA se guardó pero todavía no rige. Sin esto,
@@ -1413,14 +1469,9 @@ export default function PlanScreen() {
                                   aprendiz concluía que no podía editar. `flexWrap` porque el
                                   texto crece con el nombre del día (AGENTS.md §2). */}
                               {habit.cambioProgramado ? (
-                                <View
-                                  style={[
-                                    styles.cambioProgramadoPill,
-                                    { borderColor: c.gold, backgroundColor: c.cardBgAlt },
-                                  ]}
-                                >
-                                  <Icon name="clock" size={9} color={c.goldInk} />
-                                  <Text style={[t.micro, { color: c.goldInk, fontSize: 11, flexShrink: 1 }]}>
+                                <View style={[styles.cambioProgramadoPill, { backgroundColor: c.goldWash }]}>
+                                  <Icon name="clock" size={11} color={c.goldInk} />
+                                  <Text style={[t.micro, { color: c.goldInk, fontSize: 12, flexShrink: 1 }]}>
                                     {textoCambioProgramado(habit.cambioProgramado)}
                                   </Text>
                                 </View>
@@ -1429,8 +1480,8 @@ export default function PlanScreen() {
                           </Row>
 
                           {/* Switch Activar/Pausar para el día — o el candado si todavía no le toca */}
-                          <View style={{ alignItems: 'center', gap: 2 }} onStartShouldSetResponder={() => true}>
-                            <Text style={[t.micro, { color: estadoColor, fontSize: 10.5, fontFamily: 'Jost_700Bold' }]}>
+                          <View style={{ alignItems: 'center', gap: 4 }} onStartShouldSetResponder={() => true}>
+                            <Text style={[t.micro, { color: estadoColor, fontFamily: 'Jost_700Bold' }]}>
                               {estadoLabel}
                             </Text>
                             {bloqueado ? (
@@ -1492,30 +1543,30 @@ export default function PlanScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
-            <Pressable onPress={() => setActiveSubView('main')} style={styles.backBtnRow} hitSlop={8}>
-              <Icon name="arrowLeft" size={14} color={c.goldInk} />
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
+            <Pressable onPress={() => setActiveSubView('main')} style={styles.backBtnRow} hitSlop={12}>
+              <Icon name="arrowLeft" size={16} color={c.goldInk} />
+              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 12 }]}>
                 VOLVER A PLAN
               </Text>
             </Pressable>
-            <View style={[styles.categoryPillBadge, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+            <View style={[styles.categoryPillBadge, { backgroundColor: c.goldWash }]}>
               <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                 02. OBJETIVOS (3 NIVELES)
               </Text>
             </View>
           </View>
 
-          <View style={{ marginTop: 10 }}>
-            <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 14 }]}>
+          <View style={{ marginTop: space.gap, gap: 6 }}>
+            <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 20, lineHeight: 27 }]}>
               Tus objetivos, de los 90 días al día de hoy
             </Text>
-            <Text style={[t.small, { color: c.textSoft, fontSize: 14, marginTop: 4, lineHeight: 20 }]}>
+            <Text style={[t.body, { color: c.textSoft }]}>
               Tres niveles encadenados: el objetivo de 90 días manda sobre la semana, y la semana
               sobre lo que hacés hoy.
             </Text>
           </View>
 
-          <View style={{ gap: 14, marginTop: 14, paddingBottom: 28 }}>
+          <View style={{ gap: space.gap, marginTop: space.gapLg, paddingBottom: 28 }}>
             {/* 1. 👑 OBJETIVO PRINCIPAL (90 DÍAS) */}
             <View style={[styles.goalCard, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
               <RowBetween>
@@ -1525,11 +1576,16 @@ export default function PlanScreen() {
                     1. OBJETIVO PRINCIPAL (90 DÍAS)
                   </Text>
                 </Row>
+                {/* Relleno tenue en vez de contorno (vivía dentro del borde de la tarjeta) y
+                    48 px de alto, que es el mínimo de pulsación cómoda de AGENTS.md §4: antes
+                    eran 3 px de padding vertical. */}
                 <Pressable
                   onPress={() => openEditGoalModal()}
-                  style={[styles.editGoalBtn, { borderColor: c.gold, backgroundColor: c.cardBg }]}
+                  style={[styles.editGoalBtn, { backgroundColor: c.goldWash }]}
                 >
-                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>✏️ Editar</Text>
+                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 12 }]}>
+                    ✏️ Editar
+                  </Text>
                 </Pressable>
               </RowBetween>
 
@@ -1556,18 +1612,21 @@ export default function PlanScreen() {
                     <View style={{ gap: 4, marginTop: 8 }}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                         <Text style={[t.small, { color: c.textSoft, fontSize: 14 }]}>Avance cuantitativo:</Text>
-                        <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 15 }]}>
+                        <Text style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 15 }]}>
                           {rocaAbierta.porcentaje}% CUMPLIDO
                         </Text>
                       </View>
-                      <View style={[styles.progressBarBg, { backgroundColor: c.cardBg, borderColor: c.border }]}>
+                      {/* El riel es el propio `border` como relleno, sin contorno: una barra de
+                          8 px con un borde de 1 px alrededor era una caja dentro de la caja de la
+                          tarjeta, y el borde se comía un cuarto de la altura. */}
+                      <View style={[styles.progressBarBg, { backgroundColor: c.border }]}>
                         <View style={[styles.progressBarFill, { width: `${rocaAbierta.porcentaje}%`, backgroundColor: c.gold }]} />
                       </View>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 }}>
-                        <Text style={[t.small, { color: c.textSoft, fontSize: 14 }]}>
+                        <Text style={[t.small, styles.cifras, { color: c.textSoft, fontSize: 14 }]}>
                           Vas en: <Text style={{ color: c.goldInk, fontFamily: 'Jost_700Bold' }}>{rocaAbierta.avance} {rocaAbierta.unidad}</Text>
                         </Text>
-                        <Text style={[t.small, { color: c.textSoft, fontSize: 14 }]}>
+                        <Text style={[t.small, styles.cifras, { color: c.textSoft, fontSize: 14 }]}>
                           Meta: {rocaAbierta.meta} {rocaAbierta.unidad}
                         </Text>
                       </View>
@@ -1588,13 +1647,13 @@ export default function PlanScreen() {
             {/* Dónde está parado dentro del programa. Se deriva del día, de corrido: el "mes" es un
                 bloque de 4 semanas contado desde que arrancó, no un mes del calendario. */}
             <View style={[styles.goalCard, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
-              <Row gap={6}>
+              <Row gap={8}>
                 <Icon name="calendar" size={15} color={c.goldInk} />
-                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
                   {etiquetaDelMes(mesDe(diaPrograma))}
                 </Text>
               </Row>
-              <Text style={[t.small, { color: c.textSoft, fontSize: 14, marginTop: 4 }]}>
+              <Text style={[t.body, styles.cifras, { color: c.textSoft, marginTop: 6 }]}>
                 Vas por la semana {semanaDe(diaPrograma)} de 12 · día {diaPrograma} de 90
               </Text>
             </View>
@@ -1625,25 +1684,26 @@ export default function PlanScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContentCard, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: c.divider, paddingBottom: 8 }}>
-              <View>
+              <View style={{ flexShrink: 1, gap: 3 }}>
                 <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>REUBICAR HÁBITO</Text>
-                <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>
+                <Text style={[t.cardTitle, { color: c.textStrong }]}>
                   {selectedHabitForMove?.title}
                 </Text>
               </View>
-              <Pressable onPress={() => setMoveMomentModalVisible(false)}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                <Icon name="close" size={12} color={c.goldInk} />
-                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>Cerrar</Text>
-              </View>
+              <Pressable onPress={() => setMoveMomentModalVisible(false)} hitSlop={10}>
+                {/* 48 px de alto: era un texto de 10.5 sin área de toque propia. */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 48, paddingLeft: 12 }}>
+                  <Icon name="close" size={14} color={c.goldInk} />
+                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 12 }]}>Cerrar</Text>
+                </View>
               </Pressable>
             </View>
 
-            <Text style={[t.micro, { color: c.textSoft, fontSize: 11, marginTop: 10 }]}>
+            <Text style={[t.body, { color: c.textSoft, marginTop: 14 }]}>
               ¿En qué momento del día deseas ubicar este hábito?
             </Text>
 
-            <View style={{ gap: 8, marginTop: 12 }}>
+            <View style={{ gap: 10, marginTop: 14 }}>
               {/* Opción 1: Mañana */}
               <Pressable
                 onPress={() => applyMomentChange('mañana')}
@@ -1658,11 +1718,11 @@ export default function PlanScreen() {
                 <Row gap={10}>
                   <Icon name="sun" size={20} color={c.goldInk} />
                   <View>
-                    <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>BLOQUE DE LA MAÑANA</Text>
-                    <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>05:00 AM – 12:00 PM</Text>
+                    <Text style={[t.cardTitle, { color: c.textStrong }]}>BLOQUE DE LA MAÑANA</Text>
+                    <Text style={[t.small, styles.cifras, { color: c.textSoft }]}>05:00 AM – 12:00 PM</Text>
                   </View>
                 </Row>
-                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>Seleccionar ›</Text>
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 12 }]}>Seleccionar ›</Text>
               </Pressable>
 
               {/* Opción 2: Tarde */}
@@ -1679,11 +1739,11 @@ export default function PlanScreen() {
                 <Row gap={10}>
                   <Icon name="clock" size={20} color={c.goldInk} />
                   <View>
-                    <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>BLOQUE DE LA TARDE</Text>
-                    <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>12:00 PM – 18:00 PM</Text>
+                    <Text style={[t.cardTitle, { color: c.textStrong }]}>BLOQUE DE LA TARDE</Text>
+                    <Text style={[t.small, styles.cifras, { color: c.textSoft }]}>12:00 PM – 18:00 PM</Text>
                   </View>
                 </Row>
-                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>Seleccionar ›</Text>
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 12 }]}>Seleccionar ›</Text>
               </Pressable>
 
               {/* Opción 3: Noche */}
@@ -1700,11 +1760,11 @@ export default function PlanScreen() {
                 <Row gap={10}>
                   <Icon name="moon" size={20} color={c.goldInk} />
                   <View>
-                    <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>BLOQUE DE LA NOCHE</Text>
-                    <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>18:00 PM – 22:00 PM</Text>
+                    <Text style={[t.cardTitle, { color: c.textStrong }]}>BLOQUE DE LA NOCHE</Text>
+                    <Text style={[t.small, styles.cifras, { color: c.textSoft }]}>18:00 PM – 22:00 PM</Text>
                   </View>
                 </Row>
-                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>Seleccionar ›</Text>
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 12 }]}>Seleccionar ›</Text>
               </Pressable>
             </View>
           </View>
@@ -1723,12 +1783,13 @@ export default function PlanScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContentCard, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: c.divider, paddingBottom: 8 }}>
-              <Text style={[t.cardTitle, { color: c.goldInk, fontSize: 13 }]}>CREAR NUEVO HÁBITO</Text>
-              <Pressable onPress={() => setCreateHabitModalVisible(false)}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                <Icon name="close" size={12} color={c.goldInk} />
-                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>Cerrar</Text>
-              </View>
+              <Text style={[t.cardTitle, { color: c.goldInk }]}>CREAR NUEVO HÁBITO</Text>
+              <Pressable onPress={() => setCreateHabitModalVisible(false)} hitSlop={10}>
+                {/* 48 px de alto: era un texto de 10.5 sin área de toque propia. */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 48, paddingLeft: 12 }}>
+                  <Icon name="close" size={14} color={c.goldInk} />
+                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 12 }]}>Cerrar</Text>
+                </View>
               </Pressable>
             </View>
 
@@ -1737,7 +1798,7 @@ export default function PlanScreen() {
               <View style={{ gap: 12, paddingVertical: 8 }}>
                 {/* 1. Nombre */}
                 <View style={{ gap: 4 }}>
-                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>1. NOMBRE DEL HÁBITO:</Text>
+                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 12 }]}>1. NOMBRE DEL HÁBITO:</Text>
                   <TextInput
                     value={newHabitTitle}
                     onChangeText={setNewHabitTitle}
@@ -1750,7 +1811,7 @@ export default function PlanScreen() {
                 {/* 2. Categoría — obligatoria del lado del servidor, y de ella salen la etiqueta y
                     el icono que va a mostrar la tarjeta (E-137). */}
                 <View style={{ gap: 4 }}>
-                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>2. ÁREA DEL HÁBITO:</Text>
+                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 12 }]}>2. ÁREA DEL HÁBITO:</Text>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                     {CATEGORIAS_HABITO.map(cat => {
                       const elegida = newHabitCategory === cat.valor;
@@ -1778,7 +1839,7 @@ export default function PlanScreen() {
                 {/* 3. Hora de disparo. El bloque del día (mañana/tarde/noche) sale de esta hora, no
                     de un selector aparte: antes había uno y lo que eligiera se perdía al recargar. */}
                 <View style={{ gap: 4 }}>
-                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>3. HORA DEL DÍA:</Text>
+                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 12 }]}>3. HORA DEL DÍA:</Text>
                   <TextInput
                     value={newHabitTime}
                     onChangeText={setNewHabitTime}
@@ -1786,7 +1847,7 @@ export default function PlanScreen() {
                     placeholderTextColor={c.textSoft}
                     style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.text }]}
                   />
-                  <Text style={[t.micro, { color: c.textSoft, fontSize: 11, lineHeight: 14 }]}>
+                  <Text style={[t.small, { color: c.textSoft }]}>
                     Tu hábito propio se repite los 7 días y no vence: la hora es un recordatorio, y con
                     ella queda en el bloque de mañana, tarde o noche.
                   </Text>
@@ -1816,20 +1877,31 @@ export default function PlanScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContentCard, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: c.divider, paddingBottom: 8 }}>
-              <Text style={[t.cardTitle, { color: c.goldInk, fontSize: 13 }]}>
+              <Text style={[t.cardTitle, { color: c.goldInk, flexShrink: 1 }]}>
                 EDITAR OBJETIVO DE 90 DÍAS
               </Text>
-              <Pressable onPress={() => setEditGoalModalVisible(false)}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                <Icon name="close" size={12} color={c.goldInk} />
-                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>Cerrar</Text>
-              </View>
+              <Pressable onPress={() => setEditGoalModalVisible(false)} hitSlop={10}>
+                {/* 48 px de alto: era un texto de 10.5 sin área de toque propia. */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 48, paddingLeft: 12 }}>
+                  <Icon name="close" size={14} color={c.goldInk} />
+                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 12 }]}>Cerrar</Text>
+                </View>
               </Pressable>
             </View>
 
-            <View style={{ gap: 10, paddingVertical: 10 }}>
+            {/* El cuerpo del formulario scrollea, igual que el de "Crear hábito" unos modales más
+                arriba (2026-09-14). Con los campos a tamaño de lectura y la rejilla 2×2, la
+                tarjeta creció ~75 px: en un teléfono corto y con el teclado abierto, el botón de
+                guardar se iba abajo del borde y no había forma de llegar a él. Esto no es un
+                scroll dentro de otro scroll (AGENTS.md §2): un `Modal` no es un `ScrollView`. */}
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              style={{ maxHeight: 420 }}
+              contentContainerStyle={{ gap: 10, paddingVertical: 10 }}
+              showsVerticalScrollIndicator={false}
+            >
               <View style={{ gap: 4 }}>
-                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>DECLARACIÓN DEL OBJETIVO:</Text>
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 12 }]}>DECLARACIÓN DEL OBJETIVO:</Text>
                 <TextInput
                   value={editGoalTitle}
                   onChangeText={setEditGoalTitle}
@@ -1842,11 +1914,16 @@ export default function PlanScreen() {
 
               {(
                 <View style={{ gap: 8 }}>
-                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                  {/* Rejilla 2x2 y no cuatro columnas (2026-09-14). Con los inputs a tamaño
+                      de lectura (15 px, AGENTS.md §4) cuatro campos en una fila de teléfono dejan
+                      ~48 px de texto útil cada uno, y la etiqueta "PARTISTE DE:" ya se partía en
+                      dos líneas antes del cambio. `flexBasis` al 45 % con `flexWrap` da dos por
+                      fila en teléfono y en tablet, sin desbordar (AGENTS.md §2). */}
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
                     {/* PARTISTE DE es lo que hace que el porcentaje sirva en las dos direcciones:
                         sin él, "bajar de 82 a 75 kg" marca 100 % el primer día (E-166). */}
-                    <View style={{ flex: 1, gap: 4 }}>
-                      <Text style={[t.micro, { color: c.textSoft }]}>PARTISTE DE:</Text>
+                    <View style={{ flexGrow: 1, flexBasis: '45%', gap: 4 }}>
+                      <Text style={[t.micro, { color: c.textSoft, fontSize: 12 }]}>PARTISTE DE:</Text>
                       <TextInput
                         value={editGoalBase}
                         onChangeText={setEditGoalBase}
@@ -1856,8 +1933,8 @@ export default function PlanScreen() {
                         style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.text }]}
                       />
                     </View>
-                    <View style={{ flex: 1, gap: 4 }}>
-                      <Text style={[t.micro, { color: c.textSoft }]}>VAS EN:</Text>
+                    <View style={{ flexGrow: 1, flexBasis: '45%', gap: 4 }}>
+                      <Text style={[t.micro, { color: c.textSoft, fontSize: 12 }]}>VAS EN:</Text>
                       <TextInput
                         value={editGoalCurrentVal}
                         onChangeText={setEditGoalCurrentVal}
@@ -1867,8 +1944,8 @@ export default function PlanScreen() {
                         style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.goldInk }]}
                       />
                     </View>
-                    <View style={{ flex: 1, gap: 4 }}>
-                      <Text style={[t.micro, { color: c.textSoft }]}>META:</Text>
+                    <View style={{ flexGrow: 1, flexBasis: '45%', gap: 4 }}>
+                      <Text style={[t.micro, { color: c.textSoft, fontSize: 12 }]}>META:</Text>
                       <TextInput
                         value={editGoalTargetVal}
                         onChangeText={setEditGoalTargetVal}
@@ -1880,8 +1957,8 @@ export default function PlanScreen() {
                     </View>
                     {/* La unidad dejó de estar fija en dólares: el objetivo puede medirse en kg,
                         horas o clientes. El backend la exige junto con los dos números. */}
-                    <View style={{ flex: 1, gap: 4 }}>
-                      <Text style={[t.micro, { color: c.textSoft }]}>UNIDAD:</Text>
+                    <View style={{ flexGrow: 1, flexBasis: '45%', gap: 4 }}>
+                      <Text style={[t.micro, { color: c.textSoft, fontSize: 12 }]}>UNIDAD:</Text>
                       <TextInput
                         value={editGoalUnidad}
                         onChangeText={setEditGoalUnidad}
@@ -1893,17 +1970,17 @@ export default function PlanScreen() {
                       />
                     </View>
                   </View>
-                  <Text style={[t.micro, { color: c.micro, fontSize: 11, lineHeight: 14 }]}>
+                  <Text style={[t.small, { color: c.micro }]}>
                     Si tu objetivo no se mide con un número, deja los tres campos vacíos.
                   </Text>
                 </View>
               )}
-            </View>
+            </ScrollView>
 
             <GoldButton
               label="✓ GUARDAR OBJETIVO"
               onPress={handleSaveGoal}
-              style={{ width: '100%', marginTop: 6 }}
+              style={{ width: '100%', marginTop: 10 }}
             />
           </View>
         </View>
@@ -1926,20 +2003,24 @@ export default function PlanScreen() {
 }
 
 const estiloTramo = StyleSheet.create({
-  riel: { height: 6, borderRadius: 3, overflow: 'hidden' },
-  relleno: { height: '100%', borderRadius: 3 },
+  riel: { height: 8, borderRadius: 4, overflow: 'hidden' },
+  relleno: { height: '100%', borderRadius: 4 },
 });
 
 const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
-    paddingHorizontal: 24,
+    paddingHorizontal: space.screenX,
     paddingBottom: ESPACIO_PARA_LANZADOR,
+  },
+  /** Cifras que cambian en pantalla: ancho de dígito fijo para que nada salte (AGENTS.md §4). */
+  cifras: {
+    fontVariant: ['tabular-nums'],
   },
   gauge: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 6,
+    marginTop: space.gap,
     position: 'relative',
   },
   gaugeCenter: {
@@ -1957,35 +2038,42 @@ const styles = StyleSheet.create({
     bottom: 0,
     right: 8,
   },
+  /**
+   * Sin `borderTopWidth` (2026-09-14). Eran tres filetes horizontales cortando la pantalla en
+   * bandas, y arriba de cada bloque ya hay un rótulo (`MicroLabel`) que dice dónde empieza: la
+   * línea no agregaba información, solo ruido. Lo que separa un bloque del siguiente es el aire
+   * — `space.gapLg`, los 28 px que la referencia del dueño usa y esta pantalla no tenía.
+   */
   section: {
-    borderTopWidth: 1,
-    marginTop: 16,
-    paddingTop: 14,
+    marginTop: space.gapLg,
   },
   priorityCard: {
     borderWidth: 1,
-    borderRadius: 14,
-    padding: 12,
+    borderRadius: space.radius,
+    padding: 14,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
-  /** El distintivo del eje principal. Contorno y no relleno: marca sin gritar. */
+  /**
+   * El distintivo del eje principal. Relleno tenue y **sin contorno** (2026-09-14): con borde era
+   * un rectángulo dentro del rectángulo de la tarjeta, que es justo el patrón que esta pasada
+   * viene a quitar. `goldWash` lo distingue sin dibujar una segunda caja.
+   */
   insigniaPrincipal: {
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
+    borderRadius: space.radiusSm,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
   },
   barraObjetivo: {
-    height: 4,
-    borderRadius: 2,
+    height: 6,
+    borderRadius: 3,
     overflow: 'hidden',
-    marginTop: 3,
+    marginTop: 5,
   },
   barraObjetivoRelleno: {
     height: '100%',
-    borderRadius: 2,
+    borderRadius: 3,
   },
   detailTopBar: {
     flexDirection: 'row',
@@ -1997,137 +2085,105 @@ const styles = StyleSheet.create({
   backBtnRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
+    minHeight: 48,
+    paddingRight: 12,
   },
+  /* Sin borde: la píldora vive pegada a la línea del encabezado, así que eran dos trazos
+     discutiendo el mismo borde. El relleno (`goldWash`) la separa igual. */
   categoryPillBadge: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    borderRadius: space.radiusSm,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
   createHabitBtn: {
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    borderRadius: space.radiusSm,
+    paddingHorizontal: 14,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   dayPillBtn: {
     flex: 1,
-    paddingVertical: 8,
-    borderRadius: 12,
-    borderWidth: 1.2,
+    minHeight: 48,
+    paddingVertical: 6,
+    borderRadius: space.radiusSm,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   habitPlanCard: {
-    borderWidth: 1.2,
-    borderRadius: 16,
-    padding: 12,
+    borderWidth: 1,
+    borderRadius: space.radius,
+    padding: 14,
     gap: 4,
   },
+  /* Las cuatro piezas de adentro de la tarjeta —medallón, etiqueta de categoría, hora y aviso de
+     cambio programado— perdieron su borde (2026-09-14). Eran cuatro rectángulos dentro del
+     rectángulo de la tarjeta; ahora se distinguen por relleno (`goldWash`) y por el aire. */
   habitIconBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    borderWidth: 1,
+    width: 40,
+    height: 40,
+    borderRadius: space.radiusSm,
     alignItems: 'center',
     justifyContent: 'center',
   },
   tagPill: {
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
+    borderRadius: space.radiusSm,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
   },
   timeInputDirect: {
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    fontSize: 11,
-    fontFamily: 'Jost_700Bold',
+    borderRadius: space.radiusSm,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
   },
   cambioProgramadoPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 5,
     alignSelf: 'flex-start',
     flexWrap: 'wrap',
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    marginTop: 5,
+    borderRadius: space.radiusSm,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    marginTop: 7,
     maxWidth: '100%',
   },
-  momentBadgePill: {
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-  },
   momentMoveOptionBtn: {
-    borderWidth: 1.5,
-    borderRadius: 16,
-    padding: 14,
+    borderWidth: 1,
+    borderRadius: space.radius,
+    padding: space.cardPad,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 10,
   },
   goalCard: {
-    borderWidth: 1.5,
-    borderRadius: 18,
-    padding: 14,
+    borderWidth: 1,
+    borderRadius: space.radius,
+    padding: space.cardPad,
   },
   editGoalBtn: {
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    borderRadius: space.radiusSm,
+    paddingHorizontal: 14,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   progressBarBg: {
-    height: 6,
-    borderRadius: 3,
-    borderWidth: 1,
+    height: 8,
+    borderRadius: 4,
     overflow: 'hidden',
   },
   progressBarFill: {
     height: '100%',
-    borderRadius: 3,
-  },
-  weeklyCheckRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 8,
-  },
-  checkBoxSquare: {
-    width: 18,
-    height: 18,
     borderRadius: 4,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  dailyGoalBox: {
-    borderWidth: 1.2,
-    borderRadius: 14,
-    padding: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 6,
-    gap: 8,
-  },
-  dailyVictoryBtn: {
-    borderWidth: 1.5,
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  /* `weeklyCheckRow`, `checkBoxSquare`, `dailyGoalBox` y `dailyVictoryBtn` se borraron
+     (2026-09-14): eran los estilos del objetivo semanal y del diario que vivían en `useState`, y
+     que se quitaron del JSX cuando esos dos niveles pasaron a `NivelesDelPlan` (ver el comentario
+     de `INITIAL_GOALS` arriba). Quedaron cuatro estilos sin un solo uso. */
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.85)',
@@ -2135,25 +2191,29 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContentCard: {
-    borderWidth: 1.5,
-    borderRadius: 22,
-    padding: 16,
+    borderWidth: 1,
+    borderRadius: space.radius,
+    padding: space.cardPad,
   },
+  /* 15 px y 48 px de alto: estaba en 12 px, por debajo del mínimo de 14 que AGENTS.md §4 fija
+     para inputs — y esto lo escribe gente de 40 a 60 años en su teléfono. */
   modalInputText: {
     borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    fontSize: 12,
+    borderRadius: space.radiusSm,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    minHeight: 48,
+    fontSize: 15,
   },
   // Sin `flex: 1` a proposito: las 4 areas del habito viven en un contenedor con `flexWrap`, y
   // estirarlas las obligaria a entrar todas en una sola fila apretada en un telefono angosto.
   // Asi caen en dos filas de dos cuando no entran.
   categoryPickPill: {
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: space.radiusSm,
+    minHeight: 48,
     paddingVertical: 7,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },

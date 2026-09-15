@@ -24,7 +24,7 @@ export function TarjetaAdminHoy({ onAbrir }: { onAbrir: () => void }) {
       style={[estilos.tarjeta, { backgroundColor: c.cardBg, borderColor: c.border }]}
     >
       <View style={{ flex: 1, flexShrink: 1 }}>
-        <MicroLabel>OPERACIÓN</MicroLabel>
+        <MicroLabel>Operación</MicroLabel>
         <Text style={[t.cardTitle, { color: c.textStrong, marginTop: 6 }]}>Administración</Text>
         <Text style={[t.body, { color: c.textSoft, fontSize: 13, marginTop: 6, lineHeight: 19 }]}>
           Grupos, personas, solicitudes y evidencias. Tu programa personal sigue acá, sin cambios.

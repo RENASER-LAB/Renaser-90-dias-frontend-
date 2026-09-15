@@ -4,7 +4,7 @@ import type { ChatConversation, ChatMessage } from '../../../screens/ComunidadSc
 import { mensajeDeError } from '../../../services/http/apiClient';
 import * as chatApi from '../api/chatApi';
 import { mapearMensaje, mapearResumenConversacion, refinarTituloConMensajes } from '../api/chatMappers';
-import type { WireMiembro } from '../types/chat.types';
+import type { WireMensaje, WireMiembro } from '../types/chat.types';
 
 /**
  * Estado real de Atención Personalizada (chats) contra el backend Java, en un solo lugar — mismo
@@ -73,11 +73,18 @@ export function useChatConversaciones(actorId: string | null | undefined) {
     [actorId]
   );
 
-  /** Envía un mensaje de TEXTO real y lo agrega al final del historial en memoria — el backend
-   * es la fuente de verdad del `id`/`createdAt`, no se optimista-agrega antes de la respuesta. */
-  const enviarMensajeTexto = useCallback(
-    async (conversacion: ChatConversation, texto: string): Promise<ChatConversation> => {
-      const creado = await chatApi.enviarMensajeTexto(conversacion.id, texto);
+  /**
+   * Refleja en memoria un mensaje que el backend ACABA de crear en esta conversación: lo agrega al
+   * final del historial y actualiza la vista previa del listado. El backend es la fuente de verdad
+   * del `id`/`createdAt`, así que nada se agrega de forma optimista antes de su respuesta.
+   *
+   * Se extrajo de `enviarMensajeTexto` (2026-09-14) al aparecer el segundo camino de envío
+   * — compartir una publicación del Muro —: las dos hacen exactamente lo mismo con la respuesta,
+   * lo único que cambia es qué endpoint la produjo. Duplicar el merge dejaba dos lugares donde
+   * olvidarse de actualizar `lastMessage`.
+   */
+  const registrarMensajeCreado = useCallback(
+    (conversacion: ChatConversation, creado: WireMensaje): ChatConversation => {
       const mensaje = mapearMensaje(creado, actorId);
       const actualizada: ChatConversation = {
         ...conversacion,
@@ -91,6 +98,28 @@ export function useChatConversaciones(actorId: string | null | undefined) {
     [actorId]
   );
 
+  /** Envía un mensaje de TEXTO real. Para foto o audio va `useEnvioMediaChat`. */
+  const enviarMensajeTexto = useCallback(
+    async (conversacion: ChatConversation, texto: string): Promise<ChatConversation> => {
+      const creado = await chatApi.enviarMensajeTexto(conversacion.id, texto);
+      return registrarMensajeCreado(conversacion, creado);
+    },
+    [registrarMensajeCreado]
+  );
+
+  /**
+   * Comparte una publicación del Muro en esta conversación. Solo viaja el `postId`: el texto y la
+   * foto los arma el SERVIDOR, para que la foto no quede pegada como una URL firmada que vence a
+   * los 15 minutos — el porqué completo está en `chatApi.compartirPublicacionDelMuro`.
+   */
+  const compartirPublicacionDelMuro = useCallback(
+    async (conversacion: ChatConversation, postId: string): Promise<ChatConversation> => {
+      const creado = await chatApi.compartirPublicacionDelMuro(conversacion.id, postId);
+      return registrarMensajeCreado(conversacion, creado);
+    },
+    [registrarMensajeCreado]
+  );
+
   return {
     conversations,
     setConversations,
@@ -100,5 +129,6 @@ export function useChatConversaciones(actorId: string | null | undefined) {
     recargar,
     abrirConversacion,
     enviarMensajeTexto,
+    compartirPublicacionDelMuro,
   };
 }

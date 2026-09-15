@@ -15,6 +15,7 @@ import { Alert } from '../components/Alerta';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { useTheme } from '../theme/ThemeContext';
+import { space } from '../theme/tokens';
 import { useResponsive } from '../theme/responsive';
 import { useAuth } from '../context/AuthContext';
 import { useSystemBackHandler } from '../hooks/useSystemBackHandler';
@@ -27,6 +28,8 @@ import {
   useResumenHome,
   rotuloDeFase,
   DIAS_DEL_PROGRAMA,
+  FASES_EN_ORDEN,
+  type ClaveDeFase,
 } from '../features/home/hooks/useResumenHome';
 import { useEtapasOnboarding } from '../features/onboarding/hooks/useEtapasOnboarding';
 import { MapaRenacimientoFlow } from '../features/mapa-renacimiento/MapaRenacimientoFlow';
@@ -78,64 +81,85 @@ function fechaDeEvidencia(iso: string | null): string {
  * consiguio: se muestran todos como metas, sin marcar ninguna, hasta que exista ese dato.
  */
 const LOGROS_DEL_PROGRAMA: ReadonlyArray<{ id: string; title: string; icon: IconName; desc: string }> = [
-  { id: 'l1', title: 'FUNDADOR SOMÁTICO', icon: 'award', desc: 'Completar la Fase 1: días 1 al 30 sin fallar.' },
+  { id: 'l1', title: 'FUNDADOR SOMÁTICO', icon: 'award', desc: 'Completar la Fase 1 — El Espejo: los días 1 al 7 sin fallar.' },
   { id: 'l2', title: 'RACHA DE FUEGO (30 DÍAS)', icon: 'fire', desc: '30 amaneceres consecutivos subiendo evidencia.' },
   { id: 'l3', title: 'MAESTRO DEL FOCO', icon: 'zap', desc: '50 bloques de trabajo profundo en modo avión.' },
   { id: 'l4', title: 'REY SOMÁTICO (90 DÍAS)', icon: 'trophy', desc: 'Graduación oficial del programa: los 90 días.' },
 ];
 
-const METODO_FASES: ReadonlyArray<{
-  phase: string;
-  title: string;
-  icon: IconName;
-  color: string;
-  quote: string;
-  summary: string;
-  bullets: string[];
-}> = [
-  {
-    phase: 'FASE 1',
-    title: 'Comprender tu mente',
-    icon: 'brain',
+/**
+ * Lo editorial de cada fase: el ícono, el color, la frase y qué se hace.
+ *
+ * **El nombre, el número y el rango de días NO están acá a propósito** — salen de
+ * `FASES_EN_ORDEN` (`features/home/hooks/useResumenHome`), que es la única definición de fase de
+ * la app. Antes esta pantalla tenía su propia lista, con otros nombres y **sólo tres fases**, y
+ * por eso terminó contradiciendo a Plan: eran dos listas que nadie obligaba a coincidir. Ahora,
+ * si se renombra una fase, esta pantalla se entera sola.
+ *
+ * El contenido sale de `RENASER, PROGRAMA Y FASES.docx` (objetivo psicológico, enemigo, hábitos y
+ * rituales de cada fase), no de una redacción propia: la frase entre comillas es el mensaje de
+ * intervención o la pregunta de reflexión que el documento asigna a esa fase.
+ */
+const CONTENIDO_DEL_METODO: Record<
+  ClaveDeFase,
+  { icon: IconName; color: string; quote: string; summary: string; bullets: string[] }
+> = {
+  PHASE_1_REBIRTH: {
+    icon: 'eye',
     color: '#90CAF9',
-    quote: 'No puedes transformar lo que no comprendes.',
-    summary: 'Reconoce tu mapa mental, emocional y energético para dejar de repetir en automático.',
+    quote: 'Esta semana no buscas cambiarte. Buscas verte.',
+    summary: 'Observar la mente sin intervenir: bajar el ruido mental y el cortisol, y restaurar el sistema dopaminérgico.',
     bullets: [
-      'Identidad, creencias y patrones',
-      'Miedos, culpa y vergüenza',
-      'Heridas de infancia',
-      'Ansiedad y autosabotaje',
+      'Ayuno intermitente: última comida 6pm, primera 10am',
+      'Agua tibia con limón y jugo verde al despertar',
+      'Ritual Tierra-Agua-Fuego, tres veces al día',
+      'Un día completo de ayuno digital',
     ],
   },
-  {
-    phase: 'FASE 2',
-    title: 'Autoterapia Renaser',
-    icon: 'heart',
+  PHASE_2_DEVELOPMENT: {
+    icon: 'diamond',
     color: '#CE93D8',
-    quote: 'Aprendes a transformarte a ti mismo.',
-    summary: 'Regula tus emociones y cambia el diálogo interno con herramientas que puedes practicar cada día.',
+    quote: 'Reconócelo, corrígelo, continúa. El creador asume, la víctima se culpa.',
+    summary: 'Exponer a la víctima interna y despertar al creador: entender la raíz del sabotaje y consolidar el dominio mental.',
     bullets: [
-      'Reprogramación subconsciente',
-      'Meditación y respiración',
-      'Reencuadre profundo',
-      'Sanación emocional',
+      'Tres ciclos de Intoxicación Consciente y Desintoxicación Absoluta',
+      'Mantra: no miedo, no culpa, no vergüenza',
+      'Sueño con alarmas y celular en modo concentración',
+      '¿De qué me quejé? ¿A quién culpé? ¿Qué patrón se repitió?',
     ],
   },
-  {
-    phase: 'FASE 3',
-    title: 'Alto rendimiento personal',
-    icon: 'zap',
+  PHASE_3_ALCHEMIST_WARRIOR: {
+    icon: 'heart',
+    color: '#A5D6A7',
+    quote: '¿Estoy haciendo esto por obligación o porque amo mi vida?',
+    summary: 'Transformar la disciplina exigida en gozo, e iniciar la autoterapia desde el amor.',
+    bullets: [
+      'Los mismos hábitos, ahora desde la intención',
+      'Decretos y mantras: del ayuno, del cierre nocturno, del gozo',
+      'Baile y movimiento libre',
+      'Domingo sagrado: descanso absoluto, sin culpa',
+    ],
+  },
+  PHASE_4_ASCENSION: {
+    icon: 'target',
     color: '#FFE082',
-    quote: 'Transformarte no basta: debes sostenerlo.',
-    summary: 'Convierte claridad en hábitos, foco y resultados sostenibles sin quemarte en el proceso.',
+    quote: 'No eres menos capaz. Simplemente te has distraído.',
+    summary: 'Producir en cuatro horas lo que otros producen en diez: tres misiones de alto impacto al día.',
     bullets: [
-      'Hábitos desde tu esencia',
-      'Rituales de enfoque profundo',
-      'Plan de energía y descanso',
-      'Libertad financiera con equilibrio',
+      'Tres bloques profundos de 90 minutos',
+      'Protocolo antidistractores: el celular fuera de alcance',
+      'Planificación nocturna del día siguiente',
+      'Regla 80/20: ¿cuál fue el 20% que generó resultados?',
     ],
   },
-];
+};
+
+const METODO_FASES = FASES_EN_ORDEN.map(fase => ({
+  phase: `FASE ${fase.numero}`,
+  title: fase.nombre,
+  rango: fase.rango,
+  ...CONTENIDO_DEL_METODO[fase.clave],
+}));
 
 function inicialesDe(nombre: string): string {
   const partes = nombre.trim().split(/\s+/).filter(Boolean);
@@ -316,75 +340,91 @@ export default function YoScreen() {
             onPress={() => setActiveView('hub')}
             style={[styles.userCard, { borderColor: c.border, backgroundColor: c.cardBg }]}
           >
-            <View style={[styles.avatar, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+            {/* El disco perdió su contorno dorado — estaba dentro del borde de la tarjeta. Ahora
+                la forma la da el lavado dorado, que se ve en claro y en oscuro; el `cardBgAlt`
+                que tenía antes es blanco puro y sin la línea habría desaparecido en modo claro. */}
+            <View style={[styles.avatar, { backgroundColor: c.goldWash }]}>
               {profileAvatar ? (
                 <Image source={{ uri: profileAvatar }} style={styles.avatarImage} accessibilityLabel="Foto de perfil" />
               ) : (
-                <Text style={styles.avatarInitials}>{profileInitials}</Text>
+                <Text style={[styles.avatarInitials, { color: c.goldInk }]}>{profileInitials}</Text>
               )}
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[t.cardTitle, { color: c.textStrong }]}>{profileName}</Text>
-              <Text style={[t.small, { color: c.micro, marginTop: 2 }]}>{profileEmail}</Text>
+              <Text style={[t.small, { color: c.micro, marginTop: 3 }]}>{profileEmail}</Text>
             </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Text style={{ fontSize: 13, color: c.goldInk }}>⚙️</Text>
-              <Icon name="chevron" size={12} color={c.chevron} />
-            </View>
+            {/* Sobraba un emoji de engranaje al lado del chevron: dos señales para decir lo
+                mismo, y la de la izquierda no es parte de la paleta. Queda el chevron. */}
+            <Icon name="chevron" size={12} color={c.chevron} />
           </Pressable>
 
           {/* TU EVOLUCIÓN */}
-          <View style={{ paddingTop: 14 }}>
+          <View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <Text style={[t.micro, { color: c.textSoft }]}>TU EVOLUCIÓN</Text>
               <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                 {rotuloDeFase(resumen?.fase)?.toUpperCase() || 'PROGRAMA ACTIVO'}
               </Text>
             </View>
-            <Text style={[t.micro, { color: c.micro, marginTop: 4 }]}>
+            {/* Mismo tratamiento que en Hoy: el día del programa es el dato del bloque, no una
+                micro-etiqueta. A 10.5 px competía con el rótulo de arriba; a 15 con cifras
+                tabulares se lee y no se corre de lugar al pasar del día 9 al 10. */}
+            <Text style={[t.cardTitle, styles.cifras, { color: c.textStrong, fontSize: 15, marginTop: 4 }]}>
               DÍA {resumen?.diaPrograma ?? 1} DE {DIAS_DEL_PROGRAMA}
             </Text>
-            <Svg width="100%" height={78} viewBox="0 0 320 78" style={{ marginTop: 10 }}>
+            <Svg width="100%" height={78} viewBox="0 0 320 78" style={{ marginTop: 14 }}>
               <Path d={evoPath} stroke={c.gold} strokeWidth={1.5} strokeLinecap="round" fill="none" />
               {EVOLUCION.map(([x, y]) => <Circle key={x} cx={x} cy={y} r={2.8} fill={c.gold} />)}
             </Svg>
           </View>
 
-          {/* STATS REALES CALCULADOS POR EL BACKEND */}
-          <View style={{ flexDirection: 'row', gap: 10, paddingTop: 12 }}>
+          {/* STATS REALES CALCULADOS POR EL BACKEND
+              Eran tres cajas con borde y fondo, una dorada y dos grises sin motivo. Ahora son tres
+              columnas de texto sobre el fondo de la pantalla, separadas por líneas de pelo — el
+              mismo tratamiento que recibieron las métricas de Hoy, para que las dos pestañas
+              muestren los mismos números de la misma forma. Las cifras pasan a `t.metric`, que
+              trae ancho de dígito fijo: antes, al subir de 99 a 100 puntos, la columna se corría. */}
+          <View style={{ flexDirection: 'row', alignItems: 'stretch', gap: space.gap }}>
             {/* Coherencia */}
-            <View style={[styles.stat, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
-              <Text style={[t.micro, { color: c.goldInk, fontSize: 10, fontFamily: 'Jost_700Bold' }]}>COHERENCIA</Text>
-              <Text style={{ fontFamily: 'Jost_500Medium', fontSize: 24, color: c.goldInk, marginTop: 6 }}>
-                {Math.round(resumen?.coherencia ?? 100)}<Text style={{ fontSize: 12, color: c.goldInk }}>%</Text>
-              </Text>
+            <View style={styles.statBloque}>
+              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>COHERENCIA</Text>
+              <View style={styles.statCifra}>
+                <Text style={[t.metric, { color: c.goldInk }]}>{Math.round(resumen?.coherencia ?? 100)}</Text>
+                <Text style={{ fontFamily: 'Jost_500Medium', fontSize: 15, color: c.goldInk }}>%</Text>
+              </View>
             </View>
+
+            <View style={[styles.statSeparador, { backgroundColor: c.divider }]} />
 
             {/* Puntos Liga */}
-            <View style={[styles.stat, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-              <Text style={[t.micro, { color: c.micro, fontSize: 10, fontFamily: 'Jost_700Bold' }]}>PUNTOS LIGA</Text>
-              <Text style={{ fontFamily: 'Jost_500Medium', fontSize: 24, color: c.textStrong, marginTop: 6 }}>
-                {resumen?.puntosLiga ?? 100}
-              </Text>
+            <View style={styles.statBloque}>
+              <Text style={[t.micro, { color: c.micro, fontFamily: 'Jost_700Bold' }]}>PUNTOS LIGA</Text>
+              <View style={styles.statCifra}>
+                <Text style={[t.metric, { color: c.textStrong }]}>{resumen?.puntosLiga ?? 100}</Text>
+              </View>
             </View>
 
+            <View style={[styles.statSeparador, { backgroundColor: c.divider }]} />
+
             {/* Racha */}
-            <View style={[styles.stat, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-              <Text style={[t.micro, { color: c.micro, fontSize: 10, fontFamily: 'Jost_700Bold' }]}>RACHA DÍAS</Text>
-              <Text style={{ fontFamily: 'Jost_500Medium', fontSize: 24, color: c.textStrong, marginTop: 6 }}>
-                {resumen?.rachaActual ?? 0}<Text style={{ fontSize: 12, color: c.micro }}>d</Text>
-              </Text>
+            <View style={styles.statBloque}>
+              <Text style={[t.micro, { color: c.micro, fontFamily: 'Jost_700Bold' }]}>RACHA DÍAS</Text>
+              <View style={styles.statCifra}>
+                <Text style={[t.metric, { color: c.textStrong }]}>{resumen?.rachaActual ?? 0}</Text>
+                <Text style={{ fontFamily: 'Jost_500Medium', fontSize: 15, color: c.micro }}>d</Text>
+              </View>
             </View>
           </View>
 
           {/* EVIDENCIA */}
-          <View style={{ paddingTop: 16 }}>
-            <MicroLabel>EVIDENCIA</MicroLabel>
+          <View>
+            <MicroLabel>Evidencia</MicroLabel>
             {/* Antes: tres cajas "FOTO" fijas y un "+6" escrito a mano, que daban a entender
                 nueve evidencias a cualquiera. Ahora sale del mismo listado real que la
                 sub-pantalla, y cuando no hay ninguna se dice, no se rellena. */}
             {cargandoEvidencias ? (
-              <Text style={[t.small, { color: c.textSoft, fontSize: 12.5, marginTop: 10 }]}>
+              <Text style={[t.body, { color: c.textSoft, marginTop: 12 }]}>
                 Cargando tus evidencias…
               </Text>
             ) : evidencias.length === 0 ? (
@@ -392,16 +432,17 @@ export default function YoScreen() {
                 onPress={() => setActiveView('evidencias')}
                 accessibilityRole="button"
                 accessibilityLabel="Ver tus evidencias"
-                style={[styles.rowCard, { borderColor: c.border, backgroundColor: c.cardBg, marginTop: 10 }]}
+                style={[styles.rowCard, { borderColor: c.border, backgroundColor: c.cardBg, marginTop: 12 }]}
               >
                 <Icon name="camera" size={18} color={c.chevron} />
-                <Text style={[t.small, { color: c.textSoft, fontSize: 12.5, flex: 1 }]}>
+                {/* Era 12.5: es el texto principal de la fila, no una etiqueta de ayuda. */}
+                <Text style={[t.body, { color: c.textSoft, flex: 1 }]}>
                   {errorEvidencias ? 'No se pudieron cargar tus evidencias.' : 'Todavía no subiste evidencias.'}
                 </Text>
                 <Icon name="chevron" size={12} color={c.chevron} />
               </Pressable>
             ) : (
-              <View style={{ flexDirection: 'row', gap: 9, marginTop: 10 }}>
+              <View style={{ flexDirection: 'row', gap: space.gap, marginTop: 12 }}>
                 {evidencias.slice(0, 3).map(ev => (
                   <Pressable
                     key={ev.id}
@@ -410,10 +451,12 @@ export default function YoScreen() {
                     accessibilityLabel={`Ver evidencia del ${fechaDeEvidencia(ev.subidaEn ?? ev.timestampExif)}`}
                     style={{ flex: 1 }}
                   >
+                    {/* El borde se queda: estas miniaturas se tocan. Lo que se fue es el
+                        `borderRadius: 10` suelto — ahora sale del token de radio interno. */}
                     <View
                       style={[
                         styles.more,
-                        { height: moreSize, borderRadius: 10, borderColor: c.border, backgroundColor: c.cardBg },
+                        { height: moreSize, borderColor: c.border, backgroundColor: c.cardBg },
                       ]}
                     >
                       <Icon name={iconoDeTipo(ev.tipo)} size={18} color={c.goldInk} />
@@ -427,7 +470,7 @@ export default function YoScreen() {
                     accessibilityLabel={`Ver las otras ${evidencias.length - 3} evidencias`}
                     style={[styles.more, { width: moreSize, height: moreSize, borderColor: c.border, backgroundColor: c.cardBg }]}
                   >
-                    <Text style={[t.small, { color: c.textSoft }]}>+{evidencias.length - 3}</Text>
+                    <Text style={[t.body, { color: c.textSoft }]}>+{evidencias.length - 3}</Text>
                   </Pressable>
                 )}
               </View>
@@ -440,16 +483,16 @@ export default function YoScreen() {
             style={[styles.rowCard, { borderColor: c.border, backgroundColor: c.cardBg }]}
           >
             <View style={{ flex: 1 }}>
-              <MicroLabel>REFLEXIÓN DIARIA</MicroLabel>
+              <MicroLabel>Reflexión diaria</MicroLabel>
               <Text style={[t.body, { color: c.text, marginTop: 6 }]}>¿Qué aprendí hoy sobre mí?</Text>
             </View>
             <Icon name="chevron" size={12} color={c.chevron} />
           </Pressable>
 
           {/* PATRONES */}
-          <View style={{ flex: 1, justifyContent: 'center', paddingTop: 14 }}>
-            <MicroLabel>PATRONES</MicroLabel>
-            <Svg width="100%" height={52} viewBox="0 0 320 52" style={{ marginTop: 6 }}>
+          <View style={{ flex: 1, justifyContent: 'center' }}>
+            <MicroLabel>Patrones</MicroLabel>
+            <Svg width="100%" height={52} viewBox="0 0 320 52" style={{ marginTop: 10 }}>
               <Path
                 d="M6 34 C 34 12, 62 44, 90 30 S 146 8, 174 34 S 230 44, 258 20 S 300 30, 314 18"
                 stroke={c.gold} strokeWidth={1.5} strokeLinecap="round" fill="none"
@@ -464,7 +507,7 @@ export default function YoScreen() {
             style={[styles.rowCard, { borderColor: c.border, backgroundColor: c.cardBg }]}
           >
             <View style={{ flex: 1 }}>
-              <MicroLabel>IDENTIDAD</MicroLabel>
+              <MicroLabel>Identidad</MicroLabel>
               <Text style={[t.body, { color: c.text, marginTop: 6, lineHeight: 21 }]}>
                 Soy la persona que…{"\n"}Elijo ser cada día.
               </Text>
@@ -481,7 +524,7 @@ export default function YoScreen() {
               style={[styles.rowCard, { borderColor: c.border, backgroundColor: c.cardBg }]}
             >
               <View style={{ flex: 1 }}>
-                <MicroLabel>ADMINISTRACIÓN</MicroLabel>
+                <MicroLabel>Administración</MicroLabel>
                 <Text style={[t.body, { color: c.text, marginTop: 6 }]}>
                   Grupos, personas y solicitudes
                 </Text>
@@ -496,7 +539,11 @@ export default function YoScreen() {
             style={[styles.onboardingBtn, { borderColor: c.borderStrong, backgroundColor: c.cardBg }]}
           >
             <Icon name="doc" size={16} color={c.goldInk} />
-            <Text style={[t.micro, { color: c.textStrong, letterSpacing: 1.6, fontFamily: 'Jost_500Medium' }]}>
+            {/* Estos dos botones tenían la etiqueta a 10.5 px con `letterSpacing` 1.6 y 1.8: el
+                tamaño de una micro-etiqueta estirado para parecer importante, que es justo el
+                gesto que AGENTS.md §4 desaconseja. Ahora son 13 px (rango de etiqueta legible) y
+                el espaciado baja a 1, suficiente para versalitas. */}
+            <Text style={[t.small, { color: c.textStrong, letterSpacing: 1, fontFamily: 'Jost_500Medium' }]}>
               MI FICHA INICIAL & PACTO
             </Text>
           </Pressable>
@@ -509,7 +556,7 @@ export default function YoScreen() {
             style={[styles.logoutBtn, { borderColor: c.border, backgroundColor: c.cardBg }]}
           >
             <Icon name="logout" size={16} color={c.textSoft} />
-            <Text style={[t.micro, { color: c.textSoft, letterSpacing: 1.8 }]}>
+            <Text style={[t.small, { color: c.textSoft, letterSpacing: 1 }]}>
               CERRAR SESIÓN
             </Text>
           </Pressable>
@@ -540,34 +587,40 @@ export default function YoScreen() {
                 VOLVER A MI ESPACIO
               </Text>
             </Pressable>
-            <View style={[styles.categoryPillBadge, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+            <View style={[styles.categoryPillBadge, { backgroundColor: c.goldWash }]}>
               <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                 PERFIL & AJUSTES
               </Text>
             </View>
           </View>
 
-          {/* Banner de Usuario */}
-          <View style={[styles.profileBanner, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-            <View style={[styles.avatarLg, { borderColor: c.gold, backgroundColor: '#292215' }]}>
+          {/* Banner de Usuario — ya no es un banner: era una tarjeta con borde dorado de 1.5 que
+              adentro tenía otro disco con borde dorado, dos rectángulos para presentar a una
+              persona. Ahora es una fila sobre el fondo de la pantalla; lo que la separa de lo que
+              sigue es el aire, no un contorno. El disco pasó a `goldWash` porque sin la línea, con
+              el `#292215` que tenía escrito a mano, quedaba una mancha marrón en modo claro. */}
+          <View style={styles.profileBanner}>
+            <View style={[styles.avatarLg, { backgroundColor: c.goldWash }]}>
               {profileAvatar ? (
                 <Image source={{ uri: profileAvatar }} style={styles.avatarImageLarge} accessibilityLabel="Foto de perfil" />
               ) : (
-                <Text style={{ color: '#E5C689', fontSize: 18, fontFamily: 'Jost_700Bold' }}>{profileInitials}</Text>
+                <Text style={{ color: c.goldInk, fontSize: 18, fontFamily: 'Jost_700Bold' }}>{profileInitials}</Text>
               )}
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 15 }]}>{profileName}</Text>
-              <Text style={[t.micro, { color: c.goldInk, fontSize: 11 }]}>{profileEmail}</Text>
-              <Text style={[t.micro, { color: c.textSoft, fontSize: 11, marginTop: 2 }]}>
+            <View style={{ flex: 1, gap: 3 }}>
+              <Text style={[t.cardTitle, { color: c.textStrong }]}>{profileName}</Text>
+              {/* Eran dos líneas de 11 px: el correo y la fase de alguien no son micro-etiquetas,
+                  son los datos del encabezado. A 13 se leen sin acercar el teléfono. */}
+              <Text style={[t.small, { color: c.goldInk }]}>{profileEmail}</Text>
+              <Text style={[t.small, { color: c.textSoft }]}>
                 Día {resumen?.diaPrograma ?? 1} · {rotuloDeFase(resumen?.fase) ?? 'Alumno Activo'}
               </Text>
             </View>
           </View>
 
-          <View style={{ gap: 14, marginTop: 14, paddingBottom: 28 }}>
+          <View style={{ gap: space.gapLg, paddingBottom: 28 }}>
             {/* FASE 1: DATOS PERSONALES & PERFIL */}
-            <View style={{ gap: 6 }}>
+            <View style={{ gap: 10 }}>
               <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
                 FASE 1: DATOS PERSONALES & PERFIL
               </Text>
@@ -576,11 +629,11 @@ export default function YoScreen() {
                   onPress={() => setActiveView('editar_perfil')}
                   style={[styles.menuOptionRow, { borderBottomColor: c.divider }]}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
                     <Icon name="user" size={16} color={c.goldInk} />
-                    <View>
-                      <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>Editar Perfil</Text>
-                      <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>Nombre, foto, teléfono y contraseña</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[t.cardTitle, { color: c.textStrong }]}>Editar Perfil</Text>
+                      <Text style={[t.small, { color: c.textSoft }]}>Nombre, foto, teléfono y contraseña</Text>
                     </View>
                   </View>
                   <Icon name="chevron" size={12} color={c.goldInk} />
@@ -590,11 +643,11 @@ export default function YoScreen() {
                   onPress={() => setActiveView('info_perfil')}
                   style={styles.menuOptionRow}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
                     <Icon name="doc" size={16} color={c.goldInk} />
-                    <View>
-                      <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>Información de Perfil</Text>
-                      <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>Ubicación, redes y biografía somática</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[t.cardTitle, { color: c.textStrong }]}>Información de Perfil</Text>
+                      <Text style={[t.small, { color: c.textSoft }]}>Ubicación, redes y biografía somática</Text>
                     </View>
                   </View>
                   <Icon name="chevron" size={12} color={c.goldInk} />
@@ -603,7 +656,7 @@ export default function YoScreen() {
             </View>
 
             {/* FASE 2: HISTORIAL, EVIDENCIAS & ONBOARDING */}
-            <View style={{ gap: 6 }}>
+            <View style={{ gap: 10 }}>
               <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
                 FASE 2: HISTORIAL, EVIDENCIAS & ONBOARDING
               </Text>
@@ -612,11 +665,11 @@ export default function YoScreen() {
                   onPress={() => setActiveView('onboarding')}
                   style={[styles.menuOptionRow, { borderBottomColor: c.divider }]}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
                     <Icon name="stack" size={16} color={c.goldInk} />
-                    <View>
-                      <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>Mi Onboarding (5 Etapas)</Text>
-                      <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>El Pacto firmado, cuestionario y las 90 variables</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[t.cardTitle, { color: c.textStrong }]}>Mi Onboarding (5 Etapas)</Text>
+                      <Text style={[t.small, { color: c.textSoft }]}>El Pacto firmado, cuestionario y las 90 variables</Text>
                     </View>
                   </View>
                   <Icon name="chevron" size={12} color={c.goldInk} />
@@ -626,11 +679,11 @@ export default function YoScreen() {
                   onPress={() => setActiveView('evidencias')}
                   style={[styles.menuOptionRow, { borderBottomColor: c.divider }]}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
                     <Icon name="camera" size={16} color={c.goldInk} />
-                    <View>
-                      <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>Registro de Evidencias</Text>
-                      <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>37 fotos subidas y verificadas por tu mentor</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[t.cardTitle, { color: c.textStrong }]}>Registro de Evidencias</Text>
+                      <Text style={[t.small, { color: c.textSoft }]}>37 fotos subidas y verificadas por tu mentor</Text>
                     </View>
                   </View>
                   <Icon name="chevron" size={12} color={c.goldInk} />
@@ -640,11 +693,11 @@ export default function YoScreen() {
                   onPress={() => setActiveView('logros')}
                   style={styles.menuOptionRow}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
                     <Icon name="award" size={16} color={c.goldInk} />
-                    <View>
-                      <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>Logros e Insignias</Text>
-                      <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>Medallas y trofeos de tus 90 días</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[t.cardTitle, { color: c.textStrong }]}>Logros e Insignias</Text>
+                      <Text style={[t.small, { color: c.textSoft }]}>Medallas y trofeos de tus 90 días</Text>
                     </View>
                   </View>
                   <Icon name="chevron" size={12} color={c.goldInk} />
@@ -653,7 +706,7 @@ export default function YoScreen() {
             </View>
 
             {/* FASE 3: HERRAMIENTAS SOMÁTICAS */}
-            <View style={{ gap: 6 }}>
+            <View style={{ gap: 10 }}>
               <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
                 FASE 3: HERRAMIENTAS SOMÁTICAS
               </Text>
@@ -671,11 +724,11 @@ export default function YoScreen() {
                   }}
                   style={[styles.menuOptionRow, { borderBottomColor: c.divider }]}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
                     <Icon name="spark" size={16} color={c.goldInk} />
-                    <View>
-                      <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>El Método Renaser</Text>
-                      <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>3 fases para comprenderte y sostener tu transformación</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[t.cardTitle, { color: c.textStrong }]}>El Método Renaser</Text>
+                      <Text style={[t.small, { color: c.textSoft }]}>3 fases para comprenderte y sostener tu transformación</Text>
                     </View>
                   </View>
                   <Icon name="chevron" size={12} color={c.goldInk} />
@@ -685,11 +738,11 @@ export default function YoScreen() {
                   onPress={() => setActiveView('video_activacion')}
                   style={styles.menuOptionRow}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
                     <Icon name="play" size={16} color={c.goldInk} />
-                    <View>
-                      <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>Repetir Activación Inicial</Text>
-                      <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>Video de bienvenida y manifiesto de Macaco</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[t.cardTitle, { color: c.textStrong }]}>Repetir Activación Inicial</Text>
+                      <Text style={[t.small, { color: c.textSoft }]}>Video de bienvenida y manifiesto de Macaco</Text>
                     </View>
                   </View>
                   <Icon name="chevron" size={12} color={c.goldInk} />
@@ -698,7 +751,7 @@ export default function YoScreen() {
             </View>
 
             {/* FASE 4: PREFERENCIAS & SISTEMA */}
-            <View style={{ gap: 6 }}>
+            <View style={{ gap: 10 }}>
               <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
                 FASE 4: PREFERENCIAS & SISTEMA
               </Text>
@@ -707,11 +760,11 @@ export default function YoScreen() {
                   onPress={() => setActiveView('notificaciones')}
                   style={[styles.menuOptionRow, { borderBottomColor: c.divider }]}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
                     <Icon name="bell" size={16} color={c.goldInk} />
-                    <View>
-                      <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>Notificaciones & Alarmas</Text>
-                      <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>Recordatorio 05:00 AM y grupo</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[t.cardTitle, { color: c.textStrong }]}>Notificaciones & Alarmas</Text>
+                      <Text style={[t.small, { color: c.textSoft }]}>Recordatorio 05:00 AM y grupo</Text>
                     </View>
                   </View>
                   <Icon name="chevron" size={12} color={c.goldInk} />
@@ -723,9 +776,9 @@ export default function YoScreen() {
                   accessibilityLabel="Cerrar sesión"
                   style={styles.menuOptionRow}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
                     <Icon name="logout" size={16} color={c.goldInk} />
-                    <Text style={[t.cardTitle, { color: c.danger, fontSize: 13 }]}>Cerrar Sesión</Text>
+                    <Text style={[t.cardTitle, { color: c.danger }]}>Cerrar Sesión</Text>
                   </View>
                   <Icon name="chevron" size={12} color="#E06A66" />
                 </Pressable>
@@ -759,16 +812,21 @@ export default function YoScreen() {
                 VOLVER A AJUSTES
               </Text>
             </Pressable>
-            <View style={[styles.categoryPillBadge, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+            <View style={[styles.categoryPillBadge, { backgroundColor: c.goldWash }]}>
               <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                 MI ONBOARDING
               </Text>
             </View>
           </View>
 
-          <View style={{ alignItems: 'center', marginTop: 10 }}>
-            <Text style={[t.sectionTitle, { color: c.textStrong, fontSize: 18 }]}>Tu proceso completo</Text>
-            <Text style={[t.body, { color: c.textSoft, fontSize: 11, textAlign: 'center', marginTop: 4, lineHeight: 16 }]}>
+          {/* Alineado a la izquierda. El par "título centrado + párrafo centrado" obliga al ojo a
+              volver al centro en cada línea y es el gesto de plantilla que esta pasada viene a
+              quitar. Y el párrafo estaba a 11 px: es texto de lectura, va en `t.body` (15/22). */}
+          <View style={{ gap: 8 }}>
+            <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 20, lineHeight: 27 }]}>
+              Tu proceso completo
+            </Text>
+            <Text style={[t.body, { color: c.textSoft }]}>
               Dos etapas para poner por escrito quién eras, quién eres y en quién te estás convirtiendo. Cada etapa se guarda al terminarla.
             </Text>
           </View>
@@ -781,9 +839,11 @@ export default function YoScreen() {
             esa ventana y el backend pueda decir cuándo abre y cuándo cierra de verdad.
           */}
 
-          {/* Barra de Progreso */}
-          <View style={{ gap: 4, marginTop: 12 }}>
-            <View style={[styles.progressBarBg, { backgroundColor: c.cardBg, borderColor: c.border }]}>
+          {/* Barra de Progreso — el riel pasó de `cardBg` con borde a `divider` sin borde: en modo
+              claro `cardBg` (#FDFCFA) es casi el fondo de la pantalla, así que el único que
+              dibujaba la barra era el contorno. Ahora la dibuja el color, como en `metodoProgressTrack`. */}
+          <View style={{ gap: 8 }}>
+            <View style={[styles.progressBarBg, { backgroundColor: c.divider }]}>
               {/* El ancho sale del conteo real. Estaba fijo en 60%, así que la barra decía una
                   cosa y el texto de abajo otra apenas el conteo dejara de ser tres. */}
               <View
@@ -796,13 +856,15 @@ export default function YoScreen() {
                 ]}
               />
             </View>
-            <Text style={[t.micro, { color: c.textSoft, textAlign: 'center', fontSize: 10 }]}>
+            {/* Era 10 px y centrado: por debajo del mínimo de micro-etiqueta y desalineado
+                respecto del inicio de la barra que describe. */}
+            <Text style={[t.small, styles.cifras, { color: c.textSoft }]}>
               {etapasOnboarding.completadas} de {ONBOARDING_STAGES.length} etapas completadas
             </Text>
           </View>
 
           {/* 2 Etapas */}
-          <View style={{ gap: 8, marginTop: 12, paddingBottom: 28 }}>
+          <View style={{ gap: space.gap, paddingBottom: 28 }}>
             {ONBOARDING_STAGES.map(stage => {
               // El estado de cada etapa sale de datos reales, no del array: `pactSignedAt` para
               // el Pacto y `stageCompleted` para el Mapa. La etapa 2 leia el estado del
@@ -864,10 +926,10 @@ export default function YoScreen() {
                     )}
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[t.cardTitle, { color: enProgreso ? c.goldInk : c.textStrong, fontSize: 13 }]}>
+                    <Text style={[t.cardTitle, { color: enProgreso ? c.goldInk : c.textStrong }]}>
                       {stage.title}
                     </Text>
-                    <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>
+                    <Text style={[t.small, { color: c.textSoft }]}>
                       {descripcion}
                     </Text>
                   </View>
@@ -904,67 +966,79 @@ export default function YoScreen() {
                 VOLVER A ETAPAS
               </Text>
             </Pressable>
-            <View style={[styles.categoryPillBadge, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+            <View style={[styles.categoryPillBadge, { backgroundColor: c.goldWash }]}>
               <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                 PARTE 01
               </Text>
             </View>
           </View>
 
-          <View style={{ alignItems: 'center', marginTop: 10 }}>
-            <View style={[styles.iconShieldCircle, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+          {/* Encabezado alineado a la izquierda y sin el contorno del disco, que vivía justo
+              encima del borde del documento. "Léelo despacio" es una instrucción que se lee, no
+              una micro-etiqueta: pasa de 10.5 a 15. */}
+          <View style={{ gap: 10 }}>
+            <View style={[styles.iconShieldCircle, { backgroundColor: c.goldWash }]}>
               <Icon name="doc" size={20} color={c.goldInk} />
             </View>
-            <Text style={[t.sectionTitle, { color: c.textStrong, fontSize: 17, marginTop: 8 }]}>
+            <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 20, lineHeight: 27 }]}>
               Pacto de Renacimiento
             </Text>
-            <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5, marginTop: 2 }]}>
+            <Text style={[t.body, { color: c.textSoft }]}>
               Léelo despacio. Léelo en voz alta si puedes.
             </Text>
           </View>
 
-          {/* Manifiesto y Cláusulas */}
+          {/* Manifiesto y Cláusulas
+              El contorno dorado de esta tarjeta es el ÚNICO que se conserva en el archivo, y a
+              propósito: acá el borde es el canto de un documento que se firma, no un adorno para
+              destacar una tarjeta (baja de 1.5 a 1).
+              El cambio de fondo es el importante: el manifiesto estaba a 11 px y las diez
+              cláusulas a 10.5. AGENTS.md §4 dice, con todas las letras, que las cláusulas van
+              entre 14 y 15.5 — se le estaba pidiendo a alguien de 40–60 años que leyera y firmara
+              un compromiso en letra de nota al pie. Todo pasa a `t.body` (15/22). */}
           <View style={[styles.pactoDocumentCard, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-            <View style={{ alignItems: 'center', borderBottomWidth: 1, borderBottomColor: c.divider, paddingBottom: 8 }}>
-              <Text style={{ fontFamily: 'Jost_700Bold', color: c.goldInk, fontSize: 14, fontStyle: 'italic' }}>
+            <View style={{ borderBottomWidth: 1, borderBottomColor: c.divider, paddingBottom: 12 }}>
+              <Text style={{ fontFamily: 'Jost_700Bold', color: c.goldInk, fontSize: 16, fontStyle: 'italic' }}>
                 Pacto de Renacimiento
               </Text>
-              <Text style={[t.micro, { color: c.textSoft, letterSpacing: 2, fontSize: 10.5 }]}>
-                — ACTO FUNDACIONAL —
+              <Text style={[t.micro, { color: c.textSoft, letterSpacing: 1.4, marginTop: 4 }]}>
+                ACTO FUNDACIONAL
               </Text>
             </View>
 
-            <Text style={[t.body, { color: c.text, fontSize: 11, lineHeight: 17 }]}>
+            <Text style={[t.body, { color: c.text }]}>
               Yo, <Text style={{ color: c.goldInk, fontFamily: 'Jost_700Bold' }}>{profileName}</Text>, en pleno uso de mi consciencia, declaro este pacto conmigo mismo en presencia del sistema RENASER y de la versión más alta de mí.
             </Text>
 
-            <Text style={[t.body, { color: c.text, fontSize: 11, lineHeight: 17 }]}>
+            <Text style={[t.body, { color: c.text }]}>
               <Text style={{ fontFamily: 'Jost_700Bold', color: c.textStrong }}>Renuncio a la mediocridad.</Text> Renuncio al desdén con que he tratado mi cuerpo, mi mente, mis emociones y mi tiempo.
             </Text>
 
-            <View style={{ gap: 4, marginVertical: 4 }}>
+            <View style={{ gap: 10, marginVertical: 4 }}>
               {PACTO_CLAUSULAS.map(clause => (
-                <Text key={clause} style={[t.body, { color: c.textSoft, fontSize: 10.5, lineHeight: 15 }]}>
+                <Text key={clause} style={[t.body, { color: c.textSoft }]}>
                   {clause}
                 </Text>
               ))}
             </View>
 
-            <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 10.5, borderTopWidth: 1, borderTopColor: c.divider, paddingTop: 8 }]}>
+            <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_700Bold', borderTopWidth: 1, borderTopColor: c.divider, paddingTop: 12 }]}>
               Si lo cumplo, gano una identidad nueva. Si lo abandono, pierdo la versión de mí que ya estaba esperando del otro lado.
             </Text>
           </View>
 
-          {/* Firma Digital con el Dedo */}
-          <View style={[styles.signatureBox, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-            <Text style={{ fontFamily: 'Jost_700Bold', color: c.goldInk, fontSize: 12, fontStyle: 'italic' }}>
+          {/* Firma Digital con el Dedo — el recuadro exterior perdió su borde: adentro vive el
+              lienzo punteado, que es la afordancia de verdad. Eran dos rectángulos concéntricos
+              para pedir una sola firma. */}
+          <View style={styles.signatureBox}>
+            <Text style={{ fontFamily: 'Jost_700Bold', color: c.goldInk, fontSize: 15, fontStyle: 'italic' }}>
               — Firma con tu dedo —
             </Text>
             <View style={[styles.signatureCanvas, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
               <Text style={{ fontFamily: 'Jost_700Bold', color: c.goldInk, fontSize: 22, fontStyle: 'italic' }}>
                 {profileName}
               </Text>
-              <Text style={[t.micro, { color: c.textSoft, position: 'absolute', bottom: 4, fontSize: 10.5 }]}>
+              <Text style={[t.micro, { color: c.textSoft, position: 'absolute', bottom: 6 }]}>
                 FIRMA DIGITAL REGISTRADA & SELLADA
               </Text>
             </View>
@@ -976,7 +1050,7 @@ export default function YoScreen() {
               Alert.alert('¡Pacto Sellado! 🦅', 'Tu compromiso de 90 días está activo y respaldado en tu expediente.');
               setActiveView('onboarding');
             }}
-            style={{ width: '100%', marginTop: 12, marginBottom: 28 }}
+            style={{ width: '100%', marginBottom: 28 }}
           />
         </ScrollView>
       )}
@@ -1005,18 +1079,19 @@ export default function YoScreen() {
                 VOLVER A AJUSTES
               </Text>
             </Pressable>
-            <View style={[styles.categoryPillBadge, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+            <View style={[styles.categoryPillBadge, { backgroundColor: c.goldWash }]}>
               <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                 EVIDENCIAS
               </Text>
             </View>
           </View>
 
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
-            <View>
-              <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 14 }]}>Tus Evidencias Somáticas</Text>
-              {/* Decia "37 fotos subidas · 100% verificadas", escrito a mano, a cualquiera. */}
-              <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5 }]}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+            <View style={{ flex: 1, gap: 4 }}>
+              <Text style={[t.cardTitle, { color: c.textStrong }]}>Tus Evidencias Somáticas</Text>
+              {/* Decia "37 fotos subidas · 100% verificadas", escrito a mano, a cualquiera.
+                  Era 10.5: es la línea que resume el conteo, texto de ayuda (12–13.5), no micro. */}
+              <Text style={[t.small, { color: c.textSoft }]}>
                 {cargandoEvidencias
                   ? 'Cargando tus evidencias…'
                   : errorEvidencias
@@ -1030,11 +1105,12 @@ export default function YoScreen() {
               onPress={() => Alert.alert('Subir Evidencia', 'Abriendo selector de cámara para subir evidencia fotográfica...')}
               style={[styles.createHabitBtn, { backgroundColor: c.gold }]}
             >
-              <Text style={{ color: '#1E1B18', fontFamily: 'Jost_700Bold', fontSize: 10.5 }}>+ Subir Foto</Text>
+              {/* Botón real: pasó de 25 px de alto con etiqueta de 10.5 a 48 px con texto de 13. */}
+              <Text style={[t.small, { color: c.onGold, fontFamily: 'Jost_700Bold' }]}>+ Subir Foto</Text>
             </Pressable>
           </View>
 
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 14, paddingBottom: 28 }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.gap, paddingBottom: 28 }}>
             {evidencias.map(ev => {
               const validada = ev.estadoValidacion === ESTADO_EVIDENCIA.VALIDA;
               const rechazada = ev.estadoValidacion === ESTADO_EVIDENCIA.RECHAZADA
@@ -1052,51 +1128,50 @@ export default function YoScreen() {
                     },
                   ]}
                 >
-                  <View style={[styles.evidenceImgBox, { backgroundColor: c.cardBgAlt }]}>
+                  {/* El cuadro del ícono pasa a lavado dorado: dentro de una tarjeta que ya tiene
+                      borde, `cardBgAlt` es blanco puro en modo claro y no se distinguía de nada. */}
+                  <View style={[styles.evidenceImgBox, { backgroundColor: c.goldWash }]}>
                     <Icon name={iconoDeTipo(ev.tipo)} size={26} color={c.goldInk} />
                   </View>
-                  <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 12, marginTop: 4 }]} numberOfLines={2}>
+                  <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 14 }]} numberOfLines={2}>
                     {ev.contenidoTexto?.trim() || ETIQUETA_TIPO_EVIDENCIA[ev.tipo] || 'Evidencia'}
                   </Text>
-                  <Text style={[t.micro, { color: c.goldInk, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>
+                  <Text style={[t.small, styles.cifras, { color: c.goldInk }]}>
                     {fechaDeEvidencia(ev.subidaEn ?? ev.timestampExif)}
                   </Text>
-                  <View
-                    style={[
-                      styles.tagPill,
-                      { borderColor: colorEstado, marginTop: 6, alignSelf: 'flex-start' },
-                    ]}
-                  >
-                    <Text style={[t.micro, { color: colorEstado, fontSize: 10.5, fontFamily: 'Jost_700Bold' }]}>
-                      {ETIQUETA_ESTADO_EVIDENCIA[ev.estadoValidacion] ?? ev.estadoValidacion}
-                    </Text>
-                  </View>
+                  {/* Era una píldora con borde propio dentro de una tarjeta con borde. El estado
+                      ya lo dice el color del texto; la caja sólo agregaba una línea más. */}
+                  <Text style={[t.micro, { color: colorEstado, fontFamily: 'Jost_700Bold', marginTop: 4 }]}>
+                    {ETIQUETA_ESTADO_EVIDENCIA[ev.estadoValidacion] ?? ev.estadoValidacion}
+                  </Text>
                 </View>
               );
             })}
 
             {/* Los tres estados se dicen distinto porque no significan lo mismo: todavia no se
                 sabe, no se pudo preguntar, o se pregunto y no hay ninguna. */}
+            {/* Los tres estados van alineados a la izquierda, como el resto del texto de lectura
+                de la pantalla, y en `t.body`: eran 13 y 12.5 px centrados. */}
             {cargandoEvidencias && (
-              <Text style={[t.body, { color: c.textSoft, fontSize: 13, width: '100%', paddingVertical: 20, textAlign: 'center' }]}>
+              <Text style={[t.body, { color: c.textSoft, width: '100%', paddingVertical: 20 }]}>
                 Cargando tus evidencias…
               </Text>
             )}
             {!cargandoEvidencias && errorEvidencias && (
-              <View style={{ width: '100%', paddingVertical: 20, alignItems: 'center', gap: 10 }}>
-                <Text style={[t.body, { color: c.danger, fontSize: 13, textAlign: 'center' }]}>
+              <View style={{ width: '100%', paddingVertical: 20, alignItems: 'flex-start', gap: 12 }}>
+                <Text style={[t.body, { color: c.danger }]}>
                   {errorEvidencias}
                 </Text>
                 <GoldButton label="REINTENTAR" variant="outline" onPress={recargarEvidencias} />
               </View>
             )}
             {!cargandoEvidencias && !errorEvidencias && evidencias.length === 0 && (
-              <View style={{ width: '100%', paddingVertical: 24, alignItems: 'center', gap: 6 }}>
+              <View style={{ width: '100%', paddingVertical: 24, alignItems: 'flex-start', gap: 8 }}>
                 <Icon name="camera" size={26} color={c.chevron} />
-                <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 14, marginTop: 4 }]}>
+                <Text style={[t.cardTitle, { color: c.textStrong, marginTop: 4 }]}>
                   Todavía no subiste evidencias
                 </Text>
-                <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, textAlign: 'center' }]}>
+                <Text style={[t.body, { color: c.textSoft }]}>
                   Cada foto que selles queda aquí, con la fecha y su estado de validación.
                 </Text>
               </View>
@@ -1129,33 +1204,36 @@ export default function YoScreen() {
                 VOLVER A AJUSTES
               </Text>
             </Pressable>
-            <View style={[styles.categoryPillBadge, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+            <View style={[styles.categoryPillBadge, { backgroundColor: c.goldWash }]}>
               <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                 LOGROS
               </Text>
             </View>
           </View>
 
-          <View style={{ gap: 10, marginTop: 14, paddingBottom: 28 }}>
+          <View style={{ gap: space.gap, paddingBottom: 28 }}>
             {/* Sin endpoint de logros no se puede decir cuales estan conseguidos, asi que no se
                 marca ninguno: se listan como metas del programa. */}
-            <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, marginBottom: 4 }]}>
+            <Text style={[t.body, { color: c.textSoft }]}>
               Estas son las metas del programa. Tu avance aparecerá aquí cuando el registro de
               logros esté disponible.
             </Text>
+            {/* El disco del ícono perdió su borde —vivía dentro del borde de la tarjeta— y la
+                descripción subió de 10.5 a 15: es la frase que explica en qué consiste la meta,
+                o sea texto de lectura, no un pie de foto. */}
             {LOGROS_DEL_PROGRAMA.map(logro => (
               <View
                 key={logro.id}
                 style={[styles.logroCard, { borderColor: c.border, backgroundColor: c.cardBg }]}
               >
-                <View style={[styles.logroIconCircle, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
+                <View style={[styles.logroIconCircle, { backgroundColor: c.goldWash }]}>
                   <Icon name={logro.icon} size={20} color={c.goldInk} />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 12.5 }]}>
+                <View style={{ flex: 1, gap: 5 }}>
+                  <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 14 }]}>
                     {logro.title}
                   </Text>
-                  <Text style={[t.body, { color: c.textSoft, fontSize: 10.5, marginTop: 2 }]}>
+                  <Text style={[t.body, { color: c.textSoft }]}>
                     {logro.desc}
                   </Text>
                 </View>
@@ -1189,19 +1267,22 @@ export default function YoScreen() {
                 VOLVER A AJUSTES
               </Text>
             </Pressable>
-            <View style={[styles.categoryPillBadge, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+            <View style={[styles.categoryPillBadge, { backgroundColor: c.goldWash }]}>
               <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                 EDITAR PERFIL
               </Text>
             </View>
           </View>
 
-          <View style={{ alignItems: 'center', marginTop: 14 }}>
-            <View style={[styles.avatarLg, { borderColor: c.gold, backgroundColor: '#292215', width: 70, height: 70, borderRadius: 35 }]}>
+          {/* El avatar sigue centrado a propósito: es una imagen, no texto de lectura. Lo que se
+              fue es su contorno dorado y el `#292215` escrito a mano, que en modo claro dibujaba
+              un círculo marrón sobre el fondo crema. */}
+          <View style={{ alignItems: 'center' }}>
+            <View style={[styles.avatarLg, { backgroundColor: c.goldWash, width: 70, height: 70, borderRadius: 35 }]}>
               {profileAvatar ? (
                 <Image source={{ uri: profileAvatar }} style={styles.avatarImageLarge} accessibilityLabel="Foto de perfil" />
               ) : (
-                <Text style={{ color: '#E5C689', fontSize: 24, fontFamily: 'Jost_700Bold' }}>{profileInitials}</Text>
+                <Text style={{ color: c.goldInk, fontSize: 24, fontFamily: 'Jost_700Bold' }}>{profileInitials}</Text>
               )}
             </View>
             <Pressable
@@ -1222,15 +1303,17 @@ export default function YoScreen() {
                   setSubiendoAvatar(false);
                 }
               }}
-              style={{ marginTop: 6 }}
+              style={{ minHeight: 48, justifyContent: 'center', paddingHorizontal: 12 }}
             >
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>{subiendoAvatar ? 'Subiendo…' : 'Cambiar Foto 📷'}</Text>
+              <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>{subiendoAvatar ? 'Subiendo…' : 'Cambiar Foto 📷'}</Text>
             </Pressable>
           </View>
 
-          <View style={{ gap: 12, marginTop: 14 }}>
-            <View style={{ gap: 4 }}>
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>NOMBRE COMPLETO:</Text>
+          {/* Las etiquetas de campo pasan de 10.5 a 13: son lo que le dice a alguien qué escribir
+              en cada casilla, no una marca al margen. */}
+          <View style={{ gap: space.gap }}>
+            <View style={{ gap: 6 }}>
+              <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>NOMBRE COMPLETO:</Text>
               <TextInput
                 value={profileName}
                 onChangeText={setProfileName}
@@ -1238,8 +1321,8 @@ export default function YoScreen() {
               />
             </View>
 
-            <View style={{ gap: 4 }}>
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>CORREO ELECTRÓNICO:</Text>
+            <View style={{ gap: 6 }}>
+              <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>CORREO ELECTRÓNICO:</Text>
               <TextInput
                 value={profileEmail}
                 keyboardType="email-address"
@@ -1249,8 +1332,8 @@ export default function YoScreen() {
               />
             </View>
 
-            <View style={{ gap: 4 }}>
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>TELÉFONO / WHATSAPP:</Text>
+            <View style={{ gap: 6 }}>
+              <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>TELÉFONO / WHATSAPP:</Text>
               <TextInput
                 value={profilePhone}
                 keyboardType="phone-pad"
@@ -1259,7 +1342,7 @@ export default function YoScreen() {
                 placeholderTextColor={c.micro}
                 style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBg, color: c.text }]}
               />
-              <Text style={[t.micro, { color: c.micro, fontSize: 10 }]}>El teléfono se habilitará cuando exista en el perfil del servidor.</Text>
+              <Text style={[t.small, { color: c.micro }]}>El teléfono se habilitará cuando exista en el perfil del servidor.</Text>
             </View>
           </View>
 
@@ -1287,7 +1370,7 @@ export default function YoScreen() {
               }
             }}
             disabled={guardandoPerfil}
-            style={{ width: '100%', marginTop: 16, marginBottom: 28 }}
+            style={{ width: '100%', marginBottom: 28 }}
           />
         </ScrollView>
       )}
@@ -1316,16 +1399,16 @@ export default function YoScreen() {
                 VOLVER A AJUSTES
               </Text>
             </Pressable>
-            <View style={[styles.categoryPillBadge, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+            <View style={[styles.categoryPillBadge, { backgroundColor: c.goldWash }]}>
               <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                 INFORMACIÓN
               </Text>
             </View>
           </View>
 
-          <View style={{ gap: 12, marginTop: 14 }}>
-            <View style={{ gap: 4 }}>
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>BIOGRAFÍA SOMÁTICA:</Text>
+          <View style={{ gap: space.gap }}>
+            <View style={{ gap: 6 }}>
+              <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>BIOGRAFÍA SOMÁTICA:</Text>
               <TextInput
                 value={profileBio}
                 onChangeText={setProfileBio}
@@ -1334,8 +1417,8 @@ export default function YoScreen() {
               />
             </View>
 
-            <View style={{ gap: 4 }}>
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>DEPARTAMENTO / ÁREA:</Text>
+            <View style={{ gap: 6 }}>
+              <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>DEPARTAMENTO / ÁREA:</Text>
               <TextInput
                 value={profileDepartment}
                 onChangeText={setProfileDepartment}
@@ -1343,8 +1426,8 @@ export default function YoScreen() {
               />
             </View>
 
-            <View style={{ gap: 4 }}>
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>INSTAGRAM:</Text>
+            <View style={{ gap: 6 }}>
+              <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>INSTAGRAM:</Text>
               <TextInput
                 value={profileInstagram}
                 editable={false}
@@ -1352,7 +1435,7 @@ export default function YoScreen() {
                 placeholderTextColor={c.micro}
                 style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBg, color: c.text }]}
               />
-              <Text style={[t.micro, { color: c.micro, fontSize: 10 }]}>Instagram se habilitará cuando exista en el perfil del servidor.</Text>
+              <Text style={[t.small, { color: c.micro }]}>Instagram se habilitará cuando exista en el perfil del servidor.</Text>
             </View>
           </View>
 
@@ -1376,7 +1459,7 @@ export default function YoScreen() {
               }
             }}
             disabled={guardandoPerfil}
-            style={{ width: '100%', marginTop: 16, marginBottom: 28 }}
+            style={{ width: '100%', marginBottom: 28 }}
           />
         </ScrollView>
       )}
@@ -1405,7 +1488,7 @@ export default function YoScreen() {
                 VOLVER A AJUSTES
               </Text>
             </Pressable>
-            <View style={[styles.categoryPillBadge, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+            <View style={[styles.categoryPillBadge, { backgroundColor: c.goldWash }]}>
               <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                 EL MÉTODO
               </Text>
@@ -1429,12 +1512,18 @@ export default function YoScreen() {
 
             return (
               <View style={styles.metodoContent}>
+                {/* Portada del método, alineada a la izquierda. El título estaba hecho con
+                    `t.sectionTitle` estirado a 24 px, o sea versalitas de rótulo con `letterSpacing`
+                    positivo usadas como titular — exactamente lo que AGENTS.md §4 desaconseja desde
+                    que existen los tokens de display. Ahora usa `t.screenTitle` (la serif, con
+                    tracking negativo) y la bajada usa `t.body` sin retoques. El orbe perdió su
+                    contorno; el color de la fase lo sigue dando el ícono y el lavado. */}
                 <View style={styles.metodoHero}>
-                  <View style={[styles.metodoOrb, { borderColor: fase.color, backgroundColor: c.cardBgAlt }]}>
+                  <View style={[styles.metodoOrb, { backgroundColor: c.cardBgAlt }]}>
                     <Icon name="spark" size={24} color={fase.color} />
                   </View>
-                  <Text style={[t.sectionTitle, styles.metodoHeroTitle, { color: c.textStrong }]}>El Método Renaser</Text>
-                  <Text style={[t.body, styles.metodoHeroSubtitle, { color: c.textSoft }]}>3 fases para comprenderte, transformarte y sostener tu evolución.</Text>
+                  <Text style={[t.screenTitle, { color: c.textStrong }]}>El Método Renaser</Text>
+                  <Text style={[t.body, styles.metodoHeroSubtitle, { color: c.textSoft }]}>{`${METODO_FASES.length} fases en ${DIAS_DEL_PROGRAMA} días: verte sin filtros, desarmar el sabotaje, elegir desde el gozo y ejecutar.`}</Text>
                 </View>
 
                 <Animated.View
@@ -1449,11 +1538,12 @@ export default function YoScreen() {
                   ]}
                 >
                   <View style={styles.metodoPhaseHeader}>
-                    <View style={[styles.metodoPhaseIcon, { borderColor: fase.color, backgroundColor: c.cardBgAlt }]}>
+                    {/* Sin borde: estaba dentro del borde de colores de la tarjeta de fase. */}
+                    <View style={[styles.metodoPhaseIcon, { backgroundColor: c.cardBgAlt }]}>
                       <Icon name={fase.icon} size={23} color={fase.color} />
                     </View>
                     <View style={styles.metodoPhaseHeading}>
-                      <Text style={[t.micro, { color: fase.color, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>{fase.phase}</Text>
+                      <Text style={[t.micro, { color: fase.color, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>{`${fase.phase} · ${fase.rango.toUpperCase()}`}</Text>
                       <Text style={[t.cardTitle, styles.metodoPhaseTitle, { color: c.textStrong }]}>{fase.title}</Text>
                     </View>
                   </View>
@@ -1514,13 +1604,14 @@ export default function YoScreen() {
                   onPress={() => cambiarMetodoFase(metodoFase + 1)}
                   style={[styles.metodoNextButton, { borderColor: fase.color, backgroundColor: c.cardBgAlt }, metodoFase === METODO_FASES.length - 1 && styles.metodoNextButtonDisabled]}
                 >
-                  <Text style={[t.cardTitle, { color: metodoFase === METODO_FASES.length - 1 ? c.micro : fase.color, fontSize: 13 }]}>
+                  <Text style={[t.cardTitle, { color: metodoFase === METODO_FASES.length - 1 ? c.micro : fase.color, fontSize: 15 }]}>
                     {metodoFase === METODO_FASES.length - 1 ? 'Método completo' : 'Explorar siguiente fase'}
                   </Text>
                   {metodoFase < METODO_FASES.length - 1 && <Icon name="arrow" size={16} color={fase.color} />}
                 </Pressable>
 
-                <Text style={[t.micro, styles.metodoHint, { color: c.micro }]}>Lee una fase en 20 segundos y vuelve cuando quieras.</Text>
+                {/* Era `t.micro` forzado a 12 y centrado: una frase se lee, no se rotula. */}
+                <Text style={[t.small, { color: c.micro }]}>Lee una fase en 20 segundos y vuelve cuando quieras.</Text>
               </View>
             );
           })()}
@@ -1551,24 +1642,26 @@ export default function YoScreen() {
                 VOLVER A AJUSTES
               </Text>
             </Pressable>
-            <View style={[styles.categoryPillBadge, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+            <View style={[styles.categoryPillBadge, { backgroundColor: c.goldWash }]}>
               <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                 ACTIVACIÓN
               </Text>
             </View>
           </View>
 
-          <View style={[styles.pactoDocumentCard, { borderColor: c.gold, backgroundColor: c.cardBgAlt, marginTop: 14 }]}>
-            <View style={[styles.evidenceImgBox, { height: 160, backgroundColor: '#0C0B09', borderRadius: 14 }]}>
+          {/* Esta vista reusa `pactoDocumentCard`, pero acá el contorno dorado no es el canto de
+              un documento sino énfasis decorativo: pasa a `c.border`. La cita pasa de 11 a 15 px. */}
+          <View style={[styles.pactoDocumentCard, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
+            <View style={[styles.evidenceImgBox, { height: 160, backgroundColor: c.placeholderA }]}>
               <Text style={{ fontSize: 44 }}>▶</Text>
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', marginTop: 8 }]}>
+              <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', marginTop: 8 }]}>
                 Reproducir Manifiesto Macaco (12:45 min)
               </Text>
             </View>
-            <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13, marginTop: 6 }]}>
+            <Text style={[t.cardTitle, { color: c.textStrong }]}>
               Bienvenida Oficial al Renacimiento Somático
             </Text>
-            <Text style={[t.body, { color: c.textSoft, fontSize: 11, lineHeight: 16 }]}>
+            <Text style={[t.body, { color: c.textSoft }]}>
               "No viniste aquí a probar suerte, viniste a forjar la versión de ti que ya no negocia con la mediocridad."
             </Text>
           </View>
@@ -1599,18 +1692,18 @@ export default function YoScreen() {
                 VOLVER A AJUSTES
               </Text>
             </Pressable>
-            <View style={[styles.categoryPillBadge, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+            <View style={[styles.categoryPillBadge, { backgroundColor: c.goldWash }]}>
               <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
                 NOTIFICACIONES
               </Text>
             </View>
           </View>
 
-          <View style={[styles.groupedBox, { borderColor: c.border, backgroundColor: c.cardBg, marginTop: 14 }]}>
+          <View style={[styles.groupedBox, { borderColor: c.border, backgroundColor: c.cardBg }]}>
             <View style={[styles.menuOptionRow, { borderBottomColor: c.divider }]}>
               <View style={{ flex: 1 }}>
-                <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>Alarma 05:00 AM</Text>
-                <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>Aviso para despertar y luz solar</Text>
+                <Text style={[t.cardTitle, { color: c.textStrong }]}>Alarma 05:00 AM</Text>
+                <Text style={[t.small, { color: c.textSoft }]}>Aviso para despertar y luz solar</Text>
               </View>
               <Switch
                 value={notifAlarm}
@@ -1622,8 +1715,8 @@ export default function YoScreen() {
 
             <View style={[styles.menuOptionRow, { borderBottomColor: c.divider }]}>
               <View style={{ flex: 1 }}>
-                <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>Avisos de Grupo Fénix</Text>
-                <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>Mensajes y victorias de tu tribu</Text>
+                <Text style={[t.cardTitle, { color: c.textStrong }]}>Avisos de Grupo Fénix</Text>
+                <Text style={[t.small, { color: c.textSoft }]}>Mensajes y victorias de tu tribu</Text>
               </View>
               <Switch
                 value={notifCelula}
@@ -1635,8 +1728,8 @@ export default function YoScreen() {
 
             <View style={styles.menuOptionRow}>
               <View style={{ flex: 1 }}>
-                <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>Masterclasses en Vivo</Text>
-                <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>Alertas 1h antes de cada sesión</Text>
+                <Text style={[t.cardTitle, { color: c.textStrong }]}>Masterclasses en Vivo</Text>
+                <Text style={[t.small, { color: c.textSoft }]}>Alertas 1h antes de cada sesión</Text>
               </View>
               <Switch
                 value={notifLive}
@@ -1652,68 +1745,118 @@ export default function YoScreen() {
   );
 }
 
+/**
+ * Pasada de limpieza visual del 2026-09-14, la misma que ya se hizo en Hoy, Plan y Training.
+ *
+ * **Qué borde sobrevive y cuál no.** La regla que se aplicó en todo el archivo: un `borderWidth`
+ * se queda sólo si el elemento es un **contenedor externo** (se apoya en el fondo de la pantalla)
+ * o una **afordancia** (algo que se toca: un campo, un botón, una fila pulsable). Todo borde que
+ * vivía DENTRO de otro borde se fue — los discos de avatar, los círculos de ícono, la píldora de
+ * estado de una evidencia. Ahí la forma la da un fondo lavado, no una línea.
+ *
+ * **Por qué, cuando se quita un borde, a veces cambia el fondo.** En modo claro `bg` (#FCFBF9) y
+ * `cardBg` (#FDFCFA) son prácticamente el mismo color: lo que dibuja una tarjeta es su BORDE, no
+ * su fondo. Así que un disco al que se le quita la línea y se le deja `cardBg` desaparece. Por eso
+ * los que perdieron el borde pasaron a `goldWash`/`divider`, que sí se ven en los dos modos — es
+ * el mismo movimiento que se hizo en Hoy con `eventIconBox` y `wallAvatar`.
+ *
+ * **Radios.** Contenedor `space.radius` (20), interno `space.radiusSm` (12). Antes había once
+ * valores distintos entre 6 y 25 sin criterio.
+ *
+ * **Alturas.** Todo lo pulsable llega a 48 px (AGENTS.md §4). Había botones de 25 px de alto.
+ */
 const styles = StyleSheet.create({
-  content: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: ESPACIO_PARA_LANZADOR },
-  metodoContent: { gap: 14, paddingTop: 16, paddingBottom: 34 },
-  metodoHero: { alignItems: 'center', gap: 8, paddingHorizontal: 12 },
-  metodoOrb: { width: 58, height: 58, borderRadius: 29, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
-  metodoHeroTitle: { fontSize: 24, textAlign: 'center' },
-  metodoHeroSubtitle: { fontSize: 14, lineHeight: 20, textAlign: 'center', maxWidth: 340 },
-  metodoPhaseCard: { borderWidth: 1.5, borderRadius: 22, padding: 18, gap: 13, minHeight: 330 },
+  /* `gapLg` entre bloques: el espacio es lo que ahora separa las secciones, así que los
+     `marginTop` sueltos que tenía cada hijo (12, 14, 16, 10…) se fueron de acá y del JSX. Con
+     ellos puestos el gap se sumaba dos veces. */
+  content: {
+    flexGrow: 1,
+    paddingHorizontal: space.screenX,
+    paddingBottom: ESPACIO_PARA_LANZADOR,
+    gap: space.gapLg,
+  },
+  /** Cifras que cambian en pantalla: ancho de dígito fijo para que nada salte (AGENTS.md §4). */
+  cifras: { fontVariant: ['tabular-nums'] },
+  metodoContent: { gap: space.gap, paddingBottom: 34 },
+  /* Alineado a la izquierda: el título del método y su bajada son texto de lectura. */
+  metodoHero: { gap: 8 },
+  metodoOrb: { width: 58, height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center' },
+  metodoHeroSubtitle: { maxWidth: 420 },
+  metodoPhaseCard: { borderWidth: 1, borderRadius: space.radius, padding: space.cardPad, gap: 13, minHeight: 330 },
   metodoPhaseHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  metodoPhaseIcon: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  metodoPhaseIcon: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   metodoPhaseHeading: { flex: 1, gap: 3 },
-  metodoPhaseTitle: { fontSize: 19, lineHeight: 24 },
-  metodoQuote: { fontSize: 15, lineHeight: 21, fontStyle: 'italic' },
-  metodoSummary: { fontSize: 14.5, lineHeight: 21 },
-  metodoBullets: { gap: 8, paddingTop: 2 },
-  metodoBulletRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 9 },
-  metodoBulletDot: { width: 6, height: 6, borderRadius: 3, marginTop: 7 },
-  metodoBulletText: { flex: 1, fontSize: 14, lineHeight: 19 },
+  metodoPhaseTitle: { fontSize: 19, lineHeight: 25 },
+  metodoQuote: { fontSize: 15, lineHeight: 22, fontStyle: 'italic' },
+  metodoSummary: { fontSize: 15, lineHeight: 22 },
+  metodoBullets: { gap: 10, paddingTop: 2 },
+  metodoBulletRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  metodoBulletDot: { width: 6, height: 6, borderRadius: 3, marginTop: 8 },
+  metodoBulletText: { flex: 1, fontSize: 15, lineHeight: 22 },
   metodoProgressTrack: { height: 5, borderRadius: 3, overflow: 'hidden', marginTop: 2 },
   metodoProgressFill: { height: '100%', borderRadius: 3 },
-  metodoProgressLabel: { fontSize: 10, letterSpacing: 1.2, textAlign: 'right' },
+  /** Era 10 px, por debajo del mínimo de micro-etiqueta (10.5). Alineado al final de la barra. */
+  metodoProgressLabel: { fontSize: 11, letterSpacing: 1.2, textAlign: 'right' },
   metodoNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 },
   metodoNavButton: { width: 50, height: 50, borderRadius: 25, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   metodoNavButtonDisabled: { opacity: 0.4 },
   metodoDots: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   metodoDot: { width: 8, height: 8, borderRadius: 4 },
   metodoDotActive: { width: 24, borderRadius: 5 },
-  metodoNextButton: { minHeight: 50, borderWidth: 1, borderRadius: 15, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
+  metodoNextButton: { minHeight: 48, borderWidth: 1, borderRadius: space.radiusSm, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
   metodoNextButtonDisabled: { opacity: 0.65 },
-  metodoHint: { fontSize: 12, lineHeight: 17, textAlign: 'center' },
-  userCard: { marginTop: 12, borderWidth: 1, borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 14 },
-  avatar: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  avatarLg: { width: 50, height: 50, borderRadius: 25, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  /* Fila pulsable: el borde se queda porque dice "esto se toca". */
+  userCard: { borderWidth: 1, borderRadius: space.radius, padding: space.cardPad, minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 14 },
+  avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  avatarLg: { width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center' },
   avatarImage: { width: '100%', height: '100%', borderRadius: 22 },
   avatarImageLarge: { width: '100%', height: '100%', borderRadius: 35 },
-  avatarInitials: { color: '#E5C689', fontSize: 15, fontFamily: 'Jost_700Bold' },
-  profileBanner: { marginTop: 12, borderWidth: 1.5, borderRadius: 20, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 14 },
-  stat: { flex: 1, borderWidth: 1, borderRadius: 14, paddingVertical: 12, alignItems: 'center' },
-  more: { borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  rowCard: { marginTop: 14, borderWidth: 1, borderRadius: 14, paddingVertical: 12, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  onboardingBtn: { marginTop: 16, borderWidth: 1, borderRadius: 14, paddingVertical: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
-  logoutBtn: { marginTop: 10, marginBottom: 12, borderWidth: 1, borderRadius: 14, paddingVertical: 13, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
-  detailTopBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 10, borderBottomWidth: 1, marginTop: 4 },
-  backBtnRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  categoryPillBadge: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
-  groupedBox: { borderWidth: 1, borderRadius: 18, overflow: 'hidden' },
-  menuOptionRow: { padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1 },
-  progressBarBg: { height: 6, borderRadius: 3, borderWidth: 1, overflow: 'hidden' },
+  avatarInitials: { fontSize: 15, fontFamily: 'Jost_700Bold' },
+  /* Era una tarjeta con borde dorado de 1.5 que contenía otro disco con borde: dos rectángulos
+     para presentar a una persona. Ahora es una fila de encabezado sobre el fondo de la pantalla,
+     igual que la barra de estado de Hoy. */
+  profileBanner: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  /* Las tres cifras (coherencia, puntos, racha) eran tres cajas con borde. Ahora son tres
+     columnas de texto separadas por UNA línea de pelo: el único borde que queda es el que de
+     verdad hace falta, porque sin él las cifras se leerían como una sola frase. */
+  statBloque: { flex: 1 },
+  statCifra: { flexDirection: 'row', alignItems: 'baseline', gap: 2, marginTop: 6 },
+  statSeparador: { width: 1, alignSelf: 'stretch' },
+  more: { borderRadius: space.radiusSm, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  rowCard: { borderWidth: 1, borderRadius: space.radius, minHeight: 48, paddingVertical: 14, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  onboardingBtn: { borderWidth: 1, borderRadius: space.radiusSm, minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  logoutBtn: { borderWidth: 1, borderRadius: space.radiusSm, minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  detailTopBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 10, borderBottomWidth: 1 },
+  /** 48 px: es el "volver" de todas las sub-vistas y era el pulsable más chico del archivo. */
+  backBtnRow: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 48, paddingRight: 8 },
+  /* Sin borde: es un rótulo, no un control. El lavado dorado alcanza para separarlo del fondo. */
+  categoryPillBadge: { borderRadius: space.radiusSm, paddingHorizontal: 10, paddingVertical: 6 },
+  groupedBox: { borderWidth: 1, borderRadius: space.radius, overflow: 'hidden' },
+  menuOptionRow: { paddingVertical: 14, paddingHorizontal: 16, minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, borderBottomWidth: 1 },
+  /* Una barra de 6 px de alto no necesita contorno; el contraste lo da el color del riel. */
+  progressBarBg: { height: 6, borderRadius: 3, overflow: 'hidden' },
   progressBarFill: { height: '100%', borderRadius: 3 },
-  stageCard: { borderWidth: 1, borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  stageCard: { borderWidth: 1, borderRadius: space.radius, padding: space.cardPad, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   stageCheckCircle: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
-  iconShieldCircle: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  pactoDocumentCard: { borderWidth: 1.5, borderRadius: 20, padding: 14, gap: 10, marginTop: 12 },
-  signatureBox: { borderWidth: 1, borderRadius: 18, padding: 12, alignItems: 'center', gap: 8, marginTop: 12 },
-  signatureCanvas: { width: '100%', height: 80, borderRadius: 12, borderWidth: 1, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
-  createHabitBtn: { borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6 },
-  evidenceCard: { borderWidth: 1, borderRadius: 16, padding: 10, gap: 2 },
-  evidenceImgBox: { width: '100%', height: 75, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  tagPill: { borderWidth: 1, borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1 },
-  logroCard: { borderWidth: 1.5, borderRadius: 18, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 12 },
-  logroIconCircle: { width: 44, height: 44, borderRadius: 22, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  iconShieldCircle: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  /* El único contorno dorado que se conserva en el archivo, y a propósito: acá el borde ES el
+     contenido —es el canto de un documento que se firma—, no un adorno para destacar la tarjeta.
+     En la vista de video, que reusa este estilo, el JSX lo pasa a `c.border`. */
+  pactoDocumentCard: { borderWidth: 1, borderRadius: space.radius, padding: space.cardPad, gap: 12 },
+  /* Perdió su borde: adentro vive el lienzo de firma, que tiene el suyo (punteado, y ese sí es
+     la afordancia). Eran dos recuadros concéntricos para pedir una sola firma. */
+  signatureBox: { alignItems: 'center', gap: 10 },
+  signatureCanvas: { width: '100%', height: 80, borderRadius: space.radiusSm, borderWidth: 1, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
+  /** Era de 25 px de alto (paddingVertical 6) con texto de 10.5. Ahora es un botón de verdad. */
+  createHabitBtn: { borderRadius: space.radiusSm, paddingHorizontal: 16, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
+  evidenceCard: { borderWidth: 1, borderRadius: space.radius, padding: 14, gap: 4 },
+  evidenceImgBox: { width: '100%', height: 84, borderRadius: space.radiusSm, alignItems: 'center', justifyContent: 'center' },
+  logroCard: { borderWidth: 1, borderRadius: space.radius, padding: space.cardPad, flexDirection: 'row', alignItems: 'center', gap: 14 },
+  logroIconCircle: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   momentSwitchBtn: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
   goalCard: { borderWidth: 1.5, borderRadius: 18, padding: 14 },
-  modalInputText: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8, fontSize: 12 },
+  /* Campo de formulario: el borde se queda (es afordancia). Lo que cambió es el tamaño — 12 px
+     estaba por debajo del mínimo de input de AGENTS.md §4 (14–15.5) — y la altura, que con
+     `paddingVertical: 8` daba unos 34 px y ahora llega a 48. */
+  modalInputText: { borderWidth: 1, borderRadius: space.radiusSm, paddingHorizontal: 14, paddingVertical: 12, minHeight: 48, fontSize: 15 },
 });

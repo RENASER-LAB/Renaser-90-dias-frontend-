@@ -48,7 +48,9 @@ type Tab = 'login' | 'register';
 
 export default function LoginScreen() {
   const { c, t, mode, toggle } = useTheme();
-  const { rs, isTablet, isShort, isSmall, horizontalPadding } = useResponsive();
+  /* `rs` salio del desestructurado el 2026-09-14: sus tres usos estaban en el circulo del paso
+     que se quito, y dejarlo era una variable sin leer. Vuelve si hace falta escalar algo. */
+  const { isTablet, isShort, isSmall, horizontalPadding } = useResponsive();
   const {
     login,
     register,
@@ -492,9 +494,14 @@ export default function LoginScreen() {
         Los anillos van de FONDO, no de cabecera (2026-09-05, pedido del dueno del proyecto).
         Antes vivian dentro del ScrollView y ocupaban ~180 px de alto, asi que para llenar el
         correo y la contrasena habia que arrastrar con el dedo. Al pasarlos al fondo se recupera
-        ese alto y la marca queda mas presente. `icono={null}` porque la cabecera ya dibuja el
-        suyo, que ademas cambia segun el paso (correo / llave / usuario) — dos iconos encimados
-        se verian como un error.
+        ese alto y la marca queda mas presente.
+
+        `icono={null}` sigue en null, pero por otra razon que antes (2026-09-14). Aca decia:
+        "porque la cabecera ya dibuja el suyo, que ademas cambia segun el paso (correo / llave /
+        usuario) — dos iconos encimados se verian como un error". Esa razon dejo de existir: la
+        cabecera ya no dibuja ningun icono (ver el comentario del encabezado, mas abajo). El null
+        se mantiene porque el pedido del dueno del producto fue SACAR el adorno, no mudarlo al
+        fondo — devolverle un icono a los anillos seria reponer lo mismo un poco mas abajo.
       */}
       <FondoAnillos icono={null} />
 
@@ -543,64 +550,66 @@ export default function LoginScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Encabezado y Branding de Anillos Renaser */}
+          {/* Encabezado: el logotipo y su bajada. Nada arriba del logotipo — el porque, unas
+              lineas mas abajo. */}
           <View
             style={[
               styles.heroSection,
               {
-                paddingTop: isShort ? 2 : 10,
+                /* Este padding es AHORA el unico aire entre la barra superior y el logotipo, y por
+                   eso subio de 2/10 a 16/28. Antes valia 2/10 porque encima del logotipo habia un
+                   circulo de ~52 px que hacia de separador; sin el, 2 px dejaban la marca pegada
+                   al borde. Aun asi el encabezado queda ~40 px mas bajo que antes, que es
+                   exactamente el alto que este bloque venia peleando para que el formulario no
+                   pida scroll en pantalla corta (isShort). */
+                paddingTop: isShort ? 16 : 28,
                 paddingBottom: isShort ? 12 : 20,
               },
             ]}
           >
-            <View
-              style={[
-                styles.ringContainer,
-                // Ya no contiene anillos, solo el icono del paso: se encoge a su medida. Este
-                // es el alto que recupera el formulario para no necesitar scroll.
-                {
-                  width: isShort ? rs(44) : rs(52),
-                  height: isShort ? rs(44) : rs(52),
-                },
-              ]}
-            >
-              <View
-                style={[
-                  styles.iconDiamond,
-                  {
-                    borderColor: c.gold,
-                    backgroundColor: c.cardBg,
-                    width: isShort ? 36 : 44,
-                    height: isShort ? 36 : 44,
-                    borderRadius: isShort ? 18 : 22,
-                  },
-                ]}
-              >
-                <Icon
-                  name={
-                    step === 'otp'
-                      ? 'mail'
-                      : enRecuperacion
-                      ? 'key'
-                      : step === 'social_confirmar'
-                      ? 'user'
-                      : 'diamond'
-                  }
-                  size={isShort ? rs(16) : rs(20)}
-                  color={c.goldInk}
-                  strokeWidth={1.2}
-                />
-              </View>
-            </View>
+            {/* Aca iba un circulo con borde dorado y un icono adentro que cambiaba segun el paso:
+                'mail' en la verificacion por codigo, 'key' en recuperacion de contrasena, 'user'
+                en la confirmacion del login social y 'diamond' en el login normal. Se quito
+                COMPLETO el 2026-09-14, por pedido del dueno del producto: "parece IA".
 
+                Se quito en los CUATRO pasos, no solo el 'diamond' decorativo, por tres razones:
+
+                1. Era redundante. El bajo-logotipo que esta tres lineas mas abajo ya dice el paso
+                   con palabras: "Confirmacion de correo", "Recuperacion de cuenta", "Confirma tus
+                   datos". Para un publico de 40-60 anos esa palabra comunica muchisimo mas que un
+                   glifo de contorno de 20 px; el icono no agregaba informacion, la repetia.
+                2. El logotipo saltaba. Con el circulo presente en tres pasos y ausente en uno, la
+                   marca cambiaba de altura al pasar del login a la verificacion por codigo. Un
+                   logotipo que se mueve dentro del mismo flujo se lee como una falla, no como un
+                   paso nuevo.
+                3. Lo que "parece IA" es el envase, no el glifo: un circulo con borde dorado
+                   encima de un logotipo es el adorno generico, con una llave adentro igual que
+                   con un diamante. Dejarlo en tres de cuatro pasos no atendia el pedido, solo lo
+                   escondia.
+
+                Si algun dia hace falta reforzar la senal del paso, el lugar es el bajo-logotipo
+                (texto, que es lo que este publico lee), no un icono nuevo. */}
+
+            {/* El logotipo.
+                Antes iba en Jost con `letterSpacing: 8` — las letras tan separadas que la palabra
+                dejaba de leerse como una marca y pasaba a leerse como una plantilla: es el gesto
+                que usa cualquier landing de "lujo" genérica. Ahora va en la serif editorial con el
+                tracking casi cerrado, que es lo que hace que una cabecera pese.
+                Sigue en mayúsculas —eso es la marca, no una decisión de esta pantalla— y por eso
+                el tracking no es el negativo del token: las versales siempre piden un poco de aire,
+                pero 2, no 8. */}
             <Text
+              accessibilityRole="header"
               style={[
                 t.hero,
                 {
                   color: c.textStrong,
-                  marginTop: isShort ? 8 : 16,
-                  letterSpacing: isSmall ? 5 : 8,
-                  fontSize: isShort ? 28 : 34,
+                  /* Sin `marginTop` (antes 10/18): el logotipo es el primer hijo del encabezado,
+                     asi que el aire de arriba lo da el `paddingTop` de `heroSection` y no hay dos
+                     valores que sumar a mano para saber cuanto separa la marca de la barra. */
+                  letterSpacing: isSmall ? 1.2 : 2,
+                  fontSize: isShort ? 32 : 40,
+                  lineHeight: isShort ? 36 : 45,
                 },
               ]}
             >
@@ -612,20 +621,23 @@ export default function LoginScreen() {
                 {
                   color: c.textSoft,
                   marginTop: 4,
-                  letterSpacing: isSmall ? 2 : 3.2,
-                  fontSize: isSmall ? 9 : 10,
+                  /* Iba con tracking 3.2: el subtitulo competia con el logotipo en vez de
+                     acompanarlo. Debajo de una serif grande, el bajo-logotipo se lee mejor junto
+                     y un punto mas grande que antes. */
+                  letterSpacing: isSmall ? 0.2 : 0.4,
+                  fontSize: isSmall ? 11 : 12,
                 },
               ]}
             >
               {step === 'otp'
-                ? 'CONFIRMACIÓN DE CORREO'
+                ? 'Confirmación de correo'
                 : step === 'solicitud_enviada'
-                ? 'SOLICITUD EN REVISIÓN'
+                ? 'Solicitud en revisión'
                 : enRecuperacion
-                ? 'RECUPERACIÓN DE CUENTA'
+                ? 'Recuperación de cuenta'
                 : step === 'social_confirmar'
-                ? 'CONFIRMÁ TUS DATOS'
-                : '90 DÍAS · SISTEMA INTEGRAL'}
+                ? 'Confirmá tus datos'
+                : '90 días para redefinir tu vida'}
             </Text>
           </View>
 
@@ -660,7 +672,7 @@ export default function LoginScreen() {
                       },
                     ]}
                   >
-                    INICIAR SESIÓN
+                    Iniciar sesión
                   </Text>
                 </Pressable>
 
@@ -688,7 +700,7 @@ export default function LoginScreen() {
                       },
                     ]}
                   >
-                    CREAR CUENTA
+                    Crear cuenta
                   </Text>
                 </Pressable>
               </View>
@@ -711,7 +723,7 @@ export default function LoginScreen() {
 
                 {activeTab === 'register' && (
                   <View style={styles.inputGroup}>
-                    <MicroLabel>NOMBRES</MicroLabel>
+                    <MicroLabel>Nombres</MicroLabel>
                     <View
                       style={[
                         styles.inputWrap,
@@ -739,7 +751,7 @@ export default function LoginScreen() {
 
                 {activeTab === 'register' && (
                   <View style={styles.inputGroup}>
-                    <MicroLabel>APELLIDOS</MicroLabel>
+                    <MicroLabel>Apellidos</MicroLabel>
                     <View
                       style={[
                         styles.inputWrap,
@@ -766,7 +778,7 @@ export default function LoginScreen() {
                 )}
 
                 <View style={styles.inputGroup}>
-                  <MicroLabel>CORREO ELECTRÓNICO</MicroLabel>
+                  <MicroLabel>Correo electrónico</MicroLabel>
                   <View
                     style={[
                       styles.inputWrap,
@@ -811,7 +823,7 @@ export default function LoginScreen() {
 
                 <View style={styles.inputGroup}>
                   <View style={styles.passwordHeader}>
-                    <MicroLabel>CONTRASEÑA</MicroLabel>
+                    <MicroLabel>Contraseña</MicroLabel>
                     {activeTab === 'login' && (
                       <Pressable
                         hitSlop={8}
@@ -867,7 +879,7 @@ export default function LoginScreen() {
 
                 {activeTab === 'register' && (
                   <View style={styles.inputGroup}>
-                    <MicroLabel>CONFIRMAR CONTRASEÑA</MicroLabel>
+                    <MicroLabel>Confirmar contraseña</MicroLabel>
                     <View
                       style={[
                         styles.inputWrap,
@@ -910,8 +922,8 @@ export default function LoginScreen() {
                     {loading ? (
                       <ActivityIndicator color={c.onGold} size="small" />
                     ) : (
-                      <Text style={[t.micro, { color: c.onGold, letterSpacing: 2.5, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
-                        {activeTab === 'login' ? 'ACCEDER AL PROGRAMA' : 'CONTINUAR Y RECIBIR CÓDIGO'}
+                      <Text style={[t.cardTitle, { color: c.onGold, letterSpacing: 0.1, fontFamily: 'Jost_500Medium', fontSize: 15 }]}>
+                        {activeTab === 'login' ? 'Acceder al programa' : 'Continuar y recibir código'}
                       </Text>
                     )}
                   </LinearGradient>
@@ -924,8 +936,8 @@ export default function LoginScreen() {
               <View style={styles.socialSection}>
                 <View style={styles.dividerRow}>
                   <View style={[styles.divLine, { backgroundColor: c.divider }]} />
-                  <Text style={[t.micro, { color: c.tabInactive, paddingHorizontal: 12, letterSpacing: 1.5 }]}>
-                    O ACCEDE CON TU CUENTA
+                  <Text style={[t.small, { color: c.tabInactive, paddingHorizontal: 12, letterSpacing: 0.2, fontSize: 12.5 }]}>
+                    o accede con
                   </Text>
                   <View style={[styles.divLine, { backgroundColor: c.divider }]} />
                 </View>
@@ -962,8 +974,8 @@ export default function LoginScreen() {
                     ) : (
                       <>
                         <Icon name="google" size={20} color={c.goldInk} />
-                        <Text style={[t.micro, { color: c.textStrong, letterSpacing: 1.6, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
-                          {activeTab === 'login' ? 'CONTINUAR CON GOOGLE' : 'REGISTRARME CON GOOGLE'}
+                        <Text style={[t.cardTitle, { color: c.textStrong, letterSpacing: 0.1, fontFamily: 'Jost_500Medium', fontSize: 15 }]}>
+                          {activeTab === 'login' ? 'Continuar con Google' : 'Registrarme con Google'}
                         </Text>
                       </>
                     )}
@@ -993,7 +1005,7 @@ export default function LoginScreen() {
           {step === 'otp' && (
             <View style={[styles.card, { backgroundColor: c.cardBg, borderColor: c.border }]}>
               <View style={{ alignItems: 'center', gap: 6 }}>
-                <MicroLabel>VERIFICACIÓN DE SEGURIDAD</MicroLabel>
+                <MicroLabel>Verificación de seguridad</MicroLabel>
                 <Text style={[t.sectionTitle, { color: c.text, textAlign: 'center', marginTop: 4 }]}>
                   INGRESA TU CÓDIGO
                 </Text>
@@ -1051,7 +1063,7 @@ export default function LoginScreen() {
                   {loading ? (
                     <ActivityIndicator color={c.onGold} size="small" />
                   ) : (
-                    <Text style={[t.micro, { color: c.onGold, letterSpacing: 2.5, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
+                    <Text style={[t.cardTitle, { color: c.onGold, letterSpacing: 0.1, fontFamily: 'Jost_500Medium', fontSize: 15 }]}>
                       CONFIRMAR Y ENVIAR SOLICITUD
                     </Text>
                   )}
@@ -1079,7 +1091,7 @@ export default function LoginScreen() {
           {step === 'forgot' && (
             <View style={[styles.card, { backgroundColor: c.cardBg, borderColor: c.border }]}>
               <View style={{ alignItems: 'center', gap: 6 }}>
-                <MicroLabel>SEGURIDAD & ACCESO</MicroLabel>
+                <MicroLabel>Seguridad y acceso</MicroLabel>
                 <Text style={[t.sectionTitle, { color: c.text, textAlign: 'center', marginTop: 4 }]}>
                   ¿OLVIDASTE TU CONTRASEÑA?
                 </Text>
@@ -1095,7 +1107,7 @@ export default function LoginScreen() {
               ) : null}
 
               <View style={styles.inputGroup}>
-                <MicroLabel>CORREO REGISTRADO</MicroLabel>
+                <MicroLabel>Correo registrado</MicroLabel>
                 <View
                   style={[
                     styles.inputWrap,
@@ -1139,7 +1151,7 @@ export default function LoginScreen() {
                   {loading ? (
                     <ActivityIndicator color={c.onGold} size="small" />
                   ) : (
-                    <Text style={[t.micro, { color: c.onGold, letterSpacing: 2.5, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
+                    <Text style={[t.cardTitle, { color: c.onGold, letterSpacing: 0.1, fontFamily: 'Jost_500Medium', fontSize: 15 }]}>
                       ENVIARME UN CÓDIGO
                     </Text>
                   )}
@@ -1167,7 +1179,7 @@ export default function LoginScreen() {
           {step === 'forgot_otp' && (
             <View style={[styles.card, { backgroundColor: c.cardBg, borderColor: c.border }]}>
               <View style={{ alignItems: 'center', gap: 6 }}>
-                <MicroLabel>RECUPERACIÓN DE CONTRASEÑA</MicroLabel>
+                <MicroLabel>Recuperación de contraseña</MicroLabel>
                 <Text style={[t.sectionTitle, { color: c.text, textAlign: 'center', marginTop: 4 }]}>
                   INGRESA TU CÓDIGO
                 </Text>
@@ -1224,7 +1236,7 @@ export default function LoginScreen() {
                   {loading ? (
                     <ActivityIndicator color={c.onGold} size="small" />
                   ) : (
-                    <Text style={[t.micro, { color: c.onGold, letterSpacing: 2.5, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
+                    <Text style={[t.cardTitle, { color: c.onGold, letterSpacing: 0.1, fontFamily: 'Jost_500Medium', fontSize: 15 }]}>
                       VERIFICAR CÓDIGO
                     </Text>
                   )}
@@ -1252,7 +1264,7 @@ export default function LoginScreen() {
           {step === 'forgot_new_password' && (
             <View style={[styles.card, { backgroundColor: c.cardBg, borderColor: c.border }]}>
               <View style={{ alignItems: 'center', gap: 6 }}>
-                <MicroLabel>CÓDIGO VERIFICADO</MicroLabel>
+                <MicroLabel>Código verificado</MicroLabel>
                 <Text style={[t.sectionTitle, { color: c.text, textAlign: 'center', marginTop: 4 }]}>
                   ELEGÍ TU NUEVA CONTRASEÑA
                 </Text>
@@ -1268,7 +1280,7 @@ export default function LoginScreen() {
               ) : null}
 
               <View style={styles.inputGroup}>
-                <MicroLabel>NUEVA CONTRASEÑA</MicroLabel>
+                <MicroLabel>Nueva contraseña</MicroLabel>
                 <View
                   style={[
                     styles.inputWrap,
@@ -1307,7 +1319,7 @@ export default function LoginScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <MicroLabel>CONFIRMAR CONTRASEÑA</MicroLabel>
+                <MicroLabel>Confirmar contraseña</MicroLabel>
                 <View
                   style={[
                     styles.inputWrap,
@@ -1349,7 +1361,7 @@ export default function LoginScreen() {
                   {loading ? (
                     <ActivityIndicator color={c.onGold} size="small" />
                   ) : (
-                    <Text style={[t.micro, { color: c.onGold, letterSpacing: 2.5, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
+                    <Text style={[t.cardTitle, { color: c.onGold, letterSpacing: 0.1, fontFamily: 'Jost_500Medium', fontSize: 15 }]}>
                       GUARDAR Y VOLVER AL LOGIN
                     </Text>
                   )}
@@ -1377,7 +1389,7 @@ export default function LoginScreen() {
           {step === 'social_confirmar' && (
             <View style={[styles.card, { backgroundColor: c.cardBg, borderColor: c.border }]}>
               <View style={{ alignItems: 'center', gap: 6 }}>
-                <MicroLabel>VERIFICADO POR GOOGLE</MicroLabel>
+                <MicroLabel>Verificado por Google</MicroLabel>
                 <Text style={[t.sectionTitle, { color: c.text, textAlign: 'center', marginTop: 4 }]}>
                   CONFIRMÁ TUS DATOS
                 </Text>
@@ -1393,7 +1405,7 @@ export default function LoginScreen() {
               ) : null}
 
               <View style={styles.inputGroup}>
-                <MicroLabel>NOMBRES</MicroLabel>
+                <MicroLabel>Nombres</MicroLabel>
                 <View
                   style={[
                     styles.inputWrap,
@@ -1420,7 +1432,7 @@ export default function LoginScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <MicroLabel>APELLIDOS</MicroLabel>
+                <MicroLabel>Apellidos</MicroLabel>
                 <View
                   style={[
                     styles.inputWrap,
@@ -1446,7 +1458,7 @@ export default function LoginScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <MicroLabel>CORREO ELECTRÓNICO</MicroLabel>
+                <MicroLabel>Correo electrónico</MicroLabel>
                 {/* No editable: lo verificó Google y el backend lo toma de su propio registro
                     pendiente, nunca del cuerpo del request — dejarlo "editable" haría creer que
                     cambiarlo tiene efecto, y no lo tiene. La opacidad reducida ya se usa en este
@@ -1485,7 +1497,7 @@ export default function LoginScreen() {
                   {loading ? (
                     <ActivityIndicator color={c.onGold} size="small" />
                   ) : (
-                    <Text style={[t.micro, { color: c.onGold, letterSpacing: 2.5, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
+                    <Text style={[t.cardTitle, { color: c.onGold, letterSpacing: 0.1, fontFamily: 'Jost_500Medium', fontSize: 15 }]}>
                       ENVIAR SOLICITUD
                     </Text>
                   )}
@@ -1517,7 +1529,7 @@ export default function LoginScreen() {
                   <Icon name="check" size={26} color={c.goldInk} strokeWidth={2} />
                 </View>
 
-                <MicroLabel>SOLICITUD RECIBIDA</MicroLabel>
+                <MicroLabel>Solicitud recibida</MicroLabel>
                 <Text style={[t.sectionTitle, { color: c.text, textAlign: 'center' }]}>
                   TU CUENTA ESTÁ EN REVISIÓN
                 </Text>
@@ -1555,7 +1567,7 @@ export default function LoginScreen() {
                   end={{ x: 0.9, y: 1 }}
                   style={styles.gradientBtn}
                 >
-                  <Text style={[t.micro, { color: c.onGold, letterSpacing: 2.5, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
+                  <Text style={[t.cardTitle, { color: c.onGold, letterSpacing: 0.1, fontFamily: 'Jost_500Medium', fontSize: 15 }]}>
                     VOLVER AL INICIO DE SESIÓN
                   </Text>
                 </LinearGradient>
@@ -1576,8 +1588,8 @@ export default function LoginScreen() {
                     <Icon name="clock" size={14} color={c.textSoft} />
                     <Text style={[t.micro, { color: c.textSoft, letterSpacing: 1.5 }]}>
                       {estadoSolicitud?.status === 'APPROVED'
-                        ? 'SOLICITUD APROBADA'
-                        : 'CONSULTAR ESTADO DE MI SOLICITUD'}
+                        ? 'Solicitud aprobada'
+                        : 'Consultar estado de mi solicitud'}
                     </Text>
                   </>
                 )}
@@ -1632,23 +1644,12 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 20,
   },
-  ringContainer: {
-    width: 140,
-    height: 140,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  /* `ringContainer` e `iconDiamond` se eliminaron el 2026-09-14 junto con el circulo del paso:
+     sin ese bloque de JSX nadie los referenciaba. `ring` (position absolute + borderWidth) ya
+     estaba sin uso desde antes de este cambio — se deja para no ampliar el alcance. */
   ring: {
     position: 'absolute',
     borderWidth: 1,
-  },
-  iconDiamond: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   tabSelector: {
     flexDirection: 'row',
@@ -1668,10 +1669,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   card: {
-    borderWidth: 1,
+    /* Sin `borderWidth` a proposito (2026-09-14): el borde de esta tarjeta, mas el de la fila de
+       pestanas, mas el del boton de Google, apilaban tres cajas con borde en una sola pantalla.
+       El fondo y los campos ya dan toda la estructura que hace falta. */
     borderRadius: 20,
-    padding: 20,
-    gap: 16,
+    paddingHorizontal: 4,
+    paddingVertical: 8,
+    gap: 18,
   },
   alertBox: {
     borderWidth: 1,
@@ -1705,14 +1709,17 @@ const styles = StyleSheet.create({
   submitBtn: {
     borderRadius: 14,
     overflow: 'hidden',
-    marginTop: 6,
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
+    marginTop: 10,
+    /* Era 0.35 de opacidad con radio 10 y 6 px de desplazamiento: un halo dorado bajo el boton,
+       el gesto de "premium" que traen todas las plantillas. Queda una sombra que solo insinua
+       que el boton esta por encima del fondo. */
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
   gradientBtn: {
-    paddingVertical: 15,
+    paddingVertical: 17,
     alignItems: 'center',
     justifyContent: 'center',
   },

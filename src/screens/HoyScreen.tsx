@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
+import { space } from '../theme/tokens';
 import { useResponsive } from '../theme/responsive';
 import { Card, MicroLabel, ScreenHeader, GoldCircle } from '../components/ui';
 import { Icon } from '../components/Icon';
@@ -21,6 +22,9 @@ import { TarjetaMentorHoy } from '../features/mentor/components/TarjetaMentorHoy
 import { alAbrirAviso, consumirRutaPendiente } from '../features/mentor/notificaciones/rutaDeAviso';
 import { AdminScreen } from '../features/admin/screens/AdminScreen';
 import { TarjetaAdminHoy } from '../features/admin/components/TarjetaAdminHoy';
+import { TarjetaConfrontacion } from '../features/confrontacion/components/TarjetaConfrontacion';
+import { ParticulaDeRitmo } from '../features/home/components/ParticulaDeRitmo';
+import { ritmoDelDia } from '../features/home/utils/ritmoDelDia';
 import { useCapacidades } from '../features/admin/hooks/useCapacidades';
 import { MiCelulaScreen } from '../features/mentor/screens/MiCelulaScreen';
 import { AlumnoScreen } from '../features/mentor/screens/AlumnoScreen';
@@ -43,8 +47,7 @@ import type { RocaDiariaApi } from '../features/training/types/training.types';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
 
 export default function HoyScreen() {
-  const { c, t, mode } = useTheme();
-  const isDark = mode === 'dark';
+  const { c, t } = useTheme();
   const { rs, isShort, isTablet, horizontalPadding, width, contentMaxWidth } = useResponsive();
   const navigation = useNavigation();
 
@@ -151,6 +154,15 @@ export default function HoyScreen() {
 
   // Roca Prioritaria de Hoy: Posición 1 (Pareto Verde) o la primera disponible
   const rocaPrioritaria = rocas.find(r => r.posicion === 1) || rocas[0] || null;
+  /* El ritmo del día: lo que decide si la partícula del hero viaja, va lento o se detiene.
+     Se calcula con lo ÚNICO que hoy se mueve de verdad —hábitos y roca cumplidos— y no con
+     coherencia ni racha, que el backend no calcula (`ritmoDelDia` lo explica con la evidencia).
+     La regla vive afuera, en una función pura y probada; acá solo se le pasan los datos. */
+  const ritmo = ritmoDelDia({
+    habitosCompletados: resumen?.habitosHoy?.completados ?? 0,
+    habitosTotal: resumen?.habitosHoy?.total ?? 0,
+    rocaCompletada: rocaPrioritaria ? rocaPrioritaria.completada : null,
+  });
   const evidenciasUltimaPublicacion = ultimaPublicacion?.media ?? [];
 
   /* Los anillos son decorado: se derivan del hueco REAL que queda, no de medidas fijas.
@@ -163,6 +175,14 @@ export default function HoyScreen() {
   const heroSize = Math.min(anchoContenido, rs(isShort ? 206 : 252));
   const ringDiameters = [heroSize, heroSize * 0.82, heroSize * 0.64, heroSize * 0.46].map(Math.round);
   const ringColors = [c.ring1, c.ring2, c.ring3, c.ring2];
+
+  /* El texto del centro del hero. La altura de línea se DERIVA del tamaño en vez de ir fija:
+     `t.hero` pasó a la serif Fraunces y el override que había acá ('lineHeight: 26') quedaba por
+     DEBAJO del tamaño de letra cuando no hay roca (32 px), así que la caja de línea recortaba el
+     titular por arriba. Un título de dos líneas necesita más aire entre líneas que una palabra
+     suelta, de ahí los dos factores. */
+  const tamanoFoco = isShort ? (rocaPrioritaria ? 17 : 26) : (rocaPrioritaria ? 19 : 32);
+  const interlineadoFoco = Math.round(tamanoFoco * (rocaPrioritaria ? 1.25 : 1.1));
 
   const faseNombre = rotuloDeFase(resumen?.fase)?.toUpperCase() || 'PROGRAMA ACTIVO';
   /**
@@ -296,23 +316,32 @@ export default function HoyScreen() {
         {/* 1. BARRA DE ESTADO DEL PROGRAMA & PUNTOS                                  */}
         {/* ========================================================================= */}
         <Aparicion>
-        <View style={[styles.programStatusBar, { borderColor: c.border, backgroundColor: c.cardBg }]}>
+        {/* Era una tarjeta con borde que contenía otra caja con borde (la píldora de puntos):
+            dos rectángulos anidados para decir dos datos. Ahora es una línea de encabezado
+            —fase arriba, día debajo, puntos al margen— sin borde ni fondo propios. Lo que la
+            separa de lo que sigue es el espacio, no un contorno. */}
+        <View style={styles.programStatusBar}>
           <View style={{ flex: 1 }}>
-            <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
+            <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
               {faseNombre}
             </Text>
-            <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13.5, marginTop: 2 }]}>
+            <Text style={[t.cardTitle, styles.cifras, { color: c.textStrong, fontSize: 15, marginTop: 3 }]}>
               DÍA {diaConocido ?? '—'} DE {DIAS_DEL_PROGRAMA}
             </Text>
           </View>
 
-          <View style={[styles.metricPill, { borderColor: c.gold, backgroundColor: c.goldWash }]}>
+          <View style={[styles.metricPill, { backgroundColor: c.goldWash }]}>
             <Icon name="zap" size={12} color={c.goldInk} />
-            <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
+            <Text style={[t.micro, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
               {puntosLiga} PTS
             </Text>
           </View>
         </View>
+
+        {/* La frase de confrontación del día. Va acá —pegada a "DÍA n DE 90" y ANTES de las
+            métricas— porque la guía del cliente es explícita sobre para qué sirve: revelar, no
+            informar. Debajo de los números ya sería un dato más. */}
+        <TarjetaConfrontacion diaPrograma={diaConocido} />
 
         {/* ========================================================================= */}
         {/* 2. MÉTRICAS CLAVE REALES: COHERENCIA Y RACHA                              */}
@@ -320,49 +349,56 @@ export default function HoyScreen() {
         </Aparicion>
 
         <Aparicion retardo={70}>
+        {/* Eran dos tarjetas con borde y fondo, una dorada y la otra gris sin motivo. Ahora son
+            dos columnas de texto sobre el fondo de la pantalla, separadas por UNA línea de pelo:
+            el único borde que queda es el que de verdad hace falta, porque sin él las dos cifras
+            se leerían como una sola frase. El icono ya no se va al margen derecho — acompaña al
+            rótulo, y todo el bloque se lee de izquierda a derecha. */}
         <View style={styles.metricsRow}>
-          {/* Tarjeta Coherencia Real */}
-          <View style={[styles.metricCard, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          {/* Coherencia real */}
+          <View style={styles.metricBloque}>
+            <View style={styles.metricEncabezado}>
               <Text style={[t.micro, { color: c.textSoft, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>
                 COHERENCIA
               </Text>
               <Icon name="target" size={14} color={c.goldInk} />
             </View>
-            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 2, marginTop: 4 }}>
-              <Text style={{ fontFamily: 'Jost_500Medium', fontSize: 26, color: c.goldInk }}>
+            <View style={styles.metricCifra}>
+              <Text style={[t.metric, { color: c.goldInk }]}>
                 {coherenciaScore}
               </Text>
-              <Text style={{ fontFamily: 'Jost_500Medium', fontSize: 13, color: c.goldInk }}>%</Text>
+              <Text style={{ fontFamily: 'Jost_500Medium', fontSize: 15, color: c.goldInk }}>%</Text>
             </View>
-            <Text style={[t.micro, { color: c.micro, fontSize: 10.5, marginTop: 2 }]}>
+            <Text style={[t.small, { color: c.micro, fontSize: 12, marginTop: 4 }]}>
               {coherenciaScore >= 80 ? 'Nivel de excelencia' : 'Consistencia del día'}
             </Text>
           </View>
 
-          {/* Tarjeta Racha Real */}
-          <View style={[styles.metricCard, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={[styles.metricSeparador, { backgroundColor: c.divider }]} />
+
+          {/* Racha real */}
+          <View style={styles.metricBloque}>
+            <View style={styles.metricEncabezado}>
               <Text style={[t.micro, { color: c.textSoft, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>
                 RACHA ACTUAL
               </Text>
               <Icon name="fire" size={14} color={rachaActual > 0 ? c.goldInk : c.chevron} />
             </View>
-            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4, marginTop: 4 }}>
-              <Text style={{ fontFamily: 'Jost_500Medium', fontSize: 26, color: c.textStrong }}>
+            <View style={styles.metricCifra}>
+              <Text style={[t.metric, { color: c.textStrong }]}>
                 {rachaActual}
               </Text>
               <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>DÍAS</Text>
             </View>
-            <Text style={[t.micro, { color: c.micro, fontSize: 10.5, marginTop: 2 }]}>
+            <Text style={[t.small, { color: c.micro, fontSize: 12, marginTop: 4 }]}>
               Récord histórico: {rachaMaxima} d
             </Text>
           </View>
         </View>
 
         {errorResumen && (
-          <View style={[styles.errorBox, { borderColor: c.danger, backgroundColor: isDark ? 'rgba(224,106,102,0.1)' : 'rgba(224,106,102,0.05)' }]}>
-            <Text style={[t.micro, { color: c.danger, textAlign: 'center' }]}>
+          <View style={[styles.errorBox, { backgroundColor: c.dangerWash, borderLeftColor: c.danger }]}>
+            <Text style={[t.small, { color: c.danger }]}>
               {errorResumen}
             </Text>
           </View>
@@ -392,8 +428,13 @@ export default function HoyScreen() {
               />
             );
           })}
+          {/* La partícula orbita sobre el anillo exterior: es el único radio donde no se cruza
+              con el texto del centro en un teléfono chico. */}
+          <ParticulaDeRitmo ritmo={ritmo.ritmo} diametro={ringDiameters[0]} />
           <View style={styles.heroCenter}>
-            <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_500Medium', letterSpacing: 2, fontSize: 10.5, textAlign: 'center' }]}>
+            {/* Sin `letterSpacing: 2`: `t.micro` ya trae 1.1, y la regla nueva de AGENTS.md §4 es
+                que por encima de 1.5 un rótulo se ve estirado, no importante. */}
+            <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_500Medium', fontSize: 10.5, textAlign: 'center' }]}>
               {rocaPrioritaria ? 'PRIORIDAD #1 · FOCO DEL DÍA' : 'TU ÚNICO FOCO'}
             </Text>
 
@@ -404,10 +445,10 @@ export default function HoyScreen() {
                 {
                   color: c.textStrong,
                   marginTop: isShort ? 8 : 12,
-                  fontSize: isShort ? (rocaPrioritaria ? 17 : 26) : (rocaPrioritaria ? 19 : 32),
+                  fontSize: tamanoFoco,
                   textAlign: 'center',
                   paddingHorizontal: 20,
-                  lineHeight: isShort ? 22 : 26,
+                  lineHeight: interlineadoFoco,
                 },
               ]}
             >
@@ -415,34 +456,36 @@ export default function HoyScreen() {
             </Text>
 
             {rocaPrioritaria ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 }}>
-                <View
+              /* El sello del estado ya no lleva borde: vive dentro de los anillos, que son borde
+                 puro, y un contorno más lo convertía en una caja dentro de otra. El fondo lavado
+                 alcanza para separarlo. Además le faltaba `flexDirection: 'row'`, así que el icono
+                 se dibujaba ENCIMA del texto en vez de al lado, y sobraba una View envolviendo a
+                 un solo hijo. */
+              <View
+                style={[
+                  styles.statusPill,
+                  {
+                    backgroundColor: rocaPrioritaria.completada ? c.successWash : c.goldWash,
+                  },
+                ]}
+              >
+                <Icon
+                  name={rocaPrioritaria.completada ? 'check' : 'clock'}
+                  size={12}
+                  color={rocaPrioritaria.completada ? c.success : c.goldInk}
+                />
+                <Text
                   style={[
-                    styles.statusPill,
+                    t.micro,
                     {
-                      borderColor: rocaPrioritaria.completada ? c.success : c.gold,
-                      backgroundColor: rocaPrioritaria.completada ? 'rgba(76,175,80,0.15)' : c.goldWash,
+                      color: rocaPrioritaria.completada ? c.success : c.goldInk,
+                      fontFamily: 'Jost_700Bold',
+                      fontSize: 11,
                     },
                   ]}
                 >
-                  <Icon
-                    name={rocaPrioritaria.completada ? 'check' : 'clock'}
-                    size={12}
-                    color={rocaPrioritaria.completada ? c.success : c.goldInk}
-                  />
-                  <Text
-                    style={[
-                      t.micro,
-                      {
-                        color: rocaPrioritaria.completada ? c.success : c.goldInk,
-                        fontFamily: 'Jost_700Bold',
-                        fontSize: 11,
-                      },
-                    ]}
-                  >
-                    {rocaPrioritaria.completada ? 'ROCA COMPLETADA' : 'EN PROCESO'}
-                  </Text>
-                </View>
+                  {rocaPrioritaria.completada ? 'ROCA COMPLETADA' : 'EN PROCESO'}
+                </Text>
               </View>
             ) : (
               <Pressable
@@ -473,8 +516,8 @@ export default function HoyScreen() {
         {/* ========================================================================= */}
         </Aparicion>
 
-        <Aparicion retardo={210} style={{ gap: 12, paddingBottom: 24 }}>
-        <View style={{ gap: 12 }}>
+        <Aparicion retardo={210} style={{ paddingBottom: 24 }}>
+        <View style={{ gap: space.gap }}>
           {/* Solo para ADMIN/ALQUIMISTA. El resto de Hoy no cambia para nadie. */}
           {capacidades.administrar ? <TarjetaAdminHoy onAbrir={() => setEnAdministracion(true)} /> : null}
 
@@ -495,20 +538,22 @@ export default function HoyScreen() {
           */}
           {programaPersonal.visible ? (
             <Card>
-              <MicroLabel>TU PROGRAMA</MicroLabel>
-              <Text style={[t.cardTitle, { color: c.textStrong, marginTop: 6 }]}>
+              <MicroLabel>Tu programa</MicroLabel>
+              <Text style={[t.cardTitle, { color: c.textStrong, marginTop: 8 }]}>
                 Hacer mi programa de 90 días
               </Text>
-              <Text style={[t.body, { color: c.textSoft, fontSize: 13, marginTop: 6, lineHeight: 19 }]}>
+              {/* Era `fontSize: 13`, por debajo del mínimo de párrafo de AGENTS.md §4 (14–15.5).
+                  Se usa `t.body` tal cual: 15/22, que es lo que el token ya define. */}
+              <Text style={[t.body, { color: c.textSoft, marginTop: 8 }]}>
                 Podés recorrerlo vos también: tus hábitos, tus objetivos y tu Mapa, con tu propio
                 día. No cambia nada de lo que ves como acompañante.
               </Text>
               {programaPersonal.error ? (
-                <Text style={[t.body, { color: c.danger, fontSize: 12.5, marginTop: 8 }]}>
+                <Text style={[t.small, { color: c.danger, marginTop: 10 }]}>
                   {programaPersonal.error}
                 </Text>
               ) : null}
-              <View style={{ flexDirection: 'row', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 18, flexWrap: 'wrap' }}>
                 <Pressable
                   onPress={() => void programaPersonal.activar()}
                   disabled={programaPersonal.activando}
@@ -519,7 +564,7 @@ export default function HoyScreen() {
                     { backgroundColor: c.gold, opacity: programaPersonal.activando ? 0.6 : 1 },
                   ]}
                 >
-                  <Text style={[t.body, { color: c.onGold, fontSize: 13.5, fontFamily: 'Jost_700Bold' }]}>
+                  <Text style={[t.body, { color: c.onGold, fontFamily: 'Jost_700Bold' }]}>
                     {programaPersonal.activando ? 'Activando…' : 'Empezar'}
                   </Text>
                 </Pressable>
@@ -529,7 +574,7 @@ export default function HoyScreen() {
                   accessibilityLabel="Ahora no. No se borra nada."
                   style={[estilosPrograma.secundario, { borderColor: c.border }]}
                 >
-                  <Text style={[t.body, { color: c.textSoft, fontSize: 13.5 }]}>Ahora no</Text>
+                  <Text style={[t.body, { color: c.textSoft }]}>Ahora no</Text>
                 </Pressable>
               </View>
             </Card>
@@ -549,18 +594,19 @@ export default function HoyScreen() {
           {/* Tarjeta Mapa de Renacimiento (Día 7) */}
           {mostrarMapa ? (
             <Pressable onPress={abrirMapa} accessibilityRole="button">
-              <Card style={{ borderColor: c.gold }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  {/* Ya no dice "DÍA 7": está disponible desde el Día 0. El badge de VISTA PREVIA
-                      se fue con él — existía para marcar que en desarrollo se veía antes de tiempo,
-                      y ahora no hay "antes de tiempo". */}
-                  <MicroLabel>MAPA DE RENACIMIENTO</MicroLabel>
-                </View>
+              {/* Sin el `borderColor: c.gold`: subrayar una tarjeta con un contorno dorado es
+                  destacar por adorno. Esta tarjeta ya destaca por lo que dice y por el círculo
+                  dorado que lleva dentro; el contorno sólo la desalineaba del resto. */}
+              <Card>
+                {/* Ya no dice "DÍA 7": está disponible desde el Día 0. El badge de VISTA PREVIA
+                    se fue con él — existía para marcar que en desarrollo se veía antes de tiempo,
+                    y ahora no hay "antes de tiempo". */}
+                <MicroLabel>Mapa de renacimiento</MicroLabel>
                 <View style={styles.insight}>
                   <Icon name="spark" size={19} color={c.goldInk} />
-                  <View style={{ gap: 4, flex: 1 }}>
+                  <View style={{ gap: 5, flex: 1 }}>
                     <Text style={[t.cardTitle, { color: c.text }]}>{tituloMapa}</Text>
-                    <Text style={[t.body, { color: c.textSoft, fontSize: 12 }]}>{detalleMapa}</Text>
+                    <Text style={[t.small, { color: c.textSoft }]}>{detalleMapa}</Text>
                   </View>
                   <GoldCircle size={40} icon="chevron" />
                 </View>
@@ -580,19 +626,19 @@ export default function HoyScreen() {
             }
           >
             <Card>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <MicroLabel>HÁBITOS DE HOY</MicroLabel>
-                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
+              <View style={styles.encabezadoTarjeta}>
+                <MicroLabel>Hábitos de hoy</MicroLabel>
+                <Text style={[t.micro, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
                   {resumen?.habitosHoy ? `${resumen.habitosHoy.completados}/${resumen.habitosHoy.total}` : 'Al día'}
                 </Text>
               </View>
               <View style={styles.insight}>
                 <Icon name="sun" size={19} color={c.goldInk} />
-                <View style={{ gap: 4, flex: 1 }}>
+                <View style={{ gap: 5, flex: 1 }}>
                   <Text style={[t.cardTitle, { color: c.text }]} numberOfLines={2}>
                     {tituloHabitoAhora}
                   </Text>
-                  <Text style={[t.body, { color: c.textSoft, fontSize: 12 }]}>
+                  <Text style={[t.small, { color: c.textSoft }]}>
                     {detalleHabitoAhora}
                   </Text>
                 </View>
@@ -608,18 +654,20 @@ export default function HoyScreen() {
               style={styles.between}
             >
               <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <MicroLabel>ROCAS Y OBJETIVOS</MicroLabel>
-                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
+                <View style={styles.encabezadoTarjeta}>
+                  <MicroLabel>Rocas y objetivos</MicroLabel>
+                  <Text style={[t.micro, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
                     {resumen?.rocasHoy ? `${resumen.rocasHoy.completados}/${resumen.rocasHoy.total}` : 'Pareto 80/20'}
                   </Text>
                 </View>
-                <Text style={[t.cardTitle, { color: c.text, fontSize: 13.5 }]}>
+                {/* Era 13.5: el mismo papel que el título de las otras tarjetas, dos puntos y
+                    medio más chico. Ahora todas usan `t.cardTitle` sin retoque. */}
+                <Text style={[t.cardTitle, { color: c.text, marginTop: 12 }]}>
                   {resumen?.rocasHoy && resumen.rocasHoy.completados > 0
                     ? `${resumen.rocasHoy.completados} de ${resumen.rocasHoy.total} rocas selladas hoy.`
                     : 'Prioridad #1 del día'}
                 </Text>
-                <Text style={[t.body, { color: c.textSoft, marginTop: 4, fontSize: 12, lineHeight: 18 }]}>
+                <Text style={[t.small, { color: c.textSoft, marginTop: 5 }]}>
                   {rocaPrioritaria
                     ? `Foco: "${rocaPrioritaria.titulo}"`
                     : 'Define tu Roca Verde en Plan para sostener la dirección.'}
@@ -631,7 +679,9 @@ export default function HoyScreen() {
 
           {/* Última evidencia real del Muro: se omiten publicaciones de texto sin evidencia. */}
           {(ultimaPublicacion || cargandoUltimaPublicacion) && (
-            <Card style={{ borderColor: c.gold }}>
+            /* Sin contorno dorado, por lo mismo que la tarjeta del Mapa: dos tarjetas con borde
+               de color y cinco sin él no es jerarquía, es ruido. */
+            <Card>
               {ultimaPublicacion ? (
                 <Pressable
                   onPress={() =>
@@ -645,7 +695,7 @@ export default function HoyScreen() {
                 >
                   <View style={{ flex: 1 }}>
                     <View style={styles.wallActivityHeader}>
-                      <MicroLabel>ÚLTIMA EVIDENCIA DEL MURO</MicroLabel>
+                      <MicroLabel>Última evidencia del muro</MicroLabel>
                       <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
                         {tiempoRelativo(ultimaPublicacion.createdAt)}
                       </Text>
@@ -656,29 +706,32 @@ export default function HoyScreen() {
                         tres cajas vacias ocupando media tarjeta, y el texto de la publicacion, que
                         es lo unico que de verdad cuenta algo, no se mostraba en ningun sitio. */}
                     <View style={styles.insight}>
-                      <View style={[styles.wallAvatar, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
+                      {/* El avatar llevaba borde dorado DENTRO de una tarjeta que ya tiene borde:
+                          un círculo con contorno pegado a un rectángulo con contorno. Ahora es un
+                          disco lleno de lavado dorado, sin línea. */}
+                      <View style={[styles.wallAvatar, { backgroundColor: c.goldWash }]}>
                         <Icon name="user" size={16} color={c.goldInk} />
                       </View>
-                      <View style={{ flex: 1, gap: 3 }}>
-                        <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13.5 }]} numberOfLines={1}>
+                      <View style={{ flex: 1, gap: 5 }}>
+                        <Text style={[t.cardTitle, { color: c.textStrong }]} numberOfLines={1}>
                           {ultimaPublicacion.authorName?.trim() || 'Miembro Renaser'}
                         </Text>
                         {ultimaPublicacion.text?.trim() ? (
                           <Text
-                            style={[t.body, { color: c.text, fontSize: 13, lineHeight: 19 }]}
+                            style={[t.body, { color: c.text }]}
                             numberOfLines={3}
                           >
                             {ultimaPublicacion.text.trim()}
                           </Text>
                         ) : (
-                          <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, lineHeight: 18 }]}>
+                          <Text style={[t.small, { color: c.textSoft }]}>
                             Compartió una evidencia sin texto.
                           </Text>
                         )}
                         {evidenciasUltimaPublicacion.length > 0 && (
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
                             <Icon name="camera" size={12} color={c.goldInk} />
-                            <Text style={[t.micro, { color: c.goldInk, fontSize: 10.5, fontFamily: 'Jost_500Medium' }]}>
+                            <Text style={[t.micro, { color: c.goldInk, fontSize: 11, fontFamily: 'Jost_500Medium' }]}>
                               {evidenciasUltimaPublicacion.length}
                               {evidenciasUltimaPublicacion.length === 1 ? ' evidencia' : ' evidencias'}
                             </Text>
@@ -691,7 +744,7 @@ export default function HoyScreen() {
                 </Pressable>
               ) : (
                 <View style={styles.wallLoadingRow}>
-                  <MicroLabel>CARGANDO ACTIVIDAD DEL MURO...</MicroLabel>
+                  <MicroLabel>Cargando actividad del muro...</MicroLabel>
                 </View>
               )}
             </Card>
@@ -700,16 +753,20 @@ export default function HoyScreen() {
           {/* Próximo Evento / Mentoría (si el backend lo devuelve) */}
           {resumen?.proximoEvento && (
             <Card>
-              <MicroLabel>PRÓXIMO EVENTO</MicroLabel>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 6 }}>
-                <View style={[styles.eventIconBox, { borderColor: c.gold, backgroundColor: c.goldWash }]}>
+              <MicroLabel>Próximo evento</MicroLabel>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12 }}>
+                {/* Mismo caso que el avatar del muro: el borde dorado de este cuadradito estaba
+                    dentro del borde de la tarjeta. Queda el disco lavado, sin línea. */}
+                <View style={[styles.eventIconBox, { backgroundColor: c.goldWash }]}>
                   <Icon name="calendar" size={16} color={c.goldInk} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]}>
+                  <Text style={[t.cardTitle, { color: c.textStrong }]}>
                     {resumen.proximoEvento.titulo}
                   </Text>
-                  <Text style={[t.micro, { color: c.goldInk, fontSize: 10, marginTop: 2 }]}>
+                  {/* Era 10 px, por debajo del mínimo de micro-etiqueta (10.5) y encima con
+                      cifras que cambian. A 12 con cifras tabulares se lee y no baila. */}
+                  <Text style={[t.small, styles.cifras, { color: c.goldInk, fontSize: 12, marginTop: 3 }]}>
                     {new Date(resumen.proximoEvento.iniciaEn).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })}
                   </Text>
                 </View>
@@ -724,45 +781,65 @@ export default function HoyScreen() {
 }
 
 const styles = StyleSheet.create({
+  /* `gapLg` y no `gap` entre los cuatro bloques de la pantalla (encabezado, métricas, hero,
+     tarjetas). Con 12 px todo se leía como una lista continua; con 28 cada bloque se reconoce
+     solo, que es lo que antes intentaban hacer los bordes. */
   content: {
     flexGrow: 1,
-    paddingHorizontal: 24,
+    paddingHorizontal: space.screenX,
     paddingBottom: ESPACIO_PARA_LANZADOR,
-    gap: 12,
+    gap: space.gapLg,
+  },
+  /** Cifras que cambian en pantalla: ancho de dígito fijo para que nada salte (AGENTS.md §4). */
+  cifras: {
+    fontVariant: ['tabular-nums'],
   },
   programStatusBar: {
-    borderWidth: 1,
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: 4,
   },
   metricPill: {
-    borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: space.radiusSm,
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 6,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 5,
   },
   metricsRow: {
     flexDirection: 'row',
-    gap: 10,
+    alignItems: 'stretch',
+    gap: space.gap,
   },
-  metricCard: {
+  metricBloque: {
     flex: 1,
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 12,
   },
+  metricEncabezado: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
+  metricCifra: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 3,
+    marginTop: 6,
+  },
+  /** El único borde que sobrevive en este bloque, y sólo porque separa dos cifras contiguas. */
+  metricSeparador: {
+    width: 1,
+    alignSelf: 'stretch',
+  },
+  /* Regla lateral en vez de recuadro completo: el mismo gesto que usa la frase del día, y no
+     mete otra caja con borde en una pantalla que acaba de perder tres. */
   errorBox: {
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 10,
+    borderLeftWidth: 2,
+    borderRadius: space.radiusSm,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginTop: space.gap,
   },
   hero: {
     alignItems: 'center',
@@ -776,29 +853,40 @@ const styles = StyleSheet.create({
   heroCenter: {
     alignItems: 'center',
   },
+  /** 48 px, como todo lo pulsable (AGENTS.md §4). Estaba en 44. */
   definirRocaEnlace: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    minHeight: 44,
+    minHeight: 48,
     paddingHorizontal: 8,
   },
   statusPill: {
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: space.radiusSm,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginTop: 12,
+  },
+  /** Rótulo de la tarjeta y su contador. El aire hacia el contenido lo pone `insight`. */
+  encabezadoTarjeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
   },
   insight: {
     flexDirection: 'row',
-    gap: 13,
+    gap: 12,
     alignItems: 'flex-start',
-    marginTop: 10,
+    marginTop: 14,
   },
   between: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
   },
@@ -806,7 +894,6 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -815,13 +902,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
-    marginBottom: 2,
   },
   wallAvatar: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -831,19 +916,26 @@ const styles = StyleSheet.create({
   },
 });
 
-/** Botones de la invitación al programa personal. 48 px: pulsables con una sola mano. */
+/**
+ * Botones de la invitación al programa personal. 48 px: pulsables con una sola mano.
+ *
+ * El borde de `secundario` **se conserva a propósito**, aunque viva dentro de una tarjeta que ya
+ * tiene el suyo: es un control, no decoración. Sin contorno, "Ahora no" queda como texto suelto
+ * al lado de un botón relleno, y para alguien de 40–60 deja de parecer pulsable. La regla de esta
+ * pasada es quitar los bordes que sólo adornan, no los que dicen "esto se toca".
+ */
 const estilosPrograma = StyleSheet.create({
   principal: {
     minHeight: 48,
     justifyContent: 'center',
     paddingHorizontal: 20,
-    borderRadius: 12,
+    borderRadius: space.radiusSm,
   },
   secundario: {
     minHeight: 48,
     justifyContent: 'center',
     paddingHorizontal: 18,
-    borderRadius: 12,
+    borderRadius: space.radiusSm,
     borderWidth: 1,
   },
 });

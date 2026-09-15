@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Image, Pressable, StyleSheet, StyleProp, ViewStyle, ImageStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../theme/ThemeContext';
+import { useResponsive } from '../theme/responsive';
 import { Icon, IconName } from './Icon';
 
 /** Las iniciales de un nombre: "Ana López" → "AL", "Kelin" → "KE", vacío → "·". */
@@ -64,10 +65,26 @@ export function Card({ children, style }: { children: React.ReactNode; style?: V
   );
 }
 
+/**
+ * Cabecera de pantalla: el título grande ("HOY", "PLAN", "YO"…) más el interruptor de tema y el
+ * icono de la derecha.
+ *
+ * > **Corregido 2026-09-14.** El margen lateral estaba clavado en `paddingHorizontal: 30` dentro
+ * > de `styles.header`, mientras que el `ScrollView` de cada una de las cinco pantallas que usan
+ * > esta cabecera aplica el margen responsive de `useResponsive()` (14 / 18 / 20 / 32 según el
+ * > ancho, AGENTS.md §2). En un teléfono estándar de 360–440 px el contenido va a 18 y el título
+ * > iba a 30: el dueño del producto lo vio en el emulador como "HOY" metido 12 px más adentro que
+ * > "EL CICLO ALQUÍMICO" y "DÍA 12 DE 90". Ningún ancho daba 30, así que el título nunca estuvo
+ * > alineado con lo de abajo en ninguna pantalla ni en ningún dispositivo.
+ * >
+ * > Ahora el margen sale de la misma fuente que el del contenido, así que se mueven juntos y no
+ * > hay dos criterios que mantener sincronizados a mano.
+ */
 export function ScreenHeader({ title, right, onPressRight }: { title: string; right: IconName; onPressRight?: () => void }) {
   const { c, t, mode, toggle } = useTheme();
+  const { horizontalPadding } = useResponsive();
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { paddingHorizontal: horizontalPadding }]}>
       <Text style={[t.screenTitle, { color: c.text, flexShrink: 1 }]} numberOfLines={1} adjustsFontSizeToFit>
         {title}
       </Text>
@@ -136,7 +153,10 @@ export function ListRow({ index, label, onPress }: { index?: string; label: stri
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingHorizontal: 30, paddingTop: 8 },
+  /* Sin `paddingHorizontal`: lo pone `ScreenHeader` con el valor responsive (ver el comentario
+     "Corregido 2026-09-14" ahí arriba). Si se vuelve a escribir acá un número fijo, el título se
+     desalinea otra vez del contenido de la pantalla. */
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingTop: 8 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   headerBtn: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
   themeBtn: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },

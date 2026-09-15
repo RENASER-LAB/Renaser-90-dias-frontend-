@@ -212,7 +212,7 @@ export function GrupoFormScreen({
 
         {!grupoId ? (
           <View style={{ gap: 8, marginTop: 4 }}>
-            <MicroLabel>COHORTE</MicroLabel>
+            <MicroLabel>Cohorte</MicroLabel>
             {cohortes.length === 0 ? (
               /* Sin ninguna cohorte no se puede crear ningún grupo, y el panel no tenía por dónde
                  crearla: era un huevo-y-gallina que dejaba el formulario trabado. Acá se crea la
@@ -274,7 +274,7 @@ export function GrupoFormScreen({
 
         {!grupoId ? (
           <View style={{ gap: 8, marginTop: 10 }}>
-            <MicroLabel>TIPO</MicroLabel>
+            <MicroLabel>Tipo</MicroLabel>
             <View style={estilos.opciones}>
               {(
                 [

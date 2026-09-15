@@ -69,7 +69,7 @@ export function BienvenidaScreen({ onContinue }: BienvenidaScreenProps) {
             </View>
           </View>
 
-          <MicroLabel>BIENVENIDO A TU TRANSFORMACIÓN</MicroLabel>
+          <MicroLabel>Bienvenido a tu transformación</MicroLabel>
           <Text style={[t.hero, { color: c.textStrong, marginTop: 10, letterSpacing: 8, fontSize: 32 }]}>
             RENASER
           </Text>
@@ -81,7 +81,7 @@ export function BienvenidaScreen({ onContinue }: BienvenidaScreenProps) {
         {/* Evolution Timeline Card */}
         <View style={[styles.card, { backgroundColor: c.cardBg, borderColor: c.border }]}>
           <View style={{ alignItems: 'center', marginBottom: 8 }}>
-            <MicroLabel>TU MAPA EVOLUTIVO</MicroLabel>
+            <MicroLabel>Tu mapa evolutivo</MicroLabel>
             <Text style={[t.sectionTitle, { color: c.text, marginTop: 4, fontSize: 13, letterSpacing: 2 }]}>
               LOS PRÓXIMOS 90 DÍAS
             </Text>

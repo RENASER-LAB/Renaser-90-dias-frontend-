@@ -290,7 +290,7 @@ export function LocationCascadePicker({
     <View style={styles.container}>
       {/* Header con Título y Botón GPS */}
       <View style={styles.headerRow}>
-        <MicroLabel>UBICACIÓN GEOGRÁFICA</MicroLabel>
+        <MicroLabel>Ubicación geográfica</MicroLabel>
         <Pressable
           onPress={handleUseCurrentGPS}
           disabled={isDetectingGPS}
@@ -438,7 +438,7 @@ export function LocationCascadePicker({
         >
           <View style={[styles.modalCard, { backgroundColor: c.cardBg, borderColor: c.gold }]}>
             <View style={styles.modalHeader}>
-              <MicroLabel>UBICACIÓN RENASER</MicroLabel>
+              <MicroLabel>Ubicación Renaser</MicroLabel>
               <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 18, marginTop: 2 }]}>
                 {getModalTitle()}
               </Text>

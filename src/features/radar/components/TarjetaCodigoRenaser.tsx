@@ -44,7 +44,7 @@ export function TarjetaCodigoRenaser({
     return (
       <Card>
         <View style={styles.cabecera}>
-          <MicroLabel>CÓDIGO RENASER</MicroLabel>
+          <MicroLabel>Código Renaser</MicroLabel>
           <Text style={[t.micro, { color: c.micro, fontFamily: 'Jost_500Medium' }]}>EN ESPERA</Text>
         </View>
         <View style={styles.fila}>
@@ -61,7 +61,7 @@ export function TarjetaCodigoRenaser({
     return (
       <Card>
         <View style={styles.cabecera}>
-          <MicroLabel>CÓDIGO RENASER · {estado.slot.etiqueta}</MicroLabel>
+          <MicroLabel>Código Renaser · {estado.slot.etiqueta}</MicroLabel>
           <Text style={[t.micro, { color: c.success, fontFamily: 'Jost_700Bold' }]}>REGISTRADO</Text>
         </View>
         <View style={styles.fila}>
@@ -81,7 +81,7 @@ export function TarjetaCodigoRenaser({
     <Pressable onPress={onResponder} accessibilityRole="button" accessibilityLabel="Responder el Código Renaser de esta hora">
       <Card style={{ borderColor: c.gold }}>
         <View style={styles.cabecera}>
-          <MicroLabel>CÓDIGO RENASER · {estado.slot.etiqueta}</MicroLabel>
+          <MicroLabel>Código Renaser · {estado.slot.etiqueta}</MicroLabel>
           <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
             {obligatorio ? 'INNEGOCIABLE' : 'ABIERTO'}
           </Text>

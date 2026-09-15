@@ -67,7 +67,7 @@ export function TarjetaMentorHoy({
       ]}
     >
       <View style={{ flex: 1 }}>
-        <MicroLabel>MI GRUPO</MicroLabel>
+        <MicroLabel>Mi grupo</MicroLabel>
         <Text style={[t.cardTitle, { color: c.textStrong, marginTop: 5 }]} numberOfLines={1}>
           {vista?.celula.nombre ?? 'Acompañamiento'}
         </Text>

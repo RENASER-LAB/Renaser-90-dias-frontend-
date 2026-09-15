@@ -135,7 +135,7 @@ export function DatePickerField({
               <View style={[styles.modalIcon, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
                 <Icon name="clock" size={20} color={c.goldInk} />
               </View>
-              <MicroLabel>FECHA DE NACIMIENTO</MicroLabel>
+              <MicroLabel>Fecha de nacimiento</MicroLabel>
               <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 18, marginTop: 4 }]}>
                 {selectedDay} de {monthName} de {selectedYear}
               </Text>

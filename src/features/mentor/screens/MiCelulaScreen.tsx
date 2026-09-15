@@ -213,7 +213,7 @@ export function MiCelulaScreen({
                 recalcula, para que nunca diga un número distinto del que ve el administrador. */}
             {hayEvaluacion && evaluacion ? (
               <Aparicion retardo={40} style={{ marginBottom: 4 }}>
-                <MicroLabel>MI EVALUACIÓN</MicroLabel>
+                <MicroLabel>Mi evaluación</MicroLabel>
                 <View style={[estilos.evaluacion, { borderColor: c.border, backgroundColor: c.cardBg }]}>
                   <View style={estilos.filaEvaluacion}>
                     <Text style={[estilos.cifraValor, { color: c.textStrong, fontSize: 28 }]}>
@@ -281,7 +281,7 @@ export function MiCelulaScreen({
 
             {vista.requierenSeguimiento.length > 0 ? (
               <Aparicion retardo={140} style={{ marginTop: 22 }}>
-                <MicroLabel>REQUIEREN SEGUIMIENTO</MicroLabel>
+                <MicroLabel>Requieren seguimiento</MicroLabel>
                 <View style={[estilos.lista, { borderColor: c.border, backgroundColor: c.cardBg }]}>
                   {vista.requierenSeguimiento.map(a => (
                     <FilaAlumno key={a.participanteId} alumno={a} onPress={() => onAbrirAlumno(a)} />
@@ -303,7 +303,7 @@ export function MiCelulaScreen({
                 cuando hay datos que lo respalden; si no, se dice que faltan. */}
             {vista.sinDatos.length > 0 ? (
               <Aparicion retardo={175} style={{ marginTop: 22 }}>
-                <MicroLabel>SIN AVANCE REGISTRADO</MicroLabel>
+                <MicroLabel>Sin avance registrado</MicroLabel>
                 <View style={[estilos.lista, { borderColor: c.border, backgroundColor: c.cardBg }]}>
                   {vista.sinDatos.map(a => (
                     <FilaAlumno key={a.participanteId} alumno={a} onPress={() => onAbrirAlumno(a)} />
@@ -318,7 +318,7 @@ export function MiCelulaScreen({
 
             {vista.alDia.length > 0 ? (
               <Aparicion retardo={210} style={{ marginTop: 22 }}>
-                <MicroLabel>AL DÍA</MicroLabel>
+                <MicroLabel>Al día</MicroLabel>
                 <View style={[estilos.lista, { borderColor: c.border, backgroundColor: c.cardBg }]}>
                   {vista.alDia.map(a => (
                     <FilaAlumno key={a.participanteId} alumno={a} onPress={() => onAbrirAlumno(a)} />

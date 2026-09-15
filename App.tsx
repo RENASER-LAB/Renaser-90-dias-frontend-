@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { useFonts, Jost_400Regular, Jost_500Medium, Jost_700Bold } from '@expo-google-fonts/jost';
+import { Fraunces_600SemiBold, Fraunces_700Bold } from '@expo-google-fonts/fraunces';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import { AuthProvider } from './src/context/AuthContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
@@ -44,8 +45,19 @@ function Shell() {
 
 export default function App() {
   /* Jost_200ExtraLight y Jost_300Light se cargaban y AGENTS.md 4 los prohibe; tras sustituir
-     sus tres usos (token `hero`, dia del Plan, hora del picker) ya no hay consumidores. */
-  const [loaded, error] = useFonts({ Jost_400Regular, Jost_500Medium, Jost_700Bold });
+     sus tres usos (token `hero`, dia del Plan, hora del picker) ya no hay consumidores.
+
+     Fraunces entra en dos pesos y SOLO para los titulos de display (`t.hero`, `t.screenTitle` en
+     `theme/tokens.ts`). Todo el texto de lectura sigue en Jost, que es lo que protege AGENTS.md 4.
+     Si esta linea se quita, los titulos no fallan: caen al tipo del sistema en silencio, que es
+     peor que un error — por eso la fuente se carga aca, junto a las otras, y no a demanda. */
+  const [loaded, error] = useFonts({
+    Jost_400Regular,
+    Jost_500Medium,
+    Jost_700Bold,
+    Fraunces_600SemiBold,
+    Fraunces_700Bold,
+  });
   const scheme = useColorScheme();
 
   if (!loaded && !error) return null;

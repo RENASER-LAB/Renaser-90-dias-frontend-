@@ -274,7 +274,7 @@ export function StaffRolesScreen({ onVolver }: { onVolver: () => void }) {
 
         {cambiados.length > 0 ? (
           <View style={{ gap: 10 }}>
-            <MicroLabel>CAMBIOS DE ESTA SESIÓN</MicroLabel>
+            <MicroLabel>Cambios de esta sesión</MicroLabel>
             {cambiados.map(persona => (
               <FilaDePersona
                 key={`cambiado-${persona.id}`}
@@ -289,7 +289,7 @@ export function StaffRolesScreen({ onVolver }: { onVolver: () => void }) {
         ) : null}
 
         <View style={{ gap: 10 }}>
-          <MicroLabel>MENTORES ({mentoresVisibles.length})</MicroLabel>
+          <MicroLabel>Mentores ({mentoresVisibles.length})</MicroLabel>
           {mentoresVisibles.length === 0 && !cargando ? (
             <Text style={[t.body, { color: c.textSoft, fontSize: 13.5 }]}>
               Todavía no hay mentores. Hacé mentor a alguien de la lista de abajo.

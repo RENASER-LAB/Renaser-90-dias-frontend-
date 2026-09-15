@@ -56,7 +56,7 @@ export function GongVictoriaScreen({ onEnterApp }: GongVictoriaScreenProps) {
             </View>
           </View>
 
-          <MicroLabel>PROCESO FUNDACIONAL SELLADO</MicroLabel>
+          <MicroLabel>Proceso fundacional sellado</MicroLabel>
           <Text style={[t.hero, { color: c.textStrong, marginTop: 12, fontSize: 30, letterSpacing: 4, textAlign: 'center' }]}>
             ¡GONG DE VICTORIA!
           </Text>
@@ -67,7 +67,7 @@ export function GongVictoriaScreen({ onEnterApp }: GongVictoriaScreenProps) {
 
         {/* Milestones Card */}
         <View style={[styles.card, { backgroundColor: c.cardBg, borderColor: c.border }]}>
-          <MicroLabel>HITOS COMPLETADOS HOY</MicroLabel>
+          <MicroLabel>Hitos completados hoy</MicroLabel>
           <View style={{ gap: 14, marginVertical: 8 }}>
             {MILESTONES.map((milestone, idx) => (
               <View key={idx} style={styles.milestoneRow}>

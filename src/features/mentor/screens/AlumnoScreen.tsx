@@ -165,7 +165,7 @@ export function AlumnoScreen({
 
         <Aparicion retardo={70} style={{ marginTop: 20 }}>
           <View style={estilos.filaSemana}>
-            <MicroLabel>SEMANA</MicroLabel>
+            <MicroLabel>Semana</MicroLabel>
             {semana ? (
               <View style={estilos.navegacion}>
                 <Pressable

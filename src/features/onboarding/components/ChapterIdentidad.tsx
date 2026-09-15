@@ -127,7 +127,7 @@ export function ChapterIdentidad({ data, onChange }: ChapterIdentidadProps) {
 
       {/* Sexo (Masculino / Femenino / Otro) */}
       <View style={{ gap: 8 }}>
-        <MicroLabel>SEXO</MicroLabel>
+        <MicroLabel>Sexo</MicroLabel>
         <View style={styles.optionRow}>
           {SEXO_OPTIONS.map(sex => {
             const isSelected = data.sexo === sex;
@@ -168,7 +168,7 @@ export function ChapterIdentidad({ data, onChange }: ChapterIdentidadProps) {
 
       {/* Información Familiar: Estado Civil */}
       <View style={{ gap: 8 }}>
-        <MicroLabel>ESTADO CIVIL / SITUACIÓN FAMILIAR</MicroLabel>
+        <MicroLabel>Estado civil / situación familiar</MicroLabel>
         <View style={styles.wrapRow}>
           {ESTADO_CIVIL_OPTIONS.map(ec => {
             const isSelected = data.estadoCivil === ec;
@@ -207,7 +207,7 @@ export function ChapterIdentidad({ data, onChange }: ChapterIdentidadProps) {
 
       {/* Cantidad de Hijos */}
       <View style={{ gap: 8 }}>
-        <MicroLabel>CANTIDAD DE HIJOS</MicroLabel>
+        <MicroLabel>Cantidad de hijos</MicroLabel>
         <View style={styles.optionRow}>
           {HIJOS_OPTIONS.map(hijos => {
             const isSelected = data.cantidadHijos === hijos;
@@ -265,7 +265,7 @@ export function ChapterIdentidad({ data, onChange }: ChapterIdentidadProps) {
 
       {/* Selector de Tipo de Documento Centrado */}
       <View style={{ gap: 8 }}>
-        <MicroLabel>TIPO DE DOCUMENTO DE IDENTIDAD</MicroLabel>
+        <MicroLabel>Tipo de documento de identidad</MicroLabel>
         <View style={styles.optionRow}>
           {DOCUMENT_TYPES.map(tipo => {
             const isSelected = data.tipoDocumento === tipo.id;
@@ -360,7 +360,7 @@ export function ChapterIdentidad({ data, onChange }: ChapterIdentidadProps) {
 
       {/* Pregunta Abierta 1: Expectativa */}
       <View style={styles.openQuestionBlock}>
-        <MicroLabel>¿QUÉ ESPERAS CONCRETAMENTE DE RENASER?</MicroLabel>
+        <MicroLabel>¿Qué esperas concretamente de Renaser?</MicroLabel>
         <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, lineHeight: 18, marginVertical: 4 }]}>
           Detalla los cambios específicos que necesitas lograr en tu mente, cuerpo y negocio durante los 90 días.
         </Text>
@@ -380,7 +380,7 @@ export function ChapterIdentidad({ data, onChange }: ChapterIdentidadProps) {
 
       {/* Pregunta Abierta 2: Temor */}
       <View style={styles.openQuestionBlock}>
-        <MicroLabel>¿QUÉ TEMES QUE NO FUNCIONE?</MicroLabel>
+        <MicroLabel>¿Qué temes que no funcione?</MicroLabel>
         <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, lineHeight: 18, marginVertical: 4 }]}>
           Honestidad absoluta. ¿Cuáles son tus mayores dudas, patrones de autosabotaje o miedos frente a este proceso?
         </Text>

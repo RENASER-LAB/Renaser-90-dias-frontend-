@@ -132,7 +132,7 @@ export function FichaAprendizScreen({
 
         <View style={{ gap: 10 }}>
           <View style={estilos.encabezadoSemana}>
-            <MicroLabel>CUMPLIMIENTO DE LA SEMANA</MicroLabel>
+            <MicroLabel>Cumplimiento de la semana</MicroLabel>
             <View style={estilos.navegacion}>
               <Pressable
                 onPress={() => desplazar(-1)}
@@ -192,7 +192,7 @@ export function FichaAprendizScreen({
 
         {detalle && detalle.obligaciones.length > 0 ? (
           <View style={{ gap: 10 }}>
-            <MicroLabel>DETALLE DEL {fechaCorta(detalle.fecha).toUpperCase()}</MicroLabel>
+            <MicroLabel>Detalle del {fechaCorta(detalle.fecha)}</MicroLabel>
             {detalle.obligaciones.map(o => (
               <View
                 key={o.registroId}
@@ -223,7 +223,7 @@ export function FichaAprendizScreen({
 
         {semana && !sinDatos && semana.dias.some(d => d.obligaciones.length > 0) ? (
           <View style={{ gap: 8 }}>
-            <MicroLabel>ELEGÍ UN DÍA</MicroLabel>
+            <MicroLabel>Elegí un día</MicroLabel>
             <View style={estilos.dias}>
               {semana.dias
                 .filter(d => d.obligaciones.length > 0)

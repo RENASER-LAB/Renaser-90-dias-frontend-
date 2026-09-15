@@ -363,7 +363,7 @@ export function EvidenciaHabitoModal({
 
             {pestania === 'TEXTO' ? (
               <View style={{ gap: 4 }}>
-                <MicroLabel>REGISTRO DE VERDAD</MicroLabel>
+                <MicroLabel>Registro de verdad</MicroLabel>
                 <TextInput
                   value={nota}
                   onChangeText={setNota}

@@ -75,7 +75,7 @@ export function MasOpcionesScreen({
         }}
       >
         <View style={{ gap: 10 }}>
-          <MicroLabel>DESDE ACÁ</MicroLabel>
+          <MicroLabel>Desde acá</MicroLabel>
           {enLaApp.map(item => (
             <Pressable
               key={item.titulo}
@@ -97,7 +97,7 @@ export function MasOpcionesScreen({
         </View>
 
         <View style={{ gap: 10 }}>
-          <MicroLabel>DESDE EL PANEL WEB</MicroLabel>
+          <MicroLabel>Desde el panel web</MicroLabel>
           <Text style={[t.body, { color: c.textSoft, fontSize: 13, lineHeight: 19 }]}>
             Estas son operaciones con formularios largos. Existen y funcionan, pero desde una
             pantalla grande: acá se listan para que sepas dónde están, no para abrirlas a medias.
