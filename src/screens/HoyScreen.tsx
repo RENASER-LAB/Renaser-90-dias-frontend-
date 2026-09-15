@@ -19,6 +19,9 @@ import { useEsMentor } from '../features/mentor/hooks/useEsMentor';
 import { useCelulaQueAcompano } from '../features/mentor/hooks/useCelulaQueAcompano';
 import { useProgramaPersonal } from '../features/mentor/hooks/useProgramaPersonal';
 import { TarjetaMentorHoy } from '../features/mentor/components/TarjetaMentorHoy';
+import { entradaAlGrupoVisible, esLiderDeMentores } from '../features/mentor/utils/entradaAlGrupo';
+import { TarjetaBandejaHoy } from '../features/tickets/components/TarjetaBandejaHoy';
+import { BandejaTicketsScreen } from '../features/tickets/screens/BandejaTicketsScreen';
 import { alAbrirAviso, consumirRutaPendiente } from '../features/mentor/notificaciones/rutaDeAviso';
 import { AdminScreen } from '../features/admin/screens/AdminScreen';
 import { TarjetaAdminHoy } from '../features/admin/components/TarjetaAdminHoy';
@@ -78,6 +81,10 @@ export default function HoyScreen() {
     user?.id ?? null,
   );
   const [enAdministracion, setEnAdministracion] = useState(false);
+  /* La bandeja de tickets: la unica pantalla propia del LIDER DE MENTORES. Se monta como estado
+     de Hoy, igual que Administracion y que las vistas del mentor — no como un tab nuevo. */
+  const esLider = esLiderDeMentores(user?.role);
+  const [enBandejaTickets, setEnBandejaTickets] = useState(false);
   const [vistaMentor, setVistaMentor] = useState<'ninguna' | 'celula' | 'alumno'>('ninguna');
   const [alumnoAbierto, setAlumnoAbierto] = useState<AlumnoConEstado | null>(null);
 
@@ -261,6 +268,11 @@ export default function HoyScreen() {
      contexto de trabajo, no una tarjeta mas dentro del dia propio. */
   if (enAdministracion && capacidades.administrar) {
     return <AdminScreen onSalir={() => setEnAdministracion(false)} />;
+  }
+  /* Misma forma que Administracion: pantalla completa, y el retroceso del sistema la cierra
+     (la registra ella con su `useSystemBackHandler`). */
+  if (enBandejaTickets && esLider) {
+    return <BandejaTicketsScreen onVolver={() => setEnBandejaTickets(false)} />;
   }
   if (esMentor && vistaMentor === 'alumno' && alumnoAbierto) {
     return (
@@ -521,8 +533,13 @@ export default function HoyScreen() {
           {/* Solo para ADMIN/ALQUIMISTA. El resto de Hoy no cambia para nadie. */}
           {capacidades.administrar ? <TarjetaAdminHoy onAbrir={() => setEnAdministracion(true)} /> : null}
 
-          {/* Solo para quien acompana una celula. El resto de Hoy no cambia. */}
-          {esMentor ? (
+          {/* Solo para quien acompana una celula. El resto de Hoy no cambia.
+
+              La condicion vive en `entradaAlGrupoVisible` y no aca: un LIDER DE MENTORES contaba
+              como mentor, pero el backend no le deja tener grupo asignado, asi que esta tarjeta
+              le decia para siempre que no tiene aprendices. Para todos los demas roles la
+              funcion devuelve exactamente lo que devolvia `esMentor`. */}
+          {entradaAlGrupoVisible({ esMentor, rol: user?.role, fallo: celula.fallo }) ? (
             <TarjetaMentorHoy
               onAbrir={() => setVistaMentor('celula')}
               vista={celula.vista}
@@ -530,6 +547,12 @@ export default function HoyScreen() {
               fallo={celula.fallo}
             />
           ) : null}
+
+          {/* Solo para el LIDER DE MENTORES: es su unica pantalla propia, y el permiso
+              `VIEW_ALL_MENTOR_TICKETS` ya lo tiene. Ningun otro rol ve esta tarjeta — los
+              administradores tienen su propia entrada, y para el resto esta condicion es falsa,
+              asi que Hoy no cambia para nadie mas. */}
+          {esLider ? <TarjetaBandejaHoy onAbrir={() => setEnBandejaTickets(true)} /> : null}
 
           {/*
             Invitación secundaria, no un bloqueo. Acompañar no exige cursar (D-07), así que esto

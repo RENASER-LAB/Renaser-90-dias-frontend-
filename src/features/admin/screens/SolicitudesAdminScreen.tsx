@@ -11,7 +11,7 @@ import { aprobarSolicitud, listarAprendices, listarSolicitudes, rechazarSolicitu
 import type { SolicitudApi } from '../api/adminSchemas';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
 import { confirmar, avisar } from '../utils/dialogo';
-import { mensajeDeFallo } from '../utils/mensajes';
+import { mensajeDeAltaAprobada, mensajeDeFallo } from '../utils/mensajes';
 
 /**
  * Las altas pendientes de decidir, y qué pasó después de aprobarlas.
@@ -24,6 +24,12 @@ import { mensajeDeFallo } from '../utils/mensajes';
  *
  * Aprobar dos veces no duplica nada: el servidor rechaza la segunda. El aviso que se muestra sale
  * de lo que él responde, no de lo que la pantalla supone.
+ *
+ * > **Corregido 2026-09-15.** Los desenlaces de ese aviso son **tres**, no dos: entró, no entró, y
+ * > *no se pudo averiguar*. El tercero existe porque saber si entró es comparar la cola de "sin
+ * > grupo" antes y después, y cualquiera de las dos consultas puede fallar. Antes ese caso caía en
+ * > "no entró" y la pantalla afirmaba «quedó SIN grupo» sin haberlo comprobado. El texto vive en
+ * > `mensajeDeAltaAprobada`, con sus pruebas.
  */
 export function SolicitudesAdminScreen({
   onVolver,
@@ -72,16 +78,18 @@ export function SolicitudesAdminScreen({
     setTrabajando(solicitud.id);
     try {
       await aprobarSolicitud(solicitud.id);
-      // Se vuelve a consultar la cola de "sin grupo" ANTES de decir nada: así el mensaje describe
-      // lo que efectivamente pasó y no lo que se esperaba que pasara.
-      const despues = await listarAprendices({ pagina: 0, tamano: 1, soloSinGrupo: true });
-      const entroSolo = sinGrupo !== null && despues.total <= sinGrupo;
-      avisar(
-        'Cuenta aprobada',
-        entroSolo
-          ? `${solicitud.fullName ?? 'La persona'} ya tiene su cuenta y entró al grupo de bienvenida.`
-          : `${solicitud.fullName ?? 'La persona'} ya tiene su cuenta, pero quedó SIN grupo: no hay una bienvenida abierta hoy. Creá una o ubicala a mano.`,
+      /* Se vuelve a consultar la cola de "sin grupo" ANTES de decir nada: así el mensaje describe
+         lo que efectivamente pasó y no lo que se esperaba que pasara.
+
+         Va en su PROPIO try: la cuenta ya está aprobada. Si esta segunda consulta falla, caer al
+         `catch` de abajo haría decir «No se pudo aprobar» sobre un alta que sí ocurrió — y el
+         administrador la aprobaría otra vez. Un `null` acá significa «no sé si entró a un
+         grupo», y `mensajeDeAltaAprobada` lo dice con esas palabras. */
+      const despues = await listarAprendices({ pagina: 0, tamano: 1, soloSinGrupo: true }).then(
+        p => p.total,
+        () => null,
       );
+      avisar('Cuenta aprobada', mensajeDeAltaAprobada(solicitud.fullName, sinGrupo, despues));
       await cargar();
     } catch (e) {
       avisar('No se pudo aprobar', mensajeDeFallo(e, 'Probá de nuevo.'));

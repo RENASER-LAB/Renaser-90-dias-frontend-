@@ -7,6 +7,26 @@ Todo lo de acá está verificado contra el código de los dos repos, no contra l
 
 ---
 
+## Qué de esto ya está hecho (15 de septiembre de 2026, misma fecha)
+
+Se atacaron las superficies de **Administrador**, **Alquimista** y **Líder de Mentores**. **Nada de
+lo que ve un aprendiz se tocó**: toda la §3 y toda la §4 siguen tal cual se describen más abajo.
+
+| Punto | Estado |
+|---|---|
+| A1 — la tarjeta prometía evidencias | **Hecho.** El texto dice «Grupos, personas y solicitudes» |
+| A2 — el rol era una suposición del cliente | **Hecho, en aditivo.** Sección «Staff» nueva desde `GET /api/v1/admin/staff`, con el rol real. Las dos listas viejas quedaron intactas |
+| A3 — puerta de un solo sentido con los roles | **Hecho.** Un MENTOR_LEAD, ADMIN o ALQUIMISTA vuelve a verse y se le puede cambiar el rol. La advertencia de «va a desaparecer» se fue con el problema |
+| A4 — cuatro filas muertas en «Más opciones» | **Hecho.** Borde punteado, sin fondo de tarjeta, candado, y el motivo escrito en cada fila. Las dos que sí abren ganaron su flecha |
+| A5 — mensaje que afirmaba lo que no sabía | **Hecho.** Tres desenlaces (entró / no entró / no se pudo averiguar), en `mensajeDeAltaAprobada`, con pruebas |
+| §2.1 — la tarjeta vacía del líder de mentores | **Hecho, en la versión segura.** La entrada no se dibuja cuando el servidor dice que no acompaña ningún grupo; `mentor.types.ts:19` **no se tocó**, así que un MENTOR_LEAD con asignación heredada la sigue viendo. Un MENTOR sin grupo tampoco cambia |
+| §2.2 — bandeja de tickets para el líder | **Hecho.** Pantalla nueva de solo lectura sobre `GET /api/v1/admin/tickets`, con su propia entrada en Hoy, reusando `features/tickets` |
+| A6 (evidencias), A7 (ajustar el día), §2.3 (`leadership`) | **Sin hacer.** A1 se cerró quitando la promesa, no construyendo la bandeja |
+
+Lo que quedó **pendiente y detectado de paso** está al final, en §5.
+
+---
+
 ## 0. Tres hechos que explican todo lo demás
 
 1. **No hay ruteo por rol.** `RootNavigator.tsx:17-27` monta los mismos 5 tabs para todos. Las
@@ -116,3 +136,25 @@ de `MiCelulaScreen` no aparecen nunca**, y todo el grupo cae en "Sin avance regi
 correcto es que el backend agregue ese resumen a la respuesta del listado; el parche barato es N
 llamadas a `/progress` al abrir (un grupo son 10 personas). Riesgo **alto** en los dos casos: es la
 pantalla del mentor cambiando de aspecto por primera vez.
+
+---
+
+## 5. Lo que apareció mientras se arreglaba lo de arriba
+
+Tres cosas vistas al tocar este código, **no arregladas**, porque cada una es otro cambio:
+
+1. **Un mentor sin grupo lee «No pudimos cargar tu grupo», que es falso.** En
+   `TarjetaMentorHoy.tsx:43-52` el fallo `sin_celula` cae en la rama genérica de error. No falló
+   nada: el servidor respondió 200 con `assignments: []`. La pantalla completa sí lo distingue
+   bien (`EstadoCelula`, caso `sin_celula`: «Todavía no lideras ningún grupo»); es solo la tarjeta
+   la que colapsa los dos casos. Afecta al **mentor**, no al líder — y el rol mentor quedó
+   deliberadamente fuera de este encargo.
+2. **Un mentor SUSPENDIDO no se ve en ninguna lista del panel.** `GET /admin/cells/mentores` sale
+   de `usuariosActivosConRol`, que filtra `estado = 'ACTIVO'`; y la sección «Staff» nueva pide solo
+   los tres roles de conducción, para no duplicar a cada mentor activo. Un mentor suspendido, por
+   lo tanto, no se puede devolver a aprendiz desde la app. Se arregla el día que se decida cómo
+   mostrar mentores en dos secciones sin repetirlos.
+3. **La bandeja de tickets no dice de quién es cada ticket.** `TicketMentorResponse` trae
+   `traineeProfileId` y ningún nombre. La pantalla nueva lo dice con todas las letras en vez de
+   mostrar un UUID o de resolverlo con una consulta que el líder quizá no tenga permitida. Si el
+   nombre importa, el cambio es del backend: agregarlo a esa proyección.

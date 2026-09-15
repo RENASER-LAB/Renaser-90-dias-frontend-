@@ -9,6 +9,7 @@ import {
   mentorCandidatoSchema,
   paginaAprendicesSchema,
   paginaSolicitudesSchema,
+  paginaStaffSchema,
   type AprendizCandidatoApi,
   type CohorteAdminApi,
   type GrupoDetalleApi,
@@ -16,6 +17,7 @@ import {
   type MentorCandidatoApi,
   type PaginaAprendicesApi,
   type PaginaSolicitudesApi,
+  type PaginaStaffApi,
 } from './adminSchemas';
 import { z } from 'zod';
 
@@ -218,6 +220,48 @@ export async function listarAprendices(opciones: {
     paginaAprendicesSchema,
     await apiFetch<unknown>(`/api/v1/admin/trainees?${params.toString()}`),
     'GET /api/v1/admin/trainees',
+  );
+}
+
+/**
+ * Los cuatro roles que `/admin/staff` sabe filtrar. `TRAINEE` queda afuera **en el tipo** y no en
+ * un comentario porque el backend lo rechaza: `ListStaffCommand` valida contra `ROLES_STAFF` y
+ * lanza `IllegalArgumentException` («roleFilter debe ser un rol de staff»). Los aprendices tienen
+ * su propio listado, `/admin/trainees`.
+ */
+export type RolDeStaff = Exclude<RolAsignable, 'TRAINEE'>;
+
+/**
+ * `GET /api/v1/admin/staff?role=&status=&page=&size=`.
+ *
+ * **El único listado del panel que trae el rol de verdad.** Devuelve los cuatro roles de staff
+ * —MENTOR, MENTOR_LEAD, ADMIN, ALCHEMIST— con el campo `role` que sale de la base; sin filtro de
+ * rol los devuelve todos, y sin filtro de estado incluye también a las cuentas suspendidas
+ * (`StaffAdminService.listar`: `statusFilter` nulo no se aplica).
+ *
+ * `specs/003/PENDIENTES.md` §4 afirma que para ver estos roles «haría falta un endpoint nuevo».
+ * No hace falta: existe desde el gap #6 y está sin consumir.
+ *
+ * El guard real vive dentro del servicio (`RequireAdminGuard`): solo ADMIN y ALQUIMISTA, los
+ * mismos dos que pueden cambiar roles. Quien no lo sea recibe 403 aunque llegue a la pantalla.
+ */
+export async function listarStaff(opciones: {
+  rol?: RolDeStaff;
+  estado?: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+  pagina?: number;
+  tamano?: number;
+}): Promise<PaginaStaffApi> {
+  const params = new URLSearchParams({
+    page: String(opciones.pagina ?? 0),
+    size: String(opciones.tamano ?? 20),
+  });
+  if (opciones.rol) params.set('role', opciones.rol);
+  if (opciones.estado) params.set('status', opciones.estado);
+
+  return validarRespuesta<PaginaStaffApi>(
+    paginaStaffSchema,
+    await apiFetch<unknown>(`/api/v1/admin/staff?${params.toString()}`),
+    'GET /api/v1/admin/staff',
   );
 }
 

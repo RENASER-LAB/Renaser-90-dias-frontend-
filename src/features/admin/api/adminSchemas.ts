@@ -120,6 +120,42 @@ export const paginaSolicitudesSchema = z
   })
   .passthrough();
 
+/**
+ * `UserResponse` — lo que devuelve `GET /api/v1/admin/staff`.
+ *
+ * **Acá `role` es un dato, no una deducción.** Es el único listado del panel que lo trae: los
+ * aprendices salen de `/admin/trainees` y los mentores de `/admin/cells/mentores`, y en esos dos
+ * el rol se infiere de *en qué lista apareció la persona*. Mientras eso fuera lo único que había,
+ * promover a alguien a líder, administrador o alquimista lo borraba de las dos listas y no se lo
+ * volvía a ver.
+ *
+ * `role` y `status` quedan como `string` a propósito —no `z.enum`—: si mañana el backend agrega
+ * un rol, la pantalla lo muestra con su nombre crudo en vez de dejar de cargar el listado entero.
+ * `traineeProfile` no se declara: este endpoint lo manda siempre `null` (usa
+ * `UserResponse.from(User)`), y `passthrough()` lo deja pasar sin que nadie lo lea.
+ */
+export const usuarioStaffSchema = z
+  .object({
+    id: z.string(),
+    email: z.string().nullish(),
+    role: z.string(),
+    status: z.string(),
+    fullName: z.string().nullish(),
+    avatarUrl: z.string().nullish(),
+    bio: z.string().nullish(),
+    department: z.string().nullish(),
+  })
+  .passthrough();
+
+export const paginaStaffSchema = z
+  .object({
+    content: z.array(usuarioStaffSchema),
+    total: z.number(),
+    page: z.number(),
+    size: z.number(),
+  })
+  .passthrough();
+
 export type PerfilAdminApi = z.infer<typeof perfilAdminSchema>;
 export type EstadoGrupoApi = z.infer<typeof estadoGrupoSchema>;
 export type GrupoResumenApi = z.infer<typeof grupoResumenSchema>;
@@ -131,3 +167,5 @@ export type AprendizAdminApi = z.infer<typeof aprendizAdminSchema>;
 export type PaginaAprendicesApi = z.infer<typeof paginaAprendicesSchema>;
 export type SolicitudApi = z.infer<typeof solicitudSchema>;
 export type PaginaSolicitudesApi = z.infer<typeof paginaSolicitudesSchema>;
+export type UsuarioStaffApi = z.infer<typeof usuarioStaffSchema>;
+export type PaginaStaffApi = z.infer<typeof paginaStaffSchema>;

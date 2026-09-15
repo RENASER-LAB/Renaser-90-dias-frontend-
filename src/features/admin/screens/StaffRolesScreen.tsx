@@ -7,13 +7,23 @@ import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
-import { cambiarRolDeUsuario, listarAprendices, mentoresDisponibles } from '../api/adminApi';
+import { cambiarRolDeUsuario, listarAprendices, listarStaff, mentoresDisponibles } from '../api/adminApi';
 import type { RolAsignable } from '../api/adminApi';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
 import { confirmar, avisar } from '../utils/dialogo';
 import { mensajeDeFallo } from '../utils/mensajes';
+import { personaDeStaff, ROLES_SOLO_EN_STAFF, type PersonaDelPadron } from '../utils/staff';
 
 const POR_PAGINA = 20;
+
+/**
+ * Cuántos líderes, administradores y alquimistas se piden de una.
+ *
+ * No son muchos —son los tres roles de conducción de la plataforma— así que entran en una página
+ * y la pantalla no necesita un «ver más» para ellos. Si alguna vez no entraran, la cabecera de la
+ * sección dice cuántos hay en total, que es el aviso de que falta paginar.
+ */
+const STAFF_POR_PAGINA = 50;
 
 /** Los cinco, con el nombre que usa la gente y no el del enum. */
 const ROLES: Array<{ clave: RolAsignable; etiqueta: string }> = [
@@ -25,15 +35,27 @@ const ROLES: Array<{ clave: RolAsignable; etiqueta: string }> = [
 ];
 
 /**
- * Los roles que el PANEL sabe volver a encontrar. Aprendices y mentores tienen cada uno su
- * listado; los otros tres no se listan en ningún lado, así que promover a uno de ellos saca a la
- * persona de la vista.
+ * Dónde queda la persona después de cambiarle el rol. La confirmación lo dice con esta frase.
+ *
+ * > **Corregido 2026-09-15.** Acá había un `Set` llamado `LISTABLES` con solo `TRAINEE` y
+ * > `MENTOR`, y la confirmación avisaba que los otros tres roles hacían *desaparecer* a la
+ * > persona del panel. Era cierto: no existía ningún listado que los trajera de vuelta. Desde
+ * > que la pantalla consume `GET /api/v1/admin/staff` los cinco roles se vuelven a encontrar,
+ * > así que la advertencia dejó de ser verdad y se fue con el `Set`.
  */
-const LISTABLES: ReadonlySet<RolAsignable> = new Set<RolAsignable>(['TRAINEE', 'MENTOR']);
+const DONDE_QUEDA: Record<RolAsignable, string> = {
+  TRAINEE: 'Va a aparecer en la lista de aprendices.',
+  MENTOR: 'Va a aparecer en la lista de mentores.',
+  MENTOR_LEAD: 'Va a aparecer en la sección Staff.',
+  ADMIN: 'Va a aparecer en la sección Staff, y va a poder entrar a Administración.',
+  ALCHEMIST: 'Va a aparecer en la sección Staff, y va a poder entrar a Administración.',
+};
 
-const ETIQUETA = new Map(ROLES.map(r => [r.clave, r.etiqueta]));
+/* `Map<string, …>` y no `Map<RolAsignable, …>`: el listado de staff trae el rol del servidor, y
+   uno que esta versión no conozca tiene que poder buscarse acá sin que TypeScript lo impida. */
+const ETIQUETA = new Map<string, string>(ROLES.map(r => [r.clave as string, r.etiqueta]));
 
-type Persona = { id: string; nombre: string; detalle: string; rol: RolAsignable };
+type Persona = PersonaDelPadron;
 
 /**
  * Una persona con su rol desplegable.
@@ -120,20 +142,33 @@ function FilaDePersona({
  * Cambiar el rol de una cuenta.
  *
  * **El cambio tiene que poder deshacerse desde acá mismo**, y esa es la restricción que da forma a
- * la pantalla. El panel solo sabe listar dos roles: los aprendices salen de
- * `GET /admin/trainees` y los mentores de `GET /admin/cells/mentores`. No hay listado de
- * administradores, alquimistas ni líderes — promover a uno de esos tres hace desaparecer a la
- * persona de las dos listas, y sin nada más sería una puerta de un solo sentido: un toque mal dado
- * y recuperar esa cuenta exige entrar a la base de datos.
+ * la pantalla. Se lee de tres fuentes, y cada una responde una pregunta distinta:
  *
- * Por eso hay dos defensas, y ninguna es decorativa:
+ * | Sección | De dónde sale | Qué rol muestra |
+ * |---|---|---|
+ * | Staff | `GET /admin/staff?role=` (líder, admin, alquimista) | El que manda el servidor |
+ * | Mentores | `GET /admin/cells/mentores` | MENTOR, deducido de la lista de origen |
+ * | Aprendices | `GET /admin/trainees` | TRAINEE, deducido de la lista de origen |
+ *
+ * > **Corregido 2026-09-15.** Acá decía que *«el panel solo sabe listar dos roles»* y que ascender
+ * > a alguien a líder de mentores, administrador o alquimista lo hacía **desaparecer** de la
+ * > pantalla — una puerta de un solo sentido que solo se deshacía entrando a la base de datos. Era
+ * > cierto, y era evitable: `GET /api/v1/admin/staff` existe desde el gap #6, devuelve el campo
+ * > `role` de verdad y lista los cuatro roles de staff. La sección «Staff» lo consume y cierra la
+ * > puerta. Las otras dos listas quedaron **intactas**.
+ *
+ * Las tres secciones son **disjuntas**: Staff pide solo los tres roles que ninguna otra trae, así
+ * que nadie aparece dos veces con dos rótulos distintos — la forma más rápida de que alguien deje
+ * de creerle a esta pantalla.
+ *
+ * Quedan además dos defensas, y ninguna es decorativa:
  *
  * 1. La confirmación dice **dónde va a quedar la persona después**, no solo qué rol se le pone.
- *    Un administrador de 40 o 60 años no tiene por qué deducir que "Administrador" significa
- *    "desaparece de esta pantalla" (AGENTS.md §5).
+ *    Un administrador de 40 o 60 años no tiene por qué deducir en qué lista va a buscarla mañana
+ *    (AGENTS.md §5).
  * 2. Lo cambiado en esta visita queda fijado arriba, en «Cambios de esta sesión», con su rol nuevo
- *    y pudiendo cambiarse otra vez. Así el arrepentimiento se resuelve con un toque en vez de con
- *    un psql.
+ *    y pudiendo cambiarse otra vez. Así el arrepentimiento se resuelve con un toque, sin esperar a
+ *    que el listado se recargue.
  *
  * No se ofrece `ASSISTANT`: está en el enum de la base pero la API lo rechaza con 400 —comprobado
  * el 2026-09-11—, y una opción que siempre falla es peor que no tenerla.
@@ -147,6 +182,15 @@ export function StaffRolesScreen({ onVolver }: { onVolver: () => void }) {
   const [pagina, setPagina] = useState(0);
   const [aprendices, setAprendices] = useState<Persona[]>([]);
   const [mentores, setMentores] = useState<Persona[]>([]);
+  const [staff, setStaff] = useState<Persona[]>([]);
+  /** Cuántos hay en el servidor, para saber si la única página alcanzó. `null` = no se sabe. */
+  const [totalStaff, setTotalStaff] = useState<number | null>(null);
+  /* Propio, y no el `cargando` de las otras dos listas: son consultas distintas y terminan en
+     momentos distintos. Compartirlo hacía parpadear «Todavía no hay nadie con estos roles» en
+     cuanto los aprendices llegaban primero. */
+  const [cargandoStaff, setCargandoStaff] = useState(true);
+  /** El listado de staff falló pero el resto cargó. Se dice ahí y no arriba de todo. */
+  const [errorStaff, setErrorStaff] = useState<string | null>(null);
   const [totalAprendices, setTotalAprendices] = useState<number | null>(null);
   const [cambiados, setCambiados] = useState<Persona[]>([]);
   const [abierta, setAbierta] = useState<string | null>(null);
@@ -202,6 +246,40 @@ export function StaffRolesScreen({ onVolver }: { onVolver: () => void }) {
     }
   }, [pagina, busquedaAplicada]);
 
+  /**
+   * Los tres roles de conducción, cada uno con su propia consulta.
+   *
+   * Son tres llamadas y no una sin filtro porque sin `role=` el endpoint devuelve **también** a
+   * los mentores, que ya tienen su sección: la persona aparecería dos veces en la misma pantalla.
+   *
+   * Va aparte de `cargar` a propósito. Si este listado falla, las otras dos secciones se ven
+   * igual y el error se dice **dentro de la sección Staff** — un fallo de un panel no puede
+   * arrastrar a los demás, que es el criterio que el resto de Administración ya sigue.
+   */
+  const cargarStaff = useCallback(async () => {
+    setCargandoStaff(true);
+    setErrorStaff(null);
+    try {
+      const paginas = await Promise.all(
+        ROLES_SOLO_EN_STAFF.map(rol => listarStaff({ rol, tamano: STAFF_POR_PAGINA })),
+      );
+      setStaff(paginas.flatMap(p => p.content).map(personaDeStaff));
+      setTotalStaff(paginas.reduce((suma, p) => suma + p.total, 0));
+    } catch (e) {
+      setStaff([]);
+      setTotalStaff(null);
+      setErrorStaff(mensajeDeFallo(e, 'No se pudo cargar el staff.'));
+    } finally {
+      setCargandoStaff(false);
+    }
+  }, []);
+
+  /* Sin `pagina` ni `busquedaAplicada`: el buscador y el "ver más" son de los aprendices. Pedir
+     los tres roles de staff otra vez en cada tecla serían tres llamadas por pulsación. */
+  useEffect(() => {
+    void cargarStaff();
+  }, [cargarStaff]);
+
   useEffect(() => {
     void cargar();
   }, [cargar]);
@@ -212,6 +290,7 @@ export function StaffRolesScreen({ onVolver }: { onVolver: () => void }) {
   const idsCambiados = useMemo(() => new Set(cambiados.map(p => p.id)), [cambiados]);
   const aprendicesVisibles = aprendices.filter(p => !idsCambiados.has(p.id));
   const mentoresVisibles = mentores.filter(p => !idsCambiados.has(p.id));
+  const staffVisible = staff.filter(p => !idsCambiados.has(p.id));
 
   const aplicar = async (persona: Persona, nuevo: RolAsignable) => {
     if (nuevo === persona.rol) {
@@ -219,12 +298,7 @@ export function StaffRolesScreen({ onVolver }: { onVolver: () => void }) {
       return;
     }
     const etiqueta = ETIQUETA.get(nuevo) ?? nuevo;
-    const donde = LISTABLES.has(nuevo)
-      ? nuevo === 'TRAINEE'
-        ? 'Va a aparecer en la lista de aprendices.'
-        : 'Va a aparecer en la lista de mentores.'
-      : 'El panel no lista ese rol, así que va a salir de estas listas. Mientras no salgas de esta '
-        + 'pantalla la vas a seguir viendo arriba, en «Cambios de esta sesión», por si te arrepentís.';
+    const donde = DONDE_QUEDA[nuevo];
 
     const acepto = await confirmar(
       `¿Hacer ${etiqueta} a ${persona.nombre}?`,
@@ -287,6 +361,46 @@ export function StaffRolesScreen({ onVolver }: { onVolver: () => void }) {
             ))}
           </View>
         ) : null}
+
+        {/* Líderes, administradores y alquimistas. Es la única sección cuyo rol NO se deduce de
+            la lista de origen: viene en la respuesta. Y es la que cierra la puerta de un solo
+            sentido — antes, ascender a alguno de estos tres roles lo borraba de la pantalla. */}
+        <View style={{ gap: 10 }}>
+          {/* El número es el de las filas que se ven, no el del servidor: una cabecera que dice 5
+              sobre una lista de 4 es la clase de detalle que hace dudar de toda la pantalla. Lo
+              que el servidor dice que hay va abajo, y solo si no entró todo. */}
+          <MicroLabel>Staff ({staffVisible.length})</MicroLabel>
+          <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, lineHeight: 18 }]}>
+            Líderes de mentores, administradores y alquimistas, con el rol que dice el servidor.
+            Los mentores están más abajo, con su grupo.
+          </Text>
+          {errorStaff ? (
+            <Text style={[t.body, { color: c.danger, fontSize: 13.5 }]}>{errorStaff}</Text>
+          ) : null}
+          {cargandoStaff ? <ActivityIndicator color={c.goldInk} style={{ marginTop: 6 }} /> : null}
+          {!errorStaff && !cargandoStaff && staffVisible.length === 0 ? (
+            <Text style={[t.body, { color: c.textSoft, fontSize: 13.5 }]}>
+              Todavía no hay nadie con estos roles.
+            </Text>
+          ) : null}
+          {staffVisible.map(persona => (
+            <FilaDePersona
+              key={`staff-${persona.id}`}
+              persona={persona}
+              desplegada={abierta === persona.id}
+              guardando={guardando}
+              onAlternar={() => setAbierta(abierta === persona.id ? null : persona.id)}
+              onElegir={rol => aplicar(persona, rol)}
+            />
+          ))}
+          {/* Si el servidor dice que hay más de los que se pidieron, se avisa en vez de mostrar
+              una lista incompleta como si fuera completa. */}
+          {totalStaff !== null && totalStaff > staff.length ? (
+            <Text style={[t.body, { color: c.micro, fontSize: 12.5 }]}>
+              Se muestran {staff.length} de {totalStaff}.
+            </Text>
+          ) : null}
+        </View>
 
         <View style={{ gap: 10 }}>
           <MicroLabel>Mentores ({mentoresVisibles.length})</MicroLabel>

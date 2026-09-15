@@ -26,8 +26,12 @@ export function TarjetaAdminHoy({ onAbrir }: { onAbrir: () => void }) {
       <View style={{ flex: 1, flexShrink: 1 }}>
         <MicroLabel>Operación</MicroLabel>
         <Text style={[t.cardTitle, { color: c.textStrong, marginTop: 6 }]}>Administración</Text>
+        {/* Dice SOLO lo que hay detrás. Decía «…solicitudes y evidencias» y no existe ninguna
+            pantalla de evidencias: la bandeja está construida en el backend
+            (`GET /admin/evidence`) y sin un solo consumidor acá. Prometer una sección que no se
+            puede abrir hace perder el tiempo buscándola y resta confianza al resto de la lista. */}
         <Text style={[t.body, { color: c.textSoft, fontSize: 13, marginTop: 6, lineHeight: 19 }]}>
-          Grupos, personas, solicitudes y evidencias. Tu programa personal sigue acá, sin cambios.
+          Grupos, personas y solicitudes. Tu programa personal sigue acá, sin cambios.
         </Text>
       </View>
       <Icon name="chevron" size={20} color={c.chevron} />

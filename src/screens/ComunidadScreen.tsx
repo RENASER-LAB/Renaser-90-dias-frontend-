@@ -26,6 +26,7 @@ import { useEsMentor } from '../features/mentor/hooks/useEsMentor';
 import { AlumnoScreen } from '../features/mentor/screens/AlumnoScreen';
 import { MiCelulaScreen } from '../features/mentor/screens/MiCelulaScreen';
 import type { AlumnoConEstado } from '../features/mentor/types/mentor.types';
+import { entradaAlGrupoVisible } from '../features/mentor/utils/entradaAlGrupo';
 import { MicroLabel, ScreenHeader, AvatarPersona } from '../components/ui';
 import { Icon, IconName } from '../components/Icon';
 import { GoldButton } from '../components/GoldButton';
@@ -2866,8 +2867,12 @@ export default function ComunidadScreen() {
           {seccionActiva === 'celula' && (
             <>
             {/* Para quien ACOMPAÑA. Va arriba de todo porque es lo que viene a hacer; el resto
-                de Grupo —su mentor, su tribu, su chat— sigue igual para todos, incluido él. */}
-            {esMentor ? (
+                de Grupo —su mentor, su tribu, su chat— sigue igual para todos, incluido él.
+
+                Misma condición que la tarjeta de Hoy, y por eso vive en una función y no acá:
+                son las DOS entradas al mismo grupo (RF-26), y una que se esconda mientras la
+                otra no sería peor que las dos vacías. */}
+            {entradaAlGrupoVisible({ esMentor, rol: user?.role, fallo: celulaQueAcompano.fallo }) ? (
               <View style={styles.section}>
                 <MicroLabel>Acompañamiento</MicroLabel>
                 <Pressable

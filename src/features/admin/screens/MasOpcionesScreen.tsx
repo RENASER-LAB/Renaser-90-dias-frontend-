@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Icon } from '../../../components/Icon';
 import { MicroLabel } from '../../../components/ui';
 import { irAPestana } from '../../../navigation/navegacionRef';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
@@ -52,11 +53,35 @@ export function MasOpcionesScreen({
     },
   ];
 
+  /**
+   * Lo que NO se abre desde acá.
+   *
+   * Cada fila lleva su propio `motivo`: la explicación general de arriba se lee una vez y
+   * después el ojo salta a las filas, así que el motivo tiene que viajar con la fila. Antes
+   * estas cuatro se veían igual que las dos de arriba —misma tarjeta, mismo borde, solo
+   * `opacity: 0.85`— y se tocaban esperando que abrieran algo.
+   */
   const enLaWeb = [
-    { titulo: 'Catálogo de hábitos', detalle: 'Crear, editar, guías, horarios y audioterapias' },
-    { titulo: 'Invitar y editar cuentas', detalle: 'Dar de alta a mano y editar los datos de una persona' },
-    { titulo: 'Soporte y tickets', detalle: 'Bandeja de soporte y tickets de mentoría' },
-    { titulo: 'Categorías del muro y conocimiento', detalle: 'Moderación y base de conocimiento' },
+    {
+      titulo: 'Catálogo de hábitos',
+      detalle: 'Crear, editar, guías, horarios y audioterapias',
+      motivo: 'El formulario de un hábito son más de veinte campos y un audio por subir.',
+    },
+    {
+      titulo: 'Invitar y editar cuentas',
+      detalle: 'Dar de alta a mano y editar los datos de una persona',
+      motivo: 'Necesita el alta completa con contraseña temporal y envío de correo.',
+    },
+    {
+      titulo: 'Soporte y tickets',
+      detalle: 'Bandeja de soporte y tickets de mentoría',
+      motivo: 'Es una bandeja de trabajo con respuestas largas: pide teclado y pantalla.',
+    },
+    {
+      titulo: 'Categorías del muro y conocimiento',
+      detalle: 'Moderación y base de conocimiento',
+      motivo: 'Moderar exige ver la publicación entera con sus adjuntos.',
+    },
   ];
 
   return (
@@ -92,6 +117,9 @@ export function MasOpcionesScreen({
                   {item.detalle}
                 </Text>
               </View>
+              {/* La flecha es la mitad visual del contraste: lo que se abre la tiene, lo que no
+                  se abre lleva un candado. Sin ella la única diferencia sería el borde. */}
+              <Icon name="chevron" size={18} color={c.chevron} />
             </Pressable>
           ))}
         </View>
@@ -105,12 +133,25 @@ export function MasOpcionesScreen({
           {enLaWeb.map(item => (
             <View
               key={item.titulo}
-              style={[estilos.fila, { backgroundColor: c.cardBg, borderColor: c.border, opacity: 0.85 }]}
+              accessible
+              accessibilityLabel={`${item.titulo}. No se abre desde el teléfono. ${item.motivo}`}
+              /* Sin fondo de tarjeta y con el borde punteado: la diferencia se ve de lejos y sin
+                 depender del color, que es lo que pedía AGENTS.md §4. `opacity: 0.85` no era una
+                 diferencia, era la misma fila un poco más pálida. */
+              style={[estilos.fila, estilos.filaInerte, { borderColor: c.border }]}
             >
+              <View style={{ paddingTop: 3 }}>
+                <Icon name="lock" size={16} color={c.chevron} />
+              </View>
               <View style={{ flex: 1, flexShrink: 1 }}>
-                <Text style={[t.body, { color: c.text, fontSize: 15 }]}>{item.titulo}</Text>
+                <Text style={[t.body, { color: c.textSoft, fontSize: 15 }]}>{item.titulo}</Text>
                 <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, marginTop: 2 }]}>
                   {item.detalle}
+                </Text>
+                {/* `c.chevron` y no `c.micro`: el dorado de `micro` es el acento de lo que se
+                    puede tocar, y acá diría justo lo contrario de lo que la fila significa. */}
+                <Text style={[t.body, { color: c.chevron, fontSize: 12.5, marginTop: 6, lineHeight: 18 }]}>
+                  No se abre desde el teléfono. {item.motivo}
                 </Text>
               </View>
             </View>
@@ -132,5 +173,12 @@ const estilos = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     width: '100%',
+  },
+  /** Lo que no se abre: sin fondo de tarjeta, borde punteado y alineado arriba (lleva tres
+      líneas de texto, así que centrar dejaba el candado flotando en el medio). */
+  filaInerte: {
+    backgroundColor: 'transparent',
+    borderStyle: 'dashed',
+    alignItems: 'flex-start',
   },
 });
