@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon } from '../../../components/Icon';
@@ -18,6 +18,7 @@ import {
   quitarMentor,
   retirarAprendiz,
 } from '../api/adminApi';
+import { filtrarCandidatos } from '../utils/filtrarCandidatos';
 import type { AprendizCandidatoApi, GrupoDetalleApi, MentorCandidatoApi } from '../api/adminSchemas';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
 import { EstadoDeGrupo } from '../components/EstadoDeGrupo';
@@ -84,6 +85,15 @@ export function GrupoDetalleScreen({
    */
   const [errorLista, setErrorLista] = useState<string | null>(null);
 
+  /** Lo escrito en el buscador del selector. Se limpia al abrirlo o cerrarlo. */
+  const [busquedaCandidato, setBusquedaCandidato] = useState('');
+  /* Se filtra en el cliente: la lista llega ENTERA del servidor, asi que buscar es recorrer un
+     arreglo que ya esta en memoria. Ver `utils/filtrarCandidatos.ts`. */
+  const candidatosVisibles = useMemo(
+    () => filtrarCandidatos(candidatos, busquedaCandidato),
+    [candidatos, busquedaCandidato],
+  );
+
   useSystemBackHandler(() => {
     // El selector abierto se cierra primero: el gesto sube un nivel, no sale de la pantalla.
     if (eligiendo) {
@@ -129,6 +139,7 @@ export function GrupoDetalleScreen({
     setEligiendo(tipo);
     setCargandoLista(true);
     setErrorLista(null);
+    setBusquedaCandidato('');
     try {
       if (tipo === 'mentor') {
         setMentores(await mentoresDisponibles());
@@ -313,6 +324,25 @@ export function GrupoDetalleScreen({
                 <MicroLabel>
                   {eligiendo === 'mentor' ? 'ELEGÍ UN MENTOR' : 'ELEGÍ UN APRENDIZ'}
                 </MicroLabel>
+                {/* Buscador solo para aprendices: los mentores activos son un puñado y caben en
+                    pantalla, mientras que el padrón de aprendices crece con cada cohorte. Un campo
+                    que siempre devuelve la lista entera es ruido, no ayuda. */}
+                {eligiendo === 'aprendiz' && !cargandoLista && !errorLista && candidatos.length > 0 ? (
+                  <TextInput
+                    value={busquedaCandidato}
+                    onChangeText={setBusquedaCandidato}
+                    placeholder="Buscar por nombre"
+                    placeholderTextColor={c.micro}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    accessibilityLabel="Buscar aprendiz para agregar al grupo"
+                    style={[
+                      estilos.buscadorCandidato,
+                      { backgroundColor: c.cardBg, borderColor: c.border, color: c.text },
+                      t.body,
+                    ]}
+                  />
+                ) : null}
                 {eligiendo === 'mentor'
                   ? mentores.map(m => (
                       <Pressable
@@ -341,7 +371,7 @@ export function GrupoDetalleScreen({
                         <Icon name="chevron" size={16} color={c.chevron} />
                       </Pressable>
                     ))
-                  : candidatos.map(a => (
+                  : candidatosVisibles.map(a => (
                       <Pressable
                         key={a.userId}
                         testID="candidato-aprendiz"
@@ -393,6 +423,16 @@ export function GrupoDetalleScreen({
                 {/* "No hay nadie" SOLO si de verdad no hay nadie. Si la consulta falló, lo que
                     corresponde decir es que falló — afirmar que la lista está vacía sería
                     convertir un error en un dato. */}
+                {/* "No hay nadie" y "tu busqueda no encontro nada" son cosas distintas: la
+                    primera dice que el grupo no tiene a quien sumar, la segunda que hay gente pero
+                    no con ese nombre. Decir la primera cuando pasa la segunda manda a crear
+                    aprendices que ya existen. */}
+                {!cargandoLista && !errorLista && eligiendo === 'aprendiz'
+                  && candidatos.length > 0 && candidatosVisibles.length === 0 ? (
+                  <Text style={[t.body, { color: c.textSoft, fontSize: 14 }]}>
+                    Ningún aprendiz coincide con «{busquedaCandidato.trim()}».
+                  </Text>
+                ) : null}
                 {!cargandoLista && !errorLista && (eligiendo === 'mentor' ? mentores : candidatos).length === 0 ? (
                   <Text style={[t.body, { color: c.textSoft, fontSize: 14 }]}>
                     {eligiendo === 'mentor'
@@ -418,6 +458,7 @@ export function GrupoDetalleScreen({
 }
 
 const estilos = StyleSheet.create({
+  buscadorCandidato: { minHeight: 48, borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, fontSize: 15, width: '100%' },
   tarjeta: { borderRadius: 14, borderWidth: 1, padding: 14, width: '100%' },
   fila: {
     flexDirection: 'row',
