@@ -231,9 +231,21 @@ export default function LoginScreen() {
     }
   };
 
+  /**
+   * Un código que el backend rechazó, o que un reenvío acaba de invalidar, no sirve para nada
+   * más: se vacían las casillas y vuelve el foco al input para tipear el nuevo. Sin esto, los
+   * seis dígitos viejos quedaban en pantalla y, como el `TextInput` real está oculto, la persona
+   * no encontraba cómo borrarlos (reporte de prueba de campo, 2026-09-16). Lo usan el alta y la
+   * recuperación de contraseña, que comparten `CodigoOtpInput`.
+   */
+  const descartarCodigo = () => {
+    setOtpCode('');
+    setTimeout(() => otpInputRef.current?.focus(), 300);
+  };
+
   const handleVerifyOtp = async () => {
     setErrorMessage(null);
-    if (otpCode.length !== 6) {
+    if (otpCode.length !== LARGO_CODIGO) {
       setErrorMessage('Por favor ingresa los 6 dígitos del código');
       return;
     }
@@ -248,6 +260,7 @@ export default function LoginScreen() {
       setStep('solicitud_enviada');
     } catch (error) {
       setErrorMessage(mensajeDeError(error, 'Código inválido o expirado. Inténtalo de nuevo.'));
+      descartarCodigo();
     } finally {
       setLoading(false);
     }
@@ -262,6 +275,7 @@ export default function LoginScreen() {
       setResendTimer(45);
       setCanResend(false);
       setSuccessMessage('Nuevo código enviado a tu correo.');
+      descartarCodigo();
     } catch (error) {
       setErrorMessage(mensajeDeError(error, 'No se pudo reenviar el código. Inténtalo más tarde.'));
     } finally {
@@ -332,6 +346,7 @@ export default function LoginScreen() {
       setResendTimer(45);
       setCanResend(false);
       setSuccessMessage('Nuevo código enviado a tu correo.');
+      descartarCodigo();
     } catch (error) {
       setErrorMessage(mensajeDeError(error, 'No se pudo reenviar el código. Inténtalo más tarde.'));
     } finally {
@@ -361,6 +376,7 @@ export default function LoginScreen() {
       setStep('forgot_new_password');
     } catch (error) {
       setErrorMessage(mensajeDeError(error, 'Código inválido o expirado. Inténtalo de nuevo.'));
+      descartarCodigo();
     } finally {
       setLoading(false);
     }
