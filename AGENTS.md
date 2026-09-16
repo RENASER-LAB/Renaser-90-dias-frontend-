@@ -15,6 +15,16 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
   * `data/`: Constantes, cláusulas, configuraciones estáticas.
 * **Componentes de UI Atómicos**: Utiliza componentes compartidos bajo `src/components/` (`FormField`, `GoldButton`, `SliderRating`, `Checkbox`, `SignatureCanvas`, `Icon`).
 * **Integridad del Core**: NUNCA alterar, romper ni desconfigurar las pantallas existentes ni los tabs principales (`Hoy`, `Plan`, `Training`, `Comunidad`, `Yo`).
+  * **Excepción autorizada por el dueño del producto — 2026-09-16 — tab `Yo`.** Se autorizó
+    expresamente agregar la fila **"Modo oscuro"** (ícono + `Switch`) a la sección
+    *FASE 4: PREFERENCIAS & SISTEMA* de `src/screens/YoScreen.tsx`, porque hasta entonces el tema
+    solo se podía cambiar desde el botón de luna/sol de la cabecera y el dueño lo quería como una
+    fila de ajustes más. Queda anotado acá para que esta regla no contradiga al código.
+    El alcance autorizado fue **solo esa fila**: el resto de `Yo` no se tocó, el botón de la
+    cabecera sigue donde estaba, y "Notificaciones & Alarmas" sigue navegando a su sub-vista con
+    chevron (convertirla en `Switch` habría tapado los tres ajustes detallados que viven adentro).
+    Una excepción puntual **no abre** el tab: cualquier otro cambio sobre los cinco principales
+    vuelve a necesitar autorización explícita.
 
 ---
 

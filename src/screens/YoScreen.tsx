@@ -195,7 +195,9 @@ const PACTO_CLAUSULAS = [
 ];
 
 export default function YoScreen() {
-  const { c, t } = useTheme();
+  /* `mode` y `toggle` son los MISMOS que usa el botón de luna/sol de `ScreenHeader`: la fila
+     "Modo oscuro" de Preferencias es otra puerta al mismo interruptor, no un mecanismo aparte. */
+  const { c, t, mode, toggle } = useTheme();
   const {
     evidencias,
     verificadas: verificadasEvidencias,
@@ -772,6 +774,34 @@ export default function YoScreen() {
                   </View>
                   <Icon name="chevron" size={12} color={c.goldInk} />
                 </Pressable>
+
+                {/* Es un `View` y no un `Pressable` como sus dos vecinas —y como las tres filas con
+                    Switch de la sub-vista de Notificaciones—: envolver un Switch en un Pressable
+                    hace que tocar el propio interruptor dispare las dos cosas y el modo se cambie
+                    dos veces, volviendo a donde estaba. El área táctil es el Switch. */}
+                <View style={[styles.menuOptionRow, { borderBottomColor: c.divider }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                    {/* El ícono acompaña al estado (sol = ahora está claro), al revés que el del
+                        botón de la cabecera, que muestra la ACCIÓN (luna = "pasar a oscuro").
+                        Acá quien dice qué va a pasar es el Switch; el ícono solo ilustra la fila,
+                        y si mostrara la acción contradiría al interruptor de al lado. */}
+                    <Icon name={mode === 'dark' ? 'moon' : 'sun'} size={16} color={c.goldInk} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[t.cardTitle, { color: c.textStrong }]}>Modo oscuro</Text>
+                      <Text style={[t.small, { color: c.textSoft }]}>Descansa la vista de noche</Text>
+                    </View>
+                  </View>
+                  <Switch
+                    value={mode === 'dark'}
+                    onValueChange={toggle}
+                    /* Etiqueta fija y no una del tipo "Activar modo oscuro": el lector de pantalla
+                       ya anuncia solo si un Switch está activado o desactivado, así que una
+                       etiqueta con la acción se leería "activar modo oscuro, activado". */
+                    accessibilityLabel="Modo oscuro"
+                    trackColor={{ false: '#332C20', true: c.gold }}
+                    thumbColor={mode === 'dark' ? '#1E1B18' : '#888'}
+                  />
+                </View>
 
                 <Pressable
                   onPress={logout}
