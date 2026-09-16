@@ -132,8 +132,17 @@ cuenta de Google**.
       `expo-notifications` no carga ni en web ni en Expo Go, así que es lo único que no se puede
       verificar sin un build nativo. Desde que `extra.eas.projectId` existe, el token de push
       nativo se puede pedir — antes `pushNativo.ts` devolvía `sin_project_id` y no pedía ninguno.
-- [ ] Si se va a compilar en local: `npx expo prebuild --clean`. La carpeta `android/` del
-      repositorio es un prebuild viejo y todavía tiene el `applicationId` anterior.
+- [x] ~~Si se va a compilar en local: `npx expo prebuild --clean`.~~ **Hecho el 2026-09-16**: la
+      carpeta `android/` ya se regeneró con `com.renaser.app`. Sigue sin versionarse (está en
+      `.gitignore`), así que en otra máquina hay que volver a correrlo.
+- [ ] **PENDIENTE — APK nuevo con el arreglo del código de verificación** *(anotado el 2026-09-16)*.
+      El APK que hoy tienen los probadores (`1.5.0 (82)`, perfil `preview`, compilado en local) lleva
+      el arreglo de `coherencia` en null pero **no** el del código OTP que no se podía borrar cuando
+      el backend lo rechazaba (commit `b2533e1`, ya en `master` y desplegado en la web). Decisión del
+      dueño: **no generar otro APK por esto solo**; esperar a que los probadores junten el resto del
+      feedback, corregirlo todo y sacar un único APK con todo adentro. Cuando toque:
+      `npx eas-cli@latest build --platform android --profile preview --local` con `JAVA_HOME` en el
+      JDK 21 (la cuota gratis de EAS en la nube se repone el 1 de octubre).
 
 ---
 
@@ -147,3 +156,27 @@ Vale la pena tenerlo junto, porque son las decisiones sin marcha atrás:
   Play App Signing, no hay forma de volver a publicar en esa ficha. Con Play App Signing (activado
   por defecto desde 2021) la clave de *carga* sí se puede resetear desde Play Console.
 - **El `versionCode`.** Solo sube. Un número quemado por error no se recupera.
+
+---
+
+## 6. Compilar en local — lo que pasó el 2026-09-16
+
+Primer APK sacado desde este repo, y salió de la máquina, no de EAS: la cuota gratuita de builds
+Android del mes ya estaba agotada. `--local` funcionó de una, con dos condiciones que conviene
+dejar escritas:
+
+- **`JAVA_HOME` al JDK 21** (`~/.sdkman/candidates/java/21.0.12+1.1-tem`). Con el 25 del backend
+  el plugin de Gradle no compila.
+- **`npx expo prebuild --clean` antes**, porque `android/` traía `com.anonymous.renaser`. Sin eso
+  el APK sale con el paquete equivocado y no actualiza la app instalada.
+
+Tardó ~15 min en 12 núcleos / 15 GB (con IntelliJ cerrado; con él abierto la RAM iba al límite).
+El `versionCode` lo asigna EAS igual que en la nube (`appVersionSource: remote`): quedó en **82**.
+El perfil `preview` **no** tiene `autoIncrement`, así que dos APK de preview seguidos comparten
+número — instalar el segundo sobre el primero funciona igual, es la misma versión con otro
+contenido.
+
+Verificación que sí sirve, sobre el archivo y no sobre el log:
+`aapt2 dump badging renaser.apk | head -1` (paquete y versión) y
+`unzip -p renaser.apk assets/index.android.bundle | grep -ao "https://[a-z0-9]*\.cloudfront\.net"`
+(la URL de la API incrustada).
