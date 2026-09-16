@@ -182,6 +182,25 @@ export async function quitarMentor(grupoId: string): Promise<GrupoDetalleApi> {
   );
 }
 
+/**
+ * Suma un aprendiz a un grupo **sin sacarlo de los que ya tenga**.
+ *
+ * Es una operación distinta de {@link agregarAprendiz}, no una variante: aquella CIERRA la
+ * pertenencia anterior (traslado) y esta abre una más. Son endpoints separados del lado del
+ * servidor por el mismo motivo — que un efecto destructivo no dependa de un campo del cuerpo que
+ * un cliente viejo podría no mandar.
+ */
+export async function sumarAprendizAGrupo(grupoId: string, aprendizId: string): Promise<GrupoDetalleApi> {
+  return validarRespuesta<GrupoDetalleApi>(
+    grupoDetalleSchema,
+    await apiFetch<unknown>(`/api/v1/admin/cells/${encodeURIComponent(grupoId)}/additional-trainees`, {
+      method: 'POST',
+      body: { traineeId: aprendizId },
+    }),
+    'POST /api/v1/admin/cells/{id}/additional-trainees',
+  );
+}
+
 export async function agregarAprendiz(grupoId: string, aprendizId: string): Promise<GrupoDetalleApi> {
   return validarRespuesta<GrupoDetalleApi>(
     grupoDetalleSchema,

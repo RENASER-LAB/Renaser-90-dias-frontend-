@@ -75,6 +75,15 @@ export const aprendizCandidatoSchema = z
     userId: z.string(),
     fullName: z.string().nullable(),
     avatarUrl: z.string().nullable(),
+    /**
+     * El grupo al que ya pertenece, o `null` si no tiene ninguno.
+     *
+     * Decide QUÉ operación hace la pantalla al elegirlo, y son dos cosas distintas: a quien no
+     * tiene grupo se lo da de alta; a quien ya tiene uno se lo SUMA sin sacarlo del anterior.
+     * `nullish` y no `nullable` a propósito: un cliente contra un backend viejo no recibe el
+     * campo, y ahí el valor correcto es "no sé", que se trata igual que "sin grupo".
+     */
+    cellId: z.string().nullish(),
   })
   .passthrough();
 

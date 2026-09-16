@@ -10,6 +10,7 @@ import { useTheme } from '../../../theme/ThemeContext';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
 import {
   agregarAprendiz,
+  sumarAprendizAGrupo,
   aprendicesDisponibles,
   asignarMentor,
   mentoresDisponibles,
@@ -345,13 +346,30 @@ export function GrupoDetalleScreen({
                         key={a.userId}
                         testID="candidato-aprendiz"
                         disabled={trabajando}
-                        onPress={() => void conAviso(() => agregarAprendiz(grupoId, a.userId), 'No se pudo agregar')}
+                        onPress={() =>
+                          void conAviso(
+                            /* Dos operaciones distintas, decididas con el dato que la lista YA
+                               trae: a quien no tiene grupo se lo da de alta; a quien ya tiene uno
+                               se lo SUMA sin sacarlo del anterior. Usar siempre `agregarAprendiz`
+                               lo trasladaria en silencio, y sacar a alguien de su grupo no es algo
+                               que deba pasar por elegirlo en una lista. */
+                            () =>
+                              a.cellId
+                                ? sumarAprendizAGrupo(grupoId, a.userId)
+                                : agregarAprendiz(grupoId, a.userId),
+                            'No se pudo agregar',
+                          )
+                        }
                         accessibilityRole="button"
                         accessibilityLabel={a.fullName ?? 'Aprendiz'}
                         style={[estilos.fila, { backgroundColor: c.cardBg, borderColor: c.border }]}
                       >
                         <Text style={[t.body, { color: c.textStrong, fontSize: 15, flex: 1, flexShrink: 1 }]}>
                           {a.fullName ?? 'Sin nombre'}
+                          {/* Mismo criterio que la fila de mentores, que ya avisa "ya lidera otro
+                              grupo": quien elige tiene que saber que esta persona no esta libre
+                              antes de tocarla, no despues. */}
+                          {a.cellId ? (a.cellId === grupoId ? ' · ya está en este grupo' : ' · ya está en otro grupo') : ''}
                         </Text>
                         <Icon name="chevron" size={16} color={c.chevron} />
                       </Pressable>
