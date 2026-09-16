@@ -7,6 +7,7 @@ import type {
   WireTipoConversacion,
   WireTipoConversacionRecibido,
   WireTipoMensaje,
+  WireTipoMensajeRecibido,
 } from '../types/chat.types';
 
 /**
@@ -104,7 +105,10 @@ export function mapearTipoConversacion(tipo: WireTipoConversacionRecibido): Chat
   return 'direct';
 }
 
-function mapearTipoMensaje(tipo: WireTipoMensaje): ChatMessageType {
+/* Recibe el tipo ABIERTO: un valor que este binario no conozca tiene que poder entrar y caer en
+   el `default`, que lo pinta como texto. La burbuja igual dice que el mensaje no es compatible,
+   porque de eso se encarga `textoPorTipo`. */
+function mapearTipoMensaje(tipo: WireTipoMensajeRecibido): ChatMessageType {
   switch (tipo) {
     case 'AUDIO':
       return 'audio';
@@ -142,8 +146,14 @@ function textoPorTipo(wire: WireMensaje): string | undefined {
       return 'Imagen adjunta';
     case 'SYSTEM':
       return 'Mensaje del sistema';
-    default:
+    case 'TEXT':
+      // Un TEXT sin texto no tiene nada que mostrar, y asi estaba antes.
       return undefined;
+    default:
+      /* Un tipo que este binario no conoce. Antes caia aca junto con TEXT y devolvia `undefined`,
+         o sea una burbuja VACIA: la persona veia un hueco sin saber que le falta actualizar. Un
+         texto honesto es mejor que un silencio. */
+      return 'Mensaje no compatible. Actualizá la app para verlo.';
   }
 }
 

@@ -41,6 +41,17 @@ export type WireTipoConversacionRecibido = WireTipoConversacion | (string & {});
 
 export type WireTipoMensaje = 'TEXT' | 'IMAGE' | 'AUDIO' | 'VIDEO' | 'SYSTEM';
 
+/**
+ * Lo que de verdad puede llegar en `type` de un mensaje, con el mismo criterio que
+ * {@link WireTipoConversacionRecibido} y por el mismo motivo — agravado.
+ *
+ * `lastMessage` viaja ANIDADO dentro de cada elemento de `GET /conversations`. Con el `z.enum`
+ * cerrado, un tipo de mensaje que el binario no conociera no rompia un historial: rompia la
+ * validacion del array de conversaciones, o sea **la bandeja entera**, y la persona se quedaba sin
+ * ninguna de sus conversaciones por un mensaje suelto que ni siquiera iba a abrir.
+ */
+export type WireTipoMensajeRecibido = WireTipoMensaje | (string & {});
+
 /** `ConversacionResponse`. */
 export interface WireConversacion {
   id: string;
@@ -57,7 +68,7 @@ export interface WireConversacion {
 export interface WireReplyPreview {
   id: string;
   senderName: string | null;
-  type: WireTipoMensaje;
+  type: WireTipoMensajeRecibido;
   text: string | null;
   deletedAt: string | null;
 }
@@ -71,7 +82,7 @@ export interface WireMensaje {
   senderId: string;
   senderName: string | null;
   senderAvatarUrl: string | null;
-  type: WireTipoMensaje;
+  type: WireTipoMensajeRecibido;
   text: string | null;
   mediaBucket: string | null;
   mediaPath: string | null;

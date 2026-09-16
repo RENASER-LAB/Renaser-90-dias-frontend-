@@ -42,7 +42,12 @@ const wireReplyPreviewSchema = z
   .object({
     id: z.string(),
     senderName: z.string().nullable(),
-    type: z.enum(['TEXT', 'IMAGE', 'AUDIO', 'VIDEO', 'SYSTEM']),
+    /* `z.string()` por el mismo motivo que el `type` de la conversacion, y con el radio de
+       explosion todavia mas grande: `lastMessage` va anidado en cada elemento de
+       `GET /conversations`, asi que un tipo de mensaje nuevo no dejaba sin ver un historial —
+       dejaba sin ver LA BANDEJA. Lo desconocido se resuelve en `chatMappers`, que ahora lo
+       muestra como un mensaje no compatible en vez de una burbuja vacia. */
+    type: z.string(),
     text: z.string().nullable(),
     deletedAt: z.string().nullable(),
   })
@@ -55,7 +60,12 @@ export const wireMensajeSchema = z
     senderId: z.string(),
     senderName: z.string().nullable(),
     senderAvatarUrl: z.string().nullable(),
-    type: z.enum(['TEXT', 'IMAGE', 'AUDIO', 'VIDEO', 'SYSTEM']),
+    /* `z.string()` por el mismo motivo que el `type` de la conversacion, y con el radio de
+       explosion todavia mas grande: `lastMessage` va anidado en cada elemento de
+       `GET /conversations`, asi que un tipo de mensaje nuevo no dejaba sin ver un historial —
+       dejaba sin ver LA BANDEJA. Lo desconocido se resuelve en `chatMappers`, que ahora lo
+       muestra como un mensaje no compatible en vez de una burbuja vacia. */
+    type: z.string(),
     text: z.string().nullable(),
     mediaBucket: z.string().nullable(),
     mediaPath: z.string().nullable(),
