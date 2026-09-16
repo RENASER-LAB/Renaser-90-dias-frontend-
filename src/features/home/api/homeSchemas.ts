@@ -44,12 +44,15 @@ const proximoEventoSchema = z
  * `fase` se valida como string y no como enum cerrado: si el backend agrega una quinta fase, la
  * app tiene que seguir funcionando y mostrar el dia igual, no romper la pantalla de inicio.
  *
- * `coherencia` llega como numero (BigDecimal de Java serializado por Jackson).
+ * `coherencia` llega como numero (BigDecimal de Java serializado por Jackson) o como `null`:
+ * desde D-128 el backend la deriva de las acciones planificadas en la semana, y quien no
+ * planifico ninguna no tiene porcentaje que mostrar. Ese `null` es una respuesta valida, no un
+ * hueco — exigir numero aca tumbaba la pantalla de Inicio entera para esa persona.
  */
 const resumenHomeSchema = z
   .object({
     puntosLiga: z.number(),
-    coherencia: z.number(),
+    coherencia: z.number().nullable(),
     rachaActual: z.number(),
     rachaMaxima: z.number(),
     diaPrograma: z.number(),

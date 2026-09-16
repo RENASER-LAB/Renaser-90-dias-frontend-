@@ -31,7 +31,8 @@ export type ProximoEventoApi = {
 
 export type ResumenHomeApi = {
   puntosLiga: number;
-  coherencia: number;
+  /** `null` cuando no planifico acciones en la semana: no hay porcentaje que mostrar (D-128). */
+  coherencia: number | null;
   rachaActual: number;
   rachaMaxima: number;
   /** 0 a 90. El 0 es legitimo: eligio fecha de inicio pero el programa no arranco. */
