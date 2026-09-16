@@ -1,6 +1,13 @@
 import type { ChatConversation, ChatMessage, ChatMessageType } from '../../../screens/ComunidadScreen';
 import { horaChat } from '../utils/horaChat';
-import type { WireConversacionResumen, WireMensaje, WireMiembro, WireTipoConversacion, WireTipoMensaje } from '../types/chat.types';
+import type {
+  WireConversacionResumen,
+  WireMensaje,
+  WireMiembro,
+  WireTipoConversacion,
+  WireTipoConversacionRecibido,
+  WireTipoMensaje,
+} from '../types/chat.types';
 
 /**
  * Traduce las respuestas del backend (`chatSchemas.ts`) a los tipos que ya consume el diseño de
@@ -9,14 +16,60 @@ import type { WireConversacionResumen, WireMensaje, WireMiembro, WireTipoConvers
  * `community/api/wallMappers.ts`.
  */
 
+/**
+ * Con qué ficha se pinta cada conversación en la bandeja.
+ *
+ * Tiene DOS valores más que `ChatConversation['type']` a propósito. `ChatConversation` vive en
+ * `screens/ComunidadScreen.tsx` y su unión sigue siendo `'celula' | 'direct' | 'global'`: esa
+ * pantalla es uno de los cinco tabs principales y AGENTS.md §1 prohíbe tocarla. Así que la decisión
+ * de "qué es esta conversación" se toma acá, con el vocabulario completo, y recién al final
+ * `mapearTipoConversacion` la traduce a los tres valores que la pantalla sabe filtrar y pintar.
+ */
+export type TipoChat = 'celula' | 'direct' | 'global' | 'soporte' | 'desconocido';
+
+/**
+ * Traducción del tipo del cable al de la bandeja, exhaustiva **por construcción**: es un `Record`
+ * sobre `WireTipoConversacion`, así que agregar un valor a esa unión no compila hasta que alguien
+ * decida cómo se pinta. Un `switch` sin `default` daba la misma garantía, pero se caía solo en
+ * cuanto el parámetro dejó de ser una unión cerrada (ver `WireTipoConversacionRecibido`).
+ */
+const TIPO_CHAT_POR_WIRE: Record<WireTipoConversacion, TipoChat> = {
+  CELL: 'celula',
+  DIRECT: 'direct',
+  GLOBAL: 'global',
+  SUPPORT: 'soporte',
+};
+
+/**
+ * Qué es esta conversación para el cliente. Un tipo que este binario no conoce NO es un error: es
+ * `'desconocido'`, y se sigue mostrando con el `nombre` que mandó el servidor. Ver el porqué largo
+ * en `chatSchemas.wireConversacionSchema.type` — resumido: es preferible una fila genérica a una
+ * bandeja vacía para todo el que no actualizó la app.
+ */
+export function reconocerTipoChat(tipo: WireTipoConversacionRecibido): TipoChat {
+  /* `hasOwnProperty` y no un `??` sobre el acceso directo: un objeto literal hereda de
+     `Object.prototype`, así que `TIPO_CHAT_POR_WIRE['constructor']` no devuelve `undefined` sino
+     una función, y el `??` la dejaría pasar como si fuera un tipo de chat válido — la fila
+     terminaría con el avatar en `undefined`. Es rebuscado viniendo de un enum de Java, pero esta
+     función existe justamente para que NINGÚN string caiga fuera de los cinco valores de
+     `TipoChat`. */
+  return Object.prototype.hasOwnProperty.call(TIPO_CHAT_POR_WIRE, tipo)
+    ? TIPO_CHAT_POR_WIRE[tipo as WireTipoConversacion]
+    : 'desconocido';
+}
+
 /** El diseño pinta el avatar como un emoji (`<Text>{conv.avatar}</Text>`, sin `<Image>`). Se
  * reutilizan los mismos emojis que ya usaba el mock para célula/global (📷 no aplica acá) y uno
  * neutro para 1 a 1, porque `avatarUrl` del backend es una URL real, no un emoji — mismo motivo
- * que `wallMappers.ts` (`AVATAR_POR_DEFECTO`). */
-const AVATAR_POR_TIPO: Record<'celula' | 'direct' | 'global', string> = {
+ * que `wallMappers.ts` (`AVATAR_POR_DEFECTO`). Los dos nuevos se eligieron viejos a propósito:
+ * 🎧 y 💬 son Unicode 6.0 (2010) y existen en cualquier Android que corra la app; 🛟, que sería
+ * el ícono obvio de soporte, es Unicode 14 y se vería como un cuadrado vacío en teléfonos viejos. */
+const AVATAR_POR_TIPO: Record<TipoChat, string> = {
   celula: '👥',
   direct: '👤',
   global: '🌐',
+  soporte: '🎧',
+  desconocido: '💬',
 };
 
 const ETIQUETA_ROL: Record<string, string> = {
@@ -31,15 +84,24 @@ function traducirRol(role: string): string {
   return ETIQUETA_ROL[role] ?? role;
 }
 
-export function mapearTipoConversacion(tipo: WireTipoConversacion): ChatConversation['type'] {
-  switch (tipo) {
-    case 'CELL':
-      return 'celula';
-    case 'DIRECT':
-      return 'direct';
-    case 'GLOBAL':
-      return 'global';
+/**
+ * En cuál de los tres cajones que conoce `ComunidadScreen` cae la conversación.
+ *
+ * Soporte y lo desconocido caen en `'direct'`, y no es una comodidad: es el único cajón donde se
+ * ven. El filtro de la bandeja (`filteredConversations` en `ComunidadScreen`) lista `'global'` solo
+ * en la pestaña Global, `'celula'` sola en la sección Célula, y `'direct'` + `'celula'` en la
+ * pestaña de conversaciones. Devolver cualquier otra cosa dejaría el chat de soporte invisible: el
+ * aprendiz no puede salirse de él, pero tampoco lo encontraría.
+ *
+ * Lo que distingue soporte de un 1 a 1 no se pierde: `mapearResumenConversacion` decide nombre,
+ * subtítulo y ícono con `reconocerTipoChat`, que sí sabe la diferencia.
+ */
+export function mapearTipoConversacion(tipo: WireTipoConversacionRecibido): ChatConversation['type'] {
+  const reconocido = reconocerTipoChat(tipo);
+  if (reconocido === 'celula' || reconocido === 'global') {
+    return reconocido;
   }
+  return 'direct';
 }
 
 function mapearTipoMensaje(tipo: WireTipoMensaje): ChatMessageType {
@@ -158,7 +220,7 @@ function resolverOtroParticipante(
   return directorio[ultimo.senderId];
 }
 
-function construirTitulo(tipo: ChatConversation['type'], nombre: string | null, otro?: WireMiembro): string {
+function construirTitulo(tipo: TipoChat, nombre: string | null, otro?: WireMiembro): string {
   if (tipo === 'global') {
     return nombre?.trim() || 'Comunidad Global';
   }
@@ -167,12 +229,26 @@ function construirTitulo(tipo: ChatConversation['type'], nombre: string | null, 
     // (UUID), sin nombre — `community` no está en el alcance de esta integración.
     return 'Mi Grupo';
   }
+  if (tipo === 'soporte') {
+    // Mismo camino que GLOBAL: el nombre lo manda el servidor en `ConversacionResponse.nombre` y
+    // acá solo se le pone un respaldo. No se arma con el nombre de nadie a propósito — del otro
+    // lado no hay una persona sino el staff entero (ADMIN / ALQUIMISTA), y cuál de ellos conteste
+    // no debería cambiar el título de la conversación en la bandeja.
+    return nombre?.trim() || 'Soporte Renaser';
+  }
+  if (tipo === 'desconocido') {
+    // Un tipo que este binario no conoce. El servidor igual manda `nombre` para todo lo que no sea
+    // un 1 a 1, así que en la práctica la fila se lee bien; el respaldo es para el caso peor.
+    return nombre?.trim() || 'Conversación';
+  }
   return otro?.fullName?.trim() || 'Conversación directa';
 }
 
-function construirSubtitulo(tipo: ChatConversation['type'], otro?: WireMiembro): string {
+function construirSubtitulo(tipo: TipoChat, otro?: WireMiembro): string {
   if (tipo === 'global') return 'Comunidad completa RENASER';
   if (tipo === 'celula') return 'Chat de tu grupo';
+  if (tipo === 'soporte') return 'Soporte · Equipo Renaser';
+  if (tipo === 'desconocido') return 'Conversación';
   return otro ? `${traducirRol(otro.role)} · 1 a 1` : 'Conversación directa';
 }
 
@@ -186,15 +262,23 @@ export function mapearResumenConversacion(
   actorId: string | null | undefined,
   directorio: Record<string, WireMiembro>
 ): ChatConversation {
-  const tipo = mapearTipoConversacion(resumen.conversation.type);
-  const otro = tipo === 'direct' ? resolverOtroParticipante(resumen, actorId, directorio) : undefined;
+  /* Dos tipos, y no es redundancia: `tipoChat` es lo que la conversación ES (cinco valores
+     posibles) y decide nombre, subtítulo e ícono; `tipoDePantalla` es en qué cajón de los tres que
+     conoce `ComunidadScreen` entra. Un chat de soporte es `'soporte'` para lo primero y `'direct'`
+     para lo segundo. */
+  const tipoChat = reconocerTipoChat(resumen.conversation.type);
+  const tipoDePantalla = mapearTipoConversacion(resumen.conversation.type);
+  /* Solo un 1 a 1 de verdad tiene "el otro". En soporte del otro lado está el staff entero, así
+     que buscar un único participante daría el nombre de quien haya escrito último — y el título de
+     la conversación cambiaría según quién conteste. */
+  const otro = tipoChat === 'direct' ? resolverOtroParticipante(resumen, actorId, directorio) : undefined;
 
   return {
     id: resumen.conversation.id,
-    type: tipo,
-    title: construirTitulo(tipo, resumen.conversation.nombre, otro),
-    subtitle: construirSubtitulo(tipo, otro),
-    avatar: AVATAR_POR_TIPO[tipo],
+    type: tipoDePantalla,
+    title: construirTitulo(tipoChat, resumen.conversation.nombre, otro),
+    subtitle: construirSubtitulo(tipoChat, otro),
+    avatar: AVATAR_POR_TIPO[tipoChat],
     lastMessage: construirUltimoMensajeTexto(resumen.lastMessage),
     lastTime: resumen.lastMessage ? horaChat(resumen.lastMessage.createdAt) : '',
     unreadCount: resumen.unreadCount,
@@ -209,6 +293,13 @@ export function mapearResumenConversacion(
  * `resolverOtroParticipante` no pudo resolver un nombre desde el directorio (porque el último
  * mensaje lo mandé yo, o no había ninguno), los mensajes enriquecidos de `GET .../messages` sí
  * traen `senderName` — se usa el primero que no sea mío. No pisa un título ya resuelto.
+ *
+ * Desde que soporte y los tipos desconocidos también llegan acá como `'direct'` (ver
+ * `mapearTipoConversacion`), el guardia que los deja afuera es el segundo: solo se renombra la
+ * conversación que quedó con el título genérico EXACTO `'Conversación directa'`, y esos dos casos
+ * salen de `construirTitulo` con el suyo ('Soporte Renaser' / el `nombre` del servidor). Si algún
+ * día se afloja esa comparación, un chat de soporte pasaría a llamarse como el último del staff que
+ * contestó.
  */
 export function refinarTituloConMensajes(conversacion: ChatConversation, mensajes: ChatMessage[]): ChatConversation {
   if (conversacion.type !== 'direct' || conversacion.title !== 'Conversación directa') {

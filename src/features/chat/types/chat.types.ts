@@ -7,17 +7,47 @@
  *
  * OJO `nombre`: `ConversacionResponse` es un record Java sin `@JsonNaming`, así que sus claves
  * salen tal cual sus nombres de campo — y ese campo específico se llama `nombre` (español) aunque
- * `type` sí viaja traducido a inglés (CELL/DIRECT/GLOBAL). No es un typo de este archivo, es el
- * wire real; ya pasó una vez en este proyecto asumir un nombre en inglés que el backend no manda.
+ * `type` sí viaja traducido a inglés (CELL/DIRECT/GLOBAL/SUPPORT). No es un typo de este archivo,
+ * es el wire real; ya pasó una vez en este proyecto asumir un nombre en inglés que el backend no
+ * manda.
+ *
+ * > **Corregido 2026-09-16.** Acá decía que `type` viaja como `(CELL/DIRECT/GLOBAL)`. Son cuatro
+ * > desde que existe el chat de soporte por aprendiz: en el dominio del backend el enum se llama
+ * > `SOPORTE` y `ConversacionResponse.toWireTipo` lo traduce a `SUPPORT`, igual que CELULA→CELL y
+ * > DIRECTA→DIRECT.
  */
 
-export type WireTipoConversacion = 'CELL' | 'DIRECT' | 'GLOBAL';
+/**
+ * Los tipos de conversación que ESTA versión del cliente sabe pintar.
+ *
+ * `SUPPORT` es el chat de soporte de un aprendiz: adentro están ese aprendiz y el staff
+ * (ADMIN / ALQUIMISTA). El aprendiz no puede salirse; el staff sí. Nada de eso se decide desde el
+ * móvil — lo impone el backend —, pero explica por qué el chat aparece solo en la bandeja sin que
+ * nadie lo haya abierto.
+ */
+export type WireTipoConversacion = 'CELL' | 'DIRECT' | 'GLOBAL' | 'SUPPORT';
+
+/**
+ * Lo que puede llegar REALMENTE en `type`: uno de los conocidos, o cualquier otro string.
+ *
+ * La app vive publicada en la tienda y el backend se despliega solo: entre que sale una versión y
+ * la gente la actualiza pueden pasar semanas, y durante esas semanas el servidor puede empezar a
+ * mandar un tipo que este binario no conoce. Por eso el tipo del cable NO es la unión cerrada — es
+ * la unión cerrada MÁS `string`. El `& {}` es el truco de TypeScript que evita que la unión colapse
+ * a `string` a secas: sigue autocompletando los cuatro valores conocidos y a la vez acepta el
+ * quinto que todavía no existe.
+ */
+export type WireTipoConversacionRecibido = WireTipoConversacion | (string & {});
+
 export type WireTipoMensaje = 'TEXT' | 'IMAGE' | 'AUDIO' | 'VIDEO' | 'SYSTEM';
 
 /** `ConversacionResponse`. */
 export interface WireConversacion {
   id: string;
-  type: WireTipoConversacion;
+  /** Ojo: `WireTipoConversacionRecibido`, no `WireTipoConversacion`. Quien lo lea tiene que pasar
+   * por `reconocerTipoChat` (`api/chatMappers.ts`) en vez de comparar contra literales: es lo que
+   * decide qué hacer con un tipo que este cliente no conoce. */
+  type: WireTipoConversacionRecibido;
   celulaId: string | null;
   nombre: string | null;
   createdAt: string;

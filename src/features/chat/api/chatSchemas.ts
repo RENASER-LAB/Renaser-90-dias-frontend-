@@ -14,7 +14,24 @@ import { z } from 'zod';
 export const wireConversacionSchema = z
   .object({
     id: z.string(),
-    type: z.enum(['CELL', 'DIRECT', 'GLOBAL']),
+    /**
+     * `z.string()` y NO `z.enum([...])`, a propósito y a pesar de que los valores válidos son
+     * cuatro y conocidos (CELL/DIRECT/GLOBAL/SUPPORT).
+     *
+     * El motivo es el radio de la explosión. `type` viaja dentro de cada elemento de
+     * `GET /conversations`, un `z.array(...)`: si UNA conversación trae un tipo que el `enum` no
+     * lista, falla la validación del array ENTERO, `validarRespuesta` lanza, y la persona no ve
+     * una conversación rara — ve la bandeja vacía con un error, sin ninguna de sus conversaciones
+     * viejas. Y como la app vive publicada en la tienda, eso le pasaría a todo el que no haya
+     * actualizado el día que el backend estrene un tipo nuevo.
+     *
+     * Validar acá no gana nada: el `enum` no "protege" a nadie río abajo, porque `reconocerTipoChat`
+     * (`chatMappers.ts`) ya tiene que decidir qué hacer con cada valor y trata lo desconocido como
+     * una conversación genérica. Lo único que agregaba el `enum` era convertir un tipo nuevo en una
+     * caída total. El resto del schema sigue estricto: si falta `id` o `createdAt` no hay nada que
+     * pintar y ahí sí conviene fallar ruidosamente.
+     */
+    type: z.string(),
     celulaId: z.string().nullable(),
     nombre: z.string().nullable(),
     createdAt: z.string(),
