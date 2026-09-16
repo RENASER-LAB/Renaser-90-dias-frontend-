@@ -9,8 +9,47 @@ import { nombreDePrueba } from './soporte/api';
  * después: un caso que crea el grupo por API y lo verifica por API no probó ninguna pantalla.
  */
 
+/**
+ * Formateador del día de LIMA. `en-CA` da `YYYY-MM-DD`, que es el formato que espera la API.
+ */
+const DIA_EN_LIMA = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/Lima',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+/**
+ * `YYYY-MM-DD` del día de Lima, armado pieza por pieza con `formatToParts`.
+ *
+ * No se usa `format()` ni el locale `en-CA` (que daría ese formato de una): el Node de esta
+ * máquina trae **ICU reducido**, así que `en-CA` no existe, cae a `en-US` y devuelve
+ * `09/15/2026` — que al construir un `Date` da `Invalid Date`. `formatToParts` sí respeta la
+ * zona horaria en cualquier build, y ensamblar el texto a mano no depende de ningún locale.
+ */
+function diaDeLima(): string {
+  const partes = new Map(DIA_EN_LIMA.formatToParts(new Date()).map(p => [p.type, p.value]));
+  return `${partes.get('year')}-${partes.get('month')}-${partes.get('day')}`;
+}
+
+/**
+ * Una fecha a `offsetDias` de HOY, contando "hoy" en la zona del PROGRAMA.
+ *
+ * > **Corregido 2026-09-16.** Esto era `new Date(); d.setUTCDate(d.getUTCDate() + offset)`, o sea
+ * > la fecha en UTC. El backend decide si un grupo está vigente contra la zona del programa
+ * > (`America/Lima`), y entre las 00:00 y las 05:00 UTC esas dos fechas son DISTINTAS: Lima va un
+ * > día atrás. En esa franja, un grupo creado con `fechaISO(0)` nacía con `periodo_inicio` de
+ * > MAÑANA para el servidor, salía como PROGRAMADO en vez de VIGENTE, y el filtro "Vigentes" de la
+ * > pantalla lo escondía: E04 y E06 fallaban buscando un grupo que sí existía en la base.
+ * >
+ * > Verificado esa noche: la prueba escribió `periodo_inicio = 2026-09-16` mientras el backend
+ * > contaba `2026-09-15`. Misma familia que E-189 del backend, y que el E-91 que originó la regla
+ * > de zonas horarias: el código estaba bien y el fixture lo hacía fallar.
+ */
 function fechaISO(offsetDias: number): string {
-  const d = new Date();
+  // Se ancla en la medianoche UTC del día de Lima: a partir de ahí, sumar días es aritmética
+  // simple sobre una fecha sin hora, sin que un cambio de horario la corra.
+  const d = new Date(`${diaDeLima()}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + offsetDias);
   return d.toISOString().slice(0, 10);
 }
