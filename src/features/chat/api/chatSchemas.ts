@@ -145,3 +145,13 @@ export function validarRespuesta<T>(schema: z.ZodType, dato: unknown, endpoint: 
   }
   return resultado.data as T;
 }
+
+/**
+ * `GET /api/v1/chat/conversations/{id}/presence` — solo los ids de quienes tienen el chat
+ * abierto ahora. Nunca "ultima vez": el backend no lo sabe (`usuarios.ultima_actividad_en`
+ * existe desde la migracion V1 y no la escribe nadie), y este endpoint nacio justamente para
+ * dejar de afirmar cosas que el sistema no sabe.
+ */
+export const presenciaSchema = z.object({
+  online: z.array(z.string()),
+});

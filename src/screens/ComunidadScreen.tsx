@@ -9,10 +9,11 @@ import {
   Modal,
   Image,
   Share,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Alert } from '../components/Alerta';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../theme/ThemeContext';
@@ -50,6 +51,7 @@ import { CursoPortada } from '../features/academy/components/CursoPortada';
 import { useLeccionDetalle } from '../features/academy/hooks/useLeccionDetalle';
 import { LeccionVideoPlayer } from '../features/academy/components/LeccionVideoPlayer';
 import { useChatConversaciones } from '../features/chat/hooks/useChatConversaciones';
+import { useChatEnVivo } from '../features/chat/hooks/useChatEnVivo';
 import { useEnvioMediaChat } from '../features/chat/hooks/useEnvioMediaChat';
 import { BurbujaAudioChat } from '../features/chat/components/BurbujaAudioChat';
 import { EvidenciaDesdeChatModal } from '../features/habits/components/EvidenciaDesdeChatModal';
@@ -391,6 +393,7 @@ export default function ComunidadScreen() {
   const { diaPrograma } = useProgramaDia();
   const isDark = mode === 'dark';
   const { rs, isTablet, horizontalPadding, contentMaxWidth } = useResponsive();
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const mentorPhoto = rs(50);
   const avatarSize = rs(42);
@@ -421,7 +424,7 @@ export default function ComunidadScreen() {
     celulaCargando || celulaError
       ? null
       : tieneMentor
-        ? 'Escribile para coordinar tu próxima sesión.'
+        ? 'Escríbele para coordinar tu próxima sesión.'
         : 'Te avisaremos apenas se te asigne uno.';
   const TRIBU_AVATARES_VISIBLES = 4;
   const tribuVisibles = companerosCelula.slice(0, TRIBU_AVATARES_VISIBLES);
@@ -444,6 +447,26 @@ export default function ComunidadScreen() {
     return filas;
   }, [miCelula, companerosCelula]);
   const nombreDelGrupo = miCelula?.assigned === true ? miCelula.cellName : 'Tu grupo';
+
+  /**
+   * La firma que acompaña al nombre en el compositor del Muro.
+   *
+   * BUG ENCONTRADO 2026-09-17: decía `"Grupo 07 · Día 37"` **escrito a mano** en el JSX. Le
+   * mostraba ese texto a todo el mundo: a quien todavía no tiene grupo asignado (la mayoría, ver
+   * el WARN de "no hay grupo de recepción vigente") y a quien todavía no arrancó el programa
+   * (`diaPrograma === 0`, que es el estado normal entre elegir el Día 1 y que llegue esa fecha).
+   * O sea que la primera publicación de alguien salía firmada con un grupo y un día que no eran
+   * los suyos.
+   *
+   * Las dos mitades son independientes y cada una puede faltar: se arma con las que haya y, si no
+   * hay ninguna, la línea no se pinta. Nunca se inventa un grupo ni un día.
+   */
+  const firmaDePublicacion = [
+    miCelula?.assigned === true ? miCelula.cellName : null,
+    diaPrograma > 0 ? `Día ${diaPrograma}` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
   const subtituloDelGrupo =
     miCelula?.assigned === true
       ? `${miCelula.memberCount} ${miCelula.memberCount === 1 ? 'integrante' : 'integrantes'} · Cohorte ${miCelula.cohortName}`
@@ -1401,8 +1424,35 @@ export default function ComunidadScreen() {
     setActiveChat(conversacion);
     abrirConversacion(conversacion)
       .then(actualizada => setActiveChat(actualizada))
-      .catch(e => Alert.alert('No se pudo cargar el chat', mensajeDeError(e, 'Intentá de nuevo en un momento.')));
+      .catch(e => Alert.alert('No se pudo cargar el chat', mensajeDeError(e, 'Inténtalo de nuevo en un momento.')));
   };
+
+  /**
+   * La conversación abierta, en vivo (2026-09-17).
+   *
+   * Hasta acá la app conversaba SOLO por REST: un mensaje entrante no aparecía hasta salir y
+   * volver a entrar, y el "● En línea" del encabezado era un texto fijo que se le mostraba a
+   * cualquiera. El backend ya tenía el canal armado —`/ws` con STOMP y Redis, hecho para
+   * "reemplazar el polling" según su propio javadoc— y ningún cliente lo abría.
+   *
+   * Al llegar un mensaje de otro se recarga el historial por el camino de siempre
+   * (`abrirConversacion`) en vez de pintar el payload del empuje: ese payload es liviano a
+   * propósito y no trae la URL firmada de una foto ni el nombre de quien escribe, así que
+   * pintarlo directo dejaría burbujas incompletas. El socket avisa; la fuente de verdad sigue
+   * siendo el GET.
+   */
+  const { enLinea: participantesEnLinea } = useChatEnVivo({
+    conversacionId: activeChat?.id ?? null,
+    miUsuarioId: user?.id,
+    alLlegarMensaje: () => {
+      if (!activeChat) return;
+      abrirConversacion(activeChat)
+        .then(actualizada => setActiveChat(actualizada))
+        // Si la recarga falla se queda lo que ya estaba en pantalla: un mensaje que no se ve
+        // es mejor que una conversación que se vacía por un error de red.
+        .catch(() => undefined);
+    },
+  });
 
   /**
    * Abre el chat que pidió otra pantalla, en cuanto el listado lo tenga.
@@ -2081,8 +2131,8 @@ export default function ComunidadScreen() {
                         accessibilityRole="button"
                         accessibilityLabel={
                           post.likes === 1
-                            ? 'Una reacción. Tocá para ver quién reaccionó'
-                            : `${post.likes} reacciones. Tocá para ver quién reaccionó`
+                            ? 'Una reacción. Toca para ver quién reaccionó'
+                            : `${post.likes} reacciones. Toca para ver quién reaccionó`
                         }
                         hitSlop={10}
                         style={styles.rxCountBotonFila}
@@ -2362,7 +2412,7 @@ export default function ComunidadScreen() {
                       hay que decir —todavía no hay posiciones en este corte, y de dónde salen los
                       puntos— pero desde lo que la persona puede hacer, no desde lo que al servidor
                       le falta. Solo aparece con el podio entero vacío: con un líder ya puesto,
-                      "podés ser el próximo" deja de ser cierto para el primer puesto. */}
+                      "puedes ser el próximo" deja de ser cierto para el primer puesto. */}
                   {!podioTop1 && (
                     <View style={[styles.myRankCard, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
                       <Text style={{ fontSize: 24, marginBottom: 8 }}>🏆</Text>
@@ -3054,7 +3104,16 @@ export default function ComunidadScreen() {
                 onPress={() => setMiembrosTab('directos')}
                 style={[styles.tabBtn, miembrosTab === 'directos' && { backgroundColor: c.gold }]}
               >
-                <Text style={[t.small, { color: miembrosTab === 'directos' ? c.onGold : c.textSoft, fontFamily: 'Jost_700Bold' }]}>
+                {/* `numberOfLines` + `adjustsFontSizeToFit`: con el tamaño de letra del sistema
+                    subido, "💬 DIRECTOS" no entraba en la mitad de la fila y se partía en dos
+                    líneas; la segunda quedaba fuera de la pastilla y se leía solo el emoji. Ahora
+                    la palabra se achica hasta caber, pero nunca se corta. */}
+                <Text
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.75}
+                  style={[t.small, { color: miembrosTab === 'directos' ? c.onGold : c.textSoft, fontFamily: 'Jost_700Bold' }]}
+                >
                   💬 DIRECTOS
                 </Text>
               </Pressable>
@@ -3063,7 +3122,12 @@ export default function ComunidadScreen() {
                 onPress={() => setMiembrosTab('global')}
                 style={[styles.tabBtn, miembrosTab === 'global' && { backgroundColor: c.gold }]}
               >
-                <Text style={[t.small, { color: miembrosTab === 'global' ? c.onGold : c.textSoft, fontFamily: 'Jost_700Bold' }]}>
+                <Text
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.75}
+                  style={[t.small, { color: miembrosTab === 'global' ? c.onGold : c.textSoft, fontFamily: 'Jost_700Bold' }]}
+                >
                   🌐 GLOBAL
                 </Text>
               </Pressable>
@@ -3146,7 +3210,26 @@ export default function ComunidadScreen() {
       {/* VISTA 4.1: SALA DE CHAT ACTIVA (TIPO WHATSAPP)                            */}
       {/* ========================================================================= */}
       {inChatsComunidad && activeChat !== null && !groupInfoVisible && (
-        <View style={{ flex: 1 }}>
+        /*
+          BUG ENCONTRADO 2026-09-17: al tocar el campo de texto, el teclado tapaba la barra de
+          escritura entera — no se veía ni lo que se estaba escribiendo ni el botón de enviar.
+          Acá había un `<View style={{ flex: 1 }}>` pelado, contando con que Android encogiera la
+          ventana (`softwareKeyboardLayoutMode: "resize"`, que es el valor por omisión de Expo).
+          Desde que el modo edge-to-edge es obligatorio en Android (SDK 54+) la ventana YA NO se
+          encoge: la app sigue dibujando debajo del teclado, así que todo lo que está al pie
+          —barra de escritura y barra de pestañas— queda fuera de la vista.
+
+          `behavior="padding"` se corrige solo y por eso va en las dos plataformas: React Native
+          calcula el alto que hace falta como `fondo de esta vista − borde superior del teclado`,
+          de modo que en un dispositivo donde la ventana SÍ se encoja el resultado da 0 y no
+          agrega nada. No hay riesgo de levantar el composer de más.
+
+          `keyboardVerticalOffset={insets.top}`: el alto lo mide contra su padre (el SafeAreaView),
+          cuyo origen ya está por debajo del inset de arriba, mientras que la posición del teclado
+          viene en coordenadas de pantalla. Sin compensar esa diferencia la barra quedaba justo
+          esos píxeles por debajo del borde del teclado — medio tapada.
+        */
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" keyboardVerticalOffset={insets.top}>
           {/* Header del Chat */}
           <View style={[styles.chatRoomHeader, { borderBottomColor: c.divider, backgroundColor: c.cardBg }]}>
             <Pressable onPress={() => setActiveChat(null)} hitSlop={8} style={{ minWidth: 48, minHeight: 48, justifyContent: 'center' }}>
@@ -3164,9 +3247,38 @@ export default function ComunidadScreen() {
                 <Text numberOfLines={1} style={[t.cardTitle, { color: c.textStrong }]}>
                   {activeChat.title}
                 </Text>
-                <Text style={[t.small, { color: c.success, fontSize: 12.5 }]}>
-                  {activeChat.type === 'celula' ? '16 miembros · Toca para ver info ℹ️' : '● En línea'}
-                </Text>
+                {/*
+                  El "● En línea" de un 1 a 1 ahora es un dato, no un adorno: sale de
+                  `useChatEnVivo`, que lo pregunta al abrir (`GET .../presence`) y después lo
+                  mantiene al día por el socket. `participantesEnLinea` ya excluye a uno mismo
+                  —lo hace el backend—, así que en una conversación de dos, que tenga algo
+                  significa exactamente que la otra persona está conectada.
+
+                  Cuando no está conectada NO se dice "última vez": esa columna existe en la
+                  base desde la migración V1 y no la escribe nadie. Se muestra el subtítulo real
+                  de la conversación ("Mentor · 1 a 1"), que sí es cierto.
+
+                  PENDIENTE: la rama del grupo sigue con `"16 miembros"` fijo. Se probó sacarlo
+                  de `useMiCelula` y se dio marcha atrás: ese hook responde "¿de qué grupo soy
+                  MIEMBRO?" y a un mentor —que acompaña varios— le devuelve `assigned:false`, así
+                  que habría puesto el número de otro grupo. El arreglo de verdad es que el
+                  número venga de la conversación abierta (`membersCount`, que hoy no escribe
+                  ningún mapeador). Cambiar una cifra fija por una variable y equivocada no es un
+                  arreglo, así que se deja hasta entonces.
+                */}
+                {activeChat.type === 'celula' ? (
+                  <Text numberOfLines={1} style={[t.small, { color: c.textSoft, fontSize: 12.5 }]}>
+                    16 miembros · Toca para ver info ℹ️
+                  </Text>
+                ) : participantesEnLinea.size > 0 ? (
+                  <Text numberOfLines={1} style={[t.small, { color: c.success, fontSize: 12.5 }]}>
+                    ● En línea
+                  </Text>
+                ) : (
+                  <Text numberOfLines={1} style={[t.small, { color: c.textSoft, fontSize: 12.5 }]}>
+                    {activeChat.subtitle}
+                  </Text>
+                )}
               </View>
             </Pressable>
 
@@ -3408,7 +3520,7 @@ export default function ComunidadScreen() {
             onCerrar={() => setEvidenciaVisible(false)}
             onSubida={handleEvidenciaSubida}
           />
-        </View>
+        </KeyboardAvoidingView>
       )}
 
       {/* ========================================================================= */}
@@ -3614,19 +3726,37 @@ export default function ComunidadScreen() {
       >
         <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
           <View style={[styles.modalHeaderBar, { borderBottomColor: c.divider }]}>
-            <Pressable onPress={() => setCreatePostModalVisible(false)} hitSlop={8} style={{ minHeight: 48, justifyContent: 'center' }}>
+            {/*
+              Los tres elementos sumaban más que el ancho de la pantalla en móviles de 360 dp (o
+              con la letra del sistema agrandada): el título se montaba sobre "CANCELAR" y
+              "PUBLICAR" se cortaba contra el borde. Ahora los dos botones se quedan con su ancho
+              (`flexShrink: 0`) y el título se lleva el sobrante, achicándose hasta caber en una
+              sola línea.
+            */}
+            <Pressable
+              onPress={() => setCreatePostModalVisible(false)}
+              hitSlop={8}
+              style={{ minHeight: 48, justifyContent: 'center', flexShrink: 0 }}
+            >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Icon name="close" size={14} color={c.goldInk} />
                 <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>CANCELAR</Text>
               </View>
             </Pressable>
-            <Text style={[t.cardTitle, { color: c.textStrong }]}>NUEVA PUBLICACIÓN</Text>
+            <Text
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.75}
+              style={[t.cardTitle, { color: c.textStrong, flex: 1, minWidth: 0, textAlign: 'center' }]}
+            >
+              NUEVA PUBLICACIÓN
+            </Text>
             <Pressable
               onPress={handlePublishPost}
               disabled={subiendoPublicacion}
               style={[styles.publishHeaderBtn, { backgroundColor: c.gold }, subiendoPublicacion && { opacity: 0.6 }]}
             >
-              <Text style={[t.small, { color: c.onGold, fontFamily: 'Jost_700Bold' }]}>
+              <Text numberOfLines={1} style={[t.small, { color: c.onGold, fontFamily: 'Jost_700Bold' }]}>
                 {subiendoPublicacion ? 'PUBLICANDO...' : 'PUBLICAR'}
               </Text>
             </Pressable>
@@ -3638,9 +3768,11 @@ export default function ComunidadScreen() {
               <View style={[styles.avatarCircle, { backgroundColor: c.goldWash }]}>
                 <Text style={{ fontSize: 14 }}>🦅</Text>
               </View>
-              <View style={{ gap: 3 }}>
-                <Text style={[t.cardTitle, { color: c.textStrong }]}>{nombreUsuario}</Text>
-                <Text style={[t.small, { color: c.goldInk }]}>Grupo 07 · Día 37</Text>
+              <View style={{ gap: 3, flex: 1, minWidth: 0 }}>
+                <Text numberOfLines={1} style={[t.cardTitle, { color: c.textStrong }]}>{nombreUsuario}</Text>
+                {firmaDePublicacion ? (
+                  <Text numberOfLines={1} style={[t.small, { color: c.goldInk }]}>{firmaDePublicacion}</Text>
+                ) : null}
               </View>
             </View>
 
@@ -4005,7 +4137,9 @@ const styles = StyleSheet.create({
   },
   tabBtn: {
     flex: 1,
+    minWidth: 0,
     minHeight: 48,
+    paddingHorizontal: 8,
     borderRadius: space.radiusSm,
     alignItems: 'center',
     justifyContent: 'center',
@@ -4382,6 +4516,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 8,
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderBottomWidth: 1,
@@ -4391,6 +4526,7 @@ const styles = StyleSheet.create({
     borderRadius: space.radiusSm,
     paddingHorizontal: 12,
     minHeight: 48,
+    flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -4567,14 +4703,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    gap: 8,
+    paddingHorizontal: 14,
     paddingVertical: 12,
     borderBottomWidth: 1,
   },
   publishHeaderBtn: {
     borderRadius: space.radiusSm,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     minHeight: 48,
+    flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -4,6 +4,7 @@ import { registrarTokenPushNativo, escucharRotacionDeToken } from '../../mentor/
 import { escucharAperturaDeAviso, olvidarRutaPendiente } from '../../mentor/notificaciones/rutaDeAviso';
 import { FichaInicialData } from '../../onboarding/types/onboarding.types';
 import * as authApi from '../api/authApi';
+import { conexionChat } from '../../chat/tiempoReal/conexionStomp';
 import * as onboardingApi from '../../onboarding/api/onboardingApi';
 import { aUsuario } from '../api/usuarioMapper';
 import { loginConGoogle } from '../api/googleAuth';
@@ -381,6 +382,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(() => {
     // Se limpia el estado local sin esperar al servidor: cerrar sesión nunca debe poder fallar
     // desde el punto de vista de quien usa la app. authApi ya descarta el token igual.
+    //
+    // El socket del chat se corta ACÁ y no en la pantalla: lleva el token de quien se está
+    // yendo, y el servidor cuenta esa conexión como "en línea". Sin esto, alguien que cierra
+    // sesión seguiría figurando conectado para sus compañeros hasta que el sistema operativo
+    // se dignara a cerrar el socket.
+    conexionChat.cerrarTodo();
     void authApi.cerrarSesion().catch(() => undefined);
     setUser(null);
     setIsOnboardingCompleted(false);

@@ -8,6 +8,7 @@ import {
   wireMensajeSchema,
   wireMensajesPageSchema,
   wireMiembrosPageSchema,
+  presenciaSchema,
 } from './chatSchemas';
 
 /**
@@ -37,6 +38,19 @@ export async function abrirConversacionDirecta(otherUserId: string): Promise<Wir
     body: { otherUserId },
   });
   return validarRespuesta<WireConversacion>(wireConversacionSchema, r, 'POST /api/v1/chat/conversations/direct');
+}
+
+/**
+ * Quien esta en linea en una conversacion, para pintar el indicador al ABRIRLA.
+ *
+ * Despues del primer dato manda el socket (ver `useChatEnVivo`): una suscripcion entrega
+ * CAMBIOS, asi que sin esta llamada quien abre el chat con la otra persona ya conectada no
+ * recibiria nada y la veria apagada hasta que se fuera.
+ */
+export async function obtenerPresencia(conversationId: string): Promise<string[]> {
+  const r = await apiFetch<unknown>(`/api/v1/chat/conversations/${conversationId}/presence`);
+  return validarRespuesta<{ online: string[] }>(presenciaSchema, r,
+    'GET /api/v1/chat/conversations/{id}/presence').online;
 }
 
 export async function marcarConversacionLeida(conversationId: string): Promise<void> {

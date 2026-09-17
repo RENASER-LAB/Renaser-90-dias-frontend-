@@ -11,7 +11,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '../../../theme/ThemeContext';
 import { useResponsive } from '../../../theme/responsive';
@@ -53,6 +53,7 @@ const ALTURA_MIN_CONTROL = 50;
 export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanelProps) {
   const { c, t } = useTheme();
   const { isTablet, horizontalPadding, rs, contentMaxWidth } = useResponsive();
+  const insets = useSafeAreaInsets();
   const perfil = AGENTES[agent];
   const nombre = nombreVisible(agent);
   const {
@@ -124,10 +125,18 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
           </Pressable>
         </View>
 
+        {/*
+          `behavior` va en las DOS plataformas desde 2026-09-17. Decia `undefined` en Android
+          contando con que el sistema encogiera la ventana al abrir el teclado; con el modo
+          edge-to-edge obligatorio (Android, SDK 54+) eso ya no pasa y la barra de escritura queda
+          debajo del teclado. El calculo de `padding` se corrige solo —da 0 donde la ventana SI se
+          encoge—, y `insets.top` compensa que el alto se mide contra el SafeAreaView mientras que
+          el teclado se reporta en coordenadas de pantalla. Mismo arreglo que el chat de Comunidad.
+        */}
         <KeyboardAvoidingView
           style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
+          behavior="padding"
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : insets.top}
         >
           <ScrollView
             ref={scrollRef}
@@ -218,7 +227,7 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
             <TextInput
               value={texto}
               onChangeText={setTexto}
-              placeholder={`Escribile a ${nombre}…`}
+              placeholder={`Escríbele a ${nombre}…`}
               placeholderTextColor={c.textSoft}
               style={[
                 styles.input,
