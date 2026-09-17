@@ -226,7 +226,15 @@ export const SignatureCanvas = forwardRef<SignatureCanvasHandle, SignatureCanvas
       {/* Header Label and Status */}
       {!hideHeader && !hideControls && (
         <View style={styles.headerRow}>
-          <MicroLabel>{label}</MicroLabel>
+          {/*
+            La etiqueta se lleva el ancho sobrante y el sello se queda con el suyo. Sin esto —era
+            una fila con `space-between` y nada más— en pantallas angostas la etiqueta
+            ("FIRMA DE ACEPTACIÓN LEGAL (CON TU DEDO)") ocupaba dos líneas, empujaba el sello fuera
+            del borde derecho y el "✓ TRAZADO" quedaba cortado a mitad de palabra.
+          */}
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <MicroLabel>{label}</MicroLabel>
+          </View>
           {hasSignature && (
             <View style={styles.signedBadge}>
               <Icon name="check" size={12} color="#4E9F76" />
@@ -337,11 +345,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 10,
   },
   signedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    flexShrink: 0,
   },
   canvasBox: {
     height: 145,
