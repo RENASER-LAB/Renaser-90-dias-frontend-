@@ -220,7 +220,7 @@ export function GrupoFormScreen({
               <View style={{ gap: 8 }}>
                 <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, lineHeight: 17 }]}>
                   La cohorte es la generación a la que pertenece el grupo (por ejemplo «Generación
-                  Septiembre»). Todavía no hay ninguna: creá la primera para poder seguir.
+                  Septiembre»). Todavía no hay ninguna: crea la primera para poder seguir.
                 </Text>
                 <FormField
                   label="NOMBRE DE LA COHORTE"

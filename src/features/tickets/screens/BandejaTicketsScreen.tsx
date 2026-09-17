@@ -218,7 +218,7 @@ function Fallo({ bandeja }: { bandeja: ReturnType<typeof useBandejaDeTickets> })
         style={[t.body, { color: c.textSoft, fontSize: 13, textAlign: 'center', marginTop: 6, lineHeight: 19 }]}
       >
         {sinPermiso
-          ? 'Ver todos los tickets de mentoría es de líderes de mentores, administradores y alquimistas. Si creés que es un error, escribilo por soporte.'
+          ? 'Ver todos los tickets de mentoría es de líderes de mentores, administradores y alquimistas. Si crees que es un error, escríbelo por soporte.'
           : bandeja.fallo === 'sin_red'
             ? 'Revisa tu conexión y vuelve a intentarlo.'
             : 'Vuelve a intentarlo. Si sigue pasando, avísanos por soporte.'}

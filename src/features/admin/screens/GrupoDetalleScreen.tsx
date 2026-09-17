@@ -214,8 +214,8 @@ export function GrupoDetalleScreen({
               </Text>
               {cerrado ? (
                 <Text style={[t.body, { color: c.textSoft, fontSize: 13, lineHeight: 18 }]}>
-                  Este grupo terminó su período. Se conserva para consultarlo; para seguir, creá el
-                  grupo siguiente y movés a su gente ahí.
+                  Este grupo terminó su período. Se conserva para consultarlo; para seguir, crea el
+                  grupo siguiente y mueves a su gente ahí.
                 </Text>
               ) : null}
               {grupo.status === 'PROGRAMADO' ? (

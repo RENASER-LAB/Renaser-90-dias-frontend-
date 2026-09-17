@@ -107,7 +107,7 @@ export function GruposAdminScreen({
 
         {!cargando && !error && grupos.length === 0 ? (
           <Text style={[t.body, { color: c.textSoft, fontSize: 14, marginTop: 12 }]}>
-            No hay grupos en este tramo. Cambiá el filtro o creá uno nuevo.
+            No hay grupos en este tramo. Cambia el filtro o crea uno nuevo.
           </Text>
         ) : null}
 

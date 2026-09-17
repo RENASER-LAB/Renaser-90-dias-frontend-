@@ -59,7 +59,7 @@ export function TarjetaAccionesDelDia({ diaria, semanal, diaPrograma }: TarjetaA
 
       {!hayPlanSemanal ? (
         <Text style={[t.body, { color: c.textSoft, fontSize: 15, marginTop: 8, lineHeight: 22 }]}>
-          Primero arma tu semana. Las acciones del día salen de las acciones críticas que definís
+          Primero arma tu semana. Las acciones del día salen de las acciones críticas que defines
           ahí, no se escriben sueltas.
         </Text>
       ) : cubos.length > 0 ? (

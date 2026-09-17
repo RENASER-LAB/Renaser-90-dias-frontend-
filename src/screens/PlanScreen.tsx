@@ -856,7 +856,7 @@ export default function PlanScreen() {
     if (lineaBase !== undefined && meta !== undefined && lineaBase === meta) {
       Alert.alert(
         'Punto de partida igual a la meta',
-        'Si arrancás justo en tu meta no hay avance que medir. Revisa los dos números.'
+        'Si arrancas justo en tu meta no hay avance que medir. Revisa los dos números.'
       );
       return;
     }
