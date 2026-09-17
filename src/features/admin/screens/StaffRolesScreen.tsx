@@ -12,7 +12,11 @@ import type { RolAsignable } from '../api/adminApi';
 import type { UsuarioStaffApi } from '../api/adminSchemas';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
 import { confirmar, avisar } from '../utils/dialogo';
-import { mensajeDeFallo } from '../utils/mensajes';
+import {
+  botonDeMasAprendices,
+  mensajeDeFallo,
+  mensajeDeLaSeccionMentores,
+} from '../utils/mensajes';
 import {
   mentoresQueFaltan,
   personaDeStaff,
@@ -119,7 +123,7 @@ function FilaDePersona({
 
       {desplegada ? (
         <View style={{ gap: 8, paddingHorizontal: 12, paddingBottom: 12 }}>
-          <Text style={[t.body, { color: c.textSoft, fontSize: 12.5 }]}>Elegí el rol nuevo:</Text>
+          <Text style={[t.body, { color: c.textSoft, fontSize: 12.5 }]}>Elige el rol nuevo:</Text>
           {ROLES.map(rol => {
             const actual = rol.clave === persona.rol;
             return (
@@ -269,6 +273,15 @@ export function StaffRolesScreen({ onVolver }: { onVolver: () => void }) {
         })),
       );
     } catch (e) {
+      /* Página 0 = consulta NUEVA: la primera carga, o un texto distinto en el buscador. Lo que
+         hay en pantalla es de la búsqueda anterior, y dejarlo debajo del texto nuevo lo haría
+         pasar por resultado de esta — la misma mentira que la sección Mentores dejó de decir.
+         Las páginas siguientes sí conservan lo traído: eso es de esta misma búsqueda, y borrarlo
+         castigaría al que ya venía leyendo por un fallo al pedir más. */
+      if (pagina === 0) {
+        setAprendices([]);
+        setTotalAprendices(null);
+      }
       setError(mensajeDeFallo(e, 'No se pudo cargar el padrón.'));
     } finally {
       setCargando(false);
@@ -346,6 +359,19 @@ export function StaffRolesScreen({ onVolver }: { onVolver: () => void }) {
   const mentoresVisibles = todosLosMentores.filter(p => !idsCambiados.has(p.id));
   const staffVisible = staff.filter(p => !idsCambiados.has(p.id));
 
+  /* Lo que la sección «Mentores» dice cuando no tiene filas, o cuando las tiene incompletas.
+
+     `error` vale como "no se sabe quiénes son los mentores activos" aunque sea el error de
+     TODO `cargar()`: las dos consultas van en un mismo `Promise.all`, así que si falla
+     cualquiera de las dos —incluida la de aprendices— `setMentores` no se ejecuta y la lista
+     de mentores queda sin traer. */
+  const mensajeDeMentores = mensajeDeLaSeccionMentores({
+    falloElListadoDeGrupos: error !== null,
+    falloElListadoDeStaff: errorStaff !== null,
+    cargando: cargando || cargandoStaff,
+    hayFilas: mentoresVisibles.length > 0,
+  });
+
   const aplicar = async (persona: Persona, nuevo: RolAsignable) => {
     if (nuevo === persona.rol) {
       setAbierta(null);
@@ -370,13 +396,22 @@ export function StaffRolesScreen({ onVolver }: { onVolver: () => void }) {
       ]);
       setAbierta(null);
     } catch (e) {
-      avisar('No se pudo cambiar el rol', mensajeDeFallo(e, 'Probá de nuevo.'));
+      avisar('No se pudo cambiar el rol', mensajeDeFallo(e, 'Inténtalo de nuevo.'));
     } finally {
       setGuardando(null);
     }
   };
 
-  const hayMas = totalAprendices !== null && aprendices.length < totalAprendices;
+  /* Qué va al pie de la lista de aprendices. `error !== null` significa que la página pedida
+     NO entró —vale para cualquiera de las dos consultas de `cargar()`, por el mismo
+     `Promise.all` de arriba—, y mientras eso no se resuelva el botón reintenta en vez de
+     avanzar: la lista se acumula, así que una página salteada deja un hueco permanente. */
+  const botonDelPie = botonDeMasAprendices({
+    cargando,
+    falloLaCarga: error !== null,
+    cargados: aprendices.length,
+    total: totalAprendices,
+  });
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
@@ -465,11 +500,26 @@ export function StaffRolesScreen({ onVolver }: { onVolver: () => void }) {
             correo»—, así que no hace falta una sección aparte para explicar por qué está ahí. */}
         <View style={{ gap: 10 }}>
           <MicroLabel>Mentores ({mentoresVisibles.length})</MicroLabel>
-          {/* El listado de staff falló: se dice acá también. Callarlo dejaría esta sección
-              mostrando solo los activos con cara de estar completa. */}
-          {errorStaff ? (
-            <Text style={[t.body, { color: c.micro, fontSize: 12.5, lineHeight: 18 }]}>
-              No se pudo comprobar si hay mentores con la cuenta suspendida: estos son los activos.
+          {/* Qué falta averiguar, o que todavía no hay mentores — nunca las dos cosas, y el «no
+              hay» solo cuando se pudo comprobar. Callar un fallo dejaría esta sección con cara de
+              estar completa; afirmar el vacío sin haberlo mirado es peor todavía.
+
+              > **Corregido 2026-09-15.** El vacío se dibujaba con
+              > `mentoresVisibles.length === 0 && !cargando && !cargandoStaff`, sin mirar `error`
+              > ni `errorStaff`: con la carga caída, la pantalla afirmaba «Todavía no hay
+              > mentores» sin haber podido averiguarlo, y encima mandaba a nombrar uno. La sección
+              > «Staff», acá arriba, ya condicionaba su vacío a `!errorStaff`; ahora las dos
+              > siguen el mismo criterio. */}
+          {mensajeDeMentores ? (
+            <Text
+              style={[
+                t.body,
+                mensajeDeMentores.tono === 'vacio'
+                  ? { color: c.textSoft, fontSize: 13.5 }
+                  : { color: c.micro, fontSize: 12.5, lineHeight: 18 },
+              ]}
+            >
+              {mensajeDeMentores.texto}
             </Text>
           ) : null}
           {/* La página de mentores no alcanzó. Se dice, en vez de dejar la sección con cara de
@@ -478,11 +528,6 @@ export function StaffRolesScreen({ onVolver }: { onVolver: () => void }) {
             <Text style={[t.body, { color: c.micro, fontSize: 12.5, lineHeight: 18 }]}>
               El servidor dice que hay {totalMentoresDeStaff} mentores y acá entraron{' '}
               {mentoresDeStaff.length}: puede faltar alguno con la cuenta suspendida.
-            </Text>
-          ) : null}
-          {mentoresVisibles.length === 0 && !cargando && !cargandoStaff ? (
-            <Text style={[t.body, { color: c.textSoft, fontSize: 13.5 }]}>
-              Todavía no hay mentores. Hacé mentor a alguien de la lista de abajo.
             </Text>
           ) : null}
           {mentoresVisibles.map(persona => (
@@ -525,15 +570,24 @@ export function StaffRolesScreen({ onVolver }: { onVolver: () => void }) {
 
         {cargando ? <ActivityIndicator color={c.goldInk} style={{ marginTop: 12 }} /> : null}
 
-        {hayMas && !cargando ? (
+        {botonDelPie ? (
           <Pressable
-            onPress={() => setPagina(p => p + 1)}
+            onPress={() => {
+              /* Reintentar es volver a llamar a `cargar()` TAL CUAL: la página y la búsqueda son
+                 las mismas, y `cargar` ya limpia el error al empezar. Tocar `pagina` acá sería
+                 justo el error que esto arregla. */
+              if (botonDelPie.accion === 'reintentar') {
+                void cargar();
+                return;
+              }
+              setPagina(p => p + 1);
+            }}
             accessibilityRole="button"
-            accessibilityLabel="Ver más aprendices"
+            accessibilityLabel={botonDelPie.etiquetaAccesible}
             style={[estilos.boton, { borderColor: c.border }]}
           >
             <Text style={[t.body, { color: c.textStrong, fontSize: 14, fontWeight: '500' }]}>
-              Ver más ({aprendices.length} de {totalAprendices ?? '—'})
+              {botonDelPie.etiqueta}
             </Text>
           </Pressable>
         ) : null}
