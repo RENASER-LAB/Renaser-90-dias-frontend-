@@ -138,7 +138,7 @@ export async function enviarMensajeRenasia(
     // a la persona al login. Solo el 401: un 403 acá es cuenta suspendida o permiso, no sesión.
     if (respuesta.status === 401 && token) {
       notificarSesionVencida();
-      throw new Error('Tu sesión venció. Volvé a entrar.');
+      throw new Error('Tu sesión venció. Vuelve a entrar.');
     }
     throw new Error(mensaje);
   }
@@ -237,6 +237,6 @@ export async function enviarMensajeRenasia(
     // El contrato dice que "fin" siempre llega al final. Si el stream se cerró sin él es un corte
     // anormal (conexión perdida, backend caído a mitad de respuesta) y hay que decirlo en vez de
     // dejar la respuesta como si hubiera terminado bien.
-    throw new Error(`La respuesta de ${nombre} se cortó antes de terminar. Probá de nuevo.`);
+    throw new Error(`La respuesta de ${nombre} se cortó antes de terminar. Inténtalo de nuevo.`);
   }
 }

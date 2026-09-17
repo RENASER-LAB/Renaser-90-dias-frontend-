@@ -65,10 +65,10 @@ export function ritmoDelDia(estado: EstadoDelDia): RitmoDelDia {
   const progreso = Math.min(1, hechas / totales);
 
   if (progreso >= 1) {
-    return { ritmo: 'rapido', progreso: 1, mensaje: 'Día completo. Seguí así.' };
+    return { ritmo: 'rapido', progreso: 1, mensaje: 'Día completo. Sigue así.' };
   }
   if (progreso > 0) {
-    return { ritmo: 'lento', progreso, mensaje: 'Vas en movimiento. Seguí así.' };
+    return { ritmo: 'lento', progreso, mensaje: 'Vas en movimiento. Sigue así.' };
   }
   return { ritmo: 'detenido', progreso: 0, mensaje: 'Todavía no arrancaste el día.' };
 }

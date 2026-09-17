@@ -580,7 +580,7 @@ export default function HoyScreen() {
               {/* Era `fontSize: 13`, por debajo del mínimo de párrafo de AGENTS.md §4 (14–15.5).
                   Se usa `t.body` tal cual: 15/22, que es lo que el token ya define. */}
               <Text style={[t.body, { color: c.textSoft, marginTop: 8 }]}>
-                Podés recorrerlo vos también: tus hábitos, tus objetivos y tu Mapa, con tu propio
+                Puedes recorrerlo tú también: tus hábitos, tus objetivos y tu Mapa, con tu propio
                 día. No cambia nada de lo que ves como acompañante.
               </Text>
               {programaPersonal.error ? (

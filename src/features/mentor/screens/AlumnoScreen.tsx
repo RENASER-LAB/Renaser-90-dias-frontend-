@@ -79,7 +79,7 @@ export function AlumnoScreen({
       }
       await Linking.openURL(url);
     } catch {
-      Alert.alert('No se pudo abrir', 'Revisá tu conexión e intentá de nuevo.');
+      Alert.alert('No se pudo abrir', 'Revisa tu conexión e inténtalo de nuevo.');
     } finally {
       setAbriendoEvidencia(null);
     }
@@ -117,7 +117,7 @@ export function AlumnoScreen({
         );
       }
     } catch {
-      Alert.alert('No se pudo abrir el chat', 'Revisá tu conexión e intentá de nuevo.');
+      Alert.alert('No se pudo abrir el chat', 'Revisa tu conexión e inténtalo de nuevo.');
     } finally {
       setAbriendoChat(false);
     }

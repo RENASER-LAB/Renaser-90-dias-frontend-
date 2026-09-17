@@ -54,7 +54,7 @@ export async function elegirFotoDeGaleriaChat(): Promise<ArchivoChat | null> {
   try {
     return await normalizarFoto(resultado.assets[0]);
   } catch {
-    Alert.alert('No se pudo procesar la foto', 'Probá con otra imagen.');
+    Alert.alert('No se pudo procesar la foto', 'Prueba con otra imagen.');
     return null;
   }
 }
@@ -74,7 +74,7 @@ export async function tomarFotoConCamaraChat(): Promise<ArchivoChat | null> {
   try {
     return await normalizarFoto(resultado.assets[0]);
   } catch {
-    Alert.alert('No se pudo procesar la foto', 'Probá sacarla de nuevo.');
+    Alert.alert('No se pudo procesar la foto', 'Prueba a sacarla de nuevo.');
     return null;
   }
 }

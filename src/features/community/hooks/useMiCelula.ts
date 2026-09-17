@@ -31,7 +31,7 @@ export function useMiCelula() {
       setMiCelula(celula);
       setMiembros(companeros);
     } catch (e) {
-      setError(mensajeDeError(e, 'No pudimos cargar tu grupo. Revisa tu conexión e intentá de nuevo.'));
+      setError(mensajeDeError(e, 'No pudimos cargar tu grupo. Revisa tu conexión e inténtalo de nuevo.'));
     } finally {
       setLoading(false);
     }

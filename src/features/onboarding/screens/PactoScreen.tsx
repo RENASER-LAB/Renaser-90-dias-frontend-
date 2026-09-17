@@ -87,7 +87,7 @@ export function PactoScreen({
       // el hito PACTO se marca acá igual.
       const resultadoRespuesta = await guardarCapitulo(mapearPacto(initialName));
       if (resultadoRespuesta.pendientes > 0) {
-        Alert.alert('No se pudo guardar', 'No pudimos registrar tu aceptación del Pacto. Revisa tu conexión e intentá de nuevo.');
+        Alert.alert('No se pudo guardar', 'No pudimos registrar tu aceptación del Pacto. Revisa tu conexión e inténtalo de nuevo.');
         return;
       }
       await aceptarHito('PACTO');
@@ -99,7 +99,7 @@ export function PactoScreen({
       // valor probatorio que se quiere tener.
       const pngFirma = await signatureRef.current?.capturarComoPngBase64();
       if (!pngFirma) {
-        Alert.alert('No se pudo capturar la firma', 'Vuelve a dibujar tu firma e intentá de nuevo.');
+        Alert.alert('No se pudo capturar la firma', 'Vuelve a dibujar tu firma e inténtalo de nuevo.');
         return;
       }
       const resultado = await guardarFirma({
@@ -111,7 +111,7 @@ export function PactoScreen({
       if (!resultado.ok) {
         Alert.alert(
           'No se pudo guardar tu firma',
-          'No pudimos respaldar tu firma en el almacenamiento. Revisa tu conexión e intentá de nuevo.'
+          'No pudimos respaldar tu firma en el almacenamiento. Revisa tu conexión e inténtalo de nuevo.'
         );
         return;
       }

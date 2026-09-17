@@ -1310,7 +1310,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                 returnKeyType="done"
               />
 
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', marginTop: 16 }]}>ELEGÍ UN ICONO</Text>
+              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', marginTop: 16 }]}>ELIGE UN ICONO</Text>
               {/* Los mismos iconos del catálogo, no una lista aparte: así un hábito propio se ve
                   igual de curado que uno del programa. Sin elegir ninguno se guarda `null` y el
                   hábito hereda el de su categoría, que es como nacían todos hasta ahora. */}

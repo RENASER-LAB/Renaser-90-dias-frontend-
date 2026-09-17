@@ -513,7 +513,7 @@ export function ImageViewerModal({
                   accessibilityRole={onVerReacciones ? 'button' : undefined}
                   accessibilityLabel={
                     onVerReacciones
-                      ? `${likes} ${likes === 1 ? 'reacción' : 'reacciones'}. Tocá para ver quién reaccionó`
+                      ? `${likes} ${likes === 1 ? 'reacción' : 'reacciones'}. Toca para ver quién reaccionó`
                       : `${likes} ${likes === 1 ? 'reacción' : 'reacciones'}`
                   }
                   hitSlop={10}

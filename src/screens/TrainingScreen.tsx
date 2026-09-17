@@ -595,7 +595,7 @@ export default function TrainingScreen() {
             <Text style={[t.body, { color: c.textSoft }]}>
               {arranque.estado === 'PENDIENTE_ELEGIR'
                 ? 'Elige en qué día quieres empezar tus 90 días. Hasta entonces no hay evidencia que entregar.'
-                : `Empezás el ${formatearFechaLarga(arranque.fechaInicio)}. Desde el ${formatearFechaLarga(
+                : `Empiezas el ${formatearFechaLarga(arranque.fechaInicio)}. Desde el ${formatearFechaLarga(
                     diaAnterior(arranque.fechaInicio),
                   )} vas a poder organizar tus hábitos y entregar evidencia; hasta entonces no hay nada que hacer acá.`}
             </Text>

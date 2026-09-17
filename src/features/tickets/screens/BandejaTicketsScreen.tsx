@@ -220,8 +220,8 @@ function Fallo({ bandeja }: { bandeja: ReturnType<typeof useBandejaDeTickets> })
         {sinPermiso
           ? 'Ver todos los tickets de mentoría es de líderes de mentores, administradores y alquimistas. Si creés que es un error, escribilo por soporte.'
           : bandeja.fallo === 'sin_red'
-            ? 'Revisá tu conexión y volvé a intentarlo.'
-            : 'Volvé a intentarlo. Si sigue pasando, avisanos por soporte.'}
+            ? 'Revisa tu conexión y vuelve a intentarlo.'
+            : 'Vuelve a intentarlo. Si sigue pasando, avísanos por soporte.'}
       </Text>
       {/* El detalle técnico solo cuando aporta: dice qué cambió el backend y ahorra media hora a
           quien mantiene la app. Con un 403 no aporta nada. */}

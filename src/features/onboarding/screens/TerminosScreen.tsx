@@ -90,7 +90,7 @@ export function TerminosScreen({
     try {
       const resultadoRespuesta = await guardarCapitulo(mapearTerminos(accepted));
       if (resultadoRespuesta.pendientes > 0) {
-        Alert.alert('No se pudo guardar', 'No pudimos registrar tu aceptación. Revisa tu conexión e intentá de nuevo.');
+        Alert.alert('No se pudo guardar', 'No pudimos registrar tu aceptación. Revisa tu conexión e inténtalo de nuevo.');
         return;
       }
 
@@ -98,7 +98,7 @@ export function TerminosScreen({
       // referencia guardada en la base (ver mapaPreguntas.ts, PREGUNTA_FIRMA_TERMINOS).
       const pngFirma = await signatureRef.current?.capturarComoPngBase64();
       if (!pngFirma || !signature) {
-        Alert.alert('No se pudo capturar la firma', 'Vuelve a dibujar tu firma e intentá de nuevo.');
+        Alert.alert('No se pudo capturar la firma', 'Vuelve a dibujar tu firma e inténtalo de nuevo.');
         return;
       }
       const resultadoFirma = await guardarFirma({
@@ -110,7 +110,7 @@ export function TerminosScreen({
       if (!resultadoFirma.ok) {
         Alert.alert(
           'No se pudo guardar tu firma',
-          'No pudimos respaldar tu firma en el almacenamiento. Revisa tu conexión e intentá de nuevo.'
+          'No pudimos respaldar tu firma en el almacenamiento. Revisa tu conexión e inténtalo de nuevo.'
         );
         return;
       }

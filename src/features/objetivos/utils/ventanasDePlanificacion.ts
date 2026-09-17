@@ -46,7 +46,7 @@ export function ventanaSemanalAbierta(ahora: Date = new Date()): boolean {
 /**
  * Qué decirle a la persona sobre la ventana semanal.
  *
- * Se muestra siempre, abierta o cerrada: saber que "el domingo a las 12 podés replanificar" es tan
+ * Se muestra siempre, abierta o cerrada: saber que "el domingo a las 12 puedes replanificar" es tan
  * útil como saber que ahora se puede.
  */
 export function textoVentanaSemanal(ahora: Date = new Date()): string {

@@ -229,7 +229,7 @@ export function mensajeDeError(error: unknown, porDefecto: string): string {
     /* Dos situaciones muy distintas comparten el 401. Con sesión mandada, el token venció y lo
        único que hay que decir es que vuelva a entrar; sin sesión es el login, y ahí sí son las
        credenciales. Antes las dos decían lo mismo. */
-    return error.sesionVencida ? 'Tu sesión venció. Volvé a entrar.' : 'Correo o contraseña incorrectos.';
+    return error.sesionVencida ? 'Tu sesión venció. Vuelve a entrar.' : 'Correo o contraseña incorrectos.';
   }
   if (error.esProhibido) {
     /* El mensaje del backend gana. Antes se descartaba y TODO 403 decía lo mismo — que es el

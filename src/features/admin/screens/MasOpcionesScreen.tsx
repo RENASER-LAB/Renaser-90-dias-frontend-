@@ -47,7 +47,7 @@ export function MasOpcionesScreen({
       detalle: 'El catálogo vive en Comunidad, con el reproductor y el muro',
       onPress: () => {
         if (!irAPestana('Comunidad')) {
-          avisar('Comunidad', 'Abrí la pestaña Comunidad desde la barra de abajo.');
+          avisar('Comunidad', 'Abre la pestaña Comunidad desde la barra de abajo.');
         }
       },
     },

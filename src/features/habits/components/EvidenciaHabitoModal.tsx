@@ -158,7 +158,7 @@ export function EvidenciaHabitoModal({
       await grabador.stop();
       const uri = grabador.uri;
       if (!uri) {
-        setError('La grabación no dejó ningún archivo. Probá de nuevo.');
+        setError('La grabación no dejó ningún archivo. Inténtalo de nuevo.');
         return;
       }
       setArchivo({

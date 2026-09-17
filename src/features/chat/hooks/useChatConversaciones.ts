@@ -35,7 +35,7 @@ export function useChatConversaciones(actorId: string | null | undefined) {
       );
       setConversations(resumenes.map(r => mapearResumenConversacion(r, actorId, directorio)));
     } catch (e) {
-      setError(mensajeDeError(e, 'No pudimos cargar tus conversaciones. Revisa tu conexión e intentá de nuevo.'));
+      setError(mensajeDeError(e, 'No pudimos cargar tus conversaciones. Revisa tu conexión e inténtalo de nuevo.'));
     } finally {
       setLoading(false);
     }

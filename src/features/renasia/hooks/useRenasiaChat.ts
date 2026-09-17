@@ -178,7 +178,7 @@ export function useRenasiaChat(opciones: OpcionesRenasiaChat): EstadoRenasiaChat
         const esCuota = e instanceof RenasiaCuotaExcedidaError;
         const mensajeError = mensajeDeError(
           e,
-          `No pudimos obtener respuesta de ${nombre}. Revisa tu conexión e intentá de nuevo.`
+          `No pudimos obtener respuesta de ${nombre}. Revisa tu conexión e inténtalo de nuevo.`
         );
         setMensajes(prev =>
           prev.map(m =>

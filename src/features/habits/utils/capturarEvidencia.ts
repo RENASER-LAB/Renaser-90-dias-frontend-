@@ -121,7 +121,7 @@ export async function elegirFotoDeGaleria(): Promise<ArchivoEvidencia | null> {
     const asset = resultado.assets[0];
     return await normalizarFoto(asset, instanteDelExif(asset.exif));
   } catch {
-    Alert.alert('No se pudo procesar la foto', 'Probá con otra imagen.');
+    Alert.alert('No se pudo procesar la foto', 'Prueba con otra imagen.');
     return null;
   }
 }
@@ -144,7 +144,7 @@ export async function tomarFotoConCamara(): Promise<ArchivoEvidencia | null> {
     // app recibió la captura, que acaba de pasar y la app sí puede atestiguar.
     return await normalizarFoto(asset, instanteDelExif(asset.exif) ?? new Date().toISOString());
   } catch {
-    Alert.alert('No se pudo procesar la foto', 'Probá sacarla de nuevo.');
+    Alert.alert('No se pudo procesar la foto', 'Prueba a sacarla de nuevo.');
     return null;
   }
 }

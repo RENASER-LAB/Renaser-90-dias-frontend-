@@ -33,7 +33,7 @@ import { CodigoOtpInput, LARGO_CODIGO } from '../features/auth/components/Codigo
 /**
  * `forgot` → `forgot_otp` → `forgot_new_password` es la recuperación de contraseña dentro de la
  * app (D-102): correo, código de 6 dígitos, contraseña nueva, y de vuelta al login. Reemplaza al
- * `forgot_sent` de antes, que solo decía "revisá tu bandeja" y esperaba un link hacia un
+ * `forgot_sent` de antes, que solo decía "revisa tu bandeja" y esperaba un link hacia un
  * frontend web que no existe.
  */
 type AuthStep =
@@ -1282,7 +1282,7 @@ export default function LoginScreen() {
               <View style={{ alignItems: 'center', gap: 6 }}>
                 <MicroLabel>Código verificado</MicroLabel>
                 <Text style={[t.sectionTitle, { color: c.text, textAlign: 'center', marginTop: 4 }]}>
-                  ELEGÍ TU NUEVA CONTRASEÑA
+                  ELIGE TU NUEVA CONTRASEÑA
                 </Text>
                 <Text style={[t.small, { color: c.textSoft, textAlign: 'center', lineHeight: 19, marginTop: 4 }]}>
                   Mínimo {MIN_CONTRASENA} caracteres. Al guardarla se cierran todas tus sesiones abiertas.

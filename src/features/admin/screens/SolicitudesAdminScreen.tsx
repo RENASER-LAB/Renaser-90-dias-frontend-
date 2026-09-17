@@ -92,7 +92,7 @@ export function SolicitudesAdminScreen({
       avisar('Cuenta aprobada', mensajeDeAltaAprobada(solicitud.fullName, sinGrupo, despues));
       await cargar();
     } catch (e) {
-      avisar('No se pudo aprobar', mensajeDeFallo(e, 'Probá de nuevo.'));
+      avisar('No se pudo aprobar', mensajeDeFallo(e, 'Inténtalo de nuevo.'));
     } finally {
       setTrabajando(null);
     }
@@ -110,7 +110,7 @@ export function SolicitudesAdminScreen({
       await rechazarSolicitud(solicitud.id, 'Rechazada desde el panel de administración');
       await cargar();
     } catch (e) {
-      avisar('No se pudo rechazar', mensajeDeFallo(e, 'Probá de nuevo.'));
+      avisar('No se pudo rechazar', mensajeDeFallo(e, 'Inténtalo de nuevo.'));
     } finally {
       setTrabajando(null);
     }

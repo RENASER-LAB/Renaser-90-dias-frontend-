@@ -38,7 +38,7 @@ export function saludoDeBienvenida(nombre?: string | null): { titulo: string; pa
     parrafos: [
       `Soy ${NOMBRE_ASISTENTE}, la inteligencia de RENASER.`,
       'Una IA creada para ayudarte a verte con mayor claridad, identificar patrones, cuestionar decisiones y transformar la raíz desde donde estás creando tus resultados.',
-      'No está diseñada para decirte qué quieres escuchar.',
+      'No está diseñada para decirte lo que quieres escuchar.',
       'Está diseñada para ayudarte a pensar, decidir y actuar desde una versión más consciente y poderosa de ti.',
     ],
   };
@@ -48,7 +48,7 @@ export function saludoDeBienvenida(nombre?: string | null): { titulo: string; pa
 export const GUIA_PRIMER_POST = {
   titulo: 'Tu primera publicación',
   parrafos: [
-    'Escribe unas líneas contando quién eres y qué venís a cambiar. No tiene que ser perfecto: tiene que ser verdad.',
+    'Escribe unas líneas contando quién eres y qué vienes a cambiar. No tiene que ser perfecto: tiene que ser verdad.',
     'Necesitas sumarle una foto — el Muro pide al menos una por publicación.',
   ],
   botonPrincipal: 'Llevame al Muro',

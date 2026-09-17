@@ -195,7 +195,7 @@ export function FichaInicialScreen({
       if (resultado.pendientes > 0) {
         Alert.alert(
           'No se pudo guardar',
-          'No pudimos guardar tus respuestas de este capítulo. Revisa tu conexión e intentá de nuevo.'
+          'No pudimos guardar tus respuestas de este capítulo. Revisa tu conexión e inténtalo de nuevo.'
         );
         return;
       }

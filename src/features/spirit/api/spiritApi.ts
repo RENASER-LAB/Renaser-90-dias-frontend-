@@ -8,7 +8,7 @@ import { spiritSchemas, validarRespuesta } from './spiritSchemas';
  * ## Por qué este hábito NO se cierra con `POST /habit-tracks/{id}/complete`
  *
  * "Pastilla Renacer" tiene estado propio en el servidor (`registros_espiritu`): qué audio te toca,
- * cuándo se desbloqueó, hasta qué hora podés entregar, y si el día quedó entregado, pendiente o
+ * cuándo se desbloqueó, hasta qué hora puedes entregar, y si el día quedó entregado, pendiente o
  * perdido. Ese estado no vive en el track del día. Por eso la entrega va por `POST
  * /api/v1/spirit-audio/submit`, y es el propio backend el que, con esa misma entrega, completa
  * además el hábito del día (`EspirituService.reflejarEnPastillaRenacer`) — mismo patrón que la

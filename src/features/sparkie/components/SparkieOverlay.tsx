@@ -39,7 +39,7 @@ import { useArranqueGuiado } from '../hooks/useArranqueGuiado';
  * línea fija de "faltan credenciales", así que un arranque que dependiera de él nacería roto.
  *
  * <p><b>Nunca atrapa a nadie.</b> `AGENTS.md` §6 exige que el gesto lateral del sistema cierre el
- * overlay y jamás la app; y no se inventó ninguna regla de "no podés usar la app hasta publicar"
+ * overlay y jamás la app; y no se inventó ninguna regla de "no puedes usar la app hasta publicar"
  * — nadie la dictó. Se puede minimizar y seguir; el acompañamiento vuelve como una burbuja
  * discreta, y reaparece en el próximo arranque mientras el Pacto siga sin firmar.
  */

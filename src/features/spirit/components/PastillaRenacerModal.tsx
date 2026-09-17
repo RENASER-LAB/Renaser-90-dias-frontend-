@@ -399,7 +399,7 @@ export function PastillaRenacerModal({
                     </View>
 
                     <Text style={[t.small, { color: c.textSoft, marginTop: 10 }]}>
-                      Si cerrás, guardamos lo que escribiste y volvés donde estabas.
+                      Si cierras, guardamos lo que escribiste y vuelves donde estabas.
                     </Text>
                   </View>
                 )}

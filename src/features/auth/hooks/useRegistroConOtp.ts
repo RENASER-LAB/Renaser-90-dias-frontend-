@@ -133,7 +133,7 @@ export function useRegistroConOtp() {
       throw conMensaje(error, 'No pudimos verificar tu correo. Intentá de nuevo.');
     }
     if (!disponible) {
-      throw new ApiError(409, 'Ese correo ya tiene una cuenta o una solicitud en curso. Probá iniciando sesión.');
+      throw new ApiError(409, 'Ese correo ya tiene una cuenta o una solicitud en curso. Prueba iniciando sesión.');
     }
     await reenviarCodigo(email);
   }, [reenviarCodigo]);
@@ -163,7 +163,7 @@ export function useRegistroConOtp() {
       setEstadoSolicitud({ status: 'PENDING', rejectionReason: null });
       return id;
     } catch (error) {
-      throw conMensaje(error, 'No pudimos registrar tu solicitud. Revisa tus datos e intentá de nuevo.');
+      throw conMensaje(error, 'No pudimos registrar tu solicitud. Revisa tus datos e inténtalo de nuevo.');
     }
   }, []);
 

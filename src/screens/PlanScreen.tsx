@@ -856,7 +856,7 @@ export default function PlanScreen() {
     if (lineaBase !== undefined && meta !== undefined && lineaBase === meta) {
       Alert.alert(
         'Punto de partida igual a la meta',
-        'Si arrancás justo en tu meta no hay avance que medir. Revisá los dos números.'
+        'Si arrancás justo en tu meta no hay avance que medir. Revisa los dos números.'
       );
       return;
     }
@@ -1271,7 +1271,7 @@ export default function PlanScreen() {
               <Text style={[t.body, { color: c.textSoft }]}>
                 {arranque.estado === 'PENDIENTE_ELEGIR'
                   ? 'Elige en qué día quieres empezar tus 90 días. Hasta entonces no hay plan que organizar.'
-                  : `Empezás el ${formatearFechaLarga(arranque.fechaInicio)}. Desde el ${formatearFechaLarga(diaAnterior(arranque.fechaInicio))} vas a poder organizar los hábitos de tu primer día; hasta entonces no hay nada que hacer acá.`}
+                  : `Empiezas el ${formatearFechaLarga(arranque.fechaInicio)}. Desde el ${formatearFechaLarga(diaAnterior(arranque.fechaInicio))} vas a poder organizar los hábitos de tu primer día; hasta entonces no hay nada que hacer acá.`}
               </Text>
             </View>
           )}
@@ -1629,7 +1629,7 @@ export default function PlanScreen() {
             </Text>
             <Text style={[t.body, { color: c.textSoft }]}>
               Tres niveles encadenados: el objetivo de 90 días manda sobre la semana, y la semana
-              sobre lo que hacés hoy.
+              sobre lo que haces hoy.
             </Text>
           </View>
 

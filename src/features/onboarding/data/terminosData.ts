@@ -61,7 +61,7 @@ export const TERMINOS_CLAUSULAS = [
   },
   {
     num: 16,
-    texto: 'Dispongo de siete (7) días hábiles desde la recepción del kit físico para presentar reclamos respecto al material físico.',
+    texto: 'Dispongo de siete (7) días hábiles desde la recepción del kit Renaser para presentar reclamos respecto al material recibido.',
   },
   {
     num: 17,

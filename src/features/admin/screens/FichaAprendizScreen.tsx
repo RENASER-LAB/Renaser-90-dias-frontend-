@@ -69,7 +69,7 @@ export function FichaAprendizScreen({
       }
       await Linking.openURL(url);
     } catch {
-      avisar('No se pudo abrir', 'Revisá tu conexión e intentá de nuevo.');
+      avisar('No se pudo abrir', 'Revisa tu conexión e inténtalo de nuevo.');
     } finally {
       setAbriendoEvidencia(null);
     }
@@ -88,7 +88,7 @@ export function FichaAprendizScreen({
         );
       }
     } catch {
-      avisar('No se pudo abrir el chat', 'Revisá tu conexión e intentá de nuevo.');
+      avisar('No se pudo abrir el chat', 'Revisa tu conexión e inténtalo de nuevo.');
     } finally {
       setAbriendoChat(false);
     }
@@ -166,7 +166,7 @@ export function FichaAprendizScreen({
               {fallo === 'sin_permiso'
                 ? 'Tu cuenta no puede ver el cumplimiento de esta persona.'
                 : fallo === 'sin_red'
-                  ? 'Sin conexión. Volvé a intentar en un momento.'
+                  ? 'Sin conexión. Vuelve a intentar en un momento.'
                   : 'No se pudo cargar la semana.'}
             </Text>
           ) : null}
@@ -223,7 +223,7 @@ export function FichaAprendizScreen({
 
         {semana && !sinDatos && semana.dias.some(d => d.obligaciones.length > 0) ? (
           <View style={{ gap: 8 }}>
-            <MicroLabel>Elegí un día</MicroLabel>
+            <MicroLabel>Elige un día</MicroLabel>
             <View style={estilos.dias}>
               {semana.dias
                 .filter(d => d.obligaciones.length > 0)

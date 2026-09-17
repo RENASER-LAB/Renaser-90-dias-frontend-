@@ -29,7 +29,7 @@ export function useWallFeed() {
       const pagina = await wallApi.obtenerFeedMuro();
       setPosts(pagina.posts.map(mapearPublicacion));
     } catch (e) {
-      setError(mensajeDeError(e, 'No pudimos cargar el muro. Revisa tu conexión e intentá de nuevo.'));
+      setError(mensajeDeError(e, 'No pudimos cargar el muro. Revisa tu conexión e inténtalo de nuevo.'));
     } finally {
       setLoading(false);
     }
@@ -134,7 +134,7 @@ export function useWallFeed() {
           const urlSubida = await wallApi.solicitarUrlSubidaMuro(foto.mimeType);
           if (wallApi.almacenamientoSinConfigurar(urlSubida.uploadUrl)) {
             throw new Error(
-              'El almacenamiento de fotos (S3) todavía no está configurado en el servidor. Avisale al equipo técnico e intentá de nuevo más tarde.'
+              'El almacenamiento de fotos (S3) todavía no está configurado en el servidor. Avísale al equipo técnico e inténtalo de nuevo más tarde.'
             );
           }
           await wallApi.subirImagenAS3(urlSubida.uploadUrl, foto.uri, foto.mimeType);

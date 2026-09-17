@@ -125,7 +125,7 @@ describe('vencimiento de sesión', () => {
     const vencida = new ApiError(401, 'no autorizado', null, true);
     const credenciales = new ApiError(401, 'no autorizado', null, false);
 
-    expect(mensajeDeError(vencida, 'algo falló')).toBe('Tu sesión venció. Volvé a entrar.');
+    expect(mensajeDeError(vencida, 'algo falló')).toBe('Tu sesión venció. Vuelve a entrar.');
     expect(mensajeDeError(credenciales, 'algo falló')).toBe('Correo o contraseña incorrectos.');
   });
 });

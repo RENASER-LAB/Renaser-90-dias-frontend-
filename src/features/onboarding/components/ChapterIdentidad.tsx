@@ -122,7 +122,7 @@ export function ChapterIdentidad({ data, onChange }: ChapterIdentidadProps) {
         placeholder="Tu nombre y apellidos"
         icon="user"
         autoCapitalize="words"
-        helperText="Como deseas que te identifique tu mentor y el sistema"
+        helperText="Cómo deseas que te identifique tu mentor y el sistema"
       />
 
       {/* Sexo (Masculino / Femenino / Otro) */}

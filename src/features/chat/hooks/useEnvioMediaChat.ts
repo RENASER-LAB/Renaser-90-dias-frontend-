@@ -100,7 +100,7 @@ export function useEnvioMediaChat(conversationId: string | null,
       const uri = grabador.uri;
       const segundos = Math.round(estadoGrabador.durationMillis / 1000);
       if (!uri) {
-        Alert.alert('La grabación no dejó ningún archivo', 'Probá de nuevo.');
+        Alert.alert('La grabación no dejó ningún archivo', 'Inténtalo de nuevo.');
         return;
       }
       // El backend rechaza `mediaDurationSeconds` si no es positivo, así que una nota de menos

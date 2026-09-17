@@ -98,8 +98,8 @@ export function GrupoFormScreen({
 
   const validar = (): boolean => {
     const nuevos: Record<string, string> = {};
-    if (!nombre.trim()) nuevos.nombre = 'Poné un nombre para el grupo.';
-    if (!cohorteId) nuevos.cohorte = 'Elegí la cohorte.';
+    if (!nombre.trim()) nuevos.nombre = 'Pon un nombre para el grupo.';
+    if (!cohorteId) nuevos.cohorte = 'Elige la cohorte.';
     const hayAlguna = Boolean(inicio.trim() || fin.trim());
     if (hayAlguna) {
       if (!esFechaValida(inicio.trim())) nuevos.inicio = 'Formato AAAA-MM-DD, y que la fecha exista.';
@@ -159,7 +159,7 @@ export function GrupoFormScreen({
 
   const crearNuevaCohorte = async () => {
     if (!nuevaCohorte.trim()) {
-      setErrores(e => ({ ...e, cohorte: 'Poné un nombre para la cohorte.' }));
+      setErrores(e => ({ ...e, cohorte: 'Pon un nombre para la cohorte.' }));
       return;
     }
     setCreandoCohorte(true);
@@ -170,7 +170,7 @@ export function GrupoFormScreen({
       setNuevaCohorte('');
       setErrores(e => ({ ...e, cohorte: '' }));
     } catch (e) {
-      avisar('No se pudo crear la cohorte', mensajeDeFallo(e, 'Probá de nuevo.'));
+      avisar('No se pudo crear la cohorte', mensajeDeFallo(e, 'Inténtalo de nuevo.'));
     } finally {
       setCreandoCohorte(false);
     }

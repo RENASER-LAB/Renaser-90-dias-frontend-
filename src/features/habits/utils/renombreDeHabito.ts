@@ -145,7 +145,7 @@ function tieneTituloPropio(titulos: Readonly<Record<string, string>>, habitId: s
  */
 export function errorDeTituloPersonal(valor: string): string | null {
   const recortado = valor.trim();
-  if (recortado.length === 0) return 'Escribí el nombre que le vas a poner.';
+  if (recortado.length === 0) return 'Escribe el nombre que le vas a poner.';
   if (recortado.length > MAXIMO_TITULO_PERSONAL) {
     return `El nombre no puede pasar de ${MAXIMO_TITULO_PERSONAL} caracteres.`;
   }
@@ -155,7 +155,7 @@ export function errorDeTituloPersonal(valor: string): string | null {
 /** `null` = el motivo sirve. Mismo criterio y mismos límites que `errorDeTituloPersonal`. */
 export function errorDeMotivo(valor: string): string | null {
   const recortado = valor.trim();
-  if (recortado.length === 0) return 'Contanos en una línea por qué te queda mejor así.';
+  if (recortado.length === 0) return 'Cuéntanos en una línea por qué te queda mejor así.';
   if (recortado.length > MAXIMO_MOTIVO) {
     return `El motivo no puede pasar de ${MAXIMO_MOTIVO} caracteres.`;
   }

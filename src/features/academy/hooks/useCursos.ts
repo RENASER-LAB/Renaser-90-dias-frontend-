@@ -57,7 +57,7 @@ export function useCursos() {
       );
       setCourses(catalogoCompleto);
     } catch (e) {
-      setError(mensajeDeError(e, 'No pudimos cargar los cursos. Revisa tu conexión e intentá de nuevo.'));
+      setError(mensajeDeError(e, 'No pudimos cargar los cursos. Revisa tu conexión e inténtalo de nuevo.'));
     } finally {
       setLoading(false);
     }

@@ -58,7 +58,7 @@ export async function elegirYNormalizarFotoMuro(): Promise<FotoMuroNormalizada |
   try {
     return await normalizarFoto(resultado.assets[0]);
   } catch {
-    Alert.alert('No se pudo procesar la foto', 'Probá con otra imagen, o intentá de nuevo en un momento.');
+    Alert.alert('No se pudo procesar la foto', 'Prueba con otra imagen, o inténtalo de nuevo en un momento.');
     return null;
   }
 }

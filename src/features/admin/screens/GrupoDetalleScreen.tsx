@@ -127,7 +127,7 @@ export function GrupoDetalleScreen({
       await cargar();
       setEligiendo(null);
     } catch (e) {
-      avisar(queFalla, mensajeDeFallo(e, 'Probá de nuevo en un momento.'));
+      avisar(queFalla, mensajeDeFallo(e, 'Inténtalo de nuevo en un momento.'));
     } finally {
       setTrabajando(false);
     }
@@ -153,8 +153,8 @@ export function GrupoDetalleScreen({
         mensajeDeFallo(
           e,
           tipo === 'mentor'
-            ? 'No pudimos traer la lista de mentores. Probá de nuevo.'
-            : 'No pudimos traer la lista de aprendices. Probá de nuevo.',
+            ? 'No pudimos traer la lista de mentores. Inténtalo de nuevo.'
+            : 'No pudimos traer la lista de aprendices. Inténtalo de nuevo.',
         ),
       );
     } finally {
@@ -220,7 +220,7 @@ export function GrupoDetalleScreen({
               ) : null}
               {grupo.status === 'PROGRAMADO' ? (
                 <Text style={[t.body, { color: c.textSoft, fontSize: 13, lineHeight: 18 }]}>
-                  Todavía no arrancó. Podés armarlo ahora: sus integrantes no tendrán acceso ni chat
+                  Todavía no arrancó. Puedes armarlo ahora: sus integrantes no tendrán acceso ni chat
                   hasta el día de comienzo.
                 </Text>
               ) : null}
@@ -322,7 +322,7 @@ export function GrupoDetalleScreen({
             {eligiendo ? (
               <View style={{ gap: 10 }}>
                 <MicroLabel>
-                  {eligiendo === 'mentor' ? 'ELEGÍ UN MENTOR' : 'ELEGÍ UN APRENDIZ'}
+                  {eligiendo === 'mentor' ? 'ELIGE UN MENTOR' : 'ELIGE UN APRENDIZ'}
                 </MicroLabel>
                 {/* Buscador solo para aprendices: los mentores activos son un puñado y caben en
                     pantalla, mientras que el padrón de aprendices crece con cada cohorte. Un campo

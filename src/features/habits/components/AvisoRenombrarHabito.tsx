@@ -77,7 +77,7 @@ export function AvisoRenombrarHabito({
     >
       <Aparicion desplazamiento={12}>
         <View
-          accessibilityLabel={`Podés cambiarle el nombre a ${tituloHabito}`}
+          accessibilityLabel={`Puedes cambiarle el nombre a ${tituloHabito}`}
           style={[styles.tarjeta, { borderColor: c.borderStrong }]}
         >
           {/* Capa de fondo, aparte del contenido: la opacidad vive acá para que el texto de
@@ -91,7 +91,7 @@ export function AvisoRenombrarHabito({
                 {tituloHabito}
               </Text>
               <Text style={[t.small, { color: c.text, marginTop: 3 }]}>
-                Si no te cae bien, podés ponerle el nombre que sí vayas a hacer.
+                Si no te cae bien, puedes ponerle el nombre que sí vayas a hacer.
               </Text>
             </View>
             <Pressable

@@ -97,7 +97,7 @@ export function ActivarProgramaScreen({ onActivated }: ActivarProgramaScreenProp
       await onboardingApi.activarPrograma({ startDate: seleccionada });
       onActivated();
     } catch (e) {
-      setError(mensajeDeError(e, 'No pudimos activar tu programa. Revisa tu conexión e intentá de nuevo.'));
+      setError(mensajeDeError(e, 'No pudimos activar tu programa. Revisa tu conexión e inténtalo de nuevo.'));
     } finally {
       setConfirmando(false);
     }
@@ -140,12 +140,12 @@ export function ActivarProgramaScreen({ onActivated }: ActivarProgramaScreenProp
             UN ÚLTIMO PASO
           </Text>
           <Text style={[t.screenTitle, { color: c.goldInk, fontSize: 22, fontFamily: 'Jost_700Bold', letterSpacing: 0.5, marginTop: 4, textAlign: 'center' }]}>
-            ELEGÍ TU DÍA 1
+            ELIGE TU DÍA 1
           </Text>
           <View style={[styles.goldDivider, { backgroundColor: c.gold }]} />
           <Text style={[t.body, { color: c.textSoft, fontSize: 14, lineHeight: 21, textAlign: 'center', marginTop: 12 }]}>
-            Tu programa de 90 días arranca el día que elijas. Nunca puede ser hoy: así tienes tiempo
-            de programar tus hábitos antes de que empiece a correr la cuenta.
+            Tu programa de 90 días arranca el día que elijas. No puede ser hoy, para que puedas
+            planificarte y dejar listos tus hábitos antes de que empiece a correr la cuenta.
           </Text>
         </View>
 
