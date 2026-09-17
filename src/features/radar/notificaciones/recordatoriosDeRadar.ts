@@ -106,12 +106,23 @@ export async function programarRecordatoriosDeRadar(): Promise<boolean> {
         content: {
           title: `Código Renaser · ${horaEnPunto(hora)}`,
           body: '¿Dónde estás ahora mismo? Cinco preguntas, un minuto.',
-          ...(Platform.OS === 'android' ? { channelId: CANAL_ANDROID } : {}),
         },
         trigger: {
           type: N.SchedulableTriggerInputTypes.DAILY,
           hour: hora,
           minute: MINUTO_DEL_AVISO,
+          // BUG ENCONTRADO 2026-09-17: esto estaba en `content`, donde `expo-notifications` lo
+          // ignora — `channelId` es un campo del DISPARADOR (`DailyTriggerInput`), no del
+          // contenido. Con eso el canal "Código Renaser" que crea `asegurarCanal()` quedaba
+          // creado y sin usar: los doce avisos caían en el canal de reserva de la librería
+          // (`expo_notifications_fallback_notification_channel`). Seguían sonando —ese canal se
+          // crea con importancia alta— pero la persona no podía silenciarlos ni dejarlos aparte
+          // en los ajustes de Android, y si silenciaba ese canal genérico se le apagaban de una
+          // vez TODOS los avisos de la app. Entraba por un `...spread`, que es justamente la
+          // forma en que TypeScript no comprueba las propiedades de más: por eso `tsc` nunca dijo
+          // nada. Va sin condicionar por plataforma, igual que en hábitos: en iOS el disparador
+          // diario simplemente no mira este campo.
+          channelId: CANAL_ANDROID,
         },
       });
     }
