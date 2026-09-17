@@ -286,6 +286,9 @@ export function mapearResumenConversacion(
   return {
     id: resumen.conversation.id,
     type: tipoDePantalla,
+    /* Se conserva tal cual viene, sin resolverlo a un nombre: `chat` no conoce `community`. Quien
+       necesite el nombre del grupo lo cruza contra `/me/cells` (D-142). */
+    celulaId: resumen.conversation.celulaId,
     title: construirTitulo(tipoChat, resumen.conversation.nombre, otro),
     subtitle: construirSubtitulo(tipoChat, otro),
     avatar: AVATAR_POR_TIPO[tipoChat],

@@ -106,6 +106,25 @@ export interface CellMember {
   isSelf: boolean;
 }
 
+/**
+ * Uno de los grupos del aprendiz, tal como lo devuelve `GET /api/v1/me/cells` (D-142).
+ *
+ * Misma forma que la rama asignada de {@link MiCelulaInfo} pero sin el discriminante: acá no hace
+ * falta, porque "no tengo grupo" se expresa con una lista vacía y no con un objeto aparte.
+ */
+export interface CelulaDelAprendiz {
+  cellId: string;
+  cellName: string;
+  cohortName: string;
+  cohortStatus: string;
+  mentorName: string | null;
+  mentorAvatarUrl: string | null;
+  memberCount: number;
+  totalCellsInCohort: number;
+  videoCallUrl: string | null;
+  nextSessionAt: string | null;
+}
+
 /** `MiCelulaResponse` del backend, ya normalizado con el discriminante `assigned` explícito
  * (el backend no manda `assigned:true`, lo agrega `celulaApi.obtenerMiCelula` al validar). */
 export type MiCelulaInfo =

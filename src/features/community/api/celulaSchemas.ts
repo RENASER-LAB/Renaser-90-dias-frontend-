@@ -41,6 +41,17 @@ const miCelulaAsignadaSchema = z
  */
 export const miCelulaResponseSchema = z.union([miCelulaSinAsignarSchema, miCelulaAsignadaSchema]);
 
+/**
+ * `GET /api/v1/me/cells` (D-142) — los grupos del aprendiz, el principal primero. Cada elemento
+ * tiene la MISMA forma que la respuesta con célula de `/me/cell`, así que se reusa ese esquema en
+ * vez de escribir uno gemelo que podría desincronizarse.
+ *
+ * Sin grupos responde `{"cells": []}`: no tener grupo es un estado válido, no un error.
+ */
+export const misCelulasResponseSchema = z
+  .object({ cells: z.array(miCelulaAsignadaSchema) })
+  .passthrough();
+
 export const cellMemberSchema = z
   .object({
     traineeId: z.string(),

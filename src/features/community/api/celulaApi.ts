@@ -1,8 +1,9 @@
 import { ApiError, apiFetch } from '../../../services/http/apiClient';
-import type { CellMember, MiCelulaInfo } from '../types/community.types';
+import type { CellMember, CelulaDelAprendiz, MiCelulaInfo } from '../types/community.types';
 import {
   cellMembersResponseSchema,
   miCelulaResponseSchema,
+  misCelulasResponseSchema,
   validarRespuesta,
 } from './celulaSchemas';
 
@@ -59,6 +60,43 @@ export async function obtenerMisCompaneros(): Promise<CellMember[]> {
     cellMembersResponseSchema,
     r,
     'GET /api/v1/me/cell/members'
+  );
+  return validado.members;
+}
+
+/**
+ * `GET /api/v1/me/cells` — TODOS los grupos del aprendiz, el principal primero (D-142).
+ *
+ * Distinto de `obtenerMiCelula`, que responde por uno solo. Existe porque desde que alguien puede
+ * pertenecer a varios grupos, preguntarle "¿cuál es tu grupo?" al backend y usar esa respuesta para
+ * pintar la info de cualquiera de ellos mostraba siempre el mismo — el principal.
+ *
+ * Sin grupos devuelve `[]`, que es un estado válido: no se distingue de un error porque el backend
+ * responde 200 igual.
+ */
+export async function obtenerMisCelulas(): Promise<CelulaDelAprendiz[]> {
+  const r = await apiFetch<unknown>('/api/v1/me/cells');
+  const validado = validarRespuesta<{ cells: CelulaDelAprendiz[] }>(
+    misCelulasResponseSchema,
+    r,
+    'GET /api/v1/me/cells'
+  );
+  return validado.cells;
+}
+
+/**
+ * `GET /api/v1/me/cells/{cellId}/members` — los integrantes de UNO de sus grupos (D-142).
+ *
+ * El backend responde 403 si el aprendiz no pertenece a ese grupo; no se traduce a lista vacía acá,
+ * porque una lista vacía es indistinguible de "el grupo está vacío" y quien llame no podría
+ * distinguir un grupo ajeno de uno propio recién creado.
+ */
+export async function obtenerIntegrantesDeGrupo(cellId: string): Promise<CellMember[]> {
+  const r = await apiFetch<unknown>(`/api/v1/me/cells/${encodeURIComponent(cellId)}/members`);
+  const validado = validarRespuesta<{ members: CellMember[] }>(
+    cellMembersResponseSchema,
+    r,
+    'GET /api/v1/me/cells/{cellId}/members'
   );
   return validado.members;
 }

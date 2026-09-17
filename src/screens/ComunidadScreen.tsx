@@ -34,7 +34,9 @@ import { GoldButton } from '../components/GoldButton';
 import { useAuth } from '../features/auth/context/AuthContext';
 import { useWallFeed } from '../features/community/hooks/useWallFeed';
 import { useWallReactions } from '../features/community/hooks/useWallReactions';
+import { useGruposDelAprendiz, useIntegrantesDelGrupo } from '../features/community/hooks/useGruposDelAprendiz';
 import { useMiCelula } from '../features/community/hooks/useMiCelula';
+import { nombreVisibleDeGrupo } from '../features/community/utils/nombreDeGrupo';
 import { useCategoriasMuro } from '../features/community/hooks/useCategoriasMuro';
 import { PodioRanking, EntradaEscalonada } from '../features/community/components/PodioRanking';
 import * as wallApi from '../features/community/api/wallApi';
@@ -249,6 +251,15 @@ export interface ChatMessage {
 export interface ChatConversation {
   id: string;
   type: 'celula' | 'direct' | 'global';
+  /**
+   * El grupo al que pertenece esta conversación, cuando es de grupo (D-142).
+   *
+   * El backend siempre lo mandó (`ConversacionResponse.celulaId`) y el mapper lo tiraba. Sin él, la
+   * pantalla de info no tenía forma de saber QUÉ grupo estaba abierto y se armaba con `/me/cell`,
+   * que responde siempre por el principal: abrir la info de cualquier grupo mostraba los
+   * integrantes del general.
+   */
+  celulaId: string | null;
   title: string;
   subtitle: string;
   avatar: string;
@@ -411,6 +422,10 @@ export default function ComunidadScreen() {
     loading: celulaCargando,
     error: celulaError,
   } = useMiCelula();
+  /* Todos los grupos de la persona, para poder responder por el que tenga abierto y no siempre por
+     el principal (D-142). `useMiCelula` sigue alimentando la sección MENTOR / TRIBU de la pantalla
+     principal, que habla de UN grupo y para eso es correcto. */
+  const { grupos } = useGruposDelAprendiz();
   const tieneMentor = miCelula?.assigned === true && !!miCelula.mentorName;
   const mentorTitulo = celulaCargando
     ? 'Cargando tu mentor...'
@@ -430,23 +445,71 @@ export default function ComunidadScreen() {
   const tribuVisibles = companerosCelula.slice(0, TRIBU_AVATARES_VISIBLES);
   const tribuRestantes = Math.max(companerosCelula.length - TRIBU_AVATARES_VISIBLES, 0);
 
+  /* Estas dos viven acá arriba, y no con el resto del estado de navegación, porque el bloque de
+     abajo las lee: `const` no se puede usar antes de su declaración. */
+  const [activeChat, setActiveChat] = useState<ChatConversation | null>(null);
+  const [groupInfoVisible, setGroupInfoVisible] = useState(false);
+
   /**
-   * Los integrantes reales del grupo para la pantalla "INFO DEL GRUPO", que antes mostraba una
-   * lista inventada (Sebastián Arango, María Alejandra…). El mentor va primero —sin botón de
-   * chatear, porque `/me/cell` no trae su id de usuario, y sin id no hay DM—; después los
-   * compañeros de `/me/cell/members`, que sí lo traen (`traineeId`).
+   * El grupo cuya info está abierta — el de la conversación, no "mi grupo" (D-142).
+   *
+   * BUG ENCONTRADO 2026-09-17: la pantalla "INFO DEL GRUPO" se armaba entera con `useMiCelula`,
+   * que responde por el grupo que nombra `participantes_programa.celula_id`. Esa columna es UNA y
+   * el alta adicional no la mueve (D-139), así que abrir la info de CUALQUIER grupo mostraba el
+   * nombre, el mentor y los integrantes del principal —el "general"—. El chat de al lado sí traía
+   * a la gente correcta, porque se reconcilia contra el historial de asignaciones: dos fuentes
+   * distintas en la misma pantalla, y la de la derecha mentía.
+   *
+   * Ahora sale de `/me/cells`, cruzando por el `celulaId` que la conversación siempre trajo y el
+   * mapeador tiraba. Si no se puede resolver —conversación que no es de grupo, o lista todavía
+   * cargando— se cae a `miCelula`, que es lo que había y sigue siendo correcto cuando hay uno solo.
+   */
+  /**
+   * El nombre con el que se muestra una conversación.
+   *
+   * Los chats de grupo llegaban todos titulados `'Mi Grupo'`: el módulo `chat` del backend solo
+   * conoce el `celulaId` y no el nombre del grupo, así que el mapeador le pone ese texto fijo. Con
+   * un grupo por persona no se notaba; con varios, la bandeja mostraba dos filas idénticas y no
+   * había forma de saber cuál era cuál. Acá se resuelve contra `/me/cells`, que sí trae el nombre.
+   *
+   * Si no se puede resolver se deja el título que vino: es genérico, pero nunca es el de otro grupo.
+   */
+  const nombreVisibleDeConversacion = useCallback(
+    (conversacion: ChatConversation) => nombreVisibleDeGrupo(conversacion, grupos),
+    [grupos]
+  );
+
+  const celulaIdAbierto = activeChat?.celulaId ?? null;
+  const grupoAbierto = useMemo(
+    () => grupos.find(g => g.cellId === celulaIdAbierto) ?? null,
+    [grupos, celulaIdAbierto]
+  );
+  /* Los integrantes se piden recién al abrir la info, no al abrir el chat: mientras solo estás
+     leyendo mensajes, esa lista no se muestra y pedirla sería una llamada por cada chat que abras. */
+  const { integrantes: integrantesDelGrupoAbierto, cargando: integrantesCargando, error: integrantesError } =
+    useIntegrantesDelGrupo(groupInfoVisible ? celulaIdAbierto : null);
+
+  /**
+   * Las filas de la lista de integrantes. El mentor va primero —sin botón de chatear, porque el
+   * grupo no trae su id de usuario, y sin id no hay DM—; después los compañeros, que sí lo traen.
    */
   const integrantesDelGrupo = useMemo(() => {
     const filas: { id: string; nombre: string; avatarUrl: string | null; badge: string | null; chateable: boolean }[] = [];
-    if (miCelula?.assigned === true && miCelula.mentorName) {
-      filas.push({ id: 'mentor', nombre: miCelula.mentorName, avatarUrl: miCelula.mentorAvatarUrl, badge: 'MENTOR', chateable: false });
+    const mentorNombre = grupoAbierto ? grupoAbierto.mentorName : (miCelula?.assigned === true ? miCelula.mentorName : null);
+    const mentorAvatar = grupoAbierto ? grupoAbierto.mentorAvatarUrl : (miCelula?.assigned === true ? miCelula.mentorAvatarUrl : null);
+    if (mentorNombre) {
+      filas.push({ id: 'mentor', nombre: mentorNombre, avatarUrl: mentorAvatar, badge: 'MENTOR', chateable: false });
     }
-    for (const m of companerosCelula) {
+    for (const m of grupoAbierto ? integrantesDelGrupoAbierto : companerosCelula) {
       filas.push({ id: m.traineeId, nombre: m.fullName, avatarUrl: m.avatarUrl, badge: m.isSelf ? 'TÚ' : null, chateable: !m.isSelf });
     }
     return filas;
-  }, [miCelula, companerosCelula]);
-  const nombreDelGrupo = miCelula?.assigned === true ? miCelula.cellName : 'Tu grupo';
+  }, [grupoAbierto, integrantesDelGrupoAbierto, miCelula, companerosCelula]);
+  const nombreDelGrupo = grupoAbierto
+    ? grupoAbierto.cellName
+    : miCelula?.assigned === true
+      ? miCelula.cellName
+      : 'Tu grupo';
 
   /**
    * La firma que acompaña al nombre en el compositor del Muro.
@@ -467,10 +530,10 @@ export default function ComunidadScreen() {
   ]
     .filter(Boolean)
     .join(' · ');
-  const subtituloDelGrupo =
-    miCelula?.assigned === true
-      ? `${miCelula.memberCount} ${miCelula.memberCount === 1 ? 'integrante' : 'integrantes'} · Cohorte ${miCelula.cohortName}`
-      : null;
+  const grupoDelSubtitulo = grupoAbierto ?? (miCelula?.assigned === true ? miCelula : null);
+  const subtituloDelGrupo = grupoDelSubtitulo
+    ? `${grupoDelSubtitulo.memberCount} ${grupoDelSubtitulo.memberCount === 1 ? 'integrante' : 'integrantes'} · Cohorte ${grupoDelSubtitulo.cohortName}`
+    : null;
 
   // =========================================================================
   // ESTADOS DE NAVEGACIÓN
@@ -534,8 +597,6 @@ export default function ComunidadScreen() {
     enviarMensajeTexto: enviarMensajeChatRemoto,
     compartirPublicacionDelMuro: compartirPublicacionEnChat,
   } = useChatConversaciones(user?.id ?? null);
-  const [activeChat, setActiveChat] = useState<ChatConversation | null>(null);
-  const [groupInfoVisible, setGroupInfoVisible] = useState(false);
   const [selectedMemberProfile, setSelectedMemberProfile] = useState<GroupMember | null>(null);
 
   /**
@@ -1381,6 +1442,8 @@ export default function ComunidadScreen() {
       const newConv: ChatConversation = {
         id: `conv_${member.id}`,
         type: 'direct',
+        // Un 1 a 1 no pertenece a ningun grupo.
+        celulaId: null,
         title: member.name,
         subtitle: `${member.role} · 1 a 1`,
         avatar: member.avatar,
@@ -3183,7 +3246,7 @@ export default function ComunidadScreen() {
 
                     <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                        <Text numberOfLines={1} style={[t.cardTitle, { color: c.textStrong, flex: 1 }]}>{conv.title}</Text>
+                        <Text numberOfLines={1} style={[t.cardTitle, { color: c.textStrong, flex: 1 }]}>{nombreVisibleDeConversacion(conv)}</Text>
                         <Text style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>{conv.lastTime}</Text>
                       </View>
                       <Text numberOfLines={1} style={[t.body, { color: c.textSoft }]}>
@@ -3245,7 +3308,7 @@ export default function ComunidadScreen() {
               </View>
               <View style={{ flex: 1, gap: 2 }}>
                 <Text numberOfLines={1} style={[t.cardTitle, { color: c.textStrong }]}>
-                  {activeChat.title}
+                  {nombreVisibleDeConversacion(activeChat)}
                 </Text>
                 {/*
                   El "● En línea" de un 1 a 1 ahora es un dato, no un adorno: sale de
@@ -3258,17 +3321,21 @@ export default function ComunidadScreen() {
                   base desde la migración V1 y no la escribe nadie. Se muestra el subtítulo real
                   de la conversación ("Mentor · 1 a 1"), que sí es cierto.
 
-                  PENDIENTE: la rama del grupo sigue con `"16 miembros"` fijo. Se probó sacarlo
-                  de `useMiCelula` y se dio marcha atrás: ese hook responde "¿de qué grupo soy
-                  MIEMBRO?" y a un mentor —que acompaña varios— le devuelve `assigned:false`, así
-                  que habría puesto el número de otro grupo. El arreglo de verdad es que el
-                  número venga de la conversación abierta (`membersCount`, que hoy no escribe
-                  ningún mapeador). Cambiar una cifra fija por una variable y equivocada no es un
-                  arreglo, así que se deja hasta entonces.
+                  RESUELTO 2026-09-17 (D-142). Acá decía `"16 miembros"` FIJO, y la nota anterior
+                  explicaba por qué el intento previo se había revertido: se probó sacarlo de
+                  `useMiCelula`, que responde "¿de qué grupo soy MIEMBRO?" y a un mentor le
+                  contesta `assigned:false`, así que habría puesto el número de otro grupo. El
+                  diagnóstico era correcto y por eso el arreglo no fue insistir con ese hook: el
+                  número sale ahora del grupo de ESTA conversación (`/me/cells` cruzado por
+                  `celulaId`), que es una lectura que sí incluye a los mentores en los grupos que
+                  acompañan. Si el grupo no se puede resolver todavía —lista cargando— no se
+                  inventa una cifra: se muestra solo la invitación a abrir la info.
                 */}
                 {activeChat.type === 'celula' ? (
                   <Text numberOfLines={1} style={[t.small, { color: c.textSoft, fontSize: 12.5 }]}>
-                    16 miembros · Toca para ver info ℹ️
+                    {grupoAbierto
+                      ? `${grupoAbierto.memberCount} ${grupoAbierto.memberCount === 1 ? 'integrante' : 'integrantes'} · Toca para ver info ℹ️`
+                      : 'Toca para ver info ℹ️'}
                   </Text>
                 ) : participantesEnLinea.size > 0 ? (
                   <Text numberOfLines={1} style={[t.small, { color: c.success, fontSize: 12.5 }]}>
@@ -3577,9 +3644,20 @@ export default function ComunidadScreen() {
               INTEGRANTES DEL GRUPO ({integrantesDelGrupo.length})
             </Text>
 
-            {integrantesDelGrupo.length === 0 && (
+            {/* Los tres estados se distinguen a propósito: "cargando", "falló" y "no hay nadie" son
+                cosas distintas, y mostrar el último cuando en realidad se cayó la red le hace creer
+                a la persona que su grupo está vacío. */}
+            {integrantesCargando && integrantesDelGrupo.length === 0 && (
+              <Text style={[t.body, { color: c.textSoft }]}>Cargando integrantes…</Text>
+            )}
+
+            {!integrantesCargando && integrantesError && (
+              <Text style={[t.body, { color: c.danger }]}>{integrantesError}</Text>
+            )}
+
+            {!integrantesCargando && !integrantesError && integrantesDelGrupo.length === 0 && (
               <Text style={[t.body, { color: c.textSoft }]}>
-                Todavía no hay integrantes en tu grupo.
+                Todavía no hay integrantes en este grupo.
               </Text>
             )}
 
