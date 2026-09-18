@@ -285,7 +285,10 @@ export function CodigoRenaserModal({
             />
             <Text style={[t.micro, { color: c.micro, fontSize: 11, textAlign: 'center' }]}>
               {obligatorio
-                ? `Se pide una vez por hora durante los primeros ${CONFIG_RADAR.ultimoDia} días.`
+                /* Texto pedido por el dueño (2026-09-18). Antes decía "Se pide una vez por hora
+                   durante los primeros N días": describía el sistema en pasiva —quién pide, a
+                   quién— en vez de decirle a la persona qué tiene que hacer. */
+                ? `Completa las preguntas cada hora. Durante los primeros ${CONFIG_RADAR.ultimoDia} días.`
                 : 'Puedes cerrarlo; vuelve a ofrecerse la hora que viene.'}
             </Text>
           </View>

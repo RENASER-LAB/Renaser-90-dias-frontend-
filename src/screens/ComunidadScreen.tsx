@@ -38,6 +38,7 @@ import { useWallFeed } from '../features/community/hooks/useWallFeed';
 import { useWallReactions } from '../features/community/hooks/useWallReactions';
 import { useGruposDelAprendiz, useIntegrantesDelGrupo } from '../features/community/hooks/useGruposDelAprendiz';
 import { useMiCelula } from '../features/community/hooks/useMiCelula';
+import { TextoConEnlaces } from '../features/academy/components/TextoConEnlaces';
 import { estaCercaDelFinal } from '../features/community/utils/cercaDelFinal';
 import { nombreVisibleDeGrupo } from '../features/community/utils/nombreDeGrupo';
 import { useCategoriasMuro } from '../features/community/hooks/useCategoriasMuro';
@@ -2903,10 +2904,13 @@ export default function ComunidadScreen() {
             <Text style={[t.small, { color: c.goldInk, marginTop: 6 }]}>
               {leccionMostrada.meta}
             </Text>
+            {/* Con los enlaces tocables: el cuerpo de una lección puede traer el link de un
+                formulario, y como texto plano no había forma de abrirlo desde un teléfono. */}
             {!!leccionMostrada.desc && (
-              <Text style={[t.body, { color: c.textSoft, marginTop: 10 }]}>
-                {leccionMostrada.desc}
-              </Text>
+              <TextoConEnlaces
+                texto={leccionMostrada.desc}
+                style={[t.body, { color: c.textSoft, marginTop: 10 }]}
+              />
             )}
 
             {/* Reproductor — nuevo, el diseño original no tenía ninguno (ver
