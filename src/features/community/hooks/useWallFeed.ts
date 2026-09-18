@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { CommentItem, PostItem } from '../../../screens/ComunidadScreen';
 import { mensajeDeError } from '../../../services/http/apiClient';
@@ -21,6 +21,18 @@ export function useWallFeed() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [comentariosCargados, setComentariosCargados] = useState<Record<string, boolean>>({});
+  /**
+   * El cursor de la SIGUIENTE página, o `null` cuando ya no hay más.
+   *
+   * `GET /api/v1/wall` viene paginado por cursor desde siempre —`wallFeedPageSchema` valida
+   * `nextCursor`— y este hook lo ignoraba: pedía la primera página y ahí se quedaba. En un muro con
+   * cien publicaciones eso son dos cosas a la vez: una lista incompleta, y todas las imágenes de
+   * esa primera página cargando de golpe.
+   */
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [cargandoMas, setCargandoMas] = useState(false);
+  /** Evita que dos disparos del scroll pidan la misma página dos veces. */
+  const pidiendoMas = useRef(false);
 
   const recargar = useCallback(async () => {
     setLoading(true);
@@ -28,12 +40,47 @@ export function useWallFeed() {
     try {
       const pagina = await wallApi.obtenerFeedMuro();
       setPosts(pagina.posts.map(mapearPublicacion));
+      setCursor(pagina.nextCursor);
     } catch (e) {
       setError(mensajeDeError(e, 'No pudimos cargar el muro. Revisa tu conexión e inténtalo de nuevo.'));
     } finally {
       setLoading(false);
     }
   }, []);
+
+  /**
+   * Trae la página siguiente y la agrega al final.
+   *
+   * **El guardia de `pidiendoMas` no es opcional.** El evento de scroll se dispara muchas veces por
+   * segundo mientras el dedo se mueve, y `cargandoMas` es estado de React: no se actualiza hasta el
+   * próximo render, así que dos disparos seguidos lo leerían todavía en `false` y pedirían la misma
+   * página dos veces. El `ref` cambia en el acto.
+   *
+   * **Se descartan los repetidos por id.** Si alguien publica entre una página y la siguiente, el
+   * cursor puede devolver una publicación que ya está arriba; sin este filtro React avisaría de
+   * claves duplicadas y la misma tarjeta aparecería dos veces.
+   */
+  const cargarMas = useCallback(async () => {
+    if (pidiendoMas.current || cursor === null) return;
+    pidiendoMas.current = true;
+    setCargandoMas(true);
+    try {
+      const pagina = await wallApi.obtenerFeedMuro(cursor);
+      setPosts(prev => {
+        const yaEstan = new Set(prev.map(p => p.id));
+        const nuevos = pagina.posts.map(mapearPublicacion).filter(p => !yaEstan.has(p.id));
+        return [...prev, ...nuevos];
+      });
+      setCursor(pagina.nextCursor);
+    } catch {
+      /* Silencioso a propósito: seguir bajando no es una acción que la persona pidió con un botón,
+         así que fallar no debe interrumpirla con una alerta. El cursor no se toca, de modo que el
+         próximo tirón hacia abajo lo reintenta solo. */
+    } finally {
+      pidiendoMas.current = false;
+      setCargandoMas(false);
+    }
+  }, [cursor]);
 
   useEffect(() => {
     void recargar();
@@ -208,5 +255,9 @@ export function useWallFeed() {
     cargarComentarios,
     agregarComentario,
     publicarOptimista,
+    cargarMas,
+    cargandoMas,
+    /** `false` cuando el servidor ya no tiene más páginas: es lo que distingue "se acabó" de "todavía no pedí". */
+    hayMas: cursor !== null,
   };
 }

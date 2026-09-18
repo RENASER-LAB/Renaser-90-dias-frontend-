@@ -11,6 +11,8 @@ import {
   Share,
   KeyboardAvoidingView,
 } from 'react-native';
+// Solo tipos del evento de scroll: `import type` se borra al compilar y no agrega nada al bundle.
+import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import { Alert } from '../components/Alerta';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -36,6 +38,7 @@ import { useWallFeed } from '../features/community/hooks/useWallFeed';
 import { useWallReactions } from '../features/community/hooks/useWallReactions';
 import { useGruposDelAprendiz, useIntegrantesDelGrupo } from '../features/community/hooks/useGruposDelAprendiz';
 import { useMiCelula } from '../features/community/hooks/useMiCelula';
+import { estaCercaDelFinal } from '../features/community/utils/cercaDelFinal';
 import { nombreVisibleDeGrupo } from '../features/community/utils/nombreDeGrupo';
 import { useCategoriasMuro } from '../features/community/hooks/useCategoriasMuro';
 import { PodioRanking, EntradaEscalonada } from '../features/community/components/PodioRanking';
@@ -646,8 +649,33 @@ export default function ComunidadScreen() {
     cargarComentarios,
     agregarComentario: agregarComentarioRemoto,
     publicarOptimista,
+    cargarMas: cargarMasPublicaciones,
+    cargandoMas: muroCargandoMas,
+    hayMas: hayMasPublicaciones,
   } = useWallFeed();
   const [expandedPosts, setExpandedPosts] = useState<Record<string, boolean>>({});
+
+  /**
+   * Lazy loading del Muro: la página siguiente se pide al acercarse al final.
+   *
+   * Solo cuando el Muro es la sección activa — este `ScrollView` también contiene Cursos y
+   * Ranking, y bajar ahí no tiene por qué traer publicaciones.
+   *
+   * Es un `ScrollView` con `.map` y no una `FlatList`, que sería lo natural para una lista larga.
+   * Convertirlo es un cambio grande y arriesgado —esta pantalla mete varias secciones dentro del
+   * mismo contenedor— y no hacía falta para lo que se pidió: `estaCercaDelFinal` da el mismo
+   * disparo que `onEndReached` sin tocar la estructura. Queda anotado como el siguiente paso si el
+   * muro llega a tener miles de publicaciones, que es cuando la virtualización empieza a pagar.
+   */
+  const alDesplazarElMuro = useCallback(
+    (evento: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (seccionActiva !== 'muro' || !hayMasPublicaciones) return;
+      if (estaCercaDelFinal(evento.nativeEvent)) {
+        void cargarMasPublicaciones();
+      }
+    },
+    [seccionActiva, hayMasPublicaciones, cargarMasPublicaciones]
+  );
   const [postOffsets, setPostOffsets] = useState<Record<string, number>>({});
   const [publicacionPedida, setPublicacionPedida] = useState<string | null>(null);
   const [publicacionDestacada, setPublicacionDestacada] = useState<string | null>(null);
@@ -1913,6 +1941,10 @@ export default function ComunidadScreen() {
         <ScrollView
           keyboardShouldPersistTaps="handled"
           ref={muroScrollRef}
+          onScroll={alDesplazarElMuro}
+          /* 16 ms = una vez por cuadro. Con el valor por omisión el evento llega tan espaciado que
+             un desplazamiento rápido puede saltarse la zona de disparo entera. */
+          scrollEventThrottle={16}
           contentContainerStyle={[
             styles.content,
             {
@@ -2349,6 +2381,21 @@ export default function ComunidadScreen() {
                   </View>
                 );
               })}
+
+              {/* Pie del lazy loading. Los dos mensajes son distintos a propósito: "trayendo más"
+                  dice que hay que esperar, y "llegaste al final" cierra la lista para que nadie se
+                  quede tirando hacia abajo de un muro que ya no tiene nada. El segundo solo se
+                  muestra si de verdad había algo: un muro vacío ya tiene su propio mensaje. */}
+              {muroCargandoMas && (
+                <Text style={[t.small, { color: c.textSoft, textAlign: 'center', paddingVertical: 12 }]}>
+                  Trayendo más publicaciones…
+                </Text>
+              )}
+              {!muroCargandoMas && !hayMasPublicaciones && posts.length > 0 && (
+                <Text style={[t.small, { color: c.textSoft, textAlign: 'center', paddingVertical: 12 }]}>
+                  Llegaste al final del muro.
+                </Text>
+              )}
             </View>
           )}
 

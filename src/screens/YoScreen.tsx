@@ -33,7 +33,7 @@ import {
 } from '../features/home/hooks/useResumenHome';
 import { useEtapasOnboarding } from '../features/onboarding/hooks/useEtapasOnboarding';
 import { MapaRenacimientoFlow } from '../features/mapa-renacimiento/MapaRenacimientoFlow';
-import { elegirFotoDeGaleria } from '../features/habits/utils/capturarEvidencia';
+import { elegirFotoDePerfil } from '../features/auth/utils/elegirFotoDePerfil';
 import * as authApi from '../features/auth/api/authApi';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
 import { useMisEvidencias } from '../features/evidence/hooks/useMisEvidencias';
@@ -195,8 +195,10 @@ const PACTO_CLAUSULAS = [
 ];
 
 export default function YoScreen() {
-  /* `mode` y `toggle` son los MISMOS que usa el botón de luna/sol de `ScreenHeader`: la fila
-     "Modo oscuro" de Preferencias es otra puerta al mismo interruptor, no un mecanismo aparte. */
+  /* Corregido 2026-09-18: acá decía que estos son "los MISMOS que usa el botón de luna/sol de
+     `ScreenHeader`". Ese botón ya no existe —se quitó de la cabecera por decisión del dueño—, así
+     que esta fila dejó de ser "otra puerta al mismo interruptor" y pasó a ser LA puerta dentro de
+     la app. Los únicos que quedan son los de login y onboarding, donde Yo todavía no se alcanza. */
   const { c, t, mode, toggle } = useTheme();
   const {
     evidencias,
@@ -1321,7 +1323,10 @@ export default function YoScreen() {
             <Pressable
               disabled={subiendoAvatar}
               onPress={async () => {
-                const archivo = await elegirFotoDeGaleria();
+                /* El selector PROPIO del perfil, no el de evidencias: aquel pide el permiso
+                   hablando de "la evidencia de tu hábito" y, sobre todo, no recorta — una foto
+                   apaisada entraba al círculo con la cara fuera del encuadre. */
+                const archivo = await elegirFotoDePerfil();
                 if (!archivo) return;
                 setSubiendoAvatar(true);
                 try {

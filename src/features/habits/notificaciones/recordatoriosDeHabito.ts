@@ -49,6 +49,27 @@ import type * as TipoNotificaciones from 'expo-notifications';
  * scheduler existente envía los DOS avisos automáticos del hábito (inicio y vencimiento). La
  * alarma no depende de que la pestaña siga abierta.
  *
+ * ## POR QUÉ LA ALARMA TIENE QUE SER EXACTA (2026-09-18)
+ *
+ * Android tiene dos clases de alarma y `expo-notifications` elige sola cuál usar, en
+ * `ExpoSchedulingDelegate.setupAlarm`: la exacta si `canScheduleExactAlarms()` da `true`, y si no
+ * una INEXACTA que el sistema puede posponer y entregar en lote con otras.
+ *
+ * Con el teléfono quieto de madrugada —el caso de una alarma para despertarse— esa postergación no
+ * es de segundos: el lote sale recién en la siguiente ventana de mantenimiento de Doze. Un hábito
+ * de las 06:30 llegaba 06:44, y los tres avisos (30 min antes, 10 min antes y la hora) aparecían
+ * juntos en vez de por separado.
+ *
+ * `canScheduleExactAlarms()` da `false` mientras el permiso no esté declarado, y no lo declaraba
+ * nadie: ni `app.json`, ni el manifiesto de `expo-notifications`, que solo trae `POST_NOTIFICATIONS`
+ * y `RECEIVE_BOOT_COMPLETED`. Desde 2026-09-18 `app.json` pide `SCHEDULE_EXACT_ALARM` — y no
+ * `USE_EXACT_ALARM`, que se concede solo pero la política de Google Play reserva a apps cuya función
+ * principal es reloj o calendario. Ver `__tests__/alarmaExacta.test.ts`.
+ *
+ * **En Android 14+ el permiso se declara pero no se concede solo**: la persona tiene que activar
+ * "Alarmas y recordatorios" para esta app en los ajustes del sistema. Sin eso, la alarma sigue
+ * siendo inexacta — el permiso es condición necesaria, no suficiente.
+ *
  * ## POR QUÉ SE GUARDA EL IDENTIFICADOR
  *
  * `scheduleNotificationAsync` devuelve un id y esa es la ÚNICA forma de cancelar esa alarma

@@ -80,8 +80,20 @@ export function Card({ children, style }: { children: React.ReactNode; style?: V
  * > Ahora el margen sale de la misma fuente que el del contenido, así que se mueven juntos y no
  * > hay dos criterios que mantener sincronizados a mano.
  */
+/**
+ * La cabecera de cada pantalla.
+ *
+ * **Sin el botón de luna/sol (2026-09-18, decisión del dueño).** Estaba acá, así que aparecía en
+ * TODAS las pantallas: un interruptor de apariencia compitiendo por la vista con el título y con la
+ * acción propia de cada pantalla. Desde que el modo oscuro es una fila de preferencias en **Yo**
+ * —donde uno va a cambiar ajustes— tenerlo además en cada cabecera era ofrecer lo mismo dos veces,
+ * y en el lugar donde menos se busca.
+ *
+ * No se perdió nada: `useTheme().toggle` sigue existiendo y lo usa la fila de Yo. Lo que se quitó es
+ * este atajo, no la función.
+ */
 export function ScreenHeader({ title, right, onPressRight }: { title: string; right: IconName; onPressRight?: () => void }) {
-  const { c, t, mode, toggle } = useTheme();
+  const { c, t } = useTheme();
   const { horizontalPadding } = useResponsive();
   return (
     <View style={[styles.header, { paddingHorizontal: horizontalPadding }]}>
@@ -89,15 +101,6 @@ export function ScreenHeader({ title, right, onPressRight }: { title: string; ri
         {title}
       </Text>
       <View style={styles.headerActions}>
-        <Pressable
-          hitSlop={10}
-          onPress={toggle}
-          accessibilityRole="button"
-          accessibilityLabel={mode === 'light' ? 'Activar modo oscuro' : 'Activar modo claro'}
-          style={[styles.themeBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
-        >
-          <Icon name={mode === 'light' ? 'moon' : 'sun'} size={16} color={c.goldInk} />
-        </Pressable>
         <Pressable hitSlop={12} onPress={onPressRight} style={styles.headerBtn}>
           <Icon name={right} size={19} color={right === 'dots' ? c.textSoft : c.goldInk} />
         </Pressable>
