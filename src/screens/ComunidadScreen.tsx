@@ -657,6 +657,17 @@ export default function ComunidadScreen() {
   const [expandedPosts, setExpandedPosts] = useState<Record<string, boolean>>({});
 
   /**
+   * La vista de lección vuelve arriba cada vez que cambia de lección.
+   *
+   * BUG ENCONTRADO 2026-09-18: al marcar una lección como completada, la app avanza sola a la
+   * siguiente (`handleAlternarLeccionCompletada`). Pero el `ScrollView` conserva su posición, y el
+   * botón de completar está AL FONDO — así que la lección nueva aparecía ya desplazada hasta el
+   * final. Se veía el pie de una lección que nunca se empezó a leer, y daba la impresión de que el
+   * botón no había hecho nada. No era del backend: la lección sí cambiaba.
+   */
+  const leccionScrollRef = useRef<ScrollView | null>(null);
+
+  /**
    * Lazy loading del Muro: la página siguiente se pide al acercarse al final.
    *
    * Solo cuando el Muro es la sección activa — este `ScrollView` también contiene Cursos y
@@ -789,6 +800,15 @@ export default function ComunidadScreen() {
   const leccionMostrada: LessonResource | null = fullScreenLesson
     ? { ...fullScreenLesson, ...detalleLeccionPorId[fullScreenLesson.id] }
     : null;
+
+  /* Vuelve arriba al cambiar de lección. Depende del id y no del objeto: `leccionMostrada` se
+     reconstruye en cada render al fusionar el detalle que llega por red, así que con el objeto como
+     dependencia esto se dispararía también mientras la persona está leyendo. */
+  useEffect(() => {
+    if (leccionMostrada?.id) {
+      leccionScrollRef.current?.scrollTo({ y: 0, animated: false });
+    }
+  }, [leccionMostrada?.id]);
 
   // Ventana Externa de Publicación a Pantalla Completa
   const [createPostModalVisible, setCreatePostModalVisible] = useState(false);
@@ -2873,6 +2893,7 @@ export default function ComunidadScreen() {
       {inExclusiveResources && leccionMostrada !== null && (
         <ScrollView
           keyboardShouldPersistTaps="handled"
+          ref={leccionScrollRef}
           contentContainerStyle={[
             styles.content,
             {
@@ -2941,11 +2962,13 @@ export default function ComunidadScreen() {
               </Text>
             )}
 
+            {/* `content` es el cuerpo LARGO de la lección — el que trae el link del formulario — y
+                `desc` el resumen corto de arriba. Los dos se pintan por separado, así que enlazar
+                solo `desc` (2026-09-18) dejó el caso real sin arreglar: el enlace que la persona
+                necesita tocar vive acá. */}
             {leccionMostrada.content && (
               <View style={{ marginTop: space.gapLg, padding: 14, borderRadius: space.radiusSm, backgroundColor: c.goldWash }}>
-                <Text style={[t.body, { color: c.text }]}>
-                  {leccionMostrada.content}
-                </Text>
+                <TextoConEnlaces texto={leccionMostrada.content} style={[t.body, { color: c.text }]} />
               </View>
             )}
 
