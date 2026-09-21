@@ -15,6 +15,18 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
   * `data/`: Constantes, cláusulas, configuraciones estáticas.
 * **Componentes de UI Atómicos**: Utiliza componentes compartidos bajo `src/components/` (`FormField`, `GoldButton`, `SliderRating`, `Checkbox`, `SignatureCanvas`, `Icon`).
 * **Integridad del Core**: NUNCA alterar, romper ni desconfigurar las pantallas existentes ni los tabs principales (`Hoy`, `Plan`, `Training`, `Comunidad`, `Yo`).
+  * **Excepciones autorizadas por el dueño del producto — 2026-09-21 — tabs `Plan`, `Comunidad` y `Yo`.**
+    Autorizadas expresamente ese día, sobre capturas de la app:
+    * **`Plan`** — acortar la intro de *Objetivos (3 niveles)* dejando el detalle tras un "Más
+      detalles", y en el *Plan de la semana* llamar **objetivo semanal** a lo que la app decía
+      "roca" y dejar de exigir que se llenen los cuatro pasos para poder navegarlos. Ojo: el
+      backend sigue exigiendo tres ejes completos para GUARDAR, así que el formulario avisa qué
+      falta en vez de bloquear el botón.
+    * **`Comunidad`** — juntar las pestañas *Grupo* y *Miembros* en una sola llamada **Tribu**.
+    * **`Yo`** — cablear la firma del Pacto, que era una maqueta: el recuadro mostraba el nombre
+      del perfil con el rótulo "FIRMA DIGITAL REGISTRADA & SELLADA" sin que se guardara nada.
+    El alcance autorizado fue ese y no abre los tabs: cualquier otro cambio sobre los cinco
+    principales vuelve a necesitar autorización explícita.
   * **Excepción autorizada por el dueño del producto — 2026-09-16 — tab `Yo`.** Se autorizó
     expresamente agregar la fila **"Modo oscuro"** (ícono + `Switch`) a la sección
     *FASE 4: PREFERENCIAS & SISTEMA* de `src/screens/YoScreen.tsx`, porque hasta entonces el tema
