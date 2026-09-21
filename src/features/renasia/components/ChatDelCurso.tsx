@@ -63,7 +63,7 @@ export function ChatDelCurso({ cursoId, cursoTitulo, leccionTitulo, diaPrograma 
         </View>
         <View style={{ flexShrink: 1 }}>
           <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 14 }]}>
-            Preguntale a {NOMBRE_TUTOR_CURSOS}
+            Pregúntale a {NOMBRE_TUTOR_CURSOS}
           </Text>
           <Text style={[t.small, { color: c.textSoft, fontSize: 12.5 }]} numberOfLines={2}>
             Sobre {leccionTitulo ? 'esta leccion' : 'este curso'} y como aplicarlo hoy

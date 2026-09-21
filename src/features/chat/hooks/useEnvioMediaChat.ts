@@ -69,7 +69,7 @@ export function useEnvioMediaChat(conversationId: string | null,
         return true;
       } catch (e) {
         Alert.alert('No se pudo enviar',
-          e instanceof Error ? e.message : 'Intentá de nuevo en un momento.');
+          e instanceof Error ? e.message : 'Intenta de nuevo en un momento.');
         return false;
       } finally {
         setEnviando(false);

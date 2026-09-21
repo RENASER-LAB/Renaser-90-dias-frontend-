@@ -41,17 +41,17 @@ export const AGENTES: Record<AgenteRenasia, PerfilAgente> = {
   COMPANION: {
     nombre: NOMBRE_ACOMPANANTE,
     subtitulo: 'Tu guía del programa, siempre disponible',
-    vacioTitulo: `Hablá con ${NOMBRE_ACOMPANANTE.toUpperCase()}`,
+    vacioTitulo: `Habla con ${NOMBRE_ACOMPANANTE.toUpperCase()}`,
     // E-141: la frase terminaba con "Cada respuesta cita las lecciones exactas de las que sale."
     // Se quitó junto con los chips de lecciones citadas: era una promesa a la persona sobre algo
     // que la pantalla ya no muestra.
     vacioParrafo:
-      'Preguntale por tus hábitos, por el día en que vas, por cómo está armada la app o por cualquier duda del programa.',
+      'Pregúntale por tus hábitos, por el día en que vas, por cómo está armada la app o por cualquier duda del programa.',
   },
   COURSE_TUTOR: {
     nombre: NOMBRE_TUTOR_CURSOS,
     subtitulo: 'Tu tutor dentro de este curso',
-    vacioTitulo: `Preguntale a ${NOMBRE_TUTOR_CURSOS.toUpperCase()}`,
+    vacioTitulo: `Pregúntale a ${NOMBRE_TUTOR_CURSOS.toUpperCase()}`,
     vacioParrafo:
       'Sobre lo que dice esta lección, cómo aplicarla hoy o cualquier duda del curso. Si la pregunta se va del tema, te orienta con lo más cercano del curso en vez de negarse.',
   },

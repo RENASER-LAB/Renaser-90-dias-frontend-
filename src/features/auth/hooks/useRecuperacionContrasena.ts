@@ -32,7 +32,7 @@ export function useRecuperacionContrasena() {
     try {
       await authApi.solicitarCodigoResetContrasena(email);
     } catch (error) {
-      throw conMensaje(error, 'No pudimos enviar el código a tu correo. Intentá más tarde.');
+      throw conMensaje(error, 'No pudimos enviar el código a tu correo. Intenta más tarde.');
     }
   }, []);
 

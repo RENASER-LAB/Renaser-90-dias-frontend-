@@ -85,7 +85,7 @@ export function useEspiritu() {
       await spiritApi.entregarResumenEspiritu(dia, texto);
       return true;
     } catch (e) {
-      setErrorEnvio(mensajeDeError(e, 'No pudimos enviar tu respuesta. Intentá de nuevo.'));
+      setErrorEnvio(mensajeDeError(e, 'No pudimos enviar tu respuesta. Intenta de nuevo.'));
       return false;
     } finally {
       setEnviando(false);

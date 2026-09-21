@@ -153,7 +153,7 @@ function textoPorTipo(wire: WireMensaje): string | undefined {
       /* Un tipo que este binario no conoce. Antes caia aca junto con TEXT y devolvia `undefined`,
          o sea una burbuja VACIA: la persona veia un hueco sin saber que le falta actualizar. Un
          texto honesto es mejor que un silencio. */
-      return 'Mensaje no compatible. Actualizá la app para verlo.';
+      return 'Mensaje no compatible. Actualiza la app para verlo.';
   }
 }
 

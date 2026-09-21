@@ -290,7 +290,7 @@ export default function TrainingScreen() {
       setRepasoSemanal(false);
       Alert.alert(
         'Falta el permiso de notificaciones',
-        'Habilitá las notificaciones de la app para que podamos avisarte los domingos.',
+        'Habilita las notificaciones de la app para que podamos avisarte los domingos.',
       );
     }
   };
@@ -622,7 +622,7 @@ export default function TrainingScreen() {
                 <Icon name="calendar" size={16} color={c.goldInk} />
                 <View style={{ flex: 1, flexShrink: 1, gap: 2 }}>
                   <Text style={[t.body, { color: c.textStrong, fontFamily: 'Jost_500Medium' }]}>
-                    Armá tu semana los domingos
+                    Arma tu semana los domingos
                   </Text>
                   <Text style={[t.small, { color: c.textSoft }]}>
                     Te avisamos a las 19:00 para revisar a qué hora va cada hábito

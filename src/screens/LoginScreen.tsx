@@ -438,7 +438,7 @@ export default function LoginScreen() {
       setSuccessMessage(`Si ${email.trim()} tiene cuenta, te enviamos un código.`);
       setTimeout(() => otpInputRef.current?.focus(), 300);
     } catch (error) {
-      setErrorMessage(mensajeDeError(error, 'No pudimos enviar el código. Intentá más tarde.'));
+      setErrorMessage(mensajeDeError(error, 'No pudimos enviar el código. Intenta más tarde.'));
     } finally {
       setLoading(false);
     }
@@ -503,7 +503,7 @@ export default function LoginScreen() {
       await recuperacion.cambiarContrasena(password);
       // De vuelta al login con el correo ya cargado: solo falta tipear la contraseña nueva.
       handleReturnToLogin();
-      setSuccessMessage('Tu contraseña se actualizó. Iniciá sesión con la nueva.');
+      setSuccessMessage('Tu contraseña se actualizó. Inicia sesión con la nueva.');
     } catch (error) {
       // El token es de un solo uso: si venció o ya se usó, reintentar con la misma contraseña
       // nunca va a funcionar. El mensaje tiene que decir la única salida real.
@@ -555,7 +555,7 @@ export default function LoginScreen() {
       } else if (resultado.tipo === 'CONFLICTO_CORREO') {
         // Reintentar con Google nunca va a funcionar, así que el mensaje tiene que decir la
         // única salida real en vez de un "error al conectar" que la deje probando el mismo botón.
-        setErrorMessage('Ese correo ya tiene una cuenta. Ingresá con tu contraseña.');
+        setErrorMessage('Ese correo ya tiene una cuenta. Ingresa con tu contraseña.');
       }
     } catch (error) {
       setErrorMessage(
@@ -605,7 +605,7 @@ export default function LoginScreen() {
       // reintentar "Enviar solicitud" con el mismo token nunca va a funcionar. El backend ya
       // manda ese mensaje exacto en el 400 (`RegistroPendienteSocialInvalidoException`), así que
       // alcanza con mostrarlo tal cual viene.
-      setErrorMessage(mensajeDeError(error, 'No pudimos completar tu registro. Intentá de nuevo.'));
+      setErrorMessage(mensajeDeError(error, 'No pudimos completar tu registro. Intenta de nuevo.'));
     } finally {
       setLoading(false);
     }
@@ -779,7 +779,7 @@ export default function LoginScreen() {
                 : enRecuperacion
                 ? 'Recuperación de cuenta'
                 : step === 'social_confirmar'
-                ? 'Confirmá tus datos'
+                ? 'Confirma tus datos'
                 : '90 días para redefinir tu vida'}
             </Text>
           </View>
@@ -1534,10 +1534,10 @@ export default function LoginScreen() {
               <View style={{ alignItems: 'center', gap: 6 }}>
                 <MicroLabel>Verificado por Google</MicroLabel>
                 <Text style={[t.sectionTitle, { color: c.text, textAlign: 'center', marginTop: 4 }]}>
-                  CONFIRMÁ TUS DATOS
+                  CONFIRMA TUS DATOS
                 </Text>
                 <Text style={[t.small, { color: c.textSoft, textAlign: 'center', lineHeight: 18, marginTop: 4 }]}>
-                  Revisa que tu nombre esté bien y enviá tu solicitud de cuenta.
+                  Revisa que tu nombre esté bien y envía tu solicitud de cuenta.
                 </Text>
               </View>
 

@@ -60,7 +60,7 @@ describe('tipo de mensaje desconocido', () => {
 
   it('se ve como un mensaje no compatible, no como una burbuja vacía', () => {
     expect(mapearMensaje(mensajeCon('STICKER') as never, 'otro').text)
-      .toBe('Mensaje no compatible. Actualizá la app para verlo.');
+      .toBe('Mensaje no compatible. Actualiza la app para verlo.');
   });
 
   it('un TEXT sin texto sigue sin inventar contenido', () => {

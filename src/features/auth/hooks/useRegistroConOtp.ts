@@ -116,7 +116,7 @@ export function useRegistroConOtp() {
     try {
       await authApi.enviarCodigoVerificacion(email);
     } catch (error) {
-      throw conMensaje(error, 'No se pudo enviar el código a tu correo. Intentá más tarde.');
+      throw conMensaje(error, 'No se pudo enviar el código a tu correo. Intenta más tarde.');
     }
   }, []);
 
@@ -130,7 +130,7 @@ export function useRegistroConOtp() {
     try {
       disponible = await authApi.correoDisponible(email);
     } catch (error) {
-      throw conMensaje(error, 'No pudimos verificar tu correo. Intentá de nuevo.');
+      throw conMensaje(error, 'No pudimos verificar tu correo. Intenta de nuevo.');
     }
     if (!disponible) {
       throw new ApiError(409, 'Ese correo ya tiene una cuenta o una solicitud en curso. Prueba iniciando sesión.');
@@ -182,7 +182,7 @@ export function useRegistroConOtp() {
       setEstadoSolicitud({ status: 'PENDING', rejectionReason: null });
       return id;
     } catch (error) {
-      throw conMensaje(error, 'No pudimos completar tu registro. Intentá de nuevo.');
+      throw conMensaje(error, 'No pudimos completar tu registro. Intenta de nuevo.');
     }
   }, []);
 

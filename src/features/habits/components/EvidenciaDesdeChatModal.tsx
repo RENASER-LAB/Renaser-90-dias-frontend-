@@ -89,7 +89,7 @@ export function EvidenciaDesdeChatModal({ visible, onCerrar, onSubida }: Props) 
         await onSubida({ tituloHabito: track.tituloHabito, puntosOtorgados: registro.puntosOtorgados });
         onCerrar();
       } catch (e) {
-        setError(mensajeDeError(e, 'No se pudo subir tu evidencia. Intentá de nuevo.'));
+        setError(mensajeDeError(e, 'No se pudo subir tu evidencia. Intenta de nuevo.'));
       } finally {
         setSubiendo(null);
       }

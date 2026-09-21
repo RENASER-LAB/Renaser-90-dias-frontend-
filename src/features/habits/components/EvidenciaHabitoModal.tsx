@@ -220,7 +220,7 @@ export function EvidenciaHabitoModal({
       const registro = await completarRegistro(registroId, textoUtil || null);
       await onCompletado(registro.puntosOtorgados);
     } catch (e) {
-      setError(mensajeDeError(e, 'No se pudo registrar tu evidencia. Intentá de nuevo.'));
+      setError(mensajeDeError(e, 'No se pudo registrar tu evidencia. Intenta de nuevo.'));
     } finally {
       setEnviando(false);
     }

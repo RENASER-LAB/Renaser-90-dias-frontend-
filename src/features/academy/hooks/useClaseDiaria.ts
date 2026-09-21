@@ -61,7 +61,7 @@ export function useClaseDiaria() {
       await claseDiariaApi.completarClaseDiaria(leccionId, resumen);
       return true;
     } catch (e) {
-      setErrorEnvio(mensajeDeError(e, 'No pudimos enviar tu resumen. Intentá de nuevo.'));
+      setErrorEnvio(mensajeDeError(e, 'No pudimos enviar tu resumen. Intenta de nuevo.'));
       return false;
     } finally {
       setEnviando(false);

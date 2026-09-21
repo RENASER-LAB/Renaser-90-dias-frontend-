@@ -31,7 +31,7 @@ export function useWallReactions() {
       setReacciones(pagina.reactions.filter(r => r.type === 'LIKE').map(mapearReaccion));
     } catch (e) {
       setReacciones([]);
-      setError(mensajeDeError(e, 'No pudimos cargar quién reaccionó. Intentá de nuevo.'));
+      setError(mensajeDeError(e, 'No pudimos cargar quién reaccionó. Intenta de nuevo.'));
     } finally {
       setCargando(false);
     }
