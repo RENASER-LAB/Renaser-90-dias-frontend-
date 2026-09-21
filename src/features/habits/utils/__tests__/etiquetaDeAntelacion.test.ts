@@ -4,7 +4,9 @@ import {
   antelacionesAMostrar,
   etiquetaDeAntelacion,
   MAXIMO_MINUTOS_ANTELACION,
-  minutosDesdeTexto,
+  MAXIMO_MINUTOS_RUEDA_ANTELACION,
+  minutosDeArranqueDeLaRueda,
+  MINUTOS_OTRA_POR_DEFECTO,
 } from '../etiquetaDeAntelacion';
 
 describe('etiquetaDeAntelacion', () => {
@@ -37,31 +39,35 @@ describe('etiquetaDeAntelacion', () => {
   });
 });
 
-describe('minutosDesdeTexto', () => {
-  it('acepta un número entero', () => {
-    expect(minutosDesdeTexto('7')).toBe(7);
-    expect(minutosDesdeTexto(' 45 ')).toBe(45);
+describe('minutosDeArranqueDeLaRueda', () => {
+  it('sin ningún aviso puesto, abre en el valor por defecto y no en el primero de la rueda', () => {
+    expect(minutosDeArranqueDeLaRueda([])).toBe(MINUTOS_OTRA_POR_DEFECTO);
   });
 
-  it('acepta coma decimal y redondea a minutos, que es la unidad real', () => {
-    expect(minutosDesdeTexto('1,5')).toBe(2);
-    expect(minutosDesdeTexto('10.4')).toBe(10);
+  it('abre en el aviso que ya rige', () => {
+    expect(minutosDeArranqueDeLaRueda([10])).toBe(10);
   });
 
-  it('rechaza el cero: "a la hora" ya tiene su pastilla', () => {
-    expect(minutosDesdeTexto('0')).toBeNull();
+  it('con varios avisos abre en el mayor, que es el que llega antes', () => {
+    expect(minutosDeArranqueDeLaRueda([10, 45, 30])).toBe(45);
   });
 
-  it('rechaza lo que no es un número, y lo vacío', () => {
-    expect(minutosDesdeTexto('')).toBeNull();
-    expect(minutosDesdeTexto('   ')).toBeNull();
-    expect(minutosDesdeTexto('mañana')).toBeNull();
+  it('"a la hora" no es un punto de la rueda: con solo el cero abre en el valor por defecto', () => {
+    expect(minutosDeArranqueDeLaRueda([0])).toBe(MINUTOS_OTRA_POR_DEFECTO);
+    expect(minutosDeArranqueDeLaRueda([0, 10])).toBe(10);
   });
 
-  it('rechaza lo negativo y lo que pasa de un día', () => {
-    expect(minutosDesdeTexto('-10')).toBeNull();
-    expect(minutosDesdeTexto('1441')).toBeNull();
-    expect(minutosDesdeTexto(String(MAXIMO_MINUTOS_ANTELACION))).toBe(MAXIMO_MINUTOS_ANTELACION);
+  it('un valor guardado más grande que la rueda la abre en el tope, sin tocar el dato', () => {
+    const guardadas = [90];
+    expect(minutosDeArranqueDeLaRueda(guardadas)).toBe(MAXIMO_MINUTOS_RUEDA_ANTELACION);
+    expect(minutosDeArranqueDeLaRueda([MAXIMO_MINUTOS_ANTELACION])).toBe(MAXIMO_MINUTOS_RUEDA_ANTELACION);
+    // Lo que importa del caso: la lista de avisos sigue igual, el clamp es solo de la vista.
+    expect(guardadas).toEqual([90]);
+  });
+
+  it('un valor imposible no deja a la rueda sin punto de arranque', () => {
+    expect(minutosDeArranqueDeLaRueda([Number.NaN])).toBe(MINUTOS_OTRA_POR_DEFECTO);
+    expect(minutosDeArranqueDeLaRueda([-5])).toBe(MINUTOS_OTRA_POR_DEFECTO);
   });
 });
 
