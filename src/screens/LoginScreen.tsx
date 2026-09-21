@@ -9,8 +9,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  type LayoutChangeEvent,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  type TargetedEvent,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../theme/ThemeContext';
 import { useResponsive } from '../theme/responsive';
@@ -29,6 +33,7 @@ import {
 import { useRecuperacionContrasena } from '../features/auth/hooks/useRecuperacionContrasena';
 import { useDisponibilidadCorreo } from '../features/auth/hooks/useDisponibilidadCorreo';
 import { CodigoOtpInput, LARGO_CODIGO } from '../features/auth/components/CodigoOtpInput';
+import { desplazamientoParaVerElCampo } from '../features/auth/utils/campoBajoElTeclado';
 
 /**
  * `forgot` → `forgot_otp` → `forgot_new_password` es la recuperación de contraseña dentro de la
@@ -45,6 +50,13 @@ type AuthStep =
   | 'social_confirmar'
   | 'solicitud_enviada';
 type Tab = 'login' | 'register';
+
+/**
+ * El nodo nativo que viaja en el `onFocus` de un `TextInput`. Se saca del tipo del evento en vez
+ * de importarlo de las entrañas de React Native para no atarse a una ruta interna: es el mismo
+ * objeto, y lo único que se le pide es `measureInWindow`.
+ */
+type CampoMedible = Exclude<NativeSyntheticEvent<TargetedEvent>['target'], number | undefined>;
 
 export default function LoginScreen() {
   const { c, t, mode, toggle } = useTheme();
@@ -91,6 +103,101 @@ export default function LoginScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+
+  /* ==========================================================================================
+     QUE EL TECLADO NO TAPE EL CAMPO QUE SE ESTÁ LLENANDO (2026-09-21)
+
+     BUG: en "Crear cuenta", al tocar Contraseña el teclado subía y se comía el campo — no se veía
+     lo que se escribía — y Confirmar contraseña quedaba directamente abajo del teclado. En
+     "Iniciar sesión" pasaba lo mismo en pantallas cortas, porque el formulario es el mismo.
+
+     Eran DOS cosas, no una:
+
+     1. El `KeyboardAvoidingView` de abajo tenía `behavior` sólo en iOS (`Platform.OS === 'ios' ?
+        'padding' : undefined`). Con `behavior` en `undefined` ese componente no hace absolutamente
+        nada: devuelve un `View` pelado. Andaba igual mientras Android encogía la ventana al abrir
+        el teclado, y desde que el modo edge-to-edge es obligatorio (Android, SDK 54+) eso ya no
+        pasa: la app sigue dibujando debajo del teclado. Es el mismo arreglo que ya se hizo en el
+        chat de Comunidad y en RENASIA — acá quedó sin hacer porque nadie había reportado el login.
+
+     2. Aun con el área achicada, el formulario NO se mueve solo. El campo deja de estar tapado
+        pero sigue estando abajo del pliegue, así que habría que arrastrar con el dedo mientras se
+        escribe. El scroll nativo al hijo enfocado tampoco lo resuelve: Android lo decide en el
+        momento del foco, cuando el teclado todavía no subió y el campo se ve perfecto.
+
+     Por eso además de arreglar el `KeyboardAvoidingView` se lleva la lista hasta el campo. El
+     disparador es el cambio de alto de la propia lista, no un evento de teclado: cuando el área
+     se achica —la encoja el `KeyboardAvoidingView` o la encoja el sistema— hay que reacomodar, y
+     así la misma cuenta sirve en las dos situaciones. Y se mide el área visible de verdad en vez
+     de calcularla desde la posición del teclado, así el resultado no depende de que el
+     `keyboardVerticalOffset` de más abajo esté fino al píxel.
+     ========================================================================================== */
+  const insets = useSafeAreaInsets();
+  const listaRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
+  const campoEnfocado = useRef<CampoMedible | null>(null);
+  const desplazamientoDeLaLista = useRef(0);
+  const altoDeLaLista = useRef(0);
+
+  /**
+   * Corre la lista, si hace falta, hasta que el campo enfocado entre entero en lo que queda
+   * visible. `altoVisible` llega desde `onLayout` porque ése es el alto definitivo que calculó el
+   * motor de layout; medirlo con `measureInWindow` en ese mismo instante daría un valor a mitad de
+   * la animación con la que sube el teclado.
+   */
+  const asegurarCampoVisible = (altoVisible?: number) => {
+    const lista = listaRef.current;
+    const campo = campoEnfocado.current;
+    /* El `ScrollView` de React Native no se mide a sí mismo: hay que pedirle el nodo nativo, que
+       además es el que corresponde: su recuadro es el área visible, no el alto del contenido. */
+    const nodoDeLaLista = lista?.getNativeScrollRef();
+    if (!lista || !campo || !nodoDeLaLista) return;
+    nodoDeLaLista.measureInWindow((_x, listaY, _ancho, listaAlto) => {
+      campo.measureInWindow((_campoX, campoY, _campoAncho, campoAlto) => {
+        const destino = desplazamientoParaVerElCampo(
+          { y: campoY, alto: campoAlto },
+          { y: listaY, alto: altoVisible ?? listaAlto },
+          desplazamientoDeLaLista.current,
+        );
+        if (destino !== null) lista.scrollTo({ y: destino, animated: true });
+      });
+    });
+  };
+
+  /**
+   * Reemplaza al `onFocus` de una línea que tenían los campos: además de prender el borde
+   * dorado, guarda el nodo para poder medirlo. Acomoda de una cuando el teclado YA estaba abierto
+   * (pasar de un campo al siguiente): ahí no va a haber cambio de alto que dispare el reacomodo.
+   */
+  const enfocarCampo = (nombre: string, evento: NativeSyntheticEvent<TargetedEvent>) => {
+    setFocusedField(nombre);
+    /* El `target` del evento es el nodo nativo del campo. La comprobación no es ceremonia: en la
+       arquitectura vieja de React Native ahí venía un número, y esta pantalla es la puerta de
+       entrada a la app — si algún día llegara algo que no se puede medir, lo que corresponde es
+       quedarse sin el reacomodo, no reventar el login. */
+    const nodo = evento.target;
+    campoEnfocado.current =
+      typeof nodo === 'object' && nodo !== null && typeof nodo.measureInWindow === 'function'
+        ? nodo
+        : null;
+    asegurarCampoVisible();
+  };
+
+  const desenfocarCampo = () => {
+    setFocusedField(null);
+    campoEnfocado.current = null;
+  };
+
+  /**
+   * La lista cambió de alto. Sólo interesa cuando ENCOGIÓ: eso es el teclado apareciendo. Cuando
+   * crece —el teclado se fue— no se toca nada, para no arrancarle el contenido de los ojos a
+   * alguien que acaba de cerrar el teclado a propósito.
+   */
+  const alAcomodarLaLista = (evento: LayoutChangeEvent) => {
+    const alto = evento.nativeEvent.layout.height;
+    const encogio = altoDeLaLista.current > 0 && alto < altoDeLaLista.current;
+    altoDeLaLista.current = alto;
+    if (encogio) asegurarCampoVisible(alto);
+  };
 
   // Aviso en vivo de disponibilidad del correo, solo en la pestaña de crear cuenta: en login
   // no ayuda a nadie saber si un correo existe. Se le pasa string vacío fuera de esa pestaña
@@ -549,11 +656,26 @@ export default function LoginScreen() {
         </Pressable>
       </View>
 
+      {/*
+        `behavior` va en las DOS plataformas. Decía `Platform.OS === 'ios' ? 'padding' : undefined`
+        y en Android `undefined` es no hacer nada: este componente devuelve un `View` pelado. Ver
+        el bloque largo de arriba ("QUE EL TECLADO NO TAPE EL CAMPO..."). El cálculo de `padding`
+        se corrige solo —da 0 en un dispositivo donde la ventana SÍ se encoja—, así que ponerlo en
+        las dos plataformas no levanta el formulario de más en ninguna.
+
+        `insets.top` en Android compensa que el alto se mide contra el SafeAreaView mientras que el
+        teclado se reporta en coordenadas de pantalla; en iOS queda en 0 porque ahí esa diferencia
+        no existe y sumarla abriría un hueco del alto del notch. Mismo criterio que el chat de
+        Comunidad y RENASIA. Si quedara corto o largo por unos píxeles, el reacomodo al campo
+        enfocado lo absorbe: mide el área visible real, no la calcula desde este número.
+      */}
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : insets.top}
         style={{ flex: 1 }}
       >
         <ScrollView
+          ref={listaRef}
           contentContainerStyle={[
             styles.scrollContent,
             {
@@ -565,6 +687,11 @@ export default function LoginScreen() {
           ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          onLayout={alAcomodarLaLista}
+          onScroll={(evento: NativeSyntheticEvent<NativeScrollEvent>) => {
+            desplazamientoDeLaLista.current = evento.nativeEvent.contentOffset.y;
+          }}
+          scrollEventThrottle={16}
         >
           {/* Encabezado: el logotipo y su bajada. Nada arriba del logotipo — el porque, unas
               lineas mas abajo. */}
@@ -756,8 +883,8 @@ export default function LoginScreen() {
                         onChangeText={setNombres}
                         placeholder="Ej. Sebastián"
                         placeholderTextColor={c.tabInactive}
-                        onFocus={() => setFocusedField('nombres')}
-                        onBlur={() => setFocusedField(null)}
+                        onFocus={evento => enfocarCampo('nombres', evento)}
+                        onBlur={desenfocarCampo}
                         style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
                         autoCapitalize="words"
                       />
@@ -784,8 +911,8 @@ export default function LoginScreen() {
                         onChangeText={setApellidos}
                         placeholder="Ej. Arango"
                         placeholderTextColor={c.tabInactive}
-                        onFocus={() => setFocusedField('apellidos')}
-                        onBlur={() => setFocusedField(null)}
+                        onFocus={evento => enfocarCampo('apellidos', evento)}
+                        onBlur={desenfocarCampo}
                         style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
                         autoCapitalize="words"
                       />
@@ -813,8 +940,8 @@ export default function LoginScreen() {
                       placeholderTextColor={c.tabInactive}
                       keyboardType="email-address"
                       autoCapitalize="none"
-                      onFocus={() => setFocusedField('email')}
-                      onBlur={() => setFocusedField(null)}
+                      onFocus={evento => enfocarCampo('email', evento)}
+                      onBlur={desenfocarCampo}
                       style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
                     />
                   </View>
@@ -874,8 +1001,8 @@ export default function LoginScreen() {
                       placeholder={activeTab === 'register' ? `Mínimo ${MIN_CONTRASENA} caracteres` : 'Tu contraseña'}
                       placeholderTextColor={c.tabInactive}
                       secureTextEntry={!showPassword}
-                      onFocus={() => setFocusedField('password')}
-                      onBlur={() => setFocusedField(null)}
+                      onFocus={evento => enfocarCampo('password', evento)}
+                      onBlur={desenfocarCampo}
                       style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
                     />
                     <Pressable
@@ -913,8 +1040,8 @@ export default function LoginScreen() {
                         placeholder="Repite tu contraseña"
                         placeholderTextColor={c.tabInactive}
                         secureTextEntry={!showPassword}
-                        onFocus={() => setFocusedField('confirmPassword')}
-                        onBlur={() => setFocusedField(null)}
+                        onFocus={evento => enfocarCampo('confirmPassword', evento)}
+                        onBlur={desenfocarCampo}
                         style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
                       />
                     </View>
@@ -1142,8 +1269,8 @@ export default function LoginScreen() {
                     placeholderTextColor={c.tabInactive}
                     keyboardType="email-address"
                     autoCapitalize="none"
-                    onFocus={() => setFocusedField('forgot_email')}
-                    onBlur={() => setFocusedField(null)}
+                    onFocus={evento => enfocarCampo('forgot_email', evento)}
+                    onBlur={desenfocarCampo}
                     style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
                     autoFocus
                   />
@@ -1314,8 +1441,8 @@ export default function LoginScreen() {
                     placeholder={`Mínimo ${MIN_CONTRASENA} caracteres`}
                     placeholderTextColor={c.tabInactive}
                     secureTextEntry={!showPassword}
-                    onFocus={() => setFocusedField('forgot_password')}
-                    onBlur={() => setFocusedField(null)}
+                    onFocus={evento => enfocarCampo('forgot_password', evento)}
+                    onBlur={desenfocarCampo}
                     style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
                     autoFocus
                   />
@@ -1353,8 +1480,8 @@ export default function LoginScreen() {
                     placeholder="Repite tu contraseña nueva"
                     placeholderTextColor={c.tabInactive}
                     secureTextEntry={!showPassword}
-                    onFocus={() => setFocusedField('forgot_confirm')}
-                    onBlur={() => setFocusedField(null)}
+                    onFocus={evento => enfocarCampo('forgot_confirm', evento)}
+                    onBlur={desenfocarCampo}
                     onSubmitEditing={handleChangePassword}
                     style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
                   />
@@ -1438,8 +1565,8 @@ export default function LoginScreen() {
                     onChangeText={setNombres}
                     placeholder="Ej. Sebastián"
                     placeholderTextColor={c.tabInactive}
-                    onFocus={() => setFocusedField('social_nombres')}
-                    onBlur={() => setFocusedField(null)}
+                    onFocus={evento => enfocarCampo('social_nombres', evento)}
+                    onBlur={desenfocarCampo}
                     style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
                     autoCapitalize="words"
                     autoFocus
@@ -1465,8 +1592,8 @@ export default function LoginScreen() {
                     onChangeText={setApellidos}
                     placeholder="Ej. Arango"
                     placeholderTextColor={c.tabInactive}
-                    onFocus={() => setFocusedField('social_apellidos')}
-                    onBlur={() => setFocusedField(null)}
+                    onFocus={evento => enfocarCampo('social_apellidos', evento)}
+                    onBlur={desenfocarCampo}
                     style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
                     autoCapitalize="words"
                   />
@@ -1653,7 +1780,12 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 24,
-    paddingBottom: 30,
+    /* `flexGrow: 1` y `paddingBottom: 36` son los que pide AGENTS.md 2 para un contenedor de
+       scroll fluido, y eran lo que le faltaba a esta pantalla. El `paddingBottom` importa ahora
+       más que antes: con el teclado arriba, es el aire que permite que el último campo llegue a
+       acomodarse sin chocar contra el final del contenido. */
+    flexGrow: 1,
+    paddingBottom: 36,
   },
   heroSection: {
     alignItems: 'center',
