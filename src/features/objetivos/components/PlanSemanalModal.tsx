@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { Alert } from '../../../components/Alerta';
 import { GoldButton } from '../../../components/GoldButton';
 import { useTheme } from '../../../theme/ThemeContext';
 import type { EjeObjetivo, ItemPlanSemanal, RocaMaestraApi } from '../types/objetivos.types';
@@ -17,9 +18,23 @@ import { Icon } from '../../../components/Icon';
  * crea las tres de una sola vez (`POST /rocks/weekly`) o ninguna, así que guardar por eje no sería
  * ni siquiera posible.
  *
- * **Qué es obligatorio.** El título y las tres acciones críticas. Las tres, no "hasta tres": la
- * clave primaria de `acciones_criticas` las exige. El obstáculo, la contingencia y la autoevaluación
- * son opcionales — valen mucho, pero pedirlas como requisito haría que alguien abandone en el paso 1.
+ * **Nada bloquea el avance** (2026-09-21, pedido del dueño). Se recorren los cuatro pasos sin
+ * escribir una palabra, y se vuelve a cualquiera de ellos. Antes «Siguiente» quedaba apagado hasta
+ * llenar el título y las tres acciones del eje que estaba en pantalla, y eso obligaba a completar
+ * los cuatro pasos de corrido o cerrar el formulario.
+ *
+ * **Lo que sí exige el backend, y por eso se pide recién al guardar.** `POST /rocks/weekly` abre
+ * los tres ejes de una sola vez (`CrearPlanSemanalCommand` los valida con `@Size(min = 3, max = 3)`)
+ * y cada uno necesita título no vacío y exactamente tres acciones críticas no vacías
+ * (`RocaSemanal.requireAccionesValidas` y el constructor de `AccionCritica`). No es una regla de
+ * pantalla que se pueda aflojar acá: un eje a medias vuelve como 400. Lo que cambió es el trato —
+ * el botón de guardar ya no queda apagado y mudo: se puede tocar siempre, y si falta algo un
+ * `Alert` dice **qué** falta y **en qué eje**, que es lo que pide AGENTS.md §5. El obstáculo, la
+ * contingencia y la autoevaluación siguen siendo opcionales de verdad, también al guardar.
+ *
+ * **Vocabulario.** En pantalla ya no se dice «roca» sino «objetivo semanal». Los nombres internos
+ * —`RocaSemanalApi`, `rocaMaestraId`, `ItemPlanSemanal`, `/rocks/weekly`— NO se tocaron: son el
+ * contrato con el backend, que sigue llamándolas rocas.
  */
 
 const AUTOEVALUACION_MINIMA = 1;
@@ -91,9 +106,25 @@ export function PlanSemanalModal({
     });
   };
 
-  const completo = (b: BorradorDeEje) => b.titulo.trim() !== '' && b.acciones.every(a => a.trim() !== '');
-  const ejeListo = completo(borrador);
-  const todosListos = useMemo(() => EJES.every(eje => completo(borradores[eje])), [borradores]);
+  const textoAcciones = (cuantas: number) =>
+    cuantas === 1 ? 'una acción crítica' : cuantas === 3 ? 'las tres acciones críticas' : `${cuantas} acciones críticas`;
+
+  /**
+   * Qué le falta a un eje para que el backend lo acepte, dicho como se le diría a la persona.
+   * `null` cuando está listo. Es la única fuente de verdad: de acá salen `completo`, el aviso del
+   * resumen y el `Alert` de guardar, así que los tres nombran exactamente lo mismo.
+   */
+  const loQueFalta = (b: BorradorDeEje): string | null => {
+    const sinTitulo = b.titulo.trim() === '';
+    const vacias = b.acciones.filter(a => a.trim() === '').length;
+    if (sinTitulo && vacias > 0) return `faltan el objetivo de la semana y ${textoAcciones(vacias)}`;
+    if (sinTitulo) return 'falta el objetivo de la semana';
+    if (vacias === 1) return 'falta una acción crítica';
+    if (vacias > 1) return `faltan ${textoAcciones(vacias)}`;
+    return null;
+  };
+
+  const completo = (b: BorradorDeEje) => loQueFalta(b) === null;
 
   const guardar = () => {
     onGuardar(
@@ -113,6 +144,25 @@ export function PlanSemanalModal({
         };
       })
     );
+  };
+
+  /**
+   * El botón de guardar se puede tocar siempre. Si algún eje está a medias no se manda nada —el
+   * backend lo rechazaría con un 400 igual de mudo— y en su lugar se nombra qué falta y dónde.
+   */
+  const intentarGuardar = () => {
+    const pendientes = EJES.map(eje => ({ eje, falta: loQueFalta(borradores[eje]) })).filter(
+      (p): p is { eje: EjeObjetivo; falta: string } => p.falta !== null
+    );
+    if (pendientes.length > 0) {
+      const detalle = pendientes.map(p => `· ${ETIQUETA_EJE[p.eje]}: ${p.falta}`).join('\n');
+      Alert.alert(
+        'Falta poco para guardar tu semana',
+        `Tu semana se abre con los tres ejes juntos, y cada uno necesita su objetivo y sus tres acciones.\n\n${detalle}\n\nEn el resumen, toca el eje que falta para volver a él.`
+      );
+      return;
+    }
+    guardar();
   };
 
   const campo = (
@@ -201,7 +251,7 @@ export function PlanSemanalModal({
                       {!completo(b) && (
                         <Pressable onPress={() => setPaso(EJES.indexOf(eje))} style={estilos.enlaceCompletar} hitSlop={12}>
                           <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 15 }]}>
-                            Falta completarlo · toca para volver
+                            Le {loQueFalta(b)} · toca para volver
                           </Text>
                         </Pressable>
                       )}
@@ -223,7 +273,7 @@ export function PlanSemanalModal({
                   </View>
                 ) : null}
 
-                {campo('LA ROCA DE ESTA SEMANA', borrador.titulo, texto => cambiar('titulo', texto), {
+                {campo('TU OBJETIVO DE ESTA SEMANA', borrador.titulo, texto => cambiar('titulo', texto), {
                   ayuda: 'Lo más importante que vas a mover en este eje en los próximos siete días.',
                   obligatorio: true,
                 })}
@@ -233,7 +283,8 @@ export function PlanSemanalModal({
                     LAS TRES ACCIONES CRÍTICAS
                   </Text>
                   <Text style={[t.small, { color: c.textSoft, fontSize: 14, lineHeight: 20 }]}>
-                    Tres, ni más ni menos. Son las que después vas a agendar con hora en tu día.
+                    Son las que después vas a agendar con hora en tu día. Si todavía no las tienes
+                    claras, sigue y vuelve antes de guardar.
                   </Text>
                   {borrador.acciones.map((accion, indice) => (
                     <TextInput
@@ -255,7 +306,7 @@ export function PlanSemanalModal({
                   largo: true,
                 })}
 
-                {campo('QUÉ HACÉS SI PASA', borrador.contingencia, texto => cambiar('contingencia', texto), {
+                {campo('QUÉ HACES SI PASA', borrador.contingencia, texto => cambiar('contingencia', texto), {
                   ayuda: 'Tu plan B, decidido en frío.',
                   largo: true,
                 })}
@@ -301,17 +352,16 @@ export function PlanSemanalModal({
             )}
             <View style={{ flex: 1 }}>
               {esResumen ? (
+                /* Sin `disabled` por lo que falte: eso lo resuelve `intentarGuardar` diciendo qué
+                   falta. Apagado solo mientras se está guardando, para no mandar dos veces. */
                 <GoldButton
                   label={guardando ? 'GUARDANDO…' : 'GUARDAR MI SEMANA'}
-                  onPress={guardar}
-                  disabled={!todosListos || guardando}
+                  onPress={intentarGuardar}
+                  disabled={guardando}
                 />
               ) : (
-                <GoldButton
-                  label="SIGUIENTE"
-                  onPress={() => setPaso(p => p + 1)}
-                  disabled={!ejeListo}
-                />
+                /* Nunca apagado: se avanza con el eje vacío y se vuelve después. */
+                <GoldButton label="SIGUIENTE" onPress={() => setPaso(p => p + 1)} />
               )}
             </View>
           </View>

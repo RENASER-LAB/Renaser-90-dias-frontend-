@@ -495,6 +495,13 @@ export default function PlanScreen() {
   const { abrir: abrirMapa } = useMapaRenacimientoAbierto();
   /** El eje que se está mirando. Lo fija la tarjeta que se tocó en PRIORIDADES CLAVE. */
   const [ejeAbierto, setEjeAbierto] = useState<EjeObjetivo>(EJE_POR_DEFECTO);
+  /**
+   * Si se está leyendo la explicación de los tres niveles, en OBJETIVOS (3 NIVELES).
+   *
+   * Arranca cerrada (2026-09-21, pedido del dueño): lo primero que tiene que verse al entrar es el
+   * objetivo y su avance, no cómo funciona el sistema. La explicación no se borró — está a un toque.
+   */
+  const [explicacionNivelesAbierta, setExplicacionNivelesAbierta] = useState(false);
   const rocaDeEje = (eje: EjeObjetivo) => objetivos.deEje(eje);
   const rocaAbierta = objetivos.deEje(ejeAbierto);
 
@@ -1623,14 +1630,39 @@ export default function PlanScreen() {
             </View>
           </View>
 
+          {/* Introducción corta arriba, detalle detrás de «Más detalles» (2026-09-21, pedido del
+              dueño). El título con su párrafo se comían media pantalla antes de que apareciera
+              nada útil: quien entra acá viene a ver su objetivo y su avance, no a leer cómo se
+              encadenan los niveles. El párrafo es el mismo de antes, palabra por palabra — se
+              lee tocando. El botón va al lado del título y no debajo justamente para no volver a
+              empujar la tarjeta del objetivo hacia abajo. */}
           <View style={{ marginTop: space.gap, gap: 6 }}>
-            <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 20, lineHeight: 27 }]}>
-              Tus objetivos, de los 90 días al día de hoy
-            </Text>
-            <Text style={[t.body, { color: c.textSoft }]}>
-              Tres niveles encadenados: el objetivo de 90 días manda sobre la semana, y la semana
-              sobre lo que haces hoy.
-            </Text>
+            <Row align="flex-start" gap={12}>
+              <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 20, lineHeight: 27, flex: 1 }]}>
+                Tus objetivos, de los 90 días al día de hoy
+              </Text>
+              <Pressable
+                onPress={() => setExplicacionNivelesAbierta(abierta => !abierta)}
+                style={styles.verDetallesBtn}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  explicacionNivelesAbierta
+                    ? 'Ocultar cómo funcionan los tres niveles'
+                    : 'Ver cómo funcionan los tres niveles'
+                }
+              >
+                <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 14 }]}>
+                  {explicacionNivelesAbierta ? 'Ver menos' : 'Más detalles'}
+                </Text>
+              </Pressable>
+            </Row>
+            {explicacionNivelesAbierta && (
+              <Text style={[t.body, { color: c.textSoft }]}>
+                Tres niveles encadenados: el objetivo de 90 días manda sobre la semana, y la semana
+                sobre lo que haces hoy.
+              </Text>
+            )}
           </View>
 
           <View style={{ gap: space.gap, marginTop: space.gapLg, paddingBottom: 28 }}>
@@ -2265,6 +2297,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: space.radius,
     padding: space.cardPad,
+  },
+  /* «Más detalles» del encabezado de Objetivos: acción de texto al lado del título, sin caja —
+     una más ahí, pegada a la píldora del encabezado, sería la enésima. `minHeight` de 40 con
+     `hitSlop` de 8 para llegar al área de pulsación de AGENTS.md §4 sin estirar la fila del
+     título, el mismo trato que `renombrarBtn`; los 3 px de arriba lo dejan a la altura de la
+     PRIMERA línea del título, que es contra la que se lee, y no centrado contra las tres.
+     `flexShrink: 0` para que lo que se achique en 360 px sea el título, que sí puede seguir en
+     la línea de abajo, y no la etiqueta. */
+  verDetallesBtn: {
+    minHeight: 40,
+    justifyContent: 'flex-start',
+    paddingTop: 3,
+    flexShrink: 0,
   },
   editGoalBtn: {
     borderRadius: space.radiusSm,
