@@ -19,7 +19,7 @@ import { Icon } from '../../../components/Icon';
  * la semana tiene su propia cara, porque significan cosas distintas y no son "un error":
  *
  * - **bloqueada** → faltan los tres objetivos de 90 días. La salida es el Mapa, no reintentar.
- * - **sin planificar** → hay que abrir la semana con las tres rocas.
+ * - **sin planificar** → hay que abrir la semana con los tres objetivos semanales.
  * - **planificada** → se ve el plan y hasta cuándo se puede corregir.
  * - **cerrada** → las tres tienen revisión; queda como registro.
  */
@@ -87,8 +87,8 @@ export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, onIrAlMapa
       {semanal.estado === 'sin_planificar' && (
         <View style={{ gap: 12, marginTop: 8 }}>
           <Text style={[t.body, { color: c.textSoft, fontSize: 15, lineHeight: 22 }]}>
-            Todavía no armaste esta semana. Son tres rocas —una por eje— con tres acciones críticas
-            cada una. Se hace de a un eje por vez.
+            Todavía no armaste esta semana. Son tres objetivos semanales —uno por eje— con tres
+            acciones críticas cada uno. Se hace de a un eje por vez.
           </Text>
           <Pressable
             onPress={() => setPlanificando(true)}
@@ -125,7 +125,7 @@ export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, onIrAlMapa
                 ) : (
                   <Pressable onPress={() => setRevisando(eje)} style={estilos.enlace} hitSlop={12}>
                     <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 15 }]}>
-                      Cerrar esta roca con mi revisión
+                      Cerrar este objetivo con mi revisión
                     </Text>
                   </Pressable>
                 )}
