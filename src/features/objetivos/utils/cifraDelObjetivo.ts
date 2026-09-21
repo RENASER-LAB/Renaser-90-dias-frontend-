@@ -52,8 +52,11 @@ const SEPARADOR_MILES = ' ';
  * Los miles se agrupan a mano y no con `toLocaleString`: en Android el motor de JS se compila sin
  * los datos de ICU completos, así que el resultado depende del dispositivo — el mismo objetivo se
  * vería distinto en dos teléfonos.
+ *
+ * Exportada para `objetivoMensual.ts`, que escribe la cifra del mes justo debajo de la de 90 días:
+ * dos números del mismo objetivo con distinto separador de miles se leen como dos datos distintos.
  */
-function formatearNumero(valor: number): string {
+export function formatearNumero(valor: number): string {
   const redondeado = Number.isInteger(valor) ? valor : Number(valor.toFixed(2));
   const [entera, decimal] = String(Math.abs(redondeado)).split('.');
   const signo = redondeado < 0 ? '-' : '';

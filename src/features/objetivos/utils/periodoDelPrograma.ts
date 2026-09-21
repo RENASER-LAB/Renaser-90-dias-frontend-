@@ -52,7 +52,16 @@ export function semanaDe(diaPrograma: number): number {
   return acotar(Math.ceil(Math.max(diaPrograma, 1) / DIAS_POR_SEMANA), 1, SEMANAS_DEL_PROGRAMA);
 }
 
-/** Mes del programa (1 a 3) para un día dado. */
+/**
+ * Mes del programa (1 a 3) para un día dado, contado en **bloques de cuatro semanas**.
+ *
+ * **No sirve para decidir a qué mes pertenece un OBJETIVO.** Acá el mes agrupa planes semanales, y
+ * cuatro semanas son 28 días: con esta cuenta el mes 3 arranca el día 57 y los últimos días entran
+ * solo porque el resultado se acota. Los objetivos cierran a los 30, 60 y 90 días —así están los
+ * hitos del Mapa (V08) y así está `rocas_mensuales` en el backend— y para eso está
+ * `mesDelObjetivo`, en `objetivoMensual.ts`. Son dos cortes distintos del mismo programa; cada uno
+ * está bien en su terreno, y cruzarlos corre de mes el objetivo.
+ */
 export function mesDe(diaPrograma: number): number {
   return acotar(Math.ceil(semanaDe(diaPrograma) / SEMANAS_POR_MES), 1, MESES_DEL_PROGRAMA);
 }
