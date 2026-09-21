@@ -151,7 +151,7 @@ export function RenombrarHabitoModal({
             <View style={styles.encabezado}>
               <View style={{ flex: 1 }}>
                 <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
-                  SOLO PARA VOS
+                  SOLO PARA TI
                 </Text>
                 <Text style={[t.cardTitle, { color: c.textStrong, marginTop: 3 }]} numberOfLines={2}>
                   {tituloCatalogo}

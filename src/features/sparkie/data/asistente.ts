@@ -51,7 +51,7 @@ export const GUIA_PRIMER_POST = {
     'Escribe unas líneas contando quién eres y qué vienes a cambiar. No tiene que ser perfecto: tiene que ser verdad.',
     'Necesitas sumarle una foto — el Muro pide al menos una por publicación.',
   ],
-  botonPrincipal: 'Llevame al Muro',
+  botonPrincipal: 'Llévame al Muro',
   botonSecundario: 'Ahora no',
 };
 

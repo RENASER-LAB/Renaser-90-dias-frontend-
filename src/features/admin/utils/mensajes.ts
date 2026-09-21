@@ -48,7 +48,7 @@ export function mensajeDeAltaAprobada(
 
   if (sinGrupoAntes === null || sinGrupoDespues === null) {
     return `${quien} ya tiene su cuenta. No pudimos comprobar si entró a un grupo de bienvenida: `
-      + 'miralo en Grupos antes de dar por hecho que quedó ubicada.';
+      + 'míralo en Grupos antes de dar por hecho que quedó ubicada.';
   }
 
   /* La cola de "sin grupo" BAJÓ ⇒ el alta entró en una bienvenida.
@@ -69,7 +69,7 @@ export function mensajeDeAltaAprobada(
   }
 
   return `${quien} ya tiene su cuenta, pero quedó SIN grupo: no hay una bienvenida abierta hoy. `
-    + 'Creá una o ubicala a mano.';
+    + 'Crea una o ubícala a mano.';
 }
 
 /** Lo que una sección dice debajo de su rótulo cuando no tiene filas que mostrar, y cómo se lee. */

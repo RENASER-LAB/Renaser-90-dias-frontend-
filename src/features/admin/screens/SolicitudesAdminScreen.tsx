@@ -101,7 +101,7 @@ export function SolicitudesAdminScreen({
   const rechazar = async (solicitud: SolicitudApi) => {
     const acepto = await confirmar(
       'Rechazar solicitud',
-      `${solicitud.fullName ?? 'Esta persona'} no podrá entrar con este correo. ¿Confirmás?`,
+      `${solicitud.fullName ?? 'Esta persona'} no podrá entrar con este correo. ¿Confirmas?`,
       { ok: 'Rechazar', destructivo: true },
     );
     if (!acepto) return;

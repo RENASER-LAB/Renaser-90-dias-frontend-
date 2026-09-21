@@ -634,7 +634,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
         `“${h.title}” queda a las ${horaTexto}.` +
           (resultado.deferred ? `\n\nEmpieza a regir ${cuando}: el día en curso no se reacomoda.` : '') +
           (avisoImposible
-            ? `\n\nEl recordatorio quedó guardado, pero ${recordatorios.HAY_RECORDATORIOS_WEB ? 'este navegador no tiene el permiso Web Push' : 'este teléfono no tiene permiso para avisarte'}. Habilitá las notificaciones para recibir las dos alertas.`
+            ? `\n\nEl recordatorio quedó guardado, pero ${recordatorios.HAY_RECORDATORIOS_WEB ? 'este navegador no tiene el permiso Web Push' : 'este teléfono no tiene permiso para avisarte'}. Habilita las notificaciones para recibir las dos alertas.`
             : ''),
       );
     } catch (e) {

@@ -1425,7 +1425,7 @@ export default function ComunidadScreen() {
         }
       }
     } catch (e) {
-      Alert.alert('No se pudo actualizar', mensajeDeError(e, 'Intentá de nuevo en un momento.'));
+      Alert.alert('No se pudo actualizar', mensajeDeError(e, 'Intenta de nuevo en un momento.'));
     }
   };
 
@@ -1444,7 +1444,7 @@ export default function ComunidadScreen() {
       const actualizada = await enviarMensajeChatRemoto(activeChat, texto);
       setActiveChat(actualizada);
     } catch (e) {
-      Alert.alert('No se pudo enviar', mensajeDeError(e, 'Intentá de nuevo en un momento.'));
+      Alert.alert('No se pudo enviar', mensajeDeError(e, 'Intenta de nuevo en un momento.'));
       setChatInputText(texto);
     }
   };
@@ -1651,7 +1651,7 @@ export default function ComunidadScreen() {
     try {
       await reaccionarPublicacion(postId, 'LIKE');
     } catch (error) {
-      Alert.alert('No se pudo reaccionar', mensajeDeError(error, 'Intentá de nuevo en un momento.'));
+      Alert.alert('No se pudo reaccionar', mensajeDeError(error, 'Intenta de nuevo en un momento.'));
     }
   };
 
@@ -1762,7 +1762,7 @@ export default function ComunidadScreen() {
       setCommentInputs(prev => ({ ...prev, [postId]: '' }));
       setCommentPhotos(prev => ({ ...prev, [postId]: null }));
     } catch (error) {
-      Alert.alert('No se pudo comentar', mensajeDeError(error, 'Intentá de nuevo en un momento.'));
+      Alert.alert('No se pudo comentar', mensajeDeError(error, 'Intenta de nuevo en un momento.'));
     }
   };
 
@@ -1788,7 +1788,7 @@ export default function ComunidadScreen() {
   // accionable, así que se muestran tal cual en vez de pisarlos con el genérico de
   // `mensajeDeError`.
   const mensajeDeFalloAlPublicar = (error: unknown): string => {
-    const porDefecto = 'No pudimos publicar. Intentá de nuevo en un momento.';
+    const porDefecto = 'No pudimos publicar. Intenta de nuevo en un momento.';
     if (error instanceof ApiError) {
       return mensajeDeError(error, porDefecto);
     }

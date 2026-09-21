@@ -391,7 +391,7 @@ export default function HoyScreen() {
             </View>
             <Text style={[t.small, { color: c.micro, fontSize: 12, marginTop: 4 }]}>
               {coherenciaScore === null
-                ? 'Planificá tu semana para verla'
+                ? 'Planifica tu semana para verla'
                 : coherenciaScore >= 80
                   ? 'Nivel de excelencia'
                   : 'Consistencia del día'}
