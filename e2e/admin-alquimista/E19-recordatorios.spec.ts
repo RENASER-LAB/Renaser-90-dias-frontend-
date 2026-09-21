@@ -2,7 +2,7 @@ import { expect, test, cerrarGuiaDelAsistente } from './soporte/fixtures';
 import { ENTORNO } from './soporte/entorno';
 
 /**
- * E19 — antelaciones de recordatorio escritas a mano.
+ * E19 — antelaciones de recordatorio elegidas en la rueda de "Otra".
  *
  * **Qué se comprueba, y por qué no basta con "el chip aparece".** El conjunto de avisos vive en
  * DOS sitios que no se hablan: el dispositivo guarda la lista completa (`number[]`) y el backend
@@ -12,9 +12,16 @@ import { ENTORNO } from './soporte/entorno';
  * de la lista en vez del mayor, la pantalla seguiría viéndose bien, los avisos locales seguirían
  * sonando, y solo se notaría al reinstalar — cuando la persona recupera el aviso equivocado.
  *
- * Por eso el caso va de punta a punta: se escribe una antelación propia, se guarda, se comprueba
+ * Por eso el caso va de punta a punta: se elige una antelación propia, se guarda, se comprueba
  * que el SERVIDOR se quedó con la mayor, y se vuelve a abrir para ver que la lista completa
  * sobrevivió.
+ *
+ * **Cambió el control, no el invariante (2026-09-21).** "Otra" era un campo de texto con teclado
+ * numérico —que en el teléfono se abría ENCIMA del propio campo— y ahora es una rueda de 1 a 60
+ * minutos, la misma que la de la hora. Por eso aquí ya no se comprueba que el campo rechace `0`
+ * ni `9999`: en una rueda de 1 a 60 esos valores no existen, no hay nada que rechazar. Lo que se
+ * comprueba en su lugar es que la rueda abre en el aviso que ya rige y que el botón de al lado
+ * dice cuál se va a añadir.
  *
  * **Por qué la cuenta ADMIN y no la de aprendiz.** `e2e-aprendiz` tiene el onboarding sin
  * completar, así que al entrar por la interfaz cae en la Ficha Inicial y nunca llega a las
@@ -24,9 +31,38 @@ import { ENTORNO } from './soporte/entorno';
  */
 
 const HABITO = /despertar/i;
-/** Una antelación que NO está entre las sugeridas (30 y 10): si apareciera sin escribirla, el
- *  caso estaría probando el atajo en vez del campo libre. */
+/** Una antelación que NO está entre las sugeridas (30 y 10): si apareciera sin elegirla, el caso
+ *  estaría probando el atajo en vez de la rueda. Y mayor que las dos, que es lo que hace medible
+ *  la regla de "el servidor se queda con la mayor". */
 const PROPIA_MINUTOS = 45;
+
+/**
+ * Gira la rueda hasta un minuto concreto.
+ *
+ * En web la rueda es un contenedor con scroll, así que mover `scrollTop` es exactamente lo que
+ * hace el dedo; el `onScroll` del componente traduce la posición a un valor.
+ *
+ * **El alto de fila se deduce de la propia rueda y no se copia del diseño.** El recorrido que se
+ * puede scrollear dividido por los saltos que hay entre el primer valor y el último da el alto de
+ * una fila, sea el que sea: si mañana cambia, el caso sigue apuntando al minuto correcto en vez de
+ * fallar por un número mágico desactualizado.
+ */
+async function girarLaRuedaHasta(
+  rueda: import('@playwright/test').Locator,
+  minutos: number,
+  minimo: number,
+  maximo: number,
+) {
+  await rueda.evaluate((el, [m, min, max]) => {
+    const altoDeFila = (el.scrollHeight - el.clientHeight) / (max - min);
+    el.scrollTop = (m - min) * altoDeFila;
+  }, [minutos, minimo, maximo]);
+}
+
+/** El rango que ofrece la rueda de "Otra" — `MINIMO_MINUTOS_ANTELACION` y
+ *  `MAXIMO_MINUTOS_RUEDA_ANTELACION` en `etiquetaDeAntelacion.ts`. */
+const RUEDA_MINIMO = 1;
+const RUEDA_MAXIMO = 60;
 
 type Preferencia = {
   habitId: string;
@@ -80,24 +116,29 @@ test('E19 · una antelación escrita a mano se guarda, y el servidor se queda co
   try {
     await abrirPlanificadorDe(page, HABITO);
 
-    // El campo libre existe y rechaza lo que no es una antelación válida.
-    const campo = page.getByLabel('Minutos de antelación propios');
-    const anadir = page.getByRole('button', { name: 'Añadir esa antelación' });
-    await expect(campo).toBeVisible({ timeout: 15_000 });
+    /* "Otra" no escribe: DESPLIEGA la rueda. Sin tocarla no hay rueda en pantalla, que es lo que
+       mantiene el botón de guardar dentro de la hoja. */
+    const otra = page.getByRole('button', { name: 'Otra antelación, elegir los minutos en una rueda' });
+    await expect(otra).toBeVisible({ timeout: 15_000 });
+    const rueda = page.getByLabel('Minutos de antelación');
+    await expect(rueda, 'la rueda solo existe tras tocar "Otra"').toBeHidden();
+    await otra.click();
+    await expect(rueda).toBeVisible({ timeout: 10_000 });
 
-    await campo.fill('0');
-    await expect(anadir, '"a la hora" tiene su propia pastilla: el cero no se añade acá').toBeDisabled();
-    await campo.fill('9999');
-    await expect(anadir, 'más de un día no es "un aviso antes"').toBeDisabled();
-
-    // La propia entra, y entra ENCENDIDA: escribir un número ya es elegirlo.
-    await campo.fill(String(PROPIA_MINUTOS));
-    await expect(anadir).toBeEnabled();
+    /* El botón de al lado dice qué se va a añadir, igual que el de guardar dice la hora. Es
+       también la forma de comprobar que la rueda llegó donde se la mandó: si el giro no hubiera
+       entrado, este nombre diría otro número. */
+    const anadir = page.getByRole('button', { name: /^Añadir .+ antes$/ });
+    await girarLaRuedaHasta(rueda, PROPIA_MINUTOS, RUEDA_MINIMO, RUEDA_MAXIMO);
+    await expect(anadir, 'la rueda tiene que quedar en el minuto al que se la giró')
+      .toHaveAccessibleName(`Añadir ${PROPIA_MINUTOS} min antes`, { timeout: 10_000 });
     await anadir.click();
 
+    // La propia entra, y entra ENCENDIDA: elegir un número ya es elegirlo.
     const pastillaPropia = page.getByRole('button', { name: new RegExp(`^${PROPIA_MINUTOS} min antes`) });
     await expect(pastillaPropia).toBeVisible();
-    await expect(campo, 'el campo se limpia al añadir').toHaveValue('');
+    await expect(rueda, 'la rueda se pliega al añadir: la pastilla nueva es la confirmación')
+      .toBeHidden();
 
     await page.getByRole('button', { name: /guardar/i }).first().click();
 

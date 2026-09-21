@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -10,6 +10,7 @@ import { useTheme } from '../../../theme/ThemeContext';
 import { mensajeDeError } from '../../../services/http/apiClient';
 import { useAuth } from '../../auth/context/AuthContext';
 import * as habitsApi from '../../habits/api/habitsApi';
+import { RuedaAntelacionPicker } from '../../habits/components/RuedaAntelacionPicker';
 import { RuedaHoraPicker } from '../../habits/components/RuedaHoraPicker';
 import { ICONOS_ELEGIBLES } from '../../habits/utils/iconosDeHabito';
 import * as recordatorios from '../../habits/notificaciones/recordatoriosDeHabito';
@@ -30,8 +31,8 @@ import type { HabitItem } from '../../../screens/TrainingScreen';
 import {
   antelacionesAMostrar,
   etiquetaDeAntelacion,
-  MAXIMO_MINUTOS_ANTELACION,
-  minutosDesdeTexto,
+  minutosDeArranqueDeLaRueda,
+  MINUTOS_OTRA_POR_DEFECTO,
 } from '../../habits/utils/etiquetaDeAntelacion';
 
 /**
@@ -108,8 +109,14 @@ type HabitoPlanificable = HabitItem & { habitoId: string };
  *
  * > **Corregido el 2026-09-14.** Acá decía que cuatro fijas bastaban, con el argumento de que
  * > "si alguien necesita 7 minutos, no necesita 7 minutos". El dueño pidió lo contrario: que se
- * > pueda escribir la propia. Así que estas dejan de ser el límite y pasan a ser el atajo — el que
- * > las quiera usa un toque, el que necesita 45 escribe 45.
+ * > pueda elegir la propia. Así que estas dejan de ser el límite y pasan a ser el atajo — el que
+ * > las quiera usa un toque, el que necesita 45 los busca en "Otra".
+ *
+ * > **Corregido el 2026-09-21.** La antelación propia se ESCRIBÍA, en un campo con teclado
+ * > numérico, y el teclado del sistema se abría encima tapando el propio campo: se escribía a
+ * > ciegas. Ahora "Otra" despliega una rueda de 1 a 60 minutos, la misma de la hora de arriba. El
+ * > rango de la rueda no recorta lo guardado — un aviso viejo de 90 minutos sigue en la fila y
+ * > sigue sonando, solo que la rueda no puede volver a fabricarlo.
  *
  * Nada cambia aguas abajo: el conjunto siempre viajó como `number[]` hasta el programador de
  * alarmas, que calcula `(hora - minutos) mod 1440` y **ya aceptaba cualquier valor**.
@@ -216,8 +223,19 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
    * una alarma diaria propia en el teléfono.
    */
   const [antelaciones, setAntelaciones] = useState<number[]>([]);
-  /** Lo que la persona está escribiendo en el campo "otra". Se limpia al añadirla. */
-  const [antelacionPropia, setAntelacionPropia] = useState('');
+  /**
+   * Si la rueda de "Otra" está desplegada. Cerrada por defecto: la hoja no tiene scroll y cada
+   * píxel de alto que se ocupa empuja el botón de guardar hacia afuera — ya pasó una vez.
+   */
+  const [ruedaOtraAbierta, setRuedaOtraAbierta] = useState(false);
+  /** Lo que marca la rueda de "Otra" ahora mismo. Es lo que dice el botón de al lado. */
+  const [minutosOtra, setMinutosOtra] = useState(MINUTOS_OTRA_POR_DEFECTO);
+  /**
+   * Dónde ABRE la rueda de "Otra". Es ref y no estado a propósito: `RuedaAntelacionPicker` es no
+   * controlada, así que si el valor inicial cambiara en cada giro la rueda saltaría sola debajo
+   * del dedo. Se fija una vez, al desplegarla, y la rueda lo lee al montarse.
+   */
+  const arranqueDeLaRuedaOtra = useRef(MINUTOS_OTRA_POR_DEFECTO);
   const [hora, setHora] = useState(6);
   const [minuto, setMinuto] = useState(0);
   /**
@@ -313,6 +331,9 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
     setSemillaRueda(n => n + 1);
     setDiasEnEdicion([]);
     setHorarioSemanal({});
+    // La rueda de "Otra" es del hábito que se estaba mirando: abrir otro con ella desplegada
+    // mostraría los minutos del anterior sobre un recordatorio que todavía no terminó de cargar.
+    setRuedaOtraAbierta(false);
     // Se pide DESPUÉS de abrir, no antes: el toque tiene que responder ya. Mientras llega, las
     // pastillas muestran el día sin hora, que es lo honesto.
     void (async () => {
@@ -525,29 +546,35 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
   };
 
   /**
-   * Qué decirle a la persona sobre lo que escribió, o `null` si no hay nada que decir.
+   * Despliega o pliega la rueda de "Otra".
    *
-   * Vacío no es un error: es el estado de reposo del campo. Lo que sí se explica es un número
-   * fuera de rango, porque el botón deshabilitado por sí solo no dice por qué — y esa fue la queja
-   * concreta del dueño. Las letras no aparecen acá: se filtran al escribir y no pueden existir.
+   * Al desplegarla se fija dónde abre: en el aviso que ya rige, no en el primer valor de la lista.
+   * Abrir siempre en "1 min antes" obligaría a girar media rueda a quien solo quiere corregir de
+   * 30 a 35.
    */
-  const avisoAntelacion: string | null = (() => {
-    const texto = antelacionPropia.trim();
-    if (!texto) return null;
-    if (minutosDesdeTexto(texto) !== null) return null;
-    if (Number(texto) === 0) return 'Para avisar a la hora exacta usa la pastilla "A la hora".';
-    return `Escribe entre 1 y ${MAXIMO_MINUTOS_ANTELACION} minutos (${MAXIMO_MINUTOS_ANTELACION / 60} h).`;
-  })();
+  const alternarRuedaOtra = () => {
+    if (ruedaOtraAbierta) {
+      setRuedaOtraAbierta(false);
+      return;
+    }
+    const arranque = minutosDeArranqueDeLaRueda(antelaciones);
+    arranqueDeLaRuedaOtra.current = arranque;
+    setMinutosOtra(arranque);
+    setRuedaOtraAbierta(true);
+  };
 
   /**
-   * Añade la antelación escrita a mano. Queda ENCENDIDA al añadirla: nadie escribe un número para
-   * después tener que tocarlo, y una pastilla nueva apagada parece que no se guardó.
+   * Añade lo que marca la rueda. Queda ENCENDIDA al añadirla: nadie elige un número para después
+   * tener que tocarlo, y una pastilla nueva apagada parece que no se guardó.
+   *
+   * Se pliega la rueda después: la pastilla recién añadida aparece en la fila de arriba, y dejar
+   * la rueda abierta taparía la confirmación de lo que se acaba de hacer.
    */
-  const agregarAntelacionPropia = () => {
-    const minutos = minutosDesdeTexto(antelacionPropia);
-    if (minutos === null) return;
-    setAntelaciones(prev => (prev.includes(minutos) ? prev : [...prev, minutos].sort((a, b) => b - a)));
-    setAntelacionPropia('');
+  const agregarAntelacionDeLaRueda = () => {
+    setAntelaciones(prev => (
+      prev.includes(minutosOtra) ? prev : [...prev, minutosOtra].sort((a, b) => b - a)
+    ));
+    setRuedaOtraAbierta(false);
   };
 
   /** Guarda la hora GENERAL del hábito —todos los días— y vuelve a la lista. */
@@ -1207,41 +1234,23 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                         A la hora
                       </Text>
                     </Pressable>
-                    {/* El campo propio va DENTRO de la misma fila que envuelve, no en un renglón
-                        aparte. La hoja no tiene scroll a propósito —un ScrollView acá se pelearía
-                        con las ruedas de hora por el dedo (AGENTS.md §2)— así que cada píxel de
-                        alto que se añade empuja el botón de guardar fuera de la pantalla. Pasó:
-                        la primera versión lo dejó invisible. */}
-                    <TextInput
-                      value={antelacionPropia}
-                      /* Se filtran los no-dígitos al escribir en vez de avisar después: en WEB
-                         —donde están los usuarios de iOS— `number-pad` no impide nada, es solo
-                         una sugerencia de teclado al móvil. Así una letra no llega ni a existir y
-                         no hace falta un mensaje para algo que no puede pasar. */
-                      onChangeText={texto => setAntelacionPropia(texto.replace(/[^0-9]/g, ''))}
-                      onSubmitEditing={agregarAntelacionPropia}
-                      keyboardType="number-pad"
-                      returnKeyType="done"
-                      placeholder="Otra"
-                      placeholderTextColor={c.micro}
-                      maxLength={4}
-                      accessibilityLabel="Minutos de antelación propios"
-                      style={[
-                        styles.campoAntelacionPropia,
-                        { borderColor: c.border, color: c.text, backgroundColor: c.cardBg },
-                      ]}
-                    />
+                    {/* "Otra" ABRE UNA RUEDA, no un teclado (2026-09-21). Era un `TextInput` con
+                        `keyboardType="number-pad"`: al tocarlo el teclado del sistema subía y
+                        tapaba el propio campo, así que se escribía a ciegas. La hoja no tiene
+                        scroll a propósito —un ScrollView acá se pelearía con las ruedas por el
+                        dedo (AGENTS.md §2)—, así que no había a dónde correr el campo: la salida
+                        fue sacar el teclado. La rueda se despliega debajo y solo cuando se pide,
+                        porque cada píxel de alto empuja el botón de guardar fuera de la hoja. */}
                     <Pressable
-                      onPress={agregarAntelacionPropia}
-                      disabled={minutosDesdeTexto(antelacionPropia) === null}
+                      onPress={alternarRuedaOtra}
                       accessibilityRole="button"
-                      accessibilityLabel="Añadir esa antelación"
+                      accessibilityState={{ expanded: ruedaOtraAbierta }}
+                      accessibilityLabel="Otra antelación, elegir los minutos en una rueda"
                       style={[
                         styles.pastillaAntelacion,
                         {
-                          borderColor: minutosDesdeTexto(antelacionPropia) === null ? c.border : c.gold,
-                          backgroundColor: 'transparent',
-                          opacity: minutosDesdeTexto(antelacionPropia) === null ? 0.5 : 1,
+                          borderColor: ruedaOtraAbierta ? c.gold : c.border,
+                          backgroundColor: ruedaOtraAbierta ? c.cardBgAlt : 'transparent',
                         },
                       ]}
                     >
@@ -1251,23 +1260,45 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                           {
                             fontSize: 10.5,
                             fontFamily: 'Jost_700Bold',
-                            color: minutosDesdeTexto(antelacionPropia) === null ? c.textSoft : c.goldInk,
+                            color: ruedaOtraAbierta ? c.goldInk : c.textSoft,
                           },
                         ]}
+                        numberOfLines={1}
                       >
-                        + Añadir
+                        Otra
                       </Text>
                     </Pressable>
                   </View>
-                  {/* El aviso solo existe cuando HAY error. Una línea permanente de ayuda robaría
-                      alto al botón de guardar, que ya se quedó fuera de la hoja una vez. */}
-                  {avisoAntelacion !== null && (
-                    <Text
-                      accessibilityRole="alert"
-                      style={[t.micro, { color: c.danger, fontSize: 10.5, marginTop: 6 }]}
-                    >
-                      {avisoAntelacion}
-                    </Text>
+
+                  {/* La rueda y su botón van en UNA fila horizontal: apilados sumaban casi 200 px
+                      de alto y el botón de guardar se caía de la hoja. Al lado, la rueda cuesta
+                      sus 132 px y nada más. */}
+                  {ruedaOtraAbierta && (
+                    <View style={styles.filaRuedaOtra}>
+                      <RuedaAntelacionPicker
+                        minutosIniciales={arranqueDeLaRuedaOtra.current}
+                        onCambiar={setMinutosOtra}
+                      />
+                      <Pressable
+                        onPress={agregarAntelacionDeLaRueda}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Añadir ${etiquetaDeAntelacion(minutosOtra)}`}
+                        style={[
+                          styles.pastillaAntelacion,
+                          { borderColor: c.gold, backgroundColor: c.cardBgAlt },
+                        ]}
+                      >
+                        {/* El botón repite lo que marca la rueda, igual que el de guardar repite
+                            la hora: es la confirmación de lo que se va a añadir, y de paso dice
+                            que esos números sueltos son minutos. */}
+                        <Text
+                          style={[t.micro, { fontSize: 10.5, fontFamily: 'Jost_700Bold', color: c.goldInk }]}
+                          numberOfLines={1}
+                        >
+                          + Añadir {etiquetaDeAntelacion(minutosOtra)}
+                        </Text>
+                      </Pressable>
+                    </View>
                   )}
                 </>
               )}
@@ -1511,21 +1542,16 @@ const styles = StyleSheet.create({
     gap: 6,
     marginTop: 6,
   },
-  /* Del ancho de una pastilla, para convivir en la misma fila que envuelve. Cuatro dígitos es
-     todo lo que acepta (el tope es 1440), así que no necesita más. */
-  campoAntelacionPropia: {
-    flexGrow: 1,
-    minWidth: '31%',
-    minHeight: 44,
-    borderWidth: 1.2,
-    borderRadius: 11,
-    paddingHorizontal: 6,
-    textAlign: 'center',
-    fontFamily: 'Jost_700Bold',
-    fontSize: 10.5,
+  /* La rueda de "Otra" y su botón, uno al lado del otro. `alignItems: 'center'` para que el
+     botón quede a la altura de la franja central de la rueda, que es la fila que cuenta. */
+  filaRuedaOtra: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 6,
   },
-  /* 31 % y no 47 %: desde que se puede escribir una antelación propia hay hasta siete elementos
-     en esta fila, y a dos por renglón el botón de guardar quedaba fuera de la hoja —que no tiene
+  /* 31 % y no 47 %: desde que se puede elegir una antelación propia hay hasta seis elementos en
+     esta fila, y a dos por renglón el botón de guardar quedaba fuera de la hoja —que no tiene
      scroll a propósito—. A tres por renglón entran en el mismo alto de antes. La altura de 44 no
      se toca: es el mínimo cómodo para el dedo (AGENTS.md §4). */
   pastillaAntelacion: {
