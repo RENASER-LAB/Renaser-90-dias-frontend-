@@ -32,6 +32,13 @@ import {
   type ClaveDeFase,
 } from '../features/home/hooks/useResumenHome';
 import { useEtapasOnboarding } from '../features/onboarding/hooks/useEtapasOnboarding';
+import { usePersistenciaOnboarding } from '../features/onboarding/hooks/usePersistenciaOnboarding';
+import { mapearPacto, PREGUNTA_FIRMA_PACTO } from '../features/onboarding/data/mapaPreguntas';
+import {
+  SignatureCanvas,
+  type SignatureCanvasHandle,
+  type SignatureData,
+} from '../components/SignatureCanvas';
 import { MapaRenacimientoFlow } from '../features/mapa-renacimiento/MapaRenacimientoFlow';
 import { elegirFotoDePerfil } from '../features/auth/utils/elegirFotoDePerfil';
 import * as authApi from '../features/auth/api/authApi';
@@ -208,6 +215,8 @@ export default function YoScreen() {
     recargar: recargarEvidencias,
   } = useMisEvidencias();
   const etapasOnboarding = useEtapasOnboarding();
+  const { recargar: recargarEtapasOnboarding } = etapasOnboarding;
+  const { guardarCapitulo, avanzarEstado, aceptarHito, guardarFirma } = usePersistenciaOnboarding();
   const { rs, isTablet, horizontalPadding, contentMaxWidth } = useResponsive();
   const { user, logout, actualizarPerfil, refrescarPerfil } = useAuth();
   const { resumen } = useResumenHome();
@@ -273,6 +282,90 @@ export default function YoScreen() {
 
   const profileInitials = inicialesDe(profileName);
 
+  // =========================================================================
+  // FIRMA DEL PACTO (sub-vista `pacto`)
+  // =========================================================================
+  /*
+    BUG ENCONTRADO 2026-09-21 ("no sale para firmar"): acá no había ningún lienzo. El recuadro
+    punteado era una maqueta — un `<Text>` con `profileName` en cursiva y, debajo, el rótulo fijo
+    "FIRMA DIGITAL REGISTRADA & SELLADA" escrito a mano. Nada escuchaba el dedo, nada se guardaba,
+    y el rótulo afirmaba un sellado que no había ocurrido ni podía ocurrir: "SELLAR MI COMPROMISO"
+    solo abría un `Alert` y volvía a la lista de etapas. Por eso además la etapa 1 no se marcaba
+    nunca — la barra de progreso no tenía de dónde sacar un Pacto firmado.
+
+    El estado vive ACÁ y no dentro de la sub-vista (AGENTS.md §3, "Persistencia Incondicional"):
+    la sub-vista se monta y desmonta con `activeView`, así que una firma guardada adentro se
+    perdería con solo tocar "VOLVER A ETAPAS" y entrar de nuevo.
+  */
+  const firmaPactoRef = useRef<SignatureCanvasHandle>(null);
+  const [firmaPacto, setFirmaPacto] = useState<SignatureData | null>(null);
+  const [sellandoPacto, setSellandoPacto] = useState(false);
+  const pactoYaFirmado = etapasOnboarding.pacto === 'completada';
+
+  const sellarPacto = useCallback(async () => {
+    if (sellandoPacto) return;
+    if (!firmaPacto || !firmaPacto.data) {
+      Alert.alert('Falta tu firma', 'Firma en el recuadro —con tu dedo o con tu firma electrónica— antes de sellar tu compromiso.');
+      return;
+    }
+
+    // Mismo recorrido que `PactoScreen.handleConfirmSignature`, y por el mismo motivo: el Pacto es
+    // el compromiso más importante del onboarding, así que nada de esto puede fallar en silencio.
+    // El hito PACTO_FIRMADO se marca solo si la firma llegó a respaldarse de verdad.
+    setSellandoPacto(true);
+    try {
+      const respuesta = await guardarCapitulo(mapearPacto(profileName));
+      if (respuesta.pendientes > 0) {
+        Alert.alert('No se pudo guardar', 'No pudimos registrar tu aceptación del Pacto. Revisa tu conexión e inténtalo de nuevo.');
+        return;
+      }
+      await aceptarHito('PACTO');
+
+      const png = await firmaPactoRef.current?.capturarComoPngBase64();
+      if (!png) {
+        Alert.alert('No se pudo capturar tu firma', 'Vuelve a firmar en el recuadro e inténtalo de nuevo.');
+        return;
+      }
+
+      const resultado = await guardarFirma({
+        flow: 'pacto',
+        questionKey: PREGUNTA_FIRMA_PACTO.clave,
+        pngBase64: png,
+        trazosOriginales: firmaPacto.data,
+      });
+      if (!resultado.ok) {
+        Alert.alert(
+          'No se pudo guardar tu firma',
+          'No pudimos respaldar tu firma en el almacenamiento. Revisa tu conexión e inténtalo de nuevo.'
+        );
+        return;
+      }
+      await aceptarHito('PACTO_FIRMADO');
+      await avanzarEstado({ flow: 'pacto', section: 'firma', step: 0 });
+
+      // Relectura inmediata: es lo que mueve la barra de progreso y pone el ✓ en la etapa 1 sin
+      // tener que cerrar la app. No se da por completada de antemano — el criterio del hook es
+      // "ante la duda, pendiente", y un tilde verde falso es peor que ninguno.
+      await recargarEtapasOnboarding();
+
+      Alert.alert('¡Pacto sellado! 🦅', 'Tu compromiso de 90 días está activo y respaldado en tu expediente.');
+      setActiveView('onboarding');
+    } finally {
+      setSellandoPacto(false);
+    }
+  }, [
+    aceptarHito,
+    avanzarEstado,
+    // `recargar` es estable (`useCallback` con deps vacías); el objeto que lo envuelve se recrea
+    // en cada render, así que se depende de la función y no del objeto.
+    recargarEtapasOnboarding,
+    firmaPacto,
+    guardarCapitulo,
+    guardarFirma,
+    profileName,
+    sellandoPacto,
+  ]);
+
   // Notificaciones
   const [notifAlarm, setNotifAlarm] = useState(true);
   const [notifCelula, setNotifCelula] = useState(true);
@@ -308,7 +401,14 @@ export default function YoScreen() {
     return user ? (
       <MapaRenacimientoFlow
         userId={user.id}
-        onSalir={() => setActiveView('onboarding')}
+        onSalir={() => {
+          setActiveView('onboarding');
+          // El Mapa se abre y se cierra con este `useState`, sin navegación de por medio: la
+          // pestaña `Yo` nunca pierde el foco, así que el `useFocusEffect` de `useEtapasOnboarding`
+          // no se entera de que la etapa 2 acaba de terminarse. Sin esta relectura, quien activa su
+          // Mapa vuelve a "Tu proceso completo" y sigue viendo el contador de antes.
+          void recargarEtapasOnboarding();
+        }}
       />
     ) : null;
   }
@@ -1063,28 +1163,42 @@ export default function YoScreen() {
           </View>
 
           {/* Firma Digital con el Dedo — el recuadro exterior perdió su borde: adentro vive el
-              lienzo punteado, que es la afordancia de verdad. Eran dos rectángulos concéntricos
-              para pedir una sola firma. */}
+              lienzo, que es la afordancia de verdad. Eran dos rectángulos concéntricos para
+              pedir una sola firma.
+
+              Acá vivía la maqueta que no dejaba firmar (ver el comentario de `sellarPacto`).
+              Ahora es el `SignatureCanvas` de verdad, el mismo que usan Términos y `PactoScreen`:
+              trae los tres flags anti-intercepción de AGENTS.md §3 para que el `ScrollView` de
+              Android no le robe el gesto al dedo, y en modo dual, porque el nombre caligráfico
+              que se veía antes era —sin serlo— la firma electrónica que §3 pide ofrecer. */}
           <View style={styles.signatureBox}>
             <Text style={{ fontFamily: 'Jost_700Bold', color: c.goldInk, fontSize: 15, fontStyle: 'italic' }}>
               — Firma con tu dedo —
             </Text>
-            <View style={[styles.signatureCanvas, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-              <Text style={{ fontFamily: 'Jost_700Bold', color: c.goldInk, fontSize: 22, fontStyle: 'italic' }}>
-                {profileName}
-              </Text>
-              <Text style={[t.micro, { color: c.textSoft, position: 'absolute', bottom: 6 }]}>
-                FIRMA DIGITAL REGISTRADA & SELLADA
-              </Text>
-            </View>
+
+            <SignatureCanvas
+              ref={firmaPactoRef}
+              // La pantalla ya rotula el recuadro con "— Firma con tu dedo —" justo arriba: el
+              // cintillo propio del lienzo sería el segundo título de lo mismo. El pie SÍ se deja
+              // (es donde vive "Limpiar firma").
+              hideHeader
+              nombreFirmaElectronica={profileName}
+              initialSignature={firmaPacto}
+              onSignatureChange={(valida, datos) => setFirmaPacto(valida ? datos : null)}
+            />
+
+            {/* El rótulo del sellado estaba escrito a mano y afirmaba siempre lo mismo, hubiera o
+                no una firma detrás. Ahora dice lo que pasó de verdad. */}
+            <Text style={[t.micro, { color: pactoYaFirmado ? c.success : c.textSoft, textAlign: 'center' }]}>
+              {pactoYaFirmado ? 'FIRMA DIGITAL REGISTRADA & SELLADA' : 'TU FIRMA SE REGISTRA AL SELLAR EL PACTO'}
+            </Text>
           </View>
 
           <GoldButton
             label="✓ SELLAR MI COMPROMISO →"
-            onPress={() => {
-              Alert.alert('¡Pacto Sellado! 🦅', 'Tu compromiso de 90 días está activo y respaldado en tu expediente.');
-              setActiveView('onboarding');
-            }}
+            onPress={sellarPacto}
+            disabled={!firmaPacto}
+            loading={sellandoPacto}
             style={{ width: '100%', marginBottom: 28 }}
           />
         </ScrollView>
@@ -1881,10 +1995,11 @@ const styles = StyleSheet.create({
      contenido —es el canto de un documento que se firma—, no un adorno para destacar la tarjeta.
      En la vista de video, que reusa este estilo, el JSX lo pasa a `c.border`. */
   pactoDocumentCard: { borderWidth: 1, borderRadius: space.radius, padding: space.cardPad, gap: 12 },
-  /* Perdió su borde: adentro vive el lienzo de firma, que tiene el suyo (punteado, y ese sí es
-     la afordancia). Eran dos recuadros concéntricos para pedir una sola firma. */
-  signatureBox: { alignItems: 'center', gap: 10 },
-  signatureCanvas: { width: '100%', height: 80, borderRadius: space.radiusSm, borderWidth: 1, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
+  /* Perdió su borde: adentro vive el lienzo de firma, que tiene el suyo. Eran dos recuadros
+     concéntricos para pedir una sola firma.
+     `signatureCanvas` se fue con la maqueta: el recuadro lo dibuja ahora el `canvasBox` del
+     propio `SignatureCanvas`, con su alto real de 145 en vez de los 80 de adorno que había acá. */
+  signatureBox: { alignItems: 'center', gap: 10, width: '100%' },
   /** Era de 25 px de alto (paddingVertical 6) con texto de 10.5. Ahora es un botón de verdad. */
   createHabitBtn: { borderRadius: space.radiusSm, paddingHorizontal: 16, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
   evidenceCard: { borderWidth: 1, borderRadius: space.radius, padding: 14, gap: 4 },
