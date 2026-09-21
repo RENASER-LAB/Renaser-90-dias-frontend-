@@ -1,7 +1,10 @@
 import { obtenerCatalogoPreguntas } from '../../onboarding/data/catalogoPreguntas';
 import * as onboardingApi from '../../onboarding/api/onboardingApi';
 import type { TipoPreguntaOnboarding } from '../../onboarding/types/onboarding.types';
-import type { Area, DiaHito, MapaRenacimiento } from '../tipos';
+import { PERIODOS, RESULTADOS_NEGOCIO, RESULTADOS_SALUD } from '../reglas';
+import type {
+  Area, DiaHito, MapaRenacimiento, PeriodoMedicion, TipoResultadoNegocio, TipoResultadoSalud,
+} from '../tipos';
 import { AREAS } from '../tipos';
 
 /**
@@ -37,6 +40,23 @@ const FLUJO = 'mapa_dia7';
 
 function esArea(valor: string | null): valor is Area {
   return valor !== null && (AREAS as readonly string[]).includes(valor);
+}
+
+/**
+ * Los valores guardados son **exactamente** las claves de los catálogos de `reglas.ts` (verificado
+ * contra `opciones_pregunta` el 2026-09-14), pero el backend no valida que una respuesta esté entre
+ * las opciones: un valor de más se guardaría callado. Se comprueban acá antes de creerles.
+ */
+function esTipoSalud(valor: string | null): valor is TipoResultadoSalud {
+  return valor !== null && RESULTADOS_SALUD.some(r => r.clave === valor);
+}
+
+function esTipoNegocio(valor: string | null): valor is TipoResultadoNegocio {
+  return valor !== null && RESULTADOS_NEGOCIO.some(r => r.clave === valor);
+}
+
+function esPeriodo(valor: string | null): valor is PeriodoMedicion {
+  return valor !== null && PERIODOS.some(p => p.clave === valor);
 }
 
 /**
@@ -80,14 +100,27 @@ export interface ResumenDelMapa {
   /** La escala 1-10 de Relaciones: de dónde partió y a dónde va. `null` si no la contestó. */
   relacionesBase: number | null;
   relacionesMeta: number | null;
+  /**
+   * Qué mide cada objetivo, que es lo que decide si su avance admite una cuota mensual y de qué
+   * clase. La Roca Maestra guarda el número, la unidad y la línea base, pero **no** el tipo de
+   * resultado ni el periodo: sin estos tres campos, Plan no puede distinguir 82 kg de peso —que se
+   * reparte, con tope de salud— de un 8/10 de energía o de una condición clínica, que no se
+   * reparten. Ver `magnitudDeSalud` y `magnitudDeNegocio` en `reglas.ts`.
+   */
+  saludTipo: TipoResultadoSalud | null;
+  /** La unidad que escribió la persona. Solo se usa para detectar una escala en el tipo "otro". */
+  saludUnidad: string | null;
+  negocioTipo: TipoResultadoNegocio | null;
+  negocioPeriodo: PeriodoMedicion | null;
 }
 
 /**
  * Lo que Plan necesita del Mapa, en **una sola lectura**.
  *
- * Son dos cosas que no tienen nada que ver entre sí —la prioridad y la escala de Relaciones— y
- * viajan juntas por un motivo práctico: salen del mismo `GET /onboarding/answers?flow=mapa_dia7`.
- * Pedirlas por separado serían dos requests idénticas cada vez que alguien abre el Plan.
+ * Son cosas que no tienen nada que ver entre sí —la prioridad, la escala de Relaciones, y qué mide
+ * cada objetivo— y viajan juntas por un motivo práctico: salen del mismo
+ * `GET /onboarding/answers?flow=mapa_dia7`. Pedirlas por separado serían tres o cuatro requests
+ * idénticas cada vez que alguien abre el Plan.
  *
  * **Por qué la escala de Relaciones sale de acá y no de la Roca Maestra.** Ese objetivo viaja a
  * `rocks` sin meta cuantitativa a propósito (un puntaje de 1 a 10 no es una unidad de negocio, y
@@ -98,7 +131,15 @@ export interface ResumenDelMapa {
  * quien recorrió el Mapa antes de que esto se cableara.
  */
 export async function leerResumenDelMapa(): Promise<ResumenDelMapa> {
-  const vacio: ResumenDelMapa = { prioridad: null, relacionesBase: null, relacionesMeta: null };
+  const vacio: ResumenDelMapa = {
+    prioridad: null,
+    relacionesBase: null,
+    relacionesMeta: null,
+    saludTipo: null,
+    saludUnidad: null,
+    negocioTipo: null,
+    negocioPeriodo: null,
+  };
   try {
     const agrupadas = await onboardingApi.obtenerRespuestas(FLUJO);
     const resumen = { ...vacio };
@@ -107,6 +148,12 @@ export async function leerResumenDelMapa(): Promise<ResumenDelMapa> {
         if (r.questionKey === CLAVE_PRIORIDAD && esArea(r.textValue)) resumen.prioridad = r.textValue;
         if (r.questionKey === 'map_relations_baseline_scale') resumen.relacionesBase = r.scaleValue;
         if (r.questionKey === 'map_relations_target_scale') resumen.relacionesMeta = r.scaleValue;
+        if (r.questionKey === 'map_health_result_type' && esTipoSalud(r.textValue)) resumen.saludTipo = r.textValue;
+        if (r.questionKey === 'map_health_unit') resumen.saludUnidad = r.textValue;
+        if (r.questionKey === 'map_business_result_type' && esTipoNegocio(r.textValue)) {
+          resumen.negocioTipo = r.textValue;
+        }
+        if (r.questionKey === 'map_business_period' && esPeriodo(r.textValue)) resumen.negocioPeriodo = r.textValue;
       }
     }
     return resumen;
