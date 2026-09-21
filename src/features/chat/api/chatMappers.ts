@@ -90,9 +90,9 @@ function traducirRol(role: string): string {
  *
  * Soporte y lo desconocido caen en `'direct'`, y no es una comodidad: es el único cajón donde se
  * ven. El filtro de la bandeja (`filteredConversations` en `ComunidadScreen`) lista `'global'` solo
- * en la pestaña Global, `'celula'` sola en la sección Célula, y `'direct'` + `'celula'` en la
- * pestaña de conversaciones. Devolver cualquier otra cosa dejaría el chat de soporte invisible: el
- * aprendiz no puede salirse de él, pero tampoco lo encontraría.
+ * en el conmutador Global de la pestaña Tribu, y `'direct'` + `'celula'` en el de Directos, que es
+ * el otro. Devolver cualquier otra cosa dejaría el chat de soporte invisible: el aprendiz no puede
+ * salirse de él, pero tampoco lo encontraría.
  *
  * Lo que distingue soporte de un 1 a 1 no se pierde: `mapearResumenConversacion` decide nombre,
  * subtítulo y ícono con `reconocerTipoChat`, que sí sabe la diferencia.

@@ -43,6 +43,7 @@ import { estaCercaDelFinal } from '../features/community/utils/cercaDelFinal';
 import { nombreVisibleDeGrupo } from '../features/community/utils/nombreDeGrupo';
 import { useCategoriasMuro } from '../features/community/hooks/useCategoriasMuro';
 import { PodioRanking, EntradaEscalonada } from '../features/community/components/PodioRanking';
+import { FilaIntegrante, type IntegranteDeGrupo } from '../features/community/components/FilaIntegrante';
 import * as wallApi from '../features/community/api/wallApi';
 import { elegirYNormalizarFotoMuro, type FotoMuroNormalizada } from '../features/community/utils/normalizarImagen';
 import { FotoMuro } from '../features/community/components/FotoMuro';
@@ -354,7 +355,7 @@ const GROUP_MEMBERS: GroupMember[] = [
 // junto a su declaración, más arriba): el backend no expone los campos que ese roster necesita.
 
 /**
- * En qué sección de Comunidad está parada la pantalla. Las seis son EXCLUYENTES entre sí: solo
+ * En qué sección de Comunidad está parada la pantalla. Las cinco son EXCLUYENTES entre sí: solo
  * una se pinta a la vez, y la fila de medallones de arriba es el único modo de cambiar de una a
  * otra (más los dos atajos que entran desde Training, ver los efectos de `route.params`).
  *
@@ -367,22 +368,27 @@ const GROUP_MEMBERS: GroupMember[] = [
  *
  * REDISEÑO 2026-09-07: antes eran cuatro (`inicio` | `eventos` | `recursos` | `atencion`) y
  * `inicio` era una portada desde la que había que entrar a un sub-módulo y, ya adentro, elegir una
- * pestaña — el Muro quedaba a dos toques de profundidad. Ahora las seis están al mismo nivel,
+ * pestaña — el Muro quedaba a dos toques de profundidad. Ahora están todas al mismo nivel,
  * arriba, y `muro` es la que abre. Lo que era una pestaña dentro de "Eventos & Experiencias"
- * (`muro`, `testimonios`, `ranking`) y lo que era una categoría de chat (`celula`, `miembros`) son
- * secciones de pleno derecho; "Recursos Exclusivos" pasó a llamarse `classroom`.
+ * (`muro`, `testimonios`, `ranking`) y lo que era una categoría de chat pasaron a ser secciones de
+ * pleno derecho; "Recursos Exclusivos" pasó a llamarse `classroom`.
+ *
+ * REDISEÑO 2026-09-21 (autorizado por el dueño del producto): `celula` ("Grupo") y `miembros`
+ * ("Miembros") se fusionaron en `tribu`. Eran dos pestañas para un solo trabajo —tu gente y dónde
+ * le escribes— y encima se pisaban: la lista de "Directos" YA incluía los chats de grupo
+ * (`filteredConversations`), así que la sección Grupo terminaba mostrando un subconjunto de lo que
+ * Miembros mostraba al lado. De seis pasan a cinco.
  */
 export type SeccionComunidad =
   | 'muro'
   | 'classroom'
-  | 'celula'
-  | 'miembros'
+  | 'tribu'
   | 'ranking'
   | 'testimonios';
 
 /**
- * Las seis secciones, en el orden en que se pintan en la fila de medallones. Es la única fuente de
- * verdad de esa fila: agregar una sección es agregar una entrada acá y su bloque de contenido.
+ * Las cinco secciones, en el orden en que se pintan en la fila de medallones. Es la única fuente
+ * de verdad de esa fila: agregar una sección es agregar una entrada acá y su bloque de contenido.
  *
  * Los tickets al mentor no están, y no es que se hayan movido: el apartado entero se retiró de la
  * app el 2026-09-07 a pedido del dueño del proyecto (ver la nota junto a `tieneGrupo`).
@@ -390,16 +396,25 @@ export type SeccionComunidad =
 const SECCIONES: { id: SeccionComunidad; icon: IconName; label: string }[] = [
   { id: 'muro', icon: 'chat', label: 'Muro' },
   { id: 'classroom', icon: 'stack', label: 'Classroom' },
-  { id: 'celula', icon: 'users', label: 'Grupo' },
-  { id: 'miembros', icon: 'user', label: 'Miembros' },
+  { id: 'tribu', icon: 'users', label: 'Tribu' },
   { id: 'ranking', icon: 'trophy', label: 'Ranking' },
   { id: 'testimonios', icon: 'star', label: 'Testimonios' },
 ];
 
+/**
+ * El pulso de la tribu. Se pinta como UNA línea de texto al pie de la tarjeta —"12 conversaciones
+ * esta semana · 3 eventos próximos · 2 mentorías programadas"— y no como las tres tarjetas con
+ * número de 22 px que eran hasta el 2026-09-21.
+ *
+ * Por qué se degradó: son datos de contexto, no algo sobre lo que se actúe, y ocupaban el mismo
+ * peso visual que el mentor y los integrantes, que sí son el motivo de entrar acá. Además siguen
+ * siendo valores fijos —ningún endpoint los calcula todavía—, así que darles tamaño de titular
+ * era prometer una precisión que no existe. La información no se perdió: se le bajó la voz.
+ */
 const METRICAS = [
-  { n: '12', label: 'Conversaciones\nesta semana' },
-  { n: '3', label: 'Eventos\npróximos' },
-  { n: '2', label: 'Mentorías\nprogramadas' },
+  { n: '12', label: 'conversaciones esta semana' },
+  { n: '3', label: 'eventos próximos' },
+  { n: '2', label: 'mentorías programadas' },
 ];
 
 export default function ComunidadScreen() {
@@ -496,9 +511,14 @@ export default function ComunidadScreen() {
   /**
    * Las filas de la lista de integrantes. El mentor va primero —sin botón de chatear, porque el
    * grupo no trae su id de usuario, y sin id no hay DM—; después los compañeros, que sí lo traen.
+   *
+   * Sirve a los DOS lugares donde se lista gente, y sin ramas nuevas: dentro de una sala de chat
+   * `grupoAbierto` apunta al grupo de esa conversación (ficha "INFO DEL GRUPO"), y en la pestaña
+   * Tribu —donde nunca hay chat abierto, así que `grupoAbierto` es `null`— cae sola al grupo
+   * principal de `useMiCelula`, que es exactamente el que describe la tarjeta de la tribu.
    */
   const integrantesDelGrupo = useMemo(() => {
-    const filas: { id: string; nombre: string; avatarUrl: string | null; badge: string | null; chateable: boolean }[] = [];
+    const filas: IntegranteDeGrupo[] = [];
     const mentorNombre = grupoAbierto ? grupoAbierto.mentorName : (miCelula?.assigned === true ? miCelula.mentorName : null);
     const mentorAvatar = grupoAbierto ? grupoAbierto.mentorAvatarUrl : (miCelula?.assigned === true ? miCelula.mentorAvatarUrl : null);
     if (mentorNombre) {
@@ -539,6 +559,16 @@ export default function ComunidadScreen() {
     ? `${grupoDelSubtitulo.memberCount} ${grupoDelSubtitulo.memberCount === 1 ? 'integrante' : 'integrantes'} · Cohorte ${grupoDelSubtitulo.cohortName}`
     : null;
 
+  /* Nombre y resumen de MI grupo, para la tarjeta de la pestaña Tribu. Se derivan solo de
+     `miCelula` y no de `nombreDelGrupo`/`subtituloDelGrupo`, que miran primero al grupo de la
+     conversación abierta: la tarjeta habla siempre del grupo principal, tenga o no un chat
+     abierto detrás. */
+  const nombreDeMiTribu = miCelula?.assigned === true ? miCelula.cellName : null;
+  const resumenDeMiTribu =
+    miCelula?.assigned === true
+      ? `${miCelula.memberCount} ${miCelula.memberCount === 1 ? 'integrante' : 'integrantes'} · Cohorte ${miCelula.cohortName}`
+      : null;
+
   // =========================================================================
   // ESTADOS DE NAVEGACIÓN
   // =========================================================================
@@ -569,11 +599,12 @@ export default function ComunidadScreen() {
   const enMuroTestimoniosORanking =
     seccionActiva === 'muro' || seccionActiva === 'testimonios' || seccionActiva === 'ranking';
   /**
-   * Célula y Miembros comparten el listado de conversaciones, la sala de chat y la ficha del
-   * grupo: lo único que cambia entre las dos es qué conversaciones se filtran y qué va arriba de
-   * la lista.
+   * La pestaña Tribu: la tarjeta de tu gente, el listado de conversaciones, la sala de chat y la
+   * ficha del grupo. Hasta el 2026-09-21 eran dos secciones (`celula` y `miembros`) que ya
+   * compartían las tres últimas cosas; ahora es una sola y esta constante queda como el nombre
+   * legible de "estoy en Tribu" para las cuatro vistas que la componen.
    */
-  const inChatsComunidad = seccionActiva === 'celula' || seccionActiva === 'miembros';
+  const enTribu = seccionActiva === 'tribu';
   // Se guarda el ID, no el objeto: `courses` (de `useCursos`) es la única fuente de verdad, así
   // que `selectedCourse` sale siempre DERIVADO más abajo. Si se guardara el objeto entero (como
   // hacía el mock) quedaría una copia vieja congelada en el momento del toque, y una acción
@@ -585,10 +616,23 @@ export default function ComunidadScreen() {
   // real (GET /api/v1/chat/conversations) a través de `useChatConversaciones`; el historial de
   // cada una se pide recién al abrirla (ver `handleAbrirChat`), nunca en el listado.
   /**
-   * Qué se lista dentro de Miembros. La célula dejó de ser una opción acá porque pasó a ser su
-   * propia sección: quedan las conversaciones uno a uno y el canal global.
+   * Qué se lista en la bandeja de la pestaña Tribu. `directos` son las conversaciones con gente
+   * —los 1 a 1, los chats de soporte y los chats de grupo—; `global` es el canal abierto a toda
+   * la comunidad. Los dos valores son los mismos de siempre: lo que se fusionó fue la pestaña de
+   * arriba, no este conmutador.
    */
-  const [miembrosTab, setMiembrosTab] = useState<'directos' | 'global'>('directos');
+  const [tribuTab, setTribuTab] = useState<'directos' | 'global'>('directos');
+
+  /**
+   * Si el desplegable de integrantes de la tarjeta de la tribu está abierto.
+   *
+   * Arranca cerrado a propósito: quien entra a Tribu viene casi siempre a escribirle a alguien, y
+   * la lista completa de la gente del grupo es una consulta ocasional. Dejarla siempre desplegada
+   * empuja la bandeja de conversaciones fuera de la primera pantalla, que es justo lo que este
+   * rediseño vino a evitar. El gesto de volver atrás del sistema la cierra antes de salir de la
+   * sección (AGENTS.md §6, ver `useSystemBackHandler` más abajo).
+   */
+  const [integrantesAbiertos, setIntegrantesAbiertos] = useState(false);
   const {
     conversations,
     setConversations,
@@ -623,11 +667,12 @@ export default function ComunidadScreen() {
       setFullScreenLesson(null);
       setSelectedCourseId(null);
     }
-    // Célula y Miembros comparten la sala de chat abierta: pasar de una a otra no la cierra, salir
-    // de las dos sí.
-    if (seccion !== 'celula' && seccion !== 'miembros') {
+    // Salir de Tribu cierra lo que quedó abierto adentro: la sala de chat, la ficha del grupo y
+    // el desplegable de integrantes. Volver a entrar la deja como recién llegado.
+    if (seccion !== 'tribu') {
       setActiveChat(null);
       setGroupInfoVisible(false);
+      setIntegrantesAbiertos(false);
     }
   }, []);
   const [chatInputText, setChatInputText] = useState('');
@@ -1075,7 +1120,13 @@ export default function ComunidadScreen() {
       setActiveChat(null);
       return true;
     }
-    if (inChatsComunidad) {
+    // El desplegable de integrantes es un nivel más adentro de la pestaña Tribu: el gesto lo
+    // cierra antes de considerar salir de la sección (AGENTS.md §6).
+    if (integrantesAbiertos) {
+      setIntegrantesAbiertos(false);
+      return true;
+    }
+    if (enTribu) {
       irASeccion('muro');
       return true;
     }
@@ -1103,7 +1154,7 @@ export default function ComunidadScreen() {
       return true;
     }
     return false;
-  }, shareSheetPost !== null || seccionActiva !== 'muro' || selectedCourse !== null || fullScreenLesson !== null || createPostModalVisible || reactionsModalVisible || activeChat !== null || groupInfoVisible || selectedMemberProfile !== null || fotoChatAmpliada !== null);
+  }, shareSheetPost !== null || seccionActiva !== 'muro' || selectedCourse !== null || fullScreenLesson !== null || createPostModalVisible || reactionsModalVisible || activeChat !== null || groupInfoVisible || selectedMemberProfile !== null || fotoChatAmpliada !== null || integrantesAbiertos);
 
   /**
    * Mientras la sala de chat esté abierta, se esconde el botón flotante del acompañante: se monta
@@ -1111,9 +1162,9 @@ export default function ComunidadScreen() {
    * `ChatDelCurso` (ver `renasia/state/chatEnPantalla.ts`), no un mecanismo nuevo.
    */
   useEffect(() => {
-    if (!inChatsComunidad || activeChat === null || groupInfoVisible) return;
+    if (!enTribu || activeChat === null || groupInfoVisible) return;
     return marcarChatMontado();
-  }, [inChatsComunidad, activeChat, groupInfoVisible]);
+  }, [enTribu, activeChat, groupInfoVisible]);
 
   // =========================================================================
   // HANDLERS
@@ -1248,8 +1299,8 @@ export default function ComunidadScreen() {
     const id = params?.abrirChatConversacionId;
     if (!id) return;
 
-    irASeccion('miembros');
-    setMiembrosTab('directos');
+    irASeccion('tribu');
+    setTribuTab('directos');
     setChatPedidoDeOtraPestana(id);
     // Recién creada, puede no estar en el listado: se pide de nuevo para que aparezca.
     void recargarConversaciones();
@@ -1516,8 +1567,8 @@ export default function ComunidadScreen() {
     setGroupInfoVisible(false);
     try {
       const conv = await abrirConversacionDirecta(usuarioId);
-      irASeccion('miembros');
-      setMiembrosTab('directos');
+      irASeccion('tribu');
+      setTribuTab('directos');
       setChatPedidoDeOtraPestana(conv.id);
       void recargarConversaciones();
     } catch {
@@ -1575,7 +1626,7 @@ export default function ComunidadScreen() {
    *
    * Si la conversación no está todavía, no hace nada y espera al siguiente render: `recargar()`
    * ya salió a buscarla. No se reintenta ni se pone un temporizador — si nunca llega, la persona
-   * queda en Miembros, que es exactamente donde está su chat.
+   * queda en Tribu, que es exactamente donde está su chat.
    */
   useEffect(() => {
     if (!chatPedidoDeOtraPestana) return;
@@ -1821,15 +1872,28 @@ export default function ComunidadScreen() {
   };
 
   /**
-   * Qué conversaciones se listan. Sale de la sección activa, no de un estado aparte: en Célula son
-   * siempre las de la célula, y en Miembros las elige `miembrosTab`.
+   * Qué conversaciones se listan. Ahora lo decide solo el conmutador, porque hay una sola sección.
+   *
+   * Nada se perdió al fusionar Grupo con Miembros: la rama de la sección Grupo listaba
+   * `type === 'celula'`, y "Directos" ya listaba `'direct' + 'celula'` —o sea, un SUPERCONJUNTO de
+   * aquella—. Los chats de grupo siguen exactamente donde estaban para quien los buscaba en
+   * Directos, y dejaron de aparecer dos veces en dos pestañas distintas.
+   *
+   * `'direct'` es además el único cajón donde se ve un chat de soporte (ver
+   * `chatMappers.mapearTipoConversacion`): sacarlo de acá lo dejaría invisible.
    */
   const filteredConversations = conversations.filter(conv => {
-    if (seccionActiva === 'celula') return conv.type === 'celula';
-    if (miembrosTab === 'global') return conv.type === 'global';
-    // Directos: los 1-a-1 y TAMBIÉN el chat del grupo, para que no quede escondido solo en la
-    // pestaña Grupo y se encuentre acá, donde la persona busca sus conversaciones (pedido del dueño).
+    if (tribuTab === 'global') return conv.type === 'global';
     return conv.type === 'direct' || conv.type === 'celula';
+  });
+
+  /* Si esta persona ACOMPAÑA un grupo. Se calcula acá y no dentro del JSX porque la pestaña Tribu
+     lo pregunta dos veces: para pintar la entrada al grupo que acompaña y para saber si la
+     tarjeta de la tribu es el primer bloque de la pantalla (y entonces lleva menos aire arriba). */
+  const veLaEntradaAlGrupoQueAcompana = entradaAlGrupoVisible({
+    esMentor,
+    rol: user?.role,
+    fallo: celulaQueAcompano.fallo,
   });
 
   /*
@@ -1868,21 +1932,22 @@ export default function ComunidadScreen() {
       <ScreenHeader title="COMUNIDAD" right="info" />
 
       {/* ========================================================================= */}
-      {/* FILA DE SECCIONES: LAS SEIS, SIEMPRE A LA VISTA                           */}
+      {/* FILA DE SECCIONES: LAS CINCO, SIEMPRE A LA VISTA                          */}
       {/* ========================================================================= */}
       {/*
         REDISEÑO 2026-09-07. Antes acá vivía una portada ("TU TRIBU. TU SOPORTE. TU LEGADO.") con
         tres medallones que abrían sub-módulos, y recién adentro de cada uno había pestañas. El
         Muro —lo que la gente viene a ver— quedaba a dos toques y detrás de un nombre que no lo
-        anunciaba. Ahora las seis secciones están acá arriba, siempre visibles, y el contenido de
+        anunciaba. Ahora las cinco secciones están acá arriba, siempre visibles, y el contenido de
         la elegida se pinta abajo: un solo toque para cualquiera de ellas.
 
         Los medallones son EXACTAMENTE los de la portada que reemplazan (`styles.medallion`, mismo
         tamaño `medallionSize`, mismo oro, misma tipografía micro) — se movieron de lugar y se les
         agregó el estado activo, no se rediseñaron.
 
-        Scroll horizontal y no seis columnas repartidas: en un teléfono angosto seis medallones a
-        `flex: 1` dejan las etiquetas partidas en tres renglones. Con scroll cada una entra en uno.
+        Scroll horizontal y no cinco columnas repartidas: en un teléfono angosto cinco medallones
+        a `flex: 1` dejan las etiquetas partidas en varios renglones. Con scroll cada una entra en
+        uno, y la fila sigue sirviendo si mañana vuelve a haber seis.
       */}
       {/*
         Se esconde en las tres vistas que se toman la pantalla entera y traen su propio "atrás":
@@ -3095,9 +3160,33 @@ export default function ComunidadScreen() {
       )}
 
       {/* ========================================================================= */}
-      {/* SECCIONES GRUPO Y MIEMBROS: CHATS TIPO WHATSAPP                          */}
+      {/* PESTAÑA TRIBU: PRIMERO QUIÉNES SON, DESPUÉS DÓNDE LES HABLAS              */}
       {/* ========================================================================= */}
-      {inChatsComunidad && activeChat === null && (
+      {/*
+        REDISEÑO 2026-09-21, autorizado por el dueño del producto: acá vivían DOS pestañas, "Grupo"
+        y "Miembros", y se fusionaron en esta.
+
+        El orden no es el de antes apilado. Quien entra a Tribu viene a una de dos cosas, y están
+        separadas en ese orden:
+
+          1. QUIÉNES SON MI TRIBU — el mentor y los integrantes. Es una consulta, no una tarea: se
+             mira al principio y de vez en cuando. Por eso es UNA tarjeta compacta y no tres
+             secciones con rótulo propio (mentor / tribu privada / interacciones), que era lo que
+             empujaba la bandeja fuera de la primera pantalla.
+          2. DÓNDE HABLO CON ELLOS — el conmutador y la bandeja de conversaciones. Es lo que de
+             verdad se hace acá todos los días, así que arranca visible sin tener que desplazar.
+
+        Lo que se fue a segundo plano, y por qué:
+          · La lista completa de integrantes pasó a abrirse BAJO DEMANDA desde la tarjeta. Antes no
+            existía en esta pantalla: había cuatro avatares y un "+N" que no llevaba a ningún lado,
+            y para ver quién más estaba había que entrar a un chat de grupo y abrir su ficha.
+          · Las tres tarjetas de "Interacciones clave" son ahora una línea de texto al pie de la
+            tarjeta (ver `METRICAS`).
+          · El rótulo "Chat de tu grupo" con su lista aparte desapareció, y no se perdió nada: los
+            chats de grupo YA salían en "Directos" (ver `filteredConversations`). Eran la misma
+            lista dos veces, una en cada pestaña.
+      */}
+      {enTribu && activeChat === null && (
         <ScrollView
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
@@ -3111,242 +3200,343 @@ export default function ComunidadScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-          {/* ========================================================================= */}
-          {/* SECCIÓN GRUPO: MENTOR, TRIBU, MÉTRICAS Y CHAT DEL GRUPO               */}
-          {/* ========================================================================= */}
-          {/*
-            Acá aterrizó lo que antes era la portada de Comunidad. El dueño del proyecto lo pidió
-            así: la tarjeta del mentor y los dos bloques de datos de la tribu se manejan dentro de
-            Grupo, que es de lo que hablan.
-          */}
-          {seccionActiva === 'celula' && (
-            <>
-            {/* Para quien ACOMPAÑA. Va arriba de todo porque es lo que viene a hacer; el resto
-                de Grupo —su mentor, su tribu, su chat— sigue igual para todos, incluido él.
+          {/* -------------------------------------------------------------------------------
+              PARA QUIEN ACOMPAÑA. Va arriba de todo porque es lo que ese perfil viene a hacer;
+              el resto de la pestaña —su mentor, su tribu, sus chats— sigue igual para él.
 
-                Misma condición que la tarjeta de Hoy, y por eso vive en una función y no acá:
-                son las DOS entradas al mismo grupo (RF-26), y una que se esconda mientras la
-                otra no sería peor que las dos vacías. */}
-            {entradaAlGrupoVisible({ esMentor, rol: user?.role, fallo: celulaQueAcompano.fallo }) ? (
-              <View style={styles.section}>
-                <MicroLabel>Acompañamiento</MicroLabel>
-                <Pressable
-                  onPress={() => setVistaMentor('celula')}
-                  accessibilityRole="button"
-                  accessibilityLabel="Abrir el grupo que acompañas"
-                  style={[styles.entradaMentor, { borderColor: c.goldInk, backgroundColor: c.goldWash }]}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={[t.cardTitle, { color: c.textStrong }]} numberOfLines={1}>
-                      {celulaQueAcompano.vista?.celula.nombre ?? 'Mi grupo'}
-                    </Text>
-                    <Text style={[t.small, { color: c.textSoft, marginTop: 2 }]}>
-                      {celulaQueAcompano.cargando
-                        ? 'Cargando…'
-                        : celulaQueAcompano.vista
-                          ? `${celulaQueAcompano.vista.resumen.total} ${
-                              celulaQueAcompano.vista.resumen.total === 1 ? 'aprendiz' : 'aprendices'
-                            }`
-                          : 'Ver el grupo que acompañas'}
-                    </Text>
-                  </View>
-                  <Icon name="chevron" size={16} color={c.goldInk} />
-                </Pressable>
-              </View>
-            ) : null}
-
-            <View style={styles.section}>
-              <MicroLabel>Mentor</MicroLabel>
-              <View style={[styles.mentor, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-                <AvatarPersona
-                  nombre={tieneMentor && miCelula?.assigned === true ? miCelula.mentorName : null}
-                  avatarUrl={tieneMentor && miCelula?.assigned === true ? miCelula.mentorAvatarUrl : null}
-                  size={mentorPhoto}
-                />
+              Misma condición que la tarjeta de Hoy, y por eso vive en una función y no acá: son
+              las DOS entradas al mismo grupo (RF-26), y una que se esconda mientras la otra no
+              sería peor que las dos vacías.
+          ------------------------------------------------------------------------------- */}
+          {veLaEntradaAlGrupoQueAcompana ? (
+            <View style={styles.tribuBloqueInicial}>
+              <MicroLabel>Acompañamiento</MicroLabel>
+              <Pressable
+                onPress={() => setVistaMentor('celula')}
+                accessibilityRole="button"
+                accessibilityLabel="Abrir el grupo que acompañas"
+                style={[styles.entradaMentor, { borderColor: c.goldInk, backgroundColor: c.goldWash }]}
+              >
                 <View style={{ flex: 1 }}>
-                  <Text style={[t.cardTitle, { color: c.textStrong }]}>{mentorTitulo}</Text>
-                  {mentorSubtitulo && (
-                    <Text style={[t.small, { color: c.micro, marginTop: 2 }]}>{mentorSubtitulo}</Text>
-                  )}
-                  {mentorNota && (
-                    <Text style={[t.small, { color: c.textSoft, marginTop: 6, fontStyle: 'italic', lineHeight: 18 }]}>
-                      {mentorNota}
-                    </Text>
-                  )}
+                  <Text style={[t.cardTitle, { color: c.textStrong }]} numberOfLines={1}>
+                    {celulaQueAcompano.vista?.celula.nombre ?? 'Mi grupo'}
+                  </Text>
+                  <Text style={[t.small, { color: c.textSoft, marginTop: 2 }]}>
+                    {celulaQueAcompano.cargando
+                      ? 'Cargando…'
+                      : celulaQueAcompano.vista
+                        ? `${celulaQueAcompano.vista.resumen.total} ${
+                            celulaQueAcompano.vista.resumen.total === 1 ? 'aprendiz' : 'aprendices'
+                          }`
+                        : 'Ver el grupo que acompañas'}
+                  </Text>
                 </View>
-                <Icon name="chevron" size={12} color={c.chevron} />
+                <Icon name="chevron" size={16} color={c.goldInk} />
+              </Pressable>
+            </View>
+          ) : null}
+
+          {/* -------------------------------------------------------------------------------
+              1. QUIÉNES SON TU TRIBU — una sola tarjeta: mentor arriba, grupo en el medio, pulso
+              al pie. Las tres cosas describen al mismo sujeto, así que se leen como un objeto y
+              no como tres bloques sueltos con rótulo propio.
+          ------------------------------------------------------------------------------- */}
+          <View
+            style={[
+              styles.tribuCard,
+              veLaEntradaAlGrupoQueAcompana ? styles.tribuCardConEntradaArriba : styles.tribuBloqueInicial,
+              { borderColor: c.border, backgroundColor: c.cardBg },
+            ]}
+          >
+            {/* MENTOR. Sin chevron: no lleva a ninguna parte —el grupo no trae el id de usuario
+                del mentor, así que no hay DM que abrir— y una flecha que no responde al toque es
+                peor que no tenerla. Escribirle se hace por el chat del grupo, que ahora está en
+                esta misma pantalla, unos centímetros más abajo. */}
+            <View style={styles.tribuMentor}>
+              <AvatarPersona
+                nombre={tieneMentor && miCelula?.assigned === true ? miCelula.mentorName : null}
+                avatarUrl={tieneMentor && miCelula?.assigned === true ? miCelula.mentorAvatarUrl : null}
+                size={mentorPhoto}
+              />
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={[t.cardTitle, { color: c.textStrong }]}>{mentorTitulo}</Text>
+                {mentorSubtitulo && (
+                  <Text style={[t.small, { color: c.micro, marginTop: 2 }]}>{mentorSubtitulo}</Text>
+                )}
+                {mentorNota && (
+                  <Text style={[t.small, { color: c.textSoft, marginTop: 6, lineHeight: 18 }]}>
+                    {mentorNota}
+                  </Text>
+                )}
               </View>
             </View>
 
-            <View style={styles.section}>
-              <MicroLabel>Tribu privada</MicroLabel>
+            <View style={[styles.tribuFilete, { backgroundColor: c.divider }]} />
+
+            {/* GRUPO + INTEGRANTES. Toda la fila es el interruptor del desplegable, no solo el
+                "VER TODOS": el área pulsable es de más de 48 px de alto y ocupa el ancho entero
+                (AGENTS.md §4). Los avatares van en su propio renglón con `flexWrap` para que en
+                una pantalla de 320 px no empujen el rótulo fuera de la tarjeta. */}
+            <Pressable
+              onPress={() => setIntegrantesAbiertos(abiertos => !abiertos)}
+              disabled={integrantesDelGrupo.length === 0}
+              accessibilityRole="button"
+              accessibilityState={{
+                expanded: integrantesAbiertos,
+                disabled: integrantesDelGrupo.length === 0,
+              }}
+              accessibilityLabel={
+                integrantesAbiertos ? 'Ocultar los integrantes de tu tribu' : 'Ver los integrantes de tu tribu'
+              }
+              style={styles.tribuGrupo}
+            >
+              <View style={styles.tribuGrupoTitulo}>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text numberOfLines={1} style={[t.cardTitle, { color: c.textStrong }]}>
+                    {nombreDeMiTribu ?? 'Tu tribu'}
+                  </Text>
+                  {resumenDeMiTribu && (
+                    <Text style={[t.small, { color: c.textSoft, marginTop: 2 }]}>{resumenDeMiTribu}</Text>
+                  )}
+                </View>
+
+                {integrantesDelGrupo.length > 0 && (
+                  <View style={styles.tribuVerTodos}>
+                    <Text
+                      numberOfLines={1}
+                      style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 0.8 }]}
+                    >
+                      {integrantesAbiertos ? 'OCULTAR' : 'VER TODOS'}
+                    </Text>
+                    {/* El ícono `chevron` apunta a la derecha: girado 90° baja (cerrado, "se
+                        abre hacia abajo") y −90° sube (abierto, "se cierra"). */}
+                    <View style={{ transform: [{ rotate: integrantesAbiertos ? '-90deg' : '90deg' }] }}>
+                      <Icon name="chevron" size={14} color={c.goldInk} />
+                    </View>
+                  </View>
+                )}
+              </View>
+
               {celulaCargando && companerosCelula.length === 0 && (
-                <Text style={[t.body, { color: c.textSoft, marginTop: 12 }]}>Cargando tu tribu...</Text>
+                <Text style={[t.small, { color: c.textSoft, marginTop: 8 }]}>Cargando tu tribu...</Text>
               )}
               {!celulaCargando && !celulaError && companerosCelula.length === 0 && (
-                <Text style={[t.body, { color: c.textSoft, marginTop: 12 }]}>
+                <Text style={[t.small, { color: c.textSoft, marginTop: 8 }]}>
                   Todavía no tienes integrantes en tu grupo.
                 </Text>
               )}
               {companerosCelula.length > 0 && (
-                <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                <View style={styles.tribuAvatares}>
                   {tribuVisibles.map(m => (
-                    <AvatarPersona
-                      key={m.traineeId}
-                      nombre={m.fullName}
-                      avatarUrl={m.avatarUrl}
-                      size={avatarSize}
-                    />
+                    <AvatarPersona key={m.traineeId} nombre={m.fullName} avatarUrl={m.avatarUrl} size={avatarSize} />
                   ))}
                   {tribuRestantes > 0 && (
-                    <View style={[styles.more, { width: avatarSize, height: avatarSize, borderRadius: avatarSize / 2, backgroundColor: c.goldWash }]}>
-                      <Text style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>+{tribuRestantes}</Text>
+                    <View
+                      style={[
+                        styles.more,
+                        {
+                          width: avatarSize,
+                          height: avatarSize,
+                          borderRadius: avatarSize / 2,
+                          backgroundColor: c.goldWash,
+                        },
+                      ]}
+                    >
+                      <Text style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
+                        +{tribuRestantes}
+                      </Text>
                     </View>
                   )}
                 </View>
               )}
-            </View>
+            </Pressable>
 
-            <View style={[styles.section, { paddingBottom: 24 }]}>
-              <MicroLabel>Interacciones clave</MicroLabel>
-              <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
-                {METRICAS.map(m => (
-                  <View key={m.n} style={[styles.metric, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-                    <Text style={[t.metric, { color: c.textStrong, fontSize: 22 }]}>{m.n}</Text>
-                    <Text style={[t.micro, { color: c.micro, letterSpacing: 0, fontSize: 10.5, textAlign: 'center', marginTop: 4, lineHeight: 13 }]}>
-                      {m.label}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            </View>
+            {/* PULSO DE LA TRIBU. Un solo renglón de texto corrido —no tres tarjetas con número
+                de 22 px— para que no compita con el mentor ni con la bandeja. Es un `Text` con
+                `Text` anidados y no una fila de `View`s: así los tres datos fluyen y se parten
+                solos en dos líneas cuando la pantalla es angosta o la letra del sistema es grande. */}
+            <View style={[styles.tribuFilete, { backgroundColor: c.divider }]} />
+            <Text style={[t.small, { color: c.micro }]}>
+              {METRICAS.map((m, i) => (
+                <Text key={m.n}>
+                  {i > 0 ? '   ·   ' : ''}
+                  <Text style={[styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>{m.n}</Text>
+                  {` ${m.label}`}
+                </Text>
+              ))}
+            </Text>
+          </View>
 
-              <View style={styles.section}>
-                <MicroLabel>Chat de tu grupo</MicroLabel>
-              </View>
-            </>
+          {/* -------------------------------------------------------------------------------
+              INTEGRANTES, BAJO DEMANDA. Fuera de la tarjeta a propósito: cada fila ya es una
+              tarjeta con su borde, y meterlas dentro de otra deja dos contornos anidados, que es
+              precisamente la sensación de "recargado" que este rediseño vino a sacar.
+
+              Mismo renglón (`FilaIntegrante`) que la ficha "INFO DEL GRUPO" de una sala de chat,
+              y misma fuente de datos (`integrantesDelGrupo`): acá, sin chat abierto, esa lista
+              cae sola al grupo principal.
+          ------------------------------------------------------------------------------- */}
+          {integrantesAbiertos && (
+            <View style={styles.tribuIntegrantes}>
+              <Text
+                style={[
+                  t.micro,
+                  styles.cifras,
+                  { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 },
+                ]}
+              >
+                INTEGRANTES ({integrantesDelGrupo.length})
+              </Text>
+
+              {celulaCargando && integrantesDelGrupo.length === 0 && (
+                <Text style={[t.body, { color: c.textSoft }]}>Cargando integrantes…</Text>
+              )}
+              {!celulaCargando && celulaError && (
+                <Text style={[t.body, { color: c.danger }]}>{celulaError}</Text>
+              )}
+
+              {integrantesDelGrupo.map(m => (
+                <FilaIntegrante
+                  key={m.id}
+                  integrante={m}
+                  onChatear={usuarioId => void abrirDMConIntegrante(usuarioId)}
+                />
+              ))}
+            </View>
           )}
 
-          {/* ========================================================================= */}
-          {/* SECCIÓN MIEMBROS: CONVERSACIONES UNO A UNO Y CANAL GLOBAL                 */}
-          {/* ========================================================================= */}
-          {/*
-            El selector perdió la opción "GRUPO" porque el grupo pasó a ser su propia sección
-            (con su propio medallón arriba). Las otras dos categorías que ya existían —directos y
-            global— se quedaron acá, que es donde la persona busca a alguien puntual.
-          */}
-          {seccionActiva === 'miembros' && (
+          {/* -------------------------------------------------------------------------------
+              2. DÓNDE HABLAS CON ELLOS. El conmutador es el mismo de siempre —directos y global,
+              los mismos dos valores y el mismo filtro—; solo perdió los emojis, que obligaban a
+              encoger el texto para que "💬 DIRECTOS" entrara en media fila. Sin ellos la palabra
+              entra entera y se lee a tamaño completo.
+          ------------------------------------------------------------------------------- */}
+          <View style={styles.tribuConversaciones}>
+            <MicroLabel>Conversaciones</MicroLabel>
             <View style={[styles.tabsRow, { borderColor: c.border, backgroundColor: c.cardBg }]}>
               <Pressable
-                onPress={() => setMiembrosTab('directos')}
-                style={[styles.tabBtn, miembrosTab === 'directos' && { backgroundColor: c.gold }]}
+                onPress={() => setTribuTab('directos')}
+                accessibilityRole="button"
+                accessibilityState={{ selected: tribuTab === 'directos' }}
+                style={[styles.tabBtn, tribuTab === 'directos' && { backgroundColor: c.gold }]}
               >
-                {/* `numberOfLines` + `adjustsFontSizeToFit`: con el tamaño de letra del sistema
-                    subido, "💬 DIRECTOS" no entraba en la mitad de la fila y se partía en dos
-                    líneas; la segunda quedaba fuera de la pastilla y se leía solo el emoji. Ahora
-                    la palabra se achica hasta caber, pero nunca se corta. */}
                 <Text
                   numberOfLines={1}
                   adjustsFontSizeToFit
                   minimumFontScale={0.75}
-                  style={[t.small, { color: miembrosTab === 'directos' ? c.onGold : c.textSoft, fontFamily: 'Jost_700Bold' }]}
+                  style={[
+                    t.small,
+                    {
+                      color: tribuTab === 'directos' ? c.onGold : c.textSoft,
+                      fontFamily: 'Jost_700Bold',
+                      letterSpacing: 0.8,
+                    },
+                  ]}
                 >
-                  💬 DIRECTOS
+                  DIRECTOS
                 </Text>
               </Pressable>
 
               <Pressable
-                onPress={() => setMiembrosTab('global')}
-                style={[styles.tabBtn, miembrosTab === 'global' && { backgroundColor: c.gold }]}
+                onPress={() => setTribuTab('global')}
+                accessibilityRole="button"
+                accessibilityState={{ selected: tribuTab === 'global' }}
+                style={[styles.tabBtn, tribuTab === 'global' && { backgroundColor: c.gold }]}
               >
                 <Text
                   numberOfLines={1}
                   adjustsFontSizeToFit
                   minimumFontScale={0.75}
-                  style={[t.small, { color: miembrosTab === 'global' ? c.onGold : c.textSoft, fontFamily: 'Jost_700Bold' }]}
+                  style={[
+                    t.small,
+                    {
+                      color: tribuTab === 'global' ? c.onGold : c.textSoft,
+                      fontFamily: 'Jost_700Bold',
+                      letterSpacing: 0.8,
+                    },
+                  ]}
                 >
-                  🌐 GLOBAL
+                  GLOBAL
                 </Text>
               </Pressable>
             </View>
-          )}
+          </View>
 
           {/* ========================================================================= */}
-          {/* LISTADO DE CONVERSACIONES — COMPARTIDO POR GRUPO Y MIEMBROS              */}
+          {/* BANDEJA DE CONVERSACIONES                                                */}
           {/* ========================================================================= */}
           {/*
-            Un solo listado para las dos secciones, no dos copias: lo único que cambia entre ellas
-            es el filtro, y eso ya lo resuelve `filteredConversations` leyendo `seccionActiva`.
+            Un solo listado, como antes, pero ahora también una sola pestaña: lo que elige qué se
+            ve es `filteredConversations` leyendo el conmutador de arriba. La navegación a cada
+            conversación (`handleAbrirChat`) no cambió.
           */}
-          <>
-              {/* Estados de carga/error del listado real — mismo criterio que el Muro (texto con los
-                  tokens que ya usa el resto de la pantalla, sin componentes nuevos). */}
-              {conversacionesCargando && conversations.length === 0 && (
-                <Text style={[t.body, { color: c.textSoft, marginTop: space.gapLg }]}>
-                  Cargando tus conversaciones...
-                </Text>
-              )}
-              {conversacionesError && (
-                <Text style={[t.body, { color: c.danger, marginTop: space.gapLg }]}>
-                  {conversacionesError}
-                </Text>
-              )}
-              {!conversacionesCargando && !conversacionesError && filteredConversations.length === 0 && (
-                <Text style={[t.body, { color: c.textSoft, marginTop: space.gapLg }]}>
-                  Todavía no tienes conversaciones acá.
-                </Text>
-              )}
+          {/* Estados de carga/error del listado real — mismo criterio que el Muro (texto con los
+              tokens que ya usa el resto de la pantalla, sin componentes nuevos). */}
+          {conversacionesCargando && conversations.length === 0 && (
+            <Text style={[t.body, { color: c.textSoft, marginTop: space.gapLg }]}>
+              Cargando tus conversaciones...
+            </Text>
+          )}
+          {conversacionesError && (
+            <Text style={[t.body, { color: c.danger, marginTop: space.gapLg }]}>
+              {conversacionesError}
+            </Text>
+          )}
+          {!conversacionesCargando && !conversacionesError && filteredConversations.length === 0 && (
+            <Text style={[t.body, { color: c.textSoft, marginTop: space.gapLg }]}>
+              Todavía no tienes conversaciones acá.
+            </Text>
+          )}
 
-              {/* Lista de Conversaciones Activas */}
-              <View style={{ gap: space.gap, paddingTop: space.gap, paddingBottom: 28 }}>
-                {filteredConversations.map(conv => (
-                  <Pressable
-                    key={conv.id}
-                    onPress={() => handleAbrirChat(conv)}
-                    style={[
-                      styles.chatConvCard,
-                      {
-                        borderColor: conv.type === 'celula' ? c.gold : c.border,
-                        backgroundColor: conv.type === 'celula' ? c.cardBgAlt : c.cardBg,
-                      },
-                    ]}
-                  >
-                    <View style={[styles.convAvatarBox, { backgroundColor: c.goldWash }]}>
-                      <Text style={{ fontSize: 18 }}>{conv.avatar}</Text>
-                      {conv.isOnline && (
-                        <View style={[styles.onlineBadgeDot, { backgroundColor: c.success, borderColor: c.cardBg }]} />
-                      )}
-                    </View>
+          {/* Lista de Conversaciones Activas */}
+          <View style={{ gap: space.gap, paddingTop: space.gap, paddingBottom: 28 }}>
+            {filteredConversations.map(conv => (
+              <Pressable
+                key={conv.id}
+                onPress={() => handleAbrirChat(conv)}
+                style={[
+                  styles.chatConvCard,
+                  {
+                    borderColor: conv.type === 'celula' ? c.gold : c.border,
+                    backgroundColor: conv.type === 'celula' ? c.cardBgAlt : c.cardBg,
+                  },
+                ]}
+              >
+                <View style={[styles.convAvatarBox, { backgroundColor: c.goldWash }]}>
+                  <Text style={{ fontSize: 18 }}>{conv.avatar}</Text>
+                  {conv.isOnline && (
+                    <View style={[styles.onlineBadgeDot, { backgroundColor: c.success, borderColor: c.cardBg }]} />
+                  )}
+                </View>
 
-                    <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                        <Text numberOfLines={1} style={[t.cardTitle, { color: c.textStrong, flex: 1 }]}>{nombreVisibleDeConversacion(conv)}</Text>
-                        <Text style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>{conv.lastTime}</Text>
-                      </View>
-                      <Text numberOfLines={1} style={[t.body, { color: c.textSoft }]}>
-                        {conv.lastMessage}
-                      </Text>
-                      <Text style={[t.small, { color: c.micro, fontSize: 12.5 }]}>
-                        {conv.subtitle}
-                      </Text>
-                    </View>
+                <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                    <Text numberOfLines={1} style={[t.cardTitle, { color: c.textStrong, flex: 1 }]}>{nombreVisibleDeConversacion(conv)}</Text>
+                    <Text style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>{conv.lastTime}</Text>
+                  </View>
+                  <Text numberOfLines={1} style={[t.body, { color: c.textSoft }]}>
+                    {conv.lastMessage}
+                  </Text>
+                  <Text style={[t.small, { color: c.micro, fontSize: 12.5 }]}>
+                    {conv.subtitle}
+                  </Text>
+                </View>
 
-                    {conv.unreadCount > 0 && (
-                      <View style={[styles.unreadBadgePill, { backgroundColor: c.gold }]}>
-                        <Text style={[t.micro, styles.cifras, { color: c.onGold, fontFamily: 'Jost_700Bold' }]}>{conv.unreadCount}</Text>
-                      </View>
-                    )}
-                  </Pressable>
-                ))}
-              </View>
-            </>
+                {conv.unreadCount > 0 && (
+                  <View style={[styles.unreadBadgePill, { backgroundColor: c.gold }]}>
+                    <Text style={[t.micro, styles.cifras, { color: c.onGold, fontFamily: 'Jost_700Bold' }]}>{conv.unreadCount}</Text>
+                  </View>
+                )}
+              </Pressable>
+            ))}
+          </View>
         </ScrollView>
       )}
 
       {/* ========================================================================= */}
       {/* VISTA 4.1: SALA DE CHAT ACTIVA (TIPO WHATSAPP)                            */}
       {/* ========================================================================= */}
-      {inChatsComunidad && activeChat !== null && !groupInfoVisible && (
+      {enTribu && activeChat !== null && !groupInfoVisible && (
         /*
           BUG ENCONTRADO 2026-09-17: al tocar el campo de texto, el teclado tapaba la barra de
           escritura entera — no se veía ni lo que se estaba escribiendo ni el botón de enviar.
@@ -3667,7 +3857,7 @@ export default function ComunidadScreen() {
       {/* ========================================================================= */}
       {/* VISTA 4.2: INFORMACIÓN DEL GRUPO / INTEGRANTES (TIPO WHATSAPP GROUP INFO) */}
       {/* ========================================================================= */}
-      {inChatsComunidad && groupInfoVisible && (
+      {enTribu && groupInfoVisible && (
         <ScrollView
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
@@ -3735,40 +3925,14 @@ export default function ComunidadScreen() {
               </Text>
             )}
 
+            {/* Mismo renglón que el desplegable de integrantes de la pestaña Tribu: un solo
+                componente para los dos lugares (ver `FilaIntegrante`). */}
             {integrantesDelGrupo.map(m => (
-              <View
+              <FilaIntegrante
                 key={m.id}
-                style={[styles.memberRowCard, { borderColor: c.border, backgroundColor: c.cardBg }]}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, flexShrink: 1 }}>
-                  <AvatarPersona nombre={m.nombre} avatarUrl={m.avatarUrl} size={38} />
-                  <View style={{ flexShrink: 1 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                      <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 15 }]} numberOfLines={1}>
-                        {m.nombre}
-                      </Text>
-                      {m.badge && (
-                        <View style={[styles.memberBadgePill, { backgroundColor: c.goldWash }]}>
-                          <Text style={[t.micro, { color: c.goldInk, fontSize: 10.5, fontFamily: 'Jost_700Bold' }]}>
-                            {m.badge}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                  </View>
-                </View>
-
-                {m.chateable && (
-                  <Pressable
-                    onPress={() => void abrirDMConIntegrante(m.id)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Chatear con ${m.nombre}`}
-                    style={[styles.chat1a1Btn, { backgroundColor: c.gold }]}
-                  >
-                    <Text style={[t.small, { color: c.onGold, fontFamily: 'Jost_700Bold' }]}>💬 Chatear</Text>
-                  </Pressable>
-                )}
-              </View>
+                integrante={m}
+                onChatear={usuarioId => void abrirDMConIntegrante(usuarioId)}
+              />
             ))}
           </View>
         </ScrollView>
@@ -4216,18 +4380,67 @@ const styles = StyleSheet.create({
   },
   /** Cifras que cambian en pantalla: ancho de dígito fijo para que nada salte (AGENTS.md §4). */
   cifras: { fontVariant: ['tabular-nums'] },
-  mentor: {
-    marginTop: 10,
+  /* ----------------------------------------------------------------------------------------
+     PESTAÑA TRIBU (rediseño 2026-09-21). Reemplazan a `section` (el rótulo + bloque que repetían
+     Mentor / Tribu privada / Interacciones clave), a `mentor` (la tarjeta del mentor, que ahora
+     es la primera fila de la tarjeta de la tribu) y a `metric` (las tres cajas con número, hoy
+     una línea de texto).
+     ---------------------------------------------------------------------------------------- */
+  /** El primer bloque de la pestaña: menos aire arriba que entre bloques (`gapLg` son 28). */
+  tribuBloqueInicial: {
+    marginTop: 14,
+  },
+  tribuCardConEntradaArriba: {
+    marginTop: space.gapLg,
+  },
+  /** La tarjeta única de "quiénes son tu tribu": mentor, grupo y pulso. */
+  tribuCard: {
     borderWidth: 1,
     borderRadius: space.radius,
     padding: space.cardPad,
+  },
+  tribuMentor: {
     flexDirection: 'row',
     gap: 14,
     alignItems: 'center',
   },
-  /* Sin la línea de arriba: el aire separa igual de bien y esta pantalla tenía reglas
-     horizontales en cada junta. Lo que antes hacía el filete ahora lo hace `gapLg`. */
-  section: {
+  /** Filete interno de la tarjeta. Separa las tres zonas sin abrir tres tarjetas. */
+  tribuFilete: {
+    height: 1,
+    marginVertical: 14,
+  },
+  /* Interruptor del desplegable de integrantes: toda la fila. `minHeight` por si algún día el
+     grupo no tiene nombre ni resumen y queda solo el rótulo (AGENTS.md §4, 48 px). */
+  tribuGrupo: {
+    minHeight: 48,
+    justifyContent: 'center',
+  },
+  tribuGrupoTitulo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  /* No se encoge: el nombre del grupo, que sí puede, es el que cede el ancho. */
+  tribuVerTodos: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    flexShrink: 0,
+  },
+  /* `flexWrap`: con cuatro avatares, el "+N" y la letra del sistema en grande, en una pantalla de
+     320 px la fila no entra de una sola línea (AGENTS.md §2, cero desbordamientos). */
+  tribuAvatares: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 12,
+  },
+  /** El desplegable de integrantes, fuera de la tarjeta: cada fila trae su propio borde. */
+  tribuIntegrantes: {
+    gap: space.gap,
+    marginTop: space.gap,
+  },
+  tribuConversaciones: {
     marginTop: space.gapLg,
   },
   /* El "+N" del desborde de avatares: es un disco, no una caja. Sin borde, con lavado dorado
@@ -4249,13 +4462,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     paddingTop: 4,
     paddingBottom: 10,
-  },
-  metric: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: 14,
-    paddingVertical: 12,
-    alignItems: 'center',
   },
   detailTopBar: {
     flexDirection: 'row',
@@ -4793,28 +4999,6 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  memberRowCard: {
-    borderWidth: 1,
-    borderRadius: space.radius,
-    padding: 14,
-    minHeight: 48,
-    gap: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  memberBadgePill: {
-    borderRadius: space.radiusSm,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  chat1a1Btn: {
-    borderRadius: space.radiusSm,
-    paddingHorizontal: 14,
-    minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
   },
