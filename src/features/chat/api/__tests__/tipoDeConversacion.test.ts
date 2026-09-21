@@ -64,10 +64,10 @@ describe('mapearTipoConversacion', () => {
     expect(mapearTipoConversacion('GLOBAL')).toBe('global');
   });
 
-  /* `ComunidadScreen.filteredConversations` lista 'global' solo en su pestaña, 'celula' sola en la
-     sección Célula, y 'direct' + 'celula' en la pestaña de conversaciones. O sea que 'direct' es el
-     ÚNICO valor con el que un chat de soporte se ve; cualquier otro lo dejaría invisible, y el
-     aprendiz no puede salirse de ese chat pero tampoco lo encontraría. */
+  /* `ComunidadScreen.filteredConversations` lista 'global' solo en el conmutador Global de la
+     pestaña Tribu, y 'direct' + 'celula' en el de Directos. O sea que 'direct' es el ÚNICO valor
+     con el que un chat de soporte se ve; cualquier otro lo dejaría invisible, y el aprendiz no
+     puede salirse de ese chat pero tampoco lo encontraría. */
   it('manda soporte y lo desconocido al único cajón donde la bandeja los muestra', () => {
     expect(mapearTipoConversacion('SUPPORT')).toBe('direct');
     expect(mapearTipoConversacion('BROADCAST')).toBe('direct');
