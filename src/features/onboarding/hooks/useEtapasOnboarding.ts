@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 
 import { consultarMapa } from '../../mapa-renacimiento/api/mapaApi';
 import * as onboardingApi from '../api/onboardingApi';
@@ -23,6 +24,21 @@ import * as onboardingApi from '../api/onboardingApi';
  *
  * Se mantiene el criterio de siempre: ante la duda, **pendiente**. Un tilde verde falso es peor
  * que ninguno.
+ *
+ * BUG ENCONTRADO 2026-09-21 ("el progreso no se guarda rápido"): esto leía UNA sola vez, con un
+ * `useEffect` de dependencias estables. Y `Yo` es una pestaña de `createBottomTabNavigator`: se
+ * monta la primera vez que se la visita y **no se vuelve a desmontar** en toda la sesión. O sea que
+ * la barra "X de 2 etapas completadas" mostraba para siempre la foto del momento en que se abrió
+ * `Yo` por primera vez; terminar el Mapa no la movía, y la única forma de verla al día era cerrar
+ * la app y volver a abrirla. Parecía un guardado lento y no lo era: el guardado ya era inmediato
+ * (`activar()` de `useMapaRenacimiento` espera al servidor antes de devolver), lo que nunca
+ * ocurría era la RELECTURA.
+ *
+ * Ahora se recarga cada vez que la pestaña vuelve al foco, que es el patrón que ya usan
+ * `useResumenHome`, `useHabitoDelMomento` y `useUltimaPublicacionMuro`. El foco no alcanza solo:
+ * las sub-vistas de `Yo` (el Pacto, el Mapa) cambian con un `useState` interno, sin navegación de
+ * por medio, así que no emiten foco — por eso `recargar` sigue expuesto y `YoScreen` lo llama al
+ * volver de ellas.
  */
 
 export type EstadoEtapa = 'completada' | 'en_progreso' | 'pendiente' | 'desconocido';
@@ -80,9 +96,11 @@ export function useEtapasOnboarding() {
     }
   }, []);
 
-  useEffect(() => {
-    void recargar();
-  }, [recargar]);
+  useFocusEffect(
+    useCallback(() => {
+      void recargar();
+    }, [recargar])
+  );
 
   return { ...etapas, loading, recargar };
 }
