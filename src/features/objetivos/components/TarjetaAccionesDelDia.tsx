@@ -106,12 +106,21 @@ export function TarjetaAccionesDelDia({ diaria, semanal, diaPrograma }: TarjetaA
           <Text style={[t.small, { color: c.textSoft, fontSize: 14, lineHeight: 20 }]}>
             Las marcas con evidencia desde Entrenamiento, en Vida y Negocio.
           </Text>
+          {/* Con algo ya agendado, el planificador seguía existiendo pero sin puerta: el botón solo
+              salía cuando no había NADA. Planificabas un día y ya no podías abrir para agendar el
+              viernes — justo lo que el dueño pidió poder hacer ("planifico para todo lo que
+              queda"). Se vio probando: la tarjeta mostraba el plan de hoy y el botón desaparecía. */}
+          <Pressable onPress={() => setAgendando(true)} hitSlop={10}>
+            <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 15 }]}>
+              Agendar otro día
+            </Text>
+          </Pressable>
         </View>
       ) : (
         <View style={{ gap: 12, marginTop: 8 }}>
           <Text style={[t.body, { color: c.textSoft, fontSize: 15, lineHeight: 22 }]}>
-            Todavía no agendaste acciones. Elige cuáles de tu semana caen ahora, y a qué hora. Desde
-            las 18:00 el programa planifica el día siguiente.
+            Todavía no agendaste acciones. Elige cuáles caen cada día que quede de la semana, y a
+            qué hora. Desde las 18:00 el día en curso ya no se reacomoda.
           </Text>
           <Pressable
             onPress={() => setAgendando(true)}
