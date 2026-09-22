@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { mensajeDeError } from '../../../services/http/apiClient';
 import * as planMensualApi from '../api/planMensualApi';
+import { cifraEscrita } from '../api/planMensualApi';
 import type { MesDelPlan, PlanMensualDelEje } from '../api/planMensualApi';
 import type { EjeObjetivo } from '../types/objetivos.types';
 
@@ -72,7 +73,27 @@ export function usePlanMensual() {
     [cargar]
   );
 
-  return { planes, porEje, mesEnCursoDe, cargando, error, guardando, guardarMes, recargar: cargar };
+  /**
+   * El objetivo de ESTA SEMANA por eje, ya escrito: `"Llegar a 83.5 kg"`.
+   *
+   * Es lo que prellena el asistente semanal. El dueño lo dijo así al ver que el formulario pedía el
+   * número en blanco teniéndolo calculado al lado: *"¿no que tenemos autocalculado todo?"*. Tenía
+   * razón — la cifra ya viajaba en esta misma respuesta y no la miraba nadie.
+   *
+   * `''` cuando el eje no lleva cifra (condición clínica, ritmo fuera de alcance, sin Mapa): ahí el
+   * campo abre vacío, que es lo honesto, y la persona escribe lo suyo.
+   */
+  const objetivoSugeridoDe = useCallback(
+    (eje: EjeObjetivo): string => {
+      const plan = porEje.get(eje);
+      if (!plan?.semana) return '';
+      return `Llegar a ${cifraEscrita(plan.semana.cifra, plan.unidad, plan.unidadAdelante)}`;
+    },
+    [porEje]
+  );
+
+  return { planes, porEje, mesEnCursoDe, objetivoSugeridoDe, cargando, error, guardando, guardarMes,
+    recargar: cargar };
 }
 
 /**

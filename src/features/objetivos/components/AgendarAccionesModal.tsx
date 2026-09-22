@@ -7,7 +7,8 @@ import { useTheme } from '../../../theme/ThemeContext';
 import type { useRocasSemanales } from '../hooks/useRocasSemanales';
 import type { EjeObjetivo, ItemPlanDiario } from '../types/objetivos.types';
 import { EJES, ETIQUETA_EJE } from '../types/objetivos.types';
-import type { AccionesPorEje } from '../../mapa-renacimiento/hooks/useAccionesDelMapa';
+import type { AccionDelMapa, AccionesPorEje } from '../../mapa-renacimiento/hooks/useAccionesDelMapa';
+import { diasEscritos, tocaHoy } from '../../mapa-renacimiento/hooks/useAccionesDelMapa';
 import { posicionarPorEje } from '../hooks/useRocasDiarias';
 import { Icon } from '../../../components/Icon';
 
@@ -71,9 +72,32 @@ export function AgendarAccionesModal({
   // avisa por `onCambiar` y no guarda nada: es un selector, no un formulario.
   const [horaEnCurso, setHoraEnCurso] = useState({ hora: 6, minuto: 0 });
 
+  /**
+   * Al abrir vienen marcadas **las que tocan hoy**, según los días que la persona le puso a cada
+   * acción en el Mapa.
+   *
+   * Es lo mismo que hace Training: no te pregunta qué hábitos van hoy, lo sabe por su horario. Acá
+   * el horario ya estaba —`Caminar 40 minutos, 3×/semana, L·X·V`— y no lo miraba nadie; la persona
+   * tenía que acordarse y tildarlas a mano todos los días. Pedido del dueño: *"dale con lo de los
+   * días del mapa, tipo training"*.
+   *
+   * **Marcadas, no impuestas.** Se pueden destildar, y se puede agregar una que hoy no tocaba: un
+   * martes libre es un buen día para adelantar algo. Lo que cambia es de qué lado empieza el
+   * trabajo.
+   */
   useEffect(() => {
-    if (visible) setElegidas([]);
-  }, [visible]);
+    if (!visible) return;
+    const deHoy: AccionElegida[] = [];
+    for (const eje of EJES) {
+      for (const accion of aElegirDe(eje)) {
+        if (semanal.deEje(eje) && tocaHoy(accion) && deHoy.filter(e => e.eje === eje).length < MAXIMO_POR_EJE) {
+          deHoy.push({ eje, titulo: accion.texto, hora: '' });
+        }
+      }
+    }
+    setElegidas(deHoy);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, accionesDelMapa]);
 
   /**
    * Lo que se puede agendar hoy, por eje: el objetivo de la semana y las acciones entre las que
@@ -89,7 +113,7 @@ export function AgendarAccionesModal({
     () =>
       EJES.map(eje => ({ eje, roca: semanal.deEje(eje), acciones: aElegirDe(eje) }))
         .filter(
-          (x): x is { eje: EjeObjetivo; roca: NonNullable<typeof x.roca>; acciones: string[] } =>
+          (x): x is { eje: EjeObjetivo; roca: NonNullable<typeof x.roca>; acciones: AccionDelMapa[] } =>
             x.roca !== null && x.acciones.length > 0
         ),
     [semanal, accionesDelMapa]
@@ -98,11 +122,16 @@ export function AgendarAccionesModal({
   /**
    * Las del Mapa primero —son las que la persona eligió sostener— y después las de la semana, sin
    * repetir. Así quien ya tenía un plan semanal viejo sigue viendo lo suyo.
+   *
+   * Las del Mapa traen sus días; las viejas de la semana no tenían ninguno y por eso van sin.
    */
-  function aElegirDe(eje: EjeObjetivo): string[] {
+  function aElegirDe(eje: EjeObjetivo): AccionDelMapa[] {
     const delMapa = accionesDelMapa[eje] ?? [];
-    const deLaSemana = semanal.deEje(eje)?.accionesCriticas ?? [];
-    return [...delMapa, ...deLaSemana.filter(a => !delMapa.includes(a))];
+    const textosDelMapa = delMapa.map(a => a.texto);
+    const deLaSemana = (semanal.deEje(eje)?.accionesCriticas ?? [])
+      .filter(a => !textosDelMapa.includes(a))
+      .map(texto => ({ texto, dias: [], frecuenciaSemanal: 0 }));
+    return [...delMapa, ...deLaSemana];
   }
 
   const indiceDe = (eje: EjeObjetivo, titulo: string) =>
@@ -204,15 +233,16 @@ export function AgendarAccionesModal({
                   </Text>
                   <Text style={[t.small, { color: c.textSoft, fontSize: 14, lineHeight: 20 }]}>{roca.titulo}</Text>
                   {acciones.map(accion => {
-                    const indice = indiceDe(eje, accion);
+                    const indice = indiceDe(eje, accion.texto);
                     const elegida = indice >= 0;
-                    const clave = `${eje}|${accion}`;
+                    const clave = `${eje}|${accion.texto}`;
                     const hora = elegida ? elegidas[indice].hora : '';
                     const tope = !elegida && cuantasDe(eje) >= MAXIMO_POR_EJE;
+                    const dias = diasEscritos(accion.dias);
                     return (
-                      <View key={accion} style={{ gap: 6 }}>
+                      <View key={accion.texto} style={{ gap: 6 }}>
                         <Pressable
-                          onPress={() => alternar(eje, accion)}
+                          onPress={() => alternar(eje, accion.texto)}
                           disabled={tope}
                           style={[
                             estilos.opcion,
@@ -231,9 +261,18 @@ export function AgendarAccionesModal({
                           >
                             {elegida && <Text style={{ color: c.onGold, fontSize: 14, fontFamily: 'Jost_700Bold' }}>✓</Text>}
                           </View>
-                          <Text style={[t.body, { color: c.textStrong, fontSize: 15, flex: 1, lineHeight: 21 }]}>
-                            {accion}
-                          </Text>
+                          <View style={{ flex: 1 }}>
+                            <Text style={[t.body, { color: c.textStrong, fontSize: 15, lineHeight: 21 }]}>
+                              {accion.texto}
+                            </Text>
+                            {/* El ritmo que la persona le puso en el Mapa. Sin esto, "por qué viene
+                                marcada" no se puede contestar mirando la pantalla. */}
+                            {!!dias && (
+                              <Text style={[t.micro, { color: tocaHoy(accion) ? c.goldInk : c.micro, fontSize: 12, marginTop: 2 }]}>
+                                {dias}{tocaHoy(accion) ? '  ·  hoy' : ''}
+                              </Text>
+                            )}
+                          </View>
                         </Pressable>
                         {elegida && (
                           <Pressable

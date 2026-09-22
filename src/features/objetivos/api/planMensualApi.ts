@@ -51,6 +51,17 @@ const mesSchema = z.object({
   titulo: z.string().nullable(),
 });
 
+/**
+ * El tramo de ESTA semana, derivado del mes. `null` cuando el mes no lleva cifra — y entonces la
+ * semana tampoco, por el mismo motivo que ya explica el mes.
+ */
+const semanaSchema = z.object({
+  cifra: z.number(),
+  paso: z.number(),
+  semanasQueQuedan: z.number().int(),
+  sube: z.boolean(),
+});
+
 const planSchema = z.array(
   z.object({
     eje: z.enum(['CUERPO', 'TRABAJO', 'RELACIONES']),
@@ -58,10 +69,12 @@ const planSchema = z.array(
     unidad: z.string(),
     unidadAdelante: z.boolean(),
     meses: z.array(mesSchema),
+    semana: semanaSchema.nullable().default(null),
   })
 );
 
 export type MesDelPlan = z.infer<typeof mesSchema>;
+export type SemanaDelPlan = z.infer<typeof semanaSchema>;
 export type PlanMensualDelEje = z.infer<typeof planSchema>[number];
 
 /** `GET /api/v1/rocks/monthly/plan` — los tres meses de cada eje, ya calculados. */

@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GoldCircle } from '../../../components/ui';
 import { useAuth } from '../../auth/context/AuthContext';
 import { RenasiaPanel } from '../screens/RenasiaPanel';
+import { useMapaRenacimientoAbierto } from '../../mapa-renacimiento/MapaRenacimientoContext';
 import { useHayChatEnPantalla } from '../state/chatEnPantalla';
 
 /**
@@ -28,6 +29,7 @@ export function RenasiaLauncher() {
   const insets = useSafeAreaInsets();
   const [visible, setVisible] = useState(false);
   const hayChatEnPantalla = useHayChatEnPantalla();
+  const { abierto: mapaAbierto } = useMapaRenacimientoAbierto();
 
   // El javadoc de esta clase ya decia "en el login y durante el onboarding no tiene sentido",
   // pero solo estaba implementada la mitad del login: durante la ficha inicial la sesion YA esta
@@ -44,6 +46,13 @@ export function RenasiaLauncher() {
   // de IA flotando sobre una conversacion entre personas no tiene por que estar ahi.
   // Se esconde el boton pero NO el panel: si la persona ya tenia abierto al acompanante, no se le
   // cierra en la cara.
+  //
+  // Y tambien con el Mapa de Renacimiento abierto (2026-09-22, reportado por el dueno mirando la
+  // pantalla: "que hace ahi, quitalo cuando este haciendo el formulario del mapa del poder"). Es
+  // exactamente el mismo caso que la ficha inicial de mas arriba, y se escapo por un detalle: el
+  // Mapa es del DIA 7, o sea que el onboarding ya esta completo y `isOnboardingCompleted` no lo
+  // filtra. No es solo estorbo visual — el flotante se monta justo encima del interruptor de
+  // compromiso del ultimo paso, asi que tocar "me comprometo" abria el chat.
 
   return (
     <>
@@ -51,7 +60,7 @@ export function RenasiaLauncher() {
         Una sola vista absoluta del tamaño del botón, no una capa a pantalla completa: así no hay
         nada que pueda comerse los toques de la pantalla que esté debajo.
       */}
-      {!hayChatEnPantalla && (
+      {!hayChatEnPantalla && !mapaAbierto && (
         <View style={[styles.posicion, { bottom: insets.bottom + ALTO_TAB_BAR + SEPARACION }]}>
           <GoldCircle size={DIAMETRO} icon="chat" onPress={() => setVisible(true)} />
         </View>

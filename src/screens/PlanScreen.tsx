@@ -1817,6 +1817,7 @@ export default function PlanScreen() {
               numeroSemana={semanaDe(diaPrograma)}
               diaPrograma={diaPrograma}
               ejePrincipal={ejePrincipal}
+              objetivoSugeridoDe={planMensual.objetivoSugeridoDe}
               onIrAlMapa={abrirMapa}
             />
           </View>

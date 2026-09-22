@@ -30,11 +30,14 @@ interface TarjetaPlanSemanalProps {
   numeroSemana: number;
   /** El principal del Mapa: va primero en el asistente y es el único obligatorio. */
   ejePrincipal: EjeObjetivo | null;
+  /** El objetivo de la semana ya calculado, por eje. Siembra el campo del asistente. */
+  objetivoSugeridoDe: (eje: EjeObjetivo) => string;
   /** Para mandar a definir los objetivos cuando la cadena está bloqueada. */
   onIrAlMapa?: () => void;
 }
 
-export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, ejePrincipal, onIrAlMapa }: TarjetaPlanSemanalProps) {
+export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, ejePrincipal, objetivoSugeridoDe,
+  onIrAlMapa }: TarjetaPlanSemanalProps) {
   const { c, t } = useTheme();
   const [planificando, setPlanificando] = useState(false);
   const [revisando, setRevisando] = useState<EjeObjetivo | null>(null);
@@ -150,6 +153,7 @@ export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, ejePrincip
         numeroSemana={numeroSemana}
         maestras={maestras}
         ejePrincipal={ejePrincipal}
+        objetivoSugeridoDe={objetivoSugeridoDe}
         guardando={semanal.guardando}
         onGuardar={guardarPlan}
         onCerrar={() => setPlanificando(false)}

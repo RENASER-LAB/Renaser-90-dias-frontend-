@@ -240,5 +240,22 @@ export function mensajeDeError(error: unknown, porDefecto: string): string {
     return error.message || 'Tu cuenta no está habilitada para ingresar.';
   }
   // El backend manda un texto pensado para leerse (ApiErrorResponse.message); si vino, se usa.
-  return error.message || porDefecto;
+  return pareceInterno(error.message) ? porDefecto : error.message || porDefecto;
+}
+
+/**
+ * ¿Ese mensaje es de los que NO se le muestran a una persona?
+ *
+ * **Por qué existe.** Un error de validación del backend salió tal cual en un diálogo de la app:
+ * *"CrearPlanDiarioCommand.rocas: el tamaño debe estar entre 3 y 9"* — el nombre de una clase Java
+ * y el de un campo, en la cara de un aprendiz. Lo reportó el dueño mirando la pantalla. La causa se
+ * arregló del lado del servidor (E-207), y esto es el cinturón: `mensajeDeError` confiaba en que
+ * todo `message` que llegara estaba pensado para leerse, y esa confianza es de una sola vía.
+ *
+ * El patrón que se descarta es `AlgoEnMayuscula.campo:` al principio — la forma que tiene el
+ * `getMessage()` de una violación de Bean Validation. Es deliberadamente estrecho: descartar de más
+ * dejaría a la persona con un texto genérico donde el backend sí tenía algo útil que decirle.
+ */
+function pareceInterno(mensaje: string | undefined): boolean {
+  return !!mensaje && /^[A-Z][A-Za-z0-9]*(\.[A-Za-z0-9_]+)+\s*:/.test(mensaje.trim());
 }

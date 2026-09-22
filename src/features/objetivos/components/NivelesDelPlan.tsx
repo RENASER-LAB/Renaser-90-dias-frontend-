@@ -27,10 +27,13 @@ interface NivelesDelPlanProps {
    * tiene de `usePrioridadPrincipal`: montar ese hook otra vez acá serían dos lecturas iguales.
    */
   ejePrincipal: EjeObjetivo | null;
+  /** El objetivo semanal ya calculado, por eje. Baja desde `PlanScreen`, que ya tiene el plan. */
+  objetivoSugeridoDe: (eje: EjeObjetivo) => string;
   onIrAlMapa?: () => void;
 }
 
-export function NivelesDelPlan({ maestras, numeroSemana, diaPrograma, ejePrincipal, onIrAlMapa }: NivelesDelPlanProps) {
+export function NivelesDelPlan({ maestras, numeroSemana, diaPrograma, ejePrincipal, objetivoSugeridoDe,
+  onIrAlMapa }: NivelesDelPlanProps) {
   const semanal = useRocasSemanales(maestras);
   const diaria = useRocasDiarias();
 
@@ -41,6 +44,7 @@ export function NivelesDelPlan({ maestras, numeroSemana, diaPrograma, ejePrincip
         maestras={maestras}
         numeroSemana={numeroSemana}
         ejePrincipal={ejePrincipal}
+        objetivoSugeridoDe={objetivoSugeridoDe}
         onIrAlMapa={onIrAlMapa}
       />
       <TarjetaAccionesDelDia diaria={diaria} semanal={semanal} diaPrograma={diaPrograma} />

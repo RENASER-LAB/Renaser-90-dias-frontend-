@@ -68,6 +68,12 @@ interface PlanSemanalModalProps {
    * otros dos se suman cuando quiera, no cuando el formulario lo exija.
    */
   ejePrincipal: EjeObjetivo | null;
+  /**
+   * El objetivo de la semana ya escrito, por eje: `"Llegar a 83.5 kg"`. Lo calcula el servidor y
+   * siembra el campo — la persona lo confirma o lo cambia, pero no escribe un número que el sistema
+   * ya sabe. `''` cuando ese eje no lleva cifra; ahí el campo abre vacío.
+   */
+  objetivoSugeridoDe: (eje: EjeObjetivo) => string;
   guardando: boolean;
   onGuardar: (items: ItemPlanSemanal[]) => void;
   onCerrar: () => void;
@@ -78,6 +84,7 @@ export function PlanSemanalModal({
   numeroSemana,
   maestras,
   ejePrincipal,
+  objetivoSugeridoDe,
   guardando,
   onGuardar,
   onCerrar,
@@ -101,11 +108,11 @@ export function PlanSemanalModal({
     if (!visible) return;
     setPaso(0);
     setBorradores({
-      CUERPO: { ...BORRADOR_VACIO },
-      TRABAJO: { ...BORRADOR_VACIO },
-      RELACIONES: { ...BORRADOR_VACIO },
+      CUERPO: { ...BORRADOR_VACIO, titulo: objetivoSugeridoDe('CUERPO') },
+      TRABAJO: { ...BORRADOR_VACIO, titulo: objetivoSugeridoDe('TRABAJO') },
+      RELACIONES: { ...BORRADOR_VACIO, titulo: objetivoSugeridoDe('RELACIONES') },
     });
-  }, [visible]);
+  }, [visible, objetivoSugeridoDe]);
 
   /* El principal del Mapa va primero: es el que manda y el único que hay que llenar para guardar. */
   const ejesOrdenados = conPrincipalPrimero(EJES, ejePrincipal);
@@ -278,7 +285,7 @@ export function PlanSemanalModal({
                 ) : null}
 
                 {campo('TU OBJETIVO DE ESTA SEMANA', borrador.titulo, texto => cambiar('titulo', texto), {
-                  ayuda: 'Lo más importante que vas a mover en este eje en los próximos siete días.',
+                  ayuda: 'Viene calculado de tu objetivo del mes. Cámbialo si quieres otra cosa.',
                   obligatorio: true,
                 })}
 

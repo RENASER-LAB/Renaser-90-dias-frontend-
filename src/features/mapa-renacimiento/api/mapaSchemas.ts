@@ -22,6 +22,8 @@ export const mapaServidorSchema = z
           area: z.string(),
           text: z.string(),
           weeklyFrequency: z.number().int(),
+          /** Días en ISO: 1 = lunes … 7 = domingo, que es lo que devuelve `DayOfWeek.getValue()`. */
+          days: z.array(z.number().int()).default([]),
         })
         .passthrough()
     ),

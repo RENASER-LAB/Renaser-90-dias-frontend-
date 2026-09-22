@@ -407,9 +407,25 @@ export function reemplazoValido(r: ProtocoloReemplazo): boolean {
     && !esVago(r.respuestaAlternativa);
 }
 
+/**
+ * El "Cuando" que la persona ya escribió al principio de su disparador.
+ *
+ * La plantilla antepone «Cuando », y el campo se pide con el placeholder *"Cuándo, dónde o ante qué
+ * ocurre"* — que invita justamente a empezar la frase con "Cuando". El resultado era
+ * *"**Cuando Cuando** abro el celular en la cama"*, visible en el resumen del paso 10 y en el panel
+ * del mentor. Se quita del dato al redactar y no del campo al escribir: lo que la persona tipeó es
+ * suyo y se respeta; lo que se corrige es cómo se compone la frase.
+ *
+ * Con y sin tilde, porque las dos formas se escriben: `Cuando` y `Cuándo`.
+ */
+function sinCuandoInicial(texto: string): string {
+  return texto.trim().replace(/^cu[aá]ndo\s+/i, '');
+}
+
 /** Formato de guardado del manual: "Cuando [disparador], en lugar de [conducta], haré [respuesta]." */
 export function frasearReemplazo(r: ProtocoloReemplazo): string {
-  return `Cuando ${sinPuntoFinal(r.disparador)}, en lugar de ${sinPuntoFinal(r.conductaActual)}, haré ${sinPuntoFinal(r.respuestaAlternativa)}.`;
+  const disparador = sinCuandoInicial(sinPuntoFinal(r.disparador));
+  return `Cuando ${disparador}, en lugar de ${sinPuntoFinal(r.conductaActual)}, haré ${sinPuntoFinal(r.respuestaAlternativa)}.`;
 }
 
 export function reemplazosValidos(reemplazos: ProtocoloReemplazo[]): boolean {
