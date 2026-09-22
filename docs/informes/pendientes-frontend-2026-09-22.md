@@ -28,6 +28,8 @@ pruebas, pero **ninguno se vio en una pantalla**.
       no empuje la bandeja de conversaciones.
 - [ ] **El objetivo mensual**: que muestre cifra cuando el ritmo es razonable y **no** la muestre
       cuando es irreal (el tope es 4 % del peso por mes, o 3× el ritmo que la persona se puso).
+      Desde el 2026-09-22 los dos topes viven en el backend (`CalculadoraObjetivoMensual`) y tienen
+      prueba propia; lo que falta ver en una pantalla es **que se pueda editar la cifra tocándola**.
 - [ ] Las etiquetas en versales que cambiaron con el voseo: `CONFIRMA TUS DATOS` y `SOLO PARA TI`.
       Un carácter menos puede cambiar el calce.
 
@@ -69,10 +71,23 @@ pruebas, pero **ninguno se vio en una pantalla**.
          tarjeta decía "Elige primero qué vas a medir" con un objetivo de 84 → 78 kg. Lo correcto es
          `usePrioridadPrincipal`, que ya llamaba a `leerResumenDelMapa()` y **descartaba**
          `saludTipo`/`negocioTipo`. Cero requests nuevas.
-- [ ] **El nivel mensual ya existe en el backend** (`/api/v1/rocks/monthly`, tabla `rocas_mensuales`
-      de la V36) y el frontend **no lo consume**. La cifra calculada tiene dónde guardarse sin
-      backend nuevo. Cuidado con el `CHECK meta > 0`, que rechazaría una meta mensual de 0 (saldar
-      una deuda entera).
+- [x] ~~**El nivel mensual ya existe en el backend** (`/api/v1/rocks/monthly`, tabla `rocas_mensuales`
+      de la V36) y el frontend **no lo consume**.~~ **HECHO el 2026-09-22**, y de paso se arregló algo
+      peor que nadie había anotado: había **dos cifras distintas para el mismo mes**. Con 84 → 78 kg,
+      el hito del Mapa para el Día 30 decía *81,6 kg* y la tarjeta "Este mes" decía *82*. Ver E-203
+      y D-147 en el backend.
+      El cálculo entero se **movió al servidor** (`GET /api/v1/rocks/monthly/plan`) y el motor local
+      —`objetivoMensual.ts`, `cifraDelMesDeLaRoca.ts` y la sección mensual de `reglas.ts`— se borró.
+      Tres apuntes:
+      1. **No se dejó "por si acaso".** Una segunda implementación de la misma regla es exactamente
+         lo que produjo el bug, y el comentario que decía *"no reemplaza a `hitosSugeridos`, conviene
+         no confundirlos"* describía el problema en vez de resolverlo.
+      2. **`hitosSugeridos` sí se queda.** Dibuja la progresión el día 7, mientras la persona llena el
+         Mapa y todavía no existe ninguna Roca Maestra que el servidor pueda repartir. Y ahora
+         coincide con lo que el servidor calcula para el mes 1.
+      3. **El `CHECK meta > 0` sigue ahí** y sigue siendo un problema para quien quiera saldar una
+         deuda entera en un mes: el cálculo produce la cifra, pero fijarla a mano en 0 se rechaza.
+         `rocas_mensuales` no tiene columna de línea base, que es lo que haría falta.
 - [x] ~~**Los tres contadores de Comunidad** ("12 conversaciones · 3 eventos · 2 mentorías") son
       valores fijos: ningún endpoint los calcula. O se cablean, o se quitan.~~ **QUITADOS el
       2026-09-22**, decisión del dueño: *"todo lo quiero con el backend, nada de ahí fuera"*.

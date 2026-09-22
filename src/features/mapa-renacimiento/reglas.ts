@@ -4,8 +4,6 @@ import type {
   ProtocoloReemplazo, TipoResultadoNegocio, TipoResultadoSalud, Vinculo,
 } from './tipos';
 import { AREAS } from './tipos';
-import type { FormatoCifra, Magnitud, ObjetivoMensual } from '../objetivos/utils/objetivoMensual';
-import { objetivoDelMes } from '../objetivos/utils/objetivoMensual';
 
 /**
  * Las reglas del manual (§3 por vista, §4 motor SMART, §1.2 definición de terminado), en código
@@ -526,133 +524,21 @@ export function ajustarDias(dias: DiaSemana[], frecuencia: number): DiaSemana[] 
 }
 
 // ------------------------------------------------------------------------------------------
-// El objetivo del MES, autocalculado. Pedido del dueño, 2026-09-21.
+// El objetivo del MES vivía acá. Ahora lo calcula el servidor.
 //
-// El Mapa bajaba del objetivo de 90 días directo a la semana: el aprendiz veía "82 → 75 kg" y
-// "esta semana, tres acciones", y el escalón del medio —qué tiene que estar logrado al cierre de
-// este mes— se lo inventaba. Acá se calcula. La aritmética entera vive en
-// `objetivos/utils/objetivoMensual.ts`, que no sabe nada del Mapa; esta sección es la traducción:
-// de un objetivo del Mapa (con su tipo de resultado, su unidad y su periodo) a lo poco que el
-// motor necesita.
+// > **Corregido el 2026-09-22.** Esta sección traducía un objetivo del Mapa a lo que el motor de
+// > `objetivos/utils/objetivoMensual.ts` necesitaba, y repartía lo que faltaba entre los meses que
+// > quedaban. El problema no era la cuenta: era que había DOS. Para 84 → 78 kg, `hitosSugeridos`
+// > (acá abajo, progresión 40 / 75 / 100 % del manual del cliente §3 V08) decía que el Día 30
+// > cerraba en **81,6 kg**, y esta sección decía **82**. Las dos respondían "qué logro este mes".
+// >
+// > Quedó una sola, en `rocks.domain.rocamensual.CalculadoraObjetivoMensual`, que usa la curva de
+// > los hitos y además la recalcula contra el valor real de hoy — o sea, conserva lo que aportaba
+// > cada una. La app la lee por `GET /api/v1/rocks/monthly/plan`. Se borró todo lo de acá en vez de
+// > dejarlo "por si acaso": una segunda implementación de la misma regla es exactamente lo que
+// > produjo el bug, y el servidor además sabe algo que esta capa no —qué se mide en cada eje, que
+// > vive en las respuestas del Mapa y no en la Roca Maestra—.
 //
-// **No reemplaza a `hitosSugeridos`, y conviene no confundirlos.** Los hitos son el plan dibujado
-// el día 7 —una progresión 40 / 75 / 100 % que la persona edita y confirma— y se quedan quietos.
-// El objetivo del mes es el ritmo recalculado contra el valor real de hoy, y cambia cada vez que
-// hay una medición nueva. Uno es la promesa; el otro, lo que falta para cumplirla.
+// `hitosSugeridos` SÍ se queda: dibuja la progresión el día 7, cuando la persona todavía está
+// llenando el Mapa y no existe ninguna Roca Maestra que el servidor pueda repartir.
 // ------------------------------------------------------------------------------------------
-
-/**
- * Tope de movimiento sano del peso corporal, por mes: el 4 % del peso de hoy, que es cerca de 1 %
- * por semana — el extremo alto de lo que se considera seguro para bajar (o razonable para subir).
- *
- * **En porcentaje y no en kilos fijos** por dos razones que se pagan solas: escala con la persona
- * (quien pesa 120 puede mover más kilos que quien pesa 55) y sobrevive a la unidad, que en el Mapa
- * la escribe el aprendiz y bien puede ser libras. Un `4` a secas sería un tope de 4 libras.
- */
-export const TOPE_PESO_POR_MES = 0.04;
-
-const MAGNITUD_SALUD: Record<TipoResultadoSalud, Magnitud> = {
-  // Valores que se miden en un momento dado y hay que mover. La cifra del mes es dónde estar.
-  peso: 'nivel',
-  medidas: 'nivel',
-  fuerza: 'nivel',
-  resistencia: 'nivel',
-  sueno: 'nivel',
-  // Un 1-10 es una percepción, no una magnitud: "este mes tienes que estar en 6,3/10 de energía"
-  // es precisión falsa —nadie actúa sobre tres décimas de punto— y no hay medición objetiva contra
-  // la cual recalcular. Mismo criterio con el que Relaciones viaja sin meta cuantitativa.
-  energia: 'escala',
-  // Marcar el ritmo de un indicador clínico es dosificar un tratamiento. La app ya avisa
-  // UNSAFE_HEALTH acá; inventar además una cuota mensual sería exactamente lo que ese aviso pide
-  // no hacer.
-  condicion_clinica: 'clinico',
-  // Texto libre con unidad libre: se lee como nivel, que es lo que significan los dos campos que
-  // la persona llenó ("parto de X, llego a Y"). Si la unidad delata una escala, se trata como tal.
-  otro: 'nivel',
-};
-
-/** "/10", "puntos", "pts": alguien se inventó una escala en el campo de unidad libre. */
-function pareceEscala(unidad: string): boolean {
-  const u = unidad.trim().toLowerCase();
-  return u === '/10' || u === '/ 10' || u === '10' || u === 'pt' || u === 'pts' || u.startsWith('punto');
-}
-
-/** Qué clase de magnitud es un resultado de salud. `null` mientras no se eligió el tipo. */
-export function magnitudDeSalud(tipo: TipoResultadoSalud | null, unidad: string): Magnitud | null {
-  if (!tipo) return null;
-  const magnitud = MAGNITUD_SALUD[tipo];
-  return tipo === 'otro' && pareceEscala(unidad) ? 'escala' : magnitud;
-}
-
-/**
- * Qué clase de magnitud es un resultado de negocio. Lo decide el **periodo**, no el tipo: la misma
- * facturación es un nivel que hay que alcanzar si se mide por mes o por semana ("llegar a S/ 15 000
- * mensuales") y una suma que hay que juntar si se mide acumulada al Día 90 ("llevar S/ 45 000
- * vendidos"). Es justo la pregunta que el Mapa le hace a la persona en V04, así que no hay que
- * adivinarla. `null` mientras falte el tipo o el periodo — los dos bloquean el paso igual.
- */
-export function magnitudDeNegocio(
-  tipo: TipoResultadoNegocio | null,
-  periodo: PeriodoMedicion | null
-): Magnitud | null {
-  if (!tipo || !periodo) return null;
-  return periodo === 'acumulado_dia_90' ? 'acumulado' : 'nivel';
-}
-
-export function magnitudDelObjetivo(o: Objetivo): Magnitud | null {
-  if (o.area === 'salud') return magnitudDeSalud(o.tipoResultado, o.unidad);
-  if (o.area === 'negocio_dinero') return magnitudDeNegocio(o.tipoResultado, o.periodo);
-  // Relaciones se mide del 1 al 10 y por eso viaja sin meta cuantitativa a la Roca Maestra: no hay
-  // valor real que recalcular, y su objetivo del mes es el cambio observable, no un número.
-  return 'escala';
-}
-
-/** Las dos puntas numéricas de un objetivo, ya parseadas. Relaciones las tiene como escala. */
-function numerosDelObjetivo(o: Objetivo): { base: number | null; meta: number | null } {
-  if (o.area === 'relaciones') return { base: o.situacionActual, meta: o.resultadoDia90 };
-  return { base: aNumero(o.lineaBase), meta: aNumero(o.resultadoDia90) };
-}
-
-/**
- * Cómo se escribe la cifra de este objetivo: la moneda va delante ("S/ 15 000") y la unidad física
- * detrás ("75 kg"), igual que en los hitos. El periodo se pega solo cuando el número ES una tasa;
- * en una meta acumulada la cifra del mes es el tramo del mes, y "acumulados al Día 90" ahí mentiría.
- */
-export function formatoDelObjetivo(o: Objetivo): FormatoCifra {
-  if (o.area === 'salud') return { unidad: o.unidad.trim(), unidadAdelante: false };
-  if (o.area === 'negocio_dinero') {
-    const periodo = o.periodo === 'semanal' || o.periodo === 'mensual' ? ETIQUETA_PERIODO[o.periodo] : undefined;
-    return { unidad: o.moneda.trim(), unidadAdelante: true, periodo };
-  }
-  return { unidad: '' };
-}
-
-/** Tope duro del mes, solo donde el mundo impone uno. Hoy: el peso. Ver {@link TOPE_PESO_POR_MES}. */
-function topeDelObjetivo(o: Objetivo, referencia: number | null): number | null {
-  if (o.area !== 'salud' || o.tipoResultado !== 'peso') return null;
-  if (referencia === null || !Number.isFinite(referencia) || referencia === 0) return null;
-  return TOPE_PESO_POR_MES * Math.abs(referencia);
-}
-
-/**
- * El objetivo de este mes para un objetivo del Mapa.
- *
- * `valorActual` es la medición REAL de hoy —`avance` de la Roca Maestra— y es lo que hace que el
- * cálculo se rehaga cada mes en vez de quedarse con los tercios del primer día. Sin ella (nadie
- * midió todavía) se usa la línea base, que es lo correcto el mes 1.
- */
-export function objetivoMensualDelMapa(
-  o: Objetivo,
-  opciones: { valorActual?: number | null; mes: number }
-): ObjetivoMensual {
-  const { base, meta } = numerosDelObjetivo(o);
-  const valorActual = opciones.valorActual ?? null;
-  return objetivoDelMes({
-    lineaBase: base,
-    valorActual,
-    meta,
-    mes: opciones.mes,
-    magnitud: magnitudDelObjetivo(o),
-    topePorMes: topeDelObjetivo(o, valorActual ?? base),
-  });
-}

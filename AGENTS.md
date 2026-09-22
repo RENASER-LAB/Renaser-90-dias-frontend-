@@ -45,6 +45,18 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       el Mapa. Se reusó `primeraClausula`, que ya existía y ya se usaba en la lista de los tres.
     Una excepción puntual **no abre** los tabs: cualquier otro cambio sobre los cinco principales
     vuelve a necesitar autorización explícita.
+  * **Excepción autorizada por el dueño del producto — 2026-09-22 — tab `Plan`, la cifra del mes
+    se toca para corregirla.** Pedido textual: *"el backend debe de autocalcular el objetivo del mes
+    en todos los aspectos y también debe de poder editar"*. La línea "Este mes: 81.6 kg" pasa a ser
+    pulsable, con un ✏️ al lado —el mismo del botón Editar del objetivo, tres tarjetas más arriba— y
+    abre un modal de **un solo campo** con el número ya propuesto. Se mantiene la regla de poco
+    texto: la tarjeta no gana ni una palabra.
+    Lo de fondo no es la UI: la cifra **ya no la calcula la app**. Había dos fórmulas dando números
+    distintos para el mismo mes (el hito del Mapa decía 81,6 y el Plan 82); ahora hay una sola, en
+    el backend, y la app la lee de `GET /api/v1/rocks/monthly/plan`. Ver `api/planMensualApi.ts`, y
+    E-203 / D-147 en el repo del backend.
+    Una excepción puntual **no abre** los tabs: cualquier otro cambio sobre los cinco principales
+    vuelve a necesitar autorización explícita.
   * **Excepción autorizada por el dueño del producto — 2026-09-22 — tab `Plan`, tarjeta del mes.**
     Pedido del dueño ese día, revisando los pendientes del 22 sobre una captura: que la cifra del mes
     se vea. El alcance autorizado fue **solo agregar la cifra mensual** a la tarjeta que ya decía
@@ -63,6 +75,18 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       objetivo de 90 días entero encima. Cuando no hay cifra —escala subjetiva, condición clínica o
       ritmo fuera de alcance— no se muestra nada.
     * **No se tocó** ninguna otra tarjeta de `Plan`, ni la intro de Objetivos, ni el plan semanal.
+
+    > **Corregido el 2026-09-22 (el mismo día, más tarde).** Todo lo de arriba describe la primera
+    > versión y **ya no es cierto de la mitad para abajo**. El dueño vio la cifra en pantalla y notó
+    > que no coincidía con el hito del Mapa para el mismo mes (*81,6 kg* contra *82*). Lo que cambió:
+    > * `cifraDelMesDeLaRoca`, `objetivoMensual.ts` y la sección mensual de `reglas.ts`
+    >   **se borraron**. El cálculo vive ahora en el backend y la app lo lee de
+    >   `GET /api/v1/rocks/monthly/plan`.
+    > * `usePrioridadPrincipal` **volvió a no exponer** `saludTipo`/`saludUnidad`/`negocioTipo`/
+    >   `negocioPeriodo`: el backend lee esas respuestas del Mapa por su cuenta.
+    > * La línea muestra **81.6 kg**, no 82, y Relaciones **sí** lleva cifra (entera, `7/10`) —
+    >   antes el Mapa le dibujaba hito y el Plan le decía "no se reparte".
+    > * La línea ahora **se toca para corregirla**; ver la excepción de más arriba.
     Una excepción puntual **no abre** el tab: cualquier otro cambio sobre los cinco principales
     vuelve a necesitar autorización explícita.
   * **Excepción autorizada por el dueño del producto — 2026-09-22 — tab `Comunidad`, pestaña *Tribu*.**

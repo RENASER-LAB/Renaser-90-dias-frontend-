@@ -47,8 +47,9 @@ import type { DiaDelPlan } from '../features/habits/utils/semanaDelPlan';
 import type { CategoriaHabitoApi } from '../features/habits/types/habits.types';
 import { mensajeDeError } from '../services/http/apiClient';
 import { useMapaRenacimientoAbierto } from '../features/mapa-renacimiento/MapaRenacimientoContext';
-import { cifraDelMesDeLaRoca } from '../features/objetivos/utils/cifraDelMesDeLaRoca';
-import { mesDelObjetivo } from '../features/objetivos/utils/objetivoMensual';
+import { cifraEscrita } from '../features/objetivos/api/planMensualApi';
+import { EditarObjetivoDelMesModal } from '../features/objetivos/components/EditarObjetivoDelMesModal';
+import { usePlanMensual } from '../features/objetivos/hooks/usePlanMensual';
 import { NivelesDelPlan } from '../features/objetivos/components/NivelesDelPlan';
 import { useRocasMaestras } from '../features/objetivos/hooks/useRocasMaestras';
 import type { EjeObjetivo } from '../features/objetivos/types/objetivos.types';
@@ -514,22 +515,20 @@ export default function PlanScreen() {
    * primero**. Mientras no haya prioridad guardada, `conPrincipalPrimero` devuelve el orden de
    * siempre, así que quien hizo el Mapa antes de que esto existiera no ve ningún cambio raro.
    */
-  const { ejePrincipal, relacionesBase, relacionesMeta, saludTipo, saludUnidad, negocioTipo, negocioPeriodo } =
-    usePrioridadPrincipal();
+  const { ejePrincipal, relacionesBase, relacionesMeta } = usePrioridadPrincipal();
 
-  /* La cifra de ESTE MES para el eje abierto. Va acá, y no arriba con `rocaAbierta`, porque
-     necesita QUÉ se mide, y eso lo trae `usePrioridadPrincipal` del servidor en la misma lectura
-     que la prioridad.
+  /* El objetivo de ESTE MES para el eje abierto, calculado por el servidor.
+     Antes se calculaba acá y daba un número distinto al hito del Mapa para el mismo mes; el porqué
+     del cambio está en la cabecera de `api/planMensualApi.ts`. */
+  const planMensual = usePlanMensual();
+  const mesDelEjeAbierto = planMensual.mesEnCursoDe(ejeAbierto);
+  const planDelEjeAbierto = planMensual.porEje.get(ejeAbierto);
+  const [editandoMes, setEditandoMes] = useState(false);
 
-     `mesDelObjetivo` y no `mesDe`: aquél cuenta bloques de CUATRO semanas (así se agrupan los
-     planes semanales) y éste bloques de TREINTA días (así cierran los objetivos: 30/60/90). Usar
-     el del plan semanal dejaría los días 85 a 90 en un mes ya cerrado; su propio javadoc avisa. */
-  const cifraDelMesAbierto = cifraDelMesDeLaRoca(
-    ejeAbierto,
-    rocaAbierta,
-    { saludTipo, saludUnidad, negocioTipo, negocioPeriodo },
-    cargandoDiaPrograma ? null : mesDelObjetivo(diaPrograma)
-  );
+  const cifraDelMesAbierto =
+    mesDelEjeAbierto?.cifra != null && planDelEjeAbierto
+      ? cifraEscrita(mesDelEjeAbierto.cifra, planDelEjeAbierto.unidad, planDelEjeAbierto.unidadAdelante)
+      : null;
   const ejesOrdenados = useMemo(() => conPrincipalPrimero(EJES, ejePrincipal), [ejePrincipal]);
 
   /** Abre la vista de Objetivos en el eje pedido. Un solo camino para las tres tarjetas. */
@@ -1784,18 +1783,28 @@ export default function PlanScreen() {
               </Text>
 
               {/* LA CIFRA DEL MES (2026-09-22, autorizada por el dueño — ver AGENTS.md §1).
-                  El escalón que faltaba entre "de dónde partes" y "dónde querés estar al Día 90":
-                  la función existía y estaba probada desde el 21, pero no la usaba ninguna
-                  pantalla, así que la persona seguía teniendo que inventarse la meta del mes.
+                  El escalón que faltaba entre "de dónde partes" y "dónde quieres estar al Día 90".
+                  La calcula el servidor; tocarla la corrige a mano.
 
                   Una línea y nada más. `null` cuando el objetivo no admite cuota mensual —una
-                  escala del 1 al 10, una condición clínica, o un ritmo fuera de alcance— y ahí no
-                  se muestra nada: esta tarjeta ya tiene el objetivo de 90 días entero encima. */}
+                  condición clínica, o un ritmo fuera de alcance— y ahí no se muestra nada: esta
+                  tarjeta ya tiene el objetivo de 90 días entero encima. */}
               {cifraDelMesAbierto && (
-                <Text style={[t.body, styles.cifras, { color: c.textSoft, marginTop: 4 }]}>
-                  Este mes:{' '}
-                  <Text style={{ color: c.goldInk, fontFamily: 'Jost_700Bold' }}>{cifraDelMesAbierto}</Text>
-                </Text>
+                <Pressable
+                  onPress={() => setEditandoMes(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cambiar el objetivo de este mes"
+                  hitSlop={8}
+                >
+                  <Row gap={6} style={{ marginTop: 4 }}>
+                    <Text style={[t.body, styles.cifras, { color: c.textSoft }]}>
+                      Este mes:{' '}
+                      <Text style={{ color: c.goldInk, fontFamily: 'Jost_700Bold' }}>{cifraDelMesAbierto}</Text>
+                    </Text>
+                    {/* Mismo ✏️ que el botón Editar del objetivo, tres tarjetas más arriba. */}
+                    <Text style={[t.micro, { color: c.micro, fontSize: 12 }]}>✏️</Text>
+                  </Row>
+                </Pressable>
               )}
             </View>
 
@@ -2126,6 +2135,30 @@ export default function PlanScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* ========================================================================= */}
+      {/* MODAL: CORREGIR A MANO EL OBJETIVO DEL MES                                */}
+      {/* ========================================================================= */}
+      <EditarObjetivoDelMesModal
+        visible={editandoMes}
+        mes={mesDelEjeAbierto}
+        unidad={planDelEjeAbierto?.unidad ?? ''}
+        guardando={planMensual.guardando}
+        onCerrar={() => setEditandoMes(false)}
+        onGuardar={async cifra => {
+          if (!mesDelEjeAbierto) return;
+          /* El título es obligatorio en el servidor y acá no se pide: este tramo es un número, no
+             una frase, y obligar a escribir una para corregir un kilo sería el "mucho texto" que el
+             dueño viene sacando de las pantallas. Se arma con el rótulo que ya usa la tarjeta. */
+          const resultado = await planMensual.guardarMes(ejeAbierto, mesDelEjeAbierto.numeroMes, {
+            titulo: `Objetivo del mes ${mesDelEjeAbierto.numeroMes}`,
+            cifra,
+            unidad: planDelEjeAbierto?.unidad ?? '',
+          });
+          setEditandoMes(false);
+          if (!resultado.ok) Alert.alert('El objetivo de este mes', resultado.mensaje);
+        }}
+      />
 
       {/* ========================================================================= */}
       {/* MODAL: SELECTOR DE HORA TÁCTIL (§1 — reemplaza el TextInput de texto libre) */}
