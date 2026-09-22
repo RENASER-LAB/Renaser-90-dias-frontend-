@@ -103,6 +103,11 @@ pruebas, pero **ninguno se vio en una pantalla**.
 
 ## 3. Deuda que hace daño callado
 
+- [x] ~~**La cifra semanal no se pinta.**~~ **HECHO el 2026-09-22.** La tarjeta del mes muestra
+      ahora los dos escalones: `Este mes: 81.6 kg ✏️` y debajo, más chica, `Esta semana: 83.2 kg`.
+      La semanal va **sin lápiz a propósito**: el objetivo de la semana se corrige donde se escribe
+      —en "Armar mi semana", que abre con ese mismo número ya puesto— y un segundo lugar para editar
+      lo mismo es un segundo lugar donde puede quedar distinto.
 - [ ] **La prueba que vigila el voseo tiene la regex incompleta.** En
       `src/features/objetivos/utils/__tests__/objetivoMensual.test.ts` no incluye `intentá`,
       `ingresá` ni `confirmá` — que eran justo las formas más repetidas de las 39 que se

@@ -529,6 +529,14 @@ export default function PlanScreen() {
     mesDelEjeAbierto?.cifra != null && planDelEjeAbierto
       ? cifraEscrita(mesDelEjeAbierto.cifra, planDelEjeAbierto.unidad, planDelEjeAbierto.unidadAdelante)
       : null;
+
+  /* La misma cifra, un escalón más abajo. El servidor la calcula repartiendo lo que falta del mes
+     entre las semanas que quedan, y se recalcula contra el peso real: si una semana no te moviste,
+     la siguiente pide un poco más para llegar igual al cierre del mes. */
+  const cifraDeLaSemanaAbierta =
+    planDelEjeAbierto?.semana
+      ? cifraEscrita(planDelEjeAbierto.semana.cifra, planDelEjeAbierto.unidad, planDelEjeAbierto.unidadAdelante)
+      : null;
   const ejesOrdenados = useMemo(() => conPrincipalPrimero(EJES, ejePrincipal), [ejePrincipal]);
 
   /** Abre la vista de Objetivos en el eje pedido. Un solo camino para las tres tarjetas. */
@@ -1805,6 +1813,18 @@ export default function PlanScreen() {
                     <Text style={[t.micro, { color: c.micro, fontSize: 12 }]}>✏️</Text>
                   </Row>
                 </Pressable>
+              )}
+
+              {/* LA CIFRA DE LA SEMANA. El mes es el hito; ésta es la que se mueve esta semana, y
+                  por eso va debajo y más chica: no compite con el mes, lo aterriza.
+
+                  Sin ✏️ a propósito. El objetivo de la semana se corrige donde se escribe —en
+                  "Armar mi semana", que abre con este mismo número ya puesto—; un segundo lugar
+                  para editar lo mismo es un segundo lugar donde puede quedar distinto. */}
+              {cifraDeLaSemanaAbierta && (
+                <Text style={[t.small, styles.cifras, { color: c.micro, fontSize: 13.5, marginTop: 2 }]}>
+                  Esta semana: <Text style={{ color: c.textSoft }}>{cifraDeLaSemanaAbierta}</Text>
+                </Text>
               )}
             </View>
 
