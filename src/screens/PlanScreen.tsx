@@ -47,6 +47,8 @@ import type { DiaDelPlan } from '../features/habits/utils/semanaDelPlan';
 import type { CategoriaHabitoApi } from '../features/habits/types/habits.types';
 import { mensajeDeError } from '../services/http/apiClient';
 import { useMapaRenacimientoAbierto } from '../features/mapa-renacimiento/MapaRenacimientoContext';
+import { useObjetivoMensualDelEje } from '../features/mapa-renacimiento/hooks/useObjetivoMensualDelEje';
+import { mesDelObjetivo } from '../features/objetivos/utils/objetivoMensual';
 import { NivelesDelPlan } from '../features/objetivos/components/NivelesDelPlan';
 import { useRocasMaestras } from '../features/objetivos/hooks/useRocasMaestras';
 import type { EjeObjetivo } from '../features/objetivos/types/objetivos.types';
@@ -504,6 +506,17 @@ export default function PlanScreen() {
   const [explicacionNivelesAbierta, setExplicacionNivelesAbierta] = useState(false);
   const rocaDeEje = (eje: EjeObjetivo) => objetivos.deEje(eje);
   const rocaAbierta = objetivos.deEje(ejeAbierto);
+
+  /* La cifra de ESTE MES para el eje abierto. `mesDelObjetivo` y no `mesDe`: aquél cuenta bloques
+     de CUATRO semanas (así se agrupan los planes semanales) y éste bloques de TREINTA días (así
+     cierran los objetivos: 30/60/90). Usar el del plan semanal dejaría los días 85 a 90 en un mes
+     ya cerrado. El propio javadoc de `mesDelObjetivo` avisa de esta confusión. */
+  const cifraDelMesAbierto = useObjetivoMensualDelEje(
+    user?.id ?? null,
+    ejeAbierto,
+    rocaAbierta?.avance ?? null,
+    cargandoDiaPrograma ? null : mesDelObjetivo(diaPrograma)
+  );
 
   /**
    * El eje que la persona eligió como principal en el paso 2 del Mapa, y los tres con ese adelante.
@@ -1755,6 +1768,28 @@ export default function PlanScreen() {
               <Text style={[t.body, styles.cifras, { color: c.textSoft, marginTop: 6 }]}>
                 Vas por la semana {semanaDe(diaPrograma)} de 12 · día {diaPrograma} de 90
               </Text>
+
+              {/* LA CIFRA DEL MES (2026-09-22, autorizada por el dueño — ver AGENTS.md §1).
+                  El escalón que faltaba entre "de dónde partes" y "dónde querés estar al Día 90":
+                  la función existía y estaba probada desde el 21, pero no se pintaba en ningún
+                  lado, así que la persona seguía teniendo que inventarse el objetivo del mes.
+
+                  `cifra` puede venir null y eso NO es un error: una escala del 1 al 10 o una
+                  condición clínica no se reparten en cuotas mensuales, y el objetivo de peso
+                  arrastrado dos meses pide más de lo que se puede. En esos casos `nota` explica
+                  por qué — que es mejor que un número imposible o un hueco mudo. */}
+              {cifraDelMesAbierto && (
+                <View style={{ marginTop: 10, gap: 2 }}>
+                  {cifraDelMesAbierto.cifra && (
+                    <Text style={[t.cardTitle, styles.cifras, { color: c.goldInk, fontSize: 17 }]}>
+                      {cifraDelMesAbierto.cifra}
+                    </Text>
+                  )}
+                  <Text style={[t.small, { color: c.textSoft, fontSize: 13.5, lineHeight: 19 }]}>
+                    {cifraDelMesAbierto.nota}
+                  </Text>
+                </View>
+              )}
             </View>
 
             {/* 2 y 3: la semana y el día. Viven en `features/objetivos/components` y no acá porque

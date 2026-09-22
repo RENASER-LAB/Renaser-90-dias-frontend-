@@ -15,6 +15,23 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
   * `data/`: Constantes, cláusulas, configuraciones estáticas.
 * **Componentes de UI Atómicos**: Utiliza componentes compartidos bajo `src/components/` (`FormField`, `GoldButton`, `SliderRating`, `Checkbox`, `SignatureCanvas`, `Icon`).
 * **Integridad del Core**: NUNCA alterar, romper ni desconfigurar las pantallas existentes ni los tabs principales (`Hoy`, `Plan`, `Training`, `Comunidad`, `Yo`).
+  * **Excepción autorizada por el dueño del producto — 2026-09-22 — tab `Plan`, tarjeta del mes.**
+    Pedido del dueño ese día, revisando los pendientes del 22 sobre una captura: que la cifra del mes
+    se vea. El alcance autorizado fue **solo agregar la cifra mensual** a la tarjeta que ya decía
+    *"Mes 1 · Semanas 1 a 4 · Vas por la semana N de 12"*:
+    * El cálculo **ya existía y estaba probado** desde el 21 (`objetivoMensual.ts` +
+      `objetivoMensualDelMapa`), pero **no se pintaba en ningún lado**: era el pendiente *"Enganchar
+      la cifra mensual en la UI"*. Esto es solo el enganche — no se tocó una línea de la fórmula.
+    * Hook nuevo `useObjetivoMensualDelEje`: lee el Mapa del almacén local y devuelve la cifra y su
+      nota ya formateadas, para que la pantalla no calcule nada.
+    * Se lee el **Mapa** y no la Roca Maestra porque solo el Mapa sabe `area` y `tipoResultado`, y
+      eso es lo que activa el tope del 4 % por mes. Sin ese tope, un objetivo de peso arrastrado dos
+      meses mostraría *"baja 20 kg este mes"*, que el dueño pidió expresamente que no se muestre.
+    * Cuando no hay cifra (escala subjetiva, condición clínica, o ritmo fuera de alcance) se muestra
+      **el motivo**, no un hueco ni un número inventado.
+    * **No se tocó** ninguna otra tarjeta de `Plan`, ni la intro de Objetivos, ni el plan semanal.
+    Una excepción puntual **no abre** el tab: cualquier otro cambio sobre los cinco principales
+    vuelve a necesitar autorización explícita.
   * **Excepción autorizada por el dueño del producto — 2026-09-22 — tab `Comunidad`, pestaña *Tribu*.**
     Pedido del dueño ese día, sobre una captura de la app y trayendo el reporte de un usuario: que
     los grupos a los que la persona pertenece se vean juntos, con nombre propio, y los 1 a 1 abajo.
