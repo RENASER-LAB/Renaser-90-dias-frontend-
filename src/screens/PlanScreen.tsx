@@ -47,7 +47,7 @@ import type { DiaDelPlan } from '../features/habits/utils/semanaDelPlan';
 import type { CategoriaHabitoApi } from '../features/habits/types/habits.types';
 import { mensajeDeError } from '../services/http/apiClient';
 import { useMapaRenacimientoAbierto } from '../features/mapa-renacimiento/MapaRenacimientoContext';
-import { useObjetivoMensualDelEje } from '../features/mapa-renacimiento/hooks/useObjetivoMensualDelEje';
+import { cifraDelMesDeLaRoca } from '../features/objetivos/utils/cifraDelMesDeLaRoca';
 import { mesDelObjetivo } from '../features/objetivos/utils/objetivoMensual';
 import { NivelesDelPlan } from '../features/objetivos/components/NivelesDelPlan';
 import { useRocasMaestras } from '../features/objetivos/hooks/useRocasMaestras';
@@ -507,17 +507,6 @@ export default function PlanScreen() {
   const rocaDeEje = (eje: EjeObjetivo) => objetivos.deEje(eje);
   const rocaAbierta = objetivos.deEje(ejeAbierto);
 
-  /* La cifra de ESTE MES para el eje abierto. `mesDelObjetivo` y no `mesDe`: aquél cuenta bloques
-     de CUATRO semanas (así se agrupan los planes semanales) y éste bloques de TREINTA días (así
-     cierran los objetivos: 30/60/90). Usar el del plan semanal dejaría los días 85 a 90 en un mes
-     ya cerrado. El propio javadoc de `mesDelObjetivo` avisa de esta confusión. */
-  const cifraDelMesAbierto = useObjetivoMensualDelEje(
-    user?.id ?? null,
-    ejeAbierto,
-    rocaAbierta?.avance ?? null,
-    cargandoDiaPrograma ? null : mesDelObjetivo(diaPrograma)
-  );
-
   /**
    * El eje que la persona eligió como principal en el paso 2 del Mapa, y los tres con ese adelante.
    *
@@ -525,7 +514,22 @@ export default function PlanScreen() {
    * primero**. Mientras no haya prioridad guardada, `conPrincipalPrimero` devuelve el orden de
    * siempre, así que quien hizo el Mapa antes de que esto existiera no ve ningún cambio raro.
    */
-  const { ejePrincipal, relacionesBase, relacionesMeta } = usePrioridadPrincipal();
+  const { ejePrincipal, relacionesBase, relacionesMeta, saludTipo, saludUnidad, negocioTipo, negocioPeriodo } =
+    usePrioridadPrincipal();
+
+  /* La cifra de ESTE MES para el eje abierto. Va acá, y no arriba con `rocaAbierta`, porque
+     necesita QUÉ se mide, y eso lo trae `usePrioridadPrincipal` del servidor en la misma lectura
+     que la prioridad.
+
+     `mesDelObjetivo` y no `mesDe`: aquél cuenta bloques de CUATRO semanas (así se agrupan los
+     planes semanales) y éste bloques de TREINTA días (así cierran los objetivos: 30/60/90). Usar
+     el del plan semanal dejaría los días 85 a 90 en un mes ya cerrado; su propio javadoc avisa. */
+  const cifraDelMesAbierto = cifraDelMesDeLaRoca(
+    ejeAbierto,
+    rocaAbierta,
+    { saludTipo, saludUnidad, negocioTipo, negocioPeriodo },
+    cargandoDiaPrograma ? null : mesDelObjetivo(diaPrograma)
+  );
   const ejesOrdenados = useMemo(() => conPrincipalPrimero(EJES, ejePrincipal), [ejePrincipal]);
 
   /** Abre la vista de Objetivos en el eje pedido. Un solo camino para las tres tarjetas. */
@@ -1771,24 +1775,17 @@ export default function PlanScreen() {
 
               {/* LA CIFRA DEL MES (2026-09-22, autorizada por el dueño — ver AGENTS.md §1).
                   El escalón que faltaba entre "de dónde partes" y "dónde querés estar al Día 90":
-                  la función existía y estaba probada desde el 21, pero no se pintaba en ningún
-                  lado, así que la persona seguía teniendo que inventarse el objetivo del mes.
+                  la función existía y estaba probada desde el 21, pero no la usaba ninguna
+                  pantalla, así que la persona seguía teniendo que inventarse la meta del mes.
 
-                  `cifra` puede venir null y eso NO es un error: una escala del 1 al 10 o una
-                  condición clínica no se reparten en cuotas mensuales, y el objetivo de peso
-                  arrastrado dos meses pide más de lo que se puede. En esos casos `nota` explica
-                  por qué — que es mejor que un número imposible o un hueco mudo. */}
+                  Una línea y nada más. `null` cuando el objetivo no admite cuota mensual —una
+                  escala del 1 al 10, una condición clínica, o un ritmo fuera de alcance— y ahí no
+                  se muestra nada: esta tarjeta ya tiene el objetivo de 90 días entero encima. */}
               {cifraDelMesAbierto && (
-                <View style={{ marginTop: 10, gap: 2 }}>
-                  {cifraDelMesAbierto.cifra && (
-                    <Text style={[t.cardTitle, styles.cifras, { color: c.goldInk, fontSize: 17 }]}>
-                      {cifraDelMesAbierto.cifra}
-                    </Text>
-                  )}
-                  <Text style={[t.small, { color: c.textSoft, fontSize: 13.5, lineHeight: 19 }]}>
-                    {cifraDelMesAbierto.nota}
-                  </Text>
-                </View>
+                <Text style={[t.body, styles.cifras, { color: c.textSoft, marginTop: 4 }]}>
+                  Este mes:{' '}
+                  <Text style={{ color: c.goldInk, fontFamily: 'Jost_700Bold' }}>{cifraDelMesAbierto}</Text>
+                </Text>
               )}
             </View>
 

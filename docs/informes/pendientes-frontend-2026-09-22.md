@@ -58,15 +58,17 @@ pruebas, pero **ninguno se vio en una pantalla**.
       1. **Ese "registro de la auditoría" no existe.** Ni el commit que trajo el cálculo (`3ae35ea`,
          solo tiene título) ni la cabecera de `objetivoMensual.ts` describen los puntos de enganche.
          El diseño se tomó de nuevo; el puntero era un callejón sin salida.
-      2. **Hay que leer el Mapa, no la Roca Maestra.** `PlanScreen` trabaja con Rocas
-         (`meta`/`avance`/`lineaBase`/`unidad`) y con eso NO alcanza: el tope del 4 % por mes
-         depende de `area === 'salud'` + `tipoResultado === 'peso'`, que solo el Mapa sabe.
-         Deducirlo de `unidad === 'kg'` era adivinar, y si la adivinanza falla se muestra
-         justamente el *"baja 20 kg este mes"* que el dueño prohibió. Se resolvió con
-         `useObjetivoMensualDelEje`, que lee el Mapa del almacén local.
-      3. `areaDelEje` quedó en `tipos.ts` y **no** en el hook, por el mismo motivo que
-         `EJE_POR_AREA`: importarla del hook arrastra `almacen.ts` y AsyncStorage, y revienta
-         cualquier test. Es un error que este repo ya había cometido una vez y está documentado ahí.
+      2. **Hace falta saber QUÉ se mide, y eso NO está en la Roca Maestra.** La Roca guarda el
+         número, la unidad y la línea base, pero el tope del 4 % por mes depende de
+         `tipoResultado === 'peso'`. Deducirlo de `unidad === 'kg'` era adivinar, y si la adivinanza
+         falla se muestra justamente el *"baja 20 kg este mes"* que el dueño prohibió.
+      3. **El dato viene del SERVIDOR y ya estaba en una lectura que Plan hace igual.** La primera
+         versión de este arreglo leyó el borrador local del Mapa (`almacenMapa`) y estaba mal: ese
+         borrador no sobrevive a reinstalar ni a cambiar de teléfono, así que la cifra desaparecía
+         aunque la Roca Maestra siguiera en el servidor — y fue justo lo que se vio en la app, la
+         tarjeta decía "Elige primero qué vas a medir" con un objetivo de 84 → 78 kg. Lo correcto es
+         `usePrioridadPrincipal`, que ya llamaba a `leerResumenDelMapa()` y **descartaba**
+         `saludTipo`/`negocioTipo`. Cero requests nuevas.
 - [ ] **El nivel mensual ya existe en el backend** (`/api/v1/rocks/monthly`, tabla `rocas_mensuales`
       de la V36) y el frontend **no lo consume**. La cifra calculada tiene dónde guardarse sin
       backend nuevo. Cuidado con el `CHECK meta > 0`, que rechazaría una meta mensual de 0 (saldar

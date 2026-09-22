@@ -22,13 +22,16 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * El cálculo **ya existía y estaba probado** desde el 21 (`objetivoMensual.ts` +
       `objetivoMensualDelMapa`), pero **no se pintaba en ningún lado**: era el pendiente *"Enganchar
       la cifra mensual en la UI"*. Esto es solo el enganche — no se tocó una línea de la fórmula.
-    * Hook nuevo `useObjetivoMensualDelEje`: lee el Mapa del almacén local y devuelve la cifra y su
-      nota ya formateadas, para que la pantalla no calcule nada.
-    * Se lee el **Mapa** y no la Roca Maestra porque solo el Mapa sabe `area` y `tipoResultado`, y
-      eso es lo que activa el tope del 4 % por mes. Sin ese tope, un objetivo de peso arrastrado dos
-      meses mostraría *"baja 20 kg este mes"*, que el dueño pidió expresamente que no se muestre.
-    * Cuando no hay cifra (escala subjetiva, condición clínica, o ritmo fuera de alcance) se muestra
-      **el motivo**, no un hueco ni un número inventado.
+    * Función pura `cifraDelMesDeLaRoca`: recibe la Roca Maestra y qué se mide, y devuelve la cifra
+      ya formateada. La pantalla no calcula nada y la función se prueba sin montar un componente.
+    * **Qué se mide sale del servidor**, no del borrador local: `usePrioridadPrincipal` ya traía
+      `saludTipo`/`negocioTipo` en la misma lectura que la prioridad y los descartaba. Hacía falta
+      ese dato porque la Roca Maestra guarda el número, la unidad y la línea base pero no QUÉ se
+      mide, y eso es lo que activa el tope del 4 % por mes: sin él, un objetivo de peso arrastrado
+      dos meses mostraría *"baja 20 kg este mes"*, que el dueño pidió que no se muestre.
+    * **Una sola línea** (`Este mes: 82 kg`), sin párrafo explicativo: la tarjeta ya tiene el
+      objetivo de 90 días entero encima. Cuando no hay cifra —escala subjetiva, condición clínica o
+      ritmo fuera de alcance— no se muestra nada.
     * **No se tocó** ninguna otra tarjeta de `Plan`, ni la intro de Objetivos, ni el plan semanal.
     Una excepción puntual **no abre** el tab: cualquier otro cambio sobre los cinco principales
     vuelve a necesitar autorización explícita.

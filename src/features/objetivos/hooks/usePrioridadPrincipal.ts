@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import type { ResumenDelMapa } from '../../mapa-renacimiento/api/respuestasDelMapa';
 import { leerResumenDelMapa } from '../../mapa-renacimiento/api/respuestasDelMapa';
 import { EJE_POR_AREA } from '../../mapa-renacimiento/tipos';
 import type { EjeObjetivo } from '../types/objetivos.types';
@@ -25,6 +26,19 @@ export interface PrioridadYEscala {
   /** La escala 1-10 de Relaciones. Viaja acá porque sale de la MISMA lectura que la prioridad. */
   relacionesBase: number | null;
   relacionesMeta: number | null;
+  /**
+   * Qué mide cada objetivo, tal cual viene de {@link ResumenDelMapa}.
+   *
+   * **Agregado el 2026-09-22.** Estos cuatro campos ya venían en la MISMA respuesta y se tiraban.
+   * La cifra del mes los necesita: la Roca Maestra guarda el número, la unidad y la línea base,
+   * pero no qué se mide, y sin eso no se distingue "82 kg de peso" —que se reparte, con tope de
+   * salud— de un "8/10 de energía", que no se reparte. Antes esto se leía del borrador local del
+   * Mapa, que no sobrevive a un reinstalar ni a cambiar de teléfono; acá viene del servidor.
+   */
+  saludTipo: ResumenDelMapa['saludTipo'];
+  saludUnidad: ResumenDelMapa['saludUnidad'];
+  negocioTipo: ResumenDelMapa['negocioTipo'];
+  negocioPeriodo: ResumenDelMapa['negocioPeriodo'];
   cargando: boolean;
 }
 
@@ -33,6 +47,10 @@ export function usePrioridadPrincipal(): PrioridadYEscala {
     ejePrincipal: null,
     relacionesBase: null,
     relacionesMeta: null,
+    saludTipo: null,
+    saludUnidad: null,
+    negocioTipo: null,
+    negocioPeriodo: null,
   });
   const [cargando, setCargando] = useState(true);
 
@@ -44,6 +62,10 @@ export function usePrioridadPrincipal(): PrioridadYEscala {
         ejePrincipal: resumen.prioridad ? EJE_POR_AREA[resumen.prioridad] : null,
         relacionesBase: resumen.relacionesBase,
         relacionesMeta: resumen.relacionesMeta,
+        saludTipo: resumen.saludTipo,
+        saludUnidad: resumen.saludUnidad,
+        negocioTipo: resumen.negocioTipo,
+        negocioPeriodo: resumen.negocioPeriodo,
       });
       setCargando(false);
     });

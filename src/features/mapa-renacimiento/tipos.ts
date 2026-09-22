@@ -199,20 +199,3 @@ export const EJE_POR_AREA: Record<Area, EjeObjetivo> = {
   relaciones: 'RELACIONES',
 };
 
-/**
- * La traducción de vuelta: de qué área del Mapa viene un eje de Rocas. La usa
- * `useObjetivoMensualDelEje` para encontrar, a partir del eje abierto en Plan, el objetivo del Mapa
- * que sabe su `area` y su `tipoResultado`.
- *
- * **Vive acá por el mismo motivo que {@link EJE_POR_AREA}, y no en el hook**: ponerla allá la
- * volvía imposible de probar, porque importarla arrastraba `almacen.ts` y con él AsyncStorage. Es
- * exactamente el problema que esta tabla ya había tenido una vez.
- *
- * Se deriva de {@link EJE_POR_AREA} en vez de escribirse a mano: una segunda tabla literal se
- * desincroniza de la primera en cuanto alguien agregue un área, y el síntoma sería silencioso —la
- * cifra de un eje debajo del objetivo de otro—.
- */
-export function areaDelEje(eje: EjeObjetivo): Area | null {
-  const entrada = (Object.entries(EJE_POR_AREA) as [Area, EjeObjetivo][]).find(([, e]) => e === eje);
-  return entrada ? entrada[0] : null;
-}
