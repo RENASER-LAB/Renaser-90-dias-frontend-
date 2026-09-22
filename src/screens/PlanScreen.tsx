@@ -1718,8 +1718,18 @@ export default function PlanScreen() {
                 </Text>
               ) : (
                 <>
+                  {/* Solo la primera cláusula (2026-09-22, pedido del dueño: "quiero poco texto").
+                      Acá iba `rocaAbierta.objetivo` entero —"Al Día 90 facturaré S/ 12000
+                      mensuales, partiendo de S/ 5000, con evidencia en Reportes mensuales de
+                      facturacion, porque Quiero estabilidad economica…"—, un párrafo de cinco
+                      líneas sobre la tarjeta que la persona abre para ver su avance.
+
+                      Lo que se corta no se pierde: "partiendo de X" es literalmente el "Partiste
+                      de X" que está tres renglones más abajo, y la evidencia y el motivo se leen
+                      en el Mapa, que es donde se escriben. Queda la frase que contesta la
+                      pregunta de esta pantalla: a dónde vas. */}
                   <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 17, marginTop: 6, lineHeight: 24 }]}>
-                    {rocaAbierta.objetivo}
+                    {primeraClausula(rocaAbierta.objetivo)}
                   </Text>
 
                   {/* La barra solo aparece si el objetivo tiene meta medible. Un objetivo

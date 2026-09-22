@@ -15,6 +15,27 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
   * `data/`: Constantes, cláusulas, configuraciones estáticas.
 * **Componentes de UI Atómicos**: Utiliza componentes compartidos bajo `src/components/` (`FormField`, `GoldButton`, `SliderRating`, `Checkbox`, `SignatureCanvas`, `Icon`).
 * **Integridad del Core**: NUNCA alterar, romper ni desconfigurar las pantallas existentes ni los tabs principales (`Hoy`, `Plan`, `Training`, `Comunidad`, `Yo`).
+  * **Excepción autorizada por el dueño del producto — 2026-09-22 — tabs `Training` y `Plan`.**
+    Dos pedidos del dueño ese día, sobre capturas:
+    * **`Training` — la Audioterapia Semanal abre con su audio.** Hasta hoy caía en el selector
+      genérico y te pedía una foto o un video para demostrar que habías escuchado un audio que la
+      app **nunca te mostraba**: `GET /api/v1/audio-therapy/status` existía en el backend y no lo
+      llamaba nadie. Ahora el modal de evidencia, y SOLO para `AUDIO_THERAPY_WEEKLY`, muestra
+      arriba el audio de la semana con su botón de play, abre en la pestaña TEXTO y lista las dos
+      preguntas fijas de D-97 — las mismas de la Pastilla Renacer.
+      **El cierre no cambió**: sigue siendo el camino genérico de evidencia. Se evaluó y se
+      **descartó** entregarlo por `POST /spirit-audio/submit`, que es lo que parecía obvio: ese
+      endpoint llama a `completarPastillaRenacer.completarDeHoy(...)`, resuelve el hábito por una
+      constante y no recibe cuál cerrar — habría completado la PASTILLA, dado sus puntos y dejado
+      la Audioterapia sin completar. Cero backend nuevo: es el camino que el propio
+      `AudioterapiaService` documenta.
+    * **`Plan` — la tarjeta del objetivo muestra solo la primera cláusula.** Pedido textual:
+      *"quiero poco texto"*. Ahí iba la meta redactada entera —cinco líneas— sobre la tarjeta que
+      se abre para ver el avance. Lo que se corta no se pierde: *"partiendo de X"* es el
+      *"Partiste de X"* que está tres renglones más abajo, y la evidencia y el motivo se leen en
+      el Mapa. Se reusó `primeraClausula`, que ya existía y ya se usaba en la lista de los tres.
+    Una excepción puntual **no abre** los tabs: cualquier otro cambio sobre los cinco principales
+    vuelve a necesitar autorización explícita.
   * **Excepción autorizada por el dueño del producto — 2026-09-22 — tab `Plan`, tarjeta del mes.**
     Pedido del dueño ese día, revisando los pendientes del 22 sobre una captura: que la cifra del mes
     se vea. El alcance autorizado fue **solo agregar la cifra mensual** a la tarjeta que ya decía

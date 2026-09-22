@@ -18,6 +18,9 @@ import { mensajeDeError } from '../services/http/apiClient';
 import { CLAVE_SISTEMA_PASTILLA_RENACER } from '../features/spirit/api/spiritApi';
 import { escucharPostDiarioCerrado } from '../features/habits/events/avisoPostDiarioCerrado';
 import { PastillaRenacerModal } from '../features/spirit/components/PastillaRenacerModal';
+import { PREGUNTAS_FIJAS } from '../features/spirit/data/preguntasPastilla';
+import type { AudioterapiaSemanal } from '../features/habits/api/audioterapiaApi';
+import { obtenerAudioterapiaSemanal } from '../features/habits/api/audioterapiaApi';
 import { useEspiritu } from '../features/spirit/hooks/useEspiritu';
 import { ClaseDiariaModal } from '../features/academy/components/ClaseDiariaModal';
 import { useClaseDiaria } from '../features/academy/hooks/useClaseDiaria';
@@ -44,6 +47,8 @@ import { useAuth } from '../features/auth/context/AuthContext';
  * emparejar por texto haria desaparecer la funcion en silencio el dia que alguien lo renombre.
  */
 const CLAVE_SISTEMA_CLASE_DIARIA = 'DAILY_CLASS';
+/** La Audioterapia Semanal. Se ramifica por la clave, nunca por el título (ver `openEvidenceModal`). */
+const CLAVE_SISTEMA_AUDIOTERAPIA = 'AUDIO_THERAPY_WEEKLY';
 const CLAVE_SISTEMA_POST_COMUNIDAD = 'COMMUNITY_POST';
 /**
  * D-97: en estos dos la evidencia ES el instante en que se toca el boton (queda en
@@ -470,7 +475,22 @@ export default function TrainingScreen() {
     }
   };
 
+  /** El audio de la semana, solo cuando el hábito abierto es la Audioterapia. `null` en todos los
+   *  demás: ese `null` es lo que hace que el modal se comporte como siempre. */
+  const [audioSemana, setAudioSemana] = useState<AudioterapiaSemanal | null>(null);
+
   const openEvidenceModal = (habit: HabitItem) => {
+    /* La Audioterapia usa el MISMO modal de evidencia que el resto —y por lo tanto el mismo camino
+       de cierre, que completa el hábito correcto—, pero con el audio de la semana arriba y las dos
+       preguntas de D-97 en vez del selector de foto/video. Lo único que hace falta es traer el
+       audio; si falla, el modal abre igual y se comporta como siempre: mejor un selector genérico
+       que un hábito que no se puede cerrar. */
+    setAudioSemana(null);
+    if (habit.systemKey === CLAVE_SISTEMA_AUDIOTERAPIA) {
+      void obtenerAudioterapiaSemanal()
+        .then(setAudioSemana)
+        .catch(() => setAudioSemana(null));
+    }
     // Se ramifica por `systemKey` (la `clave_sistema` del catalogo) y NUNCA por titulo: el titulo
     // es editable desde el panel admin, y emparejar por texto haria desaparecer la funcion en
     // silencio el dia que alguien lo renombre.
@@ -1198,6 +1218,12 @@ export default function TrainingScreen() {
             ? datos => sellarRocaDiaria(activeEvidenceHabit.id, datos)
             : undefined
         }
+        audioDeLaSemana={
+          audioSemana?.estado === 'con_audio'
+            ? { titulo: audioSemana.titulo, url: audioSemana.url }
+            : null
+        }
+        preguntas={PREGUNTAS_FIJAS}
         titulo={activeEvidenceHabit?.title ?? ''}
         contexto={
           activeEvidenceHabit
