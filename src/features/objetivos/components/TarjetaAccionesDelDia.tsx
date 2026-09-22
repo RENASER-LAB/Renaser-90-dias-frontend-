@@ -43,8 +43,10 @@ export function TarjetaAccionesDelDia({ diaria, semanal, diaPrograma }: TarjetaA
     { titulo: 'Mañana', rocas: diaria.manana },
   ].filter(cubo => cubo.rocas.length > 0);
 
-  const guardar = async (items: ItemPlanDiario[]) => {
-    const resultado = await diaria.planificar(diaria.objetivo.fecha, items);
+  /* La fecha la elige la persona en la fila de días del modal, no la propone más esta tarjeta:
+     desde el 2026-09-22 se puede agendar cualquier día que quede de la semana. */
+  const guardar = async (items: ItemPlanDiario[], fecha: string) => {
+    const resultado = await diaria.planificar(fecha, items);
     setAgendando(false);
     if (!resultado.ok) {
       Alert.alert('Tus acciones del día', resultado.mensaje);

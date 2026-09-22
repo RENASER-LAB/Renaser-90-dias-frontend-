@@ -1,3 +1,5 @@
+import { DIAS_DEL_PLAN, INDICE_DE_HOY, type DiaDelPlan } from '../../habits/utils/semanaDelPlan';
+
 /**
  * Cuándo se puede planificar, en palabras que la pantalla pueda mostrar.
  *
@@ -76,4 +78,25 @@ export function fechaAPlanificar(ahora: Date = new Date()): { fecha: string; esM
     objetivo.setDate(objetivo.getDate() + 1);
   }
   return { fecha: fechaLocalISO(objetivo), esManana };
+}
+
+/**
+ * Qué días de la semana se pueden agendar para las acciones.
+ *
+ * **No es `esPlanificable`, la de los hábitos, y la diferencia es un día.** Aquélla bloquea hoy
+ * siempre (D-91: el horario de un hábito rige desde mañana); las acciones del día **sí** se agendan
+ * hoy mientras la ventana nocturna no haya abierto, y el servidor las acepta — es lo que la app
+ * viene haciendo. Reusar la de hábitos les taparía un día que funciona.
+ *
+ * El borde superior es el domingo: cada objetivo del día cuelga del objetivo de SU semana, así que
+ * ofrecer la semana que viene sería ofrecer un `NO_WEEKLY_ROCK`. Esa se planifica el domingo.
+ *
+ * Usa `fechaAPlanificar` para el corte de las 18:00 en vez de repetir la hora: una sola definición
+ * de "desde cuándo se planifica mañana" en toda la app.
+ */
+export function diaAgendable(dia: DiaDelPlan, ahora: Date = new Date()): boolean {
+  const indice = DIAS_DEL_PLAN.indexOf(dia);
+  const hoy = INDICE_DE_HOY;
+  const desde = fechaAPlanificar(ahora).esManana ? hoy + 1 : hoy;
+  return indice >= desde;
 }

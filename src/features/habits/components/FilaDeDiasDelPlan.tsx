@@ -47,10 +47,28 @@ interface FilaDeDiasDelPlanProps {
   horarios?: Partial<Record<DiaDelPlan, HoraDelDia>>;
   /** Los días que se están editando ahora. Vacío = se edita el horario general. */
   enEdicion: DiaDelPlan[];
+  /**
+   * Qué días se pueden tocar. Por defecto `esPlanificable`, la regla de los **hábitos** (D-91: de
+   * mañana en adelante).
+   *
+   * Existe porque las acciones del día tienen **su propia regla** y no la misma: se pueden agendar
+   * HOY mientras la ventana nocturna no haya abierto, y el servidor las acepta. Reusar la fila con
+   * el candado de hábitos les taparía un día que sí funciona.
+   *
+   * Lo que se comparte es cómo se ve y cómo se toca; la regla la trae cada pantalla, que es la que
+   * sabe contra qué endpoint va.
+   */
+  planificable?: (dia: DiaDelPlan) => boolean;
   onAlternarDia: (dia: DiaDelPlan) => void;
 }
 
-export function FilaDeDiasDelPlan({ corre, horarios, enEdicion, onAlternarDia }: FilaDeDiasDelPlanProps) {
+export function FilaDeDiasDelPlan({
+  corre,
+  horarios,
+  enEdicion,
+  planificable = esPlanificable,
+  onAlternarDia,
+}: FilaDeDiasDelPlanProps) {
   const { c, t } = useTheme();
   const diasDelMes = diasDelMesDeLaSemana();
 
@@ -60,11 +78,11 @@ export function FilaDeDiasDelPlan({ corre, horarios, enEdicion, onAlternarDia }:
         const corriendo = corre[dia];
         const editando = enEdicion.includes(dia);
         const delDia = horarios?.[dia];
-        // D-98/D-91: el día en curso y los ya pasados no se planifican. El servidor empieza a
-        // contar en `hoy.plusDays(1)`, así que guardar sobre hoy no cambiaría hoy — dejarlo tocable
-        // sería ofrecer algo que el backend no va a hacer.
-        const planificable = esPlanificable(dia);
-        const bloqueado = !corriendo || !planificable;
+        // Por defecto D-98/D-91: el día en curso y los ya pasados no se planifican, porque el
+        // servidor empieza a contar en `hoy.plusDays(1)` y dejarlo tocable sería ofrecer algo que
+        // no va a hacer. Las acciones del día traen la suya — ver la prop.
+        const sePuede = planificable(dia);
+        const bloqueado = !corriendo || !sePuede;
         return (
           <Pressable
             key={dia}
@@ -90,8 +108,8 @@ export function FilaDeDiasDelPlan({ corre, horarios, enEdicion, onAlternarDia }:
             >
               {diasDelMes[dia]}
             </Text>
-            {corriendo && !planificable && <Icon name="lock" size={11} color={c.tabInactive} />}
-            {corriendo && planificable && (
+            {corriendo && !sePuede && <Icon name="lock" size={11} color={c.tabInactive} />}
+            {corriendo && sePuede && (
               <Text
                 style={[
                   t.micro,

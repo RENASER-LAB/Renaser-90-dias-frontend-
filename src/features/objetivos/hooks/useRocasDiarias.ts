@@ -86,7 +86,14 @@ export function useRocasDiarias() {
     } catch (e) {
       if (e instanceof ApiError && e.esConflicto) {
         await cargar();
-        return { ok: false as const, motivo: 'ya_planificado' as const, mensaje: 'Ese día ya tenía acciones agendadas.' };
+        /* Solo puede ser HOY: un día que todavía no llegó se reemplaza en el servidor sin
+           rechazar (E-208), así que si llega este error es porque se intentó rehacer el día en
+           curso — y eso no se reacomoda, igual que los hábitos (D-91). */
+        return {
+          ok: false as const,
+          motivo: 'ya_planificado' as const,
+          mensaje: 'El día en curso ya está armado y no se reacomoda. Puedes cambiar los que vienen.',
+        };
       }
       // NO_WEEKLY_ROCK llega como 400 con el código en el texto. Se distingue por el código y no por
       // el mensaje completo, que puede cambiar de redacción sin avisar.
@@ -101,7 +108,10 @@ export function useRocasDiarias() {
         return {
           ok: false as const,
           motivo: 'fecha_invalida' as const,
-          mensaje: 'Después de las 18:00 solo se planifica el día siguiente.',
+          /* Corregido el 2026-09-22 con E-208. Decía "después de las 18:00 solo se planifica el
+             día siguiente", que era la regla vieja: el servidor admitía dos fechas y nada más. Hoy
+             admite hasta el domingo, y el corte de las 18:00 solo mueve el primer día. */
+          mensaje: 'Ese día ya no se puede planificar. Elige uno que quede de la semana.',
         };
       }
       return { ok: false as const, motivo: 'error' as const, mensaje: mensajeDeError(e, 'No pudimos agendar tus acciones.') };

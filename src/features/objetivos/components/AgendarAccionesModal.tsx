@@ -9,6 +9,9 @@ import type { EjeObjetivo, ItemPlanDiario } from '../types/objetivos.types';
 import { EJES, ETIQUETA_EJE } from '../types/objetivos.types';
 import type { AccionDelMapa, AccionesPorEje } from '../../mapa-renacimiento/hooks/useAccionesDelMapa';
 import { diasEscritos, tocaHoy } from '../../mapa-renacimiento/hooks/useAccionesDelMapa';
+import { FilaDeDiasDelPlan } from '../../habits/components/FilaDeDiasDelPlan';
+import { DIAS_DEL_PLAN, fechasIsoDeLaSemana, type DiaDelPlan } from '../../habits/utils/semanaDelPlan';
+import { diaAgendable } from '../utils/ventanasDePlanificacion';
 import { posicionarPorEje } from '../hooks/useRocasDiarias';
 import { Icon } from '../../../components/Icon';
 
@@ -33,6 +36,18 @@ import { Icon } from '../../../components/Icon';
  */
 
 const MAXIMO_POR_EJE = 3;
+
+/** `2026-09-23` → `MIÉ`. Reusa `fechasIsoDeLaSemana` para no recalcular el lunes por otro lado. */
+function diaDeLaFecha(fechaIso: string): DiaDelPlan {
+  const fechas = fechasIsoDeLaSemana();
+  return DIAS_DEL_PLAN.find(d => fechas[d] === fechaIso) ?? DIAS_DEL_PLAN[0];
+}
+
+/** Todos los días existen para una acción: el candado lo pone `diaAgendable`, no el catálogo. */
+const TODOS_LOS_DIAS: Record<DiaDelPlan, boolean> = DIAS_DEL_PLAN.reduce(
+  (acc, dia) => ({ ...acc, [dia]: true }),
+  {} as Record<DiaDelPlan, boolean>
+);
 
 /** Hasta tres pasos por objetivo del día. Mismo tope que el backend (`AccionDiaria.MAXIMO`). */
 const MAXIMO_PASOS = 3;
@@ -59,11 +74,15 @@ interface AgendarAccionesModalProps {
    * `YYYY-MM-DD` que se va a mandar. Sale del reloj del dispositivo, que es lo único que hay, y
    * **puede no coincidir con el día del participante**: el servidor decide en qué día cae.
    */
+  /**
+   * La fecha que se propone al abrir. Deja de ser el destino fijo: la persona elige el día en la
+   * fila de arriba y puede agendar cualquier día que quede de la semana.
+   */
   fecha: string;
   /** Las acciones del Mapa, por eje: de ahí sale lo que se puede agendar. Ver `disponibles`. */
   accionesDelMapa: AccionesPorEje;
   guardando: boolean;
-  onGuardar: (items: ItemPlanDiario[]) => void;
+  onGuardar: (items: ItemPlanDiario[], fecha: string) => void;
   onCerrar: () => void;
 }
 
@@ -79,6 +98,13 @@ export function AgendarAccionesModal({
   const { c, t } = useTheme();
   const [elegidas, setElegidas] = useState<AccionElegida[]>([]);
   const [eligiendoHoraDe, setEligiendoHoraDe] = useState<string | null>(null);
+  /**
+   * El día que se está agendando. Arranca en el que propone el servidor de reglas (`fecha`), o sea
+   * hoy antes de las 18:00 y mañana después.
+   */
+  const [diaElegido, setDiaElegido] = useState<DiaDelPlan>(() => diaDeLaFecha(fecha));
+  const fechasIso = fechasIsoDeLaSemana();
+  const fechaAGuardar = fechasIso[diaElegido] ?? fecha;
   // Lo que marca la rueda antes de confirmar. Vive acá y no en la rueda porque `RuedaHoraPicker`
   // avisa por `onCambiar` y no guarda nada: es un selector, no un formulario.
   const [horaEnCurso, setHoraEnCurso] = useState({ hora: 6, minuto: 0 });
@@ -220,7 +246,8 @@ export function AgendarAccionesModal({
              nada", no "un paso sin texto" — que el dominio rechazaría con un 400. */
           acciones: e.pasos.map(p => p.trim()).filter(p => p !== ''),
         }))
-      )
+      ),
+      fechaAGuardar
     );
   };
 
@@ -262,6 +289,25 @@ export function AgendarAccionesModal({
             </View>
           ) : (
             <ScrollView contentContainerStyle={{ padding: 18, gap: 18 }}>
+              {/* QUÉ DÍA. La misma fila que el planificador de hábitos de Training —el dueño pidió
+                  esa interfaz— pero con la regla de las acciones: hoy SÍ se agenda mientras la
+                  ventana nocturna no haya abierto. Ver `diaAgendable`. */}
+              <View style={{ gap: 4 }}>
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 12 }]}>
+                  ¿QUÉ DÍA?
+                </Text>
+                <FilaDeDiasDelPlan
+                  corre={TODOS_LOS_DIAS}
+                  enEdicion={[diaElegido]}
+                  planificable={dia => diaAgendable(dia)}
+                  onAlternarDia={setDiaElegido}
+                />
+                <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5, marginTop: 5, lineHeight: 14 }]}>
+                  Puedes agendar cualquier día que quede de la semana, y corregirlo hasta que llegue.
+                  La semana que viene se arma el domingo.
+                </Text>
+              </View>
+
               {disponibles.map(({ eje, roca, acciones }) => (
                 <View key={eje} style={{ gap: 10 }}>
                   <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 12 }]}>
@@ -376,7 +422,7 @@ export function AgendarAccionesModal({
               <Text style={[t.small, { color: c.textSoft, fontSize: 13, marginTop: 8, textAlign: 'center' }]}>
                 {/* Se muestra la fecha exacta que se va a mandar, en vez de decir "hoy": el
                   dispositivo puede estar en otro día que el participante. */}
-              Se agendan para el {fecha} y aparecen en Entrenamiento, en Vida y Negocio
+              Se agendan para el {fechaAGuardar} y aparecen en Entrenamiento, en Vida y Negocio
               </Text>
             )}
           </View>

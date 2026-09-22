@@ -118,6 +118,23 @@ export function PlanSemanalModal({
   const ejesOrdenados = conPrincipalPrimero(EJES, ejePrincipal);
   const ejeObligatorio = ejesOrdenados[0];
   const ejeActual = ejesOrdenados[Math.min(paso, ejesOrdenados.length - 1)];
+
+  /**
+   * El rótulo del paso, sin contador.
+   *
+   * > **Corregido el 2026-09-22.** Decía `Paso 1 de 4 · Cuerpo`. Son cuatro **pasos** —los tres ejes
+   * > y el resumen— pero el dueño lo leyó como cuatro cosas que tenía que llenar: *"no tengo que
+   * > llenar todo del mes para continuar (…) el usuario se va, le dará flojera los 4 de una"*. Y con
+   * > un solo eje obligatorio (RK-12) el contador además exageraba el trabajo: decía cuatro cuando
+   * > lo que hace falta es uno.
+   * >
+   * > Los puntos de abajo ya dicen dónde está y cuánto queda, así que el número no hacía falta para
+   * > orientarse. Lo que sí hacía falta es decir cuál es obligatorio.
+   */
+  const rotuloDelPaso =
+    ejeActual === ejesOrdenados[0]
+      ? `${ETIQUETA_EJE[ejeActual]} · el único obligatorio`
+      : `${ETIQUETA_EJE[ejeActual]} · opcional`;
   const esResumen = paso >= ejesOrdenados.length;
   const borrador = borradores[ejeActual];
   const objetivoDelEje = maestras.find(m => m.eje === ejeActual)?.objetivo ?? null;
@@ -225,7 +242,7 @@ export function PlanSemanalModal({
                 PLAN DE LA SEMANA {String(numeroSemana).padStart(2, '0')}
               </Text>
               <Text style={[t.small, { color: c.textSoft, fontSize: 14, marginTop: 2 }]}>
-                {esResumen ? 'Revisa antes de guardar' : `Paso ${paso + 1} de ${ejesOrdenados.length + 1} · ${ETIQUETA_EJE[ejeActual]}`}
+                {esResumen ? 'Revisa antes de guardar' : rotuloDelPaso}
               </Text>
             </View>
             <Pressable onPress={onCerrar} hitSlop={16} style={estilos.botonCerrar}>
