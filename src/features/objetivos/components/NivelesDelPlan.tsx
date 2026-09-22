@@ -3,7 +3,7 @@ import { View } from 'react-native';
 
 import { useRocasDiarias } from '../hooks/useRocasDiarias';
 import { useRocasSemanales } from '../hooks/useRocasSemanales';
-import type { RocaMaestraApi } from '../types/objetivos.types';
+import type { EjeObjetivo, RocaMaestraApi } from '../types/objetivos.types';
 import { TarjetaAccionesDelDia } from './TarjetaAccionesDelDia';
 import { TarjetaPlanSemanal } from './TarjetaPlanSemanal';
 
@@ -22,10 +22,15 @@ interface NivelesDelPlanProps {
   maestras: RocaMaestraApi[];
   numeroSemana: number;
   diaPrograma: number;
+  /**
+   * El eje que la persona eligió como principal en el Mapa. Baja desde `PlanScreen`, que ya lo
+   * tiene de `usePrioridadPrincipal`: montar ese hook otra vez acá serían dos lecturas iguales.
+   */
+  ejePrincipal: EjeObjetivo | null;
   onIrAlMapa?: () => void;
 }
 
-export function NivelesDelPlan({ maestras, numeroSemana, diaPrograma, onIrAlMapa }: NivelesDelPlanProps) {
+export function NivelesDelPlan({ maestras, numeroSemana, diaPrograma, ejePrincipal, onIrAlMapa }: NivelesDelPlanProps) {
   const semanal = useRocasSemanales(maestras);
   const diaria = useRocasDiarias();
 
@@ -35,6 +40,7 @@ export function NivelesDelPlan({ maestras, numeroSemana, diaPrograma, onIrAlMapa
         semanal={semanal}
         maestras={maestras}
         numeroSemana={numeroSemana}
+        ejePrincipal={ejePrincipal}
         onIrAlMapa={onIrAlMapa}
       />
       <TarjetaAccionesDelDia diaria={diaria} semanal={semanal} diaPrograma={diaPrograma} />

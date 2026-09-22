@@ -45,6 +45,29 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       el Mapa. Se reusó `primeraClausula`, que ya existía y ya se usaba en la lista de los tres.
     Una excepción puntual **no abre** los tabs: cualquier otro cambio sobre los cinco principales
     vuelve a necesitar autorización explícita.
+  * **Excepción autorizada por el dueño del producto — 2026-09-22 — tabs `Hoy` y `Plan`.**
+    Dos pedidos del dueño, el mismo día, sobre el mismo tema: que el plan cueste menos de llenar.
+    * **`Hoy` — se termina el renombre de "roca".** Era el pendiente *"El renombre de roca quedó a
+      medias"*, que estaba trabado esperando justo esta autorización: la del 21 cubría `Plan`,
+      `Comunidad` y `Yo`, no `Hoy`. Cambian **cuatro** textos y nada más:
+      *"Define tu Roca Verde en Plan"* (×2) → *"Define tu objetivo en Plan"*,
+      *"Rocas y objetivos"* → *"Acciones y objetivos"*, y
+      *"N de M rocas selladas hoy"* → *"N de M acciones selladas hoy"*.
+      **Por qué "acciones" y no "objetivos" en dos de ellos**, aunque el pedido fue *"ya no son
+      rocas, ahora son objetivos"*: esa tarjeta cuenta las **diarias**, y en `Plan` las diarias ya
+      se llaman *acciones* (*"3. TUS ACCIONES · DÍA 15"*, *"las tres acciones críticas"*). Decirles
+      "objetivos" acá crearía una palabra distinta para lo mismo en dos tabs — exactamente la clase
+      de incoherencia que este día se dedicó a cerrar. Los identificadores del código siguen
+      diciendo `roca` (el módulo del backend se llama `rocks`); esto es solo el texto que se ve.
+    * **`Plan` — el asistente semanal se abre con lo del Mapa y con un solo eje obligatorio.**
+      Pedía inventar **nueve** acciones críticas desde cero cuando la persona ya había escrito las
+      suyas el día 7. Ahora el asistente abre en el eje principal del Mapa, con sus acciones ya
+      escritas, y guardar exige **solo ese**; los otros dos se suman cuando quiera.
+      **Cero endpoints nuevos**: `GET /api/v1/mapa-renacimiento` ya devolvía las acciones y
+      `consultarMapa()` ya lo llamaba — solo hacía falta tipar `actions` en el esquema, que venía
+      como `passthrough` esperando que alguien las leyera.
+    Una excepción puntual **no abre** los tabs: cualquier otro cambio sobre los cinco principales
+    vuelve a necesitar autorización explícita.
   * **Excepción autorizada por el dueño del producto — 2026-09-22 — tab `Plan`, la cifra del mes
     se toca para corregirla.** Pedido textual: *"el backend debe de autocalcular el objetivo del mes
     en todos los aspectos y también debe de poder editar"*. La línea "Este mes: 81.6 kg" pasa a ser

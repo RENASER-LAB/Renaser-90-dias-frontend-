@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Alert } from '../../../components/Alerta';
+import { useAccionesDelMapa } from '../../mapa-renacimiento/hooks/useAccionesDelMapa';
 import { useTheme } from '../../../theme/ThemeContext';
 import type { useRocasSemanales } from '../hooks/useRocasSemanales';
 import type { CierreRocaSemanal, EjeObjetivo, ItemPlanSemanal, RocaMaestraApi } from '../types/objetivos.types';
@@ -19,7 +20,7 @@ import { Icon } from '../../../components/Icon';
  * la semana tiene su propia cara, porque significan cosas distintas y no son "un error":
  *
  * - **bloqueada** → faltan los tres objetivos de 90 días. La salida es el Mapa, no reintentar.
- * - **sin planificar** → hay que abrir la semana con los tres objetivos semanales.
+ * - **sin planificar** → hay que abrir la semana. Alcanza con el eje principal (2026-09-22).
  * - **planificada** → se ve el plan y hasta cuándo se puede corregir.
  * - **cerrada** → las tres tienen revisión; queda como registro.
  */
@@ -28,13 +29,17 @@ interface TarjetaPlanSemanalProps {
   semanal: ReturnType<typeof useRocasSemanales>;
   maestras: RocaMaestraApi[];
   numeroSemana: number;
+  /** El principal del Mapa: va primero en el asistente y es el único obligatorio. */
+  ejePrincipal: EjeObjetivo | null;
   /** Para mandar a definir los objetivos cuando la cadena está bloqueada. */
   onIrAlMapa?: () => void;
 }
 
-export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, onIrAlMapa }: TarjetaPlanSemanalProps) {
+export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, ejePrincipal, onIrAlMapa }: TarjetaPlanSemanalProps) {
   const { c, t } = useTheme();
   const [planificando, setPlanificando] = useState(false);
+  /* Solo cuando el asistente se abre: quien nunca lo toca no paga la lectura del Mapa. */
+  const accionesDelMapa = useAccionesDelMapa(planificando);
   const [revisando, setRevisando] = useState<EjeObjetivo | null>(null);
 
   const guardarPlan = async (items: ItemPlanSemanal[]) => {
@@ -87,8 +92,8 @@ export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, onIrAlMapa
       {semanal.estado === 'sin_planificar' && (
         <View style={{ gap: 12, marginTop: 8 }}>
           <Text style={[t.body, { color: c.textSoft, fontSize: 15, lineHeight: 22 }]}>
-            Todavía no armaste esta semana. Son tres objetivos semanales —uno por eje— con tres
-            acciones críticas cada uno. Se hace de a un eje por vez.
+            Todavía no armaste esta semana. Con tu eje principal alcanza; los otros dos los sumas
+            cuando quieras. Vienen con lo que escribiste en el Mapa.
           </Text>
           <Pressable
             onPress={() => setPlanificando(true)}
@@ -147,6 +152,8 @@ export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, onIrAlMapa
         visible={planificando}
         numeroSemana={numeroSemana}
         maestras={maestras}
+        accionesDelMapa={accionesDelMapa}
+        ejePrincipal={ejePrincipal}
         guardando={semanal.guardando}
         onGuardar={guardarPlan}
         onCerrar={() => setPlanificando(false)}

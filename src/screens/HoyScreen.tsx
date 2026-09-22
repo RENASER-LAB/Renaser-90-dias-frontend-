@@ -519,7 +519,7 @@ export default function HoyScreen() {
                 hitSlop={8}
               >
                 <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_500Medium' }]}>
-                  Define tu Roca Verde en Plan
+                  Define tu objetivo en Plan
                 </Text>
                 <Icon name="arrow" size={12} color={c.goldInk} />
               </Pressable>
@@ -690,7 +690,7 @@ export default function HoyScreen() {
             >
               <View style={{ flex: 1 }}>
                 <View style={styles.encabezadoTarjeta}>
-                  <MicroLabel>Rocas y objetivos</MicroLabel>
+                  <MicroLabel>Acciones y objetivos</MicroLabel>
                   <Text style={[t.micro, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
                     {resumen?.rocasHoy ? `${resumen.rocasHoy.completados}/${resumen.rocasHoy.total}` : 'Pareto 80/20'}
                   </Text>
@@ -699,13 +699,13 @@ export default function HoyScreen() {
                     medio más chico. Ahora todas usan `t.cardTitle` sin retoque. */}
                 <Text style={[t.cardTitle, { color: c.text, marginTop: 12 }]}>
                   {resumen?.rocasHoy && resumen.rocasHoy.completados > 0
-                    ? `${resumen.rocasHoy.completados} de ${resumen.rocasHoy.total} rocas selladas hoy.`
+                    ? `${resumen.rocasHoy.completados} de ${resumen.rocasHoy.total} acciones selladas hoy.`
                     : 'Prioridad #1 del día'}
                 </Text>
                 <Text style={[t.small, { color: c.textSoft, marginTop: 5 }]}>
                   {rocaPrioritaria
                     ? `Foco: "${rocaPrioritaria.titulo}"`
-                    : 'Define tu Roca Verde en Plan para sostener la dirección.'}
+                    : 'Define tu objetivo en Plan para sostener la dirección.'}
                 </Text>
               </View>
               <Icon name="chevron" size={14} color={c.chevron} />

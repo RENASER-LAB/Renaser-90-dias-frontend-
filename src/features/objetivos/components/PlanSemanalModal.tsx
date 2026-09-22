@@ -6,6 +6,8 @@ import { GoldButton } from '../../../components/GoldButton';
 import { useTheme } from '../../../theme/ThemeContext';
 import type { EjeObjetivo, ItemPlanSemanal, RocaMaestraApi } from '../types/objetivos.types';
 import { EJES, ETIQUETA_EJE } from '../types/objetivos.types';
+import type { AccionesPorEje } from '../../mapa-renacimiento/hooks/useAccionesDelMapa';
+import { conPrincipalPrimero } from '../hooks/usePrioridadPrincipal';
 import { textoVentanaSemanal } from '../utils/ventanasDePlanificacion';
 import { Icon } from '../../../components/Icon';
 
@@ -57,11 +59,34 @@ const BORRADOR_VACIO: BorradorDeEje = {
   autoevaluacionInicio: null,
 };
 
+/**
+ * Un borrador con las acciones que la persona ya escribió en el Mapa, en orden y sin pisar los
+ * huecos que queden. El Mapa permite hasta dos por área, así que lo normal es que llegue una o dos
+ * y la tercera quede en blanco — que es exactamente lo que hay que completar.
+ */
+function conAccionesDelMapa(delMapa: string[]): BorradorDeEje {
+  const acciones: [string, string, string] = ['', '', ''];
+  delMapa.slice(0, 3).forEach((texto, indice) => {
+    acciones[indice] = texto;
+  });
+  return { ...BORRADOR_VACIO, acciones };
+}
+
 interface PlanSemanalModalProps {
   visible: boolean;
   numeroSemana: number;
-  /** Para mostrar, en cada paso, a qué objetivo de 90 días sirve la roca de esta semana. */
+  /** Para mostrar, en cada paso, a qué objetivo de 90 días sirve el de esta semana. */
   maestras: RocaMaestraApi[];
+  /**
+   * Las acciones que la persona escribió en el Mapa, por eje. Prellenan las acciones críticas en
+   * vez de pedirlas de nuevo en blanco — ver `useAccionesDelMapa`.
+   */
+  accionesDelMapa: AccionesPorEje;
+  /**
+   * El eje que eligió como principal en el Mapa. Va primero y es **el único obligatorio**: los
+   * otros dos se suman cuando quiera, no cuando el formulario lo exija.
+   */
+  ejePrincipal: EjeObjetivo | null;
   guardando: boolean;
   onGuardar: (items: ItemPlanSemanal[]) => void;
   onCerrar: () => void;
@@ -71,6 +96,8 @@ export function PlanSemanalModal({
   visible,
   numeroSemana,
   maestras,
+  accionesDelMapa,
+  ejePrincipal,
   guardando,
   onGuardar,
   onCerrar,
@@ -83,14 +110,28 @@ export function PlanSemanalModal({
     RELACIONES: { ...BORRADOR_VACIO },
   }));
 
-  // Se vuelve al paso 1 cada vez que se abre. Reabrir a mitad de camino, con lo escrito de la vez
-  // anterior, es más confuso que empezar de nuevo: no hay forma de saber qué quedó a medias.
+  /*
+   * Se vuelve al paso 1 cada vez que se abre, y se siembran las acciones del Mapa.
+   *
+   * Reabrir a mitad de camino, con lo escrito de la vez anterior, es más confuso que empezar de
+   * nuevo: no hay forma de saber qué quedó a medias. Lo que sí sobrevive es lo que la persona
+   * escribió el día 7 — eso no es "a medias", es su plan.
+   */
   useEffect(() => {
-    if (visible) setPaso(0);
-  }, [visible]);
+    if (!visible) return;
+    setPaso(0);
+    setBorradores({
+      CUERPO: conAccionesDelMapa(accionesDelMapa.CUERPO),
+      TRABAJO: conAccionesDelMapa(accionesDelMapa.TRABAJO),
+      RELACIONES: conAccionesDelMapa(accionesDelMapa.RELACIONES),
+    });
+  }, [visible, accionesDelMapa]);
 
-  const ejeActual = EJES[Math.min(paso, EJES.length - 1)];
-  const esResumen = paso >= EJES.length;
+  /* El principal del Mapa va primero: es el que manda y el único que hay que llenar para guardar. */
+  const ejesOrdenados = conPrincipalPrimero(EJES, ejePrincipal);
+  const ejeObligatorio = ejesOrdenados[0];
+  const ejeActual = ejesOrdenados[Math.min(paso, ejesOrdenados.length - 1)];
+  const esResumen = paso >= ejesOrdenados.length;
   const borrador = borradores[ejeActual];
   const objetivoDelEje = maestras.find(m => m.eje === ejeActual)?.objetivo ?? null;
 
@@ -126,9 +167,12 @@ export function PlanSemanalModal({
 
   const completo = (b: BorradorDeEje) => loQueFalta(b) === null;
 
+  /** Solo viajan los ejes completos. El backend acepta de 1 a 3 desde el 2026-09-22. */
   const guardar = () => {
     onGuardar(
-      EJES.map<ItemPlanSemanal>(eje => {
+      ejesOrdenados
+        .filter(eje => completo(borradores[eje]))
+        .map<ItemPlanSemanal>(eje => {
         const b = borradores[eje];
         return {
           eje,
@@ -147,18 +191,24 @@ export function PlanSemanalModal({
   };
 
   /**
-   * El botón de guardar se puede tocar siempre. Si algún eje está a medias no se manda nada —el
-   * backend lo rechazaría con un 400 igual de mudo— y en su lugar se nombra qué falta y dónde.
+   * El botón de guardar se puede tocar siempre.
+   *
+   * > **Corregido el 2026-09-22.** Antes exigía **los tres ejes** y, si alguno estaba a medias, no
+   * > mandaba nada: doce campos mínimos en una sentada, o la semana entera sin armar. El dueño lo
+   * > cambió con el criterio del Mapa — alcanza con el eje que la persona eligió como principal, y
+   * > los otros dos se suman cuando quiera. El texto decía *"Tu semana se abre con los tres ejes
+   * > juntos"*, que ya no es cierto.
+   *
+   * Los ejes a medias no se mandan (el backend los rechazaría con un 400 igual de mudo), pero
+   * tampoco bloquean: se guarda lo que esté completo.
    */
   const intentarGuardar = () => {
-    const pendientes = EJES.map(eje => ({ eje, falta: loQueFalta(borradores[eje]) })).filter(
-      (p): p is { eje: EjeObjetivo; falta: string } => p.falta !== null
-    );
-    if (pendientes.length > 0) {
-      const detalle = pendientes.map(p => `· ${ETIQUETA_EJE[p.eje]}: ${p.falta}`).join('\n');
+    const faltaElPrincipal = loQueFalta(borradores[ejeObligatorio]);
+    if (faltaElPrincipal !== null) {
       Alert.alert(
         'Falta poco para guardar tu semana',
-        `Tu semana se abre con los tres ejes juntos, y cada uno necesita su objetivo y sus tres acciones.\n\n${detalle}\n\nEn el resumen, toca el eje que falta para volver a él.`
+        `Con ${ETIQUETA_EJE[ejeObligatorio]} alcanza para abrir la semana, y le ${faltaElPrincipal}.`
+          + '\n\nEn el resumen, toca ese eje para volver a él.'
       );
       return;
     }
@@ -209,7 +259,7 @@ export function PlanSemanalModal({
                 PLAN DE LA SEMANA {String(numeroSemana).padStart(2, '0')}
               </Text>
               <Text style={[t.small, { color: c.textSoft, fontSize: 14, marginTop: 2 }]}>
-                {esResumen ? 'Revisa antes de guardar' : `Paso ${paso + 1} de ${EJES.length + 1} · ${ETIQUETA_EJE[ejeActual]}`}
+                {esResumen ? 'Revisa antes de guardar' : `Paso ${paso + 1} de ${ejesOrdenados.length + 1} · ${ETIQUETA_EJE[ejeActual]}`}
               </Text>
             </View>
             <Pressable onPress={onCerrar} hitSlop={16} style={estilos.botonCerrar}>
@@ -219,7 +269,7 @@ export function PlanSemanalModal({
 
           {/* Un punto por paso: dónde está y cuánto falta, sin animación ni barra que se mueva. */}
           <View style={estilos.puntos}>
-            {[...EJES, 'resumen'].map((clave, indice) => (
+            {[...ejesOrdenados, 'resumen'].map((clave, indice) => (
               <View
                 key={clave}
                 style={[
@@ -233,7 +283,7 @@ export function PlanSemanalModal({
           <ScrollView contentContainerStyle={{ padding: 18, gap: 18 }} keyboardShouldPersistTaps="handled">
             {esResumen ? (
               <>
-                {EJES.map(eje => {
+                {ejesOrdenados.map(eje => {
                   const b = borradores[eje];
                   return (
                     <View key={eje} style={[estilos.bloqueResumen, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
@@ -249,7 +299,7 @@ export function PlanSemanalModal({
                         </Text>
                       ))}
                       {!completo(b) && (
-                        <Pressable onPress={() => setPaso(EJES.indexOf(eje))} style={estilos.enlaceCompletar} hitSlop={12}>
+                        <Pressable onPress={() => setPaso(ejesOrdenados.indexOf(eje))} style={estilos.enlaceCompletar} hitSlop={12}>
                           <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 15 }]}>
                             Le {loQueFalta(b)} · toca para volver
                           </Text>

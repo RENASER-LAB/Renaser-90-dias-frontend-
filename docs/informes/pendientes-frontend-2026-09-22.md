@@ -37,10 +37,13 @@ pruebas, pero **ninguno se vio en una pantalla**.
 
 ## 2. Código pendiente
 
-- [ ] **El renombre de "roca" quedó a medias.** El tab `Hoy` sigue diciendo "roca" en tres sitios
-      (`HoyScreen.tsx` ~522 *"Define tu Roca Verde en Plan"*, ~693 *"Rocas y objetivos"*, ~702
-      *"rocas selladas hoy"*). No se tocó porque `AGENTS.md` protege ese tab y la autorización del
-      21 cubría `Plan`, `Comunidad` y `Yo`, no `Hoy`.
+- [x] ~~**El renombre de "roca" quedó a medias.** El tab `Hoy` sigue diciendo "roca" en tres
+      sitios.~~ **HECHO el 2026-09-22**, con la autorización del dueño para `Hoy` (ver `AGENTS.md`
+      §1). Eran **cuatro** textos, no tres: *"Define tu Roca Verde en Plan"* aparece dos veces.
+      Dos pasaron a *"objetivo"* y dos a *"acciones"* — esa tarjeta cuenta las diarias, y en `Plan`
+      las diarias ya se llaman *acciones*; decirles "objetivos" habría creado una palabra distinta
+      para lo mismo en dos tabs. Los identificadores del código siguen diciendo `roca`: el módulo
+      del backend se llama `rocks` y renombrarlos no le cambia nada a nadie que use la app.
 - [x] ~~**El bug de la coma en el Mapa de Renacimiento.** Hay dos lectores de números que se
       contradicen: `"78,5"` se lee como **78,5** para la Roca Maestra y como **785** para la
       validación, los hitos y el cálculo del objetivo mensual.~~ **ARREGLADO el 2026-09-22.**
