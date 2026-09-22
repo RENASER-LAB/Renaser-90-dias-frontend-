@@ -17,18 +17,27 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
 * **Integridad del Core**: NUNCA alterar, romper ni desconfigurar las pantallas existentes ni los tabs principales (`Hoy`, `Plan`, `Training`, `Comunidad`, `Yo`).
   * **Excepción autorizada por el dueño del producto — 2026-09-22 — tabs `Training` y `Plan`.**
     Dos pedidos del dueño ese día, sobre capturas:
-    * **`Training` — la Audioterapia Semanal abre con su audio.** Hasta hoy caía en el selector
-      genérico y te pedía una foto o un video para demostrar que habías escuchado un audio que la
-      app **nunca te mostraba**: `GET /api/v1/audio-therapy/status` existía en el backend y no lo
-      llamaba nadie. Ahora el modal de evidencia, y SOLO para `AUDIO_THERAPY_WEEKLY`, muestra
-      arriba el audio de la semana con su botón de play, abre en la pestaña TEXTO y lista las dos
-      preguntas fijas de D-97 — las mismas de la Pastilla Renacer.
-      **El cierre no cambió**: sigue siendo el camino genérico de evidencia. Se evaluó y se
-      **descartó** entregarlo por `POST /spirit-audio/submit`, que es lo que parecía obvio: ese
-      endpoint llama a `completarPastillaRenacer.completarDeHoy(...)`, resuelve el hábito por una
-      constante y no recibe cuál cerrar — habría completado la PASTILLA, dado sus puntos y dejado
-      la Audioterapia sin completar. Cero backend nuevo: es el camino que el propio
-      `AudioterapiaService` documenta.
+    * **`Training` — la Audioterapia Semanal abre con la MISMA hoja que la Pastilla Renacer.**
+      Hasta hoy caía en el selector genérico y te pedía una foto o un video para demostrar que
+      habías escuchado un audio que la app **nunca te mostraba**:
+      `GET /api/v1/audio-therapy/status` existía en el backend y no lo llamaba nadie. Ahora abre
+      `PastillaRenacerModal`: rótulo, título del audio, reproductor, las dos preguntas fijas de
+      D-97 de a una, y el borrador que se guarda si cierras.
+      **El cierre no cambió**: sigue siendo el camino genérico de evidencia
+      (`confirmarEvidencia` TEXTO + `completarRegistro`). Se evaluó y se **descartó** entregarlo
+      por `POST /spirit-audio/submit`, que es lo que parecía obvio: ese endpoint llama a
+      `completarPastillaRenacer.completarDeHoy(...)`, resuelve el hábito por una constante y no
+      recibe cuál cerrar — habría completado la PASTILLA, dado sus puntos y dejado la Audioterapia
+      sin completar. Cero backend nuevo: es el camino que el propio `AudioterapiaService`
+      documenta.
+
+      > **Corregido el 2026-09-22.** Este párrafo decía que la Audioterapia mostraba el audio
+      > *"arriba"* dentro del **modal genérico de evidencia**, abriendo en la pestaña TEXTO con las
+      > dos preguntas listadas como guía. Esa fue la primera versión y **el dueño la rechazó** al
+      > verla: *"está mal, cópiate este estilo, lo mismo para audioterapias"*, señalando la hoja de
+      > la Pastilla. Se revirtió `EvidenciaHabitoModal` a como estaba y en su lugar se generalizó
+      > `PastillaRenacerModal`, que ahora recibe un `AudioGuiado` (`audio`) en vez de un
+      > `SpiritDayApi` (`dia`) — el mismo componente sirve a los dos flujos sin saber de cuál viene.
     * **`Plan` — la tarjeta del objetivo muestra solo la primera cláusula.** Pedido textual:
       *"quiero poco texto"*. Ahí iba la meta redactada entera —cinco líneas— sobre la tarjeta que
       se abre para ver el avance. Lo que se corta no se pierde: *"partiendo de X"* es el

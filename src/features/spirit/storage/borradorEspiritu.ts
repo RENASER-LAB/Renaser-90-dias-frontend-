@@ -45,8 +45,16 @@ export interface BorradorEspiritu {
 
 const PREFIJO_CLAVE = 'renaser.espiritu.borrador.';
 
-function clave(userId: string, diaDeAudio: number): string {
-  return `${PREFIJO_CLAVE}${userId}.${diaDeAudio}`;
+/**
+ * La clave del borrador, por usuario y por AUDIO.
+ *
+ * > **Ampliado el 2026-09-22.** `audio` era un `number` —el día de la Pastilla— y ahora es
+ * > `string | number`, porque el mismo modal sirve además a la Audioterapia Semanal, que se
+ * > identifica por semana y no por día (`'semana-3'`). Un número sigue dando exactamente la misma
+ * > clave que antes, así que los borradores ya guardados se siguen leyendo.
+ */
+function clave(userId: string, audio: string | number): string {
+  return `${PREFIJO_CLAVE}${userId}.${audio}`;
 }
 
 /** Ninguna operación de almacenamiento debe poder tumbar la app — degradar a "no hay borrador". */
@@ -61,18 +69,18 @@ async function sinRomper<T>(operacion: () => Promise<T>, porDefecto: T): Promise
 export const borradorEspiritu = {
   guardar: (
     userId: string,
-    diaDeAudio: number,
+    audio: string | number,
     datos: Omit<BorradorEspiritu, 'guardadoEn'>,
   ): Promise<void> =>
     sinRomper(async () => {
       const borrador: BorradorEspiritu = { ...datos, guardadoEn: new Date().toISOString() };
-      await AsyncStorage.setItem(clave(userId, diaDeAudio), JSON.stringify(borrador));
+      await AsyncStorage.setItem(clave(userId, audio), JSON.stringify(borrador));
     }, undefined),
 
   /** `null` si no hay borrador o si el JSON quedó corrupto (degrada, no revienta). */
-  leer: (userId: string, diaDeAudio: number): Promise<BorradorEspiritu | null> =>
+  leer: (userId: string, audio: string | number): Promise<BorradorEspiritu | null> =>
     sinRomper(async () => {
-      const crudo = await AsyncStorage.getItem(clave(userId, diaDeAudio));
+      const crudo = await AsyncStorage.getItem(clave(userId, audio));
       if (!crudo) return null;
       try {
         const borrador = JSON.parse(crudo) as BorradorEspiritu;
@@ -86,6 +94,6 @@ export const borradorEspiritu = {
     }, null),
 
   /** Se llama recién cuando el backend confirmó la entrega: el borrador ya no representa nada. */
-  borrar: (userId: string, diaDeAudio: number): Promise<void> =>
-    sinRomper(() => AsyncStorage.removeItem(clave(userId, diaDeAudio)), undefined),
+  borrar: (userId: string, audio: string | number): Promise<void> =>
+    sinRomper(() => AsyncStorage.removeItem(clave(userId, audio)), undefined),
 };

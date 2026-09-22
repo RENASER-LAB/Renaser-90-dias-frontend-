@@ -19,7 +19,7 @@ import { useTheme } from '../../../theme/ThemeContext';
 import { RESPUESTA_MAX_LENGTH, RESPUESTA_MIN_LENGTH } from '../api/spiritApi';
 import { preguntasDelDia } from '../data/preguntasPastilla';
 import { borradorEspiritu, type BorradorEspiritu } from '../storage/borradorEspiritu';
-import type { SpiritDayApi } from '../types/spirit.types';
+import type { AudioGuiado } from '../types/audioGuiado';
 
 /**
  * "Pastilla Renacer": escuchá el audio de hoy y contestá. Sale desde abajo, como pidió el dueño
@@ -55,32 +55,45 @@ import type { SpiritDayApi } from '../types/spirit.types';
  * datos de nadie.
  *
  * Lo que queda fuera del alcance de este archivo y hace falta para *garantizar* el número: que los
- * mp3 estén servidos por un CDN cercano. Hoy `audios_espiritu.ruta_storage` está en NULL en las 43
- * filas (los archivos siguen en el Google Drive viejo, sin migrar), así que `audioUrl` llega
- * `null` y este componente muestra el aviso de "audio en preparación" en vez de un reproductor
- * roto.
+ * mp3 estén servidos por un CDN cercano.
+ *
+ * > **Corregido el 2026-09-22.** Acá decía que `audios_espiritu.ruta_storage` estaba en NULL en
+ * > las 43 filas y que por eso `audioUrl` llegaba `null` y se mostraba el aviso de "audio en
+ * > preparación". Ya no: las 45 filas tienen ruta (`contenido/pastilla-renacer/dia-NN.mp3`), y el
+ * > backend las firma con `AlmacenamientoPort.firmarLectura`. **Ojo con el entorno local:** sin
+ * > `STORAGE_PROVEEDOR=s3` corre `NoOpAlmacenamientoAdapter`, que devuelve
+ * > `about:blank#pendiente-s3/<ruta>` — una URL **no nula** que ningún reproductor puede abrir.
+ * > O sea que `hayAudio` da `true`, sale el reproductor, y se queda en `cargando…` para siempre.
+ * > Eso no es un bug de este componente: es el backend sin credenciales de AWS.
  */
 
 interface PastillaRenacerModalProps {
   visible: boolean;
   /** Id de la persona logueada: el borrador se guarda por usuario y por día. */
   userId: string;
-  /** El día en curso (`state: 'current'`) o el ya entregado de hoy. `null` mientras carga. */
-  dia: SpiritDayApi | null;
+  /**
+   * El audio a escuchar y responder. `null` mientras carga.
+   *
+   * > **Generalizado el 2026-09-22.** Acá iba `dia: SpiritDayApi`, lo que ataba este modal a la
+   * > Pastilla diaria y a su máquina de estados. La Audioterapia Semanal necesita el mismo flujo
+   * > —escuchar y contestar las dos preguntas de D-97— sin tener `state` ni `unlockedAt`. Cada
+   * > origen arma su {@link AudioGuiado} con su adaptador; este modal ya no sabe de cuál viene.
+   */
+  audio: AudioGuiado | null;
   cargando: boolean;
   /** Falla al leer el estado de Espíritu — distinta de una falla al entregar. */
   error: string | null;
   enviando: boolean;
   errorEnvio: string | null;
   /** Solo se llama con un texto que ya pasó la validación de largo. */
-  onEntregar: (dia: number, texto: string) => void;
+  onEntregar: (texto: string) => void;
   onCerrar: () => void;
 }
 
 export function PastillaRenacerModal({
   visible,
   userId,
-  dia,
+  audio,
   cargando,
   error,
   enviando,
@@ -91,8 +104,8 @@ export function PastillaRenacerModal({
   const { c, t } = useTheme();
   const { isTablet, horizontalPadding, contentMaxWidth } = useResponsive();
 
-  const yaEntregado = dia?.state === 'submitted';
-  const fuente = dia?.audioUrl ?? null;
+  const yaEntregado = audio?.yaEntregado ?? false;
+  const fuente = audio?.audioUrl ?? null;
 
   // ─── Reproductor ────────────────────────────────────────────────────────────────────────────
   // Crear el player con la fuente ya puesta es lo que dispara la carga. `null` es una fuente
@@ -135,7 +148,7 @@ export function PastillaRenacerModal({
   const hidratado = useRef(false);
 
   useEffect(() => {
-    if (!visible || !dia) return;
+    if (!visible || !audio) return;
     let cancelado = false;
     hidratado.current = false;
     setBorradorListo(false);
@@ -143,7 +156,7 @@ export function PastillaRenacerModal({
     void (async () => {
       const guardado: BorradorEspiritu | null = yaEntregado
         ? null
-        : await borradorEspiritu.leer(userId, dia.day);
+        : await borradorEspiritu.leer(userId, audio.claveBorrador);
       if (cancelado) return;
 
       if (guardado) {
@@ -153,7 +166,7 @@ export function PastillaRenacerModal({
         setRespuestas(guardado.respuestas);
         setIndice(Math.min(guardado.indiceActual, guardado.preguntas.length - 1));
       } else {
-        const delDia = preguntasDelDia(dia.day);
+        const delDia = preguntasDelDia();
         setPreguntas(delDia.preguntas);
         setRespuestas(delDia.preguntas.map(() => ''));
         setIndice(0);
@@ -166,34 +179,34 @@ export function PastillaRenacerModal({
     return () => {
       cancelado = true;
     };
-  }, [visible, dia, userId, yaEntregado]);
+  }, [visible, audio, userId, yaEntregado]);
 
   // Guardado del borrador: en cada cambio, con un respiro de medio segundo para no escribir en
   // disco en cada tecla. Mismo criterio que el borrador de la Ficha Inicial.
   useEffect(() => {
-    if (!visible || !dia || yaEntregado || !hidratado.current) return;
+    if (!visible || !audio || yaEntregado || !hidratado.current) return;
     const temporizador = setTimeout(() => {
-      void borradorEspiritu.guardar(userId, dia.day, {
+      void borradorEspiritu.guardar(userId, audio.claveBorrador, {
         preguntas,
         respuestas,
         indiceActual: indice,
       });
     }, 500);
     return () => clearTimeout(temporizador);
-  }, [visible, dia, userId, yaEntregado, preguntas, respuestas, indice]);
+  }, [visible, audio, userId, yaEntregado, preguntas, respuestas, indice]);
 
   const cerrar = useCallback(() => {
     // El guardado con respiro puede no haber llegado a correr si cierra rápido: se fuerza uno
     // último, sincrónico con el cierre. Es exactamente el caso que el dueño pidió cubrir.
-    if (dia && !yaEntregado && hidratado.current) {
-      void borradorEspiritu.guardar(userId, dia.day, {
+    if (audio && !yaEntregado && hidratado.current) {
+      void borradorEspiritu.guardar(userId, audio.claveBorrador, {
         preguntas,
         respuestas,
         indiceActual: indice,
       });
     }
     onCerrar();
-  }, [dia, yaEntregado, userId, preguntas, respuestas, indice, onCerrar]);
+  }, [audio, yaEntregado, userId, preguntas, respuestas, indice, onCerrar]);
 
   /**
    * Gesto lateral del sistema / botón atrás: cierra el modal, nunca la app (AGENTS.md §6). Con el
@@ -238,9 +251,9 @@ export function PastillaRenacerModal({
       setIndice(i => i + 1);
       return;
     }
-    if (!todasCompletas || !dia) return;
-    onEntregar(dia.day, textoAEntregar);
-  }, [actualMuyCorta, esUltima, todasCompletas, dia, onEntregar, textoAEntregar]);
+    if (!todasCompletas || !audio) return;
+    onEntregar(textoAEntregar);
+  }, [actualMuyCorta, esUltima, todasCompletas, audio, onEntregar, textoAEntregar]);
 
   const anchoTarjeta = contentMaxWidth;
 
@@ -273,13 +286,13 @@ export function PastillaRenacerModal({
           >
             <View style={styles.encabezado}>
               <View style={styles.tituloBloque}>
-                <Text style={[t.micro, { color: c.goldInk }]}>PASTILLA RENASER</Text>
+                <Text style={[t.micro, { color: c.goldInk }]}>{audio?.rotulo ?? 'PASTILLA RENASER'}</Text>
                 <Text style={[t.cardTitle, { color: c.text, marginTop: 4 }]}>
-                  {dia?.title ?? 'Tu audio de hoy'}
+                  {audio?.titulo ?? 'Tu audio de hoy'}
                 </Text>
-                {dia ? (
+                {audio ? (
                   <Text style={[t.small, { color: c.textSoft, marginTop: 2 }]}>
-                    Audio {dia.day}
+                    {audio.subtitulo}
                   </Text>
                 ) : null}
               </View>
@@ -299,7 +312,7 @@ export function PastillaRenacerModal({
               </View>
             ) : error ? (
               <Text style={[t.body, { color: c.danger }]}>{error}</Text>
-            ) : !dia ? (
+            ) : !audio ? (
               <Text style={[t.body, { color: c.textSoft }]}>
                 Todavía no tienes una Pastilla disponible. Aparece a partir del día 8 de tu programa.
               </Text>
@@ -323,7 +336,7 @@ export function PastillaRenacerModal({
                       </Text>
                     </View>
                     <Text style={[t.body, { color: c.text, marginTop: 12 }]}>
-                      {dia.summaryText}
+                      {audio.resumenEntregado}
                     </Text>
                   </View>
                 ) : !borradorListo ? (

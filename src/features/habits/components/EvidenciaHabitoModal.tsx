@@ -13,8 +13,6 @@ import { Alert } from '../../../components/Alerta';
 import {
   useAudioRecorder,
   useAudioRecorderState,
-  useAudioPlayer,
-  useAudioPlayerStatus,
   RecordingPresets,
   requestRecordingPermissionsAsync,
   setAudioModeAsync,
@@ -81,20 +79,6 @@ export interface EvidenciaHabitoModalProps {
   contexto?: string;
   /** Nota previa del registro, si ya había una. */
   notaInicial?: string;
-  /**
-   * El audio que hay que escuchar ANTES de completar, cuando el hábito tiene uno: hoy solo la
-   * Audioterapia Semanal (`AUDIO_THERAPY_WEEKLY`).
-   *
-   * Cuando viene, este modal deja de ser "subí una prueba de que lo hiciste" y pasa a ser
-   * "escuchá esto y contá qué te pasó", que es el flujo que D-97 pidió para la Audioterapia y que
-   * hasta hoy solo tenía la Pastilla Renacer. Lo que NO cambia es el cierre: sigue siendo el
-   * camino genérico de evidencia, que completa el hábito correcto y deja que el servidor otorgue
-   * los puntos. (Entregarlo por `/spirit-audio/submit` habría completado la PASTILLA: ese endpoint
-   * resuelve el hábito por una constante y no recibe cuál cerrar.)
-   */
-  audioDeLaSemana?: { titulo: string; url: string } | null;
-  /** Las preguntas a responder cuando hay audio. Fijas, de `spirit/data/preguntasPastilla`. */
-  preguntas?: readonly string[];
   onCerrar: () => void;
   /** Se llama con los puntos que otorgó el SERVIDOR, ya cerrado el registro. */
   onCompletado: (puntosOtorgados: number) => void | Promise<void>;
@@ -115,8 +99,6 @@ export function EvidenciaHabitoModal({
   sellarPersonalizado,
   titulo,
   contexto,
-  audioDeLaSemana,
-  preguntas,
   notaInicial,
   onCerrar,
   onCompletado,
@@ -133,26 +115,18 @@ export function EvidenciaHabitoModal({
   const grabador = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const estadoGrabador = useAudioRecorderState(grabador);
 
-  /* El reproductor del audio de la semana. Se crea SIEMPRE, con `null` de fuente cuando el hábito
-     no tiene audio: los hooks no pueden ir dentro de un `if`, y `expo-audio` acepta `null` como
-     fuente válida —el player existe y no carga nada—. Mismo criterio que `PastillaRenacerModal`. */
-  const reproductor = useAudioPlayer(audioDeLaSemana?.url ?? null, { updateInterval: 250 });
-  const estadoReproductor = useAudioPlayerStatus(reproductor);
-
   const visible = registroId !== null;
 
   // Cada vez que se abre para un registro distinto se arranca de cero: si no, la foto elegida
   // para el hábito anterior quedaba cargada y se subía como evidencia de éste.
   useEffect(() => {
     if (!visible) return;
-    /* Con audio, la evidencia que se espera es lo que la persona ESCRIBA después de escuchar, no
-       una foto: abrir en FOTO la mandaba a buscar una prueba que este hábito no necesita. */
-    setPestania(audioDeLaSemana ? 'TEXTO' : 'FOTO');
+    setPestania('FOTO');
     setArchivo(null);
     setNota(notaInicial ?? '');
     setError(null);
     setEnviando(false);
-  }, [registroId, visible, notaInicial, audioDeLaSemana]);
+  }, [registroId, visible, notaInicial]);
 
   /**
    * AGENTS.md §6: el gesto lateral del sistema cierra ESTE modal, nunca la app. Mientras hay
@@ -298,35 +272,9 @@ export function EvidenciaHabitoModal({
                 {titulo}
               </Text>
               <Text style={[t.micro, { color: c.textSoft, fontSize: 12, textAlign: 'center' }]}>
-                {audioDeLaSemana
-                  ? 'Escucha el audio y responde las dos preguntas. Con eso queda completado.'
-                  : 'Con una sola forma de evidencia alcanza: foto, texto, audio o video.'}
+                Con una sola forma de evidencia alcanza: foto, texto, audio o video.
               </Text>
             </View>
-
-            {/* EL AUDIO DE LA SEMANA (2026-09-22). Antes este modal no lo mostraba: le pedía a la
-                persona una foto o un video para demostrar que había escuchado un audio que la app
-                nunca le decía cuál era. Ahora se reproduce acá mismo, antes de responder. */}
-            {audioDeLaSemana ? (
-              <View style={[estilos.audioSemana, { borderColor: c.goldInk, backgroundColor: c.goldWash }]}>
-                <Pressable
-                  onPress={() => (estadoReproductor.playing ? reproductor.pause() : reproductor.play())}
-                  accessibilityRole="button"
-                  accessibilityLabel={estadoReproductor.playing ? 'Pausar el audio' : 'Reproducir el audio'}
-                  style={[estilos.audioBoton, { borderColor: c.goldInk }]}
-                >
-                  <Icon name={estadoReproductor.playing ? 'pause' : 'play'} size={18} color={c.goldInk} />
-                </Pressable>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text numberOfLines={2} style={[t.cardTitle, { color: c.textStrong, fontSize: 15 }]}>
-                    {audioDeLaSemana.titulo}
-                  </Text>
-                  <Text style={[t.micro, { color: c.textSoft, fontSize: 12, marginTop: 2 }]}>
-                    {estadoReproductor.isLoaded ? 'Tu audioterapia de esta semana' : 'Cargando el audio…'}
-                  </Text>
-                </View>
-              </View>
-            ) : null}
 
             {/* Selector de forma de evidencia */}
             <View style={estilos.pestanias}>
@@ -415,25 +363,11 @@ export function EvidenciaHabitoModal({
 
             {pestania === 'TEXTO' ? (
               <View style={{ gap: 4 }}>
-                <MicroLabel>{audioDeLaSemana ? 'Después de escuchar' : 'Registro de verdad'}</MicroLabel>
-                {/* Las dos preguntas fijas de D-97, las mismas de la Pastilla Renacer. Se muestran
-                    como guía y no como dos campos: la respuesta viaja junta, igual que el
-                    `resumen_texto` de Espíritu. */}
-                {audioDeLaSemana && preguntas?.length
-                  ? preguntas.map(pregunta => (
-                      <Text key={pregunta} style={[t.body, { color: c.textSoft, fontSize: 13.5, lineHeight: 19 }]}>
-                        · {pregunta}
-                      </Text>
-                    ))
-                  : null}
+                <MicroLabel>Registro de verdad</MicroLabel>
                 <TextInput
                   value={nota}
                   onChangeText={setNota}
-                  placeholder={
-                    audioDeLaSemana
-                      ? 'Responde las dos, en tus palabras.'
-                      : '¿Cómo cumpliste tu palabra hoy?'
-                  }
+                  placeholder="¿Cómo cumpliste tu palabra hoy?"
                   placeholderTextColor={c.tabInactive}
                   multiline
                   style={[
@@ -565,24 +499,6 @@ const estilos = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 18,
     padding: 18,
-  },
-  /** La fila del audio de la semana: botón redondo de play + título. */
-  audioSemana: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    borderWidth: 1,
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-  },
-  audioBoton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   insignia: {
     borderWidth: 1,

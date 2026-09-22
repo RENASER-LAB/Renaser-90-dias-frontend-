@@ -13,13 +13,13 @@ import { ProximoAVencerCard } from '../features/training/components/ProximoAVenc
 import { EvidenciaHabitoModal } from '../features/habits/components/EvidenciaHabitoModal';
 import { sellarRocaDiaria } from '../features/objetivos/utils/sellarRocaDiaria';
 import { PlanificarDimensionModal } from '../features/training/components/PlanificarDimensionModal';
-import { completarRegistro } from '../features/habits/api/evidenciaHabitoApi';
+import { completarRegistro, confirmarEvidencia } from '../features/habits/api/evidenciaHabitoApi';
 import { mensajeDeError } from '../services/http/apiClient';
 import { CLAVE_SISTEMA_PASTILLA_RENACER } from '../features/spirit/api/spiritApi';
 import { escucharPostDiarioCerrado } from '../features/habits/events/avisoPostDiarioCerrado';
 import { PastillaRenacerModal } from '../features/spirit/components/PastillaRenacerModal';
-import { PREGUNTAS_FIJAS } from '../features/spirit/data/preguntasPastilla';
 import type { AudioterapiaSemanal } from '../features/habits/api/audioterapiaApi';
+import { audioDeLaAudioterapia, audioDeLaPastilla } from '../features/spirit/types/audioGuiado';
 import { obtenerAudioterapiaSemanal } from '../features/habits/api/audioterapiaApi';
 import { useEspiritu } from '../features/spirit/hooks/useEspiritu';
 import { ClaseDiariaModal } from '../features/academy/components/ClaseDiariaModal';
@@ -475,9 +475,31 @@ export default function TrainingScreen() {
     }
   };
 
-  /** El audio de la semana, solo cuando el hábito abierto es la Audioterapia. `null` en todos los
-   *  demás: ese `null` es lo que hace que el modal se comporte como siempre. */
-  const [audioSemana, setAudioSemana] = useState<AudioterapiaSemanal | null>(null);
+  /**
+   * La Audioterapia abierta: el audio de la semana MÁS el registro del día que hay que cerrar.
+   * `null` cuando no está abierta, y ese `null` es lo que deja al modal siendo el de la Pastilla.
+   *
+   * Lleva el `registroId` porque la Audioterapia **no** se entrega por `/spirit-audio/submit`:
+   * ese endpoint resuelve el hábito por la constante `PASTILLA_RENACER` y cerraría el equivocado.
+   * Se cierra por el camino genérico de evidencia, que necesita el id del registro.
+   */
+  const [audioterapiaAbierta, setAudioterapiaAbierta] = useState<
+    { semana: number; titulo: string; url: string; registroId: string } | null
+  >(null);
+
+  /** Entrega la Audioterapia: las dos respuestas como evidencia de TEXTO, y el registro cerrado. */
+  const handleEntregarAudioterapia = async (texto: string) => {
+    const abierta = audioterapiaAbierta;
+    if (!abierta) return;
+    try {
+      await confirmarEvidencia(abierta.registroId, { tipo: 'TEXTO', contenidoTexto: texto });
+      await completarRegistro(abierta.registroId);
+      setAudioterapiaAbierta(null);
+      await recargarEntrenamiento();
+    } catch (e) {
+      Alert.alert('No se pudo registrar', mensajeDeError(e, 'Intenta de nuevo en un momento.'));
+    }
+  };
 
   const openEvidenceModal = (habit: HabitItem) => {
     /* La Audioterapia usa el MISMO modal de evidencia que el resto —y por lo tanto el mismo camino
@@ -485,11 +507,22 @@ export default function TrainingScreen() {
        preguntas de D-97 en vez del selector de foto/video. Lo único que hace falta es traer el
        audio; si falla, el modal abre igual y se comporta como siempre: mejor un selector genérico
        que un hábito que no se puede cerrar. */
-    setAudioSemana(null);
     if (habit.systemKey === CLAVE_SISTEMA_AUDIOTERAPIA) {
       void obtenerAudioterapiaSemanal()
-        .then(setAudioSemana)
-        .catch(() => setAudioSemana(null));
+        .then(audio => {
+          if (audio.estado !== 'con_audio') {
+            Alert.alert('Todavía no hay audio', 'La audioterapia de esta semana no está cargada.');
+            return;
+          }
+          setAudioterapiaAbierta({
+            semana: audio.semana,
+            titulo: audio.titulo,
+            url: audio.url,
+            registroId: habit.id,
+          });
+        })
+        .catch(e => Alert.alert('No se pudo abrir', mensajeDeError(e, 'No pudimos traer el audio de esta semana.')));
+      return;
     }
     // Se ramifica por `systemKey` (la `clave_sistema` del catalogo) y NUNCA por titulo: el titulo
     // es editable desde el panel admin, y emparejar por texto haria desaparecer la funcion en
@@ -1218,12 +1251,6 @@ export default function TrainingScreen() {
             ? datos => sellarRocaDiaria(activeEvidenceHabit.id, datos)
             : undefined
         }
-        audioDeLaSemana={
-          audioSemana?.estado === 'con_audio'
-            ? { titulo: audioSemana.titulo, url: audioSemana.url }
-            : null
-        }
-        preguntas={PREGUNTAS_FIJAS}
         titulo={activeEvidenceHabit?.title ?? ''}
         contexto={
           activeEvidenceHabit
@@ -1258,19 +1285,40 @@ export default function TrainingScreen() {
       {/* MODAL: PASTILLA RENACER (audio del día + preguntas)                       */}
       {/* ========================================================================= */}
       <PastillaRenacerModal
-        visible={pastillaVisible}
+        visible={pastillaVisible || audioterapiaAbierta !== null}
         userId={user?.id ?? 'anon'}
-        dia={diaDePastilla}
-        cargando={espiritu.cargando}
-        error={espiritu.error}
+        /* El MISMO modal sirve a los dos audios (2026-09-22). La Audioterapia pedía exactamente
+           este flujo —escuchar y contestar las dos preguntas de D-97— y hasta hoy caía en el
+           selector genérico de evidencia, que le pedía una foto para probar que había escuchado
+           un audio que la app ni le mostraba. Lo único distinto es de dónde sale el audio y por
+           dónde se entrega; la pantalla es la misma. */
+        audio={
+          audioterapiaAbierta
+            ? audioDeLaAudioterapia(
+                audioterapiaAbierta.semana,
+                audioterapiaAbierta.titulo,
+                audioterapiaAbierta.url,
+                false
+              )
+            : diaDePastilla
+              ? audioDeLaPastilla(diaDePastilla)
+              : null
+        }
+        cargando={audioterapiaAbierta ? false : espiritu.cargando}
+        error={audioterapiaAbierta ? null : espiritu.error}
         enviando={espiritu.enviando}
         errorEnvio={espiritu.errorEnvio}
-        onEntregar={(dia, texto) => {
-          void handleEntregarPastilla(dia, texto);
+        onEntregar={texto => {
+          if (audioterapiaAbierta) {
+            void handleEntregarAudioterapia(texto);
+            return;
+          }
+          if (diaDePastilla) void handleEntregarPastilla(diaDePastilla.day, texto);
         }}
         onCerrar={() => {
           espiritu.limpiarError();
           setPastillaVisible(false);
+          setAudioterapiaAbierta(null);
         }}
       />
 
