@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { GoldButton } from '../../../components/GoldButton';
 import { RuedaHoraPicker } from '../../habits/components/RuedaHoraPicker';
@@ -34,11 +34,22 @@ import { Icon } from '../../../components/Icon';
 
 const MAXIMO_POR_EJE = 3;
 
+/** Hasta tres pasos por objetivo del día. Mismo tope que el backend (`AccionDiaria.MAXIMO`). */
+const MAXIMO_PASOS = 3;
+
 interface AccionElegida {
   eje: EjeObjetivo;
   titulo: string;
   /** `HH:mm`, o vacío si la persona no le puso hora. */
   hora: string;
+  /**
+   * Los pasos con los que se logra ese objetivo del día. **Arranca vacío y es opcional.**
+   *
+   * Un objetivo puede ser una sola cosa que no necesita desglose ("pesarme en ayunas"), y obligar a
+   * escribir tres es lo que llevaba a rellenar por rellenar — el motivo por el que dejaron de ser
+   * obligatorias al bajar del nivel semanal al diario (V61).
+   */
+  pasos: string[];
 }
 
 interface AgendarAccionesModalProps {
@@ -91,7 +102,7 @@ export function AgendarAccionesModal({
     for (const eje of EJES) {
       for (const accion of aElegirDe(eje)) {
         if (semanal.deEje(eje) && tocaHoy(accion) && deHoy.filter(e => e.eje === eje).length < MAXIMO_POR_EJE) {
-          deHoy.push({ eje, titulo: accion.texto, hora: '' });
+          deHoy.push({ eje, titulo: accion.texto, hora: '', pasos: [] });
         }
       }
     }
@@ -146,7 +157,29 @@ export function AgendarAccionesModal({
       return;
     }
     if (cuantasDe(eje) >= MAXIMO_POR_EJE) return;
-    setElegidas(previas => [...previas, { eje, titulo, hora: '' }]);
+    setElegidas(previas => [...previas, { eje, titulo, hora: '', pasos: [] }]);
+  };
+
+  /** Agrega un campo de paso vacío a ese objetivo, hasta el tope. */
+  const agregarPaso = (clave: string) => {
+    setElegidas(previas =>
+      previas.map(e =>
+        `${e.eje}|${e.titulo}` === clave && e.pasos.length < MAXIMO_PASOS
+          ? { ...e, pasos: [...e.pasos, ''] }
+          : e
+      )
+    );
+  };
+
+  const cambiarPaso = (clave: string, indice: number, texto: string) => {
+    setElegidas(previas =>
+      previas.map(e => {
+        if (`${e.eje}|${e.titulo}` !== clave) return e;
+        const pasos = [...e.pasos];
+        pasos[indice] = texto;
+        return { ...e, pasos };
+      })
+    );
   };
 
   const abrirRueda = (clave: string, horaActual: string) => {
@@ -183,6 +216,9 @@ export function AgendarAccionesModal({
           titulo: e.titulo,
           // El backend guarda `LocalTime`; sin segundos lo parsea igual. Sin hora va ausente, no "".
           horaInicio: e.hora || undefined,
+          /* Los pasos en blanco se saltean acá y no en el servidor: un campo vacío es "no escribí
+             nada", no "un paso sin texto" — que el dominio rechazaría con un 400. */
+          acciones: e.pasos.map(p => p.trim()).filter(p => p !== ''),
         }))
       )
     );
@@ -237,6 +273,7 @@ export function AgendarAccionesModal({
                     const elegida = indice >= 0;
                     const clave = `${eje}|${accion.texto}`;
                     const hora = elegida ? elegidas[indice].hora : '';
+                    const pasos = elegida ? elegidas[indice].pasos : [];
                     const tope = !elegida && cuantasDe(eje) >= MAXIMO_POR_EJE;
                     const dias = diasEscritos(accion.dias);
                     return (
@@ -284,6 +321,39 @@ export function AgendarAccionesModal({
                             </Text>
                           </Pressable>
                         )}
+
+                        {/* LOS PASOS (V61). Aparecen solo si la persona los pide: arranca sin
+                            ningún campo y cada toque agrega uno, hasta tres.
+
+                            Es deliberado que no haya tres cajas esperando. Un objetivo del día
+                            puede ser una sola cosa que no necesita desglose, y tres campos vacíos
+                            en pantalla se leen como una obligación — que es exactamente lo que
+                            llevaba a rellenar por rellenar cuando estas acciones vivían, de a tres
+                            y obligatorias, colgando de la semana. */}
+                        {elegida && (
+                          <View style={{ gap: 6, marginLeft: 38 }}>
+                            {pasos.map((paso, indice) => (
+                              <TextInput
+                                key={indice}
+                                value={paso}
+                                onChangeText={texto => cambiarPaso(clave, indice, texto)}
+                                placeholder={`Paso ${indice + 1}`}
+                                placeholderTextColor={c.chevron}
+                                style={[
+                                  estilos.paso,
+                                  { borderColor: c.border, backgroundColor: c.cardBg, color: c.textStrong },
+                                ]}
+                              />
+                            ))}
+                            {pasos.length < MAXIMO_PASOS && (
+                              <Pressable onPress={() => agregarPaso(clave)} hitSlop={10}>
+                                <Text style={[t.small, { color: c.goldInk, fontSize: 14, fontFamily: 'Jost_700Bold' }]}>
+                                  {pasos.length === 0 ? '+ Desglosarla en pasos (opcional)' : '+ Otro paso'}
+                                </Text>
+                              </Pressable>
+                            )}
+                          </View>
+                        )}
                       </View>
                     );
                   })}
@@ -325,5 +395,6 @@ const estilos = StyleSheet.create({
   opcion: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 12, padding: 14, minHeight: 56 },
   casilla: { width: 26, height: 26, borderRadius: 6, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   botonHora: { minHeight: 48, borderWidth: 1, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginLeft: 38 },
+  paso: { minHeight: 48, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, fontSize: 15 },
   pie: { padding: 18, borderTopWidth: 1 },
 });

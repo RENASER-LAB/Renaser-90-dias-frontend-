@@ -86,6 +86,13 @@ export function TarjetaAccionesDelDia({ diaria, semanal, diaPrograma }: TarjetaA
                   {roca.horaInicio ? ` · ${roca.horaInicio.slice(0, 5)}` : ''}
                   {roca.bloqueada ? ' · se abre al completar la primera' : ''}
                 </Text>
+                {/* Los pasos, si los escribió. Numerados y en chico: son el CÓMO del objetivo, no
+                    tareas propias — el que se cierra con evidencia es el objetivo, uno solo. */}
+                {roca.acciones.map((accion, indice) => (
+                  <Text key={indice} style={[t.small, { color: c.micro, fontSize: 13, marginTop: 2 }]}>
+                    {indice + 1}. {accion}
+                  </Text>
+                ))}
               </View>
               {roca.completada && (
                 <Text style={[t.small, { color: c.success, fontFamily: 'Jost_700Bold', fontSize: 14 }]}>✓</Text>

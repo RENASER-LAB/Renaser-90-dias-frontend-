@@ -10,6 +10,7 @@ import { useTheme } from '../../../theme/ThemeContext';
 import { mensajeDeError } from '../../../services/http/apiClient';
 import { useAuth } from '../../auth/context/AuthContext';
 import * as habitsApi from '../../habits/api/habitsApi';
+import { FilaDeDiasDelPlan } from '../../habits/components/FilaDeDiasDelPlan';
 import { RuedaAntelacionPicker } from '../../habits/components/RuedaAntelacionPicker';
 import { RuedaHoraPicker } from '../../habits/components/RuedaHoraPicker';
 import { ICONOS_ELEGIBLES } from '../../habits/utils/iconosDeHabito';
@@ -1008,80 +1009,15 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                   </Pressable>
                 )}
               </View>
-              <View style={styles.filaDias}>
-                {DIAS_DEL_PLAN.map(dia => {
-                  const corre = diasDe(habitoEnEdicion)[dia];
-                  const editando = diasEnEdicion.includes(dia);
-                  const delDia = horarioSemanal[dia];
-                  // D-98/D-91: el día en curso y los ya pasados no se planifican. El servidor
-                  // empieza a contar en `hoy.plusDays(1)`, así que guardar sobre hoy no cambiaría
-                  // hoy — dejarlo tocable sería ofrecer algo que el backend no va a hacer.
-                  const planificable = esPlanificable(dia);
-                  const bloqueado = !corre || !planificable;
-                  return (
-                    <Pressable
-                      key={dia}
-                      // Un día en que el hábito NO corre no se puede editar: la hora de un día que
-                      // no existe no significa nada. Eso lo decide el catálogo, no el aprendiz.
-                      onPress={() => !bloqueado && alternarDia(dia)}
-                      disabled={bloqueado}
-                      style={[
-                        styles.pastillaDia,
-                        {
-                          borderColor: editando ? c.gold : c.border,
-                          backgroundColor: editando ? c.gold : 'transparent',
-                          opacity: bloqueado ? 0.35 : 1,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          t.micro,
-                          { fontSize: 12, fontFamily: 'Jost_700Bold', color: editando ? c.onGold : c.textSoft },
-                        ]}
-                      >
-                        {dia.charAt(0)}
-                      </Text>
-                      {/* El día del mes: convierte "el martes" en "el martes 09". */}
-                      <Text
-                        style={[
-                          t.micro,
-                          { fontSize: 11, fontFamily: 'Jost_700Bold', color: editando ? c.onGold : c.textSoft },
-                        ]}
-                      >
-                        {diasDelMes[dia]}
-                      </Text>
-                      {/* Un candado en vez de la hora cuando el día ya no se puede planificar:
-                          atenuarlo solo diría "algo pasa acá", y el candado dice qué pasa. Mismo
-                          criterio que el interruptor bloqueado de `PlanScreen`. */}
-                      {corre && !planificable && (
-                        <Icon name="lock" size={11} color={c.tabInactive} />
-                      )}
-                      {corre && planificable && (
-                        <Text
-                          style={[
-                            t.micro,
-                            {
-                              fontSize: 10.5,
-                              color: editando
-                                ? c.onGold
-                                : delDia?.activo === false
-                                  ? c.danger
-                                  : delDia?.propio
-                                    ? c.goldInk
-                                    : c.textSoft,
-                              fontFamily: delDia?.propio ? 'Jost_700Bold' : 'Jost_400Regular',
-                            },
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {delDia?.activo === false ? 'no va' : (delDia?.hora ?? '·')}
-                        </Text>
-                      )}
-                    </Pressable>
-                  );
-                })}
-              </View>
+              {/* La fila salió a `FilaDeDiasDelPlan` (2026-09-22) para que el planificador de las
+                  acciones del día use la MISMA, en vez de una copia. Acá no cambió nada: los mismos
+                  días, el mismo candado de D-91 y las mismas medidas. */}
+              <FilaDeDiasDelPlan
+                corre={diasDe(habitoEnEdicion)}
+                horarios={horarioSemanal}
+                enEdicion={diasEnEdicion}
+                onAlternarDia={alternarDia}
+              />
               <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5, marginTop: 5, lineHeight: 14 }]}>
                 {diasEnEdicion.length === 0
                   ? 'Toca uno o varios días para darles su propia hora. Lo de hoy y lo que ya pasó va con candado: se planifica de mañana en adelante.'
