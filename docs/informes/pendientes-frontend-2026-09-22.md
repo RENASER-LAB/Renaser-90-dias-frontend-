@@ -39,9 +39,17 @@ pruebas, pero **ninguno se vio en una pantalla**.
       (`HoyScreen.tsx` ~522 *"Define tu Roca Verde en Plan"*, ~693 *"Rocas y objetivos"*, ~702
       *"rocas selladas hoy"*). No se tocó porque `AGENTS.md` protege ese tab y la autorización del
       21 cubría `Plan`, `Comunidad` y `Yo`, no `Hoy`.
-- [ ] **El bug de la coma en el Mapa de Renacimiento.** Hay dos lectores de números que se
+- [x] ~~**El bug de la coma en el Mapa de Renacimiento.** Hay dos lectores de números que se
       contradicen: `"78,5"` se lee como **78,5** para la Roca Maestra y como **785** para la
-      validación, los hitos y el cálculo del objetivo mensual.
+      validación, los hitos y el cálculo del objetivo mensual.~~ **ARREGLADO el 2026-09-22.**
+      Quedó **un solo lector**: `aNumeroDeMeta` delega en `reglas.aNumero`, así que no pueden volver
+      a divergir. La regla nueva respeta las dos convenciones que conviven en el mismo formulario:
+      coma con **una o dos** cifras detrás es decimal (`"78,5"` → 78.5, así se escribe el peso) y
+      con **exactamente tres** es de miles (`"S/ 15,000"` → 15000, así se escribe la plata — eso ya
+      lo prometía el docstring viejo de `aNumero` y no había que romperlo al arreglar lo otro).
+      `aNumero.test.ts` fija la tabla entera. **Sigue sin cubrirse el caso espejo**: `"15.000"` a la
+      europea da 15, no 15000. Nadie lo reportó y la app muestra los miles con espacio duro, así que
+      no le enseña a nadie a escribirlos con punto.
 - [x] ~~**Enganchar la cifra mensual en la UI.** La función está lista y probada
       (`src/features/objetivos/utils/objetivoMensual.ts`) pero no se muestra en ningún lado. Los
       tres puntos de enganche —el hook, `PlanScreen` y el render— están descritos en el registro de

@@ -123,11 +123,45 @@ export function dependeDeUnTercero(texto: string): boolean {
   return TERCEROS.test(texto.trim());
 }
 
-/** "78", "78.5", "5,000", "S/ 15,000" → 78 / 78.5 / 5000 / 15000. `null` si no hay número. */
+/**
+ * Toda coma seguida de exactamente tres dígitos, de punta a punta: `"15,000"`, `"1,234,567"`.
+ * Escrito así, la coma solo puede ser separador de miles — nadie mide 78,500 kg queriendo decir
+ * 78 kg y medio.
+ */
+const COMA_DE_MILES = /^-?\d{1,3}(,\d{3})+$/;
+
+/**
+ * Lee el número que escribió la persona, en las dos convenciones que conviven en el mismo
+ * formulario: `"78"`, `"78.5"`, `"78,5"`, `"S/ 15,000"` → 78 / 78.5 / 78.5 / 15000.
+ *
+ * > **Corregido el 2026-09-22.** Acá iba `.replace(/,/g, '')`: la coma se borraba SIEMPRE, como si
+ * > solo pudiera ser separador de miles, y `"78,5"` se leía **785**. La otra mitad de la app hacía
+ * > lo contrario — `aNumeroDeMeta` en `useMapaRenacimiento` hacía `.replace(',', '.')` y leía
+ * > **78,5** —, así que el MISMO texto valía dos cosas distintas según quién lo mirara: la Roca
+ * > Maestra mostraba 78,5 kg mientras la validación, los hitos y la cifra del mes calculaban sobre
+ * > 785 kg. Ahora hay **un solo lector**: `aNumeroDeMeta` delega acá y no pueden volver a
+ * > contradecirse.
+ *
+ * **La regla.** Coma seguida de exactamente tres dígitos → miles (`"S/ 15,000"` → 15000): así se
+ * escribe la plata, y es lo que este mismo docstring ya prometía. Con una o dos cifras detrás →
+ * decimal (`"78,5"` → 78.5): así se escribe el peso, y es la convención que el resto de la app ya
+ * declara (`cifraDelObjetivo.SEPARADOR_MILES` usa un espacio duro justamente para no chocar con
+ * ella). Con coma Y punto juntos, la coma es de miles: `"15,000.50"` → 15000.5.
+ *
+ * **Lo que NO cubre, a propósito.** El punto se sigue leyendo como decimal siempre, así que
+ * `"15.000"` escrito a la europea da 15, no 15000. Es el caso espejo, nadie lo reportó, y la app
+ * MUESTRA los miles con espacio duro — no le enseña a nadie a escribirlos con punto.
+ */
 export function aNumero(texto: string): number | null {
-  const limpio = texto.replace(/[^0-9.,-]/g, '').replace(/,/g, '');
+  const limpio = (texto ?? '').replace(/[^0-9.,-]/g, '');
   if (!limpio || limpio === '-' || limpio === '.') return null;
-  const n = Number(limpio);
+
+  const tienePunto = limpio.includes('.');
+  const comaEsDeMiles = tienePunto || COMA_DE_MILES.test(limpio);
+  const normalizado = comaEsDeMiles ? limpio.replace(/,/g, '') : limpio.replace(/,/g, '.');
+
+  if (!normalizado || normalizado === '-' || normalizado === '.') return null;
+  const n = Number(normalizado);
   return Number.isFinite(n) ? n : null;
 }
 

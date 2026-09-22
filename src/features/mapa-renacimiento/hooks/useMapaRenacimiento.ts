@@ -12,7 +12,7 @@ import {
   guardarProtocolosDelMapa,
 } from '../api/mapaApi';
 import { guardarPrioridad, guardarRespuestasDelMapa } from '../api/respuestasDelMapa';
-import { completarHitos, definicionDeTerminado, redactar } from '../reglas';
+import { aNumero, completarHitos, definicionDeTerminado, redactar } from '../reglas';
 import type { AccionMotora, Area, BloqueDia, DiaSemana, MapaRenacimiento, Objetivo, PasoMapa } from '../tipos';
 import { AREAS, EJE_POR_AREA, objetivoDe } from '../tipos';
 import { mapaVacio } from '../tipos';
@@ -81,12 +81,20 @@ function definicionDesde(objetivo: Objetivo): DefinicionRocaMaestra {
   return { objetivo: texto, meta, avance: base, unidad, lineaBase: base };
 }
 
-/** `"78,5 kg"` → `78.5`. `null` si no hay ningún número: entonces el objetivo es cualitativo. */
+/**
+ * `"78,5 kg"` → `78.5`. `null` si no hay ningún número: entonces el objetivo es cualitativo.
+ *
+ * > **Corregido el 2026-09-22.** Acá vivía una segunda lectura de números
+ * > (`.replace(',', '.').replace(/[^0-9.]/g, '')`) que **contradecía** a `reglas.aNumero`: ésta leía
+ * > `"78,5"` como 78,5 y aquélla como 785, así que el mismo texto valía dos cosas distintas según
+ * > quién lo mirara — la Roca Maestra mostraba 78,5 kg y la validación, los hitos y la cifra del mes
+ * > calculaban sobre 785 kg. Ahora delega, y hay **un solo lector** en toda la app. La lectura que
+ * > queda es la de acá (coma decimal), más el caso de la plata (`"S/ 15,000"` → 15000) que aquélla
+ * > ya sabía y ésta perdía: `.replace(/[^0-9.]/g, '')` borraba la coma DESPUÉS de convertirla, así
+ * > que `"15,000"` daba 15. Los dos casos quedan cubiertos.
+ */
 function aNumeroDeMeta(crudo: string): number | null {
-  const limpio = (crudo || '').replace(',', '.').replace(/[^0-9.]/g, '');
-  if (!limpio) return null;
-  const n = Number(limpio);
-  return Number.isFinite(n) ? n : null;
+  return aNumero(crudo ?? '');
 }
 
 /**
