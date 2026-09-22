@@ -73,8 +73,13 @@ pruebas, pero **ninguno se vio en una pantalla**.
       de la V36) y el frontend **no lo consume**. La cifra calculada tiene dónde guardarse sin
       backend nuevo. Cuidado con el `CHECK meta > 0`, que rechazaría una meta mensual de 0 (saldar
       una deuda entera).
-- [ ] **Los tres contadores de Comunidad** ("12 conversaciones · 3 eventos · 2 mentorías") son
-      valores fijos: ningún endpoint los calcula. O se cablean, o se quitan. (Decisión de producto.)
+- [x] ~~**Los tres contadores de Comunidad** ("12 conversaciones · 3 eventos · 2 mentorías") son
+      valores fijos: ningún endpoint los calcula. O se cablean, o se quitan.~~ **QUITADOS el
+      2026-09-22**, decisión del dueño: *"todo lo quiero con el backend, nada de ahí fuera"*.
+      De paso se eliminó `GROUP_MEMBERS`, cinco personas inventadas con nombre, racha y grupo que
+      estaban declaradas en `ComunidadScreen` y que **nadie renderizaba** — un dato falso que nadie
+      muestra es un dato falso esperando que alguien lo muestre por error. El tipo `GroupMember`
+      queda: lo usan el perfil y el 1 a 1, que trabajan con gente real.
 
 ---
 

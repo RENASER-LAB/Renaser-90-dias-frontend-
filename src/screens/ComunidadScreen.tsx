@@ -307,56 +307,23 @@ export interface GroupMember {
 // =========================================================================
 // DATOS ESTÁTICOS: CHATS & INTEGRANTES DE CÉLULA (TIPO WHATSAPP)
 // =========================================================================
-// GROUP_MEMBERS queda en mock a propósito: el directorio real (GET /api/v1/chat/members) solo
-// trae {id, fullName, avatarUrl, role} — no `badge`/`streakDays`/`cell`/`focus` ni un emoji de
-// avatar (trae una URL de S3, y este diseño pinta el avatar como `<Text>`, no `<Image>`). Wirear
-// esta lista con datos reales exigiría inventar esos campos o tocar el JSX del perfil/roster, las
-// dos cosas prohibidas por el alcance de esta tarea — se deja documentado como pendiente.
-const GROUP_MEMBERS: GroupMember[] = [
-  {
-    id: 'm1',
-    name: 'Sebastián Arango',
-    role: 'Mentor de Alto Rendimiento',
-    avatar: '🦅',
-    badge: 'MENTOR',
-    streakDays: 90,
-    cell: 'Grupo 07',
-    focus: 'Gestión Somática & Negocios de Alto Valor',
-  },
-  {
-    id: 'm2',
-    name: 'María Alejandra',
-    role: 'Alumna de Alto Rendimiento',
-    avatar: '👩‍💼',
-    badge: 'ALUMNA',
-    streakDays: 37,
-    cell: 'Grupo 07',
-    focus: 'Bloque Deep Work 90m & Ventas',
-  },
-  {
-    id: 'm3',
-    name: 'Carlos Méndez',
-    role: 'Graduado Generación 04',
-    avatar: '👨‍💼',
-    badge: 'GRADUADO',
-    streakDays: 90,
-    cell: 'Grupo 04',
-    focus: 'Bioquímica, Sueño Profundo & Flujo de Caja',
-  },
-  {
-    id: 'm4',
-    name: 'Dra. Valeria Ruiz',
-    role: 'Directora Médica & Cirujana',
-    avatar: '👩‍⚕️',
-    badge: 'GRADUADA',
-    streakDays: 90,
-    cell: 'Grupo 05',
-    focus: 'Respiración Diafragmática & Regulación Cortisol',
-  },
-];
+/*
+ * Acá vivía GROUP_MEMBERS: cinco personas inventadas —nombre, rol, emoji de avatar, racha de 90
+ * días, grupo y "foco"— declaradas como si fueran el padrón. Se eliminó el 2026-09-22.
+ *
+ * Nadie las leía: la constante estaba declarada y ninguna vista la renderizaba. La nota que la
+ * acompañaba explicaba bien por qué no se había cableado (el directorio real, GET /chat/members,
+ * trae {id, fullName, avatarUrl, role} y no `badge`/`streakDays`/`cell`/`focus`), pero eso es un
+ * argumento para NO tenerla, no para dejarla escrita: un dato falso que nadie muestra es un dato
+ * falso esperando que alguien lo muestre por error.
+ *
+ * El tipo `GroupMember` SÍ queda: lo usan el perfil de integrante y `handleStartDirectChat`, que
+ * trabajan con gente real que viene del servidor.
+ */
 
 // `INITIAL_CONVERSATIONS` (mock) se retiró: las conversaciones salen del backend real vía
-// `useChatConversaciones` (GET /api/v1/chat/conversations). `GROUP_MEMBERS` sigue mock (ver nota
+// `useChatConversaciones` (GET /api/v1/chat/conversations). La lista de integrantes inventada se
+// eliminó el 2026-09-22 (ver la nota
 // junto a su declaración, más arriba): el backend no expone los campos que ese roster necesita.
 
 /**
@@ -406,21 +373,19 @@ const SECCIONES: { id: SeccionComunidad; icon: IconName; label: string }[] = [
   { id: 'testimonios', icon: 'star', label: 'Testimonios' },
 ];
 
-/**
- * El pulso de la tribu. Se pinta como UNA línea de texto al pie de la tarjeta —"12 conversaciones
- * esta semana · 3 eventos próximos · 2 mentorías programadas"— y no como las tres tarjetas con
- * número de 22 px que eran hasta el 2026-09-21.
+/*
+ * Acá vivía METRICAS, "el pulso de la tribu": "12 conversaciones esta semana · 3 eventos próximos ·
+ * 2 mentorías programadas". Se eliminó el 2026-09-22, por decisión del dueño.
  *
- * Por qué se degradó: son datos de contexto, no algo sobre lo que se actúe, y ocupaban el mismo
- * peso visual que el mentor y los integrantes, que sí son el motivo de entrar acá. Además siguen
- * siendo valores fijos —ningún endpoint los calcula todavía—, así que darles tamaño de titular
- * era prometer una precisión que no existe. La información no se perdió: se le bajó la voz.
+ * Los tres números eran CONSTANTES escritas a mano. Ningún endpoint los calculaba: decían 12, 3 y 2
+ * para todo el mundo, todos los días, desde el primer día. El 21 ya se les había bajado la voz —de
+ * tres tarjetas con número de 22 px a un renglón de texto— con el argumento de que "la información
+ * no se pierde, se le baja la voz". Pero no había información que bajar de voz: eran decorado.
+ *
+ * Mostrarle a alguien "2 mentorías programadas" cuando no tiene ninguna es peor que no mostrar
+ * nada, porque va a buscarlas. La regla que queda: en esta pantalla no se pinta un número que no
+ * venga del servidor.
  */
-const METRICAS = [
-  { n: '12', label: 'conversaciones esta semana' },
-  { n: '3', label: 'eventos próximos' },
-  { n: '2', label: 'mentorías programadas' },
-];
 
 export default function ComunidadScreen() {
   const { c, t, mode } = useTheme();
@@ -1528,10 +1493,10 @@ export default function ComunidadScreen() {
     }
   };
 
-  // Sigue local-only, sin backend: `GROUP_MEMBERS` es mock (ver nota junto a su declaración), así
-  // que su `member.id` no es un UUID real — mandarlo a `POST /chat/conversations/direct` fallaría
-  // o, peor, apuntaría a otro usuario real por coincidencia de id. Pendiente hasta que exista un
-  // selector de integrantes respaldado por el directorio real (`GET /api/v1/chat/members`).
+  // Abre el 1 a 1 buscando por NOMBRE entre las conversaciones que ya existen, y no por id: los
+  // integrantes que llegan acá salen del roster real, pero este camino nunca mandó un id a
+  // `POST /chat/conversations/direct`. Pendiente cablearlo contra `GET /api/v1/chat/members`
+  // cuando exista un selector de integrantes de verdad.
   const handleStartDirectChat = (member: GroupMember) => {
     setSelectedMemberProfile(null);
     setGroupInfoVisible(false);
@@ -3191,11 +3156,12 @@ export default function ComunidadScreen() {
           · La lista completa de integrantes pasó a abrirse BAJO DEMANDA desde la tarjeta. Antes no
             existía en esta pantalla: había cuatro avatares y un "+N" que no llevaba a ningún lado,
             y para ver quién más estaba había que entrar a un chat de grupo y abrir su ficha.
-          · Las tres tarjetas de "Interacciones clave" son ahora una línea de texto al pie de la
-            tarjeta (ver `METRICAS`).
+          · Las tres tarjetas de "Interacciones clave" se fueron del todo el 2026-09-22: eran
+            números constantes escritos a mano, sin endpoint detrás. Ver la nota donde vivía
+            `METRICAS`.
           · El rótulo "Chat de tu grupo" con su lista aparte desapareció, y no se perdió nada: los
-            chats de grupo YA salían en "Directos" (ver `filteredConversations`). Eran la misma
-            lista dos veces, una en cada pestaña.
+            chats de grupo salen en la sección "Formación Renaser", junto al general y al de
+            soporte. Eran la misma lista dos veces, una en cada pestaña.
       */}
       {enTribu && activeChat === null && (
         <ScrollView
@@ -3361,21 +3327,6 @@ export default function ComunidadScreen() {
                 </View>
               )}
             </Pressable>
-
-            {/* PULSO DE LA TRIBU. Un solo renglón de texto corrido —no tres tarjetas con número
-                de 22 px— para que no compita con el mentor ni con la bandeja. Es un `Text` con
-                `Text` anidados y no una fila de `View`s: así los tres datos fluyen y se parten
-                solos en dos líneas cuando la pantalla es angosta o la letra del sistema es grande. */}
-            <View style={[styles.tribuFilete, { backgroundColor: c.divider }]} />
-            <Text style={[t.small, { color: c.micro }]}>
-              {METRICAS.map((m, i) => (
-                <Text key={m.n}>
-                  {i > 0 ? '   ·   ' : ''}
-                  <Text style={[styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>{m.n}</Text>
-                  {` ${m.label}`}
-                </Text>
-              ))}
-            </Text>
           </View>
 
           {/* -------------------------------------------------------------------------------
