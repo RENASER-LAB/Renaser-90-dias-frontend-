@@ -86,20 +86,25 @@ function traducirRol(role: string): string {
 }
 
 /**
- * En cuál de los tres cajones que conoce `ComunidadScreen` cae la conversación.
+ * En cuál de los cuatro cajones que conoce `ComunidadScreen` cae la conversación.
  *
- * Soporte y lo desconocido caen en `'direct'`, y no es una comodidad: es el único cajón donde se
- * ven. El filtro de la bandeja (`filteredConversations` en `ComunidadScreen`) lista `'global'` solo
- * en el conmutador Global de la pestaña Tribu, y `'direct'` + `'celula'` en el de Directos, que es
- * el otro. Devolver cualquier otra cosa dejaría el chat de soporte invisible: el aprendiz no puede
- * salirse de él, pero tampoco lo encontraría.
+ * <blockquote><b>Corregido el 2026-09-22.</b> Soporte caía en <code>'direct'</code>, y el motivo
+ * escrito acá era bueno: <i>"es el único cajón donde se ve. Devolver cualquier otra cosa dejaría el
+ * chat de soporte invisible: el aprendiz no puede salirse de él, pero tampoco lo encontraría"</i>.
+ * Dejó de valer porque la pestaña Tribu ahora tiene una sección propia —<b>Formación Renaser</b>—
+ * que lista los tres grupos a los que la persona pertenece: el general, el de su mentor y el de
+ * soporte. Con un cajón propio, soporte se ve MEJOR que antes: ya no compite con los 1 a 1.
+ * </blockquote>
  *
- * Lo que distingue soporte de un 1 a 1 no se pierde: `mapearResumenConversacion` decide nombre,
- * subtítulo y ícono con `reconocerTipoChat`, que sí sabe la diferencia.
+ * Lo desconocido sigue cayendo en `'direct'`, y por el mismo motivo de siempre: es preferible una
+ * fila genérica en la bandeja a una conversación que no aparece en ninguna parte.
+ *
+ * Lo que distingue soporte de un 1 a 1 tampoco se pierde en el resto: `mapearResumenConversacion`
+ * decide nombre, subtítulo e ícono con `reconocerTipoChat`, que sabe la diferencia.
  */
 export function mapearTipoConversacion(tipo: WireTipoConversacionRecibido): ChatConversation['type'] {
   const reconocido = reconocerTipoChat(tipo);
-  if (reconocido === 'celula' || reconocido === 'global') {
+  if (reconocido === 'celula' || reconocido === 'global' || reconocido === 'soporte') {
     return reconocido;
   }
   return 'direct';

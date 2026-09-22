@@ -255,7 +255,12 @@ export interface ChatMessage {
 
 export interface ChatConversation {
   id: string;
-  type: 'celula' | 'direct' | 'global';
+  /* `'soporte'` se sumó el 2026-09-22: antes el mapper lo aplastaba a `'direct'` porque los
+     Directos eran el único cajón donde se veía. Ahora la pestaña Tribu tiene la sección
+     "Formación Renaser", que lista los tres grupos a los que la persona pertenece —general, el de
+     su mentor y el de soporte—, así que soporte necesita distinguirse para caer ahí y no entre los
+     1 a 1. Ver `chatMappers.mapearTipoConversacion`. */
+  type: 'celula' | 'direct' | 'global' | 'soporte';
   /**
    * El grupo al que pertenece esta conversación, cuando es de grupo (D-142).
    *
@@ -615,13 +620,10 @@ export default function ComunidadScreen() {
   // Sub-módulo: Atención Personalizada & Chats tipo WhatsApp — `conversations` sale del backend
   // real (GET /api/v1/chat/conversations) a través de `useChatConversaciones`; el historial de
   // cada una se pide recién al abrirla (ver `handleAbrirChat`), nunca en el listado.
-  /**
-   * Qué se lista en la bandeja de la pestaña Tribu. `directos` son las conversaciones con gente
-   * —los 1 a 1, los chats de soporte y los chats de grupo—; `global` es el canal abierto a toda
-   * la comunidad. Los dos valores son los mismos de siempre: lo que se fusionó fue la pestaña de
-   * arriba, no este conmutador.
-   */
-  const [tribuTab, setTribuTab] = useState<'directos' | 'global'>('directos');
+  /* Acá vivía `tribuTab`, el conmutador DIRECTOS | GLOBAL de la bandeja. Se eliminó el
+     2026-09-22 junto con el conmutador: la pestaña Tribu ya no elige QUÉ lista se ve, muestra las
+     dos —los grupos de Formación Renaser arriba, los 1 a 1 abajo—, así que no hay nada que
+     conmutar ni un estado que recordar entre visitas. Ver AGENTS.md §1. */
 
   /**
    * Si el desplegable de integrantes de la tarjeta de la tribu está abierto.
@@ -1300,7 +1302,6 @@ export default function ComunidadScreen() {
     if (!id) return;
 
     irASeccion('tribu');
-    setTribuTab('directos');
     setChatPedidoDeOtraPestana(id);
     // Recién creada, puede no estar en el listado: se pide de nuevo para que aparezca.
     void recargarConversaciones();
@@ -1568,7 +1569,6 @@ export default function ComunidadScreen() {
     try {
       const conv = await abrirConversacionDirecta(usuarioId);
       irASeccion('tribu');
-      setTribuTab('directos');
       setChatPedidoDeOtraPestana(conv.id);
       void recargarConversaciones();
     } catch {
@@ -1882,10 +1882,21 @@ export default function ComunidadScreen() {
    * `'direct'` es además el único cajón donde se ve un chat de soporte (ver
    * `chatMappers.mapearTipoConversacion`): sacarlo de acá lo dejaría invisible.
    */
-  const filteredConversations = conversations.filter(conv => {
-    if (tribuTab === 'global') return conv.type === 'global';
-    return conv.type === 'direct' || conv.type === 'celula';
-  });
+  /* REDISEÑO 2026-09-22 (autorizado por el dueño, ver AGENTS.md §1). Acá vivía
+     `filteredConversations`, que leía un conmutador DIRECTOS | GLOBAL y devolvía
+     `'direct' + 'celula'` en un cajón y `'global'` en el otro. Los grupos quedaban repartidos
+     entre las dos pestañas y el de soporte escondido entre los 1 a 1.
+
+     Ahora son dos listas fijas, sin conmutador: arriba los GRUPOS a los que la persona
+     pertenece —el general, el de su mentor y el de soporte—, y abajo los DIRECTOS. El orden de
+     los grupos es el de `ORDEN_GRUPOS` y no el que devuelva el servidor: es una lista de tres
+     elementos que la persona va a mirar todos los días, así que tiene que estar siempre en el
+     mismo lugar. Los directos sí conservan el orden del servidor, que es por actividad. */
+  const ORDEN_GRUPOS: ChatConversation['type'][] = ['global', 'celula', 'soporte'];
+  const gruposDeFormacion = conversations
+    .filter(conv => ORDEN_GRUPOS.includes(conv.type))
+    .sort((a, b) => ORDEN_GRUPOS.indexOf(a.type) - ORDEN_GRUPOS.indexOf(b.type));
+  const directos = conversations.filter(conv => conv.type === 'direct');
 
   /* Si esta persona ACOMPAÑA un grupo. Se calcula acá y no dentro del JSX porque la pestaña Tribu
      lo pregunta dos veces: para pintar la entrada al grupo que acompaña y para saber si la
@@ -3412,63 +3423,66 @@ export default function ComunidadScreen() {
               entra entera y se lee a tamaño completo.
           ------------------------------------------------------------------------------- */}
           <View style={styles.tribuConversaciones}>
-            <MicroLabel>Conversaciones</MicroLabel>
-            <View style={[styles.tabsRow, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-              <Pressable
-                onPress={() => setTribuTab('directos')}
-                accessibilityRole="button"
-                accessibilityState={{ selected: tribuTab === 'directos' }}
-                style={[styles.tabBtn, tribuTab === 'directos' && { backgroundColor: c.gold }]}
-              >
-                <Text
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.75}
-                  style={[
-                    t.small,
-                    {
-                      color: tribuTab === 'directos' ? c.onGold : c.textSoft,
-                      fontFamily: 'Jost_700Bold',
-                      letterSpacing: 0.8,
-                    },
-                  ]}
-                >
-                  DIRECTOS
-                </Text>
-              </Pressable>
+            <MicroLabel>Formación Renaser</MicroLabel>
 
-              <Pressable
-                onPress={() => setTribuTab('global')}
-                accessibilityRole="button"
-                accessibilityState={{ selected: tribuTab === 'global' }}
-                style={[styles.tabBtn, tribuTab === 'global' && { backgroundColor: c.gold }]}
-              >
-                <Text
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.75}
-                  style={[
-                    t.small,
-                    {
-                      color: tribuTab === 'global' ? c.onGold : c.textSoft,
-                      fontFamily: 'Jost_700Bold',
-                      letterSpacing: 0.8,
-                    },
-                  ]}
+            {/* Los grupos a los que la persona PERTENECE, en fila y siempre los mismos: el
+                general, el de su mentor y el de soporte. Se pintan con `entradaMentor` —la misma
+                fila dorada con chevron que usa la entrada al grupo que se acompaña— y no con la
+                tarjeta de la bandeja: son tres destinos fijos, no una lista que crece, y leerlos
+                como destinos evita que compitan visualmente con los 1 a 1 de abajo.
+
+                No hay estado vacío por grupo: si el servidor no devolvió uno, esa fila no existe.
+                Inventar una fila apagada "Soporte (no disponible)" sería prometer un lugar al que
+                no se puede entrar. */}
+            {gruposDeFormacion.length === 0 && !conversacionesCargando && !conversacionesError && (
+              <Text style={[t.body, { color: c.textSoft, marginTop: space.gap }]}>
+                Todavía no estás en ningún grupo.
+              </Text>
+            )}
+            <View style={{ gap: space.gap, marginTop: space.gap }}>
+              {gruposDeFormacion.map(grupo => (
+                <Pressable
+                  key={grupo.id}
+                  onPress={() => handleAbrirChat(grupo)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Abrir ${nombreVisibleDeConversacion(grupo)}`}
+                  style={[styles.entradaMentor, { borderColor: c.goldInk, backgroundColor: c.goldWash }]}
                 >
-                  GLOBAL
-                </Text>
-              </Pressable>
+                  <Text style={{ fontSize: 18, marginRight: 10 }}>{grupo.avatar}</Text>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text numberOfLines={1} style={[t.cardTitle, { color: c.textStrong }]}>
+                      {nombreVisibleDeConversacion(grupo)}
+                    </Text>
+                    <Text numberOfLines={1} style={[t.small, { color: c.textSoft, marginTop: 2 }]}>
+                      {grupo.subtitle}
+                    </Text>
+                  </View>
+                  {grupo.unreadCount > 0 && (
+                    <View style={[styles.unreadBadgePill, { backgroundColor: c.gold, marginRight: 8 }]}>
+                      <Text style={[t.micro, styles.cifras, { color: c.onGold, fontFamily: 'Jost_700Bold' }]}>
+                        {grupo.unreadCount}
+                      </Text>
+                    </View>
+                  )}
+                  <Icon name="chevron" size={16} color={c.goldInk} />
+                </Pressable>
+              ))}
             </View>
+          </View>
+
+          <View style={styles.tribuConversaciones}>
+            <MicroLabel>Directos</MicroLabel>
           </View>
 
           {/* ========================================================================= */}
           {/* BANDEJA DE CONVERSACIONES                                                */}
           {/* ========================================================================= */}
           {/*
-            Un solo listado, como antes, pero ahora también una sola pestaña: lo que elige qué se
-            ve es `filteredConversations` leyendo el conmutador de arriba. La navegación a cada
-            conversación (`handleAbrirChat`) no cambió.
+            Corregido el 2026-09-22: acá decía «un solo listado […]: lo que elige qué se ve es
+            `filteredConversations` leyendo el conmutador de arriba». Ya no hay conmutador. Son dos
+            listas a la vez —los grupos arriba, los 1 a 1 acá— y este bloque es el segundo. La
+            navegación a cada conversación (`handleAbrirChat`) no cambió, y es la misma que usan
+            las filas de grupo de arriba.
           */}
           {/* Estados de carga/error del listado real — mismo criterio que el Muro (texto con los
               tokens que ya usa el resto de la pantalla, sin componentes nuevos). */}
@@ -3482,15 +3496,15 @@ export default function ComunidadScreen() {
               {conversacionesError}
             </Text>
           )}
-          {!conversacionesCargando && !conversacionesError && filteredConversations.length === 0 && (
+          {!conversacionesCargando && !conversacionesError && directos.length === 0 && (
             <Text style={[t.body, { color: c.textSoft, marginTop: space.gapLg }]}>
-              Todavía no tienes conversaciones acá.
+              Todavía no tienes conversaciones uno a uno.
             </Text>
           )}
 
-          {/* Lista de Conversaciones Activas */}
+          {/* Los 1 a 1. Los grupos ya salieron arriba, en Formación Renaser. */}
           <View style={{ gap: space.gap, paddingTop: space.gap, paddingBottom: 28 }}>
-            {filteredConversations.map(conv => (
+            {directos.map(conv => (
               <Pressable
                 key={conv.id}
                 onPress={() => handleAbrirChat(conv)}
@@ -4484,24 +4498,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
-  /* El control segmentado (DIRECTOS / GLOBAL) conserva su borde: es el contorno del control
-     entero, no una caja decorativa. Las pestañas de adentro no tienen ninguno. */
-  tabsRow: {
-    flexDirection: 'row',
-    borderRadius: space.radius,
-    borderWidth: 1,
-    padding: 4,
-    marginTop: 10,
-  },
-  tabBtn: {
-    flex: 1,
-    minWidth: 0,
-    minHeight: 48,
-    paddingHorizontal: 8,
-    borderRadius: space.radiusSm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  /* Acá vivían `tabsRow` y `tabBtn`, el control segmentado DIRECTOS / GLOBAL de la pestaña
+     Tribu. Se eliminaron el 2026-09-22 con el conmutador: no quedó un solo uso en esta pantalla.
+     (`LoginScreen` tiene sus propios `tabBtn`/`tabBtnActive`, que no son estos.) */
   createPostBar: {
     borderWidth: 1,
     borderRadius: space.radius,

@@ -64,12 +64,19 @@ describe('mapearTipoConversacion', () => {
     expect(mapearTipoConversacion('GLOBAL')).toBe('global');
   });
 
-  /* `ComunidadScreen.filteredConversations` lista 'global' solo en el conmutador Global de la
-     pestaña Tribu, y 'direct' + 'celula' en el de Directos. O sea que 'direct' es el ÚNICO valor
-     con el que un chat de soporte se ve; cualquier otro lo dejaría invisible, y el aprendiz no
-     puede salirse de ese chat pero tampoco lo encontraría. */
-  it('manda soporte y lo desconocido al único cajón donde la bandeja los muestra', () => {
-    expect(mapearTipoConversacion('SUPPORT')).toBe('direct');
+  /* Corregido el 2026-09-22. Este caso se llamaba «manda soporte y lo desconocido al único cajón
+     donde la bandeja los muestra» y esperaba 'direct' para los dos, porque el conmutador
+     DIRECTOS | GLOBAL de la pestaña Tribu no tenía dónde poner un tercer tipo. Ese conmutador ya
+     no existe: la sección "Formación Renaser" lista los tres GRUPOS a los que la persona
+     pertenece —general, el de su mentor y el de soporte—, así que soporte tiene cajón propio.
+     Este test falla contra el mapper viejo, que devolvía 'direct'. */
+  it('le da cajón propio a soporte, ahora que la bandeja lo tiene', () => {
+    expect(mapearTipoConversacion('SUPPORT')).toBe('soporte');
+  });
+
+  /* Lo desconocido SÍ sigue cayendo en 'direct', y por el mismo motivo de siempre: una fila
+     genérica entre los 1 a 1 es mejor que una conversación que no aparece en ninguna parte. */
+  it('deja lo desconocido entre los directos', () => {
     expect(mapearTipoConversacion('BROADCAST')).toBe('direct');
   });
 });
@@ -85,8 +92,10 @@ describe('la conversación de soporte en la bandeja', () => {
     expect(conv.title).toBe('Soporte Renaser');
     expect(conv.subtitle).toBe('Soporte · Equipo Renaser');
     expect(conv.avatar).toBe('🎧');
-    // Sin esto no aparecería en ninguna pestaña de la bandeja.
-    expect(conv.type).toBe('direct');
+    /* Corregido el 2026-09-22: acá se esperaba 'direct' con el comentario «sin esto no aparecería
+       en ninguna pestaña de la bandeja». Dejó de valer cuando la pestaña Tribu ganó la sección
+       "Formación Renaser", que lista los tres grupos de la persona y le da cajón propio a soporte. */
+    expect(conv.type).toBe('soporte');
   });
 
   /* Del otro lado del soporte no hay una persona sino el staff entero. Si se resolviera "el otro"

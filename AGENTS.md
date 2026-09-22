@@ -15,6 +15,27 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
   * `data/`: Constantes, cláusulas, configuraciones estáticas.
 * **Componentes de UI Atómicos**: Utiliza componentes compartidos bajo `src/components/` (`FormField`, `GoldButton`, `SliderRating`, `Checkbox`, `SignatureCanvas`, `Icon`).
 * **Integridad del Core**: NUNCA alterar, romper ni desconfigurar las pantallas existentes ni los tabs principales (`Hoy`, `Plan`, `Training`, `Comunidad`, `Yo`).
+  * **Excepción autorizada por el dueño del producto — 2026-09-22 — tab `Comunidad`, pestaña *Tribu*.**
+    Pedido del dueño ese día, sobre una captura de la app y trayendo el reporte de un usuario: que
+    los grupos a los que la persona pertenece se vean juntos, con nombre propio, y los 1 a 1 abajo.
+    El alcance autorizado fue:
+    * Una sección nueva **“Formación Renaser”** que lista los **tres grupos** de la persona: el
+      general (`GLOBAL`), el de su mentor (`CELULA`) y el de soporte (`SOPORTE`). Orden fijo, no el
+      del servidor: son tres destinos que se miran todos los días y tienen que estar siempre en el
+      mismo lugar.
+    * **Se eliminó el conmutador `DIRECTOS | GLOBAL`** y su estado `tribuTab`. Ya no hay nada que
+      conmutar: se ven las dos listas a la vez, grupos arriba y 1 a 1 abajo, bajo el rótulo
+      **“Directos”**.
+    * En consecuencia, `chatMappers.mapearTipoConversacion` **dejó de aplastar `SUPPORT` a
+      `'direct'`** y `ChatConversation['type']` sumó `'soporte'`. Ese aplastamiento existía porque
+      Directos era el único cajón donde el chat de soporte se veía; con cajón propio se ve mejor,
+      ya no compite con los 1 a 1.
+    * **No se tocó** la tarjeta del mentor ni la entrada al grupo que se acompaña (la sección
+      *Acompañamiento*, que solo ve un mentor y significa otra cosa: el grupo que LIDERA, no uno al
+      que pertenece). Tampoco cambió `handleAbrirChat`: las filas de grupo abren el chat por el
+      mismo camino que siempre.
+    Una excepción puntual **no abre** el tab: cualquier otro cambio sobre los cinco principales
+    vuelve a necesitar autorización explícita.
   * **Excepciones autorizadas por el dueño del producto — 2026-09-21 — tabs `Plan`, `Comunidad` y `Yo`.**
     Autorizadas expresamente ese día, sobre capturas de la app:
     * **`Plan`** — acortar la intro de *Objetivos (3 niveles)* dejando el detalle tras un "Más
