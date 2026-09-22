@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Alert } from '../../../components/Alerta';
+import { useAccionesDelMapa } from '../../mapa-renacimiento/hooks/useAccionesDelMapa';
 import { useTheme } from '../../../theme/ThemeContext';
 import type { Palette } from '../../../theme/tokens';
 import type { useRocasDiarias } from '../hooks/useRocasDiarias';
@@ -32,6 +33,8 @@ interface TarjetaAccionesDelDiaProps {
 export function TarjetaAccionesDelDia({ diaria, semanal, diaPrograma }: TarjetaAccionesDelDiaProps) {
   const { c, t } = useTheme();
   const [agendando, setAgendando] = useState(false);
+  /* Solo cuando el planificador se abre: quien nunca lo toca no paga la lectura del Mapa. */
+  const accionesDelMapa = useAccionesDelMapa(agendando);
 
   const hayPlanSemanal = semanal.estado === 'planificada' || semanal.estado === 'cerrada';
   // Los dos cubos vienen del servidor, que es el único que sabe en qué día está el participante.
@@ -120,6 +123,7 @@ export function TarjetaAccionesDelDia({ diaria, semanal, diaPrograma }: TarjetaA
         visible={agendando}
         semanal={semanal}
         fecha={diaria.objetivo.fecha}
+        accionesDelMapa={accionesDelMapa}
         guardando={diaria.guardando}
         onGuardar={guardar}
         onCerrar={() => setAgendando(false)}

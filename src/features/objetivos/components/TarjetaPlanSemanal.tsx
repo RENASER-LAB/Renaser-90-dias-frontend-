@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Alert } from '../../../components/Alerta';
-import { useAccionesDelMapa } from '../../mapa-renacimiento/hooks/useAccionesDelMapa';
 import { useTheme } from '../../../theme/ThemeContext';
 import type { useRocasSemanales } from '../hooks/useRocasSemanales';
 import type { CierreRocaSemanal, EjeObjetivo, ItemPlanSemanal, RocaMaestraApi } from '../types/objetivos.types';
@@ -38,8 +37,6 @@ interface TarjetaPlanSemanalProps {
 export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, ejePrincipal, onIrAlMapa }: TarjetaPlanSemanalProps) {
   const { c, t } = useTheme();
   const [planificando, setPlanificando] = useState(false);
-  /* Solo cuando el asistente se abre: quien nunca lo toca no paga la lectura del Mapa. */
-  const accionesDelMapa = useAccionesDelMapa(planificando);
   const [revisando, setRevisando] = useState<EjeObjetivo | null>(null);
 
   const guardarPlan = async (items: ItemPlanSemanal[]) => {
@@ -93,7 +90,7 @@ export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, ejePrincip
         <View style={{ gap: 12, marginTop: 8 }}>
           <Text style={[t.body, { color: c.textSoft, fontSize: 15, lineHeight: 22 }]}>
             Todavía no armaste esta semana. Con tu eje principal alcanza; los otros dos los sumas
-            cuando quieras. Vienen con lo que escribiste en el Mapa.
+            cuando quieras.
           </Text>
           <Pressable
             onPress={() => setPlanificando(true)}
@@ -152,7 +149,6 @@ export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, ejePrincip
         visible={planificando}
         numeroSemana={numeroSemana}
         maestras={maestras}
-        accionesDelMapa={accionesDelMapa}
         ejePrincipal={ejePrincipal}
         guardando={semanal.guardando}
         onGuardar={guardarPlan}

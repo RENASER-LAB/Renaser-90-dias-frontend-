@@ -45,6 +45,23 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       el Mapa. Se reusó `primeraClausula`, que ya existía y ya se usaba en la lista de los tres.
     Una excepción puntual **no abre** los tabs: cualquier otro cambio sobre los cinco principales
     vuelve a necesitar autorización explícita.
+  * **Excepción autorizada por el dueño del producto — 2026-09-22 — tab `Plan`, las acciones bajan
+    al día.** El dueño describió la cadena del plan así: *"objetivo de los 90 días, luego mensual,
+    luego semanal, y luego objetivo diario, y estos objetivos diarios tienen acciones para
+    hacerlo"*. Los cuatro niveles ya existían; lo que estaba en el lugar equivocado eran las
+    acciones, que colgaban de la semana. Dos pantallas cambian:
+    * **El asistente semanal pierde los tres campos de acciones críticas.** La semana queda en lo
+      que es: un objetivo. De doce campos mínimos pasa a **uno**.
+    * **El planificador del día cambia de dónde saca lo que ofrece.** Leía
+      `roca.accionesCriticas` —las tres del domingo—; ahora lee las del Mapa. **Esto no era
+      opcional:** sin cambiarlo, una semana nueva llega sin acciones y esa pantalla quedaba vacía,
+      o sea que nadie podía planificar su día. Las de la semana se siguen ofreciendo para los planes
+      viejos que las tienen, sin repetir.
+    Lo de fondo está en el backend: `V61` crea `acciones_diarias` colgando de `rocas_diarias`, y
+    ahora son **0 a 3** en vez de exactamente 3 — obligar a inventar tres es lo que llevaba a
+    escribir relleno. Ver RK-13 y D-150 en el repo del backend.
+    Una excepción puntual **no abre** los tabs: cualquier otro cambio sobre los cinco principales
+    vuelve a necesitar autorización explícita.
   * **Excepción autorizada por el dueño del producto — 2026-09-22 — tabs `Hoy` y `Plan`.**
     Dos pedidos del dueño, el mismo día, sobre el mismo tema: que el plan cueste menos de llenar.
     * **`Hoy` — se termina el renombre de "roca".** Era el pendiente *"El renombre de roca quedó a

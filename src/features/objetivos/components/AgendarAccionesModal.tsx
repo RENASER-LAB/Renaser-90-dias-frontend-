@@ -7,15 +7,16 @@ import { useTheme } from '../../../theme/ThemeContext';
 import type { useRocasSemanales } from '../hooks/useRocasSemanales';
 import type { EjeObjetivo, ItemPlanDiario } from '../types/objetivos.types';
 import { EJES, ETIQUETA_EJE } from '../types/objetivos.types';
+import type { AccionesPorEje } from '../../mapa-renacimiento/hooks/useAccionesDelMapa';
 import { posicionarPorEje } from '../hooks/useRocasDiarias';
 import { Icon } from '../../../components/Icon';
 
 /**
  * Elegir qué acciones críticas van hoy, y a qué hora.
  *
- * **De dónde salen las acciones.** No se escriben acá: son las mismas tres que la persona ya
- * definió al armar su semana. Esta pantalla solo decide **cuáles caen hoy y cuándo**, igual que con
- * un hábito. Escribir acciones nuevas acá rompería el hilo entre el objetivo de 90 días y el día.
+ * **De dónde salen las acciones.** No se escriben acá: son las que la persona declaró en el Mapa
+ * el día 7. Esta pantalla solo decide **cuáles caen hoy y cuándo**, igual que con un hábito.
+ * Escribir acciones nuevas acá rompería el hilo entre el objetivo de 90 días y el día.
  *
  * **Por qué máximo tres por eje.** Es el tope del backend, y también la idea: el orden en que se
  * eligen define el color (1ª VERDE, 2ª AMARILLA, 3ª ROJA), y hasta completar la VERDE de un eje las
@@ -47,6 +48,8 @@ interface AgendarAccionesModalProps {
    * **puede no coincidir con el día del participante**: el servidor decide en qué día cae.
    */
   fecha: string;
+  /** Las acciones del Mapa, por eje: de ahí sale lo que se puede agendar. Ver `disponibles`. */
+  accionesDelMapa: AccionesPorEje;
   guardando: boolean;
   onGuardar: (items: ItemPlanDiario[]) => void;
   onCerrar: () => void;
@@ -56,6 +59,7 @@ export function AgendarAccionesModal({
   visible,
   semanal,
   fecha,
+  accionesDelMapa,
   guardando,
   onGuardar,
   onCerrar,
@@ -71,14 +75,35 @@ export function AgendarAccionesModal({
     if (visible) setElegidas([]);
   }, [visible]);
 
-  /** Las nueve acciones de la semana, agrupadas por eje. */
+  /**
+   * Lo que se puede agendar hoy, por eje: el objetivo de la semana y las acciones entre las que
+   * elegir.
+   *
+   * > **Corregido el 2026-09-22.** Las acciones salían de `roca.accionesCriticas`, las tres que se
+   * > escribían el domingo. Pasaron al objetivo diario (V61), así que una semana nueva llega **sin
+   * > ninguna** y esta pantalla quedaba vacía: nadie podía planificar su día. Ahora salen del Mapa,
+   * > que es de donde la persona las sacaba igual, y las de la semana se siguen ofreciendo para los
+   * > planes viejos que las tienen.
+   */
   const disponibles = useMemo(
     () =>
-      EJES.map(eje => ({ eje, roca: semanal.deEje(eje) })).filter(
-        (x): x is { eje: EjeObjetivo; roca: NonNullable<typeof x.roca> } => x.roca !== null
-      ),
-    [semanal]
+      EJES.map(eje => ({ eje, roca: semanal.deEje(eje), acciones: aElegirDe(eje) }))
+        .filter(
+          (x): x is { eje: EjeObjetivo; roca: NonNullable<typeof x.roca>; acciones: string[] } =>
+            x.roca !== null && x.acciones.length > 0
+        ),
+    [semanal, accionesDelMapa]
   );
+
+  /**
+   * Las del Mapa primero —son las que la persona eligió sostener— y después las de la semana, sin
+   * repetir. Así quien ya tenía un plan semanal viejo sigue viendo lo suyo.
+   */
+  function aElegirDe(eje: EjeObjetivo): string[] {
+    const delMapa = accionesDelMapa[eje] ?? [];
+    const deLaSemana = semanal.deEje(eje)?.accionesCriticas ?? [];
+    return [...delMapa, ...deLaSemana.filter(a => !delMapa.includes(a))];
+  }
 
   const indiceDe = (eje: EjeObjetivo, titulo: string) =>
     elegidas.findIndex(e => e.eje === eje && e.titulo === titulo);
@@ -172,13 +197,13 @@ export function AgendarAccionesModal({
             </View>
           ) : (
             <ScrollView contentContainerStyle={{ padding: 18, gap: 18 }}>
-              {disponibles.map(({ eje, roca }) => (
+              {disponibles.map(({ eje, roca, acciones }) => (
                 <View key={eje} style={{ gap: 10 }}>
                   <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 12 }]}>
                     {ETIQUETA_EJE[eje].toUpperCase()}  ·  {cuantasDe(eje)}/{MAXIMO_POR_EJE}
                   </Text>
                   <Text style={[t.small, { color: c.textSoft, fontSize: 14, lineHeight: 20 }]}>{roca.titulo}</Text>
-                  {roca.accionesCriticas.map(accion => {
+                  {acciones.map(accion => {
                     const indice = indiceDe(eje, accion);
                     const elegida = indice >= 0;
                     const clave = `${eje}|${accion}`;

@@ -6,7 +6,6 @@ import { GoldButton } from '../../../components/GoldButton';
 import { useTheme } from '../../../theme/ThemeContext';
 import type { EjeObjetivo, ItemPlanSemanal, RocaMaestraApi } from '../types/objetivos.types';
 import { EJES, ETIQUETA_EJE } from '../types/objetivos.types';
-import type { AccionesPorEje } from '../../mapa-renacimiento/hooks/useAccionesDelMapa';
 import { conPrincipalPrimero } from '../hooks/usePrioridadPrincipal';
 import { textoVentanaSemanal } from '../utils/ventanasDePlanificacion';
 import { Icon } from '../../../components/Icon';
@@ -17,22 +16,24 @@ import { Icon } from '../../../components/Icon';
  * **Por qué de a uno.** Son tres rocas con seis campos cada una: dieciocho campos juntos son un
  * muro, y el usuario de este programa tiene entre 50 y 60 años. Se avanza de a un eje, igual que el
  * Mapa de Renacimiento con sus vistas. El último paso resume y recién ahí se guarda: el backend
- * crea las tres de una sola vez (`POST /rocks/weekly`) o ninguna, así que guardar por eje no sería
- * ni siquiera posible.
+ * crea todas de una sola llamada (`POST /rocks/weekly`), así que guardar eje por eje no sería ni
+ * siquiera posible.
  *
  * **Nada bloquea el avance** (2026-09-21, pedido del dueño). Se recorren los cuatro pasos sin
  * escribir una palabra, y se vuelve a cualquiera de ellos. Antes «Siguiente» quedaba apagado hasta
- * llenar el título y las tres acciones del eje que estaba en pantalla, y eso obligaba a completar
- * los cuatro pasos de corrido o cerrar el formulario.
+ * llenar el eje que estaba en pantalla, y eso obligaba a completar los cuatro pasos de corrido o
+ * cerrar el formulario.
  *
- * **Lo que sí exige el backend, y por eso se pide recién al guardar.** `POST /rocks/weekly` abre
- * los tres ejes de una sola vez (`CrearPlanSemanalCommand` los valida con `@Size(min = 3, max = 3)`)
- * y cada uno necesita título no vacío y exactamente tres acciones críticas no vacías
- * (`RocaSemanal.requireAccionesValidas` y el constructor de `AccionCritica`). No es una regla de
- * pantalla que se pueda aflojar acá: un eje a medias vuelve como 400. Lo que cambió es el trato —
- * el botón de guardar ya no queda apagado y mudo: se puede tocar siempre, y si falta algo un
- * `Alert` dice **qué** falta y **en qué eje**, que es lo que pide AGENTS.md §5. El obstáculo, la
- * contingencia y la autoevaluación siguen siendo opcionales de verdad, también al guardar.
+ * **Lo que sí exige el backend, y por eso se pide recién al guardar.** Un título no vacío en el eje
+ * principal, y nada más. El botón de guardar se puede tocar siempre, y si falta algo un `Alert` dice
+ * **qué** falta y **en qué eje**, que es lo que pide AGENTS.md §5. El obstáculo, la contingencia y
+ * la autoevaluación son opcionales de verdad, también al guardar.
+ *
+ * > **Corregido el 2026-09-22.** Acá decía que `POST /rocks/weekly` abre **los tres ejes de una
+ * > sola vez** (`@Size(min = 3, max = 3)`) y que cada uno necesita *"exactamente tres acciones
+ * > críticas no vacías"*. Las dos cosas dejaron de ser ciertas el mismo día: alcanza con un eje
+ * > (RK-12) y las acciones pasaron al objetivo diario (RK-13, V61). Este formulario pedía doce
+ * > campos mínimos; ahora pide uno.
  *
  * **Vocabulario.** En pantalla ya no se dice «roca» sino «objetivo semanal». Los nombres internos
  * —`RocaSemanalApi`, `rocaMaestraId`, `ItemPlanSemanal`, `/rocks/weekly`— NO se tocaron: son el
@@ -45,7 +46,6 @@ const AUTOEVALUACION_MAXIMA = 10;
 /** Lo que se está escribiendo para un eje, antes de convertirse en `ItemPlanSemanal`. */
 interface BorradorDeEje {
   titulo: string;
-  acciones: [string, string, string];
   obstaculo: string;
   contingencia: string;
   autoevaluacionInicio: number | null;
@@ -53,35 +53,16 @@ interface BorradorDeEje {
 
 const BORRADOR_VACIO: BorradorDeEje = {
   titulo: '',
-  acciones: ['', '', ''],
   obstaculo: '',
   contingencia: '',
   autoevaluacionInicio: null,
 };
-
-/**
- * Un borrador con las acciones que la persona ya escribió en el Mapa, en orden y sin pisar los
- * huecos que queden. El Mapa permite hasta dos por área, así que lo normal es que llegue una o dos
- * y la tercera quede en blanco — que es exactamente lo que hay que completar.
- */
-function conAccionesDelMapa(delMapa: string[]): BorradorDeEje {
-  const acciones: [string, string, string] = ['', '', ''];
-  delMapa.slice(0, 3).forEach((texto, indice) => {
-    acciones[indice] = texto;
-  });
-  return { ...BORRADOR_VACIO, acciones };
-}
 
 interface PlanSemanalModalProps {
   visible: boolean;
   numeroSemana: number;
   /** Para mostrar, en cada paso, a qué objetivo de 90 días sirve el de esta semana. */
   maestras: RocaMaestraApi[];
-  /**
-   * Las acciones que la persona escribió en el Mapa, por eje. Prellenan las acciones críticas en
-   * vez de pedirlas de nuevo en blanco — ver `useAccionesDelMapa`.
-   */
-  accionesDelMapa: AccionesPorEje;
   /**
    * El eje que eligió como principal en el Mapa. Va primero y es **el único obligatorio**: los
    * otros dos se suman cuando quiera, no cuando el formulario lo exija.
@@ -96,7 +77,6 @@ export function PlanSemanalModal({
   visible,
   numeroSemana,
   maestras,
-  accionesDelMapa,
   ejePrincipal,
   guardando,
   onGuardar,
@@ -121,11 +101,11 @@ export function PlanSemanalModal({
     if (!visible) return;
     setPaso(0);
     setBorradores({
-      CUERPO: conAccionesDelMapa(accionesDelMapa.CUERPO),
-      TRABAJO: conAccionesDelMapa(accionesDelMapa.TRABAJO),
-      RELACIONES: conAccionesDelMapa(accionesDelMapa.RELACIONES),
+      CUERPO: { ...BORRADOR_VACIO },
+      TRABAJO: { ...BORRADOR_VACIO },
+      RELACIONES: { ...BORRADOR_VACIO },
     });
-  }, [visible, accionesDelMapa]);
+  }, [visible]);
 
   /* El principal del Mapa va primero: es el que manda y el único que hay que llenar para guardar. */
   const ejesOrdenados = conPrincipalPrimero(EJES, ejePrincipal);
@@ -139,31 +119,13 @@ export function PlanSemanalModal({
     setBorradores(previos => ({ ...previos, [ejeActual]: { ...previos[ejeActual], [campo]: valor } }));
   };
 
-  const cambiarAccion = (indice: number, texto: string) => {
-    setBorradores(previos => {
-      const acciones = [...previos[ejeActual].acciones] as [string, string, string];
-      acciones[indice] = texto;
-      return { ...previos, [ejeActual]: { ...previos[ejeActual], acciones } };
-    });
-  };
-
-  const textoAcciones = (cuantas: number) =>
-    cuantas === 1 ? 'una acción crítica' : cuantas === 3 ? 'las tres acciones críticas' : `${cuantas} acciones críticas`;
-
   /**
    * Qué le falta a un eje para que el backend lo acepte, dicho como se le diría a la persona.
    * `null` cuando está listo. Es la única fuente de verdad: de acá salen `completo`, el aviso del
    * resumen y el `Alert` de guardar, así que los tres nombran exactamente lo mismo.
    */
-  const loQueFalta = (b: BorradorDeEje): string | null => {
-    const sinTitulo = b.titulo.trim() === '';
-    const vacias = b.acciones.filter(a => a.trim() === '').length;
-    if (sinTitulo && vacias > 0) return `faltan el objetivo de la semana y ${textoAcciones(vacias)}`;
-    if (sinTitulo) return 'falta el objetivo de la semana';
-    if (vacias === 1) return 'falta una acción crítica';
-    if (vacias > 1) return `faltan ${textoAcciones(vacias)}`;
-    return null;
-  };
+  const loQueFalta = (b: BorradorDeEje): string | null =>
+    b.titulo.trim() === '' ? 'falta el objetivo de la semana' : null;
 
   const completo = (b: BorradorDeEje) => loQueFalta(b) === null;
 
@@ -177,9 +139,6 @@ export function PlanSemanalModal({
         return {
           eje,
           titulo: b.titulo.trim(),
-          accionCritica1: b.acciones[0].trim(),
-          accionCritica2: b.acciones[1].trim(),
-          accionCritica3: b.acciones[2].trim(),
           // Vacío se manda como ausente, no como "": el backend guarda el texto tal cual, y una
           // cadena vacía se vería después como un obstáculo escrito que no dice nada.
           obstaculo: b.obstaculo.trim() || undefined,
@@ -293,11 +252,6 @@ export function PlanSemanalModal({
                       <Text style={[t.body, { color: c.textStrong, fontSize: 16, marginTop: 4 }]}>
                         {b.titulo.trim() || 'Sin título'}
                       </Text>
-                      {b.acciones.map((accion, indice) => (
-                        <Text key={indice} style={[t.small, { color: c.textSoft, fontSize: 15, marginTop: 4 }]}>
-                          {indice + 1}. {accion.trim() || '—'}
-                        </Text>
-                      ))}
                       {!completo(b) && (
                         <Pressable onPress={() => setPaso(ejesOrdenados.indexOf(eje))} style={estilos.enlaceCompletar} hitSlop={12}>
                           <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 15 }]}>
@@ -327,29 +281,6 @@ export function PlanSemanalModal({
                   ayuda: 'Lo más importante que vas a mover en este eje en los próximos siete días.',
                   obligatorio: true,
                 })}
-
-                <View style={{ gap: 10 }}>
-                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 12 }]}>
-                    LAS TRES ACCIONES CRÍTICAS
-                  </Text>
-                  <Text style={[t.small, { color: c.textSoft, fontSize: 14, lineHeight: 20 }]}>
-                    Son las que después vas a agendar con hora en tu día. Si todavía no las tienes
-                    claras, sigue y vuelve antes de guardar.
-                  </Text>
-                  {borrador.acciones.map((accion, indice) => (
-                    <TextInput
-                      key={indice}
-                      value={accion}
-                      onChangeText={texto => cambiarAccion(indice, texto)}
-                      placeholder={`Acción ${indice + 1}`}
-                      placeholderTextColor={c.chevron}
-                      style={[
-                        estilos.entrada,
-                        { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.textStrong },
-                      ]}
-                    />
-                  ))}
-                </View>
 
                 {campo('QUÉ PODRÍA IMPEDIRLO', borrador.obstaculo, texto => cambiar('obstaculo', texto), {
                   ayuda: 'El obstáculo más probable. Nombrarlo ahora te ahorra la sorpresa el jueves.',

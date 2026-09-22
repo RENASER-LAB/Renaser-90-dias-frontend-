@@ -33,8 +33,10 @@ const rocaSemanalSchema = z
     rocaMaestraId: z.string(),
     numeroSemana: z.number(),
     titulo: z.string(),
-    // Siempre tres, ya ordenadas por el servidor. Si algún día llegan menos, es un bug del backend
-    // y conviene que explote acá y no en un `acciones[2]` undefined dentro de la pantalla.
+    /* De 0 a 3, ya ordenadas por el servidor.
+       > Corregido el 2026-09-22. Acá decía "siempre tres" y que menos era un bug del backend que
+       > convenía que explotara. Dejó de ser cierto: las acciones pasaron al objetivo diario (V61) y
+       > una semana nueva llega sin ninguna. Los planes viejos siguen trayendo las suyas. */
     accionesCriticas: z.array(z.string()),
     obstaculo: z.string().nullable(),
     contingencia: z.string().nullable(),
@@ -66,6 +68,10 @@ const rocaDiariaSchema = z
     completadaEn: z.string().nullable(),
     puntosOtorgados: z.number(),
     bloqueada: z.boolean(),
+    /* Con qué se logra este objetivo del día (V61). `.default([])` y no `.optional()`: la pantalla
+       las recorre con `.map`, y un `undefined` ahí revienta. Los registros anteriores a la V61 no
+       traen el campo y tienen que leerse como "sin desglose", que es lo que eran. */
+    acciones: z.array(z.string()).default([]),
   })
   .passthrough();
 

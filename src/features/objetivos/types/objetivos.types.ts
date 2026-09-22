@@ -100,17 +100,23 @@ export interface RocaSemanalApi {
 /**
  * Un eje del plan semanal, tal como lo pide `POST /api/v1/rocks/weekly`.
  *
- * Las tres acciones van como campos sueltos (`accionCritica1..3`) y no como arreglo porque así lo
+ * Las acciones van como campos sueltos (`accionCritica1..3`) y no como arreglo porque así lo
  * define `CrearPlanSemanalRequest`. Es una asimetría real del contrato: **editar** sí manda
  * `accionesCriticas: string[]`. No se "arregla" acá — se respeta y se documenta, que es lo que
  * evita mandar la forma equivocada al endpoint equivocado.
+ *
+ * > **Corregido el 2026-09-22.** Las tres acciones eran **obligatorias**. Pasaron al objetivo
+ * > diario (`ItemPlanDiario.acciones`, V61 del backend): la semana quedó en su objetivo, y las
+ * > acciones se escriben al planificar el día, que es cuando la persona sabe con qué cuenta. Los
+ * > campos siguen existiendo porque el endpoint los acepta y hay planes viejos que los tienen.
  */
 export interface ItemPlanSemanal {
   eje: EjeObjetivo;
   titulo: string;
-  accionCritica1: string;
-  accionCritica2: string;
-  accionCritica3: string;
+  /** Opcionales desde el 2026-09-22 — ver arriba. El asistente ya no las pide. */
+  accionCritica1?: string;
+  accionCritica2?: string;
+  accionCritica3?: string;
   obstaculo?: string;
   contingencia?: string;
   /** 1 a 10. Cuánto se ve capaz de cumplirla al empezar la semana. */
@@ -120,7 +126,7 @@ export interface ItemPlanSemanal {
 /** Cuerpo de `PATCH /api/v1/rocks/weekly/{id}`. Lo que va en `null`/ausente no se toca. */
 export interface EdicionRocaSemanal {
   titulo?: string;
-  /** Exactamente 3, en orden. Acá sí es arreglo — ver `ItemPlanSemanal`. */
+  /** Hasta 3, en orden. Acá sí es arreglo — ver `ItemPlanSemanal`. */
   accionesCriticas?: string[];
   obstaculo?: string;
   contingencia?: string;
@@ -164,6 +170,8 @@ export interface RocaDiariaApi {
   completadaEn: string | null;
   puntosOtorgados: number;
   bloqueada: boolean;
+  /** Con qué se logra este objetivo del día, en orden. Vacío = sin desglose. */
+  acciones: string[];
 }
 
 /**
@@ -183,4 +191,12 @@ export interface ItemPlanDiario {
   /** `HH:mm`. Opcional: una acción puede no tener hora, igual que un hábito. */
   horaInicio?: string;
   horaFin?: string;
+  /**
+   * Con qué se logra este objetivo del día: hasta tres, opcionales.
+   *
+   * Es el nivel donde ahora viven las acciones (V61). Antes se escribían el domingo colgando de la
+   * semana, sin saber todavía qué día se iban a hacer. Vacío es válido: un objetivo puede ser una
+   * sola cosa que no necesita desglose.
+   */
+  acciones?: string[];
 }
