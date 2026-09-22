@@ -118,11 +118,6 @@ export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, ejePrincip
                 <Text style={[t.body, { color: c.textStrong, fontSize: 16, marginTop: 4, lineHeight: 22 }]}>
                   {roca.titulo}
                 </Text>
-                {roca.accionesCriticas.map((accion, indice) => (
-                  <Text key={indice} style={[t.small, { color: c.textSoft, fontSize: 15, marginTop: 4, lineHeight: 21 }]}>
-                    {indice + 1}. {accion}
-                  </Text>
-                ))}
                 {cerrada ? (
                   <Text style={[t.small, { color: c.success, fontSize: 14, marginTop: 8, fontFamily: 'Jost_700Bold' }]}>
                     Revisada · te pusiste {roca.autoevaluacionFin} de 10

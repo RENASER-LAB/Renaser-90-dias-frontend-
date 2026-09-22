@@ -33,11 +33,13 @@ const rocaSemanalSchema = z
     rocaMaestraId: z.string(),
     numeroSemana: z.number(),
     titulo: z.string(),
-    /* De 0 a 3, ya ordenadas por el servidor.
-       > Corregido el 2026-09-22. Acá decía "siempre tres" y que menos era un bug del backend que
-       > convenía que explotara. Dejó de ser cierto: las acciones pasaron al objetivo diario (V61) y
-       > una semana nueva llega sin ninguna. Los planes viejos siguen trayendo las suyas. */
-    accionesCriticas: z.array(z.string()),
+    /* > **Corregido el 2026-09-22.** Primero decía "siempre tres, y menos es un bug del backend que
+       > conviene que explote"; después pasó a 0-3 cuando las acciones bajaron al objetivo diario
+       > (V61). Ahora es `.optional()` porque el campo **va a dejar de venir**: se borra la tabla
+       > `acciones_criticas`, ya vacía. Optional y no eliminado para que la app tolere las dos
+       > versiones del backend — si esto exigiera el campo, un servidor actualizado haría que el plan
+       > semanal entero dejara de cargar por un `validarRespuesta` fallido. */
+    accionesCriticas: z.array(z.string()).optional(),
     obstaculo: z.string().nullable(),
     contingencia: z.string().nullable(),
     autoevaluacionInicio: z.number().nullable(),

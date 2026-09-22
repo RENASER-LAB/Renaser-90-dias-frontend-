@@ -75,7 +75,11 @@ export interface DefinicionRocaMaestra {
  * (`useRocasMaestras`). Es la razón por la que `useRocasSemanales` recibe las maestras en vez de
  * pedirlas por su cuenta.
  *
- * `accionesCriticas` son siempre **tres**, ya ordenadas por el servidor (`orden` 1, 2, 3): lo impone
+ * > **Corregido el 2026-09-22.** `accionesCriticas` deja de venir: la tabla `acciones_criticas` se
+ * > borró (estaba vacía) y las acciones viven en el objetivo diario desde la V61. Queda opcional en
+ * > el tipo para que la app funcione contra un backend viejo y uno nuevo.
+ *
+ * (Decía) `accionesCriticas` son siempre **tres**, ya ordenadas por el servidor (`orden` 1, 2, 3): lo impone
  * la clave primaria de `acciones_criticas`, no es una convención de pantalla.
  *
  * Los campos de cierre (`autoevaluacionFin`, `bloqueoPrincipal`, `correccion`) vienen en `null`
@@ -86,7 +90,7 @@ export interface RocaSemanalApi {
   rocaMaestraId: string;
   numeroSemana: number;
   titulo: string;
-  accionesCriticas: string[];
+  accionesCriticas?: string[];
   obstaculo: string | null;
   contingencia: string | null;
   autoevaluacionInicio: number | null;

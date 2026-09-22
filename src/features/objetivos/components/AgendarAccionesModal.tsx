@@ -157,18 +157,14 @@ export function AgendarAccionesModal({
   );
 
   /**
-   * Las del Mapa primero —son las que la persona eligió sostener— y después las de la semana, sin
-   * repetir. Así quien ya tenía un plan semanal viejo sigue viendo lo suyo.
+   * Lo que se puede agendar de ese eje: las acciones que la persona escribió en el Mapa.
    *
-   * Las del Mapa traen sus días; las viejas de la semana no tenían ninguno y por eso van sin.
+   * > **Corregido el 2026-09-22.** También ofrecía las acciones críticas del plan semanal viejo,
+   * > para no dejar sin opciones a quien las tuviera. Dejó de hacer falta: la tabla
+   * > `acciones_criticas` se borró, ya vacía, y el campo dejó de venir.
    */
   function aElegirDe(eje: EjeObjetivo): AccionDelMapa[] {
-    const delMapa = accionesDelMapa[eje] ?? [];
-    const textosDelMapa = delMapa.map(a => a.texto);
-    const deLaSemana = (semanal.deEje(eje)?.accionesCriticas ?? [])
-      .filter(a => !textosDelMapa.includes(a))
-      .map(texto => ({ texto, dias: [], frecuenciaSemanal: 0 }));
-    return [...delMapa, ...deLaSemana];
+    return accionesDelMapa[eje] ?? [];
   }
 
   const indiceDe = (eje: EjeObjetivo, titulo: string) =>
