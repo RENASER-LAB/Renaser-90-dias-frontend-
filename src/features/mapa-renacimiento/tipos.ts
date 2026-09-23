@@ -31,7 +31,13 @@ export type CodigoCalidad =
   // llegar?"— aunque lo que faltaba no era un número: era el tipo de resultado, el periodo o el
   // vínculo. El aviso señalaba un campo que estaba bien lleno y se perdían minutos buscando el
   // error donde no estaba. Cada cosa que falta necesita su propio código, o el mensaje miente.
-  | 'MISSING_TYPE' | 'MISSING_PERIOD' | 'MISSING_LINK';
+  | 'MISSING_TYPE' | 'MISSING_PERIOD' | 'MISSING_LINK'
+  // Agregado el 2026-09-23. Una meta medida en escala (energía, o "otro" con unidad /10) aceptaba
+  // cualquier número: se cargó 84 -> 78 en una escala del 1 al 10 y el formulario lo dejó pasar.
+  // El backend clasifica eso como ESCALA (`Magnitud.deSalud`) y reparte el avance en enteros del 1
+  // al 10, así que los hitos salían sin sentido — "81.6 /10" — sin que nadie hubiera hecho nada mal
+  // a la vista.
+  | 'OUT_OF_SCALE';
 
 export interface AvisoCalidad {
   codigo: CodigoCalidad;

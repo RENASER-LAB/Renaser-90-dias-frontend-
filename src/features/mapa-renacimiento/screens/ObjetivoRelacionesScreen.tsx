@@ -8,7 +8,7 @@ import type { ObjetivoRelaciones } from '../tipos';
 import type { PropsPaso } from './props';
 
 /** V05 · Objetivo 3 · Relaciones (§3 V05). Conducta propia; se rechaza controlar a un tercero. */
-export function ObjetivoRelacionesScreen({ estado }: PropsPaso) {
+export function ObjetivoRelacionesScreen({ estado, numeroDePaso }: PropsPaso) {
   const { mapa, actualizar, siguiente, anterior } = estado;
   const o = mapa.relaciones;
   const [editando, setEditando] = useState(false);
@@ -26,7 +26,7 @@ export function ObjetivoRelacionesScreen({ estado }: PropsPaso) {
 
   return (
     <PantallaPaso
-      paso={5}
+      paso={numeroDePaso ?? 5}
       onAtras={anterior}
       boton={{
         label: 'Revisar mi meta',
