@@ -27,6 +27,11 @@ export type PreguntarRenasiaBody = {
   courseId?: string;
   /** Solo `COURSE_TUTOR` (D-100): "el curso X, lección Y". Va al prompt de sistema, nunca dentro de la pregunta. */
   scope?: string;
+  /**
+   * D-158: `VOZ` cuando la pregunta llega por el orbe de Hoy; el acompañante responde corto y como
+   * se habla, sin listas. Ausente = `TEXTO` (el chat de siempre).
+   */
+  canal?: 'TEXTO' | 'VOZ';
 };
 
 export type RenasiaRoleApi = 'USER' | 'ASSISTANT';

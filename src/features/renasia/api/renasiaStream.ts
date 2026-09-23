@@ -52,6 +52,8 @@ export type OpcionesEnvioRenasia = {
   courseId?: string | null;
   /** D-100: "el curso X, lección Y". Va al prompt de sistema del backend, nunca dentro de la pregunta. */
   scope?: string | null;
+  /** D-158: la pregunta llega hablada; se pide una respuesta para decir en voz alta. */
+  canal?: 'TEXTO' | 'VOZ';
 };
 
 function esAbort(error: unknown): boolean {
@@ -64,6 +66,7 @@ function armarCuerpo(question: string, opciones: OpcionesEnvioRenasia): Pregunta
     if (opciones.courseId) body.courseId = opciones.courseId;
     if (opciones.scope) body.scope = opciones.scope;
   }
+  if (opciones.canal === 'VOZ') body.canal = 'VOZ';
   return body;
 }
 

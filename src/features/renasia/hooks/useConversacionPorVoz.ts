@@ -1,33 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type * as ModuloDeHabla from 'expo-speech';
 
 import { mensajeDeError } from '../../../services/http/apiClient';
 import { enviarMensajeRenasia, RenasiaCuotaExcedidaError } from '../api/renasiaStream';
+import { Locutor } from '../utils/locutor';
 import { quitarTextoDeRespaldo } from '../utils/propuestas';
-import { elegirIdiomaDeVoz, MAXIMO_CARACTERES_HABLADOS, separarOraciones, textoParaHablar } from '../utils/voz';
+import { MAXIMO_CARACTERES_HABLADOS, separarOraciones, textoParaHablar } from '../utils/voz';
+import { PARLANTES_DEL_TELEFONO, PUEDE_HABLAR } from './parlantesDelTelefono';
 import { useDictado } from './useDictado';
 import { useFrasesDeHabitos } from './useFrasesDeHabitos';
-
-/**
- * Idioma de la voz hasta saber cuáles hay instaladas: `es-US` es la voz latinoamericana más común en
- * Android. Se reemplaza al montar por la mejor disponible (`elegirIdiomaDeVoz`).
- */
-const IDIOMA_POR_DEFECTO = 'es-US';
-
-/**
- * `expo-speech` se carga opcional por el mismo motivo que el módulo de voz en `useDictado`: si el
- * binario instalado no lo trae, Hoy no puede reventar. Sin él, la respuesta se muestra escrita.
- */
-function cargarModuloDeHabla(): typeof ModuloDeHabla | null {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    return require('expo-speech') as typeof ModuloDeHabla;
-  } catch {
-    return null;
-  }
-}
-
-const HABLA = cargarModuloDeHabla();
 
 export type FaseDeVoz = 'reposo' | 'escuchando' | 'pensando' | 'hablando';
 
@@ -53,10 +33,14 @@ export type ConversacionPorVoz = {
  * - **Escuchar:** el dictado de siempre (`useDictado`), sesgado con los nombres de sus hábitos.
  * - **Pensar:** la MISMA llamada que el chat (`POST /api/v1/renasia/mensajes`, agente COMPANION):
  *   mismas herramientas, misma cuota, y la conversación queda en su historial del chat.
- * - **Responder:** texto-a-voz del sistema, sin markdown. Empieza a hablar con la PRIMERA oración
- *   completa mientras el resto sigue llegando (2026-09-23: esperar la respuesta entera se sentía
- *   lento). Las oraciones se encolan en el motor (`QUEUE_ADD` en Android); pasado el máximo,
- *   avisa que el resto quedó escrito.
+ * - **Responder:** voz natural del servidor (Piper es_MX, D-157) y, si no hay, la del teléfono; sin
+ *   markdown. Empieza a hablar con la PRIMERA oración completa mientras el resto sigue llegando
+ *   (2026-09-23: esperar la respuesta entera se sentía lento). El `Locutor` pide cada oración apenas
+ *   llega y las dice en orden; pasado el máximo, avisa que el resto quedó escrito.
+ * - La pregunta viaja con `canal: 'VOZ'` (D-158): el acompañante contesta corto y como se habla.
+ *
+ * > Corregido 2026-09-23: decía "texto-a-voz del sistema" y encolaba en el motor del teléfono. Esa
+ * > voz sonaba robótica; ahora es el respaldo.
  *
  * **Lo que cambia algo no se confirma por voz.** Si el acompañante propone una acción (mover un
  * horario, marcar un hábito), el orbe lo dice y la persona la confirma con el botón en el chat. Un
@@ -72,53 +56,33 @@ export function useConversacionPorVoz(): ConversacionPorVoz {
   const montadoRef = useRef(true);
 
   const frasesDeHabitos = useFrasesDeHabitos(true);
-  const idiomaRef = useRef<string | null>(IDIOMA_POR_DEFECTO);
 
-  // Qué voz en español tiene ESTE teléfono (ver `elegirIdiomaDeVoz`).
-  useEffect(() => {
-    HABLA?.getAvailableVoicesAsync()
-      .then(voces => {
-        if (voces.length > 0) idiomaRef.current = elegirIdiomaDeVoz(voces.map(voz => voz.language));
-      })
-      .catch(() => undefined);
+  /** El locutor del turno en curso; cada pregunta arranca uno nuevo. */
+  const locutorRef = useRef<Locutor | null>(null);
+  const turnoRef = useRef({ caracteres: 0, cortado: false, terminoDeLlegar: false });
+
+  const alQuedarCallado = useCallback(() => {
+    if (turnoRef.current.terminoDeLlegar && montadoRef.current) setFase('reposo');
   }, []);
 
-  /** Estado del locutor del turno en curso: cuántas frases quedan por decir y cuánto se dijo. */
-  const locutorRef = useRef({ pendientes: 0, caracteres: 0, cortado: false, terminoDeLlegar: false });
+  /** Dice una oración (detrás de la anterior). Nunca lee el respaldo "Propuesta: …". */
+  const decir = useCallback((oracion: string) => {
+    const turno = turnoRef.current;
+    const limpia = textoParaHablar(oracion);
+    if (!PUEDE_HABLAR || !locutorRef.current || !limpia || turno.cortado || /^Propuesta:/i.test(limpia)) return;
+    if (turno.caracteres + limpia.length > MAXIMO_CARACTERES_HABLADOS) {
+      turno.cortado = true;
+      decirTal('El resto te lo dejé escrito en el chat.');
+      return;
+    }
+    decirTal(limpia);
 
-  const alTerminarUnaFrase = useCallback(() => {
-    const locutor = locutorRef.current;
-    locutor.pendientes = Math.max(0, locutor.pendientes - 1);
-    if (locutor.pendientes === 0 && locutor.terminoDeLlegar && montadoRef.current) setFase('reposo');
+    function decirTal(frase: string) {
+      turno.caracteres += frase.length;
+      if (montadoRef.current) setFase('hablando');
+      locutorRef.current?.decir(frase);
+    }
   }, []);
-
-  /** Dice una oración (o la encola detrás de la anterior). Nunca lee el respaldo "Propuesta: …". */
-  const decir = useCallback(
-    (oracion: string) => {
-      const locutor = locutorRef.current;
-      const limpia = textoParaHablar(oracion);
-      if (!HABLA || !idiomaRef.current || !limpia || locutor.cortado || /^Propuesta:/i.test(limpia)) return;
-      if (locutor.caracteres + limpia.length > MAXIMO_CARACTERES_HABLADOS) {
-        locutor.cortado = true;
-        decirTal('El resto te lo dejé escrito en el chat.');
-        return;
-      }
-      decirTal(limpia);
-
-      function decirTal(frase: string) {
-        locutor.pendientes += 1;
-        locutor.caracteres += frase.length;
-        if (montadoRef.current) setFase('hablando');
-        HABLA!.speak(frase, {
-          language: idiomaRef.current ?? IDIOMA_POR_DEFECTO,
-          onDone: alTerminarUnaFrase,
-          onStopped: alTerminarUnaFrase,
-          onError: alTerminarUnaFrase,
-        });
-      }
-    },
-    [alTerminarUnaFrase]
-  );
 
   const preguntar = useCallback(
     async (pregunta: string) => {
@@ -137,11 +101,13 @@ export function useConversacionPorVoz(): ConversacionPorVoz {
       let acumulado = '';
       let sinDecir = '';
       let cantidadDePropuestas = 0;
-      locutorRef.current = { pendientes: 0, caracteres: 0, cortado: false, terminoDeLlegar: false };
+      locutorRef.current?.callar();
+      locutorRef.current = new Locutor(PARLANTES_DEL_TELEFONO, alQuedarCallado);
+      turnoRef.current = { caracteres: 0, cortado: false, terminoDeLlegar: false };
       try {
         await enviarMensajeRenasia(
           texto,
-          { agent: 'COMPANION' },
+          { agent: 'COMPANION', canal: 'VOZ' },
           {
             onTexto: fragmento => {
               acumulado += fragmento;
@@ -168,8 +134,8 @@ export function useConversacionPorVoz(): ConversacionPorVoz {
         if (!montadoRef.current) return;
         decir(sinDecir);
         if (cantidadDePropuestas > 0) decir('Te dejé la propuesta en el chat: confírmala con el botón.');
-        locutorRef.current.terminoDeLlegar = true;
-        if (locutorRef.current.pendientes === 0) setFase('reposo');
+        turnoRef.current.terminoDeLlegar = true;
+        if (!locutorRef.current?.hablando) setFase('reposo');
       } catch (e) {
         if (e instanceof Error && e.name === 'AbortError') return;
         if (!montadoRef.current) return;
@@ -183,7 +149,7 @@ export function useConversacionPorVoz(): ConversacionPorVoz {
         abortRef.current = null;
       }
     },
-    [decir]
+    [decir, alQuedarCallado]
   );
 
   const dictado = useDictado(frasesDeHabitos, preguntar);
@@ -210,7 +176,7 @@ export function useConversacionPorVoz(): ConversacionPorVoz {
     return () => {
       montadoRef.current = false;
       abortRef.current?.abort();
-      HABLA?.stop();
+      locutorRef.current?.callar();
     };
   }, []);
 
@@ -219,8 +185,8 @@ export function useConversacionPorVoz(): ConversacionPorVoz {
       dictado.detener();
     } else if (fase === 'hablando') {
       // Callado de verdad: las oraciones que sigan llegando del stream ya no se dicen.
-      locutorRef.current.cortado = true;
-      HABLA?.stop();
+      turnoRef.current.cortado = true;
+      locutorRef.current?.callar();
       setFase('reposo');
     } else if (fase === 'reposo') {
       setError(null);
