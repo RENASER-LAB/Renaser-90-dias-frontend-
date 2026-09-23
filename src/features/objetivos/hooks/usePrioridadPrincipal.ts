@@ -70,12 +70,9 @@ export function usePrioridadPrincipal(): PrioridadYEscala {
  * Vive acá y no en la pantalla porque es la regla, no la presentación: el mismo orden lo van a
  * necesitar el resumen del mentor y cualquier otra vista que liste los tres objetivos.
  */
-export function conPrincipalPrimero(
-  ejes: readonly EjeObjetivo[],
-  ejePrincipal: EjeObjetivo | null
-): EjeObjetivo[] {
-  if (!ejePrincipal || !ejes.includes(ejePrincipal)) return [...ejes];
+export function conPrincipalPrimero<T>(items: readonly T[], principal: T | null): T[] {
+  if (!principal || !items.includes(principal)) return [...items];
   // Filtrar y anteponer, en vez de ordenar: el orden de los otros dos queda intacto sin depender
   // de que `sort` sea estable, y no hay comparador que revisar.
-  return [ejePrincipal, ...ejes.filter(eje => eje !== ejePrincipal)];
+  return [principal, ...items.filter(item => item !== principal)];
 }

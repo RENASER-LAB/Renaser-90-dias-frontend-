@@ -5,11 +5,12 @@ import { Row } from '../../../components/ui';
 import { PantallaPaso } from '../components/PantallaPaso';
 import { Apoyo, Avisos, Entrada, Etiqueta, Nota, Pastillas, Pregunta, TarjetaMeta } from '../components/Piezas';
 import { LIMITES, RESULTADOS_SALUD, calidadSalud, objetivoValido, redactar } from '../reglas';
+import { ejemploDeSalud } from '../ejemplos';
 import type { ObjetivoSalud, TipoResultadoSalud } from '../tipos';
 import type { PropsPaso } from './props';
 
 /** V03 · Objetivo 1 · Cuerpo y salud (§3 V03). La redacción se regenera con cada dato salvo que la persona la haya editado. */
-export function ObjetivoSaludScreen({ estado }: PropsPaso) {
+export function ObjetivoSaludScreen({ estado, numeroDePaso }: PropsPaso) {
   const { mapa, actualizar, siguiente, anterior } = estado;
   const o = mapa.salud;
   const [editando, setEditando] = useState(false);
@@ -27,9 +28,12 @@ export function ObjetivoSaludScreen({ estado }: PropsPaso) {
     cambiar({ tipoResultado: tipo, unidad: sugerida || o.unidad });
   };
 
+  /* El ejemplo sigue al tipo: peso y medidas bajan; fuerza, sueno y energia suben. */
+  const ejemplo = ejemploDeSalud(o.tipoResultado);
+
   return (
     <PantallaPaso
-      paso={3}
+      paso={numeroDePaso ?? 3}
       onAtras={anterior}
       boton={{
         label: 'Revisar mi meta',
@@ -46,12 +50,12 @@ export function ObjetivoSaludScreen({ estado }: PropsPaso) {
 
       <Etiqueta>Situación actual</Etiqueta>
       <Row gap={8} align="flex-start">
-        <Entrada valor={o.lineaBase} onCambiar={v => cambiar({ lineaBase: v })} placeholder="Ej. 78" numerico style={{ flex: 1 }} />
+        <Entrada valor={o.lineaBase} onCambiar={v => cambiar({ lineaBase: v })} placeholder={ejemplo.base} numerico style={{ flex: 1 }} />
         <Entrada valor={o.unidad} onCambiar={v => cambiar({ unidad: v })} placeholder="kg" maximo={12} style={{ width: 92 }} />
       </Row>
 
       <Etiqueta>Resultado Día 90</Etiqueta>
-      <Entrada valor={o.resultadoDia90} onCambiar={v => cambiar({ resultadoDia90: v })} placeholder="Ej. 68" numerico />
+      <Entrada valor={o.resultadoDia90} onCambiar={v => cambiar({ resultadoDia90: v })} placeholder={ejemplo.meta} numerico />
       <Apoyo>Usa la misma unidad que tu situación actual. Debe ser distinto al punto de partida.</Apoyo>
 
       <Etiqueta>Evidencia</Etiqueta>
