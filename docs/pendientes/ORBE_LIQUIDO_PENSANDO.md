@@ -1,6 +1,12 @@
 # Orbe líquido animado para el estado "pensando" de los chats con IA
 
-**Estado: RETOMADO e implementado el 2026-09-23** (pedido del dueño: el orbe en el centro de Hoy,
+**Estado: DESCARTADO el mismo 2026-09-23, reemplazado por `expo-thinking-orbs`.** Se implementó
+(ver abajo) y al verlo en el emulador el dueño lo rechazó: *"se ve feo"* — dentro del cristal quedaba
+un disco beige con una mancha dorada. El centro de Hoy usa ahora `ThinkingOrb` de
+`expo-thinking-orbs` (puntos 3D teñidos de dorado) en `OrbeAcompanante`. El código del orbe líquido se
+borró; el shader sigue en `orbe-liquido-preview.html` por si se retoma.
+
+~~**Estado: RETOMADO e implementado el 2026-09-23**~~ (pedido del dueño: el orbe en el centro de Hoy,
 como acompañante por voz). Rama `acompanante-ia`.
 
 - Shader: `src/features/renasia/components/orbe/orbeShader.ts` (SkSL, misma matemática que el GLSL de
