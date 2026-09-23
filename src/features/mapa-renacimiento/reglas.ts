@@ -184,7 +184,29 @@ const MENSAJE: Record<AvisoCalidad['codigo'], string> = {
   MISSING_TYPE: 'Elige primero qué vas a medir, arriba.',
   MISSING_PERIOD: 'Indica cada cuánto se mide: semanal, mensual o acumulado al Día 90.',
   MISSING_LINK: 'Elige con quién es el vínculo que quieres fortalecer.',
+  OUT_OF_SCALE: 'En una escala del 1 al 10, usa valores entre 1 y 10.',
 };
+
+/**
+ * Un objetivo de salud medido en escala del 1 al 10.
+ *
+ * Espeja a `Magnitud.deSalud` del backend, que es quien decide cómo se reparte el avance: `energia`
+ * siempre es escala, y `otro` lo es cuando la persona escribió una unidad que lo declara. Si esta
+ * lista se separa de aquélla, el formulario valida una cosa y el servidor calcula otra.
+ */
+function esEscala(o: ObjetivoSalud): boolean {
+  if (o.tipoResultado === 'energia') return true;
+  if (o.tipoResultado !== 'otro') return false;
+  return UNIDADES_DE_ESCALA.has(o.unidad.trim().toLowerCase());
+}
+
+/** Las mismas que reconoce `Magnitud.UNIDADES_DE_ESCALA` en el backend. */
+const UNIDADES_DE_ESCALA = new Set(['/10', '/ 10', '10', 'pt', 'pts', 'puntos']);
+
+/** `null` no es "fuera de rango": eso ya lo avisan MISSING_BASELINE y MISSING_TARGET. */
+function fueraDeEscala(base: number | null, meta: number | null): boolean {
+  return [base, meta].some(v => v !== null && (v < 1 || v > 10));
+}
 
 function aviso(codigo: AvisoCalidad['codigo'], bloquea: boolean): AvisoCalidad {
   return { codigo, mensaje: MENSAJE[codigo], bloquea };
@@ -199,6 +221,7 @@ export function calidadSalud(o: ObjetivoSalud): AvisoCalidad[] {
   if (meta === null) avisos.push(aviso('MISSING_TARGET', true));
   else if (base !== null && meta === base) avisos.push(aviso('VAGUE_RESULT', true));
   if (!o.unidad.trim()) avisos.push(aviso('UNIT_MISMATCH', true));
+  if (esEscala(o) && fueraDeEscala(base, meta)) avisos.push(aviso('OUT_OF_SCALE', true));
   if (!o.evidencia.trim()) avisos.push(aviso('MISSING_EVIDENCE', true));
   if (!largoEntre(o.motivo, LIMITES.motivo.min, LIMITES.motivo.max)) avisos.push(aviso('VAGUE_RESULT', true));
   else if (esVago(o.motivo)) avisos.push(aviso('VAGUE_RESULT', false));
