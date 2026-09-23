@@ -75,12 +75,12 @@ export interface DefinicionRocaMaestra {
  * (`useRocasMaestras`). Es la razón por la que `useRocasSemanales` recibe las maestras en vez de
  * pedirlas por su cuenta.
  *
- * > **Corregido el 2026-09-22.** `accionesCriticas` deja de venir: la tabla `acciones_criticas` se
- * > borró (estaba vacía) y las acciones viven en el objetivo diario desde la V61. Queda opcional en
- * > el tipo para que la app funcione contra un backend viejo y uno nuevo.
- *
- * (Decía) `accionesCriticas` son siempre **tres**, ya ordenadas por el servidor (`orden` 1, 2, 3): lo impone
- * la clave primaria de `acciones_criticas`, no es una convención de pantalla.
+ * > **Corregido el 2026-09-23.** Acá decía que `accionesCriticas` son siempre **tres, ya ordenadas
+ * > por el servidor, y que lo impone la clave primaria de `acciones_criticas`**. Esa tabla ya no
+ * > existe: se borró vacía (V62 del backend) y las acciones viven en el objetivo diario desde la
+ * > V61. El campo **sigue llegando, siempre `[]`**, y a propósito: esta app no tiene actualización
+ * > por aire, así que el servidor lo manda hasta que todos los builds instalados sean de hoy en
+ * > adelante. Queda opcional acá porque ya no significa nada — no se lee en ninguna pantalla.
  *
  * Los campos de cierre (`autoevaluacionFin`, `bloqueoPrincipal`, `correccion`) vienen en `null`
  * mientras la semana sigue abierta. Es el dato que distingue "planificada" de "cerrada".
@@ -104,23 +104,15 @@ export interface RocaSemanalApi {
 /**
  * Un eje del plan semanal, tal como lo pide `POST /api/v1/rocks/weekly`.
  *
- * Las acciones van como campos sueltos (`accionCritica1..3`) y no como arreglo porque así lo
- * define `CrearPlanSemanalRequest`. Es una asimetría real del contrato: **editar** sí manda
- * `accionesCriticas: string[]`. No se "arregla" acá — se respeta y se documenta, que es lo que
- * evita mandar la forma equivocada al endpoint equivocado.
- *
- * > **Corregido el 2026-09-22.** Las tres acciones eran **obligatorias**. Pasaron al objetivo
- * > diario (`ItemPlanDiario.acciones`, V61 del backend): la semana quedó en su objetivo, y las
- * > acciones se escriben al planificar el día, que es cuando la persona sabe con qué cuenta. Los
- * > campos siguen existiendo porque el endpoint los acepta y hay planes viejos que los tienen.
+ * > **Corregido el 2026-09-23.** Acá se documentaba una asimetría del contrato —alta con
+ * > `accionCritica1..3` sueltos, edición con `accionesCriticas: string[]`— y se pedía respetarla.
+ * > Dejó de existir: los dos endpoints perdieron sus campos de acciones cuando la tabla se borró
+ * > (V62). La semana manda su objetivo y nada más; las acciones se escriben al planificar el día
+ * > (`ItemPlanDiario.acciones`), que es cuando la persona sabe con qué cuenta.
  */
 export interface ItemPlanSemanal {
   eje: EjeObjetivo;
   titulo: string;
-  /** Opcionales desde el 2026-09-22 — ver arriba. El asistente ya no las pide. */
-  accionCritica1?: string;
-  accionCritica2?: string;
-  accionCritica3?: string;
   obstaculo?: string;
   contingencia?: string;
   /** 1 a 10. Cuánto se ve capaz de cumplirla al empezar la semana. */
@@ -130,8 +122,6 @@ export interface ItemPlanSemanal {
 /** Cuerpo de `PATCH /api/v1/rocks/weekly/{id}`. Lo que va en `null`/ausente no se toca. */
 export interface EdicionRocaSemanal {
   titulo?: string;
-  /** Hasta 3, en orden. Acá sí es arreglo — ver `ItemPlanSemanal`. */
-  accionesCriticas?: string[];
   obstaculo?: string;
   contingencia?: string;
   autoevaluacionInicio?: number;
