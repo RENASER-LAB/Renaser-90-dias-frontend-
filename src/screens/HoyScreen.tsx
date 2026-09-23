@@ -481,7 +481,7 @@ export default function HoyScreen() {
             <View style={{ marginTop: isShort ? 10 : 14 }}>
               <OrbeAcompanante
                 fase={voz.fase}
-                diametro={Math.round(heroSize * 0.54)}
+                diametro={Math.min(140, Math.round(heroSize * 0.58))}
                 onTocar={voz.disponible ? voz.tocar : () => setChatDelOrbeAbierto(true)}
               />
             </View>
