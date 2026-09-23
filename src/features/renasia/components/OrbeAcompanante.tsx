@@ -5,9 +5,34 @@ import { Icon } from '../../../components/Icon';
 import { useTheme } from '../../../theme/ThemeContext';
 import type { FaseDeVoz } from '../hooks/useConversacionPorVoz';
 
+/**
+ * El orbe líquido (Skia + Reanimated) se carga opcional: son módulos nativos, y si el binario
+ * instalado no los trae, Hoy tiene que abrir igual con los halos simples. Mismo criterio que la voz
+ * en `useDictado` ("Cannot find native module", 2026-09-23).
+ */
+function cargarOrbeLiquido(): typeof import('./orbe/OrbeLiquido') | null {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const modulo = require('./orbe/OrbeLiquido') as typeof import('./orbe/OrbeLiquido');
+    return modulo.ORBE_LIQUIDO_DISPONIBLE ? modulo : null;
+  } catch {
+    return null;
+  }
+}
+
+const LIQUIDO = cargarOrbeLiquido();
+
+/** Qué tan "encendido" se ve el orbe líquido en cada fase (0 reposo … 1 pensando). */
+const INTENSIDAD: Record<FaseDeVoz, number> = {
+  reposo: 0,
+  escuchando: 0.7,
+  pensando: 1,
+  hablando: 0.55,
+};
+
 type Props = {
   fase: FaseDeVoz;
-  /** Diámetro del núcleo tocable. Los halos crecen alrededor, dentro de los anillos de Hoy. */
+  /** Diámetro del área del orbe. El líquido la ocupa entera; el simple usa un núcleo más chico. */
   diametro: number;
   onTocar: () => void;
   deshabilitado?: boolean;
@@ -30,17 +55,52 @@ const ETIQUETA: Record<FaseDeVoz, string> = {
 
 /**
  * El orbe del acompañante en el centro de Hoy (pedido del dueño, 2026-09-23; reemplaza a "TU ÚNICO
- * FOCO / AHORA"). Un núcleo dorado tocable y dos halos que laten a un ritmo distinto según la fase,
- * para que se note sin leer nada si está escuchando, pensando o hablando.
+ * FOCO / AHORA"). Tocable: escucha, piensa y habla (`useConversacionPorVoz`).
  *
- * Se hace con `Animated` de React Native y no con un shader: el orbe líquido de
- * `docs/pendientes/ORBE_LIQUIDO_PENSANDO.md` necesita Skia o WebGL, que la app no tiene. Este es el
- * camino 4 de ese documento ("aproximación con las APIs que ya tiene el proyecto").
+ * Por defecto es el **orbe líquido** (`orbe/OrbeLiquido`, shader de Skia): la cinta fluye lenta en
+ * reposo y se abre y acelera al pensar. Si Skia no está en el binario o el shader no compila, cae al
+ * **orbe simple**: un núcleo dorado con dos halos de `Animated` que laten a otro ritmo por fase.
  *
- * Mismo cuidado que `ParticulaDeRitmo`: si el sistema pide reducir el movimiento, los halos quedan
- * quietos (la fase igual se dice con texto al lado).
+ * > Corregido 2026-09-23: la primera versión de este comentario decía que el orbe líquido no se
+ * > podía hacer porque la app no tenía Skia. Se instaló Skia ese mismo día.
+ *
+ * En los dos, si el sistema pide reducir el movimiento, la animación queda quieta (la fase igual se
+ * dice con texto debajo del orbe).
  */
 export function OrbeAcompanante({ fase, diametro, onTocar, deshabilitado }: Props) {
+  if (LIQUIDO) {
+    return <OrbeConLiquido fase={fase} diametro={diametro} onTocar={onTocar} deshabilitado={deshabilitado} />;
+  }
+  return <OrbeSimple fase={fase} diametro={Math.round(diametro * 0.62)} onTocar={onTocar} deshabilitado={deshabilitado} />;
+}
+
+/**
+ * El orbe líquido tocable. Al escuchar se le suma un aro que late en rojo: es la señal, universal
+ * en las apps de voz, de que el micrófono está abierto.
+ */
+function OrbeConLiquido({ fase, diametro, onTocar, deshabilitado }: Props) {
+  const { c } = useTheme();
+  const Liquido = LIQUIDO!.OrbeLiquido;
+  return (
+    <Pressable
+      onPress={onTocar}
+      disabled={deshabilitado}
+      accessibilityRole="button"
+      accessibilityLabel={ETIQUETA[fase]}
+      style={({ pressed }) => [styles.contenedor, { width: diametro, height: diametro, opacity: deshabilitado ? 0.5 : pressed ? 0.9 : 1 }]}
+    >
+      {fase === 'escuchando' ? (
+        <View
+          pointerEvents="none"
+          style={[styles.halo, styles.aroEscuchando, { width: diametro, height: diametro, borderRadius: diametro / 2, borderColor: c.danger }]}
+        />
+      ) : null}
+      <Liquido intensidad={INTENSIDAD[fase]} diametro={diametro} />
+    </Pressable>
+  );
+}
+
+function OrbeSimple({ fase, diametro, onTocar, deshabilitado }: Props) {
   const { c } = useTheme();
   const latido = useRef(new Animated.Value(0)).current;
 
@@ -119,5 +179,6 @@ export function OrbeAcompanante({ fase, diametro, onTocar, deshabilitado }: Prop
 const styles = StyleSheet.create({
   contenedor: { alignItems: 'center', justifyContent: 'center' },
   halo: { position: 'absolute' },
+  aroEscuchando: { borderWidth: 2 },
   nucleo: { alignItems: 'center', justifyContent: 'center' },
 });

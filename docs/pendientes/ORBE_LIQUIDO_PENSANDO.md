@@ -1,8 +1,20 @@
 # Orbe líquido animado para el estado "pensando" de los chats con IA
 
-**Estado: PARADO el 2026-09-05 por decisión del dueño** — *"el orbe animado documentalo para otro día, ahora no va"*.
-No hay código de esta funcionalidad en la app. Este documento existe para que retomarlo no cueste
-volver a investigar todo desde cero.
+**Estado: RETOMADO e implementado el 2026-09-23** (pedido del dueño: el orbe en el centro de Hoy,
+como acompañante por voz). Rama `acompanante-ia`.
+
+- Shader: `src/features/renasia/components/orbe/orbeShader.ts` (SkSL, misma matemática que el GLSL de
+  `orbe-liquido-preview.html`; sin invertir la Y, porque en Skia ya crece hacia abajo).
+- Componente: `orbe/OrbeLiquido.tsx` con `@shopify/react-native-skia` + `react-native-reanimated`
+  (camino 1 de abajo). La fase se acumula en el hilo de UI con `useFrameCallback`; la transición
+  idle↔thinking es la del diseño (220 ms ease-out cúbico / 650 ms smoothstep).
+- Se usa en `OrbeAcompanante` (Hoy), con los halos de `Animated` como respaldo si Skia no está en el
+  binario o el shader no compila.
+- **No se aplicó todavía** a los indicadores de "pensando" de los chats, que era el pedido original.
+
+> Decía: «PARADO el 2026-09-05 por decisión del dueño — "el orbe animado documentalo para otro día,
+> ahora no va". No hay código de esta funcionalidad en la app.» Más abajo, la regla de "no tocar las
+> cinco pantallas principales": el dueño autorizó explícitamente cambiar el centro de Hoy.
 
 ---
 
