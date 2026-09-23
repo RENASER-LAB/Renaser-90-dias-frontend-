@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-speech-recognition';
+import type * as ModuloDeVoz from 'expo-speech-recognition';
 
 import { mensajeDeErrorDeVoz } from '../utils/dictado';
 
@@ -8,6 +8,28 @@ import { mensajeDeErrorDeVoz } from '../utils/dictado';
  * sí en el de Google y el de Apple, y reconoce igual el habla peruana.
  */
 const IDIOMA = 'es-419';
+
+/**
+ * El módulo nativo se carga con `require` dentro de un try, NO con un `import` arriba: el paquete
+ * llama a `requireNativeModule` al importarse y, si el binario instalado no lo trae compilado
+ * (una build anterior a la voz, o una recarga en caliente sobre el binario viejo), revienta al
+ * abrir el chat con "Cannot find native module 'ExpoSpeechRecognition'" (visto el 2026-09-23).
+ * Sin el módulo, el chat funciona igual y simplemente no muestra el micrófono.
+ */
+function cargarModuloDeVoz(): typeof ModuloDeVoz | null {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return require('expo-speech-recognition') as typeof ModuloDeVoz;
+  } catch {
+    return null;
+  }
+}
+
+const VOZ = cargarModuloDeVoz();
+const modulo = VOZ?.ExpoSpeechRecognitionModule ?? null;
+/** Sin módulo, un hook que no escucha nada: los hooks se llaman siempre, en el mismo orden. */
+const escucharEvento: typeof ModuloDeVoz.useSpeechRecognitionEvent =
+  VOZ?.useSpeechRecognitionEvent ?? (() => undefined);
 
 export type EstadoDictado = {
   /** El micrófono está abierto. */
@@ -38,7 +60,7 @@ export function useDictado(frasesDeContexto: readonly string[], alTerminar: (tex
   const [error, setError] = useState<string | null>(null);
   const [disponible] = useState(() => {
     try {
-      return ExpoSpeechRecognitionModule.isRecognitionAvailable();
+      return modulo?.isRecognitionAvailable() ?? false;
     } catch {
       return false;
     }
@@ -46,12 +68,12 @@ export function useDictado(frasesDeContexto: readonly string[], alTerminar: (tex
   const alTerminarRef = useRef(alTerminar);
   alTerminarRef.current = alTerminar;
 
-  useSpeechRecognitionEvent('start', () => setEscuchando(true));
-  useSpeechRecognitionEvent('end', () => {
+  escucharEvento('start', () => setEscuchando(true));
+  escucharEvento('end', () => {
     setEscuchando(false);
     setParcial('');
   });
-  useSpeechRecognitionEvent('result', evento => {
+  escucharEvento('result', evento => {
     const transcripcion = evento.results[0]?.transcript ?? '';
     if (evento.isFinal) {
       setParcial('');
@@ -60,23 +82,24 @@ export function useDictado(frasesDeContexto: readonly string[], alTerminar: (tex
       setParcial(transcripcion);
     }
   });
-  useSpeechRecognitionEvent('error', evento => {
+  escucharEvento('error', evento => {
     setEscuchando(false);
     setParcial('');
     setError(mensajeDeErrorDeVoz(evento.error));
   });
 
   // Si se cierra el chat con el micrófono abierto, se corta: no queda escuchando en segundo plano.
-  useEffect(() => () => ExpoSpeechRecognitionModule.abort(), []);
+  useEffect(() => () => modulo?.abort(), []);
 
   const empezar = useCallback(async () => {
     setError(null);
-    const permiso = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+    if (!modulo) return;
+    const permiso = await modulo.requestPermissionsAsync();
     if (!permiso.granted) {
       setError(mensajeDeErrorDeVoz('not-allowed'));
       return;
     }
-    ExpoSpeechRecognitionModule.start({
+    modulo.start({
       lang: IDIOMA,
       interimResults: true,
       continuous: false,
@@ -86,7 +109,7 @@ export function useDictado(frasesDeContexto: readonly string[], alTerminar: (tex
     });
   }, [frasesDeContexto]);
 
-  const detener = useCallback(() => ExpoSpeechRecognitionModule.stop(), []);
+  const detener = useCallback(() => modulo?.stop(), []);
 
   return { escuchando, parcial, error, disponible, empezar, detener };
 }
