@@ -139,7 +139,7 @@ export function TarjetaAccionesDelDia({ diaria, semanal, diaPrograma, ejeAbierto
             onPress={() => setAgendando(true)}
             style={[estilos.boton, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}
           >
-            <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 15 }]}>
+            <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 15, textAlign: 'center' }]}>
               Agendar mis acciones
             </Text>
           </Pressable>
@@ -181,5 +181,10 @@ const estilos = StyleSheet.create({
   encabezado: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   fila: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 12, padding: 14 },
   marca: { width: 6, height: 34, borderRadius: 3 },
-  boton: { minHeight: 48, borderWidth: 1, borderRadius: 10, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 },
+  /*
+   * `paddingVertical` además del `minHeight`: con la fuente del sistema en grande, "Agendar mis
+   * acciones" no entra en un renglón y se veía cortado en "Agendar mis" (visto en el emulador el
+   * 2026-09-23). El alto fijo no dejaba lugar al segundo renglón; con padding el botón crece.
+   */
+  boton: { minHeight: 48, borderWidth: 1, borderRadius: 10, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 10 },
 });

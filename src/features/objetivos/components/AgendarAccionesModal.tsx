@@ -6,6 +6,7 @@ import { RuedaHoraPicker } from '../../habits/components/RuedaHoraPicker';
 import { useTheme } from '../../../theme/ThemeContext';
 import type { useRocasSemanales } from '../hooks/useRocasSemanales';
 import type { EjeObjetivo, ItemPlanDiario } from '../types/objetivos.types';
+import { conAccionPropia, opcionesDelEje } from '../utils/accionesPropias';
 import { EJES, ETIQUETA_EJE } from '../types/objetivos.types';
 import type { AccionDelMapa, AccionesPorEje } from '../../mapa-renacimiento/hooks/useAccionesDelMapa';
 import { diasEscritos, tocaHoy } from '../../mapa-renacimiento/hooks/useAccionesDelMapa';
@@ -176,25 +177,19 @@ export function AgendarAccionesModal({
   /** Lo que se está escribiendo a mano en cada eje, antes de agregarlo. */
   const [escribiendo, setEscribiendo] = useState<Partial<Record<EjeObjetivo, string>>>({});
 
-  /**
-   * Lo que se ofrece en un eje: lo del Mapa **más** lo que la persona escribió a mano.
-   *
-   * Las propias se agregan a la lista visible para que se dibujen igual que las del Mapa —con su
-   * hora y sus pasos—. Sin esto una acción escrita a mano quedaba elegida pero invisible.
-   */
-  const opcionesDe = (eje: EjeObjetivo, delMapa: AccionDelMapa[]): AccionDelMapa[] => {
-    const textos = new Set(delMapa.map(a => a.texto));
-    const propias = elegidas
-      .filter(e => e.eje === eje && !textos.has(e.titulo))
-      .map<AccionDelMapa>(e => ({ texto: e.titulo, dias: [], frecuenciaSemanal: 0 }));
-    return [...delMapa, ...propias];
-  };
+  /** Lo del Mapa más lo escrito a mano. Las reglas y sus pruebas viven en `utils/accionesPropias`. */
+  const opcionesDe = (eje: EjeObjetivo, delMapa: AccionDelMapa[]): AccionDelMapa[] =>
+    opcionesDelEje(eje, delMapa, elegidas);
 
-  /** Agrega una acción escrita a mano, con las mismas reglas que una del Mapa. */
+  /**
+   * Agrega una acción escrita a mano. Si no corresponde —vacía, repetida, o el eje ya llegó a
+   * tres— no pasa nada: no hay error que mostrar porque no hubo un intento fallido, hubo un campo
+   * sin completar.
+   */
   const agregarPropia = (eje: EjeObjetivo) => {
-    const texto = (escribiendo[eje] ?? '').trim();
-    if (!texto || cuantasDe(eje) >= MAXIMO_POR_EJE || indiceDe(eje, texto) >= 0) return;
-    setElegidas(previas => [...previas, { eje, titulo: texto, hora: '', pasos: [] }]);
+    const conLaNueva = conAccionPropia(elegidas, eje, escribiendo[eje] ?? '', MAXIMO_POR_EJE);
+    if (conLaNueva === null) return;
+    setElegidas(conLaNueva);
     setEscribiendo(previo => ({ ...previo, [eje]: '' }));
   };
 
