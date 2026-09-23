@@ -48,6 +48,13 @@
         {
           "microphonePermission": "Renaser necesita el micrófono para que puedas grabar en audio la evidencia de tus hábitos."
         }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Renaser usa el micrófono para que puedas dictarle tus mensajes al acompañante.",
+          "speechRecognitionPermission": "Renaser convierte tu voz en texto para que puedas hablarle al acompañante en vez de escribir."
+        }
       ]
     ],
     "extra": {
