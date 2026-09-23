@@ -48,6 +48,24 @@ import { useMapaRenacimientoAbierto } from '../features/mapa-renacimiento/MapaRe
 import { useEstadoMapa } from '../features/mapa-renacimiento/hooks/useEstadoMapa';
 import type { RocaDiariaApi } from '../features/training/types/training.types';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
+import { OrbeAcompanante } from '../features/renasia/components/OrbeAcompanante';
+import { RenasiaPanel } from '../features/renasia/screens/RenasiaPanel';
+import { useConversacionPorVoz, type FaseDeVoz } from '../features/renasia/hooks/useConversacionPorVoz';
+
+/** Lo que se lee debajo del orbe: la fase dicha con texto, para quien no ve la animación. */
+function rotuloDelOrbe(fase: FaseDeVoz, disponible: boolean): string {
+  if (!disponible) return 'Toca para escribirle';
+  switch (fase) {
+    case 'escuchando':
+      return 'Te escucho… toca de nuevo para terminar';
+    case 'pensando':
+      return 'Pensando…';
+    case 'hablando':
+      return 'Toca para que se calle';
+    default:
+      return 'Toca y háblame';
+  }
+}
 
 export default function HoyScreen() {
   const { c, t } = useTheme();
@@ -85,6 +103,10 @@ export default function HoyScreen() {
      de Hoy, igual que Administracion y que las vistas del mentor — no como un tab nuevo. */
   const esLider = esLiderDeMentores(user?.role);
   const [enBandejaTickets, setEnBandejaTickets] = useState(false);
+  // El orbe del centro (2026-09-23): conversación por voz con el acompañante, y su chat para
+  // confirmar propuestas o leer la respuesta completa.
+  const voz = useConversacionPorVoz();
+  const [chatDelOrbeAbierto, setChatDelOrbeAbierto] = useState(false);
   const [vistaMentor, setVistaMentor] = useState<'ninguna' | 'celula' | 'alumno'>('ninguna');
   const [alumnoAbierto, setAlumnoAbierto] = useState<AlumnoConEstado | null>(null);
 
@@ -183,13 +205,6 @@ export default function HoyScreen() {
   const ringDiameters = [heroSize, heroSize * 0.82, heroSize * 0.64, heroSize * 0.46].map(Math.round);
   const ringColors = [c.ring1, c.ring2, c.ring3, c.ring2];
 
-  /* El texto del centro del hero. La altura de línea se DERIVA del tamaño en vez de ir fija:
-     `t.hero` pasó a la serif Fraunces y el override que había acá ('lineHeight: 26') quedaba por
-     DEBAJO del tamaño de letra cuando no hay roca (32 px), así que la caja de línea recortaba el
-     titular por arriba. Un título de dos líneas necesita más aire entre líneas que una palabra
-     suelta, de ahí los dos factores. */
-  const tamanoFoco = isShort ? (rocaPrioritaria ? 17 : 26) : (rocaPrioritaria ? 19 : 32);
-  const interlineadoFoco = Math.round(tamanoFoco * (rocaPrioritaria ? 1.25 : 1.1));
 
   const faseNombre = rotuloDeFase(resumen?.fase)?.toUpperCase() || 'PROGRAMA ACTIVO';
   /**
@@ -455,85 +470,60 @@ export default function HoyScreen() {
           {/* La partícula orbita sobre el anillo exterior: es el único radio donde no se cruza
               con el texto del centro en un teléfono chico. */}
           <ParticulaDeRitmo ritmo={ritmo.ritmo} diametro={ringDiameters[0]} />
+          {/* El centro del hero es el acompañante por voz (pedido del dueño, 2026-09-23). Antes
+              decía "TU ÚNICO FOCO / AHORA" (o la roca prioritaria del día) y llevaba a Plan; ese
+              dato se le pregunta ahora al propio acompañante ("¿cuál es mi foco de hoy?"), que lo
+              lee con consultar_rocas. Tocar el orbe: escucha, piensa y responde en voz alta. */}
           <View style={styles.heroCenter}>
-            {/* Sin `letterSpacing: 2`: `t.micro` ya trae 1.1, y la regla nueva de AGENTS.md §4 es
-                que por encima de 1.5 un rótulo se ve estirado, no importante. */}
             <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_500Medium', fontSize: 10.5, textAlign: 'center' }]}>
-              {rocaPrioritaria ? 'PRIORIDAD #1 · FOCO DEL DÍA' : 'TU ÚNICO FOCO'}
+              TU ACOMPAÑANTE
             </Text>
-
+            <View style={{ marginTop: isShort ? 10 : 14 }}>
+              <OrbeAcompanante
+                fase={voz.fase}
+                diametro={Math.round(ringDiameters[3] * 0.62)}
+                onTocar={voz.disponible ? voz.tocar : () => setChatDelOrbeAbierto(true)}
+              />
+            </View>
             <Text
               numberOfLines={2}
-              style={[
-                t.hero,
-                {
-                  color: c.textStrong,
-                  marginTop: isShort ? 8 : 12,
-                  fontSize: tamanoFoco,
-                  textAlign: 'center',
-                  paddingHorizontal: 20,
-                  lineHeight: interlineadoFoco,
-                },
-              ]}
+              style={[t.small, { color: c.textSoft, marginTop: isShort ? 10 : 14, textAlign: 'center', paddingHorizontal: 24 }]}
             >
-              {rocaPrioritaria ? rocaPrioritaria.titulo : 'AHORA'}
+              {rotuloDelOrbe(voz.fase, voz.disponible)}
             </Text>
-
-            {rocaPrioritaria ? (
-              /* El sello del estado ya no lleva borde: vive dentro de los anillos, que son borde
-                 puro, y un contorno más lo convertía en una caja dentro de otra. El fondo lavado
-                 alcanza para separarlo. Además le faltaba `flexDirection: 'row'`, así que el icono
-                 se dibujaba ENCIMA del texto en vez de al lado, y sobraba una View envolviendo a
-                 un solo hijo. */
-              <View
-                style={[
-                  styles.statusPill,
-                  {
-                    backgroundColor: rocaPrioritaria.completada ? c.successWash : c.goldWash,
-                  },
-                ]}
-              >
-                <Icon
-                  name={rocaPrioritaria.completada ? 'check' : 'clock'}
-                  size={12}
-                  color={rocaPrioritaria.completada ? c.success : c.goldInk}
-                />
-                <Text
-                  style={[
-                    t.micro,
-                    {
-                      color: rocaPrioritaria.completada ? c.success : c.goldInk,
-                      fontFamily: 'Jost_700Bold',
-                      fontSize: 11,
-                    },
-                  ]}
-                >
-                  {rocaPrioritaria.completada ? 'ROCA COMPLETADA' : 'EN PROCESO'}
-                </Text>
-              </View>
-            ) : (
-              <Pressable
-                onPress={() => (navigation as any).navigate('Plan')}
-                accessibilityRole="button"
-                style={({ pressed }) => [styles.definirRocaEnlace, { opacity: pressed ? 0.6 : 1 }]}
-                hitSlop={8}
-              >
-                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_500Medium' }]}>
-                  Define tu objetivo en Plan
-                </Text>
-                <Icon name="arrow" size={12} color={c.goldInk} />
-              </Pressable>
-            )}
-
-            <Pressable
-              onPress={() => (navigation as any).navigate('Plan')}
-              style={{ marginTop: isShort ? 14 : 20 }}
-              hitSlop={8}
-            >
-              <GoldCircle size={isShort ? 44 : 50} icon={rocaPrioritaria?.completada ? 'check' : 'chevron'} />
-            </Pressable>
           </View>
         </View>
+
+        {voz.loQueDijiste || voz.respuesta || voz.error ? (
+          <View style={[styles.conversacionVoz, { borderColor: c.border, backgroundColor: c.cardBg }]}>
+            {voz.loQueDijiste ? (
+              <Text style={[t.small, { color: c.textSoft }]} numberOfLines={2}>
+                Tú: {voz.loQueDijiste}
+              </Text>
+            ) : null}
+            {voz.respuesta ? (
+              <Text style={[t.body, { color: c.text, fontSize: rs(14.5), lineHeight: rs(21) }]} numberOfLines={6}>
+                {voz.respuesta.replace(/[*_#`]+/g, '')}
+              </Text>
+            ) : null}
+            {voz.error ? <Text style={[t.small, { color: c.danger }]}>{voz.error}</Text> : null}
+            {voz.propuestas > 0 ? (
+              <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_500Medium' }]}>
+                Tienes {voz.propuestas === 1 ? 'una propuesta' : `${voz.propuestas} propuestas`} para confirmar en el chat.
+              </Text>
+            ) : null}
+            <Pressable
+              onPress={() => setChatDelOrbeAbierto(true)}
+              accessibilityRole="button"
+              hitSlop={8}
+              style={({ pressed }) => [styles.definirRocaEnlace, { opacity: pressed ? 0.6 : 1 }]}
+            >
+              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_500Medium' }]}>Ver en el chat</Text>
+              <Icon name="arrow" size={12} color={c.goldInk} />
+            </Pressable>
+          </View>
+        ) : null}
+        <RenasiaPanel agent="COMPANION" visible={chatDelOrbeAbierto} onClose={() => setChatDelOrbeAbierto(false)} />
 
         {/* ========================================================================= */}
         {/* 4. TARJETAS DE PROGRESO Y CONTADORES REALES DEL DÍA                       */}
@@ -884,6 +874,14 @@ const styles = StyleSheet.create({
   ring: {
     position: 'absolute',
     borderWidth: 1,
+  },
+  conversacionVoz: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 14,
+    gap: 8,
+    marginTop: 12,
+    width: '100%',
   },
   heroCenter: {
     alignItems: 'center',
