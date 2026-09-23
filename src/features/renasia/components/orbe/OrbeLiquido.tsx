@@ -25,11 +25,13 @@ type Props = {
   diametro: number;
 };
 
-/** smoothstep t²(3-2t): la vuelta al reposo, igual que en la vista previa. */
-function suave(t: number): number {
-  'worklet';
-  return t * t * (3 - 2 * t);
-}
+/**
+ * La vuelta al reposo. El diseño usa smoothstep t²(3-2t); esta Bézier es prácticamente la misma
+ * curva y es de Reanimated, así que ya corre en el hilo de UI. Una función propia con 'worklet'
+ * dependía de que el plugin de Babel la transformara, y con la caché de Metro vieja reventaba Hoy:
+ * "[Reanimated] The easing function is not a worklet" (2026-09-23).
+ */
+const SUAVE = Easing.bezier(0.45, 0, 0.55, 1);
 
 /**
  * El orbe líquido de `docs/pendientes/ORBE_LIQUIDO_PENSANDO.md`, ahora sí en la app (pedido del
@@ -53,7 +55,7 @@ export function OrbeLiquido({ intensidad, diametro }: Props) {
     const sube = intensidad > estado.value;
     estado.value = withTiming(intensidad, {
       duration: sube ? MS_ENTRADA : MS_SALIDA,
-      easing: sube ? Easing.out(Easing.cubic) : suave,
+      easing: sube ? Easing.out(Easing.cubic) : SUAVE,
     });
   }, [intensidad, estado]);
 
