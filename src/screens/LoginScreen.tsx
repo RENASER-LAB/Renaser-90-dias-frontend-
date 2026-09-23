@@ -1100,29 +1100,33 @@ export default function LoginScreen() {
                   bloque, no rehacer nada.
                 */}
 
-                {/* Botón de Google en Android, iOS y Web */}
+                {/*
+                  Botón de Google — DESACTIVADO, "Próximamente" (2026-09-23, pedido del dueño).
+
+                  El ingreso con Google no está funcionando y se publica igual, así que el botón se
+                  muestra apagado en vez de esconderse. Es a propósito: quien ya entró alguna vez
+                  con Google lo va a buscar, y un botón que desapareció se lee como "me borraron la
+                  cuenta". Apagado con la razón escrita se lee como lo que es.
+
+                  No se toca nada más. `handleSocialLogin` y `loginWithGoogle` (AuthContext) quedan
+                  intactos, igual que el flujo de confirmación de registro que viene detrás: volver
+                  a prenderlo es devolver el `onPress` y el `disabled` de abajo a lo que eran, sin
+                  rehacer nada. Mismo criterio que se usó con Apple más arriba.
+                */}
                 {(Platform.OS === 'android' || Platform.OS === 'ios' || Platform.OS === 'web') && (
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Continuar con Google"
-                    onPress={() => handleSocialLogin('google')}
-                    disabled={socialLoading !== null}
+                  <View
+                    accessibilityRole="text"
+                    accessibilityLabel="Continuar con Google, próximamente"
                     style={[
                       styles.bigSocialBtn,
-                      { borderColor: c.border, backgroundColor: c.cardBgAlt }
+                      { borderColor: c.border, backgroundColor: c.cardBgAlt, opacity: 0.55 }
                     ]}
                   >
-                    {socialLoading === 'google' ? (
-                      <ActivityIndicator color={c.goldInk} size="small" />
-                    ) : (
-                      <>
-                        <Icon name="google" size={20} color={c.goldInk} />
-                        <Text style={[t.cardTitle, { color: c.textStrong, letterSpacing: 0.1, fontFamily: 'Jost_500Medium', fontSize: 15 }]}>
-                          {activeTab === 'login' ? 'Continuar con Google' : 'Registrarme con Google'}
-                        </Text>
-                      </>
-                    )}
-                  </Pressable>
+                    <Icon name="google" size={20} color={c.textSoft} />
+                    <Text style={[t.cardTitle, { color: c.textSoft, letterSpacing: 0.1, fontFamily: 'Jost_500Medium', fontSize: 15 }]}>
+                      Google · Próximamente
+                    </Text>
+                  </View>
                 )}
               </View>
 
