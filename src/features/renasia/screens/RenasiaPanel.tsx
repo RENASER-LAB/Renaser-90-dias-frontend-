@@ -67,6 +67,8 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
     cargarMasAntiguos,
     enviarPregunta,
     reintentarMensaje,
+    confirmarPropuesta,
+    cancelarPropuesta,
   } = useRenasiaChat({ agent, courseId: contexto?.cursoId, ambito: contexto?.ambito });
 
   const [texto, setTexto] = useState('');
@@ -214,6 +216,8 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
                     mensaje={m}
                     nombreAsistente={nombre}
                     onReintentar={reintentarMensaje}
+                    onConfirmarPropuesta={confirmarPropuesta}
+                    onCancelarPropuesta={cancelarPropuesta}
                   />
                 ))}
               </>

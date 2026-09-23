@@ -50,6 +50,16 @@ const eventoFinSchema = z.object({ tipo: z.literal('fin') }).passthrough();
 /** `{"tipo":"error","valor":"..."}` — D-100: falla del modelo, apta para mostrar. */
 const eventoErrorSchema = z.object({ tipo: z.literal('error'), valor: z.string() }).passthrough();
 
+/** `{"tipo":"propuesta",...}` — D-153: una escritura que la persona confirma con un botón. */
+const eventoPropuestaSchema = z
+  .object({ tipo: z.literal('propuesta'), id: z.string(), resumen: z.string(), venceEn: z.string() })
+  .passthrough();
+
+/** Respuesta de confirmar una propuesta. */
+const resultadoPropuestaSchema = z
+  .object({ estado: z.enum(['CONFIRMADA', 'FALLIDA']), mensaje: z.string() })
+  .passthrough();
+
 /**
  * Rama de escape para tipos de evento que esta versión de la app no conoce.
  *
@@ -68,12 +78,14 @@ const eventoRenasiaSchema = z.union([
   eventoFuentesSchema,
   eventoFinSchema,
   eventoErrorSchema,
+  eventoPropuestaSchema,
   eventoDesconocidoSchema,
 ]);
 
 export const renasiaSchemas = {
   historial: historialRenasiaSchema,
   evento: eventoRenasiaSchema,
+  resultadoPropuesta: resultadoPropuestaSchema,
 };
 
 export function validarRespuesta<T>(esquema: z.ZodType<T>, datos: unknown, origen: string): T {

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Pressable, ActivityIndicator, StyleSheet } from 'react-native';
 
 import { TextoAsistente } from './TextoAsistente';
+import { TarjetaPropuesta } from './TarjetaPropuesta';
 import { useSegundosEsperando } from '../hooks/useSegundosEsperando';
 import { avisoDeEspera } from '../utils/esperaDelAsistente';
 import { useTheme } from '../../../theme/ThemeContext';
@@ -13,6 +14,9 @@ type Props = {
   /** D-102: el nombre del asistente de ESTE panel (RENASIA o SPARKIE), para "X está escribiendo…". */
   nombreAsistente: string;
   onReintentar: (idMensajeAsistente: string) => void;
+  /** D-153: botones de las propuestas del acompañante. Sin estos, las tarjetas no se dibujan. */
+  onConfirmarPropuesta?: (idMensaje: string, idPropuesta: string) => void;
+  onCancelarPropuesta?: (idMensaje: string, idPropuesta: string) => void;
 };
 
 /**
@@ -33,7 +37,13 @@ type Props = {
  * "esto no es parte del curso") viaja dentro del TEXTO de la respuesta y se sigue mostrando
  * entera: quitar los chips no deja al modelo hablando de fuentes invisibles.
  */
-export function MensajeBurbuja({ mensaje, nombreAsistente, onReintentar }: Props) {
+export function MensajeBurbuja({
+  mensaje,
+  nombreAsistente,
+  onReintentar,
+  onConfirmarPropuesta,
+  onCancelarPropuesta,
+}: Props) {
   const { c, t } = useTheme();
   const { rs, isSmall } = useResponsive();
   const esPersona = mensaje.autor === 'persona';
@@ -77,6 +87,18 @@ export function MensajeBurbuja({ mensaje, nombreAsistente, onReintentar }: Props
             />
           )
         ) : null}
+
+        {!esPersona &&
+          onConfirmarPropuesta &&
+          onCancelarPropuesta &&
+          mensaje.propuestas?.map(propuesta => (
+            <TarjetaPropuesta
+              key={propuesta.id}
+              propuesta={propuesta}
+              onConfirmar={() => onConfirmarPropuesta(mensaje.id, propuesta.id)}
+              onCancelar={() => onCancelarPropuesta(mensaje.id, propuesta.id)}
+            />
+          ))}
 
         {mensaje.enProgreso && (
           <View style={styles.filaEscribiendo}>

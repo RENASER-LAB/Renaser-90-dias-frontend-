@@ -8,6 +8,7 @@ import type {
   PreguntarRenasiaBody,
   RenasiaEvento,
   RenasiaEventoError,
+  RenasiaEventoPropuesta,
   RenasiaEventoTexto,
 } from '../types/renasia.types';
 import { renasiaSchemas, validarRespuesta } from './renasiaSchemas';
@@ -37,6 +38,8 @@ export type CallbacksMensajeRenasia = {
   onFin: () => void;
   /** D-100: el backend avisa que el modelo no pudo responder. */
   onError?: (mensaje: string) => void;
+  /** D-153: el acompañante propuso una acción que la persona confirma con un botón. */
+  onPropuesta?: (propuesta: RenasiaEventoPropuesta) => void;
 };
 
 /**
@@ -196,6 +199,8 @@ export async function enviarMensajeRenasia(
     } else if (evento.tipo === 'error') {
       // D-100: antes esto no existia y un fallo del modelo llegaba como un `fin` sin texto.
       callbacks.onError?.((evento as RenasiaEventoError).valor);
+    } else if (evento.tipo === 'propuesta') {
+      callbacks.onPropuesta?.(evento as RenasiaEventoPropuesta);
     } else if (evento.tipo === 'fin') {
       recibioFin = true;
       callbacks.onFin();

@@ -1,5 +1,5 @@
 import { apiFetch } from '../../../services/http/apiClient';
-import type { AgenteRenasia, HistorialRenasiaApi } from '../types/renasia.types';
+import type { AgenteRenasia, HistorialRenasiaApi, ResultadoPropuestaApi } from '../types/renasia.types';
 import { renasiaSchemas, validarRespuesta } from './renasiaSchemas';
 
 /**
@@ -26,4 +26,28 @@ export async function obtenerHistorialRenasia(
   params.set('limit', String(limit));
   const r = await apiFetch<unknown>(`/api/v1/renasia/mensajes?${params.toString()}`);
   return validarRespuesta<HistorialRenasiaApi>(renasiaSchemas.historial, r, 'GET /api/v1/renasia/mensajes');
+}
+
+/**
+ * `POST /api/v1/renasia/propuestas/{id}/confirmar` — D-153. Ejecuta UNA vez la acción que propuso
+ * el acompañante: un doble toque o un reintento devuelven el mismo resultado sin repetirla.
+ *
+ * - 200 `{estado:"CONFIRMADA"|"FALLIDA", mensaje}`: `FALLIDA` es que el negocio la rechazó al
+ *   aplicarla (se venció el hábito, se acabó el cupo); `mensaje` es apto para mostrar.
+ * - 409: la propuesta venció o ya se canceló. 403: no es tuya o la cuenta está suspendida.
+ */
+export async function confirmarPropuestaRenasia(id: string): Promise<ResultadoPropuestaApi> {
+  const r = await apiFetch<unknown>(`/api/v1/renasia/propuestas/${encodeURIComponent(id)}/confirmar`, {
+    method: 'POST',
+  });
+  return validarRespuesta<ResultadoPropuestaApi>(
+    renasiaSchemas.resultadoPropuesta,
+    r,
+    'POST /api/v1/renasia/propuestas/{id}/confirmar'
+  );
+}
+
+/** `POST /api/v1/renasia/propuestas/{id}/cancelar` — 204, idempotente (D-153). */
+export async function cancelarPropuestaRenasia(id: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/renasia/propuestas/${encodeURIComponent(id)}/cancelar`, { method: 'POST' });
 }

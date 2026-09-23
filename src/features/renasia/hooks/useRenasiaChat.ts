@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { mensajeDeError } from '../../../services/http/apiClient';
-import { obtenerHistorialRenasia } from '../api/renasiaApi';
+import { ApiError, mensajeDeError } from '../../../services/http/apiClient';
+import { cancelarPropuestaRenasia, confirmarPropuestaRenasia, obtenerHistorialRenasia } from '../api/renasiaApi';
 import { enviarMensajeRenasia, RenasiaCuotaExcedidaError } from '../api/renasiaStream';
 import { nombreVisible } from '../data/agentes';
-import type { AgenteRenasia, MensajeRenasiaApi, RenasiaMensajeUI } from '../types/renasia.types';
+import type { AgenteRenasia, MensajeRenasiaApi, PropuestaUI, RenasiaMensajeUI } from '../types/renasia.types';
+import { estadoTrasConfirmar, propuestaDesdeEvento, quitarTextoDeRespaldo } from '../utils/propuestas';
 
 let contadorIdLocal = 0;
 /** Ids para mensajes que todavía no existen en el servidor (la pregunta optimista, la respuesta en curso). */
@@ -38,7 +39,37 @@ export type EstadoRenasiaChat = {
   cargarMasAntiguos: () => Promise<void>;
   enviarPregunta: (texto: string) => Promise<void>;
   reintentarMensaje: (idMensajeAsistente: string) => Promise<void>;
+  /** D-153: la persona tocó "Confirmar" en una propuesta del acompañante. */
+  confirmarPropuesta: (idMensaje: string, idPropuesta: string) => Promise<void>;
+  /** D-153: la persona tocó "Cancelar". */
+  cancelarPropuesta: (idMensaje: string, idPropuesta: string) => Promise<void>;
 };
+
+/** Cambia UNA propuesta de UN mensaje, sin tocar el resto de la lista. */
+function conPropuesta(
+  mensajes: RenasiaMensajeUI[],
+  idMensaje: string,
+  idPropuesta: string,
+  cambio: Partial<PropuestaUI>
+): RenasiaMensajeUI[] {
+  return mensajes.map(m =>
+    m.id !== idMensaje
+      ? m
+      : { ...m, propuestas: m.propuestas?.map(p => (p.id === idPropuesta ? { ...p, ...cambio } : p)) }
+  );
+}
+
+/**
+ * Qué mostrar si confirmar o cancelar falla. 409 = venció o ya se canceló: la tarjeta queda
+ * cerrada con el motivo del servidor. Sin red: vuelve a `pendiente` para poder reintentar. Otro
+ * error (403, 404): se cierra como fallida con el mensaje.
+ */
+function cambioPorError(error: unknown): Partial<PropuestaUI> {
+  const mensaje = mensajeDeError(error, 'No pudimos completar esa acción. Inténtalo de nuevo.');
+  if (error instanceof ApiError && error.esConflicto) return { estado: 'vencida', mensaje };
+  if (error instanceof ApiError && !error.esDeRed) return { estado: 'fallida', mensaje };
+  return { estado: 'pendiente', mensaje };
+}
 
 /**
  * D-102: con quién se habla. `courseId` y `ambito` solo tienen sentido para `COURSE_TUTOR`
@@ -161,6 +192,22 @@ export function useRenasiaChat(opciones: OpcionesRenasiaChat): EstadoRenasiaChat
                 prev.map(m => (m.id === idAsistente ? { ...m, enProgreso: false } : m))
               );
             },
+            onPropuesta: evento => {
+              // D-153: el texto "Propuesta: …" que llegó justo antes es el respaldo para apps
+              // viejas; acá se reemplaza por la tarjeta con botones.
+              if (!montadoRef.current) return;
+              setMensajes(prev =>
+                prev.map(m =>
+                  m.id === idAsistente
+                    ? {
+                        ...m,
+                        texto: quitarTextoDeRespaldo(m.texto, evento.resumen),
+                        propuestas: [...(m.propuestas ?? []), propuestaDesdeEvento(evento)],
+                      }
+                    : m
+                )
+              );
+            },
             onError: mensaje => {
               // D-100: el modelo fallo del lado del servidor. Se muestra en la burbuja, con
               // reintento, igual que un error de red — antes quedaba una burbuja vacia y muda.
@@ -241,6 +288,35 @@ export function useRenasiaChat(opciones: OpcionesRenasiaChat): EstadoRenasiaChat
     [enviando, ejecutarEnvio]
   );
 
+  const confirmarPropuesta = useCallback(async (idMensaje: string, idPropuesta: string) => {
+    setMensajes(prev => conPropuesta(prev, idMensaje, idPropuesta, { estado: 'confirmando', mensaje: null }));
+    try {
+      const resultado = await confirmarPropuestaRenasia(idPropuesta);
+      if (!montadoRef.current) return;
+      setMensajes(prev =>
+        conPropuesta(prev, idMensaje, idPropuesta, {
+          estado: estadoTrasConfirmar(resultado),
+          mensaje: resultado.mensaje,
+        })
+      );
+    } catch (e) {
+      if (!montadoRef.current) return;
+      setMensajes(prev => conPropuesta(prev, idMensaje, idPropuesta, cambioPorError(e)));
+    }
+  }, []);
+
+  const cancelarPropuesta = useCallback(async (idMensaje: string, idPropuesta: string) => {
+    setMensajes(prev => conPropuesta(prev, idMensaje, idPropuesta, { estado: 'cancelando', mensaje: null }));
+    try {
+      await cancelarPropuestaRenasia(idPropuesta);
+      if (!montadoRef.current) return;
+      setMensajes(prev => conPropuesta(prev, idMensaje, idPropuesta, { estado: 'cancelada' }));
+    } catch (e) {
+      if (!montadoRef.current) return;
+      setMensajes(prev => conPropuesta(prev, idMensaje, idPropuesta, cambioPorError(e)));
+    }
+  }, []);
+
   return {
     mensajes,
     cargandoHistorial,
@@ -252,5 +328,7 @@ export function useRenasiaChat(opciones: OpcionesRenasiaChat): EstadoRenasiaChat
     cargarMasAntiguos,
     enviarPregunta,
     reintentarMensaje,
+    confirmarPropuesta,
+    cancelarPropuesta,
   };
 }
