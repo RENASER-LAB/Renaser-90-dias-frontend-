@@ -28,6 +28,14 @@ interface TarjetaPlanSemanalProps {
   semanal: ReturnType<typeof useRocasSemanales>;
   maestras: RocaMaestraApi[];
   numeroSemana: number;
+  /**
+   * El eje que se está mirando. **Esta tarjeta muestra SOLO ese.**
+   *
+   * > **Agregado el 2026-09-23.** Antes listaba los tres apilados, así que estando en Negocio la
+   * > primera línea era el objetivo de Cuerpo y la pantalla se contradecía con su propio
+   * > encabezado. El dueño lo pidió así: *"debe de estar por cada categoría, no juntarlo"*.
+   */
+  ejeAbierto: EjeObjetivo;
   /** El principal del Mapa: va primero en el asistente y es el único obligatorio. */
   ejePrincipal: EjeObjetivo | null;
   /** El objetivo de la semana ya calculado, por eje. Siembra el campo del asistente. */
@@ -36,7 +44,7 @@ interface TarjetaPlanSemanalProps {
   onIrAlMapa?: () => void;
 }
 
-export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, ejePrincipal, objetivoSugeridoDe,
+export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, ejeAbierto, ejePrincipal, objetivoSugeridoDe,
   onIrAlMapa }: TarjetaPlanSemanalProps) {
   const { c, t } = useTheme();
   const [planificando, setPlanificando] = useState(false);
@@ -118,7 +126,7 @@ export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, ejePrincip
             > los agregás", es "perdiste la semana". El backend ahora rechaza por eje y no por
             > semana, así que acá cada eje pendiente se muestra y se puede planificar.
           */}
-          {EJES.map(eje => {
+          {[ejeAbierto].map(eje => {
             const roca = semanal.deEje(eje);
             if (!roca) {
               return (
@@ -175,7 +183,7 @@ export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, ejePrincip
         visible={planificando}
         numeroSemana={numeroSemana}
         maestras={maestras}
-        ejePrincipal={ejePrincipal}
+        ejePrincipal={ejeAbierto}
         ejesYaConObjetivo={EJES.filter(eje => semanal.deEje(eje) != null)}
         objetivoSugeridoDe={objetivoSugeridoDe}
         guardando={semanal.guardando}

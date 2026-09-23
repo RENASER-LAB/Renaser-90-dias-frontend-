@@ -150,8 +150,14 @@ export function AgendarAccionesModal({
     () =>
       EJES.map(eje => ({ eje, roca: semanal.deEje(eje), acciones: aElegirDe(eje) }))
         .filter(
+          /*
+           * > **Corregido el 2026-09-23.** Pedía además `acciones.length > 0`, así que un eje sin
+           * > acciones escritas en el Mapa no aparecía y no había forma de agendarle nada. Desde
+           * > que se pueden escribir acciones propias eso deja de tener sentido: alcanza con tener
+           * > objetivo de la semana en ese eje.
+           */
           (x): x is { eje: EjeObjetivo; roca: NonNullable<typeof x.roca>; acciones: AccionDelMapa[] } =>
-            x.roca !== null && x.acciones.length > 0
+            x.roca !== null
         ),
     [semanal, accionesDelMapa]
   );
@@ -166,6 +172,31 @@ export function AgendarAccionesModal({
   function aElegirDe(eje: EjeObjetivo): AccionDelMapa[] {
     return accionesDelMapa[eje] ?? [];
   }
+
+  /** Lo que se está escribiendo a mano en cada eje, antes de agregarlo. */
+  const [escribiendo, setEscribiendo] = useState<Partial<Record<EjeObjetivo, string>>>({});
+
+  /**
+   * Lo que se ofrece en un eje: lo del Mapa **más** lo que la persona escribió a mano.
+   *
+   * Las propias se agregan a la lista visible para que se dibujen igual que las del Mapa —con su
+   * hora y sus pasos—. Sin esto una acción escrita a mano quedaba elegida pero invisible.
+   */
+  const opcionesDe = (eje: EjeObjetivo, delMapa: AccionDelMapa[]): AccionDelMapa[] => {
+    const textos = new Set(delMapa.map(a => a.texto));
+    const propias = elegidas
+      .filter(e => e.eje === eje && !textos.has(e.titulo))
+      .map<AccionDelMapa>(e => ({ texto: e.titulo, dias: [], frecuenciaSemanal: 0 }));
+    return [...delMapa, ...propias];
+  };
+
+  /** Agrega una acción escrita a mano, con las mismas reglas que una del Mapa. */
+  const agregarPropia = (eje: EjeObjetivo) => {
+    const texto = (escribiendo[eje] ?? '').trim();
+    if (!texto || cuantasDe(eje) >= MAXIMO_POR_EJE || indiceDe(eje, texto) >= 0) return;
+    setElegidas(previas => [...previas, { eje, titulo: texto, hora: '', pasos: [] }]);
+    setEscribiendo(previo => ({ ...previo, [eje]: '' }));
+  };
 
   const indiceDe = (eje: EjeObjetivo, titulo: string) =>
     elegidas.findIndex(e => e.eje === eje && e.titulo === titulo);
@@ -310,7 +341,7 @@ export function AgendarAccionesModal({
                     {ETIQUETA_EJE[eje].toUpperCase()}  ·  {cuantasDe(eje)}/{MAXIMO_POR_EJE}
                   </Text>
                   <Text style={[t.small, { color: c.textSoft, fontSize: 14, lineHeight: 20 }]}>{roca.titulo}</Text>
-                  {acciones.map(accion => {
+                  {opcionesDe(eje, acciones).map(accion => {
                     const indice = indiceDe(eje, accion.texto);
                     const elegida = indice >= 0;
                     const clave = `${eje}|${accion.texto}`;
@@ -399,6 +430,33 @@ export function AgendarAccionesModal({
                       </View>
                     );
                   })}
+                  {/*
+                    > **Agregado el 2026-09-23.** Antes solo se podía elegir de lo que la persona
+                    > había escrito el día 7 en el Mapa. El dueño lo vio en pantalla: *"no puedo
+                    > agregar otro, puedo agendar lo que yo quiera"*. El tope de tres por eje se
+                    > mantiene porque lo impone la base (`posicion BETWEEN 1 AND 3`), no la pantalla.
+                  */}
+                  {cuantasDe(eje) < MAXIMO_POR_EJE && (
+                    <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                      <TextInput
+                        value={escribiendo[eje] ?? ''}
+                        onChangeText={texto => setEscribiendo(previo => ({ ...previo, [eje]: texto }))}
+                        onSubmitEditing={() => agregarPropia(eje)}
+                        returnKeyType="done"
+                        placeholder="Escribe otra acción tuya"
+                        placeholderTextColor={c.chevron}
+                        style={[
+                          estilos.paso,
+                          { flex: 1, borderColor: c.border, backgroundColor: c.cardBg, color: c.textStrong },
+                        ]}
+                      />
+                      <Pressable onPress={() => agregarPropia(eje)} hitSlop={10}>
+                        <Text style={[t.small, { color: c.goldInk, fontSize: 15, fontFamily: 'Jost_700Bold' }]}>
+                          Agregar
+                        </Text>
+                      </Pressable>
+                    </View>
+                  )}
                 </View>
               ))}
             </ScrollView>

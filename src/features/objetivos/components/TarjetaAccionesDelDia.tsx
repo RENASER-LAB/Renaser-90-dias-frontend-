@@ -7,7 +7,7 @@ import { useTheme } from '../../../theme/ThemeContext';
 import type { Palette } from '../../../theme/tokens';
 import type { useRocasDiarias } from '../hooks/useRocasDiarias';
 import type { useRocasSemanales } from '../hooks/useRocasSemanales';
-import type { ItemPlanDiario, RocaDiariaApi } from '../types/objetivos.types';
+import type { EjeObjetivo, ItemPlanDiario, RocaDiariaApi } from '../types/objetivos.types';
 import { ETIQUETA_EJE } from '../types/objetivos.types';
 import { AgendarAccionesModal } from './AgendarAccionesModal';
 import { Icon } from '../../../components/Icon';
@@ -28,9 +28,21 @@ interface TarjetaAccionesDelDiaProps {
   diaria: ReturnType<typeof useRocasDiarias>;
   semanal: ReturnType<typeof useRocasSemanales>;
   diaPrograma: number;
+  /**
+   * El eje que se está mirando. **Esta tarjeta muestra SOLO sus acciones.**
+   *
+   * > **Agregado el 2026-09-23.** Mezclaba los tres ejes en una lista, así que estando en Negocio
+   * > la única acción visible era *"Caminar 40 minutos · Cuerpo"*. El dueño lo pidió así: *"cada
+   * > categoría tiene sus propias acciones, no es que se junte con Negocio"*.
+   * >
+   * > **Esto NO cambia dónde se cumplen.** Training sigue mostrando las de los tres ejes juntas en
+   * > VIDA Y NEGOCIO: esa pantalla lee `GET /rocks/today` por su cuenta (`trainingApi`) y no pasa
+   * > por acá. Lo que se filtra es la vista de Plan, no lo que se guarda ni lo que se evidencia.
+   */
+  ejeAbierto: EjeObjetivo;
 }
 
-export function TarjetaAccionesDelDia({ diaria, semanal, diaPrograma }: TarjetaAccionesDelDiaProps) {
+export function TarjetaAccionesDelDia({ diaria, semanal, diaPrograma, ejeAbierto }: TarjetaAccionesDelDiaProps) {
   const { c, t } = useTheme();
   const [agendando, setAgendando] = useState(false);
   /* Solo cuando el planificador se abre: quien nunca lo toca no paga la lectura del Mapa. */
@@ -38,9 +50,10 @@ export function TarjetaAccionesDelDia({ diaria, semanal, diaPrograma }: TarjetaA
 
   const hayPlanSemanal = semanal.estado === 'planificada' || semanal.estado === 'cerrada';
   // Los dos cubos vienen del servidor, que es el único que sabe en qué día está el participante.
+  const delEjeAbierto = (rocas: RocaDiariaApi[]) => rocas.filter(roca => roca.eje === ejeAbierto);
   const cubos: { titulo: string; rocas: RocaDiariaApi[] }[] = [
-    { titulo: 'Hoy', rocas: diaria.hoy },
-    { titulo: 'Mañana', rocas: diaria.manana },
+    { titulo: 'Hoy', rocas: delEjeAbierto(diaria.hoy) },
+    { titulo: 'Mañana', rocas: delEjeAbierto(diaria.manana) },
   ].filter(cubo => cubo.rocas.length > 0);
 
   /* La fecha la elige la persona en la fila de días del modal, no la propone más esta tarjeta:
@@ -119,8 +132,8 @@ export function TarjetaAccionesDelDia({ diaria, semanal, diaPrograma }: TarjetaA
       ) : (
         <View style={{ gap: 12, marginTop: 8 }}>
           <Text style={[t.body, { color: c.textSoft, fontSize: 15, lineHeight: 22 }]}>
-            Todavía no agendaste acciones. Elige cuáles caen cada día que quede de la semana, y a
-            qué hora. Desde las 18:00 el día en curso ya no se reacomoda.
+            Todavía no agendaste acciones de {ETIQUETA_EJE[ejeAbierto]}. Elige cuáles caen cada día
+            que quede de la semana, y a qué hora. Desde las 18:00 el día en curso ya no se reacomoda.
           </Text>
           <Pressable
             onPress={() => setAgendando(true)}

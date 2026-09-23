@@ -1836,6 +1836,7 @@ export default function PlanScreen() {
               maestras={objetivos.rocas}
               numeroSemana={semanaDe(diaPrograma)}
               diaPrograma={diaPrograma}
+              ejeAbierto={ejeAbierto}
               ejePrincipal={ejePrincipal}
               objetivoSugeridoDe={planMensual.objetivoSugeridoDe}
               onIrAlMapa={abrirMapa}

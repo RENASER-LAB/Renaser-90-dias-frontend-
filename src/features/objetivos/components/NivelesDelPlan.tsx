@@ -27,12 +27,20 @@ interface NivelesDelPlanProps {
    * tiene de `usePrioridadPrincipal`: montar ese hook otra vez acá serían dos lecturas iguales.
    */
   ejePrincipal: EjeObjetivo | null;
+  /**
+   * El eje que se está mirando: la tarjeta de la semana muestra SOLO ese.
+   *
+   * > **Agregado el 2026-09-23.** La tarjeta apilaba los tres ejes siempre, así que estando en
+   * > Negocio la primera línea era el objetivo de Cuerpo. Con una tarjeta por categoría, arriba y
+   * > abajo hablan de lo mismo.
+   */
+  ejeAbierto: EjeObjetivo;
   /** El objetivo semanal ya calculado, por eje. Baja desde `PlanScreen`, que ya tiene el plan. */
   objetivoSugeridoDe: (eje: EjeObjetivo) => string;
   onIrAlMapa?: () => void;
 }
 
-export function NivelesDelPlan({ maestras, numeroSemana, diaPrograma, ejePrincipal, objetivoSugeridoDe,
+export function NivelesDelPlan({ maestras, numeroSemana, diaPrograma, ejeAbierto, ejePrincipal, objetivoSugeridoDe,
   onIrAlMapa }: NivelesDelPlanProps) {
   const semanal = useRocasSemanales(maestras);
   const diaria = useRocasDiarias();
@@ -43,11 +51,12 @@ export function NivelesDelPlan({ maestras, numeroSemana, diaPrograma, ejePrincip
         semanal={semanal}
         maestras={maestras}
         numeroSemana={numeroSemana}
+        ejeAbierto={ejeAbierto}
         ejePrincipal={ejePrincipal}
         objetivoSugeridoDe={objetivoSugeridoDe}
         onIrAlMapa={onIrAlMapa}
       />
-      <TarjetaAccionesDelDia diaria={diaria} semanal={semanal} diaPrograma={diaPrograma} />
+      <TarjetaAccionesDelDia diaria={diaria} semanal={semanal} diaPrograma={diaPrograma} ejeAbierto={ejeAbierto} />
     </View>
   );
 }
