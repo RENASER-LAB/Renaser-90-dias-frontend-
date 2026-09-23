@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Alert } from '../../../components/Alerta';
@@ -69,6 +69,15 @@ interface PlanSemanalModalProps {
    */
   ejePrincipal: EjeObjetivo | null;
   /**
+   * Los ejes que esta semana YA tienen objetivo: el asistente no los vuelve a pedir.
+   *
+   * Existe para poder sumar los que faltan sin recorrer de nuevo lo ya hecho. El backend igual los
+   * ignoraría —desde el 2026-09-23 rechaza por eje y no por semana— pero mostrarlos sería pedirle
+   * a la persona que reescriba algo que ya guardó, y como no se pisa quedaría además la sensación
+   * de que no se guardó.
+   */
+  ejesYaConObjetivo?: EjeObjetivo[];
+  /**
    * El objetivo de la semana ya escrito, por eje: `"Llegar a 83.5 kg"`. Lo calcula el servidor y
    * siembra el campo — la persona lo confirma o lo cambia, pero no escribe un número que el sistema
    * ya sabe. `''` cuando ese eje no lleva cifra; ahí el campo abre vacío.
@@ -84,6 +93,7 @@ export function PlanSemanalModal({
   numeroSemana,
   maestras,
   ejePrincipal,
+  ejesYaConObjetivo,
   objetivoSugeridoDe,
   guardando,
   onGuardar,
@@ -114,8 +124,16 @@ export function PlanSemanalModal({
     });
   }, [visible, objetivoSugeridoDe]);
 
-  /* El principal del Mapa va primero: es el que manda y el único que hay que llenar para guardar. */
-  const ejesOrdenados = conPrincipalPrimero(EJES, ejePrincipal);
+  /*
+   * El principal del Mapa va primero: es el que manda y el único que hay que llenar para guardar.
+   * Los que ya tienen objetivo esta semana quedan fuera de los pasos — ver `ejesYaConObjetivo`.
+   */
+  const ejesOrdenados = useMemo(() => {
+    const todos = conPrincipalPrimero(EJES, ejePrincipal);
+    const pendientes = todos.filter(eje => !(ejesYaConObjetivo ?? []).includes(eje));
+    // Si no quedara ninguno, se muestran todos antes que un asistente vacío que no se puede cerrar.
+    return pendientes.length > 0 ? pendientes : todos;
+  }, [ejePrincipal, ejesYaConObjetivo]);
   const ejeObligatorio = ejesOrdenados[0];
   const ejeActual = ejesOrdenados[Math.min(paso, ejesOrdenados.length - 1)];
 
@@ -136,6 +154,7 @@ export function PlanSemanalModal({
       ? `${ETIQUETA_EJE[ejeActual]} · el único obligatorio`
       : `${ETIQUETA_EJE[ejeActual]} · opcional`;
   const esResumen = paso >= ejesOrdenados.length;
+
   const borrador = borradores[ejeActual];
   const objetivoDelEje = maestras.find(m => m.eje === ejeActual)?.objetivo ?? null;
 
@@ -150,6 +169,14 @@ export function PlanSemanalModal({
    */
   const loQueFalta = (b: BorradorDeEje): string | null =>
     b.titulo.trim() === '' ? 'falta el objetivo de la semana' : null;
+
+  /**
+   * Con el eje obligatorio lleno ya se puede cerrar la semana, sin recorrer los otros dos.
+   *
+   * Se mira `loQueFalta` del obligatorio —el mismo que usa `intentarGuardar`— y no solo el título,
+   * para que el botón no prometa algo que el guardado después rechaza con un diálogo.
+   */
+  const puedeGuardarYa = loQueFalta(borradores[ejeObligatorio]) === null;
 
   const completo = (b: BorradorDeEje) => loQueFalta(b) === null;
 
@@ -355,8 +382,20 @@ export function PlanSemanalModal({
                 <Text style={[t.body, { color: c.textSoft, fontFamily: 'Jost_700Bold', fontSize: 15 }]}>Atrás</Text>
               </Pressable>
             )}
-            <View style={{ flex: 1 }}>
-              {esResumen ? (
+            <View style={{ flex: 1, gap: 10 }}>
+              {/*
+                > **Corregido el 2026-09-23.** Guardar solo aparecía en el resumen, así que para
+                > terminar había que pasar por los tres ejes sí o sí. El dueño lo reportó con las
+                > mismas palabras de la vez anterior: *"¿por qué me pide 4 fases? solo debe pedirme
+                > la de la semana para terminar"*. La validación del backend ya acepta un eje
+                > (RK-12) y `intentarGuardar` ya valida solo el obligatorio — lo único que faltaba
+                > era que el botón estuviera a mano antes del final.
+                >
+                > Ahora, apenas el eje obligatorio tiene su objetivo, el botón principal es GUARDAR.
+                > Los otros dos siguen alcanzables por el enlace de abajo, que es lo que eran desde
+                > el principio: opcionales.
+              */}
+              {esResumen || puedeGuardarYa ? (
                 /* Sin `disabled` por lo que falte: eso lo resuelve `intentarGuardar` diciendo qué
                    falta. Apagado solo mientras se está guardando, para no mandar dos veces. */
                 <GoldButton
@@ -367,6 +406,13 @@ export function PlanSemanalModal({
               ) : (
                 /* Nunca apagado: se avanza con el eje vacío y se vuelve después. */
                 <GoldButton label="SIGUIENTE" onPress={() => setPaso(p => p + 1)} />
+              )}
+              {!esResumen && puedeGuardarYa && (
+                <Pressable onPress={() => setPaso(p => p + 1)} hitSlop={8} style={{ alignItems: 'center' }}>
+                  <Text style={[t.small, { color: c.textSoft, fontFamily: 'Jost_500Medium', fontSize: 14 }]}>
+                    {paso + 1 < ejesOrdenados.length ? 'Agregar otro eje (opcional)' : 'Ver el resumen'}
+                  </Text>
+                </Pressable>
               )}
             </View>
           </View>

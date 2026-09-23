@@ -106,9 +106,37 @@ export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, ejePrincip
 
       {(semanal.estado === 'planificada' || semanal.estado === 'cerrada') && (
         <View style={{ gap: 12, marginTop: 10 }}>
+          {/*
+            > **Corregido el 2026-09-23.** Acá había un `if (!roca) return null`: los ejes sin
+            > objetivo de la semana simplemente no se dibujaban. Sumado a que "Armar mi semana"
+            > solo aparecía en `sin_planificar`, el resultado era que al guardar el eje principal
+            > los otros dos quedaban inalcanzables hasta el domingo siguiente — el dueño abría
+            > Negocio, veía el objetivo de Cuerpo y no tenía cómo planificar el suyo.
+            >
+            > Era la otra mitad de RK-12, que nunca se construyó: se bajó el mínimo a un eje para
+            > no pedir los tres de una, pero sin forma de sumar los que faltan eso no es "después
+            > los agregás", es "perdiste la semana". El backend ahora rechaza por eje y no por
+            > semana, así que acá cada eje pendiente se muestra y se puede planificar.
+          */}
           {EJES.map(eje => {
             const roca = semanal.deEje(eje);
-            if (!roca) return null;
+            if (!roca) {
+              return (
+                <View key={eje} style={[estilos.bloqueEje, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
+                  <Text style={[t.micro, { color: c.textSoft, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
+                    {ETIQUETA_EJE[eje].toUpperCase()}
+                  </Text>
+                  <Text style={[t.body, { color: c.textSoft, fontSize: 15, marginTop: 4, lineHeight: 21 }]}>
+                    Todavía no le pusiste objetivo esta semana.
+                  </Text>
+                  <Pressable onPress={() => setPlanificando(true)} style={estilos.enlace} hitSlop={12}>
+                    <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 15 }]}>
+                      Planificar {ETIQUETA_EJE[eje]}
+                    </Text>
+                  </Pressable>
+                </View>
+              );
+            }
             const cerrada = roca.autoevaluacionFin != null;
             return (
               <View key={eje} style={[estilos.bloqueEje, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
@@ -148,6 +176,7 @@ export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, ejePrincip
         numeroSemana={numeroSemana}
         maestras={maestras}
         ejePrincipal={ejePrincipal}
+        ejesYaConObjetivo={EJES.filter(eje => semanal.deEje(eje) != null)}
         objetivoSugeridoDe={objetivoSugeridoDe}
         guardando={semanal.guardando}
         onGuardar={guardarPlan}
