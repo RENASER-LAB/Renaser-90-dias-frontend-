@@ -53,23 +53,6 @@ export function separarOraciones(texto: string): { completas: string[]; resto: s
 /** Preferencia de idioma para la voz: primero español latinoamericano, después cualquier español. */
 const PREFERENCIA_DE_VOZ = ['es-419', 'es-US', 'es-MX', 'es-PE', 'es-CO', 'es-AR', 'es-CL'];
 
-/**
- * Elige el idioma de la voz entre las que el teléfono tiene instaladas. Pedir uno que no existe
- * (p. ej. `es-419` en un emulador que solo trae "Spanish (United States)" y "Spanish (Spain)") hace
- * que el motor falle en silencio y el orbe no diga nada (visto el 2026-09-23). `null` = no hay
- * ninguna voz en español: la respuesta queda solo escrita.
- */
-export function elegirIdiomaDeVoz(idiomasInstalados: readonly string[]): string | null {
-  const normalizados = idiomasInstalados.map(idioma => idioma.replace('_', '-'));
-  const exacto = PREFERENCIA_DE_VOZ.find(preferido =>
-    normalizados.some(idioma => idioma.toLowerCase() === preferido.toLowerCase())
-  );
-  if (exacto) return exacto;
-  const latino = normalizados.find(idioma => /^es-(?!ES)/i.test(idioma));
-  if (latino) return latino;
-  return normalizados.find(idioma => /^es\b/i.test(idioma)) ?? null;
-}
-
 /** A partir de este largo, lo agrupado se manda a la voz sin esperar el final de la respuesta. */
 export const MAXIMO_AGRUPADO = 220;
 

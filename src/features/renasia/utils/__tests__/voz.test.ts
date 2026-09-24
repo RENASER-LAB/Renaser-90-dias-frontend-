@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from '@jest/globals';
 
-import { crearAgrupador, elegirIdiomaDeVoz, MAXIMO_CARACTERES_HABLADOS, recortarParaHablar, separarOraciones, textoParaHablar } from '../voz';
+import { crearAgrupador, MAXIMO_CARACTERES_HABLADOS, recortarParaHablar, separarOraciones, textoParaHablar } from '../voz';
 
 describe('textoParaHablar', () => {
   it('saca negritas, viñetas y títulos, que en voz alta serían ruido', () => {
@@ -48,24 +48,6 @@ describe('separarOraciones', () => {
 
   it('un salto de línea también cierra (listas)', () => {
     expect(separarOraciones('Te faltan:\n- Meditar\n- Le').completas).toEqual(['Te faltan:', '- Meditar']);
-  });
-});
-
-describe('elegirIdiomaDeVoz', () => {
-  it('prefiere español latinoamericano sobre el de España', () => {
-    expect(elegirIdiomaDeVoz(['en-US', 'es-ES', 'es-US'])).toBe('es-US');
-  });
-
-  it('acepta el formato con guion bajo que devuelven algunos motores', () => {
-    expect(elegirIdiomaDeVoz(['es_MX'])).toBe('es-MX');
-  });
-
-  it('si solo hay español de España, usa ese', () => {
-    expect(elegirIdiomaDeVoz(['en-US', 'es-ES'])).toBe('es-ES');
-  });
-
-  it('sin ninguna voz en español, no inventa una', () => {
-    expect(elegirIdiomaDeVoz(['en-US', 'pt-BR'])).toBeNull();
   });
 });
 

@@ -496,7 +496,7 @@ export default function HoyScreen() {
           </View>
         </View>
 
-        {voz.loQueDijiste || voz.respuesta || voz.error || voz.propuestas.length > 0 ? (
+        {voz.loQueDijiste || voz.respuesta || voz.error || voz.aviso || voz.propuestas.length > 0 ? (
           <View style={[styles.conversacionVoz, { borderColor: c.border, backgroundColor: c.cardBg }]}>
             {voz.loQueDijiste ? (
               <Text style={[t.small, { color: c.textSoft }]} numberOfLines={2}>
@@ -508,6 +508,7 @@ export default function HoyScreen() {
                 {voz.respuesta.replace(/[*_#`]+/g, '')}
               </Text>
             ) : null}
+            {voz.aviso ? <Text style={[t.small, { color: c.textSoft }]}>{voz.aviso}</Text> : null}
             {voz.error ? <Text style={[t.small, { color: c.danger }]}>{voz.error}</Text> : null}
             {voz.propuestas.length > 0 ? (
               // D-163: lo que el acompañante propone se confirma acá mismo, como haría un asistente

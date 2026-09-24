@@ -17,7 +17,8 @@ type Props = {
 function textoDeCierre(estado: EstadoPropuestaUI, mensaje?: string | null): string | null {
   switch (estado) {
     case 'confirmada':
-      return mensaje || 'Listo, quedó aplicado.';
+      // D-163: que se vea que la acción ya se hizo, y quién la propuso.
+      return mensaje || 'Hecho: tu acompañante ya lo aplicó.';
     case 'fallida':
       return mensaje || 'No se pudo aplicar.';
     case 'cancelada':
@@ -48,7 +49,7 @@ export function TarjetaPropuesta({ propuesta, onConfirmar, onCancelar }: Props) 
 
   return (
     <View style={[styles.tarjeta, { borderColor: c.borderStrong, backgroundColor: c.cardBgAlt }]}>
-      <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>PROPUESTA</Text>
+      <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>PROPUESTA DE TU ACOMPAÑANTE</Text>
       <Text style={[t.body, { color: c.text, fontSize: rs(14.5), lineHeight: rs(21) }]}>
         {propuesta.resumen}
       </Text>

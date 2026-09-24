@@ -12,9 +12,6 @@ function parlantesDePrueba(voces: Record<string, VozSintetizada | Promise<VozSin
       dicho.push(`natural:${voz.uri}`);
       return true;
     },
-    hablarConSistema: async texto => {
-      dicho.push(`sistema:${texto}`);
-    },
     detener: jest.fn(),
   };
   return { parlantes, dicho };
@@ -45,19 +42,23 @@ describe('Locutor', () => {
     expect(callado).toHaveBeenCalledTimes(1);
   });
 
-  it('usa la voz del teléfono cuando el servidor no tiene voz o falla', async () => {
+  it('sin voz del servidor no habla nada y avisa UNA sola vez: la respuesta queda escrita (D-164)', async () => {
     const { parlantes, dicho } = parlantesDePrueba({ Hola: { tipo: 'sin-voz' } });
-    const locutor = new Locutor(parlantes, jest.fn());
+    const alFaltarLaVoz = jest.fn();
+    const callado = jest.fn();
+    const locutor = new Locutor(parlantes, callado, alFaltarLaVoz);
 
     locutor.decir('Hola');
     locutor.decir('Chau');
     await esperarCola();
     await esperarCola();
 
-    expect(dicho).toEqual(['sistema:Hola', 'sistema:Chau']);
+    expect(dicho).toEqual([]);
+    expect(alFaltarLaVoz).toHaveBeenCalledTimes(1);
+    expect(callado).toHaveBeenCalledTimes(1);
   });
 
-  it('si el audio no se puede reproducir, esa oración la dice la voz del teléfono', async () => {
+  it('si un audio no se puede reproducir, avisa y sigue con la siguiente oración', async () => {
     const { parlantes, dicho } = parlantesDePrueba({
       Uno: { tipo: 'audio', uri: 'rota', headers: {} },
       Dos: { tipo: 'audio', uri: 'dos', headers: {} },
@@ -69,7 +70,7 @@ describe('Locutor', () => {
     await esperarCola();
     await esperarCola();
 
-    expect(dicho).toEqual(['sistema:Uno', 'natural:dos']);
+    expect(dicho).toEqual(['natural:dos']);
   });
 
   it('callado no dice lo pendiente ni lo que llegue después', async () => {

@@ -1,14 +1,11 @@
 import type * as ModuloDeAudio from 'expo-audio';
-import type * as ModuloDeHabla from 'expo-speech';
 
 import { sintetizarVoz, type VozSintetizada } from '../api/renasiaVoz';
 import type { Parlantes } from '../utils/locutor';
-import { elegirIdiomaDeVoz } from '../utils/voz';
 
 /**
- * Los dos módulos nativos se cargan opcionales, como la voz en `useDictado`: si el binario
- * instalado no los trae, Hoy abre igual. Sin expo-audio queda la voz del teléfono; sin ninguno, la
- * respuesta se muestra escrita.
+ * El módulo nativo se carga opcional, como la voz en `useDictado`: si el binario instalado no lo
+ * trae, Hoy abre igual y la respuesta se muestra escrita.
  */
 function cargar<T>(cargador: () => T): T | null {
   try {
@@ -20,16 +17,6 @@ function cargar<T>(cargador: () => T): T | null {
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const AUDIO = cargar(() => require('expo-audio') as typeof ModuloDeAudio);
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const HABLA = cargar(() => require('expo-speech') as typeof ModuloDeHabla);
-
-/** `es-US` es la voz latinoamericana más común en Android; se cambia por la mejor instalada. */
-let idioma: string | null = 'es-US';
-HABLA?.getAvailableVoicesAsync()
-  .then(voces => {
-    if (voces.length > 0) idioma = elegirIdiomaDeVoz(voces.map(voz => voz.language));
-  })
-  .catch(() => undefined);
 
 let reproductor: ModuloDeAudio.AudioPlayer | null = null;
 /** Corta lo que esté sonando y suelta a quien espera que termine. */
@@ -120,29 +107,18 @@ function reproducir(voz: Extract<VozSintetizada, { tipo: 'audio' }>, oracion: st
   });
 }
 
-function hablarConSistema(texto: string): Promise<void> {
-  if (!HABLA || !idioma) return Promise.resolve();
-  return new Promise(resolver => {
-    const listo = () => resolver();
-    HABLA.speak(texto, { language: idioma ?? 'es-US', onDone: listo, onStopped: listo, onError: listo });
-  });
-}
-
 /**
  * La voz del acompañante en este teléfono: la del servidor (Gemini, voz Kore, D-159) bajada entera y
- * reproducida con expo-audio y, si no hay, la del sistema. Si algún día la voz corre dentro de la
+ * reproducida con expo-audio. Si no hay, no suena otra voz (D-164): el `Locutor` avisa y la respuesta
+ * queda escrita. Si algún día la voz corre dentro de la
  * app (Piper con sherpa-onnx), se cambia solo `sintetizar`.
  */
 export const PARLANTES_DEL_TELEFONO: Parlantes = {
   sintetizar: (texto, signal) =>
     obtenerReproductor() ? sintetizarYBajar(texto, signal) : Promise.resolve({ tipo: 'sin-voz' as const }),
   reproducir,
-  hablarConSistema,
-  detener: () => {
-    cortarLoQueSuena?.();
-    HABLA?.stop();
-  },
+  detener: () => cortarLoQueSuena?.(),
 };
 
-/** El teléfono puede hablar de alguna forma. Si no, el orbe responde solo por escrito. */
-export const PUEDE_HABLAR = AUDIO !== null || HABLA !== null;
+/** Hay con qué reproducir la voz del servidor. Si no, el orbe responde solo por escrito. */
+export const PUEDE_HABLAR = AUDIO !== null;

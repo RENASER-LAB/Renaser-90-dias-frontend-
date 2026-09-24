@@ -229,6 +229,7 @@ export function useConversacionEnVivo(): ConversacionEnVivo {
     confirmarPropuesta: propuestasDeVoz.confirmar,
     cancelarPropuesta: propuestasDeVoz.cancelar,
     error,
+    aviso: null,
     tocar,
     empezar,
   };

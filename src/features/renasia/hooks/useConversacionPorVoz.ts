@@ -26,6 +26,8 @@ export type ConversacionPorVoz = {
   confirmarPropuesta: (id: string) => Promise<void>;
   cancelarPropuesta: (id: string) => Promise<void>;
   error: string | null;
+  /** Algo que la persona debe saber sin que sea un error de la conversación: p. ej., que no hay voz (D-164). */
+  aviso: string | null;
   /** Un solo toque hace lo que corresponde a la fase: escuchar, dejar de escuchar o callarse. */
   tocar: () => void;
 };
@@ -57,6 +59,7 @@ export function useConversacionPorVoz(): ConversacionPorVoz {
   const [respuesta, setRespuesta] = useState('');
   const propuestasDeVoz = usePropuestasDeVoz();
   const [error, setError] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const montadoRef = useRef(true);
 
@@ -65,6 +68,10 @@ export function useConversacionPorVoz(): ConversacionPorVoz {
   /** El locutor del turno en curso; cada pregunta arranca uno nuevo. */
   const locutorRef = useRef<Locutor | null>(null);
   const turnoRef = useRef({ caracteres: 0, cortado: false, terminoDeLlegar: false });
+
+  const alFaltarLaVoz = useCallback(() => {
+    if (montadoRef.current) setAviso('Mi voz no está disponible ahora mismo; te respondo por escrito.');
+  }, []);
 
   const alQuedarCallado = useCallback(() => {
     if (turnoRef.current.terminoDeLlegar && montadoRef.current) setFase('reposo');
@@ -100,6 +107,7 @@ export function useConversacionPorVoz(): ConversacionPorVoz {
       setRespuesta('');
       propuestasDeVoz.podarResueltas();
       setError(null);
+      setAviso(null);
       setFase('pensando');
       const controller = new AbortController();
       abortRef.current = controller;
@@ -108,7 +116,7 @@ export function useConversacionPorVoz(): ConversacionPorVoz {
       const agrupador = crearAgrupador(decir);
       let cantidadDePropuestas = 0;
       locutorRef.current?.callar();
-      locutorRef.current = new Locutor(PARLANTES_DEL_TELEFONO, alQuedarCallado);
+      locutorRef.current = new Locutor(PARLANTES_DEL_TELEFONO, alQuedarCallado, alFaltarLaVoz);
       turnoRef.current = { caracteres: 0, cortado: false, terminoDeLlegar: false };
       try {
         await enviarMensajeRenasia(
@@ -157,7 +165,7 @@ export function useConversacionPorVoz(): ConversacionPorVoz {
         abortRef.current = null;
       }
     },
-    [decir, alQuedarCallado]
+    [decir, alQuedarCallado, alFaltarLaVoz]
   );
 
   const dictado = useDictado(frasesDeHabitos, preguntar);
@@ -212,6 +220,7 @@ export function useConversacionPorVoz(): ConversacionPorVoz {
     confirmarPropuesta: propuestasDeVoz.confirmar,
     cancelarPropuesta: propuestasDeVoz.cancelar,
     error,
+    aviso,
     tocar,
   };
 }
