@@ -49,7 +49,7 @@ import { useEstadoMapa } from '../features/mapa-renacimiento/hooks/useEstadoMapa
 import type { RocaDiariaApi } from '../features/training/types/training.types';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
 import { OrbeAcompanante } from '../features/renasia/components/OrbeAcompanante';
-import { TarjetaPropuesta } from '../features/renasia/components/TarjetaPropuesta';
+import { AccionDelAcompanante } from '../features/renasia/components/AccionDelAcompanante';
 import { RenasiaPanel } from '../features/renasia/screens/RenasiaPanel';
 import { type FaseDeVoz } from '../features/renasia/hooks/useConversacionPorVoz';
 import { useVozDelOrbe } from '../features/renasia/hooks/useVozDelOrbe';
@@ -496,7 +496,7 @@ export default function HoyScreen() {
           </View>
         </View>
 
-        {voz.loQueDijiste || voz.respuesta || voz.error || voz.aviso || voz.propuestas.length > 0 ? (
+        {voz.loQueDijiste || voz.respuesta || voz.error || voz.aviso ? (
           <View style={[styles.conversacionVoz, { borderColor: c.border, backgroundColor: c.cardBg }]}>
             {voz.loQueDijiste ? (
               <Text style={[t.small, { color: c.textSoft }]} numberOfLines={2}>
@@ -510,23 +510,6 @@ export default function HoyScreen() {
             ) : null}
             {voz.aviso ? <Text style={[t.small, { color: c.textSoft }]}>{voz.aviso}</Text> : null}
             {voz.error ? <Text style={[t.small, { color: c.danger }]}>{voz.error}</Text> : null}
-            {voz.propuestas.length > 0 ? (
-              // D-163: lo que el acompañante propone se confirma acá mismo, como haría un asistente
-              // de voz. Nada cambia hasta que la persona toca Confirmar; la voz nunca confirma.
-              <View style={{ gap: 6 }}>
-                <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_500Medium' }]}>
-                  Tu acompañante propone. Nada cambia hasta que confirmes.
-                </Text>
-                {voz.propuestas.map(propuesta => (
-                  <TarjetaPropuesta
-                    key={propuesta.id}
-                    propuesta={propuesta}
-                    onConfirmar={() => void voz.confirmarPropuesta(propuesta.id)}
-                    onCancelar={() => void voz.cancelarPropuesta(propuesta.id)}
-                  />
-                ))}
-              </View>
-            ) : null}
             <Pressable
               onPress={() => setChatDelOrbeAbierto(true)}
               accessibilityRole="button"
@@ -816,6 +799,12 @@ export default function HoyScreen() {
         </View>
         </Aparicion>
       </ScrollView>
+      {/* D-163: la hoja de acción del orbe. Flotante y una sola a la vez: la voz no llena la pantalla. */}
+      <AccionDelAcompanante
+        propuestas={voz.propuestas}
+        onConfirmar={id => void voz.confirmarPropuesta(id)}
+        onCancelar={id => void voz.cancelarPropuesta(id)}
+      />
     </SafeAreaView>
   );
 }

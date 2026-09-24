@@ -14,7 +14,7 @@ type Props = {
 };
 
 /** Lo que se lee debajo del resumen cuando la propuesta ya no está pendiente. */
-function textoDeCierre(estado: EstadoPropuestaUI, mensaje?: string | null): string | null {
+export function textoDeCierre(estado: EstadoPropuestaUI, mensaje?: string | null): string | null {
   switch (estado) {
     case 'confirmada':
       // D-163: que se vea que la acción ya se hizo, y quién la propuso.

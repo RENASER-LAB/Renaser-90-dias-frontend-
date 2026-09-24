@@ -23,7 +23,10 @@ export function usePropuestasDeVoz(): PropuestasDeVoz {
   const [propuestas, setPropuestas] = useState<PropuestaUI[]>([]);
 
   const cambiar = useCallback((id: string, cambio: Partial<PropuestaUI>) => {
-    setPropuestas(prev => prev.map(p => (p.id === id ? { ...p, ...cambio } : p)));
+    // Al dejar de estar pendiente se anota cuándo: la hoja de acción la muestra unos segundos y se va.
+    const resuelta = cambio.estado && !['pendiente', 'confirmando', 'cancelando'].includes(cambio.estado);
+    const conMarca = resuelta ? { ...cambio, resueltaEnMs: Date.now() } : cambio;
+    setPropuestas(prev => prev.map(p => (p.id === id ? { ...p, ...conMarca } : p)));
   }, []);
 
   const agregar = useCallback((evento: RenasiaEventoPropuesta) => {

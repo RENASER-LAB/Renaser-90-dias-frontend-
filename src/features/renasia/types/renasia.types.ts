@@ -125,6 +125,8 @@ export type PropuestaUI = {
   estado: EstadoPropuestaUI;
   /** Lo que respondió el servidor al confirmar, o por qué no se pudo. Apto para mostrar. */
   mensaje?: string | null;
+  /** Cuándo dejó de estar pendiente (D-163): la hoja de acción del orbe la muestra unos segundos y se va. */
+  resueltaEnMs?: number;
 };
 
 /**
