@@ -50,8 +50,6 @@ export function separarOraciones(texto: string): { completas: string[]; resto: s
   return { completas, resto: texto.slice(inicio) };
 }
 
-/** Preferencia de idioma para la voz: primero español latinoamericano, después cualquier español. */
-const PREFERENCIA_DE_VOZ = ['es-419', 'es-US', 'es-MX', 'es-PE', 'es-CO', 'es-AR', 'es-CL'];
 
 /** A partir de este largo, lo agrupado se manda a la voz sin esperar el final de la respuesta. */
 export const MAXIMO_AGRUPADO = 220;
