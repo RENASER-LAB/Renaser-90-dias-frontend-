@@ -3,7 +3,7 @@ import type * as ModuloDosVias from '@speechmatics/expo-two-way-audio';
 
 import { getTokenSesion } from '../../../services/http/apiClient';
 import { leerEventoEnVivo, urlDeVozEnVivo, type EventoEnVivo } from '../api/vozEnVivo';
-import { Dosificador } from '../utils/dosificador';
+import { LoteDeMicrofono, Parlante } from '../utils/audioEnVivo';
 import type { ConversacionPorVoz, FaseDeVoz } from './useConversacionPorVoz';
 
 /**
@@ -23,8 +23,8 @@ const DOS_VIAS = cargarDosVias();
 const escucharAudio: typeof ModuloDosVias.useExpoTwoWayAudioEventListener =
   DOS_VIAS?.useExpoTwoWayAudioEventListener ?? (() => undefined);
 
-/** Cada cuánto se le entrega audio al reproductor (ver `Dosificador`). */
-const TICK_MS = 40;
+/** Cada cuánto se revisa si el orbe terminó de sonar. Solo mueve la fase: el audio no pasa por acá. */
+const REVISION_MS = 100;
 
 export type ConversacionEnVivo = ConversacionPorVoz & {
   /** Abre la conversación en vivo. `false` si no se pudo: el orbe usa entonces el flujo de siempre. */
@@ -33,11 +33,17 @@ export type ConversacionEnVivo = ConversacionPorVoz & {
 
 /**
  * Conversación por voz en tiempo real (D-162, Gemini Live a través del backend): se habla y el
- * acompañante contesta con voz mientras la genera, con el texto a la par. Se lo puede interrumpir
- * hablando. El micrófono queda abierto con cancelación de eco hasta que se toca el orbe de nuevo.
+ * acompañante contesta con voz mientras la genera, con el texto a la par. El micrófono queda
+ * abierto con cancelación de eco hasta que se toca el orbe de nuevo.
  *
  * Protocolo: `docs/arquitectura/PROPUESTA_GEMINI_LIVE.md` §5.ter. El audio va en frames binarios
  * (PCM 16 bits, 16 kHz) y los eventos en JSON.
+ *
+ * > Corregido 2026-09-24 (E-238). La primera versión repartía el audio al parlante de a poco desde
+ * > JavaScript y mandaba el micrófono siempre. Se oía entrecortado (43 `underrun` en el log) y el
+ * > orbe se oía a sí mismo y se contestaba en loop. Ahora el audio va entero y enseguida al módulo
+ * > nativo, y mientras el orbe habla se manda silencio (semidúplex, ver `Parlante`). La
+ * > interrupción hablando queda para cuando haya cancelación de eco de verdad: hoy se corta tocando.
  */
 export function useConversacionEnVivo(): ConversacionEnVivo {
   const [fase, setFase] = useState<FaseDeVoz>('reposo');
@@ -47,7 +53,8 @@ export function useConversacionEnVivo(): ConversacionEnVivo {
   const [error, setError] = useState<string | null>(null);
 
   const socketRef = useRef<WebSocket | null>(null);
-  const dosificadorRef = useRef(new Dosificador());
+  const parlanteRef = useRef(new Parlante());
+  const loteRef = useRef(new LoteDeMicrofono());
   const turnoNuevoRef = useRef(true);
 
   const cerrar = useCallback(() => {
@@ -55,7 +62,8 @@ export function useConversacionEnVivo(): ConversacionEnVivo {
     socketRef.current = null;
     if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ tipo: 'fin' }));
     socket?.close();
-    dosificadorRef.current.vaciar(Date.now());
+    parlanteRef.current.callar(Date.now());
+    loteRef.current.descartar();
     try {
       DOS_VIAS?.toggleRecording(false);
       DOS_VIAS?.tearDown();
@@ -65,23 +73,43 @@ export function useConversacionEnVivo(): ConversacionEnVivo {
     setFase('reposo');
   }, []);
 
-  // El micrófono, ya sin eco, va directo al backend.
-  escucharAudio('onMicrophoneData', evento => {
+  /**
+   * El micrófono, ya sin eco, va al backend en lotes de ~100 ms. Mientras el orbe habla (y un margen
+   * después) va silencio en vez del micrófono, así no se oye a sí mismo (semidúplex, E-238).
+   *
+   * Es estable a propósito (`useCallback` sin dependencias, todo por refs): el módulo se vuelve a
+   * suscribir cada vez que cambia la función, y con la transcripción llegando 25 veces por segundo
+   * eso era una suscripción nueva por render.
+   */
+  const alMicrofono = useCallback((evento: { data: Uint8Array }) => {
     const socket = socketRef.current;
-    if (socket?.readyState !== WebSocket.OPEN) return;
+    if (socket?.readyState !== WebSocket.OPEN) {
+      loteRef.current.descartar();
+      return;
+    }
     // Copia propia: el buffer del evento es del módulo nativo y se reusa.
-    socket.send(Uint8Array.from(evento.data));
-  });
+    const pcm = parlanteRef.current.microfonoAbierto(Date.now())
+      ? Uint8Array.from(evento.data)
+      : new Uint8Array(evento.data.length);
+    const lote = loteRef.current.agregar(pcm);
+    if (lote) socket.send(lote);
+  }, []);
+  escucharAudio('onMicrophoneData', alMicrofono);
 
-  // Entrega el audio de a poco y marca cuándo terminó de hablar.
+  /** Entero y enseguida al parlante nativo, que lo encola y lo toca de corrido (E-238). */
+  const alAudio = useCallback((pcm: Uint8Array) => {
+    DOS_VIAS?.playPCMData(pcm);
+    parlanteRef.current.sonar(pcm.length, Date.now());
+    setFase('hablando');
+  }, []);
+
+  // Cuando el orbe termina de sonar, vuelve a escuchar.
   useEffect(() => {
     const reloj = setInterval(() => {
-      const ahora = Date.now();
-      dosificadorRef.current.entregar(ahora).forEach(pedazo => DOS_VIAS?.playPCMData(pedazo));
-      if (!dosificadorRef.current.estaSonando(ahora)) {
+      if (!parlanteRef.current.estaSonando(Date.now())) {
         setFase(actual => (actual === 'hablando' ? 'escuchando' : actual));
       }
-    }, TICK_MS);
+    }, REVISION_MS);
     return () => clearInterval(reloj);
   }, []);
 
@@ -104,7 +132,9 @@ export function useConversacionEnVivo(): ConversacionEnVivo {
           setRespuesta(actual => actual + evento.texto);
           return;
         case 'interrumpido':
-          dosificadorRef.current.vaciar(Date.now());
+          // Lo que ya se le entregó al módulo nativo no se puede sacar de su cola; con el micrófono
+          // en silencio mientras habla, esto casi no llega. Solo se acomoda la fase.
+          parlanteRef.current.callar(Date.now());
           setFase('escuchando');
           return;
         case 'turnoCompleto':
@@ -154,13 +184,14 @@ export function useConversacionEnVivo(): ConversacionEnVivo {
       socketRef.current = socket;
       socket.onmessage = mensaje => {
         if (typeof mensaje.data !== 'string') {
-          dosificadorRef.current.agregar(new Uint8Array(mensaje.data as ArrayBuffer));
-          setFase('hablando');
+          alAudio(new Uint8Array(mensaje.data as ArrayBuffer));
           return;
         }
         const evento = leerEventoEnVivo(mensaje.data);
         if (evento?.tipo === 'listo') {
           void DOS_VIAS.initialize().then(() => {
+            parlanteRef.current = new Parlante();
+            loteRef.current.descartar();
             DOS_VIAS.toggleRecording(true);
             turnoNuevoRef.current = true;
             setFase('escuchando');
@@ -174,12 +205,14 @@ export function useConversacionEnVivo(): ConversacionEnVivo {
         terminar(false);
         if (socketRef.current === socket) cerrar();
       };
-      socket.onclose = () => {
+      socket.onclose = cierre => {
+        // Solo en desarrollo: el código dice por qué se cerró (1000 normal, 1013 no disponible, 1011 error).
+        if (__DEV__) console.log(`[voz en vivo] cerrado ${cierre.code} ${cierre.reason ?? ''}`);
         terminar(false);
         if (socketRef.current === socket) cerrar();
       };
     });
-  }, [alEvento, cerrar]);
+  }, [alAudio, alEvento, cerrar]);
 
   const tocar = useCallback(() => {
     if (socketRef.current) cerrar();
