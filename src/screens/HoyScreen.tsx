@@ -50,7 +50,8 @@ import type { RocaDiariaApi } from '../features/training/types/training.types';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
 import { OrbeAcompanante } from '../features/renasia/components/OrbeAcompanante';
 import { RenasiaPanel } from '../features/renasia/screens/RenasiaPanel';
-import { useConversacionPorVoz, type FaseDeVoz } from '../features/renasia/hooks/useConversacionPorVoz';
+import { type FaseDeVoz } from '../features/renasia/hooks/useConversacionPorVoz';
+import { useVozDelOrbe } from '../features/renasia/hooks/useVozDelOrbe';
 
 /** Lo que se lee debajo del orbe: la fase dicha con texto, para quien no ve la animación. */
 function rotuloDelOrbe(fase: FaseDeVoz, disponible: boolean): string {
@@ -105,7 +106,7 @@ export default function HoyScreen() {
   const [enBandejaTickets, setEnBandejaTickets] = useState(false);
   // El orbe del centro (2026-09-23): conversación por voz con el acompañante, y su chat para
   // confirmar propuestas o leer la respuesta completa.
-  const voz = useConversacionPorVoz();
+  const voz = useVozDelOrbe();
   const [chatDelOrbeAbierto, setChatDelOrbeAbierto] = useState(false);
   const [vistaMentor, setVistaMentor] = useState<'ninguna' | 'celula' | 'alumno'>('ninguna');
   const [alumnoAbierto, setAlumnoAbierto] = useState<AlumnoConEstado | null>(null);
