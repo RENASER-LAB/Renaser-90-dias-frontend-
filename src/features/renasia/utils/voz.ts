@@ -69,3 +69,41 @@ export function elegirIdiomaDeVoz(idiomasInstalados: readonly string[]): string 
   if (latino) return latino;
   return normalizados.find(idioma => /^es\b/i.test(idioma)) ?? null;
 }
+
+/** A partir de este largo, lo agrupado se manda a la voz sin esperar el final de la respuesta. */
+export const MAXIMO_AGRUPADO = 220;
+
+/**
+ * Decide qué se manda a la voz y cuándo (E-232, 2026-09-24): la PRIMERA oración sola, apenas llega,
+ * para que empiece a hablar rápido; el resto junto en un solo audio.
+ *
+ * Una oración por audio metía una pausa en cada punto: el silencio del final de un clip, el del
+ * principio del siguiente y el cambio de clip en el reproductor. Juntas, además, la voz entona el
+ * párrafo entero en vez de frases sueltas. El respaldo "Propuesta: …" nunca se lee.
+ */
+export function crearAgrupador(decir: (texto: string) => void, maximo = MAXIMO_AGRUPADO) {
+  let dijoLaPrimera = false;
+  let juntas = '';
+  return {
+    oracion(oracion: string) {
+      const limpia = oracion.trim();
+      if (!limpia || /^Propuesta:/i.test(limpia)) return;
+      if (!dijoLaPrimera) {
+        dijoLaPrimera = true;
+        decir(limpia);
+        return;
+      }
+      juntas = juntas ? `${juntas} ${limpia}` : limpia;
+      if (juntas.length >= maximo) {
+        decir(juntas);
+        juntas = '';
+      }
+    },
+    /** Lo que quedaba, más lo que haya que agregar al final (el aviso de la propuesta). */
+    terminar(...alFinal: string[]) {
+      alFinal.forEach(texto => this.oracion(texto));
+      if (juntas) decir(juntas);
+      juntas = '';
+    },
+  };
+}

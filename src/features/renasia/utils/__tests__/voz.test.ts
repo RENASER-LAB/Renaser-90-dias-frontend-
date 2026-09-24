@@ -3,7 +3,7 @@
  */
 import { describe, expect, it } from '@jest/globals';
 
-import { elegirIdiomaDeVoz, MAXIMO_CARACTERES_HABLADOS, recortarParaHablar, separarOraciones, textoParaHablar } from '../voz';
+import { crearAgrupador, elegirIdiomaDeVoz, MAXIMO_CARACTERES_HABLADOS, recortarParaHablar, separarOraciones, textoParaHablar } from '../voz';
 
 describe('textoParaHablar', () => {
   it('saca negritas, viñetas y títulos, que en voz alta serían ruido', () => {
@@ -66,5 +66,38 @@ describe('elegirIdiomaDeVoz', () => {
 
   it('sin ninguna voz en español, no inventa una', () => {
     expect(elegirIdiomaDeVoz(['en-US', 'pt-BR'])).toBeNull();
+  });
+});
+
+describe('crearAgrupador', () => {
+  it('dice la primera oración sola y junta el resto en un solo audio al terminar', () => {
+    const dicho: string[] = [];
+    const agrupador = crearAgrupador(texto => dicho.push(texto));
+
+    agrupador.oracion('¡Bien hecho!');
+    agrupador.oracion('Te faltan Leer y Tomar agua.');
+    agrupador.oracion('Leer vence a las ocho y media.');
+    expect(dicho).toEqual(['¡Bien hecho!']);
+
+    agrupador.terminar('¿Lo hacemos ahora?');
+    expect(dicho).toEqual(['¡Bien hecho!', 'Te faltan Leer y Tomar agua. Leer vence a las ocho y media. ¿Lo hacemos ahora?']);
+  });
+
+  it('si lo junto se hace largo, lo manda sin esperar el final', () => {
+    const dicho: string[] = [];
+    const agrupador = crearAgrupador(texto => dicho.push(texto), 30);
+
+    agrupador.oracion('Hola.');
+    agrupador.oracion('Esta oración ya es bastante larga.');
+    expect(dicho).toEqual(['Hola.', 'Esta oración ya es bastante larga.']);
+  });
+
+  it('nunca lee el respaldo de la propuesta', () => {
+    const dicho: string[] = [];
+    const agrupador = crearAgrupador(texto => dicho.push(texto));
+
+    agrupador.oracion('Propuesta: Cambiar Meditar a las 7:00');
+    agrupador.terminar('Listo.');
+    expect(dicho).toEqual(['Listo.']);
   });
 });

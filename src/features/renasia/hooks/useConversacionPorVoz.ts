@@ -4,7 +4,7 @@ import { mensajeDeError } from '../../../services/http/apiClient';
 import { enviarMensajeRenasia, RenasiaCuotaExcedidaError } from '../api/renasiaStream';
 import { Locutor } from '../utils/locutor';
 import { quitarTextoDeRespaldo } from '../utils/propuestas';
-import { MAXIMO_CARACTERES_HABLADOS, separarOraciones, textoParaHablar } from '../utils/voz';
+import { crearAgrupador, MAXIMO_CARACTERES_HABLADOS, separarOraciones, textoParaHablar } from '../utils/voz';
 import { PARLANTES_DEL_TELEFONO, PUEDE_HABLAR } from './parlantesDelTelefono';
 import { useDictado } from './useDictado';
 import { useFrasesDeHabitos } from './useFrasesDeHabitos';
@@ -35,8 +35,9 @@ export type ConversacionPorVoz = {
  *   mismas herramientas, misma cuota, y la conversación queda en su historial del chat.
  * - **Responder:** voz del servidor (Gemini, voz Kore, D-159; antes Piper, D-157) y, si no hay, la
  *   del teléfono; sin markdown. Empieza a hablar con la PRIMERA oración completa mientras el resto sigue llegando
- *   (2026-09-23: esperar la respuesta entera se sentía lento). El `Locutor` pide cada oración apenas
- *   llega y las dice en orden; pasado el máximo, avisa que el resto quedó escrito.
+ *   (2026-09-23: esperar la respuesta entera se sentía lento). La primera oración va sola y el resto
+ *   junto en un solo audio (`crearAgrupador`, E-232: una oración por audio metía una pausa en cada
+ *   punto). El `Locutor` los dice en orden; pasado el máximo, avisa que el resto quedó escrito.
  * - La pregunta viaja con `canal: 'VOZ'` (D-158): el acompañante contesta corto y como se habla.
  *
  * > Corregido 2026-09-23: decía "texto-a-voz del sistema" y encolaba en el motor del teléfono. Esa
@@ -100,6 +101,7 @@ export function useConversacionPorVoz(): ConversacionPorVoz {
       abortRef.current = controller;
       let acumulado = '';
       let sinDecir = '';
+      const agrupador = crearAgrupador(decir);
       let cantidadDePropuestas = 0;
       locutorRef.current?.callar();
       locutorRef.current = new Locutor(PARLANTES_DEL_TELEFONO, alQuedarCallado);
@@ -114,7 +116,7 @@ export function useConversacionPorVoz(): ConversacionPorVoz {
               if (montadoRef.current) setRespuesta(acumulado);
               const { completas, resto } = separarOraciones(sinDecir + fragmento);
               sinDecir = resto;
-              completas.forEach(decir);
+              completas.forEach(oracion => agrupador.oracion(oracion));
             },
             onPropuesta: evento => {
               acumulado = quitarTextoDeRespaldo(acumulado, evento.resumen);
@@ -132,8 +134,10 @@ export function useConversacionPorVoz(): ConversacionPorVoz {
           controller.signal
         );
         if (!montadoRef.current) return;
-        decir(sinDecir);
-        if (cantidadDePropuestas > 0) decir('Te dejé la propuesta en el chat: confírmala con el botón.');
+        agrupador.terminar(
+          sinDecir,
+          cantidadDePropuestas > 0 ? 'Te dejé la propuesta en el chat: confírmala con el botón.' : ''
+        );
         turnoRef.current.terminoDeLlegar = true;
         if (!locutorRef.current?.hablando) setFase('reposo');
       } catch (e) {
