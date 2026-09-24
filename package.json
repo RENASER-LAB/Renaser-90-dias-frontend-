@@ -61,7 +61,7 @@
     "test:e2e:native": "maestro test .maestro/admin-alquimista",
     "test": "jest --runInBand",
     "test:watch": "jest --runInBand --watch",
-    "postinstall": "node scripts/arreglar-thinking-orbs.js"
+    "postinstall": "node scripts/arreglar-thinking-orbs.js && node scripts/arreglar-two-way-audio.js"
   },
   "private": true
 }
