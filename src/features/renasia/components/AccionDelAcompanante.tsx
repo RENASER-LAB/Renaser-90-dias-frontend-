@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Aparicion } from '../../../components/Aparicion';
 import { GoldButton } from '../../../components/GoldButton';
+import { Icon, type IconName } from '../../../components/Icon';
 import { useTheme } from '../../../theme/ThemeContext';
-import type { PropuestaUI } from '../types/renasia.types';
-import { elegirAccionVisible } from '../utils/accionDelOrbe';
+import type { EstadoPropuestaUI, PropuestaUI } from '../types/renasia.types';
+import { elegirAccionVisible, primeraFrase, resumenCorto } from '../utils/accionDelOrbe';
 import { estadoVisible } from '../utils/propuestas';
 import { ESPACIO_PARA_LANZADOR } from './RenasiaLauncher';
-import { textoDeCierre } from './TarjetaPropuesta';
 
 type Props = {
   propuestas: PropuestaUI[];
@@ -16,17 +16,32 @@ type Props = {
   onCancelar: (id: string) => void;
 };
 
+/** Cómo se cierra la hoja: ícono y una sola frase. Pedido del dueño: directo, sin párrafos. */
+function cierreDe(estado: EstadoPropuestaUI, mensaje?: string | null): { icono: IconName; texto: string } {
+  switch (estado) {
+    case 'confirmada':
+      return { icono: 'checkCircle', texto: `Hecho${primeraFrase(mensaje) ? ` · ${primeraFrase(mensaje)}` : ''}` };
+    case 'cancelada':
+      return { icono: 'close', texto: 'Cancelado · No se cambió nada' };
+    case 'vencida':
+      return { icono: 'clock', texto: 'Venció · Pídeselo de nuevo' };
+    default:
+      return { icono: 'close', texto: `No se pudo${primeraFrase(mensaje) ? ` · ${primeraFrase(mensaje)}` : ''}` };
+  }
+}
+
 /**
- * La hoja de acción del orbe (D-163): una sola tarjeta flotante, abajo y siempre a la vista, con lo
- * que el acompañante propone y los botones para decidir. Al confirmar se convierte en "Hecho" con el
- * resultado y se va sola; cancelada o fallida, igual. Es lo que hace un asistente de voz: muestra la
- * acción, pide la confirmación y se retira. No se apila nada en la conversación.
+ * La hoja de acción del orbe (D-163): una sola tarjeta flotante, abajo y siempre a la vista. Una
+ * línea con lo que el acompañante propone (tocándola se ve el detalle: desde cuándo, cuántos
+ * cambios quedan) y los botones para decidir. Al confirmar se convierte en "Hecho" con una frase y
+ * se retira sola; cancelada o fallida, igual. Nada se apila en la conversación.
  *
  * Nada cambia hasta que la persona toca Confirmar: la voz nunca confirma (D-132, D-153).
  */
 export function AccionDelAcompanante({ propuestas, onConfirmar, onCancelar }: Props) {
   const { c, t } = useTheme();
   const [, volverAEvaluar] = useState(0);
+  const [detalleDe, setDetalleDe] = useState<string | null>(null);
   const accion = elegirAccionVisible(propuestas, Date.now());
 
   // Una acción ya resuelta se queda unos segundos y después la hoja se retira sola.
@@ -42,8 +57,7 @@ export function AccionDelAcompanante({ propuestas, onConfirmar, onCancelar }: Pr
   const estado = estadoVisible(propuesta, Date.now());
   const enCurso = estado === 'confirmando' || estado === 'cancelando';
   const pendiente = estado === 'pendiente' || enCurso;
-  const cierre = pendiente ? null : textoDeCierre(estado, propuesta.mensaje);
-  const colorCierre = estado === 'confirmada' ? c.success : estado === 'fallida' ? c.danger : c.textSoft;
+  const conDetalle = detalleDe === propuesta.id;
 
   return (
     <View
@@ -52,21 +66,22 @@ export function AccionDelAcompanante({ propuestas, onConfirmar, onCancelar }: Pr
       accessibilityLiveRegion="polite"
     >
       <Aparicion desplazamiento={12} style={styles.contenido}>
-        <View style={styles.cabecera}>
-          <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
-            {pendiente ? 'TU ACOMPAÑANTE PROPONE' : 'TU ACOMPAÑANTE'}
-          </Text>
-          {otrasPendientes > 0 ? (
-            <Text style={[t.micro, { color: c.textSoft }]}>
-              +{otrasPendientes} en el chat
-            </Text>
-          ) : null}
-        </View>
-        <Text style={[t.body, { color: c.text }]} numberOfLines={3}>
-          {propuesta.resumen}
-        </Text>
         {pendiente ? (
           <>
+            <Pressable
+              onPress={() => setDetalleDe(conDetalle ? null : propuesta.id)}
+              accessibilityRole="button"
+              accessibilityLabel={conDetalle ? 'Ocultar el detalle' : 'Ver el detalle de la propuesta'}
+              style={styles.linea}
+            >
+              <Icon name="spark" size={18} color={c.goldInk} />
+              <Text style={[t.body, styles.texto, { color: c.text }]} numberOfLines={conDetalle ? 8 : 2}>
+                {conDetalle ? propuesta.resumen : resumenCorto(propuesta.resumen)}
+              </Text>
+              {otrasPendientes > 0 ? (
+                <Text style={[t.micro, { color: c.textSoft }]}>+{otrasPendientes}</Text>
+              ) : null}
+            </Pressable>
             <View style={styles.botones}>
               <GoldButton
                 label="CANCELAR"
@@ -84,10 +99,18 @@ export function AccionDelAcompanante({ propuestas, onConfirmar, onCancelar }: Pr
                 style={styles.boton}
               />
             </View>
-            <Text style={[t.micro, { color: c.textSoft }]}>Nada cambia hasta que confirmes.</Text>
           </>
         ) : (
-          <Text style={[t.small, { color: colorCierre }]}>{cierre}</Text>
+          <View style={styles.linea}>
+            <Icon
+              name={cierreDe(estado, propuesta.mensaje).icono}
+              size={18}
+              color={estado === 'confirmada' ? c.success : estado === 'fallida' ? c.danger : c.textSoft}
+            />
+            <Text style={[t.body, styles.texto, { color: c.text }]} numberOfLines={2}>
+              {cierreDe(estado, propuesta.mensaje).texto}
+            </Text>
+          </View>
         )}
       </Aparicion>
     </View>
@@ -101,15 +124,17 @@ const styles = StyleSheet.create({
     right: 16,
     borderWidth: 1,
     borderRadius: 16,
-    padding: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     elevation: 6,
     shadowColor: '#000',
     shadowOpacity: 0.12,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
   },
-  contenido: { gap: 8 },
-  cabecera: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  contenido: { gap: 10 },
+  linea: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  texto: { flex: 1 },
   botones: { flexDirection: 'row', gap: 8 },
-  boton: { flex: 1, minHeight: 48 },
+  boton: { flex: 1, minHeight: 46 },
 });

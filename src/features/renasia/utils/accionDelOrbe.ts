@@ -33,3 +33,24 @@ export function elegirAccionVisible(propuestas: PropuestaUI[], ahoraMs: number):
   const ultima = recientes.reduce((a, b) => ((a.resueltaEnMs ?? 0) >= (b.resueltaEnMs ?? 0) ? a : b));
   return { propuesta: ultima, otrasPendientes: 0, seVaEnMs: PERMANENCIA_RESUELTA_MS - (ahoraMs - (ultima.resueltaEnMs ?? 0)) };
 }
+
+/** Hasta dónde se corta la línea corta de la hoja de acción. */
+export const LARGO_RESUMEN_CORTO = 64;
+
+/**
+ * La acción en una línea, para la hoja del orbe: lo que va antes del primer paréntesis o de la
+ * primera coma ("Cambiar 'Genera 10 km' de 07:00 a 10:00"). El detalle completo (desde cuándo,
+ * cuántos cambios quedan) se ve al tocar. Pedido del dueño: directo, poco texto.
+ */
+export function resumenCorto(resumen: string): string {
+  const corte = resumen.search(/\s\(|,/);
+  const base = (corte > 0 ? resumen.slice(0, corte) : resumen).trim();
+  return base.length > LARGO_RESUMEN_CORTO ? `${base.slice(0, LARGO_RESUMEN_CORTO - 1).trimEnd()}…` : base;
+}
+
+/** La primera frase de lo que respondió el servidor: "Horario cambiado: 10:00 desde el viernes…". */
+export function primeraFrase(mensaje: string | null | undefined): string | null {
+  if (!mensaje) return null;
+  const punto = mensaje.search(/\.(\s|$)/);
+  return (punto > 0 ? mensaje.slice(0, punto) : mensaje).trim();
+}
