@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { ApiError, mensajeDeError } from '../../../services/http/apiClient';
+import { mensajeDeError } from '../../../services/http/apiClient';
 import { cancelarPropuestaRenasia, confirmarPropuestaRenasia, obtenerHistorialRenasia } from '../api/renasiaApi';
 import { enviarMensajeRenasia, RenasiaCuotaExcedidaError } from '../api/renasiaStream';
 import { nombreVisible } from '../data/agentes';
 import type { AgenteRenasia, MensajeRenasiaApi, PropuestaUI, RenasiaMensajeUI } from '../types/renasia.types';
-import { estadoTrasConfirmar, propuestaDesdeEvento, quitarTextoDeRespaldo } from '../utils/propuestas';
+import { cambioPorError, estadoTrasConfirmar, propuestaDesdeEvento, quitarTextoDeRespaldo } from '../utils/propuestas';
 
 let contadorIdLocal = 0;
 /** Ids para mensajes que todavía no existen en el servidor (la pregunta optimista, la respuesta en curso). */
@@ -57,18 +57,6 @@ function conPropuesta(
       ? m
       : { ...m, propuestas: m.propuestas?.map(p => (p.id === idPropuesta ? { ...p, ...cambio } : p)) }
   );
-}
-
-/**
- * Qué mostrar si confirmar o cancelar falla. 409 = venció o ya se canceló: la tarjeta queda
- * cerrada con el motivo del servidor. Sin red: vuelve a `pendiente` para poder reintentar. Otro
- * error (403, 404): se cierra como fallida con el mensaje.
- */
-function cambioPorError(error: unknown): Partial<PropuestaUI> {
-  const mensaje = mensajeDeError(error, 'No pudimos completar esa acción. Inténtalo de nuevo.');
-  if (error instanceof ApiError && error.esConflicto) return { estado: 'vencida', mensaje };
-  if (error instanceof ApiError && !error.esDeRed) return { estado: 'fallida', mensaje };
-  return { estado: 'pendiente', mensaje };
 }
 
 /**

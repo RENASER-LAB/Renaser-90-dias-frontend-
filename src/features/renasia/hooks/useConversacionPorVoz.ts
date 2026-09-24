@@ -3,9 +3,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { mensajeDeError } from '../../../services/http/apiClient';
 import { enviarMensajeRenasia, RenasiaCuotaExcedidaError } from '../api/renasiaStream';
 import { Locutor } from '../utils/locutor';
+import type { PropuestaUI } from '../types/renasia.types';
 import { quitarTextoDeRespaldo } from '../utils/propuestas';
 import { crearAgrupador, MAXIMO_CARACTERES_HABLADOS, separarOraciones, textoParaHablar } from '../utils/voz';
 import { PARLANTES_DEL_TELEFONO, PUEDE_HABLAR } from './parlantesDelTelefono';
+import { usePropuestasDeVoz } from './usePropuestasDeVoz';
 import { useDictado } from './useDictado';
 import { useFrasesDeHabitos } from './useFrasesDeHabitos';
 
@@ -19,8 +21,10 @@ export type ConversacionPorVoz = {
   loQueDijiste: string;
   /** La respuesta del acompañante, escrita (siempre se muestra, también mientras la dice). */
   respuesta: string;
-  /** Cuántas acciones propuso en esta respuesta: se confirman con botón en el chat, nunca por voz. */
-  propuestas: number;
+  /** Lo que el acompañante propuso: se confirma con el botón, ahí mismo sobre el orbe, nunca por voz. */
+  propuestas: PropuestaUI[];
+  confirmarPropuesta: (id: string) => Promise<void>;
+  cancelarPropuesta: (id: string) => Promise<void>;
   error: string | null;
   /** Un solo toque hace lo que corresponde a la fase: escuchar, dejar de escuchar o callarse. */
   tocar: () => void;
@@ -51,7 +55,7 @@ export function useConversacionPorVoz(): ConversacionPorVoz {
   const [fase, setFase] = useState<FaseDeVoz>('reposo');
   const [loQueDijiste, setLoQueDijiste] = useState('');
   const [respuesta, setRespuesta] = useState('');
-  const [propuestas, setPropuestas] = useState(0);
+  const propuestasDeVoz = usePropuestasDeVoz();
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const montadoRef = useRef(true);
@@ -94,7 +98,7 @@ export function useConversacionPorVoz(): ConversacionPorVoz {
       }
       setLoQueDijiste(texto);
       setRespuesta('');
-      setPropuestas(0);
+      propuestasDeVoz.podarResueltas();
       setError(null);
       setFase('pensando');
       const controller = new AbortController();
@@ -123,7 +127,7 @@ export function useConversacionPorVoz(): ConversacionPorVoz {
               cantidadDePropuestas += 1;
               if (montadoRef.current) {
                 setRespuesta(acumulado);
-                setPropuestas(cantidadDePropuestas);
+                propuestasDeVoz.agregar(evento);
               }
             },
             onError: mensaje => {
@@ -136,7 +140,7 @@ export function useConversacionPorVoz(): ConversacionPorVoz {
         if (!montadoRef.current) return;
         agrupador.terminar(
           sinDecir,
-          cantidadDePropuestas > 0 ? 'Te dejé la propuesta en el chat: confírmala con el botón.' : ''
+          cantidadDePropuestas > 0 ? 'Te dejé la propuesta acá abajo: confírmala con el botón.' : ''
         );
         turnoRef.current.terminoDeLlegar = true;
         if (!locutorRef.current?.hablando) setFase('reposo');
@@ -199,5 +203,15 @@ export function useConversacionPorVoz(): ConversacionPorVoz {
     // 'pensando': el toque no hace nada; ya está en camino la respuesta.
   }, [fase, dictado]);
 
-  return { fase, disponible: dictado.disponible, loQueDijiste, respuesta, propuestas, error, tocar };
+  return {
+    fase,
+    disponible: dictado.disponible,
+    loQueDijiste,
+    respuesta,
+    propuestas: propuestasDeVoz.propuestas,
+    confirmarPropuesta: propuestasDeVoz.confirmar,
+    cancelarPropuesta: propuestasDeVoz.cancelar,
+    error,
+    tocar,
+  };
 }

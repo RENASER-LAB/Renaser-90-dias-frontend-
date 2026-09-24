@@ -3,7 +3,10 @@
  */
 import { describe, expect, it } from '@jest/globals';
 
+import { ApiError } from '../../../../services/http/apiClient';
+
 import {
+  cambioPorError,
   admiteAcciones,
   estadoTrasConfirmar,
   estadoVisible,
@@ -74,5 +77,26 @@ describe('estadoTrasConfirmar y admiteAcciones', () => {
     expect(admiteAcciones('pendiente')).toBe(true);
     expect(admiteAcciones('confirmando')).toBe(false);
     expect(admiteAcciones('confirmada')).toBe(false);
+  });
+});
+
+/**
+ * Compartido por el chat y por las propuestas sobre el orbe (D-163): qué queda en la tarjeta si
+ * confirmar o cancelar falla.
+ */
+describe('cambioPorError', () => {
+  it('409 (venció o ya se canceló): la tarjeta se cierra como vencida con el motivo del servidor', () => {
+    expect(cambioPorError(new ApiError(409, 'La propuesta venció'))).toEqual({
+      estado: 'vencida',
+      mensaje: 'La propuesta venció',
+    });
+  });
+
+  it('otro error del servidor (403): se cierra como fallida', () => {
+    expect(cambioPorError(new ApiError(403, 'No puedes confirmar esto')).estado).toBe('fallida');
+  });
+
+  it('sin red: vuelve a pendiente para poder reintentar', () => {
+    expect(cambioPorError(new Error('Network request failed')).estado).toBe('pendiente');
   });
 });

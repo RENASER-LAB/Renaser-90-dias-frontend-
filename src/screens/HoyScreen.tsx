@@ -49,6 +49,7 @@ import { useEstadoMapa } from '../features/mapa-renacimiento/hooks/useEstadoMapa
 import type { RocaDiariaApi } from '../features/training/types/training.types';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
 import { OrbeAcompanante } from '../features/renasia/components/OrbeAcompanante';
+import { TarjetaPropuesta } from '../features/renasia/components/TarjetaPropuesta';
 import { RenasiaPanel } from '../features/renasia/screens/RenasiaPanel';
 import { type FaseDeVoz } from '../features/renasia/hooks/useConversacionPorVoz';
 import { useVozDelOrbe } from '../features/renasia/hooks/useVozDelOrbe';
@@ -495,7 +496,7 @@ export default function HoyScreen() {
           </View>
         </View>
 
-        {voz.loQueDijiste || voz.respuesta || voz.error ? (
+        {voz.loQueDijiste || voz.respuesta || voz.error || voz.propuestas.length > 0 ? (
           <View style={[styles.conversacionVoz, { borderColor: c.border, backgroundColor: c.cardBg }]}>
             {voz.loQueDijiste ? (
               <Text style={[t.small, { color: c.textSoft }]} numberOfLines={2}>
@@ -508,10 +509,22 @@ export default function HoyScreen() {
               </Text>
             ) : null}
             {voz.error ? <Text style={[t.small, { color: c.danger }]}>{voz.error}</Text> : null}
-            {voz.propuestas > 0 ? (
-              <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_500Medium' }]}>
-                Tienes {voz.propuestas === 1 ? 'una propuesta' : `${voz.propuestas} propuestas`} para confirmar en el chat.
-              </Text>
+            {voz.propuestas.length > 0 ? (
+              // D-163: lo que el acompañante propone se confirma acá mismo, como haría un asistente
+              // de voz. Nada cambia hasta que la persona toca Confirmar; la voz nunca confirma.
+              <View style={{ gap: 6 }}>
+                <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_500Medium' }]}>
+                  Tu acompañante propone. Nada cambia hasta que confirmes.
+                </Text>
+                {voz.propuestas.map(propuesta => (
+                  <TarjetaPropuesta
+                    key={propuesta.id}
+                    propuesta={propuesta}
+                    onConfirmar={() => void voz.confirmarPropuesta(propuesta.id)}
+                    onCancelar={() => void voz.cancelarPropuesta(propuesta.id)}
+                  />
+                ))}
+              </View>
             ) : null}
             <Pressable
               onPress={() => setChatDelOrbeAbierto(true)}

@@ -5,6 +5,7 @@ import { getTokenSesion } from '../../../services/http/apiClient';
 import { leerEventoEnVivo, urlDeVozEnVivo, type EventoEnVivo } from '../api/vozEnVivo';
 import { LoteDeMicrofono, Parlante } from '../utils/audioEnVivo';
 import type { ConversacionPorVoz, FaseDeVoz } from './useConversacionPorVoz';
+import { usePropuestasDeVoz } from './usePropuestasDeVoz';
 
 /**
  * El módulo nativo se carga opcional, como la voz en `useDictado`: un binario anterior no lo
@@ -49,7 +50,7 @@ export function useConversacionEnVivo(): ConversacionEnVivo {
   const [fase, setFase] = useState<FaseDeVoz>('reposo');
   const [loQueDijiste, setLoQueDijiste] = useState('');
   const [respuesta, setRespuesta] = useState('');
-  const [propuestas, setPropuestas] = useState(0);
+  const propuestasDeVoz = usePropuestasDeVoz();
   const [error, setError] = useState<string | null>(null);
 
   const socketRef = useRef<WebSocket | null>(null);
@@ -123,7 +124,7 @@ export function useConversacionEnVivo(): ConversacionEnVivo {
             turnoNuevoRef.current = false;
             setLoQueDijiste('');
             setRespuesta('');
-            setPropuestas(0);
+            propuestasDeVoz.podarResueltas();
           }
           setLoQueDijiste(actual => actual + evento.texto);
           setFase(actual => (actual === 'hablando' ? actual : 'pensando'));
@@ -141,7 +142,7 @@ export function useConversacionEnVivo(): ConversacionEnVivo {
           turnoNuevoRef.current = true;
           return;
         case 'propuesta':
-          setPropuestas(actual => actual + 1);
+          propuestasDeVoz.agregar(evento);
           return;
         case 'cuotaAgotada':
           setError('Por hoy ya usaste tu tiempo de voz en vivo. Sigo contigo por el modo de siempre.');
@@ -155,7 +156,7 @@ export function useConversacionEnVivo(): ConversacionEnVivo {
           return;
       }
     },
-    [cerrar]
+    [cerrar, propuestasDeVoz]
   );
 
   const empezar = useCallback(async (): Promise<boolean> => {
@@ -219,5 +220,16 @@ export function useConversacionEnVivo(): ConversacionEnVivo {
     else void empezar();
   }, [cerrar, empezar]);
 
-  return { fase, disponible: DOS_VIAS !== null, loQueDijiste, respuesta, propuestas, error, tocar, empezar };
+  return {
+    fase,
+    disponible: DOS_VIAS !== null,
+    loQueDijiste,
+    respuesta,
+    propuestas: propuestasDeVoz.propuestas,
+    confirmarPropuesta: propuestasDeVoz.confirmar,
+    cancelarPropuesta: propuestasDeVoz.cancelar,
+    error,
+    tocar,
+    empezar,
+  };
 }

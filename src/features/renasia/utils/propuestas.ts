@@ -1,3 +1,4 @@
+import { ApiError, mensajeDeError } from '../../../services/http/apiClient';
 import type {
   EstadoPropuestaUI,
   PropuestaUI,
@@ -46,4 +47,16 @@ export function estadoTrasConfirmar(resultado: ResultadoPropuestaApi): EstadoPro
 /** Mientras se confirma o se cancela, ningún botón responde: evita el doble toque del lado del cliente. */
 export function admiteAcciones(estado: EstadoPropuestaUI): boolean {
   return estado === 'pendiente';
+}
+
+/**
+ * Qué mostrar si confirmar o cancelar falla. 409 = venció o ya se canceló: la tarjeta queda
+ * cerrada con el motivo del servidor. Sin red: vuelve a `pendiente` para poder reintentar. Otro
+ * error (403, 404): se cierra como fallida con el mensaje.
+ */
+export function cambioPorError(error: unknown): Partial<PropuestaUI> {
+  const mensaje = mensajeDeError(error, 'No pudimos completar esa acción. Inténtalo de nuevo.');
+  if (error instanceof ApiError && error.esConflicto) return { estado: 'vencida', mensaje };
+  if (error instanceof ApiError && !error.esDeRed) return { estado: 'fallida', mensaje };
+  return { estado: 'pendiente', mensaje };
 }
