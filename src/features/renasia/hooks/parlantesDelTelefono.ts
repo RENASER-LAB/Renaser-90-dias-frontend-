@@ -1,7 +1,7 @@
 import type * as ModuloDeAudio from 'expo-audio';
 import type * as ModuloDeHabla from 'expo-speech';
 
-import { sintetizarVoz } from '../api/renasiaVoz';
+import { sintetizarVoz, type VozSintetizada } from '../api/renasiaVoz';
 import type { Parlantes } from '../utils/locutor';
 import { elegirIdiomaDeVoz } from '../utils/voz';
 
@@ -44,26 +44,36 @@ function obtenerReproductor(): ModuloDeAudio.AudioPlayer | null {
   return reproductor;
 }
 
-function reproducir(uri: string, segundos: number): Promise<void> {
+/**
+ * Cuánto debería durar una oración dicha (~14 caracteres por segundo) más margen para que empiece a
+ * llegar. Si el reproductor nunca avisa que terminó, la conversación no se queda colgada.
+ */
+function plazoMs(oracion: string): number {
+  return (oracion.length / 14) * 1000 + 8000;
+}
+
+function reproducir(voz: Extract<VozSintetizada, { tipo: 'audio' }>, oracion: string): Promise<boolean> {
   const player = obtenerReproductor();
-  if (!player) return Promise.reject(new Error('sin reproductor'));
+  if (!player) return Promise.resolve(false);
   return new Promise(resolver => {
-    // Si el reproductor nunca avisa que terminó, no se queda la conversación colgada.
-    const plazo = setTimeout(terminar, segundos * 1000 + 2000);
+    const plazo = setTimeout(() => terminar(true), plazoMs(oracion));
     const suscripcion = player.addListener('playbackStatusUpdate', estado => {
-      if (estado.didJustFinish) terminar();
+      if (estado.didJustFinish) terminar(true);
+      // Sin ningún audio reproducido (204, sin red): que la diga la voz del teléfono.
+      else if (estado.error) terminar(estado.currentTime > 0.5);
     });
-    function terminar() {
+    function terminar(sono: boolean) {
       clearTimeout(plazo);
       suscripcion.remove();
       cortarLoQueSuena = null;
-      resolver();
+      resolver(sono);
     }
     cortarLoQueSuena = () => {
       player.pause();
-      terminar();
+      terminar(true);
     };
-    player.replace({ uri });
+    // El WAV llega mientras se genera (D-159): Android lo va tocando a medida que baja.
+    player.replace({ uri: voz.uri, headers: voz.headers });
     player.play();
   });
 }
@@ -77,9 +87,9 @@ function hablarConSistema(texto: string): Promise<void> {
 }
 
 /**
- * La voz del acompañante en este teléfono: la natural del servidor (D-157) reproducida con
- * expo-audio y, si no hay, la del sistema. Si algún día la voz corre dentro de la app (Piper con
- * sherpa-onnx), se cambia solo `sintetizar`.
+ * La voz del acompañante en este teléfono: la del servidor (Gemini, voz Kore, D-159) reproducida
+ * con expo-audio mientras baja y, si no hay, la del sistema. Si algún día la voz corre dentro de la
+ * app (Piper con sherpa-onnx), se cambia solo `sintetizar`.
  */
 export const PARLANTES_DEL_TELEFONO: Parlantes = {
   sintetizar: (texto, signal) =>

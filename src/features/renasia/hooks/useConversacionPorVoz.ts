@@ -33,8 +33,8 @@ export type ConversacionPorVoz = {
  * - **Escuchar:** el dictado de siempre (`useDictado`), sesgado con los nombres de sus hábitos.
  * - **Pensar:** la MISMA llamada que el chat (`POST /api/v1/renasia/mensajes`, agente COMPANION):
  *   mismas herramientas, misma cuota, y la conversación queda en su historial del chat.
- * - **Responder:** voz natural del servidor (Piper es_MX, D-157) y, si no hay, la del teléfono; sin
- *   markdown. Empieza a hablar con la PRIMERA oración completa mientras el resto sigue llegando
+ * - **Responder:** voz del servidor (Gemini, voz Kore, D-159; antes Piper, D-157) y, si no hay, la
+ *   del teléfono; sin markdown. Empieza a hablar con la PRIMERA oración completa mientras el resto sigue llegando
  *   (2026-09-23: esperar la respuesta entera se sentía lento). El `Locutor` pide cada oración apenas
  *   llega y las dice en orden; pasado el máximo, avisa que el resto quedó escrito.
  * - La pregunta viaja con `canal: 'VOZ'` (D-158): el acompañante contesta corto y como se habla.

@@ -3,8 +3,11 @@ import type { VozSintetizada } from '../api/renasiaVoz';
 /** Lo que el locutor necesita del mundo; en la app son el backend, expo-audio y expo-speech. */
 export type Parlantes = {
   sintetizar: (texto: string, signal: AbortSignal) => Promise<VozSintetizada>;
-  /** Resuelve cuando el audio terminó o se detuvo. */
-  reproducir: (uri: string, segundos: number) => Promise<void>;
+  /**
+   * Resuelve `true` cuando el audio terminó o se detuvo, y `false` si no se pudo reproducir (entonces
+   * la oración la dice la voz del teléfono). `oracion` sirve para estimar cuánto debería durar.
+   */
+  reproducir: (voz: Extract<VozSintetizada, { tipo: 'audio' }>, oracion: string) => Promise<boolean>;
   /** La voz del teléfono. Resuelve al terminar, detenerse o fallar. */
   hablarConSistema: (texto: string) => Promise<void>;
   detener: () => void;
@@ -40,8 +43,8 @@ export class Locutor {
       .then(async () => {
         const voz = await audio;
         if (this.cortado) return;
-        if (voz.tipo === 'audio') await this.parlantes.reproducir(voz.uri, voz.segundos);
-        else await this.parlantes.hablarConSistema(oracion);
+        const sono = voz.tipo === 'audio' && (await this.parlantes.reproducir(voz, oracion));
+        if (!sono && !this.cortado) await this.parlantes.hablarConSistema(oracion);
       })
       .catch(() => undefined)
       .finally(() => {
