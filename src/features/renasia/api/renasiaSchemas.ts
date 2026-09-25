@@ -82,10 +82,24 @@ const eventoRenasiaSchema = z.union([
   eventoDesconocidoSchema,
 ]);
 
+/**
+ * `GET /api/v1/renasia/memoria` (D-167). `categoria` es texto libre y no un enum a propósito: una
+ * categoría nueva del backend no puede romper el perfil de una app instalada hace meses; se muestra
+ * con su `titulo`, al final.
+ */
+const recuerdoRenasiaSchema = z
+  .object({ id: z.string(), categoria: z.string(), titulo: z.string(), texto: z.string() })
+  .passthrough();
+
+const memoriaRenasiaSchema = z
+  .object({ activa: z.boolean(), recuerdos: z.array(recuerdoRenasiaSchema), resumen: z.string().nullable() })
+  .passthrough();
+
 export const renasiaSchemas = {
   historial: historialRenasiaSchema,
   evento: eventoRenasiaSchema,
   resultadoPropuesta: resultadoPropuestaSchema,
+  memoria: memoriaRenasiaSchema,
 };
 
 export function validarRespuesta<T>(esquema: z.ZodType<T>, datos: unknown, origen: string): T {

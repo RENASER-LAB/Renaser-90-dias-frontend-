@@ -160,3 +160,17 @@ export type RenasiaMensajeUI = {
    */
   propuestas?: PropuestaUI[];
 };
+
+/**
+ * `GET /api/v1/renasia/memoria` — D-167: lo que el acompañante aprendió de la persona. `categoria`
+ * es el nombre estable para agrupar (hoy CONTEXTO_DE_VIDA, METAS_Y_LO_QUE_FUNCIONA,
+ * PREFERENCIAS_DE_TRATO); `titulo`, lo que se muestra. El `id` sirve solo para borrar: nunca se
+ * dibuja en pantalla.
+ */
+export type RecuerdoRenasiaApi = { id: string; categoria: string; titulo: string; texto: string };
+
+/**
+ * `activa`: si la memoria está encendida en el servidor. Apagada y sin nada guardado, la sección no
+ * se muestra; apagada con algo de antes, sí, para poder borrarlo.
+ */
+export type MemoriaRenasiaApi = { activa: boolean; recuerdos: RecuerdoRenasiaApi[]; resumen: string | null };
