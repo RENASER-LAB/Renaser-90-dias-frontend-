@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { semaforoDeHoySchema } from '../../semaforo/api/semaforoSchemas';
+
 /**
  * Validacion en runtime de `GET /api/v1/home`. Mismo criterio que
  * `features/habits/api/habitsSchemas.ts`: los tipos de TypeScript se borran al compilar, asi que
@@ -49,6 +51,27 @@ const proximoEventoSchema = z
  * planifico ninguna no tiene porcentaje que mostrar. Ese `null` es una respuesta valida, no un
  * hueco — exigir numero aca tumbaba la pantalla de Inicio entera para esa persona.
  */
+/**
+ * El semaforo de cumplimiento (D-168, contrato §4.2). **El unico campo de `/home` que no puede
+ * tumbar `/home`:**
+ *
+ * - `.nullish()`: `null` es "esta persona no se mide", y un backend anterior al semaforo ni siquiera
+ *   lo manda. En los dos casos la tarjeta no aparece.
+ * - `.catch(null)`: si llegara mal formado, la tarjeta no aparece y el resto de Inicio sigue en pie.
+ *   Es exactamente lo que no paso con `coherencia` el 2026-09-16 (ver el test de esta carpeta): un
+ *   campo nuevo exigido de mas dejo a la persona sin su pantalla de Inicio.
+ *
+ * En desarrollo se avisa por consola: esconder la tarjeta sin decir nada haria que un cambio de
+ * nombre en el backend pasara desapercibido.
+ */
+const semaforoDeHoyTolerante = semaforoDeHoySchema.nullish().catch(({ error }) => {
+  if (__DEV__) {
+    const detalle = error.issues.map(i => `${i.path.join('.') || '(raiz)'}: ${i.message}`).join(' | ');
+    console.warn(`GET /api/v1/home: el campo "semaforo" no tiene la forma esperada y se ignora — ${detalle}`);
+  }
+  return null;
+});
+
 const resumenHomeSchema = z
   .object({
     puntosLiga: z.number(),
@@ -63,6 +86,7 @@ const resumenHomeSchema = z
     proximoEvento: proximoEventoSchema.nullable(),
     notificacionesNoLeidas: z.number().nullable(),
     bloqueos: z.array(z.string()),
+    semaforo: semaforoDeHoyTolerante,
   })
   .passthrough();
 

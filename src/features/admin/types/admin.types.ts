@@ -1,5 +1,5 @@
 /** Las vistas de Administración. No son rutas del navegador: los cinco tabs no se tocan. */
-export type SeccionAdmin = 'inicio' | 'grupos' | 'personas' | 'solicitudes' | 'mas';
+export type SeccionAdmin = 'inicio' | 'grupos' | 'personas' | 'solicitudes' | 'semaforo' | 'mas';
 
 /** Un grupo tal como lo muestra la lista, ya traducido del contrato HTTP. */
 export type GrupoAdmin = {

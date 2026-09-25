@@ -11,6 +11,7 @@ import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher'
 import { abrirConversacionDirecta } from '../../chat/api/chatApi';
 import { urlDeEvidencia } from '../../evidence/api/evidenceApi';
 import { RejillaSemanal } from '../../mentor/components/RejillaSemanal';
+import { TarjetaSemaforoDeAprendiz } from '../../semaforo/components/TarjetaSemaforoDeAprendiz';
 import { avisar } from '../utils/dialogo';
 import type { AprendizAdminApi } from '../api/adminSchemas';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
@@ -253,6 +254,11 @@ export function FichaAprendizScreen({
             </View>
           </View>
         ) : null}
+
+        {/* Semáforo de cumplimiento (D-168), por la puerta de administración
+            (`GET /api/v1/admin/trainees/{id}/semaforo`): la MISMA tarjeta que ve su mentor. Se suma
+            al final, sin mover lo de arriba; con 404 o 403 no se dibuja. */}
+        <TarjetaSemaforoDeAprendiz origen={{ quien: 'admin', aprendizId: aprendiz.id }} />
       </ScrollView>
     </SafeAreaView>
   );

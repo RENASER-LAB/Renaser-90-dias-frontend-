@@ -1,5 +1,5 @@
-import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon } from '../../../components/Icon';
@@ -13,6 +13,7 @@ import { useRankingDeGrupos } from '../hooks/useRankingDeGrupos';
 import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
+import { SeccionSemaforoDelGrupo } from '../../semaforo/components/SeccionSemaforoDelGrupo';
 import { CargandoCelula, EstadoCelula } from '../components/EstadoCelula';
 import { FilaAlumno } from '../components/FilaAlumno';
 import type { FalloCelula, VistaCelula } from '../hooks/useCelulaQueAcompano';
@@ -25,6 +26,10 @@ import type { AlumnoConEstado } from '../types/mentor.types';
  * con `FlatList` a propósito: una lista virtualizada dentro de un `ScrollView` es exactamente
  * el doble scroll que la guía prohíbe, y una célula tiene diez personas —no mil— así que la
  * virtualización no compra nada y sí rompe el gesto.
+ *
+ * Desde el semáforo (D-168) suma la sección «Semáforo del grupo», debajo de las cifras. El aviso
+ * del sábado al mentor (`/mentor/groups/{g}/semaforo`) abre esta pantalla con `enfocarSemaforo`, y
+ * entonces el scroll baja hasta esa sección.
  */
 export function MiCelulaScreen({
   onSalir,
@@ -34,6 +39,7 @@ export function MiCelulaScreen({
   fallo,
   detalle,
   recargar,
+  enfocarSemaforo = false,
 }: {
   onSalir: () => void;
   onAbrirAlumno: (alumno: AlumnoConEstado) => void;
@@ -42,9 +48,33 @@ export function MiCelulaScreen({
   fallo: FalloCelula | null;
   detalle: string | null;
   recargar: () => void;
+  /** Llegó por el aviso del semáforo del grupo: abrir con esa sección a la vista. */
+  enfocarSemaforo?: boolean;
 }) {
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth, isTablet } = useResponsive();
+
+  /* Llevar el scroll hasta el semáforo cuando se llegó por su aviso. Se sigue a la sección
+     mientras lo de arriba (avisos, evaluación) termina de cargar y la corre hacia abajo —cada
+     cambio de su posición llega por `onLayout`—, y se deja de seguirla en cuanto la persona
+     mueve la pantalla con el dedo: a partir de ahí manda ella. */
+  const scroll = useRef<ScrollView>(null);
+  const alturaDelSemaforo = useRef<number | null>(null);
+  const seguirAlSemaforo = useRef(enfocarSemaforo);
+  const irAlSemaforo = () => {
+    if (!seguirAlSemaforo.current || alturaDelSemaforo.current === null) return;
+    scroll.current?.scrollTo({ y: Math.max(0, alturaDelSemaforo.current - 8), animated: false });
+  };
+  const alMedirSemaforo = (e: LayoutChangeEvent) => {
+    alturaDelSemaforo.current = e.nativeEvent.layout.y;
+    irAlSemaforo();
+  };
+  useEffect(() => {
+    if (!enfocarSemaforo) return;
+    seguirAlSemaforo.current = true;
+    irAlSemaforo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enfocarSemaforo]);
 
   useSystemBackHandler(() => {
     onSalir();
@@ -95,8 +125,12 @@ export function MiCelulaScreen({
       </View>
 
       <ScrollView
+        ref={scroll}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        onScrollBeginDrag={() => {
+          seguirAlSemaforo.current = false;
+        }}
         contentContainerStyle={[
           estilos.contenido,
           {
@@ -278,6 +312,23 @@ export function MiCelulaScreen({
                 ))}
               </View>
             </Aparicion>
+
+            {/* Semáforo de cumplimiento (D-168): la semana del grupo, persona por persona, con
+                palabra y color. Convive con las listas de abajo, que miden otra cosa (reglas.ts).
+                Si el servidor no tiene la ruta (404) o el mentor ya no acompaña el grupo (403),
+                la sección no aparece y la pantalla queda como estaba. La envoltura mide dónde
+                cae, para poder llevar el scroll hasta acá desde el aviso del sábado. */}
+            <View onLayout={alMedirSemaforo}>
+              <SeccionSemaforoDelGrupo
+                grupoId={vista.celula.id}
+                onAbrirAprendiz={aprendizId => {
+                  /* Solo si sigue en el padrón: la ficha necesita al alumno entero, y alguien
+                     que ya rotó no es de este mentor (mismo criterio que los avisos). */
+                  const alumno = vista.todos.find(a => a.participanteId === aprendizId);
+                  return alumno ? () => onAbrirAlumno(alumno) : undefined;
+                }}
+              />
+            </View>
 
             {vista.requierenSeguimiento.length > 0 ? (
               <Aparicion retardo={140} style={{ marginTop: 22 }}>

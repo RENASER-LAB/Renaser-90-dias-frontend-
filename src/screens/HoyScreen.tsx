@@ -23,6 +23,19 @@ import { entradaAlGrupoVisible, esLiderDeMentores } from '../features/mentor/uti
 import { TarjetaBandejaHoy } from '../features/tickets/components/TarjetaBandejaHoy';
 import { BandejaTicketsScreen } from '../features/tickets/screens/BandejaTicketsScreen';
 import { alAbrirAviso, consumirRutaPendiente } from '../features/mentor/notificaciones/rutaDeAviso';
+import { TarjetaSemaforoHoy } from '../features/semaforo/components/TarjetaSemaforoHoy';
+import { TarjetaSemaforoGruposHoy } from '../features/semaforo/components/TarjetaSemaforoGruposHoy';
+import { SemaforoScreen } from '../features/semaforo/screens/SemaforoScreen';
+import { SemaforoGruposScreen } from '../features/semaforo/screens/SemaforoGruposScreen';
+import { useMiSemaforo } from '../features/semaforo/hooks/useMiSemaforo';
+import { useResumenPorGrupos } from '../features/semaforo/hooks/useLecturaPorSemana';
+import {
+  comoAbrirElSemaforoDelGrupo,
+  diasParaLaTarjeta,
+  entradaDelResumenVisible,
+  hayQuePedirMiSemaforo,
+  quienAbreElResumenPorGrupos,
+} from '../features/semaforo/utils/entradasDelSemaforo';
 import { AdminScreen } from '../features/admin/screens/AdminScreen';
 import { TarjetaAdminHoy } from '../features/admin/components/TarjetaAdminHoy';
 import { TarjetaConfrontacion } from '../features/confrontacion/components/TarjetaConfrontacion';
@@ -92,7 +105,7 @@ export default function HoyScreen() {
   /* Quien puede administrar lo dice el SERVIDOR, no el rol leido en el telefono. Un rol nuevo
      manana no dejaria la entrada colgada, y una capacidad falseada abre pantallas vacias: cada
      endpoint vuelve a autorizar (SDD 003, ARF-15). */
-  const { capacidades } = useCapacidades();
+  const { capacidades, cargando: cargandoCapacidades } = useCapacidades();
   /* Ya no `esMentor`: la invitacion al programa propio es para todo el staff, ADMIN y ALQUIMISTA
      incluidos. Atarla a "es mentor" los dejaba fuera de un programa que el backend si les
      permitia iniciar — el bloqueo estaba aca, no en el permiso (ARF-16). */
@@ -111,6 +124,27 @@ export default function HoyScreen() {
   const [chatDelOrbeAbierto, setChatDelOrbeAbierto] = useState(false);
   const [vistaMentor, setVistaMentor] = useState<'ninguna' | 'celula' | 'alumno'>('ninguna');
   const [alumnoAbierto, setAlumnoAbierto] = useState<AlumnoConEstado | null>(null);
+  /* Semaforo de cumplimiento (D-168). Lo que el dueño autorizo agregar a Hoy el 2026-09-25 es esto
+     y nada mas (ver AGENTS.md): la tarjeta del semaforo con el detalle que abre, la tarjeta del lider
+     de mentores (abajo) y las rutas de los avisos del sabado. El detalle es estado de esta pantalla,
+     como las vistas del mentor. UNA lectura de `/me/semaforo`, compartida por la tarjeta (las barras)
+     y el detalle; solo se pide si `/home` dice que la persona se mide o si el detalle se abrio desde
+     el aviso. */
+  const [enSemaforo, setEnSemaforo] = useState(false);
+  /* Si `/home` ya trae los 7 dias (campo aditivo del backend), la tarjeta no necesita
+     `/me/semaforo`: se pide solo con el detalle abierto. Sin ese campo, como antes. */
+  const miSemaforo = useMiSemaforo(hayQuePedirMiSemaforo(resumen?.semaforo, enSemaforo));
+  /* Semaforo por grupos (D-168): la pantalla propia del LIDER DE MENTORES, como la bandeja de
+     tickets. UNA lectura, compartida por su tarjeta (que aparece solo si el servidor ya respondio
+     que existe) y su pantalla. Para cualquier otro rol no se pide nada. */
+  const semaforoGrupos = useResumenPorGrupos(esLider);
+  const [enSemaforoGrupos, setEnSemaforoGrupos] = useState(false);
+  /* El aviso del sabado al mentor abre su grupo con el semaforo a la vista. */
+  const [enfocarSemaforoDelGrupo, setEnfocarSemaforoDelGrupo] = useState(false);
+  /* El aviso del sabado a administracion entra directo al semaforo de Administracion. La clave
+     vuelve a montar la pila de vistas para que entre por ahi aunque ya estuviera abierta. */
+  const [adminAbreEn, setAdminAbreEn] = useState<'inicio' | 'semaforo'>('inicio');
+  const [montajeAdmin, setMontajeAdmin] = useState(0);
 
   /* Un aviso tocado desde la bandeja del sistema abre la ficha de ese alumno (RF-25).
      La ruta la deja `rutaDeAviso` y se atiende ACA porque las vistas del mentor son estado de
@@ -128,8 +162,10 @@ export default function HoyScreen() {
     const abrir = () => {
       const vista = celula.vista;
       if (!vista) return;
-      const ruta = consumirRutaPendiente();
+      /* Solo las rutas de alumno: la del semaforo la atiende su propio efecto, mas abajo. */
+      const ruta = consumirRutaPendiente('alumno');
       if (!ruta) return;
+      setEnSemaforo(false);
       const alumno = vista.todos.find(a => a.participanteId === ruta.alumnoId);
       if (alumno) {
         setAlumnoAbierto(alumno);
@@ -141,6 +177,65 @@ export default function HoyScreen() {
     abrir();
     return alAbrirAviso(abrir);
   }, [esMentor, celula.vista]);
+
+  /* El aviso del sabado (`/semaforo`, «Tu semana ya cerro») abre el detalle del semaforo. Para
+     cualquier rol: le llega a toda persona medida, no solo al mentor. Se trae Hoy al frente por si
+     el toque encontro la app en otra pestaña; si no, el detalle quedaria abierto donde no se ve. */
+  useEffect(() => {
+    const abrir = () => {
+      if (!consumirRutaPendiente('semaforo')) return;
+      setEnSemaforo(true);
+      (navigation as any).navigate('Hoy');
+    };
+    abrir();
+    return alAbrirAviso(abrir);
+  }, [navigation]);
+
+  /* El resumen del sabado al mentor (`/mentor/groups/{g}/semaforo`) abre su grupo con la seccion
+     del semaforo a la vista. Como la ruta de un alumno, espera al padron; y si el aviso es de un
+     grupo que ya no acompana, abre el grupo y nada mas. */
+  useEffect(() => {
+    if (!esMentor) return;
+    const abrir = () => {
+      const vista = celula.vista;
+      if (!vista) return;
+      const ruta = consumirRutaPendiente('semaforoGrupo');
+      if (!ruta) return;
+      setEnSemaforo(false);
+      setEnfocarSemaforoDelGrupo(comoAbrirElSemaforoDelGrupo(ruta.grupoId, vista.celula.id) === 'seccion');
+      setVistaMentor('celula');
+      (navigation as any).navigate('Hoy');
+    };
+    abrir();
+    return alAbrirAviso(abrir);
+  }, [esMentor, celula.vista, navigation]);
+
+  /* El resumen general del sabado (`/semaforo/grupos`): el lider de mentores abre su pantalla;
+     administracion y alquimista, el semaforo de Administracion. Espera a saber si la cuenta
+     administra, porque eso lo dice el servidor. */
+  useEffect(() => {
+    const abrir = () => {
+      const quien = quienAbreElResumenPorGrupos({
+        esLider,
+        administrar: capacidades.administrar,
+        cargandoCapacidades,
+      });
+      if (quien === 'esperar' || quien === 'nadie') return;
+      if (!consumirRutaPendiente('semaforoGrupos')) return;
+      setEnSemaforo(false);
+      if (quien === 'lider') {
+        setEnBandejaTickets(false);
+        setEnSemaforoGrupos(true);
+      } else {
+        setAdminAbreEn('semaforo');
+        setMontajeAdmin(n => n + 1);
+        setEnAdministracion(true);
+      }
+      (navigation as any).navigate('Hoy');
+    };
+    abrir();
+    return alAbrirAviso(abrir);
+  }, [esLider, capacidades.administrar, cargandoCapacidades, navigation]);
   const { abrir: abrirMapa, abierto: mapaAbierto } = useMapaRenacimientoAbierto();
   const estadoMapa = useEstadoMapa(user?.id ?? null, mapaAbierto);
   const {
@@ -172,8 +267,11 @@ export default function HoyScreen() {
     }, [cargarRocas])
   );
 
+  const recargarSemaforo = miSemaforo.recargar;
   const recargarTodo = useCallback(async () => {
     setRefreshing(true);
+    // Las barras de la tarjeta del semaforo: sin esto el resumen se refrescaria y ellas no.
+    recargarSemaforo();
     await Promise.all([
       recargarResumen(),
       cargarRocas(),
@@ -181,7 +279,7 @@ export default function HoyScreen() {
       recargarHabitoAhora(),
     ]);
     setRefreshing(false);
-  }, [recargarResumen, cargarRocas, recargarUltimaPublicacion, recargarHabitoAhora]);
+  }, [recargarResumen, cargarRocas, recargarUltimaPublicacion, recargarHabitoAhora, recargarSemaforo]);
 
   // Roca Prioritaria de Hoy: Posición 1 (Pareto Verde) o la primera disponible
   const rocaPrioritaria = rocas.find(r => r.posicion === 1) || rocas[0] || null;
@@ -287,15 +385,39 @@ export default function HoyScreen() {
   /* Las vistas del mentor toman la pantalla completa, como el Mapa: son otro contexto de
      trabajo, no una tarjeta mas dentro del dia propio. El retroceso del sistema las cierra
      paso a paso (cada una registra su `useSystemBackHandler`). */
+  /* El detalle del semaforo va PRIMERO: el aviso del sabado puede llegar con otra vista abierta
+     (Administracion, el grupo). Al volver, esa vista sigue donde estaba. */
+  if (enSemaforo) {
+    return (
+      <SemaforoScreen
+        semaforo={miSemaforo}
+        onVolver={() => setEnSemaforo(false)}
+        onPausaCambiada={() => void recargarResumen()}
+      />
+    );
+  }
   /* Administracion toma la pantalla completa, como las vistas del mentor y como el Mapa: es otro
      contexto de trabajo, no una tarjeta mas dentro del dia propio. */
   if (enAdministracion && capacidades.administrar) {
-    return <AdminScreen onSalir={() => setEnAdministracion(false)} />;
+    return (
+      <AdminScreen
+        key={montajeAdmin}
+        abrirEn={adminAbreEn}
+        onSalir={() => {
+          setEnAdministracion(false);
+          setAdminAbreEn('inicio');
+        }}
+      />
+    );
   }
   /* Misma forma que Administracion: pantalla completa, y el retroceso del sistema la cierra
      (la registra ella con su `useSystemBackHandler`). */
   if (enBandejaTickets && esLider) {
     return <BandejaTicketsScreen onVolver={() => setEnBandejaTickets(false)} />;
+  }
+  /* Misma forma que la bandeja: la otra pantalla propia del lider de mentores. */
+  if (enSemaforoGrupos && esLider) {
+    return <SemaforoGruposScreen lectura={semaforoGrupos} onVolver={() => setEnSemaforoGrupos(false)} />;
   }
   if (esMentor && vistaMentor === 'alumno' && alumnoAbierto) {
     return (
@@ -309,7 +431,11 @@ export default function HoyScreen() {
   if (esMentor && vistaMentor === 'celula') {
     return (
       <MiCelulaScreen
-        onSalir={() => setVistaMentor('ninguna')}
+        onSalir={() => {
+          setVistaMentor('ninguna');
+          setEnfocarSemaforoDelGrupo(false);
+        }}
+        enfocarSemaforo={enfocarSemaforoDelGrupo}
         onAbrirAlumno={alumno => {
           setAlumnoAbierto(alumno);
           setVistaMentor('alumno');
@@ -554,6 +680,12 @@ export default function HoyScreen() {
               asi que Hoy no cambia para nadie mas. */}
           {esLider ? <TarjetaBandejaHoy onAbrir={() => setEnBandejaTickets(true)} /> : null}
 
+          {/* Solo para el LIDER DE MENTORES, y solo si el servidor ya tiene el resumen por grupos
+              (con 404 o 403 no aparece). Para el resto esta condicion es falsa: Hoy no cambia. */}
+          {esLider && entradaDelResumenVisible(semaforoGrupos) ? (
+            <TarjetaSemaforoGruposHoy onAbrir={() => setEnSemaforoGrupos(true)} />
+          ) : null}
+
           {/*
             Invitación secundaria, no un bloqueo. Acompañar no exige cursar (D-07), así que esto
             es una oferta: quien dice "Ahora no" sigue trabajando igual y no pierde ningún dato —
@@ -669,6 +801,17 @@ export default function HoyScreen() {
               </View>
             </Card>
           </Pressable>
+
+          {/* Semaforo de cumplimiento (D-168). Entre Habitos y Acciones porque junta las dos cosas.
+              Solo si `/home` dice que la persona se mide: con `null` —no se mide, o un backend que
+              todavia no lo manda— Hoy queda exactamente como estaba. */}
+          {resumen?.semaforo ? (
+            <TarjetaSemaforoHoy
+              semaforo={resumen.semaforo}
+              dias={diasParaLaTarjeta(resumen.semaforo, miSemaforo.detalle)}
+              onAbrir={() => setEnSemaforo(true)}
+            />
+          ) : null}
 
           {/* Tarjeta Rocas y Objetivos */}
           <Card>
