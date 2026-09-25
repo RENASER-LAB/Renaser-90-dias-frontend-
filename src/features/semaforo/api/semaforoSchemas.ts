@@ -244,6 +244,9 @@ const grupoDelResumenSchema = z
     resumen: resumenPorColorSchema.nullish(),
     /** `BigDecimal` con un decimal, o `null` si ningún aprendiz del grupo tuvo datos. */
     promedio: z.number().nullish(),
+    /** El color del promedio y su palabra. String y no enum, como en todo el cable. */
+    color: z.string().nullish(),
+    etiqueta: z.string().nullish(),
   })
   .passthrough();
 
@@ -413,12 +416,18 @@ export function aSemaforoDelGrupo(crudo: SemaforoDelGrupoCrudo): SemaforoDelGrup
 }
 
 function aGrupoDelResumen(crudo: GrupoDelResumenCrudo): GrupoDelResumen {
+  const promedio = crudo.promedio ?? null;
+  /* Con color, la regla de todo promedio: sin número no hay color, y un color que no se entiende no
+     lleva número. Sin color (un backend anterior), el promedio queda neutro, como antes. */
+  const lectura = crudo.color == null ? null : aLecturaDelPromedio(crudo.color, crudo.etiqueta, promedio);
   return {
     grupoId: crudo.grupoId,
     grupoNombre: crudo.grupoNombre ?? null,
     mentorNombre: crudo.mentorNombre ?? null,
     resumen: aResumenPorColor(crudo.resumen),
-    promedio: crudo.promedio ?? null,
+    promedio: lectura ? lectura.porcentaje : promedio,
+    colorDelPromedio: lectura ? lectura.color : null,
+    etiquetaDelPromedio: lectura ? lectura.etiqueta : null,
   };
 }
 

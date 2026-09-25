@@ -43,9 +43,9 @@ const RESUMEN_DEL_CONTRATO = {
   desde: '2026-09-18', hasta: '2026-09-24', cerrada: false,
   totales: { verde: 40, amarillo: 12, rojo: 8, sinDatos: 2, total: 62 },
   grupos: [
-    { grupoId: '…', grupoNombre: 'Grupo Fénix', mentorNombre: 'Luisa R.',
+    { grupoId: '…', grupoNombre: 'Grupo Fénix', mentorNombre: 'Luisa Ramírez',
       resumen: { verde: 5, amarillo: 2, rojo: 1, sinDatos: 0, total: 8 },
-      promedio: 76.4 },
+      promedio: 76.4, color: 'AMARILLO', etiqueta: 'Requiere atención' },
   ],
 };
 
@@ -265,9 +265,11 @@ describe('el resumen por grupos (§4.4)', () => {
         {
           grupoId: '…',
           grupoNombre: 'Grupo Fénix',
-          mentorNombre: 'Luisa R.',
+          mentorNombre: 'Luisa Ramírez',
           resumen: { verde: 5, amarillo: 2, rojo: 1, sinDatos: 0, total: 8 },
           promedio: 76.4,
+          colorDelPromedio: 'AMARILLO',
+          etiquetaDelPromedio: 'Requiere atención',
         },
       ],
     });
@@ -279,6 +281,35 @@ describe('el resumen por grupos (§4.4)', () => {
       grupos: [{ ...RESUMEN_DEL_CONTRATO.grupos[0], promedio: null, resumen: { verde: 0, amarillo: 0, rojo: 0, sinDatos: 8, total: 8 } }],
     }).grupos;
     expect(grupo.promedio).toBeNull();
+  });
+
+  /* El color del promedio sigue la regla de todo promedio: sin número no hay color, y un color que
+     no se entiende no lleva número. */
+  it('con color pero sin promedio se lee «Sin datos», nunca «Al día»', () => {
+    const [grupo] = leerGrupos({
+      ...RESUMEN_DEL_CONTRATO,
+      grupos: [{ ...RESUMEN_DEL_CONTRATO.grupos[0], promedio: null, color: 'VERDE', etiqueta: 'Al día' }],
+    }).grupos;
+    expect(grupo.colorDelPromedio).toBe('SIN_DATOS');
+    expect(grupo.etiquetaDelPromedio).toBeNull();
+    expect(grupo.promedio).toBeNull();
+  });
+
+  it('un color del promedio que la app no conoce no lleva número', () => {
+    const [grupo] = leerGrupos({
+      ...RESUMEN_DEL_CONTRATO,
+      grupos: [{ ...RESUMEN_DEL_CONTRATO.grupos[0], color: 'AZUL', etiqueta: 'Otra cosa' }],
+    }).grupos;
+    expect(grupo.colorDelPromedio).toBe('SIN_DATOS');
+    expect(grupo.promedio).toBeNull();
+  });
+
+  it('un backend que todavía no manda el color deja el promedio neutro, con su número', () => {
+    const { color: _color, etiqueta: _etiqueta, ...sinColor } = RESUMEN_DEL_CONTRATO.grupos[0];
+    const [grupo] = leerGrupos({ ...RESUMEN_DEL_CONTRATO, grupos: [sinColor] }).grupos;
+    expect(grupo.colorDelPromedio).toBeNull();
+    expect(grupo.etiquetaDelPromedio).toBeNull();
+    expect(grupo.promedio).toBe(76.4);
   });
 
   it('los grupos quedan en el orden del servidor', () => {
@@ -301,7 +332,9 @@ describe('el resumen por grupos (§4.4)', () => {
       grupos: [{ ...RESUMEN_DEL_CONTRATO.grupos[0], aprendices: [{ aprendizId: 'u-1', nombre: 'Ana Pérez' }] }],
     });
     expect(JSON.stringify(resumen)).not.toContain('Ana Pérez');
-    expect(Object.keys(resumen.grupos[0]).sort()).toEqual(['grupoId', 'grupoNombre', 'mentorNombre', 'promedio', 'resumen']);
+    expect(Object.keys(resumen.grupos[0]).sort()).toEqual([
+      'colorDelPromedio', 'etiquetaDelPromedio', 'grupoId', 'grupoNombre', 'mentorNombre', 'promedio', 'resumen',
+    ]);
   });
 
   it('nulos: sin totales, sin grupos, sin mentor', () => {
@@ -311,7 +344,12 @@ describe('el resumen por grupos (§4.4)', () => {
       hasta: '2026-09-18',
       cerrada: true,
       totales: null,
-      grupos: [{ grupoId: 'g-1', grupoNombre: null, mentorNombre: null, resumen: null, promedio: null }],
+      grupos: [
+        {
+          grupoId: 'g-1', grupoNombre: null, mentorNombre: null, resumen: null, promedio: null,
+          colorDelPromedio: null, etiquetaDelPromedio: null,
+        },
+      ],
     });
   });
 

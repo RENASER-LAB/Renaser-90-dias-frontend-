@@ -8,6 +8,7 @@ import type { LecturaDeGrupos } from '../hooks/useLecturaPorSemana';
 import type { GrupoDelResumen } from '../types/semaforo.types';
 import { aprendicesEnPalabras, promedioEnPalabras, resumenEnPalabras } from '../utils/lecturaDelSemaforo';
 import { CantidadesPorColor } from './CantidadesPorColor';
+import { EtiquetaSemaforo } from './EtiquetaSemaforo';
 import { CargandoLectura, FalloDeLectura } from './EstadoDeLectura';
 import { NavegacionDeSemanas } from './NavegacionDeSemanas';
 
@@ -80,7 +81,7 @@ export function ResumenDeGrupos({
   );
 }
 
-/** Un grupo: nombre, mentor, cantidades por color con palabras y el promedio (sin color: §4.4 no lo trae). */
+/** Un grupo: nombre, mentor, cantidades por color con palabras y el promedio con su color y su palabra. */
 function TarjetaDeGrupo({ grupo, onPress }: { grupo: GrupoDelResumen; onPress?: () => void }) {
   const { c, t } = useTheme();
   const nombre = grupo.grupoNombre?.trim() || 'Grupo sin nombre';
@@ -89,7 +90,7 @@ function TarjetaDeGrupo({ grupo, onPress }: { grupo: GrupoDelResumen; onPress?: 
     nombre,
     grupo.mentorNombre ? `Mentor: ${grupo.mentorNombre}` : null,
     grupo.resumen ? resumenEnPalabras(grupo.resumen) : null,
-    promedio,
+    promedioEnPalabras(grupo.promedio, grupo.colorDelPromedio, grupo.etiquetaDelPromedio),
   ]
     .filter(Boolean)
     .join('. ');
@@ -106,9 +107,15 @@ function TarjetaDeGrupo({ grupo, onPress }: { grupo: GrupoDelResumen; onPress?: 
         <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 22 }]}>Mentor: {grupo.mentorNombre}</Text>
       ) : null}
       {grupo.resumen ? <CantidadesPorColor resumen={grupo.resumen} /> : null}
-      <Text style={[t.body, { color: c.text, fontSize: 16, lineHeight: 22, fontVariant: ['tabular-nums'] }]}>
-        {grupo.resumen ? `${promedio} · ${aprendicesEnPalabras(grupo.resumen.total)}` : promedio}
-      </Text>
+      <View style={estilos.promedio}>
+        {/* El color del promedio lo manda el servidor; sin él (backend anterior), queda neutro. */}
+        {grupo.colorDelPromedio ? (
+          <EtiquetaSemaforo color={grupo.colorDelPromedio} etiqueta={grupo.etiquetaDelPromedio} />
+        ) : null}
+        <Text style={[t.body, { color: c.text, fontSize: 16, lineHeight: 22, fontVariant: ['tabular-nums'] }]}>
+          {grupo.resumen ? `${promedio} · ${aprendicesEnPalabras(grupo.resumen.total)}` : promedio}
+        </Text>
+      </View>
     </>
   );
 
@@ -136,4 +143,5 @@ const estilos = StyleSheet.create({
   /* Misma caja que las tarjetas de Administración (radio 14, borde 1). */
   tarjeta: { borderRadius: 14, borderWidth: 1, padding: 14, gap: 8, width: '100%' },
   cabecera: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  promedio: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 12, rowGap: 4 },
 });

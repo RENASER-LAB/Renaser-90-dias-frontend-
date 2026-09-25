@@ -293,11 +293,13 @@ export function resumenEnPalabras(resumen: ResumenPorColor): string {
 }
 
 /**
- * El promedio de un grupo (§4.4). Sin color ni palabra, a propósito: el contrato no se los da y
- * la app no aplica umbrales por su cuenta. Sin número, «sin datos»: nunca un 0 %.
+ * El promedio de un grupo (§4.4), con la palabra de su color si el servidor la mandó: la app no
+ * aplica umbrales por su cuenta. Sin número, «sin datos»: nunca un 0 %.
  */
-export function promedioEnPalabras(promedio: number | null): string {
-  return promedio === null ? 'Promedio del grupo: sin datos' : `Promedio del grupo: ${formatearPorcentaje(promedio)}`;
+export function promedioEnPalabras(promedio: number | null, color?: ColorSemaforo | null, etiqueta?: string | null): string {
+  if (promedio === null) return 'Promedio del grupo: sin datos';
+  const palabra = color ? `${palabraDelSemaforo(color, etiqueta)}, ` : '';
+  return `Promedio del grupo: ${palabra}${formatearPorcentaje(promedio)}`;
 }
 
 /**

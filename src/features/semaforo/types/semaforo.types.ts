@@ -183,9 +183,17 @@ export interface GrupoDelResumen {
   resumen: ResumenPorColor | null;
   /**
    * Promedio de los porcentajes de sus aprendices con datos, un decimal. `null` = ninguno tuvo
-   * datos: nunca un 0 %. El contrato no le da color ni palabra, y la app no se los inventa.
+   * datos: nunca un 0 %.
    */
   promedio: number | null;
+  /**
+   * El color del promedio, que manda el servidor con los mismos umbrales que una persona (decisión
+   * del dueño, 2026-09-25). La app no lo calcula. `null` = un backend que todavía no lo manda: el
+   * promedio se muestra neutro, como antes.
+   */
+  colorDelPromedio: ColorSemaforo | null;
+  /** La palabra de ese color; `null` si no vino (la etiqueta pone la del color). */
+  etiquetaDelPromedio: string | null;
 }
 
 /** `GET /api/v1/semaforo/groups`: líder de mentores, administración y alquimista. */

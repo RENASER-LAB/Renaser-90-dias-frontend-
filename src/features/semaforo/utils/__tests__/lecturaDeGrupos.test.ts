@@ -53,6 +53,14 @@ describe('el promedio de un grupo (§4.4)', () => {
 
   it('sin número dice «sin datos», nunca 0 %', () => {
     expect(promedioEnPalabras(null)).toBe('Promedio del grupo: sin datos');
+    expect(promedioEnPalabras(null, 'VERDE', 'Al día')).toBe('Promedio del grupo: sin datos');
+  });
+
+  it('con color, dice la palabra antes del número', () => {
+    expect(promedioEnPalabras(76.4, 'AMARILLO', 'Requiere atención')).toBe(
+      `Promedio del grupo: Requiere atención, 76.4${ESPACIO_DURO}%`,
+    );
+    expect(promedioEnPalabras(84.2, 'VERDE', null)).toBe(`Promedio del grupo: Al día, 84.2${ESPACIO_DURO}%`);
   });
 
   it('un 0 real se dice: es un promedio medido, no una falta de datos', () => {
