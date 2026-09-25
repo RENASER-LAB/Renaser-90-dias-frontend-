@@ -885,7 +885,13 @@ export default function YoScreen() {
                 {/* D-167: solo si la memoria está encendida, o si quedó algo de antes para borrar. */}
                 {mostrarMemoria(memoriaRenasia.memoria) ? (
                   <Pressable
-                    onPress={() => setActiveView('memoria_renasia')}
+                    onPress={() => {
+                      /* Se vuelve a pedir al abrir: la pestaña Yo queda montada y, sin esto, la
+                         pantalla mostraba lo de hace una hora aunque Renasia ya hubiera aprendido
+                         algo nuevo (visto en el emulador, 2026-09-25). */
+                      void memoriaRenasia.recargar();
+                      setActiveView('memoria_renasia');
+                    }}
                     accessibilityRole="button"
                     accessibilityLabel="Ver lo que Renasia recuerda de ti"
                     style={[styles.menuOptionRow, { borderBottomColor: c.divider }]}
