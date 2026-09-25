@@ -50,6 +50,16 @@ const eventoFinSchema = z.object({ tipo: z.literal('fin') }).passthrough();
 /** `{"tipo":"error","valor":"..."}` — D-100: falla del modelo, apta para mostrar. */
 const eventoErrorSchema = z.object({ tipo: z.literal('error'), valor: z.string() }).passthrough();
 
+/** `{"tipo":"propuesta",...}` — D-153: una escritura que la persona confirma con un botón. */
+const eventoPropuestaSchema = z
+  .object({ tipo: z.literal('propuesta'), id: z.string(), resumen: z.string(), venceEn: z.string() })
+  .passthrough();
+
+/** Respuesta de confirmar una propuesta. */
+const resultadoPropuestaSchema = z
+  .object({ estado: z.enum(['CONFIRMADA', 'FALLIDA']), mensaje: z.string() })
+  .passthrough();
+
 /**
  * Rama de escape para tipos de evento que esta versión de la app no conoce.
  *
@@ -68,12 +78,28 @@ const eventoRenasiaSchema = z.union([
   eventoFuentesSchema,
   eventoFinSchema,
   eventoErrorSchema,
+  eventoPropuestaSchema,
   eventoDesconocidoSchema,
 ]);
+
+/**
+ * `GET /api/v1/renasia/memoria` (D-167). `categoria` es texto libre y no un enum a propósito: una
+ * categoría nueva del backend no puede romper el perfil de una app instalada hace meses; se muestra
+ * con su `titulo`, al final.
+ */
+const recuerdoRenasiaSchema = z
+  .object({ id: z.string(), categoria: z.string(), titulo: z.string(), texto: z.string() })
+  .passthrough();
+
+const memoriaRenasiaSchema = z
+  .object({ activa: z.boolean(), recuerdos: z.array(recuerdoRenasiaSchema), resumen: z.string().nullable() })
+  .passthrough();
 
 export const renasiaSchemas = {
   historial: historialRenasiaSchema,
   evento: eventoRenasiaSchema,
+  resultadoPropuesta: resultadoPropuestaSchema,
+  memoria: memoriaRenasiaSchema,
 };
 
 export function validarRespuesta<T>(esquema: z.ZodType<T>, datos: unknown, origen: string): T {

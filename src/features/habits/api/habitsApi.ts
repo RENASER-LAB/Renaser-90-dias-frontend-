@@ -51,8 +51,25 @@ export async function obtenerPreferencias(): Promise<PreferenciaHabitoApi[]> {
  * El backend genera los tracks del día si todavía no existen, descartando los hábitos cuya ventana
  * ya se cerró a esta hora (alguien que activa su programa a las 11 no recibe la ducha fría que
  * cerraba a las 08:00). Por eso esta llamada puede escribir en el servidor aunque sea un GET.
+ *
+ * Pedidos simultáneos comparten UNA sola llamada (E-230, 2026-09-24): Hoy pide esto para el hábito del
+ * momento y el orbe para sesgar el micrófono, al mismo tiempo. Dos GET en el mismo milisegundo hacían
+ * que el backend intentara crear dos veces el mismo track y uno respondía 409. El backend ya lo
+ * tolera; esto además ahorra el pedido repetido. Solo se comparte mientras está en vuelo: el
+ * siguiente pedido, ya terminado este, vuelve a ir al servidor.
  */
-export async function obtenerTracksDeHoy(): Promise<TrackDelDiaApi[]> {
+let tracksDeHoyEnVuelo: Promise<TrackDelDiaApi[]> | null = null;
+
+export function obtenerTracksDeHoy(): Promise<TrackDelDiaApi[]> {
+  if (!tracksDeHoyEnVuelo) {
+    tracksDeHoyEnVuelo = pedirTracksDeHoy().finally(() => {
+      tracksDeHoyEnVuelo = null;
+    });
+  }
+  return tracksDeHoyEnVuelo;
+}
+
+async function pedirTracksDeHoy(): Promise<TrackDelDiaApi[]> {
   const r = await apiFetch<unknown>('/api/v1/habit-tracks/today');
   return validarRespuesta(habitsSchemas.tracksDeHoy, r, 'GET /api/v1/habit-tracks/today');
 }

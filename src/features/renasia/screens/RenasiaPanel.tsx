@@ -18,6 +18,9 @@ import { useResponsive } from '../../../theme/responsive';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { Icon } from '../../../components/Icon';
 import { useRenasiaChat } from '../hooks/useRenasiaChat';
+import { useDictado } from '../hooks/useDictado';
+import { useFrasesDeHabitos } from '../hooks/useFrasesDeHabitos';
+import { unirDictado } from '../utils/dictado';
 import { MensajeBurbuja } from '../components/MensajeBurbuja';
 import { AGENTES, nombreVisible } from '../data/agentes';
 import type { AgenteRenasia } from '../types/renasia.types';
@@ -67,9 +70,15 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
     cargarMasAntiguos,
     enviarPregunta,
     reintentarMensaje,
+    confirmarPropuesta,
+    cancelarPropuesta,
   } = useRenasiaChat({ agent, courseId: contexto?.cursoId, ambito: contexto?.ambito });
 
   const [texto, setTexto] = useState('');
+  // Dictado por voz (plan de IA v2.1 §3.5): lo dictado se suma al campo y la persona lo revisa
+  // antes de enviar. En el acompañante se sesga con los nombres de sus hábitos de hoy.
+  const frasesDeHabitos = useFrasesDeHabitos(agent === 'COMPANION');
+  const dictado = useDictado(frasesDeHabitos, dictadoFinal => setTexto(actual => unirDictado(actual, dictadoFinal)));
   const scrollRef = useRef<ScrollView>(null);
 
   // Soporte para gestos nativos de Android / Xiaomi: deslizar desde el borde (o el botón físico
@@ -214,27 +223,56 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
                     mensaje={m}
                     nombreAsistente={nombre}
                     onReintentar={reintentarMensaje}
+                    onConfirmarPropuesta={confirmarPropuesta}
+                    onCancelarPropuesta={cancelarPropuesta}
                   />
                 ))}
               </>
             )}
           </ScrollView>
 
+          {dictado.error ? (
+            <Text
+              style={[t.small, { color: c.danger, fontSize: 12.5, paddingHorizontal: horizontalPadding, paddingTop: 6 }]}
+            >
+              {dictado.error}
+            </Text>
+          ) : null}
+
           {/* Input */}
           <View
             style={[styles.inputBar, { borderTopColor: c.divider, paddingHorizontal: horizontalPadding }]}
           >
+            {dictado.disponible && (
+              <Pressable
+                onPress={dictado.escuchando ? dictado.detener : dictado.empezar}
+                disabled={enviando}
+                accessibilityRole="button"
+                accessibilityLabel={dictado.escuchando ? 'Dejar de dictar' : 'Dictar por voz'}
+                style={[
+                  styles.enviarBtn,
+                  {
+                    backgroundColor: dictado.escuchando ? c.danger : c.cardBgAlt,
+                    borderWidth: 1,
+                    borderColor: dictado.escuchando ? c.danger : c.border,
+                    opacity: enviando ? 0.5 : 1,
+                  },
+                ]}
+              >
+                <Icon name="mic" size={20} color={dictado.escuchando ? '#FFFFFF' : c.goldInk} />
+              </Pressable>
+            )}
             <TextInput
-              value={texto}
+              value={dictado.escuchando && dictado.parcial ? unirDictado(texto, dictado.parcial) : texto}
               onChangeText={setTexto}
-              placeholder={`Escríbele a ${nombre}…`}
+              placeholder={dictado.escuchando ? 'Te escucho…' : `Escríbele a ${nombre}…`}
               placeholderTextColor={c.textSoft}
               style={[
                 styles.input,
                 { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.text, fontSize: rs(14.5) },
               ]}
               multiline
-              editable={!enviando}
+              editable={!enviando && !dictado.escuchando}
               onSubmitEditing={handleEnviar}
               blurOnSubmit={false}
             />

@@ -43,6 +43,9 @@ import { MapaRenacimientoFlow } from '../features/mapa-renacimiento/MapaRenacimi
 import { elegirFotoDePerfil } from '../features/auth/utils/elegirFotoDePerfil';
 import * as authApi from '../features/auth/api/authApi';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
+import { MemoriaDeRenasia } from '../features/renasia/components/MemoriaDeRenasia';
+import { useMemoriaDeRenasia } from '../features/renasia/hooks/useMemoriaDeRenasia';
+import { mostrarMemoria } from '../features/renasia/utils/memoria';
 import { useMisEvidencias } from '../features/evidence/hooks/useMisEvidencias';
 import { ESTADO_EVIDENCIA, iconoDeTipo } from '../features/evidence/api/evidenceSchemas';
 
@@ -227,8 +230,10 @@ export default function YoScreen() {
   // ESTADOS DE NAVEGACIÓN DENTRO DE LA TARJETA DEL USUARIO
   // =========================================================================
   const [activeView, setActiveView] = useState<
-    'main' | 'hub' | 'editar_perfil' | 'info_perfil' | 'evidencias' | 'logros' | 'onboarding' | 'pacto' | 'mapa_renacimiento' | 'metodo' | 'video_activacion' | 'notificaciones'
+    'main' | 'hub' | 'editar_perfil' | 'info_perfil' | 'evidencias' | 'logros' | 'onboarding' | 'pacto' | 'mapa_renacimiento' | 'metodo' | 'video_activacion' | 'notificaciones' | 'memoria_renasia'
   >('main');
+  /* D-167: se pide al entrar a Ajustes (donde está la fila) y no al abrir la pestaña Yo. */
+  const memoriaRenasia = useMemoriaDeRenasia(activeView === 'hub' || activeView === 'memoria_renasia');
   /* Segunda puerta a Administracion, ademas de la de Hoy. Dos entradas y ningun sexto tab: el
      administrador llega desde donde este, y los cinco tabs quedan como estaban (SDD 003, ARF-01). */
   const { capacidades } = useCapacidades();
@@ -877,6 +882,31 @@ export default function YoScreen() {
                   <Icon name="chevron" size={12} color={c.goldInk} />
                 </Pressable>
 
+                {/* D-167: solo si la memoria está encendida, o si quedó algo de antes para borrar. */}
+                {mostrarMemoria(memoriaRenasia.memoria) ? (
+                  <Pressable
+                    onPress={() => {
+                      /* Se vuelve a pedir al abrir: la pestaña Yo queda montada y, sin esto, la
+                         pantalla mostraba lo de hace una hora aunque Renasia ya hubiera aprendido
+                         algo nuevo (visto en el emulador, 2026-09-25). */
+                      void memoriaRenasia.recargar();
+                      setActiveView('memoria_renasia');
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Ver lo que Renasia recuerda de ti"
+                    style={[styles.menuOptionRow, { borderBottomColor: c.divider }]}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                      <Icon name="brain" size={16} color={c.goldInk} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={[t.cardTitle, { color: c.textStrong }]}>Lo que Renasia recuerda de ti</Text>
+                        <Text style={[t.small, { color: c.textSoft }]}>Míralo y bórralo cuando quieras</Text>
+                      </View>
+                    </View>
+                    <Icon name="chevron" size={12} color={c.goldInk} />
+                  </Pressable>
+                ) : null}
+
                 {/* Es un `View` y no un `Pressable` como sus dos vecinas —y como las tres filas con
                     Switch de la sub-vista de Notificaciones—: envolver un Switch en un Pressable
                     hace que tocar el propio interruptor dispare las dos cosas y el modo se cambie
@@ -920,6 +950,50 @@ export default function YoScreen() {
               </View>
             </View>
           </View>
+        </ScrollView>
+      )}
+
+      {/* ========================================================================= */}
+      {/* SUB-VISTA: LO QUE RENASIA RECUERDA DE TI (D-167)                          */}
+      {/* ========================================================================= */}
+      {activeView === 'memoria_renasia' && (
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={[
+            styles.content,
+            {
+              paddingHorizontal: horizontalPadding,
+              maxWidth: contentMaxWidth,
+              alignSelf: isTablet ? 'center' : 'stretch',
+              width: isTablet ? '100%' : undefined,
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
+            <Pressable onPress={() => setActiveView('hub')} style={styles.backBtnRow} hitSlop={8}>
+              <Icon name="arrowLeft" size={14} color={c.goldInk} />
+              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
+                VOLVER A AJUSTES
+              </Text>
+            </Pressable>
+            <View style={[styles.categoryPillBadge, { backgroundColor: c.goldWash }]}>
+              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
+                RENASIA
+              </Text>
+            </View>
+          </View>
+
+          <Text style={[t.cardTitle, { color: c.textStrong }]}>Lo que Renasia recuerda de ti</Text>
+          <MemoriaDeRenasia
+            memoria={memoriaRenasia.memoria}
+            cargando={memoriaRenasia.cargando}
+            borrando={memoriaRenasia.borrando}
+            error={memoriaRenasia.error}
+            onOlvidar={id => void memoriaRenasia.olvidar(id)}
+            onOlvidarTodo={() => void memoriaRenasia.olvidarTodo()}
+            onReintentar={() => void memoriaRenasia.recargar()}
+          />
         </ScrollView>
       )}
 

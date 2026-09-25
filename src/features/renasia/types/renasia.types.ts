@@ -27,6 +27,11 @@ export type PreguntarRenasiaBody = {
   courseId?: string;
   /** Solo `COURSE_TUTOR` (D-100): "el curso X, lección Y". Va al prompt de sistema, nunca dentro de la pregunta. */
   scope?: string;
+  /**
+   * D-158: `VOZ` cuando la pregunta llega por el orbe de Hoy; el acompañante responde corto y como
+   * se habla, sin listas. Ausente = `TEXTO` (el chat de siempre).
+   */
+  canal?: 'TEXTO' | 'VOZ';
 };
 
 export type RenasiaRoleApi = 'USER' | 'ASSISTANT';
@@ -71,6 +76,17 @@ export type RenasiaEventoFin = { tipo: 'fin' };
 export type RenasiaEventoError = { tipo: 'error'; valor: string };
 
 /**
+ * `{"tipo":"propuesta","id":"…","resumen":"…","venceEn":"ISO-8601"}` — D-153 del backend: el
+ * acompañante NO ejecuta escrituras; las propone y la persona las confirma con un botón. Llega
+ * después de un `texto` "\n\nPropuesta: <resumen>" que es el respaldo para versiones viejas de la
+ * app (que ignoran este tipo); esta versión quita ese texto y dibuja la tarjeta.
+ */
+export type RenasiaEventoPropuesta = { tipo: 'propuesta'; id: string; resumen: string; venceEn: string };
+
+/** Respuesta de `POST /api/v1/renasia/propuestas/{id}/confirmar`. */
+export type ResultadoPropuestaApi = { estado: 'CONFIRMADA' | 'FALLIDA'; mensaje: string };
+
+/**
  * Cualquier evento que esta versión de la app todavía no conoce.
  *
  * Existe a propósito y es la razón por la que el backend manda eventos con `tipo` en vez de
@@ -85,7 +101,33 @@ export type RenasiaEvento =
   | RenasiaEventoFuentes
   | RenasiaEventoFin
   | RenasiaEventoError
+  | RenasiaEventoPropuesta
   | RenasiaEventoDesconocido;
+
+/**
+ * Cómo se ve una propuesta en pantalla. `vencida` no la manda el servidor: se deriva de `venceEn`
+ * contra el reloj del teléfono solo para esconder los botones; si el reloj miente, el backend igual
+ * responde 409 y la tarjeta pasa a `vencida` con el mensaje del servidor.
+ */
+export type EstadoPropuestaUI =
+  | 'pendiente'
+  | 'confirmando'
+  | 'cancelando'
+  | 'confirmada'
+  | 'fallida'
+  | 'cancelada'
+  | 'vencida';
+
+export type PropuestaUI = {
+  id: string;
+  resumen: string;
+  venceEn: string;
+  estado: EstadoPropuestaUI;
+  /** Lo que respondió el servidor al confirmar, o por qué no se pudo. Apto para mostrar. */
+  mensaje?: string | null;
+  /** Cuándo dejó de estar pendiente (D-163): la hoja de acción del orbe la muestra unos segundos y se va. */
+  resueltaEnMs?: number;
+};
 
 /**
  * Un mensaje listo para dibujar en el panel, venga del historial o se esté armando en vivo.
@@ -112,4 +154,23 @@ export type RenasiaMensajeUI = {
    * reintentar sin pedirle a la persona que la escriba de nuevo. No se dibuja en pantalla.
    */
   preguntaOriginal?: string;
+  /**
+   * D-153: acciones que el acompañante propuso en esta respuesta, con sus botones. Solo existen en
+   * vivo: el historial no las trae (en el historial queda el texto "Propuesta: …").
+   */
+  propuestas?: PropuestaUI[];
 };
+
+/**
+ * `GET /api/v1/renasia/memoria` — D-167: lo que el acompañante aprendió de la persona. `categoria`
+ * es el nombre estable para agrupar (hoy CONTEXTO_DE_VIDA, METAS_Y_LO_QUE_FUNCIONA,
+ * PREFERENCIAS_DE_TRATO); `titulo`, lo que se muestra. El `id` sirve solo para borrar: nunca se
+ * dibuja en pantalla.
+ */
+export type RecuerdoRenasiaApi = { id: string; categoria: string; titulo: string; texto: string };
+
+/**
+ * `activa`: si la memoria está encendida en el servidor. Apagada y sin nada guardado, la sección no
+ * se muestra; apagada con algo de antes, sí, para poder borrarlo.
+ */
+export type MemoriaRenasiaApi = { activa: boolean; recuerdos: RecuerdoRenasiaApi[]; resumen: string | null };

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 
+import type { InicioSemanal } from '../../semaforo/hooks/useLecturaPorSemana';
 import type { AprendizAdminApi } from '../api/adminSchemas';
 import { AdminInicioScreen } from './AdminInicioScreen';
 import { FichaAprendizScreen } from './FichaAprendizScreen';
@@ -8,6 +9,8 @@ import { GrupoFormScreen } from './GrupoFormScreen';
 import { GruposAdminScreen } from './GruposAdminScreen';
 import { MasOpcionesScreen } from './MasOpcionesScreen';
 import { PersonasAdminScreen } from './PersonasAdminScreen';
+import { SemaforoAdminScreen } from './SemaforoAdminScreen';
+import { SemaforoGrupoAdminScreen } from './SemaforoGrupoAdminScreen';
 import { SolicitudesAdminScreen } from './SolicitudesAdminScreen';
 import { StaffRolesScreen } from './StaffRolesScreen';
 
@@ -18,8 +21,8 @@ import { StaffRolesScreen } from './StaffRolesScreen';
  * rol Mentor ya resolvió esto mismo así: sus pantallas son estado de `HoyScreen`. Repetir ese
  * patrón deja una sola forma de entrar y salir en toda la app.
  *
- * La pila se lleva en una variable y no con un router: son ocho vistas con un solo camino de ida
- * y vuelta. Cada una registra su `useSystemBackHandler`, así que el gesto lateral sube un nivel —
+ * La pila se lleva en una variable y no con un router: son una decena de vistas con un solo
+ * camino de ida y vuelta. Cada una registra su `useSystemBackHandler`, así que el gesto lateral sube un nivel —
  * ficha → personas → inicio → Mi programa— en vez de cerrar la app (AGENTS.md §6).
  */
 type Vista =
@@ -30,11 +33,19 @@ type Vista =
   | { nombre: 'personas'; soloSinGrupo: boolean }
   | { nombre: 'ficha'; aprendiz: AprendizAdminApi }
   | { nombre: 'solicitudes' }
+  | { nombre: 'semaforo' }
+  | { nombre: 'semaforo-grupo'; grupoId: string; grupoNombre: string | null; inicio: InicioSemanal }
   | { nombre: 'staff' }
   | { nombre: 'mas' };
 
-export function AdminScreen({ onSalir }: { onSalir: () => void }) {
-  const [pila, setPila] = useState<Vista[]>([{ nombre: 'inicio' }]);
+/**
+ * `abrirEn`: por dónde entra. El aviso del sábado (`/semaforo/grupos`) entra directo al semáforo,
+ * con la raíz debajo: volver desde ahí sube a Administración, no sale de golpe a Mi programa.
+ */
+export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => void; abrirEn?: 'inicio' | 'semaforo' }) {
+  const [pila, setPila] = useState<Vista[]>(() =>
+    abrirEn === 'semaforo' ? [{ nombre: 'inicio' }, { nombre: 'semaforo' }] : [{ nombre: 'inicio' }],
+  );
   const vista = pila[pila.length - 1];
 
   const entrar = (siguiente: Vista) => setPila(p => [...p, siguiente]);
@@ -85,6 +96,24 @@ export function AdminScreen({ onSalir }: { onSalir: () => void }) {
       return (
         <SolicitudesAdminScreen onVolver={volver} onIrAGrupos={() => entrar({ nombre: 'grupos' })} />
       );
+    case 'semaforo':
+      return (
+        <SemaforoAdminScreen
+          onVolver={volver}
+          onAbrirGrupo={(grupo, inicio) =>
+            entrar({ nombre: 'semaforo-grupo', grupoId: grupo.grupoId, grupoNombre: grupo.grupoNombre, inicio })
+          }
+        />
+      );
+    case 'semaforo-grupo':
+      return (
+        <SemaforoGrupoAdminScreen
+          grupoId={vista.grupoId}
+          grupoNombre={vista.grupoNombre}
+          inicio={vista.inicio}
+          onVolver={volver}
+        />
+      );
     case 'staff':
       return <StaffRolesScreen onVolver={volver} />;
     case 'mas':
@@ -97,6 +126,7 @@ export function AdminScreen({ onSalir }: { onSalir: () => void }) {
             if (seccion === 'grupos') entrar({ nombre: 'grupos' });
             else if (seccion === 'personas') entrar({ nombre: 'personas', soloSinGrupo: false });
             else if (seccion === 'solicitudes') entrar({ nombre: 'solicitudes' });
+            else if (seccion === 'semaforo') entrar({ nombre: 'semaforo' });
             else if (seccion === 'mas') entrar({ nombre: 'mas' });
           }}
         />

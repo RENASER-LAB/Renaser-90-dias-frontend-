@@ -1,3 +1,5 @@
+import type { SemaforoDeHoy } from '../../semaforo/types/semaforo.types';
+
 /**
  * Espejo de `ResumenHomeResponse` del backend Java (`GET /api/v1/home`, modulo `points`).
  *
@@ -49,4 +51,9 @@ export type ResumenHomeApi = {
    * contrato diciendo explicitamente que no invento el valor. La app no dibuja eso.
    */
   bloqueos: string[];
+  /**
+   * Semaforo de cumplimiento (D-168, contrato §4.2). `null` si la persona no se mide, si el
+   * backend todavia no lo manda o si llego mal formado: en los tres casos Hoy no dibuja la tarjeta.
+   */
+  semaforo: SemaforoDeHoy | null;
 };

@@ -23,15 +23,33 @@ import { HAY_PUSH_NATIVO } from './pushNativo';
  * sesión vencida o después de una rotación. En los tres casos la ruta espera, y quien decide si
  * se abre es el servidor cuando la pantalla pide los datos —un exmentor recibe 403 y ve el
  * mensaje, no el expediente—. La ruta del push nunca es una autorización.
+ *
+ * ## Dos clases de destino (2026-09-25)
+ *
+ * Desde el semáforo (D-168) hay un segundo aviso: el del sábado, con ruta `/semaforo`, que le
+ * llega a TODA persona medida, no solo al mentor. Los dos destinos comparten este único lugar de
+ * espera, pero cada pantalla consume **solo el suyo** (`consumirRutaPendiente(tipo)`): si no, la
+ * escucha del mentor se tragaría un `/semaforo` y ese aviso no abriría nada.
+ *
+ * Después se sumaron los otros dos resúmenes del sábado (contrato §1.2 y §4.5):
+ * `/mentor/groups/{g}/semaforo` (`semaforoGrupo`, el mentor) y `/semaforo/grupos`
+ * (`semaforoGrupos`, líder de mentores y administración). Misma regla: cuatro clases, un solo
+ * lugar de espera, y cada escucha se lleva solo la suya.
  */
 
 let pendiente: DestinoDeAviso | null = null;
 const oyentes = new Set<(ruta: DestinoDeAviso) => void>();
 
-/** Deja una ruta esperando y avisa a quien esté escuchando. */
-function anotar(ruta: DestinoDeAviso): void {
-  pendiente = ruta;
-  oyentes.forEach(oyente => oyente(ruta));
+/**
+ * Deja esperando el destino de la ruta de un aviso y avisa a quien esté escuchando. `false` si la
+ * ruta no es de las que esta versión sabe abrir: no se anota nada y el toque solo abre la app.
+ */
+export function anotarRutaDeAviso(ruta: unknown): boolean {
+  const destino = destinoDeRuta(ruta);
+  if (!destino) return false;
+  pendiente = destino;
+  oyentes.forEach(oyente => oyente(destino));
+  return true;
 }
 
 /**
@@ -45,9 +63,16 @@ export function alAbrirAviso(oyente: (ruta: DestinoDeAviso) => void): () => void
   return () => { oyentes.delete(oyente); };
 }
 
-/** La consume quien la atendió. Sin esto, volver atrás reabriría la misma ficha para siempre. */
-export function consumirRutaPendiente(): DestinoDeAviso | null {
-  const ruta = pendiente;
+/**
+ * La consume quien la atendió. Sin esto, volver atrás reabriría la misma ficha para siempre.
+ *
+ * Solo si es de la clase que se pide: una ruta de otra clase se deja esperando para su pantalla.
+ */
+export function consumirRutaPendiente<T extends DestinoDeAviso['tipo']>(
+  tipo: T,
+): Extract<DestinoDeAviso, { tipo: T }> | null {
+  if (!pendiente || pendiente.tipo !== tipo) return null;
+  const ruta = pendiente as Extract<DestinoDeAviso, { tipo: T }>;
   pendiente = null;
   return ruta;
 }
@@ -82,8 +107,7 @@ function atender(respuesta: TipoNotificaciones.NotificationResponse | null): voi
   atendidas.add(id);
 
   const datos = respuesta.notification.request.content.data as { route?: unknown } | null;
-  const ruta = destinoDeRuta(datos?.route);
-  if (ruta) anotar(ruta);
+  anotarRutaDeAviso(datos?.route);
 }
 
 /**

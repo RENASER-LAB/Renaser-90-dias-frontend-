@@ -13,6 +13,7 @@ import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
+import { TarjetaSemaforoDeAprendiz } from '../../semaforo/components/TarjetaSemaforoDeAprendiz';
 import { abrirConversacionDirecta } from '../../chat/api/chatApi';
 import { urlDeEvidencia } from '../../evidence/api/evidenceApi';
 import { useSemanaDelAlumno } from '../hooks/useSemanaDelAlumno';
@@ -393,6 +394,18 @@ export function AlumnoScreen({
             )}
           </View>
         </Aparicion>
+
+        {/*
+          Semáforo de cumplimiento (D-168): su vigente con palabra y porcentaje, los 7 días con su
+          desglose y las semanas cerradas — lo mismo que ve la persona, sin la pausa. Va después de
+          lo que ya estaba arriba (la semana, escribirle, qué necesita), que no se movió. Si el
+          servidor no tiene la ruta (404) o ya no acompaña a esta persona (403), no se dibuja.
+        */}
+        <TarjetaSemaforoDeAprendiz
+          origen={grupoId ? { quien: 'mentor', grupoId, aprendizId: alumno.participanteId } : null}
+          retardo={160}
+          margenArriba={20}
+        />
 
         {/*
           Las dos lecturas que explican lo de arriba, en el orden en que se necesitan: primero

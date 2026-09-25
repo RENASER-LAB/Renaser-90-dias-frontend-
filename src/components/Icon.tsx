@@ -7,7 +7,7 @@ export type IconName =
   | 'mail' | 'lock' | 'eye' | 'eyeOff' | 'check' | 'logout' | 'google' | 'apple' | 'key' | 'trophy' | 'zap'
   | 'fire' | 'play' | 'pause' | 'plus' | 'chat' | 'send' | 'calendar' | 'award' | 'share' | 'filter'
   | 'dumbbell' | 'volume' | 'star' | 'checkCircle' | 'camera' | 'image'
-  | 'close' | 'target' | 'thumbsUp';
+  | 'close' | 'target' | 'thumbsUp' | 'mic';
 
 type Props = { name: IconName; size?: number; color: string; strokeWidth?: number };
 
@@ -47,6 +47,12 @@ export function Icon({ name, size = 20, color, strokeWidth = 1.1 }: Props) {
       return (
         <Svg width={size} height={size} viewBox="0 0 20 20">
           <Path {...s} d="M17 9.5a6.5 6.5 0 0 1-9.5 5.7L3 16.5l1.3-4.5A6.5 6.5 0 1 1 17 9.5z" />
+        </Svg>
+      );
+    case 'mic':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 20 20">
+          <Path {...s} d="M10 2.5a2.5 2.5 0 0 0-2.5 2.5v5a2.5 2.5 0 0 0 5 0V5A2.5 2.5 0 0 0 10 2.5zM5 9.5a5 5 0 0 0 10 0M10 14.5V18M7 18h6" />
         </Svg>
       );
     case 'send':

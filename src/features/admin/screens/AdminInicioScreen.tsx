@@ -67,6 +67,8 @@ export function AdminInicioScreen({
     { clave: 'grupos', titulo: 'Grupos', detalle: 'Crear, programar y componer' },
     { clave: 'personas', titulo: 'Personas', detalle: 'Ficha, hábitos y cumplimiento' },
     { clave: 'solicitudes', titulo: 'Solicitudes y bienvenida', detalle: 'Aprobar altas y ver su ingreso' },
+    /* Semáforo de cumplimiento (D-168): el resumen por grupos y, al tocar uno, su tabla con nombres. */
+    { clave: 'semaforo', titulo: 'Semáforo', detalle: 'Cumplimiento de cada grupo, semana a semana' },
     { clave: 'mas', titulo: 'Más opciones', detalle: 'Catálogo, soporte, staff y comunidad' },
   ];
 

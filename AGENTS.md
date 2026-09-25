@@ -15,6 +15,29 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
   * `data/`: Constantes, cláusulas, configuraciones estáticas.
 * **Componentes de UI Atómicos**: Utiliza componentes compartidos bajo `src/components/` (`FormField`, `GoldButton`, `SliderRating`, `Checkbox`, `SignatureCanvas`, `Icon`).
 * **Integridad del Core**: NUNCA alterar, romper ni desconfigurar las pantallas existentes ni los tabs principales (`Hoy`, `Plan`, `Training`, `Comunidad`, `Yo`).
+  * **Excepción autorizada por el dueño del producto — 2026-09-25 — tab `Hoy`, tarjeta del semáforo.**
+    Autorizada junto con el diseño del semáforo de cumplimiento del aprendiz (D-168; el contrato vive
+    en el backend, `docs/arquitectura/SEMAFORO_DEL_APRENDIZ.md`). El alcance es **solo** la tarjeta
+    del semáforo, entre *Hábitos de hoy* y *Acciones y objetivos*, y el detalle que abre:
+    * La tarjeta aparece solo si `GET /api/v1/home` trae `semaforo` distinto de `null`. Para quien no
+      se mide, y con un backend que todavía no lo manda, Hoy queda exactamente como estaba.
+    * El detalle (`features/semaforo/screens/SemaforoScreen.tsx`) es estado de Hoy, como las vistas
+      del mentor. También lo abre el aviso del sábado (ruta `/semaforo`, `rutaDeAviso.ts`).
+    * Lo demás que se tocó en `HoyScreen.tsx` existe solo para esa tarjeta: la lectura compartida
+      `useMiSemaforo`, que el pull-to-refresh también la recargue, y que la escucha de avisos del
+      mentor consuma solo rutas de alumno (antes consumía cualquiera, y se habría tragado `/semaforo`).
+    * Si `/home` trae `semaforo.dias` (aditivo, contrato §4.2), la tarjeta dibuja sus barras con eso y
+      **no** pide `/me/semaforo`; sin ese campo queda como arriba (`utils/entradasDelSemaforo.ts`).
+    * **Mismo día, misma autorización («Vista del mentor» y «Vista de líder y admin»), y amplía el
+      «solo» de arriba en esto y nada más:** una tarjeta
+      **solo para el LÍDER DE MENTORES**, debajo de *Tickets de mentoría* y con su misma forma, que
+      abre el resumen por grupos sin nombres (`SemaforoGruposScreen`, estado de Hoy como la bandeja).
+      Aparece solo si el servidor ya respondió que `/api/v1/semaforo/groups` existe: con 404 o 403, y
+      para cualquier otro rol, Hoy queda como estaba. También se agregaron las escuchas de los otros
+      dos avisos del sábado: `/mentor/groups/{g}/semaforo` abre «Mi grupo» en su sección del semáforo,
+      y `/semaforo/grupos` abre la pantalla del líder o el semáforo de Administración.
+    Una excepción puntual **no abre** el tab: cualquier otro cambio sobre los cinco principales
+    vuelve a necesitar autorización explícita.
   * **Excepción autorizada por el dueño del producto — 2026-09-22 — tabs `Training` y `Plan`.**
     Dos pedidos del dueño ese día, sobre capturas:
     * **`Training` — la Audioterapia Semanal abre con la MISMA hoja que la Pastilla Renacer.**
