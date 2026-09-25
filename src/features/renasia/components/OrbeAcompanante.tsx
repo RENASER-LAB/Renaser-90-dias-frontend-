@@ -11,20 +11,7 @@ import {
 import { Icon } from "../../../components/Icon";
 import { useTheme } from "../../../theme/ThemeContext";
 import type { FaseDeVoz } from "../hooks/useConversacionPorVoz";
-
-/**
- * `expo-thinking-orbs` (MIT; Skia + Reanimated, sin código nativo propio) se carga opcional: si el
- * binario instalado no trae Skia o Reanimated, Hoy abre igual con el orbe simple. Mismo criterio
- * que la voz en `useDictado` ("Cannot find native module", 2026-09-23).
- */
-function cargarOrbes(): typeof import("expo-thinking-orbs") | null {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    return require("expo-thinking-orbs") as typeof import("expo-thinking-orbs");
-  } catch {
-    return null;
-  }
-}
+import { cargarOrbes } from "../utils/orbes";
 
 const ORBES = cargarOrbes();
 
@@ -87,11 +74,34 @@ type Props = {
  * Reducir movimiento: el orbe se congela en su pose (y la fase se dice con texto debajo).
  */
 export function OrbeAcompanante(props: Props) {
+  const simple = <OrbeSimple {...props} diametro={Math.round(props.diametro * 0.62)} />;
   return ORBES ? (
-    <OrbeDeRazonamiento {...props} />
+    <SiFallaElOrbe alternativa={simple}>
+      <OrbeDeRazonamiento {...props} />
+    </SiFallaElOrbe>
   ) : (
-    <OrbeSimple {...props} diametro={Math.round(props.diametro * 0.62)} />
+    simple
   );
+}
+
+/**
+ * Si el orbe animado revienta al dibujar (Skia en un teléfono que no lo soporta, como pasó en web
+ * con E-255), queda el orbe simple en vez de Hoy entero en blanco. React solo atrapa errores de
+ * render con un componente de clase.
+ */
+class SiFallaElOrbe extends React.Component<
+  { alternativa: React.ReactNode; children: React.ReactNode },
+  { fallo: boolean }
+> {
+  state = { fallo: false };
+
+  static getDerivedStateFromError() {
+    return { fallo: true };
+  }
+
+  render() {
+    return this.state.fallo ? this.props.alternativa : this.props.children;
+  }
 }
 
 function useMovimientoReducido(): boolean {
