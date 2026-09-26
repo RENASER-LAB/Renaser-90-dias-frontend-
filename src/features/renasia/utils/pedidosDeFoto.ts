@@ -10,7 +10,13 @@ import type { EstadoPedidoDeFotoUI, PedidoDeFotoUI, RenasiaEventoEvidencia } fro
 export const TEXTO_REGISTRADO = 'Listo, quedó registrado.';
 
 export function pedidoDesdeEvento(evento: RenasiaEventoEvidencia): PedidoDeFotoUI {
-  return { registroId: evento.registroId, titulo: evento.titulo, venceEn: evento.venceEn, estado: 'pendiente' };
+  return {
+    registroId: evento.registroId,
+    titulo: evento.titulo,
+    venceEn: evento.venceEn,
+    conPregunta: evento.conPregunta === true,
+    estado: 'pendiente',
+  };
 }
 
 /** Agrega el pedido sin repetirlo: el mismo registro pedido dos veces es una sola tarjeta. */

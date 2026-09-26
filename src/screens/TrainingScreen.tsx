@@ -14,6 +14,7 @@ import { EvidenciaHabitoModal } from '../features/habits/components/EvidenciaHab
 import { RegistroConFotoModal } from '../features/habits/components/RegistroConFotoModal';
 import { useRegistroConFoto } from '../features/habits/hooks/useRegistroConFoto';
 import { estaVencido, seRegistraConFoto } from '../features/training/utils/registroConFotoEnTraining';
+import { preguntaQueSintio } from '../features/habits/utils/registroConFoto';
 import { sellarRocaDiaria } from '../features/objetivos/utils/sellarRocaDiaria';
 import { PlanificarDimensionModal } from '../features/training/components/PlanificarDimensionModal';
 import { completarRegistro, confirmarEvidencia } from '../features/habits/api/evidenciaHabitoApi';
@@ -609,6 +610,7 @@ export default function TrainingScreen() {
         {
           registroId: habit.id,
           titulo: tituloVisible({ id: habit.habitoId ?? habit.id, title: habit.title }, renombre.titulos),
+          conPregunta: preguntaQueSintio(habit.systemKey),
         },
         habit.hasEvidence
       );

@@ -27,7 +27,13 @@ describe('leerEventoEnVivo', () => {
   it('lee el pedido de foto de un hábito (evento evidencia, 2026-09-26)', () => {
     expect(
       leerEventoEnVivo('{"tipo":"evidencia","registroId":"r-1","titulo":"Ducha fría","venceEn":"2026-09-26T23:00:00Z"}')
-    ).toEqual({ tipo: 'evidencia', registroId: 'r-1', titulo: 'Ducha fría', venceEn: '2026-09-26T23:00:00Z' });
+    ).toEqual({ tipo: 'evidencia', registroId: 'r-1', titulo: 'Ducha fría', venceEn: '2026-09-26T23:00:00Z', conPregunta: false });
+    // D-172: el backend manda `conPregunta` en los rituales.
+    expect(
+      leerEventoEnVivo(
+        '{"tipo":"evidencia","registroId":"r-1","titulo":"RITUAL","venceEn":"2026-09-26T23:00:00Z","conPregunta":true}'
+      )
+    ).toMatchObject({ conPregunta: true });
     expect(leerEventoEnVivo('{"tipo":"evidencia","registroId":"r-1"}')).toBeNull();
   });
 

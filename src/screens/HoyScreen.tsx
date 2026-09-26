@@ -141,7 +141,11 @@ export default function HoyScreen() {
     // La cámara no convive con el micrófono abierto ni con el orbe hablando: se lo calla antes.
     if (voz.fase === 'escuchando' || voz.fase === 'hablando') voz.tocar();
     voz.cambiarPedidoDeFoto(pedido.registroId, { estado: 'abriendo' });
-    const resultado = await registroConFoto.iniciar({ registroId: pedido.registroId, titulo: pedido.titulo });
+    const resultado = await registroConFoto.iniciar({
+      registroId: pedido.registroId,
+      titulo: pedido.titulo,
+      conPregunta: pedido.conPregunta,
+    });
     voz.cambiarPedidoDeFoto(pedido.registroId, cambioTrasIniciar(resultado));
   };
   const [vistaMentor, setVistaMentor] = useState<'ninguna' | 'celula' | 'alumno'>('ninguna');

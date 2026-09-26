@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -22,7 +22,12 @@ import {
 } from '../utils/registroConFoto';
 
 /** Qué registro se quiere cerrar con foto. `registroId` es el id del track del día (`habit-tracks`). */
-export type SolicitudDeFoto = { registroId: string; titulo: string };
+export type SolicitudDeFoto = {
+  registroId: string;
+  titulo: string;
+  /** Solo en los rituales se pregunta "¿Qué sentiste?"; en los demás, foto y se registra solo (D-172). */
+  conPregunta: boolean;
+};
 
 /** La pantalla partida abierta: la foto de arriba y la respuesta de abajo. */
 export type RegistroConFotoAbierto = SolicitudDeFoto & {
@@ -142,7 +147,7 @@ export function useRegistroConFoto(opciones: OpcionesRegistroConFoto) {
   }, []);
 
   const sacarFoto = useCallback(async (solicitud: SolicitudDeFoto): Promise<ArchivoEvidencia | null> => {
-    if (Platform.OS === 'android') await fotoPendiente.guardar(solicitud.registroId, solicitud.titulo);
+    if (Platform.OS === 'android') await fotoPendiente.guardar(solicitud);
     try {
       return await tomarFotoConCamara();
     } finally {
@@ -222,6 +227,20 @@ export function useRegistroConFoto(opciones: OpcionesRegistroConFoto) {
     }
   }, [respuesta]);
 
+  /**
+   * Sin pregunta (todo lo que no es ritual, D-172) no hay nada que escribir: apenas la foto está en
+   * pantalla se registra sola. Una vez por foto: si falla, queda el error y el botón de reintentar,
+   * sin volver a mandarla en cada render.
+   */
+  const autoEnviadoRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!registro || registro.conPregunta || enviando || error) return;
+    const clave = `${registro.registroId}:${registro.archivo?.uri ?? 'ya-subida'}`;
+    if (autoEnviadoRef.current === clave) return;
+    autoEnviadoRef.current = clave;
+    void terminar();
+  }, [registro, enviando, error, terminar]);
+
   const cerrar = useCallback(() => {
     if (enviando) return;
     setRegistro(null);
@@ -248,6 +267,7 @@ export function useRegistroConFoto(opciones: OpcionesRegistroConFoto) {
       abrir({
         registroId: contexto.registroId,
         titulo: contexto.titulo,
+        conPregunta: contexto.conPregunta,
         archivo,
         evidenciaYaSubida: estado.tipo === 'disponible' && estado.evidenciaYaSubida,
       });

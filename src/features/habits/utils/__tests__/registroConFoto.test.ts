@@ -8,6 +8,7 @@ import type { TrackDelDiaApi } from '../../types/habits.types';
 import {
   avisoParaFoto,
   estadoParaFoto,
+  preguntaQueSintio,
   registrarConFoto,
   respuestaValida,
   type DependenciasDelRegistro,
@@ -68,8 +69,8 @@ describe('estadoParaFoto', () => {
     expect(estadoParaFoto([track({ estado: 'FALLIDO' })], 'r-1', AHORA).tipo).toBe('vencido');
   });
 
-  it('pasado el plazo cuenta como vencido aunque el estado no se haya actualizado', () => {
-    expect(estadoParaFoto([track()], 'r-1', Date.parse('2026-09-26T23:00:01Z')).tipo).toBe('vencido');
+  it('pasado el plazo sigue disponible: el backend lo acepta tarde, con 0 puntos (E-280)', () => {
+    expect(estadoParaFoto([track()], 'r-1', Date.parse('2026-09-26T23:00:01Z')).tipo).toBe('disponible');
   });
 
   it('un registro que ya no está entre los de hoy es de otro día (pantalla abierta pasada la medianoche)', () => {
@@ -90,7 +91,7 @@ describe('respuestaValida', () => {
 describe('registrarConFoto', () => {
   it('sube la foto, avisa que quedó y recién ahí cierra con la respuesta', async () => {
     const orden: string[] = [];
-    const completar = jest.fn(async (_id: string, _respuesta: string) => {
+    const completar = jest.fn(async (_id: string, _respuesta: string | null) => {
       orden.push('completar');
       return { puntosOtorgados: 10 };
     });
@@ -103,7 +104,7 @@ describe('registrarConFoto', () => {
     });
 
     const resultado = await registrarConFoto(
-      { registroId: 'r-1', archivo: FOTO, respuesta: '  Frío, pero bien ', evidenciaYaSubida: false },
+      { registroId: 'r-1', archivo: FOTO, respuesta: '  Frío, pero bien ', evidenciaYaSubida: false, conPregunta: true },
       () => orden.push('confirmada'),
       deps
     );
@@ -117,7 +118,7 @@ describe('registrarConFoto', () => {
     const deps = dependencias();
 
     await registrarConFoto(
-      { registroId: 'r-1', archivo: FOTO, respuesta: 'Bien', evidenciaYaSubida: true },
+      { registroId: 'r-1', archivo: FOTO, respuesta: 'Bien', evidenciaYaSubida: true, conPregunta: true },
       () => undefined,
       deps
     );
@@ -131,7 +132,7 @@ describe('registrarConFoto', () => {
     const alConfirmar = jest.fn();
 
     await expect(
-      registrarConFoto({ registroId: 'r-1', archivo: FOTO, respuesta: 'Bien', evidenciaYaSubida: false }, alConfirmar, deps)
+      registrarConFoto({ registroId: 'r-1', archivo: FOTO, respuesta: 'Bien', evidenciaYaSubida: false, conPregunta: true }, alConfirmar, deps)
     ).rejects.toThrow('Sin conexión');
     expect(alConfirmar).toHaveBeenCalledTimes(1);
   });
@@ -141,7 +142,7 @@ describe('registrarConFoto', () => {
     const alConfirmar = jest.fn();
 
     await expect(
-      registrarConFoto({ registroId: 'r-1', archivo: FOTO, respuesta: 'Bien', evidenciaYaSubida: false }, alConfirmar, deps)
+      registrarConFoto({ registroId: 'r-1', archivo: FOTO, respuesta: 'Bien', evidenciaYaSubida: false, conPregunta: true }, alConfirmar, deps)
     ).rejects.toThrow('S3 403');
     expect(alConfirmar).not.toHaveBeenCalled();
     expect(deps.completar).not.toHaveBeenCalled();
@@ -154,7 +155,7 @@ describe('registrarConFoto', () => {
     });
 
     const resultado = await registrarConFoto(
-      { registroId: 'r-1', archivo: null, respuesta: 'Bien', evidenciaYaSubida: true },
+      { registroId: 'r-1', archivo: null, respuesta: 'Bien', evidenciaYaSubida: true, conPregunta: true },
       () => undefined,
       deps
     );
@@ -166,7 +167,7 @@ describe('registrarConFoto', () => {
     const deps = dependencias({ completar: jest.fn(async () => Promise.reject(new ApiError(400, 'Venció'))) });
 
     await expect(
-      registrarConFoto({ registroId: 'r-1', archivo: null, respuesta: 'Bien', evidenciaYaSubida: true }, () => undefined, deps)
+      registrarConFoto({ registroId: 'r-1', archivo: null, respuesta: 'Bien', evidenciaYaSubida: true, conPregunta: true }, () => undefined, deps)
     ).rejects.toThrow('Venció');
   });
 
@@ -174,8 +175,36 @@ describe('registrarConFoto', () => {
     const deps = dependencias();
 
     await expect(
-      registrarConFoto({ registroId: 'r-1', archivo: FOTO, respuesta: '  ', evidenciaYaSubida: false }, () => undefined, deps)
+      registrarConFoto({ registroId: 'r-1', archivo: FOTO, respuesta: '  ', evidenciaYaSubida: false, conPregunta: true }, () => undefined, deps)
     ).rejects.toThrow();
     expect(deps.subirEvidencia).not.toHaveBeenCalled();
+  });
+});
+
+describe('D-172: solo los rituales preguntan "¿Qué sentiste?"', () => {
+  it('reconoce los tres rituales por su clave de sistema, no por el título', () => {
+    expect(preguntaQueSintio('RITUAL_MORNING')).toBe(true);
+    expect(preguntaQueSintio('RITUAL_MIDDAY')).toBe(true);
+    expect(preguntaQueSintio('RITUAL_NIGHT')).toBe(true);
+    expect(preguntaQueSintio('GREEN_JUICE')).toBe(false);
+    expect(preguntaQueSintio(null)).toBe(false);
+  });
+
+  it('sin pregunta el botón vale aunque no haya respuesta; con pregunta, no', () => {
+    expect(respuestaValida('', false)).toBe(true);
+    expect(respuestaValida('   ', true)).toBe(false);
+  });
+
+  it('sin pregunta sube la foto y cierra sin respuesta (null), aunque haya texto viejo', async () => {
+    const completar = jest.fn(async (_id: string, _respuesta: string | null) => ({ puntosOtorgados: 10 }));
+    const deps = dependencias({ subirEvidencia: async () => ({}), completar });
+
+    await registrarConFoto(
+      { registroId: 'r-1', archivo: FOTO, respuesta: 'algo', evidenciaYaSubida: false, conPregunta: false },
+      () => undefined,
+      deps
+    );
+
+    expect(completar).toHaveBeenCalledWith('r-1', null);
   });
 });

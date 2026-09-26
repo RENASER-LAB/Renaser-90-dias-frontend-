@@ -15,17 +15,22 @@ const CLAVE = 'renaser:registro-con-foto:pendiente';
 /** Pasado este tiempo, una foto pendiente ya no se ofrece: seguramente es de otro momento del día. */
 export const VIGENCIA_FOTO_PENDIENTE_MS = 30 * 60_000;
 
-export type FotoPendiente = { registroId: string; titulo: string; guardadaEnMs: number };
+export type FotoPendiente = { registroId: string; titulo: string; conPregunta: boolean; guardadaEnMs: number };
 
 function esFotoPendiente(valor: unknown): valor is FotoPendiente {
   const v = valor as Partial<FotoPendiente> | null;
-  return typeof v?.registroId === 'string' && typeof v.titulo === 'string' && typeof v.guardadaEnMs === 'number';
+  return (
+    typeof v?.registroId === 'string' &&
+    typeof v.titulo === 'string' &&
+    typeof v.conPregunta === 'boolean' &&
+    typeof v.guardadaEnMs === 'number'
+  );
 }
 
 export const fotoPendiente = {
-  async guardar(registroId: string, titulo: string): Promise<void> {
+  async guardar({ registroId, titulo, conPregunta }: Omit<FotoPendiente, 'guardadaEnMs'>): Promise<void> {
     try {
-      await AsyncStorage.setItem(CLAVE, JSON.stringify({ registroId, titulo, guardadaEnMs: Date.now() }));
+      await AsyncStorage.setItem(CLAVE, JSON.stringify({ registroId, titulo, conPregunta, guardadaEnMs: Date.now() }));
     } catch {
       // Best-effort: sin esto solo se pierde la recuperación tras un cierre de Android.
     }

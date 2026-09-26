@@ -85,6 +85,7 @@ const pedido = (registroId: string, extra: Partial<PedidoDeFotoUI> = {}): Pedido
   registroId,
   titulo: `Hábito ${registroId}`,
   venceEn: new Date(AHORA + 600_000).toISOString(),
+  conPregunta: false,
   estado: 'pendiente',
   ...extra,
 });

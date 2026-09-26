@@ -90,7 +90,14 @@ export type RenasiaEventoPropuesta = { tipo: 'propuesta'; id: string; resumen: s
  * foto (`useRegistroConFoto`) usa `registroId` como el id del registro del día. Mismo evento en el
  * stream del chat y en la voz en vivo.
  */
-export type RenasiaEventoEvidencia = { tipo: 'evidencia'; registroId: string; titulo: string; venceEn: string };
+export type RenasiaEventoEvidencia = {
+  tipo: 'evidencia';
+  registroId: string;
+  titulo: string;
+  venceEn: string;
+  /** D-172 del backend: solo los rituales preguntan "¿Qué sentiste?". Sin el campo, sin pregunta. */
+  conPregunta?: boolean;
+};
 
 /** Respuesta de `POST /api/v1/renasia/propuestas/{id}/confirmar`. */
 export type ResultadoPropuestaApi = { estado: 'CONFIRMADA' | 'FALLIDA'; mensaje: string };
@@ -150,6 +157,7 @@ export type PedidoDeFotoUI = {
   registroId: string;
   titulo: string;
   venceEn: string;
+  conPregunta: boolean;
   estado: EstadoPedidoDeFotoUI;
   /** Qué pasó, apto para mostrar ("Listo, quedó registrado"). */
   mensaje?: string | null;

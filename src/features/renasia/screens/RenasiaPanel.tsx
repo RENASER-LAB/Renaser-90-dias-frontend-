@@ -100,7 +100,11 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
     if (estadoVisibleDelPedido(pedido, Date.now()) !== 'pendiente') return;
     if (dictado.escuchando) dictado.detener();
     cambiarPedidoDeFoto(pedido.registroId, { estado: 'abriendo' });
-    const resultado = await registroConFoto.iniciar({ registroId: pedido.registroId, titulo: pedido.titulo });
+    const resultado = await registroConFoto.iniciar({
+      registroId: pedido.registroId,
+      titulo: pedido.titulo,
+      conPregunta: pedido.conPregunta,
+    });
     cambiarPedidoDeFoto(pedido.registroId, cambioTrasIniciar(resultado));
   };
   const scrollRef = useRef<ScrollView>(null);

@@ -24,8 +24,10 @@ import { PREGUNTA_DEL_REGISTRO, respuestaValida } from '../utils/registroConFoto
 
 /**
  * La pantalla partida del REGISTRO CON FOTO (pedido del dueño, 2026-09-26): arriba la foto que se
- * acaba de sacar, abajo "¿Qué sentiste?" con su campo y el botón para terminar. La respuesta es
- * obligatoria. Se puede volver a sacar la foto sin perder lo escrito.
+ * acaba de sacar, abajo "¿Qué sentiste?" con su campo y el botón para terminar. La pregunta sale
+ * SOLO en los tres rituales (D-172), y ahí la respuesta es obligatoria; en los demás no hay pregunta
+ * y la foto se registra sola apenas aparece (`useRegistroConFoto`). Se puede volver a sacar la foto
+ * sin perder lo escrito.
  *
  * Solo dibuja: el estado y la subida viven en `useRegistroConFoto`, y es el mismo componente en
  * Training, en el chat del acompañante y en la hoja del orbe.
@@ -46,7 +48,8 @@ export function RegistroConFotoModal({
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth, isTablet } = useResponsive();
   const visible = registro !== null;
-  const puedeTerminar = respuestaValida(respuesta) && !enviando;
+  const conPregunta = registro?.conPregunta ?? true;
+  const puedeTerminar = respuestaValida(respuesta, conPregunta) && !enviando;
 
   // AGENTS.md §6: el gesto lateral cierra esta pantalla, nunca la app. Durante el envío se consume
   // sin cerrar: cortar a mitad dejaría la foto subida y el registro sin cerrar.
@@ -80,7 +83,7 @@ export function RegistroConFotoModal({
                   Tu foto ya quedó guardada
                 </Text>
                 <Text style={[t.small, { color: c.textSoft, textAlign: 'center' }]}>
-                  Solo falta tu respuesta para terminar.
+                  {conPregunta ? 'Solo falta tu respuesta para terminar.' : 'Solo falta registrarla.'}
                 </Text>
               </View>
             )}
@@ -117,20 +120,28 @@ export function RegistroConFotoModal({
             <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]} numberOfLines={2}>
               {registro.titulo.toUpperCase()}
             </Text>
-            <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 24 }]}>{PREGUNTA_DEL_REGISTRO}</Text>
-            <TextInput
-              value={respuesta}
-              onChangeText={onCambiarRespuesta}
-              placeholder="Cuéntalo con tus palabras"
-              placeholderTextColor={c.tabInactive}
-              multiline
-              editable={!enviando}
-              accessibilityLabel={PREGUNTA_DEL_REGISTRO}
-              style={[
-                estilos.campo,
-                { color: c.textStrong, borderColor: error ? c.danger : c.border, backgroundColor: c.cardBgAlt },
-              ]}
-            />
+            {conPregunta ? (
+              <>
+                <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 24 }]}>{PREGUNTA_DEL_REGISTRO}</Text>
+                <TextInput
+                  value={respuesta}
+                  onChangeText={onCambiarRespuesta}
+                  placeholder="Cuéntalo con tus palabras"
+                  placeholderTextColor={c.tabInactive}
+                  multiline
+                  editable={!enviando}
+                  accessibilityLabel={PREGUNTA_DEL_REGISTRO}
+                  style={[
+                    estilos.campo,
+                    { color: c.textStrong, borderColor: error ? c.danger : c.border, backgroundColor: c.cardBgAlt },
+                  ]}
+                />
+              </>
+            ) : (
+              <Text style={[t.body, { color: c.textSoft }]}>
+                {enviando ? 'Registrando tu foto…' : error ? 'No se pudo registrar tu foto.' : 'Tu foto está lista.'}
+              </Text>
+            )}
 
             {error ? (
               <View style={[estilos.error, { borderColor: c.danger }]}>
@@ -139,12 +150,12 @@ export function RegistroConFotoModal({
             ) : null}
 
             <GoldButton
-              label={enviando ? 'REGISTRANDO…' : error ? 'REINTENTAR' : 'TERMINAR'}
+              label={enviando ? 'REGISTRANDO…' : error ? 'REINTENTAR' : conPregunta ? 'TERMINAR' : 'REGISTRAR'}
               onPress={onTerminar}
               loading={enviando}
               disabled={!puedeTerminar}
             />
-            {!respuestaValida(respuesta) ? (
+            {!respuestaValida(respuesta, conPregunta) ? (
               <Text style={[t.small, { color: c.textSoft, textAlign: 'center' }]}>
                 Escribe qué sentiste para poder terminar.
               </Text>

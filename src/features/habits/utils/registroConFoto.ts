@@ -12,6 +12,17 @@ import type { TrackDelDiaApi } from '../types/habits.types';
 /** La pregunta fija de la pantalla partida. */
 export const PREGUNTA_DEL_REGISTRO = '¿Qué sentiste?';
 
+/**
+ * Los tres RITUAL TIERRA - AGUA - FUEGO (clave de sistema desde V69 del backend). Son los ÚNICOS que
+ * preguntan "¿Qué sentiste?" después de la foto (D-172, decisión del dueño: "solo para los rituales").
+ * En los demás que exigen evidencia es foto y listo.
+ */
+export const CLAVES_DE_RITUAL: ReadonlySet<string> = new Set(['RITUAL_MORNING', 'RITUAL_MIDDAY', 'RITUAL_NIGHT']);
+
+export function preguntaQueSintio(systemKey: string | null | undefined): boolean {
+  return !!systemKey && CLAVES_DE_RITUAL.has(systemKey);
+}
+
 /** Un registro terminal ya no acepta evidencia ni cierre: el backend los rechaza. */
 const ESTADOS_VENCIDOS: ReadonlySet<string> = new Set(['EXPIRADO', 'FALLIDO']);
 
@@ -31,14 +42,15 @@ export type EstadoParaFoto =
 export function estadoParaFoto(
   tracks: readonly TrackDelDiaApi[],
   registroId: string,
-  ahoraMs: number,
+  _ahoraMs: number,
 ): EstadoParaFoto {
   const track = tracks.find(t => t.id === registroId);
   if (!track) return { tipo: 'no-es-de-hoy' };
   if (track.estado === 'COMPLETADO') return { tipo: 'completado' };
   if (ESTADOS_VENCIDOS.has(track.estado)) return { tipo: 'vencido' };
-  const plazo = track.plazoEvidencia ? Date.parse(track.plazoEvidencia) : NaN;
-  if (Number.isFinite(plazo) && plazo <= ahoraMs) return { tipo: 'vencido' };
+  // Pasado `plazoEvidencia` el hábito sigue PENDIENTE y el backend lo acepta: paga 0 puntos y queda
+  // como tarde (el 409 por vencido se quitó a propósito). Bloquearlo acá era más estricto que el
+  // backend y que la app de antes (E-280): solo cortan EXPIRADO y FALLIDO.
   return { tipo: 'disponible', evidenciaYaSubida: track.tieneEvidencia === true };
 }
 
@@ -62,15 +74,18 @@ export function avisoParaFoto(estado: EstadoParaFoto): { titulo: string; mensaje
   }
 }
 
-/** La respuesta es obligatoria: el botón no se habilita con el campo vacío o con puros espacios. */
-export function respuestaValida(respuesta: string): boolean {
-  return respuesta.trim().length > 0;
+/**
+ * En los rituales la respuesta es obligatoria: el botón no se habilita con el campo vacío o con puros
+ * espacios. En los demás no hay pregunta, así que siempre vale.
+ */
+export function respuestaValida(respuesta: string, conPregunta = true): boolean {
+  return !conPregunta || respuesta.trim().length > 0;
 }
 
 /** Lo que el registro necesita del backend. Se inyecta para poder probar el orden y los reintentos. */
 export type DependenciasDelRegistro = {
   subirEvidencia: (registroId: string, archivo: ArchivoParaSubir) => Promise<unknown>;
-  completar: (registroId: string, respuesta: string) => Promise<{ puntosOtorgados: number }>;
+  completar: (registroId: string, respuesta: string | null) => Promise<{ puntosOtorgados: number }>;
   tracksDeHoy: () => Promise<TrackDelDiaApi[]>;
 };
 
@@ -78,6 +93,8 @@ export type EntradaDelRegistro = {
   registroId: string;
   archivo: ArchivoParaSubir | null;
   respuesta: string;
+  /** Solo los rituales preguntan "¿Qué sentiste?" (D-172); en los demás se cierra sin respuesta. */
+  conPregunta: boolean;
   /**
    * `true` si la evidencia ya quedó confirmada (en un intento anterior de esta misma pantalla, o
    * porque el servidor dice que el registro ya la tiene). Entonces NO se vuelve a subir: se
@@ -103,8 +120,8 @@ export async function registrarConFoto(
   alConfirmarEvidencia: () => void,
   deps: DependenciasDelRegistro,
 ): Promise<ResultadoDelRegistro> {
-  const respuesta = entrada.respuesta.trim();
-  if (!respuesta) throw new Error('Cuéntanos qué sentiste antes de terminar.');
+  const respuesta = entrada.conPregunta ? entrada.respuesta.trim() : null;
+  if (entrada.conPregunta && !respuesta) throw new Error('Cuéntanos qué sentiste antes de terminar.');
   if (!entrada.evidenciaYaSubida) {
     if (!entrada.archivo) throw new Error('Falta la foto. Tómala de nuevo.');
     await deps.subirEvidencia(entrada.registroId, entrada.archivo);

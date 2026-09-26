@@ -15,7 +15,7 @@ export type EventoEnVivo =
   | { tipo: 'interrumpido' }
   | { tipo: 'turnoCompleto' }
   | { tipo: 'propuesta'; id: string; resumen: string; venceEn: string }
-  | { tipo: 'evidencia'; registroId: string; titulo: string; venceEn: string }
+  | { tipo: 'evidencia'; registroId: string; titulo: string; venceEn: string; conPregunta: boolean }
   | { tipo: 'cuotaAgotada' }
   | { tipo: 'error'; valor: string };
 
@@ -52,6 +52,7 @@ export function leerEventoEnVivo(texto: string): EventoEnVivo | null {
             registroId: evento.registroId as string,
             titulo: evento.titulo as string,
             venceEn: evento.venceEn as string,
+            conPregunta: evento.conPregunta === true,
           }
         : null;
     case 'error':

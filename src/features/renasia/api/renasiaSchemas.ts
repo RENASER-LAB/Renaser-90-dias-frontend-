@@ -57,7 +57,13 @@ const eventoPropuestaSchema = z
 
 /** `{"tipo":"evidencia",...}` — el acompañante pide la foto de un hábito (2026-09-26). */
 const eventoEvidenciaSchema = z
-  .object({ tipo: z.literal('evidencia'), registroId: z.string(), titulo: z.string(), venceEn: z.string() })
+  .object({
+    tipo: z.literal('evidencia'),
+    registroId: z.string(),
+    titulo: z.string(),
+    venceEn: z.string(),
+    conPregunta: z.boolean().optional(),
+  })
   .passthrough();
 
 /** Respuesta de confirmar una propuesta. */

@@ -27,6 +27,7 @@ describe('pedidoDesdeEvento', () => {
       registroId: 'r-1',
       titulo: 'Ducha fría',
       venceEn: '2026-09-26T23:00:00Z',
+      conPregunta: false,
       estado: 'pendiente',
     });
   });
