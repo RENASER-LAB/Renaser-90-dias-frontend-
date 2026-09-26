@@ -11,6 +11,7 @@ import {
   estadoTrasConfirmar,
   estadoVisible,
   propuestaDesdeEvento,
+  quitarRespaldoDeFoto,
   quitarTextoDeRespaldo,
 } from '../propuestas';
 
@@ -98,5 +99,18 @@ describe('cambioPorError', () => {
 
   it('sin red: vuelve a pendiente para poder reintentar', () => {
     expect(cambioPorError(new Error('Network request failed')).estado).toBe('pendiente');
+  });
+});
+
+describe('quitarRespaldoDeFoto', () => {
+  const respaldo = "\n\nFoto para registrar 'JUGO VERDE': si no ves el boton de la camara, subela desde Hoy.";
+
+  it('saca el texto de respaldo del pedido de foto cuando está al final', () => {
+    expect(quitarRespaldoDeFoto(`Dale, sácale foto.${respaldo}`, 'JUGO VERDE')).toBe('Dale, sácale foto.');
+  });
+
+  it('no toca nada si el título no coincide', () => {
+    const texto = `Dale.${respaldo}`;
+    expect(quitarRespaldoDeFoto(texto, 'AGUA TIBIA CON LIMÓN')).toBe(texto);
   });
 });

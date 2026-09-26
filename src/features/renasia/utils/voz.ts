@@ -60,7 +60,7 @@ export const MAXIMO_AGRUPADO = 220;
  *
  * Una oración por audio metía una pausa en cada punto: el silencio del final de un clip, el del
  * principio del siguiente y el cambio de clip en el reproductor. Juntas, además, la voz entona el
- * párrafo entero en vez de frases sueltas. El respaldo "Propuesta: …" nunca se lee.
+ * párrafo entero en vez de frases sueltas. El respaldo "Propuesta: …" nunca se lee, ni el del pedido de foto ("Foto para registrar …").
  */
 export function crearAgrupador(decir: (texto: string) => void, maximo = MAXIMO_AGRUPADO) {
   let dijoLaPrimera = false;
@@ -68,7 +68,7 @@ export function crearAgrupador(decir: (texto: string) => void, maximo = MAXIMO_A
   return {
     oracion(oracion: string) {
       const limpia = oracion.trim();
-      if (!limpia || /^Propuesta:/i.test(limpia)) return;
+      if (!limpia || /^(Propuesta:|Foto para registrar )/i.test(limpia)) return;
       if (!dijoLaPrimera) {
         dijoLaPrimera = true;
         decir(limpia);

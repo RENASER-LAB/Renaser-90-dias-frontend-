@@ -4,7 +4,7 @@ import { mensajeDeError } from '../../../services/http/apiClient';
 import { enviarMensajeRenasia, RenasiaCuotaExcedidaError } from '../api/renasiaStream';
 import { Locutor } from '../utils/locutor';
 import type { PedidoDeFotoUI, PropuestaUI } from '../types/renasia.types';
-import { quitarTextoDeRespaldo } from '../utils/propuestas';
+import { quitarRespaldoDeFoto, quitarTextoDeRespaldo } from '../utils/propuestas';
 import { crearAgrupador, MAXIMO_CARACTERES_HABLADOS, separarOraciones, textoParaHablar } from '../utils/voz';
 import { PARLANTES_DEL_TELEFONO, PUEDE_HABLAR } from './parlantesDelTelefono';
 import { usePropuestasDeVoz } from './usePropuestasDeVoz';
@@ -125,6 +125,7 @@ export function useConversacionPorVoz(): ConversacionPorVoz {
       let sinDecir = '';
       const agrupador = crearAgrupador(decir);
       let cantidadDePropuestas = 0;
+      let cantidadDeFotos = 0;
       locutorRef.current?.callar();
       locutorRef.current = new Locutor(PARLANTES_DEL_TELEFONO, alQuedarCallado, alFaltarLaVoz);
       turnoRef.current = { caracteres: 0, cortado: false, terminoDeLlegar: false };
@@ -149,7 +150,12 @@ export function useConversacionPorVoz(): ConversacionPorVoz {
               }
             },
             onEvidencia: evento => {
-              if (montadoRef.current) propuestasDeVoz.agregarPedidoDeFoto(evento);
+              acumulado = quitarRespaldoDeFoto(acumulado, evento.titulo);
+              cantidadDeFotos += 1;
+              if (montadoRef.current) {
+                setRespuesta(acumulado);
+                propuestasDeVoz.agregarPedidoDeFoto(evento);
+              }
             },
             onError: mensaje => {
               if (montadoRef.current) setError(mensaje);
@@ -161,7 +167,11 @@ export function useConversacionPorVoz(): ConversacionPorVoz {
         if (!montadoRef.current) return;
         agrupador.terminar(
           sinDecir,
-          cantidadDePropuestas > 0 ? 'Te dejé la propuesta acá abajo: confírmala con el botón.' : ''
+          cantidadDePropuestas > 0
+            ? 'Te dejé la propuesta acá abajo: confírmala con el botón.'
+            : cantidadDeFotos > 0
+              ? 'Te dejé abajo el botón para la foto.'
+              : ''
         );
         turnoRef.current.terminoDeLlegar = true;
         if (!locutorRef.current?.hablando) setFase('reposo');

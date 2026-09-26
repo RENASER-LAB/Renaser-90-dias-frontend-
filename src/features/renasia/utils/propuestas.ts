@@ -31,6 +31,16 @@ export function quitarTextoDeRespaldo(texto: string, resumen: string): string {
 }
 
 /**
+ * Igual que la propuesta, el pedido de foto llega antes como texto para la app vieja (D-171 del
+ * backend: "Foto para registrar '<titulo>': ..."). Esta versión dibuja la tarjeta, así que lo saca
+ * si está al final del mensaje; si no coincide exacto, no toca nada.
+ */
+export function quitarRespaldoDeFoto(texto: string, titulo: string): string {
+  const respaldo = `\n\nFoto para registrar '${titulo}': si no ves el boton de la camara, subela desde Hoy.`;
+  return texto.endsWith(respaldo) ? texto.slice(0, texto.length - respaldo.length) : texto;
+}
+
+/**
  * Una pendiente cuyo `venceEn` ya pasó se muestra vencida, sin botones. Es solo cosmético: si el
  * reloj del teléfono está adelantado o atrasado, el servidor es quien decide (responde 409).
  */

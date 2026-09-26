@@ -82,4 +82,15 @@ describe('crearAgrupador', () => {
     agrupador.terminar('Listo.');
     expect(dicho).toEqual(['Listo.']);
   });
+
+  it('nunca lee el respaldo del pedido de foto', () => {
+    const dicho: string[] = [];
+    const agrupador = crearAgrupador(texto => dicho.push(texto));
+
+    agrupador.terminar(
+      "Foto para registrar 'JUGO VERDE': si no ves el boton de la camara, subela desde Hoy.",
+      'Te dejé abajo el botón para la foto.'
+    );
+    expect(dicho).toEqual(['Te dejé abajo el botón para la foto.']);
+  });
 });

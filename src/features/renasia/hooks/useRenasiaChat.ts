@@ -12,7 +12,13 @@ import type {
   RenasiaMensajeUI,
 } from '../types/renasia.types';
 import { agregarPedido, pedidoDesdeEvento } from '../utils/pedidosDeFoto';
-import { cambioPorError, estadoTrasConfirmar, propuestaDesdeEvento, quitarTextoDeRespaldo } from '../utils/propuestas';
+import {
+  cambioPorError,
+  estadoTrasConfirmar,
+  propuestaDesdeEvento,
+  quitarRespaldoDeFoto,
+  quitarTextoDeRespaldo,
+} from '../utils/propuestas';
 
 let contadorIdLocal = 0;
 /** Ids para mensajes que todavía no existen en el servidor (la pregunta optimista, la respuesta en curso). */
@@ -214,7 +220,11 @@ export function useRenasiaChat(opciones: OpcionesRenasiaChat): EstadoRenasiaChat
               setMensajes(prev =>
                 prev.map(m =>
                   m.id === idAsistente
-                    ? { ...m, pedidosDeFoto: agregarPedido(m.pedidosDeFoto, pedidoDesdeEvento(evento)) }
+                    ? {
+                        ...m,
+                        texto: quitarRespaldoDeFoto(m.texto, evento.titulo),
+                        pedidosDeFoto: agregarPedido(m.pedidosDeFoto, pedidoDesdeEvento(evento)),
+                      }
                     : m
                 )
               );
