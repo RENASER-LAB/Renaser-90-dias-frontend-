@@ -27,7 +27,15 @@ describe('leerEventoEnVivo', () => {
   it('lee el pedido de foto de un hábito (evento evidencia, 2026-09-26)', () => {
     expect(
       leerEventoEnVivo('{"tipo":"evidencia","registroId":"r-1","titulo":"Ducha fría","venceEn":"2026-09-26T23:00:00Z"}')
-    ).toEqual({ tipo: 'evidencia', registroId: 'r-1', titulo: 'Ducha fría', venceEn: '2026-09-26T23:00:00Z', conPregunta: false });
+    ).toEqual({
+      tipo: 'evidencia',
+      registroId: 'r-1',
+      titulo: 'Ducha fría',
+      venceEn: '2026-09-26T23:00:00Z',
+      conPregunta: false,
+      // Sin `destino` (backend anterior a D-178): un hábito.
+      destino: 'habito',
+    });
     // D-172: el backend manda `conPregunta` en los rituales.
     expect(
       leerEventoEnVivo(
@@ -35,6 +43,13 @@ describe('leerEventoEnVivo', () => {
       )
     ).toMatchObject({ conPregunta: true });
     expect(leerEventoEnVivo('{"tipo":"evidencia","registroId":"r-1"}')).toBeNull();
+  });
+
+  it('D-178: lee el destino roca e ignora un destino que no conoce', () => {
+    const base = '"tipo":"evidencia","registroId":"k-1","titulo":"Llamar","venceEn":"2026-09-26T23:00:00Z"';
+    expect(leerEventoEnVivo(`{${base},"destino":"roca"}`)).toMatchObject({ destino: 'roca', registroId: 'k-1' });
+    expect(leerEventoEnVivo(`{${base},"destino":"habito"}`)).toMatchObject({ destino: 'habito' });
+    expect(leerEventoEnVivo(`{${base},"destino":"otra-cosa"}`)).toBeNull();
   });
 
   it('ignora lo desconocido o mal formado en vez de romper', () => {

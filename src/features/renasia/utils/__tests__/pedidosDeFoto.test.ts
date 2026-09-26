@@ -10,6 +10,7 @@ import {
   conMarcaDeCierre,
   estadoVisibleDelPedido,
   pedidoDesdeEvento,
+  solicitudDelPedido,
 } from '../pedidosDeFoto';
 
 const EVENTO = {
@@ -28,7 +29,25 @@ describe('pedidoDesdeEvento', () => {
       titulo: 'Ducha fría',
       venceEn: '2026-09-26T23:00:00Z',
       conPregunta: false,
+      destino: 'habito',
       estado: 'pendiente',
+    });
+  });
+
+  it('D-178: con destino roca es una acción del día; sin destino, un hábito (backend viejo)', () => {
+    expect(pedidoDesdeEvento({ ...EVENTO, destino: 'roca' }).destino).toBe('roca');
+    expect(pedidoDesdeEvento({ ...EVENTO, destino: 'habito' }).destino).toBe('habito');
+    expect(pedidoDesdeEvento(EVENTO).destino).toBe('habito');
+  });
+});
+
+describe('solicitudDelPedido', () => {
+  it('le pasa al registro con foto el destino de la tarjeta', () => {
+    expect(solicitudDelPedido(pedidoDesdeEvento({ ...EVENTO, destino: 'roca' }))).toEqual({
+      registroId: 'r-1',
+      titulo: 'Ducha fría',
+      conPregunta: false,
+      destino: 'roca',
     });
   });
 });
@@ -71,6 +90,18 @@ describe('cambioTrasIniciar', () => {
   it('vencido o de otro día la deshabilita', () => {
     expect(cambioTrasIniciar('vencido').estado).toBe('vencido');
     expect(cambioTrasIniciar('no-es-de-hoy').estado).toBe('vencido');
+  });
+
+  it('D-178: una acción bloqueada por Pareto queda disponible para cuando haga la verde', () => {
+    expect(cambioTrasIniciar('bloqueada', 'roca')).toEqual({ estado: 'pendiente' });
+    expect(cambioTrasIniciar('completado', 'roca')).toEqual({ estado: 'registrado', mensaje: 'Ya estaba registrada.' });
+  });
+});
+
+describe('cambioAlRegistrar', () => {
+  it('D-178: una acción dice "quedó registrada tu acción"; un hábito, lo de siempre', () => {
+    expect(cambioAlRegistrar('roca')).toEqual({ estado: 'registrado', mensaje: 'Listo, quedó registrada tu acción.' });
+    expect(cambioAlRegistrar()).toEqual({ estado: 'registrado', mensaje: 'Listo, quedó registrado.' });
   });
 });
 

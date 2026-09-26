@@ -21,7 +21,8 @@ import { useRenasiaChat } from '../hooks/useRenasiaChat';
 import { useDictado } from '../hooks/useDictado';
 import { useFrasesDeHabitos } from '../hooks/useFrasesDeHabitos';
 import { LARGO_MAXIMO_PREGUNTA, recortarPregunta, unirDictado } from '../utils/dictado';
-import { cambioAlRegistrar, cambioTrasIniciar, estadoVisibleDelPedido } from '../utils/pedidosDeFoto';
+import { cambioAlRegistrar, cambioTrasIniciar, estadoVisibleDelPedido, solicitudDelPedido } from '../utils/pedidosDeFoto';
+import { REGLAS_DE_ACCION } from '../../objetivos/utils/registroDeAccionConFoto';
 import { useRegistroConFoto } from '../../habits/hooks/useRegistroConFoto';
 import { RegistroConFotoModal } from '../../habits/components/RegistroConFotoModal';
 import { MensajeBurbuja } from '../components/MensajeBurbuja';
@@ -94,18 +95,17 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
    * se muestra.
    */
   const registroConFoto = useRegistroConFoto({
-    onCompletado: registroId => cambiarPedidoDeFoto(registroId, cambioAlRegistrar()),
+    onCompletado: (registroId, _resultado, _titulo, destino) =>
+      cambiarPedidoDeFoto(registroId, cambioAlRegistrar(destino)),
+    // D-178: la tarjeta de una acción del día sube a los endpoints de rocas.
+    destinos: { roca: REGLAS_DE_ACCION },
   });
   const tomarFoto = async (pedido: PedidoDeFotoUI) => {
     if (estadoVisibleDelPedido(pedido, Date.now()) !== 'pendiente') return;
     if (dictado.escuchando) dictado.detener();
     cambiarPedidoDeFoto(pedido.registroId, { estado: 'abriendo' });
-    const resultado = await registroConFoto.iniciar({
-      registroId: pedido.registroId,
-      titulo: pedido.titulo,
-      conPregunta: pedido.conPregunta,
-    });
-    cambiarPedidoDeFoto(pedido.registroId, cambioTrasIniciar(resultado));
+    const resultado = await registroConFoto.iniciar(solicitudDelPedido(pedido));
+    cambiarPedidoDeFoto(pedido.registroId, cambioTrasIniciar(resultado, pedido.destino));
   };
   const scrollRef = useRef<ScrollView>(null);
 

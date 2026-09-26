@@ -5,6 +5,7 @@ import { enviarMensajeRenasia, RenasiaCuotaExcedidaError } from '../api/renasiaS
 import { Locutor } from '../utils/locutor';
 import type { PedidoDeFotoUI, PropuestaUI } from '../types/renasia.types';
 import { quitarRespaldoDeFoto, quitarTextoDeRespaldo } from '../utils/propuestas';
+import { destinoDeEvidencia } from '../../habits/utils/destinoDeFoto';
 import { crearAgrupador, MAXIMO_CARACTERES_HABLADOS, separarOraciones, textoParaHablar } from '../utils/voz';
 import { PARLANTES_DEL_TELEFONO, PUEDE_HABLAR } from './parlantesDelTelefono';
 import { usePropuestasDeVoz } from './usePropuestasDeVoz';
@@ -150,7 +151,7 @@ export function useConversacionPorVoz(): ConversacionPorVoz {
               }
             },
             onEvidencia: evento => {
-              acumulado = quitarRespaldoDeFoto(acumulado, evento.titulo);
+              acumulado = quitarRespaldoDeFoto(acumulado, evento.titulo, destinoDeEvidencia(evento.destino) ?? 'habito');
               cantidadDeFotos += 1;
               if (montadoRef.current) {
                 setRespuesta(acumulado);

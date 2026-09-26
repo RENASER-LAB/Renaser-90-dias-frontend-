@@ -63,6 +63,9 @@ const eventoEvidenciaSchema = z
     titulo: z.string(),
     venceEn: z.string(),
     conPregunta: z.boolean().optional(),
+    /** D-178: `"habito"` (o ausente) | `"roca"`. Se valida en `esEventoEvidencia`, no acá: un valor
+        nuevo no puede tirar el stream. */
+    destino: z.string().optional(),
   })
   .passthrough();
 

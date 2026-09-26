@@ -1,5 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { destinoDeEvidencia, type DestinoDeFoto } from '../utils/destinoDeFoto';
+
 /**
  * Para qué registro se abrió la cámara (registro con foto, 2026-09-26).
  *
@@ -15,7 +17,14 @@ const CLAVE = 'renaser:registro-con-foto:pendiente';
 /** Pasado este tiempo, una foto pendiente ya no se ofrece: seguramente es de otro momento del día. */
 export const VIGENCIA_FOTO_PENDIENTE_MS = 30 * 60_000;
 
-export type FotoPendiente = { registroId: string; titulo: string; conPregunta: boolean; guardadaEnMs: number };
+export type FotoPendiente = {
+  registroId: string;
+  titulo: string;
+  conPregunta: boolean;
+  /** D-178: `'roca'` si era una acción del día. Lo guardado por una versión anterior no lo trae: hábito. */
+  destino?: DestinoDeFoto;
+  guardadaEnMs: number;
+};
 
 function esFotoPendiente(valor: unknown): valor is FotoPendiente {
   const v = valor as Partial<FotoPendiente> | null;
@@ -23,14 +32,18 @@ function esFotoPendiente(valor: unknown): valor is FotoPendiente {
     typeof v?.registroId === 'string' &&
     typeof v.titulo === 'string' &&
     typeof v.conPregunta === 'boolean' &&
-    typeof v.guardadaEnMs === 'number'
+    typeof v.guardadaEnMs === 'number' &&
+    destinoDeEvidencia(v.destino) !== null
   );
 }
 
 export const fotoPendiente = {
-  async guardar({ registroId, titulo, conPregunta }: Omit<FotoPendiente, 'guardadaEnMs'>): Promise<void> {
+  async guardar({ registroId, titulo, conPregunta, destino }: Omit<FotoPendiente, 'guardadaEnMs'>): Promise<void> {
     try {
-      await AsyncStorage.setItem(CLAVE, JSON.stringify({ registroId, titulo, conPregunta, guardadaEnMs: Date.now() }));
+      await AsyncStorage.setItem(
+        CLAVE,
+        JSON.stringify({ registroId, titulo, conPregunta, destino: destino ?? 'habito', guardadaEnMs: Date.now() }),
+      );
     } catch {
       // Best-effort: sin esto solo se pierde la recuperación tras un cierre de Android.
     }

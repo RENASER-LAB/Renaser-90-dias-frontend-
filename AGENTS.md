@@ -35,6 +35,20 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     `features/habits/hooks/useRegistroConFoto.ts` + `components/RegistroConFotoModal.tsx`.
     Una excepción puntual **no abre** los tabs: cualquier otro cambio sobre los cinco principales
     vuelve a necesitar autorización explícita.
+  * **Excepción autorizada por el dueño del producto — 2026-09-26 — tab `Hoy`, la foto de una
+    ACCIÓN del día desde el acompañante (D-178 del backend).** Decisión del dueño: marcar como hecha
+    una acción del día (roca) desde el acompañante funciona *exactamente* como un hábito que exige
+    evidencia: la misma tarjeta, la misma cámara, la misma pantalla partida (sin "¿Qué sentiste?").
+    El evento `evidencia` trae `destino: "roca"` y la foto sube por `/rocks/{id}/evidence`, que la
+    completa y paga sus puntos. En `Hoy` lo único que cambia es que la hoja del orbe puede mostrar
+    esa tarjeta ("EVIDENCIA DE TU ACCIÓN", *"Listo, quedó registrada tu acción."*). Un solo código:
+    `useRegistroConFoto` recibe las reglas de la roca inyectadas
+    (`features/objetivos/utils/registroDeAccionConFoto.ts`, que reusa `sellarRocaDiaria`), porque
+    `habits` no conoce las rocas. El cerrojo Pareto se avisa antes de abrir la cámara, nombrando la
+    verde que va primero. Sin `destino` (backend viejo) todo sigue siendo un hábito. **`Training` no
+    cambia**: sus acciones siguen con el modal de antes.
+    Una excepción puntual **no abre** el tab: cualquier otro cambio sobre los cinco principales
+    vuelve a necesitar autorización explícita.
   * **Excepción autorizada por el dueño del producto — 2026-09-25 — tab `Hoy`, tarjeta del semáforo.**
     Autorizada junto con el diseño del semáforo de cumplimiento del aprendiz (D-168; el contrato vive
     en el backend, `docs/arquitectura/SEMAFORO_DEL_APRENDIZ.md`). El alcance es **solo** la tarjeta

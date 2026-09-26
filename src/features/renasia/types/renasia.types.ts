@@ -1,3 +1,5 @@
+import type { DestinoDeFoto } from '../../habits/utils/destinoDeFoto';
+
 /**
  * Espejo del contrato de los asistentes conversacionales del programa, endpoints bajo
  * `/api/v1/renasia`.
@@ -97,6 +99,11 @@ export type RenasiaEventoEvidencia = {
   venceEn: string;
   /** D-172 del backend: solo los rituales preguntan "¿Qué sentiste?". Sin el campo, sin pregunta. */
   conPregunta?: boolean;
+  /**
+   * D-178 del backend: `"roca"` = una acción del día, y `registroId` es el id de la roca diaria (se
+   * sube a `/rocks/{id}/evidence`). Sin el campo, o `"habito"`: un hábito, como antes.
+   */
+  destino?: string;
 };
 
 /** Respuesta de `POST /api/v1/renasia/propuestas/{id}/confirmar`. */
@@ -158,6 +165,8 @@ export type PedidoDeFotoUI = {
   titulo: string;
   venceEn: string;
   conPregunta: boolean;
+  /** A qué se sube la foto (D-178): un hábito o una acción del día. */
+  destino: DestinoDeFoto;
   estado: EstadoPedidoDeFotoUI;
   /** Qué pasó, apto para mostrar ("Listo, quedó registrado"). */
   mensaje?: string | null;

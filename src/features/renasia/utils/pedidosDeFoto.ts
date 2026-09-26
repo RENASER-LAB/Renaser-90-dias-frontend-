@@ -1,4 +1,5 @@
-import type { ResultadoDeInicio } from '../../habits/hooks/useRegistroConFoto';
+import type { ResultadoDeInicio, SolicitudDeFoto } from '../../habits/hooks/useRegistroConFoto';
+import { destinoDeEvidencia, type DestinoDeFoto } from '../../habits/utils/destinoDeFoto';
 import type { EstadoPedidoDeFotoUI, PedidoDeFotoUI, RenasiaEventoEvidencia } from '../types/renasia.types';
 
 /**
@@ -8,14 +9,31 @@ import type { EstadoPedidoDeFotoUI, PedidoDeFotoUI, RenasiaEventoEvidencia } fro
  */
 
 export const TEXTO_REGISTRADO = 'Listo, quedó registrado.';
+/** D-178: lo que dice la tarjeta de una acción del día al registrarse. */
+export const TEXTO_ACCION_REGISTRADA = 'Listo, quedó registrada tu acción.';
 
+/**
+ * Solo se llama con un evento ya validado (el stream y la voz descartan un `destino` desconocido).
+ * Sin `destino` es un hábito: un backend anterior a D-178.
+ */
 export function pedidoDesdeEvento(evento: RenasiaEventoEvidencia): PedidoDeFotoUI {
   return {
     registroId: evento.registroId,
     titulo: evento.titulo,
     venceEn: evento.venceEn,
     conPregunta: evento.conPregunta === true,
+    destino: destinoDeEvidencia(evento.destino) ?? 'habito',
     estado: 'pendiente',
+  };
+}
+
+/** Lo que se le pasa a `useRegistroConFoto.iniciar` desde una tarjeta del acompañante. */
+export function solicitudDelPedido(pedido: PedidoDeFotoUI): SolicitudDeFoto {
+  return {
+    registroId: pedido.registroId,
+    titulo: pedido.titulo,
+    conPregunta: pedido.conPregunta,
+    destino: pedido.destino,
   };
 }
 
@@ -37,21 +55,24 @@ export function estadoVisibleDelPedido(pedido: PedidoDeFotoUI, ahoraMs: number):
  * deja disponible; `abierto` también: el registro recién se cierra cuando la persona termina, y
  * eso lo avisa {@link cambioAlRegistrar}.
  */
-export function cambioTrasIniciar(resultado: ResultadoDeInicio): Partial<PedidoDeFotoUI> {
+export function cambioTrasIniciar(resultado: ResultadoDeInicio, destino: DestinoDeFoto = 'habito'): Partial<PedidoDeFotoUI> {
+  const esAccion = destino === 'roca';
   switch (resultado) {
     case 'completado':
-      return { estado: 'registrado', mensaje: 'Ya estaba registrado.' };
+      return { estado: 'registrado', mensaje: esAccion ? 'Ya estaba registrada.' : 'Ya estaba registrado.' };
     case 'vencido':
-      return { estado: 'vencido', mensaje: 'Este hábito ya venció.' };
+      return { estado: 'vencido', mensaje: esAccion ? 'Era de otro día.' : 'Este hábito ya venció.' };
     case 'no-es-de-hoy':
       return { estado: 'vencido', mensaje: 'Era de otro día.' };
     default:
+      // `bloqueada` (Pareto, D-178) también: el aviso ya dijo cuál va primero, y hecha la verde se
+      // puede volver a tocar.
       return { estado: 'pendiente' };
   }
 }
 
-export function cambioAlRegistrar(): Partial<PedidoDeFotoUI> {
-  return { estado: 'registrado', mensaje: TEXTO_REGISTRADO };
+export function cambioAlRegistrar(destino: DestinoDeFoto = 'habito'): Partial<PedidoDeFotoUI> {
+  return { estado: 'registrado', mensaje: destino === 'roca' ? TEXTO_ACCION_REGISTRADA : TEXTO_REGISTRADO };
 }
 
 /** Si el cambio cierra la tarjeta, le anota cuándo (la hoja del orbe la retira sola después). */

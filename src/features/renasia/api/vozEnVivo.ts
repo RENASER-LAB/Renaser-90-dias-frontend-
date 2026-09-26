@@ -1,4 +1,5 @@
 import { API_CONFIG } from '../../../config/apiConfig';
+import { destinoDeEvidencia, type DestinoDeFoto } from '../../habits/utils/destinoDeFoto';
 
 const RUTA = '/api/v1/renasia/voz/en-vivo';
 
@@ -15,7 +16,15 @@ export type EventoEnVivo =
   | { tipo: 'interrumpido' }
   | { tipo: 'turnoCompleto' }
   | { tipo: 'propuesta'; id: string; resumen: string; venceEn: string }
-  | { tipo: 'evidencia'; registroId: string; titulo: string; venceEn: string; conPregunta: boolean }
+  | {
+      tipo: 'evidencia';
+      registroId: string;
+      titulo: string;
+      venceEn: string;
+      conPregunta: boolean;
+      /** D-178: sin el campo, un hábito. */
+      destino: DestinoDeFoto;
+    }
   | { tipo: 'cuotaAgotada' }
   | { tipo: 'error'; valor: string };
 
@@ -45,16 +54,20 @@ export function leerEventoEnVivo(texto: string): EventoEnVivo | null {
       return esTexto('id') && esTexto('resumen') && esTexto('venceEn')
         ? { tipo: 'propuesta', id: evento.id as string, resumen: evento.resumen as string, venceEn: evento.venceEn as string }
         : null;
-    case 'evidencia':
-      return esTexto('registroId') && esTexto('titulo') && esTexto('venceEn')
+    case 'evidencia': {
+      // D-178: un `destino` que esta versión no conoce se ignora, como un evento mal formado.
+      const destino = destinoDeEvidencia(evento.destino);
+      return esTexto('registroId') && esTexto('titulo') && esTexto('venceEn') && destino
         ? {
             tipo: 'evidencia',
             registroId: evento.registroId as string,
             titulo: evento.titulo as string,
             venceEn: evento.venceEn as string,
             conPregunta: evento.conPregunta === true,
+            destino,
           }
         : null;
+    }
     case 'error':
       return esTexto('valor') ? { tipo: 'error', valor: evento.valor as string } : null;
     default:

@@ -25,7 +25,7 @@ import { registrarEvidenciaRoca, solicitarUrlSubidaEvidenciaRoca } from '../api/
  */
 export async function sellarRocaDiaria(
   rocaId: string,
-  datos: { archivo: ArchivoEvidencia | null; texto: string }
+  datos: { archivo: Pick<ArchivoEvidencia, 'uri' | 'mimeType' | 'tipo' | 'tomadaEn'> | null; texto: string }
 ): Promise<number> {
   const { archivo, texto } = datos;
   let bucket: string | null = null;

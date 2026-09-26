@@ -113,4 +113,12 @@ describe('quitarRespaldoDeFoto', () => {
     const texto = `Dale.${respaldo}`;
     expect(quitarRespaldoDeFoto(texto, 'AGUA TIBIA CON LIMÓN')).toBe(texto);
   });
+
+  it('D-178: el respaldo de una acción del día es otro (manda a Training) y también se saca', () => {
+    const deAccion =
+      "\n\nFoto para registrar tu accion 'Llamar a 3 clientes': si no ves el boton de la camara, subela desde Training.";
+    expect(quitarRespaldoDeFoto(`Listo.${deAccion}`, 'Llamar a 3 clientes', 'roca')).toBe('Listo.');
+    // El de hábito no se confunde con el de acción.
+    expect(quitarRespaldoDeFoto(`Listo.${deAccion}`, 'Llamar a 3 clientes')).toBe(`Listo.${deAccion}`);
+  });
 });

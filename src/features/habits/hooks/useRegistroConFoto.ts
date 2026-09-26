@@ -12,6 +12,7 @@ import {
 import { obtenerTracksDeHoy } from '../api/habitsApi';
 import { fotoPendiente } from '../storage/fotoPendiente';
 import { archivoDeResultadoDeCamara, tomarFotoConCamara, type ArchivoEvidencia } from '../utils/capturarEvidencia';
+import { RechazoParaMostrar, type DestinoDeFoto, type ReglasDelDestino } from '../utils/destinoDeFoto';
 import {
   avisoParaFoto,
   estadoParaFoto,
@@ -21,12 +22,17 @@ import {
   type ResultadoDelRegistro,
 } from '../utils/registroConFoto';
 
-/** Qué registro se quiere cerrar con foto. `registroId` es el id del track del día (`habit-tracks`). */
+/**
+ * Qué registro se quiere cerrar con foto. `registroId` es el id del track del día (`habit-tracks`),
+ * o el de la roca diaria si `destino` es `'roca'` (D-178).
+ */
 export type SolicitudDeFoto = {
   registroId: string;
   titulo: string;
   /** Solo en los rituales se pregunta "¿Qué sentiste?"; en los demás, foto y se registra solo (D-172). */
   conPregunta: boolean;
+  /** Sin el campo, un hábito: como antes de D-178. */
+  destino?: DestinoDeFoto;
 };
 
 /** La pantalla partida abierta: la foto de arriba y la respuesta de abajo. */
@@ -41,9 +47,20 @@ export type ResultadoDeInicio = 'abierto' | 'cancelado' | 'ocupado' | Exclude<Es
 
 export type OpcionesRegistroConFoto = {
   /** El backend ya cerró el registro. Los puntos son los que devolvió él, nunca un número local. */
-  onCompletado: (registroId: string, resultado: ResultadoDelRegistro, titulo: string) => void | Promise<void>;
+  onCompletado: (
+    registroId: string,
+    resultado: ResultadoDelRegistro,
+    titulo: string,
+    destino: DestinoDeFoto,
+  ) => void | Promise<void>;
   /** El registro no era de hoy (pantalla abierta de un día para otro): hay que recargar. */
   onDiaCambiado?: () => void;
+  /**
+   * D-178: las reglas de los destinos que no son hábitos. Las inyecta quien monta el hook porque
+   * `habits` no conoce las rocas (`objetivos/utils/registroDeAccionConFoto` → `REGLAS_DE_ACCION`).
+   * Sin ellas, un pedido de roca no abre la cámara.
+   */
+  destinos?: { roca?: ReglasDelDestino };
 };
 
 /** Lo que `RegistroConFotoModal` necesita. Se pasa entero: `<RegistroConFotoModal {...r.modal} />`. */
@@ -64,6 +81,20 @@ const DEPENDENCIAS: DependenciasDelRegistro = {
   tracksDeHoy: obtenerTracksDeHoy,
 };
 
+/** El destino de siempre: el registro del día de un hábito. */
+const REGLAS_DE_HABITO: ReglasDelDestino = {
+  estadoFresco: async registroId => estadoParaFoto(await obtenerTracksDeHoy(), registroId, Date.now()),
+  registrar: (entrada, alConfirmarEvidencia) => registrarConFoto(entrada, alConfirmarEvidencia, DEPENDENCIAS),
+};
+
+/** `null` si quien montó el hook no dio reglas para ese destino. */
+export function reglasPara(
+  destino: DestinoDeFoto | undefined,
+  destinos: OpcionesRegistroConFoto['destinos'],
+): ReglasDelDestino | null {
+  return destino === 'roca' ? destinos?.roca ?? null : REGLAS_DE_HABITO;
+}
+
 /**
  * iOS: el picker de la cámara se cierra con animación y la promesa resuelve ANTES de que termine.
  * Presentar un `Modal` de React Native en ese instante choca con la animación y el modal no
@@ -80,6 +111,7 @@ function mensajeDelFallo(error: unknown): string {
   if (error instanceof AlmacenamientoSinConfigurarError) {
     return 'El servidor todavía no puede guardar fotos. Avísale al equipo técnico; tu foto y tu respuesta siguen acá.';
   }
+  if (error instanceof RechazoParaMostrar) return error.message;
   return mensajeDeError(error, 'No se pudo registrar. Tu foto y tu respuesta siguen acá: intenta de nuevo.');
 }
 
@@ -123,13 +155,13 @@ export function useRegistroConFoto(opciones: OpcionesRegistroConFoto) {
 
   /** Estado FRESCO del registro, justo antes de abrir la cámara. */
   const verificar = useCallback(
-    async (registroId: string, pistaEvidencia: boolean): Promise<EstadoParaFoto> => {
+    async (reglas: ReglasDelDestino, registroId: string, pistaEvidencia: boolean): Promise<EstadoParaFoto> => {
       // En web la cámara solo se abre si se llama "enseguida" después del toque: esperar una
       // consulta de red haría que el navegador la bloquee en silencio. Ahí se confía en el
       // manejo de errores del envío.
       if (Platform.OS === 'web') return { tipo: 'disponible', evidenciaYaSubida: pistaEvidencia };
       try {
-        return estadoParaFoto(await obtenerTracksDeHoy(), registroId, Date.now());
+        return await reglas.estadoFresco(registroId);
       } catch {
         // Sin red no se bloquea: el envío va a fallar con un mensaje claro y la foto se conserva.
         return { tipo: 'disponible', evidenciaYaSubida: pistaEvidencia };
@@ -138,8 +170,8 @@ export function useRegistroConFoto(opciones: OpcionesRegistroConFoto) {
     [],
   );
 
-  const avisarSiNoSePuede = useCallback((estado: EstadoParaFoto): boolean => {
-    const aviso = avisoParaFoto(estado);
+  const avisarSiNoSePuede = useCallback((estado: EstadoParaFoto, destino?: DestinoDeFoto): boolean => {
+    const aviso = avisoParaFoto(estado, destino);
     if (!aviso) return false;
     Alert.alert(aviso.titulo, aviso.mensaje);
     if (estado.tipo === 'no-es-de-hoy') opcionesRef.current.onDiaCambiado?.();
@@ -162,11 +194,13 @@ export function useRegistroConFoto(opciones: OpcionesRegistroConFoto) {
   const iniciar = useCallback(
     async (solicitud: SolicitudDeFoto, evidenciaYaSubida = false): Promise<ResultadoDeInicio> => {
       if (ocupadoRef.current || registroRef.current) return 'ocupado';
+      const reglas = reglasPara(solicitud.destino, opcionesRef.current.destinos);
+      if (!reglas) return 'cancelado';
       ocupadoRef.current = true;
       try {
-        const estado = await verificar(solicitud.registroId, evidenciaYaSubida);
+        const estado = await verificar(reglas, solicitud.registroId, evidenciaYaSubida);
         if (estado.tipo !== 'disponible') {
-          avisarSiNoSePuede(estado);
+          avisarSiNoSePuede(estado, solicitud.destino);
           return estado.tipo;
         }
         if (estado.evidenciaYaSubida) {
@@ -205,20 +239,20 @@ export function useRegistroConFoto(opciones: OpcionesRegistroConFoto) {
 
   const terminar = useCallback(async () => {
     const actual = registroRef.current;
-    if (!actual || ocupadoRef.current) return;
+    const reglas = actual ? reglasPara(actual.destino, opcionesRef.current.destinos) : null;
+    if (!actual || !reglas || ocupadoRef.current) return;
     ocupadoRef.current = true;
     setEnviando(true);
     setError(null);
     try {
-      const resultado = await registrarConFoto(
+      const resultado = await reglas.registrar(
         { ...actual, respuesta },
         // Desde acá un reintento solo cierra: volver a subir duplicaría la evidencia.
         () => setRegistro(previo => (previo ? { ...previo, evidenciaYaSubida: true } : previo)),
-        DEPENDENCIAS,
       );
       setRegistro(null);
       setRespuesta('');
-      await opcionesRef.current.onCompletado(actual.registroId, resultado, actual.titulo);
+      await opcionesRef.current.onCompletado(actual.registroId, resultado, actual.titulo, actual.destino ?? 'habito');
     } catch (e) {
       setError(mensajeDelFallo(e));
     } finally {
@@ -260,14 +294,17 @@ export function useRegistroConFoto(opciones: OpcionesRegistroConFoto) {
       const pendiente = await ImagePicker.getPendingResultAsync().catch(() => null);
       const contexto = await fotoPendiente.tomar(Date.now());
       if (!pendiente || !contexto || !('canceled' in pendiente)) return;
+      const reglas = reglasPara(contexto.destino, opcionesRef.current.destinos);
+      if (!reglas) return;
       const archivo = await archivoDeResultadoDeCamara(pendiente);
       if (!archivo) return;
-      const estado = await verificar(contexto.registroId, false);
-      if (avisarSiNoSePuede(estado)) return;
+      const estado = await verificar(reglas, contexto.registroId, false);
+      if (avisarSiNoSePuede(estado, contexto.destino)) return;
       abrir({
         registroId: contexto.registroId,
         titulo: contexto.titulo,
         conPregunta: contexto.conPregunta,
+        destino: contexto.destino,
         archivo,
         evidenciaYaSubida: estado.tipo === 'disponible' && estado.evidenciaYaSubida,
       });

@@ -2,6 +2,7 @@ import { fetch as expoFetch } from 'expo/fetch';
 
 import { API_CONFIG } from '../../../config/apiConfig';
 import { getTokenSesion, notificarSesionVencida } from '../../../services/http/apiClient';
+import { destinoDeEvidencia } from '../../habits/utils/destinoDeFoto';
 import { nombreVisible } from '../data/agentes';
 import type {
   AgenteRenasia,
@@ -66,7 +67,13 @@ export type OpcionesEnvioRenasia = {
  */
 function esEventoEvidencia(evento: RenasiaEvento): evento is RenasiaEventoEvidencia {
   const e = evento as Partial<RenasiaEventoEvidencia>;
-  return typeof e.registroId === 'string' && typeof e.titulo === 'string' && typeof e.venceEn === 'string';
+  return (
+    typeof e.registroId === 'string' &&
+    typeof e.titulo === 'string' &&
+    typeof e.venceEn === 'string' &&
+    // D-178: un `destino` que esta versión no conoce se ignora (queda el texto de respaldo).
+    destinoDeEvidencia(e.destino) !== null
+  );
 }
 
 function esAbort(error: unknown): boolean {

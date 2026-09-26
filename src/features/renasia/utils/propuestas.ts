@@ -1,4 +1,5 @@
 import { ApiError, mensajeDeError } from '../../../services/http/apiClient';
+import type { DestinoDeFoto } from '../../habits/utils/destinoDeFoto';
 import type {
   EstadoPropuestaUI,
   PropuestaUI,
@@ -35,8 +36,11 @@ export function quitarTextoDeRespaldo(texto: string, resumen: string): string {
  * backend: "Foto para registrar '<titulo>': ..."). Esta versión dibuja la tarjeta, así que lo saca
  * si está al final del mensaje; si no coincide exacto, no toca nada.
  */
-export function quitarRespaldoDeFoto(texto: string, titulo: string): string {
-  const respaldo = `\n\nFoto para registrar '${titulo}': si no ves el boton de la camara, subela desde Hoy.`;
+export function quitarRespaldoDeFoto(texto: string, titulo: string, destino: DestinoDeFoto = 'habito'): string {
+  const respaldo =
+    destino === 'roca'
+      ? `\n\nFoto para registrar tu accion '${titulo}': si no ves el boton de la camara, subela desde Training.`
+      : `\n\nFoto para registrar '${titulo}': si no ves el boton de la camara, subela desde Hoy.`;
   return texto.endsWith(respaldo) ? texto.slice(0, texto.length - respaldo.length) : texto;
 }
 

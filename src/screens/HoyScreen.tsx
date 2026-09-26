@@ -66,7 +66,8 @@ import { AccionDelAcompanante } from '../features/renasia/components/AccionDelAc
 import { RenasiaPanel } from '../features/renasia/screens/RenasiaPanel';
 import { type FaseDeVoz } from '../features/renasia/hooks/useConversacionPorVoz';
 import { useVozDelOrbe } from '../features/renasia/hooks/useVozDelOrbe';
-import { cambioAlRegistrar, cambioTrasIniciar, estadoVisibleDelPedido } from '../features/renasia/utils/pedidosDeFoto';
+import { cambioAlRegistrar, cambioTrasIniciar, estadoVisibleDelPedido, solicitudDelPedido } from '../features/renasia/utils/pedidosDeFoto';
+import { REGLAS_DE_ACCION } from '../features/objetivos/utils/registroDeAccionConFoto';
 import type { PedidoDeFotoUI } from '../features/renasia/types/renasia.types';
 import { useRegistroConFoto } from '../features/habits/hooks/useRegistroConFoto';
 import { RegistroConFotoModal } from '../features/habits/components/RegistroConFotoModal';
@@ -130,23 +131,21 @@ export default function HoyScreen() {
      acompañante pidió la foto de un hábito (evento `evidencia`) y se abre la cámara y la misma
      pantalla partida de Training. Al registrarse, Hoy relee el resumen y el hábito del momento. */
   const registroConFoto = useRegistroConFoto({
-    onCompletado: registroId => {
-      voz.cambiarPedidoDeFoto(registroId, cambioAlRegistrar());
+    onCompletado: (registroId, _resultado, _titulo, destino) => {
+      voz.cambiarPedidoDeFoto(registroId, cambioAlRegistrar(destino));
       void recargarResumen();
       void recargarHabitoAhora();
     },
+    // D-178: el acompañante también pide la foto de una acción del día; sube a los endpoints de rocas.
+    destinos: { roca: REGLAS_DE_ACCION },
   });
   const tomarFotoDelOrbe = async (pedido: PedidoDeFotoUI) => {
     if (estadoVisibleDelPedido(pedido, Date.now()) !== 'pendiente') return;
     // La cámara no convive con el micrófono abierto ni con el orbe hablando: se lo calla antes.
     if (voz.fase === 'escuchando' || voz.fase === 'hablando') voz.tocar();
     voz.cambiarPedidoDeFoto(pedido.registroId, { estado: 'abriendo' });
-    const resultado = await registroConFoto.iniciar({
-      registroId: pedido.registroId,
-      titulo: pedido.titulo,
-      conPregunta: pedido.conPregunta,
-    });
-    voz.cambiarPedidoDeFoto(pedido.registroId, cambioTrasIniciar(resultado));
+    const resultado = await registroConFoto.iniciar(solicitudDelPedido(pedido));
+    voz.cambiarPedidoDeFoto(pedido.registroId, cambioTrasIniciar(resultado, pedido.destino));
   };
   const [vistaMentor, setVistaMentor] = useState<'ninguna' | 'celula' | 'alumno'>('ninguna');
   const [alumnoAbierto, setAlumnoAbierto] = useState<AlumnoConEstado | null>(null);

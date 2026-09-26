@@ -78,6 +78,16 @@ describe('estadoParaFoto', () => {
     expect(avisoParaFoto({ tipo: 'no-es-de-hoy' })?.titulo).toBe('Tu día cambió');
     expect(avisoParaFoto({ tipo: 'disponible', evidenciaYaSubida: false })).toBeNull();
   });
+
+  it('D-178: para una acción del día habla de "acción" y explica el cerrojo Pareto nombrando la verde', () => {
+    expect(avisoParaFoto({ tipo: 'completado' }, 'roca')?.mensaje).toBe('Esta acción ya quedó cumplida hoy.');
+    const bloqueada = avisoParaFoto({ tipo: 'bloqueada', primero: 'Llamar a 3 clientes' }, 'roca');
+    expect(bloqueada?.titulo).toBe('Primero tu acción verde');
+    expect(bloqueada?.mensaje).toContain('«Llamar a 3 clientes»');
+    expect(avisoParaFoto({ tipo: 'bloqueada', primero: null }, 'roca')?.mensaje).toContain('primero va la acción verde');
+    expect(avisoParaFoto({ tipo: 'no-es-de-hoy' }, 'roca')?.mensaje).toContain('acción era de otro día');
+    expect(avisoParaFoto({ tipo: 'disponible', evidenciaYaSubida: false }, 'roca')).toBeNull();
+  });
 });
 
 describe('respuestaValida', () => {

@@ -1,6 +1,7 @@
 import { ApiError } from '../../../services/http/apiClient';
 import type { ArchivoParaSubir } from '../api/evidenciaHabitoApi';
 import type { TrackDelDiaApi } from '../types/habits.types';
+import type { DestinoDeFoto } from './destinoDeFoto';
 
 /**
  * Reglas puras del REGISTRO CON FOTO (pedido del dueño, 2026-09-26): los hábitos que exigen
@@ -32,7 +33,12 @@ export type EstadoParaFoto =
   | { tipo: 'completado' }
   | { tipo: 'vencido' }
   /** El registro no está entre los de hoy: la pantalla quedó abierta de un día para otro. */
-  | { tipo: 'no-es-de-hoy' };
+  | { tipo: 'no-es-de-hoy' }
+  /**
+   * Solo acciones del día (D-178): el cerrojo Pareto. En cada eje primero va la verde; `primero` es
+   * su título, si se conoce.
+   */
+  | { tipo: 'bloqueada'; primero: string | null };
 
 /**
  * Qué hacer con un registro según la lista FRESCA de `GET /habit-tracks/today`. Se consulta
@@ -55,7 +61,11 @@ export function estadoParaFoto(
 }
 
 /** El texto que se muestra cuando no se abre la cámara. `null` = se puede seguir. */
-export function avisoParaFoto(estado: EstadoParaFoto): { titulo: string; mensaje: string } | null {
+export function avisoParaFoto(
+  estado: EstadoParaFoto,
+  destino: DestinoDeFoto = 'habito',
+): { titulo: string; mensaje: string } | null {
+  if (destino === 'roca') return avisoParaAccion(estado);
   switch (estado.tipo) {
     case 'completado':
       return { titulo: 'Ya está registrado', mensaje: 'Este hábito ya quedó cumplido hoy.' };
@@ -72,6 +82,31 @@ export function avisoParaFoto(estado: EstadoParaFoto): { titulo: string; mensaje
     default:
       return null;
   }
+}
+
+/** Lo mismo para una acción del día (D-178): otras palabras, y el cerrojo Pareto. */
+function avisoParaAccion(estado: EstadoParaFoto): { titulo: string; mensaje: string } | null {
+  switch (estado.tipo) {
+    case 'completado':
+      return { titulo: 'Ya está registrada', mensaje: 'Esta acción ya quedó cumplida hoy.' };
+    case 'bloqueada':
+      return { titulo: 'Primero tu acción verde', mensaje: mensajeDeAccionBloqueada(estado.primero) };
+    case 'vencido':
+    case 'no-es-de-hoy':
+      return {
+        titulo: 'Tu día cambió',
+        mensaje: 'Esta acción era de otro día, así que ya no se registra desde acá.',
+      };
+    default:
+      return null;
+  }
+}
+
+/** Ley IV: en cada eje la verde va primero. Mismo texto en el aviso y cuando lo rechaza el servidor. */
+export function mensajeDeAccionBloqueada(primero: string | null): string {
+  return primero
+    ? `En cada eje primero va la acción verde. Registra antes «${primero}» y después se desbloquea esta.`
+    : 'En cada eje primero va la acción verde. Regístrala antes y después se desbloquea esta.';
 }
 
 /**
@@ -91,7 +126,11 @@ export type DependenciasDelRegistro = {
 
 export type EntradaDelRegistro = {
   registroId: string;
-  archivo: ArchivoParaSubir | null;
+  /**
+   * `tomadaEn`: cuándo se sacó (EXIF o, si falta, el instante de la captura). Los hábitos no lo usan;
+   * una acción del día sí (D-178): `/rocks/{id}/evidence` lo exige para una FOTO (Ley VI, ±15 min).
+   */
+  archivo: (ArchivoParaSubir & { tomadaEn?: string | null }) | null;
   respuesta: string;
   /** Solo los rituales preguntan "¿Qué sentiste?" (D-172); en los demás se cierra sin respuesta. */
   conPregunta: boolean;

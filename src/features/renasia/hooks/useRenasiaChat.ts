@@ -215,15 +215,17 @@ export function useRenasiaChat(opciones: OpcionesRenasiaChat): EstadoRenasiaChat
               );
             },
             onEvidencia: evento => {
-              // El acompañante pide la foto de un hábito: tarjeta con "Tomar foto" (2026-09-26).
+              // El acompañante pide la foto de un hábito, o de una acción del día (D-178): tarjeta
+              // con "Tomar foto" (2026-09-26).
               if (!montadoRef.current) return;
+              const pedido = pedidoDesdeEvento(evento);
               setMensajes(prev =>
                 prev.map(m =>
                   m.id === idAsistente
                     ? {
                         ...m,
-                        texto: quitarRespaldoDeFoto(m.texto, evento.titulo),
-                        pedidosDeFoto: agregarPedido(m.pedidosDeFoto, pedidoDesdeEvento(evento)),
+                        texto: quitarRespaldoDeFoto(m.texto, evento.titulo, pedido.destino),
+                        pedidosDeFoto: agregarPedido(m.pedidosDeFoto, pedido),
                       }
                     : m
                 )

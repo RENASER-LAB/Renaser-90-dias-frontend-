@@ -5,7 +5,7 @@ import { GoldButton } from '../../../components/GoldButton';
 import { Icon } from '../../../components/Icon';
 import { useTheme } from '../../../theme/ThemeContext';
 import type { PedidoDeFotoUI } from '../types/renasia.types';
-import { estadoVisibleDelPedido } from '../utils/pedidosDeFoto';
+import { estadoVisibleDelPedido, TEXTO_ACCION_REGISTRADA, TEXTO_REGISTRADO } from '../utils/pedidosDeFoto';
 
 type Props = {
   pedido: PedidoDeFotoUI;
@@ -13,8 +13,8 @@ type Props = {
 };
 
 /**
- * El acompañante pidió la foto de un hábito (evento `evidencia`, 2026-09-26): el título del
- * hábito y el botón "Tomar foto". Tocarlo abre la cámara y después la misma pantalla partida de
+ * El acompañante pidió la foto de un hábito (evento `evidencia`, 2026-09-26) o, desde D-178, de una
+ * acción del día (`destino: 'roca'`): el título y el botón "Tomar foto". Tocarlo abre la cámara y después la misma pantalla partida de
  * Training ("¿Qué sentiste?"). Registrado, dice que quedó; vencido, el botón se deshabilita.
  *
  * Solo dibuja: la cámara y la subida las maneja quien la monta (chat u orbe) con
@@ -26,14 +26,16 @@ export function TarjetaFotoDeHabito({ pedido, onTomarFoto }: Props) {
 
   return (
     <View style={[styles.tarjeta, { borderColor: c.borderStrong, backgroundColor: c.cardBgAlt }]}>
-      <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>EVIDENCIA DE TU HÁBITO</Text>
+      <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
+        {pedido.destino === 'roca' ? 'EVIDENCIA DE TU ACCIÓN' : 'EVIDENCIA DE TU HÁBITO'}
+      </Text>
       <Text style={[t.body, { color: c.text, fontSize: 14.5 }]}>{pedido.titulo}</Text>
 
       {estado === 'registrado' ? (
         <View style={styles.cierre}>
           <Icon name="checkCircle" size={16} color={c.success} />
           <Text style={[t.small, { color: c.success, fontSize: 13, flexShrink: 1 }]}>
-            {pedido.mensaje || 'Listo, quedó registrado.'}
+            {pedido.mensaje || (pedido.destino === 'roca' ? TEXTO_ACCION_REGISTRADA : TEXTO_REGISTRADO)}
           </Text>
         </View>
       ) : (
