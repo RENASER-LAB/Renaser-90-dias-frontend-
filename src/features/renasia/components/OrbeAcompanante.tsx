@@ -11,7 +11,9 @@ import {
 import { Icon } from "../../../components/Icon";
 import { useTheme } from "../../../theme/ThemeContext";
 import type { FaseDeVoz } from "../hooks/useConversacionPorVoz";
+import { useOrbeALaVista } from "../hooks/useOrbeALaVista";
 import { cargarOrbes } from "../utils/orbes";
+import { FPS_MAXIMO_DEL_ORBE } from "../utils/ritmoDelOrbe";
 
 const ORBES = cargarOrbes();
 
@@ -72,6 +74,11 @@ type Props = {
  * > `docs/pendientes/`; al verlo en el teléfono el dueño lo reemplazó por este ("se ve feo").
  *
  * Reducir movimiento: el orbe se congela en su pose (y la fase se dice con texto debajo).
+ *
+ * > Corregido 2026-09-26 ("en mi Xiaomi se laguea feo"): ya no se usa `<ThinkingOrb>` del paquete
+ * > sino `OrbeDePuntos`, que dibuja con el mismo motor pero con tope de cuadros por segundo
+ * > (`FPS_MAXIMO_DEL_ORBE`), se detiene cuando Hoy no se ve (`useOrbeALaVista`) y graba cada punto con
+ * > una llamada nativa menos. Antes corría a la frecuencia de la pantalla y nunca paraba.
  */
 export function OrbeAcompanante(props: Props) {
   const simple = <OrbeSimple {...props} diametro={Math.round(props.diametro * 0.62)} />;
@@ -128,7 +135,8 @@ function useMovimientoReducido(): boolean {
 function OrbeDeRazonamiento({ fase, diametro, onTocar, deshabilitado }: Props) {
   const { c, mode } = useTheme();
   const reducido = useMovimientoReducido();
-  const ThinkingOrb = ORBES!.ThinkingOrb;
+  const aLaVista = useOrbeALaVista();
+  const { OrbeDePuntos } = ORBES!;
   const oscuro = mode === "dark";
 
   return (
@@ -164,15 +172,17 @@ function OrbeDeRazonamiento({ fase, diametro, onTocar, deshabilitado }: Props) {
       ) : null}
       {/* El lienzo de Skia se queda con los toques: sin esto, tocar el orbe no llegaba al botón. */}
       <View pointerEvents="none">
-        <ThinkingOrb
-          state={ANIMACION[fase]}
-          size={diametro}
-          theme={oscuro ? "dark" : "light"}
+        <OrbeDePuntos
+          estado={ANIMACION[fase]}
+          tamano={diametro}
+          oscuro={oscuro}
           color={c.goldInk}
-          colorTo={oscuro ? "#E5C689" : c.gold}
-          speed={TEMPO[fase]}
-          paused={reducido}
-          dotScale={1.9}
+          colorHasta={oscuro ? "#E5C689" : c.gold}
+          velocidad={TEMPO[fase]}
+          escalaDePunto={1.9}
+          fpsMaximo={FPS_MAXIMO_DEL_ORBE[fase]}
+          activo={aLaVista && !reducido}
+          movimientoReducido={reducido}
         />
       </View>
     </Pressable>
