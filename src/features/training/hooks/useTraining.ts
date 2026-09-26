@@ -170,6 +170,8 @@ export function useTraining() {
           time: track.horaDisparo?.slice(0, 5) ?? '',
           tag: track.esOpcional ? 'Opcional' : 'Innegociable',
           done: track.estado === 'COMPLETADO',
+          // Crudo, para distinguir EXPIRADO/FALLIDO de pendiente: `done` los junta a los tres.
+          estado: track.estado,
           hasEvidence: track.tieneEvidencia ?? false,
           respuestaTexto: track.respuestaTexto ?? null,
           pointsAtStake: track.puntosEnJuego ?? null,

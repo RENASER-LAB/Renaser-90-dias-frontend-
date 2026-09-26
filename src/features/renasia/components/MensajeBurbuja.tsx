@@ -3,11 +3,12 @@ import { View, Text, Pressable, ActivityIndicator, StyleSheet } from 'react-nati
 
 import { TextoAsistente } from './TextoAsistente';
 import { TarjetaPropuesta } from './TarjetaPropuesta';
+import { TarjetaFotoDeHabito } from './TarjetaFotoDeHabito';
 import { useSegundosEsperando } from '../hooks/useSegundosEsperando';
 import { avisoDeEspera } from '../utils/esperaDelAsistente';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useResponsive } from '../../../theme/responsive';
-import type { RenasiaMensajeUI } from '../types/renasia.types';
+import type { PedidoDeFotoUI, RenasiaMensajeUI } from '../types/renasia.types';
 
 type Props = {
   mensaje: RenasiaMensajeUI;
@@ -17,6 +18,8 @@ type Props = {
   /** D-153: botones de las propuestas del acompañante. Sin estos, las tarjetas no se dibujan. */
   onConfirmarPropuesta?: (idMensaje: string, idPropuesta: string) => void;
   onCancelarPropuesta?: (idMensaje: string, idPropuesta: string) => void;
+  /** "Tomar foto" de un pedido de evidencia del acompañante. Sin esto, esas tarjetas no se dibujan. */
+  onTomarFoto?: (pedido: PedidoDeFotoUI) => void;
 };
 
 /**
@@ -43,6 +46,7 @@ export function MensajeBurbuja({
   onReintentar,
   onConfirmarPropuesta,
   onCancelarPropuesta,
+  onTomarFoto,
 }: Props) {
   const { c, t } = useTheme();
   const { rs, isSmall } = useResponsive();
@@ -97,6 +101,16 @@ export function MensajeBurbuja({
               propuesta={propuesta}
               onConfirmar={() => onConfirmarPropuesta(mensaje.id, propuesta.id)}
               onCancelar={() => onCancelarPropuesta(mensaje.id, propuesta.id)}
+            />
+          ))}
+
+        {!esPersona &&
+          onTomarFoto &&
+          mensaje.pedidosDeFoto?.map(pedido => (
+            <TarjetaFotoDeHabito
+              key={pedido.registroId}
+              pedido={pedido}
+              onTomarFoto={() => onTomarFoto(pedido)}
             />
           ))}
 

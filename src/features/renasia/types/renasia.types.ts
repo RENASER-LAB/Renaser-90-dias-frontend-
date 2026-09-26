@@ -83,6 +83,15 @@ export type RenasiaEventoError = { tipo: 'error'; valor: string };
  */
 export type RenasiaEventoPropuesta = { tipo: 'propuesta'; id: string; resumen: string; venceEn: string };
 
+/**
+ * `{"tipo":"evidencia","registroId":"<uuid>","titulo":"…","venceEn":"ISO-8601"}` (2026-09-26): el
+ * acompañante le pide a la persona la foto de un hábito que exige evidencia. A diferencia de la
+ * propuesta, no hay nada que confirmar en el servidor: la tarjeta abre la cámara y el registro con
+ * foto (`useRegistroConFoto`) usa `registroId` como el id del registro del día. Mismo evento en el
+ * stream del chat y en la voz en vivo.
+ */
+export type RenasiaEventoEvidencia = { tipo: 'evidencia'; registroId: string; titulo: string; venceEn: string };
+
 /** Respuesta de `POST /api/v1/renasia/propuestas/{id}/confirmar`. */
 export type ResultadoPropuestaApi = { estado: 'CONFIRMADA' | 'FALLIDA'; mensaje: string };
 
@@ -102,6 +111,7 @@ export type RenasiaEvento =
   | RenasiaEventoFin
   | RenasiaEventoError
   | RenasiaEventoPropuesta
+  | RenasiaEventoEvidencia
   | RenasiaEventoDesconocido;
 
 /**
@@ -127,6 +137,24 @@ export type PropuestaUI = {
   mensaje?: string | null;
   /** Cuándo dejó de estar pendiente (D-163): la hoja de acción del orbe la muestra unos segundos y se va. */
   resueltaEnMs?: number;
+};
+
+/**
+ * Cómo se ve un pedido de foto en pantalla. `vencido` se deriva también de `venceEn` contra el
+ * reloj del teléfono (solo para deshabilitar el botón); si el reloj miente, la consulta del
+ * registro antes de abrir la cámara es la que decide.
+ */
+export type EstadoPedidoDeFotoUI = 'pendiente' | 'abriendo' | 'registrado' | 'vencido';
+
+export type PedidoDeFotoUI = {
+  registroId: string;
+  titulo: string;
+  venceEn: string;
+  estado: EstadoPedidoDeFotoUI;
+  /** Qué pasó, apto para mostrar ("Listo, quedó registrado"). */
+  mensaje?: string | null;
+  /** Cuándo dejó de estar pendiente: la hoja del orbe lo muestra unos segundos y se va. */
+  resueltoEnMs?: number;
 };
 
 /**
@@ -159,6 +187,8 @@ export type RenasiaMensajeUI = {
    * vivo: el historial no las trae (en el historial queda el texto "Propuesta: …").
    */
   propuestas?: PropuestaUI[];
+  /** Pedidos de foto de un hábito (evento `evidencia`). Igual que las propuestas: solo en vivo. */
+  pedidosDeFoto?: PedidoDeFotoUI[];
 };
 
 /**

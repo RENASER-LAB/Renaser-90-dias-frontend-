@@ -60,3 +60,41 @@ export function mensajeDeErrorDeVoz(codigo: string): string | null {
       return 'No pude entender el audio. Intenta de nuevo o escribe tu mensaje.';
   }
 }
+
+/**
+ * Techo de `question` en `POST /api/v1/renasia/mensajes`: el backend no acepta más. Un dictado
+ * largo (ahora que el micrófono no corta a la primera pausa) puede pasarse; se recorta antes de
+ * mandarlo en vez de que el servidor rechace la pregunta entera.
+ */
+export const LARGO_MAXIMO_PREGUNTA = 4000;
+
+export function recortarPregunta(texto: string): string {
+  return texto.length > LARGO_MAXIMO_PREGUNTA ? texto.slice(0, LARGO_MAXIMO_PREGUNTA) : texto;
+}
+
+/**
+ * Pausa sin habla nueva tras la cual se da por terminado lo que dijo (pedido del dueño,
+ * 2026-09-26: 1,5 s). Antes se mandaba el primer resultado final del reconocedor, que en Android
+ * llega en la primera pausa corta: a quien habla largo se le cortaba la frase a la mitad.
+ */
+export const SILENCIO_PARA_TERMINAR_MS = 1500;
+
+/**
+ * Si todavía no dijo nada, cuánto se espera antes de cerrar el micrófono. En modo continuo el
+ * reconocedor no se cierra solo, y un micrófono abierto sin que nadie hable no sirve de nada.
+ */
+export const ESPERA_SIN_HABLA_MS = 8000;
+
+/**
+ * En modo continuo cada resultado final es un tramo NUEVO de lo dicho y hay que ir sumándolos.
+ * Algunos motores (iOS) mandan en cambio todo lo dicho hasta ahí: si el final nuevo ya empieza con
+ * lo acumulado, lo reemplaza en vez de repetirlo.
+ */
+export function sumarTramo(acumulado: string, tramo: string): string {
+  const nuevo = tramo.trim();
+  const previo = acumulado.trim();
+  if (!nuevo) return previo;
+  if (!previo) return nuevo;
+  if (nuevo.toLocaleLowerCase('es').startsWith(previo.toLocaleLowerCase('es'))) return nuevo;
+  return `${previo} ${nuevo}`;
+}

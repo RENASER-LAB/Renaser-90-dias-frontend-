@@ -24,6 +24,13 @@ describe('leerEventoEnVivo', () => {
     ).toEqual({ tipo: 'propuesta', id: 'p1', resumen: 'Mover Leer', venceEn: '2026-09-24T20:00:00Z' });
   });
 
+  it('lee el pedido de foto de un hábito (evento evidencia, 2026-09-26)', () => {
+    expect(
+      leerEventoEnVivo('{"tipo":"evidencia","registroId":"r-1","titulo":"Ducha fría","venceEn":"2026-09-26T23:00:00Z"}')
+    ).toEqual({ tipo: 'evidencia', registroId: 'r-1', titulo: 'Ducha fría', venceEn: '2026-09-26T23:00:00Z' });
+    expect(leerEventoEnVivo('{"tipo":"evidencia","registroId":"r-1"}')).toBeNull();
+  });
+
   it('ignora lo desconocido o mal formado en vez de romper', () => {
     expect(leerEventoEnVivo('{"tipo":"nuevo"}')).toBeNull();
     expect(leerEventoEnVivo('{"tipo":"dicho"}')).toBeNull();

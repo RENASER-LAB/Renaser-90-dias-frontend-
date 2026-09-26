@@ -144,6 +144,9 @@ export function useConversacionEnVivo(): ConversacionEnVivo {
         case 'propuesta':
           propuestasDeVoz.agregar(evento);
           return;
+        case 'evidencia':
+          propuestasDeVoz.agregarPedidoDeFoto(evento);
+          return;
         case 'cuotaAgotada':
           setError('Por hoy ya usaste tu tiempo de voz en vivo. Sigo contigo por el modo de siempre.');
           cerrar();
@@ -228,6 +231,8 @@ export function useConversacionEnVivo(): ConversacionEnVivo {
     propuestas: propuestasDeVoz.propuestas,
     confirmarPropuesta: propuestasDeVoz.confirmar,
     cancelarPropuesta: propuestasDeVoz.cancelar,
+    pedidosDeFoto: propuestasDeVoz.pedidosDeFoto,
+    cambiarPedidoDeFoto: propuestasDeVoz.cambiarPedidoDeFoto,
     error,
     aviso: null,
     tocar,

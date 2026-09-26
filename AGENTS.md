@@ -15,6 +15,26 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
   * `data/`: Constantes, cláusulas, configuraciones estáticas.
 * **Componentes de UI Atómicos**: Utiliza componentes compartidos bajo `src/components/` (`FormField`, `GoldButton`, `SliderRating`, `Checkbox`, `SignatureCanvas`, `Icon`).
 * **Integridad del Core**: NUNCA alterar, romper ni desconfigurar las pantallas existentes ni los tabs principales (`Hoy`, `Plan`, `Training`, `Comunidad`, `Yo`).
+  * **Excepción autorizada por el dueño del producto — 2026-09-26 — tabs `Training` y `Hoy`,
+    registro con foto.** Decisiones del dueño ese día:
+    * **`Training` — los hábitos que EXIGEN evidencia abren la cámara directo** (solo foto, también
+      los rituales). Con la foto tomada se abre una pantalla partida: la foto arriba y
+      **"¿Qué sentiste?"** abajo, obligatoria; al terminar se sube la foto (evidencia `FOTO`) y se
+      cierra el registro con esa respuesta como `respuestaTexto`. Aplica al check, al cuerpo de la
+      tarjeta, a SUBIR y a la tarjeta del próximo a vencer. Quedan fuera los de flujo propio
+      (`DAILY_CLASS`, Audioterapia, Pastilla, post de Comunidad, Despertar/Dormir), las rocas y el
+      build web, que siguen con lo de antes. **Los de evidencia opcional no cambian**: siguen con el
+      modal de las cuatro formas.
+    * **`Training` — VER sobre un hábito ya cumplido ya no abre el modal de subida**: muestra lo
+      que se escribió. Antes subía otra vez y terminaba en un `/complete` que el backend rechaza.
+      Tampoco se abre la cámara para un registro `EXPIRADO`/`FALLIDO`.
+    * **`Hoy` — la hoja del orbe** muestra el pedido de foto del acompañante (evento `evidencia`)
+      con **"Tomar foto"**, que abre la misma cámara y la misma pantalla partida. Nada más de Hoy
+      cambia; al registrarse, Hoy relee el resumen y el hábito del momento.
+    El código es uno solo para los tres lugares (y para la tarjeta del chat):
+    `features/habits/hooks/useRegistroConFoto.ts` + `components/RegistroConFotoModal.tsx`.
+    Una excepción puntual **no abre** los tabs: cualquier otro cambio sobre los cinco principales
+    vuelve a necesitar autorización explícita.
   * **Excepción autorizada por el dueño del producto — 2026-09-25 — tab `Hoy`, tarjeta del semáforo.**
     Autorizada junto con el diseño del semáforo de cumplimiento del aprendiz (D-168; el contrato vive
     en el backend, `docs/arquitectura/SEMAFORO_DEL_APRENDIZ.md`). El alcance es **solo** la tarjeta

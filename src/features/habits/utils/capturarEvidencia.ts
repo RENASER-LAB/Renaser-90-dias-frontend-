@@ -1,3 +1,4 @@
+import { Linking, Platform } from 'react-native';
 import { Alert } from '../../../components/Alerta';
 import * as ImagePicker from 'expo-image-picker';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
@@ -126,17 +127,51 @@ export async function elegirFotoDeGaleria(): Promise<ArchivoEvidencia | null> {
   }
 }
 
-/** Cámara → foto. El permiso de cámara es distinto del de galería y se pide aparte. */
+/**
+ * Cámara → foto. El permiso de cámara es distinto del de galería y se pide aparte.
+ *
+ * Si el permiso quedó negado para siempre (`canAskAgain: false`), el sistema ya no vuelve a
+ * preguntar y el aviso de siempre dejaba a la persona sin salida: ahora ofrece abrir los ajustes
+ * del teléfono (2026-09-26).
+ */
 export async function tomarFotoConCamara(): Promise<ArchivoEvidencia | null> {
   const permiso = await ImagePicker.requestCameraPermissionsAsync();
   if (!permiso.granted) {
+    avisarPermisoDeCamara(permiso.canAskAgain);
+    return null;
+  }
+  const resultado = await ImagePicker.launchCameraAsync(OPCIONES_DE_CAMARA);
+  return archivoDeResultadoDeCamara(resultado);
+}
+
+/** Las mismas opciones al lanzar la cámara y al recuperar su resultado pendiente (Android). */
+const OPCIONES_DE_CAMARA: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 1, exif: true };
+
+function avisarPermisoDeCamara(sePuedePreguntarDeNuevo: boolean): void {
+  if (sePuedePreguntarDeNuevo || Platform.OS === 'web') {
     Alert.alert(
       'Permiso de cámara requerido',
       'Renaser necesita la cámara para que puedas tomar la foto de tu evidencia.',
     );
-    return null;
+    return;
   }
-  const resultado = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 1, exif: true });
+  Alert.alert(
+    'La cámara está bloqueada',
+    'Negaste el permiso de la cámara y el teléfono ya no vuelve a preguntar. Actívalo en los ajustes de Renaser para poder tomar la foto.',
+    [
+      { text: 'Ahora no', style: 'cancel' },
+      { text: 'Abrir ajustes', onPress: () => void Linking.openSettings().catch(() => undefined) },
+    ],
+  );
+}
+
+/**
+ * Normaliza lo que devolvió la cámara. Sirve también para el resultado que Android guarda cuando
+ * mató la actividad con la cámara abierta (`ImagePicker.getPendingResultAsync`).
+ */
+export async function archivoDeResultadoDeCamara(
+  resultado: ImagePicker.ImagePickerResult,
+): Promise<ArchivoEvidencia | null> {
   if (resultado.canceled || !resultado.assets?.[0]) return null;
   try {
     const asset = resultado.assets[0];

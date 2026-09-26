@@ -158,6 +158,45 @@ export async function confirmarEvidencia(
 }
 
 /**
+ * El servidor no tiene dónde guardar archivos (ver {@link almacenamientoSinConfigurar}). Tipo
+ * propio para que quien no puede ofrecer "déjalo por escrito" (el registro con foto) muestre su
+ * propio texto; el mensaje por defecto es el de siempre.
+ */
+export class AlmacenamientoSinConfigurarError extends Error {
+  constructor() {
+    super(ALMACENAMIENTO_SIN_CONFIGURAR);
+    this.name = 'AlmacenamientoSinConfigurarError';
+  }
+}
+
+/** Lo mínimo que hace falta de un archivo para subirlo (un `ArchivoEvidencia` lo cumple). */
+export type ArchivoParaSubir = { uri: string; mimeType: string; tipo: TipoEvidencia };
+
+/**
+ * Pasos 1 a 3 en orden: firmar, subir a S3 y confirmar la evidencia. NO completa el registro.
+ *
+ * Extraído del `sellar` de `EvidenciaHabitoModal` (2026-09-26) para que el modal genérico y el
+ * registro con foto (Training, la tarjeta del chat y la del orbe) suban por el MISMO código.
+ * Resuelve recién cuando el backend confirmó la evidencia: desde ahí, repetir estos pasos
+ * crearía una evidencia duplicada, y quien llama lo sabe.
+ */
+export async function subirEvidenciaDeArchivo(
+  registroId: string,
+  archivo: ArchivoParaSubir,
+): Promise<EvidenciaRegistrada> {
+  const url = await solicitarUrlSubidaEvidencia(registroId, archivo.mimeType);
+  if (almacenamientoSinConfigurar(url.uploadUrl)) {
+    throw new AlmacenamientoSinConfigurarError();
+  }
+  await subirArchivoAS3(url.uploadUrl, archivo.uri, archivo.mimeType);
+  return confirmarEvidencia(registroId, {
+    tipo: archivo.tipo,
+    bucket: url.bucket,
+    rutaStorage: url.ruta,
+  });
+}
+
+/**
  * Paso 4 — cierra el registro del día. Es ESTE endpoint el que otorga los puntos, no el de
  * evidencia: subir la prueba y completar son dos operaciones distintas del backend
  * (`EvidenciaRegistroService` no toca puntos; `RegistroService.completar` sí).

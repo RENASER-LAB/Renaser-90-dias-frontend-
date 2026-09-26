@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Switch } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Switch, Platform } from 'react-native';
 import { Alert } from '../components/Alerta';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
@@ -11,6 +11,9 @@ import { Icon, IconName } from '../components/Icon';
 import { useTraining } from '../features/training/hooks/useTraining';
 import { ProximoAVencerCard } from '../features/training/components/ProximoAVencerCard';
 import { EvidenciaHabitoModal } from '../features/habits/components/EvidenciaHabitoModal';
+import { RegistroConFotoModal } from '../features/habits/components/RegistroConFotoModal';
+import { useRegistroConFoto } from '../features/habits/hooks/useRegistroConFoto';
+import { estaVencido, seRegistraConFoto } from '../features/training/utils/registroConFotoEnTraining';
 import { sellarRocaDiaria } from '../features/objetivos/utils/sellarRocaDiaria';
 import { PlanificarDimensionModal } from '../features/training/components/PlanificarDimensionModal';
 import { completarRegistro, confirmarEvidencia } from '../features/habits/api/evidenciaHabitoApi';
@@ -73,6 +76,12 @@ export interface HabitItem {
    * necesita `habitoId`.
    */
   tieneTrackHoy: boolean;
+  /**
+   * Estado crudo del registro de hoy (`PENDIENTE`, `COMPLETADO`, `EXPIRADO`, `FALLIDO`…). `done`
+   * solo dice si es `COMPLETADO`; esto es lo que permite no abrir la cámara para uno vencido.
+   * `undefined` en las rocas y en los hábitos sin track de hoy.
+   */
+  estado?: string;
   note?: string;
   /**
    * Clave FUNCIONAL del hábito de catálogo (`DAILY_CLASS`, `PASTILLA_RENACER`…), `null` en las
@@ -234,6 +243,31 @@ export default function TrainingScreen() {
   const [activeEvidenceHabit, setActiveEvidenceHabit] = useState<HabitItem | null>(null);
 
   /**
+   * REGISTRO CON FOTO (pedido del dueño, 2026-09-26): los hábitos que EXIGEN evidencia abren la
+   * cámara directo y después preguntan "¿Qué sentiste?". El flujo entero (verificar que el
+   * registro siga siendo de hoy, la cámara, subir y cerrar) vive en `useRegistroConFoto`; es el
+   * mismo que usan la tarjeta del chat y la del orbe. Los de evidencia opcional no cambian.
+   */
+  const registroConFoto = useRegistroConFoto({
+    onCompletado: async (_registroId, resultado, titulo) => {
+      await recargarEntrenamiento();
+      Alert.alert(
+        '¡Evidencia de Verdad Sellada! 🦅',
+        resultado.puntosOtorgados > 0
+          ? `Cumpliste tu palabra en "${titulo}". +${resultado.puntosOtorgados} puntos.`
+          : `Cumpliste tu palabra en "${titulo}".`
+      );
+    },
+    // La pantalla quedó abierta de un día para otro: se recargan los registros de hoy.
+    onDiaCambiado: () => void recargarEntrenamiento(),
+  });
+  const { reanudarPendiente } = registroConFoto;
+  // Android puede matar la app con la cámara abierta: al volver, se retoma esa foto.
+  useEffect(() => {
+    void reanudarPendiente();
+  }, [reanudarPendiente]);
+
+  /**
    * "Planificar" — ahora es UNA opción grande de la dimensión entera, no un botón chico por
    * hábito (pedido del dueño 2026-09-07).
    *
@@ -320,6 +354,12 @@ export default function TrainingScreen() {
 
   // Interceptar gestos de retroceso en pantalla táctil (Xiaomi / Android / iOS Edge Swipe)
   useSystemBackHandler(() => {
+    // `RegistroConFotoModal` también cablea el suyo; esto es la misma red de seguridad. `cerrar`
+    // no hace nada mientras se está enviando.
+    if (registroConFoto.abierto) {
+      registroConFoto.cerrar();
+      return true;
+    }
     // `PastillaRenacerModal` ya cablea su propio retroceso (para poder guardar el borrador antes
     // de cerrar). Esta rama es la red de seguridad por si el orden de registro de los dos
     // handlers cambia: el gesto lateral tiene que cerrar el modal, nunca la app.
@@ -350,7 +390,7 @@ export default function TrainingScreen() {
       return true;
     }
     return false; // Permite el comportamiento por defecto si está en el menú raíz
-  }, pastillaVisible || claseDiariaVisible || activeEvidenceHabit !== null || planificarVisible || selectedDimension !== null);
+  }, registroConFoto.abierto || pastillaVisible || claseDiariaVisible || activeEvidenceHabit !== null || planificarVisible || selectedDimension !== null);
 
   /** Lleva al muro con el compositor abierto. Reusa el parametro que ComunidadScreen ya entiende. */
   const abrirMuroParaPublicar = () => {
@@ -547,6 +587,31 @@ export default function TrainingScreen() {
     }
     if (habit.systemKey && CLAVES_SOLO_HORA.has(habit.systemKey)) {
       void registrarSoloHora(habit);
+      return;
+    }
+    // Ya cumplido (el botón dice VER): no se abre nada que suba y vuelva a cerrar. Antes abría el
+    // modal genérico y "sellar" subía el archivo y terminaba en un `/complete` que el backend
+    // rechaza porque el registro ya estaba cerrado (2026-09-26).
+    if (habit.done) {
+      const escrito = habit.respuestaTexto?.trim();
+      Alert.alert(
+        'Ya está cumplido',
+        escrito ? `Lo que escribiste: "${escrito}"` : 'Este hábito ya quedó registrado hoy.'
+      );
+      return;
+    }
+    if (seRegistraConFoto(habit, Platform.OS === 'web')) {
+      if (estaVencido(habit.estado)) {
+        Alert.alert('Este hábito ya venció', 'Pasó el plazo para registrarlo hoy, así que ya no acepta evidencia.');
+        return;
+      }
+      void registroConFoto.iniciar(
+        {
+          registroId: habit.id,
+          titulo: tituloVisible({ id: habit.habitoId ?? habit.id, title: habit.title }, renombre.titulos),
+        },
+        habit.hasEvidence
+      );
       return;
     }
     setActiveEvidenceHabit(habit);
@@ -1261,6 +1326,9 @@ export default function TrainingScreen() {
         onCerrar={() => setActiveEvidenceHabit(null)}
         onCompletado={handleEvidenciaCompletada}
       />
+
+      {/* REGISTRO CON FOTO: la foto arriba y "¿Qué sentiste?" abajo (hábitos que exigen evidencia). */}
+      <RegistroConFotoModal {...registroConFoto.modal} />
 
       {/* ========================================================================= */}
       {/* HOJA: PLANIFICAR LA CATEGORÍA                                             */}

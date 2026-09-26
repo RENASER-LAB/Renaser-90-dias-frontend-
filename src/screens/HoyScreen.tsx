@@ -66,6 +66,10 @@ import { AccionDelAcompanante } from '../features/renasia/components/AccionDelAc
 import { RenasiaPanel } from '../features/renasia/screens/RenasiaPanel';
 import { type FaseDeVoz } from '../features/renasia/hooks/useConversacionPorVoz';
 import { useVozDelOrbe } from '../features/renasia/hooks/useVozDelOrbe';
+import { cambioAlRegistrar, cambioTrasIniciar, estadoVisibleDelPedido } from '../features/renasia/utils/pedidosDeFoto';
+import type { PedidoDeFotoUI } from '../features/renasia/types/renasia.types';
+import { useRegistroConFoto } from '../features/habits/hooks/useRegistroConFoto';
+import { RegistroConFotoModal } from '../features/habits/components/RegistroConFotoModal';
 
 /** Lo que se lee debajo del orbe: la fase dicha con texto, para quien no ve la animación. */
 function rotuloDelOrbe(fase: FaseDeVoz, disponible: boolean): string {
@@ -122,6 +126,24 @@ export default function HoyScreen() {
   // confirmar propuestas o leer la respuesta completa.
   const voz = useVozDelOrbe();
   const [chatDelOrbeAbierto, setChatDelOrbeAbierto] = useState(false);
+  /* "Tomar foto" en la hoja del orbe (autorizado por el dueño el 2026-09-26, ver AGENTS.md): el
+     acompañante pidió la foto de un hábito (evento `evidencia`) y se abre la cámara y la misma
+     pantalla partida de Training. Al registrarse, Hoy relee el resumen y el hábito del momento. */
+  const registroConFoto = useRegistroConFoto({
+    onCompletado: registroId => {
+      voz.cambiarPedidoDeFoto(registroId, cambioAlRegistrar());
+      void recargarResumen();
+      void recargarHabitoAhora();
+    },
+  });
+  const tomarFotoDelOrbe = async (pedido: PedidoDeFotoUI) => {
+    if (estadoVisibleDelPedido(pedido, Date.now()) !== 'pendiente') return;
+    // La cámara no convive con el micrófono abierto ni con el orbe hablando: se lo calla antes.
+    if (voz.fase === 'escuchando' || voz.fase === 'hablando') voz.tocar();
+    voz.cambiarPedidoDeFoto(pedido.registroId, { estado: 'abriendo' });
+    const resultado = await registroConFoto.iniciar({ registroId: pedido.registroId, titulo: pedido.titulo });
+    voz.cambiarPedidoDeFoto(pedido.registroId, cambioTrasIniciar(resultado));
+  };
   const [vistaMentor, setVistaMentor] = useState<'ninguna' | 'celula' | 'alumno'>('ninguna');
   const [alumnoAbierto, setAlumnoAbierto] = useState<AlumnoConEstado | null>(null);
   /* Semaforo de cumplimiento (D-168). Lo que el dueño autorizo agregar a Hoy el 2026-09-25 es esto
@@ -947,7 +969,10 @@ export default function HoyScreen() {
         propuestas={voz.propuestas}
         onConfirmar={id => void voz.confirmarPropuesta(id)}
         onCancelar={id => void voz.cancelarPropuesta(id)}
+        pedidosDeFoto={voz.pedidosDeFoto}
+        onTomarFoto={pedido => void tomarFotoDelOrbe(pedido)}
       />
+      <RegistroConFotoModal {...registroConFoto.modal} />
     </SafeAreaView>
   );
 }

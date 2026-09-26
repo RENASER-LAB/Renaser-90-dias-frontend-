@@ -1,7 +1,8 @@
 import { useCallback, useState } from 'react';
 
 import { cancelarPropuestaRenasia, confirmarPropuestaRenasia } from '../api/renasiaApi';
-import type { PropuestaUI, RenasiaEventoPropuesta } from '../types/renasia.types';
+import type { PedidoDeFotoUI, PropuestaUI, RenasiaEventoEvidencia, RenasiaEventoPropuesta } from '../types/renasia.types';
+import { agregarPedido, conMarcaDeCierre, estadoVisibleDelPedido, pedidoDesdeEvento } from '../utils/pedidosDeFoto';
 import { cambioPorError, estadoTrasConfirmar, estadoVisible, propuestaDesdeEvento } from '../utils/propuestas';
 
 export type PropuestasDeVoz = {
@@ -11,6 +12,10 @@ export type PropuestasDeVoz = {
   podarResueltas: () => void;
   confirmar: (id: string) => Promise<void>;
   cancelar: (id: string) => Promise<void>;
+  /** Pedidos de foto del acompañante (evento `evidencia`, 2026-09-26), para la hoja del orbe. */
+  pedidosDeFoto: PedidoDeFotoUI[];
+  agregarPedidoDeFoto: (evento: RenasiaEventoEvidencia) => void;
+  cambiarPedidoDeFoto: (registroId: string, cambio: Partial<PedidoDeFotoUI>) => void;
 };
 
 /**
@@ -21,6 +26,7 @@ export type PropuestasDeVoz = {
  */
 export function usePropuestasDeVoz(): PropuestasDeVoz {
   const [propuestas, setPropuestas] = useState<PropuestaUI[]>([]);
+  const [pedidosDeFoto, setPedidosDeFoto] = useState<PedidoDeFotoUI[]>([]);
 
   const cambiar = useCallback((id: string, cambio: Partial<PropuestaUI>) => {
     // Al dejar de estar pendiente se anota cuándo: la hoja de acción la muestra unos segundos y se va.
@@ -35,6 +41,16 @@ export function usePropuestasDeVoz(): PropuestasDeVoz {
 
   const podarResueltas = useCallback(() => {
     setPropuestas(prev => prev.filter(p => estadoVisible(p, Date.now()) === 'pendiente'));
+    setPedidosDeFoto(prev => prev.filter(p => estadoVisibleDelPedido(p, Date.now()) === 'pendiente'));
+  }, []);
+
+  const agregarPedidoDeFoto = useCallback((evento: RenasiaEventoEvidencia) => {
+    setPedidosDeFoto(prev => agregarPedido(prev, pedidoDesdeEvento(evento)));
+  }, []);
+
+  const cambiarPedidoDeFoto = useCallback((registroId: string, cambio: Partial<PedidoDeFotoUI>) => {
+    const conMarca = conMarcaDeCierre(cambio, Date.now());
+    setPedidosDeFoto(prev => prev.map(p => (p.registroId === registroId ? { ...p, ...conMarca } : p)));
   }, []);
 
   const confirmar = useCallback(
@@ -63,5 +79,14 @@ export function usePropuestasDeVoz(): PropuestasDeVoz {
     [cambiar]
   );
 
-  return { propuestas, agregar, podarResueltas, confirmar, cancelar };
+  return {
+    propuestas,
+    agregar,
+    podarResueltas,
+    confirmar,
+    cancelar,
+    pedidosDeFoto,
+    agregarPedidoDeFoto,
+    cambiarPedidoDeFoto,
+  };
 }

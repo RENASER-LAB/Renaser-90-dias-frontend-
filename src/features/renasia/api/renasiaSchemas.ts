@@ -55,6 +55,11 @@ const eventoPropuestaSchema = z
   .object({ tipo: z.literal('propuesta'), id: z.string(), resumen: z.string(), venceEn: z.string() })
   .passthrough();
 
+/** `{"tipo":"evidencia",...}` — el acompañante pide la foto de un hábito (2026-09-26). */
+const eventoEvidenciaSchema = z
+  .object({ tipo: z.literal('evidencia'), registroId: z.string(), titulo: z.string(), venceEn: z.string() })
+  .passthrough();
+
 /** Respuesta de confirmar una propuesta. */
 const resultadoPropuestaSchema = z
   .object({ estado: z.enum(['CONFIRMADA', 'FALLIDA']), mensaje: z.string() })
@@ -79,6 +84,7 @@ const eventoRenasiaSchema = z.union([
   eventoFinSchema,
   eventoErrorSchema,
   eventoPropuestaSchema,
+  eventoEvidenciaSchema,
   eventoDesconocidoSchema,
 ]);
 

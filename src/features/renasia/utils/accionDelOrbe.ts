@@ -1,4 +1,5 @@
-import type { PropuestaUI } from '../types/renasia.types';
+import type { PedidoDeFotoUI, PropuestaUI } from '../types/renasia.types';
+import { estadoVisibleDelPedido } from './pedidosDeFoto';
 import { estadoVisible } from './propuestas';
 
 /** Cuánto queda a la vista una acción ya resuelta (hecha, cancelada, fallida) antes de irse sola. */
@@ -53,4 +54,30 @@ export function primeraFrase(mensaje: string | null | undefined): string | null 
   if (!mensaje) return null;
   const punto = mensaje.search(/\.(\s|$)/);
   return (punto > 0 ? mensaje.slice(0, punto) : mensaje).trim();
+}
+
+export type PedidoVisible = {
+  pedido: PedidoDeFotoUI;
+  /** Cuánto le queda a uno ya registrado antes de retirarse; `null` si está pendiente. */
+  seVaEnMs: number | null;
+};
+
+/**
+ * El pedido de foto que muestra la hoja del orbe (evento `evidencia`, 2026-09-26), con la misma
+ * regla que las propuestas: el pendiente más reciente; si no hay, el último que se cerró hace
+ * menos de {@link PERMANENCIA_RESUELTA_MS} ("Listo, quedó registrado"), y después nada. Uno cuyo
+ * plazo ya pasó no se ofrece: en el chat queda la tarjeta, deshabilitada.
+ */
+export function elegirPedidoVisible(pedidos: readonly PedidoDeFotoUI[], ahoraMs: number): PedidoVisible | null {
+  const disponibles = pedidos.filter(p => {
+    const estado = estadoVisibleDelPedido(p, ahoraMs);
+    return estado === 'pendiente' || estado === 'abriendo';
+  });
+  if (disponibles.length > 0) return { pedido: disponibles[disponibles.length - 1], seVaEnMs: null };
+  const recientes = pedidos.filter(
+    p => p.resueltoEnMs !== undefined && ahoraMs - p.resueltoEnMs < PERMANENCIA_RESUELTA_MS
+  );
+  if (recientes.length === 0) return null;
+  const ultimo = recientes.reduce((a, b) => ((a.resueltoEnMs ?? 0) >= (b.resueltoEnMs ?? 0) ? a : b));
+  return { pedido: ultimo, seVaEnMs: PERMANENCIA_RESUELTA_MS - (ahoraMs - (ultimo.resueltoEnMs ?? 0)) };
 }

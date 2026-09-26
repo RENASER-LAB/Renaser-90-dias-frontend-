@@ -4,7 +4,14 @@ import { mensajeDeError } from '../../../services/http/apiClient';
 import { cancelarPropuestaRenasia, confirmarPropuestaRenasia, obtenerHistorialRenasia } from '../api/renasiaApi';
 import { enviarMensajeRenasia, RenasiaCuotaExcedidaError } from '../api/renasiaStream';
 import { nombreVisible } from '../data/agentes';
-import type { AgenteRenasia, MensajeRenasiaApi, PropuestaUI, RenasiaMensajeUI } from '../types/renasia.types';
+import type {
+  AgenteRenasia,
+  MensajeRenasiaApi,
+  PedidoDeFotoUI,
+  PropuestaUI,
+  RenasiaMensajeUI,
+} from '../types/renasia.types';
+import { agregarPedido, pedidoDesdeEvento } from '../utils/pedidosDeFoto';
 import { cambioPorError, estadoTrasConfirmar, propuestaDesdeEvento, quitarTextoDeRespaldo } from '../utils/propuestas';
 
 let contadorIdLocal = 0;
@@ -43,6 +50,11 @@ export type EstadoRenasiaChat = {
   confirmarPropuesta: (idMensaje: string, idPropuesta: string) => Promise<void>;
   /** D-153: la persona tocó "Cancelar". */
   cancelarPropuesta: (idMensaje: string, idPropuesta: string) => Promise<void>;
+  /**
+   * Actualiza la tarjeta "Tomar foto" de ese registro (abriendo, registrado, vencido), en todos los
+   * mensajes donde aparezca: el mismo hábito registrado es el mismo hecho en todas.
+   */
+  cambiarPedidoDeFoto: (registroId: string, cambio: Partial<PedidoDeFotoUI>) => void;
 };
 
 /** Cambia UNA propuesta de UN mensaje, sin tocar el resto de la lista. */
@@ -196,6 +208,17 @@ export function useRenasiaChat(opciones: OpcionesRenasiaChat): EstadoRenasiaChat
                 )
               );
             },
+            onEvidencia: evento => {
+              // El acompañante pide la foto de un hábito: tarjeta con "Tomar foto" (2026-09-26).
+              if (!montadoRef.current) return;
+              setMensajes(prev =>
+                prev.map(m =>
+                  m.id === idAsistente
+                    ? { ...m, pedidosDeFoto: agregarPedido(m.pedidosDeFoto, pedidoDesdeEvento(evento)) }
+                    : m
+                )
+              );
+            },
             onError: mensaje => {
               // D-100: el modelo fallo del lado del servidor. Se muestra en la burbuja, con
               // reintento, igual que un error de red — antes quedaba una burbuja vacia y muda.
@@ -305,6 +328,23 @@ export function useRenasiaChat(opciones: OpcionesRenasiaChat): EstadoRenasiaChat
     }
   }, []);
 
+  const cambiarPedidoDeFoto = useCallback(
+    (registroId: string, cambio: Partial<PedidoDeFotoUI>) => {
+      if (!montadoRef.current) return;
+      setMensajes(prev =>
+        prev.map(m =>
+          m.pedidosDeFoto?.some(p => p.registroId === registroId)
+            ? {
+                ...m,
+                pedidosDeFoto: m.pedidosDeFoto.map(p => (p.registroId === registroId ? { ...p, ...cambio } : p)),
+              }
+            : m
+        )
+      );
+    },
+    []
+  );
+
   return {
     mensajes,
     cargandoHistorial,
@@ -318,5 +358,6 @@ export function useRenasiaChat(opciones: OpcionesRenasiaChat): EstadoRenasiaChat
     reintentarMensaje,
     confirmarPropuesta,
     cancelarPropuesta,
+    cambiarPedidoDeFoto,
   };
 }

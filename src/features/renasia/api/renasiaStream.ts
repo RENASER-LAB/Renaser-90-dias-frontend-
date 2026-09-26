@@ -8,6 +8,7 @@ import type {
   PreguntarRenasiaBody,
   RenasiaEvento,
   RenasiaEventoError,
+  RenasiaEventoEvidencia,
   RenasiaEventoPropuesta,
   RenasiaEventoTexto,
 } from '../types/renasia.types';
@@ -40,6 +41,8 @@ export type CallbacksMensajeRenasia = {
   onError?: (mensaje: string) => void;
   /** D-153: el acompañante propuso una acción que la persona confirma con un botón. */
   onPropuesta?: (propuesta: RenasiaEventoPropuesta) => void;
+  /** El acompañante pide la foto de un hábito que exige evidencia (2026-09-26). */
+  onEvidencia?: (pedido: RenasiaEventoEvidencia) => void;
 };
 
 /**
@@ -55,6 +58,16 @@ export type OpcionesEnvioRenasia = {
   /** D-158: la pregunta llega hablada; se pide una respuesta para decir en voz alta. */
   canal?: 'TEXTO' | 'VOZ';
 };
+
+/**
+ * Un `evidencia` al que le falta un campo cae en la rama de lo desconocido del esquema (la unión
+ * prueba en orden y `passthrough` lo deja pasar), así que se revisa acá antes de usarlo: mal
+ * formado se ignora, como cualquier evento que esta versión no entiende.
+ */
+function esEventoEvidencia(evento: RenasiaEvento): evento is RenasiaEventoEvidencia {
+  const e = evento as Partial<RenasiaEventoEvidencia>;
+  return typeof e.registroId === 'string' && typeof e.titulo === 'string' && typeof e.venceEn === 'string';
+}
 
 function esAbort(error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError';
@@ -204,6 +217,8 @@ export async function enviarMensajeRenasia(
       callbacks.onError?.((evento as RenasiaEventoError).valor);
     } else if (evento.tipo === 'propuesta') {
       callbacks.onPropuesta?.(evento as RenasiaEventoPropuesta);
+    } else if (evento.tipo === 'evidencia' && esEventoEvidencia(evento)) {
+      callbacks.onEvidencia?.(evento);
     } else if (evento.tipo === 'fin') {
       recibioFin = true;
       callbacks.onFin();

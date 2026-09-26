@@ -3,7 +3,15 @@
  */
 import { describe, expect, it } from '@jest/globals';
 
-import { frasesDeContexto, MAXIMO_FRASES_DE_CONTEXTO, mensajeDeErrorDeVoz, unirDictado } from '../dictado';
+import {
+  frasesDeContexto,
+  LARGO_MAXIMO_PREGUNTA,
+  MAXIMO_FRASES_DE_CONTEXTO,
+  mensajeDeErrorDeVoz,
+  recortarPregunta,
+  sumarTramo,
+  unirDictado,
+} from '../dictado';
 
 describe('frasesDeContexto', () => {
   it('limpia espacios y saca repetidos sin distinguir mayúsculas', () => {
@@ -43,5 +51,29 @@ describe('mensajeDeErrorDeVoz', () => {
 
   it('un código desconocido igual da un mensaje apto para mostrar', () => {
     expect(mensajeDeErrorDeVoz('algo-nuevo')).toContain('escribe tu mensaje');
+  });
+});
+
+describe('sumarTramo (dictado continuo, 2026-09-26)', () => {
+  it('suma los tramos finales en orden: quien habla largo no pierde lo primero', () => {
+    const primero = sumarTramo('', 'Hoy me levanté tarde');
+    expect(sumarTramo(primero, 'y no pude hacer la ducha fría')).toBe(
+      'Hoy me levanté tarde y no pude hacer la ducha fría'
+    );
+  });
+
+  it('si el motor manda todo lo dicho hasta ahí, no lo repite', () => {
+    expect(sumarTramo('Hoy me levanté tarde', 'Hoy me levanté tarde y no pude')).toBe('Hoy me levanté tarde y no pude');
+  });
+
+  it('un tramo vacío no cambia nada', () => {
+    expect(sumarTramo('Hola', '   ')).toBe('Hola');
+  });
+});
+
+describe('recortarPregunta', () => {
+  it('deja pasar lo que entra y recorta lo que se pasa del techo del backend', () => {
+    expect(recortarPregunta('corto')).toBe('corto');
+    expect(recortarPregunta('a'.repeat(LARGO_MAXIMO_PREGUNTA + 10))).toHaveLength(LARGO_MAXIMO_PREGUNTA);
   });
 });

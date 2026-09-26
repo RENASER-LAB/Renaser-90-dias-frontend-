@@ -3,12 +3,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { mensajeDeError } from '../../../services/http/apiClient';
 import { enviarMensajeRenasia, RenasiaCuotaExcedidaError } from '../api/renasiaStream';
 import { Locutor } from '../utils/locutor';
-import type { PropuestaUI } from '../types/renasia.types';
+import type { PedidoDeFotoUI, PropuestaUI } from '../types/renasia.types';
 import { quitarTextoDeRespaldo } from '../utils/propuestas';
 import { crearAgrupador, MAXIMO_CARACTERES_HABLADOS, separarOraciones, textoParaHablar } from '../utils/voz';
 import { PARLANTES_DEL_TELEFONO, PUEDE_HABLAR } from './parlantesDelTelefono';
 import { usePropuestasDeVoz } from './usePropuestasDeVoz';
 import { useDictado } from './useDictado';
+import { LARGO_MAXIMO_PREGUNTA, recortarPregunta } from '../utils/dictado';
 import { useFrasesDeHabitos } from './useFrasesDeHabitos';
 
 export type FaseDeVoz = 'reposo' | 'escuchando' | 'pensando' | 'hablando';
@@ -25,6 +26,9 @@ export type ConversacionPorVoz = {
   propuestas: PropuestaUI[];
   confirmarPropuesta: (id: string) => Promise<void>;
   cancelarPropuesta: (id: string) => Promise<void>;
+  /** Fotos de hábitos que pidió el acompañante: la hoja del orbe ofrece "Tomar foto". */
+  pedidosDeFoto: PedidoDeFotoUI[];
+  cambiarPedidoDeFoto: (registroId: string, cambio: Partial<PedidoDeFotoUI>) => void;
   error: string | null;
   /** Algo que la persona debe saber sin que sea un error de la conversación: p. ej., que no hay voz (D-164). */
   aviso: string | null;
@@ -98,7 +102,9 @@ export function useConversacionPorVoz(): ConversacionPorVoz {
 
   const preguntar = useCallback(
     async (pregunta: string) => {
-      const texto = pregunta.trim();
+      const completo = pregunta.trim();
+      // Con el dictado continuo se puede hablar mucho: el backend no acepta más de 4000 caracteres.
+      const texto = recortarPregunta(completo);
       if (!texto) {
         setFase('reposo');
         return;
@@ -107,7 +113,11 @@ export function useConversacionPorVoz(): ConversacionPorVoz {
       setRespuesta('');
       propuestasDeVoz.podarResueltas();
       setError(null);
-      setAviso(null);
+      setAviso(
+        texto.length < completo.length
+          ? `Hablaste mucho: le mandé solo los primeros ${LARGO_MAXIMO_PREGUNTA} caracteres.`
+          : null
+      );
       setFase('pensando');
       const controller = new AbortController();
       abortRef.current = controller;
@@ -137,6 +147,9 @@ export function useConversacionPorVoz(): ConversacionPorVoz {
                 setRespuesta(acumulado);
                 propuestasDeVoz.agregar(evento);
               }
+            },
+            onEvidencia: evento => {
+              if (montadoRef.current) propuestasDeVoz.agregarPedidoDeFoto(evento);
             },
             onError: mensaje => {
               if (montadoRef.current) setError(mensaje);
@@ -219,6 +232,8 @@ export function useConversacionPorVoz(): ConversacionPorVoz {
     propuestas: propuestasDeVoz.propuestas,
     confirmarPropuesta: propuestasDeVoz.confirmar,
     cancelarPropuesta: propuestasDeVoz.cancelar,
+    pedidosDeFoto: propuestasDeVoz.pedidosDeFoto,
+    cambiarPedidoDeFoto: propuestasDeVoz.cambiarPedidoDeFoto,
     error,
     aviso,
     tocar,

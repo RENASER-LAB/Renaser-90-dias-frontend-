@@ -20,10 +20,13 @@ import { Icon } from '../../../components/Icon';
 import { useRenasiaChat } from '../hooks/useRenasiaChat';
 import { useDictado } from '../hooks/useDictado';
 import { useFrasesDeHabitos } from '../hooks/useFrasesDeHabitos';
-import { unirDictado } from '../utils/dictado';
+import { LARGO_MAXIMO_PREGUNTA, recortarPregunta, unirDictado } from '../utils/dictado';
+import { cambioAlRegistrar, cambioTrasIniciar, estadoVisibleDelPedido } from '../utils/pedidosDeFoto';
+import { useRegistroConFoto } from '../../habits/hooks/useRegistroConFoto';
+import { RegistroConFotoModal } from '../../habits/components/RegistroConFotoModal';
 import { MensajeBurbuja } from '../components/MensajeBurbuja';
 import { AGENTES, nombreVisible } from '../data/agentes';
-import type { AgenteRenasia } from '../types/renasia.types';
+import type { AgenteRenasia, PedidoDeFotoUI } from '../types/renasia.types';
 
 export interface RenasiaPanelProps {
   /**
@@ -72,13 +75,34 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
     reintentarMensaje,
     confirmarPropuesta,
     cancelarPropuesta,
+    cambiarPedidoDeFoto,
   } = useRenasiaChat({ agent, courseId: contexto?.cursoId, ambito: contexto?.ambito });
 
   const [texto, setTexto] = useState('');
   // Dictado por voz (plan de IA v2.1 §3.5): lo dictado se suma al campo y la persona lo revisa
   // antes de enviar. En el acompañante se sesga con los nombres de sus hábitos de hoy.
   const frasesDeHabitos = useFrasesDeHabitos(agent === 'COMPANION');
-  const dictado = useDictado(frasesDeHabitos, dictadoFinal => setTexto(actual => unirDictado(actual, dictadoFinal)));
+  // El backend corta la pregunta a 4000 caracteres: lo dictado se suma sin pasarse de ahí.
+  const dictado = useDictado(frasesDeHabitos, dictadoFinal =>
+    setTexto(actual => recortarPregunta(unirDictado(actual, dictadoFinal)))
+  );
+
+  /**
+   * "Tomar foto" en una tarjeta del acompañante (evento `evidencia`, 2026-09-26): la cámara y la
+   * pantalla partida de Training, con el `registroId` que mandó el acompañante. El modal se monta
+   * DENTRO del `Modal` de este panel: en iOS, un modal montado al lado de otro ya presentado no
+   * se muestra.
+   */
+  const registroConFoto = useRegistroConFoto({
+    onCompletado: registroId => cambiarPedidoDeFoto(registroId, cambioAlRegistrar()),
+  });
+  const tomarFoto = async (pedido: PedidoDeFotoUI) => {
+    if (estadoVisibleDelPedido(pedido, Date.now()) !== 'pendiente') return;
+    if (dictado.escuchando) dictado.detener();
+    cambiarPedidoDeFoto(pedido.registroId, { estado: 'abriendo' });
+    const resultado = await registroConFoto.iniciar({ registroId: pedido.registroId, titulo: pedido.titulo });
+    cambiarPedidoDeFoto(pedido.registroId, cambioTrasIniciar(resultado));
+  };
   const scrollRef = useRef<ScrollView>(null);
 
   // Soporte para gestos nativos de Android / Xiaomi: deslizar desde el borde (o el botón físico
@@ -225,6 +249,7 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
                     onReintentar={reintentarMensaje}
                     onConfirmarPropuesta={confirmarPropuesta}
                     onCancelarPropuesta={cancelarPropuesta}
+                    onTomarFoto={pedido => void tomarFoto(pedido)}
                   />
                 ))}
               </>
@@ -273,6 +298,7 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
               ]}
               multiline
               editable={!enviando && !dictado.escuchando}
+              maxLength={LARGO_MAXIMO_PREGUNTA}
               onSubmitEditing={handleEnviar}
               blurOnSubmit={false}
             />
@@ -295,6 +321,8 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
+
+      <RegistroConFotoModal {...registroConFoto.modal} />
     </Modal>
   );
 }

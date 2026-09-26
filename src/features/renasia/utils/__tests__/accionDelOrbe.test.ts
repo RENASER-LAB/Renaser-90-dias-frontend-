@@ -1,7 +1,13 @@
 import { describe, expect, it } from '@jest/globals';
 
-import type { PropuestaUI } from '../../types/renasia.types';
-import { elegirAccionVisible, PERMANENCIA_RESUELTA_MS, primeraFrase, resumenCorto } from '../accionDelOrbe';
+import type { PedidoDeFotoUI, PropuestaUI } from '../../types/renasia.types';
+import {
+  elegirAccionVisible,
+  elegirPedidoVisible,
+  PERMANENCIA_RESUELTA_MS,
+  primeraFrase,
+  resumenCorto,
+} from '../accionDelOrbe';
 
 const AHORA = 1_000_000;
 const propuesta = (id: string, extra: Partial<PropuestaUI> = {}): PropuestaUI => ({
@@ -72,5 +78,37 @@ describe('primeraFrase', () => {
     );
     expect(primeraFrase('Habito apagado el 2026-09-25.')).toBe('Habito apagado el 2026-09-25');
     expect(primeraFrase(null)).toBeNull();
+  });
+});
+
+const pedido = (registroId: string, extra: Partial<PedidoDeFotoUI> = {}): PedidoDeFotoUI => ({
+  registroId,
+  titulo: `Hábito ${registroId}`,
+  venceEn: new Date(AHORA + 600_000).toISOString(),
+  estado: 'pendiente',
+  ...extra,
+});
+
+describe('elegirPedidoVisible (tarjeta "Tomar foto" del orbe)', () => {
+  it('sin pedidos no muestra nada', () => {
+    expect(elegirPedidoVisible([], AHORA)).toBeNull();
+  });
+
+  it('muestra el pendiente más reciente', () => {
+    const visible = elegirPedidoVisible([pedido('a'), pedido('b')], AHORA);
+
+    expect(visible?.pedido.registroId).toBe('b');
+    expect(visible?.seVaEnMs).toBeNull();
+  });
+
+  it('no ofrece uno cuyo plazo ya pasó', () => {
+    expect(elegirPedidoVisible([pedido('a', { venceEn: new Date(AHORA - 1).toISOString() })], AHORA)).toBeNull();
+  });
+
+  it('uno recién registrado queda unos segundos y después se va', () => {
+    const registrado = pedido('a', { estado: 'registrado', resueltoEnMs: AHORA - 1000 });
+
+    expect(elegirPedidoVisible([registrado], AHORA)?.seVaEnMs).toBe(PERMANENCIA_RESUELTA_MS - 1000);
+    expect(elegirPedidoVisible([registrado], AHORA + PERMANENCIA_RESUELTA_MS)).toBeNull();
   });
 });

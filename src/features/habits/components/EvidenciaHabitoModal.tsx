@@ -25,12 +25,9 @@ import { Icon, IconName } from '../../../components/Icon';
 import { MicroLabel } from '../../../components/ui';
 import { mensajeDeError } from '../../../services/http/apiClient';
 import {
-  ALMACENAMIENTO_SIN_CONFIGURAR,
-  almacenamientoSinConfigurar,
   completarRegistro,
   confirmarEvidencia,
-  solicitarUrlSubidaEvidencia,
-  subirArchivoAS3,
+  subirEvidenciaDeArchivo,
 } from '../api/evidenciaHabitoApi';
 import {
   ArchivoEvidencia,
@@ -203,16 +200,8 @@ export function EvidenciaHabitoModal({
         return;
       }
       if (archivo) {
-        const url = await solicitarUrlSubidaEvidencia(registroId, archivo.mimeType);
-        if (almacenamientoSinConfigurar(url.uploadUrl)) {
-          throw new Error(ALMACENAMIENTO_SIN_CONFIGURAR);
-        }
-        await subirArchivoAS3(url.uploadUrl, archivo.uri, archivo.mimeType);
-        await confirmarEvidencia(registroId, {
-          tipo: archivo.tipo,
-          bucket: url.bucket,
-          rutaStorage: url.ruta,
-        });
+        // Pasos 1-3, compartidos con el registro con foto (`subirEvidenciaDeArchivo`).
+        await subirEvidenciaDeArchivo(registroId, archivo);
       }
       if (textoUtil) {
         await confirmarEvidencia(registroId, { tipo: 'TEXTO', contenidoTexto: textoUtil });
