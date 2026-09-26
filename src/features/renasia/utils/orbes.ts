@@ -9,13 +9,17 @@ import { Platform } from "react-native";
  * y la app no lo carga: el `require` funciona, pero Hoy queda en blanco al montar el orbe con
  * `TypeError: Cannot read properties of undefined (reading 'Paint')`. En web va el orbe simple.
  */
-export function cargarOrbes(plataforma: string = Platform.OS): typeof import("expo-thinking-orbs") | null {
+export function cargarOrbes(
+  plataforma: string = Platform.OS,
+): typeof import("../components/OrbeDePuntos") | null {
   if (plataforma === "web") {
     return null;
   }
   try {
+    // `OrbeDePuntos` importa el paquete, Skia y Reanimated: si falta alguno, el `require` falla acá
+    // y Hoy sigue con el orbe simple (2026-09-26: antes se cargaba `<ThinkingOrb>` directo).
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    return require("expo-thinking-orbs") as typeof import("expo-thinking-orbs");
+    return require("../components/OrbeDePuntos") as typeof import("../components/OrbeDePuntos");
   } catch {
     return null;
   }
