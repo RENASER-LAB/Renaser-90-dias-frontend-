@@ -1642,9 +1642,12 @@ const styles = StyleSheet.create({
   },
   // 48×48 y no 44: es el mínimo cómodo de AGENTS.md §4, y hace innecesario el `hitSlop` que le
   // robaba el toque al chevron de la fila. Crece 2px por lado, que caben en el `gap` de 8.
+  // `marginVertical: 10` es el relleno vertical que la fila le daba antes de partirse (PLN-03): sin
+  // él, las filas de los obligatorios quedaban 12 px más bajas que antes (de 70 a 58).
   candado: {
     width: 48,
     height: 48,
+    marginVertical: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
