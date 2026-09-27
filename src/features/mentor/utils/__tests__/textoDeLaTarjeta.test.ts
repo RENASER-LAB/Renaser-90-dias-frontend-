@@ -40,4 +40,8 @@ describe('la línea de la tarjeta «Mi grupo» en Hoy', () => {
     expect(textoDeLaTarjeta({ ...base, fallo: 'sin_red', resumen: null })).toBe('No pudimos cargar tu grupo.');
     expect(textoDeLaTarjeta({ ...base, total: 0, resumen: null })).toBe('Todavía no tienes aprendices asignados.');
   });
+
+  it('un mentor sin grupo asignado no ve un error', () => {
+    expect(textoDeLaTarjeta({ ...base, fallo: 'sin_celula', resumen: null })).toBe('Todavía no lideras ningún grupo.');
+  });
 });

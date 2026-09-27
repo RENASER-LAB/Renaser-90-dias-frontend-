@@ -20,6 +20,9 @@ export function textoDeLaTarjeta({
 }): string {
   if (cargando) return 'Cargando tu grupo…';
   if (fallo === 'no_disponible') return 'El seguimiento del grupo aún no está disponible.';
+  // Un mentor sin grupo asignado no es un error: decirle «No pudimos cargar» lo manda a revisar
+  // su conexión por algo que no depende de él (visto en el e2e del 26/09).
+  if (fallo === 'sin_celula') return 'Todavía no lideras ningún grupo.';
   if (fallo) return 'No pudimos cargar tu grupo.';
   if (total === 0) return 'Todavía no tienes aprendices asignados.';
   if (resumen) return lineaDeAyudaDelGrupo(resumen);
