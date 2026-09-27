@@ -3,7 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon } from '../../../components/Icon';
-import { MicroLabel } from '../../../components/ui';
+import { BotonPeligro, BotonSecundario, TituloDeSeccion } from '../../../components/Legible';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
@@ -24,7 +24,7 @@ import { CabeceraAdmin } from '../components/CabeceraAdmin';
 import { EstadoDeGrupo } from '../components/EstadoDeGrupo';
 import { rangoDeFechas } from '../utils/fechas';
 import { confirmar, avisar } from '../utils/dialogo';
-import { mensajeDeFallo } from '../utils/mensajes';
+import { mensajeDeFallo, preguntaDeAsignarMentor } from '../utils/mensajes';
 
 const ESPECIALIDADES: Record<string, string> = {
   NEGOCIO: 'Negocio',
@@ -194,9 +194,9 @@ export function GrupoDetalleScreen({
 
         {error ? (
           <View style={[estilos.tarjeta, { backgroundColor: c.cardBg, borderColor: c.border }]}>
-            <Text style={[t.body, { color: c.danger, fontSize: 14 }]}>{error}</Text>
+            <Text style={[t.body, { color: c.danger, fontSize: 16 }]}>{error}</Text>
             <Pressable onPress={cargar} accessibilityRole="button" style={estilos.accionTexto}>
-              <Text style={[t.body, { color: c.goldInk, fontSize: 14, fontWeight: '500' }]}>Reintentar</Text>
+              <Text style={[t.body, { color: c.goldInk, fontSize: 16, fontWeight: '500' }]}>Reintentar</Text>
             </Pressable>
           </View>
         ) : null}
@@ -205,21 +205,21 @@ export function GrupoDetalleScreen({
           <>
             <View style={[estilos.tarjeta, { backgroundColor: c.cardBg, borderColor: c.border, gap: 8 }]}>
               <EstadoDeGrupo estado={grupo.status ?? null} />
-              <Text style={[t.body, { color: c.text, fontSize: 14.5 }]}>
+              <Text style={[t.body, { color: c.text, fontSize: 16 }]}>
                 {grupo.type === 'RECEPCION'
-                  ? 'Bienvenida · sin tope de plazas'
+                  ? 'Grupo de bienvenida · sin tope de plazas'
                   : cupo
                     ? `${ocupadas} de ${cupo} plazas ocupadas`
                     : `${ocupadas} aprendices`}
               </Text>
               {cerrado ? (
-                <Text style={[t.body, { color: c.textSoft, fontSize: 13, lineHeight: 18 }]}>
+                <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]}>
                   Este grupo terminó su período. Se conserva para consultarlo; para seguir, crea el
                   grupo siguiente y mueves a su gente ahí.
                 </Text>
               ) : null}
               {grupo.status === 'PROGRAMADO' ? (
-                <Text style={[t.body, { color: c.textSoft, fontSize: 13, lineHeight: 18 }]}>
+                <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]}>
                   Todavía no arrancó. Puedes armarlo ahora: sus integrantes no tendrán acceso ni chat
                   hasta el día de comienzo.
                 </Text>
@@ -228,62 +228,57 @@ export function GrupoDetalleScreen({
 
             {/* ── Mentor ─────────────────────────────────────────────────── */}
             <View style={{ gap: 10 }}>
-              <MicroLabel>Mentor</MicroLabel>
+              <TituloDeSeccion>Mentor</TituloDeSeccion>
               {grupo.mentor ? (
                 <View style={[estilos.fila, { backgroundColor: c.cardBg, borderColor: c.border }]}>
-                  <Text style={[t.body, { color: c.textStrong, fontSize: 15, flex: 1, flexShrink: 1 }]}>
+                  <Text style={[t.body, { color: c.textStrong, fontSize: 16, flex: 1, flexShrink: 1 }]}>
                     {grupo.mentor.fullName ?? 'Sin nombre'}
                   </Text>
                   {!cerrado ? (
-                    <Pressable
+                    <BotonPeligro
+                      etiqueta="Quitar"
+                      accessibilityLabel="Quitar mentor"
+                      deshabilitado={trabajando}
                       onPress={async () => {
                         if (await confirmar('Quitar mentor', '¿Dejar el grupo sin mentor asignado?', { ok: 'Quitar', destructivo: true })) {
                           void conAviso(() => quitarMentor(grupoId), 'No se pudo quitar');
                         }
                       }}
-                      accessibilityRole="button"
-                      accessibilityLabel="Quitar mentor"
-                      style={estilos.accionTexto}
-                    >
-                      <Text style={[t.body, { color: c.danger, fontSize: 13.5 }]}>Quitar</Text>
-                    </Pressable>
+                    />
                   ) : null}
                 </View>
               ) : (
-                <Text style={[t.body, { color: c.textSoft, fontSize: 14 }]}>
+                <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>
                   Sin mentor asignado. El grupo sigue siendo un grupo.
                 </Text>
               )}
               {!cerrado ? (
-                <Pressable
+                <BotonSecundario
+                  etiqueta={grupo.mentor ? 'Cambiar mentor' : 'Asignar mentor'}
                   onPress={abrirSelectorDeMentor}
-                  accessibilityRole="button"
-                  accessibilityLabel={grupo.mentor ? 'Cambiar mentor' : 'Asignar mentor'}
-                  style={[estilos.boton, { borderColor: c.border }]}
-                >
-                  <Text style={[t.body, { color: c.textStrong, fontSize: 14, fontWeight: '500' }]}>
-                    {grupo.mentor ? 'Cambiar mentor' : 'Asignar mentor'}
-                  </Text>
-                </Pressable>
+                />
               ) : null}
             </View>
 
             {/* ── Aprendices ─────────────────────────────────────────────── */}
             <View style={{ gap: 10 }}>
-              <MicroLabel>Aprendices</MicroLabel>
+              <TituloDeSeccion>Aprendices</TituloDeSeccion>
               {grupo.members.length === 0 ? (
-                <Text style={[t.body, { color: c.textSoft, fontSize: 14 }]}>Todavía no hay nadie.</Text>
+                <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>Todavía no hay nadie.</Text>
               ) : null}
               {grupo.members.map(persona => (
                 <View
                   key={persona.id}
                   style={[estilos.fila, { backgroundColor: c.cardBg, borderColor: c.border }]}
                 >
-                  <Text style={[t.body, { color: c.textStrong, fontSize: 15, flex: 1, flexShrink: 1 }]}>
+                  <Text style={[t.body, { color: c.textStrong, fontSize: 16, flex: 1, flexShrink: 1 }]}>
                     {persona.fullName ?? 'Sin nombre'}
                   </Text>
                   {!cerrado ? (
-                    <Pressable
+                    <BotonPeligro
+                      etiqueta="Retirar"
+                      accessibilityLabel={`Retirar a ${persona.fullName ?? 'esta persona'}`}
+                      deshabilitado={trabajando}
                       onPress={async () => {
                         if (
                           await confirmar(
@@ -295,35 +290,21 @@ export function GrupoDetalleScreen({
                           void conAviso(() => retirarAprendiz(grupoId, persona.id), 'No se pudo retirar');
                         }
                       }}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Retirar a ${persona.fullName ?? 'esta persona'}`}
-                      style={estilos.accionTexto}
-                    >
-                      <Text style={[t.body, { color: c.danger, fontSize: 13.5 }]}>Retirar</Text>
-                    </Pressable>
+                    />
                   ) : null}
                 </View>
               ))}
               {!cerrado ? (
-                <Pressable
-                  onPress={abrirSelectorDeAprendiz}
-                  accessibilityRole="button"
-                  accessibilityLabel="Agregar aprendiz"
-                  style={[estilos.boton, { borderColor: c.border }]}
-                >
-                  <Text style={[t.body, { color: c.textStrong, fontSize: 14, fontWeight: '500' }]}>
-                    Agregar aprendiz
-                  </Text>
-                </Pressable>
+                <BotonSecundario etiqueta="Agregar aprendiz" onPress={abrirSelectorDeAprendiz} />
               ) : null}
             </View>
 
             {/* ── Selector ───────────────────────────────────────────────── */}
             {eligiendo ? (
               <View style={{ gap: 10 }}>
-                <MicroLabel>
-                  {eligiendo === 'mentor' ? 'ELIGE UN MENTOR' : 'ELIGE UN APRENDIZ'}
-                </MicroLabel>
+                <TituloDeSeccion>
+                  {eligiendo === 'mentor' ? 'Elige un mentor' : 'Elige un aprendiz'}
+                </TituloDeSeccion>
                 {/* Buscador solo para aprendices: los mentores activos son un puñado y caben en
                     pantalla, mientras que el padrón de aprendices crece con cada cohorte. Un campo
                     que siempre devuelve la lista entera es ruido, no ayuda. */}
@@ -337,9 +318,9 @@ export function GrupoDetalleScreen({
                     autoCorrect={false}
                     accessibilityLabel="Buscar aprendiz para agregar al grupo"
                     style={[
-                      estilos.buscadorCandidato,
-                      { backgroundColor: c.cardBg, borderColor: c.border, color: c.text },
                       t.body,
+                      estilos.buscadorCandidato,
+                      { backgroundColor: c.cardBg, borderColor: c.border, color: c.text, fontSize: 16 },
                     ]}
                   />
                 ) : null}
@@ -349,16 +330,25 @@ export function GrupoDetalleScreen({
                         key={m.userId}
                         testID="candidato-mentor"
                         disabled={trabajando}
-                        onPress={() => void conAviso(() => asignarMentor(grupoId, m.userId), 'No se pudo asignar')}
+                        onPress={async () => {
+                          /* A-5 (26/09): se pregunta antes. Asignar en el primer toque cambiaba
+                             quién acompaña al grupo por un dedo que resbalaba en la lista. */
+                          const acepto = await confirmar(
+                            'Asignar mentor',
+                            preguntaDeAsignarMentor(m.fullName, grupo.name, Boolean(m.cellId && m.cellId !== grupoId)),
+                            { ok: 'Asignar' },
+                          );
+                          if (acepto) void conAviso(() => asignarMentor(grupoId, m.userId), 'No se pudo asignar');
+                        }}
                         accessibilityRole="button"
                         accessibilityLabel={m.fullName ?? 'Mentor'}
                         style={[estilos.fila, { backgroundColor: c.cardBg, borderColor: c.border }]}
                       >
                         <View style={{ flex: 1, flexShrink: 1 }}>
-                          <Text style={[t.body, { color: c.textStrong, fontSize: 15 }]}>
+                          <Text style={[t.body, { color: c.textStrong, fontSize: 16 }]}>
                             {m.fullName ?? 'Sin nombre'}
                           </Text>
-                          <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, marginTop: 2 }]}>
+                          <Text style={[t.body, { color: c.textSoft, fontSize: 16, marginTop: 2 }]}>
                             {/* Null NO se rellena con ninguna de las tres: el administrador elige
                                 por esto, y adivinarla sería decidir por él. */}
                             {m.specialty ? ESPECIALIDADES[m.specialty] ?? m.specialty : 'Sin especialidad definida'}
@@ -394,7 +384,7 @@ export function GrupoDetalleScreen({
                         accessibilityLabel={a.fullName ?? 'Aprendiz'}
                         style={[estilos.fila, { backgroundColor: c.cardBg, borderColor: c.border }]}
                       >
-                        <Text style={[t.body, { color: c.textStrong, fontSize: 15, flex: 1, flexShrink: 1 }]}>
+                        <Text style={[t.body, { color: c.textStrong, fontSize: 16, flex: 1, flexShrink: 1 }]}>
                           {a.fullName ?? 'Sin nombre'}
                           {/* Mismo criterio que la fila de mentores, que ya avisa "ya lidera otro
                               grupo": quien elige tiene que saber que esta persona no esta libre
@@ -410,13 +400,13 @@ export function GrupoDetalleScreen({
                     que no se sabe, y suena igual de creíble que la verdad. */}
                 {!cargandoLista && errorLista ? (
                   <View style={{ gap: 4 }}>
-                    <Text style={[t.body, { color: c.danger, fontSize: 14 }]}>{errorLista}</Text>
+                    <Text style={[t.body, { color: c.danger, fontSize: 16 }]}>{errorLista}</Text>
                     <Pressable
                       onPress={() => void traerCandidatos(eligiendo === 'mentor' ? 'mentor' : 'aprendiz')}
                       accessibilityRole="button"
                       style={estilos.accionTexto}
                     >
-                      <Text style={[t.body, { color: c.goldInk, fontSize: 14, fontWeight: '500' }]}>Reintentar</Text>
+                      <Text style={[t.body, { color: c.goldInk, fontSize: 16, fontWeight: '500' }]}>Reintentar</Text>
                     </Pressable>
                   </View>
                 ) : null}
@@ -429,25 +419,18 @@ export function GrupoDetalleScreen({
                     aprendices que ya existen. */}
                 {!cargandoLista && !errorLista && eligiendo === 'aprendiz'
                   && candidatos.length > 0 && candidatosVisibles.length === 0 ? (
-                  <Text style={[t.body, { color: c.textSoft, fontSize: 14 }]}>
+                  <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>
                     Ningún aprendiz coincide con «{busquedaCandidato.trim()}».
                   </Text>
                 ) : null}
                 {!cargandoLista && !errorLista && (eligiendo === 'mentor' ? mentores : candidatos).length === 0 ? (
-                  <Text style={[t.body, { color: c.textSoft, fontSize: 14 }]}>
+                  <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>
                     {eligiendo === 'mentor'
                       ? 'No hay mentores activos con perfil creado.'
                       : 'No hay aprendices activos sin grupo.'}
                   </Text>
                 ) : null}
-                <Pressable
-                  onPress={() => setEligiendo(null)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Cerrar la lista"
-                  style={[estilos.boton, { borderColor: c.border }]}
-                >
-                  <Text style={[t.body, { color: c.textSoft, fontSize: 14 }]}>Cerrar</Text>
-                </Pressable>
+                <BotonSecundario etiqueta="Cerrar" accessibilityLabel="Cerrar la lista" onPress={() => setEligiendo(null)} />
               </View>
             ) : null}
           </>
@@ -458,7 +441,7 @@ export function GrupoDetalleScreen({
 }
 
 const estilos = StyleSheet.create({
-  buscadorCandidato: { minHeight: 48, borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, fontSize: 15, width: '100%' },
+  buscadorCandidato: { minHeight: 48, borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, fontSize: 16, width: '100%' },
   tarjeta: { borderRadius: 14, borderWidth: 1, padding: 14, width: '100%' },
   fila: {
     flexDirection: 'row',

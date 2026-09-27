@@ -2,7 +2,8 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Aparicion } from '../../../components/Aparicion';
-import { Card, MicroLabel } from '../../../components/ui';
+import { TituloDeSeccion } from '../../../components/Legible';
+import { Card } from '../../../components/ui';
 import { ahoraConfiable } from '../../../services/http/relojServidor';
 import { useTheme } from '../../../theme/ThemeContext';
 import type { OrigenDelAprendiz } from '../api/semaforoApi';
@@ -13,11 +14,11 @@ import {
   formatearPorcentaje,
   hoyDeLaPersona,
   momentoDeCalculo,
-  palabraDelSemaforo,
   primeraEnMayuscula,
   rangoDeFechas,
   textoDiasConDatos,
 } from '../utils/lecturaDelSemaforo';
+import { notaDelCierreSemanal, palabraParaQuienAcompana } from '../utils/ayudaDelSemaforo';
 import { CargandoLectura, FalloDeLectura } from './EstadoDeLectura';
 import { CifraDelSemaforo } from './CifraDelSemaforo';
 import { EtiquetaSemaforo } from './EtiquetaSemaforo';
@@ -51,7 +52,7 @@ export function TarjetaSemaforoDeAprendiz({
 
   return (
     <Aparicion retardo={retardo} style={{ marginTop: margenArriba }}>
-      <MicroLabel>Semáforo</MicroLabel>
+      <TituloDeSeccion>Semáforo de esta semana</TituloDeSeccion>
       <Card style={{ marginTop: 8, gap: 18 }}>
         {detalle ? (
           <DetalleDeOtraPersona detalle={detalle} />
@@ -83,36 +84,41 @@ function DetalleDeOtraPersona({ detalle }: { detalle: DetalleDelSemaforo }) {
   const hoy = hoyDeLaPersona(detalle, ahoraConfiable());
   const pausa = detalle.pausa;
 
+  const palabra = palabraParaQuienAcompana(color, vigente?.etiqueta);
+  const ultimaCerrada = detalle.semanas.length > 0 ? detalle.semanas[detalle.semanas.length - 1] : null;
+  const nota = notaDelCierreSemanal(ultimaCerrada, vigente?.hasta ?? null, 'otra');
+
   return (
     <>
-      {/* 1. El vigente: el corte a la vista, la cifra, la palabra y el denominador. */}
-      <View style={{ gap: 6 }}>
-        <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>
-          Últimos 7 días
-        </Text>
-        {vigente ? (
-          <Text style={cuerpo}>{primeraEnMayuscula(rangoDeFechas(vigente.desde, vigente.hasta))}</Text>
-        ) : null}
-      </View>
-
+      {/* 1. Lo primero, una sola palabra de estado (26/09, S-2): color + palabra + «X de 7 días»,
+          y la cifra. Debajo, qué días cubre. */}
       <View
         style={{ gap: 6 }}
         accessible
         accessibilityLabel={
-          `Su semáforo: ${palabraDelSemaforo(color, vigente?.etiqueta)}` +
+          `Su semáforo: ${palabra}` +
           (vigente?.porcentaje != null ? `, ${formatearPorcentaje(vigente.porcentaje)}` : '') +
           (vigente?.diasConDatos != null ? `. ${textoDiasConDatos(vigente.diasConDatos)}.` : '.')
         }
       >
-        <CifraDelSemaforo porcentaje={vigente?.porcentaje ?? null} color={color} />
-        <EtiquetaSemaforo color={color} etiqueta={vigente?.etiqueta} />
+        <EtiquetaSemaforo color={color} etiqueta={palabra} tamano="grande" />
         {vigente?.diasConDatos != null ? <Text style={cuerpo}>{textoDiasConDatos(vigente.diasConDatos)}</Text> : null}
+        <CifraDelSemaforo porcentaje={vigente?.porcentaje ?? null} color={color} />
         {pausa ? (
           <Text style={cuerpo}>
             {pausa.desde <= hoy
               ? `En pausa hasta el ${fechaLarga(pausa.hasta)}.`
               : `Pausa programada del ${fechaLarga(pausa.desde)} al ${fechaLarga(pausa.hasta)}.`}
           </Text>
+        ) : null}
+      </View>
+
+      <View style={{ gap: 4 }}>
+        <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>
+          Últimos 7 días
+        </Text>
+        {vigente ? (
+          <Text style={cuerpo}>{primeraEnMayuscula(rangoDeFechas(vigente.desde, vigente.hasta))}</Text>
         ) : null}
       </View>
 
@@ -130,7 +136,9 @@ function DetalleDeOtraPersona({ detalle }: { detalle: DetalleDelSemaforo }) {
 
       {/* 3. La tendencia: las semanas cerradas, sábado a viernes. */}
       <View style={{ gap: 8 }}>
-        <MicroLabel>Semanas cerradas</MicroLabel>
+        <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>
+          Semanas cerradas
+        </Text>
         {detalle.semanas.length > 0 ? (
           <View style={{ marginTop: 4 }}>
             <GraficoDeSemanas semanas={detalle.semanas} />
@@ -140,6 +148,9 @@ function DetalleDeOtraPersona({ detalle }: { detalle: DetalleDelSemaforo }) {
         )}
       </View>
 
+      {/* S-6: el cierre del sábado, dicho siempre igual en el detalle y en la ficha. */}
+      {nota ? <Text style={[cuerpo, { color: c.text }]}>{nota}</Text> : null}
+
       <Text style={[t.small, estilos.nota, { color: c.textSoft }]}>
         {calculado ? `Calculado el ${calculado}.` : 'Todavía no se calculó ningún día.'}
       </Text>
@@ -148,5 +159,5 @@ function DetalleDeOtraPersona({ detalle }: { detalle: DetalleDelSemaforo }) {
 }
 
 const estilos = StyleSheet.create({
-  nota: { fontSize: 14, lineHeight: 20 },
+  nota: { fontSize: 14 /* metadato */, lineHeight: 20 },
 });

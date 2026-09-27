@@ -37,7 +37,7 @@ export function SemaforoAdminScreen({
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
-      <CabeceraAdmin titulo="Semáforo" subtitulo="Cumplimiento de cada grupo" onVolver={onVolver} />
+      <CabeceraAdmin titulo="Semáforo" subtitulo="Cuánto cumplió cada grupo" onVolver={onVolver} />
       <ScrollView
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}

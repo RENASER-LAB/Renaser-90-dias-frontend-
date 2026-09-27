@@ -84,8 +84,8 @@ export function RejillaSemanal({ dias }: { dias: DiaAlumnoApi[] }) {
      número desambigua sin ocupar más de una columna estrecha. */
   const cabecera = dias.map(dia => (
     <View key={dia.fecha} style={celdaDia}>
-      <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5 }]}>{inicialDe(dia.fecha)}</Text>
-      <Text style={[t.micro, { color: c.chevron, fontSize: 9.5 }]}>{numeroDe(dia.fecha)}</Text>
+      <Text style={[t.micro, { color: c.textSoft, fontSize: 14 /* metadato */ }]}>{inicialDe(dia.fecha)}</Text>
+      <Text style={[t.micro, { color: c.chevron, fontSize: 14 /* metadato */ }]}>{numeroDe(dia.fecha)}</Text>
     </View>
   ));
 
@@ -104,7 +104,7 @@ export function RejillaSemanal({ dias }: { dias: DiaAlumnoApi[] }) {
             { borderColor: c.border, opacity: pressed ? 0.6 : 1 },
           ]}
         >
-          <Text style={[t.body, { color: c.text, fontSize: 13.5 }]}>
+          <Text style={[t.body, { color: c.text, fontSize: 16 }]}>
             Semana completa · {habitos.length} {habitos.length === 1 ? 'hábito' : 'hábitos'}
           </Text>
           {/* El chevron apunta a la derecha cuando esta cerrada y hacia abajo cuando esta
@@ -126,7 +126,7 @@ export function RejillaSemanal({ dias }: { dias: DiaAlumnoApi[] }) {
         ? habitos.map(titulo =>
             apilada ? (
               <View key={titulo} style={[estilos.bloque, { borderTopWidth: 1, borderTopColor: c.border }]}>
-                <Text style={[t.body, { color: c.text, fontSize: 12.5 }]} numberOfLines={2}>
+                <Text style={[t.body, { color: c.text, fontSize: 16 }]} numberOfLines={2}>
                   {titulo}
                 </Text>
                 <View style={estilos.fila}>{celdasDe(titulo)}</View>
@@ -134,7 +134,7 @@ export function RejillaSemanal({ dias }: { dias: DiaAlumnoApi[] }) {
             ) : (
               <View key={titulo} style={[estilos.fila, { borderTopWidth: 1, borderTopColor: c.border }]}>
                 <View style={estilos.celdaHabito}>
-                  <Text style={[t.body, { color: c.text, fontSize: 12.5 }]} numberOfLines={2}>
+                  <Text style={[t.body, { color: c.text, fontSize: 16 }]} numberOfLines={2}>
                     {titulo}
                   </Text>
                 </View>
@@ -185,7 +185,7 @@ function Marca({ obligacion }: { obligacion: ObligacionDiaApi | undefined }) {
   const { c, t } = useTheme();
 
   if (!obligacion) {
-    return <Text style={[t.micro, { color: c.chevron, fontSize: 13 }]}>—</Text>;
+    return <Text style={[t.micro, { color: c.chevron, fontSize: 16 }]}>—</Text>;
   }
   if (obligacion.estadoHabito === 'COMPLETADO') {
     return <Icon name="checkCircle" size={15} color={c.success} />;
@@ -203,11 +203,11 @@ function ItemLeyenda({ icono, color, texto }: { icono: string; color: string; te
       {icono === 'circle' ? (
         <View style={[estilos.pendiente, { borderColor: color }]} />
       ) : icono === 'minus' ? (
-        <Text style={[t.micro, { color, fontSize: 13 }]}>—</Text>
+        <Text style={[t.micro, { color, fontSize: 16 }]}>—</Text>
       ) : (
         <Icon name={icono as 'checkCircle' | 'clock'} size={13} color={color} />
       )}
-      <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5 }]}>{texto}</Text>
+      <Text style={[t.micro, { color: c.textSoft, fontSize: 14 /* metadato */ }]}>{texto}</Text>
     </View>
   );
 }

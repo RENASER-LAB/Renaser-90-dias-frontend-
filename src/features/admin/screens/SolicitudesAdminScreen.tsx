@@ -2,14 +2,16 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { MicroLabel } from '../../../components/ui';
+import { BotonPeligro, BotonPrincipal, BotonSecundario, TituloDeSeccion } from '../../../components/Legible';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
 import { aprobarSolicitud, listarAprendices, listarSolicitudes, rechazarSolicitud } from '../api/adminApi';
 import type { SolicitudApi } from '../api/adminSchemas';
+import { AvisoBreve } from '../components/AvisoBreve';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
+import { quedanPorTraer, sinLaDecidida, sumarPagina, textoVerMas } from '../utils/paginasDeSolicitudes';
 import { confirmar, avisar } from '../utils/dialogo';
 import { mensajeDeAltaAprobada, mensajeDeFallo } from '../utils/mensajes';
 
@@ -30,6 +32,11 @@ import { mensajeDeAltaAprobada, mensajeDeFallo } from '../utils/mensajes';
  * > grupo" antes y después, y cualquiera de las dos consultas puede fallar. Antes ese caso caía en
  * > "no entró" y la pantalla afirmaba «quedó SIN grupo» sin haberlo comprobado. El texto vive en
  * > `mensajeDeAltaAprobada`, con sus pruebas.
+ *
+ * > **Corregido 2026-09-26 (A-4).** Solo cargaba la página 0 (20 solicitudes): la 21 no aparecía en
+ * > ningún lado. Ahora hay «Ver más». Y aprobar ya no abre un diálogo que hay que cerrar: la
+ * > solicitud sale de la lista y el resultado llega como aviso breve (`AvisoBreve`). Rechazar sigue
+ * > pidiendo confirmación, porque no se deshace.
  */
 export function SolicitudesAdminScreen({
   onVolver,
@@ -42,27 +49,23 @@ export function SolicitudesAdminScreen({
   const { horizontalPadding, contentMaxWidth } = useResponsive();
 
   const [solicitudes, setSolicitudes] = useState<SolicitudApi[]>([]);
+  /** El total que dice el servidor: con él se sabe si hay más páginas (26/09, A-4). */
+  const [total, setTotal] = useState<number | null>(null);
+  const [pagina, setPagina] = useState(0);
   const [cargando, setCargando] = useState(true);
+  const [cargandoMas, setCargandoMas] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [trabajando, setTrabajando] = useState<string | null>(null);
   const [sinGrupo, setSinGrupo] = useState<number | null>(null);
+  const [avisoFinal, setAvisoFinal] = useState<string | null>(null);
+  const cerrarAviso = useCallback(() => setAvisoFinal(null), []);
 
   useSystemBackHandler(() => {
     onVolver();
     return true;
   });
 
-  const cargar = useCallback(async () => {
-    setCargando(true);
-    setError(null);
-    try {
-      const pagina = await listarSolicitudes('PENDING', 0);
-      setSolicitudes(pagina.content);
-    } catch (e) {
-      setError(mensajeDeFallo(e, 'No se pudieron cargar las solicitudes.'));
-    } finally {
-      setCargando(false);
-    }
+  const contarSinGrupo = useCallback(() => {
     // Aparte y sin bloquear: si esta consulta falla, la lista de solicitudes se ve igual.
     void listarAprendices({ pagina: 0, tamano: 1, soloSinGrupo: true }).then(
       p => setSinGrupo(p.total),
@@ -70,14 +73,56 @@ export function SolicitudesAdminScreen({
     );
   }, []);
 
+  const cargar = useCallback(async () => {
+    setCargando(true);
+    setError(null);
+    try {
+      const primera = await listarSolicitudes('PENDING', 0);
+      setSolicitudes(primera.content);
+      setTotal(primera.total);
+      setPagina(0);
+    } catch (e) {
+      setError(mensajeDeFallo(e, 'No se pudieron cargar las solicitudes.'));
+    } finally {
+      setCargando(false);
+    }
+    contarSinGrupo();
+  }, [contarSinGrupo]);
+
   useEffect(() => {
     void cargar();
   }, [cargar]);
 
+  /** «Ver más»: la página siguiente, sumada a lo que ya se ve. */
+  const verMas = async () => {
+    setCargandoMas(true);
+    try {
+      const siguiente = await listarSolicitudes('PENDING', pagina + 1);
+      setSolicitudes(actuales => sumarPagina(actuales, siguiente.content));
+      setTotal(siguiente.total);
+      setPagina(pagina + 1);
+    } catch (e) {
+      avisar('No se pudieron traer más', mensajeDeFallo(e, 'Inténtalo de nuevo.'));
+    } finally {
+      setCargandoMas(false);
+    }
+  };
+
+  /** Saca la decidida de la lista sin volver a la página 0: quien iba por la 21 sigue ahí. */
+  const quitarDeLaLista = (id: string) => {
+    setSolicitudes(actuales => sinLaDecidida(actuales, null, id).lista);
+    setTotal(anterior => (anterior === null ? null : Math.max(0, anterior - 1)));
+  };
+
+  /**
+   * Aprobar es UN toque (A-4): no hay confirmación —aprobar no borra nada y el servidor rechaza la
+   * segunda— y el resultado llega como aviso breve abajo, sin diálogo que cerrar.
+   */
   const aprobar = async (solicitud: SolicitudApi) => {
     setTrabajando(solicitud.id);
     try {
       await aprobarSolicitud(solicitud.id);
+      quitarDeLaLista(solicitud.id);
       /* Se vuelve a consultar la cola de "sin grupo" ANTES de decir nada: así el mensaje describe
          lo que efectivamente pasó y no lo que se esperaba que pasara.
 
@@ -89,8 +134,8 @@ export function SolicitudesAdminScreen({
         p => p.total,
         () => null,
       );
-      avisar('Cuenta aprobada', mensajeDeAltaAprobada(solicitud.fullName, sinGrupo, despues));
-      await cargar();
+      setAvisoFinal(`Cuenta aprobada. ${mensajeDeAltaAprobada(solicitud.fullName, sinGrupo, despues)}`);
+      if (despues !== null) setSinGrupo(despues);
     } catch (e) {
       avisar('No se pudo aprobar', mensajeDeFallo(e, 'Inténtalo de nuevo.'));
     } finally {
@@ -108,7 +153,8 @@ export function SolicitudesAdminScreen({
     setTrabajando(solicitud.id);
     try {
       await rechazarSolicitud(solicitud.id, 'Rechazada desde el panel de administración');
-      await cargar();
+      quitarDeLaLista(solicitud.id);
+      setAvisoFinal(`Solicitud de ${solicitud.fullName ?? 'esta persona'} rechazada.`);
     } catch (e) {
       avisar('No se pudo rechazar', mensajeDeFallo(e, 'Inténtalo de nuevo.'));
     } finally {
@@ -118,7 +164,11 @@ export function SolicitudesAdminScreen({
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
-      <CabeceraAdmin titulo="Solicitudes" subtitulo="Altas pendientes de decidir" onVolver={onVolver} />
+      <CabeceraAdmin
+        titulo="Solicitudes"
+        subtitulo={total === null ? 'Altas por decidir' : `${total} por decidir`}
+        onVolver={onVolver}
+      />
       <ScrollView
         style={{ flex: 1 }}
         keyboardShouldPersistTaps="handled"
@@ -136,78 +186,73 @@ export function SolicitudesAdminScreen({
           <Pressable
             onPress={onIrAGrupos}
             accessibilityRole="button"
-            accessibilityLabel="Ver los grupos para abrir una bienvenida"
+            accessibilityLabel="Ver los grupos para abrir un grupo de bienvenida"
             style={[estilos.tarjeta, { backgroundColor: c.goldWash, borderColor: c.borderStrong }]}
           >
-            <Text style={[t.body, { color: c.textStrong, fontSize: 14, lineHeight: 20 }]}>
-              Hay {sinGrupo} {sinGrupo === 1 ? 'persona' : 'personas'} sin grupo. Si no hay una
-              bienvenida abierta, quien se registre hoy también quedará afuera.
+            <Text style={[t.body, { color: c.textStrong, fontSize: 16, lineHeight: 23 }]}>
+              Hay {sinGrupo} {sinGrupo === 1 ? 'persona' : 'personas'} sin grupo. Si no hay un grupo de
+              bienvenida abierto, quien se registre hoy también quedará afuera.
             </Text>
-            <Text style={[t.body, { color: c.goldInk, fontSize: 13.5, fontWeight: '500', marginTop: 6 }]}>
+            <Text style={[t.body, { color: c.goldInk, fontSize: 16, fontWeight: '500', marginTop: 6 }]}>
               Ver grupos
             </Text>
           </Pressable>
         ) : null}
 
         {cargando ? <ActivityIndicator color={c.goldInk} style={{ marginTop: 16 }} /> : null}
-        {error ? <Text style={[t.body, { color: c.danger, fontSize: 13.5 }]}>{error}</Text> : null}
+        {error ? <Text style={[t.body, { color: c.danger, fontSize: 16 }]}>{error}</Text> : null}
 
         {!cargando && solicitudes.length === 0 && !error ? (
-          <Text style={[t.body, { color: c.textSoft, fontSize: 14, marginTop: 8 }]}>
+          <Text style={[t.body, { color: c.textSoft, fontSize: 16, marginTop: 8 }]}>
             No hay solicitudes pendientes.
           </Text>
         ) : null}
 
-        {solicitudes.length > 0 ? <MicroLabel>Pendientes</MicroLabel> : null}
+        {solicitudes.length > 0 ? <TituloDeSeccion>Por decidir</TituloDeSeccion> : null}
 
         {solicitudes.map(solicitud => (
           <View
             key={solicitud.id}
             style={[estilos.tarjeta, { backgroundColor: c.cardBg, borderColor: c.border, gap: 4 }]}
           >
-            <Text style={[t.body, { color: c.textStrong, fontSize: 15.5, fontWeight: '500' }]}>
+            <Text style={[t.body, { color: c.textStrong, fontSize: 18, fontFamily: 'Jost_500Medium' }]}>
               {solicitud.fullName ?? 'Sin nombre'}
             </Text>
-            <Text style={[t.body, { color: c.textSoft, fontSize: 13 }]}>{solicitud.email ?? 'Sin correo'}</Text>
+            <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>{solicitud.email ?? 'Sin correo'}</Text>
             <View style={estilos.acciones}>
-              <Pressable
+              <BotonPrincipal
+                etiqueta={trabajando === solicitud.id ? 'Aprobando…' : 'Aprobar'}
                 onPress={() => void aprobar(solicitud)}
-                disabled={trabajando === solicitud.id}
-                accessibilityRole="button"
+                deshabilitado={trabajando === solicitud.id}
                 accessibilityLabel={`Aprobar a ${solicitud.fullName ?? 'esta persona'}`}
-                style={[estilos.boton, { borderColor: c.goldInk }]}
-              >
-                <Text style={[t.body, { color: c.goldInk, fontSize: 14, fontWeight: '500' }]}>
-                  {trabajando === solicitud.id ? 'Aprobando…' : 'Aprobar'}
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={() => rechazar(solicitud)}
-                disabled={trabajando === solicitud.id}
-                accessibilityRole="button"
+                estilo={estilos.boton}
+              />
+              <BotonPeligro
+                etiqueta="Rechazar"
+                onPress={() => void rechazar(solicitud)}
+                deshabilitado={trabajando === solicitud.id}
                 accessibilityLabel={`Rechazar a ${solicitud.fullName ?? 'esta persona'}`}
-                style={[estilos.boton, { borderColor: c.border }]}
-              >
-                <Text style={[t.body, { color: c.textSoft, fontSize: 14 }]}>Rechazar</Text>
-              </Pressable>
+                estilo={estilos.boton}
+              />
             </View>
           </View>
         ))}
+
+        {!cargando && total !== null && quedanPorTraer(solicitudes.length, total) ? (
+          <BotonSecundario
+            etiqueta={cargandoMas ? 'Cargando…' : textoVerMas(solicitudes.length, total)}
+            onPress={() => void verMas()}
+            cargando={cargandoMas}
+          />
+        ) : null}
       </ScrollView>
+      <AvisoBreve texto={avisoFinal} onCerrar={cerrarAviso} />
     </SafeAreaView>
   );
 }
 
 const estilos = StyleSheet.create({
-  tarjeta: { borderRadius: 14, borderWidth: 1, padding: 14, width: '100%' },
-  acciones: { flexDirection: 'row', gap: 10, marginTop: 10, flexWrap: 'wrap' },
-  boton: {
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingHorizontal: 18,
-    flexShrink: 1,
-  },
+  tarjeta: { borderRadius: 14, borderWidth: 1, padding: 16, width: '100%' },
+  acciones: { flexDirection: 'row', gap: 10, marginTop: 12, flexWrap: 'wrap' },
+  boton: { flexGrow: 1, flexBasis: 130 },
 });

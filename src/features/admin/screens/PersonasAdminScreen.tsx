@@ -99,7 +99,7 @@ export function PersonasAdminScreen({
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
       <CabeceraAdmin
         titulo="Personas"
-        subtitulo={total === null ? 'Sin datos todavía' : `${total} en total`}
+        subtitulo={total === null ? 'Todavía no se pudo contar' : `${total} en total`}
         onVolver={onVolver}
       />
       <ScrollView
@@ -124,9 +124,9 @@ export function PersonasAdminScreen({
           autoCorrect={false}
           accessibilityLabel="Buscar personas"
           style={[
-            estilos.buscador,
-            { backgroundColor: c.cardBg, borderColor: c.border, color: c.text },
             t.body,
+            estilos.buscador,
+            { backgroundColor: c.cardBg, borderColor: c.border, color: c.text, fontSize: 16 },
           ]}
         />
 
@@ -149,14 +149,14 @@ export function PersonasAdminScreen({
           <Text
             style={[
               t.body,
-              { color: soloSinGrupo ? c.goldInk : c.textSoft, fontSize: 13.5, fontWeight: soloSinGrupo ? '700' : '400' },
+              { color: soloSinGrupo ? c.goldInk : c.textSoft, fontSize: 16, fontWeight: soloSinGrupo ? '700' : '400' },
             ]}
           >
             {soloSinGrupo ? '✓ Solo sin grupo' : 'Solo sin grupo'}
           </Text>
         </Pressable>
 
-        {error ? <Text style={[t.body, { color: c.danger, fontSize: 13.5 }]}>{error}</Text> : null}
+        {error ? <Text style={[t.body, { color: c.danger, fontSize: 16 }]}>{error}</Text> : null}
 
         {personas.map(persona => (
           <Pressable
@@ -167,10 +167,10 @@ export function PersonasAdminScreen({
             style={[estilos.fila, { backgroundColor: c.cardBg, borderColor: c.border }]}
           >
             <View style={{ flex: 1, flexShrink: 1 }}>
-              <Text style={[t.body, { color: c.textStrong, fontSize: 15, fontWeight: '500' }]} numberOfLines={1}>
+              <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontWeight: '500' }]} numberOfLines={1}>
                 {persona.fullName ?? 'Sin nombre'}
               </Text>
-              <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, marginTop: 2 }]} numberOfLines={1}>
+              <Text style={[t.body, { color: c.textSoft, fontSize: 16, marginTop: 2 }]} numberOfLines={1}>
                 {persona.cellId ? `Día ${persona.programDay}` : `Sin grupo · día ${persona.programDay}`}
                 {persona.status === 'SUSPENDED' ? ' · suspendida' : ''}
               </Text>
@@ -182,7 +182,7 @@ export function PersonasAdminScreen({
         {cargando ? <ActivityIndicator color={c.goldInk} style={{ marginTop: 12 }} /> : null}
 
         {!cargando && personas.length === 0 && !error ? (
-          <Text style={[t.body, { color: c.textSoft, fontSize: 14, marginTop: 8 }]}>
+          <Text style={[t.body, { color: c.textSoft, fontSize: 16, marginTop: 8 }]}>
             {busquedaAplicada.trim()
               ? `Nadie coincide con "${busquedaAplicada.trim()}".`
               : 'No hay personas en este tramo.'}
@@ -196,7 +196,7 @@ export function PersonasAdminScreen({
             accessibilityLabel="Ver más personas"
             style={[estilos.boton, { borderColor: c.border }]}
           >
-            <Text style={[t.body, { color: c.textStrong, fontSize: 14, fontWeight: '500' }]}>
+            <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontWeight: '500' }]}>
               Ver más ({personas.length} de {total ?? '—'})
             </Text>
           </Pressable>
@@ -212,12 +212,12 @@ const estilos = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     paddingHorizontal: 14,
-    fontSize: 15,
+    fontSize: 16,
     width: '100%',
   },
   pastilla: {
     alignSelf: 'flex-start',
-    minHeight: 44,
+    minHeight: 48,
     justifyContent: 'center',
     paddingHorizontal: 14,
     borderRadius: 999,

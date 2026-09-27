@@ -51,7 +51,12 @@ test('E08b · la ficha muestra la semana y NO ofrece completar por el alumno', a
   await expect(primera).toBeVisible();
   await primera.click();
 
-  await expect(page.getByText(/cumplimiento de la semana/i)).toBeVisible();
+  /* S-2 (26/09): la semana de lunes a domingo va plegada y con su nombre verdadero, debajo del
+     semáforo. Se abre para comprobar que sigue ahí. */
+  const detalle = page.getByRole('button', { name: /detalle de hábitos \(lunes a domingo\)/i });
+  await expect(detalle).toBeVisible();
+  await detalle.click();
+  await expect(page.getByRole('button', { name: /semana anterior/i })).toBeVisible();
   /* La lectura es de LECTURA. Que no exista un botón para marcar cumplido no es una ausencia de
      funcionalidad: es el requisito (ARF-10). */
   await expect(page.getByRole('button', { name: /marcar cumplido|completar hábito|firmar/i })).toHaveCount(0);

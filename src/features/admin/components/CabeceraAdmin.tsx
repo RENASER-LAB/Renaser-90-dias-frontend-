@@ -46,7 +46,7 @@ export function CabeceraAdmin({
           {titulo}
         </Text>
         {subtitulo ? (
-          <Text style={[t.body, { color: c.textSoft, fontSize: 12.5 }]} numberOfLines={1}>
+          <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]} numberOfLines={1}>
             {subtitulo}
           </Text>
         ) : null}
@@ -58,7 +58,7 @@ export function CabeceraAdmin({
           accessibilityLabel={accion.etiqueta}
           style={[estilos.accion, { borderColor: c.border }]}
         >
-          <Text style={[t.body, { color: c.textStrong, fontSize: 13.5, fontWeight: '500' }]}>
+          <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontWeight: '500' }]}>
             {accion.etiqueta}
           </Text>
         </Pressable>

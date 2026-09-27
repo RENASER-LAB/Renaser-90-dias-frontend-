@@ -2,7 +2,6 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '../../../components/Icon';
-import { MicroLabel } from '../../../components/ui';
 import { useTheme } from '../../../theme/ThemeContext';
 
 /**
@@ -24,13 +23,14 @@ export function TarjetaAdminHoy({ onAbrir }: { onAbrir: () => void }) {
       style={[estilos.tarjeta, { backgroundColor: c.cardBg, borderColor: c.border }]}
     >
       <View style={{ flex: 1, flexShrink: 1 }}>
-        <MicroLabel>Operación</MicroLabel>
+        {/* Rótulo de la tarjeta, con la forma de las demás de Hoy pero a 14 px (A-1). */}
+        <Text style={[t.micro, { color: c.micro, fontSize: 14 /* metadato */ }]}>OPERACIÓN</Text>
         <Text style={[t.cardTitle, { color: c.textStrong, marginTop: 6 }]}>Administración</Text>
         {/* Dice SOLO lo que hay detrás. Decía «…solicitudes y evidencias» y no existe ninguna
             pantalla de evidencias: la bandeja está construida en el backend
             (`GET /admin/evidence`) y sin un solo consumidor acá. Prometer una sección que no se
             puede abrir hace perder el tiempo buscándola y resta confianza al resto de la lista. */}
-        <Text style={[t.body, { color: c.textSoft, fontSize: 13, marginTop: 6, lineHeight: 19 }]}>
+        <Text style={[t.body, { color: c.textSoft, fontSize: 16, marginTop: 6, lineHeight: 23 }]}>
           Grupos, personas y solicitudes. Tu programa personal sigue acá, sin cambios.
         </Text>
       </View>

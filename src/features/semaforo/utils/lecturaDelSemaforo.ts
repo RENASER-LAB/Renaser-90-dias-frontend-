@@ -33,6 +33,13 @@ export const PALABRA_DEL_COLOR: Record<ColorSemaforo, string> = {
 };
 
 /**
+ * Cómo se nombra la falta de datos en las vistas de quien ACOMPAÑA o SUPERVISA (retroalimentación del
+ * 26/09, A-2): «Sin datos» no le dice nada a una persona de 60 años. La vista del propio aprendiz
+ * sigue diciendo lo de siempre; las palabras de los tres colores no cambian (decisión del dueño).
+ */
+export const PALABRA_SIN_ACTIVIDAD = 'Todavía sin actividad para medir';
+
+/**
  * La palabra que se muestra. Gana la del servidor: la app no se actualiza por aire, y así un cambio
  * de redacción del dueño llega a todos sin reinstalar. Si no vino, la del color.
  */
@@ -247,7 +254,7 @@ export const COLORES_EN_ORDEN: readonly ColorSemaforo[] = ['VERDE', 'AMARILLO', 
 
 /**
  * Una cantidad con la palabra de su color, concordada: `5 al día` · `1 requiere atención` ·
- * `2 requieren atención` · `1 con problemas` · `0 sin datos`. Son las palabras del contrato
+ * `2 requieren atención` · `1 con problemas` · `0 todavía sin actividad para medir`. Son las palabras del contrato
  * (§1 y el aviso del sábado de §1.2) en minúscula, porque van dentro de una frase.
  */
 export function cantidadEnPalabras(color: ColorSemaforo, cantidad: number): string {
@@ -259,7 +266,7 @@ export function cantidadEnPalabras(color: ColorSemaforo, cantidad: number): stri
     case 'ROJO':
       return `${cantidad} con problemas`;
     default:
-      return `${cantidad} sin datos`;
+      return `${cantidad} ${PALABRA_SIN_ACTIVIDAD.toLowerCase()}`;
   }
 }
 
@@ -297,7 +304,7 @@ export function resumenEnPalabras(resumen: ResumenPorColor): string {
  * aplica umbrales por su cuenta. Sin número, «sin datos»: nunca un 0 %.
  */
 export function promedioEnPalabras(promedio: number | null, color?: ColorSemaforo | null, etiqueta?: string | null): string {
-  if (promedio === null) return 'Promedio del grupo: sin datos';
+  if (promedio === null) return `Promedio del grupo: ${PALABRA_SIN_ACTIVIDAD.toLowerCase()}`;
   const palabra = color ? `${palabraDelSemaforo(color, etiqueta)}, ` : '';
   return `Promedio del grupo: ${palabra}${formatearPorcentaje(promedio)}`;
 }
@@ -334,7 +341,8 @@ export function rotuloDeVentana(
  */
 export function dichoDelAprendiz(aprendiz: AprendizDelSemaforo): string {
   const nombre = aprendiz.nombre?.trim() || 'Aprendiz sin nombre';
-  const palabra = palabraDelSemaforo(aprendiz.color, aprendiz.etiqueta);
+  const palabra =
+    aprendiz.color === 'SIN_DATOS' ? PALABRA_SIN_ACTIVIDAD : palabraDelSemaforo(aprendiz.color, aprendiz.etiqueta);
   const cifra = aprendiz.porcentaje !== null ? `, ${formatearPorcentaje(aprendiz.porcentaje)}` : '';
   const dias = aprendiz.diasConDatos !== null ? ` ${textoDiasConDatos(aprendiz.diasConDatos)}.` : '';
   return `${nombre}. ${palabra}${cifra}.${dias}`;

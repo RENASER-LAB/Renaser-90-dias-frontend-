@@ -2,7 +2,8 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Aparicion } from '../../../components/Aparicion';
-import { Card, MicroLabel } from '../../../components/ui';
+import { Card } from '../../../components/ui';
+import { TituloDeSeccion } from '../../../components/Legible';
 import { useTheme } from '../../../theme/ThemeContext';
 import { ENERGIA_MAXIMA, PREGUNTAS_RADAR } from '../../radar/config/configRadar';
 import type { RegistroRadarApi } from '../../radar/types/radar.types';
@@ -44,23 +45,23 @@ export function CodigoRenaserDelAlumno({ grupoId, alumnoId }: { grupoId: string 
 
   return (
     <Aparicion retardo={200} style={{ marginTop: 20 }}>
-      <MicroLabel>CÓDIGO RENASER</MicroLabel>
+      <TituloDeSeccion>CÓDIGO RENASER</TituloDeSeccion>
       <Card style={estilos.tarjeta}>
         {cargando ? (
-          <Text style={[t.body, { color: c.textSoft, fontSize: 13 }]}>Cargando sus registros…</Text>
+          <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>Cargando sus registros…</Text>
         ) : fallo ? (
-          <Text style={[t.body, { color: c.textSoft, fontSize: 13, lineHeight: 19 }]}>
+          <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]}>
             {fallo === 'sin_red'
               ? 'No se pudieron cargar sus registros. Revisa tu conexión y vuelve a entrar.'
               : 'No se pudieron cargar sus registros.'}
           </Text>
         ) : dias.length === 0 ? (
-          <Text style={[t.body, { color: c.textSoft, fontSize: 13 }]}>Sin registros.</Text>
+          <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>Sin registros.</Text>
         ) : (
           <>
             {dias.map((dia, indice) => (
               <View key={dia.fecha ?? 'sin-fecha'} style={indice > 0 ? estilos.diaSiguiente : undefined}>
-                <Text style={[t.body, { color: c.text, fontSize: 13.5, fontFamily: 'Jost_500Medium' }]}>
+                <Text style={[t.body, { color: c.text, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>
                   {/* `null` sólo aparece si `createdAt` llegó ilegible. El registro se muestra
                       igual: perder lo que alguien escribió por no poder ubicarlo en el
                       calendario sería peor que mostrarlo sin fecha. */}
@@ -81,7 +82,7 @@ export function CodigoRenaserDelAlumno({ grupoId, alumnoId }: { grupoId: string 
                 accessibilityState={{ disabled: cargandoMas }}
                 style={[estilos.verMas, { borderColor: c.border, opacity: cargandoMas ? 0.6 : 1 }]}
               >
-                <Text style={[t.body, { color: c.goldInk, fontSize: 13.5, fontFamily: 'Jost_500Medium' }]}>
+                <Text style={[t.body, { color: c.goldInk, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>
                   {cargandoMas ? 'Cargando…' : 'Ver registros anteriores'}
                 </Text>
               </Pressable>
@@ -101,8 +102,8 @@ function RegistroDeHora({ registro, hora }: { registro: RegistroRadarApi; hora: 
     <View style={[estilos.registro, { borderColor: c.border }]}>
       <View style={estilos.cabecera}>
         {/* El guion es literal: si no se pudo leer la hora, no se inventa ninguna. */}
-        <Text style={[t.micro, { color: c.micro, fontSize: 11.5 }]}>{hora ?? '—'}</Text>
-        <Text style={[t.micro, { color: c.textSoft, fontSize: 11.5 }]}>
+        <Text style={[t.micro, { color: c.micro, fontSize: 14 /* metadato */ }]}>{hora ?? '—'}</Text>
+        <Text style={[t.micro, { color: c.textSoft, fontSize: 14 /* metadato */ }]}>
           Energía {registro.energyLevel} / {ENERGIA_MAXIMA}
         </Text>
       </View>
@@ -111,8 +112,8 @@ function RegistroDeHora({ registro, hora }: { registro: RegistroRadarApi; hora: 
         const texto = registro[pregunta.campo]?.trim();
         return (
           <View key={pregunta.campo} style={estilos.respuesta}>
-            <Text style={[t.micro, { color: c.micro, fontSize: 11 }]}>{pregunta.titulo}</Text>
-            <Text style={[t.body, { color: c.text, fontSize: 13.5, lineHeight: 19 }]}>
+            <Text style={[t.micro, { color: c.micro, fontSize: 14 /* metadato */ }]}>{pregunta.titulo}</Text>
+            <Text style={[t.body, { color: c.text, fontSize: 16, lineHeight: 23 }]}>
               {texto || '—'}
             </Text>
           </View>
@@ -128,11 +129,11 @@ const estilos = StyleSheet.create({
   registro: { borderTopWidth: 1, paddingTop: 10, marginTop: 10, gap: 8 },
   cabecera: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
   respuesta: { gap: 2 },
-  // 44 px: pulsable con el pulgar sin apuntar (AGENTS.md §4).
+  // 48 px: pulsable con el pulgar sin apuntar (A-1, 26/09).
   verMas: {
     alignSelf: 'flex-start',
     justifyContent: 'center',
-    minHeight: 44,
+    minHeight: 48,
     paddingHorizontal: 14,
     borderRadius: 12,
     borderWidth: 1,

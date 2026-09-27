@@ -2,7 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '../../../components/Icon';
-import { MicroLabel } from '../../../components/ui';
+import { TituloDeSeccion } from '../../../components/Legible';
 import { useTheme } from '../../../theme/ThemeContext';
 import type { LecturaDeGrupos } from '../hooks/useLecturaPorSemana';
 import type { GrupoDelResumen } from '../types/semaforo.types';
@@ -42,7 +42,7 @@ export function ResumenDeGrupos({
         <>
           {datos.totales ? (
             <View style={{ gap: 8 }}>
-              <MicroLabel>Todos los grupos</MicroLabel>
+              <TituloDeSeccion>Todos los grupos</TituloDeSeccion>
               <CantidadesPorColor resumen={datos.totales} />
               <Text style={cuerpo}>
                 {`${datos.grupos.length === 1 ? '1 grupo' : `${datos.grupos.length} grupos`} · ${aprendicesEnPalabras(
@@ -52,10 +52,10 @@ export function ResumenDeGrupos({
             </View>
           ) : null}
           {datos.grupos.length === 0 ? (
-            <Text style={cuerpo}>No hay grupos con mentor que mostrar en estos días.</Text>
+            <Text style={cuerpo}>No hay grupos que mostrar en estos días.</Text>
           ) : (
             <View style={{ gap: 10 }}>
-              <MicroLabel>Por grupo</MicroLabel>
+              <TituloDeSeccion>Por grupo</TituloDeSeccion>
               {ayudaPorGrupo ? <Text style={cuerpo}>{ayudaPorGrupo}</Text> : null}
               {datos.grupos.map(grupo => (
                 <TarjetaDeGrupo

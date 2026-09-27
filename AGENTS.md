@@ -15,6 +15,22 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
   * `data/`: Constantes, cláusulas, configuraciones estáticas.
 * **Componentes de UI Atómicos**: Utiliza componentes compartidos bajo `src/components/` (`FormField`, `GoldButton`, `SliderRating`, `Checkbox`, `SignatureCanvas`, `Icon`).
 * **Integridad del Core**: NUNCA alterar, romper ni desconfigurar las pantallas existentes ni los tabs principales (`Hoy`, `Plan`, `Training`, `Comunidad`, `Yo`).
+  * **Excepción autorizada por el dueño del producto — 2026-09-26 — tab `Hoy`, tarjetas del mentor
+    y de administración (retroalimentación del 26/09, spec `docs/specs/RETROALIMENTACION_2026-09-26.md`
+    del backend, S-1, S-6 y A-1).** Lo único que cambia en `Hoy`:
+    * **Tarjeta «Mi grupo» (solo mentores):** su línea la dice el semáforo del grupo
+      (`GET /api/v1/mentor/groups/{g}/semaforo`): «N necesitan tu ayuda esta semana» (rojo + amarillo),
+      «Nadie necesita ayuda esta semana» o «N aprendices · todavía sin actividad para medir». Antes
+      decía siempre «sin avance registrado todavía», con campos que el servidor nunca mandaba. Sin
+      semáforo (404/403) dice solo cuántos son. La tarjeta pide esa lectura por su cuenta:
+      `HoyScreen.tsx` no se tocó.
+    * **Rótulos «MI GRUPO» y «OPERACIÓN»** de esas dos tarjetas pasan de 10,5 a 14 px.
+    * **El detalle del semáforo** (`SemaforoScreen`, estado de Hoy) suma una línea fija bajo
+      «Semanas cerradas»: *«La semana del sábado X al viernes Y ya cerró; lo que completes después no
+      la cambia.»* (S-6). Nada más del detalle cambia; las palabras y los colores del semáforo quedan
+      exactamente como estaban (decisión del dueño del mismo día).
+    Una excepción puntual **no abre** el tab: cualquier otro cambio sobre los cinco principales
+    vuelve a necesitar autorización explícita.
   * **Excepción autorizada por el dueño del producto — 2026-09-26 — tabs `Training` y `Hoy`,
     registro con foto.** Decisiones del dueño ese día:
     * **`Training` — los hábitos que EXIGEN evidencia abren la cámara directo** (solo foto, también

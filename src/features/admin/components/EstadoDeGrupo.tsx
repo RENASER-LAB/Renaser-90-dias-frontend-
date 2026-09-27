@@ -22,7 +22,7 @@ export function EstadoDeGrupo({ estado }: { estado: EstadoGrupoApi | null | unde
   const { texto, color } = descripcion(estado, c);
   return (
     <View style={[estilos.pastilla, { borderColor: color }]}>
-      <Text style={[t.body, { color, fontSize: 11.5, fontWeight: '700', letterSpacing: 0.3 }]}>
+      <Text style={[t.body, { color, fontSize: 14 /* metadato */, fontWeight: '700', letterSpacing: 0.3 }]}>
         {texto}
       </Text>
     </View>

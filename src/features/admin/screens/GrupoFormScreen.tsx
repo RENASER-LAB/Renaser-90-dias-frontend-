@@ -3,8 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FormField } from '../../../components/FormField';
-import { GoldButton } from '../../../components/GoldButton';
-import { MicroLabel } from '../../../components/ui';
+import { BotonPrincipal, TituloDeSeccion } from '../../../components/Legible';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
@@ -99,7 +98,7 @@ export function GrupoFormScreen({
   const validar = (): boolean => {
     const nuevos: Record<string, string> = {};
     if (!nombre.trim()) nuevos.nombre = 'Pon un nombre para el grupo.';
-    if (!cohorteId) nuevos.cohorte = 'Elige la cohorte.';
+    if (!cohorteId) nuevos.cohorte = 'Elige la generación.';
     const hayAlguna = Boolean(inicio.trim() || fin.trim());
     if (hayAlguna) {
       if (!esFechaValida(inicio.trim())) nuevos.inicio = 'Formato AAAA-MM-DD, y que la fecha exista.';
@@ -159,7 +158,7 @@ export function GrupoFormScreen({
 
   const crearNuevaCohorte = async () => {
     if (!nuevaCohorte.trim()) {
-      setErrores(e => ({ ...e, cohorte: 'Pon un nombre para la cohorte.' }));
+      setErrores(e => ({ ...e, cohorte: 'Pon un nombre para la generación.' }));
       return;
     }
     setCreandoCohorte(true);
@@ -170,7 +169,7 @@ export function GrupoFormScreen({
       setNuevaCohorte('');
       setErrores(e => ({ ...e, cohorte: '' }));
     } catch (e) {
-      avisar('No se pudo crear la cohorte', mensajeDeFallo(e, 'Inténtalo de nuevo.'));
+      avisar('No se pudo crear la generación', mensajeDeFallo(e, 'Inténtalo de nuevo.'));
     } finally {
       setCreandoCohorte(false);
     }
@@ -212,13 +211,13 @@ export function GrupoFormScreen({
 
         {!grupoId ? (
           <View style={{ gap: 8, marginTop: 4 }}>
-            <MicroLabel>Cohorte</MicroLabel>
+            <TituloDeSeccion>Generación</TituloDeSeccion>
             {cohortes.length === 0 ? (
               /* Sin ninguna cohorte no se puede crear ningún grupo, y el panel no tenía por dónde
                  crearla: era un huevo-y-gallina que dejaba el formulario trabado. Acá se crea la
                  primera en el sitio. */
               <View style={{ gap: 8 }}>
-                <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, lineHeight: 17 }]}>
+                <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]}>
                   La cohorte es la generación a la que pertenece el grupo (por ejemplo «Generación
                   Septiembre»). Todavía no hay ninguna: crea la primera para poder seguir.
                 </Text>
@@ -234,11 +233,11 @@ export function GrupoFormScreen({
                   onPress={crearNuevaCohorte}
                   disabled={creandoCohorte}
                   accessibilityRole="button"
-                  accessibilityLabel="Crear la cohorte"
+                  accessibilityLabel="Crear la generación"
                   style={[estilos.opcion, { borderColor: c.goldInk, alignItems: 'center', opacity: creandoCohorte ? 0.6 : 1 }]}
                 >
-                  <Text style={[t.body, { color: c.goldInk, fontSize: 14, fontWeight: '500' }]}>
-                    {creandoCohorte ? 'Creando…' : 'Crear cohorte'}
+                  <Text style={[t.body, { color: c.goldInk, fontSize: 16, fontWeight: '500' }]}>
+                    {creandoCohorte ? 'Creando…' : 'Crear generación'}
                   </Text>
                 </Pressable>
               </View>
@@ -259,13 +258,13 @@ export function GrupoFormScreen({
                           { borderColor: activa ? c.goldInk : c.border, backgroundColor: activa ? c.goldWash : 'transparent' },
                         ]}
                       >
-                        <Text style={[t.body, { color: activa ? c.goldInk : c.text, fontSize: 14 }]}>{co.name}</Text>
+                        <Text style={[t.body, { color: activa ? c.goldInk : c.text, fontSize: 16 }]}>{co.name}</Text>
                       </Pressable>
                     );
                   })}
                 </View>
                 {errores.cohorte ? (
-                  <Text style={[t.body, { color: c.danger, fontSize: 12.5 }]}>{errores.cohorte}</Text>
+                  <Text style={[t.body, { color: c.danger, fontSize: 16 }]}>{errores.cohorte}</Text>
                 ) : null}
               </>
             )}
@@ -274,12 +273,12 @@ export function GrupoFormScreen({
 
         {!grupoId ? (
           <View style={{ gap: 8, marginTop: 10 }}>
-            <MicroLabel>Tipo</MicroLabel>
+            <TituloDeSeccion>Tipo</TituloDeSeccion>
             <View style={estilos.opciones}>
               {(
                 [
                   { clave: 'REGULAR' as const, etiqueta: 'Grupo estable' },
-                  { clave: 'RECEPTION' as const, etiqueta: 'Bienvenida (permanente)' },
+                  { clave: 'RECEPTION' as const, etiqueta: 'Grupo de bienvenida (permanente)' },
                 ]
               ).map(op => {
                 const activa = tipo === op.clave;
@@ -303,7 +302,7 @@ export function GrupoFormScreen({
                       { borderColor: activa ? c.goldInk : c.border, backgroundColor: activa ? c.goldWash : 'transparent' },
                     ]}
                   >
-                    <Text style={[t.body, { color: activa ? c.goldInk : c.text, fontSize: 14 }]}>{op.etiqueta}</Text>
+                    <Text style={[t.body, { color: activa ? c.goldInk : c.text, fontSize: 16 }]}>{op.etiqueta}</Text>
                   </Pressable>
                 );
               })}
@@ -314,10 +313,10 @@ export function GrupoFormScreen({
                 el cliente pasó al armado manual. Prometerlo acá hacía que el administrador diera
                 por hecho que el sistema se ordena solo, y la gente se quedaba en la bienvenida
                 para siempre. */}
-            <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, lineHeight: 17 }]}>
+            <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]}>
               {esBienvenida
-                ? 'La bienvenida no lleva fechas ni tope de plazas: recibe sola a cada persona que se registra. Con una alcanza — no hace falta crear una nueva cada semana. Salir de ella no es automático: cuando alguien tiene que pasar a un grupo estable, se le mueve a mano desde ese grupo.'
-                : 'El grupo estable tiene fechas (suele ser por mes) y un tope de plazas. Acá se coloca a la gente cuando sale de la bienvenida.'}
+                ? 'El grupo de bienvenida no lleva fechas ni tope de plazas: recibe sola a cada persona que se registra. Con una alcanza — no hace falta crear una nueva cada semana. Salir de ella no es automático: cuando alguien tiene que pasar a un grupo estable, se le mueve a mano desde ese grupo.'
+                : 'El grupo estable tiene fechas (suele ser por mes) y un tope de plazas. Acá se coloca a la gente cuando sale del grupo de bienvenida.'}
             </Text>
           </View>
         ) : null}
@@ -349,7 +348,7 @@ export function GrupoFormScreen({
               autoCapitalize="none"
             />
             {teniaPeriodo && !inicio.trim() && !fin.trim() ? (
-              <Text style={[t.body, { color: c.danger, fontSize: 12.5, marginTop: -4, marginBottom: 8 }]}>
+              <Text style={[t.body, { color: c.danger, fontSize: 16, marginTop: -4, marginBottom: 8 }]}>
                 Al guardar se le quita el período: el grupo dejará de cerrarse solo.
               </Text>
             ) : null}
@@ -368,14 +367,14 @@ export function GrupoFormScreen({
         ) : null}
 
         {fallo ? (
-          <Text style={[t.body, { color: c.danger, fontSize: 13, marginBottom: 8 }]}>{fallo}</Text>
+          <Text style={[t.body, { color: c.danger, fontSize: 16, marginBottom: 8 }]}>{fallo}</Text>
         ) : null}
 
-        <GoldButton
-          label={grupoId ? 'Guardar cambios' : 'Crear grupo'}
+        <BotonPrincipal
+          etiqueta={grupoId ? 'Guardar cambios' : 'Crear grupo'}
           onPress={guardar}
-          loading={guardando}
-          style={{ marginTop: 8 }}
+          cargando={guardando}
+          estilo={{ marginTop: 8 }}
         />
       </ScrollView>
     </SafeAreaView>

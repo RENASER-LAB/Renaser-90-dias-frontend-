@@ -84,7 +84,7 @@ export function GruposAdminScreen({
                 <Text
                   style={[
                     t.body,
-                    { color: activo ? c.goldInk : c.textSoft, fontSize: 13.5, fontWeight: activo ? '700' : '400' },
+                    { color: activo ? c.goldInk : c.textSoft, fontSize: 16, fontWeight: activo ? '700' : '400' },
                   ]}
                 >
                   {f.etiqueta}
@@ -98,15 +98,15 @@ export function GruposAdminScreen({
 
         {error ? (
           <View style={[estilos.tarjeta, { backgroundColor: c.cardBg, borderColor: c.border }]}>
-            <Text style={[t.body, { color: c.danger, fontSize: 14 }]}>{error}</Text>
+            <Text style={[t.body, { color: c.danger, fontSize: 16 }]}>{error}</Text>
             <Pressable onPress={recargar} accessibilityRole="button" style={estilos.reintentar}>
-              <Text style={[t.body, { color: c.goldInk, fontSize: 14, fontWeight: '500' }]}>Reintentar</Text>
+              <Text style={[t.body, { color: c.goldInk, fontSize: 16, fontWeight: '500' }]}>Reintentar</Text>
             </Pressable>
           </View>
         ) : null}
 
         {!cargando && !error && grupos.length === 0 ? (
-          <Text style={[t.body, { color: c.textSoft, fontSize: 14, marginTop: 12 }]}>
+          <Text style={[t.body, { color: c.textSoft, fontSize: 16, marginTop: 12 }]}>
             No hay grupos en este tramo. Cambia el filtro o crea uno nuevo.
           </Text>
         ) : null}
@@ -125,13 +125,13 @@ export function GruposAdminScreen({
               </Text>
               <EstadoDeGrupo estado={grupo.estado} />
             </View>
-            <Text style={[t.body, { color: c.textSoft, fontSize: 13, marginTop: 4 }]}>
+            <Text style={[t.body, { color: c.textSoft, fontSize: 16, marginTop: 4 }]}>
               {rangoDeFechas(grupo.periodoInicio, grupo.periodoFin)}
               {grupo.aprendices !== null
                 ? ` · ${grupo.aprendices}${grupo.cupo ? ` de ${grupo.cupo}` : ''} aprendices`
                 : ''}
             </Text>
-            <Text style={[t.body, { color: c.textSoft, fontSize: 13, marginTop: 2 }]}>
+            <Text style={[t.body, { color: c.textSoft, fontSize: 16, marginTop: 2 }]}>
               {grupo.mentorNombre ? `Mentor: ${grupo.mentorNombre}` : 'Sin mentor asignado'}
               {grupo.tipo === 'RECEPCION' ? ' · Bienvenida' : ''}
             </Text>
@@ -145,7 +145,7 @@ export function GruposAdminScreen({
 const estilos = StyleSheet.create({
   filtros: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingTop: 4 },
   pastilla: {
-    minHeight: 44,
+    minHeight: 48,
     justifyContent: 'center',
     paddingHorizontal: 14,
     borderRadius: 999,

@@ -76,6 +76,12 @@ test('E04 · crear un grupo con fechas, elegir mentor y agregar aprendices persi
   /* Los candidatos se apuntan por testID y no por su nombre: el nombre es el de cada persona del
      entorno, así que cualquier regex genérico terminaría enganchando "Volver" o "Cerrar". */
   await page.getByRole('button', { name: /asignar mentor/i }).click();
+  /* A-5 (26/09): elegir un mentor pregunta antes «¿Asignar a X como mentor de Y?». En web es un
+     `window.confirm`, y Playwright descarta los diálogos por defecto: sin aceptar, no asigna. */
+  page.once('dialog', dialogo => {
+    expect(dialogo.message()).toMatch(/¿Asignar a .+ como mentor de /);
+    void dialogo.accept();
+  });
   await page.getByTestId('candidato-mentor').first().click();
   await expect(page.getByRole('button', { name: /cambiar mentor/i })).toBeVisible();
 
