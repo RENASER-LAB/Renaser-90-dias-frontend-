@@ -71,6 +71,7 @@ import { REGLAS_DE_ACCION } from '../features/objetivos/utils/registroDeAccionCo
 import type { PedidoDeFotoUI } from '../features/renasia/types/renasia.types';
 import { useRegistroConFoto } from '../features/habits/hooks/useRegistroConFoto';
 import { RegistroConFotoModal } from '../features/habits/components/RegistroConFotoModal';
+import { cifrasDeHabitos } from '../features/home/utils/cifrasDeHabitos';
 
 /** Lo que se lee debajo del orbe: la fase dicha con texto, para quien no ve la animación. */
 function rotuloDelOrbe(fase: FaseDeVoz, disponible: boolean): string {
@@ -808,9 +809,11 @@ export default function HoyScreen() {
             <Card>
               <View style={styles.encabezadoTarjeta}>
                 <MicroLabel>Hábitos de hoy</MicroLabel>
-                <Text style={[t.micro, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
-                  {resumen?.habitosHoy ? `${resumen.habitosHoy.completados}/${resumen.habitosHoy.total}` : 'Al día'}
-                </Text>
+                {cifrasDeHabitos(resumen?.habitosHoy) !== null ? (
+                  <Text style={[t.micro, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
+                    {cifrasDeHabitos(resumen?.habitosHoy)}
+                  </Text>
+                ) : null}
               </View>
               <View style={styles.insight}>
                 <Icon name="sun" size={19} color={c.goldInk} />
