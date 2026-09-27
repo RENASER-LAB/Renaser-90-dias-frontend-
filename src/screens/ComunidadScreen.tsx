@@ -89,6 +89,7 @@ import {
 } from '../features/chat/utils/formatoChat';
 import { mostrarBotonBajar, posicionAMantener } from '../features/chat/utils/bajadaDelChat';
 import { conLaFotoDeLaLista, pideReleerAlCerrarElChat } from '../features/chat/utils/refrescoDeLaLista';
+import { avisoDelLargoDelMensaje, LARGO_MAXIMO_DEL_MENSAJE } from '../features/chat/utils/largoDelMensaje';
 import { conLeidoHasta } from '../features/chat/utils/lecturaDelChat';
 import {
   cifraDeIntegrantes,
@@ -3730,6 +3731,14 @@ export default function ComunidadScreen() {
           {/* Barra estilo WhatsApp (2026-09-26): un campo redondeado con los adjuntos adentro
               —evidencia de un hábito y cámara/galería, los mismos de antes— y afuera un solo botón
               redondo que es micrófono sin texto y enviar con texto. */}
+          {!grabando && avisoDelLargoDelMensaje(chatInputText) ? (
+            <Text
+              accessibilityLiveRegion="polite"
+              style={[styles.chatAviso, { color: c.textSoft, backgroundColor: paletaDelChat.fondo, paddingVertical: 4 }]}
+            >
+              {avisoDelLargoDelMensaje(chatInputText)}
+            </Text>
+          ) : null}
           <View style={[styles.chatInputBar, { backgroundColor: paletaDelChat.fondo }]}>
             <View style={[styles.chatCampo, { backgroundColor: paletaDelChat.ajena, borderColor: c.border }]}>
               {grabando ? (
@@ -3747,6 +3756,8 @@ export default function ComunidadScreen() {
                     placeholder="Mensaje"
                     placeholderTextColor={c.textSoft}
                     multiline
+                    // E-374 (D-215): el mismo tope que el servidor; cerca del tope, el aviso de abajo.
+                    maxLength={LARGO_MAXIMO_DEL_MENSAJE}
                     style={[styles.chatTextoCampo, styles.textInputChat, { color: c.text }]}
                     accessibilityLabel="Escribe un mensaje"
                   />

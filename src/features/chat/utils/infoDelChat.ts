@@ -167,16 +167,18 @@ export function integrantesDeLaInfo(params: {
 
 /**
  * D-212: si la info del grupo le muestra a quien mira el control para cambiar la foto del grupo. El dueño
- * decidió que la cambian «Admin y el mentor de ese grupo»: el ADMIN (de cualquier grupo) y el mentor
- * cuyo id es el `mentorId` del grupo. Es lo mismo que exige el servidor, que tiene la última palabra; sin
- * `mentorId` no se adivina quién es el mentor.
+ * decidió que la cambian «Admin y el mentor de ese grupo», y el Alquimista: el ADMIN y el ALCHEMIST (de
+ * cualquier grupo) y el mentor cuyo id es el `mentorId` del grupo. Es lo mismo que exige el servidor, que
+ * tiene la última palabra; sin `mentorId` no se adivina quién es el mentor.
+ *
+ * > **Corregido 2026-09-27.** Solo el ADMIN: en la página de decisiones el dueño sumó al Alquimista («sí»).
  */
 export function puedeCambiarLaFotoDelGrupo(params: {
   mentorId?: string | null;
   yoId?: string | null;
   miRol?: string | null;
 }): boolean {
-  if (params.miRol?.toUpperCase() === 'ADMIN') return true;
+  if (esAdministracionDeGrupos(params.miRol)) return true;
   const mentorId = params.mentorId?.trim();
   return !!mentorId && mentorId === params.yoId;
 }
@@ -201,4 +203,10 @@ function filaDelMentor(mentor: MentorDelGrupo | null, yoId: string | null | unde
     abreChat: mentorId !== null && !esYo,
     abreFicha: false,
   };
+}
+
+/** ADMIN y ALCHEMIST: los que administran los grupos (en el servidor, `UserRole.canManageRoles`). */
+export function esAdministracionDeGrupos(rol: string | null | undefined): boolean {
+  const normalizado = rol?.toUpperCase();
+  return normalizado === 'ADMIN' || normalizado === 'ALCHEMIST';
 }

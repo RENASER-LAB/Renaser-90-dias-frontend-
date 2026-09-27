@@ -11,15 +11,18 @@ import { useTheme } from '../../../theme/ThemeContext';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
 import { obtenerFotoDelGrupo, type FotoDelGrupo } from '../../community/api/fotoDelGrupoApi';
 import { CambiarFotoDelGrupo } from '../../community/components/CambiarFotoDelGrupo';
+import { esAdministracionDeGrupos } from '../../chat/utils/infoDelChat';
 import {
   agregarAprendiz,
   sumarAprendizAGrupo,
   aprendicesDisponibles,
   asignarMentor,
   mentoresDisponibles,
+  nombresDeTodosLosGrupos,
   obtenerGrupo,
   quitarMentor,
   retirarAprendiz,
+  sumarMentorAGrupo,
 } from '../api/adminApi';
 import { filtrarCandidatos } from '../utils/filtrarCandidatos';
 import type { AprendizCandidatoApi, GrupoDetalleApi, MentorCandidatoApi } from '../api/adminSchemas';
@@ -27,7 +30,16 @@ import { CabeceraAdmin } from '../components/CabeceraAdmin';
 import { EstadoDeGrupo } from '../components/EstadoDeGrupo';
 import { fechaCorta, rangoDeFechas } from '../utils/fechas';
 import { confirmar, avisar } from '../utils/dialogo';
-import { mensajeDeFallo, preguntaDeAsignarMentor } from '../utils/mensajes';
+import { mensajeDeFallo } from '../utils/mensajes';
+import {
+  avisoDeTrasladoDeMentor,
+  nombresDeLosGrupos,
+  otrosGruposDelMentor,
+  planParaAsignarMentor,
+  preguntaDeAsignarMentor,
+  yaLideraEsteGrupo,
+  listaDeNombres,
+} from '../utils/asignarMentor';
 
 const ESPECIALIDADES: Record<string, string> = {
   NEGOCIO: 'Negocio',
@@ -60,16 +72,21 @@ export function GrupoDetalleScreen({
   const { horizontalPadding, contentMaxWidth } = useResponsive();
 
   const [grupo, setGrupo] = useState<GrupoDetalleApi | null>(null);
-  /* D-212: la foto del grupo la cambian el ADMIN y el mentor de ese grupo. Acá, el ADMIN: el
-     Alquimista entra a este panel pero el dueño no lo nombró, y el servidor le respondería 403. */
+  /* D-212: la foto del grupo la cambian el ADMIN, el Alquimista y el mentor de ese grupo. Acá, ADMIN y
+     Alquimista.
+     > Corregido 2026-09-27: decía «Acá, el ADMIN: el Alquimista entra a este panel pero el dueño no lo
+     > nombró». En la página de decisiones el dueño lo sumó («sí»). */
   const { user } = useAuth();
-  const esAdmin = user?.role?.toUpperCase() === 'ADMIN';
+  const esAdmin = esAdministracionDeGrupos(user?.role);
   const [fotoDelGrupo, setFotoDelGrupo] = useState<FotoDelGrupo | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [trabajando, setTrabajando] = useState(false);
   const [eligiendo, setEligiendo] = useState<'mentor' | 'aprendiz' | null>(null);
   const [mentores, setMentores] = useState<MentorCandidatoApi[]>([]);
+  /* E-372: el nombre de cada grupo, para decir cuáles conserva un mentor que se suma o cuáles se quedan sin
+     mentor si se lo traslada. Si esa lectura falla, se cuentan en vez de nombrarse. */
+  const [nombresDeGrupos, setNombresDeGrupos] = useState<Record<string, string>>({});
   const [candidatos, setCandidatos] = useState<AprendizCandidatoApi[]>([]);
   /**
    * Si la lista de candidatos se está trayendo todavía.
@@ -164,7 +181,12 @@ export function GrupoDetalleScreen({
     setBusquedaCandidato('');
     try {
       if (tipo === 'mentor') {
-        setMentores(await mentoresDisponibles());
+        const [candidatos, nombres] = await Promise.all([
+          mentoresDisponibles(),
+          nombresDeTodosLosGrupos().catch(() => ({}) as Record<string, string>),
+        ]);
+        setMentores(candidatos);
+        setNombresDeGrupos(nombres);
       } else {
         setCandidatos(await aprendicesDisponibles());
       }
@@ -185,6 +207,53 @@ export function GrupoDetalleScreen({
   };
 
   const abrirSelectorDeMentor = () => void traerCandidatos('mentor');
+
+  /**
+   * «Asignar» SUMA por defecto (E-372; ver `utils/asignarMentor.ts`): el mentor conserva los grupos que ya
+   * acompaña. Antes el panel trasladaba siempre y dejaba esos grupos sin mentor, en silencio (ADM-13). Si el
+   * grupo tiene otro mentor y el elegido lidera otros grupos son dos operaciones —quitar al actual y
+   * sumar—: si la segunda falla, el grupo queda sin mentor, y se dice para que se vuelva a elegir.
+   */
+  const asignarSumando = async (mentor: MentorCandidatoApi) => {
+    if (!grupo) return;
+    const quien = mentor.fullName ?? 'Esta persona';
+    const plan = planParaAsignarMentor({ grupoId, mentorDelGrupoId: grupo.mentor?.id ?? null, mentor });
+    if (plan.tipo === 'nada') {
+      avisar('Ya es su mentor', `${quien} ya acompaña a ${grupo.name}.`);
+      return;
+    }
+    const otros = nombresDeLosGrupos(otrosGruposDelMentor(mentor, grupoId), nombresDeGrupos);
+    const acepto = await confirmar(
+      otros.length > 0 ? 'Sumar mentor' : 'Asignar mentor',
+      preguntaDeAsignarMentor(mentor.fullName, grupo.name, otros),
+      { ok: otros.length > 0 ? 'Sumar' : 'Asignar' },
+    );
+    if (!acepto) return;
+    void conAviso(async () => {
+      if (plan.tipo === 'asignar') return asignarMentor(grupoId, mentor.userId);
+      if (plan.quitarAlActual) await quitarMentor(grupoId);
+      try {
+        return await sumarMentorAGrupo(grupoId, mentor.userId);
+      } catch (e) {
+        if (!plan.quitarAlActual) throw e;
+        throw new Error(`${grupo.name} quedó sin mentor: no se pudo sumar a ${quien}. Vuelve a elegirlo.`);
+      }
+    }, 'No se pudo asignar');
+  };
+
+  /**
+   * El traslado, aparte y con aviso (E-372): lo saca de sus otros grupos, que se quedan sin mentor, y el aviso
+   * los nombra. Es la única forma de llegar al `PUT …/mentor` cuando el mentor lidera otros grupos.
+   */
+  const trasladarAqui = async (mentor: MentorCandidatoApi) => {
+    if (!grupo) return;
+    const otros = nombresDeLosGrupos(otrosGruposDelMentor(mentor, grupoId), nombresDeGrupos);
+    const acepto = await confirmar('Trasladar mentor', avisoDeTrasladoDeMentor(mentor.fullName, grupo.name, otros), {
+      ok: 'Trasladar',
+      destructivo: true,
+    });
+    if (acepto) void conAviso(() => asignarMentor(grupoId, mentor.userId), 'No se pudo trasladar');
+  };
   const abrirSelectorDeAprendiz = () => void traerCandidatos('aprendiz');
 
   const cerrado = grupo?.status === 'CERRADO';
@@ -364,42 +433,51 @@ export function GrupoDetalleScreen({
                   />
                 ) : null}
                 {eligiendo === 'mentor'
-                  ? mentores.map(m => (
-                      <Pressable
-                        key={m.userId}
-                        testID="candidato-mentor"
-                        disabled={trabajando}
-                        onPress={async () => {
-                          /* A-5 (26/09): se pregunta antes. Asignar en el primer toque cambiaba
-                             quién acompaña al grupo por un dedo que resbalaba en la lista. */
-                          const acepto = await confirmar(
-                            'Asignar mentor',
-                            preguntaDeAsignarMentor(m.fullName, grupo.name, Boolean(m.cellId && m.cellId !== grupoId)),
-                            { ok: 'Asignar' },
-                          );
-                          if (acepto) void conAviso(() => asignarMentor(grupoId, m.userId), 'No se pudo asignar');
-                        }}
-                        accessibilityRole="button"
-                        accessibilityLabel={m.fullName ?? 'Mentor'}
-                        style={[estilos.fila, { backgroundColor: c.cardBg, borderColor: c.border }]}
-                      >
-                        <View style={{ flex: 1, flexShrink: 1 }}>
-                          <Text style={[t.body, { color: c.textStrong, fontSize: 16 }]}>
-                            {m.fullName ?? 'Sin nombre'}
-                          </Text>
-                          <Text style={[t.body, { color: c.textSoft, fontSize: 16, marginTop: 2 }]}>
-                            {/* Null NO se rellena con ninguna de las tres: el administrador elige
-                                por esto, y adivinarla sería decidir por él. */}
-                            {m.specialty ? ESPECIALIDADES[m.specialty] ?? m.specialty : 'Sin especialidad definida'}
-                            {/* "Otro" solo si de verdad es otro: el mentor de ESTE grupo aparece en
-                                la lista y decirle que lidera otro es falso, y ademas asusta —
-                                parece que reasignarlo se lo quitaria a alguien. */}
-                            {m.cellId ? (m.cellId === grupoId ? ' · ya lidera este grupo' : ' · ya lidera otro grupo') : ''}
-                          </Text>
+                  ? mentores.map(m => {
+                      const otros = otrosGruposDelMentor(m, grupoId);
+                      const nombres = nombresDeLosGrupos(otros, nombresDeGrupos);
+                      const yaEsDeEste = yaLideraEsteGrupo(m, grupoId);
+                      return (
+                        <View key={m.userId} style={{ gap: 6 }}>
+                          <Pressable
+                            testID="candidato-mentor"
+                            disabled={trabajando}
+                            /* A-5 (26/09): se pregunta antes. E-372: y lo que se hace es SUMAR. */
+                            onPress={() => void asignarSumando(m)}
+                            accessibilityRole="button"
+                            accessibilityLabel={m.fullName ?? 'Mentor'}
+                            style={[estilos.fila, { backgroundColor: c.cardBg, borderColor: c.border }]}
+                          >
+                            <View style={{ flex: 1, flexShrink: 1 }}>
+                              <Text style={[t.body, { color: c.textStrong, fontSize: 16 }]}>
+                                {m.fullName ?? 'Sin nombre'}
+                              </Text>
+                              <Text style={[t.body, { color: c.textSoft, fontSize: 16, marginTop: 2 }]}>
+                                {/* Null NO se rellena con ninguna de las tres: el administrador elige
+                                    por esto, y adivinarla sería decidir por él. */}
+                                {m.specialty ? ESPECIALIDADES[m.specialty] ?? m.specialty : 'Sin especialidad definida'}
+                                {/* Con `cellIds` (D-141) y no con `cellId`, que es solo el primero: el mentor
+                                    de ESTE grupo no aparece como «de otro», y los otros se nombran. */}
+                                {yaEsDeEste
+                                  ? ' · ya lidera este grupo'
+                                  : otros.length > 0
+                                    ? ` · también acompaña a ${listaDeNombres(nombres)}`
+                                    : ''}
+                              </Text>
+                            </View>
+                            <Icon name="chevron" size={16} color={c.chevron} />
+                          </Pressable>
+                          {!yaEsDeEste && otros.length > 0 ? (
+                            <BotonPeligro
+                              etiqueta="Trasladar aquí"
+                              accessibilityLabel={`Trasladar a ${m.fullName ?? 'este mentor'}: ${listaDeNombres(nombres)} se quedan sin mentor`}
+                              deshabilitado={trabajando}
+                              onPress={() => void trasladarAqui(m)}
+                            />
+                          ) : null}
                         </View>
-                        <Icon name="chevron" size={16} color={c.chevron} />
-                      </Pressable>
-                    ))
+                      );
+                    })
                   : candidatosVisibles.map(a => (
                       <Pressable
                         key={a.userId}

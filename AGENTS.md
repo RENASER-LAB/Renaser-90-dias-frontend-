@@ -199,7 +199,9 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
           (`GrupoDetalleScreen`, sección «Foto del grupo», con si tiene foto propia y desde cuándo): no
           ve la lista de la info del grupo (el servidor le da 403). El Alquimista entra a ese panel pero
           no ve el control: el dueño nombró solo a «Admin», y el servidor le respondería 403. Nada más
-          de esa pantalla cambia.
+          de esa pantalla cambia. *Corregido el mismo día: en la página de decisiones el dueño sumó al
+          Alquimista («sí»); ahora ve el control en el panel y en la info (`infoDelChat.esAdministracionDeGrupos`),
+          y el servidor lo deja.*
       * **E-341 (mismo día): el «Escribirle» de la ficha de «Mi grupo» en Comunidad abría el chat
         detrás de la ficha** y parecía no hacer nada. Las vistas del mentor que tapan Comunidad («Mi
         grupo», su ficha y la ficha desde la info) pasaron a un reductor
@@ -405,6 +407,25 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       (`admin/utils/etiquetaDeAtencion.ts`).
     Una excepción puntual **no abre** los tabs: cualquier otro cambio sobre los cinco principales
     vuelve a necesitar autorización explícita.
+  * **Arreglos del e2e del 2026-09-27 (pedidos del coordinador; hallazgos ADM-12, ADM-13, ADM-14 y
+    CHT-06).** Lo que cambia y nada más:
+    * **Administración (estado de `Hoy`), pantalla del grupo — «Asignar mentor» SUMA por defecto**
+      (E-372, ADM-13, P0). Antes llamaba siempre al traslado (`PUT …/mentor`): un mentor con otros
+      grupos quedaba afuera de ellos, que se quedaban sin mentor, y el diálogo solo decía «Hoy ya
+      acompaña otro grupo.». Ahora (`admin/utils/asignarMentor.ts`): si el mentor no lidera otros
+      grupos, «Asignar» como siempre; si lidera otros, «Sumar» (`POST …/additional-mentor`, D-141) y la
+      pregunta dice cuáles conserva. Si el grupo ya tiene otro mentor, antes se lo quita
+      (`DELETE …/mentor`): dos operaciones, y si la segunda falla se avisa que el grupo quedó sin mentor.
+      El traslado queda como botón aparte, «Trasladar aquí», con un aviso que nombra los grupos que se
+      quedan sin mentor (los nombres salen de `GET /admin/cells/dashboard`; si esa lectura falla, se
+      cuentan). La fila dice «también acompaña a …» con `cellIds`, no con `cellId`.
+    * **Administración — el motivo del servidor** (E-373, ADM-12 y ADM-14). `admin/utils/mensajes.mensajeDeFallo`
+      muestra el texto del servidor en 400, 409, 413, 415 y 422 («El nombre de la celula no puede pasar de
+      200 caracteres», el cupo lleno), salvo que parezca interno o sea el relleno «Error NNN»; un 404 y un
+      5xx siguen con el genérico.
+    * **`Comunidad`, barra de escribir del chat — tope de 6.000 caracteres** (E-374, CHT-06; D-215 del
+      backend). El campo corta en el mismo número que el servidor (`chat/utils/largoDelMensaje.ts`) y,
+      desde los 5.500, dice «N de 6000 caracteres» encima de la barra. Nada más del chat cambia.
   * **Excepción autorizada por el dueño del producto — 2026-09-26 — tab `Hoy`, tarjetas del mentor
     y de administración (retroalimentación del 26/09, spec `docs/specs/RETROALIMENTACION_2026-09-26.md`
     del backend, S-1, S-6 y A-1).** Lo único que cambia en `Hoy`:

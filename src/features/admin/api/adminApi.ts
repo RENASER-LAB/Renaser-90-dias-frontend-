@@ -5,6 +5,7 @@ import {
   aprendizCandidatoSchema,
   cohorteAdminSchema,
   detalleAprendizSchema,
+  grupoDelTableroSchema,
   grupoDetalleSchema,
   grupoResumenSchema,
   mentorCandidatoSchema,
@@ -163,6 +164,11 @@ export async function aprendicesDisponibles(): Promise<AprendizCandidatoApi[]> {
   );
 }
 
+/**
+ * El TRASLADO (`PUT …/mentor`): lo pone al frente de este grupo y lo saca de TODOS los demás, que se quedan
+ * sin mentor. Desde E-372 el panel lo usa solo cuando el mentor no lidera otros grupos (ahí es lo mismo que
+ * sumar) o cuando el administrador elige «Trasladar aquí» después de leer qué grupos pierden su mentor.
+ */
 export async function asignarMentor(grupoId: string, mentorId: string): Promise<GrupoDetalleApi> {
   return validarRespuesta<GrupoDetalleApi>(
     grupoDetalleSchema,
@@ -172,6 +178,35 @@ export async function asignarMentor(grupoId: string, mentorId: string): Promise<
     }),
     'PUT /api/v1/admin/cells/{id}/mentor',
   );
+}
+
+/**
+ * Pone al mentor al frente de este grupo **sin sacarlo de los que ya lidera** (D-141). Es la operación que el
+ * panel hace por defecto desde E-372: {@link asignarMentor} es el TRASLADO, que deja sin mentor a sus otros
+ * grupos. El servidor no suma a un grupo que ya tiene otro mentor (un grupo tiene uno solo): antes se quita.
+ */
+export async function sumarMentorAGrupo(grupoId: string, mentorId: string): Promise<GrupoDetalleApi> {
+  return validarRespuesta<GrupoDetalleApi>(
+    grupoDetalleSchema,
+    await apiFetch<unknown>(`/api/v1/admin/cells/${encodeURIComponent(grupoId)}/additional-mentor`, {
+      method: 'POST',
+      body: { leaderUserId: mentorId },
+    }),
+    'POST /api/v1/admin/cells/{id}/additional-mentor',
+  );
+}
+
+/**
+ * El nombre de cada grupo, por id (`GET /admin/cells/dashboard`, cruza todas las cohortes). Lo usa «Asignar
+ * mentor» para nombrar los grupos que un traslado dejaría sin mentor (E-372).
+ */
+export async function nombresDeTodosLosGrupos(): Promise<Record<string, string>> {
+  const grupos = validarRespuesta<{ id: string; name: string }[]>(
+    z.array(grupoDelTableroSchema),
+    await apiFetch<unknown>('/api/v1/admin/cells/dashboard'),
+    'GET /api/v1/admin/cells/dashboard',
+  );
+  return Object.fromEntries(grupos.map(grupo => [grupo.id, grupo.name]));
 }
 
 export async function quitarMentor(grupoId: string): Promise<GrupoDetalleApi> {

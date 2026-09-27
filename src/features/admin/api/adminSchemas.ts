@@ -65,10 +65,18 @@ export const mentorCandidatoSchema = z
     fullName: z.string().nullable(),
     avatarUrl: z.string().nullable(),
     cellId: z.string().nullable(),
+    /**
+     * TODOS los grupos que lidera (D-141): `cellId` es solo el primero. Opcional porque un backend anterior no
+     * lo manda. Con esto «Asignar mentor» sabe si suma o si el traslado dejaría grupos sin mentor (E-372).
+     */
+    cellIds: z.array(z.string()).nullish(),
     /** NEGOCIO | MENTE | RELACIONES, o `null` si no la declaró. Nunca se rellena. */
     specialty: z.string().nullish(),
   })
   .passthrough();
+
+/** Una fila de `GET /admin/cells/dashboard`, lo justo para nombrar un grupo por su id. */
+export const grupoDelTableroSchema = z.object({ id: z.string(), name: z.string() }).passthrough();
 
 export const aprendizCandidatoSchema = z
   .object({

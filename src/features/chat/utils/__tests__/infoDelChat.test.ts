@@ -206,16 +206,18 @@ describe('integrantesDeLaInfo: escribirle al mentor y ver la ficha (D-207)', () 
   });
 });
 
-describe('puedeCambiarLaFotoDelGrupo (D-212: «Admin y el mentor de ese grupo»)', () => {
-  it('el ADMIN, en cualquier grupo; el mentor, en el suyo', () => {
+describe('puedeCambiarLaFotoDelGrupo (D-212: «Admin y el mentor de ese grupo», y el Alquimista)', () => {
+  it('el ADMIN y el Alquimista, en cualquier grupo; el mentor, en el suyo', () => {
     expect(puedeCambiarLaFotoDelGrupo({ mentorId: 'u-ricardo', yoId: 'u-kelin', miRol: 'ADMIN' })).toBe(true);
+    // Decisión del dueño en la página de decisiones (2026-09-27): el Alquimista también («sí»).
+    expect(puedeCambiarLaFotoDelGrupo({ mentorId: 'u-ricardo', yoId: 'u-alq', miRol: 'ALCHEMIST' })).toBe(true);
     expect(puedeCambiarLaFotoDelGrupo({ mentorId: 'u-ricardo', yoId: 'u-ricardo', miRol: 'MENTOR' })).toBe(true);
   });
 
-  it('nadie más: un aprendiz, el mentor de otro grupo, el Alquimista', () => {
+  it('nadie más: un aprendiz, el mentor de otro grupo, un líder de mentores que no es el mentor', () => {
     expect(puedeCambiarLaFotoDelGrupo({ mentorId: 'u-ricardo', yoId: 'u-ana', miRol: 'TRAINEE' })).toBe(false);
     expect(puedeCambiarLaFotoDelGrupo({ mentorId: 'u-ricardo', yoId: 'u-otro', miRol: 'MENTOR' })).toBe(false);
-    expect(puedeCambiarLaFotoDelGrupo({ mentorId: 'u-ricardo', yoId: 'u-alq', miRol: 'ALCHEMIST' })).toBe(false);
+    expect(puedeCambiarLaFotoDelGrupo({ mentorId: 'u-ricardo', yoId: 'u-lider', miRol: 'MENTOR_LEAD' })).toBe(false);
   });
 
   it('sin el id del mentor no se adivina quién es', () => {
