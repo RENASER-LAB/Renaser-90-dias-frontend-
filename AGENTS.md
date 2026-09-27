@@ -64,6 +64,29 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       seguían inexactas: `RearmadorDeAlarmas` (en `App.tsx`, fuera de los tabs) las vuelve a armar
       tal cual —mismo id, contenido y disparador— al abrir la app y al volver a primer plano, con 10
       min mínimo entre corridas (`features/alarmas/rearmarAlarmas.ts`, solo Android).
+    * **Mismo día, ampliación posterior pedida por el dueño — Eventos «tipo calendario del mes, 2
+      formas»** (textual: «ver los eventos asignados por mes a los alumnos y ver de largo como cursos
+      los eventos… no me gusta ese diseño, muy IA»). Solo dentro de `features/eventos/`; en
+      `ComunidadScreen.tsx` no cambia nada. La lista de filas con iconito se reemplaza por:
+      * Un selector grande «Calendario» | «Tarjetas», recordado por persona en AsyncStorage
+        (`utils/vistaPreferida.ts`; por defecto «Calendario»), y la casilla «Solo a los que voy»,
+        que filtra las dos. «Mi agenda» y «Crear evento» (ADMIN/ALCHEMIST) siguen arriba, en una fila.
+      * **Calendario** (`CalendarioDelMes`): grilla del mes de lunes a domingo, ‹ › y «Hoy»; punto
+        dorado en los días con eventos y verde (el de «Vas») si la persona dijo «Voy»; tocar un día
+        muestra sus eventos debajo, que abren el detalle de siempre. Los días son los de la zona del
+        evento, no de UTC (`utils/calendarioDelMes.ts`, con pruebas con el reloj en la madrugada UTC).
+        Pide el rango de la grilla visible (`useEventosDelMes`), lectura aparte que **no** toca
+        alarmas.
+      * **Tarjetas** (`TarjetasDeEventos`): la tarjeta de los cursos de Classroom con los datos del
+        evento — `CursoPortada` (sin portada, el mismo fondo oscuro de los cursos), rótulo del tipo
+        («SESIÓN ESPECIAL»), título en serif, día y hora grandes, lugar y «VER EVENTO ›» —, agrupadas
+        por mes. Muestran los próximos **60 días** (`DIAS_EN_LA_SECCION`; antes la lista era de 30):
+        `useEventos` lee y sincroniza alarmas sobre esa misma ventana. `AbridorDeEventos` y Yo →
+        Alarmas siguen con 30 (`DIAS_A_LA_VISTA`).
+      * **Portada opcional en el formulario** («Elegir portada», recorte 16:9): se sube después de
+        guardar con `/events/{id}/portada/upload-url` y `/confirm`, con `expo-image-picker`,
+        `expo-image-manipulator` y `subirImagenAS3` del Muro (sin dependencias nuevas). Si falla, el
+        evento queda guardado y se avisa. `Evento.portadaUrl` sale de `coverUrl`.
     Una excepción puntual **no abre** los tabs: cualquier otro cambio sobre los cinco principales
     vuelve a necesitar autorización explícita.
   * **Excepción autorizada por el dueño del producto — 2026-09-26 — tabs `Training`, `Comunidad`

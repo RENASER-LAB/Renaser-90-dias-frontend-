@@ -20,7 +20,9 @@ function falloDe(e: unknown): FalloDeEventos {
 }
 
 /**
- * Los eventos de los próximos 30 días y el «Voy» / «No voy» de esta persona.
+ * Los eventos de los próximos 60 días (`DIAS_EN_LA_SECCION`; eran 30 hasta el rediseño del
+ * 2026-09-26, cuando las tarjetas pasaron a mostrar el mes en curso y el siguiente) y el «Voy» /
+ * «No voy» de esta persona. La ventana de sincronización de alarmas es la misma que la lectura.
  *
  * Cada lectura también pone al día las alarmas del teléfono (`sincronizarAlarmasDeEventos`): quita
  * la de un evento que se canceló o al que ya no va, y pone la que falte. Así «si el evento se cancela,
@@ -51,7 +53,7 @@ export function useEventos(userId: string | null, activo: boolean) {
     lectura.current = crearLecturaVigente(
       async () => {
         const ahora = Date.now();
-        return { ahora, lista: await eventosApi.listarProximos(ahora) };
+        return { ahora, lista: await eventosApi.listarProximos(ahora, eventosApi.DIAS_EN_LA_SECCION) };
       },
       resultado => {
         if (!resultado.ok) {
@@ -67,7 +69,7 @@ export function useEventos(userId: string | null, activo: boolean) {
         if (id) {
           void sincronizarAlarmasDeEventos(id, lista, {
             desdeMs: ahora - 60 * 60 * 1000,
-            hastaMs: ahora + eventosApi.DIAS_A_LA_VISTA * 24 * 60 * 60 * 1000,
+            hastaMs: ahora + eventosApi.DIAS_EN_LA_SECCION * 24 * 60 * 60 * 1000,
           }).catch(() => {});
         }
       },

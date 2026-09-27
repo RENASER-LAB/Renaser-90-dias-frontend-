@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { leerEvento, leerOcurrencias } from '../eventosSchemas';
+import { leerEvento, leerOcurrencias, leerUrlDePortada } from '../eventosSchemas';
 
 /**
  * El parser de eventos tiene que aguantar un backend que cambia sin que la app se actualice (no hay
@@ -93,5 +93,27 @@ describe('leerOcurrencias', () => {
       { tipo: 'horaDelDia', hora: '06:00' },
       { tipo: 'diasAntes', dias: 1 },
     ]);
+  });
+});
+
+describe('portada (coverUrl)', () => {
+  it('trae la URL firmada de la portada', () => {
+    const ev = leerEvento({ ...EVENTO, coverUrl: 'https://s3.example.com/calendar/e1/portada-1?X-Amz=1' });
+    expect(ev.portadaUrl).toBe('https://s3.example.com/calendar/e1/portada-1?X-Amz=1');
+  });
+
+  it('sin portada, o con la URL de un almacenamiento sin configurar, no hay portada', () => {
+    expect(leerEvento(EVENTO).portadaUrl).toBeNull();
+    expect(leerEvento({ ...EVENTO, coverUrl: 'about:blank#pendiente-s3/x' }).portadaUrl).toBeNull();
+  });
+});
+
+describe('leerUrlDePortada', () => {
+  it('toma la URL de subida y la ruta que se confirma', () => {
+    expect(leerUrlDePortada({ url: 'https://s3/x', bucket: 'b', ruta: 'calendar/e1/portada-1' })).toEqual({
+      url: 'https://s3/x',
+      ruta: 'calendar/e1/portada-1',
+    });
+    expect(() => leerUrlDePortada({ bucket: 'b' })).toThrow();
   });
 });
