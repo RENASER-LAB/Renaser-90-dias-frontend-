@@ -1,12 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import type { PlanHabit } from '../../../screens/PlanScreen';
 import type { HabitItem } from '../../../screens/TrainingScreen';
 import { mensajeDeError } from '../../../services/http/apiClient';
-import * as habitsApi from '../../habits/api/habitsApi';
-import { usePlanHabitos } from '../../habits/hooks/usePlanHabitos';
 import type { HabitoCatalogoApi, TrackDelDiaApi } from '../../habits/types/habits.types';
-import * as trainingApi from '../api/trainingApi';
-import type { EvidenciaApi, RocaDiariaApi } from '../types/training.types';
+import { cargarEntrenamiento, type DatosEntrenamiento } from '../api/cargarEntrenamiento';
+import type { RocaDiariaApi } from '../types/training.types';
 
 /**
  * Alimenta `TrainingScreen` con datos reales, agrupados por dimensión.
@@ -23,7 +22,7 @@ import type { EvidenciaApi, RocaDiariaApi } from '../types/training.types';
  * las categorías de hábito son `BODY`/`MIND`/`SPIRIT`/`CONSCIENCE`; los ejes de roca son
  * `CUERPO`/`TRABAJO`/`RELACIONES`. No unificarlos.
  *
- * **Dos listas con responsabilidades distintas.** `plan.habits` conserva el inventario que la hoja
+ * **Dos listas con responsabilidades distintas.** `planHabits` conserva el inventario que la hoja
  * de Planificar necesita para editar o reactivar hábitos, incluso cuando alguno no corre hoy.
  * `habits` se construye únicamente recorriendo `tracks`, porque el backend ya resolvió fecha,
  * zona horaria, desbloqueo, pausa y horario por día. Así Training no pinta una tarjeta fantasma
@@ -38,63 +37,68 @@ const DIMENSION_POR_CATEGORIA: Record<string, HabitItem['dimension']> = {
   SPIRIT: 'ESPÍRITU',
 };
 
+// Vacíos estables: un `[]` nuevo en cada render rompería los `useMemo` de abajo.
+const SIN_TRACKS: TrackDelDiaApi[] = [];
+const SIN_CATALOGO: HabitoCatalogoApi[] = [];
+const SIN_PLAN: PlanHabit[] = [];
+const SIN_ROCAS: RocaDiariaApi[] = [];
+const SIN_EVIDENCIA: Set<string> = new Set();
+
 export function useTraining() {
-  // Catálogo + horario propio + pausas, con las reglas EXACTAS que ya usa Plan (incluida la
-  // normalización de día 0). Se importa el hook, no se reimplementa.
-  const plan = usePlanHabitos();
+  const [datos, setDatos] = useState<DatosEntrenamiento | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  /** Si ya se pintó alguna vez con datos: decide entre esqueleto y refresco silencioso. */
+  const hayDatos = useRef(false);
+  /** Numera las cargas para que una respuesta vieja no pise a una más nueva. */
+  const ultimaCarga = useRef(0);
 
-  const [tracks, setTracks] = useState<TrackDelDiaApi[]>([]);
-  // Solo para lo que `PlanHabit` no trae: la categoría cruda (BODY/MIND/...) y `systemKey`.
-  const [catalogo, setCatalogo] = useState<HabitoCatalogoApi[]>([]);
-  const [rocas, setRocas] = useState<RocaDiariaApi[]>([]);
-  const [rocasConEvidencia, setRocasConEvidencia] = useState<Set<string>>(new Set());
-  const [loadingPropio, setLoadingPropio] = useState(true);
-  const [errorPropio, setErrorPropio] = useState<string | null>(null);
-
+  /**
+   * Relee Training del backend.
+   *
+   * **La primera vez** (o después de un error sin datos) prende `loading` y la pantalla dibuja el
+   * esqueleto. **Después, el refresco es silencioso** (V-2, 26/09/2026): lo que ya está en
+   * pantalla se queda y se reemplaza cuando llega lo nuevo. Antes cada completar/sellar volvía a
+   * tapar la pantalla entera con el esqueleto durante las dos rondas de pedidos (~3 s).
+   *
+   * Si un refresco silencioso falla, se conserva lo que había y se deja un `console.warn`: la
+   * acción que lo disparó ya la confirmó el servidor, y cambiar la pantalla por un error por no
+   * haber podido RELEER sería peor que mostrar el dato de hace un segundo.
+   */
   const recargar = useCallback(async () => {
-    setLoadingPropio(true);
-    setErrorPropio(null);
-    try {
-      // Las tres llamadas son independientes entre sí: se piden en paralelo. Las dos que no son
-      // imprescindibles degradan solas en vez de tirar abajo la pantalla entera — si falla la
-      // roca, se ven las cuatro dimensiones de hábitos igual. Degradan, pero no en silencio
-      // (2026-09-05): queda un `console.warn` para poder distinguir "no hay nada" de "un
-      // endpoint se cayó".
-      const [tr, cat, rk, ev] = await Promise.all([
-        habitsApi.obtenerTracksDeHoy(),
-        habitsApi.obtenerCatalogo(),
-        trainingApi.obtenerRocasDeHoy().catch(e => {
-          console.warn('[Training] no se pudo cargar la roca del día; la dimensión sale vacía:', e);
-          return [] as RocaDiariaApi[];
-        }),
-        trainingApi.obtenerEvidenciasDeRocas().catch(e => {
-          console.warn('[Training] no se pudo cargar la evidencia de rocas; se muestran sin sellar:', e);
-          return [] as EvidenciaApi[];
-        }),
-      ]);
-      setTracks(tr);
-      setCatalogo(cat);
-      setRocas(rk);
-      // Para las ROCAS hay que cruzar contra el listado de evidencia. Para los HÁBITOS no: desde
-      // el 2026-09-05 (D-113) cada track de `habit-tracks/today` trae `tieneEvidencia` resuelto
-      // por el backend.
-      setRocasConEvidencia(
-        new Set(ev.map(e => e.rocaDiariaId).filter((id): id is string => Boolean(id))),
-      );
-    } catch (e) {
-      setErrorPropio(mensajeDeError(e, 'No pudimos cargar tu entrenamiento'));
-    } finally {
-      setLoadingPropio(false);
+    const esta = ++ultimaCarga.current;
+    const silencioso = hayDatos.current;
+    if (!silencioso) {
+      setLoading(true);
+      setError(null);
     }
-    // Refresca también el hook de Plan: sin esto, un cambio recién guardado desde "Planificar"
-    // (hora, activo/pausado) no se vería reflejado hasta que la persona saliera y volviera a
-    // entrar a Training.
-    await plan.recargar();
-  }, [plan.recargar]);
+    try {
+      const nuevos = await cargarEntrenamiento();
+      if (esta !== ultimaCarga.current) return;
+      hayDatos.current = true;
+      setDatos(nuevos);
+      setError(null);
+    } catch (e) {
+      if (esta !== ultimaCarga.current) return;
+      if (silencioso) {
+        console.warn('[Training] no se pudo refrescar; queda lo que ya estaba en pantalla:', e);
+      } else {
+        setError(mensajeDeError(e, 'No pudimos cargar tu entrenamiento'));
+      }
+    } finally {
+      if (esta === ultimaCarga.current) setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     void recargar();
   }, [recargar]);
+
+  const tracks = datos?.tracks ?? SIN_TRACKS;
+  const catalogo = datos?.catalogo ?? SIN_CATALOGO;
+  const inventario = datos?.planHabits ?? SIN_PLAN;
+  const rocas = datos?.rocas ?? SIN_ROCAS;
+  const rocasConEvidencia = datos?.rocasConEvidencia ?? SIN_EVIDENCIA;
 
   /** Inventario completo para la hoja Planificar, incluidos hábitos sin track de hoy. */
   const planHabits = useMemo(() => {
@@ -102,7 +106,7 @@ export function useTraining() {
     const claveSistemaPorHabito = new Map(catalogo.map(h => [h.id, h.systemKey ?? null]));
     const exigenciaPorHabito = new Map(catalogo.map(h => [h.id, h.evidenceRequirement]));
 
-    return plan.habits
+    return inventario
       .map((habito): HabitItem | null => {
         const dimension = DIMENSION_POR_CATEGORIA[categoriaPorHabito.get(habito.id) ?? ''];
         if (!dimension) {
@@ -136,11 +140,11 @@ export function useTraining() {
         };
       })
       .filter((h): h is HabitItem => h !== null);
-  }, [plan.habits, catalogo]);
+  }, [inventario, catalogo]);
 
-  // `useMemo` y no estado propio: `plan.habits` vive en OTRA instancia de estado (la de
-  // `usePlanHabitos`, adentro de este mismo hook) y se actualiza en su propio momento. Los tracks
-  // son la única fuente de verdad para las tarjetas operables de HOY.
+  // `useMemo` y no estado propio: se deriva de UNA sola lectura (`datos`), así el inventario y los
+  // tracks cambian juntos y nunca se cruza un plan nuevo con tracks viejos. Los tracks son la
+  // única fuente de verdad para las tarjetas operables de HOY.
   const habits = useMemo(() => {
     const trackPorHabito = new Map(tracks.map(t => [t.habitoId, t] as const));
 
@@ -212,8 +216,8 @@ export function useTraining() {
   return {
     habits,
     planHabits,
-    loading: loadingPropio || plan.loading,
-    error: errorPropio ?? plan.error,
+    loading,
+    error,
     recargar,
   };
 }

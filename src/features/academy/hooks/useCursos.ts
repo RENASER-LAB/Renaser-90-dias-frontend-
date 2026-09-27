@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { CourseItem } from '../../../screens/ComunidadScreen';
 import { mensajeDeError } from '../../../services/http/apiClient';
@@ -17,7 +17,9 @@ import { mapearCursoBloqueado, mapearCursoConSecciones } from '../api/academyMap
  * Combinadas y ordenadas por `orden` (el mismo campo que ya trae cada curso), el catálogo se lee
  * de punta a punta como la progresión que es, en vez de mostrar solo lo ya accesible.
  */
-export function useCursos() {
+export function useCursos(activo = true) {
+  // `activo` (V-3, 26/09/2026): Comunidad lo pasa en `false` hasta que se abre la sección que
+  // usa esto, para que no compita con el Muro al abrir. Una vez pedido no se vuelve a pedir solo.
   const [courses, setCourses] = useState<CourseItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -63,9 +65,12 @@ export function useCursos() {
     }
   }, []);
 
+  const yaPidio = useRef(false);
   useEffect(() => {
+    if (!activo || yaPidio.current) return;
+    yaPidio.current = true;
     void recargar();
-  }, [recargar]);
+  }, [activo, recargar]);
 
   return { courses, loading, error, recargar };
 }

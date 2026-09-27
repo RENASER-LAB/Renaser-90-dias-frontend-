@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { mensajeDeError } from '../../../services/http/apiClient';
 import * as celulaApi from '../api/celulaApi';
@@ -17,7 +17,9 @@ import type { CellMember, CelulaDelAprendiz } from '../types/community.types';
  * integrantes se piden por grupo, recién cuando se abre su info, y cambian al cambiar de grupo. Si
  * vivieran juntos, abrir un chat obligaría a recargar la lista entera.
  */
-export function useGruposDelAprendiz() {
+export function useGruposDelAprendiz(activo = true) {
+  // `activo` (V-3, 26/09/2026): Comunidad lo pasa en `false` hasta que se abre la sección que
+  // usa esto, para que no compita con el Muro al abrir. Una vez pedido no se vuelve a pedir solo.
   const [grupos, setGrupos] = useState<CelulaDelAprendiz[]>([]);
   const [cargandoGrupos, setCargandoGrupos] = useState(true);
   const [errorGrupos, setErrorGrupos] = useState<string | null>(null);
@@ -34,9 +36,12 @@ export function useGruposDelAprendiz() {
     }
   }, []);
 
+  const yaPidio = useRef(false);
   useEffect(() => {
+    if (!activo || yaPidio.current) return;
+    yaPidio.current = true;
     void recargarGrupos();
-  }, [recargarGrupos]);
+  }, [activo, recargarGrupos]);
 
   return { grupos, cargandoGrupos, errorGrupos, recargarGrupos };
 }
