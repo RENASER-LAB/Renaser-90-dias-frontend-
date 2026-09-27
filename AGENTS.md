@@ -49,6 +49,11 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       `/me/semaforo` (mismos colores, umbrales y palabras) y los días ya vividos de esta semana
       (sábado → ayer) con su puntito. Hoy y los días que vienen no llevan color: no se predice. Con
       404/403, sin datos o para quien no se mide, no aparece nada.
+    * **Mismo día — `Yo` → Alarmas, aviso de «Alarmas y recordatorios»** (e2e en Android SDK 37: sin
+      ese permiso, la alarma de «Voy» quedó con `window=+40m59s`). Arriba de la sub-vista, en
+      Android 12+, un aviso con el botón «Revisar permiso de alarmas exactas» que abre esa pantalla
+      del sistema (`features/alarmas/permisoDeAlarmaExacta.ts`). Está siempre porque la app no puede
+      saber si ya se concedió sin un módulo nativo nuevo. Nada más de `Yo` cambia.
     Una excepción puntual **no abre** los tabs: cualquier otro cambio sobre los cinco principales
     vuelve a necesitar autorización explícita.
   * **Excepción autorizada por el dueño del producto — 2026-09-26 — tabs `Training`, `Comunidad`

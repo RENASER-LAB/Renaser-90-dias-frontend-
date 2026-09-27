@@ -23,6 +23,7 @@ import {
 } from '../preferenciasDeAlarmas';
 import { probarSonido } from '../probarSonido';
 import { SONIDOS, type SonidoDeAlarma } from '../sonidoDeAlarma';
+import { AvisoAlarmaExacta } from './AvisoAlarmaExacta';
 
 /** El hábito de despertar, por su clave de sistema (el título lo puede renombrar el aprendiz). */
 const CLAVE_DESPERTAR = 'WAKE_UP';
@@ -193,6 +194,7 @@ export function SeccionAlarmas({ userId }: { userId: string }) {
 
   return (
     <View style={{ gap: 18 }}>
+      <AvisoAlarmaExacta />
       <View style={{ gap: 8 }}>
         <Text style={[estilos.titulo, { color: c.textStrong }]}>Despertar</Text>
         {despertar === null ? <Text style={texto}>Cargando…</Text> : null}
