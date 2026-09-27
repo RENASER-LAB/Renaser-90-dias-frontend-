@@ -4,6 +4,7 @@ import { semanaAlumnoSchema, type SemanaAlumnoApi } from '../../mentor/api/mento
 import {
   aprendizCandidatoSchema,
   cohorteAdminSchema,
+  detalleAprendizSchema,
   grupoDetalleSchema,
   grupoResumenSchema,
   mentorCandidatoSchema,
@@ -12,6 +13,7 @@ import {
   paginaStaffSchema,
   type AprendizCandidatoApi,
   type CohorteAdminApi,
+  type DetalleAprendizApi,
   type GrupoDetalleApi,
   type GrupoResumenApi,
   type MentorCandidatoApi,
@@ -282,6 +284,37 @@ export async function listarStaff(opciones: {
     await apiFetch<unknown>(`/api/v1/admin/staff?${params.toString()}`),
     'GET /api/v1/admin/staff',
   );
+}
+
+/**
+ * `GET /api/v1/admin/trainees/{id}`: el día del programa tal como está AHORA en el servidor y el
+ * último ajuste manual (`lastDayAdjustment`, D-82). La ficha lo pide al abrir: el día que trae la
+ * fila de Personas puede ser de hace un rato, y el semáforo ni siquiera lo trae.
+ */
+export async function obtenerDetalleAprendiz(aprendizId: string): Promise<DetalleAprendizApi> {
+  return validarRespuesta<DetalleAprendizApi>(
+    detalleAprendizSchema,
+    await apiFetch<unknown>(`/api/v1/admin/trainees/${encodeURIComponent(aprendizId)}`),
+    'GET /api/v1/admin/trainees/{id}',
+  );
+}
+
+/**
+ * `PUT /api/v1/admin/trainees/{id}/program-day` (D-82). Responde 204.
+ *
+ * El servidor no escribe el día: calcula el corrimiento que hace que HOY, en la zona del aprendiz,
+ * caiga en ese día, y desde mañana el reloj sigue contando desde ahí (regla 02: el día se deriva
+ * de fechas). Deja una fila en la bitácora `ajustes_dia_programa` con quién y por qué. El cuerpo
+ * lo arma `cuerpoDelCambioDeDia` (`utils/diaDelPrograma.ts`), que ya validó rango y motivo.
+ */
+export async function cambiarDiaDelPrograma(
+  aprendizId: string,
+  cuerpo: { programDay: number; motivo: string },
+): Promise<void> {
+  await apiFetch<unknown>(`/api/v1/admin/trainees/${encodeURIComponent(aprendizId)}/program-day`, {
+    method: 'PUT',
+    body: cuerpo,
+  });
 }
 
 /**

@@ -177,6 +177,17 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       «Semanas cerradas»: *«La semana del sábado X al viernes Y ya cerró; lo que completes después no
       la cambia.»* (S-6). Nada más del detalle cambia; las palabras y los colores del semáforo quedan
       exactamente como estaban (decisión del dueño del mismo día).
+    * **Mismo día, ampliación posterior pedida por el dueño — Administración (estado de `Hoy`), ficha
+      del aprendiz: «Cambiar día del programa»** (backend D-82, `PUT /api/v1/admin/trainees/{id}/program-day`).
+      La ficha pide `GET /api/v1/admin/trainees/{id}` al abrir; si el servidor lo entrega (mismo
+      permiso `MANAGE_TRAINEES` que el PUT) y su Día 1 ya llegó, muestra el botón y, si existe,
+      «Último ajuste: del día X al Y por <quién>, el <fecha>. Motivo: …» (`lastDayAdjustment`,
+      opcional: un backend viejo no lo manda). El botón abre `CambiarDiaScreen` (vista de la ficha,
+      no modal): − / + de 64 px, campo numérico 0–90, «−1 día» / «+1 día», motivo obligatorio
+      (≤ 280, aunque el backend lo acepta vacío) y confirmación «¿Pasar a <nombre> del día N al día
+      M?» con `Alert` de `components/Alerta` (nunca `window.confirm`). Lógica en
+      `admin/utils/diaDelPrograma.ts`. Nada más de la ficha ni de `Hoy` cambia; la ficha deja de ser
+      solo lectura únicamente en esto (el cumplimiento sigue sin poder marcarse por nadie).
     Una excepción puntual **no abre** el tab: cualquier otro cambio sobre los cinco principales
     vuelve a necesitar autorización explícita.
   * **Excepción autorizada por el dueño del producto — 2026-09-26 — tabs `Training` y `Hoy`,

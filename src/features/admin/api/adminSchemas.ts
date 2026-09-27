@@ -178,3 +178,41 @@ export type SolicitudApi = z.infer<typeof solicitudSchema>;
 export type PaginaSolicitudesApi = z.infer<typeof paginaSolicitudesSchema>;
 export type UsuarioStaffApi = z.infer<typeof usuarioStaffSchema>;
 export type PaginaStaffApi = z.infer<typeof paginaStaffSchema>;
+
+/**
+ * `UltimoAjusteDiaResponse` (D-82 del backend): el último cambio manual del día del programa.
+ * `adjustedBy` es el id de quien lo hizo, no su nombre. `adjustmentDays` es el corrimiento
+ * ACUMULADO del reloj, no lo que movió este ajuste solo.
+ */
+export const ultimoAjusteDiaSchema = z
+  .object({
+    previousDay: z.number(),
+    newDay: z.number(),
+    adjustmentDays: z.number().nullish(),
+    motivo: z.string().nullish(),
+    adjustedBy: z.string().nullish(),
+    adjustedAt: z.string().nullish(),
+  })
+  .passthrough();
+
+/**
+ * `TraineeDetailResponse` — `GET /api/v1/admin/trainees/{id}`.
+ *
+ * `lastDayAdjustment` se declara `unknown` a propósito: se lee aparte con
+ * `leerUltimoAjuste` (`utils/diaDelPrograma.ts`). Un backend viejo no lo manda y uno que lo mande
+ * con otra forma no puede tumbar la ficha entera: sin ajuste legible, la ficha sigue sin esa línea.
+ */
+export const detalleAprendizSchema = z
+  .object({
+    id: z.string(),
+    fullName: z.string().nullish(),
+    inscrito: z.boolean().nullish(),
+    programDay: z.number(),
+    startDate: z.string().nullish(),
+    phase: z.string().nullish(),
+    lastDayAdjustment: z.unknown().optional(),
+  })
+  .passthrough();
+
+export type UltimoAjusteDiaApi = z.infer<typeof ultimoAjusteDiaSchema>;
+export type DetalleAprendizApi = z.infer<typeof detalleAprendizSchema>;
