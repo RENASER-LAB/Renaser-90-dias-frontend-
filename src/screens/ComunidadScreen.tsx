@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef, useReducer } from 'react';
 import {
   View,
   Text,
@@ -30,8 +30,8 @@ import { useCelulaQueAcompano } from '../features/mentor/hooks/useCelulaQueAcomp
 import { useEsMentor } from '../features/mentor/hooks/useEsMentor';
 import { AlumnoScreen } from '../features/mentor/screens/AlumnoScreen';
 import { MiCelulaScreen } from '../features/mentor/screens/MiCelulaScreen';
-import type { AlumnoConEstado } from '../features/mentor/types/mentor.types';
 import { alumnoDesdeLaInfo } from '../features/mentor/utils/alumnoDesdeLaInfo';
+import { loQueTapaComunidad, SIN_VISTAS_DEL_MENTOR, vistasDelMentor } from '../features/mentor/utils/vistasDelMentor';
 import { entradaAlGrupoVisible } from '../features/mentor/utils/entradaAlGrupo';
 import { MicroLabel, ScreenHeader, AvatarPersona } from '../components/ui';
 import { Icon, IconName } from '../components/Icon';
@@ -715,11 +715,10 @@ export default function ComunidadScreen() {
   const esMentor = useEsMentor();
   // Solo para mentores, y recién cuando abren Tribu, que es donde está la entrada a su grupo.
   const celulaQueAcompano = useCelulaQueAcompano(esMentor && recursosPedidos.grupoQueAcompano);
-  const [vistaMentor, setVistaMentor] = useState<'ninguna' | 'celula' | 'alumno'>('ninguna');
-  const [alumnoAbierto, setAlumnoAbierto] = useState<AlumnoConEstado | null>(null);
-  /* D-207: la ficha de un aprendiz abierta desde la info del chat de SU grupo, con el id de ese grupo
-     (el mentor puede acompañar varios y «Mi grupo» muestra uno). Al volver se vuelve a la info. */
-  const [fichaDesdeLaInfo, setFichaDesdeLaInfo] = useState<{ alumno: AlumnoConEstado; grupoId: string } | null>(null);
+  /* Las vistas del mentor que TAPAN Comunidad: «Mi grupo», su ficha y la ficha abierta desde la info
+     del chat de SU grupo (D-207, con el id de ese grupo: el mentor puede acompañar varios y «Mi grupo»
+     muestra uno). Van juntas en un reductor para despejarlas todas al pedir un chat (E-341). */
+  const [vistas, despacharVista] = useReducer(vistasDelMentor, SIN_VISTAS_DEL_MENTOR);
   // Derivados, no estados: agrupan las secciones que comparten un mismo contenedor de scroll o un
   // mismo sub-estado. Nunca se pueden prender dos a la vez, porque salen todos de `seccionActiva`.
   const inExclusiveResources = seccionActiva === 'classroom';
@@ -1492,9 +1491,10 @@ export default function ComunidadScreen() {
     if (!id) return;
 
     irASeccion('tribu');
-    /* D-207: si el pedido vino de la ficha abierta desde la info del grupo (su botón para escribirle),
-       se cierran la ficha y la info: si no, taparían el chat que se acaba de pedir. */
-    setFichaDesdeLaInfo(null);
+    /* El pedido suele venir del «Escribirle» de una ficha: se cierra todo lo que tapa Comunidad
+       («Mi grupo», su ficha, la ficha desde la info) y la info, o el chat pedido quedaría detrás.
+       E-341: antes no se cerraban «Mi grupo» ni su ficha, y el botón parecía no hacer nada. */
+    despacharVista({ tipo: 'pedir-un-chat' });
     setGroupInfoVisible(false);
     setChatPedidoDeOtraPestana(id);
     // Recién creada, puede no estar en el listado: se pide de nuevo para que aparezca. `forzar`:
@@ -1811,7 +1811,8 @@ export default function ComunidadScreen() {
   const abrirFichaDesdeLaInfo = (integrante: IntegranteDeLaInfo) => {
     if (!celulaIdAbierto || !integrante.usuarioId) return;
     const vista = celulaQueAcompano.vista;
-    setFichaDesdeLaInfo({
+    despacharVista({
+      tipo: 'abrir-ficha-desde-la-info',
       alumno: alumnoDesdeLaInfo(
         { usuarioId: integrante.usuarioId, nombre: integrante.nombreCompleto },
         celulaIdAbierto,
@@ -2273,32 +2274,30 @@ export default function ComunidadScreen() {
    * trabajo, no una tarjeta más dentro de Comunidad. Cada una registra su `useSystemBackHandler`,
    * así que el gesto del sistema las cierra paso a paso en vez de salir de la app.
    */
-  if (fichaDesdeLaInfo) {
+  const loQueTapa = loQueTapaComunidad(vistas, esMentor);
+  if (loQueTapa === 'ficha-desde-la-info' && vistas.fichaDesdeLaInfo) {
     return (
       <AlumnoScreen
-        alumno={fichaDesdeLaInfo.alumno}
-        grupoId={fichaDesdeLaInfo.grupoId}
-        onVolver={() => setFichaDesdeLaInfo(null)}
+        alumno={vistas.fichaDesdeLaInfo.alumno}
+        grupoId={vistas.fichaDesdeLaInfo.grupoId}
+        onVolver={() => despacharVista({ tipo: 'volver-a-la-info' })}
       />
     );
   }
-  if (esMentor && vistaMentor === 'alumno' && alumnoAbierto) {
+  if (loQueTapa === 'ficha-de-mi-grupo' && vistas.alumnoAbierto) {
     return (
       <AlumnoScreen
-        alumno={alumnoAbierto}
+        alumno={vistas.alumnoAbierto}
         grupoId={celulaQueAcompano.vista?.celula.id ?? null}
-        onVolver={() => setVistaMentor('celula')}
+        onVolver={() => despacharVista({ tipo: 'volver-a-mi-grupo' })}
       />
     );
   }
-  if (esMentor && vistaMentor === 'celula') {
+  if (loQueTapa === 'mi-grupo') {
     return (
       <MiCelulaScreen
-        onSalir={() => setVistaMentor('ninguna')}
-        onAbrirAlumno={alumno => {
-          setAlumnoAbierto(alumno);
-          setVistaMentor('alumno');
-        }}
+        onSalir={() => despacharVista({ tipo: 'salir-de-mi-grupo' })}
+        onAbrirAlumno={alumno => despacharVista({ tipo: 'abrir-ficha', alumno })}
         vista={celulaQueAcompano.vista}
         cargando={celulaQueAcompano.cargando}
         fallo={celulaQueAcompano.fallo}
@@ -3291,7 +3290,7 @@ export default function ComunidadScreen() {
             <View style={styles.tribuBloqueInicial}>
               <MicroLabel>Acompañamiento</MicroLabel>
               <Pressable
-                onPress={() => setVistaMentor('celula')}
+                onPress={() => despacharVista({ tipo: 'abrir-mi-grupo' })}
                 accessibilityRole="button"
                 accessibilityLabel="Abrir el grupo que acompañas"
                 style={[styles.entradaMentor, { borderColor: c.goldInk, backgroundColor: c.goldWash }]}

@@ -176,6 +176,11 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
           la info, para que no tapen el chat pedido. No es un permiso nuevo: la ficha la sirve el servidor al
           acompañante vigente del grupo, y la lista de la info solo la ven los aprendices y el mentor
           del grupo; un administrador no la ve, así que no ve el botón.
+      * **E-341 (mismo día): el «Escribirle» de la ficha de «Mi grupo» en Comunidad abría el chat
+        detrás de la ficha** y parecía no hacer nada. Las vistas del mentor que tapan Comunidad («Mi
+        grupo», su ficha y la ficha desde la info) pasaron a un reductor
+        (`mentor/utils/vistasDelMentor.ts`) con una sola acción que las despeja todas al pedir un
+        chat; la navegación con «←» no cambia. Desde Hoy ya funcionaba (cambia de pestaña).
       En `ComunidadScreen.tsx` solo cambian los campos opcionales `esDelPrograma`, `rolDelOtro` y
       `fotoPath` (este último se pasa a la cabecera y a la info), el id y la tarjeta del mentor y el id
       de la sesión que recibe la lista de la info (D-206), la ficha abierta desde la info y el aviso
