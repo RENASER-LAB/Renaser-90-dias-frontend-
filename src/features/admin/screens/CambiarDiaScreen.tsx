@@ -12,6 +12,7 @@ import { cambiarDiaDelPrograma } from '../api/adminApi';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
 import {
   DIA_MAXIMO,
+  DIA_MINIMO,
   MOTIVO_MAXIMO,
   detalleDelCambioDeDia,
   leerDiaEscrito,
@@ -57,6 +58,7 @@ export function CambiarDiaScreen({
   });
 
   const diaEscrito = leerDiaEscrito(texto);
+  const fueraDeRango = diaEscrito !== null && (diaEscrito < DIA_MINIMO || diaEscrito > DIA_MAXIMO);
   const base = diaEscrito ?? diaActual;
   const mover = (delta: number) => {
     setTexto(String(moverDia(base, delta)));
@@ -107,7 +109,7 @@ export function CambiarDiaScreen({
         }}
       >
         <Text style={[t.body, { color: c.textStrong, fontSize: 20, lineHeight: 28 }]}>
-          Hoy está en el día {diaActual} de {DIA_MAXIMO}.
+          Hoy está en el día {diaActual} de 90.
         </Text>
 
         <View style={{ gap: 10 }}>
@@ -131,7 +133,7 @@ export function CambiarDiaScreen({
               keyboardType="number-pad"
               maxLength={3}
               editable={!enviando}
-              accessibilityLabel={`Día nuevo, de 0 a ${DIA_MAXIMO}`}
+              accessibilityLabel={`Día nuevo, de ${DIA_MINIMO} a ${DIA_MAXIMO}`}
               style={[...campo, estilos.numero]}
             />
             <Pressable
@@ -197,14 +199,16 @@ export function CambiarDiaScreen({
           puntos) no se borra.
         </Text>
 
-        {error ? (
+        {error || fueraDeRango ? (
           <Text accessibilityRole="alert" style={[t.body, { color: c.danger, fontSize: 16, lineHeight: 23 }]}>
-            {error}
+            {error ?? `Escribe un día entre ${DIA_MINIMO} y ${DIA_MAXIMO}.`}
           </Text>
         ) : null}
 
         <BotonPrincipal
-          etiqueta={diaEscrito !== null && diaEscrito !== diaActual ? `Pasar al día ${diaEscrito}` : 'Cambiar el día'}
+          etiqueta={
+            diaEscrito !== null && diaEscrito !== diaActual && !fueraDeRango ? `Pasar al día ${diaEscrito}` : 'Cambiar el día'
+          }
           onPress={pedirConfirmacion}
           cargando={enviando}
         />
@@ -220,6 +224,8 @@ const estilos = StyleSheet.create({
   paso: { width: 64, height: 64, borderRadius: 16, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   signo: { fontFamily: 'Jost_500Medium', fontSize: 32, lineHeight: 36 },
   campo: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, fontSize: 18 },
-  numero: { flex: 1, height: 64, textAlign: 'center', fontSize: 28 },
+  // minWidth/flexBasis 0: en web el <input> trae un ancho propio y empujaba el «+» fuera de la
+  // pantalla a 360 px (e2e del 26/09).
+  numero: { flex: 1, flexBasis: 0, minWidth: 0, height: 64, textAlign: 'center', fontSize: 28 },
   motivo: { minHeight: 96, paddingVertical: 12, textAlignVertical: 'top' },
 });

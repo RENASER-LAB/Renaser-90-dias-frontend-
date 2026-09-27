@@ -21,6 +21,7 @@ import { useSemanaAdministrativa } from '../hooks/useSemanaAdministrativa';
 import { disponibilidadDelCambio, textoDelUltimoAjuste } from '../utils/diaDelPrograma';
 import { fechaCorta, hoyIso } from '../utils/fechas';
 import { CambiarDiaScreen } from './CambiarDiaScreen';
+import { rotuloDeFase } from '../../home/hooks/useResumenHome';
 
 /**
  * La ficha de un aprendiz vista por administración: quién es, cómo viene la semana y qué entregó.
@@ -340,7 +341,7 @@ function lineasDeCabecera(aprendiz: PersonaDeFicha): string[] {
   if (aprendiz.programDay != null) {
     lineas.push(
       `Día ${aprendiz.programDay} del programa` +
-        (aprendiz.phase ? ` · ${aprendiz.phase.replaceAll('_', ' ').toLowerCase()}` : ''),
+        (aprendiz.phase ? ` · ${rotuloDeFase(aprendiz.phase) ?? aprendiz.phase}` : ''),
     );
   }
   if (aprendiz.cellId !== undefined) {
