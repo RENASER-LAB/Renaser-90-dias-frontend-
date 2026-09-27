@@ -18,6 +18,7 @@ import { CodigoRenaserOverlay } from './src/features/radar/components/CodigoRena
 import { RenombrarHabitoOverlay } from './src/features/habits/components/RenombrarHabitoOverlay';
 import { AbridorDeEventos } from './src/features/eventos/components/AbridorDeEventos';
 import { RearmadorDeAlarmas } from './src/features/alarmas/components/RearmadorDeAlarmas';
+import { SincronizadorDeAcciones } from './src/features/objetivos/components/SincronizadorDeAcciones';
 
 function Shell() {
   const { mode, c } = useTheme();
@@ -50,6 +51,10 @@ function Shell() {
           (mismo id, contenido y hora): las de antes del permiso de alarmas exactas quedan exactas.
           No pinta nada. Ver `features/alarmas/rearmarAlarmas.ts`. */}
       <RearmadorDeAlarmas />
+      {/* Pone al dia las alarmas de las acciones con hora (hoy y manana) al abrir y al volver a
+          primer plano, solo si la persona pidio ese aviso. No pinta nada. Ver
+          `features/objetivos/notificaciones/recordatoriosDeAcciones.ts`. */}
+      <SincronizadorDeAcciones />
       {/* Dibuja los Alert en el build web, donde el Alert de react-native-web es un metodo vacio
           que nunca ejecuta los onPress de sus botones (E-144). En movil no pinta nada. */}
       <AnfitrionAlerta />

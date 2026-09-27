@@ -22,7 +22,10 @@ import {
   type PreferenciasDeAlarmas,
 } from '../preferenciasDeAlarmas';
 import { probarSonido } from '../probarSonido';
-import { SONIDOS, type SonidoDeAlarma } from '../sonidoDeAlarma';
+import { cambiarSonidoDeLasProgramadas } from '../cambioDeSonido';
+import { canalDeAlarma, SONIDOS, type SonidoDeAlarma } from '../sonidoDeAlarma';
+import { RecordatorioDeAcciones } from '../../objetivos/components/RecordatorioDeAcciones';
+import { idsDeRecordatoriosDeAcciones } from '../../objetivos/notificaciones/recordatoriosDeAcciones';
 import { AvisoAlarmaExacta } from './AvisoAlarmaExacta';
 
 /** El hábito de despertar, por su clave de sistema (el título lo puede renombrar el aprendiz). */
@@ -40,8 +43,9 @@ interface Despertar {
 }
 
 /**
- * Yo → Alarmas (E-10, decisión del dueño del 26/09): encender o apagar cada alarma (Despertar y
- * eventos), elegir el sonido y la hora. Sin tablas nuevas: la alarma de Despertar es el recordatorio
+ * Yo → Alarmas (E-10, decisión del dueño del 26/09): encender o apagar cada alarma (Despertar,
+ * eventos y, desde la tarde del mismo día, las acciones de los objetivos), elegir el sonido y la hora.
+ * El sonido rige para todas las alarmas locales, incluida la «Voz». Sin tablas nuevas: la alarma de Despertar es el recordatorio
  * del hábito `WAKE_UP` (las mismas preferencias de siempre, `habit-preferences`), y lo demás vive en
  * el teléfono (`preferenciasDeAlarmas`).
  *
@@ -172,6 +176,10 @@ export function SeccionAlarmas({ userId }: { userId: string }) {
           await recordatorios.reprogramarTrasCambioDeHora(userId, despertar.habitoId, despertar.titulo, despertar.hora);
         }
       }
+      // Los demás hábitos y las acciones de los objetivos (2026-09-26): se pasan al canal nuevo tal
+      // cual están programadas, sin servidor. Despertar ya quedó en el canal nuevo y se salta solo.
+      await cambiarSonidoDeLasProgramadas(await recordatorios.idsDeRecordatoriosDeHabitos(userId), canalDeAlarma('habitos', sonido));
+      await cambiarSonidoDeLasProgramadas(await idsDeRecordatoriosDeAcciones(userId), canalDeAlarma('objetivos', sonido));
       try {
         await reprogramarConSonidoNuevo(userId, await listarProximos(Date.now()));
       } catch {
@@ -250,8 +258,13 @@ export function SeccionAlarmas({ userId }: { userId: string }) {
       </View>
 
       <View style={{ gap: 8 }}>
+        <Text style={[estilos.titulo, { color: c.textStrong }]}>Acciones de tus objetivos</Text>
+        <RecordatorioDeAcciones userId={userId} />
+      </View>
+
+      <View style={{ gap: 8 }}>
         <Text style={[estilos.titulo, { color: c.textStrong }]}>Sonido</Text>
-        <Text style={texto}>Para la alarma de despertar y la de los eventos.</Text>
+        <Text style={texto}>Para todas tus alarmas: hábitos, despertar, eventos y acciones de tus objetivos.</Text>
         {SONIDOS.map(s => {
           const elegido = prefs.sonido === s.clave;
           return (

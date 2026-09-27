@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Alert } from '../../../components/Alerta';
@@ -11,6 +11,8 @@ import type { EjeObjetivo, ItemPlanDiario, RocaDiariaApi } from '../types/objeti
 import { ETIQUETA_EJE } from '../types/objetivos.types';
 import { AgendarAccionesModal } from './AgendarAccionesModal';
 import { Icon } from '../../../components/Icon';
+import { useAuth } from '../../../context/AuthContext';
+import { RecordatorioDeAcciones } from './RecordatorioDeAcciones';
 
 /**
  * Parte 3 del plan: el día.
@@ -44,11 +46,17 @@ interface TarjetaAccionesDelDiaProps {
 
 export function TarjetaAccionesDelDia({ diaria, semanal, diaPrograma, ejeAbierto }: TarjetaAccionesDelDiaProps) {
   const { c, t } = useTheme();
+  const { user } = useAuth();
   const [agendando, setAgendando] = useState(false);
   /* Solo cuando el planificador se abre: quien nunca lo toca no paga la lectura del Mapa. */
   const accionesDelMapa = useAccionesDelMapa(agendando);
 
   const hayPlanSemanal = semanal.estado === 'planificada' || semanal.estado === 'cerrada';
+  // Con error de lectura no se pasa la lista: una vacía por falla quitaría alarmas que siguen valiendo.
+  const todasLasRocas = useMemo(
+    () => (diaria.cargando || diaria.error ? undefined : [...diaria.hoy, ...diaria.manana]),
+    [diaria.cargando, diaria.error, diaria.hoy, diaria.manana],
+  );
   // Los dos cubos vienen del servidor, que es el único que sabe en qué día está el participante.
   const delEjeAbierto = (rocas: RocaDiariaApi[]) => rocas.filter(roca => roca.eje === ejeAbierto);
   const cubos: { titulo: string; rocas: RocaDiariaApi[] }[] = [
@@ -145,6 +153,15 @@ export function TarjetaAccionesDelDia({ diaria, semanal, diaPrograma, ejeAbierto
           </Pressable>
         </View>
       )}
+
+      {/* Recordatorios de las acciones (2026-09-26): con TODAS las de hoy y mañana, no solo las del
+          eje abierto — las alarmas son de todas. Mismo control que Yo → Alarmas. */}
+      {hayPlanSemanal && user?.id ? (
+        <View style={{ marginTop: 16, gap: 8 }}>
+          <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>RECORDATORIOS</Text>
+          <RecordatorioDeAcciones userId={user.id} rocas={todasLasRocas} />
+        </View>
+      ) : null}
 
       {!!diaria.error && (
         <Text style={[t.small, { color: c.danger, fontSize: 14, marginTop: 8 }]}>{diaria.error}</Text>

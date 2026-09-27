@@ -9,6 +9,7 @@ import {
   type CanalDeAlarma,
   type SonidoDeAlarma,
 } from '../../alarmas/sonidoDeAlarma';
+import { preferenciasDeAlarmas } from '../../alarmas/preferenciasDeAlarmas';
 // SOLO tipos: `import type` se borra al compilar, así que esto NO carga el módulo en runtime. Ver
 // el bloque "POR QUÉ NO SE IMPORTA ARRIBA" más abajo — importarlo de verdad rompe Expo Go.
 import type * as TipoNotificaciones from 'expo-notifications';
@@ -122,8 +123,8 @@ const MINUTO_REPASO = 0;
 /**
  * Canal de Android. Sin uno propio, el sistema agrupa estos avisos con cualquier otro.
  *
- * Desde 2026-09-26 (E-10) un hábito puede sonar con otro sonido —hoy solo Despertar, desde Yo →
- * Alarmas—, y en Android el sonido es del canal. El de siempre conserva este id; los otros salen de
+ * Desde 2026-09-26 (E-10) un hábito puede sonar con otro sonido —el elegido en Yo → Alarmas, que
+ * desde la voz rige para todos los hábitos (ver `sonidoDe`)—, y en Android el sonido es del canal. El de siempre conserva este id; los otros salen de
  * `canalDeAlarma` (`features/alarmas/sonidoDeAlarma.ts`).
  */
 const CANAL_ANDROID = canalDeAlarma('habitos', SONIDO_POR_DEFECTO);
@@ -236,12 +237,39 @@ export async function asegurarCanal(canal: CanalDeAlarma = CANAL_ANDROID): Promi
   });
 }
 
-/** El sonido elegido para ese hábito en este teléfono. */
+/**
+ * El sonido de ese hábito en este teléfono: el que se le fijó (hoy solo Despertar) y, si no, el
+ * elegido en Yo → Alarmas → Sonido.
+ *
+ * > **Cambiado 2026-09-26 (voz).** Sin sonido fijado devolvía siempre el del teléfono: el sonido de
+ * > Yo → Alarmas solo llegaba a Despertar y a los eventos. El dueño pidió la voz «Tu hábito está por
+ * > empezar» como sonido del recordatorio de hábito, y la única forma de elegirla es esa sección, así
+ * > que ahora rige para todos los hábitos. Quien nunca tocó Alarmas sigue en «El del teléfono».
+ */
 export async function sonidoDe(userId: string, habitoId: string): Promise<SonidoDeAlarma> {
   return sinRomper(async () => {
     const crudo = await AsyncStorage.getItem(`${CLAVE_SONIDO}${userId}.${habitoId}`);
-    return esSonido(crudo) ? crudo : SONIDO_POR_DEFECTO;
+    if (esSonido(crudo)) return crudo;
+    return (await preferenciasDeAlarmas(userId)).sonido;
   }, SONIDO_POR_DEFECTO);
+}
+
+/**
+ * Los ids de TODAS las alarmas de hábitos de esta persona en este teléfono (sin el repaso de los
+ * domingos, que no es de un hábito y tiene su propia clave). Para pasarlas al sonido nuevo.
+ */
+export async function idsDeRecordatoriosDeHabitos(userId: string): Promise<string[]> {
+  if (!HAY_RECORDATORIOS_LOCALES) return [];
+  return sinRomper(async () => {
+    const prefijo = `${PREFIJO_CLAVE}${userId}.`;
+    const claves = (await AsyncStorage.getAllKeys()).filter(k => k.startsWith(prefijo));
+    const ids: string[] = [];
+    for (const clave of claves) {
+      const guardado = await AsyncStorage.getItem(clave);
+      if (guardado) ids.push(...leerIds(guardado));
+    }
+    return ids;
+  }, []);
 }
 
 /**

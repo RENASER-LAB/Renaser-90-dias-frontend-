@@ -15,7 +15,9 @@ export async function probarSonido(sonido: SonidoDeAlarma): Promise<boolean> {
   if (!N) return false;
   try {
     if (!(await pedirPermiso())) return false;
-    const canal = canalDeAlarma('eventos', sonido);
+    // Por el canal de hábitos (2026-09-26): con «Voz» se oye «Tu hábito está por empezar», que es lo
+    // que describe la opción. Antes era el de eventos; el sonido es el mismo en los dos.
+    const canal = canalDeAlarma('habitos', sonido);
     await asegurarCanal(canal);
     await N.scheduleNotificationAsync({
       content: { title: 'Así suena tu alarma', body: 'Esta es una prueba de Renaser.', sound: canal.sonidoDelAviso },
