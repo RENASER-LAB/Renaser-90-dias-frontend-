@@ -11,6 +11,7 @@ import { armarAgenda, type AccionParaAgenda, type HabitoParaAgenda, type TipoDeE
 import { diaRelativo } from '../utils/textosDeFecha';
 import { fechaEnZona, sumarDiasIso, zonaDelTelefono } from '../utils/zonaHoraria';
 import { BotonVolver, LETRA, Parrafo } from './piezas';
+import { SemaforoDeLaAgenda } from './SemaforoDeLaAgenda';
 
 const ICONO: Record<TipoDeEntrada, IconName> = { evento: 'calendar', habito: 'clock', accion: 'target' };
 const PALABRA: Record<TipoDeEntrada, string> = { evento: 'Evento', habito: 'Hábito', accion: 'Acción' };
@@ -21,6 +22,9 @@ const PALABRA: Record<TipoDeEntrada, string> = { evento: 'Evento', habito: 'Háb
  *
  * Si hábitos o acciones fallan, se muestra lo demás y se dice qué falta: una lectura que falla no
  * borra lo que sí se sabe.
+ *
+ * Arriba va el semáforo de la persona (`SemaforoDeLaAgenda`, decisión del dueño del 2026-09-26): solo
+ * días ya vividos; los de la agenda, que son de hoy en adelante, no llevan color.
  */
 export function MiAgenda({
   ocurrencias,
@@ -78,6 +82,7 @@ export function MiAgenda({
   return (
     <View style={{ gap: 18 }}>
       <BotonVolver etiqueta="Volver a Eventos" onPress={onVolver} />
+      <SemaforoDeLaAgenda />
       <View style={{ gap: 4 }}>
         <Text accessibilityRole="header" style={[estilos.titulo, { color: c.textStrong }]}>
           Mi agenda

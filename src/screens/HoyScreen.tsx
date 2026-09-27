@@ -941,27 +941,40 @@ export default function HoyScreen() {
             </Card>
           )}
 
-          {/* Próximo Evento / Mentoría (si el backend lo devuelve) */}
+          {/* Próximo Evento / Mentoría (si el backend lo devuelve). Tocarla abre su detalle en
+              Comunidad → Eventos (E-5, decisión del dueño del 2026-09-26): la misma entrada que usa
+              el aviso del evento (`abrirEventoId`). */}
           {resumen?.proximoEvento && (
             <Card>
-              <MicroLabel>Próximo evento</MicroLabel>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12 }}>
-                {/* Mismo caso que el avatar del muro: el borde dorado de este cuadradito estaba
-                    dentro del borde de la tarjeta. Queda el disco lavado, sin línea. */}
-                <View style={[styles.eventIconBox, { backgroundColor: c.goldWash }]}>
-                  <Icon name="calendar" size={16} color={c.goldInk} />
+              <Pressable
+                onPress={() =>
+                  (navigation as any).navigate('Comunidad', {
+                    abrirEventoId: resumen.proximoEvento?.eventoId,
+                  })
+                }
+                accessibilityRole="button"
+                accessibilityLabel={`Ver el evento ${resumen.proximoEvento.titulo}`}
+              >
+                <MicroLabel>Próximo evento</MicroLabel>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12 }}>
+                  {/* Mismo caso que el avatar del muro: el borde dorado de este cuadradito estaba
+                      dentro del borde de la tarjeta. Queda el disco lavado, sin línea. */}
+                  <View style={[styles.eventIconBox, { backgroundColor: c.goldWash }]}>
+                    <Icon name="calendar" size={16} color={c.goldInk} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[t.cardTitle, { color: c.textStrong }]}>
+                      {resumen.proximoEvento.titulo}
+                    </Text>
+                    {/* Era 10 px, por debajo del mínimo de micro-etiqueta (10.5) y encima con
+                        cifras que cambian. A 12 con cifras tabulares se lee y no baila. */}
+                    <Text style={[t.small, styles.cifras, { color: c.goldInk, fontSize: 12, marginTop: 3 }]}>
+                      {new Date(resumen.proximoEvento.iniciaEn).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })}
+                    </Text>
+                  </View>
+                  <Icon name="chevron" size={14} color={c.chevron} />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[t.cardTitle, { color: c.textStrong }]}>
-                    {resumen.proximoEvento.titulo}
-                  </Text>
-                  {/* Era 10 px, por debajo del mínimo de micro-etiqueta (10.5) y encima con
-                      cifras que cambian. A 12 con cifras tabulares se lee y no baila. */}
-                  <Text style={[t.small, styles.cifras, { color: c.goldInk, fontSize: 12, marginTop: 3 }]}>
-                    {new Date(resumen.proximoEvento.iniciaEn).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })}
-                  </Text>
-                </View>
-              </View>
+              </Pressable>
             </Card>
           )}
         </View>
