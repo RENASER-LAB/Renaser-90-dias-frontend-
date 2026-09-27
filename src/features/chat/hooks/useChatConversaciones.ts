@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { ChatConversation, ChatMessage } from '../../../screens/ComunidadScreen';
+import type { ChatConversation } from '../../../screens/ComunidadScreen';
 import { mensajeDeError } from '../../../services/http/apiClient';
 import * as chatApi from '../api/chatApi';
 import {
+  conversacionConHistorial,
   mapearMensaje,
   mapearResumenConversacion,
-  refinarTituloConMensajes,
   resumenDelUltimoMensaje,
 } from '../api/chatMappers';
 import type { WireMensaje, WireMiembro } from '../types/chat.types';
@@ -66,14 +66,16 @@ export function useChatConversaciones(actorId: string | null | undefined, activo
    * — se da vuelta acá para pintar de más vieja a más nueva, como espera el `.map` del diseño) y
    * la marca como leída. Devuelve la conversación ya con `messages` cargados y, si es un DIRECT
    * sin título resuelto, con el nombre real si algún mensaje enriquecido lo trae.
+   *
+   * También pone al día la fila de la lista con el último mensaje (2026-09-27): es lo que la
+   * ordena, y un mensaje que llegaba en vivo no la movía. Ver `chatMappers.conversacionConHistorial`.
    */
   const abrirConversacion = useCallback(
     async (conversacion: ChatConversation): Promise<ChatConversation> => {
       setMensajesCargando(true);
       try {
         const pagina = await chatApi.obtenerMensajes(conversacion.id);
-        const mensajes: ChatMessage[] = pagina.messages.map(m => mapearMensaje(m, actorId)).reverse();
-        const actualizada = refinarTituloConMensajes({ ...conversacion, messages: mensajes }, mensajes);
+        const actualizada = conversacionConHistorial(conversacion, pagina.messages, actorId);
 
         setConversations(prev => prev.map(c => (c.id === conversacion.id ? { ...actualizada, unreadCount: 0 } : c)));
 

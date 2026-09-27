@@ -4,8 +4,12 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { ChatMessage } from '../../../screens/ComunidadScreen';
 import { useTheme } from '../../../theme/ThemeContext';
 import { colorDeRemitente } from '../utils/formatoChat';
+import { FotoDelPrograma } from './AvatarDeChat';
 import { BurbujaAudioChat } from './BurbujaAudioChat';
 import type { ColoresDelChat } from './coloresDelChat';
+
+/** El fénix al lado de las burbujas del programa: chico, como los avatares de un grupo de WhatsApp. */
+const TAM_FOTO_DEL_PROGRAMA = 34;
 
 /**
  * Un mensaje, con la gramática de WhatsApp (2026-09-26): los propios a la derecha en dorado suave,
@@ -20,6 +24,11 @@ import type { ColoresDelChat } from './coloresDelChat';
  * Una sola marca «✓» en los propios: el servidor confirmó que lo guardó. Antes se pintaba «✓✓»
  * siempre, que en WhatsApp quiere decir «entregado», y el backend no informa entrega ni lectura
  * por mensaje: era una promesa que la app no podía cumplir.
+ *
+ * **Mensajes del programa** (`esDelPrograma`, 2026-09-27): los de sistema con texto o imagen, como
+ * la bienvenida del soporte. Van a la izquierda con el fénix al lado y firmados «Formación
+ * Renaser» en dorado en cualquier conversación, no solo en los grupos: no los manda una persona
+ * (aunque el servidor los guarde a nombre de una cuenta) y no son un aviso gris centrado.
  */
 export function BurbujaDeMensaje({
   mensaje,
@@ -42,25 +51,38 @@ export function BurbujaDeMensaje({
   onAbrirFoto: (url: string) => void;
 }) {
   const { c, mode } = useTheme();
-  const propio = mensaje.isMe;
+  const delPrograma = !!mensaje.esDelPrograma;
+  const propio = mensaje.isMe && !delPrograma;
   const fondo = propio ? colores.propia : colores.ajena;
-  const conNombre = enGrupo && !propio && primeroDeLaTanda;
+  const conNombre = (enGrupo || delPrograma) && !propio && primeroDeLaTanda;
   const conFoto = mensaje.type === 'image_grid' && !!mensaje.mediaUrl;
   const texto = mensaje.text?.trim() ? mensaje.text : null;
   const pie = `${mensaje.time}${propio ? ' ✓' : ''}`;
+  const colorDelNombre = delPrograma
+    ? c.goldInk
+    : colorDeRemitente(mensaje.senderId ?? mensaje.sender, mode === 'dark');
 
   return (
     <View
       style={[
         styles.renglon,
         propio ? styles.renglonPropio : styles.renglonAjeno,
+        delPrograma && styles.renglonDelPrograma,
         { marginTop: primeroDeLaTanda ? 8 : 2, marginBottom: ultimoDeLaTanda ? 2 : 0 },
       ]}
     >
+      {/* El fénix va en el primero de la tanda; los siguientes dejan su lugar vacío para que las
+          burbujas queden alineadas debajo de la primera. */}
+      {delPrograma && (
+        <View style={styles.columnaDelPrograma}>
+          {primeroDeLaTanda && <FotoDelPrograma size={TAM_FOTO_DEL_PROGRAMA} accessibilityLabel={mensaje.sender} />}
+        </View>
+      )}
       <View
         style={[
           styles.burbuja,
           { backgroundColor: fondo },
+          delPrograma && styles.burbujaDelPrograma,
           primeroDeLaTanda && (propio ? { borderTopRightRadius: 0 } : { borderTopLeftRadius: 0 }),
           conFoto && styles.burbujaConFoto,
         ]}
@@ -81,12 +103,13 @@ export function BurbujaDeMensaje({
             numberOfLines={1}
             style={[
               styles.remitente,
+              delPrograma && styles.firmaDelPrograma,
               conFoto && styles.remitenteSobreFoto,
-              { color: colorDeRemitente(mensaje.senderId ?? mensaje.sender, mode === 'dark') },
+              { color: colorDelNombre },
             ]}
           >
             {mensaje.sender}
-            {mensaje.senderRole ? ` · ${mensaje.senderRole}` : ''}
+            {!delPrograma && mensaje.senderRole ? ` · ${mensaje.senderRole}` : ''}
           </Text>
         )}
 
@@ -164,6 +187,22 @@ const styles = StyleSheet.create({
   },
   renglonPropio: { justifyContent: 'flex-end' },
   renglonAjeno: { justifyContent: 'flex-start' },
+  /* El fénix arriba, a la altura del nombre, y la cola de la burbuja en el hueco del medio. */
+  renglonDelPrograma: {
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  columnaDelPrograma: {
+    width: TAM_FOTO_DEL_PROGRAMA,
+  },
+  /* Con el fénix al lado la burbuja se achica si hace falta, en vez de salirse de la pantalla. */
+  burbujaDelPrograma: {
+    flexShrink: 1,
+  },
+  /* La firma del programa en 16 px: se lee como el nombre de quien habla. */
+  firmaDelPrograma: {
+    fontSize: 16,
+  },
   burbuja: {
     maxWidth: '82%',
     minWidth: 84,

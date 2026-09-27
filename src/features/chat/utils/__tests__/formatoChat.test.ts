@@ -9,6 +9,8 @@ import { describe, expect, it } from '@jest/globals';
 import {
   agruparMensajes,
   colorDeRemitente,
+  cuantosIntegrantes,
+  elementosDeLaListaInvertida,
   etiquetaDeDia,
   horaCorta,
   horaDeLaLista,
@@ -163,6 +165,90 @@ describe('agruparMensajes', () => {
       AHORA
     );
     expect(elementos.filter(e => e.tipo === 'dia')).toHaveLength(1);
+  });
+});
+
+/*
+ * La lista de la conversación es invertida desde el 2026-09-27 (el grupo «Fénix» abría arriba y no
+ * bajaba): el primer elemento se dibuja ABAJO de todo. Estas pruebas fijan que el orden, los
+ * separadores de día y las tandas sigan diciendo lo mismo al revés.
+ */
+describe('elementosDeLaListaInvertida', () => {
+  const msj = (id: string, quien: string, cuando: string, isMe = false) => ({
+    id,
+    isMe,
+    sender: quien,
+    senderId: quien,
+    createdAt: cuando,
+  });
+  const conversacion = [
+    msj('1', 'ana', iso(2026, 8, 25, 20, 0)),
+    msj('2', 'ana', iso(2026, 8, 25, 20, 1)),
+    msj('3', 'yo', iso(2026, 8, 25, 20, 2), true),
+    msj('4', 'ana', iso(2026, 8, 26, 9, 0)),
+    msj('5', 'luis', iso(2026, 8, 26, 9, 1)),
+  ];
+  const leer = (elementos: ReturnType<typeof elementosDeLaListaInvertida>) =>
+    elementos.map(e =>
+      e.tipo === 'dia' ? `[${e.etiqueta}]` : `${e.mensaje.id}${e.primeroDeLaTanda ? '^' : ''}${e.ultimoDeLaTanda ? '$' : ''}`
+    );
+
+  it('el último mensaje va primero (abajo de todo) y el más viejo al final (arriba)', () => {
+    const elementos = elementosDeLaListaInvertida(conversacion, AHORA);
+    expect(elementos[0].tipo === 'mensaje' && elementos[0].mensaje.id).toBe('5');
+    const ultimoMensaje = [...elementos].reverse().find(e => e.tipo === 'mensaje');
+    expect(ultimoMensaje?.tipo === 'mensaje' && ultimoMensaje.mensaje.id).toBe('1');
+  });
+
+  it('cada separador queda DESPUÉS de sus mensajes en el arreglo: dibujado ARRIBA de ellos', () => {
+    expect(leer(elementosDeLaListaInvertida(conversacion, AHORA))).toEqual([
+      '5^$',
+      '4^$',
+      '[Hoy]',
+      '3^$',
+      '2$',
+      '1^',
+      '[Ayer]',
+    ]);
+  });
+
+  it('es exactamente la agrupación cronológica dada vuelta: tandas y claves intactas', () => {
+    const derecha = agruparMensajes(conversacion, AHORA);
+    const invertida = elementosDeLaListaInvertida(conversacion, AHORA);
+    expect(invertida).toEqual([...derecha].reverse());
+    expect(new Set(invertida.map(e => e.clave)).size).toBe(invertida.length);
+  });
+
+  it('no toca los mensajes que recibe', () => {
+    const copia = conversacion.map(x => ({ ...x }));
+    elementosDeLaListaInvertida(conversacion, AHORA);
+    expect(conversacion).toEqual(copia);
+  });
+
+  it('los mensajes del programa forman su propia tanda, aunque vengan guardados a nombre de alguien', () => {
+    const programa = (id: string, cuando: string) => ({ ...msj(id, 'kelin', cuando), sender: 'Formación Renaser', esDelPrograma: true });
+    const elementos = agruparMensajes(
+      [
+        programa('tarjeta', iso(2026, 8, 26, 9, 0)),
+        programa('texto', iso(2026, 8, 26, 9, 0)),
+        msj('kelin-escribe', 'kelin', iso(2026, 8, 26, 9, 2)),
+      ],
+      AHORA
+    );
+    expect(elementos.map(e => (e.tipo === 'dia' ? `[${e.etiqueta}]` : `${e.clave}${e.primeroDeLaTanda ? '^' : ''}`))).toEqual([
+      '[Hoy]',
+      'tarjeta^',
+      'texto',
+      // Kelin, escribiendo como persona, vuelve a llevar su nombre y su cola.
+      'kelin-escribe^',
+    ]);
+  });
+});
+
+describe('cuantosIntegrantes', () => {
+  it('singular y plural', () => {
+    expect(cuantosIntegrantes(1)).toBe('1 integrante');
+    expect(cuantosIntegrantes(5)).toBe('5 integrantes');
   });
 });
 

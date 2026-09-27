@@ -121,8 +121,8 @@ function mapearTipoMensaje(tipo: WireTipoMensajeRecibido): ChatMessageType {
       return 'image_grid';
     case 'VIDEO':
       return 'video';
-    // TEXT y SYSTEM: el diseño no tiene una burbuja propia para "mensaje de sistema", se pintan
-    // como texto normal — ver `handleSendChatMessage`/el `.map` de mensajes en ComunidadScreen.
+    // TEXT y SYSTEM: se pintan como texto. Un SYSTEM con texto o imagen ni llega acá: es un
+    // mensaje del programa y lo mapea `mapearMensajeDelPrograma` (2026-09-27).
     default:
       return 'text';
   }
@@ -162,11 +162,79 @@ function textoPorTipo(wire: WireMensaje): string | undefined {
   }
 }
 
+/**
+ * Quién firma los mensajes que manda el PROGRAMA (2026-09-27). Es el nombre con el que el backend
+ * titula el chat de soporte (`ConversacionSoporteService.SUFIJO_SOPORTE`) y el de la sección de
+ * grupos de Tribu: la bienvenida la da el programa, no la persona cuya cuenta la haya enviado.
+ */
+export const FIRMA_DEL_PROGRAMA = 'Formación Renaser';
+
+/**
+ * Si el adjunto de un mensaje es una imagen. Sin MIME se toma como imagen: lo único que el
+ * programa adjunta hoy es la tarjeta de bienvenida (`image/png`).
+ */
+function adjuntoEsImagen(wire: Pick<WireMensaje, 'mediaMime'>): boolean {
+  return !wire.mediaMime || wire.mediaMime.toLowerCase().startsWith('image/');
+}
+
+/**
+ * Si el mensaje trae una imagen: con la URL firmada (historial, `GET .../messages`) o solo con la
+ * ruta (el «último mensaje» de `GET /conversations`, que el servidor no firma a propósito).
+ */
+function traeImagen(wire: Pick<WireMensaje, 'mediaUrl' | 'mediaPath' | 'mediaMime'>): boolean {
+  return (!!wire.mediaUrl || !!wire.mediaPath) && adjuntoEsImagen(wire);
+}
+
+/**
+ * Un mensaje del PROGRAMA (2026-09-27): de sistema (`SYSTEM`, el `TipoMensaje.SISTEMA` del
+ * backend) y con algo que mostrar — texto, imagen o las dos. Es la bienvenida del chat de soporte
+ * desde que la manda el programa y no la cuenta de una persona.
+ *
+ * Uno de sistema VACÍO no entra: sigue como siempre, «Mensaje del sistema» (`textoPorTipo`).
+ */
+export function esMensajeDelPrograma(
+  wire: Pick<WireMensaje, 'type' | 'text' | 'mediaUrl' | 'mediaPath' | 'mediaMime'>
+): boolean {
+  return wire.type === 'SYSTEM' && (!!wire.text?.trim() || traeImagen(wire));
+}
+
+/**
+ * La burbuja de un mensaje del programa: siempre a la izquierda (`isMe` en `false` aunque el
+ * servidor lo haya guardado a nombre de quien mira, por ejemplo la cuenta de staff que lo envía),
+ * firmada «Formación Renaser» y sin el id del emisor, que no es de nadie en particular. La burbuja
+ * le pone el fénix (`BurbujaDeMensaje`).
+ */
+function mapearMensajeDelPrograma(wire: WireMensaje): ChatMessage {
+  const conImagen = traeImagen(wire);
+  return {
+    id: wire.id,
+    sender: FIRMA_DEL_PROGRAMA,
+    avatar: '',
+    isMe: false,
+    esDelPrograma: true,
+    time: horaCorta(wire.createdAt),
+    type: conImagen ? 'image_grid' : 'text',
+    text: wire.text?.trim() || undefined,
+    mediaUrl: conImagen ? wire.mediaUrl ?? undefined : undefined,
+    // Imagen sin URL firmada: se rotula el adjunto, como en una foto de una persona.
+    mediaList: conImagen && !wire.mediaUrl ? ['📷 Imagen adjunta'] : undefined,
+    status: 'read',
+    createdAt: wire.createdAt,
+    senderAvatarUrl: null,
+  };
+}
+
 /** `avatar`/`status` de `ChatMessage` no se leen en ningún lado del JSX de la burbuja (el diseño
  * solo pinta `sender`/`senderRole` para mensajes ajenos, y el doble-check `✓✓` depende únicamente
- * de `isMe`) — se dejan en valores neutros, no rotos. */
+ * de `isMe`) — se dejan en valores neutros, no rotos.
+ *
+ * Un emisor `null` (2026-09-27, ver `chatSchemas.emisorTolerante`) no rompe nada: el mensaje no es
+ * de nadie de la sesión y sale como «Miembro Renaser» si tampoco trae nombre. */
 export function mapearMensaje(wire: WireMensaje, actorId: string | null | undefined): ChatMessage {
-  const esMio = !!actorId && wire.senderId === actorId;
+  if (esMensajeDelPrograma(wire)) {
+    return mapearMensajeDelPrograma(wire);
+  }
+  const esMio = !!actorId && !!wire.senderId && wire.senderId === actorId;
   return {
     id: wire.id,
     sender: wire.senderName?.trim() || (esMio ? 'Tú' : 'Miembro Renaser'),
@@ -192,7 +260,7 @@ export function mapearMensaje(wire: WireMensaje, actorId: string | null | undefi
       : undefined,
     status: 'read',
     createdAt: wire.createdAt,
-    senderId: wire.senderId,
+    senderId: wire.senderId ?? undefined,
     senderAvatarUrl: wire.senderAvatarUrl ?? null,
   };
 }
@@ -203,6 +271,9 @@ export function mapearMensaje(wire: WireMensaje, actorId: string | null | undefi
  *
  * Sale del mensaje del CABLE y no del ya mapeado: el mapeado le pone «Imagen adjunta» a una foto
  * sin texto, y la vista previa diría «📷 Imagen adjunta».
+ *
+ * Un mensaje del programa (2026-09-27) nunca dice «Tú: », y su imagen se lee «📷 Foto» aunque el
+ * tipo sea `SYSTEM`.
  */
 export function resumenDelUltimoMensaje(
   ultimo: WireMensaje | null,
@@ -212,13 +283,16 @@ export function resumenDelUltimoMensaje(
   if (!ultimo) {
     return { lastMessage: vistaPreviaDelMensaje(null), lastTime: '', lastMessageAt: null };
   }
-  const tipo = mapearTipoMensaje(ultimo.type);
+  const delPrograma = esMensajeDelPrograma(ultimo);
+  const tipo: ChatMessageType = delPrograma
+    ? traeImagen(ultimo) ? 'image_grid' : 'text'
+    : mapearTipoMensaje(ultimo.type);
   const conAdjunto = tipo === 'image_grid' || tipo === 'video' || tipo === 'audio';
   return {
     lastMessage: vistaPreviaDelMensaje({
       tipo,
       texto: conAdjunto ? ultimo.text : textoPorTipo(ultimo),
-      esMio: !!actorId && ultimo.senderId === actorId,
+      esMio: !delPrograma && !!actorId && !!ultimo.senderId && ultimo.senderId === actorId,
     }),
     lastTime: horaDeLaLista(ultimo.createdAt, ahora),
     lastMessageAt: ultimo.createdAt,
@@ -263,9 +337,10 @@ function resolverOtroParticipante(
     return directorio[declarado];
   }
   /* Sin el campo —backend viejo— se conserva la heurística de antes. Es peor, pero es lo que
-     había, y quitarla dejaría SIN nombre también los casos que hoy sí lo resuelven. */
+     había, y quitarla dejaría SIN nombre también los casos que hoy sí lo resuelven. Un último
+     mensaje sin emisor o del programa (2026-09-27) no dice quién es el otro. */
   const ultimo = resumen.lastMessage;
-  if (!ultimo || !actorId || ultimo.senderId === actorId) {
+  if (!ultimo || !actorId || !ultimo.senderId || ultimo.senderId === actorId || esMensajeDelPrograma(ultimo)) {
     return undefined;
   }
   return directorio[ultimo.senderId];
@@ -332,6 +407,8 @@ export function mapearResumenConversacion(
     createdAt: resumen.conversation.createdAt,
     // La foto del otro en un 1 a 1. Grupos y soporte no traen imagen: usan el avatar del programa.
     avatarUrl: otro?.avatarUrl ?? null,
+    // El rol del otro en palabras, el mismo dato del subtítulo, para la info del contacto.
+    rolDelOtro: otro ? traducirRol(otro.role) : null,
     unreadCount: resumen.unreadCount,
     // El listado nunca trae el historial completo — se pide recién al abrir la conversación
     // (`GET .../messages`), mismo criterio que `useWallFeed.cargarComentarios`.
@@ -351,14 +428,39 @@ export function mapearResumenConversacion(
  * salen de `construirTitulo` con el suyo ('Soporte Renaser' / el `nombre` del servidor). Si algún
  * día se afloja esa comparación, un chat de soporte pasaría a llamarse como el último del staff que
  * contestó.
+ *
+ * Un mensaje del programa (2026-09-27) no es «el otro»: la conversación no se llama «Formación
+ * Renaser» por tener uno.
  */
 export function refinarTituloConMensajes(conversacion: ChatConversation, mensajes: ChatMessage[]): ChatConversation {
   if (conversacion.type !== 'direct' || conversacion.title !== 'Conversación directa') {
     return conversacion;
   }
-  const deOtro = mensajes.find(m => !m.isMe && m.sender && m.sender !== 'Miembro Renaser');
+  const deOtro = mensajes.find(m => !m.isMe && !m.esDelPrograma && m.sender && m.sender !== 'Miembro Renaser');
   if (!deOtro) {
     return conversacion;
   }
   return { ...conversacion, title: deOtro.sender };
+}
+
+/**
+ * La conversación con su historial recién traído (`GET .../messages`, del más nuevo al más viejo):
+ * los mensajes en el orden en que se pintan (del más viejo al más nuevo), el título refinado y,
+ * desde el 2026-09-27, **el resumen del último mensaje al día**.
+ *
+ * Eso último es lo que ordena la lista de chats. Antes el resumen solo se actualizaba al MANDAR:
+ * un mensaje que llegaba en vivo con la conversación abierta recargaba el historial, pero la fila
+ * seguía con la vista previa, la hora y la fecha de antes, y la conversación no subía en la lista
+ * aunque su último mensaje fuera el más nuevo de todos. Con la página vacía se deja lo que había.
+ */
+export function conversacionConHistorial(
+  conversacion: ChatConversation,
+  delMasNuevoAlMasViejo: readonly WireMensaje[],
+  actorId: string | null | undefined,
+  ahora: Date = new Date()
+): ChatConversation {
+  const mensajes = delMasNuevoAlMasViejo.map(m => mapearMensaje(m, actorId)).reverse();
+  const conMensajes = refinarTituloConMensajes({ ...conversacion, messages: mensajes }, mensajes);
+  const masNuevo = delMasNuevoAlMasViejo[0];
+  return masNuevo ? { ...conMensajes, ...resumenDelUltimoMensaje(masNuevo, actorId, ahora) } : conMensajes;
 }

@@ -14,6 +14,11 @@ import { AvatarPersona } from '../../../components/ui';
  * sala de chat, y en el desplegable de integrantes de la tarjeta de la tribu. Eran el mismo JSX
  * copiado dos veces hasta que se extrajo: la próxima corrección de este renglón —un tamaño, un
  * contraste, un `numberOfLines`— ahora toca los dos lados a la vez en vez de uno solo.
+ *
+ * > **Corregido 2026-09-27.** Ya no son dos lugares: la info del chat se rediseñó al estilo de
+ * > WhatsApp a pedido del dueño y tiene su propio renglón (`chat/components/InfoDelChat.tsx`,
+ * > `FilaDeIntegranteDelChat`). Este queda solo para el desplegable de la tarjeta de Tribu, que no
+ * > cambió.
  */
 export type IntegranteDeGrupo = {
   id: string;

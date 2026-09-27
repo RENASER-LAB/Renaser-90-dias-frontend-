@@ -1,6 +1,47 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { leerEventoDelChat } from '../eventosDelChat';
+import { esAvisoDeSistema, esEcoPropio, leerEventoDelChat } from '../eventosDelChat';
+
+/**
+ * Mensajes del programa en vivo (2026-09-27). `MensajeFanoutPayload` manda el tipo con el nombre
+ * del DOMINIO (`mensaje.tipo().name()`: `SISTEMA`) y la bienvenida puede no tener persona detrás.
+ * Antes, con `senderId: z.string()`, un aviso sin emisor se descartaba y la bienvenida no aparecía
+ * hasta volver a entrar al chat.
+ */
+describe('avisos de mensajes del programa', () => {
+  const aviso = (parcial: Record<string, unknown>) =>
+    JSON.stringify({
+      event: 'MESSAGE',
+      id: '6f1c',
+      conversationId: 'c1',
+      senderId: 'u9',
+      type: 'SISTEMA',
+      text: '¡Bienvenida!',
+      createdAt: '2026-09-27T12:00:00Z',
+      ...parcial,
+    });
+
+  it('lee un aviso con el emisor en null o sin el campo', () => {
+    expect(leerEventoDelChat(aviso({ senderId: null }))?.event).toBe('MESSAGE');
+    expect(leerEventoDelChat(aviso({ senderId: undefined }))?.event).toBe('MESSAGE');
+  });
+
+  it('reconoce el tipo de sistema con el nombre del dominio y con el del REST', () => {
+    expect(esAvisoDeSistema({ type: 'SISTEMA' })).toBe(true);
+    expect(esAvisoDeSistema({ type: 'SYSTEM' })).toBe(true);
+    expect(esAvisoDeSistema({ type: 'TEXTO' })).toBe(false);
+  });
+
+  it('el eco de lo que uno mandó se ignora; uno de sistema a nombre de uno mismo, no', () => {
+    expect(esEcoPropio({ type: 'TEXTO', senderId: 'u-yo' }, 'u-yo')).toBe(true);
+    // La cuenta de staff que envía la bienvenida no la mandó desde la pantalla: hay que recargar.
+    expect(esEcoPropio({ type: 'SISTEMA', senderId: 'u-yo' }, 'u-yo')).toBe(false);
+    expect(esEcoPropio({ type: 'SISTEMA', senderId: null }, 'u-yo')).toBe(false);
+    expect(esEcoPropio({ type: 'TEXTO', senderId: 'u-otra' }, 'u-yo')).toBe(false);
+    // Sin sesión no hay «uno mismo»: nada es eco.
+    expect(esEcoPropio({ type: 'TEXTO', senderId: undefined }, undefined)).toBe(false);
+  });
+});
 
 /**
  * El contrato con el backend. Los cuerpos de acá están copiados de lo que serializan

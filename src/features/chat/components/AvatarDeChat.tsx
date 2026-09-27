@@ -31,31 +31,32 @@ const SELLO: Partial<Record<TipoDeAvatar, IconName>> = {
  *   (`assets/imagenes/fenix-renaser.png`, recortado del mismo fondo que usa el backend en
  *   `bienvenida/fondo.png`). La exportación «Fotos de perfil - Formación 2026.png» salió en blanco
  *   (26/09); cuando Operaciones la vuelva a exportar, se reemplaza ese PNG con el mismo nombre.
+ *
+ * `conSello={false}` (2026-09-27) lo deja sin el sello de la esquina: en la info del chat el
+ * avatar va grande y la línea de abajo ya dice si es un grupo o el soporte.
  */
 export function AvatarDeChat({
   tipo,
   nombre,
   avatarUrl,
   size,
+  conSello = true,
 }: {
   tipo: TipoDeAvatar;
   nombre?: string | null;
   avatarUrl?: string | null;
   size: number;
+  conSello?: boolean;
 }) {
   const { c } = useTheme();
   if (tipo === 'direct') {
     return <AvatarPersona nombre={nombre} avatarUrl={avatarUrl} size={size} />;
   }
-  const sello = SELLO[tipo];
+  const sello = conSello ? SELLO[tipo] : undefined;
   const selloTam = Math.round(size * 0.4);
   return (
     <View style={{ width: size, height: size }} accessibilityLabel={nombre ?? 'Renaser'}>
-      <Image
-        source={FENIX}
-        style={{ width: size, height: size, borderRadius: size / 2, borderWidth: 1, borderColor: c.gold }}
-        accessibilityIgnoresInvertColors
-      />
+      <FotoDelPrograma size={size} />
       {sello && (
         <View
           style={{
@@ -76,5 +77,22 @@ export function AvatarDeChat({
         </View>
       )}
     </View>
+  );
+}
+
+/**
+ * El fénix redondo con borde dorado: la foto del PROGRAMA. La usan el avatar de los grupos, el
+ * soporte y la comunidad, y desde el 2026-09-27 los mensajes que manda el programa (la bienvenida
+ * del soporte), al lado de su burbuja.
+ */
+export function FotoDelPrograma({ size, accessibilityLabel }: { size: number; accessibilityLabel?: string }) {
+  const { c } = useTheme();
+  return (
+    <Image
+      source={FENIX}
+      style={{ width: size, height: size, borderRadius: size / 2, borderWidth: 1, borderColor: c.gold }}
+      accessibilityIgnoresInvertColors
+      accessibilityLabel={accessibilityLabel}
+    />
   );
 }
