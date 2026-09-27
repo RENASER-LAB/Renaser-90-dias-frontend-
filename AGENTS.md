@@ -41,6 +41,14 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       suelto; nada visual cambia.
     * `app.json` suma el plugin de `expo-notifications` con el sonido
       `assets/sonidos/campana_renaser.wav`: **requiere APK nuevo**.
+    * **Mismo día, ampliación posterior, confirmada por el dueño — `Hoy`, solo la tarjeta «Próximo
+      evento»:** tocarla abre el detalle de ese evento en Comunidad → Eventos (E-5), con la misma
+      entrada `abrirEventoId` que usa el aviso. En `HoyScreen.tsx` solo se envolvió la tarjeta en un
+      `Pressable` y se le sumó el chevron; nada más de Hoy cambia. Y **«Mi agenda» muestra el
+      semáforo** (`SemaforoDeLaAgenda`): arriba, el color y la palabra del semáforo vigente de
+      `/me/semaforo` (mismos colores, umbrales y palabras) y los días ya vividos de esta semana
+      (sábado → ayer) con su puntito. Hoy y los días que vienen no llevan color: no se predice. Con
+      404/403, sin datos o para quien no se mide, no aparece nada.
     Una excepción puntual **no abre** los tabs: cualquier otro cambio sobre los cinco principales
     vuelve a necesitar autorización explícita.
   * **Excepción autorizada por el dueño del producto — 2026-09-26 — tabs `Training`, `Comunidad`
