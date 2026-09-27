@@ -62,11 +62,12 @@ export function HabitosDelAlumno({ grupoId, alumnoId }: { grupoId: string | null
             {/* De quién es el reloj con el que se leen las horas de abajo. Sin esto, un mentor
                 en otro huso no tiene forma de saber que "07:00" no son sus siete. */}
             <Text style={[t.micro, { color: c.textSoft, fontSize: 14 /* metadato */, marginTop: 6, lineHeight: 20 }]}>
-              Hoy para él es {diaYMes(habitos.localDate)} · horarios en {habitos.timeZone}
+              Su día hoy: {diaYMes(habitos.localDate)} · horarios en {habitos.timeZone}
             </Text>
-            <Text style={[t.micro, { color: c.textSoft, fontSize: 14 /* metadato */, marginTop: 2, lineHeight: 20 }]}>
-              {textoDeCupoDeCambios(habitos.scheduleEdits)}
-            </Text>
+            {/* Sin la línea «Cambios de horario: X de 3 · quedan N» (e2e del 26/09): D-170 quitó el
+                tope, pero el servidor sigue mandando `scheduleEdits` para no romper APKs viejos, y la
+                ficha le mostraba al mentor un límite que ya no existe. «Para él» pasó a «Su día hoy»:
+                el texto se lo decía igual a una alumna. */}
 
             {habitos.habits.length === 0 ? (
               <Text style={[t.body, { color: c.textSoft, fontSize: 16, marginTop: 12, lineHeight: 23 }]}>
@@ -178,23 +179,6 @@ function lineaDeSemanal(h: HabitoDelAlumnoApi): string | null {
     ? `Semanal, elige el día · ${diaYMes(h.chosenWeeklyDate)}`
     : 'Semanal, elige el día';
 }
-
-/**
- * El cupo de cambios de horario. Se muestran los tres números del servidor sin recalcular
- * ninguno: si `remaining` dejara de ser `limit − used` por una regla nueva, la pantalla diría
- * lo que el backend decide y no lo que ella supone.
- */
-function textoDeCupoDeCambios(cupo: { used: number; remaining: number; limit: number; period: string }): string {
-  const periodo = PERIODO[cupo.period];
-  return `Cambios de horario${periodo ? ` ${periodo}` : ''}: ${cupo.used} de ${cupo.limit} · quedan ${cupo.remaining}`;
-}
-
-/** Sólo los períodos confirmados por el contrato. Uno desconocido no se traduce: se omite. */
-const PERIODO: Record<string, string | undefined> = {
-  DAY: 'hoy',
-  WEEK: 'esta semana',
-  MONTH: 'este mes',
-};
 
 const estilos = StyleSheet.create({
   tarjeta: { marginTop: 8 },
