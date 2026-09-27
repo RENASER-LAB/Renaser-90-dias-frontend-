@@ -12,6 +12,9 @@ import type { HabitItem } from '../../../../screens/TrainingScreen';
  * - PLN-03: en la web, tocar el interruptor de pausa de un hábito abría TAMBIÉN el editor de su
  *   hora, detrás del diálogo de pausa. El `Switch` vivía dentro del `Pressable` de la fila, y en
  *   react-native-web el clic del interruptor (un `<input type="checkbox">`) sube hasta la fila.
+ * - PLN-02: con un cambio de hora ya guardado que rige desde mañana (D-91), al volver a abrir el
+ *   hábito decía «Ahora: 09:00» y la rueda arrancaba en 09:00, sin decir que desde mañana va 09:30.
+ *   Guardar desde ahí (por ejemplo, para tocar solo el aviso) devolvía el hábito a 09:00.
  */
 
 const mockAlerta = jest.fn<(titulo: string, mensaje?: string) => void>();
@@ -165,5 +168,52 @@ describe('PLN-03: el interruptor de pausa no abre el editor', () => {
     raiz = await montar();
     await abrir(raiz, 'JUGO VERDE');
     expect(textos(raiz)).toContain('Ahora: 09:00');
+  });
+});
+
+describe('PLN-02: el editor avisa el cambio de hora que rige desde mañana', () => {
+  it('con un cambio ya guardado: dice la hora de hoy, la nueva y desde cuándo, y la rueda arranca en la nueva', async () => {
+    mockPreferencias.mockResolvedValue([
+      preferencia('h-jugo', '09:00', { triggerTime: '09:30:00', limitTime: null, effectiveDate: '2026-09-28' }),
+    ]);
+    raiz = await montar();
+    await abrir(raiz, 'JUGO VERDE');
+
+    const todo = textos(raiz);
+    expect(todo).toContain('Ahora: 09:00');
+    expect(todo).toContain('Desde el lunes 28 de septiembre: 09:30');
+    expect(mockRueda).toHaveBeenLastCalledWith(expect.objectContaining({ horaInicial: 9, minutoInicial: 30 }));
+  });
+
+  it('sin cambio pendiente no agrega nada', async () => {
+    mockPreferencias.mockResolvedValue([preferencia('h-jugo', '09:00')]);
+    raiz = await montar();
+    await abrir(raiz, 'JUGO VERDE');
+
+    expect(textos(raiz)).not.toContain('Desde el');
+    expect(mockRueda).toHaveBeenLastCalledWith(expect.objectContaining({ horaInicial: 9, minutoInicial: 0 }));
+  });
+
+  it('recién guardado (se difiere a mañana): al volver a abrirlo lo dice igual', async () => {
+    mockPreferencias.mockResolvedValue([preferencia('h-jugo', '09:00')]);
+    mockCambiarHorario.mockResolvedValue({ deferred: true, deferredEffectiveDate: '2026-09-28' });
+    raiz = await montar();
+    await abrir(raiz, 'JUGO VERDE');
+
+    await act(async () => {
+      mockRueda.mock.lastCall![0].onCambiar(9, 30);
+    });
+    const [guardar] = raiz.root.findAll(n => typeof n.props.label === 'string' && n.props.label.startsWith('GUARDAR 09:30'));
+    await act(async () => {
+      guardar.props.onPress();
+    });
+    await esperar();
+    expect(mockCambiarHorario).toHaveBeenCalledTimes(1);
+
+    await abrir(raiz, 'JUGO VERDE');
+    const todo = textos(raiz);
+    expect(todo).toContain('Ahora: 09:00');
+    expect(todo).toContain('Desde el lunes 28 de septiembre: 09:30');
+    expect(mockRueda).toHaveBeenLastCalledWith(expect.objectContaining({ horaInicial: 9, minutoInicial: 30 }));
   });
 });

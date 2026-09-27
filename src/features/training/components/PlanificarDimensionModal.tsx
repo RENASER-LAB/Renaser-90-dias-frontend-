@@ -35,6 +35,7 @@ import {
   minutosDeArranqueDeLaRueda,
   MINUTOS_OTRA_POR_DEFECTO,
 } from '../../habits/utils/etiquetaDeAntelacion';
+import { horaDelEditor, preferenciaTrasGuardar, textoDelCambioProgramado } from '../utils/horaDelEditor';
 
 /**
  * PLANIFICAR los hábitos de una dimensión: a qué hora va cada uno, y prenderlo o apagarlo.
@@ -307,11 +308,19 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, dimension]);
 
-  /** La hora que rige HOY para un hábito: la recién guardada, la del backend, o la de la lista. */
+  /**
+   * La hora de la LISTA para un hábito: la recién guardada en esta hoja, la del backend, o la de la
+   * lista de Training.
+   *
+   * > **Corregido 2026-09-27 (PLN-02).** Decía «La hora que rige HOY», y el editor la usaba para su
+   * > «Ahora:». Con D-91 la recién guardada rige recién mañana: al reabrir el hábito decía «Ahora:
+   * > 09:30» el mismo día en que todavía iba a las 09:00. Lo de hoy y lo pendiente del editor salen
+   * > ahora de `horaDelEditor`; esta queda para la lista, que marca lo guardado con «✓ GUARDADO».
+   */
   const horaDe = (habitoId: string, porDefecto: string) =>
     guardados[habitoId] ?? preferencias.get(habitoId)?.triggerTime?.slice(0, 5) ?? porDefecto;
 
-  /** Minutos desde medianoche de la hora que rige hoy. `null` = todavía no tiene hora. */
+  /** Minutos desde medianoche de la hora de la lista (`horaDe`). `null` = todavía no tiene hora. */
   const minutosDe = (habitoId: string, porDefecto: string): number | null =>
     aMinutos(horaDe(habitoId, porDefecto));
 
@@ -322,9 +331,15 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
   /** Volver de un hábito a la lista sin guardar nada. */
   const volverALaLista = () => setHabitoEnEdicion(null);
 
-  /** Abre el editor de UN hábito con su hora ya cargada. Ese es el camino principal. */
+  /**
+   * Abre el editor de UN hábito con su hora ya cargada. Ese es el camino principal.
+   *
+   * La rueda arranca en la hora que rige DE MAÑANA EN ADELANTE: si hay un cambio guardado que todavía
+   * no rige, la de ese cambio (PLN-02). Lo que se guarda desde acá rige desde mañana, así que arrancar
+   * en la de hoy y guardar sin mover la rueda deshacía el cambio.
+   */
   const abrirHabito = (h: HabitoPlanificable) => {
-    const minutos = aMinutos(horaDe(h.habitoId, h.time));
+    const minutos = aMinutos(horaDelEditor(preferencias.get(h.habitoId), h.time).arranqueDeLaRueda);
     // Sin hora todavía: se propone el comienzo de la mañana, que es donde arranca la jornada.
     const inicial = minutos ?? INICIO_DE_JORNADA_MIN;
     setHora(Math.floor(inicial / 60));
@@ -610,18 +625,21 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
         : await recordatorios.programar(claveUsuario, h.habitoId, h.title, horaTexto, antelaciones);
       const avisoImposible = antelaciones.length > 0 && !ok;
       // El horario local se actualiza acá y no recargando todo: recargar con la hoja abierta
-      // reordenaría la lista debajo del dedo.
+      // reordenaría la lista debajo del dedo. Diferido (D-91), la hora de hoy no cambia y el cambio
+      // queda pendiente, como lo devolverá el servidor al reabrir la hoja (PLN-02).
       setPreferencias(prev => {
         const siguiente = new Map(prev);
-        const base = prev.get(h.habitoId);
-        if (base) {
-          siguiente.set(h.habitoId, {
-            ...base,
-            triggerTime: `${horaTexto}:00`,
-            reminderEnabled: recordatorio.activo,
-            reminderMinutesBefore: recordatorio.minutosAntes,
-          });
-        }
+        siguiente.set(
+          h.habitoId,
+          preferenciaTrasGuardar(prev.get(h.habitoId), {
+            habitoId: h.habitoId,
+            titulo: h.title,
+            horaDeLaTarjeta: h.time,
+            horaNueva: horaTexto,
+            recordatorio,
+            resultado,
+          }),
+        );
         return siguiente;
       });
       setGuardados(prev => ({ ...prev, [h.habitoId]: horaTexto }));
@@ -835,6 +853,11 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
     );
   };
 
+  /** Las horas del hábito abierto en el paso 2: la de hoy, la del cambio pendiente (PLN-02). */
+  const horasDelHabitoAbierto = habitoEnEdicion
+    ? horaDelEditor(preferencias.get(habitoEnEdicion.habitoId), habitoEnEdicion.time)
+    : null;
+
   return (
     <Modal
       visible={visible}
@@ -981,10 +1004,23 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                     {habitoEnEdicion.title}
                   </Text>
                   <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>
-                    Ahora: {horaDe(habitoEnEdicion.habitoId, habitoEnEdicion.time) || 'sin hora'}
+                    Ahora: {horasDelHabitoAbierto?.ahora || 'sin hora'}
                   </Text>
                 </View>
               </View>
+
+              {/* El cambio ya guardado que todavía no rige (D-91), con la misma frase que la tarjeta
+                  del hábito en Plan. Sin esto, «Ahora: 09:00» parecía decir que el cambio no se
+                  había guardado (PLN-02). Solo aparece cuando hay uno: la hoja no tiene scroll y cada
+                  renglón empuja el botón de guardar. */}
+              {horasDelHabitoAbierto?.programado && (
+                <View style={[styles.cambioProgramado, { backgroundColor: c.goldWash }]}>
+                  <Icon name="clock" size={16} color={c.goldInk} />
+                  <Text style={[t.body, { color: c.goldInk, fontSize: 16, lineHeight: 22, flexShrink: 1 }]}>
+                    {textoDelCambioProgramado(horasDelHabitoAbierto.programado)}
+                  </Text>
+                </View>
+              )}
 
               {/* Los bloques del día (madrugada / mañana / tarde / noche) se sacaron el
                   2026-09-08 por decisión del cliente: no los quiere ver. Con ellos se fue el
@@ -1441,6 +1477,17 @@ const styles = StyleSheet.create({
   emojiHabitoGrande: {
     fontSize: 28,
     lineHeight: 34,
+  },
+  // «Desde el lunes 28 de septiembre: 09:30» (PLN-02): el mismo lavado dorado que la tarjeta del
+  // hábito en Plan, a lo ancho de la hoja para que entre en un renglón a 16 px.
+  cambioProgramado: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginTop: 6,
   },
   filaTituloCompacta: {
     flexDirection: 'row',
