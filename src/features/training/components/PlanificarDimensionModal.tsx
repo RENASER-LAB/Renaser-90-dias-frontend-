@@ -768,40 +768,49 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
     }
   };
 
-  /** Una fila de la lista. Tocarla abre su hora; el interruptor de la derecha la prende o apaga. */
+  /**
+   * Una fila de la lista. Tocarla abre su hora; el interruptor de la derecha la prende o apaga.
+   *
+   * El interruptor y el candado van AL LADO de lo que abre el editor, no adentro (PLN-03, e2e web del
+   * 2026-09-27): en la web, el clic del `Switch` (un `<input type="checkbox">`) subía hasta el
+   * `Pressable` de la fila y abría también el editor, detrás del diálogo de pausa. En el teléfono no
+   * pasaba porque el interruptor nativo se queda con el toque. Se ve igual: el borde y el relleno de
+   * la fila son los de siempre, repartidos entre las dos partes.
+   */
   const filaDeHabito = (h: HabitoPlanificable) => {
     const horaGuardada = guardados[h.habitoId];
     const horaActual = horaDe(h.habitoId, h.time);
     const tieneHora = minutosDe(h.habitoId, h.time) !== null;
     const activo = !pausados.has(h.habitoId);
     return (
-      <Pressable
+      <View
         key={h.habitoId}
-        onPress={() => abrirHabito(h)}
         style={[styles.filaHabito, { borderColor: c.border, opacity: activo ? 1 : 0.55 }]}
       >
-        <View style={styles.iconoHabito}>
-          <Text style={styles.emojiHabito}>{h.icon ?? '🎯'}</Text>
-        </View>
-
-        <View style={{ flex: 1, flexShrink: 1, gap: 1 }}>
-          <Text style={[t.body, { color: c.text, fontSize: 13.5 }]} numberOfLines={2}>
-            {h.title}
-          </Text>
-          <View style={styles.filaMeta}>
-            <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5 }]}>
-              {tieneHora ? horaActual : 'Toca para ponerle hora'}
-            </Text>
-            {horaGuardada && (
-              <Text style={[t.micro, { color: c.success, fontSize: 10, fontFamily: 'Jost_700Bold' }]}>✓ GUARDADO</Text>
-            )}
-            {!activo && (
-              <Text style={[t.micro, { color: c.danger, fontSize: 10, fontFamily: 'Jost_700Bold' }]}>PAUSADO</Text>
-            )}
+        <Pressable onPress={() => abrirHabito(h)} style={styles.filaHabitoAbrir}>
+          <View style={styles.iconoHabito}>
+            <Text style={styles.emojiHabito}>{h.icon ?? '🎯'}</Text>
           </View>
-        </View>
 
-        <Icon name="chevron" size={14} color={c.chevron} />
+          <View style={{ flex: 1, flexShrink: 1, gap: 1 }}>
+            <Text style={[t.body, { color: c.text, fontSize: 13.5 }]} numberOfLines={2}>
+              {h.title}
+            </Text>
+            <View style={styles.filaMeta}>
+              <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5 }]}>
+                {tieneHora ? horaActual : 'Toca para ponerle hora'}
+              </Text>
+              {horaGuardada && (
+                <Text style={[t.micro, { color: c.success, fontSize: 10, fontFamily: 'Jost_700Bold' }]}>✓ GUARDADO</Text>
+              )}
+              {!activo && (
+                <Text style={[t.micro, { color: c.danger, fontSize: 10, fontFamily: 'Jost_700Bold' }]}>PAUSADO</Text>
+              )}
+            </View>
+          </View>
+
+          <Icon name="chevron" size={14} color={c.chevron} />
+        </Pressable>
 
         {h.isDeactivatable === false ? (
           // SIN `hitSlop`: el candado ya mide 48×48, de sobra para el dedo (AGENTS.md §4), y el
@@ -822,7 +831,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
             thumbColor={activo ? '#1E1B18' : '#888'}
           />
         )}
-      </Pressable>
+      </View>
     );
   };
 
@@ -1544,15 +1553,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     marginTop: 10,
   },
+  // La fila tiene dos partes (PLN-03): lo que abre el editor y, al lado, el interruptor o el candado.
+  // El relleno de siempre (10 por lado) quedó repartido: el derecho acá, el resto en `filaHabitoAbrir`.
   filaHabito: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     borderWidth: 1,
     borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
+    paddingRight: 10,
     minHeight: 56,
+  },
+  // Se estira al alto de la fila y lleva su relleno: tocar arriba o abajo del título sigue abriendo.
+  filaHabitoAbrir: {
+    flex: 1,
+    flexShrink: 1,
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingLeft: 10,
+    paddingVertical: 10,
   },
   iconoHabito: {
     width: 36,
