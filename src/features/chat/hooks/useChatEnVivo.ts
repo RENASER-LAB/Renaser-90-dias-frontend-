@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { obtenerPresencia } from '../api/chatApi';
 import { conexionChat, destinoDeConversacion, HAY_CHAT_EN_VIVO } from '../tiempoReal/conexionStomp';
 import { esEcoPropio, leerEventoDelChat, type EventoMensaje } from '../tiempoReal/eventosDelChat';
+import { marcaMasReciente } from '../utils/lecturaDelChat';
 
 /**
  * La conversación abierta, en vivo: quién está conectado y qué mensajes van llegando.
@@ -22,6 +23,15 @@ import { esEcoPropio, leerEventoDelChat, type EventoMensaje } from '../tiempoRea
  *
  * Los mensajes PROPIOS se descartan acá: la pantalla ya agregó el suyo al mandarlo, con la
  * respuesta del POST. Sin este filtro, cada mensaje que uno escribe se vería dos veces.
+ *
+ * ## Qué hace con las lecturas (D-208, 2026-09-27)
+ *
+ * Devuelve `leidoHasta`: hasta dónde leyeron todos en la conversación abierta, según el último aviso
+ * `READ`. La pantalla lo aplica a sus mensajes propios (`utils/lecturaDelChat.conLeidoHasta`) y ahí
+ * pasan de ✓ a ✓✓ sin recargar. La marca solo avanza, y se recuerda por conversación mientras la
+ * pantalla viva: volver a un chat no la pierde ni hace parpadear un ✓✓ ya visto. Nunca se marca
+ * nada como leído desde acá: recargar el historial (que sí marca) por un aviso de lectura haría que
+ * dos teléfonos con el chat abierto se avisaran uno al otro sin fin.
  */
 interface OpcionesChatEnVivo {
   /** `null` cuando no hay conversación abierta: entonces no se suscribe a nada. */
@@ -30,10 +40,24 @@ interface OpcionesChatEnVivo {
   miUsuarioId: string | null | undefined;
   /** Se llama cuando llega un mensaje de OTRO. La pantalla decide qué recargar. */
   alLlegarMensaje?: (evento: EventoMensaje) => void;
+  /** `false` en la comunidad: ahí no hay ✓✓ y un aviso de lectura se ignora (el servidor no lo manda). */
+  confirmaLectura?: boolean;
 }
 
-export function useChatEnVivo({ conversacionId, miUsuarioId, alLlegarMensaje }: OpcionesChatEnVivo) {
+export function useChatEnVivo({
+  conversacionId,
+  miUsuarioId,
+  alLlegarMensaje,
+  confirmaLectura = true,
+}: OpcionesChatEnVivo) {
   const [enLinea, setEnLinea] = useState<Set<string>>(new Set());
+  /* Por conversación, y no una sola marca: así la de un chat nunca se aplica a otro durante el
+     render en que se cambia de uno a otro, y volver a un chat la encuentra donde estaba. */
+  const [leidoHastaPorConversacion, setLeidoHastaPorConversacion] = useState<ReadonlyMap<string, string>>(
+    () => new Map()
+  );
+  const confirmaLecturaRef = useRef(confirmaLectura);
+  confirmaLecturaRef.current = confirmaLectura;
 
   /* En una ref y no en las dependencias del efecto: si la pantalla pasa una función nueva en
      cada render —que es lo normal—, ponerla como dependencia volvería a suscribir el socket en
@@ -81,6 +105,19 @@ export function useChatEnVivo({ conversacionId, miUsuarioId, alLlegarMensaje }: 
         return;
       }
 
+      if (evento.event === 'READ') {
+        if (!confirmaLecturaRef.current) return;
+        setLeidoHastaPorConversacion(previo => {
+          const actual = previo.get(conversacionId) ?? null;
+          const nueva = marcaMasReciente(actual, evento.readUpTo);
+          if (nueva === actual) return previo;
+          const siguiente = new Map(previo);
+          siguiente.set(conversacionId, nueva);
+          return siguiente;
+        });
+        return;
+      }
+
       // Un mensaje de sistema a nombre de uno mismo no es un eco: la pantalla no lo agregó.
       if (esEcoPropio(evento, miUsuarioId)) return;
       alLlegarMensajeRef.current?.(evento);
@@ -92,5 +129,6 @@ export function useChatEnVivo({ conversacionId, miUsuarioId, alLlegarMensaje }: 
     };
   }, [conversacionId, miUsuarioId]);
 
-  return { enLinea };
+  const leidoHasta = conversacionId && confirmaLectura ? leidoHastaPorConversacion.get(conversacionId) ?? null : null;
+  return { enLinea, leidoHasta };
 }

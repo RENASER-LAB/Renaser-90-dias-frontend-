@@ -1,5 +1,6 @@
 import type { ChatConversation, ChatMessage, ChatMessageType } from '../../../screens/ComunidadScreen';
 import { horaCorta, horaDeLaLista, vistaPreviaDelMensaje } from '../utils/formatoChat';
+import { estadoDeEntrega } from '../utils/lecturaDelChat';
 import type {
   WireConversacionResumen,
   WireMensaje,
@@ -224,9 +225,13 @@ function mapearMensajeDelPrograma(wire: WireMensaje): ChatMessage {
   };
 }
 
-/** `avatar`/`status` de `ChatMessage` no se leen en ningún lado del JSX de la burbuja (el diseño
- * solo pinta `sender`/`senderRole` para mensajes ajenos, y el doble-check `✓✓` depende únicamente
- * de `isMe`) — se dejan en valores neutros, no rotos.
+/** `avatar` de `ChatMessage` no se lee en ningún lado del JSX de la burbuja (el diseño solo pinta
+ * `sender`/`senderRole` para mensajes ajenos) — se deja en un valor neutro, no roto.
+ *
+ * `status` SÍ se lee desde el 2026-09-27 (D-208): es la marca de un mensaje propio, `'read'` (✓✓)
+ * solo si el servidor dice `READ`; lo demás, incluso nada, es `'sent'` (✓). Ver `utils/lecturaDelChat.ts`.
+ * > **Corregido 2026-09-27.** Decía que `status` no se leía y que el doble-check dependía solo de
+ * > `isMe`, y el mapeo ponía `'read'` a todos: no había de dónde saber la lectura.
  *
  * Un emisor `null` (2026-09-27, ver `chatSchemas.emisorTolerante`) no rompe nada: el mensaje no es
  * de nadie de la sesión y sale como «Miembro Renaser» si tampoco trae nombre. */
@@ -258,7 +263,7 @@ export function mapearMensaje(wire: WireMensaje, actorId: string | null | undefi
     mediaList: wire.type === 'IMAGE' && !wire.mediaUrl
       ? [wire.text?.trim() || '📷 Imagen adjunta']
       : undefined,
-    status: 'read',
+    status: estadoDeEntrega(wire.status),
     createdAt: wire.createdAt,
     senderId: wire.senderId ?? undefined,
     senderAvatarUrl: wire.senderAvatarUrl ?? null,

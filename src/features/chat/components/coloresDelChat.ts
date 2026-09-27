@@ -9,6 +9,12 @@ import type { Palette } from '../../../theme/tokens';
  *
  * Contrastes medidos (texto principal sobre cada burbuja, WCAG): claro ≥ 13:1, oscuro ≥ 11:1; la
  * hora (`hora`) ≥ 4,8:1 en las dos burbujas de cada modo.
+ *
+ * `leido` (2026-09-27, D-208 del backend): el «✓✓» dorado de un mensaje propio que ya leyeron. Va
+ * sobre la burbuja propia, con contraste de texto: 4,65:1 en claro (#7D5F16 sobre #F0E2C2; el
+ * `goldInk` de la paleta daba 3,9:1) y 6,07:1 en oscuro (#D4AF37 sobre #3B3120). `leidoSobreFoto`, el
+ * mismo «✓✓» sobre la franja oscura de una foto sin texto: 6,4:1 con una foto de gris medio detrás
+ * (sobre una foto blanca baja a 2,3:1, como la hora blanca de siempre baja a 3,4:1).
  */
 export type ColoresDelChat = {
   fondo: string;
@@ -18,7 +24,12 @@ export type ColoresDelChat = {
   hora: string;
   separador: string;
   textoSeparador: string;
+  leido: string;
+  leidoSobreFoto: string;
 };
+
+/** Sobre la franja oscura de la foto el fondo es el mismo en los dos modos. */
+const LEIDO_SOBRE_FOTO = '#F2D27E';
 
 export function coloresDelChat(c: Palette, oscuro: boolean): ColoresDelChat {
   return oscuro
@@ -30,6 +41,8 @@ export function coloresDelChat(c: Palette, oscuro: boolean): ColoresDelChat {
         hora: '#BDB5A8',
         separador: '#262420',
         textoSeparador: c.textSoft,
+        leido: '#D4AF37',
+        leidoSobreFoto: LEIDO_SOBRE_FOTO,
       }
     : {
         fondo: '#F2ECE1',
@@ -39,5 +52,7 @@ export function coloresDelChat(c: Palette, oscuro: boolean): ColoresDelChat {
         hora: '#5F574A',
         separador: '#E6DDCC',
         textoSeparador: '#4A453D',
+        leido: '#7D5F16',
+        leidoSobreFoto: LEIDO_SOBRE_FOTO,
       };
 }

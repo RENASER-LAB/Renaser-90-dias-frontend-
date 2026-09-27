@@ -4,6 +4,7 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { ChatMessage } from '../../../screens/ComunidadScreen';
 import { useTheme } from '../../../theme/ThemeContext';
 import { colorDeRemitente } from '../utils/formatoChat';
+import { llevaDobleMarca } from '../utils/lecturaDelChat';
 import { FotoDelPrograma } from './AvatarDeChat';
 import { BurbujaAudioChat } from './BurbujaAudioChat';
 import type { ColoresDelChat } from './coloresDelChat';
@@ -21,9 +22,17 @@ const TAM_FOTO_DEL_PROGRAMA = 34;
  * y una sola sonando a la vez) y el mismo visor de fotos de la pantalla (`onAbrirFoto`). La tarjeta
  * de bienvenida que manda el servidor es una foto seguida de un texto, así que sale sola por acá.
  *
- * Una sola marca «✓» en los propios: el servidor confirmó que lo guardó. Antes se pintaba «✓✓»
- * siempre, que en WhatsApp quiere decir «entregado», y el backend no informa entrega ni lectura
- * por mensaje: era una promesa que la app no podía cumplir.
+ * **Las marcas de los propios** (D-208 del backend, decisión del dueño del 2026-09-27): «✓» es que
+ * el servidor lo guardó; «✓✓» en dorado, que lo leyeron —en un 1 a 1 el otro, en un grupo y en el
+ * soporte TODOS los demás, como WhatsApp—. En la comunidad queda siempre «✓»: «leído por todos»
+ * ahí no tiene sentido y el servidor no lo informa. La marca sale de `mensaje.status`
+ * (`'read'` = ✓✓), que trae el listado y que el aviso en vivo sube a leído sin recargar
+ * (`utils/lecturaDelChat.ts`). Sin marca, o con una que esta versión no conoce, es «✓».
+ * > **Corregido 2026-09-27.** Decía: «Una sola marca «✓» en los propios: el servidor confirmó que
+ * > lo guardó. Antes se pintaba «✓✓» siempre, que en WhatsApp quiere decir «entregado», y el backend
+ * > no informa entrega ni lectura por mensaje: era una promesa que la app no podía cumplir.» Era
+ * > cierto hasta D-208: desde entonces el backend informa la lectura (no la entrega, que sigue sin
+ * > saber), así que el «✓✓» volvió, pero ahora dice algo verdadero.
  *
  * **Mensajes del programa** (`esDelPrograma`, 2026-09-27): los de sistema con texto o imagen, como
  * la bienvenida del soporte. Van a la izquierda con el fénix al lado y firmados «Formación
@@ -57,7 +66,9 @@ export function BurbujaDeMensaje({
   const conNombre = (enGrupo || delPrograma) && !propio && primeroDeLaTanda;
   const conFoto = mensaje.type === 'image_grid' && !!mensaje.mediaUrl;
   const texto = mensaje.text?.trim() ? mensaje.text : null;
-  const pie = `${mensaje.time}${propio ? ' ✓' : ''}`;
+  const leido = llevaDobleMarca(mensaje);
+  const pie = `${mensaje.time}${propio ? (leido ? ' ✓✓' : ' ✓') : ''}`;
+  const etiquetaDeLaHora = `Enviado a las ${mensaje.time}${leido ? ', leído' : ''}`;
   const colorDelNombre = delPrograma
     ? c.goldInk
     : colorDeRemitente(mensaje.senderId ?? mensaje.sender, mode === 'dark');
@@ -123,7 +134,10 @@ export function BurbujaDeMensaje({
             />
             {!texto && (
               <View style={styles.horaSobreFoto}>
-                <Text style={styles.horaSobreFotoTexto}>{pie}</Text>
+                <Text style={styles.horaSobreFotoTexto} accessibilityLabel={etiquetaDeLaHora}>
+                  {leido ? mensaje.time : pie}
+                  {leido && <Text style={{ color: colores.leidoSobreFoto }}>{' ✓✓'}</Text>}
+                </Text>
               </View>
             )}
           </Pressable>
@@ -171,8 +185,11 @@ export function BurbujaDeMensaje({
         )}
 
         {(!conFoto || texto) && (
-          <Text style={[styles.hora, { color: colores.hora }]} accessibilityLabel={`Enviado a las ${mensaje.time}`}>
-            {pie}
+          <Text style={[styles.hora, { color: colores.hora }]} accessibilityLabel={etiquetaDeLaHora}>
+            {leido ? mensaje.time : pie}
+            {/* «✓» va en el color de la hora, como antes; «✓✓» en dorado, que es lo que separa «lo
+                leyeron» de «se guardó» de un vistazo (en WhatsApp, el azul). */}
+            {leido && <Text style={{ color: colores.leido }}>{' ✓✓'}</Text>}
           </Text>
         )}
       </View>

@@ -98,6 +98,11 @@ export const wireMensajeSchema = z
     replyToId: z.string().nullable(),
     replyTo: wireReplyPreviewSchema.nullable(),
     createdAt: z.string(),
+    /* D-208 (2026-09-27): la marca de un mensaje propio, `SENT` o `READ`. Lo más tolerante posible y
+       por el mismo radio de explosión que `type`: un backend anterior no la manda, uno futuro puede
+       mandar un valor nuevo, y cualquier cosa que no sea texto se descarta (`catch`) en vez de
+       rechazar la página — y con ella, vía `lastMessage`, la bandeja. Sin marca, la burbuja dice ✓. */
+    status: z.string().nullish().catch(null),
   })
   .passthrough();
 

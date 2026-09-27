@@ -3,10 +3,15 @@ import { z } from 'zod';
 /**
  * Lo que llega por `/topic/conversaciones/{id}`.
  *
- * Por ese mismo canal viajan dos cosas distintas —mensajes nuevos y cambios de presencia— y se
- * distinguen por `event`. El backend lo manda siempre y con valor fijo
- * (`MensajeFanoutPayload.EVENTO` / `PresenciaFanoutPayload.EVENTO`): adivinar por "trae campo
- * texto" habría sido exactamente lo que el discriminador viene a evitar.
+ * Por ese mismo canal viajan tres cosas distintas —mensajes nuevos, cambios de presencia y, desde el
+ * 2026-09-27, hasta dónde leyeron todos (D-208)— y se distinguen por `event`. El backend lo manda
+ * siempre y con valor fijo (`MensajeFanoutPayload.EVENTO` / `PresenciaFanoutPayload.EVENTO` /
+ * `LecturaFanoutPayload.EVENTO`): adivinar por "trae campo texto" habría sido exactamente lo que el
+ * discriminador viene a evitar.
+ *
+ * > **Corregido 2026-09-27.** Decía «dos cosas distintas»: el aviso de lectura (`READ`) es el tercero.
+ * > Un APK que no lo conoce lo descarta sin romperse (ver {@link leerEventoDelChat}): verificado
+ * > contra el `eventosDelChat.ts` de `origin/master`.
  *
  * Se valida con zod como todo lo que entra de la red (mismo criterio que `chatSchemas.ts`): un
  * payload con forma inesperada se descarta, nunca se cuela a la pantalla.
@@ -60,9 +65,20 @@ const eventoPresenciaSchema = z.object({
   online: z.boolean(),
 });
 
+/**
+ * «Todos leyeron hasta `readUpTo`» (D-208 del backend, `LecturaFanoutPayload`): los mensajes propios
+ * escritos en ese instante o antes pasan a ✓✓. Es la misma marca para todos los que miran la
+ * conversación: no dice quién leyó. Nunca llega de la comunidad, que no tiene ✓✓.
+ */
+const eventoLecturaSchema = z.object({
+  event: z.literal('READ'),
+  readUpTo: z.string(),
+});
+
 export type EventoMensaje = z.infer<typeof eventoMensajeSchema> & { event: 'MESSAGE' };
 export type EventoPresencia = z.infer<typeof eventoPresenciaSchema>;
-export type EventoDelChat = EventoMensaje | EventoPresencia;
+export type EventoLectura = z.infer<typeof eventoLecturaSchema>;
+export type EventoDelChat = EventoMensaje | EventoPresencia | EventoLectura;
 
 /**
  * Convierte el cuerpo crudo de la trama en un evento, o `null` si no se entiende.
@@ -85,6 +101,10 @@ export function leerEventoDelChat(cuerpo: string): EventoDelChat | null {
      se convertiría en tragarse cualquier cosa. */
   const presencia = eventoPresenciaSchema.safeParse(crudo);
   if (presencia.success) return presencia.data;
+
+  // Con su literal exigido, igual que la presencia y por lo mismo: antes que la rama tolerante.
+  const lectura = eventoLecturaSchema.safeParse(crudo);
+  if (lectura.success) return lectura.data;
 
   const mensaje = eventoMensajeSchema.safeParse(crudo);
   if (mensaje.success) return { ...mensaje.data, event: 'MESSAGE' };
