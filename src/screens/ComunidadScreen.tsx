@@ -31,6 +31,7 @@ import { useEsMentor } from '../features/mentor/hooks/useEsMentor';
 import { AlumnoScreen } from '../features/mentor/screens/AlumnoScreen';
 import { MiCelulaScreen } from '../features/mentor/screens/MiCelulaScreen';
 import type { AlumnoConEstado } from '../features/mentor/types/mentor.types';
+import { alumnoDesdeLaInfo } from '../features/mentor/utils/alumnoDesdeLaInfo';
 import { entradaAlGrupoVisible } from '../features/mentor/utils/entradaAlGrupo';
 import { MicroLabel, ScreenHeader, AvatarPersona } from '../components/ui';
 import { Icon, IconName } from '../components/Icon';
@@ -92,6 +93,7 @@ import {
   integrantesDeLaInfo,
   subtituloDeLaInfo,
   tituloDeLaInfo,
+  type IntegranteDeLaInfo,
 } from '../features/chat/utils/infoDelChat';
 import { conversacionAPantallaCompleta } from '../features/chat/utils/pantallaCompletaDelChat';
 import { OPCIONES_CON_PESTANAS, OPCIONES_SIN_PESTANAS } from '../navigation/pestanasOcultas';
@@ -715,6 +717,9 @@ export default function ComunidadScreen() {
   const celulaQueAcompano = useCelulaQueAcompano(esMentor && recursosPedidos.grupoQueAcompano);
   const [vistaMentor, setVistaMentor] = useState<'ninguna' | 'celula' | 'alumno'>('ninguna');
   const [alumnoAbierto, setAlumnoAbierto] = useState<AlumnoConEstado | null>(null);
+  /* D-207: la ficha de un aprendiz abierta desde la info del chat de SU grupo, con el id de ese grupo
+     (el mentor puede acompañar varios y «Mi grupo» muestra uno). Al volver se vuelve a la info. */
+  const [fichaDesdeLaInfo, setFichaDesdeLaInfo] = useState<{ alumno: AlumnoConEstado; grupoId: string } | null>(null);
   // Derivados, no estados: agrupan las secciones que comparten un mismo contenedor de scroll o un
   // mismo sub-estado. Nunca se pueden prender dos a la vez, porque salen todos de `seccionActiva`.
   const inExclusiveResources = seccionActiva === 'classroom';
@@ -1487,6 +1492,10 @@ export default function ComunidadScreen() {
     if (!id) return;
 
     irASeccion('tribu');
+    /* D-207: si el pedido vino de la ficha abierta desde la info del grupo (su botón para escribirle),
+       se cierran la ficha y la info: si no, taparían el chat que se acaba de pedir. */
+    setFichaDesdeLaInfo(null);
+    setGroupInfoVisible(false);
     setChatPedidoDeOtraPestana(id);
     // Recién creada, puede no estar en el listado: se pide de nuevo para que aparezca. `forzar`:
     // una lectura que ya estuviera en vuelo salió antes de crearla y no la traería.
@@ -1786,9 +1795,30 @@ export default function ComunidadScreen() {
       setChatPedidoDeOtraPestana(conv.id);
       // `forzar`: puede estar recién creada, y una lectura en vuelo no la traería.
       void recargarConversaciones({ forzar: true });
-    } catch {
-      // Si falla, el usuario se queda donde estaba: no se inventa una conversacion local.
+    } catch (e) {
+      /* Si falla, el usuario se queda donde estaba: no se inventa una conversacion local. Quién puede
+         escribirle a quién lo decide el servidor (cuentas activas, G-4); desde D-207 se dice su
+         respuesta en vez de quedarse quieto. Antes el toque no hacía nada y no se sabía por qué. */
+      Alert.alert('No se pudo abrir el chat', mensajeDeError(e, 'Inténtalo de nuevo en un momento.'));
     }
+  };
+
+  /**
+   * D-207: «Ver ficha» desde la info del grupo abre la MISMA ficha que «Mi grupo» (`AlumnoScreen`), con
+   * el id del grupo de la conversación. El botón solo aparece cuando quien mira es el mentor de ese
+   * grupo (`infoDelChat.abreFicha`); quién puede ver la ficha lo sigue decidiendo el servidor.
+   */
+  const abrirFichaDesdeLaInfo = (integrante: IntegranteDeLaInfo) => {
+    if (!celulaIdAbierto || !integrante.usuarioId) return;
+    const vista = celulaQueAcompano.vista;
+    setFichaDesdeLaInfo({
+      alumno: alumnoDesdeLaInfo(
+        { usuarioId: integrante.usuarioId, nombre: integrante.nombreCompleto },
+        celulaIdAbierto,
+        vista ? { grupoId: vista.celula.id, alumnos: vista.todos } : null
+      ),
+      grupoId: celulaIdAbierto,
+    });
   };
 
   /**
@@ -2243,6 +2273,15 @@ export default function ComunidadScreen() {
    * trabajo, no una tarjeta más dentro de Comunidad. Cada una registra su `useSystemBackHandler`,
    * así que el gesto del sistema las cierra paso a paso en vez de salir de la app.
    */
+  if (fichaDesdeLaInfo) {
+    return (
+      <AlumnoScreen
+        alumno={fichaDesdeLaInfo.alumno}
+        grupoId={fichaDesdeLaInfo.grupoId}
+        onVolver={() => setFichaDesdeLaInfo(null)}
+      />
+    );
+  }
   if (esMentor && vistaMentor === 'alumno' && alumnoAbierto) {
     return (
       <AlumnoScreen
@@ -3783,6 +3822,7 @@ export default function ComunidadScreen() {
           }
           onVolver={() => setGroupInfoVisible(false)}
           onAbrirChatCon={usuarioId => void abrirDMConIntegrante(usuarioId)}
+          onVerFicha={abrirFichaDesdeLaInfo}
         />
       )}
 

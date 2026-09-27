@@ -19,8 +19,9 @@ import { AvatarDeIntegrante } from './AvatarDeIntegrante';
  *   un 1 a 1), el nombre grande y una línea («Grupo · 5 integrantes», «Chat de soporte»,
  *   «Aprendiz»).
  * - En un grupo, la sección «N integrantes»: el mentor primero, cada uno con su marca («Mentor»,
- *   «Aprendiz») y su tarjeta con nombre (D-206, `AvatarDeIntegrante`). Tocar a alguien abre su 1 a 1
- *   cuando eso ya se podía hacer desde acá.
+ *   «Aprendiz») y su tarjeta con nombre (D-206, `AvatarDeIntegrante`). Tocar a alguien abre su 1 a 1,
+ *   también al mentor (D-207). Al mentor de ESE grupo, cada aprendiz le muestra además un botón grande
+ *   «Ver ficha», que abre la misma ficha que «Mi grupo» (D-207, `onVerFicha`).
  *
  * > **Corregido 2026-09-27 (D-206).** Decía «el fénix en grupos, soporte y comunidad»: desde 8971acf el
  * > grupo lleva la tarjeta sin nombre, desde D-205 el soporte la de su aprendiz, y el fénix quedó solo
@@ -39,6 +40,7 @@ export function InfoDelChat({
   integrantes,
   onVolver,
   onAbrirChatCon,
+  onVerFicha,
 }: {
   tipo: TipoDeAvatar;
   /** «Info. del grupo», «Info. del contacto», «Info. del chat». */
@@ -59,6 +61,8 @@ export function InfoDelChat({
   } | null;
   onVolver: () => void;
   onAbrirChatCon: (usuarioId: string) => void;
+  /** D-207: abre la ficha de un aprendiz (solo en las filas con `abreFicha`). */
+  onVerFicha: (integrante: IntegranteDeLaInfo) => void;
 }) {
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth, isTablet } = useResponsive();
@@ -125,6 +129,7 @@ export function InfoDelChat({
                 integrante={fila}
                 margen={horizontalPadding}
                 onAbrirChat={onAbrirChatCon}
+                onVerFicha={onVerFicha}
               />
             ))}
           </View>
@@ -135,50 +140,84 @@ export function InfoDelChat({
 }
 
 /**
- * Una persona en la info del grupo, como en WhatsApp: avatar, nombre y debajo su marca. Si tocarla
- * abre su 1 a 1, toda la fila es el botón (72 px de alto) y lleva el ícono de chat a la derecha.
+ * Una persona en la info del grupo, como en WhatsApp: avatar, nombre y debajo su marca. Tres formas:
+ * - **Con «Ver ficha»** (D-207: quien mira es el mentor de este grupo): la fila no es un botón; lleva
+ *   debajo del nombre un botón grande con texto, «Ver ficha» (nota del dueño: «el público es objetivo,
+ *   lo mejor visible posible»), y a la derecha el ícono del 1 a 1 como botón aparte, de 48 px.
+ * - **Si tocarla abre su 1 a 1:** toda la fila es el botón (72 px de alto) y lleva el ícono de chat.
+ * - Si no hay acción (uno mismo), solo se lee.
  */
 export function FilaDeIntegranteDelChat({
   integrante,
   margen,
   onAbrirChat,
+  onVerFicha,
 }: {
   integrante: IntegranteDeLaInfo;
   margen: number;
   onAbrirChat: (usuarioId: string) => void;
+  onVerFicha: (integrante: IntegranteDeLaInfo) => void;
 }) {
   const { c } = useTheme();
-  const esMentor = integrante.rol === 'Mentor';
+  const avatar = (
+    <AvatarDeIntegrante
+      nombre={integrante.nombreCompleto}
+      avatarUrl={integrante.avatarUrl}
+      fotoPath={integrante.fotoPath}
+      size={48}
+    />
+  );
+  const usuarioId = integrante.usuarioId;
+
+  if (integrante.abreFicha && usuarioId) {
+    return (
+      <View style={[styles.fila, { paddingLeft: margen }]}>
+        {avatar}
+        <View style={[styles.filaTextos, { borderBottomColor: c.divider }]}>
+          <View style={styles.columnaDeLaFila}>
+            <NombreYMarca integrante={integrante} />
+            <Pressable
+              onPress={() => onVerFicha(integrante)}
+              accessibilityRole="button"
+              accessibilityLabel={`Ver la ficha de ${integrante.nombre}`}
+              style={({ pressed }) => [
+                styles.botonFicha,
+                { borderColor: c.gold, backgroundColor: pressed ? c.cardBg : c.goldWash },
+              ]}
+            >
+              <Icon name="doc" size={20} color={c.goldInk} />
+              <Text style={[styles.botonFichaTexto, { color: c.goldInk }]}>Ver ficha</Text>
+            </Pressable>
+          </View>
+          {integrante.abreChat && (
+            <Pressable
+              onPress={() => onAbrirChat(usuarioId)}
+              hitSlop={4}
+              accessibilityRole="button"
+              accessibilityLabel={`Escribirle a ${integrante.nombre}`}
+              style={({ pressed }) => [styles.botonChat, pressed && { backgroundColor: c.goldWash }]}
+            >
+              <Icon name="chat" size={24} color={c.goldInk} />
+            </Pressable>
+          )}
+        </View>
+      </View>
+    );
+  }
+
   const contenido = (
     <>
-      <AvatarDeIntegrante
-        nombre={integrante.nombreCompleto}
-        avatarUrl={integrante.avatarUrl}
-        fotoPath={integrante.fotoPath}
-        size={48}
-      />
+      {avatar}
       <View style={[styles.filaTextos, { borderBottomColor: c.divider }]}>
-        <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
-          <Text numberOfLines={2} style={[styles.filaNombre, { color: c.textStrong }]}>
-            {integrante.nombre}
-          </Text>
-          <View
-            style={[
-              styles.marca,
-              esMentor
-                ? { backgroundColor: c.goldWash, borderColor: c.gold }
-                : { backgroundColor: 'transparent', borderColor: c.border },
-            ]}
-          >
-            <Text style={[styles.marcaTexto, { color: esMentor ? c.goldInk : c.textSoft }]}>{integrante.rol}</Text>
-          </View>
+        <View style={styles.columnaDeLaFila}>
+          <NombreYMarca integrante={integrante} />
         </View>
         {integrante.abreChat && <Icon name="chat" size={24} color={c.goldInk} />}
       </View>
     </>
   );
 
-  if (!integrante.abreChat || !integrante.usuarioId) {
+  if (!integrante.abreChat || !usuarioId) {
     return (
       <View
         style={[styles.fila, { paddingLeft: margen }]}
@@ -189,7 +228,6 @@ export function FilaDeIntegranteDelChat({
       </View>
     );
   }
-  const usuarioId = integrante.usuarioId;
   return (
     <Pressable
       onPress={() => onAbrirChat(usuarioId)}
@@ -199,6 +237,29 @@ export function FilaDeIntegranteDelChat({
     >
       {contenido}
     </Pressable>
+  );
+}
+
+/** El nombre («Tú» para uno mismo) y debajo su marca, «Mentor» en dorado o «Aprendiz». */
+function NombreYMarca({ integrante }: { integrante: IntegranteDeLaInfo }) {
+  const { c } = useTheme();
+  const esMentor = integrante.rol === 'Mentor';
+  return (
+    <>
+      <Text numberOfLines={2} style={[styles.filaNombre, { color: c.textStrong }]}>
+        {integrante.nombre}
+      </Text>
+      <View
+        style={[
+          styles.marca,
+          esMentor
+            ? { backgroundColor: c.goldWash, borderColor: c.gold }
+            : { backgroundColor: 'transparent', borderColor: c.border },
+        ]}
+      >
+        <Text style={[styles.marcaTexto, { color: esMentor ? c.goldInk : c.textSoft }]}>{integrante.rol}</Text>
+      </View>
+    </>
   );
 }
 
@@ -287,6 +348,34 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingRight: 18,
     borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  columnaDeLaFila: {
+    flex: 1,
+    minWidth: 0,
+    gap: 4,
+  },
+  botonFicha: {
+    alignSelf: 'stretch',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    minHeight: 48,
+    marginTop: 6,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1.5,
+  },
+  botonFichaTexto: {
+    fontFamily: 'Jost_500Medium',
+    fontSize: 17,
+  },
+  botonChat: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   filaNombre: {
     fontFamily: 'Jost_500Medium',

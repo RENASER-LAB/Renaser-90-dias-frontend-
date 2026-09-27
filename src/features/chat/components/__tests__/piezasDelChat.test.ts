@@ -17,6 +17,11 @@ jest.mock('../../../../theme/ThemeContext', () => {
 });
 // La nota de voz usa `expo-audio`; acá no se prueba y se reemplaza por nada.
 jest.mock('../BurbujaAudioChat', () => ({ BurbujaAudioChat: () => null }));
+// Las tarjetas con nombre se piden con la sesión (D-205, D-206): una sesión fija para verlas pedidas.
+jest.mock('../../../../services/http/apiClient', () => ({
+  ...jest.requireActual<object>('../../../../services/http/apiClient'),
+  getTokenSesion: () => 'sesion-de-prueba',
+}));
 
 import type { ChatConversation, ChatMessage } from '../../../../screens/ComunidadScreen';
 import { mapearMensaje } from '../../api/chatMappers';
@@ -27,6 +32,7 @@ import { CabeceraDeChat } from '../CabeceraDeChat';
 import { coloresDelChat } from '../coloresDelChat';
 import { FilaDeConversacion } from '../FilaDeConversacion';
 import { InfoDelChat } from '../InfoDelChat';
+import { AvatarDeChat, FotoDelGrupo, FotoDelPrograma } from '../AvatarDeChat';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -294,6 +300,7 @@ describe('InfoDelChat', () => {
         integrantes: { filas, cifra: 3, cargando: false, error: null },
         onVolver: () => undefined,
         onAbrirChatCon: () => undefined,
+        onVerFicha: () => undefined,
       })
     );
     const todo = textos(raiz);
@@ -320,6 +327,7 @@ describe('InfoDelChat', () => {
         integrantes: { filas, cifra: 3, cargando: false, error: null },
         onVolver: volver,
         onAbrirChatCon: abrir,
+        onVerFicha: () => undefined,
       })
     );
     const tocables = raiz.root.findAll(n => typeof n.props.accessibilityLabel === 'string' && n.props.accessibilityLabel.startsWith('Escribirle a') && !!n.props.onPress);
@@ -343,12 +351,90 @@ describe('InfoDelChat', () => {
           integrantes: null,
           onVolver: () => undefined,
           onAbrirChatCon: () => undefined,
+          onVerFicha: () => undefined,
         })
       )
     );
     expect(todo).toContain('Luis Soto');
     expect(todo).toContain('Aprendiz');
     expect(todo).not.toContain('integrantes');
+  });
+});
+
+/** Las fuentes de todas las `Image` dibujadas. */
+function fuentes(raiz: ReactTestRenderer): unknown[] {
+  return raiz.root.findAll(n => (n.type as unknown) === 'Image').map(n => n.props.source);
+}
+
+describe('AvatarDeChat (D-206)', () => {
+  it('la comunidad vuelve al fénix; el grupo sigue con la tarjeta sin nombre', () => {
+    const fenix = fuentes(dibujar(React.createElement(FotoDelPrograma, { size: 40 })))[0];
+    const tarjeta = fuentes(dibujar(React.createElement(FotoDelGrupo, { size: 40 })))[0];
+
+    expect(fuentes(dibujar(React.createElement(AvatarDeChat, { tipo: 'global', nombre: 'Comunidad', size: 40 })))).toEqual([fenix]);
+    expect(fuentes(dibujar(React.createElement(AvatarDeChat, { tipo: 'celula', nombre: 'Fénix', size: 40 })))).toEqual([tarjeta]);
+    expect(fenix).not.toEqual(tarjeta);
+  });
+});
+
+describe('InfoDelChat: tarjetas con nombre, escribirle al mentor y la ficha (D-206, D-207)', () => {
+  const RUTA = (id: string) => `/api/v1/chat/conversations/g-1/miembros/${id}/foto`;
+  const mentor = { id: 'u-ricardo', nombre: 'Ricardo Palomino', avatarUrl: 'https://s3/avatares/ricardo.jpg', fotoPath: RUTA('u-ricardo') };
+  const miembros = [
+    { traineeId: 'u-e2e-1', fullName: 'E2E Libre 01', avatarUrl: null, isSelf: false, photoPath: RUTA('u-e2e-1') },
+    { traineeId: 'u-e2e-2', fullName: 'E2E Libre 02', avatarUrl: 'https://s3/avatares/e2e-2.jpg', isSelf: false, photoPath: null },
+  ];
+  const dibujarInfo = (yoId: string, acciones: { abrir?: () => void; ficha?: () => void } = {}) =>
+    dibujar(
+      React.createElement(InfoDelChat, {
+        tipo: 'celula',
+        titulo: 'Info. del grupo',
+        nombre: 'Grupo Fénix (prueba)',
+        subtitulo: 'Grupo · 3 integrantes',
+        integrantes: { filas: integrantesDeLaInfo({ mentor, miembros, yoId }), cifra: 3, cargando: false, error: null },
+        onVolver: () => undefined,
+        onAbrirChatCon: acciones.abrir ?? (() => undefined),
+        onVerFicha: acciones.ficha ?? (() => undefined),
+      })
+    );
+
+  it('con la ruta, la tarjeta pedida con la sesión y NO la foto subida; sin la ruta, la foto subida', () => {
+    const pedidas = fuentes(dibujarInfo('u-e2e-1')).filter(
+      (f): f is { uri: string; headers?: Record<string, string> } => typeof f === 'object' && f !== null && 'uri' in f
+    );
+
+    const deRicardo = pedidas.find(f => f.uri.endsWith(RUTA('u-ricardo')));
+    expect(deRicardo?.headers).toEqual({ 'X-Auth-Token': 'sesion-de-prueba' });
+    expect(pedidas.some(f => f.uri.endsWith(RUTA('u-e2e-1')))).toBe(true);
+    expect(pedidas.some(f => f.uri === 'https://s3/avatares/ricardo.jpg')).toBe(false);
+    expect(pedidas.some(f => f.uri === 'https://s3/avatares/e2e-2.jpg')).toBe(true);
+  });
+
+  it('el aprendiz le escribe a su mentor desde la info, y no ve «Ver ficha»', () => {
+    const abrir = jest.fn();
+    const raiz = dibujarInfo('u-e2e-1', { abrir });
+
+    const alMentor = raiz.root.findAll(n => n.props.accessibilityLabel === 'Escribirle a Ricardo Palomino, Mentor' && !!n.props.onPress);
+    act(() => alMentor[0].props.onPress());
+    expect(abrir).toHaveBeenCalledWith('u-ricardo');
+    expect(textos(raiz)).not.toContain('Ver ficha');
+  });
+
+  it('el mentor de este grupo se ve como «Tú» y ve «Ver ficha» en cada aprendiz, con el 1 a 1 al lado', () => {
+    const abrir = jest.fn();
+    const ficha = jest.fn();
+    const raiz = dibujarInfo('u-ricardo', { abrir, ficha });
+
+    expect(textos(raiz)).toContain('Tú');
+    const botones = raiz.root.findAll(n => typeof n.props.accessibilityLabel === 'string' && n.props.accessibilityLabel.startsWith('Ver la ficha de') && !!n.props.onPress);
+    expect(botones.map(n => n.props.accessibilityLabel)).toEqual(['Ver la ficha de E2E Libre 01', 'Ver la ficha de E2E Libre 02']);
+    act(() => botones[1].props.onPress());
+    expect(ficha).toHaveBeenCalledWith(expect.objectContaining({ usuarioId: 'u-e2e-2', nombreCompleto: 'E2E Libre 02' }));
+
+    const chats = raiz.root.findAll(n => n.props.accessibilityLabel === 'Escribirle a E2E Libre 01' && !!n.props.onPress);
+    act(() => chats[0].props.onPress());
+    expect(abrir).toHaveBeenCalledWith('u-e2e-1');
+    expect(raiz.root.findAll(n => n.props.accessibilityLabel === 'Escribirle a Tú, Mentor')).toHaveLength(0);
   });
 });
 

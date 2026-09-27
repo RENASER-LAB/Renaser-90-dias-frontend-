@@ -170,3 +170,37 @@ describe('integrantesDeLaInfo con la tarjeta de cada uno y el id del mentor (D-2
     expect(filas.map(f => f.fotoPath)).toEqual([null, null]);
   });
 });
+
+describe('integrantesDeLaInfo: escribirle al mentor y ver la ficha (D-207)', () => {
+  const mentor = { id: 'u-ricardo', nombre: 'Ricardo Palomino', avatarUrl: null, fotoPath: null };
+  const miembros: MiembroDelGrupo[] = [miembro('u-ana', 'Ana Pérez'), miembro('u-beto', 'Beto Díaz')];
+
+  it('el aprendiz le escribe a su mentor desde la info: la fila del mentor abre su 1 a 1', () => {
+    const filas = integrantesDeLaInfo({ mentor, miembros: [miembro('u-ana', 'Ana Pérez', true)], yoId: 'u-ana' });
+
+    expect(filas[0]).toMatchObject({ clave: 'mentor', usuarioId: 'u-ricardo', abreChat: true, abreFicha: false });
+  });
+
+  it('el mentor de ESTE grupo ve «Ver ficha» en cada aprendiz, y el 1 a 1 se queda', () => {
+    const filas = integrantesDeLaInfo({ mentor, miembros, yoId: 'u-ricardo' });
+
+    expect(filas.map(f => [f.nombre, f.abreChat, f.abreFicha])).toEqual([
+      ['Tú', false, false],
+      ['Ana Pérez', true, true],
+      ['Beto Díaz', true, true],
+    ]);
+  });
+
+  it('un aprendiz no ve «Ver ficha» de nadie: no se inventa un permiso', () => {
+    const filas = integrantesDeLaInfo({ mentor, miembros: [miembro('u-ana', 'Ana Pérez', true), miembro('u-beto', 'Beto Díaz')], yoId: 'u-ana' });
+
+    expect(filas.some(f => f.abreFicha)).toBe(false);
+  });
+
+  it('sin el id del mentor, ni 1 a 1 con él ni fichas: no se adivina quién es', () => {
+    const filas = integrantesDeLaInfo({ mentor: { ...mentor, id: undefined }, miembros, yoId: 'u-ricardo' });
+
+    expect(filas[0].abreChat).toBe(false);
+    expect(filas.some(f => f.abreFicha)).toBe(false);
+  });
+});

@@ -107,10 +107,22 @@ export type IntegranteDeLaInfo = {
   esYo: boolean;
   /**
    * Si tocarlo abre su chat 1 a 1. Es la acción que ya existía en la info (el botón «Chatear»,
-   * `abrirDMConIntegrante`) y con los mismos límites: no para uno mismo, ni para el mentor (el dueño
-   * todavía no lo había decidido). Quien puede o no escribirle a quién lo sigue decidiendo el servidor.
+   * `abrirDMConIntegrante`): para cualquiera menos uno mismo, el mentor incluido cuando se sabe su id
+   * (D-207, decisión del dueño: «Sí, agregarlo»; si el chat de dos de D-173 ya existe, el servidor
+   * devuelve ese). Quien puede o no escribirle a quién lo sigue decidiendo el servidor (cuentas
+   * activas, G-4).
+   *
+   * > **Corregido 2026-09-27 (D-207).** Decía «no para uno mismo, ni para el mentor, que no trae id»:
+   * > `/me/cells` no traía su id y el dueño todavía no había decidido si se le podía escribir desde acá.
    */
   abreChat: boolean;
+  /**
+   * D-207: si la fila lleva el botón «Ver ficha», que abre la misma ficha que «Mi grupo». Solo en los
+   * aprendices, y solo cuando quien mira es el mentor de ESTE grupo (su id de sesión es el del
+   * mentor): es a quien el servidor le sirve la ficha (acompañante vigente del grupo) y quien ve esta
+   * lista, junto con los aprendices. No se inventa un permiso por rol.
+   */
+  abreFicha: boolean;
 };
 
 /**
@@ -124,27 +136,14 @@ export function integrantesDeLaInfo(params: {
   miembros: readonly MiembroDelGrupo[];
   /**
    * El id de la sesión. Si es el del mentor, su fila dice «Tú» (D-206: el mentor que miraba su propio
-   * grupo se veía como «Ricardo Palomino»). Los aprendices no lo necesitan: traen `isSelf`.
+   * grupo se veía como «Ricardo Palomino») y cada aprendiz lleva «Ver ficha» (D-207). Para los
+   * aprendices no hace falta: traen `isSelf`.
    */
   yoId?: string | null;
 }): IntegranteDeLaInfo[] {
-  const filas: IntegranteDeLaInfo[] = [];
-  const mentor = params.mentor;
-  if (mentor?.nombre) {
-    const mentorId = mentor.id?.trim() || null;
-    const esYo = mentorId !== null && mentorId === params.yoId;
-    filas.push({
-      clave: 'mentor',
-      usuarioId: mentorId,
-      nombre: esYo ? 'Tú' : mentor.nombre,
-      nombreCompleto: mentor.nombre,
-      avatarUrl: mentor.avatarUrl,
-      fotoPath: mentor.fotoPath?.trim() || null,
-      rol: 'Mentor',
-      esYo,
-      abreChat: false,
-    });
-  }
+  const delMentor = filaDelMentor(params.mentor, params.yoId);
+  const filas: IntegranteDeLaInfo[] = delMentor ? [delMentor] : [];
+  const yoSoyElMentor = delMentor?.esYo === true;
   const yo = params.miembros.filter(m => m.isSelf);
   const otros = params.miembros
     .filter(m => !m.isSelf)
@@ -160,7 +159,30 @@ export function integrantesDeLaInfo(params: {
       rol: 'Aprendiz',
       esYo: m.isSelf,
       abreChat: !m.isSelf,
+      abreFicha: yoSoyElMentor && !m.isSelf,
     });
   }
   return filas;
+}
+
+/**
+ * El mentor, si el grupo lo tiene (hay `mentorName`). Con su id (D-206) se sabe si es uno mismo —su
+ * fila dice «Tú»— y se le puede escribir (D-207); sin id no se adivina ninguna de las dos cosas.
+ */
+function filaDelMentor(mentor: MentorDelGrupo | null, yoId: string | null | undefined): IntegranteDeLaInfo | null {
+  if (!mentor?.nombre) return null;
+  const mentorId = mentor.id?.trim() || null;
+  const esYo = mentorId !== null && mentorId === yoId;
+  return {
+    clave: 'mentor',
+    usuarioId: mentorId,
+    nombre: esYo ? 'Tú' : mentor.nombre,
+    nombreCompleto: mentor.nombre,
+    avatarUrl: mentor.avatarUrl,
+    fotoPath: mentor.fotoPath?.trim() || null,
+    rol: 'Mentor',
+    esYo,
+    abreChat: mentorId !== null && !esYo,
+    abreFicha: false,
+  };
 }

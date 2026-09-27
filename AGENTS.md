@@ -82,7 +82,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
         «Tú» y el resto por nombre, cada uno con su marca («Mentor», «Aprendiz»). La cifra es la
         de la cabecera (aprendices + mentor). Tocar a un compañero abre su 1 a 1 con la acción que
         ya existía (`abrirDMConIntegrante`, el botón «Chatear» de antes); al mentor no, porque el
-        grupo no trae su id: no se inventan permisos. Ninguna sección sin datos detrás (ni
+        grupo no trae su id: no se inventan permisos (*corregido el mismo día, D-207: el dueño decidió
+        que sí se le escribe al mentor desde acá, y `/me/cells` ya trae su id; ver el punto de D-207*). Ninguna sección sin datos detrás (ni
         «archivos» ni «descripción»). Lógica en `chat/utils/infoDelChat.ts`. El desplegable de
         integrantes de la tarjeta de Tribu (`FilaIntegrante`) no cambia.
       * **La lista de chats va por el último mensaje** (confirmado por el dueño): las dos secciones
@@ -154,9 +155,29 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
         * No cambian: las burbujas del grupo (solo el nombre, sin avatar), el desplegable de
           integrantes de la tarjeta de Tribu (`FilaIntegrante`, con la foto subida), el perfil, «Mi
           grupo» ni el panel de admin. El soporte no tiene lista de integrantes en la app.
+      * **Desde la info del grupo, el aprendiz le escribe a su mentor y el mentor abre la ficha de
+        cada aprendiz** (decisiones del dueño en la página de decisiones, mismo día; D-207 del
+        backend, sin cambios en el servidor). Escribirle al mentor: «Sí, agregarlo». La ficha:
+        «Agregar la ficha desde la info», con la nota «El público es objetivo lo mejor visible
+        posible».
+        * La fila del mentor abre su 1 a 1 con la misma acción que la de un compañero
+          (`abrirDMConIntegrante` → `POST /api/v1/chat/conversations/direct`): si el chat de dos de
+          D-173 ya existe, el servidor devuelve ese. Quién puede escribirle a quién lo decide el
+          servidor (cuentas activas, G-4): si no lo abre, la app avisa con su respuesta (antes el
+          toque no hacía nada; vale también para los compañeros y el «Chatear» de Tribu).
+        * Cuando quien mira es el mentor de ESE grupo (su id de sesión es el `mentorId`), cada
+          aprendiz lleva debajo del nombre un botón grande con texto, «Ver ficha», y a la derecha el
+          ícono del 1 a 1 como botón aparte. Abre la misma ficha que «Mi grupo» (`AlumnoScreen`) con
+          el id de ESE grupo, y «←» vuelve a la info (`mentor/utils/alumnoDesdeLaInfo.ts`: el alumno
+          del padrón de «Mi grupo» si es el mismo grupo; si no, uno armado con el id y el nombre, con
+          lo de seguimiento en `null`). El «Escribirle» de esa ficha abre el 1 a 1 y cierra la ficha y
+          la info, para que no tapen el chat pedido. No es un permiso nuevo: la ficha la sirve el servidor al
+          acompañante vigente del grupo, y la lista de la info solo la ven los aprendices y el mentor
+          del grupo; un administrador no la ve, así que no ve el botón.
       En `ComunidadScreen.tsx` solo cambian los campos opcionales `esDelPrograma`, `rolDelOtro` y
       `fotoPath` (este último se pasa a la cabecera y a la info), el id y la tarjeta del mentor y el id
-      de la sesión que recibe la lista de la info (D-206), la
+      de la sesión que recibe la lista de la info (D-206), la ficha abierta desde la info y el aviso
+      cuando el servidor no abre un 1 a 1 (D-207), la
       lista de mensajes, el bloque de la info, que el flotante del acompañante siga escondido con
       la info abierta y los disparos del refresco de la lista (volver de un chat, foco, deslizar);
       envío, fotos, audios, evidencia y la tarjeta de Tribu siguen por el mismo camino.
