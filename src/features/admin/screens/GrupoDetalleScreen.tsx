@@ -11,6 +11,7 @@ import { useTheme } from '../../../theme/ThemeContext';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
 import { obtenerFotoDelGrupo, type FotoDelGrupo } from '../../community/api/fotoDelGrupoApi';
 import { CambiarFotoDelGrupo } from '../../community/components/CambiarFotoDelGrupo';
+import { esAdministracionDeGrupos } from '../../chat/utils/infoDelChat';
 import {
   agregarAprendiz,
   sumarAprendizAGrupo,
@@ -71,10 +72,12 @@ export function GrupoDetalleScreen({
   const { horizontalPadding, contentMaxWidth } = useResponsive();
 
   const [grupo, setGrupo] = useState<GrupoDetalleApi | null>(null);
-  /* D-212: la foto del grupo la cambian el ADMIN y el mentor de ese grupo. Acá, el ADMIN: el
-     Alquimista entra a este panel pero el dueño no lo nombró, y el servidor le respondería 403. */
+  /* D-212: la foto del grupo la cambian el ADMIN, el Alquimista y el mentor de ese grupo. Acá, ADMIN y
+     Alquimista.
+     > Corregido 2026-09-27: decía «Acá, el ADMIN: el Alquimista entra a este panel pero el dueño no lo
+     > nombró». En la página de decisiones el dueño lo sumó («sí»). */
   const { user } = useAuth();
-  const esAdmin = user?.role?.toUpperCase() === 'ADMIN';
+  const esAdmin = esAdministracionDeGrupos(user?.role);
   const [fotoDelGrupo, setFotoDelGrupo] = useState<FotoDelGrupo | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
