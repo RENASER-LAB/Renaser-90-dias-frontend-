@@ -15,6 +15,24 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
   * `data/`: Constantes, cláusulas, configuraciones estáticas.
 * **Componentes de UI Atómicos**: Utiliza componentes compartidos bajo `src/components/` (`FormField`, `GoldButton`, `SliderRating`, `Checkbox`, `SignatureCanvas`, `Icon`).
 * **Integridad del Core**: NUNCA alterar, romper ni desconfigurar las pantallas existentes ni los tabs principales (`Hoy`, `Plan`, `Training`, `Comunidad`, `Yo`).
+  * **Excepción autorizada por el dueño del producto — 2026-09-26 — tabs `Training`, `Comunidad`
+    y `Hoy`, velocidad (V-1..V-4 de `docs/specs/RETROALIMENTACION_2026-09-26.md` del backend).**
+    Pedido del dueño con la retroalimentación de ese día: Muro y Training tardaban ~3 s. **No cambia
+    nada visual**; cambia cuándo y cuántas veces se pide al backend:
+    * **`Training`** abre con UNA ronda de seis pedidos (`features/training/api/cargarEntrenamiento.ts`);
+      antes eran diez en dos rondas en serie, con `GET /api/v1/habits` tres veces. Después de
+      completar o sellar, la tarjeta se marca en cuanto el servidor confirma y el refresco es
+      silencioso: el esqueleto solo aparece en la primera carga.
+    * **`Comunidad`** abre con `GET /api/v1/wall` y `/home`; cursos, ranking, conversaciones,
+      directorio, célula, grupos y categorías se piden la primera vez que se abre su sección, el
+      compositor o la hoja de compartir (`features/community/utils/cargaPorSeccion.ts`). El Muro es
+      una `FlatList` y la tarjeta salió a `features/community/components/TarjetaPublicacionMuro.tsx`
+      (mismo JSX, en `memo`); ya no existe `setPostOffsets`: llegar a la publicación desde Hoy usa
+      `scrollToIndex`.
+    * **`Hoy`** reusa la última lectura del Muro durante 2 minutos en vez de repedir la página
+      entera en cada foco (`useUltimaPublicacionMuro`); publicar la invalida.
+    Una excepción puntual **no abre** los tabs: cualquier otro cambio sobre los cinco principales
+    vuelve a necesitar autorización explícita.
   * **Excepción autorizada por el dueño del producto — 2026-09-26 — tabs `Training` y `Hoy`,
     registro con foto.** Decisiones del dueño ese día:
     * **`Training` — los hábitos que EXIGEN evidencia abren la cámara directo** (solo foto, también

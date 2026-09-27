@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { mensajeDeError } from '../../../services/http/apiClient';
 import * as celulaApi from '../api/celulaApi';
@@ -14,7 +14,9 @@ import type { CellMember, MiCelulaInfo } from '../types/community.types';
  * `Promise.all` porque en la práctica ambas fallan o funcionan juntas — comparten el mismo guard
  * de autorización en el backend, `requireActorActivo`).
  */
-export function useMiCelula() {
+export function useMiCelula(activo = true) {
+  // `activo` (V-3, 26/09/2026): Comunidad lo pasa en `false` hasta que se abre la sección que
+  // usa esto, para que no compita con el Muro al abrir. Una vez pedido no se vuelve a pedir solo.
   const [miCelula, setMiCelula] = useState<MiCelulaInfo | null>(null);
   const [miembros, setMiembros] = useState<CellMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,9 +39,12 @@ export function useMiCelula() {
     }
   }, []);
 
+  const yaPidio = useRef(false);
   useEffect(() => {
+    if (!activo || yaPidio.current) return;
+    yaPidio.current = true;
     void recargar();
-  }, [recargar]);
+  }, [activo, recargar]);
 
   return { miCelula, miembros, loading, error, recargar };
 }

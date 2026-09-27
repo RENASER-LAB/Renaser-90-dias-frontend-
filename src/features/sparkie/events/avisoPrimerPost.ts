@@ -8,8 +8,9 @@
  * seguridad (por si el post se publicó desde otro lado, o la app se cerró en el medio).
  *
  * Es un emisor de 15 líneas y no una librería nueva ni un contexto global a propósito: el único
- * emisor es `ComunidadScreen` y el único oyente es `useArranqueGuiado`. Meter una dependencia o un
- * provider para esto sería más caro que el problema.
+ * emisor es `ComunidadScreen` y los oyentes son `useArranqueGuiado` y, desde el 26/09/2026,
+ * `useUltimaPublicacionMuro` (Hoy), que con este aviso da por vencida su última lectura del Muro.
+ * Meter una dependencia o un provider para esto sería más caro que el problema.
  */
 
 type Oyente = () => void;

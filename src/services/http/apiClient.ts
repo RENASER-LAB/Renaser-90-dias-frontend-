@@ -1,6 +1,7 @@
 import { API_CONFIG } from '../../config/apiConfig';
 import { almacenamientoSeguro } from '../storage/almacenamientoSeguro';
 import { registrarHoraDelServidor } from './relojServidor';
+import { registrarPedido } from './medicionDePedidos';
 
 /**
  * Cliente HTTP contra el backend Java (Spring Boot).
@@ -165,6 +166,11 @@ export async function apiFetch<T>(ruta: string, opciones: OpcionesPeticion = {})
   const tokenEnviado = conSesion ? tokenSesion : null;
   if (tokenEnviado) {
     headers[HEADER_SESION] = tokenEnviado;
+  }
+
+  // Solo en desarrollo: alimenta la medición de pedidos por pantalla (`useMedicionDePantalla`).
+  if (__DEV__) {
+    registrarPedido(`${method} ${ruta}`);
   }
 
   let respuesta: Response;

@@ -10,9 +10,9 @@ import {
   Image,
   Share,
   KeyboardAvoidingView,
+  FlatList,
 } from 'react-native';
-// Solo tipos del evento de scroll: `import type` se borra al compilar y no agrega nada al bundle.
-import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
+import type { ListRenderItemInfo } from 'react-native';
 import { Alert } from '../components/Alerta';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -24,6 +24,7 @@ import { ChatDelCurso } from '../features/renasia/components/ChatDelCurso';
 import { useProgramaDia } from '../features/programa/hooks/useProgramaDia';
 import { useResponsive } from '../theme/responsive';
 import { useSystemBackHandler } from '../hooks/useSystemBackHandler';
+import { useMedicionDePantalla } from '../hooks/useMedicionDePantalla';
 import { useCelulaQueAcompano } from '../features/mentor/hooks/useCelulaQueAcompano';
 import { useEsMentor } from '../features/mentor/hooks/useEsMentor';
 import { AlumnoScreen } from '../features/mentor/screens/AlumnoScreen';
@@ -39,15 +40,22 @@ import { useWallReactions } from '../features/community/hooks/useWallReactions';
 import { useGruposDelAprendiz, useIntegrantesDelGrupo } from '../features/community/hooks/useGruposDelAprendiz';
 import { useMiCelula } from '../features/community/hooks/useMiCelula';
 import { TextoConEnlaces } from '../features/academy/components/TextoConEnlaces';
-import { estaCercaDelFinal } from '../features/community/utils/cercaDelFinal';
 import { nombreVisibleDeGrupo } from '../features/community/utils/nombreDeGrupo';
 import { useCategoriasMuro } from '../features/community/hooks/useCategoriasMuro';
+import {
+  acumularRecursos,
+  NINGUN_RECURSO,
+  recursosQueNecesita,
+  type RecursosPedidos,
+} from '../features/community/utils/cargaPorSeccion';
 import { PodioRanking, EntradaEscalonada } from '../features/community/components/PodioRanking';
 import { FilaIntegrante, type IntegranteDeGrupo } from '../features/community/components/FilaIntegrante';
 import * as wallApi from '../features/community/api/wallApi';
 import { elegirYNormalizarFotoMuro, type FotoMuroNormalizada } from '../features/community/utils/normalizarImagen';
-import { FotoMuro } from '../features/community/components/FotoMuro';
-import { PROPORCION_POR_DEFECTO } from '../features/community/utils/proporcionImagen';
+import {
+  TarjetaPublicacionMuro,
+  type AccionesPublicacion,
+} from '../features/community/components/TarjetaPublicacionMuro';
 import { avisarPostPublicado } from '../features/sparkie/events/avisoPrimerPost';
 import { cerrarHabitoPostDiarioComunidad } from '../features/habits/api/postDiarioComunidad';
 import { avisarPostDiarioCerrado } from '../features/habits/events/avisoPostDiarioCerrado';
@@ -387,6 +395,11 @@ const SECCIONES: { id: SeccionComunidad; icon: IconName; label: string }[] = [
  * venga del servidor.
  */
 
+/** El aire entre dos publicaciones del Muro: el mismo `gap` que tenían dentro del `.map`. */
+function SeparadorDePublicaciones() {
+  return <View style={{ height: space.gap }} />;
+}
+
 export default function ComunidadScreen() {
   const { c, t, mode } = useTheme();
   // D-99: el chat dentro de un curso le dice a Sparkie en que dia del programa va la persona.
@@ -403,6 +416,14 @@ export default function ComunidadScreen() {
   const nombreUsuario = user?.name?.trim() || 'Tú';
   const primerNombreUsuario = nombreUsuario.split(' ')[0];
 
+  /*
+   * Qué recursos ya se pidieron (V-3, retroalimentación del 26/09/2026). Al abrir, solo el Muro y
+   * `/home`; el resto se pide la primera vez que se abre su sección, el compositor o la hoja de
+   * compartir, y queda pedido. Se ACUMULA más abajo, junto a `shareSheetPost`, porque depende de
+   * estados que se declaran después; acá arriba solo se lee. Ver `utils/cargaPorSeccion.ts`.
+   */
+  const [recursosPedidos, setRecursosPedidos] = useState<RecursosPedidos>(NINGUN_RECURSO);
+
   // Mentor asignado + integrantes de la célula — datos reales (GET /api/v1/me/cell y
   // GET /api/v1/me/cell/members), usados en la vista principal (sección MENTOR / TRIBU PRIVADA).
   const {
@@ -410,11 +431,11 @@ export default function ComunidadScreen() {
     miembros: companerosCelula,
     loading: celulaCargando,
     error: celulaError,
-  } = useMiCelula();
+  } = useMiCelula(recursosPedidos.celula);
   /* Todos los grupos de la persona, para poder responder por el que tenga abierto y no siempre por
      el principal (D-142). `useMiCelula` sigue alimentando la sección MENTOR / TRIBU de la pantalla
      principal, que habla de UN grupo y para eso es correcto. */
-  const { grupos } = useGruposDelAprendiz();
+  const { grupos } = useGruposDelAprendiz(recursosPedidos.grupos);
   const tieneMentor = miCelula?.assigned === true && !!miCelula.mentorName;
   const mentorTitulo = celulaCargando
     ? 'Cargando tu mentor...'
@@ -555,19 +576,16 @@ export default function ComunidadScreen() {
    * El hook se activa solo para mentores: para el resto no hace ni una llamada.
    */
   const esMentor = useEsMentor();
-  const celulaQueAcompano = useCelulaQueAcompano(esMentor);
+  // Solo para mentores, y recién cuando abren Tribu, que es donde está la entrada a su grupo.
+  const celulaQueAcompano = useCelulaQueAcompano(esMentor && recursosPedidos.grupoQueAcompano);
   const [vistaMentor, setVistaMentor] = useState<'ninguna' | 'celula' | 'alumno'>('ninguna');
   const [alumnoAbierto, setAlumnoAbierto] = useState<AlumnoConEstado | null>(null);
   // Derivados, no estados: agrupan las secciones que comparten un mismo contenedor de scroll o un
   // mismo sub-estado. Nunca se pueden prender dos a la vez, porque salen todos de `seccionActiva`.
   const inExclusiveResources = seccionActiva === 'classroom';
-  /**
-   * Las tres que se pintan dentro del mismo `ScrollView` (el que hasta 2026-09-07 era el
-   * sub-módulo "Eventos & Experiencias" con sus tres pestañas). Comparten contenedor y padding;
-   * el contenido de cada una se elige más abajo con `seccionActiva`.
-   */
-  const enMuroTestimoniosORanking =
-    seccionActiva === 'muro' || seccionActiva === 'testimonios' || seccionActiva === 'ranking';
+  /* Acá vivía `enMuroTestimoniosORanking`: las tres secciones compartían un mismo `ScrollView`.
+     Desde el 26/09/2026 (V-4) el Muro es una `FlatList` propia y Testimonios y Ranking siguen
+     juntos en su `ScrollView`; cada bloque pregunta por `seccionActiva` directamente. */
   /**
    * La pestaña Tribu: la tarjeta de tu gente, el listado de conversaciones, la sala de chat y la
    * ficha del grupo. Hasta el 2026-09-21 eran dos secciones (`celula` y `miembros`) que ya
@@ -611,7 +629,7 @@ export default function ComunidadScreen() {
     abrirConversacion,
     enviarMensajeTexto: enviarMensajeChatRemoto,
     compartirPublicacionDelMuro: compartirPublicacionEnChat,
-  } = useChatConversaciones(user?.id ?? null);
+  } = useChatConversaciones(user?.id ?? null, recursosPedidos.conversaciones);
   const [selectedMemberProfile, setSelectedMemberProfile] = useState<GroupMember | null>(null);
 
   /**
@@ -666,6 +684,8 @@ export default function ComunidadScreen() {
     cargandoMas: muroCargandoMas,
     hayMas: hayMasPublicaciones,
   } = useWallFeed();
+  // Solo en desarrollo: pedidos al montar y tiempo hasta ver el Muro (V-3, 26/09/2026).
+  useMedicionDePantalla('Muro', !muroCargando);
   const [expandedPosts, setExpandedPosts] = useState<Record<string, boolean>>({});
 
   /**
@@ -682,33 +702,24 @@ export default function ComunidadScreen() {
   /**
    * Lazy loading del Muro: la página siguiente se pide al acercarse al final.
    *
-   * Solo cuando el Muro es la sección activa — este `ScrollView` también contiene Cursos y
-   * Ranking, y bajar ahí no tiene por qué traer publicaciones.
-   *
-   * Es un `ScrollView` con `.map` y no una `FlatList`, que sería lo natural para una lista larga.
-   * Convertirlo es un cambio grande y arriesgado —esta pantalla mete varias secciones dentro del
-   * mismo contenedor— y no hacía falta para lo que se pidió: `estaCercaDelFinal` da el mismo
-   * disparo que `onEndReached` sin tocar la estructura. Queda anotado como el siguiente paso si el
-   * muro llega a tener miles de publicaciones, que es cuando la virtualización empieza a pagar.
+   * > **Corregido el 26/09/2026 (V-4).** Acá decía que el Muro era un `ScrollView` con `.map` y no
+   * > una `FlatList` porque convertirlo era "grande y arriesgado", y que quedaba como el siguiente
+   * > paso. Ese paso se dio: con decenas de publicaciones el `.map` montaba todas y el `onLayout`
+   * > de cada una re-renderizaba la pantalla. Ahora es `onEndReached` de la `FlatList`.
    */
-  const alDesplazarElMuro = useCallback(
-    (evento: NativeSyntheticEvent<NativeScrollEvent>) => {
-      if (seccionActiva !== 'muro' || !hayMasPublicaciones) return;
-      if (estaCercaDelFinal(evento.nativeEvent)) {
-        void cargarMasPublicaciones();
-      }
-    },
-    [seccionActiva, hayMasPublicaciones, cargarMasPublicaciones]
-  );
-  const [postOffsets, setPostOffsets] = useState<Record<string, number>>({});
+  const alLlegarAlFinalDelMuro = useCallback(() => {
+    if (!hayMasPublicaciones) return;
+    void cargarMasPublicaciones();
+  }, [hayMasPublicaciones, cargarMasPublicaciones]);
   const [publicacionPedida, setPublicacionPedida] = useState<string | null>(null);
   const [publicacionDestacada, setPublicacionDestacada] = useState<string | null>(null);
-  const muroScrollRef = useRef<ScrollView | null>(null);
+  const muroListaRef = useRef<FlatList<PostItem> | null>(null);
+  /** Reintentos de `scrollToIndex` hacia la publicación pedida, para no quedar en un bucle. */
+  const intentosScrollAPublicacion = useRef(0);
   const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
   const [commentPhotos, setCommentPhotos] = useState<Record<string, FotoMuroNormalizada | null>>({});
   const [expandedComments, setExpandedComments] = useState<Record<string, boolean>>({});
-  const EMOJIS_RAPIDOS = ['🔥', '👏', '💪', '⚡', '❤️', '🦅', '🎯', '🙌'];
 
   const handlePickCommentPhoto = async (postId: string) => {
     try {
@@ -725,7 +736,9 @@ export default function ComunidadScreen() {
   // (GET /api/v1/cursos + GET /api/v1/cursos/{id}/secciones) a través de `useCursos`.
   const navigation = useNavigation();
   const route = useRoute();
-  const { courses, loading: cursosCargando, error: cursosError, recargar: recargarCursos } = useCursos();
+  const { courses, loading: cursosCargando, error: cursosError, recargar: recargarCursos } = useCursos(
+    recursosPedidos.cursos
+  );
   const selectedCourse = selectedCourseId ? (courses.find(cu => cu.id === selectedCourseId) ?? null) : null;
   const [expandedCourseSummaries, setExpandedCourseSummaries] = useState<Record<string, boolean>>({});
 
@@ -845,7 +858,7 @@ export default function ComunidadScreen() {
     cargando: cargandoCategoriasMuro,
     error: errorCategoriasMuro,
     recargar: recargarCategoriasMuro,
-  } = useCategoriasMuro();
+  } = useCategoriasMuro(recursosPedidos.categorias);
   // Fotos ya elegidas de la galería y normalizadas (`utils/normalizarImagen.ts`), listas para
   // subir a S3 al publicar. Arranca vacío: el backend exige al menos una (Publicacion.MEDIA_MIN
   // = 1), así que ya no tiene sentido precargar nombres de archivo falsos.
@@ -920,6 +933,22 @@ export default function ComunidadScreen() {
   // Modal / Bottom Sheet de Compartir Publicación (Feed y Visor)
   const [shareSheetPost, setShareSheetPost] = useState<PostItem | null>(null);
 
+  /* Acumula lo que pide lo que está en pantalla (V-3). Es el patrón de React de "ajustar el estado
+     durante el render": si hay algo nuevo, React vuelve a renderizar en el acto, antes de pintar,
+     y los hooks de arriba ya reciben su `activo` en verdadero. Si no hay nada nuevo,
+     `acumularRecursos` devuelve el mismo objeto y no pasa nada. */
+  const recursosAcumulados = acumularRecursos(
+    recursosPedidos,
+    recursosQueNecesita({
+      seccion: seccionActiva,
+      componiendo: createPostModalVisible,
+      compartiendo: shareSheetPost !== null || imageViewerVisible,
+    })
+  );
+  if (recursosAcumulados !== recursosPedidos) {
+    setRecursosPedidos(recursosAcumulados);
+  }
+
   /**
    * Pertenece a una célula CON mentor asignado. Lo lee el compositor del Muro para saber si puede
    * ofrecer compartir en la célula.
@@ -933,7 +962,7 @@ export default function ComunidadScreen() {
   const tieneGrupo = miCelula?.assigned === true && tieneMentor;
 
   // Sub-módulo: Ranking Real del Backend
-  const { rankingData, loading: rankingCargando, error: rankingError } = useRanking();
+  const { rankingData, loading: rankingCargando, error: rankingError } = useRanking(recursosPedidos.ranking);
 
   /**
    * Qué tabla se está mirando. El backend manda las TRES en la misma respuesta
@@ -1313,18 +1342,34 @@ export default function ComunidadScreen() {
     (navigation as any).setParams({ abrirPublicacionId: undefined });
   }, [route.params, navigation, irASeccion]);
 
+  /* Lleva la lista hasta la publicación pedida desde Hoy. Antes se esperaba a que su tarjeta
+     informara su `y` por `onLayout`; con la `FlatList` alcanza con su índice, y si todavía no está
+     medida, `alFallarScrollAPublicacion` se acerca y reintenta. */
   useEffect(() => {
     if (!publicacionPedida || seccionActiva !== 'muro') return;
-    if (!posts.some(post => post.id === publicacionPedida)) return;
+    const indice = posts.findIndex(post => post.id === publicacionPedida);
+    if (indice < 0) return;
 
-    const offset = postOffsets[publicacionPedida];
-    if (offset === undefined) return;
-
+    intentosScrollAPublicacion.current = 0;
     requestAnimationFrame(() => {
-      muroScrollRef.current?.scrollTo({ y: Math.max(offset - 12, 0), animated: true });
+      muroListaRef.current?.scrollToIndex({ index: indice, animated: true, viewOffset: 12 });
     });
     setPublicacionPedida(null);
-  }, [postOffsets, posts, publicacionPedida, seccionActiva]);
+  }, [posts, publicacionPedida, seccionActiva]);
+
+  const alFallarScrollAPublicacion = useCallback(
+    (info: { index: number; averageItemLength: number }) => {
+      const lista = muroListaRef.current;
+      if (!lista || intentosScrollAPublicacion.current >= 5) return;
+      intentosScrollAPublicacion.current += 1;
+      // Se salta cerca con el alto promedio (eso monta esas tarjetas) y se reintenta exacto.
+      lista.scrollToOffset({ offset: info.averageItemLength * info.index, animated: false });
+      setTimeout(() => {
+        muroListaRef.current?.scrollToIndex({ index: info.index, animated: true, viewOffset: 12 });
+      }, 120);
+    },
+    []
+  );
 
   useEffect(() => {
     if (!leccionPedidaDeOtraPestana) return;
@@ -1863,6 +1908,91 @@ export default function ComunidadScreen() {
     .sort((a, b) => ORDEN_GRUPOS.indexOf(a.type) - ORDEN_GRUPOS.indexOf(b.type));
   const directos = conversations.filter(conv => conv.type === 'direct');
 
+  /*
+   * Lo que cada tarjeta del Muro le pide a la pantalla, en UN objeto que no cambia nunca (V-4).
+   * Si cambiara en cada render, `memo` de `TarjetaPublicacionMuro` no serviría de nada: todas las
+   * tarjetas se volverían a dibujar con cada "Like". Cada función reenvía a la versión MÁS NUEVA
+   * del manejador (`accionesVigentes`), así que no se queda con estado viejo.
+   */
+  const accionesVigentes = useRef<AccionesPublicacion | null>(null);
+  accionesVigentes.current = {
+    alternarExpandida: postId => setExpandedPosts(prev => ({ ...prev, [postId]: !prev[postId] })),
+    alternarComentarios: handleToggleComments,
+    alternarLike: postId => void handleToggleLike(postId),
+    compartir: handleSharePost,
+    verReacciones: postId => {
+      setReactionsModalVisible(true);
+      void cargarReacciones(postId);
+    },
+    abrirFotos: abrirVisorFotos,
+    recordarProporcion,
+    alternarComentarioExpandido: comentarioId =>
+      setExpandedComments(prev => ({ ...prev, [comentarioId]: !prev[comentarioId] })),
+    abrirFotoDeComentario: comentario => {
+      setImageViewerData({
+        authorName: comentario.author,
+        timeAgo: comentario.timeAgo,
+        postText: comentario.text,
+        images: [{ url: comentario.photoAttached! }],
+        initialIndex: 0,
+      });
+      setImageViewerVisible(true);
+    },
+    votarComentario: handleCommentVote,
+    agregarEmoji: (postId, emoji) =>
+      setCommentInputs(prev => ({ ...prev, [postId]: (prev[postId] || '') + emoji })),
+    quitarFotoComentario: postId => setCommentPhotos(prev => ({ ...prev, [postId]: null })),
+    elegirFotoComentario: postId => void handlePickCommentPhoto(postId),
+    escribirComentario: (postId, texto) => setCommentInputs(prev => ({ ...prev, [postId]: texto })),
+    enviarComentario: postId => void handleAddComment(postId),
+  };
+  const accionesPublicacion = useMemo<AccionesPublicacion>(
+    () => ({
+      alternarExpandida: id => accionesVigentes.current!.alternarExpandida(id),
+      alternarComentarios: id => accionesVigentes.current!.alternarComentarios(id),
+      alternarLike: id => accionesVigentes.current!.alternarLike(id),
+      compartir: id => accionesVigentes.current!.compartir(id),
+      verReacciones: id => accionesVigentes.current!.verReacciones(id),
+      abrirFotos: (post, indice) => accionesVigentes.current!.abrirFotos(post, indice),
+      recordarProporcion: (id, proporcion) => accionesVigentes.current!.recordarProporcion(id, proporcion),
+      alternarComentarioExpandido: id => accionesVigentes.current!.alternarComentarioExpandido(id),
+      abrirFotoDeComentario: comentario => accionesVigentes.current!.abrirFotoDeComentario(comentario),
+      votarComentario: (id, comentarioId) => accionesVigentes.current!.votarComentario(id, comentarioId),
+      agregarEmoji: (id, emoji) => accionesVigentes.current!.agregarEmoji(id, emoji),
+      quitarFotoComentario: id => accionesVigentes.current!.quitarFotoComentario(id),
+      elegirFotoComentario: id => accionesVigentes.current!.elegirFotoComentario(id),
+      escribirComentario: (id, texto) => accionesVigentes.current!.escribirComentario(id, texto),
+      enviarComentario: id => accionesVigentes.current!.enviarComentario(id),
+    }),
+    []
+  );
+
+  const renderPublicacion = useCallback(
+    ({ item }: ListRenderItemInfo<PostItem>) => (
+      <TarjetaPublicacionMuro
+        post={item}
+        expandida={!!expandedPosts[item.id]}
+        comentariosAbiertos={!!openComments[item.id]}
+        destacada={publicacionDestacada === item.id}
+        proporcion={proporcionesFoto[item.id]}
+        textoComentario={commentInputs[item.id] || ''}
+        fotoComentario={commentPhotos[item.id]}
+        comentariosExpandidos={expandedComments}
+        acciones={accionesPublicacion}
+      />
+    ),
+    [
+      expandedPosts,
+      openComments,
+      publicacionDestacada,
+      proporcionesFoto,
+      commentInputs,
+      commentPhotos,
+      expandedComments,
+      accionesPublicacion,
+    ]
+  );
+
   /* Si esta persona ACOMPAÑA un grupo. Se calcula acá y no dentro del JSX porque la pestaña Tribu
      lo pregunta dos veces: para pintar la entrada al grupo que acompaña y para saber si la
      tarjeta de la tribu es el primer bloque de la pantalla (y entonces lleva menos aire arriba). */
@@ -1996,30 +2126,22 @@ export default function ComunidadScreen() {
       </View>
       )}
 
-      {/* ========================================================================= */}
-      {/* SECCIONES MURO, TESTIMONIOS Y RANKING (comparten contenedor de scroll)     */}
-      {/* ========================================================================= */}
-      {enMuroTestimoniosORanking && (
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          ref={muroScrollRef}
-          onScroll={alDesplazarElMuro}
-          /* 16 ms = una vez por cuadro. Con el valor por omisión el evento llega tan espaciado que
-             un desplazamiento rápido puede saltarse la zona de disparo entera. */
-          scrollEventThrottle={16}
-          contentContainerStyle={[
-            styles.content,
-            {
-              paddingHorizontal: horizontalPadding,
-              maxWidth: contentMaxWidth,
-              alignSelf: isTablet ? 'center' : 'stretch',
-              width: isTablet ? '100%' : undefined,
-            },
-          ]}
-          showsVerticalScrollIndicator={false}
-        >
-          {seccionActiva === 'muro' && (
-            <View style={{ gap: space.gap, paddingTop: 10, paddingBottom: 28 }}>
+      {/*
+        MURO: una `FlatList` desde el 26/09/2026 (V-4). Antes compartía un `ScrollView` con
+        Testimonios y Ranking y pintaba TODAS las publicaciones con `.map`; cada tarjeta avisaba su
+        posición con `onLayout` → `setPostOffsets`, que re-renderizaba la pantalla entera una vez
+        por publicación. Esa posición existía solo para llegar a la publicación que se abre desde
+        Hoy: ahora eso lo hace `scrollToIndex` (ver `publicacionPedida`). La paginación pasó de
+        `onScroll` + `estaCercaDelFinal` a `onEndReached`, que es lo mismo sin medir a mano.
+      */}
+      {seccionActiva === 'muro' && (
+        <FlatList
+          ref={muroListaRef}
+          data={posts}
+          keyExtractor={post => post.id}
+          renderItem={renderPublicacion}
+          ListHeaderComponent={
+            <View style={{ gap: space.gap, paddingTop: 10, marginBottom: space.gap }}>
               {/* Botón Ventana Externa de Publicación */}
               <Pressable
                 onPress={() => setCreatePostModalVisible(true)}
@@ -2060,390 +2182,11 @@ export default function ComunidadScreen() {
                   Todavía no hay publicaciones. ¡Sé el primero en compartir tu victoria!
                 </Text>
               )}
-
-              {/* Lista de Publicaciones */}
-              {posts.map(post => {
-                const isExpanded = expandedPosts[post.id];
-                const commentsVisible = openComments[post.id];
-
-                return (
-                  <View
-                    key={post.id}
-                    onLayout={event => {
-                      const y = event.nativeEvent.layout.y;
-                      setPostOffsets(prev => (prev[post.id] === y ? prev : { ...prev, [post.id]: y }));
-                    }}
-                    style={[
-                      styles.postCard,
-                      {
-                        borderColor: publicacionDestacada === post.id ? c.gold : c.border,
-                        backgroundColor: c.cardBg,
-                      },
-                      // Único cambio visual del post optimista: atenuado mientras se confirma. Se
-                      // suma como estilo al lado de los que ya estaban, sin tocar `styles.postCard`
-                      // ni reestructurar el JSX de la tarjeta.
-                      post.pendiente && { opacity: 0.55 },
-                    ]}
-                  >
-                    {/* Header del Post */}
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                        <View style={[styles.avatarCircle, { backgroundColor: c.goldWash }]}>
-                          <Text style={{ fontSize: 14 }}>{post.avatar}</Text>
-                        </View>
-                        <View>
-                          <Text style={[t.cardTitle, { color: c.textStrong }]}>{post.author}</Text>
-                          <Text style={[t.small, { color: c.micro }]}>
-                            {post.cell} · {post.timeAgo}
-                          </Text>
-                        </View>
-                      </View>
-                      {/* Sin día no hay insignia. Dibujar "Día 0" era peor que no dibujar nada. */}
-                      {post.diaPrograma !== null ? (
-                        <View style={[styles.dayBadge, { backgroundColor: c.goldWash }]}>
-                          <Text style={[t.micro, { color: c.goldInk, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>
-                            Día {post.diaPrograma}
-                          </Text>
-                        </View>
-                      ) : null}
-                    </View>
-
-                    {/* Texto del Post con "Ver más..." */}
-                    <View style={{ marginTop: 8 }}>
-                      <Text
-                        numberOfLines={isExpanded ? undefined : 3}
-                        style={[t.body, { color: c.text }]}
-                      >
-                        {post.text}
-                      </Text>
-                      {post.text.length > 120 && (
-                        <Pressable
-                          onPress={() => setExpandedPosts(prev => ({ ...prev, [post.id]: !prev[post.id] }))}
-                          style={{ minHeight: 48, justifyContent: 'center' }}
-                        >
-                          <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
-                            {isExpanded ? 'Ver menos' : 'Ver más...'}
-                          </Text>
-                        </Pressable>
-                      )}
-                    </View>
-
-                    {/* Galería Autodetectada */}
-                    {post.media.length > 0 && (
-                      <View style={[styles.mediaGridContainer, { marginTop: 10 }]}>
-                        {post.media.length === 1 ? (
-                          <Pressable
-                            onPress={() => abrirVisorFotos(post, 0)}
-                            style={[
-                              styles.mediaSingleBox,
-                              // La forma de la caja la da la foto, no un alto fijo: mientras no se
-                              // sabe, cuadrada; al cargar, la proporción real que avisó `FotoMuro`.
-                              { aspectRatio: proporcionesFoto[post.id] ?? PROPORCION_POR_DEFECTO },
-                              { backgroundColor: c.placeholderA },
-                            ]}
-                          >
-                            <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
-                              {post.media[0].title}
-                            </Text>
-                            {/* Overlay DESPUÉS del texto a propósito: si la foto carga, lo tapa; si es
-                                video o falla, no dibuja nada y el texto de siempre queda visible. */}
-                            <FotoMuro
-                              url={post.media[0].url}
-                              mimeType={post.media[0].mimeType}
-                              radioBorde={12}
-                              colorFondo={c.cardBgAlt}
-                              ajuste="contain"
-                              onProporcion={proporcion => recordarProporcion(post.id, proporcion)}
-                            />
-                          </Pressable>
-                        ) : post.media.length === 2 ? (
-                          <View style={{ flexDirection: 'row', gap: 6 }}>
-                            {post.media.map((m, idx) => (
-                              <Pressable
-                                key={idx}
-                                onPress={() => abrirVisorFotos(post, idx)}
-                                style={[styles.mediaHalfBox, { backgroundColor: c.placeholderA }]}
-                              >
-                                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
-                                  {m.title}
-                                </Text>
-                                <FotoMuro url={m.url} mimeType={m.mimeType} radioBorde={10} colorFondo={c.cardBgAlt} />
-                              </Pressable>
-                            ))}
-                          </View>
-                        ) : (
-                          // Mosaico de 3 o más: proporción en vez de alto fijo, para que crezca con
-                          // el ancho de la tarjeta igual que en Instagram/Facebook. Con 130 px
-                          // fijos las tres fotos quedaban en una tira demasiado baja.
-                          <View style={{ flexDirection: 'row', gap: 6, aspectRatio: 1.5 }}>
-                            <Pressable
-                              onPress={() => abrirVisorFotos(post, 0)}
-                              style={[styles.mediaLargeLeft, { backgroundColor: c.placeholderA }]}
-                            >
-                              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
-                                {post.media[0].title}
-                              </Text>
-                              <FotoMuro
-                                url={post.media[0].url}
-                                mimeType={post.media[0].mimeType}
-                                radioBorde={10}
-                                colorFondo={c.cardBgAlt}
-                              />
-                            </Pressable>
-                            <View style={{ flex: 1, gap: 6 }}>
-                              {post.media.slice(1, 3).map((m, idx) => (
-                                <Pressable
-                                  key={idx}
-                                  onPress={() => abrirVisorFotos(post, idx + 1)}
-                                  style={[styles.mediaSmallRight, { backgroundColor: c.placeholderA }]}
-                                >
-                                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
-                                    {m.title}
-                                  </Text>
-                                  <FotoMuro url={m.url} mimeType={m.mimeType} radioBorde={8} colorFondo={c.cardBgAlt} />
-                                </Pressable>
-                              ))}
-                            </View>
-                          </View>
-                        )}
-                      </View>
-                    )}
-
-                    {/* Solo el recuento de comentarios. Las reacciones bajaron a la fila de
-                        acciones, al MISMO nivel que Like, Comentar y Compartir. */}
-                    <View style={styles.reactionsSummaryRow}>
-                      <Pressable
-                        onPress={() => handleToggleComments(post.id)}
-                        hitSlop={8}
-                        style={{ minHeight: 48, justifyContent: 'center' }}
-                      >
-                        <Text style={[t.small, { color: c.textSoft }]}>
-                          {post.comments.length} Comentarios
-                        </Text>
-                      </Pressable>
-                    </View>
-
-                    {/* Botones de Acción: Like, Comentar, Compartir */}
-                    <View style={[styles.actionButtonsRow, { borderTopColor: c.divider }]}>
-                      <Pressable
-                        onPress={() => handleToggleLike(post.id)}
-                        accessibilityRole="button"
-                        accessibilityLabel={post.userReaction === 'like' ? 'Quitar reaccion' : 'Reaccionar a la publicacion'}
-                        accessibilityState={{ selected: post.userReaction === 'like' }}
-                        style={({ pressed }) => [styles.actionBtn, pressed && { backgroundColor: c.goldWash }]}
-                      >
-                        <Icon
-                          name="thumbsUp"
-                          size={14}
-                          color={post.userReaction === 'like' ? c.success : c.textSoft}
-                        />
-                        <Text
-                          numberOfLines={1}
-                          style={[
-                            t.micro,
-                            {
-                              color: post.userReaction === 'like' ? c.success : c.textSoft,
-                              fontFamily: 'Jost_700Bold',
-                              fontSize: 10.5,
-                            },
-                          ]}
-                        >
-                          Like
-                        </Text>
-                      </Pressable>
-
-                      <Pressable
-                        onPress={() => handleToggleComments(post.id)}
-                        accessibilityRole="button"
-                        accessibilityLabel="Ver y escribir comentarios"
-                        style={({ pressed }) => [styles.actionBtn, pressed && { backgroundColor: c.goldWash }]}
-                      >
-                        <Icon name="chat" size={14} color={c.goldInk} />
-                        <Text numberOfLines={1} style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 10.5 }]}>
-                          Comentar
-                        </Text>
-                      </Pressable>
-
-                      <Pressable
-                        onPress={() => handleSharePost(post.id)}
-                        accessibilityRole="button"
-                        accessibilityLabel="Compartir la publicacion"
-                        style={({ pressed }) => [styles.actionBtn, pressed && { backgroundColor: c.goldWash }]}
-                      >
-                        <Icon name="share" size={14} color={c.textSoft} />
-                        <Text numberOfLines={1} style={[t.micro, { color: c.textSoft, fontFamily: 'Jost_700Bold', fontSize: 10.5 }]}>
-                          Compartir
-                        </Text>
-                      </Pressable>
-
-                      {/* Las reacciones, a la derecha y en la MISMA fila que las tres acciones.
-                          `marginLeft: 'auto'` las empuja al borde sin estirar los botones.
-                          La chapa ES el botón: ya no hay un "Ver quién reaccionó ›" que lo
-                          explique, así que lleva su propia etiqueta para el lector de pantalla. */}
-                      <Pressable
-                        onPress={() => {
-                          setReactionsModalVisible(true);
-                          void cargarReacciones(post.id);
-                        }}
-                        accessibilityRole="button"
-                        accessibilityLabel={
-                          post.likes === 1
-                            ? 'Una reacción. Toca para ver quién reaccionó'
-                            : `${post.likes} reacciones. Toca para ver quién reaccionó`
-                        }
-                        hitSlop={10}
-                        style={styles.rxCountBotonFila}
-                      >
-                        <View style={[styles.rxCountBadge, { backgroundColor: c.successWash }]}>
-                          <Icon name="thumbsUp" size={11} color={c.success} />
-                          <Text style={[styles.rxCountTexto, { color: c.success }]}>{post.likes}</Text>
-                        </View>
-                      </Pressable>
-                    </View>
-
-                    {/* Comentarios con Fotos */}
-                    {commentsVisible && (
-                      <View style={[styles.commentsSection, { borderTopColor: c.divider }]}>
-                        {post.comments.map(cItem => {
-                          const isLong = cItem.text.length > 90;
-                          const isExpanded = !!expandedComments[cItem.id];
-                          const displayText = isLong && !isExpanded ? cItem.text.slice(0, 90) + '...' : cItem.text;
-
-                          return (
-                            <View key={cItem.id} style={[styles.commentCard, { backgroundColor: c.cardBgAlt }]}>
-                              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <Text style={[t.cardTitle, { color: c.goldInk, fontSize: 14 }]}>
-                                  {cItem.author} {cItem.role ? `(${cItem.role})` : ''}
-                                </Text>
-                                <Text style={[t.micro, { color: c.textSoft }]}>{cItem.timeAgo}</Text>
-                              </View>
-
-                              <Text style={[t.body, { color: c.text, marginTop: 6 }]}>
-                                {displayText}
-                              </Text>
-
-                              {isLong && (
-                                <Pressable
-                                  onPress={() => setExpandedComments(prev => ({ ...prev, [cItem.id]: !prev[cItem.id] }))}
-                                  hitSlop={6}
-                                  style={{ minHeight: 48, justifyContent: 'center' }}
-                                >
-                                  <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
-                                    {isExpanded ? 'Ver menos' : 'Ver más...'}
-                                  </Text>
-                                </Pressable>
-                              )}
-
-                              {cItem.photoAttached && (
-                                <Pressable
-                                  onPress={() => {
-                                    setImageViewerData({
-                                      authorName: cItem.author,
-                                      timeAgo: cItem.timeAgo,
-                                      postText: cItem.text,
-                                      images: [{ url: cItem.photoAttached! }],
-                                      initialIndex: 0,
-                                    });
-                                    setImageViewerVisible(true);
-                                  }}
-                                  style={styles.commentPhotoBox}
-                                >
-                                  <Image
-                                    source={{ uri: cItem.photoAttached }}
-                                    style={styles.commentPhotoImage}
-                                    resizeMode="cover"
-                                  />
-                                </Pressable>
-                              )}
-
-                              <View style={{ flexDirection: 'row', gap: 12, marginTop: 6, alignItems: 'center' }}>
-                                <Pressable
-                                  onPress={() => handleCommentVote(post.id, cItem.id)}
-                                  style={{ flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 48 }}
-                                >
-                                  <Icon name="thumbsUp" size={13} color={c.success} />
-                                  <Text style={[t.small, { color: cItem.userReaction === 'like' ? c.success : c.textSoft }]}>
-                                    {cItem.likes}
-                                  </Text>
-                                </Pressable>
-                              </View>
-                            </View>
-                          );
-                        })}
-
-                        {/* Input de Comentario con Emojis y Foto Real */}
-                        <View style={{ gap: 6, marginTop: 8 }}>
-                          {/* Tira de Emojis Rápidos */}
-                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4, paddingHorizontal: 6 }}>
-                            {EMOJIS_RAPIDOS.map(emoji => (
-                              <Pressable
-                                key={emoji}
-                                onPress={() => setCommentInputs(prev => ({ ...prev, [post.id]: (prev[post.id] || '') + emoji }))}
-                                hitSlop={4}
-                                style={{ minWidth: 44, minHeight: 48, alignItems: 'center', justifyContent: 'center' }}
-                              >
-                                <Text style={{ fontSize: 20 }}>{emoji}</Text>
-                              </Pressable>
-                            ))}
-                          </View>
-
-                          {/* Previsualización compacta de foto seleccionada */}
-                          {commentPhotos[post.id] && (
-                            <View style={[styles.commentPhotoPreview, { backgroundColor: c.goldWash, gap: 8 }]}>
-                              <Image
-                                source={{ uri: commentPhotos[post.id]!.uri }}
-                                style={{ width: 38, height: 38, borderRadius: 6 }}
-                                resizeMode="cover"
-                              />
-                              <View style={{ flex: 1 }}>
-                                <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
-                                  📷 Foto adjunta
-                                </Text>
-                                <Text style={[t.small, { color: c.textSoft }]}>
-                                  Lista para enviar con tu comentario
-                                </Text>
-                              </View>
-                              <Pressable
-                                onPress={() => setCommentPhotos(prev => ({ ...prev, [post.id]: null }))}
-                                hitSlop={6}
-                                style={{ minWidth: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center' }}
-                              >
-                                <Icon name="close" size={14} color={c.danger} />
-                              </Pressable>
-                            </View>
-                          )}
-
-                          <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
-                            <Pressable
-                              onPress={() => handlePickCommentPhoto(post.id)}
-                              style={[styles.attachPhotoBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
-                              hitSlop={6}
-                            >
-                              <Icon name="camera" size={14} color={c.goldInk} />
-                            </Pressable>
-
-                            <TextInput
-                              value={commentInputs[post.id] || ''}
-                              onChangeText={val => setCommentInputs(prev => ({ ...prev, [post.id]: val }))}
-                              placeholder="Escribe un comentario..."
-                              placeholderTextColor={c.textSoft}
-                              style={[styles.commentInput, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.text }]}
-                            />
-
-                            <Pressable
-                              onPress={() => handleAddComment(post.id)}
-                              style={[styles.sendCommentBtn, { backgroundColor: c.gold }]}
-                            >
-                              <Text style={[t.small, { color: c.onGold, fontFamily: 'Jost_700Bold' }]}>Enviar</Text>
-                            </Pressable>
-                          </View>
-                        </View>
-                      </View>
-                    )}
-                  </View>
-                );
-              })}
-
+            </View>
+          }
+          ItemSeparatorComponent={SeparadorDePublicaciones}
+          ListFooterComponent={
+            <View style={{ paddingTop: space.gap, paddingBottom: 28 }}>
               {/* Pie del lazy loading. Los dos mensajes son distintos a propósito: "trayendo más"
                   dice que hay que esperar, y "llegaste al final" cierra la lista para que nadie se
                   quede tirando hacia abajo de un muro que ya no tiene nada. El segundo solo se
@@ -2459,8 +2202,49 @@ export default function ComunidadScreen() {
                 </Text>
               )}
             </View>
-          )}
+          }
+          onEndReached={alLlegarAlFinalDelMuro}
+          // Pantalla y media antes del final, el mismo margen que tenía `MARGEN_PARA_PEDIR_MAS`:
+          // las publicaciones nuevas ya están cuando la persona llega abajo.
+          onEndReachedThreshold={1.5}
+          onScrollToIndexFailed={alFallarScrollAPublicacion}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={[
+            styles.content,
+            {
+              paddingHorizontal: horizontalPadding,
+              maxWidth: contentMaxWidth,
+              alignSelf: isTablet ? 'center' : 'stretch',
+              width: isTablet ? '100%' : undefined,
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
+          initialNumToRender={4}
+          maxToRenderPerBatch={4}
+          windowSize={9}
+          // Sin recorte nativo de vistas: en Android deja en blanco fotos y cajas de comentario
+          // al volver a subir. La virtualización ya la da `windowSize`.
+          removeClippedSubviews={false}
+        />
+      )}
 
+      {/* ========================================================================= */}
+      {/* SECCIONES TESTIMONIOS Y RANKING (comparten contenedor de scroll)          */}
+      {/* ========================================================================= */}
+      {(seccionActiva === 'testimonios' || seccionActiva === 'ranking') && (
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={[
+            styles.content,
+            {
+              paddingHorizontal: horizontalPadding,
+              maxWidth: contentMaxWidth,
+              alignSelf: isTablet ? 'center' : 'stretch',
+              width: isTablet ? '100%' : undefined,
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
           {/* PESTAÑA 2: TESTIMONIOS EN MEDIA LUNA */}
           {seccionActiva === 'testimonios' && (
             <View style={{ gap: space.gap, paddingTop: 10, paddingBottom: 28 }}>
@@ -4469,178 +4253,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  /* El contenedor externo de una publicación: su borde se queda. Lo que se fue son los trece
-     bordes que vivían adentro. */
-  postCard: {
-    borderWidth: 1,
-    borderRadius: space.radius,
-    padding: space.cardPad,
-  },
   avatarCircle: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dayBadge: {
-    borderRadius: space.radiusSm,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  mediaGridContainer: {
-    borderRadius: space.radiusSm,
-    overflow: 'hidden',
-  },
-  // SIN `height`: el alto sale del `aspectRatio` que se pasa en línea con la proporción real de la
-  // foto (ver `proporcionesFoto` en esta pantalla). El `height: 120` que había acá era la causa de
-  // que toda foto vertical apareciera recortada.
-  /* Los cuatro recuadros de foto perdieron el borde: lo que tienen adentro es una imagen, que ya
-     define su propia forma. Un contorno alrededor de una foto, dentro de una tarjeta que también
-     tiene contorno, son dos marcos para una sola imagen. */
-  mediaSingleBox: {
-    width: '100%',
-    borderRadius: space.radiusSm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  // Dos fotos: una al lado de la otra y cuadradas, como el mosaico de Instagram. Antes eran de
-  // 100 px de alto con el ancho de media tarjeta, o sea apaisadas a la fuerza.
-  mediaHalfBox: {
-    flex: 1,
-    aspectRatio: 1,
-    borderRadius: space.radiusSm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  // Sin `height: '100%'`: la fila que lo contiene ya no tiene alto en píxeles sino `aspectRatio`,
-  // y un porcentaje contra un alto derivado es justo el caso frágil de Yoga. El estirado vertical
-  // lo da el `alignItems: 'stretch'` que la fila trae por defecto.
-  mediaLargeLeft: {
-    flex: 1.4,
-    borderRadius: space.radiusSm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mediaSmallRight: {
-    flex: 1,
-    borderRadius: space.radiusSm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  /* Una publicación llegaba a tener tres filetes horizontales seguidos: resumen de reacciones,
-     fila de acciones y comentarios. Se quedan los dos últimos, que separan cosas distintas; este
-     iba 8 px encima de otro y sólo agregaba ruido. Lo reemplaza el aire. */
-  reactionsSummaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  rxCountBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 7,
-    paddingVertical: 4,
-    borderRadius: space.radiusSm,
-  },
-  rxCountTexto: {
-    fontSize: 10.5,
-    fontFamily: 'Jost_700Bold',
-  },
-  actionButtonsRow: {
-    flexDirection: 'row',
-    /* Alineadas a la IZQUIERDA, no repartidas. Con `flex: 1` en cada botón la fila se estiraba de
-       borde a borde y "Like" quedaba pegado al margen, lejos del pulgar en un teléfono de 360 px.
-       Agrupadas a la izquierda, las tres caen dentro del arco natural del dedo. */
-    justifyContent: 'flex-start',
-    marginTop: 8,
-    paddingTop: 6,
-    borderTopWidth: 1,
-  },
-  actionBtn: {
-    /* Sin `flex: 1`: cada botón mide lo que su contenido. `flexShrink` evita que los tres juntos
-       desborden en 360 px, que es el ancho de referencia (AGENTS.md §2). */
-    flexShrink: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    /* 48px minimos (AGENTS.md 4): con `paddingVertical: 6` la fila medía ~26 y era la accion
-       mas usada del Muro. `flexShrink` en la etiqueta evita que "Compartir" empuje la fila. */
-    minHeight: 48,
-    gap: 5,
-    paddingVertical: 6,
-    /* 8, no 4 ni 12. Sin `flex: 1` el respiro lateral es lo único que separa "Like" de
-       "Comentar", así que 4 los pegaba. Pero con 12 los tres botones sumaban 280 px y llenaban
-       justo la tarjeta de 281: quedaban agrupados a la izquierda y no se notaba, porque no
-       sobraba sitio. Con 8 sobran ~25 px a la derecha y el agrupamiento SE VE. */
-    paddingHorizontal: 8,
-    borderRadius: space.radiusSm,
-  },
-  rxCountBotonFila: {
-    /* Empuja la chapa al borde derecho sin estirar los botones, que siguen agrupados a la
-       izquierda. Misma altura de toque que ellos. */
-    marginLeft: 'auto',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 48,
-    paddingLeft: 8,
-  },
-  commentsSection: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    gap: space.gap,
-  },
-  commentCard: {
-    borderRadius: space.radiusSm,
-    padding: 12,
-  },
-  commentPhotoBox: {
-    borderRadius: space.radiusSm,
-    marginTop: 8,
-    overflow: 'hidden',
-    maxWidth: 220,
-  },
-  commentPhotoImage: {
-    width: '100%',
-    height: 130,
-    borderRadius: space.radiusSm,
-  },
-  commentPhotoPreview: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderRadius: space.radiusSm,
-    padding: 8,
-  },
-  /* El clip y el botón de enviar son los dos controles de la fila de comentario: conservan su
-     forma, pero pasan de 34 y ~30 px de alto a 48 (AGENTS.md §4). */
-  attachPhotoBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  /* Era `fontSize: 12`: por debajo del mínimo de input de AGENTS.md §4 (14–15.5). */
-  commentInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: space.radiusSm,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    minHeight: 48,
-    fontSize: 15,
-  },
-  sendCommentBtn: {
-    borderRadius: space.radiusSm,
-    paddingHorizontal: 14,
-    minHeight: 48,
     alignItems: 'center',
     justifyContent: 'center',
   },

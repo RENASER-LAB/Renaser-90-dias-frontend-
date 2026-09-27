@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { mensajeDeError } from '../../../services/http/apiClient';
 import * as wallApi from '../api/wallApi';
@@ -23,7 +23,9 @@ import type { WallCategory } from '../types/community.types';
  * `findByActivaTrueOrderByOrdenAscClaveAsc`). Reordenarlas de nuevo en el cliente sería una
  * segunda fuente de verdad para algo que el administrador decide desde el panel.
  */
-export function useCategoriasMuro() {
+export function useCategoriasMuro(activo = true) {
+  // `activo` (V-3, 26/09/2026): Comunidad lo pasa en `false` hasta que se abre la sección que
+  // usa esto, para que no compita con el Muro al abrir. Una vez pedido no se vuelve a pedir solo.
   const [categorias, setCategorias] = useState<WallCategory[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,9 +42,12 @@ export function useCategoriasMuro() {
     }
   }, []);
 
+  const yaPidio = useRef(false);
   useEffect(() => {
+    if (!activo || yaPidio.current) return;
+    yaPidio.current = true;
     void recargar();
-  }, [recargar]);
+  }, [activo, recargar]);
 
   return { categorias, cargando, error, recargar };
 }

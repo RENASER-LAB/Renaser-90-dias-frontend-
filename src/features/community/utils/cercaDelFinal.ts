@@ -1,3 +1,10 @@
+/*
+ * > **Sin uso en pantallas desde el 26/09/2026 (V-4).** Lo usaba el `onScroll` del Muro cuando era
+ * > un `ScrollView`; ahora el Muro es una `FlatList` y el mismo disparo lo da `onEndReached` con
+ * > `onEndReachedThreshold={1.5}` (la pantalla y media de abajo). Se deja con sus pruebas por si
+ * > otra lista que no sea `FlatList` necesita el mismo criterio.
+ */
+
 /** Lo que un evento de scroll de React Native trae, y lo único que hace falta mirar. */
 export interface MedidasDeScroll {
   layoutMeasurement: { height: number };

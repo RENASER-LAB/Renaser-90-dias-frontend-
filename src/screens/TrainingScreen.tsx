@@ -6,6 +6,7 @@ import { useTheme } from '../theme/ThemeContext';
 import { space } from '../theme/tokens';
 import { useResponsive } from '../theme/responsive';
 import { useSystemBackHandler } from '../hooks/useSystemBackHandler';
+import { useMedicionDePantalla } from '../hooks/useMedicionDePantalla';
 import { ScreenHeader, MicroLabel } from '../components/ui';
 import { Icon, IconName } from '../components/Icon';
 import { useTraining } from '../features/training/hooks/useTraining';
@@ -205,6 +206,8 @@ export default function TrainingScreen() {
     error: errorBackend,
     recargar: recargarEntrenamiento,
   } = useTraining();
+  // Solo en desarrollo: pedidos al montar y tiempo hasta tener datos (V-1, 26/09/2026).
+  useMedicionDePantalla('Training', !cargandoBackend);
   /**
    * ¿El programa de esta persona ya arrancó?
    *
@@ -232,6 +235,26 @@ export default function TrainingScreen() {
     }
   }, [cargandoBackend, errorBackend, habitsDelBackend, planHabitsDelBackend]);
 
+  /**
+   * Refleja en la tarjeta un cierre que el SERVIDOR YA CONFIRMÓ, sin esperar a releer (V-2,
+   * 26/09/2026). No es un marcado optimista: se llama solo después de que `/complete` (o el
+   * endpoint propio del hábito) respondió bien. El refresco silencioso que va detrás trae los
+   * puntos, la racha y el resto del estado verdadero y pisa esto en cuanto llega.
+   *
+   * > Antes cada cierre esperaba `await recargarEntrenamiento()`: dos rondas de pedidos con el
+   * > esqueleto tapando la pantalla (~3 s) antes de ver el check.
+   */
+  const reflejarCierreConfirmado = (id: string, conEvidencia = false) => {
+    setHabits(prev =>
+      prev.map(h =>
+        h.id === id
+          ? { ...h, done: true, estado: 'COMPLETADO', hasEvidence: h.hasEvidence || conEvidencia }
+          : h
+      )
+    );
+    void recargarEntrenamiento();
+  };
+
   // El habito de post diario lo cierra el compositor del Muro, en OTRA pestana (E-117). Sin esto,
   // la persona lee "hábito completado" alla y vuelve a encontrar la tarjeta sin tildar, porque
   // `useTraining` carga una sola vez al montarse. No se marca nada a mano: se recarga del backend,
@@ -250,8 +273,8 @@ export default function TrainingScreen() {
    * mismo que usan la tarjeta del chat y la del orbe. Los de evidencia opcional no cambian.
    */
   const registroConFoto = useRegistroConFoto({
-    onCompletado: async (_registroId, resultado, titulo) => {
-      await recargarEntrenamiento();
+    onCompletado: async (registroId, resultado, titulo) => {
+      reflejarCierreConfirmado(registroId, true);
       Alert.alert(
         '¡Evidencia de Verdad Sellada! 🦅',
         resultado.puntosOtorgados > 0
@@ -433,13 +456,18 @@ export default function TrainingScreen() {
   /**
    * El habito queda completado con ESTE POST, no con un segundo `/complete`. Si el envio falla el
    * modal sigue abierto con el texto escrito, y nada se marca de forma optimista: la tarjeta se
-   * actualiza recargando desde el backend, que es la unica fuente de verdad.
+   * marca recién con la respuesta del backend (`reflejarCierreConfirmado`) y un refresco
+   * silencioso trae el resto, porque el backend es la unica fuente de verdad.
    */
   const handleEnviarResumen = async (leccionId: string, resumen: string) => {
     const enviado = await claseDiaria.enviarResumen(leccionId, resumen);
     if (!enviado) return;
     cerrarClaseDiaria();
-    await recargarEntrenamiento();
+    if (habitoClaseDiaria) {
+      reflejarCierreConfirmado(habitoClaseDiaria.id);
+    } else {
+      void recargarEntrenamiento();
+    }
   };
 
   /** Deep-link a la leccion del dia dentro de Cursos, por el mismo camino que usa Comunidad. */
@@ -451,13 +479,14 @@ export default function TrainingScreen() {
 
   /**
    * DESPERTAR / DORMIR: registrar la hora de la accion y nada mas. Sin marcado optimista — la
-   * tarjeta se actualiza recargando del backend, que ademas es quien calcula los puntos con
+   * tarjeta se marca cuando el backend confirma y un refresco silencioso trae el resto; el
+   * backend es ademas quien calcula los puntos con
    * la hora real del servidor (no la del telefono).
    */
   const registrarSoloHora = async (habit: HabitItem) => {
     try {
       await completarRegistro(habit.id, null);
-      await recargarEntrenamiento();
+      reflejarCierreConfirmado(habit.id);
     } catch (e) {
       Alert.alert('No pudimos registrar la hora', mensajeDeError(e, 'Intenta de nuevo en unos segundos.'));
     }
@@ -500,8 +529,9 @@ export default function TrainingScreen() {
   };
 
   /**
-   * Cierra un hábito que no exige evidencia. Sin marcado optimista: la tarjeta se actualiza
-   * recargando del backend, que además es quien calcula los puntos con la hora del servidor.
+   * Cierra un hábito que no exige evidencia. Sin marcado optimista: la tarjeta se marca cuando el
+   * backend confirma y un refresco silencioso trae el resto — el backend es además quien calcula
+   * los puntos con la hora del servidor.
    *
    * > **Corregido 2026-09-07.** Acá antes había un `setHabits` y nada más: el check tachaba el
    * > hábito en el estado de React, sin llamar a nadie, y al recargar la pantalla volvía sin
@@ -510,7 +540,7 @@ export default function TrainingScreen() {
   const completarHabitoSimple = async (habit: HabitItem) => {
     try {
       await completarRegistro(habit.id, null);
-      await recargarEntrenamiento();
+      reflejarCierreConfirmado(habit.id);
     } catch (e) {
       Alert.alert('No pudimos marcarlo', mensajeDeError(e, 'Intenta de nuevo en unos segundos.'));
     }
@@ -536,7 +566,7 @@ export default function TrainingScreen() {
       await confirmarEvidencia(abierta.registroId, { tipo: 'TEXTO', contenidoTexto: texto });
       await completarRegistro(abierta.registroId);
       setAudioterapiaAbierta(null);
-      await recargarEntrenamiento();
+      reflejarCierreConfirmado(abierta.registroId, true);
     } catch (e) {
       Alert.alert('No se pudo registrar', mensajeDeError(e, 'Intenta de nuevo en un momento.'));
     }
@@ -634,7 +664,15 @@ export default function TrainingScreen() {
       await borradorEspiritu.borrar(user.id, dia);
     }
     setPastillaVisible(false);
-    await Promise.all([espiritu.recargar(), recargarEntrenamiento()]);
+    // El track de la Pastilla se ubica por su clave de sistema: el endpoint de Espíritu no
+    // devuelve el id del registro que cerró.
+    const trackPastilla = habits.find(h => h.systemKey === CLAVE_SISTEMA_PASTILLA_RENACER && h.tieneTrackHoy);
+    if (trackPastilla) {
+      reflejarCierreConfirmado(trackPastilla.id);
+    } else {
+      void recargarEntrenamiento();
+    }
+    void espiritu.recargar();
     Alert.alert('Pastilla Renaser registrada 🦅', 'Tu respuesta quedo guardada y el habito, completado.');
   };
 
@@ -646,8 +684,13 @@ export default function TrainingScreen() {
    */
   const handleEvidenciaCompletada = async (puntosOtorgados: number) => {
     const nombre = activeEvidenceHabit?.title ?? 'tu hábito';
+    const cerrado = activeEvidenceHabit;
     setActiveEvidenceHabit(null);
-    await recargarEntrenamiento();
+    if (cerrado) {
+      reflejarCierreConfirmado(cerrado.id, true);
+    } else {
+      void recargarEntrenamiento();
+    }
     Alert.alert(
       '¡Evidencia de Verdad Sellada! 🦅',
       puntosOtorgados > 0

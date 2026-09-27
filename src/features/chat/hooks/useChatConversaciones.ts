@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { ChatConversation, ChatMessage } from '../../../screens/ComunidadScreen';
 import { mensajeDeError } from '../../../services/http/apiClient';
 import * as chatApi from '../api/chatApi';
 import { mapearMensaje, mapearResumenConversacion, refinarTituloConMensajes } from '../api/chatMappers';
 import type { WireMensaje, WireMiembro } from '../types/chat.types';
+
+/** Marca de "todavía no se pidió para nadie" (distinta de `null`, que es un actor posible). */
+const SIN_PEDIR = Symbol('sin-pedir');
 
 /**
  * Estado real de Atención Personalizada (chats) contra el backend Java, en un solo lugar — mismo
@@ -16,13 +19,19 @@ import type { WireMensaje, WireMiembro } from '../types/chat.types';
  * si el cohorte de usuarios activos supera eso, algunas conversaciones DIRECT sin mensaje propio
  * más reciente quedan con el título genérico "Conversación directa" hasta que se abren.
  */
-export function useChatConversaciones(actorId: string | null | undefined) {
+export function useChatConversaciones(actorId: string | null | undefined, activo = true) {
+  // `activo` (V-3, 26/09/2026): Comunidad lo pasa en `false` hasta que se abre la sección que
+  // usa esto, para que no compita con el Muro al abrir. Una vez pedido no se vuelve a pedir solo.
+  // Para quién se pidió la última vez. Un `recargar()` explícito (la entrada desde "Escribirle")
+  // también lo anota, así que activar la sección justo después no repide lo mismo.
+  const pedidoPara = useRef<string | null | undefined | typeof SIN_PEDIR>(SIN_PEDIR);
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [mensajesCargando, setMensajesCargando] = useState(false);
 
   const recargar = useCallback(async () => {
+    pedidoPara.current = actorId;
     setLoading(true);
     setError(null);
     try {
@@ -41,9 +50,11 @@ export function useChatConversaciones(actorId: string | null | undefined) {
     }
   }, [actorId]);
 
+  // Se repide si cambia la persona (igual que antes), pero solo con la sección activa.
   useEffect(() => {
+    if (!activo || pedidoPara.current === actorId) return;
     void recargar();
-  }, [recargar]);
+  }, [activo, actorId, recargar]);
 
   /**
    * Trae el historial real de una conversación (`GET .../messages`, orden más reciente primero
