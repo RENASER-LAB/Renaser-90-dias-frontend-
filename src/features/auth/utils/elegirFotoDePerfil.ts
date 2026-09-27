@@ -39,13 +39,18 @@ export const LADO_DEL_AVATAR = 512;
  * acostada.
  *
  * Devuelve `null` si canceló o negó el permiso — nunca lanza.
+ *
+ * `para` (D-212, 2026-09-27) es lo que dice el aviso del permiso: el mismo selector sirve para la foto
+ * de un grupo, que también va en un círculo, y ahí el aviso no puede hablar de «tu foto de perfil».
  */
-export async function elegirFotoDePerfil(): Promise<FotoDePerfil | null> {
+export async function elegirFotoDePerfil(
+  { para = 'tu foto de perfil' }: { para?: string } = {},
+): Promise<FotoDePerfil | null> {
   const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!permiso.granted) {
     Alert.alert(
       'Permiso de galería requerido',
-      'Renaser necesita acceder a tus fotos para que puedas elegir tu foto de perfil.',
+      `Renaser necesita acceder a tus fotos para que puedas elegir ${para}.`,
     );
     return null;
   }

@@ -22,6 +22,18 @@ export function pideReleerAlCerrarElChat(anterior: string | null, actual: string
 }
 
 /**
+ * D-212: la foto propia de un grupo cambia sin que cambie la conversación. Al releer la lista llega otro
+ * `fotoPath` (otro `?v=`), y la conversación abierta —su cabecera y su info— toma el de la lista, sin
+ * tocar lo demás (el historial, lo que se está escribiendo). Devuelve la MISMA si no cambió, para que
+ * React no vuelva a dibujar.
+ */
+export function conLaFotoDeLaLista(abierta: ChatConversation, lista: readonly ChatConversation[]): ChatConversation {
+  const enLaLista = lista.find(conversacion => conversacion.id === abierta.id);
+  if (!enLaLista || (enLaLista.fotoPath ?? null) === (abierta.fotoPath ?? null)) return abierta;
+  return { ...abierta, fotoPath: enLaLista.fotoPath ?? null };
+}
+
+/**
  * Lo que trae el servidor, sin perder lo que el teléfono ya sabía de cada conversación.
  *
  * Del servidor sale todo lo de la fila —vista previa, hora, fecha con la que se ordena, no leídos—

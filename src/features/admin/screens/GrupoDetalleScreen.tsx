@@ -3,11 +3,14 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon } from '../../../components/Icon';
+import { useAuth } from '../../../context/AuthContext';
 import { BotonPeligro, BotonSecundario, TituloDeSeccion } from '../../../components/Legible';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
+import { obtenerFotoDelGrupo, type FotoDelGrupo } from '../../community/api/fotoDelGrupoApi';
+import { CambiarFotoDelGrupo } from '../../community/components/CambiarFotoDelGrupo';
 import {
   agregarAprendiz,
   sumarAprendizAGrupo,
@@ -22,7 +25,7 @@ import { filtrarCandidatos } from '../utils/filtrarCandidatos';
 import type { AprendizCandidatoApi, GrupoDetalleApi, MentorCandidatoApi } from '../api/adminSchemas';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
 import { EstadoDeGrupo } from '../components/EstadoDeGrupo';
-import { rangoDeFechas } from '../utils/fechas';
+import { fechaCorta, rangoDeFechas } from '../utils/fechas';
 import { confirmar, avisar } from '../utils/dialogo';
 import { mensajeDeFallo, preguntaDeAsignarMentor } from '../utils/mensajes';
 
@@ -57,6 +60,11 @@ export function GrupoDetalleScreen({
   const { horizontalPadding, contentMaxWidth } = useResponsive();
 
   const [grupo, setGrupo] = useState<GrupoDetalleApi | null>(null);
+  /* D-212: la foto del grupo la cambian el ADMIN y el mentor de ese grupo. Acá, el ADMIN: el
+     Alquimista entra a este panel pero el dueño no lo nombró, y el servidor le respondería 403. */
+  const { user } = useAuth();
+  const esAdmin = user?.role?.toUpperCase() === 'ADMIN';
+  const [fotoDelGrupo, setFotoDelGrupo] = useState<FotoDelGrupo | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [trabajando, setTrabajando] = useState(false);
@@ -119,6 +127,20 @@ export function GrupoDetalleScreen({
   useEffect(() => {
     void cargar();
   }, [cargar]);
+
+  /** Si el grupo tiene foto propia. Si no se pudo saber, el control igual deja cambiarla. */
+  const cargarFoto = useCallback(async () => {
+    if (!esAdmin) return;
+    try {
+      setFotoDelGrupo(await obtenerFotoDelGrupo(grupoId));
+    } catch {
+      setFotoDelGrupo(null);
+    }
+  }, [esAdmin, grupoId]);
+
+  useEffect(() => {
+    void cargarFoto();
+  }, [cargarFoto]);
 
   const conAviso = async (accion: () => Promise<unknown>, queFalla: string) => {
     setTrabajando(true);
@@ -225,6 +247,23 @@ export function GrupoDetalleScreen({
                 </Text>
               ) : null}
             </View>
+
+            {/* ── Foto del grupo (D-212), solo para el ADMIN ──────────────── */}
+            {esAdmin ? (
+              <View style={{ gap: 10 }}>
+                <TituloDeSeccion>Foto del grupo</TituloDeSeccion>
+                <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]}>
+                  {fotoDelGrupo?.photoChangedAt
+                    ? `Tiene foto propia desde el ${fechaCorta(diaLocal(fotoDelGrupo.photoChangedAt))}. La ven sus integrantes en el chat del grupo.`
+                    : 'Usa la foto de Renaser, la tarjeta que trae la app.'}
+                </Text>
+                <CambiarFotoDelGrupo
+                  grupoId={grupoId}
+                  tieneFotoPropia={!!fotoDelGrupo?.photoChangedAt}
+                  onCambiada={() => void cargarFoto()}
+                />
+              </View>
+            ) : null}
 
             {/* ── Mentor ─────────────────────────────────────────────────── */}
             <View style={{ gap: 10 }}>
@@ -465,3 +504,11 @@ const estilos = StyleSheet.create({
   },
   accionTexto: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 6 },
 });
+
+/** El día de un instante en el reloj del teléfono, como `AAAA-MM-DD`: el de UTC puede ser otro de noche. */
+function diaLocal(iso: string): string {
+  const fecha = new Date(iso);
+  if (Number.isNaN(fecha.getTime())) return iso;
+  const dos = (n: number) => String(n).padStart(2, '0');
+  return `${fecha.getFullYear()}-${dos(fecha.getMonth() + 1)}-${dos(fecha.getDate())}`;
+}

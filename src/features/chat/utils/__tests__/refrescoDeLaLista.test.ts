@@ -5,7 +5,7 @@
 import { describe, expect, it } from '@jest/globals';
 
 import type { ChatConversation, ChatMessage } from '../../../../screens/ComunidadScreen';
-import { fusionarConLoQueHabia, pideReleerAlCerrarElChat } from '../refrescoDeLaLista';
+import { conLaFotoDeLaLista, fusionarConLoQueHabia, pideReleerAlCerrarElChat } from '../refrescoDeLaLista';
 
 function conversacion(parcial: Partial<ChatConversation> & { id: string }): ChatConversation {
   return {
@@ -83,5 +83,31 @@ describe('fusionarConLoQueHabia', () => {
     fusionarConLoQueHabia(previas, nuevas);
     expect(nuevas[0].messages).toEqual([]);
     expect(previas[0].messages).toHaveLength(1);
+  });
+});
+
+describe('conLaFotoDeLaLista (D-212: la foto propia del grupo cambia sin reinstalar)', () => {
+  const RUTA = (v: number) => `/api/v1/chat/conversations/g-1/foto?v=${v}`;
+
+  it('la conversación abierta toma la ruta nueva de la lista, sin perder su historial', () => {
+    const abierta = conversacion({ id: 'g-1', fotoPath: RUTA(1), messages: [mensaje('m-1')] });
+
+    const actualizada = conLaFotoDeLaLista(abierta, [conversacion({ id: 'g-1', fotoPath: RUTA(2) })]);
+
+    expect(actualizada.fotoPath).toBe(RUTA(2));
+    expect(actualizada.messages).toBe(abierta.messages);
+  });
+
+  it('volver a la de Renaser (sin ruta) también llega a la abierta', () => {
+    const abierta = conversacion({ id: 'g-1', fotoPath: RUTA(1) });
+
+    expect(conLaFotoDeLaLista(abierta, [conversacion({ id: 'g-1', fotoPath: null })]).fotoPath).toBeNull();
+  });
+
+  it('si no cambió, o no está en la lista, es la MISMA conversación (no se vuelve a dibujar)', () => {
+    const abierta = conversacion({ id: 'g-1', fotoPath: RUTA(1) });
+
+    expect(conLaFotoDeLaLista(abierta, [conversacion({ id: 'g-1', fotoPath: RUTA(1) })])).toBe(abierta);
+    expect(conLaFotoDeLaLista(abierta, [conversacion({ id: 'otra' })])).toBe(abierta);
   });
 });

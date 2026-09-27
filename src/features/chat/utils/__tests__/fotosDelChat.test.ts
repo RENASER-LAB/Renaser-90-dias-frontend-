@@ -17,12 +17,15 @@ describe('fotoDeLaConversacion', () => {
     expect(fotoDeLaConversacion('global', RUTA_DEL_SOPORTE)).toBe('fenix');
   });
 
-  it('el grupo lleva la tarjeta sin nombre', () => {
+  it('el grupo lleva la tarjeta sin nombre, salvo que tenga foto propia (D-212)', () => {
     expect(fotoDeLaConversacion('celula')).toBe('tarjeta-sin-nombre');
+    expect(fotoDeLaConversacion('celula', '/api/v1/chat/conversations/g-1/foto?v=1790000000000')).toBe(
+      'foto-del-servidor'
+    );
   });
 
   it('el soporte, la tarjeta con el nombre de su aprendiz si llega la ruta; si no, la sin nombre', () => {
-    expect(fotoDeLaConversacion('soporte', RUTA_DEL_SOPORTE)).toBe('tarjeta-con-nombre');
+    expect(fotoDeLaConversacion('soporte', RUTA_DEL_SOPORTE)).toBe('foto-del-servidor');
     expect(fotoDeLaConversacion('soporte', null)).toBe('tarjeta-sin-nombre');
     expect(fotoDeLaConversacion('soporte', '  ')).toBe('tarjeta-sin-nombre');
   });

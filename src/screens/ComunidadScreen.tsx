@@ -87,10 +87,11 @@ import {
   type ElementoDelChat,
 } from '../features/chat/utils/formatoChat';
 import { mostrarBotonBajar, posicionAMantener } from '../features/chat/utils/bajadaDelChat';
-import { pideReleerAlCerrarElChat } from '../features/chat/utils/refrescoDeLaLista';
+import { conLaFotoDeLaLista, pideReleerAlCerrarElChat } from '../features/chat/utils/refrescoDeLaLista';
 import {
   cifraDeIntegrantes,
   integrantesDeLaInfo,
+  puedeCambiarLaFotoDelGrupo,
   subtituloDeLaInfo,
   tituloDeLaInfo,
   type IntegranteDeLaInfo,
@@ -773,6 +774,12 @@ export default function ComunidadScreen() {
     compartirPublicacionDelMuro: compartirPublicacionEnChat,
   } = useChatConversaciones(user?.id ?? null, recursosPedidos.conversaciones);
   const [selectedMemberProfile, setSelectedMemberProfile] = useState<GroupMember | null>(null);
+  /* D-212: la foto propia de un grupo cambia sin que cambie la conversación. Al releer la lista llega otro
+     `fotoPath` (otro `?v=`) y la conversación abierta —cabecera e info— lo toma; si no cambió, queda la
+     misma y no se vuelve a dibujar. */
+  useEffect(() => {
+    setActiveChat(abierta => (abierta ? conLaFotoDeLaLista(abierta, conversations) : abierta));
+  }, [conversations]);
 
   /**
    * Único camino para cambiar de sección. Además de mover `seccionActiva`, limpia el sub-estado de
@@ -3822,6 +3829,18 @@ export default function ComunidadScreen() {
           onVolver={() => setGroupInfoVisible(false)}
           onAbrirChatCon={usuarioId => void abrirDMConIntegrante(usuarioId)}
           onVerFicha={abrirFichaDesdeLaInfo}
+          fotoDelGrupo={
+            activeChat.type === 'celula' &&
+            celulaIdAbierto &&
+            puedeCambiarLaFotoDelGrupo({ mentorId: grupoAbierto?.mentorId, yoId: user?.id, miRol: user?.role })
+              ? {
+                  grupoId: celulaIdAbierto,
+                  tieneFotoPropia: !!activeChat.fotoPath,
+                  // La lista relee y trae la ruta nueva (otro `?v=`); la abierta la toma de ahí.
+                  onCambiada: () => void recargarConversaciones({ forzar: true }),
+                }
+              : null
+          }
         />
       )}
 

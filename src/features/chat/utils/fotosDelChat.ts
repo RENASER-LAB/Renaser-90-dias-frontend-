@@ -4,16 +4,24 @@
  */
 import type { TipoDeInfo } from './infoDelChat';
 
-/** La foto de una conversación. */
-export type FotoDeConversacion = 'persona' | 'tarjeta-con-nombre' | 'tarjeta-sin-nombre' | 'fenix';
+/**
+ * La foto de una conversación. `foto-del-servidor` es la que el backend sirve con la sesión por la ruta
+ * que manda (`fotoPath`): en un soporte, la tarjeta con el nombre de su aprendiz; en un grupo, su foto
+ * propia. Debajo, mientras carga o si falla, va la tarjeta sin nombre.
+ */
+export type FotoDeConversacion = 'persona' | 'foto-del-servidor' | 'tarjeta-sin-nombre' | 'fenix';
 
 /**
  * - **1 a 1:** la persona (su foto o sus iniciales).
  * - **Soporte:** SU tarjeta con el primer nombre de su aprendiz (D-205), si el servidor manda la ruta;
  *   si no, la tarjeta sin nombre.
- * - **Grupo:** la tarjeta sin nombre (8971acf).
+ * - **Grupo:** su foto propia si tiene (D-212: la eligen el administrador o su mentor, y el servidor
+ *   manda la ruta con `?v=`); si no, la tarjeta sin nombre (8971acf).
  * - **Comunidad (`global`):** el fénix, como antes de 8971acf (D-206: «solo afecta esos 2 primeros»,
  *   el grupo y el soporte).
+ *
+ * > **Corregido 2026-09-27 (D-212).** El grupo era siempre la tarjeta sin nombre, y el valor para la
+ * > foto que sirve el backend se llamaba `tarjeta-con-nombre` (solo existía la del soporte).
  */
 export function fotoDeLaConversacion(tipo: TipoDeInfo, fotoPath?: string | null): FotoDeConversacion {
   switch (tipo) {
@@ -21,10 +29,8 @@ export function fotoDeLaConversacion(tipo: TipoDeInfo, fotoPath?: string | null)
       return 'persona';
     case 'global':
       return 'fenix';
-    case 'soporte':
-      return fotoPath?.trim() ? 'tarjeta-con-nombre' : 'tarjeta-sin-nombre';
     default:
-      return 'tarjeta-sin-nombre';
+      return fotoPath?.trim() ? 'foto-del-servidor' : 'tarjeta-sin-nombre';
   }
 }
 

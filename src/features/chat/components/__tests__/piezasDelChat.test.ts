@@ -377,6 +377,51 @@ describe('AvatarDeChat (D-206)', () => {
   });
 });
 
+describe('La foto propia del grupo (D-212)', () => {
+  const RUTA = '/api/v1/chat/conversations/g-1/foto?v=1790000000000';
+
+  it('el avatar del grupo pide su foto propia con la sesión, con la tarjeta debajo', () => {
+    const tarjeta = fuentes(dibujar(React.createElement(FotoDelGrupo, { size: 40 })))[0];
+
+    const imagenes = fuentes(dibujar(React.createElement(AvatarDeChat, { tipo: 'celula', nombre: 'Fénix', fotoPath: RUTA, size: 40 })));
+
+    expect(imagenes[0]).toEqual(tarjeta);
+    expect(imagenes[1]).toEqual({ uri: expect.stringContaining(RUTA), headers: { 'X-Auth-Token': 'sesion-de-prueba' } });
+  });
+
+  const info = (fotoDelGrupo: { grupoId: string; tieneFotoPropia: boolean; onCambiada: () => void } | null) =>
+    dibujar(
+      React.createElement(InfoDelChat, {
+        tipo: 'celula',
+        titulo: 'Info. del grupo',
+        nombre: 'Fénix',
+        subtitulo: 'Grupo · 3 integrantes',
+        integrantes: { filas: [], cifra: 3, cargando: false, error: null },
+        onVolver: () => undefined,
+        onAbrirChatCon: () => undefined,
+        onVerFicha: () => undefined,
+        fotoDelGrupo,
+      })
+    );
+
+  it('a quien puede cambiarla, «Cambiar foto del grupo»; con foto propia, también «Volver a la foto de Renaser»', () => {
+    const sinPropia = textos(info({ grupoId: 'g-1', tieneFotoPropia: false, onCambiada: () => undefined }));
+    const conPropia = textos(info({ grupoId: 'g-1', tieneFotoPropia: true, onCambiada: () => undefined }));
+
+    expect(sinPropia).toContain('Foto del grupo');
+    expect(sinPropia).toContain('Cambiar foto del grupo');
+    expect(sinPropia).not.toContain('Volver a la foto de Renaser');
+    expect(conPropia).toContain('Volver a la foto de Renaser');
+  });
+
+  it('a quien no puede, nada', () => {
+    const todo = textos(info(null));
+
+    expect(todo).not.toContain('Foto del grupo');
+    expect(todo).not.toContain('Cambiar foto del grupo');
+  });
+});
+
 describe('InfoDelChat: tarjetas con nombre, escribirle al mentor y la ficha (D-206, D-207)', () => {
   const RUTA = (id: string) => `/api/v1/chat/conversations/g-1/miembros/${id}/foto`;
   const mentor = { id: 'u-ricardo', nombre: 'Ricardo Palomino', avatarUrl: 'https://s3/avatares/ricardo.jpg', fotoPath: RUTA('u-ricardo') };

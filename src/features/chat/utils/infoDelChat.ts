@@ -166,6 +166,22 @@ export function integrantesDeLaInfo(params: {
 }
 
 /**
+ * D-212: si la info del grupo le muestra a quien mira el control para cambiar la foto del grupo. El dueño
+ * decidió que la cambian «Admin y el mentor de ese grupo»: el ADMIN (de cualquier grupo) y el mentor
+ * cuyo id es el `mentorId` del grupo. Es lo mismo que exige el servidor, que tiene la última palabra; sin
+ * `mentorId` no se adivina quién es el mentor.
+ */
+export function puedeCambiarLaFotoDelGrupo(params: {
+  mentorId?: string | null;
+  yoId?: string | null;
+  miRol?: string | null;
+}): boolean {
+  if (params.miRol?.toUpperCase() === 'ADMIN') return true;
+  const mentorId = params.mentorId?.trim();
+  return !!mentorId && mentorId === params.yoId;
+}
+
+/**
  * El mentor, si el grupo lo tiene (hay `mentorName`). Con su id (D-206) se sabe si es uno mismo —su
  * fila dice «Tú»— y se le puede escribir (D-207); sin id no se adivina ninguna de las dos cosas.
  */

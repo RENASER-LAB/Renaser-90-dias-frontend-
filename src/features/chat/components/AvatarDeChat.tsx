@@ -40,9 +40,10 @@ const SELLO: Partial<Record<TipoDeAvatar, IconName>> = {
  * lo decide `fotoDeLaConversacion` (`utils/fotosDelChat.ts`):
  *
  * - **1 a 1:** la foto de la persona o sus iniciales (`AvatarPersona`, el de toda la app).
- * - **Grupo:** la tarjeta de Canva sin nombre (`tarjeta-renaser.jpg`, pedido del dueño del
- *   2026-09-27: «esas 2 imágenes van de foto del grupo»). El procedimiento de Operaciones dice que los
- *   grupos usan la foto de perfil oficial de Renaser, y el backend no manda imagen de grupo.
+ * - **Grupo:** su foto propia si la tiene (D-212: la eligen el administrador o su mentor, y el servidor
+ *   la sirve con sesión por `fotoPath`); si no, la tarjeta de Canva sin nombre (`tarjeta-renaser.jpg`,
+ *   pedido del dueño del 2026-09-27: «esas 2 imágenes van de foto del grupo»), que queda debajo mientras
+ *   la propia carga y si falla.
  * - **Soporte:** con `fotoPath`, la tarjeta con el primer nombre de SU aprendiz (decisión del dueño
  *   del 2026-09-27, D-205 del backend), en la lista, la cabecera y la info; sin ella, la sin nombre.
  * - **Comunidad:** el fénix del programa (`FotoDelPrograma`), que también es la foto de los MENSAJES
@@ -66,7 +67,7 @@ export function AvatarDeChat({
   tipo: TipoDeAvatar;
   nombre?: string | null;
   avatarUrl?: string | null;
-  /** Solo en un soporte: la ruta de su foto (`ChatConversation.fotoPath`). */
+  /** En un soporte, la ruta de su tarjeta; en un grupo, la de su foto propia (`ChatConversation.fotoPath`). */
   fotoPath?: string | null;
   size: number;
   conSello?: boolean;
@@ -82,7 +83,7 @@ export function AvatarDeChat({
     <View style={{ width: size, height: size }} accessibilityLabel={nombre ?? 'Renaser'}>
       {foto === 'fenix' ? (
         <FotoDelPrograma size={size} />
-      ) : foto === 'tarjeta-con-nombre' && fotoPath ? (
+      ) : foto === 'foto-del-servidor' && fotoPath ? (
         <FotoConSesion ruta={fotoPath} size={size} debajo={<FotoDelGrupo size={size} />} />
       ) : (
         <FotoDelGrupo size={size} />
@@ -147,8 +148,9 @@ export function FotoDelGrupo({ size }: { size: number }) {
 /**
  * Una foto que el servidor sirve con la sesión (`useFotoConSesion`), redonda y con borde dorado, ENCIMA
  * de `debajo`: lo de debajo se ve mientras carga y queda solo si la foto no llega, así nunca hay un
- * hueco en blanco ni un error a la vista. La usan el soporte (debajo, la tarjeta sin nombre; D-205) y
- * cada integrante de la info de un grupo (debajo, sus iniciales; D-206).
+ * hueco en blanco ni un error a la vista. La usan el soporte (debajo, la tarjeta sin nombre; D-205),
+ * cada integrante de la info de un grupo (debajo, sus iniciales; D-206) y el grupo con foto propia
+ * (debajo, la tarjeta sin nombre; D-212).
  */
 export function FotoConSesion({ ruta, size, debajo }: { ruta: string; size: number; debajo: React.ReactNode }) {
   const { c } = useTheme();

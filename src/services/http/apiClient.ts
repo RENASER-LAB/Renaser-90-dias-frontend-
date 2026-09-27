@@ -131,6 +131,10 @@ export async function cargarTokenPersistido(): Promise<string | null> {
 
 type OpcionesPeticion = {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  /**
+   * Se manda como JSON, salvo un `FormData`, que va tal cual (multipart; el `Content-Type` con su
+   * `boundary` lo pone `fetch`). Hoy el único multipart es la foto de un grupo (D-212).
+   */
   body?: unknown;
   /** Endpoints públicos (login, alta, OTP) no necesitan mandar sesión. */
   conSesion?: boolean;
@@ -159,7 +163,8 @@ export async function apiFetch<T>(ruta: string, opciones: OpcionesPeticion = {})
   const { method = 'GET', body, conSesion = true } = opciones;
 
   const headers: Record<string, string> = { Accept: 'application/json' };
-  if (body !== undefined) {
+  const esFormulario = typeof FormData !== 'undefined' && body instanceof FormData;
+  if (body !== undefined && !esFormulario) {
     headers['Content-Type'] = 'application/json';
   }
   // Se guarda si la request LLEVÓ sesión: de eso depende qué significa un 401 más abajo.
@@ -178,7 +183,7 @@ export async function apiFetch<T>(ruta: string, opciones: OpcionesPeticion = {})
     respuesta = await fetch(`${API_CONFIG.BASE_URL}${ruta}`, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : esFormulario ? (body as FormData) : JSON.stringify(body),
     });
   } catch (error) {
     // fetch solo rechaza cuando no hubo respuesta: backend apagado, IP mal puesta, sin red.

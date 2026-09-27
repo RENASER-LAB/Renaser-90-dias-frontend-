@@ -78,7 +78,7 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
         «COMUNIDAD», sin secciones ni pestañas ni el botón flotante del acompañante; ← y el «atrás»
         de Android vuelven al chat): avatar de 120 px (el fénix, sin sello, en grupo, soporte y
         comunidad; foto o iniciales en un 1 a 1 — *corregido 2026-09-27, D-206: el de `AvatarDeChat`,
-        o sea la tarjeta sin nombre en el grupo, la del nombre de su aprendiz en el soporte y el fénix
+        o sea la tarjeta sin nombre en el grupo (o su foto propia, D-212), la del nombre de su aprendiz en el soporte y el fénix
         solo en la comunidad; esta línea había quedado del fénix de antes de 8971acf*), nombre grande y debajo «Grupo · N integrantes» /
         «Chat de soporte» / el rol del otro («Aprendiz»). En un grupo, la cohorte y la sección «N integrantes»: el mentor primero,
         «Tú» y el resto por nombre, cada uno con su marca («Mentor», «Aprendiz»). La cifra es la
@@ -176,6 +176,25 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
           la info, para que no tapen el chat pedido. No es un permiso nuevo: la ficha la sirve el servidor al
           acompañante vigente del grupo, y la lista de la info solo la ven los aprendices y el mentor
           del grupo; un administrador no la ve, así que no ve el botón.
+      * **La foto de un grupo se puede cambiar** (decisión del dueño en la página de decisiones, mismo
+        día: la cambian «Admin y el mentor de ese grupo»; D-212 del backend).
+        * El grupo con foto propia la muestra en la lista, la cabecera y la info: la conversación trae
+          `photoPath` con `?v=` (cuándo cambió) y `AvatarDeChat` la pide con la sesión, con la tarjeta
+          sin nombre debajo mientras carga o si falla (`fotosDelChat.fotoDeLaConversacion`). Al releer
+          la lista, la conversación abierta toma la ruta nueva (`refrescoDeLaLista.conLaFotoDeLaLista`):
+          se ve la foto nueva sin reinstalar la app.
+        * En la info del grupo, a quien puede cambiarla (`infoDelChat.puedeCambiarLaFotoDelGrupo`: el
+          ADMIN, o el mentor cuyo id es el `mentorId` del grupo), la sección «Foto del grupo»
+          (`community/components/CambiarFotoDelGrupo.tsx`): «Cambiar foto del grupo», grande y con texto,
+          abre el selector de siempre (`elegirFotoDePerfil`, que ahora recibe para qué es la foto en el
+          aviso del permiso), muestra la vista previa en el círculo con «Guardar foto» y «Cancelar», y
+          sube por multipart (`community/api/fotoDelGrupoApi.ts`; `apiFetch` ahora manda un `FormData`
+          tal cual). Con foto propia, también «Volver a la foto de Renaser», con confirmación.
+        * El ADMIN tiene el mismo control en la pantalla del grupo del panel de Administración
+          (`GrupoDetalleScreen`, sección «Foto del grupo», con si tiene foto propia y desde cuándo): no
+          ve la lista de la info del grupo (el servidor le da 403). El Alquimista entra a ese panel pero
+          no ve el control: el dueño nombró solo a «Admin», y el servidor le respondería 403. Nada más
+          de esa pantalla cambia.
       * **E-341 (mismo día): el «Escribirle» de la ficha de «Mi grupo» en Comunidad abría el chat
         detrás de la ficha** y parecía no hacer nada. Las vistas del mentor que tapan Comunidad («Mi
         grupo», su ficha y la ficha desde la info) pasaron a un reductor
@@ -184,7 +203,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       En `ComunidadScreen.tsx` solo cambian los campos opcionales `esDelPrograma`, `rolDelOtro` y
       `fotoPath` (este último se pasa a la cabecera y a la info), el id y la tarjeta del mentor y el id
       de la sesión que recibe la lista de la info (D-206), la ficha abierta desde la info y el aviso
-      cuando el servidor no abre un 1 a 1 (D-207), la
+      cuando el servidor no abre un 1 a 1 (D-207), las vistas del mentor en un reductor (E-341), el
+      control de la foto del grupo en la info y la foto nueva tomada de la lista (D-212), la
       lista de mensajes, el bloque de la info, que el flotante del acompañante siga escondido con
       la info abierta y los disparos del refresco de la lista (volver de un chat, foco, deslizar);
       envío, fotos, audios, evidencia y la tarjeta de Tribu siguen por el mismo camino.

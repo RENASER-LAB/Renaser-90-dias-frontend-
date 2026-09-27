@@ -6,6 +6,7 @@ import { useTheme } from '../../../theme/ThemeContext';
 import { useResponsive } from '../../../theme/responsive';
 import { cuantosIntegrantes } from '../utils/formatoChat';
 import type { IntegranteDeLaInfo } from '../utils/infoDelChat';
+import { CambiarFotoDelGrupo } from '../../community/components/CambiarFotoDelGrupo';
 import { AvatarDeChat, type TipoDeAvatar } from './AvatarDeChat';
 import { AvatarDeIntegrante } from './AvatarDeIntegrante';
 
@@ -14,14 +15,16 @@ import { AvatarDeIntegrante } from './AvatarDeIntegrante';
  * 2026-09-27: «si le doy en el círculo, ver la info del grupo tipo WhatsApp»). Se abre tocando el
  * avatar o el nombre en la cabecera del chat y ocupa la pantalla entera, como el chat.
  *
- * - Arriba, el avatar grande (el de `AvatarDeChat`: la tarjeta sin nombre en un grupo, la tarjeta
- *   con el nombre de su aprendiz en el soporte, el fénix en la comunidad; la foto o las iniciales en
- *   un 1 a 1), el nombre grande y una línea («Grupo · 5 integrantes», «Chat de soporte»,
- *   «Aprendiz»).
+ * - Arriba, el avatar grande (el de `AvatarDeChat`: en un grupo, su foto propia o la tarjeta sin
+ *   nombre (D-212); la tarjeta con el nombre de su aprendiz en el soporte, el fénix en la comunidad;
+ *   la foto o las iniciales en un 1 a 1), el nombre grande y una línea («Grupo · 5 integrantes»,
+ *   «Chat de soporte», «Aprendiz»).
  * - En un grupo, la sección «N integrantes»: el mentor primero, cada uno con su marca («Mentor»,
  *   «Aprendiz») y su tarjeta con nombre (D-206, `AvatarDeIntegrante`). Tocar a alguien abre su 1 a 1,
  *   también al mentor (D-207). Al mentor de ESE grupo, cada aprendiz le muestra además un botón grande
  *   «Ver ficha», que abre la misma ficha que «Mi grupo» (D-207, `onVerFicha`).
+ * - En un grupo, a quien puede cambiarla (el mentor de ese grupo o el ADMIN), la sección «Foto del grupo»
+ *   con «Cambiar foto del grupo» y, si tiene foto propia, «Volver a la foto de Renaser» (D-212).
  *
  * > **Corregido 2026-09-27 (D-206).** Decía «el fénix en grupos, soporte y comunidad»: desde 8971acf el
  * > grupo lleva la tarjeta sin nombre, desde D-205 el soporte la de su aprendiz, y el fénix quedó solo
@@ -41,6 +44,7 @@ export function InfoDelChat({
   onVolver,
   onAbrirChatCon,
   onVerFicha,
+  fotoDelGrupo = null,
 }: {
   tipo: TipoDeAvatar;
   /** «Info. del grupo», «Info. del contacto», «Info. del chat». */
@@ -63,6 +67,11 @@ export function InfoDelChat({
   onAbrirChatCon: (usuarioId: string) => void;
   /** D-207: abre la ficha de un aprendiz (solo en las filas con `abreFicha`). */
   onVerFicha: (integrante: IntegranteDeLaInfo) => void;
+  /**
+   * D-212: el control para cambiar la foto del grupo, solo para quien puede (`puedeCambiarLaFotoDelGrupo`:
+   * el ADMIN o el mentor de ese grupo). `null` en lo demás.
+   */
+  fotoDelGrupo?: { grupoId: string; tieneFotoPropia: boolean; onCambiada: () => void } | null;
 }) {
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth, isTablet } = useResponsive();
@@ -98,6 +107,21 @@ export function InfoDelChat({
           <Text style={[styles.subtitulo, { color: c.textSoft }]}>{subtitulo}</Text>
           {detalle ? <Text style={[styles.detalle, { color: c.textSoft }]}>{detalle}</Text> : null}
         </View>
+
+        {fotoDelGrupo && (
+          <View style={[styles.seccion, ancho, { backgroundColor: c.cardBg, borderColor: c.divider }]}>
+            <Text style={[styles.tituloSeccion, { color: c.goldInk, paddingHorizontal: horizontalPadding }]}>
+              Foto del grupo
+            </Text>
+            <View style={{ paddingHorizontal: horizontalPadding, paddingBottom: 12 }}>
+              <CambiarFotoDelGrupo
+                grupoId={fotoDelGrupo.grupoId}
+                tieneFotoPropia={fotoDelGrupo.tieneFotoPropia}
+                onCambiada={fotoDelGrupo.onCambiada}
+              />
+            </View>
+          </View>
+        )}
 
         {integrantes && (
           <View style={[styles.seccion, ancho, { backgroundColor: c.cardBg, borderColor: c.divider }]}>

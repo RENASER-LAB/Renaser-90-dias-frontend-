@@ -8,6 +8,7 @@ import { integrantesDelChatDeGrupo, subtituloDeLaCabecera } from '../formatoChat
 import {
   cifraDeIntegrantes,
   integrantesDeLaInfo,
+  puedeCambiarLaFotoDelGrupo,
   subtituloDeLaInfo,
   tituloDeLaInfo,
   type MiembroDelGrupo,
@@ -202,5 +203,23 @@ describe('integrantesDeLaInfo: escribirle al mentor y ver la ficha (D-207)', () 
 
     expect(filas[0].abreChat).toBe(false);
     expect(filas.some(f => f.abreFicha)).toBe(false);
+  });
+});
+
+describe('puedeCambiarLaFotoDelGrupo (D-212: «Admin y el mentor de ese grupo»)', () => {
+  it('el ADMIN, en cualquier grupo; el mentor, en el suyo', () => {
+    expect(puedeCambiarLaFotoDelGrupo({ mentorId: 'u-ricardo', yoId: 'u-kelin', miRol: 'ADMIN' })).toBe(true);
+    expect(puedeCambiarLaFotoDelGrupo({ mentorId: 'u-ricardo', yoId: 'u-ricardo', miRol: 'MENTOR' })).toBe(true);
+  });
+
+  it('nadie más: un aprendiz, el mentor de otro grupo, el Alquimista', () => {
+    expect(puedeCambiarLaFotoDelGrupo({ mentorId: 'u-ricardo', yoId: 'u-ana', miRol: 'TRAINEE' })).toBe(false);
+    expect(puedeCambiarLaFotoDelGrupo({ mentorId: 'u-ricardo', yoId: 'u-otro', miRol: 'MENTOR' })).toBe(false);
+    expect(puedeCambiarLaFotoDelGrupo({ mentorId: 'u-ricardo', yoId: 'u-alq', miRol: 'ALCHEMIST' })).toBe(false);
+  });
+
+  it('sin el id del mentor no se adivina quién es', () => {
+    expect(puedeCambiarLaFotoDelGrupo({ mentorId: null, yoId: 'u-ricardo', miRol: 'MENTOR' })).toBe(false);
+    expect(puedeCambiarLaFotoDelGrupo({ mentorId: ' ', yoId: ' ', miRol: 'MENTOR' })).toBe(false);
   });
 });

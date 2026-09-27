@@ -71,6 +71,14 @@ export const cellMemberSchema = z
 
 export const cellMembersResponseSchema = z.object({ members: z.array(cellMemberSchema) }).passthrough();
 
+/**
+ * `GET|PUT /api/v1/admin/cells/{id}/photo` (D-212): si el grupo tiene foto propia y desde cuándo.
+ * `photoChangedAt` en `null` = usa la foto de Renaser. La foto en sí la sirve el chat del grupo.
+ */
+export const fotoDelGrupoSchema = z
+  .object({ cellId: z.string(), photoChangedAt: z.string().nullable() })
+  .passthrough();
+
 /** Mismo helper que `wallSchemas.ts` — duplicado a propósito, ver el comentario ahí. */
 export function validarRespuesta<T>(schema: z.ZodType, dato: unknown, endpoint: string): T {
   const resultado = schema.safeParse(dato);
