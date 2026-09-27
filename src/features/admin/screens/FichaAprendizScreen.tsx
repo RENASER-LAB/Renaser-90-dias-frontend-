@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { SeccionPlegable } from '../../../components/Legible';
+import { BotonSecundario, SeccionPlegable } from '../../../components/Legible';
 import { irAPestana } from '../../../navigation/navegacionRef';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { useResponsive } from '../../../theme/responsive';
@@ -14,9 +14,13 @@ import { RejillaSemanal } from '../../mentor/components/RejillaSemanal';
 import { TarjetaSemaforoDeAprendiz } from '../../semaforo/components/TarjetaSemaforoDeAprendiz';
 import { avisar } from '../utils/dialogo';
 import type { PersonaDeFicha } from '../types/admin.types';
+import { AvisoBreve } from '../components/AvisoBreve';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
+import { useDetalleAprendiz } from '../hooks/useDetalleAprendiz';
 import { useSemanaAdministrativa } from '../hooks/useSemanaAdministrativa';
-import { fechaCorta } from '../utils/fechas';
+import { disponibilidadDelCambio, textoDelUltimoAjuste } from '../utils/diaDelPrograma';
+import { fechaCorta, hoyIso } from '../utils/fechas';
+import { CambiarDiaScreen } from './CambiarDiaScreen';
 
 /**
  * La ficha de un aprendiz vista por administración: quién es, cómo viene la semana y qué entregó.
@@ -30,6 +34,10 @@ import { fechaCorta } from '../utils/fechas';
  * en otra cosa (ARF-10).
  *
  * La evaluación no se calcula acá. Los números que se muestran son los que devuelve el servidor.
+ *
+ * **La única escritura es el día del programa** (pedido del dueño, 26/09; backend D-82): corregir
+ * a mano el reloj de alguien que viajó o empezó tarde. No toca cumplimiento: mueve la fecha desde
+ * la que se cuentan sus 90 días y deja constancia de quién y por qué.
  */
 export function FichaAprendizScreen({
   aprendiz,
@@ -45,11 +53,16 @@ export function FichaAprendizScreen({
   const [diaElegido, setDiaElegido] = useState<string | null>(null);
   const [abriendoChat, setAbriendoChat] = useState(false);
   const [abriendoEvidencia, setAbriendoEvidencia] = useState<string | null>(null);
+  const programa = useDetalleAprendiz(aprendiz.id);
+  const [cambiandoDia, setCambiandoDia] = useState(false);
+  const [avisoFinal, setAvisoFinal] = useState<string | null>(null);
+  const cerrarAviso = useCallback(() => setAvisoFinal(null), []);
 
+  /* Mientras se cambia el día, el «atrás» lo atiende esa vista (vuelve a la ficha). */
   useSystemBackHandler(() => {
     onVolver();
     return true;
-  });
+  }, !cambiandoDia);
 
   useEffect(() => {
     const conAlgo = semana?.dias.filter(d => d.obligaciones.length > 0) ?? [];
@@ -58,7 +71,13 @@ export function FichaAprendizScreen({
 
   const detalle = semana?.dias.find(d => d.fecha === diaElegido) ?? null;
   const nombre = aprendiz.fullName?.trim() || 'Aprendiz sin nombre';
-  const datosDeCabecera = lineasDeCabecera(aprendiz);
+  /* El día que trae el servidor al abrir la ficha gana sobre el de la fila que la abrió. */
+  const datosDeCabecera = lineasDeCabecera(
+    programa.detalle
+      ? { ...aprendiz, programDay: programa.detalle.programDay, phase: programa.detalle.phase ?? aprendiz.phase }
+      : aprendiz,
+  );
+  const disponibilidad = programa.detalle ? disponibilidadDelCambio(programa.detalle, hoyIso()) : null;
 
   /** La URL se pide al abrir y no antes: vence a los diez minutos y es una llave al archivo. */
   const verEvidencia = async (evidenciaId: string) => {
@@ -96,6 +115,22 @@ export function FichaAprendizScreen({
     }
   };
 
+  if (cambiandoDia && programa.detalle) {
+    return (
+      <CambiarDiaScreen
+        aprendizId={aprendiz.id}
+        nombre={nombre}
+        diaActual={programa.detalle.programDay}
+        onVolver={() => setCambiandoDia(false)}
+        onCambiado={diaNuevo => {
+          setCambiandoDia(false);
+          setAvisoFinal(`Listo: ${nombre} pasó al día ${diaNuevo}.`);
+          void programa.recargar();
+        }}
+      />
+    );
+  }
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
       <CabeceraAdmin
@@ -125,6 +160,33 @@ export function FichaAprendizScreen({
               </Text>
             ))}
           </View>
+        ) : null}
+
+        {/* Día del programa (26/09, D-82). El botón aparece solo si el servidor entregó el detalle
+            administrativo —mismo permiso que el PUT— y su programa ya empezó. */}
+        {programa.detalle ? (
+          <View style={[estilos.tarjeta, { backgroundColor: c.cardBg, borderColor: c.border, gap: 10 }]}>
+            {programa.ultimoAjuste ? (
+              <Text style={[t.body, { color: c.text, fontSize: 16, lineHeight: 23 }]}>
+                {textoDelUltimoAjuste(programa.ultimoAjuste, programa.quienAjusto)}
+              </Text>
+            ) : null}
+            {disponibilidad?.puede ? (
+              <BotonSecundario
+                etiqueta="Cambiar día del programa"
+                icono="calendar"
+                onPress={() => setCambiandoDia(true)}
+              />
+            ) : disponibilidad ? (
+              <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]}>
+                {disponibilidad.motivo}
+              </Text>
+            ) : null}
+          </View>
+        ) : programa.fallo === 'sin_red' ? (
+          <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>
+            Sin conexión: no se pudo leer su día del programa.
+          </Text>
         ) : null}
 
         {/* S-2 (26/09): el semáforo PRIMERO —una sola palabra de estado—, por la puerta de
@@ -264,6 +326,7 @@ export function FichaAprendizScreen({
           </View>
         </SeccionPlegable>
       </ScrollView>
+      <AvisoBreve texto={avisoFinal} onCerrar={cerrarAviso} />
     </SafeAreaView>
   );
 }
