@@ -74,7 +74,13 @@ function conteoEnPalabras(conteo: ConteoDelDia, singular: string, plural: string
   return `${conteo.cumplidos} de ${conteo.programados} ${conteo.programados === 1 ? singular : plural}`;
 }
 
-/** Por qué un día no tiene porcentaje, dicho corto. `null` si el día sí se midió. */
+/**
+ * Por qué un día no tiene porcentaje, dicho corto. `null` si el día sí se midió.
+ *
+ * «Cuenta en pausa» y no «Cuenta suspendida»: es un día que no se midió porque la cuenta estuvo
+ * suspendida (backend D-209); la palabra no juzga a la persona, y la misma fila la leen ella, su mentor
+ * y administración.
+ */
 export function estadoDelDiaEnPalabras(estado: EstadoDiaSemaforo): string | null {
   switch (estado) {
     case 'MEDIDO':
@@ -83,6 +89,8 @@ export function estadoDelDiaEnPalabras(estado: EstadoDiaSemaforo): string | null
       return 'Nada programado';
     case 'PAUSADO':
       return 'En pausa';
+    case 'CUENTA_SUSPENDIDA':
+      return 'Cuenta en pausa';
     case 'PENDIENTE':
       return 'Todavía sin calcular';
     case 'FUERA_DEL_PROGRAMA':

@@ -104,6 +104,7 @@ describe('el desglose de un día', () => {
     const sinPorcentaje = { porcentaje: null, color: 'SIN_DATOS' as const };
     expect(desgloseDelDia(dia({ estado: 'SIN_DATOS', ...sinPorcentaje }))).toBe('Nada programado');
     expect(desgloseDelDia(dia({ estado: 'PAUSADO', ...sinPorcentaje }))).toBe('En pausa');
+    expect(desgloseDelDia(dia({ estado: 'CUENTA_SUSPENDIDA', ...sinPorcentaje }))).toBe('Cuenta en pausa');
     expect(desgloseDelDia(dia({ estado: 'PENDIENTE', ...sinPorcentaje }))).toBe('Todavía sin calcular');
     expect(desgloseDelDia(dia({ estado: 'FUERA_DEL_PROGRAMA', ...sinPorcentaje }))).toBe('Fuera del programa');
     expect(desgloseDelDia(dia({ estado: 'DESCONOCIDO', ...sinPorcentaje }))).toBe('Sin datos');
@@ -111,6 +112,11 @@ describe('el desglose de un día', () => {
 
   it('solo un día medido no tiene explicación de estado', () => {
     expect(estadoDelDiaEnPalabras('MEDIDO')).toBeNull();
+  });
+
+  it('un día con la cuenta suspendida (backend D-209) se oye igual que se lee, sin color ni número', () => {
+    const suspendido = dia({ fecha: '2026-09-21', estado: 'CUENTA_SUSPENDIDA', porcentaje: null, color: 'SIN_DATOS' });
+    expect(dichoDelDia(suspendido)).toBe('Lunes 21 de septiembre: Cuenta en pausa');
   });
 });
 

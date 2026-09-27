@@ -47,6 +47,7 @@ const ESTADOS_CONOCIDOS: readonly EstadoDiaSemaforo[] = [
   'MEDIDO',
   'SIN_DATOS',
   'PAUSADO',
+  'CUENTA_SUSPENDIDA',
   'PENDIENTE',
   'FUERA_DEL_PROGRAMA',
 ];

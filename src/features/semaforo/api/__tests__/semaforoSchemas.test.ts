@@ -314,6 +314,22 @@ describe('lo que el backend agregue mañana no rompe nada', () => {
     expect(detalle.vigente).toMatchObject({ color: 'SIN_DATOS', porcentaje: null, etiqueta: null });
   });
 
+  /**
+   * D-209 del backend: un día con la cuenta suspendida no se mide. Esta versión lo conoce y lo nombra
+   * («Cuenta en pausa»); el APK publicado, que no lo conoce, lo lee como el `FERIADO` de abajo:
+   * desconocido, neutro y sin romper la pantalla.
+   */
+  it('un día con la cuenta suspendida se conoce y nunca trae número', () => {
+    const detalle = leer({
+      aplica: true,
+      vigente: {
+        desde: '2026-09-18', hasta: '2026-09-24',
+        dias: [{ fecha: '2026-09-21', estado: 'CUENTA_SUSPENDIDA', porcentaje: 0, color: 'ROJO', etiqueta: 'Sin datos' }],
+      },
+    });
+    expect(detalle.vigente!.dias[0]).toMatchObject({ estado: 'CUENTA_SUSPENDIDA', porcentaje: null, color: 'SIN_DATOS' });
+  });
+
   it('un estado de día nuevo se lee como desconocido, sin número', () => {
     const detalle = leer({
       aplica: true,
