@@ -215,3 +215,22 @@ export function botonDeMasAprendices({
     etiquetaAccesible: 'Ver más aprendices',
   };
 }
+
+/**
+ * La pregunta antes de asignar un mentor (26/09, A-5). Antes, tocar un nombre de la lista lo
+ * asignaba en el acto: un toque de más —o un dedo que resbala al hacer scroll— cambiaba quién
+ * acompaña a diez personas.
+ *
+ * Si esa persona ya lidera OTRO grupo se dice, sin afirmar qué le pasa a ese otro grupo: eso lo
+ * decide el servidor, y la pantalla lo muestra después al recargar.
+ */
+export function preguntaDeAsignarMentor(
+  mentorNombre: string | null | undefined,
+  grupoNombre: string | null | undefined,
+  yaLideraOtroGrupo: boolean,
+): string {
+  const quien = mentorNombre?.trim() || 'esta persona';
+  const grupo = grupoNombre?.trim() || 'este grupo';
+  const aviso = yaLideraOtroGrupo ? ` Hoy ya acompaña otro grupo.` : '';
+  return `¿Asignar a ${quien} como mentor de ${grupo}?${aviso}`;
+}

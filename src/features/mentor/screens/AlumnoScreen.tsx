@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon } from '../../../components/Icon';
 import { Aparicion } from '../../../components/Aparicion';
-import { MicroLabel } from '../../../components/ui';
+import { BotonPrincipal, SeccionPlegable } from '../../../components/Legible';
 import { CodigoRenaserDelAlumno } from '../components/CodigoRenaserDelAlumno';
 import { HabitosDelAlumno } from '../components/HabitosDelAlumno';
 import { RejillaSemanal } from '../components/RejillaSemanal';
@@ -17,7 +17,8 @@ import { TarjetaSemaforoDeAprendiz } from '../../semaforo/components/TarjetaSema
 import { abrirConversacionDirecta } from '../../chat/api/chatApi';
 import { urlDeEvidencia } from '../../evidence/api/evidenceApi';
 import { useSemanaDelAlumno } from '../hooks/useSemanaDelAlumno';
-import { diasDesde, etiquetaDeMotivo } from '../reglas';
+import { diasDesde } from '../reglas';
+import { subtituloDelAlumno } from '../utils/subtituloDelAlumno';
 import type { AlumnoConEstado } from '../types/mentor.types';
 
 /**
@@ -48,7 +49,7 @@ export function AlumnoScreen({
   });
 
   const nombre = alumno.nombre?.trim() || 'Aprendiz sin nombre';
-  const dias = diasDesde(alumno.ultimaActividadEn);
+  const subtitulo = subtituloDelAlumno(alumno.diaPrograma, diasDesde(alumno.ultimaActividadEn));
   const { semana, diasConContenido, cargando, fallo, desplazar } = useSemanaDelAlumno(
     grupoId,
     alumno.participanteId,
@@ -135,8 +136,8 @@ export function AlumnoScreen({
           style={estilos.volver}
         >
           <Icon name="arrowLeft" size={15} color={c.goldInk} />
-          <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
-            MI GRUPO
+          <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_500Medium', fontSize: 16 }]}>
+            Mi grupo
           </Text>
         </Pressable>
       </View>
@@ -155,49 +156,70 @@ export function AlumnoScreen({
         ]}
       >
         <Aparicion>
-          <Text style={[t.screenTitle, { color: c.text, fontSize: 21 }]} numberOfLines={2}>
+          <Text style={[t.screenTitle, { color: c.text, fontSize: 24 }]} numberOfLines={2}>
             {nombre}
           </Text>
-          <Text style={[t.body, { color: c.textSoft, fontSize: 13, marginTop: 4 }]}>
-            {alumno.diaPrograma === null ? 'Día por confirmar'
-              : alumno.diaPrograma <= 0 ? 'Todavía no arrancó su programa'
-              : `Día ${alumno.diaPrograma} de 90`}
-            {dias !== null ? ` · última actividad hace ${dias === 0 ? 'menos de un día' : dias === 1 ? '1 día' : `${dias} días`}` : ''}
-          </Text>
+          {/* Solo lo que se sabe. Antes decía «Día por confirmar» de todo el mundo: el día llega en
+              `null` desde la lista del grupo (26/09, S-1). */}
+          {subtitulo ? (
+            <Text style={[t.body, { color: c.textSoft, fontSize: 16, marginTop: 4 }]}>{subtitulo}</Text>
+          ) : null}
         </Aparicion>
 
-        <Aparicion retardo={70} style={{ marginTop: 20 }}>
-          <View style={estilos.filaSemana}>
-            <MicroLabel>Semana</MicroLabel>
+        {/* S-2 (26/09): el semáforo PRIMERO, con una sola palabra de estado. Lo mismo que ve la
+            persona, sin la pausa. Si el servidor no tiene la ruta (404) o ya no acompaña a esta
+            persona (403), no se dibuja. */}
+        <TarjetaSemaforoDeAprendiz
+          origen={grupoId ? { quien: 'mentor', grupoId, aprendizId: alumno.participanteId } : null}
+          retardo={40}
+          margenArriba={20}
+        />
+
+        {/* La acción principal de esta pantalla: escribirle. Rellena, una sola (A-1). */}
+        <Aparicion retardo={80} style={{ marginTop: 18 }}>
+          <BotonPrincipal
+            etiqueta={abriendoChat ? 'Abriendo…' : 'Escribirle'}
+            icono="chat"
+            onPress={() => void escribirle()}
+            cargando={abriendoChat}
+            accessibilityLabel={`Escribirle a ${nombre}`}
+          />
+        </Aparicion>
+
+        {/* La semana de lunes a domingo, plegada: es detalle, no la decisión. Antes iba arriba de
+            todo con el rótulo «Semana» y competía con el semáforo (que va de sábado a viernes). */}
+        <Aparicion retardo={110} style={{ marginTop: 20 }}>
+          <SeccionPlegable
+            titulo="Detalle de hábitos (lunes a domingo)"
+            detalle={semana ? rangoLegible(semana.inicioDeSemana, semana.finDeSemana) : null}
+          >
             {semana ? (
               <View style={estilos.navegacion}>
                 <Pressable
                   onPress={() => desplazar(-1)}
-                  hitSlop={10}
                   accessibilityRole="button"
                   accessibilityLabel="Semana anterior"
                   style={[estilos.flecha, { borderColor: c.border }]}
                 >
-                  <Icon name="arrowLeft" size={14} color={c.goldInk} />
+                  <Icon name="arrowLeft" size={16} color={c.goldInk} />
+                  <Text style={[t.body, { color: c.goldInk, fontSize: 16 }]}>Anterior</Text>
                 </Pressable>
                 <Pressable
                   onPress={() => desplazar(1)}
-                  hitSlop={10}
                   accessibilityRole="button"
                   accessibilityLabel="Semana siguiente"
                   style={[estilos.flecha, { borderColor: c.border }]}
                 >
-                  <Icon name="arrow" size={14} color={c.goldInk} />
+                  <Text style={[t.body, { color: c.goldInk, fontSize: 16 }]}>Siguiente</Text>
+                  <Icon name="arrow" size={16} color={c.goldInk} />
                 </Pressable>
               </View>
             ) : null}
-          </View>
 
-          <View style={[estilos.tarjeta, { borderColor: c.border, backgroundColor: c.cardBg }]}>
             {cargando ? (
-              <Text style={[t.body, { color: c.textSoft, fontSize: 13 }]}>Cargando la semana…</Text>
+              <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>Cargando la semana…</Text>
             ) : fallo ? (
-              <Text style={[t.body, { color: c.textSoft, fontSize: 13, lineHeight: 19 }]}>
+              <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]}>
                 {fallo === 'sin_permiso'
                   ? 'Ya no tienes acceso al avance de este aprendiz.'
                   : fallo === 'sin_red'
@@ -205,207 +227,114 @@ export function AlumnoScreen({
                     : 'No se pudo cargar la semana de este aprendiz.'}
               </Text>
             ) : semana ? (
-              <>
-                <Text style={[t.body, { color: c.text, fontSize: 13.5, fontFamily: 'Jost_500Medium' }]}>
-                  {rangoLegible(semana.inicioDeSemana, semana.finDeSemana)}
+              semana.cobertura === 'SIN_DATOS' ? (
+                /* No es "no cumplió nada": es que no hay registro de esa semana. */
+                <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]}>
+                  Todavía sin actividad para medir en esta semana. No significa que no haya cumplido:
+                  no hay hábitos registrados para estos días.
                 </Text>
-
-                {semana.cobertura === 'SIN_DATOS' ? (
-                  /* No es "no cumplió nada": es que no hay registro de esa semana. Decirlo
-                     distinto importa — de esto salen conversaciones con una persona. */
-                  <Text style={[t.body, { color: c.textSoft, fontSize: 13, marginTop: 10, lineHeight: 19 }]}>
-                    No hay hábitos registrados para esta semana. No significa que no haya cumplido:
-                    significa que no hay datos.
+              ) : (
+                <>
+                  <Text style={[t.body, { color: c.text, fontSize: 16, lineHeight: 23 }]}>
+                    {semana.resumen.cumplidas} cumplidos · {semana.resumen.sinCumplir} sin cumplir ·{' '}
+                    {semana.resumen.pendientes} pendientes · {semana.resumen.conEntrega} con evidencia
                   </Text>
-                ) : (
-                  <>
-                    <Text style={[t.micro, { color: c.textSoft, fontSize: 11.5, marginTop: 6 }]}>
-                      {semana.resumen.cumplidas} cumplidos · {semana.resumen.sinCumplir} sin cumplir ·{' '}
-                      {semana.resumen.pendientes} pendientes · {semana.resumen.conEntrega} con evidencia
-                    </Text>
 
-                    {/*
-                      La rejilla SUMA, no reemplaza. En tablet da la vista de conjunto —los
-                      huecos se leen mejor en la forma que en una lista— y debajo sigue el
-                      detalle del dia, que es donde estan las acciones: abrir la evidencia,
-                      leer el estado de revision. Ponerla en lugar del detalle dejaba una
-                      pantalla bonita desde la que no se podia hacer nada.
+                  {/* La rejilla da la vista de conjunto; debajo, el detalle del día con las acciones
+                      (abrir la evidencia, leer la revisión). */}
+                  <RejillaSemanal dias={semana.dias} />
 
-                      En telefono va solo el detalle: siete columnas en 360 px dan titulos
-                      recortados y casillas de 8 px (AGENTS.md §2, plan.md §10). No es
-                      simplificar el movil, es que ahi la rejilla miente por ilegible.
-                    */}
-                    {/* Sin condicion de ancho: la rejilla ya trae su forma compacta para
-                        movil. Antes esto era `isTablet ? ... : null` y en telefono la semana
-                        entera desaparecia -- que es donde mas se mira. */}
-                    <RejillaSemanal dias={semana.dias} />
-
-                    <View style={estilos.chips}>
-                      {diasConContenido.map(dia => {
-                        const activo = detalleDelDia?.fecha === dia.fecha;
-                        return (
-                          <Pressable
-                            key={dia.fecha}
-                            onPress={() => setDiaElegido(dia.fecha)}
-                            accessibilityRole="button"
-                            accessibilityState={{ selected: activo }}
-                            accessibilityLabel={diaLargo(dia.fecha)}
+                  <View style={estilos.chips}>
+                    {diasConContenido.map(dia => {
+                      const activo = detalleDelDia?.fecha === dia.fecha;
+                      return (
+                        <Pressable
+                          key={dia.fecha}
+                          onPress={() => setDiaElegido(dia.fecha)}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: activo }}
+                          accessibilityLabel={diaLargo(dia.fecha)}
+                          style={[
+                            estilos.chip,
+                            {
+                              borderColor: activo ? c.goldInk : c.border,
+                              backgroundColor: activo ? c.goldWash : 'transparent',
+                            },
+                          ]}
+                        >
+                          <Text
                             style={[
-                              estilos.chip,
+                              t.body,
                               {
-                                borderColor: activo ? c.goldInk : c.border,
-                                backgroundColor: activo ? c.goldWash : 'transparent',
+                                color: activo ? c.goldInk : c.textSoft,
+                                fontSize: 16,
+                                fontFamily: activo ? 'Jost_700Bold' : 'Jost_400Regular',
                               },
                             ]}
                           >
-                            <Text
-                              style={[
-                                t.micro,
-                                {
-                                  color: activo ? c.goldInk : c.textSoft,
-                                  fontSize: 11.5,
-                                  fontFamily: activo ? 'Jost_700Bold' : 'Jost_400Regular',
-                                },
-                              ]}
-                            >
-                              {diaCorto(dia.fecha)}
-                            </Text>
-                          </Pressable>
-                        );
-                      })}
-                    </View>
-
-                    {detalleDelDia ? (
-                      <View style={estilos.detalleDia}>
-                        <Text style={[t.body, { color: c.text, fontSize: 14, fontFamily: 'Jost_500Medium' }]}>
-                          {diaLargo(detalleDelDia.fecha)}
-                        </Text>
-                        {detalleDelDia.obligaciones.length === 0 ? (
-                          <Text style={[t.body, { color: c.textSoft, fontSize: 13, marginTop: 6 }]}>
-                            Sin hábitos programados este día.
+                            {diaCorto(dia.fecha)}
                           </Text>
-                        ) : (
-                          detalleDelDia.obligaciones.map(o => (
-                            <View key={o.registroId} style={[estilos.obligacion, { borderColor: c.border }]}>
-                              <Text style={[t.body, { color: c.text, fontSize: 13.5, flexShrink: 1 }]}>
-                                {o.titulo}
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+
+                  {detalleDelDia ? (
+                    <View style={estilos.detalleDia}>
+                      <Text style={[t.body, { color: c.text, fontSize: 17, fontFamily: 'Jost_500Medium' }]}>
+                        {diaLargo(detalleDelDia.fecha)}
+                      </Text>
+                      {detalleDelDia.obligaciones.length === 0 ? (
+                        <Text style={[t.body, { color: c.textSoft, fontSize: 16, marginTop: 6 }]}>
+                          Sin hábitos programados este día.
+                        </Text>
+                      ) : (
+                        detalleDelDia.obligaciones.map(o => (
+                          <View key={o.registroId} style={[estilos.obligacion, { borderColor: c.border }]}>
+                            <Text style={[t.body, { color: c.text, fontSize: 16, flexShrink: 1 }]}>
+                              {o.titulo}
+                            </Text>
+                            <View style={estilos.estados}>
+                              <Text
+                                style={[
+                                  t.body,
+                                  { color: colorDeEstado(o.estadoHabito, c), fontSize: 16,
+                                    fontFamily: 'Jost_500Medium' },
+                                ]}
+                              >
+                                {etiquetaDeEstado(o.estadoHabito)}
                               </Text>
-                              <View style={estilos.estados}>
-                                <Text
-                                  style={[
-                                    t.micro,
-                                    { color: colorDeEstado(o.estadoHabito, c), fontSize: 11.5,
-                                      fontFamily: 'Jost_500Medium' },
-                                  ]}
-                                >
-                                  {etiquetaDeEstado(o.estadoHabito)}
+                              {o.entrega !== 'NO_REQUERIDA' ? (
+                                <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>
+                                  {etiquetaDeEntrega(o.entrega, o.revision)}
                                 </Text>
-                                {o.entrega !== 'NO_REQUERIDA' ? (
-                                  <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>
-                                    {etiquetaDeEntrega(o.entrega, o.revision)}
+                              ) : null}
+                              {o.evidenciaId ? (
+                                <Pressable
+                                  onPress={() => void verEvidencia(o.evidenciaId as string)}
+                                  disabled={abriendoEvidencia === o.evidenciaId}
+                                  accessibilityRole="button"
+                                  accessibilityLabel={`Ver la evidencia de ${o.titulo}`}
+                                  style={[estilos.verEvidencia, { borderColor: c.goldInk }]}
+                                >
+                                  <Icon name="image" size={16} color={c.goldInk} />
+                                  <Text style={[t.body, { color: c.goldInk, fontSize: 16,
+                                    fontFamily: 'Jost_500Medium' }]}>
+                                    {abriendoEvidencia === o.evidenciaId ? 'Abriendo…' : 'Ver evidencia'}
                                   </Text>
-                                ) : null}
-                                {o.evidenciaId ? (
-                                  <Pressable
-                                    onPress={() => void verEvidencia(o.evidenciaId as string)}
-                                    disabled={abriendoEvidencia === o.evidenciaId}
-                                    accessibilityRole="button"
-                                    accessibilityLabel={`Ver la evidencia de ${o.titulo}`}
-                                    style={[estilos.verEvidencia, { borderColor: c.goldInk }]}
-                                  >
-                                    <Icon name="image" size={13} color={c.goldInk} />
-                                    <Text style={[t.micro, { color: c.goldInk, fontSize: 11,
-                                      fontFamily: 'Jost_500Medium' }]}>
-                                      {abriendoEvidencia === o.evidenciaId ? 'Abriendo…' : 'Ver evidencia'}
-                                    </Text>
-                                  </Pressable>
-                                ) : null}
-                              </View>
+                                </Pressable>
+                              ) : null}
                             </View>
-                          ))
-                        )}
-                      </View>
-                    ) : null}
-                  </>
-                )}
-              </>
+                          </View>
+                        ))
+                      )}
+                    </View>
+                  ) : null}
+                </>
+              )
             ) : null}
-          </View>
+          </SeccionPlegable>
         </Aparicion>
-
-        <Aparicion retardo={110} style={{ marginTop: 16 }}>
-          <Pressable
-            onPress={() => void escribirle()}
-            disabled={abriendoChat}
-            accessibilityRole="button"
-            accessibilityLabel={`Escribirle a ${nombre}`}
-            accessibilityState={{ disabled: abriendoChat }}
-            style={[
-              estilos.escribir,
-              { borderColor: c.goldInk, backgroundColor: c.goldWash, opacity: abriendoChat ? 0.6 : 1 },
-            ]}
-          >
-            <Icon name="chat" size={16} color={c.goldInk} />
-            <Text style={[t.body, { color: c.goldInk, fontSize: 14, fontFamily: 'Jost_500Medium' }]}>
-              {abriendoChat ? 'Abriendo…' : 'Escribirle'}
-            </Text>
-          </Pressable>
-        </Aparicion>
-
-        <Aparicion retardo={140} style={{ marginTop: 20 }}>
-          <MicroLabel>{alumno.requiereSeguimiento ? 'QUÉ NECESITA' : 'ESTADO'}</MicroLabel>
-          <View style={[estilos.tarjeta, { borderColor: c.border, backgroundColor: c.cardBg, gap: 10 }]}>
-            {alumno.requiereSeguimiento ? (
-              alumno.motivos.map((m, i) => (
-                <View key={`${m.clase}-${i}`} style={estilos.motivo}>
-                  <Icon
-                    name={m.clase === 'sin_actividad' ? 'clock' : m.clase === 'habitos_pendientes' ? 'diamond' : 'camera'}
-                    size={15}
-                    color={c.danger}
-                  />
-                  <Text style={[t.body, { color: c.text, fontSize: 13.5, flex: 1 }]}>
-                    {etiquetaDeMotivo(m)}
-                  </Text>
-                </View>
-              ))
-            ) : (
-              /*
-               * Esto habla de la SEMANA que se acaba de cargar arriba, no del resumen del
-               * listado —que viene sin avance y hacia decir "va al dia" a cualquiera—. La
-               * pantalla llego a mostrar "0 cumplidos · 2 sin cumplir" y, tres centimetros
-               * mas abajo, "Va al dia. No hay nada pendiente esta semana".
-               */
-              <View style={estilos.motivo}>
-                <Icon
-                  name={semana && semana.resumen.sinCumplir > 0 ? 'clock' : 'checkCircle'}
-                  size={16}
-                  color={semana && semana.resumen.sinCumplir > 0 ? c.danger : c.success}
-                />
-                <Text style={[t.body, { color: c.text, fontSize: 13.5, flex: 1 }]}>
-                  {!semana || semana.cobertura === 'SIN_DATOS'
-                    ? 'No hay actividad registrada esta semana. No significa que no haya cumplido: significa que no hay datos.'
-                    : semana.resumen.sinCumplir > 0
-                      ? `${semana.resumen.sinCumplir} ${semana.resumen.sinCumplir === 1 ? 'obligación' : 'obligaciones'} sin cumplir esta semana.`
-                      : semana.resumen.pendientes > 0
-                        ? `${semana.resumen.pendientes} ${semana.resumen.pendientes === 1 ? 'pendiente' : 'pendientes'} esta semana, nada vencido.`
-                        : 'Va al día. No hay nada pendiente esta semana.'}
-                </Text>
-              </View>
-            )}
-          </View>
-        </Aparicion>
-
-        {/*
-          Semáforo de cumplimiento (D-168): su vigente con palabra y porcentaje, los 7 días con su
-          desglose y las semanas cerradas — lo mismo que ve la persona, sin la pausa. Va después de
-          lo que ya estaba arriba (la semana, escribirle, qué necesita), que no se movió. Si el
-          servidor no tiene la ruta (404) o ya no acompaña a esta persona (403), no se dibuja.
-        */}
-        <TarjetaSemaforoDeAprendiz
-          origen={grupoId ? { quien: 'mentor', grupoId, aprendizId: alumno.participanteId } : null}
-          retardo={160}
-          margenArriba={20}
-        />
 
         {/*
           Las dos lecturas que explican lo de arriba, en el orden en que se necesitan: primero
@@ -496,42 +425,28 @@ function etiquetaDeEntrega(entrega: string, revision: string | null): string {
 
 const estilos = StyleSheet.create({
   barra: { flexDirection: 'row', alignItems: 'center', paddingTop: 10, paddingBottom: 6 },
-  volver: { flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 44 },
+  volver: { flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 48 },
   contenido: { flexGrow: 1, paddingTop: 8, paddingBottom: ESPACIO_PARA_LANZADOR },
-  tarjeta: { borderWidth: 1, borderRadius: 16, padding: 16, marginTop: 8 },
-  grande: { fontFamily: 'Jost_500Medium', fontSize: 26, lineHeight: 30, fontVariant: ['tabular-nums'] },
-  riel: { height: 6, borderRadius: 3, overflow: 'hidden', marginTop: 12 },
-  relleno: { height: '100%', borderRadius: 3 },
-  motivo: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  nota: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderWidth: 1, borderRadius: 14, padding: 14 },
-  // 52 px: acción principal del detalle, pulsable con el pulgar.
-  // 44 px: pulsable sin apuntar, dentro de una fila de obligacion.
+  // 48 px: pulsable sin apuntar, dentro de una fila de obligación.
   verEvidencia: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    gap: 6,
-    minHeight: 44,
-    paddingHorizontal: 12,
-    borderRadius: 10,
+    gap: 8,
+    minHeight: 48,
+    paddingHorizontal: 14,
+    borderRadius: 12,
     borderWidth: 1,
     marginTop: 6,
   },
-  escribir: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    minHeight: 52,
-    borderRadius: 14,
-    borderWidth: 1,
+  navegacion: { flexDirection: 'row', gap: 10, marginBottom: 12 },
+  // 48 px de alto, con palabra: una flecha sola no se entiende (A-1).
+  flecha: {
+    flex: 1, minHeight: 48, borderRadius: 12, borderWidth: 1,
+    flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center',
   },
-  filaSemana: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  navegacion: { flexDirection: 'row', gap: 8 },
-  // 44 px de lado: pulsable con el pulgar sin apuntar (AGENTS.md §4).
-  flecha: { width: 44, height: 44, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 },
-  chip: { minHeight: 40, justifyContent: 'center', paddingHorizontal: 12, borderRadius: 10, borderWidth: 1 },
+  chip: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 14, borderRadius: 12, borderWidth: 1 },
   detalleDia: { marginTop: 16 },
   obligacion: { borderTopWidth: 1, paddingTop: 10, marginTop: 10, gap: 4 },
   estados: { gap: 2 },

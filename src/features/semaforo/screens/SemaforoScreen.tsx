@@ -26,6 +26,7 @@ import {
   rangoDeFechas,
   textoDiasConDatos,
 } from '../utils/lecturaDelSemaforo';
+import { notaDelCierreSemanal } from '../utils/ayudaDelSemaforo';
 
 /**
  * El detalle del semáforo propio: el vigente en grande, los 7 días con su desglose, las semanas
@@ -128,6 +129,11 @@ function Detalle({
   const color: ColorSemaforo = vigente?.color ?? 'SIN_DATOS';
   const calculado = momentoDeCalculo(detalle.calculadoEn);
   const hoy = hoyDeLaPersona(detalle, ahoraConfiable());
+  const notaDelCierre = notaDelCierreSemanal(
+    detalle.semanas.length > 0 ? detalle.semanas[detalle.semanas.length - 1] : null,
+    vigente?.hasta ?? null,
+    'propia',
+  );
 
   const alCambiarPausa = async (accion: Promise<boolean>) => {
     if (await accion) onPausaCambiada?.();
@@ -192,6 +198,8 @@ function Detalle({
         ) : (
           <Text style={[cuerpo, { color: c.textSoft }]}>Todavía no se cerró ninguna semana.</Text>
         )}
+        {/* S-6 (26/09): el cierre del sábado, dicho siempre igual acá y en la ficha del mentor. */}
+        {notaDelCierre ? <Text style={cuerpo}>{notaDelCierre}</Text> : null}
       </View>
 
       {/* 4. Cómo se calcula, en palabras. */}

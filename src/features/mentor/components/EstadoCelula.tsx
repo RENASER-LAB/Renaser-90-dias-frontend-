@@ -1,7 +1,7 @@
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
-import { GoldButton } from '../../../components/GoldButton';
+import { BotonSecundario } from '../../../components/Legible';
 import { Icon, type IconName } from '../../../components/Icon';
 import { useTheme } from '../../../theme/ThemeContext';
 import type { FalloCelula } from '../hooks/useCelulaQueAcompano';
@@ -67,10 +67,10 @@ export function EstadoCelula({ fallo, vacia, detalle, onReintentar }: Props) {
     return (
       <View style={estilos.caja}>
         <Icon name="users" size={26} color={c.chevron} />
-        <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 15, marginTop: 10, textAlign: 'center' }]}>
+        <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 16, marginTop: 10, textAlign: 'center' }]}>
           Tu grupo todavía no tiene aprendices
         </Text>
-        <Text style={[t.body, { color: c.textSoft, fontSize: 13, textAlign: 'center', marginTop: 6 }]}>
+        <Text style={[t.body, { color: c.textSoft, fontSize: 16, textAlign: 'center', marginTop: 6 }]}>
           Cuando se asignen, los verás aquí con su día de programa y qué necesita cada uno.
         </Text>
       </View>
@@ -83,22 +83,22 @@ export function EstadoCelula({ fallo, vacia, detalle, onReintentar }: Props) {
   return (
     <View style={estilos.caja}>
       <Icon name={info.icono} size={26} color={fallo === 'no_disponible' ? c.goldInk : c.chevron} />
-      <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 15, marginTop: 10, textAlign: 'center' }]}>
+      <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 16, marginTop: 10, textAlign: 'center' }]}>
         {info.titulo}
       </Text>
-      <Text style={[t.body, { color: c.textSoft, fontSize: 13, textAlign: 'center', marginTop: 6, lineHeight: 19 }]}>
+      <Text style={[t.body, { color: c.textSoft, fontSize: 16, textAlign: 'center', marginTop: 6, lineHeight: 23 }]}>
         {info.texto}
       </Text>
       {/* El detalle tecnico solo cuando aporta: un mensaje de esquema dice que cambio el
           backend, y eso ahorra media hora a quien lo mantiene. */}
       {detalle && fallo === 'error' ? (
-        <Text style={[t.micro, { color: c.chevron, fontSize: 10.5, textAlign: 'center', marginTop: 8 }]}>
+        <Text style={[t.micro, { color: c.chevron, fontSize: 14 /* metadato */, textAlign: 'center', marginTop: 8 }]}>
           {detalle}
         </Text>
       ) : null}
       {info.reintentar ? (
         <View style={{ marginTop: 16, width: '100%' }}>
-          <GoldButton label="REINTENTAR" variant="outline" onPress={onReintentar} />
+          <BotonSecundario etiqueta="Reintentar" onPress={onReintentar} />
         </View>
       ) : null}
     </View>
@@ -111,7 +111,7 @@ export function CargandoCelula() {
   return (
     <View style={estilos.caja}>
       <ActivityIndicator color={c.goldInk} />
-      <Text style={[t.body, { color: c.textSoft, fontSize: 13, marginTop: 12 }]}>
+      <Text style={[t.body, { color: c.textSoft, fontSize: 16, marginTop: 12 }]}>
         Cargando tu grupo…
       </Text>
     </View>

@@ -23,7 +23,7 @@ describe('cada cantidad con la palabra de su color', () => {
     expect(cantidadEnPalabras('VERDE', 5)).toBe('5 al día');
     expect(cantidadEnPalabras('AMARILLO', 2)).toBe('2 requieren atención');
     expect(cantidadEnPalabras('ROJO', 1)).toBe('1 con problemas');
-    expect(cantidadEnPalabras('SIN_DATOS', 0)).toBe('0 sin datos');
+    expect(cantidadEnPalabras('SIN_DATOS', 0)).toBe('0 todavía sin actividad para medir');
   });
 
   it('«requiere» concuerda con uno solo', () => {
@@ -33,10 +33,10 @@ describe('cada cantidad con la palabra de su color', () => {
 
   it('la línea entera, con las cuatro aunque alguna sea cero', () => {
     expect(resumenEnPalabras({ verde: 5, amarillo: 2, rojo: 1, sinDatos: 0, total: 8 })).toBe(
-      '8 aprendices: 5 al día, 2 requieren atención, 1 con problemas, 0 sin datos',
+      '8 aprendices: 5 al día, 2 requieren atención, 1 con problemas, 0 todavía sin actividad para medir',
     );
     expect(resumenEnPalabras({ verde: 1, amarillo: 0, rojo: 0, sinDatos: 0, total: 1 })).toBe(
-      '1 aprendiz: 1 al día, 0 requieren atención, 0 con problemas, 0 sin datos',
+      '1 aprendiz: 1 al día, 0 requieren atención, 0 con problemas, 0 todavía sin actividad para medir',
     );
   });
 
@@ -52,8 +52,8 @@ describe('el promedio de un grupo (§4.4)', () => {
   });
 
   it('sin número dice «sin datos», nunca 0 %', () => {
-    expect(promedioEnPalabras(null)).toBe('Promedio del grupo: sin datos');
-    expect(promedioEnPalabras(null, 'VERDE', 'Al día')).toBe('Promedio del grupo: sin datos');
+    expect(promedioEnPalabras(null)).toBe('Promedio del grupo: todavía sin actividad para medir');
+    expect(promedioEnPalabras(null, 'VERDE', 'Al día')).toBe('Promedio del grupo: todavía sin actividad para medir');
   });
 
   it('con color, dice la palabra antes del número', () => {
@@ -120,7 +120,7 @@ describe('lo que se oye en la fila de una persona', () => {
   it('sin datos no dice ningún porcentaje', () => {
     expect(
       dichoDelAprendiz({ ...ana, nombre: 'Beto Soto', porcentaje: null, color: 'SIN_DATOS', etiqueta: 'Sin datos', diasConDatos: 0 }),
-    ).toBe('Beto Soto. Sin datos. 0 de 7 días con datos.');
+    ).toBe('Beto Soto. Todavía sin actividad para medir. 0 de 7 días con datos.');
   });
 
   it('sin nombre no inventa uno', () => {

@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon } from '../../../components/Icon';
-import { MicroLabel } from '../../../components/ui';
+import { TituloDeSeccion } from '../../../components/Legible';
 import { irAPestana } from '../../../navigation/navegacionRef';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { useResponsive } from '../../../theme/responsive';
@@ -38,7 +38,7 @@ export function MasOpcionesScreen({
 
   const enLaApp: Array<{ titulo: string; detalle: string; onPress: () => void }> = [
     {
-      titulo: 'Staff y roles',
+      titulo: 'Equipo y roles',
       detalle: 'Cambiar el rol de una cuenta: aprendiz, mentor, líder, administrador o alquimista',
       onPress: onAbrirStaff,
     },
@@ -100,7 +100,7 @@ export function MasOpcionesScreen({
         }}
       >
         <View style={{ gap: 10 }}>
-          <MicroLabel>Desde acá</MicroLabel>
+          <TituloDeSeccion>Desde acá</TituloDeSeccion>
           {enLaApp.map(item => (
             <Pressable
               key={item.titulo}
@@ -110,10 +110,10 @@ export function MasOpcionesScreen({
               style={[estilos.fila, { backgroundColor: c.cardBg, borderColor: c.border }]}
             >
               <View style={{ flex: 1, flexShrink: 1 }}>
-                <Text style={[t.body, { color: c.textStrong, fontSize: 15, fontWeight: '500' }]}>
+                <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontWeight: '500' }]}>
                   {item.titulo}
                 </Text>
-                <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, marginTop: 2 }]}>
+                <Text style={[t.body, { color: c.textSoft, fontSize: 16, marginTop: 2 }]}>
                   {item.detalle}
                 </Text>
               </View>
@@ -125,8 +125,8 @@ export function MasOpcionesScreen({
         </View>
 
         <View style={{ gap: 10 }}>
-          <MicroLabel>Desde el panel web</MicroLabel>
-          <Text style={[t.body, { color: c.textSoft, fontSize: 13, lineHeight: 19 }]}>
+          <TituloDeSeccion>Desde el panel web</TituloDeSeccion>
+          <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]}>
             Estas son operaciones con formularios largos. Existen y funcionan, pero desde una
             pantalla grande: acá se listan para que sepas dónde están, no para abrirlas a medias.
           </Text>
@@ -144,13 +144,13 @@ export function MasOpcionesScreen({
                 <Icon name="lock" size={16} color={c.chevron} />
               </View>
               <View style={{ flex: 1, flexShrink: 1 }}>
-                <Text style={[t.body, { color: c.textSoft, fontSize: 15 }]}>{item.titulo}</Text>
-                <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, marginTop: 2 }]}>
+                <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>{item.titulo}</Text>
+                <Text style={[t.body, { color: c.textSoft, fontSize: 16, marginTop: 2 }]}>
                   {item.detalle}
                 </Text>
                 {/* `c.chevron` y no `c.micro`: el dorado de `micro` es el acento de lo que se
                     puede tocar, y acá diría justo lo contrario de lo que la fila significa. */}
-                <Text style={[t.body, { color: c.chevron, fontSize: 12.5, marginTop: 6, lineHeight: 18 }]}>
+                <Text style={[t.body, { color: c.chevron, fontSize: 16, marginTop: 6, lineHeight: 23 }]}>
                   No se abre desde el teléfono. {item.motivo}
                 </Text>
               </View>

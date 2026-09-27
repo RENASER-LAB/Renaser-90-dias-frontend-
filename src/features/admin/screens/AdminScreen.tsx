@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 import type { InicioSemanal } from '../../semaforo/hooks/useLecturaPorSemana';
-import type { AprendizAdminApi } from '../api/adminSchemas';
+import type { PersonaDeFicha } from '../types/admin.types';
 import { AdminInicioScreen } from './AdminInicioScreen';
 import { FichaAprendizScreen } from './FichaAprendizScreen';
 import { GrupoDetalleScreen } from './GrupoDetalleScreen';
@@ -31,7 +31,7 @@ type Vista =
   | { nombre: 'grupo'; grupoId: string }
   | { nombre: 'grupo-form'; grupoId: string | null }
   | { nombre: 'personas'; soloSinGrupo: boolean }
-  | { nombre: 'ficha'; aprendiz: AprendizAdminApi }
+  | { nombre: 'ficha'; aprendiz: PersonaDeFicha }
   | { nombre: 'solicitudes' }
   | { nombre: 'semaforo' }
   | { nombre: 'semaforo-grupo'; grupoId: string; grupoNombre: string | null; inicio: InicioSemanal }
@@ -112,6 +112,7 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
           grupoNombre={vista.grupoNombre}
           inicio={vista.inicio}
           onVolver={volver}
+          onAbrirAprendiz={aprendiz => entrar({ nombre: 'ficha', aprendiz })}
         />
       );
     case 'staff':
@@ -122,6 +123,7 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
       return (
         <AdminInicioScreen
           onSalir={onSalir}
+          onAbrirFicha={aprendiz => entrar({ nombre: 'ficha', aprendiz })}
           onAbrir={seccion => {
             if (seccion === 'grupos') entrar({ nombre: 'grupos' });
             else if (seccion === 'personas') entrar({ nombre: 'personas', soloSinGrupo: false });

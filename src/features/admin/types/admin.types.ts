@@ -15,3 +15,18 @@ export type GrupoAdmin = {
   aprendices: number | null;
   cupo: number | null;
 };
+
+/**
+ * A quién abre la ficha de un aprendiz. La lista de Personas trae la fila entera
+ * (`AprendizAdminApi`); el semáforo y «¿A quién atiendo hoy?» (26/09, S-3 y S-4) solo saben su id,
+ * su nombre y de qué grupo viene. La ficha muestra lo que haya y no pide nada más: el resto (su
+ * semana, su semáforo) lo lee por el id.
+ */
+export type PersonaDeFicha = {
+  id: string;
+  fullName: string | null;
+  email?: string | null;
+  programDay?: number | null;
+  phase?: string | null;
+  cellId?: string | null;
+};

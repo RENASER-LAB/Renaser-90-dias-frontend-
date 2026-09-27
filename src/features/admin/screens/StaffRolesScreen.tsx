@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { MicroLabel } from '../../../components/ui';
+import { TituloDeSeccion } from '../../../components/Legible';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
@@ -67,9 +67,9 @@ const ROLES: Array<{ clave: RolAsignable; etiqueta: string }> = [
 const DONDE_QUEDA: Record<RolAsignable, string> = {
   TRAINEE: 'Va a aparecer en la lista de aprendices.',
   MENTOR: 'Va a aparecer en la lista de mentores.',
-  MENTOR_LEAD: 'Va a aparecer en la sección Staff.',
-  ADMIN: 'Va a aparecer en la sección Staff, y va a poder entrar a Administración.',
-  ALCHEMIST: 'Va a aparecer en la sección Staff, y va a poder entrar a Administración.',
+  MENTOR_LEAD: 'Va a aparecer en la sección Equipo.',
+  ADMIN: 'Va a aparecer en la sección Equipo, y va a poder entrar a Administración.',
+  ALCHEMIST: 'Va a aparecer en la sección Equipo, y va a poder entrar a Administración.',
 };
 
 /* `Map<string, …>` y no `Map<RolAsignable, …>`: el listado de staff trae el rol del servidor, y
@@ -111,10 +111,10 @@ function FilaDePersona({
         style={estilos.cabeceraFila}
       >
         <View style={{ flex: 1, flexShrink: 1 }}>
-          <Text style={[t.body, { color: c.textStrong, fontSize: 15, fontWeight: '500' }]} numberOfLines={1}>
+          <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontWeight: '500' }]} numberOfLines={1}>
             {persona.nombre}
           </Text>
-          <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, marginTop: 2 }]} numberOfLines={1}>
+          <Text style={[t.body, { color: c.textSoft, fontSize: 16, marginTop: 2 }]} numberOfLines={1}>
             {rotuloActual} · {persona.detalle}
           </Text>
         </View>
@@ -123,7 +123,7 @@ function FilaDePersona({
 
       {desplegada ? (
         <View style={{ gap: 8, paddingHorizontal: 12, paddingBottom: 12 }}>
-          <Text style={[t.body, { color: c.textSoft, fontSize: 12.5 }]}>Elige el rol nuevo:</Text>
+          <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>Elige el rol nuevo:</Text>
           {ROLES.map(rol => {
             const actual = rol.clave === persona.rol;
             return (
@@ -145,7 +145,7 @@ function FilaDePersona({
                 <Text
                   style={[
                     t.body,
-                    { color: actual ? c.goldInk : c.textStrong, fontSize: 14.5, fontWeight: actual ? '700' : '400' },
+                    { color: actual ? c.goldInk : c.textStrong, fontSize: 16, fontWeight: actual ? '700' : '400' },
                   ]}
                 >
                   {actual ? `✓ ${rol.etiqueta} (rol actual)` : rol.etiqueta}
@@ -322,7 +322,7 @@ export function StaffRolesScreen({ onVolver }: { onVolver: () => void }) {
       setTotalStaff(null);
       setMentoresDeStaff([]);
       setTotalMentoresDeStaff(null);
-      setErrorStaff(mensajeDeFallo(e, 'No se pudo cargar el staff.'));
+      setErrorStaff(mensajeDeFallo(e, 'No se pudo cargar el equipo.'));
     } finally {
       setCargandoStaff(false);
     }
@@ -415,7 +415,7 @@ export function StaffRolesScreen({ onVolver }: { onVolver: () => void }) {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
-      <CabeceraAdmin titulo="Staff y roles" subtitulo="Quién es qué" onVolver={onVolver} />
+      <CabeceraAdmin titulo="Equipo y roles" subtitulo="Quién es qué" onVolver={onVolver} />
       <ScrollView
         style={{ flex: 1 }}
         keyboardShouldPersistTaps="handled"
@@ -429,15 +429,15 @@ export function StaffRolesScreen({ onVolver }: { onVolver: () => void }) {
           gap: 14,
         }}
       >
-        <Text style={[t.body, { color: c.textSoft, fontSize: 13, lineHeight: 19 }]}>
+        <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]}>
           Al aprobar una solicitud la persona entra siempre como aprendiz. Acá se le cambia el rol.
         </Text>
 
-        {error ? <Text style={[t.body, { color: c.danger, fontSize: 13.5 }]}>{error}</Text> : null}
+        {error ? <Text style={[t.body, { color: c.danger, fontSize: 16 }]}>{error}</Text> : null}
 
         {cambiados.length > 0 ? (
           <View style={{ gap: 10 }}>
-            <MicroLabel>Cambios de esta sesión</MicroLabel>
+            <TituloDeSeccion>Cambios de esta sesión</TituloDeSeccion>
             {cambiados.map(persona => (
               <FilaDePersona
                 key={`cambiado-${persona.id}`}
@@ -458,21 +458,21 @@ export function StaffRolesScreen({ onVolver }: { onVolver: () => void }) {
           {/* El número es el de las filas que se ven, no el del servidor: una cabecera que dice 5
               sobre una lista de 4 es la clase de detalle que hace dudar de toda la pantalla. Lo
               que el servidor dice que hay va abajo, y solo si no entró todo. */}
-          <MicroLabel>Staff ({staffVisible.length})</MicroLabel>
+          <TituloDeSeccion>Equipo ({staffVisible.length})</TituloDeSeccion>
           {/* > **Corregido 2026-09-15.** Esto decía «Los mentores están más abajo, con su grupo».
               La sección de abajo ahora también trae mentores suspendidos, que no salen del listado
               de grupos y por lo tanto no tienen grupo que mostrar: la promesa dejó de valer para
               todas sus filas, y prometer de más es lo que hace dudar del resto de la pantalla. */}
-          <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, lineHeight: 18 }]}>
+          <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]}>
             Líderes de mentores, administradores y alquimistas, con el rol que dice el servidor.
             Los mentores están más abajo.
           </Text>
           {errorStaff ? (
-            <Text style={[t.body, { color: c.danger, fontSize: 13.5 }]}>{errorStaff}</Text>
+            <Text style={[t.body, { color: c.danger, fontSize: 16 }]}>{errorStaff}</Text>
           ) : null}
           {cargandoStaff ? <ActivityIndicator color={c.goldInk} style={{ marginTop: 6 }} /> : null}
           {!errorStaff && !cargandoStaff && staffVisible.length === 0 ? (
-            <Text style={[t.body, { color: c.textSoft, fontSize: 13.5 }]}>
+            <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>
               Todavía no hay nadie con estos roles.
             </Text>
           ) : null}
@@ -489,7 +489,7 @@ export function StaffRolesScreen({ onVolver }: { onVolver: () => void }) {
           {/* Si el servidor dice que hay más de los que se pidieron, se avisa en vez de mostrar
               una lista incompleta como si fuera completa. */}
           {totalStaff !== null && totalStaff > staff.length ? (
-            <Text style={[t.body, { color: c.micro, fontSize: 12.5 }]}>
+            <Text style={[t.body, { color: c.micro, fontSize: 16 }]}>
               Se muestran {staff.length} de {totalStaff}.
             </Text>
           ) : null}
@@ -499,7 +499,7 @@ export function StaffRolesScreen({ onVolver }: { onVolver: () => void }) {
             Una cuenta suspendida se reconoce en su propia línea —«Mentor · Cuenta suspendida ·
             correo»—, así que no hace falta una sección aparte para explicar por qué está ahí. */}
         <View style={{ gap: 10 }}>
-          <MicroLabel>Mentores ({mentoresVisibles.length})</MicroLabel>
+          <TituloDeSeccion>Mentores ({mentoresVisibles.length})</TituloDeSeccion>
           {/* Qué falta averiguar, o que todavía no hay mentores — nunca las dos cosas, y el «no
               hay» solo cuando se pudo comprobar. Callar un fallo dejaría esta sección con cara de
               estar completa; afirmar el vacío sin haberlo mirado es peor todavía.
@@ -515,8 +515,8 @@ export function StaffRolesScreen({ onVolver }: { onVolver: () => void }) {
               style={[
                 t.body,
                 mensajeDeMentores.tono === 'vacio'
-                  ? { color: c.textSoft, fontSize: 13.5 }
-                  : { color: c.micro, fontSize: 12.5, lineHeight: 18 },
+                  ? { color: c.textSoft, fontSize: 16 }
+                  : { color: c.micro, fontSize: 16, lineHeight: 23 },
               ]}
             >
               {mensajeDeMentores.texto}
@@ -525,7 +525,7 @@ export function StaffRolesScreen({ onVolver }: { onVolver: () => void }) {
           {/* La página de mentores no alcanzó. Se dice, en vez de dejar la sección con cara de
               completa: el que falte va a ser justo el que alguien vino a buscar. */}
           {totalMentoresDeStaff !== null && totalMentoresDeStaff > mentoresDeStaff.length ? (
-            <Text style={[t.body, { color: c.micro, fontSize: 12.5, lineHeight: 18 }]}>
+            <Text style={[t.body, { color: c.micro, fontSize: 16, lineHeight: 23 }]}>
               El servidor dice que hay {totalMentoresDeStaff} mentores y acá entraron{' '}
               {mentoresDeStaff.length}: puede faltar alguno con la cuenta suspendida.
             </Text>
@@ -543,9 +543,9 @@ export function StaffRolesScreen({ onVolver }: { onVolver: () => void }) {
         </View>
 
         <View style={{ gap: 10 }}>
-          <MicroLabel>
+          <TituloDeSeccion>
             APRENDICES {totalAprendices === null ? '' : `(${totalAprendices} en total)`}
-          </MicroLabel>
+          </TituloDeSeccion>
           <TextInput
             value={busqueda}
             onChangeText={setBusqueda}
@@ -554,7 +554,7 @@ export function StaffRolesScreen({ onVolver }: { onVolver: () => void }) {
             autoCapitalize="none"
             autoCorrect={false}
             accessibilityLabel="Buscar aprendices"
-            style={[estilos.buscador, { backgroundColor: c.cardBg, borderColor: c.border, color: c.text }, t.body]}
+            style={[t.body, estilos.buscador, { backgroundColor: c.cardBg, borderColor: c.border, color: c.text, fontSize: 16 }]}
           />
           {aprendicesVisibles.map(persona => (
             <FilaDePersona
@@ -586,7 +586,7 @@ export function StaffRolesScreen({ onVolver }: { onVolver: () => void }) {
             accessibilityLabel={botonDelPie.etiquetaAccesible}
             style={[estilos.boton, { borderColor: c.border }]}
           >
-            <Text style={[t.body, { color: c.textStrong, fontSize: 14, fontWeight: '500' }]}>
+            <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontWeight: '500' }]}>
               {botonDelPie.etiqueta}
             </Text>
           </Pressable>
@@ -602,7 +602,7 @@ const estilos = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     paddingHorizontal: 14,
-    fontSize: 15,
+    fontSize: 16,
     width: '100%',
   },
   tarjeta: {

@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon } from '../../../components/Icon';
 import { Aparicion } from '../../../components/Aparicion';
-import { MicroLabel } from '../../../components/ui';
+import { TituloDeSeccion } from '../../../components/Legible';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { destinoDe } from '../api/avisosApi';
 import { useAvisosDeAcompanamiento } from '../hooks/useAvisosDeAcompanamiento';
@@ -14,6 +14,8 @@ import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
 import { SeccionSemaforoDelGrupo } from '../../semaforo/components/SeccionSemaforoDelGrupo';
+import { useSemaforoDelGrupo } from '../../semaforo/hooks/useLecturaPorSemana';
+import { seOcultaLaSeccion } from '../../semaforo/utils/entradasDelSemaforo';
 import { CargandoCelula, EstadoCelula } from '../components/EstadoCelula';
 import { FilaAlumno } from '../components/FilaAlumno';
 import type { FalloCelula, VistaCelula } from '../hooks/useCelulaQueAcompano';
@@ -27,9 +29,13 @@ import type { AlumnoConEstado } from '../types/mentor.types';
  * el doble scroll que la guía prohíbe, y una célula tiene diez personas —no mil— así que la
  * virtualización no compra nada y sí rompe el gesto.
  *
- * Desde el semáforo (D-168) suma la sección «Semáforo del grupo», debajo de las cifras. El aviso
- * del sábado al mentor (`/mentor/groups/{g}/semaforo`) abre esta pantalla con `enfocarSemaforo`, y
- * entonces el scroll baja hasta esa sección.
+ * Desde el 26/09 (S-1) manda el semáforo: después de los avisos va «Necesitan tu ayuda esta
+ * semana» (rojo y amarillo) y debajo el resto del grupo. Se quitaron las cifras («0 al día»,
+ * «— cumplimiento», «— por revisar») y las listas «Requieren seguimiento / Sin avance registrado /
+ * Al día»: salían de campos que el servidor nunca mandaba y decían «sin avance» de todo el mundo.
+ * Si el semáforo no está disponible (404 o 403), se muestra la lista simple del grupo, sin estados.
+ * El aviso del sábado al mentor (`/mentor/groups/{g}/semaforo`) abre esta pantalla con
+ * `enfocarSemaforo`, y entonces el scroll baja hasta esa sección.
  */
 export function MiCelulaScreen({
   onSalir,
@@ -81,26 +87,14 @@ export function MiCelulaScreen({
     return true;
   });
 
-  const resumen = vista?.resumen;
   const { evaluacion, disponible: hayEvaluacion } = useEvaluacionPropia(vista != null);
   const { avisos, disponible: hayAvisos, marcarLeido } = useAvisosDeAcompanamiento(vista != null);
   const { miFila, total: gruposEnCohorte, disponible: hayRanking } = useRankingDeGrupos(
     vista?.celula.cohorteId ?? null,
     vista?.celula.id ?? null,
   );
-  /** `—` y no `0`: que no se sepa no es que valga cero. */
-  const pct = resumen?.cumplimiento;
-  const cifras: Array<{ valor: string; etiqueta: string }> = [
-    { valor: String(resumen?.total ?? '—'), etiqueta: 'aprendices' },
-    { valor: String(resumen?.alDia ?? '—'), etiqueta: 'al día' },
-    // Solo cuando hay alguien sin juzgar: en el caso normal la cabecera queda en cuatro cifras.
-    ...(resumen && resumen.sinDatos > 0
-      ? [{ valor: String(resumen.sinDatos), etiqueta: 'sin datos' }]
-      : []),
-    { valor: pct === null || pct === undefined ? '—' : `${Math.round(pct * 100)}%`, etiqueta: 'cumplimiento' },
-    { valor: resumen?.evidenciasPendientes === null || resumen?.evidenciasPendientes === undefined
-        ? '—' : String(resumen.evidenciasPendientes), etiqueta: 'por revisar' },
-  ];
+  const semaforo = useSemaforoDelGrupo(vista ? { quien: 'mentor', grupoId: vista.celula.id } : null);
+  const sinSemaforo = seOcultaLaSeccion(semaforo);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
@@ -113,12 +107,12 @@ export function MiCelulaScreen({
           style={estilos.volver}
         >
           <Icon name="arrowLeft" size={15} color={c.goldInk} />
-          <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
-            VOLVER
+          <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_500Medium', fontSize: 16 }]}>
+            Volver
           </Text>
         </Pressable>
         <View style={[estilos.insignia, { borderColor: c.gold, backgroundColor: c.goldWash }]}>
-          <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 10.5 }]}>
+          <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 14 /* metadato */ }]}>
             MENTOR
           </Text>
         </View>
@@ -145,14 +139,14 @@ export function MiCelulaScreen({
           <Text style={[t.screenTitle, { color: c.text, fontSize: 21 }]} numberOfLines={2}>
             {vista?.celula.nombre ?? 'Mi grupo'}
           </Text>
-          <Text style={[t.body, { color: c.textSoft, fontSize: 13, marginTop: 4 }]}>
+          <Text style={[t.body, { color: c.textSoft, fontSize: 16, marginTop: 4 }]}>
             {vista
               ? [
                   vista.celula.cohorte,
                   /* Los DOS se nombran, no solo la recepción. Antes el grupo estable no
                      llevaba etiqueta, y un mentor que acompaña los dos no podía distinguirlos:
                      la ausencia de etiqueta no dice "estable", solo dice nada. */
-                  vista.celula.tipo === 'recepcion' ? 'Recepción' : 'Grupo estable',
+                  vista.celula.tipo === 'recepcion' ? 'Grupo de bienvenida' : 'Grupo estable',
                   ocupacion(vista.resumen.total, vista.celula.cupo),
                 ]
                   .filter(Boolean)
@@ -177,7 +171,7 @@ export function MiCelulaScreen({
                   t.body,
                   {
                     color: vista.celula.cobertura === 'soporte' ? c.goldInk : c.danger,
-                    fontSize: 12.5,
+                    fontSize: 16,
                     fontFamily: 'Jost_500Medium',
                   },
                 ]}
@@ -203,13 +197,12 @@ export function MiCelulaScreen({
 
         {!cargando && vista && vista.todos.length > 0 ? (
           <>
-            {/* Avisos sin leer. Salen de la bandeja general filtrada por tipo: no hay lista
-                paralela de alertas. Cada uno dice su causa y lleva al alumno. */}
+            {/* Avisos sin leer, arriba de todo (SIN_ACTIVIDAD, EVIDENCIA_VENCIDA…). Salen de la
+                bandeja general filtrada por tipo: no hay lista paralela de alertas. Cada uno dice su
+                causa y lleva al alumno. */}
             {hayAvisos ? (
               <Aparicion retardo={20} style={{ marginBottom: 4 }}>
-                <MicroLabel>
-                  {avisos.length === 1 ? '1 AVISO' : `${avisos.length} AVISOS`}
-                </MicroLabel>
+                <TituloDeSeccion>{avisos.length === 1 ? '1 aviso' : `${avisos.length} avisos`}</TituloDeSeccion>
                 <View style={[estilos.evaluacion, { borderColor: c.border, backgroundColor: c.cardBg,
                   paddingVertical: 6 }]}>
                   {avisos.map((aviso, i) => {
@@ -231,8 +224,8 @@ export function MiCelulaScreen({
                         accessibilityLabel={aviso.body}
                         style={[estilos.aviso, i > 0 ? { borderTopWidth: 1, borderTopColor: c.border } : null]}
                       >
-                        <Icon name="clock" size={15} color={c.goldInk} />
-                        <Text style={[t.body, { color: c.text, fontSize: 13.5, flex: 1 }]}>
+                        <Icon name="clock" size={16} color={c.goldInk} />
+                        <Text style={[t.body, { color: c.text, fontSize: 16, lineHeight: 23, flex: 1 }]}>
                           {aviso.body}
                         </Text>
                         {alumno ? <Icon name="chevron" size={14} color={c.chevron} /> : null}
@@ -243,11 +236,39 @@ export function MiCelulaScreen({
               </Aparicion>
             ) : null}
 
+            {/* El semáforo manda (26/09, S-1): «Necesitan tu ayuda esta semana» y el resto del
+                grupo, persona por persona, con palabra y color. La envoltura mide dónde cae, para
+                poder llevar el scroll hasta acá desde el aviso del sábado. */}
+            <View onLayout={alMedirSemaforo}>
+              <SeccionSemaforoDelGrupo
+                lectura={semaforo}
+                onAbrirAprendiz={aprendizId => {
+                  /* Solo si sigue en el padrón: la ficha necesita al alumno entero, y alguien
+                     que ya rotó no es de este mentor (mismo criterio que los avisos). */
+                  const alumno = vista.todos.find(a => a.participanteId === aprendizId);
+                  return alumno ? () => onAbrirAlumno(alumno) : undefined;
+                }}
+              />
+            </View>
+
+            {/* Sin semáforo (servidor sin la ruta, o sin permiso) queda la lista simple del grupo:
+                los nombres, para poder abrir a cada uno. Sin estados inventados. */}
+            {sinSemaforo ? (
+              <Aparicion retardo={60} style={{ marginTop: 18 }}>
+                <TituloDeSeccion>Tu grupo</TituloDeSeccion>
+                <View style={[estilos.lista, { borderColor: c.border, backgroundColor: c.cardBg }]}>
+                  {vista.todos.map(a => (
+                    <FilaAlumno key={a.participanteId} alumno={a} onPress={() => onAbrirAlumno(a)} />
+                  ))}
+                </View>
+              </Aparicion>
+            ) : null}
+
             {/* Mi evaluación. El porcentaje llega calculado del servidor: la app no lo
                 recalcula, para que nunca diga un número distinto del que ve el administrador. */}
             {hayEvaluacion && evaluacion ? (
-              <Aparicion retardo={40} style={{ marginBottom: 4 }}>
-                <MicroLabel>Mi evaluación</MicroLabel>
+              <Aparicion retardo={80} style={{ marginTop: 22 }}>
+                <TituloDeSeccion>Mi evaluación</TituloDeSeccion>
                 <View style={[estilos.evaluacion, { borderColor: c.border, backgroundColor: c.cardBg }]}>
                   <View style={estilos.filaEvaluacion}>
                     <Text style={[estilos.cifraValor, { color: c.textStrong, fontSize: 28 }]}>
@@ -256,11 +277,11 @@ export function MiCelulaScreen({
                         : `${Math.round(evaluacion.porcentaje)}%`}
                     </Text>
                     <View style={{ flex: 1 }}>
-                      <Text style={[t.body, { color: c.text, fontSize: 13, fontFamily: 'Jost_500Medium' }]}>
+                      <Text style={[t.body, { color: c.text, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>
                         {textoDeEstado(evaluacion.estado)}
                       </Text>
                       {evaluacion.estado === 'CALCULADA' ? (
-                        <Text style={[t.micro, { color: c.textSoft, fontSize: 11.5, marginTop: 2 }]}>
+                        <Text style={[t.body, { color: c.textSoft, fontSize: 16, marginTop: 2 }]}>
                           {evaluacion.entregadas} de {evaluacion.esperadas} evidencias ·{' '}
                           {evaluacion.alumnosEvaluados}{' '}
                           {evaluacion.alumnosEvaluados === 1 ? 'aprendiz' : 'aprendices'}
@@ -273,12 +294,12 @@ export function MiCelulaScreen({
                       mentor entró a mitad de mes. Se dice, no se disimula (plan.md §8). */}
                   {hayRanking && miFila ? (
                     <View style={[estilos.posicion, { borderTopColor: c.border }]}>
-                      <Text style={[t.body, { color: c.text, fontSize: 13 }]}>
-                        Tu grupo va en el puesto {miFila.posicion} de {gruposEnCohorte} en la cohorte
+                      <Text style={[t.body, { color: c.text, fontSize: 16 }]}>
+                        Tu grupo va en el puesto {miFila.posicion} de {gruposEnCohorte} en la generación
                       </Text>
-                      <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>
+                      <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>
                         {miFila.porcentaje === null
-                          ? 'Sin muestra suficiente este mes'
+                          ? 'Todavía sin actividad para medir este mes'
                           : `${Math.round(miFila.porcentaje)}% del grupo · ${miFila.muestra} ${
                               miFila.muestra === 1 ? 'aprendiz medido' : 'aprendices medidos'
                             }`}
@@ -286,94 +307,11 @@ export function MiCelulaScreen({
                     </View>
                   ) : null}
 
-                  <Text style={[t.micro, { color: c.chevron, fontSize: 10.5, marginTop: 10, lineHeight: 15 }]}>
+                  <Text style={[t.body, { color: c.textSoft, fontSize: 14 /* metadato */, marginTop: 10, lineHeight: 20 }]}>
                     Se promedia el porcentaje de cada aprendiz, no el total de evidencias. Cuenta la
                     entrega dentro de tu período; la verificación se informa aparte
                     {evaluacion.verificadas > 0 ? ` (${evaluacion.verificadas} verificadas)` : ''}.
                   </Text>
-                </View>
-              </Aparicion>
-            ) : null}
-
-            <Aparicion retardo={70}>
-              {/* `flexWrap` y un ancho minimo: cuatro en linea donde cabe, 2x2 en pantallas
-                  estrechas. Sin puntos de ruptura escritos a mano — la caja decide. */}
-              <View style={estilos.cifras}>
-                {cifras.map(cifra => (
-                  <View
-                    key={cifra.etiqueta}
-                    style={[estilos.cifra, { borderColor: c.border, backgroundColor: c.cardBg }]}
-                  >
-                    <Text style={[estilos.cifraValor, { color: c.textStrong }]}>{cifra.valor}</Text>
-                    <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5 }]} numberOfLines={2}>
-                      {cifra.etiqueta}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            </Aparicion>
-
-            {/* Semáforo de cumplimiento (D-168): la semana del grupo, persona por persona, con
-                palabra y color. Convive con las listas de abajo, que miden otra cosa (reglas.ts).
-                Si el servidor no tiene la ruta (404) o el mentor ya no acompaña el grupo (403),
-                la sección no aparece y la pantalla queda como estaba. La envoltura mide dónde
-                cae, para poder llevar el scroll hasta acá desde el aviso del sábado. */}
-            <View onLayout={alMedirSemaforo}>
-              <SeccionSemaforoDelGrupo
-                grupoId={vista.celula.id}
-                onAbrirAprendiz={aprendizId => {
-                  /* Solo si sigue en el padrón: la ficha necesita al alumno entero, y alguien
-                     que ya rotó no es de este mentor (mismo criterio que los avisos). */
-                  const alumno = vista.todos.find(a => a.participanteId === aprendizId);
-                  return alumno ? () => onAbrirAlumno(alumno) : undefined;
-                }}
-              />
-            </View>
-
-            {vista.requierenSeguimiento.length > 0 ? (
-              <Aparicion retardo={140} style={{ marginTop: 22 }}>
-                <MicroLabel>Requieren seguimiento</MicroLabel>
-                <View style={[estilos.lista, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-                  {vista.requierenSeguimiento.map(a => (
-                    <FilaAlumno key={a.participanteId} alumno={a} onPress={() => onAbrirAlumno(a)} />
-                  ))}
-                </View>
-              </Aparicion>
-            ) : vista.alDia.length > 0 ? (
-              <Aparicion retardo={140} style={{ marginTop: 22 }}>
-                <View style={[estilos.todoBien, { borderColor: c.border, backgroundColor: c.successWash }]}>
-                  <Icon name="checkCircle" size={17} color={c.success} />
-                  <Text style={[t.body, { color: c.text, fontSize: 13, flex: 1 }]}>
-                    Nadie de tu grupo necesita seguimiento hoy.
-                  </Text>
-                </View>
-              </Aparicion>
-            ) : null}
-
-            {/* Sin una sola señal no se afirma nada. El verde de "todo bien" solo aparece
-                cuando hay datos que lo respalden; si no, se dice que faltan. */}
-            {vista.sinDatos.length > 0 ? (
-              <Aparicion retardo={175} style={{ marginTop: 22 }}>
-                <MicroLabel>Sin avance registrado</MicroLabel>
-                <View style={[estilos.lista, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-                  {vista.sinDatos.map(a => (
-                    <FilaAlumno key={a.participanteId} alumno={a} onPress={() => onAbrirAlumno(a)} />
-                  ))}
-                </View>
-                <Text style={[t.micro, { color: c.chevron, fontSize: 10.5, marginTop: 8, lineHeight: 15 }]}>
-                  Todavía no hay actividad registrada de estas personas. Abre a cada una para ver
-                  su semana: que falte el resumen no significa que no haya cumplido.
-                </Text>
-              </Aparicion>
-            ) : null}
-
-            {vista.alDia.length > 0 ? (
-              <Aparicion retardo={210} style={{ marginTop: 22 }}>
-                <MicroLabel>Al día</MicroLabel>
-                <View style={[estilos.lista, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-                  {vista.alDia.map(a => (
-                    <FilaAlumno key={a.participanteId} alumno={a} onPress={() => onAbrirAlumno(a)} />
-                  ))}
                 </View>
               </Aparicion>
             ) : null}
@@ -392,11 +330,11 @@ export function MiCelulaScreen({
 function textoDeEstado(estado: string): string {
   switch (estado) {
     case 'CALCULADA':
-      return 'Cumplimiento de tus aprendices este mes';
+      return 'Cuánto cumplieron tus aprendices este mes';
     case 'SIN_MUESTRA':
       return 'Este mes todavía no vencieron evidencias que medir';
     default:
-      return 'Sin historial evaluable en este período';
+      return 'Todavía sin actividad para medir en este período';
   }
 }
 
@@ -421,25 +359,12 @@ const estilos = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingTop: 10, paddingBottom: 6,
   },
-  volver: { flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 44 },
+  volver: { flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 48 },
   insignia: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
   contenido: { flexGrow: 1, paddingTop: 8, paddingBottom: ESPACIO_PARA_LANZADOR },
-  cifras: { flexDirection: 'row', flexWrap: 'wrap', gap: 9, marginTop: 16 },
-  /* `flexBasis: 132` es lo que hace que escale sola, sin puntos de ruptura escritos a mano:
-     a 375px de ancho no caben cuatro, asi que se reparten 2x2 y cada etiqueta tiene sitio; en
-     tablet (560 de contenido) las cuatro entran en una fila. Con 74 cabian las cuatro y
-     "cumplimiento" se partia por la mitad. */
-  cifra: {
-    flexGrow: 1, flexBasis: 132, minWidth: 132,
-    borderWidth: 1, borderRadius: 13, paddingVertical: 12, paddingHorizontal: 10, alignItems: 'center',
-  },
   cifraValor: {
     fontFamily: 'Jost_500Medium', fontSize: 23, lineHeight: 27,
     fontVariant: ['tabular-nums'],
   },
   lista: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 14, marginTop: 8 },
-  todoBien: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    borderWidth: 1, borderRadius: 14, padding: 14,
-  },
 });

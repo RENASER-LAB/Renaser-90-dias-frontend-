@@ -2,7 +2,8 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Aparicion } from '../../../components/Aparicion';
-import { Card, MicroLabel } from '../../../components/ui';
+import { Card } from '../../../components/ui';
+import { TituloDeSeccion } from '../../../components/Legible';
 import { useTheme } from '../../../theme/ThemeContext';
 import { aHoraCorta, etiquetaDeCategoria } from '../../habits/api/habitsMappers';
 import { useHabitosDelAlumno } from '../hooks/useHabitosDelAlumno';
@@ -43,32 +44,32 @@ export function HabitosDelAlumno({ grupoId, alumnoId }: { grupoId: string | null
 
   return (
     <Aparicion retardo={170} style={{ marginTop: 20 }}>
-      <MicroLabel>SUS HÁBITOS</MicroLabel>
+      <TituloDeSeccion>SUS HÁBITOS</TituloDeSeccion>
       <Card style={estilos.tarjeta}>
         {cargando ? (
-          <Text style={[t.body, { color: c.textSoft, fontSize: 13 }]}>Cargando sus hábitos…</Text>
+          <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>Cargando sus hábitos…</Text>
         ) : fallo ? (
-          <Text style={[t.body, { color: c.textSoft, fontSize: 13, lineHeight: 19 }]}>
+          <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]}>
             {fallo === 'sin_red'
               ? 'No se pudieron cargar sus hábitos. Revisa tu conexión y vuelve a entrar.'
               : 'No se pudieron cargar sus hábitos.'}
           </Text>
         ) : habitos ? (
           <>
-            <Text style={[t.body, { color: c.text, fontSize: 13.5, fontFamily: 'Jost_500Medium' }]}>
+            <Text style={[t.body, { color: c.text, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>
               {habitos.programDay > 0 ? `Día ${habitos.programDay} de 90` : 'Todavía no arrancó su programa'}
             </Text>
             {/* De quién es el reloj con el que se leen las horas de abajo. Sin esto, un mentor
                 en otro huso no tiene forma de saber que "07:00" no son sus siete. */}
-            <Text style={[t.micro, { color: c.textSoft, fontSize: 11.5, marginTop: 6, lineHeight: 17 }]}>
+            <Text style={[t.micro, { color: c.textSoft, fontSize: 14 /* metadato */, marginTop: 6, lineHeight: 20 }]}>
               Hoy para él es {diaYMes(habitos.localDate)} · horarios en {habitos.timeZone}
             </Text>
-            <Text style={[t.micro, { color: c.textSoft, fontSize: 11.5, marginTop: 2, lineHeight: 17 }]}>
+            <Text style={[t.micro, { color: c.textSoft, fontSize: 14 /* metadato */, marginTop: 2, lineHeight: 20 }]}>
               {textoDeCupoDeCambios(habitos.scheduleEdits)}
             </Text>
 
             {habitos.habits.length === 0 ? (
-              <Text style={[t.body, { color: c.textSoft, fontSize: 13, marginTop: 12, lineHeight: 19 }]}>
+              <Text style={[t.body, { color: c.textSoft, fontSize: 16, marginTop: 12, lineHeight: 23 }]}>
                 Sin hábitos configurados.
               </Text>
             ) : (
@@ -105,19 +106,19 @@ function FilaHabito({ habito }: { habito: HabitoDelAlumnoApi }) {
 
   return (
     <View style={[estilos.habito, { borderColor: c.border }]}>
-      <Text style={[t.body, { color: c.text, fontSize: 13.5 }]}>{titulo}</Text>
+      <Text style={[t.body, { color: c.text, fontSize: 16 }]}>{titulo}</Text>
       {renombrado ? (
-        <Text style={[t.micro, { color: c.textSoft, fontSize: 11, lineHeight: 16 }]}>
+        <Text style={[t.micro, { color: c.textSoft, fontSize: 14 /* metadato */, lineHeight: 20 }]}>
           En el catálogo: {habito.catalogTitle}
         </Text>
       ) : null}
       {etiquetas.length > 0 ? (
-        <Text style={[t.micro, { color: c.micro, fontSize: 11 }]}>{etiquetas.join(' · ')}</Text>
+        <Text style={[t.micro, { color: c.micro, fontSize: 14 /* metadato */ }]}>{etiquetas.join(' · ')}</Text>
       ) : null}
       {lineas.map((linea, i) => (
         <Text
           key={`${habito.habitId}-${i}`}
-          style={[t.micro, { color: c.textSoft, fontSize: 11.5, lineHeight: 17 }]}
+          style={[t.micro, { color: c.textSoft, fontSize: 14 /* metadato */, lineHeight: 20 }]}
         >
           {linea}
         </Text>

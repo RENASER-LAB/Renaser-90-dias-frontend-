@@ -9,26 +9,34 @@ import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher'
 import { VistaSemaforoDelGrupo } from '../../semaforo/components/TablaDelSemaforo';
 import { useSemaforoDelGrupo, type InicioSemanal } from '../../semaforo/hooks/useLecturaPorSemana';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
+import type { PersonaDeFicha } from '../types/admin.types';
 
 /**
  * La tabla del semáforo de un grupo, CON nombres, para administración y alquimista
  * (`GET /api/v1/admin/semaforo/groups/{groupId}`, contrato §4.3). **Es el mismo componente de tabla
  * que ve el mentor** (`VistaSemaforoDelGrupo`): dos tablas distintas serían dos verdades.
  *
- * Las filas no se abren: la persona se mira en su ficha (Personas), que ya tiene su tarjeta del
- * semáforo. Abre en la misma semana que se estaba mirando en el resumen.
+ * Tocar una fila abre la ficha de esa persona (26/09, S-3: llegar a alguien en 4 toques o menos:
+ * Administración → Semáforo → grupo → persona). Abre en la misma semana que se estaba mirando en el
+ * resumen.
+ *
+ * > **Corregido 2026-09-26.** Decía «las filas no se abren: la persona se mira en su ficha
+ * > (Personas)». Eso obligaba a salir, ir a Personas y buscarla por nombre.
  */
 export function SemaforoGrupoAdminScreen({
   grupoId,
   grupoNombre,
   inicio,
   onVolver,
+  onAbrirAprendiz,
 }: {
   grupoId: string;
   /** El nombre que ya se conocía por el resumen, para no dejar la cabecera vacía mientras carga. */
   grupoNombre: string | null;
   inicio?: InicioSemanal;
   onVolver: () => void;
+  /** Abre la ficha de la persona tocada. Se reusa la ficha de Personas. */
+  onAbrirAprendiz: (persona: PersonaDeFicha) => void;
 }) {
   const { c } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
@@ -57,7 +65,13 @@ export function SemaforoGrupoAdminScreen({
           alignSelf: 'center',
         }}
       >
-        <VistaSemaforoDelGrupo lectura={lectura} />
+        <VistaSemaforoDelGrupo
+          lectura={lectura}
+          onAbrirAprendiz={aprendizId => {
+            const fila = lectura.datos?.aprendices.find(a => a.aprendizId === aprendizId);
+            return () => onAbrirAprendiz({ id: aprendizId, fullName: fila?.nombre ?? null, cellId: grupoId });
+          }}
+        />
       </ScrollView>
     </SafeAreaView>
   );
