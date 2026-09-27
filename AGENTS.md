@@ -40,6 +40,29 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       info. Las marcas de los propios pasan de «✓✓» a «✓»: el backend no informa entrega ni lectura.
       Todo en `features/chat/components/` y `features/chat/utils/formatoChat.ts`; envío, fotos,
       audios, evidencia, tiempo real y la tarjeta de bienvenida siguen por el mismo camino.
+    * **Ampliada el 2026-09-26 (noche), tercer pedido del dueño mirando el emulador — conversación
+      a pantalla completa, franja blanca, conteo de integrantes y chat en vivo.**
+      * **Pantalla completa, como WhatsApp**: con una conversación abierta (o su info) no se ven la
+        cabecera «COMUNIDAD» ni la fila de secciones, y **se esconde la barra de pestañas de
+        abajo** (`navigation.setOptions({ tabBarStyle: { display: 'none' } })`); vuelve al cerrar
+        con ← o con el «atrás» de Android, que sigue cerrando primero la conversación. Por eso
+        `components/TabBar.tsx` (la barra propia) ahora obedece esa opción de la pestaña enfocada
+        (`navigation/pestanasOcultas.ts`); las otras cuatro pestañas no la usan y no cambian.
+      * **Franja blanca** bajo la barra de escribir: el `SafeAreaView` de Comunidad aplicaba el
+        inset de abajo que la barra de pestañas ya reserva (se pagaba dos veces, pintado de `c.bg`).
+        Ahora va con `edges={['top','left','right']}`; sin barra de pestañas, el inset lo pinta un
+        relleno con el fondo del chat. Efecto colateral: en las demás secciones de Comunidad
+        desaparece el mismo hueco duplicado encima de la barra de pestañas.
+      * **«Grupo · N integrantes» cuenta a todos**, mentor incluido (WhatsApp cuenta a todos los
+        participantes): `memberCount` de `/me/cells` son solo los aprendices vigentes y el backend
+        no da el total de la conversación, así que se suma el mentor del grupo
+        (`integrantesDelChatDeGrupo`), la misma cifra que la lista de la info.
+      * **Chat en vivo que nunca funcionó en el teléfono** (roto desde que existe, 2026-09-17):
+        React Native corta en el primer NUL los strings que cruzan a lo nativo, y cada trama STOMP
+        salía sin su NUL final; el servidor nunca procesaba el CONNECT y la app nunca se suscribía.
+        Las tramas salen ahora en binario (`protocoloStomp.tramaEnBytes`), se repone el NUL de las
+        que lleguen sin él, y el vigilante de silencio respeta `heart-beat:0,0` del backend (antes
+        habría reconectado cada 32 s de silencio dejando el socket viejo abierto).
     Una excepción puntual **no abre** el tab: cualquier otro cambio sobre los cinco principales
     vuelve a necesitar autorización explícita.
   * **Excepción autorizada por el dueño del producto — 2026-09-26 — tabs `Yo` y `Plan`, aviso con

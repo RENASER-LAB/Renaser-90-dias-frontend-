@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { useResponsive } from '../theme/responsive';
 import { Icon, IconName } from './Icon';
+import { pestanasOcultas } from '../navigation/pestanasOcultas';
 
 const ICONS: Record<string, IconName> = { Hoy: 'sun', Plan: 'doc', Training: 'diamond', Comunidad: 'users', Yo: 'user' };
 const LABELS: Record<string, string> = { Hoy: 'HOY', Plan: 'PLAN', Training: 'TRAINING', Comunidad: 'COMUNIDAD', Yo: 'YO' };
@@ -31,10 +32,17 @@ const LABELS: Record<string, string> = { Hoy: 'HOY', Plan: 'PLAN', Training: 'TR
  * no son evidentes para un público de 40 a 60 años — el mismo criterio por el que `AGENTS.md` §4
  * fija tamaños mínimos de lectura.
  */
-export function TabBar({ state, navigation }: BottomTabBarProps) {
+export function TabBar({ state, navigation, descriptors }: BottomTabBarProps) {
   const { c, t } = useTheme();
   const insets = useSafeAreaInsets();
   const { rs, isTablet } = useResponsive();
+
+  /* 2026-09-26: una pestaña puede pedir la pantalla entera (una conversación de Comunidad, como en
+     WhatsApp) con `tabBarStyle: { display: 'none' }`. Una barra propia no lee esa opción sola, así
+     que se mira acá; ver `navigation/pestanasOcultas.ts`. Va después de los hooks a propósito. */
+  if (pestanasOcultas(descriptors[state.routes[state.index].key]?.options)) {
+    return null;
+  }
 
   const centerSize = rs(46);
   const iconSize = rs(20);

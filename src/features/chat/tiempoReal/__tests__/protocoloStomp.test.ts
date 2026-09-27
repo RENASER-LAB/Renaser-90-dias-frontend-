@@ -1,6 +1,13 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { FIN_DE_TRAMA, armarTrama, leerTramas } from '../protocoloStomp';
+import {
+  FIN_DE_TRAMA,
+  armarTrama,
+  completarFinDeTrama,
+  latidosNegociados,
+  leerTramas,
+  tramaEnBytes,
+} from '../protocoloStomp';
 
 /**
  * Las tres formas conocidas de romper un cliente STOMP escrito a mano:
@@ -116,6 +123,51 @@ describe('protocolo STOMP', () => {
       expect(tramas[0].comando).toBe('SEND');
       expect(tramas[0].cabeceras.destination).toBe('/app/x');
       expect(tramas[0].cuerpo).toBe(cuerpo);
+    });
+  });
+
+  /* Bug del 2026-09-26: el puente de React Native corta en el primer NUL los strings que cruzan a
+     lo nativo, y cada trama salía sin su final. Ver `tramaEnBytes`. */
+  describe('tramaEnBytes', () => {
+    it('conserva el NUL final, que es lo que el puente cortaba', () => {
+      const bytes = tramaEnBytes(armarTrama('CONNECT', { 'accept-version': '1.2' }));
+
+      expect(bytes[bytes.length - 1]).toBe(0);
+      expect(bytes.length).toBe('CONNECT\naccept-version:1.2\n\n'.length + 1);
+    });
+
+    it('codifica en UTF-8 las tildes, la ñ y los emojis', () => {
+      expect(Array.from(tramaEnBytes('a'))).toEqual([0x61]);
+      expect(Array.from(tramaEnBytes('ñ'))).toEqual([0xc3, 0xb1]);
+      expect(Array.from(tramaEnBytes('€'))).toEqual([0xe2, 0x82, 0xac]);
+      expect(Array.from(tramaEnBytes('🎤'))).toEqual([0xf0, 0x9f, 0x8e, 0xa4]);
+    });
+  });
+
+  describe('completarFinDeTrama', () => {
+    it('le devuelve el NUL a una trama que llegó sin él', () => {
+      const cortada = 'CONNECTED\nversion:1.2\nheart-beat:0,0\n\n';
+
+      expect(leerTramas(cortada).tramas).toHaveLength(0);
+      expect(leerTramas(completarFinDeTrama(cortada)).tramas[0].comando).toBe('CONNECTED');
+    });
+
+    it('no toca una trama que trae su NUL ni un latido', () => {
+      const entera = 'CONNECTED\nversion:1.2\n\n\u0000';
+
+      expect(completarFinDeTrama(entera)).toBe(entera);
+      expect(completarFinDeTrama('\n')).toBe('\n');
+    });
+  });
+
+  describe('latidosNegociados', () => {
+    it('con «0,0» el servidor no promete latidos: no hay silencio que vigilar', () => {
+      expect(latidosNegociados('0,0', 10_000)).toEqual({ esperarCadaMs: null, enviarCadaMs: null });
+      expect(latidosNegociados(undefined, 10_000)).toEqual({ esperarCadaMs: null, enviarCadaMs: null });
+    });
+
+    it('si los promete, rige el mayor de los dos lados', () => {
+      expect(latidosNegociados('5000,20000', 10_000)).toEqual({ esperarCadaMs: 10_000, enviarCadaMs: 20_000 });
     });
   });
 });

@@ -77,9 +77,12 @@ import { SeparadorDeDia } from '../features/chat/components/SeparadorDeDia';
 import { AvatarDeChat } from '../features/chat/components/AvatarDeChat';
 import {
   agruparMensajes,
+  integrantesDelChatDeGrupo,
   ordenarPorActividad,
   subtituloDeLaCabecera,
 } from '../features/chat/utils/formatoChat';
+import { conversacionAPantallaCompleta } from '../features/chat/utils/pantallaCompletaDelChat';
+import { OPCIONES_CON_PESTANAS, OPCIONES_SIN_PESTANAS } from '../navigation/pestanasOcultas';
 import { EvidenciaDesdeChatModal } from '../features/habits/components/EvidenciaDesdeChatModal';
 import { mapearMensaje, resumenDelUltimoMensaje } from '../features/chat/api/chatMappers';
 import { abrirConversacionDirecta } from '../features/chat/api/chatApi';
@@ -1253,6 +1256,19 @@ export default function ComunidadScreen() {
     return marcarChatMontado();
   }, [enTribu, activeChat, groupInfoVisible]);
 
+  /**
+   * Conversación a pantalla completa, como WhatsApp (2026-09-26): sin cabecera «COMUNIDAD», sin
+   * fila de secciones y sin la barra de pestañas de abajo. Al cerrarla (flecha o «atrás» de
+   * Android, que ya la cierran arriba en `useSystemBackHandler`) la barra vuelve; y si la pantalla
+   * se desmonta con la conversación abierta, la limpieza también la devuelve.
+   */
+  const pantallaCompleta = conversacionAPantallaCompleta({ enTribu, hayConversacionAbierta: activeChat !== null });
+  useEffect(() => {
+    if (!pantallaCompleta) return;
+    navigation.setOptions(OPCIONES_SIN_PESTANAS);
+    return () => navigation.setOptions(OPCIONES_CON_PESTANAS);
+  }, [pantallaCompleta, navigation]);
+
   // =========================================================================
   // HANDLERS
   // =========================================================================
@@ -2142,8 +2158,17 @@ export default function ComunidadScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
-      <ScreenHeader title="COMUNIDAD" right="info" />
+    /*
+      BUG 2026-09-26 — «franja blanca» entre la barra de escribir y la barra de pestañas. Este
+      `SafeAreaView` iba con los cuatro bordes, así que ponía `paddingBottom = insets.bottom` (la
+      barra de gestos) pintado de `c.bg`; y la barra de pestañas, que se dibuja DEBAJO de la
+      pantalla, ya reserva ese mismo inset (`TabBar`: `paddingBottom: max(insets.bottom, 14)`). El
+      inset se pagaba dos veces, y el primero quedaba a la vista como una franja de otro color que el
+      fondo del chat. Ahora el borde de abajo no se aplica acá: con la barra de pestañas visible lo
+      pone ella, y en una conversación (sin barra) lo pinta el relleno del final con el color del chat.
+    */
+    <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: c.bg }}>
+      {!pantallaCompleta && <ScreenHeader title="COMUNIDAD" right="info" />}
 
       {/* ========================================================================= */}
       {/* FILA DE SECCIONES: LAS CINCO, SIEMPRE A LA VISTA                          */}
@@ -3444,14 +3469,16 @@ export default function ComunidadScreen() {
               excluye a uno mismo. No se dice «última vez»: esa columna nadie la escribe.
 
               El número de integrantes sale del grupo de ESTA conversación (`/me/cells` cruzado por
-              `celulaId`, D-142), que incluye a los mentores; si todavía no se resolvió no se
-              inventa una cifra. */}
+              `celulaId`, D-142) y cuenta a todos los de la conversación, mentor incluido
+              (`integrantesDelChatDeGrupo`); si todavía no se resolvió no se inventa una cifra.
+              > Corregido 2026-09-26: decía que `memberCount` «incluye a los mentores». No: son
+              > solo los aprendices vigentes, y un mentor leía «0 integrantes» en su propio grupo. */}
           <CabeceraDeChat
             tipo={activeChat.type}
             titulo={nombreVisibleDeConversacion(activeChat)}
             subtitulo={subtituloDeLaCabecera({
               tipo: activeChat.type,
-              integrantes: grupoAbierto ? grupoAbierto.memberCount : null,
+              integrantes: integrantesDelChatDeGrupo(grupoAbierto),
               subtitulo: activeChat.subtitle,
             })}
             enLinea={activeChat.type === 'direct' && participantesEnLinea.size > 0}
@@ -3682,6 +3709,14 @@ export default function ComunidadScreen() {
           </View>
           )}
         </ScrollView>
+      )}
+
+      {/* Sin barra de pestañas (conversación a pantalla completa), el inset de abajo —la barra de
+          gestos o de tres botones— lo pinta este relleno con el fondo de lo que está a la vista, en
+          vez de dejar la barra de escribir debajo de la del sistema. Con el teclado abierto queda
+          detrás del teclado: el `KeyboardAvoidingView` mide desde su propio borde, que está encima. */}
+      {pantallaCompleta && insets.bottom > 0 && (
+        <View style={{ height: insets.bottom, backgroundColor: groupInfoVisible ? c.bg : paletaDelChat.fondo }} />
       )}
 
       {/* ========================================================================= */}

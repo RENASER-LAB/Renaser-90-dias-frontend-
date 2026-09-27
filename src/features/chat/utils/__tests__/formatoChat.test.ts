@@ -14,6 +14,7 @@ import {
   horaDeLaLista,
   ordenarPorActividad,
   subtituloDeLaCabecera,
+  integrantesDelChatDeGrupo,
   vistaPreviaDelMensaje,
 } from '../formatoChat';
 
@@ -182,6 +183,19 @@ describe('subtituloDeLaCabecera', () => {
     expect(subtituloDeLaCabecera({ tipo: 'direct', integrantes: null, subtitulo: 'Aprendiz · 1 a 1' })).toBe(
       'Aprendiz · 1 a 1'
     );
+  });
+});
+
+describe('integrantesDelChatDeGrupo', () => {
+  it('cuenta al mentor además de los aprendices, como WhatsApp cuenta a todos', () => {
+    // El caso del dueño: mentor de un grupo sin aprendices vigentes leía «0 integrantes».
+    expect(integrantesDelChatDeGrupo({ memberCount: 0, mentorName: 'Ricardo' })).toBe(1);
+    expect(integrantesDelChatDeGrupo({ memberCount: 2, mentorName: 'Ricardo' })).toBe(3);
+  });
+
+  it('sin mentor cuenta solo a los aprendices, y sin grupo no inventa cifra', () => {
+    expect(integrantesDelChatDeGrupo({ memberCount: 2, mentorName: null })).toBe(2);
+    expect(integrantesDelChatDeGrupo(null)).toBeNull();
   });
 });
 
