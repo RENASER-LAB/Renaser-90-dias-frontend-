@@ -46,8 +46,12 @@ const LATIDO_MS = 10_000;
 /**
  * Sin nada del servidor por este tiempo, la conexión se da por muerta: tres latidos perdidos.
  * Rige mientras se espera el CONNECTED y, después, SOLO si el servidor se comprometió a mandar
- * latidos (ver `latidosNegociados`): el backend de hoy contesta `heart-beat:0,0`, y con él una
- * conversación callada no es una conexión muerta.
+ * latidos (ver `latidosNegociados`). Desde D-202 del backend (2026-09-27) el servidor contesta
+ * `heart-beat:10000,10000` y el vigilante rige siempre; con un backend anterior, que contestaba
+ * `heart-beat:0,0`, una conversación callada no es una conexión muerta.
+ *
+ * > **Corregido 2026-09-27.** Decía «el backend de hoy contesta `heart-beat:0,0`»: dejó de ser así
+ * > con D-202, que le dio al broker su programador de latidos (10 s en los dos sentidos).
  */
 const SILENCIO_MAXIMO_MS = 32_000;
 

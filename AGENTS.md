@@ -67,7 +67,9 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
         salía sin su NUL final; el servidor nunca procesaba el CONNECT y la app nunca se suscribía.
         Las tramas salen ahora en binario (`protocoloStomp.tramaEnBytes`), se repone el NUL de las
         que lleguen sin él, y el vigilante de silencio respeta `heart-beat:0,0` del backend (antes
-        habría reconectado cada 32 s de silencio dejando el socket viejo abierto).
+        habría reconectado cada 32 s de silencio dejando el socket viejo abierto). *Desde D-202 del
+        backend (2026-09-27) el servidor manda latidos cada 10 s (`heart-beat:10000,10000`); el
+        vigilante sigue leyendo lo que se negocie, así que funciona con los dos.*
     * **Ampliada el 2026-09-27, pedidos del dueño mirando el emulador — info tipo WhatsApp, orden
       de la lista, mensajes del programa y la conversación que no bajaba al último mensaje.**
       * **Info del chat tipo WhatsApp** (textual: «si le doy en el círculo, ver la info del grupo

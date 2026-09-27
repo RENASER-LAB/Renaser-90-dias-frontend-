@@ -190,9 +190,14 @@ export function completarFinDeTrama(datos: string): string {
  * - `esperarCadaMs`: cada cuánto va a mandar algo el servidor, o `null` si dijo que nunca.
  * - `enviarCadaMs`: cada cuánto quiere recibir un latido nuestro, o `null` si no quiere.
  *
- * Importa porque el backend de hoy contesta `heart-beat:0,0` (su broker simple no tiene
+ * Importaba porque el backend contestaba `heart-beat:0,0` (su broker simple no tenía
  * programador de latidos): con un vigilante de silencio fijo, la app daba por muerta cada
- * conversación callada a los 32 s y reconectaba, perdiendo lo que llegara en el hueco.
+ * conversación callada a los 32 s y reconectaba, perdiendo lo que llegara en el hueco. Desde D-202
+ * del backend contesta `heart-beat:10000,10000`; se sigue leyendo la cabecera en vez de suponer un
+ * valor, por si la app habla con un backend anterior.
+ *
+ * > **Corregido 2026-09-27.** Decía «el backend de hoy contesta `heart-beat:0,0`», que dejó de ser
+ * > cierto con D-202.
  */
 export function latidosNegociados(
   cabecera: string | undefined,
