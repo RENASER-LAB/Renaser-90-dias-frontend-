@@ -4,14 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../theme/ThemeContext';
 import { useResponsive } from '../theme/responsive';
 import { Icon, IconName } from './Icon';
-
-/** Las iniciales de un nombre: "Ana López" → "AL", "Kelin" → "KE", vacío → "·". */
-function inicialesDe(nombre?: string | null): string {
-  const partes = (nombre ?? '').trim().split(/\s+/).filter(Boolean);
-  if (partes.length === 0) return '·';
-  if (partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
-  return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
-}
+import { inicialesDe } from '../utils/iniciales';
 
 /**
  * Avatar de una persona: su foto si la tiene, o sus iniciales sobre un círculo si no.
