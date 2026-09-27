@@ -29,6 +29,18 @@ interface TarjetaPlanSemanalProps {
   maestras: RocaMaestraApi[];
   numeroSemana: number;
   /**
+   * El domingo, la semana que empieza el lunes: es la que se arma ese día (D-203), porque
+   * `POST /rocks/weekly` el domingo guarda la siguiente. La lee `NivelesDelPlan`; los otros días no
+   * viene y la tarjeta es la de siempre.
+   *
+   * > **Agregado el 2026-09-27 (OBJ-03).** El domingo esta tarjeta mostraba la semana que termina y
+   * > sus botones de armar guardaban la que empieza: lo guardado no aparecía al recargar, y quien ya
+   * > tenía armada la que termina no tenía por dónde armar la que empieza —ni, por lo tanto, cómo
+   * > agendar el lunes—. Ahora la que termina queda para verla y revisarla, y la que empieza va
+   * > debajo, con su número.
+   */
+  semanaQueEmpieza?: { semanal: ReturnType<typeof useRocasSemanales>; numeroSemana: number };
+  /**
    * El eje que se está mirando. **Esta tarjeta muestra SOLO ese.**
    *
    * > **Agregado el 2026-09-23.** Antes listaba los tres apilados, así que estando en Negocio la
@@ -44,14 +56,17 @@ interface TarjetaPlanSemanalProps {
   onIrAlMapa?: () => void;
 }
 
-export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, ejeAbierto, ejePrincipal, objetivoSugeridoDe,
-  onIrAlMapa }: TarjetaPlanSemanalProps) {
+export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, semanaQueEmpieza, ejeAbierto, ejePrincipal,
+  objetivoSugeridoDe, onIrAlMapa }: TarjetaPlanSemanalProps) {
   const { c, t } = useTheme();
   const [planificando, setPlanificando] = useState(false);
   const [revisando, setRevisando] = useState<EjeObjetivo | null>(null);
+  /** La semana que se arma hoy: la que empieza, el domingo; la de siempre, los otros días. */
+  const seArma = semanaQueEmpieza ?? { semanal, numeroSemana };
+  const rocaQueEmpieza = semanaQueEmpieza?.semanal.deEje(ejeAbierto) ?? null;
 
   const guardarPlan = async (items: ItemPlanSemanal[]) => {
-    const resultado = await semanal.planificar(items);
+    const resultado = await seArma.semanal.planificar(items);
     setPlanificando(false);
     if (!resultado.ok) {
       Alert.alert('Tu plan de la semana', resultado.mensaje);
@@ -97,7 +112,13 @@ export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, ejeAbierto
         </View>
       )}
 
-      {semanal.estado === 'sin_planificar' && (
+      {semanal.estado === 'sin_planificar' && semanaQueEmpieza && (
+        <Text style={[t.body, { color: c.textSoft, fontSize: 15, marginTop: 8, lineHeight: 22 }]}>
+          Esta semana no la armaste. Hoy ya se arma la que empieza el lunes.
+        </Text>
+      )}
+
+      {semanal.estado === 'sin_planificar' && !semanaQueEmpieza && (
         <View style={{ gap: 12, marginTop: 8 }}>
           <Text style={[t.body, { color: c.textSoft, fontSize: 15, lineHeight: 22 }]}>
             Todavía no armaste esta semana. Con tu eje principal alcanza; los otros dos los sumas
@@ -135,13 +156,17 @@ export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, ejeAbierto
                     {ETIQUETA_EJE[eje].toUpperCase()}
                   </Text>
                   <Text style={[t.body, { color: c.textSoft, fontSize: 15, marginTop: 4, lineHeight: 21 }]}>
-                    Todavía no le pusiste objetivo esta semana.
+                    {semanaQueEmpieza ? 'Esta semana no le pusiste objetivo.' : 'Todavía no le pusiste objetivo esta semana.'}
                   </Text>
-                  <Pressable onPress={() => setPlanificando(true)} style={estilos.enlace} hitSlop={12}>
-                    <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 15 }]}>
-                      Planificar {ETIQUETA_EJE[eje]}
-                    </Text>
-                  </Pressable>
+                  {/* El domingo, planificar desde acá guardaría la semana que empieza: eso se hace
+                      en su propio bloque, más abajo, que la muestra con su número. */}
+                  {!semanaQueEmpieza && (
+                    <Pressable onPress={() => setPlanificando(true)} style={estilos.enlace} hitSlop={12}>
+                      <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 15 }]}>
+                        Planificar {ETIQUETA_EJE[eje]}
+                      </Text>
+                    </Pressable>
+                  )}
                 </View>
               );
             }
@@ -175,18 +200,50 @@ export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, ejeAbierto
         </View>
       )}
 
+      {/* LA SEMANA QUE EMPIEZA, solo el domingo (ver la prop). Es la que se arma ese día y la que
+          sostiene las acciones del lunes: sin su objetivo, agendarlas da NO_WEEKLY_ROCK. */}
+      {semanaQueEmpieza && semanal.estado !== 'cargando' && semanal.estado !== 'bloqueada' && (
+        <View style={[estilos.bloqueEje, { borderColor: c.gold, backgroundColor: c.cardBgAlt, marginTop: 12 }]}>
+          <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
+            LA QUE EMPIEZA EL LUNES · SEMANA {String(semanaQueEmpieza.numeroSemana).padStart(2, '0')}
+          </Text>
+          {semanaQueEmpieza.semanal.estado === 'cargando' ? (
+            <Text style={[t.small, { color: c.textSoft, fontSize: 15, marginTop: 4 }]}>Cargando…</Text>
+          ) : rocaQueEmpieza ? (
+            <Text style={[t.body, { color: c.textStrong, fontSize: 16, marginTop: 4, lineHeight: 22 }]}>
+              {rocaQueEmpieza.titulo}
+            </Text>
+          ) : (
+            <>
+              <Text style={[t.body, { color: c.textSoft, fontSize: 15, marginTop: 4, lineHeight: 21 }]}>
+                Hoy se arma. Las acciones del lunes salen de su objetivo.
+              </Text>
+              <Pressable onPress={() => setPlanificando(true)} style={estilos.enlace} hitSlop={12}>
+                <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 15 }]}>
+                  Armar la semana que empieza
+                </Text>
+              </Pressable>
+            </>
+          )}
+          {!!semanaQueEmpieza.semanal.error && (
+            <Text style={[t.small, { color: c.danger, fontSize: 14, marginTop: 8 }]}>{semanaQueEmpieza.semanal.error}</Text>
+          )}
+        </View>
+      )}
+
       {!!semanal.error && (
         <Text style={[t.small, { color: c.danger, fontSize: 14, marginTop: 8 }]}>{semanal.error}</Text>
       )}
 
+      {/* Arma la semana que se arma HOY (`seArma`): el domingo, la que empieza, con su número. */}
       <PlanSemanalModal
         visible={planificando}
-        numeroSemana={numeroSemana}
+        numeroSemana={seArma.numeroSemana}
         maestras={maestras}
         ejePrincipal={ejeAbierto}
-        ejesYaConObjetivo={EJES.filter(eje => semanal.deEje(eje) != null)}
+        ejesYaConObjetivo={EJES.filter(eje => seArma.semanal.deEje(eje) != null)}
         objetivoSugeridoDe={objetivoSugeridoDe}
-        guardando={semanal.guardando}
+        guardando={seArma.semanal.guardando}
         onGuardar={guardarPlan}
         onCerrar={() => setPlanificando(false)}
       />

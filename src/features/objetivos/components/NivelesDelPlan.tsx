@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import { useRocasDiarias } from '../hooks/useRocasDiarias';
 import { useRocasSemanales } from '../hooks/useRocasSemanales';
 import type { EjeObjetivo, RocaMaestraApi } from '../types/objetivos.types';
+import { semanaAPlanificar } from '../utils/periodoDelPrograma';
 import { TarjetaAccionesDelDia } from './TarjetaAccionesDelDia';
 import { TarjetaPlanSemanal } from './TarjetaPlanSemanal';
 
@@ -43,6 +44,19 @@ interface NivelesDelPlanProps {
 export function NivelesDelPlan({ maestras, numeroSemana, diaPrograma, ejeAbierto, ejePrincipal, objetivoSugeridoDe,
   onIrAlMapa }: NivelesDelPlanProps) {
   const semanal = useRocasSemanales(maestras);
+  /*
+   * El domingo se arma la semana que EMPIEZA (D-203): `POST /rocks/weekly` la guarda sin que se le
+   * mande el número, mientras `GET` sin número sigue devolviendo la que termina. Se lee aparte para
+   * mostrarla con su número y para agendar el lunes, que cuelga de ella (E-340). Los otros días —y
+   * el domingo dentro de la 13, o antes del Día 1— es la misma semana y no se lee dos veces.
+   *
+   * > **Agregado el 2026-09-27 (OBJ-03).** El domingo la tarjeta mostraba la semana que termina y
+   * > «Armar mi semana» guardaba la siguiente: al recargar, lo guardado no aparecía. Y quien ya tenía
+   * > armada la que termina no tenía por dónde armar la que empieza.
+   */
+  const semanaQueSeArma = semanaAPlanificar(diaPrograma);
+  const armaLaQueEmpieza = semanaQueSeArma !== numeroSemana;
+  const queEmpieza = useRocasSemanales(maestras, semanaQueSeArma, armaLaQueEmpieza);
   const diaria = useRocasDiarias();
 
   return (
@@ -51,12 +65,19 @@ export function NivelesDelPlan({ maestras, numeroSemana, diaPrograma, ejeAbierto
         semanal={semanal}
         maestras={maestras}
         numeroSemana={numeroSemana}
+        semanaQueEmpieza={armaLaQueEmpieza ? { semanal: queEmpieza, numeroSemana: semanaQueSeArma } : undefined}
         ejeAbierto={ejeAbierto}
         ejePrincipal={ejePrincipal}
         objetivoSugeridoDe={objetivoSugeridoDe}
         onIrAlMapa={onIrAlMapa}
       />
-      <TarjetaAccionesDelDia diaria={diaria} semanal={semanal} diaPrograma={diaPrograma} ejeAbierto={ejeAbierto} />
+      <TarjetaAccionesDelDia
+        diaria={diaria}
+        semanal={semanal}
+        semanalParaAgendar={armaLaQueEmpieza ? queEmpieza : undefined}
+        diaPrograma={diaPrograma}
+        ejeAbierto={ejeAbierto}
+      />
     </View>
   );
 }

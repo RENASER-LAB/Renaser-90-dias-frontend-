@@ -12,7 +12,7 @@ import type { AccionDelMapa, AccionesPorEje } from '../../mapa-renacimiento/hook
 import { diasEscritos, tocaHoy } from '../../mapa-renacimiento/hooks/useAccionesDelMapa';
 import { FilaDeDiasDelPlan } from '../../habits/components/FilaDeDiasDelPlan';
 import { DIAS_DEL_PLAN, fechasIsoDeLaSemana, type DiaDelPlan } from '../../habits/utils/semanaDelPlan';
-import { diaAgendable } from '../utils/ventanasDePlanificacion';
+import { diaAgendable, diaInicialDelPlanificador, textoDeLaFilaDeDias } from '../utils/ventanasDePlanificacion';
 import { posicionarPorEje } from '../hooks/useRocasDiarias';
 import { Icon } from '../../../components/Icon';
 
@@ -37,12 +37,6 @@ import { Icon } from '../../../components/Icon';
  */
 
 const MAXIMO_POR_EJE = 3;
-
-/** `2026-09-23` → `MIÉ`. Reusa `fechasIsoDeLaSemana` para no recalcular el lunes por otro lado. */
-function diaDeLaFecha(fechaIso: string): DiaDelPlan {
-  const fechas = fechasIsoDeLaSemana();
-  return DIAS_DEL_PLAN.find(d => fechas[d] === fechaIso) ?? DIAS_DEL_PLAN[0];
-}
 
 /** Todos los días existen para una acción: el candado lo pone `diaAgendable`, no el catálogo. */
 const TODOS_LOS_DIAS: Record<DiaDelPlan, boolean> = DIAS_DEL_PLAN.reduce(
@@ -101,9 +95,9 @@ export function AgendarAccionesModal({
   const [eligiendoHoraDe, setEligiendoHoraDe] = useState<string | null>(null);
   /**
    * El día que se está agendando. Arranca en el que propone el servidor de reglas (`fecha`), o sea
-   * hoy antes de las 18:00 y mañana después.
+   * hoy antes de las 18:00 y mañana después; el domingo, en el lunes (`diaInicialDelPlanificador`).
    */
-  const [diaElegido, setDiaElegido] = useState<DiaDelPlan>(() => diaDeLaFecha(fecha));
+  const [diaElegido, setDiaElegido] = useState<DiaDelPlan>(() => diaInicialDelPlanificador(fecha));
   const fechasIso = fechasIsoDeLaSemana();
   const fechaAGuardar = fechasIso[diaElegido] ?? fecha;
   // Lo que marca la rueda antes de confirmar. Vive acá y no en la rueda porque `RuedaHoraPicker`
@@ -325,8 +319,7 @@ export function AgendarAccionesModal({
                   onAlternarDia={setDiaElegido}
                 />
                 <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5, marginTop: 5, lineHeight: 14 }]}>
-                  Puedes agendar cualquier día que quede de la semana, y corregirlo hasta que llegue.
-                  La semana que viene se arma el domingo.
+                  {textoDeLaFilaDeDias()}
                 </Text>
               </View>
 

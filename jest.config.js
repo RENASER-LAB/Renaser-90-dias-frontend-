@@ -8,6 +8,17 @@
  * levantada y prueban otra cosa —el producto entero, con backend—; si Jest los tomara intentaría
  * ejecutarlos sin navegador y fallarían todos.
  */
+
+/*
+ * **Las pruebas corren en la zona del padrón, `America/Lima`, en cualquier máquina.** El CI corre en
+ * UTC y la laptop en Lima: una prueba del domingo a las 22:00 de Lima (el lunes 03:00 UTC) daba un
+ * resultado en cada lado. Tiene que ir acá y no en la prueba: asignar `process.env.TZ` dentro de un
+ * archivo de prueba no cambia nada (Jest le da una copia de `process.env`), y los procesos de Jest
+ * se crean después de leer esta configuración, así que heredan la zona. Visto el 2026-09-27 al
+ * probar el lunes que se agenda el domingo (E-340 del backend).
+ */
+process.env.TZ = 'America/Lima';
+
 module.exports = {
   preset: 'jest-expo',
   testMatch: ['<rootDir>/src/**/__tests__/**/*.test.ts', '<rootDir>/src/**/*.test.ts'],

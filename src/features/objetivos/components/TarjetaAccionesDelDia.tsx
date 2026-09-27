@@ -9,6 +9,7 @@ import type { useRocasDiarias } from '../hooks/useRocasDiarias';
 import type { useRocasSemanales } from '../hooks/useRocasSemanales';
 import type { EjeObjetivo, ItemPlanDiario, RocaDiariaApi } from '../types/objetivos.types';
 import { ETIQUETA_EJE } from '../types/objetivos.types';
+import { textoParaEmpezarAAgendar } from '../utils/ventanasDePlanificacion';
 import { AgendarAccionesModal } from './AgendarAccionesModal';
 import { Icon } from '../../../components/Icon';
 import { useAuth } from '../../../context/AuthContext';
@@ -29,6 +30,12 @@ import { RecordatorioDeAcciones } from './RecordatorioDeAcciones';
 interface TarjetaAccionesDelDiaProps {
   diaria: ReturnType<typeof useRocasDiarias>;
   semanal: ReturnType<typeof useRocasSemanales>;
+  /**
+   * El domingo, la semana que empieza (la lee `NivelesDelPlan`). Ese día lo único que se agenda es
+   * el lunes (`diaAgendable`), que cuelga del objetivo de esa semana y no del de la que termina: el
+   * planificador ofrece sus ejes, y sin ella armada no se abre. Los otros días no viene.
+   */
+  semanalParaAgendar?: ReturnType<typeof useRocasSemanales>;
   diaPrograma: number;
   /**
    * El eje que se está mirando. **Esta tarjeta muestra SOLO sus acciones.**
@@ -44,14 +51,18 @@ interface TarjetaAccionesDelDiaProps {
   ejeAbierto: EjeObjetivo;
 }
 
-export function TarjetaAccionesDelDia({ diaria, semanal, diaPrograma, ejeAbierto }: TarjetaAccionesDelDiaProps) {
+export function TarjetaAccionesDelDia({ diaria, semanal, semanalParaAgendar, diaPrograma, ejeAbierto }: TarjetaAccionesDelDiaProps) {
   const { c, t } = useTheme();
   const { user } = useAuth();
   const [agendando, setAgendando] = useState(false);
   /* Solo cuando el planificador se abre: quien nunca lo toca no paga la lectura del Mapa. */
   const accionesDelMapa = useAccionesDelMapa(agendando);
 
-  const hayPlanSemanal = semanal.estado === 'planificada' || semanal.estado === 'cerrada';
+  /* De qué semana salen las acciones que se agendan: la que empieza, el domingo (ver la prop).
+     Las de hoy se siguen mostrando aunque esa semana no esté armada todavía. */
+  const paraAgendar = semanalParaAgendar ?? semanal;
+  const puedeAgendar = estaArmada(paraAgendar);
+  const hayPlanSemanal = estaArmada(semanal) || puedeAgendar;
   // Con error de lectura no se pasa la lista: una vacía por falla quitaría alarmas que siguen valiendo.
   const todasLasRocas = useMemo(
     () => (diaria.cargando || diaria.error ? undefined : [...diaria.hoy, ...diaria.manana]),
@@ -85,8 +96,9 @@ export function TarjetaAccionesDelDia({ diaria, semanal, diaPrograma, ejeAbierto
 
       {!hayPlanSemanal ? (
         <Text style={[t.body, { color: c.textSoft, fontSize: 15, marginTop: 8, lineHeight: 22 }]}>
-          Primero arma tu semana. Las acciones del día salen de las que escribiste en tu Mapa, no
-          se escriben sueltas.
+          {semanalParaAgendar
+            ? SIN_LA_SEMANA_QUE_EMPIEZA
+            : 'Primero arma tu semana. Las acciones del día salen de las que escribiste en tu Mapa, no se escriben sueltas.'}
         </Text>
       ) : cubos.length > 0 ? (
         <View style={{ gap: 10, marginTop: 10 }}>
@@ -131,17 +143,24 @@ export function TarjetaAccionesDelDia({ diaria, semanal, diaPrograma, ejeAbierto
               salía cuando no había NADA. Planificabas un día y ya no podías abrir para agendar el
               viernes — justo lo que el dueño pidió poder hacer ("planifico para todo lo que
               queda"). Se vio probando: la tarjeta mostraba el plan de hoy y el botón desaparecía. */}
-          <Pressable onPress={() => setAgendando(true)} hitSlop={10}>
-            <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 15 }]}>
-              Agendar otro día
-            </Text>
-          </Pressable>
+          {puedeAgendar ? (
+            <Pressable onPress={() => setAgendando(true)} hitSlop={10}>
+              <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 15 }]}>
+                Agendar otro día
+              </Text>
+            </Pressable>
+          ) : (
+            <Text style={[t.small, { color: c.textSoft, fontSize: 14, lineHeight: 20 }]}>{SIN_LA_SEMANA_QUE_EMPIEZA}</Text>
+          )}
         </View>
+      ) : !puedeAgendar ? (
+        <Text style={[t.body, { color: c.textSoft, fontSize: 15, marginTop: 8, lineHeight: 22 }]}>
+          {SIN_LA_SEMANA_QUE_EMPIEZA}
+        </Text>
       ) : (
         <View style={{ gap: 12, marginTop: 8 }}>
           <Text style={[t.body, { color: c.textSoft, fontSize: 15, lineHeight: 22 }]}>
-            Todavía no agendaste acciones de {ETIQUETA_EJE[ejeAbierto]}. Elige cuáles caen cada día
-            que quede de la semana, y a qué hora. Desde las 18:00 el día en curso ya no se reacomoda.
+            Todavía no agendaste acciones de {ETIQUETA_EJE[ejeAbierto]}. {textoParaEmpezarAAgendar()}
           </Text>
           <Pressable
             onPress={() => setAgendando(true)}
@@ -169,7 +188,7 @@ export function TarjetaAccionesDelDia({ diaria, semanal, diaPrograma, ejeAbierto
 
       <AgendarAccionesModal
         visible={agendando}
-        semanal={semanal}
+        semanal={paraAgendar}
         fecha={diaria.objetivo.fecha}
         accionesDelMapa={accionesDelMapa}
         guardando={diaria.guardando}
@@ -178,6 +197,14 @@ export function TarjetaAccionesDelDia({ diaria, semanal, diaPrograma, ejeAbierto
       />
     </View>
   );
+}
+
+/** El domingo, sin la semana que empieza armada, no hay de dónde colgar las acciones del lunes. */
+const SIN_LA_SEMANA_QUE_EMPIEZA = 'Para agendar las acciones del lunes, primero arma la semana que empieza.';
+
+/** Una semana con objetivo: en curso o ya revisada. */
+function estaArmada(semanal: ReturnType<typeof useRocasSemanales>): boolean {
+  return semanal.estado === 'planificada' || semanal.estado === 'cerrada';
 }
 
 /* Recibe la paleta en vez de leer colores fijos: el verde y el rojo cambian con el tema
