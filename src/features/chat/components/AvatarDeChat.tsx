@@ -14,6 +14,14 @@ export type TipoDeAvatar = 'celula' | 'direct' | 'global' | 'soporte';
  */
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const FENIX = require('../../../../assets/imagenes/fenix-renaser.png');
+/*
+ * La foto de los grupos (2026-09-27): la tarjeta de Canva SIN nombre que pasó el dueño
+ * («Fotos de perfil - Formación 2026», `49.png`; es el mismo fondo que usa el backend en
+ * `bienvenida/fondo.png`). El soporte de cada persona llevará su tarjeta CON su nombre cuando el
+ * servidor la mande; mientras tanto, esta.
+ */
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const TARJETA = require('../../../../assets/imagenes/tarjeta-renaser.jpg');
 
 const SELLO: Partial<Record<TipoDeAvatar, IconName>> = {
   celula: 'users',
@@ -27,10 +35,10 @@ const SELLO: Partial<Record<TipoDeAvatar, IconName>> = {
  * - **1 a 1:** la foto de la persona o sus iniciales (`AvatarPersona`, el de toda la app).
  * - **Grupo, comunidad y soporte:** el avatar del PROGRAMA. El procedimiento de Operaciones dice
  *   que los grupos usan la foto de perfil oficial de Renaser, y el backend no manda imagen de
- *   grupo. Es el fénix de la tarjeta de bienvenida de Canva de Operaciones
- *   (`assets/imagenes/fenix-renaser.png`, recortado del mismo fondo que usa el backend en
- *   `bienvenida/fondo.png`). La exportación «Fotos de perfil - Formación 2026.png» salió en blanco
- *   (26/09); cuando Operaciones la vuelva a exportar, se reemplaza ese PNG con el mismo nombre.
+ *   grupo. Desde el 2026-09-27 es la tarjeta de Canva sin nombre (`tarjeta-renaser.jpg`, pedido
+ *   del dueño: «esas 2 imágenes van de foto del grupo»). Antes era el fénix recortado de esa misma
+ *   tarjeta, que sigue siendo la foto de los MENSAJES del programa (`FotoDelPrograma`): a 28 px la
+ *   tarjeta entera no se distingue.
  *
  * `conSello={false}` (2026-09-27) lo deja sin el sello de la esquina: en la info del chat el
  * avatar va grande y la línea de abajo ya dice si es un grupo o el soporte.
@@ -56,7 +64,7 @@ export function AvatarDeChat({
   const selloTam = Math.round(size * 0.4);
   return (
     <View style={{ width: size, height: size }} accessibilityLabel={nombre ?? 'Renaser'}>
-      <FotoDelPrograma size={size} />
+      <FotoDelGrupo size={size} />
       {sello && (
         <View
           style={{
@@ -93,6 +101,21 @@ export function FotoDelPrograma({ size, accessibilityLabel }: { size: number; ac
       style={{ width: size, height: size, borderRadius: size / 2, borderWidth: 1, borderColor: c.gold }}
       accessibilityIgnoresInvertColors
       accessibilityLabel={accessibilityLabel}
+    />
+  );
+}
+
+/**
+ * La foto de un grupo, la comunidad o el soporte: la tarjeta de Canva sin nombre, redonda y con
+ * borde dorado para que no se pierda sobre el fondo claro (la tarjeta es casi blanca).
+ */
+export function FotoDelGrupo({ size }: { size: number }) {
+  const { c } = useTheme();
+  return (
+    <Image
+      source={TARJETA}
+      style={{ width: size, height: size, borderRadius: size / 2, borderWidth: 1.5, borderColor: c.gold }}
+      accessibilityIgnoresInvertColors
     />
   );
 }
