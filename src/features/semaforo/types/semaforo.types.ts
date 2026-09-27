@@ -24,6 +24,9 @@ export type ColorSemaforo = 'VERDE' | 'AMARILLO' | 'ROJO' | 'SIN_DATOS';
 /**
  * Por qué un día tiene o no tiene porcentaje. Solo `MEDIDO` lo tiene.
  *
+ * `CUENTA_SUSPENDIDA` (backend D-209, 2026-09-27): la cuenta estuvo suspendida ese día, aunque sea un
+ * rato, y ese día no se mide. Un APK anterior no lo conoce y lo lee como `DESCONOCIDO` («Sin datos»).
+ *
  * `DESCONOCIDO` no existe en el backend: es cómo se lee acá un estado nuevo que esta versión de la
  * app no sabe nombrar. Se pinta neutro y no se afirma nada sobre ese día.
  */
@@ -31,6 +34,7 @@ export type EstadoDiaSemaforo =
   | 'MEDIDO'
   | 'SIN_DATOS'
   | 'PAUSADO'
+  | 'CUENTA_SUSPENDIDA'
   | 'PENDIENTE'
   | 'FUERA_DEL_PROGRAMA'
   | 'DESCONOCIDO';

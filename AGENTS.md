@@ -257,6 +257,14 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       entera en cada foco (`useUltimaPublicacionMuro`); publicar la invalida.
     Una excepción puntual **no abre** los tabs: cualquier otro cambio sobre los cinco principales
     vuelve a necesitar autorización explícita.
+  * **Decisión del dueño del producto — 2026-09-27 — semáforo: los días con la cuenta suspendida no se
+    miden (backend D-209).** El dueño eligió «Que no se midan». El servidor manda esos días con un estado
+    nuevo, `CUENTA_SUSPENDIDA`, y la app lo nombra **«Cuenta en pausa»** (`estadoDelDiaEnPalabras`), en la
+    misma fila de 16 px que los otros estados («Nada programado», «En pausa»…): el detalle del semáforo
+    (estado de `Hoy`), las barras de su tarjeta y la tarjeta del semáforo de un aprendiz en mentoría y
+    administración. Sin porcentaje ni color, como todo día que no se mide. **APK publicado:** no lo
+    conoce y lo lee como «Sin datos», neutro, sin romper la pantalla (`aEstadoDelDia` lee `estado` como
+    texto abierto; verificado contra `origin/master`). Nada más de `Hoy` cambia.
   * **Excepción autorizada por el dueño del producto — 2026-09-27 — tab `Hoy`, cifra de «Hábitos de hoy»
     (S-9 de `docs/specs/RETROALIMENTACION_2026-09-26.md` del backend, E-257).** Sin datos
     (`habitosHoy` null) la tarjeta ya no dice «Al día»: no muestra cifra (`features/home/utils/cifrasDeHabitos.ts`).

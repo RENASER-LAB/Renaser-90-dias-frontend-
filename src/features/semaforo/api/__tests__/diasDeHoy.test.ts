@@ -54,6 +54,14 @@ describe('`/home.semaforo.dias`', () => {
     expect(semaforo.dias?.[0]).toMatchObject({ estado: 'PAUSADO', porcentaje: null, color: 'SIN_DATOS' });
   });
 
+  it('un día con la cuenta suspendida (backend D-209) llega a las barras con su estado y sin número', () => {
+    const semaforo = leer({
+      ...SEMAFORO_CON_DIAS,
+      dias: [{ fecha: '2026-09-21', estado: 'CUENTA_SUSPENDIDA', porcentaje: null, color: 'SIN_DATOS', etiqueta: 'Sin datos' }],
+    });
+    expect(semaforo.dias?.[0]).toMatchObject({ estado: 'CUENTA_SUSPENDIDA', porcentaje: null, color: 'SIN_DATOS' });
+  });
+
   it('sin el campo, `null`: la tarjeta vuelve a pedirlos a `/me/semaforo`', () => {
     const { dias: _dias, ...sinDias } = SEMAFORO_CON_DIAS;
     expect(leer(sinDias).dias).toBeNull();
