@@ -261,6 +261,22 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     (S-9 de `docs/specs/RETROALIMENTACION_2026-09-26.md` del backend, E-257).** Sin datos
     (`habitosHoy` null) la tarjeta ya no dice «Al día»: no muestra cifra (`features/home/utils/cifrasDeHabitos.ts`).
     Nada más de `Hoy` cambia.
+  * **Excepción autorizada por el dueño del producto — 2026-09-27 — Administración (estado de `Hoy`),
+    «Bienvenida»** (pedido del dueño: que Administración y Alquimista cambien desde la app la portada
+    de la tarjeta de bienvenida y los mensajes; backend D-210, `/api/v1/admin/bienvenida`). En «Más
+    opciones» → «Desde acá» hay una entrada nueva, «Bienvenida», que abre `BienvenidaAdminScreen`
+    (vista de la pila de Administración, no modal): un nombre de ejemplo (por defecto «María»); la
+    tarjeta vigente con ese nombre (la dibuja el servidor); «Cambiar la portada» con una imagen del
+    teléfono —el mismo selector cuadrado de la foto de perfil (`elegirFotoCuadrada`, 1200 px), subida
+    directa al almacenamiento y vista previa ya revisada por el servidor antes de «Usar esta
+    portada»— y «Volver a la portada original»; y los tres mensajes (el que acompaña la tarjeta, el
+    formal y el del grupo) con su estado (original / cambiado por quién y cuándo), vista previa con
+    los marcadores reemplazados, un editor con la misma revisión que el servidor (`{nombre}`, y
+    `{mentor}` en el del grupo; hasta 1000 caracteres) y «Volver al texto original». Con el
+    almacenamiento de marcador (local) la portada no se puede cambiar y la pantalla lo dice. La raíz
+    de Administración no suma secciones (A-3): solo el detalle de «Más opciones» la nombra. Lógica en
+    `admin/utils/bienvenida.ts`, `portadaCandidata.ts` y `tarjetaDeMuestra.ts`. Nada más de `Hoy`
+    cambia.
   * **Excepción autorizada por el dueño del producto — 2026-09-26 — tab `Hoy`, tarjetas del mentor
     y de administración (retroalimentación del 26/09, spec `docs/specs/RETROALIMENTACION_2026-09-26.md`
     del backend, S-1, S-6 y A-1).** Lo único que cambia en `Hoy`:

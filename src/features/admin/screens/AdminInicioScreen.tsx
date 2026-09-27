@@ -86,7 +86,7 @@ export function AdminInicioScreen({
   const mas: Array<{ clave: SeccionAdmin; titulo: string; detalle: string }> = [
     /* Semáforo de cumplimiento (D-168): el resumen por grupos y, al tocar uno, su tabla con nombres. */
     { clave: 'semaforo', titulo: 'Semáforo', detalle: 'Cuánto cumplió cada grupo, semana a semana' },
-    { clave: 'mas', titulo: 'Más opciones', detalle: 'Catálogo, soporte, equipo y comunidad' },
+    { clave: 'mas', titulo: 'Más opciones', detalle: 'Bienvenida, equipo, catálogo, soporte y comunidad' },
   ];
 
   return (
