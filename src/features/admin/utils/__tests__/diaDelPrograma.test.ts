@@ -18,23 +18,23 @@ import {
 
 /**
  * Cambiar el día del programa desde Administración (26/09, backend D-82:
- * `PUT /api/v1/admin/trainees/{id}/program-day` con `{ programDay: 0..90, motivo ≤ 280 }`).
+ * `PUT /api/v1/admin/trainees/{id}/program-day` con `{ programDay: 1..89, motivo ≤ 280 }`).
  */
 describe('rango y deltas', () => {
-  it('acota al rango 0..90', () => {
-    expect(acotarDia(-3)).toBe(0);
-    expect(acotarDia(0)).toBe(0);
+  it('acota al rango 1..89: ni 0 ni 90 desde esta herramienta (decisión del dueño, 26/09)', () => {
+    expect(acotarDia(-3)).toBe(1);
+    expect(acotarDia(0)).toBe(1);
     expect(acotarDia(45)).toBe(45);
-    expect(acotarDia(90)).toBe(90);
-    expect(acotarDia(91)).toBe(90);
-    expect(acotarDia(Number.NaN)).toBe(0);
+    expect(acotarDia(90)).toBe(89);
+    expect(acotarDia(91)).toBe(89);
+    expect(acotarDia(Number.NaN)).toBe(1);
   });
 
   it('los botones y atajos mueven de a uno sin salir del rango', () => {
     expect(moverDia(34, 1)).toBe(35);
     expect(moverDia(34, -1)).toBe(33);
-    expect(moverDia(0, -1)).toBe(0);
-    expect(moverDia(90, 1)).toBe(90);
+    expect(moverDia(1, -1)).toBe(1);
+    expect(moverDia(89, 1)).toBe(89);
   });
 
   it('lee solo enteros escritos, sin acotar en silencio', () => {
@@ -54,18 +54,20 @@ describe('validarCambioDeDia', () => {
       ok: true,
       cuerpo: { programDay: 34, motivo: 'Viajó y pidió volver al día 34' },
     });
-    expect(cuerpoDelCambioDeDia(0, ' x ')).toEqual({ programDay: 0, motivo: 'x' });
+    expect(cuerpoDelCambioDeDia(1, ' x ')).toEqual({ programDay: 1, motivo: 'x' });
   });
 
-  it('acepta los extremos 0 y 90', () => {
-    expect(validarCambioDeDia({ diaActual: 10, diaNuevo: 0, motivo: 'm' }).ok).toBe(true);
-    expect(validarCambioDeDia({ diaActual: 10, diaNuevo: 90, motivo: 'm' }).ok).toBe(true);
+  it('acepta los extremos 1 y 89 y rechaza 0 y 90', () => {
+    expect(validarCambioDeDia({ diaActual: 10, diaNuevo: 1, motivo: 'm' }).ok).toBe(true);
+    expect(validarCambioDeDia({ diaActual: 10, diaNuevo: 89, motivo: 'm' }).ok).toBe(true);
+    expect(validarCambioDeDia({ diaActual: 10, diaNuevo: 0, motivo: 'm' }).ok).toBe(false);
+    expect(validarCambioDeDia({ diaActual: 10, diaNuevo: 90, motivo: 'm' }).ok).toBe(false);
   });
 
   it('rechaza fuera de rango, vacío o igual al actual', () => {
     expect(validarCambioDeDia({ diaActual: 10, diaNuevo: 91, motivo: 'm' })).toEqual({
       ok: false,
-      error: 'Escribe un día entre 0 y 90.',
+      error: 'Escribe un día entre 1 y 89.',
     });
     expect(validarCambioDeDia({ diaActual: 10, diaNuevo: -1, motivo: 'm' }).ok).toBe(false);
     expect(validarCambioDeDia({ diaActual: 10, diaNuevo: null, motivo: 'm' }).ok).toBe(false);
@@ -98,8 +100,9 @@ describe('confirmación', () => {
 describe('errores del PUT', () => {
   it('traduce cada código a un texto claro', () => {
     expect(mensajeDelErrorDeCambio(new ApiError(400, 'programDay: debe ser menor que o igual a 90'))).toContain(
-      'entre 0 y 90',
+      'entre 1 y 89',
     );
+    expect(mensajeDelErrorDeCambio(new ApiError(409, 'no empezó'))).toContain('todavía no empezó su Día 1');
     expect(mensajeDelErrorDeCambio(new ApiError(403, 'x'))).toBe('Tu cuenta no puede cambiar el día.');
     expect(mensajeDelErrorDeCambio(new ApiError(0, 'x'))).toContain('Sin conexión');
     expect(mensajeDelErrorDeCambio(new ApiError(404, 'Participante no inscripto'))).toContain('no está inscrita');

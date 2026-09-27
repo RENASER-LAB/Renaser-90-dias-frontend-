@@ -4,19 +4,21 @@ import { ultimoAjusteDiaSchema } from '../api/adminSchemas';
 /**
  * Cambiar el día del programa de un aprendiz desde Administración (pedido del dueño, 26/09).
  *
- * El contrato es el del backend (D-82, `SetProgramDayRequest`): `programDay` entero de 0 a 90 y
- * `motivo` de hasta 280 caracteres. El motivo es opcional en el servidor —el panel viejo no lo
+ * El contrato es el del backend (D-82, `SetProgramDayRequest`): `programDay` entero y `motivo` de
+ * hasta 280 caracteres. Rango **1 a 89** por decisión del dueño (26/09): el 90 gradúa a la persona
+ * y no se deshace, y el 0 la deja un día sin programa; ninguno se pone desde esta herramienta.
+ * Antes el rango era 0..90. El motivo es opcional en el servidor —el panel viejo no lo
  * mandaba—, pero acá se pide SIEMPRE: la bitácora `ajustes_dia_programa` existe para responder
  * «¿por qué le movimos el día?», y un ajuste sin motivo no la responde.
  *
  * Todo lo que decide algo vive acá, sin React, para probarlo sin pantalla.
  */
 
-export const DIA_MINIMO = 0;
-export const DIA_MAXIMO = 90;
+export const DIA_MINIMO = 1;
+export const DIA_MAXIMO = 89;
 export const MOTIVO_MAXIMO = 280;
 
-/** Deja un día dentro de 0..90. */
+/** Deja un día dentro de 1..89. */
 export function acotarDia(dia: number): number {
   if (!Number.isFinite(dia)) return DIA_MINIMO;
   return Math.min(DIA_MAXIMO, Math.max(DIA_MINIMO, Math.trunc(dia)));
@@ -92,6 +94,9 @@ export function mensajeDelErrorDeCambio(error: unknown): string {
       return `No se pudo cambiar: el día tiene que estar entre ${DIA_MINIMO} y ${DIA_MAXIMO} y el motivo, tener hasta ${MOTIVO_MAXIMO} caracteres.`;
     }
     if (error.status === 403) return 'Tu cuenta no puede cambiar el día.';
+    if (error.status === 409) {
+      return 'Esta persona todavía no empezó su Día 1: el día se puede ajustar desde que empieza.';
+    }
     if (error.status === 404) return 'Esta persona no está inscrita en el programa: no tiene un día que cambiar.';
     if (error.esNoAutenticado) return 'Tu sesión venció. Vuelve a entrar.';
   }
