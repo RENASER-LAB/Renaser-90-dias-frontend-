@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, View } from 'react-native';
+import { Image, View } from 'react-native';
 
 import { AvatarPersona } from '../../../components/ui';
 import { Icon, type IconName } from '../../../components/Icon';
@@ -12,6 +12,9 @@ export type TipoDeAvatar = 'celula' | 'direct' | 'global' | 'soporte';
  * El sello chico en la esquina, que distingue grupo, comunidad y soporte sin leer nada. Un 1 a 1
  * no lleva: su foto o sus iniciales ya dicen que es una persona.
  */
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const FENIX = require('../../../../assets/imagenes/fenix-renaser.png');
+
 const SELLO: Partial<Record<TipoDeAvatar, IconName>> = {
   celula: 'users',
   global: 'users',
@@ -24,9 +27,10 @@ const SELLO: Partial<Record<TipoDeAvatar, IconName>> = {
  * - **1 a 1:** la foto de la persona o sus iniciales (`AvatarPersona`, el de toda la app).
  * - **Grupo, comunidad y soporte:** el avatar del PROGRAMA. El procedimiento de Operaciones dice
  *   que los grupos usan la foto de perfil oficial de Renaser, y el backend no manda imagen de
- *   grupo. En `assets/` no hay un logo de Renaser (los PNG son los de la plantilla de Expo), así
- *   que el sello del programa es la «R» de la marca en Fraunces sobre dorado. Cuando exista el
- *   logo oficial en PNG se cambia solo acá.
+ *   grupo. Es el fénix de la tarjeta de bienvenida de Canva de Operaciones
+ *   (`assets/imagenes/fenix-renaser.png`, recortado del mismo fondo que usa el backend en
+ *   `bienvenida/fondo.png`). La exportación «Fotos de perfil - Formación 2026.png» salió en blanco
+ *   (26/09); cuando Operaciones la vuelva a exportar, se reemplaza ese PNG con el mismo nombre.
  */
 export function AvatarDeChat({
   tipo,
@@ -47,27 +51,11 @@ export function AvatarDeChat({
   const selloTam = Math.round(size * 0.4);
   return (
     <View style={{ width: size, height: size }} accessibilityLabel={nombre ?? 'Renaser'}>
-      <View
-        style={{
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          backgroundColor: c.gold,
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Text
-          style={{
-            fontFamily: 'Fraunces_700Bold',
-            color: c.onGold,
-            fontSize: Math.round(size * 0.5),
-            lineHeight: Math.round(size * 0.62),
-          }}
-        >
-          R
-        </Text>
-      </View>
+      <Image
+        source={FENIX}
+        style={{ width: size, height: size, borderRadius: size / 2, borderWidth: 1, borderColor: c.gold }}
+        accessibilityIgnoresInvertColors
+      />
       {sello && (
         <View
           style={{
