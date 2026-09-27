@@ -1,6 +1,6 @@
 import { describe, expect, it } from '@jest/globals';
 
-import { DIAS_DEL_PLAN, INDICE_DE_HOY, esPlanificable } from '../../../habits/utils/semanaDelPlan';
+import { DIAS_DEL_PLAN, INDICE_DE_HOY, MOSTRAR_SEMANA_SIGUIENTE, esPlanificable } from '../../../habits/utils/semanaDelPlan';
 import { diaAgendable } from '../ventanasDePlanificacion';
 
 const HOY = DIAS_DEL_PLAN[INDICE_DE_HOY];
@@ -42,7 +42,9 @@ describe('diaAgendable', () => {
   });
 
   it('NO es la misma regla que la de hábitos: ahí hoy siempre va con candado', () => {
-    expect(esPlanificable(HOY)).toBe(false);
+    // Un domingo el Plan muestra la semana SIGUIENTE entera y ahí todo es planificable: la prueba
+    // fallaba cada domingo porque suponía un día de semana (visto el domingo 27/09).
+    expect(esPlanificable(HOY)).toBe(MOSTRAR_SEMANA_SIGUIENTE);
     expect(diaAgendable(HOY, aLas(10))).toBe(true);
   });
 });
