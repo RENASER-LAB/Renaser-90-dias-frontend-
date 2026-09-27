@@ -1,4 +1,4 @@
-import { ApiError } from '../../../services/http/apiClient';
+import { ApiError, mensajeDeError } from '../../../services/http/apiClient';
 
 /**
  * El texto que se le muestra a una persona cuando algo falla.
@@ -11,17 +11,33 @@ import { ApiError } from '../../../services/http/apiClient';
  *
  * La regla: el mensaje explica QUÉ pasó y QUÉ hacer, y no expone detalles del transporte
  * (AGENTS.md §5).
+ *
+ * <blockquote><b>Corregido 2026-09-27 (E-373).</b> Todo error de la API que no fuera de red, 401 o 403
+ * devolvía `alFallar`, y se tragaba el motivo que el servidor escribe para leerse: con un nombre de grupo de
+ * 201 caracteres (ADM-12) o el cupo lleno (ADM-14) el panel decía «No se pudo guardar el grupo.» o
+ * «Inténtalo de nuevo en un momento.». Ahora, en {@link CON_MOTIVO}, el motivo del servidor, salvo que parezca
+ * interno (el filtro de `mensajeDeError`) o sea el relleno «Error NNN».</blockquote>
  */
 export function mensajeDeFallo(error: unknown, alFallar: string): string {
   if (error instanceof ApiError) {
     if (error.esDeRed) return 'Sin conexión con el servidor. Revisa tu red y vuelve a intentar.';
     if (error.esNoAutenticado) return 'Tu sesión venció. Vuelve a entrar.';
     if (error.esProhibido) return 'Tu cuenta no tiene permiso para esto.';
+    if (CON_MOTIVO.has(error.status) && !/^Error \d{3}$/.test(error.message.trim())) {
+      return mensajeDeError(error, alFallar);
+    }
     return alFallar;
   }
   // Un error que no es de la API sí puede traer algo útil (validación local, por ejemplo).
   return error instanceof Error && error.message ? error.message : alFallar;
 }
+
+/**
+ * Los errores que el servidor explica con un texto para leerse: validación (400), estado o cupo (409), tamaño
+ * (413), tipo (415) y regla de negocio (422). Un 404 queda afuera porque su texto trae ids
+ * («Celula no encontrada: 1b2c…»), y un 5xx porque no explica nada.
+ */
+const CON_MOTIVO = new Set([400, 409, 413, 415, 422]);
 
 /**
  * Qué se le dice al administrador justo después de aprobar una cuenta.
@@ -214,23 +230,4 @@ export function botonDeMasAprendices({
     etiqueta: `Ver más (${cargados} de ${total})`,
     etiquetaAccesible: 'Ver más aprendices',
   };
-}
-
-/**
- * La pregunta antes de asignar un mentor (26/09, A-5). Antes, tocar un nombre de la lista lo
- * asignaba en el acto: un toque de más —o un dedo que resbala al hacer scroll— cambiaba quién
- * acompaña a diez personas.
- *
- * Si esa persona ya lidera OTRO grupo se dice, sin afirmar qué le pasa a ese otro grupo: eso lo
- * decide el servidor, y la pantalla lo muestra después al recargar.
- */
-export function preguntaDeAsignarMentor(
-  mentorNombre: string | null | undefined,
-  grupoNombre: string | null | undefined,
-  yaLideraOtroGrupo: boolean,
-): string {
-  const quien = mentorNombre?.trim() || 'esta persona';
-  const grupo = grupoNombre?.trim() || 'este grupo';
-  const aviso = yaLideraOtroGrupo ? ` Hoy ya acompaña otro grupo.` : '';
-  return `¿Asignar a ${quien} como mentor de ${grupo}?${aviso}`;
 }
