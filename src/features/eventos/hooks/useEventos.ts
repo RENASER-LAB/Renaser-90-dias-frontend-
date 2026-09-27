@@ -9,6 +9,7 @@ import {
   type ResultadoAlarma,
 } from '../notificaciones/alarmasDeEventos';
 import type { Asistencia, Ocurrencia } from '../types/eventos.types';
+import { crearLecturaVigente, type LecturaVigente } from '../utils/lecturaVigente';
 
 export type FalloDeEventos = 'sin_red' | 'no_disponible' | 'otro';
 
@@ -27,37 +28,67 @@ function falloDe(e: unknown): FalloDeEventos {
  *
  * Se pide solo cuando `activo` (la sección Eventos está abierta): Comunidad abre con el Muro y no
  * paga esta lectura si nadie entra (V-3).
+ *
+ * **Relecturas (bug del e2e del 26/09).** Antes se leía una sola vez, al montar: un evento creado con
+ * la app abierta no aparecía hasta cerrarla. Ahora la sección llama a `recargar` al ganar el foco, al
+ * volver a la lista y al deslizar; `lecturaVigente` hace que esos disparos compartan un solo pedido y
+ * que una respuesta vieja no pise una nueva. **Solo la primera lectura muestra «Buscando eventos…»**
+ * (estilo V-2 de `useTraining`): después, lo que está en pantalla se queda hasta que llega lo nuevo, y
+ * si la relectura falla se conserva la lista (con `fallo` puesto, para que la sección lo diga).
  */
 export function useEventos(userId: string | null, activo: boolean) {
   const [ocurrencias, setOcurrencias] = useState<Ocurrencia[]>([]);
   const [cargando, setCargando] = useState(false);
+  const [refrescando, setRefrescando] = useState(false);
   const [fallo, setFallo] = useState<FalloDeEventos | null>(null);
   const [yaLeido, setYaLeido] = useState(false);
-  const turno = useRef(0);
+  const hayDatos = useRef(false);
+  const usuario = useRef(userId);
+  usuario.current = userId;
 
-  const recargar = useCallback(async () => {
-    const miTurno = ++turno.current;
-    setCargando(true);
-    const ahora = Date.now();
+  const lectura = useRef<LecturaVigente | null>(null);
+  if (lectura.current === null) {
+    lectura.current = crearLecturaVigente(
+      async () => {
+        const ahora = Date.now();
+        return { ahora, lista: await eventosApi.listarProximos(ahora) };
+      },
+      resultado => {
+        if (!resultado.ok) {
+          setFallo(falloDe(resultado.error));
+          return;
+        }
+        const { ahora, lista } = resultado.valor;
+        hayDatos.current = true;
+        setOcurrencias(lista);
+        setFallo(null);
+        setYaLeido(true);
+        const id = usuario.current;
+        if (id) {
+          void sincronizarAlarmasDeEventos(id, lista, {
+            desdeMs: ahora - 60 * 60 * 1000,
+            hastaMs: ahora + eventosApi.DIAS_A_LA_VISTA * 24 * 60 * 60 * 1000,
+          }).catch(() => {});
+        }
+      },
+    );
+  }
+
+  /**
+   * Relee la lista. `forzar`: aunque haya una lectura en vuelo (después de guardar un evento).
+   * `deslizando`: prende el indicador del pull-to-refresh mientras dura.
+   */
+  const recargar = useCallback(async (opciones: { forzar?: boolean; deslizando?: boolean } = {}) => {
+    const lector = lectura.current as LecturaVigente;
+    if (!hayDatos.current) setCargando(true);
+    if (opciones.deslizando) setRefrescando(true);
     try {
-      const lista = await eventosApi.listarProximos(ahora);
-      if (miTurno !== turno.current) return;
-      setOcurrencias(lista);
-      setFallo(null);
-      setYaLeido(true);
-      if (userId) {
-        void sincronizarAlarmasDeEventos(userId, lista, {
-          desdeMs: ahora - 60 * 60 * 1000,
-          hastaMs: ahora + eventosApi.DIAS_A_LA_VISTA * 24 * 60 * 60 * 1000,
-        }).catch(() => {});
-      }
-    } catch (e) {
-      if (miTurno !== turno.current) return;
-      setFallo(falloDe(e));
+      await lector.leer({ forzar: opciones.forzar });
     } finally {
-      if (miTurno === turno.current) setCargando(false);
+      if (!lector.ocupada()) setCargando(false);
+      if (opciones.deslizando) setRefrescando(false);
     }
-  }, [userId]);
+  }, []);
 
   useEffect(() => {
     if (activo) void recargar();
@@ -73,6 +104,9 @@ export function useEventos(userId: string | null, activo: boolean) {
       const esLaMisma = (x: Ocurrencia) =>
         x.evento.id === oc.evento.id && x.inicioOcurrencia === oc.inicioOcurrencia;
       const anterior = oc.asistencia;
+      // Una lectura que salió antes de este cambio traería la asistencia vieja (y su sincronización
+      // quitaría la alarma recién puesta): se descarta antes y después del PUT.
+      lectura.current?.invalidar();
       setOcurrencias(prev => prev.map(x => (esLaMisma(x) ? { ...x, asistencia: respuesta } : x)));
       try {
         await eventosApi.responderAsistencia(oc.evento.id, oc.inicioOcurrencia, respuesta);
@@ -80,6 +114,7 @@ export function useEventos(userId: string | null, activo: boolean) {
         setOcurrencias(prev => prev.map(x => (esLaMisma(x) ? { ...x, asistencia: anterior } : x)));
         throw e;
       }
+      lectura.current?.invalidar();
       if (!userId) return null;
       if (respuesta === 'GOING') return programarAlarmaDeEvento(userId, { ...oc, asistencia: 'GOING' });
       await cancelarAlarmaDeEvento(userId, oc.evento.id, oc.inicioOcurrencia);
@@ -91,6 +126,7 @@ export function useEventos(userId: string | null, activo: boolean) {
   /** Tras cancelar un evento: sale de la lista y se quita su alarma (de todas sus fechas si `todas`). */
   const quitarDeLaLista = useCallback(
     async (eventoId: string, inicioOcurrencia: string | null) => {
+      lectura.current?.invalidar();
       setOcurrencias(prev =>
         prev.filter(x => x.evento.id !== eventoId || (inicioOcurrencia !== null && x.inicioOcurrencia !== inicioOcurrencia)),
       );
@@ -99,5 +135,5 @@ export function useEventos(userId: string | null, activo: boolean) {
     [userId],
   );
 
-  return { ocurrencias, cargando, fallo, yaLeido, recargar, responder, quitarDeLaLista };
+  return { ocurrencias, cargando, refrescando, fallo, yaLeido, recargar, responder, quitarDeLaLista };
 }
