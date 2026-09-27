@@ -68,6 +68,7 @@ import { useCursos } from '../features/academy/hooks/useCursos';
 import { CursoPortada } from '../features/academy/components/CursoPortada';
 import { useLeccionDetalle } from '../features/academy/hooks/useLeccionDetalle';
 import { LeccionVideoPlayer } from '../features/academy/components/LeccionVideoPlayer';
+import { leccionAnteriorPendiente } from '../features/academy/utils/progresionDeLecciones';
 import { useChatConversaciones } from '../features/chat/hooks/useChatConversaciones';
 import { useChatEnVivo } from '../features/chat/hooks/useChatEnVivo';
 import { useEnvioMediaChat } from '../features/chat/hooks/useEnvioMediaChat';
@@ -1430,8 +1431,16 @@ export default function ComunidadScreen() {
    * indicador visual de "candado" para una lección puntual dentro de un curso ya accesible, así
    * que en vez de inventar esa UI se avisa con el mismo `Alert.alert` que ya usa el resto de la
    * pantalla (ver `handleAbrirCurso` acá arriba y las reacciones del Muro).
+   *
+   * `leccionRecienCompletadaId`: la lección que el servidor acaba de dar por completada en este
+   * mismo toque (ver `handleAlternarLeccionCompletada`). La regla secuencial la cuenta como
+   * completada aunque el estado de la pantalla todavía no se haya enterado (TRB-04).
    */
-  const handleAbrirLeccion = (lesson: LessonResource, omitirProgresionSecuencial = false) => {
+  const handleAbrirLeccion = (
+    lesson: LessonResource,
+    omitirProgresionSecuencial = false,
+    leccionRecienCompletadaId?: string
+  ) => {
     if (lesson.locked) {
       const faltan = lesson.diasFaltantes ?? 0;
       Alert.alert(
@@ -1452,19 +1461,15 @@ export default function ComunidadScreen() {
     // Diaria imposible de cerrar apenas alguien se saltaba un solo día: el día avanza, la lección
     // de hoy cambia, y la anterior sigue sin completarse. Las dos reglas se contradecían; para la
     // Clase Diaria manda el día de programa.
-    const indexEnCurso = allCourseLessons.findIndex(l => l.id === lesson.id);
-    if (!omitirProgresionSecuencial && indexEnCurso > 0) {
-      const anterior = allCourseLessons[indexEnCurso - 1];
-      const anteriorCompleta = esLeccionCompletada(anterior.id, indexEnCurso - 1);
-      const estaCompleta = esLeccionCompletada(lesson.id, indexEnCurso);
-
-      if (!anteriorCompleta && !estaCompleta) {
-        Alert.alert(
-          'Lección no disponible 🔒',
-          `Para acceder a esta lección primero debes completar la lección anterior:\n\n"${anterior.title}"`
-        );
-        return;
-      }
+    const anterior = omitirProgresionSecuencial
+      ? null
+      : leccionAnteriorPendiente(allCourseLessons, lesson.id, esLeccionCompletada, leccionRecienCompletadaId);
+    if (anterior) {
+      Alert.alert(
+        'Lección no disponible 🔒',
+        `Para acceder a esta lección primero debes completar la lección anterior:\n\n"${anterior.title}"`
+      );
+      return;
     }
 
     setFullScreenLesson(lesson);
@@ -1686,7 +1691,11 @@ export default function ComunidadScreen() {
             }.`
           );
         } else {
-          handleAbrirLeccion(nextLesson);
+          // Con `leccion.id`: la anterior de la siguiente es ESTA, que el servidor acaba de dar por
+          // completada. El estado de la pantalla recién se entera en el próximo render; sin esto la
+          // regla secuencial la leía pendiente, avisaba «Lección no disponible 🔒» nombrándola a
+          // ella y no abría la siguiente (TRB-04, e2e web del 2026-09-27).
+          handleAbrirLeccion(nextLesson, false, leccion.id);
           Alert.alert(
             '¡Excelente Progreso! 🦅',
             `Lección completada con éxito. Avanzando a: "${nextLesson.title}".`
