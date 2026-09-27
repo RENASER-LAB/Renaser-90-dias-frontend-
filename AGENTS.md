@@ -104,10 +104,25 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
         «↓» con el contador de nuevos; lo propio siempre baja. Separadores y tandas se arman en
         orden cronológico y después se da vuelta la lista (`formatoChat.elementosDeLaListaInvertida`,
         `utils/bajadaDelChat.ts`, `hooks/useBajadaDelChat.ts`).
+      * **La lista de chats se refresca sola** (mismo día, pedido del coordinador sobre lo
+        encontrado). `GET /api/v1/chat/conversations` se pedía una vez, al entrar a Tribu por
+        primera vez; ahora se relee al volver de una conversación, al volver a la pestaña o a Tribu
+        y deslizando la lista (`RefreshControl`), para que el orden y los no leídos queden al día.
+        En silencio si ya hay lista, un solo pedido para los disparos juntos y sin que una
+        respuesta vieja pise a una nueva (`useChatConversaciones`, con la misma
+        `eventos/utils/lecturaVigente` de Eventos, solo leída); un cambio hecho en el teléfono
+        descarta la lectura en vuelo, y la lectura espera a que el chat recién abierto quede
+        marcado como leído. Se conserva el historial ya cargado de cada chat
+        (`utils/refrescoDeLaLista.ts`). **Sin refresco en vivo de la lista**: el backend solo
+        publica por conversación (`/topic/conversaciones/{id}`) y no tiene un destino por persona;
+        no se inventó.
+      * **No se adivina el rol del otro en un 1 a 1.** Sin rol en el directorio, el mapeador ponía
+        `'TRAINEE'` y la cabecera y la info decían «Aprendiz» de cualquiera. Ahora dice «1 a 1» a
+        secas (`chatMappers.SUBTITULO_DE_UN_1_A_1_SIN_ROL`) y la info no muestra rol.
       En `ComunidadScreen.tsx` solo cambian los campos opcionales `esDelPrograma` y `rolDelOtro`, la
-      lista de mensajes, el bloque de la info y que el flotante del acompañante siga escondido con
-      la info abierta; envío, fotos, audios, evidencia y la tarjeta de Tribu siguen por el mismo
-      camino.
+      lista de mensajes, el bloque de la info, que el flotante del acompañante siga escondido con
+      la info abierta y los disparos del refresco de la lista (volver de un chat, foco, deslizar);
+      envío, fotos, audios, evidencia y la tarjeta de Tribu siguen por el mismo camino.
     Una excepción puntual **no abre** el tab: cualquier otro cambio sobre los cinco principales
     vuelve a necesitar autorización explícita.
   * **Excepción autorizada por el dueño del producto — 2026-09-26 — tabs `Yo` y `Plan`, aviso con

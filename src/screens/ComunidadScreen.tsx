@@ -11,12 +11,13 @@ import {
   Share,
   KeyboardAvoidingView,
   FlatList,
+  RefreshControl,
 } from 'react-native';
 import type { ListRenderItemInfo } from 'react-native';
 import { Alert } from '../components/Alerta';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../theme/ThemeContext';
 import { space } from '../theme/tokens';
@@ -85,6 +86,7 @@ import {
   type ElementoDelChat,
 } from '../features/chat/utils/formatoChat';
 import { mostrarBotonBajar, posicionAMantener } from '../features/chat/utils/bajadaDelChat';
+import { pideReleerAlCerrarElChat } from '../features/chat/utils/refrescoDeLaLista';
 import {
   cifraDeIntegrantes,
   integrantesDeLaInfo,
@@ -742,9 +744,12 @@ export default function ComunidadScreen() {
     conversations,
     setConversations,
     loading: conversacionesCargando,
+    refrescando: conversacionesRefrescando,
     error: conversacionesError,
     mensajesCargando,
-    // Lo usa la entrada desde "Escribirle": la conversación puede acabar de crearse.
+    // Lo usan la entrada desde "Escribirle" (la conversación puede acabar de crearse) y, desde el
+    // 2026-09-27, los refrescos de la lista: al volver de un chat, al volver a la pestaña o a
+    // Tribu y deslizando (ver el bloque «LA LISTA DE CHATS SE REFRESCA SOLA», más abajo).
     recargar: recargarConversaciones,
     abrirConversacion,
     enviarMensajeTexto: enviarMensajeChatRemoto,
@@ -1470,8 +1475,9 @@ export default function ComunidadScreen() {
 
     irASeccion('tribu');
     setChatPedidoDeOtraPestana(id);
-    // Recién creada, puede no estar en el listado: se pide de nuevo para que aparezca.
-    void recargarConversaciones();
+    // Recién creada, puede no estar en el listado: se pide de nuevo para que aparezca. `forzar`:
+    // una lectura que ya estuviera en vuelo salió antes de crearla y no la traería.
+    void recargarConversaciones({ forzar: true });
     (navigation as any).setParams({ abrirChatConversacionId: undefined });
   }, [route.params, navigation, recargarConversaciones]);
 
@@ -1765,7 +1771,8 @@ export default function ComunidadScreen() {
       const conv = await abrirConversacionDirecta(usuarioId);
       irASeccion('tribu');
       setChatPedidoDeOtraPestana(conv.id);
-      void recargarConversaciones();
+      // `forzar`: puede estar recién creada, y una lectura en vuelo no la traería.
+      void recargarConversaciones({ forzar: true });
     } catch {
       // Si falla, el usuario se queda donde estaba: no se inventa una conversacion local.
     }
@@ -1833,6 +1840,32 @@ export default function ComunidadScreen() {
     // efecto en bucle. Lo que decide es el par (id pedido, listado), que sí está declarado.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatPedidoDeOtraPestana, conversations]);
+
+  /*
+   * LA LISTA DE CHATS SE REFRESCA SOLA (2026-09-27, «tipo WhatsApp»). Antes se pedía una vez, al
+   * entrar a Tribu por primera vez, y el orden por último mensaje y los no leídos se quedaban
+   * viejos. Ahora se relee `GET /api/v1/chat/conversations`:
+   * - al volver de una conversación a la lista;
+   * - al volver a la pestaña Comunidad estando en Tribu, y al volver a Tribu desde otra sección;
+   * - deslizando la lista hacia abajo (el `RefreshControl` de Tribu).
+   * En silencio si ya hay lista, con un solo pedido para los disparos que caen juntos y sin que una
+   * respuesta vieja pise a una nueva (`useChatConversaciones.recargar`). No hay refresco EN VIVO de
+   * la lista: el backend solo publica por conversación (`/topic/conversaciones/{id}`), no tiene un
+   * destino por persona que avise de un mensaje en otro chat.
+   */
+  const idDelChatAbierto = activeChat?.id ?? null;
+  const chatAbiertoAntes = useRef<string | null>(idDelChatAbierto);
+  useEffect(() => {
+    const anterior = chatAbiertoAntes.current;
+    chatAbiertoAntes.current = idDelChatAbierto;
+    if (enTribu && pideReleerAlCerrarElChat(anterior, idDelChatAbierto)) void recargarConversaciones();
+  }, [enTribu, idDelChatAbierto, recargarConversaciones]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (enTribu) void recargarConversaciones();
+    }, [enTribu, recargarConversaciones])
+  );
 
 
   // El "me gusta" va contra el backend real (POST /api/v1/wall/{id}/react). El propio backend
@@ -3184,6 +3217,15 @@ export default function ComunidadScreen() {
             },
           ]}
           showsVerticalScrollIndicator={false}
+          /* Deslizar hacia abajo relee la lista de chats (2026-09-27): orden y no leídos al día. */
+          refreshControl={
+            <RefreshControl
+              refreshing={conversacionesRefrescando}
+              onRefresh={() => void recargarConversaciones({ deslizando: true })}
+              tintColor={c.goldInk}
+              colors={[c.goldInk]}
+            />
+          }
         >
           {/* -------------------------------------------------------------------------------
               PARA QUIEN ACOMPAÑA. Va arriba de todo porque es lo que ese perfil viene a hacer;

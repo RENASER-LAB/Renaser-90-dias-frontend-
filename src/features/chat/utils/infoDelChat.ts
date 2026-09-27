@@ -24,7 +24,8 @@ export function tituloDeLaInfo(tipo: TipoDeInfo): string {
  *   todavía no se sabe cuántos son: no se inventa);
  * - soporte: «Chat de soporte»;
  * - 1 a 1: el rol del otro («Aprendiz»), el mismo dato con el que la cabecera dice «Aprendiz · 1
- *   a 1»; si no se sabe quién es el otro, el subtítulo que ya traía la conversación;
+ *   a 1»; si no se sabe su rol (o quién es), el subtítulo genérico que ya traía la conversación
+ *   («1 a 1», «Conversación directa»): nunca un rol supuesto;
  * - comunidad: el subtítulo que ya traía («Comunidad completa RENASER»).
  */
 export function subtituloDeLaInfo(params: {

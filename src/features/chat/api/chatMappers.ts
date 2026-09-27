@@ -300,6 +300,17 @@ export function resumenDelUltimoMensaje(
 }
 
 /**
+ * «El otro» de un 1 a 1, con su rol SOLO si se conoce (`null` si no). Es `WireMiembro` con el rol
+ * opcional: ese tipo lo exige, y exigirlo es lo que llevó a rellenarlo con un supuesto.
+ */
+type OtroParticipante = Omit<WireMiembro, 'role'> & { role: string | null };
+
+/** El rol del directorio, si lo hay. Un rol vacío tampoco dice quién es. */
+function rolConocido(miembro: WireMiembro | undefined): string | null {
+  return miembro?.role?.trim() ? miembro.role : null;
+}
+
+/**
  * `GET /conversations` NO expone participantes de un DIRECT: ni `ConversacionResponse.nombre`
  * (siempre `null` para DIRECT, ver `Conversacion.crearDirecta`) ni el "último mensaje" resuelven
  * nombre de emisor (`MensajeResponse.from(Mensaje)` deja `senderName` en `null` a propósito —
@@ -313,7 +324,7 @@ function resolverOtroParticipante(
   resumen: WireConversacionResumen,
   actorId: string | null | undefined,
   directorio: Record<string, WireMiembro>
-): WireMiembro | undefined {
+): OtroParticipante | undefined {
   /* El servidor manda el NOMBRE ya resuelto. Primero se intentó que mandara solo el id y que el
      móvil lo buscara en el directorio (`GET /chat/members`), pero ese directorio exige que exista
      la conversación GLOBAL y donde no existe responde 404: la bandeja de mensajes directos se
@@ -328,13 +339,17 @@ function resolverOtroParticipante(
       id: declarado,
       fullName: resumen.otherParticipantName,
       avatarUrl: resumen.otherParticipantAvatarUrl ?? null,
-      /* El rol no viaja en el resumen. Se toma del directorio SI está; si no, el subtítulo cae en
-         el genérico. Un nombre correcto con subtítulo genérico es mejor que ningún nombre. */
-      role: directorio[declarado]?.role ?? 'TRAINEE',
-    } as WireMiembro;
+      /* El rol no viaja en el resumen. Se toma del directorio SI está; si no, queda sin rol y el
+         subtítulo cae en el genérico («1 a 1»). Un nombre correcto con subtítulo genérico es mejor
+         que ningún nombre.
+         > Corregido 2026-09-27: acá decía `?? 'TRAINEE'`. El comentario ya prometía el genérico,
+         > pero el código ponía «Aprendiz» a cualquiera que el directorio no trajera —un mentor, el
+         > staff—, y la info del contacto lo repetía bajo el nombre. */
+      role: rolConocido(directorio[declarado]),
+    };
   }
   if (declarado && directorio[declarado]) {
-    return directorio[declarado];
+    return { ...directorio[declarado], role: rolConocido(directorio[declarado]) };
   }
   /* Sin el campo —backend viejo— se conserva la heurística de antes. Es peor, pero es lo que
      había, y quitarla dejaría SIN nombre también los casos que hoy sí lo resuelven. Un último
@@ -343,10 +358,11 @@ function resolverOtroParticipante(
   if (!ultimo || !actorId || !ultimo.senderId || ultimo.senderId === actorId || esMensajeDelPrograma(ultimo)) {
     return undefined;
   }
-  return directorio[ultimo.senderId];
+  const delDirectorio = directorio[ultimo.senderId];
+  return delDirectorio ? { ...delDirectorio, role: rolConocido(delDirectorio) } : undefined;
 }
 
-function construirTitulo(tipo: TipoChat, nombre: string | null, otro?: WireMiembro): string {
+function construirTitulo(tipo: TipoChat, nombre: string | null, otro?: OtroParticipante): string {
   if (tipo === 'global') {
     return nombre?.trim() || 'Comunidad Global';
   }
@@ -370,12 +386,17 @@ function construirTitulo(tipo: TipoChat, nombre: string | null, otro?: WireMiemb
   return otro?.fullName?.trim() || 'Conversación directa';
 }
 
-function construirSubtitulo(tipo: TipoChat, otro?: WireMiembro): string {
+/** El subtítulo genérico de un 1 a 1 cuando se sabe con quién es pero no qué rol tiene. */
+export const SUBTITULO_DE_UN_1_A_1_SIN_ROL = '1 a 1';
+
+function construirSubtitulo(tipo: TipoChat, otro?: OtroParticipante): string {
   if (tipo === 'global') return 'Comunidad completa RENASER';
   if (tipo === 'celula') return 'Chat de tu grupo';
   if (tipo === 'soporte') return 'Soporte · Equipo Renaser';
   if (tipo === 'desconocido') return 'Conversación';
-  return otro ? `${traducirRol(otro.role)} · 1 a 1` : 'Conversación directa';
+  if (!otro) return 'Conversación directa';
+  // Sin rol conocido no se adivina uno: «1 a 1» a secas (2026-09-27).
+  return otro.role ? `${traducirRol(otro.role)} · 1 a 1` : SUBTITULO_DE_UN_1_A_1_SIN_ROL;
 }
 
 export function mapearResumenConversacion(
@@ -407,8 +428,9 @@ export function mapearResumenConversacion(
     createdAt: resumen.conversation.createdAt,
     // La foto del otro en un 1 a 1. Grupos y soporte no traen imagen: usan el avatar del programa.
     avatarUrl: otro?.avatarUrl ?? null,
-    // El rol del otro en palabras, el mismo dato del subtítulo, para la info del contacto.
-    rolDelOtro: otro ? traducirRol(otro.role) : null,
+    // El rol del otro en palabras, el mismo dato del subtítulo, para la info del contacto. `null`
+    // si no se conoce: la info muestra entonces el genérico, nunca un rol supuesto.
+    rolDelOtro: otro?.role ? traducirRol(otro.role) : null,
     unreadCount: resumen.unreadCount,
     // El listado nunca trae el historial completo — se pide recién al abrir la conversación
     // (`GET .../messages`), mismo criterio que `useWallFeed.cargarComentarios`.
