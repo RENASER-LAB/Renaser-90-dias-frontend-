@@ -126,3 +126,83 @@ function parsearTrama(crudo: string): TramaStomp | null {
 
   return { comando, cabeceras, cuerpo };
 }
+
+/**
+ * La trama en bytes UTF-8, para mandarla como frame BINARIO y no como texto.
+ *
+ * ## Por qué (bug del 2026-09-26: el chat en vivo nunca funcionó en el teléfono)
+ *
+ * React Native cruza al código nativo los `string` de un TurboModule como cadenas de C, que
+ * terminan en el primer NUL: en Android `JavaTurboModule.cpp` hace
+ * `env->NewStringUTF(arg.utf8(rt).c_str())` y en iOS `RCTTurboModule.mm` hace
+ * `[NSString stringWithUTF8String:value.utf8(runtime).c_str()]`. `WebSocket.send(texto)` pasa por
+ * ahí, así que cada trama STOMP salía **sin su NUL final**. Spring (`StompDecoder`) espera ese NUL
+ * para dar la trama por completa: el CONNECT quedaba a medias para siempre, el servidor nunca
+ * contestaba CONNECTED, la app nunca mandaba el SUBSCRIBE, y ningún mensaje ajeno llegaba en vivo
+ * —con el socket abierto y el `GET /ws 101` en el registro, que es lo que lo hacía parecer sano—.
+ * Las estadísticas del broker lo decían: una sesión abierta y `processed CONNECT(0)`.
+ *
+ * `send(ArrayBuffer)` va por `sendBinary` en base64, que no tiene NUL que cortar, y Spring acepta
+ * STOMP en frames binarios igual que en texto. Codificado a mano porque React Native no trae
+ * `TextEncoder` (ver el encabezado de este archivo).
+ */
+export function tramaEnBytes(texto: string): Uint8Array {
+  const bytes: number[] = [];
+  for (const caracter of texto) {
+    const punto = caracter.codePointAt(0) ?? 0;
+    if (punto < 0x80) {
+      bytes.push(punto);
+    } else if (punto < 0x800) {
+      bytes.push(0xc0 | (punto >> 6), 0x80 | (punto & 0x3f));
+    } else if (punto < 0x10000) {
+      bytes.push(0xe0 | (punto >> 12), 0x80 | ((punto >> 6) & 0x3f), 0x80 | (punto & 0x3f));
+    } else {
+      bytes.push(
+        0xf0 | (punto >> 18),
+        0x80 | ((punto >> 12) & 0x3f),
+        0x80 | ((punto >> 6) & 0x3f),
+        0x80 | (punto & 0x3f)
+      );
+    }
+  }
+  return Uint8Array.from(bytes);
+}
+
+/**
+ * Lo que llega por un `onmessage`, con su NUL final repuesto si el puente de React Native se lo
+ * comió al subir (el mismo corte de {@link tramaEnBytes}, en la otra dirección; es el
+ * `appendMissingNULLonIncoming` que documenta `@stomp/stompjs` para React Native).
+ *
+ * Solo se completa lo que no trae ningún NUL y no es un latido: Spring manda cada trama en UN
+ * mensaje del WebSocket, nunca partida, así que un mensaje con contenido y sin NUL solo puede ser
+ * una trama a la que le cortaron el final. Si el NUL llegó, no se toca nada.
+ */
+export function completarFinDeTrama(datos: string): string {
+  if (datos.includes(FIN_DE_TRAMA)) return datos;
+  if (datos.replace(/[\r\n]/g, '').length === 0) return datos;
+  return datos + FIN_DE_TRAMA;
+}
+
+/**
+ * Los latidos acordados (STOMP 1.2 §Heart-beating), a partir de la cabecera `heart-beat` del
+ * CONNECTED (`"sx,sy"`) y de lo que la app ofreció en ambos sentidos.
+ *
+ * - `esperarCadaMs`: cada cuánto va a mandar algo el servidor, o `null` si dijo que nunca.
+ * - `enviarCadaMs`: cada cuánto quiere recibir un latido nuestro, o `null` si no quiere.
+ *
+ * Importa porque el backend de hoy contesta `heart-beat:0,0` (su broker simple no tiene
+ * programador de latidos): con un vigilante de silencio fijo, la app daba por muerta cada
+ * conversación callada a los 32 s y reconectaba, perdiendo lo que llegara en el hueco.
+ */
+export function latidosNegociados(
+  cabecera: string | undefined,
+  propioMs: number
+): { esperarCadaMs: number | null; enviarCadaMs: number | null } {
+  const [sx, sy] = (cabecera ?? '0,0').split(',').map(v => Number.parseInt(v, 10));
+  const servidorEnvia = Number.isFinite(sx) && sx > 0;
+  const servidorEspera = Number.isFinite(sy) && sy > 0;
+  return {
+    esperarCadaMs: servidorEnvia ? Math.max(sx, propioMs) : null,
+    enviarCadaMs: servidorEspera ? Math.max(sy, propioMs) : null,
+  };
+}

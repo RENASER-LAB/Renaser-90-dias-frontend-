@@ -2,7 +2,15 @@ import { Platform } from 'react-native';
 
 import { API_CONFIG } from '../../../config/apiConfig';
 import { getTokenSesion } from '../../../services/http/apiClient';
-import { armarTrama, leerTramas, LATIDO, type TramaStomp } from './protocoloStomp';
+import {
+  armarTrama,
+  completarFinDeTrama,
+  latidosNegociados,
+  leerTramas,
+  LATIDO,
+  tramaEnBytes,
+  type TramaStomp,
+} from './protocoloStomp';
 
 /**
  * El socket del chat en vivo: UNO para toda la app, compartido por quien lo necesite.
@@ -35,7 +43,12 @@ export const HAY_CHAT_EN_VIVO = Platform.OS !== 'web';
 /** Latidos, en milisegundos, negociados con el broker simple de Spring (su valor por omisión). */
 const LATIDO_MS = 10_000;
 
-/** Sin nada del servidor por este tiempo, la conexión se da por muerta. Tres latidos perdidos. */
+/**
+ * Sin nada del servidor por este tiempo, la conexión se da por muerta: tres latidos perdidos.
+ * Rige mientras se espera el CONNECTED y, después, SOLO si el servidor se comprometió a mandar
+ * latidos (ver `latidosNegociados`): el backend de hoy contesta `heart-beat:0,0`, y con él una
+ * conversación callada no es una conexión muerta.
+ */
 const SILENCIO_MAXIMO_MS = 32_000;
 
 /** Espera antes de reintentar: crece hasta un techo para no martillar un backend caído. */
@@ -85,6 +98,8 @@ class ConexionStomp {
   private temporizadorSilencio: ReturnType<typeof setTimeout> | null = null;
   private temporizadorReintento: ReturnType<typeof setTimeout> | null = null;
   private esperaReintento = REINTENTO_MIN_MS;
+  /** Cada cuánto prometió escribir el servidor; `null` si no prometió nada (o aún no contestó). */
+  private latidoDelServidorMs: number | null = null;
 
   /**
    * Escucha un destino. Devuelve la función para dejar de escuchar — llamarla es obligatorio
@@ -143,12 +158,15 @@ class ConexionStomp {
         host: 'renaser',
         'heart-beat': `${LATIDO_MS},${LATIDO_MS}`,
       }));
+      // Sin CONNECTED a tiempo, se reintenta: un socket abierto que nunca completa el saludo no
+      // puede quedarse así para siempre (es como se escondió el bug del NUL, ver `tramaEnBytes`).
+      this.reiniciarSilencio();
     };
 
     this.socket.onmessage = evento => {
-      const datos = typeof evento.data === 'string' ? evento.data : '';
+      const datos = typeof evento.data === 'string' ? completarFinDeTrama(evento.data) : '';
       if (!datos) return;
-      this.reiniciarSilencio();
+      if (!this.conectado || this.latidoDelServidorMs !== null) this.reiniciarSilencio();
 
       const { tramas, resto } = leerTramas(this.acumulado + datos);
       this.acumulado = resto;
@@ -174,8 +192,10 @@ class ConexionStomp {
     if (trama.comando === 'CONNECTED') {
       this.conectado = true;
       this.esperaReintento = REINTENTO_MIN_MS;
+      this.latidoDelServidorMs = latidosNegociados(trama.cabeceras['heart-beat'], LATIDO_MS).esperarCadaMs;
       this.arrancarLatido();
-      this.reiniciarSilencio();
+      if (this.latidoDelServidorMs !== null) this.reiniciarSilencio();
+      else this.pararSilencio();
       // Se (re)suscribe TODO lo vivo: tras una reconexión el servidor no recuerda nada.
       for (const id of this.suscripciones.keys()) {
         this.enviarSuscripcion(id);
@@ -216,9 +236,11 @@ class ConexionStomp {
     suscripcion.enviada = true;
   }
 
+  /** En BINARIO, nunca como texto: el puente de React Native cortaría el NUL final de la trama.
+   * Ver `tramaEnBytes`. */
   private enviar(texto: string): void {
     try {
-      this.socket?.send(texto);
+      this.socket?.send(tramaEnBytes(texto));
     } catch {
       // El socket se cerró entre medio; `onclose` ya se encarga.
     }
@@ -239,11 +261,25 @@ class ConexionStomp {
    * datos— sin que llegue nunca un `onclose`. El silencio es la única señal de que eso pasó.
    */
   private reiniciarSilencio(): void {
-    if (this.temporizadorSilencio) clearTimeout(this.temporizadorSilencio);
+    this.pararSilencio();
+    const espera = this.latidoDelServidorMs !== null ? Math.max(this.latidoDelServidorMs * 3 + 2_000, SILENCIO_MAXIMO_MS) : SILENCIO_MAXIMO_MS;
     this.temporizadorSilencio = setTimeout(() => {
+      // Se CIERRA el socket viejo, no solo se lo suelta: suelto seguía abierto del lado del
+      // servidor, con su suscripción y su «en línea», mientras se abría otro al lado.
+      const socket = this.socket;
       this.limpiarSocket();
+      try {
+        socket?.close();
+      } catch {
+        // Ya estaba cerrado.
+      }
       if (this.suscripciones.size > 0) this.programarReintento();
-    }, SILENCIO_MAXIMO_MS);
+    }, espera);
+  }
+
+  private pararSilencio(): void {
+    if (this.temporizadorSilencio) clearTimeout(this.temporizadorSilencio);
+    this.temporizadorSilencio = null;
   }
 
   private programarReintento(): void {
@@ -258,9 +294,9 @@ class ConexionStomp {
 
   private limpiarSocket(): void {
     this.pararLatido();
-    if (this.temporizadorSilencio) clearTimeout(this.temporizadorSilencio);
-    this.temporizadorSilencio = null;
+    this.pararSilencio();
     this.conectado = false;
+    this.latidoDelServidorMs = null;
     if (this.socket) {
       this.socket.onopen = null;
       this.socket.onmessage = null;
