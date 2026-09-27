@@ -19,7 +19,7 @@ jest.mock('../../../../theme/ThemeContext', () => {
 jest.mock('../BurbujaAudioChat', () => ({ BurbujaAudioChat: () => null }));
 
 import type { ChatConversation, ChatMessage } from '../../../../screens/ComunidadScreen';
-import { BurbujaDeMensaje } from '../BurbujaDeMensaje';
+import { BurbujaDeMensaje, huecoParaLaHora } from '../BurbujaDeMensaje';
 import { CabeceraDeChat } from '../CabeceraDeChat';
 import { coloresDelChat } from '../coloresDelChat';
 import { FilaDeConversacion } from '../FilaDeConversacion';
@@ -170,5 +170,14 @@ describe('CabeceraDeChat', () => {
     );
     act(() => quien[0].props.onPress());
     expect(abrirInfo).toHaveBeenCalled();
+  });
+});
+
+describe('huecoParaLaHora', () => {
+  it('reserva el lugar con espacios que no dibujan nada (en Android la hora anidada se veía dos veces)', () => {
+    const hueco = huecoParaLaHora('09:56 ✓');
+    expect(hueco).toMatch(/^ +$/);
+    expect(hueco).not.toContain('09:56');
+    expect(hueco.length).toBeGreaterThanOrEqual(15);
   });
 });

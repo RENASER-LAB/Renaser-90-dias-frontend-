@@ -143,7 +143,7 @@ export function BurbujaDeMensaje({
         {texto && mensaje.type !== 'audio' && (
           <Text style={[styles.texto, { color: colores.texto }, conFoto && styles.pieDeFoto]}>
             {texto}
-            <Text style={styles.huecoDeHora}>{`   ${pie}`}</Text>
+            <Text style={styles.huecoDeHora}>{huecoParaLaHora(pie)}</Text>
           </Text>
         )}
 
@@ -207,10 +207,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
     paddingTop: 5,
   },
-  /* Mismo tamaño que la hora y transparente: solo reserva el lugar. */
+  /* Solo reserva el lugar de la hora: son espacios, no dibujan nada. */
   huecoDeHora: {
     fontSize: 12.5,
-    color: 'transparent',
   },
   hora: {
     position: 'absolute',
@@ -271,3 +270,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
+
+/**
+ * El hueco al final del texto que deja sitio a la hora. Son espacios que no se parten (U+00A0):
+ * con el texto de la hora en `color: 'transparent'`, Android dibujaba igual la hora anidada y se
+ * veía dos veces, una encima de la otra (e2e del 26/09). Un espacio de Jost a 12,5 px mide cerca
+ * de un tercio de un dígito: por eso ~2,2 espacios por carácter de la hora.
+ */
+export function huecoParaLaHora(pie: string): string {
+  return '\u00A0'.repeat(Math.ceil(pie.length * 2.2) + 3);
+}
