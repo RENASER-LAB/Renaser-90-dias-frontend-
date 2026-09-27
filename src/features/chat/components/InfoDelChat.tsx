@@ -1,24 +1,30 @@
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { AvatarPersona } from '../../../components/ui';
 import { Icon } from '../../../components/Icon';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useResponsive } from '../../../theme/responsive';
 import { cuantosIntegrantes } from '../utils/formatoChat';
 import type { IntegranteDeLaInfo } from '../utils/infoDelChat';
 import { AvatarDeChat, type TipoDeAvatar } from './AvatarDeChat';
+import { AvatarDeIntegrante } from './AvatarDeIntegrante';
 
 /**
  * La info de una conversación, al estilo de WhatsApp con el tema de Renaser (pedido del dueño,
  * 2026-09-27: «si le doy en el círculo, ver la info del grupo tipo WhatsApp»). Se abre tocando el
  * avatar o el nombre en la cabecera del chat y ocupa la pantalla entera, como el chat.
  *
- * - Arriba, el avatar grande (el fénix en grupos, soporte y comunidad; la foto o las iniciales en
+ * - Arriba, el avatar grande (el de `AvatarDeChat`: la tarjeta sin nombre en un grupo, la tarjeta
+ *   con el nombre de su aprendiz en el soporte, el fénix en la comunidad; la foto o las iniciales en
  *   un 1 a 1), el nombre grande y una línea («Grupo · 5 integrantes», «Chat de soporte»,
  *   «Aprendiz»).
  * - En un grupo, la sección «N integrantes»: el mentor primero, cada uno con su marca («Mentor»,
- *   «Aprendiz»). Tocar a alguien abre su 1 a 1 cuando eso ya se podía hacer desde acá.
+ *   «Aprendiz») y su tarjeta con nombre (D-206, `AvatarDeIntegrante`). Tocar a alguien abre su 1 a 1
+ *   cuando eso ya se podía hacer desde acá.
+ *
+ * > **Corregido 2026-09-27 (D-206).** Decía «el fénix en grupos, soporte y comunidad»: desde 8971acf el
+ * > grupo lleva la tarjeta sin nombre, desde D-205 el soporte la de su aprendiz, y el fénix quedó solo
+ * > para la comunidad. Los integrantes mostraban la foto subida o las iniciales.
  *
  * Nada más: la pantalla no inventa secciones que el backend no puede llenar.
  */
@@ -145,7 +151,12 @@ export function FilaDeIntegranteDelChat({
   const esMentor = integrante.rol === 'Mentor';
   const contenido = (
     <>
-      <AvatarPersona nombre={integrante.nombreCompleto} avatarUrl={integrante.avatarUrl} size={48} />
+      <AvatarDeIntegrante
+        nombre={integrante.nombreCompleto}
+        avatarUrl={integrante.avatarUrl}
+        fotoPath={integrante.fotoPath}
+        size={48}
+      />
       <View style={[styles.filaTextos, { borderBottomColor: c.divider }]}>
         <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
           <Text numberOfLines={2} style={[styles.filaNombre, { color: c.textStrong }]}>

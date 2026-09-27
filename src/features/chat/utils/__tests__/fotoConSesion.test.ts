@@ -1,9 +1,11 @@
 /**
- * La foto del chat de soporte (decisión del dueño del 2026-09-27; D-205 del backend): la tarjeta con el
- * primer nombre del aprendiz, que el servidor sirve CON sesión. En Android/iOS la pide el `Image` con
- * la cabecera; en web se trae el blob y se muestra desde un object URL guardado por conversación.
+ * Las fotos del chat que el servidor sirve CON sesión: la del soporte (D-205, la tarjeta con el primer
+ * nombre del aprendiz) y la tarjeta de cada integrante de la info del grupo (D-206). En Android/iOS
+ * la pide el `Image` con la cabecera; en web se trae el blob y se muestra desde un object URL
+ * guardado por ruta.
  *
  * Falla contra el código viejo: no existía, y el soporte mostraba la tarjeta sin nombre.
+ * (Corregido 2026-09-27, D-206: se llamaba `fotoDelSoporte.test.ts`.)
  */
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 
@@ -17,7 +19,7 @@ import {
   olvidarFotosWeb,
   yaFallo,
   type EntornoWeb,
-} from '../fotoDelSoporte';
+} from '../fotoConSesion';
 
 const RUTA = '/api/v1/chat/conversations/c-1/foto';
 
@@ -107,6 +109,20 @@ describe('web: la foto se trae con la sesión y se guarda por conversación', ()
 
     expect(pedidos.map(p => p.headers['X-Auth-Token'])).toEqual(['sesion-1', 'sesion-2']);
     expect(liberadas).toEqual(['blob:foto-1']);
+  });
+
+  it('la tarjeta de un integrante (D-206) va por el mismo camino, con su propia ruta', async () => {
+    const { entorno, pedidos } = entornoDePrueba([{ ok: true }, { ok: true }]);
+    const deRicardo = '/api/v1/chat/conversations/g-1/miembros/u-ricardo/foto';
+
+    await expect(fotoParaWeb(RUTA, 'sesion-1', entorno)).resolves.toBe('blob:foto-1');
+    await expect(fotoParaWeb(deRicardo, 'sesion-1', entorno)).resolves.toBe('blob:foto-2');
+    await expect(fotoParaWeb(deRicardo, 'sesion-1', entorno)).resolves.toBe('blob:foto-2');
+
+    expect(pedidos.map(p => p.url)).toEqual([
+      'http://localhost:8080/api/v1/chat/conversations/c-1/foto',
+      'http://localhost:8080/api/v1/chat/conversations/g-1/miembros/u-ricardo/foto',
+    ]);
   });
 
   it('sin sesión no pide nada', async () => {

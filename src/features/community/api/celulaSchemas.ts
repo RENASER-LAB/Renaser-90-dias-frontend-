@@ -31,6 +31,11 @@ const miCelulaAsignadaSchema = z
     totalCellsInCohort: z.number(),
     videoCallUrl: z.string().nullable(),
     nextSessionAt: z.string().nullable(),
+    /* D-206 (2026-09-27), aditivos y opcionales: un backend anterior no los manda. `mentorId` dice
+       quién es el mentor (para el «Tú» de la info y para escribirle, D-207) y `mentorPhotoPath` la ruta
+       de su tarjeta con nombre, pedida con la sesión (solo en `/me/cells`). */
+    mentorId: z.string().nullish(),
+    mentorPhotoPath: z.string().nullish(),
   })
   .passthrough();
 
@@ -58,6 +63,9 @@ export const cellMemberSchema = z
     fullName: z.string(),
     avatarUrl: z.string().nullable(),
     isSelf: z.boolean(),
+    /* D-206 (2026-09-27), aditivo y opcional: la ruta de su tarjeta con nombre en el chat del grupo
+       (solo en `/me/cells/{id}/members`). Cuando viene, la info muestra la tarjeta e ignora `avatarUrl`. */
+    photoPath: z.string().nullish(),
   })
   .passthrough();
 

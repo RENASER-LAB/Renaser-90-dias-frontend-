@@ -75,7 +75,9 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
         la info) lleva a `chat/components/InfoDelChat.tsx`, a pantalla completa como el chat (sin
         «COMUNIDAD», sin secciones ni pestañas ni el botón flotante del acompañante; ← y el «atrás»
         de Android vuelven al chat): avatar de 120 px (el fénix, sin sello, en grupo, soporte y
-        comunidad; foto o iniciales en un 1 a 1), nombre grande y debajo «Grupo · N integrantes» /
+        comunidad; foto o iniciales en un 1 a 1 — *corregido 2026-09-27, D-206: el de `AvatarDeChat`,
+        o sea la tarjeta sin nombre en el grupo, la del nombre de su aprendiz en el soporte y el fénix
+        solo en la comunidad; esta línea había quedado del fénix de antes de 8971acf*), nombre grande y debajo «Grupo · N integrantes» /
         «Chat de soporte» / el rol del otro («Aprendiz»). En un grupo, la cohorte y la sección «N integrantes»: el mentor primero,
         «Tú» y el resto por nombre, cada uno con su marca («Mentor», «Aprendiz»). La cifra es la
         de la cabecera (aprendices + mentor). Tocar a un compañero abre su 1 a 1 con la acción que
@@ -121,16 +123,40 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
         secas (`chatMappers.SUBTITULO_DE_UN_1_A_1_SIN_ROL`) y la info no muestra rol.
       * **La foto del chat de SOPORTE es SU tarjeta de Canva con SU primer nombre** (decisión del
         dueño, mismo día; D-205 del backend). Los grupos y la comunidad siguen con la tarjeta sin
-        nombre (`tarjeta-renaser.jpg`, 8971acf). La conversación de soporte trae `photoPath`
+        nombre (`tarjeta-renaser.jpg`, 8971acf). *Corregido el mismo día (D-206): la comunidad
+        volvió al fénix; la tarjeta sin nombre queda para los grupos (ver el punto siguiente).* La conversación de soporte trae `photoPath`
         (`GET /api/v1/chat/conversations/{id}/foto`, campo nuevo y opcional) y el avatar del soporte
         la muestra en la lista, la cabecera y la info (`AvatarDeChat` con `fotoPath`). El endpoint pide
         la sesión: en Android/iOS va en las cabeceras del `Image`; en web se trae el blob con
         `X-Auth-Token` y se muestra desde un object URL guardado por conversación (uno por sesión; al
         cambiar de sesión se liberan). La tarjeta sin nombre queda debajo: se ve mientras carga y
         queda sola si la foto falla, sin reintentar en cada fila (`utils/fotoDelSoporte.ts`,
-        `hooks/useFotoDelSoporte.ts`).
+        `hooks/useFotoDelSoporte.ts`; *desde D-206 se llaman `utils/fotoConSesion.ts` y
+        `hooks/useFotoConSesion.ts`, porque sirven cualquier ruta*).
+      * **La comunidad vuelve al fénix y cada integrante de la info del grupo muestra su tarjeta con
+        nombre** (decisiones del dueño del mismo día, D-206 del backend). Textual: «de la plantilla
+        que te pasé los 2 png […] es para el grupo con el mentor y el tema de soporte […] y chat
+        global, solo afecta esos 2 primeros», y sobre la info (que mostraba «RP», «EL», «EL»): «debe
+        de poner con el nombre […] el grupo del mentor y sus integrantes». En la página de decisiones
+        eligió «Siempre su tarjeta con nombre» aunque la persona haya subido foto en «Yo», y pidió dejar
+        listo el otro modo («hazlo los 2 por si acaso»).
+        * El chat global muestra el fénix (`FotoDelPrograma`) en la lista, la cabecera y la info; qué
+          foto lleva cada conversación lo decide `utils/fotosDelChat.fotoDeLaConversacion`.
+        * `/me/cells` trae `mentorId` y `mentorPhotoPath`, y `/me/cells/{id}/members` trae `photoPath`
+          (campos nuevos y opcionales; el esquema los acepta ausentes o en `null`). La info muestra
+          `AvatarDeIntegrante` con una sola regla (`fotosDelChat.fotoDelIntegrante`): si llega la ruta,
+          la tarjeta —pedida con la sesión, con las iniciales debajo mientras carga o si falla—, y la
+          foto subida se ignora; si no llega, la foto subida; si tampoco, las iniciales.
+        * **El modo lo elige el servidor** (`CHAT_FOTO_DE_INTEGRANTES`: `TARJETA` por defecto, o
+          `FOTO_SUBIDA`) decidiendo a quién le manda la ruta, así que cambiarlo no pide APK.
+        * El mentor que mira su propio grupo ya no se ve como «Ricardo Palomino»: su fila dice «Tú»
+          (la app compara `mentorId` con el id de la sesión; sin `mentorId` no adivina).
+        * No cambian: las burbujas del grupo (solo el nombre, sin avatar), el desplegable de
+          integrantes de la tarjeta de Tribu (`FilaIntegrante`, con la foto subida), el perfil, «Mi
+          grupo» ni el panel de admin. El soporte no tiene lista de integrantes en la app.
       En `ComunidadScreen.tsx` solo cambian los campos opcionales `esDelPrograma`, `rolDelOtro` y
-      `fotoPath` (este último se pasa a la cabecera y a la info), la
+      `fotoPath` (este último se pasa a la cabecera y a la info), el id y la tarjeta del mentor y el id
+      de la sesión que recibe la lista de la info (D-206), la
       lista de mensajes, el bloque de la info, que el flotante del acompañante siga escondido con
       la info abierta y los disparos del refresco de la lista (volver de un chat, foco, deslizar);
       envío, fotos, audios, evidencia y la tarjeta de Tribu siguen por el mismo camino.

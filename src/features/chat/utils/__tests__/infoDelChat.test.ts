@@ -116,4 +116,57 @@ describe('integrantesDeLaInfo', () => {
     expect(sinMentor.map(f => f.nombre)).toEqual(['Tú']);
     expect(integrantesDeLaInfo({ mentor: null, miembros: [] })).toEqual([]);
   });
+
+  it('un servidor anterior (sin rutas de tarjeta ni id del mentor) deja todo como estaba', () => {
+    expect(filas.map(f => f.fotoPath)).toEqual([null, null, null, null]);
+    expect(filas[0].esYo).toBe(false);
+  });
+});
+
+describe('integrantesDeLaInfo con la tarjeta de cada uno y el id del mentor (D-206)', () => {
+  const RUTA = (id: string) => `/api/v1/chat/conversations/g-1/miembros/${id}/foto`;
+  const mentor = {
+    id: 'u-ricardo',
+    nombre: 'Ricardo Palomino',
+    avatarUrl: 'https://s3/avatares/ricardo.jpg',
+    fotoPath: RUTA('u-ricardo'),
+  };
+  const miembros: MiembroDelGrupo[] = [
+    { ...miembro('u-e2e-1', 'E2E Libre 01'), photoPath: RUTA('u-e2e-1') },
+    { ...miembro('u-e2e-2', 'E2E Libre 02'), photoPath: RUTA('u-e2e-2') },
+  ];
+
+  it('cada fila lleva la ruta de su tarjeta, el mentor incluido (la captura del dueño: «RP», «EL», «EL»)', () => {
+    const filas = integrantesDeLaInfo({ mentor, miembros, yoId: 'u-e2e-1' });
+
+    expect(filas.map(f => f.fotoPath)).toEqual([RUTA('u-ricardo'), RUTA('u-e2e-1'), RUTA('u-e2e-2')]);
+  });
+
+  it('el mentor que mira su propio grupo se ve como «Tú», no como «Ricardo Palomino»', () => {
+    const filas = integrantesDeLaInfo({ mentor, miembros, yoId: 'u-ricardo' });
+
+    expect(filas[0]).toMatchObject({ clave: 'mentor', nombre: 'Tú', nombreCompleto: 'Ricardo Palomino', esYo: true });
+    expect(filas.slice(1).map(f => f.nombre)).toEqual(['E2E Libre 01', 'E2E Libre 02']);
+  });
+
+  it('para un aprendiz, el mentor sigue con su nombre y con su id de usuario', () => {
+    const filas = integrantesDeLaInfo({ mentor, miembros, yoId: 'u-e2e-1' });
+
+    expect(filas[0]).toMatchObject({ nombre: 'Ricardo Palomino', esYo: false, usuarioId: 'u-ricardo' });
+  });
+
+  it('sin id del mentor no se adivina quién es: nunca «Tú»', () => {
+    const filas = integrantesDeLaInfo({ mentor: { ...mentor, id: null }, miembros, yoId: 'u-ricardo' });
+
+    expect(filas[0]).toMatchObject({ nombre: 'Ricardo Palomino', esYo: false, usuarioId: null });
+  });
+
+  it('una ruta en blanco no es una tarjeta', () => {
+    const filas = integrantesDeLaInfo({
+      mentor: { ...mentor, fotoPath: '  ' },
+      miembros: [{ ...miembro('u-e2e-1', 'E2E Libre 01'), photoPath: '' }],
+    });
+
+    expect(filas.map(f => f.fotoPath)).toEqual([null, null]);
+  });
 });

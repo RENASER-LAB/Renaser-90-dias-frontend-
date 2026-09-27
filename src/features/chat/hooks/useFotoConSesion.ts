@@ -2,20 +2,25 @@ import { useCallback, useEffect, useState } from 'react';
 import { Platform, type ImageSourcePropType } from 'react-native';
 
 import { getTokenSesion } from '../../../services/http/apiClient';
-import { fotoParaWeb, fuenteNativaDeLaFoto, marcarQueFallo, yaFallo } from '../utils/fotoDelSoporte';
+import { fotoParaWeb, fuenteNativaDeLaFoto, marcarQueFallo, yaFallo } from '../utils/fotoConSesion';
 
 /**
- * La foto del chat de soporte lista para un `Image` (D-205 del backend; ver `utils/fotoDelSoporte.ts`).
+ * Una foto que el backend sirve con sesión, lista para un `Image`: la del soporte (D-205) o la tarjeta
+ * de un integrante en la info del grupo (D-206). Ver `utils/fotoConSesion.ts`.
  *
  * Devuelve `fuente: null` mientras no hay nada que mostrar —sin ruta, sin sesión, cargando en web o
- * después de un error— y quien la usa deja ver la tarjeta sin nombre. `alFallar` va en el `onError`
- * del `Image`: recuerda el fallo en esta sesión para no reintentar en cada fila.
+ * después de un error— y quien la usa deja ver lo de debajo (la tarjeta sin nombre, las iniciales).
+ * `alFallar` va en el `onError` del `Image`: recuerda el fallo en esta sesión para no reintentar en
+ * cada fila.
  *
  * Lo que se guarda en el estado lleva su ruta: la cabecera es el MISMO componente al pasar de un
  * soporte a otro (el staff los recorre), y sin eso mostraría un instante la tarjeta del anterior o
  * heredaría su fallo.
+ *
+ * > **Corregido 2026-09-27 (D-206).** Se llamaba `useFotoDelSoporte`; es el mismo hook para cualquier
+ * > ruta.
  */
-export function useFotoDelSoporte(ruta: string | null | undefined): {
+export function useFotoConSesion(ruta: string | null | undefined): {
   fuente: ImageSourcePropType | null;
   alFallar: () => void;
 } {

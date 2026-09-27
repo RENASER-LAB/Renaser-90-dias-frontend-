@@ -429,7 +429,8 @@ export function mapearResumenConversacion(
     // La foto del otro en un 1 a 1. Grupos y comunidad no traen imagen: usan el avatar del programa.
     avatarUrl: otro?.avatarUrl ?? null,
     // D-205: el soporte trae la ruta de SU foto (la tarjeta con el primer nombre del aprendiz). Se
-    // pide con la sesión (`utils/fotoDelSoporte.ts`); sin ella, la tarjeta sin nombre de siempre.
+    // pide con la sesión (`utils/fotoConSesion.ts`, antes `fotoDelSoporte.ts`); sin ella, la tarjeta
+    // sin nombre de siempre.
     fotoPath: resumen.conversation.photoPath?.trim() || null,
     // El rol del otro en palabras, el mismo dato del subtítulo, para la info del contacto. `null`
     // si no se conoce: la info muestra entonces el genérico, nunca un rol supuesto.

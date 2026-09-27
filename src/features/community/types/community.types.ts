@@ -104,6 +104,8 @@ export interface CellMember {
   fullName: string;
   avatarUrl: string | null;
   isSelf: boolean;
+  /** D-206: la ruta de su tarjeta con nombre (solo `/me/cells/{id}/members`; ausente en un backend anterior). */
+  photoPath?: string | null;
 }
 
 /**
@@ -123,6 +125,10 @@ export interface CelulaDelAprendiz {
   totalCellsInCohort: number;
   videoCallUrl: string | null;
   nextSessionAt: string | null;
+  /** D-206: el id del mentor (para el «Tú» de la info y para escribirle, D-207). */
+  mentorId?: string | null;
+  /** D-206: la ruta de la tarjeta con nombre del mentor, pedida con la sesión. */
+  mentorPhotoPath?: string | null;
 }
 
 /** `MiCelulaResponse` del backend, ya normalizado con el discriminante `assigned` explícito
@@ -141,4 +147,7 @@ export type MiCelulaInfo =
       totalCellsInCohort: number;
       videoCallUrl: string | null;
       nextSessionAt: string | null;
+      /** D-206: aditivos, opcionales (ver `CelulaDelAprendiz`). En `/me/cell` la ruta viene en `null`. */
+      mentorId?: string | null;
+      mentorPhotoPath?: string | null;
     };

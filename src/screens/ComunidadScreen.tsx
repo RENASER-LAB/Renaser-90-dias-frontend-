@@ -637,14 +637,24 @@ export default function ComunidadScreen() {
       : 'Tu grupo';
   /* La info del grupo abierto, al estilo WhatsApp (2026-09-27): el mentor primero, después «Tú» y
      el resto por nombre, cada uno con su marca. La cifra es la MISMA que dice la cabecera del chat
-     (aprendices + mentor, `integrantesDelChatDeGrupo`). Ver `chat/utils/infoDelChat.ts`. */
+     (aprendices + mentor, `integrantesDelChatDeGrupo`). Ver `chat/utils/infoDelChat.ts`.
+     D-206: cada uno con la ruta de su tarjeta con nombre, y el mentor con su id, que contra el de la
+     sesión le dice «Tú» al mentor que mira su propio grupo. */
   const filasDeLaInfo = useMemo(
     () =>
       integrantesDeLaInfo({
-        mentor: grupoAbierto ? { nombre: grupoAbierto.mentorName, avatarUrl: grupoAbierto.mentorAvatarUrl } : null,
+        mentor: grupoAbierto
+          ? {
+              id: grupoAbierto.mentorId,
+              nombre: grupoAbierto.mentorName,
+              avatarUrl: grupoAbierto.mentorAvatarUrl,
+              fotoPath: grupoAbierto.mentorPhotoPath,
+            }
+          : null,
         miembros: integrantesDelGrupoAbierto,
+        yoId: user?.id,
       }),
-    [grupoAbierto, integrantesDelGrupoAbierto]
+    [grupoAbierto, integrantesDelGrupoAbierto, user?.id]
   );
   const cifraDeLaInfo = cifraDeIntegrantes(grupoAbierto, filasDeLaInfo.length);
 

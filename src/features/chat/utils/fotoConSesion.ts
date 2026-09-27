@@ -1,18 +1,26 @@
 import { API_CONFIG } from '../../../config/apiConfig';
 
 /**
- * La foto del chat de SOPORTE (decisión del dueño del 2026-09-27; D-205 del backend): la tarjeta de
- * Canva con el primer nombre del aprendiz, que sirve `GET /api/v1/chat/conversations/{id}/foto`. Los
- * grupos y la comunidad siguen con la tarjeta sin nombre que la app ya trae.
+ * Las fotos del chat que sirve el backend CON sesión, por la ruta que manda en la respuesta
+ * (decisiones del dueño del 2026-09-27):
+ * - **La del chat de soporte** (D-205): la tarjeta de Canva con el primer nombre de su aprendiz,
+ *   `photoPath` de la conversación (`GET /api/v1/chat/conversations/{id}/foto`).
+ * - **La de cada integrante** de la info de un grupo (D-206): su tarjeta con su primer nombre,
+ *   `mentorPhotoPath` de `/me/cells` y `photoPath` de `/me/cells/{id}/members`
+ *   (`GET /api/v1/chat/conversations/{id}/miembros/{usuarioId}/foto`).
  *
  * **El endpoint pide la sesión** (`X-Auth-Token`), igual que el resto del chat, y eso cambia según la
  * plataforma:
  * - **Android/iOS:** `Image` acepta cabeceras en `source`, así que se le pasa la URL con la sesión y
  *   el cargador nativo la guarda en su caché como cualquier foto.
  * - **Web:** `<img>` no manda cabeceras. Se trae la imagen con la sesión y se muestra desde un object
- *   URL, guardado en memoria por conversación para no volver a bajarla en cada fila y cabecera.
+ *   URL, guardado en memoria por ruta para no volver a bajarla en cada fila y cabecera.
  *
- * Si algo falla, quien llama muestra la tarjeta sin nombre: la foto es un adorno, nunca un error.
+ * Si algo falla, quien llama muestra lo que tenga debajo (la tarjeta sin nombre en el soporte, las
+ * iniciales en un integrante): la foto es un adorno, nunca un error.
+ *
+ * > **Corregido 2026-09-27 (D-206).** Se llamaba `fotoDelSoporte.ts` y solo servía la del soporte; es
+ * > el mismo camino para cualquier ruta, así que se generalizó en vez de copiarlo.
  */
 
 const HEADER_SESION = 'X-Auth-Token';
@@ -27,7 +35,7 @@ export function urlDeLaFoto(ruta: string): string {
   return `${API_CONFIG.BASE_URL}${ruta}`;
 }
 
-/** Android/iOS. Sin sesión no hay foto que pedir: `null` (tarjeta sin nombre). */
+/** Android/iOS. Sin sesión no hay foto que pedir: `null` (queda lo de debajo). */
 export function fuenteNativaDeLaFoto(ruta: string, token: string | null): FuenteConSesion | null {
   if (!token) return null;
   return { uri: urlDeLaFoto(ruta), headers: { [HEADER_SESION]: token } };
@@ -46,14 +54,14 @@ const entornoDelNavegador: EntornoWeb = {
   liberarUrl: url => URL.revokeObjectURL(url),
 };
 
-/** Las fotos ya pedidas en web, por ruta (una por conversación). `null` = falló: no se reintenta. */
+/** Las fotos ya pedidas en web, por ruta (una por soporte o por integrante). `null` = falló: no se reintenta. */
 const fotosWeb = new Map<string, Promise<string | null>>();
 /** De qué sesión son las de arriba: al cambiar de sesión se liberan y se vuelven a pedir. */
 let sesionDeLasFotosWeb: string | null = null;
 
 /**
- * Web: el object URL de la foto de esa conversación, o `null` si no se pudo traer. Un solo pedido por
- * conversación y sesión, aunque la pidan a la vez la fila, la cabecera y la info.
+ * Web: el object URL de la foto de esa ruta, o `null` si no se pudo traer. Un solo pedido por ruta y
+ * sesión, aunque la pidan a la vez la fila, la cabecera y la info.
  */
 export function fotoParaWeb(
   ruta: string,
@@ -97,7 +105,7 @@ export function olvidarFotosWeb(entorno: EntornoWeb = entornoDelNavegador): void
 
 /**
  * Android/iOS: las fotos que ya fallaron en esta sesión (un 403, sin red). Se recuerdan para mostrar
- * la tarjeta sin nombre de una vez, sin reintentar en cada fila que se vuelve a pintar.
+ * lo de debajo de una vez, sin reintentar en cada fila que se vuelve a pintar.
  */
 const fallidasNativas = new Set<string>();
 
