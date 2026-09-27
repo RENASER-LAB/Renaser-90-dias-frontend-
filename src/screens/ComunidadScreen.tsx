@@ -2258,10 +2258,16 @@ export default function ComunidadScreen() {
       {/* ========================================================================= */}
       {/* SECCIÓN EVENTOS (2026-09-26, E-5 a E-8)                                   */}
       {/* ========================================================================= */}
+      {/* El `ScrollView` es de la sección desde el arreglo del 26/09 (la lista no se refrescaba): su
+          pull-to-refresh necesita el estado de la lectura. Mismo estilo de contenido que antes. */}
       {seccionActiva === 'eventos' && (
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={[
+        <SeccionEventos
+          userId={user?.id ?? null}
+          rol={user?.role}
+          eventoPedido={eventoPedido}
+          onEventoPedidoAtendido={eventoPedidoAtendido}
+          volverRef={eventosVolverRef}
+          estiloDelContenido={[
             styles.content,
             {
               paddingHorizontal: horizontalPadding,
@@ -2271,16 +2277,7 @@ export default function ComunidadScreen() {
               paddingTop: 14,
             },
           ]}
-          showsVerticalScrollIndicator={false}
-        >
-          <SeccionEventos
-            userId={user?.id ?? null}
-            rol={user?.role}
-            eventoPedido={eventoPedido}
-            onEventoPedidoAtendido={eventoPedidoAtendido}
-            volverRef={eventosVolverRef}
-          />
-        </ScrollView>
+        />
       )}
 
       {/* ========================================================================= */}

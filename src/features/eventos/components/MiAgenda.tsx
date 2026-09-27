@@ -23,15 +23,21 @@ const PALABRA: Record<TipoDeEntrada, string> = { evento: 'Evento', habito: 'Háb
  * Si hábitos o acciones fallan, se muestra lo demás y se dice qué falta: una lectura que falla no
  * borra lo que sí se sabe.
  *
+ * Deslizar hacia abajo en la agenda sube `vuelta` y relee hábitos y acciones en silencio (lo que ya
+ * está en pantalla se queda hasta que llega lo nuevo); los eventos los relee la sección.
+ *
  * Arriba va el semáforo de la persona (`SemaforoDeLaAgenda`, decisión del dueño del 2026-09-26): solo
  * días ya vividos; los de la agenda, que son de hoy en adelante, no llevan color.
  */
 export function MiAgenda({
   ocurrencias,
+  vuelta = 0,
   onVolver,
   onAbrirEvento,
 }: {
   ocurrencias: Ocurrencia[];
+  /** Sube con cada pull-to-refresh: vuelve a leer hábitos y acciones. */
+  vuelta?: number;
   onVolver: () => void;
   onAbrirEvento: (eventoId: string) => void;
 }) {
@@ -69,7 +75,7 @@ export function MiAgenda({
     return () => {
       vivo = false;
     };
-  }, []);
+  }, [vuelta]);
 
   const zona = zonaDelTelefono();
   const dias = useMemo(

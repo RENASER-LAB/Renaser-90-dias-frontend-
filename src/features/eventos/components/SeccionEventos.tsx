@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState, type MutableRefObject } from 'react';
-import { View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
+import { RefreshControl, ScrollView, View, type StyleProp, type ViewStyle } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 
 import { Alert } from '../../../components/Alerta';
 import { BotonPrincipal, BotonSecundario, TituloDeSeccion } from '../../../components/Legible';
@@ -8,7 +9,9 @@ import * as eventosApi from '../api/eventosApi';
 import { useEventos } from '../hooks/useEventos';
 import type { Asistencia, Evento, Ocurrencia } from '../types/eventos.types';
 import { armarCuerpo, formularioDesdeEvento, formularioVacio, type FormularioDeEvento } from '../utils/formularioDeEvento';
+import { vistaPideReleer } from '../utils/lecturaVigente';
 import { puedeGestionarEventos } from '../utils/permisosDeEventos';
+import { useTheme } from '../../../theme/ThemeContext';
 import { DetalleDelEvento } from './DetalleDelEvento';
 import { FormularioDelEvento } from './FormularioDelEvento';
 import { MiAgenda } from './MiAgenda';
@@ -39,6 +42,11 @@ function ocurrenciaSuelta(evento: Evento): Ocurrencia {
  *
  * La sección es dueña de su propio estado: Comunidad solo la monta, le pasa el evento pedido desde un
  * aviso y le presta el gesto de «atrás» (`volverRef`).
+ *
+ * **La lista se relee sola** (bug del e2e del 26/09: un evento recién creado no aparecía hasta cerrar
+ * la app): al ganar el foco la pestaña, al volver a la lista desde el detalle, la agenda o el
+ * formulario, y deslizando hacia abajo en la lista y en «Mi agenda». Por eso el `ScrollView` es de la
+ * sección y no de Comunidad: el `RefreshControl` necesita el estado de la lectura.
  */
 export function SeccionEventos({
   userId,
@@ -46,6 +54,7 @@ export function SeccionEventos({
   eventoPedido,
   onEventoPedidoAtendido,
   volverRef,
+  estiloDelContenido,
 }: {
   userId: string | null;
   rol: string | null | undefined;
@@ -54,10 +63,39 @@ export function SeccionEventos({
   onEventoPedidoAtendido: () => void;
   /** Comunidad lo llama con el «atrás» del sistema: `true` si la sección lo usó para volver. */
   volverRef: MutableRefObject<(() => boolean) | null>;
+  /** El `contentContainerStyle` que Comunidad usa en todas sus secciones. */
+  estiloDelContenido?: StyleProp<ViewStyle>;
 }) {
+  const { c } = useTheme();
   const gestiona = puedeGestionarEventos(rol);
-  const { ocurrencias, cargando, fallo, yaLeido, recargar, responder, quitarDeLaLista } = useEventos(userId, true);
+  const { ocurrencias, cargando, refrescando, fallo, yaLeido, recargar, responder, quitarDeLaLista } = useEventos(
+    userId,
+    true,
+  );
   const [vista, setVista] = useState<Vista>({ nombre: 'lista' });
+  /** Sube con cada pull-to-refresh de «Mi agenda», que relee también hábitos y acciones. */
+  const [vueltaDeAgenda, setVueltaDeAgenda] = useState(0);
+
+  // Volver a la pestaña relee (en silencio: ya hay lista). Al montar coincide con la lectura
+  // inicial de `useEventos` y comparten el mismo pedido.
+  useFocusEffect(
+    useCallback(() => {
+      void recargar();
+    }, [recargar]),
+  );
+
+  // Volver a la lista desde el detalle, la agenda o el formulario relee.
+  const vistaAnterior = useRef(vista.nombre);
+  useEffect(() => {
+    const anterior = vistaAnterior.current;
+    vistaAnterior.current = vista.nombre;
+    if (vistaPideReleer(anterior, vista.nombre)) void recargar();
+  }, [vista.nombre, recargar]);
+
+  const alDeslizar = useCallback(() => {
+    if (vista.nombre === 'agenda') setVueltaDeAgenda(n => n + 1);
+    void recargar({ deslizando: true });
+  }, [vista.nombre, recargar]);
   const [suelta, setSuelta] = useState<{ ocurrencia: Ocurrencia | null; fallo: boolean } | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [errorFormulario, setErrorFormulario] = useState<string | null>(null);
@@ -139,7 +177,7 @@ export function SeccionEventos({
       const guardado = original
         ? await eventosApi.editarEvento(original.id, armado.cuerpo)
         : await eventosApi.crearEvento(armado.cuerpo);
-      await recargar();
+      await recargar({ forzar: true });
       setSuelta(null);
       setVista({ nombre: 'detalle', eventoId: guardado.id, inicioOcurrencia: null });
     } catch (e) {
@@ -167,8 +205,25 @@ export function SeccionEventos({
     }
   };
 
+  /** El scroll de la sección. El pull-to-refresh va solo en la lista y en «Mi agenda». */
+  const conRefresco = vista.nombre === 'lista' || vista.nombre === 'agenda';
+  const envolver = (hijo: React.ReactNode) => (
+    <ScrollView
+      keyboardShouldPersistTaps="handled"
+      contentContainerStyle={estiloDelContenido}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        conRefresco ? (
+          <RefreshControl refreshing={refrescando} onRefresh={alDeslizar} tintColor={c.goldInk} colors={[c.goldInk]} />
+        ) : undefined
+      }
+    >
+      {hijo}
+    </ScrollView>
+  );
+
   if (vista.nombre === 'formulario') {
-    return (
+    return envolver(
       <FormularioDelEvento
         inicial={vista.original ? formularioDesdeEvento(vista.original) : formularioVacio(Date.now())}
         original={vista.original}
@@ -181,9 +236,10 @@ export function SeccionEventos({
   }
 
   if (vista.nombre === 'agenda') {
-    return (
+    return envolver(
       <MiAgenda
         ocurrencias={ocurrencias}
+        vuelta={vueltaDeAgenda}
         onVolver={volverALista}
         onAbrirEvento={id => setVista({ nombre: 'detalle', eventoId: id, inicioOcurrencia: null })}
       />
@@ -193,7 +249,7 @@ export function SeccionEventos({
   if (vista.nombre === 'detalle') {
     const oc = enLaLista ?? suelta?.ocurrencia ?? null;
     if (!oc) {
-      return (
+      return envolver(
         <View style={{ gap: 14 }}>
           <BotonSecundario etiqueta="Volver a Eventos" icono="arrowLeft" onPress={volverALista} />
           <Parrafo tono={suelta?.fallo ? 'peligro' : 'suave'}>
@@ -202,7 +258,7 @@ export function SeccionEventos({
         </View>
       );
     }
-    return (
+    return envolver(
       <DetalleDelEvento
         oc={oc}
         puedeGestionar={gestiona}
@@ -218,7 +274,7 @@ export function SeccionEventos({
     );
   }
 
-  return (
+  return envolver(
     <View style={{ gap: 14 }}>
       <TituloDeSeccion detalle="Clases y encuentros de los próximos 30 días.">Eventos</TituloDeSeccion>
       <View style={{ gap: 10 }}>
@@ -236,7 +292,10 @@ export function SeccionEventos({
       </View>
 
       {cargando && ocurrencias.length === 0 ? <Parrafo>Buscando eventos…</Parrafo> : null}
-      {!cargando && fallo ? (
+      {fallo && ocurrencias.length > 0 ? (
+        <Parrafo tono="peligro">No se pudo actualizar la lista; esto es lo último que llegó. Desliza hacia abajo para reintentar.</Parrafo>
+      ) : null}
+      {!cargando && fallo && ocurrencias.length === 0 ? (
         <View style={{ gap: 8 }}>
           <Parrafo tono="peligro">
             {fallo === 'sin_red'
