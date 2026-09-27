@@ -574,6 +574,12 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     > * La línea muestra **81.6 kg**, no 82, y Relaciones **sí** lleva cifra (entera, `7/10`) —
     >   antes el Mapa le dibujaba hito y el Plan le decía "no se reparte".
     > * La línea ahora **se toca para corregirla**; ver la excepción de más arriba.
+
+    > **Nota 2026-09-27 (D-203 del backend, OBJ-03).** El *«Vas por la semana N de 12»* citado
+    > arriba ya no es el texto: las semanas se cuentan como las numera el servidor, de lunes a
+    > domingo y **trece** (la 13 hasta el día 90), y la tarjeta dice *«de 13»*; el mes 3 son las
+    > semanas 9 a 13. Además, el domingo la tarjeta de la semana suma debajo la que empieza el
+    > lunes, que es la que se arma ese día. Ver `features/objetivos/utils/periodoDelPrograma.ts`.
     Una excepción puntual **no abre** el tab: cualquier otro cambio sobre los cinco principales
     vuelve a necesitar autorización explícita.
   * **Excepción autorizada por el dueño del producto — 2026-09-22 — tab `Comunidad`, pestaña *Tribu*.**

@@ -57,7 +57,12 @@ import type { EjeObjetivo } from '../features/objetivos/types/objetivos.types';
 import { EJES, ETIQUETA_EJE } from '../features/objetivos/types/objetivos.types';
 import { conPrincipalPrimero, usePrioridadPrincipal } from '../features/objetivos/hooks/usePrioridadPrincipal';
 import { cifraDeEscala, cifraDelObjetivo, primeraClausula } from '../features/objetivos/utils/cifraDelObjetivo';
-import { etiquetaDelMes, mesDe, semanaDe } from '../features/objetivos/utils/periodoDelPrograma';
+import {
+  SEMANAS_DEL_PROGRAMA,
+  etiquetaDelMes,
+  mesDe,
+  semanaDe,
+} from '../features/objetivos/utils/periodoDelPrograma';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
 
 // =========================================================================
@@ -1786,8 +1791,9 @@ export default function PlanScreen() {
               )}
             </View>
 
-            {/* Dónde está parado dentro del programa. Se deriva del día, de corrido: el "mes" es un
-                bloque de 4 semanas contado desde que arrancó, no un mes del calendario. */}
+            {/* Dónde está parado dentro del programa. La semana es la del servidor, de lunes a
+                domingo y trece (D-203); el "mes" es un bloque de 4 semanas contado desde que
+                arrancó, no un mes del calendario. Ver `periodoDelPrograma`. */}
             <View style={[styles.goalCard, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
               <Row gap={8}>
                 <Icon name="calendar" size={15} color={c.goldInk} />
@@ -1796,7 +1802,7 @@ export default function PlanScreen() {
                 </Text>
               </Row>
               <Text style={[t.body, styles.cifras, { color: c.textSoft, marginTop: 6 }]}>
-                Vas por la semana {semanaDe(diaPrograma)} de 12 · día {diaPrograma} de 90
+                Vas por la semana {semanaDe(diaPrograma)} de {SEMANAS_DEL_PROGRAMA} · día {diaPrograma} de 90
               </Text>
 
               {/* LA CIFRA DEL MES (2026-09-22, autorizada por el dueño — ver AGENTS.md §1).

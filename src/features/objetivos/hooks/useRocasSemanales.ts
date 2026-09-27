@@ -44,14 +44,25 @@ export interface RocaSemanalDeEje {
   roca: RocaSemanalApi;
 }
 
-export function useRocasSemanales(maestras: RocaMaestraApi[], semana?: number) {
+/**
+ * @param semana qué semana leer; sin número, la que el servidor calcula como la de hoy.
+ * @param activo `false` = no leer nada. Existe para la semana que empieza, que solo hace falta el
+ *   domingo (`NivelesDelPlan`): los hooks no se pueden llamar a veces sí y a veces no, y leerla
+ *   igual los otros seis días sería un `GET /rocks/weekly` de más en cada visita al Plan.
+ */
+export function useRocasSemanales(maestras: RocaMaestraApi[], semana?: number, activo = true) {
   const [rocas, setRocas] = useState<RocaSemanalApi[]>([]);
-  const [cargando, setCargando] = useState(true);
+  const [cargando, setCargando] = useState(activo);
   const [bloqueada, setBloqueada] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
 
   const cargar = useCallback(async () => {
+    if (!activo) {
+      setRocas([]);
+      setCargando(false);
+      return;
+    }
     setCargando(true);
     setError(null);
     try {
@@ -70,7 +81,7 @@ export function useRocasSemanales(maestras: RocaMaestraApi[], semana?: number) {
     } finally {
       setCargando(false);
     }
-  }, [semana]);
+  }, [semana, activo]);
 
   useEffect(() => {
     void cargar();
