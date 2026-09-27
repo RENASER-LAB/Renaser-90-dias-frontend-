@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ApiError, mensajeDeError } from '../../../services/http/apiClient';
 import * as objetivosApi from '../api/objetivosApi';
 import type { EjeObjetivo, ItemPlanDiario, RocaDiariaApi } from '../types/objetivos.types';
-import { fechaAPlanificar } from '../utils/ventanasDePlanificacion';
+import { fechaAPlanificar, mensajeSinPlanSemanal } from '../utils/ventanasDePlanificacion';
 
 /**
  * Las acciones del día: la parte 3 del plan.
@@ -96,12 +96,13 @@ export function useRocasDiarias() {
         };
       }
       // NO_WEEKLY_ROCK llega como 400 con el código en el texto. Se distingue por el código y no por
-      // el mensaje completo, que puede cambiar de redacción sin avisar.
+      // el mensaje completo, que puede cambiar de redacción sin avisar. El domingo lo que falta es
+      // el plan de la semana que empieza, y el mensaje lo nombra (`mensajeSinPlanSemanal`).
       if (e instanceof ApiError && e.message.includes('NO_WEEKLY_ROCK')) {
         return {
           ok: false as const,
           motivo: 'sin_plan_semanal' as const,
-          mensaje: 'Primero arma tu plan de la semana: las acciones salen de ahí.',
+          mensaje: mensajeSinPlanSemanal(fecha),
         };
       }
       if (e instanceof ApiError && e.message.includes('INVALID_DATE')) {

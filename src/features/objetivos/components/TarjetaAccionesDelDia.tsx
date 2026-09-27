@@ -9,6 +9,7 @@ import type { useRocasDiarias } from '../hooks/useRocasDiarias';
 import type { useRocasSemanales } from '../hooks/useRocasSemanales';
 import type { EjeObjetivo, ItemPlanDiario, RocaDiariaApi } from '../types/objetivos.types';
 import { ETIQUETA_EJE } from '../types/objetivos.types';
+import { textoParaEmpezarAAgendar } from '../utils/ventanasDePlanificacion';
 import { AgendarAccionesModal } from './AgendarAccionesModal';
 import { Icon } from '../../../components/Icon';
 import { useAuth } from '../../../context/AuthContext';
@@ -140,8 +141,7 @@ export function TarjetaAccionesDelDia({ diaria, semanal, diaPrograma, ejeAbierto
       ) : (
         <View style={{ gap: 12, marginTop: 8 }}>
           <Text style={[t.body, { color: c.textSoft, fontSize: 15, lineHeight: 22 }]}>
-            Todavía no agendaste acciones de {ETIQUETA_EJE[ejeAbierto]}. Elige cuáles caen cada día
-            que quede de la semana, y a qué hora. Desde las 18:00 el día en curso ya no se reacomoda.
+            Todavía no agendaste acciones de {ETIQUETA_EJE[ejeAbierto]}. {textoParaEmpezarAAgendar()}
           </Text>
           <Pressable
             onPress={() => setAgendando(true)}

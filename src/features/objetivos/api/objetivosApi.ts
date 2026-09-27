@@ -123,10 +123,15 @@ export async function obtenerRocasDeManana(): Promise<RocaDiariaApi[]> {
 /**
  * `POST /api/v1/rocks/plan` — agenda las acciones de un día, con hora si la persona la eligió.
  *
- * **Qué fechas acepta.** No cualquiera: a partir de las 18:00 locales solo se puede planificar
- * **mañana** (es la hora de cerrar el día y preparar el siguiente); antes de las 18:00 se acepta
- * hoy o mañana. Otra fecha da `400 INVALID_DATE`. Es deliberado: planificar tres días adelante es
- * lista de deseos, no plan.
+ * **Qué fechas acepta.** De mañana hasta el domingo de la semana en curso, y además hoy mientras no
+ * sean las 18:00 locales. **El domingo, también el lunes** (E-340 del backend), que cuelga del
+ * objetivo de la semana que empieza. Otra fecha da `400 INVALID_DATE`. En la app lo decide
+ * `diaAgendable`.
+ *
+ * > **Corregido 2026-09-27.** Decía: «a partir de las 18:00 locales solo se puede planificar
+ * > **mañana** (…); antes de las 18:00 se acepta hoy o mañana. Otra fecha da `400 INVALID_DATE`. Es
+ * > deliberado: planificar tres días adelante es lista de deseos, no plan.» Era la regla anterior a
+ * > E-208 (2026-09-22), que abrió el resto de la semana; E-340 sumó el lunes del domingo.
  *
  * Otros dos errores esperables: `409 ALREADY_PLANNED` (ese día ya tiene rocas — el plan del día se
  * arma una vez) y `400 NO_WEEKLY_ROCK` (falta la roca semanal del eje, o sea la parte 2).
