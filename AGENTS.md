@@ -119,7 +119,18 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       * **No se adivina el rol del otro en un 1 a 1.** Sin rol en el directorio, el mapeador ponía
         `'TRAINEE'` y la cabecera y la info decían «Aprendiz» de cualquiera. Ahora dice «1 a 1» a
         secas (`chatMappers.SUBTITULO_DE_UN_1_A_1_SIN_ROL`) y la info no muestra rol.
-      En `ComunidadScreen.tsx` solo cambian los campos opcionales `esDelPrograma` y `rolDelOtro`, la
+      * **La foto del chat de SOPORTE es SU tarjeta de Canva con SU primer nombre** (decisión del
+        dueño, mismo día; D-205 del backend). Los grupos y la comunidad siguen con la tarjeta sin
+        nombre (`tarjeta-renaser.jpg`, 8971acf). La conversación de soporte trae `photoPath`
+        (`GET /api/v1/chat/conversations/{id}/foto`, campo nuevo y opcional) y el avatar del soporte
+        la muestra en la lista, la cabecera y la info (`AvatarDeChat` con `fotoPath`). El endpoint pide
+        la sesión: en Android/iOS va en las cabeceras del `Image`; en web se trae el blob con
+        `X-Auth-Token` y se muestra desde un object URL guardado por conversación (uno por sesión; al
+        cambiar de sesión se liberan). La tarjeta sin nombre queda debajo: se ve mientras carga y
+        queda sola si la foto falla, sin reintentar en cada fila (`utils/fotoDelSoporte.ts`,
+        `hooks/useFotoDelSoporte.ts`).
+      En `ComunidadScreen.tsx` solo cambian los campos opcionales `esDelPrograma`, `rolDelOtro` y
+      `fotoPath` (este último se pasa a la cabecera y a la info), la
       lista de mensajes, el bloque de la info, que el flotante del acompañante siga escondido con
       la info abierta y los disparos del refresco de la lista (volver de un chat, foco, deslizar);
       envío, fotos, audios, evidencia y la tarjeta de Tribu siguen por el mismo camino.

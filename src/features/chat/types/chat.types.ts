@@ -68,6 +68,12 @@ export interface WireConversacion {
   celulaId: string | null;
   nombre: string | null;
   createdAt: string;
+  /**
+   * Solo en un SOPORTE (D-205 del backend, 2026-09-27): la ruta de su foto, la tarjeta de Canva con
+   * el primer nombre del aprendiz (`/api/v1/chat/conversations/{id}/foto`). Relativa a la API y se
+   * pide CON la sesión (`X-Auth-Token`). `null` o ausente en lo demás, y en un backend anterior.
+   */
+  photoPath?: string | null;
 }
 
 /** `MensajeResponse.ReplyPreviewResponse` (#29). */

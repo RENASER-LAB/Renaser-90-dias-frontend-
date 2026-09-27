@@ -337,6 +337,9 @@ export interface ChatConversation {
      con el que se arma `subtitle` («Aprendiz · 1 a 1»). La info del contacto lo muestra solo bajo
      el nombre. `null` si no se sabe quién es el otro. */
   rolDelOtro?: string | null;
+  /* 2026-09-27 (D-205 del backend): en un chat de soporte, la ruta de su foto —la tarjeta de Canva
+     con el primer nombre del aprendiz—, pedida con la sesión. `null` en lo demás. */
+  fotoPath?: string | null;
 }
 
 export interface GroupMember {
@@ -3592,6 +3595,7 @@ export default function ComunidadScreen() {
             })}
             enLinea={activeChat.type === 'direct' && participantesEnLinea.size > 0}
             avatarUrl={activeChat.avatarUrl}
+            fotoPath={activeChat.fotoPath}
             onVolver={() => setActiveChat(null)}
             onAbrirInfo={() => setGroupInfoVisible(true)}
           />
@@ -3754,6 +3758,7 @@ export default function ComunidadScreen() {
           titulo={tituloDeLaInfo(activeChat.type)}
           nombre={activeChat.type === 'celula' ? nombreDelGrupo : nombreVisibleDeConversacion(activeChat)}
           avatarUrl={activeChat.avatarUrl}
+          fotoPath={activeChat.fotoPath}
           subtitulo={subtituloDeLaInfo({
             tipo: activeChat.type,
             integrantes: cifraDeLaInfo,

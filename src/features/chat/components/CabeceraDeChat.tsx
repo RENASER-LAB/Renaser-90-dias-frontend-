@@ -16,6 +16,7 @@ export function CabeceraDeChat({
   subtitulo,
   enLinea,
   avatarUrl,
+  fotoPath,
   onVolver,
   onAbrirInfo,
 }: {
@@ -25,6 +26,8 @@ export function CabeceraDeChat({
   /** En un 1 a 1, si la otra persona está conectada ahora (sale de la presencia del socket). */
   enLinea: boolean;
   avatarUrl?: string | null;
+  /** Solo en un soporte: la ruta de su foto (D-205). */
+  fotoPath?: string | null;
   onVolver: () => void;
   onAbrirInfo: () => void;
 }) {
@@ -47,7 +50,7 @@ export function CabeceraDeChat({
         accessibilityRole="button"
         accessibilityLabel={`Ver la información de ${titulo}`}
       >
-        <AvatarDeChat tipo={tipo} nombre={titulo} avatarUrl={avatarUrl} size={42} />
+        <AvatarDeChat tipo={tipo} nombre={titulo} avatarUrl={avatarUrl} fotoPath={fotoPath} size={42} />
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text numberOfLines={1} style={[styles.titulo, { color: c.textStrong }]}>
             {titulo}

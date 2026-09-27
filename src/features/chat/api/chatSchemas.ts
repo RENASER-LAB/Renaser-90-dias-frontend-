@@ -35,6 +35,9 @@ export const wireConversacionSchema = z
     celulaId: z.string().nullable(),
     nombre: z.string().nullable(),
     createdAt: z.string(),
+    /* D-205: la ruta de la foto de un chat de soporte. `nullish`: los demás chats y un backend
+       anterior no la mandan, y una ausencia no puede dejar a nadie sin bandeja. */
+    photoPath: z.string().nullish(),
   })
   .passthrough();
 

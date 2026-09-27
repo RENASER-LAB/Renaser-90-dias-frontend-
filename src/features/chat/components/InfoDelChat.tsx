@@ -27,6 +27,7 @@ export function InfoDelChat({
   titulo,
   nombre,
   avatarUrl,
+  fotoPath,
   subtitulo,
   detalle,
   integrantes,
@@ -38,6 +39,8 @@ export function InfoDelChat({
   titulo: string;
   nombre: string;
   avatarUrl?: string | null;
+  /** Solo en un soporte: la ruta de su foto (D-205). */
+  fotoPath?: string | null;
   subtitulo: string;
   /** Una línea más bajo el subtítulo, si hay dato (la cohorte de un grupo). */
   detalle?: string | null;
@@ -78,7 +81,7 @@ export function InfoDelChat({
         showsVerticalScrollIndicator={false}
       >
         <View style={[styles.portada, ancho, { backgroundColor: c.cardBg, borderColor: c.divider }]}>
-          <AvatarDeChat tipo={tipo} nombre={nombre} avatarUrl={avatarUrl} size={120} conSello={false} />
+          <AvatarDeChat tipo={tipo} nombre={nombre} avatarUrl={avatarUrl} fotoPath={fotoPath} size={120} conSello={false} />
           <Text style={[t.screenTitle, styles.nombre, { color: c.textStrong }]} numberOfLines={3}>
             {nombre}
           </Text>

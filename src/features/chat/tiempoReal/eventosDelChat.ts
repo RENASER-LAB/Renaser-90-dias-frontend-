@@ -37,9 +37,9 @@ const eventoMensajeSchema = z.object({
 });
 
 /**
- * Si el aviso es de un mensaje de sistema (del programa). Este canal manda el tipo con el nombre
- * del DOMINIO (`MensajeFanoutPayload`: `mensaje.tipo().name()`, o sea `SISTEMA`), no el del REST
- * (`SYSTEM`); se aceptan los dos para no depender de cuál se use mañana.
+ * Si el aviso es de un mensaje de sistema (del programa). Se aceptan los dos nombres: desde el
+ * 2026-09-27 (E-333 del backend) este canal manda el del REST (`SYSTEM`); antes mandaba el del
+ * dominio (`SISTEMA`, `mensaje.tipo().name()`), y un backend sin actualizar lo sigue mandando.
  */
 export function esAvisoDeSistema(evento: Pick<EventoMensaje, 'type'>): boolean {
   return evento.type === 'SISTEMA' || evento.type === 'SYSTEM';

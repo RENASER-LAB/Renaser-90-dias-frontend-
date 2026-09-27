@@ -40,6 +40,7 @@ export function FilaDeConversacion({
         tipo={conversacion.type}
         nombre={titulo}
         avatarUrl={conversacion.avatarUrl}
+        fotoPath={conversacion.fotoPath}
         size={54}
       />
       <View style={[styles.cuerpo, { borderBottomColor: c.divider }]}>
