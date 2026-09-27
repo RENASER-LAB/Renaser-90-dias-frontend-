@@ -60,7 +60,10 @@
         "expo-notifications",
         {
           "sounds": [
-            "./assets/sonidos/campana_renaser.wav"
+            "./assets/sonidos/campana_renaser.wav",
+            "./assets/sonidos/voz_habito.wav",
+            "./assets/sonidos/voz_evento.wav",
+            "./assets/sonidos/voz_objetivos.wav"
           ]
         }
       ]

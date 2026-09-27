@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 import type * as TipoNotificaciones from 'expo-notifications';
 
 import { cargarNotificaciones, HAY_RECORDATORIOS_LOCALES } from '../habits/notificaciones/recordatoriosDeHabito';
-import { ARCHIVO_CAMPANA } from './sonidoDeAlarma';
+import { ARCHIVO_CAMPANA, archivoDelCanal } from './sonidoDeAlarma';
 
 /**
  * Vuelve a armar, tal cual, las alarmas locales que el teléfono ya tiene programadas (e2e en
@@ -24,7 +24,8 @@ import { ARCHIVO_CAMPANA } from './sonidoDeAlarma';
  * identificador, el mismo contenido y el mismo disparador**. La librería guarda el pedido por
  * identificador y el `PendingIntent` también es por identificador, así que re-programar REEMPLAZA la
  * alarma (no la duplica) y, con el permiso dado, la deja exacta. Los ids que guardan hábitos, eventos,
- * Despertar y el Código Renaser siguen sirviendo para cancelarlas.
+ * Despertar, el Código Renaser y las acciones de los objetivos (desde 2026-09-26: el diario y el de
+ * cada acción con hora, que son `DAILY` y `DATE` y entran solos) siguen sirviendo para cancelarlas.
  *
  * No necesita servidor, no inventa alarmas (solo las que ya estaban) y no pide permisos. No hay forma
  * de saber desde JS si el permiso ya se dio sin un módulo nativo nuevo; por eso corre siempre, y el
@@ -74,19 +75,22 @@ type Registro = Record<string, unknown>;
 
 const esNumero = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);
 
-/** La salida de la librería dice `'default' | 'custom' | null`; la entrada quiere el booleano o el archivo. */
-function sonidoDeEntrada(sonido: unknown): boolean | string {
+/**
+ * La salida de la librería dice `'default' | 'custom' | null`; la entrada quiere el booleano o el
+ * archivo. `'custom'` no dice cuál: desde que hay voces (2026-09-26) se deduce del canal, que es uno
+ * por sonido. En Android 8+ igual manda el del canal; esto es para que el aviso no lo contradiga.
+ */
+function sonidoDeEntrada(sonido: unknown, canalId: unknown): boolean | string {
   if (sonido === 'default') return true;
-  // El único sonido propio que la app empaqueta. En Android 8+ igual manda el del canal.
-  if (sonido === 'custom') return ARCHIVO_CAMPANA;
+  if (sonido === 'custom') return archivoDelCanal(canalId) ?? ARCHIVO_CAMPANA;
   return false;
 }
 
-function contenidoDeEntrada(c: AlarmaProgramada['content']): TipoNotificaciones.NotificationContentInput {
+function contenidoDeEntrada(c: AlarmaProgramada['content'], canalId: unknown): TipoNotificaciones.NotificationContentInput {
   const contenido: TipoNotificaciones.NotificationContentInput = {
     title: c.title ?? null,
     body: c.body ?? null,
-    sound: sonidoDeEntrada(c.sound),
+    sound: sonidoDeEntrada(c.sound, canalId),
   };
   if (c.subtitle) contenido.subtitle = c.subtitle;
   if (c.data && typeof c.data === 'object') contenido.data = c.data;
@@ -118,17 +122,18 @@ function desdeLaUltimaHoraNominal(ahora: Date, hora: number, minuto: number, wee
 function disparadorDeEntrada(
   crudo: unknown,
   ahoraMs: number,
+  margenMs: number,
 ): TipoNotificaciones.SchedulableNotificationTriggerInput | null {
   if (!crudo || typeof crudo !== 'object') return null;
   const t = crudo as Registro;
   const canal = typeof t.channelId === 'string' && t.channelId ? { channelId: t.channelId } : {};
   const ahora = new Date(ahoraMs);
   if (t.type === 'daily' && esNumero(t.hour) && esNumero(t.minute)) {
-    if (desdeLaUltimaHoraNominal(ahora, t.hour, t.minute) < MARGEN_RECIEN_VENCIDA_MS) return null;
+    if (desdeLaUltimaHoraNominal(ahora, t.hour, t.minute) < margenMs) return null;
     return { type: 'daily' as TipoNotificaciones.SchedulableTriggerInputTypes.DAILY, hour: t.hour, minute: t.minute, ...canal };
   }
   if (t.type === 'weekly' && esNumero(t.weekday) && esNumero(t.hour) && esNumero(t.minute)) {
-    if (desdeLaUltimaHoraNominal(ahora, t.hour, t.minute, t.weekday) < MARGEN_RECIEN_VENCIDA_MS) return null;
+    if (desdeLaUltimaHoraNominal(ahora, t.hour, t.minute, t.weekday) < margenMs) return null;
     return {
       type: 'weekly' as TipoNotificaciones.SchedulableTriggerInputTypes.WEEKLY,
       weekday: t.weekday,
@@ -143,16 +148,27 @@ function disparadorDeEntrada(
   return null;
 }
 
-/** Qué alarmas se re-arman y con qué pedido. Pura: la prueban los tests. */
-export function planDeRearmado(programadas: AlarmaProgramada[], ahoraMs: number): PedidoDeRearmado[] {
+/**
+ * Qué alarmas se re-arman y con qué pedido. Pura: la prueban los tests.
+ *
+ * `margenMs` es cuánto se respeta una diaria o semanal recién vencida (ver arriba). El cambio de
+ * sonido (`cambioDeSonido.ts`) pasa `0`: si la saltara, esa alarma diaria quedaría en el canal viejo
+ * —con el sonido viejo— todos los días, no solo hoy.
+ */
+export function planDeRearmado(
+  programadas: AlarmaProgramada[],
+  ahoraMs: number,
+  margenMs: number = MARGEN_RECIEN_VENCIDA_MS,
+): PedidoDeRearmado[] {
   const pedidos: PedidoDeRearmado[] = [];
   const vistos = new Set<string>();
   for (const alarma of programadas) {
     if (!alarma?.identifier || vistos.has(alarma.identifier)) continue;
-    const trigger = disparadorDeEntrada(alarma.trigger, ahoraMs);
+    const trigger = disparadorDeEntrada(alarma.trigger, ahoraMs, margenMs);
     if (!trigger) continue;
     vistos.add(alarma.identifier);
-    pedidos.push({ identifier: alarma.identifier, content: contenidoDeEntrada(alarma.content ?? {}), trigger });
+    const canalId = (alarma.trigger as Registro | null)?.channelId;
+    pedidos.push({ identifier: alarma.identifier, content: contenidoDeEntrada(alarma.content ?? {}, canalId), trigger });
   }
   return pedidos;
 }

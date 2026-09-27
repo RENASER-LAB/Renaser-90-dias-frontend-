@@ -15,6 +15,35 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
   * `data/`: Constantes, cláusulas, configuraciones estáticas.
 * **Componentes de UI Atómicos**: Utiliza componentes compartidos bajo `src/components/` (`FormField`, `GoldButton`, `SliderRating`, `Checkbox`, `SignatureCanvas`, `Icon`).
 * **Integridad del Core**: NUNCA alterar, romper ni desconfigurar las pantallas existentes ni los tabs principales (`Hoy`, `Plan`, `Training`, `Comunidad`, `Yo`).
+  * **Excepción autorizada por el dueño del producto — 2026-09-26 — tabs `Yo` y `Plan`, aviso con
+    voz y recordatorios de las acciones de los objetivos (decisiones del dueño de ese día).** Lo que
+    cambia y nada más:
+    * **`Yo` → Alarmas → Sonido suma «Voz»**: un tono suave y una voz que dice «Tu hábito está por
+      empezar» (hábitos), «Tu evento está por empezar» (eventos) o «Tienes acciones de tus objetivos
+      por hacer» (objetivos). El nombre del hábito o del evento sigue escrito en el aviso. Un canal de
+      Android por tipo y sonido (`recordatorios-*-voz`), como la campana. **El sonido elegido pasa a
+      regir para TODOS los recordatorios de hábitos**, no solo Despertar (antes los demás hábitos
+      sonaban siempre con el del teléfono; sin esto la voz no llegaba a ningún hábito). Cambiarlo pasa
+      las alarmas ya programadas al canal nuevo sin tocar su hora (`alarmas/cambioDeSonido.ts`). Quien
+      nunca tocó Alarmas sigue con «El del teléfono». «Probar el sonido» usa el canal de hábitos.
+    * **Los audios son PROVISIONALES**: voz sintética (`espeak-ng -v es-419`) generada con
+      `scripts/generar-voces-provisionales.sh` en `assets/sonidos/voz_habito.wav`, `voz_evento.wav` y
+      `voz_objetivos.wav` (WAV mono 16-bit 44,1 kHz, < 5 s). **El dueño puede reemplazarlos por una
+      grabación humana con el MISMO nombre de archivo** (minúsculas y guion bajo: lo exige Android
+      `res/raw`) y un APK nuevo; el código no cambia. Si se reemplazan, no volver a correr el script.
+    * **Recordatorios de las acciones de los objetivos** (hasta hoy solo los hábitos tenían). Una
+      acción del día (`RocaDiaria`) tiene `horaInicio` **opcional**, así que van los dos, locales, sin
+      servidor ni tablas (`objetivos/notificaciones/recordatoriosDeAcciones.ts`): (1) «Recordarme mis
+      acciones del día», diario, con hora elegible y encendido/apagado, texto fijo «Revisa las acciones
+      de tus objetivos de hoy» (una alarma que suena sin que la app corra no puede contar pendientes);
+      (2) «Aviso antes de cada acción con hora»: sin aviso / 30 / 10 min antes / a la hora, una sola
+      elección para todas las acciones. El control (`RecordatorioDeAcciones`) está en `Plan`, al pie
+      de la tarjeta «Tus acciones» (solo cuando ya hay plan semanal), y en `Yo` → Alarmas, entre
+      Eventos y Sonido. En `TarjetaAccionesDelDia.tsx` solo se agregó ese bloque; nada más de Plan
+      cambia. `App.tsx` monta `SincronizadorDeAcciones` (no pinta nada) junto a `RearmadorDeAlarmas`.
+    * `app.json` suma los tres WAV al plugin de `expo-notifications`: **requiere APK nuevo**.
+    Una excepción puntual **no abre** los tabs: cualquier otro cambio sobre los cinco principales
+    vuelve a necesitar autorización explícita.
   * **Excepción autorizada por el dueño del producto — 2026-09-26 — tabs `Comunidad`, `Yo` y
     `Plan`, eventos, avisos y alarmas (E-4 a E-10 de `docs/specs/RETROALIMENTACION_2026-09-26.md`
     del backend, y §9 con las decisiones del dueño de ese día).** Lo que cambia y nada más:
