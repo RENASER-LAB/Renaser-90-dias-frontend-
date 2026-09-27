@@ -223,3 +223,24 @@ export function subtituloDeLaCabecera(params: {
   if (params.integrantes === null) return 'Grupo · toca para ver quiénes son';
   return `Grupo · ${params.integrantes} ${params.integrantes === 1 ? 'integrante' : 'integrantes'}`;
 }
+
+/**
+ * Cuántos son en un chat de grupo, contando como WhatsApp: **todos los que están en la
+ * conversación**, no solo los aprendices (2026-09-26).
+ *
+ * `memberCount` de `/me/cells` cuenta solo a los APRENDICES vigentes del grupo (backend,
+ * `MisCelulasService.aMiCelula` → `aprendicesVigentesEn`): el mentor no entra. Con eso un mentor
+ * que abría el chat de su grupo leía «0 integrantes» aunque él mismo estuviera adentro, y la info
+ * del grupo, que sí lo lista primero con la marca MENTOR, decía otra cifra. El backend no expone
+ * cuántos participantes tiene una conversación de grupo (`ConversacionResumenResponse` no trae ese
+ * dato), así que se suma el mentor del grupo cuando lo hay: el mismo criterio con el que la info
+ * arma su lista (el mentor entra si hay `mentorName`), para que las dos cifras coincidan.
+ *
+ * `null` sin grupo resuelto: la cabecera no inventa una cifra.
+ */
+export function integrantesDelChatDeGrupo(
+  grupo: { memberCount: number; mentorName: string | null } | null
+): number | null {
+  if (!grupo) return null;
+  return grupo.memberCount + (grupo.mentorName ? 1 : 0);
+}
