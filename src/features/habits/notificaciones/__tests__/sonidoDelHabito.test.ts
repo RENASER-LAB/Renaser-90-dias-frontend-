@@ -33,6 +33,8 @@ import * as recordatorios from '../recordatoriosDeHabito';
 import { guardarPreferenciasDeAlarmas } from '../../../alarmas/preferenciasDeAlarmas';
 
 const USUARIO = 'u-1';
+/** `JUGO VERDE` del catálogo (V4 del backend), uno de los dos que se pueden renombrar. */
+const JUGO_VERDE = '00006bd5-ab74-4317-b022-ae2e3a878d55';
 
 beforeEach(async () => {
   mockProgramadas.length = 0;
@@ -47,12 +49,36 @@ describe('sonido de los recordatorios de hábitos', () => {
     expect(mockProgramadas[0].content.sound).toBe(true);
   });
 
-  it('con «Voz» en Yo → Alarmas, cualquier hábito sale con la voz y el nombre sigue en el texto', async () => {
+  it('con «Voz» en Yo → Alarmas, un hábito propio sale con la frase genérica y el nombre sigue en el texto', async () => {
     await guardarPreferenciasDeAlarmas(USUARIO, { eventosActivas: true, sonido: 'voz' });
     await recordatorios.programar(USUARIO, 'h-leer', 'Leer', '21:30', [0]);
     expect(mockProgramadas[0]).toMatchObject({
-      content: { title: 'Leer', sound: 'voz_habito.wav' },
+      content: { title: 'Leer', sound: 'voz_habito.mp3' },
       trigger: { channelId: 'recordatorios-habitos-voz' },
+    });
+  });
+
+  it('con «Voz», un hábito del catálogo sale por su canal y la voz dice su nombre (2026-09-27)', async () => {
+    await guardarPreferenciasDeAlarmas(USUARIO, { eventosActivas: true, sonido: 'voz' });
+    await recordatorios.programar(USUARIO, JUGO_VERDE, 'JUGO VERDE', '09:00', [10, 0]);
+    expect(mockProgramadas.map(p => [p.content.title, p.content.sound, p.trigger.channelId])).toEqual([
+      ['En 10 min: JUGO VERDE', 'voz_habito_jugo_verde.mp3', 'recordatorios-habitos-voz-jugo_verde'],
+      ['JUGO VERDE', 'voz_habito_jugo_verde.mp3', 'recordatorios-habitos-voz-jugo_verde'],
+    ]);
+  });
+
+  it('con «Voz», el mismo hábito renombrado dice la frase genérica (no el nombre que ya no tiene)', async () => {
+    await guardarPreferenciasDeAlarmas(USUARIO, { eventosActivas: true, sonido: 'voz' });
+    await recordatorios.programar(USUARIO, JUGO_VERDE, 'Agua con miel', '09:00', [0]);
+    expect(mockProgramadas[0].trigger.channelId).toBe('recordatorios-habitos-voz');
+  });
+
+  it('con un sonido para alertar, cualquier hábito sale por el canal de ese sonido', async () => {
+    await guardarPreferenciasDeAlarmas(USUARIO, { eventosActivas: true, sonido: 'alertar-kalimba' });
+    await recordatorios.programar(USUARIO, JUGO_VERDE, 'JUGO VERDE', '09:00', [0]);
+    expect(mockProgramadas[0]).toMatchObject({
+      content: { sound: 'alertar_kalimba.mp3' },
+      trigger: { channelId: 'recordatorios-habitos-alertar-kalimba' },
     });
   });
 
@@ -69,5 +95,13 @@ describe('sonido de los recordatorios de hábitos', () => {
     await recordatorios.programar('otro', 'h-leer', 'Leer', '21:30', [0]);
     await recordatorios.programarRepasoSemanal(USUARIO);
     expect((await recordatorios.idsDeRecordatoriosDeHabitos(USUARIO)).sort()).toEqual(['alarma-1', 'alarma-2', 'alarma-3']);
+  });
+
+  it('y agrupados por hábito, para que el cambio de sonido sepa de quién es cada alarma', async () => {
+    await recordatorios.programar(USUARIO, 'h-leer', 'Leer', '21:30', [30, 0]);
+    await recordatorios.programar(USUARIO, JUGO_VERDE, 'JUGO VERDE', '08:00', [0]);
+    await recordatorios.programar('otro', 'h-leer', 'Leer', '21:30', [0]);
+    const porHabito = await recordatorios.recordatoriosPorHabito(USUARIO);
+    expect(Object.fromEntries(porHabito)).toEqual({ 'h-leer': ['alarma-1', 'alarma-2'], [JUGO_VERDE]: ['alarma-3'] });
   });
 });

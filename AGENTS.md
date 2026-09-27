@@ -229,6 +229,44 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       envío, fotos, audios, evidencia y la tarjeta de Tribu siguen por el mismo camino.
     Una excepción puntual **no abre** el tab: cualquier otro cambio sobre los cinco principales
     vuelve a necesitar autorización explícita.
+  * **Excepción autorizada por el dueño del producto — 2026-09-27 — tab `Yo` → Alarmas: la voz Dora
+    dice el nombre del hábito, y sonidos para alertar y para relajar (decisiones del dueño de ese día,
+    con sus notas: «que diga el nombre del hábito nomás y que sea rápido como está», tono antes de la
+    voz «sí», y de los sonidos «déjalos como está y opcional que escoja el usuario»).** Lo que cambia y
+    nada más:
+    * **La «Voz» es Dora** (Kokoro-82M, Apache-2.0), a la velocidad que el dueño escuchó, con una
+      campanita corta delante, y **en los hábitos dice su nombre**: un audio por hábito del catálogo
+      (los 18 activos de `V4__catalogo_habitos_default.sql` del backend; 17 archivos, porque los dos
+      rituales de la mañana dicen lo mismo): «Despertar», «Tu jugo verde» (con «Tu» delante: sin
+      palabra antes, la jota inicial de Kokoro se oía «Kugo»), «Ritual de la mañana»… Lo que dice cada
+      uno está en `features/alarmas/vocesDeLasAlarmas.json`, que leen la app y el script. Cada hábito
+      con voz propia sale por su canal (`recordatorios-habitos-voz-<clave>`), porque en Android el
+      sonido es del canal. Se empareja por id **y** por título del catálogo: un hábito propio, uno
+      renombrado (jugo verde, agua tibia) o uno cuyo título cambie dicen la frase genérica «Tu hábito
+      está por empezar»; eventos y objetivos, la suya. Todas con Dora: la app no genera voz en el
+      teléfono (`features/alarmas/vozDeLosHabitos.ts`).
+    * **Yo → Alarmas → Sonido**: debajo de los cuatro de siempre, dos grupos nuevos, **«Para
+      alertar»** (Amanecer, Marimba, Campanas, Kalimba) y **«Para relajar»** (Cuenco, Campanitas,
+      Lluvia, Ruido marrón). Cada opción tiene un ▶ que la hace sonar al instante sin elegirla
+      (`escucharSonido`, por el mismo canal que la alarma y sin pasar por una alarma, así que no
+      depende del permiso de alarmas exactas); tocar la opción la elige, como antes, y «Probar el
+      sonido» sigue igual. Todo en `features/alarmas/components/SelectorDeSonido.tsx`; en
+      `SeccionAlarmas.tsx` solo cambian esa lista, una línea de ayuda («Toca ▶ para escuchar cada uno
+      antes de elegirlo») y el paso de los hábitos al sonido nuevo, cada uno a su canal
+      (`cambiarSonidoDeLosHabitos`). **El sonido por defecto sigue siendo «El del teléfono»**, los
+      canales de antes conservan id y archivo, y el rearmado (`archivoDelCanal`) conoce todos los
+      nuevos: a quien ya tenía una elección no se le rompe nada.
+    * **Audios**: MP3 mono 44,1 kHz (voces a 64 kb/s; los ocho sonidos a 128 kb/s, byte a byte los que
+      aprobó el dueño) en `assets/sonidos/` y en `sounds` de `app.json`. Suman 1,48 MB y se van los
+      tres WAV provisionales (0,88 MB): **+0,62 MB al APK**. iOS no acepta MP3 en un aviso (sonaría el
+      del sistema); hoy la app es solo Android. Se regeneran con `scripts/sonidos/generar-sonidos.sh`
+      (Kokoro con semillas fijas: da los mismos archivos; corre sin red si el modelo ya está bajado; la
+      cabecera dice cómo armar el entorno, que no va en el repo), que reemplaza a
+      `scripts/generar-voces-provisionales.sh`. `sonidosElegibles.test.ts` falla si un archivo que el
+      código nombra falta en `assets/sonidos/` o en `app.json`, si sobra uno, o si pasan de 2 MB.
+    * `app.json` cambia la lista de sonidos: **requiere APK nuevo** (no se armó: va a la Play Store).
+    Una excepción puntual **no abre** el tab: cualquier otro cambio sobre los cinco principales
+    vuelve a necesitar autorización explícita.
   * **Excepción autorizada por el dueño del producto — 2026-09-26 — tabs `Yo` y `Plan`, aviso con
     voz y recordatorios de las acciones de los objetivos (decisiones del dueño de ese día).** Lo que
     cambia y nada más:
@@ -240,11 +278,21 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       sonaban siempre con el del teléfono; sin esto la voz no llegaba a ningún hábito). Cambiarlo pasa
       las alarmas ya programadas al canal nuevo sin tocar su hora (`alarmas/cambioDeSonido.ts`). Quien
       nunca tocó Alarmas sigue con «El del teléfono». «Probar el sonido» usa el canal de hábitos.
+      > **Corregido 2026-09-27.** Un hábito del catálogo ya no dice «Tu hábito está por empezar»:
+      > con la voz Dora dice su nombre y sale por su propio canal (`recordatorios-habitos-voz-<clave>`).
+      > La frase genérica queda para los hábitos propios y los renombrados. Ver la excepción del 27.
     * **Los audios son PROVISIONALES**: voz sintética (`espeak-ng -v es-419`) generada con
       `scripts/generar-voces-provisionales.sh` en `assets/sonidos/voz_habito.wav`, `voz_evento.wav` y
       `voz_objetivos.wav` (WAV mono 16-bit 44,1 kHz, < 5 s). **El dueño puede reemplazarlos por una
       grabación humana con el MISMO nombre de archivo** (minúsculas y guion bajo: lo exige Android
       `res/raw`) y un APK nuevo; el código no cambia. Si se reemplazan, no volver a correr el script.
+      > **Corregido 2026-09-27.** Ya no son provisionales ni WAV ni de `espeak-ng`: el dueño eligió la
+      > voz Dora de Kokoro. Son `voz_habito.mp3`, `voz_evento.mp3`, `voz_objetivos.mp3` y uno
+      > `voz_habito_<clave>.mp3` por hábito del catálogo, hechos con `scripts/sonidos/generar-sonidos.sh`;
+      > `generar-voces-provisionales.sh` ya no existe. Cambiar lo que dice una voz es editar
+      > `features/alarmas/vocesDeLasAlarmas.json` y volver a generar: el nombre del archivo no cambia.
+      > Una grabación humana sigue entrando con el mismo nombre base (Android busca `res/raw` sin
+      > extensión), pero si la extensión no es `.mp3` hay que cambiarla también en `app.json`.
     * **Recordatorios de las acciones de los objetivos** (hasta hoy solo los hábitos tenían). Una
       acción del día (`RocaDiaria`) tiene `horaInicio` **opcional**, así que van los dos, locales, sin
       servidor ni tablas (`objetivos/notificaciones/recordatoriosDeAcciones.ts`): (1) «Recordarme mis
@@ -256,6 +304,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       Eventos y Sonido. En `TarjetaAccionesDelDia.tsx` solo se agregó ese bloque; nada más de Plan
       cambia. `App.tsx` monta `SincronizadorDeAcciones` (no pinta nada) junto a `RearmadorDeAlarmas`.
     * `app.json` suma los tres WAV al plugin de `expo-notifications`: **requiere APK nuevo**.
+      > **Corregido 2026-09-27.** Los tres WAV se reemplazaron por MP3 con el mismo nombre base, y la
+      > lista suma las voces de los hábitos y los ocho sonidos nuevos (29 archivos en total).
     Una excepción puntual **no abre** los tabs: cualquier otro cambio sobre los cinco principales
     vuelve a necesitar autorización explícita.
   * **Excepción autorizada por el dueño del producto — 2026-09-26 — tabs `Comunidad`, `Yo` y

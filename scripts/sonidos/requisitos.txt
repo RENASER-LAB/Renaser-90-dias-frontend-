@@ -1,0 +1,17 @@
+# Lo que necesitan los scripts de scripts/sonidos/ (Python 3.11). Versiones exactas del 2026-09-27.
+#
+# torch va aparte, desde el índice solo-CPU de PyTorch (el de PyPI trae ~2,5 GB de CUDA):
+#   uv pip install --python <venv>/bin/python "torch==2.8.0" --index-url https://download.pytorch.org/whl/cpu
+# y después esto:
+#   uv pip install --python <venv>/bin/python -r scripts/sonidos/requisitos.txt
+#
+# Del sistema: ffmpeg (con libmp3lame) para el MP3.
+kokoro==0.9.4
+misaki[en]==0.9.4
+numpy==2.4.6
+scipy==1.17.1
+soundfile==0.14.0
+pyloudnorm==0.2.0
+huggingface-hub==1.33.0
+# Solo para `verificar.py --asr` (Whisper escucha cada voz):
+faster-whisper==1.2.1

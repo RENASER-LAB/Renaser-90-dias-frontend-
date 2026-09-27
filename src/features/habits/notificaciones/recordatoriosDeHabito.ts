@@ -255,21 +255,41 @@ export async function sonidoDe(userId: string, habitoId: string): Promise<Sonido
 }
 
 /**
- * Los ids de TODAS las alarmas de hábitos de esta persona en este teléfono (sin el repaso de los
- * domingos, que no es de un hábito y tiene su propia clave). Para pasarlas al sonido nuevo.
+ * Las alarmas de hábitos de esta persona en este teléfono, agrupadas por hábito: `habitoId` → ids
+ * (sin el repaso de los domingos, que no es de un hábito y tiene su propia clave). Para pasarlas al
+ * sonido nuevo: desde que la «Voz» dice el nombre del hábito (2026-09-27) cada hábito puede ir a su
+ * propio canal, y el aviso ya programado no dice de qué hábito es.
  */
-export async function idsDeRecordatoriosDeHabitos(userId: string): Promise<string[]> {
-  if (!HAY_RECORDATORIOS_LOCALES) return [];
+export async function recordatoriosPorHabito(userId: string): Promise<Map<string, string[]>> {
+  const porHabito = new Map<string, string[]>();
+  if (!HAY_RECORDATORIOS_LOCALES) return porHabito;
   return sinRomper(async () => {
     const prefijo = `${PREFIJO_CLAVE}${userId}.`;
     const claves = (await AsyncStorage.getAllKeys()).filter(k => k.startsWith(prefijo));
-    const ids: string[] = [];
     for (const clave of claves) {
       const guardado = await AsyncStorage.getItem(clave);
-      if (guardado) ids.push(...leerIds(guardado));
+      if (guardado) porHabito.set(clave.slice(prefijo.length), leerIds(guardado));
     }
-    return ids;
-  }, []);
+    return porHabito;
+  }, porHabito);
+}
+
+/** Los ids de TODAS las alarmas de hábitos de esta persona en este teléfono. */
+export async function idsDeRecordatoriosDeHabitos(userId: string): Promise<string[]> {
+  return [...(await recordatoriosPorHabito(userId)).values()].flat();
+}
+
+/** El título del aviso: el nombre del hábito, con «En N min:» delante si es antes de la hora. */
+export function tituloDelAviso(titulo: string, minutosAntes: number): string {
+  return minutosAntes > 0 ? `En ${minutosAntes} min: ${titulo}` : titulo;
+}
+
+/**
+ * Lo inverso de `tituloDelAviso`: el nombre del hábito a partir del título de un aviso ya
+ * programado. Lo usa el cambio de sonido para saber si ese hábito tiene voz propia.
+ */
+export function habitoDelAviso(tituloAviso: string): string {
+  return tituloAviso.replace(/^En \d+ min: /, '');
 }
 
 /**
@@ -362,7 +382,8 @@ export async function programar(
   }
   return sinRomper(async () => {
     if (!(await pedirPermiso())) return false;
-    const canal = canalDeAlarma('habitos', await sonidoDe(userId, habitoId));
+    // Con el hábito: con «Voz», uno del catálogo dice su nombre y sale por su propio canal.
+    const canal = canalDeAlarma('habitos', await sonidoDe(userId, habitoId), { id: habitoId, titulo });
     await asegurarCanal(canal);
     const ids: string[] = [];
     // De la más temprana a la más tardía, que es el orden en que van a sonar.
@@ -373,7 +394,7 @@ export async function programar(
       const minutos = ((h * 60 + m - minutosAntes) % MINUTOS_POR_DIA + MINUTOS_POR_DIA) % MINUTOS_POR_DIA;
       const id = await N.scheduleNotificationAsync({
         content: {
-          title: minutosAntes > 0 ? `En ${minutosAntes} min: ${titulo}` : titulo,
+          title: tituloDelAviso(titulo, minutosAntes),
           body: `Te toca a las ${horaHHmm}.`,
           // `true` y no `'default'`: la cadena se interpreta como el nombre de un archivo de sonido
           // propio, y la librería se queja de no encontrarlo. El booleano pide el del sistema.

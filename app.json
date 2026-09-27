@@ -61,9 +61,34 @@
         {
           "sounds": [
             "./assets/sonidos/campana_renaser.wav",
-            "./assets/sonidos/voz_habito.wav",
-            "./assets/sonidos/voz_evento.wav",
-            "./assets/sonidos/voz_objetivos.wav"
+            "./assets/sonidos/voz_habito.mp3",
+            "./assets/sonidos/voz_evento.mp3",
+            "./assets/sonidos/voz_objetivos.mp3",
+            "./assets/sonidos/voz_habito_despertar.mp3",
+            "./assets/sonidos/voz_habito_agua_tibia.mp3",
+            "./assets/sonidos/voz_habito_ritual_manana.mp3",
+            "./assets/sonidos/voz_habito_dia_sin_celular.mp3",
+            "./assets/sonidos/voz_habito_clase_diaria.mp3",
+            "./assets/sonidos/voz_habito_jugo_verde.mp3",
+            "./assets/sonidos/voz_habito_primera_comida.mp3",
+            "./assets/sonidos/voz_habito_ritual_mediodia.mp3",
+            "./assets/sonidos/voz_habito_ultima_comida.mp3",
+            "./assets/sonidos/voz_habito_ritual_noche.mp3",
+            "./assets/sonidos/voz_habito_escritura_libre.mp3",
+            "./assets/sonidos/voz_habito_post_comunidad.mp3",
+            "./assets/sonidos/voz_habito_pastilla_renacer.mp3",
+            "./assets/sonidos/voz_habito_dormir.mp3",
+            "./assets/sonidos/voz_habito_audioterapia.mp3",
+            "./assets/sonidos/voz_habito_descanso_profundo.mp3",
+            "./assets/sonidos/voz_habito_agua_hidratacion.mp3",
+            "./assets/sonidos/alertar_amanecer.mp3",
+            "./assets/sonidos/alertar_marimba.mp3",
+            "./assets/sonidos/alertar_campana.mp3",
+            "./assets/sonidos/alertar_kalimba.mp3",
+            "./assets/sonidos/relajar_cuenco.mp3",
+            "./assets/sonidos/relajar_campanitas.mp3",
+            "./assets/sonidos/relajar_lluvia.mp3",
+            "./assets/sonidos/relajar_ruido_marron.mp3"
           ]
         }
       ]
