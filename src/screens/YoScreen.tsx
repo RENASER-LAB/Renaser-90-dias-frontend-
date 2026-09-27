@@ -18,6 +18,8 @@ import { useTheme } from '../theme/ThemeContext';
 import { space } from '../theme/tokens';
 import { useResponsive } from '../theme/responsive';
 import { useAuth } from '../context/AuthContext';
+import { InterruptoresDeAvisos } from '../features/alarmas/components/InterruptoresDeAvisos';
+import { SeccionAlarmas } from '../features/alarmas/components/SeccionAlarmas';
 import { useSystemBackHandler } from '../hooks/useSystemBackHandler';
 import { MicroLabel, ScreenHeader, Placeholder } from '../components/ui';
 import { AdminScreen } from '../features/admin/screens/AdminScreen';
@@ -230,7 +232,7 @@ export default function YoScreen() {
   // ESTADOS DE NAVEGACIÓN DENTRO DE LA TARJETA DEL USUARIO
   // =========================================================================
   const [activeView, setActiveView] = useState<
-    'main' | 'hub' | 'editar_perfil' | 'info_perfil' | 'evidencias' | 'logros' | 'onboarding' | 'pacto' | 'mapa_renacimiento' | 'metodo' | 'video_activacion' | 'notificaciones' | 'memoria_renasia'
+    'main' | 'hub' | 'editar_perfil' | 'info_perfil' | 'evidencias' | 'logros' | 'onboarding' | 'pacto' | 'mapa_renacimiento' | 'metodo' | 'video_activacion' | 'notificaciones' | 'alarmas' | 'memoria_renasia'
   >('main');
   /* D-167: se pide al entrar a Ajustes (donde está la fila) y no al abrir la pestaña Yo. */
   const memoriaRenasia = useMemoriaDeRenasia(activeView === 'hub' || activeView === 'memoria_renasia');
@@ -371,10 +373,10 @@ export default function YoScreen() {
     sellandoPacto,
   ]);
 
-  // Notificaciones
-  const [notifAlarm, setNotifAlarm] = useState(true);
-  const [notifCelula, setNotifCelula] = useState(true);
-  const [notifLive, setNotifLive] = useState(true);
+  /* Notificaciones: acá vivían `notifAlarm`, `notifCelula` y `notifLive`, tres `useState` que no
+     guardaban nada (al reiniciar volvían a estar prendidos). Desde el 2026-09-26 (E-4 y E-10) la
+     sub-vista usa `InterruptoresDeAvisos`, que guarda en el servidor, y la alarma de las 05:00 pasó a
+     la sub-vista Alarmas (`SeccionAlarmas`). */
 
   // =========================================================================
   // GESTOS TÁCTILES DEL SISTEMA (BACKHANDLER)
@@ -870,13 +872,32 @@ export default function YoScreen() {
               <View style={[styles.groupedBox, { borderColor: c.border, backgroundColor: c.cardBg }]}>
                 <Pressable
                   onPress={() => setActiveView('notificaciones')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Notificaciones: qué avisos te llegan"
                   style={[styles.menuOptionRow, { borderBottomColor: c.divider }]}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
                     <Icon name="bell" size={16} color={c.goldInk} />
                     <View style={{ flex: 1 }}>
-                      <Text style={[t.cardTitle, { color: c.textStrong }]}>Notificaciones & Alarmas</Text>
-                      <Text style={[t.small, { color: c.textSoft }]}>Recordatorio 05:00 AM y grupo</Text>
+                      <Text style={[t.cardTitle, { color: c.textStrong }]}>Notificaciones</Text>
+                      <Text style={[t.small, { color: c.textSoft, fontSize: 16, lineHeight: 22 }]}>Qué avisos te llegan</Text>
+                    </View>
+                  </View>
+                  <Icon name="chevron" size={12} color={c.goldInk} />
+                </Pressable>
+
+                {/* E-10 (26/09, decisión del dueño): una sección para personalizar las alarmas. */}
+                <Pressable
+                  onPress={() => setActiveView('alarmas')}
+                  accessibilityRole="button"
+                  accessibilityLabel="Alarmas: despertar, eventos y sonido"
+                  style={[styles.menuOptionRow, { borderBottomColor: c.divider }]}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                    <Icon name="clock" size={16} color={c.goldInk} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[t.cardTitle, { color: c.textStrong }]}>Alarmas</Text>
+                      <Text style={[t.small, { color: c.textSoft, fontSize: 16, lineHeight: 22 }]}>Despertar, eventos y sonido</Text>
                     </View>
                   </View>
                   <Icon name="chevron" size={12} color={c.goldInk} />
@@ -1925,46 +1946,42 @@ export default function YoScreen() {
             </View>
           </View>
 
-          <View style={[styles.groupedBox, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-            <View style={[styles.menuOptionRow, { borderBottomColor: c.divider }]}>
-              <View style={{ flex: 1 }}>
-                <Text style={[t.cardTitle, { color: c.textStrong }]}>Alarma 05:00 AM</Text>
-                <Text style={[t.small, { color: c.textSoft }]}>Aviso para despertar y luz solar</Text>
-              </View>
-              <Switch
-                value={notifAlarm}
-                onValueChange={setNotifAlarm}
-                trackColor={{ false: '#332C20', true: c.gold }}
-                thumbColor={notifAlarm ? '#1E1B18' : '#888'}
-              />
-            </View>
+          <InterruptoresDeAvisos />
+        </ScrollView>
+      )}
 
-            <View style={[styles.menuOptionRow, { borderBottomColor: c.divider }]}>
-              <View style={{ flex: 1 }}>
-                <Text style={[t.cardTitle, { color: c.textStrong }]}>Avisos de Grupo Fénix</Text>
-                <Text style={[t.small, { color: c.textSoft }]}>Mensajes y victorias de tu tribu</Text>
-              </View>
-              <Switch
-                value={notifCelula}
-                onValueChange={setNotifCelula}
-                trackColor={{ false: '#332C20', true: c.gold }}
-                thumbColor={notifCelula ? '#1E1B18' : '#888'}
-              />
-            </View>
-
-            <View style={styles.menuOptionRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={[t.cardTitle, { color: c.textStrong }]}>Masterclasses en Vivo</Text>
-                <Text style={[t.small, { color: c.textSoft }]}>Alertas 1h antes de cada sesión</Text>
-              </View>
-              <Switch
-                value={notifLive}
-                onValueChange={setNotifLive}
-                trackColor={{ false: '#332C20', true: c.gold }}
-                thumbColor={notifLive ? '#1E1B18' : '#888'}
-              />
+      {/* ========================================================================= */}
+      {/* 13. SUB-VISTA: ALARMAS (2026-09-26, E-10)                                  */}
+      {/* ========================================================================= */}
+      {activeView === 'alarmas' && (
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={[
+            styles.content,
+            {
+              paddingHorizontal: horizontalPadding,
+              maxWidth: contentMaxWidth,
+              alignSelf: isTablet ? 'center' : 'stretch',
+              width: isTablet ? '100%' : undefined,
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
+            <Pressable onPress={() => setActiveView('hub')} style={styles.backBtnRow} hitSlop={8}>
+              <Icon name="arrowLeft" size={14} color={c.goldInk} />
+              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
+                VOLVER A AJUSTES
+              </Text>
+            </Pressable>
+            <View style={[styles.categoryPillBadge, { backgroundColor: c.goldWash }]}>
+              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
+                ALARMAS
+              </Text>
             </View>
           </View>
+
+          {user?.id ? <SeccionAlarmas userId={user.id} /> : null}
         </ScrollView>
       )}
     </SafeAreaView>

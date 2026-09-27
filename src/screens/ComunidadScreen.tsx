@@ -77,6 +77,7 @@ import { marcarChatMontado } from '../features/renasia/state/chatEnPantalla';
 import { useRanking } from '../features/ranking/hooks/useRanking';
 import { ApiError, mensajeDeError } from '../services/http/apiClient';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
+import { SeccionEventos } from '../features/eventos/components/SeccionEventos';
 
 // =========================================================================
 // TIPOS: RECURSOS EXCLUSIVOS & CURSOS
@@ -335,7 +336,7 @@ export interface GroupMember {
 // junto a su declaración, más arriba): el backend no expone los campos que ese roster necesita.
 
 /**
- * En qué sección de Comunidad está parada la pantalla. Las cinco son EXCLUYENTES entre sí: solo
+ * En qué sección de Comunidad está parada la pantalla. Todas son EXCLUYENTES entre sí: solo
  * una se pinta a la vez, y la fila de medallones de arriba es el único modo de cambiar de una a
  * otra (más los dos atajos que entran desde Training, ver los efectos de `route.params`).
  *
@@ -361,13 +362,14 @@ export interface GroupMember {
  */
 export type SeccionComunidad =
   | 'muro'
+  | 'eventos'
   | 'classroom'
   | 'tribu'
   | 'ranking'
   | 'testimonios';
 
 /**
- * Las cinco secciones, en el orden en que se pintan en la fila de medallones. Es la única fuente
+ * Las secciones (seis desde el 2026-09-26, cuando se sumó Eventos), en el orden en que se pintan en la fila de medallones. Es la única fuente
  * de verdad de esa fila: agregar una sección es agregar una entrada acá y su bloque de contenido.
  *
  * Los tickets al mentor no están, y no es que se hayan movido: el apartado entero se retiró de la
@@ -375,6 +377,9 @@ export type SeccionComunidad =
  */
 const SECCIONES: { id: SeccionComunidad; icon: IconName; label: string }[] = [
   { id: 'muro', icon: 'chat', label: 'Muro' },
+  /* 2026-09-26 (E-5, decisión del dueño): los eventos se ven sobre todo acá. Segunda, al lado del
+     Muro, para que se vea sin deslizar la fila. Ver `features/eventos/components/SeccionEventos`. */
+  { id: 'eventos', icon: 'calendar', label: 'Eventos' },
   { id: 'classroom', icon: 'stack', label: 'Classroom' },
   { id: 'tribu', icon: 'users', label: 'Tribu' },
   { id: 'ranking', icon: 'trophy', label: 'Ranking' },
@@ -567,6 +572,11 @@ export default function ComunidadScreen() {
   // mano: se pasa siempre por `irASeccion`, que además limpia el sub-estado de la sección que se
   // deja.
   const [seccionActiva, setSeccionActiva] = useState<SeccionComunidad>('muro');
+  /* Eventos (E-5): el evento que pidió un aviso (`/eventos/{id}`) y el «atrás» de su sección, que
+     vuelve del detalle o del formulario a la lista antes de dejar la sección. */
+  const [eventoPedido, setEventoPedido] = useState<string | null>(null);
+  const eventosVolverRef = useRef<(() => boolean) | null>(null);
+  const eventoPedidoAtendido = useCallback(() => setEventoPedido(null), []);
 
   /*
    * El grupo que acompaña un mentor se llega desde Hoy y también desde acá: son los dos lugares
@@ -1142,6 +1152,10 @@ export default function ComunidadScreen() {
       setSelectedCourseId(null);
       return true;
     }
+    // Dentro de Eventos, el detalle, el formulario y la agenda vuelven primero a la lista.
+    if (seccionActiva === 'eventos' && eventosVolverRef.current?.()) {
+      return true;
+    }
     // Cualquier sección que no sea el Muro vuelve al Muro, que es la que abre la pestaña. Estando
     // ya en el Muro se devuelve `false` a propósito: ahí el gesto le toca al sistema (salir de la
     // app), que es lo que la persona espera en la raíz de una pestaña.
@@ -1324,6 +1338,19 @@ export default function ComunidadScreen() {
     // reabriría el composer aunque la persona lo hubiera cerrado a propósito.
     (navigation as any).setParams({ abrirComposerMuro: undefined });
   }, [route.params, navigation]);
+
+  /**
+   * Entrada desde un aviso de evento (`/eventos/{id}`, E-5): la deja `AbridorDeEventos`, que vive
+   * por encima del navegador. Misma forma que las otras entradas: parámetro consumido una vez.
+   */
+  useEffect(() => {
+    const params = route.params as { abrirEventoId?: string } | undefined;
+    const id = params?.abrirEventoId;
+    if (!id) return;
+    irASeccion('eventos');
+    setEventoPedido(id);
+    (navigation as any).setParams({ abrirEventoId: undefined });
+  }, [route.params, navigation, irASeccion]);
 
   /**
    * Entrada desde Hoy al post exacto. Se consume el parámetro una sola vez, pero se conserva el
@@ -2226,6 +2253,34 @@ export default function ComunidadScreen() {
           // al volver a subir. La virtualización ya la da `windowSize`.
           removeClippedSubviews={false}
         />
+      )}
+
+      {/* ========================================================================= */}
+      {/* SECCIÓN EVENTOS (2026-09-26, E-5 a E-8)                                   */}
+      {/* ========================================================================= */}
+      {seccionActiva === 'eventos' && (
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={[
+            styles.content,
+            {
+              paddingHorizontal: horizontalPadding,
+              maxWidth: contentMaxWidth,
+              alignSelf: isTablet ? 'center' : 'stretch',
+              width: isTablet ? '100%' : undefined,
+              paddingTop: 14,
+            },
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          <SeccionEventos
+            userId={user?.id ?? null}
+            rol={user?.role}
+            eventoPedido={eventoPedido}
+            onEventoPedidoAtendido={eventoPedidoAtendido}
+            volverRef={eventosVolverRef}
+          />
+        </ScrollView>
       )}
 
       {/* ========================================================================= */}

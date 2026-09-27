@@ -16,6 +16,7 @@ import { MapaRenacimientoProvider } from './src/features/mapa-renacimiento/MapaR
 import { RadarProvider } from './src/features/radar/RadarContext';
 import { CodigoRenaserOverlay } from './src/features/radar/components/CodigoRenaserOverlay';
 import { RenombrarHabitoOverlay } from './src/features/habits/components/RenombrarHabitoOverlay';
+import { AbridorDeEventos } from './src/features/eventos/components/AbridorDeEventos';
 
 function Shell() {
   const { mode, c } = useTheme();
@@ -41,6 +42,9 @@ function Shell() {
           limon), para quien no las puede tomar. Aca arriba por el mismo motivo que los otros tres:
           ninguna de las cinco pantallas cambia. No es un Modal — no bloquea lo que hay debajo. */}
       <RenombrarHabitoOverlay />
+      {/* Tocar el aviso de un evento abre su detalle en Comunidad → Eventos (E-5). No pinta nada:
+          escucha la ruta `/eventos/{id}` y lleva a la pestaña cuando existe. */}
+      <AbridorDeEventos />
       {/* Dibuja los Alert en el build web, donde el Alert de react-native-web es un metodo vacio
           que nunca ejecuta los onPress de sus botones (E-144). En movil no pinta nada. */}
       <AnfitrionAlerta />

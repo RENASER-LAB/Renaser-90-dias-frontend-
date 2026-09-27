@@ -71,6 +71,17 @@ export interface DestinoDelSemaforoPorGrupos {
 }
 
 /**
+ * El detalle de un evento: `/eventos/{eventoId}`, la ruta del recordatorio de evento del servidor
+ * (`RECORDATORIO_EVENTO`, D-182) y de la alarma local que programa «Voy» (26/09, E-5 y E-7). Abre
+ * Comunidad → Eventos con ese evento. Si el evento ya no existe o no es para esta persona, el
+ * servidor lo dice al pedirlo (404/403) y la pantalla lo muestra.
+ */
+export interface DestinoDelEvento {
+  tipo: 'evento';
+  eventoId: string;
+}
+
+/**
  * Destino de un aviso, extraído de su ruta. `null` si la ruta no tiene una forma que esta versión
  * de la app sepa abrir — entonces el toque solo abre la app, que es lo que el contrato espera de
  * una app instalada ante una ruta nueva (§4.5).
@@ -79,7 +90,8 @@ export type DestinoDeAviso =
   | DestinoDeAlumno
   | DestinoDelSemaforo
   | DestinoDelSemaforoDeGrupo
-  | DestinoDelSemaforoPorGrupos;
+  | DestinoDelSemaforoPorGrupos
+  | DestinoDelEvento;
 
 export async function obtenerAvisosDeAcompanamiento(): Promise<AvisoApi[]> {
   const bandeja = validarRespuesta<z.infer<typeof bandejaSchema>>(
@@ -100,6 +112,7 @@ const RUTA_DEL_SEMAFORO = /^\/semaforo\/?$/;
 /** Con la barra final tolerada, igual que `/semaforo`. */
 const RUTA_DEL_SEMAFORO_DE_GRUPO = /^\/mentor\/groups\/([^/]+)\/semaforo\/?$/;
 const RUTA_DEL_SEMAFORO_POR_GRUPOS = /^\/semaforo\/grupos\/?$/;
+const RUTA_DEL_EVENTO = /^\/eventos\/([^/]+)\/?$/;
 
 /**
  * Saca el destino de la ruta de un aviso: la ficha de un alumno
@@ -124,6 +137,11 @@ export function destinoDeRuta(ruta: unknown): DestinoDeAviso | null {
   if (typeof ruta !== 'string') return null;
   if (RUTA_DEL_SEMAFORO.test(ruta)) return { tipo: 'semaforo' };
   if (RUTA_DEL_SEMAFORO_POR_GRUPOS.test(ruta)) return { tipo: 'semaforoGrupos' };
+  const delEvento = RUTA_DEL_EVENTO.exec(ruta);
+  if (delEvento) {
+    const eventoId = decodificar(delEvento[1]);
+    return eventoId ? { tipo: 'evento', eventoId } : null;
+  }
   const delGrupo = RUTA_DEL_SEMAFORO_DE_GRUPO.exec(ruta);
   if (delGrupo) {
     const grupoId = decodificar(delGrupo[1]);

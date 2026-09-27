@@ -31,3 +31,14 @@ export function irAPestana(nombre: string, params?: Record<string, unknown>): bo
   (navegacionRef.navigate as (nombre: string, params?: Record<string, unknown>) => void)(nombre, params);
   return true;
 }
+
+/**
+ * `true` si esa pestaña existe AHORA en el navegador. Mientras se ve el login, el onboarding o el Mapa
+ * del Día 7 las pestañas no están montadas, y navegar a una no hace nada (solo un aviso en consola).
+ * Quien quiera llevar a alguien a una pestaña desde afuera espera a que esto dé `true`.
+ */
+export function pestanaDisponible(nombre: string): boolean {
+  if (!navegacionRef.isReady()) return false;
+  const estado = navegacionRef.getRootState() as { routeNames?: string[] } | undefined;
+  return !!estado?.routeNames?.includes(nombre);
+}
