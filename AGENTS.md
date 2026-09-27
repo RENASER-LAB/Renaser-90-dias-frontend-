@@ -45,6 +45,11 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       > (`assets/imagenes/fenix-renaser.png`, commit «Usar el fénix de la tarjeta de Canva como foto
       > de los grupos del chat»), con un sello chico en la esquina. Esta línea no se había puesto al
       > día.
+      > **Corregido 2026-09-27 (D-208 del backend).** «Las marcas de los propios pasan de «✓✓» a «✓»:
+      > el backend no informa entrega ni lectura» dejó de ser cierto: desde D-208 el backend informa
+      > la LECTURA (la entrega sigue sin saberla). «✓» es que el servidor guardó el mensaje y «✓✓»
+      > dorado que lo leyeron; en la comunidad queda un solo «✓». Ver el punto de la doble marca, más
+      > abajo.
     * **Ampliada el 2026-09-26 (noche), tercer pedido del dueño mirando el emulador — conversación
       a pantalla completa, franja blanca, conteo de integrantes y chat en vivo.**
       * **Pantalla completa, como WhatsApp**: con una conversación abierta (o su info) no se ven la
@@ -200,11 +205,25 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
         grupo», su ficha y la ficha desde la info) pasaron a un reductor
         (`mentor/utils/vistasDelMentor.ts`) con una sola acción que las despeja todas al pedir un
         chat; la navegación con «←» no cambia. Desde Hoy ya funcionaba (cambia de pestaña).
+      * **Doble marca de leído, «✓✓»** (decisión del dueño en la página de decisiones, mismo día:
+        «Quiero ✓✓ de leído (trabajo extra en el servidor)»; D-208 del backend). En los mensajes
+        propios, «✓» es que el servidor lo guardó y «✓✓» en dorado que lo leyeron: en un 1 a 1 el
+        otro; en un grupo y en el soporte, TODOS los demás, como WhatsApp. En la comunidad queda un
+        solo «✓». Pasa de «✓» a «✓✓» sin recargar: el aviso en vivo `READ` («todos leyeron hasta X»)
+        llega por la suscripción de la conversación abierta (`useChatEnVivo.leidoHasta`, que solo
+        avanza) y se aplica a los mensajes propios (`chat/utils/lecturaDelChat.ts`); al abrir, la
+        marca de cada mensaje viene en el listado (`status`). Un `status` ausente o desconocido se
+        ve «✓» (el esquema lo tolera aunque no sea texto), y un APK anterior ignora el campo y el
+        aviso. Nunca se marca nada como leído por un aviso de lectura: haría que dos teléfonos se
+        avisaran sin fin. Colores con contraste medido en `coloresDelChat.ts` (`leido`,
+        `leidoSobreFoto`). No cambia la fila de la lista (sin marcas, como antes).
       En `ComunidadScreen.tsx` solo cambian los campos opcionales `esDelPrograma`, `rolDelOtro` y
       `fotoPath` (este último se pasa a la cabecera y a la info), el id y la tarjeta del mentor y el id
       de la sesión que recibe la lista de la info (D-206), la ficha abierta desde la info y el aviso
       cuando el servidor no abre un 1 a 1 (D-207), las vistas del mentor en un reductor (E-341), el
-      control de la foto del grupo en la info y la foto nueva tomada de la lista (D-212), la
+      control de la foto del grupo en la info y la foto nueva tomada de la lista (D-212), la marca de
+      leído en vivo (D-208: la llamada a `useChatEnVivo` sube junto a la lista de mensajes, que la
+      necesita, y su `leidoHasta` se aplica a los mensajes propios), la
       lista de mensajes, el bloque de la info, que el flotante del acompañante siga escondido con
       la info abierta y los disparos del refresco de la lista (volver de un chat, foco, deslizar);
       envío, fotos, audios, evidencia y la tarjeta de Tribu siguen por el mismo camino.

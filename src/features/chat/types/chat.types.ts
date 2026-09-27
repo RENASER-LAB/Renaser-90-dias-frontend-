@@ -114,7 +114,26 @@ export interface WireMensaje {
   replyToId: string | null;
   replyTo: WireReplyPreview | null;
   createdAt: string;
+  /**
+   * La marca de un mensaje PROPIO (D-208 del backend, 2026-09-27): `SENT` (✓, el servidor lo guardó)
+   * o `READ` (✓✓, lo leyeron; en un grupo o un soporte, todos los demás). En la comunidad siempre
+   * `SENT`. `null` en los de otras personas y en los del programa. Solo viene resuelto en
+   * `GET .../messages`: en la respuesta de enviar y en el «último mensaje» de la lista viaja `null`,
+   * y un backend anterior no lo manda. Ausente, `null` o desconocido se lee como ✓
+   * (`utils/lecturaDelChat.ts`).
+   */
+  status?: WireEstadoDeEntregaRecibido | null;
 }
+
+/** Las marcas que ESTA versión del cliente sabe pintar. Ver {@link WireMensaje.status}. */
+export type WireEstadoDeEntrega = 'SENT' | 'READ';
+
+/**
+ * Lo que de verdad puede llegar en `status`, con el mismo criterio que
+ * {@link WireTipoMensajeRecibido}: un valor que este binario no conozca (un «entregado» futuro) no
+ * puede romper la página de mensajes; se pinta ✓.
+ */
+export type WireEstadoDeEntregaRecibido = WireEstadoDeEntrega | (string & {});
 
 /** `ConversacionResumenResponse` — item de `GET /api/v1/chat/conversations`. */
 export interface WireConversacionResumen {

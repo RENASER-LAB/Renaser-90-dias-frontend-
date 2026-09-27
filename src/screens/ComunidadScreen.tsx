@@ -88,6 +88,7 @@ import {
 } from '../features/chat/utils/formatoChat';
 import { mostrarBotonBajar, posicionAMantener } from '../features/chat/utils/bajadaDelChat';
 import { conLaFotoDeLaLista, pideReleerAlCerrarElChat } from '../features/chat/utils/refrescoDeLaLista';
+import { conLeidoHasta } from '../features/chat/utils/lecturaDelChat';
 import {
   cifraDeIntegrantes,
   integrantesDeLaInfo,
@@ -817,11 +818,47 @@ export default function ComunidadScreen() {
      fondo y burbujas salen del tema (dorado suave / crema), no del verde de WhatsApp. */
   const paletaDelChat = useMemo(() => coloresDelChat(c, isDark), [c, isDark]);
 
+  /**
+   * La conversación abierta, en vivo (2026-09-17).
+   *
+   * Hasta acá la app conversaba SOLO por REST: un mensaje entrante no aparecía hasta salir y
+   * volver a entrar, y el "● En línea" del encabezado era un texto fijo que se le mostraba a
+   * cualquiera. El backend ya tenía el canal armado —`/ws` con STOMP y Redis, hecho para
+   * "reemplazar el polling" según su propio javadoc— y ningún cliente lo abría.
+   *
+   * Al llegar un mensaje de otro se recarga el historial por el camino de siempre
+   * (`abrirConversacion`) en vez de pintar el payload del empuje: ese payload es liviano a
+   * propósito y no trae la URL firmada de una foto ni el nombre de quien escribe, así que
+   * pintarlo directo dejaría burbujas incompletas. El socket avisa; la fuente de verdad sigue
+   * siendo el GET.
+   *
+   * Desde el 2026-09-27 (D-208 del backend) también trae `leidoHasta`, la marca del último aviso de
+   * lectura: los mensajes propios escritos hasta ahí pasan de ✓ a ✓✓ sin recargar (abajo, en
+   * `mensajesDelChat`). Está acá arriba, y no más abajo como antes, porque esa lista la necesita.
+   * En la comunidad no hay ✓✓.
+   */
+  const { enLinea: participantesEnLinea, leidoHasta } = useChatEnVivo({
+    conversacionId: activeChat?.id ?? null,
+    miUsuarioId: user?.id,
+    alLlegarMensaje: () => {
+      if (!activeChat) return;
+      abrirConversacion(activeChat)
+        .then(actualizada => setActiveChat(actualizada))
+        // Si la recarga falla se queda lo que ya estaba en pantalla: un mensaje que no se ve
+        // es mejor que una conversación que se vacía por un error de red.
+        .catch(() => undefined);
+    },
+    confirmaLectura: activeChat?.type !== 'global',
+  });
+
   /* La conversación abierta es una lista INVERTIDA (2026-09-27): abre en el último mensaje sin
      pedirlo y crece hacia arriba. `useBajadaDelChat` decide cuándo bajar sola y cuándo mostrar
      «↓» con los nuevos (`chat/utils/bajadaDelChat.ts`). Su clave es `null` mientras la lista no
      está a la vista —con la info abierta encima—: al volver, arranca otra vez en el final. */
-  const mensajesDelChat = activeChat?.messages ?? SIN_MENSAJES;
+  const mensajesDelChat = useMemo(
+    () => conLeidoHasta(activeChat?.messages ?? SIN_MENSAJES, leidoHasta),
+    [activeChat?.messages, leidoHasta]
+  );
   const bajadaDelChat = useBajadaDelChat(
     enTribu && activeChat !== null && !groupInfoVisible ? activeChat.id : null,
     mensajesDelChat
@@ -1842,33 +1879,6 @@ export default function ComunidadScreen() {
       .then(actualizada => setActiveChat(actualizada))
       .catch(e => Alert.alert('No se pudo cargar el chat', mensajeDeError(e, 'Inténtalo de nuevo en un momento.')));
   };
-
-  /**
-   * La conversación abierta, en vivo (2026-09-17).
-   *
-   * Hasta acá la app conversaba SOLO por REST: un mensaje entrante no aparecía hasta salir y
-   * volver a entrar, y el "● En línea" del encabezado era un texto fijo que se le mostraba a
-   * cualquiera. El backend ya tenía el canal armado —`/ws` con STOMP y Redis, hecho para
-   * "reemplazar el polling" según su propio javadoc— y ningún cliente lo abría.
-   *
-   * Al llegar un mensaje de otro se recarga el historial por el camino de siempre
-   * (`abrirConversacion`) en vez de pintar el payload del empuje: ese payload es liviano a
-   * propósito y no trae la URL firmada de una foto ni el nombre de quien escribe, así que
-   * pintarlo directo dejaría burbujas incompletas. El socket avisa; la fuente de verdad sigue
-   * siendo el GET.
-   */
-  const { enLinea: participantesEnLinea } = useChatEnVivo({
-    conversacionId: activeChat?.id ?? null,
-    miUsuarioId: user?.id,
-    alLlegarMensaje: () => {
-      if (!activeChat) return;
-      abrirConversacion(activeChat)
-        .then(actualizada => setActiveChat(actualizada))
-        // Si la recarga falla se queda lo que ya estaba en pantalla: un mensaje que no se ve
-        // es mejor que una conversación que se vacía por un error de red.
-        .catch(() => undefined);
-    },
-  });
 
   /**
    * Abre el chat que pidió otra pantalla, en cuanto el listado lo tenga.
