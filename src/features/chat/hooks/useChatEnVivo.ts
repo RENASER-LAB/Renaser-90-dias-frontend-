@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { obtenerPresencia } from '../api/chatApi';
 import { conexionChat, destinoDeConversacion, HAY_CHAT_EN_VIVO } from '../tiempoReal/conexionStomp';
-import { leerEventoDelChat, type EventoMensaje } from '../tiempoReal/eventosDelChat';
+import { esEcoPropio, leerEventoDelChat, type EventoMensaje } from '../tiempoReal/eventosDelChat';
 
 /**
  * La conversación abierta, en vivo: quién está conectado y qué mensajes van llegando.
@@ -81,7 +81,8 @@ export function useChatEnVivo({ conversacionId, miUsuarioId, alLlegarMensaje }: 
         return;
       }
 
-      if (evento.senderId === miUsuarioId) return;
+      // Un mensaje de sistema a nombre de uno mismo no es un eco: la pantalla no lo agregó.
+      if (esEcoPropio(evento, miUsuarioId)) return;
       alLlegarMensajeRef.current?.(evento);
     });
 

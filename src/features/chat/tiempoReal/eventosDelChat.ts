@@ -28,11 +28,31 @@ const eventoMensajeSchema = z.object({
   event: z.literal('MESSAGE').optional(),
   id: z.string(),
   conversationId: z.string(),
-  senderId: z.string(),
+  /* Tolerante (2026-09-27): un mensaje del programa puede no tener una persona detrás. Con
+     `z.string()` el aviso se descartaba y la bienvenida no aparecía hasta volver a entrar. */
+  senderId: z.string().nullish(),
   type: z.string(),
   text: z.string().nullable().optional(),
   createdAt: z.string(),
 });
+
+/**
+ * Si el aviso es de un mensaje de sistema (del programa). Este canal manda el tipo con el nombre
+ * del DOMINIO (`MensajeFanoutPayload`: `mensaje.tipo().name()`, o sea `SISTEMA`), no el del REST
+ * (`SYSTEM`); se aceptan los dos para no depender de cuál se use mañana.
+ */
+export function esAvisoDeSistema(evento: Pick<EventoMensaje, 'type'>): boolean {
+  return evento.type === 'SISTEMA' || evento.type === 'SYSTEM';
+}
+
+/**
+ * Si el aviso es el eco de algo que la pantalla ya agregó al mandarlo. Solo los mensajes propios
+ * de una PERSONA: uno de sistema guardado a nombre de quien mira (la cuenta de staff que envía la
+ * bienvenida) no lo mandó la pantalla, y hay que recargar para verlo.
+ */
+export function esEcoPropio(evento: Pick<EventoMensaje, 'type' | 'senderId'>, miUsuarioId: string | null | undefined): boolean {
+  return !!miUsuarioId && evento.senderId === miUsuarioId && !esAvisoDeSistema(evento);
+}
 
 const eventoPresenciaSchema = z.object({
   event: z.literal('PRESENCE'),

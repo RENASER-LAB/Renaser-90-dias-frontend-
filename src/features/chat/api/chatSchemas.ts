@@ -38,10 +38,28 @@ export const wireConversacionSchema = z
   })
   .passthrough();
 
+/**
+ * El emisor de un mensaje, tolerante (2026-09-27). Un mensaje del PROGRAMA (tipo `SYSTEM`, la
+ * bienvenida del chat de soporte) puede llegar sin persona detrás: `senderId` en `null`, vacío o
+ * ausente. Con `z.string()` a secas, UN mensaje así hacía fallar la página entera de mensajes y,
+ * como `lastMessage` va anidado en cada fila de `GET /conversations`, dejaba a la persona sin LA
+ * BANDEJA. Se normaliza a `null`: un id vacío no identifica a nadie.
+ */
+const emisorTolerante = z
+  .string()
+  .nullish()
+  .transform(valor => (valor && valor.trim() ? valor : null));
+
+/** Nombre o foto del emisor: pueden faltar del todo en un mensaje sin persona detrás. */
+const datoDelEmisorTolerante = z
+  .string()
+  .nullish()
+  .transform(valor => valor ?? null);
+
 const wireReplyPreviewSchema = z
   .object({
     id: z.string(),
-    senderName: z.string().nullable(),
+    senderName: datoDelEmisorTolerante,
     /* `z.string()` por el mismo motivo que el `type` de la conversacion, y con el radio de
        explosion todavia mas grande: `lastMessage` va anidado en cada elemento de
        `GET /conversations`, asi que un tipo de mensaje nuevo no dejaba sin ver un historial —
@@ -57,9 +75,9 @@ export const wireMensajeSchema = z
   .object({
     id: z.string(),
     conversationId: z.string(),
-    senderId: z.string(),
-    senderName: z.string().nullable(),
-    senderAvatarUrl: z.string().nullable(),
+    senderId: emisorTolerante,
+    senderName: datoDelEmisorTolerante,
+    senderAvatarUrl: datoDelEmisorTolerante,
     /* `z.string()` por el mismo motivo que el `type` de la conversacion, y con el radio de
        explosion todavia mas grande: `lastMessage` va anidado en cada elemento de
        `GET /conversations`, asi que un tipo de mensaje nuevo no dejaba sin ver un historial —

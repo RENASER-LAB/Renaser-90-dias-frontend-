@@ -119,6 +119,8 @@ export type MensajeAgrupable = {
   sender: string;
   senderId?: string;
   createdAt?: string;
+  /** Lo mandó el programa (2026-09-27): es un remitente propio, «Formación Renaser». */
+  esDelPrograma?: boolean;
 };
 
 export type ElementoDelChat<M extends MensajeAgrupable> =
@@ -139,7 +141,10 @@ export type ElementoDelChat<M extends MensajeAgrupable> =
  */
 export const PAUSA_QUE_CORTA_LA_TANDA_MS = 10 * 60 * 1000;
 
+/* Los mensajes del programa forman su propia tanda: no se pegan a los de la persona cuya cuenta
+   los haya enviado, ni esa persona queda sin nombre por venir detrás de uno. */
 function remitenteDe(mensaje: MensajeAgrupable): string {
+  if (mensaje.esDelPrograma) return '__programa__';
   if (mensaje.isMe) return '__yo__';
   return mensaje.senderId ?? `nombre:${mensaje.sender}`;
 }
@@ -191,6 +196,32 @@ export function agruparMensajes<M extends MensajeAgrupable>(mensajes: readonly M
   return elementos;
 }
 
+/**
+ * Lo mismo que `agruparMensajes`, del MÁS NUEVO al más viejo: el orden que necesita la lista
+ * invertida de la conversación (2026-09-27), que dibuja el primer elemento abajo de todo.
+ *
+ * **Por qué una lista invertida.** Con la lista derecha, abrir en el último mensaje dependía de
+ * que un `scrollToEnd` disparado por `onContentSizeChange` llegara DESPUÉS de que la vista nativa
+ * midiera todo el contenido. En el emulador no pasó: la conversación quedó ARRIBA, en «Ayer» y las
+ * primeras bienvenidas, y no bajó ni a los 10 s (e2e del 27/09, grupo «Fénix», ~12 mensajes
+ * largos). Lo más probable es que corriera con la medida vieja y que ningún cambio de tamaño
+ * posterior lo repitiera; no se confirmó en el teléfono, y con la lista invertida deja de
+ * importar: el desplazamiento 0 ES el final, así que abre en el último mensaje sin pedirlo, y lo
+ * que crece después de medirse —un texto largo, una foto que carga— crece hacia arriba, sin mover
+ * lo que se está viendo.
+ *
+ * **Separadores y tandas siguen bien sin tocar nada**, porque se calculan en orden cronológico y
+ * recién después se da vuelta la lista: el separador de un día queda en el arreglo DESPUÉS de sus
+ * mensajes, o sea dibujado ARRIBA de ellos; y «primero / último de la tanda» siguen siendo los de
+ * la cronología (la cola y el nombre van en el de más arriba).
+ */
+export function elementosDeLaListaInvertida<M extends MensajeAgrupable>(
+  mensajes: readonly M[],
+  ahora: Date
+): ElementoDelChat<M>[] {
+  return agruparMensajes(mensajes, ahora).reverse();
+}
+
 /*
  * Colores para el nombre del remitente en los grupos. Tonos tierra que conversan con el dorado
  * de Renaser (nada del verde de WhatsApp) y que pasan AA sobre la burbuja clara (#FFFFFF) o sobre
@@ -221,7 +252,12 @@ export function subtituloDeLaCabecera(params: {
 }): string {
   if (params.tipo !== 'celula') return params.subtitulo;
   if (params.integrantes === null) return 'Grupo · toca para ver quiénes son';
-  return `Grupo · ${params.integrantes} ${params.integrantes === 1 ? 'integrante' : 'integrantes'}`;
+  return `Grupo · ${cuantosIntegrantes(params.integrantes)}`;
+}
+
+/** «1 integrante», «5 integrantes»: la misma frase en la cabecera y en la info del grupo. */
+export function cuantosIntegrantes(cantidad: number): string {
+  return `${cantidad} ${cantidad === 1 ? 'integrante' : 'integrantes'}`;
 }
 
 /**

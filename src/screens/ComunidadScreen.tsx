@@ -11,12 +11,13 @@ import {
   Share,
   KeyboardAvoidingView,
   FlatList,
+  RefreshControl,
 } from 'react-native';
 import type { ListRenderItemInfo } from 'react-native';
 import { Alert } from '../components/Alerta';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../theme/ThemeContext';
 import { space } from '../theme/tokens';
@@ -74,13 +75,24 @@ import { CabeceraDeChat } from '../features/chat/components/CabeceraDeChat';
 import { coloresDelChat } from '../features/chat/components/coloresDelChat';
 import { FilaDeConversacion } from '../features/chat/components/FilaDeConversacion';
 import { SeparadorDeDia } from '../features/chat/components/SeparadorDeDia';
-import { AvatarDeChat } from '../features/chat/components/AvatarDeChat';
+import { BotonBajarAlFinal } from '../features/chat/components/BotonBajarAlFinal';
+import { InfoDelChat } from '../features/chat/components/InfoDelChat';
+import { useBajadaDelChat } from '../features/chat/hooks/useBajadaDelChat';
 import {
-  agruparMensajes,
+  elementosDeLaListaInvertida,
   integrantesDelChatDeGrupo,
   ordenarPorActividad,
   subtituloDeLaCabecera,
+  type ElementoDelChat,
 } from '../features/chat/utils/formatoChat';
+import { mostrarBotonBajar, posicionAMantener } from '../features/chat/utils/bajadaDelChat';
+import { pideReleerAlCerrarElChat } from '../features/chat/utils/refrescoDeLaLista';
+import {
+  cifraDeIntegrantes,
+  integrantesDeLaInfo,
+  subtituloDeLaInfo,
+  tituloDeLaInfo,
+} from '../features/chat/utils/infoDelChat';
 import { conversacionAPantallaCompleta } from '../features/chat/utils/pantallaCompletaDelChat';
 import { OPCIONES_CON_PESTANAS, OPCIONES_SIN_PESTANAS } from '../navigation/pestanasOcultas';
 import { EvidenciaDesdeChatModal } from '../features/habits/components/EvidenciaDesdeChatModal';
@@ -246,7 +258,9 @@ export interface LeaderboardUser {
 // TIPOS: ATENCIÓN PERSONALIZADA & CHATS (TIPO WHATSAPP)
 // =========================================================================
 /**
- * Los mismos cinco tipos que `tipo_mensaje` en la base, menos SISTEMA (que se pinta como texto).
+ * Los mismos cinco tipos que `tipo_mensaje` en la base, menos SISTEMA (que se pinta como texto, o
+ * como foto si trae imagen; desde el 2026-09-27 el de sistema con contenido lleva además
+ * `esDelPrograma`, ver `ChatMessage`).
  * `gif` se retiró: no existía del lado del backend — era una burbuja local con un emoji grande
  * que solo veía quien la mandaba y desaparecía al recargar. El chat ahora manda fotos y notas de
  * voz reales, que es lo que se esperaba de esos botones.
@@ -280,6 +294,10 @@ export interface ChatMessage {
   createdAt?: string;
   senderId?: string;
   senderAvatarUrl?: string | null;
+  /* 2026-09-27: lo mandó el PROGRAMA y no una persona (mensaje de sistema con texto o imagen, como
+     la bienvenida del soporte). Va a la izquierda, firmado «Formación Renaser» y con el fénix,
+     aunque el servidor lo haya guardado a nombre de alguien. Ver `chatMappers.esMensajeDelPrograma`. */
+  esDelPrograma?: boolean;
 }
 
 export interface ChatConversation {
@@ -315,6 +333,10 @@ export interface ChatConversation {
   lastMessageAt?: string | null;
   createdAt?: string | null;
   avatarUrl?: string | null;
+  /* 2026-09-27: en un 1 a 1, el rol del otro ya en palabras («Aprendiz», «Mentor»), el mismo dato
+     con el que se arma `subtitle` («Aprendiz · 1 a 1»). La info del contacto lo muestra solo bajo
+     el nombre. `null` si no se sabe quién es el otro. */
+  rolDelOtro?: string | null;
 }
 
 export interface GroupMember {
@@ -431,6 +453,9 @@ const SECCIONES: { id: SeccionComunidad; icon: IconName; label: string }[] = [
 function SeparadorDePublicaciones() {
   return <View style={{ height: space.gap }} />;
 }
+
+/** Sin conversación abierta: la misma lista vacía siempre, para no recalcular nada en cada render. */
+const SIN_MENSAJES: ChatMessage[] = [];
 
 export default function ComunidadScreen() {
   const { c, t, mode } = useTheme();
@@ -579,6 +604,10 @@ export default function ComunidadScreen() {
    * `grupoAbierto` apunta al grupo de esa conversación (ficha "INFO DEL GRUPO"), y en la pestaña
    * Tribu —donde nunca hay chat abierto, así que `grupoAbierto` es `null`— cae sola al grupo
    * principal de `useMiCelula`, que es exactamente el que describe la tarjeta de la tribu.
+   *
+   * > **Corregido 2026-09-27.** La info del chat ya no usa estas filas: se rediseñó al estilo de
+   * > WhatsApp y arma las suyas con `filasDeLaInfo` (mismas fuentes, con «Mentor» / «Aprendiz» /
+   * > «Tú»). Estas quedan para el desplegable de integrantes de la tarjeta de Tribu.
    */
   const integrantesDelGrupo = useMemo(() => {
     const filas: IntegranteDeGrupo[] = [];
@@ -596,8 +625,6 @@ export default function ComunidadScreen() {
     }
     return filas;
   }, [celulaIdAbierto, grupoAbierto, integrantesDelGrupoAbierto, mentorDeLaTarjeta.nombre, mentorDeLaTarjeta.avatarUrl, companerosDeLaTarjeta]);
-  /* La info abierta es la de un chat de grupo (o, sin chat, la del grupo de la tarjeta). */
-  const infoEsDeGrupo = !activeChat || activeChat.type === 'celula';
   /* Corregido 2026-09-26: sin `grupoAbierto` caía a `miCelula`, que puede ser OTRO grupo (y para
      un mentor, ninguno). Ahora cae al nombre visible de la conversación abierta. */
   const nombreDelGrupo = grupoAbierto
@@ -605,6 +632,18 @@ export default function ComunidadScreen() {
     : activeChat
       ? nombreVisibleDeConversacion(activeChat)
       : 'Tu grupo';
+  /* La info del grupo abierto, al estilo WhatsApp (2026-09-27): el mentor primero, después «Tú» y
+     el resto por nombre, cada uno con su marca. La cifra es la MISMA que dice la cabecera del chat
+     (aprendices + mentor, `integrantesDelChatDeGrupo`). Ver `chat/utils/infoDelChat.ts`. */
+  const filasDeLaInfo = useMemo(
+    () =>
+      integrantesDeLaInfo({
+        mentor: grupoAbierto ? { nombre: grupoAbierto.mentorName, avatarUrl: grupoAbierto.mentorAvatarUrl } : null,
+        miembros: integrantesDelGrupoAbierto,
+      }),
+    [grupoAbierto, integrantesDelGrupoAbierto]
+  );
+  const cifraDeLaInfo = cifraDeIntegrantes(grupoAbierto, filasDeLaInfo.length);
 
   /**
    * La firma que acompaña al nombre en el compositor del Muro.
@@ -625,16 +664,13 @@ export default function ComunidadScreen() {
   ]
     .filter(Boolean)
     .join(' · ');
-  // Sin el grupo resuelto no hay subtítulo: el de `miCelula` podía ser el de otro grupo.
-  const grupoDelSubtitulo = grupoAbierto;
-  const subtituloDelGrupo = grupoDelSubtitulo
-    ? `${grupoDelSubtitulo.memberCount} ${grupoDelSubtitulo.memberCount === 1 ? 'integrante' : 'integrantes'} · Cohorte ${grupoDelSubtitulo.cohortName}`
-    : null;
+  /* Acá vivía `subtituloDelGrupo` («N integrantes · Cohorte X») de la info vieja, que contaba solo
+     a los aprendices. Se retiró el 2026-09-27: la info nueva dice «Grupo · N integrantes» con la
+     cifra de la cabecera (`cifraDeLaInfo`) y la cohorte en su propia línea. */
 
   /* Nombre y resumen de MI grupo, para la tarjeta de la pestaña Tribu. Se derivan solo de
-     `miCelula` y no de `nombreDelGrupo`/`subtituloDelGrupo`, que miran primero al grupo de la
-     conversación abierta: la tarjeta habla siempre del grupo principal, tenga o no un chat
-     abierto detrás. */
+     `miCelula` y no de `nombreDelGrupo`, que mira primero al grupo de la conversación abierta:
+     la tarjeta habla siempre del grupo principal, tenga o no un chat abierto detrás. */
   const grupoDeMiTribu = celulaDeLaTarjeta ?? (miCelula?.assigned === true ? miCelula : null);
   const nombreDeMiTribu = grupoDeMiTribu ? grupoDeMiTribu.cellName : null;
   const resumenDeMiTribu = grupoDeMiTribu
@@ -708,9 +744,12 @@ export default function ComunidadScreen() {
     conversations,
     setConversations,
     loading: conversacionesCargando,
+    refrescando: conversacionesRefrescando,
     error: conversacionesError,
     mensajesCargando,
-    // Lo usa la entrada desde "Escribirle": la conversación puede acabar de crearse.
+    // Lo usan la entrada desde "Escribirle" (la conversación puede acabar de crearse) y, desde el
+    // 2026-09-27, los refrescos de la lista: al volver de un chat, al volver a la pestaña o a
+    // Tribu y deslizando (ver el bloque «LA LISTA DE CHATS SE REFRESCA SOLA», más abajo).
     recargar: recargarConversaciones,
     abrirConversacion,
     enviarMensajeTexto: enviarMensajeChatRemoto,
@@ -752,8 +791,37 @@ export default function ComunidadScreen() {
   const [fotoChatAmpliada, setFotoChatAmpliada] = useState<string | null>(null);
   /* Chat estilo WhatsApp (2026-09-26): la lista de mensajes abre en lo último, y los colores de
      fondo y burbujas salen del tema (dorado suave / crema), no del verde de WhatsApp. */
-  const mensajesScrollRef = useRef<ScrollView>(null);
   const paletaDelChat = useMemo(() => coloresDelChat(c, isDark), [c, isDark]);
+
+  /* La conversación abierta es una lista INVERTIDA (2026-09-27): abre en el último mensaje sin
+     pedirlo y crece hacia arriba. `useBajadaDelChat` decide cuándo bajar sola y cuándo mostrar
+     «↓» con los nuevos (`chat/utils/bajadaDelChat.ts`). Su clave es `null` mientras la lista no
+     está a la vista —con la info abierta encima—: al volver, arranca otra vez en el final. */
+  const mensajesDelChat = activeChat?.messages ?? SIN_MENSAJES;
+  const bajadaDelChat = useBajadaDelChat(
+    enTribu && activeChat !== null && !groupInfoVisible ? activeChat.id : null,
+    mensajesDelChat
+  );
+  const elementosDelChat = useMemo(() => elementosDeLaListaInvertida(mensajesDelChat, new Date()), [mensajesDelChat]);
+  const chatEsDeGrupo = activeChat !== null && activeChat.type !== 'direct';
+  const renderElementoDelChat = useCallback(
+    ({ item }: ListRenderItemInfo<ElementoDelChat<ChatMessage>>) =>
+      item.tipo === 'dia' ? (
+        <SeparadorDeDia etiqueta={item.etiqueta} colores={paletaDelChat} />
+      ) : (
+        <BurbujaDeMensaje
+          mensaje={item.mensaje}
+          enGrupo={chatEsDeGrupo}
+          primeroDeLaTanda={item.primeroDeLaTanda}
+          ultimoDeLaTanda={item.ultimoDeLaTanda}
+          colores={paletaDelChat}
+          audioActivo={playingAudioId === item.mensaje.id}
+          alActivarAudio={() => setPlayingAudioId(item.mensaje.id)}
+          onAbrirFoto={setFotoChatAmpliada}
+        />
+      ),
+    [chatEsDeGrupo, paletaDelChat, playingAudioId]
+  );
 
   // Estados del Muro Social — `posts` sale del backend real (GET /api/v1/wall) a través de
   // `useWallFeed`; `setPosts` queda expuesto para las interacciones que el backend todavía no
@@ -1250,11 +1318,14 @@ export default function ComunidadScreen() {
    * Mientras la sala de chat esté abierta, se esconde el botón flotante del acompañante: se monta
    * justo encima de la barra de escribir y tapa el botón de enviar. Es la misma señal que ya usaba
    * `ChatDelCurso` (ver `renasia/state/chatEnPantalla.ts`), no un mecanismo nuevo.
+   *
+   * Desde el 2026-09-27 también con la info del chat abierta: es parte de la conversación a
+   * pantalla completa, y el flotante caía encima del ícono de chat de la última persona de la lista.
    */
   useEffect(() => {
-    if (!enTribu || activeChat === null || groupInfoVisible) return;
+    if (!enTribu || activeChat === null) return;
     return marcarChatMontado();
-  }, [enTribu, activeChat, groupInfoVisible]);
+  }, [enTribu, activeChat]);
 
   /**
    * Conversación a pantalla completa, como WhatsApp (2026-09-26): sin cabecera «COMUNIDAD», sin
@@ -1404,8 +1475,9 @@ export default function ComunidadScreen() {
 
     irASeccion('tribu');
     setChatPedidoDeOtraPestana(id);
-    // Recién creada, puede no estar en el listado: se pide de nuevo para que aparezca.
-    void recargarConversaciones();
+    // Recién creada, puede no estar en el listado: se pide de nuevo para que aparezca. `forzar`:
+    // una lectura que ya estuviera en vuelo salió antes de crearla y no la traería.
+    void recargarConversaciones({ forzar: true });
     (navigation as any).setParams({ abrirChatConversacionId: undefined });
   }, [route.params, navigation, recargarConversaciones]);
 
@@ -1699,7 +1771,8 @@ export default function ComunidadScreen() {
       const conv = await abrirConversacionDirecta(usuarioId);
       irASeccion('tribu');
       setChatPedidoDeOtraPestana(conv.id);
-      void recargarConversaciones();
+      // `forzar`: puede estar recién creada, y una lectura en vuelo no la traería.
+      void recargarConversaciones({ forzar: true });
     } catch {
       // Si falla, el usuario se queda donde estaba: no se inventa una conversacion local.
     }
@@ -1767,6 +1840,32 @@ export default function ComunidadScreen() {
     // efecto en bucle. Lo que decide es el par (id pedido, listado), que sí está declarado.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatPedidoDeOtraPestana, conversations]);
+
+  /*
+   * LA LISTA DE CHATS SE REFRESCA SOLA (2026-09-27, «tipo WhatsApp»). Antes se pedía una vez, al
+   * entrar a Tribu por primera vez, y el orden por último mensaje y los no leídos se quedaban
+   * viejos. Ahora se relee `GET /api/v1/chat/conversations`:
+   * - al volver de una conversación a la lista;
+   * - al volver a la pestaña Comunidad estando en Tribu, y al volver a Tribu desde otra sección;
+   * - deslizando la lista hacia abajo (el `RefreshControl` de Tribu).
+   * En silencio si ya hay lista, con un solo pedido para los disparos que caen juntos y sin que una
+   * respuesta vieja pise a una nueva (`useChatConversaciones.recargar`). No hay refresco EN VIVO de
+   * la lista: el backend solo publica por conversación (`/topic/conversaciones/{id}`), no tiene un
+   * destino por persona que avise de un mensaje en otro chat.
+   */
+  const idDelChatAbierto = activeChat?.id ?? null;
+  const chatAbiertoAntes = useRef<string | null>(idDelChatAbierto);
+  useEffect(() => {
+    const anterior = chatAbiertoAntes.current;
+    chatAbiertoAntes.current = idDelChatAbierto;
+    if (enTribu && pideReleerAlCerrarElChat(anterior, idDelChatAbierto)) void recargarConversaciones();
+  }, [enTribu, idDelChatAbierto, recargarConversaciones]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (enTribu) void recargarConversaciones();
+    }, [enTribu, recargarConversaciones])
+  );
 
 
   // El "me gusta" va contra el backend real (POST /api/v1/wall/{id}/react). El propio backend
@@ -3118,6 +3217,15 @@ export default function ComunidadScreen() {
             },
           ]}
           showsVerticalScrollIndicator={false}
+          /* Deslizar hacia abajo relee la lista de chats (2026-09-27): orden y no leídos al día. */
+          refreshControl={
+            <RefreshControl
+              refreshing={conversacionesRefrescando}
+              onRefresh={() => void recargarConversaciones({ deslizando: true })}
+              tintColor={c.goldInk}
+              colors={[c.goldInk]}
+            />
+          }
         >
           {/* -------------------------------------------------------------------------------
               PARA QUIEN ACOMPAÑA. Va arriba de todo porque es lo que ese perfil viene a hacer;
@@ -3314,9 +3422,10 @@ export default function ComunidadScreen() {
               tarjeta con su borde, y meterlas dentro de otra deja dos contornos anidados, que es
               precisamente la sensación de "recargado" que este rediseño vino a sacar.
 
-              Mismo renglón (`FilaIntegrante`) que la ficha "INFO DEL GRUPO" de una sala de chat,
-              y misma fuente de datos (`integrantesDelGrupo`): acá, sin chat abierto, esa lista
-              cae sola al grupo principal.
+              Renglón `FilaIntegrante` con la fuente `integrantesDelGrupo`: acá, sin chat abierto,
+              esa lista cae sola al grupo principal. (Hasta el 2026-09-27 la info del grupo de una
+              sala de chat usaba el mismo renglón; desde el rediseño al estilo WhatsApp tiene el
+              suyo, `FilaDeIntegranteDelChat`. Este desplegable no cambió.)
           ------------------------------------------------------------------------------- */}
           {integrantesAbiertos && (
             <View style={styles.tribuIntegrantes}>
@@ -3489,42 +3598,50 @@ export default function ComunidadScreen() {
 
           {/* Mensajes estilo WhatsApp (2026-09-26): separadores de día, tandas del mismo
               remitente (cola solo en la primera, nombre en color en los grupos) y la hora dentro
-              de la burbuja. Abre abajo, en lo último, y baja solo cuando llega o sale un mensaje. */}
-          <ScrollView
-            ref={mensajesScrollRef}
-            keyboardShouldPersistTaps="handled"
-            style={{ backgroundColor: paletaDelChat.fondo }}
-            contentContainerStyle={{ paddingVertical: 10, flexGrow: 1 }}
-            onContentSizeChange={() => mensajesScrollRef.current?.scrollToEnd({ animated: false })}
-            showsVerticalScrollIndicator={false}
-          >
-            {mensajesCargando && activeChat.messages.length === 0 && (
-              <Text style={[styles.chatAviso, { color: c.textSoft }]}>Cargando mensajes...</Text>
-            )}
-            {!mensajesCargando && activeChat.messages.length === 0 && (
-              <Text style={[styles.chatAviso, { color: c.textSoft }]}>
-                Todavía no hay mensajes. ¡Escribe el primero!
-              </Text>
-            )}
+              de la burbuja.
 
-            {agruparMensajes(activeChat.messages, new Date()).map(elemento =>
-              elemento.tipo === 'dia' ? (
-                <SeparadorDeDia key={elemento.clave} etiqueta={elemento.etiqueta} colores={paletaDelChat} />
-              ) : (
-                <BurbujaDeMensaje
-                  key={elemento.clave}
-                  mensaje={elemento.mensaje}
-                  enGrupo={activeChat.type !== 'direct'}
-                  primeroDeLaTanda={elemento.primeroDeLaTanda}
-                  ultimoDeLaTanda={elemento.ultimoDeLaTanda}
-                  colores={paletaDelChat}
-                  audioActivo={playingAudioId === elemento.mensaje.id}
-                  alActivarAudio={() => setPlayingAudioId(elemento.mensaje.id)}
-                  onAbrirFoto={url => setFotoChatAmpliada(url)}
-                />
-              )
+              LISTA INVERTIDA (2026-09-27). En el emulador, el grupo «Fénix» (~12 mensajes, varios
+              largos) abría ARRIBA, en «Ayer» y las primeras bienvenidas, y no bajaba nunca. Era un
+              `ScrollView` que dependía de que el `scrollToEnd` de `onContentSizeChange` llegara
+              después de medir todo (lo más probable: corrió con la medida vieja y nada lo repitió;
+              ver `formatoChat.elementosDeLaListaInvertida`). Invertida, el desplazamiento 0 ES
+              el último mensaje: abre ahí sin pedirlo, y lo que crece después de medirse —un texto
+              largo, una foto que carga— crece hacia arriba sin mover el final. Quien está abajo ve
+              aparecer lo nuevo sin que nada se desplace; a quien subió a leer lo deja quieto
+              `maintainVisibleContentPosition`, puesto SOLO mientras está arriba
+              (`posicionAMantener`). El «↓» con los nuevos y la bajada al mandar uno propio los
+              decide `useBajadaDelChat`. */}
+          <View style={styles.chatMensajes}>
+            <FlatList
+              key={activeChat.id}
+              ref={bajadaDelChat.listaRef}
+              inverted
+              data={elementosDelChat}
+              keyExtractor={elemento => elemento.clave}
+              renderItem={renderElementoDelChat}
+              extraData={playingAudioId}
+              keyboardShouldPersistTaps="handled"
+              style={{ backgroundColor: paletaDelChat.fondo }}
+              contentContainerStyle={styles.chatMensajesContenido}
+              onScroll={bajadaDelChat.alDesplazarse}
+              scrollEventThrottle={64}
+              maintainVisibleContentPosition={posicionAMantener(bajadaDelChat.estado)}
+              removeClippedSubviews={false}
+              initialNumToRender={20}
+              showsVerticalScrollIndicator={false}
+              ListEmptyComponent={
+                <Text style={[styles.chatAviso, { color: c.textSoft }]}>
+                  {mensajesCargando ? 'Cargando mensajes...' : 'Todavía no hay mensajes. ¡Escribe el primero!'}
+                </Text>
+              }
+            />
+            {mostrarBotonBajar(bajadaDelChat.estado) && (
+              <BotonBajarAlFinal
+                nuevosSinVer={bajadaDelChat.estado.nuevosSinVer}
+                onPress={bajadaDelChat.bajarAlFinal}
+              />
             )}
-          </ScrollView>
+          </View>
 
           {/*
             Barra de escribir, con la gramática de WhatsApp: mientras se graba, la barra entera
@@ -3619,96 +3736,39 @@ export default function ComunidadScreen() {
       )}
 
       {/* ========================================================================= */}
-      {/* VISTA 4.2: INFORMACIÓN DEL GRUPO / INTEGRANTES (TIPO WHATSAPP GROUP INFO) */}
+      {/* VISTA 4.2: INFO DEL CHAT (TIPO WHATSAPP)                                  */}
       {/* ========================================================================= */}
-      {enTribu && groupInfoVisible && (
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={[
-            styles.content,
-            {
-              paddingHorizontal: horizontalPadding,
-              maxWidth: contentMaxWidth,
-              alignSelf: isTablet ? 'center' : 'stretch',
-              width: isTablet ? '100%' : undefined,
-            },
-          ]}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
-            <Pressable onPress={() => setGroupInfoVisible(false)} style={styles.backBtnRow} hitSlop={8}>
-              <Icon name="arrowLeft" size={14} color={c.goldInk} />
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
-                VOLVER AL CHAT
-              </Text>
-            </Pressable>
+      {/* Rediseño del 2026-09-27, pedido del dueño («si le doy en el círculo, ver la info del grupo
+          tipo WhatsApp»): avatar grande, nombre grande, «Grupo · N integrantes» / «Chat de
+          soporte» / el rol del otro, y en los grupos la sección «N integrantes» con el mentor
+          primero y la marca de cada uno. A pantalla completa como el chat: sin «COMUNIDAD», sin la
+          fila de secciones ni la barra de pestañas (`pantallaCompleta` sigue en pie porque hay
+          conversación abierta); ← y el «atrás» de Android vuelven al chat.
 
-            <View style={[styles.categoryPillBadge, { backgroundColor: c.goldWash }]}>
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
-                {infoEsDeGrupo ? 'INFO DEL GRUPO' : activeChat?.type === 'direct' ? 'INFO DEL CONTACTO' : 'INFO DEL CHAT'}
-              </Text>
-            </View>
-          </View>
-
-          {/* Corregido 2026-09-26: la info de un chat que NO es de grupo (1 a 1, soporte,
-              comunidad) se armaba igual con el grupo principal —nombre, cohorte e integrantes de
-              `/me/cell`—, así que tocar la cabecera del soporte mostraba «tu grupo». Ahora cada
-              conversación muestra lo suyo y la lista de integrantes es solo de los grupos. */}
-          <View style={[styles.groupInfoHeaderCard, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-            <AvatarDeChat
-              tipo={activeChat?.type ?? 'celula'}
-              nombre={activeChat ? nombreVisibleDeConversacion(activeChat) : nombreDelGrupo}
-              avatarUrl={activeChat?.avatarUrl}
-              size={64}
-            />
-            <View style={{ flex: 1, gap: 4 }}>
-              <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 22, lineHeight: 28 }]}>
-                {activeChat && !infoEsDeGrupo ? nombreVisibleDeConversacion(activeChat) : nombreDelGrupo}
-              </Text>
-              {(infoEsDeGrupo ? subtituloDelGrupo : activeChat?.subtitle) ? (
-                <Text style={[t.body, { color: c.goldInk }]}>
-                  {infoEsDeGrupo ? subtituloDelGrupo : activeChat?.subtitle}
-                </Text>
-              ) : null}
-            </View>
-          </View>
-
-          {/* LISTA DE INTEGRANTES — solo en los chats de grupo. */}
-          {infoEsDeGrupo && (
-          <View style={{ gap: space.gap, marginTop: space.gapLg, paddingBottom: 28 }}>
-            <Text style={[t.micro, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
-              INTEGRANTES DEL GRUPO ({integrantesDelGrupo.length})
-            </Text>
-
-            {/* Los tres estados se distinguen a propósito: "cargando", "falló" y "no hay nadie" son
-                cosas distintas, y mostrar el último cuando en realidad se cayó la red le hace creer
-                a la persona que su grupo está vacío. */}
-            {integrantesCargando && integrantesDelGrupo.length === 0 && (
-              <Text style={[t.body, { color: c.textSoft }]}>Cargando integrantes…</Text>
-            )}
-
-            {!integrantesCargando && integrantesError && (
-              <Text style={[t.body, { color: c.danger }]}>{integrantesError}</Text>
-            )}
-
-            {!integrantesCargando && !integrantesError && integrantesDelGrupo.length === 0 && (
-              <Text style={[t.body, { color: c.textSoft }]}>
-                Todavía no hay integrantes en este grupo.
-              </Text>
-            )}
-
-            {/* Mismo renglón que el desplegable de integrantes de la pestaña Tribu: un solo
-                componente para los dos lugares (ver `FilaIntegrante`). */}
-            {integrantesDelGrupo.map(m => (
-              <FilaIntegrante
-                key={m.id}
-                integrante={m}
-                onChatear={usuarioId => void abrirDMConIntegrante(usuarioId)}
-              />
-            ))}
-          </View>
-          )}
-        </ScrollView>
+          Se conserva lo corregido el 2026-09-26: la info de un chat que NO es de grupo muestra lo
+          suyo y la lista de integrantes es solo de los grupos. Tocar a un compañero abre su 1 a 1
+          con la misma acción que tenía el botón «Chatear» de antes (`abrirDMConIntegrante`). */}
+      {enTribu && groupInfoVisible && activeChat && (
+        <InfoDelChat
+          tipo={activeChat.type}
+          titulo={tituloDeLaInfo(activeChat.type)}
+          nombre={activeChat.type === 'celula' ? nombreDelGrupo : nombreVisibleDeConversacion(activeChat)}
+          avatarUrl={activeChat.avatarUrl}
+          subtitulo={subtituloDeLaInfo({
+            tipo: activeChat.type,
+            integrantes: cifraDeLaInfo,
+            rolDelOtro: activeChat.rolDelOtro,
+            subtitulo: activeChat.subtitle,
+          })}
+          detalle={activeChat.type === 'celula' && grupoAbierto?.cohortName ? `Cohorte ${grupoAbierto.cohortName}` : null}
+          integrantes={
+            activeChat.type === 'celula'
+              ? { filas: filasDeLaInfo, cifra: cifraDeLaInfo, cargando: integrantesCargando, error: integrantesError }
+              : null
+          }
+          onVolver={() => setGroupInfoVisible(false)}
+          onAbrirChatCon={usuarioId => void abrirDMConIntegrante(usuarioId)}
+        />
       )}
 
       {/* Sin barra de pestañas (conversación a pantalla completa), el inset de abajo —la barra de
@@ -4150,6 +4210,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 16,
   },
+  /* La lista de mensajes y, encima, el botón «↓» (2026-09-27). */
+  chatMensajes: {
+    flex: 1,
+  },
+  chatMensajesContenido: {
+    paddingVertical: 10,
+    flexGrow: 1,
+  },
   tribuSelectorGrupos: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -4281,12 +4349,8 @@ const styles = StyleSheet.create({
     minHeight: 48,
     paddingRight: 8,
   },
-  /* Sin borde: es un rótulo, no un control. El lavado dorado alcanza para separarlo del fondo. */
-  categoryPillBadge: {
-    borderRadius: space.radiusSm,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
+  /* Acá vivía `categoryPillBadge`, la píldora «INFO DEL GRUPO» de la info vieja. Se fue el
+     2026-09-27 con el rediseño al estilo WhatsApp (`chat/components/InfoDelChat.tsx`). */
   /* Acá vivían `tabsRow` y `tabBtn`, el control segmentado DIRECTOS / GLOBAL de la pestaña
      Tribu. Se eliminaron el 2026-09-22 con el conmutador: no quedó un solo uso en esta pantalla.
      (`LoginScreen` tiene sus propios `tabBtn`/`tabBtnActive`, que no son estos.) */
@@ -4532,16 +4596,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  /* Alineado a la izquierda: el nombre del grupo y su bajada son texto que se lee. */
-  groupInfoHeaderCard: {
-    borderWidth: 1,
-    borderRadius: space.radius,
-    padding: space.cardPad,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    marginTop: 10,
-  },
+  /* Acá vivía `groupInfoHeaderCard`, la tarjeta de la info vieja del grupo. Se fue el 2026-09-27
+     con el rediseño al estilo WhatsApp: la cabecera grande vive en `InfoDelChat`. */
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.8)',

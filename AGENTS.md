@@ -40,6 +40,11 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       info. Las marcas de los propios pasan de «✓✓» a «✓»: el backend no informa entrega ni lectura.
       Todo en `features/chat/components/` y `features/chat/utils/formatoChat.ts`; envío, fotos,
       audios, evidencia, tiempo real y la tarjeta de bienvenida siguen por el mismo camino.
+      > **Corregido 2026-09-27.** El sello de grupos, comunidad y soporte ya no es una «R» sobre
+      > dorado: desde el mismo 26 es el fénix de la tarjeta de bienvenida de Operaciones
+      > (`assets/imagenes/fenix-renaser.png`, commit «Usar el fénix de la tarjeta de Canva como foto
+      > de los grupos del chat»), con un sello chico en la esquina. Esta línea no se había puesto al
+      > día.
     * **Ampliada el 2026-09-26 (noche), tercer pedido del dueño mirando el emulador — conversación
       a pantalla completa, franja blanca, conteo de integrantes y chat en vivo.**
       * **Pantalla completa, como WhatsApp**: con una conversación abierta (o su info) no se ven la
@@ -63,6 +68,61 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
         Las tramas salen ahora en binario (`protocoloStomp.tramaEnBytes`), se repone el NUL de las
         que lleguen sin él, y el vigilante de silencio respeta `heart-beat:0,0` del backend (antes
         habría reconectado cada 32 s de silencio dejando el socket viejo abierto).
+    * **Ampliada el 2026-09-27, pedidos del dueño mirando el emulador — info tipo WhatsApp, orden
+      de la lista, mensajes del programa y la conversación que no bajaba al último mensaje.**
+      * **Info del chat tipo WhatsApp** (textual: «si le doy en el círculo, ver la info del grupo
+        tipo WhatsApp; esa parte ajústala»). Tocar el avatar o el nombre de la cabecera (ya abría
+        la info) lleva a `chat/components/InfoDelChat.tsx`, a pantalla completa como el chat (sin
+        «COMUNIDAD», sin secciones ni pestañas ni el botón flotante del acompañante; ← y el «atrás»
+        de Android vuelven al chat): avatar de 120 px (el fénix, sin sello, en grupo, soporte y
+        comunidad; foto o iniciales en un 1 a 1), nombre grande y debajo «Grupo · N integrantes» /
+        «Chat de soporte» / el rol del otro («Aprendiz»). En un grupo, la cohorte y la sección «N integrantes»: el mentor primero,
+        «Tú» y el resto por nombre, cada uno con su marca («Mentor», «Aprendiz»). La cifra es la
+        de la cabecera (aprendices + mentor). Tocar a un compañero abre su 1 a 1 con la acción que
+        ya existía (`abrirDMConIntegrante`, el botón «Chatear» de antes); al mentor no, porque el
+        grupo no trae su id: no se inventan permisos. Ninguna sección sin datos detrás (ni
+        «archivos» ni «descripción»). Lógica en `chat/utils/infoDelChat.ts`. El desplegable de
+        integrantes de la tarjeta de Tribu (`FilaIntegrante`) no cambia.
+      * **La lista de chats va por el último mensaje** (confirmado por el dueño): las dos secciones
+        siguen separadas y las dos ordenan con `ordenarPorActividad`. Se corrigió que un mensaje
+        recibido en vivo con la conversación abierta no movía su fila: al recargar el historial,
+        la fila toma la vista previa, la hora y la fecha del último (`conversacionConHistorial`).
+      * **Mensajes del programa.** Un mensaje de sistema (`SYSTEM`, el `TipoMensaje.SISTEMA` del
+        backend) con texto y/o imagen es una burbuja a la izquierda firmada «Formación Renaser»
+        con el fénix al lado, en cualquier conversación y aunque el servidor lo guarde a nombre de
+        una cuenta (`chatMappers.esMensajeDelPrograma`); uno de sistema vacío sigue como antes
+        («Mensaje del sistema»). El parser acepta el emisor en `null`, vacío o ausente
+        (`chatSchemas.emisorTolerante`: antes un emisor `null` dejaba a la persona sin bandeja), el
+        aviso en vivo también (`SISTEMA` o `SYSTEM`), y uno de sistema a nombre de quien mira no se
+        descarta como eco. En la lista nunca dice «Tú: » y la tarjeta se lee «📷 Foto».
+      * **La conversación no bajaba al último mensaje** (grupo «Fénix», ~12 mensajes largos: se
+        quedaba en «Ayer»: bajaba con un `scrollToEnd` desde `onContentSizeChange`, que dependía de
+        llegar después de medir todo y en el emulador no llegó; causa exacta no confirmada). Ahora
+        es una `FlatList` invertida: abre siempre en el último mensaje y lo que se mide tarde crece
+        hacia arriba. Quien está abajo ve llegar lo nuevo; quien subió a leer no es arrastrado
+        (`maintainVisibleContentPosition`, puesto solo mientras está arriba) y ve un botón redondo
+        «↓» con el contador de nuevos; lo propio siempre baja. Separadores y tandas se arman en
+        orden cronológico y después se da vuelta la lista (`formatoChat.elementosDeLaListaInvertida`,
+        `utils/bajadaDelChat.ts`, `hooks/useBajadaDelChat.ts`).
+      * **La lista de chats se refresca sola** (mismo día, pedido del coordinador sobre lo
+        encontrado). `GET /api/v1/chat/conversations` se pedía una vez, al entrar a Tribu por
+        primera vez; ahora se relee al volver de una conversación, al volver a la pestaña o a Tribu
+        y deslizando la lista (`RefreshControl`), para que el orden y los no leídos queden al día.
+        En silencio si ya hay lista, un solo pedido para los disparos juntos y sin que una
+        respuesta vieja pise a una nueva (`useChatConversaciones`, con la misma
+        `eventos/utils/lecturaVigente` de Eventos, solo leída); un cambio hecho en el teléfono
+        descarta la lectura en vuelo, y la lectura espera a que el chat recién abierto quede
+        marcado como leído. Se conserva el historial ya cargado de cada chat
+        (`utils/refrescoDeLaLista.ts`). **Sin refresco en vivo de la lista**: el backend solo
+        publica por conversación (`/topic/conversaciones/{id}`) y no tiene un destino por persona;
+        no se inventó.
+      * **No se adivina el rol del otro en un 1 a 1.** Sin rol en el directorio, el mapeador ponía
+        `'TRAINEE'` y la cabecera y la info decían «Aprendiz» de cualquiera. Ahora dice «1 a 1» a
+        secas (`chatMappers.SUBTITULO_DE_UN_1_A_1_SIN_ROL`) y la info no muestra rol.
+      En `ComunidadScreen.tsx` solo cambian los campos opcionales `esDelPrograma` y `rolDelOtro`, la
+      lista de mensajes, el bloque de la info, que el flotante del acompañante siga escondido con
+      la info abierta y los disparos del refresco de la lista (volver de un chat, foco, deslizar);
+      envío, fotos, audios, evidencia y la tarjeta de Tribu siguen por el mismo camino.
     Una excepción puntual **no abre** el tab: cualquier otro cambio sobre los cinco principales
     vuelve a necesitar autorización explícita.
   * **Excepción autorizada por el dueño del producto — 2026-09-26 — tabs `Yo` y `Plan`, aviso con

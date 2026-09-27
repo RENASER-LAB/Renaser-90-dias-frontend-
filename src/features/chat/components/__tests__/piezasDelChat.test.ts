@@ -19,10 +19,14 @@ jest.mock('../../../../theme/ThemeContext', () => {
 jest.mock('../BurbujaAudioChat', () => ({ BurbujaAudioChat: () => null }));
 
 import type { ChatConversation, ChatMessage } from '../../../../screens/ComunidadScreen';
+import { mapearMensaje } from '../../api/chatMappers';
+import { integrantesDeLaInfo } from '../../utils/infoDelChat';
+import { BotonBajarAlFinal } from '../BotonBajarAlFinal';
 import { BurbujaDeMensaje, huecoParaLaHora } from '../BurbujaDeMensaje';
 import { CabeceraDeChat } from '../CabeceraDeChat';
 import { coloresDelChat } from '../coloresDelChat';
 import { FilaDeConversacion } from '../FilaDeConversacion';
+import { InfoDelChat } from '../InfoDelChat';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -171,6 +175,26 @@ describe('CabeceraDeChat', () => {
     act(() => quien[0].props.onPress());
     expect(abrirInfo).toHaveBeenCalled();
   });
+
+  /* Pedido del dueño (2026-09-27): «si le doy en el círculo, ver la info del grupo». El círculo
+     (el fénix del grupo) está DENTRO del botón que abre la info, junto con el nombre. */
+  it('el círculo del avatar es parte de lo que se toca para abrir la info', () => {
+    const raiz = dibujar(
+      React.createElement(CabeceraDeChat, {
+        tipo: 'celula',
+        titulo: 'Grupo Fénix (prueba)',
+        subtitulo: 'Grupo · 2 integrantes',
+        enLinea: false,
+        onVolver: () => undefined,
+        onAbrirInfo: () => undefined,
+      })
+    );
+    const quien = raiz.root.findAll(
+      n => n.props.accessibilityLabel === 'Ver la información de Grupo Fénix (prueba)' && !!n.props.onPress
+    );
+    const circulo = quien[0].findAll(n => (n.type as unknown) === 'Image');
+    expect(circulo.length).toBeGreaterThan(0);
+  });
 });
 
 describe('huecoParaLaHora', () => {
@@ -179,5 +203,167 @@ describe('huecoParaLaHora', () => {
     expect(hueco).toMatch(/^ +$/);
     expect(hueco).not.toContain('09:56');
     expect(hueco.length).toBeGreaterThanOrEqual(15);
+  });
+});
+
+/*
+ * Mensajes del programa (2026-09-27): la bienvenida del soporte llega como mensaje de sistema y
+ * se dibuja como una burbuja de «Formación Renaser» con el fénix, no como una persona.
+ */
+describe('BurbujaDeMensaje de un mensaje del programa', () => {
+  const delPrograma = (parcial: Record<string, unknown>) =>
+    mapearMensaje(
+      {
+        id: 'm-bienvenida',
+        conversationId: 'c-soporte',
+        senderId: null,
+        senderName: null,
+        senderAvatarUrl: null,
+        type: 'SYSTEM',
+        text: '¡Bienvenida, Ana!',
+        mediaBucket: null,
+        mediaPath: null,
+        mediaMime: null,
+        mediaBytes: null,
+        mediaDurationSeconds: null,
+        mediaUrl: null,
+        hidden: false,
+        replyToId: null,
+        replyTo: null,
+        createdAt: new Date(2026, 8, 27, 9, 30).toISOString(),
+        ...parcial,
+      },
+      'u-yo'
+    );
+
+  const dibujarBurbuja = (mensaje: ChatMessage, primeroDeLaTanda = true) =>
+    dibujar(
+      React.createElement(BurbujaDeMensaje, {
+        mensaje,
+        // El soporte no es un grupo: igual va firmado.
+        enGrupo: false,
+        primeroDeLaTanda,
+        ultimoDeLaTanda: true,
+        colores: COLORES,
+        audioActivo: false,
+        alActivarAudio: () => undefined,
+        onAbrirFoto: () => undefined,
+      })
+    );
+
+  it('va firmada «Formación Renaser», con el fénix al lado y sin la marca de enviado', () => {
+    const raiz = dibujarBurbuja(delPrograma({}));
+    const todo = textos(raiz);
+    expect(todo).toContain('Formación Renaser');
+    expect(todo).toContain('¡Bienvenida, Ana!');
+    expect(todo).not.toContain('✓');
+    const fenix = raiz.root.findAll(n => (n.type as unknown) === 'Image' && n.props.accessibilityLabel === 'Formación Renaser');
+    expect(fenix).toHaveLength(1);
+  });
+
+  it('la tarjeta se ve como foto dentro de la burbuja', () => {
+    const raiz = dibujarBurbuja(delPrograma({ text: null, mediaPath: 'chat/c/fotos/1', mediaMime: 'image/png', mediaUrl: 'https://s3/tarjeta.png' }));
+    const fotos = raiz.root.findAll(n => (n.type as unknown) === 'Image' && n.props.source?.uri === 'https://s3/tarjeta.png');
+    expect(fotos).toHaveLength(1);
+  });
+
+  it('los siguientes de la tanda no repiten firma ni fénix', () => {
+    const raiz = dibujarBurbuja(delPrograma({}), false);
+    expect(textos(raiz)).not.toContain('Formación Renaser');
+    expect(raiz.root.findAll(n => (n.type as unknown) === 'Image')).toHaveLength(0);
+  });
+});
+
+describe('InfoDelChat', () => {
+  const filas = integrantesDeLaInfo({
+    mentor: { nombre: 'Ricardo Díaz', avatarUrl: null },
+    miembros: [
+      { traineeId: 'u-yo', fullName: 'Ana Rojas', avatarUrl: null, isSelf: true },
+      { traineeId: 'u-luis', fullName: 'Luis Soto', avatarUrl: null, isSelf: false },
+    ],
+  });
+
+  it('muestra nombre grande, «Grupo · N integrantes» y la sección con el mentor primero y sus marcas', () => {
+    const raiz = dibujar(
+      React.createElement(InfoDelChat, {
+        tipo: 'celula',
+        titulo: 'Info. del grupo',
+        nombre: 'Grupo Fénix (prueba)',
+        subtitulo: 'Grupo · 3 integrantes',
+        detalle: 'Cohorte Septiembre',
+        integrantes: { filas, cifra: 3, cargando: false, error: null },
+        onVolver: () => undefined,
+        onAbrirChatCon: () => undefined,
+      })
+    );
+    const todo = textos(raiz);
+    expect(todo).toContain('Info. del grupo');
+    expect(todo).toContain('Grupo Fénix (prueba)');
+    expect(todo).toContain('Grupo · 3 integrantes');
+    expect(todo).toContain('Cohorte Septiembre');
+    expect(todo).toContain('3 integrantes');
+    expect(todo.indexOf('Ricardo Díaz')).toBeLessThan(todo.indexOf('Tú'));
+    expect(todo.indexOf('Tú')).toBeLessThan(todo.indexOf('Luis Soto'));
+    expect(todo).toContain('Mentor');
+    expect(todo).toContain('Aprendiz');
+  });
+
+  it('tocar a un compañero abre su 1 a 1; al mentor y a uno mismo no se los puede tocar', () => {
+    const abrir = jest.fn();
+    const volver = jest.fn();
+    const raiz = dibujar(
+      React.createElement(InfoDelChat, {
+        tipo: 'celula',
+        titulo: 'Info. del grupo',
+        nombre: 'Grupo Fénix (prueba)',
+        subtitulo: 'Grupo · 3 integrantes',
+        integrantes: { filas, cifra: 3, cargando: false, error: null },
+        onVolver: volver,
+        onAbrirChatCon: abrir,
+      })
+    );
+    const tocables = raiz.root.findAll(n => typeof n.props.accessibilityLabel === 'string' && n.props.accessibilityLabel.startsWith('Escribirle a') && !!n.props.onPress);
+    expect(tocables.map(n => n.props.accessibilityLabel)).toEqual(['Escribirle a Luis Soto, Aprendiz']);
+    act(() => tocables[0].props.onPress());
+    expect(abrir).toHaveBeenCalledWith('u-luis');
+
+    const flecha = raiz.root.findAll(n => n.props.accessibilityLabel === 'Volver al chat' && !!n.props.onPress);
+    act(() => flecha[0].props.onPress());
+    expect(volver).toHaveBeenCalled();
+  });
+
+  it('en un 1 a 1 no hay sección de integrantes: nombre y rol', () => {
+    const todo = textos(
+      dibujar(
+        React.createElement(InfoDelChat, {
+          tipo: 'direct',
+          titulo: 'Info. del contacto',
+          nombre: 'Luis Soto',
+          subtitulo: 'Aprendiz',
+          integrantes: null,
+          onVolver: () => undefined,
+          onAbrirChatCon: () => undefined,
+        })
+      )
+    );
+    expect(todo).toContain('Luis Soto');
+    expect(todo).toContain('Aprendiz');
+    expect(todo).not.toContain('integrantes');
+  });
+});
+
+describe('BotonBajarAlFinal', () => {
+  it('dice cuántos mensajes nuevos llegaron y baja al tocarlo', () => {
+    const bajar = jest.fn();
+    const raiz = dibujar(React.createElement(BotonBajarAlFinal, { nuevosSinVer: 3, onPress: bajar }));
+    expect(textos(raiz)).toContain('3');
+    const boton = raiz.root.findAll(n => n.props.accessibilityLabel === 'Ir al último mensaje. 3 mensajes nuevos' && !!n.props.onPress);
+    act(() => boton[0].props.onPress());
+    expect(bajar).toHaveBeenCalled();
+  });
+
+  it('sin nuevos, solo la flecha', () => {
+    const raiz = dibujar(React.createElement(BotonBajarAlFinal, { nuevosSinVer: 0, onPress: () => undefined }));
+    expect(textos(raiz)).toBe('');
   });
 });

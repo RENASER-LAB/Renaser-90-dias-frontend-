@@ -39,6 +39,12 @@ export type WireTipoConversacion = 'CELL' | 'DIRECT' | 'GLOBAL' | 'SUPPORT';
  */
 export type WireTipoConversacionRecibido = WireTipoConversacion | (string & {});
 
+/**
+ * `SYSTEM` es el tipo `SISTEMA` del backend (`TipoMensaje`, traducido en
+ * `MensajeResponse.toWireTipo`): un mensaje que manda el PROGRAMA y no una persona, como la
+ * bienvenida del chat de soporte. Con texto o imagen se pinta como burbuja de «Formación Renaser»
+ * (`chatMappers.esMensajeDelPrograma`); vacío, como siempre («Mensaje del sistema»).
+ */
 export type WireTipoMensaje = 'TEXT' | 'IMAGE' | 'AUDIO' | 'VIDEO' | 'SYSTEM';
 
 /**
@@ -79,7 +85,12 @@ export interface WireReplyPreview {
 export interface WireMensaje {
   id: string;
   conversationId: string;
-  senderId: string;
+  /**
+   * Quién lo mandó. `null` (2026-09-27) cuando no hay una persona detrás: un mensaje del programa
+   * (`SYSTEM`) puede llegar sin emisor, vacío o sin el campo, y el esquema lo normaliza a `null`
+   * en vez de rechazar la página entera. Ver `chatSchemas.emisorTolerante`.
+   */
+  senderId: string | null;
   senderName: string | null;
   senderAvatarUrl: string | null;
   type: WireTipoMensajeRecibido;
