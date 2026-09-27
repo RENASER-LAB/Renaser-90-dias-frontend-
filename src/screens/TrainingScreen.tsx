@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Switch, Platform } from 'react-native';
 import { Alert } from '../components/Alerta';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -228,7 +228,10 @@ export default function TrainingScreen() {
 
   const [habits, setHabits] = useState<HabitItem[]>([]);
   const [planHabits, setPlanHabits] = useState<HabitItem[]>([]);
-  useEffect(() => {
+  // useLayoutEffect y no useEffect (e2e del 26/09): con useEffect había un cuadro ya sin
+  // esqueleto y todavía sin hábitos, y las cinco dimensiones decían «0/0 CUMPLIDOS» hasta un
+  // segundo en un teléfono lento — parecía que se había perdido lo del día.
+  useLayoutEffect(() => {
     if (!cargandoBackend && !errorBackend) {
       setHabits(habitsDelBackend);
       setPlanHabits(planHabitsDelBackend);
