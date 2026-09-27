@@ -103,7 +103,7 @@ export function DetalleDelEvento({
           {vas ? (
             <BotonSecundario etiqueta="Voy" icono="check" deshabilitado estilo={estilos.mitad} onPress={() => {}} />
           ) : (
-            <BotonPrincipal etiqueta="Voy" icono="check" cargando={enviando} estilo={estilos.mitad} onPress={() => onResponder('GOING')} />
+            <BotonPrincipal etiqueta="Voy" cargando={enviando} estilo={estilos.mitad} onPress={() => onResponder('GOING')} />
           )}
           <BotonSecundario
             etiqueta="No voy"
