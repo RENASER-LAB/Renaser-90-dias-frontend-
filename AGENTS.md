@@ -15,6 +15,33 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
   * `data/`: Constantes, cláusulas, configuraciones estáticas.
 * **Componentes de UI Atómicos**: Utiliza componentes compartidos bajo `src/components/` (`FormField`, `GoldButton`, `SliderRating`, `Checkbox`, `SignatureCanvas`, `Icon`).
 * **Integridad del Core**: NUNCA alterar, romper ni desconfigurar las pantallas existentes ni los tabs principales (`Hoy`, `Plan`, `Training`, `Comunidad`, `Yo`).
+  * **Excepción autorizada por el dueño del producto — 2026-09-26 — tab `Comunidad`, pestaña
+    *Tribu* y chat (dos pedidos del dueño de ese día).** Lo que cambia y nada más:
+    * **Bug «no carga los integrantes».** Un mentor que lidera un grupo entraba a Tribu y leía
+      «Todavía no tienes un mentor asignado» y «Todavía no tienes integrantes en tu grupo» debajo de
+      su propio grupo. La tarjeta salía SOLO de `/me/cell` y `/me/cell/members`, que responden «¿de
+      qué grupo soy aprendiz?» y a un mentor le dicen que de ninguno. Ahora
+      (`community/utils/tarjetaDeTribu.ts`): quien es aprendiz de un grupo sigue igual; si no, la
+      tarjeta usa sus grupos de `/me/cells` (que ya incluye los que acompaña) y los integrantes de
+      ESE grupo (`/me/cells/{id}/members`), con fichas para elegir si son varios; el bloque del
+      mentor solo se muestra a aprendices. La info de un chat que no es de grupo (1 a 1, soporte,
+      comunidad) ya no muestra el grupo principal: muestra lo suyo, sin lista de integrantes.
+    * **Chat estilo WhatsApp** (patrones, no la marca ni su verde): filas de chat con avatar redondo
+      (foto o iniciales; grupos, comunidad y soporte con el sello del programa, una «R» de la marca
+      sobre dorado, porque en `assets/` no hay logo de Renaser), último mensaje en una línea
+      («Tú: …», «📷 Foto», «🎤 Audio»), hora a la derecha («21:04», «Ayer», «lun») y no leídos en
+      un círculo dorado. **Las dos secciones («Formación Renaser» y «Directos») se ordenan por el
+      último mensaje**: el orden fijo de grupos del 2026-09-22 queda reemplazado. Conversación con
+      burbujas con cola (propias a la derecha en dorado suave, ajenas a la izquierda en blanco),
+      hora dentro, separadores «Hoy» / «Ayer» / «25 de septiembre», nombre en color en los grupos,
+      tandas del mismo remitente, foto dentro de la burbuja, y una barra con campo redondeado
+      (evidencia y cámara adentro) y un botón redondo que es micrófono o enviar. Cabecera con
+      avatar, nombre y «Grupo · N integrantes» / «Aprendiz · 1 a 1» / «En línea»; tocarla abre la
+      info. Las marcas de los propios pasan de «✓✓» a «✓»: el backend no informa entrega ni lectura.
+      Todo en `features/chat/components/` y `features/chat/utils/formatoChat.ts`; envío, fotos,
+      audios, evidencia, tiempo real y la tarjeta de bienvenida siguen por el mismo camino.
+    Una excepción puntual **no abre** el tab: cualquier otro cambio sobre los cinco principales
+    vuelve a necesitar autorización explícita.
   * **Excepción autorizada por el dueño del producto — 2026-09-26 — tabs `Yo` y `Plan`, aviso con
     voz y recordatorios de las acciones de los objetivos (decisiones del dueño de ese día).** Lo que
     cambia y nada más:
@@ -331,6 +358,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       general (`GLOBAL`), el de su mentor (`CELULA`) y el de soporte (`SOPORTE`). Orden fijo, no el
       del servidor: son tres destinos que se miran todos los días y tienen que estar siempre en el
       mismo lugar.
+      > **Corregido 2026-09-26.** El orden fijo se reemplazó por el del último mensaje, a pedido del
+      > dueño (chat estilo WhatsApp); ver la excepción de ese día, más arriba.
     * **Se eliminó el conmutador `DIRECTOS | GLOBAL`** y su estado `tribuTab`. Ya no hay nada que
       conmutar: se ven las dos listas a la vez, grupos arriba y 1 a 1 abajo, bajo el rótulo
       **“Directos”**.

@@ -41,6 +41,7 @@ import { useGruposDelAprendiz, useIntegrantesDelGrupo } from '../features/commun
 import { useMiCelula } from '../features/community/hooks/useMiCelula';
 import { TextoConEnlaces } from '../features/academy/components/TextoConEnlaces';
 import { nombreVisibleDeGrupo } from '../features/community/utils/nombreDeGrupo';
+import { decidirTarjetaDeTribu } from '../features/community/utils/tarjetaDeTribu';
 import { useCategoriasMuro } from '../features/community/hooks/useCategoriasMuro';
 import {
   acumularRecursos,
@@ -68,9 +69,19 @@ import { LeccionVideoPlayer } from '../features/academy/components/LeccionVideoP
 import { useChatConversaciones } from '../features/chat/hooks/useChatConversaciones';
 import { useChatEnVivo } from '../features/chat/hooks/useChatEnVivo';
 import { useEnvioMediaChat } from '../features/chat/hooks/useEnvioMediaChat';
-import { BurbujaAudioChat } from '../features/chat/components/BurbujaAudioChat';
+import { BurbujaDeMensaje } from '../features/chat/components/BurbujaDeMensaje';
+import { CabeceraDeChat } from '../features/chat/components/CabeceraDeChat';
+import { coloresDelChat } from '../features/chat/components/coloresDelChat';
+import { FilaDeConversacion } from '../features/chat/components/FilaDeConversacion';
+import { SeparadorDeDia } from '../features/chat/components/SeparadorDeDia';
+import { AvatarDeChat } from '../features/chat/components/AvatarDeChat';
+import {
+  agruparMensajes,
+  ordenarPorActividad,
+  subtituloDeLaCabecera,
+} from '../features/chat/utils/formatoChat';
 import { EvidenciaDesdeChatModal } from '../features/habits/components/EvidenciaDesdeChatModal';
-import { mapearMensaje } from '../features/chat/api/chatMappers';
+import { mapearMensaje, resumenDelUltimoMensaje } from '../features/chat/api/chatMappers';
 import { abrirConversacionDirecta } from '../features/chat/api/chatApi';
 import type { WireMensaje } from '../features/chat/types/chat.types';
 import { marcarChatMontado } from '../features/renasia/state/chatEnPantalla';
@@ -260,6 +271,12 @@ export interface ChatMessage {
    * `<Image>` o al reproductor: la ruta cruda de S3 que se guarda en la base no se puede abrir. */
   mediaUrl?: string;
   status?: 'sent' | 'delivered' | 'read';
+  /* Chat estilo WhatsApp (2026-09-26): la fecha real del mensaje, para los separadores de día y
+     para agrupar tandas; y quién lo mandó, para el color del nombre en los grupos. Opcionales
+     porque un mensaje armado a mano (el 1 a 1 local de `handleStartDirectChat`) no los tiene. */
+  createdAt?: string;
+  senderId?: string;
+  senderAvatarUrl?: string | null;
 }
 
 export interface ChatConversation {
@@ -288,6 +305,13 @@ export interface ChatConversation {
   membersCount?: number;
   isOnline?: boolean;
   messages: ChatMessage[];
+  /* Chat estilo WhatsApp (2026-09-26). Todo sale de `GET /chat/conversations`, que ya lo mandaba:
+     la fecha del último mensaje (hora de la fila y orden de la lista), la de creación (orden de
+     una conversación sin mensajes) y la foto del otro en un 1 a 1. `lastMessage` pasa a ser la
+     vista previa ya armada («Tú: …», «📷 Foto»), ver `formatoChat.vistaPreviaDelMensaje`. */
+  lastMessageAt?: string | null;
+  createdAt?: string | null;
+  avatarUrl?: string | null;
 }
 
 export interface GroupMember {
@@ -440,25 +464,65 @@ export default function ComunidadScreen() {
   /* Todos los grupos de la persona, para poder responder por el que tenga abierto y no siempre por
      el principal (D-142). `useMiCelula` sigue alimentando la sección MENTOR / TRIBU de la pantalla
      principal, que habla de UN grupo y para eso es correcto. */
-  const { grupos } = useGruposDelAprendiz(recursosPedidos.grupos);
-  const tieneMentor = miCelula?.assigned === true && !!miCelula.mentorName;
-  const mentorTitulo = celulaCargando
+  const { grupos, cargandoGrupos } = useGruposDelAprendiz(recursosPedidos.grupos);
+
+  /*
+   * La tarjeta «Tu tribu» (corregido 2026-09-26). Antes salía SOLO de `useMiCelula`, que a un
+   * mentor le responde «no eres aprendiz de ningún grupo»: veía «Todavía no tienes un mentor
+   * asignado» y «Todavía no tienes integrantes» debajo de su propio grupo. Ahora, si la persona no
+   * es aprendiz de un grupo, la tarjeta usa sus grupos de `/me/cells` y los integrantes de ESE
+   * grupo; y el bloque del mentor solo se muestra a aprendices. Ver `utils/tarjetaDeTribu.ts`.
+   */
+  const [grupoDeTribuElegido, setGrupoDeTribuElegido] = useState<string | null>(null);
+  const tarjetaDeTribu = useMemo(
+    () =>
+      decidirTarjetaDeTribu({
+        rol: user?.role,
+        miCelula,
+        grupos,
+        gruposCargando: cargandoGrupos,
+        grupoElegidoId: grupoDeTribuElegido,
+      }),
+    [user?.role, miCelula, grupos, cargandoGrupos, grupoDeTribuElegido]
+  );
+  const celulaDeLaTarjeta = tarjetaDeTribu.grupo.fuente === 'mis-grupos' ? tarjetaDeTribu.grupo.celula : null;
+  const {
+    integrantes: integrantesDeLaTarjeta,
+    cargando: integrantesDeLaTarjetaCargando,
+    error: integrantesDeLaTarjetaError,
+  } = useIntegrantesDelGrupo(celulaDeLaTarjeta?.cellId ?? null);
+  /* La gente, el estado de carga y el error de la tarjeta, vengan de donde vengan. */
+  const companerosDeLaTarjeta = celulaDeLaTarjeta ? integrantesDeLaTarjeta : companerosCelula;
+  /* Sin grupo resuelto todavía y sin error de `/me/cell`: sigue cargando. Con error, se dice. */
+  const tarjetaEsperando = tarjetaDeTribu.grupo.fuente === 'cargando' && !celulaError;
+  const tribuCargando = celulaDeLaTarjeta ? integrantesDeLaTarjetaCargando : tarjetaEsperando || celulaCargando;
+  const tribuError = celulaDeLaTarjeta ? integrantesDeLaTarjetaError : celulaError;
+  const mentorCargando = !celulaDeLaTarjeta && (tarjetaEsperando || celulaCargando);
+  const mentorError = celulaDeLaTarjeta ? null : celulaError;
+  const mentorDeLaTarjeta = celulaDeLaTarjeta
+    ? { nombre: celulaDeLaTarjeta.mentorName, avatarUrl: celulaDeLaTarjeta.mentorAvatarUrl }
+    : miCelula?.assigned === true
+      ? { nombre: miCelula.mentorName, avatarUrl: miCelula.mentorAvatarUrl }
+      : { nombre: null, avatarUrl: null };
+
+  const tieneMentor = !!mentorDeLaTarjeta.nombre;
+  const mentorTitulo = mentorCargando
     ? 'Cargando tu mentor...'
-    : celulaError
+    : mentorError
       ? 'No pudimos cargar tu mentor'
-      : tieneMentor && miCelula?.assigned === true
-        ? miCelula.mentorName!
+      : tieneMentor
+        ? mentorDeLaTarjeta.nombre!
         : 'Todavía no tienes un mentor asignado';
   const mentorSubtitulo = tieneMentor ? 'Mentor de tu grupo' : null;
   const mentorNota =
-    celulaCargando || celulaError
+    mentorCargando || mentorError
       ? null
       : tieneMentor
         ? 'Escríbele para coordinar tu próxima sesión.'
         : 'Te avisaremos apenas se te asigne uno.';
   const TRIBU_AVATARES_VISIBLES = 4;
-  const tribuVisibles = companerosCelula.slice(0, TRIBU_AVATARES_VISIBLES);
-  const tribuRestantes = Math.max(companerosCelula.length - TRIBU_AVATARES_VISIBLES, 0);
+  const tribuVisibles = companerosDeLaTarjeta.slice(0, TRIBU_AVATARES_VISIBLES);
+  const tribuRestantes = Math.max(companerosDeLaTarjeta.length - TRIBU_AVATARES_VISIBLES, 0);
 
   /* Estas dos viven acá arriba, y no con el resto del estado de navegación, porque el bloque de
      abajo las lee: `const` no se puede usar antes de su declaración. */
@@ -515,20 +579,28 @@ export default function ComunidadScreen() {
    */
   const integrantesDelGrupo = useMemo(() => {
     const filas: IntegranteDeGrupo[] = [];
-    const mentorNombre = grupoAbierto ? grupoAbierto.mentorName : (miCelula?.assigned === true ? miCelula.mentorName : null);
-    const mentorAvatar = grupoAbierto ? grupoAbierto.mentorAvatarUrl : (miCelula?.assigned === true ? miCelula.mentorAvatarUrl : null);
+    /* Sin chat abierto cae al grupo de la tarjeta de Tribu (corregido 2026-09-26: antes caía
+       siempre a `useMiCelula`, vacío para un mentor). */
+    /* Con un chat de grupo abierto manda SU `celulaId`: los integrantes se piden por ese id aunque
+       `/me/cells` todavía no lo haya resuelto, en vez de caer a los de otro grupo. */
+    const mentorNombre = celulaIdAbierto ? grupoAbierto?.mentorName ?? null : mentorDeLaTarjeta.nombre;
+    const mentorAvatar = celulaIdAbierto ? grupoAbierto?.mentorAvatarUrl ?? null : mentorDeLaTarjeta.avatarUrl;
     if (mentorNombre) {
       filas.push({ id: 'mentor', nombre: mentorNombre, avatarUrl: mentorAvatar, badge: 'MENTOR', chateable: false });
     }
-    for (const m of grupoAbierto ? integrantesDelGrupoAbierto : companerosCelula) {
+    for (const m of celulaIdAbierto ? integrantesDelGrupoAbierto : companerosDeLaTarjeta) {
       filas.push({ id: m.traineeId, nombre: m.fullName, avatarUrl: m.avatarUrl, badge: m.isSelf ? 'TÚ' : null, chateable: !m.isSelf });
     }
     return filas;
-  }, [grupoAbierto, integrantesDelGrupoAbierto, miCelula, companerosCelula]);
+  }, [celulaIdAbierto, grupoAbierto, integrantesDelGrupoAbierto, mentorDeLaTarjeta.nombre, mentorDeLaTarjeta.avatarUrl, companerosDeLaTarjeta]);
+  /* La info abierta es la de un chat de grupo (o, sin chat, la del grupo de la tarjeta). */
+  const infoEsDeGrupo = !activeChat || activeChat.type === 'celula';
+  /* Corregido 2026-09-26: sin `grupoAbierto` caía a `miCelula`, que puede ser OTRO grupo (y para
+     un mentor, ninguno). Ahora cae al nombre visible de la conversación abierta. */
   const nombreDelGrupo = grupoAbierto
     ? grupoAbierto.cellName
-    : miCelula?.assigned === true
-      ? miCelula.cellName
+    : activeChat
+      ? nombreVisibleDeConversacion(activeChat)
       : 'Tu grupo';
 
   /**
@@ -550,7 +622,8 @@ export default function ComunidadScreen() {
   ]
     .filter(Boolean)
     .join(' · ');
-  const grupoDelSubtitulo = grupoAbierto ?? (miCelula?.assigned === true ? miCelula : null);
+  // Sin el grupo resuelto no hay subtítulo: el de `miCelula` podía ser el de otro grupo.
+  const grupoDelSubtitulo = grupoAbierto;
   const subtituloDelGrupo = grupoDelSubtitulo
     ? `${grupoDelSubtitulo.memberCount} ${grupoDelSubtitulo.memberCount === 1 ? 'integrante' : 'integrantes'} · Cohorte ${grupoDelSubtitulo.cohortName}`
     : null;
@@ -559,11 +632,11 @@ export default function ComunidadScreen() {
      `miCelula` y no de `nombreDelGrupo`/`subtituloDelGrupo`, que miran primero al grupo de la
      conversación abierta: la tarjeta habla siempre del grupo principal, tenga o no un chat
      abierto detrás. */
-  const nombreDeMiTribu = miCelula?.assigned === true ? miCelula.cellName : null;
-  const resumenDeMiTribu =
-    miCelula?.assigned === true
-      ? `${miCelula.memberCount} ${miCelula.memberCount === 1 ? 'integrante' : 'integrantes'} · Cohorte ${miCelula.cohortName}`
-      : null;
+  const grupoDeMiTribu = celulaDeLaTarjeta ?? (miCelula?.assigned === true ? miCelula : null);
+  const nombreDeMiTribu = grupoDeMiTribu ? grupoDeMiTribu.cellName : null;
+  const resumenDeMiTribu = grupoDeMiTribu
+    ? `${grupoDeMiTribu.memberCount} ${grupoDeMiTribu.memberCount === 1 ? 'integrante' : 'integrantes'} · Cohorte ${grupoDeMiTribu.cohortName}`
+    : null;
 
   // =========================================================================
   // ESTADOS DE NAVEGACIÓN
@@ -674,6 +747,10 @@ export default function ComunidadScreen() {
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
   /** Foto de chat abierta a pantalla completa; `null` si no hay ninguna. */
   const [fotoChatAmpliada, setFotoChatAmpliada] = useState<string | null>(null);
+  /* Chat estilo WhatsApp (2026-09-26): la lista de mensajes abre en lo último, y los colores de
+     fondo y burbujas salen del tema (dorado suave / crema), no del verde de WhatsApp. */
+  const mensajesScrollRef = useRef<ScrollView>(null);
+  const paletaDelChat = useMemo(() => coloresDelChat(c, isDark), [c, isDark]);
 
   // Estados del Muro Social — `posts` sale del backend real (GET /api/v1/wall) a través de
   // `useWallFeed`; `setPosts` queda expuesto para las interacciones que el backend todavía no
@@ -1506,8 +1583,7 @@ export default function ComunidadScreen() {
       const actualizada = {
         ...prev,
         messages: [...prev.messages, mensaje],
-        lastMessage: mensaje.text || 'Elemento multimedia',
-        lastTime: mensaje.time,
+        ...resumenDelUltimoMensaje(wire, user?.id ?? null),
       };
       setConversations(anteriores =>
         anteriores.map(cItem => (cItem.id === actualizada.id ? actualizada : cItem)));
@@ -1929,11 +2005,16 @@ export default function ComunidadScreen() {
      los grupos es el de `ORDEN_GRUPOS` y no el que devuelva el servidor: es una lista de tres
      elementos que la persona va a mirar todos los días, así que tiene que estar siempre en el
      mismo lugar. Los directos sí conservan el orden del servidor, que es por actividad. */
-  const ORDEN_GRUPOS: ChatConversation['type'][] = ['global', 'celula', 'soporte'];
-  const gruposDeFormacion = conversations
-    .filter(conv => ORDEN_GRUPOS.includes(conv.type))
-    .sort((a, b) => ORDEN_GRUPOS.indexOf(a.type) - ORDEN_GRUPOS.indexOf(b.type));
-  const directos = conversations.filter(conv => conv.type === 'direct');
+  /* Corregido 2026-09-26 (chat estilo WhatsApp, pedido del dueño): acá decía que el orden de los
+     grupos era FIJO (`ORDEN_GRUPOS = ['global', 'celula', 'soporte']`) y que los directos seguían
+     el del servidor. Ahora las dos listas van por el último mensaje, lo más reciente arriba, como
+     WhatsApp; las dos secciones siguen separadas (grupos y soporte arriba, 1 a 1 abajo). */
+  const TIPOS_DE_FORMACION: ChatConversation['type'][] = ['global', 'celula', 'soporte'];
+  const gruposDeFormacion = ordenarPorActividad(conversations.filter(conv => TIPOS_DE_FORMACION.includes(conv.type)));
+  const directos = ordenarPorActividad(conversations.filter(conv => conv.type === 'direct'));
+  /* «Ahora» para las horas de la lista («21:04», «Ayer», «lun»): se toma en cada render, que es
+     cuando la lista cambia. */
+  const ahoraDeLaLista = new Date();
 
   /*
    * Lo que cada tarjeta del Muro le pide a la pantalla, en UN objeto que no cambia nunca (V-4).
@@ -3065,10 +3146,14 @@ export default function ComunidadScreen() {
                 del mentor, así que no hay DM que abrir— y una flecha que no responde al toque es
                 peor que no tenerla. Escribirle se hace por el chat del grupo, que ahora está en
                 esta misma pantalla, unos centímetros más abajo. */}
+            {/* Solo para aprendices (2026-09-26): a un mentor o al staff «Todavía no tienes un
+                mentor asignado» le decía algo falso sobre sí mismo. */}
+            {tarjetaDeTribu.mostrarMentor && (
+            <>
             <View style={styles.tribuMentor}>
               <AvatarPersona
-                nombre={tieneMentor && miCelula?.assigned === true ? miCelula.mentorName : null}
-                avatarUrl={tieneMentor && miCelula?.assigned === true ? miCelula.mentorAvatarUrl : null}
+                nombre={mentorDeLaTarjeta.nombre}
+                avatarUrl={mentorDeLaTarjeta.avatarUrl}
                 size={mentorPhoto}
               />
               <View style={{ flex: 1, minWidth: 0 }}>
@@ -3085,6 +3170,35 @@ export default function ComunidadScreen() {
             </View>
 
             <View style={[styles.tribuFilete, { backgroundColor: c.divider }]} />
+            </>
+            )}
+
+            {/* Quien está en varios grupos sin ser aprendiz de ninguno (un mentor que acompaña
+                dos) elige de cuál ver la gente. Con uno solo, no aparece nada. */}
+            {celulaDeLaTarjeta && grupos.length > 1 && (
+              <View style={styles.tribuSelectorGrupos}>
+                {grupos.map(g => {
+                  const elegido = g.cellId === celulaDeLaTarjeta.cellId;
+                  return (
+                    <Pressable
+                      key={g.cellId}
+                      onPress={() => setGrupoDeTribuElegido(g.cellId)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: elegido }}
+                      accessibilityLabel={`Ver los integrantes de ${g.cellName}`}
+                      style={[
+                        styles.tribuChipGrupo,
+                        { borderColor: elegido ? c.goldInk : c.border, backgroundColor: elegido ? c.goldWash : c.cardBg },
+                      ]}
+                    >
+                      <Text numberOfLines={1} style={[t.body, { color: elegido ? c.goldInk : c.textSoft, fontFamily: 'Jost_500Medium' }]}>
+                        {g.cellName}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
 
             {/* GRUPO + INTEGRANTES. Toda la fila es el interruptor del desplegable, no solo el
                 "VER TODOS": el área pulsable es de más de 48 px de alto y ocupa el ancho entero
@@ -3130,15 +3244,20 @@ export default function ComunidadScreen() {
                 )}
               </View>
 
-              {celulaCargando && companerosCelula.length === 0 && (
+              {tribuCargando && companerosDeLaTarjeta.length === 0 && (
                 <Text style={[t.small, { color: c.textSoft, marginTop: 8 }]}>Cargando tu tribu...</Text>
               )}
-              {!celulaCargando && !celulaError && companerosCelula.length === 0 && (
+              {!tribuCargando && tribuError && companerosDeLaTarjeta.length === 0 && (
+                <Text style={[t.small, { color: c.danger, marginTop: 8 }]}>{tribuError}</Text>
+              )}
+              {!tribuCargando && !tribuError && companerosDeLaTarjeta.length === 0 && (
                 <Text style={[t.small, { color: c.textSoft, marginTop: 8 }]}>
-                  Todavía no tienes integrantes en tu grupo.
+                  {tarjetaDeTribu.grupo.fuente === 'ninguno'
+                    ? 'Todavía no estás en ningún grupo.'
+                    : 'Todavía no tienes integrantes en tu grupo.'}
                 </Text>
               )}
-              {companerosCelula.length > 0 && (
+              {companerosDeLaTarjeta.length > 0 && (
                 <View style={styles.tribuAvatares}>
                   {tribuVisibles.map(m => (
                     <AvatarPersona key={m.traineeId} nombre={m.fullName} avatarUrl={m.avatarUrl} size={avatarSize} />
@@ -3186,11 +3305,11 @@ export default function ComunidadScreen() {
                 INTEGRANTES ({integrantesDelGrupo.length})
               </Text>
 
-              {celulaCargando && integrantesDelGrupo.length === 0 && (
+              {tribuCargando && integrantesDelGrupo.length === 0 && (
                 <Text style={[t.body, { color: c.textSoft }]}>Cargando integrantes…</Text>
               )}
-              {!celulaCargando && celulaError && (
-                <Text style={[t.body, { color: c.danger }]}>{celulaError}</Text>
+              {!tribuCargando && tribuError && (
+                <Text style={[t.body, { color: c.danger }]}>{tribuError}</Text>
               )}
 
               {integrantesDelGrupo.map(m => (
@@ -3212,11 +3331,12 @@ export default function ComunidadScreen() {
           <View style={styles.tribuConversaciones}>
             <MicroLabel>Formación Renaser</MicroLabel>
 
-            {/* Los grupos a los que la persona PERTENECE, en fila y siempre los mismos: el
-                general, el de su mentor y el de soporte. Se pintan con `entradaMentor` —la misma
-                fila dorada con chevron que usa la entrada al grupo que se acompaña— y no con la
-                tarjeta de la bandeja: son tres destinos fijos, no una lista que crece, y leerlos
-                como destinos evita que compitan visualmente con los 1 a 1 de abajo.
+            {/* Los grupos a los que la persona PERTENECE: el general, el de su mentor y el de
+                soporte.
+                > Corregido 2026-09-26. Decía que se pintaban con `entradaMentor` (fila dorada con
+                > chevron) en orden fijo, como «tres destinos». El dueño pidió la lista estilo
+                > WhatsApp: ahora son filas de chat, ordenadas por el último mensaje, y el sello
+                > del avatar distingue grupo y soporte.
 
                 No hay estado vacío por grupo: si el servidor no devolvió uno, esa fila no existe.
                 Inventar una fila apagada "Soporte (no disponible)" sería prometer un lugar al que
@@ -3226,33 +3346,17 @@ export default function ComunidadScreen() {
                 Todavía no estás en ningún grupo.
               </Text>
             )}
-            <View style={{ gap: space.gap, marginTop: space.gap }}>
+            {/* Filas estilo WhatsApp (2026-09-26): avatar del programa, último mensaje, hora y
+                no leídos. Abren el chat por el mismo camino de siempre (`handleAbrirChat`). */}
+            <View style={{ marginTop: 6 }}>
               {gruposDeFormacion.map(grupo => (
-                <Pressable
+                <FilaDeConversacion
                   key={grupo.id}
+                  conversacion={grupo}
+                  titulo={nombreVisibleDeConversacion(grupo)}
+                  ahora={ahoraDeLaLista}
                   onPress={() => handleAbrirChat(grupo)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Abrir ${nombreVisibleDeConversacion(grupo)}`}
-                  style={[styles.entradaMentor, { borderColor: c.goldInk, backgroundColor: c.goldWash }]}
-                >
-                  <Text style={{ fontSize: 18, marginRight: 10 }}>{grupo.avatar}</Text>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text numberOfLines={1} style={[t.cardTitle, { color: c.textStrong }]}>
-                      {nombreVisibleDeConversacion(grupo)}
-                    </Text>
-                    <Text numberOfLines={1} style={[t.small, { color: c.textSoft, marginTop: 2 }]}>
-                      {grupo.subtitle}
-                    </Text>
-                  </View>
-                  {grupo.unreadCount > 0 && (
-                    <View style={[styles.unreadBadgePill, { backgroundColor: c.gold, marginRight: 8 }]}>
-                      <Text style={[t.micro, styles.cifras, { color: c.onGold, fontFamily: 'Jost_700Bold' }]}>
-                        {grupo.unreadCount}
-                      </Text>
-                    </View>
-                  )}
-                  <Icon name="chevron" size={16} color={c.goldInk} />
-                </Pressable>
+                />
               ))}
             </View>
           </View>
@@ -3290,45 +3394,15 @@ export default function ComunidadScreen() {
           )}
 
           {/* Los 1 a 1. Los grupos ya salieron arriba, en Formación Renaser. */}
-          <View style={{ gap: space.gap, paddingTop: space.gap, paddingBottom: 28 }}>
+          <View style={{ paddingTop: 6, paddingBottom: 28 }}>
             {directos.map(conv => (
-              <Pressable
+              <FilaDeConversacion
                 key={conv.id}
+                conversacion={conv}
+                titulo={nombreVisibleDeConversacion(conv)}
+                ahora={ahoraDeLaLista}
                 onPress={() => handleAbrirChat(conv)}
-                style={[
-                  styles.chatConvCard,
-                  {
-                    borderColor: conv.type === 'celula' ? c.gold : c.border,
-                    backgroundColor: conv.type === 'celula' ? c.cardBgAlt : c.cardBg,
-                  },
-                ]}
-              >
-                <View style={[styles.convAvatarBox, { backgroundColor: c.goldWash }]}>
-                  <Text style={{ fontSize: 18 }}>{conv.avatar}</Text>
-                  {conv.isOnline && (
-                    <View style={[styles.onlineBadgeDot, { backgroundColor: c.success, borderColor: c.cardBg }]} />
-                  )}
-                </View>
-
-                <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                    <Text numberOfLines={1} style={[t.cardTitle, { color: c.textStrong, flex: 1 }]}>{nombreVisibleDeConversacion(conv)}</Text>
-                    <Text style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>{conv.lastTime}</Text>
-                  </View>
-                  <Text numberOfLines={1} style={[t.body, { color: c.textSoft }]}>
-                    {conv.lastMessage}
-                  </Text>
-                  <Text style={[t.small, { color: c.micro, fontSize: 12.5 }]}>
-                    {conv.subtitle}
-                  </Text>
-                </View>
-
-                {conv.unreadCount > 0 && (
-                  <View style={[styles.unreadBadgePill, { backgroundColor: c.gold }]}>
-                    <Text style={[t.micro, styles.cifras, { color: c.onGold, fontFamily: 'Jost_700Bold' }]}>{conv.unreadCount}</Text>
-                  </View>
-                )}
-              </Pressable>
+              />
             ))}
           </View>
         </ScrollView>
@@ -3357,204 +3431,72 @@ export default function ComunidadScreen() {
           viene en coordenadas de pantalla. Sin compensar esa diferencia la barra quedaba justo
           esos píxeles por debajo del borde del teclado — medio tapada.
         */
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" keyboardVerticalOffset={insets.top}>
-          {/* Header del Chat */}
-          <View style={[styles.chatRoomHeader, { borderBottomColor: c.divider, backgroundColor: c.cardBg }]}>
-            <Pressable onPress={() => setActiveChat(null)} hitSlop={8} style={{ minWidth: 48, minHeight: 48, justifyContent: 'center' }}>
-              <Icon name="arrowLeft" size={16} color={c.goldInk} />
-            </Pressable>
+        <KeyboardAvoidingView
+          style={{ flex: 1, backgroundColor: paletaDelChat.fondo }}
+          behavior="padding"
+          keyboardVerticalOffset={insets.top}
+        >
+          {/* Cabecera estilo WhatsApp (2026-09-26): avatar, nombre y «Grupo · N integrantes» /
+              «Aprendiz · 1 a 1» / «En línea». Tocarla abre la info (en un grupo, sus integrantes).
 
-            <Pressable
-              onPress={() => setGroupInfoVisible(true)}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minHeight: 48 }}
-            >
-              <View style={[styles.avatarCircle, { backgroundColor: c.goldWash }]}>
-                <Text style={{ fontSize: 14 }}>{activeChat.avatar}</Text>
-              </View>
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text numberOfLines={1} style={[t.cardTitle, { color: c.textStrong }]}>
-                  {nombreVisibleDeConversacion(activeChat)}
-                </Text>
-                {/*
-                  El "● En línea" de un 1 a 1 ahora es un dato, no un adorno: sale de
-                  `useChatEnVivo`, que lo pregunta al abrir (`GET .../presence`) y después lo
-                  mantiene al día por el socket. `participantesEnLinea` ya excluye a uno mismo
-                  —lo hace el backend—, así que en una conversación de dos, que tenga algo
-                  significa exactamente que la otra persona está conectada.
+              El «En línea» de un 1 a 1 es un dato: sale de `useChatEnVivo`, que lo pregunta al
+              abrir (`GET .../presence`) y lo mantiene por el socket; `participantesEnLinea` ya
+              excluye a uno mismo. No se dice «última vez»: esa columna nadie la escribe.
 
-                  Cuando no está conectada NO se dice "última vez": esa columna existe en la
-                  base desde la migración V1 y no la escribe nadie. Se muestra el subtítulo real
-                  de la conversación ("Mentor · 1 a 1"), que sí es cierto.
+              El número de integrantes sale del grupo de ESTA conversación (`/me/cells` cruzado por
+              `celulaId`, D-142), que incluye a los mentores; si todavía no se resolvió no se
+              inventa una cifra. */}
+          <CabeceraDeChat
+            tipo={activeChat.type}
+            titulo={nombreVisibleDeConversacion(activeChat)}
+            subtitulo={subtituloDeLaCabecera({
+              tipo: activeChat.type,
+              integrantes: grupoAbierto ? grupoAbierto.memberCount : null,
+              subtitulo: activeChat.subtitle,
+            })}
+            enLinea={activeChat.type === 'direct' && participantesEnLinea.size > 0}
+            avatarUrl={activeChat.avatarUrl}
+            onVolver={() => setActiveChat(null)}
+            onAbrirInfo={() => setGroupInfoVisible(true)}
+          />
 
-                  RESUELTO 2026-09-17 (D-142). Acá decía `"16 miembros"` FIJO, y la nota anterior
-                  explicaba por qué el intento previo se había revertido: se probó sacarlo de
-                  `useMiCelula`, que responde "¿de qué grupo soy MIEMBRO?" y a un mentor le
-                  contesta `assigned:false`, así que habría puesto el número de otro grupo. El
-                  diagnóstico era correcto y por eso el arreglo no fue insistir con ese hook: el
-                  número sale ahora del grupo de ESTA conversación (`/me/cells` cruzado por
-                  `celulaId`), que es una lectura que sí incluye a los mentores en los grupos que
-                  acompañan. Si el grupo no se puede resolver todavía —lista cargando— no se
-                  inventa una cifra: se muestra solo la invitación a abrir la info.
-                */}
-                {activeChat.type === 'celula' ? (
-                  <Text numberOfLines={1} style={[t.small, { color: c.textSoft, fontSize: 12.5 }]}>
-                    {grupoAbierto
-                      ? `${grupoAbierto.memberCount} ${grupoAbierto.memberCount === 1 ? 'integrante' : 'integrantes'} · Toca para ver info ℹ️`
-                      : 'Toca para ver info ℹ️'}
-                  </Text>
-                ) : participantesEnLinea.size > 0 ? (
-                  <Text numberOfLines={1} style={[t.small, { color: c.success, fontSize: 12.5 }]}>
-                    ● En línea
-                  </Text>
-                ) : (
-                  <Text numberOfLines={1} style={[t.small, { color: c.textSoft, fontSize: 12.5 }]}>
-                    {activeChat.subtitle}
-                  </Text>
-                )}
-              </View>
-            </Pressable>
-
-            <Pressable
-              onPress={() => setGroupInfoVisible(true)}
-              style={[styles.infoBtnPill, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
-            >
-              <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>ℹ️ INFO</Text>
-            </Pressable>
-          </View>
-
-          {/* Mensajes del Chat */}
+          {/* Mensajes estilo WhatsApp (2026-09-26): separadores de día, tandas del mismo
+              remitente (cola solo en la primera, nombre en color en los grupos) y la hora dentro
+              de la burbuja. Abre abajo, en lo último, y baja solo cuando llega o sale un mensaje. */}
           <ScrollView
+            ref={mensajesScrollRef}
             keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ padding: 14, gap: space.gap }}
+            style={{ backgroundColor: paletaDelChat.fondo }}
+            contentContainerStyle={{ paddingVertical: 10, flexGrow: 1 }}
+            onContentSizeChange={() => mensajesScrollRef.current?.scrollToEnd({ animated: false })}
             showsVerticalScrollIndicator={false}
           >
-            {/* Historial real (GET .../messages) — mismo criterio de estados que el resto de la
-                pantalla: con solo 3 conversaciones/5 mensajes en la base, el vacío es el caso
-                común, no una excepción a cubrir "por si acaso". */}
             {mensajesCargando && activeChat.messages.length === 0 && (
-              <Text style={[t.body, { color: c.textSoft }]}>
-                Cargando mensajes...
-              </Text>
+              <Text style={[styles.chatAviso, { color: c.textSoft }]}>Cargando mensajes...</Text>
             )}
             {!mensajesCargando && activeChat.messages.length === 0 && (
-              <Text style={[t.body, { color: c.textSoft }]}>
+              <Text style={[styles.chatAviso, { color: c.textSoft }]}>
                 Todavía no hay mensajes. ¡Escribe el primero!
               </Text>
             )}
 
-            {activeChat.messages.map(msg => (
-              <View
-                key={msg.id}
-                style={[
-                  styles.messageBubbleWrapper,
-                  msg.isMe ? { alignSelf: 'flex-end', alignItems: 'flex-end' } : { alignSelf: 'flex-start', alignItems: 'flex-start' },
-                ]}
-              >
-                {!msg.isMe && (
-                  <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', marginBottom: 3, paddingLeft: 4 }]}>
-                    {msg.sender} {msg.senderRole ? `(${msg.senderRole})` : ''}
-                  </Text>
-                )}
-
-                {/* Mensaje de Texto */}
-                {msg.type === 'text' && (
-                  <View
-                    style={[
-                      styles.chatBubble,
-                      {
-                        backgroundColor: msg.isMe ? c.cardBgAlt : c.cardBg,
-                        borderColor: msg.isMe ? c.gold : c.border,
-                      },
-                    ]}
-                  >
-                    <Text style={[t.body, { color: c.text }]}>
-                      {msg.text}
-                    </Text>
-                  </View>
-                )}
-
-                {/*
-                  Nota de voz. `mediaUrl` es la URL firmada que devuelve el backend; sin ella
-                  (mensajes viejos, o un adjunto que no se pudo firmar) se muestra la burbuja
-                  apagada en vez de un botón que no haría nada al tocarlo.
-                */}
-                {msg.type === 'audio' && (
-                  msg.mediaUrl ? (
-                    <BurbujaAudioChat
-                      uri={msg.mediaUrl}
-                      duracion={msg.audioDuration}
-                      esMio={msg.isMe}
-                      colores={c}
-                      estilos={{ caja: styles.audioBubbleBox, boton: styles.audioPlayBtn }}
-                      activo={playingAudioId === msg.id}
-                      alActivar={() => setPlayingAudioId(msg.id)}
-                    />
-                  ) : (
-                    <View
-                      style={[
-                        styles.audioBubbleBox,
-                        { backgroundColor: msg.isMe ? c.cardBgAlt : c.cardBg, borderColor: c.border },
-                      ]}
-                    >
-                      <View style={[styles.audioPlayBtn, { backgroundColor: c.border }]}>
-                        <Text style={{ fontSize: 11, color: c.textSoft }}>▶</Text>
-                      </View>
-                      <Text style={[t.small, { color: c.textSoft, flex: 1 }]}>
-                        Audio no disponible
-                      </Text>
-                    </View>
-                  )
-                )}
-
-                {/*
-                  Foto. Antes acá se pintaba un recuadro con el NOMBRE del archivo dentro
-                  ("📷 Evidencia_1.jpg"): no había ninguna imagen que mostrar, porque el backend
-                  devolvía la clave del objeto en S3 y no una URL que se pudiera abrir. Ahora
-                  viene `mediaUrl` ya firmada y se muestra la foto. El recuadro con texto queda
-                  solo como respaldo para los mensajes viejos, que sí tienen ese contenido.
-                */}
-                {msg.type === 'image_grid' && (
-                  <View
-                    style={[
-                      styles.chatBubble,
-                      {
-                        backgroundColor: msg.isMe ? c.cardBgAlt : c.cardBg,
-                        borderColor: msg.isMe ? c.gold : c.border,
-                        gap: 6,
-                      },
-                    ]}
-                  >
-                    {msg.mediaUrl ? (
-                      <Pressable onPress={() => setFotoChatAmpliada(msg.mediaUrl ?? null)}>
-                        <Image
-                          source={{ uri: msg.mediaUrl }}
-                          style={styles.chatFoto}
-                          resizeMode="cover"
-                          accessibilityLabel="Foto enviada por chat"
-                        />
-                      </Pressable>
-                    ) : (
-                      <View style={{ flexDirection: 'row', gap: 6 }}>
-                        {msg.mediaList?.map((m, idx) => (
-                          <View key={idx} style={[styles.chatMediaThumbnail, { backgroundColor: c.divider }]}>
-                            <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>{m}</Text>
-                          </View>
-                        ))}
-                      </View>
-                    )}
-                    {msg.text && (
-                      <Text style={[t.body, { color: c.text, marginTop: 4 }]}>{msg.text}</Text>
-                    )}
-                  </View>
-                )}
-
-                {/* Hora y Doble Check */}
-                <View style={{ flexDirection: 'row', gap: 4, alignItems: 'center', marginTop: 2, paddingHorizontal: 4 }}>
-                  <Text style={[t.micro, styles.cifras, { color: c.textSoft }]}>{msg.time}</Text>
-                  {msg.isMe && <Text style={{ color: c.goldInk, fontSize: 10.5, fontFamily: 'Jost_700Bold' }}>✓✓</Text>}
-                </View>
-              </View>
-            ))}
+            {agruparMensajes(activeChat.messages, new Date()).map(elemento =>
+              elemento.tipo === 'dia' ? (
+                <SeparadorDeDia key={elemento.clave} etiqueta={elemento.etiqueta} colores={paletaDelChat} />
+              ) : (
+                <BurbujaDeMensaje
+                  key={elemento.clave}
+                  mensaje={elemento.mensaje}
+                  enGrupo={activeChat.type !== 'direct'}
+                  primeroDeLaTanda={elemento.primeroDeLaTanda}
+                  ultimoDeLaTanda={elemento.ultimoDeLaTanda}
+                  colores={paletaDelChat}
+                  audioActivo={playingAudioId === elemento.mensaje.id}
+                  alActivarAudio={() => setPlayingAudioId(elemento.mensaje.id)}
+                  onAbrirFoto={url => setFotoChatAmpliada(url)}
+                />
+              )
+            )}
           </ScrollView>
 
           {/*
@@ -3563,84 +3505,78 @@ export default function ComunidadScreen() {
             cortar y enviar) en vez de seguir mostrando controles que en ese momento no hacen
             nada. Es lo que separa "grabar" de "escribir" sin explicárselo a nadie.
           */}
-          <View style={[styles.chatInputBar, { borderTopColor: c.divider, backgroundColor: c.cardBg }]}>
-            {grabando ? (
-              <>
-                <View style={[styles.grabandoPunto, { backgroundColor: c.danger }]} />
-                <Text style={[t.body, styles.cifras, { color: c.text, flex: 1 }]}>
-                  Grabando… {formatearSegundos(segundosGrabados)}
-                </Text>
-                <Pressable
-                  onPress={() => void alternarGrabacion()}
-                  style={[styles.sendBtnGold, { backgroundColor: c.gold }]}
-                  accessibilityLabel="Terminar y enviar la nota de voz"
-                >
-                  <Text style={{ color: c.onGold, fontFamily: 'Jost_700Bold', fontSize: 17 }}>➤</Text>
-                </Pressable>
-              </>
-            ) : (
-              <>
-                <Pressable
-                  onPress={handleAdjuntarFoto}
-                  disabled={enviandoMedia}
-                  style={[styles.mediaOptionBtn, {
-                    backgroundColor: c.goldWash,
-                    opacity: enviandoMedia ? 0.4 : 1,
-                  }]}
-                  accessibilityLabel="Enviar una foto"
-                >
-                  <Icon name="camera" size={18} color={c.goldInk} />
-                </Pressable>
-
-                {/* Acción aparte del botón de foto: acá la imagen se sella como EVIDENCIA de un
-                    hábito (otro endpoint, otro bucket, otorga puntos), no como una foto de chat. */}
-                <Pressable
-                  onPress={() => setEvidenciaVisible(true)}
-                  disabled={enviandoMedia}
-                  style={[styles.mediaOptionBtn, {
-                    backgroundColor: c.successWash,
-                    opacity: enviandoMedia ? 0.4 : 1,
-                  }]}
-                  accessibilityLabel="Subir evidencia de un hábito"
-                >
-                  <Icon name="checkCircle" size={18} color={c.success} />
-                </Pressable>
-
-                <TextInput
-                  value={chatInputText}
-                  onChangeText={setChatInputText}
-                  placeholder="Escribe un mensaje..."
-                  placeholderTextColor={c.textSoft}
-                  style={[styles.textInputChat, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.text }]}
-                />
-
-                {/*
-                  Un solo botón a la derecha, como en WhatsApp: micrófono cuando no hay nada
-                  escrito, flecha de enviar en cuanto hay texto. Así el gesto de mandar es
-                  siempre el mismo y no hay dos botones compitiendo por el mismo lugar.
-                */}
-                {chatInputText.trim() ? (
+          {/* Barra estilo WhatsApp (2026-09-26): un campo redondeado con los adjuntos adentro
+              —evidencia de un hábito y cámara/galería, los mismos de antes— y afuera un solo botón
+              redondo que es micrófono sin texto y enviar con texto. */}
+          <View style={[styles.chatInputBar, { backgroundColor: paletaDelChat.fondo }]}>
+            <View style={[styles.chatCampo, { backgroundColor: paletaDelChat.ajena, borderColor: c.border }]}>
+              {grabando ? (
+                <View style={styles.chatGrabando}>
+                  <View style={[styles.grabandoPunto, { backgroundColor: c.danger }]} />
+                  <Text style={[styles.chatTextoCampo, styles.cifras, { color: c.text }]}>
+                    Grabando… {formatearSegundos(segundosGrabados)}
+                  </Text>
+                </View>
+              ) : (
+                <>
+                  <TextInput
+                    value={chatInputText}
+                    onChangeText={setChatInputText}
+                    placeholder="Mensaje"
+                    placeholderTextColor={c.textSoft}
+                    multiline
+                    style={[styles.chatTextoCampo, styles.textInputChat, { color: c.text }]}
+                    accessibilityLabel="Escribe un mensaje"
+                  />
+                  {/* Acción aparte de la foto: acá la imagen se sella como EVIDENCIA de un hábito
+                      (otro endpoint, otro bucket, otorga puntos), no como una foto de chat. */}
                   <Pressable
-                    onPress={() => void handleEnviarTextoReal()}
-                    style={[styles.sendBtnGold, { backgroundColor: c.gold }]}
-                    accessibilityLabel="Enviar mensaje"
-                  >
-                    <Text style={{ color: c.onGold, fontFamily: 'Jost_700Bold', fontSize: 17 }}>➤</Text>
-                  </Pressable>
-                ) : (
-                  <Pressable
-                    onPress={() => void alternarGrabacion()}
+                    onPress={() => setEvidenciaVisible(true)}
                     disabled={enviandoMedia}
-                    style={[styles.sendBtnGold, {
-                      backgroundColor: c.gold,
-                      opacity: enviandoMedia ? 0.4 : 1,
-                    }]}
-                    accessibilityLabel="Grabar una nota de voz"
+                    hitSlop={4}
+                    style={[styles.mediaOptionBtn, { opacity: enviandoMedia ? 0.4 : 1 }]}
+                    accessibilityLabel="Subir evidencia de un hábito"
                   >
-                    <Icon name="volume" size={18} color={c.onGold} />
+                    <Icon name="checkCircle" size={22} color={c.success} />
                   </Pressable>
-                )}
-              </>
+                  <Pressable
+                    onPress={handleAdjuntarFoto}
+                    disabled={enviandoMedia}
+                    hitSlop={4}
+                    style={[styles.mediaOptionBtn, { opacity: enviandoMedia ? 0.4 : 1 }]}
+                    accessibilityLabel="Enviar una foto"
+                  >
+                    <Icon name="camera" size={22} color={c.goldInk} />
+                  </Pressable>
+                </>
+              )}
+            </View>
+
+            {grabando ? (
+              <Pressable
+                onPress={() => void alternarGrabacion()}
+                style={[styles.sendBtnGold, { backgroundColor: c.gold }]}
+                accessibilityLabel="Terminar y enviar la nota de voz"
+              >
+                <Icon name="send" size={22} color={c.onGold} />
+              </Pressable>
+            ) : chatInputText.trim() ? (
+              <Pressable
+                onPress={() => void handleEnviarTextoReal()}
+                style={[styles.sendBtnGold, { backgroundColor: c.gold }]}
+                accessibilityLabel="Enviar mensaje"
+              >
+                <Icon name="send" size={22} color={c.onGold} />
+              </Pressable>
+            ) : (
+              <Pressable
+                onPress={() => void alternarGrabacion()}
+                disabled={enviandoMedia}
+                style={[styles.sendBtnGold, { backgroundColor: c.gold, opacity: enviandoMedia ? 0.4 : 1 }]}
+                accessibilityLabel="Grabar una nota de voz"
+              >
+                <Icon name="mic" size={22} color={c.onGold} />
+              </Pressable>
             )}
           </View>
 
@@ -3682,28 +3618,36 @@ export default function ComunidadScreen() {
 
             <View style={[styles.categoryPillBadge, { backgroundColor: c.goldWash }]}>
               <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
-                INFO DEL GRUPO
+                {infoEsDeGrupo ? 'INFO DEL GRUPO' : activeChat?.type === 'direct' ? 'INFO DEL CONTACTO' : 'INFO DEL CHAT'}
               </Text>
             </View>
           </View>
 
+          {/* Corregido 2026-09-26: la info de un chat que NO es de grupo (1 a 1, soporte,
+              comunidad) se armaba igual con el grupo principal —nombre, cohorte e integrantes de
+              `/me/cell`—, así que tocar la cabecera del soporte mostraba «tu grupo». Ahora cada
+              conversación muestra lo suyo y la lista de integrantes es solo de los grupos. */}
           <View style={[styles.groupInfoHeaderCard, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-            <View style={[styles.groupLargeAvatar, { backgroundColor: c.goldWash }]}>
-              <Icon name="users" size={28} color={c.goldInk} />
-            </View>
+            <AvatarDeChat
+              tipo={activeChat?.type ?? 'celula'}
+              nombre={activeChat ? nombreVisibleDeConversacion(activeChat) : nombreDelGrupo}
+              avatarUrl={activeChat?.avatarUrl}
+              size={64}
+            />
             <View style={{ flex: 1, gap: 4 }}>
               <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 22, lineHeight: 28 }]}>
-                {nombreDelGrupo}
+                {activeChat && !infoEsDeGrupo ? nombreVisibleDeConversacion(activeChat) : nombreDelGrupo}
               </Text>
-              {subtituloDelGrupo && (
-                <Text style={[t.small, { color: c.goldInk }]}>
-                  {subtituloDelGrupo}
+              {(infoEsDeGrupo ? subtituloDelGrupo : activeChat?.subtitle) ? (
+                <Text style={[t.body, { color: c.goldInk }]}>
+                  {infoEsDeGrupo ? subtituloDelGrupo : activeChat?.subtitle}
                 </Text>
-              )}
+              ) : null}
             </View>
           </View>
 
-          {/* LISTA DE INTEGRANTES */}
+          {/* LISTA DE INTEGRANTES — solo en los chats de grupo. */}
+          {infoEsDeGrupo && (
           <View style={{ gap: space.gap, marginTop: space.gapLg, paddingBottom: 28 }}>
             <Text style={[t.micro, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
               INTEGRANTES DEL GRUPO ({integrantesDelGrupo.length})
@@ -3736,6 +3680,7 @@ export default function ComunidadScreen() {
               />
             ))}
           </View>
+          )}
         </ScrollView>
       )}
 
@@ -4162,6 +4107,28 @@ export default function ComunidadScreen() {
  * categoría de 25 y botones de la barra de chat de 32.
  */
 const styles = StyleSheet.create({
+  chatAviso: {
+    fontFamily: 'Jost_400Regular',
+    fontSize: 16,
+    lineHeight: 23,
+    textAlign: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+  },
+  tribuSelectorGrupos: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  tribuChipGrupo: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    minHeight: 44,
+    justifyContent: 'center',
+    maxWidth: '100%',
+  },
   // 56 px de alto: entrada principal, pulsable sin apuntar (AGENTS.md §4).
   entradaMentor: {
     flexDirection: 'row',
@@ -4453,59 +4420,6 @@ const styles = StyleSheet.create({
     borderRadius: space.radius,
     padding: space.cardPad,
   },
-  chatConvCard: {
-    borderWidth: 1,
-    borderRadius: space.radius,
-    padding: 14,
-    minHeight: 48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  /* Perdió su contorno: vivía dentro del borde de la fila. El anillo del punto de "en línea"
-     (`onlineBadgeDot`) SÍ se queda, porque no es decoración: es el recorte que separa el punto
-     del avatar, y va pintado del color del fondo. */
-  convAvatarBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  onlineBadgeDot: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    borderWidth: 1.5,
-  },
-  unreadBadgePill: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chatRoomHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-  },
-  infoBtnPill: {
-    borderWidth: 1,
-    borderRadius: space.radiusSm,
-    paddingHorizontal: 12,
-    minHeight: 48,
-    flexShrink: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   dateDividerPill: {
     borderWidth: 1,
     borderRadius: 10,
@@ -4514,45 +4428,11 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     fontFamily: 'Jost_700Bold',
   },
-  messageBubbleWrapper: {
-    maxWidth: '85%',
-  },
-  /* La burbuja conserva su borde: es un contenedor externo dentro de la lista de mensajes, y en
-     modo claro `cardBg` y el fondo de pantalla son casi el mismo color, así que sin la línea la
-     burbuja desaparecería. Lo que se fue es el borde del recuadro de adjunto que lleva adentro. */
-  chatBubble: {
-    borderWidth: 1,
-    borderRadius: space.radius,
-    padding: 12,
-  },
-  audioBubbleBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    borderWidth: 1,
-    borderRadius: space.radius,
-    padding: 12,
-    minWidth: 170,
-  },
-  audioPlayBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   /** El punto que late al lado del cronómetro mientras se graba. */
   grabandoPunto: {
     width: 9,
     height: 9,
     borderRadius: 4.5,
-  },
-  /** Foto recibida por chat. Alto fijo y `cover`: una tira de fotos de alturas distintas hace
-   * saltar el scroll cada vez que carga una, y es lo que evita WhatsApp con el mismo recurso. */
-  chatFoto: {
-    width: 200,
-    height: 200,
-    borderRadius: 12,
   },
   visorFotoFondo: {
     flex: 1,
@@ -4564,42 +4444,56 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '80%',
   },
-  chatMediaThumbnail: {
-    borderRadius: space.radiusSm,
-    padding: 10,
-    alignItems: 'center',
-  },
-  /* Los tres botones de la barra pasan de 32/34 px a 48 (AGENTS.md §4). Para que el campo de
-     escribir no se quede sin ancho en un teléfono de 360 px, el respiro entre ellos baja de 6 a 4
-     y el lateral de la barra de 10 a 8: se recuperan 10 px de los ~44 que cuesta agrandarlos. */
+  /* Barra de escribir estilo WhatsApp (2026-09-26). Los botones siguen en ≥ 44–52 px de toque
+     (AGENTS.md §4); los adjuntos viven dentro del campo para que el texto tenga todo el ancho. */
   chatInputBar: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+    alignItems: 'flex-end',
+    gap: 6,
     paddingHorizontal: 8,
     paddingVertical: 8,
-    borderTopWidth: 1,
+  },
+  /* El campo redondeado de WhatsApp: el texto crece hasta ~5 renglones y los adjuntos quedan
+     adentro, a la derecha. */
+  chatCampo: {
+    flex: 1,
+    minHeight: 52,
+    borderRadius: 26,
+    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    paddingLeft: 16,
+    paddingRight: 2,
+  },
+  chatGrabando: {
+    flex: 1,
+    minHeight: 50,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  chatTextoCampo: {
+    fontFamily: 'Jost_400Regular',
+    fontSize: 17,
   },
   mediaOptionBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 50,
     alignItems: 'center',
     justifyContent: 'center',
   },
   textInputChat: {
     flex: 1,
-    borderWidth: 1,
-    borderRadius: space.radiusSm,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    minHeight: 48,
-    fontSize: 15,
+    minHeight: 50,
+    maxHeight: 130,
+    paddingTop: 13,
+    paddingBottom: 13,
+    textAlignVertical: 'center',
   },
   sendBtnGold: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -4612,13 +4506,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 14,
     marginTop: 10,
-  },
-  groupLargeAvatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   modalOverlay: {
     flex: 1,
