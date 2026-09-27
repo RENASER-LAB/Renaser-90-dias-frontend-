@@ -50,8 +50,6 @@ export function TerminosScreen({
     }
   }, [savedSignature]);
 
-  const canContinue = accepted && hasSigned;
-
   const handleSignatureChange = (valid: boolean, sigData: SignatureData) => {
     setHasSigned(valid);
     setSignature(valid ? sigData : null);
@@ -225,11 +223,13 @@ export function TerminosScreen({
           subtitle="Este es un compromiso legal y ético entre tú y el sistema Renaser."
         />
 
-        {/* Continue Action */}
+        {/* Continue Action. Encendido siempre, como en los otros capítulos: si falta la casilla o la
+            firma, al tocarlo se dice cuál («Aceptación requerida» / «Firma requerida») y el recuadro
+            de la firma se marca. Antes quedaba apagado hasta tener las dos, sin decir qué faltaba, y
+            esas dos alertas nunca llegaban a salir (ONB-02, e2e web del 2026-09-27). */}
         <GoldButton
           label="CONTINUAR"
           onPress={handleContinue}
-          disabled={!canContinue}
           loading={guardando}
           icon="arrow"
           style={{ marginTop: 4, marginBottom: 16 }}

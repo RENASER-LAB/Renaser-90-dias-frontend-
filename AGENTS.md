@@ -378,6 +378,33 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     de Administración no suma secciones (A-3): solo el detalle de «Más opciones» la nombra. Lógica en
     `admin/utils/bienvenida.ts`, `portadaCandidata.ts` y `tarjetaDeMuestra.ts`. Nada más de `Hoy`
     cambia.
+  * **Arreglos del e2e web del 2026-09-27 — tabs `Comunidad` (Classroom) y `Training`, onboarding y
+    Administración (pedido del coordinador sobre los hallazgos TRB-04, TRN-02, PLN-02, PLN-03, ONB-02
+    y ADM-01).** Lo que cambia y nada más:
+    * **Classroom (TRB-04).** Al marcar una lección como completada ya no sale «Lección no disponible
+      🔒» nombrando la lección recién completada, y la siguiente se abre de verdad (antes no se abría,
+      aunque el aviso decía «Avanzando a: …»). La regla secuencial es la misma
+      (`academy/utils/progresionDeLecciones.ts`): solo cuenta como completada la lección que el
+      servidor acaba de dar por completada, aunque la pantalla todavía no se haya enterado.
+    * **`Training` (TRN-02).** Un doble toque en Despertar/Dormir o en un hábito sin evidencia manda un
+      solo cierre, y un 409 «Este registro no puede completarse: COMPLETADO» se toma como ya registrado,
+      sin alerta (`habits/utils/cierreDeRegistro.ts`). Tocar la tarjeta o «VER» de un Despertar ya
+      cumplido dice «Ya está cumplido / Este hábito ya quedó registrado hoy.» en vez de pedir el cierre
+      otra vez. Los demás errores se avisan igual.
+    * **`Training` → «PLANIFICAR» (PLN-03 y PLN-02).** El interruptor de pausa y el candado van al lado
+      de la parte de la fila que abre el editor, no adentro: en la web, tocar el interruptor abría
+      también el editor. Se ve igual. El editor de un hábito con un cambio de hora ya guardado que rige
+      desde mañana (D-91) muestra, bajo «Ahora: 09:00», «Desde el lunes 28 de septiembre: 09:30» (la
+      frase de la tarjeta de Plan, a 16 px, solo cuando hay un cambio pendiente), y la rueda arranca en
+      la hora que va a regir: arrancar en la de hoy y guardar sin moverla deshacía el cambio
+      (`training/utils/horaDelEditor.ts`).
+    * **Onboarding → Términos (ONB-02).** «CONTINUAR» ya no queda apagado hasta tener la casilla y la
+      firma: al tocarlo dice cuál falta, con las alertas que ya existían y nunca salían.
+    * **Administración → «¿A quién atiendo hoy?» (ADM-01).** La etiqueta del lector de pantalla ya no
+      repite «Grupo» («Grupo Grupo Plan E2E», «Grupo Sin grupo»); lo que se ve no cambia
+      (`admin/utils/etiquetaDeAtencion.ts`).
+    Una excepción puntual **no abre** los tabs: cualquier otro cambio sobre los cinco principales
+    vuelve a necesitar autorización explícita.
   * **Excepción autorizada por el dueño del producto — 2026-09-26 — tab `Hoy`, tarjetas del mentor
     y de administración (retroalimentación del 26/09, spec `docs/specs/RETROALIMENTACION_2026-09-26.md`
     del backend, S-1, S-6 y A-1).** Lo único que cambia en `Hoy`:

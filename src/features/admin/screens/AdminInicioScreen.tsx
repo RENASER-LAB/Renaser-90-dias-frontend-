@@ -13,6 +13,7 @@ import { EtiquetaSemaforo } from '../../semaforo/components/EtiquetaSemaforo';
 import { palabraParaQuienAcompana } from '../../semaforo/utils/ayudaDelSemaforo';
 import { textoDiasConDatos } from '../../semaforo/utils/lecturaDelSemaforo';
 import { useAQuienAtiendoHoy } from '../hooks/useAQuienAtiendoHoy';
+import { etiquetaDeLaFilaDeAtencion } from '../utils/etiquetaDeAtencion';
 import type { PersonaDeFicha, SeccionAdmin } from '../types/admin.types';
 import { usePendientesAdmin } from '../hooks/usePendientesAdmin';
 
@@ -222,9 +223,7 @@ function AQuienAtiendoHoy({ onAbrirFicha }: { onAbrirFicha: (persona: PersonaDeF
                 key={p.aprendizId}
                 onPress={() => onAbrirFicha({ id: p.aprendizId, fullName: p.nombre, cellId: p.grupoId })}
                 accessibilityRole="button"
-                accessibilityLabel={`${nombre}. ${palabra}.${dias ? ` ${dias}.` : ''} ${
-                  p.grupoNombre ? `Grupo ${p.grupoNombre}.` : ''
-                } Abrir su ficha.`}
+                accessibilityLabel={etiquetaDeLaFilaDeAtencion({ nombre, palabra, dias, grupoNombre: p.grupoNombre })}
                 style={({ pressed }) => [
                   estilos.persona,
                   { borderTopColor: c.divider, borderTopWidth: i === 0 ? 0 : 1 },

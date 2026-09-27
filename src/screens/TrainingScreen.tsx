@@ -19,6 +19,7 @@ import { preguntaQueSintio } from '../features/habits/utils/registroConFoto';
 import { sellarRocaDiaria } from '../features/objetivos/utils/sellarRocaDiaria';
 import { PlanificarDimensionModal } from '../features/training/components/PlanificarDimensionModal';
 import { completarRegistro, confirmarEvidencia } from '../features/habits/api/evidenciaHabitoApi';
+import { crearCierreSinRepetir } from '../features/habits/utils/cierreDeRegistro';
 import { mensajeDeError } from '../services/http/apiClient';
 import { CLAVE_SISTEMA_PASTILLA_RENACER } from '../features/spirit/api/spiritApi';
 import { escucharPostDiarioCerrado } from '../features/habits/events/avisoPostDiarioCerrado';
@@ -258,6 +259,14 @@ export default function TrainingScreen() {
     void recargarEntrenamiento();
   };
 
+  /**
+   * El `/complete` de los cierres directos (Despertar/Dormir y los que no exigen evidencia), UNA vez
+   * por registro aunque lo toquen dos: como la tarjeta no se marca hasta que el servidor confirma,
+   * el segundo toque la veía pendiente y mandaba otro pedido, que volvía con un 409 mostrado como
+   * error (TRN-02, e2e web del 2026-09-27). Ver `cierreDeRegistro.ts`.
+   */
+  const [cerrarUnaVez] = useState(() => crearCierreSinRepetir(id => completarRegistro(id, null)));
+
   // El habito de post diario lo cierra el compositor del Muro, en OTRA pestana (E-117). Sin esto,
   // la persona lee "hábito completado" alla y vuelve a encontrar la tarjeta sin tildar, porque
   // `useTraining` carga una sola vez al montarse. No se marca nada a mano: se recarga del backend,
@@ -485,11 +494,19 @@ export default function TrainingScreen() {
    * tarjeta se marca cuando el backend confirma y un refresco silencioso trae el resto; el
    * backend es ademas quien calcula los puntos con
    * la hora real del servidor (no la del telefono).
+   *
+   * Ya cumplido, no se vuelve a pedir: tocar la tarjeta o «VER» de un Despertar hecho llegaba acá y
+   * terminaba en el mismo 409 que el doble toque (TRN-02).
    */
   const registrarSoloHora = async (habit: HabitItem) => {
+    if (habit.done) {
+      Alert.alert('Ya está cumplido', 'Este hábito ya quedó registrado hoy.');
+      return;
+    }
     try {
-      await completarRegistro(habit.id, null);
-      reflejarCierreConfirmado(habit.id);
+      const resultado = await cerrarUnaVez(habit.id);
+      // `en-curso` = el primer toque todavía está en camino, y es el que marca la tarjeta.
+      if (resultado !== 'en-curso') reflejarCierreConfirmado(habit.id);
     } catch (e) {
       Alert.alert('No pudimos registrar la hora', mensajeDeError(e, 'Intenta de nuevo en unos segundos.'));
     }
@@ -542,8 +559,9 @@ export default function TrainingScreen() {
    */
   const completarHabitoSimple = async (habit: HabitItem) => {
     try {
-      await completarRegistro(habit.id, null);
-      reflejarCierreConfirmado(habit.id);
+      const resultado = await cerrarUnaVez(habit.id);
+      // Mismo doble toque que Despertar (TRN-02): el segundo no sale ni avisa un error falso.
+      if (resultado !== 'en-curso') reflejarCierreConfirmado(habit.id);
     } catch (e) {
       Alert.alert('No pudimos marcarlo', mensajeDeError(e, 'Intenta de nuevo en unos segundos.'));
     }
