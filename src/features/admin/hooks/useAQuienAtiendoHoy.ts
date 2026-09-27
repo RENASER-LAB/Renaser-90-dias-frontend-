@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { falloDeLectura, obtenerResumenPorGrupos, obtenerSemaforoDelGrupo } from '../../semaforo/api/semaforoApi';
+import {
+  esNoDisponible,
+  falloDeLectura,
+  obtenerAtencionDelSemaforo,
+  obtenerResumenPorGrupos,
+  obtenerSemaforoDelGrupo,
+} from '../../semaforo/api/semaforoApi';
 import type { FalloSemaforo } from '../../semaforo/hooks/useMiSemaforo';
 import type { SemaforoDelGrupo } from '../../semaforo/types/semaforo.types';
 import { aQuienAtenderHoy, gruposConAyuda, type PersonaParaAtender } from '../../semaforo/utils/ayudaDelSemaforo';
@@ -12,7 +18,16 @@ const EN_PARALELO = 4;
  * «¿A quién atiendo hoy?» (26/09, S-4): las personas en rojo o amarillo de TODOS los grupos, arriba
  * de Administración.
  *
- * Cero endpoints nuevos: primero el resumen por grupos (`GET /api/v1/semaforo/groups`, sin nombres) y
+ * **Desde el 26/09 (tarde) la lista sale de UNA lectura**, `GET /api/v1/admin/semaforo/atencion`
+ * (contrato §4.6): parte del padrón, así que incluye la recepción, los grupos sin mentor y a quien no
+ * está en ningún grupo — lo que el camino de abajo no podía ver. Los colores y las palabras del
+ * semáforo no cambian (decisión del dueño): la fila se pinta igual.
+ *
+ * Si ese endpoint responde **404** (un APK nuevo contra un backend anterior), se cae al camino de
+ * antes, grupo por grupo. Con 403 no se reintenta por otro lado: la cuenta no puede verlo y la sección
+ * se oculta, igual que antes.
+ *
+ * El camino de antes: primero el resumen por grupos (`GET /api/v1/semaforo/groups`, sin nombres) y
  * después la tabla CON nombres (`GET /api/v1/admin/semaforo/groups/{g}`) **solo de los grupos que
  * tienen a alguien en rojo o amarillo**. Un grupo que va bien no cuesta una petición.
  *
@@ -67,7 +82,17 @@ export function useAQuienAtiendoHoy(activo = true) {
   return { personas, cargando, fallo, oculta, gruposSinLeer, recargar };
 }
 
-async function leerTodo(): Promise<{ personas: PersonaParaAtender[]; gruposSinLeer: number }> {
+export async function leerTodo(): Promise<{ personas: PersonaParaAtender[]; gruposSinLeer: number }> {
+  try {
+    return { personas: await obtenerAtencionDelSemaforo(), gruposSinLeer: 0 };
+  } catch (e) {
+    if (!esNoDisponible(e)) throw e;
+  }
+  return leerGrupoPorGrupo();
+}
+
+/** El camino de antes del endpoint §4.6: resumen por grupos + la tabla de cada grupo con ayuda. */
+async function leerGrupoPorGrupo(): Promise<{ personas: PersonaParaAtender[]; gruposSinLeer: number }> {
   const resumen = await obtenerResumenPorGrupos();
   const aLeer = gruposConAyuda(resumen.grupos);
   const tablas: Array<{ grupoId: string; grupoNombre: string | null; aprendices: SemaforoDelGrupo['aprendices'] }> = [];

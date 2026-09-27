@@ -261,6 +261,31 @@ const resumenPorGruposSchema = z
   })
   .passthrough();
 
+/**
+ * «¿A quién atiendo hoy?» (§4.6, S-4): cada persona en rojo o amarillo del padrón, con los grupos que
+ * están corriendo donde está. `grupos: []` = en ningún grupo. Mismo formato de fila que la tabla de un
+ * grupo, más `grupos`.
+ */
+const grupoDeLaPersonaSchema = z
+  .object({
+    grupoId: z.string(),
+    grupoNombre: z.string().nullish(),
+    recepcion: z.boolean().nullish(),
+    mentorNombre: z.string().nullish(),
+  })
+  .passthrough();
+
+const atencionSchema = z
+  .object({
+    desde: z.string().nullish(),
+    hasta: z.string().nullish(),
+    cerrada: z.boolean().nullish(),
+    aprendices: z.array(aprendizDelGrupoSchema.extend({ grupos: z.array(grupoDeLaPersonaSchema).nullish() })).nullish(),
+  })
+  .passthrough();
+
+export type AtencionCruda = z.infer<typeof atencionSchema>;
+
 export type SemaforoDeHoyCrudo = z.infer<typeof semaforoDeHoySchema>;
 type DetalleCrudo = z.infer<typeof detalleSchema>;
 type DiaCrudo = z.infer<typeof diaSchema>;
@@ -277,6 +302,7 @@ export const semaforoSchemas = {
   deHoy: semaforoDeHoySchema,
   grupo: grupoSchema,
   grupos: resumenPorGruposSchema,
+  atencion: atencionSchema,
 };
 
 // ------------------------------------------------------------------------------------------

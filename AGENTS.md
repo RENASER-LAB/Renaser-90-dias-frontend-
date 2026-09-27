@@ -15,6 +15,34 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
   * `data/`: Constantes, cláusulas, configuraciones estáticas.
 * **Componentes de UI Atómicos**: Utiliza componentes compartidos bajo `src/components/` (`FormField`, `GoldButton`, `SliderRating`, `Checkbox`, `SignatureCanvas`, `Icon`).
 * **Integridad del Core**: NUNCA alterar, romper ni desconfigurar las pantallas existentes ni los tabs principales (`Hoy`, `Plan`, `Training`, `Comunidad`, `Yo`).
+  * **Excepción autorizada por el dueño del producto — 2026-09-26 — tabs `Comunidad`, `Yo` y
+    `Plan`, eventos, avisos y alarmas (E-4 a E-10 de `docs/specs/RETROALIMENTACION_2026-09-26.md`
+    del backend, y §9 con las decisiones del dueño de ese día).** Lo que cambia y nada más:
+    * **`Comunidad` — sección nueva «Eventos»** (segunda medalla, al lado del Muro; decisión del
+      dueño: los eventos se ven sobre todo acá). Todo vive en `features/eventos/`
+      (`SeccionEventos`): los próximos 30 días, el detalle con «Voy» / «No voy» y un botón grande
+      «Unirme» si el evento trae un link `https://` (Meet, Zoom o Drive, pegado por quien lo crea; sin
+      OAuth), el formulario mínimo para crear, editar y cancelar (solo `ADMIN` y `ALCHEMIST`; el
+      servidor vuelve a autorizar) y «Mi agenda» (7 días con eventos, hábitos con hora y acciones).
+      En `ComunidadScreen.tsx` solo se agregó la medalla, el bloque que monta la sección, la entrada
+      por parámetro `abrirEventoId` (misma forma que los atajos de siempre) y que el «atrás» del
+      sistema vuelva primero a la lista de eventos. Las otras cinco secciones no cambian.
+    * **Tocar un aviso `/eventos/{id}`** (push del servidor o alarma local) abre ese evento. Lo
+      atiende `AbridorDeEventos`, montado en `App.tsx` junto al acompañante: ninguna pestaña escucha
+      por su cuenta.
+    * **`Yo` — Notificaciones deja de ser decorativa**: los tres `Switch` que no guardaban nada se
+      reemplazan por «Eventos y clases», «Logros» y «Resumen semanal», guardados en
+      `notification-preferences` (sin tema «Hábitos», decisión del dueño). La fila del menú se parte
+      en dos: «Notificaciones» y **«Alarmas»**, sub-vista nueva con la alarma de Despertar (prender,
+      apagar, cambiar la hora), la de los eventos a los que vas y el sonido (el del teléfono, una
+      campana propia o solo vibrar). `features/alarmas/`.
+    * **`Plan` — cambiar la hora de un hábito mueve también su alarma del teléfono.** Antes quedaba
+      sonando a la hora vieja. La pantalla llama a `habits/utils/cambioDeHora.ts` en vez del PATCH
+      suelto; nada visual cambia.
+    * `app.json` suma el plugin de `expo-notifications` con el sonido
+      `assets/sonidos/campana_renaser.wav`: **requiere APK nuevo**.
+    Una excepción puntual **no abre** los tabs: cualquier otro cambio sobre los cinco principales
+    vuelve a necesitar autorización explícita.
   * **Excepción autorizada por el dueño del producto — 2026-09-26 — tabs `Training`, `Comunidad`
     y `Hoy`, velocidad (V-1..V-4 de `docs/specs/RETROALIMENTACION_2026-09-26.md` del backend).**
     Pedido del dueño con la retroalimentación de ese día: Muro y Training tardaban ~3 s. **No cambia

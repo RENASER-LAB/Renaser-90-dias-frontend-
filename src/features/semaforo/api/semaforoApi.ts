@@ -1,6 +1,7 @@
 import { ApiError, apiFetch } from '../../../services/http/apiClient';
 import type { FalloSemaforo } from '../hooks/useMiSemaforo';
 import type { DetalleDelSemaforo, ResumenPorGrupos, SemaforoDelGrupo } from '../types/semaforo.types';
+import { aPersonasParaAtender, type PersonaParaAtender } from '../utils/ayudaDelSemaforo';
 import {
   aDetalleDelSemaforo,
   aResumenPorGrupos,
@@ -140,6 +141,18 @@ export async function obtenerSemaforoDelGrupo(
 export async function obtenerResumenPorGrupos(semanaHasta?: string | null): Promise<ResumenPorGrupos> {
   const respuesta = await apiFetch<unknown>(rutaDelResumenPorGrupos(semanaHasta));
   return aResumenPorGrupos(validarRespuesta(semaforoSchemas.grupos, respuesta, 'GET /api/v1/semaforo/groups'));
+}
+
+/**
+ * §4.6: `GET /api/v1/admin/semaforo/atencion` — «¿A quién atiendo hoy?» desde el padrón, en UNA
+ * lectura: incluye la recepción, los grupos sin mentor y a quien no está en ningún grupo. Solo ADMIN
+ * y ALCHEMIST activos; el resto recibe 403. Un backend anterior responde 404.
+ */
+export async function obtenerAtencionDelSemaforo(): Promise<PersonaParaAtender[]> {
+  const respuesta = await apiFetch<unknown>('/api/v1/admin/semaforo/atencion');
+  return aPersonasParaAtender(
+    validarRespuesta(semaforoSchemas.atencion, respuesta, 'GET /api/v1/admin/semaforo/atencion'),
+  );
 }
 
 /** El endpoint no está desplegado (404): no es un fallo de nadie y reintentar no sirve. */

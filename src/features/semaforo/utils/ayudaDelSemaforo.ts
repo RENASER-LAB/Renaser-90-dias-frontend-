@@ -6,6 +6,7 @@ import type {
 } from '../types/semaforo.types';
 import { PALABRA_SIN_ACTIVIDAD, palabraDelSemaforo, rangoDeFechas, sumarDias } from './lecturaDelSemaforo';
 import { viernesHasta } from './semanasDelSemaforo';
+import { aAprendizDelSemaforo } from '../api/semaforoSchemas';
 
 /**
  * Lo que el semáforo le dice a quien ACOMPAÑA (mentor) o SUPERVISA (administración): quién
@@ -84,10 +85,55 @@ export function gruposConAyuda(grupos: GrupoDelResumen[]): GrupoDelResumen[] {
   return grupos.filter(g => (cuantosNecesitanAyuda(g.resumen) ?? 0) > 0);
 }
 
-/** Una persona de la lista «¿A quién atiendo hoy?», con el grupo del que viene. */
+/**
+ * Una persona de la lista «¿A quién atiendo hoy?», con el grupo del que viene. `grupoId` es `null`
+ * cuando no está en ningún grupo (lo sabe solo la lista del padrón, §4.6); `grupoNombre` es lo que se
+ * lee en la fila.
+ */
 export interface PersonaParaAtender extends AprendizDelSemaforo {
-  grupoId: string;
+  grupoId: string | null;
   grupoNombre: string | null;
+}
+
+/** Un grupo de la persona, tal como lo trae §4.6. */
+export interface GrupoDeLaPersona {
+  grupoId: string;
+  grupoNombre?: string | null;
+  recepcion?: boolean | null;
+  mentorNombre?: string | null;
+}
+
+/**
+ * Cómo se nombran los grupos de una persona en la fila: «Grupo Fénix», «Bienvenida», «Grupo Fénix ·
+ * sin mentor», varios separados por «·», o «Sin grupo». Palabras, no identificadores.
+ */
+export function textoDeGrupos(grupos: GrupoDeLaPersona[]): string {
+  if (grupos.length === 0) return 'Sin grupo';
+  return grupos
+    .map(g => {
+      const nombre = g.grupoNombre?.trim() || (g.recepcion ? 'Bienvenida' : 'Grupo sin nombre');
+      return !g.recepcion && !g.mentorNombre ? `${nombre} (sin mentor)` : nombre;
+    })
+    .join(' · ');
+}
+
+/**
+ * La lista §4.6 en el formato de la pantalla. El servidor ya manda solo rojo y amarillo, en su orden;
+ * igual se pasa por `aQuienAtenderHoy`, que es la regla de la lista: primero rojos, peor porcentaje
+ * primero, una persona una sola vez. Así la pantalla dice lo mismo con cualquiera de las dos fuentes.
+ */
+export function aPersonasParaAtender(crudo: {
+  aprendices?: Array<Parameters<typeof aAprendizDelSemaforo>[0] & { grupos?: GrupoDeLaPersona[] | null }> | null;
+}): PersonaParaAtender[] {
+  const personas = (crudo.aprendices ?? []).map(a => {
+    const grupos = a.grupos ?? [];
+    return {
+      grupoId: grupos[0]?.grupoId ?? null,
+      grupoNombre: textoDeGrupos(grupos),
+      aprendices: [aAprendizDelSemaforo(a)],
+    };
+  });
+  return aQuienAtenderHoy(personas);
 }
 
 const PRIORIDAD: Record<ColorSemaforo, number> = { ROJO: 0, AMARILLO: 1, SIN_DATOS: 2, VERDE: 3 };
@@ -98,7 +144,7 @@ const PRIORIDAD: Record<ColorSemaforo, number> = { ROJO: 0, AMARILLO: 1, SIN_DAT
  * (bienvenida + estable) se muestra UNA vez: la primera que aparezca en ese orden.
  */
 export function aQuienAtenderHoy(
-  tablas: Array<{ grupoId: string; grupoNombre: string | null; aprendices: AprendizDelSemaforo[] }>,
+  tablas: Array<{ grupoId: string | null; grupoNombre: string | null; aprendices: AprendizDelSemaforo[] }>,
 ): PersonaParaAtender[] {
   const todas: PersonaParaAtender[] = tablas.flatMap(tabla =>
     tabla.aprendices

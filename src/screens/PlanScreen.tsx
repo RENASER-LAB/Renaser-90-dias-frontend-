@@ -28,6 +28,7 @@ import {
   useArranqueDelPrograma,
 } from '../features/programa/hooks/useArranqueDelPrograma';
 import { HoraPickerModal } from '../features/habits/components/HoraPickerModal';
+import { cambiarHoraDelHabito } from '../features/habits/utils/cambioDeHora';
 import { RenombrarHabitoModal } from '../features/habits/components/RenombrarHabitoModal';
 import { useRenombreLocal } from '../features/habits/hooks/useRenombreDeHabito';
 import {
@@ -676,8 +677,16 @@ export default function PlanScreen() {
     updateHabitTime(habitId, nuevaHora);
     if (!conectadoAlBackend || !habito) return;
     try {
-      const resultado = await habitsApi.cambiarHorario(habitId, `${nuevaHora}:00`, habito.limitTime,
-        habito.recordatorio);
+      // 2026-09-26: por `cambiarHoraDelHabito` y no directo al PATCH, para que la alarma del
+      // teléfono se mueva a la hora nueva. Antes quedaba sonando a la hora vieja (ver su cabecera).
+      const { resultado } = await cambiarHoraDelHabito({
+        userId: user?.id ?? 'anon',
+        habitoId: habitId,
+        titulo: habito.title,
+        horaNueva: nuevaHora,
+        limitTime: habito.limitTime,
+        recordatorio: habito.recordatorio,
+      });
       // D-91: el backend YA NO aplica ningún cambio en el día en curso — todos se difieren a
       // mañana, arranque o no arranque la ventana del hábito. `deferred` es hoy siempre true;
       // la rama de abajo se deja igual porque el contrato del campo no cambió y no queremos

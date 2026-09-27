@@ -55,6 +55,14 @@
           "microphonePermission": "Renaser usa el micrófono para que puedas dictarle tus mensajes al acompañante.",
           "speechRecognitionPermission": "Renaser convierte tu voz en texto para que puedas hablarle al acompañante en vez de escribir."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "sounds": [
+            "./assets/sonidos/campana_renaser.wav"
+          ]
+        }
       ]
     ],
     "extra": {

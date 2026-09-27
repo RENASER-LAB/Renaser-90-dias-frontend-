@@ -2,6 +2,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { registrarSuscripcionWebPush } from './webPush';
+import {
+  canalDeAlarma,
+  esSonido,
+  SONIDO_POR_DEFECTO,
+  type CanalDeAlarma,
+  type SonidoDeAlarma,
+} from '../../alarmas/sonidoDeAlarma';
 // SOLO tipos: `import type` se borra al compilar, así que esto NO carga el módulo en runtime. Ver
 // el bloque "POR QUÉ NO SE IMPORTA ARRIBA" más abajo — importarlo de verdad rompe Expo Go.
 import type * as TipoNotificaciones from 'expo-notifications';
@@ -112,8 +119,17 @@ const DOMINGO_EN_EXPO = 1;
 const HORA_REPASO = 19;
 const MINUTO_REPASO = 0;
 
-/** Canal de Android. Sin uno propio, el sistema agrupa estos avisos con cualquier otro. */
-const CANAL_ANDROID = 'recordatorios-habitos';
+/**
+ * Canal de Android. Sin uno propio, el sistema agrupa estos avisos con cualquier otro.
+ *
+ * Desde 2026-09-26 (E-10) un hábito puede sonar con otro sonido —hoy solo Despertar, desde Yo →
+ * Alarmas—, y en Android el sonido es del canal. El de siempre conserva este id; los otros salen de
+ * `canalDeAlarma` (`features/alarmas/sonidoDeAlarma.ts`).
+ */
+const CANAL_ANDROID = canalDeAlarma('habitos', SONIDO_POR_DEFECTO);
+
+/** El sonido elegido para un hábito. Sin elegir = el del teléfono, como siempre. */
+const CLAVE_SONIDO = 'renaser.habitos.sonido.';
 
 const MINUTOS_POR_DIA = 24 * 60;
 
@@ -201,17 +217,40 @@ export async function pedirPermiso(): Promise<boolean> {
   }, false);
 }
 
-/** El canal de Android tiene que existir antes de programar contra él. Idempotente. */
-async function asegurarCanal(): Promise<void> {
+/**
+ * El canal de Android tiene que existir antes de programar contra él. Idempotente.
+ *
+ * Se exporta (2026-09-26) para las alarmas de eventos, que necesitan exactamente lo mismo.
+ */
+export async function asegurarCanal(canal: CanalDeAlarma = CANAL_ANDROID): Promise<void> {
   const N = notificaciones();
   if (!N || Platform.OS !== 'android') return;
-  // SIN `sound`: en un canal de Android ese campo es el NOMBRE DE ARCHIVO de un sonido propio
-  // empaquetado en la app, no la palabra "el de siempre". Poniendo 'default' la librería avisa que
-  // no encuentra un archivo llamado así. Omitirlo es lo que deja el sonido del sistema.
-  await N.setNotificationChannelAsync(CANAL_ANDROID, {
-    name: 'Recordatorios de hábitos',
+  // SIN `sound` para el del sistema: en un canal de Android ese campo es el NOMBRE DE ARCHIVO de un
+  // sonido propio empaquetado en la app, no la palabra "el de siempre". Poniendo 'default' la
+  // librería avisa que no encuentra un archivo llamado así. Omitirlo es lo que deja el sonido del
+  // sistema; `null` es "sin sonido" y un nombre es el archivo propio.
+  await N.setNotificationChannelAsync(canal.id, {
+    name: canal.nombre,
     importance: N.AndroidImportance.HIGH,
+    ...(canal.sonidoDelCanal === undefined ? {} : { sound: canal.sonidoDelCanal }),
   });
+}
+
+/** El sonido elegido para ese hábito en este teléfono. */
+export async function sonidoDe(userId: string, habitoId: string): Promise<SonidoDeAlarma> {
+  return sinRomper(async () => {
+    const crudo = await AsyncStorage.getItem(`${CLAVE_SONIDO}${userId}.${habitoId}`);
+    return esSonido(crudo) ? crudo : SONIDO_POR_DEFECTO;
+  }, SONIDO_POR_DEFECTO);
+}
+
+/**
+ * Guarda el sonido de un hábito. NO reprograma: quien lo llama decide (Yo → Alarmas reprograma
+ * Despertar en el acto). Lo guardado lo respeta cualquier `programar` posterior —desde Plan, desde
+ * Training o desde Yo—, así que cambiarle la hora no le devuelve el sonido de siempre.
+ */
+export async function fijarSonido(userId: string, habitoId: string, sonido: SonidoDeAlarma): Promise<void> {
+  await sinRomper(() => AsyncStorage.setItem(`${CLAVE_SONIDO}${userId}.${habitoId}`, sonido), undefined);
 }
 
 function claveDe(userId: string, habitoId: string): string {
@@ -295,7 +334,8 @@ export async function programar(
   }
   return sinRomper(async () => {
     if (!(await pedirPermiso())) return false;
-    await asegurarCanal();
+    const canal = canalDeAlarma('habitos', await sonidoDe(userId, habitoId));
+    await asegurarCanal(canal);
     const ids: string[] = [];
     // De la más temprana a la más tardía, que es el orden en que van a sonar.
     for (const minutosAntes of [...antelaciones].sort((a, b) => b - a)) {
@@ -309,13 +349,13 @@ export async function programar(
           body: `Te toca a las ${horaHHmm}.`,
           // `true` y no `'default'`: la cadena se interpreta como el nombre de un archivo de sonido
           // propio, y la librería se queja de no encontrarlo. El booleano pide el del sistema.
-          sound: true,
+          sound: canal.sonidoDelAviso,
         },
         trigger: {
           type: N.SchedulableTriggerInputTypes.DAILY,
           hour: Math.floor(minutos / 60),
           minute: minutos % 60,
-          channelId: CANAL_ANDROID,
+          channelId: canal.id,
         },
       });
       ids.push(id);
@@ -324,6 +364,31 @@ export async function programar(
     await AsyncStorage.setItem(claveSet, JSON.stringify(antelaciones));
     return true;
   }, false);
+}
+
+/**
+ * Mueve la alarma de un hábito a su hora nueva, **si este teléfono tenía una**.
+ *
+ * El bug que cierra (2026-09-26): cambiar la hora de un hábito desde `PlanScreen` guardaba la hora en
+ * el servidor pero no tocaba la alarma del teléfono, que seguía sonando a la hora vieja todos los
+ * días. La hoja de Training (`PlanificarDimensionModal`) sí reprogramaba; Plan no.
+ *
+ * Se reprograma con las MISMAS antelaciones que ya tenía, que viven en este teléfono. Si no hay
+ * ninguna guardada, no se inventa una alarma: la persona nunca la pidió aquí.
+ *
+ * Devuelve `null` si no había nada que mover (o en web, donde el aviso lo manda el servidor con la
+ * hora nueva), y si no, lo que devolvió `programar`.
+ */
+export async function reprogramarTrasCambioDeHora(
+  userId: string,
+  habitoId: string,
+  titulo: string,
+  horaHHmm: string,
+): Promise<boolean | null> {
+  if (!HAY_RECORDATORIOS_LOCALES) return null;
+  const antelaciones = await antelacionesDe(userId, habitoId);
+  if (antelaciones.length === 0) return null;
+  return programar(userId, habitoId, titulo, horaHHmm, antelaciones);
 }
 
 /** `true` si esta persona tiene puesto el repaso semanal en ESTE teléfono. */
@@ -358,7 +423,7 @@ export async function programarRepasoSemanal(userId: string): Promise<boolean> {
         weekday: DOMINGO_EN_EXPO,
         hour: HORA_REPASO,
         minute: MINUTO_REPASO,
-        channelId: CANAL_ANDROID,
+        channelId: CANAL_ANDROID.id,
       },
     });
     await AsyncStorage.setItem(CLAVE_REPASO + userId, id);
