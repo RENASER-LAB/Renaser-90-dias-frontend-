@@ -53,6 +53,7 @@ function evento(parcial: Partial<Evento> = {}): Evento {
     id: 'e1',
     titulo: 'Clase',
     descripcion: null,
+    portadaUrl: null,
     iniciaEn: '2026-10-01T00:30:00Z',
     duracionMinutos: 60,
     zona: 'America/Lima',

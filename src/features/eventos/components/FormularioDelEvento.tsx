@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { Icon } from '../../../components/Icon';
 import { BotonPrincipal, BotonSecundario } from '../../../components/Legible';
 import { useTheme } from '../../../theme/ThemeContext';
+import { CursoPortada } from '../../academy/components/CursoPortada';
 import { HoraPickerModal } from '../../habits/components/HoraPickerModal';
 import type { Evento } from '../types/eventos.types';
 import {
@@ -13,6 +14,7 @@ import {
   TIPOS_DE_EVENTO,
   type FormularioDeEvento,
 } from '../utils/formularioDeEvento';
+import { elegirPortada, type PortadaElegida } from '../utils/portadaDelEvento';
 import { duracionEnPalabras, diaRelativo } from '../utils/textosDeFecha';
 import { fechaEnZona, sumarDiasIso } from '../utils/zonaHoraria';
 import { BotonVolver, CampoDeTexto, LETRA, Parrafo } from './piezas';
@@ -24,6 +26,10 @@ import { BotonVolver, CampoDeTexto, LETRA, Parrafo } from './piezas';
  *
  * El día se elige con ‹ › en vez de un calendario: botones de 52 px que no hay que apuntar, y los
  * eventos casi siempre son de las próximas semanas.
+ *
+ * **Portada opcional** (2026-09-26, tarjetas «como cursos»): se elige acá y se sube DESPUÉS de guardar,
+ * porque la URL de subida es por evento (`/events/{id}/portada/upload-url`) y un evento nuevo todavía
+ * no tiene id. La vista previa es la misma caja de la tarjeta.
  */
 export function FormularioDelEvento({
   inicial,
@@ -38,11 +44,13 @@ export function FormularioDelEvento({
   error: string | null;
   guardando: boolean;
   onVolver: () => void;
-  onGuardar: (form: FormularioDeEvento) => void;
+  onGuardar: (form: FormularioDeEvento, portada: PortadaElegida | null) => void;
 }) {
   const { c } = useTheme();
   const [form, setForm] = useState<FormularioDeEvento>(inicial);
   const [eligiendoHora, setEligiendoHora] = useState(false);
+  const [portada, setPortada] = useState<PortadaElegida | null>(null);
+  const portadaVisible = portada?.uri ?? original?.portadaUrl ?? null;
   const cambiar = <K extends keyof FormularioDeEvento>(campo: K, valor: FormularioDeEvento[K]) =>
     setForm(f => ({ ...f, [campo]: valor }));
 
@@ -163,6 +171,22 @@ export function FormularioDelEvento({
         onChangeText={v => cambiar('descripcion', v)}
       />
 
+      <View style={{ gap: 8 }}>
+        <Text style={[estilos.rotulo, { color: c.textStrong }]}>Portada (opcional)</Text>
+        <Parrafo>Una imagen apaisada. Sin portada, la tarjeta usa el fondo oscuro de siempre.</Parrafo>
+        {portadaVisible ? (
+          <View style={[estilos.portada, { borderColor: c.border }]}>
+            <CursoPortada url={portadaVisible} />
+          </View>
+        ) : null}
+        <BotonSecundario
+          etiqueta={portadaVisible ? 'Cambiar portada' : 'Elegir portada'}
+          icono="image"
+          onPress={() => void elegirPortada().then(p => p && setPortada(p))}
+        />
+        {portada ? <BotonSecundario etiqueta="No usar esta imagen" onPress={() => setPortada(null)} /> : null}
+      </View>
+
       <View style={[estilos.interruptor, { borderColor: c.border, backgroundColor: c.cardBg }]}>
         <View style={{ flex: 1 }}>
           <Text style={[estilos.opcionTexto, { color: c.textStrong }]}>Avisar a todos al guardarlo</Text>
@@ -182,7 +206,7 @@ export function FormularioDelEvento({
       <BotonPrincipal
         etiqueta={original ? 'Guardar cambios' : 'Crear evento'}
         cargando={guardando}
-        onPress={() => onGuardar(form)}
+        onPress={() => onGuardar(form, portada)}
       />
 
       <HoraPickerModal
@@ -209,5 +233,6 @@ const estilos = StyleSheet.create({
   valor: { flex: 1, textAlign: 'center', fontFamily: 'Jost_500Medium', fontSize: 17 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   chip: { minHeight: 52, borderWidth: 1.5, borderRadius: 14, paddingHorizontal: 16, justifyContent: 'center' },
+  portada: { height: 185, borderRadius: 20, borderWidth: 1, overflow: 'hidden' },
   interruptor: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 16, padding: 14 },
 });

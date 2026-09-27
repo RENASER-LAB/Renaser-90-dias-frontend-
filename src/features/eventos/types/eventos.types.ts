@@ -26,6 +26,11 @@ export interface Evento {
   id: string;
   titulo: string;
   descripcion: string | null;
+  /**
+   * La portada (`coverUrl`): una URL de lectura ya firmada por el backend, que cambia en cada
+   * respuesta. `null` sin portada: la tarjeta usa el mismo fondo que los cursos sin portada.
+   */
+  portadaUrl: string | null;
   /** ISO-8601 (instante). */
   iniciaEn: string;
   duracionMinutos: number | null;

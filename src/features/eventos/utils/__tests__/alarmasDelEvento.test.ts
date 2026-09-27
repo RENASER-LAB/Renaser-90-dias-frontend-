@@ -10,6 +10,7 @@ function oc(parcial: Partial<Evento> = {}, extra: Partial<Ocurrencia> = {}): Ocu
     id: 'e1',
     titulo: 'Clase',
     descripcion: null,
+    portadaUrl: null,
     iniciaEn: '2026-10-01T00:30:00Z', // miércoles 30/09 19:30 en Lima
     duracionMinutos: 60,
     zona: 'America/Lima',

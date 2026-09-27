@@ -1,21 +1,39 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
-import { RefreshControl, ScrollView, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { Alert } from '../../../components/Alerta';
-import { BotonPrincipal, BotonSecundario, TituloDeSeccion } from '../../../components/Legible';
+import { Icon } from '../../../components/Icon';
+import { BotonPrincipal, BotonSecundario } from '../../../components/Legible';
 import { ApiError, mensajeDeError } from '../../../services/http/apiClient';
 import * as eventosApi from '../api/eventosApi';
 import { useEventos } from '../hooks/useEventos';
+import { useEventosDelMes } from '../hooks/useEventosDelMes';
 import type { Asistencia, Evento, Ocurrencia } from '../types/eventos.types';
 import { armarCuerpo, formularioDesdeEvento, formularioVacio, type FormularioDeEvento } from '../utils/formularioDeEvento';
+import {
+  agruparPorDia,
+  diaElegidoAlAbrir,
+  mesDeLaFecha,
+  mismoMes,
+  moverMes,
+  proximasParaTarjetas,
+  soloLasQueVas,
+  type Mes,
+} from '../utils/calendarioDelMes';
 import { vistaPideReleer } from '../utils/lecturaVigente';
+import { subirPortada, type PortadaElegida } from '../utils/portadaDelEvento';
+import { guardarVistaPreferida, leerVistaPreferida, VISTA_POR_DEFECTO, type VistaDeEventos } from '../utils/vistaPreferida';
+import { fechaEnZona, zonaDelTelefono } from '../utils/zonaHoraria';
 import { puedeGestionarEventos } from '../utils/permisosDeEventos';
 import { useTheme } from '../../../theme/ThemeContext';
+import { CalendarioDelMes } from './CalendarioDelMes';
 import { DetalleDelEvento } from './DetalleDelEvento';
 import { FormularioDelEvento } from './FormularioDelEvento';
 import { MiAgenda } from './MiAgenda';
-import { Parrafo, TarjetaEvento } from './piezas';
+import { LETRA, Parrafo } from './piezas';
+import { SelectorDeVista } from './SelectorDeVista';
+import { TarjetasDeEventos } from './TarjetasDeEventos';
 
 type Vista =
   | { nombre: 'lista' }
@@ -23,7 +41,7 @@ type Vista =
   | { nombre: 'formulario'; original: Evento | null }
   | { nombre: 'agenda' };
 
-/** Un evento que no está en la lista (más allá de 30 días, o recién abierto desde un aviso). */
+/** Un evento que no está en la lista (más allá de 60 días, o recién abierto desde un aviso). */
 function ocurrenciaSuelta(evento: Evento): Ocurrencia {
   return {
     evento,
@@ -37,8 +55,15 @@ function ocurrenciaSuelta(evento: Evento): Ocurrencia {
 
 /**
  * La sección «Eventos» de Comunidad (E-5 a E-8; decisión del dueño del 26/09: los eventos se ven
- * sobre todo acá). Cuatro vistas: la lista de los próximos 30 días, el detalle, el formulario (solo
- * ADMIN y ALCHEMIST) y «Mi agenda».
+ * sobre todo acá). Cuatro vistas: la portada de la sección, el detalle, el formulario (solo ADMIN y
+ * ALCHEMIST) y «Mi agenda».
+ *
+ * **La portada tiene dos formas de ver los eventos** (pedido del dueño del 2026-09-26: «tipo
+ * calendario del mes, 2 formas… no me gusta ese diseño, muy IA»; reemplaza la lista de filas con
+ * iconito): «Calendario», la grilla del mes con los días marcados (`CalendarioDelMes`, lee el mes
+ * visible con `useEventosDelMes`), y «Tarjetas», los próximos 60 días con la tarjeta de los cursos de
+ * Classroom (`TarjetasDeEventos`). La última elegida se recuerda por persona (`vistaPreferida`).
+ * «Solo a los que voy» filtra las dos.
  *
  * La sección es dueña de su propio estado: Comunidad solo la monta, le pasa el evento pedido desde un
  * aviso y le presta el gesto de «atrás» (`volverRef`).
@@ -73,6 +98,32 @@ export function SeccionEventos({
     true,
   );
   const [vista, setVista] = useState<Vista>({ nombre: 'lista' });
+
+  const zona = useMemo(() => zonaDelTelefono(), []);
+  const hoy = fechaEnZona(Date.now(), zona);
+  const [forma, setForma] = useState<VistaDeEventos>(VISTA_POR_DEFECTO);
+  const [soloVoy, setSoloVoy] = useState(false);
+  const [mes, setMes] = useState<Mes>(() => mesDeLaFecha(hoy));
+  const [diaElegido, setDiaElegido] = useState<string | null>(hoy);
+  const delMes = useEventosDelMes(mes, zona, forma === 'calendario');
+  const releerElMes = delMes.recargar;
+
+  useEffect(() => {
+    if (!userId) return;
+    let vivo = true;
+    void leerVistaPreferida(userId).then(v => vivo && setForma(v));
+    return () => {
+      vivo = false;
+    };
+  }, [userId]);
+
+  const cambiarForma = useCallback(
+    (nueva: VistaDeEventos) => {
+      setForma(nueva);
+      if (userId) void guardarVistaPreferida(userId, nueva);
+    },
+    [userId],
+  );
   /** Sube con cada pull-to-refresh de «Mi agenda», que relee también hábitos y acciones. */
   const [vueltaDeAgenda, setVueltaDeAgenda] = useState(0);
 
@@ -81,7 +132,8 @@ export function SeccionEventos({
   useFocusEffect(
     useCallback(() => {
       void recargar();
-    }, [recargar]),
+      void releerElMes();
+    }, [recargar, releerElMes]),
   );
 
   // Volver a la lista desde el detalle, la agenda o el formulario relee.
@@ -89,13 +141,17 @@ export function SeccionEventos({
   useEffect(() => {
     const anterior = vistaAnterior.current;
     vistaAnterior.current = vista.nombre;
-    if (vistaPideReleer(anterior, vista.nombre)) void recargar();
-  }, [vista.nombre, recargar]);
+    if (vistaPideReleer(anterior, vista.nombre)) {
+      void recargar();
+      void releerElMes();
+    }
+  }, [vista.nombre, recargar, releerElMes]);
 
   const alDeslizar = useCallback(() => {
     if (vista.nombre === 'agenda') setVueltaDeAgenda(n => n + 1);
     void recargar({ deslizando: true });
-  }, [vista.nombre, recargar]);
+    if (vista.nombre === 'lista') void releerElMes();
+  }, [vista.nombre, recargar, releerElMes]);
   const [suelta, setSuelta] = useState<{ ocurrencia: Ocurrencia | null; fallo: boolean } | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [errorFormulario, setErrorFormulario] = useState<string | null>(null);
@@ -124,14 +180,50 @@ export function SeccionEventos({
     onEventoPedidoAtendido();
   }, [eventoPedido, onEventoPedidoAtendido]);
 
+  /* El detalle busca primero en los próximos 60 días y después en el mes del calendario, que puede
+     tener días pasados o meses lejanos. */
   const enLaLista = useMemo(() => {
     if (vista.nombre !== 'detalle') return null;
-    return (
-      ocurrencias.find(
-        o => o.evento.id === vista.eventoId && (vista.inicioOcurrencia === null || o.inicioOcurrencia === vista.inicioOcurrencia),
-      ) ?? null
-    );
-  }, [vista, ocurrencias]);
+    const esEste = (o: Ocurrencia) =>
+      o.evento.id === vista.eventoId && (vista.inicioOcurrencia === null || o.inicioOcurrencia === vista.inicioOcurrencia);
+    return ocurrencias.find(esEste) ?? delMes.ocurrencias.find(esEste) ?? null;
+  }, [vista, ocurrencias, delMes.ocurrencias]);
+
+  const deLaVista = useMemo(
+    () => (soloVoy ? soloLasQueVas(delMes.ocurrencias) : delMes.ocurrencias),
+    [soloVoy, delMes.ocurrencias],
+  );
+  const porDia = useMemo(() => agruparPorDia(deLaVista, zona), [deLaVista, zona]);
+
+  // Un mes que no es el de hoy abre en su primer día con eventos, cuando llegan.
+  useEffect(() => {
+    if (diaElegido !== null || delMes.cargando) return;
+    const primero = diaElegidoAlAbrir(mes, hoy, porDia);
+    if (primero) setDiaElegido(primero);
+  }, [diaElegido, delMes.cargando, mes, hoy, porDia]);
+
+  const cambiarMes = useCallback(
+    (delta: number) => {
+      const nuevo = moverMes(mes, delta);
+      setMes(nuevo);
+      setDiaElegido(mismoMes(nuevo, mesDeLaFecha(hoy)) ? hoy : null);
+    },
+    [mes, hoy],
+  );
+  const irAHoy = useCallback(() => {
+    setMes(mesDeLaFecha(hoy));
+    setDiaElegido(hoy);
+  }, [hoy]);
+  const elegirDia = useCallback(
+    (fecha: string) => {
+      const suMes = mesDeLaFecha(fecha);
+      if (!mismoMes(suMes, mes)) setMes(suMes);
+      setDiaElegido(fecha);
+    },
+    [mes],
+  );
+  const abrir = (oc: Ocurrencia) =>
+    setVista({ nombre: 'detalle', eventoId: oc.evento.id, inicioOcurrencia: oc.inicioOcurrencia });
 
   /* Si el evento no está en la lista (más allá de 30 días, o la lista todavía no llegó y vino de un
      aviso), se pide suelto. Con 404/403 se dice que ya no está: se canceló, o no es para esta persona. */
@@ -151,6 +243,7 @@ export function SeccionEventos({
     setEnviando(true);
     try {
       const alarma = await responder(oc, respuesta);
+      delMes.marcarAsistencia(oc.evento.id, oc.inicioOcurrencia, respuesta);
       if (suelta?.ocurrencia) setSuelta({ ocurrencia: { ...oc, asistencia: respuesta }, fallo: false });
       if (alarma === 'sin_permiso') {
         Alert.alert(
@@ -165,7 +258,7 @@ export function SeccionEventos({
     }
   };
 
-  const alGuardar = async (form: FormularioDeEvento, original: Evento | null) => {
+  const alGuardar = async (form: FormularioDeEvento, original: Evento | null, portada: PortadaElegida | null) => {
     const armado = armarCuerpo(form, Date.now(), original);
     if (!armado.ok) {
       setErrorFormulario(armado.error);
@@ -177,7 +270,20 @@ export function SeccionEventos({
       const guardado = original
         ? await eventosApi.editarEvento(original.id, armado.cuerpo)
         : await eventosApi.crearEvento(armado.cuerpo);
+      if (portada) {
+        // El evento ya quedó guardado: si la portada falla, se dice y se sigue (se puede reintentar
+        // editándolo).
+        try {
+          await subirPortada(guardado.id, portada);
+        } catch (e) {
+          Alert.alert(
+            'El evento se guardó, pero sin portada',
+            mensajeDeError(e, 'No se pudo subir la imagen. Puedes intentarlo de nuevo editando el evento.'),
+          );
+        }
+      }
       await recargar({ forzar: true });
+      void releerElMes({ forzar: true });
       setSuelta(null);
       setVista({ nombre: 'detalle', eventoId: guardado.id, inicioOcurrencia: null });
     } catch (e) {
@@ -230,7 +336,7 @@ export function SeccionEventos({
         error={errorFormulario}
         guardando={enviando}
         onVolver={volverALista}
-        onGuardar={form => void alGuardar(form, vista.original)}
+        onGuardar={(form, portada) => void alGuardar(form, vista.original, portada)}
       />
     );
   }
@@ -274,50 +380,107 @@ export function SeccionEventos({
     );
   }
 
+  const proximas = proximasParaTarjetas(soloVoy ? soloLasQueVas(ocurrencias) : ocurrencias, Date.now());
+
   return envolver(
-    <View style={{ gap: 14 }}>
-      <TituloDeSeccion detalle="Clases y encuentros de los próximos 30 días.">Eventos</TituloDeSeccion>
-      <View style={{ gap: 10 }}>
+    <View style={{ gap: 16 }}>
+      <View style={estilos.acciones}>
+        <BotonSecundario
+          etiqueta="Mi agenda"
+          icono="calendar"
+          estilo={estilos.accion}
+          onPress={() => setVista({ nombre: 'agenda' })}
+        />
         {gestiona ? (
           <BotonPrincipal
             etiqueta="Crear evento"
             icono="plus"
+            estilo={estilos.accion}
             onPress={() => {
               setErrorFormulario(null);
               setVista({ nombre: 'formulario', original: null });
             }}
           />
         ) : null}
-        <BotonSecundario etiqueta="Mi agenda" icono="calendar" onPress={() => setVista({ nombre: 'agenda' })} />
       </View>
 
-      {cargando && ocurrencias.length === 0 ? <Parrafo>Buscando eventos…</Parrafo> : null}
-      {fallo && ocurrencias.length > 0 ? (
-        <Parrafo tono="peligro">No se pudo actualizar la lista; esto es lo último que llegó. Desliza hacia abajo para reintentar.</Parrafo>
-      ) : null}
-      {!cargando && fallo && ocurrencias.length === 0 ? (
-        <View style={{ gap: 8 }}>
-          <Parrafo tono="peligro">
-            {fallo === 'sin_red'
-              ? 'Sin conexión con el servidor.'
-              : fallo === 'no_disponible'
-                ? 'Los eventos todavía no están disponibles.'
-                : 'No se pudieron leer los eventos.'}
-          </Parrafo>
-          <BotonSecundario etiqueta="Reintentar" onPress={() => void recargar()} />
-        </View>
-      ) : null}
-      {!cargando && !fallo && yaLeido && ocurrencias.length === 0 ? (
-        <Parrafo>No hay eventos en los próximos 30 días.</Parrafo>
-      ) : null}
+      <SelectorDeVista vista={forma} onCambiar={cambiarForma} />
+      <SoloLosQueVoy activo={soloVoy} onCambiar={setSoloVoy} />
 
-      {ocurrencias.map(oc => (
-        <TarjetaEvento
-          key={`${oc.evento.id}|${oc.inicioOcurrencia}`}
-          oc={oc}
-          onPress={() => setVista({ nombre: 'detalle', eventoId: oc.evento.id, inicioOcurrencia: oc.inicioOcurrencia })}
+      {forma === 'calendario' ? (
+        <CalendarioDelMes
+          mes={mes}
+          hoyIso={hoy}
+          porDia={porDia}
+          diaElegido={diaElegido}
+          zona={zona}
+          cargando={delMes.cargando && delMes.ocurrencias.length === 0}
+          fallo={delMes.fallo}
+          onCambiarMes={cambiarMes}
+          onHoy={irAHoy}
+          onElegirDia={elegirDia}
+          onReintentar={() => void releerElMes({ forzar: true })}
+          onAbrir={abrir}
         />
-      ))}
+      ) : (
+        <View style={{ gap: 14 }}>
+          {cargando && ocurrencias.length === 0 ? <Parrafo>Buscando eventos…</Parrafo> : null}
+          {fallo && ocurrencias.length > 0 ? (
+            <Parrafo tono="peligro">No se pudo actualizar la lista; esto es lo último que llegó. Desliza hacia abajo para reintentar.</Parrafo>
+          ) : null}
+          {!cargando && fallo && ocurrencias.length === 0 ? (
+            <View style={{ gap: 8 }}>
+              <Parrafo tono="peligro">
+                {fallo === 'sin_red'
+                  ? 'Sin conexión con el servidor.'
+                  : fallo === 'no_disponible'
+                    ? 'Los eventos todavía no están disponibles.'
+                    : 'No se pudieron leer los eventos.'}
+              </Parrafo>
+              <BotonSecundario etiqueta="Reintentar" onPress={() => void recargar()} />
+            </View>
+          ) : null}
+          {!cargando && !fallo && yaLeido && proximas.length === 0 ? (
+            <Parrafo>
+              {soloVoy ? 'Todavía no dijiste «Voy» a ningún evento de los próximos 60 días.' : 'No hay eventos en los próximos 60 días.'}
+            </Parrafo>
+          ) : null}
+          <TarjetasDeEventos ocurrencias={proximas} zona={zona} ahoraMs={Date.now()} onAbrir={abrir} />
+        </View>
+      )}
     </View>
   );
 }
+
+/** «Solo a los que voy»: una casilla de 48 px, en palabras. Filtra el calendario y las tarjetas. */
+function SoloLosQueVoy({ activo, onCambiar }: { activo: boolean; onCambiar: (v: boolean) => void }) {
+  const { c } = useTheme();
+  return (
+    <Pressable
+      onPress={() => onCambiar(!activo)}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: activo }}
+      accessibilityLabel="Ver solo los eventos a los que voy"
+      hitSlop={6}
+      style={({ pressed }) => [estilos.casilla, { opacity: pressed ? 0.7 : 1 }]}
+    >
+      <View
+        style={[
+          estilos.cuadro,
+          { borderColor: activo ? c.success : c.borderStrong, backgroundColor: activo ? c.success : c.cardBg },
+        ]}
+      >
+        {activo ? <Icon name="check" size={16} color={c.cardBg} strokeWidth={2} /> : null}
+      </View>
+      <Text style={[estilos.casillaTexto, { color: c.textStrong }]}>Solo a los que voy</Text>
+    </Pressable>
+  );
+}
+
+const estilos = StyleSheet.create({
+  acciones: { flexDirection: 'row', gap: 10 },
+  accion: { flex: 1, paddingHorizontal: 10 },
+  casilla: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 48, alignSelf: 'flex-start' },
+  cuadro: { width: 26, height: 26, borderRadius: 7, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  casillaTexto: { fontFamily: 'Jost_500Medium', fontSize: LETRA.cuerpo + 1 },
+});

@@ -23,6 +23,7 @@ const eventoSchema = z
     id: z.string().min(1),
     title: z.string(),
     description: z.string().nullish(),
+    coverUrl: z.string().nullish(),
     startsAt: z.string().min(1),
     durationMinutes: z.number().nullish(),
     timezone: z.string().nullish(),
@@ -99,6 +100,9 @@ export function aEvento(crudo: EventoCrudo): Evento {
     id: crudo.id,
     titulo: crudo.title.trim() || 'Evento',
     descripcion: crudo.description?.trim() || null,
+    // Solo una URL de verdad: el almacenamiento sin configurar firma `about:blank#…` (ver
+    // `almacenamientoSinConfigurar` en el Muro), y eso no es una imagen.
+    portadaUrl: crudo.coverUrl && /^https?:\/\//.test(crudo.coverUrl) ? crudo.coverUrl : null,
     iniciaEn: crudo.startsAt,
     duracionMinutos: crudo.durationMinutes ?? null,
     zona: crudo.timezone || null,
@@ -145,4 +149,20 @@ export function leerOcurrencias(datos: unknown): Ocurrencia[] {
     });
   }
   return ocurrencias.sort((a, b) => Date.parse(a.iniciaEn) - Date.parse(b.iniciaEn));
+}
+
+const urlDePortadaSchema = z.object({ url: z.string().min(1), ruta: z.string().min(1) }).passthrough();
+
+export interface UrlDePortada {
+  /** URL prefirmada para el `PUT` de los bytes. */
+  url: string;
+  /** La clave del objeto: es lo que se confirma. */
+  ruta: string;
+}
+
+/** `POST /events/{id}/portada/upload-url` → `{ url, bucket, ruta }`. */
+export function leerUrlDePortada(datos: unknown): UrlDePortada {
+  const r = urlDePortadaSchema.safeParse(datos);
+  if (!r.success) throw new Error('Respuesta inesperada de POST /api/v1/calendar/events/{id}/portada/upload-url');
+  return { url: r.data.url, ruta: r.data.ruta };
 }

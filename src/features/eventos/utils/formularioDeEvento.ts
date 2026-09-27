@@ -26,6 +26,15 @@ export const TIPOS_DE_EVENTO: ReadonlyArray<{ clave: string; nombre: string }> =
   { clave: 'SEMANA_MANIFESTACION', nombre: 'Semana de Manifestación' },
 ];
 
+/**
+ * El rótulo de la tarjeta, como el «CURSO ABIERTO» de Classroom: «SESIÓN ESPECIAL», «MENTORÍA DEL
+ * ALQUIMISTA». Un tipo que esta versión no conoce (o ninguno) dice «EVENTO»: nunca la clave cruda.
+ */
+export function rotuloDelTipo(tipoEvento: string | null): string {
+  const tipo = TIPOS_DE_EVENTO.find(t => t.clave === tipoEvento);
+  return (tipo ? tipo.nombre : 'Evento').toUpperCase();
+}
+
 export const DURACIONES_MINUTOS: readonly number[] = [30, 60, 90, 120];
 
 export interface FormularioDeEvento {
