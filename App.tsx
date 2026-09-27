@@ -17,6 +17,7 @@ import { RadarProvider } from './src/features/radar/RadarContext';
 import { CodigoRenaserOverlay } from './src/features/radar/components/CodigoRenaserOverlay';
 import { RenombrarHabitoOverlay } from './src/features/habits/components/RenombrarHabitoOverlay';
 import { AbridorDeEventos } from './src/features/eventos/components/AbridorDeEventos';
+import { RearmadorDeAlarmas } from './src/features/alarmas/components/RearmadorDeAlarmas';
 
 function Shell() {
   const { mode, c } = useTheme();
@@ -45,6 +46,10 @@ function Shell() {
       {/* Tocar el aviso de un evento abre su detalle en Comunidad → Eventos (E-5). No pinta nada:
           escucha la ruta `/eventos/{id}` y lleva a la pestaña cuando existe. */}
       <AbridorDeEventos />
+      {/* Al abrir y al volver a primer plano, vuelve a armar las alarmas locales ya programadas
+          (mismo id, contenido y hora): las de antes del permiso de alarmas exactas quedan exactas.
+          No pinta nada. Ver `features/alarmas/rearmarAlarmas.ts`. */}
+      <RearmadorDeAlarmas />
       {/* Dibuja los Alert en el build web, donde el Alert de react-native-web es un metodo vacio
           que nunca ejecuta los onPress de sus botones (E-144). En movil no pinta nada. */}
       <AnfitrionAlerta />

@@ -54,6 +54,16 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       Android 12+, un aviso con el botón «Revisar permiso de alarmas exactas» que abre esa pantalla
       del sistema (`features/alarmas/permisoDeAlarmaExacta.ts`). Está siempre porque la app no puede
       saber si ya se concedió sin un módulo nativo nuevo. Nada más de `Yo` cambia.
+    * **Mismo día — dos bugs del e2e en emulador, sin cambio visual en los tabs.** (1) La lista de
+      Eventos no se refrescaba (un evento recién creado solo aparecía al cerrar la app): ahora se
+      relee al ganar el foco, al volver a la lista y deslizando hacia abajo en la lista y en «Mi
+      agenda» (`utils/lecturaVigente.ts`: los disparos juntos comparten un pedido, una respuesta
+      vieja no pisa una nueva). Para el `RefreshControl`, el `ScrollView` de la sección pasó de
+      `ComunidadScreen.tsx` a `SeccionEventos` con el mismo estilo de contenido; nada más de
+      Comunidad cambia. (2) Las alarmas programadas antes de conceder «Alarmas y recordatorios»
+      seguían inexactas: `RearmadorDeAlarmas` (en `App.tsx`, fuera de los tabs) las vuelve a armar
+      tal cual —mismo id, contenido y disparador— al abrir la app y al volver a primer plano, con 10
+      min mínimo entre corridas (`features/alarmas/rearmarAlarmas.ts`, solo Android).
     Una excepción puntual **no abre** los tabs: cualquier otro cambio sobre los cinco principales
     vuelve a necesitar autorización explícita.
   * **Excepción autorizada por el dueño del producto — 2026-09-26 — tabs `Training`, `Comunidad`

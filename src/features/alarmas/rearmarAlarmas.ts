@@ -1,0 +1,209 @@
+import { Platform } from 'react-native';
+// SOLO tipos: cargar `expo-notifications` de verdad rompe Expo Go (ver `recordatoriosDeHabito.ts`).
+import type * as TipoNotificaciones from 'expo-notifications';
+
+import { cargarNotificaciones, HAY_RECORDATORIOS_LOCALES } from '../habits/notificaciones/recordatoriosDeHabito';
+import { ARCHIVO_CAMPANA } from './sonidoDeAlarma';
+
+/**
+ * Vuelve a armar, tal cual, las alarmas locales que el teléfono ya tiene programadas (e2e en
+ * emulador del 26/09).
+ *
+ * ## El bug
+ *
+ * `expo-notifications` elige la clase de alarma **al programarla** (`ExpoSchedulingDelegate.setupAlarm`):
+ * exacta si `canScheduleExactAlarms()` da `true`, inexacta si no. Las alarmas programadas ANTES de que
+ * la persona activara «Alarmas y recordatorios» quedaron inexactas — `dumpsys alarm` las mostraba con
+ * `window=+1h` (hábitos de las 06:47, 06:50 y 06:52) aunque el permiso ya estuviera dado. Solo se
+ * corregían solas después de sonar una vez (tarde).
+ *
+ * ## El arreglo
+ *
+ * Al abrir la app y al volver a primer plano (con al menos `INTERVALO_MINIMO_MS` entre corridas) se
+ * lee `getAllScheduledNotificationsAsync` y cada alarma se vuelve a programar con **el mismo
+ * identificador, el mismo contenido y el mismo disparador**. La librería guarda el pedido por
+ * identificador y el `PendingIntent` también es por identificador, así que re-programar REEMPLAZA la
+ * alarma (no la duplica) y, con el permiso dado, la deja exacta. Los ids que guardan hábitos, eventos,
+ * Despertar y el Código Renaser siguen sirviendo para cancelarlas.
+ *
+ * No necesita servidor, no inventa alarmas (solo las que ya estaban) y no pide permisos. No hay forma
+ * de saber desde JS si el permiso ya se dio sin un módulo nativo nuevo; por eso corre siempre, y el
+ * intervalo mínimo lo hace barato.
+ *
+ * Solo Android (el único con alarmas inexactas por permiso) y solo donde hay alarmas locales.
+ *
+ * ## Lo que NO se toca
+ *
+ * - Disparadores que no son diario, semanal ni de fecha (la prueba de sonido de 3 s, intervalos).
+ * - Una de fecha que ya pasó: está por entregarse o es basura del sistema.
+ * - Una diaria o semanal cuya hora nominal fue hace menos de `MARGEN_RECIEN_VENCIDA_MS`: con la alarma
+ *   inexacta puede estar todavía por sonar (hasta una hora tarde), y re-programarla la movería al día
+ *   (o a la semana) siguiente — se perdería la de hoy. Al sonar, la librería la re-arma sola, ya exacta.
+ * - Una que se canceló mientras esto corría: antes de re-programar cada una se relee la lista. Si no,
+ *   re-crear un id que Plan o «No voy» acababan de cancelar dejaría una alarma huérfana sonando.
+ */
+
+export const INTERVALO_MINIMO_MS = 10 * 60 * 1000;
+export const MARGEN_RECIEN_VENCIDA_MS = 2 * 60 * 60 * 1000;
+
+/** Lo que devuelve `getAllScheduledNotificationsAsync` en Android (lo que usa esto). */
+export interface AlarmaProgramada {
+  identifier: string;
+  content: {
+    title?: string | null;
+    subtitle?: string | null;
+    body?: string | null;
+    data?: Record<string, unknown> | null;
+    sound?: string | null;
+    color?: string | null;
+    priority?: string | null;
+    autoDismiss?: boolean;
+    sticky?: boolean;
+    categoryIdentifier?: string | null;
+  };
+  trigger: unknown;
+}
+
+export interface PedidoDeRearmado {
+  identifier: string;
+  content: TipoNotificaciones.NotificationContentInput;
+  trigger: TipoNotificaciones.SchedulableNotificationTriggerInput;
+}
+
+type Registro = Record<string, unknown>;
+
+const esNumero = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);
+
+/** La salida de la librería dice `'default' | 'custom' | null`; la entrada quiere el booleano o el archivo. */
+function sonidoDeEntrada(sonido: unknown): boolean | string {
+  if (sonido === 'default') return true;
+  // El único sonido propio que la app empaqueta. En Android 8+ igual manda el del canal.
+  if (sonido === 'custom') return ARCHIVO_CAMPANA;
+  return false;
+}
+
+function contenidoDeEntrada(c: AlarmaProgramada['content']): TipoNotificaciones.NotificationContentInput {
+  const contenido: TipoNotificaciones.NotificationContentInput = {
+    title: c.title ?? null,
+    body: c.body ?? null,
+    sound: sonidoDeEntrada(c.sound),
+  };
+  if (c.subtitle) contenido.subtitle = c.subtitle;
+  if (c.data && typeof c.data === 'object') contenido.data = c.data;
+  if (c.color) contenido.color = c.color;
+  if (c.priority) contenido.priority = c.priority;
+  if (typeof c.autoDismiss === 'boolean') contenido.autoDismiss = c.autoDismiss;
+  if (typeof c.sticky === 'boolean') contenido.sticky = c.sticky;
+  if (c.categoryIdentifier) contenido.categoryIdentifier = c.categoryIdentifier;
+  return contenido;
+}
+
+/** Cuánto hace que tocó por última vez una alarma diaria/semanal (hora del teléfono), en ms. */
+function desdeLaUltimaHoraNominal(ahora: Date, hora: number, minuto: number, weekday?: number): number {
+  const nominal = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), hora, minuto, 0, 0);
+  if (weekday === undefined) {
+    if (nominal.getTime() > ahora.getTime()) nominal.setDate(nominal.getDate() - 1);
+    return ahora.getTime() - nominal.getTime();
+  }
+  // `weekday` de expo: 1 = domingo … 7 = sábado; `getDay()`: 0 = domingo.
+  let dias = (ahora.getDay() - (weekday - 1) + 7) % 7;
+  nominal.setDate(nominal.getDate() - dias);
+  if (nominal.getTime() > ahora.getTime()) {
+    dias = 7;
+    nominal.setDate(nominal.getDate() - dias);
+  }
+  return ahora.getTime() - nominal.getTime();
+}
+
+function disparadorDeEntrada(
+  crudo: unknown,
+  ahoraMs: number,
+): TipoNotificaciones.SchedulableNotificationTriggerInput | null {
+  if (!crudo || typeof crudo !== 'object') return null;
+  const t = crudo as Registro;
+  const canal = typeof t.channelId === 'string' && t.channelId ? { channelId: t.channelId } : {};
+  const ahora = new Date(ahoraMs);
+  if (t.type === 'daily' && esNumero(t.hour) && esNumero(t.minute)) {
+    if (desdeLaUltimaHoraNominal(ahora, t.hour, t.minute) < MARGEN_RECIEN_VENCIDA_MS) return null;
+    return { type: 'daily' as TipoNotificaciones.SchedulableTriggerInputTypes.DAILY, hour: t.hour, minute: t.minute, ...canal };
+  }
+  if (t.type === 'weekly' && esNumero(t.weekday) && esNumero(t.hour) && esNumero(t.minute)) {
+    if (desdeLaUltimaHoraNominal(ahora, t.hour, t.minute, t.weekday) < MARGEN_RECIEN_VENCIDA_MS) return null;
+    return {
+      type: 'weekly' as TipoNotificaciones.SchedulableTriggerInputTypes.WEEKLY,
+      weekday: t.weekday,
+      hour: t.hour,
+      minute: t.minute,
+      ...canal,
+    };
+  }
+  if (t.type === 'date' && esNumero(t.value) && t.value > ahoraMs) {
+    return { type: 'date' as TipoNotificaciones.SchedulableTriggerInputTypes.DATE, date: t.value, ...canal };
+  }
+  return null;
+}
+
+/** Qué alarmas se re-arman y con qué pedido. Pura: la prueban los tests. */
+export function planDeRearmado(programadas: AlarmaProgramada[], ahoraMs: number): PedidoDeRearmado[] {
+  const pedidos: PedidoDeRearmado[] = [];
+  const vistos = new Set<string>();
+  for (const alarma of programadas) {
+    if (!alarma?.identifier || vistos.has(alarma.identifier)) continue;
+    const trigger = disparadorDeEntrada(alarma.trigger, ahoraMs);
+    if (!trigger) continue;
+    vistos.add(alarma.identifier);
+    pedidos.push({ identifier: alarma.identifier, content: contenidoDeEntrada(alarma.content ?? {}), trigger });
+  }
+  return pedidos;
+}
+
+/** Si toca correr: siempre la primera vez (arranque); después, con `INTERVALO_MINIMO_MS` de por medio. */
+export function tocaRearmar(ultimaMs: number | null, ahoraMs: number): boolean {
+  return ultimaMs === null || ahoraMs - ultimaMs >= INTERVALO_MINIMO_MS;
+}
+
+let ultimaCorrida: number | null = null;
+let corriendo = false;
+
+/** Solo para los tests. */
+export function olvidarUltimaCorrida(): void {
+  ultimaCorrida = null;
+  corriendo = false;
+}
+
+/**
+ * Re-arma las alarmas ya programadas. Devuelve cuántas re-armó, o `null` si no correspondía correr
+ * (otra plataforma, intervalo mínimo, o ya había una corrida en curso).
+ */
+export async function rearmarAlarmasProgramadas(
+  ahoraMs: number = Date.now(),
+  plataforma: string = Platform.OS,
+): Promise<number | null> {
+  if (!HAY_RECORDATORIOS_LOCALES || plataforma !== 'android') return null;
+  if (corriendo || !tocaRearmar(ultimaCorrida, ahoraMs)) return null;
+  const N = cargarNotificaciones();
+  if (!N) return null;
+  corriendo = true;
+  ultimaCorrida = ahoraMs;
+  try {
+    const plan = planDeRearmado((await N.getAllScheduledNotificationsAsync()) as AlarmaProgramada[], ahoraMs);
+    let rearmadas = 0;
+    for (const pedido of plan) {
+      try {
+        // Se relee justo antes: si Plan, «No voy» o Yo → Alarmas la cancelaron mientras tanto, no se
+        // la resucita (su id ya no está guardado en ningún lado y no se podría volver a cancelar).
+        const vigentes = await N.getAllScheduledNotificationsAsync();
+        if (!vigentes.some(v => v.identifier === pedido.identifier)) continue;
+        await N.scheduleNotificationAsync(pedido);
+        rearmadas++;
+      } catch {
+        // Una que falla no impide las demás.
+      }
+    }
+    return rearmadas;
+  } catch {
+    return 0;
+  } finally {
+    corriendo = false;
+  }
+}
