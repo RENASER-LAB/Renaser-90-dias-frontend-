@@ -1,5 +1,5 @@
 import type { ChatConversation, ChatMessage, ChatMessageType } from '../../../screens/ComunidadScreen';
-import { horaChat } from '../utils/horaChat';
+import { horaCorta, horaDeLaLista, vistaPreviaDelMensaje } from '../utils/formatoChat';
 import type {
   WireConversacionResumen,
   WireMensaje,
@@ -172,9 +172,14 @@ export function mapearMensaje(wire: WireMensaje, actorId: string | null | undefi
     sender: wire.senderName?.trim() || (esMio ? 'Tú' : 'Miembro Renaser'),
     avatar: '',
     isMe: esMio,
-    time: horaChat(wire.createdAt),
+    // «21:04», en 24 h como WhatsApp (antes «9:04 PM» o «Ayer», que dentro de la burbuja no
+    // servía: el día ya lo dice el separador).
+    time: horaCorta(wire.createdAt),
     type: mapearTipoMensaje(wire.type),
-    text: textoPorTipo(wire),
+    /* Una foto que se puede mostrar lleva solo SU texto al pie: el rótulo «Imagen adjunta» de
+       `textoPorTipo` quedaba escrito debajo de cada foto (2026-09-26). Sin URL se conserva,
+       porque ahí no hay foto y el rótulo es lo único que se ve. */
+    text: wire.type === 'IMAGE' && wire.mediaUrl ? wire.text?.trim() || undefined : textoPorTipo(wire),
     audioDuration: wire.mediaDurationSeconds != null ? formatearDuracion(wire.mediaDurationSeconds) : undefined,
     // La URL firmada es lo que hace que la foto se vea y el audio suene. Puede venir `null` en el
     // "último mensaje" de la lista de conversaciones (ahí el backend no la firma a propósito),
@@ -186,6 +191,37 @@ export function mapearMensaje(wire: WireMensaje, actorId: string | null | undefi
       ? [wire.text?.trim() || '📷 Imagen adjunta']
       : undefined,
     status: 'read',
+    createdAt: wire.createdAt,
+    senderId: wire.senderId,
+    senderAvatarUrl: wire.senderAvatarUrl ?? null,
+  };
+}
+
+/**
+ * Lo que dice la fila de la lista sobre el último mensaje (chat estilo WhatsApp, 2026-09-26):
+ * vista previa («Tú: …», «📷 Foto», «🎤 Audio»), hora corta y la fecha con la que se ordena.
+ *
+ * Sale del mensaje del CABLE y no del ya mapeado: el mapeado le pone «Imagen adjunta» a una foto
+ * sin texto, y la vista previa diría «📷 Imagen adjunta».
+ */
+export function resumenDelUltimoMensaje(
+  ultimo: WireMensaje | null,
+  actorId: string | null | undefined,
+  ahora: Date = new Date()
+): Pick<ChatConversation, 'lastMessage' | 'lastTime' | 'lastMessageAt'> {
+  if (!ultimo) {
+    return { lastMessage: vistaPreviaDelMensaje(null), lastTime: '', lastMessageAt: null };
+  }
+  const tipo = mapearTipoMensaje(ultimo.type);
+  const conAdjunto = tipo === 'image_grid' || tipo === 'video' || tipo === 'audio';
+  return {
+    lastMessage: vistaPreviaDelMensaje({
+      tipo,
+      texto: conAdjunto ? ultimo.text : textoPorTipo(ultimo),
+      esMio: !!actorId && ultimo.senderId === actorId,
+    }),
+    lastTime: horaDeLaLista(ultimo.createdAt, ahora),
+    lastMessageAt: ultimo.createdAt,
   };
 }
 
@@ -267,11 +303,6 @@ function construirSubtitulo(tipo: TipoChat, otro?: WireMiembro): string {
   return otro ? `${traducirRol(otro.role)} · 1 a 1` : 'Conversación directa';
 }
 
-function construirUltimoMensajeTexto(ultimo: WireMensaje | null): string {
-  if (!ultimo) return 'Todavía no hay mensajes';
-  return textoPorTipo(ultimo) ?? '';
-}
-
 export function mapearResumenConversacion(
   resumen: WireConversacionResumen,
   actorId: string | null | undefined,
@@ -297,8 +328,10 @@ export function mapearResumenConversacion(
     title: construirTitulo(tipoChat, resumen.conversation.nombre, otro),
     subtitle: construirSubtitulo(tipoChat, otro),
     avatar: AVATAR_POR_TIPO[tipoChat],
-    lastMessage: construirUltimoMensajeTexto(resumen.lastMessage),
-    lastTime: resumen.lastMessage ? horaChat(resumen.lastMessage.createdAt) : '',
+    ...resumenDelUltimoMensaje(resumen.lastMessage, actorId),
+    createdAt: resumen.conversation.createdAt,
+    // La foto del otro en un 1 a 1. Grupos y soporte no traen imagen: usan el avatar del programa.
+    avatarUrl: otro?.avatarUrl ?? null,
     unreadCount: resumen.unreadCount,
     // El listado nunca trae el historial completo — se pide recién al abrir la conversación
     // (`GET .../messages`), mismo criterio que `useWallFeed.cargarComentarios`.

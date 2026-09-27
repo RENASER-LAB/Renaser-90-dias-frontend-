@@ -3,7 +3,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChatConversation, ChatMessage } from '../../../screens/ComunidadScreen';
 import { mensajeDeError } from '../../../services/http/apiClient';
 import * as chatApi from '../api/chatApi';
-import { mapearMensaje, mapearResumenConversacion, refinarTituloConMensajes } from '../api/chatMappers';
+import {
+  mapearMensaje,
+  mapearResumenConversacion,
+  refinarTituloConMensajes,
+  resumenDelUltimoMensaje,
+} from '../api/chatMappers';
 import type { WireMensaje, WireMiembro } from '../types/chat.types';
 
 /** Marca de "todavía no se pidió para nadie" (distinta de `null`, que es un actor posible). */
@@ -100,8 +105,7 @@ export function useChatConversaciones(actorId: string | null | undefined, activo
       const actualizada: ChatConversation = {
         ...conversacion,
         messages: [...conversacion.messages, mensaje],
-        lastMessage: mensaje.text || 'Mensaje enviado',
-        lastTime: mensaje.time,
+        ...resumenDelUltimoMensaje(creado, actorId),
       };
       setConversations(prev => prev.map(c => (c.id === conversacion.id ? actualizada : c)));
       return actualizada;
