@@ -11,6 +11,20 @@ export interface FotoDePerfil {
 }
 
 /**
+ * Una foto elegida del teléfono y ya cuadrada. Es la misma forma que la de perfil: la portada de la
+ * tarjeta de bienvenida (Administración, 27/09) sale del mismo selector con otro lado.
+ */
+export type FotoCuadrada = FotoDePerfil;
+
+/** Qué cambia entre un uso y otro del selector cuadrado. */
+export interface OpcionesFotoCuadrada {
+  /** El lado, en px, del cuadrado al que se lleva la foto. */
+  lado: number;
+  /** El texto con el que se pide el acceso a las fotos: dice PARA QUÉ, con las palabras de esa pantalla. */
+  motivoDelPermiso: string;
+}
+
+/**
  * El lado del cuadrado al que se reduce la foto antes de subirla.
  *
  * 512 px es de sobra: el avatar más grande que la app dibuja son 70 px lógicos, que en una pantalla
@@ -43,15 +57,27 @@ export const LADO_DEL_AVATAR = 512;
  * `para` (D-212, 2026-09-27) es lo que dice el aviso del permiso: el mismo selector sirve para la foto
  * de un grupo, que también va en un círculo, y ahí el aviso no puede hablar de «tu foto de perfil».
  */
-export async function elegirFotoDePerfil(
+export function elegirFotoDePerfil(
   { para = 'tu foto de perfil' }: { para?: string } = {},
 ): Promise<FotoDePerfil | null> {
+  return elegirFotoCuadrada({
+    lado: LADO_DEL_AVATAR,
+    motivoDelPermiso: `Renaser necesita acceder a tus fotos para que puedas elegir ${para}.`,
+  });
+}
+
+/**
+ * El selector de {@link elegirFotoDePerfil} con el lado y el motivo del permiso como parámetros: el
+ * mismo recorte cuadrado nativo, la misma reducción y el mismo JPEG. Lo usan el avatar (512 px) y la
+ * portada de la tarjeta de bienvenida en Administración (1200 px, el lienzo de la tarjeta que dibuja
+ * el servidor). Uno solo para que los dos no se desalineen con el tiempo.
+ *
+ * Devuelve `null` si canceló o negó el permiso — nunca lanza.
+ */
+export async function elegirFotoCuadrada(opciones: OpcionesFotoCuadrada): Promise<FotoCuadrada | null> {
   const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!permiso.granted) {
-    Alert.alert(
-      'Permiso de galería requerido',
-      `Renaser necesita acceder a tus fotos para que puedas elegir ${para}.`,
-    );
+    Alert.alert('Permiso de galería requerido', opciones.motivoDelPermiso);
     return null;
   }
   const resultado = await ImagePicker.launchImageLibraryAsync({
@@ -64,7 +90,7 @@ export async function elegirFotoDePerfil(
   });
   if (resultado.canceled || !resultado.assets?.[0]) return null;
   try {
-    return await reducirACuadrado(resultado.assets[0].uri);
+    return await reducirACuadrado(resultado.assets[0].uri, opciones.lado);
   } catch {
     Alert.alert('No se pudo procesar la foto', 'Prueba con otra imagen.');
     return null;
@@ -72,15 +98,15 @@ export async function elegirFotoDePerfil(
 }
 
 /**
- * Reduce a un cuadrado de {@link LADO_DEL_AVATAR} y reencodea a JPEG.
+ * Reduce a un cuadrado del lado pedido ({@link LADO_DEL_AVATAR} en el perfil) y reencodea a JPEG.
  *
  * Se piden las dos dimensiones y no solo el ancho: el editor ya devolvió un cuadrado, así que fijar
  * las dos no deforma nada, y deja el resultado en una medida conocida pase lo que pase. Si algún
  * día el recorte se hiciera opcional, esto seguiría entregando algo que entra bien en el círculo.
  */
-async function reducirACuadrado(uri: string): Promise<FotoDePerfil> {
+async function reducirACuadrado(uri: string, lado: number): Promise<FotoCuadrada> {
   const renderizada = await ImageManipulator.manipulate(uri)
-    .resize({ width: LADO_DEL_AVATAR, height: LADO_DEL_AVATAR })
+    .resize({ width: lado, height: lado })
     .renderAsync();
   const resultado = await renderizada.saveAsync({ compress: 0.85, format: SaveFormat.JPEG });
   return { uri: resultado.uri, mimeType: 'image/jpeg' };

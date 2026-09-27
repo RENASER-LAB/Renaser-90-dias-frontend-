@@ -24,9 +24,11 @@ import { CabeceraAdmin } from '../components/CabeceraAdmin';
 export function MasOpcionesScreen({
   onVolver,
   onAbrirStaff,
+  onAbrirBienvenida,
 }: {
   onVolver: () => void;
   onAbrirStaff: () => void;
+  onAbrirBienvenida: () => void;
 }) {
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
@@ -37,6 +39,13 @@ export function MasOpcionesScreen({
   });
 
   const enLaApp: Array<{ titulo: string; detalle: string; onPress: () => void }> = [
+    /* La portada de la tarjeta y los tres mensajes de bienvenida (pedido del dueño del 27/09,
+       backend D-210). Vive acá y no en la raíz: se cambia de vez en cuando (A-3). */
+    {
+      titulo: 'Bienvenida',
+      detalle: 'La tarjeta y los mensajes que recibe quien entra al programa',
+      onPress: onAbrirBienvenida,
+    },
     {
       titulo: 'Equipo y roles',
       detalle: 'Cambiar el rol de una cuenta: aprendiz, mentor, líder, administrador o alquimista',

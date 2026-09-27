@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import type { InicioSemanal } from '../../semaforo/hooks/useLecturaPorSemana';
 import type { PersonaDeFicha } from '../types/admin.types';
 import { AdminInicioScreen } from './AdminInicioScreen';
+import { BienvenidaAdminScreen } from './BienvenidaAdminScreen';
 import { FichaAprendizScreen } from './FichaAprendizScreen';
 import { GrupoDetalleScreen } from './GrupoDetalleScreen';
 import { GrupoFormScreen } from './GrupoFormScreen';
@@ -36,6 +37,7 @@ type Vista =
   | { nombre: 'semaforo' }
   | { nombre: 'semaforo-grupo'; grupoId: string; grupoNombre: string | null; inicio: InicioSemanal }
   | { nombre: 'staff' }
+  | { nombre: 'bienvenida' }
   | { nombre: 'mas' };
 
 /**
@@ -117,8 +119,16 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
       );
     case 'staff':
       return <StaffRolesScreen onVolver={volver} />;
+    case 'bienvenida':
+      return <BienvenidaAdminScreen onVolver={volver} />;
     case 'mas':
-      return <MasOpcionesScreen onVolver={volver} onAbrirStaff={() => entrar({ nombre: 'staff' })} />;
+      return (
+        <MasOpcionesScreen
+          onVolver={volver}
+          onAbrirStaff={() => entrar({ nombre: 'staff' })}
+          onAbrirBienvenida={() => entrar({ nombre: 'bienvenida' })}
+        />
+      );
     default:
       return (
         <AdminInicioScreen
