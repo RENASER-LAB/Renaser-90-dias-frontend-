@@ -169,7 +169,7 @@ function todosLosDias(): Record<DiaDelPlan, boolean> {
 }
 
 /**
- * Los avisos que el servidor tiene para un hábito (E-403): todos si los conoce (V81), si no el único
+ * Los avisos que el servidor tiene para un hábito (E-408): todos si los conoce (V81), si no el único
  * número de siempre, y nada si el recordatorio está apagado.
  */
 function avisosDelServidor(p: PreferenciaHabitoApi | undefined): number[] {
@@ -243,7 +243,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
    * una alarma diaria propia en el teléfono.
    */
   const [antelaciones, setAntelaciones] = useState<number[]>([]);
-  /** E-403: qué hábito está abierto y si la persona ya tocó sus avisos (ver `abrirHabito`). */
+  /** E-408: qué hábito está abierto y si la persona ya tocó sus avisos (ver `abrirHabito`). */
   const abiertoRef = useRef<string | null>(null);
   const avisosTocadosRef = useRef(false);
   /**
@@ -396,7 +396,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
       }
     })();
     const previa = preferencias.get(h.habitoId);
-    // E-403: lo que muestra el recordatorio sale YA de lo que dice el servidor, no de lo que quedó del
+    // E-408: lo que muestra el recordatorio sale YA de lo que dice el servidor, no de lo que quedó del
     // hábito abierto antes. Después, si el teléfono tiene sus avisos guardados, se usan esos, pero solo
     // si sigue abierto este mismo hábito y la persona todavía no tocó nada: una lectura que llega tarde
     // no puede pisar lo que se eligió (se veía «A la hora» y se guardaba sin recordatorio).
@@ -1173,7 +1173,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
 
               {/* En Android es alarma local; en web es Web Push y los dos avisos salen del
                   scheduler del backend. Expo Go sigue sin ofrecer el canal remoto. */}
-              {/* E-403: guardar días no guarda el recordatorio; con días elegidos no se ofrece. */}
+              {/* E-408: guardar días no guarda el recordatorio; con días elegidos no se ofrece. */}
               {recordatorios.HAY_RECORDATORIOS && diasEnEdicion.length > 0 && (
                 <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5, marginTop: 12 }]}>
                   El recordatorio se elige sin días marcados.

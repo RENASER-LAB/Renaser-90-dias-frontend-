@@ -239,14 +239,14 @@ describe('PLN-02: el editor avisa el cambio de hora que rige desde mañana', () 
 });
 
 /**
- * E-403 (2026-09-28): la hoja abría un hábito sin recordatorio con «A la hora» YA MARCADO y guardaba
+ * E-408 (2026-09-28): la hoja abría un hábito sin recordatorio con «A la hora» YA MARCADO y guardaba
  * `recordatorio_activo = false`: lo que se veía no era lo que se guardaba. Visto dos veces con Jugo verde.
  *
  * Causas: (1) al abrir un hábito, las antelaciones quedaban las del hábito anterior hasta que llegaba la
  * lectura del teléfono, y esa lectura, al llegar tarde, pisaba lo que la persona ya había tocado; (2) con
  * días elegidos, la hoja mostraba el recordatorio pero guardar días lo ignoraba.
  */
-describe('E-403: lo que se ve en el recordatorio es lo que se guarda', () => {
+describe('E-408: lo que se ve en el recordatorio es lo que se guarda', () => {
   const conAviso = (habitId: string, hora: string): PreferenciaHabitoApi => ({
     ...preferencia(habitId, hora), reminderEnabled: true, reminderMinutesBefore: 0,
   });
