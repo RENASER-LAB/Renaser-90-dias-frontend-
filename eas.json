@@ -27,7 +27,8 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://djbooeq09skac.cloudfront.net"
+        "EXPO_PUBLIC_API_URL": "https://djbooeq09skac.cloudfront.net",
+        "EXPO_PUBLIC_MAPA_DIA7": "on"
       }
     }
   },
