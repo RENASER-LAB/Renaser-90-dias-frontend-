@@ -18,14 +18,17 @@ const enSeccion = (seccion: ContextoComunidad['seccion']): ContextoComunidad => 
  * compitiendo con el Muro. Ahora cada uno se pide al abrir su sección.
  */
 describe('recursosQueNecesita', () => {
-  it('el Muro solo no necesita nada más: al abrir sale únicamente `/wall` (y `/home`)', () => {
-    expect(recursosQueNecesita(enSeccion('muro'))).toEqual([]);
-    expect(recursosQueNecesita(enSeccion('testimonios'))).toEqual([]);
+  /* Corregido 2026-09-28. Decía «al abrir sale únicamente `/wall` (y `/home`)» y esperaba `[]`. Desde
+     que la ⓘ de la cabecera abre la info de tu grupo, cada sección pide también `/me/cells`: sin ella
+     no se sabe si hay grupo, y sin grupo la ⓘ no se dibuja (E-409). */
+  it('el Muro solo necesita tus grupos (la ⓘ de la cabecera): al abrir salen `/wall`, `/home` y `/me/cells`', () => {
+    expect(recursosQueNecesita(enSeccion('muro'))).toEqual(['grupos']);
+    expect(recursosQueNecesita(enSeccion('testimonios'))).toEqual(['grupos']);
   });
 
   it('cada sección pide lo suyo', () => {
-    expect(recursosQueNecesita(enSeccion('classroom'))).toEqual(['cursos']);
-    expect(recursosQueNecesita(enSeccion('ranking'))).toEqual(['ranking', 'celula']);
+    expect(recursosQueNecesita(enSeccion('classroom'))).toEqual(['grupos', 'cursos']);
+    expect(recursosQueNecesita(enSeccion('ranking'))).toEqual(['grupos', 'ranking', 'celula']);
     expect(recursosQueNecesita(enSeccion('tribu'))).toEqual(
       expect.arrayContaining(['celula', 'grupos', 'conversaciones', 'grupoQueAcompano']),
     );

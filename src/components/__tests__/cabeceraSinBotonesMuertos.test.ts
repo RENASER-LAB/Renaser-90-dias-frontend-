@@ -2,6 +2,9 @@
  * E-409 (28/09): «quitarlos si no hacen nada». La ⓘ de Comunidad, el «⋯» de Plan y de Training y la
  * campana de Hoy se veían como botones y no hacían nada. Contra el código anterior fallan: la cabecera
  * dibujaba el botón con o sin acción, y las cuatro pantallas lo pedían sin acción.
+ *
+ * > **Corregido 2026-09-28.** La ⓘ de Comunidad volvió abriendo la info de tu grupo (ver
+ * > `infoDelGrupoEnLaCabecera.test.ts`); sin grupo sigue sin dibujarse.
  */
 import { describe, expect, it, jest } from '@jest/globals';
 import * as fs from 'fs';
