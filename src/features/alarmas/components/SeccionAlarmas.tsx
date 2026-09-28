@@ -1,8 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { StyleSheet, Switch, Text, View } from 'react-native';
 
 import { Alert } from '../../../components/Alerta';
-import { Icon } from '../../../components/Icon';
 import { BotonSecundario } from '../../../components/Legible';
 import { useTheme } from '../../../theme/ThemeContext';
 import * as habitsApi from '../../habits/api/habitsApi';
@@ -21,12 +20,13 @@ import {
   PREFERENCIAS_POR_DEFECTO,
   type PreferenciasDeAlarmas,
 } from '../preferenciasDeAlarmas';
-import { probarSonido } from '../probarSonido';
-import { cambiarSonidoDeLasProgramadas } from '../cambioDeSonido';
-import { canalDeAlarma, SONIDOS, type SonidoDeAlarma } from '../sonidoDeAlarma';
+import { escucharSonido, probarSonido } from '../probarSonido';
+import { cambiarSonidoDeLasProgramadas, cambiarSonidoDeLosHabitos } from '../cambioDeSonido';
+import { canalDeAlarma, type SonidoDeAlarma } from '../sonidoDeAlarma';
 import { RecordatorioDeAcciones } from '../../objetivos/components/RecordatorioDeAcciones';
 import { idsDeRecordatoriosDeAcciones } from '../../objetivos/notificaciones/recordatoriosDeAcciones';
 import { AvisoAlarmaExacta } from './AvisoAlarmaExacta';
+import { SelectorDeSonido } from './SelectorDeSonido';
 
 /** El hábito de despertar, por su clave de sistema (el título lo puede renombrar el aprendiz). */
 const CLAVE_DESPERTAR = 'WAKE_UP';
@@ -48,6 +48,10 @@ interface Despertar {
  * El sonido rige para todas las alarmas locales, incluida la «Voz». Sin tablas nuevas: la alarma de Despertar es el recordatorio
  * del hábito `WAKE_UP` (las mismas preferencias de siempre, `habit-preferences`), y lo demás vive en
  * el teléfono (`preferenciasDeAlarmas`).
+ *
+ * Desde 2026-09-27 (decisión del dueño) el sonido se elige en `SelectorDeSonido`: los cuatro de
+ * siempre, y los grupos «Para alertar» y «Para relajar», cada opción con ▶ para escucharla antes de
+ * elegirla (`escucharSonido`). La «Voz» es la de Dora y en los hábitos dice su nombre.
  *
  * En web y en Expo Go no hay alarmas locales: la sección lo dice y no ofrece nada que no funcione.
  */
@@ -178,7 +182,8 @@ export function SeccionAlarmas({ userId }: { userId: string }) {
       }
       // Los demás hábitos y las acciones de los objetivos (2026-09-26): se pasan al canal nuevo tal
       // cual están programadas, sin servidor. Despertar ya quedó en el canal nuevo y se salta solo.
-      await cambiarSonidoDeLasProgramadas(await recordatorios.idsDeRecordatoriosDeHabitos(userId), canalDeAlarma('habitos', sonido));
+      // Desde 2026-09-27 cada hábito va a SU canal: con «Voz», el de la voz que dice su nombre.
+      await cambiarSonidoDeLosHabitos(userId, sonido);
       await cambiarSonidoDeLasProgramadas(await idsDeRecordatoriosDeAcciones(userId), canalDeAlarma('objetivos', sonido));
       try {
         await reprogramarConSonidoNuevo(userId, await listarProximos(Date.now()));
@@ -193,6 +198,13 @@ export function SeccionAlarmas({ userId }: { userId: string }) {
   const probar = async () => {
     if (!(await probarSonido(prefs.sonido))) {
       Alert.alert('No se pudo probar', 'Este teléfono no tiene permiso para avisarte. Actívalo en los ajustes del teléfono.');
+    }
+  };
+
+  /** «Escuchar» (2026-09-27): oír una opción antes de elegirla. No cambia lo elegido. */
+  const escuchar = async (sonido: SonidoDeAlarma) => {
+    if (!(await escucharSonido(sonido))) {
+      Alert.alert('No se pudo reproducir', 'Este teléfono no tiene permiso para avisarte. Actívalo en los ajustes del teléfono.');
     }
   };
 
@@ -265,26 +277,13 @@ export function SeccionAlarmas({ userId }: { userId: string }) {
       <View style={{ gap: 8 }}>
         <Text style={[estilos.titulo, { color: c.textStrong }]}>Sonido</Text>
         <Text style={texto}>Para todas tus alarmas: hábitos, despertar, eventos y acciones de tus objetivos.</Text>
-        {SONIDOS.map(s => {
-          const elegido = prefs.sonido === s.clave;
-          return (
-            <Pressable
-              key={s.clave}
-              onPress={() => void cambiarSonido(s.clave)}
-              disabled={ocupado}
-              accessibilityRole="radio"
-              accessibilityState={{ checked: elegido, disabled: ocupado }}
-              accessibilityLabel={`${s.nombre}. ${s.detalle}`}
-              style={[estilos.opcion, { borderColor: elegido ? c.gold : c.border, backgroundColor: elegido ? c.goldWash : c.cardBg }]}
-            >
-              <Icon name={elegido ? 'checkCircle' : 'volume'} size={20} color={elegido ? c.goldInk : c.chevron} />
-              <View style={{ flex: 1 }}>
-                <Text style={[estilos.nombre, { color: c.textStrong }]}>{s.nombre}</Text>
-                <Text style={texto}>{s.detalle}</Text>
-              </View>
-            </Pressable>
-          );
-        })}
+        <Text style={texto}>Toca ▶ para escuchar cada uno antes de elegirlo.</Text>
+        <SelectorDeSonido
+          elegido={prefs.sonido}
+          ocupado={ocupado}
+          onElegir={s => void cambiarSonido(s)}
+          onEscuchar={s => void escuchar(s)}
+        />
         <BotonSecundario etiqueta="Probar el sonido" icono="play" onPress={() => void probar()} />
       </View>
 
@@ -307,5 +306,4 @@ const estilos = StyleSheet.create({
   nombre: { fontFamily: 'Jost_500Medium', fontSize: 17, lineHeight: 22 },
   caja: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 14 },
   fila: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 72, paddingVertical: 12 },
-  opcion: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 64, borderWidth: 1.5, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10 },
 });

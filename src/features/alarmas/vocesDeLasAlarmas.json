@@ -1,0 +1,27 @@
+{
+  "genericas": {
+    "habitos": { "archivo": "voz_habito.mp3", "dice": "Tu hábito está por empezar." },
+    "eventos": { "archivo": "voz_evento.mp3", "dice": "Tu evento está por empezar." },
+    "objetivos": { "archivo": "voz_objetivos.mp3", "dice": "Tienes acciones de tus objetivos por hacer." }
+  },
+  "habitos": [
+    { "habitoId": "899a2151-e98c-4b61-a46c-b55134240d17", "tituloDelCatalogo": "DESPERTAR", "clave": "despertar", "dice": "Despertar." },
+    { "habitoId": "66507383-7219-43ab-aa42-2fbc76152b82", "tituloDelCatalogo": "AGUA TIBIA CON LIMÓN", "clave": "agua_tibia", "dice": "Agua tibia con limón." },
+    { "habitoId": "4dee0fa3-e285-4b7d-b062-ad0001dde314", "tituloDelCatalogo": "RITUAL TIERRA - AGUA - FUEGO (mañana)", "clave": "ritual_manana", "dice": "Ritual de la mañana." },
+    { "habitoId": "d2d58e66-db7f-4226-9c95-30b380f68b73", "tituloDelCatalogo": "DÍA SIN CELULAR", "clave": "dia_sin_celular", "dice": "Día sin celular." },
+    { "habitoId": "feeea74a-d811-47a2-a175-34f2527c1d32", "tituloDelCatalogo": "Clase diaria", "clave": "clase_diaria", "dice": "Clase diaria." },
+    { "habitoId": "00006bd5-ab74-4317-b022-ae2e3a878d55", "tituloDelCatalogo": "JUGO VERDE", "clave": "jugo_verde", "dice": "Tu jugo verde." },
+    { "habitoId": "5449b2b9-a5b4-441f-8304-2c37c425a114", "tituloDelCatalogo": "PRIMERA COMIDA (ROMPO EL AYUNO)", "clave": "primera_comida", "dice": "Primera comida." },
+    { "habitoId": "63acbd12-9792-495c-be22-6280ecba53b3", "tituloDelCatalogo": "RITUAL TIERRA - AGUA - FUEGO (mediodía)", "clave": "ritual_mediodia", "dice": "Ritual del mediodía." },
+    { "habitoId": "3a8a82a0-787d-46bc-a69e-b29c110a37bc", "tituloDelCatalogo": "ÚLTIMA COMIDA DEL DÍA", "clave": "ultima_comida", "dice": "Última comida del día." },
+    { "habitoId": "679188b9-7c1d-48ec-ae09-8a76b87badbf", "tituloDelCatalogo": "RITUAL TIERRA - AGUA - FUEGO (noche)", "clave": "ritual_noche", "dice": "Ritual de la noche." },
+    { "habitoId": "593b2c17-8acd-49d0-b8f2-199a48469715", "tituloDelCatalogo": "ESCRITURA LIBRE NOCTURNA", "clave": "escritura_libre", "dice": "Escritura libre nocturna." },
+    { "habitoId": "830c3d76-888a-4aef-bb30-fb0f0cc7ca73", "tituloDelCatalogo": "POST DIARIO EN COMUNIDAD", "clave": "post_comunidad", "dice": "Post diario en comunidad." },
+    { "habitoId": "a344681d-c7a7-4324-a9a0-1b7502e52d80", "tituloDelCatalogo": "Pastilla Renacer", "clave": "pastilla_renacer", "dice": "Pastilla Renacer." },
+    { "habitoId": "48d68c12-72a9-428c-a8c6-02b9b01bc2fe", "tituloDelCatalogo": "DORMIR", "clave": "dormir", "dice": "A dormir." },
+    { "habitoId": "bb0b1cd0-18df-4bcd-9a4e-9e1c63905c0d", "tituloDelCatalogo": "AUDIOTERAPIA SEMANAL", "clave": "audioterapia", "dice": "Audioterapia semanal." },
+    { "habitoId": "358caf57-519f-4b12-8cbe-c7094d0523d8", "tituloDelCatalogo": "DESCANSO PROFUNDO", "clave": "descanso_profundo", "dice": "Descanso profundo." },
+    { "habitoId": "60d6c870-df03-4d36-8a88-8c7411ae406b", "tituloDelCatalogo": "RITUAL DE MAÑANA (domingo)", "clave": "ritual_manana", "dice": "Ritual de la mañana." },
+    { "habitoId": "3a922b73-6d11-48f9-89c2-abc453ca6ef7", "tituloDelCatalogo": "AGUA E HIDRATACIÓN (domingo)", "clave": "agua_hidratacion", "dice": "Agua e hidratación." }
+  ]
+}

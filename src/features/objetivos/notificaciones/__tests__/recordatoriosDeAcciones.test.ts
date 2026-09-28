@@ -190,7 +190,7 @@ describe('sincronizar con el teléfono', () => {
     await guardarPreferenciasDeAcciones(USUARIO, { ...PREFERENCIAS_DE_ACCIONES_POR_DEFECTO, antelaciones: [0] });
     await sincronizarAlarmasDeAcciones(USUARIO, [roca({ id: 'r1' })], opciones);
     const [, pedido] = programadas()[0];
-    expect(pedido.content.sound).toBe('voz_objetivos.wav');
+    expect(pedido.content.sound).toBe('voz_objetivos.mp3');
     expect(pedido.trigger.channelId).toBe('recordatorios-objetivos-voz');
   });
 
@@ -254,7 +254,7 @@ describe('el rearmado (permiso de alarmas exactas) cubre estas alarmas', () => {
     ];
     const plan = planDeRearmado(lista, ahora);
     expect(plan.map(p => p.identifier)).toEqual(['diario', 'accion']);
-    expect(plan[0].content.sound).toBe('voz_objetivos.wav');
+    expect(plan[0].content.sound).toBe('voz_objetivos.mp3');
     expect(plan[1].trigger).toMatchObject({ type: 'date', channelId: 'recordatorios-objetivos' });
   });
 });
