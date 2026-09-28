@@ -85,6 +85,22 @@ beforeEach(() => {
   mockChecklist.mockReset();
 });
 
+describe('el historial con problemas (CAJA-10, D-220)', () => {
+  it('el Admin ve el motivo y la nota de cada problema', async () => {
+    const r = await montar({
+      ...ARMANDO,
+      estado: 'CON_PROBLEMA',
+      historial: [
+        { envio: 1, estado: 'ENVIADA', en: '2026-09-27T15:00:00Z', porNombre: 'Rosa' },
+        { envio: 1, estado: 'CON_PROBLEMA', en: '2026-09-28T15:00:00Z', porNombre: 'Rosa', motivo: 'PERDIDA', nota: 'Olva no la ubica' },
+      ],
+    });
+    const texto = textos(r);
+    expect(texto).toContain('Con problema · Se perdió · 28 sep · Rosa');
+    expect(texto).toContain('«Olva no la ubica»');
+  });
+});
+
 describe('la caja mientras se arma', () => {
   it('«Marcar enviada» está apagado y dice qué falta', async () => {
     const r = await montar(ARMANDO);

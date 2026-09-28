@@ -1,6 +1,7 @@
 import {
   cajaIncompletaSchema,
   type DetalleDeCaja,
+  type EnvioSalido,
   type FondoDeLaCarta,
   type MiCaja,
   type PasoDelHistorial,
@@ -189,6 +190,11 @@ export const MOTIVOS_DE_PROBLEMA = [
   { valor: 'OTRO', etiqueta: 'Otro' },
 ] as const;
 
+/** El motivo de un problema en palabras («Se perdió»), o `null` si no hay o no se conoce. */
+export function motivoEnPalabras(motivo: string | null | undefined): string | null {
+  return MOTIVOS_DE_PROBLEMA.find(m => m.valor === motivo)?.etiqueta ?? null;
+}
+
 // ─── Fechas e historial ─────────────────────────────────────────────────────
 
 const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
@@ -213,15 +219,24 @@ export function fechaCortaDe(iso: string | null | undefined): string | null {
  */
 const EN_EL_HISTORIAL: Record<string, string> = { POR_REVISAR: 'Aprobada' };
 
-/** «Enviada · 28 sep · Ana» (y «Envío 2 ·» delante si es un reenvío). */
+/**
+ * «Enviada · 28 sep · Ana» (y «Envío 2 ·» delante si es un reenvío). Un problema dice su motivo:
+ * «Con problema · Se perdió · 28 sep · Ana»; la nota va aparte (`notaDelPaso`).
+ */
 export function textoDelPaso(paso: PasoDelHistorial): string {
   const partes = [
     paso.envio && paso.envio > 1 ? `Envío ${paso.envio}` : null,
     EN_EL_HISTORIAL[paso.estado] ?? etiquetaDelEstado(paso.estado),
+    paso.estado === 'CON_PROBLEMA' ? motivoEnPalabras(paso.motivo) : null,
     fechaCortaDe(paso.en),
     paso.porNombre?.trim() || null,
   ];
   return partes.filter(Boolean).join(' · ');
+}
+
+/** La nota que dejó el Admin en un problema, o `null`. Solo para el Admin. */
+export function notaDelPaso(paso: PasoDelHistorial): string | null {
+  return paso.estado === 'CON_PROBLEMA' ? paso.nota?.trim() || null : null;
 }
 
 // ─── Los pasos que ve el aprendiz ───────────────────────────────────────────
@@ -267,6 +282,42 @@ export function textoDelEnvio(envio: { medio?: string | null; courier?: string |
   const partes = [envio.courier?.trim() || envio.medio?.trim() || null, envio.codigo?.trim() || null];
   const texto = partes.filter(Boolean).join(' · ');
   return texto || null;
+}
+
+// ─── La trazabilidad del aprendiz (D-220) ────────────────────────────────────
+
+/**
+ * El motivo como lo lee el aprendiz: los mismos del Admin, salvo «Otro», que suelto no dice nada
+ * en una línea del envío.
+ */
+function motivoParaElAprendiz(motivo: string | null | undefined): string {
+  if (motivo === 'OTRO' || !motivoEnPalabras(motivo)) return 'Tuvo un problema';
+  return motivoEnPalabras(motivo) as string;
+}
+
+/** En qué terminó un envío, para el aprendiz: «En camino», «Entregada» o el motivo del problema. */
+export function resultadoDelEnvio(envio: Pick<EnvioSalido, 'resultado' | 'motivo'>): string {
+  if (envio.resultado === 'CON_PROBLEMA') return motivoParaElAprendiz(envio.motivo);
+  return etiquetaParaElAprendiz(envio.resultado) ?? etiquetaDelEstado(envio.resultado);
+}
+
+/** «Envío 1 · Olva OLV-7777 · Se perdió · 28 sep». */
+export function textoDelEnvioSalido(envio: EnvioSalido, posicion: number): string {
+  const numero = envio.envio ?? posicion + 1;
+  const donde = [envio.courier?.trim() || envio.medio?.trim() || null, envio.codigo?.trim() || null]
+    .filter(Boolean)
+    .join(' ');
+  return [`Envío ${numero}`, donde || null, resultadoDelEnvio(envio), fechaCortaDe(envio.en)].filter(Boolean).join(' · ');
+}
+
+/**
+ * Qué le pasó a la caja, en palabras, cuando está con problema: el motivo del último envío. Nunca
+ * la nota del Admin (no llega). `null` si no está con problema.
+ */
+export function problemaDeMiCaja(caja: Pick<MiCaja, 'estado' | 'envios'>): string | null {
+  if (caja.estado !== 'CON_PROBLEMA') return null;
+  const ultimo = caja.envios?.[caja.envios.length - 1];
+  return ultimo?.resultado === 'CON_PROBLEMA' ? motivoParaElAprendiz(ultimo.motivo) : null;
 }
 
 /** Solo se abre un enlace web: un `rastreoUrl` raro no se le pasa al sistema. */

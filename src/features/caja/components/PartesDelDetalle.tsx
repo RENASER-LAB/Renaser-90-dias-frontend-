@@ -5,7 +5,7 @@ import { Checkbox } from '../../../components/Checkbox';
 import { useTheme } from '../../../theme/ThemeContext';
 import type { DatosDelEnvio, DestinoDeCaja, ElementoDeContenido, PasoDelHistorial } from '../api/cajaSchemas';
 import { lineasDelDestino } from '../utils/contenidoYDestino';
-import { COURIERS_CONOCIDOS, textoDelCosto, textoDelPaso, type FormularioDeEnvio } from '../utils/estadosDeCaja';
+import { COURIERS_CONOCIDOS, notaDelPaso, textoDelCosto, textoDelPaso, type FormularioDeEnvio } from '../utils/estadosDeCaja';
 
 /**
  * Las partes del detalle de una caja que solo muestran lo que llega: dónde enviarla, el checklist,
@@ -182,11 +182,15 @@ export function HistorialDeLaCaja({ historial }: { historial: PasoDelHistorial[]
   return (
     <View style={{ gap: 6 }}>
       <Titulo>Historial</Titulo>
-      {historial.map((paso, i) => (
-        <Text key={`${paso.estado}-${paso.en ?? i}-${i}`} style={[t.body, { color: c.textSoft, fontSize: 16 }]}>
-          {textoDelPaso(paso)}
-        </Text>
-      ))}
+      {historial.map((paso, i) => {
+        const nota = notaDelPaso(paso);
+        return (
+          <View key={`${paso.estado}-${paso.en ?? i}-${i}`}>
+            <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>{textoDelPaso(paso)}</Text>
+            {nota ? <Text style={[t.body, { color: c.textSoft, fontSize: 15, fontStyle: 'italic' }]}>«{nota}»</Text> : null}
+          </View>
+        );
+      })}
     </View>
   );
 }

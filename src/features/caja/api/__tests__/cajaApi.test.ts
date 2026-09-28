@@ -191,6 +191,40 @@ describe('las respuestas reales del servidor, con null', () => {
     expect(caja.pasos).toHaveLength(5);
     expect(caja.destino?.provincia).toBeNull();
   });
+
+  it('la trazabilidad (D-220): envíos con motivo null y la foto null, como los manda el servidor', async () => {
+    mockApiFetch.mockResolvedValue({
+      estado: 'ARMANDO',
+      pasos: [],
+      envioDatos: null,
+      puedeConfirmar: false,
+      puedeCambiarDestino: true,
+      destino: null,
+      envios: [
+        { envio: 1, medio: 'Olva', courier: 'Olva', codigo: 'OLV-7777', rastreoUrl: 'https://tracking.olvaexpress.pe/',
+          resultado: 'CON_PROBLEMA', en: '2026-09-28T15:00:00Z', motivo: 'PERDIDA' },
+        { envio: 2, medio: 'inDrive', courier: null, codigo: 'ABC', rastreoUrl: null, resultado: 'ENTREGADA',
+          en: '2026-09-30T15:00:00Z', motivo: null },
+      ],
+      fotoArmadaUrl: null,
+    });
+    const caja = await leerMiCaja();
+    expect(caja.envios?.map(e => e.resultado)).toEqual(['CON_PROBLEMA', 'ENTREGADA']);
+    expect(caja.fotoArmadaUrl).toBeNull();
+  });
+
+  it('el historial del Admin con el motivo y la nota de un problema', async () => {
+    mockApiFetch.mockResolvedValue({
+      ...DETALLE,
+      historial: [
+        { envio: 1, estado: 'ENVIADA', en: '2026-09-27T15:00:00Z', porNombre: 'Kelin', motivo: null, nota: null },
+        { envio: 1, estado: 'CON_PROBLEMA', en: '2026-09-28T15:00:00Z', porNombre: 'Kelin', motivo: 'DANADA',
+          nota: 'Llegó mojada' },
+      ],
+    });
+    const detalle = await leerCaja('a-1');
+    expect(detalle.historial?.[1]).toMatchObject({ motivo: 'DANADA', nota: 'Llegó mojada' });
+  });
 });
 
 describe('el fondo de la carta', () => {

@@ -128,4 +128,57 @@ describe('Tu Caja Renaser', () => {
     expect(textos(r)).toContain('Estamos resolviendo tu envío');
     expect(boton(r, 'Publicar una foto')).toBeUndefined();
   });
+
+  it('trazabilidad: una línea por envío con su rastreo, el motivo y la foto de su caja (D-220)', () => {
+    const r = montar({
+      estado: 'ENVIADA',
+      pasos: [{ estado: 'ENVIADA', en: '2026-09-30T15:00:00Z' }],
+      envioDatos: { medio: 'Shalom', courier: 'Shalom', codigo: 'SH-7777', rastreoUrl: 'https://shalom.com.pe/rastrea' },
+      puedeConfirmar: true,
+      envios: [
+        {
+          envio: 1,
+          courier: 'Olva',
+          codigo: 'OLV-7777',
+          rastreoUrl: 'https://tracking.olvaexpress.pe/',
+          resultado: 'CON_PROBLEMA',
+          en: '2026-09-28T15:00:00Z',
+          motivo: 'PERDIDA',
+        },
+        {
+          envio: 2,
+          courier: 'Shalom',
+          codigo: 'SH-7777',
+          rastreoUrl: 'https://shalom.com.pe/rastrea',
+          resultado: 'ENVIADA',
+          en: '2026-09-30T15:00:00Z',
+        },
+      ],
+      fotoArmadaUrl: 'https://almacen.test/onboarding/a/caja/1?firma',
+    });
+    const texto = textos(r);
+    expect(texto).toContain('Envío 1 · Olva OLV-7777 · Se perdió · 28 sep');
+    expect(texto).toContain('Envío 2 · Shalom SH-7777 · En camino · 30 sep');
+    expect(texto).not.toContain('Shalom · SH-7777');
+    expect(r.root.findAll(n => n.props.accessibilityLabel === 'Ver dónde va' && typeof n.props.onPress === 'function')).toHaveLength(2);
+    const foto = r.root.findAll(n => n.props.accessibilityLabel === 'Foto de tu caja' && n.props.source);
+    expect(foto[0]?.props.source).toEqual({ uri: 'https://almacen.test/onboarding/a/caja/1?firma' });
+  });
+
+  it('con un problema dice el motivo en palabras simples', () => {
+    const r = montar({
+      estado: 'CON_PROBLEMA',
+      envios: [{ envio: 1, courier: 'Olva', codigo: 'OLV-1', resultado: 'CON_PROBLEMA', en: null, motivo: 'DEVUELTA' }],
+    });
+    const texto = textos(r);
+    expect(texto).toContain('Estamos resolviendo tu envío');
+    expect(texto).toContain('La devolvieron');
+    expect(texto).not.toContain('DEVUELTA');
+  });
+
+  it('sin envío que haya salido ni foto, no hay líneas de envío ni imagen', () => {
+    const r = montar({ estado: 'ARMANDO', envios: [], fotoArmadaUrl: null });
+    expect(textos(r)).not.toContain('Envío');
+    expect(r.root.findAll(n => n.props.accessibilityLabel === 'Foto de tu caja')).toHaveLength(0);
+  });
 });

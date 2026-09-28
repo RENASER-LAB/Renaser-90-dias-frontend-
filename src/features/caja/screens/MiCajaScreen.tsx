@@ -20,12 +20,24 @@ import {
   formularioDelDestino,
   type FormularioDelDestino,
 } from '../utils/contenidoYDestino';
-import { etiquetaParaElAprendiz, pasosDeMiCaja, rastreoAbrible, textoDelEnvio } from '../utils/estadosDeCaja';
+import { ImagenRemota } from '../components/ImagenDeLaCaja';
+import {
+  etiquetaParaElAprendiz,
+  pasosDeMiCaja,
+  problemaDeMiCaja,
+  rastreoAbrible,
+  textoDelEnvio,
+  textoDelEnvioSalido,
+} from '../utils/estadosDeCaja';
 
 /**
  * Yo → «Tu Caja Renaser» (spec §7): los cinco pasos, «Ya la recibí» cuando está en camino, «¿Te la
  * enviamos a otro lugar?» antes del envío y, ya entregada, la invitación (opcional) a mostrarla en el
  * Muro. Pocas palabras, a pedido del dueño.
+ *
+ * Trazabilidad (D-220): una línea por envío que salió («Envío 1 · Olva OLV-7777 · Se perdió ·
+ * 28 sep») con «Ver dónde va» si tiene rastreo, el motivo de un problema en palabras y la foto de la
+ * caja que salió. Nunca el comprobante, el costo ni la nota del Admin: el servidor no los manda.
  */
 export function MiCajaScreen({ caja, onVolver, onCambio }: { caja: MiCaja; onVolver: () => void; onCambio: () => Promise<void> }) {
   const { c, t } = useTheme();
@@ -41,8 +53,11 @@ export function MiCajaScreen({ caja, onVolver, onCambio }: { caja: MiCaja; onVol
 
   const estado = etiquetaParaElAprendiz(caja.estado);
   const pasos = pasosDeMiCaja(caja);
-  const envio = textoDelEnvio(caja.envioDatos);
-  const rastreo = rastreoAbrible(caja.envioDatos?.rastreoUrl);
+  const envios = caja.envios ?? [];
+  // Un servidor anterior a D-220 no manda `envios`: queda la línea del envío en curso de siempre.
+  const envio = envios.length === 0 ? textoDelEnvio(caja.envioDatos) : null;
+  const rastreo = envios.length === 0 ? rastreoAbrible(caja.envioDatos?.rastreoUrl) : null;
+  const problema = problemaDeMiCaja(caja);
 
   const laRecibi = async () => {
     if (!(await confirmar('¿Ya la recibiste?', undefined, { ok: 'Sí, ya la tengo' }))) return;
@@ -95,6 +110,7 @@ export function MiCajaScreen({ caja, onVolver, onCambio }: { caja: MiCaja; onVol
                 {estado}
               </Text>
             ) : null}
+            {problema ? <Text style={[t.body, { color: c.danger, fontSize: 17, marginTop: -12 }]}>{problema}</Text> : null}
 
             <View style={{ gap: 0 }}>
               {pasos.map((paso, i) => (
@@ -136,6 +152,18 @@ export function MiCajaScreen({ caja, onVolver, onCambio }: { caja: MiCaja; onVol
               ))}
             </View>
 
+            {envios.map((salido, i) => {
+              const suRastreo = rastreoAbrible(salido.rastreoUrl);
+              return (
+                <View key={`${salido.envio ?? i}`} style={{ gap: 8 }}>
+                  <Text style={[t.body, { color: c.textStrong, fontSize: 17 }]}>{textoDelEnvioSalido(salido, i)}</Text>
+                  {suRastreo ? (
+                    <BotonSecundario etiqueta="Ver dónde va" icono="arrow" onPress={() => void Linking.openURL(suRastreo)} />
+                  ) : null}
+                </View>
+              );
+            })}
+
             {envio ? <Text style={[t.body, { color: c.textStrong, fontSize: 17 }]}>{envio}</Text> : null}
             {rastreo ? (
               <BotonSecundario etiqueta="Ver dónde va" icono="arrow" onPress={() => void Linking.openURL(rastreo)} />
@@ -148,6 +176,8 @@ export function MiCajaScreen({ caja, onVolver, onCambio }: { caja: MiCaja; onVol
             {caja.puedeCambiarDestino ? (
               <BotonSecundario etiqueta="¿Te la enviamos a otro lugar?" onPress={() => setCambiandoDestino(true)} />
             ) : null}
+
+            {caja.fotoArmadaUrl ? <ImagenRemota url={caja.fotoArmadaUrl} descripcion="Foto de tu caja" /> : null}
 
             {caja.estado === 'ENTREGADA' ? (
               <View style={[estilos.muro, { borderColor: c.borderStrong, backgroundColor: c.goldWash }]}>

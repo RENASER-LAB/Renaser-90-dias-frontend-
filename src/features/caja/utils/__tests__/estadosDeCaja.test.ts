@@ -9,12 +9,16 @@ import {
   etiquetaParaElAprendiz,
   faltaSegunElServidor,
   fechaCortaDe,
+  motivoEnPalabras,
+  notaDelPaso,
   pasosDeMiCaja,
+  problemaDeMiCaja,
   queFaltaParaEnviar,
   rastreoAbrible,
   textoDeLoQueFalta,
   textoDelCosto,
   textoDelEnvio,
+  textoDelEnvioSalido,
   textoDelFondo,
   textoDelPaso,
 } from '../estadosDeCaja';
@@ -139,6 +143,23 @@ describe('el historial', () => {
     );
   });
 
+  it('un problema dice su motivo, y la nota del Admin va aparte (CAJA-10, D-220)', () => {
+    const problema = {
+      envio: 1,
+      estado: 'CON_PROBLEMA',
+      en: '2026-09-28T15:00:00Z',
+      porNombre: 'Kelin',
+      motivo: 'PERDIDA',
+      nota: ' El courier no la encuentra ',
+    };
+    expect(textoDelPaso(problema)).toBe('Con problema · Se perdió · 28 sep · Kelin');
+    expect(notaDelPaso(problema)).toBe('El courier no la encuentra');
+    expect(notaDelPaso({ ...problema, nota: '  ' })).toBeNull();
+    expect(notaDelPaso({ envio: 1, estado: 'ENVIADA', en: null, porNombre: null, nota: 'x' })).toBeNull();
+    expect(motivoEnPalabras('DANADA')).toBe('Llegó dañada');
+    expect(motivoEnPalabras('ROBADA')).toBeNull();
+  });
+
   it('POR_REVISAR en el historial es la aprobación del Admin, no «Por revisar»', () => {
     expect(textoDelPaso({ envio: 1, estado: 'POR_REVISAR', en: '2026-09-28T15:00:00Z', porNombre: 'Ana' })).toBe(
       'Aprobada · 28 sep · Ana',
@@ -219,5 +240,48 @@ describe('el envío y su rastreo', () => {
     expect(rastreoAbrible('https://tracking.olvacourier.com/?g=1')).toBe('https://tracking.olvacourier.com/?g=1');
     expect(rastreoAbrible('javascript:alert(1)')).toBeNull();
     expect(rastreoAbrible(null)).toBeNull();
+  });
+});
+
+describe('la trazabilidad del aprendiz (D-220)', () => {
+  const perdido = {
+    envio: 1,
+    medio: 'Olva Courier',
+    courier: 'Olva',
+    codigo: 'OLV-7777',
+    rastreoUrl: 'https://tracking.olvaexpress.pe/',
+    resultado: 'CON_PROBLEMA',
+    en: '2026-09-28T15:00:00Z',
+    motivo: 'PERDIDA',
+  };
+  const entregado = {
+    envio: 2,
+    medio: 'Shalom',
+    courier: 'Shalom',
+    codigo: 'SH-7777',
+    resultado: 'ENTREGADA',
+    en: '2026-09-30T15:00:00Z',
+    motivo: null,
+  };
+
+  it('una línea por envío: medio, código, en qué terminó y cuándo', () => {
+    expect(textoDelEnvioSalido(perdido, 0)).toBe('Envío 1 · Olva OLV-7777 · Se perdió · 28 sep');
+    expect(textoDelEnvioSalido(entregado, 1)).toBe('Envío 2 · Shalom SH-7777 · Entregada · 30 sep');
+    expect(textoDelEnvioSalido({ ...entregado, resultado: 'ENVIADA', courier: null, medio: 'inDrive' }, 1)).toBe(
+      'Envío 2 · inDrive SH-7777 · En camino · 30 sep',
+    );
+  });
+
+  it('los motivos en palabras simples; «Otro» o uno desconocido, sin nombres internos', () => {
+    expect(textoDelEnvioSalido({ ...perdido, motivo: 'DANADA' }, 0)).toContain('Llegó dañada');
+    expect(textoDelEnvioSalido({ ...perdido, motivo: 'DEVUELTA' }, 0)).toContain('La devolvieron');
+    expect(textoDelEnvioSalido({ ...perdido, motivo: 'OTRO' }, 0)).toContain('Tuvo un problema');
+    expect(textoDelEnvioSalido({ ...perdido, motivo: 'ROBADA' }, 0)).not.toContain('ROBADA');
+  });
+
+  it('con problema, el motivo del último envío; sin problema, nada', () => {
+    expect(problemaDeMiCaja({ estado: 'CON_PROBLEMA', envios: [perdido] })).toBe('Se perdió');
+    expect(problemaDeMiCaja({ estado: 'ARMANDO', envios: [perdido] })).toBeNull();
+    expect(problemaDeMiCaja({ estado: 'CON_PROBLEMA', envios: null })).toBeNull();
   });
 });

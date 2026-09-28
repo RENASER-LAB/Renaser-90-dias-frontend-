@@ -76,6 +76,10 @@ export const pasoDelHistorialSchema = z
     estado: z.string(),
     en: textoOpcional,
     porNombre: textoOpcional,
+    /** Solo en `CON_PROBLEMA` (D-220): `PERDIDA` | `DANADA` | `DEVUELTA` | `OTRO`. */
+    motivo: textoOpcional,
+    /** Solo en `CON_PROBLEMA`: la nota del Admin. Interna: el aprendiz nunca la recibe. */
+    nota: textoOpcional,
   })
   .passthrough();
 
@@ -132,7 +136,27 @@ export const cajaIncompletaSchema = z.object({ faltan: z.array(z.string()) }).pa
 /** `GET /api/v1/mentor/trainees/{id}/caja`: solo el estado. */
 export const estadoDeCajaSchema = z.object({ estado: z.string() }).passthrough();
 
-/** `GET /api/v1/me/caja`: lo que ve el aprendiz. */
+/**
+ * Un envío que salió, como lo sigue el aprendiz (D-220): por dónde, el código, en qué terminó
+ * (`ENVIADA` = sigue en camino, `ENTREGADA`, `CON_PROBLEMA`) y cuándo. Sin costo ni nota.
+ */
+export const envioSalidoSchema = z
+  .object({
+    envio: z.number().nullish(),
+    medio: textoOpcional,
+    courier: textoOpcional,
+    codigo: textoOpcional,
+    rastreoUrl: textoOpcional,
+    resultado: z.string(),
+    en: textoOpcional,
+    motivo: textoOpcional,
+  })
+  .passthrough();
+
+/**
+ * `GET /api/v1/me/caja`: lo que ve el aprendiz. `envios` y `fotoArmadaUrl` son la trazabilidad
+ * (D-220): un servidor anterior no los manda y la pantalla sigue como antes.
+ */
 export const miCajaSchema = z
   .object({
     estado: z.string(),
@@ -150,6 +174,9 @@ export const miCajaSchema = z
       })
       .passthrough()
       .nullish(),
+    envios: z.array(envioSalidoSchema).nullish(),
+    /** La foto de la caja que salió en el envío en curso (URL firmada que vence), o `null`. */
+    fotoArmadaUrl: textoOpcional,
   })
   .passthrough();
 
@@ -163,5 +190,6 @@ export type DetalleDeCaja = z.infer<typeof detalleDeCajaSchema>;
 export type SubidaDeCaja = z.infer<typeof subidaDeCajaSchema>;
 export type ContenidoDeLaCaja = z.infer<typeof contenidoDeLaCajaSchema>;
 export type MiCaja = z.infer<typeof miCajaSchema>;
+export type EnvioSalido = z.infer<typeof envioSalidoSchema>;
 export type FondoDeLaCarta = z.infer<typeof fondoDeLaCartaSchema>;
 export type DestinoDeMiCaja = NonNullable<MiCaja['destino']>;
