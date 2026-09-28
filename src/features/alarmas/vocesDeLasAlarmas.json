@@ -18,7 +18,7 @@
     { "habitoId": "593b2c17-8acd-49d0-b8f2-199a48469715", "tituloDelCatalogo": "ESCRITURA LIBRE NOCTURNA", "clave": "escritura_libre", "dice": "Escritura libre nocturna." },
     { "habitoId": "830c3d76-888a-4aef-bb30-fb0f0cc7ca73", "tituloDelCatalogo": "POST DIARIO EN COMUNIDAD", "clave": "post_comunidad", "dice": "Post diario en comunidad." },
     { "habitoId": "a344681d-c7a7-4324-a9a0-1b7502e52d80", "tituloDelCatalogo": "Pastilla Renacer", "clave": "pastilla_renacer", "dice": "Pastilla Renacer." },
-    { "habitoId": "48d68c12-72a9-428c-a8c6-02b9b01bc2fe", "tituloDelCatalogo": "DORMIR", "clave": "dormir", "dice": "Dormir." },
+    { "habitoId": "48d68c12-72a9-428c-a8c6-02b9b01bc2fe", "tituloDelCatalogo": "DORMIR", "clave": "dormir", "dice": "A dormir." },
     { "habitoId": "bb0b1cd0-18df-4bcd-9a4e-9e1c63905c0d", "tituloDelCatalogo": "AUDIOTERAPIA SEMANAL", "clave": "audioterapia", "dice": "Audioterapia semanal." },
     { "habitoId": "358caf57-519f-4b12-8cbe-c7094d0523d8", "tituloDelCatalogo": "DESCANSO PROFUNDO", "clave": "descanso_profundo", "dice": "Descanso profundo." },
     { "habitoId": "60d6c870-df03-4d36-8a88-8c7411ae406b", "tituloDelCatalogo": "RITUAL DE MAÑANA (domingo)", "clave": "ritual_manana", "dice": "Ritual de la mañana." },

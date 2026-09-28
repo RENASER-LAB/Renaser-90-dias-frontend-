@@ -9,16 +9,20 @@
 # Reemplaza a `scripts/generar-voces-provisionales.sh` (espeak-ng, 2026-09-26), que ya no existe.
 #
 # USO
-#   ./scripts/sonidos/generar-sonidos.sh            # todo, y verifica con Whisper
-#   ./scripts/sonidos/generar-sonidos.sh voces      # solo las voces
-#   ./scripts/sonidos/generar-sonidos.sh alarmas    # solo los 8 sonidos
-#   SIN_ASR=1 ./scripts/sonidos/generar-sonidos.sh  # sin la escucha de Whisper
-# Da los mismos archivos cada vez (semillas fijas). Después: `npx jest src/features/alarmas` y un
-# APK nuevo — los sonidos van DENTRO del APK (plugin de `expo-notifications` en `app.json`).
+#   ./scripts/sonidos/generar-sonidos.sh                                # todo, y verifica con Whisper
+#   ./scripts/sonidos/generar-sonidos.sh voces                          # solo las voces
+#   ./scripts/sonidos/generar-sonidos.sh voces voz_habito_dormir.mp3    # solo esa (o esas) voces
+#   ./scripts/sonidos/generar-sonidos.sh alarmas                        # solo los 8 sonidos
+#   SIN_ASR=1 ./scripts/sonidos/generar-sonidos.sh ...                  # sin la escucha de Whisper
+# Da los mismos archivos byte a byte cada vez, en esta laptop (semillas fijas y, para Kokoro, un hilo
+# sin oneDNN: ver la trampa 4 en `generar_voces.py`). En otra CPU o con otras versiones puede cambiar
+# algún byte sin que cambie el sonido. Después: `npx jest src/features/alarmas` y un APK nuevo — los
+# sonidos van DENTRO del APK (plugin de `expo-notifications` en `app.json`).
 #
 # CAMBIAR ALGO
-#   - Una frase: editar `dice` en `vocesDeLasAlarmas.json` y correr `voces`. El archivo conserva el
-#     nombre, así que no hay que tocar código: el canal de Android guarda el recurso por nombre.
+#   - Una frase: editar `dice` en `vocesDeLasAlarmas.json` y regenerar SOLO esa voz
+#     (`voces voz_habito_<clave>.mp3`). El archivo conserva el nombre, así que no hay que tocar
+#     código: el canal de Android guarda el recurso por nombre.
 #   - Un hábito nuevo en el catálogo: agregarlo al JSON (id, título del catálogo, clave, lo que dice),
 #     correr `voces` y sumar `./assets/sonidos/voz_habito_<clave>.mp3` a `sounds` en `app.json`.
 #     Si falta, `src/features/alarmas/__tests__/sonidosElegibles.test.ts` lo avisa. Mientras no
@@ -34,7 +38,7 @@
 #   kokoro-v1_0.pth, voices/ef_dora.pt) y `Systran/faster-whisper-small`. Si el modelo ya está en
 #   HF_HOME, esto corre SIN red (`HF_HUB_OFFLINE=1`): `generar_voces.py` le pasa a Kokoro las rutas
 #   locales, que es lo que evita el `LocalEntryNotFoundError` que da Kokoro sin red.
-#   Memoria: Kokoro ocupa ~2 GB mientras genera (una frase por vez); Whisper, ~1 GB.
+#   Memoria: Kokoro ocupa ~1,3 GB mientras genera (una frase por vez); Whisper, ~1 GB.
 set -euo pipefail
 
 AQUI="$(cd "$(dirname "$0")" && pwd)"
@@ -44,10 +48,12 @@ PY="${TTS_PYTHON:-$HOME/.cache/renaser-e2e/tts-venv/bin/python}"
 export HF_HOME="${HF_HOME:-$HOME/.cache/renaser-e2e/hf-cache}"
 export OMP_NUM_THREADS="${OMP_NUM_THREADS:-4}"   # CPU, sin GPU; 4 hilos para no ahogar la laptop
 export PYTHONDONTWRITEBYTECODE=1                  # sin __pycache__ dentro del repo
+export MKL_CBWR=COMPATIBLE                         # MKL reproducible (ver la trampa 4 de generar_voces.py)
 if [ -d "$HF_HOME/hub/models--hexgrad--Kokoro-82M/snapshots/f3ff3571791e39611d31c381e3a41a3af07b4987" ]; then
   export HF_HUB_OFFLINE="${HF_HUB_OFFLINE:-1}"
 fi
 QUE="${1:-todo}"
+[ $# -gt 0 ] && shift
 
 if [ ! -x "$PY" ]; then
   echo "No encuentro el Python con Kokoro en $PY. Ver ENTORNO en la cabecera de este script." >&2
@@ -58,10 +64,12 @@ trap 'rm -rf "$TRABAJO"' EXIT
 
 cd "$AQUI"
 case "$QUE" in
-  todo|voces) "$PY" generar_voces.py "$TRABAJO/voces" "$DESTINO" ;;&
-  todo|alarmas) "$PY" sintetizar_alarmas.py "$TRABAJO/alarmas" "$DESTINO" ;;
-  voces) ;;
-  *) echo "Uso: $0 [todo|voces|alarmas]" >&2; exit 2 ;;
+  todo)
+    "$PY" generar_voces.py "$TRABAJO/voces" "$DESTINO"
+    "$PY" sintetizar_alarmas.py "$TRABAJO/alarmas" "$DESTINO" ;;
+  voces) "$PY" generar_voces.py "$TRABAJO/voces" "$DESTINO" "$@" ;;
+  alarmas) "$PY" sintetizar_alarmas.py "$TRABAJO/alarmas" "$DESTINO" ;;
+  *) echo "Uso: $0 [todo | voces [voz_....mp3 ...] | alarmas]" >&2; exit 2 ;;
 esac
 
 if [ -n "${SIN_ASR:-}" ]; then

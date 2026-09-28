@@ -237,9 +237,10 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **La «Voz» es Dora** (Kokoro-82M, Apache-2.0), a la velocidad que el dueño escuchó, con una
       campanita corta delante, y **en los hábitos dice su nombre**: un audio por hábito del catálogo
       (los 18 activos de `V4__catalogo_habitos_default.sql` del backend; 17 archivos, porque los dos
-      rituales de la mañana dicen lo mismo): «Despertar», «Tu jugo verde» (con «Tu» delante: sin
-      palabra antes, la jota inicial de Kokoro se oía «Kugo»), «Ritual de la mañana»… Lo que dice cada
-      uno está en `features/alarmas/vocesDeLasAlarmas.json`, que leen la app y el script. Cada hábito
+      rituales de la mañana dicen lo mismo): «Despertar», «Ritual de la mañana», «Tu jugo verde» y
+      «A dormir» (con una palabra delante: sin ella, Kokoro decía «Kugo verde» y «Dormir» sola se
+      confundía con «Dormida»)… Lo que dice cada uno está en `features/alarmas/vocesDeLasAlarmas.json`,
+      que leen la app y el script. Cada hábito
       con voz propia sale por su canal (`recordatorios-habitos-voz-<clave>`), porque en Android el
       sonido es del canal. Se empareja por id **y** por título del catálogo: un hábito propio, uno
       renombrado (jugo verde, agua tibia) o uno cuyo título cambie dicen la frase genérica «Tu hábito

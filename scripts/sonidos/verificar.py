@@ -50,9 +50,11 @@ def medir(archivo: Path) -> dict:
 
 
 def normalizar_texto(texto: str) -> str:
+    """Solo las letras, sin tildes ni mayúsculas. Sin espacios: en una frase de dos palabras Whisper
+    junta o separa a su antojo («A dormir» → «Adormir»), y lo que importa es que suenen las letras."""
     sin_tildes = unicodedata.normalize("NFD", texto.lower())
     sin_tildes = "".join(c for c in sin_tildes if unicodedata.category(c) != "Mn")
-    return re.sub(r"\s+", " ", re.sub(r"[^a-z ]", " ", sin_tildes)).strip()
+    return re.sub(r"[^a-z]", "", sin_tildes)
 
 
 def transcribir(archivos: list[Path]) -> dict[str, str]:
