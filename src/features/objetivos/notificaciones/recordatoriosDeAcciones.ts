@@ -137,6 +137,7 @@ export async function cancelarRecordatorioDiario(userId: string): Promise<void> 
     if (!id) return;
     await cancelarIds([id]);
     await AsyncStorage.removeItem(CLAVE_DIARIO + userId);
+    await reagrupar(userId);
   } catch {
     // Sin poder leer, no hay id que cancelar.
   }
@@ -160,6 +161,7 @@ export async function programarRecordatorioDiario(userId: string, horaHHmm: stri
       trigger: { type: N.SchedulableTriggerInputTypes.DAILY, hour: h, minute: m, channelId: canal.id },
     });
     await AsyncStorage.setItem(CLAVE_DIARIO + userId, id);
+    await reagrupar(userId);
     return true;
   } catch {
     return false;
@@ -177,6 +179,13 @@ export interface AlarmaDeAccion {
   instanteMs: number;
   titulo: string;
   cuerpo: string;
+  /** Adónde lleva tocarla: Plan → Objetivos en el eje de la acción (D-218). */
+  ruta: string;
+}
+
+/** `/objetivos/{fecha}?eje={eje}`: la entiende `destinoDeRuta` y la abre `AbridorDeAvisos` (D-218). */
+export function rutaDelAvisoDeAccion(roca: Pick<RocaDiariaApi, 'fecha' | 'eje'>): string {
+  return `/objetivos/${roca.fecha}?eje=${roca.eje}`;
 }
 
 export interface AlarmaDeAccionGuardada {
@@ -212,6 +221,7 @@ export function alarmasDeseadas(
         instanteMs,
         titulo: minutos > 0 ? `En ${minutos} min: ${roca.titulo}` : roca.titulo,
         cuerpo: `Te toca a las ${hora}.`,
+        ruta: rutaDelAvisoDeAccion(roca),
       });
     }
   }
@@ -223,8 +233,9 @@ export function alarmasDeseadas(
  * guardado ya al día, no hay nada que hacer.
  *
  * Solo se cancela lo que esta lista puede desmentir: alarmas de un día que la lista TRAE (`fechas`), o
- * que ya pasaron. La lista es la de hoy y mañana; una acción agendada para el viernes conserva su
- * alarma hasta que su día entra en la lista.
+ * que ya pasaron. Desde D-217 la lista es la semana agendable entera (`GET /rocks/upcoming`); con un
+ * backend anterior, hoy y mañana, y entonces una acción del viernes conserva su alarma hasta que su día
+ * entra en la lista.
  */
 export function planDeAlarmasDeAcciones(args: {
   guardadas: Record<string, AlarmaDeAccionGuardada>;
@@ -317,7 +328,7 @@ async function sincronizarAhora(
     for (const alarma of plan.programar) {
       try {
         const id = await N.scheduleNotificationAsync({
-          content: { title: alarma.titulo, body: alarma.cuerpo, sound: canal.sonidoDelAviso },
+          content: { title: alarma.titulo, body: alarma.cuerpo, sound: canal.sonidoDelAviso, data: { route: alarma.ruta } },
           trigger: { type: N.SchedulableTriggerInputTypes.DATE, date: new Date(alarma.instanteMs), channelId: canal.id },
         });
         guardadas[alarma.clave] = { id, fecha: alarma.fecha, instanteMs: alarma.instanteMs };
@@ -327,6 +338,22 @@ async function sincronizarAhora(
     }
   }
   await escribirGuardadas(userId, guardadas);
+  await reagrupar(userId);
+}
+
+/**
+ * E-410: con varias acciones (o el diario y un hábito) a la misma hora, suena un solo aviso que las
+ * nombra a todas; y una que quedó sola vuelve a sonar. Se carga acá adentro porque aquel módulo usa
+ * este (un import de ida y vuelta dejaría uno sin cargar).
+ */
+async function reagrupar(userId: string): Promise<void> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { agruparAvisosQueCoinciden } = require('../../alarmas/avisosJuntos') as typeof import('../../alarmas/avisosJuntos');
+    await agruparAvisosQueCoinciden(userId);
+  } catch {
+    // Sin agrupar, cada una suena por su lado, como antes.
+  }
 }
 
 /** Quita todas las alarmas de acciones de esta persona en este teléfono (no el recordatorio diario). */
@@ -336,6 +363,7 @@ export async function cancelarTodasLasAlarmasDeAcciones(userId: string): Promise
     const guardadas = await leerGuardadas(userId);
     await cancelarIds(Object.values(guardadas).map(g => g.id));
     await escribirGuardadas(userId, {});
+    await reagrupar(userId);
   });
 }
 
@@ -355,4 +383,46 @@ export async function idsDeRecordatoriosDeAcciones(userId: string): Promise<stri
     // Sin el diario, se pasan las demás.
   }
   return ids;
+}
+
+/** Todas las fechas `YYYY-MM-DD` de `desde` a `hasta`, inclusive (a lo sumo 14, por las dudas). */
+export function fechasEntre(desde: string, hasta: string): string[] {
+  const fechas: string[] = [];
+  const [a, m, d] = desde.split('-').map(Number);
+  const dia = new Date(Date.UTC(a, m - 1, d));
+  while (fechas.length < 14) {
+    const iso = dia.toISOString().slice(0, 10);
+    if (iso > hasta) break;
+    fechas.push(iso);
+    dia.setUTCDate(dia.getUTCDate() + 1);
+  }
+  return fechas;
+}
+
+/** De dónde se leen las acciones agendadas. Se inyecta para probarlo sin red. */
+export interface LectorDeAcciones {
+  agendadas: () => Promise<{ desde: string; hasta: string; rocas: RocaDiariaApi[] }>;
+  hoy: () => Promise<RocaDiariaApi[]>;
+  manana: () => Promise<RocaDiariaApi[]>;
+}
+
+/**
+ * Las acciones con las que se ponen al día las alarmas, y qué días representan (D-217).
+ *
+ * Primero la semana agendable entera (`GET /rocks/upcoming`). Si ese pedido falla —un backend anterior
+ * a D-217 responde 404— se cae a hoy y mañana, como antes; y si una de esas dos falla, se usa la otra y
+ * solo sus días. `null` si no llegó nada: no se toca ninguna alarma.
+ */
+export async function leerAccionesAgendadas(
+  lector: LectorDeAcciones,
+): Promise<{ rocas: RocaDiariaApi[]; fechas: string[] } | null> {
+  try {
+    const { desde, hasta, rocas } = await lector.agendadas();
+    return { rocas, fechas: fechasEntre(desde, hasta) };
+  } catch {
+    const [hoy, manana] = await Promise.allSettled([lector.hoy(), lector.manana()]);
+    if (hoy.status === 'rejected' && manana.status === 'rejected') return null;
+    const rocas = [...(hoy.status === 'fulfilled' ? hoy.value : []), ...(manana.status === 'fulfilled' ? manana.value : [])];
+    return { rocas, fechas: [] };
+  }
 }

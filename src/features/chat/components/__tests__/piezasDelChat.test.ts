@@ -362,8 +362,11 @@ describe('InfoDelChat', () => {
 });
 
 /** Las fuentes de todas las `Image` dibujadas. */
+/** Las fuentes de cada `Image`. La foto con sesión va en un arreglo (E-411): se aplana. */
 function fuentes(raiz: ReactTestRenderer): unknown[] {
-  return raiz.root.findAll(n => (n.type as unknown) === 'Image').map(n => n.props.source);
+  return raiz.root
+    .findAll(n => (n.type as unknown) === 'Image')
+    .flatMap(n => (Array.isArray(n.props.source) ? n.props.source : [n.props.source]));
 }
 
 describe('AvatarDeChat (D-206)', () => {

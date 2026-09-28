@@ -23,12 +23,35 @@ function rutaDeLaFoto(grupoId: string): string {
   return `/api/v1/admin/cells/${encodeURIComponent(grupoId)}/photo`;
 }
 
+/** La parte `foto` en Android/iOS: el archivo con nombre y tipo, y cómo leer sus bytes. */
+export interface ParteNativaDeLaFoto {
+  uri: string;
+  name: string;
+  type: string;
+  bytes: () => Promise<Uint8Array>;
+}
+
 /**
- * Lo que va en la parte `foto` del multipart en Android/iOS: el `FormData` nativo lee el archivo de la
- * `uri`. En web no existe esa forma y va el `Blob` (ver `formularioConLaFoto`).
+ * Lo que va en la parte `foto` del multipart en Android/iOS. En web va el `Blob` (ver
+ * `formularioConLaFoto`).
+ *
+ * > **Corregido 2026-09-28 (E-401 del backend).** Era solo `{ uri, name, type }`, la parte propia de
+ * > React Native. Pero desde Expo 57 el `fetch` global de la app es el de Expo (`expo/fetch`, lo instala
+ * > `expo/src/winter/runtime.native.ts`), y ese no lee la `uri`: arma el multipart con
+ * > `convertFormDataAsync`, que solo acepta texto, un `Blob` o algo con `bytes()`. Con la `uri` sola
+ * > tiraba `Error: Unsupported FormDataPart implementation` antes de mandar nada, `apiFetch` lo
+ * > convertía en «No se pudo conectar con el servidor» y la foto del grupo no se guardaba nunca (el
+ * > pedido ni llegaba al servidor). Ahora la parte trae además `bytes()`, que lee el archivo con el
+ * > mismo `fetch` (lee `file://`). La `uri` queda para el `fetch` de React Native, por si un día se
+ * > vuelve a él (`EXPO_PUBLIC_USE_RN_FETCH`).
  */
-export function parteNativaDeLaFoto(foto: FotoDePerfil): { uri: string; name: string; type: string } {
-  return { uri: foto.uri, name: 'foto-del-grupo.jpg', type: foto.mimeType };
+export function parteNativaDeLaFoto(foto: FotoDePerfil): ParteNativaDeLaFoto {
+  return {
+    uri: foto.uri,
+    name: 'foto-del-grupo.jpg',
+    type: foto.mimeType,
+    bytes: async () => new Uint8Array(await (await fetch(foto.uri)).arrayBuffer()),
+  };
 }
 
 async function formularioConLaFoto(foto: FotoDePerfil): Promise<FormData> {

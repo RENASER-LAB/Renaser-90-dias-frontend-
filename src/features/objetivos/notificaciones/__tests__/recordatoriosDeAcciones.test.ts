@@ -39,8 +39,10 @@ import {
   alarmasDeseadas,
   cancelarRecordatorioDiario,
   cancelarTodasLasAlarmasDeAcciones,
+  fechasEntre,
   guardarPreferenciasDeAcciones,
   idsDeRecordatoriosDeAcciones,
+  leerAccionesAgendadas,
   leerPreferenciasDeAcciones,
   planDeAlarmasDeAcciones,
   PREFERENCIAS_DE_ACCIONES_POR_DEFECTO,
@@ -256,5 +258,62 @@ describe('el rearmado (permiso de alarmas exactas) cubre estas alarmas', () => {
     expect(plan.map(p => p.identifier)).toEqual(['diario', 'accion']);
     expect(plan[0].content.sound).toBe('voz_objetivos.mp3');
     expect(plan[1].trigger).toMatchObject({ type: 'date', channelId: 'recordatorios-objetivos' });
+  });
+});
+
+/**
+ * D-217 (2026-09-28): las alarmas de TODAS las acciones con hora ya agendadas hasta el domingo, no solo
+ * las de hoy y mañana. Contra el código viejo falla: el sincronizador leía `/rocks/today` y
+ * `/rocks/tomorrow` y nada más, así que la acción del jueves 01/10 agendada el viernes 25/09 no tenía
+ * alarma (`leerAccionesAgendadas` y `/rocks/upcoming` no existían).
+ */
+describe('la semana agendada entera (D-217)', () => {
+  const opciones = { ahoraMs: MADRUGADA_UTC, zona: LIMA };
+  const delJueves = roca({ id: 'r-jueves', fecha: '2026-10-01', horaInicio: '09:00:00', eje: 'TRABAJO' });
+  const deHoy = roca({ id: 'r-hoy', fecha: '2026-09-25', horaInicio: '23:00:00', eje: 'CUERPO' });
+
+  it('las fechas del rango, inclusive', () => {
+    expect(fechasEntre('2026-09-25', '2026-09-28')).toEqual(['2026-09-25', '2026-09-26', '2026-09-27', '2026-09-28']);
+    expect(fechasEntre('2026-09-28', '2026-09-27')).toEqual([]);
+  });
+
+  it('arma la acción del jueves, con la ruta a Plan → Objetivos en su eje', async () => {
+    await guardarPreferenciasDeAcciones(USUARIO, { ...PREFERENCIAS_DE_ACCIONES_POR_DEFECTO, antelaciones: [0] });
+    const leidas = await leerAccionesAgendadas({
+      agendadas: async () => ({ desde: '2026-09-25', hasta: '2026-10-04', rocas: [deHoy, delJueves] }),
+      hoy: async () => { throw new Error('no se pide'); },
+      manana: async () => { throw new Error('no se pide'); },
+    });
+    expect(leidas?.fechas).toContain('2026-10-01');
+    await sincronizarAlarmasDeAcciones(USUARIO, leidas!.rocas, { ...opciones, fechasDeLaLista: leidas!.fechas });
+    const pedidos = programadas().map(([, p]) => p);
+    expect(pedidos.map(p => (p.trigger.date as Date).getTime())).toEqual([
+      Date.UTC(2026, 8, 26, 4, 0), // 23:00 del 25 en Lima
+      Date.UTC(2026, 9, 1, 14, 0), // 09:00 del 01/10 en Lima
+    ]);
+    expect(pedidos[1].content.data).toEqual({ route: '/objetivos/2026-10-01?eje=TRABAJO' });
+  });
+
+  it('si la acción del jueves se borra, su alarma se quita aunque falten días', async () => {
+    await guardarPreferenciasDeAcciones(USUARIO, { ...PREFERENCIAS_DE_ACCIONES_POR_DEFECTO, antelaciones: [0] });
+    const semana = fechasEntre('2026-09-25', '2026-10-04');
+    await sincronizarAlarmasDeAcciones(USUARIO, [delJueves], { ...opciones, fechasDeLaLista: semana });
+    expect(programadas()).toHaveLength(1);
+    await sincronizarAlarmasDeAcciones(USUARIO, [], { ...opciones, fechasDeLaLista: semana });
+    expect(programadas()).toHaveLength(0);
+  });
+
+  it('con un backend anterior (sin /rocks/upcoming) cae a hoy y mañana, sin prometer más días', async () => {
+    const leidas = await leerAccionesAgendadas({
+      agendadas: async () => { throw new Error('404'); },
+      hoy: async () => [deHoy],
+      manana: async () => { throw new Error('500'); },
+    });
+    expect(leidas).toEqual({ rocas: [deHoy], fechas: [] });
+    expect(await leerAccionesAgendadas({
+      agendadas: async () => { throw new Error('404'); },
+      hoy: async () => { throw new Error('500'); },
+      manana: async () => { throw new Error('500'); },
+    })).toBeNull();
   });
 });

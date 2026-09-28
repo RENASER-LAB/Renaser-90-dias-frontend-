@@ -22,6 +22,23 @@ import {
 } from '../utils/capturarMediaChat';
 
 /**
+ * El mensaje recién enviado, listo para verse y escucharse en el teléfono de quien lo mandó.
+ *
+ * La respuesta de `POST .../messages` NO trae `mediaUrl`: el servidor firma la lectura solo en el
+ * listado (`GET .../messages`), igual que `senderName` y `status` (ver `MensajeResponse` del backend).
+ * Sin URL, la burbuja propia decía «Audio no disponible» (o «📷 Imagen adjunta» en vez de la foto)
+ * apenas se enviaba, y así quedaba: el aviso en vivo del propio mensaje se descarta como eco. Para
+ * quien lo mandó, el audio «fallaba» aunque había llegado bien (E-402 del backend, 28/09).
+ *
+ * El archivo ya está en el teléfono (la grabación o la foto elegida), así que se muestra ese, como
+ * WhatsApp. Al volver a abrir el chat llega la URL firmada del servidor. Si algún día la respuesta de
+ * enviar trae su `mediaUrl`, se usa la del servidor.
+ */
+export function conLaCopiaLocal(mensaje: WireMensaje, uriLocal: string): WireMensaje {
+  return mensaje.mediaUrl ? mensaje : { ...mensaje, mediaUrl: uriLocal };
+}
+
+/**
  * Mandar una foto o una nota de voz por chat, con el patrón de tres pasos del backend: pedir la
  * URL firmada, `PUT` de los bytes directo a S3, y recién entonces crear el mensaje.
  *
@@ -65,7 +82,7 @@ export function useEnvioMediaChat(conversationId: string | null,
           mime: archivo.mimeType,
           durationSeconds,
         });
-        alEnviar(mensaje);
+        alEnviar(conLaCopiaLocal(mensaje, archivo.uri));
         return true;
       } catch (e) {
         Alert.alert('No se pudo enviar',

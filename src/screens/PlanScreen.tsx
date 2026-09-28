@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Alert } from '../components/Alerta';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { useTheme } from '../theme/ThemeContext';
 import { space } from '../theme/tokens';
@@ -551,6 +552,22 @@ export default function PlanScreen() {
     setActiveSubView('objetivos');
   };
 
+  /**
+   * Entrada desde la alarma de una acción con hora (D-218, 2026-09-28): la deja `AbridorDeAvisos` con
+   * `abrirObjetivosEje` (y la fecha de la acción, que suena el mismo día que se muestra en «Acciones del
+   * día»). Se consume una vez, como `abrirEventoId` en Comunidad. Sin eje, se abre el que estaba.
+   */
+  const route = useRoute();
+  const navigation = useNavigation();
+  useEffect(() => {
+    const params = route.params as { abrirObjetivosFecha?: string; abrirObjetivosEje?: EjeObjetivo | null } | undefined;
+    if (!params?.abrirObjetivosFecha) return;
+    if (params.abrirObjetivosEje) setEjeAbierto(params.abrirObjetivosEje);
+    setActiveSubView('objetivos');
+    (navigation as unknown as { setParams: (p: Record<string, unknown>) => void })
+      .setParams({ abrirObjetivosFecha: undefined, abrirObjetivosEje: undefined });
+  }, [route.params, navigation]);
+
   // =========================================================================
   // GESTOS TÁCTILES DEL SISTEMA (BACKHANDLER)
   // =========================================================================
@@ -691,6 +708,8 @@ export default function PlanScreen() {
         horaNueva: nuevaHora,
         limitTime: habito.limitTime,
         recordatorio: habito.recordatorio,
+        // D-217: con la hora de hoy, la alarma de hoy sigue en ella y la nueva empieza mañana.
+        horaAnterior: habito.time,
       });
       // D-91: el backend YA NO aplica ningún cambio en el día en curso — todos se difieren a
       // mañana, arranque o no arranque la ventana del hábito. `deferred` es hoy siempre true;
@@ -934,7 +953,7 @@ export default function PlanScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
-      <ScreenHeader title="PLAN" right="dots" />
+      <ScreenHeader title="PLAN" />
 
       {/* ========================================================================= */}
       {/* VISTA 1: PANTALLA PRINCIPAL DE PLAN (DISEÑO ORIGINAL DE LUJO CON GAUGE)   */}

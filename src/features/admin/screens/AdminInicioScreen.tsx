@@ -87,6 +87,8 @@ export function AdminInicioScreen({
   const mas: Array<{ clave: SeccionAdmin; titulo: string; detalle: string }> = [
     /* Semáforo de cumplimiento (D-168): el resumen por grupos y, al tocar uno, su tabla con nombres. */
     { clave: 'semaforo', titulo: 'Semáforo', detalle: 'Cuánto cumplió cada grupo, semana a semana' },
+    /* Caja Renaser (D-219, 28/09): armar, enviar y seguir la caja de quien pasó la Fase 1. */
+    { clave: 'caja', titulo: 'Caja Renaser', detalle: 'Armar, enviar y seguir cada caja' },
     { clave: 'mas', titulo: 'Más opciones', detalle: 'Bienvenida, equipo, catálogo, soporte y comunidad' },
   ];
 

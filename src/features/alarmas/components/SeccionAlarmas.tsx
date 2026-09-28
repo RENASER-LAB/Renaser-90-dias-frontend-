@@ -21,11 +21,11 @@ import {
   type PreferenciasDeAlarmas,
 } from '../preferenciasDeAlarmas';
 import { escucharSonido, probarSonido } from '../probarSonido';
-import { cambiarSonidoDeLasProgramadas, cambiarSonidoDeLosHabitos } from '../cambioDeSonido';
-import { canalDeAlarma, type SonidoDeAlarma } from '../sonidoDeAlarma';
+import { pasarAlarmasAlSonido } from '../cambioDeSonido';
+import { type SonidoDeAlarma } from '../sonidoDeAlarma';
 import { RecordatorioDeAcciones } from '../../objetivos/components/RecordatorioDeAcciones';
-import { idsDeRecordatoriosDeAcciones } from '../../objetivos/notificaciones/recordatoriosDeAcciones';
 import { AvisoAlarmaExacta } from './AvisoAlarmaExacta';
+import { GuiaDeBateria } from './GuiaDeBateria';
 import { SelectorDeSonido } from './SelectorDeSonido';
 
 /** El hábito de despertar, por su clave de sistema (el título lo puede renombrar el aprendiz). */
@@ -138,10 +138,18 @@ export function SeccionAlarmas({ userId }: { userId: string }) {
         horaNueva: hora,
         limitTime: despertar.limitTime,
         recordatorio: despertar.recordatorioServidor,
+        horaAnterior: despertar.hora || undefined,
       });
       setDespertar({ ...despertar, hora });
       if (resultado.deferred) {
-        Alert.alert('Guardado', `Desde mañana tu hora de despertar es a las ${hora}. La alarma ya quedó a esa hora.`);
+        // D-217: la alarma respeta la fecha del cambio. Antes decía «La alarma ya quedó a esa hora», y
+        // era cierto: sonaba hoy a la hora nueva, que el servidor todavía no aplicaba.
+        Alert.alert(
+          'Guardado',
+          despertar.hora
+            ? `Desde mañana tu hora de despertar es a las ${hora}. Hoy la alarma sigue a las ${despertar.hora}.`
+            : `Desde mañana tu hora de despertar es a las ${hora}.`,
+        );
       }
     } catch {
       Alert.alert('No se pudo cambiar la hora', 'Intenta de nuevo en unos segundos.');
@@ -174,17 +182,9 @@ export function SeccionAlarmas({ userId }: { userId: string }) {
     setOcupado(true);
     try {
       await guardarPrefs({ ...prefs, sonido });
-      if (despertar && typeof despertar !== 'string') {
-        await recordatorios.fijarSonido(userId, despertar.habitoId, sonido);
-        if (despertar.alarmaPuesta && despertar.hora) {
-          await recordatorios.reprogramarTrasCambioDeHora(userId, despertar.habitoId, despertar.titulo, despertar.hora);
-        }
-      }
-      // Los demás hábitos y las acciones de los objetivos (2026-09-26): se pasan al canal nuevo tal
-      // cual están programadas, sin servidor. Despertar ya quedó en el canal nuevo y se salta solo.
-      // Desde 2026-09-27 cada hábito va a SU canal: con «Voz», el de la voz que dice su nombre.
-      await cambiarSonidoDeLosHabitos(userId, sonido);
-      await cambiarSonidoDeLasProgramadas(await idsDeRecordatoriosDeAcciones(userId), canalDeAlarma('objetivos', sonido));
+      // Todos los hábitos —Despertar incluido— y las acciones de los objetivos pasan al canal nuevo tal
+      // cual están programados, y los que coinciden vuelven a sonar como uno solo (`cambioDeSonido.ts`).
+      await pasarAlarmasAlSonido(userId, sonido, despertar && typeof despertar !== 'string' ? despertar : null);
       try {
         await reprogramarConSonidoNuevo(userId, await listarProximos(Date.now()));
       } catch {
@@ -215,6 +215,7 @@ export function SeccionAlarmas({ userId }: { userId: string }) {
   return (
     <View style={{ gap: 18 }}>
       <AvisoAlarmaExacta />
+      <GuiaDeBateria />
       <View style={{ gap: 8 }}>
         <Text style={[estilos.titulo, { color: c.textStrong }]}>Despertar</Text>
         {despertar === null ? <Text style={texto}>Cargando…</Text> : null}

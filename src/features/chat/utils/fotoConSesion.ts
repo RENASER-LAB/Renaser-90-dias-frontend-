@@ -11,8 +11,8 @@ import { API_CONFIG } from '../../../config/apiConfig';
  *
  * **El endpoint pide la sesión** (`X-Auth-Token`), igual que el resto del chat, y eso cambia según la
  * plataforma:
- * - **Android/iOS:** `Image` acepta cabeceras en `source`, así que se le pasa la URL con la sesión y
- *   el cargador nativo la guarda en su caché como cualquier foto.
+ * - **Android/iOS:** `Image` acepta cabeceras en `source` (en un arreglo: ver `fuenteNativaDeLaFoto`),
+ *   así que se le pasa la URL con la sesión y el cargador nativo la guarda en su caché como cualquier foto.
  * - **Web:** `<img>` no manda cabeceras. Se trae la imagen con la sesión y se muestra desde un object
  *   URL, guardado en memoria por ruta para no volver a bajarla en cada fila y cabecera.
  *
@@ -35,10 +35,21 @@ export function urlDeLaFoto(ruta: string): string {
   return `${API_CONFIG.BASE_URL}${ruta}`;
 }
 
-/** Android/iOS. Sin sesión no hay foto que pedir: `null` (queda lo de debajo). */
-export function fuenteNativaDeLaFoto(ruta: string, token: string | null): FuenteConSesion | null {
+/**
+ * Android/iOS. Sin sesión no hay foto que pedir: `null` (queda lo de debajo).
+ *
+ * **Va en un arreglo, a propósito.** `Image.android.js` de React Native solo pasa las cabeceras al
+ * componente nativo (la prop `headers`, la única que lee `ReactImageManager`) cuando `source` es un
+ * arreglo; con un objeto las deja adentro y Android pide la foto sin sesión.
+ *
+ * > **Corregido 2026-09-28 (E-411).** Devolvía el objeto `{ uri, headers }`. En Android la tarjeta
+ * > salía sin `X-Auth-Token` (visto con tcpdump en el emulador), el servidor respondía 403 y la info
+ * > del grupo mostraba iniciales en vez de la tarjeta con el nombre; el soporte y la foto propia de
+ * > un grupo, la tarjeta sin nombre.
+ */
+export function fuenteNativaDeLaFoto(ruta: string, token: string | null): FuenteConSesion[] | null {
   if (!token) return null;
-  return { uri: urlDeLaFoto(ruta), headers: { [HEADER_SESION]: token } };
+  return [{ uri: urlDeLaFoto(ruta), headers: { [HEADER_SESION]: token } }];
 }
 
 /** Lo que la versión web necesita del entorno; inyectable para probarla sin navegador. */

@@ -1,9 +1,12 @@
 import {
   asegurarCanal,
   cargarNotificaciones,
+  fijarSonido,
   habitoDelAviso,
   recordatoriosPorHabito,
 } from '../habits/notificaciones/recordatoriosDeHabito';
+import { idsDeRecordatoriosDeAcciones } from '../objetivos/notificaciones/recordatoriosDeAcciones';
+import { agruparAvisosQueCoinciden } from './avisosJuntos';
 import { planDeRearmado, type AlarmaProgramada, type PedidoDeRearmado } from './rearmarAlarmas';
 import { canalDeAlarma, type CanalDeAlarma, type SonidoDeAlarma } from './sonidoDeAlarma';
 
@@ -117,4 +120,32 @@ export async function cambiarSonidoDeLosHabitos(
     canalDelHabitoProgramado(habitoDeLaAlarma, sonido),
     ahoraMs,
   );
+}
+
+/** El hábito de Despertar tal como lo muestra Yo → Alarmas. */
+export interface DespertarDeYo {
+  habitoId: string;
+  titulo: string;
+  hora: string;
+  alarmaPuesta: boolean;
+}
+
+/**
+ * Yo → Alarmas → Sonido: pasa al sonido nuevo TODO lo que ya está programado —hábitos, Despertar y
+ * acciones de los objetivos— y vuelve a juntar los avisos que coinciden (E-410). No toca horas.
+ */
+export async function pasarAlarmasAlSonido(
+  userId: string,
+  sonido: SonidoDeAlarma,
+  despertar: DespertarDeYo | null,
+): Promise<void> {
+  // Despertar guarda su sonido (lo respeta todo `programar` posterior) y se pasa con los demás hábitos.
+  //
+  // > **Corregido 2026-09-28 (E-412).** Se reprogramaba aparte con `despertar.hora`, la hora de HOY, y
+  // > eso borraba un cambio de hora con fecha (D-217): con «12:00 desde mañana», elegir otro sonido lo
+  // > dejaba en «06:00 todos los días». `cambiarSonidoDeLosHabitos` conserva cada disparador tal cual.
+  if (despertar) await fijarSonido(userId, despertar.habitoId, sonido);
+  await cambiarSonidoDeLosHabitos(userId, sonido);
+  await cambiarSonidoDeLasProgramadas(await idsDeRecordatoriosDeAcciones(userId), canalDeAlarma('objetivos', sonido));
+  await agruparAvisosQueCoinciden(userId);
 }

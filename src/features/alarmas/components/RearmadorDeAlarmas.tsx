@@ -1,23 +1,33 @@
 import { useEffect } from 'react';
 import { AppState } from 'react-native';
 
-import { rearmarAlarmasProgramadas } from '../rearmarAlarmas';
+import { useAuth } from '../../../context/AuthContext';
+import { ponerAlDiaLasAlarmas } from '../ponerAlDiaLasAlarmas';
+import { rearmarLoLocalDeLaCuenta } from '../alarmasDeLaCuenta';
 
 /**
- * Re-arma las alarmas locales ya programadas al abrir la app y cada vez que vuelve a primer plano
- * (con el intervalo mínimo de `rearmarAlarmas.ts`): así, las que se programaron antes de activar
- * «Alarmas y recordatorios» pasan a ser exactas sin que la persona toque nada.
+ * Pone al día las alarmas locales al abrir la app y cada vez que vuelve a primer plano (con el intervalo
+ * mínimo de `rearmarAlarmas.ts`): las re-arma, completa los cambios de hora con fecha, arma las que el
+ * servidor sabe y el teléfono no, y le confirma al servidor que están vivas. Ver `ponerAlDiaLasAlarmas.ts`.
  *
- * Vive en `App.tsx`, por encima del navegador, como `AbridorDeEventos`: ninguna pestaña cambia.
+ * > **Cambiado 2026-09-28 (D-217).** Solo re-armaba las ya programadas, sin sesión. Ahora necesita la
+ * > sesión para lo demás; sin ella, sigue re-armando igual.
+ *
+ * Vive en `App.tsx`, por encima del navegador, como `AbridorDeAvisos`: ninguna pestaña cambia.
  * No pinta nada.
  */
 export function RearmadorDeAlarmas(): null {
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
+
   useEffect(() => {
-    void rearmarAlarmasProgramadas().catch(() => {});
+    void ponerAlDiaLasAlarmas(userId).catch(() => {});
+    // E-413: lo que solo sabe el teléfono (aviso diario, repaso) vuelve si esta cuenta ya lo tenía.
+    if (userId) void rearmarLoLocalDeLaCuenta(userId).catch(() => {});
     const suscripcion = AppState.addEventListener('change', estado => {
-      if (estado === 'active') void rearmarAlarmasProgramadas().catch(() => {});
+      if (estado === 'active') void ponerAlDiaLasAlarmas(userId).catch(() => {});
     });
     return () => suscripcion.remove();
-  }, []);
+  }, [userId]);
   return null;
 }

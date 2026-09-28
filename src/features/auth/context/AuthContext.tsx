@@ -1,12 +1,13 @@
 import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
 
-import { registrarTokenPushNativo, escucharRotacionDeToken } from '../../mentor/notificaciones/pushNativo';
+import { registrarTokenPushNativo, escucharRotacionDeToken, olvidarTokenPushRegistrado } from '../../mentor/notificaciones/pushNativo';
 import { escucharAperturaDeAviso, olvidarRutaPendiente } from '../../mentor/notificaciones/rutaDeAviso';
 import { FichaInicialData } from '../../onboarding/types/onboarding.types';
 import * as authApi from '../api/authApi';
 import { conexionChat } from '../../chat/tiempoReal/conexionStomp';
 import * as onboardingApi from '../../onboarding/api/onboardingApi';
 import { aUsuario } from '../api/usuarioMapper';
+import { prepararAlarmasPara, soltarAlarmasDeLaCuenta } from '../../alarmas/alarmasDeLaCuenta';
 import { loginConGoogle } from '../api/googleAuth';
 /* `mentorApi` es el único dueño del cliente de `/mentor/context`, así que la pregunta se hace
    ahí y no se duplica acá. No hay ciclo: ese archivo solo depende de `apiClient` y de sus
@@ -114,6 +115,17 @@ type AuthContextType = {
 
 const AuthCtx = createContext<AuthContextType | null>(null);
 
+/**
+ * E-413: el cierre de sesión cancela las alarmas locales sin esperar (cerrar sesión no debe demorarse);
+ * quien entra después espera a que termine, y si las alarmas del teléfono son de otra cuenta, las suelta
+ * antes de que se arme nada suyo.
+ */
+let soltando: Promise<void> = Promise.resolve();
+async function alarmasListas(userId: string): Promise<void> {
+  await soltando;
+  await prepararAlarmasPara(userId);
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isOnboardingCompleted, setIsOnboardingCompleted] = useState<boolean>(false);
@@ -152,6 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const api = await authApi.perfilActual();
         if (!vigente) return;
+        await alarmasListas(api.id);
         setUser(aUsuario(api));
         setOnboardingResuelto(false);
         try {
@@ -215,6 +228,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!user) {
       olvidarRutaPendiente();
+      olvidarTokenPushRegistrado();
       return;
     }
     void registrarTokenPushNativo();
@@ -236,6 +250,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    */
   const login = useCallback(async (email: string, pass: string) => {
     const api = await authApi.iniciarSesion(email, pass);
+    await alarmasListas(api.id);
     setUser(aUsuario(api));
     // Se resetea en el mismo tick que `setUser` (sin ningún `await` entre medio), así que React
     // los aplica en el mismo render: nunca hay un frame con `user` seteado y `onboardingResuelto`
@@ -268,6 +283,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loginWithGoogle = useCallback(async () => {
     const resultado = await loginConGoogle();
     if (resultado?.tipo === 'SESION') {
+      await alarmasListas(resultado.usuario.id);
       setUser(aUsuario(resultado.usuario));
       setOnboardingResuelto(false);
       // El backend solo devuelve sesión si la cuenta ya existe y está aprobada — pero "ya existe"
@@ -388,6 +404,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // sesión seguiría figurando conectado para sus compañeros hasta que el sistema operativo
     // se dignara a cerrar el socket.
     conexionChat.cerrarTodo();
+    // E-413: las alarmas locales son de esta cuenta; al salir se cancelan todas. Quien entre después
+    // espera a que termine (`alarmasListas`).
+    soltando = soltarAlarmasDeLaCuenta().catch(() => undefined);
     void authApi.cerrarSesion().catch(() => undefined);
     setUser(null);
     setIsOnboardingCompleted(false);

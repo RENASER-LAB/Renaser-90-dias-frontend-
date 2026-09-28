@@ -12,6 +12,7 @@ import { abrirConversacionDirecta } from '../../chat/api/chatApi';
 import { urlDeEvidencia } from '../../evidence/api/evidenceApi';
 import { RejillaSemanal } from '../../mentor/components/RejillaSemanal';
 import { TarjetaSemaforoDeAprendiz } from '../../semaforo/components/TarjetaSemaforoDeAprendiz';
+import { ChipDeCaja } from '../../caja/components/ChipDeCaja';
 import { avisar } from '../utils/dialogo';
 import type { PersonaDeFicha } from '../types/admin.types';
 import { AvisoBreve } from '../components/AvisoBreve';
@@ -43,9 +44,12 @@ import { rotuloDeFase } from '../../home/hooks/useResumenHome';
 export function FichaAprendizScreen({
   aprendiz,
   onVolver,
+  onAbrirCaja,
 }: {
   aprendiz: PersonaDeFicha;
   onVolver: () => void;
+  /** El chip de la Caja Renaser (D-219) abre su caja. Sin esto, el chip solo se muestra. */
+  onAbrirCaja?: (aprendizId: string) => void;
 }) {
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
@@ -194,6 +198,12 @@ export function FichaAprendizScreen({
             administración (`GET /api/v1/admin/trainees/{id}/semaforo`): la MISMA tarjeta que ve su
             mentor. Con 404 o 403 no se dibuja. Antes iba al final, debajo de la semana. */}
         <TarjetaSemaforoDeAprendiz origen={{ quien: 'admin', aprendizId: aprendiz.id }} />
+
+        {/* Caja Renaser (D-219): un chip con su estado; tocarlo abre su caja. Antes del día 8, nada. */}
+        <ChipDeCaja
+          origen={{ quien: 'admin', aprendizId: aprendiz.id }}
+          onPress={onAbrirCaja ? () => onAbrirCaja(aprendiz.id) : undefined}
+        />
 
         {/* La semana de lunes a domingo, plegada y con su nombre verdadero. Antes se titulaba
             «Cumplimiento de la semana» y competía con el semáforo, que va de sábado a viernes. */}

@@ -70,6 +70,8 @@ const preferenciaHabitoSchema = z
     // `.optional()` para no romper contra un backend anterior a ese cambio.
     reminderEnabled: z.boolean().optional(),
     reminderMinutesBefore: z.number().nullable().optional(),
+    /** Todos los avisos elegidos (V81, D-217). `null` = desconocido: guardado antes de V81 o por el APK viejo. */
+    reminderMinutesList: z.array(z.number()).nullable().optional(),
     limitTime: z.string().nullable(),
     customized: z.boolean(),
     // Se valida de verdad en vez de `z.unknown()`: es el dato que sostiene el aviso "desde

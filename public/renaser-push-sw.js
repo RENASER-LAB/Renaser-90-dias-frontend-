@@ -26,8 +26,10 @@ self.addEventListener('notificationclick', event => {
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientes => {
       const existente = clientes.find(cliente => 'focus' in cliente);
       if (existente) {
-        existente.focus();
-        return existente;
+        // D-218 (2026-09-28): la ventana abierta tambien va a lo del aviso (Training con la categoria
+        // del habito, Plan -> Objetivos). Antes solo se enfocaba y quedaba donde estaba.
+        existente.postMessage({ tipo: 'renaser-abrir-aviso', ruta: destino });
+        return existente.focus();
       }
       return self.clients.openWindow(destino);
     }),
