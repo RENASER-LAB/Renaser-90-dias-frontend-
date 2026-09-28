@@ -137,9 +137,26 @@ function BotonBase({
   );
 }
 
+/**
+ * Un padding horizontal mínimo, pero distinto de cero, en todo texto de estas piezas (E-419).
+ *
+ * En Android con Fabric (RN 0.86), los `TextView` se reciclan (`enableViewRecyclingForText`) y
+ * `ReactTextView.recycleView()` no le borra el padding. Al insertar un `Text` nuevo,
+ * `FabricMountingManager.cpp` solo manda su padding si es distinto de cero
+ * (`contentInsets != EdgeInsets::ZERO`). Entonces un texto SIN padding que recibe la vista de uno CON
+ * padding (una pastilla, un chip) se queda con ese padding viejo: la caja mide lo justo para la
+ * etiqueta, el área útil es más angosta, el texto se parte en dos renglones y el segundo queda
+ * recortado. Pasaba con «Ya la recibí» → «Ya la» cuando la pantalla ya abierta pasaba a «En camino»
+ * al volver de otra pestaña (las vistas de la otra pestaña quedan en el pozo de reciclado).
+ *
+ * Con 1 px de padding horizontal el padding siempre viaja al montar y pisa el que haya quedado. El
+ * texto mide 2 px más: no se nota.
+ */
+const PADDING_QUE_PISA_EL_RECICLADO = { paddingHorizontal: 1 } as const;
+
 const estilos = StyleSheet.create({
-  titulo: { fontFamily: 'Jost_500Medium', fontSize: 18, lineHeight: 24 },
-  detalle: { fontFamily: 'Jost_400Regular', fontSize: 16, lineHeight: 23, marginTop: 2 },
+  titulo: { fontFamily: 'Jost_500Medium', fontSize: 18, lineHeight: 24, ...PADDING_QUE_PISA_EL_RECICLADO },
+  detalle: { fontFamily: 'Jost_400Regular', fontSize: 16, lineHeight: 23, marginTop: 2, ...PADDING_QUE_PISA_EL_RECICLADO },
   boton: {
     minHeight: 52,
     borderRadius: 14,
@@ -154,5 +171,12 @@ const estilos = StyleSheet.create({
   plegable: { borderWidth: 1, borderRadius: 16 },
   cabeceraPlegable: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12 },
   cuerpoPlegable: { paddingHorizontal: 16, paddingBottom: 16 },
-  etiqueta: { fontFamily: 'Jost_500Medium', fontSize: 17, lineHeight: 22, textAlign: 'center', flexShrink: 1 },
+  etiqueta: {
+    fontFamily: 'Jost_500Medium',
+    fontSize: 17,
+    lineHeight: 22,
+    textAlign: 'center',
+    flexShrink: 1,
+    ...PADDING_QUE_PISA_EL_RECICLADO,
+  },
 });
