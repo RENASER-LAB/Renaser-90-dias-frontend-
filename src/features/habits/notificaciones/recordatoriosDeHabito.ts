@@ -91,6 +91,8 @@ const PREFIJO_CLAVE = 'renaser.habitos.recordatorio.';
 
 /** El repaso semanal es UNO por persona, no uno por hábito: clave aparte. */
 const CLAVE_REPASO = 'renaser.habitos.repasoSemanal.';
+/** El repaso quedó pedido pero sin alarma: se cerró sesión (E-413) y se rearma al volver a entrar. */
+export const REPASO_SIN_ALARMA = 'sin-alarma';
 
 /**
  * QUÉ antelaciones eligió, por hábito.
@@ -584,10 +586,10 @@ export async function cancelarRepasoSemanal(userId: string): Promise<void> {
   if (!N) return;
   await sinRomper(async () => {
     const id = await AsyncStorage.getItem(CLAVE_REPASO + userId);
-    if (id) {
-      await N.cancelScheduledNotificationAsync(id);
-      await AsyncStorage.removeItem(CLAVE_REPASO + userId);
-    }
+    if (!id) return;
+    // `REPASO_SIN_ALARMA` (tras cerrar sesión, E-413) no tiene alarma que cancelar; apagarlo lo borra igual.
+    if (id !== REPASO_SIN_ALARMA) await N.cancelScheduledNotificationAsync(id);
+    await AsyncStorage.removeItem(CLAVE_REPASO + userId);
   }, undefined);
 }
 

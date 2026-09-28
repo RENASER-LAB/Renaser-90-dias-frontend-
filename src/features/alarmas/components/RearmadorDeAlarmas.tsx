@@ -3,6 +3,7 @@ import { AppState } from 'react-native';
 
 import { useAuth } from '../../../context/AuthContext';
 import { ponerAlDiaLasAlarmas } from '../ponerAlDiaLasAlarmas';
+import { rearmarLoLocalDeLaCuenta } from '../alarmasDeLaCuenta';
 
 /**
  * Pone al día las alarmas locales al abrir la app y cada vez que vuelve a primer plano (con el intervalo
@@ -21,6 +22,8 @@ export function RearmadorDeAlarmas(): null {
 
   useEffect(() => {
     void ponerAlDiaLasAlarmas(userId).catch(() => {});
+    // E-413: lo que solo sabe el teléfono (aviso diario, repaso) vuelve si esta cuenta ya lo tenía.
+    if (userId) void rearmarLoLocalDeLaCuenta(userId).catch(() => {});
     const suscripcion = AppState.addEventListener('change', estado => {
       if (estado === 'active') void ponerAlDiaLasAlarmas(userId).catch(() => {});
     });

@@ -12,6 +12,8 @@ import {
 } from '../notificaciones/recordatoriosDeAcciones';
 
 let ultima: number | null = null;
+/** De quién fue la última corrida: otra cuenta (o la misma tras cerrar sesión, E-413) corre ya. */
+let ultimoUsuario: string | null = null;
 
 /**
  * Al abrir la app y al volver a primer plano (como mucho cada 10 min, el mismo intervalo del
@@ -30,11 +32,15 @@ export function SincronizadorDeAcciones(): null {
   const userId = user?.id ?? null;
 
   useEffect(() => {
-    if (!isAuthenticated || !userId || !HAY_RECORDATORIOS_LOCALES) return;
+    if (!isAuthenticated || !userId || !HAY_RECORDATORIOS_LOCALES) {
+      ultimoUsuario = null;
+      return;
+    }
     const correr = async () => {
       const ahora = Date.now();
-      if (!tocaRearmar(ultima, ahora)) return;
+      if (userId === ultimoUsuario && !tocaRearmar(ultima, ahora)) return;
       ultima = ahora;
+      ultimoUsuario = userId;
       if ((await preferenciasDeAcciones(userId)).antelaciones.length === 0) return;
       const leidas = await leerAccionesAgendadas({
         agendadas: objetivosApi.obtenerRocasAgendadas,
