@@ -35,6 +35,14 @@ import {
   minutosDeArranqueDeLaRueda,
   MINUTOS_OTRA_POR_DEFECTO,
 } from '../../habits/utils/etiquetaDeAntelacion';
+import {
+  abrirPermisoDeAlarmasExactas,
+  anotarQueSePidioAlarmaExacta,
+  hayQuePedirAlarmaExactaAlGuardar,
+  hayQueRecordarAlarmaExacta,
+  LINEA_ALARMA_EXACTA_PENDIENTE,
+  TEXTO_PEDIDO_ALARMA_EXACTA,
+} from '../../alarmas/pedirAlarmaExacta';
 import { horaDelEditor, preferenciaTrasGuardar, textoDelCambioProgramado } from '../utils/horaDelEditor';
 
 /**
@@ -160,6 +168,16 @@ function todosLosDias(): Record<DiaDelPlan, boolean> {
   return Object.fromEntries(DIAS_DEL_PLAN.map(d => [d, true])) as Record<DiaDelPlan, boolean>;
 }
 
+/**
+ * Los avisos que el servidor tiene para un hábito (E-408): todos si los conoce (V81), si no el único
+ * número de siempre, y nada si el recordatorio está apagado.
+ */
+function avisosDelServidor(p: PreferenciaHabitoApi | undefined): number[] {
+  if (!p?.reminderEnabled) return [];
+  if (p.reminderMinutesList && p.reminderMinutesList.length > 0) return [...p.reminderMinutesList];
+  return [p.reminderMinutesBefore ?? 0];
+}
+
 export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar, onGuardado }: Props) {
   const { c, t } = useTheme();
   const { isTablet, contentMaxWidth } = useResponsive();
@@ -225,6 +243,9 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
    * una alarma diaria propia en el teléfono.
    */
   const [antelaciones, setAntelaciones] = useState<number[]>([]);
+  /** E-408: qué hábito está abierto y si la persona ya tocó sus avisos (ver `abrirHabito`). */
+  const abiertoRef = useRef<string | null>(null);
+  const avisosTocadosRef = useRef(false);
   /**
    * Si la rueda de "Otra" está desplegada. Cerrada por defecto: la hoja no tiene scroll y cada
    * píxel de alto que se ocupa empuja el botón de guardar hacia afuera — ya pasó una vez.
@@ -375,15 +396,16 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
       }
     })();
     const previa = preferencias.get(h.habitoId);
-    // El conjunto vive en el teléfono (`minutos_recordatorio` del backend es UN solo número). Si
-    // no hay nada guardado ahí, se cae al campo del servidor, que sí tiene el aviso principal:
-    // así quien ya lo tenía puesto no lo pierde.
+    // E-408: lo que muestra el recordatorio sale YA de lo que dice el servidor, no de lo que quedó del
+    // hábito abierto antes. Después, si el teléfono tiene sus avisos guardados, se usan esos, pero solo
+    // si sigue abierto este mismo hábito y la persona todavía no tocó nada: una lectura que llega tarde
+    // no puede pisar lo que se eligió (se veía «A la hora» y se guardaba sin recordatorio).
+    setAntelaciones(avisosDelServidor(previa));
+    abiertoRef.current = h.habitoId;
+    avisosTocadosRef.current = false;
     void recordatorios.antelacionesDe(claveUsuario, h.habitoId).then(locales => {
-      if (locales.length > 0) {
-        setAntelaciones(locales);
-        return;
-      }
-      setAntelaciones(previa?.reminderEnabled ? [previa.reminderMinutesBefore ?? 0] : []);
+      if (abiertoRef.current !== h.habitoId || avisosTocadosRef.current) return;
+      if (locales.length > 0 && previa?.reminderEnabled !== false) setAntelaciones(locales);
     });
     setHabitoEnEdicion(h);
   };
@@ -556,6 +578,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
    * que es el orden en que los avisos llegan y también en el que el programador los recorre.
    */
   const alternarAntelacion = (minutos: number) => {
+    avisosTocadosRef.current = true;
     setAntelaciones(prev =>
       prev.includes(minutos) ? prev.filter(x => x !== minutos) : [...prev, minutos].sort((a, b) => b - a),
     );
@@ -587,6 +610,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
    * la rueda abierta taparía la confirmación de lo que se acaba de hacer.
    */
   const agregarAntelacionDeLaRueda = () => {
+    avisosTocadosRef.current = true;
     setAntelaciones(prev => (
       prev.includes(minutosOtra) ? prev : [...prev, minutosOtra].sort((a, b) => b - a)
     ));
@@ -611,6 +635,8 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
       const recordatorio = {
         activo: antelaciones.length > 0,
         minutosAntes: antelaciones.length > 0 ? Math.max(...antelaciones) : null,
+        // D-217: y todos, para que otro teléfono (o este reinstalado) los reconstruya.
+        lista: antelaciones.length > 0 ? antelaciones : null,
       };
       const resultado = await habitsApi.cambiarHorario(
         h.habitoId,
@@ -622,7 +648,15 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
       // y los dos avisos los envía el scheduler del backend para esta misma persona.
       const ok = recordatorios.HAY_RECORDATORIOS_WEB
         ? (antelaciones.length === 0 || webPushPreparado === true)
-        : await recordatorios.programar(claveUsuario, h.habitoId, h.title, horaTexto, antelaciones);
+        : resultado.deferred && resultado.deferredEffectiveDate
+          // D-217: el cambio rige desde su fecha (D-91), y la alarma también: hoy suena a la hora de
+          // hoy y la nueva empieza ese día. Antes la diaria se movía en el acto y hoy sonaba a la nueva.
+          ? await recordatorios.programarConCambioDiferido(claveUsuario, h.habitoId, h.title, {
+            horaDeHoy: horaDelEditor(previa, h.time).ahora,
+            horaNueva: horaTexto,
+            desde: resultado.deferredEffectiveDate,
+          }, antelaciones, { dimension })
+          : await recordatorios.programar(claveUsuario, h.habitoId, h.title, horaTexto, antelaciones, { dimension });
       const avisoImposible = antelaciones.length > 0 && !ok;
       // El horario local se actualiza acá y no recargando todo: recargar con la hoja abierta
       // reordenaría la lista debajo del dedo. Diferido (D-91), la hora de hoy no cambia y el cambio
@@ -648,14 +682,26 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
       const cuando = resultado.deferredEffectiveDate
         ? formatearFechaLarga(resultado.deferredEffectiveDate)
         : 'el día siguiente';
-      Alert.alert(
-        'Listo',
-        `“${h.title}” queda a las ${horaTexto}.` +
-          (resultado.deferred ? `\n\nEmpieza a regir ${cuando}: el día en curso no se reacomoda.` : '') +
-          (avisoImposible
-            ? `\n\nEl recordatorio quedó guardado, pero ${recordatorios.HAY_RECORDATORIOS_WEB ? 'este navegador no tiene el permiso Web Push' : 'este teléfono no tiene permiso para avisarte'}. Habilita las notificaciones para recibir las dos alertas.`
-            : ''),
-      );
+      const mensaje = `“${h.title}” queda a las ${horaTexto}.` +
+        (resultado.deferred ? `\n\nEmpieza a regir ${cuando}: el día en curso no se reacomoda.` : '') +
+        (avisoImposible
+          ? `\n\nEl recordatorio quedó guardado, pero ${recordatorios.HAY_RECORDATORIOS_WEB ? 'este navegador no tiene el permiso Web Push' : 'este teléfono no tiene permiso para avisarte'}. Habilita las notificaciones para recibir las dos alertas.`
+          : '');
+      // D-217: con el primer recordatorio, si Android no deja alarmas exactas, se pide acá mismo —una
+      // sola vez— en vez de dejar que suene hasta 40 min tarde sin que nadie lo sepa.
+      // Después, si sigue negado, solo una línea corta; el diálogo no vuelve a abrirse (dueño, 28/09).
+      const conAviso = antelaciones.length > 0 && ok;
+      if (conAviso && (await hayQuePedirAlarmaExactaAlGuardar(claveUsuario))) {
+        await anotarQueSePidioAlarmaExacta(claveUsuario);
+        Alert.alert('Listo', `${mensaje}\n\n${TEXTO_PEDIDO_ALARMA_EXACTA}`, [
+          { text: 'Ahora no', style: 'cancel' },
+          { text: 'Permitir', onPress: () => void abrirPermisoDeAlarmasExactas() },
+        ]);
+      } else if (conAviso && (await hayQueRecordarAlarmaExacta(claveUsuario))) {
+        Alert.alert('Listo', `${mensaje}\n\n${LINEA_ALARMA_EXACTA_PENDIENTE}`);
+      } else {
+        Alert.alert('Listo', mensaje);
+      }
     } catch (e) {
       Alert.alert('No pudimos guardar la hora', mensajeDeError(e, 'Intenta de nuevo en unos segundos.'));
     } finally {
@@ -1127,7 +1173,13 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
 
               {/* En Android es alarma local; en web es Web Push y los dos avisos salen del
                   scheduler del backend. Expo Go sigue sin ofrecer el canal remoto. */}
-              {recordatorios.HAY_RECORDATORIOS && (
+              {/* E-408: guardar días no guarda el recordatorio; con días elegidos no se ofrece. */}
+              {recordatorios.HAY_RECORDATORIOS && diasEnEdicion.length > 0 && (
+                <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5, marginTop: 12 }]}>
+                  El recordatorio se elige sin días marcados.
+                </Text>
+              )}
+              {recordatorios.HAY_RECORDATORIOS && diasEnEdicion.length === 0 && (
                 <>
                   <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', marginTop: 12 }]}>
                     RECORDATORIO {antelaciones.length > 1 ? `(${antelaciones.length} avisos)` : ''}
@@ -1136,7 +1188,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
                     {/* "Sin aviso" no es una opción más: es el conjunto vacío, y por eso va aparte
                         y no compite con las otras tres. */}
                     <Pressable
-                      onPress={() => setAntelaciones([])}
+                      onPress={() => { avisosTocadosRef.current = true; setAntelaciones([]); }}
                       style={[
                         styles.pastillaAntelacion,
                         {

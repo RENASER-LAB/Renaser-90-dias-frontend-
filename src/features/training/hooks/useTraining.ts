@@ -6,6 +6,7 @@ import { mensajeDeError } from '../../../services/http/apiClient';
 import type { HabitoCatalogoApi, TrackDelDiaApi } from '../../habits/types/habits.types';
 import { cargarEntrenamiento, type DatosEntrenamiento } from '../api/cargarEntrenamiento';
 import type { RocaDiariaApi } from '../types/training.types';
+import { DIMENSION_POR_CATEGORIA } from '../utils/dimensionDelHabito';
 
 /**
  * Alimenta `TrainingScreen` con datos reales, agrupados por dimensión.
@@ -29,13 +30,8 @@ import type { RocaDiariaApi } from '../types/training.types';
  * cuando un hábito está pausado o apagado para la fecha actual.
  */
 
-/** Categoría del catálogo (no la trae `PlanHabit`) → la dimensión que le corresponde acá. */
-const DIMENSION_POR_CATEGORIA: Record<string, HabitItem['dimension']> = {
-  BODY: 'CUERPO',
-  MIND: 'MENTE',
-  CONSCIENCE: 'EMOCIONES',
-  SPIRIT: 'ESPÍRITU',
-};
+// La tabla categoría → dimensión vive en `utils/dimensionDelHabito.ts` desde 2026-09-28 (D-218):
+// también la usan el aviso de un hábito y Training al abrirse desde ese aviso.
 
 // Vacíos estables: un `[]` nuevo en cada render rompería los `useMemo` de abajo.
 const SIN_TRACKS: TrackDelDiaApi[] = [];

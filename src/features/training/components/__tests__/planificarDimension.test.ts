@@ -42,13 +42,30 @@ jest.mock('../../../habits/components/RuedaHoraPicker', () => ({
   },
 }));
 jest.mock('../../../habits/components/RuedaAntelacionPicker', () => ({ RuedaAntelacionPicker: () => null }));
-jest.mock('../../../habits/components/FilaDeDiasDelPlan', () => ({ FilaDeDiasDelPlan: () => null }));
+const mockFilaDias = jest.fn<(props: { onAlternarDia: (dia: string) => void }) => void>();
+jest.mock('../../../habits/components/FilaDeDiasDelPlan', () => ({
+  FilaDeDiasDelPlan: (props: { onAlternarDia: (dia: string) => void }) => {
+    mockFilaDias(props);
+    return null;
+  },
+}));
+const mockAntelacionesDe = jest.fn<(userId: string, habitoId: string) => Promise<number[]>>(async () => []);
 jest.mock('../../../habits/notificaciones/recordatoriosDeHabito', () => ({
   HAY_RECORDATORIOS: true,
   HAY_RECORDATORIOS_WEB: false,
-  antelacionesDe: async () => [],
+  antelacionesDe: (userId: string, habitoId: string) => mockAntelacionesDe(userId, habitoId),
   programar: async () => true,
+  // D-217: con el cambio diferido (D-91, siempre) la hoja programa la alarma respetando su fecha.
+  programarConCambioDiferido: async () => true,
   prepararWebPush: async () => true,
+}));
+// D-217: la hoja pide «Alarmas y recordatorios» con el primer recordatorio; acá no hay sistema que
+// consultar, así que nunca hace falta pedirlo.
+jest.mock('../../../alarmas/pedirAlarmaExacta', () => ({
+  hayQuePedirAlarmaExactaAlGuardar: async () => false,
+  anotarQueSePidioAlarmaExacta: async () => undefined,
+  abrirPermisoDeAlarmasExactas: async () => 'ninguna',
+  TEXTO_PEDIDO_ALARMA_EXACTA: '',
 }));
 jest.mock('../../../habits/api/habitsApi', () => ({
   obtenerPreferencias: () => mockPreferencias(),
@@ -144,6 +161,9 @@ beforeEach(() => {
   mockRueda.mockReset();
   mockPreferencias.mockReset();
   mockCambiarHorario.mockReset();
+  mockFilaDias.mockReset();
+  mockAntelacionesDe.mockReset();
+  mockAntelacionesDe.mockImplementation(async () => []);
 });
 
 afterEach(() => {
@@ -215,5 +235,76 @@ describe('PLN-02: el editor avisa el cambio de hora que rige desde mañana', () 
     expect(todo).toContain('Ahora: 09:00');
     expect(todo).toContain('Desde el lunes 28 de septiembre: 09:30');
     expect(mockRueda).toHaveBeenLastCalledWith(expect.objectContaining({ horaInicial: 9, minutoInicial: 30 }));
+  });
+});
+
+/**
+ * E-408 (2026-09-28): la hoja abría un hábito sin recordatorio con «A la hora» YA MARCADO y guardaba
+ * `recordatorio_activo = false`: lo que se veía no era lo que se guardaba. Visto dos veces con Jugo verde.
+ *
+ * Causas: (1) al abrir un hábito, las antelaciones quedaban las del hábito anterior hasta que llegaba la
+ * lectura del teléfono, y esa lectura, al llegar tarde, pisaba lo que la persona ya había tocado; (2) con
+ * días elegidos, la hoja mostraba el recordatorio pero guardar días lo ignoraba.
+ */
+describe('E-408: lo que se ve en el recordatorio es lo que se guarda', () => {
+  const conAviso = (habitId: string, hora: string): PreferenciaHabitoApi => ({
+    ...preferencia(habitId, hora), reminderEnabled: true, reminderMinutesBefore: 0,
+  });
+  const aLaHoraMarcado = (r: ReactTestRenderer): boolean => {
+    const boton = r.root.findAll(n => typeof n.props.onPress === 'function'
+      && typeof n.props.accessibilityLabel === 'string' && n.props.accessibilityLabel.startsWith('A la hora exacta'));
+    return boton.length > 0 && boton[0].props.accessibilityState?.selected === true;
+  };
+  const volver = async (r: ReactTestRenderer) => {
+    const [boton] = tocablesQueContienen(r, n => (n.type as unknown) === 'Text' && n.props.children === 'VOLVER');
+    await act(async () => { boton.props.onPress(); });
+  };
+  const guardar = async (r: ReactTestRenderer) => {
+    const [boton] = r.root.findAll(n => typeof n.props.label === 'string' && n.props.label.startsWith('GUARDAR'));
+    await act(async () => { boton.props.onPress(); });
+    await esperar();
+  };
+
+  it('abrir un hábito sin recordatorio después de uno con «A la hora» no lo muestra marcado', async () => {
+    mockPreferencias.mockResolvedValue([conAviso('h-jugo', '09:00'), preferencia('h-clase', '14:59')]);
+    mockCambiarHorario.mockResolvedValue({ deferred: true, deferredEffectiveDate: '2026-09-29' });
+    mockAntelacionesDe.mockImplementation(async (_u, id) => (id === 'h-jugo' ? [0] : new Promise<number[]>(() => {})));
+    raiz = await montar();
+    await abrir(raiz, 'JUGO VERDE');
+    expect(aLaHoraMarcado(raiz)).toBe(true);
+    await volver(raiz);
+    await abrir(raiz, 'Clase diaria');
+    // La lectura del teléfono de Clase diaria todavía no llegó: manda lo que dice el servidor (nada).
+    expect(aLaHoraMarcado(raiz)).toBe(false);
+    await guardar(raiz);
+    expect(mockCambiarHorario).toHaveBeenLastCalledWith('h-clase', '14:59:00', null,
+      expect.objectContaining({ activo: false, minutosAntes: null }));
+  });
+
+  it('si la persona marca «A la hora» antes de que llegue la lectura del teléfono, no se lo pisa', async () => {
+    let responder!: (v: number[]) => void;
+    mockPreferencias.mockResolvedValue([preferencia('h-jugo', '09:00')]);
+    mockCambiarHorario.mockResolvedValue({ deferred: true, deferredEffectiveDate: '2026-09-29' });
+    mockAntelacionesDe.mockImplementation(() => new Promise<number[]>(r => { responder = r; }));
+    raiz = await montar();
+    await abrir(raiz, 'JUGO VERDE');
+    const [aLaHora] = raiz.root.findAll(n => typeof n.props.onPress === 'function'
+      && typeof n.props.accessibilityLabel === 'string' && n.props.accessibilityLabel.startsWith('A la hora exacta'));
+    await act(async () => { aLaHora.props.onPress(); });
+    await act(async () => { responder([]); });
+    await esperar();
+    expect(aLaHoraMarcado(raiz)).toBe(true);
+    await guardar(raiz);
+    expect(mockCambiarHorario).toHaveBeenLastCalledWith('h-jugo', '09:00:00', null,
+      expect.objectContaining({ activo: true, minutosAntes: 0 }));
+  });
+
+  it('con días elegidos no se ofrece un recordatorio que guardar días no guarda', async () => {
+    mockPreferencias.mockResolvedValue([preferencia('h-jugo', '09:00')]);
+    raiz = await montar();
+    await abrir(raiz, 'JUGO VERDE');
+    expect(raiz.root.findAll(n => n.props.accessibilityLabel?.startsWith?.('A la hora exacta')).length).toBeGreaterThan(0);
+    await act(async () => { mockFilaDias.mock.lastCall![0].onAlternarDia('VIE'); });
+    expect(raiz.root.findAll(n => n.props.accessibilityLabel?.startsWith?.('A la hora exacta'))).toHaveLength(0);
   });
 });

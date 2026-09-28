@@ -1,0 +1,6 @@
+{
+  "name": "renaser-alarmas",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Módulo nativo local de Renaser: si Android deja programar alarmas exactas y abrir su ajuste (D-217)."
+}

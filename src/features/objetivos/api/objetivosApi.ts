@@ -121,6 +121,20 @@ export async function obtenerRocasDeManana(): Promise<RocaDiariaApi[]> {
 }
 
 /**
+ * `GET /api/v1/rocks/upcoming` (D-217, 2026-09-28) — todo lo agendado desde HOY hasta el último día que
+ * se puede agendar (el domingo de la semana; el domingo, también el lunes; en la semana 13, el día 90),
+ * con ese rango. Lo usan las alarmas de las acciones: con solo hoy y mañana, una acción del viernes
+ * agendada el martes no tenía alarma hasta que la app se abriera el jueves.
+ *
+ * `desde`/`hasta` dicen qué días representa la lista aunque vengan vacíos: sin ellos no se puede saber
+ * si falta la alarma de una acción que se borró o si ese día simplemente no se pidió.
+ */
+export async function obtenerRocasAgendadas(): Promise<{ desde: string; hasta: string; rocas: RocaDiariaApi[] }> {
+  const r = await apiFetch<unknown>('/api/v1/rocks/upcoming');
+  return validarRespuesta(objetivosSchemas.rocasAgendadas, r, 'GET /api/v1/rocks/upcoming');
+}
+
+/**
  * `POST /api/v1/rocks/plan` — agenda las acciones de un día, con hora si la persona la eligió.
  *
  * **Qué fechas acepta.** De mañana hasta el domingo de la semana en curso, y además hoy mientras no

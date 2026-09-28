@@ -17,6 +17,7 @@ import { RadarProvider } from './src/features/radar/RadarContext';
 import { CodigoRenaserOverlay } from './src/features/radar/components/CodigoRenaserOverlay';
 import { RenombrarHabitoOverlay } from './src/features/habits/components/RenombrarHabitoOverlay';
 import { AbridorDeEventos } from './src/features/eventos/components/AbridorDeEventos';
+import { AbridorDeAvisos } from './src/features/alarmas/components/AbridorDeAvisos';
 import { RearmadorDeAlarmas } from './src/features/alarmas/components/RearmadorDeAlarmas';
 import { SincronizadorDeAcciones } from './src/features/objetivos/components/SincronizadorDeAcciones';
 
@@ -44,9 +45,12 @@ function Shell() {
           limon), para quien no las puede tomar. Aca arriba por el mismo motivo que los otros tres:
           ninguna de las cinco pantallas cambia. No es un Modal — no bloquea lo que hay debajo. */}
       <RenombrarHabitoOverlay />
-      {/* Tocar el aviso de un evento abre su detalle en Comunidad → Eventos (E-5). No pinta nada:
-          escucha la ruta `/eventos/{id}` y lleva a la pestaña cuando existe. */}
+      {/* Canales de Android y alarmas de eventos al día al entrar. No pinta nada. */}
       <AbridorDeEventos />
+      {/* Tocar un aviso abre lo suyo: un evento (Comunidad → Eventos, E-5), el recordatorio de un
+          hábito (Training en su dimensión) o el de una acción (Plan → Objetivos), D-218. Espera a que
+          se cierren el Código Renaser, el arranque guiado o el Pacto. No pinta nada. */}
+      <AbridorDeAvisos />
       {/* Al abrir y al volver a primer plano, vuelve a armar las alarmas locales ya programadas
           (mismo id, contenido y hora): las de antes del permiso de alarmas exactas quedan exactas.
           No pinta nada. Ver `features/alarmas/rearmarAlarmas.ts`. */}

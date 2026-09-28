@@ -2,6 +2,7 @@ import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Switch, Platform } from 'react-native';
 import { Alert } from '../components/Alerta';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
 import { space } from '../theme/tokens';
 import { useResponsive } from '../theme/responsive';
@@ -32,6 +33,8 @@ import { ClaseDiariaModal } from '../features/academy/components/ClaseDiariaModa
 import { useClaseDiaria } from '../features/academy/hooks/useClaseDiaria';
 import type { ClaseDiariaApi } from '../features/academy/types/academy.types';
 import { irAPestana } from '../navigation/navegacionRef';
+import { dimensionAAbrir } from '../features/training/utils/aperturaDesdeAviso';
+import type { DimensionDeTraining } from '../features/training/utils/dimensionDelHabito';
 import { useProgramaDia } from '../features/programa/hooks/useProgramaDia';
 import * as recordatorios from '../features/habits/notificaciones/recordatoriosDeHabito';
 import {
@@ -229,6 +232,23 @@ export default function TrainingScreen() {
 
   const [habits, setHabits] = useState<HabitItem[]>([]);
   const [planHabits, setPlanHabits] = useState<HabitItem[]>([]);
+
+  /**
+   * Entrada desde el aviso de un hábito (D-218, 2026-09-28): la deja `AbridorDeAvisos` con
+   * `abrirHabitoId` y `abrirDimension`, cuando ya no hay ninguna capa obligatoria encima. Se consume el
+   * parámetro una vez (como `abrirEventoId` en Comunidad) y se guarda el pedido hasta saber qué
+   * dimensión abrir: si la ruta no la trajo, hay que esperar a que carguen los hábitos.
+   */
+  const route = useRoute();
+  const navigation = useNavigation();
+  const [habitoPedido, setHabitoPedido] = useState<{ habitoId: string; dimension: DimensionDeTraining | null } | null>(null);
+  useEffect(() => {
+    const params = route.params as { abrirHabitoId?: string; abrirDimension?: DimensionDeTraining | null } | undefined;
+    if (!params?.abrirHabitoId) return;
+    setHabitoPedido({ habitoId: params.abrirHabitoId, dimension: params.abrirDimension ?? null });
+    (navigation as unknown as { setParams: (p: Record<string, unknown>) => void })
+      .setParams({ abrirHabitoId: undefined, abrirDimension: undefined });
+  }, [route.params, navigation]);
   // useLayoutEffect y no useEffect (e2e del 26/09): con useEffect había un cuadro ya sin
   // esqueleto y todavía sin hábitos, y las cinco dimensiones decían «0/0 CUMPLIDOS» hasta un
   // segundo en un teléfono lento — parecía que se había perdido lo del día.
@@ -238,6 +258,18 @@ export default function TrainingScreen() {
       setPlanHabits(planHabitsDelBackend);
     }
   }, [cargandoBackend, errorBackend, habitsDelBackend, planHabitsDelBackend]);
+
+  useEffect(() => {
+    if (!habitoPedido) return;
+    const dimension = dimensionAAbrir(habitoPedido, [...habits, ...planHabits], cargandoBackend);
+    if (dimension === 'esperar') return;
+    const config = dimension ? DIMENSIONES_CONFIG.find(d => d.key === dimension) ?? null : null;
+    if (config) {
+      setSelectedDimension(config);
+      setInnerTab('habitos');
+    }
+    setHabitoPedido(null);
+  }, [habitoPedido, habits, planHabits, cargandoBackend]);
 
   /**
    * Refleja en la tarjeta un cierre que el SERVIDOR YA CONFIRMÓ, sin esperar a releer (V-2,

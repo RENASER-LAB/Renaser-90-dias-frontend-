@@ -26,6 +26,7 @@ import { canalDeAlarma, type SonidoDeAlarma } from '../sonidoDeAlarma';
 import { RecordatorioDeAcciones } from '../../objetivos/components/RecordatorioDeAcciones';
 import { idsDeRecordatoriosDeAcciones } from '../../objetivos/notificaciones/recordatoriosDeAcciones';
 import { AvisoAlarmaExacta } from './AvisoAlarmaExacta';
+import { GuiaDeBateria } from './GuiaDeBateria';
 import { SelectorDeSonido } from './SelectorDeSonido';
 
 /** El hábito de despertar, por su clave de sistema (el título lo puede renombrar el aprendiz). */
@@ -138,10 +139,18 @@ export function SeccionAlarmas({ userId }: { userId: string }) {
         horaNueva: hora,
         limitTime: despertar.limitTime,
         recordatorio: despertar.recordatorioServidor,
+        horaAnterior: despertar.hora || undefined,
       });
       setDespertar({ ...despertar, hora });
       if (resultado.deferred) {
-        Alert.alert('Guardado', `Desde mañana tu hora de despertar es a las ${hora}. La alarma ya quedó a esa hora.`);
+        // D-217: la alarma respeta la fecha del cambio. Antes decía «La alarma ya quedó a esa hora», y
+        // era cierto: sonaba hoy a la hora nueva, que el servidor todavía no aplicaba.
+        Alert.alert(
+          'Guardado',
+          despertar.hora
+            ? `Desde mañana tu hora de despertar es a las ${hora}. Hoy la alarma sigue a las ${despertar.hora}.`
+            : `Desde mañana tu hora de despertar es a las ${hora}.`,
+        );
       }
     } catch {
       Alert.alert('No se pudo cambiar la hora', 'Intenta de nuevo en unos segundos.');
@@ -215,6 +224,7 @@ export function SeccionAlarmas({ userId }: { userId: string }) {
   return (
     <View style={{ gap: 18 }}>
       <AvisoAlarmaExacta />
+      <GuiaDeBateria />
       <View style={{ gap: 8 }}>
         <Text style={[estilos.titulo, { color: c.textStrong }]}>Despertar</Text>
         {despertar === null ? <Text style={texto}>Cargando…</Text> : null}

@@ -16,7 +16,10 @@ jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
 );
 
-type Programada = { content: { title: string; sound: unknown }; trigger: { hour: number; minute: number; channelId: string } };
+type Programada = {
+  content: { title: string; sound: unknown };
+  trigger: { type?: string; hour: number; minute: number; channelId: string; date?: Date };
+};
 
 const mockProgramadas: Programada[] = [];
 const mockCanceladas: string[] = [];
@@ -79,6 +82,31 @@ describe('cambiar la hora de un hábito desde Plan', () => {
     const horas = mockProgramadas.map(p => `${p.trigger.hour}:${String(p.trigger.minute).padStart(2, '0')}`);
     expect(horas).toEqual(['4:50', '5:00']);
     expect(await recordatorios.antelacionesDe(USUARIO, HABITO)).toEqual([0, 10]);
+  });
+
+  it('D-217: con la hora de hoy y el cambio diferido, la diaria nueva no arranca hasta su fecha', async () => {
+    await recordatorios.programar(USUARIO, HABITO, 'Despertar', '06:30', [0]);
+    mockProgramadas.length = 0;
+    const pasado = new Date();
+    pasado.setDate(pasado.getDate() + 2);
+    const dos = (n: number) => String(n).padStart(2, '0');
+    const desde = `${pasado.getFullYear()}-${dos(pasado.getMonth() + 1)}-${dos(pasado.getDate())}`;
+    mockCambiarHorario.mockImplementationOnce(async () => ({ deferred: true, deferredEffectiveDate: desde }));
+
+    await cambiarHoraDelHabito({
+      userId: USUARIO,
+      habitoId: HABITO,
+      titulo: 'Despertar',
+      horaNueva: '05:00',
+      limitTime: null,
+      recordatorio: { activo: true, minutosAntes: 0 },
+      horaAnterior: '06:30',
+    });
+
+    // Antes: una diaria de las 05:00 en el acto, que sonaba mañana aunque el cambio rigiera pasado mañana.
+    expect(mockProgramadas.some(p => p.trigger.type === 'daily')).toBe(false);
+    const primera = mockProgramadas.find(p => p.trigger.date?.getHours() === 5);
+    expect(primera?.trigger.date?.getDate()).toBe(pasado.getDate());
   });
 
   it('no inventa una alarma si este teléfono nunca tuvo una para ese hábito', async () => {

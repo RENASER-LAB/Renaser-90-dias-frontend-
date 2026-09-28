@@ -112,7 +112,15 @@ export async function cambiarHorario(
    * > este parámetro, cambiar la hora de un hábito le borraba la alarma en silencio. El GET ahora
    * > devuelve los dos campos, así que preservarlos ya es posible.
    */
-  recordatorio: { activo: boolean; minutosAntes: number | null },
+  recordatorio: {
+    activo: boolean;
+    minutosAntes: number | null;
+    /**
+     * Todos los avisos elegidos (V81, D-217). Solo lo manda quien los conoce (la hoja de Training): sin
+     * él, el servidor conserva el conjunto si `minutosAntes` es su más temprano.
+     */
+    lista?: number[] | null;
+  },
 ): Promise<CambioHorarioResultado> {
   const r = await apiFetch<unknown>(`/api/v1/habit-preferences/${habitId}`, {
     method: 'PATCH',
@@ -121,6 +129,7 @@ export async function cambiarHorario(
       limitTime,
       reminderEnabled: recordatorio.activo,
       reminderMinutesBefore: recordatorio.minutosAntes,
+      ...(recordatorio.lista === undefined ? {} : { reminderMinutesList: recordatorio.lista }),
     },
   });
   return validarRespuesta(habitsSchemas.cambioHorario, r, 'PATCH /api/v1/habit-preferences/{id}');
