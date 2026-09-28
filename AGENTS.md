@@ -15,6 +15,31 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
   * `data/`: Constantes, cláusulas, configuraciones estáticas.
 * **Componentes de UI Atómicos**: Utiliza componentes compartidos bajo `src/components/` (`FormField`, `GoldButton`, `SliderRating`, `Checkbox`, `SignatureCanvas`, `Icon`).
 * **Integridad del Core**: NUNCA alterar, romper ni desconfigurar las pantallas existentes ni los tabs principales (`Hoy`, `Plan`, `Training`, `Comunidad`, `Yo`).
+  * **Excepción autorizada por el dueño del producto — 2026-09-28 — tabs `Yo` y `Hoy`, Administración y
+    las dos fichas del aprendiz: la Caja Renaser** (backend D-219, `docs/specs/CAJA_RENASER.md`; pedido
+    del dueño en el cuestionario del 28/09, con «poco texto, que no se maree el usuario»). Todo vive en
+    `src/features/caja/`. Lo que cambia y nada más:
+    * **`Yo`**: una fila «Tu Caja Renaser» (con el estado en palabras del aprendiz) entre «Identidad» y
+      «Administración», que aparece SOLO si `GET /api/v1/me/caja` responde con un estado que se le
+      muestra (no `NO_APLICA`, `EN_PAUSA` ni `FUERA_DE_LA_APP`; un 404/403 la esconde). Abre
+      `MiCajaScreen` a pantalla completa (como Administración): cinco pasos, «Ya la recibí» si
+      `puedeConfirmar`, «¿Te la enviamos a otro lugar?» si `puedeCambiarDestino`, «Ver dónde va» si
+      hay `rastreoUrl`, y ya entregada una invitación opcional a publicar una foto en el Muro (abre el
+      composer existente, `abrirComposerMuro`). Yo lee además el parámetro `abrirCaja`.
+    * **`Hoy`**: solo lee el parámetro `abrirCajaAprendizId` para abrir Administración en esa caja
+      (si la cuenta administra; si no, se descarta). La tarjeta y todo lo demás de Hoy no cambian.
+    * **Avisos** (D-218): `/caja` abre Yo con su caja y `/admin/caja/{aprendizId}` abre Hoy →
+      Administración → Caja Renaser → esa caja. Los dos esperan a que se cierre una capa obligatoria
+      (Código Renaser, arranque guiado, Pacto), como los de hábitos (`navigation/abrirAviso.ts`).
+    * **Administración**: «Caja Renaser» en «Más» de la raíz (lista con pestañas por estado y conteo,
+      buscador, «Descargar» la planilla), el detalle de cada caja (datos de envío, checklist, foto de
+      la caja, formulario del envío, comprobante, carta, historial y un botón por acción) y «Contenido
+      y carta» (la lista editable y el fondo de la carta). La ficha del aprendiz suma un chip con el
+      estado de su caja que abre su caja.
+    * **Ficha del mentor** (`AlumnoScreen`): el mismo chip, solo para mirar.
+    * **Dependencias nuevas**: `expo-sharing` y `expo-file-system` (esta ya venía dentro de `expo`,
+      ahora es directa): en el teléfono, «Descargar» guarda el archivo con la sesión y abre la hoja de
+      compartir del sistema. Llevan código nativo: **hace falta un APK nuevo**.
   * **Excepción autorizada por el dueño del producto — 2026-09-26 — tab `Comunidad`, pestaña
     *Tribu* y chat (dos pedidos del dueño de ese día).** Lo que cambia y nada más:
     * **Bug «no carga los integrantes».** Un mentor que lidera un grupo entraba a Tribu y leía

@@ -9,7 +9,7 @@ import type { DestinoDeAviso } from '../features/mentor/api/avisosApi';
  *
  * ## Cuándo se va
  *
- * 1. Si es un hábito o una acción y hay una capa obligatoria abierta (el Código Renaser, el arranque
+ * 1. Si es un hábito, una acción o la Caja Renaser (D-219) y hay una capa obligatoria abierta (el Código Renaser, el arranque
  *    guiado o el Pacto, `capasObligatorias.ts`), **no se va**: la ruta queda esperando y se vuelve a
  *    intentar al cerrarse. La capa no se toca. El evento no espera (decisión del dueño del 28/09).
  * 2. Si la pestaña todavía no existe (login, onboarding, Mapa del Día 7), tampoco: se reintenta cuando
@@ -20,14 +20,26 @@ import type { DestinoDeAviso } from '../features/mentor/api/avisosApi';
  * Las rutas del mentor y del semáforo no pasan por acá: las atienden sus pantallas, como siempre.
  */
 
-export type TipoQueAbreUnaPestana = 'evento' | 'habito' | 'objetivo';
+export type TipoQueAbreUnaPestana = 'evento' | 'habito' | 'objetivo' | 'caja' | 'cajaAdmin';
 
-export const TIPOS_QUE_ABREN_UNA_PESTANA: readonly TipoQueAbreUnaPestana[] = ['evento', 'habito', 'objetivo'];
+export const TIPOS_QUE_ABREN_UNA_PESTANA: readonly TipoQueAbreUnaPestana[] = [
+  'evento',
+  'habito',
+  'objetivo',
+  'caja',
+  'cajaAdmin',
+];
 
+/**
+ * La Caja Renaser (D-219, 2026-09-28): la del aprendiz vive en Yo; la del Admin, en Administración,
+ * que se abre desde Hoy (es estado de `HoyScreen`, no una ruta del navegador).
+ */
 const PESTANA: Record<TipoQueAbreUnaPestana, string> = {
   evento: 'Comunidad',
   habito: 'Training',
   objetivo: 'Plan',
+  caja: 'Yo',
+  cajaAdmin: 'Hoy',
 };
 
 /** La pestaña y los parámetros que cada pantalla ya sabe consumir una vez. */
@@ -41,6 +53,10 @@ export function pestanaDelDestino(
       return { pestana: PESTANA.habito, params: { abrirHabitoId: destino.habitoId, abrirDimension: destino.dimension } };
     case 'objetivo':
       return { pestana: PESTANA.objetivo, params: { abrirObjetivosFecha: destino.fecha, abrirObjetivosEje: destino.eje } };
+    case 'caja':
+      return { pestana: PESTANA.caja, params: { abrirCaja: true } };
+    case 'cajaAdmin':
+      return { pestana: PESTANA.cajaAdmin, params: { abrirCajaAprendizId: destino.aprendizId } };
   }
 }
 
@@ -56,9 +72,10 @@ export type ResultadoDeApertura = 'abierto' | 'esperando' | 'nada';
 
 /**
  * Los que esperan a que se cierre una capa obligatoria. El evento NO (decisión del dueño, 2026-09-28): su
- * aviso abre el evento directo, como desde E-5.
+ * aviso abre el evento directo, como desde E-5. Los de la Caja Renaser sí esperan (D-219): nada tapa el
+ * Código Renaser ni el Pacto.
  */
-const ESPERAN_A_LAS_CAPAS: ReadonlySet<TipoQueAbreUnaPestana> = new Set(['habito', 'objetivo']);
+const ESPERAN_A_LAS_CAPAS: ReadonlySet<TipoQueAbreUnaPestana> = new Set(['habito', 'objetivo', 'caja', 'cajaAdmin']);
 
 export function intentarAbrirAvisoPendiente(deps: DependenciasDeApertura): ResultadoDeApertura {
   let esperando = false;

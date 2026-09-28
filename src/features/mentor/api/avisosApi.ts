@@ -106,6 +106,24 @@ export interface DestinoDelObjetivo {
 }
 
 /**
+ * La Caja Renaser del aprendiz: `/caja` (D-219, 2026-09-28), la ruta de los avisos de su caja («Tu caja
+ * va en camino», «¿Ya te llegó?»). Abre Yo → «Tu Caja Renaser». Sin identificadores: es siempre la suya.
+ */
+export interface DestinoDeMiCaja {
+  tipo: 'caja';
+}
+
+/**
+ * La caja de un aprendiz, para Administración: `/admin/caja/{aprendizId}` (D-219), la ruta de los
+ * avisos al Admin («X está lista para su Caja», la caja enviada hace 5 días sin confirmar). Abre
+ * Administración → Caja Renaser en esa caja. Quien no administra no abre nada: el servidor autoriza.
+ */
+export interface DestinoDeCajaAdmin {
+  tipo: 'cajaAdmin';
+  aprendizId: string;
+}
+
+/**
  * Destino de un aviso, extraído de su ruta. `null` si la ruta no tiene una forma que esta versión
  * de la app sepa abrir — entonces el toque solo abre la app, que es lo que el contrato espera de
  * una app instalada ante una ruta nueva (§4.5).
@@ -117,7 +135,9 @@ export type DestinoDeAviso =
   | DestinoDelSemaforoPorGrupos
   | DestinoDelEvento
   | DestinoDelHabito
-  | DestinoDelObjetivo;
+  | DestinoDelObjetivo
+  | DestinoDeMiCaja
+  | DestinoDeCajaAdmin;
 
 export async function obtenerAvisosDeAcompanamiento(): Promise<AvisoApi[]> {
   const bandeja = validarRespuesta<z.infer<typeof bandejaSchema>>(
@@ -142,6 +162,9 @@ const RUTA_DEL_EVENTO = /^\/eventos\/([^/]+)\/?$/;
 /** El `?` separa la consulta: un id de hábito no lo lleva nunca (es un UUID, o va codificado). */
 const RUTA_DEL_HABITO = /^\/habitos\/([^/?]+)\/?(?:\?(.*))?$/;
 const RUTA_DEL_OBJETIVO = /^\/objetivos\/(\d{4}-\d{2}-\d{2})\/?(?:\?(.*))?$/;
+/** Con la barra final tolerada, como `/semaforo`. */
+const RUTA_DE_MI_CAJA = /^\/caja\/?$/;
+const RUTA_DE_LA_CAJA_ADMIN = /^\/admin\/caja\/([^/?]+)\/?$/;
 
 /**
  * Saca el destino de la ruta de un aviso: la ficha de un alumno
@@ -166,6 +189,12 @@ export function destinoDeRuta(ruta: unknown): DestinoDeAviso | null {
   if (typeof ruta !== 'string') return null;
   if (RUTA_DEL_SEMAFORO.test(ruta)) return { tipo: 'semaforo' };
   if (RUTA_DEL_SEMAFORO_POR_GRUPOS.test(ruta)) return { tipo: 'semaforoGrupos' };
+  if (RUTA_DE_MI_CAJA.test(ruta)) return { tipo: 'caja' };
+  const deLaCaja = RUTA_DE_LA_CAJA_ADMIN.exec(ruta);
+  if (deLaCaja) {
+    const aprendizId = decodificar(deLaCaja[1]);
+    return aprendizId ? { tipo: 'cajaAdmin', aprendizId } : null;
+  }
   const delEvento = RUTA_DEL_EVENTO.exec(ruta);
   if (delEvento) {
     const eventoId = decodificar(delEvento[1]);

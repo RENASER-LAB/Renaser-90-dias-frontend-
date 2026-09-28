@@ -50,6 +50,10 @@ import { useMemoriaDeRenasia } from '../features/renasia/hooks/useMemoriaDeRenas
 import { mostrarMemoria } from '../features/renasia/utils/memoria';
 import { useMisEvidencias } from '../features/evidence/hooks/useMisEvidencias';
 import { ESTADO_EVIDENCIA, iconoDeTipo } from '../features/evidence/api/evidenceSchemas';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { useMiCaja } from '../features/caja/hooks/useMiCaja';
+import { MiCajaScreen } from '../features/caja/screens/MiCajaScreen';
+import { etiquetaParaElAprendiz } from '../features/caja/utils/estadosDeCaja';
 
 // =========================================================================
 // DATOS ESTÁTICOS
@@ -240,6 +244,23 @@ export default function YoScreen() {
      administrador llega desde donde este, y los cinco tabs quedan como estaban (SDD 003, ARF-01). */
   const { capacidades } = useCapacidades();
   const [enAdministracion, setEnAdministracion] = useState(false);
+  /* Caja Renaser (D-219, pedido del dueño del 28/09): la fila «Tu Caja Renaser» y su pantalla. La
+     fila aparece solo si el servidor dice que hay algo que mostrarle (desde el día 8, sin pausa y en
+     Perú). El aviso `/caja` llega con `abrirCaja` (lo deja `AbridorDeAvisos`, D-218). */
+  const miCaja = useMiCaja();
+  const [enCaja, setEnCaja] = useState(false);
+  const rutaDeYo = useRoute();
+  const navegacionDeYo = useNavigation();
+  useEffect(() => {
+    const params = rutaDeYo.params as { abrirCaja?: boolean } | undefined;
+    if (!params?.abrirCaja) return;
+    setEnCaja(true);
+    (navegacionDeYo as unknown as { setParams: (p: Record<string, unknown>) => void }).setParams({ abrirCaja: undefined });
+  }, [rutaDeYo.params, navegacionDeYo]);
+  useEffect(() => {
+    // Un aviso viejo de una caja que ya no se le muestra no deja la pantalla esperando abierta.
+    if (enCaja && !miCaja.cargando && !miCaja.visible) setEnCaja(false);
+  }, [enCaja, miCaja.cargando, miCaja.visible]);
   const [metodoFase, setMetodoFase] = useState(0);
   const metodoAnim = useRef(new Animated.Value(1)).current;
 
@@ -422,6 +443,10 @@ export default function YoScreen() {
 
   if (enAdministracion && capacidades.administrar) {
     return <AdminScreen onSalir={() => setEnAdministracion(false)} />;
+  }
+
+  if (enCaja && miCaja.visible && miCaja.caja) {
+    return <MiCajaScreen caja={miCaja.caja} onVolver={() => setEnCaja(false)} onCambio={miCaja.recargar} />;
   }
 
 
@@ -631,6 +656,24 @@ export default function YoScreen() {
             </View>
             <Icon name="chevron" size={12} color={c.chevron} />
           </Pressable>
+
+          {/* TU CAJA RENASER (D-219) — solo si el servidor dice que hay algo que mostrarle */}
+          {miCaja.visible && miCaja.caja ? (
+            <Pressable
+              onPress={() => setEnCaja(true)}
+              accessibilityRole="button"
+              accessibilityLabel={`Tu Caja Renaser: ${etiquetaParaElAprendiz(miCaja.caja.estado)}`}
+              style={[styles.rowCard, { borderColor: c.borderStrong, backgroundColor: c.cardBg }]}
+            >
+              <View style={{ flex: 1 }}>
+                <MicroLabel>Tu Caja Renaser</MicroLabel>
+                <Text style={[t.body, { color: c.text, marginTop: 6 }]}>
+                  {etiquetaParaElAprendiz(miCaja.caja.estado)}
+                </Text>
+              </View>
+              <Icon name="chevron" size={12} color={c.chevron} />
+            </Pressable>
+          ) : null}
 
           {/* ADMINISTRACIÓN — solo si el servidor dice que esta cuenta puede */}
           {capacidades.administrar ? (

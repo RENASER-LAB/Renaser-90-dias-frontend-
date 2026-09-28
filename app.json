@@ -91,7 +91,8 @@
             "./assets/sonidos/relajar_ruido_marron.mp3"
           ]
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "extra": {
       "eas": {

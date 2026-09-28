@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 
 import type { InicioSemanal } from '../../semaforo/hooks/useLecturaPorSemana';
 import type { PersonaDeFicha } from '../types/admin.types';
+import { CajaContenidoScreen } from '../../caja/screens/CajaContenidoScreen';
+import { CajaDetalleScreen } from '../../caja/screens/CajaDetalleScreen';
+import { CajaListaScreen } from '../../caja/screens/CajaListaScreen';
 import { AdminInicioScreen } from './AdminInicioScreen';
 import { BienvenidaAdminScreen } from './BienvenidaAdminScreen';
 import { FichaAprendizScreen } from './FichaAprendizScreen';
@@ -38,16 +41,30 @@ type Vista =
   | { nombre: 'semaforo-grupo'; grupoId: string; grupoNombre: string | null; inicio: InicioSemanal }
   | { nombre: 'staff' }
   | { nombre: 'bienvenida' }
-  | { nombre: 'mas' };
+  | { nombre: 'mas' }
+  | { nombre: 'caja' }
+  | { nombre: 'caja-detalle'; aprendizId: string }
+  | { nombre: 'caja-contenido' };
+
+/** Por dónde entra Administración: la raíz, el semáforo (aviso del sábado) o una caja (aviso de la Caja). */
+export type EntradaDeAdmin = 'inicio' | 'semaforo' | { caja: string };
+
+/** La pila con la que abre: la raíz siempre debajo, para que volver suba y no salga de golpe. */
+export function pilaInicial(abrirEn: EntradaDeAdmin): Vista[] {
+  if (abrirEn === 'semaforo') return [{ nombre: 'inicio' }, { nombre: 'semaforo' }];
+  if (typeof abrirEn === 'object') {
+    return [{ nombre: 'inicio' }, { nombre: 'caja' }, { nombre: 'caja-detalle', aprendizId: abrirEn.caja }];
+  }
+  return [{ nombre: 'inicio' }];
+}
 
 /**
  * `abrirEn`: por dónde entra. El aviso del sábado (`/semaforo/grupos`) entra directo al semáforo,
- * con la raíz debajo: volver desde ahí sube a Administración, no sale de golpe a Mi programa.
+ * con la raíz debajo: volver desde ahí sube a Administración, no sale de golpe a Mi programa. El de la
+ * Caja Renaser (`/admin/caja/{aprendizId}`, D-219) entra a esa caja, con la lista y la raíz debajo.
  */
-export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => void; abrirEn?: 'inicio' | 'semaforo' }) {
-  const [pila, setPila] = useState<Vista[]>(() =>
-    abrirEn === 'semaforo' ? [{ nombre: 'inicio' }, { nombre: 'semaforo' }] : [{ nombre: 'inicio' }],
-  );
+export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => void; abrirEn?: EntradaDeAdmin }) {
+  const [pila, setPila] = useState<Vista[]>(() => pilaInicial(abrirEn));
   const vista = pila[pila.length - 1];
 
   const entrar = (siguiente: Vista) => setPila(p => [...p, siguiente]);
@@ -93,7 +110,25 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
         />
       );
     case 'ficha':
-      return <FichaAprendizScreen aprendiz={vista.aprendiz} onVolver={volver} />;
+      return (
+        <FichaAprendizScreen
+          aprendiz={vista.aprendiz}
+          onVolver={volver}
+          onAbrirCaja={aprendizId => entrar({ nombre: 'caja-detalle', aprendizId })}
+        />
+      );
+    case 'caja':
+      return (
+        <CajaListaScreen
+          onVolver={volver}
+          onAbrirCaja={aprendizId => entrar({ nombre: 'caja-detalle', aprendizId })}
+          onEditarContenido={() => entrar({ nombre: 'caja-contenido' })}
+        />
+      );
+    case 'caja-detalle':
+      return <CajaDetalleScreen key={vista.aprendizId} aprendizId={vista.aprendizId} onVolver={volver} />;
+    case 'caja-contenido':
+      return <CajaContenidoScreen onVolver={volver} />;
     case 'solicitudes':
       return (
         <SolicitudesAdminScreen onVolver={volver} onIrAGrupos={() => entrar({ nombre: 'grupos' })} />
@@ -140,6 +175,7 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
             else if (seccion === 'solicitudes') entrar({ nombre: 'solicitudes' });
             else if (seccion === 'semaforo') entrar({ nombre: 'semaforo' });
             else if (seccion === 'mas') entrar({ nombre: 'mas' });
+            else if (seccion === 'caja') entrar({ nombre: 'caja' });
           }}
         />
       );

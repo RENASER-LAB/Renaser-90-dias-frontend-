@@ -14,6 +14,7 @@ import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
 import { TarjetaSemaforoDeAprendiz } from '../../semaforo/components/TarjetaSemaforoDeAprendiz';
+import { ChipDeCaja } from '../../caja/components/ChipDeCaja';
 import { abrirConversacionDirecta } from '../../chat/api/chatApi';
 import { urlDeEvidencia } from '../../evidence/api/evidenceApi';
 import { useSemanaDelAlumno } from '../hooks/useSemanaDelAlumno';
@@ -174,6 +175,9 @@ export function AlumnoScreen({
           retardo={40}
           margenArriba={20}
         />
+
+        {/* Caja Renaser (D-219): el estado de su caja, un chip. Antes del día 8 o sin permiso, nada. */}
+        <ChipDeCaja origen={{ quien: 'mentor', aprendizId: alumno.participanteId }} margenArriba={14} />
 
         {/* La acción principal de esta pantalla: escribirle. Rellena, una sola (A-1). */}
         <Aparicion retardo={80} style={{ marginTop: 18 }}>

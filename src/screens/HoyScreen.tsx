@@ -8,7 +8,7 @@ import {
   Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
 import { space } from '../theme/tokens';
 import { useResponsive } from '../theme/responsive';
@@ -36,7 +36,7 @@ import {
   hayQuePedirMiSemaforo,
   quienAbreElResumenPorGrupos,
 } from '../features/semaforo/utils/entradasDelSemaforo';
-import { AdminScreen } from '../features/admin/screens/AdminScreen';
+import { AdminScreen, type EntradaDeAdmin } from '../features/admin/screens/AdminScreen';
 import { TarjetaAdminHoy } from '../features/admin/components/TarjetaAdminHoy';
 import { TarjetaConfrontacion } from '../features/confrontacion/components/TarjetaConfrontacion';
 import { ParticulaDeRitmo } from '../features/home/components/ParticulaDeRitmo';
@@ -169,8 +169,23 @@ export default function HoyScreen() {
   const [enfocarSemaforoDelGrupo, setEnfocarSemaforoDelGrupo] = useState(false);
   /* El aviso del sabado a administracion entra directo al semaforo de Administracion. La clave
      vuelve a montar la pila de vistas para que entre por ahi aunque ya estuviera abierta. */
-  const [adminAbreEn, setAdminAbreEn] = useState<'inicio' | 'semaforo'>('inicio');
+  const [adminAbreEn, setAdminAbreEn] = useState<EntradaDeAdmin>('inicio');
   const [montajeAdmin, setMontajeAdmin] = useState(0);
+
+  /* El aviso de la Caja Renaser al Admin (`/admin/caja/{aprendizId}`, D-219) llega por
+     `AbridorDeAvisos` con `abrirCajaAprendizId`, ya sin capas obligatorias encima. Abre Administracion
+     en esa caja. Espera a saber si la cuenta administra (lo dice el servidor); si no, se descarta. */
+  const rutaDeHoy = useRoute();
+  useEffect(() => {
+    const aprendizId = (rutaDeHoy.params as { abrirCajaAprendizId?: string } | undefined)?.abrirCajaAprendizId;
+    if (!aprendizId || cargandoCapacidades) return;
+    (navigation as any).setParams({ abrirCajaAprendizId: undefined });
+    if (!capacidades.administrar) return;
+    setEnSemaforo(false);
+    setAdminAbreEn({ caja: aprendizId });
+    setMontajeAdmin(n => n + 1);
+    setEnAdministracion(true);
+  }, [rutaDeHoy.params, cargandoCapacidades, capacidades.administrar, navigation]);
 
   /* Un aviso tocado desde la bandeja del sistema abre la ficha de ese alumno (RF-25).
      La ruta la deja `rutaDeAviso` y se atiende ACA porque las vistas del mentor son estado de
