@@ -427,7 +427,10 @@ export default function YoScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
-      <ScreenHeader title="YO" right="dots" />
+      {/* El «⋯» abre el Centro de Perfil y Ajustes (Notificaciones, Alarmas, modo oscuro): lo mismo
+          que la tarjeta del usuario. Hasta el 28/09 no tenía `onPressRight` —nunca lo tuvo—, así
+          que tocarlo no hacía nada (E-400 del backend). La prueba `menuDeYoAbreAjustes` lo cuida. */}
+      <ScreenHeader title="YO" right="dots" onPressRight={() => setActiveView('hub')} />
 
       {/* ========================================================================= */}
       {/* 1. PANTALLA PRINCIPAL "YO" (DISEÑO ORIGINAL 100% INTACTO)                 */}
