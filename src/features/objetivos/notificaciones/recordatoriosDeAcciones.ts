@@ -137,6 +137,7 @@ export async function cancelarRecordatorioDiario(userId: string): Promise<void> 
     if (!id) return;
     await cancelarIds([id]);
     await AsyncStorage.removeItem(CLAVE_DIARIO + userId);
+    await reagrupar(userId);
   } catch {
     // Sin poder leer, no hay id que cancelar.
   }
@@ -160,6 +161,7 @@ export async function programarRecordatorioDiario(userId: string, horaHHmm: stri
       trigger: { type: N.SchedulableTriggerInputTypes.DAILY, hour: h, minute: m, channelId: canal.id },
     });
     await AsyncStorage.setItem(CLAVE_DIARIO + userId, id);
+    await reagrupar(userId);
     return true;
   } catch {
     return false;
@@ -336,7 +338,15 @@ async function sincronizarAhora(
     }
   }
   await escribirGuardadas(userId, guardadas);
-  // E-410: con varias acciones (o hábitos) a la misma hora, suena una sola que las nombra a todas.
+  await reagrupar(userId);
+}
+
+/**
+ * E-410: con varias acciones (o el diario y un hábito) a la misma hora, suena un solo aviso que las
+ * nombra a todas; y una que quedó sola vuelve a sonar. Se carga acá adentro porque aquel módulo usa
+ * este (un import de ida y vuelta dejaría uno sin cargar).
+ */
+async function reagrupar(userId: string): Promise<void> {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { agruparAvisosQueCoinciden } = require('../../alarmas/avisosJuntos') as typeof import('../../alarmas/avisosJuntos');
@@ -353,6 +363,7 @@ export async function cancelarTodasLasAlarmasDeAcciones(userId: string): Promise
     const guardadas = await leerGuardadas(userId);
     await cancelarIds(Object.values(guardadas).map(g => g.id));
     await escribirGuardadas(userId, {});
+    await reagrupar(userId);
   });
 }
 

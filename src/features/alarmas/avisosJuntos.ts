@@ -192,7 +192,8 @@ async function agruparAhora(userId: string, ahoraMs: number): Promise<number> {
   if (!N) return 0;
   try {
     const programadas = (await N.getAllScheduledNotificationsAsync()) as AlarmaProgramada[];
-    if (!Array.isArray(programadas) || programadas.length < 2) return 0;
+    // Aun con una sola: si quedó sola de un grupo, tiene que volver a su texto y a su sonido.
+    if (!Array.isArray(programadas) || programadas.length === 0) return 0;
     const porId = new Map(programadas.map(p => [p?.identifier, p]));
     const sonido = (await preferenciasDeAlarmas(userId)).sonido;
     const miembros = new Map<string, MiembroDeAviso>();

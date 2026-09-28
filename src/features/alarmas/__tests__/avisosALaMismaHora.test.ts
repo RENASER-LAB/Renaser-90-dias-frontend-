@@ -70,6 +70,7 @@ import * as recordatorios from '../../habits/notificaciones/recordatoriosDeHabit
 import { guardarPreferenciasDeAlarmas, PREFERENCIAS_POR_DEFECTO } from '../preferenciasDeAlarmas';
 import { pasarAlarmasAlSonido } from '../cambioDeSonido';
 import { CANAL_EN_SILENCIO, planDeAvisosJuntos } from '../avisosJuntos';
+import { cancelarRecordatorioDiario, programarRecordatorioDiario } from '../../objetivos/notificaciones/recordatoriosDeAcciones';
 
 const USUARIO = 'u-1';
 // Ids reales del catálogo: con «Voz» cada uno tiene su propia voz (vocesDeLasAlarmas.json).
@@ -192,5 +193,30 @@ describe('cambiar el sonido en Yo → Alarmas no toca horas (E-412)', () => {
     }
     const [suya] = mockLista.values();
     expect(suya.trigger.channelId).toBe('recordatorios-habitos-relajar-cuenco');
+  });
+});
+
+describe('Yo → Alarmas: el aviso diario de objetivos y la antelación (E-410)', () => {
+  it('el diario de objetivos a la misma hora que un hábito también suena una sola vez', async () => {
+    await elegirSonido('voz');
+    await recordatorios.programar(USUARIO, JUGO.id, JUGO.titulo, '08:00', [0]);
+    await programarRecordatorioDiario(USUARIO, '08:00');
+
+    const ocho = aLas(8, 0);
+    expect(ocho).toHaveLength(2);
+    const conSonido = ocho.filter(a => suena(a.trigger.channelId));
+    expect(conSonido).toHaveLength(1);
+    expect(conSonido[0].content.title).toBe('2 avisos a las 08:00');
+  });
+
+  it('apagar el diario deja al hábito que quedó solo con su voz', async () => {
+    await elegirSonido('voz');
+    await recordatorios.programar(USUARIO, JUGO.id, JUGO.titulo, '08:00', [0]);
+    await programarRecordatorioDiario(USUARIO, '08:00');
+    await cancelarRecordatorioDiario(USUARIO);
+
+    const [jugo] = aLas(8, 0);
+    expect(jugo.content.title).toBe('JUGO VERDE');
+    expect(jugo.trigger.channelId).toBe('recordatorios-habitos-voz-jugo_verde');
   });
 });
