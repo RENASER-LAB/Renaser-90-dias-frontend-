@@ -67,8 +67,8 @@ describe('los textos de Legible no heredan el padding de una vista reciclada (E-
       React.createElement(
         React.Fragment,
         null,
-        React.createElement(TituloDeSeccion, { detalle: 'Una línea' }, 'Historial'),
-        React.createElement(SeccionPlegable, { titulo: 'Semana', detalle: 'Lunes a domingo' }, null),
+        React.createElement(TituloDeSeccion, { detalle: 'Una línea', children: 'Historial' }),
+        React.createElement(SeccionPlegable, { titulo: 'Semana', detalle: 'Lunes a domingo', children: null }),
       ),
     );
     const textos = paddingsDeLosTextos(r);
