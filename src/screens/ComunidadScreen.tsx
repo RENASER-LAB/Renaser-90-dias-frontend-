@@ -2345,7 +2345,7 @@ export default function ComunidadScreen() {
       pone ella, y en una conversación (sin barra) lo pinta el relleno del final con el color del chat.
     */
     <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: c.bg }}>
-      {!pantallaCompleta && <ScreenHeader title="COMUNIDAD" right="info" />}
+      {!pantallaCompleta && <ScreenHeader title="COMUNIDAD" />}
 
       {/* ========================================================================= */}
       {/* FILA DE SECCIONES: LAS CINCO, SIEMPRE A LA VISTA                          */}

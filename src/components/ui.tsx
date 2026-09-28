@@ -85,7 +85,14 @@ export function Card({ children, style }: { children: React.ReactNode; style?: V
  * No se perdió nada: `useTheme().toggle` sigue existiendo y lo usa la fila de Yo. Lo que se quitó es
  * este atajo, no la función.
  */
-export function ScreenHeader({ title, right, onPressRight }: { title: string; right: IconName; onPressRight?: () => void }) {
+/*
+ * **El botón de la derecha solo se dibuja si hace algo (28/09, pedido del dueño: «quitarlos si no hacen
+ * nada»).** Hasta ese día la ⓘ de Comunidad, el «⋯» de Plan y de Training y la campana de Hoy se
+ * dibujaban sin `onPressRight`: parecían botones y no hacían nada (E-404 y E-409 de la bitácora del
+ * backend). Ahora hacen falta el ícono y la acción; sin acción no hay botón. La altura de la cabecera no
+ * cambia (`minHeight` igual al botón), así que el contenido de abajo no se mueve.
+ */
+export function ScreenHeader({ title, right, onPressRight }: { title: string; right?: IconName; onPressRight?: () => void }) {
   const { c, t } = useTheme();
   const { horizontalPadding } = useResponsive();
   return (
@@ -93,11 +100,13 @@ export function ScreenHeader({ title, right, onPressRight }: { title: string; ri
       <Text style={[t.screenTitle, { color: c.text, flexShrink: 1 }]} numberOfLines={1} adjustsFontSizeToFit>
         {title}
       </Text>
-      <View style={styles.headerActions}>
-        <Pressable hitSlop={12} onPress={onPressRight} style={styles.headerBtn}>
-          <Icon name={right} size={19} color={right === 'dots' ? c.textSoft : c.goldInk} />
-        </Pressable>
-      </View>
+      {right && onPressRight ? (
+        <View style={styles.headerActions}>
+          <Pressable hitSlop={12} onPress={onPressRight} style={styles.headerBtn} accessibilityRole="button">
+            <Icon name={right} size={19} color={right === 'dots' ? c.textSoft : c.goldInk} />
+          </Pressable>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -152,7 +161,7 @@ const styles = StyleSheet.create({
   /* Sin `paddingHorizontal`: lo pone `ScreenHeader` con el valor responsive (ver el comentario
      "Corregido 2026-09-14" ahí arriba). Si se vuelve a escribir acá un número fijo, el título se
      desalinea otra vez del contenido de la pantalla. */
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingTop: 8 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingTop: 8, minHeight: 46 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   headerBtn: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
   themeBtn: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },

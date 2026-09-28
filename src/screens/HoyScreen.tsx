@@ -477,7 +477,7 @@ export default function HoyScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
-      <ScreenHeader title="HOY" right="bell" />
+      <ScreenHeader title="HOY" />
 
       <ScrollView
         contentContainerStyle={[

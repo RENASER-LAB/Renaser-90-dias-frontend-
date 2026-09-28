@@ -776,7 +776,7 @@ export default function TrainingScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
-      <ScreenHeader title="TRAINING" right="dots" />
+      <ScreenHeader title="TRAINING" />
 
       <ScrollView
         contentContainerStyle={[

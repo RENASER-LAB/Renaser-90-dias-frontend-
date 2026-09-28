@@ -953,7 +953,7 @@ export default function PlanScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
-      <ScreenHeader title="PLAN" right="dots" />
+      <ScreenHeader title="PLAN" />
 
       {/* ========================================================================= */}
       {/* VISTA 1: PANTALLA PRINCIPAL DE PLAN (DISEÑO ORIGINAL DE LUJO CON GAUGE)   */}
