@@ -12,19 +12,22 @@ export interface ElementoEnEdicion {
 }
 
 /**
- * El valor de un elemento nuevo: su etiqueta en mayúsculas, sin tildes y con `_` («Taza de café» →
- * `TAZA_DE_CAFE`), distinto de los que ya existen. Los que ya existen conservan el suyo aunque se
- * cambie la etiqueta: es el que tienen guardado los checklists de cada caja.
+ * El valor de un elemento nuevo: su etiqueta en minúsculas, sin tildes y con `_` («Taza de café» →
+ * `taza_de_cafe`), distinto de los que ya existen. Es la misma regla del servidor (`[a-z0-9_]{1,40}`,
+ * `ElementoDeCaja`): en MAYÚSCULAS el servidor lo rechazaba con 400 y el Admin no podía agregar nada
+ * desde la app (E-418). Los que ya existen conservan el suyo aunque se cambie la etiqueta: es el que
+ * tienen guardado los checklists de cada caja.
  */
 export function valorParaUnaEtiqueta(etiqueta: string, usados: ReadonlySet<string>): string {
   const base =
     etiqueta
       .normalize('NFD')
-      .replace(/[̀-ͯ]/g, '')
-      .toUpperCase()
-      .replace(/[^A-Z0-9]+/g, '_')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
       .replace(/^_+|_+$/g, '')
-      .slice(0, 40) || 'ELEMENTO';
+      .slice(0, 36)
+      .replace(/_+$/g, '') || 'elemento';
   if (!usados.has(base)) return base;
   let n = 2;
   while (usados.has(`${base}_${n}`)) n++;
