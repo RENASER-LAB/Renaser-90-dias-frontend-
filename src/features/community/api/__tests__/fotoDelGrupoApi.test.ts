@@ -31,11 +31,37 @@ describe('subir la foto del grupo', () => {
   });
 
   it('en Android/iOS la parte «foto» es el archivo de la uri, con nombre y tipo', () => {
-    expect(parteNativaDeLaFoto(FOTO)).toEqual({
+    expect(parteNativaDeLaFoto(FOTO)).toMatchObject({
       uri: 'file:///cache/foto.jpg',
       name: 'foto-del-grupo.jpg',
       type: 'image/jpeg',
     });
+  });
+
+  /*
+   * E-401 (emulador, 28/09): el `fetch` global de la app es el de Expo 57, y arma el multipart con
+   * `convertFormDataAsync`. Con la parte `{ uri, name, type }` a secas tiraba «Unsupported FormDataPart
+   * implementation» y la foto nunca llegaba al servidor. Esta prueba pasa la parte por ESE mismo
+   * serializador: si la parte deja de tener `bytes()`, vuelve a fallar.
+   */
+  it('el fetch de Expo la puede armar: sale el JPEG con su tipo y su nombre', async () => {
+    const { convertFormDataAsync } = require('expo/src/winter/fetch/convertFormData');
+    const bytesDelArchivo = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]);
+    const fetchOriginal = global.fetch;
+    global.fetch = jest.fn(async () => ({ arrayBuffer: async () => bytesDelArchivo.buffer })) as unknown as typeof fetch;
+    try {
+      const formulario = { entries: () => [['foto', parteNativaDeLaFoto(FOTO)]] };
+
+      const { body } = await convertFormDataAsync(formulario as unknown as FormData, 'LIMITE');
+
+      const texto = Buffer.from(body).toString('latin1');
+      expect(texto).toContain('content-disposition: form-data; name="foto"; filename="foto-del-grupo.jpg"');
+      expect(texto).toContain('content-type: image/jpeg');
+      expect(texto).toContain(Buffer.from(bytesDelArchivo).toString('latin1'));
+      expect(global.fetch).toHaveBeenCalledWith('file:///cache/foto.jpg');
+    } finally {
+      global.fetch = fetchOriginal;
+    }
   });
 
   it('una respuesta con otra forma se rechaza en vez de mostrar datos a medias', async () => {
