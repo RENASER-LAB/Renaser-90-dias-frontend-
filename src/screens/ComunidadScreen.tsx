@@ -44,6 +44,11 @@ import { useMiCelula } from '../features/community/hooks/useMiCelula';
 import { TextoConEnlaces } from '../features/academy/components/TextoConEnlaces';
 import { nombreVisibleDeGrupo } from '../features/community/utils/nombreDeGrupo';
 import { decidirTarjetaDeTribu } from '../features/community/utils/tarjetaDeTribu';
+import {
+  botonDeInfoDelGrupo,
+  conversacionDelGrupo,
+  grupoDeLaCabecera,
+} from '../features/community/utils/infoDesdeLaCabecera';
 import { useCategoriasMuro } from '../features/community/hooks/useCategoriasMuro';
 import {
   acumularRecursos,
@@ -1912,6 +1917,33 @@ export default function ComunidadScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatPedidoDeOtraPestana, conversations]);
 
+  /**
+   * La ⓘ de la cabecera abre la info de tu grupo (28/09, corrige E-409). Mismo camino que un toque en
+   * la bandeja y luego en la ⓘ del chat: se va a Tribu, se abre el chat del grupo en cuanto la
+   * bandeja lo tenga (`handleAbrirChat`) y encima su info. Si ese chat nunca llega, la persona queda
+   * en Tribu, que es donde está. Ver `utils/infoDesdeLaCabecera.ts`.
+   */
+  const [infoDelGrupoPedida, setInfoDelGrupoPedida] = useState<string | null>(null);
+  const botonDeInfo = botonDeInfoDelGrupo(grupoDeLaCabecera(grupos, grupoDeTribuElegido), grupoId => {
+    irASeccion('tribu');
+    setInfoDelGrupoPedida(grupoId);
+  });
+  useEffect(() => {
+    if (!infoDelGrupoPedida) return;
+    // Si se fue de Tribu antes de que llegara el chat, el pedido se olvida: no se abre a sus espaldas.
+    if (!enTribu) {
+      setInfoDelGrupoPedida(null);
+      return;
+    }
+    const conversacion = conversacionDelGrupo(conversations, infoDelGrupoPedida);
+    if (!conversacion) return;
+    setInfoDelGrupoPedida(null);
+    handleAbrirChat(conversacion);
+    setGroupInfoVisible(true);
+    // Igual que el efecto de arriba: `handleAbrirChat` se redefine en cada render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [infoDelGrupoPedida, conversations, enTribu]);
+
   /*
    * LA LISTA DE CHATS SE REFRESCA SOLA (2026-09-27, «tipo WhatsApp»). Antes se pedía una vez, al
    * entrar a Tribu por primera vez, y el orden por último mensaje y los no leídos se quedaban
@@ -2345,7 +2377,8 @@ export default function ComunidadScreen() {
       pone ella, y en una conversación (sin barra) lo pinta el relleno del final con el color del chat.
     */
     <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: c.bg }}>
-      {!pantallaCompleta && <ScreenHeader title="COMUNIDAD" />}
+      {/* La ⓘ abre la info de tu grupo; sin grupo no se dibuja (E-409). */}
+      {!pantallaCompleta && <ScreenHeader title="COMUNIDAD" {...botonDeInfo} />}
 
       {/* ========================================================================= */}
       {/* FILA DE SECCIONES: LAS CINCO, SIEMPRE A LA VISTA                          */}
