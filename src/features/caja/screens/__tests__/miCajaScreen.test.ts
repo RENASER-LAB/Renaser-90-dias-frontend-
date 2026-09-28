@@ -163,6 +163,9 @@ describe('Tu Caja Renaser', () => {
     expect(r.root.findAll(n => n.props.accessibilityLabel === 'Ver dónde va' && typeof n.props.onPress === 'function')).toHaveLength(2);
     const foto = r.root.findAll(n => n.props.accessibilityLabel === 'Foto de tu caja' && n.props.source);
     expect(foto[0]?.props.source).toEqual({ uri: 'https://almacen.test/onboarding/a/caja/1?firma' });
+    // «Ya la recibí» va antes que la lista: con varios envíos no queda debajo del pliegue.
+    expect(texto.indexOf('Ya la recibí')).toBeGreaterThan(-1);
+    expect(texto.indexOf('Ya la recibí')).toBeLessThan(texto.indexOf('Envío 1'));
   });
 
   it('con un problema dice el motivo en palabras simples', () => {

@@ -152,6 +152,16 @@ export function MiCajaScreen({ caja, onVolver, onCambio }: { caja: MiCaja; onVol
               ))}
             </View>
 
+            {/* Las acciones antes que la lista de envíos: con dos o tres envíos, «Ya la recibí»
+                quedaba debajo del pliegue (visto en el emulador, D-220). */}
+            {caja.puedeConfirmar ? (
+              <BotonPrincipal etiqueta="Ya la recibí" icono="check" onPress={() => void laRecibi()} cargando={confirmando} />
+            ) : null}
+
+            {caja.puedeCambiarDestino ? (
+              <BotonSecundario etiqueta="¿Te la enviamos a otro lugar?" onPress={() => setCambiandoDestino(true)} />
+            ) : null}
+
             {envios.map((salido, i) => {
               const suRastreo = rastreoAbrible(salido.rastreoUrl);
               return (
@@ -167,14 +177,6 @@ export function MiCajaScreen({ caja, onVolver, onCambio }: { caja: MiCaja; onVol
             {envio ? <Text style={[t.body, { color: c.textStrong, fontSize: 17 }]}>{envio}</Text> : null}
             {rastreo ? (
               <BotonSecundario etiqueta="Ver dónde va" icono="arrow" onPress={() => void Linking.openURL(rastreo)} />
-            ) : null}
-
-            {caja.puedeConfirmar ? (
-              <BotonPrincipal etiqueta="Ya la recibí" icono="check" onPress={() => void laRecibi()} cargando={confirmando} />
-            ) : null}
-
-            {caja.puedeCambiarDestino ? (
-              <BotonSecundario etiqueta="¿Te la enviamos a otro lugar?" onPress={() => setCambiandoDestino(true)} />
             ) : null}
 
             {caja.fotoArmadaUrl ? <ImagenRemota url={caja.fotoArmadaUrl} descripcion="Foto de tu caja" /> : null}
