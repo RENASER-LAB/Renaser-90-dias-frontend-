@@ -10,16 +10,10 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Alert } from '../../../components/Alerta';
-import {
-  useAudioRecorder,
-  useAudioRecorderState,
-  RecordingPresets,
-  requestRecordingPermissionsAsync,
-  setAudioModeAsync,
-} from 'expo-audio';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useResponsive } from '../../../theme/responsive';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
+import { useGrabadorDeVoz } from '../../../hooks/useGrabadorDeVoz';
 import { GoldButton } from '../../../components/GoldButton';
 import { Icon, IconName } from '../../../components/Icon';
 import { MicroLabel } from '../../../components/ui';
@@ -109,8 +103,8 @@ export function EvidenciaHabitoModal({
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const grabador = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
-  const estadoGrabador = useAudioRecorderState(grabador);
+  // Se crea al tocar «grabar», no al montar Training (el modal vive montado): mismo riesgo que E-424.
+  const grabador = useGrabadorDeVoz();
 
   const visible = registroId !== null;
 
@@ -151,36 +145,34 @@ export function EvidenciaHabitoModal({
 
   const alternarGrabacion = async () => {
     setError(null);
-    if (estadoGrabador.isRecording) {
-      await grabador.stop();
-      const uri = grabador.uri;
-      if (!uri) {
+    if (grabador.grabando) {
+      const grabacion = await grabador.terminar();
+      if (!grabacion?.uri) {
         setError('La grabación no dejó ningún archivo. Inténtalo de nuevo.');
         return;
       }
       setArchivo({
-        uri,
-        mimeType: mimeDeAudio(uri),
+        uri: grabacion.uri,
+        mimeType: mimeDeAudio(grabacion.uri),
         tipo: 'AUDIO',
         // Solo las FOTO llevan instante de captura (Ley VI); un audio no.
         tomadaEn: null,
-        etiqueta: `Audio de ${duracionLegible(estadoGrabador.durationMillis / 1000)}`,
+        etiqueta: `Audio de ${duracionLegible(grabacion.durationMillis / 1000)}`,
       });
       return;
     }
-    const permiso = await requestRecordingPermissionsAsync();
-    if (!permiso.granted) {
+    const inicio = await grabador.empezar();
+    if (inicio === 'sin-permiso') {
       Alert.alert(
         'Permiso de micrófono requerido',
         'Renaser necesita el micrófono para que puedas grabar la evidencia de tu hábito.',
       );
       return;
     }
-    // `allowsRecording` es obligatorio en iOS: sin él, `record()` no captura nada y el archivo
-    // sale mudo sin que ninguna API avise.
-    await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
-    await grabador.prepareToRecordAsync();
-    grabador.record();
+    if (inicio === 'no-disponible') {
+      setError('No se pudo usar el micrófono. Intenta de nuevo en un momento.');
+      return;
+    }
     setArchivo(null);
   };
 
@@ -336,12 +328,12 @@ export function EvidenciaHabitoModal({
               <View style={{ gap: rs(8) }}>
                 <BotonAccion
                   etiqueta={
-                    estadoGrabador.isRecording
-                      ? `DETENER  ·  ${duracionLegible(estadoGrabador.durationMillis / 1000)}`
+                    grabador.grabando
+                      ? `DETENER  ·  ${duracionLegible(grabador.durationMillis / 1000)}`
                       : 'GRABAR AUDIO'
                   }
                   icono="volume"
-                  destacado={estadoGrabador.isRecording}
+                  destacado={grabador.grabando}
                   onPress={() => void alternarGrabacion()}
                 />
                 <Text style={[t.micro, { color: c.textSoft, fontSize: 12 }]}>

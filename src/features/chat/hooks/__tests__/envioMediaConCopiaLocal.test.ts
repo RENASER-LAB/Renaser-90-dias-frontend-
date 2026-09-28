@@ -18,13 +18,15 @@ const mockGrabador = {
   stop: jest.fn(async () => undefined),
   prepareToRecordAsync: jest.fn(async () => undefined),
   record: jest.fn(),
+  getStatus: () => ({ isRecording: true, durationMillis: 5000 }),
+  release: jest.fn(),
 };
+// El grabador se crea al tocar «grabar» (E-424), con el constructor del módulo nativo.
 jest.mock('expo-audio', () => ({
   RecordingPresets: { HIGH_QUALITY: {} },
   requestRecordingPermissionsAsync: async () => ({ granted: true }),
   setAudioModeAsync: async () => undefined,
-  useAudioRecorder: () => mockGrabador,
-  useAudioRecorderState: () => ({ isRecording: true, durationMillis: 5000 }),
+  AudioModule: { AudioRecorder: function AudioRecorder() { return mockGrabador; } },
 }));
 
 function respuestaDelServidor(tipo: 'AUDIO' | 'IMAGE', mediaUrl: string | null): WireMensaje {
@@ -57,16 +59,26 @@ import { useEnvioMediaChat } from '../useEnvioMediaChat';
 
 type Hook = ReturnType<typeof useEnvioMediaChat>;
 
-function montar(alEnviar: (m: WireMensaje) => void): Hook {
-  let hook!: Hook;
+function montar(alEnviar: (m: WireMensaje) => void): { current: Hook } {
+  const hook = {} as { current: Hook };
   function Sonda() {
-    hook = useEnvioMediaChat('c-1', alEnviar);
+    hook.current = useEnvioMediaChat('c-1', alEnviar);
     return null;
   }
   act(() => {
     TestRenderer.create(React.createElement(Sonda));
   });
   return hook;
+}
+
+/** Primer toque: empieza a grabar. Segundo toque: corta y manda (como en WhatsApp). */
+async function grabarYCortar(hook: { current: Hook }) {
+  await act(async () => {
+    await hook.current.alternarGrabacion();
+  });
+  await act(async () => {
+    await hook.current.alternarGrabacion();
+  });
 }
 
 beforeEach(() => {
@@ -80,9 +92,7 @@ describe('lo que ve quien manda un audio o una foto', () => {
     const enviados: WireMensaje[] = [];
     const hook = montar(m => enviados.push(m));
 
-    await act(async () => {
-      await hook.alternarGrabacion();
-    });
+    await grabarYCortar(hook);
 
     expect(mockAlerta).not.toHaveBeenCalled();
     expect(enviados).toHaveLength(1);
@@ -95,7 +105,7 @@ describe('lo que ve quien manda un audio o una foto', () => {
     const hook = montar(m => enviados.push(m));
 
     await act(async () => {
-      await hook.enviarFoto('galeria');
+      await hook.current.enviarFoto('galeria');
     });
 
     expect(enviados[0].mediaUrl).toBe('file:///cache/ImagePicker/foto.jpg');
@@ -106,9 +116,7 @@ describe('lo que ve quien manda un audio o una foto', () => {
     const enviados: WireMensaje[] = [];
     const hook = montar(m => enviados.push(m));
 
-    await act(async () => {
-      await hook.alternarGrabacion();
-    });
+    await grabarYCortar(hook);
 
     expect(enviados[0].mediaUrl).toBe('https://s3.example/leer');
   });

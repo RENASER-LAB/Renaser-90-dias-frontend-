@@ -1,12 +1,6 @@
 import { useCallback, useState } from 'react';
 import { Alert } from '../../../components/Alerta';
-import {
-  RecordingPresets,
-  requestRecordingPermissionsAsync,
-  setAudioModeAsync,
-  useAudioRecorder,
-  useAudioRecorderState,
-} from 'expo-audio';
+import { useGrabadorDeVoz } from '../../../hooks/useGrabadorDeVoz';
 
 import {
   almacenamientoSinConfigurar,
@@ -53,8 +47,9 @@ export function conLaCopiaLocal(mensaje: WireMensaje, uriLocal: string): WireMen
  */
 export function useEnvioMediaChat(conversationId: string | null,
                                     alEnviar: (mensaje: WireMensaje) => void) {
-  const grabador = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
-  const estadoGrabador = useAudioRecorderState(grabador);
+  // El grabador se crea recién al tocar «grabar», nunca al montar Comunidad (E-424): si el
+  // micrófono no está disponible, falla ese botón y no la pantalla.
+  const grabador = useGrabadorDeVoz();
   const [enviando, setEnviando] = useState(false);
 
   /** Los tres pasos, en orden. Devuelve `true` si el mensaje llegó a crearse. */
@@ -106,53 +101,44 @@ export function useEnvioMediaChat(conversationId: string | null,
 
   /**
    * Un solo botón para grabar y para soltar, como en WhatsApp: el primer toque arranca, el
-   * segundo corta y manda. `estadoGrabador.isRecording` es lo que la pantalla mira para pintar
-   * el botón en rojo y mostrar el cronómetro.
+   * segundo corta y manda. `grabando` es lo que la pantalla mira para pintar el botón en rojo y
+   * mostrar el cronómetro.
    */
   const alternarGrabacion = useCallback(async () => {
     if (enviando || !conversationId) return;
 
-    if (estadoGrabador.isRecording) {
-      await grabador.stop();
-      const uri = grabador.uri;
-      const segundos = Math.round(estadoGrabador.durationMillis / 1000);
-      if (!uri) {
+    if (grabador.grabando) {
+      const grabacion = await grabador.terminar();
+      const segundos = Math.round((grabacion?.durationMillis ?? 0) / 1000);
+      if (!grabacion?.uri) {
         Alert.alert('La grabación no dejó ningún archivo', 'Inténtalo de nuevo.');
         return;
       }
       // El backend rechaza `mediaDurationSeconds` si no es positivo, así que una nota de menos
       // de un segundo se manda sin duración en vez de con un 0 que haría fallar el envío entero.
-      await subirYEnviar({ uri, mimeType: mimeDeAudioChat(uri) }, 'AUDIO',
+      await subirYEnviar({ uri: grabacion.uri, mimeType: mimeDeAudioChat(grabacion.uri) }, 'AUDIO',
         segundos > 0 ? segundos : undefined);
       return;
     }
 
-    const permiso = await requestRecordingPermissionsAsync();
-    if (!permiso.granted) {
+    const inicio = await grabador.empezar();
+    if (inicio === 'sin-permiso') {
       Alert.alert(
         'Permiso de micrófono requerido',
         'Renaser necesita el micrófono para que puedas mandar notas de voz.',
       );
-      return;
+    } else if (inicio === 'no-disponible') {
+      Alert.alert('No se pudo usar el micrófono', 'Intenta de nuevo en un momento.');
     }
-    // `allowsRecording` es obligatorio en iOS: sin él, `record()` no captura nada y el archivo
-    // sale mudo sin que ninguna API avise.
-    await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
-    await grabador.prepareToRecordAsync();
-    grabador.record();
-  }, [conversationId, enviando, estadoGrabador.isRecording, estadoGrabador.durationMillis,
-      grabador, subirYEnviar]);
+  }, [conversationId, enviando, grabador, subirYEnviar]);
 
   /** Descartar lo grabado sin mandarlo — el equivalente a deslizar para cancelar. */
-  const cancelarGrabacion = useCallback(async () => {
-    if (!estadoGrabador.isRecording) return;
-    await grabador.stop();
-  }, [estadoGrabador.isRecording, grabador]);
+  const cancelarGrabacion = grabador.descartar;
 
   return {
     enviando,
-    grabando: estadoGrabador.isRecording,
-    segundosGrabados: Math.floor(estadoGrabador.durationMillis / 1000),
+    grabando: grabador.grabando,
+    segundosGrabados: Math.floor(grabador.durationMillis / 1000),
     enviarFoto,
     alternarGrabacion,
     cancelarGrabacion,
