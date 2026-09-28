@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 import { apiFetch } from '../../../services/http/apiClient';
 import { validarRespuesta } from './mentorSchemas';
+import { dimensionDeCategoria, type DimensionDeTraining } from '../../training/utils/dimensionDelHabito';
+import { EJES, type EjeObjetivo } from '../../objetivos/types/objetivos.types';
 
 /**
  * Los avisos de acompañamiento del mentor salen de la bandeja que YA existe
@@ -82,6 +84,28 @@ export interface DestinoDelEvento {
 }
 
 /**
+ * Un hábito: `/habitos/{habitoId}?dimension={BODY|MIND|CONSCIENCE|SPIRIT}` (D-218, 2026-09-28), la ruta
+ * del aviso de hábito del servidor (`AvisoHabitoNotificationListener`, respaldo de D-217) y de la
+ * alarma local del recordatorio. Abre Training con la dimensión de ese hábito. `dimension` es `null`
+ * si no vino o no se conoce: Training la busca entre sus hábitos por el id.
+ */
+export interface DestinoDelHabito {
+  tipo: 'habito';
+  habitoId: string;
+  dimension: DimensionDeTraining | null;
+}
+
+/**
+ * Una acción de objetivo: `/objetivos/{YYYY-MM-DD}?eje={CUERPO|TRABAJO|RELACIONES}` (D-218), la ruta
+ * de la alarma local de cada acción con hora. Abre Plan → Objetivos en el eje de la acción.
+ */
+export interface DestinoDelObjetivo {
+  tipo: 'objetivo';
+  fecha: string;
+  eje: EjeObjetivo | null;
+}
+
+/**
  * Destino de un aviso, extraído de su ruta. `null` si la ruta no tiene una forma que esta versión
  * de la app sepa abrir — entonces el toque solo abre la app, que es lo que el contrato espera de
  * una app instalada ante una ruta nueva (§4.5).
@@ -91,7 +115,9 @@ export type DestinoDeAviso =
   | DestinoDelSemaforo
   | DestinoDelSemaforoDeGrupo
   | DestinoDelSemaforoPorGrupos
-  | DestinoDelEvento;
+  | DestinoDelEvento
+  | DestinoDelHabito
+  | DestinoDelObjetivo;
 
 export async function obtenerAvisosDeAcompanamiento(): Promise<AvisoApi[]> {
   const bandeja = validarRespuesta<z.infer<typeof bandejaSchema>>(
@@ -113,6 +139,9 @@ const RUTA_DEL_SEMAFORO = /^\/semaforo\/?$/;
 const RUTA_DEL_SEMAFORO_DE_GRUPO = /^\/mentor\/groups\/([^/]+)\/semaforo\/?$/;
 const RUTA_DEL_SEMAFORO_POR_GRUPOS = /^\/semaforo\/grupos\/?$/;
 const RUTA_DEL_EVENTO = /^\/eventos\/([^/]+)\/?$/;
+/** El `?` separa la consulta: un id de hábito no lo lleva nunca (es un UUID, o va codificado). */
+const RUTA_DEL_HABITO = /^\/habitos\/([^/?]+)\/?(?:\?(.*))?$/;
+const RUTA_DEL_OBJETIVO = /^\/objetivos\/(\d{4}-\d{2}-\d{2})\/?(?:\?(.*))?$/;
 
 /**
  * Saca el destino de la ruta de un aviso: la ficha de un alumno
@@ -142,6 +171,18 @@ export function destinoDeRuta(ruta: unknown): DestinoDeAviso | null {
     const eventoId = decodificar(delEvento[1]);
     return eventoId ? { tipo: 'evento', eventoId } : null;
   }
+  const delHabito = RUTA_DEL_HABITO.exec(ruta);
+  if (delHabito) {
+    const habitoId = decodificar(delHabito[1]);
+    return habitoId
+      ? { tipo: 'habito', habitoId, dimension: dimensionDeCategoria(parametro(delHabito[2], 'dimension')) }
+      : null;
+  }
+  const delObjetivo = RUTA_DEL_OBJETIVO.exec(ruta);
+  if (delObjetivo) {
+    const eje = parametro(delObjetivo[2], 'eje');
+    return { tipo: 'objetivo', fecha: delObjetivo[1], eje: EJES.find(e => e === eje) ?? null };
+  }
   const delGrupo = RUTA_DEL_SEMAFORO_DE_GRUPO.exec(ruta);
   if (delGrupo) {
     const grupoId = decodificar(delGrupo[1]);
@@ -152,6 +193,16 @@ export function destinoDeRuta(ruta: unknown): DestinoDeAviso | null {
   const grupoId = decodificar(partes[1]);
   const alumnoId = decodificar(partes[2]);
   return grupoId && alumnoId ? { tipo: 'alumno', grupoId, alumnoId } : null;
+}
+
+/** Un parámetro de la consulta de la ruta, decodificado, o `null`. Sin `URLSearchParams`: Hermes lo trae a medias. */
+function parametro(consulta: string | undefined, nombre: string): string | null {
+  if (!consulta) return null;
+  for (const par of consulta.split('&')) {
+    const [clave, valor] = par.split('=');
+    if (clave === nombre && valor !== undefined) return decodificar(valor);
+  }
+  return null;
 }
 
 /** Un tramo de la ruta, decodificado. `null` si viene vacío o con un `%` suelto (que haría lanzar). */

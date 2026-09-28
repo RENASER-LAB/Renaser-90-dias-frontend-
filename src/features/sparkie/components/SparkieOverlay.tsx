@@ -6,6 +6,7 @@ import { GoldButton } from '../../../components/GoldButton';
 import { Icon } from '../../../components/Icon';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { irAPestana } from '../../../navigation/navegacionRef';
+import { useCapaObligatoria } from '../../../navigation/capasObligatorias';
 import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useAuth } from '../../auth/context/AuthContext';
@@ -67,6 +68,10 @@ export function SparkieOverlay() {
 
   const tarjetaVisible = habilitado && !pactoAbierto && !minimizado
     && (estado.paso === 'PUBLICAR_PRIMER_POST' || estado.paso === 'FIRMAR_PACTO');
+
+  // D-218: con la tarjeta del arranque o el Pacto a la vista, tocar un aviso no navega por debajo:
+  // espera a que se guarde la tarjeta o se firme el Pacto. Minimizada (la burbuja) ya no frena nada.
+  useCapaObligatoria('arranqueGuiado', habilitado && (tarjetaVisible || pactoAbierto));
 
   // Gesto lateral / botón atrás con la tarjeta abierta: la guarda, nunca cierra la app.
   useSystemBackHandler(() => {

@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { useAuth } from '../../../context/AuthContext';
+import { useCapaObligatoria } from '../../../navigation/capasObligatorias';
 import { useRadar } from '../RadarContext';
 import { CodigoRenaserModal } from './CodigoRenaserModal';
 
@@ -19,10 +20,14 @@ import { CodigoRenaserModal } from './CodigoRenaserModal';
 export function CodigoRenaserOverlay() {
   const radar = useRadar();
   const { user } = useAuth();
+  const visible = radar.abierto && radar.slot !== null;
+  // D-218: mientras el formulario esté a la vista, tocar un aviso no navega por debajo; espera a que
+  // se registre (o se cierre, para quien puede cerrarlo) y recién ahí abre lo suyo.
+  useCapaObligatoria('codigoRenaser', visible);
 
   return (
     <CodigoRenaserModal
-      visible={radar.abierto && radar.slot !== null}
+      visible={visible}
       slot={radar.slot}
       obligatorio={radar.obligatorio}
       usuarioId={user?.id ?? null}
