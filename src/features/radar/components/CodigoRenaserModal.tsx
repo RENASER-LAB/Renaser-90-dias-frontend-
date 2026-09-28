@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
+  type LayoutChangeEvent,
   Modal,
   Platform,
   Pressable,
@@ -30,6 +31,7 @@ import {
 } from '../config/configRadar';
 import { borrarBorrador, guardarBorrador, leerBorrador, limpiarBorradoresViejos } from '../storage/borradorRadar';
 import type { CheckInRadarApi } from '../types/radar.types';
+import { faltantesDelRadar, textoDeLoQueFalta, type PiezaDelRadar } from '../utils/faltantesDelRadar';
 import type { SlotRadar } from '../utils/slotsDelRadar';
 
 /**
@@ -149,16 +151,28 @@ export function CodigoRenaserModal({
     setRespuestas(previas => ({ ...previas, [campo]: texto.slice(0, MAXIMO_CARACTERES) }));
   }, []);
 
-  const faltantes = useMemo(() => {
-    const sinTexto = PREGUNTAS_RADAR.filter(p => respuestas[p.campo].trim().length === 0).length;
-    return sinTexto + (energia === null ? 1 : 0);
-  }, [respuestas, energia]);
+  const faltan = useMemo(() => faltantesDelRadar(respuestas, energia), [respuestas, energia]);
+  const completo = faltan.length === 0;
 
-  const completo = faltantes === 0;
+  /* Dónde queda cada pieza dentro del scroll, para llevar a la persona a la primera que falta.
+     Sin esto, «Registrar» con el nivel de energía sin marcar no hacía nada a la vista: el selector
+     y el aviso quedaban debajo del pliegue (visto en el emulador el 2026-09-28). */
+  const scroll = useRef<ScrollView>(null);
+  const posiciones = useRef<Partial<Record<PiezaDelRadar, number>>>({});
+  const anotarPosicion = useCallback(
+    (pieza: PiezaDelRadar) => (e: LayoutChangeEvent) => {
+      posiciones.current[pieza] = e.nativeEvent.layout.y;
+    },
+    [],
+  );
 
   const enviar = useCallback(async () => {
     setIntentoEnvio(true);
-    if (!completo || energia === null) return;
+    if (!completo || energia === null) {
+      const y = faltan.length > 0 ? posiciones.current[faltan[0].pieza] : undefined;
+      if (y !== undefined) scroll.current?.scrollTo({ y: Math.max(0, y - 12), animated: true });
+      return;
+    }
     const ok = await onEnviar({
       whatAmIDoing: respuestas.whatAmIDoing.trim(),
       whatAmIThinking: respuestas.whatAmIThinking.trim(),
@@ -170,7 +184,7 @@ export function CodigoRenaserModal({
       if (usuarioId) void borrarBorrador(usuarioId, ahoraConfiable());
       onCerrar();
     }
-  }, [completo, energia, respuestas, usuarioId, onEnviar, onCerrar]);
+  }, [completo, faltan, energia, respuestas, usuarioId, onEnviar, onCerrar]);
 
   return (
     <Modal
@@ -214,6 +228,7 @@ export function CodigoRenaserModal({
           </View>
 
           <ScrollView
+            ref={scroll}
             style={{ flex: 1 }}
             contentContainerStyle={styles.contenido}
             keyboardShouldPersistTaps="handled"
@@ -229,7 +244,7 @@ export function CodigoRenaserModal({
               const valor = respuestas[pregunta.campo];
               const vacioYMarcado = intentoEnvio && valor.trim().length === 0;
               return (
-                <View key={pregunta.campo} style={{ gap: 6 }}>
+                <View key={pregunta.campo} style={{ gap: 6 }} onLayout={anotarPosicion(pregunta.campo)}>
                   <Text style={[t.cardTitle, { color: c.text, fontSize: 15.5 }]}>{pregunta.titulo}</Text>
                   <Text style={[t.micro, { color: c.micro, fontSize: 11.5 }]}>{pregunta.ayuda}</Text>
                   <TextInput
@@ -253,30 +268,31 @@ export function CodigoRenaserModal({
               );
             })}
 
-            <SliderRating
-              label="NIVEL DE ENERGÍA"
-              value={energia}
-              onChange={setEnergia}
-              minLabel={`En reserva (${ENERGIA_MINIMA})`}
-              maxLabel={`A tope (${ENERGIA_MAXIMA})`}
-            />
-
-            {error ? (
-              <View style={[styles.aviso, { borderColor: '#E06A66', backgroundColor: c.dangerWash }]}>
-                <Text style={[t.body, { color: c.danger, fontSize: 13.5 }]}>{error}</Text>
-              </View>
-            ) : intentoEnvio && !completo ? (
-              <View style={[styles.aviso, { borderColor: '#E06A66', backgroundColor: c.dangerWash }]}>
-                <Text style={[t.body, { color: c.danger, fontSize: 13.5 }]}>
-                  {faltantes === 1
-                    ? 'Falta 1 respuesta. Las cinco son obligatorias.'
-                    : `Faltan ${faltantes} respuestas. Las cinco son obligatorias.`}
-                </Text>
-              </View>
-            ) : null}
+            <View onLayout={anotarPosicion('energia')}>
+              <SliderRating
+                label="NIVEL DE ENERGÍA"
+                value={energia}
+                onChange={setEnergia}
+                minLabel={`En reserva (${ENERGIA_MINIMA})`}
+                maxLabel={`A tope (${ENERGIA_MAXIMA})`}
+              />
+            </View>
           </ScrollView>
 
           <View style={styles.pie}>
+            {/* El aviso va en el pie, pegado al botón, y no al final del scroll: ahí abajo quedaba
+                fuera de la vista y «Registrar» parecía no responder (2026-09-28). */}
+            {error ? (
+              <View style={[styles.aviso, { borderColor: '#E06A66', backgroundColor: c.dangerWash }]}>
+                <Text accessibilityRole="alert" style={[t.body, { color: c.danger, fontSize: 13.5 }]}>{error}</Text>
+              </View>
+            ) : intentoEnvio && !completo ? (
+              <View style={[styles.aviso, { borderColor: '#E06A66', backgroundColor: c.dangerWash }]}>
+                <Text accessibilityRole="alert" style={[t.body, { color: c.danger, fontSize: 13.5 }]}>
+                  {textoDeLoQueFalta(faltan)}
+                </Text>
+              </View>
+            ) : null}
             <GoldButton
               label={enviando ? 'Guardando…' : 'Registrar'}
               onPress={() => void enviar()}
