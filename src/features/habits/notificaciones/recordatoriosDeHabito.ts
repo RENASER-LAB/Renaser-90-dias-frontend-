@@ -323,6 +323,30 @@ export async function cancelar(userId: string, habitoId: string): Promise<void> 
   // Un cambio de hora que esperaba su fecha (D-217) deja de tener sentido: lo que se cancela, se
   // cancela entero.
   await sinRomper(() => AsyncStorage.removeItem(claveDiferido(userId, habitoId)), undefined);
+  await sinRomper(() => AsyncStorage.removeItem(claveHora(userId, habitoId)), undefined);
+}
+
+/**
+ * A qué hora quedó programado un hábito en este teléfono (y desde cuándo, si el cambio esperaba su
+ * fecha). Para comparar con el servidor al ponerse al día (D-217): sin esto, un cambio de hora hecho en
+ * otro dispositivo no movía esta alarma. Las alarmas de antes de este dato no lo tienen y no se comparan.
+ */
+const PREFIJO_HORA = 'renaser.habitos.hora.';
+
+interface HoraProgramada {
+  hora: string;
+  desde?: string;
+}
+
+function claveHora(userId: string, habitoId: string): string {
+  return `${PREFIJO_HORA}${userId}.${habitoId}`;
+}
+
+async function horaProgramada(userId: string, habitoId: string): Promise<HoraProgramada | null> {
+  return sinRomper(async () => {
+    const crudo = await AsyncStorage.getItem(claveHora(userId, habitoId));
+    return crudo ? (JSON.parse(crudo) as HoraProgramada) : null;
+  }, null);
 }
 
 /**
@@ -449,6 +473,7 @@ export async function programar(
     }
     await AsyncStorage.setItem(claveDe(userId, habitoId), JSON.stringify(ids));
     await AsyncStorage.setItem(claveSet, JSON.stringify(antelaciones));
+    await AsyncStorage.setItem(claveHora(userId, habitoId), JSON.stringify({ hora: horaHHmm }));
     return true;
   }, false);
 }
@@ -682,6 +707,7 @@ export async function programarConCambioDiferido(
     }
     await AsyncStorage.setItem(claveDe(userId, habitoId), JSON.stringify(ids));
     await AsyncStorage.setItem(claveSet, JSON.stringify(antelaciones));
+    await AsyncStorage.setItem(claveHora(userId, habitoId), JSON.stringify({ hora: cambio.horaNueva, desde: cambio.desde }));
     if (pendientes.length > 0) {
       const registro: RegistroDiferido = { titulo, horaNueva: cambio.horaNueva, dimension: opciones.dimension ?? null, pendientes };
       await AsyncStorage.setItem(claveDiferido(userId, habitoId), JSON.stringify(registro));
@@ -752,30 +778,45 @@ async function completarUno(
 }
 
 /* ------------------------------------------------------------------------------------------------
- * Teléfono nuevo o app reinstalada: armar lo que el servidor sabe — D-217, 2026-09-28
+ * Ponerse al día con el servidor: teléfono nuevo, reinstalación, o cambios desde otro dispositivo
+ * (D-217, 2026-09-28)
  * ---------------------------------------------------------------------------------------------- */
 
+const mismoConjunto = (a: readonly number[], b: readonly number[]): boolean =>
+  a.length === b.length && [...a].sort((x, y) => x - y).every((x, i) => x === [...b].sort((m, n) => m - n)[i]);
+
 /**
- * Arma la alarma de cada hábito que, según el servidor, tiene recordatorio y en este teléfono no tiene
- * ninguna. Devuelve cuántos hábitos armó.
- *
- * ## El bug que cierra
- *
- * Las antelaciones y las ids viven en este teléfono (AsyncStorage). En un teléfono nuevo, o al
- * reinstalar, el servidor seguía diciendo «recordatorio activo, 10 min antes» y el teléfono no tenía
- * ninguna alarma: no sonaba nada hasta que la persona volviera a guardar la hora de cada hábito.
- *
- * ## Qué arma y qué no
- *
- * - Solo si el servidor dice `reminderEnabled` y trae `reminderMinutesBefore` y hora. Un hábito que ya
- *   tiene alarma en este teléfono no se toca.
- * - Con las antelaciones guardadas en el teléfono si las hay; si no, con la única que conoce el servidor
- *   (la más temprana que se eligió). «30 min antes y a la hora» vuelve como «30 min antes»: el servidor
- *   guarda un solo número.
- * - Con el cambio de hora pendiente, si lo hay, respetando su fecha.
- * - **No pide permiso**: corre al abrir la app, no por un toque. Sin permiso de avisos no arma nada.
+ * Qué avisos tiene que tener este hábito según el servidor. Con el conjunto (V81) manda el conjunto. Sin
+ * él (guardado antes de V81 o por el APK viejo) el servidor solo sabe el más temprano: si coincide con el
+ * más temprano del teléfono, se conservan los del teléfono («30 min y a la hora» no se achica a «30 min»).
  */
-export async function armarRecordatoriosQueFaltan(
+export function avisosSegunElServidor(p: PreferenciaHabitoApi, delTelefono: readonly number[]): number[] {
+  if (p.reminderMinutesList && p.reminderMinutesList.length > 0) return [...p.reminderMinutesList];
+  const minutos = p.reminderMinutesBefore as number;
+  if (delTelefono.length > 0 && Math.max(...delTelefono) === minutos) return [...delTelefono];
+  return [minutos];
+}
+
+/**
+ * Deja las alarmas de hábitos de este teléfono como dice el servidor. Devuelve cuántos hábitos tocó.
+ *
+ * ## Los bugs que cierra
+ *
+ * - **Teléfono nuevo o reinstalación (E-398):** las antelaciones y las ids vivían solo en AsyncStorage; el
+ *   servidor decía «recordatorio activo» y el teléfono no tenía alarma.
+ * - **Cambios desde otro dispositivo (dueño, 28/09):** apagar el recordatorio o cambiar la hora o los
+ *   avisos en otro teléfono o en la web no tocaba la alarma de este.
+ *
+ * ## Qué hace
+ *
+ * - `reminderEnabled === false` y el teléfono tiene alarma → la cancela.
+ * - Activo (con minutos y hora) y sin alarma → la arma con `avisosSegunElServidor`.
+ * - Activo y con alarma → la reprograma si cambiaron los avisos, la hora o el cambio pendiente. La hora
+ *   solo se compara si el teléfono la anotó (las alarmas de antes de D-217 no la tienen).
+ * - Con cambio pendiente, respetando su fecha.
+ * - **No pide permiso**: corre al abrir la app. Sin permiso de avisos no arma nada (sí cancela).
+ */
+export async function ajustarRecordatoriosAlServidor(
   userId: string,
   preferencias: ReadonlyArray<PreferenciaHabitoApi>,
   opciones: { ahora?: Date; dimensionDe?: (habitoId: string) => string | null } = {},
@@ -783,23 +824,46 @@ export async function armarRecordatoriosQueFaltan(
   const N = notificaciones();
   if (!N) return 0;
   const permiso = await sinRomper(async () => (await N.getPermissionsAsync()).granted, false);
-  if (!permiso) return 0;
   const conAlarma = await recordatoriosPorHabito(userId);
-  let armados = 0;
+  let tocados = 0;
   for (const p of preferencias) {
-    if (p.reminderEnabled !== true || p.reminderMinutesBefore == null || !p.triggerTime) continue;
-    if ((conAlarma.get(p.habitId)?.length ?? 0) > 0) continue;
-    const guardadas = await antelacionesDe(userId, p.habitId);
-    const antelaciones = guardadas.length > 0 ? guardadas : [p.reminderMinutesBefore];
-    const dimension = opciones.dimensionDe?.(p.habitId) ?? null;
-    const hora = p.triggerTime.slice(0, 5);
-    const cambio = p.pendingChange;
-    const ok = cambio?.triggerTime && cambio.effectiveDate
-      ? await programarConCambioDiferido(userId, p.habitId, p.title,
-        { horaDeHoy: hora, horaNueva: cambio.triggerTime.slice(0, 5), desde: cambio.effectiveDate },
-        antelaciones, { dimension, ahora: opciones.ahora })
-      : await programar(userId, p.habitId, p.title, hora, antelaciones, { dimension });
-    if (ok) armados++;
+    const tieneAlarma = (conAlarma.get(p.habitId)?.length ?? 0) > 0;
+    if (p.reminderEnabled === false) {
+      if (tieneAlarma) {
+        await cancelar(userId, p.habitId);
+        await sinRomper(() => AsyncStorage.removeItem(CLAVE_ANTELACIONES + `${userId}.${p.habitId}`), undefined);
+        tocados++;
+      }
+      continue;
+    }
+    if (!permiso || p.reminderEnabled !== true || p.reminderMinutesBefore == null || !p.triggerTime) continue;
+    if (await ajustarUno(userId, p, tieneAlarma, opciones)) tocados++;
   }
-  return armados;
+  return tocados;
+}
+
+async function ajustarUno(
+  userId: string,
+  p: PreferenciaHabitoApi,
+  tieneAlarma: boolean,
+  opciones: { ahora?: Date; dimensionDe?: (habitoId: string) => string | null },
+): Promise<boolean> {
+  const delTelefono = await antelacionesDe(userId, p.habitId);
+  const avisos = avisosSegunElServidor(p, delTelefono);
+  const hora = (p.triggerTime as string).slice(0, 5);
+  const cambio = p.pendingChange?.triggerTime && p.pendingChange.effectiveDate
+    ? { horaNueva: p.pendingChange.triggerTime.slice(0, 5), desde: p.pendingChange.effectiveDate }
+    : null;
+  if (tieneAlarma) {
+    const anotada = await horaProgramada(userId, p.habitId);
+    const horaCambio = anotada !== null && (cambio
+      ? anotada.hora !== cambio.horaNueva || anotada.desde !== cambio.desde
+      : anotada.hora !== hora);
+    if (mismoConjunto(avisos, delTelefono) && !horaCambio) return false;
+  }
+  const dimension = opciones.dimensionDe?.(p.habitId) ?? null;
+  return cambio
+    ? programarConCambioDiferido(userId, p.habitId, p.title,
+      { horaDeHoy: hora, horaNueva: cambio.horaNueva, desde: cambio.desde }, avisos, { dimension, ahora: opciones.ahora })
+    : programar(userId, p.habitId, p.title, hora, avisos, { dimension });
 }

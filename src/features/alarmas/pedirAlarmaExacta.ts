@@ -45,7 +45,22 @@ export async function abrirPermisoDeAlarmasExactas(
   return abrirAlarmasYRecordatorios(linking);
 }
 
-/** Texto del pedido: qué pasa sin el permiso y qué tocar. */
-export const TEXTO_PEDIDO_ALARMA_EXACTA =
-  'Para que tus recordatorios suenen a la hora exacta, Android necesita un permiso: «Alarmas y recordatorios». ' +
-  'Sin él pueden llegar hasta 40 minutos tarde. Toca «Permitir», activa el interruptor y vuelve a Renaser.';
+/**
+ * Textos cortos (dueño, 28/09: «mucho texto marea al usuario»). El pedido va una sola vez; después, al
+ * guardar, solo la línea discreta.
+ */
+export const TEXTO_PEDIDO_ALARMA_EXACTA = 'Permite «Alarmas y recordatorios» para que suenen a la hora exacta.';
+export const LINEA_ALARMA_EXACTA_PENDIENTE = 'Pueden sonar tarde: actívalo en Yo → Alarmas.';
+
+/** La línea discreta al guardar: solo si ya se pidió una vez y sigue negado. */
+export async function hayQueRecordarAlarmaExacta(
+  userId: string,
+  estado: EstadoDeAlarmaExacta = estadoDeAlarmaExacta(),
+): Promise<boolean> {
+  if (estado !== 'denegado') return false;
+  try {
+    return (await AsyncStorage.getItem(CLAVE_YA_SE_PIDIO + userId)) !== null;
+  } catch {
+    return false;
+  }
+}

@@ -1,5 +1,6 @@
 // SOLO tipos; el módulo se carga con `require` dentro de `notificaciones()`. Ver `pushNativo.ts`.
 import type * as TipoNotificaciones from 'expo-notifications';
+import { Platform } from 'react-native';
 
 import { destinoDeRuta, type DestinoDeAviso } from '../api/avisosApi';
 import { HAY_PUSH_NATIVO } from './pushNativo';
@@ -122,10 +123,41 @@ function atender(respuesta: TipoNotificaciones.NotificationResponse | null): voi
  * persona vuelve a abrir la app.
  */
 export function escucharAperturaDeAviso(): () => void {
+  if (Platform.OS === 'web') return escucharEnLaWeb();
   const N = notificaciones();
   if (!N) return () => {};
 
   const suscripcion = N.addNotificationResponseReceivedListener(atender);
   void N.getLastNotificationResponseAsync().then(atender).catch(() => {});
   return () => suscripcion.remove();
+}
+
+/**
+ * En la web (D-218, 2026-09-28, pedido del dueño): tocar el push abre lo mismo que en el teléfono.
+ *
+ * El service worker (`public/renaser-push-sw.js`) tiene dos caminos:
+ * - **Con una ventana abierta**, la enfoca y le manda `{ tipo: 'renaser-abrir-aviso', ruta }`.
+ * - **Sin ventana**, abre una nueva en la ruta del aviso (`/habitos/…`); Vercel la sirve con
+ *   `index.html` y acá se lee de la barra de direcciones, y se limpia para que recargar no la repita.
+ */
+export const MENSAJE_DEL_SERVICE_WORKER = 'renaser-abrir-aviso';
+
+/** La ruta de un mensaje del service worker, o `null` si el mensaje no es de un aviso. Pura. */
+export function rutaDelMensajeDelServiceWorker(datos: unknown): string | null {
+  const d = datos as { tipo?: unknown; ruta?: unknown } | null;
+  return d && d.tipo === MENSAJE_DEL_SERVICE_WORKER && typeof d.ruta === 'string' ? d.ruta : null;
+}
+
+function escucharEnLaWeb(): () => void {
+  if (typeof window === 'undefined') return () => {};
+  const inicial = `${window.location.pathname}${window.location.search}`;
+  if (anotarRutaDeAviso(inicial)) window.history.replaceState(null, '', '/');
+  const sw = typeof navigator !== 'undefined' ? navigator.serviceWorker : undefined;
+  if (!sw) return () => {};
+  const oyente = (evento: MessageEvent) => {
+    const ruta = rutaDelMensajeDelServiceWorker(evento.data);
+    if (ruta) anotarRutaDeAviso(ruta);
+  };
+  sw.addEventListener('message', oyente);
+  return () => sw.removeEventListener('message', oyente);
 }

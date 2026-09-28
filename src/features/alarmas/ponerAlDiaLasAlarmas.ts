@@ -1,7 +1,7 @@
 import * as habitsApi from '../habits/api/habitsApi';
 import type { PreferenciaHabitoApi } from '../habits/types/habits.types';
 import {
-  armarRecordatoriosQueFaltan,
+  ajustarRecordatoriosAlServidor,
   completarCambiosDiferidos,
   HAY_RECORDATORIOS_LOCALES,
   recordatoriosPorHabito,
@@ -16,8 +16,8 @@ import { agregarRutaALasAlarmasDeHabitos, rearmarAlarmasProgramadas, tocaRearmar
  * 1. **Rearmar** las ya programadas (Android): las de antes del permiso de alarmas exactas quedan
  *    exactas, y las que el sistema borró al detener la app vuelven (`rearmarAlarmas.ts`).
  * 2. **Cambios de hora con fecha** que ya pueden pasar a ser la diaria (`completarCambiosDiferidos`).
- * 3. **Lo que el servidor sabe y el teléfono no**: un hábito con recordatorio activo sin alarma acá
- *    (teléfono nuevo, reinstalación) se arma desde `GET /habit-preferences`.
+ * 3. **Lo que dice el servidor** (`GET /habit-preferences`): arma lo que falta (teléfono nuevo,
+ *    reinstalación), cancela lo que se apagó y ajusta lo que cambió en otro dispositivo.
  * 4. **La ruta** en las alarmas de hábitos de antes de D-218, para que tocarlas abra Training.
  * 5. **Confirmar** al servidor: con esto el push de inicio deja de ir también a este teléfono.
  *
@@ -45,7 +45,7 @@ const porDefecto: DependenciasDePuestaAlDia = {
   rearmar: ahoraMs => rearmarAlarmasProgramadas(ahoraMs),
   completarDiferidos: (userId, ahora) => completarCambiosDiferidos(userId, ahora),
   preferencias: () => habitsApi.obtenerPreferencias(),
-  armarQueFaltan: (userId, preferencias) => armarRecordatoriosQueFaltan(userId, preferencias),
+  armarQueFaltan: (userId, preferencias) => ajustarRecordatoriosAlServidor(userId, preferencias),
   agregarRutas: async (userId, ahoraMs) => agregarRutaALasAlarmasDeHabitos(await recordatoriosPorHabito(userId), ahoraMs),
   confirmar: () => confirmarAlarmasAlServidor(),
 };

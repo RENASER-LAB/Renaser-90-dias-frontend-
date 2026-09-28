@@ -39,6 +39,8 @@ import {
   abrirPermisoDeAlarmasExactas,
   anotarQueSePidioAlarmaExacta,
   hayQuePedirAlarmaExactaAlGuardar,
+  hayQueRecordarAlarmaExacta,
+  LINEA_ALARMA_EXACTA_PENDIENTE,
   TEXTO_PEDIDO_ALARMA_EXACTA,
 } from '../../alarmas/pedirAlarmaExacta';
 import { horaDelEditor, preferenciaTrasGuardar, textoDelCambioProgramado } from '../utils/horaDelEditor';
@@ -617,6 +619,8 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
       const recordatorio = {
         activo: antelaciones.length > 0,
         minutosAntes: antelaciones.length > 0 ? Math.max(...antelaciones) : null,
+        // D-217: y todos, para que otro teléfono (o este reinstalado) los reconstruya.
+        lista: antelaciones.length > 0 ? antelaciones : null,
       };
       const resultado = await habitsApi.cambiarHorario(
         h.habitoId,
@@ -669,12 +673,16 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
           : '');
       // D-217: con el primer recordatorio, si Android no deja alarmas exactas, se pide acá mismo —una
       // sola vez— en vez de dejar que suene hasta 40 min tarde sin que nadie lo sepa.
-      if (antelaciones.length > 0 && ok && (await hayQuePedirAlarmaExactaAlGuardar(claveUsuario))) {
+      // Después, si sigue negado, solo una línea corta; el diálogo no vuelve a abrirse (dueño, 28/09).
+      const conAviso = antelaciones.length > 0 && ok;
+      if (conAviso && (await hayQuePedirAlarmaExactaAlGuardar(claveUsuario))) {
         await anotarQueSePidioAlarmaExacta(claveUsuario);
         Alert.alert('Listo', `${mensaje}\n\n${TEXTO_PEDIDO_ALARMA_EXACTA}`, [
           { text: 'Ahora no', style: 'cancel' },
           { text: 'Permitir', onPress: () => void abrirPermisoDeAlarmasExactas() },
         ]);
+      } else if (conAviso && (await hayQueRecordarAlarmaExacta(claveUsuario))) {
+        Alert.alert('Listo', `${mensaje}\n\n${LINEA_ALARMA_EXACTA_PENDIENTE}`);
       } else {
         Alert.alert('Listo', mensaje);
       }

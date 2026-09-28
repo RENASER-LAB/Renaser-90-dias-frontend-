@@ -16,7 +16,11 @@ import {
   abrirPermisoDeAlarmasExactas,
   anotarQueSePidioAlarmaExacta,
   hayQuePedirAlarmaExactaAlGuardar,
+  hayQueRecordarAlarmaExacta,
+  LINEA_ALARMA_EXACTA_PENDIENTE,
+  TEXTO_PEDIDO_ALARMA_EXACTA,
 } from '../pedirAlarmaExacta';
+import { TEXTO_DE_BATERIA } from '../components/GuiaDeBateria';
 
 beforeEach(async () => {
   await AsyncStorage.clear();
@@ -44,6 +48,24 @@ describe('pedir el permiso al guardar el primer recordatorio', () => {
   it('la hoja de Training lo pide al guardar', () => {
     const fuente = leer('features/training/components/PlanificarDimensionModal.tsx');
     expect(fuente).toContain('hayQuePedirAlarmaExactaAlGuardar(claveUsuario)');
+  });
+});
+
+describe('después del único pedido (dueño, 28/09)', () => {
+  it('si sigue negado, solo una línea discreta al guardar; nunca otra vez el diálogo', async () => {
+    expect(await hayQueRecordarAlarmaExacta('u-1', 'denegado')).toBe(false);
+    await anotarQueSePidioAlarmaExacta('u-1');
+    expect(await hayQuePedirAlarmaExactaAlGuardar('u-1', 'denegado')).toBe(false);
+    expect(await hayQueRecordarAlarmaExacta('u-1', 'denegado')).toBe(true);
+    expect(await hayQueRecordarAlarmaExacta('u-1', 'concedido')).toBe(false);
+  });
+
+  it('los textos nuevos son cortos: una o dos frases («mucho texto marea al usuario»)', () => {
+    const frases = (t: string) => t.split(/[.!?](\s|$)/).filter(x => x.trim().length > 1).length;
+    for (const texto of [TEXTO_PEDIDO_ALARMA_EXACTA, LINEA_ALARMA_EXACTA_PENDIENTE, TEXTO_DE_BATERIA]) {
+      expect(frases(texto)).toBeLessThanOrEqual(2);
+      expect(texto.length).toBeLessThanOrEqual(120);
+    }
   });
 });
 

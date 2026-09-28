@@ -16,12 +16,9 @@ import { useTheme } from '../../../theme/ThemeContext';
  * El botón abre los ajustes de Renaser; desde ahí se entra a Batería. No hay una pantalla común a todas
  * las marcas para ir directo a «Sin restricciones».
  */
-export const PASOS_DE_BATERIA: readonly string[] = [
-  'Toca «Abrir ajustes de Renaser».',
-  'Entra a «Batería» y elige «Sin restricciones» (en algunos teléfonos, «No optimizar»).',
-  'En Xiaomi, Oppo o Huawei, activa también «Inicio automático».',
-  'No cierres Renaser deslizándola desde las apps recientes ni uses «Forzar detención».',
-];
+/** Dos frases como máximo (dueño, 28/09: «mucho texto marea al usuario»). */
+export const TEXTO_DE_BATERIA =
+  'Para que tus alarmas no se borren, en Batería elige «Sin restricciones» y no cierres Renaser a la fuerza.';
 
 export function GuiaDeBateria() {
   const { c } = useTheme();
@@ -37,23 +34,13 @@ export function GuiaDeBateria() {
 
   return (
     <View style={[estilos.caja, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-      <Text style={[estilos.titulo, { color: c.textStrong }]}>Que el teléfono no apague tus alarmas</Text>
-      <Text style={[estilos.cuerpo, { color: c.textSoft }]}>
-        Algunos teléfonos cierran las apps para ahorrar batería, y con ellas se borran las alarmas.
-      </Text>
-      {PASOS_DE_BATERIA.map((paso, i) => (
-        <Text key={paso} style={[estilos.cuerpo, { color: c.textStrong }]}>{`${i + 1}. ${paso}`}</Text>
-      ))}
-      <Text style={[estilos.cuerpo, { color: c.textSoft }]}>
-        Si se cerró, ábrela una vez: las alarmas vuelven solas.
-      </Text>
-      <BotonSecundario etiqueta="Abrir ajustes de Renaser" onPress={() => void abrir()} />
+      <Text style={[estilos.cuerpo, { color: c.textSoft }]}>{TEXTO_DE_BATERIA}</Text>
+      <BotonSecundario etiqueta="Abrir ajustes" onPress={() => void abrir()} />
     </View>
   );
 }
 
 const estilos = StyleSheet.create({
   caja: { borderWidth: 1, borderRadius: 16, padding: 14, gap: 8 },
-  titulo: { fontFamily: 'Jost_700Bold', fontSize: 19, lineHeight: 25 },
   cuerpo: { fontFamily: 'Jost_400Regular', fontSize: 17, lineHeight: 24 },
 });

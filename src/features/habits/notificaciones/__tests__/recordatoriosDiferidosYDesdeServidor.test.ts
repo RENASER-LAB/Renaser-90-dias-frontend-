@@ -7,7 +7,7 @@
  * - el aviso no llevaba `data.route`, así que tocarlo no abría Training;
  * - `programarConCambioDiferido` no existía: la hoja movía la alarma DIARIA en el acto, y hoy sonaba a la
  *   hora nueva (que el servidor todavía no aplica) y no a la de hoy;
- * - `armarRecordatoriosQueFaltan` no existía: en un teléfono nuevo el servidor decía «recordatorio
+ * - `ajustarRecordatoriosAlServidor` no existía: en un teléfono nuevo el servidor decía «recordatorio
  *   activo» y el teléfono no tenía ninguna alarma («Jugo verde … tras reinstalar: 0»).
  */
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
@@ -140,7 +140,7 @@ describe('el cambio de hora que rige desde mañana (D-91) también en la alarma 
   });
 });
 
-describe('teléfono nuevo o app reinstalada: se arma lo que el servidor sabe (D-217)', () => {
+describe('ponerse al día con el servidor (D-217)', () => {
   const preferencia = (p: Partial<PreferenciaHabitoApi> & { habitId: string }): PreferenciaHabitoApi => ({
     title: 'Jugo verde',
     triggerTime: '10:00:00',
@@ -153,7 +153,7 @@ describe('teléfono nuevo o app reinstalada: se arma lo que el servidor sabe (D-
   });
 
   it('el servidor dice recordatorio activo y el teléfono no tiene alarma: la arma', async () => {
-    const armados = await recordatorios.armarRecordatoriosQueFaltan(USUARIO, [
+    const armados = await recordatorios.ajustarRecordatoriosAlServidor(USUARIO, [
       preferencia({ habitId: JUGO, reminderMinutesBefore: 10 }),
     ], { dimensionDe: () => 'CUERPO' });
     expect(armados).toBe(1);
@@ -165,8 +165,9 @@ describe('teléfono nuevo o app reinstalada: se arma lo que el servidor sabe (D-
   it('no toca el hábito que ya tiene alarma, ni el que tiene el recordatorio apagado o sin hora', async () => {
     await recordatorios.programar(USUARIO, JUGO, 'Jugo verde', '10:00', [0, 30]);
     mockProgramadas.length = 0;
-    const armados = await recordatorios.armarRecordatoriosQueFaltan(USUARIO, [
-      preferencia({ habitId: JUGO }),
+    const armados = await recordatorios.ajustarRecordatoriosAlServidor(USUARIO, [
+      // Sin conjunto en el servidor (antes de V81) y con el mismo aviso más temprano: se conservan los dos.
+      preferencia({ habitId: JUGO, reminderMinutesBefore: 30 }),
       preferencia({ habitId: 'h-apagado', reminderEnabled: false }),
       preferencia({ habitId: 'h-sin-minutos', reminderMinutesBefore: null }),
       preferencia({ habitId: 'h-sin-hora', triggerTime: null }),
@@ -177,13 +178,13 @@ describe('teléfono nuevo o app reinstalada: se arma lo que el servidor sabe (D-
 
   it('sin permiso de avisos no arma nada y no lo pide: corre al abrir la app, no por un toque', async () => {
     mockEstado.permiso = false;
-    const armados = await recordatorios.armarRecordatoriosQueFaltan(USUARIO, [preferencia({ habitId: JUGO })]);
+    const armados = await recordatorios.ajustarRecordatoriosAlServidor(USUARIO, [preferencia({ habitId: JUGO })]);
     expect(armados).toBe(0);
     expect(mockPedirPermiso).not.toHaveBeenCalled();
   });
 
   it('con un cambio pendiente, respeta su fecha', async () => {
-    const armados = await recordatorios.armarRecordatoriosQueFaltan(USUARIO, [
+    const armados = await recordatorios.ajustarRecordatoriosAlServidor(USUARIO, [
       preferencia({
         habitId: JUGO,
         triggerTime: '07:00:00',
@@ -192,5 +193,42 @@ describe('teléfono nuevo o app reinstalada: se arma lo que el servidor sabe (D-
     ], { ahora: new Date('2026-09-28T11:00:00Z') });
     expect(armados).toBe(1);
     expect(resumen()).toEqual(['fecha 2026-09-28 07:00', 'fecha 2026-09-29 10:00']);
+  });
+
+  it('teléfono nuevo: reconstruye TODOS los avisos que el servidor guarda (V81), no solo uno', async () => {
+    await recordatorios.ajustarRecordatoriosAlServidor(USUARIO, [
+      preferencia({ habitId: JUGO, reminderMinutesBefore: 30, reminderMinutesList: [30, 0] }),
+    ]);
+    expect(resumen()).toEqual(['diaria 09:30', 'diaria 10:00']);
+  });
+
+  it('apagado desde otro dispositivo: cancela la alarma de este teléfono', async () => {
+    await recordatorios.programar(USUARIO, JUGO, 'Jugo verde', '10:00', [0]);
+    const tocados = await recordatorios.ajustarRecordatoriosAlServidor(USUARIO, [
+      preferencia({ habitId: JUGO, reminderEnabled: false, reminderMinutesBefore: null }),
+    ]);
+    expect(tocados).toBe(1);
+    expect(mockCanceladas).toEqual(['alarma-1']);
+    expect(await recordatorios.antelacionesDe(USUARIO, JUGO)).toEqual([]);
+  });
+
+  it('otra hora u otros avisos desde otro dispositivo: la ajusta', async () => {
+    await recordatorios.programar(USUARIO, JUGO, 'Jugo verde', '10:00', [30, 0]);
+    mockProgramadas.length = 0;
+    await recordatorios.ajustarRecordatoriosAlServidor(USUARIO, [
+      preferencia({ habitId: JUGO, triggerTime: '11:00:00', reminderMinutesBefore: 30, reminderMinutesList: [30] }),
+    ]);
+    expect(resumen()).toEqual(['diaria 10:30']);
+    expect(await recordatorios.antelacionesDe(USUARIO, JUGO)).toEqual([30]);
+  });
+
+  it('igual que el servidor: no reprograma nada', async () => {
+    await recordatorios.programar(USUARIO, JUGO, 'Jugo verde', '10:00', [30, 0]);
+    mockProgramadas.length = 0;
+    const tocados = await recordatorios.ajustarRecordatoriosAlServidor(USUARIO, [
+      preferencia({ habitId: JUGO, reminderMinutesBefore: 30, reminderMinutesList: [0, 30] }),
+    ]);
+    expect(tocados).toBe(0);
+    expect(mockProgramadas).toHaveLength(0);
   });
 });

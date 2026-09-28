@@ -149,6 +149,12 @@ export interface PreferenciaHabitoApi {
   reminderEnabled?: boolean;
   reminderMinutesBefore?: number | null;
   /**
+   * TODOS los avisos elegidos, en minutos antes («30 min antes» y «a la hora» = `[30, 0]`), desde V81
+   * (D-217, 2026-09-28). `reminderMinutesBefore` sigue siendo el más temprano, para el APK viejo.
+   * `null`/ausente = el servidor no conoce el conjunto (guardado antes de V81, o por el APK viejo).
+   */
+  reminderMinutesList?: number[] | null;
+  /**
    * Cambio de horario ya guardado que todavía NO rige: el backend lo programa para el día
    * siguiente cuando la ventana del hábito ya arrancó hoy ("no se improvisa el día").
    * `null` cuando no hay nada pendiente.

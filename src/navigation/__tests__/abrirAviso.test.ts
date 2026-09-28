@@ -138,13 +138,21 @@ describe('las otras rutas que abren una pestaña', () => {
     soltar();
   });
 
-  it('el evento sigue abriendo Comunidad → Eventos, ahora también esperando al Código Renaser', () => {
+  it('el evento NO espera al Código Renaser: abre el evento directo (dueño, 28/09)', () => {
     const { irAPestana, soltar } = navegador(PESTANAS);
     marcarCapaObligatoria('codigoRenaser', true);
     anotarRutaDeAviso('/eventos/e-1');
+    expect(irAPestana).toHaveBeenCalledWith('Comunidad', { abrirEventoId: 'e-1' });
+    soltar();
+  });
+
+  it('la acción de un objetivo sí espera al Código Renaser', () => {
+    const { irAPestana, soltar } = navegador(PESTANAS);
+    marcarCapaObligatoria('codigoRenaser', true);
+    anotarRutaDeAviso('/objetivos/2026-10-02?eje=TRABAJO');
     expect(irAPestana).not.toHaveBeenCalled();
     marcarCapaObligatoria('codigoRenaser', false);
-    expect(irAPestana).toHaveBeenCalledWith('Comunidad', { abrirEventoId: 'e-1' });
+    expect(irAPestana).toHaveBeenCalledWith('Plan', { abrirObjetivosFecha: '2026-10-02', abrirObjetivosEje: 'TRABAJO' });
     soltar();
   });
 

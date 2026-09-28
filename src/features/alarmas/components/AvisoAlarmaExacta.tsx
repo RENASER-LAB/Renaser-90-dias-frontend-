@@ -29,12 +29,7 @@ export function AvisoAlarmaExacta() {
   if (estado === 'no_hace_falta' || Platform.OS !== 'android') return null;
 
   if (estado === 'concedido') {
-    return (
-      <View style={[estilos.caja, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-        <Text style={[estilos.titulo, { color: c.textStrong }]}>Alarmas a la hora exacta: activado ✓</Text>
-        <Text style={[estilos.cuerpo, { color: c.textSoft }]}>Tus recordatorios suenan a la hora que elegiste.</Text>
-      </View>
-    );
+    return <Text style={[estilos.cuerpo, { color: c.textSoft }]}>Alarmas a la hora exacta: activado ✓</Text>;
   }
 
   const abrir = async () => {
@@ -49,15 +44,13 @@ export function AvisoAlarmaExacta() {
 
   return (
     <View style={[estilos.caja, { borderColor: c.gold, backgroundColor: c.goldWash }]}>
-      <Text style={[estilos.titulo, { color: c.textStrong }]}>
-        {estado === 'denegado' ? 'Tus alarmas pueden llegar tarde' : 'Alarmas a la hora exacta'}
-      </Text>
+      <Text style={[estilos.titulo, { color: c.textStrong }]}>Alarmas a la hora exacta</Text>
       <Text style={[estilos.cuerpo, { color: c.textStrong }]}>
         {estado === 'denegado'
-          ? 'El permiso «Alarmas y recordatorios» está apagado: tus recordatorios pueden sonar hasta 40 minutos tarde. Toca el botón, activa el interruptor y vuelve.'
-          : 'Para que tus alarmas suenen a la hora exacta, permite «Alarmas y recordatorios». En la lista que se abre, toca Renaser y actívalo. Si ya lo hiciste, no hace falta nada más.'}
+          ? 'Está apagado: tus alarmas pueden sonar tarde.'
+          : 'Permite «Alarmas y recordatorios» para Renaser.'}
       </Text>
-      <BotonPrincipal etiqueta="Permitir alarmas a la hora exacta" onPress={() => void abrir()} />
+      <BotonPrincipal etiqueta="Permitir" onPress={() => void abrir()} />
     </View>
   );
 }

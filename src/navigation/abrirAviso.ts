@@ -9,9 +9,9 @@ import type { DestinoDeAviso } from '../features/mentor/api/avisosApi';
  *
  * ## Cuándo se va
  *
- * 1. Si hay una capa obligatoria abierta (el Código Renaser, el arranque guiado o el Pacto,
- *    `capasObligatorias.ts`), **no se va**: la ruta queda esperando y se vuelve a intentar al
- *    cerrarse. La capa no se toca.
+ * 1. Si es un hábito o una acción y hay una capa obligatoria abierta (el Código Renaser, el arranque
+ *    guiado o el Pacto, `capasObligatorias.ts`), **no se va**: la ruta queda esperando y se vuelve a
+ *    intentar al cerrarse. La capa no se toca. El evento no espera (decisión del dueño del 28/09).
  * 2. Si la pestaña todavía no existe (login, onboarding, Mapa del Día 7), tampoco: se reintenta cuando
  *    cambia la navegación.
  * 3. Si no, se consume la ruta y se navega. Consumirla recién ahí es lo que hace que la espera no la
@@ -54,16 +54,26 @@ export interface DependenciasDeApertura {
 /** `abierto` si navegó; `esperando` si hay algo que la frena (capa o pestaña); `nada` si no había ruta. */
 export type ResultadoDeApertura = 'abierto' | 'esperando' | 'nada';
 
+/**
+ * Los que esperan a que se cierre una capa obligatoria. El evento NO (decisión del dueño, 2026-09-28): su
+ * aviso abre el evento directo, como desde E-5.
+ */
+const ESPERAN_A_LAS_CAPAS: ReadonlySet<TipoQueAbreUnaPestana> = new Set(['habito', 'objetivo']);
+
 export function intentarAbrirAvisoPendiente(deps: DependenciasDeApertura): ResultadoDeApertura {
-  if (deps.hayCapaObligatoriaAbierta()) return 'esperando';
+  let esperando = false;
   for (const tipo of TIPOS_QUE_ABREN_UNA_PESTANA) {
+    if (ESPERAN_A_LAS_CAPAS.has(tipo) && deps.hayCapaObligatoriaAbierta()) {
+      esperando = true;
+      continue;
+    }
     if (!deps.pestanaDisponible(PESTANA[tipo])) continue;
     const destino = deps.consumir(tipo);
     if (!destino) continue;
     const { pestana, params } = pestanaDelDestino(destino);
     return deps.irAPestana(pestana, params) ? 'abierto' : 'esperando';
   }
-  return 'nada';
+  return esperando ? 'esperando' : 'nada';
 }
 
 /** De dónde llegan los motivos para volver a intentar. Cada uno devuelve cómo dejar de escuchar. */
