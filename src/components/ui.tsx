@@ -91,6 +91,10 @@ export function Card({ children, style }: { children: React.ReactNode; style?: V
  * dibujaban sin `onPressRight`: parecían botones y no hacían nada (E-404 y E-409 de la bitácora del
  * backend). Ahora hacen falta el ícono y la acción; sin acción no hay botón. La altura de la cabecera no
  * cambia (`minHeight` igual al botón), así que el contenido de abajo no se mueve.
+ *
+ * > **Corregido 2026-09-28.** La ⓘ de Comunidad volvió, ahora con acción: abre la info de tu grupo, y
+ * > sin grupo no se dibuja (`features/community/utils/infoDesdeLaCabecera.ts`). Los otros tres siguen
+ * > quitados.
  */
 export function ScreenHeader({ title, right, onPressRight }: { title: string; right?: IconName; onPressRight?: () => void }) {
   const { c, t } = useTheme();

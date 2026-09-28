@@ -8,7 +8,8 @@ import type { SeccionComunidad } from '../../../screens/ComunidadScreen';
  * > compañeros, grupos, categorías… todos compitiendo con `GET /api/v1/wall`, que es lo único que
  * > se ve al abrir. Cada uno cruza a Miami (130–490 ms), así que el Muro tardaba ~3 s.
  *
- * Ahora al abrir salen solo el Muro y `/home` (el día de programa). Cada recurso se pide la
+ * Ahora al abrir salen solo el Muro, `/home` (el día de programa) y `/me/cells` (la ⓘ de la cabecera,
+ * desde el 28/09). Cada recurso se pide la
  * primera vez que hace falta —al abrir su sección, el compositor o la hoja de compartir— y queda
  * pedido: volver a la sección no lo repide, igual que antes.
  */
@@ -43,7 +44,9 @@ export type ContextoComunidad = {
 
 /** Lo que necesita, AHORA, lo que está en pantalla. */
 export function recursosQueNecesita({ seccion, componiendo, compartiendo }: ContextoComunidad): RecursoComunidad[] {
-  const recursos: RecursoComunidad[] = [];
+  /* La ⓘ de la cabecera (28/09, corrige E-409) se dibuja solo si tienes grupo, y está en TODAS las
+     secciones: `/me/cells` (una llamada liviana) se pide al abrir. */
+  const recursos: RecursoComunidad[] = ['grupos'];
   if (seccion === 'classroom') recursos.push('cursos');
   // Tribu: la tarjeta de tu gente (célula), los grupos por nombre, la bandeja y, para un mentor,
   // la entrada al grupo que acompaña.
