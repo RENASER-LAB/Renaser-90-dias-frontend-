@@ -336,6 +336,14 @@ async function sincronizarAhora(
     }
   }
   await escribirGuardadas(userId, guardadas);
+  // E-410: con varias acciones (o hábitos) a la misma hora, suena una sola que las nombra a todas.
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { agruparAvisosQueCoinciden } = require('../../alarmas/avisosJuntos') as typeof import('../../alarmas/avisosJuntos');
+    await agruparAvisosQueCoinciden(userId);
+  } catch {
+    // Sin agrupar, cada una suena por su lado, como antes.
+  }
 }
 
 /** Quita todas las alarmas de acciones de esta persona en este teléfono (no el recordatorio diario). */

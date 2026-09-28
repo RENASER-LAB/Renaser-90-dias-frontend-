@@ -205,6 +205,19 @@ async function sinRomper<T>(operacion: () => Promise<T>, porDefecto: T): Promise
  * Pide permiso, si hace falta. Devuelve `false` en web y cuando la persona lo niega — el llamador
  * tiene que respetar ese `false` y no prometer un aviso que no va a llegar.
  */
+/**
+ * E-410: después de programar o cancelar, los avisos que quedaron a la misma hora se ordenan para que
+ * suene uno solo que nombre a todos (`alarmas/avisosJuntos.ts`). Se carga acá adentro porque aquel
+ * módulo usa este: un import de ida y vuelta dejaría uno sin cargar.
+ */
+async function reagrupar(userId: string): Promise<void> {
+  await sinRomper(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { agruparAvisosQueCoinciden } = require('../../alarmas/avisosJuntos') as typeof import('../../alarmas/avisosJuntos');
+    await agruparAvisosQueCoinciden(userId);
+  }, undefined);
+}
+
 export async function pedirPermiso(): Promise<boolean> {
   const N = notificaciones();
   if (!N) return false;
@@ -324,6 +337,7 @@ export async function cancelar(userId: string, habitoId: string): Promise<void> 
   // cancela entero.
   await sinRomper(() => AsyncStorage.removeItem(claveDiferido(userId, habitoId)), undefined);
   await sinRomper(() => AsyncStorage.removeItem(claveHora(userId, habitoId)), undefined);
+  await reagrupar(userId);
 }
 
 /**
@@ -448,7 +462,7 @@ export async function programar(
     await sinRomper(() => AsyncStorage.removeItem(claveSet), undefined);
     return true;
   }
-  return sinRomper(async () => {
+  const ok = await sinRomper(async () => {
     if (!(await pedirPermiso())) return false;
     // Con el hábito: con «Voz», uno del catálogo dice su nombre y sale por su propio canal.
     const canal = canalDeAlarma('habitos', await sonidoDe(userId, habitoId), { id: habitoId, titulo });
@@ -476,6 +490,8 @@ export async function programar(
     await AsyncStorage.setItem(claveHora(userId, habitoId), JSON.stringify({ hora: horaHHmm }));
     return true;
   }, false);
+  if (ok) await reagrupar(userId);
+  return ok;
 }
 
 /**
@@ -672,7 +688,7 @@ export async function programarConCambioDiferido(
   }
   const ahora = opciones.ahora ?? new Date();
   const ruta = rutaDelAvisoDeHabito(habitoId, opciones.dimension);
-  return sinRomper(async () => {
+  const ok = await sinRomper(async () => {
     if (!(await pedirPermiso())) return false;
     const canal = canalDeAlarma('habitos', await sonidoDe(userId, habitoId), { id: habitoId, titulo });
     await asegurarCanal(canal);
@@ -714,6 +730,8 @@ export async function programarConCambioDiferido(
     }
     return true;
   }, false);
+  if (ok) await reagrupar(userId);
+  return ok;
 }
 
 /**
@@ -731,6 +749,7 @@ export async function completarCambiosDiferidos(userId: string, ahora: Date = ne
     for (const clave of claves) {
       convertidas += await completarUno(N, userId, clave.slice(prefijo.length), ahora);
     }
+    if (convertidas > 0) await reagrupar(userId);
     return convertidas;
   }, 0);
 }

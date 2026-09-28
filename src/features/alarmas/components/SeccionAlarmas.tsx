@@ -21,10 +21,9 @@ import {
   type PreferenciasDeAlarmas,
 } from '../preferenciasDeAlarmas';
 import { escucharSonido, probarSonido } from '../probarSonido';
-import { cambiarSonidoDeLasProgramadas, cambiarSonidoDeLosHabitos } from '../cambioDeSonido';
-import { canalDeAlarma, type SonidoDeAlarma } from '../sonidoDeAlarma';
+import { pasarAlarmasAlSonido } from '../cambioDeSonido';
+import { type SonidoDeAlarma } from '../sonidoDeAlarma';
 import { RecordatorioDeAcciones } from '../../objetivos/components/RecordatorioDeAcciones';
-import { idsDeRecordatoriosDeAcciones } from '../../objetivos/notificaciones/recordatoriosDeAcciones';
 import { AvisoAlarmaExacta } from './AvisoAlarmaExacta';
 import { GuiaDeBateria } from './GuiaDeBateria';
 import { SelectorDeSonido } from './SelectorDeSonido';
@@ -183,17 +182,9 @@ export function SeccionAlarmas({ userId }: { userId: string }) {
     setOcupado(true);
     try {
       await guardarPrefs({ ...prefs, sonido });
-      if (despertar && typeof despertar !== 'string') {
-        await recordatorios.fijarSonido(userId, despertar.habitoId, sonido);
-        if (despertar.alarmaPuesta && despertar.hora) {
-          await recordatorios.reprogramarTrasCambioDeHora(userId, despertar.habitoId, despertar.titulo, despertar.hora);
-        }
-      }
-      // Los demás hábitos y las acciones de los objetivos (2026-09-26): se pasan al canal nuevo tal
-      // cual están programadas, sin servidor. Despertar ya quedó en el canal nuevo y se salta solo.
-      // Desde 2026-09-27 cada hábito va a SU canal: con «Voz», el de la voz que dice su nombre.
-      await cambiarSonidoDeLosHabitos(userId, sonido);
-      await cambiarSonidoDeLasProgramadas(await idsDeRecordatoriosDeAcciones(userId), canalDeAlarma('objetivos', sonido));
+      // Todos los hábitos —Despertar incluido— y las acciones de los objetivos pasan al canal nuevo tal
+      // cual están programados, y los que coinciden vuelven a sonar como uno solo (`cambioDeSonido.ts`).
+      await pasarAlarmasAlSonido(userId, sonido, despertar && typeof despertar !== 'string' ? despertar : null);
       try {
         await reprogramarConSonidoNuevo(userId, await listarProximos(Date.now()));
       } catch {

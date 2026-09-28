@@ -7,6 +7,7 @@ import {
   recordatoriosPorHabito,
 } from '../habits/notificaciones/recordatoriosDeHabito';
 import { confirmarAlarmasAlServidor, type ResultadoDeConfirmacion } from './confirmacionDeAlarmas';
+import { agruparAvisosQueCoinciden } from './avisosJuntos';
 import { agregarRutaALasAlarmasDeHabitos, rearmarAlarmasProgramadas, tocaRearmar } from './rearmarAlarmas';
 
 /**
@@ -31,6 +32,8 @@ export interface DependenciasDePuestaAlDia {
   armarQueFaltan: (userId: string, preferencias: PreferenciaHabitoApi[]) => Promise<number>;
   agregarRutas: (userId: string, ahoraMs: number) => Promise<number>;
   confirmar: () => Promise<ResultadoDeConfirmacion>;
+  /** E-410: los avisos que coinciden suenan una sola vez. Opcional para las pruebas de antes. */
+  agrupar?: (userId: string, ahoraMs: number) => Promise<number>;
 }
 
 export interface ResultadoDePuestaAlDia {
@@ -48,6 +51,7 @@ const porDefecto: DependenciasDePuestaAlDia = {
   armarQueFaltan: (userId, preferencias) => ajustarRecordatoriosAlServidor(userId, preferencias),
   agregarRutas: async (userId, ahoraMs) => agregarRutaALasAlarmasDeHabitos(await recordatoriosPorHabito(userId), ahoraMs),
   confirmar: () => confirmarAlarmasAlServidor(),
+  agrupar: (userId, ahoraMs) => agruparAvisosQueCoinciden(userId, ahoraMs),
 };
 
 let ultima: number | null = null;
@@ -90,6 +94,8 @@ export async function ponerAlDiaLasAlarmas(
       .then(preferencias => deps.armarQueFaltan(userId, preferencias))
       .catch(() => null);
     const conRuta = await deps.agregarRutas(userId, ahoraMs).catch(() => 0);
+    // 4 bis. Los que coinciden a la misma hora: suena uno que nombra a todos (E-410).
+    await deps.agrupar?.(userId, ahoraMs).catch(() => 0);
     const confirmacion = armadas === null ? 'sin_lectura_del_servidor' : await deps.confirmar();
     return { rearmadas, convertidas, armadas, conRuta, confirmacion };
   } finally {
