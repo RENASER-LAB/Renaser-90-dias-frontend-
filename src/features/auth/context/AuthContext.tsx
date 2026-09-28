@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
 
-import { registrarTokenPushNativo, escucharRotacionDeToken } from '../../mentor/notificaciones/pushNativo';
+import { registrarTokenPushNativo, escucharRotacionDeToken, olvidarTokenPushRegistrado } from '../../mentor/notificaciones/pushNativo';
 import { escucharAperturaDeAviso, olvidarRutaPendiente } from '../../mentor/notificaciones/rutaDeAviso';
 import { FichaInicialData } from '../../onboarding/types/onboarding.types';
 import * as authApi from '../api/authApi';
@@ -215,6 +215,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!user) {
       olvidarRutaPendiente();
+      olvidarTokenPushRegistrado();
       return;
     }
     void registrarTokenPushNativo();

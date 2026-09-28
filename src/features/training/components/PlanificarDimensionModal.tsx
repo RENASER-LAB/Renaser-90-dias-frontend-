@@ -35,6 +35,12 @@ import {
   minutosDeArranqueDeLaRueda,
   MINUTOS_OTRA_POR_DEFECTO,
 } from '../../habits/utils/etiquetaDeAntelacion';
+import {
+  abrirPermisoDeAlarmasExactas,
+  anotarQueSePidioAlarmaExacta,
+  hayQuePedirAlarmaExactaAlGuardar,
+  TEXTO_PEDIDO_ALARMA_EXACTA,
+} from '../../alarmas/pedirAlarmaExacta';
 import { horaDelEditor, preferenciaTrasGuardar, textoDelCambioProgramado } from '../utils/horaDelEditor';
 
 /**
@@ -622,7 +628,15 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
       // y los dos avisos los envía el scheduler del backend para esta misma persona.
       const ok = recordatorios.HAY_RECORDATORIOS_WEB
         ? (antelaciones.length === 0 || webPushPreparado === true)
-        : await recordatorios.programar(claveUsuario, h.habitoId, h.title, horaTexto, antelaciones);
+        : resultado.deferred && resultado.deferredEffectiveDate
+          // D-217: el cambio rige desde su fecha (D-91), y la alarma también: hoy suena a la hora de
+          // hoy y la nueva empieza ese día. Antes la diaria se movía en el acto y hoy sonaba a la nueva.
+          ? await recordatorios.programarConCambioDiferido(claveUsuario, h.habitoId, h.title, {
+            horaDeHoy: horaDelEditor(previa, h.time).ahora,
+            horaNueva: horaTexto,
+            desde: resultado.deferredEffectiveDate,
+          }, antelaciones, { dimension })
+          : await recordatorios.programar(claveUsuario, h.habitoId, h.title, horaTexto, antelaciones, { dimension });
       const avisoImposible = antelaciones.length > 0 && !ok;
       // El horario local se actualiza acá y no recargando todo: recargar con la hoja abierta
       // reordenaría la lista debajo del dedo. Diferido (D-91), la hora de hoy no cambia y el cambio
@@ -648,14 +662,22 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
       const cuando = resultado.deferredEffectiveDate
         ? formatearFechaLarga(resultado.deferredEffectiveDate)
         : 'el día siguiente';
-      Alert.alert(
-        'Listo',
-        `“${h.title}” queda a las ${horaTexto}.` +
-          (resultado.deferred ? `\n\nEmpieza a regir ${cuando}: el día en curso no se reacomoda.` : '') +
-          (avisoImposible
-            ? `\n\nEl recordatorio quedó guardado, pero ${recordatorios.HAY_RECORDATORIOS_WEB ? 'este navegador no tiene el permiso Web Push' : 'este teléfono no tiene permiso para avisarte'}. Habilita las notificaciones para recibir las dos alertas.`
-            : ''),
-      );
+      const mensaje = `“${h.title}” queda a las ${horaTexto}.` +
+        (resultado.deferred ? `\n\nEmpieza a regir ${cuando}: el día en curso no se reacomoda.` : '') +
+        (avisoImposible
+          ? `\n\nEl recordatorio quedó guardado, pero ${recordatorios.HAY_RECORDATORIOS_WEB ? 'este navegador no tiene el permiso Web Push' : 'este teléfono no tiene permiso para avisarte'}. Habilita las notificaciones para recibir las dos alertas.`
+          : '');
+      // D-217: con el primer recordatorio, si Android no deja alarmas exactas, se pide acá mismo —una
+      // sola vez— en vez de dejar que suene hasta 40 min tarde sin que nadie lo sepa.
+      if (antelaciones.length > 0 && ok && (await hayQuePedirAlarmaExactaAlGuardar(claveUsuario))) {
+        await anotarQueSePidioAlarmaExacta(claveUsuario);
+        Alert.alert('Listo', `${mensaje}\n\n${TEXTO_PEDIDO_ALARMA_EXACTA}`, [
+          { text: 'Ahora no', style: 'cancel' },
+          { text: 'Permitir', onPress: () => void abrirPermisoDeAlarmasExactas() },
+        ]);
+      } else {
+        Alert.alert('Listo', mensaje);
+      }
     } catch (e) {
       Alert.alert('No pudimos guardar la hora', mensajeDeError(e, 'Intenta de nuevo en unos segundos.'));
     } finally {

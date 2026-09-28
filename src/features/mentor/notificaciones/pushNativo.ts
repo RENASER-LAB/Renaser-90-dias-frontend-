@@ -95,6 +95,31 @@ async function permisoConcedido(N: typeof TipoNotificaciones): Promise<boolean> 
  * funciona. El push es el atajo, no el canal.
  */
 export async function registrarTokenPushNativo(): Promise<ResultadoRegistroPush> {
+  const registro = registrarAhora();
+  registroEnCurso = registro;
+  return registro;
+}
+
+/** El registro en vuelo, para quien necesita el token apenas exista (la confirmación de D-217). */
+let registroEnCurso: Promise<ResultadoRegistroPush> | null = null;
+
+/**
+ * El token registrado; si el registro todavía está en vuelo, lo espera (a lo sumo `esperaMs`). Al abrir
+ * la app las dos cosas arrancan juntas, y sin esperar la confirmación de alarmas salía siempre sin token.
+ */
+export async function esperarTokenPush(esperaMs = 15_000): Promise<string | null> {
+  if (tokenRegistrado || !registroEnCurso) return tokenRegistrado;
+  let vencio: ReturnType<typeof setTimeout> | undefined;
+  const plazo = new Promise<null>(resolver => { vencio = setTimeout(() => resolver(null), esperaMs); });
+  try {
+    const resultado = await Promise.race([registroEnCurso, plazo]);
+    return resultado && resultado.estado === 'registrado' ? resultado.token : tokenRegistrado;
+  } finally {
+    if (vencio) clearTimeout(vencio);
+  }
+}
+
+async function registrarAhora(): Promise<ResultadoRegistroPush> {
   const N = notificaciones();
   if (!N) return { estado: 'no_aplica' };
 
@@ -113,10 +138,28 @@ export async function registrarTokenPushNativo(): Promise<ResultadoRegistroPush>
 
     const { data: token } = await N.getExpoPushTokenAsync({ projectId: proyecto });
     await enviarAlBackend(token);
+    tokenRegistrado = token;
     return { estado: 'registrado', token };
   } catch (error) {
     return { estado: 'fallo', detalle: error instanceof Error ? error.message : String(error) };
   }
+}
+
+/**
+ * El token de este teléfono ya registrado en el servidor en esta sesión, o `null`. Lo usa la
+ * confirmación de alarmas locales (D-217): el servidor la guarda por token, así que sin token no hay
+ * a qué atarla.
+ */
+let tokenRegistrado: string | null = null;
+
+export function tokenPushRegistrado(): string | null {
+  return tokenRegistrado;
+}
+
+/** Al cerrar sesión: el token queda del teléfono, pero la confirmación es de la persona que entra. */
+export function olvidarTokenPushRegistrado(): void {
+  tokenRegistrado = null;
+  registroEnCurso = null;
 }
 
 async function enviarAlBackend(token: string): Promise<void> {
@@ -142,7 +185,8 @@ export function escucharRotacionDeToken(): () => void {
     // día llegara el token nativo crudo, no es lo que este backend sabe despachar: se ignora en
     // vez de mandar algo que el transporte de Expo rechazaría por no empezar con "ExponentPush".
     if (typeof nuevo.data === 'string') {
-      void enviarAlBackend(nuevo.data).catch(() => {});
+      const token = nuevo.data;
+      void enviarAlBackend(token).then(() => { tokenRegistrado = token; }).catch(() => {});
     }
   });
   return () => suscripcion.remove();

@@ -2,7 +2,11 @@ import { Platform } from 'react-native';
 // SOLO tipos: cargar `expo-notifications` de verdad rompe Expo Go (ver `recordatoriosDeHabito.ts`).
 import type * as TipoNotificaciones from 'expo-notifications';
 
-import { cargarNotificaciones, HAY_RECORDATORIOS_LOCALES } from '../habits/notificaciones/recordatoriosDeHabito';
+import {
+  cargarNotificaciones,
+  HAY_RECORDATORIOS_LOCALES,
+  rutaDelAvisoDeHabito,
+} from '../habits/notificaciones/recordatoriosDeHabito';
 import { ARCHIVO_CAMPANA, archivoDelCanal } from './sonidoDeAlarma';
 
 /**
@@ -221,5 +225,59 @@ export async function rearmarAlarmasProgramadas(
     return 0;
   } finally {
     corriendo = false;
+  }
+}
+
+/**
+ * Qué alarmas de hábitos hay que volver a programar para que lleven su ruta (D-218, 2026-09-28). Pura.
+ *
+ * Las alarmas programadas antes de D-218 no llevan `data.route`, y tocarlas solo abría la app. Se
+ * re-programan con el MISMO id, contenido y disparador (como el rearmado de arriba), sumando la ruta
+ * `/habitos/{id}`: sin la dimensión, que el teléfono no guardó; Training la busca por el id. Una diaria
+ * que acaba de sonar se deja para la próxima vuelta, por el mismo motivo que en `planDeRearmado`.
+ */
+export function planDeRutasDeHabitos(
+  programadas: AlarmaProgramada[],
+  idsPorHabito: ReadonlyMap<string, string[]>,
+  ahoraMs: number,
+): PedidoDeRearmado[] {
+  const habitoDelId = new Map<string, string>();
+  idsPorHabito.forEach((ids, habitoId) => ids.forEach(id => habitoDelId.set(id, habitoId)));
+  const sinRuta = programadas.filter(a => {
+    const datos = a?.content?.data as Registro | null | undefined;
+    return habitoDelId.has(a?.identifier) && typeof datos?.route !== 'string';
+  });
+  return planDeRearmado(sinRuta, ahoraMs).map(pedido => ({
+    ...pedido,
+    content: {
+      ...pedido.content,
+      data: { ...(pedido.content.data ?? {}), route: rutaDelAvisoDeHabito(habitoDelId.get(pedido.identifier) as string) },
+    },
+  }));
+}
+
+/** Aplica `planDeRutasDeHabitos` en el teléfono (solo Android). Devuelve cuántas completó. */
+export async function agregarRutaALasAlarmasDeHabitos(
+  idsPorHabito: ReadonlyMap<string, string[]>,
+  ahoraMs: number = Date.now(),
+  plataforma: string = Platform.OS,
+): Promise<number> {
+  if (!HAY_RECORDATORIOS_LOCALES || plataforma !== 'android' || idsPorHabito.size === 0) return 0;
+  const N = cargarNotificaciones();
+  if (!N) return 0;
+  try {
+    const plan = planDeRutasDeHabitos((await N.getAllScheduledNotificationsAsync()) as AlarmaProgramada[], idsPorHabito, ahoraMs);
+    let completadas = 0;
+    for (const pedido of plan) {
+      try {
+        await N.scheduleNotificationAsync(pedido);
+        completadas++;
+      } catch {
+        // Una que falla no impide las demás.
+      }
+    }
+    return completadas;
+  } catch {
+    return 0;
   }
 }

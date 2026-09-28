@@ -88,6 +88,10 @@ export const objetivosSchemas = {
   rocasSemanales: z.array(rocaSemanalSchema),
   rocaDiaria: rocaDiariaSchema,
   rocasDiarias: z.array(rocaDiariaSchema),
+  /** `GET /rocks/upcoming` (D-217): las acciones de hoy al último día agendable, con el rango. */
+  rocasAgendadas: z
+    .object({ desde: z.string(), hasta: z.string(), rocas: z.array(rocaDiariaSchema) })
+    .passthrough(),
   urlSubidaEvidencia: urlSubidaEvidenciaSchema,
 };
 

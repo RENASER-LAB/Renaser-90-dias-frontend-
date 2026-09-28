@@ -10,6 +10,8 @@ import {
   type SonidoDeAlarma,
 } from '../../alarmas/sonidoDeAlarma';
 import { preferenciasDeAlarmas } from '../../alarmas/preferenciasDeAlarmas';
+import { categoriaDeDimension } from '../../training/utils/dimensionDelHabito';
+import type { PreferenciaHabitoApi } from '../types/habits.types';
 // SOLO tipos: `import type` se borra al compilar, así que esto NO carga el módulo en runtime. Ver
 // el bloque "POR QUÉ NO SE IMPORTA ARRIBA" más abajo — importarlo de verdad rompe Expo Go.
 import type * as TipoNotificaciones from 'expo-notifications';
@@ -318,6 +320,9 @@ export async function cancelar(userId: string, habitoId: string): Promise<void> 
     }
     await AsyncStorage.removeItem(clave);
   }, undefined);
+  // Un cambio de hora que esperaba su fecha (D-217) deja de tener sentido: lo que se cancela, se
+  // cancela entero.
+  await sinRomper(() => AsyncStorage.removeItem(claveDiferido(userId, habitoId)), undefined);
 }
 
 /**
@@ -344,6 +349,44 @@ export async function antelacionesDe(userId: string, habitoId: string): Promise<
   }, []);
 }
 
+/** Lo que acompaña a una alarma de hábito además de la hora. */
+export interface OpcionesDelAviso {
+  /**
+   * La dimensión de Training del hábito (`CUERPO`, `MENTE`…), para que tocar el aviso la abra (D-218).
+   * Sin ella el aviso igual abre Training, y la pantalla busca el hábito por su id.
+   */
+  dimension?: string | null;
+}
+
+/**
+ * La ruta que lleva el aviso en `data.route`: la misma que manda el servidor en su push de respaldo
+ * (D-217), `/habitos/{habitoId}?dimension={BODY|MIND|CONSCIENCE|SPIRIT}`. Tocarlo abre Training con esa
+ * dimensión (D-218, `AbridorDeAvisos`). Con la categoría del catálogo y no la palabra de la pantalla:
+ * `ESPÍRITU` lleva tilde y `VIDA Y NEGOCIO` espacios, y una ruta no es lugar para eso.
+ */
+export function rutaDelAvisoDeHabito(habitoId: string, dimension?: string | null): string {
+  const categoria = categoriaDeDimension(dimension);
+  const base = `/habitos/${encodeURIComponent(habitoId)}`;
+  return categoria ? `${base}?dimension=${categoria}` : base;
+}
+
+function contenidoDelAviso(
+  titulo: string,
+  minutosAntes: number,
+  horaHHmm: string,
+  canal: CanalDeAlarma,
+  ruta: string,
+): TipoNotificaciones.NotificationContentInput {
+  return {
+    title: tituloDelAviso(titulo, minutosAntes),
+    body: `Te toca a las ${horaHHmm}.`,
+    // `true` y no `'default'`: la cadena se interpreta como el nombre de un archivo de sonido
+    // propio, y la librería se queja de no encontrarlo. El booleano pide el del sistema.
+    sound: canal.sonidoDelAviso,
+    data: { route: ruta },
+  };
+}
+
 /**
  * Programa los avisos diarios de un hábito: uno por cada antelación elegida.
  *
@@ -360,6 +403,7 @@ export async function programar(
   titulo: string,
   horaHHmm: string,
   antelaciones: number[],
+  opciones: OpcionesDelAviso = {},
 ): Promise<boolean> {
   if (HAY_RECORDATORIOS_WEB) {
     // Web no tiene scheduler local: la suscripción se registra una vez y los dos avisos los
@@ -393,13 +437,7 @@ export async function programar(
       // negativo, que es el caso en que `DAILY` recibiría una hora inválida.
       const minutos = ((h * 60 + m - minutosAntes) % MINUTOS_POR_DIA + MINUTOS_POR_DIA) % MINUTOS_POR_DIA;
       const id = await N.scheduleNotificationAsync({
-        content: {
-          title: tituloDelAviso(titulo, minutosAntes),
-          body: `Te toca a las ${horaHHmm}.`,
-          // `true` y no `'default'`: la cadena se interpreta como el nombre de un archivo de sonido
-          // propio, y la librería se queja de no encontrarlo. El booleano pide el del sistema.
-          sound: canal.sonidoDelAviso,
-        },
+        content: contenidoDelAviso(titulo, minutosAntes, horaHHmm, canal, rutaDelAvisoDeHabito(habitoId, opciones.dimension)),
         trigger: {
           type: N.SchedulableTriggerInputTypes.DAILY,
           hour: Math.floor(minutos / 60),
@@ -433,11 +471,30 @@ export async function reprogramarTrasCambioDeHora(
   habitoId: string,
   titulo: string,
   horaHHmm: string,
+  dimension?: string | null,
 ): Promise<boolean | null> {
   if (!HAY_RECORDATORIOS_LOCALES) return null;
   const antelaciones = await antelacionesDe(userId, habitoId);
   if (antelaciones.length === 0) return null;
-  return programar(userId, habitoId, titulo, horaHHmm, antelaciones);
+  return programar(userId, habitoId, titulo, horaHHmm, antelaciones, { dimension });
+}
+
+/**
+ * Como `reprogramarTrasCambioDeHora`, pero con un cambio que el servidor difirió (D-91): hoy sigue la
+ * hora vieja y la nueva empieza en su fecha (D-217). `null` si este teléfono no tenía alarma.
+ */
+export async function reprogramarTrasCambioDiferido(
+  userId: string,
+  habitoId: string,
+  titulo: string,
+  cambio: CambioDiferido,
+  dimension?: string | null,
+  ahora?: Date,
+): Promise<boolean | null> {
+  if (!HAY_RECORDATORIOS_LOCALES) return null;
+  const antelaciones = await antelacionesDe(userId, habitoId);
+  if (antelaciones.length === 0) return null;
+  return programarConCambioDiferido(userId, habitoId, titulo, cambio, antelaciones, { dimension, ahora });
 }
 
 /** `true` si esta persona tiene puesto el repaso semanal en ESTE teléfono. */
@@ -491,4 +548,258 @@ export async function cancelarRepasoSemanal(userId: string): Promise<void> {
       await AsyncStorage.removeItem(CLAVE_REPASO + userId);
     }
   }, undefined);
+}
+
+/* ------------------------------------------------------------------------------------------------
+ * El cambio de hora que rige desde mañana (D-91), también en la alarma — D-217, 2026-09-28
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * Un cambio de hora que el servidor difirió: hoy sigue `horaDeHoy`, y desde `desde` (`YYYY-MM-DD`, el
+ * `deferredEffectiveDate` del PATCH) rige `horaNueva`.
+ */
+export interface CambioDiferido {
+  horaDeHoy: string;
+  horaNueva: string;
+  desde: string;
+}
+
+/** Una alarma de fecha que espera ser la primera de la diaria nueva. */
+interface Pendiente {
+  antes: number;
+  instanteMs: number;
+  id: string;
+}
+
+interface RegistroDiferido {
+  titulo: string;
+  horaNueva: string;
+  dimension: string | null;
+  pendientes: Pendiente[];
+}
+
+const PREFIJO_DIFERIDO = 'renaser.habitos.diferido.';
+
+function claveDiferido(userId: string, habitoId: string): string {
+  return `${PREFIJO_DIFERIDO}${userId}.${habitoId}`;
+}
+
+const esHoraHHmm = (x: string): boolean => /^([01]\d|2[0-3]):[0-5]\d$/.test(x);
+
+/** La fecha local (del teléfono) de un instante, `YYYY-MM-DD`. */
+function fechaLocal(d: Date): string {
+  const dos = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${dos(d.getMonth() + 1)}-${dos(d.getDate())}`;
+}
+
+/** El instante local de `fecha` a `hora`, menos la antelación (puede caer el día anterior). */
+function instanteDelAviso(fecha: string, horaHHmm: string, minutosAntes: number): Date {
+  const [a, m, d] = fecha.split('-').map(Number);
+  const [h, mi] = horaHHmm.split(':').map(Number);
+  return new Date(a, m - 1, d, h, mi - minutosAntes, 0, 0);
+}
+
+/** Cuándo sonaría por primera vez una alarma diaria de `hora:minuto` programada en `ahora`. */
+function primeraDeUnaDiaria(ahora: Date, hora: number, minuto: number): Date {
+  const hoy = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), hora, minuto, 0, 0);
+  if (hoy.getTime() <= ahora.getTime()) hoy.setDate(hoy.getDate() + 1);
+  return hoy;
+}
+
+/**
+ * Programa un hábito cuyo cambio de hora rige desde `cambio.desde` (D-91 en el servidor; D-217 en la
+ * alarma).
+ *
+ * ## El bug que cierra
+ *
+ * `programar` mueve la alarma DIARIA en el acto, y una diaria no sabe «desde mañana»: si a las 06:00 se
+ * pasaba un hábito de las 07:00 a las 10:00, hoy no sonaba a las 07:00 (la de hoy según el servidor) y
+ * sí a las 10:00 (que para el servidor todavía no rige).
+ *
+ * ## Cómo
+ *
+ * - **Hoy, a la hora vieja**: una alarma de FECHA por antelación, si todavía no pasó.
+ * - **Desde la fecha, a la hora nueva**: si la diaria programada ahora ya sonaría por primera vez ese día
+ *   o después (la hora nueva ya pasó hoy), se programa la diaria de una. Si sonaría antes —hoy mismo—,
+ *   va una alarma de FECHA para el primer día y se anota como pendiente; `completarCambiosDiferidos` la
+ *   convierte en la diaria la primera vez que la app se abra cuando ya no puede adelantarse. Si la app
+ *   no se abre, suena ese primer día igual, y de ahí en adelante cubre el push del servidor (D-217): ese
+ *   teléfono dejó de confirmar sus alarmas.
+ *
+ * Todas las ids quedan bajo la misma clave del hábito, así que `cancelar` las quita todas.
+ */
+export async function programarConCambioDiferido(
+  userId: string,
+  habitoId: string,
+  titulo: string,
+  cambio: CambioDiferido,
+  antelaciones: number[],
+  opciones: OpcionesDelAviso & { ahora?: Date } = {},
+): Promise<boolean> {
+  if (HAY_RECORDATORIOS_WEB) return antelaciones.length === 0 ? true : registrarSuscripcionWebPush();
+  const N = notificaciones();
+  if (!N || !esHoraHHmm(cambio.horaDeHoy) || !esHoraHHmm(cambio.horaNueva)) return false;
+  await cancelar(userId, habitoId);
+  const claveSet = CLAVE_ANTELACIONES + `${userId}.${habitoId}`;
+  if (antelaciones.length === 0) {
+    await sinRomper(() => AsyncStorage.removeItem(claveSet), undefined);
+    return true;
+  }
+  const ahora = opciones.ahora ?? new Date();
+  const ruta = rutaDelAvisoDeHabito(habitoId, opciones.dimension);
+  return sinRomper(async () => {
+    if (!(await pedirPermiso())) return false;
+    const canal = canalDeAlarma('habitos', await sonidoDe(userId, habitoId), { id: habitoId, titulo });
+    await asegurarCanal(canal);
+    const ids: string[] = [];
+    const pendientes: Pendiente[] = [];
+    const hoy = fechaLocal(ahora);
+    for (const antes of [...antelaciones].sort((a, b) => b - a)) {
+      const deHoy = instanteDelAviso(hoy, cambio.horaDeHoy, antes);
+      if (hoy < cambio.desde && deHoy.getTime() > ahora.getTime()) {
+        ids.push(await N.scheduleNotificationAsync({
+          content: contenidoDelAviso(titulo, antes, cambio.horaDeHoy, canal, ruta),
+          trigger: { type: N.SchedulableTriggerInputTypes.DATE, date: deHoy, channelId: canal.id },
+        }));
+      }
+      const primera = instanteDelAviso(cambio.desde, cambio.horaNueva, antes);
+      const hora = primera.getHours();
+      const minuto = primera.getMinutes();
+      const contenido = contenidoDelAviso(titulo, antes, cambio.horaNueva, canal, ruta);
+      if (primeraDeUnaDiaria(ahora, hora, minuto).getTime() >= primera.getTime()) {
+        ids.push(await N.scheduleNotificationAsync({
+          content: contenido,
+          trigger: { type: N.SchedulableTriggerInputTypes.DAILY, hour: hora, minute: minuto, channelId: canal.id },
+        }));
+      } else {
+        const id = await N.scheduleNotificationAsync({
+          content: contenido,
+          trigger: { type: N.SchedulableTriggerInputTypes.DATE, date: primera, channelId: canal.id },
+        });
+        ids.push(id);
+        pendientes.push({ antes, instanteMs: primera.getTime(), id });
+      }
+    }
+    await AsyncStorage.setItem(claveDe(userId, habitoId), JSON.stringify(ids));
+    await AsyncStorage.setItem(claveSet, JSON.stringify(antelaciones));
+    if (pendientes.length > 0) {
+      const registro: RegistroDiferido = { titulo, horaNueva: cambio.horaNueva, dimension: opciones.dimension ?? null, pendientes };
+      await AsyncStorage.setItem(claveDiferido(userId, habitoId), JSON.stringify(registro));
+    }
+    return true;
+  }, false);
+}
+
+/**
+ * Convierte en diaria cada alarma de fecha que esperaba el primer día de una hora nueva, en cuanto la
+ * diaria ya no puede sonar antes de ese día. Idempotente; corre al abrir la app. Devuelve cuántas
+ * convirtió.
+ */
+export async function completarCambiosDiferidos(userId: string, ahora: Date = new Date()): Promise<number> {
+  const N = notificaciones();
+  if (!N) return 0;
+  return sinRomper(async () => {
+    const prefijo = `${PREFIJO_DIFERIDO}${userId}.`;
+    const claves = (await AsyncStorage.getAllKeys()).filter(k => k.startsWith(prefijo));
+    let convertidas = 0;
+    for (const clave of claves) {
+      convertidas += await completarUno(N, userId, clave.slice(prefijo.length), ahora);
+    }
+    return convertidas;
+  }, 0);
+}
+
+async function completarUno(
+  N: typeof TipoNotificaciones,
+  userId: string,
+  habitoId: string,
+  ahora: Date,
+): Promise<number> {
+  const crudo = await AsyncStorage.getItem(claveDiferido(userId, habitoId));
+  if (!crudo) return 0;
+  const registro = JSON.parse(crudo) as RegistroDiferido;
+  const ids = leerIds((await AsyncStorage.getItem(claveDe(userId, habitoId))) ?? '[]');
+  const canal = canalDeAlarma('habitos', await sonidoDe(userId, habitoId), { id: habitoId, titulo: registro.titulo });
+  const quedan: Pendiente[] = [];
+  let convertidas = 0;
+  for (const p of registro.pendientes) {
+    const primera = new Date(p.instanteMs);
+    if (primeraDeUnaDiaria(ahora, primera.getHours(), primera.getMinutes()).getTime() < p.instanteMs) {
+      quedan.push(p);
+      continue;
+    }
+    await N.cancelScheduledNotificationAsync(p.id).catch(() => {});
+    await asegurarCanal(canal);
+    const nueva = await N.scheduleNotificationAsync({
+      content: contenidoDelAviso(registro.titulo, p.antes, registro.horaNueva, canal,
+        rutaDelAvisoDeHabito(habitoId, registro.dimension)),
+      trigger: {
+        type: N.SchedulableTriggerInputTypes.DAILY,
+        hour: primera.getHours(),
+        minute: primera.getMinutes(),
+        channelId: canal.id,
+      },
+    });
+    const i = ids.indexOf(p.id);
+    if (i >= 0) ids[i] = nueva;
+    else ids.push(nueva);
+    convertidas++;
+  }
+  await AsyncStorage.setItem(claveDe(userId, habitoId), JSON.stringify(ids));
+  if (quedan.length === 0) await AsyncStorage.removeItem(claveDiferido(userId, habitoId));
+  else await AsyncStorage.setItem(claveDiferido(userId, habitoId), JSON.stringify({ ...registro, pendientes: quedan }));
+  return convertidas;
+}
+
+/* ------------------------------------------------------------------------------------------------
+ * Teléfono nuevo o app reinstalada: armar lo que el servidor sabe — D-217, 2026-09-28
+ * ---------------------------------------------------------------------------------------------- */
+
+/**
+ * Arma la alarma de cada hábito que, según el servidor, tiene recordatorio y en este teléfono no tiene
+ * ninguna. Devuelve cuántos hábitos armó.
+ *
+ * ## El bug que cierra
+ *
+ * Las antelaciones y las ids viven en este teléfono (AsyncStorage). En un teléfono nuevo, o al
+ * reinstalar, el servidor seguía diciendo «recordatorio activo, 10 min antes» y el teléfono no tenía
+ * ninguna alarma: no sonaba nada hasta que la persona volviera a guardar la hora de cada hábito.
+ *
+ * ## Qué arma y qué no
+ *
+ * - Solo si el servidor dice `reminderEnabled` y trae `reminderMinutesBefore` y hora. Un hábito que ya
+ *   tiene alarma en este teléfono no se toca.
+ * - Con las antelaciones guardadas en el teléfono si las hay; si no, con la única que conoce el servidor
+ *   (la más temprana que se eligió). «30 min antes y a la hora» vuelve como «30 min antes»: el servidor
+ *   guarda un solo número.
+ * - Con el cambio de hora pendiente, si lo hay, respetando su fecha.
+ * - **No pide permiso**: corre al abrir la app, no por un toque. Sin permiso de avisos no arma nada.
+ */
+export async function armarRecordatoriosQueFaltan(
+  userId: string,
+  preferencias: ReadonlyArray<PreferenciaHabitoApi>,
+  opciones: { ahora?: Date; dimensionDe?: (habitoId: string) => string | null } = {},
+): Promise<number> {
+  const N = notificaciones();
+  if (!N) return 0;
+  const permiso = await sinRomper(async () => (await N.getPermissionsAsync()).granted, false);
+  if (!permiso) return 0;
+  const conAlarma = await recordatoriosPorHabito(userId);
+  let armados = 0;
+  for (const p of preferencias) {
+    if (p.reminderEnabled !== true || p.reminderMinutesBefore == null || !p.triggerTime) continue;
+    if ((conAlarma.get(p.habitId)?.length ?? 0) > 0) continue;
+    const guardadas = await antelacionesDe(userId, p.habitId);
+    const antelaciones = guardadas.length > 0 ? guardadas : [p.reminderMinutesBefore];
+    const dimension = opciones.dimensionDe?.(p.habitId) ?? null;
+    const hora = p.triggerTime.slice(0, 5);
+    const cambio = p.pendingChange;
+    const ok = cambio?.triggerTime && cambio.effectiveDate
+      ? await programarConCambioDiferido(userId, p.habitId, p.title,
+        { horaDeHoy: hora, horaNueva: cambio.triggerTime.slice(0, 5), desde: cambio.effectiveDate },
+        antelaciones, { dimension, ahora: opciones.ahora })
+      : await programar(userId, p.habitId, p.title, hora, antelaciones, { dimension });
+    if (ok) armados++;
+  }
+  return armados;
 }

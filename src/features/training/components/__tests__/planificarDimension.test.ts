@@ -48,7 +48,17 @@ jest.mock('../../../habits/notificaciones/recordatoriosDeHabito', () => ({
   HAY_RECORDATORIOS_WEB: false,
   antelacionesDe: async () => [],
   programar: async () => true,
+  // D-217: con el cambio diferido (D-91, siempre) la hoja programa la alarma respetando su fecha.
+  programarConCambioDiferido: async () => true,
   prepararWebPush: async () => true,
+}));
+// D-217: la hoja pide «Alarmas y recordatorios» con el primer recordatorio; acá no hay sistema que
+// consultar, así que nunca hace falta pedirlo.
+jest.mock('../../../alarmas/pedirAlarmaExacta', () => ({
+  hayQuePedirAlarmaExactaAlGuardar: async () => false,
+  anotarQueSePidioAlarmaExacta: async () => undefined,
+  abrirPermisoDeAlarmasExactas: async () => 'ninguna',
+  TEXTO_PEDIDO_ALARMA_EXACTA: '',
 }));
 jest.mock('../../../habits/api/habitsApi', () => ({
   obtenerPreferencias: () => mockPreferencias(),
