@@ -49,10 +49,10 @@ beforeEach(() => {
 
 describe('Android/iOS: el Image pide la foto con la sesión', () => {
   it('la URL completa del backend y la sesión en X-Auth-Token', () => {
-    expect(fuenteNativaDeLaFoto(RUTA, 'sesion-1')).toEqual({
+    expect(fuenteNativaDeLaFoto(RUTA, 'sesion-1')).toEqual([{
       uri: 'http://localhost:8080/api/v1/chat/conversations/c-1/foto',
       headers: { 'X-Auth-Token': 'sesion-1' },
-    });
+    }]);
   });
 
   it('sin sesión no hay nada que pedir: queda la tarjeta sin nombre', () => {
