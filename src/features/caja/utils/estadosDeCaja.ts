@@ -1,4 +1,10 @@
-import type { DetalleDeCaja, MiCaja, PasoDelHistorial } from '../api/cajaSchemas';
+import {
+  cajaIncompletaSchema,
+  type DetalleDeCaja,
+  type FondoDeLaCarta,
+  type MiCaja,
+  type PasoDelHistorial,
+} from '../api/cajaSchemas';
 
 /**
  * Qué dice y qué ofrece cada estado de la Caja Renaser (spec §2). Todo lo que la pantalla decide
@@ -139,6 +145,19 @@ export function queFaltaParaEnviar(detalle: Pick<DetalleDeCaja, 'faltaParaEnviar
   return falta;
 }
 
+/**
+ * El 409 de «Marcar enviada» cuando falta algo trae `faltan` (`['FOTO', 'COMPROBANTE']`) y un
+ * `message` con las claves en crudo («Para enviarla falta: [FOTO, COMPROBANTE]»). Esto lo dice con
+ * las palabras de la pantalla, o `null` si el error no es ese (se muestra el mensaje de siempre).
+ */
+export function faltaSegunElServidor(error: unknown): string | null {
+  const cuerpo = (error as { status?: number; body?: unknown } | null) ?? null;
+  if (cuerpo?.status !== 409) return null;
+  const leido = cajaIncompletaSchema.safeParse(cuerpo.body);
+  if (!leido.success || leido.data.faltan.length === 0) return null;
+  return textoDeLoQueFalta(leido.data.faltan.map(f => FALTA[f] ?? f.toLowerCase()));
+}
+
 export function textoDeLoQueFalta(falta: string[]): string | null {
   return falta.length > 0 ? `Falta: ${falta.join(', ')}` : null;
 }
@@ -188,11 +207,17 @@ export function fechaCortaDe(iso: string | null | undefined): string | null {
   return `${d.getDate()} ${MESES[d.getMonth()]}`;
 }
 
+/**
+ * En el historial, `POR_REVISAR` es siempre una aprobación del Admin (spec §11: el paso automático no
+ * se guarda), así que se nombra por lo que pasó y no por el estado.
+ */
+const EN_EL_HISTORIAL: Record<string, string> = { POR_REVISAR: 'Aprobada' };
+
 /** «Enviada · 28 sep · Ana» (y «Envío 2 ·» delante si es un reenvío). */
 export function textoDelPaso(paso: PasoDelHistorial): string {
   const partes = [
     paso.envio && paso.envio > 1 ? `Envío ${paso.envio}` : null,
-    etiquetaDelEstado(paso.estado),
+    EN_EL_HISTORIAL[paso.estado] ?? etiquetaDelEstado(paso.estado),
     fechaCortaDe(paso.en),
     paso.porNombre?.trim() || null,
   ];
@@ -247,4 +272,16 @@ export function textoDelEnvio(envio: { medio?: string | null; courier?: string |
 /** Solo se abre un enlace web: un `rastreoUrl` raro no se le pasa al sistema. */
 export function rastreoAbrible(url: string | null | undefined): string | null {
   return url && /^https?:\/\//i.test(url.trim()) ? url.trim() : null;
+}
+
+// ─── La carta ───────────────────────────────────────────────────────────────
+
+/**
+ * Qué fondo tiene la carta hoy, en pocas palabras: «Fondo original» o «Fondo nuevo · 28 sep · Ana».
+ * Sin estado leído (falló la lectura), nada.
+ */
+export function textoDelFondo(fondo: FondoDeLaCarta | null): string | null {
+  if (!fondo) return null;
+  if (!fondo.cambiado) return 'Fondo original';
+  return ['Fondo nuevo', fechaCortaDe(fondo.cambiadoEn), fondo.cambiadoPor?.trim() || null].filter(Boolean).join(' · ');
 }

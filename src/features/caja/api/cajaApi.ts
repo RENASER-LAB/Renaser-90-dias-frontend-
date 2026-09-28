@@ -4,12 +4,14 @@ import {
   contenidoDeLaCajaSchema,
   detalleDeCajaSchema,
   estadoDeCajaSchema,
+  fondoDeLaCartaSchema,
   listaDeCajasSchema,
   miCajaSchema,
   subidaDeCajaSchema,
   type ContenidoDeLaCaja,
   type DetalleDeCaja,
   type DestinoDeMiCaja,
+  type FondoDeLaCarta,
   type ListaDeCajas,
   type MiCaja,
   type SubidaDeCaja,
@@ -27,6 +29,10 @@ export const BASE_ADMIN = '/api/v1/admin/caja';
 
 const rutaDe = (aprendizId: string) => `${BASE_ADMIN}/${encodeURIComponent(aprendizId)}`;
 
+/**
+ * `page` empieza en 0; `size` por defecto 50 y máximo 200 en el servidor. Sin `estado` el servidor
+ * devuelve todas menos `NO_APLICA` (spec §11).
+ */
 export interface FiltroDeCajas {
   estado?: string | null;
   q?: string | null;
@@ -169,12 +175,23 @@ export async function pedirSubidaDelFondo(tipoContenido: string): Promise<Subida
   );
 }
 
-export async function confirmarFondo(ruta: string): Promise<void> {
-  await apiFetch<unknown>(`${BASE_ADMIN}/carta/fondo/confirm`, { method: 'POST', body: { ruta } });
+const FONDO = `${BASE_ADMIN}/carta/fondo`;
+
+function fondo(respuesta: unknown, metodo: string, tramo = ''): FondoDeLaCarta {
+  return validarRespuesta<FondoDeLaCarta>(fondoDeLaCartaSchema, respuesta, `${metodo} ${FONDO}${tramo}`);
 }
 
-export async function volverAlFondoOriginal(): Promise<void> {
-  await apiFetch<unknown>(`${BASE_ADMIN}/carta/fondo`, { method: 'DELETE' });
+/** Si la carta tiene un fondo cambiado y si este servidor puede guardar uno. */
+export async function leerFondoDeLaCarta(): Promise<FondoDeLaCarta> {
+  return fondo(await apiFetch<unknown>(FONDO), 'GET');
+}
+
+export async function confirmarFondo(ruta: string): Promise<FondoDeLaCarta> {
+  return fondo(await apiFetch<unknown>(`${FONDO}/confirm`, { method: 'POST', body: { ruta } }), 'POST', '/confirm');
+}
+
+export async function volverAlFondoOriginal(): Promise<FondoDeLaCarta> {
+  return fondo(await apiFetch<unknown>(FONDO, { method: 'DELETE' }), 'DELETE');
 }
 
 /** Rutas de archivos (no pasan por `apiFetch`: son una imagen y un CSV, con la sesión aparte). */
@@ -194,7 +211,10 @@ export async function leerMiCaja(): Promise<MiCaja> {
   return validarRespuesta<MiCaja>(miCajaSchema, await apiFetch<unknown>(MI_CAJA), `GET ${MI_CAJA}`);
 }
 
-/** Lo que el aprendiz puede cambiar antes del envío. Vacío = sin cambio. */
+/**
+ * Lo que el aprendiz puede cambiar antes del envío. Se manda el formulario entero: un campo `null`
+ * BORRA lo que había (spec §11), no lo deja como estaba.
+ */
 export async function guardarMiDestino(destino: DestinoDeMiCaja): Promise<void> {
   await apiFetch<unknown>(`${MI_CAJA}/destino`, { method: 'PUT', body: destino });
 }

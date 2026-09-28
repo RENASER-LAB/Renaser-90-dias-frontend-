@@ -110,6 +110,25 @@ export const contenidoDeLaCajaSchema = z
   })
   .passthrough();
 
+/**
+ * `GET /api/v1/admin/caja/carta/fondo` (y lo que devuelven `confirm` y `DELETE`): si la carta tiene un
+ * fondo subido por el Admin y si este servidor puede guardar uno (en local, sin almacenamiento, no).
+ */
+export const fondoDeLaCartaSchema = z
+  .object({
+    cambiado: z.boolean(),
+    sePuedeCambiar: z.boolean().nullish(),
+    cambiadoPor: textoOpcional,
+    cambiadoEn: textoOpcional,
+  })
+  .passthrough();
+
+/**
+ * El 409 de «enviar» cuando falta algo: `{message, faltan, timestamp}` (spec §11). `faltan` son las
+ * mismas claves de `faltaParaEnviar`.
+ */
+export const cajaIncompletaSchema = z.object({ faltan: z.array(z.string()) }).passthrough();
+
 /** `GET /api/v1/mentor/trainees/{id}/caja`: solo el estado. */
 export const estadoDeCajaSchema = z.object({ estado: z.string() }).passthrough();
 
@@ -144,4 +163,5 @@ export type DetalleDeCaja = z.infer<typeof detalleDeCajaSchema>;
 export type SubidaDeCaja = z.infer<typeof subidaDeCajaSchema>;
 export type ContenidoDeLaCaja = z.infer<typeof contenidoDeLaCajaSchema>;
 export type MiCaja = z.infer<typeof miCajaSchema>;
+export type FondoDeLaCarta = z.infer<typeof fondoDeLaCartaSchema>;
 export type DestinoDeMiCaja = NonNullable<MiCaja['destino']>;

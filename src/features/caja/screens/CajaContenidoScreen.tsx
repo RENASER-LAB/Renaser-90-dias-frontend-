@@ -16,11 +16,14 @@ import {
   confirmarFondo,
   guardarContenidoDeLaCaja,
   leerContenidoDeLaCaja,
+  leerFondoDeLaCarta,
   pedirSubidaDelFondo,
   volverAlFondoOriginal,
 } from '../api/cajaApi';
+import type { FondoDeLaCarta as EstadoDelFondo } from '../api/cajaSchemas';
 import { Titulo } from '../components/PartesDelDetalle';
 import { elementosParaGuardar, type ElementoEnEdicion } from '../utils/contenidoYDestino';
+import { textoDelFondo } from '../utils/estadosDeCaja';
 import { elegirImagen, subirImagen } from '../utils/subirImagen';
 
 /**
@@ -150,11 +153,21 @@ export function CajaContenidoScreen({ onVolver }: { onVolver: () => void }) {
   );
 }
 
-/** Cambiar la imagen de fondo de la carta, o volver a la original. Se ve en «Ver carta» de cada caja. */
+/**
+ * Cambiar la imagen de fondo de la carta, o volver a la original. Se ve en «Ver carta» de cada caja.
+ * Lee primero cómo está (`GET …/carta/fondo`): «Volver al original» solo si hay uno cambiado, y
+ * «Cambiar fondo» solo si el servidor puede guardar la imagen.
+ */
 function FondoDeLaCarta() {
   const { c, t } = useTheme();
+  const [fondo, setFondo] = useState<EstadoDelFondo | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [aviso, setAviso] = useState<{ texto: string; error: boolean } | null>(null);
+
+  useEffect(() => {
+    leerFondoDeLaCarta().then(setFondo, () => setFondo(null));
+  }, []);
+
   const cambiar = async () => {
     setAviso(null);
     const resultado = await subirImagen({
@@ -165,8 +178,10 @@ function FondoDeLaCarta() {
       alSubir: () => setOcupado(true),
     });
     setOcupado(false);
-    if (resultado.tipo === 'lista') setAviso({ texto: 'Listo: la carta tiene el fondo nuevo.', error: false });
-    else if (resultado.tipo === 'fallo') setAviso({ texto: resultado.mensaje, error: true });
+    if (resultado.tipo === 'lista') {
+      setFondo(resultado.valor);
+      setAviso({ texto: 'Listo: la carta tiene el fondo nuevo.', error: false });
+    } else if (resultado.tipo === 'fallo') setAviso({ texto: resultado.mensaje, error: true });
   };
 
   const volver = async () => {
@@ -174,7 +189,7 @@ function FondoDeLaCarta() {
     setOcupado(true);
     setAviso(null);
     try {
-      await volverAlFondoOriginal();
+      setFondo(await volverAlFondoOriginal());
       setAviso({ texto: 'Listo: la carta volvió al fondo original.', error: false });
     } catch (e) {
       setAviso({ texto: mensajeDeError(e, 'No se pudo.'), error: true });
@@ -183,16 +198,23 @@ function FondoDeLaCarta() {
     }
   };
 
+  const estado = textoDelFondo(fondo);
+  // Sin estado leído se ofrecen los dos: el servidor dice que no si no corresponde.
+  const puedeCambiar = fondo?.sePuedeCambiar !== false;
+  const puedeVolver = fondo ? fondo.cambiado : true;
+
   return (
     <View style={{ gap: 10 }}>
       <Titulo>Fondo de la carta</Titulo>
-      <BotonSecundario
-        etiqueta="Cambiar fondo"
-        icono="image"
-        onPress={() => void cambiar()}
-        cargando={ocupado}
-      />
-      <BotonSecundario etiqueta="Volver al original" onPress={() => void volver()} deshabilitado={ocupado} />
+      {estado ? <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>{estado}</Text> : null}
+      {puedeCambiar ? (
+        <BotonSecundario etiqueta="Cambiar fondo" icono="image" onPress={() => void cambiar()} cargando={ocupado} />
+      ) : (
+        <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>Este servidor no guarda imágenes.</Text>
+      )}
+      {puedeVolver ? (
+        <BotonSecundario etiqueta="Volver al original" onPress={() => void volver()} deshabilitado={ocupado} />
+      ) : null}
       {aviso ? (
         <Text
           accessibilityRole={aviso.error ? 'alert' : undefined}

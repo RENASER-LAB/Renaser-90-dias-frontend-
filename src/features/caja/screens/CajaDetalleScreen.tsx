@@ -38,6 +38,7 @@ import {
   accionesDelEstado,
   costoDelTexto,
   etiquetaDelEstado,
+  faltaSegunElServidor,
   queFaltaParaEnviar,
   seEstaArmando,
   textoDeLoQueFalta,
@@ -98,7 +99,9 @@ export function CajaDetalleScreen({ aprendizId, onVolver }: { aprendizId: string
       actualizar(await hacer());
       setReportando(false);
     } catch (e) {
-      setError(mensajeDeError(e, 'No se pudo. Vuelve a intentar.'));
+      setError(faltaSegunElServidor(e) ?? mensajeDeError(e, 'No se pudo. Vuelve a intentar.'));
+      // Un 409 dice que el estado cambió o que falta algo: se relee para que la pantalla lo muestre.
+      if ((e as { status?: number } | null)?.status === 409) void recargar();
     } finally {
       setHaciendo(null);
     }

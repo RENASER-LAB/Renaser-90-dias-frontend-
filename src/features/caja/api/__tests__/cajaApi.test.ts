@@ -10,13 +10,17 @@ import {
   consultaDeLaLista,
   ejecutarAccion,
   guardarChecklist,
+  confirmarFondo,
   guardarContenidoDeLaCaja,
+  leerCaja,
+  leerFondoDeLaCarta,
   leerMiCaja,
   listarCajas,
   marcarEntregada,
   marcarEnviada,
   pedirSubidaDeImagen,
   reportarProblema,
+  volverAlFondoOriginal,
 } from '../cajaApi';
 
 /** El contrato de la Caja Renaser (spec §9), tal como lo usa la app: rutas, métodos y cuerpos. */
@@ -116,5 +120,92 @@ describe('la caja del aprendiz', () => {
     mockApiFetch.mockResolvedValue({ estado: 'EN_EVALUACION' });
     expect((await leerMiCaja()).estado).toBe('EN_EVALUACION');
     expect(mockApiFetch).toHaveBeenCalledWith('/api/v1/me/caja', undefined);
+  });
+});
+
+/**
+ * El servidor real (D-219, spec §11) manda `null` en todo campo sin valor, no lo omite. Estas son sus
+ * respuestas tal cual: si un esquema aceptara solo `undefined`, la pantalla quedaría en «No se pudo».
+ */
+describe('las respuestas reales del servidor, con null', () => {
+  it('un detalle recién aprobado: sin envío, sin fotos, sin cumplimiento, destino a medias', async () => {
+    mockApiFetch.mockResolvedValue({
+      aprendizId: 'a-1',
+      nombre: 'Ana',
+      estado: 'POR_REVISAR',
+      envio: 1,
+      cumplimientoFase1: null,
+      destino: {
+        nombre: 'Ana', celular: null, pais: 'Perú', ciudad: null, distrito: null, provincia: null,
+        direccion: null, referencias: null, dni: null, quienRecibe: null, otraDireccion: null, otroCelular: null,
+      },
+      contenido: [{ valor: 'taza', etiqueta: 'Taza', marcado: false }],
+      fotoArmadaUrl: null,
+      comprobanteUrl: null,
+      envioDatos: null,
+      historial: [{ envio: 1, estado: 'POR_REVISAR', en: '2026-09-28T15:00:00Z', porNombre: null }],
+      faltaParaEnviar: ['CONTENIDO', 'FOTO', 'COMPROBANTE'],
+    });
+    const detalle = await leerCaja('a-1');
+    expect(detalle.envioDatos).toBeNull();
+    expect(detalle.historial?.[0]?.porNombre).toBeNull();
+  });
+
+  it('un envío con courier y costo nulos, y el costo como número', async () => {
+    mockApiFetch.mockResolvedValue({
+      ...DETALLE,
+      estado: 'ENVIADA',
+      envioDatos: { medio: 'inDrive', courier: null, codigo: 'ABC-123', costo: null, rastreoUrl: null },
+    });
+    expect((await leerCaja('a-1')).envioDatos?.codigo).toBe('ABC-123');
+  });
+
+  it('la lista con grupo, día y cumplimiento nulos', async () => {
+    mockApiFetch.mockResolvedValue({
+      items: [
+        { aprendizId: 'a-1', nombre: 'Ana', grupo: null, diaPrograma: 8, estado: 'EN_EVALUACION', envio: 1,
+          actualizadoEn: null, cumplimientoFase1: null },
+      ],
+      total: 1,
+      conteos: { EN_EVALUACION: 1, POR_REVISAR: 0 },
+    });
+    expect((await listarCajas({ page: 0 })).items).toHaveLength(1);
+  });
+
+  it('la caja del aprendiz: siempre cinco pasos, `en` null en los que no llegó, envío sin costo', async () => {
+    mockApiFetch.mockResolvedValue({
+      estado: 'ENVIADA',
+      pasos: [
+        { estado: 'EN_EVALUACION', en: null },
+        { estado: 'POR_REVISAR', en: null },
+        { estado: 'ARMANDO', en: '2026-09-28T15:00:00Z' },
+        { estado: 'ENVIADA', en: '2026-09-28T16:00:00Z' },
+        { estado: 'ENTREGADA', en: null },
+      ],
+      envioDatos: { medio: 'Olva', courier: 'Olva', codigo: '123', rastreoUrl: 'https://tracking.olvaexpress.pe' },
+      puedeConfirmar: true,
+      puedeCambiarDestino: false,
+      destino: { otraDireccion: null, otroCelular: null, quienRecibe: null, referencias: null, provincia: null },
+    });
+    const caja = await leerMiCaja();
+    expect(caja.pasos).toHaveLength(5);
+    expect(caja.destino?.provincia).toBeNull();
+  });
+});
+
+describe('el fondo de la carta', () => {
+  const FONDO = { cambiado: true, sePuedeCambiar: true, cambiadoPor: 'Ana', cambiadoEn: '2026-09-28T15:00:00Z' };
+
+  it('se lee, se confirma y se quita, y los tres devuelven cómo quedó', async () => {
+    mockApiFetch.mockResolvedValue(FONDO);
+    expect((await leerFondoDeLaCarta()).cambiado).toBe(true);
+    expect((await confirmarFondo('caja/cartas/x.png')).cambiadoPor).toBe('Ana');
+    mockApiFetch.mockResolvedValue({ cambiado: false, sePuedeCambiar: false, cambiadoPor: null, cambiadoEn: null });
+    expect((await volverAlFondoOriginal()).cambiado).toBe(false);
+    expect(mockApiFetch.mock.calls.map(c => [c[0], c[1]?.method, c[1]?.body])).toEqual([
+      ['/api/v1/admin/caja/carta/fondo', undefined, undefined],
+      ['/api/v1/admin/caja/carta/fondo/confirm', 'POST', { ruta: 'caja/cartas/x.png' }],
+      ['/api/v1/admin/caja/carta/fondo', 'DELETE', undefined],
+    ]);
   });
 });

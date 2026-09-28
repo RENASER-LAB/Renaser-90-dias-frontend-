@@ -7,6 +7,7 @@ import {
   etiquetaDelChip,
   etiquetaDelEstado,
   etiquetaParaElAprendiz,
+  faltaSegunElServidor,
   fechaCortaDe,
   pasosDeMiCaja,
   queFaltaParaEnviar,
@@ -14,6 +15,7 @@ import {
   textoDeLoQueFalta,
   textoDelCosto,
   textoDelEnvio,
+  textoDelFondo,
   textoDelPaso,
 } from '../estadosDeCaja';
 
@@ -135,6 +137,36 @@ describe('el historial', () => {
     expect(textoDelPaso({ envio: 2, estado: 'ARMANDO', en: '2026-09-29T15:00:00Z', porNombre: null })).toBe(
       'Envío 2 · Armando · 29 sep',
     );
+  });
+
+  it('POR_REVISAR en el historial es la aprobación del Admin, no «Por revisar»', () => {
+    expect(textoDelPaso({ envio: 1, estado: 'POR_REVISAR', en: '2026-09-28T15:00:00Z', porNombre: 'Ana' })).toBe(
+      'Aprobada · 28 sep · Ana',
+    );
+  });
+});
+
+describe('el 409 de «Marcar enviada»', () => {
+  it('dice qué falta con palabras, no con las claves del servidor', () => {
+    const error = { status: 409, body: { message: 'Para enviarla falta: [FOTO, COMPROBANTE]', faltan: ['FOTO', 'COMPROBANTE'] } };
+    expect(faltaSegunElServidor(error)).toBe('Falta: foto de la caja, comprobante');
+  });
+
+  it('otro 409 (el estado cambió) u otro error sigue con su mensaje de siempre', () => {
+    expect(faltaSegunElServidor({ status: 409, body: { message: 'La caja ya no está en ARMANDO' } })).toBeNull();
+    expect(faltaSegunElServidor({ status: 400, body: { faltan: ['FOTO'] } })).toBeNull();
+    expect(faltaSegunElServidor(new Error('red'))).toBeNull();
+    expect(faltaSegunElServidor(null)).toBeNull();
+  });
+});
+
+describe('el fondo de la carta', () => {
+  it('original, o nuevo con fecha y quién lo cambió', () => {
+    expect(textoDelFondo({ cambiado: false, sePuedeCambiar: true, cambiadoPor: null, cambiadoEn: null })).toBe('Fondo original');
+    expect(textoDelFondo({ cambiado: true, sePuedeCambiar: true, cambiadoPor: 'Ana', cambiadoEn: '2026-09-28T15:00:00Z' })).toBe(
+      'Fondo nuevo · 28 sep · Ana',
+    );
+    expect(textoDelFondo(null)).toBeNull();
   });
 });
 
