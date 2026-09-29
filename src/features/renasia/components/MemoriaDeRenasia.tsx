@@ -6,6 +6,7 @@ import { Icon } from '../../../components/Icon';
 import { MicroLabel } from '../../../components/ui';
 import { useTheme } from '../../../theme/ThemeContext';
 import { space } from '../../../theme/tokens';
+import { NOMBRE_ACOMPANANTE } from '../data/agentes';
 import type { MemoriaRenasiaApi, RecuerdoRenasiaApi } from '../types/renasia.types';
 import { agruparRecuerdos, memoriaVacia } from '../utils/memoria';
 
@@ -42,7 +43,7 @@ export function MemoriaDeRenasia({ memoria, cargando, borrando, error, onOlvidar
     );
 
   const confirmarOlvidarTodo = () =>
-    Alert.alert('¿Olvidar todo?', 'Renasia deja de recordar todo lo que conversaron hasta hoy. Tu chat no se borra.', [
+    Alert.alert('¿Olvidar todo?', `${NOMBRE_ACOMPANANTE} deja de recordar todo lo que conversaron hasta hoy. Tu chat no se borra.`, [
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Olvidar todo', style: 'destructive', onPress: onOlvidarTodo },
     ]);
@@ -50,7 +51,7 @@ export function MemoriaDeRenasia({ memoria, cargando, borrando, error, onOlvidar
   return (
     <View style={{ gap: space.gap }}>
       <Text style={[t.body, { color: c.textSoft, lineHeight: 21 }]}>
-        Renasia lo aprende de lo que conversan, para acompañarte mejor. Nunca guarda cómo te sientes ni nada
+        {NOMBRE_ACOMPANANTE} lo aprende de lo que conversan, para acompañarte mejor. Nunca guarda cómo te sientes ni nada
         de tu salud, y puedes borrarlo cuando quieras.
       </Text>
 
@@ -70,7 +71,7 @@ export function MemoriaDeRenasia({ memoria, cargando, borrando, error, onOlvidar
         <Text style={[t.body, { color: c.textSoft }]}>Cargando…</Text>
       ) : memoria && memoriaVacia(memoria) ? (
         <Text style={[t.body, { color: c.textSoft }]}>
-          Renasia todavía no recuerda nada de ti. Va aprendiendo de lo que conversan.
+          {NOMBRE_ACOMPANANTE} todavía no recuerda nada de ti. Va aprendiendo de lo que conversan.
         </Text>
       ) : memoria ? (
         <>
@@ -114,7 +115,7 @@ export function MemoriaDeRenasia({ memoria, cargando, borrando, error, onOlvidar
             onPress={confirmarOlvidarTodo}
             disabled={borrando}
             accessibilityRole="button"
-            accessibilityLabel="Olvidar todo lo que Renasia recuerda de ti"
+            accessibilityLabel={`Olvidar todo lo que ${NOMBRE_ACOMPANANTE} recuerda de ti`}
             style={[styles.olvidarTodo, { borderColor: c.border, backgroundColor: c.cardBg }]}
           >
             <Text style={[t.small, { color: borrando ? c.micro : c.textSoft, letterSpacing: 1 }]}>

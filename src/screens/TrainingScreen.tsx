@@ -23,6 +23,7 @@ import { completarRegistro, confirmarEvidencia } from '../features/habits/api/ev
 import { crearCierreSinRepetir } from '../features/habits/utils/cierreDeRegistro';
 import { mensajeDeError } from '../services/http/apiClient';
 import { CLAVE_SISTEMA_PASTILLA_RENACER } from '../features/spirit/api/spiritApi';
+import { escucharPropuestaConfirmada } from '../features/renasia/events/avisoPropuestaConfirmada';
 import { escucharPostDiarioCerrado } from '../features/habits/events/avisoPostDiarioCerrado';
 import { PastillaRenacerModal } from '../features/spirit/components/PastillaRenacerModal';
 import type { AudioterapiaSemanal } from '../features/habits/api/audioterapiaApi';
@@ -306,6 +307,8 @@ export default function TrainingScreen() {
   // `useTraining` carga una sola vez al montarse. No se marca nada a mano: se recarga del backend,
   // que es la unica fuente de verdad.
   useEffect(() => escucharPostDiarioCerrado(() => void recargarEntrenamiento()), [recargarEntrenamiento]);
+  // D-229: SER creó un hábito (o cambió otro) y la persona lo confirmó en el chat: se recarga del backend.
+  useEffect(() => escucharPropuestaConfirmada(() => void recargarEntrenamiento()), [recargarEntrenamiento]);
 
   // Evidence Upload Modal State
   // El estado de la subida en sí (archivo elegido, nota, error, envío en curso) vive dentro de
