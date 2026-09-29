@@ -41,6 +41,14 @@ describe('nombreVisibleDeGrupo', () => {
     expect(nombreVisibleDeGrupo(chat, GRUPOS)).toBe('Luisa y sus aprendices');
   });
 
+  it('D-225: un grupo ajeno del Admin (que no está en su /me/cells) se nombra con el nombre del servidor', () => {
+    // Desde D-225 el Admin ve en su lista TODOS los grupos en curso, también los que no le devuelve
+    // `/me/cells`. La app no filtra nada por su lado: el nombre tiene que salir igual del servidor.
+    const ajeno = { type: 'celula', celulaId: 'g-de-otro', title: 'Ricardo y sus aprendices' };
+    expect(nombreVisibleDeGrupo(ajeno, [])).toBe('Ricardo y sus aprendices');
+    expect(nombreVisibleDeGrupo(ajeno, GRUPOS)).toBe('Ricardo y sus aprendices');
+  });
+
   it('no toca las conversaciones que no son de grupo', () => {
     expect(nombreVisibleDeGrupo({ type: 'direct', celulaId: null, title: 'Ana Pérez' }, GRUPOS))
       .toBe('Ana Pérez');
