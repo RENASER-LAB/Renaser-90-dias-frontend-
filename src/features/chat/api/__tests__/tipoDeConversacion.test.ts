@@ -191,7 +191,13 @@ describe('lo que ya andaba sigue andando', () => {
     expect(conv.avatar).toBe('🌐');
   });
 
-  it('CELL sigue titulándose Mi Grupo', () => {
+  it('CELL con nombre del servidor (D-221) lleva ese nombre: «Luisa y sus aprendices»', () => {
+    const conv = mapearResumenConversacion(resumen('CELL', 'Luisa y sus aprendices'), 'yo', {});
+    expect(conv.title).toBe('Luisa y sus aprendices');
+    expect(conv.subtitle).toBe('Chat de tu grupo');
+  });
+
+  it('CELL sin nombre (backend anterior a D-221) sigue titulándose Mi Grupo', () => {
     const conv = mapearResumenConversacion(resumen('CELL'), 'yo', {});
     expect(conv.type).toBe('celula');
     expect(conv.title).toBe('Mi Grupo');
