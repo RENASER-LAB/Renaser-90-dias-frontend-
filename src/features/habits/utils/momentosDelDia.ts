@@ -179,17 +179,12 @@ export function rangosValidos(rangos: RangosDelDia): boolean {
   return true;
 }
 
-/**
- * Hábitos cuyo bloque NO es cuestión de gusto: despertarse es de mañana y dormir es de noche, por
- * definición de lo que la persona está haciendo. Se emparejan por `clave_sistema` y NUNCA por
- * título, que el aprendiz puede renombrar — mismo criterio que el resto de la app.
- *
- * No bloquea: avisa. Alguien que trabaja de noche puede querer dormir a las 09:00 y está en su
- * derecho; lo que no puede pasar es que lo haga sin darse cuenta.
+/*
+ * > **Corregido 2026-09-29 (D-230 del backend).** Acá vivía `MOMENTO_ESPERADO`: «despertarse es de
+ * > mañana y dormir es de noche, por definición» (`WAKE_UP: ['madrugada', 'mañana']`,
+ * > `SLEEP: ['noche', 'madrugada']`). Ya no lo leía ninguna pantalla desde el 2026-09-08, pero era la
+ * > regla escrita. El dueño pidió lo contrario, probando: «que no se limite a eso… no que despertar
+ * > sea sí o sí en la mañana… hay gente que trabaja en la noche… no debes bloquearlo». Ningún hábito
+ * > tiene un bloque esperado: va a la hora que la persona elija. Se borró para que nadie lo vuelva a
+ * > conectar.
  */
-export const MOMENTO_ESPERADO: Readonly<Record<string, readonly MomentoDelDia[]>> = {
-  // Levantarse puede ser de madrugada: es justamente el caso que el corte de las 03:00 contempla.
-  WAKE_UP: ['madrugada', 'mañana'],
-  // Y acostarse a las 00:30 es tarde, no incoherente. Lo que sí llama la atención es dormir de día.
-  SLEEP: ['noche', 'madrugada'],
-};
