@@ -19,6 +19,9 @@ export function useMisEvidencias() {
   const [evidencias, setEvidencias] = useState<EvidenciaApi[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  /* `true` si el servidor dice que hay otra página. Sin esto, `evidencias.length` se leía como el
+     total aunque fuera solo la primera página. */
+  const [hayMas, setHayMas] = useState(false);
 
   const recargar = useCallback(async () => {
     setCargando(true);
@@ -26,8 +29,10 @@ export function useMisEvidencias() {
     try {
       const pagina = await listarMisEvidencias();
       setEvidencias(pagina.evidencias);
+      setHayMas(pagina.nextCursor !== null);
     } catch (e) {
       setEvidencias([]);
+      setHayMas(false);
       setError(e instanceof Error ? e.message : 'No se pudieron cargar tus evidencias.');
     } finally {
       setCargando(false);
@@ -43,5 +48,5 @@ export function useMisEvidencias() {
      backend (PENDIENTE | VALIDA | RECHAZADA | REVISION_MANUAL | ANULADA_ADMIN). */
   const verificadas = evidencias.filter(e => e.estadoValidacion === 'VALIDA').length;
 
-  return { evidencias, verificadas, cargando, error, recargar };
+  return { evidencias, verificadas, cargando, error, hayMas, recargar };
 }

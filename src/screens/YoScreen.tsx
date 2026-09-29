@@ -49,6 +49,7 @@ import { MemoriaDeRenasia } from '../features/renasia/components/MemoriaDeRenasi
 import { useMemoriaDeRenasia } from '../features/renasia/hooks/useMemoriaDeRenasia';
 import { mostrarMemoria } from '../features/renasia/utils/memoria';
 import { useMisEvidencias } from '../features/evidence/hooks/useMisEvidencias';
+import { resumenDeEvidencias } from '../features/evidence/resumenDeEvidencias';
 import { ESTADO_EVIDENCIA, iconoDeTipo } from '../features/evidence/api/evidenceSchemas';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useMiCaja } from '../features/caja/hooks/useMiCaja';
@@ -221,6 +222,7 @@ export default function YoScreen() {
     verificadas: verificadasEvidencias,
     cargando: cargandoEvidencias,
     error: errorEvidencias,
+    hayMas: hayMasEvidencias,
     recargar: recargarEvidencias,
   } = useMisEvidencias();
   const etapasOnboarding = useEtapasOnboarding();
@@ -779,7 +781,14 @@ export default function YoScreen() {
           </View>
 
           <View style={{ gap: space.gapLg, paddingBottom: 28 }}>
-            {/* FASE 1: DATOS PERSONALES & PERFIL */}
+            {/* FASE 1: DATOS PERSONALES & PERFIL 
+                Corregido 2026-09-29 («textos verdaderos»): los subtítulos de estas filas prometían
+                lo que la pantalla de destino no tiene. Decían «Nombre, foto, teléfono y
+                contraseña», «Ubicación, redes y biografía somática», «Mi Onboarding (5 Etapas) ·
+                El Pacto firmado, cuestionario y las 90 variables», «37 fotos subidas y verificadas
+                por tu mentor» (fijo; y ningún mentor verifica), «Medallas y trofeos» (no hay
+                registro de logros), «3 fases» (son 4) y «Video de bienvenida» (no hay video).
+                Ahora dicen solo lo que existe; los conteos salen de los datos. */}
             <View style={{ gap: 10 }}>
               <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
                 FASE 1: DATOS PERSONALES & PERFIL
@@ -793,7 +802,7 @@ export default function YoScreen() {
                     <Icon name="user" size={16} color={c.goldInk} />
                     <View style={{ flex: 1 }}>
                       <Text style={[t.cardTitle, { color: c.textStrong }]}>Editar Perfil</Text>
-                      <Text style={[t.small, { color: c.textSoft }]}>Nombre, foto, teléfono y contraseña</Text>
+                      <Text style={[t.small, { color: c.textSoft }]}>Nombre y foto</Text>
                     </View>
                   </View>
                   <Icon name="chevron" size={12} color={c.goldInk} />
@@ -807,7 +816,7 @@ export default function YoScreen() {
                     <Icon name="doc" size={16} color={c.goldInk} />
                     <View style={{ flex: 1 }}>
                       <Text style={[t.cardTitle, { color: c.textStrong }]}>Información de Perfil</Text>
-                      <Text style={[t.small, { color: c.textSoft }]}>Ubicación, redes y biografía somática</Text>
+                      <Text style={[t.small, { color: c.textSoft }]}>Biografía y departamento</Text>
                     </View>
                   </View>
                   <Icon name="chevron" size={12} color={c.goldInk} />
@@ -828,8 +837,8 @@ export default function YoScreen() {
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
                     <Icon name="stack" size={16} color={c.goldInk} />
                     <View style={{ flex: 1 }}>
-                      <Text style={[t.cardTitle, { color: c.textStrong }]}>Mi Onboarding (5 Etapas)</Text>
-                      <Text style={[t.small, { color: c.textSoft }]}>El Pacto firmado, cuestionario y las 90 variables</Text>
+                      <Text style={[t.cardTitle, { color: c.textStrong }]}>{`Mi Onboarding (${ONBOARDING_STAGES.length} etapas)`}</Text>
+                      <Text style={[t.small, { color: c.textSoft }]}>El Pacto y tu Mapa de Renacimiento</Text>
                     </View>
                   </View>
                   <Icon name="chevron" size={12} color={c.goldInk} />
@@ -843,7 +852,14 @@ export default function YoScreen() {
                     <Icon name="camera" size={16} color={c.goldInk} />
                     <View style={{ flex: 1 }}>
                       <Text style={[t.cardTitle, { color: c.textStrong }]}>Registro de Evidencias</Text>
-                      <Text style={[t.small, { color: c.textSoft }]}>37 fotos subidas y verificadas por tu mentor</Text>
+                      <Text style={[t.small, { color: c.textSoft }]}>
+                        {resumenDeEvidencias({
+                          cargando: cargandoEvidencias,
+                          error: errorEvidencias,
+                          cantidad: evidencias.length,
+                          hayMas: hayMasEvidencias,
+                        })}
+                      </Text>
                     </View>
                   </View>
                   <Icon name="chevron" size={12} color={c.goldInk} />
@@ -857,7 +873,7 @@ export default function YoScreen() {
                     <Icon name="award" size={16} color={c.goldInk} />
                     <View style={{ flex: 1 }}>
                       <Text style={[t.cardTitle, { color: c.textStrong }]}>Logros e Insignias</Text>
-                      <Text style={[t.small, { color: c.textSoft }]}>Medallas y trofeos de tus 90 días</Text>
+                      <Text style={[t.small, { color: c.textSoft }]}>Las metas de tus 90 días</Text>
                     </View>
                   </View>
                   <Icon name="chevron" size={12} color={c.goldInk} />
@@ -888,7 +904,7 @@ export default function YoScreen() {
                     <Icon name="spark" size={16} color={c.goldInk} />
                     <View style={{ flex: 1 }}>
                       <Text style={[t.cardTitle, { color: c.textStrong }]}>El Método Renaser</Text>
-                      <Text style={[t.small, { color: c.textSoft }]}>3 fases para comprenderte y sostener tu transformación</Text>
+                      <Text style={[t.small, { color: c.textSoft }]}>{`${METODO_FASES.length} fases para comprenderte y sostener tu transformación`}</Text>
                     </View>
                   </View>
                   <Icon name="chevron" size={12} color={c.goldInk} />
@@ -902,7 +918,7 @@ export default function YoScreen() {
                     <Icon name="play" size={16} color={c.goldInk} />
                     <View style={{ flex: 1 }}>
                       <Text style={[t.cardTitle, { color: c.textStrong }]}>Repetir Activación Inicial</Text>
-                      <Text style={[t.small, { color: c.textSoft }]}>Video de bienvenida y manifiesto de Macaco</Text>
+                      <Text style={[t.small, { color: c.textSoft }]}>Bienvenida y manifiesto de Macaco</Text>
                     </View>
                   </View>
                   <Icon name="chevron" size={12} color={c.goldInk} />
@@ -1388,7 +1404,9 @@ export default function YoScreen() {
                     ? 'No se pudo cargar el conteo'
                     : evidencias.length === 0
                       ? 'Todavía no subiste ninguna'
-                      : `${evidencias.length} ${evidencias.length === 1 ? 'evidencia' : 'evidencias'} · ${verificadasEvidencias} verificada${verificadasEvidencias === 1 ? '' : 's'}`}
+                      : hayMasEvidencias
+                        ? 'Tus evidencias más recientes'
+                        : `${evidencias.length} ${evidencias.length === 1 ? 'evidencia' : 'evidencias'} · ${verificadasEvidencias} verificada${verificadasEvidencias === 1 ? '' : 's'}`}
               </Text>
             </View>
             <Pressable
@@ -1948,7 +1966,7 @@ export default function YoScreen() {
             <View style={[styles.evidenceImgBox, { height: 160, backgroundColor: c.placeholderA }]}>
               <Text style={{ fontSize: 44 }}>▶</Text>
               <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', marginTop: 8 }]}>
-                Reproducir Manifiesto Macaco (12:45 min)
+                El video todavía no está disponible
               </Text>
             </View>
             <Text style={[t.cardTitle, { color: c.textStrong }]}>
