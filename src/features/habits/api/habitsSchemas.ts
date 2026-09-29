@@ -136,6 +136,14 @@ const trackDelDiaSchema = z
      * a este cambio llega `undefined` y el hook lo trata como `false`.
      */
     tieneEvidencia: z.boolean().optional(),
+    /**
+     * D-226 del backend (2026-09-29): solo en los hábitos que registran un número (KILÓMETROS
+     * DIARIOS). `nullish()`: los demás tracks lo traen null y un backend anterior no lo manda.
+     */
+    medicion: z
+      .object({ unidad: z.string(), valorDelDia: z.number().nullable(), total: z.number() })
+      .passthrough()
+      .nullish(),
   })
   .passthrough();
 

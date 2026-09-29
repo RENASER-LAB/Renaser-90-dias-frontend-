@@ -24,6 +24,13 @@ import {
   subirEvidenciaDeArchivo,
 } from '../api/evidenciaHabitoApi';
 import {
+  formatoKm,
+  leerKilometros,
+  PREGUNTA_DE_KILOMETROS,
+  totalConHoy,
+  type MedicionPedida,
+} from '../utils/registroConFoto';
+import {
   ArchivoEvidencia,
   duracionLegible,
   elegirFotoDeGaleria,
@@ -70,6 +77,11 @@ export interface EvidenciaHabitoModalProps {
   contexto?: string;
   /** Nota previa del registro, si ya había una. */
   notaInicial?: string;
+  /**
+   * D-226: el registro pide los km del día (KILÓMETROS DIARIOS). Es el camino de la web, donde
+   * Training no abre la cámara directa: se pide el número acá, junto a la evidencia.
+   */
+  medicion?: MedicionPedida | null;
   onCerrar: () => void;
   /** Se llama con los puntos que otorgó el SERVIDOR, ya cerrado el registro. */
   onCompletado: (puntosOtorgados: number) => void | Promise<void>;
@@ -91,6 +103,7 @@ export function EvidenciaHabitoModal({
   titulo,
   contexto,
   notaInicial,
+  medicion = null,
   onCerrar,
   onCompletado,
 }: EvidenciaHabitoModalProps) {
@@ -100,6 +113,7 @@ export function EvidenciaHabitoModal({
   const [pestania, setPestania] = useState<Pestania>('FOTO');
   const [archivo, setArchivo] = useState<ArchivoEvidencia | null>(null);
   const [nota, setNota] = useState('');
+  const [kmTexto, setKmTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -115,6 +129,7 @@ export function EvidenciaHabitoModal({
     setPestania('FOTO');
     setArchivo(null);
     setNota(notaInicial ?? '');
+    setKmTexto('');
     setError(null);
     setEnviando(false);
   }, [registroId, visible, notaInicial]);
@@ -134,8 +149,10 @@ export function EvidenciaHabitoModal({
   );
 
   const textoUtil = nota.trim();
-  /** LA regla del pedido: con UNA de las cuatro alcanza. */
-  const puedeSellar = archivo !== null || textoUtil.length > 0;
+  /** D-226: los km escritos, ya como número (coma o punto). `null` = no hay un número válido. */
+  const km = medicion ? leerKilometros(kmTexto) : null;
+  /** LA regla del pedido: con UNA de las cuatro alcanza. Y si pide km, además un número válido. */
+  const puedeSellar = (archivo !== null || textoUtil.length > 0) && (!medicion || km !== null);
 
   const elegir = async (accion: () => Promise<ArchivoEvidencia | null>) => {
     setError(null);
@@ -198,7 +215,7 @@ export function EvidenciaHabitoModal({
       if (textoUtil) {
         await confirmarEvidencia(registroId, { tipo: 'TEXTO', contenidoTexto: textoUtil });
       }
-      const registro = await completarRegistro(registroId, textoUtil || null);
+      const registro = await completarRegistro(registroId, textoUtil || null, km);
       await onCompletado(registro.puntosOtorgados);
     } catch (e) {
       setError(mensajeDeError(e, 'No se pudo registrar tu evidencia. Intenta de nuevo.'));
@@ -385,6 +402,30 @@ export function EvidenciaHabitoModal({
               </View>
             ) : null}
 
+            {medicion ? (
+              <View style={{ gap: 4 }}>
+                <MicroLabel>{PREGUNTA_DE_KILOMETROS}</MicroLabel>
+                <TextInput
+                  value={kmTexto}
+                  onChangeText={setKmTexto}
+                  placeholder="0,0 km"
+                  placeholderTextColor={c.tabInactive}
+                  keyboardType="decimal-pad"
+                  inputMode="decimal"
+                  maxLength={6}
+                  editable={!enviando}
+                  accessibilityLabel={PREGUNTA_DE_KILOMETROS}
+                  style={[
+                    estilos.campoKm,
+                    { color: c.textStrong, borderColor: c.border, backgroundColor: c.cardBgAlt },
+                  ]}
+                />
+                <Text style={[t.micro, { color: c.textSoft, fontSize: 12 }]}>
+                  Total recorrido: {formatoKm(totalConHoy(medicion, kmTexto))} km
+                </Text>
+              </View>
+            ) : null}
+
             {error ? (
               <View style={[estilos.error, { borderColor: c.danger }]}>
                 <Text style={[t.micro, { color: c.danger, fontSize: 12.5 }]}>{error}</Text>
@@ -400,7 +441,9 @@ export function EvidenciaHabitoModal({
             />
             {!puedeSellar ? (
               <Text style={[t.micro, { color: c.textSoft, fontSize: 12, textAlign: 'center' }]}>
-                Sube una foto, un audio o un video — o escribe tu registro. Con uno alcanza.
+                {medicion && (archivo !== null || textoUtil.length > 0)
+                  ? 'Escribe los km de hoy (más que cero).'
+                  : 'Sube una foto, un audio o un video — o escribe tu registro. Con uno alcanza.'}
               </Text>
             ) : null}
 
@@ -512,6 +555,14 @@ const estilos = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     paddingHorizontal: 14,
+  },
+  campoKm: {
+    minHeight: 48,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    fontSize: 20,
+    fontFamily: 'Jost_500Medium',
   },
   campo: {
     minHeight: 96,

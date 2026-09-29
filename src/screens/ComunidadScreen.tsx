@@ -115,6 +115,14 @@ import { abrirConversacionDirecta } from '../features/chat/api/chatApi';
 import type { WireMensaje } from '../features/chat/types/chat.types';
 import { marcarChatMontado } from '../features/renasia/state/chatEnPantalla';
 import { useRanking } from '../features/ranking/hooks/useRanking';
+import {
+  entradasDeLaTabla,
+  invitacionSinPosiciones,
+  TABLAS_DE_RANKING,
+  textoDeMiPuntaje,
+  textoDelPuntaje,
+  type ClaveDeTabla,
+} from '../features/ranking/utils/tablasDeRanking';
 import { ApiError, mensajeDeError } from '../services/http/apiClient';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
 import { SeccionEventos } from '../features/eventos/components/SeccionEventos';
@@ -1203,13 +1211,9 @@ export default function ComunidadScreen() {
    * > otras dos **no se veían nunca**: el ranking por coherencia existía en el servidor, se
    * > calculaba y se guardaba, y ninguna pantalla lo mostraba.
    */
-  const [tipoRanking, setTipoRanking] = useState<'general' | 'coherencia'>('general');
+  const [tipoRanking, setTipoRanking] = useState<ClaveDeTabla>('general');
 
-  const apiRankingEntries = useMemo(() => {
-    if (!rankingData) return [];
-    if (tipoRanking === 'coherencia') return rankingData.coherenciaIndividual ?? [];
-    return rankingData.general ?? [];
-  }, [rankingData, tipoRanking]);
+  const apiRankingEntries = useMemo(() => entradasDeLaTabla(rankingData, tipoRanking), [rankingData, tipoRanking]);
 
   /**
    * Qué mide cada tabla, en una línea. Sin esto, dos listas de números no se distinguen.
@@ -1219,11 +1223,11 @@ export default function ComunidadScreen() {
    * > producción y sin clave de sistema, así que la tabla no medía lo que decía medir. El backend
    * > la sigue calculando y guardando en el corte (`TipoRanking.LEAGUE`): lo que se quita es la
    * > pestaña, no el dato, así que volver a mostrarla es agregar una línea acá.
+   *
+   * > **Corregido 2026-09-29 (D-226).** El hábito de correr ya existe (`DAILY_KM`, activo para todos)
+   * > y tiene su propia tabla, «Kilómetros»: km acumulados desde el Día 1, no la liga de puntos (que
+   * > sigue sin pestaña). Las pestañas viven ahora en `features/ranking/utils/tablasDeRanking`.
    */
-  const TABLAS_DE_RANKING = [
-    { clave: 'general' as const, titulo: 'General', explica: 'Hábitos, acciones y lecciones, todo junto' },
-    { clave: 'coherencia' as const, titulo: 'Coherencia', explica: 'Acciones diarias cumplidas de tu semana' },
-  ];
 
   // Entradas de Ranking 100% de la API (cero datos inventados)
   const rankingList = useMemo(() => {
@@ -1235,7 +1239,7 @@ export default function ComunidadScreen() {
         (user?.name && item.fullName.toLowerCase().includes(user.name.toLowerCase()))
           ? `TÚ (${nombreUsuario})`
           : item.fullName,
-      scoreText: `${item.puntaje} Pts`,
+      scoreText: textoDelPuntaje(tipoRanking, item.puntaje),
       medal:
         item.posicion === 1
           ? ('gold' as const)
@@ -1248,7 +1252,7 @@ export default function ComunidadScreen() {
         item.participanteId === user?.id ||
         (user?.name && item.fullName.toLowerCase().includes(user.name.toLowerCase())),
     }));
-  }, [apiRankingEntries, user?.id, user?.name, nombreUsuario]);
+  }, [apiRankingEntries, tipoRanking, user?.id, user?.name, nombreUsuario]);
 
   // Podio Top 3 100% Real de la API (null si no hay datos)
   const podioTop1 = useMemo(() => {
@@ -1260,11 +1264,11 @@ export default function ComunidadScreen() {
           (user?.name && p.fullName.toLowerCase().includes(user.name.toLowerCase()))
             ? `TÚ (${nombreUsuario})`
             : p.fullName,
-        score: `${p.puntaje} Pts`,
+        score: textoDelPuntaje(tipoRanking, p.puntaje),
       };
     }
     return null;
-  }, [apiRankingEntries, user?.id, user?.name, nombreUsuario]);
+  }, [apiRankingEntries, tipoRanking, user?.id, user?.name, nombreUsuario]);
 
   const podioTop2 = useMemo(() => {
     if (apiRankingEntries.length >= 2) {
@@ -1275,11 +1279,11 @@ export default function ComunidadScreen() {
           (user?.name && p.fullName.toLowerCase().includes(user.name.toLowerCase()))
             ? `TÚ (${nombreUsuario})`
             : p.fullName,
-        score: `${p.puntaje} Pts`,
+        score: textoDelPuntaje(tipoRanking, p.puntaje),
       };
     }
     return null;
-  }, [apiRankingEntries, user?.id, user?.name, nombreUsuario]);
+  }, [apiRankingEntries, tipoRanking, user?.id, user?.name, nombreUsuario]);
 
   const podioTop3 = useMemo(() => {
     if (apiRankingEntries.length >= 3) {
@@ -1290,11 +1294,11 @@ export default function ComunidadScreen() {
           (user?.name && p.fullName.toLowerCase().includes(user.name.toLowerCase()))
             ? `TÚ (${nombreUsuario})`
             : p.fullName,
-        score: `${p.puntaje} Pts`,
+        score: textoDelPuntaje(tipoRanking, p.puntaje),
       };
     }
     return null;
-  }, [apiRankingEntries, user?.id, user?.name, nombreUsuario]);
+  }, [apiRankingEntries, tipoRanking, user?.id, user?.name, nombreUsuario]);
 
   // Posición del usuario autenticado actual desde la API
   const userRankEntry = useMemo(() => {
@@ -1310,7 +1314,7 @@ export default function ComunidadScreen() {
     if (found) {
       return {
         rank: `${found.posicion}`,
-        cellText: `${celulaNombre} · ⚡ ${found.puntaje} Pts de Coherencia`,
+        cellText: `${celulaNombre} · ${textoDeMiPuntaje(tipoRanking, found.puntaje)}`,
       };
     }
     // Sin posición todavía. El texto habla de lo que falta hacer y no de lo que falta en la base,
@@ -1319,7 +1323,7 @@ export default function ComunidadScreen() {
       rank: '-',
       cellText: `${celulaNombre} · Tu primer avance te pone en la tabla`,
     };
-  }, [apiRankingEntries, rankingData?.celula?.cellName, user?.id, user?.name, miCelula]);
+  }, [apiRankingEntries, rankingData?.celula?.cellName, tipoRanking, user?.id, user?.name, miCelula]);
 
   // =========================================================================
   // GESTOS TÁCTILES DEL SISTEMA (BACKHANDLER)
@@ -2738,8 +2742,7 @@ export default function ComunidadScreen() {
                         Tú puedes ser el próximo líder del ranking
                       </Text>
                       <Text style={[t.body, { color: c.textSoft, marginTop: 10 }]}>
-                        Todavía nadie sumó puntos en este corte diario. Se cuentan solos con tus
-                        hábitos, tus rocas y tus lecciones: el primero que avance, encabeza.
+                        {invitacionSinPosiciones(tipoRanking)}
                       </Text>
                     </View>
                   )}

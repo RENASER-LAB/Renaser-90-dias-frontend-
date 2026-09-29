@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { PlanHabit } from '../../../screens/PlanScreen';
 import type { HabitItem } from '../../../screens/TrainingScreen';
+import { medicionPedidaDe } from '../../habits/utils/registroConFoto';
 import { mensajeDeError } from '../../../services/http/apiClient';
 import type { HabitoCatalogoApi, TrackDelDiaApi } from '../../habits/types/habits.types';
 import { cargarEntrenamiento, type DatosEntrenamiento } from '../api/cargarEntrenamiento';
@@ -177,6 +178,7 @@ export function useTraining() {
           pointsAtStake: track.puntosEnJuego ?? null,
           maxPoints: track.puntosMaximos ?? null,
           deadline: track.plazoEvidencia ?? null,
+          medicion: medicionPedidaDe(track),
         };
       })
       .filter((h): h is HabitItem => h !== null);

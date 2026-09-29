@@ -202,6 +202,19 @@ export interface TrackDelDiaApi {
   /** Si el track ya tiene al menos una evidencia subida, en cualquier estado de validación.
    * `undefined` contra un backend anterior al 2026-09-05 (D-113), y ahí se trata como `false`. */
   tieneEvidencia?: boolean;
+  /**
+   * D-226 del backend: solo en los hábitos que registran un número (hoy KILÓMETROS DIARIOS). La
+   * unidad, lo registrado ese día (null mientras no se complete) y el total acumulado del programa.
+   * `undefined`/null en los demás hábitos y contra un backend anterior.
+   */
+  medicion?: MedicionDelTrackApi | null;
+}
+
+/** D-226: la medición de un track (`GET /habit-tracks/today`). `unidad` hoy solo `KILOMETROS`. */
+export interface MedicionDelTrackApi {
+  unidad: string;
+  valorDelDia: number | null;
+  total: number;
 }
 
 /**

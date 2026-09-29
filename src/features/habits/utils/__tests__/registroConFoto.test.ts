@@ -8,7 +8,11 @@ import type { TrackDelDiaApi } from '../../types/habits.types';
 import {
   avisoParaFoto,
   estadoParaFoto,
+  formatoKm,
+  leerKilometros,
+  medicionPedidaDe,
   preguntaQueSintio,
+  totalConHoy,
   registrarConFoto,
   respuestaValida,
   type DependenciasDelRegistro,
@@ -120,7 +124,7 @@ describe('registrarConFoto', () => {
     );
 
     expect(orden).toEqual(['subir', 'confirmada', 'completar']);
-    expect(completar).toHaveBeenCalledWith('r-1', 'Frío, pero bien');
+    expect(completar).toHaveBeenCalledWith('r-1', 'Frío, pero bien', null); // sin km (D-226)
     expect(resultado).toEqual({ puntosOtorgados: 10, yaEstabaCompletado: false });
   });
 
@@ -215,6 +219,79 @@ describe('D-172: solo los rituales preguntan "¿Qué sentiste?"', () => {
       deps
     );
 
-    expect(completar).toHaveBeenCalledWith('r-1', null);
+    expect(completar).toHaveBeenCalledWith('r-1', null, null); // sin km (D-226)
+  });
+});
+
+describe('KILÓMETROS DIARIOS (D-226)', () => {
+  const KM = { unidad: 'KILOMETROS' as const, totalPrevio: 5.75 };
+
+  it('lee coma o punto decimal, redondea a dos decimales y exige más que cero hasta el tope', () => {
+    expect(leerKilometros('3,5')).toBe(3.5);
+    expect(leerKilometros(' 3.5 ')).toBe(3.5);
+    expect(leerKilometros('4,126')).toBe(4.13);
+    expect(leerKilometros(',5')).toBe(0.5);
+    expect(leerKilometros('7')).toBe(7);
+    expect(leerKilometros('100')).toBe(100);
+    for (const invalido of ['', ' ', '0', '0,00', '0,001', '-3', '100,01', '250', 'abc', '3,5,1', '3 km']) {
+      expect(leerKilometros(invalido)).toBeNull();
+    }
+  });
+
+  it('muestra los km con coma y sin ceros de más', () => {
+    expect(formatoKm(12.5)).toBe('12,5');
+    expect(formatoKm(7)).toBe('7');
+    expect(formatoKm(9.879999)).toBe('9,88');
+    expect(formatoKm(0)).toBe('0');
+    expect(formatoKm(20.1)).toBe('20,1');
+  });
+
+  it('el total suma lo de hoy solo si es un número válido', () => {
+    expect(totalConHoy(KM, '4,13')).toBe(9.88);
+    expect(totalConHoy(KM, '')).toBe(5.75);
+    expect(totalConHoy(KM, '0')).toBe(5.75);
+  });
+
+  it('el pedido de km lo decide el servidor (medicion del track), no una lista de claves', () => {
+    expect(medicionPedidaDe(track({ medicion: { unidad: 'KILOMETROS', valorDelDia: null, total: 5.75 } }))).toEqual(KM);
+    expect(medicionPedidaDe(track())).toBeNull();
+    expect(medicionPedidaDe(track({ medicion: null }))).toBeNull();
+    expect(medicionPedidaDe(track({ medicion: { unidad: 'PASOS', valorDelDia: null, total: 9 } }))).toBeNull();
+    expect(
+      estadoParaFoto([track({ medicion: { unidad: 'KILOMETROS', valorDelDia: null, total: 5.75 } })], 'r-1', AHORA),
+    ).toEqual({ tipo: 'disponible', evidenciaYaSubida: false, medicion: KM });
+  });
+
+  it('manda los km como número al cerrar, sin respuesta de texto', async () => {
+    const deps = dependencias();
+    await registrarConFoto(
+      { registroId: 'r-1', archivo: FOTO, respuesta: '3,5', conPregunta: false, evidenciaYaSubida: false, medicion: KM },
+      () => undefined,
+      deps,
+    );
+    expect(deps.completar).toHaveBeenCalledWith('r-1', null, 3.5);
+  });
+
+  it('sin km válidos no sube la foto ni cierra: primero el número', async () => {
+    const deps = dependencias();
+    await expect(
+      registrarConFoto(
+        { registroId: 'r-1', archivo: FOTO, respuesta: '0', conPregunta: false, evidenciaYaSubida: false, medicion: KM },
+        () => undefined,
+        deps,
+      ),
+    ).rejects.toThrow('km');
+    expect(deps.subirEvidencia).not.toHaveBeenCalled();
+    expect(deps.completar).not.toHaveBeenCalled();
+  });
+
+  it('un hábito que no pide km cierra sin número', async () => {
+    const deps = dependencias();
+    await registrarConFoto(
+      { registroId: 'r-1', archivo: FOTO, respuesta: '', conPregunta: false, evidenciaYaSubida: false },
+      () => undefined,
+      deps,
+    );
+    expect(deps.completar).toHaveBeenCalledWith('r-1', null, null);
   });
 });
