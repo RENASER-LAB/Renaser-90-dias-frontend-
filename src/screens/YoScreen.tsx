@@ -8,6 +8,7 @@ import {
   StyleSheet,
   ScrollView,
   Pressable,
+  Platform,
   TextInput,
   Switch,
 } from 'react-native';
@@ -55,16 +56,29 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useMiCaja } from '../features/caja/hooks/useMiCaja';
 import { MiCajaScreen } from '../features/caja/screens/MiCajaScreen';
 import { etiquetaParaElAprendiz } from '../features/caja/utils/estadosDeCaja';
+import { useMiSemaforo } from '../features/semaforo/hooks/useMiSemaforo';
+import { hayQuePedirMiSemaforo } from '../features/semaforo/utils/entradasDelSemaforo';
+import { curvaDeEvolucion } from '../features/semaforo/utils/curvaDeEvolucion';
+import { dichoDelDia } from '../features/semaforo/utils/lecturaDelSemaforo';
+import { ElegirHabitoParaFotoModal } from '../features/habits/components/ElegirHabitoParaFotoModal';
+import { RegistroConFotoModal } from '../features/habits/components/RegistroConFotoModal';
+import { useRegistroConFoto } from '../features/habits/hooks/useRegistroConFoto';
+import { useRenombreLocal } from '../features/habits/hooks/useRenombreDeHabito';
+import { tituloVisible } from '../features/habits/utils/renombreDeHabito';
+import type { HabitoParaFoto } from '../features/habits/utils/habitosParaFotoDeHoy';
 
 // =========================================================================
 // DATOS ESTÁTICOS
 // =========================================================================
-const EVOLUCION = [
-  [6, 66], [38, 58], [70, 62], [102, 46], [134, 50],
-  [166, 34], [198, 38], [230, 24], [262, 26], [294, 12], [314, 8],
-];
+/* Corregido 2026-09-29 («nada en Yo puede aparentar»): acá vivían `EVOLUCION` y `PATRONES`, las
+   coordenadas fijas de la curva de «Tu Evolución» y del gráfico de «Patrones» — la misma subida
+   para cualquiera, desde el día 1. La curva ahora sale del semáforo (`curvaDeEvolucion`) y
+   «Patrones» se quitó: no hay un dato que sea "tus patrones". También se quitaron `LOGROS_DEL_PROGRAMA`
+   (metas sin fuente y sin registro de logros detrás) y la sub-vista del video de activación (no hay
+   video). */
 
-const PATRONES = [[6, 34], [90, 30], [174, 34], [258, 20], [314, 18]];
+/** iOS no presenta la cámara mientras un `Modal` todavía se está cerrando. */
+const ESPERA_CIERRE_MODAL_IOS_MS = 400;
 
 /* Etiquetas legibles de los enums del backend. Antes las tarjetas decian siempre
    "✓ VERIFICADO" aunque la evidencia estuviera pendiente o rechazada. */
@@ -87,22 +101,6 @@ function fechaDeEvidencia(iso: string | null): string {
   if (Number.isNaN(d.getTime())) return 'Sin fecha';
   return d.toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
-
-/**
- * Catalogo de metas del programa: lo que se PUEDE conseguir, no lo que el aprendiz consiguio.
- *
- * Antes esto era `LOGROS_DATA` y tres de los cuatro venian con `unlocked: true` fijo, mas un
- * "Llevas 37 de 90 dias" escrito a mano. A alguien en el dia 2 se le afirmaba que habia
- * encadenado 30 amaneceres y 50 bloques de trabajo profundo. No hay endpoint de logros en el
- * backend (existe /api/v1/evidence, no /api/v1/logros), asi que no hay forma de saber cuales
- * consiguio: se muestran todos como metas, sin marcar ninguna, hasta que exista ese dato.
- */
-const LOGROS_DEL_PROGRAMA: ReadonlyArray<{ id: string; title: string; icon: IconName; desc: string }> = [
-  { id: 'l1', title: 'FUNDADOR SOMÁTICO', icon: 'award', desc: 'Completar la Fase 1 — El Espejo: los días 1 al 7 sin fallar.' },
-  { id: 'l2', title: 'RACHA DE FUEGO (30 DÍAS)', icon: 'fire', desc: '30 amaneceres consecutivos subiendo evidencia.' },
-  { id: 'l3', title: 'MAESTRO DEL FOCO', icon: 'zap', desc: '50 bloques de trabajo profundo en modo avión.' },
-  { id: 'l4', title: 'REY SOMÁTICO (90 DÍAS)', icon: 'trophy', desc: 'Graduación oficial del programa: los 90 días.' },
-];
 
 /**
  * Lo editorial de cada fase: el ícono, el color, la frase y qué se hace.
@@ -232,13 +230,53 @@ export default function YoScreen() {
   const { user, logout, actualizarPerfil, refrescarPerfil } = useAuth();
   const { resumen } = useResumenHome();
   const moreSize = rs(56);
-  const evoPath = 'M' + EVOLUCION.map(p => p[0] + ' ' + p[1]).join(' L');
+
+  /* «Tu Evolución»: el cumplimiento de cada día de la ventana del semáforo. Mismas fuentes que la
+     tarjeta de Hoy: los días del campo `semaforo` de `/home` y, si un backend viejo no los manda,
+     `GET /me/semaforo`. Sin semáforo (apagado, o quien no se mide) no hay curva. */
+  const miSemaforo = useMiSemaforo(hayQuePedirMiSemaforo(resumen?.semaforo, false));
+  const diasDelSemaforo = resumen?.semaforo?.dias ?? miSemaforo.detalle?.vigente?.dias ?? [];
+  const curva = curvaDeEvolucion(diasDelSemaforo);
+
+  /* «+ Subir Foto» de Evidencias: se elige el hábito de hoy y sigue el MISMO registro con foto de
+     Training (cámara → «¿Qué sentiste?» en los rituales → subida y cierre). */
+  const renombre = useRenombreLocal(user?.id ?? null);
+  const [eligiendoHabitoParaFoto, setEligiendoHabitoParaFoto] = useState(false);
+  const registroConFoto = useRegistroConFoto({
+    onCompletado: async (_registroId, resultado, titulo) => {
+      recargarEvidencias();
+      Alert.alert(
+        'Evidencia registrada',
+        resultado.puntosOtorgados > 0
+          ? `"${titulo}" quedó registrado. +${resultado.puntosOtorgados} puntos.`
+          : `"${titulo}" quedó registrado.`
+      );
+    },
+  });
+  const { iniciar: iniciarRegistroConFoto } = registroConFoto;
+  const subirFotoDe = useCallback(
+    ({ track, conPregunta }: HabitoParaFoto) => {
+      setEligiendoHabitoParaFoto(false);
+      const espera = Platform.OS === 'ios' ? ESPERA_CIERRE_MODAL_IOS_MS : 0;
+      setTimeout(() => {
+        void iniciarRegistroConFoto(
+          {
+            registroId: track.id,
+            titulo: tituloVisible({ id: track.habitoId, title: track.tituloHabito }, renombre.titulos),
+            conPregunta,
+          },
+          track.tieneEvidencia === true
+        );
+      }, espera);
+    },
+    [iniciarRegistroConFoto, renombre.titulos],
+  );
 
   // =========================================================================
   // ESTADOS DE NAVEGACIÓN DENTRO DE LA TARJETA DEL USUARIO
   // =========================================================================
   const [activeView, setActiveView] = useState<
-    'main' | 'hub' | 'editar_perfil' | 'info_perfil' | 'evidencias' | 'logros' | 'onboarding' | 'pacto' | 'mapa_renacimiento' | 'metodo' | 'video_activacion' | 'notificaciones' | 'alarmas' | 'memoria_renasia'
+    'main' | 'hub' | 'editar_perfil' | 'info_perfil' | 'evidencias' | 'onboarding' | 'pacto' | 'mapa_renacimiento' | 'metodo' | 'notificaciones' | 'alarmas' | 'memoria_renasia'
   >('main');
   /* D-167: se pide al entrar a Ajustes (donde está la fila) y no al abrir la pestaña Yo. */
   const memoriaRenasia = useMemoriaDeRenasia(activeView === 'hub' || activeView === 'memoria_renasia');
@@ -290,10 +328,8 @@ export default function YoScreen() {
   // Formulario Editar Perfil
   const [profileName, setProfileName] = useState(user?.name ?? '');
   const [profileEmail, setProfileEmail] = useState(user?.email ?? '');
-  const profilePhone = '';
   const [profileDepartment, setProfileDepartment] = useState(user?.department ?? '');
   const [profileBio, setProfileBio] = useState(user?.bio ?? '');
-  const profileInstagram = '';
   const [profileAvatar, setProfileAvatar] = useState<string | null>(user?.avatarUrl ?? null);
   const [guardandoPerfil, setGuardandoPerfil] = useState(false);
   const [subiendoAvatar, setSubiendoAvatar] = useState(false);
@@ -505,19 +541,32 @@ export default function YoScreen() {
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <Text style={[t.micro, { color: c.textSoft }]}>TU EVOLUCIÓN</Text>
               <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
-                {rotuloDeFase(resumen?.fase)?.toUpperCase() || 'PROGRAMA ACTIVO'}
+                {rotuloDeFase(resumen?.fase)?.toUpperCase() ?? ''}
               </Text>
             </View>
             {/* Mismo tratamiento que en Hoy: el día del programa es el dato del bloque, no una
                 micro-etiqueta. A 10.5 px competía con el rótulo de arriba; a 15 con cifras
                 tabulares se lee y no se corre de lugar al pasar del día 9 al 10. */}
             <Text style={[t.cardTitle, styles.cifras, { color: c.textStrong, fontSize: 15, marginTop: 4 }]}>
-              DÍA {resumen?.diaPrograma ?? 1} DE {DIAS_DEL_PROGRAMA}
+              DÍA {resumen?.diaPrograma ?? '—'} DE {DIAS_DEL_PROGRAMA}
             </Text>
-            <Svg width="100%" height={78} viewBox="0 0 320 78" style={{ marginTop: 14 }}>
-              <Path d={evoPath} stroke={c.gold} strokeWidth={1.5} strokeLinecap="round" fill="none" />
-              {EVOLUCION.map(([x, y]) => <Circle key={x} cx={x} cy={y} r={2.8} fill={c.gold} />)}
-            </Svg>
+            {/* La curva era un dibujo fijo (ver `curvaDeEvolucion`). Ahora es el cumplimiento de
+                cada día del semáforo; con menos de dos días medidos no se dibuja. */}
+            {curva ? (
+              <View
+                accessible
+                accessibilityLabel={`Tu cumplimiento de los últimos ${diasDelSemaforo.length} días. ${diasDelSemaforo.map(dichoDelDia).join('. ')}.`}
+                style={{ marginTop: 14, gap: 6 }}
+              >
+                <Svg width="100%" height={78} viewBox="0 0 320 78">
+                  <Path d={curva.trazo} stroke={c.gold} strokeWidth={1.5} strokeLinecap="round" fill="none" />
+                  {curva.puntos.map(p => <Circle key={p.clave} cx={p.x} cy={p.y} r={2.8} fill={c.gold} />)}
+                </Svg>
+                <Text style={[t.small, { color: c.micro }]}>
+                  Tu cumplimiento · últimos {diasDelSemaforo.length} días
+                </Text>
+              </View>
+            ) : null}
           </View>
 
           {/* STATS REALES CALCULADOS POR EL BACKEND
@@ -545,7 +594,7 @@ export default function YoScreen() {
             <View style={styles.statBloque}>
               <Text style={[t.micro, { color: c.micro, fontFamily: 'Jost_700Bold' }]}>PUNTOS LIGA</Text>
               <View style={styles.statCifra}>
-                <Text style={[t.metric, { color: c.textStrong }]}>{resumen?.puntosLiga ?? 100}</Text>
+                <Text style={[t.metric, { color: c.textStrong }]}>{resumen?.puntosLiga ?? '—'}</Text>
               </View>
             </View>
 
@@ -555,8 +604,8 @@ export default function YoScreen() {
             <View style={styles.statBloque}>
               <Text style={[t.micro, { color: c.micro, fontFamily: 'Jost_700Bold' }]}>RACHA DÍAS</Text>
               <View style={styles.statCifra}>
-                <Text style={[t.metric, { color: c.textStrong }]}>{resumen?.rachaActual ?? 0}</Text>
-                <Text style={{ fontFamily: 'Jost_500Medium', fontSize: 15, color: c.micro }}>d</Text>
+                <Text style={[t.metric, { color: c.textStrong }]}>{resumen?.rachaActual ?? '—'}</Text>
+                {resumen ? <Text style={{ fontFamily: 'Jost_500Medium', fontSize: 15, color: c.micro }}>d</Text> : null}
               </View>
             </View>
           </View>
@@ -621,43 +670,11 @@ export default function YoScreen() {
             )}
           </View>
 
-          {/* REFLEXIÓN DIARIA */}
-          <Pressable
-            onPress={() => Alert.alert('Reflexión Diaria', 'Registra tu introspección somática en el diario de hoy.')}
-            style={[styles.rowCard, { borderColor: c.border, backgroundColor: c.cardBg }]}
-          >
-            <View style={{ flex: 1 }}>
-              <MicroLabel>Reflexión diaria</MicroLabel>
-              <Text style={[t.body, { color: c.text, marginTop: 6 }]}>¿Qué aprendí hoy sobre mí?</Text>
-            </View>
-            <Icon name="chevron" size={12} color={c.chevron} />
-          </Pressable>
-
-          {/* PATRONES */}
-          <View style={{ flex: 1, justifyContent: 'center' }}>
-            <MicroLabel>Patrones</MicroLabel>
-            <Svg width="100%" height={52} viewBox="0 0 320 52" style={{ marginTop: 10 }}>
-              <Path
-                d="M6 34 C 34 12, 62 44, 90 30 S 146 8, 174 34 S 230 44, 258 20 S 300 30, 314 18"
-                stroke={c.gold} strokeWidth={1.5} strokeLinecap="round" fill="none"
-              />
-              {PATRONES.map(([x, y]) => <Circle key={x} cx={x} cy={y} r={2.8} fill={c.gold} />)}
-            </Svg>
-          </View>
-
-          {/* IDENTIDAD */}
-          <Pressable
-            onPress={() => Alert.alert('Identidad Somática', 'Forjando la versión de ti que ya no negocia con la mediocridad.')}
-            style={[styles.rowCard, { borderColor: c.border, backgroundColor: c.cardBg }]}
-          >
-            <View style={{ flex: 1 }}>
-              <MicroLabel>Identidad</MicroLabel>
-              <Text style={[t.body, { color: c.text, marginTop: 6, lineHeight: 21 }]}>
-                Soy la persona que…{"\n"}Elijo ser cada día.
-              </Text>
-            </View>
-            <Icon name="chevron" size={12} color={c.chevron} />
-          </Pressable>
+          {/* Corregido 2026-09-29: acá estaban «Reflexión diaria» e «Identidad», dos tarjetas que al
+              tocarlas solo mostraban un aviso con una frase fija, y «Patrones», un gráfico dibujado
+              a mano. La app no tiene dónde escribir una reflexión (el diario del backend,
+              `/journal/today`, no lo llena nadie) ni un dato de identidad propio de cada persona,
+              así que se quitaron en vez de simular. */}
 
           {/* TU CAJA RENASER (D-219) — solo si el servidor dice que hay algo que mostrarle */}
           {miCaja.visible && miCaja.caja ? (
@@ -775,7 +792,7 @@ export default function YoScreen() {
                   son los datos del encabezado. A 13 se leen sin acercar el teléfono. */}
               <Text style={[t.small, { color: c.goldInk }]}>{profileEmail}</Text>
               <Text style={[t.small, { color: c.textSoft }]}>
-                Día {resumen?.diaPrograma ?? 1} · {rotuloDeFase(resumen?.fase) ?? 'Alumno Activo'}
+                {[resumen ? `Día ${resumen.diaPrograma}` : null, rotuloDeFase(resumen?.fase)].filter(Boolean).join(' · ')}
               </Text>
             </View>
           </View>
@@ -846,7 +863,7 @@ export default function YoScreen() {
 
                 <Pressable
                   onPress={() => setActiveView('evidencias')}
-                  style={[styles.menuOptionRow, { borderBottomColor: c.divider }]}
+                  style={styles.menuOptionRow}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
                     <Icon name="camera" size={16} color={c.goldInk} />
@@ -865,19 +882,6 @@ export default function YoScreen() {
                   <Icon name="chevron" size={12} color={c.goldInk} />
                 </Pressable>
 
-                <Pressable
-                  onPress={() => setActiveView('logros')}
-                  style={styles.menuOptionRow}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-                    <Icon name="award" size={16} color={c.goldInk} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={[t.cardTitle, { color: c.textStrong }]}>Logros e Insignias</Text>
-                      <Text style={[t.small, { color: c.textSoft }]}>Las metas de tus 90 días</Text>
-                    </View>
-                  </View>
-                  <Icon name="chevron" size={12} color={c.goldInk} />
-                </Pressable>
               </View>
             </View>
 
@@ -898,7 +902,7 @@ export default function YoScreen() {
                     metodoAnim.setValue(1);
                     setActiveView('metodo');
                   }}
-                  style={[styles.menuOptionRow, { borderBottomColor: c.divider }]}
+                  style={styles.menuOptionRow}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
                     <Icon name="spark" size={16} color={c.goldInk} />
@@ -910,19 +914,6 @@ export default function YoScreen() {
                   <Icon name="chevron" size={12} color={c.goldInk} />
                 </Pressable>
 
-                <Pressable
-                  onPress={() => setActiveView('video_activacion')}
-                  style={styles.menuOptionRow}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-                    <Icon name="play" size={16} color={c.goldInk} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={[t.cardTitle, { color: c.textStrong }]}>Repetir Activación Inicial</Text>
-                      <Text style={[t.small, { color: c.textSoft }]}>Bienvenida y manifiesto de Macaco</Text>
-                    </View>
-                  </View>
-                  <Icon name="chevron" size={12} color={c.goldInk} />
-                </Pressable>
               </View>
             </View>
 
@@ -1409,13 +1400,19 @@ export default function YoScreen() {
                         : `${evidencias.length} ${evidencias.length === 1 ? 'evidencia' : 'evidencias'} · ${verificadasEvidencias} verificada${verificadasEvidencias === 1 ? '' : 's'}`}
               </Text>
             </View>
-            <Pressable
-              onPress={() => Alert.alert('Subir Evidencia', 'Abriendo selector de cámara para subir evidencia fotográfica...')}
-              style={[styles.createHabitBtn, { backgroundColor: c.gold }]}
-            >
-              {/* Botón real: pasó de 25 px de alto con etiqueta de 10.5 a 48 px con texto de 13. */}
-              <Text style={[t.small, { color: c.onGold, fontFamily: 'Jost_700Bold' }]}>+ Subir Foto</Text>
-            </Pressable>
+            {/* Corregido 2026-09-29: solo mostraba «Abriendo selector de cámara…» y no abría
+                nada. Ahora elige el hábito de hoy y sigue el registro con foto de Training. En
+                web no aparece: ahí Training tampoco usa la cámara directa. */}
+            {Platform.OS !== 'web' ? (
+              <Pressable
+                onPress={() => setEligiendoHabitoParaFoto(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Subir la foto de un hábito de hoy"
+                style={[styles.createHabitBtn, { backgroundColor: c.gold }]}
+              >
+                <Text style={[t.small, { color: c.onGold, fontFamily: 'Jost_700Bold' }]}>+ Subir Foto</Text>
+              </Pressable>
+            ) : null}
           </View>
 
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.gap, paddingBottom: 28 }}>
@@ -1484,69 +1481,6 @@ export default function YoScreen() {
                 </Text>
               </View>
             )}
-          </View>
-        </ScrollView>
-      )}
-
-      {/* ========================================================================= */}
-      {/* 6. SUB-VISTA: 🎖️ LOGROS E INSIGNIAS                                       */}
-      {/* ========================================================================= */}
-      {activeView === 'logros' && (
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={[
-            styles.content,
-            {
-              paddingHorizontal: horizontalPadding,
-              maxWidth: contentMaxWidth,
-              alignSelf: isTablet ? 'center' : 'stretch',
-              width: isTablet ? '100%' : undefined,
-            },
-          ]}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
-            <Pressable onPress={() => setActiveView('hub')} style={styles.backBtnRow} hitSlop={8}>
-              <Icon name="arrowLeft" size={14} color={c.goldInk} />
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
-                VOLVER A AJUSTES
-              </Text>
-            </Pressable>
-            <View style={[styles.categoryPillBadge, { backgroundColor: c.goldWash }]}>
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
-                LOGROS
-              </Text>
-            </View>
-          </View>
-
-          <View style={{ gap: space.gap, paddingBottom: 28 }}>
-            {/* Sin endpoint de logros no se puede decir cuales estan conseguidos, asi que no se
-                marca ninguno: se listan como metas del programa. */}
-            <Text style={[t.body, { color: c.textSoft }]}>
-              Estas son las metas del programa. Tu avance aparecerá aquí cuando el registro de
-              logros esté disponible.
-            </Text>
-            {/* El disco del ícono perdió su borde —vivía dentro del borde de la tarjeta— y la
-                descripción subió de 10.5 a 15: es la frase que explica en qué consiste la meta,
-                o sea texto de lectura, no un pie de foto. */}
-            {LOGROS_DEL_PROGRAMA.map(logro => (
-              <View
-                key={logro.id}
-                style={[styles.logroCard, { borderColor: c.border, backgroundColor: c.cardBg }]}
-              >
-                <View style={[styles.logroIconCircle, { backgroundColor: c.goldWash }]}>
-                  <Icon name={logro.icon} size={20} color={c.goldInk} />
-                </View>
-                <View style={{ flex: 1, gap: 5 }}>
-                  <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 14 }]}>
-                    {logro.title}
-                  </Text>
-                  <Text style={[t.body, { color: c.textSoft }]}>
-                    {logro.desc}
-                  </Text>
-                </View>
-              </View>
-            ))}
           </View>
         </ScrollView>
       )}
@@ -1643,18 +1577,6 @@ export default function YoScreen() {
               />
             </View>
 
-            <View style={{ gap: 6 }}>
-              <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>TELÉFONO / WHATSAPP:</Text>
-              <TextInput
-                value={profilePhone}
-                keyboardType="phone-pad"
-                editable={false}
-                placeholder="No registrado en tu cuenta"
-                placeholderTextColor={c.micro}
-                style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBg, color: c.text }]}
-              />
-              <Text style={[t.small, { color: c.micro }]}>El teléfono se habilitará cuando exista en el perfil del servidor.</Text>
-            </View>
           </View>
 
           <GoldButton
@@ -1737,17 +1659,6 @@ export default function YoScreen() {
               />
             </View>
 
-            <View style={{ gap: 6 }}>
-              <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>INSTAGRAM:</Text>
-              <TextInput
-                value={profileInstagram}
-                editable={false}
-                placeholder="No registrado en tu cuenta"
-                placeholderTextColor={c.micro}
-                style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBg, color: c.text }]}
-              />
-              <Text style={[t.small, { color: c.micro }]}>Instagram se habilitará cuando exista en el perfil del servidor.</Text>
-            </View>
           </View>
 
           <GoldButton
@@ -1930,56 +1841,6 @@ export default function YoScreen() {
       )}
 
       {/* ========================================================================= */}
-      {/* 11. SUB-VISTA: 🎬 REPETIR ACTIVACIÓN (VIDEO MACACO)                       */}
-      {/* ========================================================================= */}
-      {activeView === 'video_activacion' && (
-        <ScrollView
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={[
-            styles.content,
-            {
-              paddingHorizontal: horizontalPadding,
-              maxWidth: contentMaxWidth,
-              alignSelf: isTablet ? 'center' : 'stretch',
-              width: isTablet ? '100%' : undefined,
-            },
-          ]}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
-            <Pressable onPress={() => setActiveView('hub')} style={styles.backBtnRow} hitSlop={8}>
-              <Icon name="arrowLeft" size={14} color={c.goldInk} />
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
-                VOLVER A AJUSTES
-              </Text>
-            </Pressable>
-            <View style={[styles.categoryPillBadge, { backgroundColor: c.goldWash }]}>
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
-                ACTIVACIÓN
-              </Text>
-            </View>
-          </View>
-
-          {/* Esta vista reusa `pactoDocumentCard`, pero acá el contorno dorado no es el canto de
-              un documento sino énfasis decorativo: pasa a `c.border`. La cita pasa de 11 a 15 px. */}
-          <View style={[styles.pactoDocumentCard, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
-            <View style={[styles.evidenceImgBox, { height: 160, backgroundColor: c.placeholderA }]}>
-              <Text style={{ fontSize: 44 }}>▶</Text>
-              <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', marginTop: 8 }]}>
-                El video todavía no está disponible
-              </Text>
-            </View>
-            <Text style={[t.cardTitle, { color: c.textStrong }]}>
-              Bienvenida Oficial al Renacimiento Somático
-            </Text>
-            <Text style={[t.body, { color: c.textSoft }]}>
-              "No viniste aquí a probar suerte, viniste a forjar la versión de ti que ya no negocia con la mediocridad."
-            </Text>
-          </View>
-        </ScrollView>
-      )}
-
-      {/* ========================================================================= */}
       {/* 12. SUB-VISTA: 🔔 NOTIFICACIONES                                          */}
       {/* ========================================================================= */}
       {activeView === 'notificaciones' && (
@@ -2048,6 +1909,14 @@ export default function YoScreen() {
           {user?.id ? <SeccionAlarmas userId={user.id} /> : null}
         </ScrollView>
       )}
+
+      <ElegirHabitoParaFotoModal
+        visible={eligiendoHabitoParaFoto}
+        onCerrar={() => setEligiendoHabitoParaFoto(false)}
+        onElegir={subirFotoDe}
+        titulos={renombre.titulos}
+      />
+      <RegistroConFotoModal {...registroConFoto.modal} />
     </SafeAreaView>
   );
 }
