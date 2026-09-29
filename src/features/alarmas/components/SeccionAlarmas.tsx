@@ -22,6 +22,7 @@ import {
 } from '../preferenciasDeAlarmas';
 import { escucharSonido, probarSonido } from '../probarSonido';
 import { pasarAlarmasAlSonido } from '../cambioDeSonido';
+import { textoDelCambioDeDespertar } from '../textoDelCambioDeDespertar';
 import { type SonidoDeAlarma } from '../sonidoDeAlarma';
 import { RecordatorioDeAcciones } from '../../objetivos/components/RecordatorioDeAcciones';
 import { AvisoAlarmaExacta } from './AvisoAlarmaExacta';
@@ -146,9 +147,7 @@ export function SeccionAlarmas({ userId }: { userId: string }) {
         // era cierto: sonaba hoy a la hora nueva, que el servidor todavía no aplicaba.
         Alert.alert(
           'Guardado',
-          despertar.hora
-            ? `Desde mañana tu hora de despertar es a las ${hora}. Hoy la alarma sigue a las ${despertar.hora}.`
-            : `Desde mañana tu hora de despertar es a las ${hora}.`,
+          textoDelCambioDeDespertar(hora, despertar.hora || null),
         );
       }
     } catch {
