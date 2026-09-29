@@ -34,6 +34,13 @@ describe('nombreVisibleDeGrupo', () => {
     expect(nombreVisibleDeGrupo(chatDeGrupo('g-que-ya-no-esta'), GRUPOS)).toBe('Mi Grupo');
   });
 
+  it('D-221: el nombre del chat que manda el servidor gana al de la célula', () => {
+    // Pedido del dueño (29/09): el chat del grupo se llama «<mentor> y sus aprendices», no como la
+    // célula. Falla contra el código anterior, que siempre prefería el `cellName` de `/me/cells`.
+    const chat = { type: 'celula', celulaId: 'g-nuevo', title: 'Luisa y sus aprendices' };
+    expect(nombreVisibleDeGrupo(chat, GRUPOS)).toBe('Luisa y sus aprendices');
+  });
+
   it('no toca las conversaciones que no son de grupo', () => {
     expect(nombreVisibleDeGrupo({ type: 'direct', celulaId: null, title: 'Ana Pérez' }, GRUPOS))
       .toBe('Ana Pérez');

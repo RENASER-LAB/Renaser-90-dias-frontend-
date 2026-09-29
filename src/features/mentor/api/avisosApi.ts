@@ -124,6 +124,16 @@ export interface DestinoDeCajaAdmin {
 }
 
 /**
+ * Un chat: `/chat/{conversacionId}` (D-221, 2026-09-29), la ruta del aviso de un mensaje nuevo
+ * (`MENSAJE_CHAT`). Abre Comunidad → Tribu en esa conversación. Que la ruta llegue no autoriza nada:
+ * si la persona ya no participa, el servidor responde 403 al pedir los mensajes.
+ */
+export interface DestinoDelChat {
+  tipo: 'chat';
+  conversacionId: string;
+}
+
+/**
  * Destino de un aviso, extraído de su ruta. `null` si la ruta no tiene una forma que esta versión
  * de la app sepa abrir — entonces el toque solo abre la app, que es lo que el contrato espera de
  * una app instalada ante una ruta nueva (§4.5).
@@ -137,7 +147,8 @@ export type DestinoDeAviso =
   | DestinoDelHabito
   | DestinoDelObjetivo
   | DestinoDeMiCaja
-  | DestinoDeCajaAdmin;
+  | DestinoDeCajaAdmin
+  | DestinoDelChat;
 
 export async function obtenerAvisosDeAcompanamiento(): Promise<AvisoApi[]> {
   const bandeja = validarRespuesta<z.infer<typeof bandejaSchema>>(
@@ -165,6 +176,8 @@ const RUTA_DEL_OBJETIVO = /^\/objetivos\/(\d{4}-\d{2}-\d{2})\/?(?:\?(.*))?$/;
 /** Con la barra final tolerada, como `/semaforo`. */
 const RUTA_DE_MI_CAJA = /^\/caja\/?$/;
 const RUTA_DE_LA_CAJA_ADMIN = /^\/admin\/caja\/([^/?]+)\/?$/;
+/** D-221: el chat de un aviso de mensaje. Con la barra final tolerada. */
+const RUTA_DEL_CHAT = /^\/chat\/([^/?]+)\/?$/;
 
 /**
  * Saca el destino de la ruta de un aviso: la ficha de un alumno
@@ -194,6 +207,11 @@ export function destinoDeRuta(ruta: unknown): DestinoDeAviso | null {
   if (deLaCaja) {
     const aprendizId = decodificar(deLaCaja[1]);
     return aprendizId ? { tipo: 'cajaAdmin', aprendizId } : null;
+  }
+  const delChat = RUTA_DEL_CHAT.exec(ruta);
+  if (delChat) {
+    const conversacionId = decodificar(delChat[1]);
+    return conversacionId ? { tipo: 'chat', conversacionId } : null;
   }
   const delEvento = RUTA_DEL_EVENTO.exec(ruta);
   if (delEvento) {

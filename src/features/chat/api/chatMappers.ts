@@ -367,18 +367,28 @@ function resolverOtroParticipante(
   return delDirectorio ? { ...delDirectorio, role: rolConocido(delDirectorio) } : undefined;
 }
 
+/**
+ * El título de un chat de grupo cuando el servidor no mandó nombre (un backend anterior a D-221).
+ * `nombreVisibleDeGrupo` lo reconoce y lo reemplaza por el nombre de la célula de `/me/cells`.
+ */
+export const TITULO_DE_GRUPO_SIN_NOMBRE = 'Mi Grupo';
+
 function construirTitulo(tipo: TipoChat, nombre: string | null, otro?: OtroParticipante): string {
   if (tipo === 'global') {
+    // Desde D-221 (2026-09-29) el servidor la llama «Formación Renaser Global»; esto es respaldo.
     return nombre?.trim() || 'Comunidad Global';
   }
   if (tipo === 'celula') {
-    // La célula real (`community.Celula`) no se resuelve acá: `chat` solo expone `celulaId`
-    // (UUID), sin nombre — `community` no está en el alcance de esta integración.
-    return 'Mi Grupo';
+    // > **Corregido 2026-09-29 (D-221 del backend).** Decía que `chat` solo expone `celulaId` y que
+    // > el nombre no se resolvía acá. Ahora el servidor manda `nombre`: «<primer nombre del mentor>
+    // > y sus aprendices» (derivado al leer: si el mentor rota, cambia solo) o, sin mentor vigente,
+    // > el nombre de la célula. Con un backend viejo llega `null` y queda el genérico, que
+    // > `nombreVisibleDeGrupo` cruza contra `/me/cells` como antes.
+    return nombre?.trim() || TITULO_DE_GRUPO_SIN_NOMBRE;
   }
   if (tipo === 'soporte') {
-    // Mismo camino que GLOBAL: el nombre lo manda el servidor en `ConversacionResponse.nombre` y
-    // acá solo se le pone un respaldo. No se arma con el nombre de nadie a propósito — del otro
+    // Mismo camino que GLOBAL: el nombre lo manda el servidor en `ConversacionResponse.nombre`
+    // («<primer nombre> – Formación Renaser», para todos desde D-221) y acá solo se le pone un respaldo. No se arma con el nombre de nadie a propósito — del otro
     // lado no hay una persona sino el staff entero (ADMIN / ALQUIMISTA), y cuál de ellos conteste
     // no debería cambiar el título de la conversación en la bandeja.
     return nombre?.trim() || 'Soporte Renaser';

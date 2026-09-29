@@ -14,7 +14,30 @@ self.addEventListener('push', event => {
     badge: payload.badge || '/favicon.ico',
     data: payload.data || {},
   };
-  event.waitUntil(self.registration.showNotification(title, options));
+  // D-221 (2026-09-29): los avisos de chat traen `tag` (`chat-<conversacion>`): el nuevo REEMPLAZA al
+  // anterior de esa conversacion en vez de apilarse, y `renotify` hace que igual vuelva a sonar.
+  if (payload.tag) {
+    options.tag = payload.tag;
+    options.renotify = true;
+  }
+  const ruta = options.data && options.data.url ? options.data.url : '';
+  const esDeChat = typeof ruta === 'string' && ruta.indexOf('/chat/') === 0;
+  if (!esDeChat) {
+    event.waitUntil(self.registration.showNotification(title, options));
+    return;
+  }
+  // Con Renaser a la vista (ventana visible y enfocada), un mensaje de chat no sale como aviso del
+  // sistema: se le pasa a la pagina, que suena si es de OTRO chat y no hace nada si es el abierto.
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientes => {
+      const aLaVista = clientes.find(cliente => cliente.visibilityState === 'visible' && cliente.focused);
+      if (aLaVista) {
+        aLaVista.postMessage({ tipo: 'renaser-mensaje-chat', ruta: ruta });
+        return undefined;
+      }
+      return self.registration.showNotification(title, options);
+    }),
+  );
 });
 
 self.addEventListener('notificationclick', event => {

@@ -183,15 +183,38 @@ function notificaciones(): typeof TipoNotificaciones | null {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     modulo = require('expo-notifications') as typeof TipoNotificaciones;
     modulo.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowBanner: true,
-        shouldShowList: true,
-        shouldPlaySound: true,
-        shouldSetBadge: false,
-      }),
+      handleNotification: async notificacion => {
+        // D-221 (2026-09-29): un mensaje de chat con la app abierta no sale como aviso del sistema.
+        // Del chat que se está mirando no suena nada; de otro, un «pop» dentro de la app y la lista
+        // se relee (`features/chat/avisos`). Los demás avisos, como siempre.
+        if (avisoDeChatAtendidoEnLaApp(notificacion.request.content.data)) {
+          return { shouldShowBanner: false, shouldShowList: false, shouldPlaySound: false, shouldSetBadge: false };
+        }
+        return {
+          shouldShowBanner: true,
+          shouldShowList: true,
+          shouldPlaySound: true,
+          shouldSetBadge: false,
+        };
+      },
     });
   }
   return modulo;
+}
+
+/**
+ * Si el aviso es de un chat, lo atiende la app (D-221) y devuelve `true`. Se carga con `require` acá
+ * adentro para no arrastrar `expo-audio` a todo el que importa este módulo. Si algo falla, `false`:
+ * el aviso se muestra como cualquier otro, que es mejor que perderlo.
+ */
+function avisoDeChatAtendidoEnLaApp(datos: unknown): boolean {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { atenderAvisoDeChatEnPrimerPlano } = require('../../chat/avisos/atenderAvisoDeChat') as typeof import('../../chat/avisos/atenderAvisoDeChat');
+    return atenderAvisoDeChatEnPrimerPlano(datos) !== 'noEsDeChat';
+  } catch {
+    return false;
+  }
 }
 
 /** Ninguna operación de almacenamiento debe poder tumbar la app. */

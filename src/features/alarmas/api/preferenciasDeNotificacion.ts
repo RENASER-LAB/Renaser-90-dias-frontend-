@@ -19,8 +19,12 @@ import { apiFetch } from '../../../services/http/apiClient';
  * | Logros           | `LOGRO_DESBLOQUEADO`, `HITO_PROGRAMA`     |
  * | Resumen semanal  | `RESUMEN_SEMANAL`                         |
  *
- * «Mi grupo y mensajes» (`MENSAJE_CHAT`, `MENSAJE_MENTOR`) **no está**: al 26/09 ningún código del
- * backend emite esos tipos, así que el interruptor no cambiaría nada. Queda reportado.
+ * | Mensajes         | `MENSAJE_CHAT`                            |
+ *
+ * > **Corregido 2026-09-29 (D-221 del backend).** Decía: «"Mi grupo y mensajes" (`MENSAJE_CHAT`,
+ * > `MENSAJE_MENTOR`) no está: al 26/09 ningún código del backend emite esos tipos». Desde D-221 el
+ * > backend avisa cada mensaje de chat con `MENSAJE_CHAT`, así que «Mensajes» apaga algo de verdad.
+ * > `MENSAJE_MENTOR` sigue sin emisor y sigue afuera.
  *
  * ## Tolerancia a un backend viejo
  *
@@ -30,13 +34,19 @@ import { apiFetch } from '../../../services/http/apiClient';
  */
 
 export interface TemaDeAviso {
-  clave: 'eventos' | 'logros' | 'resumen';
+  clave: 'eventos' | 'logros' | 'resumen' | 'mensajes';
   nombre: string;
   detalle: string;
   tipos: readonly string[];
 }
 
 export const TEMAS: readonly TemaDeAviso[] = [
+  {
+    clave: 'mensajes',
+    nombre: 'Mensajes',
+    detalle: 'Cuando te escriben en un chat',
+    tipos: ['MENSAJE_CHAT'],
+  },
   {
     clave: 'eventos',
     nombre: 'Eventos y clases',

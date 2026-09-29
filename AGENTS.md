@@ -15,6 +15,32 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
   * `data/`: Constantes, cláusulas, configuraciones estáticas.
 * **Componentes de UI Atómicos**: Utiliza componentes compartidos bajo `src/components/` (`FormField`, `GoldButton`, `SliderRating`, `Checkbox`, `SignatureCanvas`, `Icon`).
 * **Integridad del Core**: NUNCA alterar, romper ni desconfigurar las pantallas existentes ni los tabs principales (`Hoy`, `Plan`, `Training`, `Comunidad`, `Yo`).
+  * **Excepción autorizada por el dueño del producto — 2026-09-29 — tab `Comunidad` (chat): nombres
+    de los chats y avisos de mensajes** (backend D-221). Pedido del dueño: «Formación Renaser Global,
+    grupo general donde estarán todos; luego el otro con el Mentor y sus estudiantes, que será el nombre
+    "Luisa y sus aprendices"; y luego será "Pedro - Formación Renaser" […] y que los chats tengan
+    notificación con el sonido tipo WhatsApp». Lo que cambia y nada más:
+    * **Nombres.** El nombre de cada chat lo manda el servidor (`conversation.nombre`): «Formación
+      Renaser Global», «<primer nombre del mentor> y sus aprendices» y «<primer nombre> – Formación
+      Renaser». Ese nombre GANA en la lista, la cabecera y la info del grupo
+      (`nombreVisibleDeGrupo`, `ComunidadScreen.nombreDelGrupo`); el `cellName` de `/me/cells` queda
+      solo para un backend viejo que manda `nombre: null` (título genérico `TITULO_DE_GRUPO_SIN_NOMBRE`).
+      Las tarjetas de grupo de Tribu siguen con el nombre de la célula.
+    * **Tocar el aviso** de un mensaje (`/chat/{id}`) abre Comunidad en esa conversación con el mismo
+      parámetro de «Escribirle» (`abrirChatConversacionId`), y espera a las capas obligatorias como los
+      de hábitos (`navigation/abrirAviso.ts`).
+    * **Con la app abierta** (`features/chat/avisos/`): un aviso del chat que se está mirando no se
+      muestra ni suena; uno de otro chat no sale como aviso del sistema, suena un «pop» corto dentro
+      de la app (volumen 0,6) y la lista de chats se relee. En segundo plano el chat deja de escuchar
+      en vivo (`useChatEnVivo`), para que el servidor sí mande el push.
+    * **Web:** el service worker agrupa por `tag` (`renotify`) y, con Renaser a la vista, le pasa el
+      mensaje a la página en vez de mostrar el aviso del sistema.
+    * **Yo → Notificaciones:** interruptor «Mensajes» (`MENSAJE_CHAT`).
+    * **Sonido y canal nuevos:** `assets/sonidos/mensaje_burbuja.wav` (síntesis propia,
+      `scripts/sonidos/sintetizar_mensaje.py`; no es ni imita el de WhatsApp) y el canal de Android
+      `mensajes-chat` (HIGH, con ese sonido), creado al registrar el token. **Hace falta un APK nuevo**:
+      el APK viejo no tiene el canal y sus avisos caen al canal de respaldo de `expo-notifications`,
+      con el sonido por defecto del teléfono.
   * **Excepción autorizada por el dueño del producto — 2026-09-28 — tabs `Yo` y `Hoy`, Administración y
     las dos fichas del aprendiz: la Caja Renaser** (backend D-219, `docs/specs/CAJA_RENASER.md`; pedido
     del dueño en el cuestionario del 28/09, con «poco texto, que no se maree el usuario»). Todo vive en

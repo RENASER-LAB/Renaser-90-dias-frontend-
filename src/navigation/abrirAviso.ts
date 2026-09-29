@@ -9,7 +9,7 @@ import type { DestinoDeAviso } from '../features/mentor/api/avisosApi';
  *
  * ## Cuándo se va
  *
- * 1. Si es un hábito, una acción o la Caja Renaser (D-219) y hay una capa obligatoria abierta (el Código Renaser, el arranque
+ * 1. Si es un hábito, una acción, la Caja Renaser (D-219) o un chat (D-221) y hay una capa obligatoria abierta (el Código Renaser, el arranque
  *    guiado o el Pacto, `capasObligatorias.ts`), **no se va**: la ruta queda esperando y se vuelve a
  *    intentar al cerrarse. La capa no se toca. El evento no espera (decisión del dueño del 28/09).
  * 2. Si la pestaña todavía no existe (login, onboarding, Mapa del Día 7), tampoco: se reintenta cuando
@@ -20,7 +20,7 @@ import type { DestinoDeAviso } from '../features/mentor/api/avisosApi';
  * Las rutas del mentor y del semáforo no pasan por acá: las atienden sus pantallas, como siempre.
  */
 
-export type TipoQueAbreUnaPestana = 'evento' | 'habito' | 'objetivo' | 'caja' | 'cajaAdmin';
+export type TipoQueAbreUnaPestana = 'evento' | 'habito' | 'objetivo' | 'caja' | 'cajaAdmin' | 'chat';
 
 export const TIPOS_QUE_ABREN_UNA_PESTANA: readonly TipoQueAbreUnaPestana[] = [
   'evento',
@@ -28,6 +28,7 @@ export const TIPOS_QUE_ABREN_UNA_PESTANA: readonly TipoQueAbreUnaPestana[] = [
   'objetivo',
   'caja',
   'cajaAdmin',
+  'chat',
 ];
 
 /**
@@ -40,6 +41,9 @@ const PESTANA: Record<TipoQueAbreUnaPestana, string> = {
   objetivo: 'Plan',
   caja: 'Yo',
   cajaAdmin: 'Hoy',
+  // D-221 (2026-09-29): el aviso de un mensaje abre esa conversación en Comunidad → Tribu, con el
+  // mismo parámetro que ya usa «Escribirle» desde la ficha de un aprendiz.
+  chat: 'Comunidad',
 };
 
 /** La pestaña y los parámetros que cada pantalla ya sabe consumir una vez. */
@@ -57,6 +61,8 @@ export function pestanaDelDestino(
       return { pestana: PESTANA.caja, params: { abrirCaja: true } };
     case 'cajaAdmin':
       return { pestana: PESTANA.cajaAdmin, params: { abrirCajaAprendizId: destino.aprendizId } };
+    case 'chat':
+      return { pestana: PESTANA.chat, params: { abrirChatConversacionId: destino.conversacionId } };
   }
 }
 
@@ -75,7 +81,8 @@ export type ResultadoDeApertura = 'abierto' | 'esperando' | 'nada';
  * aviso abre el evento directo, como desde E-5. Los de la Caja Renaser sí esperan (D-219): nada tapa el
  * Código Renaser ni el Pacto.
  */
-const ESPERAN_A_LAS_CAPAS: ReadonlySet<TipoQueAbreUnaPestana> = new Set(['habito', 'objetivo', 'caja', 'cajaAdmin']);
+/* D-221: el chat también espera. Un mensaje del grupo no puede tapar el Código Renaser ni el Pacto. */
+const ESPERAN_A_LAS_CAPAS: ReadonlySet<TipoQueAbreUnaPestana> = new Set(['habito', 'objetivo', 'caja', 'cajaAdmin', 'chat']);
 
 export function intentarAbrirAvisoPendiente(deps: DependenciasDeApertura): ResultadoDeApertura {
   let esperando = false;

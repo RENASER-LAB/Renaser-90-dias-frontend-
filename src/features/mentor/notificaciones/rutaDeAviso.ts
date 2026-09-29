@@ -2,6 +2,7 @@
 import type * as TipoNotificaciones from 'expo-notifications';
 import { Platform } from 'react-native';
 
+import { rutaDelMensajeDeChat } from '../../chat/avisos/avisoDeChat';
 import { destinoDeRuta, type DestinoDeAviso } from '../api/avisosApi';
 import { HAY_PUSH_NATIVO } from './pushNativo';
 
@@ -156,7 +157,17 @@ function escucharEnLaWeb(): () => void {
   if (!sw) return () => {};
   const oyente = (evento: MessageEvent) => {
     const ruta = rutaDelMensajeDelServiceWorker(evento.data);
-    if (ruta) anotarRutaDeAviso(ruta);
+    if (ruta) {
+      anotarRutaDeAviso(ruta);
+      return;
+    }
+    // D-221: un mensaje de chat con la página a la vista. Se carga acá para no arrastrar el audio.
+    const deChat = rutaDelMensajeDeChat(evento.data);
+    if (deChat) {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { atenderAvisoDeChatEnPrimerPlano } = require('../../chat/avisos/atenderAvisoDeChat') as typeof import('../../chat/avisos/atenderAvisoDeChat');
+      atenderAvisoDeChatEnPrimerPlano({ route: deChat });
+    }
   };
   sw.addEventListener('message', oyente);
   return () => sw.removeEventListener('message', oyente);

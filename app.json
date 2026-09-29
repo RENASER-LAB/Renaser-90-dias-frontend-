@@ -61,6 +61,7 @@
         {
           "sounds": [
             "./assets/sonidos/campana_renaser.wav",
+            "./assets/sonidos/mensaje_burbuja.wav",
             "./assets/sonidos/voz_habito.mp3",
             "./assets/sonidos/voz_evento.mp3",
             "./assets/sonidos/voz_objetivos.mp3",

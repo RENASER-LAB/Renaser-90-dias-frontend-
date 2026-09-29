@@ -32,6 +32,7 @@ import {
   type SonidoDeAlarma,
   type TipoDeAlarma,
 } from '../sonidoDeAlarma';
+import { CANAL_DE_MENSAJES } from '../../chat/avisos/canalDeMensajes';
 import { leerMp3 } from './leerMp3';
 
 const RAIZ = path.resolve(__dirname, '../../../..');
@@ -122,17 +123,19 @@ describe('los ocho sonidos, en dos grupos', () => {
 describe('los archivos que van en el APK', () => {
   const enAppJson = sonidosDeAppJson();
   const enCarpeta = fs.readdirSync(CARPETA).sort();
+  /* Los de las alarmas y, desde D-221 (2026-09-29), el del canal de mensajes del chat. */
+  const NOMBRADOS = [...ARCHIVOS_DE_SONIDO, CANAL_DE_MENSAJES.sonido];
 
   it('cada archivo que el código puede nombrar está en assets/sonidos y en `sounds` de app.json', () => {
-    for (const archivo of ARCHIVOS_DE_SONIDO) {
+    for (const archivo of NOMBRADOS) {
       expect(enAppJson).toContain(`./assets/sonidos/${archivo}`);
       expect(fs.existsSync(path.join(CARPETA, archivo))).toBe(true);
     }
   });
 
   it('y nada más: ni un archivo sin usar en el APK, ni uno en app.json que el código no nombre', () => {
-    expect(enAppJson.map(s => path.basename(s)).sort()).toEqual([...ARCHIVOS_DE_SONIDO].sort());
-    expect(enCarpeta).toEqual([...ARCHIVOS_DE_SONIDO].sort());
+    expect(enAppJson.map(s => path.basename(s)).sort()).toEqual([...NOMBRADOS].sort());
+    expect(enCarpeta).toEqual([...NOMBRADOS].sort());
   });
 
   it('nombres válidos para Android res/raw y sin dos con el mismo nombre base', () => {
@@ -166,6 +169,17 @@ describe('los archivos que van en el APK', () => {
   it('el peso que suman los sonidos al APK no pasa de 2 MB (hoy ~1,6 MB; subirlo tiene que ser a propósito)', () => {
     const bytes = enCarpeta.reduce((suma, a) => suma + fs.statSync(path.join(CARPETA, a)).size, 0);
     expect(bytes).toBeLessThan(2 * 1024 * 1024);
+  });
+
+  it('D-221: el aviso de mensaje es un WAV mono 16 bit de 44,1 kHz y corto (menos de 1 s)', () => {
+    const wav = fs.readFileSync(path.join(CARPETA, CANAL_DE_MENSAJES.sonido));
+    expect(wav.toString('ascii', 0, 4)).toBe('RIFF');
+    expect(wav.toString('ascii', 8, 12)).toBe('WAVE');
+    expect(wav.readUInt16LE(22)).toBe(1); // canales
+    expect(wav.readUInt32LE(24)).toBe(44100);
+    expect(wav.readUInt16LE(34)).toBe(16);
+    const bytesPorSegundo = wav.readUInt32LE(28);
+    expect(wav.length / bytesPorSegundo).toBeLessThan(1);
   });
 
   it('el lector de MP3 rechaza lo que no es un MP3', () => {

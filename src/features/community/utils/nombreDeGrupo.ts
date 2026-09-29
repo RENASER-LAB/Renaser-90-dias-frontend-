@@ -1,3 +1,4 @@
+import { TITULO_DE_GRUPO_SIN_NOMBRE } from '../../chat/api/chatMappers';
 import type { CelulaDelAprendiz } from '../types/community.types';
 
 /**
@@ -16,12 +17,21 @@ import type { CelulaDelAprendiz } from '../types/community.types';
  * Si el grupo no está en la lista —todavía cargando, o una conversación de un grupo del que ya
  * salió— se devuelve el título que vino. Es genérico, pero **nunca es el nombre de otro grupo**,
  * que es el error que este cambio vino a corregir.
+ *
+ * > **Corregido 2026-09-29 (D-221 del backend).** Lo de arriba («el módulo `chat` solo conoce el
+ * > `celulaId`») dejó de valer: el servidor manda el nombre del chat del grupo, «Luisa y sus
+ * > aprendices» (pedido del dueño), el mismo para aprendiz, mentor, admin y alquimista. Ese nombre
+ * > GANA: el de `/me/cells` es el de la célula, no el del chat. El cruce con `/me/cells` queda solo
+ * > para un backend viejo, que sigue mandando `nombre: null` y deja el título genérico.
  */
 export function nombreVisibleDeGrupo(
   conversacion: { type: string; celulaId: string | null; title: string },
   grupos: Pick<CelulaDelAprendiz, 'cellId' | 'cellName'>[]
 ): string {
   if (conversacion.type !== 'celula' || !conversacion.celulaId) {
+    return conversacion.title;
+  }
+  if (conversacion.title !== TITULO_DE_GRUPO_SIN_NOMBRE) {
     return conversacion.title;
   }
   return grupos.find(g => g.cellId === conversacion.celulaId)?.cellName ?? conversacion.title;

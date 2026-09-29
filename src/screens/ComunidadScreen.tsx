@@ -641,10 +641,12 @@ export default function ComunidadScreen() {
   }, [celulaIdAbierto, grupoAbierto, integrantesDelGrupoAbierto, mentorDeLaTarjeta.nombre, mentorDeLaTarjeta.avatarUrl, companerosDeLaTarjeta]);
   /* Corregido 2026-09-26: sin `grupoAbierto` caía a `miCelula`, que puede ser OTRO grupo (y para
      un mentor, ninguno). Ahora cae al nombre visible de la conversación abierta. */
-  const nombreDelGrupo = grupoAbierto
-    ? grupoAbierto.cellName
-    : activeChat
-      ? nombreVisibleDeConversacion(activeChat)
+  /* Corregido 2026-09-29 (D-221): con un chat abierto manda su nombre visible (el del servidor,
+     «Luisa y sus aprendices»), el mismo de la lista y la cabecera; el de la célula solo si no hay chat. */
+  const nombreDelGrupo = activeChat
+    ? nombreVisibleDeConversacion(activeChat)
+    : grupoAbierto
+      ? grupoAbierto.cellName
       : 'Tu grupo';
   /* La info del grupo abierto, al estilo WhatsApp (2026-09-27): el mentor primero, después «Tú» y
      el resto por nombre, cada uno con su marca. La cifra es la MISMA que dice la cabecera del chat

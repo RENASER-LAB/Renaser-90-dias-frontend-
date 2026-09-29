@@ -6,6 +6,7 @@ import { mensajeDeError } from '../../../services/http/apiClient';
 // de Eventos, con sus pruebas. Mismo criterio que `objetivos` con `eventos/utils/zonaHoraria`.
 import { crearLecturaVigente, type LecturaVigente } from '../../eventos/utils/lecturaVigente';
 import * as chatApi from '../api/chatApi';
+import { alLlegarMensajeDeOtroChat } from '../avisos/mensajesEnVivo';
 import {
   conversacionConHistorial,
   mapearMensaje,
@@ -126,6 +127,15 @@ export function useChatConversaciones(actorId: string | null | undefined, activo
     lectura.current?.invalidar();
     setConversacionesCrudas(cambio);
   }, []);
+
+  // D-221 (2026-09-29): un mensaje que llega a OTRO chat con la app abierta (aviso en primer plano o
+  // mensaje del service worker en la web) relee la lista: orden por último mensaje y no leídos al día.
+  useEffect(() => {
+    if (!activo) return;
+    return alLlegarMensajeDeOtroChat(() => {
+      void recargar({ forzar: true });
+    });
+  }, [activo, recargar]);
 
   // Se repide si cambia la persona (igual que antes), pero solo con la sección activa. Otra persona
   // descarta lo que estuviera en vuelo para la anterior.

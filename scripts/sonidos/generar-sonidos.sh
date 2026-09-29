@@ -5,6 +5,9 @@
 #             catálogo, que dice su nombre, y la frase genérica de hábitos propios, eventos y objetivos.
 #             Qué dice cada una: `src/features/alarmas/vocesDeLasAlarmas.json` (lo lee también la app).
 #   alarmas → los 8 sonidos para alertar y para relajar, síntesis propia (numpy/scipy, sin terceros).
+#   mensaje → `mensaje_burbuja.wav`, el aviso de mensaje del chat (D-221, 2026-09-29): síntesis propia
+#             (`sintetizar_mensaje.py`, numpy/scipy, sin muestras ni sonidos de terceros). Es el sonido
+#             del canal de Android `mensajes-chat` y el que suena dentro de la app abierta.
 #
 # Reemplaza a `scripts/generar-voces-provisionales.sh` (espeak-ng, 2026-09-26), que ya no existe.
 #
@@ -13,6 +16,7 @@
 #   ./scripts/sonidos/generar-sonidos.sh voces                          # solo las voces
 #   ./scripts/sonidos/generar-sonidos.sh voces voz_habito_dormir.mp3    # solo esa (o esas) voces
 #   ./scripts/sonidos/generar-sonidos.sh alarmas                        # solo los 8 sonidos
+#   ./scripts/sonidos/generar-sonidos.sh mensaje                        # solo el aviso de mensaje
 #   SIN_ASR=1 ./scripts/sonidos/generar-sonidos.sh ...                  # sin la escucha de Whisper
 # Da los mismos archivos byte a byte cada vez, en esta laptop (semillas fijas y, para Kokoro, un hilo
 # sin oneDNN: ver la trampa 4 en `generar_voces.py`). En otra CPU o con otras versiones puede cambiar
@@ -66,10 +70,12 @@ cd "$AQUI"
 case "$QUE" in
   todo)
     "$PY" generar_voces.py "$TRABAJO/voces" "$DESTINO"
-    "$PY" sintetizar_alarmas.py "$TRABAJO/alarmas" "$DESTINO" ;;
+    "$PY" sintetizar_alarmas.py "$TRABAJO/alarmas" "$DESTINO"
+    "$PY" sintetizar_mensaje.py "$TRABAJO/mensaje" "$DESTINO" ;;
   voces) "$PY" generar_voces.py "$TRABAJO/voces" "$DESTINO" "$@" ;;
   alarmas) "$PY" sintetizar_alarmas.py "$TRABAJO/alarmas" "$DESTINO" ;;
-  *) echo "Uso: $0 [todo | voces [voz_....mp3 ...] | alarmas]" >&2; exit 2 ;;
+  mensaje) "$PY" sintetizar_mensaje.py "$TRABAJO/mensaje" "$DESTINO"; exit 0 ;;
+  *) echo "Uso: $0 [todo | voces [voz_....mp3 ...] | alarmas | mensaje]" >&2; exit 2 ;;
 esac
 
 if [ -n "${SIN_ASR:-}" ]; then
