@@ -89,6 +89,7 @@ import {
   elementosDeLaListaInvertida,
   integrantesDelChatDeGrupo,
   ordenarPorActividad,
+  conElGlobalPrimero,
   subtituloDeLaCabecera,
   type ElementoDelChat,
 } from '../features/chat/utils/formatoChat';
@@ -109,7 +110,6 @@ import { irAPestana } from '../navigation/navegacionRef';
 import { useParticipantesDelChat } from '../features/chat/hooks/useParticipantesDelChat';
 import { conversacionAPantallaCompleta } from '../features/chat/utils/pantallaCompletaDelChat';
 import { OPCIONES_CON_PESTANAS, OPCIONES_SIN_PESTANAS } from '../navigation/pestanasOcultas';
-import { EvidenciaDesdeChatModal } from '../features/habits/components/EvidenciaDesdeChatModal';
 import { mapearMensaje, resumenDelUltimoMensaje } from '../features/chat/api/chatMappers';
 import { abrirConversacionDirecta } from '../features/chat/api/chatApi';
 import type { WireMensaje } from '../features/chat/types/chat.types';
@@ -1784,34 +1784,11 @@ export default function ComunidadScreen() {
     ]);
   };
 
-  /**
-   * Subir la evidencia de un hábito desde el chat (pedido del dueño, 2026-09-05).
-   *
-   * Es una acción SEPARADA del botón de foto de arriba, y a propósito: una foto de chat y una
-   * evidencia sellada son cosas distintas — distinto bucket, distinta validación, distintas
-   * consecuencias (la evidencia otorga puntos). Nunca se infiere que una foto normal "era" la
-   * evidencia de algo; el aprendiz elige explícitamente qué hábito está evidenciando.
-   */
-  const [evidenciaVisible, setEvidenciaVisible] = useState(false);
-
-  /**
-   * Después de sellar la evidencia se manda un mensaje NORMAL de texto a la conversación, para
-   * que quede constancia. Es un mensaje aparte y no un efecto de la subida: si falla, la
-   * evidencia ya está registrada igual y no se le avisa de un error que no cambia nada — el
-   * hábito quedó cerrado, que es lo que importaba.
-   */
-  const handleEvidenciaSubida = async (resultado: { tituloHabito: string; puntosOtorgados: number }) => {
-    if (!activeChat) return;
-    try {
-      const actualizada = await enviarMensajeChatRemoto(
-        activeChat,
-        `Sube mi evidencia de "${resultado.tituloHabito}" (+${resultado.puntosOtorgados} pts).`,
-      );
-      setActiveChat(actualizada);
-    } catch {
-      // Silencio deliberado: ver el comentario de arriba.
-    }
-  };
+  /* Acá vivían `evidenciaVisible` y `handleEvidenciaSubida`, el atajo para subir la evidencia de
+     un hábito DESDE el chat (2026-09-05). Se quitó el 2026-09-29 a pedido del dueño junto con su
+     botón (el círculo verde con ✓ de la barra de escribir). La evidencia se sigue subiendo desde
+     Hoy, Hábitos y RenasIA (`RegistroConFotoModal` / `EvidenciaHabitoModal`), que es donde vive;
+     `EvidenciaDesdeChatModal` queda en `features/habits` por si se vuelve a pedir. */
 
   // Abre el 1 a 1 buscando por NOMBRE entre las conversaciones que ya existen, y no por id: los
   // integrantes que llegan acá salen del roster real, pero este camino nunca mandó un id a
@@ -2239,7 +2216,12 @@ export default function ComunidadScreen() {
      el del servidor. Ahora las dos listas van por el último mensaje, lo más reciente arriba, como
      WhatsApp; las dos secciones siguen separadas (grupos y soporte arriba, 1 a 1 abajo). */
   const TIPOS_DE_FORMACION: ChatConversation['type'][] = ['global', 'celula', 'soporte'];
-  const gruposDeFormacion = ordenarPorActividad(conversations.filter(conv => TIPOS_DE_FORMACION.includes(conv.type)));
+  /* 2026-09-29, pedido del dueño: «Formación Renaser Global» va SIEMPRE primero y el resto de los
+     grupos sigue por el último mensaje. Importa sobre todo al Admin y al Alquimista, que ven todos
+     los grupos; para los demás roles no cambia nada visible más que fijar el general arriba. */
+  const gruposDeFormacion = conElGlobalPrimero(
+    ordenarPorActividad(conversations.filter(conv => TIPOS_DE_FORMACION.includes(conv.type))),
+  );
   const directos = ordenarPorActividad(conversations.filter(conv => conv.type === 'direct'));
   /* «Ahora» para las horas de la lista («21:04», «Ayer», «lun»): se toma en cada render, que es
      cuando la lista cambia. */
@@ -3773,8 +3755,9 @@ export default function ComunidadScreen() {
             nada. Es lo que separa "grabar" de "escribir" sin explicárselo a nadie.
           */}
           {/* Barra estilo WhatsApp (2026-09-26): un campo redondeado con los adjuntos adentro
-              —evidencia de un hábito y cámara/galería, los mismos de antes— y afuera un solo botón
-              redondo que es micrófono sin texto y enviar con texto. */}
+              —cámara/galería— y afuera un solo botón redondo que es micrófono sin texto y enviar
+              con texto. Hasta el 2026-09-29 adentro estaba también el círculo verde con ✓ para
+              subir la evidencia de un hábito; se quitó a pedido del dueño. */}
           {!grabando && avisoDelLargoDelMensaje(chatInputText) ? (
             <Text
               accessibilityLiveRegion="polite"
@@ -3805,17 +3788,6 @@ export default function ComunidadScreen() {
                     style={[styles.chatTextoCampo, styles.textInputChat, { color: c.text }]}
                     accessibilityLabel="Escribe un mensaje"
                   />
-                  {/* Acción aparte de la foto: acá la imagen se sella como EVIDENCIA de un hábito
-                      (otro endpoint, otro bucket, otorga puntos), no como una foto de chat. */}
-                  <Pressable
-                    onPress={() => setEvidenciaVisible(true)}
-                    disabled={enviandoMedia}
-                    hitSlop={4}
-                    style={[styles.mediaOptionBtn, { opacity: enviandoMedia ? 0.4 : 1 }]}
-                    accessibilityLabel="Subir evidencia de un hábito"
-                  >
-                    <Icon name="checkCircle" size={22} color={c.success} />
-                  </Pressable>
                   <Pressable
                     onPress={handleAdjuntarFoto}
                     disabled={enviandoMedia}
@@ -3857,14 +3829,6 @@ export default function ComunidadScreen() {
             )}
           </View>
 
-          {/* Subir la evidencia de un hábito desde el chat. Vive dentro de la vista de
-              conversación porque solo tiene sentido con un chat abierto: al terminar deja un
-              mensaje aparte en ESTA conversación. */}
-          <EvidenciaDesdeChatModal
-            visible={evidenciaVisible}
-            onCerrar={() => setEvidenciaVisible(false)}
-            onSubida={handleEvidenciaSubida}
-          />
         </KeyboardAvoidingView>
       )}
 

@@ -112,6 +112,18 @@ export function ordenarPorActividad<T extends { lastMessageAt?: string | null; c
     .map(x => x.conversacion);
 }
 
+/**
+ * El chat general («Formación Renaser Global», `type === 'global'`) arriba de todo y el resto en el
+ * orden que ya traía (pedido del dueño, 2026-09-29). Pensado para correr DESPUÉS de
+ * `ordenarPorActividad`: no reordena nada más. No modifica la lista que recibe.
+ */
+export function conElGlobalPrimero<T extends { type: string }>(conversaciones: readonly T[]): T[] {
+  return [
+    ...conversaciones.filter(conversacion => conversacion.type === 'global'),
+    ...conversaciones.filter(conversacion => conversacion.type !== 'global'),
+  ];
+}
+
 /** Lo mínimo de un mensaje que hace falta para agruparlo. */
 export type MensajeAgrupable = {
   id: string;
