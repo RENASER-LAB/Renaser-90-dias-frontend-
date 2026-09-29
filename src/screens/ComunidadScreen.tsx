@@ -1788,7 +1788,8 @@ export default function ComunidadScreen() {
      un hábito DESDE el chat (2026-09-05). Se quitó el 2026-09-29 a pedido del dueño junto con su
      botón (el círculo verde con ✓ de la barra de escribir). La evidencia se sigue subiendo desde
      Hoy, Hábitos y RenasIA (`RegistroConFotoModal` / `EvidenciaHabitoModal`), que es donde vive;
-     `EvidenciaDesdeChatModal` queda en `features/habits` por si se vuelve a pedir. */
+     `EvidenciaDesdeChatModal` quedó en `features/habits` y desde el 2026-09-29 es
+     `ElegirHabitoParaFotoModal`, que usa «+ Subir Foto» de Yo. */
 
   // Abre el 1 a 1 buscando por NOMBRE entre las conversaciones que ya existen, y no por id: los
   // integrantes que llegan acá salen del roster real, pero este camino nunca mandó un id a
