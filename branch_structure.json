@@ -1,0 +1,51 @@
+{
+  "default_branch": "master",
+  "branches": [
+    "admin-alquimista",
+    "alarmas-reloj",
+    "animacion-de-entrada",
+    "avance-diseno-y-backend-completo",
+    "caja-renaser",
+    "chore/play-store-produccion",
+    "docs/prompt-o-herramienta",
+    "evidencia-foto",
+    "feat/codigo-renaser-por-hora",
+    "feat/plan-tres-niveles",
+    "fix/muro-publicacion-instantanea",
+    "master",
+    "origin",
+    "planificar-por-bloque-en-training"
+  ],
+  "parent": {
+    "admin-alquimista": "master",
+    "alarmas-reloj": "master",
+    "animacion-de-entrada": "master",
+    "avance-diseno-y-backend-completo": "master",
+    "caja-renaser": "master",
+    "chore/play-store-produccion": "master",
+    "docs/prompt-o-herramienta": "master",
+    "evidencia-foto": "master",
+    "feat/codigo-renaser-por-hora": "master",
+    "feat/plan-tres-niveles": "master",
+    "fix/muro-publicacion-instantanea": "master",
+    "master": null,
+    "origin": "master",
+    "planificar-por-bloque-en-training": "master"
+  },
+  "order": [
+    "master",
+    "admin-alquimista",
+    "alarmas-reloj",
+    "animacion-de-entrada",
+    "avance-diseno-y-backend-completo",
+    "caja-renaser",
+    "chore/play-store-produccion",
+    "docs/prompt-o-herramienta",
+    "evidencia-foto",
+    "feat/codigo-renaser-por-hora",
+    "feat/plan-tres-niveles",
+    "fix/muro-publicacion-instantanea",
+    "origin",
+    "planificar-por-bloque-en-training"
+  ]
+}

@@ -176,20 +176,42 @@ describe('cuatro hábitos a las 12:00 (E-410)', () => {
 });
 
 describe('cambiar el sonido en Yo → Alarmas no toca horas (E-412)', () => {
-  it('Despertar con «12:00 desde mañana» sigue así después de elegir «Voz» y «Cuenco»', async () => {
-    const ahora = new Date(2026, 8, 28, 11, 40);
+  /**
+   * El reloj entra como argumento (E-431): `pasarAlarmasAlSonido` leía `Date.now()` y, en cuanto el reloj
+   * real pasaba del instante de la alarma con fecha, la tomaba por vencida y no le aplicaba el sonido.
+   * Cada caso corre con `Date` real de otro día: solo el `ahora` que se pasa puede decidir.
+   */
+  // Pasado el mediodía, «12:00 desde mañana» ya es la diaria de siempre (sonaría mañana igual), así que
+  // ahí el cambio arranca pasado mañana: es la única forma de que siga siendo una alarma con fecha.
+  const casos: [string, Date, number][] = [
+    ['antes del mediodía (11:40)', new Date(2026, 8, 28, 11, 40), 1],
+    ['pasado el mediodía (13:00)', new Date(2026, 8, 28, 13, 0), 2],
+    // 02:00 UTC del 29 = 21:00 del 28 en Lima: en UTC ya es «mañana», en Lima todavía es hoy.
+    ['02:00 UTC, el día anterior en Lima', new Date(Date.UTC(2026, 8, 29, 2, 0)), 2],
+  ];
+
+  it.each(casos)('Despertar con «12:00 desde mañana» sigue así después de elegir «Voz» y «Cuenco» (%s)', async (_, ahora, dias) => {
+    const mediodiaDeMañana = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() + dias, 12, 0).getTime();
+    const desde = new Date(mediodiaDeMañana);
+    const fechaDesde = `${desde.getFullYear()}-${String(desde.getMonth() + 1).padStart(2, '0')}-${String(desde.getDate()).padStart(2, '0')}`;
     await recordatorios.programarConCambioDiferido(USUARIO, DESPERTAR.id, DESPERTAR.titulo,
-      { horaDeHoy: '06:00', horaNueva: '12:00', desde: '2026-09-29' }, [0], { ahora });
+      { horaDeHoy: '06:00', horaNueva: '12:00', desde: fechaDesde }, [0], { ahora });
     const despertar = { habitoId: DESPERTAR.id, titulo: DESPERTAR.titulo, hora: '06:00', alarmaPuesta: true };
 
-    for (const sonido of ['voz', 'relajar-cuenco'] as const) {
-      await elegirSonido(sonido);
-      await pasarAlarmasAlSonido(USUARIO, sonido, despertar);
+    // El reloj real queda a años vista de la alarma: si algo lo lee, la daría por vencida.
+    const real = jest.spyOn(Date, 'now').mockReturnValue(new Date(2030, 0, 1, 13, 0).getTime());
+    try {
+      for (const sonido of ['voz', 'relajar-cuenco'] as const) {
+        await elegirSonido(sonido);
+        await pasarAlarmasAlSonido(USUARIO, sonido, despertar, ahora.getTime());
 
-      const suyas = [...mockLista.values()].filter(a => (a.content.data?.route as string | undefined)?.includes(DESPERTAR.id));
-      expect(suyas).toHaveLength(1);
-      expect(aLas(6, 0)).toHaveLength(0);
-      expect(suyas[0].trigger).toMatchObject({ type: 'date', value: new Date(2026, 8, 29, 12, 0).getTime() });
+        const suyas = [...mockLista.values()].filter(a => (a.content.data?.route as string | undefined)?.includes(DESPERTAR.id));
+        expect(suyas).toHaveLength(1);
+        expect(aLas(6, 0)).toHaveLength(0);
+        expect(suyas[0].trigger).toMatchObject({ type: 'date', value: mediodiaDeMañana });
+      }
+    } finally {
+      real.mockRestore();
     }
     const [suya] = mockLista.values();
     expect(suya.trigger.channelId).toBe('recordatorios-habitos-relajar-cuenco');
