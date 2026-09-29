@@ -11,6 +11,7 @@ import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher'
 import { abrirConversacionDirecta } from '../../chat/api/chatApi';
 import { urlDeEvidencia } from '../../evidence/api/evidenceApi';
 import { RejillaSemanal } from '../../mentor/components/RejillaSemanal';
+import { diaInicialDelDetalle } from '../../mentor/utils/diaInicialDelDetalle';
 import { TarjetaSemaforoDeAprendiz } from '../../semaforo/components/TarjetaSemaforoDeAprendiz';
 import { ChipDeCaja } from '../../caja/components/ChipDeCaja';
 import { avisar } from '../utils/dialogo';
@@ -69,9 +70,10 @@ export function FichaAprendizScreen({
     return true;
   }, !cambiandoDia);
 
+  /* El detalle abre en el día más reciente con hábitos —hoy, en la semana en curso—, no en el lunes
+     (E-439): mirando el lunes, el post de hoy parecía sin marcar. */
   useEffect(() => {
-    const conAlgo = semana?.dias.filter(d => d.obligaciones.length > 0) ?? [];
-    setDiaElegido(conAlgo[0]?.fecha ?? null);
+    setDiaElegido(diaInicialDelDetalle(semana?.dias ?? []));
   }, [semana]);
 
   const detalle = semana?.dias.find(d => d.fecha === diaElegido) ?? null;

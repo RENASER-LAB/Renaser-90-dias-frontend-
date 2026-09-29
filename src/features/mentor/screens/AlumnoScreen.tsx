@@ -19,6 +19,7 @@ import { abrirConversacionDirecta } from '../../chat/api/chatApi';
 import { urlDeEvidencia } from '../../evidence/api/evidenceApi';
 import { useSemanaDelAlumno } from '../hooks/useSemanaDelAlumno';
 import { diasDesde } from '../reglas';
+import { diaInicialDelDetalle } from '../utils/diaInicialDelDetalle';
 import { subtituloDelAlumno } from '../utils/subtituloDelAlumno';
 import type { AlumnoConEstado } from '../types/mentor.types';
 
@@ -57,13 +58,17 @@ export function AlumnoScreen({
   );
   const [diaElegido, setDiaElegido] = useState<string | null>(null);
 
-  /* Al cambiar de semana se vuelve al primer día con contenido. Conservar el día anterior
-     dejaría seleccionada una fecha que ya no está en la lista y la pantalla quedaría vacía. */
+  /* Al cambiar de semana se vuelve al día más reciente con contenido: hoy, en la semana en curso
+     (E-439; antes el primero, el lunes). Conservar el día anterior dejaría seleccionada una fecha
+     que ya no está en la lista y la pantalla quedaría vacía. */
   useEffect(() => {
-    setDiaElegido(diasConContenido[0]?.fecha ?? null);
+    setDiaElegido(diaInicialDelDetalle(diasConContenido));
   }, [diasConContenido]);
 
-  const detalleDelDia = diasConContenido.find(d => d.fecha === diaElegido) ?? diasConContenido[0] ?? null;
+  const detalleDelDia =
+    diasConContenido.find(d => d.fecha === diaElegido) ??
+    diasConContenido.find(d => d.fecha === diaInicialDelDetalle(diasConContenido)) ??
+    null;
   const [abriendoChat, setAbriendoChat] = useState(false);
   const [abriendoEvidencia, setAbriendoEvidencia] = useState<string | null>(null);
 
