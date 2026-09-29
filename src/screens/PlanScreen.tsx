@@ -12,7 +12,7 @@ import {
 import { Alert } from '../components/Alerta';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import Svg, { Path, Circle } from 'react-native-svg';
+import { ArcoDelDia } from '../features/programa/components/ArcoDelDia';
 import { useTheme } from '../theme/ThemeContext';
 import { space } from '../theme/tokens';
 import { useResponsive } from '../theme/responsive';
@@ -21,7 +21,7 @@ import { MicroLabel, Row, RowBetween, ScreenHeader } from '../components/ui';
 import { Icon } from '../components/Icon';
 import { GoldButton } from '../components/GoldButton';
 import { usePlanHabitos } from '../features/habits/hooks/usePlanHabitos';
-import { DIAS_DEL_PROGRAMA, puntoDelMedidor, useProgramaDia } from '../features/programa/hooks/useProgramaDia';
+import { DIAS_DEL_PROGRAMA, useProgramaDia } from '../features/programa/hooks/useProgramaDia';
 import { descripcionDeFase } from '../features/home/hooks/useResumenHome';
 import {
   diaAnterior,
@@ -394,7 +394,6 @@ export default function PlanScreen() {
    * conozca. En los dos casos no se dibuja el rótulo: mejor nada que un dato inventado.
    */
   const faseActual = descripcionDeFase(fase);
-  const medidor = puntoDelMedidor(diaPrograma);
   /* `null` mientras la carga no termina o el programa no arranco (dia 0): la arquitectura de
      tiempo no debe mostrar avance inventado, igual que Hoy no muestra un dia que no sabe. */
   const diaConocido = cargandoDiaPrograma || diaPrograma <= 0 ? null : diaPrograma;
@@ -981,24 +980,8 @@ export default function PlanScreen() {
             <Text style={[t.body, { color: c.text }]}>Enfocado. Estratégico. Real.</Text>
           </View>
 
-          {/* GAUGE DE 90 DÍAS */}
-          <View style={[styles.gauge, { height: gaugeH + 8 }]}>
-            <Svg width={gaugeW} height={gaugeH} viewBox="0 0 228 120">
-              <Path d="M14 108a100 100 0 0 1 200 0" stroke={c.divider} strokeWidth={5} strokeLinecap="round" fill="none" />
-              <Path d={medidor.path} stroke={c.chevron} strokeWidth={5} strokeLinecap="round" fill="none" />
-              <Circle cx={medidor.x} cy={medidor.y} r={6} fill={c.gold} />
-            </Svg>
-            <View style={styles.gaugeCenter}>
-              <Text style={[t.micro, { color: c.micro }]}>DÍA</Text>
-              {/* `t.metric` y no un `fontFamily` suelto: trae las cifras tabulares que pide
-                  AGENTS.md §4 para todo número que cambia en pantalla. Sin eso, pasar del día 9
-                  al 10 corría de lugar el número dentro del medidor. */}
-              <Text style={[t.metric, { fontSize: 40, lineHeight: 46, color: c.textStrong }]}>{diaPrograma}</Text>
-              <Text style={[t.small, { color: c.micro }]}>DE {DIAS_DEL_PROGRAMA}</Text>
-            </View>
-            <Text style={[t.small, styles.gaugeLeft, { color: c.textSoft }]}>01</Text>
-            <Text style={[t.small, styles.gaugeRight, { color: c.textSoft }]}>90</Text>
-          </View>
+          {/* GAUGE DE 90 DÍAS — se llena desde el día 0 hasta el actual al entrar (ArcoDelDia). */}
+          <ArcoDelDia dia={diaPrograma} ancho={gaugeW} alto={gaugeH} />
 
           {/* FASE ACTUAL — derivada del día, no escrita a mano.
               Decía "01 · Fundamentación · Días 1–30" fijo: seguía diciendo lo mismo en el día 75. */}
@@ -2267,27 +2250,6 @@ const styles = StyleSheet.create({
   /** Cifras que cambian en pantalla: ancho de dígito fijo para que nada salte (AGENTS.md §4). */
   cifras: {
     fontVariant: ['tabular-nums'],
-  },
-  gauge: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: space.gap,
-    position: 'relative',
-  },
-  gaugeCenter: {
-    position: 'absolute',
-    bottom: 2,
-    alignItems: 'center',
-  },
-  gaugeLeft: {
-    position: 'absolute',
-    bottom: 0,
-    left: 8,
-  },
-  gaugeRight: {
-    position: 'absolute',
-    bottom: 0,
-    right: 8,
   },
   /**
    * Sin `borderTopWidth` (2026-09-14). Eran tres filetes horizontales cortando la pantalla en
