@@ -138,6 +138,7 @@ export async function pasarAlarmasAlSonido(
   userId: string,
   sonido: SonidoDeAlarma,
   despertar: DespertarDeYo | null,
+  ahoraMs: number = Date.now(),
 ): Promise<void> {
   // Despertar guarda su sonido (lo respeta todo `programar` posterior) y se pasa con los demás hábitos.
   //
@@ -145,7 +146,7 @@ export async function pasarAlarmasAlSonido(
   // > eso borraba un cambio de hora con fecha (D-217): con «12:00 desde mañana», elegir otro sonido lo
   // > dejaba en «06:00 todos los días». `cambiarSonidoDeLosHabitos` conserva cada disparador tal cual.
   if (despertar) await fijarSonido(userId, despertar.habitoId, sonido);
-  await cambiarSonidoDeLosHabitos(userId, sonido);
-  await cambiarSonidoDeLasProgramadas(await idsDeRecordatoriosDeAcciones(userId), canalDeAlarma('objetivos', sonido));
-  await agruparAvisosQueCoinciden(userId);
+  await cambiarSonidoDeLosHabitos(userId, sonido, ahoraMs);
+  await cambiarSonidoDeLasProgramadas(await idsDeRecordatoriosDeAcciones(userId), canalDeAlarma('objetivos', sonido), ahoraMs);
+  await agruparAvisosQueCoinciden(userId, ahoraMs);
 }
