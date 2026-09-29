@@ -19,6 +19,7 @@ import {
   registrarConFoto,
   type DependenciasDelRegistro,
   type EstadoParaFoto,
+  type MedicionPedida,
   type ResultadoDelRegistro,
 } from '../utils/registroConFoto';
 
@@ -33,6 +34,11 @@ export type SolicitudDeFoto = {
   conPregunta: boolean;
   /** Sin el campo, un hábito: como antes de D-178. */
   destino?: DestinoDeFoto;
+  /**
+   * D-226: pista de quien llama de que el registro pide los km (p. ej. Training ya tiene el track).
+   * La que manda es la del servidor al consultar el registro fresco; esta vale si no se pudo consultar.
+   */
+  medicion?: MedicionPedida | null;
 };
 
 /** La pantalla partida abierta: la foto de arriba y la respuesta de abajo. */
@@ -40,6 +46,8 @@ export type RegistroConFotoAbierto = SolicitudDeFoto & {
   /** `null` solo cuando la evidencia ya estaba subida de antes (no hay foto local que mostrar). */
   archivo: ArchivoEvidencia | null;
   evidenciaYaSubida: boolean;
+  /** D-226: pide "¿Cuántos km recorriste hoy?" en vez de "¿Qué sentiste?". */
+  medicion?: MedicionPedida | null;
 };
 
 /** Cómo terminó el toque. Las tarjetas del chat y del orbe se actualizan con esto. */
@@ -113,6 +121,26 @@ function mensajeDelFallo(error: unknown): string {
   }
   if (error instanceof RechazoParaMostrar) return error.message;
   return mensajeDeError(error, 'No se pudo registrar. Tu foto y tu respuesta siguen acá: intenta de nuevo.');
+}
+
+/**
+ * D-226: si el registro pide los km. Lo dice el servidor en el estado fresco; en web ese estado no se
+ * consulta antes de la cámara (el navegador la bloquearía), así que se consulta DESPUÉS de la foto,
+ * cuando ya no hay gesto que cuidar. Sin red, vale la pista de quien llamó.
+ */
+async function medicionDelRegistro(
+  reglas: ReglasDelDestino,
+  solicitud: SolicitudDeFoto,
+  estado: Extract<EstadoParaFoto, { tipo: 'disponible' }>,
+): Promise<MedicionPedida | null> {
+  if (estado.medicion) return estado.medicion;
+  if (Platform.OS !== 'web' || solicitud.destino === 'roca') return solicitud.medicion ?? null;
+  try {
+    const fresco = await reglas.estadoFresco(solicitud.registroId);
+    return fresco.tipo === 'disponible' ? fresco.medicion ?? null : solicitud.medicion ?? null;
+  } catch {
+    return solicitud.medicion ?? null;
+  }
 }
 
 /**
@@ -206,13 +234,15 @@ export function useRegistroConFoto(opciones: OpcionesRegistroConFoto) {
         if (estado.evidenciaYaSubida) {
           // La foto ya está en el servidor de un intento anterior: no se pide otra (duplicaría la
           // evidencia). Solo falta la respuesta y el cierre.
-          abrir({ ...solicitud, archivo: null, evidenciaYaSubida: true });
+          const medicion = await medicionDelRegistro(reglas, solicitud, estado);
+          abrir({ ...solicitud, archivo: null, evidenciaYaSubida: true, medicion });
           return 'abierto';
         }
         const archivo = await sacarFoto(solicitud);
         if (!archivo) return 'cancelado';
         await esperarCierreDeLaCamara();
-        abrir({ ...solicitud, archivo, evidenciaYaSubida: false });
+        const medicion = await medicionDelRegistro(reglas, solicitud, estado);
+        abrir({ ...solicitud, archivo, evidenciaYaSubida: false, medicion });
         return 'abierto';
       } finally {
         ocupadoRef.current = false;
@@ -264,11 +294,11 @@ export function useRegistroConFoto(opciones: OpcionesRegistroConFoto) {
   /**
    * Sin pregunta (todo lo que no es ritual, D-172) no hay nada que escribir: apenas la foto está en
    * pantalla se registra sola. Una vez por foto: si falla, queda el error y el botón de reintentar,
-   * sin volver a mandarla en cada render.
+   * sin volver a mandarla en cada render. Los km (D-226) sí tienen algo que escribir: no se envía solo.
    */
   const autoEnviadoRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!registro || registro.conPregunta || enviando || error) return;
+    if (!registro || registro.conPregunta || registro.medicion || enviando || error) return;
     const clave = `${registro.registroId}:${registro.archivo?.uri ?? 'ya-subida'}`;
     if (autoEnviadoRef.current === clave) return;
     autoEnviadoRef.current = clave;
@@ -307,6 +337,7 @@ export function useRegistroConFoto(opciones: OpcionesRegistroConFoto) {
         destino: contexto.destino,
         archivo,
         evidenciaYaSubida: estado.tipo === 'disponible' && estado.evidenciaYaSubida,
+        medicion: estado.tipo === 'disponible' ? estado.medicion ?? null : null,
       });
     } finally {
       ocupadoRef.current = false;

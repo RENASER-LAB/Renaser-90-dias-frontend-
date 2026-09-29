@@ -66,6 +66,7 @@ import { useRegistroConFoto } from '../features/habits/hooks/useRegistroConFoto'
 import { useRenombreLocal } from '../features/habits/hooks/useRenombreDeHabito';
 import { tituloVisible } from '../features/habits/utils/renombreDeHabito';
 import type { HabitoParaFoto } from '../features/habits/utils/habitosParaFotoDeHoy';
+import { medicionPedidaDe } from '../features/habits/utils/registroConFoto';
 
 // =========================================================================
 // DATOS ESTÁTICOS
@@ -264,6 +265,8 @@ export default function YoScreen() {
             registroId: track.id,
             titulo: tituloVisible({ id: track.habitoId, title: track.tituloHabito }, renombre.titulos),
             conPregunta,
+            // D-226: pista para los km (la que manda es la del registro fresco).
+            medicion: medicionPedidaDe(track),
           },
           track.tieneEvidencia === true
         );

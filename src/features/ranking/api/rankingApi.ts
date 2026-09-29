@@ -22,6 +22,11 @@ export interface RankingAgregadoDto {
   liga: EntradaRankingDto[];
   coherenciaIndividual: EntradaRankingDto[];
   general: EntradaRankingDto[];
+  /**
+   * D-226 del backend: km acumulados desde el Día 1 (`puntaje` son km). Opcional: un backend
+   * anterior no lo manda.
+   */
+  kilometros?: EntradaRankingDto[];
 }
 
 /**

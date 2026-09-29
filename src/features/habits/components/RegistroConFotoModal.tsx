@@ -20,7 +20,14 @@ import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useResponsive } from '../../../theme/responsive';
 import type { PropsRegistroConFotoModal } from '../hooks/useRegistroConFoto';
-import { PREGUNTA_DEL_REGISTRO, respuestaValida } from '../utils/registroConFoto';
+import {
+  formatoKm,
+  leerKilometros,
+  PREGUNTA_DE_KILOMETROS,
+  PREGUNTA_DEL_REGISTRO,
+  respuestaValida,
+  totalConHoy,
+} from '../utils/registroConFoto';
 
 /**
  * La pantalla partida del REGISTRO CON FOTO (pedido del dueño, 2026-09-26): arriba la foto que se
@@ -28,6 +35,9 @@ import { PREGUNTA_DEL_REGISTRO, respuestaValida } from '../utils/registroConFoto
  * SOLO en los tres rituales (D-172), y ahí la respuesta es obligatoria; en los demás no hay pregunta
  * y la foto se registra sola apenas aparece (`useRegistroConFoto`). Se puede volver a sacar la foto
  * sin perder lo escrito.
+ *
+ * KILÓMETROS DIARIOS (D-226): en vez de "¿Qué sentiste?" pide "¿Cuántos km recorriste hoy?" con
+ * teclado numérico (coma o punto) y muestra el total recorrido del programa con lo de hoy sumado.
  *
  * Solo dibuja: el estado y la subida viven en `useRegistroConFoto`, y es el mismo componente en
  * Training, en el chat del acompañante y en la hoja del orbe.
@@ -49,7 +59,9 @@ export function RegistroConFotoModal({
   const { horizontalPadding, contentMaxWidth, isTablet } = useResponsive();
   const visible = registro !== null;
   const conPregunta = registro?.conPregunta ?? true;
-  const puedeTerminar = respuestaValida(respuesta, conPregunta) && !enviando;
+  const medicion = registro?.medicion ?? null;
+  const respuestaLista = medicion ? leerKilometros(respuesta) !== null : respuestaValida(respuesta, conPregunta);
+  const puedeTerminar = respuestaLista && !enviando;
 
   // AGENTS.md §6: el gesto lateral cierra esta pantalla, nunca la app. Durante el envío se consume
   // sin cerrar: cortar a mitad dejaría la foto subida y el registro sin cerrar.
@@ -83,7 +95,7 @@ export function RegistroConFotoModal({
                   Tu foto ya quedó guardada
                 </Text>
                 <Text style={[t.small, { color: c.textSoft, textAlign: 'center' }]}>
-                  {conPregunta ? 'Solo falta tu respuesta para terminar.' : 'Solo falta registrarla.'}
+                  {conPregunta || medicion ? 'Solo falta tu respuesta para terminar.' : 'Solo falta registrarla.'}
                 </Text>
               </View>
             )}
@@ -120,7 +132,32 @@ export function RegistroConFotoModal({
             <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]} numberOfLines={2}>
               {registro.titulo.toUpperCase()}
             </Text>
-            {conPregunta ? (
+            {medicion ? (
+              <>
+                <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 24 }]}>{PREGUNTA_DE_KILOMETROS}</Text>
+                <View style={estilos.filaKm}>
+                  <TextInput
+                    value={respuesta}
+                    onChangeText={onCambiarRespuesta}
+                    placeholder="0,0"
+                    placeholderTextColor={c.tabInactive}
+                    keyboardType="decimal-pad"
+                    inputMode="decimal"
+                    maxLength={6}
+                    editable={!enviando}
+                    accessibilityLabel={PREGUNTA_DE_KILOMETROS}
+                    style={[
+                      estilos.campoKm,
+                      { color: c.textStrong, borderColor: error ? c.danger : c.border, backgroundColor: c.cardBgAlt },
+                    ]}
+                  />
+                  <Text style={[t.cardTitle, { color: c.textSoft }]}>km</Text>
+                </View>
+                <Text style={[t.body, { color: c.textSoft }]} accessibilityLiveRegion="polite">
+                  Total recorrido: {formatoKm(totalConHoy(medicion, respuesta))} km
+                </Text>
+              </>
+            ) : conPregunta ? (
               <>
                 <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 24 }]}>{PREGUNTA_DEL_REGISTRO}</Text>
                 <TextInput
@@ -150,14 +187,16 @@ export function RegistroConFotoModal({
             ) : null}
 
             <GoldButton
-              label={enviando ? 'REGISTRANDO…' : error ? 'REINTENTAR' : conPregunta ? 'TERMINAR' : 'REGISTRAR'}
+              label={
+                enviando ? 'REGISTRANDO…' : error ? 'REINTENTAR' : conPregunta && !medicion ? 'TERMINAR' : 'REGISTRAR'
+              }
               onPress={onTerminar}
               loading={enviando}
               disabled={!puedeTerminar}
             />
-            {!respuestaValida(respuesta, conPregunta) ? (
+            {!respuestaLista ? (
               <Text style={[t.small, { color: c.textSoft, textAlign: 'center' }]}>
-                Escribe qué sentiste para poder terminar.
+                {medicion ? 'Escribe los km de hoy (más que cero).' : 'Escribe qué sentiste para poder terminar.'}
               </Text>
             ) : null}
 
@@ -208,6 +247,16 @@ const estilos = StyleSheet.create({
     fontSize: 15,
     fontFamily: 'Jost_400Regular',
     textAlignVertical: 'top',
+  },
+  filaKm: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  campoKm: {
+    flex: 1,
+    minHeight: 56,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    fontSize: 24,
+    fontFamily: 'Jost_500Medium',
   },
   error: { borderWidth: 1, borderRadius: 10, padding: 10 },
   cancelar: { minHeight: 48, borderWidth: 1, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },

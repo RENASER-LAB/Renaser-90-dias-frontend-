@@ -200,16 +200,21 @@ export async function subirEvidenciaDeArchivo(
  * Paso 4 — cierra el registro del día. Es ESTE endpoint el que otorga los puntos, no el de
  * evidencia: subir la prueba y completar son dos operaciones distintas del backend
  * (`EvidenciaRegistroService` no toca puntos; `RegistroService.completar` sí).
+ *
+ * `valorMedido` (D-226): los km del día de KILÓMETROS DIARIOS, ya leídos como número con punto
+ * decimal. Solo viaja cuando hay uno: un hábito que no mide nada lo rechaza con un 400.
  */
 export async function completarRegistro(
   registroId: string,
   respuestaTexto?: string | null,
+  valorMedido?: number | null,
 ): Promise<RegistroCompletado> {
   const r = await apiFetch<unknown>(`/api/v1/habit-tracks/${registroId}/complete`, {
     method: 'POST',
     body: {
       respuestaTexto: respuestaTexto?.trim() ? respuestaTexto.trim() : null,
       calificacionProductividad: null,
+      ...(valorMedido != null ? { valorMedido } : {}),
     },
   });
   return validarRespuesta(registroCompletadoSchema, r, 'POST /api/v1/habit-tracks/{id}/complete');
