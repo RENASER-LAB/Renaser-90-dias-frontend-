@@ -4,9 +4,12 @@
  */
 import { describe, expect, it } from '@jest/globals';
 
+import type { WireParticipante } from '../../types/chat.types';
 import { integrantesDelChatDeGrupo, subtituloDeLaCabecera } from '../formatoChat';
 import {
   cifraDeIntegrantes,
+  cifraDelChat,
+  integrantesDelChat,
   integrantesDeLaInfo,
   puedeCambiarLaFotoDelGrupo,
   subtituloDeLaInfo,
@@ -223,5 +226,129 @@ describe('puedeCambiarLaFotoDelGrupo (D-212: «Admin y el mentor de ese grupo»,
   it('sin el id del mentor no se adivina quién es', () => {
     expect(puedeCambiarLaFotoDelGrupo({ mentorId: null, yoId: 'u-ricardo', miRol: 'MENTOR' })).toBe(false);
     expect(puedeCambiarLaFotoDelGrupo({ mentorId: ' ', yoId: ' ', miRol: 'MENTOR' })).toBe(false);
+  });
+});
+
+
+/**
+ * D-222 (pedido del dueño, 29/09: «debe de salir para todos»). La lista sale de `/participants` y sirve a
+ * todo rol y a todo tipo de chat: el Admin que abre un grupo, la comunidad y el soporte.
+ */
+describe('integrantesDelChat: la lista de cualquier chat, para cualquier rol', () => {
+  const persona = (userId: string, nombre: string, rol: string, esUnoMismo = false): WireParticipante => ({
+    userId,
+    nombre,
+    rol,
+    esUnoMismo,
+  });
+  const grupo = [
+    persona('u-ricardo', 'Ricardo Palomino', 'MENTOR'),
+    persona('u-kelin', 'Kelin Rojas', 'ADMIN'),
+    persona('u-ana', 'Ana Pérez', 'APRENDIZ', true),
+    persona('u-beto', 'Beto Díaz', 'APRENDIZ'),
+  ];
+
+  it('el Admin que abre la info de un grupo ve a todos, con su marca y sin reordenar lo que manda el servidor', () => {
+    const filas = integrantesDelChat({
+      participantes: [
+        persona('u-kelin', 'Kelin Rojas', 'ADMIN', true),
+        ...grupo.filter(p => p.userId !== 'u-kelin').map(p => ({ ...p, esUnoMismo: false })),
+      ],
+      tipo: 'celula',
+      miRol: 'ADMIN',
+    });
+
+    expect(filas.map(f => [f.nombre, f.rol])).toEqual([
+      ['Tú', 'Admin'],
+      ['Ricardo Palomino', 'Mentor'],
+      ['Ana Pérez', 'Aprendiz'],
+      ['Beto Díaz', 'Aprendiz'],
+    ]);
+    expect(filas.map(f => f.abreFicha)).toEqual([false, false, true, true]);
+  });
+
+  it('la marca de cada rol: Mentor, Aprendiz, Admin y Alquimista', () => {
+    const filas = integrantesDelChat({
+      participantes: [
+        persona('1', 'A', 'MENTOR'),
+        persona('2', 'B', 'APRENDIZ'),
+        persona('3', 'C', 'ADMIN'),
+        persona('4', 'D', 'ALQUIMISTA'),
+      ],
+      tipo: 'global',
+    });
+
+    expect(filas.map(f => f.rol)).toEqual(['Mentor', 'Aprendiz', 'Admin', 'Alquimista']);
+  });
+
+  it('la comunidad: el aprendiz ve a todos y le puede escribir a cada uno, pero no ve fichas', () => {
+    const filas = integrantesDelChat({
+      participantes: [persona('u-ana', 'Ana Pérez', 'APRENDIZ', true), persona('u-beto', 'Beto Díaz', 'APRENDIZ')],
+      tipo: 'global',
+      miRol: 'TRAINEE',
+    });
+
+    expect(filas.map(f => [f.nombre, f.abreChat, f.abreFicha])).toEqual([
+      ['Tú', false, false],
+      ['Beto Díaz', true, false],
+    ]);
+  });
+
+  it('el mentor de ESTE grupo ve «Ver ficha» en sus aprendices (su fila es MENTOR); en la comunidad, no', () => {
+    const delGrupo = integrantesDelChat({
+      participantes: [persona('u-ricardo', 'Ricardo Palomino', 'MENTOR', true), persona('u-ana', 'Ana Pérez', 'APRENDIZ')],
+      tipo: 'celula',
+      miRol: 'MENTOR',
+    });
+    const enLaComunidad = integrantesDelChat({
+      participantes: [persona('u-ricardo', 'Ricardo Palomino', 'MENTOR', true), persona('u-ana', 'Ana Pérez', 'APRENDIZ')],
+      tipo: 'global',
+      miRol: 'MENTOR',
+    });
+
+    expect(delGrupo.map(f => f.abreFicha)).toEqual([false, true]);
+    expect(enLaComunidad.some(f => f.abreFicha)).toBe(false);
+  });
+
+  it('el Admin ve la ficha de los aprendices también en la comunidad y en el soporte', () => {
+    for (const tipo of ['global', 'soporte'] as const) {
+      const filas = integrantesDelChat({
+        participantes: [persona('u-ana', 'Ana Pérez', 'APRENDIZ'), persona('u-zoe', 'Zoe', 'ALQUIMISTA', true)],
+        tipo,
+        miRol: 'ALCHEMIST',
+      });
+      expect(filas.map(f => f.abreFicha)).toEqual([true, false]);
+    }
+  });
+
+  it('la tarjeta de cada uno y su foto subida llegan a la fila; en blanco, no es nada', () => {
+    const filas = integrantesDelChat({
+      participantes: [
+        { ...persona('1', 'Ana', 'APRENDIZ'), fotoPath: '/api/v1/chat/conversations/c/miembros/1/foto', avatarUrl: null },
+        { ...persona('2', 'Beto', 'APRENDIZ'), fotoPath: '  ', avatarUrl: 'https://s3/beto.jpg' },
+      ],
+      tipo: 'soporte',
+    });
+
+    expect(filas.map(f => f.fotoPath)).toEqual(['/api/v1/chat/conversations/c/miembros/1/foto', null]);
+    expect(filas.map(f => f.avatarUrl)).toEqual([null, 'https://s3/beto.jpg']);
+  });
+
+  it('un rol que la app no conoce se muestra igual: nunca se esconde a alguien', () => {
+    const filas = integrantesDelChat({ participantes: [persona('1', 'Uno', 'GUIA')], tipo: 'celula' });
+
+    expect(filas[0].rol).toBe('Guia');
+  });
+});
+
+describe('cifraDelChat (D-222)', () => {
+  it('manda el total del servidor de ESA conversación', () => {
+    expect(cifraDelChat(5, { memberCount: 3, mentorName: 'Ricardo' })).toBe(5);
+    expect(cifraDelChat(240, null)).toBe(240);
+  });
+
+  it('sin total todavía, un grupo cae a la cifra de la cabecera; lo demás, sin inventar', () => {
+    expect(cifraDelChat(null, { memberCount: 3, mentorName: 'Ricardo' })).toBe(4);
+    expect(cifraDelChat(null, null)).toBeNull();
   });
 });

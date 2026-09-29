@@ -1,5 +1,5 @@
 import { apiFetch } from '../../../services/http/apiClient';
-import type { ChatUrlSubida, WireConversacion, WireConversacionResumen, WireMensaje, WireMensajesPage, WireMiembrosPage } from '../types/chat.types';
+import type { ChatUrlSubida, WireConversacion, WireConversacionResumen, WireMensaje, WireMensajesPage, WireMiembrosPage, WireParticipantesPage } from '../types/chat.types';
 import {
   urlSubidaChatSchema,
   validarRespuesta,
@@ -8,6 +8,7 @@ import {
   wireMensajeSchema,
   wireMensajesPageSchema,
   wireMiembrosPageSchema,
+  wireParticipantesPageSchema,
   presenciaSchema,
 } from './chatSchemas';
 
@@ -205,4 +206,23 @@ export async function obtenerMiembrosGlobal(cursor?: string): Promise<WireMiembr
   const r = await apiFetch<unknown>(`/api/v1/chat/conversations/global/members${query}`);
   return validarRespuesta<WireMiembrosPage>(wireMiembrosPageSchema, r,
     'GET /api/v1/chat/conversations/global/members');
+}
+
+/**
+ * `GET /conversations/{id}/participants` — los integrantes de ESA conversación, de cualquier tipo
+ * (comunidad, grupo, soporte), para la info del chat. Los ve quien puede ver la conversación; el resto
+ * recibe 403. `q` busca por nombre; `page` va desde 0.
+ */
+export async function obtenerParticipantes(
+  conversationId: string,
+  params: { q?: string; page?: number; size?: number } = {}
+): Promise<WireParticipantesPage> {
+  const consulta = new URLSearchParams();
+  if (params.q?.trim()) consulta.set('q', params.q.trim());
+  if (params.page) consulta.set('page', String(params.page));
+  if (params.size) consulta.set('size', String(params.size));
+  const qs = consulta.toString();
+  const r = await apiFetch<unknown>(`/api/v1/chat/conversations/${conversationId}/participants${qs ? `?${qs}` : ''}`);
+  return validarRespuesta<WireParticipantesPage>(wireParticipantesPageSchema, r,
+    'GET /api/v1/chat/conversations/{id}/participants');
 }
