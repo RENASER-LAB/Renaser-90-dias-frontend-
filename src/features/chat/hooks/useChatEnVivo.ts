@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import { AppState, type AppStateStatus } from 'react-native';
 
 import { obtenerPresencia } from '../api/chatApi';
+import { cerrarConversacionAbierta, marcarConversacionAbierta } from '../avisos/conversacionAbierta';
 import { conexionChat, destinoDeConversacion, HAY_CHAT_EN_VIVO } from '../tiempoReal/conexionStomp';
 import { esEcoPropio, leerEventoDelChat, type EventoMensaje } from '../tiempoReal/eventosDelChat';
 import { marcaMasReciente } from '../utils/lecturaDelChat';
@@ -32,7 +34,22 @@ import { marcaMasReciente } from '../utils/lecturaDelChat';
  * pantalla viva: volver a un chat no la pierde ni hace parpadear un ✓✓ ya visto. Nunca se marca
  * nada como leído desde acá: recargar el historial (que sí marca) por un aviso de lectura haría que
  * dos teléfonos con el chat abierto se avisaran uno al otro sin fin.
+ *
+ * ## Segundo plano (D-221, 2026-09-29)
+ *
+ * El servidor NO le manda el push de un mensaje a quien tiene esa conversación suscripta por socket:
+ * la da por abierta en pantalla. Por eso, cuando la app pasa a segundo plano, se deja de escuchar
+ * (UNSUBSCRIBE; con la última suscripción se cierra el socket) y se borra la marca de «conversación
+ * abierta» que usa el aviso en primer plano (`avisos/conversacionAbierta.ts`); si no, con el teléfono
+ * bloqueado sobre un chat no llegaría ningún aviso de ese chat. Al volver, se re-suscribe y se vuelve
+ * a pedir la presencia.
  */
+
+/** Si con este estado de la app hay que escuchar en vivo: todo menos segundo plano. `inactive` (iOS,
+ * el centro de control encima) es un instante y no cuenta como irse. */
+export function escuchaEnVivoCon(estado: AppStateStatus): boolean {
+  return estado !== 'background';
+}
 interface OpcionesChatEnVivo {
   /** `null` cuando no hay conversación abierta: entonces no se suscribe a nada. */
   conversacionId: string | null;
@@ -65,14 +82,21 @@ export function useChatEnVivo({
   const alLlegarMensajeRef = useRef(alLlegarMensaje);
   alLlegarMensajeRef.current = alLlegarMensaje;
 
+  const [enPrimerPlano, setEnPrimerPlano] = useState(() => escuchaEnVivoCon(AppState.currentState));
   useEffect(() => {
-    if (!conversacionId) {
+    const suscripcion = AppState.addEventListener('change', estado => setEnPrimerPlano(escuchaEnVivoCon(estado)));
+    return () => suscripcion.remove();
+  }, []);
+
+  useEffect(() => {
+    if (!conversacionId || !enPrimerPlano) {
       setEnLinea(new Set());
       return;
     }
 
     let vigente = true;
     setEnLinea(new Set());
+    marcarConversacionAbierta(conversacionId);
 
     // 1) Estado inicial por REST. Funciona también en web, donde no hay socket.
     void (async () => {
@@ -87,6 +111,7 @@ export function useChatEnVivo({
     if (!HAY_CHAT_EN_VIVO) {
       return () => {
         vigente = false;
+        cerrarConversacionAbierta(conversacionId);
       };
     }
 
@@ -126,8 +151,9 @@ export function useChatEnVivo({
     return () => {
       vigente = false;
       cancelar();
+      cerrarConversacionAbierta(conversacionId);
     };
-  }, [conversacionId, miUsuarioId]);
+  }, [conversacionId, miUsuarioId, enPrimerPlano]);
 
   const leidoHasta = conversacionId && confirmaLectura ? leidoHastaPorConversacion.get(conversacionId) ?? null : null;
   return { enLinea, leidoHasta };

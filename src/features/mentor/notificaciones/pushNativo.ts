@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 
 import { apiFetch } from '../../../services/http/apiClient';
+import { CANAL_DE_MENSAJES } from '../../chat/avisos/canalDeMensajes';
 // SOLO tipos: `import type` se borra al compilar, así que esto NO carga el módulo en runtime.
 // El módulo se carga con `require` más abajo, por el mismo motivo que en
 // `features/habits/notificaciones/recordatoriosDeHabito.ts`: importarlo de verdad dispara su
@@ -131,6 +132,13 @@ async function registrarAhora(): Promise<ResultadoRegistroPush> {
       await N.setNotificationChannelAsync(CANAL_ANDROID, {
         name: 'Avisos de acompañamiento',
         importance: N.AndroidImportance.DEFAULT,
+      });
+      // D-221 (2026-09-29): el de los mensajes del chat, con su sonido propio y como banner (HIGH),
+      // antes del token: el primer push de chat puede llegar apenas se registra.
+      await N.setNotificationChannelAsync(CANAL_DE_MENSAJES.id, {
+        name: CANAL_DE_MENSAJES.nombre,
+        importance: N.AndroidImportance.HIGH,
+        sound: CANAL_DE_MENSAJES.sonido,
       });
     }
 

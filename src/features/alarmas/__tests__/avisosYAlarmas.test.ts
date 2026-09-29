@@ -22,11 +22,18 @@ const TODAS = [
 ];
 
 describe('interruptores de Notificaciones (E-4)', () => {
-  it('muestra «Eventos y clases», «Logros» y «Resumen semanal»; nunca un tema «Hábitos» (decisión del dueño)', async () => {
+  it('muestra «Mensajes», «Eventos y clases», «Logros» y «Resumen semanal»; nunca un tema «Hábitos» (decisión del dueño)', async () => {
     mockApiFetch.mockResolvedValueOnce({ preferences: TODAS.map(type => ({ type, enabled: true })) });
     const temas = temasVisibles(await obtenerPreferencias());
-    expect(temas.map(t => t.nombre)).toEqual(['Eventos y clases', 'Logros', 'Resumen semanal']);
+    // D-221 (2026-09-29): «Mensajes» apaga el aviso de cada mensaje de chat (`MENSAJE_CHAT`).
+    expect(temas.map(t => t.nombre)).toEqual(['Mensajes', 'Eventos y clases', 'Logros', 'Resumen semanal']);
     expect(TEMAS.some(t => /h[áa]bito/i.test(t.nombre))).toBe(false);
+  });
+
+  it('«Mensajes» se guarda como MENSAJE_CHAT y refleja lo que dice el servidor', () => {
+    const temas = temasVisibles({ MENSAJE_CHAT: false, RESUMEN_SEMANAL: true });
+    expect(Object.fromEntries(temas.map(t => [t.clave, t.encendido]))).toEqual({ mensajes: false, resumen: true });
+    expect(TEMAS.find(t => t.clave === 'mensajes')!.tipos).toEqual(['MENSAJE_CHAT']);
   });
 
   it('refleja lo que el servidor tiene guardado: un tema con un tipo apagado se ve apagado', () => {
