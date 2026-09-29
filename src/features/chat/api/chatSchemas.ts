@@ -152,6 +152,31 @@ export const wireMiembrosPageSchema = z
   })
   .passthrough();
 
+/**
+ * Los integrantes de un chat. `fotoPath` y `avatarUrl` son `nullish`: cada chat manda la que tiene, y un
+ * backend anterior no manda ninguna. `rol` es `z.string()` por el mismo motivo que el `type` de la
+ * conversación: un rol nuevo no puede dejar sin lista a nadie.
+ */
+const wireParticipanteSchema = z
+  .object({
+    userId: z.string(),
+    nombre: z.string(),
+    rol: z.string(),
+    esUnoMismo: z.boolean(),
+    fotoPath: z.string().nullish(),
+    avatarUrl: z.string().nullish(),
+  })
+  .passthrough();
+
+export const wireParticipantesPageSchema = z
+  .object({
+    participants: z.array(wireParticipanteSchema),
+    total: z.number(),
+    page: z.number(),
+    size: z.number(),
+  })
+  .passthrough();
+
 /** `UrlSubidaMediaChatResponse` (`ChatMediaController.urlDeSubida`). */
 export const urlSubidaChatSchema = z
   .object({ uploadUrl: z.string(), bucket: z.string(), ruta: z.string() })

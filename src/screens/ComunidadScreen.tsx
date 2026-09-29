@@ -97,13 +97,16 @@ import { conLaFotoDeLaLista, pideReleerAlCerrarElChat } from '../features/chat/u
 import { avisoDelLargoDelMensaje, LARGO_MAXIMO_DEL_MENSAJE } from '../features/chat/utils/largoDelMensaje';
 import { conLeidoHasta } from '../features/chat/utils/lecturaDelChat';
 import {
-  cifraDeIntegrantes,
-  integrantesDeLaInfo,
+  cifraDelChat,
+  esAdministracionDeGrupos,
+  integrantesDelChat,
   puedeCambiarLaFotoDelGrupo,
   subtituloDeLaInfo,
   tituloDeLaInfo,
   type IntegranteDeLaInfo,
 } from '../features/chat/utils/infoDelChat';
+import { irAPestana } from '../navigation/navegacionRef';
+import { useParticipantesDelChat } from '../features/chat/hooks/useParticipantesDelChat';
 import { conversacionAPantallaCompleta } from '../features/chat/utils/pantallaCompletaDelChat';
 import { OPCIONES_CON_PESTANAS, OPCIONES_SIN_PESTANAS } from '../navigation/pestanasOcultas';
 import { EvidenciaDesdeChatModal } from '../features/habits/components/EvidenciaDesdeChatModal';
@@ -471,6 +474,9 @@ function SeparadorDePublicaciones() {
 /** Sin conversación abierta: la misma lista vacía siempre, para no recalcular nada en cada render. */
 const SIN_MENSAJES: ChatMessage[] = [];
 
+/** Desde cuántos integrantes la info del chat ofrece el buscador por nombre (D-222). */
+const UMBRAL_DEL_BUSCADOR = 12;
+
 export default function ComunidadScreen() {
   const { c, t, mode } = useTheme();
   // D-99: el chat dentro de un curso le dice a Sparkie en que dia del programa va la persona.
@@ -605,10 +611,17 @@ export default function ComunidadScreen() {
     () => grupos.find(g => g.cellId === celulaIdAbierto) ?? null,
     [grupos, celulaIdAbierto]
   );
-  /* Los integrantes se piden recién al abrir la info, no al abrir el chat: mientras solo estás
-     leyendo mensajes, esa lista no se muestra y pedirla sería una llamada por cada chat que abras. */
-  const { integrantes: integrantesDelGrupoAbierto, cargando: integrantesCargando, error: integrantesError } =
-    useIntegrantesDelGrupo(groupInfoVisible ? celulaIdAbierto : null);
+  /* D-222 (pedido del dueño: «debe de salir para todos»). Los integrantes de la info son los de ESA
+     conversación y salen de `GET /chat/conversations/{id}/participants`, con la misma regla de quién ve el
+     chat: sirve al aprendiz, al mentor, al Admin y al Alquimista, y a la comunidad y al soporte, no solo a los
+     grupos. Se piden recién al abrir la info, no al abrir el chat, y un 1 a 1 no la lleva (ya muestra a la otra
+     persona arriba). */
+  const [busquedaDeIntegrantes, setBusquedaDeIntegrantes] = useState('');
+  const conversacionDeLaInfo = groupInfoVisible && activeChat && activeChat.type !== 'direct' ? activeChat.id : null;
+  useEffect(() => {
+    setBusquedaDeIntegrantes('');
+  }, [conversacionDeLaInfo]);
+  const participantesDeLaInfo = useParticipantesDelChat(conversacionDeLaInfo, busquedaDeIntegrantes);
 
   /**
    * Las filas de la lista de integrantes. El mentor va primero —sin botón de chatear, porque el
@@ -634,11 +647,11 @@ export default function ComunidadScreen() {
     if (mentorNombre) {
       filas.push({ id: 'mentor', nombre: mentorNombre, avatarUrl: mentorAvatar, badge: 'MENTOR', chateable: false });
     }
-    for (const m of celulaIdAbierto ? integrantesDelGrupoAbierto : companerosDeLaTarjeta) {
+    for (const m of celulaIdAbierto ? [] : companerosDeLaTarjeta) {
       filas.push({ id: m.traineeId, nombre: m.fullName, avatarUrl: m.avatarUrl, badge: m.isSelf ? 'TÚ' : null, chateable: !m.isSelf });
     }
     return filas;
-  }, [celulaIdAbierto, grupoAbierto, integrantesDelGrupoAbierto, mentorDeLaTarjeta.nombre, mentorDeLaTarjeta.avatarUrl, companerosDeLaTarjeta]);
+  }, [celulaIdAbierto, grupoAbierto, mentorDeLaTarjeta.nombre, mentorDeLaTarjeta.avatarUrl, companerosDeLaTarjeta]);
   /* Corregido 2026-09-26: sin `grupoAbierto` caía a `miCelula`, que puede ser OTRO grupo (y para
      un mentor, ninguno). Ahora cae al nombre visible de la conversación abierta. */
   /* Corregido 2026-09-29 (D-221): con un chat abierto manda su nombre visible (el del servidor,
@@ -654,22 +667,10 @@ export default function ComunidadScreen() {
      D-206: cada uno con la ruta de su tarjeta con nombre, y el mentor con su id, que contra el de la
      sesión le dice «Tú» al mentor que mira su propio grupo. */
   const filasDeLaInfo = useMemo(
-    () =>
-      integrantesDeLaInfo({
-        mentor: grupoAbierto
-          ? {
-              id: grupoAbierto.mentorId,
-              nombre: grupoAbierto.mentorName,
-              avatarUrl: grupoAbierto.mentorAvatarUrl,
-              fotoPath: grupoAbierto.mentorPhotoPath,
-            }
-          : null,
-        miembros: integrantesDelGrupoAbierto,
-        yoId: user?.id,
-      }),
-    [grupoAbierto, integrantesDelGrupoAbierto, user?.id]
+    () => integrantesDelChat({ participantes: participantesDeLaInfo.filas, tipo: activeChat?.type ?? 'global', miRol: user?.role }),
+    [participantesDeLaInfo.filas, activeChat?.type, user?.role]
   );
-  const cifraDeLaInfo = cifraDeIntegrantes(grupoAbierto, filasDeLaInfo.length);
+  const cifraDeLaInfo = cifraDelChat(participantesDeLaInfo.totalSinBuscar ?? participantesDeLaInfo.total, grupoAbierto);
 
   /**
    * La firma que acompaña al nombre en el compositor del Muro.
@@ -1870,7 +1871,15 @@ export default function ComunidadScreen() {
    * grupo (`infoDelChat.abreFicha`); quién puede ver la ficha lo sigue decidiendo el servidor.
    */
   const abrirFichaDesdeLaInfo = (integrante: IntegranteDeLaInfo) => {
-    if (!celulaIdAbierto || !integrante.usuarioId) return;
+    if (!integrante.usuarioId) return;
+    /* D-222: el ADMIN/ALQUIMISTA abre la ficha de administración (la de Personas), que sirve a cualquier
+       aprendiz, esté o no en un grupo: se pide a Hoy, que es donde vive Administración. */
+    if (esAdministracionDeGrupos(user?.role)) {
+      setGroupInfoVisible(false);
+      irAPestana('Hoy', { abrirFichaAprendiz: { id: integrante.usuarioId, fullName: integrante.nombreCompleto } });
+      return;
+    }
+    if (!celulaIdAbierto) return;
     const vista = celulaQueAcompano.vista;
     despacharVista({
       tipo: 'abrir-ficha-desde-la-info',
@@ -3887,9 +3896,20 @@ export default function ComunidadScreen() {
           })}
           detalle={activeChat.type === 'celula' && grupoAbierto?.cohortName ? `Cohorte ${grupoAbierto.cohortName}` : null}
           integrantes={
-            activeChat.type === 'celula'
-              ? { filas: filasDeLaInfo, cifra: cifraDeLaInfo, cargando: integrantesCargando, error: integrantesError }
-              : null
+            activeChat.type === 'direct'
+              ? null
+              : {
+                  filas: filasDeLaInfo,
+                  cifra: cifraDeLaInfo,
+                  cargando: participantesDeLaInfo.cargando,
+                  error: participantesDeLaInfo.error,
+                  hayMas: participantesDeLaInfo.hayMas,
+                  cargandoMas: participantesDeLaInfo.cargandoMas,
+                  onVerMas: participantesDeLaInfo.verMas,
+                  busqueda: busquedaDeIntegrantes,
+                  // El buscador solo cuando son varios (la comunidad): en un grupo de cinco estorba.
+                  onBuscar: (participantesDeLaInfo.totalSinBuscar ?? 0) > UMBRAL_DEL_BUSCADOR ? setBusquedaDeIntegrantes : undefined,
+                }
           }
           onVolver={() => setGroupInfoVisible(false)}
           onAbrirChatCon={usuarioId => void abrirDMConIntegrante(usuarioId)}

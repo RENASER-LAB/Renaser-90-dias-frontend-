@@ -39,4 +39,10 @@ describe('la pila con la que abre Administración', () => {
       { nombre: 'caja-detalle', aprendizId: 'a-7' },
     ]);
   });
+
+  it('«Ver ficha» desde la info de un chat (D-222), la ficha sobre la raíz', () => {
+    const aprendiz = { id: 'a-9', fullName: 'Ana Pérez' };
+
+    expect(pilaInicial({ ficha: aprendiz })).toEqual([{ nombre: 'inicio' }, { nombre: 'ficha', aprendiz }]);
+  });
 });

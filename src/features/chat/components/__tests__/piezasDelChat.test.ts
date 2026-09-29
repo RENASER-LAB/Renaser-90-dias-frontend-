@@ -25,7 +25,7 @@ jest.mock('../../../../services/http/apiClient', () => ({
 
 import type { ChatConversation, ChatMessage } from '../../../../screens/ComunidadScreen';
 import { mapearMensaje } from '../../api/chatMappers';
-import { integrantesDeLaInfo } from '../../utils/infoDelChat';
+import { integrantesDeLaInfo, integrantesDelChat } from '../../utils/infoDelChat';
 import { BotonBajarAlFinal } from '../BotonBajarAlFinal';
 import { BurbujaDeMensaje, huecoParaLaHora } from '../BurbujaDeMensaje';
 import { CabeceraDeChat } from '../CabeceraDeChat';
@@ -483,6 +483,130 @@ describe('InfoDelChat: tarjetas con nombre, escribirle al mentor y la ficha (D-2
     act(() => chats[0].props.onPress());
     expect(abrir).toHaveBeenCalledWith('u-e2e-1');
     expect(raiz.root.findAll(n => n.props.accessibilityLabel === 'Escribirle a Tú, Mentor')).toHaveLength(0);
+  });
+});
+
+describe('InfoDelChat: los integrantes de todo chat, para todo rol (D-222)', () => {
+  const persona = (userId: string, nombre: string, rol: string, esUnoMismo = false) => ({ userId, nombre, rol, esUnoMismo });
+  const base = {
+    titulo: 'Info. del chat',
+    onVolver: () => undefined,
+    onAbrirChatCon: () => undefined,
+    onVerFicha: () => undefined,
+  };
+
+  it('el Admin abre la info de un grupo y ve a los integrantes con su marca, «Tú» incluido y «Ver ficha» en cada aprendiz', () => {
+    const filas = integrantesDelChat({
+      participantes: [
+        persona('u-ricardo', 'Ricardo Palomino', 'MENTOR'),
+        persona('u-kelin', 'Kelin Rojas', 'ADMIN', true),
+        persona('u-ana', 'Ana Pérez', 'APRENDIZ'),
+      ],
+      tipo: 'celula',
+      miRol: 'ADMIN',
+    });
+    const raiz = dibujar(
+      React.createElement(InfoDelChat, {
+        ...base,
+        tipo: 'celula',
+        titulo: 'Info. del grupo',
+        nombre: 'Fénix',
+        subtitulo: 'Grupo · 3 integrantes',
+        integrantes: { filas, cifra: 3, cargando: false, error: null },
+      })
+    );
+
+    const todo = textos(raiz);
+    expect(todo).toContain('3 integrantes');
+    expect(todo).toContain('Ricardo Palomino');
+    expect(todo).toContain('Ana Pérez');
+    expect(todo).toContain('Tú');
+    expect(todo).toContain('Mentor');
+    expect(todo).toContain('Admin');
+    const fichas = raiz.root.findAll(n => typeof n.props.accessibilityLabel === 'string' && n.props.accessibilityLabel.startsWith('Ver la ficha de') && !!n.props.onPress);
+    expect(fichas.map(n => n.props.accessibilityLabel)).toEqual(['Ver la ficha de Ana Pérez']);
+  });
+
+  it('la comunidad muestra «N integrantes» con la marca de cada uno, el buscador y «Ver más»; tocar «Ver más» pide la siguiente página', () => {
+    const verMas = jest.fn();
+    const buscar = jest.fn();
+    const filas = integrantesDelChat({
+      participantes: [persona('u-ana', 'Ana Pérez', 'APRENDIZ', true), persona('u-zoe', 'Zoe Alquimia', 'ALQUIMISTA')],
+      tipo: 'global',
+      miRol: 'TRAINEE',
+    });
+    const raiz = dibujar(
+      React.createElement(InfoDelChat, {
+        ...base,
+        tipo: 'global',
+        nombre: 'Formación Renaser Global',
+        subtitulo: 'Comunidad completa RENASER',
+        integrantes: { filas, cifra: 240, cargando: false, error: null, hayMas: true, onVerMas: verMas, busqueda: '', onBuscar: buscar },
+      })
+    );
+
+    const todo = textos(raiz);
+    expect(todo).toContain('240 integrantes');
+    expect(todo).toContain('Alquimista');
+    expect(todo).toContain('Ver más');
+    const buscador = raiz.root.findAll(n => n.props.accessibilityLabel === 'Buscar integrantes por nombre' && !!n.props.onChangeText);
+    act(() => buscador[0].props.onChangeText('zo'));
+    expect(buscar).toHaveBeenCalledWith('zo');
+    const boton = raiz.root.findAll(n => n.props.accessibilityLabel === 'Ver más integrantes' && !!n.props.onPress);
+    act(() => boton[0].props.onPress());
+    expect(verMas).toHaveBeenCalled();
+  });
+
+  it('el soporte muestra al aprendiz y al staff; sin «Ver más» ni buscador cuando son pocos', () => {
+    const filas = integrantesDelChat({
+      participantes: [persona('u-ana', 'Ana Pérez', 'APRENDIZ', true), persona('u-kelin', 'Kelin Rojas', 'ADMIN')],
+      tipo: 'soporte',
+      miRol: 'TRAINEE',
+    });
+    const raiz = dibujar(
+      React.createElement(InfoDelChat, {
+        ...base,
+        tipo: 'soporte',
+        nombre: 'Ana – Formación Renaser',
+        subtitulo: 'Chat de soporte',
+        integrantes: { filas, cifra: 2, cargando: false, error: null },
+      })
+    );
+
+    const todo = textos(raiz);
+    expect(todo).toContain('2 integrantes');
+    expect(todo).toContain('Kelin Rojas');
+    expect(todo).not.toContain('Ver más');
+    expect(raiz.root.findAll(n => n.props.accessibilityLabel === 'Buscar integrantes por nombre')).toHaveLength(0);
+  });
+
+  it('si el servidor falla se dice, no «Todavía no hay integrantes»; buscando sin resultados, se dice distinto', () => {
+    const conError = textos(
+      dibujar(
+        React.createElement(InfoDelChat, {
+          ...base,
+          tipo: 'global',
+          nombre: 'Global',
+          subtitulo: 'Comunidad',
+          integrantes: { filas: [], cifra: null, cargando: false, error: 'No pudimos cargar los integrantes.' },
+        })
+      )
+    );
+    const sinCoincidencias = textos(
+      dibujar(
+        React.createElement(InfoDelChat, {
+          ...base,
+          tipo: 'global',
+          nombre: 'Global',
+          subtitulo: 'Comunidad',
+          integrantes: { filas: [], cifra: 240, cargando: false, error: null, busqueda: 'zzz', onBuscar: () => undefined },
+        })
+      )
+    );
+
+    expect(conError).toContain('No pudimos cargar los integrantes.');
+    expect(conError).not.toContain('Todavía no hay integrantes');
+    expect(sinCoincidencias).toContain('Nadie coincide con esa búsqueda.');
   });
 });
 

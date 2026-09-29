@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Icon } from '../../../components/Icon';
 import { useTheme } from '../../../theme/ThemeContext';
@@ -19,8 +19,9 @@ import { AvatarDeIntegrante } from './AvatarDeIntegrante';
  *   nombre (D-212); la tarjeta con el nombre de su aprendiz en el soporte, el fénix en la comunidad;
  *   la foto o las iniciales en un 1 a 1), el nombre grande y una línea («Grupo · 5 integrantes»,
  *   «Chat de soporte», «Aprendiz»).
- * - En un grupo, la sección «N integrantes»: el mentor primero, cada uno con su marca («Mentor»,
- *   «Aprendiz») y su tarjeta con nombre (D-206, `AvatarDeIntegrante`). Tocar a alguien abre su 1 a 1,
+ * - En todo chat menos un 1 a 1 (D-222), la sección «N integrantes»: cada uno con su marca («Mentor»,
+ *   «Aprendiz», «Admin», «Alquimista», «Tú») y su tarjeta con nombre (D-206, `AvatarDeIntegrante`) o su foto;
+ *   con buscador y «Ver más» cuando son muchos (la comunidad). En un grupo, el mentor primero. Tocar a alguien abre su 1 a 1,
  *   también al mentor (D-207). Al mentor de ESE grupo, cada aprendiz le muestra además un botón grande
  *   «Ver ficha», que abre la misma ficha que «Mi grupo» (D-207, `onVerFicha`).
  * - En un grupo, a quien puede cambiarla (el mentor de ese grupo o el ADMIN), la sección «Foto del grupo»
@@ -56,12 +57,22 @@ export function InfoDelChat({
   subtitulo: string;
   /** Una línea más bajo el subtítulo, si hay dato (la cohorte de un grupo). */
   detalle?: string | null;
-  /** La sección de integrantes; `null` en lo que no es un grupo. */
+  /**
+   * La sección de integrantes; `null` en un 1 a 1, que ya muestra a la otra persona arriba. Desde D-222 la
+   * tiene todo chat (comunidad, grupo, soporte) y todo rol, con el buscador y «Ver más» cuando son muchos.
+   */
   integrantes: {
     filas: IntegranteDeLaInfo[];
     cifra: number | null;
     cargando: boolean;
     error: string | null;
+    /** Cuando faltan por traer (la comunidad son cientos, se pide de a 50). */
+    hayMas?: boolean;
+    cargandoMas?: boolean;
+    onVerMas?: () => void;
+    /** Con `onBuscar` se muestra la caja de búsqueda por nombre. */
+    busqueda?: string;
+    onBuscar?: (texto: string) => void;
   } | null;
   onVolver: () => void;
   onAbrirChatCon: (usuarioId: string) => void;
@@ -131,6 +142,22 @@ export function InfoDelChat({
 
             {/* «Cargando», «falló» y «no hay nadie» se dicen distinto a propósito: mostrar el último
                 cuando se cayó la red le haría creer a la persona que su grupo está vacío. */}
+            {integrantes.onBuscar && (
+              <View style={{ paddingHorizontal: horizontalPadding, paddingBottom: 8 }}>
+                <TextInput
+                  value={integrantes.busqueda ?? ''}
+                  onChangeText={integrantes.onBuscar}
+                  placeholder="Buscar por nombre"
+                  placeholderTextColor={c.textSoft}
+                  accessibilityLabel="Buscar integrantes por nombre"
+                  autoCorrect={false}
+                  autoCapitalize="none"
+                  returnKeyType="search"
+                  style={[styles.buscador, { color: c.textStrong, borderColor: c.border, backgroundColor: c.bg }]}
+                />
+              </View>
+            )}
+
             {integrantes.cargando && integrantes.filas.length === 0 && (
               <Text style={[styles.aviso, { color: c.textSoft, paddingHorizontal: horizontalPadding }]}>
                 Cargando integrantes…
@@ -143,7 +170,7 @@ export function InfoDelChat({
             )}
             {!integrantes.cargando && !integrantes.error && integrantes.filas.length === 0 && (
               <Text style={[styles.aviso, { color: c.textSoft, paddingHorizontal: horizontalPadding }]}>
-                Todavía no hay integrantes en este grupo.
+                {integrantes.busqueda?.trim() ? 'Nadie coincide con esa búsqueda.' : 'Todavía no hay integrantes en este chat.'}
               </Text>
             )}
 
@@ -156,6 +183,22 @@ export function InfoDelChat({
                 onVerFicha={onVerFicha}
               />
             ))}
+
+            {integrantes.hayMas && integrantes.onVerMas && (
+              <Pressable
+                onPress={integrantes.onVerMas}
+                disabled={integrantes.cargandoMas}
+                accessibilityRole="button"
+                accessibilityLabel="Ver más integrantes"
+                style={({ pressed }) => [styles.verMas, { borderColor: c.gold, backgroundColor: pressed ? c.cardBg : c.goldWash }]}
+              >
+                {integrantes.cargandoMas ? (
+                  <ActivityIndicator color={c.goldInk} />
+                ) : (
+                  <Text style={[styles.botonFichaTexto, { color: c.goldInk }]}>Ver más</Text>
+                )}
+              </Pressable>
+            )}
           </View>
         )}
       </ScrollView>
@@ -267,7 +310,8 @@ export function FilaDeIntegranteDelChat({
 /** El nombre («Tú» para uno mismo) y debajo su marca, «Mentor» en dorado o «Aprendiz». */
 function NombreYMarca({ integrante }: { integrante: IntegranteDeLaInfo }) {
   const { c } = useTheme();
-  const esMentor = integrante.rol === 'Mentor';
+  /* El mentor y el staff (Admin, Alquimista) llevan la marca dorada; el aprendiz, la sobria. */
+  const esMentor = integrante.rol !== 'Aprendiz';
   return (
     <>
       <Text numberOfLines={2} style={[styles.filaNombre, { color: c.textStrong }]}>
@@ -288,6 +332,23 @@ function NombreYMarca({ integrante }: { integrante: IntegranteDeLaInfo }) {
 }
 
 const styles = StyleSheet.create({
+  buscador: {
+    minHeight: 48,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    fontFamily: 'Jost_400Regular',
+    fontSize: 17,
+  },
+  verMas: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+    marginHorizontal: 18,
+    marginVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+  },
   pantalla: {
     flex: 1,
   },

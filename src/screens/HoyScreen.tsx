@@ -187,6 +187,21 @@ export default function HoyScreen() {
     setEnAdministracion(true);
   }, [rutaDeHoy.params, cargandoCapacidades, capacidades.administrar, navigation]);
 
+  /* D-222: «Ver ficha» desde la info de un chat, para el Admin/Alquimista: `ComunidadScreen` pide esta
+     pestaña con `abrirFichaAprendiz` y Administración abre esa ficha, con Inicio debajo. Mismo camino que
+     la Caja de arriba: se consume una vez y, si la cuenta no administra, se descarta. */
+  useEffect(() => {
+    const persona = (rutaDeHoy.params as { abrirFichaAprendiz?: { id: string; fullName: string | null } } | undefined)
+      ?.abrirFichaAprendiz;
+    if (!persona?.id || cargandoCapacidades) return;
+    (navigation as any).setParams({ abrirFichaAprendiz: undefined });
+    if (!capacidades.administrar) return;
+    setEnSemaforo(false);
+    setAdminAbreEn({ ficha: { id: persona.id, fullName: persona.fullName } });
+    setMontajeAdmin(n => n + 1);
+    setEnAdministracion(true);
+  }, [rutaDeHoy.params, cargandoCapacidades, capacidades.administrar, navigation]);
+
   /* Un aviso tocado desde la bandeja del sistema abre la ficha de ese alumno (RF-25).
      La ruta la deja `rutaDeAviso` y se atiende ACA porque las vistas del mentor son estado de
      esta pantalla, no rutas del navegador (AGENTS.md 1: los cinco tabs no se tocan).

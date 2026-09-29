@@ -47,11 +47,15 @@ type Vista =
   | { nombre: 'caja-contenido' };
 
 /** Por dónde entra Administración: la raíz, el semáforo (aviso del sábado) o una caja (aviso de la Caja). */
-export type EntradaDeAdmin = 'inicio' | 'semaforo' | { caja: string };
+export type EntradaDeAdmin = 'inicio' | 'semaforo' | { caja: string } | { ficha: PersonaDeFicha };
 
 /** La pila con la que abre: la raíz siempre debajo, para que volver suba y no salga de golpe. */
 export function pilaInicial(abrirEn: EntradaDeAdmin): Vista[] {
   if (abrirEn === 'semaforo') return [{ nombre: 'inicio' }, { nombre: 'semaforo' }];
+  if (typeof abrirEn === 'object' && 'ficha' in abrirEn) {
+    // D-222: desde la info de un chat, «Ver ficha» de un aprendiz (Admin/Alquimista).
+    return [{ nombre: 'inicio' }, { nombre: 'ficha', aprendiz: abrirEn.ficha }];
+  }
   if (typeof abrirEn === 'object') {
     return [{ nombre: 'inicio' }, { nombre: 'caja' }, { nombre: 'caja-detalle', aprendizId: abrirEn.caja }];
   }

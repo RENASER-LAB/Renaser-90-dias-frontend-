@@ -7,6 +7,7 @@
  * aprendices, cada uno con la ruta de su tarjeta). Nada de secciones sin datos detrás: no hay
  * «archivos compartidos» ni «descripción» porque el backend no los da.
  */
+import type { WireParticipante } from '../types/chat.types';
 import { cuantosIntegrantes, integrantesDelChatDeGrupo } from './formatoChat';
 
 /** El tipo de conversación, el mismo vocabulario que `ChatConversation['type']`. */
@@ -48,6 +49,24 @@ export function subtituloDeLaInfo(params: {
 }
 
 /**
+ * Cuántos son, para el «N integrantes» de la info y su subtítulo: el total que dice el servidor de ESA
+ * conversación (`total` de `/participants`, que cuenta a todos: en un grupo también al Admin que lo cubre).
+ * Mientras no llegó —o si el servidor falla— y es un grupo, la cifra de la cabecera; sin ninguna, `null`.
+ *
+ * > **Corregido 2026-09-29 (D-222).** `cifraDeIntegrantes` contaba aprendices + mentor desde `/me/cells`
+ * > y, sin grupo resuelto, las filas cargadas; solo servía a un integrante del grupo.
+ */
+export function cifraDelChat(
+  totalDelServidor: number | null,
+  grupo: { memberCount: number; mentorName: string | null } | null
+): number | null {
+  return totalDelServidor ?? integrantesDelChatDeGrupo(grupo);
+}
+
+/**
+ * @deprecated D-222: la app ya no arma la lista con `/me/cells`; usa `cifraDelChat`. Queda para quien
+ * todavía lea el grupo de `/me/cells` (solo sirve a un integrante del grupo).
+ *
  * Cuántos son en el grupo, para la info: la MISMA cifra que la cabecera del chat
  * (`integrantesDelChatDeGrupo`: aprendices vigentes + el mentor). Solo si el grupo todavía no se
  * resolvió en `/me/cells` se usan las filas ya cargadas, que salen de la misma consulta del
@@ -80,8 +99,12 @@ export type MentorDelGrupo = {
   fotoPath?: string | null;
 };
 
-/** Los dos papeles que hay en un grupo. Salen de DÓNDE viene cada persona, no de adivinar. */
-export type RolEnElGrupo = 'Mentor' | 'Aprendiz';
+/**
+ * La marca de cada persona en la lista. Sale del `rol` que manda el servidor (`GET
+ * /conversations/{id}/participants`); antes eran solo «Mentor» y «Aprendiz», porque la lista era de un
+ * grupo y salía de dónde venía cada uno.
+ */
+export type RolEnElGrupo = 'Mentor' | 'Aprendiz' | 'Admin' | 'Alquimista';
 
 export type IntegranteDeLaInfo = {
   /** Clave de la fila: `'mentor'` o el id del aprendiz. */
@@ -126,6 +149,10 @@ export type IntegranteDeLaInfo = {
 };
 
 /**
+ * @deprecated D-222: la lista sale de `integrantesDelChat` (`/participants`), que sirve a todo rol y a
+ * todo tipo de chat. Esta armaba solo la de un grupo con `/me/cells` y `/me/cells/{id}/members`, que solo
+ * responden a quien pertenece a la célula.
+ *
  * Las filas de la sección «N integrantes»: el MENTOR primero (con la marca «Mentor»), después uno
  * mismo («Tú») y después el resto de los aprendices por nombre, como ordena WhatsApp. El mentor
  * entra con el mismo criterio con que la cabecera lo cuenta (hay `mentorName`), para que la cifra
@@ -203,6 +230,53 @@ function filaDelMentor(mentor: MentorDelGrupo | null, yoId: string | null | unde
     abreChat: mentorId !== null && !esYo,
     abreFicha: false,
   };
+}
+
+const MARCA_POR_ROL: Record<string, RolEnElGrupo> = {
+  MENTOR: 'Mentor',
+  APRENDIZ: 'Aprendiz',
+  ADMIN: 'Admin',
+  ALQUIMISTA: 'Alquimista',
+};
+
+/**
+ * Las filas de «N integrantes» de CUALQUIER chat, tal como las ordena el servidor (grupo: el mentor primero;
+ * soporte: el aprendiz y luego el staff; comunidad: por nombre): la app no reordena, así la primera página
+ * de la comunidad y las siguientes encajan. Fuente única, desde D-222: ya no se arma con `/me/cells`.
+ *
+ * - Uno mismo dice «Tú» y no se toca; a cualquier otro se le puede escribir (D-207).
+ * - «Ver ficha» (`abreFicha`) en cada aprendiz, para quien puede verla: el ADMIN/ALQUIMISTA en cualquier
+ *   chat, y el mentor de un grupo en SU grupo (su fila, `esUnoMismo`, es MENTOR). Un aprendiz, nunca. Quién
+ *   puede abrir la ficha de quién lo sigue decidiendo el servidor.
+ * - Un rol que la app no conoce se muestra tal cual llega, en minúscula capitalizada: nunca se esconde a alguien.
+ */
+export function integrantesDelChat(params: {
+  participantes: readonly WireParticipante[];
+  tipo: TipoDeInfo;
+  /** El rol de la sesión (`user.role`): ADMIN y ALCHEMIST administran. */
+  miRol?: string | null;
+}): IntegranteDeLaInfo[] {
+  const soyStaff = esAdministracionDeGrupos(params.miRol);
+  const soyMentorDeEsteGrupo =
+    params.tipo === 'celula' && params.participantes.some(p => p.esUnoMismo && p.rol === 'MENTOR');
+  const puedeVerFichas = soyStaff || soyMentorDeEsteGrupo;
+  return params.participantes.map(p => ({
+    clave: p.userId,
+    usuarioId: p.userId,
+    nombre: p.esUnoMismo ? 'Tú' : p.nombre,
+    nombreCompleto: p.nombre,
+    avatarUrl: p.avatarUrl?.trim() || null,
+    fotoPath: p.fotoPath?.trim() || null,
+    rol: MARCA_POR_ROL[p.rol] ?? capitalizar(p.rol),
+    esYo: p.esUnoMismo,
+    abreChat: !p.esUnoMismo,
+    abreFicha: puedeVerFichas && p.rol === 'APRENDIZ' && !p.esUnoMismo,
+  }));
+}
+
+function capitalizar(rol: string): RolEnElGrupo {
+  const texto = rol.trim().toLowerCase();
+  return (texto.charAt(0).toUpperCase() + texto.slice(1)) as RolEnElGrupo;
 }
 
 /** ADMIN y ALCHEMIST: los que administran los grupos (en el servidor, `UserRole.canManageRoles`). */

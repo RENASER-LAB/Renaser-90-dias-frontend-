@@ -182,3 +182,26 @@ export interface WireMiembrosPage {
   members: WireMiembro[];
   nextCursor: string | null;
 }
+
+/**
+ * `ParticipanteDelChatResponse` — una persona de la lista de integrantes de un chat
+ * (`GET /conversations/{id}/participants`). `rol` es lo que la persona ES hoy (APRENDIZ, MENTOR, ADMIN,
+ * ALQUIMISTA), no un permiso; `fotoPath` es la ruta de su tarjeta con nombre (solo en grupo y soporte);
+ * `avatarUrl`, la foto que subió. Nunca correo ni teléfono.
+ */
+export interface WireParticipante {
+  userId: string;
+  nombre: string;
+  rol: string;
+  esUnoMismo: boolean;
+  fotoPath?: string | null;
+  avatarUrl?: string | null;
+}
+
+/** `ParticipantesDelChatResponse`. `total` cuenta la búsqueda entera, no la página. */
+export interface WireParticipantesPage {
+  participants: WireParticipante[];
+  total: number;
+  page: number;
+  size: number;
+}
