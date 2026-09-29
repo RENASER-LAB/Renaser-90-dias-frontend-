@@ -49,6 +49,7 @@ import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLau
 import { MemoriaDeRenasia } from '../features/renasia/components/MemoriaDeRenasia';
 import { useMemoriaDeRenasia } from '../features/renasia/hooks/useMemoriaDeRenasia';
 import { mostrarMemoria } from '../features/renasia/utils/memoria';
+import { NOMBRE_ACOMPANANTE } from '../features/renasia/data/agentes';
 import { useMisEvidencias } from '../features/evidence/hooks/useMisEvidencias';
 import { resumenDeEvidencias } from '../features/evidence/resumenDeEvidencias';
 import { ESTADO_EVIDENCIA, iconoDeTipo } from '../features/evidence/api/evidenceSchemas';
@@ -970,13 +971,13 @@ export default function YoScreen() {
                       setActiveView('memoria_renasia');
                     }}
                     accessibilityRole="button"
-                    accessibilityLabel="Ver lo que Renasia recuerda de ti"
+                    accessibilityLabel={`Ver lo que ${NOMBRE_ACOMPANANTE} recuerda de ti`}
                     style={[styles.menuOptionRow, { borderBottomColor: c.divider }]}
                   >
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
                       <Icon name="brain" size={16} color={c.goldInk} />
                       <View style={{ flex: 1 }}>
-                        <Text style={[t.cardTitle, { color: c.textStrong }]}>Lo que Renasia recuerda de ti</Text>
+                        <Text style={[t.cardTitle, { color: c.textStrong }]}>Lo que {NOMBRE_ACOMPANANTE} recuerda de ti</Text>
                         <Text style={[t.small, { color: c.textSoft }]}>Míralo y bórralo cuando quieras</Text>
                       </View>
                     </View>
@@ -1061,7 +1062,7 @@ export default function YoScreen() {
             </View>
           </View>
 
-          <Text style={[t.cardTitle, { color: c.textStrong }]}>Lo que Renasia recuerda de ti</Text>
+          <Text style={[t.cardTitle, { color: c.textStrong }]}>Lo que {NOMBRE_ACOMPANANTE} recuerda de ti</Text>
           <MemoriaDeRenasia
             memoria={memoriaRenasia.memoria}
             cargando={memoriaRenasia.cargando}

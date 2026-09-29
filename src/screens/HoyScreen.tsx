@@ -63,6 +63,7 @@ import type { RocaDiariaApi } from '../features/training/types/training.types';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
 import { OrbeAcompanante } from '../features/renasia/components/OrbeAcompanante';
 import { AccionDelAcompanante } from '../features/renasia/components/AccionDelAcompanante';
+import { escucharPropuestaConfirmada } from '../features/renasia/events/avisoPropuestaConfirmada';
 import { RenasiaPanel } from '../features/renasia/screens/RenasiaPanel';
 import { type FaseDeVoz } from '../features/renasia/hooks/useConversacionPorVoz';
 import { useVozDelOrbe } from '../features/renasia/hooks/useVozDelOrbe';
@@ -321,6 +322,16 @@ export default function HoyScreen() {
     useCallback(() => {
       cargarRocas();
     }, [cargarRocas])
+  );
+
+  // D-229: una propuesta de SER confirmada (un hábito nuevo, uno marcado o pausado) cambia lo de hoy.
+  useEffect(
+    () =>
+      escucharPropuestaConfirmada(() => {
+        void recargarResumen();
+        void recargarHabitoAhora();
+      }),
+    [recargarResumen, recargarHabitoAhora]
   );
 
   const recargarSemaforo = miSemaforo.recargar;

@@ -1,6 +1,7 @@
 import { apiFetch } from '../../../services/http/apiClient';
 import type { AgenteRenasia, HistorialRenasiaApi, ResultadoPropuestaApi } from '../types/renasia.types';
 import { renasiaSchemas, validarRespuesta } from './renasiaSchemas';
+import { avisarPropuestaConfirmada } from '../events/avisoPropuestaConfirmada';
 
 /**
  * `GET /api/v1/renasia/mensajes?agent=` — historial paginado por cursor DEL AGENTE pedido
@@ -40,11 +41,14 @@ export async function confirmarPropuestaRenasia(id: string): Promise<ResultadoPr
   const r = await apiFetch<unknown>(`/api/v1/renasia/propuestas/${encodeURIComponent(id)}/confirmar`, {
     method: 'POST',
   });
-  return validarRespuesta<ResultadoPropuestaApi>(
+  const resultado = validarRespuesta<ResultadoPropuestaApi>(
     renasiaSchemas.resultadoPropuesta,
     r,
     'POST /api/v1/renasia/propuestas/{id}/confirmar'
   );
+  // D-229: Training y Hoy se recargan solas (p. ej. el hábito nuevo que creó SER).
+  if (resultado.estado === 'CONFIRMADA') avisarPropuestaConfirmada();
+  return resultado;
 }
 
 /** `POST /api/v1/renasia/propuestas/{id}/cancelar` — 204, idempotente (D-153). */

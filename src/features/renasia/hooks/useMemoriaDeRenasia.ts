@@ -2,9 +2,10 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { mensajeDeError } from '../../../services/http/apiClient';
 import { obtenerMemoriaRenasia, olvidarRecuerdoRenasia, olvidarTodoRenasia } from '../api/memoriaApi';
+import { NOMBRE_ACOMPANANTE } from '../data/agentes';
 import type { MemoriaRenasiaApi } from '../types/renasia.types';
 
-const NO_SE_PUDO_CARGAR = 'No se pudo cargar lo que Renasia recuerda de ti.';
+const NO_SE_PUDO_CARGAR = `No se pudo cargar lo que ${NOMBRE_ACOMPANANTE} recuerda de ti.`;
 const NO_SE_PUDO_BORRAR = 'No se pudo borrar. Intenta de nuevo.';
 
 /**
