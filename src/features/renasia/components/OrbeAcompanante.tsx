@@ -41,7 +41,7 @@ const TEMPO: Record<FaseDeVoz, number> = {
 
 const ETIQUETA: Record<FaseDeVoz, string> = {
   reposo: "Hablarle a tu acompañante",
-  escuchando: "Dejar de escuchar",
+  escuchando: "Terminé de hablar",
   pensando: "Tu acompañante está pensando",
   hablando: "Callar a tu acompañante",
 };
@@ -59,6 +59,8 @@ type Props = {
   /** Diámetro del área del orbe (~140 en Hoy). */
   diametro: number;
   onTocar: () => void;
+  /** Mantener presionado: cierra la conversación en vivo (E-458). Sin conversación abierta no viene. */
+  onMantener?: () => void;
   deshabilitado?: boolean;
 };
 
@@ -132,7 +134,7 @@ function useMovimientoReducido(): boolean {
   return reducido;
 }
 
-function OrbeDeRazonamiento({ fase, diametro, onTocar, deshabilitado }: Props) {
+function OrbeDeRazonamiento({ fase, diametro, onTocar, onMantener, deshabilitado }: Props) {
   const { c, mode } = useTheme();
   const reducido = useMovimientoReducido();
   const aLaVista = useOrbeALaVista();
@@ -142,6 +144,8 @@ function OrbeDeRazonamiento({ fase, diametro, onTocar, deshabilitado }: Props) {
   return (
     <Pressable
       onPress={onTocar}
+      onLongPress={onMantener}
+      accessibilityHint={onMantener ? "Mantén presionado para cerrar la conversación" : undefined}
       disabled={deshabilitado}
       accessibilityRole="button"
       accessibilityLabel={ETIQUETA[fase]}
@@ -189,7 +193,7 @@ function OrbeDeRazonamiento({ fase, diametro, onTocar, deshabilitado }: Props) {
   );
 }
 
-function OrbeSimple({ fase, diametro, onTocar, deshabilitado }: Props) {
+function OrbeSimple({ fase, diametro, onTocar, onMantener, deshabilitado }: Props) {
   const { c } = useTheme();
   const latido = useRef(new Animated.Value(0)).current;
 
@@ -266,6 +270,8 @@ function OrbeSimple({ fase, diametro, onTocar, deshabilitado }: Props) {
       />
       <Pressable
         onPress={onTocar}
+        onLongPress={onMantener}
+        accessibilityHint={onMantener ? "Mantén presionado para cerrar la conversación" : undefined}
         disabled={deshabilitado}
         accessibilityRole="button"
         accessibilityLabel={ETIQUETA[fase]}
