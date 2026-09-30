@@ -45,3 +45,31 @@ export function invitacionSinPosiciones(clave: ClaveDeTabla): string {
     ? 'Todavía nadie registró kilómetros. Sube tu captura con los km de hoy y encabeza la tabla.'
     : 'Todavía nadie sumó puntos en este corte diario. Se cuentan solos con tus hábitos, tus rocas y tus lecciones: el primero que avance, encabeza.';
 }
+
+/** Quién mira el ranking: lo mínimo para encontrarse en una tabla. */
+export interface QuienMira {
+  id?: string | null;
+  name?: string | null;
+}
+
+/**
+ * La fila de quien mira, en la tabla que se está mirando, o `null` si no figura.
+ *
+ * Se busca SIEMPRE en las filas de la pestaña activa (`entradasDeLaTabla`): es la misma lista de la
+ * que sale el podio, así que «Tu posición» y el podio no pueden hablar de tablas distintas. Por id y,
+ * como respaldo (cuentas viejas cuyo id no coincidía), por nombre.
+ *
+ * Que no figure en «General» no es un error de la pantalla: el servidor solo ordena aprendices
+ * activos con programa (`RankingPersistenceAdapter.aprendicesActivosConPuntaje`). Una cuenta de
+ * mentor o de administración no aparece en ninguna tabla.
+ */
+export function miEntradaEnLaTabla(entradas: EntradaRankingDto[], quien: QuienMira): EntradaRankingDto | null {
+  const nombre = quien.name?.toLowerCase();
+  return (
+    entradas.find(
+      entrada =>
+        (quien.id != null && entrada.participanteId === quien.id) ||
+        (Boolean(nombre) && entrada.fullName.toLowerCase().includes(nombre as string))
+    ) ?? null
+  );
+}

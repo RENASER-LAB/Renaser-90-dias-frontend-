@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing, Platform, StyleProp, ViewStyle } from 'react-native';
 import Svg, {
   Defs,
@@ -219,6 +219,25 @@ export function PodioRanking({ top1, top2, top3, activo }: PodioRankingProps) {
     };
   }, [activo, nombreOro, nombrePlata, nombreBronce, oro, plata, bronce, brillo, balanceo, corona, halo, chispas]);
 
+  // Las interpolaciones se crean UNA vez por valor, no en cada render. Ver `ColumnaPodio`: un nodo
+  // animado nuevo por render hace que React Native suelte el anterior y restaure la vista a los
+  // valores que conoce JS, que con el driver nativo no son los que se ven (podio gris al volver de «Kilómetros», 30/09).
+  const giroEscenario = useMemo(
+    () => balanceo.interpolate({ inputRange: [0, 1], outputRange: ['-2.5deg', '2.5deg'] }),
+    [balanceo]
+  );
+  const estiloChispas = useMemo(
+    () =>
+      chispas.map(valor => ({
+        opacity: valor.interpolate({ inputRange: [0, 0.15, 0.7, 1], outputRange: [0, 0.9, 0.5, 0] }),
+        transform: [
+          { translateY: valor.interpolate({ inputRange: [0, 1], outputRange: [0, -140] }) },
+          { scale: valor.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.5, 1, 0.4] }) },
+        ],
+      })),
+    [chispas]
+  );
+
   return (
     <View style={[styles.marco, { borderColor: c.gold }]}>
       {/*
@@ -266,7 +285,7 @@ export function PodioRanking({ top1, top2, top3, activo }: PodioRankingProps) {
       </Svg>
 
       {/* Chispas: viven fuera del escenario que se balancea, para que no se vayan de lado con él. */}
-      {chispas.map((valor, i) => (
+      {chispas.map((_valor, i) => (
         <Animated.View
           key={i}
           pointerEvents="none"
@@ -275,11 +294,7 @@ export function PodioRanking({ top1, top2, top3, activo }: PodioRankingProps) {
             {
               left: `${CHISPAS[i]}%`,
               backgroundColor: c.gold,
-              opacity: valor.interpolate({ inputRange: [0, 0.15, 0.7, 1], outputRange: [0, 0.9, 0.5, 0] }),
-              transform: [
-                { translateY: valor.interpolate({ inputRange: [0, 1], outputRange: [0, -140] }) },
-                { scale: valor.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.5, 1, 0.4] }) },
-              ],
+              ...estiloChispas[i],
             },
           ]}
         />
@@ -292,7 +307,7 @@ export function PodioRanking({ top1, top2, top3, activo }: PodioRankingProps) {
           {
             transform: [
               { perspective: 1200 },
-              { rotateY: balanceo.interpolate({ inputRange: [0, 1], outputRange: ['-2.5deg', '2.5deg'] }) },
+              { rotateY: giroEscenario },
             ],
           },
         ]}
@@ -443,6 +458,36 @@ function ColumnaPodio({
   const punteado = Boolean(destacado);
   const bordeVacio = destacado ? c.gold : 'rgba(246,244,238,0.22)';
 
+  /**
+   * Las interpolaciones, memorizadas por valor (podio gris al volver de «Kilómetros», 30/09).
+   *
+   * Antes se creaban dentro del JSX, o sea una nueva en cada render. Para React Native eso es un
+   * `AnimatedProps` nuevo cada vez: suelta el anterior y, al soltarlo, le pide al lado nativo que
+   * restaure la vista (`__restoreDefaultValues`), y en Fabric la vista queda con lo que JS cree que
+   * vale la animación. Con el driver nativo JS no sigue la subida cuadro a cuadro, así que cualquier
+   * render de Comunidad a mitad (o después) de la entrada podía dejar la columna a medio subir:
+   * transparente, más baja, inclinada — el pedestal «gris y sin altura». Con los mismos nodos entre
+   * renders el nodo animado no se reemplaza y la vista sigue en lo que dibujó la animación.
+   */
+  const subida = useMemo(
+    () => ({
+      translateY: avance.interpolate({ inputRange: [0, 1], outputRange: [70, 0] }),
+      rotateX: avance.interpolate({ inputRange: [0, 1], outputRange: ['34deg', '8deg'] }),
+      scale: avance.interpolate({ inputRange: [0, 1], outputRange: [0.88, 1] }),
+    }),
+    [avance]
+  );
+  const latido = useMemo(
+    () =>
+      halo && {
+        opacity: halo.interpolate({ inputRange: [0, 1], outputRange: [0.55, 0] }),
+        scale: halo.interpolate({ inputRange: [0, 1], outputRange: [1, 1.7] }),
+      },
+    [halo]
+  );
+  const flotacion = useMemo(() => corona?.interpolate({ inputRange: [0, 1], outputRange: [3, -5] }), [corona]);
+  const barrido = useMemo(() => brillo?.interpolate({ inputRange: [0, 1], outputRange: [-70, 260] }), [brillo]);
+
   return (
     <Animated.View
       style={[
@@ -452,10 +497,10 @@ function ColumnaPodio({
           transformOrigin: 'bottom',
           transform: [
             { perspective: 900 },
-            { translateY: avance.interpolate({ inputRange: [0, 1], outputRange: [70, 0] }) },
-            { rotateX: avance.interpolate({ inputRange: [0, 1], outputRange: ['34deg', '8deg'] }) },
+            { translateY: subida.translateY },
+            { rotateX: subida.rotateX },
             { rotateY: `${giroY}deg` },
-            { scale: avance.interpolate({ inputRange: [0, 1], outputRange: [0.88, 1] }) },
+            { scale: subida.scale },
           ],
         },
       ]}
@@ -469,8 +514,8 @@ function ColumnaPodio({
               styles.halo,
               {
                 borderColor: c.gold,
-                opacity: halo.interpolate({ inputRange: [0, 1], outputRange: [0.55, 0] }),
-                transform: [{ scale: halo.interpolate({ inputRange: [0, 1], outputRange: [1, 1.7] }) }],
+                opacity: latido?.opacity,
+                transform: [{ scale: latido?.scale ?? 1 }],
               },
             ]}
           />
@@ -489,7 +534,7 @@ function ColumnaPodio({
             corona
               ? {
                   transform: [
-                    { translateY: corona.interpolate({ inputRange: [0, 1], outputRange: [3, -5] }) },
+                    { translateY: flotacion ?? 0 },
                   ],
                 }
               : null,
@@ -567,7 +612,7 @@ function ColumnaPodio({
                 {
                   transform: [
                     { rotate: '18deg' },
-                    { translateX: brillo.interpolate({ inputRange: [0, 1], outputRange: [-70, 260] }) },
+                    { translateX: barrido ?? 0 },
                   ],
                 },
               ]}
@@ -636,13 +681,16 @@ export function EntradaEscalonada({ indice, activo, style, children }: EntradaEs
     return () => animacion.stop();
   }, [activo, indice, valor]);
 
+  // Memorizada por la misma razón que las del podio (ver `ColumnaPodio`).
+  const deslizamiento = useMemo(() => valor.interpolate({ inputRange: [0, 1], outputRange: [22, 0] }), [valor]);
+
   return (
     <Animated.View
       style={[
         style,
         {
           opacity: valor,
-          transform: [{ translateX: valor.interpolate({ inputRange: [0, 1], outputRange: [22, 0] }) }],
+          transform: [{ translateX: deslizamiento }],
         },
       ]}
     >

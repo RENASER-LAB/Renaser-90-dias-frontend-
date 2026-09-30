@@ -117,6 +117,7 @@ import { marcarChatMontado } from '../features/renasia/state/chatEnPantalla';
 import { useRanking } from '../features/ranking/hooks/useRanking';
 import {
   entradasDeLaTabla,
+  miEntradaEnLaTabla,
   invitacionSinPosiciones,
   TABLAS_DE_RANKING,
   textoDeMiPuntaje,
@@ -1302,11 +1303,7 @@ export default function ComunidadScreen() {
 
   // Posición del usuario autenticado actual desde la API
   const userRankEntry = useMemo(() => {
-    const found = apiRankingEntries.find(
-      p =>
-        p.participanteId === user?.id ||
-        (user?.name && p.fullName.toLowerCase().includes(user.name.toLowerCase()))
-    );
+    const found = miEntradaEnLaTabla(apiRankingEntries, { id: user?.id, name: user?.name });
     const celulaNombre =
       rankingData?.celula?.cellName ||
       (miCelula?.assigned === true ? miCelula.cellName : null) ||
@@ -2723,7 +2720,12 @@ export default function ComunidadScreen() {
                       este mismo podio pero plano y quieto: mismos colores, mismos altos, mismas
                       medallas. Se movió a su propio componente para que la animación viva junto al
                       dibujo y no le sume estado a esta pantalla, que ya es larga. */}
+                  {/* `key` por tabla: cada pestaña monta su propio podio, con valores animados
+                      nuevos, y la entrada arranca de cero como la primera vez. Antes el mismo
+                      podio se reanimaba en el lugar al cambiar de pestaña, y al volver de
+                      «Kilómetros» los pedestales podían quedar a medio subir (grises, bajos). */}
                   <PodioRanking
+                    key={tipoRanking}
                     top1={podioTop1}
                     top2={podioTop2}
                     top3={podioTop3}
@@ -2774,7 +2776,7 @@ export default function ComunidadScreen() {
 
               {/* Tabla de Clasificación General */}
               {rankingList.length > 0 && (
-                <View style={[styles.leaderboardList, { borderColor: c.border, backgroundColor: c.cardBg }]}>
+                <View key={tipoRanking} style={[styles.leaderboardList, { borderColor: c.border, backgroundColor: c.cardBg }]}>
                   {/* Las filas entran escalonadas detrás del podio (ver `EntradaEscalonada`): la
                       tabla se lee de arriba hacia abajo, que es el orden en el que importa. */}
                   {rankingList.map((u, indice) => (
