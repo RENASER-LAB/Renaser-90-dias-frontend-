@@ -19,6 +19,9 @@ const { getDefaultConfig } = require('expo/metro-config');
 
 const config = getDefaultConfig(__dirname);
 
-config.resolver.blockList = [/\/graphify-out\/.*/];
+// `.claude/worktrees/` guarda las copias de trabajo de los agentes, cada una con su node_modules:
+// vigilarlas agotaba el límite del sistema (`ENOSPC: System limit for number of file watchers
+// reached`) y Metro se caía al arrancar (2026-09-30).
+config.resolver.blockList = [/\/graphify-out\/.*/, /\/\.claude\/.*/];
 
 module.exports = config;
