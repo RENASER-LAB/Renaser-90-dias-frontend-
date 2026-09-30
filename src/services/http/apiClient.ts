@@ -155,8 +155,18 @@ async function leerMensajeDeError(respuesta: Response): Promise<{ mensaje: strin
     const json = JSON.parse(texto);
     return { mensaje: json?.message || `Error ${respuesta.status}`, cuerpo: json };
   } catch {
-    return { mensaje: texto, cuerpo: texto };
+    // Un cuerpo que no es JSON lo armó un intermediario (CloudFront, el balanceador), no el backend:
+    // mostrarlo tal cual dejaba una página HTML entera en la pantalla (E-464). Se traduce.
+    return { mensaje: mensajeSinCuerpoLegible(respuesta.status), cuerpo: texto };
   }
+}
+
+/** 502/503/504: el servidor se está reiniciando (un despliegue) o no contestó a tiempo. */
+function mensajeSinCuerpoLegible(status: number): string {
+  if (status >= 500) {
+    return 'El servidor no responde en este momento. Intenta de nuevo en unos segundos.';
+  }
+  return `Error ${status}`;
 }
 
 export async function apiFetch<T>(ruta: string, opciones: OpcionesPeticion = {}): Promise<T> {
