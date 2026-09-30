@@ -19,12 +19,17 @@ export const PAUSA_TRAS_FALLO_MS = 2 * 60_000;
  * cuando el backend no tiene la voz en vivo prendida, cuando se acabó la cuota del día o cuando
  * no hay conexión. El cambio pasa en el mismo toque: la persona no tiene que volver a intentar.
  * Mientras dura la pausa, el aviso de la voz en vivo (por ejemplo, la cuota) se sigue mostrando.
+ *
+ * Con la voz en vivo abierta, tocar ya no la cierra (E-458): es «ya terminé» o «cállate». Se cierra
+ * con `terminar` (mantener presionado el orbe).
  */
 export function useVozDelOrbe(): ConversacionPorVoz {
   const clasica = useConversacionPorVoz();
   const enVivo = useConversacionEnVivo();
   const [descartadaHastaMs, setDescartadaHastaMs] = useState(0);
   const enVivoActivaRef = useRef(false);
+  /** La persona la cerró mientras se abría: eso no es un fallo, no se pasa al modo de siempre. */
+  const cerradaAdredeRef = useRef(false);
 
   const enPausa = Date.now() < descartadaHastaMs;
   const usarEnVivo = enVivo.disponible && !enPausa;
@@ -32,7 +37,6 @@ export function useVozDelOrbe(): ConversacionPorVoz {
 
   const tocar = useCallback(() => {
     if (enSesion || enVivoActivaRef.current) {
-      enVivoActivaRef.current = false;
       enVivo.tocar();
       return;
     }
@@ -41,17 +45,26 @@ export function useVozDelOrbe(): ConversacionPorVoz {
       return;
     }
     enVivoActivaRef.current = true;
+    cerradaAdredeRef.current = false;
     void enVivo.empezar().then(ok => {
-      if (ok) return;
       enVivoActivaRef.current = false;
+      if (ok || cerradaAdredeRef.current) return;
       setDescartadaHastaMs(Date.now() + PAUSA_TRAS_FALLO_MS);
       clasica.tocar();
     });
   }, [clasica, enSesion, enVivo, usarEnVivo]);
 
+  const terminarEnVivo = enVivo.terminar;
+  const terminar = useCallback(() => {
+    enVivoActivaRef.current = false;
+    cerradaAdredeRef.current = true;
+    terminarEnVivo();
+  }, [terminarEnVivo]);
+
   const actual = usarEnVivo && (enSesion || enVivo.respuesta || enVivo.error) ? enVivo : clasica;
   return {
     ...actual,
+    terminar: enSesion ? terminar : undefined,
     disponible: clasica.disponible || enVivo.disponible,
     // En la pausa se muestra por qué se cayó la voz en vivo, aunque ya se esté usando la de siempre.
     error: actual.error ?? (enPausa ? enVivo.error : null),

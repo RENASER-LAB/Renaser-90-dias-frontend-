@@ -35,6 +35,11 @@ export type ConversacionPorVoz = {
   aviso: string | null;
   /** Un solo toque hace lo que corresponde a la fase: escuchar, dejar de escuchar o callarse. */
   tocar: () => void;
+  /**
+   * Cierra la conversación, cuando la voz en vivo la mantiene abierta entre preguntas (E-458): se
+   * mantiene presionado el orbe. Sin conversación abierta no viene.
+   */
+  terminar?: () => void;
 };
 
 /**

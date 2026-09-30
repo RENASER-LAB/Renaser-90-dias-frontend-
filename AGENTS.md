@@ -15,6 +15,21 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
   * `data/`: Constantes, cláusulas, configuraciones estáticas.
 * **Componentes de UI Atómicos**: Utiliza componentes compartidos bajo `src/components/` (`FormField`, `GoldButton`, `SliderRating`, `Checkbox`, `SignatureCanvas`, `Icon`).
 * **Integridad del Core**: NUNCA alterar, romper ni desconfigurar las pantallas existentes ni los tabs principales (`Hoy`, `Plan`, `Training`, `Comunidad`, `Yo`).
+  * **Excepción autorizada por el dueño del producto — 2026-09-30 — tab `Hoy`, el orbe con la voz en
+    vivo como una conversación abierta** (backend E-458 / D-232). Pedido del dueño probando el APK 1.5.0:
+    «noto latencia al hablar y recibir su respuesta… la respuesta se entrecorta… que siga fluido como
+    Gemini con streaming, y luego que mande el mensaje de confirmación del hábito». Lo que cambia y nada más:
+    * **Tocar el orbe ya no cierra la voz en vivo**: escuchando es «ya terminé» (contesta sin esperar el
+      silencio), hablando lo calla y sigue escuchando. **Mantener presionado** la cierra (también al pasar
+      la app a segundo plano o tras 45 s sin que nadie hable). El rótulo lo dice: «Te escucho… toca cuando
+      termines · mantén para cerrar» / «Toca para que se calle · mantén para cerrar». Con el flujo de
+      siempre (sin voz en vivo) el rótulo y los toques no cambian.
+    * **«Tomar foto»** en la hoja del orbe cierra la conversación en vivo antes de abrir la cámara.
+    * La hoja de la propuesta o de la foto aparece **cuando el orbe termina de hablar**, no a mitad.
+    * **Hace falta un APK nuevo**: además del JavaScript, el parlante nativo de `expo-two-way-audio`
+      lleva un parche (`scripts/arreglar-parlante-two-way-audio.js`, en `postinstall`).
+    Una excepción puntual **no abre** el tab: cualquier otro cambio sobre los cinco principales
+    vuelve a necesitar autorización explícita.
   * **Excepción autorizada por el dueño del producto — 2026-09-29 — tab `Comunidad` (chat): nombres
     de los chats y avisos de mensajes** (backend D-221). Pedido del dueño: «Formación Renaser Global,
     grupo general donde estarán todos; luego el otro con el Mentor y sus estudiantes, que será el nombre

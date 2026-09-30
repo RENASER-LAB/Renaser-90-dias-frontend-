@@ -75,15 +75,20 @@ import { RegistroConFotoModal } from '../features/habits/components/RegistroConF
 import { cifrasDeHabitos } from '../features/home/utils/cifrasDeHabitos';
 
 /** Lo que se lee debajo del orbe: la fase dicha con texto, para quien no ve la animación. */
-function rotuloDelOrbe(fase: FaseDeVoz, disponible: boolean): string {
+/**
+ * > Corregido 2026-09-30 (E-458). Decía «Te escucho… toca de nuevo para terminar», y con la voz en
+ * > vivo ese toque cerraba la conversación: cada pregunta abría una nueva y esperaba la conexión.
+ * > Con la conversación en vivo abierta (`abierta`), tocar es «ya terminé» y mantener la cierra.
+ */
+function rotuloDelOrbe(fase: FaseDeVoz, disponible: boolean, abierta: boolean): string {
   if (!disponible) return 'Toca para escribirle';
   switch (fase) {
     case 'escuchando':
-      return 'Te escucho… toca de nuevo para terminar';
+      return abierta ? 'Te escucho… toca cuando termines · mantén para cerrar' : 'Te escucho… toca de nuevo para terminar';
     case 'pensando':
       return 'Pensando…';
     case 'hablando':
-      return 'Toca para que se calle';
+      return abierta ? 'Toca para que se calle · mantén para cerrar' : 'Toca para que se calle';
     default:
       return 'Toca y háblame';
   }
@@ -144,7 +149,9 @@ export default function HoyScreen() {
   const tomarFotoDelOrbe = async (pedido: PedidoDeFotoUI) => {
     if (estadoVisibleDelPedido(pedido, Date.now()) !== 'pendiente') return;
     // La cámara no convive con el micrófono abierto ni con el orbe hablando: se lo calla antes.
-    if (voz.fase === 'escuchando' || voz.fase === 'hablando') voz.tocar();
+    // Con la voz en vivo, tocar ya no cierra (E-458): se cierra la conversación entera.
+    if (voz.terminar) voz.terminar();
+    else if (voz.fase === 'escuchando' || voz.fase === 'hablando') voz.tocar();
     voz.cambiarPedidoDeFoto(pedido.registroId, { estado: 'abriendo' });
     const resultado = await registroConFoto.iniciar(solicitudDelPedido(pedido));
     voz.cambiarPedidoDeFoto(pedido.registroId, cambioTrasIniciar(resultado, pedido.destino));
@@ -678,13 +685,14 @@ export default function HoyScreen() {
                 fase={voz.fase}
                 diametro={Math.min(140, Math.round(heroSize * 0.58))}
                 onTocar={voz.disponible ? voz.tocar : () => setChatDelOrbeAbierto(true)}
+                onMantener={voz.terminar}
               />
             </View>
             <Text
               numberOfLines={2}
               style={[t.small, { color: c.textSoft, marginTop: isShort ? 10 : 14, textAlign: 'center', paddingHorizontal: 24 }]}
             >
-              {rotuloDelOrbe(voz.fase, voz.disponible)}
+              {rotuloDelOrbe(voz.fase, voz.disponible, voz.terminar !== undefined)}
             </Text>
           </View>
         </View>
