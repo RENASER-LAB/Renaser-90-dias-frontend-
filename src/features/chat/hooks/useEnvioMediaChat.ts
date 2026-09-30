@@ -1,5 +1,4 @@
 import { useCallback, useRef, useState } from 'react';
-import { Asset } from 'expo-asset';
 import { Alert } from '../../../components/Alerta';
 import { useGrabadorDeVoz } from '../../../hooks/useGrabadorDeVoz';
 
@@ -12,6 +11,7 @@ import {
 import type { WireMensaje } from '../types/chat.types';
 import type { StickerRenaser } from '../data/stickersRenaser';
 import { textoDeSticker } from '../utils/stickersRenaser';
+import { archivoDelSticker } from '../utils/archivoDelSticker';
 import {
   elegirFotoDeGaleriaChat,
   mimeDeAudioChat,
@@ -102,9 +102,8 @@ export function useEnvioMediaChat(conversationId: string | null,
   const enviarSticker = useCallback(async (sticker: StickerRenaser): Promise<boolean> => {
     if (grabador.grabando) return false;
     return subirYEnviar(async () => {
-      const asset = await Asset.fromModule(sticker.imagen).downloadAsync();
       // Los bytes originales se suben como WebP; no pasan por la conversión a JPEG de las fotos.
-      return { uri: asset.localUri ?? asset.uri, mimeType: 'image/webp' };
+      return { uri: await archivoDelSticker(sticker.imagen), mimeType: 'image/webp' };
     }, 'IMAGE', undefined, textoDeSticker(sticker.nombre));
   }, [grabador.grabando, subirYEnviar]);
 
