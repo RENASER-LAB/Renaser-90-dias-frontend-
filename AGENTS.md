@@ -21,9 +21,11 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     Gemini con streaming, y luego que mande el mensaje de confirmación del hábito». Lo que cambia y nada más:
     * **Tocar el orbe ya no cierra la voz en vivo**: escuchando es «ya terminé» (contesta sin esperar el
       silencio), hablando lo calla y sigue escuchando. **Mantener presionado** la cierra (también al pasar
-      la app a segundo plano o tras 45 s sin que nadie hable). El rótulo lo dice: «Te escucho… toca cuando
-      termines · mantén para cerrar» / «Toca para que se calle · mantén para cerrar». Con el flujo de
-      siempre (sin voz en vivo) el rótulo y los toques no cambian.
+      la app a segundo plano o tras 45 s sin que nadie hable). El rótulo dice «Te escucho… toca cuando
+      termines», y mientras la conversación está abierta se ve junto al orbe un botón chico
+      «✕ Terminar» (etiqueta accesible «Terminar conversación») que la cierra; mantener presionado
+      también (confirmado por el dueño el 2026-09-30, junto con los 45 s). Con el flujo de siempre
+      (sin voz en vivo) el rótulo y los toques no cambian.
     * **«Tomar foto»** en la hoja del orbe cierra la conversación en vivo antes de abrir la cámara.
     * La hoja de la propuesta o de la foto aparece **cuando el orbe termina de hablar**, no a mitad.
     * **Hace falta un APK nuevo**: además del JavaScript, el parlante nativo de `expo-two-way-audio`

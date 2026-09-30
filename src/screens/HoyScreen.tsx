@@ -65,7 +65,8 @@ import { OrbeAcompanante } from '../features/renasia/components/OrbeAcompanante'
 import { AccionDelAcompanante } from '../features/renasia/components/AccionDelAcompanante';
 import { escucharPropuestaConfirmada } from '../features/renasia/events/avisoPropuestaConfirmada';
 import { RenasiaPanel } from '../features/renasia/screens/RenasiaPanel';
-import { type FaseDeVoz } from '../features/renasia/hooks/useConversacionPorVoz';
+import { muestraTerminar, rotuloDelOrbe } from '../features/renasia/utils/rotuloDelOrbe';
+import { BotonTerminarConversacion } from '../features/renasia/components/BotonTerminarConversacion';
 import { useVozDelOrbe } from '../features/renasia/hooks/useVozDelOrbe';
 import { cambioAlRegistrar, cambioTrasIniciar, estadoVisibleDelPedido, solicitudDelPedido } from '../features/renasia/utils/pedidosDeFoto';
 import { REGLAS_DE_ACCION } from '../features/objetivos/utils/registroDeAccionConFoto';
@@ -73,26 +74,6 @@ import type { PedidoDeFotoUI } from '../features/renasia/types/renasia.types';
 import { useRegistroConFoto } from '../features/habits/hooks/useRegistroConFoto';
 import { RegistroConFotoModal } from '../features/habits/components/RegistroConFotoModal';
 import { cifrasDeHabitos } from '../features/home/utils/cifrasDeHabitos';
-
-/** Lo que se lee debajo del orbe: la fase dicha con texto, para quien no ve la animación. */
-/**
- * > Corregido 2026-09-30 (E-458). Decía «Te escucho… toca de nuevo para terminar», y con la voz en
- * > vivo ese toque cerraba la conversación: cada pregunta abría una nueva y esperaba la conexión.
- * > Con la conversación en vivo abierta (`abierta`), tocar es «ya terminé» y mantener la cierra.
- */
-function rotuloDelOrbe(fase: FaseDeVoz, disponible: boolean, abierta: boolean): string {
-  if (!disponible) return 'Toca para escribirle';
-  switch (fase) {
-    case 'escuchando':
-      return abierta ? 'Te escucho… toca cuando termines · mantén para cerrar' : 'Te escucho… toca de nuevo para terminar';
-    case 'pensando':
-      return 'Pensando…';
-    case 'hablando':
-      return abierta ? 'Toca para que se calle · mantén para cerrar' : 'Toca para que se calle';
-    default:
-      return 'Toca y háblame';
-  }
-}
 
 export default function HoyScreen() {
   const { c, t } = useTheme();
@@ -694,6 +675,9 @@ export default function HoyScreen() {
             >
               {rotuloDelOrbe(voz.fase, voz.disponible, voz.terminar !== undefined)}
             </Text>
+            {voz.terminar && muestraTerminar(voz.fase, voz.terminar) ? (
+              <BotonTerminarConversacion onPress={voz.terminar} />
+            ) : null}
           </View>
         </View>
 
