@@ -1,4 +1,5 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
+import { Asset } from 'expo-asset';
 import { Alert } from '../../../components/Alerta';
 import { useGrabadorDeVoz } from '../../../hooks/useGrabadorDeVoz';
 
@@ -9,6 +10,8 @@ import {
   subirMediaChatAS3,
 } from '../api/chatApi';
 import type { WireMensaje } from '../types/chat.types';
+import type { StickerRenaser } from '../data/stickersRenaser';
+import { textoDeSticker } from '../utils/stickersRenaser';
 import {
   elegirFotoDeGaleriaChat,
   mimeDeAudioChat,
@@ -51,14 +54,18 @@ export function useEnvioMediaChat(conversationId: string | null,
   // micrófono no está disponible, falla ese botón y no la pantalla.
   const grabador = useGrabadorDeVoz();
   const [enviando, setEnviando] = useState(false);
+  const envioEnCurso = useRef(false);
 
   /** Los tres pasos, en orden. Devuelve `true` si el mensaje llegó a crearse. */
   const subirYEnviar = useCallback(
-    async (archivo: { uri: string; mimeType: string }, tipo: 'IMAGE' | 'AUDIO',
-            durationSeconds?: number): Promise<boolean> => {
-      if (!conversationId) return false;
+    async (origen: { uri: string; mimeType: string } | (() => Promise<{ uri: string; mimeType: string }>),
+            tipo: 'IMAGE' | 'AUDIO', durationSeconds?: number, text?: string): Promise<boolean> => {
+      // El ref también bloquea dos toques antes de que React actualice `enviando`.
+      if (!conversationId || envioEnCurso.current) return false;
+      envioEnCurso.current = true;
       setEnviando(true);
       try {
+        const archivo = typeof origen === 'function' ? await origen() : origen;
         const url = await solicitarUrlSubidaChat(conversationId, archivo.mimeType);
         // Sin `STORAGE_PROVEEDOR=s3` el backend devuelve `about:blank#pendiente-s3/...`; un PUT
         // ahí falla con un error de red críptico. Se detecta antes de intentarlo (D-34).
@@ -76,6 +83,7 @@ export function useEnvioMediaChat(conversationId: string | null,
           ruta: url.ruta,
           mime: archivo.mimeType,
           durationSeconds,
+          text,
         });
         alEnviar(conLaCopiaLocal(mensaje, archivo.uri));
         return true;
@@ -84,11 +92,21 @@ export function useEnvioMediaChat(conversationId: string | null,
           e instanceof Error ? e.message : 'Intenta de nuevo en un momento.');
         return false;
       } finally {
+        envioEnCurso.current = false;
         setEnviando(false);
       }
     },
     [conversationId, alEnviar],
   );
+
+  const enviarSticker = useCallback(async (sticker: StickerRenaser): Promise<boolean> => {
+    if (grabador.grabando) return false;
+    return subirYEnviar(async () => {
+      const asset = await Asset.fromModule(sticker.imagen).downloadAsync();
+      // Los bytes originales se suben como WebP; no pasan por la conversión a JPEG de las fotos.
+      return { uri: asset.localUri ?? asset.uri, mimeType: 'image/webp' };
+    }, 'IMAGE', undefined, textoDeSticker(sticker.nombre));
+  }, [grabador.grabando, subirYEnviar]);
 
   const enviarFoto = useCallback(async (origen: 'camara' | 'galeria') => {
     if (enviando || !conversationId) return;
@@ -140,6 +158,7 @@ export function useEnvioMediaChat(conversationId: string | null,
     grabando: grabador.grabando,
     segundosGrabados: Math.floor(grabador.durationMillis / 1000),
     enviarFoto,
+    enviarSticker,
     alternarGrabacion,
     cancelarGrabacion,
   };

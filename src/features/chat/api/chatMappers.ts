@@ -1,6 +1,7 @@
 import type { ChatConversation, ChatMessage, ChatMessageType } from '../../../screens/ComunidadScreen';
 import { horaCorta, horaDeLaLista, vistaPreviaDelMensaje } from '../utils/formatoChat';
 import { estadoDeEntrega } from '../utils/lecturaDelChat';
+import { nombreDelSticker } from '../utils/stickersRenaser';
 import type {
   WireConversacionResumen,
   WireMensaje,
@@ -240,6 +241,7 @@ export function mapearMensaje(wire: WireMensaje, actorId: string | null | undefi
     return mapearMensajeDelPrograma(wire);
   }
   const esMio = !!actorId && !!wire.senderId && wire.senderId === actorId;
+  const stickerNombre = nombreDelSticker(wire);
   return {
     id: wire.id,
     sender: wire.senderName?.trim() || (esMio ? 'Tú' : 'Miembro Renaser'),
@@ -252,7 +254,9 @@ export function mapearMensaje(wire: WireMensaje, actorId: string | null | undefi
     /* Una foto que se puede mostrar lleva solo SU texto al pie: el rótulo «Imagen adjunta» de
        `textoPorTipo` quedaba escrito debajo de cada foto (2026-09-26). Sin URL se conserva,
        porque ahí no hay foto y el rótulo es lo único que se ve. */
-    text: wire.type === 'IMAGE' && wire.mediaUrl ? wire.text?.trim() || undefined : textoPorTipo(wire),
+    text: stickerNombre ? undefined : wire.type === 'IMAGE' && wire.mediaUrl ? wire.text?.trim() || undefined : textoPorTipo(wire),
+    esSticker: !!stickerNombre,
+    stickerNombre: stickerNombre ?? undefined,
     audioDuration: wire.mediaDurationSeconds != null ? formatearDuracion(wire.mediaDurationSeconds) : undefined,
     // La URL firmada es lo que hace que la foto se vea y el audio suene. Puede venir `null` en el
     // "último mensaje" de la lista de conversaciones (ahí el backend no la firma a propósito),
@@ -261,7 +265,7 @@ export function mapearMensaje(wire: WireMensaje, actorId: string | null | undefi
     // Respaldo para los mensajes sin URL firmada: se sigue rotulando el adjunto en vez de dejar
     // la burbuja vacía. Con `mediaUrl` presente la burbuja muestra la foto y esto no se usa.
     mediaList: wire.type === 'IMAGE' && !wire.mediaUrl
-      ? [wire.text?.trim() || '📷 Imagen adjunta']
+      ? [stickerNombre ? 'Sticker no disponible' : wire.text?.trim() || '📷 Imagen adjunta']
       : undefined,
     status: estadoDeEntrega(wire.status),
     createdAt: wire.createdAt,
@@ -294,7 +298,9 @@ export function resumenDelUltimoMensaje(
     : mapearTipoMensaje(ultimo.type);
   const conAdjunto = tipo === 'image_grid' || tipo === 'video' || tipo === 'audio';
   return {
-    lastMessage: vistaPreviaDelMensaje({
+    lastMessage: nombreDelSticker(ultimo)
+      ? `${!!actorId && ultimo.senderId === actorId ? 'Tú: ' : ''}Sticker`
+      : vistaPreviaDelMensaje({
       tipo,
       texto: conAdjunto ? ultimo.text : textoPorTipo(ultimo),
       esMio: !delPrograma && !!actorId && !!ultimo.senderId && ultimo.senderId === actorId,

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image as ImagenSticker } from 'expo-image';
 
 import type { ChatMessage } from '../../../screens/ComunidadScreen';
 import { useTheme } from '../../../theme/ThemeContext';
@@ -64,7 +65,8 @@ export function BurbujaDeMensaje({
   const propio = mensaje.isMe && !delPrograma;
   const fondo = propio ? colores.propia : colores.ajena;
   const conNombre = (enGrupo || delPrograma) && !propio && primeroDeLaTanda;
-  const conFoto = mensaje.type === 'image_grid' && !!mensaje.mediaUrl;
+  const sticker = !!mensaje.esSticker;
+  const conFoto = mensaje.type === 'image_grid' && !!mensaje.mediaUrl && !sticker;
   const texto = mensaje.text?.trim() ? mensaje.text : null;
   const leido = llevaDobleMarca(mensaje);
   const pie = `${mensaje.time}${propio ? (leido ? ' ✓✓' : ' ✓') : ''}`;
@@ -96,9 +98,10 @@ export function BurbujaDeMensaje({
           delPrograma && styles.burbujaDelPrograma,
           primeroDeLaTanda && (propio ? { borderTopRightRadius: 0 } : { borderTopLeftRadius: 0 }),
           conFoto && styles.burbujaConFoto,
+          sticker && styles.burbujaSticker,
         ]}
       >
-        {primeroDeLaTanda && (
+        {primeroDeLaTanda && !sticker && (
           <View
             style={[
               styles.cola,
@@ -122,6 +125,15 @@ export function BurbujaDeMensaje({
             {mensaje.sender}
             {!delPrograma && mensaje.senderRole ? ` · ${mensaje.senderRole}` : ''}
           </Text>
+        )}
+
+        {sticker && mensaje.mediaUrl && (
+          <ImagenSticker
+            source={{ uri: mensaje.mediaUrl }}
+            style={styles.sticker}
+            contentFit="contain"
+            accessibilityLabel={mensaje.stickerNombre ?? 'Sticker Renaser'}
+          />
         )}
 
         {conFoto && (
@@ -185,7 +197,7 @@ export function BurbujaDeMensaje({
         )}
 
         {(!conFoto || texto) && (
-          <Text style={[styles.hora, { color: colores.hora }]} accessibilityLabel={etiquetaDeLaHora}>
+          <Text style={[styles.hora, { color: colores.hora }, sticker && styles.horaSticker]} accessibilityLabel={etiquetaDeLaHora}>
             {leido ? mensaje.time : pie}
             {/* «✓» va en el color de la hora, como antes; «✓✓» en dorado, que es lo que separa «lo
                 leyeron» de «se guardó» de un vistazo (en WhatsApp, el azul). */}
@@ -238,6 +250,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     paddingTop: 4,
   },
+  burbujaSticker: {
+    backgroundColor: 'transparent',
+    paddingHorizontal: 0,
+    elevation: 0,
+    shadowOpacity: 0,
+  },
+  sticker: { width: 176, height: 176 },
+  horaSticker: { position: 'relative', right: 0, bottom: 0, alignSelf: 'flex-end', marginTop: 3 },
   cola: {
     position: 'absolute',
     top: 0,
