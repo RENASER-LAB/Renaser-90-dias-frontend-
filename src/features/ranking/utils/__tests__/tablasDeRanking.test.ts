@@ -7,6 +7,7 @@ import type { RankingAgregadoDto } from '../../api/rankingApi';
 import {
   entradasDeLaTabla,
   invitacionSinPosiciones,
+  miEntradaEnLaTabla,
   TABLAS_DE_RANKING,
   textoDeMiPuntaje,
   textoDelPuntaje,
@@ -51,5 +52,33 @@ describe('tablasDeRanking', () => {
     expect(textoDeMiPuntaje('kilometros', 7.5)).toBe('7,5 km recorridos');
     expect(textoDeMiPuntaje('coherencia', 80)).toBe('⚡ 80 Pts de Coherencia');
     expect(invitacionSinPosiciones('kilometros')).toContain('kilómetros');
+  });
+});
+
+describe('«Tu posición» al ir y volver de Kilómetros', () => {
+  // Quien mira está en General (3.º) y no registró km: en Kilómetros el servidor lo manda con 0.
+  const datos: RankingAgregadoDto = {
+    ...DATOS,
+    general: [entrada('ana', 1, 90), entrada('beto', 2, 70), entrada('yo', 3, 55)],
+    kilometros: [entrada('ana', 1, 12.5), entrada('yo', 2, 0)],
+  };
+  const yo = { id: 'yo', name: 'Nadie Más' };
+
+  it('sale de la tabla que se mira, la misma del podio', () => {
+    const recorrido = (['general', 'kilometros', 'general'] as const).map(clave => {
+      const filas = entradasDeLaTabla(datos, clave);
+      return { podio: filas[0]?.participanteId, mia: miEntradaEnLaTabla(filas, yo)?.posicion ?? null };
+    });
+    expect(recorrido).toEqual([
+      { podio: 'ana', mia: 3 },
+      { podio: 'ana', mia: null },
+      { podio: 'ana', mia: 3 },
+    ]);
+  });
+
+  it('por nombre como respaldo, y sin nombre no encuentra a cualquiera', () => {
+    const filas = entradasDeLaTabla(datos, 'general');
+    expect(miEntradaEnLaTabla(filas, { id: 'otro', name: 'BETO' })?.posicion).toBe(2);
+    expect(miEntradaEnLaTabla(filas, { id: null, name: '' })).toBeNull();
   });
 });
