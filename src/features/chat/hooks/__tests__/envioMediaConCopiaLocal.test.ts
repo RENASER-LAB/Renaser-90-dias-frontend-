@@ -39,10 +39,14 @@ function respuestaDelServidor(tipo: 'AUDIO' | 'IMAGE', mediaUrl: string | null):
 }
 
 const mockEnviarMensajeConMedia = jest.fn<(...a: unknown[]) => Promise<WireMensaje>>();
+const mockSubirMedia = jest.fn(async (..._args: unknown[]) => undefined);
+const mockUrlSubida = jest.fn(async (..._args: unknown[]) => ({ uploadUrl: 'https://s3.example/firmada', bucket: 'renaser', ruta: 'chat/c-1/audios/x' }));
+const mockDescargarSticker = jest.fn(async () => ({ localUri: 'file:///cache/conectate.webp', uri: 'https://assets.example/conectate.webp' }));
+jest.mock('expo-asset', () => ({ Asset: { fromModule: () => ({ downloadAsync: () => mockDescargarSticker() }) } }));
 jest.mock('../../api/chatApi', () => ({
   almacenamientoSinConfigurar: () => false,
-  solicitarUrlSubidaChat: async () => ({ uploadUrl: 'https://s3.example/firmada', bucket: 'renaser', ruta: 'chat/c-1/audios/x' }),
-  subirMediaChatAS3: async () => undefined,
+  solicitarUrlSubidaChat: (...args: unknown[]) => mockUrlSubida(...args),
+  subirMediaChatAS3: (...args: unknown[]) => mockSubirMedia(...args),
   enviarMensajeConMedia: (...a: unknown[]) => mockEnviarMensajeConMedia(...a),
 }));
 jest.mock('../../utils/capturarMediaChat', () => ({
@@ -84,6 +88,49 @@ async function grabarYCortar(hook: { current: Hook }) {
 beforeEach(() => {
   mockEnviarMensajeConMedia.mockReset();
   mockAlerta.mockReset();
+  mockUrlSubida.mockClear();
+  mockSubirMedia.mockReset().mockResolvedValue(undefined);
+  mockDescargarSticker.mockReset().mockResolvedValue({ localUri: 'file:///cache/conectate.webp', uri: 'https://assets.example/conectate.webp' });
+});
+
+describe('enviar un sticker real con el mismo contrato de imágenes', () => {
+  const sticker = { id: 'conectate-sesion', nombre: 'Conéctate a tu sesión', imagen: 17 };
+
+  it('sube el WebP original y deja una imagen que el destinatario puede leer del historial', async () => {
+    mockEnviarMensajeConMedia.mockResolvedValue(respuestaDelServidor('IMAGE', null));
+    const enviados: WireMensaje[] = [];
+    const hook = montar(m => enviados.push(m));
+    let enviado = false;
+    await act(async () => { enviado = await hook.current.enviarSticker(sticker); });
+
+    expect(enviado).toBe(true);
+    expect(mockUrlSubida).toHaveBeenCalledWith('c-1', 'image/webp');
+    expect(mockSubirMedia).toHaveBeenCalledWith('https://s3.example/firmada', 'file:///cache/conectate.webp', 'image/webp');
+    expect(mockEnviarMensajeConMedia).toHaveBeenCalledWith('c-1', expect.objectContaining({
+      tipo: 'IMAGE', mime: 'image/webp', text: 'Sticker Renaser: Conéctate a tu sesión',
+    }));
+    expect(enviados[0].mediaUrl).toBe('file:///cache/conectate.webp');
+  });
+
+  it('dos toques seguidos crean un solo mensaje', async () => {
+    mockEnviarMensajeConMedia.mockResolvedValue(respuestaDelServidor('IMAGE', null));
+    const hook = montar(() => undefined);
+    await act(async () => {
+      await Promise.all([hook.current.enviarSticker(sticker), hook.current.enviarSticker(sticker)]);
+    });
+    expect(mockEnviarMensajeConMedia).toHaveBeenCalledTimes(1);
+  });
+
+  it('si la subida falla no crea un mensaje vacío y permite reintentar', async () => {
+    mockSubirMedia.mockRejectedValueOnce(new Error('Falló la subida'));
+    mockEnviarMensajeConMedia.mockResolvedValue(respuestaDelServidor('IMAGE', null));
+    const hook = montar(() => undefined);
+    await act(async () => { expect(await hook.current.enviarSticker(sticker)).toBe(false); });
+    expect(mockEnviarMensajeConMedia).not.toHaveBeenCalled();
+    expect(mockAlerta).toHaveBeenCalledWith('No se pudo enviar', 'Falló la subida');
+    await act(async () => { expect(await hook.current.enviarSticker(sticker)).toBe(true); });
+    expect(mockEnviarMensajeConMedia).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('lo que ve quien manda un audio o una foto', () => {

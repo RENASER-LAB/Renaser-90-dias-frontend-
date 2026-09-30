@@ -9,6 +9,7 @@ import {
   Modal,
   Image,
   Share,
+  Keyboard,
   KeyboardAvoidingView,
   FlatList,
   RefreshControl,
@@ -78,6 +79,8 @@ import { useChatConversaciones } from '../features/chat/hooks/useChatConversacio
 import { useChatEnVivo } from '../features/chat/hooks/useChatEnVivo';
 import { useEnvioMediaChat } from '../features/chat/hooks/useEnvioMediaChat';
 import { BurbujaDeMensaje } from '../features/chat/components/BurbujaDeMensaje';
+import { SelectorDeStickers } from '../features/chat/components/SelectorDeStickers';
+import { STICKERS_RENASER } from '../features/chat/data/stickersRenaser';
 import { CabeceraDeChat } from '../features/chat/components/CabeceraDeChat';
 import { coloresDelChat } from '../features/chat/components/coloresDelChat';
 import { FilaDeConversacion } from '../features/chat/components/FilaDeConversacion';
@@ -310,6 +313,9 @@ export interface ChatMessage {
   /** URL de lectura ya firmada del adjunto (`MensajeResponse.mediaUrl`). Es lo que se le pasa a
    * `<Image>` o al reproductor: la ruta cruda de S3 que se guarda en la base no se puede abrir. */
   mediaUrl?: string;
+  /** Los stickers viajan como IMAGE para ser compatibles con el backend y los APK anteriores. */
+  esSticker?: boolean;
+  stickerNombre?: string;
   status?: 'sent' | 'delivered' | 'read';
   /* Chat estilo WhatsApp (2026-09-26): la fecha real del mensaje, para los separadores de día y
      para agrupar tandas; y quién lo mandó, para el color del nombre en los grupos. Opcionales
@@ -830,6 +836,10 @@ export default function ComunidadScreen() {
     }
   }, []);
   const [chatInputText, setChatInputText] = useState('');
+  const [stickersVisible, setStickersVisible] = useState(false);
+  useEffect(() => {
+    setStickersVisible(false);
+  }, [activeChat?.id, enTribu, groupInfoVisible]);
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
   /** Foto de chat abierta a pantalla completa; `null` si no hay ninguna. */
   const [fotoChatAmpliada, setFotoChatAmpliada] = useState<string | null>(null);
@@ -1326,6 +1336,10 @@ export default function ComunidadScreen() {
   // GESTOS TÁCTILES DEL SISTEMA (BACKHANDLER)
   // =========================================================================
   useSystemBackHandler(() => {
+    if (stickersVisible) {
+      setStickersVisible(false);
+      return true;
+    }
     if (shareSheetPost !== null) {
       setShareSheetPost(null);
       return true;
@@ -1751,17 +1765,18 @@ export default function ComunidadScreen() {
    */
   const agregarMensajeEnviado = useCallback((wire: WireMensaje) => {
     const mensaje = mapearMensaje(wire, user?.id ?? null);
-    setActiveChat(prev => {
-      if (!prev) return prev;
-      const actualizada = {
-        ...prev,
-        messages: [...prev.messages, mensaje],
+    const actualizar = (conversacion: ChatConversation): ChatConversation => {
+      // Si se cerró el selector y se cambió de chat durante la subida, el mensaje sigue en su destino.
+      if (conversacion.id !== wire.conversationId) return conversacion;
+      return {
+        ...conversacion,
+        messages: conversacion.messages.some(m => m.id === mensaje.id)
+          ? conversacion.messages : [...conversacion.messages, mensaje],
         ...resumenDelUltimoMensaje(wire, user?.id ?? null),
       };
-      setConversations(anteriores =>
-        anteriores.map(cItem => (cItem.id === actualizada.id ? actualizada : cItem)));
-      return actualizada;
-    });
+    };
+    setActiveChat(prev => prev ? actualizar(prev) : prev);
+    setConversations(anteriores => anteriores.map(actualizar));
   }, [user?.id]);
 
   const {
@@ -1769,6 +1784,7 @@ export default function ComunidadScreen() {
     grabando,
     segundosGrabados,
     enviarFoto,
+    enviarSticker,
     alternarGrabacion,
   } = useEnvioMediaChat(activeChat?.id ?? null, agregarMensajeEnviado);
 
@@ -3795,6 +3811,15 @@ export default function ComunidadScreen() {
                     accessibilityLabel="Escribe un mensaje"
                   />
                   <Pressable
+                    onPress={() => { Keyboard.dismiss(); setStickersVisible(true); }}
+                    disabled={enviandoMedia}
+                    style={[styles.mediaOptionBtn, { opacity: enviandoMedia ? 0.4 : 1 }]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Enviar un sticker"
+                  >
+                    <Image source={STICKERS_RENASER[0].imagen} style={{ width: 32, height: 32 }} resizeMode="contain" />
+                  </Pressable>
+                  <Pressable
                     onPress={handleAdjuntarFoto}
                     disabled={enviandoMedia}
                     hitSlop={4}
@@ -3836,6 +3861,19 @@ export default function ComunidadScreen() {
           </View>
 
         </KeyboardAvoidingView>
+      )}
+
+      {enTribu && activeChat && !groupInfoVisible && (
+        <SelectorDeStickers
+          visible={stickersVisible}
+          enviando={enviandoMedia}
+          onCerrar={() => setStickersVisible(false)}
+          onElegir={sticker => {
+            void enviarSticker(sticker).then(enviado => {
+              if (enviado) setStickersVisible(false);
+            });
+          }}
+        />
       )}
 
       {/* ========================================================================= */}
