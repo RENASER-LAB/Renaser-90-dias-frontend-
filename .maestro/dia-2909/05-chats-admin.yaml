@@ -1,0 +1,33 @@
+# 05 — Chats del Admin: «Formación Renaser Global» primero, su info con integrantes, y grupos ajenos
+# «X y sus aprendices» visibles para el Admin (2026-09-29, pedido del dueño).
+appId: com.renaser.app
+---
+- runFlow: _login-admin.yaml
+- tapOn: "COMUNIDAD"
+- tapOn: "Tribu"
+- extendedWaitUntil:
+    visible: "Formación Renaser Global"
+    timeout: 20000
+# El Global es la primera fila de la sección «Formación Renaser», aunque otro grupo tenga un mensaje más nuevo.
+- assertVisible:
+    text: "Formación Renaser Global"
+    below: "Formación Renaser"
+- assertNotVisible:
+    text: ".* y sus aprendices"
+    above: "Formación Renaser Global"
+- takeScreenshot: 05a-lista-admin-global-primero
+- scrollUntilVisible:
+    element: "Mentor y sus aprendices"
+    direction: DOWN
+    timeout: 60000
+- takeScreenshot: 05b-admin-ve-grupos-ajenos
+- scrollUntilVisible:
+    element: "Formación Renaser Global"
+    direction: UP
+    timeout: 60000
+- tapOn: "Formación Renaser Global"
+- tapOn: "Información del chat"
+- assertVisible: "Info. del chat"
+- assertVisible: "[0-9]+ integrantes"
+- assertVisible: "Buscar integrantes por nombre"
+- takeScreenshot: 05c-info-global-integrantes

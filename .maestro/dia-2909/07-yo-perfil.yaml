@@ -1,0 +1,42 @@
+# 07 — Yo: curva de evolución, evidencias con número real, «Mi Onboarding (2 etapas)», «+ Subir Foto»
+# y «Lo que SER recuerda de ti» (ya no «Renasia»).
+# Precondición: el aprendiz subió hoy 2 evidencias (flujo 01 + una más) y ninguna antes.
+appId: com.renaser.app
+---
+- runFlow: _login-aprendiz.yaml
+- tapOn: "YO"
+- assertVisible: "TU EVOLUCIÓN"
+- assertVisible: "Tu cumplimiento · últimos 7 días"
+- takeScreenshot: 07a-yo-curva-de-evolucion
+# Centro de Perfil y Ajustes (botón «…» de la cabecera).
+# (el botón no tiene texto ni etiqueta accesible: se toca por posición)
+- tapOn:
+    point: "91%,8%"
+- extendedWaitUntil:
+    visible: "PERFIL & AJUSTES"
+    timeout: 10000
+- assertVisible: "Mi Onboarding \\(2 etapas\\)"
+- assertVisible: "[0-9]+ evidencias? subidas?"
+- takeScreenshot: 07b-hub-onboarding-y-evidencias
+# La fila de memoria solo aparece con la memoria del acompañante encendida (D-167). Si está, dice
+# SER y no Renasia; si la memoria está apagada en ese backend, este paso no afirma nada.
+- scrollUntilVisible:
+    element: "Cerrar Sesión"
+    direction: DOWN
+- assertNotVisible: ".*Renasia.*"
+- runFlow:
+    when:
+      visible: ".*recuerda de ti.*"
+    commands:
+      - assertVisible: "Lo que SER recuerda de ti"
+- takeScreenshot: 07c-hub-sin-renasia
+- scrollUntilVisible:
+    element: "Registro de Evidencias"
+    direction: UP
+- tapOn: "Registro de Evidencias"
+- extendedWaitUntil:
+    visible: "\\+ Subir Foto"
+    timeout: 10000
+- takeScreenshot: 07d-evidencias-subir-foto
+- tapOn: "\\+ Subir Foto"
+- takeScreenshot: 07e-subir-foto-elige-habito

@@ -1,0 +1,50 @@
+# Entrar con correo y contraseña desde cero. Uso: runFlow con env CORREO y CLAVE.
+# Las credenciales llegan por `-e` al correr maestro (nunca escritas en el repo).
+# `launchApp: clearState: true` cierra la app de desarrollo en este emulador; por eso se limpia aparte.
+appId: com.renaser.app
+---
+- stopApp
+- clearState
+- launchApp
+# En este emulador la app de desarrollo recién limpiada a veces se cierra sola al primer arranque
+# (vuelve al escritorio sin error): se espera y, si no apareció el login, se la lanza otra vez.
+- extendedWaitUntil:
+    visible: "Acceder al programa"
+    timeout: 40000
+    optional: true
+- runFlow:
+    when:
+      notVisible: "Acceder al programa"
+    commands:
+      - launchApp
+- extendedWaitUntil:
+    visible: "Acceder al programa"
+    timeout: 60000
+- runFlow: _cerrar-aviso-dev.yaml
+- tapOn: "tucorreo@ejemplo.com"
+- inputText: ${CORREO}
+- tapOn: "Tu contraseña"
+- inputText: ${CLAVE}
+- hideKeyboard
+- tapOn: "Acceder al programa"
+- extendedWaitUntil:
+    notVisible: "Acceder al programa"
+    timeout: 30000
+# Si el día tiene un ritual pendiente (p. ej. «Diseña tu mapa» del Día 7) la app lo abre sola: se vuelve.
+- waitForAnimationToEnd:
+    timeout: 3000
+- runFlow:
+    when:
+      visible: "← VOLVER"
+    commands:
+      - tapOn: "← VOLVER"
+# Bienvenida de SER (primera publicación) si la cuenta todavía no publicó: se deja para después.
+- runFlow:
+    when:
+      visible: "Ahora no"
+    commands:
+      - tapOn: "Ahora no"
+- runFlow: _cerrar-aviso-dev.yaml
+- extendedWaitUntil:
+    visible: "TRAINING"
+    timeout: 15000

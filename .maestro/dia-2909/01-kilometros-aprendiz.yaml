@@ -1,0 +1,46 @@
+# 01 — Aprendiz registra «Kilómetros diarios» con foto y km (D-226).
+# Training → Cuerpo → KILÓMETROS DIARIOS → SUBIR → cámara del emulador → «¿Cuántos km recorriste hoy?»
+# → «3,5» → «Total recorrido» → REGISTRAR → queda cumplido.
+# Precondición (fixture): el aprendiz tiene el hábito en su track de HOY y todavía sin registrar.
+# Correr con: -e E2E_EMU_EMAIL=... -e E2E_EMU_PASSWORD=... (no se escriben en el repo).
+appId: com.renaser.app
+---
+- runFlow: _login-aprendiz.yaml
+- tapOn: "TRAINING"
+- tapOn: "CUERPO"
+- scrollUntilVisible:
+    element: "KILÓMETROS DIARIOS"
+    direction: DOWN
+- takeScreenshot: 01a-cuerpo-con-kilometros
+# Tocar la tarjeta abre el mismo registro que su SUBIR. No se usa «SUBIR» con rightOf/below: Maestro
+# 2.11 tocó el SUBIR de DORMIR (que registra solo la hora y lo cerró) en vez del de esta fila.
+- tapOn: "KILÓMETROS DIARIOS"
+# Cámara del emulador (escena virtual): disparar y aceptar.
+- extendedWaitUntil:
+    visible:
+      id: "com.android.camera2:id/shutter_button"
+    timeout: 40000
+- tapOn:
+    id: "com.android.camera2:id/shutter_button"
+- tapOn:
+    id: "com.android.camera2:id/done_button"
+- extendedWaitUntil:
+    visible: "¿Cuántos km recorriste hoy?"
+    timeout: 15000
+- assertVisible: "Total recorrido: 0 km"
+- tapOn: "0,0"
+- inputText: "3,5"
+- hideKeyboard
+- assertVisible: "Total recorrido: 3,5 km"
+- takeScreenshot: 01b-km-escritos-total
+- tapOn: "REGISTRAR"
+- extendedWaitUntil:
+    visible: "¡Evidencia de Verdad Sellada!.*"
+    timeout: 30000
+- assertVisible: ".*KILÓMETROS.*DIARIOS.*puntos.*"
+- takeScreenshot: 01c-sellado-con-puntos
+- tapOn: "OK"
+- assertVisible:
+    text: "Evidencia Sellada"
+    below: "Opcional"
+- takeScreenshot: 01d-kilometros-cumplido

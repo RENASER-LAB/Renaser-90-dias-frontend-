@@ -1,0 +1,18 @@
+# 06 — Chats del aprendiz: «Formación Renaser Global» primero y su info con integrantes.
+appId: com.renaser.app
+---
+- runFlow: _login-aprendiz.yaml
+- tapOn: "COMUNIDAD"
+- tapOn: "Tribu"
+- extendedWaitUntil:
+    visible: "Formación Renaser Global"
+    timeout: 20000
+- assertNotVisible:
+    text: ".* y sus aprendices"
+    above: "Formación Renaser Global"
+- assertVisible: ".* y sus aprendices"
+- takeScreenshot: 06a-lista-aprendiz-global-primero
+- tapOn: "Formación Renaser Global"
+- tapOn: "Información del chat"
+- assertVisible: "[0-9]+ integrantes"
+- takeScreenshot: 06b-info-global-integrantes-aprendiz

@@ -1,0 +1,36 @@
+# 04 — Admin: ficha del aprendiz → «Detalle de hábitos» abre en HOY con el post diario cumplido (E-439).
+# Precondición: flujos 01 y 03 corridos hoy con la cuenta E2E_EMU (km y post cumplidos).
+appId: com.renaser.app
+---
+- runFlow: _login-admin.yaml
+- tapOn: "Administración"
+- scrollUntilVisible:
+    element: "Personas"
+    direction: DOWN
+- tapOn: "Personas"
+- tapOn: "Buscar personas"
+- inputText: "Emu Aprendiz"
+- hideKeyboard
+- tapOn: "Abrir ficha de Emu Aprendiz E2E"
+- assertVisible: "Día 14 del programa.*"
+- scrollUntilVisible:
+    element: "Detalle de hábitos.*"
+    direction: DOWN
+- tapOn: "Detalle de hábitos.*"
+- scrollUntilVisible:
+    element: "Detalle del .*"
+    direction: DOWN
+# El día elegido de entrada es hoy (antes era el lunes).
+- assertVisible:
+    text: "29 de septiembre"
+    selected: true
+- assertVisible: "Detalle del 29 de septiembre"
+- takeScreenshot: 04a-detalle-abre-en-hoy
+- scrollUntilVisible:
+    element: "POST DIARIO EN COMUNIDAD"
+    direction: DOWN
+- assertVisible:
+    text: "Cumplido.*"
+    below: "POST DIARIO EN COMUNIDAD"
+- assertVisible: "KILÓMETROS DIARIOS"
+- takeScreenshot: 04b-post-diario-cumplido-en-la-ficha

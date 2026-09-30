@@ -1,0 +1,48 @@
+# 03 — Publicar en el Muro cierra el hábito «Post diario en comunidad» (E-438).
+# Comunidad → Muro → «¿Qué conquistaste hoy…?» → categoría → texto → foto de la galería → PUBLICAR
+# → aviso «¡Hábito completado!» → Training → Emociones: POST DIARIO EN COMUNIDAD cumplido.
+# Precondición: el hábito del día está PENDIENTE y la galería del emulador tiene al menos una foto.
+appId: com.renaser.app
+---
+- runFlow: _login-aprendiz.yaml
+- tapOn: "COMUNIDAD"
+- tapOn: "Muro"
+- tapOn: "¿Qué conquistaste hoy.*"
+- extendedWaitUntil:
+    visible: "🙏 AGRADECIMIENTO"
+    timeout: 15000
+- tapOn: "🙏 AGRADECIMIENTO"
+- tapOn:
+    below: "🤝 AYUDA"
+    above: "FOTOS ADJUNTAS.*"
+- inputText: "Post e2e 29-09 desde Maestro: hoy cumplí mis km."
+- hideKeyboard
+- tapOn: "Agregar"
+# Selector de fotos de Android: la más reciente.
+- extendedWaitUntil:
+    visible: "Photo taken on.*"
+    timeout: 15000
+- tapOn:
+    text: "Photo taken on.*"
+    index: 0
+- runFlow:
+    when:
+      visible: "Done"
+    commands:
+      - tapOn: "Done"
+- takeScreenshot: 03a-publicacion-lista
+- tapOn: "PUBLICAR"
+- extendedWaitUntil:
+    visible: "¡Hábito completado!.*"
+    timeout: 30000
+- assertVisible: ".*Post diario en comunidad.*se completó con éxito.*"
+- takeScreenshot: 03b-aviso-habito-completado
+- tapOn: "OK"
+- assertVisible: "Post e2e 29-09 desde Maestro.*"
+- takeScreenshot: 03c-post-en-el-muro
+- tapOn: "TRAINING"
+- tapOn: "EMOCIONES"
+- scrollUntilVisible:
+    element: "POST DIARIO EN COMUNIDAD"
+    direction: DOWN
+- takeScreenshot: 03d-training-post-diario-cumplido

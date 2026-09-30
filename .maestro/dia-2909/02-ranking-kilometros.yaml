@@ -1,0 +1,17 @@
+# 02 — Comunidad → Ranking → pestaña «Kilómetros» (D-226).
+# Precondición: existe el corte del día (05:05 UTC o POST /api/v1/admin/ranking/snapshots) y el
+# aprendiz tiene km registrados (flujo 01). Los km de hoy entran al ranking en el corte siguiente.
+appId: com.renaser.app
+---
+- runFlow: _login-aprendiz.yaml
+- tapOn: "COMUNIDAD"
+- tapOn: "Ranking"
+- assertVisible: "General"
+- assertVisible: "Coherencia"
+- tapOn: "Kilómetros"
+- assertVisible: "Km recorridos desde tu Día 1"
+- takeScreenshot: 02a-ranking-kilometros
+- scrollUntilVisible:
+    element: ".*Emu.*"
+    direction: DOWN
+- takeScreenshot: 02b-ranking-kilometros-mi-fila

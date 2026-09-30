@@ -1,0 +1,53 @@
+# 08 — Despertar a cualquier hora (D-230): 22:00 y 03:00 se guardan sin avisos de «mañana».
+# Training → Cuerpo → PLANIFICAR CUERPO → DESPERTAR → rueda de horas → GUARDAR.
+# La rueda se mueve con swipes (Pixel 6, 1080×2400); se verifica el texto del botón antes de guardar.
+appId: com.renaser.app
+---
+- runFlow: _login-aprendiz.yaml
+- tapOn: "TRAINING"
+- tapOn: "CUERPO"
+- tapOn: "PLANIFICAR CUERPO"
+- tapOn: ".*DESPERTAR.*"
+- extendedWaitUntil:
+    visible: "GUARDAR .*"
+    timeout: 10000
+# Llevar la rueda de horas hasta 22 (de a una hora hacia arriba; se para al ver el botón con 22:00).
+- repeat:
+    while:
+      notVisible: "GUARDAR 22:00.*"
+    times: 24
+    commands:
+      - swipe:
+          start: "25%,53%"
+          end: "25%,47%"
+          duration: 400
+- assertVisible: "GUARDAR 22:00.*"
+# Sin avisos que aten Despertar a la mañana (el pie «se planifica de mañana en adelante» es otra cosa).
+- assertNotVisible: "Desde mañana.*"
+- assertNotVisible: ".*(de madrugada o mañana|suele ser de mañana).*"
+- tapOn: "GUARDAR 22:00.*"
+- extendedWaitUntil:
+    visible: ".*DESPERTAR.* queda a las 22:00.*"
+    timeout: 15000
+- takeScreenshot: 08a-despertar-22-guardado
+- tapOn: "OK"
+- tapOn: ".*DESPERTAR.*"
+- extendedWaitUntil:
+    visible: "GUARDAR .*"
+    timeout: 10000
+- repeat:
+    while:
+      notVisible: "GUARDAR 03:00.*"
+    times: 24
+    commands:
+      - swipe:
+          start: "25%,47%"
+          end: "25%,53%"
+          duration: 400
+- assertVisible: "GUARDAR 03:00.*"
+- tapOn: "GUARDAR 03:00.*"
+- extendedWaitUntil:
+    visible: ".*DESPERTAR.* queda a las 03:00.*"
+    timeout: 15000
+- takeScreenshot: 08b-despertar-03-guardado
+- tapOn: "OK"

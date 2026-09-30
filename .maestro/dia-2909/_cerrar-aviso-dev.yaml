@@ -1,0 +1,10 @@
+# Cierra el aviso amarillo de desarrollo («Open debugger to view warnings.») si está: tapa la barra
+# de pestañas en el emulador. En un APK de producción no aparece y este paso no hace nada.
+appId: com.renaser.app
+---
+- runFlow:
+    when:
+      visible: "Open debugger to view warnings."
+    commands:
+      - tapOn:
+          point: "92%,92%"

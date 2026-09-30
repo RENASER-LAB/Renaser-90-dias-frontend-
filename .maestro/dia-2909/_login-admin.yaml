@@ -1,0 +1,8 @@
+# Entra como el admin e2e (E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD por -e).
+appId: com.renaser.app
+---
+- runFlow:
+    file: _login.yaml
+    env:
+      CORREO: ${E2E_ADMIN_EMAIL}
+      CLAVE: ${E2E_ADMIN_PASSWORD}

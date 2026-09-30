@@ -1,0 +1,8 @@
+# Entra como el aprendiz del emulador (E2E_EMU_EMAIL / E2E_EMU_PASSWORD por -e).
+appId: com.renaser.app
+---
+- runFlow:
+    file: _login.yaml
+    env:
+      CORREO: ${E2E_EMU_EMAIL}
+      CLAVE: ${E2E_EMU_PASSWORD}
