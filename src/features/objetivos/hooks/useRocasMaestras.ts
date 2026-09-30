@@ -2,10 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { mensajeDeError } from '../../../services/http/apiClient';
 import * as objetivosApi from '../api/objetivosApi';
+import { esRocaMaestraFija } from '../utils/objetivoFijo';
 import type { DefinicionRocaMaestra, EjeObjetivo, RocaMaestraApi } from '../types/objetivos.types';
 
 /**
- * El objetivo de 90 días del aprendiz, traído del backend y editable.
+ * El objetivo de 90 días del aprendiz, traído del backend. Se define una vez y queda fijo (D-234); después solo
+ * se anota el avance.
  *
  * **Por qué esto existe.** Hasta ahora la pantalla de Objetivos del Plan mostraba un objetivo
  * escrito a mano en el código ("Facturar $30.000 USD", "Corporación Delta"), igual para todos los
@@ -39,7 +41,13 @@ export function useRocasMaestras() {
   }, [cargar]);
 
   /**
-   * Define o corrige el objetivo de un eje. Devuelve `true` si se guardó.
+   * Define el objetivo de un eje la primera vez, o anota su avance si ya estaba. Devuelve `ok`.
+   *
+   * Una vez definido, el objetivo queda fijo (D-234): cambiarlo responde `409 ROCA_MAESTRA_FIJA`.
+   * Ese rechazo trae un mensaje pensado para la persona, que se muestra tal cual, y se recarga la
+   * lista para que la pantalla vuelva a lo que de verdad está guardado.
+   *
+   * > **Corregido 2026-09-30.** Decía «Define o corrige el objetivo de un eje»: ya no se corrige.
    *
    * La respuesta del servidor reemplaza a la roca de ese eje en memoria, en vez de recargar la
    * lista entera: el backend devuelve la roca ya guardada, con su porcentaje recalculado, así que
@@ -55,11 +63,12 @@ export function useRocasMaestras() {
       });
       return { ok: true as const };
     } catch (e) {
+      if (esRocaMaestraFija(e)) void cargar();
       return { ok: false as const, mensaje: mensajeDeError(e, 'No pudimos guardar tu objetivo.') };
     } finally {
       setGuardando(false);
     }
-  }, []);
+  }, [cargar]);
 
   const deEje = useCallback(
     (eje: EjeObjetivo) => rocas.find(r => r.eje === eje) ?? null,

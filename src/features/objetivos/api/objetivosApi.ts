@@ -29,7 +29,9 @@ export async function obtenerRocasMaestras(): Promise<RocaMaestraApi[]> {
 }
 
 /**
- * `PUT /api/v1/rocks/master/{eje}` — define el objetivo de ese eje, o corrige el que ya estaba.
+ * `PUT /api/v1/rocks/master/{eje}` — define el objetivo de ese eje, o anota su avance si ya estaba.
+ * Una vez definido queda fijo: cambiar objetivo, meta, unidad o punto de partida es `409
+ * ROCA_MAESTRA_FIJA` (D-234 del backend; ver `utils/objetivoFijo.ts`).
  *
  * Es una sola operación y no un "crear" más un "editar" porque por eje hay exactamente una roca
  * maestra o ninguna: el backend hace el upsert. Mandar dos veces lo mismo deja lo mismo, así que

@@ -54,10 +54,11 @@ import { EditarObjetivoDelMesModal } from '../features/objetivos/components/Edit
 import { usePlanMensual } from '../features/objetivos/hooks/usePlanMensual';
 import { NivelesDelPlan } from '../features/objetivos/components/NivelesDelPlan';
 import { useRocasMaestras } from '../features/objetivos/hooks/useRocasMaestras';
-import type { EjeObjetivo } from '../features/objetivos/types/objetivos.types';
+import type { EjeObjetivo, RocaMaestraApi } from '../features/objetivos/types/objetivos.types';
 import { EJES, ETIQUETA_EJE } from '../features/objetivos/types/objetivos.types';
 import { conPrincipalPrimero, usePrioridadPrincipal } from '../features/objetivos/hooks/usePrioridadPrincipal';
 import { cifraDeEscala, cifraDelObjetivo, primeraClausula } from '../features/objetivos/utils/cifraDelObjetivo';
+import { definicionConAvance, LINEA_OBJETIVO_FIJO } from '../features/objetivos/utils/objetivoFijo';
 import {
   SEMANAS_DEL_PROGRAMA,
   etiquetaDelMes,
@@ -477,8 +478,11 @@ export default function PlanScreen() {
   /**
    * Desde dónde arrancó. **Sin este campo, editar el objetivo borraba el punto de partida** y el
    * porcentaje volvía a la fórmula vieja: alguien que baja de peso pasaba de 0 % a 100 % por haber
-   * corregido una palabra de su meta (E-166). Además es lo único que permite arreglar las rocas
-   * creadas antes de la migración V43, que no lo tienen.
+   * corregido una palabra de su meta (E-166). Solo se escribe al definir el objetivo por primera
+   * vez; después queda fijo como el resto (D-234).
+   *
+   * > **Corregido 2026-09-30.** Decía que además era «lo único que permite arreglar las rocas
+   * > creadas antes de la migración V43». Desde D-234 el objetivo de 90 días no se cambia.
    */
   const [editGoalBase, setEditGoalBase] = useState('');
 
@@ -513,6 +517,13 @@ export default function PlanScreen() {
   const [explicacionNivelesAbierta, setExplicacionNivelesAbierta] = useState(false);
   const rocaDeEje = (eje: EjeObjetivo) => objetivos.deEje(eje);
   const rocaAbierta = objetivos.deEje(ejeAbierto);
+  /**
+   * D-234: una vez definido, el objetivo de 90 días queda fijo (nace del Mapa y no se cambia). El
+   * modal lo muestra de solo lectura y lo único que se escribe es cuánto lleva la persona.
+   */
+  const objetivoFijo = rocaAbierta != null;
+  /** Fijo y sin número (Relaciones, por ejemplo): no hay nada que anotar, así que no hay botón. */
+  const sinAvanceQueAnotar = objetivoFijo && rocaAbierta.meta == null;
 
   /**
    * El eje que la persona eligió como principal en el paso 2 del Mapa, y los tres con ese adelante.
@@ -843,15 +854,12 @@ export default function PlanScreen() {
     setEditGoalCurrentVal(rocaAbierta?.avance != null ? String(rocaAbierta.avance) : '');
     setEditGoalTargetVal(rocaAbierta?.meta != null ? String(rocaAbierta.meta) : '');
     setEditGoalUnidad(rocaAbierta?.unidad ?? '');
-    // Si la roca ya tiene punto de partida se conserva; si es de las viejas, se propone el avance
-    // actual, que es lo más cercano a la verdad que hay sin preguntarle a la persona.
-    setEditGoalBase(
-      rocaAbierta?.lineaBase != null
-        ? String(rocaAbierta.lineaBase)
-        : rocaAbierta?.avance != null
-          ? String(rocaAbierta.avance)
-          : ''
-    );
+    // El punto de partida se muestra tal cual está guardado. Con la roca ya definida es de solo
+    // lectura (D-234), así que no se propone nada: una roca vieja sin él lo muestra vacío.
+    // > Corregido 2026-09-30: antes, si faltaba, se prellenaba con el avance para "arreglar" las
+    // > rocas anteriores a V43. Eso ya no se puede —el objetivo quedó fijo— y además se veía como
+    // > un punto de partida que la persona nunca escribió.
+    setEditGoalBase(rocaAbierta?.lineaBase != null ? String(rocaAbierta.lineaBase) : '');
     setEditGoalModalVisible(true);
   };
 
@@ -864,6 +872,10 @@ export default function PlanScreen() {
    * tres, se guarda un objetivo cualitativo, que es perfectamente válido.
    */
   const guardarObjetivoPrincipal = async () => {
+    if (rocaAbierta) {
+      await guardarAvance(rocaAbierta);
+      return;
+    }
     const meta = editGoalTargetVal.trim() === '' ? undefined : Number(editGoalTargetVal);
     const avance = editGoalCurrentVal.trim() === '' ? undefined : Number(editGoalCurrentVal);
     const unidad = editGoalUnidad.trim() === '' ? undefined : editGoalUnidad.trim();
@@ -938,8 +950,27 @@ export default function PlanScreen() {
     Alert.alert('¡Objetivo actualizado! 🎯', 'Tu objetivo de 90 días quedó guardado.');
   };
 
+  /**
+   * El objetivo ya está definido: se manda lo fijo tal cual está guardado y solo el avance nuevo.
+   * Si el servidor igual lo rechaza (`409 ROCA_MAESTRA_FIJA`), su mensaje se muestra tal cual.
+   */
+  const guardarAvance = async (roca: RocaMaestraApi) => {
+    const pedido = definicionConAvance(roca, editGoalCurrentVal);
+    if (!pedido.ok) {
+      Alert.alert(pedido.titulo, pedido.mensaje);
+      return;
+    }
+    const resultado = await objetivos.definir(ejeAbierto, pedido.definicion);
+    if (!resultado.ok) {
+      Alert.alert('No se pudo guardar', resultado.mensaje);
+      return;
+    }
+    setEditGoalModalVisible(false);
+    Alert.alert('¡Avance anotado! 🎯', 'Tu avance quedó guardado.');
+  };
+
   const handleSaveGoal = () => {
-    if (!editGoalTitle.trim()) {
+    if (!objetivoFijo && !editGoalTitle.trim()) {
       Alert.alert('Campo requerido', 'Por favor escribe la declaración de tu objetivo.');
       return;
     }
@@ -1718,14 +1749,16 @@ export default function PlanScreen() {
                 {/* Relleno tenue en vez de contorno (vivía dentro del borde de la tarjeta) y
                     48 px de alto, que es el mínimo de pulsación cómoda de AGENTS.md §4: antes
                     eran 3 px de padding vertical. */}
-                <Pressable
-                  onPress={() => openEditGoalModal()}
-                  style={[styles.editGoalBtn, { backgroundColor: c.goldWash }]}
-                >
-                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 12 }]}>
-                    ✏️ Editar
-                  </Text>
-                </Pressable>
+                {!sinAvanceQueAnotar && (
+                  <Pressable
+                    onPress={() => openEditGoalModal()}
+                    style={[styles.editGoalBtn, { backgroundColor: c.goldWash }]}
+                  >
+                    <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 12 }]}>
+                      {objetivoFijo ? '✏️ Avance' : '✏️ Editar'}
+                    </Text>
+                  </Pressable>
+                )}
               </RowBetween>
 
               {objetivos.cargando && !rocaAbierta ? (
@@ -2068,7 +2101,7 @@ export default function PlanScreen() {
           <View style={[styles.modalContentCard, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: c.divider, paddingBottom: 8 }}>
               <Text style={[t.cardTitle, { color: c.goldInk, flexShrink: 1 }]}>
-                EDITAR OBJETIVO DE 90 DÍAS
+                {objetivoFijo ? 'TU OBJETIVO DE 90 DÍAS' : 'EDITAR OBJETIVO DE 90 DÍAS'}
               </Text>
               <Pressable onPress={() => setEditGoalModalVisible(false)} hitSlop={10}>
                 {/* 48 px de alto: era un texto de 10.5 sin área de toque propia. */}
@@ -2090,15 +2123,19 @@ export default function PlanScreen() {
               contentContainerStyle={{ gap: 10, paddingVertical: 10 }}
               showsVerticalScrollIndicator={false}
             >
+              {objetivoFijo && (
+                <Text style={[t.small, { color: c.textSoft }]}>{LINEA_OBJETIVO_FIJO}</Text>
+              )}
               <View style={{ gap: 4 }}>
                 <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 12 }]}>DECLARACIÓN DEL OBJETIVO:</Text>
                 <TextInput
                   value={editGoalTitle}
                   onChangeText={setEditGoalTitle}
+                  editable={!objetivoFijo}
                   placeholder="Escribe tu objetivo aquí..."
                   placeholderTextColor={c.textSoft}
                   multiline
-                  style={[styles.modalInputText, { minHeight: 60, borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.text }]}
+                  style={[styles.modalInputText, { minHeight: 60, borderColor: c.border, backgroundColor: c.cardBgAlt, color: objetivoFijo ? c.textSoft : c.text }]}
                 />
               </View>
 
@@ -2117,10 +2154,11 @@ export default function PlanScreen() {
                       <TextInput
                         value={editGoalBase}
                         onChangeText={setEditGoalBase}
+                        editable={!objetivoFijo}
                         keyboardType="numeric"
                         placeholder="82"
                         placeholderTextColor={c.micro}
-                        style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.text }]}
+                        style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: objetivoFijo ? c.textSoft : c.text }]}
                       />
                     </View>
                     <View style={{ flexGrow: 1, flexBasis: '45%', gap: 4 }}>
@@ -2139,10 +2177,11 @@ export default function PlanScreen() {
                       <TextInput
                         value={editGoalTargetVal}
                         onChangeText={setEditGoalTargetVal}
+                        editable={!objetivoFijo}
                         keyboardType="numeric"
                         placeholder="30000"
                         placeholderTextColor={c.micro}
-                        style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.text }]}
+                        style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: objetivoFijo ? c.textSoft : c.text }]}
                       />
                     </View>
                     {/* La unidad dejó de estar fija en dólares: el objetivo puede medirse en kg,
@@ -2152,23 +2191,26 @@ export default function PlanScreen() {
                       <TextInput
                         value={editGoalUnidad}
                         onChangeText={setEditGoalUnidad}
+                        editable={!objetivoFijo}
                         placeholder="USD"
                         placeholderTextColor={c.micro}
                         maxLength={20}
                         autoCapitalize="none"
-                        style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.text }]}
+                        style={[styles.modalInputText, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: objetivoFijo ? c.textSoft : c.text }]}
                       />
                     </View>
                   </View>
-                  <Text style={[t.small, { color: c.micro }]}>
-                    Si tu objetivo no se mide con un número, deja los tres campos vacíos.
-                  </Text>
+                  {!objetivoFijo && (
+                    <Text style={[t.small, { color: c.micro }]}>
+                      Si tu objetivo no se mide con un número, deja los tres campos vacíos.
+                    </Text>
+                  )}
                 </View>
               )}
             </ScrollView>
 
             <GoldButton
-              label="✓ GUARDAR OBJETIVO"
+              label={objetivoFijo ? '✓ GUARDAR AVANCE' : '✓ GUARDAR OBJETIVO'}
               onPress={handleSaveGoal}
               style={{ width: '100%', marginTop: 10 }}
             />
