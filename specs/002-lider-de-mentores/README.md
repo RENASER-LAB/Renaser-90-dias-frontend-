@@ -1,7 +1,14 @@
 # SDD 002 · Rol Líder de Mentores
 
-Fecha: 2026-09-09. Estado: especificación y plan. **Implementación pendiente: este paquete no
-cambió una sola línea de código de aplicación.**
+Fecha: 2026-09-09. Estado: **implementado en parte desde el 2026-10-01** (backend D-241, rama
+`lider-mentores` en los dos repos): padrón, ficha, atribución de quién respondió cada consulta,
+observaciones y reporte del mes; en la app, «Mis mentores» desde Hoy.
+
+> **Corregido 2026-10-01.** Esta línea decía «Estado: especificación y plan. Implementación pendiente:
+> este paquete no cambió una sola línea de código de aplicación.». Lo que sigue pendiente (mover el
+> semáforo operativo desde la app, entrada desde Comunidad, el Líder como acompañante de la recepción)
+> está en D-241 del backend (`docs/MODULOS_A_AVANZAR.md` §8). Decisión del dueño del 01/10 que ajusta
+> este paquete: el Líder **no** entra al detalle de un grupo; su vista es sobre mentores y cantidades.
 
 Paquete canónico para backend y frontend, hermano del
 [SDD 001 · Mentoría y acompañamiento](../001-mentoria-acompanamiento/README.md). Se lee igual y
