@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -10,6 +10,7 @@ import { destinoDe } from '../api/avisosApi';
 import { useAvisosDeAcompanamiento } from '../hooks/useAvisosDeAcompanamiento';
 import { useEvaluacionPropia } from '../hooks/useEvaluacionPropia';
 import { useRankingDeGrupos } from '../hooks/useRankingDeGrupos';
+import type { MesDelRanking } from '../utils/mesDelRanking';
 import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
@@ -17,6 +18,7 @@ import { SeccionSemaforoDelGrupo } from '../../semaforo/components/SeccionSemafo
 import { useSemaforoDelGrupo } from '../../semaforo/hooks/useLecturaPorSemana';
 import { seOcultaLaSeccion } from '../../semaforo/utils/entradasDelSemaforo';
 import { CargandoCelula, EstadoCelula } from '../components/EstadoCelula';
+import { esOtroDeMisGrupos } from '../utils/entradaAlGrupo';
 import { FilaAlumno } from '../components/FilaAlumno';
 import type { FalloCelula, VistaCelula } from '../hooks/useCelulaQueAcompano';
 import type { AlumnoConEstado } from '../types/mentor.types';
@@ -36,6 +38,10 @@ import type { AlumnoConEstado } from '../types/mentor.types';
  * Si el semáforo no está disponible (404 o 403), se muestra la lista simple del grupo, sin estados.
  * El aviso del sábado al mentor (`/mentor/groups/{g}/semaforo`) abre esta pantalla con
  * `enfocarSemaforo`, y entonces el scroll baja hasta esa sección.
+ *
+ * Desde D-141 un mentor puede acompañar varios grupos en curso. Con más de uno, arriba hay una fila
+ * de pastillas con sus nombres: la elegida es la que se mira (alumnos, avisos, semáforo, ranking).
+ * Con uno solo no se dibuja nada y la pantalla queda como antes.
  */
 export function MiCelulaScreen({
   onSalir,
@@ -45,6 +51,7 @@ export function MiCelulaScreen({
   fallo,
   detalle,
   recargar,
+  onElegirGrupo,
   enfocarSemaforo = false,
 }: {
   onSalir: () => void;
@@ -54,6 +61,8 @@ export function MiCelulaScreen({
   fallo: FalloCelula | null;
   detalle: string | null;
   recargar: () => void;
+  /** Pasar a otro de sus grupos. Resuelve con la vista de ese grupo (o `null` si no llegó). */
+  onElegirGrupo: (grupoId: string) => Promise<VistaCelula | null>;
   /** Llegó por el aviso del semáforo del grupo: abrir con esa sección a la vista. */
   enfocarSemaforo?: boolean;
 }) {
@@ -89,9 +98,11 @@ export function MiCelulaScreen({
 
   const { evaluacion, disponible: hayEvaluacion } = useEvaluacionPropia(vista != null);
   const { avisos, disponible: hayAvisos, marcarLeido } = useAvisosDeAcompanamiento(vista != null);
-  const { miFila, total: gruposEnCohorte, disponible: hayRanking } = useRankingDeGrupos(
+  const [mesDelRanking, setMesDelRanking] = useState<MesDelRanking>('actual');
+  const { ranking, miFila, total: gruposEnCohorte, disponible: hayRanking } = useRankingDeGrupos(
     vista?.celula.cohorteId ?? null,
     vista?.celula.id ?? null,
+    mesDelRanking,
   );
   const semaforo = useSemaforoDelGrupo(vista ? { quien: 'mentor', grupoId: vista.celula.id } : null);
   const sinSemaforo = seOcultaLaSeccion(semaforo);
@@ -136,6 +147,25 @@ export function MiCelulaScreen({
         ]}
       >
         <Aparicion>
+          {vista && vista.grupos.length > 1 ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={estilos.pildoras}
+              style={{ marginBottom: 12 }}
+            >
+              {vista.grupos.map(g => (
+                <Pildora
+                  key={g.id}
+                  texto={g.nombre}
+                  activa={g.id === vista.celula.id}
+                  onPress={() => {
+                    if (g.id !== vista.celula.id) void onElegirGrupo(g.id);
+                  }}
+                />
+              ))}
+            </ScrollView>
+          ) : null}
           <Text style={[t.screenTitle, { color: c.text, fontSize: 21 }]} numberOfLines={2}>
             {vista?.celula.nombre ?? 'Mi grupo'}
           </Text>
@@ -210,6 +240,8 @@ export function MiCelulaScreen({
                     const alumno = destino
                       ? vista.todos.find(a => a.participanteId === destino.alumnoId)
                       : undefined;
+                    /* Alumno de otro de sus grupos (D-141): se pasa a ese grupo y se abre su ficha. */
+                    const deOtroGrupo = destino !== null && !alumno && esOtroDeMisGrupos(destino.grupoId, vista);
                     return (
                       <Pressable
                         key={aviso.id}
@@ -219,6 +251,12 @@ export function MiCelulaScreen({
                              alguien que ya rotó queda legible pero no lleva a ningún lado:
                              sus datos ya no son de este mentor (plan.md §10). */
                           if (alumno) onAbrirAlumno(alumno);
+                          else if (deOtroGrupo && destino) {
+                            void onElegirGrupo(destino.grupoId).then(nueva => {
+                              const enSuGrupo = nueva?.todos.find(a => a.participanteId === destino.alumnoId);
+                              if (enSuGrupo) onAbrirAlumno(enSuGrupo);
+                            });
+                          }
                         }}
                         accessibilityRole="button"
                         accessibilityLabel={aviso.body}
@@ -228,7 +266,7 @@ export function MiCelulaScreen({
                         <Text style={[t.body, { color: c.text, fontSize: 16, lineHeight: 23, flex: 1 }]}>
                           {aviso.body}
                         </Text>
-                        {alumno ? <Icon name="chevron" size={14} color={c.chevron} /> : null}
+                        {alumno || deOtroGrupo ? <Icon name="chevron" size={14} color={c.chevron} /> : null}
                       </Pressable>
                     );
                   })}
@@ -292,18 +330,37 @@ export function MiCelulaScreen({
                   {/* La posición del grupo es OTRA medida: cubre todo el mes sin filtrar por
                       quién acompañaba, así que puede no coincidir con la nota de arriba si el
                       mentor entró a mitad de mes. Se dice, no se disimula (plan.md §8). */}
-                  {hayRanking && miFila ? (
+                  {hayRanking ? (
                     <View style={[estilos.posicion, { borderTopColor: c.border }]}>
-                      <Text style={[t.body, { color: c.text, fontSize: 16 }]}>
-                        Tu grupo va en el puesto {miFila.posicion} de {gruposEnCohorte} en la generación
-                      </Text>
-                      <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>
-                        {miFila.porcentaje === null
-                          ? 'Todavía sin actividad para medir este mes'
-                          : `${Math.round(miFila.porcentaje)}% del grupo · ${miFila.muestra} ${
-                              miFila.muestra === 1 ? 'aprendiz medido' : 'aprendices medidos'
-                            }`}
-                      </Text>
+                      {/* Este mes o cómo terminó el anterior (dueño, 2026-10-01). */}
+                      <View style={[estilos.pildoras, { marginBottom: 6 }]}>
+                        <Pildora texto="Este mes" activa={mesDelRanking === 'actual'} onPress={() => setMesDelRanking('actual')} />
+                        <Pildora texto="Mes anterior" activa={mesDelRanking === 'anterior'} onPress={() => setMesDelRanking('anterior')} />
+                      </View>
+                      {miFila ? (
+                        <>
+                          <Text style={[t.body, { color: c.text, fontSize: 16 }]}>
+                            {mesDelRanking === 'actual'
+                              ? `Tu grupo va en el puesto ${miFila.posicion} de ${gruposEnCohorte} en la generación`
+                              : `Tu grupo terminó en el puesto ${miFila.posicion} de ${gruposEnCohorte} en la generación`}
+                          </Text>
+                          <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>
+                            {miFila.porcentaje === null
+                              ? mesDelRanking === 'actual'
+                                ? 'Todavía sin actividad para medir este mes'
+                                : 'Sin actividad para medir ese mes'
+                              : `${Math.round(miFila.porcentaje)}% del grupo · ${miFila.muestra} ${
+                                  miFila.muestra === 1 ? 'aprendiz medido' : 'aprendices medidos'
+                                }`}
+                          </Text>
+                        </>
+                      ) : ranking ? (
+                        <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>
+                          {mesDelRanking === 'actual'
+                            ? 'Tu grupo todavía no figura en el ranking de este mes'
+                            : 'Tu grupo no figuró en el ranking de ese mes'}
+                        </Text>
+                      ) : null}
                     </View>
                   ) : null}
 
@@ -319,6 +376,30 @@ export function MiCelulaScreen({
         ) : null}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+/** Una opción de los selectores de la pantalla (grupo, mes). 44 px de alto: se toca con el pulgar. */
+function Pildora({ texto, activa, onPress }: { texto: string; activa: boolean; onPress: () => void }) {
+  const { c, t } = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: activa }}
+      hitSlop={4}
+      style={[
+        estilos.pildora,
+        { borderColor: activa ? c.gold : c.border, backgroundColor: activa ? c.goldWash : 'transparent' },
+      ]}
+    >
+      <Text
+        numberOfLines={1}
+        style={[t.body, { color: activa ? c.goldInk : c.textSoft, fontFamily: activa ? 'Jost_700Bold' : 'Jost_500Medium', fontSize: 16 }]}
+      >
+        {texto}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -367,4 +448,9 @@ const estilos = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   lista: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 14, marginTop: 8 },
+  pildoras: { flexDirection: 'row', gap: 8 },
+  pildora: {
+    minHeight: 44, maxWidth: 240, justifyContent: 'center',
+    borderWidth: 1, borderRadius: 20, paddingHorizontal: 14,
+  },
 });

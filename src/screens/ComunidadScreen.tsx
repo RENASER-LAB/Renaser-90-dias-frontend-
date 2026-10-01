@@ -1321,10 +1321,10 @@ export default function ComunidadScreen() {
   // Posición del usuario autenticado actual desde la API
   const userRankEntry = useMemo(() => {
     const found = miEntradaEnLaTabla(apiRankingEntries, { id: user?.id, name: user?.name });
-    const celulaNombre =
-      rankingData?.celula?.cellName ||
-      (miCelula?.assigned === true ? miCelula.cellName : null) ||
-      'Comunidad Renaser';
+    /* Las tres tablas ordenan a TODOS los aprendices activos, no a los de tu grupo (la de
+       Coherencia es el tipo `CELL` del servidor, que pese al nombre es global). Hasta el 01/10 acá
+       iba el nombre de tu grupo —«Grupo Fénix · #12»— y se leía como «12.º de mi grupo». */
+    const celulaNombre = 'Comunidad Renaser';
     if (found) {
       return {
         rank: `${found.posicion}`,
@@ -1337,7 +1337,7 @@ export default function ComunidadScreen() {
       rank: '-',
       cellText: `${celulaNombre} · Tu primer avance te pone en la tabla`,
     };
-  }, [apiRankingEntries, rankingData?.celula?.cellName, tipoRanking, user?.id, user?.name, miCelula]);
+  }, [apiRankingEntries, tipoRanking, user?.id, user?.name]);
 
   // =========================================================================
   // GESTOS TÁCTILES DEL SISTEMA (BACKHANDLER)
@@ -2380,6 +2380,7 @@ export default function ComunidadScreen() {
         fallo={celulaQueAcompano.fallo}
         detalle={celulaQueAcompano.detalle}
         recargar={celulaQueAcompano.recargar}
+        onElegirGrupo={celulaQueAcompano.elegirGrupo}
       />
     );
   }

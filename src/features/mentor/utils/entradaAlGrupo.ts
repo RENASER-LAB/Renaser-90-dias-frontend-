@@ -56,3 +56,16 @@ export function entradaAlGrupoVisible(params: {
   if (!esLiderDeMentores(params.rol)) return true;
   return params.fallo !== 'sin_celula';
 }
+
+/**
+ * Si un aviso (de un alumno o del semáforo) es de OTRO de los grupos en curso del mentor, no del que
+ * está mirando: entonces hay que pasar a ese grupo antes de abrir lo que el aviso pide. Desde D-141
+ * un mentor puede acompañar varios; sin esto, el aviso de un alumno de su segundo grupo abría el
+ * primero y la ficha no aparecía. Un grupo que ya no es suyo da `false`: no se cambia a nada.
+ */
+export function esOtroDeMisGrupos(
+  grupoDelAviso: string,
+  vista: { celula: { id: string }; grupos: ReadonlyArray<{ id: string }> },
+): boolean {
+  return grupoDelAviso !== vista.celula.id && vista.grupos.some(g => g.id === grupoDelAviso);
+}
