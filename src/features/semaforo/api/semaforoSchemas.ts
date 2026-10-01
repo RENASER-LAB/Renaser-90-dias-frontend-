@@ -242,6 +242,8 @@ const grupoDelResumenSchema = z
     grupoId: z.string(),
     grupoNombre: z.string().nullish(),
     mentorNombre: z.string().nullish(),
+    /** D-240: grupo en curso sin mentor asignado. Un backend anterior no lo manda. */
+    sinMentor: z.boolean().nullish(),
     resumen: resumenPorColorSchema.nullish(),
     /** `BigDecimal` con un decimal, o `null` si ningún aprendiz del grupo tuvo datos. */
     promedio: z.number().nullish(),
@@ -451,6 +453,7 @@ function aGrupoDelResumen(crudo: GrupoDelResumenCrudo): GrupoDelResumen {
     grupoId: crudo.grupoId,
     grupoNombre: crudo.grupoNombre ?? null,
     mentorNombre: crudo.mentorNombre ?? null,
+    sinMentor: crudo.sinMentor === true,
     resumen: aResumenPorColor(crudo.resumen),
     promedio: lectura ? lectura.porcentaje : promedio,
     colorDelPromedio: lectura ? lectura.color : null,

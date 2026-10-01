@@ -88,7 +88,7 @@ function TarjetaDeGrupo({ grupo, onPress }: { grupo: GrupoDelResumen; onPress?: 
   const promedio = promedioEnPalabras(grupo.promedio);
   const dicho = [
     nombre,
-    grupo.mentorNombre ? `Mentor: ${grupo.mentorNombre}` : null,
+    grupo.mentorNombre ? `Mentor: ${grupo.mentorNombre}` : grupo.sinMentor ? 'Sin mentor asignado' : null,
     grupo.resumen ? resumenEnPalabras(grupo.resumen) : null,
     promedioEnPalabras(grupo.promedio, grupo.colorDelPromedio, grupo.etiquetaDelPromedio),
   ]
@@ -105,6 +105,8 @@ function TarjetaDeGrupo({ grupo, onPress }: { grupo: GrupoDelResumen; onPress?: 
       </View>
       {grupo.mentorNombre ? (
         <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 22 }]}>Mentor: {grupo.mentorNombre}</Text>
+      ) : grupo.sinMentor ? (
+        <Text style={[t.body, { color: c.danger, fontSize: 16, lineHeight: 22, fontWeight: '600' }]}>Sin mentor asignado</Text>
       ) : null}
       {grupo.resumen ? <CantidadesPorColor resumen={grupo.resumen} /> : null}
       <View style={estilos.promedio}>

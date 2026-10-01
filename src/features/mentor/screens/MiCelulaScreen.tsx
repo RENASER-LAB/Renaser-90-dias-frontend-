@@ -7,6 +7,7 @@ import { Aparicion } from '../../../components/Aparicion';
 import { TituloDeSeccion } from '../../../components/Legible';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { destinoDe } from '../api/avisosApi';
+import { tituloDeAvisos } from '../utils/tituloDeAvisos';
 import { useAvisosDeAcompanamiento } from '../hooks/useAvisosDeAcompanamiento';
 import { useEvaluacionPropia } from '../hooks/useEvaluacionPropia';
 import { useRankingDeGrupos } from '../hooks/useRankingDeGrupos';
@@ -232,7 +233,7 @@ export function MiCelulaScreen({
                 causa y lleva al alumno. */}
             {hayAvisos ? (
               <Aparicion retardo={20} style={{ marginBottom: 4 }}>
-                <TituloDeSeccion>{avisos.length === 1 ? '1 aviso' : `${avisos.length} avisos`}</TituloDeSeccion>
+                <TituloDeSeccion>{tituloDeAvisos(avisos.length, (vista?.grupos.length ?? 1) > 1)}</TituloDeSeccion>
                 <View style={[estilos.evaluacion, { borderColor: c.border, backgroundColor: c.cardBg,
                   paddingVertical: 6 }]}>
                   {avisos.map((aviso, i) => {
@@ -454,3 +455,4 @@ const estilos = StyleSheet.create({
     borderWidth: 1, borderRadius: 20, paddingHorizontal: 14,
   },
 });
+

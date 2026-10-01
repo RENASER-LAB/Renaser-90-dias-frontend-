@@ -143,5 +143,6 @@ const estilos = StyleSheet.create({
   grupo: { borderTopWidth: 1, paddingTop: 8, gap: 4 },
   observacion: { fontFamily: 'Jost_400Regular', fontSize: 16, lineHeight: 23 },
   acciones: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  accion: { flexGrow: 1, flexBasis: 100 },
+  // 150 y no 100: a 360 dp «Reconocer» no entraba y se partía en «Reconoce r». Así van dos por fila y el tercero ocupa la suya.
+  accion: { flexGrow: 1, flexBasis: 150 },
 });

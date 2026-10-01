@@ -266,6 +266,7 @@ describe('el resumen por grupos (§4.4)', () => {
           grupoId: '…',
           grupoNombre: 'Grupo Fénix',
           mentorNombre: 'Luisa Ramírez',
+          sinMentor: false,
           resumen: { verde: 5, amarillo: 2, rojo: 1, sinDatos: 0, total: 8 },
           promedio: 76.4,
           colorDelPromedio: 'AMARILLO',
@@ -333,7 +334,7 @@ describe('el resumen por grupos (§4.4)', () => {
     });
     expect(JSON.stringify(resumen)).not.toContain('Ana Pérez');
     expect(Object.keys(resumen.grupos[0]).sort()).toEqual([
-      'colorDelPromedio', 'etiquetaDelPromedio', 'grupoId', 'grupoNombre', 'mentorNombre', 'promedio', 'resumen',
+      'colorDelPromedio', 'etiquetaDelPromedio', 'grupoId', 'grupoNombre', 'mentorNombre', 'promedio', 'resumen', 'sinMentor',
     ]);
   });
 
@@ -346,7 +347,7 @@ describe('el resumen por grupos (§4.4)', () => {
       totales: null,
       grupos: [
         {
-          grupoId: 'g-1', grupoNombre: null, mentorNombre: null, resumen: null, promedio: null,
+          grupoId: 'g-1', grupoNombre: null, mentorNombre: null, sinMentor: false, resumen: null, promedio: null,
           colorDelPromedio: null, etiquetaDelPromedio: null,
         },
       ],
@@ -361,5 +362,18 @@ describe('el resumen por grupos (§4.4)', () => {
   it('un grupo sin id, o sin fechas, se dice', () => {
     expect(() => leerGrupos({ ...RESUMEN_DEL_CONTRATO, grupos: [{ grupoNombre: 'X' }] })).toThrow(/grupos\.0\.grupoId/);
     expect(() => leerGrupos({ ...RESUMEN_DEL_CONTRATO, hasta: undefined })).toThrow(/groups — hasta/);
+  });
+});
+
+describe('grupo sin mentor en el resumen (D-240)', () => {
+  it('conserva sinMentor del servidor y lo deja en false si no viene', () => {
+    const resumen = aResumenPorGrupos({
+      desde: '2026-09-24', hasta: '2026-09-30',
+      grupos: [
+        { grupoId: 'a', grupoNombre: 'Aurora', mentorNombre: null, sinMentor: true },
+        { grupoId: 'b', grupoNombre: 'Cupo', mentorNombre: 'E2E Mentor' },
+      ],
+    });
+    expect(resumen.grupos.map((g: { sinMentor: boolean }) => g.sinMentor)).toEqual([true, false]);
   });
 });

@@ -184,6 +184,8 @@ export interface GrupoDelResumen {
   grupoId: string;
   grupoNombre: string | null;
   mentorNombre: string | null;
+  /** Grupo en curso sin mentor (D-240): el Líder tiene que verlo para atenderlo. */
+  sinMentor: boolean;
   resumen: ResumenPorColor | null;
   /**
    * Promedio de los porcentajes de sus aprendices con datos, un decimal. `null` = ninguno tuvo
