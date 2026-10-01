@@ -1,10 +1,11 @@
 import React from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Image as ImagenSticker } from 'expo-image';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, type ImageSource } from 'expo-image';
 
 import type { ChatMessage } from '../../../screens/ComunidadScreen';
 import { useTheme } from '../../../theme/ThemeContext';
 import { colorDeRemitente } from '../utils/formatoChat';
+import { fuenteDeImagenDelChat } from '../utils/fuenteDeImagenDelChat';
 import { llevaDobleMarca } from '../utils/lecturaDelChat';
 import { FotoDelPrograma } from './AvatarDeChat';
 import { BurbujaAudioChat } from './BurbujaAudioChat';
@@ -12,6 +13,9 @@ import type { ColoresDelChat } from './coloresDelChat';
 
 /** El fénix al lado de las burbujas del programa: chico, como los avatares de un grupo de WhatsApp. */
 const TAM_FOTO_DEL_PROGRAMA = 34;
+
+/** Fundido corto al aparecer una foto que tuvo que bajar; desde la caché no se nota. */
+const TRANSICION_MS = 150;
 
 /**
  * Un mensaje, con la gramática de WhatsApp (2026-09-26): los propios a la derecha en dorado suave,
@@ -58,7 +62,8 @@ export function BurbujaDeMensaje({
   colores: ColoresDelChat;
   audioActivo: boolean;
   alActivarAudio: () => void;
-  onAbrirFoto: (url: string) => void;
+  /** Recibe la misma fuente que la burbuja (con su clave de caché): el visor no vuelve a bajarla. */
+  onAbrirFoto: (fuente: ImageSource | number) => void;
 }) {
   const { c, mode } = useTheme();
   const delPrograma = !!mensaje.esDelPrograma;
@@ -66,7 +71,9 @@ export function BurbujaDeMensaje({
   const fondo = propio ? colores.propia : colores.ajena;
   const conNombre = (enGrupo || delPrograma) && !propio && primeroDeLaTanda;
   const sticker = !!mensaje.esSticker;
-  const conFoto = mensaje.type === 'image_grid' && !!mensaje.mediaUrl && !sticker;
+  // Fotos y stickers por `expo-image` con la ruta como clave de caché (ver `fuenteDeImagenDelChat`).
+  const fuente = fuenteDeImagenDelChat(mensaje.mediaUrl, mensaje.mediaPath);
+  const conFoto = mensaje.type === 'image_grid' && !!fuente && !sticker;
   const texto = mensaje.text?.trim() ? mensaje.text : null;
   const leido = llevaDobleMarca(mensaje);
   const pie = `${mensaje.time}${propio ? (leido ? ' ✓✓' : ' ✓') : ''}`;
@@ -127,21 +134,26 @@ export function BurbujaDeMensaje({
           </Text>
         )}
 
-        {sticker && mensaje.mediaUrl && (
-          <ImagenSticker
-            source={{ uri: mensaje.mediaUrl }}
+        {sticker && fuente && (
+          <Image
+            source={fuente}
             style={styles.sticker}
             contentFit="contain"
+            cachePolicy="memory-disk"
+            transition={TRANSICION_MS}
             accessibilityLabel={mensaje.stickerNombre ?? 'Sticker Renaser'}
           />
         )}
 
         {conFoto && (
-          <Pressable onPress={() => onAbrirFoto(mensaje.mediaUrl!)} accessibilityLabel="Ver la foto en grande">
+          <Pressable onPress={() => onAbrirFoto(fuente)} accessibilityLabel="Ver la foto en grande">
+            {/* El fondo ocupa ya el tamaño final: mientras baja, la burbuja no salta. */}
             <Image
-              source={{ uri: mensaje.mediaUrl }}
-              style={styles.foto}
-              resizeMode="cover"
+              source={fuente}
+              style={[styles.foto, { backgroundColor: c.divider }]}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={TRANSICION_MS}
               accessibilityLabel="Foto enviada por chat"
             />
             {!texto && (
@@ -156,7 +168,7 @@ export function BurbujaDeMensaje({
         )}
 
         {/* Una foto vieja sin URL firmada: se rotula el adjunto, como antes. */}
-        {mensaje.type === 'image_grid' && !mensaje.mediaUrl && (
+        {mensaje.type === 'image_grid' && !fuente && (
           <View style={styles.adjuntosSinUrl}>
             {mensaje.mediaList?.map((rotulo, i) => (
               <View key={i} style={[styles.adjuntoSinUrl, { backgroundColor: c.divider }]}>

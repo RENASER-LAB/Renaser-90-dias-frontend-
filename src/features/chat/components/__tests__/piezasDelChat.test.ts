@@ -85,6 +85,19 @@ describe('FilaDeConversacion', () => {
   });
 });
 
+/** La imagen (`expo-image`) con ese rótulo: el primer nodo que lo lleva junto con su `source`. */
+function imagenDe(raiz: ReactTestRenderer, rotulo: string) {
+  return raiz.root.findAll(n => n.props.accessibilityLabel === rotulo && n.props.source !== undefined)[0];
+}
+function fuenteDe(raiz: ReactTestRenderer, rotulo: string): unknown {
+  return imagenDe(raiz, rotulo)?.props.source;
+}
+const TARJETAS_EMPAQUETADAS: Record<string, unknown> = {
+  verde: require('../../../../../assets/semaforo/verde-v1.jpg'),
+  amarillo: require('../../../../../assets/semaforo/amarillo-v1.jpg'),
+  rojo: require('../../../../../assets/semaforo/rojo-v1.jpg'),
+};
+
 describe('BurbujaDeMensaje', () => {
   const base: ChatMessage = {
     id: 'm-1',
@@ -141,7 +154,7 @@ describe('BurbujaDeMensaje', () => {
     const abrir = jest.fn();
     const raiz = dibujar(
       React.createElement(BurbujaDeMensaje, {
-        mensaje: { ...base, type: 'image_grid', text: undefined, mediaUrl: 'https://s3/foto.jpg' },
+        mensaje: { ...base, type: 'image_grid', text: undefined, mediaUrl: 'https://s3/foto.jpg', mediaPath: 'chat/c/fotos/1' },
         enGrupo: false,
         primeroDeLaTanda: true,
         ultimoDeLaTanda: true,
@@ -151,11 +164,69 @@ describe('BurbujaDeMensaje', () => {
         onAbrirFoto: abrir,
       })
     );
-    const imagen = raiz.root.findAll(n => (n.type as unknown) === 'Image');
-    expect(imagen[0]?.props.source).toEqual({ uri: 'https://s3/foto.jpg' });
+    expect(fuenteDe(raiz, 'Foto enviada por chat')).toEqual({ uri: 'https://s3/foto.jpg', cacheKey: 'chat/c/fotos/1' });
     const tocable = raiz.root.findAll(n => n.props.accessibilityLabel === 'Ver la foto en grande' && !!n.props.onPress);
     act(() => tocable[0].props.onPress());
-    expect(abrir).toHaveBeenCalledWith('https://s3/foto.jpg');
+    // El visor recibe la misma fuente, con la misma clave: no vuelve a bajar la foto.
+    expect(abrir).toHaveBeenCalledWith({ uri: 'https://s3/foto.jpg', cacheKey: 'chat/c/fotos/1' });
+  });
+
+  /*
+   * 2026-10-01: la tarjeta del semáforo aparecía ~1 s después de su burbuja. El backend firma la
+   * URL de nuevo en cada lectura; con la URL como clave la caché nunca acertaba. La clave es la
+   * ruta, que no cambia, y la caché es la de disco.
+   */
+  it('dos lecturas con firmas distintas usan la misma clave de caché (la ruta), en disco', () => {
+    const conFirma = (firma: string) =>
+      dibujar(
+        React.createElement(BurbujaDeMensaje, {
+          mensaje: {
+            ...base,
+            type: 'image_grid',
+            text: undefined,
+            mediaUrl: `https://renaser.s3.amazonaws.com/chat/c/fotos/1.jpg?X-Amz-Signature=${firma}`,
+            mediaPath: 'chat/c/fotos/1.jpg',
+          },
+          enGrupo: false,
+          primeroDeLaTanda: true,
+          ultimoDeLaTanda: true,
+          colores: COLORES,
+          audioActivo: false,
+          alActivarAudio: () => undefined,
+          onAbrirFoto: () => undefined,
+        })
+      );
+    const primera = imagenDe(conFirma('aaa'), 'Foto enviada por chat');
+    const segunda = imagenDe(conFirma('bbb'), 'Foto enviada por chat');
+    expect(primera.props.source.cacheKey).toBe('chat/c/fotos/1.jpg');
+    expect(segunda.props.source.cacheKey).toBe(primera.props.source.cacheKey);
+    expect(primera.props.cachePolicy).toBe('memory-disk');
+  });
+
+  it('el sticker también usa la ruta como clave de caché', () => {
+    const raiz = dibujar(
+      React.createElement(BurbujaDeMensaje, {
+        mensaje: {
+          ...base,
+          type: 'image_grid',
+          text: undefined,
+          esSticker: true,
+          stickerNombre: '¡Muy bien!',
+          mediaUrl: 'https://s3/sticker.webp?firma=1',
+          mediaPath: 'chat/c/stickers/muy-bien.webp',
+        },
+        enGrupo: false,
+        primeroDeLaTanda: true,
+        ultimoDeLaTanda: true,
+        colores: COLORES,
+        audioActivo: false,
+        alActivarAudio: () => undefined,
+        onAbrirFoto: () => undefined,
+      })
+    );
+    const sticker = imagenDe(raiz, '¡Muy bien!');
+    expect(sticker.props.source).toEqual({ uri: 'https://s3/sticker.webp?firma=1', cacheKey: 'chat/c/stickers/muy-bien.webp' });
+    expect(sticker.props.cachePolicy).toBe('memory-disk');
   });
 });
 
@@ -269,8 +340,34 @@ describe('BurbujaDeMensaje de un mensaje del programa', () => {
 
   it('la tarjeta se ve como foto dentro de la burbuja', () => {
     const raiz = dibujarBurbuja(delPrograma({ text: null, mediaPath: 'chat/c/fotos/1', mediaMime: 'image/png', mediaUrl: 'https://s3/tarjeta.png' }));
-    const fotos = raiz.root.findAll(n => (n.type as unknown) === 'Image' && n.props.source?.uri === 'https://s3/tarjeta.png');
-    expect(fotos).toHaveLength(1);
+    expect(fuenteDe(raiz, 'Foto enviada por chat')).toEqual({ uri: 'https://s3/tarjeta.png', cacheKey: 'chat/c/fotos/1' });
+  });
+
+  /* Las tarjetas del semáforo viajan dentro de la app: con la ruta versionada exacta que sube el
+     backend (`ColorDeTarjeta.rutaEnAlmacenamiento()`) no se baja nada, ni la primera vez. */
+  it.each(['verde', 'amarillo', 'rojo'])('la tarjeta %s del semáforo (v1) sale de la app, no de la red', color => {
+    const raiz = dibujarBurbuja(
+      delPrograma({
+        mediaPath: `semaforo/tarjetas/${color}-v1.jpg`,
+        mediaMime: 'image/jpeg',
+        mediaUrl: `https://s3/semaforo/tarjetas/${color}-v1.jpg?X-Amz-Signature=x`,
+      })
+    );
+    expect(fuenteDe(raiz, 'Foto enviada por chat')).toBe(TARJETAS_EMPAQUETADAS[color]);
+  });
+
+  it('una tarjeta con otra versión (diseño nuevo) sale de la red, nunca la empaquetada vieja', () => {
+    const raiz = dibujarBurbuja(
+      delPrograma({
+        mediaPath: 'semaforo/tarjetas/verde-v2.jpg',
+        mediaMime: 'image/jpeg',
+        mediaUrl: 'https://s3/semaforo/tarjetas/verde-v2.jpg?X-Amz-Signature=x',
+      })
+    );
+    expect(fuenteDe(raiz, 'Foto enviada por chat')).toEqual({
+      uri: 'https://s3/semaforo/tarjetas/verde-v2.jpg?X-Amz-Signature=x',
+      cacheKey: 'semaforo/tarjetas/verde-v2.jpg',
+    });
   });
 
   it('los siguientes de la tanda no repiten firma ni fénix', () => {

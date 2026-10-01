@@ -218,6 +218,7 @@ function mapearMensajeDelPrograma(wire: WireMensaje): ChatMessage {
     type: conImagen ? 'image_grid' : 'text',
     text: wire.text?.trim() || undefined,
     mediaUrl: conImagen ? wire.mediaUrl ?? undefined : undefined,
+    mediaPath: conImagen ? wire.mediaPath ?? undefined : undefined,
     // Imagen sin URL firmada: se rotula el adjunto, como en una foto de una persona.
     mediaList: conImagen && !wire.mediaUrl ? ['📷 Imagen adjunta'] : undefined,
     status: 'read',
@@ -262,6 +263,8 @@ export function mapearMensaje(wire: WireMensaje, actorId: string | null | undefi
     // "último mensaje" de la lista de conversaciones (ahí el backend no la firma a propósito),
     // así que la burbuja tiene que saber vivir sin ella — no es un error.
     mediaUrl: wire.mediaUrl ?? undefined,
+    // La ruta no cambia entre lecturas: es la clave de caché de la imagen (`fuenteDeImagenDelChat`).
+    mediaPath: wire.mediaPath ?? undefined,
     // Respaldo para los mensajes sin URL firmada: se sigue rotulando el adjunto en vez de dejar
     // la burbuja vacía. Con `mediaUrl` presente la burbuja muestra la foto y esto no se usa.
     mediaList: wire.type === 'IMAGE' && !wire.mediaUrl

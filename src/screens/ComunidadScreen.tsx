@@ -15,6 +15,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import type { ListRenderItemInfo } from 'react-native';
+import { Image as ImagenDelChat, type ImageSource } from 'expo-image';
 import { Alert } from '../components/Alerta';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -313,6 +314,10 @@ export interface ChatMessage {
   /** URL de lectura ya firmada del adjunto (`MensajeResponse.mediaUrl`). Es lo que se le pasa a
    * `<Image>` o al reproductor: la ruta cruda de S3 que se guarda en la base no se puede abrir. */
   mediaUrl?: string;
+  /** La ruta del adjunto en el almacenamiento (`MensajeResponse.mediaPath`). No se puede abrir,
+   * pero NO cambia entre lecturas (la URL firmada sí): es la clave de caché de la imagen y la que
+   * reconoce las tarjetas del semáforo empaquetadas. Ver `chat/utils/fuenteDeImagenDelChat`. */
+  mediaPath?: string;
   /** Los stickers viajan como IMAGE para ser compatibles con el backend y los APK anteriores. */
   esSticker?: boolean;
   stickerNombre?: string;
@@ -842,7 +847,9 @@ export default function ComunidadScreen() {
   }, [activeChat?.id, enTribu, groupInfoVisible]);
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
   /** Foto de chat abierta a pantalla completa; `null` si no hay ninguna. */
-  const [fotoChatAmpliada, setFotoChatAmpliada] = useState<string | null>(null);
+  /* La misma fuente que la burbuja (con la ruta como clave de caché, o la tarjeta empaquetada):
+     el visor la toma de la caché en vez de volver a bajarla (2026-10-01). */
+  const [fotoChatAmpliada, setFotoChatAmpliada] = useState<ImageSource | number | null>(null);
   /* Chat estilo WhatsApp (2026-09-26): la lista de mensajes abre en lo último, y los colores de
      fondo y burbujas salen del tema (dorado suave / crema), no del verde de WhatsApp. */
   const paletaDelChat = useMemo(() => coloresDelChat(c, isDark), [c, isDark]);
@@ -1348,7 +1355,7 @@ export default function ComunidadScreen() {
       setSelectedMemberProfile(null);
       return true;
     }
-    if (fotoChatAmpliada) {
+    if (fotoChatAmpliada !== null) {
       setFotoChatAmpliada(null);
       return true;
     }
@@ -3960,11 +3967,12 @@ export default function ComunidadScreen() {
         onRequestClose={() => setFotoChatAmpliada(null)}
       >
         <Pressable style={styles.visorFotoFondo} onPress={() => setFotoChatAmpliada(null)}>
-          {fotoChatAmpliada && (
-            <Image
-              source={{ uri: fotoChatAmpliada }}
+          {fotoChatAmpliada !== null && (
+            <ImagenDelChat
+              source={fotoChatAmpliada}
               style={styles.visorFotoImagen}
-              resizeMode="contain"
+              contentFit="contain"
+              cachePolicy="memory-disk"
               accessibilityLabel="Foto del chat a pantalla completa"
             />
           )}
