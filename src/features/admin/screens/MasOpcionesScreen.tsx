@@ -24,10 +24,12 @@ import { CabeceraAdmin } from '../components/CabeceraAdmin';
 export function MasOpcionesScreen({
   onVolver,
   onAbrirStaff,
+  onAbrirGuias,
   onAbrirBienvenida,
 }: {
   onVolver: () => void;
   onAbrirStaff: () => void;
+  onAbrirGuias: () => void;
   onAbrirBienvenida: () => void;
 }) {
   const { c, t } = useTheme();
@@ -50,6 +52,13 @@ export function MasOpcionesScreen({
       titulo: 'Equipo y roles',
       detalle: 'Cambiar el rol de una cuenta: aprendiz, mentor, líder, administrador o alquimista',
       onPress: onAbrirStaff,
+    },
+    /* El guía no es un rol (pedido del dueño del 01/10, backend D-242): va al lado de «Equipo y
+       roles» para que se encuentre donde se lo busca. */
+    {
+      titulo: 'Guías del grupo inicial',
+      detalle: 'Quién acompaña los primeros 7 días',
+      onPress: onAbrirGuias,
     },
     {
       titulo: 'Cursos y comunidad',

@@ -8,6 +8,7 @@ import {
   grupoDelTableroSchema,
   grupoDetalleSchema,
   grupoResumenSchema,
+  guiasRecepcionSchema,
   mentorCandidatoSchema,
   paginaAprendicesSchema,
   paginaSolicitudesSchema,
@@ -17,6 +18,7 @@ import {
   type DetalleAprendizApi,
   type GrupoDetalleApi,
   type GrupoResumenApi,
+  type GuiasRecepcionApi,
   type MentorCandidatoApi,
   type PaginaAprendicesApi,
   type PaginaSolicitudesApi,
@@ -286,6 +288,37 @@ export async function listarAprendices(opciones: {
  * su propio listado, `/admin/trainees`.
  */
 export type RolDeStaff = Exclude<RolAsignable, 'TRAINEE'>;
+
+// ── Guías del grupo inicial (recepción) ───────────────────────────────────
+
+/**
+ * `GET /api/v1/admin/cohorts/{id}/reception/guides` (backend D-242). Sin `grupoId`, el grupo de
+ * bienvenida que la cohorte ya tiene designado. Solo ADMIN y ALQUIMISTA (guard del servicio).
+ */
+export async function obtenerGuiasDeRecepcion(cohorteId: string, grupoId?: string | null): Promise<GuiasRecepcionApi> {
+  const consulta = grupoId ? `?receptionCellId=${encodeURIComponent(grupoId)}` : '';
+  return validarRespuesta<GuiasRecepcionApi>(
+    guiasRecepcionSchema,
+    await apiFetch<unknown>(`/api/v1/admin/cohorts/${encodeURIComponent(cohorteId)}/reception/guides${consulta}`),
+    'GET /api/v1/admin/cohorts/{id}/reception/guides',
+  );
+}
+
+/**
+ * `PUT /api/v1/admin/cohorts/{id}/reception/guides`. **Reemplazo**: la lista que va es la que
+ * queda, así que agregar o quitar a uno es mandar la lista entera ya cambiada. Ser guía no es un
+ * rol: esto no le cambia el rol a nadie, solo le abre el grupo de bienvenida y su chat.
+ */
+export async function reemplazarGuiasDeRecepcion(
+  cohorteId: string,
+  grupoId: string,
+  usuarioIds: readonly string[],
+): Promise<void> {
+  await apiFetch<unknown>(`/api/v1/admin/cohorts/${encodeURIComponent(cohorteId)}/reception/guides`, {
+    method: 'PUT',
+    body: { receptionCellId: grupoId, guides: usuarioIds.map(userId => ({ userId })) },
+  });
+}
 
 /**
  * `GET /api/v1/admin/staff?role=&status=&page=&size=`.

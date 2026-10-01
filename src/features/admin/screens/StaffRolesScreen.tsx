@@ -201,7 +201,7 @@ function FilaDePersona({
  * No se ofrece `ASSISTANT`: está en el enum de la base pero la API lo rechaza con 400 —comprobado
  * el 2026-09-11—, y una opción que siempre falla es peor que no tenerla.
  */
-export function StaffRolesScreen({ onVolver }: { onVolver: () => void }) {
+export function StaffRolesScreen({ onVolver, onAbrirGuias }: { onVolver: () => void; onAbrirGuias: () => void }) {
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
 
@@ -433,6 +433,20 @@ export function StaffRolesScreen({ onVolver }: { onVolver: () => void }) {
           Al aprobar una solicitud la persona entra siempre como aprendiz. Acá se le cambia el rol.
         </Text>
 
+        {/* El dueño buscaba al «Guía» entre los roles y no estaba (01/10, D-242): no es un rol, es
+            una designación por cohorte. Se dice acá y se lleva directo a donde se asigna. */}
+        <Pressable
+          onPress={onAbrirGuias}
+          accessibilityRole="button"
+          accessibilityLabel="Guía del grupo inicial no es un rol. Abrir Guías del grupo inicial"
+          style={[estilos.aviso, { borderColor: c.border }]}
+        >
+          <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]}>
+            Guía del grupo inicial no es un rol: se asigna en Administración → Guías del grupo inicial.{' '}
+            <Text style={{ color: c.goldInk, fontWeight: '500' }}>Abrir</Text>
+          </Text>
+        </Pressable>
+
         {error ? <Text style={[t.body, { color: c.danger, fontSize: 16 }]}>{error}</Text> : null}
 
         {cambiados.length > 0 ? (
@@ -597,6 +611,15 @@ export function StaffRolesScreen({ onVolver }: { onVolver: () => void }) {
 }
 
 const estilos = StyleSheet.create({
+  aviso: {
+    minHeight: 48,
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+  },
   buscador: {
     minHeight: 52,
     borderRadius: 12,

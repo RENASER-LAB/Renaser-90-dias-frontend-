@@ -11,6 +11,7 @@ import { FichaAprendizScreen } from './FichaAprendizScreen';
 import { GrupoDetalleScreen } from './GrupoDetalleScreen';
 import { GrupoFormScreen } from './GrupoFormScreen';
 import { GruposAdminScreen } from './GruposAdminScreen';
+import { GuiasRecepcionScreen } from './GuiasRecepcionScreen';
 import { MasOpcionesScreen } from './MasOpcionesScreen';
 import { PersonasAdminScreen } from './PersonasAdminScreen';
 import { SemaforoAdminScreen } from './SemaforoAdminScreen';
@@ -40,6 +41,7 @@ type Vista =
   | { nombre: 'semaforo' }
   | { nombre: 'semaforo-grupo'; grupoId: string; grupoNombre: string | null; inicio: InicioSemanal }
   | { nombre: 'staff' }
+  | { nombre: 'guias' }
   | { nombre: 'bienvenida' }
   | { nombre: 'mas' }
   | { nombre: 'caja' }
@@ -157,7 +159,9 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
         />
       );
     case 'staff':
-      return <StaffRolesScreen onVolver={volver} />;
+      return <StaffRolesScreen onVolver={volver} onAbrirGuias={() => entrar({ nombre: 'guias' })} />;
+    case 'guias':
+      return <GuiasRecepcionScreen onVolver={volver} />;
     case 'bienvenida':
       return <BienvenidaAdminScreen onVolver={volver} />;
     case 'mas':
@@ -165,6 +169,7 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
         <MasOpcionesScreen
           onVolver={volver}
           onAbrirStaff={() => entrar({ nombre: 'staff' })}
+          onAbrirGuias={() => entrar({ nombre: 'guias' })}
           onAbrirBienvenida={() => entrar({ nombre: 'bienvenida' })}
         />
       );
