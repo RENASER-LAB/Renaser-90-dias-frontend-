@@ -22,6 +22,8 @@ import { TarjetaMentorHoy } from '../features/mentor/components/TarjetaMentorHoy
 import { entradaAlGrupoVisible, esLiderDeMentores, esOtroDeMisGrupos } from '../features/mentor/utils/entradaAlGrupo';
 import { TarjetaBandejaHoy } from '../features/tickets/components/TarjetaBandejaHoy';
 import { BandejaTicketsScreen } from '../features/tickets/screens/BandejaTicketsScreen';
+import { TarjetaMentoresHoy } from '../features/lider-mentores/components/TarjetaMentoresHoy';
+import { LiderMentoresScreen } from '../features/lider-mentores/screens/LiderMentoresScreen';
 import { alAbrirAviso, consumirRutaPendiente } from '../features/mentor/notificaciones/rutaDeAviso';
 import { TarjetaSemaforoHoy } from '../features/semaforo/components/TarjetaSemaforoHoy';
 import { TarjetaSemaforoGruposHoy } from '../features/semaforo/components/TarjetaSemaforoGruposHoy';
@@ -112,6 +114,9 @@ export default function HoyScreen() {
      de Hoy, igual que Administracion y que las vistas del mentor — no como un tab nuevo. */
   const esLider = esLiderDeMentores(user?.role);
   const [enBandejaTickets, setEnBandejaTickets] = useState(false);
+  /* «Mis mentores» (SDD 002, backend D-241): la gestion del cuerpo de mentores, tercera pantalla
+     propia del lider. Mismo patron: estado de Hoy, no un tab nuevo. */
+  const [enMisMentores, setEnMisMentores] = useState(false);
   // El orbe del centro (2026-09-23): conversación por voz con el acompañante, y su chat para
   // confirmar propuestas o leer la respuesta completa.
   const voz = useVozDelOrbe();
@@ -484,6 +489,9 @@ export default function HoyScreen() {
   if (enBandejaTickets && esLider) {
     return <BandejaTicketsScreen onVolver={() => setEnBandejaTickets(false)} />;
   }
+  if (enMisMentores && esLider) {
+    return <LiderMentoresScreen onSalir={() => setEnMisMentores(false)} />;
+  }
   /* Misma forma que la bandeja: la otra pantalla propia del lider de mentores. */
   if (enSemaforoGrupos && esLider) {
     return <SemaforoGruposScreen lectura={semaforoGrupos} onVolver={() => setEnSemaforoGrupos(false)} />;
@@ -752,6 +760,10 @@ export default function HoyScreen() {
               `VIEW_ALL_MENTOR_TICKETS` ya lo tiene. Ningun otro rol ve esta tarjeta — los
               administradores tienen su propia entrada, y para el resto esta condicion es falsa,
               asi que Hoy no cambia para nadie mas. */}
+          {/* Solo para el LIDER DE MENTORES: su padron, la ficha de cada mentor y el reporte del mes
+              (SDD 002, D-241). Para el resto la condicion es falsa: Hoy no cambia. */}
+          {esLider ? <TarjetaMentoresHoy onAbrir={() => setEnMisMentores(true)} /> : null}
+
           {esLider ? <TarjetaBandejaHoy onAbrir={() => setEnBandejaTickets(true)} /> : null}
 
           {/* Solo para el LIDER DE MENTORES, y solo si el servidor ya tiene el resumen por grupos
