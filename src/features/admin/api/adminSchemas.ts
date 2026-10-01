@@ -173,7 +173,30 @@ export const paginaStaffSchema = z
   })
   .passthrough();
 
+/**
+ * `GET /api/v1/admin/cohorts/{id}/reception/guides` (backend D-242): quiénes acompañan HOY el grupo
+ * de bienvenida de una cohorte. `receptionCellId` en `null` = la cohorte todavía no tiene uno
+ * designado. `role`/`status` pueden venir en `null` si la cuenta ya no existe.
+ */
+export const guiasRecepcionSchema = z
+  .object({
+    cohortId: z.string(),
+    receptionCellId: z.string().nullable(),
+    guides: z.array(
+      z
+        .object({
+          userId: z.string(),
+          fullName: z.string().nullish(),
+          role: z.string().nullish(),
+          status: z.string().nullish(),
+        })
+        .passthrough(),
+    ),
+  })
+  .passthrough();
+
 export type PerfilAdminApi = z.infer<typeof perfilAdminSchema>;
+export type GuiasRecepcionApi = z.infer<typeof guiasRecepcionSchema>;
 export type EstadoGrupoApi = z.infer<typeof estadoGrupoSchema>;
 export type GrupoResumenApi = z.infer<typeof grupoResumenSchema>;
 export type GrupoDetalleApi = z.infer<typeof grupoDetalleSchema>;

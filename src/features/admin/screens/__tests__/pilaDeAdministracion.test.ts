@@ -7,6 +7,7 @@ jest.mock('../FichaAprendizScreen', () => ({}));
 jest.mock('../GrupoDetalleScreen', () => ({}));
 jest.mock('../GrupoFormScreen', () => ({}));
 jest.mock('../GruposAdminScreen', () => ({}));
+jest.mock('../GuiasRecepcionScreen', () => ({}));
 jest.mock('../MasOpcionesScreen', () => ({}));
 jest.mock('../PersonasAdminScreen', () => ({}));
 jest.mock('../SemaforoAdminScreen', () => ({}));

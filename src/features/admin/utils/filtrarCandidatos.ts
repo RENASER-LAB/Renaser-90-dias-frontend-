@@ -25,7 +25,7 @@ import type { AprendizCandidatoApi } from '../api/adminSchemas';
  * `NFD` separa la letra de su tilde y el rango de bloques diacríticos la borra, así que la "ñ"
  * queda como "n" — a propósito: quien busca "munoz" quiere encontrar a "Muñoz".
  */
-function comparable(texto: string): string {
+export function comparable(texto: string): string {
   return texto
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
