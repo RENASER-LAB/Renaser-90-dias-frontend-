@@ -19,7 +19,7 @@ import { useEsMentor } from '../features/mentor/hooks/useEsMentor';
 import { useCelulaQueAcompano } from '../features/mentor/hooks/useCelulaQueAcompano';
 import { useProgramaPersonal } from '../features/mentor/hooks/useProgramaPersonal';
 import { TarjetaMentorHoy } from '../features/mentor/components/TarjetaMentorHoy';
-import { entradaAlGrupoVisible, esLiderDeMentores } from '../features/mentor/utils/entradaAlGrupo';
+import { entradaAlGrupoVisible, esLiderDeMentores, esOtroDeMisGrupos } from '../features/mentor/utils/entradaAlGrupo';
 import { TarjetaBandejaHoy } from '../features/tickets/components/TarjetaBandejaHoy';
 import { BandejaTicketsScreen } from '../features/tickets/screens/BandejaTicketsScreen';
 import { alAbrirAviso, consumirRutaPendiente } from '../features/mentor/notificaciones/rutaDeAviso';
@@ -95,6 +95,7 @@ export default function HoyScreen() {
   /* UNA sola lectura de la celula, repartida a la tarjeta y a la pantalla. Si cada una
      llamara al hook por su cuenta habria dos peticiones y dos verdades. */
   const celula = useCelulaQueAcompano(esMentor);
+  const { elegirGrupo } = celula;
   /* Quien puede administrar lo dice el SERVIDOR, no el rol leido en el telefono. Un rol nuevo
      manana no dejaria la entrada colgada, y una capacidad falseada abre pantallas vacias: cada
      endpoint vuelve a autorizar (SDD 003, ARF-15). */
@@ -211,17 +212,27 @@ export default function HoyScreen() {
       const ruta = consumirRutaPendiente('alumno');
       if (!ruta) return;
       setEnSemaforo(false);
-      const alumno = vista.todos.find(a => a.participanteId === ruta.alumnoId);
-      if (alumno) {
-        setAlumnoAbierto(alumno);
-        setVistaMentor('alumno');
-      } else {
+      const abrirAlumnoDe = (padron: AlumnoConEstado[]) => {
+        const alumno = padron.find(a => a.participanteId === ruta.alumnoId);
+        if (alumno) {
+          setAlumnoAbierto(alumno);
+          setVistaMentor('alumno');
+        } else {
+          setVistaMentor('celula');
+        }
+      };
+      /* Alumno de OTRO de sus grupos (D-141): se pasa a ese grupo y se abre la ficha con su
+         padron. Mientras llega, se ve el grupo cargando. */
+      if (esOtroDeMisGrupos(ruta.grupoId, vista)) {
         setVistaMentor('celula');
+        void elegirGrupo(ruta.grupoId).then(nueva => abrirAlumnoDe(nueva?.todos ?? []));
+        return;
       }
+      abrirAlumnoDe(vista.todos);
     };
     abrir();
     return alAbrirAviso(abrir);
-  }, [esMentor, celula.vista]);
+  }, [esMentor, celula.vista, elegirGrupo]);
 
   /* El aviso del sabado (`/semaforo`, «Tu semana ya cerro») abre el detalle del semaforo. Para
      cualquier rol: le llega a toda persona medida, no solo al mentor. Se trae Hoy al frente por si
@@ -247,13 +258,16 @@ export default function HoyScreen() {
       const ruta = consumirRutaPendiente('semaforoGrupo');
       if (!ruta) return;
       setEnSemaforo(false);
-      setEnfocarSemaforoDelGrupo(comoAbrirElSemaforoDelGrupo(ruta.grupoId, vista.celula.id) === 'seccion');
+      const como = comoAbrirElSemaforoDelGrupo(ruta.grupoId, vista.celula.id, vista.grupos.map(g => g.id));
+      /* Aviso de otro de sus grupos (D-141): se abre ESE grupo, no el que estaba mirando. */
+      if (como === 'cambiar') void elegirGrupo(ruta.grupoId);
+      setEnfocarSemaforoDelGrupo(como !== 'grupo');
       setVistaMentor('celula');
       (navigation as any).navigate('Hoy');
     };
     abrir();
     return alAbrirAviso(abrir);
-  }, [esMentor, celula.vista, navigation]);
+  }, [esMentor, celula.vista, navigation, elegirGrupo]);
 
   /* El resumen general del sabado (`/semaforo/grupos`): el lider de mentores abre su pantalla;
      administracion y alquimista, el semaforo de Administracion. Espera a saber si la cuenta
@@ -500,6 +514,7 @@ export default function HoyScreen() {
         fallo={celula.fallo}
         detalle={celula.detalle}
         recargar={celula.recargar}
+        onElegirGrupo={elegirGrupo}
       />
     );
   }

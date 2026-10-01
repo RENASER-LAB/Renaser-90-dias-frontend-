@@ -87,11 +87,18 @@ export function quienAbreElResumenPorGrupos(params: {
 }
 
 /**
- * `/mentor/groups/{g}/semaforo` (§4.5): si el aviso es del grupo que el mentor acompaña, se abre su
- * grupo con la sección del semáforo a la vista. Si es de otro —un aviso viejo, de un grupo que ya
- * rotó—, se abre el grupo y nada más: esa tabla ya no es de este mentor. Mismo criterio que el
- * aviso de un alumno que ya no está en el padrón.
+ * `/mentor/groups/{g}/semaforo` (§4.5): si el aviso es del grupo que el mentor está mirando, se abre
+ * su grupo con la sección del semáforo a la vista. Si es de OTRO de sus grupos en curso (desde D-141
+ * un mentor puede acompañar varios), se cambia a ese grupo y se abre igual con la sección: antes se
+ * abría «el grupo» genérico y el mentor veía el semáforo de otro. Si el grupo ya no es suyo —un aviso
+ * viejo, de un grupo que ya rotó—, se abre el grupo y nada más: esa tabla ya no es de este mentor.
+ * Mismo criterio que el aviso de un alumno que ya no está en el padrón.
  */
-export function comoAbrirElSemaforoDelGrupo(grupoDelAviso: string, grupoQueAcompana: string): 'seccion' | 'grupo' {
-  return grupoDelAviso === grupoQueAcompana ? 'seccion' : 'grupo';
+export function comoAbrirElSemaforoDelGrupo(
+  grupoDelAviso: string,
+  grupoQueSeMira: string,
+  misGrupos: readonly string[],
+): 'seccion' | 'cambiar' | 'grupo' {
+  if (grupoDelAviso === grupoQueSeMira) return 'seccion';
+  return misGrupos.includes(grupoDelAviso) ? 'cambiar' : 'grupo';
 }

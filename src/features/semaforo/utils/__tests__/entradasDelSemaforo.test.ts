@@ -124,11 +124,15 @@ describe('qué abre el aviso `/semaforo/grupos`', () => {
 });
 
 describe('qué abre el aviso `/mentor/groups/{g}/semaforo`', () => {
-  it('el grupo que acompaña: el grupo con el semáforo a la vista', () => {
-    expect(comoAbrirElSemaforoDelGrupo('g-1', 'g-1')).toBe('seccion');
+  it('el grupo que está mirando: el grupo con el semáforo a la vista', () => {
+    expect(comoAbrirElSemaforoDelGrupo('g-1', 'g-1', ['g-1', 'g-2'])).toBe('seccion');
+  });
+
+  it('otro de sus grupos en curso: cambia a ese grupo (no abre el que estaba mirando)', () => {
+    expect(comoAbrirElSemaforoDelGrupo('g-2', 'g-1', ['g-1', 'g-2'])).toBe('cambiar');
   });
 
   it('un grupo que ya no acompaña: el grupo y nada más', () => {
-    expect(comoAbrirElSemaforoDelGrupo('g-viejo', 'g-1')).toBe('grupo');
+    expect(comoAbrirElSemaforoDelGrupo('g-viejo', 'g-1', ['g-1', 'g-2'])).toBe('grupo');
   });
 });

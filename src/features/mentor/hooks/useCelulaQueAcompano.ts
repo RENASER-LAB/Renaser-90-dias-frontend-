@@ -3,7 +3,7 @@ import { useFocusEffect } from '@react-navigation/native';
 
 import { esDeRed, esNoDisponible, esProhibido, esSinCelula, obtenerMiCelula } from '../api/mentorApi';
 import { repartirAlumnos, resumenDe } from '../reglas';
-import type { MiCelula } from '../types/mentor.types';
+import type { CelulaResumen, MiCelula } from '../types/mentor.types';
 
 /**
  * NO se llama `useMiCelula` a propósito: ya existe uno con ese nombre en `features/community`,
@@ -30,7 +30,15 @@ import type { MiCelula } from '../types/mentor.types';
 export type FalloCelula = 'sin_celula' | 'no_disponible' | 'sin_permiso' | 'sin_red' | 'error';
 
 /** Lo que la pantalla y la tarjeta consumen. Se deriva; nunca se guarda en estado. */
-export type VistaCelula = NonNullable<ReturnType<typeof useCelulaQueAcompano>['vista']>;
+export type VistaCelula = NonNullable<ReturnType<typeof vistaDe>>;
+
+/** El reparto y el resumen salen de los datos: un estado paralelo es lo que hace que la cabecera
+ *  diga 8 activos y la lista muestre 7. */
+function vistaDe(datos: MiCelula | null) {
+  if (!datos) return null;
+  const reparto = repartirAlumnos(datos.alumnos);
+  return { ...reparto, resumen: resumenDe(reparto.todos), celula: datos.celula, grupos: datos.grupos };
+}
 
 export function useCelulaQueAcompano(activo: boolean) {
   const [datos, setDatos] = useState<MiCelula | null>(null);
@@ -43,15 +51,26 @@ export function useCelulaQueAcompano(activo: boolean) {
      cinco llamadas en cinco minutos, todas 404. Un `recargar()` explicito (el boton, o volver
      a montar la app tras un despliegue) si vuelve a intentarlo. */
   const noDesplegado = useRef(false);
+  /* Cuál de sus grupos mira (desde D-141 pueden ser varios). Ref y no estado: la recarga al volver
+     a la pantalla tiene que respetarlo sin que cambiar de grupo dispare otra recarga más. */
+  const elegido = useRef<string | null>(null);
+  /* Solo la última petición escribe: si se tocan dos grupos seguidos, la respuesta del primero
+     no puede pisar a la del segundo cuando llega tarde. */
+  const ultimaPeticion = useRef(0);
 
-  const recargar = useCallback(async () => {
-    if (!activo) return;
+  const cargar = useCallback(async (): Promise<MiCelula | null> => {
+    if (!activo) return null;
+    const peticion = ++ultimaPeticion.current;
     setCargando(true);
     setFallo(null);
     setDetalle(null);
     try {
-      setDatos(await obtenerMiCelula());
+      const nuevos = await obtenerMiCelula(elegido.current);
+      if (peticion !== ultimaPeticion.current) return null;
+      setDatos(nuevos);
+      return nuevos;
     } catch (e) {
+      if (peticion !== ultimaPeticion.current) return null;
       setDatos(null);
       noDesplegado.current = esNoDisponible(e);
       setFallo(
@@ -62,10 +81,14 @@ export function useCelulaQueAcompano(activo: boolean) {
         : 'error',
       );
       setDetalle(e instanceof Error ? e.message : null);
+      return null;
     } finally {
-      setCargando(false);
+      if (peticion === ultimaPeticion.current) setCargando(false);
     }
   }, [activo]);
+  const recargar = useCallback(() => {
+    void cargar();
+  }, [cargar]);
 
   /* Se recarga al volver a la pantalla, no solo al montarla: un mentor entra, escribe a
      alguien y vuelve, y espera ver el cambio. Igual que `useUltimaPublicacionMuro`. */
@@ -82,13 +105,28 @@ export function useCelulaQueAcompano(activo: boolean) {
     void recargar();
   }, [recargar]);
 
-  /* El reparto y el resumen se derivan de los datos, no se guardan en estado: un estado
-     paralelo es lo que hace que la cabecera diga 8 activos y la lista muestre 7. */
-  const vista = useMemo(() => {
-    if (!datos) return null;
-    const reparto = repartirAlumnos(datos.alumnos);
-    return { ...reparto, resumen: resumenDe(reparto.todos), celula: datos.celula };
-  }, [datos]);
+  /**
+   * Pasa a mirar otro de sus grupos. La cabecera cambia al instante (el nombre y el tipo ya se
+   * conocen) y la lista llega con el padrón. Devuelve la vista del grupo nuevo, para quien tiene
+   * que abrir algo adentro (la ficha de un alumno de ese grupo, desde un aviso); `null` si falló
+   * o si otra elección la reemplazó.
+   */
+  const elegirGrupo = useCallback(
+    async (grupoId: string): Promise<VistaCelula | null> => {
+      elegido.current = grupoId;
+      setDatos(previos => conGrupoElegido(previos, grupoId));
+      return vistaDe(await cargar());
+    },
+    [cargar],
+  );
 
-  return { vista, cargando, fallo, detalle, recargar: reintentar };
+  const vista = useMemo(() => vistaDe(datos), [datos]);
+
+  return { vista, cargando, fallo, detalle, recargar: reintentar, elegirGrupo };
+}
+
+/** Los datos con la cabecera del grupo elegido y sin padrón, mientras llega el de ese grupo. */
+function conGrupoElegido(datos: MiCelula | null, grupoId: string): MiCelula | null {
+  const grupo: CelulaResumen | undefined = datos?.grupos.find(g => g.id === grupoId);
+  return datos && grupo ? { ...datos, celula: grupo, alumnos: [] } : datos;
 }

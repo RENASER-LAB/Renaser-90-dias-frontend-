@@ -64,8 +64,14 @@ export interface AlumnoCelula {
 }
 
 export interface MiCelula {
+  /** El grupo que se está mirando. */
   celula: CelulaResumen;
   alumnos: AlumnoCelula[];
+  /**
+   * Todos los grupos en curso que acompaña, el mirado incluido (desde D-141 pueden ser varios).
+   * Con uno solo, la pantalla no muestra selector.
+   */
+  grupos: CelulaResumen[];
 }
 
 /**

@@ -38,15 +38,19 @@ const POR_PAGINA = 50;
  *
  * La segunda comprueba relación VIGENTE antes de devolver un solo nombre: un exmentor con el
  * token todavía válido recibe 403, no la lista.
+ *
+ * `grupoElegido`: cuál de sus grupos mirar. Si ya no lo acompaña (rotó) o no se eligió ninguno,
+ * se abre el primero de `gruposQueAcompana`.
  */
-export async function obtenerMiCelula(): Promise<MiCelula> {
+export async function obtenerMiCelula(grupoElegido: string | null = null): Promise<MiCelula> {
   const contexto = validarRespuesta<ContextoMentorApi>(
     contextoMentorSchema,
     await apiFetch<unknown>('/api/v1/mentor/context'),
     'GET /api/v1/mentor/context',
   );
 
-  const grupo = grupoQueAcompana(contexto.assignments);
+  const grupos = gruposQueAcompana(contexto.assignments);
+  const grupo = grupos.find(g => g.groupId === grupoElegido) ?? grupos[0];
   if (!grupo) throw new SinCelula();
 
   const aprendices = await todosLosAprendices(grupo.groupId);
@@ -65,32 +69,39 @@ export async function obtenerMiCelula(): Promise<MiCelula> {
     evidenciasPendientes: null,
   }));
 
+  return { celula: celulaDe(grupo), alumnos, grupos: grupos.map(celulaDe) };
+}
+
+function celulaDe(grupo: AsignacionMentorApi): MiCelula['celula'] {
   return {
-    celula: {
-      id: grupo.groupId,
-      nombre: grupo.groupName,
-      cohorte: null,
-      cohorteId: grupo.cohortId,
-      proximaSesionEn: null,
-      urlVideollamada: null,
-      tipo: grupo.type === 'RECEPCION' ? 'recepcion' : 'regular',
-      cobertura: coberturaDe(grupo.coverage),
-      cupo: grupo.capacity,
-      funcion: grupo.function,
-      desde: grupo.from,
-      hasta: grupo.to,
-    },
-    alumnos,
+    id: grupo.groupId,
+    nombre: grupo.groupName,
+    cohorte: null,
+    cohorteId: grupo.cohortId,
+    proximaSesionEn: null,
+    urlVideollamada: null,
+    tipo: grupo.type === 'RECEPCION' ? 'recepcion' : 'regular',
+    cobertura: coberturaDe(grupo.coverage),
+    cupo: grupo.capacity,
+    funcion: grupo.function,
+    desde: grupo.from,
+    hasta: grupo.to,
   };
 }
 
 /**
- * El grupo estable gana sobre la recepción cuando alguien atiende las dos cosas: "Mi grupo"
- * es el grupo, y la recepción se muestra como una entrada aparte (plan.md §10). No es "el
- * primero de la lista": es una preferencia explícita.
+ * Los grupos en curso que acompaña, uno por grupo, con los estables primero: sin grupo elegido,
+ * "Mi grupo" abre el estable y la recepción queda como otra opción (plan.md §10). Desde D-141 un
+ * mentor puede tener varios; antes la app se quedaba con uno solo y los demás no se veían.
+ *
+ * El servidor ya filtra los vigentes (asignación abierta y periodo del grupo sin cerrar). Se
+ * deduplica por `groupId` por si una misma persona figurara con dos funciones en el mismo grupo.
  */
-function grupoQueAcompana(asignaciones: AsignacionMentorApi[]): AsignacionMentorApi | null {
-  return asignaciones.find(a => a.type === 'REGULAR') ?? asignaciones[0] ?? null;
+export function gruposQueAcompana(asignaciones: AsignacionMentorApi[]): AsignacionMentorApi[] {
+  const unicos = new Map<string, AsignacionMentorApi>();
+  for (const a of asignaciones) if (!unicos.has(a.groupId)) unicos.set(a.groupId, a);
+  const lista = [...unicos.values()];
+  return [...lista.filter(a => a.type === 'REGULAR'), ...lista.filter(a => a.type !== 'REGULAR')];
 }
 
 /**
