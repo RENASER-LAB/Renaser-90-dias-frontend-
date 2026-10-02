@@ -57,6 +57,28 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **Hace falta un APK nuevo**: el APK de producción no tiene estas pantallas (la app no se actualiza por aire).
     Una excepción puntual **no abre** los tabs: cualquier otro cambio sobre los cinco principales vuelve a necesitar
     autorización explícita.
+  * **Excepción autorizada por el dueño del producto — 2026-10-02 — tab `Comunidad`: el encabezado se esconde
+    al desplazar** (backend D-248). Pedido del dueño: el encabezado («COMUNIDAD», «TU TRIBU. TU SOPORTE. TU
+    LEGADO.» y la fila Muro / Eventos / Classroom / Tribu / Ranking) ocupaba ~25 % de la pantalla fijo arriba.
+    Lo que cambia y nada más:
+    * **Al bajar** se esconde entero, junto con la barra de pestañas (mismo estado compartido de D-246, misma
+      dirección y umbral); **al subir un poco** vuelve solo la fila de círculos; **cerca del tope** (24 px)
+      vuelve completo. Decisión pura en `navigation/barraAlDesplazar/logicaDelEncabezado.ts`, hook
+      `useEncabezadoAlDesplazar`. Al cambiar de sección o de pestaña, y al volver a la app, vuelve completo.
+    * **Cómo se mueve**: medido el encabezado, va ENCIMA de la lista (posición absoluta) y cada lista de
+      Comunidad suma su alto como relleno de arriba; se esconde solo con `transform` (Reanimated, 200 ms, hilo
+      de UI). Ninguna lista cambia de alto, así que el contenido no brinca ni se reabre el bucle de D-246. El
+      borde seguro de arriba lo pone una franja en el flujo que tapa lo que sube. El círculo de «actualizando»
+      de Tribu y Eventos baja lo que mide el encabezado (`progressViewOffset`).
+    * En todas las secciones (Muro, Eventos, Classroom —catálogo, curso y lección—, Tribu, Ranking). En la
+      lección no hay fila de círculos: al subir un poco no vuelve nada hasta llegar arriba. No en la
+      conversación abierta (ya es pantalla completa).
+    * **Fijo como antes** con «Reducir movimiento» o lector de pantalla (el encabezado vuelve al flujo).
+    * **Web**: `react-native-web` responde siempre que hay lector de pantalla, así que la barra de D-246 y este
+      encabezado quedaban fijos para todos en la web (E-499); ahí ya solo cuenta `prefers-reduced-motion`.
+    * **Hace falta un APK nuevo** (la app no se actualiza por aire).
+    Una excepción puntual **no abre** el tab: cualquier otro cambio sobre los cinco principales vuelve a
+    necesitar autorización explícita.
   * **Excepción autorizada por el dueño del producto — 2026-10-02 — los cinco tabs: la barra de pestañas se
     esconde al desplazar** (backend D-246). Pedido del dueño: «como en X o Facebook: al bajar se esconde la
     barra de abajo y al subir aparece, en toda la app». Lo que cambia y nada más:

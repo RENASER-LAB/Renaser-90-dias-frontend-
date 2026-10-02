@@ -136,6 +136,8 @@ import { ApiError, mensajeDeError } from '../services/http/apiClient';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
 import { SeccionEventos } from '../features/eventos/components/SeccionEventos';
 import { useOcultarBarraAlDesplazar } from '../navigation/barraAlDesplazar/BarraInferior';
+import { useEncabezadoAlDesplazar } from '../navigation/barraAlDesplazar/useEncabezadoAlDesplazar';
+import Reanimated from 'react-native-reanimated';
 
 // =========================================================================
 // TIPOS: RECURSOS EXCLUSIVOS & CURSOS
@@ -1094,9 +1096,21 @@ export default function ComunidadScreen() {
 
   /* Cada sección (y cada curso o lección de Classroom) es otra lista: al cambiar, la barra de
      pestañas vuelve a la vista (ver `navigation/barraAlDesplazar`). */
+  /* El encabezado (título, lema y fila de secciones) se esconde con la barra y vuelve con ella
+     (2026-10-02, ver `useEncabezadoAlDesplazar`): al bajar se va entero, al subir vuelve solo la
+     fila de círculos y arriba de todo vuelve completo. En la conversación abierta no hay encabezado
+     que esconder. */
+  const filaDeSeccionesALaVista = fullScreenLesson === null && activeChat === null && !groupInfoVisible;
+  const encabezado = useEncabezadoAlDesplazar({
+    disponible: !conversacionAPantallaCompleta({ enTribu, hayConversacionAbierta: activeChat !== null }),
+    conFila: filaDeSeccionesALaVista,
+  });
   const barraAlDesplazar = useOcultarBarraAlDesplazar({
     vista: `${seccionActiva}|${selectedCourseId ?? ''}|${fullScreenLesson?.id ?? ''}`,
+    onScroll: encabezado.alDesplazar,
   });
+  /* Relleno de arriba de cada lista: con el encabezado encima, el contenido empieza debajo de él. */
+  const rellenoDelEncabezado = { paddingTop: encabezado.relleno };
 
   /* Vuelve arriba al cambiar de lección. Depende del id y no del objeto: `leccionMostrada` se
      reconstruye en cada render al fusionar el detalle que llega por red, así que con el objeto como
@@ -2425,7 +2439,31 @@ export default function ComunidadScreen() {
       fondo del chat. Ahora el borde de abajo no se aplica acá: con la barra de pestañas visible lo
       pone ella, y en una conversación (sin barra) lo pinta el relleno del final con el color del chat.
     */
-    <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: c.bg }}>
+    <SafeAreaView
+      edges={encabezado.flotante ? ['left', 'right'] : ['top', 'left', 'right']}
+      style={{ flex: 1, backgroundColor: c.bg }}
+    >
+      {/*
+        ENCABEZADO QUE SE ESCONDE AL DESPLAZAR (2026-10-02, `useEncabezadoAlDesplazar`). Cuando
+        flota, va encima de la lista y se mueve con `transform`; el borde seguro de arriba lo pone
+        esta franja (en el flujo y por encima del encabezado), que tapa la parte que sube. Sin borde
+        de arriba en el `SafeAreaView`, `top` cuenta desde el mismo lugar en cualquier versión de
+        Yoga. Sin flotar (barra fija, conversación abierta, antes de medirse), todo como antes.
+      */}
+      {encabezado.flotante && (
+        <View style={{ height: insets.top, backgroundColor: c.bg, zIndex: 2 }} />
+      )}
+      <Reanimated.View
+        onLayout={encabezado.medir.encabezado}
+        style={
+          encabezado.flotante
+            ? [
+                { position: 'absolute', top: insets.top, left: 0, right: 0, zIndex: 1, backgroundColor: c.bg },
+                encabezado.estiloAnimado,
+              ]
+            : undefined
+        }
+      >
       {/* La ⓘ abre la info de tu grupo; sin grupo no se dibuja (E-409). */}
       {!pantallaCompleta && <ScreenHeader title="COMUNIDAD" {...botonDeInfo} />}
 
@@ -2453,8 +2491,11 @@ export default function ComunidadScreen() {
         para navegar —tocar otra sección haría abandonar lo que se está leyendo o escribiendo— y
         encima le come sesenta píxeles de alto a un reproductor de video o a un teclado abierto.
       */}
-      {fullScreenLesson === null && activeChat === null && !groupInfoVisible && (
-      <View style={[styles.seccionesBar, { borderBottomColor: c.divider }]}>
+      {filaDeSeccionesALaVista && (
+      <View
+        onLayout={encabezado.medir.bloqueDeSecciones}
+        style={[styles.seccionesBar, { borderBottomColor: c.divider }]}
+      >
         {/* El lema de la casa. Estaba en la portada que se retiró y se conserva acá, en un solo
             renglón: es la voz de la marca, no un adorno de esa pantalla en particular. */}
         <Text
@@ -2467,6 +2508,7 @@ export default function ComunidadScreen() {
         </Text>
 
         <ScrollView
+          onLayout={encabezado.medir.fila}
           keyboardShouldPersistTaps="handled"
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -2517,6 +2559,7 @@ export default function ComunidadScreen() {
         </ScrollView>
       </View>
       )}
+      </Reanimated.View>
 
       {/*
         MURO: una `FlatList` desde el 26/09/2026 (V-4). Antes compartía un `ScrollView` con
@@ -2610,6 +2653,7 @@ export default function ComunidadScreen() {
               alignSelf: isTablet ? 'center' : 'stretch',
               width: isTablet ? '100%' : undefined,
             },
+            rellenoDelEncabezado,
           ]}
           showsVerticalScrollIndicator={false}
           initialNumToRender={4}
@@ -2640,9 +2684,11 @@ export default function ComunidadScreen() {
               maxWidth: contentMaxWidth,
               alignSelf: isTablet ? 'center' : 'stretch',
               width: isTablet ? '100%' : undefined,
-              paddingTop: 14,
+              paddingTop: 14 + encabezado.relleno,
             },
           ]}
+          alDesplazar={encabezado.alDesplazar}
+          rellenoDelEncabezado={encabezado.relleno}
         />
       )}
 
@@ -2661,6 +2707,7 @@ export default function ComunidadScreen() {
               alignSelf: isTablet ? 'center' : 'stretch',
               width: isTablet ? '100%' : undefined,
             },
+            rellenoDelEncabezado,
           ]}
           showsVerticalScrollIndicator={false}
         >
@@ -2879,6 +2926,7 @@ export default function ComunidadScreen() {
               alignSelf: isTablet ? 'center' : 'stretch',
               width: isTablet ? '100%' : undefined,
             },
+            rellenoDelEncabezado,
           ]}
           showsVerticalScrollIndicator={false}
         >
@@ -2996,6 +3044,7 @@ export default function ComunidadScreen() {
               alignSelf: isTablet ? 'center' : 'stretch',
               width: isTablet ? '100%' : undefined,
             },
+            rellenoDelEncabezado,
           ]}
           showsVerticalScrollIndicator={false}
         >
@@ -3153,6 +3202,7 @@ export default function ComunidadScreen() {
               alignSelf: isTablet ? 'center' : 'stretch',
               width: isTablet ? '100%' : undefined,
             },
+            rellenoDelEncabezado,
           ]}
           showsVerticalScrollIndicator={false}
         >
@@ -3385,6 +3435,7 @@ export default function ComunidadScreen() {
               alignSelf: isTablet ? 'center' : 'stretch',
               width: isTablet ? '100%' : undefined,
             },
+            rellenoDelEncabezado,
           ]}
           showsVerticalScrollIndicator={false}
           /* Deslizar hacia abajo relee la lista de chats (2026-09-27): orden y no leídos al día. */
@@ -3392,6 +3443,8 @@ export default function ComunidadScreen() {
             <RefreshControl
               refreshing={conversacionesRefrescando}
               onRefresh={() => void recargarConversaciones({ deslizando: true })}
+              // Con el encabezado encima, el círculo de «actualizando» aparece debajo de él (Android).
+              progressViewOffset={encabezado.relleno}
               tintColor={c.goldInk}
               colors={[c.goldInk]}
             />

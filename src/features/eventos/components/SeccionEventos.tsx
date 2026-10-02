@@ -1,5 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import {
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { Alert } from '../../../components/Alerta';
@@ -81,6 +92,8 @@ export function SeccionEventos({
   onEventoPedidoAtendido,
   volverRef,
   estiloDelContenido,
+  alDesplazar,
+  rellenoDelEncabezado = 0,
 }: {
   userId: string | null;
   rol: string | null | undefined;
@@ -91,8 +104,12 @@ export function SeccionEventos({
   volverRef: MutableRefObject<(() => boolean) | null>;
   /** El `contentContainerStyle` que Comunidad usa en todas sus secciones. */
   estiloDelContenido?: StyleProp<ViewStyle>;
+  /** El encabezado de Comunidad, que se esconde al desplazar, sigue la `y` de esta lista (2026-10-02). */
+  alDesplazar?: (evento: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  /** Cuánto ocupa ese encabezado encima de la lista: ahí no se puede ver el círculo de «actualizando». */
+  rellenoDelEncabezado?: number;
 }) {
-  const barraAlDesplazar = useOcultarBarraAlDesplazar();
+  const barraAlDesplazar = useOcultarBarraAlDesplazar({ onScroll: alDesplazar });
   const { c } = useTheme();
   const gestiona = puedeGestionarEventos(rol);
   const { ocurrencias, cargando, refrescando, fallo, yaLeido, recargar, responder, quitarDeLaLista } = useEventos(
@@ -323,7 +340,13 @@ export function SeccionEventos({
       showsVerticalScrollIndicator={false}
       refreshControl={
         conRefresco ? (
-          <RefreshControl refreshing={refrescando} onRefresh={alDeslizar} tintColor={c.goldInk} colors={[c.goldInk]} />
+          <RefreshControl
+            refreshing={refrescando}
+            onRefresh={alDeslizar}
+            tintColor={c.goldInk}
+            colors={[c.goldInk]}
+            progressViewOffset={rellenoDelEncabezado}
+          />
         ) : undefined
       }
     >

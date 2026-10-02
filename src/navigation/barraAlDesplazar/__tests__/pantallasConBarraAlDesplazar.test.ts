@@ -65,6 +65,17 @@ describe('pantallas con «ocultar la barra al desplazar»', () => {
     expect(leer('src/screens/ComunidadScreen.tsx')).toMatch(/vista: `\$\{seccionActiva\}/);
   });
 
+  it('el encabezado de Comunidad se esconde con la barra en todas sus secciones (2026-10-02)', () => {
+    const comunidad = leer('src/screens/ComunidadScreen.tsx');
+    expect(comunidad).toMatch(/useOcultarBarraAlDesplazar\(\{\s*vista: [^\n]*\n\s*onScroll: encabezado\.alDesplazar,\s*\}\)/);
+    // Cada lista con la barra deja arriba el lugar del encabezado, que va encima de ella.
+    expect(comunidad.split('rellenoDelEncabezado,\n').length - 1).toBe(PANTALLAS['src/screens/ComunidadScreen.tsx']);
+    expect(comunidad).toMatch(/alDesplazar=\{encabezado\.alDesplazar\}/);
+    expect(leer('src/features/eventos/components/SeccionEventos.tsx')).toMatch(
+      /useOcultarBarraAlDesplazar\(\{ onScroll: alDesplazar \}\)/
+    );
+  });
+
   it('la conversación abierta del chat no la usa (va a pantalla completa, sin barra)', () => {
     const fuente = leer('src/screens/ComunidadScreen.tsx');
     const inicio = fuente.indexOf('onScroll={bajadaDelChat.alDesplazarse}');

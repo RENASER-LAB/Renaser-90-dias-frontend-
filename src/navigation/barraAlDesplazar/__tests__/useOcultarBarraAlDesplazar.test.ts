@@ -9,7 +9,7 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import React from 'react';
 import TestRenderer, { act, type ReactTestRenderer } from 'react-test-renderer';
-import { AccessibilityInfo, Keyboard } from 'react-native';
+import { AccessibilityInfo, Keyboard, Platform } from 'react-native';
 
 import { BarraInferiorProvider, useBarraInferior, useOcultarBarraAlDesplazar, type BarraInferior } from '../BarraInferior';
 
@@ -67,6 +67,15 @@ describe('useOcultarBarraAlDesplazar', () => {
     expect(barra!.fija).toBe(true);
     desplazar(0, 100, 200, 300);
     expect(barra!.escondida.value).toBe(0);
+  });
+
+  it('en la web no le cree a `isScreenReaderEnabled`, que ahí responde siempre que sí (E-499)', async () => {
+    jest.spyOn(AccessibilityInfo, 'isScreenReaderEnabled').mockResolvedValue(true);
+    jest.replaceProperty(Platform, 'OS', 'web');
+    await montar(React.createElement(Lista));
+    expect(barra!.fija).toBe(false);
+    desplazar(0, 100, 200, 300);
+    expect(barra!.escondida.value).toBe(1);
   });
 
   it('con «Reducir movimiento» queda fija a la vista', async () => {

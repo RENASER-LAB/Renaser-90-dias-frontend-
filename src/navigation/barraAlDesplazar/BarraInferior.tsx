@@ -3,6 +3,7 @@ import {
   AccessibilityInfo,
   AppState,
   Keyboard,
+  Platform,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
@@ -45,6 +46,10 @@ const Contexto = createContext<BarraInferior | null>(null);
 function useAjusteDeAccesibilidad(evento: 'reduceMotionChanged' | 'screenReaderChanged', leer: () => Promise<boolean>) {
   const [activo, setActivo] = useState(false);
   useEffect(() => {
+    // En la web no hay forma de saber si hay un lector de pantalla, y `react-native-web` responde
+    // SIEMPRE que sí: la barra (y el encabezado de Comunidad) quedaban fijos para todo el mundo en
+    // la web (E-499, 2026-10-02). Ahí se respeta solo «Reducir movimiento» (`prefers-reduced-motion`).
+    if (evento === 'screenReaderChanged' && Platform.OS === 'web') return;
     let vivo = true;
     leer()
       .then(v => vivo && setActivo(!!v))
@@ -93,7 +98,10 @@ export function BarraInferiorProvider({ children }: { children: React.ReactNode 
   const mostrar = useCallback(() => {
     reiniciosRef.current += 1;
     fijarVisible(true);
-  }, [fijarVisible]);
+    // Se avisa aunque la barra ya estuviera a la vista: el encabezado de Comunidad vuelve a estar
+    // completo en cada reinicio (cambio de pestaña o de sección), y eso no lo dice la visibilidad.
+    avisos.forEach(aviso => aviso());
+  }, [fijarVisible, avisos]);
 
   useEffect(() => {
     if (fija) mostrar();
