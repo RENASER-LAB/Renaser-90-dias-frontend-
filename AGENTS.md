@@ -57,6 +57,22 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **Hace falta un APK nuevo**: el APK de producción no tiene estas pantallas (la app no se actualiza por aire).
     Una excepción puntual **no abre** los tabs: cualquier otro cambio sobre los cinco principales vuelve a necesitar
     autorización explícita.
+  * **Excepción autorizada por el dueño del producto — 2026-10-02 — tab `Comunidad` → Tribu: los chats de soporte
+    de Admin y Alquimista en una sección plegable** (backend D-249). Pedido del dueño: con 300 aprendices, la fila
+    de soporte de cada uno («Nombre – Formación Renaser») volvía inmanejable la lista. Lo que cambia y nada más:
+    * **Solo ADMIN y ALCHEMIST** (`veLaSeccionDeSoportes`): sus soportes salen de «Formación Renaser» y van a una
+      sección **«Soporte · N»** al final de Tribu, después de Directos, **plegada al entrar**, con un contador dorado
+      de en cuántos hay mensajes sin leer. Al abrirla la lista sube hasta su buscador.
+    * Adentro: buscador por nombre o correo (en el servidor, sin tildes ni mayúsculas, espera de 300 ms, «Sin
+      resultados para «…».») y los chats de a 25 desde `GET /api/v1/chat/support-conversations`, pidiendo la
+      página siguiente al acercarse al final (mismo `onScroll` de la lista, encadenado al de la barra y el
+      encabezado). Las filas son `FilaDeConversacion` y abren el chat por el camino de siempre.
+    * El aprendiz, el mentor y el líder no ven ningún cambio: el aprendiz sigue con su único soporte en
+      «Formación Renaser». `GET /chat/conversations` no cambia.
+    * Todo vive en `src/features/chat/` (`useSoportesPaginados`, `SeccionDeSoportes`, `utils/seccionDeSoportes.ts`).
+    * **Hace falta un APK nuevo** (la app no se actualiza por aire).
+    Una excepción puntual **no abre** el tab: cualquier otro cambio sobre los cinco principales vuelve a necesitar
+    autorización explícita.
   * **Excepción autorizada por el dueño del producto — 2026-10-02 — tab `Comunidad`: el encabezado se esconde
     al desplazar** (backend D-248). Pedido del dueño: el encabezado («COMUNIDAD», «TU TRIBU. TU SOPORTE. TU
     LEGADO.» y la fila Muro / Eventos / Classroom / Tribu / Ranking) ocupaba ~25 % de la pantalla fijo arriba.

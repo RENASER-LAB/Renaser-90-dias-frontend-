@@ -131,6 +131,21 @@ export const wireConversacionResumenSchema = z
 
 export const wireConversacionesListSchema = z.array(wireConversacionResumenSchema);
 
+/**
+ * `GET /api/v1/chat/support-conversations` (D-249): una página de la sección «Soporte» de quien atiende.
+ * Cada fila es la misma de `GET /conversations`. `totalCount` y `unreadConversations` vienen solo en la
+ * primera página (`null` en las demás).
+ */
+export const wireSoportesPageSchema = z
+  .object({
+    conversations: z.array(wireConversacionResumenSchema),
+    nextCursor: z.string().nullable(),
+    hasMore: z.boolean(),
+    totalCount: z.number().nullish(),
+    unreadConversations: z.number().nullish(),
+  })
+  .passthrough();
+
 export const wireMensajesPageSchema = z
   .object({
     messages: z.array(wireMensajeSchema),

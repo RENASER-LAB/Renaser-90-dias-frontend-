@@ -14,7 +14,7 @@ import {
   FlatList,
   RefreshControl,
 } from 'react-native';
-import type { ListRenderItemInfo } from 'react-native';
+import type { ListRenderItemInfo, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import { Image as ImagenDelChat, type ImageSource } from 'expo-image';
 import { Alert } from '../components/Alerta';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -89,6 +89,15 @@ import type { EmergenciaParaSoporte } from '../features/emergencia/api/emergenci
 import { debeBuscarEmergenciaEnElChat, motivoDelAjuste } from '../features/emergencia/utils/pedidoDeEmergencia';
 import { coloresDelChat } from '../features/chat/components/coloresDelChat';
 import { FilaDeConversacion } from '../features/chat/components/FilaDeConversacion';
+import { SeccionDeSoportes } from '../features/chat/components/SeccionDeSoportes';
+import { useSoportesPaginados } from '../features/chat/hooks/useSoportesPaginados';
+import {
+  cercaDelFinal,
+  filaAlDia,
+  soportesConNoLeidos,
+  tiposDeFormacion,
+  veLaSeccionDeSoportes,
+} from '../features/chat/utils/seccionDeSoportes';
 import { SeparadorDeDia } from '../features/chat/components/SeparadorDeDia';
 import { BotonBajarAlFinal } from '../features/chat/components/BotonBajarAlFinal';
 import { InfoDelChat } from '../features/chat/components/InfoDelChat';
@@ -817,6 +826,23 @@ export default function ComunidadScreen() {
     enviarMensajeTexto: enviarMensajeChatRemoto,
     compartirPublicacionDelMuro: compartirPublicacionEnChat,
   } = useChatConversaciones(user?.id ?? null, recursosPedidos.conversaciones);
+  /* D-249: Admin y Alquimista ven sus chats de soporte (uno por aprendiz) en una sección plegable al
+     final de Tribu, de a una página y con buscador. Plegada al entrar: ver `SeccionDeSoportes`. */
+  const atiendeSoportes = veLaSeccionDeSoportes(user?.role);
+  const [soportesAbiertos, setSoportesAbiertos] = useState(false);
+  /* Al abrirla, la lista sube hasta la sección: el buscador queda arriba y el teclado no lo tapa (en
+     Android la ventana ya no se encoge con el teclado, ver la nota del chat abierto). */
+  const tribuScrollRef = useRef<ScrollView | null>(null);
+  const ySeccionDeSoportes = useRef(0);
+  const alternarSoportes = () => {
+    const abrir = !soportesAbiertos;
+    setSoportesAbiertos(abrir);
+    if (abrir) {
+      setTimeout(() => tribuScrollRef.current?.scrollTo({ y: Math.max(ySeccionDeSoportes.current - 8, 0), animated: true }), 50);
+    }
+  };
+  const soportes = useSoportesPaginados(enTribu && atiendeSoportes, user?.id);
+  const conversacionesPorId = useMemo(() => new Map(conversations.map(conv => [conv.id, conv])), [conversations]);
   const [selectedMemberProfile, setSelectedMemberProfile] = useState<GroupMember | null>(null);
   /* D-212: la foto propia de un grupo cambia sin que cambie la conversación. Al releer la lista llega otro
      `fotoPath` (otro `?v=`) y la conversación abierta —cabecera e info— lo toma; si no cambió, queda la
@@ -1111,6 +1137,14 @@ export default function ComunidadScreen() {
   });
   /* Relleno de arriba de cada lista: con el encabezado encima, el contenido empieza debajo de él. */
   const rellenoDelEncabezado = { paddingTop: encabezado.relleno };
+  /* D-249: en Tribu, además de la barra y el encabezado, acercarse al final con la sección de soportes
+     abierta pide la página siguiente (scroll infinito; `pedirMas` no repite un pedido en vuelo). */
+  const alDesplazarTribu = (evento: NativeSyntheticEvent<NativeScrollEvent>) => {
+    barraAlDesplazar.onScroll(evento);
+    if (atiendeSoportes && soportesAbiertos && cercaDelFinal(evento.nativeEvent)) {
+      void soportes.pedirMas();
+    }
+  };
 
   /* Vuelve arriba al cambiar de lección. Depende del id y no del objeto: `leccionMostrada` se
      reconstruye en cada render al fusionar el detalle que llega por red, así que con el objeto como
@@ -2271,7 +2305,8 @@ export default function ComunidadScreen() {
      grupos era FIJO (`ORDEN_GRUPOS = ['global', 'celula', 'soporte']`) y que los directos seguían
      el del servidor. Ahora las dos listas van por el último mensaje, lo más reciente arriba, como
      WhatsApp; las dos secciones siguen separadas (grupos y soporte arriba, 1 a 1 abajo). */
-  const TIPOS_DE_FORMACION: ChatConversation['type'][] = ['global', 'celula', 'soporte'];
+  /* D-249: para Admin y Alquimista los soportes salen de acá y van a su sección (`tiposDeFormacion`). */
+  const TIPOS_DE_FORMACION = tiposDeFormacion(user?.role);
   /* 2026-09-29, pedido del dueño: «Formación Renaser Global» va SIEMPRE primero y el resto de los
      grupos sigue por el último mensaje. Importa sobre todo al Admin y al Alquimista, que ven todos
      los grupos; para los demás roles no cambia nada visible más que fijar el general arriba. */
@@ -3425,7 +3460,9 @@ export default function ComunidadScreen() {
       */}
       {enTribu && activeChat === null && (
         <ScrollView
+          ref={tribuScrollRef}
           {...barraAlDesplazar}
+          onScroll={alDesplazarTribu}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.content,
@@ -3442,7 +3479,10 @@ export default function ComunidadScreen() {
           refreshControl={
             <RefreshControl
               refreshing={conversacionesRefrescando}
-              onRefresh={() => void recargarConversaciones({ deslizando: true })}
+              onRefresh={() => {
+                void recargarConversaciones({ deslizando: true });
+                if (atiendeSoportes) void soportes.recargar();
+              }}
               // Con el encabezado encima, el círculo de «actualizando» aparece debajo de él (Android).
               progressViewOffset={encabezado.relleno}
               tintColor={c.goldInk}
@@ -3762,6 +3802,32 @@ export default function ComunidadScreen() {
               />
             ))}
           </View>
+
+          {/* D-249: los chats de soporte de Admin y Alquimista, al final porque su lista no termina (se
+              carga de a 25 al bajar): arriba de los directos los dejaría inalcanzables. Plegada al
+              entrar; el contador dice en cuántos hay mensajes sin leer. Cada fila se pinta con su versión
+              de la lista completa si la tiene (`filaAlDia`), que se relee al volver de un chat. */}
+          {atiendeSoportes && (
+            <View style={{ paddingBottom: 28 }} onLayout={e => (ySeccionDeSoportes.current = e.nativeEvent.layout.y)}>
+              <SeccionDeSoportes
+                abierta={soportesAbiertos}
+                onAlternar={alternarSoportes}
+                total={soportes.totalSinBusqueda}
+                conNoLeidos={soportesConNoLeidos(conversations, soportes.conNoLeidos)}
+                texto={soportes.texto}
+                onCambiarTexto={soportes.setTexto}
+                buscando={soportes.buscando}
+                filas={soportes.filas.map(fila => filaAlDia(fila, conversacionesPorId))}
+                tituloDe={nombreVisibleDeConversacion}
+                ahora={ahoraDeLaLista}
+                onAbrir={fila => handleAbrirChat(filaAlDia(fila, conversacionesPorId))}
+                cargando={soportes.cargando}
+                cargandoMas={soportes.cargandoMas}
+                error={soportes.error}
+                onReintentar={() => void (soportes.filas.length > 0 ? soportes.pedirMas() : soportes.recargar())}
+              />
+            </View>
+          )}
         </ScrollView>
       )}
 

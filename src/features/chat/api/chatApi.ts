@@ -1,5 +1,5 @@
 import { apiFetch } from '../../../services/http/apiClient';
-import type { ChatUrlSubida, WireConversacion, WireConversacionResumen, WireMensaje, WireMensajesPage, WireMiembrosPage, WireParticipantesPage } from '../types/chat.types';
+import type { ChatUrlSubida, WireConversacion, WireConversacionResumen, WireMensaje, WireMensajesPage, WireMiembrosPage, WireParticipantesPage, WireSoportesPage } from '../types/chat.types';
 import {
   urlSubidaChatSchema,
   validarRespuesta,
@@ -9,6 +9,7 @@ import {
   wireMensajesPageSchema,
   wireMiembrosPageSchema,
   wireParticipantesPageSchema,
+  wireSoportesPageSchema,
   presenciaSchema,
 } from './chatSchemas';
 
@@ -30,6 +31,20 @@ export async function obtenerConversaciones(): Promise<WireConversacionResumen[]
   const r = await apiFetch<unknown>('/api/v1/chat/conversations');
   return validarRespuesta<WireConversacionResumen[]>(wireConversacionesListSchema, r,
     'GET /api/v1/chat/conversations');
+}
+
+/**
+ * Una página de los chats de soporte de quien atiende (D-249, solo ADMIN y ALCHEMIST): del más reciente al
+ * más viejo, `texto` busca por nombre o correo del aprendiz en el servidor. Un endpoint aparte para no
+ * tocar `GET /conversations`, que la app instalada usa tal cual.
+ */
+export async function obtenerSoportes(pedido: { texto?: string; cursor?: string | null; tamano?: number } = {}): Promise<WireSoportesPage> {
+  const params = new URLSearchParams();
+  if (pedido.texto?.trim()) params.set('q', pedido.texto.trim());
+  if (pedido.cursor) params.set('cursor', pedido.cursor);
+  params.set('size', String(pedido.tamano ?? 25));
+  const r = await apiFetch<unknown>(`/api/v1/chat/support-conversations?${params.toString()}`);
+  return validarRespuesta<WireSoportesPage>(wireSoportesPageSchema, r, 'GET /api/v1/chat/support-conversations');
 }
 
 /** `POST /conversations/direct` — abre (o recupera) el 1 a 1 con `otherUserId`. */

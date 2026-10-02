@@ -149,6 +149,16 @@ export interface WireConversacionResumen {
   otherParticipantAvatarUrl?: string | null;
 }
 
+/** `SoportesPageResponse` — `GET /api/v1/chat/support-conversations` (D-249). */
+export interface WireSoportesPage {
+  conversations: WireConversacionResumen[];
+  nextCursor: string | null;
+  hasMore: boolean;
+  /** Solo en la primera página. */
+  totalCount?: number | null;
+  unreadConversations?: number | null;
+}
+
 /** `MensajesPageResponse` — `GET /conversations/{id}/messages`. Paginación keyset por
  * `createdAt`, orden DESCENDENTE (más reciente primero) — ver `SpringDataMensajeRepository`. */
 export interface WireMensajesPage {
