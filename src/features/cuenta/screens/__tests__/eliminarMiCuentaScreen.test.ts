@@ -105,7 +105,7 @@ describe('Eliminar mi cuenta', () => {
     expect(mockEliminar).toHaveBeenCalledWith({ contrasena: 'secreta' });
     expect(mockAlerta).toHaveBeenCalledWith(
       'Tu cuenta quedó cerrada',
-      'Se borrará el 1 de noviembre de 2026. Si cambias de opinión, escríbele a soporte antes de esa fecha.',
+      'Se borrará el 1 de noviembre de 2026. Si cambias de opinión, escríbenos a renaserlab@gmail.com antes de esa fecha.',
     );
     expect(onCerrada).toHaveBeenCalledTimes(1);
   });

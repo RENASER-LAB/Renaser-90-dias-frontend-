@@ -1,3 +1,4 @@
+import { CORREO_DE_CONTACTO } from '../../legal/enlacesLegales';
 import { ApiError, mensajeDeError } from '../../../services/http/apiClient';
 import type { CuentaCerrada } from '../api/cuentaSchemas';
 
@@ -44,7 +45,8 @@ export function fechaLegible(iso: string | null | undefined, opciones: { conAnio
 export function textoDeCuentaCerrada(cerrada: CuentaCerrada): string {
   const fecha = fechaLegible(cerrada.seBorraEl);
   const cuando = fecha ? `Se borrará el ${fecha}.` : `Se borrará en ${cerrada.diasDeGracia} días.`;
-  return `${cuando} Si cambias de opinión, escríbele a soporte antes de esa fecha.`;
+  /* Con la cuenta cerrada ya no se puede entrar al soporte de la app: el aviso da el correo. */
+  return `${cuando} Si cambias de opinión, escríbenos a ${CORREO_DE_CONTACTO} antes de esa fecha.`;
 }
 
 // ── Campos ────────────────────────────────────────────────────────────────

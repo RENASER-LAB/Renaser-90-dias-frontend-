@@ -69,6 +69,8 @@ jest.mock('../../features/auth/hooks/useRecuperacionContrasena', () => ({
     reiniciar: () => undefined,
   }),
 }));
+const mockAbrirPolitica = jest.fn();
+jest.mock('../../features/legal/enlacesLegales', () => ({ abrirPoliticaDePrivacidad: () => mockAbrirPolitica() }));
 jest.mock('../../features/auth/hooks/useDisponibilidadCorreo', () => ({ useDisponibilidadCorreo: () => 'idle' }));
 
 import { ApiError } from '../../services/http/apiClient';
@@ -109,6 +111,7 @@ beforeEach(() => {
   mockEnviarCodigo.mockReset();
   mockError.mockReset();
   mockSeleccion.mockReset();
+  mockAbrirPolitica.mockReset();
   mockAtras = null;
 });
 
@@ -236,5 +239,20 @@ describe('la cabecera', () => {
     act(() => imagen.props.onError());
     expect(r.root.findAll(n => (n.type as unknown) === 'ExpoImage')).toHaveLength(0);
     expect(textos(r)).toContain('RENASER');
+  });
+});
+
+describe('la Política de privacidad (D-245)', () => {
+  it('está al pie del ingreso y de «Solicitar acceso», como enlace discreto que abre la página', () => {
+    const r = montar();
+    const enlace = tocable(r, 'Política de privacidad');
+    expect(enlace).toBeDefined();
+    expect(enlace.props.accessibilityRole).toBe('link');
+    act(() => enlace.props.onPress());
+    expect(mockAbrirPolitica).toHaveBeenCalledTimes(1);
+
+    act(() => tocable(r, '¿No tienes cuenta? Solicitar acceso').props.onPress());
+    expect(titulo(r)).toBe('Solicitar acceso');
+    expect(tocable(r, 'Política de privacidad')).toBeDefined();
   });
 });

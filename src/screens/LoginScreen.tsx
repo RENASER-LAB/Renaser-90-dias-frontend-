@@ -41,6 +41,7 @@ import { CampoDelIngreso, MensajeBajoElCampo } from '../features/auth/components
 import { BotonDelIngreso } from '../features/auth/components/BotonDelIngreso';
 import { EntradaEscalonada } from '../features/auth/components/EntradaEscalonada';
 import { useSacudida } from '../features/auth/hooks/useSacudida';
+import { abrirPoliticaDePrivacidad } from '../features/legal/enlacesLegales';
 
 /**
  * `forgot` → `forgot_otp` → `forgot_new_password` es la recuperación de contraseña dentro de la
@@ -1639,6 +1640,21 @@ export default function LoginScreen() {
                   </Text>
                 </Presionable>
               )}
+              {/* D-245: la Política de Privacidad a mano antes de entrar o pedir acceso (Google
+                  Play). Una línea chica en tipo oración y en el gris del texto secundario, debajo
+                  del cambio de vista, para no competir con él ni con «Ingresar»; se esconde con el
+                  teclado igual que la línea de arriba. Abre la página estática `public/privacidad/`. */}
+              {tecladoAbierto ? null : (
+                <Presionable
+                  accessibilityRole="link"
+                  accessibilityLabel="Política de privacidad"
+                  onPress={() => void abrirPoliticaDePrivacidad()}
+                  hitSlop={6}
+                  style={styles.enlacePrivacidad}
+                >
+                  <Text style={[t.small, styles.textoPrivacidad, { color: c.textSoft }]}>Política de privacidad</Text>
+                </Presionable>
+              )}
             </EntradaEscalonada>
           </View>
         )}
@@ -1724,6 +1740,18 @@ const styles = StyleSheet.create({
   },
   textoCambioFuerte: {
     fontFamily: 'Jost_500Medium',
+  },
+  /* 32 de alto más el `hitSlop` de 6 arriba y abajo: 44 táctiles sin agrandar el pie. */
+  enlacePrivacidad: {
+    alignSelf: 'center',
+    minHeight: 32,
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  textoPrivacidad: {
+    fontSize: 13,
+    textAlign: 'center',
+    textDecorationLine: 'underline',
   },
   card: {
     /* Sin `borderWidth` a proposito (2026-09-14): el fondo y los campos ya dan toda la estructura

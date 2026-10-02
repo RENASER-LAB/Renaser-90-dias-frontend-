@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Política de Privacidad · Renaser</title>
+<meta name="description" content="Qué datos personales recoge la app Renaser 90 días, para qué los usa, con quién los comparte, cuánto tiempo los guarda y cómo ejercer tus derechos.">
+<meta name="robots" content="index, follow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Jost:wght@400;500;700&display=swap" rel="stylesheet">
+<!--
+  Página estática, SIN JavaScript, a propósito (D-245): Google Play lee esta URL como la Política
+  de Privacidad de la app y tiene que verse completa sin ejecutar nada. Expo copia `public/` a
+  `dist/` y Vercel la sirve antes del rewrite a `/index.html`.
+  Los colores y las tipografías son los de `src/theme/tokens.ts` (claro y oscuro).
+  Datos del responsable tomados de la ficha RUC de SUNAT que entregó el dueño (2026-10-06). No
+  se publica ningún número de documento personal (DNI) del representante legal.
+-->
+<style>
+  :root {
+    --bg: #FCFBF9; --card: #FDFCFA; --border: #E2DCD2; --divider: #EDE7DC;
+    --text: #1E1B18; --strong: #11100D; --soft: #4A453D; --gold: #B2924F; --gold-ink: #856C35;
+    --wash: rgba(178,146,79,0.10);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0C0B09; --card: #161513; --border: rgba(198,164,92,0.20); --divider: rgba(255,255,255,0.08);
+      --text: #F6F4EE; --strong: #FFFFFF; --soft: #C5BEB3; --gold: #C6A45C; --gold-ink: #C6A45C;
+      --wash: rgba(198,164,92,0.12);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: 'Jost', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-size: 16px; line-height: 1.6;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 18px 64px; }
+  header { border-bottom: 1px solid var(--divider); padding-bottom: 20px; margin-bottom: 8px; }
+  .marca { font-weight: 500; font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--gold-ink); margin: 0 0 10px; }
+  h1 { font-family: 'Fraunces', Georgia, serif; font-weight: 700; font-size: 34px; line-height: 1.15; letter-spacing: -0.8px; color: var(--strong); margin: 0 0 10px; }
+  h2 { font-family: 'Fraunces', Georgia, serif; font-weight: 600; font-size: 22px; line-height: 1.25; letter-spacing: -0.3px; color: var(--strong); margin: 36px 0 10px; }
+  h3 { font-size: 16px; font-weight: 700; color: var(--strong); margin: 20px 0 6px; }
+  p, li { color: var(--text); }
+  .suave { color: var(--soft); font-size: 14px; }
+  a { color: var(--gold-ink); text-underline-offset: 3px; }
+  ul { padding-left: 20px; margin: 8px 0; }
+  li { margin: 4px 0; }
+  .caja { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 16px 18px; margin: 16px 0; }
+  .resumen { background: var(--wash); border: 1px solid var(--border); border-radius: 20px; padding: 16px 18px; margin: 20px 0; }
+  .resumen p, .caja p { margin: 6px 0; }
+  .tabla { width: 100%; border-collapse: collapse; font-size: 15px; }
+  .tabla th, .tabla td { text-align: left; vertical-align: top; padding: 10px 8px; border-bottom: 1px solid var(--divider); }
+  .tabla th { font-weight: 500; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--gold-ink); }
+  .envoltura-tabla { overflow-x: auto; }
+  nav ol { padding-left: 20px; columns: 2; column-gap: 24px; font-size: 15px; }
+  @media (max-width: 560px) {
+    nav ol { columns: 1; }
+    h1 { font-size: 30px; }
+    .tabla thead { display: none; }
+    .tabla tr { display: block; border-bottom: 1px solid var(--divider); padding: 8px 0; }
+    .tabla td { display: block; border: 0; padding: 2px 0; }
+    .tabla td:first-child { font-weight: 700; color: var(--strong); }
+  }
+  footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--divider); }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <p class="marca">Renaser · 90 días</p>
+  <h1>Política de Privacidad</h1>
+  <p class="suave">Última actualización: 6 de octubre de 2026</p>
+</header>
+
+<div class="resumen">
+  <p><strong>En pocas palabras.</strong> Renaser es un programa de acompañamiento de 90 días. Para acompañarte te pedimos datos personales, algunos de ellos sensibles (como tu salud o tus emociones). Los usamos solo para el programa, no los vendemos ni los usamos para publicidad, y puedes pedir que se borren cuando quieras.</p>
+  <p>Esta política se aplica a la app Renaser (Android e iOS) y a su versión web. Es distinta de los Términos y Condiciones que aceptas al inscribirte.</p>
+</div>
+
+<nav aria-label="Contenido">
+  <ol>
+    <li><a href="#responsable">Quién es el responsable</a></li>
+    <li><a href="#datos">Qué datos recogemos</a></li>
+    <li><a href="#finalidades">Para qué los usamos</a></li>
+    <li><a href="#base">Por qué podemos usarlos</a></li>
+    <li><a href="#terceros">Con quién los compartimos</a></li>
+    <li><a href="#transferencias">Transferencias internacionales</a></li>
+    <li><a href="#permisos">Permisos del teléfono</a></li>
+    <li><a href="#conservacion">Cuánto tiempo los guardamos</a></li>
+    <li><a href="#derechos">Tus derechos y cómo eliminar tu cuenta</a></li>
+    <li><a href="#seguridad">Seguridad</a></li>
+    <li><a href="#menores">Menores de edad</a></li>
+    <li><a href="#cambios">Cambios a esta política</a></li>
+    <li><a href="#contacto">Contacto</a></li>
+  </ol>
+</nav>
+
+<h2 id="responsable">1. Quién es el responsable de tus datos</h2>
+<div class="caja">
+  <p><strong>Responsable (titular del banco de datos personales):</strong> RENASER CONSULTING S.A.C., con nombre comercial RENASER</p>
+  <p><strong>RUC:</strong> 20615428419</p>
+  <p><strong>Domicilio:</strong> Pj. Manuel Castillo N.º 205, Urb. Alto Selva Alegre (frente a la Clínica Oftalmo Salud), Alto Selva Alegre, Arequipa, Perú</p>
+  <p><strong>Representante legal:</strong> Kelin Jadik Merma Llave, Gerente General</p>
+  <p><strong>Correo para temas de privacidad y derechos ARCO:</strong> <a href="mailto:renaserlab@gmail.com">renaserlab@gmail.com</a></p>
+</div>
+<p>Tratamos tus datos conforme a la Ley N.º 29733, Ley de Protección de Datos Personales del Perú, y su reglamento.</p>
+
+<h2 id="datos">2. Qué datos recogemos</h2>
+<p>Solo recogemos lo que tú nos das al usar la app o lo que la app necesita para funcionar.</p>
+
+<h3>Tu cuenta</h3>
+<ul>
+  <li>Nombre, correo electrónico, teléfono (WhatsApp), país y ciudad.</li>
+  <li>Tu contraseña, que guardamos cifrada (nunca en texto legible).</li>
+  <li>Tu foto de perfil, si decides subir una.</li>
+  <li>La dirección IP desde la que pides tu cuenta y desde la que inicias sesión, para frenar abusos (intentos repetidos).</li>
+</ul>
+
+<h3>Tu ficha inicial (al inscribirte)</h3>
+<ul>
+  <li><strong>Identidad:</strong> fecha de nacimiento, sexo, estado civil, número de hijos, ocupación, tipo y número de documento de identidad, país, departamento, ciudad, distrito y dirección.</li>
+  <li><strong>Salud y cuerpo</strong> (dato sensible): peso, estatura, horas y calidad de sueño, condiciones de salud que nos cuentes, si tomas medicación, cuál y por qué, y tu objetivo de salud.</li>
+  <li><strong>Mente y emociones</strong> (dato sensible): pensamientos que te boicotean, creencias, miedos, culpas, duelos, cómo es tu vínculo con tu padre y tu madre, y lo que te marcó sobre el dinero.</li>
+  <li><strong>Negocio:</strong> tu actividad, producto, cliente ideal y meta de facturación, si nos los cuentas.</li>
+  <li><strong>Compromiso:</strong> por qué empiezas ahora, tu autorización para el uso de tus datos y tu compromiso con los 90 días.</li>
+</ul>
+
+<h3>Tu firma</h3>
+<ul>
+  <li>La imagen de la firma que dibujas con el dedo al aceptar los Términos y al firmar tu Pacto, y la fecha en que lo hiciste.</li>
+</ul>
+
+<h3>Mientras haces el programa</h3>
+<ul>
+  <li><strong>Mapa de Renacimiento:</strong> las acciones que te propones en salud, dinero y relaciones, y los patrones que quieres cambiar.</li>
+  <li><strong>Hábitos y evidencias:</strong> tus registros diarios y las fotos, videos o audios con los que muestras que cumpliste un hábito, con la fecha y hora en que se tomaron, y las mediciones que registres (por ejemplo, kilómetros recorridos).</li>
+  <li><strong>Diario, radar y objetivos:</strong> lo que escribes sobre cómo te sientes, qué piensas y qué evitas, tus objetivos y tus horarios ocupados.</li>
+  <li><strong>Comunidad:</strong> publicaciones, fotos, comentarios y reacciones en el Muro, y tus confirmaciones a eventos.</li>
+  <li><strong>Chat:</strong> los mensajes, fotos y notas de voz que intercambias con tu mentor, tu grupo o el equipo de soporte.</li>
+  <li><strong>Soporte:</strong> tus consultas, los archivos que adjuntes y datos técnicos de la app que nos ayudan a entender el problema.</li>
+  <li><strong>Caja Renaser:</strong> si te corresponde un envío físico, la dirección de entrega, quién la recibe y tu documento.</li>
+  <li><strong>Puntos y ranking:</strong> tu avance, tus puntos y tu posición dentro del programa.</li>
+</ul>
+
+<h3>Tus conversaciones con el acompañante de inteligencia artificial (SER)</h3>
+<ul>
+  <li>Los mensajes que le escribes o le dictas, y sus respuestas.</li>
+  <li><strong>Voz en vivo:</strong> si hablas con el acompañante por voz, tu voz se procesa en el momento para entenderte y responderte. <strong>El audio no se guarda</strong>; solo se guarda el texto de la conversación.</li>
+  <li><strong>Memoria del acompañante</strong> (si está activa): un resumen de contexto útil, como tus metas, sin tus datos de salud ni emocionales. Puedes verla y borrarla desde tu perfil, en «Lo que el acompañante recuerda de ti».</li>
+  <li>Si en tus mensajes aparecen expresiones de malestar que se repiten, el sistema puede avisar a una persona del equipo para que te acompañe.</li>
+</ul>
+
+<h3>Datos técnicos</h3>
+<ul>
+  <li>El identificador de notificaciones de tu dispositivo, para enviarte avisos, y tus preferencias de notificaciones y alarmas.</li>
+  <li>Tu zona horaria, para que tu día del programa empiece cuando empieza tu día.</li>
+  <li><strong>Ubicación:</strong> no rastreamos tu ubicación. Al llenar tu ficha, la app puede sugerir tu país y ciudad a partir de tu dirección IP; en la versión web, si tocas «usar mi ubicación», el navegador te pide permiso y la ubicación se usa una sola vez para completar tu ciudad. No guardamos coordenadas.</li>
+</ul>
+
+<h2 id="finalidades">3. Para qué los usamos</h2>
+<ul>
+  <li>Crear y proteger tu cuenta, y recuperarla si olvidas tu contraseña.</li>
+  <li>Personalizar y llevar adelante tu programa de 90 días: tus hábitos, tu día del programa, tu grupo y tu mentor.</li>
+  <li>Que tu mentor y el equipo te acompañen: ven tu avance y lo que compartes con ellos para poder ayudarte.</li>
+  <li>Que el acompañante de IA te responda con contexto (por ejemplo, conociendo tus hábitos de hoy o tu Mapa) y te trate correctamente.</li>
+  <li>Validar tus evidencias y calcular puntos y rankings.</li>
+  <li>Enviarte avisos: recordatorios de hábitos, eventos, mensajes del chat y códigos por correo.</li>
+  <li>Enviarte la Caja Renaser, si te corresponde.</li>
+  <li>Detectar y frenar abusos, y mantener el servicio funcionando.</li>
+</ul>
+<p><strong>No vendemos tus datos ni los usamos para publicidad.</strong></p>
+
+<h2 id="base">4. Por qué podemos usarlos</h2>
+<ul>
+  <li><strong>Tu consentimiento</strong>, que das al completar la ficha y autorizar el uso de tus datos. Para los datos sensibles (salud, emociones) el consentimiento es expreso, y puedes retirarlo en cualquier momento (eso puede impedir que sigas en el programa).</li>
+  <li><strong>La relación que tenemos contigo</strong> por el programa en el que te inscribiste.</li>
+  <li><strong>Nuestro interés legítimo</strong> en mantener el servicio seguro (por ejemplo, frenar intentos de acceso abusivos).</li>
+</ul>
+
+<h2 id="terceros">5. Con quién los compartimos</h2>
+<p>Dentro de Renaser, tus datos los ven solo las personas que los necesitan: tu mentor, quienes coordinan tu grupo y el equipo de administración. Tu grupo ve lo que publicas en el Muro y en el chat del grupo.</p>
+<p>Además usamos proveedores que procesan datos por cuenta nuestra, solo para prestar el servicio:</p>
+<div class="envoltura-tabla">
+<table class="tabla">
+  <thead><tr><th>Proveedor</th><th>Para qué</th><th>Qué datos</th></tr></thead>
+  <tbody>
+    <tr><td>Amazon Web Services (EE. UU.)</td><td>Servidores, base de datos y almacenamiento de archivos</td><td>Todos los datos de la app, incluidas fotos, videos, audios y firmas</td></tr>
+    <tr><td>Google (Gemini API)</td><td>El acompañante de IA: respuestas, voz en vivo, voz del acompañante y búsqueda en el material del programa</td><td>Tus mensajes al acompañante, tu voz durante la voz en vivo y el contexto del programa necesario para responderte (hábitos, Mapa, diario, objetivos). No le enviamos tus fotos ni tus evidencias</td></tr>
+    <tr><td>Google (Gmail)</td><td>Enviar correos</td><td>Tu correo y los códigos de verificación o recuperación</td></tr>
+    <tr><td>Expo, Google Firebase Cloud Messaging y Apple Push Notification service</td><td>Entregar notificaciones en tu teléfono</td><td>El identificador de notificaciones y el texto del aviso (en los avisos de chat, el nombre de quien escribe y el comienzo del mensaje)</td></tr>
+    <tr><td>Vercel</td><td>Publicar la versión web</td><td>Datos técnicos de la visita, como la IP</td></tr>
+    <tr><td>ipapi.co y, si está activo, Google Maps</td><td>Sugerir tu país y ciudad al llenar la ficha</td><td>Tu dirección IP o la ciudad que buscas</td></tr>
+    <tr><td>El reconocimiento de voz de tu teléfono (Google en Android, Apple en iOS)</td><td>Pasar a texto lo que le dictas al acompañante</td><td>Tu voz mientras dictas, según las reglas del fabricante de tu teléfono</td></tr>
+    <tr><td>Grafana Cloud</td><td>Medir que el servicio funcione bien</td><td>Solo métricas técnicas (tiempos de respuesta, errores); ningún dato personal</td></tr>
+  </tbody>
+</table>
+</div>
+<p>También podemos entregar datos si una autoridad competente lo exige conforme a la ley.</p>
+
+<h2 id="transferencias">6. Transferencias internacionales</h2>
+<p>Nuestros servidores y la mayoría de los proveedores de arriba están en los <strong>Estados Unidos</strong>. Al usar Renaser, tus datos se transfieren y se guardan allí. Elegimos proveedores con estándares reconocidos de seguridad y solo les permitimos usar tus datos para prestarnos el servicio.</p>
+
+<h2 id="permisos">7. Permisos del teléfono</h2>
+<p>La app pide cada permiso solo cuando lo necesita, y puedes negarlo o quitarlo desde los ajustes del teléfono:</p>
+<ul>
+  <li><strong>Cámara:</strong> para tomar la foto o el video de tus evidencias y de tu perfil.</li>
+  <li><strong>Fotos y videos:</strong> para elegir una imagen de tu galería para el Muro, el chat o tus evidencias.</li>
+  <li><strong>Micrófono:</strong> para grabar notas de voz y audios de evidencia, dictar mensajes y hablar con el acompañante.</li>
+  <li><strong>Notificaciones:</strong> para avisarte de tus hábitos, eventos y mensajes.</li>
+  <li><strong>Alarmas exactas:</strong> para que tus recordatorios y tu alarma de despertar suenen a la hora exacta.</li>
+  <li><strong>Reproducción en segundo plano:</strong> para que un audio (por ejemplo, una audioterapia) siga sonando con la pantalla apagada.</li>
+</ul>
+<p>La app no pide acceso a tus contactos ni a tu ubicación en segundo plano.</p>
+
+<h2 id="conservacion">8. Cuánto tiempo los guardamos</h2>
+<ul>
+  <li>Guardamos tus datos mientras tengas tu cuenta.</li>
+  <li><strong>Si eliminas tu cuenta</strong>, queda cerrada y en espera durante <strong>30 días</strong> por si cambias de opinión: en ese plazo puedes pedirnos que la recuperemos escribiendo a <a href="mailto:renaserlab@gmail.com">renaserlab@gmail.com</a>. Pasado ese plazo, borramos definitivamente tu cuenta, tu ficha, tus mensajes, tus conversaciones con el acompañante y tus archivos.</li>
+  <li>Si un administrador elimina tu cuenta a tu pedido, el borrado es inmediato.</li>
+  <li>Las notificaciones se borran solas a los 90 días (los avisos de chat, a los 7).</li>
+  <li>Algunas cosas pueden quedar después del borrado: un testimonio que hayas autorizado publicar, un archivo que otra persona también compartió y registros internos de cambios de permisos en los que ya no figura tu identidad.</li>
+</ul>
+
+<h2 id="derechos">9. Tus derechos y cómo eliminar tu cuenta</h2>
+<p>Puedes pedir en cualquier momento:</p>
+<ul>
+  <li><strong>Acceso:</strong> saber qué datos tuyos tenemos.</li>
+  <li><strong>Rectificación:</strong> corregir datos incorrectos (muchos los puedes cambiar tú desde la app).</li>
+  <li><strong>Cancelación o eliminación:</strong> que borremos tus datos.</li>
+  <li><strong>Oposición:</strong> que dejemos de usar tus datos para un fin concreto.</li>
+  <li>Retirar tu consentimiento.</li>
+</ul>
+<p><strong>Para eliminar tu cuenta</strong> entra a <a href="/eliminar-cuenta">la página de eliminación de cuenta</a>, o escríbenos a <a href="mailto:renaserlab@gmail.com">renaserlab@gmail.com</a>. Para los demás derechos (acceso, rectificación, cancelación y oposición, conocidos como derechos ARCO), escríbenos a ese mismo correo; respondemos dentro de los plazos que fija la ley.</p>
+<p>Si sientes que no atendimos bien tu pedido, puedes acudir a la Autoridad Nacional de Protección de Datos Personales del Perú.</p>
+
+<h2 id="seguridad">10. Seguridad</h2>
+<ul>
+  <li>La conexión entre tu dispositivo y nuestro servicio viaja cifrada (HTTPS).</li>
+  <li>Las contraseñas se guardan cifradas con un algoritmo de un solo sentido.</li>
+  <li>Tus archivos se guardan en almacenamiento privado y se muestran con enlaces temporales que vencen en minutos (salvo tu foto de perfil).</li>
+  <li>Cada persona del equipo ve solo lo que su función necesita.</li>
+</ul>
+<p>Ningún sistema es 100 % seguro. Si ocurriera un incidente que afecte tus datos, te avisaremos según lo que exija la ley.</p>
+
+<h2 id="menores">11. Menores de edad</h2>
+<p>El programa Renaser está dirigido a personas mayores de edad. Si eres madre, padre o tutor y crees que un menor nos dio sus datos, escríbenos y los borraremos.</p>
+
+<h2 id="cambios">12. Cambios a esta política</h2>
+<p>Si cambiamos esta política, actualizaremos la fecha de arriba y, si el cambio es importante, te avisaremos en la app.</p>
+
+<h2 id="contacto">13. Contacto</h2>
+<p>Para cualquier duda sobre tus datos o para ejercer tus derechos, escríbenos a <a href="mailto:renaserlab@gmail.com">renaserlab@gmail.com</a>.</p>
+<p>RENASER CONSULTING S.A.C. (RENASER) · RUC 20615428419 · Pj. Manuel Castillo N.º 205, Urb. Alto Selva Alegre (frente a la Clínica Oftalmo Salud), Alto Selva Alegre, Arequipa, Perú.</p>
+
+<footer>
+  <p class="suave">Renaser · 90 días para redefinir tu vida, energía y propósito.</p>
+</footer>
+</main>
+</body>
+</html>

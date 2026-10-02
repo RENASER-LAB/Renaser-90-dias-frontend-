@@ -40,9 +40,11 @@ describe('una sola de cada cosa (decisión 10)', () => {
 });
 
 describe('Ajustes estilo iOS', () => {
-  it('los grupos se llaman Perfil, Tu proceso, Herramientas y Preferencias (decisión 14)', () => {
+  /* > **Corregido 2026-10-06 (D-245).** Esperaba solo Perfil, Tu proceso, Herramientas y
+     > Preferencias. Se suma «Legal», con la Política de Privacidad, antes del grupo rojo. */
+  it('los grupos se llaman Perfil, Tu proceso, Herramientas, Preferencias y Legal (decisión 14, D-245)', () => {
     const titulos = [...yo.matchAll(/<GrupoDeAjustes titulo="([^"]+)">/g)].map(m => m[1]);
-    expect(titulos).toEqual(['Perfil', 'Tu proceso', 'Herramientas', 'Preferencias']);
+    expect(titulos).toEqual(['Perfil', 'Tu proceso', 'Herramientas', 'Preferencias', 'Legal']);
     expect(yo).not.toMatch(/FASE \d:/);
   });
 
@@ -70,6 +72,14 @@ describe('Ajustes estilo iOS', () => {
       expect(codigo).not.toMatch(/#332C20|thumbColor|trackColor/);
     }
     expect(yo).toMatch(/accesorio=\{<Interruptor valor=\{mode === 'dark'\} onCambiar=\{toggle\} etiqueta="Modo oscuro" \/>\}/);
+  });
+});
+
+describe('Política de privacidad (D-245)', () => {
+  it('es una fila de Ajustes en «Legal», con «›», que abre la página pública', () => {
+    const legal = yo.slice(yo.indexOf('<GrupoDeAjustes titulo="Legal">'), yo.lastIndexOf('<GrupoDeAjustes>'));
+    expect(legal).toMatch(/icono="lock"\s+titulo="Política de privacidad"\s+detalle="Qué datos guardamos y para qué"\s+onPress=\{\(\) => void abrirPoliticaDePrivacidad\(\)\}/);
+    expect(legal).not.toContain('sinChevron');
   });
 });
 

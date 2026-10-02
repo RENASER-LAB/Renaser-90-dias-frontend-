@@ -90,7 +90,7 @@
 
 <div class="resumen">
   <p><strong>Tu cuenta se cierra al instante:</strong> ya no puedes entrar y sales de tus grupos, del ranking y de la comunidad.</p>
-  <p><strong>Durante 30 días</strong> puedes pedir a soporte que la recupere.</p>
+  <p><strong>Durante 30 días</strong> puedes pedir a soporte que la recupere, escribiendo a <a href="mailto:renaserlab@gmail.com">renaserlab@gmail.com</a>.</p>
   <p><strong>Pasados los 30 días</strong>, tus datos se borran para siempre.</p>
 </div>
 
@@ -115,7 +115,7 @@
     <input id="codigo" name="codigo" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required>
     <button id="eliminar" class="peligro" type="submit" disabled>Eliminar mi cuenta</button>
     <div id="confirmacion" hidden>
-      <p><strong>¿Seguro?</strong> Tu cuenta se cierra ahora. Tienes 30 días para pedir a soporte que la recupere.</p>
+      <p><strong>¿Seguro?</strong> Tu cuenta se cierra ahora. Tienes 30 días para pedir a soporte que la recupere (renaserlab@gmail.com).</p>
       <div class="fila">
         <button id="cancelar" class="secundario" type="button">Cancelar</button>
         <button id="confirmar" class="peligro" type="button">Sí, eliminar mi cuenta</button>
@@ -144,11 +144,12 @@
 <h2 id="plazos">Plazos</h2>
 <ol>
   <li><strong>Al confirmar:</strong> la cuenta se cierra al instante.</li>
-  <li><strong>Los 30 días siguientes:</strong> puedes pedir a soporte que la recupere.</li>
+  <li><strong>Los 30 días siguientes:</strong> puedes pedir a soporte que la recupere, escribiendo a <a href="mailto:renaserlab@gmail.com">renaserlab@gmail.com</a>.</li>
   <li><strong>Al terminar los 30 días:</strong> tus datos se borran de forma definitiva.</li>
 </ol>
 
 <footer>
+  <p class="suave">¿Dudas? Escríbenos a <a href="mailto:renaserlab@gmail.com">renaserlab@gmail.com</a>.</p>
   <p class="suave">Más detalles en la <a href="/privacidad">Política de Privacidad</a>.</p>
   <p class="suave">Renaser · 90 días para redefinir tu vida, energía y propósito.</p>
 </footer>
@@ -267,7 +268,7 @@
               var dias = cerrada.diasDeGracia || 30;
               $('texto-final').textContent =
                 (fecha ? 'Se borrará el ' + fecha + '. ' : 'Se borrará en ' + dias + ' días. ') +
-                'Hasta entonces puedes pedir a soporte que la recupere. Después se borran para siempre tu perfil, ' +
+                'Hasta entonces puedes pedir a soporte que la recupere, escribiendo a renaserlab@gmail.com. Después se borran para siempre tu perfil, ' +
                 'tu progreso, tus hábitos, evidencias, fotos, audios, mensajes y publicaciones.';
               $('paso-correo').hidden = true;
               $('paso-codigo').hidden = true;

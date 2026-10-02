@@ -413,6 +413,31 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       por aire).
     Una excepción puntual **no abre** el tab: cualquier otro cambio sobre los cinco principales vuelve a necesitar
     autorización explícita.
+  * **Cambio por pedido del dueño — 2026-10-06 — tab `Yo` (Ajustes) y el ingreso: Política de Privacidad (backend
+    D-245).** Google Play exige una Política de Privacidad con URL pública. El dueño entregó los datos de la empresa
+    (ficha RUC de SUNAT) y dijo «procede». Lo que cambia y nada más:
+    * **Web pública** `/privacidad/`: HTML estático sin JavaScript en `public/privacidad/index.html`, servido por una
+      regla propia de `vercel.json` antes del rewrite general. URL para declarar en Play:
+      `https://renaser-90-dias-frontend-livid.vercel.app/privacidad/`. Responsable: RENASER CONSULTING S.A.C.
+      (nombre comercial RENASER), RUC 20615428419, domicilio fiscal en Pj. Manuel Castillo N.º 205, Urb. Alto Selva
+      Alegre, Arequipa; representante legal Kelin Jadik Merma Llave (Gerente General); contacto de privacidad y
+      derechos ARCO **renaserlab@gmail.com** (`CORREO_DE_CONTACTO` en `src/features/legal/enlacesLegales.ts`).
+      **Nunca se publica el DNI** del representante ni ningún documento personal (`paginaPoliticaDePrivacidad.test.ts`
+      lo verifica, junto con que no quede ningún marcador `[[…]]`).
+    * **Ajustes**: un grupo nuevo «Legal», entre «Preferencias» y el grupo rojo, con la fila «Política de
+      privacidad» (ícono `lock`, con «›»). En nativo abre la URL absoluta en el navegador; en web, `/privacidad/` en
+      otra pestaña. No es una sub-vista de la app.
+    * **Ingreso y «Solicitar acceso»**: una línea chica «Política de privacidad» en tipo oración, gris del texto
+      secundario y subrayada, debajo de «¿No tienes cuenta? Solicitar acceso» en el pie fijo; se esconde con el
+      teclado como la línea de arriba. No cambia nada más del login aprobado el 2026-10-05.
+    * **Contacto de soporte para una cuenta cerrada**: `/eliminar-cuenta` y el aviso «Tu cuenta quedó cerrada»
+      (`textoDeCuentaCerrada`) dan renaserlab@gmail.com, porque con la cuenta cerrada ya no se entra al soporte de
+      la app. La pantalla de la app antes de eliminar sigue diciendo «pedir a soporte» (todavía hay sesión).
+    * **Sin dato, no inventado**: número de inscripción del banco de datos ante la ANPD y plazos legales de
+      respuesta (la página dice «dentro de los plazos que fija la ley»). La edad dice «mayores de edad» (D-80), sin
+      número; ojo: el selector de fecha de la ficha todavía permite desde 14 años.
+    * **Hace falta un APK nuevo** para la fila y el enlace (la app no se actualiza por aire); la página web sale con
+      el deploy de Vercel.
   * **Excepción autorizada por el dueño del producto — 2026-10-02 — tabs `Yo` y `Comunidad` (chat de soporte): el
     botón de emergencia** (backend D-244). Pedido del dueño: «un botón de emergencia para pedir ayuda si tuvo un
     accidente y quiere volver a un día específico del programa; que llegue a su soporte». Lo que cambia y nada más:

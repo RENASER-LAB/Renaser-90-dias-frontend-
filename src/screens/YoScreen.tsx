@@ -64,6 +64,7 @@ import { entradaParaElLanzador } from '../features/renasia/components/lugarDelLa
 import { MemoriaDeRenasia } from '../features/renasia/components/MemoriaDeRenasia';
 import { useMemoriaDeRenasia } from '../features/renasia/hooks/useMemoriaDeRenasia';
 import { mostrarMemoria } from '../features/renasia/utils/memoria';
+import { abrirPoliticaDePrivacidad } from '../features/legal/enlacesLegales';
 import { NOMBRE_ACOMPANANTE } from '../features/renasia/data/agentes';
 import { useMisEvidencias } from '../features/evidence/hooks/useMisEvidencias';
 import { resumenDeEvidencias } from '../features/evidence/resumenDeEvidencias';
@@ -934,6 +935,18 @@ export default function YoScreen() {
                 titulo="Modo oscuro"
                 detalle="Descansa la vista de noche"
                 accesorio={<Interruptor valor={mode === 'dark'} onCambiar={toggle} etiqueta="Modo oscuro" />}
+              />
+            </GrupoDeAjustes>
+
+            {/* D-245: la Política de Privacidad pública (exigida por Google Play). Grupo propio
+                «Legal» y no dentro de Preferencias: no es algo que se configure. Abre la página
+                estática de la web en el navegador (otra pestaña en web); no es una sub-vista. */}
+            <GrupoDeAjustes titulo="Legal">
+              <FilaDeAjuste
+                icono="lock"
+                titulo="Política de privacidad"
+                detalle="Qué datos guardamos y para qué"
+                onPress={() => void abrirPoliticaDePrivacidad()}
               />
             </GrupoDeAjustes>
 

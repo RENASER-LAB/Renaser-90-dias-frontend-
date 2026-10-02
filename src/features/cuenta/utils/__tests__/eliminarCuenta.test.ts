@@ -34,10 +34,13 @@ describe('fechaLegible', () => {
 });
 
 describe('textoDeCuentaCerrada', () => {
-  it('dice cuándo se borra y que puede escribirle a soporte, sin inventar un contacto', () => {
+  /* > **Corregido 2026-10-06 (D-245).** Decía «escríbele a soporte», sin contacto, y exigía que no
+     > apareciera ningún «@» para no inventar uno. Con la cuenta cerrada ya no se entra al soporte de
+     > la app, así que el aviso da el correo que entregó el dueño: renaserlab@gmail.com. */
+  it('dice cuándo se borra y da el correo de contacto del dueño, sin teléfonos', () => {
     const texto = textoDeCuentaCerrada({ cerradaEn: '2026-10-02T15:00:00Z', seBorraEl: '2026-11-01T15:00:00Z', diasDeGracia: 30 });
-    expect(texto).toBe('Se borrará el 1 de noviembre de 2026. Si cambias de opinión, escríbele a soporte antes de esa fecha.');
-    expect(texto).not.toMatch(/@|\+\d/);
+    expect(texto).toBe('Se borrará el 1 de noviembre de 2026. Si cambias de opinión, escríbenos a renaserlab@gmail.com antes de esa fecha.');
+    expect(texto).not.toMatch(/\+\d/);
   });
 });
 

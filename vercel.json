@@ -3,6 +3,7 @@
   "outputDirectory": "dist",
   "rewrites": [
     { "source": "/eliminar-cuenta", "destination": "/eliminar-cuenta/index.html" },
+    { "source": "/privacidad", "destination": "/privacidad/index.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
