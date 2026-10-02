@@ -29,6 +29,7 @@ import {
   textoDelEnvio,
   textoDelEnvioSalido,
 } from '../utils/estadosDeCaja';
+import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
 /**
  * Yo → «Tu Caja Renaser» (spec §7): los cinco pasos, «Ya la recibí» cuando está en camino, «¿Te la
@@ -40,6 +41,7 @@ import {
  * caja que salió. Nunca el comprobante, el costo ni la nota del Admin: el servidor no los manda.
  */
 export function MiCajaScreen({ caja, onVolver, onCambio }: { caja: MiCaja; onVolver: () => void; onCambio: () => Promise<void> }) {
+  const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
   const [cambiandoDestino, setCambiandoDestino] = useState(false);
@@ -83,6 +85,7 @@ export function MiCajaScreen({ caja, onVolver, onCambio }: { caja: MiCaja; onVol
         onVolver={cambiandoDestino ? () => setCambiandoDestino(false) : onVolver}
       />
       <ScrollView
+        {...barraAlDesplazar}
         style={{ flex: 1 }}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{

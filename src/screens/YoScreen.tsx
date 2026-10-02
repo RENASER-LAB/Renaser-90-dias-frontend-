@@ -71,6 +71,7 @@ import { useRenombreLocal } from '../features/habits/hooks/useRenombreDeHabito';
 import { tituloVisible } from '../features/habits/utils/renombreDeHabito';
 import type { HabitoParaFoto } from '../features/habits/utils/habitosParaFotoDeHoy';
 import { medicionPedidaDe } from '../features/habits/utils/registroConFoto';
+import { useOcultarBarraAlDesplazar } from '../navigation/barraAlDesplazar/BarraInferior';
 
 // =========================================================================
 // DATOS ESTÁTICOS
@@ -285,6 +286,8 @@ export default function YoScreen() {
   const [activeView, setActiveView] = useState<
     'main' | 'hub' | 'editar_perfil' | 'info_perfil' | 'evidencias' | 'onboarding' | 'pacto' | 'mapa_renacimiento' | 'metodo' | 'notificaciones' | 'alarmas' | 'memoria_renasia'
   >('main');
+  /* Al cambiar de sub-vista la barra de pestañas vuelve a la vista (ver `navigation/barraAlDesplazar`). */
+  const barraAlDesplazar = useOcultarBarraAlDesplazar({ vista: activeView });
   /* D-167: se pide al entrar a Ajustes (donde está la fila) y no al abrir la pestaña Yo. */
   const memoriaRenasia = useMemoriaDeRenasia(activeView === 'hub' || activeView === 'memoria_renasia');
   /* Segunda puerta a Administracion, ademas de la de Hoy. Dos entradas y ningun sexto tab: el
@@ -524,6 +527,7 @@ export default function YoScreen() {
       {/* ========================================================================= */}
       {activeView === 'main' && (
         <ScrollView
+          {...barraAlDesplazar}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.content,
@@ -797,6 +801,7 @@ export default function YoScreen() {
       {/* ========================================================================= */}
       {activeView === 'hub' && (
         <ScrollView
+          {...barraAlDesplazar}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.content,
@@ -1082,6 +1087,7 @@ export default function YoScreen() {
       {/* ========================================================================= */}
       {activeView === 'memoria_renasia' && (
         <ScrollView
+          {...barraAlDesplazar}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.content,
@@ -1126,6 +1132,7 @@ export default function YoScreen() {
       {/* ========================================================================= */}
       {activeView === 'onboarding' && (
         <ScrollView
+          {...barraAlDesplazar}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.content,
@@ -1280,6 +1287,7 @@ export default function YoScreen() {
       {/* ========================================================================= */}
       {activeView === 'pacto' && (
         <ScrollView
+          {...barraAlDesplazar}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.content,
@@ -1407,6 +1415,7 @@ export default function YoScreen() {
       {/* ========================================================================= */}
       {activeView === 'evidencias' && (
         <ScrollView
+          {...barraAlDesplazar}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.content,
@@ -1540,6 +1549,7 @@ export default function YoScreen() {
       {/* ========================================================================= */}
       {activeView === 'editar_perfil' && (
         <ScrollView
+          {...barraAlDesplazar}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.content,
@@ -1663,6 +1673,7 @@ export default function YoScreen() {
       {/* ========================================================================= */}
       {activeView === 'info_perfil' && (
         <ScrollView
+          {...barraAlDesplazar}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.content,
@@ -1741,6 +1752,7 @@ export default function YoScreen() {
       {/* ========================================================================= */}
       {activeView === 'metodo' && (
         <ScrollView
+          {...barraAlDesplazar}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.content,
@@ -1895,6 +1907,7 @@ export default function YoScreen() {
       {/* ========================================================================= */}
       {activeView === 'notificaciones' && (
         <ScrollView
+          {...barraAlDesplazar}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.content,
@@ -1930,6 +1943,7 @@ export default function YoScreen() {
       {/* ========================================================================= */}
       {activeView === 'alarmas' && (
         <ScrollView
+          {...barraAlDesplazar}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.content,

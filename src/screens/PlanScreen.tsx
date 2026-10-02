@@ -66,6 +66,7 @@ import {
   semanaDe,
 } from '../features/objetivos/utils/periodoDelPrograma';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
+import { useOcultarBarraAlDesplazar } from '../navigation/barraAlDesplazar/BarraInferior';
 
 // =========================================================================
 // TIPOS: PLAN, HÁBITOS 7 DÍAS Y OBJETIVOS EN 3 NIVELES
@@ -360,6 +361,8 @@ export default function PlanScreen() {
   // ESTADOS DE NAVEGACIÓN
   // =========================================================================
   const [activeSubView, setActiveSubView] = useState<'main' | 'habitos' | 'objetivos'>('main');
+  /* Al cambiar de sub-vista la barra de pestañas vuelve a la vista (ver `navigation/barraAlDesplazar`). */
+  const barraAlDesplazar = useOcultarBarraAlDesplazar({ vista: activeSubView });
 
   // Estados de Hábitos
   // D-98: arranca en el primer día planificable, que es MAÑANA (hoy está bloqueado). Quien abre
@@ -990,6 +993,7 @@ export default function PlanScreen() {
       {/* ========================================================================= */}
       {activeSubView === 'main' && (
         <ScrollView
+          {...barraAlDesplazar}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.content,
@@ -1228,6 +1232,7 @@ export default function PlanScreen() {
       {/* ========================================================================= */}
       {activeSubView === 'habitos' && (
         <ScrollView
+          {...barraAlDesplazar}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.content,
@@ -1675,6 +1680,7 @@ export default function PlanScreen() {
       {/* ========================================================================= */}
       {activeSubView === 'objetivos' && (
         <ScrollView
+          {...barraAlDesplazar}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.content,

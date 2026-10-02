@@ -10,6 +10,7 @@ import { ResumenDeGrupos } from '../../semaforo/components/ResumenDeGrupos';
 import { useResumenPorGrupos, type InicioSemanal } from '../../semaforo/hooks/useLecturaPorSemana';
 import type { GrupoDelResumen } from '../../semaforo/types/semaforo.types';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
+import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
 /**
  * El semáforo en Administración: el resumen por grupos (`GET /api/v1/semaforo/groups`, contrato
@@ -26,6 +27,7 @@ export function SemaforoAdminScreen({
   /** Con la semana que se estaba mirando, para que la tabla del grupo abra en la misma. */
   onAbrirGrupo: (grupo: GrupoDelResumen, inicio: InicioSemanal) => void;
 }) {
+  const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
   const lectura = useResumenPorGrupos(true);
@@ -39,6 +41,7 @@ export function SemaforoAdminScreen({
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
       <CabeceraAdmin titulo="Semáforo" subtitulo="Cuánto cumplió cada grupo" onVolver={onVolver} />
       <ScrollView
+        {...barraAlDesplazar}
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{

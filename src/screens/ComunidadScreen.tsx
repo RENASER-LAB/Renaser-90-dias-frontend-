@@ -135,6 +135,7 @@ import {
 import { ApiError, mensajeDeError } from '../services/http/apiClient';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
 import { SeccionEventos } from '../features/eventos/components/SeccionEventos';
+import { useOcultarBarraAlDesplazar } from '../navigation/barraAlDesplazar/BarraInferior';
 
 // =========================================================================
 // TIPOS: RECURSOS EXCLUSIVOS & CURSOS
@@ -1090,6 +1091,12 @@ export default function ComunidadScreen() {
   const leccionMostrada: LessonResource | null = fullScreenLesson
     ? { ...fullScreenLesson, ...detalleLeccionPorId[fullScreenLesson.id] }
     : null;
+
+  /* Cada sección (y cada curso o lección de Classroom) es otra lista: al cambiar, la barra de
+     pestañas vuelve a la vista (ver `navigation/barraAlDesplazar`). */
+  const barraAlDesplazar = useOcultarBarraAlDesplazar({
+    vista: `${seccionActiva}|${selectedCourseId ?? ''}|${fullScreenLesson?.id ?? ''}`,
+  });
 
   /* Vuelve arriba al cambiar de lección. Depende del id y no del objeto: `leccionMostrada` se
      reconstruye en cada render al fusionar el detalle que llega por red, así que con el objeto como
@@ -2521,6 +2528,7 @@ export default function ComunidadScreen() {
       */}
       {seccionActiva === 'muro' && (
         <FlatList
+          {...barraAlDesplazar}
           ref={muroListaRef}
           data={posts}
           keyExtractor={post => post.id}
@@ -2643,6 +2651,7 @@ export default function ComunidadScreen() {
       {/* ========================================================================= */}
       {(seccionActiva === 'testimonios' || seccionActiva === 'ranking') && (
         <ScrollView
+          {...barraAlDesplazar}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.content,
@@ -2860,6 +2869,7 @@ export default function ComunidadScreen() {
       {/* ========================================================================= */}
       {inExclusiveResources && selectedCourse === null && fullScreenLesson === null && (
         <ScrollView
+          {...barraAlDesplazar}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.content,
@@ -2976,6 +2986,7 @@ export default function ComunidadScreen() {
       {/* ========================================================================= */}
       {inExclusiveResources && selectedCourse !== null && fullScreenLesson === null && (
         <ScrollView
+          {...barraAlDesplazar}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.content,
@@ -3131,6 +3142,7 @@ export default function ComunidadScreen() {
       {/* ========================================================================= */}
       {inExclusiveResources && leccionMostrada !== null && (
         <ScrollView
+          {...barraAlDesplazar}
           keyboardShouldPersistTaps="handled"
           ref={leccionScrollRef}
           contentContainerStyle={[
@@ -3363,6 +3375,7 @@ export default function ComunidadScreen() {
       */}
       {enTribu && activeChat === null && (
         <ScrollView
+          {...barraAlDesplazar}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[
             styles.content,

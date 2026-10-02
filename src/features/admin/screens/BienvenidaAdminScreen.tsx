@@ -18,6 +18,7 @@ import {
   acotarNombreDeEjemplo,
 } from '../utils/bienvenida';
 import { entornoDeLaPlataforma } from '../utils/tarjetaDeMuestra';
+import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
 /**
  * La bienvenida de quien entra al programa, editable por Administración y Alquimista (pedido del
@@ -31,6 +32,7 @@ import { entornoDeLaPlataforma } from '../utils/tarjetaDeMuestra';
  * 403 del servidor se dice con palabras, sin pantalla rota.
  */
 export function BienvenidaAdminScreen({ onVolver }: { onVolver: () => void }) {
+  const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
   const { bienvenida, cargando, fallo, recargar, actualizar } = useBienvenidaAdmin();
@@ -49,6 +51,7 @@ export function BienvenidaAdminScreen({ onVolver }: { onVolver: () => void }) {
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
       <CabeceraAdmin titulo="Bienvenida" subtitulo="La tarjeta y los mensajes de quien entra" onVolver={onVolver} />
       <ScrollView
+        {...barraAlDesplazar}
         style={{ flex: 1 }}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{

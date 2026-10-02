@@ -8,6 +8,7 @@ import { Fraunces_600SemiBold, Fraunces_700Bold } from '@expo-google-fonts/fraun
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import { AuthProvider } from './src/context/AuthContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
+import { BarraInferiorProvider } from './src/navigation/barraAlDesplazar/BarraInferior';
 import { navegacionRef } from './src/navigation/navegacionRef';
 import { RenasiaLauncher } from './src/features/renasia/components/RenasiaLauncher';
 import { SparkieOverlay } from './src/features/sparkie/components/SparkieOverlay';
@@ -30,6 +31,9 @@ function Shell() {
     /* La `ref` la usa el arranque guiado para llevar al Muro desde fuera del arbol de navegacion
        (ver `navigation/navegacionRef.ts`). No cambia nada del comportamiento del contenedor. */
     <NavigationContainer ref={navegacionRef} theme={navTheme}>
+      {/* «Ocultar la barra al desplazar» (2026-10-02): la barra de pestañas y el botón del
+          acompañante leen de acá si la barra está escondida. Ver `navigation/barraAlDesplazar`. */}
+      <BarraInferiorProvider>
       <StatusBar style={mode === 'light' ? 'dark' : 'light'} />
       <RootNavigator />
       {/* RENASIA vive por encima del navegador para poder abrirse desde cualquier tab sin tocar
@@ -62,6 +66,7 @@ function Shell() {
       {/* Dibuja los Alert en el build web, donde el Alert de react-native-web es un metodo vacio
           que nunca ejecuta los onPress de sus botones (E-144). En movil no pinta nada. */}
       <AnfitrionAlerta />
+      </BarraInferiorProvider>
     </NavigationContainer>
   );
 }

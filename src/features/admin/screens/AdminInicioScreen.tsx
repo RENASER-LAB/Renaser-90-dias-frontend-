@@ -16,6 +16,7 @@ import { useAQuienAtiendoHoy } from '../hooks/useAQuienAtiendoHoy';
 import { etiquetaDeLaFilaDeAtencion } from '../utils/etiquetaDeAtencion';
 import type { PersonaDeFicha, SeccionAdmin } from '../types/admin.types';
 import { usePendientesAdmin } from '../hooks/usePendientesAdmin';
+import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
 /**
  * La raíz de Administración: a quién atender, qué hay pendiente y por dónde se entra.
@@ -45,6 +46,7 @@ export function AdminInicioScreen({
   onAbrir: (seccion: SeccionAdmin) => void;
   onAbrirFicha: (persona: PersonaDeFicha) => void;
 }) {
+  const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
   const pendientes = usePendientesAdmin();
@@ -101,6 +103,7 @@ export function AdminInicioScreen({
         accion={{ etiqueta: 'Mi programa', onPress: onSalir }}
       />
       <ScrollView
+        {...barraAlDesplazar}
         style={{ flex: 1 }}
         contentContainerStyle={{
           flexGrow: 1,

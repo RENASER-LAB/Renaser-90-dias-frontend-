@@ -11,6 +11,7 @@ import { useTheme } from '../../../theme/ThemeContext';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
 import { avisar } from '../utils/dialogo';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
+import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
 /**
  * Lo institucional que se usa de vez en cuando.
@@ -32,6 +33,7 @@ export function MasOpcionesScreen({
   onAbrirGuias: () => void;
   onAbrirBienvenida: () => void;
 }) {
+  const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
 
@@ -106,6 +108,7 @@ export function MasOpcionesScreen({
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
       <CabeceraAdmin titulo="Más opciones" onVolver={onVolver} />
       <ScrollView
+        {...barraAlDesplazar}
         style={{ flex: 1 }}
         contentContainerStyle={{
           flexGrow: 1,

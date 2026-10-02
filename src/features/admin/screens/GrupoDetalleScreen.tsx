@@ -40,6 +40,7 @@ import {
   yaLideraEsteGrupo,
   listaDeNombres,
 } from '../utils/asignarMentor';
+import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
 const ESPECIALIDADES: Record<string, string> = {
   NEGOCIO: 'Negocio',
@@ -68,6 +69,7 @@ export function GrupoDetalleScreen({
   onVolver: () => void;
   onEditar: (grupoId: string) => void;
 }) {
+  const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
 
@@ -269,6 +271,7 @@ export function GrupoDetalleScreen({
         accion={{ etiqueta: 'Editar', onPress: () => onEditar(grupoId) }}
       />
       <ScrollView
+        {...barraAlDesplazar}
         style={{ flex: 1 }}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{

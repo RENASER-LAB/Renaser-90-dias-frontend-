@@ -45,6 +45,7 @@ import {
   type AccionDeCaja,
   type FormularioDeEnvio,
 } from '../utils/estadosDeCaja';
+import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
 /** Lo que pregunta cada acción antes de hacerse: todas cambian lo que ve el aprendiz. */
 const CONFIRMACION: Record<Exclude<AccionDeCaja, 'problema'>, { titulo: string; mensaje?: string }> = {
@@ -62,6 +63,7 @@ const CONFIRMACION: Record<Exclude<AccionDeCaja, 'problema'>, { titulo: string; 
  * servidor no la acepta (409: falta algo o el estado cambió), se muestra su motivo corto.
  */
 export function CajaDetalleScreen({ aprendizId, onVolver }: { aprendizId: string; onVolver: () => void }) {
+  const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
   const { detalle, cargando, fallo, recargar, actualizar } = useDetalleDeCaja(aprendizId);
@@ -152,6 +154,7 @@ export function CajaDetalleScreen({ aprendizId, onVolver }: { aprendizId: string
         onVolver={reportando ? () => setReportando(false) : onVolver}
       />
       <ScrollView
+        {...barraAlDesplazar}
         style={{ flex: 1 }}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{

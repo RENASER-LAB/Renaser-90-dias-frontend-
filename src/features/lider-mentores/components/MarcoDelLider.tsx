@@ -7,6 +7,7 @@ import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
+import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
 /**
  * El marco de cada pantalla del líder: «VOLVER» + título arriba y UN solo scroll (AGENTS.md §2), igual
@@ -22,6 +23,7 @@ export function MarcoDelLider({
   onVolver: () => void;
   children: React.ReactNode;
 }) {
+  const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
 
@@ -42,6 +44,7 @@ export function MarcoDelLider({
         </Text>
       </View>
       <ScrollView
+        {...barraAlDesplazar}
         style={{ flex: 1 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}

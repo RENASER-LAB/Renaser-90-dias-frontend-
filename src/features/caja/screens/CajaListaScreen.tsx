@@ -16,6 +16,7 @@ import type { FilaDeCaja } from '../api/cajaSchemas';
 import { useCajasAdmin } from '../hooks/useCajasAdmin';
 import { descargarConSesion } from '../utils/archivosConSesion';
 import { ESTADOS_DE_LA_LISTA, PESTANA_INICIAL, etiquetaDelEstado } from '../utils/estadosDeCaja';
+import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
 /**
  * Administración → Caja Renaser (spec §7): pestañas por estado con su conteo, buscador y
@@ -30,6 +31,7 @@ export function CajaListaScreen({
   onAbrirCaja: (aprendizId: string) => void;
   onEditarContenido: () => void;
 }) {
+  const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
   const [estado, setEstado] = useState<string>(PESTANA_INICIAL);
@@ -61,6 +63,7 @@ export function CajaListaScreen({
         accion={{ etiqueta: descargando ? '…' : 'Descargar', onPress: () => void descargar() }}
       />
       <ScrollView
+        {...barraAlDesplazar}
         style={{ flex: 1 }}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{

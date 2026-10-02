@@ -14,6 +14,7 @@ import type { CohorteAdminApi } from '../api/adminSchemas';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
 import { esFechaValida, normalizarFechaIso } from '../utils/fechas';
 import { mensajeDeFallo } from '../utils/mensajes';
+import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
 const CAPACIDAD_MINIMA = 10;
 const CAPACIDAD_MAXIMA = 15;
@@ -39,6 +40,7 @@ export function GrupoFormScreen({
   onVolver: () => void;
   onGuardado: (grupoId: string) => void;
 }) {
+  const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
 
@@ -188,6 +190,7 @@ export function GrupoFormScreen({
         onVolver={onVolver}
       />
       <ScrollView
+        {...barraAlDesplazar}
         style={{ flex: 1 }}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{
