@@ -50,6 +50,7 @@ import { RenombrarHabitoModal } from '../features/habits/components/RenombrarHab
 import { useRenombreLocal } from '../features/habits/hooks/useRenombreDeHabito';
 import { esRenombrable, tituloVisible } from '../features/habits/utils/renombreDeHabito';
 import { useAuth } from '../features/auth/context/AuthContext';
+import { useOcultarBarraAlDesplazar } from '../navigation/barraAlDesplazar/BarraInferior';
 
 /**
  * Habitos con FLUJO PROPIO: no se cierran con el checkbox ni subiendo un archivo. Se ramifica por
@@ -190,6 +191,7 @@ const DIMENSIONES_CONFIG: DimensionConfig[] = [
 // arranca en [] y dibuja esqueleto / error / estado vacío según corresponda.
 
 export default function TrainingScreen() {
+  const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
   const { rs, isTablet, horizontalPadding, contentMaxWidth } = useResponsive();
   const medallionSize = rs(42);
@@ -785,6 +787,7 @@ export default function TrainingScreen() {
       <ScreenHeader title="TRAINING" />
 
       <ScrollView
+        {...barraAlDesplazar}
         contentContainerStyle={[
           styles.content,
           {

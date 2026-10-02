@@ -22,6 +22,7 @@ import { diasDesde } from '../reglas';
 import { diaInicialDelDetalle } from '../utils/diaInicialDelDetalle';
 import { subtituloDelAlumno } from '../utils/subtituloDelAlumno';
 import type { AlumnoConEstado } from '../types/mentor.types';
+import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
 /**
  * El detalle de un aprendiz, para que el mentor sepa QUÉ decirle antes de escribirle.
@@ -42,6 +43,7 @@ export function AlumnoScreen({
   grupoId: string | null;
   onVolver: () => void;
 }) {
+  const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth, isTablet } = useResponsive();
 
@@ -149,6 +151,7 @@ export function AlumnoScreen({
       </View>
 
       <ScrollView
+        {...barraAlDesplazar}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[

@@ -13,6 +13,7 @@ import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher'
 import { useBandejaDeTickets } from '../hooks/useBandejaDeTickets';
 import type { WireTicketMentor } from '../types/tickets.types';
 import { etiquetaDeEstadoDeTicket } from '../utils/bandeja';
+import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
 /**
  * La bandeja de tickets de mentoría: qué bloqueos hay abiertos en toda la plataforma.
@@ -34,6 +35,7 @@ import { etiquetaDeEstadoDeTicket } from '../utils/bandeja';
  * bandeja se pagina con «Ver más», que es lo que el cursor del backend soporta.
  */
 export function BandejaTicketsScreen({ onVolver }: { onVolver: () => void }) {
+  const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
   const bandeja = useBandejaDeTickets(true);
@@ -71,6 +73,7 @@ export function BandejaTicketsScreen({ onVolver }: { onVolver: () => void }) {
       </View>
 
       <ScrollView
+        {...barraAlDesplazar}
         style={{ flex: 1 }}
         contentContainerStyle={{
           flexGrow: 1,

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GoldCircle } from '../../../components/ui';
@@ -7,6 +8,7 @@ import { useAuth } from '../../auth/context/AuthContext';
 import { RenasiaPanel } from '../screens/RenasiaPanel';
 import { useMapaRenacimientoAbierto } from '../../mapa-renacimiento/MapaRenacimientoContext';
 import { useHayChatEnPantalla } from '../state/chatEnPantalla';
+import { useBarraInferior } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
 /**
  * Botón flotante que abre al ACOMPAÑANTE de los 90 días (`agent: 'COMPANION'`, D-102), más el
@@ -30,6 +32,16 @@ export function RenasiaLauncher() {
   const [visible, setVisible] = useState(false);
   const hayChatEnPantalla = useHayChatEnPantalla();
   const { abierto: mapaAbierto } = useMapaRenacimientoAbierto();
+  /* «Ocultar la barra al desplazar» (2026-10-02): cuando la barra de pestañas baja, el botón baja
+     lo mismo y queda a la misma distancia del borde de abajo, en vez de quedar colgado sobre un
+     hueco. Sigue a la vista: el acompañante se puede abrir aunque se esté leyendo una lista. */
+  const barra = useBarraInferior();
+  const escondida = barra?.escondida;
+  const altoQueGana = barra?.altoQueGana;
+  const acompanaALaBarra = useAnimatedStyle(() => {
+    if (!escondida || !altoQueGana) return {};
+    return { transform: [{ translateY: escondida.value * altoQueGana.value }] };
+  });
 
   // El javadoc de esta clase ya decia "en el login y durante el onboarding no tiene sentido",
   // pero solo estaba implementada la mitad del login: durante la ficha inicial la sesion YA esta
@@ -61,9 +73,9 @@ export function RenasiaLauncher() {
         nada que pueda comerse los toques de la pantalla que esté debajo.
       */}
       {!hayChatEnPantalla && !mapaAbierto && (
-        <View style={[styles.posicion, { bottom: insets.bottom + ALTO_TAB_BAR + SEPARACION }]}>
+        <Animated.View style={[styles.posicion, { bottom: insets.bottom + ALTO_TAB_BAR + SEPARACION }, acompanaALaBarra]}>
           <GoldCircle size={DIAMETRO} icon="chat" onPress={() => setVisible(true)} />
-        </View>
+        </Animated.View>
       )}
 
       <RenasiaPanel agent="COMPANION" visible={visible} onClose={() => setVisible(false)} />

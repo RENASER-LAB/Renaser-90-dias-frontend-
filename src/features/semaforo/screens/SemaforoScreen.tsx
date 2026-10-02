@@ -27,6 +27,7 @@ import {
   textoDiasConDatos,
 } from '../utils/lecturaDelSemaforo';
 import { notaDelCierreSemanal } from '../utils/ayudaDelSemaforo';
+import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
 /**
  * El detalle del semáforo propio: el vigente en grande, los 7 días con su desglose, las semanas
@@ -52,6 +53,7 @@ export function SemaforoScreen({
   /** Pausar o volver a medir cambia el resumen de `/home`: Hoy lo relee con esto. */
   onPausaCambiada?: () => void;
 }) {
+  const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth, isTablet } = useResponsive();
 
@@ -81,6 +83,7 @@ export function SemaforoScreen({
       </View>
 
       <ScrollView
+        {...barraAlDesplazar}
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[

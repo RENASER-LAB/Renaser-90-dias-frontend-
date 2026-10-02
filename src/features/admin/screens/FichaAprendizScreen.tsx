@@ -24,6 +24,7 @@ import { disponibilidadDelCambio, textoDelUltimoAjuste } from '../utils/diaDelPr
 import { fechaCorta, hoyIso } from '../utils/fechas';
 import { CambiarDiaScreen } from './CambiarDiaScreen';
 import { rotuloDeFase } from '../../home/hooks/useResumenHome';
+import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
 /**
  * La ficha de un aprendiz vista por administración: quién es, cómo viene la semana y qué entregó.
@@ -52,6 +53,7 @@ export function FichaAprendizScreen({
   /** El chip de la Caja Renaser (D-219) abre su caja. Sin esto, el chip solo se muestra. */
   onAbrirCaja?: (aprendizId: string) => void;
 }) {
+  const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
 
@@ -147,6 +149,7 @@ export function FichaAprendizScreen({
         accion={{ etiqueta: abriendoChat ? '…' : 'Escribirle', onPress: escribirle }}
       />
       <ScrollView
+        {...barraAlDesplazar}
         style={{ flex: 1 }}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{

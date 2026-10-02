@@ -28,4 +28,5 @@ module.exports = {
   // cada corrida con un aviso que no dice nada útil.
   modulePathIgnorePatterns: ['<rootDir>/.claude/'],
   clearMocks: true,
+  setupFiles: ['<rootDir>/jest.setup.js'],
 };

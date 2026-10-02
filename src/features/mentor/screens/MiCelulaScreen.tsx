@@ -23,6 +23,7 @@ import { esOtroDeMisGrupos } from '../utils/entradaAlGrupo';
 import { FilaAlumno } from '../components/FilaAlumno';
 import type { FalloCelula, VistaCelula } from '../hooks/useCelulaQueAcompano';
 import type { AlumnoConEstado } from '../types/mentor.types';
+import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
 /**
  * La célula del mentor: quién necesita algo hoy, y quién va al día.
@@ -67,6 +68,7 @@ export function MiCelulaScreen({
   /** Llegó por el aviso del semáforo del grupo: abrir con esa sección a la vista. */
   enfocarSemaforo?: boolean;
 }) {
+  const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth, isTablet } = useResponsive();
 
@@ -131,6 +133,7 @@ export function MiCelulaScreen({
       </View>
 
       <ScrollView
+        {...barraAlDesplazar}
         ref={scroll}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}

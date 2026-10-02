@@ -28,6 +28,7 @@ import {
   type FilaDeGuia,
 } from '../utils/guiasRecepcion';
 import { mensajeDeFallo } from '../utils/mensajes';
+import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
 const MAX_CANDIDATOS = 15;
 
@@ -40,6 +41,7 @@ const MAX_CANDIDATOS = 15;
  * «Quitar» manda la lista entera ya cambiada, porque el PUT es un reemplazo.
  */
 export function GuiasRecepcionScreen({ onVolver }: { onVolver: () => void }) {
+  const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
 
@@ -162,6 +164,7 @@ export function GuiasRecepcionScreen({ onVolver }: { onVolver: () => void }) {
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
       <CabeceraAdmin titulo="Guías del grupo inicial" subtitulo="Primeros 7 días" onVolver={onVolver} />
       <ScrollView
+        {...barraAlDesplazar}
         style={{ flex: 1 }}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{

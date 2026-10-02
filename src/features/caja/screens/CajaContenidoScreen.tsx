@@ -25,12 +25,14 @@ import { Titulo } from '../components/PartesDelDetalle';
 import { elementosParaGuardar, type ElementoEnEdicion } from '../utils/contenidoYDestino';
 import { textoDelFondo } from '../utils/estadosDeCaja';
 import { elegirImagen, subirImagen } from '../utils/subirImagen';
+import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
 /**
  * Lo que lleva toda caja (la lista del checklist) y el fondo de la carta (spec §3 y §7). Solo el
  * Admin. Cambiar la lista no toca lo ya marcado en cada caja: los elementos conservan su valor.
  */
 export function CajaContenidoScreen({ onVolver }: { onVolver: () => void }) {
+  const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
   const [elementos, setElementos] = useState<ElementoEnEdicion[] | null>(null);
@@ -93,6 +95,7 @@ export function CajaContenidoScreen({ onVolver }: { onVolver: () => void }) {
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
       <CabeceraAdmin titulo="Contenido y carta" onVolver={onVolver} />
       <ScrollView
+        {...barraAlDesplazar}
         style={{ flex: 1 }}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{

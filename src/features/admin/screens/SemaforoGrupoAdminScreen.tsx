@@ -10,6 +10,7 @@ import { VistaSemaforoDelGrupo } from '../../semaforo/components/TablaDelSemafor
 import { useSemaforoDelGrupo, type InicioSemanal } from '../../semaforo/hooks/useLecturaPorSemana';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
 import type { PersonaDeFicha } from '../types/admin.types';
+import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
 /**
  * La tabla del semáforo de un grupo, CON nombres, para administración y alquimista
@@ -38,6 +39,7 @@ export function SemaforoGrupoAdminScreen({
   /** Abre la ficha de la persona tocada. Se reusa la ficha de Personas. */
   onAbrirAprendiz: (persona: PersonaDeFicha) => void;
 }) {
+  const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
   const lectura = useSemaforoDelGrupo({ quien: 'admin', grupoId }, inicio);
@@ -53,6 +55,7 @@ export function SemaforoGrupoAdminScreen({
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
       <CabeceraAdmin titulo={titulo} subtitulo="Semáforo del grupo" onVolver={onVolver} />
       <ScrollView
+        {...barraAlDesplazar}
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{

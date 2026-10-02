@@ -15,6 +15,25 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
   * `data/`: Constantes, cláusulas, configuraciones estáticas.
 * **Componentes de UI Atómicos**: Utiliza componentes compartidos bajo `src/components/` (`FormField`, `GoldButton`, `SliderRating`, `Checkbox`, `SignatureCanvas`, `Icon`).
 * **Integridad del Core**: NUNCA alterar, romper ni desconfigurar las pantallas existentes ni los tabs principales (`Hoy`, `Plan`, `Training`, `Comunidad`, `Yo`).
+  * **Excepción autorizada por el dueño del producto — 2026-10-02 — los cinco tabs: la barra de pestañas se
+    esconde al desplazar** (backend D-246). Pedido del dueño: «como en X o Facebook: al bajar se esconde la
+    barra de abajo y al subir aparece, en toda la app». Lo que cambia y nada más:
+    * `navigation/barraAlDesplazar/`: la decisión pura (`logicaDeLaBarra.ts`: 10 px seguidos en una
+      dirección, visible a menos de 24 px del tope y en listas cortas, sin decidir cuando cambia el alto de
+      la vista) y el proveedor con el hook `useOcultarBarraAlDesplazar({ vista?, onScroll? })`, que devuelve
+      `{ onScroll, scrollEventThrottle }` para cualquier lista vertical.
+    * `TabBar` no se desmonta: la barra **se desliza** hacia abajo con `transform` (Reanimated, 200 ms, hilo
+      de UI) y su caja, que reserva el lugar, pasa de una vez al alto del borde seguro de abajo; la pantalla
+      crece en lo mismo, así que ningún contenido queda tapado en ningún estado. (No animar el ALTO cuadro a
+      cuadro: en el emulador la barra quedaba a medio salir; ver el comentario en `TabBar`.) Vuelve sola al cambiar de pestaña, de sub-vista o de sección, al salir de una
+      sub-pantalla, al volver a la app y al abrir o cerrar una conversación.
+    * El botón del acompañante baja con la barra. **Fija a la vista** con «Reducir movimiento» o con lector
+      de pantalla, y no se toca con el teclado abierto.
+    * Pantallas con el comportamiento: las fija `barraAlDesplazar/__tests__/pantallasConBarraAlDesplazar.test.ts`.
+      Sin él: la conversación abierta, los modales y las listas horizontales.
+    * **Hace falta un APK nuevo** (la app no se actualiza por aire).
+    Una excepción puntual **no abre** el tab: cualquier otro cambio sobre los cinco principales vuelve a
+    necesitar autorización explícita.
   * **Excepción autorizada por el dueño del producto — 2026-10-01 — tab `Hoy`, «Mis mentores» del Líder de
     Mentores** (backend D-241, SDD 002 en `specs/002-lider-de-mentores/`). Pedido del dueño: construir la gestión del
     Líder siguiendo las dos pantallas que ese rol ya tiene en Hoy (bandeja de tickets y semáforo por grupos). Lo que

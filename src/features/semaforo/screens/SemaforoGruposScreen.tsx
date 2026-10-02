@@ -9,6 +9,7 @@ import { useTheme } from '../../../theme/ThemeContext';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
 import { ResumenDeGrupos } from '../components/ResumenDeGrupos';
 import type { LecturaDeGrupos } from '../hooks/useLecturaPorSemana';
+import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
 /**
  * El semáforo por grupos del **líder de mentores** (`GET /api/v1/semaforo/groups`, contrato §4.4):
@@ -23,6 +24,7 @@ import type { LecturaDeGrupos } from '../hooks/useLecturaPorSemana';
  * Un único scroll, cuerpo de 16 px y controles de 48 px (§5).
  */
 export function SemaforoGruposScreen({ lectura, onVolver }: { lectura: LecturaDeGrupos; onVolver: () => void }) {
+  const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
 
@@ -56,6 +58,7 @@ export function SemaforoGruposScreen({ lectura, onVolver }: { lectura: LecturaDe
       </View>
 
       <ScrollView
+        {...barraAlDesplazar}
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{

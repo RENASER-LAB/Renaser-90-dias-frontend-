@@ -34,6 +34,7 @@ import { MiAgenda } from './MiAgenda';
 import { LETRA, Parrafo } from './piezas';
 import { SelectorDeVista } from './SelectorDeVista';
 import { TarjetasDeEventos } from './TarjetasDeEventos';
+import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
 type Vista =
   | { nombre: 'lista' }
@@ -91,6 +92,7 @@ export function SeccionEventos({
   /** El `contentContainerStyle` que Comunidad usa en todas sus secciones. */
   estiloDelContenido?: StyleProp<ViewStyle>;
 }) {
+  const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c } = useTheme();
   const gestiona = puedeGestionarEventos(rol);
   const { ocurrencias, cargando, refrescando, fallo, yaLeido, recargar, responder, quitarDeLaLista } = useEventos(
@@ -315,6 +317,7 @@ export function SeccionEventos({
   const conRefresco = vista.nombre === 'lista' || vista.nombre === 'agenda';
   const envolver = (hijo: React.ReactNode) => (
     <ScrollView
+      {...barraAlDesplazar}
       keyboardShouldPersistTaps="handled"
       contentContainerStyle={estiloDelContenido}
       showsVerticalScrollIndicator={false}

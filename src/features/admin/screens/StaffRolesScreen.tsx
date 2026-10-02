@@ -23,6 +23,7 @@ import {
   ROLES_SOLO_EN_STAFF,
   type PersonaDelPadron,
 } from '../utils/staff';
+import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
 const POR_PAGINA = 20;
 
@@ -202,6 +203,7 @@ function FilaDePersona({
  * el 2026-09-11—, y una opción que siempre falla es peor que no tenerla.
  */
 export function StaffRolesScreen({ onVolver, onAbrirGuias }: { onVolver: () => void; onAbrirGuias: () => void }) {
+  const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
 
@@ -417,6 +419,7 @@ export function StaffRolesScreen({ onVolver, onAbrirGuias }: { onVolver: () => v
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
       <CabeceraAdmin titulo="Equipo y roles" subtitulo="Quién es qué" onVolver={onVolver} />
       <ScrollView
+        {...barraAlDesplazar}
         style={{ flex: 1 }}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{

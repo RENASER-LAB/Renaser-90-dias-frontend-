@@ -14,6 +14,7 @@ import { CabeceraAdmin } from '../components/CabeceraAdmin';
 import { quedanPorTraer, sinLaDecidida, sumarPagina, textoVerMas } from '../utils/paginasDeSolicitudes';
 import { confirmar, avisar } from '../utils/dialogo';
 import { mensajeDeAltaAprobada, mensajeDeFallo } from '../utils/mensajes';
+import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
 /**
  * Las altas pendientes de decidir, y qué pasó después de aprobarlas.
@@ -45,6 +46,7 @@ export function SolicitudesAdminScreen({
   onVolver: () => void;
   onIrAGrupos: () => void;
 }) {
+  const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
 
@@ -170,6 +172,7 @@ export function SolicitudesAdminScreen({
         onVolver={onVolver}
       />
       <ScrollView
+        {...barraAlDesplazar}
         style={{ flex: 1 }}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{

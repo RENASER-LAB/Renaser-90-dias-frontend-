@@ -21,6 +21,7 @@ import {
   preguntaDelCambioDeDia,
   validarCambioDeDia,
 } from '../utils/diaDelPrograma';
+import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
 /**
  * Adelantar o retroceder el día del programa de una persona (pedido del dueño, 26/09; backend D-82).
@@ -45,6 +46,7 @@ export function CambiarDiaScreen({
   onVolver: () => void;
   onCambiado: (diaNuevo: number) => void;
 }) {
+  const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
   const [texto, setTexto] = useState(String(diaActual));
@@ -97,6 +99,7 @@ export function CambiarDiaScreen({
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
       <CabeceraAdmin titulo="Cambiar día del programa" subtitulo={nombre} onVolver={onVolver} />
       <ScrollView
+        {...barraAlDesplazar}
         style={{ flex: 1 }}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{

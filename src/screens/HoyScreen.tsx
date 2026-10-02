@@ -76,8 +76,10 @@ import type { PedidoDeFotoUI } from '../features/renasia/types/renasia.types';
 import { useRegistroConFoto } from '../features/habits/hooks/useRegistroConFoto';
 import { RegistroConFotoModal } from '../features/habits/components/RegistroConFotoModal';
 import { cifrasDeHabitos } from '../features/home/utils/cifrasDeHabitos';
+import { useOcultarBarraAlDesplazar } from '../navigation/barraAlDesplazar/BarraInferior';
 
 export default function HoyScreen() {
+  const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
   const { rs, isShort, isTablet, horizontalPadding, width, contentMaxWidth } = useResponsive();
   const navigation = useNavigation();
@@ -532,6 +534,7 @@ export default function HoyScreen() {
       <ScreenHeader title="HOY" />
 
       <ScrollView
+        {...barraAlDesplazar}
         contentContainerStyle={[
           styles.content,
           {

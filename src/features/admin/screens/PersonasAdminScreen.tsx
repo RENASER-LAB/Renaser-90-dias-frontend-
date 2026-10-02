@@ -11,6 +11,7 @@ import { listarAprendices } from '../api/adminApi';
 import type { AprendizAdminApi } from '../api/adminSchemas';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
 import { mensajeDeFallo } from '../utils/mensajes';
+import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
 const POR_PAGINA = 20;
 
@@ -34,6 +35,7 @@ export function PersonasAdminScreen({
   onAbrirFicha: (aprendiz: AprendizAdminApi) => void;
   soloSinGrupoAlEntrar?: boolean;
 }) {
+  const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
 
@@ -103,6 +105,7 @@ export function PersonasAdminScreen({
         onVolver={onVolver}
       />
       <ScrollView
+        {...barraAlDesplazar}
         style={{ flex: 1 }}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{

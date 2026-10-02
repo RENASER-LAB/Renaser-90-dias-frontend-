@@ -10,6 +10,7 @@ import { CabeceraAdmin } from '../components/CabeceraAdmin';
 import { EstadoDeGrupo } from '../components/EstadoDeGrupo';
 import { useGruposAdmin, type FiltroGrupos } from '../hooks/useGruposAdmin';
 import { rangoDeFechas } from '../utils/fechas';
+import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
 const FILTROS: Array<{ clave: FiltroGrupos; etiqueta: string }> = [
   { clave: 'vigentes', etiqueta: 'Vigentes' },
@@ -37,6 +38,7 @@ export function GruposAdminScreen({
   onAbrirGrupo: (grupoId: string) => void;
   onCrear: () => void;
 }) {
+  const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
   const { grupos, cargando, error, filtro, setFiltro, recargar } = useGruposAdmin();
@@ -54,6 +56,7 @@ export function GruposAdminScreen({
         accion={{ etiqueta: 'Crear', onPress: onCrear }}
       />
       <ScrollView
+        {...barraAlDesplazar}
         style={{ flex: 1 }}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{
