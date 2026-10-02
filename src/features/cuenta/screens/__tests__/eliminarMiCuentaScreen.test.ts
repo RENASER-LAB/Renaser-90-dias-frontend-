@@ -70,6 +70,10 @@ const campo = (r: ReactTestRenderer, etiqueta: string) =>
   r.root.findAll(n => n.props.accessibilityLabel === etiqueta && typeof n.props.onChangeText === 'function')[0];
 const deshabilitado = (r: ReactTestRenderer, etiqueta: string) => boton(r, etiqueta).props.disabled === true;
 
+// La primera prueba monta la pantalla en frío (tema, Legible, Alerta) y con la suite completa en paralelo
+// pasaba los 5 s por defecto; al cortarse, su envío pendiente caía en la prueba siguiente (E-430).
+jest.setTimeout(20000);
+
 beforeEach(() => {
   mockLeer.mockReset();
   mockLeer.mockResolvedValue({ confirmaCon: 'CONTRASENA', diasDeGracia: 30 });
