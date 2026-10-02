@@ -11,7 +11,8 @@ export const pedidoDeEmergenciaSchema = z
   .object({
     id: z.string(),
     queOcurrio: z.string(),
-    diaPedido: z.number(),
+    /** `null` si lo pidió en el Día 0: es solo «necesito ayuda». */
+    diaPedido: z.number().nullish(),
     diaAlPedir: z.number(),
     estado: z.string(),
     creadaEn: textoOpcional,
@@ -20,7 +21,7 @@ export const pedidoDeEmergenciaSchema = z
   })
   .passthrough();
 
-/** `GET /api/v1/me/emergency-request`. `diaMaximo` 0 = todavía no empezó: no hay botón. */
+/** `GET /api/v1/me/emergency-request`. `diaMaximo` 0 = Día 0: se pide ayuda sin elegir día. */
 export const miEmergenciaSchema = z
   .object({
     diaActual: z.number(),
@@ -36,7 +37,7 @@ export const emergenciaParaSoporteSchema = z
     aprendizId: z.string(),
     nombre: textoOpcional,
     queOcurrio: z.string(),
-    diaPedido: z.number(),
+    diaPedido: z.number().nullish(),
     diaAlPedir: z.number(),
     diaActual: z.number(),
     creadaEn: textoOpcional,

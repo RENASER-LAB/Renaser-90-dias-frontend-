@@ -90,6 +90,14 @@ describe('AvisoDeEmergenciaEnSoporte', () => {
     expect(textos(r)).toBe('');
   });
 
+  it('un pedido del Día 0 (sin día) dice que pide ayuda y solo se puede cerrar', async () => {
+    mockLeer.mockResolvedValue({ ...pedido, diaPedido: null, diaAlPedir: 0, diaActual: 0 });
+    const r = await montar();
+    expect(textos(r)).toContain('Pide ayuda (está en el día 0).');
+    expect(r.root.findAll(n => typeof n.props.accessibilityLabel === 'string' && n.props.accessibilityLabel.startsWith('Cambiar')).length).toBe(0);
+    expect(tocable(r, 'Cerrar sin cambiar')).toBeDefined();
+  });
+
   it('si ya está en el día pedido, solo se puede cerrar', async () => {
     mockLeer.mockResolvedValue({ ...pedido, diaPedido: 20 });
     const r = await montar();

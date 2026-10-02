@@ -2386,7 +2386,7 @@ export default function ComunidadScreen() {
         aprendizId={cambioPorEmergencia.aprendizId}
         nombre={cambioPorEmergencia.nombre?.trim() || 'esta persona'}
         diaActual={cambioPorEmergencia.diaActual}
-        diaSugerido={cambioPorEmergencia.diaPedido}
+        diaSugerido={cambioPorEmergencia.diaPedido ?? undefined}
         motivoSugerido={motivoDelAjuste(cambioPorEmergencia.queOcurrio)}
         onVolver={() => setCambioPorEmergencia(null)}
         onCambiado={() => setCambioPorEmergencia(null)}

@@ -108,6 +108,18 @@ describe('Tuve una emergencia', () => {
     expect(mockPedir).not.toHaveBeenCalled();
   });
 
+  it('en el Día 0 no hay selector: envía solo lo que pasó (respuesta del dueño, 02/10)', async () => {
+    const r = montar({ diaActual: 0, diaMaximo: 0, abierta: null });
+    expect(tocable(r, 'Un día antes')).toBeUndefined();
+    act(() => campo(r).props.onChangeText('Me enfermé'));
+    await act(async () => {
+      tocable(r, 'Enviar a soporte').props.onPress();
+    });
+    expect(mockConfirmar).toHaveBeenCalledWith('¿Enviar tu pedido de ayuda?', expect.anything(), expect.anything());
+    expect(mockPedir).toHaveBeenCalledWith({ queOcurrio: 'Me enfermé' });
+    expect(textos(r)).toContain('Recibimos tu pedido');
+  });
+
   it('con un pedido abierto no muestra el formulario: dice a qué día pidió volver', () => {
     const r = montar({
       diaActual: 20,

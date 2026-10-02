@@ -296,7 +296,7 @@ export default function YoScreen() {
   const miCaja = useMiCaja();
   const [enCaja, setEnCaja] = useState(false);
   /* Botón de emergencia (D-244, pedido del dueño del 02/10): un acceso discreto al pie de Yo, solo para
-     un aprendiz que ya empezó (el servidor responde 403 a quien no lo es). Pedir no cambia el día. */
+     un aprendiz, desde el Día 0 (el servidor responde 403 a quien no lo es). Pedir no cambia el día. */
   const miEmergencia = useMiEmergencia();
   const [enEmergencia, setEnEmergencia] = useState(false);
   const rutaDeYo = useRoute();

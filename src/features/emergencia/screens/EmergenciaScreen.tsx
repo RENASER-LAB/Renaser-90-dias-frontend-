@@ -16,6 +16,7 @@ import {
   PRIMER_DIA,
   acotarDiaPedido,
   detalleDelPedido,
+  eligeDia,
   mensajeDelErrorDelPedido,
   preguntaDelPedido,
   validarPedido,
@@ -23,7 +24,7 @@ import {
 
 /**
  * Yo → «Tuve una emergencia» (pedido del dueño del 02/10, backend D-244). Un formulario corto: qué pasó y
- * a qué día del programa quiere volver (de 1 al de hoy). Enviarlo NO cambia el día: le llega a soporte,
+ * a qué día del programa quiere volver (de 1 al de hoy). En el Día 0 no hay selector: es solo un pedido de ayuda. Enviarlo NO cambia el día: le llega a soporte,
  * que lo revisa y le escribe. Con un pedido ya abierto, la pantalla solo dice eso.
  */
 export function EmergenciaScreen({
@@ -53,13 +54,16 @@ export function EmergenciaScreen({
     setError(null);
   };
 
+  const conDia = eligeDia(mia);
+
   const enviar = async () => {
     const revisado = validarPedido({ queOcurrio: texto, diaPedido: dia, diaMaximo: mia.diaMaximo });
     if (!revisado.ok) {
       setError(revisado.error);
       return;
     }
-    if (!(await confirmar(preguntaDelPedido(dia), detalleDelPedido(mia.diaActual), { ok: 'Sí, enviar' }))) return;
+    const pregunta = preguntaDelPedido(conDia ? dia : null);
+    if (!(await confirmar(pregunta, detalleDelPedido(mia.diaActual), { ok: 'Sí, enviar' }))) return;
     setEnviando(true);
     try {
       await pedirAyudaPorEmergencia(revisado.cuerpo);
@@ -97,7 +101,7 @@ export function EmergenciaScreen({
               Recibimos tu pedido
             </Text>
             <Text style={[t.body, estilos.parrafo, { color: c.text }]}>
-              {pedidoAbierto
+              {pedidoAbierto?.diaPedido != null
                 ? `Pediste volver al día ${pedidoAbierto.diaPedido}. Soporte te va a escribir.`
                 : 'Soporte te va a escribir.'}
             </Text>
@@ -106,7 +110,9 @@ export function EmergenciaScreen({
         ) : (
           <>
             <Text style={[t.body, estilos.parrafo, { color: c.text }]}>
-              Si algo grave te impidió seguir, pide volver a un día del programa. Soporte lo revisa.
+              {conDia
+                ? 'Si algo grave te impidió seguir, pide volver a un día del programa. Soporte lo revisa.'
+                : 'Si algo grave te pasó, cuéntanos. Soporte lo revisa y te escribe.'}
             </Text>
 
             <View style={{ gap: 8 }}>
@@ -130,6 +136,7 @@ export function EmergenciaScreen({
               </Text>
             </View>
 
+            {conDia ? (
             <View style={{ gap: 10 }}>
               <Text style={[estilos.rotulo, { color: c.textStrong }]}>Volver al día</Text>
               <View style={estilos.fila}>
@@ -163,6 +170,7 @@ export function EmergenciaScreen({
               </View>
               <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>Hoy estás en el día {mia.diaActual}.</Text>
             </View>
+            ) : null}
 
             {error ? (
               <Text accessibilityRole="alert" style={[t.body, { color: c.danger, fontSize: 16, lineHeight: 23 }]}>

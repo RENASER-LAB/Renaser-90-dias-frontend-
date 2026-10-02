@@ -5,6 +5,8 @@ import {
   LARGO_MAXIMO,
   acotarDiaPedido,
   debeBuscarEmergenciaEnElChat,
+  eligeDia,
+  sePuedeCambiarAlDiaPedido,
   mensajeDelErrorDelPedido,
   mostrarAccesoDeEmergencia,
   motivoDelAjuste,
@@ -13,9 +15,9 @@ import {
 } from '../pedidoDeEmergencia';
 
 describe('el acceso «Tuve una emergencia»', () => {
-  it('se ve desde el Día 1, o con un pedido abierto', () => {
+  it('se ve desde el Día 0 (respuesta del dueño, 02/10)', () => {
     expect(mostrarAccesoDeEmergencia({ diaActual: 20, diaMaximo: 20, abierta: null })).toBe(true);
-    expect(mostrarAccesoDeEmergencia({ diaActual: 0, diaMaximo: 0, abierta: null })).toBe(false);
+    expect(mostrarAccesoDeEmergencia({ diaActual: 0, diaMaximo: 0, abierta: null })).toBe(true);
     expect(
       mostrarAccesoDeEmergencia({
         diaActual: 0,
@@ -56,6 +58,16 @@ describe('validarPedido', () => {
     expect(validarPedido({ queOcurrio: 'a'.repeat(LARGO_MAXIMO), diaPedido: 3, diaMaximo: 20 }).ok).toBe(true);
   });
 
+  it('en el Día 0 no se elige día: el cuerpo va sin diaPedido', () => {
+    expect(eligeDia({ diaMaximo: 0 })).toBe(false);
+    expect(eligeDia({ diaMaximo: 1 })).toBe(true);
+    expect(validarPedido({ queOcurrio: ' Me enfermé ', diaPedido: 0, diaMaximo: 0 })).toEqual({
+      ok: true,
+      cuerpo: { queOcurrio: 'Me enfermé' },
+    });
+    expect(validarPedido({ queOcurrio: ' ', diaPedido: 0, diaMaximo: 0 }).ok).toBe(false);
+  });
+
   it('el día va de 1 al de hoy, con los extremos', () => {
     expect(validarPedido({ queOcurrio: 'x', diaPedido: 1, diaMaximo: 20 }).ok).toBe(true);
     expect(validarPedido({ queOcurrio: 'x', diaPedido: 20, diaMaximo: 20 }).ok).toBe(true);
@@ -89,8 +101,15 @@ describe('para quien atiende soporte', () => {
     expect(largo.endsWith('…')).toBe(true);
   });
 
-  it('el resumen dice a qué día y en cuál está hoy', () => {
+  it('el resumen dice a qué día y en cuál está hoy; sin día, que pide ayuda', () => {
     expect(resumenParaSoporte({ diaPedido: 12, diaActual: 20 })).toBe('Pide volver al día 12 (hoy está en el día 20).');
+    expect(resumenParaSoporte({ diaPedido: null, diaActual: 0 })).toBe('Pide ayuda (está en el día 0).');
+  });
+
+  it('«Cambiar al día N» solo con un día pedido distinto del de hoy', () => {
+    expect(sePuedeCambiarAlDiaPedido({ diaPedido: 12, diaActual: 20 })).toBe(true);
+    expect(sePuedeCambiarAlDiaPedido({ diaPedido: 20, diaActual: 20 })).toBe(false);
+    expect(sePuedeCambiarAlDiaPedido({ diaPedido: null, diaActual: 0 })).toBe(false);
   });
 });
 

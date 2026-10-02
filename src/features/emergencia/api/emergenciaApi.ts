@@ -20,7 +20,8 @@ export async function leerMiEmergencia(): Promise<MiEmergencia> {
   return validarRespuesta<MiEmergencia>(miEmergenciaSchema, await apiFetch<unknown>(RUTA_MIA), `GET ${RUTA_MIA}`);
 }
 
-export async function pedirAyudaPorEmergencia(cuerpo: { queOcurrio: string; diaPedido: number }): Promise<PedidoDeEmergencia> {
+/** Sin `diaPedido` en el Día 0: el pedido es solo «necesito ayuda». */
+export async function pedirAyudaPorEmergencia(cuerpo: { queOcurrio: string; diaPedido?: number }): Promise<PedidoDeEmergencia> {
   return validarRespuesta<PedidoDeEmergencia>(
     pedidoDeEmergenciaSchema,
     await apiFetch<unknown>(RUTA_MIA, { method: 'POST', body: cuerpo }),

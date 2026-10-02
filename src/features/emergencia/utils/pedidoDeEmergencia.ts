@@ -7,16 +7,29 @@ import type { MiEmergencia } from '../api/emergenciaSchemas';
  *
  * El aprendiz elige un día entre 1 y el que vive hoy (89 como mucho: el 90 no se fija a mano) y cuenta en
  * pocas palabras qué pasó. Pedirlo no mueve nada: le llega a soporte, que lo revisa y le escribe.
+ *
+ * Desde el Día 0 (respuesta del dueño, 02/10): en el Día 0 no hay día al que volver y el pedido es solo
+ * «necesito ayuda», sin selector.
  */
 
 /** El mismo tope que el motivo de un ajuste de día: quien atiende puede pasarlo entero. */
 export const LARGO_MAXIMO = 280;
 export const PRIMER_DIA = 1;
 
-/** El acceso en Yo: solo si ya empezó (hay a qué día volver) o si ya tiene un pedido abierto. */
+/**
+ * El acceso en Yo: para todo aprendiz desde el Día 0 (el servidor responde 403 a quien no lo es, y entonces
+ * `mia` queda en `null`).
+ *
+ * > Corregido 2026-10-02 (mismo día, respuesta del dueño). Decía «solo si ya empezó o si ya tiene un pedido
+ * > abierto».
+ */
 export function mostrarAccesoDeEmergencia(mia: MiEmergencia | null): boolean {
-  if (!mia) return false;
-  return mia.diaMaximo >= PRIMER_DIA || !!mia.abierta;
+  return !!mia;
+}
+
+/** En el Día 0 no se elige día: no hay uno anterior al que volver. */
+export function eligeDia(mia: { diaMaximo: number }): boolean {
+  return mia.diaMaximo >= PRIMER_DIA;
 }
 
 /** El día dentro de 1..máximo. El selector arranca en el día de hoy y no sale del rango. */
@@ -27,7 +40,7 @@ export function acotarDiaPedido(dia: number, diaMaximo: number): number {
 }
 
 export type ResultadoDelPedido =
-  | { ok: true; cuerpo: { queOcurrio: string; diaPedido: number } }
+  | { ok: true; cuerpo: { queOcurrio: string; diaPedido?: number } }
   | { ok: false; error: string };
 
 /** Revisa lo elegido y, si está bien, arma el cuerpo EXACTO del POST. */
@@ -36,15 +49,16 @@ export function validarPedido(entrada: { queOcurrio: string; diaPedido: number; 
   if (!texto) return { ok: false, error: 'Cuéntanos en pocas palabras qué pasó.' };
   if (texto.length > LARGO_MAXIMO) return { ok: false, error: `Escríbelo en ${LARGO_MAXIMO} caracteres o menos.` };
   const { diaPedido, diaMaximo } = entrada;
+  if (diaMaximo < PRIMER_DIA) return { ok: true, cuerpo: { queOcurrio: texto } };
   if (!Number.isInteger(diaPedido) || diaPedido < PRIMER_DIA || diaPedido > diaMaximo) {
     return { ok: false, error: `Elige un día entre ${PRIMER_DIA} y ${diaMaximo}.` };
   }
   return { ok: true, cuerpo: { queOcurrio: texto, diaPedido } };
 }
 
-/** La pregunta de la confirmación. */
-export function preguntaDelPedido(diaPedido: number): string {
-  return `¿Pedir volver al día ${diaPedido}?`;
+/** La pregunta de la confirmación. Sin día (Día 0): es un pedido de ayuda. */
+export function preguntaDelPedido(diaPedido: number | null): string {
+  return diaPedido === null ? '¿Enviar tu pedido de ayuda?' : `¿Pedir volver al día ${diaPedido}?`;
 }
 
 export function detalleDelPedido(diaActual: number): string {
@@ -68,9 +82,15 @@ export function motivoDelAjuste(queOcurrio: string): string {
   return motivo.length > LARGO_MAXIMO ? `${motivo.slice(0, LARGO_MAXIMO - 1)}…` : motivo;
 }
 
-/** El renglón del aviso en el chat de soporte, para quien atiende. */
-export function resumenParaSoporte(e: { diaPedido: number; diaActual: number }): string {
+/** El renglón del aviso en el chat de soporte, para quien atiende. Sin día: lo pidió en el Día 0. */
+export function resumenParaSoporte(e: { diaPedido?: number | null; diaActual: number }): string {
+  if (e.diaPedido == null) return `Pide ayuda (está en el día ${e.diaActual}).`;
   return `Pide volver al día ${e.diaPedido} (hoy está en el día ${e.diaActual}).`;
+}
+
+/** «Cambiar al día N» solo si pidió un día y todavía no está en él. */
+export function sePuedeCambiarAlDiaPedido(e: { diaPedido?: number | null; diaActual: number }): boolean {
+  return e.diaPedido != null && e.diaPedido !== e.diaActual;
 }
 
 /**

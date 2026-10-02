@@ -9,7 +9,7 @@ import { mostrarAccesoDeEmergencia } from '../utils/pedidoDeEmergencia';
  * El pedido de emergencia del aprendiz (`GET /api/v1/me/emergency-request`, D-244). Se relee cada vez que
  * Yo vuelve a estar a la vista: soporte lo resuelve desde otro teléfono.
  *
- * `visible` es `false` antes del Día 1 y para quien no es aprendiz (el servidor responde 403): el acceso no
+ * `visible` es `false` solo para quien no es aprendiz (el servidor responde 403): el acceso no
  * aparece. Un fallo de red conserva lo último que se leyó.
  */
 export function useMiEmergencia() {
