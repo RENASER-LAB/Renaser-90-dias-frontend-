@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { BotonSecundario, SeccionPlegable } from '../../../components/Legible';
+import { Alert } from '../../../components/Alerta';
+import { BotonPeligro, BotonSecundario, SeccionPlegable } from '../../../components/Legible';
 import { irAPestana } from '../../../navigation/navegacionRef';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { useResponsive } from '../../../theme/responsive';
@@ -14,6 +15,10 @@ import { RejillaSemanal } from '../../mentor/components/RejillaSemanal';
 import { diaInicialDelDetalle } from '../../mentor/utils/diaInicialDelDetalle';
 import { TarjetaSemaforoDeAprendiz } from '../../semaforo/components/TarjetaSemaforoDeAprendiz';
 import { ChipDeCaja } from '../../caja/components/ChipDeCaja';
+import { useAuth } from '../../auth/context/AuthContext';
+import { avisoDeCuentaCerrada, puedeEliminarCuentaAjena } from '../../cuenta/utils/eliminarCuenta';
+import { recuperarCuentaDePersona } from '../api/adminApi';
+import { mensajeDeFallo } from '../utils/mensajes';
 import { avisar } from '../utils/dialogo';
 import type { PersonaDeFicha } from '../types/admin.types';
 import { AvisoBreve } from '../components/AvisoBreve';
@@ -23,6 +28,7 @@ import { useSemanaAdministrativa } from '../hooks/useSemanaAdministrativa';
 import { disponibilidadDelCambio, textoDelUltimoAjuste } from '../utils/diaDelPrograma';
 import { fechaCorta, hoyIso } from '../utils/fechas';
 import { CambiarDiaScreen } from './CambiarDiaScreen';
+import { EliminarCuentaAdminScreen } from './EliminarCuentaAdminScreen';
 import { rotuloDeFase } from '../../home/hooks/useResumenHome';
 
 /**
@@ -46,11 +52,14 @@ export function FichaAprendizScreen({
   aprendiz,
   onVolver,
   onAbrirCaja,
+  onCuentaEliminada,
 }: {
   aprendiz: PersonaDeFicha;
   onVolver: () => void;
   /** El chip de la Caja Renaser (D-219) abre su caja. Sin esto, el chip solo se muestra. */
   onAbrirCaja?: (aprendizId: string) => void;
+  /** D-243: tras «Eliminar cuenta» (204). Sin esto, se vuelve con `onVolver`. */
+  onCuentaEliminada?: () => void;
 }) {
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
@@ -63,12 +72,17 @@ export function FichaAprendizScreen({
   const [cambiandoDia, setCambiandoDia] = useState(false);
   const [avisoFinal, setAvisoFinal] = useState<string | null>(null);
   const cerrarAviso = useCallback(() => setAvisoFinal(null), []);
+  /* Eliminar cuenta (D-243): la confirmación fuerte es una vista de la ficha, como cambiar el día. */
+  const { user } = useAuth();
+  const [eliminandoCuenta, setEliminandoCuenta] = useState(false);
+  const [recuperando, setRecuperando] = useState(false);
+  const [recuperada, setRecuperada] = useState(false);
 
-  /* Mientras se cambia el día, el «atrás» lo atiende esa vista (vuelve a la ficha). */
+  /* Mientras se cambia el día o se confirma la eliminación, el «atrás» lo atiende esa vista. */
   useSystemBackHandler(() => {
     onVolver();
     return true;
-  }, !cambiandoDia);
+  }, !cambiandoDia && !eliminandoCuenta);
 
   /* El detalle abre en el día más reciente con hábitos —hoy, en la semana en curso—, no en el lunes
      (E-439): mirando el lunes, el post de hoy parecía sin marcar. */
@@ -85,6 +99,36 @@ export function FichaAprendizScreen({
       : aprendiz,
   );
   const disponibilidad = programa.detalle ? disponibilidadDelCambio(programa.detalle, hoyIso()) : null;
+  /* El detalle (leído al abrir) gana sobre la fila; tras «Recuperar cuenta» ya no hay aviso. */
+  const borradoPendiente = recuperada
+    ? null
+    : programa.detalle
+      ? programa.detalle.deletionScheduledFor ?? null
+      : aprendiz.deletionScheduledFor ?? null;
+  const avisoDeCierre = avisoDeCuentaCerrada(borradoPendiente);
+  const correo = programa.detalle?.email?.trim() || aprendiz.email?.trim() || null;
+  const ofrecerEliminar =
+    !!correo &&
+    puedeEliminarCuentaAjena({
+      miRol: user?.role,
+      miId: user?.id,
+      personaId: aprendiz.id,
+      rolDePersona: programa.detalle?.role ?? null,
+    });
+
+  const recuperarCuenta = async () => {
+    setRecuperando(true);
+    try {
+      await recuperarCuentaDePersona(aprendiz.id);
+      setRecuperada(true);
+      setAvisoFinal('Listo: la cuenta quedó recuperada.');
+    } catch (e) {
+      Alert.alert('No se pudo recuperar', mensajeDeFallo(e, 'Vuelve a intentar.'));
+    } finally {
+      setRecuperando(false);
+      void programa.recargar();
+    }
+  };
 
   /** La URL se pide al abrir y no antes: vence a los diez minutos y es una llave al archivo. */
   const verEvidencia = async (evidenciaId: string) => {
@@ -138,6 +182,22 @@ export function FichaAprendizScreen({
     );
   }
 
+  if (eliminandoCuenta && correo) {
+    return (
+      <EliminarCuentaAdminScreen
+        personaId={aprendiz.id}
+        nombre={nombre}
+        correo={correo}
+        onVolver={() => setEliminandoCuenta(false)}
+        onEliminada={() => {
+          setEliminandoCuenta(false);
+          Alert.alert('Cuenta eliminada', `La cuenta de ${nombre} se borró.`);
+          (onCuentaEliminada ?? onVolver)();
+        }}
+      />
+    );
+  }
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
       <CabeceraAdmin
@@ -159,6 +219,14 @@ export function FichaAprendizScreen({
           gap: 16,
         }}
       >
+        {/* D-243: cerró su cuenta y se borra en esa fecha. Se puede recuperar antes. */}
+        {avisoDeCierre ? (
+          <View style={[estilos.tarjeta, { backgroundColor: c.cardBg, borderColor: c.danger, gap: 10 }]}>
+            <Text style={[t.body, { color: c.danger, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>{avisoDeCierre}</Text>
+            <BotonSecundario etiqueta="Recuperar cuenta" onPress={() => void recuperarCuenta()} cargando={recuperando} />
+          </View>
+        ) : null}
+
         {datosDeCabecera.length > 0 ? (
           <View style={[estilos.tarjeta, { backgroundColor: c.cardBg, borderColor: c.border, gap: 6 }]}>
             {datosDeCabecera.map(linea => (
@@ -338,6 +406,11 @@ export function FichaAprendizScreen({
             ) : null}
           </View>
         </SeccionPlegable>
+
+        {/* D-243: solo ADMIN o ALQUIMISTA, nunca sobre sí mismo; sobre un ADMIN o ALQUIMISTA, solo un ADMIN. */}
+        {ofrecerEliminar ? (
+          <BotonPeligro etiqueta="Eliminar cuenta" onPress={() => setEliminandoCuenta(true)} estilo={{ marginTop: 12 }} />
+        ) : null}
       </ScrollView>
       <AvisoBreve texto={avisoFinal} onCerrar={cerrarAviso} />
     </SafeAreaView>

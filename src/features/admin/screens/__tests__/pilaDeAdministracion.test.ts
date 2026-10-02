@@ -18,7 +18,7 @@ jest.mock('../../../caja/screens/CajaContenidoScreen', () => ({}));
 jest.mock('../../../caja/screens/CajaDetalleScreen', () => ({}));
 jest.mock('../../../caja/screens/CajaListaScreen', () => ({}));
 
-import { pilaInicial } from '../AdminScreen';
+import { pilaInicial, pilaTrasEliminarCuenta } from '../AdminScreen';
 
 /**
  * Por dónde entra Administración. El aviso de la Caja Renaser (`/admin/caja/{id}`, D-219) entra a esa
@@ -45,5 +45,25 @@ describe('la pila con la que abre Administración', () => {
     const aprendiz = { id: 'a-9', fullName: 'Ana Pérez' };
 
     expect(pilaInicial({ ficha: aprendiz })).toEqual([{ nombre: 'inicio' }, { nombre: 'ficha', aprendiz }]);
+  });
+});
+
+/** D-243: tras «Eliminar cuenta» en la ficha se vuelve a la lista de Personas (que se relee al montarse). */
+describe('la pila tras eliminar una cuenta', () => {
+  const ficha = { nombre: 'ficha' as const, aprendiz: { id: 'a-1', fullName: 'Ana' } };
+
+  it('desde Personas, saca la ficha', () => {
+    expect(pilaTrasEliminarCuenta([{ nombre: 'inicio' }, { nombre: 'personas', soloSinGrupo: true }, ficha])).toEqual([
+      { nombre: 'inicio' },
+      { nombre: 'personas', soloSinGrupo: true },
+    ]);
+  });
+
+  it('desde otro lado (semáforo, inicio, chat), la reemplaza por Personas', () => {
+    expect(pilaTrasEliminarCuenta([{ nombre: 'inicio' }, { nombre: 'semaforo' }, ficha])).toEqual([
+      { nombre: 'inicio' },
+      { nombre: 'semaforo' },
+      { nombre: 'personas', soloSinGrupo: false },
+    ]);
   });
 });

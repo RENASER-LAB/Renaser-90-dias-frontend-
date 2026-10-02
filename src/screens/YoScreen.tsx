@@ -56,6 +56,7 @@ import { ESTADO_EVIDENCIA, iconoDeTipo } from '../features/evidence/api/evidence
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useMiCaja } from '../features/caja/hooks/useMiCaja';
 import { MiCajaScreen } from '../features/caja/screens/MiCajaScreen';
+import { EliminarMiCuentaScreen } from '../features/cuenta/screens/EliminarMiCuentaScreen';
 import { etiquetaParaElAprendiz } from '../features/caja/utils/estadosDeCaja';
 import { useMiSemaforo } from '../features/semaforo/hooks/useMiSemaforo';
 import { hayQuePedirMiSemaforo } from '../features/semaforo/utils/entradasDelSemaforo';
@@ -293,6 +294,9 @@ export default function YoScreen() {
      Perú). El aviso `/caja` llega con `abrirCaja` (lo deja `AbridorDeAvisos`, D-218). */
   const miCaja = useMiCaja();
   const [enCaja, setEnCaja] = useState(false);
+  /* «Eliminar mi cuenta» (backend D-243, autorizado por el dueño el 02/10: Google Play exige poder
+     eliminar la cuenta desde la app). A pantalla completa, como la Caja y Administración. */
+  const [eliminandoCuenta, setEliminandoCuenta] = useState(false);
   const rutaDeYo = useRoute();
   const navegacionDeYo = useNavigation();
   useEffect(() => {
@@ -485,6 +489,10 @@ export default function YoScreen() {
 
   if (enAdministracion && capacidades.administrar) {
     return <AdminScreen onSalir={() => setEnAdministracion(false)} />;
+  }
+
+  if (eliminandoCuenta) {
+    return <EliminarMiCuentaScreen onVolver={() => setEliminandoCuenta(false)} onCerrada={logout} />;
   }
 
   if (enCaja && miCaja.visible && miCaja.caja) {
@@ -742,6 +750,16 @@ export default function YoScreen() {
             <Text style={[t.small, { color: c.textSoft, letterSpacing: 1 }]}>
               CERRAR SESIÓN
             </Text>
+          </Pressable>
+
+          {/* Eliminar mi cuenta (D-243): discreta, al final, debajo de cerrar sesión. */}
+          <Pressable
+            onPress={() => setEliminandoCuenta(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Eliminar mi cuenta"
+            style={styles.eliminarCuentaBtn}
+          >
+            <Text style={[t.small, { color: c.textSoft, textDecorationLine: 'underline' }]}>Eliminar mi cuenta</Text>
           </Pressable>
         </ScrollView>
       )}
@@ -2005,6 +2023,7 @@ const styles = StyleSheet.create({
   more: { borderRadius: space.radiusSm, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   rowCard: { borderWidth: 1, borderRadius: space.radius, minHeight: 48, paddingVertical: 14, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   onboardingBtn: { borderWidth: 1, borderRadius: space.radiusSm, minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  eliminarCuentaBtn: { minHeight: 48, alignItems: 'center', justifyContent: 'center' },
   logoutBtn: { borderWidth: 1, borderRadius: space.radiusSm, minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   detailTopBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 10, borderBottomWidth: 1 },
   /** 48 px: es el "volver" de todas las sub-vistas y era el pulsable más chico del archivo. */

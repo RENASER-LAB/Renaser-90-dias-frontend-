@@ -65,6 +65,17 @@ export function pilaInicial(abrirEn: EntradaDeAdmin): Vista[] {
 }
 
 /**
+ * Tras eliminar la cuenta de alguien desde su ficha (D-243): se vuelve a la lista de Personas. Si la
+ * ficha se abrió desde Personas, se saca la ficha (Personas se vuelve a montar y relee el padrón);
+ * si se abrió desde otro lado (semáforo, inicio, chat), la ficha se reemplaza por Personas.
+ */
+export function pilaTrasEliminarCuenta(pila: Vista[]): Vista[] {
+  const sinFicha = pila[pila.length - 1]?.nombre === 'ficha' ? pila.slice(0, -1) : pila;
+  if (sinFicha[sinFicha.length - 1]?.nombre === 'personas') return sinFicha;
+  return [...sinFicha, { nombre: 'personas', soloSinGrupo: false }];
+}
+
+/**
  * `abrirEn`: por dónde entra. El aviso del sábado (`/semaforo/grupos`) entra directo al semáforo,
  * con la raíz debajo: volver desde ahí sube a Administración, no sale de golpe a Mi programa. El de la
  * Caja Renaser (`/admin/caja/{aprendizId}`, D-219) entra a esa caja, con la lista y la raíz debajo.
@@ -121,6 +132,7 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
           aprendiz={vista.aprendiz}
           onVolver={volver}
           onAbrirCaja={aprendizId => entrar({ nombre: 'caja-detalle', aprendizId })}
+          onCuentaEliminada={() => setPila(pilaTrasEliminarCuenta)}
         />
       );
     case 'caja':
