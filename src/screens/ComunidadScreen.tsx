@@ -83,6 +83,10 @@ import { BurbujaDeMensaje } from '../features/chat/components/BurbujaDeMensaje';
 import { SelectorDeStickers } from '../features/chat/components/SelectorDeStickers';
 import { STICKERS_RENASER } from '../features/chat/data/stickersRenaser';
 import { CabeceraDeChat } from '../features/chat/components/CabeceraDeChat';
+import { CambiarDiaScreen } from '../features/admin/screens/CambiarDiaScreen';
+import { AvisoDeEmergenciaEnSoporte } from '../features/emergencia/components/AvisoDeEmergenciaEnSoporte';
+import type { EmergenciaParaSoporte } from '../features/emergencia/api/emergenciaSchemas';
+import { debeBuscarEmergenciaEnElChat, motivoDelAjuste } from '../features/emergencia/utils/pedidoDeEmergencia';
 import { coloresDelChat } from '../features/chat/components/coloresDelChat';
 import { FilaDeConversacion } from '../features/chat/components/FilaDeConversacion';
 import { SeparadorDeDia } from '../features/chat/components/SeparadorDeDia';
@@ -374,6 +378,9 @@ export interface ChatConversation {
   /* 2026-09-27 (D-205 del backend): en un chat de soporte, la ruta de su foto —la tarjeta de Canva
      con el primer nombre del aprendiz—, pedida con la sesión. `null` en lo demás. */
   fotoPath?: string | null;
+  /* D-244 (2026-10-02): en un chat de soporte, el aprendiz de ese chat (`supportTraineeId`). Quien
+     atiende lo usa para ver si pidió ayuda por una emergencia. `null` en lo demás. */
+  aprendizDelSoporte?: string | null;
 }
 
 export interface GroupMember {
@@ -595,6 +602,9 @@ export default function ComunidadScreen() {
   /* Estas dos viven acá arriba, y no con el resto del estado de navegación, porque el bloque de
      abajo las lee: `const` no se puede usar antes de su declaración. */
   const [activeChat, setActiveChat] = useState<ChatConversation | null>(null);
+  /* D-244: «Cambiar al día N» desde el pedido de emergencia de un chat de soporte. Tapa la pantalla
+     como la ficha de un alumno; al volver, el chat sigue abierto y el aviso se relee. */
+  const [cambioPorEmergencia, setCambioPorEmergencia] = useState<EmergenciaParaSoporte | null>(null);
   const [groupInfoVisible, setGroupInfoVisible] = useState(false);
 
   /**
@@ -2370,6 +2380,19 @@ export default function ComunidadScreen() {
       />
     );
   }
+  if (cambioPorEmergencia) {
+    return (
+      <CambiarDiaScreen
+        aprendizId={cambioPorEmergencia.aprendizId}
+        nombre={cambioPorEmergencia.nombre?.trim() || 'esta persona'}
+        diaActual={cambioPorEmergencia.diaActual}
+        diaSugerido={cambioPorEmergencia.diaPedido}
+        motivoSugerido={motivoDelAjuste(cambioPorEmergencia.queOcurrio)}
+        onVolver={() => setCambioPorEmergencia(null)}
+        onCambiado={() => setCambioPorEmergencia(null)}
+      />
+    );
+  }
   if (loQueTapa === 'mi-grupo') {
     return (
       <MiCelulaScreen
@@ -3730,6 +3753,15 @@ export default function ComunidadScreen() {
             onVolver={() => setActiveChat(null)}
             onAbrirInfo={() => setGroupInfoVisible(true)}
           />
+
+          {/* D-244: el pedido de emergencia abierto de esta persona, para quien atiende su soporte. */}
+          {debeBuscarEmergenciaEnElChat({
+            tipo: activeChat.type,
+            aprendizDelSoporte: activeChat.aprendizDelSoporte,
+            miRol: user?.role,
+          }) && activeChat.aprendizDelSoporte ? (
+            <AvisoDeEmergenciaEnSoporte aprendizId={activeChat.aprendizDelSoporte} onCambiarDia={setCambioPorEmergencia} />
+          ) : null}
 
           {/* Mensajes estilo WhatsApp (2026-09-26): separadores de día, tandas del mismo
               remitente (cola solo en la primera, nombre en color en los grupos) y la hora dentro

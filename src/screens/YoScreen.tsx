@@ -57,6 +57,8 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useMiCaja } from '../features/caja/hooks/useMiCaja';
 import { MiCajaScreen } from '../features/caja/screens/MiCajaScreen';
 import { etiquetaParaElAprendiz } from '../features/caja/utils/estadosDeCaja';
+import { useMiEmergencia } from '../features/emergencia/hooks/useMiEmergencia';
+import { EmergenciaScreen } from '../features/emergencia/screens/EmergenciaScreen';
 import { useMiSemaforo } from '../features/semaforo/hooks/useMiSemaforo';
 import { hayQuePedirMiSemaforo } from '../features/semaforo/utils/entradasDelSemaforo';
 import { curvaDeEvolucion } from '../features/semaforo/utils/curvaDeEvolucion';
@@ -293,6 +295,10 @@ export default function YoScreen() {
      Perú). El aviso `/caja` llega con `abrirCaja` (lo deja `AbridorDeAvisos`, D-218). */
   const miCaja = useMiCaja();
   const [enCaja, setEnCaja] = useState(false);
+  /* Botón de emergencia (D-244, pedido del dueño del 02/10): un acceso discreto al pie de Yo, solo para
+     un aprendiz que ya empezó (el servidor responde 403 a quien no lo es). Pedir no cambia el día. */
+  const miEmergencia = useMiEmergencia();
+  const [enEmergencia, setEnEmergencia] = useState(false);
   const rutaDeYo = useRoute();
   const navegacionDeYo = useNavigation();
   useEffect(() => {
@@ -489,6 +495,12 @@ export default function YoScreen() {
 
   if (enCaja && miCaja.visible && miCaja.caja) {
     return <MiCajaScreen caja={miCaja.caja} onVolver={() => setEnCaja(false)} onCambio={miCaja.recargar} />;
+  }
+
+  if (enEmergencia && miEmergencia.visible && miEmergencia.mia) {
+    return (
+      <EmergenciaScreen mia={miEmergencia.mia} onVolver={() => setEnEmergencia(false)} onEnviado={miEmergencia.recargar} />
+    );
   }
 
 
@@ -730,6 +742,22 @@ export default function YoScreen() {
               MI FICHA INICIAL & PACTO
             </Text>
           </Pressable>
+
+          {/* TUVE UNA EMERGENCIA (D-244) — discreto, al pie, como «Mi ficha inicial»: no es algo de
+              todos los días. Solo si el servidor dice que esta cuenta puede pedirlo. */}
+          {miEmergencia.visible ? (
+            <Pressable
+              onPress={() => setEnEmergencia(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Tuve una emergencia: pedir volver a un día del programa"
+              style={[styles.onboardingBtn, { borderColor: c.border, backgroundColor: c.cardBg }]}
+            >
+              <Icon name="heart" size={16} color={c.textSoft} />
+              <Text style={[t.small, { color: c.textStrong, letterSpacing: 1, fontFamily: 'Jost_500Medium' }]}>
+                TUVE UNA EMERGENCIA
+              </Text>
+            </Pressable>
+          ) : null}
 
           {/* Logout */}
           <Pressable

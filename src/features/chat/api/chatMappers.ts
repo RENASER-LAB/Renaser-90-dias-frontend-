@@ -456,6 +456,8 @@ export function mapearResumenConversacion(
     // pide con la sesión (`utils/fotoConSesion.ts`, antes `fotoDelSoporte.ts`); sin ella, la tarjeta
     // sin nombre de siempre.
     fotoPath: resumen.conversation.photoPath?.trim() || null,
+    // D-244: de quién es el soporte, para el aviso de emergencia que ve quien atiende.
+    aprendizDelSoporte: resumen.conversation.supportTraineeId?.trim() || null,
     // El rol del otro en palabras, el mismo dato del subtítulo, para la info del contacto. `null`
     // si no se conoce: la info muestra entonces el genérico, nunca un rol supuesto.
     rolDelOtro: otro?.role ? traducirRol(otro.role) : null,

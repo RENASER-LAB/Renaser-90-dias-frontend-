@@ -74,6 +74,8 @@ export interface WireConversacion {
    * pide CON la sesión (`X-Auth-Token`). `null` o ausente en lo demás, y en un backend anterior.
    */
   photoPath?: string | null;
+  /** Solo en un SOPORTE (D-244 del backend, 2026-10-02): el aprendiz de ese chat. */
+  supportTraineeId?: string | null;
 }
 
 /** `MensajeResponse.ReplyPreviewResponse` (#29). */

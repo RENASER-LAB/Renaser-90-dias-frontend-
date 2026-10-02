@@ -31,6 +31,10 @@ import {
  *
  * Qué pasa en el servidor: no escribe el número, corre el reloj para que HOY (en la zona del
  * aprendiz) caiga en el día elegido, y desde mañana sigue contando desde ahí. Lo ya hecho no se borra.
+ *
+ * D-244 (2026-10-02): desde el pedido de emergencia del chat de soporte se abre con `diaSugerido` y
+ * `motivoSugerido` ya puestos (el día que pidió la persona y lo que contó). Se pueden cambiar; la
+ * confirmación es la misma. Cambiar el día deja el pedido resuelto en el servidor.
  */
 export function CambiarDiaScreen({
   aprendizId,
@@ -38,17 +42,21 @@ export function CambiarDiaScreen({
   diaActual,
   onVolver,
   onCambiado,
+  diaSugerido,
+  motivoSugerido,
 }: {
   aprendizId: string;
   nombre: string;
   diaActual: number;
   onVolver: () => void;
   onCambiado: (diaNuevo: number) => void;
+  diaSugerido?: number;
+  motivoSugerido?: string;
 }) {
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
-  const [texto, setTexto] = useState(String(diaActual));
-  const [motivo, setMotivo] = useState('');
+  const [texto, setTexto] = useState(String(diaSugerido ?? diaActual));
+  const [motivo, setMotivo] = useState(motivoSugerido ?? '');
   const [error, setError] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
 

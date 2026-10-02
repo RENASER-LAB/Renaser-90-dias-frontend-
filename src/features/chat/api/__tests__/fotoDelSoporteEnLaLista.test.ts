@@ -46,3 +46,15 @@ describe('photoPath en la lista de chats', () => {
     expect(mapearResumenConversacion(resumen('SUPPORT', '  '), 'yo', {}).fotoPath).toBeNull();
   });
 });
+
+describe('supportTraineeId (D-244)', () => {
+  it('el soporte dice de quién es; los demás no, y un backend anterior tampoco', () => {
+    const conAprendiz = resumen('SUPPORT', null) as unknown as { conversation: Record<string, unknown> };
+    conAprendiz.conversation.supportTraineeId = 'a-1';
+    expect(
+      mapearResumenConversacion(conAprendiz as unknown as WireConversacionResumen, 'yo', {}).aprendizDelSoporte,
+    ).toBe('a-1');
+    expect(mapearResumenConversacion(resumen('SUPPORT'), 'yo', {}).aprendizDelSoporte).toBeNull();
+    expect(mapearResumenConversacion(resumen('GLOBAL'), 'yo', {}).aprendizDelSoporte).toBeNull();
+  });
+});
