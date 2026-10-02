@@ -105,6 +105,11 @@ export const aprendizAdminSchema = z
     phase: z.string().nullish(),
     cellId: z.string().nullable(),
     mentorId: z.string().nullable(),
+    /**
+     * D-243: si viene, la persona cerró su cuenta y sus datos se borran en esa fecha (ISO). Opcional
+     * y anulable: un backend anterior no lo manda.
+     */
+    deletionScheduledFor: z.string().nullish(),
   })
   .passthrough();
 
@@ -242,6 +247,13 @@ export const detalleAprendizSchema = z
     startDate: z.string().nullish(),
     phase: z.string().nullish(),
     lastDayAdjustment: z.unknown().optional(),
+    /** D-243: el correo (lo que se escribe para confirmar «Eliminar cuenta») y el rol, que decide
+        si quien mira puede ofrecerlo. Opcionales por el mismo motivo que el resto. */
+    email: z.string().nullish(),
+    role: z.string().nullish(),
+    status: z.string().nullish(),
+    /** D-243: cerró su cuenta y se borra en esa fecha (ISO). Ausente o `null` = nada pendiente. */
+    deletionScheduledFor: z.string().nullish(),
   })
   .passthrough();
 

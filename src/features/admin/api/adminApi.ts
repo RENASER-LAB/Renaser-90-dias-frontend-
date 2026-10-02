@@ -368,6 +368,25 @@ export async function obtenerDetalleAprendiz(aprendizId: string): Promise<Detall
 }
 
 /**
+ * `POST /api/v1/admin/users/{id}/account-deletion` (D-243): borra la cuenta AHORA y para siempre.
+ * Responde 204. 400 si el correo no coincide, 403 sin permiso, 404 si ya no existe. Solo ADMIN y
+ * ALQUIMISTA; sobre un ADMIN o ALQUIMISTA, solo un ADMIN; nunca sobre uno mismo (lo decide el servidor).
+ */
+export async function eliminarCuentaDePersona(usuarioId: string, confirmEmail: string): Promise<void> {
+  await apiFetch<unknown>(`/api/v1/admin/users/${encodeURIComponent(usuarioId)}/account-deletion`, {
+    method: 'POST',
+    body: { confirmEmail },
+  });
+}
+
+/** `POST /api/v1/admin/users/{id}/account-deletion/recover` (D-243): reabre una cuenta cerrada. 204; 409 si ya no estaba pendiente. */
+export async function recuperarCuentaDePersona(usuarioId: string): Promise<void> {
+  await apiFetch<unknown>(`/api/v1/admin/users/${encodeURIComponent(usuarioId)}/account-deletion/recover`, {
+    method: 'POST',
+  });
+}
+
+/**
  * `PUT /api/v1/admin/trainees/{id}/program-day` (D-82). Responde 204.
  *
  * El servidor no escribe el día: calcula el corrimiento que hace que HOY, en la zona del aprendiz,

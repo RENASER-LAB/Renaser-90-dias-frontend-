@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eliminar tu cuenta · Renaser</title>
+<meta name="description" content="Cómo eliminar tu cuenta de Renaser 90 días, desde la app o desde esta página, qué datos se borran y en qué plazo.">
+<meta name="robots" content="index, follow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Jost:wght@400;500;700&display=swap" rel="stylesheet">
+<!--
+  Página estática (backend D-243): Google Play pide un enlace web para eliminar la cuenta. Todo lo
+  que explica (cómo hacerlo, qué se borra y en qué plazo) se lee SIN JavaScript, porque así la
+  revisa Google. El formulario (correo → código → confirmar) es mejora progresiva: sin JavaScript
+  queda oculto y se ve el texto alternativo de <noscript>.
+
+  Expo copia `public/` a `dist/` y `vercel.json` sirve `/eliminar-cuenta` con este archivo antes del
+  rewrite general a `/index.html`. No carga el bundle de la app: abre igual con o sin sesión.
+  Los colores y las tipografías son los de `src/theme/tokens.ts`, como `public/privacidad/`.
+
+  La API es la de producción. Solo si la página se sirve desde localhost o 127.0.0.1 se puede
+  cambiar con `?api=http://localhost:8099` (para probar en local): en cualquier otro host se ignora,
+  porque un enlace con otra API serviría para robar correos y códigos.
+-->
+<style>
+  :root {
+    --bg: #FCFBF9; --card: #FDFCFA; --border: #E2DCD2; --divider: #EDE7DC;
+    --text: #1E1B18; --strong: #11100D; --soft: #4A453D; --gold: #B2924F; --gold-ink: #856C35;
+    --on-gold: #11100D; --wash: rgba(178,146,79,0.10); --danger: #B3403B; --ok: #2F6B3A;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0C0B09; --card: #161513; --border: rgba(198,164,92,0.20); --divider: rgba(255,255,255,0.08);
+      --text: #F6F4EE; --strong: #FFFFFF; --soft: #C5BEB3; --gold: #C6A45C; --gold-ink: #C6A45C;
+      --on-gold: #11100D; --wash: rgba(198,164,92,0.12); --danger: #E06A66; --ok: #7BC48A;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: 'Jost', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    font-size: 16px; line-height: 1.6;
+  }
+  main { max-width: 640px; margin: 0 auto; padding: 32px 18px 64px; }
+  header { border-bottom: 1px solid var(--divider); padding-bottom: 20px; margin-bottom: 8px; }
+  .marca { font-weight: 500; font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--gold-ink); margin: 0 0 10px; }
+  h1 { font-family: 'Fraunces', Georgia, serif; font-weight: 700; font-size: 32px; line-height: 1.15; letter-spacing: -0.8px; color: var(--strong); margin: 0; }
+  h2 { font-family: 'Fraunces', Georgia, serif; font-weight: 600; font-size: 22px; line-height: 1.25; letter-spacing: -0.3px; color: var(--strong); margin: 32px 0 10px; }
+  p, li { color: var(--text); }
+  .suave { color: var(--soft); font-size: 14px; }
+  a { color: var(--gold-ink); text-underline-offset: 3px; }
+  ul, ol { padding-left: 20px; margin: 8px 0; }
+  li { margin: 4px 0; }
+  .resumen { background: var(--wash); border: 1px solid var(--border); border-radius: 20px; padding: 16px 18px; margin: 20px 0; }
+  .resumen p { margin: 6px 0; }
+  .caja { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 16px 18px; margin: 16px 0; }
+  .caja p { margin: 6px 0; }
+  form { display: grid; gap: 10px; margin: 0; }
+  label { font-weight: 500; color: var(--strong); }
+  input {
+    font: inherit; font-size: 17px; color: var(--text); background: var(--card);
+    border: 1px solid var(--border); border-radius: 14px; min-height: 52px; padding: 0 14px; width: 100%;
+  }
+  input:focus { outline: 2px solid var(--gold); outline-offset: 1px; }
+  button {
+    font: inherit; font-weight: 500; font-size: 16px; min-height: 52px; border-radius: 14px; padding: 0 18px;
+    cursor: pointer; width: 100%;
+  }
+  button:disabled { opacity: 0.6; cursor: default; }
+  .principal { background: var(--gold); border: 1px solid var(--gold); color: var(--on-gold); }
+  .secundario { background: var(--card); border: 1px solid var(--border); color: var(--strong); }
+  .peligro { background: var(--card); border: 1px solid var(--danger); color: var(--danger); }
+  .aviso { margin: 4px 0 0; }
+  .error { color: var(--danger); }
+  .listo { color: var(--ok); }
+  .fila { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+  @media (max-width: 420px) { .fila { grid-template-columns: 1fr; } h1 { font-size: 28px; } }
+  [hidden] { display: none !important; }
+  footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--divider); }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <p class="marca">Renaser · 90 días</p>
+  <h1>Eliminar tu cuenta de Renaser 90 días</h1>
+</header>
+
+<div class="resumen">
+  <p><strong>Tu cuenta se cierra al instante:</strong> ya no puedes entrar y sales de tus grupos, del ranking y de la comunidad.</p>
+  <p><strong>Durante 30 días</strong> puedes pedir a soporte que la recupere.</p>
+  <p><strong>Pasados los 30 días</strong>, tus datos se borran para siempre.</p>
+</div>
+
+<h2 id="desde-la-app">Desde la app</h2>
+<p>Abre Renaser → <strong>Yo</strong> → <strong>Eliminar mi cuenta</strong> (al final). Confirma con tu contraseña o, si entras con Google o Apple, con un código que te llega al correo.</p>
+
+<h2 id="desde-aqui">Desde aquí</h2>
+<noscript>
+  <p class="caja">Para hacerlo desde esta página, activa JavaScript en tu navegador. O hazlo desde la app: Yo → Eliminar mi cuenta.</p>
+</noscript>
+
+<div id="formulario" class="caja" hidden>
+  <form id="paso-correo" novalidate>
+    <label for="correo">Tu correo</label>
+    <input id="correo" name="correo" type="email" autocomplete="email" inputmode="email" required>
+    <button id="enviar-codigo" class="secundario" type="submit">Enviarme un código</button>
+    <p id="mensaje-correo" class="aviso" role="status" aria-live="polite"></p>
+  </form>
+
+  <form id="paso-codigo" novalidate hidden>
+    <label for="codigo">Código de 6 dígitos</label>
+    <input id="codigo" name="codigo" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required>
+    <button id="eliminar" class="peligro" type="submit" disabled>Eliminar mi cuenta</button>
+    <div id="confirmacion" hidden>
+      <p><strong>¿Seguro?</strong> Tu cuenta se cierra ahora. Tienes 30 días para pedir a soporte que la recupere.</p>
+      <div class="fila">
+        <button id="cancelar" class="secundario" type="button">Cancelar</button>
+        <button id="confirmar" class="peligro" type="button">Sí, eliminar mi cuenta</button>
+      </div>
+    </div>
+    <p id="mensaje-codigo" class="aviso error" role="alert"></p>
+  </form>
+
+  <div id="final" hidden>
+    <p class="listo"><strong>Tu cuenta quedó cerrada.</strong></p>
+    <p id="texto-final"></p>
+  </div>
+</div>
+
+<h2 id="que-se-borra">Qué se borra</h2>
+<p>Pasados los 30 días se borran para siempre:</p>
+<ul>
+  <li>Tu perfil: nombre, correo, teléfono y foto.</li>
+  <li>Tu progreso en el programa.</li>
+  <li>Tus hábitos y sus registros.</li>
+  <li>Tus evidencias, fotos y audios.</li>
+  <li>Tus mensajes.</li>
+  <li>Tus publicaciones.</li>
+</ul>
+
+<h2 id="plazos">Plazos</h2>
+<ol>
+  <li><strong>Al confirmar:</strong> la cuenta se cierra al instante.</li>
+  <li><strong>Los 30 días siguientes:</strong> puedes pedir a soporte que la recupere.</li>
+  <li><strong>Al terminar los 30 días:</strong> tus datos se borran de forma definitiva.</li>
+</ol>
+
+<footer>
+  <p class="suave">Más detalles en la <a href="/privacidad">Política de Privacidad</a>.</p>
+  <p class="suave">Renaser · 90 días para redefinir tu vida, energía y propósito.</p>
+</footer>
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  var API_DE_PRODUCCION = 'https://djbooeq09skac.cloudfront.net';
+  var MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto',
+    'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  var MENSAJE_CODIGO_ENVIADO = 'Si hay una cuenta con ese correo, te llegó un código.';
+
+  /** La API: la de producción, salvo en localhost/127.0.0.1 con `?api=` (solo para probar). */
+  function baseDeLaApi(ubicacion) {
+    var host = ubicacion.hostname;
+    if (host === 'localhost' || host === '127.0.0.1') {
+      var pedida = new URLSearchParams(ubicacion.search).get('api');
+      if (pedida && /^https?:\/\/[^\s]+$/.test(pedida)) return pedida.replace(/\/+$/, '');
+    }
+    return API_DE_PRODUCCION;
+  }
+
+  /** «1 de noviembre de 2026», en la zona del navegador. */
+  function fechaLegible(iso) {
+    var fecha = new Date(iso);
+    if (isNaN(fecha.getTime())) return null;
+    return fecha.getDate() + ' de ' + MESES[fecha.getMonth()] + ' de ' + fecha.getFullYear();
+  }
+
+  function correoConForma(texto) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(texto.trim());
+  }
+
+  window.RenaserEliminarCuenta = { baseDeLaApi: baseDeLaApi, fechaLegible: fechaLegible };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var api = baseDeLaApi(window.location);
+  var correoEnviado = '';
+
+  function enviar(ruta, cuerpo) {
+    return fetch(api + ruta, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(cuerpo)
+    });
+  }
+
+  function iniciar() {
+    $('formulario').hidden = false;
+
+    $('paso-correo').addEventListener('submit', function (evento) {
+      evento.preventDefault();
+      var correo = $('correo').value.trim();
+      var mensaje = $('mensaje-correo');
+      mensaje.className = 'aviso';
+      if (!correoConForma(correo)) {
+        mensaje.className = 'aviso error';
+        mensaje.textContent = 'Escribe un correo válido.';
+        return;
+      }
+      $('enviar-codigo').disabled = true;
+      enviar('/api/v1/account-deletion/request-code', { email: correo })
+        .then(function (respuesta) {
+          if (respuesta.status === 429) {
+            mensaje.className = 'aviso error';
+            mensaje.textContent = 'Demasiados intentos, prueba más tarde.';
+            return;
+          }
+          if (respuesta.status >= 500) {
+            mensaje.className = 'aviso error';
+            mensaje.textContent = 'El servidor no responde. Prueba en unos minutos.';
+            return;
+          }
+          // Siempre el mismo texto: no se revela si el correo tiene cuenta.
+          correoEnviado = correo;
+          mensaje.textContent = MENSAJE_CODIGO_ENVIADO;
+          $('enviar-codigo').textContent = 'Enviarme otro código';
+          $('paso-codigo').hidden = false;
+        })
+        .catch(function () {
+          mensaje.className = 'aviso error';
+          mensaje.textContent = 'No se pudo conectar. Revisa tu conexión.';
+        })
+        .then(function () { $('enviar-codigo').disabled = false; });
+    });
+
+    $('codigo').addEventListener('input', function () {
+      var limpio = $('codigo').value.replace(/\D/g, '').slice(0, 6);
+      if (limpio !== $('codigo').value) $('codigo').value = limpio;
+      $('eliminar').disabled = limpio.length !== 6;
+      $('mensaje-codigo').textContent = '';
+    });
+
+    $('paso-codigo').addEventListener('submit', function (evento) {
+      evento.preventDefault();
+      if ($('codigo').value.length !== 6) return;
+      $('confirmacion').hidden = false;
+      $('eliminar').hidden = true;
+    });
+
+    $('cancelar').addEventListener('click', function () {
+      $('confirmacion').hidden = true;
+      $('eliminar').hidden = false;
+    });
+
+    $('confirmar').addEventListener('click', function () {
+      var mensaje = $('mensaje-codigo');
+      $('confirmar').disabled = true;
+      enviar('/api/v1/account-deletion/confirm', { email: correoEnviado, codigo: $('codigo').value })
+        .then(function (respuesta) {
+          if (respuesta.ok) {
+            return respuesta.json().then(function (cerrada) {
+              var fecha = fechaLegible(cerrada.seBorraEl);
+              var dias = cerrada.diasDeGracia || 30;
+              $('texto-final').textContent =
+                (fecha ? 'Se borrará el ' + fecha + '. ' : 'Se borrará en ' + dias + ' días. ') +
+                'Hasta entonces puedes pedir a soporte que la recupere. Después se borran para siempre tu perfil, ' +
+                'tu progreso, tus hábitos, evidencias, fotos, audios, mensajes y publicaciones.';
+              $('paso-correo').hidden = true;
+              $('paso-codigo').hidden = true;
+              $('final').hidden = false;
+            });
+          }
+          mensaje.textContent = respuesta.status === 429
+            ? 'Demasiados intentos, prueba más tarde.'
+            : respuesta.status === 400
+              ? 'Código incorrecto o vencido.'
+              : 'No se pudo completar. Prueba en unos minutos.';
+          $('confirmacion').hidden = true;
+          $('eliminar').hidden = false;
+        })
+        .catch(function () {
+          mensaje.textContent = 'No se pudo conectar. Revisa tu conexión.';
+        })
+        .then(function () { $('confirmar').disabled = false; });
+    });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar);
+  else iniciar();
+})();
+</script>
+</body>
+</html>

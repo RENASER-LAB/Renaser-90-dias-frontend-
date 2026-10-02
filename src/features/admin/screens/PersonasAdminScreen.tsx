@@ -11,6 +11,7 @@ import { listarAprendices } from '../api/adminApi';
 import type { AprendizAdminApi } from '../api/adminSchemas';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
 import { mensajeDeFallo } from '../utils/mensajes';
+import { etiquetaDeBorradoPendiente } from '../../cuenta/utils/eliminarCuenta';
 
 const POR_PAGINA = 20;
 
@@ -158,7 +159,10 @@ export function PersonasAdminScreen({
 
         {error ? <Text style={[t.body, { color: c.danger, fontSize: 16 }]}>{error}</Text> : null}
 
-        {personas.map(persona => (
+        {personas.map(persona => {
+          /* D-243: cerró su cuenta y se borra en esa fecha. */
+          const borrado = etiquetaDeBorradoPendiente(persona.deletionScheduledFor);
+          return (
           <Pressable
             key={persona.id}
             onPress={() => onAbrirFicha(persona)}
@@ -174,10 +178,16 @@ export function PersonasAdminScreen({
                 {persona.cellId ? `Día ${persona.programDay}` : `Sin grupo · día ${persona.programDay}`}
                 {persona.status === 'SUSPENDED' ? ' · suspendida' : ''}
               </Text>
+              {borrado ? (
+                <Text style={[t.body, { color: c.danger, fontSize: 16, marginTop: 2 }]} numberOfLines={1}>
+                  {borrado}
+                </Text>
+              ) : null}
             </View>
             <Icon name="chevron" size={18} color={c.chevron} />
           </Pressable>
-        ))}
+          );
+        })}
 
         {cargando ? <ActivityIndicator color={c.goldInk} style={{ marginTop: 12 }} /> : null}
 

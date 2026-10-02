@@ -29,4 +29,6 @@ export type PersonaDeFicha = {
   programDay?: number | null;
   phase?: string | null;
   cellId?: string | null;
+  /** D-243: la fila de Personas lo trae si la persona cerró su cuenta (fecha del borrado, ISO). */
+  deletionScheduledFor?: string | null;
 };
