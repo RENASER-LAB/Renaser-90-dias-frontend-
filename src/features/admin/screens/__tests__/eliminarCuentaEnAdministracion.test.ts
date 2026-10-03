@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import React from 'react';
 import TestRenderer, { act, type ReactTestRenderer } from 'react-test-renderer';
 
@@ -57,6 +57,7 @@ import { FichaAprendizScreen } from '../FichaAprendizScreen';
 
 const APRENDIZ = { id: 'ap-1', fullName: 'Ana Pérez', email: 'ana@correo.com' };
 const DETALLE = { id: 'ap-1', programDay: 5, inscrito: true, email: 'ana@correo.com', role: 'TRAINEE', status: 'ACTIVE' };
+const pantallasMontadas: ReactTestRenderer[] = [];
 
 const boton = (r: ReactTestRenderer, etiqueta: string) =>
   r.root.findAll(n => n.props.accessibilityLabel === etiqueta && typeof n.props.onPress === 'function')[0];
@@ -77,6 +78,7 @@ function montarFicha(props: Partial<React.ComponentProps<typeof FichaAprendizScr
       React.createElement(FichaAprendizScreen, { aprendiz: APRENDIZ, onVolver: () => undefined, ...props }),
     );
   });
+  pantallasMontadas.push(r);
   return r;
 }
 
@@ -87,6 +89,14 @@ beforeEach(() => {
   mockRecuperar.mockReset();
   mockRecargar.mockClear();
   mockAlerta.mockClear();
+});
+
+afterEach(async () => {
+  // La ficha deja un aviso temporal después de recuperar una cuenta. Desmontarla cancela su
+  // temporizador antes de que Jest cierre el entorno y evita un render tardío en CI.
+  await act(async () => {
+    pantallasMontadas.splice(0).forEach(pantalla => pantalla.unmount());
+  });
 });
 
 describe('quién ve «Eliminar cuenta» en la ficha', () => {
@@ -129,6 +139,7 @@ describe('confirmación escribiendo el correo', () => {
         }),
       );
     });
+    pantallasMontadas.push(r);
     return r;
   }
 

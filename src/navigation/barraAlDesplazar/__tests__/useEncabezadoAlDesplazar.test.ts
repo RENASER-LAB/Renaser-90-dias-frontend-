@@ -117,12 +117,16 @@ describe('useEncabezadoAlDesplazar', () => {
     expect(subio()).toBe(-ALTO);
   });
 
-  it('con «Reducir movimiento» va en el flujo, fijo, como antes', async () => {
+  it('con las animaciones del sistema desactivadas el encabezado acompaña a la barra', async () => {
     jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
     await montar();
-    expect(encabezado!.flotante).toBe(false);
-    expect(encabezado!.relleno).toBe(0);
+    expect(encabezado!.flotante).toBe(true);
+    expect(encabezado!.relleno).toBe(ALTO);
     desplazar(0, 100, 200, 300);
+    expect(subio()).toBe(-ALTO);
+    desplazar(290, 280, 270);
+    expect(subio()).toBe(-SOBRE_LA_FILA);
+    desplazar(10);
     expect(subio()).toBe(0);
   });
 

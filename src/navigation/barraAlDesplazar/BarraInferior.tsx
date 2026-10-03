@@ -7,7 +7,7 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
-import { useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
+import { ReduceMotion, useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
 import { ESTADO_INICIAL, siguienteEstadoDeLaBarra, type EstadoDeLaBarra } from './logicaDeLaBarra';
 
 /**
@@ -21,9 +21,9 @@ import { ESTADO_INICIAL, siguienteEstadoDeLaBarra, type EstadoDeLaBarra } from '
  *   cambiarlo vuelva a dibujar solo la barra y no cada pantalla que usa el hook.
  * - `altoQueGana` lo mide `TabBar`: cuánto crece la pantalla con la barra escondida.
  *
- * **Se queda fija a la vista** con «Reducir movimiento» del sistema o con un lector de pantalla
- * activo: para quien pidió menos movimiento la barra es la navegación y no debe ir y venir, y a un
- * lector de pantalla no se le puede esconder la navegación.
+ * **Se queda fija a la vista** con un lector de pantalla activo. Por pedido del dueño (2026-10-03),
+ * desactivar las animaciones del sistema ya no bloquea este gesto: la barra y el encabezado de
+ * Comunidad conservan su transición de 200 ms.
  */
 export interface BarraInferior {
   escondida: SharedValue<number>;
@@ -43,23 +43,23 @@ export const DURACION_MS = 200;
 
 const Contexto = createContext<BarraInferior | null>(null);
 
-function useAjusteDeAccesibilidad(evento: 'reduceMotionChanged' | 'screenReaderChanged', leer: () => Promise<boolean>) {
+function useLectorDePantalla() {
   const [activo, setActivo] = useState(false);
   useEffect(() => {
     // En la web no hay forma de saber si hay un lector de pantalla, y `react-native-web` responde
     // SIEMPRE que sí: la barra (y el encabezado de Comunidad) quedaban fijos para todo el mundo en
-    // la web (E-499, 2026-10-02). Ahí se respeta solo «Reducir movimiento» (`prefers-reduced-motion`).
-    if (evento === 'screenReaderChanged' && Platform.OS === 'web') return;
+    // la web (E-499, 2026-10-02).
+    if (Platform.OS === 'web') return;
     let vivo = true;
-    leer()
+    AccessibilityInfo.isScreenReaderEnabled()
       .then(v => vivo && setActivo(!!v))
       .catch(() => undefined);
-    const sub = AccessibilityInfo.addEventListener(evento, v => setActivo(!!v));
+    const sub = AccessibilityInfo.addEventListener('screenReaderChanged', v => setActivo(!!v));
     return () => {
       vivo = false;
       sub?.remove?.();
     };
-  }, [evento, leer]);
+  }, []);
   return activo;
 }
 
@@ -69,9 +69,7 @@ export function BarraInferiorProvider({ children }: { children: React.ReactNode 
   const visibleRef = useRef(true);
   const reiniciosRef = useRef(0);
   const avisos = useRef(new Set<() => void>()).current;
-  const reducirMovimiento = useAjusteDeAccesibilidad('reduceMotionChanged', AccessibilityInfo.isReduceMotionEnabled);
-  const lectorDePantalla = useAjusteDeAccesibilidad('screenReaderChanged', AccessibilityInfo.isScreenReaderEnabled);
-  const fija = reducirMovimiento || lectorDePantalla;
+  const fija = useLectorDePantalla();
   const fijaRef = useRef(fija);
   fijaRef.current = fija;
 
@@ -80,7 +78,7 @@ export function BarraInferiorProvider({ children }: { children: React.ReactNode 
       const destino = visible || fijaRef.current;
       if (visibleRef.current === destino) return;
       visibleRef.current = destino;
-      escondida.value = withTiming(destino ? 0 : 1, { duration: DURACION_MS });
+      escondida.value = withTiming(destino ? 0 : 1, { duration: DURACION_MS, reduceMotion: ReduceMotion.Never });
       avisos.forEach(aviso => aviso());
     },
     [escondida, avisos]

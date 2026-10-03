@@ -1,6 +1,6 @@
 /**
  * El hook y el proveedor de «ocultar la barra al desplazar» (2026-10-02): que una lista la esconda
- * y la devuelva, y los casos en que NO debe moverse (lector de pantalla, reducir movimiento,
+ * y la devuelva, y los casos en que NO debe moverse (lector de pantalla,
  * teclado abierto) o debe volver sola (cambio de sub-vista, salir de una sub-pantalla).
  *
  * Reanimated es el doble oficial (`jest.setup.js`): `withTiming` llega al destino al instante, así
@@ -78,10 +78,13 @@ describe('useOcultarBarraAlDesplazar', () => {
     expect(barra!.escondida.value).toBe(1);
   });
 
-  it('con «Reducir movimiento» queda fija a la vista', async () => {
+  it('con las animaciones del sistema desactivadas se esconde al bajar y vuelve al subir', async () => {
     jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
     await montar(React.createElement(Lista));
+    expect(barra!.fija).toBe(false);
     desplazar(0, 100, 200, 300);
+    expect(barra!.escondida.value).toBe(1);
+    desplazar(290, 280, 270);
     expect(barra!.escondida.value).toBe(0);
   });
 

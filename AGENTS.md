@@ -89,9 +89,11 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * En todas las secciones (Muro, Eventos, Classroom —catálogo, curso y lección—, Tribu, Ranking). En la
       lección no hay fila de círculos: al subir un poco no vuelve nada hasta llegar arriba. No en la
       conversación abierta (ya es pantalla completa).
-    * **Fijo como antes** con «Reducir movimiento» o lector de pantalla (el encabezado vuelve al flujo).
+    * **Fijo como antes** con lector de pantalla (el encabezado vuelve al flujo). Por pedido del dueño
+      del 2026-10-03, las animaciones desactivadas del sistema ya no lo fijan: conserva la transición
+      de 200 ms, igual que la barra.
     * **Web**: `react-native-web` responde siempre que hay lector de pantalla, así que la barra de D-246 y este
-      encabezado quedaban fijos para todos en la web (E-499); ahí ya solo cuenta `prefers-reduced-motion`.
+      encabezado quedaban fijos para todos en la web (E-499); ahí se omite esa detección.
     * **Hace falta un APK nuevo** (la app no se actualiza por aire).
     Una excepción puntual **no abre** el tab: cualquier otro cambio sobre los cinco principales vuelve a
     necesitar autorización explícita.
@@ -107,8 +109,10 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       crece en lo mismo, así que ningún contenido queda tapado en ningún estado. (No animar el ALTO cuadro a
       cuadro: en el emulador la barra quedaba a medio salir; ver el comentario en `TabBar`.) Vuelve sola al cambiar de pestaña, de sub-vista o de sección, al salir de una
       sub-pantalla, al volver a la app y al abrir o cerrar una conversación.
-    * El botón del acompañante baja con la barra. **Fija a la vista** con «Reducir movimiento» o con lector
-      de pantalla, y no se toca con el teclado abierto.
+    * El botón del acompañante baja con la barra. **Fija a la vista** con lector de pantalla, y no se toca
+      con el teclado abierto. **Ampliación autorizada el 2026-10-03:** «activa las animaciones y genera
+      el nuevo APK». Aunque Android tenga las animaciones desactivadas, este gesto conserva la
+      transición de 200 ms (`ReduceMotion.Never` en la barra y el encabezado de Comunidad).
     * Pantallas con el comportamiento: las fija `barraAlDesplazar/__tests__/pantallasConBarraAlDesplazar.test.ts`.
       Sin él: la conversación abierta, los modales y las listas horizontales.
     * **Hace falta un APK nuevo** (la app no se actualiza por aire).
@@ -967,4 +971,3 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * Si está en el **detalle de una categoría/dimensión**: el gesto lateral debe regresar al menú principal.
     * Si está en un **formulario por pasos / onboarding**: el gesto lateral debe retroceder al paso anterior.
   * **Prohibido**: Permitir que el gesto lateral del sistema cierre o minimice la aplicación cuando el usuario se encuentre en una vista hija o modal.
-

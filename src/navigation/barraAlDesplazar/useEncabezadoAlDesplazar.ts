@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
-import { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { ReduceMotion, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { DURACION_MS, useBarraInferior } from './BarraInferior';
 import { desplazamientoDelEncabezado, siguienteEstadoDelEncabezado, type EstadoDelEncabezado } from './logicaDelEncabezado';
 
@@ -18,7 +18,7 @@ const AIRE_SOBRE_LA_FILA = 6;
  * bucle que resolvió la barra, D-246). Arriba de todo el relleno deja el contenido justo debajo del
  * encabezado completo, como antes; más abajo, lo que pasa por debajo es contenido ya leído.
  *
- * Hasta medirse, y siempre que la barra esté fija («Reducir movimiento», lector de pantalla) o la
+ * Hasta medirse, y siempre que la barra esté fija (lector de pantalla) o la
  * pantalla diga que no hay lista (`disponible: false`, la conversación abierta), el encabezado va
  * en el flujo como siempre: `flotante` es `false`, `relleno` 0 y nada se mueve.
  *
@@ -49,7 +49,9 @@ export function useEncabezadoAlDesplazar(opciones: { disponible: boolean; conFil
     (siguiente: EstadoDelEncabezado, animar: boolean) => {
       estado.current = siguiente;
       const destino = desplazamientoDelEncabezado(siguiente, altos.current);
-      desplazamiento.value = animar ? withTiming(destino, { duration: DURACION_MS }) : destino;
+      desplazamiento.value = animar
+        ? withTiming(destino, { duration: DURACION_MS, reduceMotion: ReduceMotion.Never })
+        : destino;
     },
     [desplazamiento]
   );
