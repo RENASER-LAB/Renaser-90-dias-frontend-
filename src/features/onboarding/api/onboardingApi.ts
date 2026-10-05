@@ -6,6 +6,7 @@ import type {
   EstadoActivacionProgramaApi,
   EstadoOnboardingApi,
   AvanzarEstadoInput,
+  FirmaDelPactoApi,
   GuardarRespuestaInput,
   HitoOnboarding,
   MediaOnboardingApi,
@@ -20,6 +21,7 @@ import {
   cuestionarioSchema,
   estadoActivacionProgramaSchema,
   estadoOnboardingSchema,
+  firmaDelPactoSchema,
   mediaOnboardingSchema,
   respuestaSchema,
   respuestasAgrupadasSchema,
@@ -242,4 +244,15 @@ export async function subirArchivoOnboardingAS3(
 export async function registrarMediaOnboarding(input: RegistrarMediaInput): Promise<MediaOnboardingApi> {
   const r = await apiFetch<unknown>('/api/v1/onboarding/media', { method: 'POST', body: input });
   return validarRespuesta<MediaOnboardingApi>(mediaOnboardingSchema, r, 'POST /api/v1/onboarding/media');
+}
+
+/**
+ * GET /api/v1/onboarding/pact/signature (D-253) — la URL de lectura firmada (15 min) del PNG de la
+ * firma del Pacto de quien pregunta, para verla en Yo → Pacto. Sin parámetro: el backend solo devuelve
+ * la propia. 404 si todavía no hay firma guardada; 403 con la cuenta suspendida. Un backend anterior a
+ * D-253 tampoco tiene la ruta: quien llama trata cualquier error como «sin imagen».
+ */
+export async function obtenerFirmaDelPacto(): Promise<FirmaDelPactoApi> {
+  const r = await apiFetch<unknown>('/api/v1/onboarding/pact/signature');
+  return validarRespuesta<FirmaDelPactoApi>(firmaDelPactoSchema, r, 'GET /api/v1/onboarding/pact/signature');
 }

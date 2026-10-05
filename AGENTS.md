@@ -174,8 +174,15 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       la emergencia y eliminar la cuenta), y vuelven adonde se abrieron: a Yo si se llegó desde Yo, a Ajustes si
       desde Ajustes (`features/yo/utils/navegacionDeYo`). El gesto del sistema va al mismo lugar.
     * **El Pacto ya firmado (decisión 12)**: en solo lectura, «Firmado el <fecha>» (`pactSignedAt`) y sin lienzo ni
-      «Sellar». **La firma dibujada no se muestra: el servidor la guarda pero ningún endpoint la devuelve** (solo
-      el `mediaId` en `/onboarding/answers`); hace falta backend para mostrarla.
+      «Sellar». **La firma dibujada se ve arriba de la fecha** (`PactoFirmado`, con `GET
+      /api/v1/onboarding/pact/signature`, backend D-253): el PNG tal como se selló, sobre el papel blanco del
+      lienzo en los dos temas (no se invierte: volvería azul el dorado), con `expo-image` y la URL sin la firma
+      como clave de caché (`features/yo/utils/firmaDelPacto`). Sin la URL (backend anterior, 404, sin red) o si
+      la imagen no carga, queda solo «Firmado el …».
+      > **Corregido 2026-10-05 (mismo día).** Decía: «La firma dibujada no se muestra: el servidor la guarda pero
+      > ningún endpoint la devuelve (solo el `mediaId` en `/onboarding/answers`); hace falta backend para
+      > mostrarla». El backend se hizo (D-253, rama `pacto-firma` de los dos repos); hace falta desplegarlo y un
+      > APK nuevo.
     * **El Método**: las cuatro fases son páginas que se deslizan con el dedo (asoma la siguiente; los puntos solo
       indican, y para el lector son un control ajustable), con «Siguiente fase» para quien no desliza. Se fueron el
       giro 3D con el `Animated` de React Native, las flechas y los colores pastel a mano; la Fase 3 dejó el ♡.
