@@ -171,3 +171,10 @@ describe('Plan: respuesta al tacto', () => {
     expect(PLAN).toMatch(/areaDelLapiz: \{\s*width: 44,\s*height: 44,/);
   });
 });
+
+describe('Objetivos: el título no repite el eje del segmentado (decisión del dueño, 2026-10-05)', () => {
+  it('arriba dice «Objetivos» y el eje solo lo dice el segmentado', () => {
+    expect(PLAN).toMatch(/accessibilityRole="header"[\s\S]{0,200}>\s*Objetivos\s*<\/Text>/);
+    expect(PLAN).not.toContain('{ETIQUETA_EJE[ejeAbierto]}\n            </Text>');
+  });
+});

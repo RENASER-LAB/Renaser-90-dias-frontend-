@@ -653,9 +653,11 @@ export default function PlanScreen() {
           contentContainerStyle={estiloDelContenido}
           showsVerticalScrollIndicator={false}
         >
-          {/* Volver con la flecha de 24 en 48 y el nombre del eje (2026-10-05). Antes: «← VOLVER A
+          {/* Volver con la flecha de 24 en 48 y el título «Objetivos» (2026-10-05). Antes: «← VOLVER A
               PLAN» en versales y la píldora «02. OBJETIVOS (3 NIVELES)», migas de una sub-vista
-              «01» que ya no se puede abrir. */}
+              «01» que ya no se puede abrir.
+              > **Corregido el mismo día.** El título era el nombre del eje («← Cuerpo»), que el
+              > segmentado de abajo repetía; el dueño eligió «Objetivos» para no decirlo dos veces. */}
           <View style={styles.encabezadoObjetivos}>
             <Presionable
               onPress={() => setActiveSubView('main')}
@@ -670,7 +672,7 @@ export default function PlanScreen() {
               style={[t.cardTitle, { color: c.textStrong, fontSize: 22, lineHeight: 28, flex: 1 }]}
               numberOfLines={1}
             >
-              {ETIQUETA_EJE[ejeAbierto]}
+              Objetivos
             </Text>
           </View>
 
