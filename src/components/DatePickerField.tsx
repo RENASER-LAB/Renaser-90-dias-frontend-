@@ -1,18 +1,23 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  Modal,
-  ScrollView,
-  Platform,
-} from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { Icon } from './Icon';
 import { MicroLabel } from './ui';
 import { GoldButton } from './GoldButton';
-import { VeloModal } from './VeloModal';
+import { Presionable } from './Presionable';
+import { HojaDesdeAbajo } from './hojaDesdeAbajo/HojaDesdeAbajo';
+import { ARRIBA_FILA_CENTRAL, ALTO_FILA_RUEDA, RuedaDeValores } from './fechaEnRuedas/RuedaDeValores';
+import {
+  FECHA_POR_DEFECTO,
+  MESES,
+  aniosElegibles,
+  ajustarDia,
+  armarFecha,
+  diasDelMes,
+  fechaEnPalabras,
+  partirFecha,
+  type FechaPartida,
+} from './fechaEnRuedas/logicaDeFecha';
 
 interface DatePickerFieldProps {
   label: string;
@@ -22,250 +27,98 @@ interface DatePickerFieldProps {
   error?: string;
 }
 
-const MONTHS = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-];
-
-const DAYS = Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, '0'));
-const currentYear = new Date().getFullYear();
-const YEARS = Array.from({ length: 80 }, (_, i) => String(currentYear - 14 - i)); // 14 to 94 years old
-
-export function DatePickerField({
-  label,
-  value,
-  onChange,
-  helperText,
-  error,
-}: DatePickerFieldProps) {
+/**
+ * La fecha de nacimiento de la Ficha Inicial (paso «Sobre ti»). 2026-10-05.
+ *
+ * Antes: un diálogo centrado con tres columnas de botones (día, mes, año) y «CANCELAR» /
+ * «CONFIRMAR FECHA» — la forma de un formulario web. Ahora: una hoja que sube desde abajo con tres
+ * ruedas, como el selector de fecha del teléfono, y un solo «LISTO». Cerrar la hoja de cualquier
+ * otro modo (arrastrarla, tocar fuera, la ✕, el atrás) no cambia la fecha.
+ *
+ * No se usa el selector nativo (`@react-native-community/datetimepicker`): no está instalado y trae
+ * código nativo; en Android además es un calendario de mes, incómodo para ir 30 años atrás.
+ *
+ * El campo guarda lo mismo que siempre, `"DD/MM/AAAA"`. Ver `fechaEnRuedas/logicaDeFecha.ts`.
+ */
+export function DatePickerField({ label, value, onChange, helperText, error }: DatePickerFieldProps) {
   const { c, t } = useTheme();
-  const [modalVisible, setModalVisible] = useState(false);
+  const [abierta, setAbierta] = useState(false);
+  const [borrador, setBorrador] = useState<FechaPartida>(() => partirFecha(value) ?? FECHA_POR_DEFECTO);
 
-  // Parse existing value or default to 15/06/1995
-  const parts = value ? value.split('/') : [];
-  const [selectedDay, setSelectedDay] = useState(parts[0] || '15');
-  const [selectedMonth, setSelectedMonth] = useState(parts[1] ? String(parseInt(parts[1], 10)) : '6');
-  const [selectedYear, setSelectedYear] = useState(parts[2] || '1995');
+  const elegida = partirFecha(value);
+  const anioActual = new Date().getFullYear();
 
-  const handleOpen = () => {
-    if (value && value.includes('/')) {
-      const p = value.split('/');
-      if (p.length === 3) {
-        setSelectedDay(p[0]);
-        setSelectedMonth(String(parseInt(p[1], 10)));
-        setSelectedYear(p[2]);
-      }
-    }
-    setModalVisible(true);
+  const dias = useMemo(
+    () => Array.from({ length: diasDelMes(borrador.mes, borrador.anio) }, (_, i) => ({ valor: i + 1, texto: String(i + 1) })),
+    [borrador.mes, borrador.anio],
+  );
+  const meses = useMemo(() => MESES.map((mes, i) => ({ valor: i + 1, texto: mes })), []);
+  const anios = useMemo(
+    () => aniosElegibles(anioActual, elegida?.anio).map(anio => ({ valor: anio, texto: String(anio) })),
+    [anioActual, elegida?.anio],
+  );
+
+  const abrir = () => {
+    setBorrador(partirFecha(value) ?? FECHA_POR_DEFECTO);
+    setAbierta(true);
   };
 
-  const handleConfirm = () => {
-    const formattedMonth = String(selectedMonth).padStart(2, '0');
-    const formattedDay = String(selectedDay).padStart(2, '0');
-    onChange(`${formattedDay}/${formattedMonth}/${selectedYear}`);
-    setModalVisible(false);
+  const cambiar = (parte: Partial<FechaPartida>) => setBorrador(previo => ajustarDia({ ...previo, ...parte }));
+
+  const confirmar = () => {
+    onChange(armarFecha(ajustarDia(borrador)));
+    setAbierta(false);
   };
 
-  const monthName = MONTHS[parseInt(selectedMonth, 10) - 1] || 'Mes';
-  const displayLabel = value ? `${value} (${selectedDay} de ${monthName} de ${selectedYear})` : '';
+  const textoDelCampo = elegida ? fechaEnPalabras(elegida) : '';
 
   return (
     <View style={styles.container}>
       <View style={styles.labelGroup}>
         <MicroLabel>{label}</MicroLabel>
         {helperText && (
-          <Text style={[t.small, { color: c.textSoft, fontSize: 12, lineHeight: 16, marginTop: 2 }]}>
-            {helperText}
-          </Text>
+          <Text style={[t.small, { color: c.textSoft, fontSize: 12, lineHeight: 16, marginTop: 2 }]}>{helperText}</Text>
         )}
       </View>
 
-      {/* Main Touch Input */}
-      <Pressable
-        onPress={handleOpen}
-        style={[
-          styles.inputBox,
-          {
-            borderColor: error ? c.danger : c.borderStrong,
-            backgroundColor: c.cardBgAlt,
-          },
-        ]}
+      <Presionable
+        onPress={abrir}
+        accessibilityRole="button"
+        accessibilityLabel={`Fecha de nacimiento: ${textoDelCampo || 'sin elegir'}`}
+        accessibilityHint="Abre las ruedas de día, mes y año"
+        style={[styles.campo, { borderColor: error ? c.danger : c.borderStrong, backgroundColor: c.cardBgAlt }]}
       >
-        <View style={styles.iconWrap}>
-          <Icon name="clock" size={18} color={c.goldInk} />
-        </View>
-
-        <View style={{ flex: 1 }}>
-          {value ? (
-            <Text style={[t.body, { color: c.textStrong, fontSize: 15, fontFamily: 'Jost_500Medium' }]}>
-              {value}
-            </Text>
-          ) : (
-            <Text style={[t.body, { color: c.tabInactive, fontSize: 15 }]}>
-              Selecciona tu fecha de nacimiento
-            </Text>
-          )}
-        </View>
-
-        <View style={[styles.badge, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-          <Text style={[t.micro, { color: c.goldInk, fontSize: 10, fontFamily: 'Jost_700Bold' }]}>
-            CALENDARIO ▾
-          </Text>
-        </View>
-      </Pressable>
-
-      {error && (
-        <Text style={[t.small, { color: c.danger, fontSize: 11.5 }]}>{error}</Text>
-      )}
-
-      {/* Modern Date Selection Modal */}
-      <Modal
-        visible={modalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <VeloModal
-          onCerrar={() => setModalVisible(false)}
-          style={styles.modalBackdrop}
-          etiqueta="Cerrar el selector de fecha"
+        <Icon name="calendar" size={18} color={c.goldInk} strokeWidth={1.4} />
+        <Text
+          numberOfLines={1}
+          style={[
+            t.body,
+            styles.valor,
+            elegida ? { color: c.textStrong, fontFamily: 'Jost_500Medium' } : { color: c.tabInactive },
+          ]}
         >
-          <View style={[styles.modalCard, { backgroundColor: c.cardBg, borderColor: c.gold }]}>
-            <View style={styles.modalHeader}>
-              <View style={[styles.modalIcon, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-                <Icon name="clock" size={20} color={c.goldInk} />
-              </View>
-              <MicroLabel>Fecha de nacimiento</MicroLabel>
-              <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 18, marginTop: 4 }]}>
-                {selectedDay} de {monthName} de {selectedYear}
-              </Text>
-            </View>
+          {textoDelCampo || 'Selecciona tu fecha de nacimiento'}
+        </Text>
+        <Icon name="chevron" size={14} color={c.chevron} />
+      </Presionable>
 
-            {/* 3 Column Pickers */}
-            <View style={styles.columnsRow}>
-              {/* Día */}
-              <View style={[styles.colContainer, { borderColor: c.border }]}>
-                <Text style={[t.micro, styles.colHeader, { color: c.goldInk }]}>DÍA</Text>
-                <ScrollView style={styles.colScroll} showsVerticalScrollIndicator={false}>
-                  {DAYS.map(day => {
-                    const isSel = selectedDay === day;
-                    return (
-                      <Pressable
-                        key={day}
-                        onPress={() => setSelectedDay(day)}
-                        style={[
-                          styles.itemBtn,
-                          isSel && [styles.itemBtnActive, { backgroundColor: c.gold }],
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            t.body,
-                            {
-                              color: isSel ? c.onGold : c.text,
-                              fontSize: 14,
-                              fontFamily: isSel ? 'Jost_700Bold' : 'Jost_400Regular',
-                            },
-                          ]}
-                        >
-                          {day}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
-              </View>
+      {error && <Text style={[t.small, { color: c.danger, fontSize: 11.5 }]}>{error}</Text>}
 
-              {/* Mes */}
-              <View style={[styles.colContainer, { borderColor: c.border, flex: 1.4 }]}>
-                <Text style={[t.micro, styles.colHeader, { color: c.goldInk }]}>MES</Text>
-                <ScrollView style={styles.colScroll} showsVerticalScrollIndicator={false}>
-                  {MONTHS.map((m, idx) => {
-                    const monthNum = String(idx + 1);
-                    const isSel = selectedMonth === monthNum;
-                    return (
-                      <Pressable
-                        key={m}
-                        onPress={() => setSelectedMonth(monthNum)}
-                        style={[
-                          styles.itemBtn,
-                          isSel && [styles.itemBtnActive, { backgroundColor: c.gold }],
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            t.body,
-                            {
-                              color: isSel ? c.onGold : c.text,
-                              fontSize: 13,
-                              fontFamily: isSel ? 'Jost_700Bold' : 'Jost_400Regular',
-                            },
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {m}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-
-              {/* Año */}
-              <View style={[styles.colContainer, { borderColor: c.border, flex: 1.1 }]}>
-                <Text style={[t.micro, styles.colHeader, { color: c.goldInk }]}>AÑO</Text>
-                <ScrollView style={styles.colScroll} showsVerticalScrollIndicator={false}>
-                  {YEARS.map(yr => {
-                    const isSel = selectedYear === yr;
-                    return (
-                      <Pressable
-                        key={yr}
-                        onPress={() => setSelectedYear(yr)}
-                        style={[
-                          styles.itemBtn,
-                          isSel && [styles.itemBtnActive, { backgroundColor: c.gold }],
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            t.body,
-                            {
-                              color: isSel ? c.onGold : c.text,
-                              fontSize: 14,
-                              fontFamily: isSel ? 'Jost_700Bold' : 'Jost_400Regular',
-                            },
-                          ]}
-                        >
-                          {yr}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-            </View>
-
-            {/* Actions */}
-            <View style={styles.modalActions}>
-              <Pressable
-                onPress={() => setModalVisible(false)}
-                style={[styles.cancelBtn, { borderColor: c.border }]}
-              >
-                <Text style={[t.micro, { color: c.textSoft, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>
-                  CANCELAR
-                </Text>
-              </Pressable>
-
-              <GoldButton
-                label="CONFIRMAR FECHA"
-                onPress={handleConfirm}
-                icon="check"
-                style={{ flex: 1 }}
-              />
-            </View>
-          </View>
-        </VeloModal>
-      </Modal>
+      <HojaDesdeAbajo
+        visible={abierta}
+        alCerrar={() => setAbierta(false)}
+        titulo="Fecha de nacimiento"
+        subtitulo={fechaEnPalabras(borrador)}
+        etiquetaCerrar="Cerrar sin cambiar la fecha"
+        pie={<GoldButton label="LISTO" onPress={confirmar} />}
+      >
+        <View style={styles.ruedas}>
+          <View style={[styles.franja, { backgroundColor: c.goldWash }]} />
+          <RuedaDeValores etiqueta="Día" opciones={dias} valor={borrador.dia} alCambiar={dia => cambiar({ dia })} flex={0.8} />
+          <RuedaDeValores etiqueta="Mes" opciones={meses} valor={borrador.mes} alCambiar={mes => cambiar({ mes })} flex={1.5} />
+          <RuedaDeValores etiqueta="Año" opciones={anios} valor={borrador.anio} alCambiar={anio => cambiar({ anio })} flex={1} />
+        </View>
+      </HojaDesdeAbajo>
     </View>
   );
 }
@@ -278,103 +131,32 @@ const styles = StyleSheet.create({
   labelGroup: {
     gap: 2,
   },
-  inputBox: {
+  campo: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1.5,
     borderRadius: 14,
-    paddingHorizontal: 14,
-    height: 52,
-    gap: 10,
-  },
-  iconWrap: {
-    width: 24,
-    alignItems: 'center',
-  },
-  badge: {
-    borderWidth: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  modalCard: {
-    width: '100%',
-    maxWidth: 420,
-    borderWidth: 1.5,
-    borderRadius: 20,
-    padding: 20,
-    gap: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  modalHeader: {
-    alignItems: 'center',
-  },
-  modalIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 6,
-  },
-  columnsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    height: 200,
-  },
-  colContainer: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  colHeader: {
-    textAlign: 'center',
-    paddingVertical: 6,
-    fontSize: 10,
-    fontFamily: 'Jost_700Bold',
-    letterSpacing: 1,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(178,146,79,0.2)',
-  },
-  colScroll: {
-    flex: 1,
-    paddingHorizontal: 4,
-    paddingVertical: 4,
-  },
-  itemBtn: {
-    paddingVertical: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 8,
-    marginVertical: 2,
-  },
-  itemBtnActive: {
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    gap: 10,
-    alignItems: 'center',
-  },
-  cancelBtn: {
-    borderWidth: 1,
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 14,
+    minHeight: 56,
+    gap: 12,
+  },
+  valor: {
+    flex: 1,
+    fontSize: 16,
+  },
+  ruedas: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    gap: 4,
+  },
+  franja: {
+    pointerEvents: 'none',
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    top: 8 + ARRIBA_FILA_CENTRAL,
+    height: ALTO_FILA_RUEDA,
+    borderRadius: 10,
   },
 });
