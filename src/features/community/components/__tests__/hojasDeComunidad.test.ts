@@ -89,6 +89,9 @@ const textos = (r: ReactTestRenderer) =>
     .findAll(n => typeof n.type === 'string' && (typeof n.props.children === 'string' || Array.isArray(n.props.children)))
     .map(n => ([] as unknown[]).concat(n.props.children).filter(x => typeof x === 'string').join(''));
 
+/** Los elementos de un componente dado (el doble de tipos de react-test-renderer no trae `findAllByType`). */
+const deTipo = (r: ReactTestRenderer, tipo: unknown): ReactTestInstance[] => r.root.findAll(n => n.type === tipo);
+
 const hojaAbierta = (r: ReactTestRenderer) => r.root.findAll(n => n.props.testID === 'hoja-fondo').length > 0;
 
 /** Todos los colores de fondo que se dibujan (de los nodos nativos, con los estilos aplanados). */
@@ -157,7 +160,7 @@ describe('Compartir publicación, en una hoja desde abajo', () => {
 
   it('cada destino lleva su avatar de chat y un botón de enviar; sin «Enviar ↗» ni mayúsculas espaciadas', () => {
     const r = montar(compartir());
-    const avatares = r.root.findAllByType(AvatarDeChat).map(a => a.props.tipo);
+    const avatares = deTipo(r, AvatarDeChat).map(a => a.props.tipo);
     expect(avatares).toEqual(['global', 'celula', 'direct']);
     expect(textos(r)).toEqual(expect.arrayContaining(['Directos', 'Formación Renaser Global', 'Ana Pérez']));
     expect(textos(r).join(' ')).not.toMatch(/Enviar ↗|CHAT DIRECTO|COMPARTIR PUBLICACIÓN/);
@@ -199,7 +202,7 @@ describe('Quién reaccionó, en una hoja desde abajo', () => {
     const todo = textos(r);
     expect(todo).toEqual(expect.arrayContaining(['Reacciones', '2 me gusta', 'Ana Pérez', 'Luis Rojas', 'LR']));
     expect(todo.join(' ')).not.toMatch(/REACCIONES DEL POST/);
-    expect(r.root.findAllByType(ImagenRN).map(i => (i.props.source as { uri?: string }).uri)).toContain('https://s3/ana.jpg');
+    expect(deTipo(r, ImagenRN).map(i => (i.props.source as { uri?: string }).uri)).toContain('https://s3/ana.jpg');
   });
 
   it('sin nadie, lo dice; y la ✕ pide cerrarla', async () => {
@@ -220,7 +223,7 @@ describe('Stickers, en la hoja desde abajo', () => {
   it('ya no es un Modal con la animación «slide» del sistema: sube la hoja de la app, con el tema', () => {
     const r = montar(React.createElement(SelectorDeStickers, { visible: true, enviando: false, onCerrar: () => undefined, onElegir: () => undefined }));
     expect(hojaAbierta(r)).toBe(true);
-    expect(r.root.findAllByType(Modal).map(m => m.props.animationType)).toEqual(['none']);
+    expect(deTipo(r, Modal).map(m => m.props.animationType)).toEqual(['none']);
     expect(fondos(r)).toContain(light.cardBg);
   });
 
@@ -292,8 +295,8 @@ describe('Nueva publicación', () => {
     const quitar = jest.fn<(indice: number) => void>();
     const agregar = jest.fn();
     const r = montar(nueva({ fotos: { lista: [FOTO], agregando: false, alAgregar: agregar, alQuitar: quitar } }));
-    expect(r.root.findAllByType(ImagenRN).map(i => (i.props.source as { uri?: string }).uri)).toContain(FOTO.uri);
-    expect(r.root.findAllByType(Icon).map(i => i.props.name)).toContain('imagePlus');
+    expect(deTipo(r, ImagenRN).map(i => (i.props.source as { uri?: string }).uri)).toContain(FOTO.uri);
+    expect(deTipo(r, Icon).map(i => i.props.name)).toContain('imagePlus');
     const recuadro = tocable(r, 'Agregar otra foto');
     const lados = r.root
       .findAll(n => typeof n.type === 'string' && n.props.style !== undefined)
@@ -312,7 +315,7 @@ describe('Nueva publicación', () => {
 describe('los íconos nuevos', () => {
   const trazos = (nombre: 'forward' | 'imagePlus') => {
     const r = montar(React.createElement(Icon, { name: nombre, color: '#000' }));
-    return r.root.findAllByType(Path).map(p => p.props.d as string);
+    return deTipo(r, Path).map(p => p.props.d as string);
   };
 
   it('forward es la flecha curva de reenviar (Lucide), no el chevron por defecto', () => {
