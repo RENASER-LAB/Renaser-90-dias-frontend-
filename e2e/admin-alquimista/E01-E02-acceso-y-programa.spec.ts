@@ -79,7 +79,7 @@ for (const rol of rolesAdministrativos()) {
       // clave global anterior —una sola para todo el dispositivo— esta aserción fallaba.
       await page.getByLabel('Correo electrónico', { exact: true }).fill((otraCuenta as Actor).email);
       await page.getByLabel('Contraseña', { exact: true }).fill((otraCuenta as Actor).password);
-      await page.getByRole('button', { name: 'Continuar', exact: true }).click();
+      await page.getByRole('button', { name: 'Ingresar', exact: true }).click();
 
       await expect(page.getByText(/hacer mi programa de 90 días/i)).toBeVisible({ timeout: 30_000 });
     });

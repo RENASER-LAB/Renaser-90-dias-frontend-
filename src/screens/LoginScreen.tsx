@@ -7,23 +7,25 @@ import {
   StyleSheet,
   ScrollView,
   KeyboardAvoidingView,
-  Platform,
+  Keyboard,
   ActivityIndicator,
   type LayoutChangeEvent,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   type TargetedEvent,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import Animated from 'react-native-reanimated';
 import { useTheme } from '../theme/ThemeContext';
 import { useResponsive } from '../theme/responsive';
 import { useSystemBackHandler } from '../hooks/useSystemBackHandler';
 import { useAuth } from '../context/AuthContext';
 import { mensajeDeError } from '../services/http/apiClient';
 import { Icon } from '../components/Icon';
-import { FondoAnillos } from '../components/FondoAnillos';
 import { MicroLabel } from '../components/ui';
+import { Presionable } from '../components/Presionable';
+import { tacto } from '../utils/tacto';
 import {
   useRegistroConOtp,
   validarDatosRegistro,
@@ -34,7 +36,11 @@ import { useRecuperacionContrasena } from '../features/auth/hooks/useRecuperacio
 import { useDisponibilidadCorreo } from '../features/auth/hooks/useDisponibilidadCorreo';
 import { CodigoOtpInput, LARGO_CODIGO } from '../features/auth/components/CodigoOtpInput';
 import { desplazamientoParaVerElCampo } from '../features/auth/utils/campoBajoElTeclado';
-import { ControlSegmentado } from '../components/ControlSegmentado';
+import { CabeceraDelIngreso } from '../features/auth/components/CabeceraDelIngreso';
+import { CampoDelIngreso, MensajeBajoElCampo } from '../features/auth/components/CampoDelIngreso';
+import { BotonDelIngreso } from '../features/auth/components/BotonDelIngreso';
+import { EntradaEscalonada } from '../features/auth/components/EntradaEscalonada';
+import { useSacudida } from '../features/auth/hooks/useSacudida';
 
 /**
  * `forgot` → `forgot_otp` → `forgot_new_password` es la recuperación de contraseña dentro de la
@@ -50,7 +56,16 @@ type AuthStep =
   | 'forgot_new_password'
   | 'social_confirmar'
   | 'solicitud_enviada';
+/** `register` es la vista «Solicitar acceso» (antes la pestaña «Crear cuenta»). */
 type Tab = 'login' | 'register';
+/** Bajo qué campo va el mensaje de error del formulario; `null`, al final de los campos. */
+type CampoDelError = 'email' | 'password' | null;
+
+/** Menos que esto no es un teclado en pantalla (ver `tecladoAbierto`). */
+const ALTO_MINIMO_DE_UN_TECLADO = 120;
+
+/** Aire bajo el campo enfocado en el formulario: lo que mide «¿Olvidaste tu contraseña?» y su separación. */
+const MARGEN_EN_EL_FORMULARIO = 56;
 
 /**
  * El nodo nativo que viaja en el `onFocus` de un `TextInput`. Se saca del tipo del evento en vez
@@ -60,10 +75,11 @@ type Tab = 'login' | 'register';
 type CampoMedible = Exclude<NativeSyntheticEvent<TargetedEvent>['target'], number | undefined>;
 
 export default function LoginScreen() {
-  const { c, t, mode, toggle } = useTheme();
-  /* `rs` salio del desestructurado el 2026-09-14: sus tres usos estaban en el circulo del paso
-     que se quito, y dejarlo era una variable sin leer. Vuelve si hace falta escalar algo. */
-  const { isTablet, isShort, isSmall, horizontalPadding } = useResponsive();
+  /* Sin `mode`/`toggle` desde el 2026-10-05: el botón de luna se quitó del login (el modo oscuro
+     se elige en Yo). `isShort`/`isSmall` se fueron con el logotipo de texto: la cabecera nueva
+     calcula su alto sola (`cabeceraDelIngreso`). */
+  const { c, t } = useTheme();
+  const { isTablet, horizontalPadding } = useResponsive();
   const {
     login,
     register,
@@ -158,6 +174,9 @@ export default function LoginScreen() {
           { y: campoY, alto: campoAlto },
           { y: listaY, alto: altoVisible ?? listaAlto },
           desplazamientoDeLaLista.current,
+          // En el login, bajo la contraseña está «¿Olvidaste tu contraseña?» (44 px de alto
+          // táctil): con el teclado arriba también tiene que verse, no quedar justo bajo el pliegue.
+          step === 'form' ? MARGEN_EN_EL_FORMULARIO : undefined,
         );
         if (destino !== null) lista.scrollTo({ y: destino, animated: true });
       });
@@ -182,6 +201,24 @@ export default function LoginScreen() {
         : null;
     asegurarCampoVisible();
   };
+
+  /* Con el teclado arriba el pie muestra sólo el botón: «¿No tienes cuenta? Solicitar acceso» no
+     sirve mientras se escribe y le quita 48 px a lo que se está llenando. Se escucha el teclado
+     (dos eventos por apertura, no por cuadro) y no se anima nada: aparece y desaparece con él. */
+  const [tecladoAbierto, setTecladoAbierto] = useState(false);
+  useEffect(() => {
+    /* Sólo cuenta un teclado de verdad. Con un teclado físico (o en el emulador), Gboard muestra
+       una barrita flotante que también dispara `keyboardDidShow`, con un alto chico: por ella no
+       se esconde nada. */
+    const alAbrir = Keyboard.addListener('keyboardDidShow', evento =>
+      setTecladoAbierto(evento.endCoordinates.height > ALTO_MINIMO_DE_UN_TECLADO),
+    );
+    const alCerrar = Keyboard.addListener('keyboardDidHide', () => setTecladoAbierto(false));
+    return () => {
+      alAbrir.remove();
+      alCerrar.remove();
+    };
+  }, []);
 
   const desenfocarCampo = () => {
     setFocusedField(null);
@@ -230,6 +267,37 @@ export default function LoginScreen() {
   const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [campoDelError, setCampoDelError] = useState<CampoDelError>(null);
+  const sacudida = useSacudida();
+
+  /**
+   * El ingreso no se pudo: el mensaje va debajo del campo que hay que corregir, el borde de ese
+   * campo pasa a rojo, el bloque de campos se sacude y el teléfono vibra con el patrón de error,
+   * todo en el mismo instante (`apple-design` §13: causa y respuesta en el mismo cuadro). La
+   * vibración nunca va sola: muchos teléfonos la tienen apagada.
+   */
+  const rechazarIngreso = (mensaje: string, campo: CampoDelError) => {
+    setErrorMessage(mensaje);
+    setCampoDelError(campo);
+    tacto.error();
+    sacudida.sacudir();
+    /* Con el teclado arriba, el mensaje nuevo empuja «¿Olvidaste tu contraseña?» bajo el pliegue
+       (visto en el emulador): se lleva la lista hasta el final, que es justo el mensaje y ese
+       enlace. Sin teclado el formulario entra entero y esto no mueve nada. */
+    setTimeout(() => listaRef.current?.scrollToEnd({ animated: true }), 60);
+  };
+
+  /**
+   * Pasar entre «Iniciar sesión» y «Solicitar acceso» (el pie, la flecha de arriba y el atrás del
+   * sistema). Hace lo mismo que hacían las pestañas: cambia la vista y limpia los avisos, sin
+   * borrar lo que la persona ya escribió.
+   */
+  const irA = (pestana: Tab) => {
+    setActiveTab(pestana);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    setCampoDelError(null);
+  };
 
   // Timer for OTP resend — el mismo para el código del alta y el de la recuperación.
   useEffect(() => {
@@ -254,6 +322,7 @@ export default function LoginScreen() {
     setOtpCode('');
     setErrorMessage(null);
     setSuccessMessage(null);
+    setCampoDelError(null);
     // Es una credencial de un solo uso: si la persona abandona el formulario de confirmación
     // social, no queda nada creado (el backend lo vence solo a los 10 minutos) y acá tampoco
     // debería seguir viviendo en memoria.
@@ -285,18 +354,25 @@ export default function LoginScreen() {
     handleReturnToLogin();
   };
 
-  // Interceptar gestos táctiles de retroceso en cualquier subpantalla (OTP, recuperación, etc.)
+  // Interceptar gestos táctiles de retroceso en cualquier subpantalla (OTP, recuperación, etc.).
+  // Desde que «Solicitar acceso» es una vista y no una pestaña (2026-10-05), atrás desde ahí vuelve
+  // al login en vez de salir de la app.
   useSystemBackHandler(() => {
     if (step !== 'form') {
       handleBack();
       return true;
     }
+    if (activeTab === 'register') {
+      irA('login');
+      return true;
+    }
     return false;
-  }, step !== 'form');
+  }, step !== 'form' || activeTab === 'register');
 
   const handleFormSubmit = async () => {
     setErrorMessage(null);
     setSuccessMessage(null);
+    setCampoDelError(null);
 
     if (activeTab === 'register') {
       // Las mismas reglas que el backend (incluida la contraseña de 12 caracteres), en un solo
@@ -326,13 +402,16 @@ export default function LoginScreen() {
         setLoading(false);
       }
     } else {
-      // Iniciar sesión
+      // Iniciar sesión. Los mensajes son los de siempre; lo nuevo (2026-10-05) es DÓNDE se ven:
+      // debajo del campo que hay que corregir, con la sacudida y la vibración de error. Lo que
+      // responde el servidor (credenciales, cuenta suspendida, demasiados intentos…) va bajo la
+      // contraseña, que es lo que la persona vuelve a escribir.
       if (!email.trim() || !email.includes('@')) {
-        setErrorMessage('Por favor ingresa tu correo electrónico');
+        rechazarIngreso('Por favor ingresa tu correo electrónico', 'email');
         return;
       }
       if (!password) {
-        setErrorMessage('Por favor ingresa tu contraseña');
+        rechazarIngreso('Por favor ingresa tu contraseña', 'password');
         return;
       }
 
@@ -340,7 +419,7 @@ export default function LoginScreen() {
         setLoading(true);
         await login(email, password);
       } catch (error) {
-        setErrorMessage(mensajeDeError(error, 'No pudimos iniciar tu sesión.'));
+        rechazarIngreso(mensajeDeError(error, 'No pudimos iniciar tu sesión.'), 'password');
       } finally {
         setLoading(false);
       }
@@ -620,79 +699,52 @@ export default function LoginScreen() {
     }
   };
 
+  /* El login es la única vista con la cabecera alta; «Solicitar acceso» y los pasos que siguen
+     (código, recuperación, acuse) llevan la baja, con la flecha para volver. */
+  const enElLogin = step === 'form' && activeTab === 'login';
+  const anchoDelContenido = {
+    paddingHorizontal: horizontalPadding,
+    maxWidth: isTablet ? 460 : undefined,
+    alignSelf: isTablet ? ('center' as const) : ('stretch' as const),
+    width: isTablet ? ('100%' as const) : undefined,
+  };
+
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: c.bg }]}>
+    /*
+      REDISEÑO DEL 2026-10-05 (pedido del dueño, con la imagen de cabecera que generó él): el fénix
+      a sangre arriba, fundido con el fondo en un degradado largo (`CabeceraDelIngreso`), el
+      formulario sobre fondo liso y el botón fijo abajo, en la zona del pulgar. Lo que se fue y por
+      qué:
+
+      - **Las pestañas «Iniciar sesión / Crear cuenta»** como navegación principal: crear cuenta pasó
+        a ser una vista propia, «Solicitar acceso», a la que se llega desde el pie. La lógica del
+        alta no cambió (sigue siendo por solicitud aprobada, con el mismo hook y las mismas
+        validaciones); sólo cambió la puerta.
+      - **El botón de luna/sol**: la pantalla sigue el modo que la persona eligió en Yo → «Modo
+        oscuro» (queda guardado en el teléfono), como el resto de la app desde el 2026-09-18. Si
+        nunca eligió, el claro: `app.json` fija `userInterfaceStyle: "light"`, así que el tema del
+        sistema hoy no llega a la app.
+      - **«Google · Próximamente», el separador «o accede con» y la frase del pie**: un botón que
+        no hace nada y una frase que repetía la marca. `handleSocialLogin` y el paso de
+        confirmación social quedan intactos para cuando Google vuelva (como pasó con Apple).
+      - **«Recordarme»: no se agregó**, porque la app ya mantiene la sesión abierta (el token queda
+        guardado en el teléfono y sólo se cierra con «Cerrar sesión» o si vence en el servidor).
+
+      Sin `SafeAreaView`: la imagen tiene que llegar detrás de la barra de estado. El borde seguro
+      de arriba lo respeta la flecha de volver (`insets.top`) y el de abajo, el pie.
+    */
+    <View style={[styles.raiz, { backgroundColor: c.bg }]}>
       {/*
-        Los anillos van de FONDO, no de cabecera (2026-09-05, pedido del dueno del proyecto).
-        Antes vivian dentro del ScrollView y ocupaban ~180 px de alto, asi que para llenar el
-        correo y la contrasena habia que arrastrar con el dedo. Al pasarlos al fondo se recupera
-        ese alto y la marca queda mas presente.
-
-        `icono={null}` sigue en null, pero por otra razon que antes (2026-09-14). Aca decia:
-        "porque la cabecera ya dibuja el suyo, que ademas cambia segun el paso (correo / llave /
-        usuario) — dos iconos encimados se verian como un error". Esa razon dejo de existir: la
-        cabecera ya no dibuja ningun icono (ver el comentario del encabezado, mas abajo). El null
-        se mantiene porque el pedido del dueno del producto fue SACAR el adorno, no mudarlo al
-        fondo — devolverle un icono a los anillos seria reponer lo mismo un poco mas abajo.
+        `behavior` en las dos plataformas: ver el bloque «QUE EL TECLADO NO TAPE EL CAMPO…». La
+        vista empieza en el borde de arriba de la pantalla (ya no hay `SafeAreaView` encima), así
+        que no hace falta compensar la barra de estado: el desfase es 0 en las dos plataformas.
       */}
-      <FondoAnillos icono={null} />
-
-      {/* Barra Superior con botón Volver y Toggle de Modo */}
-      <View style={[styles.topBar, { paddingHorizontal: horizontalPadding }]}>
-        {step !== 'form' ? (
-          <Pressable
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Volver a iniciar sesión"
-            onPress={handleReturnToLogin}
-            style={[styles.backBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
-          >
-            <Icon name="arrowLeft" size={16} color={c.goldInk} />
-            <Text style={[t.micro, { color: c.text, letterSpacing: 1.2 }]}>VOLVER AL LOGIN</Text>
-          </Pressable>
-        ) : (
-          <View style={{ width: 34 }} />
-        )}
-
-        <Pressable
-          hitSlop={10}
-          onPress={toggle}
-          accessibilityRole="button"
-          accessibilityLabel={mode === 'light' ? 'Activar modo oscuro' : 'Activar modo claro'}
-          style={[styles.themeBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
-        >
-          <Icon name={mode === 'light' ? 'moon' : 'sun'} size={15} color={c.goldInk} />
-        </Pressable>
-      </View>
-
-      {/*
-        `behavior` va en las DOS plataformas. Decía `Platform.OS === 'ios' ? 'padding' : undefined`
-        y en Android `undefined` es no hacer nada: este componente devuelve un `View` pelado. Ver
-        el bloque largo de arriba ("QUE EL TECLADO NO TAPE EL CAMPO..."). El cálculo de `padding`
-        se corrige solo —da 0 en un dispositivo donde la ventana SÍ se encoja—, así que ponerlo en
-        las dos plataformas no levanta el formulario de más en ninguna.
-
-        `insets.top` en Android compensa que el alto se mide contra el SafeAreaView mientras que el
-        teclado se reporta en coordenadas de pantalla; en iOS queda en 0 porque ahí esa diferencia
-        no existe y sumarla abriría un hueco del alto del notch. Mismo criterio que el chat de
-        Comunidad y RENASIA. Si quedara corto o largo por unos píxeles, el reacomodo al campo
-        enfocado lo absorbe: mide el área visible real, no la calcula desde este número.
-      */}
-      <KeyboardAvoidingView
-        behavior="padding"
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : insets.top}
-        style={{ flex: 1 }}
-      >
+      <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={0} style={styles.raiz}>
         <ScrollView
           ref={listaRef}
           contentContainerStyle={[
             styles.scrollContent,
-            {
-              paddingHorizontal: horizontalPadding,
-              maxWidth: isTablet ? 460 : undefined,
-              alignSelf: isTablet ? 'center' : 'stretch',
-              width: isTablet ? '100%' : undefined,
-            },
+            { paddingBottom: step === 'form' ? 16 : insets.bottom + 28 },
           ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -702,441 +754,208 @@ export default function LoginScreen() {
           }}
           scrollEventThrottle={16}
         >
-          {/* Encabezado: el logotipo y su bajada. Nada arriba del logotipo — el porque, unas
-              lineas mas abajo. */}
-          <View
-            style={[
-              styles.heroSection,
-              {
-                /* Este padding es AHORA el unico aire entre la barra superior y el logotipo, y por
-                   eso subio de 2/10 a 16/28. Antes valia 2/10 porque encima del logotipo habia un
-                   circulo de ~52 px que hacia de separador; sin el, 2 px dejaban la marca pegada
-                   al borde. Aun asi el encabezado queda ~40 px mas bajo que antes, que es
-                   exactamente el alto que este bloque venia peleando para que el formulario no
-                   pida scroll en pantalla corta (isShort). */
-                paddingTop: isShort ? 16 : 28,
-                paddingBottom: isShort ? 12 : 20,
-              },
-            ]}
-          >
-            {/* Aca iba un circulo con borde dorado y un icono adentro que cambiaba segun el paso:
-                'mail' en la verificacion por codigo, 'key' en recuperacion de contrasena, 'user'
-                en la confirmacion del login social y 'diamond' en el login normal. Se quito
-                COMPLETO el 2026-09-14, por pedido del dueno del producto: "parece IA".
+          <CabeceraDelIngreso
+            variante={enElLogin ? 'alta' : 'baja'}
+            alVolver={enElLogin ? undefined : step === 'form' ? () => irA('login') : handleReturnToLogin}
+          />
 
-                Se quito en los CUATRO pasos, no solo el 'diamond' decorativo, por tres razones:
-
-                1. Era redundante. El bajo-logotipo que esta tres lineas mas abajo ya dice el paso
-                   con palabras: "Confirmacion de correo", "Recuperacion de cuenta", "Confirma tus
-                   datos". Para un publico de 40-60 anos esa palabra comunica muchisimo mas que un
-                   glifo de contorno de 20 px; el icono no agregaba informacion, la repetia.
-                2. El logotipo saltaba. Con el circulo presente en tres pasos y ausente en uno, la
-                   marca cambiaba de altura al pasar del login a la verificacion por codigo. Un
-                   logotipo que se mueve dentro del mismo flujo se lee como una falla, no como un
-                   paso nuevo.
-                3. Lo que "parece IA" es el envase, no el glifo: un circulo con borde dorado
-                   encima de un logotipo es el adorno generico, con una llave adentro igual que
-                   con un diamante. Dejarlo en tres de cuatro pasos no atendia el pedido, solo lo
-                   escondia.
-
-                Si algun dia hace falta reforzar la senal del paso, el lugar es el bajo-logotipo
-                (texto, que es lo que este publico lee), no un icono nuevo. */}
-
-            {/* El logotipo.
-                Antes iba en Jost con `letterSpacing: 8` — las letras tan separadas que la palabra
-                dejaba de leerse como una marca y pasaba a leerse como una plantilla: es el gesto
-                que usa cualquier landing de "lujo" genérica. Ahora va en la serif editorial con el
-                tracking casi cerrado, que es lo que hace que una cabecera pese.
-                Sigue en mayúsculas —eso es la marca, no una decisión de esta pantalla— y por eso
-                el tracking no es el negativo del token: las versales siempre piden un poco de aire,
-                pero 2, no 8. */}
-            <Text
-              accessibilityRole="header"
-              style={[
-                t.hero,
-                {
-                  color: c.textStrong,
-                  /* Sin `marginTop` (antes 10/18): el logotipo es el primer hijo del encabezado,
-                     asi que el aire de arriba lo da el `paddingTop` de `heroSection` y no hay dos
-                     valores que sumar a mano para saber cuanto separa la marca de la barra. */
-                  letterSpacing: isSmall ? 1.2 : 2,
-                  fontSize: isShort ? 32 : 40,
-                  lineHeight: isShort ? 36 : 45,
-                },
-              ]}
-            >
-              RENASER
-            </Text>
-            <Text
-              style={[
-                t.micro,
-                {
-                  color: c.textSoft,
-                  marginTop: 4,
-                  /* Iba con tracking 3.2: el subtitulo competia con el logotipo en vez de
-                     acompanarlo. Debajo de una serif grande, el bajo-logotipo se lee mejor junto
-                     y un punto mas grande que antes. */
-                  letterSpacing: isSmall ? 0.2 : 0.4,
-                  fontSize: isSmall ? 11 : 12,
-                },
-              ]}
-            >
-              {step === 'otp'
-                ? 'Confirmación de correo'
-                : step === 'solicitud_enviada'
-                ? 'Solicitud en revisión'
-                : enRecuperacion
-                ? 'Recuperación de cuenta'
-                : step === 'social_confirmar'
-                ? 'Confirma tus datos'
-                : '90 días para redefinir tu vida'}
-            </Text>
-          </View>
-
+          <View style={[styles.cuerpo, anchoDelContenido]}>
           {/* ========================================================================= */}
-          {/* VISTA 1: FORMULARIO PRINCIPAL (LOGIN / REGISTRO) + REDES SOCIALES GRANDES */}
+          {/* VISTA 1: INICIAR SESIÓN / SOLICITAR ACCESO                                 */}
           {/* ========================================================================= */}
           {step === 'form' && (
             <>
-              {/* Selector Iniciar sesión / Crear cuenta: control segmentado con la píldora que se
-                  desplaza (2026-10-05). Eran dos botones con el texto en versalitas espaciadas y
-                  un recuadro que aparecía de golpe — se leían como las pestañas de una web. */}
-              <View style={styles.selectorModo}>
-                <ControlSegmentado<Tab>
-                  accessibilityLabel="Iniciar sesión o crear cuenta"
-                  opciones={[
-                    { valor: 'login', etiqueta: 'Iniciar sesión' },
-                    { valor: 'register', etiqueta: 'Crear cuenta' },
-                  ]}
-                  valor={activeTab}
-                  onCambiar={pestana => {
-                    setActiveTab(pestana);
-                    setErrorMessage(null);
-                    setSuccessMessage(null);
-                  }}
-                />
-              </View>
+              {/* La `key` con la pestaña hace que el título y los campos vuelvan a entrar al pasar
+                  de una vista a la otra; dentro de una misma vista no se vuelve a animar nada. */}
+              <EntradaEscalonada key={`titulo-${activeTab}`} indice={0}>
+                <Text accessibilityRole="header" style={[styles.titulo, { color: c.textStrong }]}>
+                  {activeTab === 'login' ? 'Iniciar sesión' : 'Solicitar acceso'}
+                </Text>
+                <View style={[styles.subrayadoDelTitulo, { backgroundColor: c.gold }]} />
+              </EntradaEscalonada>
 
-              {/* Tarjeta de Formulario */}
-              <View style={[styles.card, { backgroundColor: c.cardBg, borderColor: c.border }]}>
-                {errorMessage ? (
-                  <View style={[styles.alertBox, { backgroundColor: 'rgba(217, 83, 79, 0.08)', borderColor: 'rgba(217, 83, 79, 0.25)' }]}>
-                    <Text style={[t.small, { color: c.danger, textAlign: 'center' }]}>{errorMessage}</Text>
-                  </View>
-                ) : null}
-
-                {/* Avisos que llegan al login desde otro paso: "contraseña actualizada" (D-102) o
-                    "ya tenías una solicitud en revisión" (login social). Antes no se mostraban. */}
-                {successMessage ? (
-                  <View style={[styles.alertBox, { backgroundColor: c.goldWash, borderColor: c.borderStrong }]}>
-                    <Text style={[t.small, { color: c.goldInk, textAlign: 'center' }]}>{successMessage}</Text>
-                  </View>
-                ) : null}
-
-                {activeTab === 'register' && (
-                  <View style={styles.inputGroup}>
-                    <MicroLabel>Nombres</MicroLabel>
-                    <View
-                      style={[
-                        styles.inputWrap,
-                        {
-                          borderColor: focusedField === 'nombres' ? c.gold : c.border,
-                          backgroundColor: c.cardBgAlt,
-                        },
-                      ]}
-                    >
-                      <Icon name="user" size={17} color={focusedField === 'nombres' ? c.goldInk : c.tabInactive} />
-                      <TextInput
-                        value={nombres}
-                        accessibilityLabel="Nombres"
-                        onChangeText={setNombres}
-                        placeholder="Ej. Sebastián"
-                        placeholderTextColor={c.tabInactive}
-                        onFocus={evento => enfocarCampo('nombres', evento)}
-                        onBlur={desenfocarCampo}
-                        style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
-                        autoCapitalize="words"
-                        autoCorrect={false}
-                        autoComplete="given-name"
-                        textContentType="givenName"
-                        returnKeyType="next"
-                        submitBehavior="submit"
-                        onSubmitEditing={() => apellidosRef.current?.focus()}
-                      />
+              <EntradaEscalonada key={`campos-${activeTab}`} indice={1}>
+                {/* Lo que se sacude cuando el ingreso se rechaza. */}
+                <Animated.View style={[styles.campos, sacudida.estilo]}>
+                  {/* Avisos que llegan desde otro paso: «contraseña actualizada» (D-102) o «ya
+                      tenías una solicitud en revisión» (login social). */}
+                  {successMessage ? (
+                    <View style={[styles.alertBox, { backgroundColor: c.goldWash, borderColor: c.borderStrong }]}>
+                      <Text style={[t.small, { color: c.goldInk, textAlign: 'center' }]}>{successMessage}</Text>
                     </View>
-                  </View>
-                )}
+                  ) : null}
 
-                {activeTab === 'register' && (
-                  <View style={styles.inputGroup}>
-                    <MicroLabel>Apellidos</MicroLabel>
-                    <View
-                      style={[
-                        styles.inputWrap,
-                        {
-                          borderColor: focusedField === 'apellidos' ? c.gold : c.border,
-                          backgroundColor: c.cardBgAlt,
-                        },
-                      ]}
-                    >
-                      <Icon name="user" size={17} color={focusedField === 'apellidos' ? c.goldInk : c.tabInactive} />
-                      <TextInput
-                        ref={apellidosRef}
-                        value={apellidos}
-                        accessibilityLabel="Apellidos"
-                        onChangeText={setApellidos}
-                        placeholder="Ej. Arango"
-                        placeholderTextColor={c.tabInactive}
-                        onFocus={evento => enfocarCampo('apellidos', evento)}
-                        onBlur={desenfocarCampo}
-                        style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
-                        autoCapitalize="words"
-                        autoCorrect={false}
-                        autoComplete="family-name"
-                        textContentType="familyName"
-                        returnKeyType="next"
-                        submitBehavior="submit"
-                        onSubmitEditing={() => correoRef.current?.focus()}
-                      />
-                    </View>
-                  </View>
-                )}
-
-                <View style={styles.inputGroup}>
-                  <MicroLabel>Correo electrónico</MicroLabel>
-                  <View
-                    style={[
-                      styles.inputWrap,
-                      {
-                        borderColor: focusedField === 'email' ? c.gold : c.border,
-                        backgroundColor: c.cardBgAlt,
-                      },
-                    ]}
-                  >
-                    <Icon name="mail" size={17} color={focusedField === 'email' ? c.goldInk : c.tabInactive} />
-                    <TextInput
-                      ref={correoRef}
-                      value={email}
-                      accessibilityLabel="Correo electrónico"
-                      onChangeText={setEmail}
-                      placeholder="tucorreo@ejemplo.com"
-                      placeholderTextColor={c.tabInactive}
-                      keyboardType="email-address"
-                      autoCapitalize="none"
+                  {activeTab === 'register' && (
+                    <CampoDelIngreso
+                      etiqueta="Nombres"
+                      icono="user"
+                      enfocado={focusedField === 'nombres'}
+                      value={nombres}
+                      onChangeText={setNombres}
+                      placeholder="Ej. Sebastián"
+                      onFocus={evento => enfocarCampo('nombres', evento)}
+                      onBlur={desenfocarCampo}
+                      autoCapitalize="words"
                       autoCorrect={false}
-                      autoComplete="email"
-                      textContentType={activeTab === 'login' ? 'username' : 'emailAddress'}
+                      autoComplete="given-name"
+                      textContentType="givenName"
                       returnKeyType="next"
                       submitBehavior="submit"
-                      onSubmitEditing={() => contrasenaRef.current?.focus()}
-                      onFocus={evento => enfocarCampo('email', evento)}
-                      onBlur={desenfocarCampo}
-                      style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
+                      onSubmitEditing={() => apellidosRef.current?.focus()}
                     />
-                  </View>
-                  {/* Aviso en vivo de disponibilidad: solo en registro, y solo cuando hay un
-                      veredicto real. "Verificando" y "idle" no muestran nada para no agregar
-                      ruido visual mientras la persona todavía está escribiendo. */}
-                  {activeTab === 'register' && disponibilidadCorreo === 'verificando' && (
-                    <Text style={[t.micro, { color: c.textSoft }]}>Verificando disponibilidad...</Text>
                   )}
-                  {activeTab === 'register' && disponibilidadCorreo === 'disponible' && (
-                    <Text style={[t.micro, { color: c.goldInk }]}>Este correo está disponible.</Text>
-                  )}
-                  {activeTab === 'register' && disponibilidadCorreo === 'tomado' && (
-                    <Text style={[t.micro, { color: c.danger }]}>
-                      Ese correo ya tiene una cuenta. Puedes iniciar sesión.
-                    </Text>
-                  )}
-                </View>
 
-                {/* El teléfono se pide en la Ficha Inicial del onboarding, no acá: el alta tiene
-                    que ser lo más liviana posible para que nadie la abandone a mitad de camino. */}
+                  {activeTab === 'register' && (
+                    <CampoDelIngreso
+                      ref={apellidosRef}
+                      etiqueta="Apellidos"
+                      icono="user"
+                      enfocado={focusedField === 'apellidos'}
+                      value={apellidos}
+                      onChangeText={setApellidos}
+                      placeholder="Ej. Arango"
+                      onFocus={evento => enfocarCampo('apellidos', evento)}
+                      onBlur={desenfocarCampo}
+                      autoCapitalize="words"
+                      autoCorrect={false}
+                      autoComplete="family-name"
+                      textContentType="familyName"
+                      returnKeyType="next"
+                      submitBehavior="submit"
+                      onSubmitEditing={() => correoRef.current?.focus()}
+                    />
+                  )}
 
-                <View style={styles.inputGroup}>
-                  <View style={styles.passwordHeader}>
-                    <MicroLabel>Contraseña</MicroLabel>
-                    {activeTab === 'login' && (
+                  <CampoDelIngreso
+                    ref={correoRef}
+                    testID="campo-email"
+                    etiqueta="Correo electrónico"
+                    icono="mail"
+                    enfocado={focusedField === 'email'}
+                    conError={errorMessage !== null && campoDelError === 'email'}
+                    value={email}
+                    onChangeText={setEmail}
+                    placeholder="tucorreo@ejemplo.com"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    autoComplete="email"
+                    textContentType={activeTab === 'login' ? 'username' : 'emailAddress'}
+                    returnKeyType="next"
+                    submitBehavior="submit"
+                    onSubmitEditing={() => contrasenaRef.current?.focus()}
+                    onFocus={evento => enfocarCampo('email', evento)}
+                    onBlur={desenfocarCampo}
+                    debajo={
+                      <>
+                        {errorMessage && campoDelError === 'email' ? <MensajeBajoElCampo texto={errorMessage} /> : null}
+                        {/* Aviso en vivo de disponibilidad: solo al solicitar acceso, y solo cuando
+                            hay un veredicto real. "Verificando" y "idle" no muestran nada para no
+                            agregar ruido mientras la persona todavía está escribiendo. */}
+                        {activeTab === 'register' && disponibilidadCorreo === 'verificando' && (
+                          <Text style={[t.micro, { color: c.textSoft }]}>Verificando disponibilidad...</Text>
+                        )}
+                        {activeTab === 'register' && disponibilidadCorreo === 'disponible' && (
+                          <Text style={[t.micro, { color: c.goldInk }]}>Este correo está disponible.</Text>
+                        )}
+                        {activeTab === 'register' && disponibilidadCorreo === 'tomado' && (
+                          <Text style={[t.micro, { color: c.danger }]}>
+                            Ese correo ya tiene una cuenta. Puedes iniciar sesión.
+                          </Text>
+                        )}
+                      </>
+                    }
+                  />
+
+                  {/* El teléfono se pide en la Ficha Inicial del onboarding, no acá: el alta tiene
+                      que ser lo más liviana posible para que nadie la abandone a mitad de camino. */}
+
+                  <CampoDelIngreso
+                    ref={contrasenaRef}
+                    testID="campo-password"
+                    etiqueta="Contraseña"
+                    icono="lock"
+                    enfocado={focusedField === 'password'}
+                    conError={errorMessage !== null && campoDelError === 'password'}
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder={activeTab === 'register' ? `Mínimo ${MIN_CONTRASENA} caracteres` : 'Tu contraseña'}
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    // Al solicitar acceso el gestor de contraseñas propone una nueva; al entrar, la guardada.
+                    autoComplete={activeTab === 'register' ? 'new-password' : 'current-password'}
+                    textContentType={activeTab === 'register' ? 'newPassword' : 'password'}
+                    returnKeyType={activeTab === 'register' ? 'next' : 'go'}
+                    submitBehavior={activeTab === 'register' ? 'submit' : 'blurAndSubmit'}
+                    onSubmitEditing={() => {
+                      if (activeTab === 'register') confirmarRef.current?.focus();
+                      else void handleFormSubmit();
+                    }}
+                    onFocus={evento => enfocarCampo('password', evento)}
+                    onBlur={desenfocarCampo}
+                    accesorio={
+                      /* 44 × 44 de área táctil dentro del recuadro de 52: se acierta sin apuntar. */
                       <Pressable
-                        hitSlop={8}
                         accessibilityRole="button"
-                        accessibilityLabel="Recuperar la contraseña"
-                        onPress={() => {
-                          setErrorMessage(null);
-                          setSuccessMessage(null);
-                          setStep('forgot');
-                        }}
+                        accessibilityLabel={showPassword ? 'Ocultar la contraseña' : 'Mostrar la contraseña'}
+                        onPress={() => setShowPassword(!showPassword)}
+                        style={styles.ojo}
                       >
-                        <Text style={[t.micro, { color: c.goldInk, letterSpacing: 0.8, fontFamily: 'Jost_500Medium' }]}>
+                        <Icon name={showPassword ? 'eyeOff' : 'eye'} size={18} color={c.tabInactive} />
+                      </Pressable>
+                    }
+                    debajo={
+                      errorMessage && campoDelError === 'password' ? <MensajeBajoElCampo texto={errorMessage} /> : null
+                    }
+                  />
+
+                  {activeTab === 'login' && (
+                    <Pressable
+                      hitSlop={{ left: 12, right: 8 }}
+                      accessibilityRole="button"
+                      accessibilityLabel="Recuperar la contraseña"
+                      onPress={() => {
+                        setErrorMessage(null);
+                        setSuccessMessage(null);
+                        setStep('forgot');
+                      }}
+                      style={styles.olvido}
+                    >
+                      {({ pressed }) => (
+                        <Text style={[t.small, styles.textoOlvido, { color: c.goldInk, opacity: pressed ? 0.6 : 1 }]}>
                           ¿Olvidaste tu contraseña?
                         </Text>
-                      </Pressable>
-                    )}
-                  </View>
-                  <View
-                    style={[
-                      styles.inputWrap,
-                      {
-                        borderColor: focusedField === 'password' ? c.gold : c.border,
-                        backgroundColor: c.cardBgAlt,
-                      },
-                    ]}
-                  >
-                    <Icon name="lock" size={17} color={focusedField === 'password' ? c.goldInk : c.tabInactive} />
-                    <TextInput
-                      ref={contrasenaRef}
-                      value={password}
-                      accessibilityLabel="Contraseña"
-                      onChangeText={setPassword}
-                      placeholder={activeTab === 'register' ? `Mínimo ${MIN_CONTRASENA} caracteres` : 'Tu contraseña'}
-                      placeholderTextColor={c.tabInactive}
+                      )}
+                    </Pressable>
+                  )}
+
+                  {activeTab === 'register' && (
+                    <CampoDelIngreso
+                      ref={confirmarRef}
+                      etiqueta="Confirmar contraseña"
+                      icono="lock"
+                      enfocado={focusedField === 'confirmPassword'}
+                      value={confirmPassword}
+                      onChangeText={setConfirmPassword}
+                      placeholder="Repite tu contraseña"
                       secureTextEntry={!showPassword}
                       autoCapitalize="none"
                       autoCorrect={false}
-                      // Al crear la cuenta el gestor de contraseñas propone una nueva; al entrar, la guardada.
-                      autoComplete={activeTab === 'register' ? 'new-password' : 'current-password'}
-                      textContentType={activeTab === 'register' ? 'newPassword' : 'password'}
-                      returnKeyType={activeTab === 'register' ? 'next' : 'go'}
-                      submitBehavior={activeTab === 'register' ? 'submit' : 'blurAndSubmit'}
-                      onSubmitEditing={() => {
-                        if (activeTab === 'register') confirmarRef.current?.focus();
-                        else void handleFormSubmit();
-                      }}
-                      onFocus={evento => enfocarCampo('password', evento)}
+                      autoComplete="new-password"
+                      textContentType="newPassword"
+                      returnKeyType="go"
+                      onSubmitEditing={() => void handleFormSubmit()}
+                      onFocus={evento => enfocarCampo('confirmPassword', evento)}
                       onBlur={desenfocarCampo}
-                      style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
                     />
-                    <Pressable
-                      hitSlop={14}
-                      accessibilityRole="button"
-                      accessibilityLabel={showPassword ? 'Ocultar la contraseña' : 'Mostrar la contraseña'}
-                      onPress={() => setShowPassword(!showPassword)}
-                    >
-                      <Icon
-                        name={showPassword ? 'eyeOff' : 'eye'}
-                        size={17}
-                        color={c.tabInactive}
-                      />
-                    </Pressable>
-                  </View>
-                </View>
+                  )}
 
-                {activeTab === 'register' && (
-                  <View style={styles.inputGroup}>
-                    <MicroLabel>Confirmar contraseña</MicroLabel>
-                    <View
-                      style={[
-                        styles.inputWrap,
-                        {
-                          borderColor: focusedField === 'confirmPassword' ? c.gold : c.border,
-                          backgroundColor: c.cardBgAlt,
-                        },
-                      ]}
-                    >
-                      <Icon name="lock" size={17} color={focusedField === 'confirmPassword' ? c.goldInk : c.tabInactive} />
-                      <TextInput
-                        ref={confirmarRef}
-                        value={confirmPassword}
-                        accessibilityLabel="Confirmar contraseña"
-                        onChangeText={setConfirmPassword}
-                        placeholder="Repite tu contraseña"
-                        placeholderTextColor={c.tabInactive}
-                        secureTextEntry={!showPassword}
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        autoComplete="new-password"
-                        textContentType="newPassword"
-                        returnKeyType="go"
-                        onSubmitEditing={() => void handleFormSubmit()}
-                        onFocus={evento => enfocarCampo('confirmPassword', evento)}
-                        onBlur={desenfocarCampo}
-                        style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
-                      />
-                    </View>
-                  </View>
-                )}
-
-                {/* Botón Principal */}
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Continuar"
-                  onPress={handleFormSubmit}
-                  disabled={loading}
-                  style={[styles.submitBtn, { shadowColor: c.gold }]}
-                >
-                  <LinearGradient
-                    colors={c.goldGrad}
-                    start={{ x: 0.1, y: 0 }}
-                    end={{ x: 0.9, y: 1 }}
-                    style={styles.gradientBtn}
-                  >
-                    {loading ? (
-                      <ActivityIndicator color={c.onGold} size="small" />
-                    ) : (
-                      <Text style={[t.cardTitle, { color: c.onGold, letterSpacing: 0.1, fontFamily: 'Jost_500Medium', fontSize: 15 }]}>
-                        {activeTab === 'login' ? 'Acceder al programa' : 'Continuar y recibir código'}
-                      </Text>
-                    )}
-                  </LinearGradient>
-                </Pressable>
-              </View>
-
-              {/* ===================================================================== */}
-              {/* SECCIÓN DE REDES SOCIALES GRANDES                                     */}
-              {/* ===================================================================== */}
-              <View style={styles.socialSection}>
-                <View style={styles.dividerRow}>
-                  <View style={[styles.divLine, { backgroundColor: c.divider }]} />
-                  <Text style={[t.small, { color: c.tabInactive, paddingHorizontal: 12, letterSpacing: 0.2, fontSize: 12.5 }]}>
-                    o accede con
-                  </Text>
-                  <View style={[styles.divLine, { backgroundColor: c.divider }]} />
-                </View>
-
-                {/*
-                  Ingreso con Apple retirado (2026-09-05, pedido del dueno del proyecto): todavia
-                  no hay cuenta de Apple Developer, asi que el boton llevaba a un flujo que no
-                  puede completarse.
-
-                  OJO PARA CUANDO VUELVA: en iOS, si la app ofrece cualquier otro login social
-                  (aca hay Google), las reglas de la App Store EXIGEN ofrecer tambien "Sign in with
-                  Apple". Mientras Apple no este, publicar en iOS con el boton de Google visible es
-                  motivo de rechazo. En Android y en web no aplica.
-
-                  El backend ya tiene su lado resuelto (`renaser.auth.apple.*` en application.yaml)
-                  y `loginWithApple` sigue en AuthContext: volver a prenderlo es restaurar este
-                  bloque, no rehacer nada.
-                */}
-
-                {/*
-                  Botón de Google — DESACTIVADO, "Próximamente" (2026-09-23, pedido del dueño).
-
-                  El ingreso con Google no está funcionando y se publica igual, así que el botón se
-                  muestra apagado en vez de esconderse. Es a propósito: quien ya entró alguna vez
-                  con Google lo va a buscar, y un botón que desapareció se lee como "me borraron la
-                  cuenta". Apagado con la razón escrita se lee como lo que es.
-
-                  No se toca nada más. `handleSocialLogin` y `loginWithGoogle` (AuthContext) quedan
-                  intactos, igual que el flujo de confirmación de registro que viene detrás: volver
-                  a prenderlo es devolver el `onPress` y el `disabled` de abajo a lo que eran, sin
-                  rehacer nada. Mismo criterio que se usó con Apple más arriba.
-                */}
-                {(Platform.OS === 'android' || Platform.OS === 'ios' || Platform.OS === 'web') && (
-                  <View
-                    accessibilityRole="text"
-                    accessibilityLabel="Continuar con Google, próximamente"
-                    style={[
-                      styles.bigSocialBtn,
-                      { borderColor: c.border, backgroundColor: c.cardBgAlt, opacity: 0.55 }
-                    ]}
-                  >
-                    <Icon name="google" size={20} color={c.textSoft} />
-                    <Text style={[t.cardTitle, { color: c.textSoft, letterSpacing: 0.1, fontFamily: 'Jost_500Medium', fontSize: 15 }]}>
-                      Google · Próximamente
-                    </Text>
-                  </View>
-                )}
-              </View>
+                  {/* Un error que no es de un campo en particular (las validaciones del alta, un
+                      fallo al enviar el código) va al final de los campos, junto al botón. */}
+                  {errorMessage && campoDelError === null ? <MensajeBajoElCampo texto={errorMessage} /> : null}
+                </Animated.View>
+              </EntradaEscalonada>
 
               {/*
                 "ACCESO DIRECTO (MODO DEMO)" retirado (2026-09-05, pedido del dueno del proyecto).
@@ -1151,9 +970,18 @@ export default function LoginScreen() {
                 nadie. Conviene borrarlos antes de publicar: sin caller son inertes, pero es un
                 bypass de autenticacion esperando a que alguien lo vuelva a cablear.
               */}
+              {/*
+                Ingreso con Apple retirado (2026-09-05) y Google retirado de la vista (2026-10-05;
+                del 2026-09-23 al 2026-10-05 se mostró apagado como «Google · Próximamente»).
+
+                OJO PARA CUANDO VUELVAN: en iOS, si la app ofrece cualquier otro login social, las
+                reglas de la App Store EXIGEN ofrecer también "Sign in with Apple". El backend ya
+                tiene su lado resuelto (`renaser.auth.apple.*`) y `loginWithGoogle`/`loginWithApple`
+                siguen en AuthContext; `handleSocialLogin` y la vista 5 (confirmar datos) siguen
+                acá: volver a prenderlos es agregar el botón que llame a `handleSocialLogin`.
+              */}
             </>
           )}
-
           {/* ========================================================================= */}
           {/* VISTA 2: VERIFICACIÓN DE CÓDIGO OTP DE 6 DÍGITOS                          */}
           {/* ========================================================================= */}
@@ -1766,73 +1594,141 @@ export default function LoginScreen() {
             </View>
           )}
 
-          {/* Footer Note */}
-          <Text style={[t.micro, styles.footerText, { color: c.micro, letterSpacing: 0.8 }]}>
-            Renaser · 90 Días para redefinir tu vida, energía y propósito.
-          </Text>
+          </View>
         </ScrollView>
+
+        {/*
+          El pie: el botón principal y el cambio de vista, FUERA del scroll. Así queda siempre a la
+          vista, abajo, donde llega el pulgar, y sube con el teclado (el `KeyboardAvoidingView`
+          achica el scroll, no el pie). Los otros pasos (código, recuperación, acuse) siguen con
+          sus botones dentro de su tarjeta, como antes.
+        */}
+        {step === 'form' && (
+          <View
+            style={[
+              styles.pie,
+              anchoDelContenido,
+              // Con el teclado arriba el borde seguro de abajo queda detrás del teclado: basta un aire corto.
+              { paddingBottom: tecladoAbierto ? 12 : Math.max(insets.bottom, 12) },
+            ]}
+          >
+            {/* Fundido sobre el borde de abajo del scroll, justo encima del pie: avisa que hay más
+                campos debajo (en «Solicitar acceso» el último queda bajo el pliegue) sin una raya
+                dura. El mismo recurso que `MarcoDePaso` en el onboarding. */}
+            <LinearGradient pointerEvents="none" colors={[`${c.bg}00`, c.bg]} style={styles.fundidoInferior} />
+            <EntradaEscalonada key={`pie-${activeTab}`} indice={2} style={styles.pieAdentro}>
+              <BotonDelIngreso
+                etiqueta={activeTab === 'login' ? 'Ingresar' : 'Continuar y recibir código'}
+                cargando={loading}
+                onPress={() => void handleFormSubmit()}
+              />
+              {tecladoAbierto ? null : (
+                <Presionable
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    activeTab === 'login' ? '¿No tienes cuenta? Solicitar acceso' : '¿Ya tienes cuenta? Iniciar sesión'
+                  }
+                  onPress={() => irA(activeTab === 'login' ? 'register' : 'login')}
+                  style={styles.cambioDeVista}
+                >
+                  <Text style={[t.body, styles.textoCambio, { color: c.textSoft }]}>
+                    {activeTab === 'login' ? '¿No tienes cuenta? ' : '¿Ya tienes cuenta? '}
+                    <Text style={[styles.textoCambioFuerte, { color: c.goldInk }]}>
+                      {activeTab === 'login' ? 'Solicitar acceso' : 'Iniciar sesión'}
+                    </Text>
+                  </Text>
+                </Presionable>
+              )}
+            </EntradaEscalonada>
+          </View>
+        )}
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
+  raiz: {
     flex: 1,
   },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingTop: 4,
+  scrollContent: {
+    /* `flexGrow: 1` lo pide AGENTS.md 2 para un contenedor de scroll fluido. El `paddingBottom`
+       (en la vista, según haya pie o no) es el aire que permite que el último campo llegue a
+       acomodarse sobre el teclado sin chocar contra el final del contenido. */
+    flexGrow: 1,
   },
-  backBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 12,
+  /* Antes `topBar`, `backBtn`, `themeBtn`, `heroSection`, `selectorModo`, `passwordHeader`,
+     `socialSection`, `dividerRow`, `divLine`, `bigSocialBtn`, `demoSection`, `demoBtn` y
+     `footerText`: todo lo de la cabecera vieja, el control segmentado, Google y el pie de marca,
+     que se fueron con el rediseño del 2026-10-05. */
+  /* Sin aire arriba: el título se mete en el final del degradado de la cabecera
+     (`solapeDelTitulo`), donde el fondo ya tapa la imagen. */
+  cuerpo: {
+    paddingTop: 0,
   },
-  themeBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    borderWidth: 1,
+  /* La serif del tema en grande, con el tracking cerrado de los títulos de display
+     (`apple-design` §15: el texto grande pide tracking negativo). */
+  titulo: {
+    fontFamily: 'Fraunces_600SemiBold',
+    fontSize: 34,
+    lineHeight: 40,
+    letterSpacing: -0.8,
+  },
+  subrayadoDelTitulo: {
+    width: 36,
+    height: 2,
+    borderRadius: 1,
+    marginTop: 10,
+    marginBottom: 26,
+  },
+  campos: {
+    gap: 18,
+  },
+  ojo: {
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  scrollContent: {
-    paddingHorizontal: 24,
-    /* `flexGrow: 1` y `paddingBottom: 36` son los que pide AGENTS.md 2 para un contenedor de
-       scroll fluido, y eran lo que le faltaba a esta pantalla. El `paddingBottom` importa ahora
-       más que antes: con el teclado arriba, es el aire que permite que el último campo llegue a
-       acomodarse sin chocar contra el final del contenido. */
-    flexGrow: 1,
-    paddingBottom: 36,
+  /* Pegado a la contraseña (el `gap` de 18 menos 10) y a la derecha, con 44 de alto táctil. */
+  olvido: {
+    alignSelf: 'flex-end',
+    minHeight: 44,
+    justifyContent: 'center',
+    marginTop: -10,
   },
-  heroSection: {
-    alignItems: 'center',
-    paddingTop: 10,
-    paddingBottom: 20,
+  textoOlvido: {
+    fontFamily: 'Jost_500Medium',
   },
-  /* `ringContainer` e `iconDiamond` se eliminaron el 2026-09-14 junto con el circulo del paso:
-     sin ese bloque de JSX nadie los referenciaba. `ring` (position absolute + borderWidth) ya
-     estaba sin uso desde antes de este cambio — se deja para no ampliar el alcance. */
-  ring: {
+  fundidoInferior: {
     position: 'absolute',
-    borderWidth: 1,
+    left: 0,
+    right: 0,
+    top: -16,
+    height: 16,
   },
-  /* Antes `tabSelector`/`tabBtn`/`tabBtnActive`, las pestañas de botones (ver `ControlSegmentado`). */
-  selectorModo: {
-    marginBottom: 16,
+  pie: {
+    paddingTop: 10,
+  },
+  pieAdentro: {
+    gap: 2,
+  },
+  cambioDeVista: {
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  textoCambio: {
+    textAlign: 'center',
+    fontSize: 15,
+  },
+  textoCambioFuerte: {
+    fontFamily: 'Jost_500Medium',
   },
   card: {
-    /* Sin `borderWidth` a proposito (2026-09-14): el borde de esta tarjeta, mas el de la fila de
-       pestanas, mas el del boton de Google, apilaban tres cajas con borde en una sola pantalla.
-       El fondo y los campos ya dan toda la estructura que hace falta. */
+    /* Sin `borderWidth` a proposito (2026-09-14): el fondo y los campos ya dan toda la estructura
+       que hace falta. Desde el 2026-10-05 la usan solo los pasos que siguen al formulario (código,
+       recuperación, confirmación social y acuse). */
     borderRadius: 20,
     paddingHorizontal: 4,
     paddingVertical: 8,
@@ -1846,11 +1742,6 @@ const styles = StyleSheet.create({
   },
   inputGroup: {
     gap: 8,
-  },
-  passwordHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
   },
   inputWrap: {
     flexDirection: 'row',
@@ -1884,45 +1775,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  socialSection: {
-    marginTop: 20,
-    gap: 12,
-  },
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  divLine: {
-    flex: 1,
-    height: 1,
-  },
-  bigSocialBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    borderWidth: 1,
-    borderRadius: 14,
-    paddingVertical: 14,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
-  },
-  demoSection: {
-    marginTop: 14,
-  },
-  demoBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    borderWidth: 1,
-    borderRadius: 14,
-    paddingVertical: 13,
-  },
   returnLoginBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1941,10 +1793,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 6,
-  },
-  footerText: {
-    textAlign: 'center',
-    marginTop: 24,
-    lineHeight: 16,
   },
 });

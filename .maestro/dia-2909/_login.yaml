@@ -9,16 +9,16 @@ appId: com.renaser.app
 # En este emulador la app de desarrollo recién limpiada a veces se cierra sola al primer arranque
 # (vuelve al escritorio sin error): se espera y, si no apareció el login, se la lanza otra vez.
 - extendedWaitUntil:
-    visible: "Acceder al programa"
+    visible: "Ingresar"
     timeout: 40000
     optional: true
 - runFlow:
     when:
-      notVisible: "Acceder al programa"
+      notVisible: "Ingresar"
     commands:
       - launchApp
 - extendedWaitUntil:
-    visible: "Acceder al programa"
+    visible: "Ingresar"
     timeout: 60000
 - runFlow: _cerrar-aviso-dev.yaml
 - tapOn: "tucorreo@ejemplo.com"
@@ -26,9 +26,9 @@ appId: com.renaser.app
 - tapOn: "Tu contraseña"
 - inputText: ${CLAVE}
 - hideKeyboard
-- tapOn: "Acceder al programa"
+- tapOn: "Ingresar"
 - extendedWaitUntil:
-    notVisible: "Acceder al programa"
+    notVisible: "Ingresar"
     timeout: 30000
 # Si el día tiene un ritual pendiente (p. ej. «Diseña tu mapa» del Día 7) la app lo abre sola: se vuelve.
 - waitForAnimationToEnd:

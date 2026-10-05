@@ -178,13 +178,14 @@ async function estaDentro(page: Page): Promise<boolean> {
  * Los nombres salen de los `accessibilityLabel` de LoginScreen, EXACTOS y no por expresión
  * regular: la pantalla tiene además "Recuperar la contraseña", "Mostrar la contraseña" y
  * "Confirmar contraseña", así que un /contraseñ/i engancha cuatro elementos y falla por
- * ambigüedad en vez de por lo que se está probando. El botón se ve como "ACCEDER AL PROGRAMA"
- * pero su etiqueta accesible es "Continuar", y es la etiqueta la que manda.
+ * ambigüedad en vez de por lo que se está probando. El botón dice "Ingresar" y su etiqueta
+ * accesible es la misma desde el rediseño del login (2026-10-05; antes se veía "ACCEDER AL
+ * PROGRAMA" y la etiqueta era "Continuar").
  */
 export async function iniciarSesion(page: Page, actor: Actor): Promise<void> {
   await page.getByLabel('Correo electrónico', { exact: true }).fill(actor.email);
   await page.getByLabel('Contraseña', { exact: true }).fill(actor.password);
-  await page.getByRole('button', { name: 'Continuar', exact: true }).click();
+  await page.getByRole('button', { name: 'Ingresar', exact: true }).click();
 
   const barra = page.getByRole('tab', { name: /^hoy$/i }).first();
   const limitado = page.getByText(/demasiados intentos/i);
