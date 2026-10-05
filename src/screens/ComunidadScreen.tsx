@@ -85,6 +85,7 @@ import { BarraDeCita } from '../features/chat/components/CitaDeRespuesta';
 import { MenuDelMensaje } from '../features/chat/components/MenuDelMensaje';
 import { citaDeMensajeCargado, conCitaCompleta } from '../features/chat/utils/citaDelMensaje';
 import { copiarAlPortapapeles, sePuedeCopiar } from '../features/chat/utils/portapapeles';
+import { propsDelCampoDelChat } from '../features/chat/utils/campoDelChat';
 import { Presionable } from '../components/Presionable';
 import { tacto } from '../utils/tacto';
 import { CabeceraDeChat } from '../features/chat/components/CabeceraDeChat';
@@ -4113,6 +4114,8 @@ export default function ComunidadScreen() {
                     placeholder="Mensaje"
                     placeholderTextColor={c.textSoft}
                     multiline
+                    // Un renglón en la web, como en el teléfono (ver `propsDelCampoDelChat`).
+                    {...propsDelCampoDelChat()}
                     // E-374 (D-215): el mismo tope que el servidor; cerca del tope, el aviso de abajo.
                     maxLength={LARGO_MAXIMO_DEL_MENSAJE}
                     style={[styles.chatTextoCampo, styles.textInputChat, { color: c.text }]}
