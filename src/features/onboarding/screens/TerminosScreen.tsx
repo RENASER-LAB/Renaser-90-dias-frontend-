@@ -31,7 +31,7 @@ export function TerminosScreen({
   savedSignature,
   onSaveSignature,
 }: TerminosScreenProps) {
-  const { c, t, mode, toggle } = useTheme();
+  const { c, t } = useTheme();
   const { guardarCapitulo, avanzarEstado, aceptarHito, guardarFirma } = usePersistenciaOnboarding();
   // Ref al lienzo para poder capturarlo como PNG al confirmar (ver SignatureCanvas.capturarComoPngBase64).
   const signatureRef = useRef<SignatureCanvasHandle>(null);
@@ -135,8 +135,6 @@ export function TerminosScreen({
     <MarcoDePaso
       alVolver={onBack}
       accesibilidadVolver="Volver a la ficha"
-      alternarTema={toggle}
-      modoTema={mode}
       pie={
         /* Fijo abajo y encendido siempre, como en los otros capítulos: si falta la casilla o la
            firma, al tocarlo se dice cuál («Aceptación requerida» / «Firma requerida») y el recuadro

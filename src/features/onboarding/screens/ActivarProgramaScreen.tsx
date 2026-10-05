@@ -55,7 +55,7 @@ function formatearFecha(iso: string): string {
 }
 
 export function ActivarProgramaScreen({ onActivated }: ActivarProgramaScreenProps) {
-  const { c, t, mode, toggle } = useTheme();
+  const { c, t } = useTheme();
 
   const [cargando, setCargando] = useState(true);
   const [fechas, setFechas] = useState<string[]>([]);
@@ -110,8 +110,6 @@ export function ActivarProgramaScreen({ onActivated }: ActivarProgramaScreenProp
 
   return (
     <MarcoDePaso
-      alternarTema={toggle}
-      modoTema={mode}
       pie={
         <GoldButton
           label="CONFIRMAR MI DÍA 1"

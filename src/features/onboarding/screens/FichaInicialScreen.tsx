@@ -93,7 +93,7 @@ export function FichaInicialScreen({
   onComplete,
   onBack,
 }: FichaInicialScreenProps) {
-  const { c, t, mode, toggle } = useTheme();
+  const { c, t } = useTheme();
   const { guardarCapitulo, avanzarEstado } = usePersistenciaOnboarding();
 
   /** El paso que se ve (índice global 0..11) y hacia dónde se llegó, para que entre del lado correcto. */
@@ -350,8 +350,6 @@ export function FichaInicialScreen({
       }
       claveContenido={paso.id}
       direccion={navegacion.direccion}
-      alternarTema={toggle}
-      modoTema={mode}
       pie={
         <GoldButton
           label={ubicacion.esUltimo ? 'CONTINUAR A TÉRMINOS' : 'SIGUIENTE'}

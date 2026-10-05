@@ -73,8 +73,6 @@ interface MarcoDePasoProps {
   /** El botón principal. Queda fijo abajo y sube con el teclado. */
   pie: React.ReactNode;
   children: React.ReactNode;
-  alternarTema: () => void;
-  modoTema: 'light' | 'dark';
 }
 
 export function MarcoDePaso({
@@ -86,8 +84,6 @@ export function MarcoDePaso({
   direccion = 'adelante',
   pie,
   children,
-  alternarTema,
-  modoTema,
 }: MarcoDePasoProps) {
   const { c, t } = useTheme();
   const { isTablet, contentMaxWidth, horizontalPadding } = useResponsive();
@@ -169,15 +165,10 @@ export function MarcoDePaso({
 
         <View style={styles.centro}>{cabecera}</View>
 
-        <Presionable
-          hitSlop={6}
-          onPress={alternarTema}
-          accessibilityRole="button"
-          accessibilityLabel={modoTema === 'light' ? 'Activar modo oscuro' : 'Activar modo claro'}
-          style={[styles.tema, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
-        >
-          <Icon name={modoTema === 'light' ? 'moon' : 'sun'} size={16} color={c.goldInk} />
-        </Presionable>
+        {/* Acá iba el botón de luna/sol (modo oscuro). Se quitó el 2026-10-05 junto con el del
+            login, por pedido del dueño («quitamos la luna para que no afecte»): el onboarding
+            sigue el modo guardado (el claro si nunca se eligió otro) y el modo oscuro se elige en
+            Yo → «Modo oscuro», como en el resto de la app desde el 2026-09-18. */}
       </View>
 
       {/*
@@ -301,14 +292,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Jost_500Medium',
     fontSize: 14.5,
     lineHeight: 20,
-  },
-  tema: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   contenido: {
     flexGrow: 1,
