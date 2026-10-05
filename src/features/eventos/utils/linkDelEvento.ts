@@ -1,3 +1,4 @@
+import type { MarcaConLogo } from '../../../components/LogoDeMarca';
 import type { Evento, TipoUbicacion } from '../types/eventos.types';
 
 /**
@@ -40,7 +41,23 @@ export function nombreDelLink(link: string): string {
   const tipo = tipoDeUbicacionDelLink(link);
   if (tipo === 'MEET') return 'Google Meet';
   if (tipo === 'ZOOM') return 'Zoom';
-  const host = (/^https:\/\/([^/?#]+)/i.exec(link.trim())?.[1] ?? '').toLowerCase();
-  if (host === 'drive.google.com' || host === 'docs.google.com') return 'Google Drive';
+  if (esDeDrive(link)) return 'Google Drive';
   return 'Enlace';
+}
+
+/**
+ * El logo que va junto a ese nombre (`LogoDeMarca`, 2026-10-05), o `null` si es un «Enlace» sin
+ * marca. Sale de la misma lectura del dominio que `nombreDelLink`: el logo y el texto no pueden
+ * decir dos servicios distintos.
+ */
+export function marcaDelLink(link: string): MarcaConLogo | null {
+  const tipo = tipoDeUbicacionDelLink(link);
+  if (tipo === 'MEET') return 'googleMeet';
+  if (tipo === 'ZOOM') return 'zoom';
+  return esDeDrive(link) ? 'googleDrive' : null;
+}
+
+function esDeDrive(link: string): boolean {
+  const host = (/^https:\/\/([^/?#]+)/i.exec(link.trim())?.[1] ?? '').toLowerCase();
+  return host === 'drive.google.com' || host === 'docs.google.com';
 }

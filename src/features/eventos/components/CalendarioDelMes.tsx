@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '../../../components/Icon';
 import { BotonSecundario } from '../../../components/Legible';
+import { LogoDeMarca } from '../../../components/LogoDeMarca';
 import { useTheme } from '../../../theme/ThemeContext';
 import type { Ocurrencia } from '../types/eventos.types';
 import {
@@ -15,7 +16,7 @@ import {
   type MarcaDelDia,
   type Mes,
 } from '../utils/calendarioDelMes';
-import { linkParaUnirme, nombreDelLink } from '../utils/linkDelEvento';
+import { linkParaUnirme, marcaDelLink, nombreDelLink } from '../utils/linkDelEvento';
 import { diaEnPalabras } from '../utils/textosDeFecha';
 import { horaEnZona } from '../utils/zonaHoraria';
 import { EtiquetaAsistencia, LETRA, Parrafo } from './piezas';
@@ -194,6 +195,7 @@ function TarjetaDelDia({ oc, zona, onPress }: { oc: Ocurrencia; zona: string; on
   const { c } = useTheme();
   const link = linkParaUnirme(oc.evento);
   const donde = link ? nombreDelLink(link) : oc.evento.tipoUbicacion === 'ADDRESS' ? oc.evento.valorUbicacion : null;
+  const marca = link ? marcaDelLink(link) : null;
   const hora = horaEnZona(oc.iniciaEn, oc.evento.zona ?? zona);
   return (
     <Pressable
@@ -211,9 +213,12 @@ function TarjetaDelDia({ oc, zona, onPress }: { oc: Ocurrencia; zona: string; on
           {oc.titulo}
         </Text>
         {donde ? (
-          <Text style={[estilos.donde, { color: c.textSoft }]} numberOfLines={1}>
-            {donde}
-          </Text>
+          <View style={estilos.dondeFila}>
+            {marca ? <LogoDeMarca marca={marca} size={16} decorativo /> : null}
+            <Text style={[estilos.donde, { color: c.textSoft }]} numberOfLines={1}>
+              {donde}
+            </Text>
+          </View>
         ) : null}
         <EtiquetaAsistencia oc={oc} />
       </View>
@@ -250,5 +255,6 @@ const estilos = StyleSheet.create({
   },
   hora: { fontFamily: 'Jost_700Bold', fontSize: 20, width: 62, fontVariant: ['tabular-nums'] },
   tituloTarjeta: { fontFamily: 'Jost_500Medium', fontSize: LETRA.titulo, lineHeight: 24 },
-  donde: { fontFamily: 'Jost_400Regular', fontSize: LETRA.cuerpo, lineHeight: 22 },
+  dondeFila: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  donde: { flexShrink: 1, fontFamily: 'Jost_400Regular', fontSize: LETRA.cuerpo, lineHeight: 22 },
 });
