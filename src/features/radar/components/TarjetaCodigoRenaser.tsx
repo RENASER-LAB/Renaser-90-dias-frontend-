@@ -1,7 +1,8 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { Icon } from '../../../components/Icon';
+import { Icon, TAMANO_ICONO } from '../../../components/Icon';
+import { Presionable } from '../../../components/Presionable';
 import { Card, MicroLabel } from '../../../components/ui';
 import { useTheme } from '../../../theme/ThemeContext';
 import { horaEnPunto, type EstadoRadar } from '../utils/slotsDelRadar';
@@ -21,6 +22,11 @@ import { horaEnPunto, type EstadoRadar } from '../utils/slotsDelRadar';
  *
  * No hay estado "atrasado" y no lo va a haber: los slots que pasaron no se acumulan (ver
  * `config/configRadar.ts`).
+ *
+ * Rediseño de Hoy (2026-10-05): los rótulos del estado van en tipo oración («En espera»,
+ * «Registrado», «Innegociable», «Abierto»; eran versales espaciadas), los íconos a
+ * 20, el chevron a 16, y la tarjeta abierta responde al dedo (`Presionable`). La diana (`target`) se
+ * queda hasta que entre `compass`, que dibuja el rediseño de Plan.
  */
 export function TarjetaCodigoRenaser({
   estado,
@@ -45,10 +51,10 @@ export function TarjetaCodigoRenaser({
       <Card>
         <View style={styles.cabecera}>
           <MicroLabel>Código Renaser</MicroLabel>
-          <Text style={[t.micro, { color: c.micro, fontFamily: 'Jost_500Medium' }]}>EN ESPERA</Text>
+          <Text style={[t.small, { color: c.micro, fontFamily: 'Jost_500Medium' }]}>En espera</Text>
         </View>
         <View style={styles.fila}>
-          <Icon name="clock" size={18} color={c.micro} />
+          <Icon name="clock" size={TAMANO_ICONO.normal} color={c.micro} />
           <Text style={[t.body, { color: c.textSoft, fontSize: 13, flex: 1 }]}>
             El primer registro del día es a las {horaEnPunto(estado.proximaHora)}.
           </Text>
@@ -62,10 +68,10 @@ export function TarjetaCodigoRenaser({
       <Card>
         <View style={styles.cabecera}>
           <MicroLabel>Código Renaser · {estado.slot.etiqueta}</MicroLabel>
-          <Text style={[t.micro, { color: c.success, fontFamily: 'Jost_700Bold' }]}>REGISTRADO</Text>
+          <Text style={[t.small, { color: c.success, fontFamily: 'Jost_700Bold' }]}>Registrado</Text>
         </View>
         <View style={styles.fila}>
-          <Icon name="checkCircle" size={19} color={c.success} />
+          <Icon name="checkCircle" size={TAMANO_ICONO.normal} color={c.success} />
           <Text style={[t.body, { color: c.textSoft, fontSize: 13, flex: 1 }]}>
             {estado.proximaHora !== null
               ? `Listo por esta hora. El siguiente a las ${horaEnPunto(estado.proximaHora)}.`
@@ -78,16 +84,16 @@ export function TarjetaCodigoRenaser({
 
   const minutos = estado.minutosParaCerrar;
   return (
-    <Pressable onPress={onResponder} accessibilityRole="button" accessibilityLabel="Responder el Código Renaser de esta hora">
+    <Presionable onPress={onResponder} accessibilityRole="button" accessibilityLabel="Responder el Código Renaser de esta hora">
       <Card style={{ borderColor: c.gold }}>
         <View style={styles.cabecera}>
           <MicroLabel>Código Renaser · {estado.slot.etiqueta}</MicroLabel>
-          <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
-            {obligatorio ? 'INNEGOCIABLE' : 'ABIERTO'}
+          <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
+            {obligatorio ? 'Innegociable' : 'Abierto'}
           </Text>
         </View>
         <View style={styles.fila}>
-          <Icon name="target" size={19} color={c.goldInk} />
+          <Icon name="target" size={TAMANO_ICONO.normal} color={c.goldInk} />
           <View style={{ flex: 1, gap: 4 }}>
             <Text style={[t.cardTitle, { color: c.text }]}>¿Dónde estás ahora mismo?</Text>
             <Text style={[t.body, { color: c.textSoft, fontSize: 12, lineHeight: 18 }]}>
@@ -96,10 +102,10 @@ export function TarjetaCodigoRenaser({
                 : `Cinco preguntas, un minuto. Se cierra a las ${estado.slot.cierraA}${minutos <= 15 ? ` · quedan ${minutos} min` : ''}.`}
             </Text>
           </View>
-          <Icon name="chevron" size={14} color={c.chevron} />
+          <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.chevron} />
         </View>
       </Card>
-    </Pressable>
+    </Presionable>
   );
 }
 

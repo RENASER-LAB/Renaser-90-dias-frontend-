@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Icon } from '../../../components/Icon';
+import { Aparicion } from '../../../components/Aparicion';
+import { Icon, TAMANO_ICONO } from '../../../components/Icon';
 import { MicroLabel } from '../../../components/ui';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { ahoraConfiable } from '../../../services/http/relojServidor';
@@ -67,15 +68,17 @@ export function SemaforoScreen({
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
       <View style={[estilos.barra, { paddingHorizontal: horizontalPadding }]}>
+        {/* Rediseño de Hoy (2026-10-05): la flecha sola, 24 en un área de 48, como la de volver de
+            Comunidad. Decía «← VOLVER» en versales con una flecha de 15. El nombre para el lector de
+            pantalla sigue siendo «Volver». */}
         <Pressable
           onPress={onVolver}
-          hitSlop={12}
+          hitSlop={8}
           accessibilityRole="button"
           accessibilityLabel="Volver"
-          style={estilos.volver}
+          style={({ pressed }) => [estilos.volver, { opacity: pressed ? 0.6 : 1 }]}
         >
-          <Icon name="arrowLeft" size={15} color={c.goldInk} />
-          <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>VOLVER</Text>
+          <Icon name="arrowLeft" size={TAMANO_ICONO.grande} color={c.goldInk} />
         </Pressable>
         <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 18, flex: 1 }]} numberOfLines={1}>
           Tu semáforo
@@ -227,13 +230,28 @@ function Detalle({
 }
 
 /**
- * La explicación corta. Los umbrales se escriben con las palabras del contrato (§1).
+ * Cómo se calcula, plegado (rediseño de Hoy aprobado por el dueño el 2026-10-05: «se pliega y se
+ * acortan textos largos»). Cerrado se ve el título y «Más detalles», como el encabezado de Objetivos;
+ * abierto, cuatro líneas cortas y los umbrales. Los umbrales se escriben con las palabras del
+ * contrato (§1) y dicen lo mismo que antes; solo se acortaron las frases.
+ *
+ * > **Antes:** cuatro párrafos siempre abiertos al pie del detalle («Cada día se mide lo que
+ * > cumpliste de lo que tenías: tus hábitos y los objetivos que planificaste para ese día.» …), más
+ * > la lista de umbrales: una pantalla entera de texto que se leía una vez.
  *
  * Es texto fijo de la app: si el dueño cambiara un umbral en el servidor, esto habría que publicarlo
  * de nuevo (la app no se actualiza por aire).
  */
+export const LINEAS_DE_COMO_SE_CALCULA = [
+  'Cada día se mide lo que cumpliste de tus hábitos y de los objetivos que planificaste para ese día.',
+  'Un hábito opcional sin hacer no te baja el porcentaje; un objetivo planificado sin cumplir, sí.',
+  'Es el promedio de los últimos 7 días con algo programado.',
+  'La semana va de sábado a viernes y cierra el sábado a las 00:00.',
+] as const;
+
 function ComoSeCalcula() {
   const { c, t } = useTheme();
+  const [abierto, setAbierto] = useState(false);
   const cuerpo = [t.body, { color: c.text, fontSize: 16, lineHeight: 23 }];
   const umbrales: Array<{ color: ColorSemaforo; texto: string }> = [
     { color: 'VERDE', texto: '80 % o más' },
@@ -244,28 +262,37 @@ function ComoSeCalcula() {
 
   return (
     <View style={{ gap: 10 }}>
-      <MicroLabel>Cómo se calcula</MicroLabel>
-      <Text style={cuerpo}>
-        Cada día se mide lo que cumpliste de lo que tenías: tus hábitos y los objetivos que planificaste
-        para ese día.
-      </Text>
-      <Text style={cuerpo}>
-        Un hábito opcional que no hiciste no te baja el porcentaje. Un objetivo planificado que no
-        cumpliste, sí.
-      </Text>
-      <Text style={cuerpo}>
-        Tu semáforo es el promedio de los últimos 7 días que tuvieron algo programado. Los días sin nada
-        programado no cuentan.
-      </Text>
-      <Text style={cuerpo}>La semana va de sábado a viernes y se cierra el sábado a las 00:00.</Text>
-      <View style={{ gap: 8, marginTop: 4 }}>
-        {umbrales.map(u => (
-          <View key={u.color} style={estilos.umbral}>
-            <EtiquetaSemaforo color={u.color} />
-            <Text style={[cuerpo, { color: c.textSoft, flexShrink: 1 }]}>· {u.texto}</Text>
+      <Pressable
+        onPress={() => setAbierto(a => !a)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: abierto }}
+        accessibilityLabel={abierto ? 'Ocultar cómo se calcula tu semáforo' : 'Ver cómo se calcula tu semáforo'}
+        style={({ pressed }) => [estilos.plegable, { opacity: pressed ? 0.6 : 1 }]}
+      >
+        <View style={{ flex: 1 }}>
+          <MicroLabel>Cómo se calcula</MicroLabel>
+        </View>
+        <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 14 }]}>
+          {abierto ? 'Ver menos' : 'Más detalles'}
+        </Text>
+      </Pressable>
+      {abierto ? (
+        <Aparicion desplazamiento={6} style={{ gap: 10 }}>
+          {LINEAS_DE_COMO_SE_CALCULA.map(linea => (
+            <Text key={linea} style={cuerpo}>
+              {linea}
+            </Text>
+          ))}
+          <View style={{ gap: 8, marginTop: 4 }}>
+            {umbrales.map(u => (
+              <View key={u.color} style={estilos.umbral}>
+                <EtiquetaSemaforo color={u.color} />
+                <Text style={[cuerpo, { color: c.textSoft, flexShrink: 1 }]}>· {u.texto}</Text>
+              </View>
+            ))}
           </View>
-        ))}
-      </View>
+        </Aparicion>
+      ) : null}
     </View>
   );
 }
@@ -315,7 +342,9 @@ function Fallo({ semaforo }: { semaforo: EstadoMiSemaforo }) {
 const estilos = StyleSheet.create({
   barra: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingTop: 8, paddingBottom: 10 },
   /* 48 px de alto: el mínimo cómodo para una sola mano (AGENTS.md §4). */
-  volver: { height: 48, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  volver: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center', marginLeft: -12 },
+  /* El renglón que pliega «Cómo se calcula»: 48 de alto, el área cómoda de AGENTS.md §4. */
+  plegable: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 12 },
   contenido: { flexGrow: 1, paddingTop: 8, paddingBottom: 36 + ESPACIO_PARA_LANZADOR, gap: 28 },
   umbral: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
   caja: { alignItems: 'center', justifyContent: 'center', paddingVertical: 34, paddingHorizontal: 18 },

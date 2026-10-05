@@ -3,13 +3,21 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Aparicion } from '../../../components/Aparicion';
 import { GoldButton } from '../../../components/GoldButton';
-import { Icon, type IconName } from '../../../components/Icon';
+import { Icon, TAMANO_ICONO, type IconName } from '../../../components/Icon';
 import { useTheme } from '../../../theme/ThemeContext';
 import type { EstadoPropuestaUI, PedidoDeFotoUI, PropuestaUI } from '../types/renasia.types';
 import { elegirAccionVisible, elegirPedidoVisible, primeraFrase, resumenCorto } from '../utils/accionDelOrbe';
 import { TEXTO_ACCION_REGISTRADA, TEXTO_REGISTRADO } from '../utils/pedidosDeFoto';
 import { estadoVisible } from '../utils/propuestas';
+import { OrbeQuieto } from './OrbeQuieto';
 import { ESPACIO_PARA_LANZADOR } from './RenasiaLauncher';
+
+/**
+ * Los botones de la hoja en tipo oración (rediseño de Hoy, 2026-10-05): «Cancelar», «Confirmar» y
+ * «Tomar foto» a 15, sin el espaciado de las versales de `GoldButton` (que se dejó como está para el
+ * resto de la app).
+ */
+const TEXTO_DE_BOTON = { fontSize: 15, letterSpacing: 0 } as const;
 
 type Props = {
   propuestas: PropuestaUI[];
@@ -85,9 +93,11 @@ export function AccionDelAcompanante({ propuestas, onConfirmar, onCancelar, pedi
               onPress={() => setDetalleDe(conDetalle ? null : propuesta.id)}
               accessibilityRole="button"
               accessibilityLabel={conDetalle ? 'Ocultar el detalle' : 'Ver el detalle de la propuesta'}
-              style={styles.linea}
+              style={[styles.linea, styles.lineaPulsable]}
             >
-              <Icon name="spark" size={18} color={c.goldInk} />
+              {/* Quien propone es SER: su orbe, el mismo del botón flotante y del chat. Era el
+                  asterisco `spark`, el mismo dibujo que tenía el Mapa en la tarjeta de al lado. */}
+              <OrbeQuieto size={TAMANO_ICONO.normal} color={c.goldInk} />
               <Text style={[t.body, styles.texto, { color: c.text }]} numberOfLines={conDetalle ? 8 : 2}>
                 {conDetalle ? propuesta.resumen : resumenCorto(propuesta.resumen)}
               </Text>
@@ -97,19 +107,21 @@ export function AccionDelAcompanante({ propuestas, onConfirmar, onCancelar, pedi
             </Pressable>
             <View style={styles.botones}>
               <GoldButton
-                label="CANCELAR"
+                label="Cancelar"
                 variant="outline"
                 onPress={() => onCancelar(propuesta.id)}
                 disabled={enCurso}
                 loading={estado === 'cancelando'}
                 style={styles.boton}
+                textStyle={TEXTO_DE_BOTON}
               />
               <GoldButton
-                label="CONFIRMAR"
+                label="Confirmar"
                 onPress={() => onConfirmar(propuesta.id)}
                 disabled={enCurso}
                 loading={estado === 'confirmando'}
                 style={styles.boton}
+                textStyle={TEXTO_DE_BOTON}
               />
             </View>
           </>
@@ -117,7 +129,7 @@ export function AccionDelAcompanante({ propuestas, onConfirmar, onCancelar, pedi
           <View style={styles.linea}>
             <Icon
               name={cierreDe(estado, propuesta.mensaje).icono}
-              size={18}
+              size={TAMANO_ICONO.normal}
               color={estado === 'confirmada' ? c.success : estado === 'fallida' ? c.danger : c.textSoft}
             />
             <Text style={[t.body, styles.texto, { color: c.text }]} numberOfLines={2}>
@@ -150,7 +162,7 @@ function HojaPedidoDeFoto({ pedido, onTomarFoto }: { pedido: PedidoDeFotoUI; onT
         <View style={styles.linea}>
           <Icon
             name={registrado ? 'checkCircle' : cerrado ? 'clock' : 'camera'}
-            size={18}
+            size={TAMANO_ICONO.normal}
             color={registrado ? c.success : cerrado ? c.textSoft : c.goldInk}
           />
           <Text style={[t.body, styles.texto, { color: c.text }]} numberOfLines={2}>
@@ -159,7 +171,8 @@ function HojaPedidoDeFoto({ pedido, onTomarFoto }: { pedido: PedidoDeFotoUI; onT
         </View>
         {!cerrado ? (
           <GoldButton
-            label="TOMAR FOTO"
+            label="Tomar foto"
+            textStyle={TEXTO_DE_BOTON}
             onPress={onTomarFoto}
             disabled={pedido.estado === 'abriendo'}
             loading={pedido.estado === 'abriendo'}
@@ -188,6 +201,8 @@ const styles = StyleSheet.create({
   },
   contenido: { gap: 10 },
   linea: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  /** La línea que despliega el detalle se toca: 44 de alto como mínimo. */
+  lineaPulsable: { minHeight: 44 },
   texto: { flex: 1 },
   botones: { flexDirection: 'row', gap: 8 },
   boton: { flex: 1, minHeight: 46 },

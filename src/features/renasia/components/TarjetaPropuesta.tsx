@@ -7,6 +7,9 @@ import { useResponsive } from '../../../theme/responsive';
 import type { EstadoPropuestaUI, PropuestaUI } from '../types/renasia.types';
 import { admiteAcciones, estadoVisible } from '../utils/propuestas';
 
+/** Los botones en tipo oración a 15, sin el espaciado de versales de `GoldButton`. */
+const TEXTO_DE_BOTON = { fontSize: 15, letterSpacing: 0 } as const;
+
 type Props = {
   propuesta: PropuestaUI;
   onConfirmar: () => void;
@@ -49,7 +52,9 @@ export function TarjetaPropuesta({ propuesta, onConfirmar, onCancelar }: Props) 
 
   return (
     <View style={[styles.tarjeta, { borderColor: c.borderStrong, backgroundColor: c.cardBgAlt }]}>
-      <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>PROPUESTA DE TU ACOMPAÑANTE</Text>
+      {/* Tipo oración y botones como la hoja de Hoy (rediseño del 2026-10-05): la misma propuesta se
+          decide en los dos lugares y tiene que leerse igual. */}
+      <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>Propuesta de tu acompañante</Text>
       <Text style={[t.body, { color: c.text, fontSize: rs(14.5), lineHeight: rs(21) }]}>
         {propuesta.resumen}
       </Text>
@@ -57,15 +62,17 @@ export function TarjetaPropuesta({ propuesta, onConfirmar, onCancelar }: Props) 
       {(admiteAcciones(estado) || ocupado) && (
         <View style={styles.botones}>
           <GoldButton
-            label="CANCELAR"
+            label="Cancelar"
             variant="outline"
+            textStyle={TEXTO_DE_BOTON}
             onPress={onCancelar}
             disabled={ocupado}
             loading={estado === 'cancelando'}
             style={styles.boton}
           />
           <GoldButton
-            label="CONFIRMAR"
+            label="Confirmar"
+            textStyle={TEXTO_DE_BOTON}
             onPress={onConfirmar}
             disabled={ocupado}
             loading={estado === 'confirmando'}

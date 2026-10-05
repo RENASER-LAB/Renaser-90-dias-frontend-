@@ -10,6 +10,7 @@ export type IconName =
   | 'close' | 'target' | 'thumbsUp' | 'mic' | 'search'
   | 'forward' | 'imagePlus'
   | 'smile' | 'trash' | 'checkCheck' | 'reply' | 'copy'
+  | 'gauge' | 'map' | 'listChecks' | 'flame' | 'flag'
   | 'newspaper' | 'bookOpen' | 'quote' | 'globe' | 'headset' | 'messageCircle' | 'video' | 'fileText' | 'link' | 'pencil' | 'idCard' | 'layoutGrid';
 
 /**
@@ -584,6 +585,44 @@ export function Icon({ name, size = 20, color, strokeWidth }: Props) {
         <Svg width={size} height={size} viewBox="0 0 24 24">
           <Rect {...s24} x={8} y={8} width={14} height={14} rx={2} />
           <Path {...s24} d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+        </Svg>
+      );
+    /* Hoy */
+    /* Rediseño de Hoy (inventario de íconos, 2026-10-05). Forma de referencia: Lucide (ISC), caja de 24
+       y trazo `s24`. Reemplazan metáforas equivocadas: la diana de Coherencia (`gauge`, un medidor), el
+       asterisco del Mapa (`map`), el sol de «Hábitos de hoy» (`listChecks`: el sol es la pestaña HOY y
+       de noche seguía saliendo), la gota de la racha (`flame`, legible a 16) y el trofeo del objetivo
+       de 90 días (`flag`, la meta; el trofeo es el Ranking). */
+    case 'gauge':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="m12 14 4-4" />
+          <Path {...s24} d="M3.34 19a10 10 0 1 1 17.32 0" />
+        </Svg>
+      );
+    case 'map':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z" />
+          <Path {...s24} d="M15 5.764v15M9 3.236v15" />
+        </Svg>
+      );
+    case 'listChecks':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="m3 17 2 2 4-4M3 7l2 2 4-4M13 6h8M13 12h8M13 18h8" />
+        </Svg>
+      );
+    case 'flame':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
+        </Svg>
+      );
+    case 'flag':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7" />
         </Svg>
       );
     case 'chevron':
