@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { useTheme } from '../../../theme/ThemeContext';
-import { useResponsive } from '../../../theme/responsive';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
-import { Icon } from '../../../components/Icon';
 import { GoldButton } from '../../../components/GoldButton';
+import { MarcoDePaso } from '../components/MarcoDePaso';
+import { OpcionElegible } from '../components/OpcionElegible';
+import { tacto } from '../../../utils/tacto';
 import * as onboardingApi from '../api/onboardingApi';
 import { mensajeDeError } from '../../../services/http/apiClient';
 
@@ -44,14 +44,18 @@ function fechaLocalDesdeIso(iso: string): Date {
   return new Date(anio, mes - 1, dia);
 }
 
+/**
+ * «Martes 6 de octubre». Mayúscula sólo al principio: la pantalla usaba `textTransform: 'capitalize'`,
+ * que pone mayúscula a CADA palabra y mostraba «Martes 6 De Octubre» (corregido 2026-10-05).
+ */
 function formatearFecha(iso: string): string {
   const fecha = fechaLocalDesdeIso(iso);
-  return `${NOMBRES_DIA[fecha.getDay()]} ${fecha.getDate()} de ${NOMBRES_MES[fecha.getMonth()]}`;
+  const texto = `${NOMBRES_DIA[fecha.getDay()]} ${fecha.getDate()} de ${NOMBRES_MES[fecha.getMonth()]}`;
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
 
 export function ActivarProgramaScreen({ onActivated }: ActivarProgramaScreenProps) {
   const { c, t, mode, toggle } = useTheme();
-  const { isSmall, isTablet, contentMaxWidth, horizontalPadding } = useResponsive();
 
   const [cargando, setCargando] = useState(true);
   const [fechas, setFechas] = useState<string[]>([]);
@@ -95,6 +99,7 @@ export function ActivarProgramaScreen({ onActivated }: ActivarProgramaScreenProp
     setError(null);
     try {
       await onboardingApi.activarPrograma({ startDate: seleccionada });
+      tacto.logro();
       onActivated();
     } catch (e) {
       setError(mensajeDeError(e, 'No pudimos activar tu programa. Revisa tu conexión e inténtalo de nuevo.'));
@@ -104,157 +109,62 @@ export function ActivarProgramaScreen({ onActivated }: ActivarProgramaScreenProp
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: c.bg }]}>
-      <View style={[styles.topBar, { paddingHorizontal: horizontalPadding }]}>
-        <View />
-        <Pressable
-          hitSlop={10}
-          onPress={toggle}
-          accessibilityRole="button"
-          style={[styles.themeBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
-        >
-          <Icon name={mode === 'light' ? 'moon' : 'sun'} size={15} color={c.goldInk} />
-        </Pressable>
-      </View>
-
-      <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          {
-            paddingHorizontal: isSmall ? 16 : isTablet ? 32 : 20,
-            maxWidth: contentMaxWidth,
-            alignSelf: isTablet ? 'center' : 'stretch',
-            width: isTablet ? '100%' : undefined,
-          },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.logoSection}>
-          <View style={[styles.goldLogoBadge, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-            <Icon name="calendar" size={24} color={c.goldInk} />
-          </View>
-        </View>
-
-        <View style={styles.headerBlock}>
-          <Text style={[t.micro, { color: c.textSoft, fontSize: 11, letterSpacing: 1.5, textAlign: 'center' }]}>
-            UN ÚLTIMO PASO
-          </Text>
-          <Text style={[t.screenTitle, { color: c.goldInk, fontSize: 22, fontFamily: 'Jost_700Bold', letterSpacing: 0.5, marginTop: 4, textAlign: 'center' }]}>
-            ELIGE TU DÍA 1
-          </Text>
-          <View style={[styles.goldDivider, { backgroundColor: c.gold }]} />
-          <Text style={[t.body, { color: c.textSoft, fontSize: 14, lineHeight: 21, textAlign: 'center', marginTop: 12 }]}>
-            Tu programa de 90 días arranca el día que elijas. No puede ser hoy, para que puedas
-            planificarte y dejar listos tus hábitos antes de que empiece a correr la cuenta.
-          </Text>
-        </View>
-
-        {cargando ? (
-          <View style={styles.loadingBox}>
-            <ActivityIndicator color={c.goldInk} />
-          </View>
-        ) : (
-          <View style={styles.dateOptionsGroup}>
-            {fechas.map(fecha => {
-              const activa = seleccionada === fecha;
-              return (
-                <Pressable
-                  key={fecha}
-                  accessibilityRole="radio"
-                  accessibilityState={{ selected: seleccionada === fecha }}
-                  onPress={() => setSeleccionada(fecha)}
-                  style={[
-                    styles.dateCard,
-                    {
-                      borderColor: activa ? c.gold : c.borderStrong,
-                      backgroundColor: activa ? c.cardBgAlt : c.cardBg,
-                    },
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.radioCircle,
-                      {
-                        borderColor: activa ? c.gold : c.tabInactive,
-                        backgroundColor: activa ? c.gold : 'transparent',
-                      },
-                    ]}
-                  >
-                    {activa && <View style={[styles.radioInnerDot, { backgroundColor: c.onGold }]} />}
-                  </View>
-                  <Text style={[t.body, { color: c.textStrong, fontSize: 15, fontFamily: 'Jost_500Medium', textTransform: 'capitalize' }]}>
-                    {formatearFecha(fecha)}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        )}
-
-        {error ? (
-          <View style={[styles.alertBox, { backgroundColor: 'rgba(217, 83, 79, 0.08)', borderColor: 'rgba(217, 83, 79, 0.25)' }]}>
-            <Text style={[t.small, { color: c.danger, textAlign: 'center' }]}>{error}</Text>
-          </View>
-        ) : null}
-
+    <MarcoDePaso
+      alternarTema={toggle}
+      modoTema={mode}
+      pie={
         <GoldButton
           label="CONFIRMAR MI DÍA 1"
           onPress={handleConfirmar}
           disabled={!seleccionada || cargando}
           loading={confirmando}
           icon="check"
-          style={{ marginTop: 8, width: '100%' }}
         />
-      </ScrollView>
-    </SafeAreaView>
+      }
+    >
+      {/* Mismos textos; el encabezado va como en el resto del onboarding desde el 2026-10-05
+          (alineado a la izquierda, sin el medallón con el calendario). */}
+      <View style={styles.headerBlock}>
+        <Text style={[t.micro, { color: c.micro, textTransform: 'uppercase' }]}>Un último paso</Text>
+        <Text accessibilityRole="header" style={[t.screenTitle, { color: c.textStrong }]}>
+          Elige tu Día 1
+        </Text>
+        <Text style={[t.body, { color: c.textSoft }]}>
+          Tu programa de 90 días arranca el día que elijas. No puede ser hoy, para que puedas
+          planificarte y dejar listos tus hábitos antes de que empiece a correr la cuenta.
+        </Text>
+      </View>
+
+      {cargando ? (
+        <View style={styles.loadingBox}>
+          <ActivityIndicator color={c.goldInk} />
+        </View>
+      ) : (
+        <View accessibilityRole="radiogroup" style={styles.dateOptionsGroup}>
+          {fechas.map(fecha => (
+            <OpcionElegible
+              key={fecha}
+              etiqueta={formatearFecha(fecha)}
+              elegida={seleccionada === fecha}
+              onElegir={() => setSeleccionada(fecha)}
+            />
+          ))}
+        </View>
+      )}
+
+      {error ? (
+        <View style={[styles.alertBox, { backgroundColor: c.dangerWash, borderColor: c.danger }]}>
+          <Text style={[t.small, { color: c.danger, textAlign: 'center' }]}>{error}</Text>
+        </View>
+      ) : null}
+    </MarcoDePaso>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 6,
-    paddingBottom: 4,
-  },
-  themeBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  scrollContent: {
-    paddingBottom: 40,
-    gap: 16,
-    alignItems: 'center',
-  },
-  logoSection: {
-    paddingTop: 10,
-    alignItems: 'center',
-  },
-  goldLogoBadge: {
-    width: 54,
-    height: 54,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   headerBlock: {
-    alignItems: 'center',
-    width: '100%',
-  },
-  goldDivider: {
-    width: 44,
-    height: 1.5,
-    marginTop: 8,
-    borderRadius: 1,
+    gap: 8,
+    marginBottom: 24,
   },
   loadingBox: {
     width: '100%',
@@ -265,36 +175,12 @@ const styles = StyleSheet.create({
     gap: 10,
     width: '100%',
   },
-  dateCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    height: 56,
-    gap: 12,
-  },
-  radioCircle: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  /* El punto era blanco sobre el relleno dorado del circulo: 2.95:1 en modo claro, y en el
-     elemento mas pequeno de la pantalla (7px). `onGold` es la tinta pensada para ir encima del
-     dorado, la misma que usa el boton principal. */
-  radioInnerDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-  },
   alertBox: {
     width: '100%',
     borderWidth: 1,
     borderRadius: 12,
     paddingVertical: 10,
     paddingHorizontal: 14,
+    marginTop: 16,
   },
 });

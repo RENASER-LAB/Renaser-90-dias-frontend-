@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { Alert } from '../../../components/Alerta';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../../theme/ThemeContext';
-import { useResponsive } from '../../../theme/responsive';
+import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
+import { MarcoDePaso } from '../components/MarcoDePaso';
+import { tacto } from '../../../utils/tacto';
 import { TERMINOS_CLAUSULAS } from '../data/terminosData';
 import { mapearTerminos, PREGUNTA_FIRMA_TERMINOS } from '../data/mapaPreguntas';
 import { usePersistenciaOnboarding } from '../hooks/usePersistenciaOnboarding';
 import { Icon } from '../../../components/Icon';
-import { MicroLabel } from '../../../components/ui';
 import {
   SignatureCanvas,
   SignatureCanvasHandle,
@@ -32,7 +32,6 @@ export function TerminosScreen({
   onSaveSignature,
 }: TerminosScreenProps) {
   const { c, t, mode, toggle } = useTheme();
-  const { isSmall, isTablet, contentMaxWidth, horizontalPadding } = useResponsive();
   const { guardarCapitulo, avanzarEstado, aceptarHito, guardarFirma } = usePersistenciaOnboarding();
   // Ref al lienzo para poder capturarlo como PNG al confirmar (ver SignatureCanvas.capturarComoPngBase64).
   const signatureRef = useRef<SignatureCanvasHandle>(null);
@@ -62,6 +61,7 @@ export function TerminosScreen({
   const handleContinue = async () => {
     if (!accepted) {
       setShowError(true);
+      tacto.error();
       Alert.alert(
         'Aceptación requerida',
         'Por favor marca la casilla de lectura y aceptación de los términos y condiciones.'
@@ -70,6 +70,7 @@ export function TerminosScreen({
     }
     if (!hasSigned) {
       setShowError(true);
+      tacto.error();
       Alert.alert(
         'Firma requerida',
         'Por favor dibuja tu firma con el dedo en el recuadro para validar la aceptación legal.'
@@ -116,66 +117,47 @@ export function TerminosScreen({
       await aceptarHito('TERMINOS');
       await avanzarEstado({ flow: 'terminos', section: 'aceptacion', step: 0 });
 
+      tacto.logro();
       onAccept();
     } finally {
       setGuardando(false);
     }
   };
 
-  return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: c.bg }]}>
-      {/* Top Header Bar */}
-      <View style={[styles.topBar, { paddingHorizontal: horizontalPadding }]}>
-        <Pressable
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel="Volver al paso anterior"
-          onPress={onBack}
-          style={[styles.backBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
-        >
-          <Icon name="arrowLeft" size={16} color={c.goldInk} />
-          <Text style={[t.micro, { color: c.text, letterSpacing: 1.2, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>
-            FICHA
-          </Text>
-        </Pressable>
+  // El gesto/botón atrás de Android vuelve a la Ficha, igual que la flecha de arriba. Antes esta
+  // pantalla no lo atendía y el sistema podía cerrar la app (AGENTS.md §6).
+  useSystemBackHandler(() => {
+    onBack();
+    return true;
+  }, true);
 
-        <Pressable
-          hitSlop={10}
-          onPress={toggle}
-          accessibilityRole="button"
-          style={[styles.themeBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
-        >
-          <Icon name={mode === 'light' ? 'moon' : 'sun'} size={15} color={c.goldInk} />
-        </Pressable>
+  return (
+    <MarcoDePaso
+      alVolver={onBack}
+      accesibilidadVolver="Volver a la ficha"
+      alternarTema={toggle}
+      modoTema={mode}
+      pie={
+        /* Fijo abajo y encendido siempre, como en los otros capítulos: si falta la casilla o la
+           firma, al tocarlo se dice cuál («Aceptación requerida» / «Firma requerida») y el recuadro
+           de la firma se marca. Antes quedaba apagado hasta tener las dos, sin decir qué faltaba, y
+           esas dos alertas nunca llegaban a salir (ONB-02, e2e web del 2026-09-27). */
+        <GoldButton label="CONTINUAR" onPress={handleContinue} loading={guardando} icon="arrow" />
+      }
+    >
+      {/* Encabezado: mismos textos; alineado a la izquierda y sin el medallón, como el resto del
+          onboarding desde el 2026-10-05. */}
+      <View style={styles.header}>
+        <Text style={[t.micro, { color: c.micro, textTransform: 'uppercase' }]}>Acuerdo de transformación</Text>
+        <Text accessibilityRole="header" style={[t.screenTitle, { color: c.textStrong }]}>
+          Términos y condiciones
+        </Text>
+        <Text style={[t.body, { color: c.textSoft }]}>
+          Lee atentamente las 23 cláusulas y sella tu aceptación
+        </Text>
       </View>
 
-      <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          {
-            paddingHorizontal: horizontalPadding,
-            maxWidth: contentMaxWidth,
-            alignSelf: isTablet ? 'center' : 'stretch',
-            width: isTablet ? '100%' : undefined,
-          },
-        ]}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Header Medallion */}
-        <View style={styles.header}>
-          <View style={[styles.iconMedallion, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
-            <Icon name="doc" size={22} color={c.goldInk} />
-          </View>
-          <MicroLabel>Acuerdo de transformación</MicroLabel>
-          <Text style={[t.screenTitle, { color: c.textStrong, marginTop: 4, textAlign: 'center' }]}>
-            TÉRMINOS Y CONDICIONES
-          </Text>
-          <Text style={[t.body, { color: c.textSoft, textAlign: 'center', marginTop: 4, fontSize: 13.5 }]}>
-            Lee atentamente las 23 cláusulas y sella tu aceptación
-          </Text>
-        </View>
-
+      <View style={styles.cuerpo}>
         {/* Legal Clauses Container */}
         <View style={[styles.termsCard, { backgroundColor: c.cardBg, borderColor: c.border }]}>
           <View style={[styles.preambleBox, { backgroundColor: c.goldWash, borderColor: c.borderStrong }]}>
@@ -216,76 +198,25 @@ export function TerminosScreen({
         <Checkbox
           checked={accepted}
           onToggle={val => {
+            tacto.seleccion();
             setAccepted(val);
             if (val && showError) setShowError(false);
           }}
           title="He leído y acepto los Términos y Condiciones"
           subtitle="Este es un compromiso legal y ético entre tú y el sistema Renaser."
         />
-
-        {/* Continue Action. Encendido siempre, como en los otros capítulos: si falta la casilla o la
-            firma, al tocarlo se dice cuál («Aceptación requerida» / «Firma requerida») y el recuadro
-            de la firma se marca. Antes quedaba apagado hasta tener las dos, sin decir qué faltaba, y
-            esas dos alertas nunca llegaban a salir (ONB-02, e2e web del 2026-09-27). */}
-        <GoldButton
-          label="CONTINUAR"
-          onPress={handleContinue}
-          loading={guardando}
-          icon="arrow"
-          style={{ marginTop: 4, marginBottom: 16 }}
-        />
-      </ScrollView>
-    </SafeAreaView>
+      </View>
+    </MarcoDePaso>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 6,
-    paddingBottom: 4,
-  },
-  backBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    minHeight: 48,
-    justifyContent: 'center',
-    borderRadius: 12,
-  },
-  themeBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  scrollContent: {
-    paddingBottom: 36,
-    gap: 14,
-  },
   header: {
-    alignItems: 'center',
-    paddingTop: 6,
-    paddingBottom: 4,
+    gap: 8,
+    marginBottom: 24,
   },
-  iconMedallion: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
+  cuerpo: {
+    gap: 14,
   },
   termsCard: {
     borderWidth: 1,
