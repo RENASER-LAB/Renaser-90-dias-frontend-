@@ -120,7 +120,7 @@ export function PasoSobreTi({ data, onChange }: PasoIdentidadProps) {
       </Pregunta>
 
       <DatePickerField
-        label="FECHA DE NACIMIENTO"
+        label="Fecha de nacimiento"
         value={data.fechaNacimiento}
         onChange={fechaNacimiento => onChange({ ...data, fechaNacimiento })}
         helperText="Toca para elegir día, mes y año sin escribir"
@@ -171,7 +171,7 @@ export function PasoTrabajo({ data, onChange, alEnviar }: PasoIdentidadProps) {
     <View style={styles.columna}>
       <FormField
         ref={ocupacionRef}
-        label="OCUPACIÓN / PROFESIÓN ACTUAL"
+        label="Ocupación / profesión actual"
         value={data.ocupacion}
         onChangeText={ocupacion => onChange({ ...data, ocupacion })}
         placeholder="Ej. Abogado, Ingeniero, Consultor..."
@@ -186,7 +186,7 @@ export function PasoTrabajo({ data, onChange, alEnviar }: PasoIdentidadProps) {
 
       <FormField
         ref={empresaRef}
-        label="EMPRESA / NEGOCIO ACTUAL (SI APLICA)"
+        label="Empresa / negocio actual (si aplica)"
         value={data.tipoNegocio}
         onChangeText={tipoNegocio => onChange({ ...data, tipoNegocio })}
         placeholder="Nombre de tu negocio o rubro"
@@ -211,7 +211,7 @@ export function PasoDocumento({ data, onChange, alEnviar }: PasoIdentidadProps) 
     switch (data.tipoDocumento) {
       case 'Pasaporte':
         return {
-          label: 'NÚMERO DE PASAPORTE',
+          label: 'Número de pasaporte',
           placeholder: 'Ej. PE1234567',
           maxLength: 12,
           keyboardType: 'default' as const,
@@ -220,7 +220,7 @@ export function PasoDocumento({ data, onChange, alEnviar }: PasoIdentidadProps) 
         };
       case 'Carné de extranjería':
         return {
-          label: 'NÚMERO DE CARNÉ DE EXTRANJERÍA',
+          label: 'Número de carné de extranjería',
           placeholder: 'Ej. 001234567',
           maxLength: 12,
           keyboardType: 'default' as const,
@@ -230,7 +230,7 @@ export function PasoDocumento({ data, onChange, alEnviar }: PasoIdentidadProps) 
       case 'DNI':
       default:
         return {
-          label: 'NÚMERO DE DNI / CÉDULA',
+          label: 'Número de DNI / cédula',
           placeholder: 'Ej. 72345678',
           maxLength: 12,
           /* `number-pad` y no `numeric`: el DNI son sólo dígitos, y `numeric` muestra además coma,
