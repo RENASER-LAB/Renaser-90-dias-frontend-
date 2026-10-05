@@ -187,6 +187,20 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       opciones son tarjetas grandes (`OpcionElegible`) con háptico. Únicos textos nuevos: los títulos
       de los pasos que agrupan preguntas («Sobre ti», «Tu familia», «Tu trabajo», «Tu documento»,
       «¿Dónde vives?», «Tu descanso»).
+    * **Selectores de la Ficha (fase 2, mismo día; el dueño: «vamos por toda la app»):** la fecha de
+      nacimiento, el código de país del WhatsApp y la ubicación dejan el diálogo centrado con
+      «CERRAR» y abren una hoja desde abajo (`components/hojaDesdeAbajo/`): entra en 280 ms con la
+      curva del cajón, se cierra arrastrándola (un cuarto de su alto, o un golpe rápido), tocando
+      fuera, con la ✕, con el atrás de Android o con Escape; con «reducir movimiento», sólo fundido.
+      La fecha va en tres ruedas (día, mes, año) con «LISTO», y ya no deja confirmar un día que no
+      existe (el 31/02 se mandaba como `1995-02-31`). País y ubicación: buscador sin tildes, lista
+      virtualizada con lo elegido marcado (✓); la ubicación pasa a cuatro filas agrupadas. Las
+      sugerencias de Google Places del distrito llevan «Powered by Google», que su política pide
+      cuando se muestran sin un mapa (faltaba). Se guarda lo mismo: `"DD/MM/AAAA"`,
+      `"+51 987654321"` con su prefijo, y la misma cascada de ubicación. Textos nuevos o cambiados:
+      «LISTO», «Código de país», «Sugerencias», «Usar «…»» (era `USAR: "…"`), «Sin resultados para
+      «…».». **Sin dependencias nuevas:** el arrastre usa `PanResponder` (Gesture Handler no está
+      instalado y agregarlo exige prebuild); las ruedas no usan el selector nativo de fecha.
     * **Términos y Día 1:** el mismo esqueleto, con «CONTINUAR» / «CONFIRMAR MI DÍA 1» fijos abajo.
       Términos atiende el gesto atrás de Android (vuelve a la ficha).
     * **Lo que NO cambia:** preguntas, claves y respuestas (`mapaPreguntas.ts`), el guardado por

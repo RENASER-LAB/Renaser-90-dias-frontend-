@@ -1,23 +1,11 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  Pressable,
-  Modal,
-  FlatList,
-} from 'react-native';
+import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { Icon } from './Icon';
 import { MicroLabel } from './ui';
-import { VeloModal } from './VeloModal';
-import {
-  PhoneCountry,
-  ALL_WORLD_PHONE_COUNTRIES,
-  searchPhoneCountries,
-  findCountryByCodeOrIso,
-} from '../services/phoneCountriesService';
+import { Presionable } from './Presionable';
+import { HojaDeOpciones } from './hojaDesdeAbajo/HojaDeOpciones';
+import { PhoneCountry, ALL_WORLD_PHONE_COUNTRIES, searchPhoneCountries } from '../services/phoneCountriesService';
 import { useEnfocarAlLlegar } from '../hooks/useEnfocarAlLlegar';
 
 interface PhoneCountryInputProps {
@@ -38,46 +26,19 @@ interface PhoneCountryInputProps {
   onSubmitEditing?: () => void;
 }
 
-// Memoized Country Row for 0ms Rendering
-const CountryRow = React.memo(
-  ({
-    item,
-    isSelected,
-    onSelect,
-    themeColors,
-    bodyStyle,
-    microStyle,
-  }: {
-    item: PhoneCountry;
-    isSelected: boolean;
-    onSelect: (item: PhoneCountry) => void;
-    themeColors: any;
-    bodyStyle: any;
-    microStyle: any;
-  }) => {
-    return (
-      <Pressable
-        onPress={() => onSelect(item)}
-        style={[
-          styles.countryRow,
-          {
-            borderColor: isSelected ? themeColors.gold : themeColors.border,
-            backgroundColor: isSelected ? themeColors.cardBgAlt : 'transparent',
-          },
-        ]}
-      >
-        <Text style={styles.rowFlag}>{item.flag}</Text>
-        <Text style={[bodyStyle, { color: themeColors.textStrong, flex: 1, fontSize: 14.5 }]}>
-          {item.name}
-        </Text>
-        <Text style={[microStyle, { color: themeColors.gold, fontFamily: 'Jost_700Bold', fontSize: 13 }]}>
-          {item.code}
-        </Text>
-      </Pressable>
-    );
-  }
-);
+const claveDePais = (pais: PhoneCountry) => `${pais.iso}-${pais.code}-${pais.name}`;
+const nombreDePais = (pais: PhoneCountry) => pais.name;
+const banderaDePais = (pais: PhoneCountry) => pais.flag;
+const prefijoDePais = (pais: PhoneCountry) => pais.code;
 
+/**
+ * El WhatsApp de la Ficha Inicial: la píldora del país (bandera y prefijo) y el número.
+ *
+ * La píldora abre una hoja desde abajo con buscador (2026-10-05; antes, un diálogo centrado con
+ * «CERRAR»): los 249 países en una lista virtualizada, el elegido marcado y a la vista, y la búsqueda
+ * por nombre sin tildes, por prefijo o por código ISO (`searchPhoneCountries`, sin cambios). Lo que
+ * se guarda no cambió: `"+51 987654321"` y el prefijo por separado.
+ */
 export function PhoneCountryInput({
   label,
   value,
@@ -91,7 +52,7 @@ export function PhoneCountryInput({
   const { c, t } = useTheme();
   const campoNumero = useRef<TextInput>(null);
   useEnfocarAlLlegar(campoNumero, Boolean(autoFocus));
-  const [modalVisible, setModalVisible] = useState(false);
+  const [hojaAbierta, setHojaAbierta] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Extract initial country and local number
@@ -111,18 +72,25 @@ export function PhoneCountryInput({
   }, [value, selectedCountry.code]);
 
   // Instant pre-indexed search
-  const filteredCountries = useMemo(() => {
-    return searchPhoneCountries(searchQuery);
-  }, [searchQuery]);
+  const filteredCountries = useMemo(() => searchPhoneCountries(searchQuery), [searchQuery]);
+
+  const cerrarHoja = useCallback(() => {
+    setHojaAbierta(false);
+    setSearchQuery('');
+  }, []);
 
   const handleSelectCountry = useCallback(
     (ct: PhoneCountry) => {
       setSelectedCountry(ct);
-      setModalVisible(false);
-      setSearchQuery('');
+      cerrarHoja();
       onChange(`${ct.code} ${localNumber}`, ct.code, localNumber);
     },
-    [localNumber, onChange]
+    [cerrarHoja, localNumber, onChange],
+  );
+
+  const esElPaisElegido = useCallback(
+    (ct: PhoneCountry) => ct.code === selectedCountry.code && ct.name === selectedCountry.name,
+    [selectedCountry.code, selectedCountry.name],
   );
 
   const handleLocalNumberChange = (text: string) => {
@@ -130,61 +98,39 @@ export function PhoneCountryInput({
     onChange(`${selectedCountry.code} ${numericOnly}`, selectedCountry.code, numericOnly);
   };
 
-  const renderCountryItem = useCallback(
-    ({ item }: { item: PhoneCountry }) => (
-      <CountryRow
-        item={item}
-        isSelected={item.code === selectedCountry.code && item.name === selectedCountry.name}
-        onSelect={handleSelectCountry}
-        themeColors={c}
-        bodyStyle={t.body}
-        microStyle={t.micro}
-      />
-    ),
-    [c, handleSelectCountry, selectedCountry.code, selectedCountry.name, t.body, t.micro]
-  );
-
   return (
     <View style={styles.container}>
       <View style={styles.labelGroup}>
         {Boolean(label) && <MicroLabel>{label}</MicroLabel>}
         {helperText && (
-          <Text style={[t.small, { color: c.textSoft, fontSize: 12, lineHeight: 16, marginTop: 2 }]}>
-            {helperText}
-          </Text>
+          <Text style={[t.small, { color: c.textSoft, fontSize: 12, lineHeight: 16, marginTop: 2 }]}>{helperText}</Text>
         )}
       </View>
 
       <View style={styles.inputRow}>
-        {/* Country Code Selector Pill */}
-        <Pressable
+        <Presionable
           onPress={() => {
             setSearchQuery('');
-            setModalVisible(true);
+            setHojaAbierta(true);
           }}
-          style={[
-            styles.countryPill,
-            {
-              borderColor: c.borderStrong,
-              backgroundColor: c.cardBgAlt,
-            },
-          ]}
+          accessibilityRole="button"
+          accessibilityLabel={`Código de país: ${selectedCountry.name}, ${selectedCountry.code}`}
+          accessibilityHint="Abre la lista de países"
+          style={[styles.countryPill, { borderColor: c.borderStrong, backgroundColor: c.cardBgAlt }]}
         >
           <Text style={styles.flagText}>{selectedCountry.flag}</Text>
-          <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 14 }]}>
+          <Text style={[t.body, { color: c.textStrong, fontFamily: 'Jost_500Medium', fontSize: 16 }]}>
             {selectedCountry.code}
           </Text>
-          <Text style={[t.micro, { color: c.tabInactive, fontSize: 10 }]}>▾</Text>
-        </Pressable>
+          <View style={styles.flechaAbajo}>
+            <Icon name="chevron" size={12} color={c.chevron} />
+          </View>
+        </Presionable>
 
-        {/* Local Number Input */}
         <View
           style={[
             styles.phoneInputWrap,
-            {
-              borderColor: error ? c.danger : c.borderStrong,
-              backgroundColor: c.cardBgAlt,
-            },
+            { borderColor: error ? c.danger : c.borderStrong, backgroundColor: c.cardBgAlt },
           ]}
         >
           <TextInput
@@ -206,80 +152,24 @@ export function PhoneCountryInput({
         </View>
       </View>
 
-      {error && (
-        <Text style={[t.small, { color: c.danger, fontSize: 11.5, marginTop: 2 }]}>
-          {error}
-        </Text>
-      )}
+      {error && <Text style={[t.small, { color: c.danger, fontSize: 11.5, marginTop: 2 }]}>{error}</Text>}
 
-      {/* Searchable Country Modal with Lazy FlatList */}
-      <Modal
-        visible={modalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => {
-          setModalVisible(false);
-          setSearchQuery('');
-        }}
-      >
-        <VeloModal
-          onCerrar={() => {
-            setModalVisible(false);
-            setSearchQuery('');
-          }}
-          style={styles.modalBackdrop}
-          etiqueta="Cerrar el selector de pais"
-        >
-          <View style={[styles.modalCard, { backgroundColor: c.cardBg, borderColor: c.gold }]}>
-            <View style={styles.modalHeader}>
-              <MicroLabel>País y prefijo telefónico (todos los países)</MicroLabel>
-              <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 18, marginTop: 2 }]}>
-                Selecciona tu País
-              </Text>
-            </View>
-
-            {/* Search input */}
-            <View style={[styles.searchBox, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
-              <Icon name="spark" size={16} color={c.goldInk} />
-              <TextInput
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                placeholder="Buscar país o prefijo (ej. Perú, Montenegro, +51...)"
-                placeholderTextColor={c.tabInactive}
-                style={[styles.searchInput, { color: c.textStrong }]}
-                autoCapitalize="none"
-                autoFocus
-              />
-            </View>
-
-            {/* Virtualized Lazy Country FlatList (0ms, 60 FPS) */}
-            <FlatList
-              data={filteredCountries}
-              keyExtractor={item => `${item.iso}-${item.code}-${item.name}`}
-              renderItem={renderCountryItem}
-              style={styles.countryScroll}
-              keyboardShouldPersistTaps="handled"
-              initialNumToRender={12}
-              maxToRenderPerBatch={12}
-              windowSize={3}
-              removeClippedSubviews={true}
-              getItemLayout={(_, index) => ({ length: 48, offset: 48 * index, index })}
-            />
-
-            <Pressable
-              onPress={() => {
-                setModalVisible(false);
-                setSearchQuery('');
-              }}
-              style={[styles.closeBtn, { borderColor: c.border }]}
-            >
-              <Text style={[t.micro, { color: c.textSoft, fontSize: 11, fontFamily: 'Jost_700Bold', textAlign: 'center' }]}>
-                CERRAR
-              </Text>
-            </Pressable>
-          </View>
-        </VeloModal>
-      </Modal>
+      <HojaDeOpciones<PhoneCountry>
+        visible={hojaAbierta}
+        alCerrar={cerrarHoja}
+        titulo="Código de país"
+        opciones={filteredCountries}
+        claveDe={claveDePais}
+        etiquetaDe={nombreDePais}
+        prefijoDe={banderaDePais}
+        detalleDe={prefijoDePais}
+        esElegida={esElPaisElegido}
+        alElegir={handleSelectCountry}
+        busqueda={searchQuery}
+        alBuscar={setSearchQuery}
+        placeholderBusqueda="Buscar país o prefijo (ej. Perú, +51)"
+        etiquetaBusqueda="Buscar país o prefijo"
+      />
     </View>
   );
 }
@@ -303,12 +193,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1.5,
     borderRadius: 12,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     height: 52,
     gap: 6,
   },
   flagText: {
-    fontSize: 18,
+    fontSize: 20,
+  },
+  flechaAbajo: {
+    transform: [{ rotate: '90deg' }],
+    marginLeft: 2,
   },
   phoneInputWrap: {
     flex: 1,
@@ -323,61 +217,5 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     height: '100%',
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  modalCard: {
-    width: '100%',
-    maxWidth: 420,
-    maxHeight: 520,
-    borderWidth: 1.5,
-    borderRadius: 20,
-    padding: 20,
-    gap: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  modalHeader: {
-    alignItems: 'center',
-  },
-  searchBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 44,
-    gap: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-  },
-  countryScroll: {
-    maxHeight: 280,
-  },
-  countryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-    gap: 10,
-    height: 48,
-  },
-  rowFlag: {
-    fontSize: 20,
-  },
-  closeBtn: {
-    borderWidth: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
   },
 });

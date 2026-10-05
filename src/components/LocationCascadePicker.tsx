@@ -1,20 +1,13 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  Pressable,
-  Modal,
-  FlatList,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, TextInput, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { Alert } from './Alerta';
 import { useTheme } from '../theme/ThemeContext';
 import { Icon } from './Icon';
 import { MicroLabel } from './ui';
-import { LocationService, CountryOption, GooglePlaceResult } from '../services/locationService';
-import { VeloModal } from './VeloModal';
+import { Presionable } from './Presionable';
+import { HojaDeOpciones, OpcionDeHoja } from './hojaDesdeAbajo/HojaDeOpciones';
+import { LocationService, GooglePlaceResult } from '../services/locationService';
+import { tacto } from '../utils/tacto';
 
 export interface LocationData {
   pais: string;
@@ -35,21 +28,40 @@ type ModalType = 'pais' | 'departamento' | 'ciudad' | 'distrito' | null;
 interface ListItem {
   label: string;
   value: string;
+  /** La bandera, en la lista de países. */
+  prefijo?: string;
 }
 
 function normalize(str: string): string {
   return str
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[̀-ͯ]/g, '')
     .toLowerCase()
     .trim();
 }
 
-export function LocationCascadePicker({
-  data,
-  onChange,
-  error,
-}: LocationCascadePickerProps) {
+const claveDeItem = (item: ListItem) => item.value;
+const etiquetaDeItem = (item: ListItem) => item.label;
+const prefijoDeItem = (item: ListItem) => item.prefijo;
+
+/**
+ * «¿Dónde vives?» de la Ficha Inicial: país, departamento, ciudad y distrito en cascada, más la
+ * dirección. 2026-10-05.
+ *
+ * **Qué cambió (la forma).** Los cuatro selectores eran cajitas de 2 × 2 con «▾» que abrían un
+ * diálogo centrado con «SELECCIONAR ›» en cada fila y un botón «CERRAR». Ahora son las filas de una
+ * lista agrupada (como los ajustes del teléfono) y cada una abre una hoja desde abajo con buscador
+ * (sin tildes), la lista virtualizada y lo elegido marcado con ✓.
+ *
+ * **Qué no cambió (el contrato).** La cascada es la misma: elegir un país pone su primer
+ * departamento, ciudad y distrito; elegir un departamento, su primera ciudad y distrito; y así. La
+ * búsqueda en Google Places del distrito, la opción «Usar …» con lo escrito, el botón de ubicación
+ * y la dirección guardan lo mismo que antes.
+ *
+ * **Atribución de Google.** Las sugerencias de Places se muestran sin un mapa de Google, y su
+ * política pide entonces la atribución «Powered by Google» junto a ellas. Antes faltaba.
+ */
+export function LocationCascadePicker({ data, onChange, error }: LocationCascadePickerProps) {
   const { c, t } = useTheme();
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -64,17 +76,17 @@ export function LocationCascadePicker({
   const currentCity = data.ciudad || 'Arequipa';
 
   // Synchronous, Instant States, Cities & Districts in 0ms (Zero Lag!)
-  const availableStates = useMemo(() => {
-    return LocationService.getStates(currentCountry);
-  }, [currentCountry]);
+  const availableStates = useMemo(() => LocationService.getStates(currentCountry), [currentCountry]);
 
-  const availableCities = useMemo(() => {
-    return LocationService.getCities(currentCountry, currentDept || availableStates[0] || '');
-  }, [currentCountry, currentDept, availableStates]);
+  const availableCities = useMemo(
+    () => LocationService.getCities(currentCountry, currentDept || availableStates[0] || ''),
+    [currentCountry, currentDept, availableStates],
+  );
 
-  const availableDistricts = useMemo(() => {
-    return LocationService.getDistricts(currentCity, currentDept);
-  }, [currentCity, currentDept]);
+  const availableDistricts = useMemo(
+    () => LocationService.getDistricts(currentCity, currentDept),
+    [currentCity, currentDept],
+  );
 
   // Selected Country Object
   const selectedCountryObj = useMemo(() => {
@@ -88,6 +100,17 @@ export function LocationCascadePicker({
       }
     );
   }, [countriesList, currentCountry]);
+
+  const cerrarHoja = useCallback(() => {
+    setActiveModal(null);
+    setSearchQuery('');
+    setGoogleResults([]);
+  }, []);
+
+  const abrirHoja = (tipo: Exclude<ModalType, null>) => {
+    setSearchQuery('');
+    setActiveModal(tipo);
+  };
 
   // Live Predictive Search with Google Places for Districts
   const handleDistrictSearchChange = (text: string) => {
@@ -135,7 +158,7 @@ export function LocationCascadePicker({
         () => {
           fallbackIPDetection();
         },
-        { enableHighAccuracy: true, timeout: 6000, maximumAge: 60000 }
+        { enableHighAccuracy: true, timeout: 6000, maximumAge: 60000 },
       );
     } else {
       fallbackIPDetection();
@@ -160,10 +183,8 @@ export function LocationCascadePicker({
   };
 
   const handleSelectGooglePlace = (g: GooglePlaceResult) => {
-    setActiveModal(null);
-    setSearchQuery('');
-    setGoogleResults([]);
-
+    tacto.seleccion();
+    cerrarHoja();
     onChange({
       ...data,
       pais: g.pais || data.pais || 'Perú',
@@ -173,234 +194,176 @@ export function LocationCascadePicker({
     });
   };
 
+  const usarLoEscrito = () => {
+    tacto.seleccion();
+    onChange({ ...data, distrito: searchQuery.trim() });
+    cerrarHoja();
+  };
+
   // Instant Local Filtered Items in 0ms (0 API Credits, 0 Lag)
   const filteredLocalItems = useMemo<ListItem[]>(() => {
     const q = normalize(searchQuery);
     if (activeModal === 'pais') {
-      if (!q) return countriesList.map(ct => ({ label: `${ct.flag} ${ct.name}`, value: ct.name }));
-      return countriesList
-        .filter(ct => normalize(ct.name).includes(q) || ct.iso.toLowerCase().includes(q))
-        .map(ct => ({ label: `${ct.flag} ${ct.name}`, value: ct.name }));
+      const paises = q
+        ? countriesList.filter(ct => normalize(ct.name).includes(q) || ct.iso.toLowerCase().includes(q))
+        : countriesList;
+      return paises.map(ct => ({ label: ct.name, value: ct.name, prefijo: ct.flag }));
     }
-    if (activeModal === 'departamento') {
-      if (!q) return availableStates.map(d => ({ label: d, value: d }));
-      return availableStates
-        .filter(d => normalize(d).includes(q))
-        .map(d => ({ label: d, value: d }));
-    }
-    if (activeModal === 'ciudad') {
-      if (!q) return availableCities.map(ci => ({ label: ci, value: ci }));
-      return availableCities
-        .filter(ci => normalize(ci).includes(q))
-        .map(ci => ({ label: ci, value: ci }));
-    }
-    if (activeModal === 'distrito') {
-      if (!q) return availableDistricts.map(di => ({ label: di, value: di }));
-      return availableDistricts
-        .filter(di => normalize(di).includes(q))
-        .map(di => ({ label: di, value: di }));
-    }
-    return [];
+    const lista =
+      activeModal === 'departamento'
+        ? availableStates
+        : activeModal === 'ciudad'
+        ? availableCities
+        : activeModal === 'distrito'
+        ? availableDistricts
+        : [];
+    return (q ? lista.filter(v => normalize(v).includes(q)) : lista).map(v => ({ label: v, value: v }));
   }, [activeModal, searchQuery, countriesList, availableStates, availableCities, availableDistricts]);
 
   const getModalTitle = () => {
-    if (activeModal === 'pais') return 'Selecciona tu País';
-    if (activeModal === 'departamento') return 'Selecciona Departamento / Estado';
-    if (activeModal === 'ciudad') return 'Selecciona Provincia / Ciudad';
+    if (activeModal === 'pais') return 'País';
+    if (activeModal === 'departamento') return 'Departamento / Estado';
+    if (activeModal === 'ciudad') return 'Provincia / Ciudad';
     if (activeModal === 'distrito') return `Distritos de ${currentCity}`;
     return '';
   };
 
-  // High-performance virtualized item renderer (Lazy list)
-  const renderLocalItem = useCallback(({ item }: { item: ListItem }) => (
-    <Pressable
-      onPress={() => {
-        if (activeModal === 'pais') {
-          const newStates = LocationService.getStates(item.value);
-          const firstState = newStates[0] || '';
-          const newCities = LocationService.getCities(item.value, firstState);
-          const firstCity = newCities[0] || '';
-          const newDistricts = LocationService.getDistricts(firstCity, firstState);
-          const firstDistrict = newDistricts[0] || '';
-          onChange({
-            ...data,
-            pais: item.value,
-            departamento: firstState,
-            ciudad: firstCity,
-            distrito: firstDistrict,
-          });
-        } else if (activeModal === 'departamento') {
-          const newCities = LocationService.getCities(currentCountry, item.value);
-          const firstCity = newCities[0] || '';
-          const newDistricts = LocationService.getDistricts(firstCity, item.value);
-          const firstDistrict = newDistricts[0] || '';
-          onChange({
-            ...data,
-            departamento: item.value,
-            ciudad: firstCity,
-            distrito: firstDistrict,
-          });
-        } else if (activeModal === 'ciudad') {
-          const newDistricts = LocationService.getDistricts(item.value, currentDept);
-          const firstDistrict = newDistricts[0] || '';
-          onChange({
-            ...data,
-            ciudad: item.value,
-            distrito: firstDistrict,
-          });
-        } else if (activeModal === 'distrito') {
-          onChange({
-            ...data,
-            distrito: item.value,
-          });
-        }
-        setActiveModal(null);
-        setSearchQuery('');
-        setGoogleResults([]);
-      }}
-      style={[styles.itemRow, { borderColor: c.border }]}
-    >
-      <Text style={[t.body, { color: c.textStrong, fontSize: 14.5, flex: 1 }]}>
-        {item.label}
-      </Text>
-      <Text style={[t.micro, { color: c.goldInk }]}>SELECCIONAR ›</Text>
-    </Pressable>
-  ), [activeModal, currentCountry, currentDept, data, onChange, c.border, c.gold, c.textStrong, t.body, t.micro]);
+  /** Lo elegido en el nivel abierto, para marcarlo con ✓ en la lista. */
+  const esElegido = useCallback(
+    (item: ListItem) => {
+      if (activeModal === 'pais') return normalize(item.value) === normalize(currentCountry);
+      if (activeModal === 'departamento') return item.value === data.departamento;
+      if (activeModal === 'ciudad') return item.value === data.ciudad;
+      if (activeModal === 'distrito') return item.value === data.distrito;
+      return false;
+    },
+    [activeModal, currentCountry, data.ciudad, data.departamento, data.distrito],
+  );
 
-  const renderGoogleItem = useCallback(({ item }: { item: GooglePlaceResult }) => (
-    <Pressable
-      onPress={() => handleSelectGooglePlace(item)}
-      style={[styles.googleItemRow, { borderColor: c.border }]}
-    >
-      <View style={{ flex: 1 }}>
-        <Text style={[t.body, { color: c.textStrong, fontSize: 14.5, fontFamily: 'Jost_700Bold' }]}>
-          {item.mainText}
-        </Text>
-        {Boolean(item.secondaryText) && (
-          <Text style={[t.micro, { color: c.textSoft, fontSize: 11.5, marginTop: 1 }]}>
-            {item.secondaryText}
-          </Text>
+  /** La cascada de siempre: elegir un nivel pone el primero de cada nivel de abajo. */
+  const elegirItem = useCallback(
+    (item: ListItem) => {
+      if (activeModal === 'pais') {
+        const newStates = LocationService.getStates(item.value);
+        const firstState = newStates[0] || '';
+        const newCities = LocationService.getCities(item.value, firstState);
+        const firstCity = newCities[0] || '';
+        const newDistricts = LocationService.getDistricts(firstCity, firstState);
+        const firstDistrict = newDistricts[0] || '';
+        onChange({ ...data, pais: item.value, departamento: firstState, ciudad: firstCity, distrito: firstDistrict });
+      } else if (activeModal === 'departamento') {
+        const newCities = LocationService.getCities(currentCountry, item.value);
+        const firstCity = newCities[0] || '';
+        const newDistricts = LocationService.getDistricts(firstCity, item.value);
+        const firstDistrict = newDistricts[0] || '';
+        onChange({ ...data, departamento: item.value, ciudad: firstCity, distrito: firstDistrict });
+      } else if (activeModal === 'ciudad') {
+        const newDistricts = LocationService.getDistricts(item.value, currentDept);
+        const firstDistrict = newDistricts[0] || '';
+        onChange({ ...data, ciudad: item.value, distrito: firstDistrict });
+      } else if (activeModal === 'distrito') {
+        onChange({ ...data, distrito: item.value });
+      }
+      cerrarHoja();
+    },
+    [activeModal, cerrarHoja, currentCountry, currentDept, data, onChange],
+  );
+
+  const escrito = searchQuery.trim();
+  const encabezadoDistrito =
+    activeModal === 'distrito' && escrito.length > 0 ? (
+      <View>
+        <OpcionDeHoja etiqueta={`Usar «${escrito}»`} elegida={false} alTocar={usarLoEscrito} />
+        {googleResults.length > 0 && (
+          <View style={styles.sugerencias}>
+            <View style={styles.rotuloSeccion}>
+              <MicroLabel>Sugerencias</MicroLabel>
+            </View>
+            {googleResults.map(g => (
+              <Pressable
+                key={g.placeId}
+                onPress={() => handleSelectGooglePlace(g)}
+                accessibilityRole="button"
+                accessibilityLabel={g.secondaryText ? `${g.mainText}, ${g.secondaryText}` : g.mainText}
+                style={({ pressed }) => [styles.filaSugerencia, { backgroundColor: pressed ? c.goldWash : 'transparent' }]}
+              >
+                <Icon name="search" size={16} color={c.tabInactive} strokeWidth={1.4} />
+                <View style={styles.textosSugerencia}>
+                  <Text numberOfLines={1} style={[t.body, { color: c.textStrong, fontSize: 16 }]}>
+                    {g.mainText}
+                  </Text>
+                  {Boolean(g.secondaryText) && (
+                    <Text numberOfLines={1} style={[t.small, { color: c.textSoft }]}>
+                      {g.secondaryText}
+                    </Text>
+                  )}
+                </View>
+              </Pressable>
+            ))}
+            {/* Exigido por la política de Google Places cuando sus resultados se muestran sin un mapa. */}
+            <Text
+              accessibilityLabel="Sugerencias con tecnología de Google"
+              style={[t.small, styles.atribucion, { color: c.textSoft }]}
+            >
+              Powered by Google
+            </Text>
+          </View>
+        )}
+        {filteredLocalItems.length > 0 && (
+          <View style={styles.rotuloSeccion}>
+            <MicroLabel>{`Distritos de ${currentCity}`}</MicroLabel>
+          </View>
         )}
       </View>
-      <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>SELECCIONAR ›</Text>
-    </Pressable>
-  ), [c.border, c.gold, c.textSoft, c.textStrong, t.body, t.micro]);
+    ) : null;
+
+  const filas: { tipo: Exclude<ModalType, null>; rotulo: string; valor: string; bandera?: string }[] = [
+    { tipo: 'pais', rotulo: 'PAÍS', valor: data.pais || 'Perú', bandera: selectedCountryObj.flag },
+    { tipo: 'departamento', rotulo: 'DEPTO / ESTADO', valor: data.departamento || availableStates[0] || 'Seleccionar' },
+    { tipo: 'ciudad', rotulo: 'CIUDAD / PROVINCIA', valor: data.ciudad || availableCities[0] || 'Seleccionar' },
+    { tipo: 'distrito', rotulo: 'DISTRITO / ZONA', valor: data.distrito || availableDistricts[0] || 'Seleccionar' },
+  ];
 
   return (
     <View style={styles.container}>
-      {/* Header con Título y Botón GPS */}
       <View style={styles.headerRow}>
         <MicroLabel>Ubicación geográfica</MicroLabel>
-        <Pressable
+        <Presionable
           onPress={handleUseCurrentGPS}
           disabled={isDetectingGPS}
-          style={[
-            styles.gpsBtn,
-            { borderColor: c.gold, backgroundColor: isDetectingGPS ? c.cardBg : c.goldWash },
-          ]}
+          accessibilityRole="button"
+          accessibilityLabel="Usar mi ubicación"
+          hitSlop={8}
+          style={[styles.gpsBtn, { borderColor: c.gold, backgroundColor: isDetectingGPS ? c.cardBg : c.goldWash }]}
         >
-          {isDetectingGPS ? (
-            <ActivityIndicator size="small" color={c.goldInk} />
-          ) : (
-            <Icon name="spark" size={13} color={c.goldInk} />
-          )}
+          {isDetectingGPS ? <ActivityIndicator size="small" color={c.goldInk} /> : null}
           <Text style={[t.micro, { color: c.goldInk, fontSize: 10.5, fontFamily: 'Jost_700Bold' }]}>
             {isDetectingGPS ? 'DETECTANDO...' : '📍 MI UBICACIÓN'}
           </Text>
-        </Pressable>
+        </Presionable>
       </View>
 
-      {/* Fila 1: Selector de País & Departamento */}
-      <View style={styles.row}>
-        {/* Selector País */}
-        <View style={{ flex: 1 }}>
-          <Text style={[t.micro, { color: c.textSoft, marginBottom: 4, fontSize: 10 }]}>PAÍS</Text>
+      <View style={[styles.grupo, { borderColor: c.borderStrong, backgroundColor: c.cardBgAlt }]}>
+        {filas.map((fila, i) => (
           <Pressable
-            onPress={() => {
-              setSearchQuery('');
-              setActiveModal('pais');
-            }}
-            style={[styles.pickerBtn, { borderColor: c.borderStrong, backgroundColor: c.cardBgAlt }]}
+            key={fila.tipo}
+            onPress={() => abrirHoja(fila.tipo)}
+            accessibilityRole="button"
+            accessibilityLabel={`${fila.rotulo.toLowerCase()}: ${fila.valor}`}
+            style={({ pressed }) => [styles.filaGrupo, { backgroundColor: pressed ? c.goldWash : 'transparent' }]}
           >
-            <Text style={[t.body, { color: data.pais ? c.textStrong : c.tabInactive, fontSize: 14 }]} numberOfLines={1}>
-              {selectedCountryObj.flag} {data.pais || 'Perú'}
-            </Text>
-            <Text style={[t.micro, { color: c.goldInk }]}>▾</Text>
+            <View style={styles.textosFila}>
+              <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5 }]}>{fila.rotulo}</Text>
+              <Text numberOfLines={1} style={[t.body, styles.valorFila, { color: c.textStrong }]}>
+                {fila.bandera ? `${fila.bandera}  ${fila.valor}` : fila.valor}
+              </Text>
+            </View>
+            <Icon name="chevron" size={14} color={c.chevron} />
+            {i < filas.length - 1 && <View style={[styles.divisor, { backgroundColor: c.divider }]} />}
           </Pressable>
-        </View>
-
-        {/* Selector Departamento / Estado */}
-        <View style={{ flex: 1 }}>
-          <Text style={[t.micro, { color: c.textSoft, marginBottom: 4, fontSize: 10 }]}>DEPTO / ESTADO</Text>
-          <Pressable
-            onPress={() => {
-              setSearchQuery('');
-              setActiveModal('departamento');
-            }}
-            style={[styles.pickerBtn, { borderColor: c.borderStrong, backgroundColor: c.cardBgAlt }]}
-          >
-            <Text style={[t.body, { color: data.departamento ? c.textStrong : c.tabInactive, fontSize: 14 }]} numberOfLines={1}>
-              {data.departamento || availableStates[0] || 'Seleccionar'}
-            </Text>
-            <Text style={[t.micro, { color: c.goldInk }]}>▾</Text>
-          </Pressable>
-        </View>
+        ))}
       </View>
 
-      {/* Fila 2: Selector de Ciudad & Distrito */}
-      <View style={styles.row}>
-        {/* Selector Ciudad */}
-        <View style={{ flex: 1 }}>
-          <Text style={[t.micro, { color: c.textSoft, marginBottom: 4, fontSize: 10 }]}>CIUDAD / PROVINCIA</Text>
-          <Pressable
-            onPress={() => {
-              setSearchQuery('');
-              setActiveModal('ciudad');
-            }}
-            style={[styles.pickerBtn, { borderColor: c.borderStrong, backgroundColor: c.cardBgAlt }]}
-          >
-            <Text style={[t.body, { color: data.ciudad ? c.textStrong : c.tabInactive, fontSize: 14 }]} numberOfLines={1}>
-              {data.ciudad || availableCities[0] || 'Seleccionar'}
-            </Text>
-            <Text style={[t.micro, { color: c.goldInk }]}>▾</Text>
-          </Pressable>
-        </View>
-
-        {/* Selector Distrito con Lista Mapeada y Búsqueda en Google Places */}
-        <View style={{ flex: 1 }}>
-          <Text style={[t.micro, { color: c.textSoft, marginBottom: 4, fontSize: 10 }]}>DISTRITO / ZONA</Text>
-          <Pressable
-            onPress={() => {
-              setSearchQuery('');
-              setActiveModal('distrito');
-            }}
-            style={[
-              styles.pickerBtn,
-              {
-                borderColor: data.distrito ? c.gold : c.borderStrong,
-                backgroundColor: c.cardBgAlt,
-              },
-            ]}
-          >
-            <Text
-              style={[
-                t.body,
-                {
-                  color: data.distrito ? c.textStrong : c.tabInactive,
-                  fontSize: 14,
-                  fontFamily: data.distrito ? 'Jost_500Medium' : 'Jost_400Regular',
-                },
-              ]}
-              numberOfLines={1}
-            >
-              {data.distrito || availableDistricts[0] || 'Seleccionar ▾'}
-            </Text>
-            <Text style={[t.micro, { color: c.goldInk }]}>▾</Text>
-          </Pressable>
-        </View>
-      </View>
-
-      {/* Fila 3: Campo Dedicado Separado para Calle y Número */}
       <View style={{ gap: 4 }}>
         <Text style={[t.micro, { color: c.textSoft, fontSize: 10 }]}>DIRECCIÓN EXACTA / CALLE Y NÚMERO</Text>
         <View style={[styles.addressInputWrap, { borderColor: c.borderStrong, backgroundColor: c.cardBgAlt }]}>
@@ -409,6 +372,7 @@ export function LocationCascadePicker({
             onChangeText={val => onChange({ ...data, direccion: val })}
             placeholder="Ej. Av. Ejército 710, Dpto 402 / Calle Mercaderes 123"
             placeholderTextColor={c.tabInactive}
+            accessibilityLabel="Dirección exacta, calle y número"
             style={[styles.addressTextInput, { color: c.textStrong }]}
           />
         </View>
@@ -416,132 +380,37 @@ export function LocationCascadePicker({
 
       {error && <Text style={[t.small, { color: c.danger, fontSize: 11.5 }]}>{error}</Text>}
 
-      {/* Modal Interactivo con Virtualized FlatList (0ms) */}
-      <Modal
+      <HojaDeOpciones<ListItem>
         visible={activeModal !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => {
-          setActiveModal(null);
-          setSearchQuery('');
-          setGoogleResults([]);
-        }}
-      >
-        <VeloModal
-          onCerrar={() => {
-            setActiveModal(null);
-            setSearchQuery('');
-            setGoogleResults([]);
-          }}
-          style={styles.modalBackdrop}
-          etiqueta="Cerrar el selector de ubicacion"
-        >
-          <View style={[styles.modalCard, { backgroundColor: c.cardBg, borderColor: c.gold }]}>
-            <View style={styles.modalHeader}>
-              <MicroLabel>Ubicación Renaser</MicroLabel>
-              <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 18, marginTop: 2 }]}>
-                {getModalTitle()}
-              </Text>
-            </View>
-
-            {/* Input de Búsqueda */}
-            <View style={[styles.searchBox, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
-              <Icon name="spark" size={16} color={c.goldInk} />
-              <TextInput
-                value={searchQuery}
-                onChangeText={activeModal === 'distrito' ? handleDistrictSearchChange : setSearchQuery}
-                placeholder={
-                  activeModal === 'pais'
-                    ? 'Buscar país (ej. Bolivia, España, México...)'
-                    : activeModal === 'distrito'
-                    ? 'Buscar distrito (ej. Cayma, Yanahuara, Paucarpata...)'
-                    : 'Escribe para filtrar...'
-                }
-                placeholderTextColor={c.tabInactive}
-                style={[styles.searchInput, { color: c.textStrong }]}
-                autoCapitalize="words"
-                autoFocus
-              />
-              {isSearchingGoogle && <ActivityIndicator size="small" color={c.goldInk} />}
-            </View>
-
-            {/* Opción Manual de Distrito */}
-            {searchQuery.trim().length > 0 && activeModal === 'distrito' && (
-              <Pressable
-                onPress={() => {
-                  onChange({
-                    ...data,
-                    distrito: searchQuery.trim(),
-                  });
-                  setActiveModal(null);
-                  setSearchQuery('');
-                  setGoogleResults([]);
-                }}
-                style={[styles.customOptionBtn, { borderColor: c.gold, backgroundColor: c.goldWash }]}
-              >
-                <Icon name="check" size={14} color={c.goldInk} />
-                <Text style={[t.body, { color: c.goldInk, fontSize: 13.5, fontFamily: 'Jost_700Bold', flex: 1 }]}>
-                  USAR: "{searchQuery.trim()}"
-                </Text>
-                <Text style={[t.micro, { color: c.goldInk }]}>SELECCIONAR</Text>
-              </Pressable>
-            )}
-
-            {/* Si hay resultados de Google Places cuando escribe */}
-            {googleResults.length > 0 && activeModal === 'distrito' && (
-              <View style={styles.googleSection}>
-                <View style={styles.googleHeader}>
-                  <Icon name="spark" size={12} color={c.goldInk} />
-                  <Text style={[t.micro, { color: c.goldInk, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>
-                    SUGERENCIAS EN VIVO (GOOGLE PLACES)
-                  </Text>
-                </View>
-                <FlatList
-                  data={googleResults}
-                  keyExtractor={item => item.placeId}
-                  renderItem={renderGoogleItem}
-                  style={{ maxHeight: 110 }}
-                  keyboardShouldPersistTaps="handled"
-                />
-              </View>
-            )}
-
-            {/* Lista Mapeada Principal (FlatList Lazy 0ms) */}
-            <FlatList
-              data={filteredLocalItems}
-              keyExtractor={item => item.value}
-              renderItem={renderLocalItem}
-              style={styles.itemsScroll}
-              keyboardShouldPersistTaps="handled"
-              initialNumToRender={12}
-              maxToRenderPerBatch={12}
-              windowSize={3}
-              removeClippedSubviews={true}
-              getItemLayout={(_, index) => ({ length: 48, offset: 48 * index, index })}
-            />
-
-            <Pressable
-              onPress={() => {
-                setActiveModal(null);
-                setSearchQuery('');
-                setGoogleResults([]);
-              }}
-              style={[styles.closeBtn, { borderColor: c.border }]}
-            >
-              <Text style={[t.micro, { color: c.textSoft, fontSize: 11, fontFamily: 'Jost_700Bold', textAlign: 'center' }]}>
-                CERRAR
-              </Text>
-            </Pressable>
-          </View>
-        </VeloModal>
-      </Modal>
+        alCerrar={cerrarHoja}
+        titulo={getModalTitle()}
+        opciones={filteredLocalItems}
+        claveDe={claveDeItem}
+        etiquetaDe={etiquetaDeItem}
+        prefijoDe={prefijoDeItem}
+        esElegida={esElegido}
+        alElegir={elegirItem}
+        busqueda={searchQuery}
+        alBuscar={activeModal === 'distrito' ? handleDistrictSearchChange : setSearchQuery}
+        buscando={activeModal === 'distrito' && isSearchingGoogle}
+        autoCapitalize="words"
+        placeholderBusqueda={
+          activeModal === 'pais'
+            ? 'Buscar país (ej. Bolivia, España, México...)'
+            : activeModal === 'distrito'
+            ? 'Buscar distrito (ej. Cayma, Yanahuara...)'
+            : 'Escribe para filtrar...'
+        }
+        etiquetaBusqueda={activeModal === 'pais' ? 'Buscar país' : activeModal === 'distrito' ? 'Buscar distrito' : 'Filtrar la lista'}
+        encabezadoDeLista={encabezadoDistrito}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    gap: 10,
+    gap: 12,
     width: '100%',
   },
   headerRow: {
@@ -552,116 +421,74 @@ const styles = StyleSheet.create({
   gpsBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
     borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    height: 32,
   },
-  row: {
-    flexDirection: 'row',
-    gap: 10,
+  grupo: {
+    borderWidth: 1.5,
+    borderRadius: 14,
+    overflow: 'hidden',
   },
-  pickerBtn: {
+  filaGrupo: {
+    minHeight: 64,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1.5,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 50,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 12,
+  },
+  textosFila: {
+    flex: 1,
+    gap: 3,
+  },
+  valorFila: {
+    fontSize: 16,
+    fontFamily: 'Jost_500Medium',
+  },
+  divisor: {
+    position: 'absolute',
+    left: 16,
+    right: 0,
+    bottom: 0,
+    height: StyleSheet.hairlineWidth,
   },
   addressInputWrap: {
     borderWidth: 1.5,
     borderRadius: 12,
     paddingHorizontal: 12,
-    height: 50,
+    height: 52,
     justifyContent: 'center',
   },
   addressTextInput: {
-    fontSize: 14.5,
+    fontSize: 16,
+    fontFamily: 'Jost_400Regular',
   },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  modalCard: {
-    width: '100%',
-    maxWidth: 420,
-    maxHeight: 560,
-    borderWidth: 1.5,
-    borderRadius: 20,
-    padding: 20,
-    gap: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  modalHeader: {
-    alignItems: 'center',
-  },
-  searchBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 46,
-    gap: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14.5,
-  },
-  customOptionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 8,
-  },
-  googleSection: {
-    gap: 4,
-    maxHeight: 130,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(178,146,79,0.2)',
+  sugerencias: {
     paddingBottom: 4,
   },
-  googleHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 4,
-    paddingVertical: 2,
+  rotuloSeccion: {
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 6,
   },
-  googleItemRow: {
+  filaSugerencia: {
+    minHeight: 56,
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 20,
     paddingVertical: 8,
-    paddingHorizontal: 8,
-    borderBottomWidth: 0.5,
-    height: 44,
+    gap: 12,
   },
-  itemsScroll: {
-    maxHeight: 240,
+  textosSugerencia: {
+    flex: 1,
   },
-  itemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-    height: 48,
-  },
-  closeBtn: {
-    borderWidth: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
+  atribucion: {
+    textAlign: 'right',
+    paddingHorizontal: 20,
+    paddingTop: 2,
+    fontSize: 12,
   },
 });

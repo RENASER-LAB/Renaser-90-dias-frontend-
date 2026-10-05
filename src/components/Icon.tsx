@@ -7,7 +7,7 @@ export type IconName =
   | 'mail' | 'lock' | 'eye' | 'eyeOff' | 'check' | 'logout' | 'google' | 'apple' | 'key' | 'trophy' | 'zap'
   | 'fire' | 'play' | 'pause' | 'plus' | 'chat' | 'send' | 'calendar' | 'award' | 'share' | 'filter'
   | 'dumbbell' | 'volume' | 'star' | 'checkCircle' | 'camera' | 'image'
-  | 'close' | 'target' | 'thumbsUp' | 'mic';
+  | 'close' | 'target' | 'thumbsUp' | 'mic' | 'search';
 
 type Props = { name: IconName; size?: number; color: string; strokeWidth?: number };
 
@@ -226,6 +226,13 @@ export function Icon({ name, size = 20, color, strokeWidth = 1.1 }: Props) {
     /* `close`, `target` y `thumbsUp` sustituyen a los emojis que se usaban como iconos
        (✕, 🎯, 👍). Un emoji lo dibuja la fuente del sistema: cambia de forma y de color
        entre Android, iOS y web, ignora el color del tema y no escala con `size`. */
+    case 'search':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 20 20">
+          <Circle {...s} cx={8.75} cy={8.75} r={5.25} />
+          <Path {...s} d="M12.6 12.6 16.5 16.5" />
+        </Svg>
+      );
     case 'close':
       return (
         <Svg width={size} height={size} viewBox="0 0 20 20">
