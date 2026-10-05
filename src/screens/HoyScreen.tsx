@@ -8,6 +8,7 @@ import {
   Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BORDES_DE_UNA_PESTANA } from '../navigation/bordesDeUnaPestana';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
 import { space } from '../theme/tokens';
@@ -530,7 +531,7 @@ export default function HoyScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
+    <SafeAreaView edges={BORDES_DE_UNA_PESTANA} style={{ flex: 1, backgroundColor: c.bg }}>
       <ScreenHeader title="HOY" />
 
       <ScrollView

@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Alert } from '../components/Alerta';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BORDES_DE_UNA_PESTANA } from '../navigation/bordesDeUnaPestana';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ArcoDelDia } from '../features/programa/components/ArcoDelDia';
 import { useTheme } from '../theme/ThemeContext';
@@ -985,7 +986,7 @@ export default function PlanScreen() {
   // respuesta, para que no haya dos versiones de la misma regla (incluido el tope al 100 %).
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
+    <SafeAreaView edges={BORDES_DE_UNA_PESTANA} style={{ flex: 1, backgroundColor: c.bg }}>
       <ScreenHeader title="PLAN" />
 
       {/* ========================================================================= */}
