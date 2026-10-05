@@ -139,6 +139,11 @@ export const mediaOnboardingSchema = z
   })
   .passthrough();
 
+/** `GET /api/v1/onboarding/pact/signature` — espejo de `FirmaDelPactoResponse` (backend, D-253). */
+export const firmaDelPactoSchema = z
+  .object({ url: z.string(), expiresAt: z.string().nullable() })
+  .passthrough();
+
 /** `GET /api/v1/onboarding/activate-program` — espejo de `EstadoActivacionProgramaResponse` (backend). */
 export const estadoActivacionProgramaSchema = z
   .object({

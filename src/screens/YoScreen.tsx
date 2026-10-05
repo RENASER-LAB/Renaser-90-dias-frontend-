@@ -1202,9 +1202,9 @@ export default function YoScreen() {
 
           {/* Ya firmado (decisión 12 del dueño, 2026-10-05): en solo lectura, con la fecha de la
               firma. Antes se veía el lienzo vacío y «Sellar mi compromiso» otra vez, como si nunca
-              se hubiera firmado. La firma dibujada no se muestra porque el servidor no la devuelve
-              (ver `PactoFirmado`). Mientras no se sepa (`desconocido`, sin red) se ofrece firmar,
-              como antes. */}
+              se hubiera firmado. La firma dibujada se ve arriba de la fecha desde D-253 (la pide
+              `PactoFirmado`; decía que no se mostraba porque el servidor no la devolvía). Mientras no
+              se sepa (`desconocido`, sin red) se ofrece firmar, como antes. */}
           {pactoYaFirmado ? (
             <PactoFirmado firmadoEn={etapasOnboarding.pactoFirmadoEn} />
           ) : (

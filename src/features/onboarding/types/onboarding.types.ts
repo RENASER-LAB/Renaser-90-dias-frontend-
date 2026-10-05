@@ -239,6 +239,16 @@ export interface MediaOnboardingApi {
   createdAt: string;
 }
 
+/**
+ * Espejo de `FirmaDelPactoResponse` (backend, `GET /api/v1/onboarding/pact/signature`, D-253, SOLO
+ * LECTURA): la URL de lectura firmada del PNG de la firma del Pacto de quien pregunta, válida 15 min.
+ */
+export interface FirmaDelPactoApi {
+  url: string;
+  /** Hasta cuándo abre `url` (ISO). */
+  expiresAt: string | null;
+}
+
 export type SexoOption = 'Masculino' | 'Femenino' | 'Otro';
 export type EstadoCivilOption = 'Soltero(a)' | 'Casado(a)' | 'Conviviente' | 'Divorciado(a)' | 'Viudo(a)';
 
