@@ -9,12 +9,52 @@ export type IconName =
   | 'dumbbell' | 'volume' | 'star' | 'checkCircle' | 'camera' | 'image'
   | 'close' | 'target' | 'thumbsUp' | 'mic' | 'search'
   | 'forward' | 'imagePlus'
-  | 'smile' | 'trash' | 'checkCheck' | 'reply' | 'copy';
+  | 'smile' | 'trash' | 'checkCheck' | 'reply' | 'copy'
+  | 'newspaper' | 'bookOpen' | 'quote' | 'globe' | 'headset' | 'messageCircle' | 'video' | 'fileText' | 'link' | 'pencil' | 'idCard' | 'layoutGrid';
+
+/**
+ * Grosor del trazo, en píxeles REALES de pantalla, a cualquier tamaño (decisión del dueño,
+ * 2026-10-05: «unificar el grosor de los íconos en toda la app»).
+ *
+ * Antes el trazo se daba en unidades de la caja del dibujo (`strokeWidth = 1.1` en una caja de 20),
+ * así que el grosor real dependía del tamaño: a 14 px quedaba en 0,77 px (casi invisible, sobre todo
+ * en dorado sobre crema) y a 28 px en 1,54. Ahora se fija lo que se VE —1,75 px— y las unidades se
+ * calculan para cada caja y cada tamaño (`grosorDelTrazo`).
+ */
+export const GROSOR_TRAZO_PX = 1.75;
+
+/** Los tres tamaños de uso: 16 junto a texto chico, 20 en botones y filas, 24 en cabeceras y la flecha de volver. */
+export const TAMANO_ICONO = { chico: 16, normal: 20, grande: 24 } as const;
+
+/**
+ * `strokeWidth` en unidades del `viewBox` para que el trazo mida `GROSOR_TRAZO_PX` en pantalla.
+ *
+ * - `lado`: el lado de la caja del dibujo que corresponde a `size` (20, 22 o 24; 15 en el chevron,
+ *   cuya caja es de 9 × 15 y se dibuja a `size` de alto).
+ * - `explicito`: el `strokeWidth` que pasa quien lo usa, en las unidades de siempre (las de la
+ *   caja). Se respeta si es MÁS grueso que el normal —un ✓ sobre un fondo dorado, que se quiso
+ *   marcado— y nunca deja el trazo más fino que el de toda la app.
+ */
+export function grosorDelTrazo({ lado, size, explicito }: { lado: number; size: number; explicito?: number }): number {
+  const normal = (GROSOR_TRAZO_PX * lado) / size;
+  return explicito === undefined ? normal : Math.max(explicito, normal);
+}
 
 type Props = { name: IconName; size?: number; color: string; strokeWidth?: number };
 
-export function Icon({ name, size = 20, color, strokeWidth = 1.1 }: Props) {
-  const s = { stroke: color, strokeWidth, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, fill: "none" };
+export function Icon({ name, size = 20, color, strokeWidth }: Props) {
+  /* Un trazo por caja: `s` para los dibujos de 20 (casi todos), `s22` y `s24` para los de esas
+     cajas. Un ícono nuevo de Lucide va en caja de 24 y usa `s24`: con `s` saldría a 1,46 px. */
+  const trazoPara = (lado: number, conElDeQuienLoUsa = true) => ({
+    stroke: color,
+    strokeWidth: grosorDelTrazo({ lado, size, explicito: conElDeQuienLoUsa ? strokeWidth : undefined }),
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    fill: "none",
+  });
+  const s = trazoPara(20);
+  const s22 = trazoPara(22);
+  const s24 = trazoPara(24);
 
   switch (name) {
     case 'fire':
@@ -42,7 +82,7 @@ export function Icon({ name, size = 20, color, strokeWidth = 1.1 }: Props) {
     case 'plus':
       return (
         <Svg width={size} height={size} viewBox="0 0 20 20">
-          <Path {...s} strokeWidth={strokeWidth * 1.3} d="M10 4v12M4 10h12" />
+          <Path {...s} strokeWidth={s.strokeWidth * 1.3} d="M10 4v12M4 10h12" />
         </Svg>
       );
     case 'chat':
@@ -89,7 +129,7 @@ export function Icon({ name, size = 20, color, strokeWidth = 1.1 }: Props) {
     case 'filter':
       return (
         <Svg width={size} height={size} viewBox="0 0 20 20">
-          <Polygon points="3,4 17,4 11.5,10.5 11.5,16 8.5,14 8.5,10.5" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+          <Polygon points="3,4 17,4 11.5,10.5 11.5,16 8.5,14 8.5,10.5" fill="none" stroke={color} strokeWidth={s.strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
         </Svg>
       );
     case 'dumbbell':
@@ -101,7 +141,7 @@ export function Icon({ name, size = 20, color, strokeWidth = 1.1 }: Props) {
     case 'volume':
       return (
         <Svg width={size} height={size} viewBox="0 0 20 20">
-          <Polygon points="3.5,7 7.5,7 12,3.5 12,16.5 7.5,13 3.5,13" fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
+          <Polygon points="3.5,7 7.5,7 12,3.5 12,16.5 7.5,13 3.5,13" fill="none" stroke={color} strokeWidth={s.strokeWidth} strokeLinecap="round" strokeLinejoin="round" />
           <Path {...s} d="M15 7a4.5 4.5 0 0 1 0 6M16.5 4.5a8 8 0 0 1 0 11" />
         </Svg>
       );
@@ -115,7 +155,7 @@ export function Icon({ name, size = 20, color, strokeWidth = 1.1 }: Props) {
       return (
         <Svg width={size} height={size} viewBox="0 0 20 20">
           <Circle {...s} cx={10} cy={10} r={8} />
-          <Path {...s} strokeWidth={strokeWidth * 1.3} d="M6.5 10.5l2.5 2.5 5-5.5" />
+          <Path {...s} strokeWidth={s.strokeWidth * 1.3} d="M6.5 10.5l2.5 2.5 5-5.5" />
         </Svg>
       );
     case 'camera':
@@ -193,7 +233,7 @@ export function Icon({ name, size = 20, color, strokeWidth = 1.1 }: Props) {
     case 'arrowLeft':
       return (
         <Svg width={size} height={size} viewBox="0 0 20 20">
-          <Path {...s} strokeWidth={strokeWidth * 1.2} d="M15.5 10H4.5M9 5.5L4.5 10 9 14.5" />
+          <Path {...s} strokeWidth={s.strokeWidth * 1.2} d="M15.5 10H4.5M9 5.5L4.5 10 9 14.5" />
         </Svg>
       );
     case 'mail':
@@ -227,7 +267,7 @@ export function Icon({ name, size = 20, color, strokeWidth = 1.1 }: Props) {
     case 'check':
       return (
         <Svg width={size} height={size} viewBox="0 0 20 20">
-          <Path {...s} strokeWidth={strokeWidth * 1.3} d="M4 10.5l4 4 8-9" />
+          <Path {...s} strokeWidth={s.strokeWidth * 1.3} d="M4 10.5l4 4 8-9" />
         </Svg>
       );
     /* `close`, `target` y `thumbsUp` sustituyen a los emojis que se usaban como iconos
@@ -243,7 +283,7 @@ export function Icon({ name, size = 20, color, strokeWidth = 1.1 }: Props) {
     case 'close':
       return (
         <Svg width={size} height={size} viewBox="0 0 20 20">
-          <Path {...s} strokeWidth={strokeWidth * 1.3} d="M5.5 5.5l9 9M14.5 5.5l-9 9" />
+          <Path {...s} strokeWidth={s.strokeWidth * 1.3} d="M5.5 5.5l9 9M14.5 5.5l-9 9" />
         </Svg>
       );
     case 'target':
@@ -337,64 +377,157 @@ export function Icon({ name, size = 20, color, strokeWidth = 1.1 }: Props) {
     case 'bulb':
       return (
         <Svg width={size} height={size} viewBox="0 0 22 22">
-          <Path {...s} d="M11 3.2a5 5 0 0 0-3 9v2h6v-2a5 5 0 0 0-3-9z" />
-          <Path {...s} d="M9 17.4h4M9.6 19.6h2.8" />
+          <Path {...s22} d="M11 3.2a5 5 0 0 0-3 9v2h6v-2a5 5 0 0 0-3-9z" />
+          <Path {...s22} d="M9 17.4h4M9.6 19.6h2.8" />
         </Svg>
       );
     case 'body':
       return (
         <Svg width={size} height={size} viewBox="0 0 22 22">
-          <Circle {...s} cx={11} cy={4} r={1.9} />
-          <Path {...s} d="M11 6.2v6.4M11 7.6 4.8 10M11 7.6 17.2 10M11 12.6 7.8 19.6M11 12.6l3.2 7" />
+          <Circle {...s22} cx={11} cy={4} r={1.9} />
+          <Path {...s22} d="M11 6.2v6.4M11 7.6 4.8 10M11 7.6 17.2 10M11 12.6 7.8 19.6M11 12.6l3.2 7" />
         </Svg>
       );
     case 'brain':
       return (
         <Svg width={size} height={size} viewBox="0 0 22 22">
-          <Path {...s} d="M11 4.2v13.4" />
-          <Path {...s} d="M11 5.6a3 3 0 0 0-5 2.2 2.6 2.6 0 0 0-.6 4.4A2.8 2.8 0 0 0 8 17.2a3 3 0 0 0 3-1.6" />
-          <Path {...s} d="M11 5.6a3 3 0 0 1 5 2.2 2.6 2.6 0 0 1 .6 4.4A2.8 2.8 0 0 1 14 17.2a3 3 0 0 1-3-1.6" />
+          <Path {...s22} d="M11 4.2v13.4" />
+          <Path {...s22} d="M11 5.6a3 3 0 0 0-5 2.2 2.6 2.6 0 0 0-.6 4.4A2.8 2.8 0 0 0 8 17.2a3 3 0 0 0 3-1.6" />
+          <Path {...s22} d="M11 5.6a3 3 0 0 1 5 2.2 2.6 2.6 0 0 1 .6 4.4A2.8 2.8 0 0 1 14 17.2a3 3 0 0 1-3-1.6" />
         </Svg>
       );
     case 'heart':
       return (
         <Svg width={size} height={size} viewBox="0 0 22 22">
-          <Path {...s} d="M11 18.2S3.6 13.6 3.6 8.9A3.9 3.9 0 0 1 11 7a3.9 3.9 0 0 1 7.4 1.9c0 4.7-7.4 9.3-7.4 9.3z" />
+          <Path {...s22} d="M11 18.2S3.6 13.6 3.6 8.9A3.9 3.9 0 0 1 11 7a3.9 3.9 0 0 1 7.4 1.9c0 4.7-7.4 9.3-7.4 9.3z" />
         </Svg>
       );
     case 'spark':
       return (
         <Svg width={size} height={size} viewBox="0 0 22 22">
-          <Path {...s} d="M11 2.4v17.2M2.4 11h17.2M4.9 4.9l12.2 12.2M17.1 4.9 4.9 17.1" />
-          <Circle {...s} cx={11} cy={11} r={2.4} />
+          <Path {...s22} d="M11 2.4v17.2M2.4 11h17.2M4.9 4.9l12.2 12.2M17.1 4.9 4.9 17.1" />
+          <Circle {...s22} cx={11} cy={11} r={2.4} />
         </Svg>
       );
     case 'briefcase':
       return (
         <Svg width={size} height={size} viewBox="0 0 22 22">
-          <Rect {...s} x={3} y={6.6} width={16} height={11.4} rx={2} />
-          <Path {...s} d="M8.4 6.6V5a1.6 1.6 0 0 1 1.6-1.6h2A1.6 1.6 0 0 1 13.6 5v1.6M3 11.6h16" />
+          <Rect {...s22} x={3} y={6.6} width={16} height={11.4} rx={2} />
+          <Path {...s22} d="M8.4 6.6V5a1.6 1.6 0 0 1 1.6-1.6h2A1.6 1.6 0 0 1 13.6 5v1.6M3 11.6h16" />
         </Svg>
       );
     case 'clock':
       return (
         <Svg width={size} height={size} viewBox="0 0 22 22">
-          <Circle {...s} cx={11} cy={11} r={7.4} />
-          <Path {...s} d="M11 6.4v4.6l3.2 2" />
+          <Circle {...s22} cx={11} cy={11} r={7.4} />
+          <Path {...s22} d="M11 6.4v4.6l3.2 2" />
         </Svg>
       );
     case 'stack':
       return (
         <Svg width={size} height={size} viewBox="0 0 22 22">
-          <Ellipse {...s} cx={11} cy={6.2} rx={6.6} ry={2.6} />
-          <Path {...s} d="M4.4 6.2v9.6c0 1.4 3 2.6 6.6 2.6s6.6-1.2 6.6-2.6V6.2" />
-          <Path {...s} d="M4.4 11c0 1.4 3 2.6 6.6 2.6s6.6-1.2 6.6-2.6" />
+          <Ellipse {...s22} cx={11} cy={6.2} rx={6.6} ry={2.6} />
+          <Path {...s22} d="M4.4 6.2v9.6c0 1.4 3 2.6 6.6 2.6s6.6-1.2 6.6-2.6V6.2" />
+          <Path {...s22} d="M4.4 11c0 1.4 3 2.6 6.6 2.6s6.6-1.2 6.6-2.6" />
         </Svg>
       );
     case 'arrow':
       return (
         <Svg width={size} height={size} viewBox="0 0 16 12">
-          <Path {...s} strokeWidth={1.5} d="M1.6 6h12M9.4 1.8 13.6 6l-4.2 4.2" />
+          {/* Caja de 16 × 12 dibujada a `size` × `size`: manda el ancho (16). Como antes, no toma el
+              `strokeWidth` de quien lo usa (llevaba uno fijo). */}
+          <Path {...trazoPara(16, false)} d="M1.6 6h12M9.4 1.8 13.6 6l-4.2 4.2" />
+        </Svg>
+      );
+    /* Comunidad · tanda 1 (íconos) */
+    /* Forma de referencia: Lucide (licencia ISC), caja de 24 y trazo `s24`. Reemplazan emojis y
+       metáforas equivocadas de Comunidad (inventario del 2026-10-05): el Muro con el mismo globo de
+       «Comentar», Cursos con un cilindro de base de datos, Testimonios con la estrella de «favorito». */
+    case 'newspaper':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M15 18h-5M18 14h-8" />
+          <Path {...s24} d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2" />
+          <Rect {...s24} x={10} y={6} width={8} height={4} rx={1} />
+        </Svg>
+      );
+    case 'bookOpen':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M12 7v14" />
+          <Path {...s24} d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" />
+        </Svg>
+      );
+    case 'quote':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z" />
+          <Path {...s24} d="M5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z" />
+        </Svg>
+      );
+    case 'globe':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Circle {...s24} cx={12} cy={12} r={10} />
+          <Path {...s24} d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20M2 12h20" />
+        </Svg>
+      );
+    case 'headset':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M3 11h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5Zm0 0a9 9 0 1 1 18 0m0 0v5a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3Z" />
+          <Path {...s24} d="M21 16v2a4 4 0 0 1-4 4h-5" />
+        </Svg>
+      );
+    case 'messageCircle':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+        </Svg>
+      );
+    case 'video':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5" />
+          <Rect {...s24} x={2} y={6} width={14} height={12} rx={2} />
+        </Svg>
+      );
+    case 'fileText':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+          <Path {...s24} d="M14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8" />
+        </Svg>
+      );
+    case 'link':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+          <Path {...s24} d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+        </Svg>
+      );
+    case 'pencil':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
+          <Path {...s24} d="m15 5 4 4" />
+        </Svg>
+      );
+    case 'idCard':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M16 10h2M16 14h2M6.17 15a3 3 0 0 1 5.66 0" />
+          <Circle {...s24} cx={9} cy={11} r={2} />
+          <Rect {...s24} x={2} y={5} width={20} height={14} rx={2} />
+        </Svg>
+      );
+    case 'layoutGrid':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Rect {...s24} x={3} y={3} width={7} height={7} rx={1} />
+          <Rect {...s24} x={14} y={3} width={7} height={7} rx={1} />
+          <Rect {...s24} x={14} y={14} width={7} height={7} rx={1} />
+          <Rect {...s24} x={3} y={14} width={7} height={7} rx={1} />
         </Svg>
       );
     /* Comunidad · tanda 2 (hojas) */
@@ -404,18 +537,18 @@ export function Icon({ name, size = 20, color, strokeWidth = 1.1 }: Props) {
     case 'forward':
       return (
         <Svg width={size} height={size} viewBox="0 0 24 24">
-          <Path {...s} d="m15 17 5-5-5-5" />
-          <Path {...s} d="M4 18v-2a4 4 0 0 1 4-4h12" />
+          <Path {...s24} d="m15 17 5-5-5-5" />
+          <Path {...s24} d="M4 18v-2a4 4 0 0 1 4-4h12" />
         </Svg>
       );
     /* Agregar una foto (Lucide `image-plus`): el recuadro para sumar fotos a una publicación nueva. */
     case 'imagePlus':
       return (
         <Svg width={size} height={size} viewBox="0 0 24 24">
-          <Path {...s} d="M16 5h6M19 2v6" />
-          <Path {...s} d="M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5" />
-          <Path {...s} d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
-          <Circle {...s} cx={9} cy={9} r={2} />
+          <Path {...s24} d="M16 5h6M19 2v6" />
+          <Path {...s24} d="M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5" />
+          <Path {...s24} d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+          <Circle {...s24} cx={9} cy={9} r={2} />
         </Svg>
       );
     /* Comunidad · chat (2026-10-05): trazos de Lucide (smile, trash-2, check-check, reply, copy) en
@@ -424,40 +557,43 @@ export function Icon({ name, size = 20, color, strokeWidth = 1.1 }: Props) {
     case 'smile':
       return (
         <Svg width={size} height={size} viewBox="0 0 24 24">
-          <Circle {...s} cx={12} cy={12} r={10} />
-          <Path {...s} d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" />
+          <Circle {...s24} cx={12} cy={12} r={10} />
+          <Path {...s24} d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" />
         </Svg>
       );
     case 'trash':
       return (
         <Svg width={size} height={size} viewBox="0 0 24 24">
-          <Path {...s} d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2M10 11v6M14 11v6" />
+          <Path {...s24} d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2M10 11v6M14 11v6" />
         </Svg>
       );
     case 'checkCheck':
       return (
         <Svg width={size} height={size} viewBox="0 0 24 24">
-          <Path {...s} d="M18 6 7 17l-5-5M22 10l-7.5 7.5L13 16" />
+          <Path {...s24} d="M18 6 7 17l-5-5M22 10l-7.5 7.5L13 16" />
         </Svg>
       );
     case 'reply':
       return (
         <Svg width={size} height={size} viewBox="0 0 24 24">
-          <Path {...s} d="M9 17l-5-5 5-5M20 18v-2a4 4 0 0 0-4-4H4" />
+          <Path {...s24} d="M9 17l-5-5 5-5M20 18v-2a4 4 0 0 0-4-4H4" />
         </Svg>
       );
     case 'copy':
       return (
         <Svg width={size} height={size} viewBox="0 0 24 24">
-          <Rect {...s} x={8} y={8} width={14} height={14} rx={2} />
-          <Path {...s} d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+          <Rect {...s24} x={8} y={8} width={14} height={14} rx={2} />
+          <Path {...s24} d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
         </Svg>
       );
     case 'chevron':
     default:
       return (
         <Svg width={size * 0.6} height={size} viewBox="0 0 9 15">
-          <Path {...s} strokeWidth={1.4} d="M1.6 1.4 7 7.5l-5.4 6.1" />
+          {/* Caja de 9 × 15 dibujada a `size` de alto: manda el alto (15). Antes llevaba 1,4 fijo, que
+              ignoraba el `strokeWidth` de quien lo usara y a 12 px quedaba en 1,1 px reales. Lo sigue
+              ignorando: `BotonBajarAlFinal` le pasa 1,8 pensado para otra caja y saldría a 2,9 px. */}
+          <Path {...trazoPara(15, false)} d="M1.6 1.4 7 7.5l-5.4 6.1" />
         </Svg>
       );
   }

@@ -1,5 +1,7 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+
+import { Presionable } from '../../../components/Presionable';
 
 import type { ChatConversation } from '../../../screens/ComunidadScreen';
 import { useTheme } from '../../../theme/ThemeContext';
@@ -26,15 +28,17 @@ export function FilaDeConversacion({
   onPress: () => void;
 }) {
   const { c } = useTheme();
+  /* Se hunde al apoyar el dedo (2026-10-05, `Presionable`, 0.97 en 120 ms) en vez de pintarse de
+     dorado: la misma respuesta que el resto de Comunidad. */
   const hora = conversacion.lastMessageAt ? horaDeLaLista(conversacion.lastMessageAt, ahora) : conversacion.lastTime;
   const sinLeer = conversacion.unreadCount > 0;
 
   return (
-    <Pressable
+    <Presionable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${titulo}. ${conversacion.lastMessage}${sinLeer ? `. ${conversacion.unreadCount} sin leer` : ''}`}
-      style={({ pressed }) => [styles.fila, pressed && { backgroundColor: c.goldWash }]}
+      style={styles.fila}
     >
       <AvatarDeChat
         tipo={conversacion.type}
@@ -78,7 +82,7 @@ export function FilaDeConversacion({
           )}
         </View>
       </View>
-    </Pressable>
+    </Presionable>
   );
 }
 

@@ -29,14 +29,17 @@ export function entradasDeLaTabla(datos: RankingAgregadoDto | null, clave: Clave
   return datos.general ?? [];
 }
 
-/** "12,5 km" en la de kilómetros; "80 Pts" en las demás, como siempre. */
+/**
+ * "12,5 km" en la de kilómetros; "80 pts" en las demás. La unidad en minúscula, como «km»
+ * (2026-10-05): decía "80 Pts" y la pantalla le agregaba un ⚡ delante; ahora va la cifra sola.
+ */
 export function textoDelPuntaje(clave: ClaveDeTabla, puntaje: number): string {
-  return clave === 'kilometros' ? `${formatoKm(puntaje)} km` : `${puntaje} Pts`;
+  return clave === 'kilometros' ? `${formatoKm(puntaje)} km` : `${puntaje} pts`;
 }
 
-/** La línea de "tu posición" debajo del nombre del grupo. */
+/** La línea de "tu posición" debajo del nombre del grupo. Sin el ⚡ de adelante desde el 2026-10-05. */
 export function textoDeMiPuntaje(clave: ClaveDeTabla, puntaje: number): string {
-  return clave === 'kilometros' ? `${formatoKm(puntaje)} km recorridos` : `⚡ ${puntaje} Pts de Coherencia`;
+  return clave === 'kilometros' ? `${formatoKm(puntaje)} km recorridos` : `${puntaje} pts de coherencia`;
 }
 
 /** El cuerpo de la invitación cuando nadie tiene posición todavía en esa pestaña. */

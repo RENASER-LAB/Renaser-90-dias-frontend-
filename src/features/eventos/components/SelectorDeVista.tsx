@@ -8,7 +8,8 @@ import { LETRA } from './piezas';
 
 const OPCIONES: { vista: VistaDeEventos; etiqueta: string; icono: IconName }[] = [
   { vista: 'calendario', etiqueta: 'Calendario', icono: 'calendar' },
-  { vista: 'tarjetas', etiqueta: 'Tarjetas', icono: 'stack' },
+  /* `layoutGrid` (2026-10-05): `stack` es un cilindro de base de datos, no un mosaico de tarjetas. */
+  { vista: 'tarjetas', etiqueta: 'Tarjetas', icono: 'layoutGrid' },
 ];
 
 /**

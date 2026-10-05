@@ -15,10 +15,14 @@ import { tiempoRelativo } from '../utils/tiempoRelativo';
  */
 
 /**
- * El diseño pinta el avatar como un emoji (`<Text>{post.avatar}</Text>`, sin `<Image>`). El
+ * El diseño pintaba el avatar como un emoji (`<Text>{post.avatar}</Text>`, sin `<Image>`). El
  * backend guarda `avatarUrl` como una URL real a S3 (`V13__avatar_url_permanente.sql`), así que
  * mostrarla ahí imprimiría la URL cruda como texto. Hasta que el diseño sume un `<Image>` para el
  * avatar (fuera de alcance: no se puede tocar el JSX), se usa un emoji neutro por defecto.
+ *
+ * > **Corregido 2026-10-05.** La tarjeta del Muro ya pinta la foto (`AvatarPersona` con
+ * > `PostItem.avatarUrl`, que sale de `authorAvatarUrl`) o las iniciales. Este emoji queda solo en lo
+ * > que todavía lo lee: el modal de quién reaccionó, que es de otro trabajo en curso.
  */
 export const AVATAR_POR_DEFECTO = '👤';
 
@@ -52,6 +56,8 @@ export function mapearPublicacion(post: WallPost): PostItem {
     id: post.id,
     author: post.authorName?.trim() || 'Miembro Renaser',
     avatar: AVATAR_POR_DEFECTO,
+    // La tarjeta ya pinta la foto con `AvatarPersona` (2026-10-05): sin foto, las iniciales.
+    avatarUrl: post.authorAvatarUrl ?? null,
     // El feed del Muro (WallPostResponse) no trae la célula del autor: no existe ese dato en
     // esta respuesta, así que se deja vacío en vez de inventar uno.
     cell: '',

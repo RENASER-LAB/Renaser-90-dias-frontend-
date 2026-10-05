@@ -1,9 +1,11 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 
 import { useTheme } from '../../../theme/ThemeContext';
 import { space } from '../../../theme/tokens';
 import { AvatarPersona } from '../../../components/ui';
+import { Icon, TAMANO_ICONO } from '../../../components/Icon';
+import { Presionable } from '../../../components/Presionable';
 
 /**
  * Una fila de la lista de integrantes de un grupo: avatar, nombre, una insignia opcional
@@ -58,15 +60,18 @@ export function FilaIntegrante({
         </View>
       </View>
 
+      {/* «Escribir» con el globo de línea (2026-10-05): era «💬 Chatear», con el emoji de la fuente
+          del sistema. Mismo verbo que la info del chat. */}
       {integrante.chateable && (
-        <Pressable
+        <Presionable
           onPress={() => onChatear(integrante.id)}
           accessibilityRole="button"
-          accessibilityLabel={`Chatear con ${integrante.nombre}`}
+          accessibilityLabel={`Escribirle a ${integrante.nombre}`}
           style={[styles.botonChat, { backgroundColor: c.gold }]}
         >
-          <Text style={[t.small, { color: c.onGold, fontFamily: 'Jost_700Bold' }]}>💬 Chatear</Text>
-        </Pressable>
+          <Icon name="messageCircle" size={TAMANO_ICONO.chico} color={c.onGold} />
+          <Text style={[t.body, { color: c.onGold, fontFamily: 'Jost_700Bold' }]}>Escribir</Text>
+        </Presionable>
       )}
     </View>
   );
@@ -103,6 +108,8 @@ const styles = StyleSheet.create({
   },
   /** 48 px de alto: se pulsa con el pulgar, no se apunta (AGENTS.md §4). */
   botonChat: {
+    flexDirection: 'row',
+    gap: 6,
     borderRadius: space.radiusSm,
     paddingHorizontal: 14,
     minHeight: 48,

@@ -3,7 +3,7 @@ import { View, Text, Image, Pressable, StyleSheet, StyleProp, ViewStyle, ImageSt
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../theme/ThemeContext';
 import { useResponsive } from '../theme/responsive';
-import { Icon, IconName } from './Icon';
+import { Icon, IconName, TAMANO_ICONO } from './Icon';
 import { inicialesDe } from '../utils/iniciales';
 
 /**
@@ -96,7 +96,18 @@ export function Card({ children, style }: { children: React.ReactNode; style?: V
  * > sin grupo no se dibuja (`features/community/utils/infoDesdeLaCabecera.ts`). Los otros tres siguen
  * > quitados.
  */
-export function ScreenHeader({ title, right, onPressRight }: { title: string; right?: IconName; onPressRight?: () => void }) {
+export function ScreenHeader({
+  title,
+  right,
+  onPressRight,
+  etiquetaRight,
+}: {
+  title: string;
+  right?: IconName;
+  onPressRight?: () => void;
+  /** El nombre del botón para el lector de pantalla (un ícono solo no dice qué hace). */
+  etiquetaRight?: string;
+}) {
   const { c, t } = useTheme();
   const { horizontalPadding } = useResponsive();
   return (
@@ -106,8 +117,16 @@ export function ScreenHeader({ title, right, onPressRight }: { title: string; ri
       </Text>
       {right && onPressRight ? (
         <View style={styles.headerActions}>
-          <Pressable hitSlop={12} onPress={onPressRight} style={styles.headerBtn} accessibilityRole="button">
-            <Icon name={right} size={19} color={right === 'dots' ? c.textSoft : c.goldInk} />
+          <Pressable
+            hitSlop={12}
+            onPress={onPressRight}
+            style={styles.headerBtn}
+            accessibilityRole="button"
+            accessibilityLabel={etiquetaRight}
+          >
+            {/* Los íconos de cabecera van a 24 (2026-10-05, tamaños de uso 16/20/24); los tres
+                puntos de Yo se quedan como estaban. */}
+            <Icon name={right} size={right === 'dots' ? 19 : TAMANO_ICONO.grande} color={right === 'dots' ? c.textSoft : c.goldInk} />
           </Pressable>
         </View>
       ) : null}
