@@ -15,6 +15,10 @@ jest.mock('react-native-reanimated', () => {
   const { useRef } = require('react');
   return {
     ...doble,
+    // El doble oficial no trae `useReducedMotion` (lo deja como «ADD ME IF NEEDED»). Lo usan los
+    // pasos del alta y el onboarding para elegir entre deslizar y fundir (2026-10-05): en las
+    // pruebas, sin reducir.
+    useReducedMotion: () => false,
     useSharedValue: inicial => {
       const ref = useRef(null);
       if (ref.current === null) ref.current = doble.useSharedValue(inicial);
