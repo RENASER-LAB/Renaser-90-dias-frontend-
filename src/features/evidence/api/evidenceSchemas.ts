@@ -21,6 +21,14 @@ export const evidenciaApiSchema = z
     /** PENDIENTE | VALIDADA | RECHAZADA... lo decide `EstadoValidacion` en el backend. */
     estadoValidacion: z.string(),
     publicadaEnMuro: z.boolean(),
+    /**
+     * URL de lectura firmada de la foto (backend D-252, 2026-10-05), para la miniatura de Yo.
+     * `null` si la evidencia no es una foto. Opcional: un backend anterior a D-252 no la manda, y
+     * entonces la miniatura sigue con el ícono del tipo. Tolerante: si llegara con otra forma se
+     * pierde la foto (vuelve el ícono), no la lista entera. Vence a los 15 minutos, como la del
+     * chat: no se guarda, se usa al pintar.
+     */
+    fotoUrl: z.string().nullable().optional().catch(null),
   })
   .passthrough();
 

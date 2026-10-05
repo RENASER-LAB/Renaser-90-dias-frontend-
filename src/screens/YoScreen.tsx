@@ -53,7 +53,8 @@ import { mostrarMemoria } from '../features/renasia/utils/memoria';
 import { NOMBRE_ACOMPANANTE } from '../features/renasia/data/agentes';
 import { useMisEvidencias } from '../features/evidence/hooks/useMisEvidencias';
 import { resumenDeEvidencias } from '../features/evidence/resumenDeEvidencias';
-import { ESTADO_EVIDENCIA, iconoDeTipo } from '../features/evidence/api/evidenceSchemas';
+import { ESTADO_EVIDENCIA } from '../features/evidence/api/evidenceSchemas';
+import { MiniaturaDeEvidencia } from '../features/evidence/components/MiniaturaDeEvidencia';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useMiCaja } from '../features/caja/hooks/useMiCaja';
 import { MiCajaScreen } from '../features/caja/screens/MiCajaScreen';
@@ -674,15 +675,17 @@ export default function YoScreen() {
                     style={{ flex: 1 }}
                   >
                     {/* El borde se queda: estas miniaturas se tocan. Lo que se fue es el
-                        `borderRadius: 10` suelto — ahora sale del token de radio interno. */}
-                    <View
+                        `borderRadius: 10` suelto — ahora sale del token de radio interno.
+                        2026-10-05 (D-252): la foto real, con el ícono del tipo de respaldo. */}
+                    <MiniaturaDeEvidencia
+                      evidencia={ev}
                       style={[
                         styles.more,
                         { height: moreSize, borderColor: c.border, backgroundColor: c.cardBg },
                       ]}
-                    >
-                      <Icon name={iconoDeTipo(ev.tipo)} size={18} color={c.goldInk} />
-                    </View>
+                      tamanoIcono={18}
+                      colorIcono={c.goldInk}
+                    />
                   </Pressable>
                 ))}
                 {evidencias.length > 3 && (
@@ -1494,10 +1497,15 @@ export default function YoScreen() {
                   ]}
                 >
                   {/* El cuadro del ícono pasa a lavado dorado: dentro de una tarjeta que ya tiene
-                      borde, `cardBgAlt` es blanco puro en modo claro y no se distinguía de nada. */}
-                  <View style={[styles.evidenceImgBox, { backgroundColor: c.goldWash }]}>
-                    <Icon name={iconoDeTipo(ev.tipo)} size={26} color={c.goldInk} />
-                  </View>
+                      borde, `cardBgAlt` es blanco puro en modo claro y no se distinguía de nada.
+                      2026-10-05 (D-252): la foto real encima; tocarla la abre en grande. */}
+                  <MiniaturaDeEvidencia
+                    evidencia={ev}
+                    style={[styles.evidenceImgBox, { backgroundColor: c.goldWash }]}
+                    tamanoIcono={26}
+                    colorIcono={c.goldInk}
+                    ampliable
+                  />
                   <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 14 }]} numberOfLines={2}>
                     {ev.contenidoTexto?.trim() || ETIQUETA_TIPO_EVIDENCIA[ev.tipo] || 'Evidencia'}
                   </Text>

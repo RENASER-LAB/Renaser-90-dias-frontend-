@@ -27,6 +27,19 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     y usa **`s24`** —con `s` saldría a 1,46 px; `grosorDeIconos.test.ts` lo frena—. Nada de emojis como
     íconos: cambian de forma entre Android, iOS y web e ignoran el color del tema.
 * **Integridad del Core**: NUNCA alterar, romper ni desconfigurar las pantallas existentes ni los tabs principales (`Hoy`, `Plan`, `Training`, `Comunidad`, `Yo`).
+  * **Cambio por pedido del dueño — 2026-10-05 — tab `Yo` → Evidencia: la foto real en cada miniatura**
+    (backend D-252). El dueño preguntó «¿Mostrar la foto real de cada evidencia en Yo?» y respondió «sí».
+    Lo que cambia y nada más:
+    * La tira de tres miniaturas de «Evidencia» y la grilla de «Registro de Evidencias» pintan la foto real
+      (`evidence/components/MiniaturaDeEvidencia`, `expo-image`) encima del ícono del tipo, que sigue de
+      respaldo: sin `fotoUrl` (texto, video, audio, o un backend anterior a D-252), con una URL que no es de
+      la red, o si la foto no carga. La foto entra con un fundido de `DURACION_MS.fundido`.
+    * En la grilla del registro, tocar una foto la abre en grande en el visor que ya existía
+      (`ImageViewerModal`, sin reacciones ni comentarios). En la tira, tocar sigue llevando al registro.
+    * `fotoUrl` es opcional y tolerante en `evidenceSchemas.ts`; la clave de caché es la URL sin la firma
+      (`evidence/utils/fotoDeEvidencia.ts`), la misma del visor. Ningún texto visible cambia; la foto
+      ampliable se anuncia al lector de pantalla como «Ver la foto en grande».
+    * **Hace falta el backend con D-252 y un APK nuevo** (la app no se actualiza por aire).
   * **Cambio por pedido del dueño — 2026-10-05 — tab `Comunidad` → Eventos: el logo del servicio junto al
     «dónde».** Pedido del dueño: «Ayúdame con el diseño para el tema de íconos: https://github.com/pheralb/svgl
     utiliza esta parte». Es la aplicación de ese pedido general a Eventos, no una autorización aparte para el tab:
