@@ -1,22 +1,14 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  Modal,
-  Pressable,
-  ScrollView,
-  TextInput,
-  StyleSheet,
-  ActivityIndicator,
-} from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, ScrollView, TextInput, StyleSheet } from 'react-native';
 import { Alert } from '../../../components/Alerta';
 import { useTheme } from '../../../theme/ThemeContext';
-import { useResponsive } from '../../../theme/responsive';
-import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { useGrabadorDeVoz } from '../../../hooks/useGrabadorDeVoz';
 import { GoldButton } from '../../../components/GoldButton';
-import { Icon, IconName } from '../../../components/Icon';
-import { MicroLabel } from '../../../components/ui';
+import { Icon, IconName, TAMANO_ICONO } from '../../../components/Icon';
+import { Presionable } from '../../../components/Presionable';
+import { ControlSegmentado } from '../../../components/ControlSegmentado';
+import { HojaDesdeAbajo } from '../../../components/hojaDesdeAbajo/HojaDesdeAbajo';
+import { useAltoMaximoDelCuerpo } from '../../../components/hojaDesdeAbajo/altoDelCuerpo';
 import { mensajeDeError } from '../../../services/http/apiClient';
 import {
   completarRegistro,
@@ -51,6 +43,18 @@ import {
  * Componente propio y no una edición del modal viejo de `TrainingScreen`: ese modal era una
  * maqueta (el recuadro de foto solo hacía `setEvidencePhotoUploaded(true)`, sin picker ni
  * backend) y hay otros flujos de evidencia construyéndose en paralelo sobre esa misma pantalla.
+ *
+ * ## Hoja desde abajo (rediseño de Training, 2026-10-05)
+ *
+ * Era una ventana centrada con borde dorado, cuatro pestañas hechas a mano en versalitas (con un
+ * parlante para «grabar audio» y un ▶ para «subir video») y «CANCELAR». Ahora es la `HojaDesdeAbajo`
+ * de la app: Foto / Texto / Audio / Video en un `ControlSegmentado`, las acciones con el ícono de lo
+ * que hacen (`camera`, `image`, `mic`, `video`), «Entregar evidencia» fijo abajo y la ✕ arriba.
+ *
+ * **Cerrar no pierde nada.** Una hoja se cierra con un gesto (arrastrarla, tocar el fondo), así que:
+ * lo elegido se conserva si se vuelve a abrir el MISMO registro; y si se cierra mientras se envía,
+ * el envío sigue (la respuesta marca la tarjeta igual) y un error, que ya no tiene dónde verse, sale
+ * en un diálogo.
  */
 
 /**
@@ -89,12 +93,21 @@ export interface EvidenciaHabitoModalProps {
 
 type Pestania = 'FOTO' | 'TEXTO' | 'AUDIO' | 'VIDEO';
 
-const PESTANIAS: { clave: Pestania; etiqueta: string; icono: IconName }[] = [
-  { clave: 'FOTO', etiqueta: 'FOTO', icono: 'camera' },
-  { clave: 'TEXTO', etiqueta: 'TEXTO', icono: 'doc' },
-  { clave: 'AUDIO', etiqueta: 'AUDIO', icono: 'volume' },
-  { clave: 'VIDEO', etiqueta: 'VIDEO', icono: 'play' },
+const PESTANIAS: { valor: Pestania; etiqueta: string }[] = [
+  { valor: 'FOTO', etiqueta: 'Foto' },
+  { valor: 'TEXTO', etiqueta: 'Texto' },
+  { valor: 'AUDIO', etiqueta: 'Audio' },
+  { valor: 'VIDEO', etiqueta: 'Video' },
 ];
+
+/** El ícono de lo que ya se cargó: la foto, el audio, el video. */
+const ICONO_DEL_ADJUNTO: Record<string, IconName> = { FOTO: 'image', AUDIO: 'audioLines', VIDEO: 'video' };
+
+/** Los botones de la hoja, en tipo oración y a tamaño de lectura. */
+const TEXTO_DE_BOTON = { fontSize: 16, letterSpacing: 0 } as const;
+
+/** Lo que ocupan la cabecera y el pie de esta hoja: el resto es para el cuerpo desplazable. */
+const RESERVA_CABECERA_Y_PIE = 230;
 
 
 export function EvidenciaHabitoModal({
@@ -108,7 +121,7 @@ export function EvidenciaHabitoModal({
   onCompletado,
 }: EvidenciaHabitoModalProps) {
   const { c, t } = useTheme();
-  const { rs, horizontalPadding, isTablet, contentMaxWidth } = useResponsive();
+  const altoMaximo = useAltoMaximoDelCuerpo(RESERVA_CABECERA_Y_PIE);
 
   const [pestania, setPestania] = useState<Pestania>('FOTO');
   const [archivo, setArchivo] = useState<ArchivoEvidencia | null>(null);
@@ -121,11 +134,18 @@ export function EvidenciaHabitoModal({
   const grabador = useGrabadorDeVoz();
 
   const visible = registroId !== null;
+  /** Si la hoja está a la vista ahora (lo lee un envío que terminó después de cerrarla). */
+  const abierta = useRef(visible);
+  abierta.current = visible;
+  /** El último registro que se abrió: volver a abrir ese mismo conserva lo elegido. */
+  const ultimoRegistro = useRef<string | null>(null);
 
-  // Cada vez que se abre para un registro distinto se arranca de cero: si no, la foto elegida
-  // para el hábito anterior quedaba cargada y se subía como evidencia de éste.
+  // Cada vez que se abre para un registro DISTINTO se arranca de cero: si no, la foto elegida
+  // para el hábito anterior quedaba cargada y se subía como evidencia de éste. Reabrir el mismo
+  // (se cerró la hoja sin querer, 2026-10-05) conserva la foto, el texto y los km.
   useEffect(() => {
-    if (!visible) return;
+    if (!visible || registroId === ultimoRegistro.current) return;
+    ultimoRegistro.current = registroId;
     setPestania('FOTO');
     setArchivo(null);
     setNota(notaInicial ?? '');
@@ -134,19 +154,12 @@ export function EvidenciaHabitoModal({
     setEnviando(false);
   }, [registroId, visible, notaInicial]);
 
-  /**
-   * AGENTS.md §6: el gesto lateral del sistema cierra ESTE modal, nunca la app. Mientras hay
-   * una subida en vuelo se consume el gesto sin cerrar — cerrar a mitad de camino dejaría el
-   * archivo en S3 y el registro sin completar, que es el peor de los dos estados posibles.
+  /*
+   * AGENTS.md §6: el gesto lateral del sistema cierra la hoja, nunca la app. Lo cablea la propia
+   * `HojaDesdeAbajo` (el atrás de Android cierra su `Modal`). Antes, con una subida en vuelo, el
+   * gesto se consumía sin cerrar; ahora la hoja se puede cerrar igual (también arrastrándola) y la
+   * subida sigue: ver `sellar`.
    */
-  useSystemBackHandler(
-    useCallback(() => {
-      if (enviando) return true;
-      onCerrar();
-      return true;
-    }, [enviando, onCerrar]),
-    visible,
-  );
 
   const textoUtil = nota.trim();
   /** D-226: los km escritos, ya como número (coma o punto). `null` = no hay un número válido. */
@@ -218,263 +231,171 @@ export function EvidenciaHabitoModal({
       const registro = await completarRegistro(registroId, textoUtil || null, km);
       await onCompletado(registro.puntosOtorgados);
     } catch (e) {
-      setError(mensajeDeError(e, 'No se pudo registrar tu evidencia. Intenta de nuevo.'));
+      const mensaje = mensajeDeError(e, 'No se pudo registrar tu evidencia. Intenta de nuevo.');
+      setError(mensaje);
+      // La hoja ya se cerró: el error no tendría dónde verse. Lo elegido sigue cargado al reabrirla.
+      if (!abierta.current) Alert.alert('No se pudo registrar tu evidencia', mensaje);
     } finally {
       setEnviando(false);
     }
   };
 
-  const anchoTarjeta = contentMaxWidth;
+  const iconoAdjunto = archivo ? ICONO_DEL_ADJUNTO[archivo.tipo] ?? 'checkCircle' : null;
 
   return (
-    <Modal
+    <HojaDesdeAbajo
       visible={visible}
-      animationType="slide"
-      transparent
-      onRequestClose={() => {
-        if (!enviando) onCerrar();
-      }}
-    >
-      <View style={[estilos.fondo, { paddingHorizontal: horizontalPadding }]}>
-        <View
-          style={[
-            estilos.tarjeta,
-            {
-              backgroundColor: c.cardBg,
-              borderColor: c.gold,
-              maxWidth: anchoTarjeta,
-              alignSelf: isTablet ? 'center' : 'stretch',
-            },
-          ]}
-        >
-          {/* Un ÚNICO contenedor de scroll (AGENTS.md §2): nada de scrolls anidados adentro. */}
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ flexGrow: 1, paddingBottom: rs(12), gap: rs(12) }}
-          >
-            <View style={{ alignItems: 'center', gap: 2 }}>
-              {contexto ? (
-                <View style={[estilos.insignia, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 10.5 }]}>
-                    {contexto}
-                  </Text>
-                </View>
-              ) : null}
-              <Text
-                style={[
-                  t.screenTitle,
-                  { color: c.textStrong, fontSize: rs(17), textAlign: 'center', marginTop: 2 },
-                ]}
-              >
-                {titulo}
-              </Text>
-              <Text style={[t.micro, { color: c.textSoft, fontSize: 12, textAlign: 'center' }]}>
-                Con una sola forma de evidencia alcanza: foto, texto, audio o video.
-              </Text>
-            </View>
-
-            {/* Selector de forma de evidencia */}
-            <View style={estilos.pestanias}>
-              {PESTANIAS.map(p => {
-                const activa = pestania === p.clave;
-                const cumplida =
-                  (p.clave === 'TEXTO' && textoUtil.length > 0) ||
-                  (p.clave !== 'TEXTO' && archivo?.tipo === (p.clave === 'FOTO' ? 'FOTO' : p.clave));
-                return (
-                  <Pressable
-                    key={p.clave}
-                    onPress={() => setPestania(p.clave)}
-                    style={[
-                      estilos.pestania,
-                      {
-                        borderColor: cumplida ? c.success : activa ? c.gold : c.border,
-                        backgroundColor: activa ? c.cardBgAlt : 'transparent',
-                      },
-                    ]}
-                  >
-                    <Icon name={p.icono} size={16} color={cumplida ? c.success : activa ? c.goldInk : c.textSoft} />
-                    <Text
-                      style={[
-                        t.micro,
-                        {
-                          color: cumplida ? c.success : activa ? c.textStrong : c.textSoft,
-                          fontFamily: 'Jost_700Bold',
-                          fontSize: 10.5,
-                        },
-                      ]}
-                    >
-                      {cumplida ? `✓ ${p.etiqueta}` : p.etiqueta}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            {pestania === 'FOTO' ? (
-              <View style={{ gap: rs(8) }}>
-                <BotonAccion
-                  etiqueta="TOMAR FOTO CON LA CÁMARA"
-                  icono="camera"
-                  onPress={() => elegir(tomarFotoConCamara)}
-                />
-                <BotonAccion
-                  etiqueta="ELEGIR FOTO DE LA GALERÍA"
-                  icono="image"
-                  onPress={() => elegir(elegirFotoDeGaleria)}
-                />
-              </View>
-            ) : null}
-
-            {pestania === 'VIDEO' ? (
-              <View style={{ gap: rs(8) }}>
-                <BotonAccion
-                  etiqueta="GRABAR VIDEO"
-                  icono="play"
-                  onPress={() => elegir(grabarVideoConCamara)}
-                />
-                <BotonAccion
-                  etiqueta="ELEGIR VIDEO DE LA GALERÍA"
-                  icono="stack"
-                  onPress={() => elegir(elegirVideoDeGaleria)}
-                />
-              </View>
-            ) : null}
-
-            {pestania === 'AUDIO' ? (
-              <View style={{ gap: rs(8) }}>
-                <BotonAccion
-                  etiqueta={
-                    grabador.grabando
-                      ? `DETENER  ·  ${duracionLegible(grabador.durationMillis / 1000)}`
-                      : 'GRABAR AUDIO'
-                  }
-                  icono="volume"
-                  destacado={grabador.grabando}
-                  onPress={() => void alternarGrabacion()}
-                />
-                <Text style={[t.micro, { color: c.textSoft, fontSize: 12 }]}>
-                  Cuenta con tus palabras cómo cumpliste hoy. Toca otra vez para detener.
-                </Text>
-              </View>
-            ) : null}
-
-            {pestania === 'TEXTO' ? (
-              <View style={{ gap: 4 }}>
-                <MicroLabel>Registro de verdad</MicroLabel>
-                <TextInput
-                  value={nota}
-                  onChangeText={setNota}
-                  placeholder="¿Cómo cumpliste tu palabra hoy?"
-                  placeholderTextColor={c.tabInactive}
-                  multiline
-                  style={[
-                    estilos.campo,
-                    { color: c.textStrong, borderColor: c.border, backgroundColor: c.cardBgAlt },
-                  ]}
-                />
-                <Text style={[t.micro, { color: c.textSoft, fontSize: 12 }]}>
-                  Tu texto vale como evidencia por sí solo. También acompaña a la foto, el audio o
-                  el video si subiste alguno.
-                </Text>
-              </View>
-            ) : null}
-
-            {/* Resumen de lo cargado */}
-            {archivo ? (
-              <View style={[estilos.adjunto, { borderColor: c.success, backgroundColor: c.cardBgAlt }]}>
-                <Icon name="checkCircle" size={20} color={c.success} />
-                <Text
-                  style={[t.micro, { color: c.textStrong, fontSize: 12.5, flexShrink: 1 }]}
-                  numberOfLines={2}
-                >
-                  {archivo.etiqueta}
-                </Text>
-                <Pressable
-                  onPress={() => setArchivo(null)}
-                  hitSlop={10}
-                  style={[estilos.quitar, { borderColor: c.border }]}
-                >
-                  <Text style={[t.micro, { color: c.textSoft, fontFamily: 'Jost_700Bold', fontSize: 10.5 }]}>
-                    QUITAR
-                  </Text>
-                </Pressable>
-              </View>
-            ) : null}
-
-            {medicion ? (
-              <View style={{ gap: 4 }}>
-                <MicroLabel>{PREGUNTA_DE_KILOMETROS}</MicroLabel>
-                <TextInput
-                  value={kmTexto}
-                  onChangeText={setKmTexto}
-                  placeholder="0,0 km"
-                  placeholderTextColor={c.tabInactive}
-                  keyboardType="decimal-pad"
-                  inputMode="decimal"
-                  maxLength={6}
-                  editable={!enviando}
-                  accessibilityLabel={PREGUNTA_DE_KILOMETROS}
-                  style={[
-                    estilos.campoKm,
-                    { color: c.textStrong, borderColor: c.border, backgroundColor: c.cardBgAlt },
-                  ]}
-                />
-                <Text style={[t.micro, { color: c.textSoft, fontSize: 12 }]}>
-                  Total recorrido: {formatoKm(totalConHoy(medicion, kmTexto))} km
-                </Text>
-              </View>
-            ) : null}
-
-            {error ? (
-              <View style={[estilos.error, { borderColor: c.danger }]}>
-                <Text style={[t.micro, { color: c.danger, fontSize: 12.5 }]}>{error}</Text>
-              </View>
-            ) : null}
-
-            <GoldButton
-              label={enviando ? 'REGISTRANDO…' : '✓ SELLAR EVIDENCIA Y COMPLETAR'}
-              onPress={() => void sellar()}
-              loading={enviando}
-              disabled={!puedeSellar || enviando}
-              style={{ marginTop: 4 }}
-            />
-            {!puedeSellar ? (
-              <Text style={[t.micro, { color: c.textSoft, fontSize: 12, textAlign: 'center' }]}>
-                {medicion && (archivo !== null || textoUtil.length > 0)
-                  ? 'Escribe los km de hoy (más que cero).'
-                  : 'Sube una foto, un audio o un video — o escribe tu registro. Con uno alcanza.'}
-              </Text>
-            ) : null}
-
-            <Pressable
-              onPress={() => {
-                if (!enviando) onCerrar();
-              }}
-              disabled={enviando}
-              style={[estilos.cerrar, { borderColor: c.border, opacity: enviando ? 0.4 : 1 }]}
-            >
-              {enviando ? (
-                <ActivityIndicator size="small" color={c.textSoft} />
-              ) : (
-                <Text
-                  style={[
-                    t.micro,
-                    { color: c.textSoft, fontFamily: 'Jost_700Bold', fontSize: 11.5, textAlign: 'center' },
-                  ]}
-                >
-                  CANCELAR
-                </Text>
-              )}
-            </Pressable>
-          </ScrollView>
+      alCerrar={onCerrar}
+      titulo={titulo}
+      subtitulo={contexto}
+      etiquetaCerrar="Cerrar la evidencia"
+      pie={
+        <View style={{ gap: 8 }}>
+          {!puedeSellar && medicion && (archivo !== null || textoUtil.length > 0) ? (
+            <Text style={[t.small, { color: c.textSoft, textAlign: 'center' }]}>
+              Escribe los km de hoy (más que cero).
+            </Text>
+          ) : null}
+          <GoldButton
+            label={enviando ? 'Entregando…' : 'Entregar evidencia'}
+            onPress={() => void sellar()}
+            loading={enviando}
+            disabled={!puedeSellar || enviando}
+            textStyle={TEXTO_DE_BOTON}
+          />
         </View>
-      </View>
-    </Modal>
+      }
+    >
+      {/* Un ÚNICO contenedor de scroll (AGENTS.md §2): nada de scrolls anidados adentro. Con tope
+          de alto, para que el teclado no empuje el botón fuera de la hoja. */}
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        style={{ maxHeight: altoMaximo }}
+        contentContainerStyle={estilos.cuerpo}
+      >
+        {/* «Con uno alcanza» se dice UNA vez, acá (antes, también debajo del botón). */}
+        <Text style={[t.small, { color: c.textSoft }]}>
+          Con una forma alcanza: foto, texto, audio o video.
+        </Text>
+
+        <ControlSegmentado
+          opciones={PESTANIAS}
+          valor={pestania}
+          onCambiar={setPestania}
+          accessibilityLabel="Forma de la evidencia"
+        />
+
+        {pestania === 'FOTO' ? (
+          <View style={{ gap: 8 }}>
+            <BotonAccion etiqueta="Tomar foto" icono="camera" onPress={() => elegir(tomarFotoConCamara)} />
+            <BotonAccion etiqueta="Elegir de la galería" icono="image" onPress={() => elegir(elegirFotoDeGaleria)} />
+          </View>
+        ) : null}
+
+        {pestania === 'VIDEO' ? (
+          <View style={{ gap: 8 }}>
+            <BotonAccion etiqueta="Grabar video" icono="video" onPress={() => elegir(grabarVideoConCamara)} />
+            <BotonAccion etiqueta="Elegir de la galería" icono="image" onPress={() => elegir(elegirVideoDeGaleria)} />
+          </View>
+        ) : null}
+
+        {pestania === 'AUDIO' ? (
+          <View style={{ gap: 8 }}>
+            {/* Un micrófono para GRABAR (antes, el parlante de «escuchar»). */}
+            <BotonAccion
+              etiqueta={
+                grabador.grabando
+                  ? `Terminar · ${duracionLegible(grabador.durationMillis / 1000)}`
+                  : 'Grabar audio'
+              }
+              icono="mic"
+              destacado={grabador.grabando}
+              onPress={() => void alternarGrabacion()}
+            />
+            <Text style={[t.small, { color: c.textSoft }]}>
+              Cuenta cómo cumpliste hoy. Toca otra vez para terminar.
+            </Text>
+          </View>
+        ) : null}
+
+        {pestania === 'TEXTO' ? (
+          <View style={{ gap: 6 }}>
+            <Text style={[t.body, estilos.rotulo, { color: c.textStrong }]}>Tu registro</Text>
+            <TextInput
+              value={nota}
+              onChangeText={setNota}
+              placeholder="¿Cómo cumpliste tu palabra hoy?"
+              placeholderTextColor={c.tabInactive}
+              accessibilityLabel="Tu registro"
+              multiline
+              style={[
+                estilos.campo,
+                { color: c.textStrong, borderColor: c.border, backgroundColor: c.cardBgAlt },
+              ]}
+            />
+            <Text style={[t.small, { color: c.textSoft }]}>
+              Vale solo, o junto a la foto, el audio o el video.
+            </Text>
+          </View>
+        ) : null}
+
+        {/* Lo cargado, con el ícono de lo que es y una papelera para quitarlo. */}
+        {archivo && iconoAdjunto ? (
+          <View style={[estilos.adjunto, { borderColor: c.success, backgroundColor: c.successWash }]}>
+            <Icon name={iconoAdjunto} size={TAMANO_ICONO.normal} color={c.success} />
+            <Text style={[t.body, { color: c.textStrong, flexShrink: 1, flex: 1 }]} numberOfLines={2}>
+              {archivo.etiqueta}
+            </Text>
+            <Presionable
+              onPress={() => setArchivo(null)}
+              accessibilityRole="button"
+              accessibilityLabel="Quitar lo que elegiste"
+              style={estilos.quitar}
+            >
+              <Icon name="trash" size={TAMANO_ICONO.normal} color={c.textSoft} />
+            </Presionable>
+          </View>
+        ) : null}
+
+        {medicion ? (
+          <View style={{ gap: 6 }}>
+            <Text style={[t.body, estilos.rotulo, { color: c.textStrong }]}>{PREGUNTA_DE_KILOMETROS}</Text>
+            <TextInput
+              value={kmTexto}
+              onChangeText={setKmTexto}
+              placeholder="0,0 km"
+              placeholderTextColor={c.tabInactive}
+              keyboardType="decimal-pad"
+              inputMode="decimal"
+              maxLength={6}
+              editable={!enviando}
+              accessibilityLabel={PREGUNTA_DE_KILOMETROS}
+              style={[
+                estilos.campoKm,
+                { color: c.textStrong, borderColor: c.border, backgroundColor: c.cardBgAlt },
+              ]}
+            />
+            <Text style={[t.small, { color: c.textSoft }]}>
+              Total recorrido: {formatoKm(totalConHoy(medicion, kmTexto))} km
+            </Text>
+          </View>
+        ) : null}
+
+        {error ? (
+          <View style={[estilos.error, { borderColor: c.danger, backgroundColor: c.dangerWash }]}>
+            <Text style={[t.small, { color: c.danger }]}>{error}</Text>
+          </View>
+        ) : null}
+      </ScrollView>
+    </HojaDesdeAbajo>
   );
 }
 
-/** Botón de acción de 52px — el mínimo cómodo de una mano que fija AGENTS.md §4. */
+/**
+ * Botón de acción de 52px — el mínimo cómodo de una mano que fija AGENTS.md §4. Ícono de 20 y texto
+ * a 16 en tipo oración (eran versalitas de 12,5); se hunde al tocarlo.
+ */
 function BotonAccion({
   etiqueta,
   icono,
@@ -488,8 +409,9 @@ function BotonAccion({
 }) {
   const { c, t } = useTheme();
   return (
-    <Pressable
+    <Presionable
       onPress={onPress}
+      accessibilityRole="button"
       style={[
         estilos.accion,
         {
@@ -498,54 +420,22 @@ function BotonAccion({
         },
       ]}
     >
-      <Icon name={icono} size={18} color={destacado ? c.danger : c.goldInk} />
-      <Text
-        style={[
-          t.micro,
-          { color: c.textStrong, fontFamily: 'Jost_700Bold', fontSize: 12.5, flexShrink: 1 },
-        ]}
-      >
-        {etiqueta}
-      </Text>
-    </Pressable>
+      <Icon name={icono} size={TAMANO_ICONO.normal} color={destacado ? c.danger : c.goldInk} />
+      <Text style={[t.body, estilos.rotulo, { color: c.textStrong, flexShrink: 1 }]}>{etiqueta}</Text>
+    </Presionable>
   );
 }
 
 const estilos = StyleSheet.create({
-  fondo: {
-    flex: 1,
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0,0,0,0.6)',
+  cuerpo: {
+    gap: 14,
+    paddingHorizontal: 20,
+    paddingTop: 4,
+    paddingBottom: 8,
   },
-  tarjeta: {
-    width: '100%',
-    maxHeight: '88%',
-    borderWidth: 1,
-    borderRadius: 18,
-    padding: 18,
-  },
-  insignia: {
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-  },
-  pestanias: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  pestania: {
-    flexGrow: 1,
-    flexBasis: '22%',
-    minHeight: 48,
-    borderWidth: 1,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 3,
-    paddingVertical: 6,
-    paddingHorizontal: 4,
+  rotulo: {
+    fontSize: 16,
+    fontFamily: 'Jost_500Medium',
   },
   accion: {
     minHeight: 52,
@@ -553,7 +443,7 @@ const estilos = StyleSheet.create({
     borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
     paddingHorizontal: 14,
   },
   campoKm: {
@@ -570,7 +460,8 @@ const estilos = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    fontSize: 14.5,
+    fontSize: 16,
+    fontFamily: 'Jost_400Regular',
     textAlignVertical: 'top',
   },
   adjunto: {
@@ -579,27 +470,19 @@ const estilos = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingLeft: 12,
+    minHeight: 52,
   },
   quitar: {
-    marginLeft: 'auto',
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   error: {
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
-  },
-  cerrar: {
-    minHeight: 48,
-    borderWidth: 1,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

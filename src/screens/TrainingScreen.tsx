@@ -1,5 +1,5 @@
-import React, { useEffect, useLayoutEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Switch, Platform } from 'react-native';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Switch, Platform } from 'react-native';
 import { Alert } from '../components/Alerta';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BORDES_DE_UNA_PESTANA } from '../navigation/bordesDeUnaPestana';
@@ -9,8 +9,20 @@ import { space } from '../theme/tokens';
 import { useResponsive } from '../theme/responsive';
 import { useSystemBackHandler } from '../hooks/useSystemBackHandler';
 import { useMedicionDePantalla } from '../hooks/useMedicionDePantalla';
-import { ScreenHeader, MicroLabel } from '../components/ui';
-import { Icon, IconName } from '../components/Icon';
+import { ScreenHeader } from '../components/ui';
+import { Icon, IconName, TAMANO_ICONO } from '../components/Icon';
+import { Presionable } from '../components/Presionable';
+import { ConfirmacionEnLinea } from '../components/ConfirmacionEnLinea';
+import { ControlSegmentado } from '../components/ControlSegmentado';
+import { tacto } from '../utils/tacto';
+import {
+  accionDeLaTarjeta,
+  avisoDeEvidenciaEntregada,
+  detalleDelCumplido,
+  muestraElCumplidoEnLaTarjeta,
+  seccionesDeLaDimension,
+  type SeccionDeLaDimension,
+} from '../features/training/utils/tarjetaDelHabito';
 import { useTraining } from '../features/training/hooks/useTraining';
 import { ProximoAVencerCard } from '../features/training/components/ProximoAVencerCard';
 import { EvidenciaHabitoModal } from '../features/habits/components/EvidenciaHabitoModal';
@@ -116,11 +128,15 @@ export interface HabitItem {
    */
   evidenceRequirement?: string;
   /**
-   * Emoji propio del hábito, ya resuelto por `mapearPlanHabit` a partir de `iconKey` del backend
-   * (`SLEEP` → 😴, `WATER` → 💧…). Distingue una fila de otra dentro de la misma dimensión, cosa
-   * que el icono de categoría no podía: ahí los seis de CUERPO eran el mismo símbolo.
+   * Ícono de línea propio del hábito, resuelto por `iconoDeLineaDeHabito` a partir de `iconKey` y
+   * `systemKey` del catálogo (`WATER` → vaso, `WAKE_UP` → amanecer…). Distingue una fila de otra
+   * dentro de la misma dimensión, cosa que el icono de categoría no podía: ahí los seis de CUERPO
+   * eran el mismo símbolo.
+   *
+   * > **Cambiado 2026-10-05 (rediseño de Training).** Era el emoji de `mapearPlanHabit` (😴, 💧…), y
+   * > Despertar y Dormir salían con el mismo 😴 porque el catálogo les da la misma clave.
    */
-  icon?: string;
+  icon?: IconName;
   /**
    * Los mismos 7 días que ya pinta Plan para este hábito (catálogo + pausa aplicada,
    * `PlanHabit.days`) — solo para sembrar la fila decorativa de días en "Planificar", sin
@@ -129,6 +145,10 @@ export interface HabitItem {
   diasCatalogo?: Record<DayOfWeek, boolean>;
   /** Lo que la persona escribió al completar el registro (`RegistroHabito.respuestaTexto`). */
   respuestaTexto?: string | null;
+  /** Instante ISO en que el servidor lo dio por cumplido (`completadoEn` del registro). */
+  completadoEn?: string | null;
+  /** Puntos que el servidor pagó al cumplirlo (`puntosOtorgados` del registro). */
+  puntosOtorgados?: number | null;
   /**
    * Puntos que paga completarlo AHORA, tal como los calcula el backend (D-97). `null` cuando el
    * hábito ya está en estado terminal o cuando el backend todavía no manda el campo.
@@ -147,7 +167,10 @@ export interface HabitItem {
 
 interface DimensionConfig {
   key: 'CUERPO' | 'MENTE' | 'EMOCIONES' | 'ESPÍRITU' | 'VIDA Y NEGOCIO';
+  /** La clave en versales: la que entienden la hoja de Planificar y los recordatorios. */
   title: string;
+  /** Lo que se LEE (2026-10-05): tipo oración, como el resto de la app. */
+  nombre: string;
   sub: string;
   icon: IconName;
 }
@@ -156,30 +179,35 @@ const DIMENSIONES_CONFIG: DimensionConfig[] = [
   {
     key: 'CUERPO',
     title: 'CUERPO',
+    nombre: 'Cuerpo',
     sub: 'Fuerza somática · Movilidad · Energía',
     icon: 'body',
   },
   {
     key: 'MENTE',
     title: 'MENTE',
+    nombre: 'Mente',
     sub: 'Enfoque · Mentalidad · Aprendizaje',
     icon: 'brain',
   },
   {
     key: 'EMOCIONES',
     title: 'EMOCIONES',
+    nombre: 'Emociones',
     sub: 'Gestión Emocional · Relaciones · Propósito',
     icon: 'heart',
   },
   {
     key: 'ESPÍRITU',
     title: 'ESPÍRITU',
+    nombre: 'Espíritu',
     sub: 'Propósito · Fe · Gratitud',
     icon: 'spark',
   },
   {
     key: 'VIDA Y NEGOCIO',
     title: 'VIDA Y NEGOCIO',
+    nombre: 'Vida y negocio',
     sub: 'Hábitos · Entorno · Estilo de Vida · Estrategia',
     icon: 'briefcase',
   },
@@ -199,7 +227,7 @@ export default function TrainingScreen() {
 
   // Selected Dimension State
   const [selectedDimension, setSelectedDimension] = useState<DimensionConfig | null>(null);
-  const [innerTab, setInnerTab] = useState<'habitos' | 'guias'>('habitos');
+  const [innerTab, setInnerTab] = useState<SeccionDeLaDimension>('habitos');
 
   // Habits State
   // Los hábitos de CUERPO/MENTE/EMOCIONES/ESPÍRITU (habit-tracks/today) y la roca del día de VIDA
@@ -305,6 +333,27 @@ export default function TrainingScreen() {
    */
   const [cerrarUnaVez] = useState(() => crearCierreSinRepetir(id => completarRegistro(id, null)));
 
+  /*
+   * CONFIRMACIONES EN LÍNEA (rediseño de Training, 2026-10-05). Los avisos de éxito dejaron de ser
+   * diálogos («¡Evidencia de Verdad Sellada! 🦅», «Pastilla Renaser registrada 🦅»): una línea con ✓
+   * junto a lo que se hizo, que se va sola (`ConfirmacionEnLinea`), con el háptico de logro en el
+   * mismo instante. Va debajo de la tarjeta del hábito si está a la vista, si no arriba de la lista.
+   * Los errores siguen en diálogo. `clave` cambia con cada aviso: la línea empieza de cero.
+   */
+  const [confirmacion, setConfirmacion] = useState<{ clave: number; texto: string; habitoId: string | null } | null>(null);
+  const confirmar = (texto: string, habitoId: string | null) => {
+    tacto.logro();
+    setConfirmacion({ clave: Date.now(), texto, habitoId });
+  };
+
+  /**
+   * El hábito cumplido que está DESPLEGADO (decisión del dueño, 2026-10-05): tocar uno ya cumplido
+   * muestra en la misma tarjeta cuándo se cumplió y lo que escribió, en vez del diálogo «Ya está
+   * cumplido». Uno a la vez; tocarlo de nuevo lo pliega.
+   */
+  const [cumplidoAbierto, setCumplidoAbierto] = useState<string | null>(null);
+  const alternarCumplido = (id: string) => setCumplidoAbierto(actual => (actual === id ? null : id));
+
   // El habito de post diario lo cierra el compositor del Muro, en OTRA pestana (E-117). Sin esto,
   // la persona lee "hábito completado" alla y vuelve a encontrar la tarjeta sin tildar, porque
   // `useTraining` carga una sola vez al montarse. No se marca nada a mano: se recarga del backend,
@@ -317,6 +366,12 @@ export default function TrainingScreen() {
   // El estado de la subida en sí (archivo elegido, nota, error, envío en curso) vive dentro de
   // `EvidenciaHabitoModal`. Acá solo queda CUÁL hábito tiene el modal abierto.
   const [activeEvidenceHabit, setActiveEvidenceHabit] = useState<HabitItem | null>(null);
+  /**
+   * El hábito de la hoja de evidencia, guardado aparte del estado: la hoja se puede cerrar mientras
+   * la subida sigue en camino (arrastrándola, 2026-10-05), y la respuesta tiene que seguir sabiendo
+   * de qué tarjeta era.
+   */
+  const habitoDeLaEvidencia = useRef<HabitItem | null>(null);
 
   /**
    * REGISTRO CON FOTO (pedido del dueño, 2026-09-26): los hábitos que EXIGEN evidencia abren la
@@ -325,14 +380,10 @@ export default function TrainingScreen() {
    * mismo que usan la tarjeta del chat y la del orbe. Los de evidencia opcional no cambian.
    */
   const registroConFoto = useRegistroConFoto({
-    onCompletado: async (registroId, resultado, titulo) => {
+    onCompletado: async (registroId, resultado) => {
       reflejarCierreConfirmado(registroId, true);
-      Alert.alert(
-        '¡Evidencia de Verdad Sellada! 🦅',
-        resultado.puntosOtorgados > 0
-          ? `Cumpliste tu palabra en "${titulo}". +${resultado.puntosOtorgados} puntos.`
-          : `Cumpliste tu palabra en "${titulo}".`
-      );
+      // Decisión del dueño (2026-10-05): «Evidencia entregada» y los puntos solo si el servidor los dio.
+      confirmar(avisoDeEvidenciaEntregada(resultado.puntosOtorgados), registroId);
     },
     // La pantalla quedó abierta de un día para otro: se recargan los registros de hoy.
     onDiaCambiado: () => void recargarEntrenamiento(),
@@ -520,6 +571,7 @@ export default function TrainingScreen() {
     } else {
       void recargarEntrenamiento();
     }
+    confirmar('Clase diaria completada', habitoClaseDiaria?.id ?? null);
   };
 
   /** Deep-link a la leccion del dia dentro de Cursos, por el mismo camino que usa Comunidad. */
@@ -539,8 +591,9 @@ export default function TrainingScreen() {
    * terminaba en el mismo 409 que el doble toque (TRN-02).
    */
   const registrarSoloHora = async (habit: HabitItem) => {
+    // Ya cumplido: se despliega en la tarjeta a qué hora quedó (decisión del dueño, 2026-10-05).
     if (habit.done) {
-      Alert.alert('Ya está cumplido', 'Este hábito ya quedó registrado hoy.');
+      alternarCumplido(habit.id);
       return;
     }
     try {
@@ -558,8 +611,11 @@ export default function TrainingScreen() {
     const habit = habits.find(h => h.id === id);
     // Deshacer no existe en el backend: no hay endpoint que reabra un registro cerrado. Antes esto
     // lo "deshacía" en memoria, o sea que mostraba algo que el servidor no iba a confirmar.
+    // Tocar el ✓ de uno cumplido muestra su estado en la tarjeta (antes: diálogo «Ya está cumplido»);
+    // la Pastilla, la Audioterapia y la Clase diaria abren su ventana, donde se relee lo entregado.
     if (habit?.done) {
-      Alert.alert('Ya está cumplido', 'Un hábito cerrado no se puede deshacer desde acá.');
+      if (muestraElCumplidoEnLaTarjeta(habit)) alternarCumplido(habit.id);
+      else openEvidenceModal(habit);
       return;
     }
     if (habit && !habit.done) {
@@ -628,12 +684,20 @@ export default function TrainingScreen() {
       await completarRegistro(abierta.registroId);
       setAudioterapiaAbierta(null);
       reflejarCierreConfirmado(abierta.registroId, true);
+      confirmar('Audioterapia registrada', abierta.registroId);
     } catch (e) {
       Alert.alert('No se pudo registrar', mensajeDeError(e, 'Intenta de nuevo en un momento.'));
     }
   };
 
   const openEvidenceModal = (habit: HabitItem) => {
+    // Ya cumplido: su estado se lee en la tarjeta (decisión del dueño, 2026-10-05). Va PRIMERO, antes
+    // de las ramas por clave: la Audioterapia volvía a abrir su formulario y el post diario el Muro,
+    // para algo ya entregado. La Pastilla y la Clase diaria siguen abriendo su ventana de solo lectura.
+    if (muestraElCumplidoEnLaTarjeta(habit)) {
+      alternarCumplido(habit.id);
+      return;
+    }
     /* La Audioterapia usa el MISMO modal de evidencia que el resto —y por lo tanto el mismo camino
        de cierre, que completa el hábito correcto—, pero con el audio de la semana arriba y las dos
        preguntas de D-97 en vez del selector de foto/video. Lo único que hace falta es traer el
@@ -681,15 +745,12 @@ export default function TrainingScreen() {
       void registrarSoloHora(habit);
       return;
     }
-    // Ya cumplido (el botón dice VER): no se abre nada que suba y vuelva a cerrar. Antes abría el
+    // Ya cumplido (el botón dice Ver): no se abre nada que suba y vuelva a cerrar. Antes abría el
     // modal genérico y "sellar" subía el archivo y terminaba en un `/complete` que el backend
-    // rechaza porque el registro ya estaba cerrado (2026-09-26).
+    // rechaza porque el registro ya estaba cerrado (2026-09-26). Desde el 2026-10-05 (decisión del
+    // dueño) lo que escribió se lee en la misma tarjeta, no en un diálogo «Ya está cumplido».
     if (habit.done) {
-      const escrito = habit.respuestaTexto?.trim();
-      Alert.alert(
-        'Ya está cumplido',
-        escrito ? `Lo que escribiste: "${escrito}"` : 'Este hábito ya quedó registrado hoy.'
-      );
+      alternarCumplido(habit.id);
       return;
     }
     if (seRegistraConFoto(habit, Platform.OS === 'web')) {
@@ -708,6 +769,7 @@ export default function TrainingScreen() {
       );
       return;
     }
+    habitoDeLaEvidencia.current = habit;
     setActiveEvidenceHabit(habit);
   };
 
@@ -735,7 +797,7 @@ export default function TrainingScreen() {
       void recargarEntrenamiento();
     }
     void espiritu.recargar();
-    Alert.alert('Pastilla Renaser registrada 🦅', 'Tu respuesta quedo guardada y el habito, completado.');
+    confirmar('Pastilla Renaser registrada', trackPastilla?.id ?? null);
   };
 
   /**
@@ -745,20 +807,16 @@ export default function TrainingScreen() {
    * respuesta de `/complete`), nunca un número calculado acá.
    */
   const handleEvidenciaCompletada = async (puntosOtorgados: number) => {
-    const nombre = activeEvidenceHabit?.title ?? 'tu hábito';
-    const cerrado = activeEvidenceHabit;
+    const cerrado = habitoDeLaEvidencia.current;
+    habitoDeLaEvidencia.current = null;
     setActiveEvidenceHabit(null);
     if (cerrado) {
       reflejarCierreConfirmado(cerrado.id, true);
     } else {
       void recargarEntrenamiento();
     }
-    Alert.alert(
-      '¡Evidencia de Verdad Sellada! 🦅',
-      puntosOtorgados > 0
-        ? `Cumpliste tu palabra en "${nombre}". +${puntosOtorgados} puntos.`
-        : `Cumpliste tu palabra en "${nombre}".`
-    );
+    // Decisión del dueño (2026-10-05): «Evidencia entregada» y los puntos solo si el servidor los dio.
+    confirmar(avisoDeEvidenciaEntregada(puntosOtorgados), cerrado?.id ?? null);
   };
 
 
@@ -782,6 +840,13 @@ export default function TrainingScreen() {
   const dimensionProgress = currentDimensionHabits.length > 0
     ? Math.round((sealedEvidencesCount / currentDimensionHabits.length) * 100)
     : 0;
+
+  /**
+   * «Guías y audios» no tiene contenido en ninguna dimensión (no hay de dónde traerlo todavía), así
+   * que se esconde (decisión del dueño, 2026-10-05). Cuando exista, este número sale de esa fuente.
+   */
+  const GUIAS_DE_LA_DIMENSION = 0;
+  const secciones = seccionesDeLaDimension(GUIAS_DE_LA_DIMENSION);
 
   return (
     <SafeAreaView edges={BORDES_DE_UNA_PESTANA} style={{ flex: 1, backgroundColor: c.bg }}>
@@ -836,16 +901,17 @@ export default function TrainingScreen() {
             {/* Alineado a la IZQUIERDA (2026-09-14). Antes iba centrado: el par
                 "versalitas chicas centradas + subtítulo centrado" es el gesto de plantilla que
                 esta pasada viene a quitar, y además obliga al ojo a volver al centro en cada
-                línea. El rótulo queda de antetítulo y la frase pasa a tamaño de lectura. */}
-            <View style={{ paddingTop: 4, gap: 6 }}>
-              <Text style={[t.sectionTitle, { color: c.micro }]}>TU ENTRENAMIENTO INTEGRAL</Text>
+                línea. El rótulo queda de antetítulo y la frase pasa a tamaño de lectura.
+                2026-10-05: el antetítulo, en tipo oración (era versalitas de 12). */}
+            <View style={{ paddingTop: 4, gap: 4 }}>
+              <Text style={[t.cardTitle, styles.antetitulo, { color: c.goldInk }]}>Tu entrenamiento integral</Text>
               <Text style={[t.body, { color: c.text }]}>Cinco dimensiones. Un sistema.</Text>
             </View>
 
             {/* Aviso de los domingos. Solo donde puede sonar de verdad. */}
             {recordatorios.HAY_RECORDATORIOS_LOCALES && repasoSemanal !== null && !programaSinArrancar && (
               <View style={[styles.repasoSemanal, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
-                <Icon name="calendar" size={16} color={c.goldInk} />
+                <Icon name="calendar" size={TAMANO_ICONO.normal} color={c.goldInk} />
                 <View style={{ flex: 1, flexShrink: 1, gap: 2 }}>
                   <Text style={[t.body, { color: c.textStrong, fontFamily: 'Jost_500Medium' }]}>
                     Arma tu semana los domingos
@@ -869,6 +935,15 @@ export default function TrainingScreen() {
                 sin obligar a adivinar en que dimension estaba. */}
             {!cargandoBackend && errorBackend === null && (
               <ProximoAVencerCard habits={habits} onAbrir={openEvidenceModal} />
+            )}
+
+            {/* Lo entregado desde «Próximo a vencer» se confirma acá, a la vista. */}
+            {confirmacion && (
+              <ConfirmacionEnLinea
+                key={confirmacion.clave}
+                texto={confirmacion.texto}
+                onTerminar={() => setConfirmacion(null)}
+              />
             )}
 
             {/* Mientras carga o si falla. Antes se dibujaban 17 hábitos inventados, 11 de ellos
@@ -904,10 +979,11 @@ export default function TrainingScreen() {
                 <Text style={[t.body, { color: c.textSoft }]}>{errorBackend}</Text>
                 {/* Relleno sólido, sin borde: es la única acción de la tarjeta y ya vive DENTRO de
                     un recuadro. Un botón con borde acá era caja dentro de caja. */}
-                <Pressable
+                <Presionable
                   onPress={() => {
                     void recargarEntrenamiento();
                   }}
+                  accessibilityRole="button"
                   style={{
                     minHeight: 48,
                     borderRadius: space.radiusSm,
@@ -917,7 +993,7 @@ export default function TrainingScreen() {
                   }}
                 >
                   <Text style={[t.cardTitle, { color: c.onGold }]}>Reintentar</Text>
-                </Pressable>
+                </Presionable>
               </View>
             )}
 
@@ -942,15 +1018,18 @@ export default function TrainingScreen() {
                 // denominador es "todos los hábitos de la dimensión", así que el numerador tiene
                 // que poder alcanzarlo (E-118). `||` y no solo `done`: una evidencia subida sobre
                 // un registro que después venció sigue siendo una evidencia entregada.
+                // 2026-10-05: se lee «0 de 7 hoy» a 14 px (era «0/7 CUMPLIDOS» en versalitas de 10,5).
                 const evidenceCount = dimHabits.filter(h => h.done || h.hasEvidence).length;
 
                 return (
-                  <Pressable
+                  <Presionable
                     key={d.key}
                     onPress={() => {
                       setSelectedDimension(d);
                       setInnerTab('habitos');
                     }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${d.nombre}: ${evidenceCount} de ${dimHabits.length} cumplidos hoy`}
                     style={[styles.dimensionCard, { borderColor: c.border, backgroundColor: c.cardBg }]}
                   >
                     {/* Disco dorado tenue, sin anillo: el borde de este medallón vivía dentro del
@@ -967,40 +1046,28 @@ export default function TrainingScreen() {
                         },
                       ]}
                     >
-                      <Icon name={d.icon} size={rs(20)} color={c.goldInk} strokeWidth={1.1} />
+                      <Icon name={d.icon} size={TAMANO_ICONO.normal} color={c.goldInk} />
                     </View>
 
-                    <View style={{ flex: 1 }}>
+                    <View style={{ flex: 1, gap: 2 }}>
                       <View style={styles.dimensionHeaderRow}>
                         <Text
                           numberOfLines={2}
-                          style={{
-                            fontFamily: 'Jost_700Bold',
-                            color: c.text,
-                            letterSpacing: 1,
-                            fontSize: 14,
-                            flexShrink: 1,
-                          }}
+                          style={[t.cardTitle, styles.nombreDimension, { color: c.textStrong }]}
                         >
-                          {d.title}
+                          {d.nombre}
                         </Text>
-                        <Text
-                          numberOfLines={1}
-                          style={[
-                            t.micro,
-                            { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 10.5, flexShrink: 0 },
-                          ]}
-                        >
-                          {evidenceCount}/{dimHabits.length} CUMPLIDOS
+                        <Text numberOfLines={1} style={[t.small, styles.cuentaDelDia, { color: c.goldInk }]}>
+                          {evidenceCount} de {dimHabits.length} hoy
                         </Text>
                       </View>
-                      <Text style={[t.small, { color: c.textSoft, marginTop: 4 }]}>
+                      <Text style={[t.small, { color: c.textSoft }]}>
                         {d.sub}
                       </Text>
                     </View>
 
-                    <Icon name="chevron" size={12} color={c.chevron} />
-                  </Pressable>
+                    <Icon name="chevron" size={TAMANO_ICONO.normal} color={c.chevron} />
+                  </Presionable>
                 );
               })}
             </View>
@@ -1012,50 +1079,44 @@ export default function TrainingScreen() {
         {/* ========================================================================= */}
         {selectedDimension !== null && (
           <View style={{ gap: space.gapLg }}>
-            {/* Top Bar con Botón Volver */}
-            <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
-              <Pressable
+            {/* Cabecera «‹ Cuerpo», como la de Administración (2026-10-05). Antes: «← VOLVER A
+                TRAINING» en versalitas de 10,5 a la izquierda y «DIMENSIÓN · CUERPO» a la derecha,
+                una miga de pan de página web sobre una línea divisoria. */}
+            <View style={styles.cabeceraDetalle}>
+              <Presionable
                 onPress={() => setSelectedDimension(null)}
-                style={styles.backTrainingBtn}
-                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Volver a Training"
+                contenedorStyle={styles.volverDetalleArea}
+                style={styles.volverDetalle}
               >
-                <Icon name="arrowLeft" size={16} color={c.goldInk} />
-                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
-                  VOLVER A TRAINING
-                </Text>
-              </Pressable>
-
-              {/* Antes era una píldora con borde y relleno propio, pegada a la barra que ya tiene
-                  su línea divisoria: ornamento sobre ornamento para un rótulo que además se repite
-                  como título dos centímetros más abajo. Queda el texto solo. */}
+                {/* El chevron del proyecto apunta a la derecha y no acepta `style`: se rota el contenedor. */}
+                <View style={{ transform: [{ rotate: '180deg' }] }}>
+                  <Icon name="chevron" size={TAMANO_ICONO.normal} color={c.textSoft} />
+                </View>
+              </Presionable>
               <Text
+                accessibilityRole="header"
                 numberOfLines={1}
-                style={[t.micro, { color: c.textSoft, fontFamily: 'Jost_500Medium', flexShrink: 1 }]}
+                style={[t.screenTitle, styles.tituloDetalle, { color: c.textStrong }]}
               >
-                DIMENSIÓN · {selectedDimension.title}
+                {selectedDimension.nombre}
               </Text>
             </View>
 
-            {/* Dimension Summary Card */}
+            {/* Resumen de la dimensión. El nombre ya está en la cabecera: acá queda de qué se trata,
+                cuánto va del día y la barra (antes el título se repetía dos centímetros más abajo). */}
             <View style={[styles.dimSummaryCard, { borderColor: c.border, backgroundColor: c.cardBg }]}>
               <View style={styles.dimSummaryHeader}>
                 <View style={[styles.dimAvatarMedallion, { backgroundColor: c.goldWash }]}>
-                  <Icon name={selectedDimension.icon} size={22} color={c.goldInk} />
+                  <Icon name={selectedDimension.icon} size={TAMANO_ICONO.grande} color={c.goldInk} />
                 </View>
                 <View style={{ flex: 1, gap: 4 }}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 10 }}>
-                    <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 22, flexShrink: 1 }]}>
-                      {selectedDimension.title}
-                    </Text>
-                    <Text
-                      numberOfLines={1}
-                      style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', flexShrink: 0 }]}
-                    >
-                      {completedEvidencesCount}/{currentDimensionHabits.length} CUMPLIDOS
-                    </Text>
-                  </View>
-                  <Text style={[t.small, { color: c.textSoft }]}>
+                  <Text style={[t.body, { color: c.textSoft }]}>
                     {selectedDimension.sub}
+                  </Text>
+                  <Text numberOfLines={1} style={[t.small, styles.cuentaDelDia, { color: c.goldInk }]}>
+                    {completedEvidencesCount} de {currentDimensionHabits.length} cumplidos hoy
                   </Text>
                 </View>
               </View>
@@ -1072,59 +1133,30 @@ export default function TrainingScreen() {
               </View>
             </View>
 
-            {/* Sub-Tabs: HÁBITOS & EVIDENCIAS vs GUÍAS Y AUDIOS
-                La pestaña elegida se distingue por RELLENO SÓLIDO, no por un borde más grueso.
-                Antes esto era un control segmentado: una caja con borde que contenía dos botones,
-                y el activo agregaba un TERCER borde adentro — tres recuadros anidados para decir
-                "estás acá". El relleno lo dice solo, y de lejos, que es lo que hace falta. */}
-            <View style={styles.innerTabBar}>
-              <Pressable
-                onPress={() => setInnerTab('habitos')}
-                style={[
-                  styles.innerTabBtn,
-                  { backgroundColor: innerTab === 'habitos' ? c.gold : 'transparent' },
-                ]}
-              >
-                <Text
-                  style={[
-                    t.micro,
-                    {
-                      color: innerTab === 'habitos' ? c.onGold : c.textSoft,
-                      fontFamily: innerTab === 'habitos' ? 'Jost_700Bold' : 'Jost_500Medium',
-                      textAlign: 'center',
-                    },
-                  ]}
-                >
-                  HÁBITOS & EVIDENCIAS ({currentDimensionHabits.length})
-                </Text>
-              </Pressable>
+            {/* «Hábitos y evidencias / Guías y audios». Guías y audios se ESCONDE mientras no tenga
+                contenido (decisión del dueño, 2026-10-05): hoy está vacío en las cinco dimensiones,
+                así que no se dibuja el selector y queda solo la lista. Cuando haya guías, vuelve como
+                `ControlSegmentado` (ver `seccionesDeLaDimension`).
 
-              <Pressable
-                onPress={() => setInnerTab('guias')}
-                style={[
-                  styles.innerTabBtn,
-                  { backgroundColor: innerTab === 'guias' ? c.gold : 'transparent' },
+                > Antes: dos píldoras en versalitas y, en la segunda, una tarjeta «EN DESARROLLO» que
+                > prometía «la Pastilla Renaser y las audioterapias de tu programa». Ese contenido ya
+                > se entrega en la lista de hábitos (Pastilla Renacer, Audioterapia semanal). */}
+            {secciones.length > 1 && (
+              <ControlSegmentado
+                opciones={[
+                  { valor: 'habitos', etiqueta: `Hábitos y evidencias (${currentDimensionHabits.length})` },
+                  { valor: 'guias', etiqueta: 'Guías y audios' },
                 ]}
-              >
-                <Text
-                  style={[
-                    t.micro,
-                    {
-                      color: innerTab === 'guias' ? c.onGold : c.textSoft,
-                      fontFamily: innerTab === 'guias' ? 'Jost_700Bold' : 'Jost_500Medium',
-                      textAlign: 'center',
-                    },
-                  ]}
-                >
-                  GUÍAS Y AUDIOS
-                </Text>
-              </Pressable>
-            </View>
+                valor={innerTab}
+                onCambiar={setInnerTab}
+                accessibilityLabel={`Secciones de ${selectedDimension.nombre}`}
+              />
+            )}
 
             {/* =================================================================== */}
             {/* PESTAÑA A: LISTA DE HÁBITOS CON SUBIDA DE EVIDENCIA                 */}
             {/* =================================================================== */}
-            {innerTab === 'habitos' && (
+            {(innerTab === 'habitos' || secciones.length === 1) && (
               <View style={{ gap: space.gapLg }}>
                 {/* =============================================================== */}
                 {/* PLANIFICAR LA CATEGORÍA — una sola opción, grande, arriba de     */}
@@ -1136,24 +1168,26 @@ export default function TrainingScreen() {
                 {/* NEGOCIO no son hábitos de este módulo y no traen `habitoId`.      */}
                 {/* =============================================================== */}
                 {habitosPlanificables > 0 && !programaSinArrancar && (
-                  <Pressable
+                  <Presionable
                     onPress={() => setPlanificarVisible(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Planificar ${selectedDimension.nombre}`}
                     style={[styles.planificarBigBtn, { backgroundColor: c.goldWash }]}
                   >
                     <View style={[styles.planificarIconBox, { backgroundColor: c.cardBgAlt }]}>
-                      <Icon name="clock" size={20} color={c.goldInk} />
+                      <Icon name="clock" size={TAMANO_ICONO.normal} color={c.goldInk} />
                     </View>
-                    <View style={{ flex: 1, flexShrink: 1, gap: 4 }}>
-                      <Text style={[t.cardTitle, { color: c.textStrong }]}>
-                        PLANIFICAR {selectedDimension.title}
+                    <View style={{ flex: 1, flexShrink: 1, gap: 2 }}>
+                      <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 17 }]}>
+                        Planificar {selectedDimension.nombre}
                       </Text>
                       <Text style={[t.small, { color: c.textSoft }]}>
-                        Hora, días y estado de tus {habitosPlanificables}{' '}
-                        {habitosPlanificables === 1 ? 'hábito' : 'hábitos'} · a todos o uno por uno
+                        Hora, días y pausa de tus {habitosPlanificables}{' '}
+                        {habitosPlanificables === 1 ? 'hábito' : 'hábitos'}
                       </Text>
                     </View>
-                    <Icon name="chevron" size={16} color={c.goldInk} />
-                  </Pressable>
+                    <Icon name="chevron" size={TAMANO_ICONO.normal} color={c.goldInk} />
+                  </Presionable>
                 )}
 
                 {/* El "AGREGAR HÁBITO" que vivía acá se eliminó (2026-09-07): armaba un objeto en
@@ -1164,8 +1198,20 @@ export default function TrainingScreen() {
                     aire grande (`gapLg`) queda para separar este bloque de los de al lado. */}
                 <View style={{ gap: 12 }}>
                   <View style={styles.habitsActionRow}>
-                    <MicroLabel>Prácticas activas ({currentDimensionHabits.length})</MicroLabel>
+                    <Text style={[t.body, { color: c.textSoft, fontFamily: 'Jost_500Medium' }]}>
+                      Prácticas activas ({currentDimensionHabits.length})
+                    </Text>
                   </View>
+
+                  {/* Un aviso que no es de ninguna tarjeta a la vista (el hábito nuevo de
+                      Planificar, o uno que ya no está en esta dimensión) va arriba de la lista. */}
+                  {confirmacion && !currentDimensionHabits.some(h => h.id === confirmacion.habitoId) && (
+                    <ConfirmacionEnLinea
+                      key={confirmacion.clave}
+                      texto={confirmacion.texto}
+                      onTerminar={() => setConfirmacion(null)}
+                    />
+                  )}
 
                   {/* Sin hábitos en esta dimensión: es un estado legítimo (día 0, plan sin
                       generar), no un hueco que haya que tapar con datos de relleno. */}
@@ -1181,7 +1227,7 @@ export default function TrainingScreen() {
                       }}
                     >
                       <Text style={[t.cardTitle, { color: c.text }]}>
-                        Todavía no hay hábitos en {selectedDimension.title}
+                        Todavía no hay hábitos en {selectedDimension.nombre}
                       </Text>
                       <Text style={[t.body, { color: c.textSoft }]}>
                         Cuando tu plan del día se genere, los vas a ver acá con su evidencia.
@@ -1190,7 +1236,13 @@ export default function TrainingScreen() {
                   )}
 
                   {/* Multiple Habits Card List */}
-                  {currentDimensionHabits.map(habit => (
+                  {currentDimensionHabits.map(habit => {
+                    const operable = habit.tieneTrackHoy && !programaSinArrancar;
+                    const accion = accionDeLaTarjeta(habit);
+                    const titulo = tituloVisible({ id: habit.habitoId ?? habit.id, title: habit.title }, renombre.titulos);
+                    const desplegado = cumplidoAbierto === habit.id && habit.done;
+                    const cumplido = desplegado ? detalleDelCumplido(habit) : null;
+                    return (
                     <View key={habit.id} style={{ gap: 6 }}>
                     <View
                       style={[
@@ -1201,30 +1253,43 @@ export default function TrainingScreen() {
                         },
                       ]}
                     >
+                      <View style={styles.habitFila}>
                       {/* Checkbox circular interactivo — deshabilitado sin track de hoy: no hay
                           ningún registro real que marcar (ver `tieneTrackHoy` en HabitItem).
                           Su borde SE QUEDA: es la única forma de ver una casilla vacía. El
-                          `hitSlop` lo lleva a zona de toque cómoda sin agrandar el dibujo. */}
-                      <Pressable
-                        onPress={() => habit.tieneTrackHoy && !programaSinArrancar && toggleHabitState(habit.id)}
-                        disabled={!habit.tieneTrackHoy || programaSinArrancar}
+                          `hitSlop` lo lleva a zona de toque cómoda sin agrandar el dibujo.
+                          2026-10-05: se hunde al tocarlo y vibra con el «tic» al marcar. */}
+                      <Presionable
+                        onPress={() => {
+                          if (!operable) return;
+                          if (!habit.done) tacto.seleccion();
+                          toggleHabitState(habit.id);
+                        }}
+                        disabled={!operable}
                         hitSlop={12}
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: habit.done, disabled: !operable }}
+                        accessibilityLabel={habit.done ? `${titulo}, cumplido` : `Marcar ${titulo}`}
                         style={[
                           styles.habitCheckCircle,
                           {
                             borderColor: habit.done ? c.success : c.tabInactive,
                             backgroundColor: habit.done ? c.success : 'transparent',
-                            opacity: habit.tieneTrackHoy && !programaSinArrancar ? 1 : 0.35,
+                            opacity: operable ? 1 : 0.35,
                           },
                         ]}
                       >
-                        {habit.done && <Icon name="check" size={14} color="#FFFFFF" strokeWidth={2.2} />}
-                      </Pressable>
+                        {habit.done && <Icon name="check" size={TAMANO_ICONO.chico} color={c.bg} strokeWidth={2.2} />}
+                      </Presionable>
 
                       {/* Habit Info & Tap to open Evidence */}
-                      <Pressable
-                        onPress={() => habit.tieneTrackHoy && !programaSinArrancar && openEvidenceModal(habit)}
-                        style={{ flex: 1, gap: 4 }}
+                      <Presionable
+                        onPress={() => operable && openEvidenceModal(habit)}
+                        accessibilityRole="button"
+                        accessibilityState={habit.done ? { expanded: desplegado } : undefined}
+                        accessibilityLabel={habit.done ? `${titulo}: ver lo que registraste` : titulo}
+                        contenedorStyle={{ flex: 1 }}
+                        style={{ gap: 4 }}
                       >
                         <View style={styles.habitMetaRow}>
                           {/* Sin borde: la etiqueta vivía dentro del borde de la tarjeta, que ya
@@ -1234,39 +1299,49 @@ export default function TrainingScreen() {
                               {habit.tag}
                             </Text>
                           </View>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                            <Icon name="fire" size={12} color={habit.streak > 0 ? c.goldInk : c.chevron} />
-                            <Text style={[t.micro, { color: c.textSoft, fontFamily: 'Jost_700Bold' }]}>
-                              {habit.streak} DÍAS
+                          {/* La racha: llama de Lucide a 16 (la de 12 se leía como una gota). */}
+                          <View style={styles.racha} accessibilityLabel={`Racha de ${habit.streak} días`}>
+                            <Icon name="flame" size={TAMANO_ICONO.chico} color={habit.streak > 0 ? c.goldInk : c.chevron} />
+                            <Text style={[t.small, { color: c.textSoft, fontFamily: 'Jost_500Medium' }]}>
+                              {habit.streak} {habit.streak === 1 ? 'día' : 'días'}
                             </Text>
                           </View>
                         </View>
 
-                        <Text
-                          style={[
-                            t.body,
-                            {
-                              color: habit.done ? c.textStrong : c.text,
-                              fontFamily: habit.done ? 'Jost_500Medium' : 'Jost_400Regular',
-                              textDecorationLine: habit.done ? 'line-through' : 'none',
-                              opacity: habit.done ? 0.85 : 1,
-                            },
-                          ]}
-                        >
-                          {tituloVisible({ id: habit.habitoId ?? habit.id, title: habit.title }, renombre.titulos)}
-                        </Text>
+                        <View style={styles.tituloConIcono}>
+                          {/* El ícono propio del hábito (2026-10-05): de línea, por su clave del
+                              catálogo. Antes la tarjeta no tenía ninguno y Planificar usaba emojis. */}
+                          {habit.icon ? (
+                            <Icon name={habit.icon} size={TAMANO_ICONO.normal} color={habit.done ? c.success : c.goldInk} />
+                          ) : null}
+                          <Text
+                            style={[
+                              t.body,
+                              {
+                                flex: 1,
+                                fontSize: 16,
+                                color: habit.done ? c.textStrong : c.text,
+                                fontFamily: habit.done ? 'Jost_500Medium' : 'Jost_400Regular',
+                                textDecorationLine: habit.done ? 'line-through' : 'none',
+                                opacity: habit.done ? 0.85 : 1,
+                              },
+                            ]}
+                          >
+                            {titulo}
+                          </Text>
+                        </View>
 
-                        {/* `flexWrap`: a tamaño de lectura, "Durante el día" + "Evidencia
-                            Sellada" no entran en una línea en pantallas angostas. */}
+                        {/* `flexWrap`: a tamaño de lectura, "Durante el día" + "Entregada"
+                            no entran en una línea en pantallas angostas. */}
                         <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                           <Text style={[t.small, { color: c.textSoft }]}>
                             {habit.time || 'Durante el día'}
                           </Text>
                           {habit.hasEvidence && (
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                              <Icon name="camera" size={13} color={c.success} />
+                              <Icon name="badgeCheck" size={TAMANO_ICONO.chico} color={c.success} />
                               <Text style={[t.small, { color: c.success, fontFamily: 'Jost_500Medium' }]}>
-                                Evidencia Sellada
+                                Entregada
                               </Text>
                             </View>
                           )}
@@ -1276,40 +1351,71 @@ export default function TrainingScreen() {
                             </Text>
                           )}
                         </View>
-                      </Pressable>
+                      </Presionable>
 
                       {/* Botón de evidencia, SOLO. El de "PLAN" que lo acompañaba se movió al
                           encabezado de la categoría (2026-09-07): en esta fila angosta competía con
                           lo único que la tarjeta tiene que hacer fácil, que es entregar la prueba.
                           Sin borde y con relleno: era un recuadro dentro del recuadro de la
                           tarjeta. El lavado verde sale ahora de `successWash` en vez del
-                          'rgba(78, 159, 118, 0.12)' suelto, que no era ningún color de la paleta. */}
-                      <Pressable
-                        onPress={() => habit.tieneTrackHoy && !programaSinArrancar && openEvidenceModal(habit)}
-                        disabled={!habit.tieneTrackHoy || programaSinArrancar}
+                          'rgba(78, 159, 118, 0.12)' suelto, que no era ningún color de la paleta.
+                          2026-10-05: el ícono dice lo que pasa (cámara, audífonos, la clase, el
+                          Muro, el ojo de lo ya hecho), en tipo oración. Despertar y Dormir siguen
+                          con «Subir»: registran la hora al instante (decisión del dueño). */}
+                      <Presionable
+                        onPress={() => operable && openEvidenceModal(habit)}
+                        disabled={!operable}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${accion.etiqueta}: ${titulo}`}
                         style={[
                           styles.evidenceBtn,
                           {
-                            backgroundColor: habit.hasEvidence ? c.successWash : c.goldWash,
-                            opacity: habit.tieneTrackHoy && !programaSinArrancar ? 1 : 0.35,
+                            backgroundColor: habit.done || habit.hasEvidence ? c.successWash : c.goldWash,
+                            opacity: operable ? 1 : 0.35,
                           },
                         ]}
                         hitSlop={8}
                       >
-                        <Icon name="camera" size={15} color={habit.hasEvidence ? c.success : c.goldInk} />
+                        <Icon name={accion.icono} size={TAMANO_ICONO.normal} color={habit.done || habit.hasEvidence ? c.success : c.goldInk} />
                         <Text
+                          numberOfLines={1}
                           style={[
-                            t.micro,
+                            t.small,
                             {
-                              color: habit.hasEvidence ? c.success : c.goldInk,
-                              fontFamily: 'Jost_700Bold',
+                              color: habit.done || habit.hasEvidence ? c.success : c.goldInk,
+                              fontFamily: 'Jost_500Medium',
                             },
                           ]}
                         >
-                          {habit.hasEvidence ? 'VER' : 'SUBIR'}
+                          {accion.etiqueta}
                         </Text>
-                      </Pressable>
+                      </Presionable>
+                      </View>
+
+                      {/* Lo cumplido, EN LA TARJETA (decisión del dueño, 2026-10-05): cuándo, cuánto
+                          pagó y lo que escribió. Antes era el diálogo «Ya está cumplido». */}
+                      {cumplido && (
+                        <View style={[styles.cumplido, { borderTopColor: c.divider }]}>
+                          <View style={styles.lineaCumplido}>
+                            <Icon name="checkCircle" size={TAMANO_ICONO.chico} color={c.success} />
+                            <Text style={[t.small, { color: c.success, fontFamily: 'Jost_500Medium', flexShrink: 1 }]}>
+                              {cumplido.linea}
+                            </Text>
+                          </View>
+                          {cumplido.escrito ? (
+                            <Text style={[t.body, { color: c.text }]}>«{cumplido.escrito}»</Text>
+                          ) : null}
+                        </View>
+                      )}
                     </View>
+
+                    {confirmacion?.habitoId === habit.id && (
+                      <ConfirmacionEnLinea
+                        key={confirmacion.clave}
+                        texto={confirmacion.texto}
+                        onTerminar={() => setConfirmacion(null)}
+                      />
+                    )}
 
                     {/* Cambiarle el nombre a las dos bebidas (D-127). Fuera de la tarjeta y no
                         adentro: la tarjeta entera ya es un Pressable que abre la evidencia, y un
@@ -1318,30 +1424,27 @@ export default function TrainingScreen() {
 
                         Opera con `habitoId` (el id del CATALOGO) y nunca con `id`, que aca es el
                         id del track del dia: con ese, el backend responde "Habito no encontrado".
-                        Pasó el 2026-09-15 al escribir esto. */}
+                        Pasó el 2026-09-15 al escribir esto.
+
+                        2026-10-05: lápiz de 18 en una fila de 44 (era el asterisco de Espíritu a
+                        11 px y un toque de 39), y en tipo oración. */}
                     {esRenombrable(habit.systemKey) && habit.habitoId && (
-                      <Pressable
+                      <Presionable
                         onPress={() => setHabitoARenombrar(habit)}
                         accessibilityRole="button"
                         accessibilityLabel={`Cambiarle el nombre a ${tituloVisible({ id: habit.habitoId, title: habit.title }, renombre.titulos)}`}
-                        hitSlop={8}
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          gap: 6,
-                          alignSelf: 'flex-start',
-                          paddingVertical: 4,
-                          paddingHorizontal: 2,
-                        }}
+                        contenedorStyle={{ alignSelf: 'flex-start' }}
+                        style={styles.filaRenombrar}
                       >
-                        <Icon name="spark" size={11} color={c.goldInk} />
-                        <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_500Medium' }]}>
-                          {renombre.titulos[habit.habitoId] ? 'CAMBIAR O QUITAR EL NOMBRE' : 'PONERLE OTRO NOMBRE'}
+                        <Icon name="pencil" size={18} color={c.goldInk} />
+                        <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_500Medium' }]}>
+                          {renombre.titulos[habit.habitoId] ? 'Cambiar o quitar el nombre' : 'Cambiar nombre'}
                         </Text>
-                      </Pressable>
+                      </Presionable>
                     )}
                     </View>
-                  ))}
+                    );
+                  })}
                 </View>
 
                 {/* Acá vivía "Consistencia de la Dimensión · 37 días consecutivos · 94 %".
@@ -1357,43 +1460,18 @@ export default function TrainingScreen() {
             {/* =================================================================== */}
             {/* PESTAÑA B: GUÍAS Y AUDIOS DE LA DIMENSIÓN                          */}
             {/* =================================================================== */}
-            {innerTab === 'guias' && (
-              <View style={{ gap: 12 }}>
-                {/*
-                  EN DESARROLLO (2026-09-05, decision del dueno del proyecto).
+            {/*
+              ESCONDIDA mientras no tenga contenido (decisión del dueño, 2026-10-05).
 
-                  Aca habia una maqueta entera presentada como contenido real: una "AUDIO GUIA
-                  RECOMENDADA" distinta por dimension, un boton "ESCUCHAR SESION GUIADA" que solo
-                  abria un Alert, y una "RUTA DE CLASES" de cinco clases inventadas de las cuales
-                  tres decian "Completada" sin que el aprendiz hubiera hecho ninguna. El peor era
-                  el tip de MACACO de MENTE: "Hoy registraste frustracion dos veces", una constante
-                  igual para todos, presentada como una observacion sobre el dia de la persona.
-
-                  Es el mismo problema que ya se corrigio con INITIAL_HABITS (ver el comentario
-                  arriba de DIMENSIONES_CONFIG): datos inventados con estado de "hecho". Por eso no
-                  se dejo el render apagado con los textos todavia en el archivo — se borraron los
-                  datos, para que nadie los vuelva a colgar de una pantalla.
-
-                  Cuando se implemente de verdad, va la Pastilla Renacer y las audioterapias
-                  (`/api/v1/spirit-audio/status`). Falta definir que muestra cada dimension: las
-                  audioterapias del backend son de Espiritu, y esta pestana existe en las cinco.
-                */}
-                <View style={[styles.guideHeroCard, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
-                  <View style={[styles.guideTag, { backgroundColor: c.gold, alignSelf: 'flex-start' }]}>
-                    <Text style={[t.micro, { color: '#1E1B18', fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
-                      EN DESARROLLO
-                    </Text>
-                  </View>
-                  <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 16, marginTop: 8 }]}>
-                    Guías y audios de {selectedDimension.title}
-                  </Text>
-                  <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, lineHeight: 18, marginTop: 6 }]}>
-                    Estamos preparando esta sección. Cuando esté lista vas a encontrar acá la
-                    Pastilla Renaser y las audioterapias de tu programa.
-                  </Text>
-                </View>
-              </View>
-            )}
+              Historia: acá había una maqueta entera presentada como contenido real (2026-09-05): una
+              "AUDIO GUIA RECOMENDADA" por dimension, un boton "ESCUCHAR SESION GUIADA" que solo abria
+              un Alert, y una "RUTA DE CLASES" de cinco clases inventadas de las cuales tres decian
+              "Completada". Se borraron los datos y quedó una tarjeta «EN DESARROLLO»; el 2026-10-05 el
+              dueño pidió no mostrar ni eso. Cuando se implemente de verdad, va la Pastilla Renacer y
+              las audioterapias (`/api/v1/spirit-audio/status`). Falta definir que muestra cada
+              dimension: las audioterapias del backend son de Espiritu, y esta pestana existe en las
+              cinco. Con contenido, `GUIAS_DE_LA_DIMENSION` deja de ser 0 y el selector de arriba vuelve.
+            */}
           </View>
         )}
       </ScrollView>
@@ -1428,7 +1506,7 @@ export default function TrainingScreen() {
         medicion={activeEvidenceHabit?.medicion ?? null}
         contexto={
           activeEvidenceHabit
-            ? `${activeEvidenceHabit.dimension} · ${activeEvidenceHabit.tag}`
+            ? `${DIMENSIONES_CONFIG.find(d => d.key === activeEvidenceHabit.dimension)?.nombre ?? activeEvidenceHabit.dimension} · ${activeEvidenceHabit.tag}`
             : undefined
         }
         notaInicial={activeEvidenceHabit?.respuestaTexto ?? activeEvidenceHabit?.note ?? ''}
@@ -1448,13 +1526,16 @@ export default function TrainingScreen() {
       <PlanificarDimensionModal
         visible={planificarVisible}
         dimension={selectedDimension?.title ?? ''}
+        nombreDimension={selectedDimension?.nombre}
         // Planificar necesita el inventario completo de la dimensión para poder reactivar un
         // hábito pausado que, correctamente, no tiene track en Training hoy.
         habits={planHabits.filter(h => h.dimension === selectedDimension?.key)}
         onCerrar={() => setPlanificarVisible(false)}
-        onGuardado={() => {
+        onGuardado={texto => {
           setPlanificarVisible(false);
           void recargarEntrenamiento();
+          // El hábito recién creado: se confirma en línea arriba de la lista (2026-10-05).
+          if (texto) confirmar(texto, null);
         }}
       />
 
@@ -1588,8 +1669,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: ESPACIO_PARA_LANZADOR,
   },
+  antetitulo: {
+    fontSize: 17,
+  },
+  // Sin `flex: 1` desde que la tarjeta es un `Presionable` (2026-10-05): ese estilo va a la caja
+  // que se hunde, dentro del área táctil, y con `flex: 1` adentro de algo sin alto se aplastaba.
   dimensionCard: {
-    flex: 1,
     minHeight: 80,
     borderWidth: 1,
     borderRadius: space.radius,
@@ -1612,18 +1697,41 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 8,
   },
-  detailTopBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingBottom: 10,
-    borderBottomWidth: 1,
+  nombreDimension: {
+    fontSize: 17,
+    lineHeight: 22,
+    flexShrink: 1,
   },
-  backTrainingBtn: {
+  /* «0 de 7 hoy»: cifra que cambia, con ancho fijo por dígito (AGENTS.md §4). */
+  cuentaDelDia: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontFamily: 'Jost_500Medium',
+    fontVariant: ['tabular-nums'],
+    flexShrink: 0,
+  },
+  // «‹ Cuerpo»: la ‹ en 48 × 48 y corrida a la izquierda para que el dibujo quede alineado con el
+  // borde del contenido, como en `CabeceraAdmin`.
+  cabeceraDetalle: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    minHeight: 44,
+    gap: 4,
+    marginTop: -4,
+  },
+  // El corrimiento va en el área táctil, no en el dibujo: así el toque sigue midiendo 48 × 48.
+  volverDetalleArea: {
+    marginLeft: -14,
+  },
+  volverDetalle: {
+    width: 48,
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tituloDetalle: {
+    fontSize: 24,
+    lineHeight: 30,
+    flexShrink: 1,
   },
   dimSummaryCard: {
     borderWidth: 1,
@@ -1651,21 +1759,6 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 2.5,
   },
-  // Fila de píldoras pelada: sin marco contenedor ni relleno de "riel". La estructura la dan el
-  // espacio y el relleno de la píldora elegida.
-  innerTabBar: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  innerTabBtn: {
-    flex: 1,
-    minHeight: 48,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: space.radiusSm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   habitsActionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1676,6 +1769,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: space.radius,
     padding: 14,
+    gap: 12,
+  },
+  habitFila: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
@@ -1699,101 +1795,45 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
+  racha: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  tituloConIcono: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  // 72 de ancho para todos: entra «Escuchar» o «Publicar» a 13 px en un renglón, y los botones de
+  // la lista quedan alineados aunque digan cosas distintas.
   evidenceBtn: {
-    minHeight: 48,
-    minWidth: 58,
-    paddingHorizontal: 10,
+    minHeight: 52,
+    minWidth: 72,
+    paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: space.radiusSm,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 3,
   },
-  consistencyBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: space.radius,
-    padding: space.cardPad,
-    gap: 14,
-  },
-  guideHeroCard: {
-    borderWidth: 1.2,
-    borderRadius: 18,
-    padding: 14,
-    gap: 8,
-  },
-  guideTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  guideTag: {
-    paddingHorizontal: 8,
-    paddingVertical: 2.5,
-    borderRadius: 6,
-  },
-  macacoContextCard: {
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 12,
+  // Lo cumplido, desplegado dentro de la tarjeta: separado por una línea y alineado con el título.
+  cumplido: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: 10,
+    paddingLeft: 40,
     gap: 6,
   },
-  classItemRow: {
+  lineaCumplido: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 8,
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.75)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 18,
-  },
-  modalCard: {
-    width: '100%',
-    maxWidth: 440,
-    borderWidth: 1.5,
-    borderRadius: 22,
-    padding: 20,
-    gap: 12,
-  },
-  modalInput: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 46,
-    fontSize: 13.5,
-  },
-  photoUploadBox: {
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    borderRadius: 16,
-    paddingVertical: 18,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tagPickerRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 6,
   },
-  tagOptionBtn: {
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-  },
-  sessionTagBadge: {
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
+  filaRenombrar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    minHeight: 44,
+    paddingHorizontal: 2,
   },
 });

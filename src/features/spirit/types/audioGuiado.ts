@@ -17,7 +17,7 @@ import type { SpiritDayApi } from './spirit.types';
  * la pantalla pinta, y cada origen lo construye con su propio adaptador.
  */
 export interface AudioGuiado {
-  /** El rótulo chico de arriba: `PASTILLA RENASER`, `AUDIOTERAPIA SEMANAL`. */
+  /** De qué audio se trata, en tipo oración (2026-10-05): `Pastilla Renaser`, `Audioterapia semanal`. */
   rotulo: string;
   /** Debajo del título: `Audio 2`, `Semana 3`. */
   subtitulo: string;
@@ -37,7 +37,7 @@ export interface AudioGuiado {
 /** La Pastilla del día. El comportamiento es el mismo que antes, campo por campo. */
 export function audioDeLaPastilla(dia: SpiritDayApi): AudioGuiado {
   return {
-    rotulo: 'PASTILLA RENASER',
+    rotulo: 'Pastilla Renaser',
     subtitulo: `Audio ${dia.day}`,
     titulo: dia.title,
     audioUrl: dia.audioUrl,
@@ -60,7 +60,7 @@ export function audioDeLaAudioterapia(
   yaEntregado: boolean
 ): AudioGuiado {
   return {
-    rotulo: 'AUDIOTERAPIA SEMANAL',
+    rotulo: 'Audioterapia semanal',
     subtitulo: `Semana ${semana}`,
     titulo,
     audioUrl: url,
