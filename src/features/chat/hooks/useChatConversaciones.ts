@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type SetStateAction } from 'react';
 
-import type { ChatConversation } from '../../../screens/ComunidadScreen';
+import type { ChatConversation, ChatMessage } from '../../../screens/ComunidadScreen';
 import { mensajeDeError } from '../../../services/http/apiClient';
 // Solo se LEE (no se toca `features/eventos/`): la misma relectura compartida que ya usa la lista
 // de Eventos, con sus pruebas. Mismo criterio que `objetivos` con `eventos/utils/zonaHoraria`.
@@ -15,6 +15,7 @@ import {
 } from '../api/chatMappers';
 import type { WireConversacionResumen, WireMensaje, WireMiembro } from '../types/chat.types';
 import { fusionarConLoQueHabia } from '../utils/refrescoDeLaLista';
+import { conCitaCompleta } from '../utils/citaDelMensaje';
 
 /** Marca de "todavía no se pidió para nadie" (distinta de `null`, que es un actor posible). */
 const SIN_PEDIR = Symbol('sin-pedir');
@@ -189,7 +190,8 @@ export function useChatConversaciones(actorId: string | null | undefined, activo
    */
   const registrarMensajeCreado = useCallback(
     (conversacion: ChatConversation, creado: WireMensaje): ChatConversation => {
-      const mensaje = mapearMensaje(creado, actorId);
+      // D-251: con un servidor anterior la respuesta trae `replyToId` sin el resumen de la cita.
+      const mensaje = conCitaCompleta(mapearMensaje(creado, actorId), creado.replyToId, conversacion.messages);
       const actualizada: ChatConversation = {
         ...conversacion,
         messages: [...conversacion.messages, mensaje],
@@ -201,10 +203,13 @@ export function useChatConversaciones(actorId: string | null | undefined, activo
     [actorId, setConversations]
   );
 
-  /** Envía un mensaje de TEXTO real. Para foto o audio va `useEnvioMediaChat`. */
+  /**
+   * Envía un mensaje de TEXTO real. Para foto o audio va `useEnvioMediaChat`. `citado` (D-251): el
+   * mensaje al que responde, si la persona eligió «Responder».
+   */
   const enviarMensajeTexto = useCallback(
-    async (conversacion: ChatConversation, texto: string): Promise<ChatConversation> => {
-      const creado = await chatApi.enviarMensajeTexto(conversacion.id, texto);
+    async (conversacion: ChatConversation, texto: string, citado?: ChatMessage | null): Promise<ChatConversation> => {
+      const creado = await chatApi.enviarMensajeTexto(conversacion.id, texto, citado?.id);
       return registrarMensajeCreado(conversacion, creado);
     },
     [registrarMensajeCreado]

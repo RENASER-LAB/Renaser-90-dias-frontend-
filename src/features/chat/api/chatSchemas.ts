@@ -73,7 +73,16 @@ const wireReplyPreviewSchema = z
        muestra como un mensaje no compatible en vez de una burbuja vacia. */
     type: z.string(),
     text: z.string().nullable(),
-    deletedAt: z.string().nullable(),
+    /* `nullish` desde D-251 (2026-10-05): un backend nuevo lo manda siempre en `null` y uno futuro
+       podría dejar de mandarlo; que falte no le quita nada a la cita. */
+    deletedAt: z.string().nullish(),
+    /* D-251: lo que hace falta para dibujar la cita sin otra llamada. Todo `nullish` con `catch`: un
+       backend anterior no lo manda, y un valor raro no puede costar la página (ni, vía `lastMessage`,
+       la bandeja). */
+    mediaMime: z.string().nullish().catch(null),
+    mediaDurationSeconds: z.number().nullish().catch(null),
+    mediaUrl: z.string().nullish().catch(null),
+    mine: z.boolean().nullish().catch(null),
   })
   .passthrough();
 
@@ -98,8 +107,13 @@ export const wireMensajeSchema = z
     mediaDurationSeconds: z.number().nullable(),
     mediaUrl: z.string().nullable(),
     hidden: z.boolean(),
-    replyToId: z.string().nullable(),
-    replyTo: wireReplyPreviewSchema.nullable(),
+    /* D-251 (2026-10-05): la cita de una respuesta. Más tolerante que antes —`nullish` y, en el
+       resumen, `catch`— porque desde que la app dibuja la cita, un resumen que no cumple el esquema
+       tiene que perder solo la cita, no la página entera de mensajes. */
+    replyToId: z.string().nullish(),
+    replyTo: wireReplyPreviewSchema.nullish().catch(null),
+    /* D-251: respondía a un mensaje que ya no está. Un backend anterior no lo manda. */
+    replyToDeleted: z.boolean().nullish().catch(null),
     createdAt: z.string(),
     /* D-208 (2026-09-27): la marca de un mensaje propio, `SENT` o `READ`. Lo más tolerante posible y
        por el mismo radio de explosión que `type`: un backend anterior no la manda, uno futuro puede

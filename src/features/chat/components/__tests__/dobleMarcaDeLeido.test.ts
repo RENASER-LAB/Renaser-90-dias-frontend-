@@ -5,6 +5,9 @@
  *
  * Y lo que no puede romper nada: un `status` desconocido o ausente (un APK nuevo contra un backend
  * viejo, o un backend futuro con un «entregado») se ve «✓».
+ *
+ * > **Actualizado 2026-10-05.** «✓» y «✓✓» dejaron de ser texto: son los íconos `check` y `checkCheck`
+ * > de 16 px (rediseño de Comunidad). Las pruebas buscan el ícono y su color; lo que verifican no cambió.
  */
 import { describe, expect, it, jest } from '@jest/globals';
 import React from 'react';
@@ -25,6 +28,7 @@ import { mapearMensaje } from '../../api/chatMappers';
 import { wireMensajesPageSchema } from '../../api/chatSchemas';
 import type { WireMensaje } from '../../types/chat.types';
 import { conLeidoHasta } from '../../utils/lecturaDelChat';
+import { Icon } from '../../../../components/Icon';
 import { BurbujaDeMensaje } from '../BurbujaDeMensaje';
 import { coloresDelChat } from '../coloresDelChat';
 
@@ -52,17 +56,14 @@ function dibujar(mensaje: ChatMessage): ReactTestRenderer {
   return raiz;
 }
 
-/** Todo el texto visible, en orden, para buscar frases. */
-function textos(raiz: ReactTestRenderer): string {
-  return raiz.root
-    .findAll(n => (n.type as unknown) === 'Text')
-    .map(n => React.Children.toArray(n.props.children).filter(h => typeof h === 'string' || typeof h === 'number').join(''))
-    .join(' | ');
+/** El ícono que dibuja la doble marca, o `undefined`. */
+function laDobleMarca(raiz: ReactTestRenderer) {
+  return raiz.root.findAll(n => n.type === Icon && n.props.name === 'checkCheck')[0];
 }
 
-/** El `Text` que dibuja la doble marca, o `undefined`. */
-function laDobleMarca(raiz: ReactTestRenderer) {
-  return raiz.root.findAll(n => (n.type as unknown) === 'Text' && n.props.children === ' ✓✓')[0];
+/** El ícono de la marca simple («✓»), o `undefined`. */
+function laMarcaSimple(raiz: ReactTestRenderer) {
+  return raiz.root.findAll(n => n.type === Icon && n.props.name === 'check')[0];
 }
 
 /** Crudo, como en el JSON: `status` puede traer cualquier cosa, también algo que no es texto. */
@@ -101,7 +102,8 @@ describe('BurbujaDeMensaje con la doble marca de leído', () => {
 
     const marca = laDobleMarca(raiz);
     expect(marca).toBeDefined();
-    expect(marca.props.style).toEqual({ color: COLORES.leido });
+    expect(marca.props.color).toBe(COLORES.leido);
+    expect(laMarcaSimple(raiz)).toBeUndefined();
     const hora = raiz.root.findAll(n => typeof n.props.accessibilityLabel === 'string' && n.props.accessibilityLabel.startsWith('Enviado'));
     expect(hora[0].props.accessibilityLabel).toMatch(/, leído$/);
   });
@@ -109,15 +111,14 @@ describe('BurbujaDeMensaje con la doble marca de leído', () => {
   it('SENT: un solo «✓», en el color de la hora', () => {
     const raiz = dibujar(delServidor({ status: 'SENT' }));
 
-    expect(textos(raiz)).toContain('✓');
-    expect(textos(raiz)).not.toContain('✓✓');
+    expect(laMarcaSimple(raiz)?.props.color).toBe(COLORES.hora);
     expect(laDobleMarca(raiz)).toBeUndefined();
   });
 
   it('un estado ausente, nulo o que esta versión no conoce no rompe nada: se ve «✓»', () => {
     for (const parcial of [{}, { status: null }, { status: 'DELIVERED' }, { status: 42 }]) {
       const raiz = dibujar(delServidor(parcial));
-      expect(textos(raiz)).toContain('✓');
+      expect(laMarcaSimple(raiz)).toBeDefined();
       expect(laDobleMarca(raiz)).toBeUndefined();
     }
   });
@@ -125,7 +126,8 @@ describe('BurbujaDeMensaje con la doble marca de leído', () => {
   it('el mensaje de otra persona no lleva marca, aunque diga READ', () => {
     const raiz = dibujar(delServidor({ senderId: 'u-luis', senderName: 'Luis Soto', status: 'READ' }));
 
-    expect(textos(raiz)).not.toContain('✓');
+    expect(laMarcaSimple(raiz)).toBeUndefined();
+    expect(laDobleMarca(raiz)).toBeUndefined();
   });
 
   it('pasa de «✓» a «✓✓» cuando llega el aviso en vivo con una marca posterior', () => {
@@ -143,6 +145,6 @@ describe('BurbujaDeMensaje con la doble marca de leído', () => {
     const raiz = dibujar(delServidor({ type: 'IMAGE', text: null, mediaBucket: 'chat', mediaPath: 'chat/c-1/fotos/1',
       mediaMime: 'image/jpeg', mediaUrl: 'https://s3/foto.jpg', status: 'READ' }));
 
-    expect(laDobleMarca(raiz)?.props.style).toEqual({ color: COLORES.leidoSobreFoto });
+    expect(laDobleMarca(raiz)?.props.color).toBe(COLORES.leidoSobreFoto);
   });
 });

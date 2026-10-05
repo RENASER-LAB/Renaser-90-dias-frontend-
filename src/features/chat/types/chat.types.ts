@@ -78,13 +78,26 @@ export interface WireConversacion {
   supportTraineeId?: string | null;
 }
 
-/** `MensajeResponse.ReplyPreviewResponse` (#29). */
+/**
+ * `MensajeResponse.ReplyPreviewResponse` (#29): el resumen del mensaje citado por una respuesta.
+ *
+ * Desde D-251 del backend (2026-10-05, responder a un mensaje) trae además lo que hace falta para
+ * dibujar la cita sin otra llamada: `mediaMime` (para reconocer un sticker igual que en la burbuja),
+ * `mediaDurationSeconds` (la nota de voz), `mediaUrl` (la miniatura de una foto, firmada) y `mine`
+ * (el citado lo escribió quien mira: «Tú»). Opcionales: un backend anterior no los manda.
+ * `deletedAt` queda siempre en `null` en un backend nuevo (un citado que ya no está llega como
+ * `replyToDeleted`), pero uno viejo lo usaba para un mensaje borrado.
+ */
 export interface WireReplyPreview {
   id: string;
   senderName: string | null;
   type: WireTipoMensajeRecibido;
   text: string | null;
-  deletedAt: string | null;
+  deletedAt?: string | null;
+  mediaMime?: string | null;
+  mediaDurationSeconds?: number | null;
+  mediaUrl?: string | null;
+  mine?: boolean | null;
 }
 
 /** `MensajeResponse`. `senderName`/`senderAvatarUrl`/`replyTo` solo vienen resueltos cuando el
@@ -113,8 +126,15 @@ export interface WireMensaje {
    * a propósito, igual que `senderName` (ver javadoc de `MensajeResponse` en el backend). */
   mediaUrl: string | null;
   hidden: boolean;
-  replyToId: string | null;
-  replyTo: WireReplyPreview | null;
+  /** El mensaje citado, si este responde a otro y el citado se puede mostrar. */
+  replyToId?: string | null;
+  /** Su resumen. Desde D-251 viene también en la respuesta de enviar (antes solo en el listado). */
+  replyTo?: WireReplyPreview | null;
+  /**
+   * D-251: este mensaje respondía a otro que ya no está (lo borraron, su cuenta se eliminó o lo
+   * retiraron). La burbuja dice «Mensaje eliminado», sin autor. Ausente en un backend anterior.
+   */
+  replyToDeleted?: boolean | null;
   createdAt: string;
   /**
    * La marca de un mensaje PROPIO (D-208 del backend, 2026-09-27): `SENT` (✓, el servidor lo guardó)
@@ -217,3 +237,27 @@ export interface WireParticipantesPage {
   page: number;
   size: number;
 }
+
+/** De qué es el mensaje citado: decide el ícono y el rótulo de la cita (D-251 del backend). */
+export type ClaseDeCita = 'texto' | 'foto' | 'sticker' | 'audio' | 'video';
+
+/**
+ * La cita de una respuesta, lista para dibujar: en la burbuja y en la barra «Respondiendo a…» de
+ * encima del campo. `eliminada` es un mensaje que respondía a otro que ya no está.
+ */
+export type CitaDelMensaje =
+  | {
+      estado: 'visible';
+      /** El mensaje citado: tocar la cita lleva a él si está cargado. */
+      id: string;
+      /** «Tú», su nombre, «Formación Renaser» o «Miembro Renaser». */
+      autor: string;
+      /** Lo escribió quien mira: va en dorado, como «Tú». */
+      esMia: boolean;
+      clase: ClaseDeCita;
+      /** Lo que se lee: el extracto, o el rótulo del adjunto («Foto», «Sticker», «Nota de voz (0:12)»). */
+      resumen: string;
+      /** Miniatura de la foto o del sticker citado (URL firmada o archivo local), si la hay. */
+      miniatura?: string;
+    }
+  | { estado: 'eliminada' };

@@ -60,4 +60,24 @@ export const tacto = {
       sinRomper(Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success));
     }
   },
+
+  /* Comunidad · chat (2026-10-05). */
+
+  /** Mantener presionado abrió un menú (el de un mensaje del chat): el «toc» del sistema. */
+  mantener(): void {
+    if (Platform.OS === 'android') {
+      vibrarEnAndroid(Haptics.AndroidHaptics.Long_Press, Haptics.AndroidHaptics.Long_Press);
+    } else if (Platform.OS === 'ios') {
+      sinRomper(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium));
+    }
+  },
+
+  /** Se tiró algo a propósito (la nota de voz que se estaba grabando): un golpe seco, sin alerta. */
+  descartar(): void {
+    if (Platform.OS === 'android') {
+      vibrarEnAndroid(Haptics.AndroidHaptics.Virtual_Key, Haptics.AndroidHaptics.Long_Press);
+    } else if (Platform.OS === 'ios') {
+      sinRomper(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium));
+    }
+  },
 };

@@ -81,7 +81,12 @@ import { useChatEnVivo } from '../features/chat/hooks/useChatEnVivo';
 import { useEnvioMediaChat } from '../features/chat/hooks/useEnvioMediaChat';
 import { BurbujaDeMensaje } from '../features/chat/components/BurbujaDeMensaje';
 import { SelectorDeStickers } from '../features/chat/components/SelectorDeStickers';
-import { STICKERS_RENASER } from '../features/chat/data/stickersRenaser';
+import { BarraDeCita } from '../features/chat/components/CitaDeRespuesta';
+import { MenuDelMensaje } from '../features/chat/components/MenuDelMensaje';
+import { citaDeMensajeCargado, conCitaCompleta } from '../features/chat/utils/citaDelMensaje';
+import { copiarAlPortapapeles, sePuedeCopiar } from '../features/chat/utils/portapapeles';
+import { Presionable } from '../components/Presionable';
+import { tacto } from '../utils/tacto';
 import { CabeceraDeChat } from '../features/chat/components/CabeceraDeChat';
 import { CambiarDiaScreen } from '../features/admin/screens/CambiarDiaScreen';
 import { AvisoDeEmergenciaEnSoporte } from '../features/emergencia/components/AvisoDeEmergenciaEnSoporte';
@@ -129,7 +134,7 @@ import { conversacionAPantallaCompleta } from '../features/chat/utils/pantallaCo
 import { OPCIONES_CON_PESTANAS, OPCIONES_SIN_PESTANAS } from '../navigation/pestanasOcultas';
 import { mapearMensaje, resumenDelUltimoMensaje } from '../features/chat/api/chatMappers';
 import { abrirConversacionDirecta } from '../features/chat/api/chatApi';
-import type { WireMensaje } from '../features/chat/types/chat.types';
+import type { CitaDelMensaje, WireMensaje } from '../features/chat/types/chat.types';
 import { marcarChatMontado } from '../features/renasia/state/chatEnPantalla';
 import { useRanking } from '../features/ranking/hooks/useRanking';
 import {
@@ -348,6 +353,9 @@ export interface ChatMessage {
      la bienvenida del soporte). Va a la izquierda, firmado «Formación Renaser» y con el fénix,
      aunque el servidor lo haya guardado a nombre de alguien. Ver `chatMappers.esMensajeDelPrograma`. */
   esDelPrograma?: boolean;
+  /* D-251 del backend (2026-10-05): responde a otro mensaje. La cita va arriba en la burbuja; ver
+     `features/chat/utils/citaDelMensaje.ts`. */
+  cita?: CitaDelMensaje;
 }
 
 export interface ChatConversation {
@@ -884,6 +892,50 @@ export default function ComunidadScreen() {
   useEffect(() => {
     setStickersVisible(false);
   }, [activeChat?.id, enTribu, groupInfoVisible]);
+  /*
+   * RESPONDER Y COPIAR (pedido del dueño, 2026-10-05; D-251 del backend). Mantener presionado un
+   * mensaje abre su hoja de opciones (`mensajeDelMenu`); «Responder» lo deja como cita de lo próximo
+   * que se mande —texto, foto, sticker o nota de voz— (`citando`, la barra de encima del campo), y
+   * «Copiar» lleva su texto al portapapeles. Cambiar de chat suelta las dos cosas.
+   */
+  const [mensajeDelMenu, setMensajeDelMenu] = useState<ChatMessage | null>(null);
+  const [citando, setCitando] = useState<ChatMessage | null>(null);
+  /** El mensaje al que se llegó tocando una cita: su renglón se tiñe un momento. */
+  const [destelloId, setDestelloId] = useState<string | null>(null);
+  /** «Copiado», un momento sobre la barra de escribir. */
+  const [avisoDelChat, setAvisoDelChat] = useState<string | null>(null);
+  const campoDelChatRef = useRef<TextInput | null>(null);
+  const puedeCopiar = useMemo(() => sePuedeCopiar(), []);
+  useEffect(() => {
+    setMensajeDelMenu(null);
+    setCitando(null);
+    setDestelloId(null);
+  }, [activeChat?.id]);
+  useEffect(() => {
+    if (!avisoDelChat) return undefined;
+    const reloj = setTimeout(() => setAvisoDelChat(null), 1600);
+    return () => clearTimeout(reloj);
+  }, [avisoDelChat]);
+  useEffect(() => {
+    if (!destelloId) return undefined;
+    const reloj = setTimeout(() => setDestelloId(null), 1200);
+    return () => clearTimeout(reloj);
+  }, [destelloId]);
+  const abrirMenuDelMensaje = useCallback((mensaje: ChatMessage) => {
+    tacto.mantener();
+    Keyboard.dismiss();
+    setMensajeDelMenu(mensaje);
+  }, []);
+  const responderA = useCallback((mensaje: ChatMessage) => {
+    setMensajeDelMenu(null);
+    setCitando(mensaje);
+    // Como WhatsApp: elegir «Responder» deja el teclado listo para escribir.
+    setTimeout(() => campoDelChatRef.current?.focus(), 250);
+  }, []);
+  const copiarMensaje = useCallback((texto: string) => {
+    setMensajeDelMenu(null);
+    void copiarAlPortapapeles(texto).then(copiado => setAvisoDelChat(copiado ? 'Copiado' : 'No se pudo copiar'));
+  }, []);
   const [playingAudioId, setPlayingAudioId] = useState<string | null>(null);
   /** Foto de chat abierta a pantalla completa; `null` si no hay ninguna. */
   /* La misma fuente que la burbuja (con la ruta como clave de caché, o la tarjeta empaquetada):
@@ -940,6 +992,30 @@ export default function ComunidadScreen() {
   );
   const elementosDelChat = useMemo(() => elementosDeLaListaInvertida(mensajesDelChat, new Date()), [mensajesDelChat]);
   const chatEsDeGrupo = activeChat !== null && activeChat.type !== 'direct';
+  /**
+   * Tocar una cita lleva al mensaje citado si está en lo cargado (D-251): la lista se mueve hasta
+   * dejarlo al medio y su renglón se tiñe un momento. Si todavía no se cargó (es más viejo que la
+   * página), no se hace nada: la cita ya dice qué decía.
+   */
+  const irAlMensaje = useCallback((id: string) => {
+    const indice = elementosDelChat.findIndex(elemento => elemento.tipo === 'mensaje' && elemento.mensaje.id === id);
+    if (indice < 0) return;
+    reintentoDeIrAlMensaje.current = false;
+    bajadaDelChat.listaRef.current?.scrollToIndex({ index: indice, viewPosition: 0.5, animated: true });
+    setDestelloId(id);
+  }, [elementosDelChat, bajadaDelChat.listaRef]);
+  /* Sin `getItemLayout` (las burbujas miden lo que miden), un renglón lejano todavía no medido no se
+     alcanza de una: se baja a una distancia estimada y se reintenta UNA vez, ya dibujado. */
+  const reintentoDeIrAlMensaje = useRef(false);
+  const alNoAlcanzarElMensaje = useCallback((info: { index: number; averageItemLength: number }) => {
+    const lista = bajadaDelChat.listaRef.current;
+    if (!lista) return;
+    lista.scrollToOffset({ offset: info.averageItemLength * info.index, animated: true });
+    if (reintentoDeIrAlMensaje.current) return;
+    reintentoDeIrAlMensaje.current = true;
+    setTimeout(() => lista.scrollToIndex({ index: info.index, viewPosition: 0.5, animated: true }), 150);
+  }, [bajadaDelChat.listaRef]);
+  const idResaltado = mensajeDelMenu?.id ?? destelloId;
   const renderElementoDelChat = useCallback(
     ({ item }: ListRenderItemInfo<ElementoDelChat<ChatMessage>>) =>
       item.tipo === 'dia' ? (
@@ -954,9 +1030,12 @@ export default function ComunidadScreen() {
           audioActivo={playingAudioId === item.mensaje.id}
           alActivarAudio={() => setPlayingAudioId(item.mensaje.id)}
           onAbrirFoto={setFotoChatAmpliada}
+          onMantener={abrirMenuDelMensaje}
+          onTocarCita={irAlMensaje}
+          resaltado={idResaltado === item.mensaje.id}
         />
       ),
-    [chatEsDeGrupo, paletaDelChat, playingAudioId]
+    [chatEsDeGrupo, paletaDelChat, playingAudioId, abrirMenuDelMensaje, irAlMensaje, idResaltado]
   );
 
   // Estados del Muro Social — `posts` sale del backend real (GET /api/v1/wall) a través de
@@ -1814,9 +1893,12 @@ export default function ComunidadScreen() {
     const texto = chatInputText.trim();
     if (!texto) return;
     setChatInputText('');
+    // La cita (D-251) se suelta solo si el mensaje llegó: si falla, vuelven el texto y la cita.
+    const citado = citando;
     try {
-      const actualizada = await enviarMensajeChatRemoto(activeChat, texto);
+      const actualizada = await enviarMensajeChatRemoto(activeChat, texto, citado);
       setActiveChat(actualizada);
+      if (citado) setCitando(actual => (actual?.id === citado.id ? null : actual));
     } catch (e) {
       Alert.alert('No se pudo enviar', mensajeDeError(e, 'Intenta de nuevo en un momento.'));
       setChatInputText(texto);
@@ -1836,10 +1918,12 @@ export default function ComunidadScreen() {
    * no hace falta parche.
    */
   const agregarMensajeEnviado = useCallback((wire: WireMensaje) => {
-    const mensaje = mapearMensaje(wire, user?.id ?? null);
+    const mapeado = mapearMensaje(wire, user?.id ?? null);
     const actualizar = (conversacion: ChatConversation): ChatConversation => {
       // Si se cerró el selector y se cambió de chat durante la subida, el mensaje sigue en su destino.
       if (conversacion.id !== wire.conversationId) return conversacion;
+      // D-251: un servidor anterior devuelve `replyToId` sin el resumen; la cita sale de lo cargado.
+      const mensaje = conCitaCompleta(mapeado, wire.replyToId, conversacion.messages);
       return {
         ...conversacion,
         messages: conversacion.messages.some(m => m.id === mensaje.id)
@@ -1849,6 +1933,8 @@ export default function ComunidadScreen() {
     };
     setActiveChat(prev => prev ? actualizar(prev) : prev);
     setConversations(anteriores => anteriores.map(actualizar));
+    // Lo que se mandó llevaba la cita (si había): la próxima ya no responde a nada.
+    if (wire.replyToId) setCitando(actual => (actual?.id === wire.replyToId ? null : actual));
   }, [user?.id]);
 
   const {
@@ -1858,19 +1944,29 @@ export default function ComunidadScreen() {
     enviarFoto,
     enviarSticker,
     alternarGrabacion,
-  } = useEnvioMediaChat(activeChat?.id ?? null, agregarMensajeEnviado);
+    cancelarGrabacion,
+  } = useEnvioMediaChat(activeChat?.id ?? null, agregarMensajeEnviado, citando);
 
   /**
-   * La cámara y la galería son dos permisos distintos y dos intenciones distintas, así que se
-   * pregunta en vez de elegir por la persona — igual que hace WhatsApp con el clip.
+   * La galería y la cámara, cada una con su botón dentro del campo (rediseño de Comunidad,
+   * 2026-10-05): son dos permisos y dos intenciones distintas, y ahora se eligen con un toque.
+   * > **Corregido 2026-10-05.** Antes un solo botón de cámara abría la ventana centrada «Enviar una
+   * > foto — ¿De dónde la sacamos?» con «Cámara / Galería / Cancelar»: un paso de más, y el ícono de
+   * > cámara prometía la cámara aunque después preguntara.
    */
-  const handleAdjuntarFoto = () => {
+  const handleAdjuntarFoto = (origen: 'camara' | 'galeria') => {
     if (enviandoMedia || grabando) return;
-    Alert.alert('Enviar una foto', '¿De dónde la sacamos?', [
-      { text: 'Cámara', onPress: () => void enviarFoto('camara') },
-      { text: 'Galería', onPress: () => void enviarFoto('galeria') },
-      { text: 'Cancelar', style: 'cancel' },
-    ]);
+    void enviarFoto(origen);
+  };
+
+  /**
+   * La papelera mientras se graba (pedido del dueño, 2026-10-05): tira la nota sin mandarla. Antes
+   * cortar la grabación la enviaba sí o sí. Sin alerta de «¿seguro?» —grabar de nuevo cuesta un
+   * toque—, con un golpe háptico en el mismo instante en que la barra vuelve a ser la de escribir.
+   */
+  const descartarGrabacion = () => {
+    tacto.descartar();
+    void cancelarGrabacion();
   };
 
   /* Acá vivían `evidenciaVisible` y `handleEvidenciaSubida`, el atajo para subir la evidencia de
@@ -3925,6 +4021,7 @@ export default function ComunidadScreen() {
               onScroll={bajadaDelChat.alDesplazarse}
               scrollEventThrottle={64}
               maintainVisibleContentPosition={posicionAMantener(bajadaDelChat.estado)}
+              onScrollToIndexFailed={alNoAlcanzarElMensaje}
               removeClippedSubviews={false}
               initialNumToRender={20}
               showsVerticalScrollIndicator={false}
@@ -3940,6 +4037,14 @@ export default function ComunidadScreen() {
                 onPress={bajadaDelChat.bajarAlFinal}
               />
             )}
+            {/* «Copiado» (2026-10-05): flota sobre los mensajes, no empuja la lista. */}
+            {avisoDelChat ? (
+              <View pointerEvents="none" style={styles.avisoDelChatFila}>
+                <Text accessibilityLiveRegion="polite" style={[styles.avisoDelChat, { backgroundColor: c.text, color: c.bg }]}>
+                  {avisoDelChat}
+                </Text>
+              </View>
+            ) : null}
           </View>
 
           {/*
@@ -3951,7 +4056,18 @@ export default function ComunidadScreen() {
           {/* Barra estilo WhatsApp (2026-09-26): un campo redondeado con los adjuntos adentro
               —cámara/galería— y afuera un solo botón redondo que es micrófono sin texto y enviar
               con texto. Hasta el 2026-09-29 adentro estaba también el círculo verde con ✓ para
-              subir la evidencia de un hábito; se quitó a pedido del dueño. */}
+              subir la evidencia de un hábito; se quitó a pedido del dueño.
+
+              Rediseño de Comunidad (2026-10-05): dentro del campo, a la izquierda, los stickers con
+              el ícono `smile` (antes la imagen de un sticker); a la derecha la galería (`image`) y
+              la cámara (`camera`), cada una directa (antes un solo botón con la ventana «¿Cámara o
+              Galería?»). Grabando, a la izquierda la papelera para descartar. Encima, «Respondiendo
+              a…» cuando se eligió Responder en el menú de un mensaje (D-251). */}
+          {citando ? (
+            <View style={{ backgroundColor: paletaDelChat.fondo, paddingTop: 4 }}>
+              <BarraDeCita cita={citaDeMensajeCargado(citando)} colores={paletaDelChat} onCerrar={() => setCitando(null)} />
+            </View>
+          ) : null}
           {!grabando && avisoDelLargoDelMensaje(chatInputText) ? (
             <Text
               accessibilityLiveRegion="polite"
@@ -3963,15 +4079,35 @@ export default function ComunidadScreen() {
           <View style={[styles.chatInputBar, { backgroundColor: paletaDelChat.fondo }]}>
             <View style={[styles.chatCampo, { backgroundColor: paletaDelChat.ajena, borderColor: c.border }]}>
               {grabando ? (
-                <View style={styles.chatGrabando}>
-                  <View style={[styles.grabandoPunto, { backgroundColor: c.danger }]} />
-                  <Text style={[styles.chatTextoCampo, styles.cifras, { color: c.text }]}>
-                    Grabando… {formatearSegundos(segundosGrabados)}
-                  </Text>
-                </View>
+                <>
+                  <Presionable
+                    onPress={descartarGrabacion}
+                    style={styles.mediaOptionBtn}
+                    accessibilityRole="button"
+                    accessibilityLabel="Descartar la nota de voz"
+                  >
+                    <Icon name="trash" size={24} color={c.danger} />
+                  </Presionable>
+                  <View style={styles.chatGrabando}>
+                    <View style={[styles.grabandoPunto, { backgroundColor: c.danger }]} />
+                    <Text style={[styles.chatTextoCampo, styles.cifras, { color: c.text }]}>
+                      Grabando… {formatearSegundos(segundosGrabados)}
+                    </Text>
+                  </View>
+                </>
               ) : (
                 <>
+                  <Presionable
+                    onPress={() => { Keyboard.dismiss(); setStickersVisible(true); }}
+                    disabled={enviandoMedia}
+                    style={[styles.mediaOptionBtn, { opacity: enviandoMedia ? 0.4 : 1 }]}
+                    accessibilityRole="button"
+                    accessibilityLabel="Enviar un sticker"
+                  >
+                    <Icon name="smile" size={24} color={c.goldInk} />
+                  </Presionable>
                   <TextInput
+                    ref={campoDelChatRef}
                     value={chatInputText}
                     onChangeText={setChatInputText}
                     placeholder="Mensaje"
@@ -3982,24 +4118,24 @@ export default function ComunidadScreen() {
                     style={[styles.chatTextoCampo, styles.textInputChat, { color: c.text }]}
                     accessibilityLabel="Escribe un mensaje"
                   />
-                  <Pressable
-                    onPress={() => { Keyboard.dismiss(); setStickersVisible(true); }}
+                  <Presionable
+                    onPress={() => handleAdjuntarFoto('galeria')}
                     disabled={enviandoMedia}
                     style={[styles.mediaOptionBtn, { opacity: enviandoMedia ? 0.4 : 1 }]}
                     accessibilityRole="button"
-                    accessibilityLabel="Enviar un sticker"
+                    accessibilityLabel="Enviar una foto de la galería"
                   >
-                    <Image source={STICKERS_RENASER[0].imagen} style={{ width: 32, height: 32 }} resizeMode="contain" />
-                  </Pressable>
-                  <Pressable
-                    onPress={handleAdjuntarFoto}
+                    <Icon name="image" size={24} color={c.goldInk} />
+                  </Presionable>
+                  <Presionable
+                    onPress={() => handleAdjuntarFoto('camara')}
                     disabled={enviandoMedia}
-                    hitSlop={4}
                     style={[styles.mediaOptionBtn, { opacity: enviandoMedia ? 0.4 : 1 }]}
-                    accessibilityLabel="Enviar una foto"
+                    accessibilityRole="button"
+                    accessibilityLabel="Tomar una foto con la cámara"
                   >
-                    <Icon name="camera" size={22} color={c.goldInk} />
-                  </Pressable>
+                    <Icon name="camera" size={24} color={c.goldInk} />
+                  </Presionable>
                 </>
               )}
             </View>
@@ -4033,6 +4169,16 @@ export default function ComunidadScreen() {
           </View>
 
         </KeyboardAvoidingView>
+      )}
+
+      {enTribu && activeChat && !groupInfoVisible && (
+        <MenuDelMensaje
+          mensaje={mensajeDelMenu}
+          alCerrar={() => setMensajeDelMenu(null)}
+          alResponder={responderA}
+          alCopiar={copiarMensaje}
+          puedeCopiar={puedeCopiar}
+        />
       )}
 
       {enTribu && activeChat && !groupInfoVisible && (
@@ -4900,7 +5046,8 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     flexDirection: 'row',
     alignItems: 'flex-end',
-    paddingLeft: 16,
+    // Los stickers (o la papelera, grabando) abren el campo por la izquierda con su propio aire.
+    paddingLeft: 2,
     paddingRight: 2,
   },
   chatGrabando: {
@@ -4919,6 +5066,22 @@ const styles = StyleSheet.create({
     height: 50,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  /* «Copiado»: una píldora sobre la barra de escribir, un momento. */
+  avisoDelChatFila: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 12,
+    alignItems: 'center',
+  },
+  avisoDelChat: {
+    fontFamily: 'Jost_500Medium',
+    fontSize: 15,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    overflow: 'hidden',
   },
   textInputChat: {
     flex: 1,

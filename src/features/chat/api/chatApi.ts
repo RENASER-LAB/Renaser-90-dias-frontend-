@@ -80,11 +80,20 @@ export async function obtenerMensajes(conversationId: string, cursor?: string): 
     'GET /api/v1/chat/conversations/{id}/messages');
 }
 
+/**
+ * `replyToId` (D-251 del backend, 2026-10-05): el mensaje de ESTA conversación al que responde.
+ * Solo viaja si hay cita: sin ella el cuerpo es el de siempre, campo por campo.
+ */
+function conCita<T extends object>(cuerpo: T, replyToId?: string | null): T | (T & { replyToId: string }) {
+  return replyToId ? { ...cuerpo, replyToId } : cuerpo;
+}
+
 /** Mensaje de solo texto. Para foto o audio va `enviarMensajeConMedia`, después de subir. */
-export async function enviarMensajeTexto(conversationId: string, text: string): Promise<WireMensaje> {
+export async function enviarMensajeTexto(conversationId: string, text: string,
+                                         replyToId?: string | null): Promise<WireMensaje> {
   const r = await apiFetch<unknown>(`/api/v1/chat/conversations/${conversationId}/messages`, {
     method: 'POST',
-    body: { type: 'TEXT', text },
+    body: conCita({ type: 'TEXT', text }, replyToId),
   });
   return validarRespuesta<WireMensaje>(wireMensajeSchema, r,
     'POST /api/v1/chat/conversations/{id}/messages');
@@ -160,17 +169,19 @@ export async function enviarMensajeConMedia(conversationId: string, params: {
   mime: string;
   durationSeconds?: number;
   text?: string;
+  /** D-251: el mensaje al que responde (una foto, un sticker o una nota de voz también citan). */
+  replyToId?: string | null;
 }): Promise<WireMensaje> {
   const r = await apiFetch<unknown>(`/api/v1/chat/conversations/${conversationId}/messages`, {
     method: 'POST',
-    body: {
+    body: conCita({
       type: params.tipo,
       text: params.text ?? null,
       mediaBucket: params.bucket,
       mediaPath: params.ruta,
       mediaMime: params.mime,
       mediaDurationSeconds: params.durationSeconds ?? null,
-    },
+    }, params.replyToId),
   });
   return validarRespuesta<WireMensaje>(wireMensajeSchema, r,
     'POST /api/v1/chat/conversations/{id}/messages (media)');

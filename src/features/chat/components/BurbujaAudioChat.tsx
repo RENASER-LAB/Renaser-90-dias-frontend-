@@ -1,6 +1,12 @@
 import React, { useCallback, useEffect } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
+
+import { Icon } from '../../../components/Icon';
+import { Presionable } from '../../../components/Presionable';
+
+/** El ▶ / ⏸ sobre el dorado: el mismo carbón de antes, ahora como ícono (2026-10-05). */
+const COLOR_DEL_ICONO = '#1E1B18';
 
 /**
  * La burbuja de una nota de voz, con reproducción real.
@@ -13,6 +19,10 @@ import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
  * <p>Antes esto era una animación falsa: un botón que solo alternaba un `useState` y nueve barritas
  * de altura fija que se pintaban doradas al tocar. No sonaba nada, porque no había ningún audio
  * que reproducir — el backend devolvía la clave del objeto en S3, no una URL abrible.
+ *
+ * <p>El botón (2026-10-05, rediseño de Comunidad): `play` / `pause` de `Icon` en un círculo de 44 px
+ * con `Presionable` (se hunde al apoyar el dedo). Antes eran los caracteres «▶» y «⏸», que Android
+ * dibujaba como emoji azul.
  */
 export function BurbujaAudioChat({
   uri,
@@ -69,15 +79,17 @@ export function BurbujaAudioChat({
         { backgroundColor: esMio ? colores.cardBgAlt : colores.cardBg, borderColor: colores.gold },
       ]}
     >
-      <Pressable
+      <Presionable
         onPress={alternar}
         style={[estilos.boton, { backgroundColor: colores.gold }]}
+        accessibilityRole="button"
         accessibilityLabel={estado.playing ? 'Pausar la nota de voz' : 'Reproducir la nota de voz'}
       >
-        <Text style={{ fontSize: 15, color: '#1E1B18', fontFamily: 'Jost_700Bold' }}>
-          {estado.playing ? '⏸' : '▶'}
-        </Text>
-      </Pressable>
+        {/* El triángulo se corre 1 px a la derecha: centrado por su caja se ve corrido a la izquierda. */}
+        <View style={estado.playing ? null : { marginLeft: 1 }}>
+          <Icon name={estado.playing ? 'pause' : 'play'} size={18} color={COLOR_DEL_ICONO} />
+        </View>
+      </Presionable>
 
       <View style={{ flex: 1, gap: 2 }}>
         {/*

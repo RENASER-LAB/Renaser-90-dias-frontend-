@@ -1,14 +1,18 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image, type ImageSource } from 'expo-image';
+import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import type { ChatMessage } from '../../../screens/ComunidadScreen';
+import { Icon } from '../../../components/Icon';
 import { useTheme } from '../../../theme/ThemeContext';
+import { CURVA_SALIDA } from '../../../theme/movimiento';
 import { colorDeRemitente } from '../utils/formatoChat';
 import { fuenteDeImagenDelChat } from '../utils/fuenteDeImagenDelChat';
 import { llevaDobleMarca } from '../utils/lecturaDelChat';
 import { FotoDelPrograma } from './AvatarDeChat';
 import { BurbujaAudioChat } from './BurbujaAudioChat';
+import { CitaEnLaBurbuja } from './CitaDeRespuesta';
 import type { ColoresDelChat } from './coloresDelChat';
 
 /** El fénix al lado de las burbujas del programa: chico, como los avatares de un grupo de WhatsApp. */
@@ -16,6 +20,16 @@ const TAM_FOTO_DEL_PROGRAMA = 34;
 
 /** Fundido corto al aparecer una foto que tuvo que bajar; desde la caché no se nota. */
 const TRANSICION_MS = 150;
+
+/** Mantener presionado abre el menú del mensaje: un poco antes que el medio segundo del sistema. */
+const ESPERA_DEL_MENU_MS = 350;
+
+/** El tinte del renglón resaltado aparece rápido (responde al dedo) y se apaga despacio. */
+const TINTE_ENTRA_MS = 120;
+const TINTE_SALE_MS = 450;
+
+/** La marca de los propios: el ícono de 16 junto a la hora (`check` / `checkCheck`, 2026-10-05). */
+const TAM_MARCA = 16;
 
 /**
  * Un mensaje, con la gramática de WhatsApp (2026-09-26): los propios a la derecha en dorado suave,
@@ -39,6 +53,14 @@ const TRANSICION_MS = 150;
  * > cierto hasta D-208: desde entonces el backend informa la lectura (no la entrega, que sigue sin
  * > saber), así que el «✓✓» volvió, pero ahora dice algo verdadero.
  *
+ * > **Actualizado 2026-10-05.** «✓» y «✓✓» ya no son caracteres de texto: son los íconos `check` y
+ * > `checkCheck` de 16 px, en los mismos colores (la hora / `leido`). Mismo significado.
+ *
+ * **Responder y copiar** (pedido del dueño, 2026-10-05; D-251 del backend): mantener presionada la
+ * burbuja abre el menú del mensaje (`onMantener`); mientras está abierto, el renglón queda teñido
+ * (`resaltado`), igual que el mensaje al que se llega tocando una cita. Si el mensaje responde a otro,
+ * la cita va arriba (`CitaEnLaBurbuja`) y tocarla lleva al citado (`onTocarCita`).
+ *
  * **Mensajes del programa** (`esDelPrograma`, 2026-09-27): los de sistema con texto o imagen, como
  * la bienvenida del soporte. Van a la izquierda con el fénix al lado y firmados «Formación
  * Renaser» en dorado en cualquier conversación, no solo en los grupos: no los manda una persona
@@ -53,6 +75,9 @@ export function BurbujaDeMensaje({
   audioActivo,
   alActivarAudio,
   onAbrirFoto,
+  onMantener,
+  onTocarCita,
+  resaltado = false,
 }: {
   mensaje: ChatMessage;
   /** En los grupos, los mensajes ajenos llevan el nombre de quien escribe. */
@@ -64,6 +89,12 @@ export function BurbujaDeMensaje({
   alActivarAudio: () => void;
   /** Recibe la misma fuente que la burbuja (con su clave de caché): el visor no vuelve a bajarla. */
   onAbrirFoto: (fuente: ImageSource | number) => void;
+  /** Mantener presionada la burbuja: abre el menú del mensaje (Responder, Copiar). */
+  onMantener?: (mensaje: ChatMessage) => void;
+  /** Tocar la cita: lleva al mensaje citado, si está cargado. */
+  onTocarCita?: (id: string) => void;
+  /** El renglón va teñido: su menú está abierto, o se llegó a él desde una cita. */
+  resaltado?: boolean;
 }) {
   const { c, mode } = useTheme();
   const delPrograma = !!mensaje.esDelPrograma;
@@ -76,7 +107,20 @@ export function BurbujaDeMensaje({
   const conFoto = mensaje.type === 'image_grid' && !!fuente && !sticker;
   const texto = mensaje.text?.trim() ? mensaje.text : null;
   const leido = llevaDobleMarca(mensaje);
+  /* El texto de la marca ya no se dibuja (son íconos), pero sigue midiendo el hueco de la hora: un
+     ícono de 16 px ocupa lo mismo que «✓✓» a 12,5 px. */
   const pie = `${mensaje.time}${propio ? (leido ? ' ✓✓' : ' ✓') : ''}`;
+  const mantener = onMantener ? () => onMantener(mensaje) : undefined;
+  const tinte = useSharedValue(resaltado ? 1 : 0);
+  useEffect(() => {
+    tinte.set(withTiming(resaltado ? 1 : 0, {
+      duration: resaltado ? TINTE_ENTRA_MS : TINTE_SALE_MS,
+      easing: CURVA_SALIDA,
+      // Es un cambio de color que explica algo, no un desplazamiento: queda también con «reducir movimiento».
+      reduceMotion: ReduceMotion.Never,
+    }));
+  }, [resaltado, tinte]);
+  const estiloDelTinte = useAnimatedStyle(() => ({ opacity: tinte.get() }));
   const etiquetaDeLaHora = `Enviado a las ${mensaje.time}${leido ? ', leído' : ''}`;
   const colorDelNombre = delPrograma
     ? c.goldInk
@@ -91,6 +135,10 @@ export function BurbujaDeMensaje({
         { marginTop: primeroDeLaTanda ? 8 : 2, marginBottom: ultimoDeLaTanda ? 2 : 0 },
       ]}
     >
+      <Animated.View
+        pointerEvents="none"
+        style={[StyleSheet.absoluteFill, { backgroundColor: colores.seleccion }, estiloDelTinte]}
+      />
       {/* El fénix va en el primero de la tanda; los siguientes dejan su lugar vacío para que las
           burbujas queden alineadas debajo de la primera. */}
       {delPrograma && (
@@ -98,7 +146,13 @@ export function BurbujaDeMensaje({
           {primeroDeLaTanda && <FotoDelPrograma size={TAM_FOTO_DEL_PROGRAMA} accessibilityLabel={mensaje.sender} />}
         </View>
       )}
-      <View
+      {/* Toda la burbuja escucha el «mantener presionado»; no es accesible como un solo elemento
+          para que el lector de pantalla siga llegando al texto, la foto y el audio por separado. */}
+      <Pressable
+        onLongPress={mantener}
+        delayLongPress={ESPERA_DEL_MENU_MS}
+        disabled={!mantener}
+        accessible={false}
         style={[
           styles.burbuja,
           { backgroundColor: fondo },
@@ -106,6 +160,7 @@ export function BurbujaDeMensaje({
           primeroDeLaTanda && (propio ? { borderTopRightRadius: 0 } : { borderTopLeftRadius: 0 }),
           conFoto && styles.burbujaConFoto,
           sticker && styles.burbujaSticker,
+          !!mensaje.cita && styles.burbujaConCita,
         ]}
       >
         {primeroDeLaTanda && !sticker && (
@@ -134,6 +189,16 @@ export function BurbujaDeMensaje({
           </Text>
         )}
 
+        {mensaje.cita && (
+          <CitaEnLaBurbuja
+            cita={mensaje.cita}
+            propia={propio}
+            colores={colores}
+            onTocar={onTocarCita}
+            onMantener={mantener}
+          />
+        )}
+
         {sticker && fuente && (
           <Image
             source={fuente}
@@ -146,7 +211,12 @@ export function BurbujaDeMensaje({
         )}
 
         {conFoto && (
-          <Pressable onPress={() => onAbrirFoto(fuente)} accessibilityLabel="Ver la foto en grande">
+          <Pressable
+            onPress={() => onAbrirFoto(fuente)}
+            onLongPress={mantener}
+            delayLongPress={ESPERA_DEL_MENU_MS}
+            accessibilityLabel="Ver la foto en grande"
+          >
             {/* El fondo ocupa ya el tamaño final: mientras baja, la burbuja no salta. */}
             <Image
               source={fuente}
@@ -158,10 +228,16 @@ export function BurbujaDeMensaje({
             />
             {!texto && (
               <View style={styles.horaSobreFoto}>
-                <Text style={styles.horaSobreFotoTexto} accessibilityLabel={etiquetaDeLaHora}>
-                  {leido ? mensaje.time : pie}
-                  {leido && <Text style={{ color: colores.leidoSobreFoto }}>{' ✓✓'}</Text>}
-                </Text>
+                <View style={styles.filaDeLaHora} accessible accessibilityLabel={etiquetaDeLaHora}>
+                  <Text style={styles.horaSobreFotoTexto}>{mensaje.time}</Text>
+                  {propio && (
+                    <Icon
+                      name={leido ? 'checkCheck' : 'check'}
+                      size={TAM_MARCA}
+                      color={leido ? colores.leidoSobreFoto : '#FFFFFF'}
+                    />
+                  )}
+                </View>
               </View>
             )}
           </Pressable>
@@ -192,7 +268,7 @@ export function BurbujaDeMensaje({
           ) : (
             <View style={styles.audioCaja}>
               <View style={[styles.audioBoton, { backgroundColor: c.border }]}>
-                <Text style={{ fontSize: 13, color: colores.hora }}>▶</Text>
+                <Icon name="play" size={18} color={colores.hora} />
               </View>
               <Text style={[styles.texto, { color: colores.hora }]}>Audio no disponible</Text>
             </View>
@@ -209,14 +285,24 @@ export function BurbujaDeMensaje({
         )}
 
         {(!conFoto || texto) && (
-          <Text style={[styles.hora, { color: colores.hora }, sticker && styles.horaSticker]} accessibilityLabel={etiquetaDeLaHora}>
-            {leido ? mensaje.time : pie}
+          <View
+            style={[styles.hora, styles.filaDeLaHora, sticker && styles.horaSticker]}
+            accessible
+            accessibilityLabel={etiquetaDeLaHora}
+          >
+            <Text style={[styles.horaTexto, { color: colores.hora }]}>{mensaje.time}</Text>
             {/* «✓» va en el color de la hora, como antes; «✓✓» en dorado, que es lo que separa «lo
                 leyeron» de «se guardó» de un vistazo (en WhatsApp, el azul). */}
-            {leido && <Text style={{ color: colores.leido }}>{' ✓✓'}</Text>}
-          </Text>
+            {propio && (
+              <Icon
+                name={leido ? 'checkCheck' : 'check'}
+                size={TAM_MARCA}
+                color={leido ? colores.leido : colores.hora}
+              />
+            )}
+          </View>
         )}
-      </View>
+      </Pressable>
     </View>
   );
 }
@@ -262,6 +348,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     paddingTop: 4,
   },
+  /* Con cita, la burbuja deja lugar para leerla aunque la respuesta sea un «ok». */
+  burbujaConCita: {
+    minWidth: 220,
+  },
   burbujaSticker: {
     backgroundColor: 'transparent',
     paddingHorizontal: 0,
@@ -303,9 +393,16 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 10,
     bottom: 5,
+  },
+  horaTexto: {
     fontFamily: 'Jost_400Regular',
     fontSize: 12.5,
     fontVariant: ['tabular-nums'],
+  },
+  filaDeLaHora: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
   },
   foto: {
     width: 240,
@@ -350,10 +447,11 @@ const styles = StyleSheet.create({
     paddingBottom: 18,
     borderWidth: 0,
   },
+  /* 44: el mínimo de un blanco táctil (2026-10-05; antes 40). */
   audioBoton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
