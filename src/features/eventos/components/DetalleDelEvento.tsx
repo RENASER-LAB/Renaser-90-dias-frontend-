@@ -3,10 +3,11 @@ import { Linking, StyleSheet, Text, View } from 'react-native';
 
 import { Alert } from '../../../components/Alerta';
 import { BotonPeligro, BotonPrincipal, BotonSecundario } from '../../../components/Legible';
+import { LogoDeMarca } from '../../../components/LogoDeMarca';
 import { useTheme } from '../../../theme/ThemeContext';
 import type { Asistencia, Ocurrencia } from '../types/eventos.types';
 import { sePuedeEditarEnLaApp } from '../utils/formularioDeEvento';
-import { linkParaUnirme, nombreDelLink } from '../utils/linkDelEvento';
+import { linkParaUnirme, marcaDelLink, nombreDelLink } from '../utils/linkDelEvento';
 import { duracionEnPalabras, fechaYHora } from '../utils/textosDeFecha';
 import { BotonVolver, EtiquetaAsistencia, LETRA, Parrafo } from './piezas';
 
@@ -38,6 +39,7 @@ export function DetalleDelEvento({
   const { c } = useTheme();
   const { evento } = oc;
   const link = linkParaUnirme(evento);
+  const marca = link ? marcaDelLink(link) : null;
   const duracion = duracionEnPalabras(oc.duracionMinutos);
   const vas = oc.asistencia === 'GOING';
   const noVas = oc.asistencia === 'NOT_GOING';
@@ -81,7 +83,10 @@ export function DetalleDelEvento({
 
       {link ? (
         <View style={{ gap: 8 }}>
-          <Parrafo>Es por {nombreDelLink(link)}.</Parrafo>
+          <View style={estilos.porFila}>
+            {marca ? <LogoDeMarca marca={marca} size={20} decorativo /> : null}
+            <Parrafo>Es por {nombreDelLink(link)}.</Parrafo>
+          </View>
           {vas ? (
             <BotonPrincipal etiqueta="Unirme" icono="play" onPress={unirme} accessibilityLabel={`Unirme por ${nombreDelLink(link)}`} />
           ) : (
@@ -140,5 +145,6 @@ const estilos = StyleSheet.create({
   cuando: { fontFamily: 'Jost_500Medium', fontSize: 17, lineHeight: 23 },
   subtitulo: { fontFamily: 'Jost_500Medium', fontSize: LETRA.titulo, lineHeight: 24 },
   fila: { flexDirection: 'row', gap: 10 },
+  porFila: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   mitad: { flex: 1 },
 });

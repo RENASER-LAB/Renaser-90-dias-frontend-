@@ -145,6 +145,11 @@ export function Icon({ name, size = 20, color, strokeWidth = 1.1 }: Props) {
           <Path {...s} d="M11 2L3.5 11h6L8.5 18 16.5 9h-6L11 2z" />
         </Svg>
       );
+    /* `google` y `apple` son LOGOS, no íconos de interfaz, y están de salida: el reemplazo es
+       `LogoDeMarca` (los archivos oficiales de svgl, con sus colores; 2026-10-05). Estos de acá
+       pintan la marca de un solo color, que es justo lo que las guías de Google y Apple piden no
+       hacer. Quedan mientras `LoginScreen` los use; cuando pase a `LogoDeMarca`, se borran los dos
+       casos y sus nombres de `IconName`. No sumar usos nuevos. */
     case 'google':
       return (
         <Svg width={size} height={size} viewBox="0 0 24 24">

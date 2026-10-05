@@ -2,12 +2,13 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '../../../components/Icon';
+import { LogoDeMarca } from '../../../components/LogoDeMarca';
 import { useTheme } from '../../../theme/ThemeContext';
 import { CursoPortada } from '../../academy/components/CursoPortada';
 import type { Ocurrencia } from '../types/eventos.types';
 import { agruparPorMes, soloElMes } from '../utils/calendarioDelMes';
 import { rotuloDelTipo } from '../utils/formularioDeEvento';
-import { linkParaUnirme, nombreDelLink } from '../utils/linkDelEvento';
+import { linkParaUnirme, marcaDelLink, nombreDelLink } from '../utils/linkDelEvento';
 import { diaRelativo, duracionEnPalabras } from '../utils/textosDeFecha';
 import { fechaEnZona, horaEnZona, sumarDiasIso } from '../utils/zonaHoraria';
 import { EtiquetaAsistencia, LETRA } from './piezas';
@@ -77,6 +78,7 @@ function TarjetaComoCurso({
   const duracion = duracionEnPalabras(oc.duracionMinutos);
   const link = linkParaUnirme(oc.evento);
   const donde = link ? nombreDelLink(link) : oc.evento.tipoUbicacion === 'ADDRESS' ? oc.evento.valorUbicacion : null;
+  const marca = link ? marcaDelLink(link) : null;
   const rotulo = rotuloDelTipo(oc.evento.tipoEvento);
 
   return (
@@ -109,7 +111,11 @@ function TarjetaComoCurso({
         </View>
         {donde ? (
           <View style={estilos.donde}>
-            <Icon name={link ? 'play' : 'users'} size={18} color={c.goldInk} />
+            {marca ? (
+              <LogoDeMarca marca={marca} size={18} decorativo />
+            ) : (
+              <Icon name={link ? 'play' : 'users'} size={18} color={c.goldInk} />
+            )}
             <Text style={[estilos.dondeTexto, { color: c.textSoft }]} numberOfLines={2}>
               {donde}
             </Text>
