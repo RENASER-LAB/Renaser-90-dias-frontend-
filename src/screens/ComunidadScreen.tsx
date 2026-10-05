@@ -2466,9 +2466,9 @@ export default function ComunidadScreen() {
     setSubiendoPublicacion(true);
     try {
       await publicarOptimista(texto, fotos, nombreUsuario, categoria);
-      // Confirmada por el backend: se dice en línea y vibra una vez (`tacto.logro`).
+      /* Confirmada por el backend: se dice en línea. Sin háptico acá: ya vibró `NuevaPublicacion`
+         con `tacto.logro()` en el toque de «Publicar», y es una sola acción (una vibración). */
       setConfirmacionMuro({ clave: Date.now(), texto: 'Publicado en el Muro.' });
-      tacto.logro();
       // El arranque guiado espera este momento para pasar al Pacto. Se avisa DESPUÉS del `await`,
       // con la publicación ya confirmada por el backend, y nunca en el `catch`: un post que falló
       // y se revirtió no es un primer post. El aviso solo adelanta lo que igual se confirma contra

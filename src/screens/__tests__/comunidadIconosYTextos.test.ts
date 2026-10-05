@@ -124,7 +124,10 @@ describe('Comunidad: los avisos de éxito ya no interrumpen', () => {
     for (const viejo of ['¡Publicación Compartida!', '¡Hábito completado!', '¡Excelente Progreso!', '¡Curso Completado!', "'Lección actualizada'"]) {
       expect(COMUNIDAD).not.toContain(viejo);
     }
-    expect(COMUNIDAD).toMatch(/setConfirmacionMuro\(\{ clave: Date\.now\(\), texto: 'Publicado en el Muro\.' \}\);\s*tacto\.logro\(\);/);
+    // Publicar vibra una sola vez: en el toque de «Publicar» (`NuevaPublicacion`), no otra al confirmarse.
+    expect(COMUNIDAD).toMatch(/setConfirmacionMuro\(\{ clave: Date\.now\(\), texto: 'Publicado en el Muro\.' \}\);/);
+    expect(COMUNIDAD).not.toMatch(/texto: 'Publicado en el Muro\.' \}\);\s*tacto\.logro\(\);/);
+    expect(sinComentarios(leer('features/community/components/NuevaPublicacion.tsx'))).toMatch(/if \(puede\) tacto\.logro\(\);/);
     expect(COMUNIDAD).toMatch(/setConfirmacionDePublicacion\(\{[\s\S]{0,200}\}\);\s*tacto\.logro\(\);/);
     expect(COMUNIDAD).toMatch(/<ConfirmacionEnLinea/);
   });
