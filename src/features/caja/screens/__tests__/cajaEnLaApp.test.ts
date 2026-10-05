@@ -34,7 +34,8 @@ describe('la Caja Renaser en la app', () => {
   it('Yo muestra la fila solo si hay algo que mostrar, y abre la caja desde el aviso', () => {
     const yo = leer('screens/YoScreen.tsx');
     expect(yo).toMatch(/miCaja\.visible && miCaja\.caja \? \(/);
-    expect(yo).toMatch(/<MicroLabel>Tu Caja Renaser<\/MicroLabel>/);
+    // Desde el rediseño del 2026-10-05 es una fila de la lista de Yo, con su ícono (`package`).
+    expect(yo).toMatch(/titulo="Tu Caja Renaser"/);
     expect(yo).toMatch(/params\?\.abrirCaja/);
     expect(yo).toMatch(/<MiCajaScreen caja=\{miCaja\.caja\}/);
   });

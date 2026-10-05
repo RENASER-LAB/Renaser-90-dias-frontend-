@@ -46,6 +46,8 @@ export type EstadoEtapa = 'completada' | 'en_progreso' | 'pendiente' | 'desconoc
 export type EtapasOnboarding = {
   /** Firmó el Pacto. Dato real: `pactSignedAt`. */
   pacto: EstadoEtapa;
+  /** Cuándo lo firmó (`pactSignedAt`, ISO), para «Firmado el …» en Yo (2026-10-05). */
+  pactoFirmadoEn: string | null;
   /** Terminó el Mapa de Renacimiento. Dato real: `stageCompleted`. */
   mapaRenacimiento: EstadoEtapa;
   /** Cuántas etapas se pueden dar por completadas con datos reales. */
@@ -54,6 +56,7 @@ export type EtapasOnboarding = {
 
 const SIN_DATOS: EtapasOnboarding = {
   pacto: 'desconocido',
+  pactoFirmadoEn: null,
   mapaRenacimiento: 'desconocido',
   completadas: 0,
 };
@@ -86,6 +89,7 @@ export function useEtapasOnboarding() {
 
       setEtapas({
         pacto,
+        pactoFirmadoEn: estado?.pactSignedAt ?? null,
         mapaRenacimiento,
         completadas: [pacto, mapaRenacimiento].filter(e => e === 'completada').length,
       });

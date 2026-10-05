@@ -170,11 +170,14 @@ describe('Eliminar mi cuenta', () => {
 });
 
 describe('Yo abre la pantalla', () => {
-  it('fila discreta al final de Yo, a pantalla completa, con el logout del AuthContext', () => {
+  /* > **Corregido 2026-10-05 (rediseño de Yo, decisión 10 del dueño).** Decía «fila discreta al final
+     > de Yo»: era un enlace subrayado al pie de Yo. Pasó a Ajustes, al final y en rojo, para que se
+     > encuentre (Google Play lo exige). */
+  it('fila roja al final de Ajustes, a pantalla completa, con el logout del AuthContext', () => {
     const fs = jest.requireActual<typeof import('fs')>('fs');
     const path = jest.requireActual<typeof import('path')>('path');
     const yo = fs.readFileSync(path.join(__dirname, '../../../../screens/YoScreen.tsx'), 'utf8');
-    expect(yo).toMatch(/accessibilityLabel="Eliminar mi cuenta"/);
+    expect(yo).toMatch(/titulo="Eliminar mi cuenta"\s+peligro/);
     expect(yo).toMatch(/<EliminarMiCuentaScreen onVolver=\{\(\) => setEliminandoCuenta\(false\)\} onCerrada=\{logout\} \/>/);
   });
 });
