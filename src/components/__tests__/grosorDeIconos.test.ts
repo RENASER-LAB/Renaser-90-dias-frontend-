@@ -49,6 +49,7 @@ const DE_LINEA: IconName[] = [
   'clock', 'heart', 'brain', 'stack', // caja de 22
   'newspaper', 'bookOpen', 'quote', 'globe', 'headset', 'messageCircle', 'video', 'fileText', 'link', 'pencil', 'idCard', 'layoutGrid', // caja de 24
   'forward', 'imagePlus', 'smile', 'trash', 'checkCheck', 'reply', 'copy', // caja de 24, de las hojas y del chat (entraron en paralelo)
+  'lifeBuoy', 'alarmClock', 'settings', 'images', 'listChecks', 'compass', 'package', 'signature', // caja de 24, de Yo (2026-10-05)
   'chevron', 'arrow', 'filter', 'volume',
 ];
 
@@ -112,6 +113,14 @@ describe('Icon.tsx: cada caja con su trazo', () => {
       esperado[d.caja] ? d.trazos.filter(t => t !== esperado[d.caja]).map(t => `${d.caja} usa ${t}`) : []
     );
     expect(mal).toEqual([]);
+  });
+
+  it('los íconos nuevos de Yo están, en su bloque y en el tipo', () => {
+    expect(fuente).toMatch(/\/\* Yo \*\//);
+    for (const nombre of ['lifeBuoy', 'alarmClock', 'settings', 'images', 'listChecks', 'compass', 'package', 'signature']) {
+      expect(fuente).toContain(`case '${nombre}':`);
+      expect(fuente).toMatch(new RegExp(`\\| '${nombre}'`));
+    }
   });
 
   it('los íconos nuevos de Comunidad (tanda 1) están, en su bloque y en el tipo', () => {

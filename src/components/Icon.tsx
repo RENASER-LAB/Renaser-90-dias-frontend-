@@ -10,7 +10,8 @@ export type IconName =
   | 'close' | 'target' | 'thumbsUp' | 'mic' | 'search'
   | 'forward' | 'imagePlus'
   | 'smile' | 'trash' | 'checkCheck' | 'reply' | 'copy'
-  | 'newspaper' | 'bookOpen' | 'quote' | 'globe' | 'headset' | 'messageCircle' | 'video' | 'fileText' | 'link' | 'pencil' | 'idCard' | 'layoutGrid';
+  | 'newspaper' | 'bookOpen' | 'quote' | 'globe' | 'headset' | 'messageCircle' | 'video' | 'fileText' | 'link' | 'pencil' | 'idCard' | 'layoutGrid'
+  | 'lifeBuoy' | 'alarmClock' | 'settings' | 'images' | 'listChecks' | 'compass' | 'package' | 'signature';
 
 /**
  * Grosor del trazo, en píxeles REALES de pantalla, a cualquier tamaño (decisión del dueño,
@@ -584,6 +585,73 @@ export function Icon({ name, size = 20, color, strokeWidth }: Props) {
         <Svg width={size} height={size} viewBox="0 0 24 24">
           <Rect {...s24} x={8} y={8} width={14} height={14} rx={2} />
           <Path {...s24} d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+        </Svg>
+      );
+    /* Yo */
+    /* Yo y su Centro de Perfil y Ajustes (rediseño aprobado por el dueño, 2026-10-05; mosaico
+       `trainingyo-iconos-inventario.png`, filas de Yo y Ajustes). Trazos de Lucide (ISC) en su caja de
+       24, con `s24`. Reemplazan metáforas equivocadas: el ♡ de «Tuve una emergencia» (se leía «me
+       gusta»), el cilindro de base de datos de «Mi Onboarding», el reloj de «Planificar» en Alarmas,
+       los «⋯» que abrían Ajustes, la cámara de «Mis evidencias» (prometía sacar una foto), el asterisco
+       de Espíritu en «El Método», y el `doc` repetido de «Mi ficha y Pacto». */
+    case 'lifeBuoy':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Circle {...s24} cx={12} cy={12} r={10} />
+          <Circle {...s24} cx={12} cy={12} r={4} />
+          <Path {...s24} d="m4.93 4.93 4.24 4.24M14.83 9.17l4.24-4.24M14.83 14.83l4.24 4.24M9.17 14.83l-4.24 4.24" />
+        </Svg>
+      );
+    case 'alarmClock':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Circle {...s24} cx={12} cy={13} r={8} />
+          <Path {...s24} d="M12 9v4l2 2M5 3 2 6M22 6l-3-3M6.38 18.7 4 21M17.64 18.67 20 21" />
+        </Svg>
+      );
+    case 'settings':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path
+            {...s24}
+            d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
+          />
+          <Circle {...s24} cx={12} cy={12} r={3} />
+        </Svg>
+      );
+    case 'images':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M18 22H4a2 2 0 0 1-2-2V6M22 13l-1.296-1.296a2.41 2.41 0 0 0-3.408 0L11 18" />
+          <Circle {...s24} cx={12} cy={8} r={2} />
+          <Rect {...s24} x={6} y={2} width={16} height={16} rx={2} />
+        </Svg>
+      );
+    case 'listChecks':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="m3 17 2 2 4-4M3 7l2 2 4-4M13 6h8M13 12h8M13 18h8" />
+        </Svg>
+      );
+    case 'compass':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z" />
+          <Circle {...s24} cx={12} cy={12} r={10} />
+        </Svg>
+      );
+    case 'package':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z" />
+          <Path {...s24} d="M12 22V12M3.3 7l7.703 4.734a2 2 0 0 0 1.994 0L20.7 7M7.5 4.27l9 5.15" />
+        </Svg>
+      );
+    case 'signature':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="m21 17-2.156-1.868A.5.5 0 0 0 18 15.5v.5a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1c0-2.545-3.991-3.97-8.5-4a1 1 0 0 0 0 5c4.153 0 4.745-11.295 5.708-13.5a2.5 2.5 0 1 1 3.31 3.284" />
+          <Path {...s24} d="M3 21h18" />
         </Svg>
       );
     case 'chevron':
