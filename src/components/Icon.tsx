@@ -11,6 +11,7 @@ export type IconName =
   | 'forward' | 'imagePlus'
   | 'smile' | 'trash' | 'checkCheck' | 'reply' | 'copy'
   | 'gauge' | 'map' | 'listChecks' | 'flame' | 'flag'
+  | 'house' | 'clipboardList' | 'bicepsFlexed' | 'usersThree' | 'circleUser'
   | 'activity' | 'heartHandshake' | 'calendarRange'
   | 'newspaper' | 'bookOpen' | 'quote' | 'globe' | 'headset' | 'messageCircle' | 'video' | 'fileText' | 'link' | 'pencil' | 'idCard' | 'layoutGrid'
   | 'lifeBuoy' | 'alarmClock' | 'settings' | 'images' | 'compass' | 'package' | 'signature'
@@ -862,6 +863,53 @@ export function Icon({ name, size = 20, color, strokeWidth }: Props) {
         <Svg width={size} height={size} viewBox="0 0 24 24">
           <Rect {...s24} x={3} y={4} width={18} height={18} rx={2} />
           <Path {...s24} d="M16 2v4M3 10h18M8 2v4M17 14h-6M13 18H7M7 14h.01M17 18h.01" />
+        </Svg>
+      );
+    /* Barra de pestañas */
+    /* Los cinco íconos de la barra de abajo (pedido del dueño, 2026-10-05: «íconos que le
+       correspondan»; mosaico `barra-iconos-opciones.png`). Caja de 24 y trazo `s24`. Forma de Lucide
+       (ISC) salvo `usersThree`: Lucide no tiene un grupo de tres, y `users` (dos personas) ya es la
+       Tribu dentro de Comunidad. `usersThree` es la persona de `users` adelante y dos detrás, como el
+       ícono de «Comunidades» de WhatsApp. Ninguno de los cinco se usa para otra cosa en la app
+       (`barraDePestanasIconos.test.ts` lo vigila). */
+    case 'house':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" />
+          <Path {...s24} d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+        </Svg>
+      );
+    case 'clipboardList':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Rect {...s24} x={8} y={2} width={8} height={4} rx={1} />
+          <Path {...s24} d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+          <Path {...s24} d="M12 11h4M12 16h4M8 11h.01M8 16h.01" />
+        </Svg>
+      );
+    case 'bicepsFlexed':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M12.409 13.017A5 5 0 0 1 22 15c0 3.866-4 7-9 7-4.077 0-8.153-.82-10.371-2.462-.426-.316-.631-.832-.62-1.362C2.118 12.723 2.627 2 10 2a3 3 0 0 1 3 3 2 2 0 0 1-2 2c-1.105 0-1.64-.444-2-1" />
+          <Path {...s24} d="M15 14a5 5 0 0 0-7.584 2M9.964 6.825C8.019 7.977 9.5 13 8 15" />
+        </Svg>
+      );
+    case 'usersThree':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Circle {...s24} cx={12} cy={9.5} r={3.2} />
+          <Path {...s24} d="M5.5 21v-.5a4 4 0 0 1 4-4h5a4 4 0 0 1 4 4v.5" />
+          <Circle {...s24} cx={4.5} cy={5.5} r={2.5} />
+          <Circle {...s24} cx={19.5} cy={5.5} r={2.5} />
+          <Path {...s24} d="M1.5 14.5V14a3 3 0 0 1 3-3H6M22.5 14.5V14a3 3 0 0 0-3-3H18" />
+        </Svg>
+      );
+    case 'circleUser':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Circle {...s24} cx={12} cy={12} r={10} />
+          <Circle {...s24} cx={12} cy={10} r={3} />
+          <Path {...s24} d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662" />
         </Svg>
       );
     case 'chevron':

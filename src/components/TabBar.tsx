@@ -10,12 +10,41 @@ import { Icon, IconName } from './Icon';
 import { pestanasOcultas } from '../navigation/pestanasOcultas';
 import { useBarraInferior } from '../navigation/barraAlDesplazar/BarraInferior';
 
-const ICONS: Record<string, IconName> = { Hoy: 'sun', Plan: 'doc', Training: 'diamond', Comunidad: 'users', Yo: 'user' };
+/**
+ * El ícono de cada pestaña, **todos en este mapa** —también el del botón dorado de TRAINING—: cambiar
+ * uno, o volver atrás, es cambiar una línea.
+ *
+ * > **Cambiado el 2026-10-05**, pedido del dueño: «la parte de abajo, íconos que le correspondan».
+ * > Eran `sun` (Hoy), `doc` (Plan), `diamond` (Training, fijo en el botón central y fuera de este
+ * > mapa), `users` (Comunidad) y `user` (Yo): no decían qué hay en cada pestaña, y los cinco ya
+ * > significaban otra cosa dentro de la app (el sol es el modo claro de Ajustes y el ritual del
+ * > mediodía; la hoja, un recurso de lección o una evidencia de texto; el diamante, la fase 2 del
+ * > programa; `users`, la Tribu; `user`, «Editar perfil»). Ahora: la casa de «inicio» para el tablero
+ * > del día, la planilla para el plan, el brazo de 💪 para el entrenamiento diario, un grupo de tres
+ * > (la Tribu es de dos) para la comunidad y la persona en un círculo de «mi cuenta» para Yo.
+ * > El dueño eligió este juego (el 2) entre las opciones del mosaico `barra-iconos-opciones.png`;
+ * > `barraDePestanasIconos.test.ts` frena que se repita un dibujo que ya significa otra cosa.
+ */
+const ICONS: Record<string, IconName> = { Hoy: 'house', Plan: 'clipboardList', Training: 'bicepsFlexed', Comunidad: 'usersThree', Yo: 'circleUser' };
 const LABELS: Record<string, string> = { Hoy: 'HOY', Plan: 'PLAN', Training: 'TRAINING', Comunidad: 'COMUNIDAD', Yo: 'YO' };
 
 /**
  * **Los cinco nombres se ven siempre**, y la pestaña activa se distingue por el color dorado
- * (el resto queda en `tabInactive`).
+ * (el resto queda en `tabInactive`) y por una **pastilla `goldWash` detrás de su ícono**.
+ *
+ * > **Cambiado el 2026-10-05**, decisión del dueño (opción 5 del mosaico `barra-iconos-opciones.png`,
+ * > aprobada junto con los íconos nuevos). Decía: «la pestaña activa se distingue por el color
+ * > dorado». Solo el color no alcanzaba: en modo claro el dorado de la abierta (#856C35) y el gris de
+ * > las demás (#736C60) tienen casi el mismo brillo —contraste 1,04 : 1; en oscuro 1,37 : 1—, los
+ * > separaba nada más el tono, que es lo primero que se pierde con la vista de 40 a 60 años. La
+ * > pastilla es la marca de Android (Material 3): una forma grande, sin rellenar el ícono.
+ * > - Va por fuera del flujo (`absolute`, en una caja del tamaño del ícono): no cambia el alto de la
+ * >   barra ni corre los nombres.
+ * > - No en TRAINING: su botón ya es el círculo dorado.
+ * > - **Sin animación**, a propósito: se cambia de pestaña decenas de veces al día y la pantalla
+ * >   cambia en el acto; una pastilla que llegara 150 ms después se sentiría lenta (mismo criterio
+ * >   que «las pestañas no se deslizan»). Por eso tampoco hay nada que apagar con «reducir
+ * >   movimiento».
  *
  * > **Corregido el 2026-09-15.** Del 2026-09-14 al 2026-09-15 el nombre se vio SOLO en la pestaña
  * > activa, para descargar la franja. El dueño lo revirtió al verlo funcionando: con cuatro íconos
@@ -89,6 +118,10 @@ export function TabBar({ state, navigation, descriptors }: BottomTabBarProps) {
 
   const centerSize = rs(46);
   const iconSize = rs(20);
+  /* La pastilla de la pestaña abierta: 4 px por encima y por debajo del ícono (queda a 3 del
+     nombre, que está a 7) y ~2,6 veces su ancho, como la de Android. */
+  const altoPastilla = iconSize + 8;
+  const anchoPastilla = rs(52);
   const maxBarWidth = isTablet ? 480 : undefined;
 
   return (
@@ -130,7 +163,7 @@ export function TabBar({ state, navigation, descriptors }: BottomTabBarProps) {
                       end={{ x: 0.8, y: 1 }}
                       style={[styles.center, { width: centerSize, height: centerSize, borderRadius: centerSize / 2 }]}
                     >
-                      <Icon name="diamond" size={rs(18)} color={c.onGold} />
+                      <Icon name={ICONS[route.name]} size={rs(18)} color={c.onGold} />
                     </LinearGradient>
                   </View>
                   <Text style={[t.tab, { color: focused ? c.goldInk : c.tabInactive }]} numberOfLines={1} adjustsFontSizeToFit>
@@ -143,7 +176,25 @@ export function TabBar({ state, navigation, descriptors }: BottomTabBarProps) {
             return (
               <Pressable key={route.key} onPress={onPress} style={styles.item} hitSlop={8}
                 accessibilityRole="tab" accessibilityState={{ selected: focused }} accessibilityLabel={LABELS[route.name]}>
-                <Icon name={ICONS[route.name]} size={iconSize} color={focused ? c.goldInk : c.tabInactive} />
+                {/* La caja mide lo que el ícono: la pastilla va por fuera del flujo (`absolute`) y no
+                    cambia el alto de la barra ni corre el nombre. */}
+                <View style={{ width: iconSize, height: iconSize }}>
+                  {focused ? (
+                    <View
+                      testID="pastilla-de-la-pestana-abierta"
+                      pointerEvents="none"
+                      style={[styles.pastilla, {
+                        width: anchoPastilla,
+                        height: altoPastilla,
+                        borderRadius: altoPastilla / 2,
+                        left: (iconSize - anchoPastilla) / 2,
+                        top: (iconSize - altoPastilla) / 2,
+                        backgroundColor: c.goldWash,
+                      }]}
+                    />
+                  ) : null}
+                  <Icon name={ICONS[route.name]} size={iconSize} color={focused ? c.goldInk : c.tabInactive} />
+                </View>
                 <Text style={[t.tab, { color: focused ? c.goldInk : c.tabInactive }]} numberOfLines={1} adjustsFontSizeToFit>
                   {LABELS[route.name]}
                 </Text>
@@ -174,4 +225,5 @@ const styles = StyleSheet.create({
   item: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 48, gap: 7 },
   centerWrap: { marginTop: -22, borderRadius: 29, borderWidth: 6, shadowOpacity: 0.45, shadowRadius: 12, shadowOffset: { width: 0, height: 8 }, elevation: 6 },
   center: { alignItems: 'center', justifyContent: 'center' },
+  pastilla: { position: 'absolute' },
 });
