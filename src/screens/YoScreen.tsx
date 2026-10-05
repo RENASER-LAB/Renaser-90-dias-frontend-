@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { Alert } from '../components/Alerta';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BORDES_DE_UNA_PESTANA } from '../navigation/bordesDeUnaPestana';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { useTheme } from '../theme/ThemeContext';
 import { space } from '../theme/tokens';
@@ -516,7 +517,7 @@ export default function YoScreen() {
 
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
+    <SafeAreaView edges={BORDES_DE_UNA_PESTANA} style={{ flex: 1, backgroundColor: c.bg }}>
       {/* El «⋯» abre el Centro de Perfil y Ajustes (Notificaciones, Alarmas, modo oscuro): lo mismo
           que la tarjeta del usuario. Hasta el 28/09 no tenía `onPressRight` —nunca lo tuvo—, así
           que tocarlo no hacía nada (E-400 del backend). La prueba `menuDeYoAbreAjustes` lo cuida. */}

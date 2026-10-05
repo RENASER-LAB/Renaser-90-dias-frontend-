@@ -2,6 +2,7 @@ import React, { useEffect, useLayoutEffect, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Switch, Platform } from 'react-native';
 import { Alert } from '../components/Alerta';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BORDES_DE_UNA_PESTANA } from '../navigation/bordesDeUnaPestana';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
 import { space } from '../theme/tokens';
@@ -783,7 +784,7 @@ export default function TrainingScreen() {
     : 0;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
+    <SafeAreaView edges={BORDES_DE_UNA_PESTANA} style={{ flex: 1, backgroundColor: c.bg }}>
       <ScreenHeader title="TRAINING" />
 
       <ScrollView
