@@ -51,7 +51,9 @@ describe('Training: sin emojis ni glifos de texto haciendo de ícono', () => {
     expect(ICONOS).toContain('/* Training */');
     const linea = ICONOS.split('\n').find(l => l.includes("| 'timer'"));
     expect(linea).toBeDefined();
-    for (const nombre of ['timer', 'flame', 'badgeCheck', 'hourglass', 'ban', 'rotateCcw', 'audioLines', 'sunrise', 'sunMedium', 'moonStar', 'glassWater', 'showerHead', 'footprints', 'salad', 'utensils', 'utensilsCrossed', 'bookOpenText', 'headphones', 'notebookPen', 'handHeart', 'smartphoneOff']) {
+    // `flame` también lo trajo el rediseño de Hoy, que entró antes al integrar: vive en el bloque de Hoy.
+    expect(ICONOS).toContain("case 'flame':");
+    for (const nombre of ['timer', 'badgeCheck', 'hourglass', 'ban', 'rotateCcw', 'audioLines', 'sunrise', 'sunMedium', 'moonStar', 'glassWater', 'showerHead', 'footprints', 'salad', 'utensils', 'utensilsCrossed', 'bookOpenText', 'headphones', 'notebookPen', 'handHeart', 'smartphoneOff']) {
       expect(linea).toContain(`'${nombre}'`);
       expect(ICONOS.slice(ICONOS.indexOf('/* Training */'))).toContain(`case '${nombre}':`);
     }
