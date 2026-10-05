@@ -25,8 +25,8 @@ import { horaEnPunto, type EstadoRadar } from '../utils/slotsDelRadar';
  *
  * Rediseño de Hoy (2026-10-05): los rótulos del estado van en tipo oración («En espera»,
  * «Registrado», «Innegociable», «Abierto»; eran versales espaciadas), los íconos a
- * 20, el chevron a 16, y la tarjeta abierta responde al dedo (`Presionable`). La diana (`target`) se
- * queda hasta que entre `compass`, que dibuja el rediseño de Plan.
+ * 20, el chevron a 16, y la tarjeta abierta responde al dedo (`Presionable`). El ícono es la
+ * brújula (`compass`, del rediseño de Plan): la diana (`target`) queda solo en las acciones de Plan.
  */
 export function TarjetaCodigoRenaser({
   estado,
@@ -93,7 +93,7 @@ export function TarjetaCodigoRenaser({
           </Text>
         </View>
         <View style={styles.fila}>
-          <Icon name="target" size={TAMANO_ICONO.normal} color={c.goldInk} />
+          <Icon name="compass" size={TAMANO_ICONO.normal} color={c.goldInk} />
           <View style={{ flex: 1, gap: 4 }}>
             <Text style={[t.cardTitle, { color: c.text }]}>¿Dónde estás ahora mismo?</Text>
             <Text style={[t.body, { color: c.textSoft, fontSize: 12, lineHeight: 18 }]}>
