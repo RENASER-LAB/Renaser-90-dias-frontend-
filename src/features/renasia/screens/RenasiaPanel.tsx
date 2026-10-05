@@ -16,7 +16,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useTheme } from '../../../theme/ThemeContext';
 import { useResponsive } from '../../../theme/responsive';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
-import { Icon } from '../../../components/Icon';
+import { Icon, TAMANO_ICONO } from '../../../components/Icon';
+import { propsDelCampoDelChat } from '../../chat/utils/campoDelChat';
 import { useRenasiaChat } from '../hooks/useRenasiaChat';
 import { useDictado } from '../hooks/useDictado';
 import { useFrasesDeHabitos } from '../hooks/useFrasesDeHabitos';
@@ -26,6 +27,7 @@ import { REGLAS_DE_ACCION } from '../../objetivos/utils/registroDeAccionConFoto'
 import { useRegistroConFoto } from '../../habits/hooks/useRegistroConFoto';
 import { RegistroConFotoModal } from '../../habits/components/RegistroConFotoModal';
 import { MensajeBurbuja } from '../components/MensajeBurbuja';
+import { OrbeQuieto } from '../components/OrbeQuieto';
 import { AGENTES, nombreVisible } from '../data/agentes';
 import type { AgenteRenasia, PedidoDeFotoUI } from '../types/renasia.types';
 
@@ -141,24 +143,33 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
           style={[styles.header, { borderBottomColor: c.divider, paddingHorizontal: horizontalPadding }]}
         >
           <View style={styles.headerTitulo}>
-            <View style={[styles.medallion, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
-              <Icon name="chat" size={18} color={c.goldInk} />
-            </View>
+            {/* Rediseño de Hoy (2026-10-05): SER se presenta con su orbe, el mismo del centro de Hoy y
+                del botón flotante que abre este chat. Era el globo `chat` en un medallón, que en la
+                app es «Comentar» y el soporte. Sparkie (el tutor de los cursos) conserva el suyo. */}
+            {agent === 'COMPANION' ? (
+              <OrbeQuieto size={38} color={c.goldInk} />
+            ) : (
+              <View style={[styles.medallion, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
+                <Icon name="chat" size={18} color={c.goldInk} />
+              </View>
+            )}
             <View style={{ flexShrink: 1 }}>
-              <Text style={[t.sectionTitle, { color: c.textStrong, fontSize: 13 }]}>{nombre}</Text>
+              <Text style={[t.cardTitle, { color: c.textStrong }]}>{perfil.nombre}</Text>
               <Text style={[t.small, { color: c.textSoft, fontSize: 12.5 }]} numberOfLines={1}>
                 {contexto ? `Sobre: ${contexto.etiqueta}` : perfil.subtitulo}
               </Text>
             </View>
           </View>
+          {/* ✕ de 24 en un área de 44, sin disco: como la cabecera de las hojas de Comunidad. Era un ✕
+              de 16 dentro de un círculo con borde de 50. */}
           <Pressable
             onPress={onClose}
-            hitSlop={12}
+            hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel={`Cerrar ${nombre}`}
-            style={[styles.cerrarBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
+            style={({ pressed }) => [styles.cerrarBtn, { opacity: pressed ? 0.6 : 1 }]}
           >
-            <Icon name="close" size={16} color={c.text} />
+            <Icon name="close" size={TAMANO_ICONO.grande} color={c.textSoft} />
           </Pressable>
         </View>
 
@@ -204,18 +215,21 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
                 </Text>
                 <Pressable
                   onPress={() => void cargarHistorialInicial()}
+                  accessibilityRole="button"
                   style={[styles.reintentarHistorialBtn, { borderColor: c.gold }]}
                 >
-                  <Text style={[t.micro, { color: c.goldInk, fontSize: 11.5, fontFamily: 'Jost_700Bold' }]}>
-                    REINTENTAR
-                  </Text>
+                  <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>Reintentar</Text>
                 </Pressable>
               </View>
             ) : mensajes.length === 0 ? (
               <View style={styles.centro}>
-                <View style={[styles.medallionGrande, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
-                  <Icon name="chat" size={28} color={c.goldInk} />
-                </View>
+                {agent === 'COMPANION' ? (
+                  <OrbeQuieto size={64} color={c.goldInk} />
+                ) : (
+                  <View style={[styles.medallionGrande, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
+                    <Icon name="chat" size={28} color={c.goldInk} />
+                  </View>
+                )}
                 <Text style={[t.cardTitle, { color: c.textStrong, textAlign: 'center', marginTop: 14 }]}>
                   {perfil.vacioTitulo}
                 </Text>
@@ -234,13 +248,14 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
                   <Pressable
                     onPress={() => void cargarMasAntiguos()}
                     disabled={cargandoMasAntiguos}
+                    accessibilityRole="button"
                     style={styles.cargarMasBtn}
                   >
                     {cargandoMasAntiguos ? (
                       <ActivityIndicator size="small" color={c.goldInk} />
                     ) : (
-                      <Text style={[t.micro, { color: c.goldInk, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>
-                        VER MENSAJES ANTERIORES
+                      <Text style={[t.small, { color: c.goldInk, fontSize: 14, fontFamily: 'Jost_700Bold' }]}>
+                        Ver mensajes anteriores
                       </Text>
                     )}
                   </Pressable>
@@ -301,6 +316,8 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
                 { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.text, fontSize: rs(14.5) },
               ]}
               multiline
+              // Un renglón en la web, como en el teléfono y como el chat de Comunidad (`propsDelCampoDelChat`).
+              {...propsDelCampoDelChat()}
               editable={!enviando && !dictado.escuchando}
               maxLength={LARGO_MAXIMO_PREGUNTA}
               onSubmitEditing={handleEnviar}
@@ -359,10 +376,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cerrarBtn: {
-    width: ALTURA_MIN_CONTROL,
-    height: ALTURA_MIN_CONTROL,
-    borderRadius: ALTURA_MIN_CONTROL / 2,
-    borderWidth: 1,
+    width: 44,
+    height: 44,
+    marginRight: -10,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -385,7 +401,7 @@ const styles = StyleSheet.create({
   },
   cargarMasBtn: {
     alignSelf: 'center',
-    minHeight: 40,
+    minHeight: 44,
     paddingHorizontal: 16,
     justifyContent: 'center',
     marginBottom: 6,

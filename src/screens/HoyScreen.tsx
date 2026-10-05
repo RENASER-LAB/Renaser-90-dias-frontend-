@@ -13,8 +13,10 @@ import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/nativ
 import { useTheme } from '../theme/ThemeContext';
 import { space } from '../theme/tokens';
 import { useResponsive } from '../theme/responsive';
-import { Card, MicroLabel, ScreenHeader, GoldCircle } from '../components/ui';
-import { Icon } from '../components/Icon';
+import { AvatarPersona, Card, MicroLabel, ScreenHeader } from '../components/ui';
+import { Icon, TAMANO_ICONO } from '../components/Icon';
+import { Presionable } from '../components/Presionable';
+import { tacto } from '../utils/tacto';
 import { Aparicion } from '../components/Aparicion';
 import { useEsMentor } from '../features/mentor/hooks/useEsMentor';
 import { useCelulaQueAcompano } from '../features/mentor/hooks/useCelulaQueAcompano';
@@ -68,7 +70,7 @@ import { OrbeAcompanante } from '../features/renasia/components/OrbeAcompanante'
 import { AccionDelAcompanante } from '../features/renasia/components/AccionDelAcompanante';
 import { escucharPropuestaConfirmada } from '../features/renasia/events/avisoPropuestaConfirmada';
 import { RenasiaPanel } from '../features/renasia/screens/RenasiaPanel';
-import { muestraTerminar, rotuloDelOrbe } from '../features/renasia/utils/rotuloDelOrbe';
+import { muestraTerminar, rotuloDelOrbe, tocarEmpiezaAEscuchar } from '../features/renasia/utils/rotuloDelOrbe';
 import { BotonTerminarConversacion } from '../features/renasia/components/BotonTerminarConversacion';
 import { useVozDelOrbe } from '../features/renasia/hooks/useVozDelOrbe';
 import { cambioAlRegistrar, cambioTrasIniciar, estadoVisibleDelPedido, solicitudDelPedido } from '../features/renasia/utils/pedidosDeFoto';
@@ -77,6 +79,8 @@ import type { PedidoDeFotoUI } from '../features/renasia/types/renasia.types';
 import { useRegistroConFoto } from '../features/habits/hooks/useRegistroConFoto';
 import { RegistroConFotoModal } from '../features/habits/components/RegistroConFotoModal';
 import { cifrasDeHabitos } from '../features/home/utils/cifrasDeHabitos';
+import { diasQueQuedan as calcularDiasQueQuedan } from '../features/home/utils/diasQueQuedan';
+import { cuandoEsElEvento } from '../features/home/utils/cuandoEsElEvento';
 import { useOcultarBarraAlDesplazar } from '../navigation/barraAlDesplazar/BarraInferior';
 
 export default function HoyScreen() {
@@ -383,7 +387,9 @@ export default function HoyScreen() {
   const ringColors = [c.ring1, c.ring2, c.ring3, c.ring2];
 
 
-  const faseNombre = rotuloDeFase(resumen?.fase)?.toUpperCase() || 'PROGRAMA ACTIVO';
+  /* Tipo oración (rediseño de Hoy, 2026-10-05): el nombre de la fase tal como lo escribe el documento
+     del cliente («El Ciclo Alquímico»), sin pasarlo a versales. */
+  const faseNombre = rotuloDeFase(resumen?.fase) || 'Programa activo';
   /**
    * `null` = todavía no sabemos en qué día está, porque la carga falló o no terminó.
    *
@@ -413,7 +419,8 @@ export default function HoyScreen() {
   const MAPA_DIA7_HABILITADO = __DEV__ || process.env.EXPO_PUBLIC_MAPA_DIA7 === 'on';
   // Decía "83 días", que era 90 − 7 y valía mientras el Mapa vivía en el Día 7. Desde que arranca
   // en el Día 0 ese número miente: quien lo abre el primer día tiene 90 por delante, no 83.
-  const diasQueQuedan = Math.max(1, 90 - diaNumero);
+  // La cuenta vive en `diasQueQuedan` desde el 2026-10-05: la apertura del Mapa usa la misma.
+  const diasQueQuedan = calcularDiasQueQuedan(diaNumero);
   const mostrarMapa = MAPA_DIA7_HABILITADO && !!user;
   const tituloMapa = estadoMapa === 'activo'
     ? 'Tu mapa está activo'
@@ -458,6 +465,26 @@ export default function HoyScreen() {
   const puntosLiga = resumen?.puntosLiga ?? 100;
   const rachaActual = resumen?.rachaActual ?? 0;
   const rachaMaxima = resumen?.rachaMaxima ?? 0;
+
+  /* El orbe responde también al tacto (rediseño de Hoy, 2026-10-05): un «tic» cuando el toque
+     EMPIEZA a escuchar y el «toc» del sistema cuando mantenerlo presionado cierra la conversación.
+     Una vibración por acción y en el mismo instante en que cambia lo que se ve; nunca es la única
+     señal (el rótulo de abajo dice la fase). */
+  const tocarOrbe = () => {
+    if (!voz.disponible) {
+      setChatDelOrbeAbierto(true);
+      return;
+    }
+    if (tocarEmpiezaAEscuchar(voz.fase, voz.disponible)) tacto.seleccion();
+    voz.tocar();
+  };
+  const terminarConversacion = voz.terminar;
+  const mantenerOrbe = terminarConversacion
+    ? () => {
+        tacto.mantener();
+        terminarConversacion();
+      }
+    : undefined;
 
   /* Las vistas del mentor toman la pantalla completa, como el Mapa: son otro contexto de
      trabajo, no una tarjeta mas dentro del dia propio. El retroceso del sistema las cierra
@@ -565,20 +592,22 @@ export default function HoyScreen() {
             separa de lo que sigue es el espacio, no un contorno. */}
         <View style={styles.programStatusBar}>
           <View style={{ flex: 1 }}>
-            <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
+            <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
               {faseNombre}
             </Text>
             <Text style={[t.cardTitle, styles.cifras, { color: c.textStrong, fontSize: 15, marginTop: 3 }]}>
-              DÍA {diaConocido ?? '—'} DE {DIAS_DEL_PROGRAMA}
+              Día {diaConocido ?? '—'} de {DIAS_DEL_PROGRAMA}
             </Text>
           </View>
 
-          <View style={[styles.metricPill, { backgroundColor: c.goldWash }]}>
-            <Icon name="zap" size={12} color={c.goldInk} />
-            <Text style={[t.micro, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
-              {puntosLiga} PTS
-            </Text>
-          </View>
+          {/* La cifra sola, como en Ranking (rediseño de Hoy, 2026-10-05). Llevaba un rayo, que en
+              Plan es «Tu semana», dentro de una píldora en versales. */}
+          <Text
+            style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 14 }]}
+            accessibilityLabel={`${puntosLiga} puntos de la liga`}
+          >
+            {puntosLiga} pts
+          </Text>
         </View>
 
         {/* La frase de confrontación del día. Va acá —pegada a "DÍA n DE 90" y ANTES de las
@@ -601,10 +630,9 @@ export default function HoyScreen() {
           {/* Coherencia real */}
           <View style={styles.metricBloque}>
             <View style={styles.metricEncabezado}>
-              <Text style={[t.micro, { color: c.textSoft, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>
-                COHERENCIA
-              </Text>
-              <Icon name="target" size={14} color={c.goldInk} />
+              {/* Un medidor y no la diana: la diana era la misma del Código Renaser y de Acciones. */}
+              <Text style={[t.small, { color: c.textSoft, fontFamily: 'Jost_700Bold' }]}>Coherencia</Text>
+              <Icon name="gauge" size={TAMANO_ICONO.chico} color={c.goldInk} />
             </View>
             <View style={styles.metricCifra}>
               <Text style={[t.metric, { color: c.goldInk }]}>
@@ -628,16 +656,15 @@ export default function HoyScreen() {
           {/* Racha real */}
           <View style={styles.metricBloque}>
             <View style={styles.metricEncabezado}>
-              <Text style={[t.micro, { color: c.textSoft, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>
-                RACHA ACTUAL
-              </Text>
-              <Icon name="fire" size={14} color={rachaActual > 0 ? c.goldInk : c.chevron} />
+              {/* La llama de Lucide a 16: la de antes, a 14, se leía como una gota. Gris en 0. */}
+              <Text style={[t.small, { color: c.textSoft, fontFamily: 'Jost_700Bold' }]}>Racha</Text>
+              <Icon name="flame" size={TAMANO_ICONO.chico} color={rachaActual > 0 ? c.goldInk : c.chevron} />
             </View>
             <View style={styles.metricCifra}>
               <Text style={[t.metric, { color: c.textStrong }]}>
                 {rachaActual}
               </Text>
-              <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>DÍAS</Text>
+              <Text style={[t.small, { color: c.textSoft }]}>{rachaActual === 1 ? 'día' : 'días'}</Text>
             </View>
             <Text style={[t.small, { color: c.micro, fontSize: 12, marginTop: 4 }]}>
               Récord histórico: {rachaMaxima} d
@@ -685,15 +712,15 @@ export default function HoyScreen() {
               dato se le pregunta ahora al propio acompañante ("¿cuál es mi foco de hoy?"), que lo
               lee con consultar_rocas. Tocar el orbe: escucha, piensa y responde en voz alta. */}
           <View style={styles.heroCenter}>
-            <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_500Medium', fontSize: 10.5, textAlign: 'center' }]}>
-              TU ACOMPAÑANTE
+            <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_500Medium', textAlign: 'center' }]}>
+              Tu acompañante
             </Text>
             <View style={{ marginTop: isShort ? 10 : 14 }}>
               <OrbeAcompanante
                 fase={voz.fase}
                 diametro={Math.min(140, Math.round(heroSize * 0.58))}
-                onTocar={voz.disponible ? voz.tocar : () => setChatDelOrbeAbierto(true)}
-                onMantener={voz.terminar}
+                onTocar={tocarOrbe}
+                onMantener={mantenerOrbe}
               />
             </View>
             <Text
@@ -728,8 +755,8 @@ export default function HoyScreen() {
               hitSlop={8}
               style={({ pressed }) => [styles.definirRocaEnlace, { opacity: pressed ? 0.6 : 1 }]}
             >
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_500Medium' }]}>Ver en el chat</Text>
-              <Icon name="arrow" size={12} color={c.goldInk} />
+              <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 14 }]}>Ver en el chat</Text>
+              <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.goldInk} />
             </Pressable>
           </View>
         ) : null}
@@ -836,9 +863,9 @@ export default function HoyScreen() {
             onResponder={radar.abrir}
           />
 
-          {/* Tarjeta Mapa de Renacimiento (Día 7) */}
+          {/* Tarjeta Mapa de Renacimiento */}
           {mostrarMapa ? (
-            <Pressable onPress={abrirMapa} accessibilityRole="button">
+            <Presionable onPress={abrirMapa} accessibilityRole="button" accessibilityLabel={`${tituloMapa}. ${detalleMapa}`}>
               {/* Sin el `borderColor: c.gold`: subrayar una tarjeta con un contorno dorado es
                   destacar por adorno. Esta tarjeta ya destaca por lo que dice y por el círculo
                   dorado que lleva dentro; el contorno sólo la desalineaba del resto. */}
@@ -847,23 +874,35 @@ export default function HoyScreen() {
                     se fue con él — existía para marcar que en desarrollo se veía antes de tiempo,
                     y ahora no hay "antes de tiempo". */}
                 <MicroLabel>Mapa de renacimiento</MicroLabel>
+                {/* Rediseño de Hoy (2026-10-05): el mapa (`map`) en vez del asterisco `spark`, que era
+                    también el de la propuesta de SER; y el chevron gris de 16 de todas las tarjetas
+                    en vez del disco dorado de 40 (era la única tarjeta con uno: la tarjeta entera es
+                    el botón).
+
+                    El chevron va a la altura del TÍTULO y no centrado como en las demás: con la
+                    pantalla sin desplazar, esta tarjeta queda al pie, y en un Android de 412 × 915 el
+                    botón flotante de SER (`RenasiaLauncher`, fijo abajo a la derecha) caía justo sobre
+                    el centro de su borde derecho (prueba nativa del 2026-10-05). Arriba, junto al
+                    título, queda libre. */}
                 <View style={styles.insight}>
-                  <Icon name="spark" size={19} color={c.goldInk} />
+                  <Icon name="map" size={TAMANO_ICONO.normal} color={c.goldInk} />
                   <View style={{ gap: 5, flex: 1 }}>
                     <Text style={[t.cardTitle, { color: c.text }]}>{tituloMapa}</Text>
                     <Text style={[t.small, { color: c.textSoft }]}>{detalleMapa}</Text>
                   </View>
-                  <GoldCircle size={40} icon="chevron" />
+                  <View style={styles.chevronDelTitulo}>
+                    <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.chevron} />
+                  </View>
                 </View>
               </Card>
-            </Pressable>
+            </Presionable>
           ) : null}
 
           {/* Tarjeta Hábitos de Hoy — EL HÁBITO DE ESTA HORA, no una frase fija.
               Antes decía siempre "Lidera tu energía diaria" con el contador al lado: el contador
               dice cuánto falta, nunca QUÉ toca. Ahora el título es el hábito que la persona tiene
               delante (`useHabitoDelMomento`) y toca lleva a Training, que es donde se opera. */}
-          <Pressable
+          <Presionable
             onPress={() => (navigation as any).navigate('Training')}
             accessibilityRole="button"
             accessibilityLabel={
@@ -879,8 +918,10 @@ export default function HoyScreen() {
                   </Text>
                 ) : null}
               </View>
+              {/* Una lista con tildes (`listChecks`) y no el sol: el sol es la pestaña HOY, y de noche
+                  seguía saliendo. */}
               <View style={styles.insight}>
-                <Icon name="sun" size={19} color={c.goldInk} />
+                <Icon name="listChecks" size={TAMANO_ICONO.normal} color={c.goldInk} />
                 <View style={{ gap: 5, flex: 1 }}>
                   <Text style={[t.cardTitle, { color: c.text }]} numberOfLines={2}>
                     {tituloHabitoAhora}
@@ -889,10 +930,12 @@ export default function HoyScreen() {
                     {detalleHabitoAhora}
                   </Text>
                 </View>
-                <Icon name="chevron" size={14} color={c.chevron} />
+                <View style={styles.chevronCentrado}>
+                  <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.chevron} />
+                </View>
               </View>
             </Card>
-          </Pressable>
+          </Presionable>
 
           {/* Semaforo de cumplimiento (D-168). Entre Habitos y Acciones porque junta las dos cosas.
               Solo si `/home` dice que la persona se mide: con `null` —no se mide, o un backend que
@@ -906,11 +949,9 @@ export default function HoyScreen() {
           ) : null}
 
           {/* Tarjeta Rocas y Objetivos */}
+          <Presionable onPress={() => (navigation as any).navigate('Plan')} accessibilityRole="button">
           <Card>
-            <Pressable
-              onPress={() => (navigation as any).navigate('Plan')}
-              style={styles.between}
-            >
+            <View style={styles.between}>
               <View style={{ flex: 1 }}>
                 <View style={styles.encabezadoTarjeta}>
                   <MicroLabel>Acciones y objetivos</MicroLabel>
@@ -931,26 +972,30 @@ export default function HoyScreen() {
                     : 'Define tu objetivo en Plan para sostener la dirección.'}
                 </Text>
               </View>
-              <Icon name="chevron" size={14} color={c.chevron} />
-            </Pressable>
+              <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.chevron} />
+            </View>
           </Card>
+          </Presionable>
 
-          {/* Última evidencia real del Muro: se omiten publicaciones de texto sin evidencia. */}
-          {(ultimaPublicacion || cargandoUltimaPublicacion) && (
-            /* Sin contorno dorado, por lo mismo que la tarjeta del Mapa: dos tarjetas con borde
-               de color y cinco sin él no es jerarquía, es ruido. */
-            <Card>
-              {ultimaPublicacion ? (
-                <Pressable
-                  onPress={() =>
-                    (navigation as any).navigate('Comunidad', {
-                      abrirPublicacionId: ultimaPublicacion.id,
-                    })
-                  }
-                  accessibilityRole="button"
-                  accessibilityLabel={`Abrir la última evidencia de ${ultimaPublicacion.authorName || 'la comunidad'}`}
-                  style={styles.between}
-                >
+          {/* Última evidencia real del Muro: se omiten publicaciones de texto sin evidencia.
+              Rediseño de Hoy (2026-10-05): la tarjeta entera responde al dedo (`Presionable`), el
+              autor se ve con su foto o sus iniciales (`AvatarPersona`, como en Comunidad) en vez del
+              mismo muñequito para todos, y la cuenta de fotos lleva `image` (era una cámara, que en
+              la app es «tomar foto»). */}
+          {ultimaPublicacion ? (
+            <Presionable
+              onPress={() =>
+                (navigation as any).navigate('Comunidad', {
+                  abrirPublicacionId: ultimaPublicacion.id,
+                })
+              }
+              accessibilityRole="button"
+              accessibilityLabel={`Abrir la última evidencia de ${ultimaPublicacion.authorName || 'la comunidad'}`}
+            >
+              {/* Sin contorno dorado, por lo mismo que la tarjeta del Mapa: dos tarjetas con borde
+                  de color y cinco sin él no es jerarquía, es ruido. */}
+              <Card>
+                <View style={styles.between}>
                   <View style={{ flex: 1 }}>
                     <View style={styles.wallActivityHeader}>
                       <MicroLabel>Última evidencia del muro</MicroLabel>
@@ -964,12 +1009,11 @@ export default function HoyScreen() {
                         tres cajas vacias ocupando media tarjeta, y el texto de la publicacion, que
                         es lo unico que de verdad cuenta algo, no se mostraba en ningun sitio. */}
                     <View style={styles.insight}>
-                      {/* El avatar llevaba borde dorado DENTRO de una tarjeta que ya tiene borde:
-                          un círculo con contorno pegado a un rectángulo con contorno. Ahora es un
-                          disco lleno de lavado dorado, sin línea. */}
-                      <View style={[styles.wallAvatar, { backgroundColor: c.goldWash }]}>
-                        <Icon name="user" size={16} color={c.goldInk} />
-                      </View>
+                      <AvatarPersona
+                        nombre={ultimaPublicacion.authorName?.trim() || 'Miembro Renaser'}
+                        avatarUrl={ultimaPublicacion.authorAvatarUrl}
+                        size={36}
+                      />
                       <View style={{ flex: 1, gap: 5 }}>
                         <Text style={[t.cardTitle, { color: c.textStrong }]} numberOfLines={1}>
                           {ultimaPublicacion.authorName?.trim() || 'Miembro Renaser'}
@@ -988,61 +1032,63 @@ export default function HoyScreen() {
                         )}
                         {evidenciasUltimaPublicacion.length > 0 && (
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
-                            <Icon name="camera" size={12} color={c.goldInk} />
-                            <Text style={[t.micro, { color: c.goldInk, fontSize: 11, fontFamily: 'Jost_500Medium' }]}>
+                            <Icon name="image" size={TAMANO_ICONO.chico} color={c.goldInk} />
+                            <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_500Medium' }]}>
                               {evidenciasUltimaPublicacion.length}
-                              {evidenciasUltimaPublicacion.length === 1 ? ' evidencia' : ' evidencias'}
+                              {evidenciasUltimaPublicacion.length === 1 ? ' foto' : ' fotos'}
                             </Text>
                           </View>
                         )}
                       </View>
                     </View>
                   </View>
-                  <Icon name="chevron" size={14} color={c.chevron} />
-                </Pressable>
-              ) : (
-                <View style={styles.wallLoadingRow}>
-                  <MicroLabel>Cargando actividad del muro...</MicroLabel>
+                  <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.chevron} />
                 </View>
-              )}
+              </Card>
+            </Presionable>
+          ) : cargandoUltimaPublicacion ? (
+            <Card>
+              <View style={styles.wallLoadingRow}>
+                <MicroLabel>Cargando actividad del muro...</MicroLabel>
+              </View>
             </Card>
-          )}
+          ) : null}
 
           {/* Próximo Evento / Mentoría (si el backend lo devuelve). Tocarla abre su detalle en
               Comunidad → Eventos (E-5, decisión del dueño del 2026-09-26): la misma entrada que usa
               el aviso del evento (`abrirEventoId`). */}
           {resumen?.proximoEvento && (
-            <Card>
-              <Pressable
-                onPress={() =>
-                  (navigation as any).navigate('Comunidad', {
-                    abrirEventoId: resumen.proximoEvento?.eventoId,
-                  })
-                }
-                accessibilityRole="button"
-                accessibilityLabel={`Ver el evento ${resumen.proximoEvento.titulo}`}
-              >
+            <Presionable
+              onPress={() =>
+                (navigation as any).navigate('Comunidad', {
+                  abrirEventoId: resumen.proximoEvento?.eventoId,
+                })
+              }
+              accessibilityRole="button"
+              accessibilityLabel={`Ver el evento ${resumen.proximoEvento.titulo}, ${cuandoEsElEvento(resumen.proximoEvento.iniciaEn)}`}
+            >
+              <Card>
                 <MicroLabel>Próximo evento</MicroLabel>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12 }}>
                   {/* Mismo caso que el avatar del muro: el borde dorado de este cuadradito estaba
                       dentro del borde de la tarjeta. Queda el disco lavado, sin línea. */}
                   <View style={[styles.eventIconBox, { backgroundColor: c.goldWash }]}>
-                    <Icon name="calendar" size={16} color={c.goldInk} />
+                    <Icon name="calendar" size={TAMANO_ICONO.normal} color={c.goldInk} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={[t.cardTitle, { color: c.textStrong }]}>
                       {resumen.proximoEvento.titulo}
                     </Text>
-                    {/* Era 10 px, por debajo del mínimo de micro-etiqueta (10.5) y encima con
-                        cifras que cambian. A 12 con cifras tabulares se lee y no baila. */}
-                    <Text style={[t.small, styles.cifras, { color: c.goldInk, fontSize: 12, marginTop: 3 }]}>
-                      {new Date(resumen.proximoEvento.iniciaEn).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })}
+                    {/* «Hoy · 20:00» o «mar 6 oct · 20:00» (rediseño de Hoy, 2026-10-05): decía
+                        «5/10/26, 20:00», que se lee mayo u octubre según quién. */}
+                    <Text style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold', marginTop: 3 }]}>
+                      {cuandoEsElEvento(resumen.proximoEvento.iniciaEn)}
                     </Text>
                   </View>
-                  <Icon name="chevron" size={14} color={c.chevron} />
+                  <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.chevron} />
                 </View>
-              </Pressable>
-            </Card>
+              </Card>
+            </Presionable>
           )}
         </View>
         </Aparicion>
@@ -1079,14 +1125,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: 4,
-  },
-  metricPill: {
-    borderRadius: space.radiusSm,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
   },
   metricsRow: {
     flexDirection: 'row',
@@ -1172,6 +1210,15 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginTop: 14,
   },
+  /** El chevron de «entrar» de una fila `insight` (que alinea arriba): centrado en el alto de la fila. */
+  chevronCentrado: {
+    alignSelf: 'center',
+  },
+  /** El chevron a la altura del título de la tarjeta (solo el Mapa: ver el comentario de la tarjeta). */
+  chevronDelTitulo: {
+    height: 22,
+    justifyContent: 'center',
+  },
   between: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1190,13 +1237,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
-  },
-  wallAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   wallLoadingRow: {
     minHeight: 48,

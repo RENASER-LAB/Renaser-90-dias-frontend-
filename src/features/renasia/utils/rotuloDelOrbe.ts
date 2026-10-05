@@ -29,3 +29,13 @@ export function rotuloDelOrbe(fase: FaseDeVoz, disponible: boolean, abierta: boo
 export function muestraTerminar(fase: FaseDeVoz, terminar: (() => void) | undefined): boolean {
   return terminar !== undefined && fase !== 'reposo';
 }
+
+/**
+ * Si tocar el orbe ahora EMPIEZA a escuchar: en reposo y con voz. Es el toque que vibra
+ * (`tacto.seleccion()`, rediseño de Hoy del 2026-10-05). Sin voz, tocar abre el chat escrito y no
+ * vibra; con la conversación ya abierta, tocar es «ya terminé» o «cállate», que no vibran para que
+ * la vibración diga una sola cosa: «te escucho».
+ */
+export function tocarEmpiezaAEscuchar(fase: FaseDeVoz, disponible: boolean): boolean {
+  return disponible && fase === 'reposo';
+}
