@@ -8,6 +8,9 @@ import { NOMBRE_ACOMPANANTE } from '../../renasia/data/agentes';
  * «Mi ficha y Pacto» o las miniaturas de evidencias): se tocaba «volver» y se aparecía en una
  * pantalla que nunca se había abierto. Ahora se recuerda de dónde se vino (`origen`), y la cabecera
  * «‹ título» y el gesto del sistema vuelven al mismo lugar.
+ *
+ * > **2026-10-05.** «Mi ficha y Pacto» ya no está en Yo (pedido del dueño: abría lo mismo que «Mi
+ * > onboarding» de Ajustes). Desde Yo se abren las miniaturas de evidencias; el resto, desde Ajustes.
  */
 export type VistaDeYo =
   | 'main'

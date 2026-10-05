@@ -107,12 +107,14 @@ const ETIQUETA_TIPO_EVIDENCIA: Record<string, string> = {
   FOTO: 'Foto', VIDEO: 'Video', AUDIO: 'Audio', TEXTO: 'Texto', CAPTURA: 'Captura',
 };
 
+/* Tipo oración desde el 2026-10-05 (pedido del dueño): eran «EN REVISIÓN», «VERIFICADA»… en versales
+   espaciadas, el mismo rótulo que se quitó del resto de Yo. */
 const ETIQUETA_ESTADO_EVIDENCIA: Record<string, string> = {
-  PENDIENTE: 'EN REVISIÓN',
-  VALIDA: 'VERIFICADA',
-  RECHAZADA: 'RECHAZADA',
-  REVISION_MANUAL: 'REVISIÓN MANUAL',
-  ANULADA_ADMIN: 'ANULADA',
+  PENDIENTE: 'En revisión',
+  VALIDA: 'Verificada',
+  RECHAZADA: 'Rechazada',
+  REVISION_MANUAL: 'Revisión manual',
+  ANULADA_ADMIN: 'Anulada',
 };
 
 /** Fecha corta en la zona del dispositivo. `null` cuando el backend no la trae. */
@@ -591,19 +593,21 @@ export default function YoScreen() {
             </View>
           </View>
 
-          {/* TU EVOLUCIÓN */}
+          {/* Tu evolución. Tipo oración, como Hoy (pedido del dueño del 2026-10-05): el rótulo, la
+              fase y el día iban en versales espaciadas («TU EVOLUCIÓN», «EL CICLO ALQUÍMICO», «DÍA 15
+              DE 90»), lo único de Yo que había quedado así después del rediseño. */}
           <View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={[t.micro, { color: c.textSoft }]}>TU EVOLUCIÓN</Text>
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
-                {rotuloDeFase(resumen?.fase)?.toUpperCase() ?? ''}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+              <Text style={[t.small, styles.rotulo, { color: c.textSoft }]}>Tu evolución</Text>
+              <Text style={[t.small, styles.rotulo, { color: c.goldInk, flexShrink: 1, textAlign: 'right' }]}>
+                {rotuloDeFase(resumen?.fase) ?? ''}
               </Text>
             </View>
             {/* Mismo tratamiento que en Hoy: el día del programa es el dato del bloque, no una
                 micro-etiqueta. A 10.5 px competía con el rótulo de arriba; a 15 con cifras
                 tabulares se lee y no se corre de lugar al pasar del día 9 al 10. */}
             <Text style={[t.cardTitle, styles.cifras, { color: c.textStrong, fontSize: 15, marginTop: 4 }]}>
-              DÍA {resumen?.diaPrograma ?? '—'} DE {DIAS_DEL_PROGRAMA}
+              Día {resumen?.diaPrograma ?? '—'} de {DIAS_DEL_PROGRAMA}
             </Text>
             {/* La curva era un dibujo fijo (ver `curvaDeEvolucion`). Ahora es el cumplimiento de
                 cada día del semáforo; con menos de dos días medidos no se dibuja. */}
@@ -630,24 +634,30 @@ export default function YoScreen() {
               mismo tratamiento que recibieron las métricas de Hoy, para que las dos pestañas
               muestren los mismos números de la misma forma. Las cifras pasan a `t.metric`, que
               trae ancho de dígito fijo: antes, al subir de 99 a 100 puntos, la columna se corría. */}
+          {/* Los rótulos, en tipo oración y sin espaciar, como los de Hoy (pedido del dueño del
+              2026-10-05): decían «COHERENCIA», «PUNTOS LIGA» y «RACHA DÍAS» en versales de 10.5 px.
+              La racha dice «días» como en Hoy (era una «d» suelta), y el «%» aparece solo con cifra:
+              «—%» no es un porcentaje. */}
           <View style={{ flexDirection: 'row', alignItems: 'stretch', gap: space.gap }}>
             {/* Coherencia */}
             <View style={styles.statBloque}>
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>COHERENCIA</Text>
+              <Text style={[t.small, styles.rotulo, { color: c.textSoft }]}>Coherencia</Text>
               <View style={styles.statCifra}>
                 <Text style={[t.metric, { color: c.goldInk }]}>
                   {/* Sin acciones planificadas no hay coherencia: un guion, no un 100 (D-128). */}
                   {resumen?.coherencia == null ? '—' : Math.round(resumen.coherencia)}
                 </Text>
-                <Text style={{ fontFamily: 'Jost_500Medium', fontSize: 15, color: c.goldInk }}>%</Text>
+                {resumen?.coherencia == null ? null : (
+                  <Text style={{ fontFamily: 'Jost_500Medium', fontSize: 15, color: c.goldInk }}>%</Text>
+                )}
               </View>
             </View>
 
             <View style={[styles.statSeparador, { backgroundColor: c.divider }]} />
 
-            {/* Puntos Liga */}
+            {/* Puntos de liga */}
             <View style={styles.statBloque}>
-              <Text style={[t.micro, { color: c.micro, fontFamily: 'Jost_700Bold' }]}>PUNTOS LIGA</Text>
+              <Text style={[t.small, styles.rotulo, { color: c.textSoft }]}>Puntos de liga</Text>
               <View style={styles.statCifra}>
                 <Text style={[t.metric, { color: c.textStrong }]}>{resumen?.puntosLiga ?? '—'}</Text>
               </View>
@@ -657,10 +667,12 @@ export default function YoScreen() {
 
             {/* Racha */}
             <View style={styles.statBloque}>
-              <Text style={[t.micro, { color: c.micro, fontFamily: 'Jost_700Bold' }]}>RACHA DÍAS</Text>
+              <Text style={[t.small, styles.rotulo, { color: c.textSoft }]}>Racha</Text>
               <View style={styles.statCifra}>
                 <Text style={[t.metric, { color: c.textStrong }]}>{resumen?.rachaActual ?? '—'}</Text>
-                {resumen ? <Text style={{ fontFamily: 'Jost_500Medium', fontSize: 15, color: c.micro }}>d</Text> : null}
+                {resumen?.rachaActual == null ? null : (
+                  <Text style={[t.small, { color: c.textSoft }]}>{resumen.rachaActual === 1 ? 'día' : 'días'}</Text>
+                )}
               </View>
             </View>
           </View>
@@ -738,7 +750,10 @@ export default function YoScreen() {
               versales («MI FICHA INICIAL & PACTO», «TUVE UNA EMERGENCIA» con el ♡ de «me gusta»,
               «CERRAR SESIÓN») más un enlace subrayado «Eliminar mi cuenta». Cerrar sesión y eliminar
               la cuenta pasaron a Ajustes, al final y en rojo: quedan UNA vez cada una (decisión 10
-              del dueño). */}
+              del dueño).
+              > **Corregido 2026-10-05 (pedido del dueño).** Acá estaba también la fila «Mi ficha y
+              > Pacto», que abría la misma vista que «Mi onboarding» de Ajustes: dos entradas a un mismo
+              > lugar. Quedó solo la de Ajustes (Ajustes → Mi onboarding → El Pacto / el Mapa). */}
           <GrupoDeAjustes>
             {/* TU CAJA RENASER (D-219) — solo si el servidor dice que hay algo que mostrarle */}
             {miCaja.visible && miCaja.caja ? (
@@ -761,12 +776,6 @@ export default function YoScreen() {
                 onPress={() => setEnAdministracion(true)}
               />
             ) : null}
-            <FilaDeAjuste
-              key="ficha"
-              icono="signature"
-              titulo="Mi ficha y Pacto"
-              onPress={() => setActiveView('onboarding')}
-            />
             {/* TUVE UNA EMERGENCIA (D-244): solo si el servidor dice que esta cuenta puede pedirlo. */}
             {miEmergencia.visible ? (
               <FilaDeAjuste
@@ -1340,7 +1349,7 @@ export default function YoScreen() {
                   </Text>
                   {/* Era una píldora con borde propio dentro de una tarjeta con borde. El estado
                       ya lo dice el color del texto; la caja sólo agregaba una línea más. */}
-                  <Text style={[t.micro, { color: colorEstado, fontFamily: 'Jost_700Bold', marginTop: 4 }]}>
+                  <Text style={[t.small, styles.rotulo, { color: colorEstado, marginTop: 4 }]}>
                     {ETIQUETA_ESTADO_EVIDENCIA[ev.estadoValidacion] ?? ev.estadoValidacion}
                   </Text>
                 </View>
@@ -1734,6 +1743,9 @@ const styles = StyleSheet.create({
      columnas de texto separadas por UNA línea de pelo: el único borde que queda es el que de
      verdad hace falta, porque sin él las cifras se leerían como una sola frase. */
   statBloque: { flex: 1 },
+  /* Rótulo de bloque en tipo oración: 13 px en negrita y sin espaciar, el de «Coherencia» y «Racha»
+     de Hoy (2026-10-05). Reemplaza las versales de `t.micro` con su `letterSpacing: 1.1`. */
+  rotulo: { fontFamily: 'Jost_700Bold', letterSpacing: 0 },
   statCifra: { flexDirection: 'row', alignItems: 'baseline', gap: 2, marginTop: 6 },
   statSeparador: { width: 1, alignSelf: 'stretch' },
   more: { borderRadius: space.radiusSm, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },

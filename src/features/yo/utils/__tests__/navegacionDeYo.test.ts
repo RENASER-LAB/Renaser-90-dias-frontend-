@@ -4,6 +4,9 @@
  * Contra el código anterior falla lo de «volver»: toda sub-vista volvía a Ajustes (`hub`), aunque se
  * hubiera abierto desde Yo («Mi ficha y Pacto», las miniaturas de evidencias).
  *
+ * > **2026-10-05.** La fila «Mi ficha y Pacto» de Yo ya no existe (pedido del dueño): «Mi onboarding»
+ * > se abre solo desde Ajustes. Lo que se sigue abriendo desde Yo son las miniaturas de evidencias.
+ *
  * Las pruebas corren en `America/Lima` (jest.config.js): la firma de las 03:00 UTC del 29 cae el 28
  * en Lima, el caso que un reloj fijo a mediodía UTC escondería.
  */
@@ -25,17 +28,18 @@ describe('volver en Yo', () => {
   });
 
   it('una sub-vista abierta desde Yo vuelve a Yo, y abierta desde Ajustes vuelve a Ajustes', () => {
-    expect(vistaDeRegreso('onboarding', recorrer(['main', 'onboarding']))).toBe('main');
     expect(vistaDeRegreso('evidencias', recorrer(['main', 'evidencias']))).toBe('main');
+    expect(vistaDeRegreso('evidencias', recorrer(['main', 'hub', 'evidencias']))).toBe('hub');
     expect(vistaDeRegreso('onboarding', recorrer(['main', 'hub', 'onboarding']))).toBe('hub');
     expect(vistaDeRegreso('notificaciones', recorrer(['main', 'hub', 'notificaciones']))).toBe('hub');
   });
 
   it('el Pacto y el Mapa vuelven a la lista de etapas, y la lista no pierde de dónde se vino', () => {
-    expect(vistaDeRegreso('pacto', 'main')).toBe('onboarding');
+    expect(vistaDeRegreso('pacto', 'hub')).toBe('onboarding');
     expect(vistaDeRegreso('mapa_renacimiento', 'hub')).toBe('onboarding');
-    const origen = recorrer(['main', 'onboarding', 'pacto', 'onboarding', 'mapa_renacimiento', 'onboarding']);
-    expect(vistaDeRegreso('onboarding', origen)).toBe('main');
+    // Ajustes → Mi onboarding → el Pacto → la lista → el Mapa → la lista: «volver» lleva a Ajustes.
+    const origen = recorrer(['main', 'hub', 'onboarding', 'pacto', 'onboarding', 'mapa_renacimiento', 'onboarding']);
+    expect(vistaDeRegreso('onboarding', origen)).toBe('hub');
   });
 
   it('cada sub-vista tiene su título, en tipo oración', () => {
