@@ -146,6 +146,11 @@ type AlDesplazar = (evento: NativeSyntheticEvent<NativeScrollEvent>) => void;
  * cuando cambia, la barra vuelve a la vista y la medida empieza de cero, igual que al montarse la
  * pantalla. Sin eso, entrar a una sub-vista con la barra escondida la dejaba escondida hasta el
  * primer desplazamiento. No sirve para una lista horizontal: su `y` es siempre 0.
+ *
+ * El cambio de vista no se puede deducir del desplazamiento: una lista recién montada arranca
+ * arriba SIN avisar ningún `onScroll` (en Android basta con poner o quitar el `RefreshControl` para
+ * que el `ScrollView` se monte de nuevo). Una pantalla con varias vistas tiene que decirlas en
+ * `vista`; si no, el encabezado de Comunidad queda escondido sobre su relleno (E-516, Eventos).
  */
 export function useOcultarBarraAlDesplazar(opciones: { onScroll?: AlDesplazar; vista?: unknown } = {}) {
   const barra = useBarraInferior();

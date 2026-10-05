@@ -109,7 +109,6 @@ export function SeccionEventos({
   /** Cuánto ocupa ese encabezado encima de la lista: ahí no se puede ver el círculo de «actualizando». */
   rellenoDelEncabezado?: number;
 }) {
-  const barraAlDesplazar = useOcultarBarraAlDesplazar({ onScroll: alDesplazar });
   const { c } = useTheme();
   const gestiona = puedeGestionarEventos(rol);
   const { ocurrencias, cargando, refrescando, fallo, yaLeido, recargar, responder, quitarDeLaLista } = useEventos(
@@ -117,6 +116,14 @@ export function SeccionEventos({
     true,
   );
   const [vista, setVista] = useState<Vista>({ nombre: 'lista' });
+  /* E-516 (2026-10-05). Cada vista de la sección es OTRA lista, y se le dice a la barra con `vista`:
+     al cambiar, la barra y el encabezado de Comunidad vuelven a la vista. En Android el
+     `ScrollView` se monta de nuevo al poner o quitar el `RefreshControl` (lo envuelve un
+     `AndroidSwipeRefreshLayout`), y uno recién montado arranca arriba sin avisar ningún `onScroll`.
+     Sin `vista`, abrir un evento con la lista desplazada dejaba el encabezado escondido encima de su
+     relleno —un hueco negro de su alto arriba— y la barra escondida; el detalle no se desplaza, así
+     que no había gesto que los devolviera. Volver a la lista repetía lo mismo. */
+  const barraAlDesplazar = useOcultarBarraAlDesplazar({ onScroll: alDesplazar, vista: vista.nombre });
 
   const zona = useMemo(() => zonaDelTelefono(), []);
   const hoy = fechaEnZona(Date.now(), zona);

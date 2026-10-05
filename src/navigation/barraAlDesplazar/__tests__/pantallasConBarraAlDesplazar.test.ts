@@ -71,8 +71,10 @@ describe('pantallas con «ocultar la barra al desplazar»', () => {
     // Cada lista con la barra deja arriba el lugar del encabezado, que va encima de ella.
     expect(comunidad.split('rellenoDelEncabezado,\n').length - 1).toBe(PANTALLAS['src/screens/ComunidadScreen.tsx']);
     expect(comunidad).toMatch(/alDesplazar=\{encabezado\.alDesplazar\}/);
+    // Y las vistas de Eventos (lista, detalle, formulario, agenda) son otras listas: sin `vista`,
+    // abrir un evento con la lista desplazada dejaba el encabezado escondido sobre un hueco (E-516).
     expect(leer('src/features/eventos/components/SeccionEventos.tsx')).toMatch(
-      /useOcultarBarraAlDesplazar\(\{ onScroll: alDesplazar \}\)/
+      /useOcultarBarraAlDesplazar\(\{ onScroll: alDesplazar, vista: vista\.nombre \}\)/
     );
   });
 
