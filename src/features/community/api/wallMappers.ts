@@ -130,6 +130,8 @@ export function mapearReaccion(item: WallReactionItem): ReactionUser {
     name: item.name?.trim() || 'Miembro Renaser',
     role: item.role ? (ETIQUETA_ROL[item.role] ?? item.role) : '',
     avatar: AVATAR_POR_DEFECTO,
+    // La hoja de reacciones (2026-10-05) sí dibuja la foto: `AvatarPersona`, con iniciales si no hay.
+    avatarUrl: item.avatarUrl ?? null,
     // Siempre 'like': quien llama ya descartó las filas DISLIKE (`useWallReactions`), porque el
     // modal "quién reaccionó" dejó de mostrar reacciones negativas.
     type: 'like',

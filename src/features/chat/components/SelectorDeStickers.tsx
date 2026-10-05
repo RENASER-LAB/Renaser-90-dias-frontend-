@@ -1,14 +1,26 @@
 import React, { useState } from 'react';
-import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Icon } from '../../../components/Icon';
+import { HojaDesdeAbajo } from '../../../components/hojaDesdeAbajo/HojaDesdeAbajo';
+import { Presionable } from '../../../components/Presionable';
 import { useTheme } from '../../../theme/ThemeContext';
 import { STICKERS_RENASER } from '../data/stickersRenaser';
 import type { StickerRenaser } from '../data/stickersRenaser';
 
-/** Hoja del chat: una sola lista, sin permisos de galería ni conversiones de las imágenes. */
+/**
+ * Hoja del chat: una sola lista, sin permisos de galería ni conversiones de las imágenes.
+ *
+ * > **Corregido 2026-10-05 (tanda 2 de Comunidad).** Era un `Modal` propio con `animationType="slide"`:
+ * > subía con la animación del sistema, sin agarradera ni arrastre, y el fondo oscuro aparecía de
+ * > golpe. Ahora es la `HojaDesdeAbajo` de toda la app: sube con la curva del cajón, se arrastra para
+ * > cerrarla, el fondo se aclara con el dedo y usa los colores del tema. La grilla, los stickers y
+ * > cómo se envían no cambiaron.
+ *
+ * La grilla ocupa hasta un poco más de media pantalla y se desplaza si no entra (en un teléfono
+ * chico, con tres columnas, no entra). Cada sticker se hunde al apoyar el dedo (`Presionable`).
+ */
 export function SelectorDeStickers({ visible, enviando, onCerrar, onElegir }: {
   visible: boolean;
   enviando: boolean;
@@ -17,59 +29,48 @@ export function SelectorDeStickers({ visible, enviando, onCerrar, onElegir }: {
 }) {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
+  const { height: altoVentana } = useWindowDimensions();
   const [ancho, setAncho] = useState(320);
   const columnas = ancho < 360 ? 3 : 4;
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onCerrar}>
-      <View style={styles.velo}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onCerrar} accessibilityLabel="Cerrar stickers" />
-        <View
-          style={[styles.hoja, { backgroundColor: c.cardBg, paddingBottom: Math.max(insets.bottom, 12) }]}
-          onLayout={event => setAncho(event.nativeEvent.layout.width)}
-          accessibilityViewIsModal
-        >
-          <View style={styles.cabecera}>
-            <Text style={[styles.titulo, { color: c.text }]} accessibilityRole="header">Stickers Renaser</Text>
-            <Pressable onPress={onCerrar} style={styles.cerrar} accessibilityRole="button" accessibilityLabel="Cerrar stickers">
-              <Icon name="close" size={22} color={c.text} />
-            </Pressable>
-          </View>
-          <FlatList
-            key={columnas}
-            data={STICKERS_RENASER}
-            numColumns={columnas}
-            keyExtractor={item => item.id}
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={styles.lista}
-            renderItem={({ item }) => (
-              <Pressable
-                onPress={() => onElegir(item)}
-                disabled={enviando}
-                style={[styles.sticker, { width: `${100 / columnas}%`, opacity: enviando ? 0.4 : 1 }]}
-                accessibilityRole="button"
-                accessibilityLabel={`Enviar sticker: ${item.nombre}`}
-                accessibilityState={{ disabled: enviando }}
-              >
-                <Image source={item.imagen} style={styles.imagen} contentFit="contain" />
-              </Pressable>
-            )}
-          />
-          {enviando && <Text style={[styles.estado, { color: c.textSoft }]} accessibilityLiveRegion="polite">Enviando sticker…</Text>}
-        </View>
+    <HojaDesdeAbajo visible={visible} alCerrar={onCerrar} titulo="Stickers Renaser" etiquetaCerrar="Cerrar stickers">
+      <View onLayout={event => setAncho(event.nativeEvent.layout.width)}>
+        <FlatList
+          key={columnas}
+          data={STICKERS_RENASER}
+          numColumns={columnas}
+          keyExtractor={item => item.id}
+          keyboardShouldPersistTaps="handled"
+          style={{ maxHeight: Math.round((altoVentana - insets.top) * 0.55) }}
+          contentContainerStyle={styles.lista}
+          renderItem={({ item }) => (
+            <Presionable
+              onPress={() => onElegir(item)}
+              disabled={enviando}
+              contenedorStyle={{ width: `${100 / columnas}%` }}
+              style={[styles.sticker, { opacity: enviando ? 0.4 : 1 }]}
+              accessibilityRole="button"
+              accessibilityLabel={`Enviar sticker: ${item.nombre}`}
+              accessibilityState={{ disabled: enviando }}
+            >
+              <Image source={item.imagen} style={styles.imagen} contentFit="contain" />
+            </Presionable>
+          )}
+        />
       </View>
-    </Modal>
+      {enviando && (
+        <Text style={[styles.estado, { color: c.textSoft }]} accessibilityLiveRegion="polite">
+          Enviando sticker…
+        </Text>
+      )}
+    </HojaDesdeAbajo>
   );
 }
 
 const styles = StyleSheet.create({
-  velo: { flex: 1, justifyContent: 'flex-end', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.45)' },
-  hoja: { width: '100%', maxWidth: 560, height: '60%', borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden' },
-  cabecera: { flexDirection: 'row', alignItems: 'center', paddingLeft: 18, paddingRight: 8, paddingVertical: 8 },
-  titulo: { flex: 1, fontFamily: 'Jost_700Bold', fontSize: 19 },
-  cerrar: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
-  lista: { flexGrow: 1, paddingHorizontal: 8, paddingBottom: 16 },
+  lista: { paddingHorizontal: 8, paddingBottom: 8 },
   sticker: { aspectRatio: 1, padding: 6, minHeight: 48 },
   imagen: { width: '100%', height: '100%' },
-  estado: { textAlign: 'center', fontFamily: 'Jost_500Medium', fontSize: 14, paddingBottom: 8 },
+  estado: { textAlign: 'center', fontFamily: 'Jost_500Medium', fontSize: 14, paddingTop: 4 },
 });
