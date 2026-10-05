@@ -23,8 +23,9 @@ export function TarjetaAdminHoy({ onAbrir }: { onAbrir: () => void }) {
       style={[estilos.tarjeta, { backgroundColor: c.cardBg, borderColor: c.border }]}
     >
       <View style={{ flex: 1, flexShrink: 1 }}>
-        {/* Rótulo de la tarjeta, con la forma de las demás de Hoy pero a 14 px (A-1). */}
-        <Text style={[t.micro, { color: c.micro, fontSize: 14 /* metadato */ }]}>OPERACIÓN</Text>
+        {/* Rótulo de la tarjeta, a 14 px (A-1). Tipo oración, en negrita y sin espaciar desde el
+            2026-10-05 (pedido del dueño): decía «OPERACIÓN» en versales espaciadas. */}
+        <Text style={[t.small, { color: c.micro, fontSize: 14 /* metadato */, fontFamily: 'Jost_700Bold' }]}>Operación</Text>
         <Text style={[t.cardTitle, { color: c.textStrong, marginTop: 6 }]}>Administración</Text>
         {/* Dice SOLO lo que hay detrás. Decía «…solicitudes y evidencias» y no existe ninguna
             pantalla de evidencias: la bandeja está construida en el backend

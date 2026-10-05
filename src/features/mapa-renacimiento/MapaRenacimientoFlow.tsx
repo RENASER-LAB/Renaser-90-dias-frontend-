@@ -4,6 +4,8 @@ import { ActivityIndicator, View } from 'react-native';
 import { useSystemBackHandler } from '../../hooks/useSystemBackHandler';
 import { useTheme } from '../../theme/ThemeContext';
 import { useMapaRenacimiento } from './hooks/useMapaRenacimiento';
+import { useProgramaDia } from '../programa/hooks/useProgramaDia';
+import { textosConLosDiasQueQuedan } from './textosDeApertura';
 import { conPrincipalPrimero } from '../objetivos/hooks/usePrioridadPrincipal';
 import { AREAS, type Area } from './tipos';
 import type { PropsPaso } from './screens/props';
@@ -34,6 +36,9 @@ const PANTALLA_DEL_AREA: Record<Area, (props: PropsPaso) => React.JSX.Element> =
 export function MapaRenacimientoFlow({ userId, onSalir }: { userId: string; onSalir: () => void }) {
   const { c } = useTheme();
   const estado = useMapaRenacimiento(userId);
+  // El día real del programa, una vez para todo el flujo (`PropsPaso.dias`): los «83 días» que había
+  // escritos en cuatro pantallas pasan a ser los que de verdad quedan (2026-10-05).
+  const dias = textosConLosDiasQueQuedan(useProgramaDia());
   const { mapa, cargando, anterior } = estado;
 
   useSystemBackHandler(() => {
@@ -53,7 +58,7 @@ export function MapaRenacimientoFlow({ userId, onSalir }: { userId: string; onSa
     );
   }
 
-  const props = { estado, onSalir };
+  const props = { estado, onSalir, dias };
   // Un mapa ya activo no vuelve a recorrerse: abre directo en el cierre, que es su estado real.
   const paso = mapa.estado === 'activo' ? 11 : mapa.pasoActual;
   switch (paso) {

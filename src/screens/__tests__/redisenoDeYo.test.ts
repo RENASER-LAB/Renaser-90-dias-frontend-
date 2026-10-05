@@ -51,8 +51,11 @@ describe('Ajustes estilo iOS', () => {
     expect(yo).not.toContain('groupedBox');
   });
 
+  /* > **Corregido 2026-10-05.** La lista incluía `signature`, el ícono de la fila «Mi ficha y Pacto» de
+     > Yo. Esa fila se quitó (pedido del dueño: abría lo mismo que «Mi onboarding» de Ajustes; ver
+     > `unaSolaEntradaAlOnboarding.test.ts`). El ícono queda en `Icon.tsx`, sin uso. */
   it('cada fila con su ícono del inventario', () => {
-    for (const icono of ['user', 'idCard', 'listChecks', 'images', 'compass', 'bell', 'alarmClock', 'trash', 'logout', 'package', 'signature', 'lifeBuoy']) {
+    for (const icono of ['user', 'idCard', 'listChecks', 'images', 'compass', 'bell', 'alarmClock', 'trash', 'logout', 'package', 'lifeBuoy']) {
       expect(yo).toContain(`icono="${icono}"`);
     }
     // «Lo que SER recuerda» con el orbe de SER, no con el cerebro de «Mente».

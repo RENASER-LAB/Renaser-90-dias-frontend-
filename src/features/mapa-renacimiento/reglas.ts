@@ -101,7 +101,7 @@ export const LIMITES = {
   accionesPorObjetivo: 2,
   accionesTotales: 6,
   reemplazos: 3,
-  /** UNREALISTIC_LOAD: más de esto por semana entre todas las acciones no se sostiene 83 días. */
+  /** UNREALISTIC_LOAD: más de esto por semana entre todas las acciones no se sostiene lo que queda del programa. */
   cargaSemanalMaxima: 28,
 } as const;
 
@@ -180,7 +180,9 @@ const MENSAJE: Record<AvisoCalidad['codigo'], string> = {
   THIRD_PARTY_CONTROL: 'Reformula la meta desde una acción o decisión que dependa de ti.',
   UNSAFE_HEALTH: 'Ajusta esta meta con acompañamiento profesional y define una conducta segura.',
   UNIT_MISMATCH: 'Usa la misma unidad para tu situación actual y tu meta.',
-  UNREALISTIC_LOAD: 'Revisa si esta frecuencia puede sostenerse durante 83 días.',
+  /* Decía «durante 83 días», escrito a mano (90 − 7, de cuando el Mapa vivía en el Día 7). Sin número;
+     `avisosDeCarga` lo dice con los días que de verdad quedan (2026-10-05). */
+  UNREALISTIC_LOAD: 'Revisa si esta frecuencia puede sostenerse durante lo que queda del programa.',
   MISSING_TYPE: 'Elige primero qué vas a medir, arriba.',
   MISSING_PERIOD: 'Indica cada cuánto se mide: semanal, mensual o acumulado al Día 90.',
   MISSING_LINK: 'Elige con quién es el vínculo que quieres fortalecer.',
@@ -417,9 +419,15 @@ export function sistemaEjecucionValido(acciones: AccionMotora[]): boolean {
   return acciones.every(accionValida);
 }
 
-export function avisosDeCarga(acciones: AccionMotora[]): AvisoCalidad[] {
+/**
+ * `lapso` es el que queda del programa ya dicho («los próximos 75 días», `lapsoQueQueda`): lo arma el
+ * flujo con el día real. Sin él, el aviso no dice ningún número.
+ */
+export function avisosDeCarga(acciones: AccionMotora[], lapso?: string): AvisoCalidad[] {
   const total = acciones.reduce((s, a) => s + a.frecuenciaSemanal, 0);
-  return total > LIMITES.cargaSemanalMaxima ? [aviso('UNREALISTIC_LOAD', false)] : [];
+  if (total <= LIMITES.cargaSemanalMaxima) return [];
+  const carga = aviso('UNREALISTIC_LOAD', false);
+  return [lapso ? { ...carga, mensaje: `Revisa si esta frecuencia puede sostenerse durante ${lapso}.` } : carga];
 }
 
 export function reemplazoValido(r: ProtocoloReemplazo): boolean {

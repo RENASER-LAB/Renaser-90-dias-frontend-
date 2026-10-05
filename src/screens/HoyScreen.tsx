@@ -79,7 +79,7 @@ import type { PedidoDeFotoUI } from '../features/renasia/types/renasia.types';
 import { useRegistroConFoto } from '../features/habits/hooks/useRegistroConFoto';
 import { RegistroConFotoModal } from '../features/habits/components/RegistroConFotoModal';
 import { cifrasDeHabitos } from '../features/home/utils/cifrasDeHabitos';
-import { diasQueQuedan as calcularDiasQueQuedan } from '../features/home/utils/diasQueQuedan';
+import { diasQueQuedanSiSeSabe, lapsoQueQueda } from '../features/home/utils/diasQueQuedan';
 import { cuandoEsElEvento } from '../features/home/utils/cuandoEsElEvento';
 import { useOcultarBarraAlDesplazar } from '../navigation/barraAlDesplazar/BarraInferior';
 
@@ -399,8 +399,6 @@ export default function HoyScreen() {
    * > inventado es peor que no mostrarlo. Reportado por el dueño el día que se registró.
    */
   const diaConocido = resumen?.diaPrograma ?? null;
-  /** Para los cálculos derivados, que necesitan un número. `0` es el día real de quien recién entra. */
-  const diaNumero = diaConocido ?? 0;
   // Mapa de Renacimiento. **Disponible desde el Día 0 y opcional** (decisión del dueño,
   // 2026-09-08). Antes aparecía recién el Día 7; se adelanta por dos razones:
   //
@@ -420,14 +418,23 @@ export default function HoyScreen() {
   // Decía "83 días", que era 90 − 7 y valía mientras el Mapa vivía en el Día 7. Desde que arranca
   // en el Día 0 ese número miente: quien lo abre el primer día tiene 90 por delante, no 83.
   // La cuenta vive en `diasQueQuedan` desde el 2026-10-05: la apertura del Mapa usa la misma.
-  const diasQueQuedan = calcularDiasQueQuedan(diaNumero);
+  //
+  // > **Corregido 2026-10-05 (ajustes de Hoy y Yo).** Se calculaba con `diaNumero` (era
+  // > `diaConocido ?? 0`): con `/home` caído la tarjeta decía «los próximos 90 días», un número
+  // > inventado. Ahora usa el mismo criterio que la apertura del Mapa: sin día conocido (o sin
+  // > inscripción), «lo que queda del programa», y «el día que queda» en vez de «los próximos 1 días».
+  // > `cargando: false` a propósito: Hoy se vuelve a pedir en cada foco con el resumen anterior a la
+  // > vista, y el texto no tiene que parpadear a «lo que queda del programa» en cada recarga.
+  const lapsoDelMapa = lapsoQueQueda(
+    diasQueQuedanSiSeSabe({ diaPrograma: resumen?.diaPrograma, inscrito: resumen?.inscrito, cargando: false }),
+  );
   const mostrarMapa = MAPA_DIA7_HABILITADO && !!user;
   const tituloMapa = estadoMapa === 'activo'
     ? 'Tu mapa está activo'
     : estadoMapa === 'en_progreso' || estadoMapa === 'listo_para_revision' ? 'Continúa tu mapa' : 'Diseña tu mapa';
   const detalleMapa = estadoMapa === 'activo'
-    ? `Tus objetivos, acciones y protocolo de retorno para los ${diasQueQuedan} días.`
-    : `Convierte lo aprendido en un plan claro para los próximos ${diasQueQuedan} días. 15–20 min.`;
+    ? `Tus objetivos, acciones y protocolo de retorno para ${lapsoDelMapa}.`
+    : `Convierte lo aprendido en un plan claro para ${lapsoDelMapa}. 15–20 min.`;
   /* Los dos textos de la primera tarjeta. El estado lo decide `habitoDelMomento`; acá solo se
      redacta. `sin-datos` cae al texto genérico de siempre —Día 0, cuenta recién aprobada, o el
      endpoint falló— porque inventar un hábito sería peor que no decir nada. */
@@ -462,9 +469,13 @@ export default function HoyScreen() {
     resumen?.coherencia === null || resumen?.coherencia === undefined
       ? null
       : Math.round(resumen.coherencia);
-  const puntosLiga = resumen?.puntosLiga ?? 100;
-  const rachaActual = resumen?.rachaActual ?? 0;
-  const rachaMaxima = resumen?.rachaMaxima ?? 0;
+  /* `null` = no se sabe (`/home` falló, todavía carga o no trajo el dato): la pantalla dice «—».
+     > **Corregido 2026-10-05.** Acá había `?? 100`, `?? 0` y `?? 0`: con `/home` caído Hoy decía
+     > «100 pts», «0 días» y «Récord histórico: 0 d», tres datos inventados (el mismo error que el
+     > «DÍA 1 DE 90» del 2026-09-07 y el «100 %» de coherencia del 2026-09-15). Yo ya decía «—». */
+  const puntosLiga = typeof resumen?.puntosLiga === 'number' ? resumen.puntosLiga : null;
+  const rachaActual = typeof resumen?.rachaActual === 'number' ? resumen.rachaActual : null;
+  const rachaMaxima = typeof resumen?.rachaMaxima === 'number' ? resumen.rachaMaxima : null;
 
   /* El orbe responde también al tacto (rediseño de Hoy, 2026-10-05): un «tic» cuando el toque
      EMPIEZA a escuchar y el «toc» del sistema cuando mantenerlo presionado cierra la conversación.
@@ -604,9 +615,9 @@ export default function HoyScreen() {
               Plan es «Tu semana», dentro de una píldora en versales. */}
           <Text
             style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 14 }]}
-            accessibilityLabel={`${puntosLiga} puntos de la liga`}
+            accessibilityLabel={puntosLiga === null ? 'Puntos de la liga: sin datos' : `${puntosLiga} puntos de la liga`}
           >
-            {puntosLiga} pts
+            {puntosLiga ?? '—'} pts
           </Text>
         </View>
 
@@ -658,16 +669,18 @@ export default function HoyScreen() {
             <View style={styles.metricEncabezado}>
               {/* La llama de Lucide a 16: la de antes, a 14, se leía como una gota. Gris en 0. */}
               <Text style={[t.small, { color: c.textSoft, fontFamily: 'Jost_700Bold' }]}>Racha</Text>
-              <Icon name="flame" size={TAMANO_ICONO.chico} color={rachaActual > 0 ? c.goldInk : c.chevron} />
+              <Icon name="flame" size={TAMANO_ICONO.chico} color={rachaActual ? c.goldInk : c.chevron} />
             </View>
             <View style={styles.metricCifra}>
               <Text style={[t.metric, { color: c.textStrong }]}>
-                {rachaActual}
+                {rachaActual ?? '—'}
               </Text>
-              <Text style={[t.small, { color: c.textSoft }]}>{rachaActual === 1 ? 'día' : 'días'}</Text>
+              {rachaActual !== null && (
+                <Text style={[t.small, { color: c.textSoft }]}>{rachaActual === 1 ? 'día' : 'días'}</Text>
+              )}
             </View>
             <Text style={[t.small, { color: c.micro, fontSize: 12, marginTop: 4 }]}>
-              Récord histórico: {rachaMaxima} d
+              Récord histórico: {rachaMaxima === null ? '—' : `${rachaMaxima} d`}
             </Text>
           </View>
         </View>

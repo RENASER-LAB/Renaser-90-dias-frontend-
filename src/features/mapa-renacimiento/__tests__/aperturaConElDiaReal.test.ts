@@ -24,10 +24,9 @@ jest.mock('react-native-safe-area-context', () => {
   const { View } = jest.requireActual<typeof import('react-native')>('react-native');
   return { SafeAreaView: View, useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) };
 });
-jest.mock('../../programa/hooks/useProgramaDia', () => ({ useProgramaDia: () => mockPrograma }));
 
 import { AperturaScreen } from '../screens/AperturaScreen';
-import { textosDeApertura } from '../textosDeApertura';
+import { textosConLosDiasQueQuedan, textosDeApertura } from '../textosDeApertura';
 import { diasQueQuedan } from '../../home/utils/diasQueQuedan';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -37,7 +36,12 @@ function montar(): ReactTestRenderer {
   let r!: ReactTestRenderer;
   act(() => {
     r = TestRenderer.create(
-      React.createElement(AperturaScreen, { estado: estado as never, onSalir: () => undefined }),
+      // Desde el 2026-10-05 el día lo lee el flujo una vez (`useProgramaDia`) y llega en `dias`.
+      React.createElement(AperturaScreen, {
+        estado: estado as never,
+        onSalir: () => undefined,
+        dias: textosConLosDiasQueQuedan(mockPrograma),
+      }),
     );
   });
   return r;

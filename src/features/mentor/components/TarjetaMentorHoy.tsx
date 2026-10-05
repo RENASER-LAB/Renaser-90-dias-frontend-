@@ -62,8 +62,9 @@ export function TarjetaMentorHoy({
       ]}
     >
       <View style={{ flex: 1 }}>
-        {/* Rótulo de la tarjeta, con la forma de las demás de Hoy pero a 14 px (A-1). */}
-        <Text style={[t.micro, { color: c.micro, fontSize: 14 /* metadato */ }]}>MI GRUPO</Text>
+        {/* Rótulo de la tarjeta, a 14 px (A-1). Tipo oración, en negrita y sin espaciar desde el
+            2026-10-05 (pedido del dueño): decía «MI GRUPO» en versales espaciadas. */}
+        <Text style={[t.small, { color: c.micro, fontSize: 14 /* metadato */, fontFamily: 'Jost_700Bold' }]}>Mi grupo</Text>
         <Text style={[t.cardTitle, { color: c.textStrong, marginTop: 5 }]} numberOfLines={1}>
           {vista?.celula.nombre ?? 'Acompañamiento'}
         </Text>
