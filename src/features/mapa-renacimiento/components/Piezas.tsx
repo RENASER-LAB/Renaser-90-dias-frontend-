@@ -9,7 +9,7 @@ import { ULTIMO_PASO_CONTADO } from '../tipos';
 
 /**
  * Piezas visuales del Mapa de Renacimiento, calcadas de las once vistas del diseño (V01–V11):
- * cabecera con "Día 7 · Paso X de 10" y barra dorada, pastillas de selección, campos con
+ * cabecera con "Paso X de 10" y barra dorada, pastillas de selección, campos con
  * etiqueta y contador, escala 1–10, tarjeta de meta redactada y aviso de calidad.
  *
  * Reglas de experiencia del manual (§2.1) que viven acá: objetivo táctil mínimo 44×44, mensajes
@@ -18,15 +18,17 @@ import { ULTIMO_PASO_CONTADO } from '../tipos';
 
 const ALTO_TACTIL = 44;
 
+/**
+ * > **Corregido 2026-10-05.** Decía «Día 7» a la izquierda, escrito a mano: el Mapa se abre desde el
+ * > Día 0 y una cuenta en el día 15 lo veía junto a «Día 15» en la apertura. El día real lo dice la
+ * > apertura (`textosDeApertura`); acá queda solo el paso.
+ */
 export function PasoCabecera({ paso }: { paso: number }) {
   const { c, t } = useTheme();
   const progreso = Math.min(1, paso / ULTIMO_PASO_CONTADO);
   return (
     <View style={{ marginBottom: 18 }}>
-      <RowBetween>
-        <Text style={[t.small, { color: c.textSoft }]}>Día 7</Text>
-        <Text style={[t.small, { color: c.textSoft }]}>Paso {paso} de {ULTIMO_PASO_CONTADO}</Text>
-      </RowBetween>
+      <Text style={[t.small, { color: c.textSoft }]}>Paso {paso} de {ULTIMO_PASO_CONTADO}</Text>
       <View style={[styles.barra, { backgroundColor: c.divider }]}>
         <View style={[styles.barraLlena, { backgroundColor: c.gold, width: `${Math.round(progreso * 100)}%` }]} />
       </View>
