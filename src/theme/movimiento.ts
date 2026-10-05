@@ -37,6 +37,10 @@ export const DURACION_MS = {
   avance: 280,
   /** El fundido que reemplaza al deslizamiento cuando el sistema pide reducir el movimiento. */
   fundido: 160,
+  /** Entre un bloque y el siguiente de una entrada escalonada (el login: título, campos, botón). */
+  escalon: 50,
+  /** La sacudida de «no» de un formulario rechazado: tres idas y vueltas que se apagan. */
+  sacudida: 280,
 } as const;
 
 /** Escala de un elemento apretado. Nunca menos de 0.95: lo físico no se encoge de golpe. */
