@@ -150,6 +150,29 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       lleva un parche (`scripts/arreglar-parlante-two-way-audio.js`, en `postinstall`).
     Una excepción puntual **no abre** el tab: cualquier otro cambio sobre los cinco principales
     vuelve a necesitar autorización explícita.
+  * **Excepción autorizada por el dueño del producto — 2026-10-05 — alta (`LoginScreen`) y
+    onboarding (Ficha Inicial, Términos, «Elige tu Día 1»): forma «de app»** (backend D-250). Pedido
+    del dueño: «Me gustaría mejorar el diseño. Estamos en una app móvil y veo cosas como si fuera una
+    web, tipo el registro, que lo hace por fases». Cambia la FORMA, no el contenido. Lo que cambia y
+    nada más:
+    * **Login:** las pestañas «Iniciar sesión / Crear cuenta» pasan a `ControlSegmentado` (píldora que
+      se desplaza, 250 ms, háptico de selección). Cada campo declara `autoComplete`/`textContentType`
+      y su tecla de acción encadena al siguiente o envía. Mismos textos, placeholders y flujo.
+    * **Ficha Inicial:** los tres capítulos se muestran en doce pasos cortos (`data/pasosFicha.ts`)
+      dentro de `MarcoDePaso` (botón principal fijo abajo que sube con el teclado, barra fina de
+      avance en vez de «CAPÍTULO 1 DE 3», atrás con la flecha o el gesto del sistema = un paso). Las
+      opciones son tarjetas grandes (`OpcionElegible`) con háptico. Únicos textos nuevos: los títulos
+      de los pasos que agrupan preguntas («Sobre ti», «Tu familia», «Tu trabajo», «Tu documento»,
+      «¿Dónde vives?», «Tu descanso»).
+    * **Términos y Día 1:** el mismo esqueleto, con «CONTINUAR» / «CONFIRMAR MI DÍA 1» fijos abajo.
+      Términos atiende el gesto atrás de Android (vuelve a la ficha).
+    * **Lo que NO cambia:** preguntas, claves y respuestas (`mapaPreguntas.ts`), el guardado por
+      capítulo (mismo `POST /onboarding/answers`, mismo `avanzarEstado`, sólo al terminar cada
+      capítulo), las 23 cláusulas, la firma y los avisos de validación (mismos títulos y mensajes).
+      El Pacto (`PactoScreen`) y `BienvenidaScreen` no están en este flujo y no se tocaron.
+    * **Dependencia nueva:** `expo-haptics` (código nativo). Sin el módulo, `utils/tacto.ts` no vibra
+      y no rompe; la vibración se siente recién con un APK nuevo, que de todos modos hace falta para
+      que este cambio llegue (no hay actualización por aire).
   * **Excepción autorizada por el dueño del producto — 2026-09-29 — tab `Comunidad` (chat): nombres
     de los chats y avisos de mensajes** (backend D-221). Pedido del dueño: «Formación Renaser Global,
     grupo general donde estarán todos; luego el otro con el Mentor y sus estudiantes, que será el nombre
