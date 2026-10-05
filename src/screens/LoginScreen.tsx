@@ -34,6 +34,7 @@ import { useRecuperacionContrasena } from '../features/auth/hooks/useRecuperacio
 import { useDisponibilidadCorreo } from '../features/auth/hooks/useDisponibilidadCorreo';
 import { CodigoOtpInput, LARGO_CODIGO } from '../features/auth/components/CodigoOtpInput';
 import { desplazamientoParaVerElCampo } from '../features/auth/utils/campoBajoElTeclado';
+import { ControlSegmentado } from '../components/ControlSegmentado';
 
 /**
  * `forgot` → `forgot_otp` → `forgot_new_password` es la recuperación de contraseña dentro de la
@@ -215,6 +216,14 @@ export default function LoginScreen() {
   const [resendTimer, setResendTimer] = useState(45);
   const [canResend, setCanResend] = useState(false);
   const otpInputRef = useRef<TextInput>(null);
+
+  /* La tecla de acción del teclado lleva al campo siguiente («Siguiente») y, en el último, envía
+     («Ir»), como en cualquier formulario de una app (2026-10-05). Antes todos los campos mostraban
+     el tilde de «listo», que sólo cerraba el teclado: había que buscar el botón con el dedo. */
+  const apellidosRef = useRef<TextInput>(null);
+  const correoRef = useRef<TextInput>(null);
+  const contrasenaRef = useRef<TextInput>(null);
+  const confirmarRef = useRef<TextInput>(null);
 
   // UI state
   const [loading, setLoading] = useState(false);
@@ -789,63 +798,23 @@ export default function LoginScreen() {
           {/* ========================================================================= */}
           {step === 'form' && (
             <>
-              {/* Selector de Pestañas: Iniciar Sesión / Registro */}
-              <View style={[styles.tabSelector, { backgroundColor: c.cardBg, borderColor: c.border }]}>
-                <Pressable
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: activeTab === 'login' }}
-                  accessibilityLabel="Iniciar sesión"
-                  onPress={() => {
-                    setActiveTab('login');
+              {/* Selector Iniciar sesión / Crear cuenta: control segmentado con la píldora que se
+                  desplaza (2026-10-05). Eran dos botones con el texto en versalitas espaciadas y
+                  un recuadro que aparecía de golpe — se leían como las pestañas de una web. */}
+              <View style={styles.selectorModo}>
+                <ControlSegmentado<Tab>
+                  accessibilityLabel="Iniciar sesión o crear cuenta"
+                  opciones={[
+                    { valor: 'login', etiqueta: 'Iniciar sesión' },
+                    { valor: 'register', etiqueta: 'Crear cuenta' },
+                  ]}
+                  valor={activeTab}
+                  onCambiar={pestana => {
+                    setActiveTab(pestana);
                     setErrorMessage(null);
                     setSuccessMessage(null);
                   }}
-                  style={[
-                    styles.tabBtn,
-                    activeTab === 'login' && [styles.tabBtnActive, { backgroundColor: c.cardBgAlt, borderColor: c.borderStrong }],
-                  ]}
-                >
-                  <Text
-                    style={[
-                      t.micro,
-                      {
-                        color: activeTab === 'login' ? c.goldInk : c.textSoft,
-                        letterSpacing: 1.8,
-                        fontFamily: activeTab === 'login' ? 'Jost_500Medium' : 'Jost_400Regular',
-                      },
-                    ]}
-                  >
-                    Iniciar sesión
-                  </Text>
-                </Pressable>
-
-                <Pressable
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: activeTab === 'register' }}
-                  accessibilityLabel="Crear cuenta"
-                  onPress={() => {
-                    setActiveTab('register');
-                    setErrorMessage(null);
-                    setSuccessMessage(null);
-                  }}
-                  style={[
-                    styles.tabBtn,
-                    activeTab === 'register' && [styles.tabBtnActive, { backgroundColor: c.cardBgAlt, borderColor: c.borderStrong }],
-                  ]}
-                >
-                  <Text
-                    style={[
-                      t.micro,
-                      {
-                        color: activeTab === 'register' ? c.goldInk : c.textSoft,
-                        letterSpacing: 1.8,
-                        fontFamily: activeTab === 'register' ? 'Jost_500Medium' : 'Jost_400Regular',
-                      },
-                    ]}
-                  >
-                    Crear cuenta
-                  </Text>
-                </Pressable>
+                />
               </View>
 
               {/* Tarjeta de Formulario */}
@@ -887,6 +856,12 @@ export default function LoginScreen() {
                         onBlur={desenfocarCampo}
                         style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
                         autoCapitalize="words"
+                        autoCorrect={false}
+                        autoComplete="given-name"
+                        textContentType="givenName"
+                        returnKeyType="next"
+                        submitBehavior="submit"
+                        onSubmitEditing={() => apellidosRef.current?.focus()}
                       />
                     </View>
                   </View>
@@ -906,6 +881,7 @@ export default function LoginScreen() {
                     >
                       <Icon name="user" size={17} color={focusedField === 'apellidos' ? c.goldInk : c.tabInactive} />
                       <TextInput
+                        ref={apellidosRef}
                         value={apellidos}
                         accessibilityLabel="Apellidos"
                         onChangeText={setApellidos}
@@ -915,6 +891,12 @@ export default function LoginScreen() {
                         onBlur={desenfocarCampo}
                         style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
                         autoCapitalize="words"
+                        autoCorrect={false}
+                        autoComplete="family-name"
+                        textContentType="familyName"
+                        returnKeyType="next"
+                        submitBehavior="submit"
+                        onSubmitEditing={() => correoRef.current?.focus()}
                       />
                     </View>
                   </View>
@@ -933,6 +915,7 @@ export default function LoginScreen() {
                   >
                     <Icon name="mail" size={17} color={focusedField === 'email' ? c.goldInk : c.tabInactive} />
                     <TextInput
+                      ref={correoRef}
                       value={email}
                       accessibilityLabel="Correo electrónico"
                       onChangeText={setEmail}
@@ -940,6 +923,12 @@ export default function LoginScreen() {
                       placeholderTextColor={c.tabInactive}
                       keyboardType="email-address"
                       autoCapitalize="none"
+                      autoCorrect={false}
+                      autoComplete="email"
+                      textContentType={activeTab === 'login' ? 'username' : 'emailAddress'}
+                      returnKeyType="next"
+                      submitBehavior="submit"
+                      onSubmitEditing={() => contrasenaRef.current?.focus()}
                       onFocus={evento => enfocarCampo('email', evento)}
                       onBlur={desenfocarCampo}
                       style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
@@ -995,18 +984,30 @@ export default function LoginScreen() {
                   >
                     <Icon name="lock" size={17} color={focusedField === 'password' ? c.goldInk : c.tabInactive} />
                     <TextInput
+                      ref={contrasenaRef}
                       value={password}
                       accessibilityLabel="Contraseña"
                       onChangeText={setPassword}
                       placeholder={activeTab === 'register' ? `Mínimo ${MIN_CONTRASENA} caracteres` : 'Tu contraseña'}
                       placeholderTextColor={c.tabInactive}
                       secureTextEntry={!showPassword}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      // Al crear la cuenta el gestor de contraseñas propone una nueva; al entrar, la guardada.
+                      autoComplete={activeTab === 'register' ? 'new-password' : 'current-password'}
+                      textContentType={activeTab === 'register' ? 'newPassword' : 'password'}
+                      returnKeyType={activeTab === 'register' ? 'next' : 'go'}
+                      submitBehavior={activeTab === 'register' ? 'submit' : 'blurAndSubmit'}
+                      onSubmitEditing={() => {
+                        if (activeTab === 'register') confirmarRef.current?.focus();
+                        else void handleFormSubmit();
+                      }}
                       onFocus={evento => enfocarCampo('password', evento)}
                       onBlur={desenfocarCampo}
                       style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
                     />
                     <Pressable
-                      hitSlop={8}
+                      hitSlop={14}
                       accessibilityRole="button"
                       accessibilityLabel={showPassword ? 'Ocultar la contraseña' : 'Mostrar la contraseña'}
                       onPress={() => setShowPassword(!showPassword)}
@@ -1034,12 +1035,19 @@ export default function LoginScreen() {
                     >
                       <Icon name="lock" size={17} color={focusedField === 'confirmPassword' ? c.goldInk : c.tabInactive} />
                       <TextInput
+                        ref={confirmarRef}
                         value={confirmPassword}
                         accessibilityLabel="Confirmar contraseña"
                         onChangeText={setConfirmPassword}
                         placeholder="Repite tu contraseña"
                         placeholderTextColor={c.tabInactive}
                         secureTextEntry={!showPassword}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        autoComplete="new-password"
+                        textContentType="newPassword"
+                        returnKeyType="go"
+                        onSubmitEditing={() => void handleFormSubmit()}
                         onFocus={evento => enfocarCampo('confirmPassword', evento)}
                         onBlur={desenfocarCampo}
                         style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
@@ -1273,6 +1281,11 @@ export default function LoginScreen() {
                     placeholderTextColor={c.tabInactive}
                     keyboardType="email-address"
                     autoCapitalize="none"
+                    autoCorrect={false}
+                    autoComplete="email"
+                    textContentType="emailAddress"
+                    returnKeyType="send"
+                    onSubmitEditing={() => void handleForgotPasswordSubmit()}
                     onFocus={evento => enfocarCampo('forgot_email', evento)}
                     onBlur={desenfocarCampo}
                     style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
@@ -1445,13 +1458,17 @@ export default function LoginScreen() {
                     placeholder={`Mínimo ${MIN_CONTRASENA} caracteres`}
                     placeholderTextColor={c.tabInactive}
                     secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    autoComplete="new-password"
+                    textContentType="newPassword"
                     onFocus={evento => enfocarCampo('forgot_password', evento)}
                     onBlur={desenfocarCampo}
                     style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
                     autoFocus
                   />
                   <Pressable
-                      hitSlop={8}
+                      hitSlop={14}
                       accessibilityRole="button"
                       accessibilityLabel={showPassword ? 'Ocultar la contraseña' : 'Mostrar la contraseña'}
                       onPress={() => setShowPassword(!showPassword)}
@@ -1484,6 +1501,11 @@ export default function LoginScreen() {
                     placeholder="Repite tu contraseña nueva"
                     placeholderTextColor={c.tabInactive}
                     secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    autoComplete="new-password"
+                    textContentType="newPassword"
+                    returnKeyType="go"
                     onFocus={evento => enfocarCampo('forgot_confirm', evento)}
                     onBlur={desenfocarCampo}
                     onSubmitEditing={handleChangePassword}
@@ -1803,22 +1825,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     borderWidth: 1,
   },
-  tabSelector: {
-    flexDirection: 'row',
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 4,
+  /* Antes `tabSelector`/`tabBtn`/`tabBtnActive`, las pestañas de botones (ver `ControlSegmentado`). */
+  selectorModo: {
     marginBottom: 16,
-  },
-  tabBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 10,
-  },
-  tabBtnActive: {
-    borderWidth: 1,
   },
   card: {
     /* Sin `borderWidth` a proposito (2026-09-14): el borde de esta tarjeta, mas el de la fila de
