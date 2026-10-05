@@ -207,8 +207,8 @@ export function CodigoRenaserModal({
           <View style={styles.encabezado}>
             <View style={{ flex: 1, gap: 3 }}>
               <MicroLabel>
-                {slot ? `CÓDIGO RENASER · ${slot.etiqueta}` : 'CÓDIGO RENASER'}
-                {obligatorio ? ' · INNEGOCIABLE' : ''}
+                {slot ? `Código Renaser · ${slot.etiqueta}` : 'Código Renaser'}
+                {obligatorio ? ' · Innegociable' : ''}
               </MicroLabel>
               <Text style={[t.screenTitle, { color: c.text, fontSize: isShort ? 20 : 24 }]}>
                 ¿Dónde estás ahora mismo?
@@ -270,7 +270,7 @@ export function CodigoRenaserModal({
 
             <View onLayout={anotarPosicion('energia')}>
               <SliderRating
-                label="NIVEL DE ENERGÍA"
+                label="Nivel de energía"
                 value={energia}
                 onChange={setEnergia}
                 minLabel={`En reserva (${ENERGIA_MINIMA})`}

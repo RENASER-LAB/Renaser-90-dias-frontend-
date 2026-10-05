@@ -1,8 +1,10 @@
 import React from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { GoldButton } from '../../../components/GoldButton';
+import { Icon, TAMANO_ICONO } from '../../../components/Icon';
+import { Presionable } from '../../../components/Presionable';
 import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
 import { PasoCabecera } from './Piezas';
@@ -23,6 +25,12 @@ import { PasoCabecera } from './Piezas';
  * deja de estar bloqueado — se ve lo que falta, pero no frena.
  */
 const RECORRIDO_LIBRE = __DEV__ || process.env.EXPO_PUBLIC_MAPA_LIBRE === 'on';
+
+/**
+ * El texto del botón principal del Mapa, sin espaciar y legible (2026-10-05), como el resto del
+ * rediseño (`TEXTO_DE_BOTON` de Plan, Training…). El `GoldButton` global sigue igual: se ajusta acá.
+ */
+const TEXTO_DE_BOTON = { fontSize: 16, letterSpacing: 0 } as const;
 
 /**
  * Esqueleto común de V01–V10: cabecera con el paso, contenido que se desplaza, y la acción
@@ -68,10 +76,21 @@ export function PantallaPaso({
           contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingTop: 12, paddingBottom: 28 }}
           keyboardShouldPersistTaps="handled"
         >
+          {/* La flecha de volver del rediseño: 24 en un área de 48, con el texto en tipo oración
+              (2026-10-05, decisión del dueño). Decía «← ANTERIOR» en versalitas de 10,5 espaciadas,
+              con una flecha de texto. */}
           {onAtras ? (
-            <Pressable onPress={onAtras} hitSlop={10} accessibilityRole="button" style={styles.atras}>
-              <Text style={[t.micro, { color: c.textSoft, letterSpacing: 1 }]}>← {etiquetaAtras.toUpperCase()}</Text>
-            </Pressable>
+            <Presionable
+              onPress={onAtras}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={etiquetaAtras}
+              contenedorStyle={styles.atrasArea}
+              style={styles.atras}
+            >
+              <Icon name="arrowLeft" size={TAMANO_ICONO.grande} color={c.goldInk} />
+              <Text style={[styles.atrasTexto, { color: c.goldInk }]}>{etiquetaAtras}</Text>
+            </Presionable>
           ) : null}
           {paso !== null ? <PasoCabecera paso={paso} /> : null}
           {children}
@@ -96,6 +115,7 @@ export function PantallaPaso({
             disabled={RECORRIDO_LIBRE ? false : boton.disabled}
             loading={boton.loading}
             icon="arrow"
+            textStyle={TEXTO_DE_BOTON}
           />
         </View>
       </KeyboardAvoidingView>
@@ -105,7 +125,9 @@ export function PantallaPaso({
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  atras: { minHeight: 44, justifyContent: 'center', alignSelf: 'flex-start', marginBottom: 4 },
+  atrasArea: { alignSelf: 'flex-start', marginBottom: 4 },
+  atras: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 8, paddingRight: 8 },
+  atrasTexto: { fontFamily: 'Jost_500Medium', fontSize: 16 },
   pie: { paddingTop: 12, paddingBottom: 14, borderTopWidth: 1 },
   faltan: { borderWidth: 1, borderRadius: 12, padding: 12, marginBottom: 10 },
 });

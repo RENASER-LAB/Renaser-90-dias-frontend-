@@ -186,7 +186,7 @@ export function TerminosScreen({
           <SignatureCanvas
             ref={signatureRef}
             onSignatureChange={handleSignatureChange}
-            label="FIRMA DE ACEPTACIÓN LEGAL (CON TU DEDO)"
+            label="Firma de aceptación legal (con tu dedo)"
             initialSignature={savedSignature}
             error={showError && !hasSigned ? 'Por favor dibuja tu firma con el dedo para continuar' : null}
           />

@@ -388,8 +388,11 @@ export default function HoyScreen() {
 
 
   /* Tipo oración (rediseño de Hoy, 2026-10-05): el nombre de la fase tal como lo escribe el documento
-     del cliente («El Ciclo Alquímico»), sin pasarlo a versales. */
-  const faseNombre = rotuloDeFase(resumen?.fase) || 'Programa activo';
+     del cliente («El Ciclo Alquímico»), sin pasarlo a versales.
+     > **Corregido 2026-10-05 (decisión del dueño).** Sin `/home` (o con una fase que la app no conoce)
+     > decía «Programa activo»: un dato inventado, el mismo error que los «100 pts» y el «DÍA 1 DE 90».
+     > Ahora dice «—», como los puntos y la racha. */
+  const faseNombre = rotuloDeFase(resumen?.fase);
   /**
    * `null` = todavía no sabemos en qué día está, porque la carga falló o no terminó.
    *
@@ -603,8 +606,11 @@ export default function HoyScreen() {
             separa de lo que sigue es el espacio, no un contorno. */}
         <View style={styles.programStatusBar}>
           <View style={{ flex: 1 }}>
-            <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
-              {faseNombre}
+            <Text
+              style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}
+              accessibilityLabel={faseNombre === null ? 'Fase del programa: sin datos' : undefined}
+            >
+              {faseNombre ?? '—'}
             </Text>
             <Text style={[t.cardTitle, styles.cifras, { color: c.textStrong, fontSize: 15, marginTop: 3 }]}>
               Día {diaConocido ?? '—'} de {DIAS_DEL_PROGRAMA}
@@ -925,8 +931,10 @@ export default function HoyScreen() {
             <Card>
               <View style={styles.encabezadoTarjeta}>
                 <MicroLabel>Hábitos de hoy</MicroLabel>
+                {/* La cifra va con la misma letra que el rótulo (13, negrita, sin espaciar; 2026-10-05):
+                    a 10,5 y espaciada quedaba más chica y corrida respecto de «Hábitos de hoy». */}
                 {cifrasDeHabitos(resumen?.habitosHoy) !== null ? (
-                  <Text style={[t.micro, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
+                  <Text style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
                     {cifrasDeHabitos(resumen?.habitosHoy)}
                   </Text>
                 ) : null}
@@ -968,7 +976,7 @@ export default function HoyScreen() {
               <View style={{ flex: 1 }}>
                 <View style={styles.encabezadoTarjeta}>
                   <MicroLabel>Acciones y objetivos</MicroLabel>
-                  <Text style={[t.micro, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
+                  <Text style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
                     {resumen?.rocasHoy ? `${resumen.rocasHoy.completados}/${resumen.rocasHoy.total}` : 'Pareto 80/20'}
                   </Text>
                 </View>
@@ -1012,7 +1020,7 @@ export default function HoyScreen() {
                   <View style={{ flex: 1 }}>
                     <View style={styles.wallActivityHeader}>
                       <MicroLabel>Última evidencia del muro</MicroLabel>
-                      <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
+                      <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
                         {tiempoRelativo(ultimaPublicacion.createdAt)}
                       </Text>
                     </View>
