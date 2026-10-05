@@ -272,7 +272,7 @@ function TarjetaPublicacionMuroBase({
             accessibilityLabel="Compartir la publicacion"
             style={({ pressed }) => [styles.actionBtn, pressed && { backgroundColor: c.goldWash }]}
           >
-            <Icon name="share" size={14} color={c.textSoft} />
+            <Icon name="forward" size={14} color={c.textSoft} />
             <Text numberOfLines={1} style={[t.micro, { color: c.textSoft, fontFamily: 'Jost_700Bold', fontSize: 10.5 }]}>
               Compartir
             </Text>

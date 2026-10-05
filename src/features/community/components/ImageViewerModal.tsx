@@ -493,7 +493,9 @@ export function ImageViewerModal({
                   style={styles.actionBtnTransparent}
                   hitSlop={8}
                 >
-                  <Text style={{ fontSize: 16 }}>↗️</Text>
+                  {/* `forward`, la flecha curva de reenviar, igual que en la tarjeta del Muro.
+                      Hasta el 2026-10-05 era el emoji ↗️ (en Android, un cuadro azul). */}
+                  <Icon name="forward" size={16} color="#FFFFFF" />
                   <Text style={styles.actionBtnText}>
                     Compartir
                   </Text>
@@ -721,38 +723,40 @@ export function ImageViewerModal({
         {/* ========================================================================= */}
         {/* BOTTOM SHEET DE COMPARTIR (EXTERNO, GLOBAL, GRUPO, DIRECTOS)             */}
         {/* ========================================================================= */}
-        {showShareSheet && (
-          <View style={styles.shareSheetWrapper}>
-            <SharePostSheet
-              post={{
-                id: postId || 'unknown',
-                author: authorName,
-                text: postText,
-                media: images.map(img => ({ url: img.url })),
-              }}
-              conversations={conversations}
-              tieneCelula={tieneCelula}
-              onClose={() => setShowShareSheet(false)}
-              onShareExternal={async () => {
-                try {
-                  const shareUrl = images[currentIndex]?.url || images[0]?.url || '';
-                  const textToShare = postText ? `"${postText}"` : '';
-                  const byAuthor = authorName ? `Publicado por ${authorName} en Renaser` : 'Comunidad Renaser';
-                  await Share.share({
-                    title: 'Renaser Muro',
-                    message: `${byAuthor}\n${textToShare}\n${shareUrl ? `\nVer foto: ${shareUrl}` : ''}`.trim(),
-                  });
-                } catch {}
-              }}
-              onShareToConversation={async conv => {
-                if (onShareToConversation) {
-                  await onShareToConversation(conv);
+        {/* Una hoja desde abajo con su propio `Modal` (2026-10-05): queda encima del visor porque
+            se abre después, y se queda montada para bajar animada al cerrarse. */}
+        <SharePostSheet
+          post={
+            showShareSheet
+              ? {
+                  id: postId || 'unknown',
+                  author: authorName,
+                  text: postText,
+                  media: images.map(img => ({ url: img.url })),
                 }
-                setShowShareSheet(false);
-              }}
-            />
-          </View>
-        )}
+              : null
+          }
+          conversations={conversations}
+          tieneCelula={tieneCelula}
+          onClose={() => setShowShareSheet(false)}
+          onShareExternal={async () => {
+            try {
+              const shareUrl = images[currentIndex]?.url || images[0]?.url || '';
+              const textToShare = postText ? `"${postText}"` : '';
+              const byAuthor = authorName ? `Publicado por ${authorName} en Renaser` : 'Comunidad Renaser';
+              await Share.share({
+                title: 'Renaser Muro',
+                message: `${byAuthor}\n${textToShare}\n${shareUrl ? `\nVer foto: ${shareUrl}` : ''}`.trim(),
+              });
+            } catch {}
+          }}
+          onShareToConversation={async conv => {
+            if (onShareToConversation) {
+              await onShareToConversation(conv);
+            }
+            setShowShareSheet(false);
+          }}
+        />
       </Animated.View>
     </Modal>
   );
@@ -915,13 +919,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 20,
-  },
-  shareSheetWrapper: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    zIndex: 25,
   },
   commentsSheetBox: {
     backgroundColor: '#1E1B18',

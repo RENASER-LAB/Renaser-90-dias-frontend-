@@ -1,17 +1,14 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  ScrollView,
-  ActivityIndicator,
-} from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import type { ChatConversation } from '../../../screens/ComunidadScreen';
 import { Icon } from '../../../components/Icon';
+import { MicroLabel } from '../../../components/ui';
+import { Presionable } from '../../../components/Presionable';
+import { HojaDesdeAbajo } from '../../../components/hojaDesdeAbajo/HojaDesdeAbajo';
+import { AvatarDeChat, type TipoDeAvatar } from '../../chat/components/AvatarDeChat';
+import { useTheme } from '../../../theme/ThemeContext';
 
 export interface SharePostTargetPost {
   id: string;
@@ -22,7 +19,8 @@ export interface SharePostTargetPost {
 }
 
 export interface SharePostSheetProps {
-  post: SharePostTargetPost;
+  /** La publicación que se comparte, o `null` con la hoja cerrada (baja animada antes de irse). */
+  post: SharePostTargetPost | null;
   conversations: ChatConversation[];
   tieneCelula: boolean;
   onClose: () => void;
@@ -30,6 +28,23 @@ export interface SharePostSheetProps {
   onShareToConversation: (conv: ChatConversation) => Promise<void> | void;
 }
 
+/**
+ * «Compartir publicación»: a qué chat mandar una publicación del Muro, desde la tarjeta o desde el
+ * visor de fotos (rediseño del 2026-10-05, tanda 2 de Comunidad).
+ *
+ * > **Antes del 2026-10-05** era una caja con colores fijos `#1E1B18`/`#E5C689` —salía oscura
+ * > también en el tema claro—, aparecía con un fundido, su agarradera era un adorno que no
+ * > arrastraba, el chat global llevaba el ícono de «compartir» en una caja azul y cada destino un
+ * > «Enviar ↗» (la flecha de «abrir afuera»). Ahora es la `HojaDesdeAbajo` de toda la app: sube, se
+ * > arrastra para cerrarla, usa los colores del tema, y cada destino se ve como en la lista de chats.
+ *
+ * - **Cada destino con su avatar** (`AvatarDeChat`): el fénix del programa para la comunidad, la
+ *   foto del grupo, la persona en un 1 a 1; con el mismo nombre y la misma línea de abajo que en la
+ *   lista de chats, para reconocerlos sin leer.
+ * - **Solo el botón redondo envía** (44 × 44, ícono `send`), no la fila: compartir no se deshace, y
+ *   un toque al desplazar la lista no puede mandar la publicación a nadie.
+ * - **Rótulos en tipo oración** («Directos»), como en la lista de chats.
+ */
 export function SharePostSheet({
   post,
   conversations,
@@ -38,19 +53,22 @@ export function SharePostSheet({
   onShareExternal,
   onShareToConversation,
 }: SharePostSheetProps) {
+  const { c, t } = useTheme();
   const insets = useSafeAreaInsets();
+  const { height: altoVentana } = useWindowDimensions();
   const [enviandoId, setEnviandoId] = useState<string | null>(null);
 
-  // Soporte de navegación por gestos de Android / Xiaomi (Regla 6)
-  useSystemBackHandler(() => {
-    onClose();
-    return true;
-  }, true);
+  const globalConv = conversations.find(conv => conv.type === 'global');
+  const celulaConv = conversations.find(conv => conv.type === 'celula');
+  const directConvs = conversations.filter(conv => conv.type === 'direct');
 
-  // Clasificar conversaciones
-  const globalConv = conversations.find(c => c.type === 'global');
-  const celulaConv = conversations.find(c => c.type === 'celula');
-  const directConvs = conversations.filter(c => c.type === 'direct');
+  /*
+    "WhatsApp y Otras Apps" retirado por pedido del dueno del proyecto (2026-09-05), POR AHORA:
+    compartir hacia afuera saca la publicacion de un aprendiz del circulo cerrado de la tribu, y eso
+    todavia no esta decidido. La prop `onShareExternal` se deja en su lugar a proposito — la opcion
+    vuelve sumando su fila, sin rehacer nada.
+  */
+  void onShareExternal;
 
   const handleSendToConv = async (conv: ChatConversation) => {
     if (enviandoId) return;
@@ -62,360 +80,210 @@ export function SharePostSheet({
     }
   };
 
-  // Sin usar mientras la opcion externa este retirada (ver el bloque comentado abajo).
-  const handleShareExt = async () => {
-    if (enviandoId) return;
-    await onShareExternal();
-    onClose();
-  };
+  /** Cómo está el botón de un destino: sin conversación o mientras se manda a otro, apagado. */
+  const envioHacia = (conv: ChatConversation | undefined) => ({
+    enviando: !!conv && enviandoId === conv.id,
+    bloqueado: !conv || (enviandoId !== null && enviandoId !== conv.id),
+    alEnviar: () => {
+      if (conv) void handleSendToConv(conv);
+    },
+  });
 
   return (
-    <View style={[styles.sheetContainer, { paddingBottom: Math.max(insets.bottom, 18) }]}>
-      {/* Píldora de arrastre decorativa */}
-      <View style={styles.dragIndicator} />
-
-      {/* Cabecera */}
-      <View style={styles.headerRow}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerTitle}>COMPARTIR PUBLICACIÓN</Text>
-          <Text style={styles.headerSubtitle}>
-            {post.author ? `De ${post.author}` : 'Comunidad Renaser'}
-          </Text>
-        </View>
-        <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={10}>
-          <Icon name="close" size={16} color="#FFFFFF" />
-        </Pressable>
-      </View>
-
-      {/* Tarjeta de previsualización compacta del post */}
-      <View style={styles.previewBox}>
-        {post.media && post.media[0]?.url ? (
-          <Image
-            source={{ uri: post.media[0].url }}
-            style={styles.previewImg}
-            contentFit="cover"
-            cachePolicy="memory-disk"
-          />
-        ) : null}
-        <View style={styles.previewContent}>
-          <Text style={styles.previewAuthor}>{post.author || 'Renaser'}</Text>
-          <Text numberOfLines={2} style={styles.previewText}>
-            {post.text || 'Publicación compartida'}
-          </Text>
-        </View>
-      </View>
-
-      {/* Lista de opciones scrolleable */}
+    <HojaDesdeAbajo
+      visible={post !== null}
+      alCerrar={onClose}
+      titulo="Compartir publicación"
+      subtitulo={post?.author ? `De ${post.author}` : 'Comunidad Renaser'}
+      etiquetaCerrar="Cerrar compartir"
+      bajoElTitulo={post ? <VistaPreviaDelPost post={post} /> : null}
+    >
       <ScrollView
-        style={styles.scrollOptions}
-        contentContainerStyle={{ gap: 10, paddingBottom: 16 }}
+        style={{ maxHeight: Math.round((altoVentana - insets.top) * 0.55) }}
+        contentContainerStyle={styles.lista}
         showsVerticalScrollIndicator={false}
       >
-        {/*
-          "WhatsApp y Otras Apps" retirado por pedido del dueno del proyecto (2026-09-05),
-          POR AHORA: compartir hacia afuera saca la publicacion de un aprendiz del circulo
-          cerrado de la tribu, y eso todavia no esta decidido. `handleShareExt` y la prop
-          `onShareExternal` se dejan en su lugar a proposito — la opcion vuelve prendiendo
-          este bloque de nuevo, sin rehacer nada.
-        */}
-
-        {/* 2. CHAT GLOBAL DE LA COMUNIDAD */}
-        <Pressable
-          onPress={() => globalConv && handleSendToConv(globalConv)}
-          disabled={!globalConv || enviandoId === globalConv?.id}
-          style={({ pressed }) => [
-            styles.optionCard,
-            !globalConv && styles.optionCardDisabled,
-            pressed && styles.optionCardPressed,
-          ]}
-        >
-          <View style={[styles.optionIconBox, { backgroundColor: 'rgba(52, 152, 219, 0.15)' }]}>
-            <Icon name="share" size={20} color="#E5C689" />
-          </View>
-          <View style={styles.optionTextBox}>
-            <Text style={styles.optionTitle}>Chat Global Renaser</Text>
-            <Text style={styles.optionDesc}>
-              {globalConv ? 'Compartir en el canal general de toda la tribu' : 'Canal global no disponible'}
-            </Text>
-          </View>
-          {enviandoId === globalConv?.id ? (
-            <ActivityIndicator size="small" color="#E5C689" />
-          ) : (
-            <View style={styles.actionPill}>
-              <Text style={styles.actionPillText}>Enviar ↗</Text>
-            </View>
-          )}
-        </Pressable>
-
-        {/* 3. CHAT DE MI GRUPO (SOLO SI TIENE GRUPO) */}
+        <View style={styles.rotulo}>
+          <MicroLabel>Formación Renaser</MicroLabel>
+        </View>
+        <DestinoDeCompartir
+          tipo="global"
+          nombre={globalConv?.title ?? 'Comunidad Renaser'}
+          detalle={globalConv ? globalConv.subtitle : 'No disponible ahora'}
+          {...envioHacia(globalConv)}
+        />
         {tieneCelula && (
-          <Pressable
-            onPress={() => celulaConv && handleSendToConv(celulaConv)}
-            disabled={!celulaConv || enviandoId === celulaConv?.id}
-            style={({ pressed }) => [
-              styles.optionCard,
-              !celulaConv && styles.optionCardDisabled,
-              pressed && styles.optionCardPressed,
-            ]}
-          >
-            <View style={[styles.optionIconBox, { backgroundColor: 'rgba(198,164,92,0.12)' }]}>
-              <Icon name="users" size={20} color="#E5C689" />
-            </View>
-            <View style={styles.optionTextBox}>
-              <Text style={styles.optionTitle}>Chat de mi Grupo</Text>
-              <Text style={styles.optionDesc}>
-                {celulaConv ? `Enviar a ${celulaConv.title}` : 'Compartir con tu grupo íntimo y mentor'}
-              </Text>
-            </View>
-            {enviandoId === celulaConv?.id ? (
-              <ActivityIndicator size="small" color="#E5C689" />
-            ) : (
-              <View style={styles.actionPill}>
-                <Text style={styles.actionPillText}>Enviar ↗</Text>
-              </View>
-            )}
-          </Pressable>
+          <DestinoDeCompartir
+            tipo="celula"
+            nombre={celulaConv?.title ?? 'Tu grupo'}
+            detalle={celulaConv ? celulaConv.subtitle : 'No disponible ahora'}
+            fotoPath={celulaConv?.fotoPath}
+            {...envioHacia(celulaConv)}
+          />
         )}
 
-        {/* 4. CHAT DIRECTO CON MIEMBROS */}
-        <View style={styles.directSectionHeader}>
-          <Text style={styles.directSectionTitle}>💬 CHAT DIRECTO CON MIEMBROS</Text>
+        <View style={[styles.rotulo, styles.rotuloDirectos]}>
+          <MicroLabel>Directos</MicroLabel>
         </View>
-
         {directConvs.length > 0 ? (
           directConvs.map(conv => (
-            <Pressable
+            <DestinoDeCompartir
               key={conv.id}
-              onPress={() => handleSendToConv(conv)}
-              disabled={enviandoId === conv.id}
-              style={({ pressed }) => [styles.directMemberCard, pressed && styles.optionCardPressed]}
-            >
-              <View style={styles.directAvatarBox}>
-                <Text style={{ fontSize: 16 }}>{conv.avatar || '👤'}</Text>
-              </View>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text numberOfLines={1} style={styles.directMemberName}>
-                  {conv.title}
-                </Text>
-                <Text numberOfLines={1} style={styles.directMemberSub}>
-                  {conv.subtitle || '1 a 1'}
-                </Text>
-              </View>
-              {enviandoId === conv.id ? (
-                <ActivityIndicator size="small" color="#E5C689" />
-              ) : (
-                <View style={[styles.actionPill, { paddingHorizontal: 10 }]}>
-                  <Text style={styles.actionPillText}>Enviar ↗</Text>
-                </View>
-              )}
-            </Pressable>
+              tipo="direct"
+              nombre={conv.title}
+              detalle={conv.subtitle || '1 a 1'}
+              avatarUrl={conv.avatarUrl}
+              {...envioHacia(conv)}
+            />
           ))
         ) : (
-          <View style={styles.emptyDirectBox}>
-            <Text style={styles.emptyDirectText}>
-              Aún no tienes conversaciones directas abiertas con otros integrantes.
-            </Text>
-          </View>
+          <Text style={[t.small, styles.vacio, { color: c.textSoft }]}>
+            Todavía no tienes conversaciones uno a uno.
+          </Text>
         )}
       </ScrollView>
+    </HojaDesdeAbajo>
+  );
+}
+
+/** La publicación que se va a mandar, en chico: su primera foto, quién la escribió y el comienzo. */
+function VistaPreviaDelPost({ post }: { post: SharePostTargetPost }) {
+  const { c, t } = useTheme();
+  const foto = post.media?.[0]?.url;
+  return (
+    <View style={[styles.vistaPrevia, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}>
+      {foto ? (
+        <Image
+          source={{ uri: foto }}
+          style={[styles.vistaPreviaFoto, { backgroundColor: c.placeholderA }]}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+        />
+      ) : null}
+      <View style={styles.vistaPreviaTextos}>
+        <Text numberOfLines={1} style={[t.small, { color: c.goldInk, fontFamily: 'Jost_500Medium' }]}>
+          {post.author || 'Renaser'}
+        </Text>
+        <Text numberOfLines={2} style={[t.small, { color: c.text }]}>
+          {post.text || 'Publicación compartida'}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+interface DestinoProps {
+  tipo: TipoDeAvatar;
+  nombre: string;
+  detalle: string;
+  avatarUrl?: string | null;
+  fotoPath?: string | null;
+  enviando: boolean;
+  bloqueado: boolean;
+  alEnviar: () => void;
+}
+
+/** Una fila: avatar, nombre y detalle como en la lista de chats, y a la derecha el botón de enviar. */
+function DestinoDeCompartir({ tipo, nombre, detalle, avatarUrl, fotoPath, enviando, bloqueado, alEnviar }: DestinoProps) {
+  const { c } = useTheme();
+  const apagado = bloqueado || enviando;
+  return (
+    <View style={styles.fila}>
+      <AvatarDeChat tipo={tipo} nombre={nombre} avatarUrl={avatarUrl} fotoPath={fotoPath} size={44} />
+      <View style={[styles.filaCuerpo, { borderBottomColor: c.divider }]}>
+        <View style={styles.filaTextos}>
+          <Text numberOfLines={1} style={[styles.nombre, { color: c.textStrong }]}>
+            {nombre}
+          </Text>
+          <Text numberOfLines={1} style={[styles.detalle, { color: c.textSoft }]}>
+            {detalle}
+          </Text>
+        </View>
+        <Presionable
+          onPress={alEnviar}
+          disabled={apagado}
+          accessibilityRole="button"
+          accessibilityLabel={`Enviar a ${nombre}`}
+          accessibilityState={{ disabled: apagado, busy: enviando }}
+          style={[styles.enviar, { backgroundColor: c.gold, opacity: bloqueado ? 0.4 : 1 }]}
+        >
+          {enviando ? <ActivityIndicator size="small" color={c.onGold} /> : <Icon name="send" size={20} color={c.onGold} />}
+        </Presionable>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  sheetContainer: {
-    backgroundColor: '#1E1B18',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(212, 160, 23, 0.3)',
-    maxHeight: '82%',
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    width: '100%',
-  },
-  dragIndicator: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: 'rgba(255, 255, 255, 0.25)',
-    alignSelf: 'center',
-    marginBottom: 12,
-  },
-  headerRow: {
+  vistaPrevia: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  headerTitle: {
-    color: '#E5C689',
-    fontFamily: 'Jost_700Bold',
-    fontSize: 14,
-    letterSpacing: 0.8,
-  },
-  headerSubtitle: {
-    color: '#C5BEB3',
-    fontFamily: 'Jost_400Regular',
-    fontSize: 11.5,
-    marginTop: 1,
-  },
-  closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  closeBtnText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontFamily: 'Jost_700Bold',
-  },
-  previewBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 12,
-    padding: 8,
-    marginVertical: 10,
     gap: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    padding: 8,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
   },
-  previewImg: {
+  vistaPreviaFoto: {
     width: 44,
     height: 44,
     borderRadius: 8,
   },
-  previewContent: {
+  vistaPreviaTextos: {
     flex: 1,
     minWidth: 0,
   },
-  previewAuthor: {
-    color: '#E5C689',
-    fontFamily: 'Jost_700Bold',
-    fontSize: 11.5,
+  lista: {
+    paddingTop: 4,
+    paddingBottom: 4,
   },
-  previewText: {
-    color: '#FFFFFF',
-    fontFamily: 'Jost_400Regular',
-    fontSize: 11.5,
-    lineHeight: 16,
-    marginTop: 1,
+  rotulo: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 2,
   },
-  scrollOptions: {
-    marginTop: 4,
+  rotuloDirectos: {
+    paddingTop: 18,
   },
-  optionCard: {
+  fila: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    borderRadius: 14,
-    padding: 12,
+    paddingLeft: 20,
     gap: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    minHeight: 52,
   },
-  optionCardPressed: {
-    backgroundColor: 'rgba(212, 160, 23, 0.15)',
-    borderColor: '#E5C689',
-  },
-  optionCardDisabled: {
-    opacity: 0.5,
-  },
-  optionIconBox: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  optionTextBox: {
+  filaCuerpo: {
     flex: 1,
     minWidth: 0,
-  },
-  optionTitle: {
-    color: '#FFFFFF',
-    fontFamily: 'Jost_700Bold',
-    fontSize: 13,
-  },
-  optionDesc: {
-    color: '#C5BEB3',
-    fontFamily: 'Jost_400Regular',
-    fontSize: 11,
-    lineHeight: 15,
-    marginTop: 2,
-  },
-  actionPill: {
-    backgroundColor: 'rgba(212, 160, 23, 0.2)',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(212, 160, 23, 0.4)',
-  },
-  actionPillText: {
-    color: '#E5C689',
-    fontFamily: 'Jost_700Bold',
-    fontSize: 11,
-  },
-  directSectionHeader: {
-    marginTop: 10,
-    marginBottom: 4,
-    paddingHorizontal: 4,
-  },
-  directSectionTitle: {
-    color: '#E5C689',
-    fontFamily: 'Jost_700Bold',
-    fontSize: 11,
-    letterSpacing: 0.8,
-  },
-  directMemberCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderRadius: 12,
-    padding: 10,
-    gap: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.07)',
-    minHeight: 48,
+    gap: 12,
+    paddingVertical: 10,
+    paddingRight: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  directAvatarBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
+  filaTextos: {
+    flex: 1,
+    minWidth: 0,
+    gap: 1,
   },
-  directMemberName: {
-    color: '#FFFFFF',
+  nombre: {
     fontFamily: 'Jost_500Medium',
-    fontSize: 12.5,
+    fontSize: 16,
+    lineHeight: 21,
   },
-  directMemberSub: {
-    color: '#C5BEB3',
+  detalle: {
     fontFamily: 'Jost_400Regular',
-    fontSize: 10.5,
-    marginTop: 1,
+    fontSize: 14,
+    lineHeight: 19,
   },
-  emptyDirectBox: {
-    padding: 16,
+  enviar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    borderRadius: 12,
   },
-  emptyDirectText: {
-    color: '#C5BEB3',
-    fontFamily: 'Jost_400Regular',
-    fontSize: 11.5,
-    textAlign: 'center',
+  vacio: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
   },
 });

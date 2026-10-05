@@ -7,7 +7,8 @@ export type IconName =
   | 'mail' | 'lock' | 'eye' | 'eyeOff' | 'check' | 'logout' | 'google' | 'apple' | 'key' | 'trophy' | 'zap'
   | 'fire' | 'play' | 'pause' | 'plus' | 'chat' | 'send' | 'calendar' | 'award' | 'share' | 'filter'
   | 'dumbbell' | 'volume' | 'star' | 'checkCircle' | 'camera' | 'image'
-  | 'close' | 'target' | 'thumbsUp' | 'mic' | 'search';
+  | 'close' | 'target' | 'thumbsUp' | 'mic' | 'search'
+  | 'forward' | 'imagePlus';
 
 type Props = { name: IconName; size?: number; color: string; strokeWidth?: number };
 
@@ -393,6 +394,27 @@ export function Icon({ name, size = 20, color, strokeWidth = 1.1 }: Props) {
       return (
         <Svg width={size} height={size} viewBox="0 0 16 12">
           <Path {...s} strokeWidth={1.5} d="M1.6 6h12M9.4 1.8 13.6 6l-4.2 4.2" />
+        </Svg>
+      );
+    /* Comunidad · tanda 2 (hojas) */
+    /* Compartir una publicación: la flecha curva de «reenviar» de WhatsApp y Facebook (Lucide
+       `forward`). Reemplaza a `share` (tres nodos unidos, la «red» de Android, que no se lee como
+       «mandar esto a alguien») y al emoji ↗️ del visor de fotos (2026-10-05). */
+    case 'forward':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s} d="m15 17 5-5-5-5" />
+          <Path {...s} d="M4 18v-2a4 4 0 0 1 4-4h12" />
+        </Svg>
+      );
+    /* Agregar una foto (Lucide `image-plus`): el recuadro para sumar fotos a una publicación nueva. */
+    case 'imagePlus':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s} d="M16 5h6M19 2v6" />
+          <Path {...s} d="M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5" />
+          <Path {...s} d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+          <Circle {...s} cx={9} cy={9} r={2} />
         </Svg>
       );
     case 'chevron':

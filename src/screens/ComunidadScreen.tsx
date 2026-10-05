@@ -71,6 +71,9 @@ import { cerrarHabitoPostDiarioComunidad } from '../features/habits/api/postDiar
 import { avisarPostDiarioCerrado } from '../features/habits/events/avisoPostDiarioCerrado';
 import { ImageViewerModal, type ImageViewerItem } from '../features/community/components/ImageViewerModal';
 import { SharePostSheet } from '../features/community/components/SharePostSheet';
+import { HojaDeReacciones } from '../features/community/components/HojaDeReacciones';
+import { NuevaPublicacion } from '../features/community/components/NuevaPublicacion';
+import { ControlSegmentado } from '../components/ControlSegmentado';
 import { useCursos } from '../features/academy/hooks/useCursos';
 import { CursoPortada } from '../features/academy/components/CursoPortada';
 import { useLeccionDetalle } from '../features/academy/hooks/useLeccionDetalle';
@@ -266,6 +269,8 @@ export interface ReactionUser {
   name: string;
   role: string;
   avatar: string;
+  /** La foto de la persona (URL pública de S3) o `null`: la hoja de reacciones dibuja sus iniciales. */
+  avatarUrl?: string | null;
   /**
    * Siempre `'like'`: el modal "quién reaccionó" solo lista los "me gusta" desde que se retiró el
    * dislike. Las filas `DISLIKE` que el backend todavía devuelva se descartan en
@@ -2802,42 +2807,21 @@ export default function ComunidadScreen() {
               */}
               {/* Qué tabla se mira. Las tres vienen en la misma respuesta del backend, así que
                   cambiar de una a otra no pide nada al servidor. Antes solo se veía la general:
-                  la de coherencia se calculaba, se guardaba, y no la mostraba ninguna pantalla. */}
-              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
-                {TABLAS_DE_RANKING.map(tabla => {
-                  const activa = tipoRanking === tabla.clave;
-                  return (
-                    <Pressable
-                      key={tabla.clave}
-                      onPress={() => setTipoRanking(tabla.clave)}
-                      accessibilityRole="tab"
-                      accessibilityState={{ selected: activa }}
-                      accessibilityLabel={`${tabla.titulo}: ${tabla.explica}`}
-                      style={{
-                        flex: 1,
-                        paddingVertical: 8,
-                        paddingHorizontal: 6,
-                        borderRadius: space.radius,
-                        borderWidth: 1,
-                        borderColor: activa ? c.gold : c.border,
-                        backgroundColor: activa ? c.goldWash : 'transparent',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <Text
-                        style={[
-                          t.micro,
-                          {
-                            color: activa ? c.goldInk : c.textSoft,
-                            fontFamily: activa ? 'Jost_700Bold' : 'Jost_500Medium',
-                          },
-                        ]}
-                      >
-                        {tabla.titulo}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
+                  la de coherencia se calculaba, se guardaba, y no la mostraba ninguna pantalla.
+                  > Corregido 2026-10-05 (tanda 2 de Comunidad). Eran tres botones hechos a mano:
+                  > texto micro con letras espaciadas y un borde dorado que aparecía de golpe. Ahora
+                  > es el `ControlSegmentado` de la app (píldora que viaja, tic de selección). */}
+              <View style={{ marginBottom: 14 }}>
+                <ControlSegmentado
+                  opciones={TABLAS_DE_RANKING.map(tabla => ({
+                    valor: tabla.clave,
+                    etiqueta: tabla.titulo,
+                    accessibilityLabel: `${tabla.titulo}: ${tabla.explica}`,
+                  }))}
+                  valor={tipoRanking}
+                  onCambiar={setTipoRanking}
+                  accessibilityLabel="Tabla del ranking"
+                />
               </View>
               {/* Qué mide la tabla que se está mirando: tres listas de números sin rótulo no se
                   distinguen entre sí. */}
@@ -4212,245 +4196,42 @@ export default function ComunidadScreen() {
       </Modal>
 
       {/* ========================================================================= */}
-      {/* MODAL: VENTANA EXTERNA DE PUBLICACIÓN A PANTALLA COMPLETA                */}
+      {/* Nueva publicación, a pantalla completa (ver `NuevaPublicacion`)          */}
       {/* ========================================================================= */}
-      <Modal
+      <NuevaPublicacion
         visible={createPostModalVisible}
-        transparent={false}
-        animationType="slide"
-        onRequestClose={() => setCreatePostModalVisible(false)}
-      >
-        <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
-          <View style={[styles.modalHeaderBar, { borderBottomColor: c.divider }]}>
-            {/*
-              Los tres elementos sumaban más que el ancho de la pantalla en móviles de 360 dp (o
-              con la letra del sistema agrandada): el título se montaba sobre "CANCELAR" y
-              "PUBLICAR" se cortaba contra el borde. Ahora los dos botones se quedan con su ancho
-              (`flexShrink: 0`) y el título se lleva el sobrante, achicándose hasta caber en una
-              sola línea.
-            */}
-            <Pressable
-              onPress={() => setCreatePostModalVisible(false)}
-              hitSlop={8}
-              style={{ minHeight: 48, justifyContent: 'center', flexShrink: 0 }}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Icon name="close" size={14} color={c.goldInk} />
-                <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>CANCELAR</Text>
-              </View>
-            </Pressable>
-            <Text
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              minimumFontScale={0.75}
-              style={[t.cardTitle, { color: c.textStrong, flex: 1, minWidth: 0, textAlign: 'center' }]}
-            >
-              NUEVA PUBLICACIÓN
-            </Text>
-            <Pressable
-              onPress={handlePublishPost}
-              disabled={subiendoPublicacion}
-              style={[styles.publishHeaderBtn, { backgroundColor: c.gold }, subiendoPublicacion && { opacity: 0.6 }]}
-            >
-              <Text numberOfLines={1} style={[t.small, { color: c.onGold, fontFamily: 'Jost_700Bold' }]}>
-                {subiendoPublicacion ? 'PUBLICANDO...' : 'PUBLICAR'}
-              </Text>
-            </Pressable>
-          </View>
-
-          <ScrollView
-            keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: space.cardPad, gap: space.gapLg }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <View style={[styles.avatarCircle, { backgroundColor: c.goldWash }]}>
-                <Text style={{ fontSize: 14 }}>🦅</Text>
-              </View>
-              <View style={{ gap: 3, flex: 1, minWidth: 0 }}>
-                <Text numberOfLines={1} style={[t.cardTitle, { color: c.textStrong }]}>{nombreUsuario}</Text>
-                {firmaDePublicacion ? (
-                  <Text numberOfLines={1} style={[t.small, { color: c.goldInk }]}>{firmaDePublicacion}</Text>
-                ) : null}
-              </View>
-            </View>
-
-            {/* Categorías del catálogo del servidor (`GET /api/v1/wall/categories`), no una lista
-                escrita a mano: el administrador las da de alta y les cambia emoji/nombre desde el
-                panel, y eso tiene que llegar a la app sin publicar una versión nueva.
-                Elegir una es OPCIONAL — `category` es opcional en el backend — así que ninguna
-                viene preseleccionada y volver a tocar la elegida la desmarca. Los tres estados de
-                red se resuelven acá abajo y en ninguno el compositor queda inutilizable: sin
-                catálogo se publica igual, sin categoría. */}
-            <View style={{ gap: 6 }}>
-              {cargandoCategoriasMuro && categoriasMuro.length === 0 && (
-                <Text style={[t.small, { color: c.textSoft }]}>CARGANDO CATEGORÍAS...</Text>
-              )}
-
-              {!cargandoCategoriasMuro && errorCategoriasMuro && categoriasMuro.length === 0 && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <Text style={[t.body, { color: c.textSoft, flexShrink: 1 }]}>
-                    No pudimos cargar las categorías. Puedes publicar igual, sin categoría.
-                  </Text>
-                  <Pressable
-                    onPress={() => void recargarCategoriasMuro()}
-                    hitSlop={8}
-                    style={[styles.tagSelectorPill, { borderColor: c.gold, backgroundColor: c.cardBg }]}
-                  >
-                    <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>REINTENTAR</Text>
-                  </Pressable>
-                </View>
-              )}
-
-              {!cargandoCategoriasMuro && !errorCategoriasMuro && categoriasMuro.length === 0 && (
-                <Text style={[t.body, { color: c.textSoft }]}>
-                  Todavía no hay categorías configuradas. Tu publicación se guarda igual.
-                </Text>
-              )}
-
-              {categoriasMuro.length > 0 && (
-                <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-                  {categoriasMuro.map(categoria => {
-                    const elegida = categoriaSeleccionada === categoria.key;
-                    return (
-                      <Pressable
-                        key={categoria.key}
-                        onPress={() => setCategoriaSeleccionada(elegida ? null : categoria.key)}
-                        style={[
-                          styles.tagSelectorPill,
-                          { borderColor: c.border, backgroundColor: c.cardBgAlt },
-                          elegida && { borderColor: c.gold, backgroundColor: c.cardBg },
-                        ]}
-                      >
-                        <Text style={[t.small, { color: elegida ? c.goldInk : c.textSoft, fontFamily: 'Jost_700Bold' }]}>
-                          {`${categoria.emoji} ${categoria.label.toUpperCase()}`}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              )}
-            </View>
-
-            <TextInput
-              value={newPostText}
-              onChangeText={setNewPostText}
-              placeholder="Escribe tu reflexión, victoria o experiencia de hoy (sin límite de caracteres)..."
-              placeholderTextColor={c.textSoft}
-              multiline
-              textAlignVertical="top"
-              style={[styles.fullPostInput, { borderColor: c.border, backgroundColor: c.cardBg, color: c.text }]}
-            />
-
-            <View style={{ gap: 10 }}>
-              <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>FOTOS ADJUNTAS (AL MENOS UNA):</Text>
-              <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-                {attachedPhotos.map((foto, idx) => (
-                  <View
-                    key={foto.uri}
-                    style={[styles.attachedPhotoCard, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
-                  >
-                    {/* Miniatura real de la foto ya normalizada — mismo chip del diseño original
-                        (styles.attachedPhotoCard intacto), solo que ahora también muestra la
-                        imagen elegida y no únicamente su nombre. */}
-                    <Image source={{ uri: foto.uri }} style={{ width: 24, height: 24, borderRadius: 6 }} />
-                    <Text style={[t.small, { color: c.goldInk }]} numberOfLines={1}>
-                      {foto.nombre}
-                    </Text>
-                    <Pressable
-                      onPress={() => setAttachedPhotos(prev => prev.filter((_, i) => i !== idx))}
-                      hitSlop={8}
-                      style={{ minWidth: 44, minHeight: 48, alignItems: 'center', justifyContent: 'center' }}
-                    >
-                      <Icon name="close" size={14} color={c.danger} />
-                    </Pressable>
-                  </View>
-                ))}
-                <Pressable
-                  onPress={handleAgregarFoto}
-                  disabled={agregandoFoto}
-                  style={[
-                    styles.addMorePhotoBtn,
-                    { borderColor: c.border, backgroundColor: c.cardBg },
-                    agregandoFoto && { opacity: 0.6 },
-                  ]}
-                >
-                  <Icon name="plus" size={16} color={c.textSoft} />
-                  <Text style={[t.small, { color: c.textSoft }]}>
-                    {agregandoFoto ? 'Abriendo...' : 'Agregar'}
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
-          </ScrollView>
-        </SafeAreaView>
-      </Modal>
+        alCancelar={() => setCreatePostModalVisible(false)}
+        alPublicar={handlePublishPost}
+        publicando={subiendoPublicacion}
+        autor={{ nombre: nombreUsuario, firma: firmaDePublicacion, avatarUrl: user?.avatarUrl }}
+        texto={newPostText}
+        alCambiarTexto={setNewPostText}
+        categorias={{
+          lista: categoriasMuro,
+          cargando: cargandoCategoriasMuro,
+          error: errorCategoriasMuro,
+          recargar: () => void recargarCategoriasMuro(),
+          elegida: categoriaSeleccionada,
+          alElegir: setCategoriaSeleccionada,
+        }}
+        fotos={{
+          lista: attachedPhotos,
+          agregando: agregandoFoto,
+          alAgregar: () => void handleAgregarFoto(),
+          alQuitar: indice => setAttachedPhotos(prev => prev.filter((_, i) => i !== indice)),
+        }}
+      />
 
       {/* ========================================================================= */}
-      {/* MODAL: QUIÉN REACCIONÓ (solo "me gusta")                                  */}
+      {/* QUIÉN REACCIONÓ (solo "me gusta"), en una hoja desde abajo                */}
       {/* ========================================================================= */}
-      <Modal
+      <HojaDeReacciones
         visible={reactionsModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setReactionsModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.reactionsModalCard, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: c.divider, paddingBottom: 10 }}>
-              <Text style={[t.cardTitle, { color: c.textStrong }]}>REACCIONES DEL POST</Text>
-              <Pressable onPress={() => setReactionsModalVisible(false)} hitSlop={8} style={{ minHeight: 48, justifyContent: 'center' }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Icon name="close" size={14} color={c.goldInk} />
-                  <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>Cerrar</Text>
-                </View>
-              </Pressable>
-            </View>
-
-            {/* Sin pestañas de filtro: con el dislike retirado del producto queda un solo tipo de
-                reacción, así que "TODOS / LIKES / DISLIKES" filtraba entre una opción y ella
-                misma. En su lugar, el conteo directo de quiénes dieron "me gusta". */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginVertical: 12 }}>
-              <Icon name="thumbsUp" size={14} color={c.textSoft} />
-              <Text style={[t.small, styles.cifras, { color: c.textSoft }]}>
-                {reactionUsers.length} me gusta
-              </Text>
-            </View>
-
-            <ScrollView
-              keyboardShouldPersistTaps="handled" style={{ maxHeight: 220 }}>
-              {/* Mismos tokens que los estados del feed real (muroCargando/muroError/lista vacía,
-                  más arriba en esta pantalla) — ningún componente nuevo, solo texto. */}
-              {cargandoReacciones && (
-                <Text style={[t.body, { color: c.textSoft, paddingVertical: 14 }]}>
-                  Cargando reacciones...
-                </Text>
-              )}
-              {!cargandoReacciones && errorReacciones && (
-                <Text style={[t.body, { color: c.danger, paddingVertical: 14 }]}>
-                  {errorReacciones}
-                </Text>
-              )}
-              {!cargandoReacciones && !errorReacciones && reactionUsers.length === 0 && (
-                <Text style={[t.body, { color: c.textSoft, paddingVertical: 14 }]}>
-                  Todavía nadie reaccionó a esta publicación.
-                </Text>
-              )}
-              {!cargandoReacciones && !errorReacciones && reactionUsers.length > 0 && reactionUsers.map(user => (
-                <View key={user.id} style={[styles.reactionUserRow, { borderBottomColor: c.divider }]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                    <View style={[styles.avatarCircle, { backgroundColor: c.goldWash }]}>
-                      <Text style={{ fontSize: 13 }}>{user.avatar}</Text>
-                    </View>
-                    <View style={{ gap: 2 }}>
-                      <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 15 }]}>{user.name}</Text>
-                      <Text style={[t.small, { color: c.micro }]}>{user.role}</Text>
-                    </View>
-                  </View>
-                  <Icon name="thumbsUp" size={16} color={c.goldInk} />
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+        alCerrar={() => setReactionsModalVisible(false)}
+        reacciones={reactionUsers}
+        cargando={cargandoReacciones}
+        error={errorReacciones}
+      />
 
       {/* Visor de Fotos a Pantalla Completa estilo Facebook / X */}
       {(() => {
@@ -4487,34 +4268,20 @@ export default function ComunidadScreen() {
         );
       })()}
 
-      {/* Modal de Compartir para Publicaciones del Feed */}
-      {shareSheetPost && (
-        <Modal
-          visible={!!shareSheetPost}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShareSheetPost(null)}
-        >
-          <Pressable
-            style={styles.shareModalBackdrop}
-            onPress={() => setShareSheetPost(null)}
-          >
-            <Pressable style={{ width: '100%' }} onPress={e => e.stopPropagation()}>
-              <SharePostSheet
-                post={shareSheetPost}
-                conversations={conversations}
-                tieneCelula={tieneGrupo}
-                onClose={() => setShareSheetPost(null)}
-                onShareExternal={() => handleShareExternal(shareSheetPost)}
-                onShareToConversation={async conv => {
-                  await handleShareToConversation(shareSheetPost, conv);
-                  setShareSheetPost(null);
-                }}
-              />
-            </Pressable>
-          </Pressable>
-        </Modal>
-      )}
+      {/* Compartir una publicación del Muro: una hoja desde abajo (ver `SharePostSheet`). Queda
+          montada para que pueda bajar animada al cerrarse; `post` en `null` es cerrada. */}
+      <SharePostSheet
+        post={shareSheetPost}
+        conversations={conversations}
+        tieneCelula={tieneGrupo}
+        onClose={() => setShareSheetPost(null)}
+        onShareExternal={() => (shareSheetPost ? handleShareExternal(shareSheetPost) : undefined)}
+        onShareToConversation={async conv => {
+          if (!shareSheetPost) return;
+          await handleShareToConversation(shareSheetPost, conv);
+          setShareSheetPost(null);
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -4970,76 +4737,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 10,
   },
-  modalHeaderBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  publishHeaderBtn: {
-    borderRadius: space.radiusSm,
-    paddingHorizontal: 14,
-    minHeight: 48,
-    flexShrink: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  /* Las categorías son opciones que se eligen, así que conservan el borde. Lo que cambia es el
-     alto: 25 px era la mitad del mínimo, y son la única forma de etiquetar una publicación. */
-  tagSelectorPill: {
-    borderWidth: 1,
-    borderRadius: space.radiusSm,
-    paddingHorizontal: 14,
-    minHeight: 48,
-    justifyContent: 'center',
-  },
-  /* Era `fontSize: 13`: el campo donde se escribe la publicación entera, por debajo del mínimo
-     de input de AGENTS.md §4. */
-  fullPostInput: {
-    minHeight: 180,
-    borderWidth: 1,
-    borderRadius: space.radius,
-    padding: space.cardPad,
-    fontSize: 15,
-    lineHeight: 22,
-  },
-  attachedPhotoCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    borderWidth: 1,
-    borderRadius: space.radiusSm,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    minHeight: 48,
-  },
-  addMorePhotoBtn: {
-    borderWidth: 1,
-    borderRadius: space.radiusSm,
-    paddingHorizontal: 14,
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  reactionsModalCard: {
-    borderWidth: 1,
-    borderRadius: space.radius,
-    padding: space.cardPad,
-  },
-  reactionUserRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 10,
-    minHeight: 48,
-    borderBottomWidth: 1,
-  },
-  shareModalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.65)',
-    justifyContent: 'flex-end',
-  },
+  /* Los estilos de la ventana de publicar, la de reacciones y la de compartir se mudaron con
+     ellas (2026-10-05): `NuevaPublicacion`, `HojaDeReacciones` y `SharePostSheet`. */
 });
