@@ -19,7 +19,9 @@ export function CierreScreen({ estado, onSalir, dias }: PropsPaso) {
   ];
   return (
     <PantallaPaso paso={null} boton={{ label: dias.botonDelCierre, onPress: onSalir }}>
-      <Text style={[t.micro, { color: c.goldInk, letterSpacing: 2, marginTop: 24 }]}>FELICIDADES</Text>
+      {/* Tipo oración y sin espaciar (decisión del dueño, 2026-10-05; decía «FELICIDADES» en versales
+          con 2 de espaciado): la misma línea dorada en negrita que el día de la apertura del Mapa. */}
+      <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', marginTop: 24 }]}>Felicidades</Text>
       <Text style={[t.hero, { color: c.textStrong, fontSize: 28, letterSpacing: 0.5, marginTop: 8, fontFamily: 'Jost_400Regular' }]}>
         Tu mapa está activo.
       </Text>
@@ -48,7 +50,10 @@ export function CierreScreen({ estado, onSalir, dias }: PropsPaso) {
         <Icon name="play" size={14} color={c.textSoft} />
         <View style={{ flex: 1 }}>
           <Text style={[t.small, { color: c.textSoft }]}>Audio de bautizo (opcional)</Text>
-          <Text style={[t.micro, { color: c.micro, marginTop: 2 }]}>PRÓXIMAMENTE · REAFIRMA TU COMPROMISO</Text>
+          {/* Decía «PRÓXIMAMENTE · REAFIRMA TU COMPROMISO» en versalitas espaciadas (2026-10-05). */}
+          <Text style={[t.small, { color: c.micro, fontFamily: 'Jost_500Medium', marginTop: 2 }]}>
+            Próximamente · Reafirma tu compromiso
+          </Text>
         </View>
       </Row>
     </PantallaPaso>
