@@ -226,6 +226,27 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **Dependencia nueva:** `expo-haptics` (código nativo). Sin el módulo, `utils/tacto.ts` no vibra
       y no rompe; la vibración se siente recién con un APK nuevo, que de todos modos hace falta para
       que este cambio llegue (no hay actualización por aire).
+  * **Excepción autorizada por el dueño del producto — 2026-10-05 — tab `Comunidad`, tanda 2 de la
+    propuesta de rediseño (hojas):** cambia la FORMA de cinco ventanas, no lo que hacen.
+    * **Compartir publicación** (`SharePostSheet`, desde la tarjeta del Muro y desde el visor): pasa a
+      la `HojaDesdeAbajo`, con los colores del tema (antes `#1E1B18` fijo: oscura también en claro).
+      Cada destino como en la lista de chats (`AvatarDeChat`, su nombre y su línea), con un botón
+      redondo `send` de 44 que es lo único que envía. Rótulos «Formación Renaser» y «Directos»
+      (era «💬 CHAT DIRECTO CON MIEMBROS»). El ícono de compartir pasa a `forward` en la tarjeta y en
+      el visor (era `share` y el emoji ↗️).
+    * **Quién reaccionó** (`HojaDeReacciones`): hoja «Reacciones · N me gusta» con la foto o las
+      iniciales de cada persona (era la ventana centrada «REACCIONES DEL POST»).
+    * **Stickers** (`SelectorDeStickers`): la misma hoja en vez de su `Modal` con `slide`.
+    * **Nueva publicación** (`NuevaPublicacion`): ✕ de 24 en área de 44, «Nueva publicación» y la
+      píldora «Publicar», que se ve apagada hasta que hay texto y una foto; tocarla igual muestra la
+      alerta de siempre con lo que falta (y vibra con `tacto.error`), y al publicar vibra con
+      `tacto.logro`. Las fotos se ven en un mosaico de 88 con un recuadro `imagePlus` para agregar.
+      Rótulos en tipo oración («Fotos · al menos una», «Cargando categorías…», «Reintentar»; las
+      categorías se muestran como las manda el servidor, sin pasarlas a mayúsculas).
+    * **Ranking:** las tres tablas en el `ControlSegmentado`.
+    * **No cambia:** a quién se puede compartir, `handleShareToConversation`, la validación y el
+      guardado de la publicación (`handlePublishPost`, mismas alertas), el pedido de reacciones, los
+      stickers y su envío, ni las tablas del ranking. Sin dependencias nuevas.
   * **Excepción autorizada por el dueño del producto — 2026-09-29 — tab `Comunidad` (chat): nombres
     de los chats y avisos de mensajes** (backend D-221). Pedido del dueño: «Formación Renaser Global,
     grupo general donde estarán todos; luego el otro con el Mentor y sus estudiantes, que será el nombre
