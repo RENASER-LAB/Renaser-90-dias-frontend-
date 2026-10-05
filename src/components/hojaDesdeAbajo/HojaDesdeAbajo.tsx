@@ -206,8 +206,16 @@ export function HojaDesdeAbajo(props: HojaDesdeAbajoProps) {
   };
 
   /* ARRASTRAR PARA CERRAR. Solo la cabecera (agarradera, título, buscador): la lista de abajo
-     tiene su propio desplazamiento y pelearían por el mismo dedo. Un toque no lo activa (la ✕ y el
-     buscador siguen recibiendo sus toques): recién un movimiento vertical de 6 px. */
+     tiene su propio desplazamiento y pelearían por el mismo dedo. La ✕ y el buscador siguen
+     recibiendo sus toques: son más profundos, así que se los quedan ellos.
+
+     LA CABECERA TOMA EL DEDO AL APOYARLO, no recién al moverlo 6 px. El `Modal` de React Native
+     envuelve su contenido en una vista que reclama el toque al empezar si nadie más lo hizo
+     (`onStartShouldSetResponder` → `true`, para que no atraviese el modal). Esa vista es antecesora
+     de la cabecera, y una vez dueña del gesto el sistema de respuesta no le vuelve a preguntar a
+     ningún descendiente en cada movimiento: en Android la hoja no seguía al dedo ni se cerraba al
+     bajarla (visto en el emulador el 2026-10-05; en la web no pasaba porque react-native-web no
+     tiene ese contenedor). Un toque sin arrastre se trata en `onPanResponderRelease`. */
   const arrastre = useMemo(() => {
     let base = 0;
     let inicio = 0;
@@ -225,6 +233,7 @@ export function HojaDesdeAbajo(props: HojaDesdeAbajoProps) {
       );
     };
     return PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dy) > UMBRAL_PARA_ARRASTRAR && Math.abs(g.dy) > Math.abs(g.dx),
       onPanResponderGrant: () => {
         cancelAnimation(y);
@@ -235,6 +244,12 @@ export function HojaDesdeAbajo(props: HojaDesdeAbajoProps) {
         y.set(posicionAlArrastrar(base + g.dy, alto.get()));
       },
       onPanResponderRelease: (_e, g) => {
+        /* Un toque en el título o la agarradera no es un arrastre: si llegó durante la entrada,
+           `base` es lo que faltaba subir y no debe leerse como «la bajaron un cuarto». */
+        if (Math.abs(g.dy) <= UMBRAL_PARA_ARRASTRAR && Math.abs(g.dx) <= UMBRAL_PARA_ARRASTRAR) {
+          volver(0);
+          return;
+        }
         const decision = decidirAlSoltar({
           desplazamiento: base + g.dy,
           msTranscurridos: Date.now() - inicio,
