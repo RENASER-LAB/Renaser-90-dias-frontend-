@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -30,12 +30,23 @@ function SleepQualitySlider({
    * `locationX` se mide contra el elemento que recibio el toque, asi que solo sirve acá mientras
    * los hijos decorativos del riel lleven `pointerEvents="none"`.
    */
+  /**
+   * TERCER BUG (encontrado el 2026-10-05 en el emulador): el `PanResponder` de abajo se arma con
+   * `useMemo([trackWidth])`, así que sus manejadores se quedaban con el `onChange` del dibujo en que
+   * se midió el riel — y ese `onChange` arrastraba la ficha ENTERA de ese momento
+   * (`{ ...data, calidadSueno }` y, arriba, `{ ...formData, salud }`). Escribir las horas de sueño y
+   * DESPUÉS arrastrar la calidad devolvía las horas al valor viejo. Se lee el último `onChange`
+   * desde una referencia, que el `PanResponder` sí ve actualizada.
+   */
+  const onChangeActual = useRef(onChange);
+  onChangeActual.current = onChange;
+
   const calculateValueFromX = (x: number) => {
     if (trackWidth <= 0) return;
     const ratio = Math.max(0, Math.min(1, x / trackWidth));
     const newVal = Math.round(1 + ratio * 9); // 1..10
     const clamped = Math.max(1, Math.min(10, newVal));
-    onChange(clamped);
+    onChangeActual.current(clamped);
   };
 
   /**
@@ -306,8 +317,10 @@ export function ChapterSalud({ data, onChange }: ChapterSaludProps) {
             <TextInput
               value={data.especificacionMedicacion}
               onChangeText={val => {
-                updateField('especificacionMedicacion', val);
-                updateField('motivoMedicacion', val);
+                // Una sola actualización con los dos campos (2026-10-05). Eran dos `updateField`
+                // seguidos con la misma `data`: el segundo pisaba al primero y lo escrito no quedaba
+                // — quien tomaba medicación no podía pasar del capítulo («Medicación requerida»).
+                onChange({ ...data, especificacionMedicacion: val, motivoMedicacion: val });
               }}
               placeholder="Ejemplo: Levotiroxina 50 mcg para el tiroides."
               placeholderTextColor={c.tabInactive}
