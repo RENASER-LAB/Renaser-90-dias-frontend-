@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -18,13 +18,24 @@ import {
   searchPhoneCountries,
   findCountryByCodeOrIso,
 } from '../services/phoneCountriesService';
+import { useEnfocarAlLlegar } from '../hooks/useEnfocarAlLlegar';
 
 interface PhoneCountryInputProps {
+  /** Vacío = sin rótulo arriba (cuando el título de la pantalla ya dice qué se pide). */
   label: string;
   value: string;
   onChange: (fullNumber: string, countryCode: string, localNumber: string) => void;
   helperText?: string;
   error?: string;
+  /**
+   * Lo que necesita el campo del número para comportarse como en una app (2026-10-05, onboarding
+   * de un paso por pantalla): abrir el teclado solo al llegar (con `useEnfocarAlLlegar`, no con el
+   * `autoFocus` del `TextInput`, que en Android no abre el teclado al montar), y que la tecla de
+   * acción del teclado lleve al paso siguiente en vez de sólo cerrarlo.
+   */
+  autoFocus?: boolean;
+  returnKeyType?: 'next' | 'done';
+  onSubmitEditing?: () => void;
 }
 
 // Memoized Country Row for 0ms Rendering
@@ -73,8 +84,13 @@ export function PhoneCountryInput({
   onChange,
   helperText,
   error,
+  autoFocus,
+  returnKeyType,
+  onSubmitEditing,
 }: PhoneCountryInputProps) {
   const { c, t } = useTheme();
+  const campoNumero = useRef<TextInput>(null);
+  useEnfocarAlLlegar(campoNumero, Boolean(autoFocus));
   const [modalVisible, setModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -131,7 +147,7 @@ export function PhoneCountryInput({
   return (
     <View style={styles.container}>
       <View style={styles.labelGroup}>
-        <MicroLabel>{label}</MicroLabel>
+        {Boolean(label) && <MicroLabel>{label}</MicroLabel>}
         {helperText && (
           <Text style={[t.small, { color: c.textSoft, fontSize: 12, lineHeight: 16, marginTop: 2 }]}>
             {helperText}
@@ -177,8 +193,15 @@ export function PhoneCountryInput({
             placeholder={selectedCountry.example || '999 999 999'}
             placeholderTextColor={c.tabInactive}
             keyboardType="phone-pad"
+            // El prefijo va en la píldora de al lado: lo que se autocompleta es el número local.
+            autoComplete="tel-national"
+            textContentType="telephoneNumber"
+            accessibilityLabel={label || 'Número de WhatsApp'}
+            ref={campoNumero}
+            returnKeyType={returnKeyType}
+            onSubmitEditing={onSubmitEditing}
             maxLength={selectedCountry.maxDigits || 12}
-            style={[styles.phoneTextInput, { color: c.textStrong }]}
+            style={[styles.phoneTextInput, { color: c.textStrong, fontFamily: 'Jost_400Regular' }]}
           />
         </View>
       </View>
@@ -281,7 +304,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderRadius: 12,
     paddingHorizontal: 10,
-    height: 50,
+    height: 52,
     gap: 6,
   },
   flagText: {
@@ -293,12 +316,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1.5,
     borderRadius: 12,
-    height: 50,
+    height: 52,
     paddingHorizontal: 12,
   },
   phoneTextInput: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 16,
     height: '100%',
   },
   modalBackdrop: {

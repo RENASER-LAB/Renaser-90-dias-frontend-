@@ -19,6 +19,12 @@ import { FichaInicialData } from '../../features/onboarding/types/onboarding.typ
 interface BorradorFicha {
   formData: FichaInicialData;
   currentChapter: number;
+  /**
+   * En qué paso del capítulo iba la persona (2026-10-05: la ficha pasó a mostrarse de a un paso por
+   * pantalla). Opcional a propósito: los borradores escritos antes no lo tienen, y esos vuelven al
+   * primer paso de su capítulo con lo escrito ya cargado (`indiceDesdeBorrador`).
+   */
+  pasoEnCapitulo?: number;
   guardadoEn: string;
 }
 
@@ -34,9 +40,14 @@ async function sinRomper<T>(operacion: () => Promise<T>, porDefecto: T): Promise
 }
 
 export const almacenamientoLocal = {
-  guardarBorradorFicha: (userId: string, formData: FichaInicialData, currentChapter: number): Promise<void> =>
+  guardarBorradorFicha: (
+    userId: string,
+    formData: FichaInicialData,
+    currentChapter: number,
+    pasoEnCapitulo?: number,
+  ): Promise<void> =>
     sinRomper(async () => {
-      const borrador: BorradorFicha = { formData, currentChapter, guardadoEn: new Date().toISOString() };
+      const borrador: BorradorFicha = { formData, currentChapter, pasoEnCapitulo, guardadoEn: new Date().toISOString() };
       await AsyncStorage.setItem(PREFIJO_CLAVE + userId, JSON.stringify(borrador));
     }, undefined),
 

@@ -1,11 +1,12 @@
-import { afterEach, describe, expect, it, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import React from 'react';
 import { TextInput } from 'react-native';
 import TestRenderer, { act, type ReactTestRenderer } from 'react-test-renderer';
 
 /**
  * Dos errores del capítulo «Descanso y salud» que estaban en producción y se vieron en el emulador
- * el 2026-10-05 (bitácora del backend). Las dos pruebas fallan contra el `ChapterSalud` de antes:
+ * el 2026-10-05 al pasar la ficha a un paso por pantalla (bitácora del backend). Las dos pruebas
+ * fallan contra el `ChapterSalud` de antes:
  *
  * 1. **La medicación no se podía escribir.** El campo llamaba a `onChange` DOS veces seguidas con
  *    la misma `data` (una por `especificacionMedicacion`, otra por `motivoMedicacion`); la segunda
@@ -16,20 +17,31 @@ import TestRenderer, { act, type ReactTestRenderer } from 'react-test-renderer';
  *    momento adentro.
  */
 
+const mockTacto = { seleccion: jest.fn(), error: jest.fn(), logro: jest.fn() };
+
 jest.mock('../../../../theme/ThemeContext', () => {
   const tokens = jest.requireActual<typeof import('../../../../theme/tokens')>('../../../../theme/tokens');
   return {
     useTheme: () => ({ mode: 'light', c: tokens.light, t: tokens.type, space: tokens.space, toggle: () => undefined, setMode: () => undefined }),
   };
 });
+jest.mock('../../../../utils/tacto', () => ({
+  get tacto() {
+    return mockTacto;
+  },
+}));
 
-import { ChapterSalud } from '../ChapterSalud';
+import { PasoDescanso, PasoMedicacion } from '../ChapterSalud';
 import { INITIAL_FICHA_DATA } from '../../data/chaptersConfig';
 import type { FichaSaludData } from '../../types/onboarding.types';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 let raiz: ReactTestRenderer | null = null;
+
+beforeEach(() => {
+  mockTacto.seleccion.mockReset();
+});
 
 afterEach(() => {
   act(() => raiz?.unmount());
@@ -61,11 +73,11 @@ describe('Medicación', () => {
     const onChange = jest.fn<(data: FichaSaludData) => void>();
     const data: FichaSaludData = { ...INITIAL_FICHA_DATA.salud, tomaMedicacionRegular: true };
     act(() => {
-      raiz = TestRenderer.create(React.createElement(ChapterSalud, { data, onChange }));
+      raiz = TestRenderer.create(React.createElement(PasoMedicacion, { data, onChange }));
     });
 
     const campo = raiz!.root.findAll(
-      n => n.type === TextInput && n.props.placeholder === 'Ejemplo: Levotiroxina 50 mcg para el tiroides.',
+      n => n.type === TextInput && n.props.accessibilityLabel === 'Especifica tu medicación y motivo de la toma',
     )[0];
     act(() => campo.props.onChangeText('Levotiroxina'));
 
@@ -81,7 +93,7 @@ describe('Calidad del sueño', () => {
     const primero = jest.fn<(data: FichaSaludData) => void>();
     const data: FichaSaludData = { ...INITIAL_FICHA_DATA.salud, horasSueno: '7.5', calidadSueno: 5 };
     act(() => {
-      raiz = TestRenderer.create(React.createElement(ChapterSalud, { data, onChange: primero }));
+      raiz = TestRenderer.create(React.createElement(PasoDescanso, { data, onChange: primero }));
     });
 
     // El riel se mide (esto rearma el `PanResponder`)…
@@ -90,7 +102,7 @@ describe('Calidad del sueño', () => {
 
     // …y DESPUÉS la persona escribe 6 horas: llega una `data` nueva con su `onChange` nuevo.
     const despues = jest.fn<(data: FichaSaludData) => void>();
-    act(() => raiz!.update(React.createElement(ChapterSalud, { data: { ...data, horasSueno: '6' }, onChange: despues })));
+    act(() => raiz!.update(React.createElement(PasoDescanso, { data: { ...data, horasSueno: '6' }, onChange: despues })));
 
     act(() => {
       riel().props.onResponderGrant(toqueEn(300));
@@ -98,5 +110,7 @@ describe('Calidad del sueño', () => {
 
     expect(primero).not.toHaveBeenCalled();
     expect(despues).toHaveBeenLastCalledWith(expect.objectContaining({ horasSueno: '6', calidadSueno: 10 }));
+    // Un «tic» háptico por el punto nuevo que cruzó el dedo.
+    expect(mockTacto.seleccion).toHaveBeenCalledTimes(1);
   });
 });

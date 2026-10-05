@@ -1,14 +1,24 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../../../theme/ThemeContext';
 import { FichaConsentimientoData } from '../types/onboarding.types';
 import { Icon } from '../../../components/Icon';
+import { Presionable } from '../../../components/Presionable';
+import { tacto } from '../../../utils/tacto';
 
 interface ChapterConsentimientoProps {
   data: FichaConsentimientoData;
   onChange: (data: FichaConsentimientoData) => void;
 }
 
+/**
+ * Capítulo 3 de la Ficha Inicial · Consentimiento y compromiso (un solo paso).
+ *
+ * 2026-10-05 (onboarding nativo): mismos textos y misma casilla; cambia la respuesta al toque. La
+ * tarjeta se hunde al apoyar el dedo, vibra al marcarse, y la marca va en dorado con la tinta de
+ * encima del dorado. Antes, marcada, era un cuadrado BLANCO con borde blanco sobre una tarjeta
+ * blanca (modo claro): sólo se veía el tilde, flotando.
+ */
 export function ChapterConsentimiento({ data, onChange }: ChapterConsentimientoProps) {
   const { c, t } = useTheme();
 
@@ -16,6 +26,7 @@ export function ChapterConsentimiento({ data, onChange }: ChapterConsentimientoP
 
   const handleToggle = () => {
     const nextVal = !isChecked;
+    tacto.seleccion();
     onChange({
       ...data,
       autorizaUsoDatos: nextVal,
@@ -26,12 +37,12 @@ export function ChapterConsentimiento({ data, onChange }: ChapterConsentimientoP
   return (
     <View style={styles.container}>
       {/* Texto de Autorización y Tratamiento de Datos */}
-      <Text style={[t.body, { color: c.text, fontSize: 14, lineHeight: 21 }]}>
+      <Text style={[t.body, { color: c.text, fontSize: 15, lineHeight: 23 }]}>
         Autorizo el uso responsable de mis datos para fines de seguimiento, mejora continua del proceso y envío de información relevante relacionada al acompañamiento dentro del ecosistema RENASER.
       </Text>
 
       {/* Tarjeta de Consentimiento y Compromiso a 90 Días */}
-      <Pressable
+      <Presionable
         accessibilityRole="checkbox"
         accessibilityState={{ checked: isChecked }}
         accessibilityLabel="Consentimiento y compromiso de 90 días"
@@ -40,49 +51,48 @@ export function ChapterConsentimiento({ data, onChange }: ChapterConsentimientoP
           styles.consentCard,
           {
             borderColor: isChecked ? c.gold : c.borderStrong,
-            backgroundColor: isChecked ? c.cardBgAlt : c.cardBg,
+            backgroundColor: isChecked ? c.goldWash : c.cardBgAlt,
           },
         ]}
       >
-        {/* Checkbox Rounded Pill */}
+        {/* Casilla */}
         <View
           style={[
             styles.checkPill,
             {
-              backgroundColor: isChecked ? '#FFFFFF' : 'transparent',
-              borderColor: isChecked ? '#FFFFFF' : c.tabInactive,
+              backgroundColor: isChecked ? c.gold : 'transparent',
+              borderColor: isChecked ? c.gold : c.tabInactive,
             },
           ]}
         >
-          {isChecked && <Icon name="check" size={14} color="#1E1B18" />}
+          {isChecked && <Icon name="check" size={15} color={c.onGold} strokeWidth={2.4} />}
         </View>
 
         {/* Textos de la tarjeta */}
         <View style={styles.textColumn}>
-          <Text style={[t.body, { color: c.textStrong, fontSize: 14.5, fontFamily: 'Jost_700Bold', lineHeight: 20 }]}>
+          <Text style={[t.body, { color: c.textStrong, fontSize: 15, fontFamily: 'Jost_700Bold', lineHeight: 21 }]}>
             Autorizo el uso de mis datos y me comprometo a los 90 días
           </Text>
-          <Text style={[t.micro, { color: c.textSoft, fontSize: 12.5, lineHeight: 17, marginTop: 2 }]}>
+          <Text style={[t.small, { color: c.textSoft, fontSize: 13.5, lineHeight: 19, marginTop: 2 }]}>
             Acepto las exigencias del sistema y respeto el código de honor del grupo.
           </Text>
         </View>
-      </Pressable>
+      </Presionable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    gap: 18,
+    gap: 22,
     width: '100%',
-    paddingTop: 4,
   },
   consentCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     borderWidth: 1.5,
     borderRadius: 16,
-    padding: 16,
+    padding: 18,
     gap: 14,
   },
   checkPill: {
@@ -92,7 +102,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 2,
+    marginTop: 1,
   },
   textColumn: {
     flex: 1,

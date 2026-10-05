@@ -4,13 +4,20 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  Pressable,
   PanResponder,
 } from 'react-native';
 import { useTheme } from '../../../theme/ThemeContext';
 import { FichaSaludData } from '../types/onboarding.types';
+import { tacto } from '../../../utils/tacto';
+import { useEnfocarAlLlegar } from '../../../hooks/useEnfocarAlLlegar';
+import { OpcionElegible } from './OpcionElegible';
 
-interface ChapterSaludProps {
+/**
+ * Capítulo 2 de la Ficha Inicial · Descanso y salud, en dos pasos (2026-10-05): «Tu descanso»
+ * (horas y calidad del sueño) y «¿Tomas alguna medicación…?». Mismos campos, mismas reglas y mismo
+ * guardado que cuando era un solo bloque (`ChapterSalud`); ver `data/pasosFicha.ts`.
+ */
+export interface PasoSaludProps {
   data: FichaSaludData;
   onChange: (data: FichaSaludData) => void;
 }
@@ -31,21 +38,28 @@ function SleepQualitySlider({
    * los hijos decorativos del riel lleven `pointerEvents="none"`.
    */
   /**
-   * TERCER BUG (encontrado el 2026-10-05 en el emulador): el `PanResponder` de abajo se arma con
-   * `useMemo([trackWidth])`, así que sus manejadores se quedaban con el `onChange` del dibujo en que
-   * se midió el riel — y ese `onChange` arrastraba la ficha ENTERA de ese momento
-   * (`{ ...data, calidadSueno }` y, arriba, `{ ...formData, salud }`). Escribir las horas de sueño y
-   * DESPUÉS arrastrar la calidad devolvía las horas al valor viejo. Se lee el último `onChange`
-   * desde una referencia, que el `PanResponder` sí ve actualizada.
+   * TERCER BUG (encontrado el 2026-10-05 al pasar la ficha a un paso por pantalla): el `PanResponder`
+   * de abajo se arma con `useMemo([trackWidth])`, así que sus manejadores se quedaban con el
+   * `onChange` del dibujo en que se midió el riel — y ese `onChange` arrastraba la ficha ENTERA de
+   * ese momento (`{ ...data, calidadSueno }` y, arriba, `{ ...formData, salud }`). Escribir las horas
+   * de sueño y DESPUÉS arrastrar la calidad devolvía las horas al valor viejo. Se lee el último
+   * `onChange` (y el último valor) desde una referencia, que el `PanResponder` sí ve actualizada.
    */
   const onChangeActual = useRef(onChange);
   onChangeActual.current = onChange;
+  const valorActual = useRef(value);
+  valorActual.current = value;
 
   const calculateValueFromX = (x: number) => {
     if (trackWidth <= 0) return;
     const ratio = Math.max(0, Math.min(1, x / trackWidth));
     const newVal = Math.round(1 + ratio * 9); // 1..10
     const clamped = Math.max(1, Math.min(10, newVal));
+    // Un «tic» por cada punto que cruza el dedo, como los topes de un control físico. Nunca por cuadro.
+    if (clamped !== valorActual.current) {
+      valorActual.current = clamped;
+      tacto.seleccion();
+    }
     onChangeActual.current(clamped);
   };
 
@@ -156,22 +170,11 @@ function SleepQualitySlider({
     </View>
   );
 }
-
-export function ChapterSalud({ data, onChange }: ChapterSaludProps) {
+export function PasoDescanso({ data, onChange }: PasoSaludProps) {
   const { c, t } = useTheme();
 
   const updateField = (key: keyof FichaSaludData, value: any) => {
     onChange({ ...data, [key]: value });
-  };
-
-  // Single Atomic State Update for Medication Toggle
-  const handleToggleMedicacion = (val: boolean) => {
-    onChange({
-      ...data,
-      tomaMedicacionRegular: val,
-      especificacionMedicacion: val ? data.especificacionMedicacion : '',
-      motivoMedicacion: val ? data.motivoMedicacion : '',
-    });
   };
 
   const handleHorasChange = (text: string) => {
@@ -192,7 +195,7 @@ export function ChapterSalud({ data, onChange }: ChapterSaludProps) {
       {/* Campo 1: Horas promedio de sueño */}
       <View style={styles.fieldBlock}>
         <View style={styles.labelRow}>
-          <Text style={[t.body, { color: c.textStrong, fontSize: 14.5, fontFamily: 'Jost_500Medium' }]}>
+          <Text style={[t.body, { color: c.textStrong, fontSize: 15, fontFamily: 'Jost_500Medium' }]}>
             Horas promedio de sueño
           </Text>
           {isValidHoras && (
@@ -214,9 +217,12 @@ export function ChapterSalud({ data, onChange }: ChapterSaludProps) {
             onChangeText={handleHorasChange}
             placeholder="Ej. 7 u 8"
             placeholderTextColor={c.tabInactive}
-            keyboardType="numeric"
+            accessibilityLabel="Horas promedio de sueño"
+            /* `decimal-pad`: las horas llevan punto (7.5) y nada más. */
+            keyboardType="decimal-pad"
+            returnKeyType="done"
             maxLength={4}
-            style={[styles.textInput, { color: c.textStrong }]}
+            style={[styles.textInput, { color: c.textStrong, fontFamily: 'Jost_400Regular' }]}
           />
         </View>
         <Text style={[t.micro, { color: c.textSoft, fontSize: 12 }]}>Entre 0 y 24.</Text>
@@ -225,7 +231,7 @@ export function ChapterSalud({ data, onChange }: ChapterSaludProps) {
       {/* Campo 2: Calidad de tu sueño (Opcional) */}
       <View style={styles.fieldBlock}>
         <View style={styles.labelRow}>
-          <Text style={[t.body, { color: c.textStrong, fontSize: 14.5, fontFamily: 'Jost_500Medium' }]}>
+          <Text style={[t.body, { color: c.textStrong, fontSize: 15, fontFamily: 'Jost_500Medium' }]}>
             Calidad de tu sueño
           </Text>
           <Text style={[t.micro, { color: c.tabInactive, fontSize: 12 }]}>Opcional</Text>
@@ -236,97 +242,67 @@ export function ChapterSalud({ data, onChange }: ChapterSaludProps) {
           onChange={val => updateField('calidadSueno', val)}
         />
       </View>
+    </View>
+  );
+}
 
-      {/* Campo 3: ¿Tomas alguna medicación de forma regular? */}
-      <View style={styles.fieldBlock}>
-        <Text style={[t.body, { color: c.textStrong, fontSize: 14.5, fontFamily: 'Jost_500Medium' }]}>
-          ¿Tomas alguna medicación de forma regular?
-        </Text>
+export function PasoMedicacion({ data, onChange }: PasoSaludProps) {
+  const { c, t } = useTheme();
+  // Al decir «Sí» aparece el campo y se abre el teclado para escribirla.
+  const campoMedicacion = useRef<TextInput>(null);
+  useEnfocarAlLlegar(campoMedicacion, data.tomaMedicacionRegular === true);
 
-        <View style={styles.radioOptionsGroup}>
-          {/* Opción Sí */}
-          <Pressable
-            accessibilityRole="radio"
-            accessibilityState={{ selected: data.tomaMedicacionRegular === true }}
-            accessibilityLabel="Sí, tomo medicación regular"
-            onPress={() => handleToggleMedicacion(true)}
-            style={[
-              styles.radioCard,
-              {
-                borderColor: data.tomaMedicacionRegular === true ? c.gold : c.borderStrong,
-                backgroundColor: data.tomaMedicacionRegular === true ? c.cardBgAlt : c.cardBg,
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.radioCircle,
-                {
-                  borderColor: data.tomaMedicacionRegular === true ? c.gold : c.tabInactive,
-                  backgroundColor: data.tomaMedicacionRegular === true ? c.gold : 'transparent',
-                },
-              ]}
-            >
-              {data.tomaMedicacionRegular === true && <View style={[styles.radioInnerDot, { backgroundColor: c.onGold }]} />}
-            </View>
-            <Text style={[t.body, { color: c.textStrong, fontSize: 14.5, fontFamily: 'Jost_500Medium' }]}>
-              Sí
-            </Text>
-          </Pressable>
+  // Single Atomic State Update for Medication Toggle
+  const handleToggleMedicacion = (val: boolean) => {
+    onChange({
+      ...data,
+      tomaMedicacionRegular: val,
+      especificacionMedicacion: val ? data.especificacionMedicacion : '',
+      motivoMedicacion: val ? data.motivoMedicacion : '',
+    });
+  };
 
-          {/* Opción No */}
-          <Pressable
-            accessibilityRole="radio"
-            accessibilityState={{ selected: data.tomaMedicacionRegular === false }}
-            accessibilityLabel="No tomo medicación regular"
-            onPress={() => handleToggleMedicacion(false)}
-            style={[
-              styles.radioCard,
-              {
-                borderColor: data.tomaMedicacionRegular === false ? c.gold : c.borderStrong,
-                backgroundColor: data.tomaMedicacionRegular === false ? c.cardBgAlt : c.cardBg,
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.radioCircle,
-                {
-                  borderColor: data.tomaMedicacionRegular === false ? c.gold : c.tabInactive,
-                  backgroundColor: data.tomaMedicacionRegular === false ? c.gold : 'transparent',
-                },
-              ]}
-            >
-              {data.tomaMedicacionRegular === false && <View style={[styles.radioInnerDot, { backgroundColor: c.onGold }]} />}
-            </View>
-            <Text style={[t.body, { color: c.textStrong, fontSize: 14.5, fontFamily: 'Jost_500Medium' }]}>
-              No
-            </Text>
-          </Pressable>
-        </View>
+  return (
+    <View style={styles.container}>
+      {/* La pregunta va en el título del paso; acá, las dos respuestas. */}
+      <View accessibilityRole="radiogroup" style={styles.radioOptionsGroup}>
+        <OpcionElegible
+          etiqueta="Sí"
+          accessibilityLabel="Sí, tomo medicación regular"
+          elegida={data.tomaMedicacionRegular === true}
+          onElegir={() => handleToggleMedicacion(true)}
+        />
+        <OpcionElegible
+          etiqueta="No"
+          accessibilityLabel="No tomo medicación regular"
+          elegida={data.tomaMedicacionRegular === false}
+          onElegir={() => handleToggleMedicacion(false)}
+        />
       </View>
 
       {/* Campo 4: Especifica tu medicación (SOLO VISIBLE CUANDO ES "SÍ") */}
       {data.tomaMedicacionRegular === true && (
         <View style={styles.fieldBlock}>
-          <Text style={[t.body, { color: c.textStrong, fontSize: 14.5, fontFamily: 'Jost_500Medium' }]}>
+          <Text style={[t.body, { color: c.textStrong, fontSize: 15, fontFamily: 'Jost_500Medium' }]}>
             Especifica tu medicación y motivo de la toma
           </Text>
 
           <View style={[styles.textareaWrap, { borderColor: c.borderStrong, backgroundColor: c.cardBgAlt }]}>
             <TextInput
+              ref={campoMedicacion}
               value={data.especificacionMedicacion}
               onChangeText={val => {
-                // Una sola actualización con los dos campos (2026-10-05). Eran dos `updateField`
-                // seguidos con la misma `data`: el segundo pisaba al primero y lo escrito no quedaba
-                // — quien tomaba medicación no podía pasar del capítulo («Medicación requerida»).
+                // Una sola actualización con los dos campos: dos `onChange` seguidos con la misma
+                // `data` hacían que el segundo pisara al primero.
                 onChange({ ...data, especificacionMedicacion: val, motivoMedicacion: val });
               }}
               placeholder="Ejemplo: Levotiroxina 50 mcg para el tiroides."
               placeholderTextColor={c.tabInactive}
+              accessibilityLabel="Especifica tu medicación y motivo de la toma"
+              autoCapitalize="sentences"
               multiline
               numberOfLines={4}
-              style={[styles.textareaInput, { color: c.textStrong }]}
+              style={[styles.textareaInput, { color: c.textStrong, fontFamily: 'Jost_400Regular' }]}
             />
           </View>
           <Text style={[t.micro, { color: c.textSoft, fontSize: 12 }]}>
@@ -340,7 +316,7 @@ export function ChapterSalud({ data, onChange }: ChapterSaludProps) {
 
 const styles = StyleSheet.create({
   container: {
-    gap: 16,
+    gap: 24,
     width: '100%',
   },
   fieldBlock: {
@@ -360,7 +336,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   textInput: {
-    fontSize: 15,
+    fontSize: 16,
     height: '100%',
   },
   sliderContainer: {
@@ -402,7 +378,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   radioOptionsGroup: {
-    gap: 8,
+    gap: 10,
     width: '100%',
   },
   radioCard: {

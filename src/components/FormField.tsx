@@ -10,6 +10,12 @@ interface FormFieldProps extends TextInputProps {
   error?: string | null;
   icon?: IconName;
   containerStyle?: ViewStyle;
+  /**
+   * El campo de verdad, para enfocarlo desde afuera (pasar al siguiente campo con la tecla «Siguiente»
+   * del teclado, 2026-10-05). En React 19 `ref` llega como una prop más y viaja al `TextInput` con
+   * el resto de `inputProps`: no hace falta `forwardRef`.
+   */
+  ref?: React.Ref<TextInput>;
 }
 
 export function FormField({
