@@ -282,6 +282,15 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       (`RegistroConFotoModal`, compartido con Hoy y Yo), las reglas de cierre de cada hábito y los pedidos al
       backend.
     * **Hace falta un APK nuevo** (la app no se actualiza por aire).
+  * **Cambio por pedido del dueño — 2026-10-05 — tab `Training`: la racha real de cada hábito** (D-254 del
+    backend). Lo que cambia y nada más:
+    * **«🔥 N días» sale del servidor**: `rachaDias` de cada track de `GET /api/v1/habit-tracks/today`
+      (días programados seguidos que se cumplieron; los días en que el hábito no toca y los de pausa no cortan
+      ni suman; hoy pendiente no corta). Antes `useTraining` fijaba `streak: 0` y todas decían «0 días».
+    * **Sin dato no hay racha**: si el campo no viene (backend anterior), en un hábito sin track de hoy (no le
+      toca hoy o está en pausa) y en las rocas de Vida y negocio, la tarjeta no dibuja la llama
+      (`HabitItem.streak` es `number | null`). Con 0 sigue la llama gris y «0 días».
+    * **Hace falta un APK nuevo** (la app no se actualiza por aire); el APK publicado ignora el campo nuevo.
   * **Cambio por pedido del dueño — 2026-10-05 — tabs `Hoy` y `Yo`: ajustes al rediseño** (decisiones del dueño del
     mismo día sobre lo ya integrado en `rediseno-junto`). Lo que cambia y nada más:
     * **Una sola entrada a «Mi onboarding»**: se quitó la fila «Mi ficha y Pacto» de Yo, que abría la misma vista. Se

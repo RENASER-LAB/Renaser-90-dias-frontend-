@@ -208,6 +208,11 @@ export interface TrackDelDiaApi {
    * `undefined`/null en los demás hábitos y contra un backend anterior.
    */
   medicion?: MedicionDelTrackApi | null;
+  /**
+   * D-254 del backend (2026-10-05): la racha de este hábito en días programados seguidos cumplidos,
+   * hasta hoy. `undefined`/null contra un backend anterior: la tarjeta no muestra racha.
+   */
+  rachaDias?: number | null;
 }
 
 /** D-226: la medición de un track (`GET /habit-tracks/today`). `unidad` hoy solo `KILOMETROS`. */

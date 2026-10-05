@@ -126,7 +126,8 @@ export function useTraining() {
           title: habito.title,
           time: habito.time,
           tag: habito.isOptional ? 'Opcional' : 'Innegociable',
-          streak: 0,
+          // Sin track de hoy no hay racha del servidor (D-254): no se muestra, en vez de un 0 inventado.
+          streak: null,
           done: false,
           habitoId: habito.id,
           isDeactivatable: habito.isDeactivatable,
@@ -188,6 +189,9 @@ export function useTraining() {
           maxPoints: track.puntosMaximos ?? null,
           deadline: track.plazoEvidencia ?? null,
           medicion: medicionPedidaDe(track),
+          // D-254: la racha la calcula el servidor (días programados seguidos cumplidos, la pausa la
+          // congela, hoy pendiente no corta). Un backend anterior no la manda: `null` y no se dibuja.
+          streak: track.rachaDias ?? null,
         };
       })
       .filter((h): h is HabitItem => h !== null);
@@ -199,7 +203,8 @@ export function useTraining() {
       title: roca.titulo,
       time: roca.horaInicio ? roca.horaInicio.slice(0, 5) : '',
       tag: roca.esDelegable ? 'Delegable' : 'Innegociable',
-      streak: 0,
+      // Una roca no tiene racha en el servidor: no se dibuja (antes era un «0 días» fijo).
+      streak: null,
       done: roca.completada,
       hasEvidence: rocasConEvidencia.has(roca.id),
       // Una roca no es un hábito de catálogo: no tiene clave de sistema ni resumen, y tampoco

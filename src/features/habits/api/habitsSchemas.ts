@@ -144,6 +144,12 @@ const trackDelDiaSchema = z
       .object({ unidad: z.string(), valorDelDia: z.number().nullable(), total: z.number() })
       .passthrough()
       .nullish(),
+    /**
+     * D-254 del backend (2026-10-05): días programados seguidos que cumplió este hábito, hasta hoy
+     * (los días en que no le toca y los de pausa no cortan; hoy pendiente no corta). `nullish()`: un
+     * backend anterior no lo manda, y ahí la tarjeta NO muestra racha — nunca un «0 días» inventado.
+     */
+    rachaDias: z.number().int().nonnegative().nullish(),
   })
   .passthrough();
 

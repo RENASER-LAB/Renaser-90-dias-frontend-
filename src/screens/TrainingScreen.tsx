@@ -86,7 +86,11 @@ export interface HabitItem {
   title: string;
   time: string;
   tag: string;
-  streak: number;
+  /**
+   * Racha del hábito en días (D-254 del backend, `rachaDias` del track de hoy). `null` = no se sabe
+   * —backend anterior, hábito sin track de hoy, o una roca—, y entonces la tarjeta no la muestra.
+   */
+  streak: number | null;
   done: boolean;
   hasEvidence: boolean;
   /**
@@ -1299,13 +1303,16 @@ export default function TrainingScreen() {
                               {habit.tag}
                             </Text>
                           </View>
-                          {/* La racha: llama de Lucide a 16 (la de 12 se leía como una gota). */}
-                          <View style={styles.racha} accessibilityLabel={`Racha de ${habit.streak} días`}>
-                            <Icon name="flame" size={TAMANO_ICONO.chico} color={habit.streak > 0 ? c.goldInk : c.chevron} />
-                            <Text style={[t.small, { color: c.textSoft, fontFamily: 'Jost_500Medium' }]}>
-                              {habit.streak} {habit.streak === 1 ? 'día' : 'días'}
-                            </Text>
-                          </View>
+                          {/* La racha: llama de Lucide a 16 (la de 12 se leía como una gota). Solo si
+                              el servidor la mandó (D-254): sin dato no se dibuja, nunca «0 días». */}
+                          {habit.streak != null && (
+                            <View style={styles.racha} accessibilityLabel={`Racha de ${habit.streak} ${habit.streak === 1 ? 'día' : 'días'}`}>
+                              <Icon name="flame" size={TAMANO_ICONO.chico} color={habit.streak > 0 ? c.goldInk : c.chevron} />
+                              <Text style={[t.small, { color: c.textSoft, fontFamily: 'Jost_500Medium' }]}>
+                                {habit.streak} {habit.streak === 1 ? 'día' : 'días'}
+                              </Text>
+                            </View>
+                          )}
                         </View>
 
                         <View style={styles.tituloConIcono}>
