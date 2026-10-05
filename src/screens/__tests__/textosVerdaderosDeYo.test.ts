@@ -33,13 +33,17 @@ describe('los textos del Centro de Perfil y Ajustes de Yo', () => {
   });
 
   it('dice solo lo que se puede editar', () => {
-    expect(codigo).toContain('>Nombre y foto<');
-    expect(codigo).toContain('>Biografía y departamento<');
+    expect(codigo).toContain('detalle="Nombre y foto"');
+    expect(codigo).toContain('detalle="Biografía y departamento"');
   });
 
-  it('cuenta las etapas del onboarding y las fases del método de sus listas', () => {
-    expect(codigo).toContain('`Mi Onboarding (${ONBOARDING_STAGES.length} etapas)`');
-    expect(codigo).toContain('>El Pacto y tu Mapa de Renacimiento<');
+  /* > **Corregido 2026-10-05 (rediseño de Yo).** La fila decía `Mi Onboarding (${ONBOARDING_STAGES.length}
+     > etapas)`, y la prueba cuidaba que el número saliera de la lista. Con los textos cortos del
+     > rediseño la fila dice «Mi onboarding», sin número: ya no hay un conteo que pueda mentir. */
+  it('cuenta las fases del método de su lista, y la fila de onboarding no lleva un número escrito', () => {
+    expect(codigo).toContain('titulo="Mi onboarding"');
+    expect(codigo).not.toMatch(/Mi [Oo]nboarding \(\d/);
+    expect(codigo).toContain('detalle="El Pacto y tu Mapa de Renacimiento"');
     expect(codigo).toContain('`${METODO_FASES.length} fases para comprenderte y sostener tu transformación`');
     expect(codigo).toMatch(/ONBOARDING_STAGES = \[\s*\{ id: 'st1'[^\n]*\n\s*\{ id: 'st2'[^\n]*\n\] as const/);
   });

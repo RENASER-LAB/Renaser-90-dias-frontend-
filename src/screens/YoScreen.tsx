@@ -1,8 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  Animated,
   Image,
-  Easing,
   View,
   Text,
   StyleSheet,
@@ -10,7 +8,6 @@ import {
   Pressable,
   Platform,
   TextInput,
-  Switch,
 } from 'react-native';
 import { Alert } from '../components/Alerta';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,11 +20,27 @@ import { useAuth } from '../context/AuthContext';
 import { InterruptoresDeAvisos } from '../features/alarmas/components/InterruptoresDeAvisos';
 import { SeccionAlarmas } from '../features/alarmas/components/SeccionAlarmas';
 import { useSystemBackHandler } from '../hooks/useSystemBackHandler';
-import { MicroLabel, ScreenHeader, Placeholder } from '../components/ui';
+import { MicroLabel, ScreenHeader } from '../components/ui';
 import { AdminScreen } from '../features/admin/screens/AdminScreen';
 import { useCapacidades } from '../features/admin/hooks/useCapacidades';
-import { Icon, type IconName } from '../components/Icon';
+import { Icon, TAMANO_ICONO, type IconName } from '../components/Icon';
 import { GoldButton } from '../components/GoldButton';
+import { Interruptor } from '../components/Interruptor';
+import { Presionable } from '../components/Presionable';
+import { ConfirmacionEnLinea } from '../components/ConfirmacionEnLinea';
+import { tacto } from '../utils/tacto';
+import { CabeceraAdmin } from '../features/admin/components/CabeceraAdmin';
+import { OrbeQuieto } from '../features/renasia/components/OrbeQuieto';
+import { FilaDeAjuste, GrupoDeAjustes, TAMANO_ICONO_BALDOSA } from '../features/yo/components/FilasDeAjustes';
+import { MetodoEnPaginas, type FaseDelMetodo } from '../features/yo/components/MetodoEnPaginas';
+import { PactoFirmado } from '../features/yo/components/PactoFirmado';
+import {
+  origenTrasCambio,
+  TITULO_DE_VISTA,
+  vistaDeRegreso,
+  type OrigenDeYo,
+  type VistaDeYo,
+} from '../features/yo/utils/navegacionDeYo';
 import {
   useResumenHome,
   rotuloDeFase,
@@ -111,7 +124,7 @@ function fechaDeEvidencia(iso: string | null): string {
 }
 
 /**
- * Lo editorial de cada fase: el ícono, el color, la frase y qué se hace.
+ * Lo editorial de cada fase: el ícono, la frase y qué se hace.
  *
  * **El nombre, el número y el rango de días NO están acá a propósito** — salen de
  * `FASES_EN_ORDEN` (`features/home/hooks/useResumenHome`), que es la única definición de fase de
@@ -122,17 +135,21 @@ function fechaDeEvidencia(iso: string | null): string {
  * El contenido sale de `RENASER, PROGRAMA Y FASES.docx` (objetivo psicológico, enemigo, hábitos y
  * rituales de cada fase), no de una redacción propia: la frase entre comillas es el mensaje de
  * intervención o la pregunta de reflexión que el documento asigna a esa fase.
+ *
+ * Corregido 2026-10-05 (rediseño de Yo): cada fase tenía su color pastel escrito a mano (`#90CAF9`,
+ * `#CE93D8`, `#A5D6A7`, `#FFE082`; el amarillo no se veía sobre crema). Ahora los íconos van en la
+ * tinta del tema, y la Fase 3 dejó el ♡ (es «me gusta» y «Emociones» en el resto de la app) por la
+ * llama del gozo.
  */
 const CONTENIDO_DEL_METODO: Record<
   ClaveDeFase,
-  { icon: IconName; color: string; quote: string; summary: string; bullets: string[] }
+  { icono: IconName; frase: string; resumen: string; puntos: string[] }
 > = {
   PHASE_1_REBIRTH: {
-    icon: 'eye',
-    color: '#90CAF9',
-    quote: 'Esta semana no buscas cambiarte. Buscas verte.',
-    summary: 'Observar la mente sin intervenir: bajar el ruido mental y el cortisol, y restaurar el sistema dopaminérgico.',
-    bullets: [
+    icono: 'eye',
+    frase: 'Esta semana no buscas cambiarte. Buscas verte.',
+    resumen: 'Observar la mente sin intervenir: bajar el ruido mental y el cortisol, y restaurar el sistema dopaminérgico.',
+    puntos: [
       'Ayuno intermitente: última comida 6pm, primera 10am',
       'Agua tibia con limón y jugo verde al despertar',
       'Ritual Tierra-Agua-Fuego, tres veces al día',
@@ -140,11 +157,10 @@ const CONTENIDO_DEL_METODO: Record<
     ],
   },
   PHASE_2_DEVELOPMENT: {
-    icon: 'diamond',
-    color: '#CE93D8',
-    quote: 'Reconócelo, corrígelo, continúa. El creador asume, la víctima se culpa.',
-    summary: 'Exponer a la víctima interna y despertar al creador: entender la raíz del sabotaje y consolidar el dominio mental.',
-    bullets: [
+    icono: 'diamond',
+    frase: 'Reconócelo, corrígelo, continúa. El creador asume, la víctima se culpa.',
+    resumen: 'Exponer a la víctima interna y despertar al creador: entender la raíz del sabotaje y consolidar el dominio mental.',
+    puntos: [
       'Tres ciclos de Intoxicación Consciente y Desintoxicación Absoluta',
       'Mantra: no miedo, no culpa, no vergüenza',
       'Sueño con alarmas y celular en modo concentración',
@@ -152,11 +168,10 @@ const CONTENIDO_DEL_METODO: Record<
     ],
   },
   PHASE_3_ALCHEMIST_WARRIOR: {
-    icon: 'heart',
-    color: '#A5D6A7',
-    quote: '¿Estoy haciendo esto por obligación o porque amo mi vida?',
-    summary: 'Transformar la disciplina exigida en gozo, e iniciar la autoterapia desde el amor.',
-    bullets: [
+    icono: 'fire',
+    frase: '¿Estoy haciendo esto por obligación o porque amo mi vida?',
+    resumen: 'Transformar la disciplina exigida en gozo, e iniciar la autoterapia desde el amor.',
+    puntos: [
       'Los mismos hábitos, ahora desde la intención',
       'Decretos y mantras: del ayuno, del cierre nocturno, del gozo',
       'Baile y movimiento libre',
@@ -164,11 +179,10 @@ const CONTENIDO_DEL_METODO: Record<
     ],
   },
   PHASE_4_ASCENSION: {
-    icon: 'target',
-    color: '#FFE082',
-    quote: 'No eres menos capaz. Simplemente te has distraído.',
-    summary: 'Producir en cuatro horas lo que otros producen en diez: tres misiones de alto impacto al día.',
-    bullets: [
+    icono: 'target',
+    frase: 'No eres menos capaz. Simplemente te has distraído.',
+    resumen: 'Producir en cuatro horas lo que otros producen en diez: tres misiones de alto impacto al día.',
+    puntos: [
       'Tres bloques profundos de 90 minutos',
       'Protocolo antidistractores: el celular fuera de alcance',
       'Planificación nocturna del día siguiente',
@@ -177,9 +191,9 @@ const CONTENIDO_DEL_METODO: Record<
   },
 };
 
-const METODO_FASES = FASES_EN_ORDEN.map(fase => ({
-  phase: `FASE ${fase.numero}`,
-  title: fase.nombre,
+const METODO_FASES: FaseDelMetodo[] = FASES_EN_ORDEN.map(fase => ({
+  numero: fase.numero,
+  titulo: fase.nombre,
   rango: fase.rango,
   ...CONTENIDO_DEL_METODO[fase.clave],
 }));
@@ -246,6 +260,15 @@ export default function YoScreen() {
   const diasDelSemaforo = resumen?.semaforo?.dias ?? miSemaforo.detalle?.vigente?.dias ?? [];
   const curva = curvaDeEvolucion(diasDelSemaforo);
 
+  /* Los avisos de éxito (perfil guardado, Pacto sellado…) son una línea bajo la cabecera de la
+     vista donde se ve lo hecho, y se van solos (`ConfirmacionEnLinea`). Los errores siguen en
+     diálogo: esos hay que leerlos antes de seguir. */
+  const [confirmacion, setConfirmacion] = useState<{ clave: number; texto: string; vista: VistaDeYo } | null>(null);
+  const confirmar = useCallback((texto: string, vista: VistaDeYo) => {
+    tacto.logro();
+    setConfirmacion({ clave: Date.now(), texto, vista });
+  }, []);
+
   /* «+ Subir Foto» de Evidencias: se elige el hábito de hoy y sigue el MISMO registro con foto de
      Training (cámara → «¿Qué sentiste?» en los rituales → subida y cierre). */
   const renombre = useRenombreLocal(user?.id ?? null);
@@ -253,11 +276,12 @@ export default function YoScreen() {
   const registroConFoto = useRegistroConFoto({
     onCompletado: async (_registroId, resultado, titulo) => {
       recargarEvidencias();
-      Alert.alert(
-        'Evidencia registrada',
+      // Era un diálogo «Evidencia registrada» que había que cerrar: ahora es una línea (2026-10-05).
+      confirmar(
         resultado.puntosOtorgados > 0
-          ? `"${titulo}" quedó registrado. +${resultado.puntosOtorgados} puntos.`
-          : `"${titulo}" quedó registrado.`
+          ? `«${titulo}» quedó registrado. +${resultado.puntosOtorgados} puntos.`
+          : `«${titulo}» quedó registrado.`,
+        'evidencias',
       );
     },
   });
@@ -285,9 +309,22 @@ export default function YoScreen() {
   // =========================================================================
   // ESTADOS DE NAVEGACIÓN DENTRO DE LA TARJETA DEL USUARIO
   // =========================================================================
-  const [activeView, setActiveView] = useState<
-    'main' | 'hub' | 'editar_perfil' | 'info_perfil' | 'evidencias' | 'onboarding' | 'pacto' | 'mapa_renacimiento' | 'metodo' | 'notificaciones' | 'alarmas' | 'memoria_renasia'
-  >('main');
+  const [activeView, setActiveView] = useState<VistaDeYo>('main');
+  /* De dónde se abrió la sub-vista actual (Yo o Ajustes), para que «‹» y el gesto del sistema
+     vuelvan ahí y no siempre a Ajustes (ver `navegacionDeYo`). */
+  const [origen, setOrigen] = useState<OrigenDeYo>('hub');
+  const vistaPrevia = useRef<VistaDeYo>(activeView);
+  useEffect(() => {
+    const previa = vistaPrevia.current;
+    vistaPrevia.current = activeView;
+    setOrigen(o => origenTrasCambio(previa, o));
+    // Una confirmación es de la vista donde se mostró: al irse de ella, se va con ella.
+    setConfirmacion(actual => (actual && actual.vista !== activeView ? null : actual));
+  }, [activeView]);
+  const regreso = vistaDeRegreso(activeView, origen);
+  const volver = useCallback(() => {
+    if (regreso) setActiveView(regreso);
+  }, [regreso]);
   /* Al cambiar de sub-vista la barra de pestañas vuelve a la vista (ver `navigation/barraAlDesplazar`). */
   const barraAlDesplazar = useOcultarBarraAlDesplazar({ vista: activeView });
   /* D-167: se pide al entrar a Ajustes (donde está la fila) y no al abrir la pestaña Yo. */
@@ -320,29 +357,9 @@ export default function YoScreen() {
     // Un aviso viejo de una caja que ya no se le muestra no deja la pantalla esperando abierta.
     if (enCaja && !miCaja.cargando && !miCaja.visible) setEnCaja(false);
   }, [enCaja, miCaja.cargando, miCaja.visible]);
-  const [metodoFase, setMetodoFase] = useState(0);
-  const metodoAnim = useRef(new Animated.Value(1)).current;
-
-  const cambiarMetodoFase = useCallback((next: number) => {
-    const clamped = Math.max(0, Math.min(METODO_FASES.length - 1, next));
-    if (clamped === metodoFase) return;
-
-    Animated.sequence([
-      Animated.timing(metodoAnim, {
-        toValue: 0,
-        duration: 130,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: false,
-      }),
-      Animated.timing(metodoAnim, {
-        toValue: 1,
-        duration: 260,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: false,
-      }),
-    ]).start();
-    setMetodoFase(clamped);
-  }, [metodoAnim, metodoFase]);
+  /* Acá vivían `metodoFase`, `metodoAnim` y `cambiarMetodoFase`: el «giro 3D» de la tarjeta de El
+     Método con el `Animated` de React Native en el hilo de JavaScript. Desde el 2026-10-05 las fases
+     son páginas que se deslizan con el dedo (`MetodoEnPaginas`). */
 
   // Formulario Editar Perfil
   const [profileName, setProfileName] = useState(user?.name ?? '');
@@ -433,7 +450,9 @@ export default function YoScreen() {
       // "ante la duda, pendiente", y un tilde verde falso es peor que ninguno.
       await recargarEtapasOnboarding();
 
-      Alert.alert('¡Pacto sellado! 🦅', 'Tu compromiso de 90 días está activo y respaldado en tu expediente.');
+      // Era el diálogo «¡Pacto sellado! 🦅»: ahora una línea sobre «Tu proceso completo», cuya barra
+      // acaba de avanzar (2026-10-05).
+      confirmar('Pacto sellado. Tu compromiso de 90 días está activo.', 'onboarding');
       setActiveView('onboarding');
     } finally {
       setSellandoPacto(false);
@@ -441,6 +460,7 @@ export default function YoScreen() {
   }, [
     aceptarHito,
     avanzarEstado,
+    confirmar,
     // `recargar` es estable (`useCallback` con deps vacías); el objeto que lo envuelve se recrea
     // en cada render, así que se depende de la función y no del objeto.
     recargarEtapasOnboarding,
@@ -460,19 +480,10 @@ export default function YoScreen() {
   // GESTOS TÁCTILES DEL SISTEMA (BACKHANDLER)
   // =========================================================================
   useSystemBackHandler(() => {
-    if (activeView === 'pacto') {
-      setActiveView('onboarding');
-      return true;
-    }
-    if (activeView !== 'main' && activeView !== 'hub') {
-      setActiveView('hub');
-      return true;
-    }
-    if (activeView === 'hub') {
-      setActiveView('main');
-      return true;
-    }
-    return false;
+    // El mismo destino que la «‹» de la cabecera.
+    if (!regreso) return false;
+    setActiveView(regreso);
+    return true;
     // Con el Mapa de Renacimiento abierto manda SU handler (registrado después): tiene que poder
     // retroceder paso por paso, no salir de la etapa entera de un toque.
   }, activeView !== 'main' && activeView !== 'mapa_renacimiento');
@@ -519,10 +530,27 @@ export default function YoScreen() {
 
   return (
     <SafeAreaView edges={BORDES_DE_UNA_PESTANA} style={{ flex: 1, backgroundColor: c.bg }}>
-      {/* El «⋯» abre el Centro de Perfil y Ajustes (Notificaciones, Alarmas, modo oscuro): lo mismo
-          que la tarjeta del usuario. Hasta el 28/09 no tenía `onPressRight` —nunca lo tuvo—, así
-          que tocarlo no hacía nada (E-400 del backend). La prueba `menuDeYoAbreAjustes` lo cuida. */}
-      <ScreenHeader title="YO" right="dots" onPressRight={() => setActiveView('hub')} />
+      {/* La entrada ÚNICA a Ajustes (decisión 10 del dueño, 2026-10-05): el engranaje con nombre para
+          el lector de pantalla. Antes eran unos «⋯» de 38 px sin nombre («más opciones») que abrían
+          lo mismo que la tarjeta del usuario; la tarjeta ya no se toca. Hasta el 28/09 los «⋯» no
+          tenían `onPressRight` y no hacían nada (E-400 del backend); `menuDeYoAbreAjustes` lo cuida.
+          En las sub-vistas, una sola forma de volver: la cabecera «‹ título» de `CabeceraAdmin`, la
+          misma de la Caja, la emergencia y eliminar la cuenta (antes convivían «← VOLVER A AJUSTES»
+          con una píldora y la «‹»). */}
+      {activeView === 'main' ? (
+        <ScreenHeader title="YO" right="settings" etiquetaRight="Ajustes" onPressRight={() => setActiveView('hub')} />
+      ) : (
+        <CabeceraAdmin titulo={TITULO_DE_VISTA[activeView]} onVolver={volver} />
+      )}
+      {confirmacion && confirmacion.vista === activeView ? (
+        <View style={{ paddingHorizontal: horizontalPadding, paddingBottom: 8 }}>
+          <ConfirmacionEnLinea
+            key={confirmacion.clave}
+            texto={confirmacion.texto}
+            onTerminar={() => setConfirmacion(null)}
+          />
+        </View>
+      ) : null}
 
       {/* ========================================================================= */}
       {/* 1. PANTALLA PRINCIPAL "YO" (DISEÑO ORIGINAL 100% INTACTO)                 */}
@@ -542,11 +570,11 @@ export default function YoScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-          {/* User Card Interactiva (Al dar clic abre el Centro de Perfil y Ajustes) */}
-          <Pressable
-            onPress={() => setActiveView('hub')}
-            style={[styles.userCard, { borderColor: c.border, backgroundColor: c.cardBg }]}
-          >
+          {/* Quién eres. Era una tarjeta con «›» que abría Ajustes, lo mismo que los «⋯» de la
+              cabecera: dos entradas a un mismo lugar (decisión 10 del dueño, 2026-10-05). Quedó el
+              engranaje; esto ya no se toca, así que perdió el borde y el «›» (un borde dice «se
+              toca»). */}
+          <View style={styles.userCard}>
             {/* El disco perdió su contorno dorado — estaba dentro del borde de la tarjeta. Ahora
                 la forma la da el lavado dorado, que se ve en claro y en oscuro; el `cardBgAlt`
                 que tenía antes es blanco puro y sin la línea habría desaparecido en modo claro. */}
@@ -561,10 +589,7 @@ export default function YoScreen() {
               <Text style={[t.cardTitle, { color: c.textStrong }]}>{profileName}</Text>
               <Text style={[t.small, { color: c.micro, marginTop: 3 }]}>{profileEmail}</Text>
             </View>
-            {/* Sobraba un emoji de engranaje al lado del chevron: dos señales para decir lo
-                mismo, y la de la izquierda no es parte de la paleta. Queda el chevron. */}
-            <Icon name="chevron" size={12} color={c.chevron} />
-          </Pressable>
+          </View>
 
           {/* TU EVOLUCIÓN */}
           <View>
@@ -708,95 +733,51 @@ export default function YoScreen() {
               `/journal/today`, no lo llena nadie) ni un dato de identidad propio de cada persona,
               así que se quitaron en vez de simular. */}
 
-          {/* TU CAJA RENASER (D-219) — solo si el servidor dice que hay algo que mostrarle */}
-          {miCaja.visible && miCaja.caja ? (
-            <Pressable
-              onPress={() => setEnCaja(true)}
-              accessibilityRole="button"
-              accessibilityLabel={`Tu Caja Renaser: ${etiquetaParaElAprendiz(miCaja.caja.estado)}`}
-              style={[styles.rowCard, { borderColor: c.borderStrong, backgroundColor: c.cardBg }]}
-            >
-              <View style={{ flex: 1 }}>
-                <MicroLabel>Tu Caja Renaser</MicroLabel>
-                <Text style={[t.body, { color: c.text, marginTop: 6 }]}>
-                  {etiquetaParaElAprendiz(miCaja.caja.estado)}
-                </Text>
-              </View>
-              <Icon name="chevron" size={12} color={c.chevron} />
-            </Pressable>
-          ) : null}
-
-          {/* ADMINISTRACIÓN — solo si el servidor dice que esta cuenta puede */}
-          {capacidades.administrar ? (
-            <Pressable
-              onPress={() => setEnAdministracion(true)}
-              accessibilityRole="button"
-              accessibilityLabel="Abrir Administración"
-              style={[styles.rowCard, { borderColor: c.border, backgroundColor: c.cardBg }]}
-            >
-              <View style={{ flex: 1 }}>
-                <MicroLabel>Administración</MicroLabel>
-                <Text style={[t.body, { color: c.text, marginTop: 6 }]}>
-                  Grupos, personas y solicitudes
-                </Text>
-              </View>
-              <Icon name="chevron" size={12} color={c.chevron} />
-            </Pressable>
-          ) : null}
-
-          {/* BOTÓN: MI FICHA INICIAL & PACTO */}
-          <Pressable
-            onPress={() => setActiveView('onboarding')}
-            style={[styles.onboardingBtn, { borderColor: c.borderStrong, backgroundColor: c.cardBg }]}
-          >
-            <Icon name="doc" size={16} color={c.goldInk} />
-            {/* Estos dos botones tenían la etiqueta a 10.5 px con `letterSpacing` 1.6 y 1.8: el
-                tamaño de una micro-etiqueta estirado para parecer importante, que es justo el
-                gesto que AGENTS.md §4 desaconseja. Ahora son 13 px (rango de etiqueta legible) y
-                el espaciado baja a 1, suficiente para versalitas. */}
-            <Text style={[t.small, { color: c.textStrong, letterSpacing: 1, fontFamily: 'Jost_500Medium' }]}>
-              MI FICHA INICIAL & PACTO
-            </Text>
-          </Pressable>
-
-          {/* TUVE UNA EMERGENCIA (D-244) — discreto, al pie, como «Mi ficha inicial»: no es algo de
-              todos los días. Solo si el servidor dice que esta cuenta puede pedirlo. */}
-          {miEmergencia.visible ? (
-            <Pressable
-              onPress={() => setEnEmergencia(true)}
-              accessibilityRole="button"
-              accessibilityLabel="Tuve una emergencia: pedir volver a un día del programa"
-              style={[styles.onboardingBtn, { borderColor: c.border, backgroundColor: c.cardBg }]}
-            >
-              <Icon name="heart" size={16} color={c.textSoft} />
-              <Text style={[t.small, { color: c.textStrong, letterSpacing: 1, fontFamily: 'Jost_500Medium' }]}>
-                TUVE UNA EMERGENCIA
-              </Text>
-            </Pressable>
-          ) : null}
-
-          {/* Logout */}
-          <Pressable
-            onPress={logout}
-            accessibilityRole="button"
-            accessibilityLabel="Cerrar sesión"
-            style={[styles.logoutBtn, { borderColor: c.border, backgroundColor: c.cardBg }]}
-          >
-            <Icon name="logout" size={16} color={c.textSoft} />
-            <Text style={[t.small, { color: c.textSoft, letterSpacing: 1 }]}>
-              CERRAR SESIÓN
-            </Text>
-          </Pressable>
-
-          {/* Eliminar mi cuenta (D-243): discreta, al final, debajo de cerrar sesión. */}
-          <Pressable
-            onPress={() => setEliminandoCuenta(true)}
-            accessibilityRole="button"
-            accessibilityLabel="Eliminar mi cuenta"
-            style={styles.eliminarCuentaBtn}
-          >
-            <Text style={[t.small, { color: c.textSoft, textDecorationLine: 'underline' }]}>Eliminar mi cuenta</Text>
-          </Pressable>
+          {/* Lo que se abre desde Yo, como filas de una lista (rediseño del 2026-10-05). Eran dos
+              tarjetas sueltas (la Caja y Administración, sin ícono) y tres botones de web en
+              versales («MI FICHA INICIAL & PACTO», «TUVE UNA EMERGENCIA» con el ♡ de «me gusta»,
+              «CERRAR SESIÓN») más un enlace subrayado «Eliminar mi cuenta». Cerrar sesión y eliminar
+              la cuenta pasaron a Ajustes, al final y en rojo: quedan UNA vez cada una (decisión 10
+              del dueño). */}
+          <GrupoDeAjustes>
+            {/* TU CAJA RENASER (D-219) — solo si el servidor dice que hay algo que mostrarle */}
+            {miCaja.visible && miCaja.caja ? (
+              <FilaDeAjuste
+                key="caja"
+                icono="package"
+                titulo="Tu Caja Renaser"
+                detalle={etiquetaParaElAprendiz(miCaja.caja.estado)}
+                onPress={() => setEnCaja(true)}
+              />
+            ) : null}
+            {/* ADMINISTRACIÓN — solo si el servidor dice que esta cuenta puede */}
+            {capacidades.administrar ? (
+              <FilaDeAjuste
+                key="administracion"
+                icono="users"
+                titulo="Administración"
+                detalle="Grupos, personas y solicitudes"
+                etiqueta="Abrir Administración"
+                onPress={() => setEnAdministracion(true)}
+              />
+            ) : null}
+            <FilaDeAjuste
+              key="ficha"
+              icono="signature"
+              titulo="Mi ficha y Pacto"
+              onPress={() => setActiveView('onboarding')}
+            />
+            {/* TUVE UNA EMERGENCIA (D-244): solo si el servidor dice que esta cuenta puede pedirlo. */}
+            {miEmergencia.visible ? (
+              <FilaDeAjuste
+                key="emergencia"
+                icono="lifeBuoy"
+                titulo="Tuve una emergencia"
+                etiqueta="Tuve una emergencia: pedir volver a un día del programa"
+                onPress={() => setEnEmergencia(true)}
+              />
+            ) : null}
+          </GrupoDeAjustes>
         </ScrollView>
       )}
 
@@ -818,20 +799,6 @@ export default function YoScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-          <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
-            <Pressable onPress={() => setActiveView('main')} style={styles.backBtnRow} hitSlop={8}>
-              <Icon name="arrowLeft" size={14} color={c.goldInk} />
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
-                VOLVER A MI ESPACIO
-              </Text>
-            </Pressable>
-            <View style={[styles.categoryPillBadge, { backgroundColor: c.goldWash }]}>
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
-                PERFIL & AJUSTES
-              </Text>
-            </View>
-          </View>
-
           {/* Banner de Usuario — ya no es un banner: era una tarjeta con borde dorado de 1.5 que
               adentro tenía otro disco con borde dorado, dos rectángulos para presentar a una
               persona. Ahora es una fila sobre el fondo de la pantalla; lo que la separa de lo que
@@ -856,232 +823,130 @@ export default function YoScreen() {
             </View>
           </View>
 
+          {/* Ajustes como en iOS (rediseño del 2026-10-05): filas de 56 agrupadas, cada una con su
+              baldosa dorada, y los grupos con un título en tipo oración. Los títulos decían «FASE 1:
+              DATOS PERSONALES & PERFIL» … «FASE 4: PREFERENCIAS & SISTEMA»: «fase» chocaba con las
+              cuatro fases del programa (decisión 14 del dueño).
+              Corregido 2026-09-29 («textos verdaderos»): los subtítulos de estas filas prometían
+              lo que la pantalla de destino no tiene. Decían «Nombre, foto, teléfono y
+              contraseña», «Ubicación, redes y biografía somática», «Mi Onboarding (5 Etapas) ·
+              El Pacto firmado, cuestionario y las 90 variables», «37 fotos subidas y verificadas
+              por tu mentor» (fijo; y ningún mentor verifica), «Medallas y trofeos» (no hay
+              registro de logros), «3 fases» (son 4) y «Video de bienvenida» (no hay video).
+              Ahora dicen solo lo que existe; los conteos salen de los datos. */}
           <View style={{ gap: space.gapLg, paddingBottom: 28 }}>
-            {/* FASE 1: DATOS PERSONALES & PERFIL 
-                Corregido 2026-09-29 («textos verdaderos»): los subtítulos de estas filas prometían
-                lo que la pantalla de destino no tiene. Decían «Nombre, foto, teléfono y
-                contraseña», «Ubicación, redes y biografía somática», «Mi Onboarding (5 Etapas) ·
-                El Pacto firmado, cuestionario y las 90 variables», «37 fotos subidas y verificadas
-                por tu mentor» (fijo; y ningún mentor verifica), «Medallas y trofeos» (no hay
-                registro de logros), «3 fases» (son 4) y «Video de bienvenida» (no hay video).
-                Ahora dicen solo lo que existe; los conteos salen de los datos. */}
-            <View style={{ gap: 10 }}>
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
-                FASE 1: DATOS PERSONALES & PERFIL
-              </Text>
-              <View style={[styles.groupedBox, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-                <Pressable
-                  onPress={() => setActiveView('editar_perfil')}
-                  style={[styles.menuOptionRow, { borderBottomColor: c.divider }]}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-                    <Icon name="user" size={16} color={c.goldInk} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={[t.cardTitle, { color: c.textStrong }]}>Editar Perfil</Text>
-                      <Text style={[t.small, { color: c.textSoft }]}>Nombre y foto</Text>
-                    </View>
-                  </View>
-                  <Icon name="chevron" size={12} color={c.goldInk} />
-                </Pressable>
+            <GrupoDeAjustes titulo="Perfil">
+              <FilaDeAjuste
+                icono="user"
+                titulo="Editar perfil"
+                detalle="Nombre y foto"
+                onPress={() => setActiveView('editar_perfil')}
+              />
+              <FilaDeAjuste
+                icono="idCard"
+                titulo="Información"
+                detalle="Biografía y departamento"
+                onPress={() => setActiveView('info_perfil')}
+              />
+            </GrupoDeAjustes>
 
-                <Pressable
-                  onPress={() => setActiveView('info_perfil')}
-                  style={styles.menuOptionRow}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-                    <Icon name="doc" size={16} color={c.goldInk} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={[t.cardTitle, { color: c.textStrong }]}>Información de Perfil</Text>
-                      <Text style={[t.small, { color: c.textSoft }]}>Biografía y departamento</Text>
-                    </View>
-                  </View>
-                  <Icon name="chevron" size={12} color={c.goldInk} />
-                </Pressable>
-              </View>
-            </View>
+            <GrupoDeAjustes titulo="Tu proceso">
+              <FilaDeAjuste
+                icono="listChecks"
+                titulo="Mi onboarding"
+                detalle="El Pacto y tu Mapa de Renacimiento"
+                onPress={() => setActiveView('onboarding')}
+              />
+              <FilaDeAjuste
+                icono="images"
+                titulo="Mis evidencias"
+                detalle={resumenDeEvidencias({
+                  cargando: cargandoEvidencias,
+                  error: errorEvidencias,
+                  cantidad: evidencias.length,
+                  hayMas: hayMasEvidencias,
+                })}
+                onPress={() => setActiveView('evidencias')}
+              />
+            </GrupoDeAjustes>
 
-            {/* FASE 2: HISTORIAL, EVIDENCIAS & ONBOARDING */}
-            <View style={{ gap: 10 }}>
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
-                FASE 2: HISTORIAL, EVIDENCIAS & ONBOARDING
-              </Text>
-              <View style={[styles.groupedBox, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-                <Pressable
-                  onPress={() => setActiveView('onboarding')}
-                  style={[styles.menuOptionRow, { borderBottomColor: c.divider }]}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-                    <Icon name="stack" size={16} color={c.goldInk} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={[t.cardTitle, { color: c.textStrong }]}>{`Mi Onboarding (${ONBOARDING_STAGES.length} etapas)`}</Text>
-                      <Text style={[t.small, { color: c.textSoft }]}>El Pacto y tu Mapa de Renacimiento</Text>
-                    </View>
-                  </View>
-                  <Icon name="chevron" size={12} color={c.goldInk} />
-                </Pressable>
+            {/* Decisión del cliente (2026-09-04): "Espejo de la Sombra" (catarsis privada +
+                informe semanal con IA) YA NO VA. Se quitaron la entrada del menú y su sub-vista
+                completa, más el estado `catarsisText` y el valor 'espejo' de `activeView`, que
+                quedaban sin uso. El módulo `rag` del backend (InformeEspejoSombra) NO se tocó:
+                esto es solo el acceso desde la app. Recuperable del historial de git si vuelve. */}
+            <GrupoDeAjustes titulo="Herramientas">
+              <FilaDeAjuste
+                icono="compass"
+                titulo="El Método Renaser"
+                detalle={`${METODO_FASES.length} fases para comprenderte y sostener tu transformación`}
+                onPress={() => setActiveView('metodo')}
+              />
+            </GrupoDeAjustes>
 
-                <Pressable
-                  onPress={() => setActiveView('evidencias')}
-                  style={styles.menuOptionRow}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-                    <Icon name="camera" size={16} color={c.goldInk} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={[t.cardTitle, { color: c.textStrong }]}>Registro de Evidencias</Text>
-                      <Text style={[t.small, { color: c.textSoft }]}>
-                        {resumenDeEvidencias({
-                          cargando: cargandoEvidencias,
-                          error: errorEvidencias,
-                          cantidad: evidencias.length,
-                          hayMas: hayMasEvidencias,
-                        })}
-                      </Text>
-                    </View>
-                  </View>
-                  <Icon name="chevron" size={12} color={c.goldInk} />
-                </Pressable>
-
-              </View>
-            </View>
-
-            {/* FASE 3: HERRAMIENTAS SOMÁTICAS */}
-            <View style={{ gap: 10 }}>
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
-                FASE 3: HERRAMIENTAS SOMÁTICAS
-              </Text>
-              {/* Decisión del cliente (2026-09-04): "Espejo de la Sombra" (catarsis privada +
-                  informe semanal con IA) YA NO VA. Se quitaron la entrada del menú y su sub-vista
-                  completa, más el estado `catarsisText` y el valor 'espejo' de `activeView`, que
-                  quedaban sin uso. El módulo `rag` del backend (InformeEspejoSombra) NO se tocó:
-                  esto es solo el acceso desde la app. Recuperable del historial de git si vuelve. */}
-              <View style={[styles.groupedBox, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-                <Pressable
+            <GrupoDeAjustes titulo="Preferencias">
+              <FilaDeAjuste
+                icono="bell"
+                titulo="Notificaciones"
+                detalle="Qué avisos te llegan"
+                onPress={() => setActiveView('notificaciones')}
+              />
+              {/* E-10 (26/09, decisión del dueño): una sección para personalizar las alarmas. */}
+              <FilaDeAjuste
+                icono="alarmClock"
+                titulo="Alarmas"
+                detalle="Despertar, eventos y sonido"
+                onPress={() => setActiveView('alarmas')}
+              />
+              {/* D-167: solo si la memoria está encendida, o si quedó algo de antes para borrar. La
+                  baldosa es el orbe de SER, su cara en Hoy y en el botón flotante (era un cerebro, el
+                  mismo de la dimensión «Mente»). */}
+              {mostrarMemoria(memoriaRenasia.memoria) ? (
+                <FilaDeAjuste
+                  baldosa={<OrbeQuieto size={TAMANO_ICONO_BALDOSA + 4} color={c.onGold} />}
+                  titulo={`Lo que ${NOMBRE_ACOMPANANTE} recuerda de ti`}
+                  detalle="Míralo y bórralo cuando quieras"
+                  etiqueta={`Ver lo que ${NOMBRE_ACOMPANANTE} recuerda de ti`}
                   onPress={() => {
-                    setMetodoFase(0);
-                    metodoAnim.setValue(1);
-                    setActiveView('metodo');
+                    /* Se vuelve a pedir al abrir: la pestaña Yo queda montada y, sin esto, la
+                       pantalla mostraba lo de hace una hora aunque Renasia ya hubiera aprendido
+                       algo nuevo (visto en el emulador, 2026-09-25). */
+                    void memoriaRenasia.recargar();
+                    setActiveView('memoria_renasia');
                   }}
-                  style={styles.menuOptionRow}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-                    <Icon name="spark" size={16} color={c.goldInk} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={[t.cardTitle, { color: c.textStrong }]}>El Método Renaser</Text>
-                      <Text style={[t.small, { color: c.textSoft }]}>{`${METODO_FASES.length} fases para comprenderte y sostener tu transformación`}</Text>
-                    </View>
-                  </View>
-                  <Icon name="chevron" size={12} color={c.goldInk} />
-                </Pressable>
+                />
+              ) : null}
+              {/* La fila no se toca: se toca el interruptor. Envolverlo en algo tocable hace que un
+                  toque cambie el modo dos veces y vuelva a donde estaba. El ícono acompaña al estado
+                  (sol = ahora está claro); lo que va a pasar lo dice el interruptor. */}
+              <FilaDeAjuste
+                icono={mode === 'dark' ? 'moon' : 'sun'}
+                titulo="Modo oscuro"
+                detalle="Descansa la vista de noche"
+                accesorio={<Interruptor valor={mode === 'dark'} onCambiar={toggle} etiqueta="Modo oscuro" />}
+              />
+            </GrupoDeAjustes>
 
-              </View>
-            </View>
-
-            {/* FASE 4: PREFERENCIAS & SISTEMA */}
-            <View style={{ gap: 10 }}>
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
-                FASE 4: PREFERENCIAS & SISTEMA
-              </Text>
-              <View style={[styles.groupedBox, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-                <Pressable
-                  onPress={() => setActiveView('notificaciones')}
-                  accessibilityRole="button"
-                  accessibilityLabel="Notificaciones: qué avisos te llegan"
-                  style={[styles.menuOptionRow, { borderBottomColor: c.divider }]}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-                    <Icon name="bell" size={16} color={c.goldInk} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={[t.cardTitle, { color: c.textStrong }]}>Notificaciones</Text>
-                      <Text style={[t.small, { color: c.textSoft, fontSize: 16, lineHeight: 22 }]}>Qué avisos te llegan</Text>
-                    </View>
-                  </View>
-                  <Icon name="chevron" size={12} color={c.goldInk} />
-                </Pressable>
-
-                {/* E-10 (26/09, decisión del dueño): una sección para personalizar las alarmas. */}
-                <Pressable
-                  onPress={() => setActiveView('alarmas')}
-                  accessibilityRole="button"
-                  accessibilityLabel="Alarmas: despertar, eventos y sonido"
-                  style={[styles.menuOptionRow, { borderBottomColor: c.divider }]}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-                    <Icon name="clock" size={16} color={c.goldInk} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={[t.cardTitle, { color: c.textStrong }]}>Alarmas</Text>
-                      <Text style={[t.small, { color: c.textSoft, fontSize: 16, lineHeight: 22 }]}>Despertar, eventos y sonido</Text>
-                    </View>
-                  </View>
-                  <Icon name="chevron" size={12} color={c.goldInk} />
-                </Pressable>
-
-                {/* D-167: solo si la memoria está encendida, o si quedó algo de antes para borrar. */}
-                {mostrarMemoria(memoriaRenasia.memoria) ? (
-                  <Pressable
-                    onPress={() => {
-                      /* Se vuelve a pedir al abrir: la pestaña Yo queda montada y, sin esto, la
-                         pantalla mostraba lo de hace una hora aunque Renasia ya hubiera aprendido
-                         algo nuevo (visto en el emulador, 2026-09-25). */
-                      void memoriaRenasia.recargar();
-                      setActiveView('memoria_renasia');
-                    }}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Ver lo que ${NOMBRE_ACOMPANANTE} recuerda de ti`}
-                    style={[styles.menuOptionRow, { borderBottomColor: c.divider }]}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-                      <Icon name="brain" size={16} color={c.goldInk} />
-                      <View style={{ flex: 1 }}>
-                        <Text style={[t.cardTitle, { color: c.textStrong }]}>Lo que {NOMBRE_ACOMPANANTE} recuerda de ti</Text>
-                        <Text style={[t.small, { color: c.textSoft }]}>Míralo y bórralo cuando quieras</Text>
-                      </View>
-                    </View>
-                    <Icon name="chevron" size={12} color={c.goldInk} />
-                  </Pressable>
-                ) : null}
-
-                {/* Es un `View` y no un `Pressable` como sus dos vecinas —y como las tres filas con
-                    Switch de la sub-vista de Notificaciones—: envolver un Switch en un Pressable
-                    hace que tocar el propio interruptor dispare las dos cosas y el modo se cambie
-                    dos veces, volviendo a donde estaba. El área táctil es el Switch. */}
-                <View style={[styles.menuOptionRow, { borderBottomColor: c.divider }]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-                    {/* El ícono acompaña al estado (sol = ahora está claro), al revés que el del
-                        botón de la cabecera, que muestra la ACCIÓN (luna = "pasar a oscuro").
-                        Acá quien dice qué va a pasar es el Switch; el ícono solo ilustra la fila,
-                        y si mostrara la acción contradiría al interruptor de al lado. */}
-                    <Icon name={mode === 'dark' ? 'moon' : 'sun'} size={16} color={c.goldInk} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={[t.cardTitle, { color: c.textStrong }]}>Modo oscuro</Text>
-                      <Text style={[t.small, { color: c.textSoft }]}>Descansa la vista de noche</Text>
-                    </View>
-                  </View>
-                  <Switch
-                    value={mode === 'dark'}
-                    onValueChange={toggle}
-                    /* Etiqueta fija y no una del tipo "Activar modo oscuro": el lector de pantalla
-                       ya anuncia solo si un Switch está activado o desactivado, así que una
-                       etiqueta con la acción se leería "activar modo oscuro, activado". */
-                    accessibilityLabel="Modo oscuro"
-                    trackColor={{ false: '#332C20', true: c.gold }}
-                    thumbColor={mode === 'dark' ? '#1E1B18' : '#888'}
-                  />
-                </View>
-
-                <Pressable
-                  onPress={logout}
-                  accessibilityRole="button"
-                  accessibilityLabel="Cerrar sesión"
-                  style={styles.menuOptionRow}
-                >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-                    <Icon name="logout" size={16} color={c.goldInk} />
-                    <Text style={[t.cardTitle, { color: c.danger }]}>Cerrar Sesión</Text>
-                  </View>
-                  <Icon name="chevron" size={12} color="#E06A66" />
-                </Pressable>
-              </View>
-            </View>
+            {/* Lo que cierra o borra la cuenta, aparte y al final, en rojo (decisión 10 del dueño,
+                2026-10-05). «Eliminar mi cuenta» vivía en Yo como un enlace subrayado al pie; Google
+                Play exige que se encuentre, así que acá es una fila visible, con «›» porque abre su
+                pantalla. «Cerrar sesión» estaba dos veces (en Yo y acá): queda esta, sin «›» porque
+                no abre nada, lo hace. */}
+            <GrupoDeAjustes>
+              <FilaDeAjuste
+                icono="trash"
+                titulo="Eliminar mi cuenta"
+                peligro
+                onPress={() => setEliminandoCuenta(true)}
+              />
+              <FilaDeAjuste
+                icono="logout"
+                titulo="Cerrar sesión"
+                peligro
+                sinChevron
+                onPress={logout}
+              />
+            </GrupoDeAjustes>
           </View>
         </ScrollView>
       )}
@@ -1104,21 +969,7 @@ export default function YoScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-          <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
-            <Pressable onPress={() => setActiveView('hub')} style={styles.backBtnRow} hitSlop={8}>
-              <Icon name="arrowLeft" size={14} color={c.goldInk} />
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
-                VOLVER A AJUSTES
-              </Text>
-            </Pressable>
-            <View style={[styles.categoryPillBadge, { backgroundColor: c.goldWash }]}>
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
-                RENASIA
-              </Text>
-            </View>
-          </View>
-
-          <Text style={[t.cardTitle, { color: c.textStrong }]}>Lo que {NOMBRE_ACOMPANANTE} recuerda de ti</Text>
+          {/* El título «Lo que SER recuerda de ti» se fue: lo dice la cabecera. */}
           <MemoriaDeRenasia
             memoria={memoriaRenasia.memoria}
             cargando={memoriaRenasia.cargando}
@@ -1149,20 +1000,6 @@ export default function YoScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-          <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
-            <Pressable onPress={() => setActiveView('hub')} style={styles.backBtnRow} hitSlop={8}>
-              <Icon name="arrowLeft" size={14} color={c.goldInk} />
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
-                VOLVER A AJUSTES
-              </Text>
-            </Pressable>
-            <View style={[styles.categoryPillBadge, { backgroundColor: c.goldWash }]}>
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
-                MI ONBOARDING
-              </Text>
-            </View>
-          </View>
-
           {/* Alineado a la izquierda. El par "título centrado + párrafo centrado" obliga al ojo a
               volver al centro en cada línea y es el gesto de plantilla que esta pasada viene a
               quitar. Y el párrafo estaba a 11 px: es texto de lectura, va en `t.body` (15/22). */}
@@ -1227,8 +1064,10 @@ export default function YoScreen() {
                 : stage.descPendiente;
 
               return (
-              <Pressable
+              <Presionable
                 key={stage.id}
+                accessibilityRole="button"
+                accessibilityLabel={`${stage.title}. ${descripcion}`}
                 onPress={() => {
                   if (stage.id === 'st1') {
                     setActiveView('pacto');
@@ -1246,24 +1085,29 @@ export default function YoScreen() {
                   },
                 ]}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                  {/* Los discos eran casi negros escritos a mano (`#173429`, `#2A2620`) con un «✓» de
+                      texto de 11 px: en claro desentonaban. Ahora salen del tema (2026-10-05): hecha,
+                      lavado verde con el ✓ de 16; empezada, dorado; pendiente, lavado dorado con su
+                      número. */}
                   <View
                     style={[
                       styles.stageCheckCircle,
-                      {
-                        backgroundColor: completada ? '#173429' : enProgreso ? c.gold : '#2A2620',
-                      },
+                      { backgroundColor: completada ? c.successWash : enProgreso ? c.gold : c.goldWash },
                     ]}
                   >
                     {completada ? (
-                      <Text style={{ color: c.success, fontFamily: 'Jost_700Bold', fontSize: 11 }}>✓</Text>
+                      <Icon name="check" size={TAMANO_ICONO.chico} color={c.success} />
                     ) : (
                       <Text
-                        style={{
-                          color: enProgreso ? '#1E1B18' : '#888',
-                          fontFamily: enProgreso ? 'Jost_700Bold' : 'Jost_400Regular',
-                          fontSize: 11,
-                        }}
+                        style={[
+                          styles.cifras,
+                          {
+                            color: enProgreso ? c.onGold : c.goldInk,
+                            fontFamily: 'Jost_700Bold',
+                            fontSize: 14,
+                          },
+                        ]}
                       >
                         {stage.num}
                       </Text>
@@ -1278,8 +1122,8 @@ export default function YoScreen() {
                     </Text>
                   </View>
                 </View>
-                <Icon name="chevron" size={12} color={enProgreso ? c.goldInk : c.textSoft} />
-              </Pressable>
+                <Icon name="chevron" size={20} color={enProgreso ? c.goldInk : c.chevron} />
+              </Presionable>
               );
             })}
           </View>
@@ -1304,26 +1148,12 @@ export default function YoScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-          <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
-            <Pressable onPress={() => setActiveView('onboarding')} style={styles.backBtnRow} hitSlop={8}>
-              <Icon name="arrowLeft" size={14} color={c.goldInk} />
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
-                VOLVER A ETAPAS
-              </Text>
-            </Pressable>
-            <View style={[styles.categoryPillBadge, { backgroundColor: c.goldWash }]}>
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
-                PARTE 01
-              </Text>
-            </View>
-          </View>
-
           {/* Encabezado alineado a la izquierda y sin el contorno del disco, que vivía justo
               encima del borde del documento. "Léelo despacio" es una instrucción que se lee, no
               una micro-etiqueta: pasa de 10.5 a 15. */}
           <View style={{ gap: 10 }}>
             <View style={[styles.iconShieldCircle, { backgroundColor: c.goldWash }]}>
-              <Icon name="doc" size={20} color={c.goldInk} />
+              <Icon name="signature" size={TAMANO_ICONO.normal} color={c.goldInk} />
             </View>
             <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 20, lineHeight: 27 }]}>
               Pacto de Renacimiento
@@ -1346,9 +1176,7 @@ export default function YoScreen() {
               <Text style={{ fontFamily: 'Jost_700Bold', color: c.goldInk, fontSize: 16, fontStyle: 'italic' }}>
                 Pacto de Renacimiento
               </Text>
-              <Text style={[t.micro, { color: c.textSoft, letterSpacing: 1.4, marginTop: 4 }]}>
-                ACTO FUNDACIONAL
-              </Text>
+              <Text style={[t.small, { color: c.textSoft, marginTop: 4 }]}>Acto fundacional</Text>
             </View>
 
             <Text style={[t.body, { color: c.text }]}>
@@ -1372,45 +1200,57 @@ export default function YoScreen() {
             </Text>
           </View>
 
-          {/* Firma Digital con el Dedo — el recuadro exterior perdió su borde: adentro vive el
-              lienzo, que es la afordancia de verdad. Eran dos rectángulos concéntricos para
-              pedir una sola firma.
+          {/* Ya firmado (decisión 12 del dueño, 2026-10-05): en solo lectura, con la fecha de la
+              firma. Antes se veía el lienzo vacío y «Sellar mi compromiso» otra vez, como si nunca
+              se hubiera firmado. La firma dibujada no se muestra porque el servidor no la devuelve
+              (ver `PactoFirmado`). Mientras no se sepa (`desconocido`, sin red) se ofrece firmar,
+              como antes. */}
+          {pactoYaFirmado ? (
+            <PactoFirmado firmadoEn={etapasOnboarding.pactoFirmadoEn} />
+          ) : (
+            <>
+              {/* Firma Digital con el Dedo — el recuadro exterior perdió su borde: adentro vive el
+                  lienzo, que es la afordancia de verdad. Eran dos rectángulos concéntricos para
+                  pedir una sola firma.
 
-              Acá vivía la maqueta que no dejaba firmar (ver el comentario de `sellarPacto`).
-              Ahora es el `SignatureCanvas` de verdad, el mismo que usan Términos y `PactoScreen`:
-              trae los tres flags anti-intercepción de AGENTS.md §3 para que el `ScrollView` de
-              Android no le robe el gesto al dedo, y en modo dual, porque el nombre caligráfico
-              que se veía antes era —sin serlo— la firma electrónica que §3 pide ofrecer. */}
-          <View style={styles.signatureBox}>
-            <Text style={{ fontFamily: 'Jost_700Bold', color: c.goldInk, fontSize: 15, fontStyle: 'italic' }}>
-              — Firma con tu dedo —
-            </Text>
+                  Acá vivía la maqueta que no dejaba firmar (ver el comentario de `sellarPacto`).
+                  Ahora es el `SignatureCanvas` de verdad, el mismo que usan Términos y `PactoScreen`:
+                  trae los tres flags anti-intercepción de AGENTS.md §3 para que el `ScrollView` de
+                  Android no le robe el gesto al dedo, y en modo dual, porque el nombre caligráfico
+                  que se veía antes era —sin serlo— la firma electrónica que §3 pide ofrecer. */}
+              <View style={styles.signatureBox}>
+                <Text style={{ fontFamily: 'Jost_700Bold', color: c.goldInk, fontSize: 15, fontStyle: 'italic' }}>
+                  Firma con tu dedo
+                </Text>
 
-            <SignatureCanvas
-              ref={firmaPactoRef}
-              // La pantalla ya rotula el recuadro con "— Firma con tu dedo —" justo arriba: el
-              // cintillo propio del lienzo sería el segundo título de lo mismo. El pie SÍ se deja
-              // (es donde vive "Limpiar firma").
-              hideHeader
-              nombreFirmaElectronica={profileName}
-              initialSignature={firmaPacto}
-              onSignatureChange={(valida, datos) => setFirmaPacto(valida ? datos : null)}
-            />
+                <SignatureCanvas
+                  ref={firmaPactoRef}
+                  // La pantalla ya rotula el recuadro con «Firma con tu dedo» justo arriba: el
+                  // cintillo propio del lienzo sería el segundo título de lo mismo. El pie SÍ se deja
+                  // (es donde vive "Limpiar firma").
+                  hideHeader
+                  nombreFirmaElectronica={profileName}
+                  initialSignature={firmaPacto}
+                  onSignatureChange={(valida, datos) => setFirmaPacto(valida ? datos : null)}
+                />
 
-            {/* El rótulo del sellado estaba escrito a mano y afirmaba siempre lo mismo, hubiera o
-                no una firma detrás. Ahora dice lo que pasó de verdad. */}
-            <Text style={[t.micro, { color: pactoYaFirmado ? c.success : c.textSoft, textAlign: 'center' }]}>
-              {pactoYaFirmado ? 'FIRMA DIGITAL REGISTRADA & SELLADA' : 'TU FIRMA SE REGISTRA AL SELLAR EL PACTO'}
-            </Text>
-          </View>
+                <Text style={[t.small, { color: c.textSoft, textAlign: 'center' }]}>
+                  Tu firma se registra al sellar el Pacto.
+                </Text>
+              </View>
 
-          <GoldButton
-            label="✓ SELLAR MI COMPROMISO →"
-            onPress={sellarPacto}
-            disabled={!firmaPacto}
-            loading={sellandoPacto}
-            style={{ width: '100%', marginBottom: 28 }}
-          />
+              <GoldButton
+                label="Sellar mi compromiso"
+                icon="check"
+                iconPosition="left"
+                onPress={sellarPacto}
+                disabled={!firmaPacto}
+                loading={sellandoPacto}
+                style={{ width: '100%', marginBottom: 28 }}
+                textStyle={{ fontSize: 15, letterSpacing: 0 }}
+              />
+            </>
+          )}
         </ScrollView>
       )}
 
@@ -1432,20 +1272,6 @@ export default function YoScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-          <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
-            <Pressable onPress={() => setActiveView('hub')} style={styles.backBtnRow} hitSlop={8}>
-              <Icon name="arrowLeft" size={14} color={c.goldInk} />
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
-                VOLVER A AJUSTES
-              </Text>
-            </Pressable>
-            <View style={[styles.categoryPillBadge, { backgroundColor: c.goldWash }]}>
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
-                EVIDENCIAS
-              </Text>
-            </View>
-          </View>
-
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
             <View style={{ flex: 1, gap: 4 }}>
               <Text style={[t.cardTitle, { color: c.textStrong }]}>Tus Evidencias Somáticas</Text>
@@ -1571,63 +1397,61 @@ export default function YoScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-          <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
-            <Pressable onPress={() => setActiveView('hub')} style={styles.backBtnRow} hitSlop={8}>
-              <Icon name="arrowLeft" size={14} color={c.goldInk} />
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
-                VOLVER A AJUSTES
-              </Text>
-            </Pressable>
-            <View style={[styles.categoryPillBadge, { backgroundColor: c.goldWash }]}>
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
-                EDITAR PERFIL
-              </Text>
-            </View>
-          </View>
-
           {/* El avatar sigue centrado a propósito: es una imagen, no texto de lectura. Lo que se
               fue es su contorno dorado y el `#292215` escrito a mano, que en modo claro dibujaba
-              un círculo marrón sobre el fondo crema. */}
-          <View style={{ alignItems: 'center' }}>
-            <View style={[styles.avatarLg, { backgroundColor: c.goldWash, width: 70, height: 70, borderRadius: 35 }]}>
-              {profileAvatar ? (
-                <Image source={{ uri: profileAvatar }} style={styles.avatarImageLarge} accessibilityLabel="Foto de perfil" />
-              ) : (
-                <Text style={{ color: c.goldInk, fontSize: 24, fontFamily: 'Jost_700Bold' }}>{profileInitials}</Text>
-              )}
+              un círculo marrón sobre el fondo crema.
+              Rediseño 2026-10-05: «Cambiar Foto 📷» llevaba un emoji (cambia de forma entre Android,
+              iOS y la web e ignora el tema). Ahora la cámara es una insignia sobre la foto, y la foto
+              y el texto son UN botón que responde al dedo. */}
+          <Presionable
+            disabled={subiendoAvatar}
+            accessibilityRole="button"
+            accessibilityLabel="Cambiar tu foto de perfil"
+            accessibilityState={{ disabled: subiendoAvatar, busy: subiendoAvatar }}
+            onPress={async () => {
+              /* El selector PROPIO del perfil, no el de evidencias: aquel pide el permiso
+                 hablando de "la evidencia de tu hábito" y, sobre todo, no recorta — una foto
+                 apaisada entraba al círculo con la cara fuera del encuadre. */
+              const archivo = await elegirFotoDePerfil();
+              if (!archivo) return;
+              setSubiendoAvatar(true);
+              try {
+                const subida = await authApi.solicitarUrlAvatar(archivo.mimeType);
+                await authApi.subirAvatarAS3(subida.url, archivo.uri, archivo.mimeType);
+                await authApi.confirmarAvatar(subida.bucket, subida.ruta);
+                await refrescarPerfil();
+                confirmar('Foto actualizada.', 'editar_perfil');
+              } catch (error) {
+                Alert.alert('No se pudo actualizar la foto', error instanceof Error ? error.message : 'Inténtalo de nuevo.');
+              } finally {
+                setSubiendoAvatar(false);
+              }
+            }}
+            contenedorStyle={{ alignSelf: 'center' }}
+            style={{ alignItems: 'center', gap: 8 }}
+          >
+            <View>
+              <View style={[styles.avatarLg, { backgroundColor: c.goldWash, width: 76, height: 76, borderRadius: 38 }]}>
+                {profileAvatar ? (
+                  <Image source={{ uri: profileAvatar }} style={styles.avatarImageLarge} accessibilityLabel="Foto de perfil" />
+                ) : (
+                  <Text style={{ color: c.goldInk, fontSize: 24, fontFamily: 'Jost_700Bold' }}>{profileInitials}</Text>
+                )}
+              </View>
+              <View style={[styles.insigniaCamara, { backgroundColor: c.gold, borderColor: c.bg }]}>
+                <Icon name="camera" size={TAMANO_ICONO.chico} color={c.onGold} />
+              </View>
             </View>
-            <Pressable
-              disabled={subiendoAvatar}
-              onPress={async () => {
-                /* El selector PROPIO del perfil, no el de evidencias: aquel pide el permiso
-                   hablando de "la evidencia de tu hábito" y, sobre todo, no recorta — una foto
-                   apaisada entraba al círculo con la cara fuera del encuadre. */
-                const archivo = await elegirFotoDePerfil();
-                if (!archivo) return;
-                setSubiendoAvatar(true);
-                try {
-                  const subida = await authApi.solicitarUrlAvatar(archivo.mimeType);
-                  await authApi.subirAvatarAS3(subida.url, archivo.uri, archivo.mimeType);
-                  await authApi.confirmarAvatar(subida.bucket, subida.ruta);
-                  await refrescarPerfil();
-                  Alert.alert('Foto actualizada', 'Tu foto de perfil ya está guardada en tu cuenta.');
-                } catch (error) {
-                  Alert.alert('No se pudo actualizar la foto', error instanceof Error ? error.message : 'Inténtalo de nuevo.');
-                } finally {
-                  setSubiendoAvatar(false);
-                }
-              }}
-              style={{ minHeight: 48, justifyContent: 'center', paddingHorizontal: 12 }}
-            >
-              <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>{subiendoAvatar ? 'Subiendo…' : 'Cambiar Foto 📷'}</Text>
-            </Pressable>
-          </View>
+            <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_500Medium', fontSize: 15 }]}>
+              {subiendoAvatar ? 'Subiendo…' : 'Cambiar foto'}
+            </Text>
+          </Presionable>
 
           {/* Las etiquetas de campo pasan de 10.5 a 13: son lo que le dice a alguien qué escribir
               en cada casilla, no una marca al margen. */}
           <View style={{ gap: space.gap }}>
             <View style={{ gap: 6 }}>
-              <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>NOMBRE COMPLETO:</Text>
+              <Text style={[t.small, styles.rotuloCampo, { color: c.textStrong }]}>Nombre completo</Text>
               <TextInput
                 value={profileName}
                 onChangeText={setProfileName}
@@ -1636,7 +1460,7 @@ export default function YoScreen() {
             </View>
 
             <View style={{ gap: 6 }}>
-              <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>CORREO ELECTRÓNICO:</Text>
+              <Text style={[t.small, styles.rotuloCampo, { color: c.textStrong }]}>Correo electrónico</Text>
               <TextInput
                 value={profileEmail}
                 keyboardType="email-address"
@@ -1649,7 +1473,10 @@ export default function YoScreen() {
           </View>
 
           <GoldButton
-            label={guardandoPerfil ? 'GUARDANDO…' : '✓ GUARDAR CAMBIOS'}
+            label={guardandoPerfil ? 'Guardando…' : 'Guardar cambios'}
+            icon={guardandoPerfil ? undefined : 'check'}
+            iconPosition="left"
+            textStyle={{ fontSize: 15, letterSpacing: 0 }}
             onPress={async () => {
               if (!profileName.trim()) {
                 Alert.alert('Falta tu nombre', 'Escribe tu nombre completo para guardar el perfil.');
@@ -1663,7 +1490,8 @@ export default function YoScreen() {
                   bio: profileBio,
                   department: profileDepartment,
                 });
-                Alert.alert('Perfil guardado', 'Tus datos reales ya están actualizados en tu cuenta.');
+                // Era un diálogo «Perfil guardado»: ahora una línea en Ajustes, que se va sola.
+                confirmar('Perfil guardado.', 'hub');
                 setActiveView('hub');
               } catch (error) {
                 Alert.alert('No se pudo guardar', error instanceof Error ? error.message : 'Inténtalo de nuevo.');
@@ -1695,23 +1523,9 @@ export default function YoScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-          <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
-            <Pressable onPress={() => setActiveView('hub')} style={styles.backBtnRow} hitSlop={8}>
-              <Icon name="arrowLeft" size={14} color={c.goldInk} />
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
-                VOLVER A AJUSTES
-              </Text>
-            </Pressable>
-            <View style={[styles.categoryPillBadge, { backgroundColor: c.goldWash }]}>
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
-                INFORMACIÓN
-              </Text>
-            </View>
-          </View>
-
           <View style={{ gap: space.gap }}>
             <View style={{ gap: 6 }}>
-              <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>BIOGRAFÍA SOMÁTICA:</Text>
+              <Text style={[t.small, styles.rotuloCampo, { color: c.textStrong }]}>Biografía somática</Text>
               <TextInput
                 value={profileBio}
                 onChangeText={setProfileBio}
@@ -1721,7 +1535,7 @@ export default function YoScreen() {
             </View>
 
             <View style={{ gap: 6 }}>
-              <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>DEPARTAMENTO / ÁREA:</Text>
+              <Text style={[t.small, styles.rotuloCampo, { color: c.textStrong }]}>Departamento o área</Text>
               <TextInput
                 value={profileDepartment}
                 onChangeText={setProfileDepartment}
@@ -1732,7 +1546,10 @@ export default function YoScreen() {
           </View>
 
           <GoldButton
-            label={guardandoPerfil ? 'GUARDANDO…' : '✓ GUARDAR INFORMACIÓN'}
+            label={guardandoPerfil ? 'Guardando…' : 'Guardar información'}
+            icon={guardandoPerfil ? undefined : 'check'}
+            iconPosition="left"
+            textStyle={{ fontSize: 15, letterSpacing: 0 }}
             onPress={async () => {
               setGuardandoPerfil(true);
               try {
@@ -1742,7 +1559,7 @@ export default function YoScreen() {
                   bio: profileBio,
                   department: profileDepartment,
                 });
-                Alert.alert('Información guardada', 'Tu biografía y departamento ya están actualizados en tu cuenta.');
+                confirmar('Información guardada.', 'hub');
                 setActiveView('hub');
               } catch (error) {
                 Alert.alert('No se pudo guardar', error instanceof Error ? error.message : 'Inténtalo de nuevo.');
@@ -1774,140 +1591,23 @@ export default function YoScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-          <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
-            <Pressable onPress={() => setActiveView('hub')} style={styles.backBtnRow} hitSlop={8}>
-              <Icon name="arrowLeft" size={14} color={c.goldInk} />
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
-                VOLVER A AJUSTES
-              </Text>
-            </Pressable>
-            <View style={[styles.categoryPillBadge, { backgroundColor: c.goldWash }]}>
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
-                EL MÉTODO
-              </Text>
-            </View>
-          </View>
-
-          {(() => {
-            const fase = METODO_FASES[metodoFase];
-            const rotateY = metodoAnim.interpolate({
-              inputRange: [0, 1],
-              outputRange: ['-8deg', '0deg'],
-            });
-            const scale = metodoAnim.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0.96, 1],
-            });
-            const opacity = metodoAnim.interpolate({
-              inputRange: [0, 0.2, 1],
-              outputRange: [0.25, 0.9, 1],
-            });
-
-            return (
-              <View style={styles.metodoContent}>
-                {/* Portada del método, alineada a la izquierda. El título estaba hecho con
-                    `t.sectionTitle` estirado a 24 px, o sea versalitas de rótulo con `letterSpacing`
-                    positivo usadas como titular — exactamente lo que AGENTS.md §4 desaconseja desde
-                    que existen los tokens de display. Ahora usa `t.screenTitle` (la serif, con
-                    tracking negativo) y la bajada usa `t.body` sin retoques. El orbe perdió su
-                    contorno; el color de la fase lo sigue dando el ícono y el lavado. */}
-                <View style={styles.metodoHero}>
-                  <View style={[styles.metodoOrb, { backgroundColor: c.cardBgAlt }]}>
-                    <Icon name="spark" size={24} color={fase.color} />
-                  </View>
-                  <Text style={[t.screenTitle, { color: c.textStrong }]}>El Método Renaser</Text>
-                  <Text style={[t.body, styles.metodoHeroSubtitle, { color: c.textSoft }]}>{`${METODO_FASES.length} fases en ${DIAS_DEL_PROGRAMA} días: verte sin filtros, desarmar el sabotaje, elegir desde el gozo y ejecutar.`}</Text>
-                </View>
-
-                <Animated.View
-                  style={[
-                    styles.metodoPhaseCard,
-                    {
-                      borderColor: fase.color,
-                      backgroundColor: c.cardBg,
-                      opacity,
-                      transform: [{ perspective: 900 }, { rotateY }, { scale }],
-                    },
-                  ]}
-                >
-                  <View style={styles.metodoPhaseHeader}>
-                    {/* Sin borde: estaba dentro del borde de colores de la tarjeta de fase. */}
-                    <View style={[styles.metodoPhaseIcon, { backgroundColor: c.cardBgAlt }]}>
-                      <Icon name={fase.icon} size={23} color={fase.color} />
-                    </View>
-                    <View style={styles.metodoPhaseHeading}>
-                      <Text style={[t.micro, { color: fase.color, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>{`${fase.phase} · ${fase.rango.toUpperCase()}`}</Text>
-                      <Text style={[t.cardTitle, styles.metodoPhaseTitle, { color: c.textStrong }]}>{fase.title}</Text>
-                    </View>
-                  </View>
-
-                  <Text style={[styles.metodoQuote, { color: fase.color }]}>{`“${fase.quote}”`}</Text>
-                  <Text style={[t.body, styles.metodoSummary, { color: c.textSoft }]}>{fase.summary}</Text>
-
-                  <View style={styles.metodoBullets}>
-                    {fase.bullets.map((bullet) => (
-                      <View key={bullet} style={styles.metodoBulletRow}>
-                        <View style={[styles.metodoBulletDot, { backgroundColor: fase.color }]} />
-                        <Text style={[t.body, styles.metodoBulletText, { color: c.textSoft }]}>{bullet}</Text>
-                      </View>
-                    ))}
-                  </View>
-
-                  <View style={[styles.metodoProgressTrack, { backgroundColor: c.divider }]}>
-                    <View style={[styles.metodoProgressFill, { width: `${((metodoFase + 1) / METODO_FASES.length) * 100}%`, backgroundColor: fase.color }]} />
-                  </View>
-                  <Text style={[t.micro, styles.metodoProgressLabel, { color: c.micro }]}>FASE {metodoFase + 1} DE {METODO_FASES.length}</Text>
-                </Animated.View>
-
-                <View style={styles.metodoNav}>
-                  <Pressable
-                    accessibilityLabel="Ver fase anterior"
-                    disabled={metodoFase === 0}
-                    onPress={() => cambiarMetodoFase(metodoFase - 1)}
-                    style={[styles.metodoNavButton, { borderColor: c.border, backgroundColor: c.cardBg }, metodoFase === 0 && styles.metodoNavButtonDisabled]}
-                  >
-                    <View style={{ transform: [{ rotate: '180deg' }] }}>
-                      <Icon name="chevron" size={18} color={metodoFase === 0 ? c.micro : c.goldInk} />
-                    </View>
-                  </Pressable>
-
-                  <View style={styles.metodoDots}>
-                    {METODO_FASES.map((item, index) => (
-                      <Pressable
-                        key={item.phase}
-                        accessibilityLabel={`Ir a ${item.phase.toLowerCase()}`}
-                        onPress={() => cambiarMetodoFase(index)}
-                        style={[styles.metodoDot, { backgroundColor: index === metodoFase ? item.color : c.divider }, index === metodoFase && styles.metodoDotActive]}
-                      />
-                    ))}
-                  </View>
-
-                  <Pressable
-                    accessibilityLabel="Ver fase siguiente"
-                    disabled={metodoFase === METODO_FASES.length - 1}
-                    onPress={() => cambiarMetodoFase(metodoFase + 1)}
-                    style={[styles.metodoNavButton, { borderColor: c.gold, backgroundColor: c.cardBgAlt }, metodoFase === METODO_FASES.length - 1 && styles.metodoNavButtonDisabled]}
-                  >
-                    <Icon name="chevron" size={18} color={metodoFase === METODO_FASES.length - 1 ? c.micro : c.goldInk} />
-                  </Pressable>
-                </View>
-
-                <Pressable
-                  disabled={metodoFase === METODO_FASES.length - 1}
-                  onPress={() => cambiarMetodoFase(metodoFase + 1)}
-                  style={[styles.metodoNextButton, { borderColor: fase.color, backgroundColor: c.cardBgAlt }, metodoFase === METODO_FASES.length - 1 && styles.metodoNextButtonDisabled]}
-                >
-                  <Text style={[t.cardTitle, { color: metodoFase === METODO_FASES.length - 1 ? c.micro : fase.color, fontSize: 15 }]}>
-                    {metodoFase === METODO_FASES.length - 1 ? 'Método completo' : 'Explorar siguiente fase'}
-                  </Text>
-                  {metodoFase < METODO_FASES.length - 1 && <Icon name="arrow" size={16} color={fase.color} />}
-                </Pressable>
-
-                {/* Era `t.micro` forzado a 12 y centrado: una frase se lee, no se rotula. */}
-                <Text style={[t.small, { color: c.micro }]}>Lee una fase en 20 segundos y vuelve cuando quieras.</Text>
+          {/* Portada del método, alineada a la izquierda (`t.screenTitle`, la serif). El orbe
+              llevaba el asterisco de Espíritu teñido del color de cada fase; ahora es la brújula de
+              la fila de Ajustes, en la tinta del tema. */}
+          <View style={styles.metodoContent}>
+            <View style={styles.metodoHero}>
+              <View style={[styles.metodoOrb, { backgroundColor: c.goldWash }]}>
+                <Icon name="compass" size={TAMANO_ICONO.grande} color={c.goldInk} />
               </View>
-            );
-          })()}
+              <Text style={[t.screenTitle, { color: c.textStrong }]}>El Método Renaser</Text>
+              <Text style={[t.body, styles.metodoHeroSubtitle, { color: c.textSoft }]}>{`${METODO_FASES.length} fases en ${DIAS_DEL_PROGRAMA} días: verte sin filtros, desarmar el sabotaje, elegir desde el gozo y ejecutar.`}</Text>
+            </View>
+
+            <MetodoEnPaginas fases={METODO_FASES} margenLateral={horizontalPadding} />
+
+            {/* Era `t.micro` forzado a 12 y centrado: una frase se lee, no se rotula. */}
+            <Text style={[t.small, { color: c.micro }]}>Desliza para pasar de fase. Lee una en 20 segundos y vuelve cuando quieras.</Text>
+          </View>
         </ScrollView>
       )}
 
@@ -1929,20 +1629,6 @@ export default function YoScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-          <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
-            <Pressable onPress={() => setActiveView('hub')} style={styles.backBtnRow} hitSlop={8}>
-              <Icon name="arrowLeft" size={14} color={c.goldInk} />
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
-                VOLVER A AJUSTES
-              </Text>
-            </Pressable>
-            <View style={[styles.categoryPillBadge, { backgroundColor: c.goldWash }]}>
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
-                NOTIFICACIONES
-              </Text>
-            </View>
-          </View>
-
           <InterruptoresDeAvisos />
         </ScrollView>
       )}
@@ -1965,20 +1651,6 @@ export default function YoScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
-          <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
-            <Pressable onPress={() => setActiveView('hub')} style={styles.backBtnRow} hitSlop={8}>
-              <Icon name="arrowLeft" size={14} color={c.goldInk} />
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
-                VOLVER A AJUSTES
-              </Text>
-            </Pressable>
-            <View style={[styles.categoryPillBadge, { backgroundColor: c.goldWash }]}>
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
-                ALARMAS
-              </Text>
-            </View>
-          </View>
-
           {user?.id ? <SeccionAlarmas userId={user.id} /> : null}
         </ScrollView>
       )}
@@ -2031,33 +1703,26 @@ const styles = StyleSheet.create({
   metodoHero: { gap: 8 },
   metodoOrb: { width: 58, height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center' },
   metodoHeroSubtitle: { maxWidth: 420 },
-  metodoPhaseCard: { borderWidth: 1, borderRadius: space.radius, padding: space.cardPad, gap: 13, minHeight: 330 },
-  metodoPhaseHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  metodoPhaseIcon: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
-  metodoPhaseHeading: { flex: 1, gap: 3 },
-  metodoPhaseTitle: { fontSize: 19, lineHeight: 25 },
-  metodoQuote: { fontSize: 15, lineHeight: 22, fontStyle: 'italic' },
-  metodoSummary: { fontSize: 15, lineHeight: 22 },
-  metodoBullets: { gap: 10, paddingTop: 2 },
-  metodoBulletRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  metodoBulletDot: { width: 6, height: 6, borderRadius: 3, marginTop: 8 },
-  metodoBulletText: { flex: 1, fontSize: 15, lineHeight: 22 },
-  metodoProgressTrack: { height: 5, borderRadius: 3, overflow: 'hidden', marginTop: 2 },
-  metodoProgressFill: { height: '100%', borderRadius: 3 },
-  /** Era 10 px, por debajo del mínimo de micro-etiqueta (10.5). Alineado al final de la barra. */
-  metodoProgressLabel: { fontSize: 11, letterSpacing: 1.2, textAlign: 'right' },
-  metodoNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 },
-  metodoNavButton: { width: 50, height: 50, borderRadius: 25, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  metodoNavButtonDisabled: { opacity: 0.4 },
-  metodoDots: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  metodoDot: { width: 8, height: 8, borderRadius: 4 },
-  metodoDotActive: { width: 24, borderRadius: 5 },
-  metodoNextButton: { minHeight: 48, borderWidth: 1, borderRadius: space.radiusSm, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9 },
-  metodoNextButtonDisabled: { opacity: 0.65 },
-  /* Fila pulsable: el borde se queda porque dice "esto se toca". */
-  userCard: { borderWidth: 1, borderRadius: space.radius, padding: space.cardPad, minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 14 },
-  avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  avatarLg: { width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center' },
+  /* Quién eres, arriba de Yo. Ya no se toca (2026-10-05), así que no lleva borde: un borde dice
+     «esto se toca». */
+  userCard: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 14 },
+  /* `overflow: 'hidden'`: la foto toma la forma del disco, mida lo que mida el disco. */
+  avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  avatarLg: { width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  /** La cámara sobre la foto de Editar perfil: dice «toca para cambiarla» sin texto con emoji. */
+  insigniaCamara: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  /** El nombre de un campo, en tipo oración (eran versales doradas con dos puntos: «NOMBRE COMPLETO:»). */
+  rotuloCampo: { fontFamily: 'Jost_500Medium', fontSize: 15, lineHeight: 20 },
   avatarImage: { width: '100%', height: '100%', borderRadius: 22 },
   avatarImageLarge: { width: '100%', height: '100%', borderRadius: 35 },
   avatarInitials: { fontSize: 15, fontFamily: 'Jost_700Bold' },
@@ -2073,21 +1738,11 @@ const styles = StyleSheet.create({
   statSeparador: { width: 1, alignSelf: 'stretch' },
   more: { borderRadius: space.radiusSm, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   rowCard: { borderWidth: 1, borderRadius: space.radius, minHeight: 48, paddingVertical: 14, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  onboardingBtn: { borderWidth: 1, borderRadius: space.radiusSm, minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
-  eliminarCuentaBtn: { minHeight: 48, alignItems: 'center', justifyContent: 'center' },
-  logoutBtn: { borderWidth: 1, borderRadius: space.radiusSm, minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
-  detailTopBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 10, borderBottomWidth: 1 },
-  /** 48 px: es el "volver" de todas las sub-vistas y era el pulsable más chico del archivo. */
-  backBtnRow: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 48, paddingRight: 8 },
-  /* Sin borde: es un rótulo, no un control. El lavado dorado alcanza para separarlo del fondo. */
-  categoryPillBadge: { borderRadius: space.radiusSm, paddingHorizontal: 10, paddingVertical: 6 },
-  groupedBox: { borderWidth: 1, borderRadius: space.radius, overflow: 'hidden' },
-  menuOptionRow: { paddingVertical: 14, paddingHorizontal: 16, minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, borderBottomWidth: 1 },
   /* Una barra de 6 px de alto no necesita contorno; el contraste lo da el color del riel. */
   progressBarBg: { height: 6, borderRadius: 3, overflow: 'hidden' },
   progressBarFill: { height: '100%', borderRadius: 3 },
   stageCard: { borderWidth: 1, borderRadius: space.radius, padding: space.cardPad, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  stageCheckCircle: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  stageCheckCircle: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   iconShieldCircle: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   /* El único contorno dorado que se conserva en el archivo, y a propósito: acá el borde ES el
      contenido —es el canto de un documento que se firma—, no un adorno para destacar la tarjeta.

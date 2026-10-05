@@ -70,7 +70,13 @@ function FilaDeSonido({ opcion, elegida, ocupado, onElegir, onEscuchar }: {
         accessibilityLabel={`${opcion.nombre}. ${opcion.detalle}`}
         style={estilos.eleccion}
       >
-        <Icon name={elegida ? 'checkCircle' : 'volume'} size={20} color={elegida ? c.goldInk : c.chevron} />
+        {/* Un radio: vacío o con ✓ (2026-10-05). Antes el no elegido era el parlante, que se lee
+            «escuchar», y escuchar es el botón de al lado. */}
+        {elegida ? (
+          <Icon name="checkCircle" size={20} color={c.goldInk} />
+        ) : (
+          <View testID="radio-vacio" style={[estilos.radioVacio, { borderColor: c.chevron }]} />
+        )}
         <View style={{ flex: 1, flexShrink: 1 }}>
           <Text style={[estilos.nombre, { color: c.textStrong }]}>{opcion.nombre}</Text>
           <Text style={[estilos.cuerpo, { color: c.textSoft }]}>{opcion.detalle}</Text>
@@ -97,4 +103,6 @@ const estilos = StyleSheet.create({
   opcion: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 64, borderWidth: 1.5, borderRadius: 14, paddingRight: 10 },
   eleccion: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 64, paddingLeft: 14, paddingVertical: 10 },
   escuchar: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  /* El mismo círculo que el de `checkCircle` (radio 8 en la caja de 20) y el mismo grosor de trazo. */
+  radioVacio: { width: 16, height: 16, borderRadius: 8, borderWidth: 1.75, margin: 2 },
 });

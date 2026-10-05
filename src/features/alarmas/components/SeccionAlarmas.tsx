@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Switch, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { Alert } from '../../../components/Alerta';
+import { Interruptor } from '../../../components/Interruptor';
 import { BotonSecundario } from '../../../components/Legible';
 import { useTheme } from '../../../theme/ThemeContext';
 import * as habitsApi from '../../habits/api/habitsApi';
@@ -234,13 +235,11 @@ export function SeccionAlarmas({ userId }: { userId: string }) {
                 </Text>
                 <Text style={texto}>{despertar.alarmaPuesta ? 'Suena todos los días.' : 'Apagada en este teléfono.'}</Text>
               </View>
-              <Switch
-                value={despertar.alarmaPuesta}
-                disabled={ocupado}
-                onValueChange={v => void cambiarDespertar(v)}
-                accessibilityLabel="Alarma de despertar"
-                trackColor={{ false: '#332C20', true: c.gold }}
-                thumbColor={despertar.alarmaPuesta ? '#1E1B18' : '#888'}
+              <Interruptor
+                valor={despertar.alarmaPuesta}
+                deshabilitado={ocupado}
+                onCambiar={v => void cambiarDespertar(v)}
+                etiqueta="Alarma de despertar"
               />
             </View>
             <View style={{ paddingBottom: 14 }}>
@@ -258,12 +257,10 @@ export function SeccionAlarmas({ userId }: { userId: string }) {
               <Text style={[estilos.nombre, { color: c.textStrong }]}>Alarma de los eventos a los que vas</Text>
               <Text style={texto}>Cuando dices «Voy», suena antes de que empiece.</Text>
             </View>
-            <Switch
-              value={prefs.eventosActivas}
-              onValueChange={v => void cambiarEventos(v)}
-              accessibilityLabel="Alarma de los eventos a los que vas"
-              trackColor={{ false: '#332C20', true: c.gold }}
-              thumbColor={prefs.eventosActivas ? '#1E1B18' : '#888'}
+            <Interruptor
+              valor={prefs.eventosActivas}
+              onCambiar={v => void cambiarEventos(v)}
+              etiqueta="Alarma de los eventos a los que vas"
             />
           </View>
         </View>
@@ -277,7 +274,8 @@ export function SeccionAlarmas({ userId }: { userId: string }) {
       <View style={{ gap: 8 }}>
         <Text style={[estilos.titulo, { color: c.textStrong }]}>Sonido</Text>
         <Text style={texto}>Para todas tus alarmas: hábitos, despertar, eventos y acciones de tus objetivos.</Text>
-        <Text style={texto}>Toca ▶ para escuchar cada uno antes de elegirlo.</Text>
+        {/* «▶» con el selector de texto (U+FE0E): sin él, Android lo pinta como el emoji ▶️. */}
+        <Text style={texto}>Toca ▶{'\uFE0E'} para escuchar cada uno antes de elegirlo.</Text>
         <SelectorDeSonido
           elegido={prefs.sonido}
           ocupado={ocupado}

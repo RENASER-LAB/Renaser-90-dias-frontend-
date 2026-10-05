@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Switch, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
+import { Interruptor } from '../../../components/Interruptor';
 import { BotonSecundario } from '../../../components/Legible';
 import { useTheme } from '../../../theme/ThemeContext';
 import { guardarTema, obtenerPreferencias, temasVisibles, type Preferencias, type TemaDeAviso } from '../api/preferenciasDeNotificacion';
@@ -68,13 +69,13 @@ export function InterruptoresDeAvisos() {
               <Text style={[estilos.nombre, { color: c.textStrong }]}>{tema.nombre}</Text>
               <Text style={texto}>{tema.detalle}</Text>
             </View>
-            <Switch
-              value={tema.encendido}
-              disabled={guardando !== null}
-              onValueChange={v => void cambiar(tema, v)}
-              accessibilityLabel={tema.nombre}
-              trackColor={{ false: '#332C20', true: c.gold }}
-              thumbColor={tema.encendido ? '#1E1B18' : '#888'}
+            {/* `Interruptor` y no el `Switch` con colores a mano: en la web su pulgar encendido salía
+                verde azulado (2026-10-05). */}
+            <Interruptor
+              valor={tema.encendido}
+              deshabilitado={guardando !== null}
+              onCambiar={v => void cambiar(tema, v)}
+              etiqueta={tema.nombre}
             />
           </View>
         ))}
