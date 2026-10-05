@@ -7,13 +7,9 @@ import { useTheme } from '../../../theme/ThemeContext';
 import { PantallaPaso } from '../components/PantallaPaso';
 import { Apoyo, Pregunta } from '../components/Piezas';
 import { ETIQUETA_AREA, SUBTITULO_AREA } from '../reglas';
-import type { Area } from '../tipos';
-import { AREAS } from '../tipos';
+import { AREAS, EJE_POR_AREA } from '../tipos';
+import { iconoDelEje } from '../../objetivos/utils/iconoDelEje';
 import type { PropsPaso } from './props';
-
-const ICONO: Record<Area, 'heart' | 'briefcase' | 'users'> = {
-  salud: 'heart', negocio_dinero: 'briefcase', relaciones: 'users',
-};
 
 /** V02 · Prioridad principal. Selección única; no excluye a las otras áreas (§3 V02). */
 export function PrioridadScreen({ estado }: PropsPaso) {
@@ -41,7 +37,7 @@ export function PrioridadScreen({ estado }: PropsPaso) {
               <RowBetween>
                 <Row gap={14} style={{ flex: 1 }}>
                   <View style={[styles.icono, { borderColor: activa ? c.gold : c.border }]}>
-                    <Icon name={ICONO[area]} size={20} color={activa ? c.goldInk : c.textSoft} />
+                    <Icon name={iconoDelEje(EJE_POR_AREA[area])} size={20} color={activa ? c.goldInk : c.textSoft} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={[t.cardTitle, { color: c.textStrong }]}>{ETIQUETA_AREA[area]}</Text>

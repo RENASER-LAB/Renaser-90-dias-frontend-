@@ -11,10 +11,9 @@ import {
   ajustarDias, avisosDeCarga, esVago, faltantesDelSistema, sistemaEjecucionValido,
 } from '../reglas';
 import type { AccionMotora, Area, DiaSemana } from '../tipos';
-import { AREAS } from '../tipos';
+import { AREAS, EJE_POR_AREA } from '../tipos';
+import { iconoDelEje } from '../../objetivos/utils/iconoDelEje';
 import { idLocal, type PropsPaso } from './props';
-
-const ICONO: Record<Area, 'heart' | 'briefcase' | 'users'> = { salud: 'heart', negocio_dinero: 'briefcase', relaciones: 'users' };
 
 /** V06 · Sistema de ejecución (§3 V06): 1–2 acciones por objetivo, máximo 6, sin verbos vagos. */
 export function SistemaEjecucionScreen({ estado }: PropsPaso) {
@@ -52,7 +51,7 @@ export function SistemaEjecucionScreen({ estado }: PropsPaso) {
         return (
           <View key={area} style={[styles.bloque, { borderColor: c.border, backgroundColor: c.cardBg }]}>
             <Row gap={8}>
-              <Icon name={ICONO[area]} size={14} color={c.goldInk} />
+              <Icon name={iconoDelEje(EJE_POR_AREA[area])} size={16} color={c.goldInk} />
               <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 14 }]}>{ETIQUETA_AREA[area]}</Text>
             </Row>
             {propias.map(a => (

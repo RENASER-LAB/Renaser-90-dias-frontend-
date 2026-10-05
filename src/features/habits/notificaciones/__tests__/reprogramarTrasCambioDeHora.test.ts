@@ -162,15 +162,20 @@ describe('cambiar la hora de un hábito desde Plan', () => {
  * La prueba de arriba verifica la función; esta, que Plan la use. Es la línea que faltaba: si alguien
  * vuelve a llamar al PATCH directo desde la pantalla, la alarma vuelve a quedar en la hora vieja y
  * ninguna otra prueba lo nota (la pantalla no se puede montar en Jest sin medio árbol de contextos).
+ *
+ * > **Corregido 2026-10-05.** Exigía además que Plan llamara a `cambiarHoraDelHabito`. Plan ya no
+ * > cambia horas: la sub-vista «Hábitos 7 días», la única que lo hacía, era inalcanzable desde el
+ * > 2026-09-08 y se borró en el rediseño de Plan. La regla sigue: si una pantalla vuelve a cambiar la
+ * > hora de un hábito, va por `cambiarHoraDelHabito` y nunca por el PATCH suelto.
  */
 describe('PlanScreen', () => {
-  it('cambia la hora por cambiarHoraDelHabito, no con el PATCH suelto', () => {
+  it('no cambia la hora con el PATCH suelto (y si vuelve a cambiarla, va por cambiarHoraDelHabito)', () => {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const fs = require('fs') as typeof import('fs');
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const path = require('path') as typeof import('path');
     const fuente = fs.readFileSync(path.join(__dirname, '../../../../screens/PlanScreen.tsx'), 'utf8');
-    expect(fuente).toContain('cambiarHoraDelHabito(');
     expect(fuente).not.toContain('habitsApi.cambiarHorario(');
+    if (/HoraPickerModal|guardarNuevaHora/.test(fuente)) expect(fuente).toContain('cambiarHoraDelHabito(');
   });
 });

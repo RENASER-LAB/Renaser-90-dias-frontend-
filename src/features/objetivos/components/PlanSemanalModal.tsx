@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Alert } from '../../../components/Alerta';
 import { GoldButton } from '../../../components/GoldButton';
@@ -8,7 +8,9 @@ import type { EjeObjetivo, ItemPlanSemanal, RocaMaestraApi } from '../types/obje
 import { EJES, ETIQUETA_EJE } from '../types/objetivos.types';
 import { conPrincipalPrimero } from '../hooks/usePrioridadPrincipal';
 import { textoVentanaSemanal } from '../utils/ventanasDePlanificacion';
-import { Icon } from '../../../components/Icon';
+import { HojaDesdeAbajo } from '../../../components/hojaDesdeAbajo/HojaDesdeAbajo';
+import { Presionable } from '../../../components/Presionable';
+import { tacto } from '../../../utils/tacto';
 
 /**
  * Armar el plan de la semana: **un eje por pantalla**.
@@ -225,6 +227,12 @@ export function PlanSemanalModal({
     guardar();
   };
 
+  /** Elegir en la escala: un «tic» por toque. Tocar el elegido lo desmarca (es opcional). */
+  const elegirEnLaEscala = (valor: number) => {
+    tacto.seleccion();
+    cambiar('autoevaluacionInicio', borrador.autoevaluacionInicio === valor ? null : valor);
+  };
+
   const campo = (
     etiqueta: string,
     valor: string,
@@ -232,7 +240,7 @@ export function PlanSemanalModal({
     opciones: { ayuda?: string; largo?: boolean; obligatorio?: boolean } = {}
   ) => (
     <View style={{ gap: 6 }} key={etiqueta}>
-      <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 12 }]}>
+      <Text style={[t.small, estilos.etiqueta, { color: c.goldInk }]}>
         {etiqueta}
         {opciones.obligatorio ? '' : '  ·  opcional'}
       </Text>
@@ -259,176 +267,172 @@ export function PlanSemanalModal({
     </View>
   );
 
+  /*
+   * Hoja desde abajo (2026-10-05) en vez de la ventana centrada, con el mismo contenido: los puntos
+   * del paso van pegados al título (también arrastran la hoja) y los botones fijos abajo. `grande`
+   * porque es un formulario largo: con el teclado abierto el cuerpo se acorta y el pie queda a la
+   * vista.
+   */
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCerrar}>
-      <View style={[estilos.fondo, { backgroundColor: 'rgba(0,0,0,0.7)' }]}>
-        <View style={[estilos.tarjeta, { backgroundColor: c.cardBg, borderColor: c.border }]}>
-          <View style={[estilos.encabezado, { borderBottomColor: c.divider }]}>
-            <View style={{ flex: 1 }}>
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1, fontSize: 12 }]}>
-                PLAN DE LA SEMANA {String(numeroSemana).padStart(2, '0')}
-              </Text>
-              <Text style={[t.small, { color: c.textSoft, fontSize: 14, marginTop: 2 }]}>
-                {esResumen ? 'Revisa antes de guardar' : rotuloDelPaso}
-              </Text>
-            </View>
-            <Pressable onPress={onCerrar} hitSlop={16} style={estilos.botonCerrar}>
-              <Icon name="close" size={18} color={c.textSoft} />
-            </Pressable>
-          </View>
-
-          {/* Un punto por paso: dónde está y cuánto falta, sin animación ni barra que se mueva. */}
-          <View style={estilos.puntos}>
-            {[...ejesOrdenados, 'resumen'].map((clave, indice) => (
-              <View
-                key={clave}
-                style={[
-                  estilos.punto,
-                  { backgroundColor: indice <= paso ? c.gold : c.border },
-                ]}
+    <HojaDesdeAbajo
+      visible={visible}
+      alCerrar={onCerrar}
+      titulo={`Plan de la semana ${numeroSemana}`}
+      subtitulo={esResumen ? 'Revisa antes de guardar' : rotuloDelPaso}
+      tamano="grande"
+      bajoElTitulo={
+        /* Un punto por paso: dónde está y cuánto falta, sin animación ni barra que se mueva. */
+        <View style={estilos.puntos}>
+          {[...ejesOrdenados, 'resumen'].map((clave, indice) => (
+            <View
+              key={clave}
+              style={[
+                estilos.punto,
+                { backgroundColor: indice <= paso ? c.gold : c.border },
+              ]}
+            />
+          ))}
+        </View>
+      }
+      pie={
+        <View style={estilos.pie}>
+          {paso > 0 && (
+            <Presionable onPress={() => setPaso(p => p - 1)} accessibilityRole="button" style={estilos.botonAtras}>
+              <Text style={[t.body, { color: c.textSoft, fontFamily: 'Jost_500Medium', fontSize: 15 }]}>Atrás</Text>
+            </Presionable>
+          )}
+          <View style={{ flex: 1, gap: 4 }}>
+            {/*
+              > **Corregido el 2026-09-23.** Guardar solo aparecía en el resumen, así que para
+              > terminar había que pasar por los tres ejes sí o sí. Ahora, apenas el eje obligatorio
+              > tiene su objetivo, el botón principal es Guardar; los otros dos siguen alcanzables por
+              > el enlace de abajo, que es lo que son: opcionales.
+            */}
+            {esResumen || puedeGuardarYa ? (
+              /* Sin `disabled` por lo que falte: eso lo resuelve `intentarGuardar` diciendo qué
+                 falta. Apagado solo mientras se está guardando, para no mandar dos veces. */
+              <GoldButton
+                label={guardando ? 'Guardando…' : 'Guardar mi semana'}
+                onPress={intentarGuardar}
+                disabled={guardando}
+                textStyle={TEXTO_DE_BOTON}
               />
-            ))}
-          </View>
-
-          <ScrollView contentContainerStyle={{ padding: 18, gap: 18 }} keyboardShouldPersistTaps="handled">
-            {esResumen ? (
-              <>
-                {ejesOrdenados.map(eje => {
-                  const b = borradores[eje];
-                  return (
-                    <View key={eje} style={[estilos.bloqueResumen, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
-                      <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 12 }]}>
-                        {ETIQUETA_EJE[eje].toUpperCase()}
-                      </Text>
-                      <Text style={[t.body, { color: c.textStrong, fontSize: 16, marginTop: 4 }]}>
-                        {b.titulo.trim() || 'Sin título'}
-                      </Text>
-                      {!completo(b) && (
-                        <Pressable onPress={() => setPaso(ejesOrdenados.indexOf(eje))} style={estilos.enlaceCompletar} hitSlop={12}>
-                          <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 15 }]}>
-                            Le {loQueFalta(b)} · toca para volver
-                          </Text>
-                        </Pressable>
-                      )}
-                    </View>
-                  );
-                })}
-                <Text style={[t.small, { color: c.textSoft, fontSize: 14, lineHeight: 20 }]}>
-                  {textoVentanaSemanal()}
-                </Text>
-              </>
             ) : (
-              <>
-                {objetivoDelEje ? (
-                  <View style={[estilos.recordatorio, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
-                    <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>TU OBJETIVO DE 90 DÍAS</Text>
-                    <Text style={[t.body, { color: c.textStrong, fontSize: 15, marginTop: 4, lineHeight: 21 }]}>
-                      {objetivoDelEje}
-                    </Text>
-                  </View>
-                ) : null}
-
-                {campo('TU OBJETIVO DE ESTA SEMANA', borrador.titulo, texto => cambiar('titulo', texto), {
-                  ayuda: 'Viene calculado de tu objetivo del mes. Cámbialo si quieres otra cosa.',
-                  obligatorio: true,
-                })}
-
-                {campo('QUÉ PODRÍA IMPEDIRLO', borrador.obstaculo, texto => cambiar('obstaculo', texto), {
-                  ayuda: 'El obstáculo más probable. Nombrarlo ahora te ahorra la sorpresa el jueves.',
-                  largo: true,
-                })}
-
-                {campo('QUÉ HACES SI PASA', borrador.contingencia, texto => cambiar('contingencia', texto), {
-                  ayuda: 'Tu plan B, decidido en frío.',
-                  largo: true,
-                })}
-
-                <View style={{ gap: 8 }}>
-                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 12 }]}>
-                    ¿QUÉ TAN CAPAZ TE VES DE CUMPLIRLA?  ·  opcional
-                  </Text>
-                  <View style={estilos.escala}>
-                    {Array.from({ length: AUTOEVALUACION_MAXIMA }, (_, i) => i + AUTOEVALUACION_MINIMA).map(valor => {
-                      const elegido = borrador.autoevaluacionInicio === valor;
-                      return (
-                        <Pressable
-                          key={valor}
-                          onPress={() => cambiar('autoevaluacionInicio', elegido ? null : valor)}
-                          style={[
-                            estilos.puntoEscala,
-                            { borderColor: elegido ? c.gold : c.border, backgroundColor: elegido ? c.gold : c.cardBgAlt },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              t.body,
-                              { color: elegido ? c.onGold : c.textSoft, fontFamily: 'Jost_700Bold', fontSize: 15 },
-                            ]}
-                          >
-                            {valor}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                </View>
-              </>
+              /* Nunca apagado: se avanza con el eje vacío y se vuelve después. */
+              <GoldButton label="Siguiente" onPress={() => setPaso(p => p + 1)} textStyle={TEXTO_DE_BOTON} />
             )}
-          </ScrollView>
-
-          <View style={[estilos.pie, { borderTopColor: c.divider }]}>
-            {paso > 0 && (
-              <Pressable onPress={() => setPaso(p => p - 1)} style={estilos.botonAtras} hitSlop={8}>
-                <Text style={[t.body, { color: c.textSoft, fontFamily: 'Jost_700Bold', fontSize: 15 }]}>Atrás</Text>
-              </Pressable>
+            {!esResumen && puedeGuardarYa && (
+              <Presionable onPress={() => setPaso(p => p + 1)} accessibilityRole="button" style={estilos.enlaceOpcional}>
+                <Text style={[t.small, { color: c.textSoft, fontFamily: 'Jost_500Medium', fontSize: 14 }]}>
+                  {paso + 1 < ejesOrdenados.length ? 'Agregar otro eje (opcional)' : 'Ver el resumen'}
+                </Text>
+              </Presionable>
             )}
-            <View style={{ flex: 1, gap: 10 }}>
-              {/*
-                > **Corregido el 2026-09-23.** Guardar solo aparecía en el resumen, así que para
-                > terminar había que pasar por los tres ejes sí o sí. El dueño lo reportó con las
-                > mismas palabras de la vez anterior: *"¿por qué me pide 4 fases? solo debe pedirme
-                > la de la semana para terminar"*. La validación del backend ya acepta un eje
-                > (RK-12) y `intentarGuardar` ya valida solo el obligatorio — lo único que faltaba
-                > era que el botón estuviera a mano antes del final.
-                >
-                > Ahora, apenas el eje obligatorio tiene su objetivo, el botón principal es GUARDAR.
-                > Los otros dos siguen alcanzables por el enlace de abajo, que es lo que eran desde
-                > el principio: opcionales.
-              */}
-              {esResumen || puedeGuardarYa ? (
-                /* Sin `disabled` por lo que falte: eso lo resuelve `intentarGuardar` diciendo qué
-                   falta. Apagado solo mientras se está guardando, para no mandar dos veces. */
-                <GoldButton
-                  label={guardando ? 'GUARDANDO…' : 'GUARDAR MI SEMANA'}
-                  onPress={intentarGuardar}
-                  disabled={guardando}
-                />
-              ) : (
-                /* Nunca apagado: se avanza con el eje vacío y se vuelve después. */
-                <GoldButton label="SIGUIENTE" onPress={() => setPaso(p => p + 1)} />
-              )}
-              {!esResumen && puedeGuardarYa && (
-                <Pressable onPress={() => setPaso(p => p + 1)} hitSlop={8} style={{ alignItems: 'center' }}>
-                  <Text style={[t.small, { color: c.textSoft, fontFamily: 'Jost_500Medium', fontSize: 14 }]}>
-                    {paso + 1 < ejesOrdenados.length ? 'Agregar otro eje (opcional)' : 'Ver el resumen'}
-                  </Text>
-                </Pressable>
-              )}
-            </View>
           </View>
         </View>
-      </View>
-    </Modal>
+      }
+    >
+      <ScrollView contentContainerStyle={estilos.cuerpo} keyboardShouldPersistTaps="handled">
+        {esResumen ? (
+          <>
+            {ejesOrdenados.map(eje => {
+              const b = borradores[eje];
+              return (
+                <View key={eje} style={[estilos.bloqueResumen, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
+                  <Text style={[t.small, estilos.etiqueta, { color: c.goldInk }]}>{ETIQUETA_EJE[eje]}</Text>
+                  <Text style={[t.body, { color: c.textStrong, fontSize: 16, marginTop: 4 }]}>
+                    {b.titulo.trim() || 'Sin título'}
+                  </Text>
+                  {!completo(b) && (
+                    <Presionable
+                      onPress={() => setPaso(ejesOrdenados.indexOf(eje))}
+                      accessibilityRole="button"
+                      style={estilos.enlaceCompletar}
+                    >
+                      <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 15 }]}>
+                        Le {loQueFalta(b)} · toca para volver
+                      </Text>
+                    </Presionable>
+                  )}
+                </View>
+              );
+            })}
+            <Text style={[t.small, { color: c.textSoft, fontSize: 14, lineHeight: 20 }]}>
+              {textoVentanaSemanal()}
+            </Text>
+          </>
+        ) : (
+          <>
+            {objetivoDelEje ? (
+              <View style={[estilos.recordatorio, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
+                <Text style={[t.small, { color: c.textSoft, fontSize: 13 }]}>Tu objetivo de 90 días</Text>
+                <Text style={[t.body, { color: c.textStrong, fontSize: 15, marginTop: 4, lineHeight: 21 }]}>
+                  {objetivoDelEje}
+                </Text>
+              </View>
+            ) : null}
+
+            {campo('Tu objetivo de esta semana', borrador.titulo, texto => cambiar('titulo', texto), {
+              ayuda: 'Viene calculado de tu objetivo del mes. Cámbialo si quieres otra cosa.',
+              obligatorio: true,
+            })}
+
+            {campo('Qué podría impedirlo', borrador.obstaculo, texto => cambiar('obstaculo', texto), {
+              ayuda: 'El obstáculo más probable. Nombrarlo ahora te ahorra la sorpresa el jueves.',
+              largo: true,
+            })}
+
+            {campo('Qué haces si pasa', borrador.contingencia, texto => cambiar('contingencia', texto), {
+              ayuda: 'Tu plan B, decidido en frío.',
+              largo: true,
+            })}
+
+            <View style={{ gap: 8 }}>
+              <Text style={[t.small, estilos.etiqueta, { color: c.goldInk }]}>
+                ¿Qué tan capaz te ves de cumplirla?  ·  opcional
+              </Text>
+              <View style={estilos.escala} accessibilityRole="radiogroup">
+                {Array.from({ length: AUTOEVALUACION_MAXIMA }, (_, i) => i + AUTOEVALUACION_MINIMA).map(valor => {
+                  const elegido = borrador.autoevaluacionInicio === valor;
+                  return (
+                    <Presionable
+                      key={valor}
+                      onPress={() => elegirEnLaEscala(valor)}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: elegido }}
+                      accessibilityLabel={`${valor}`}
+                      style={[
+                        estilos.puntoEscala,
+                        { borderColor: elegido ? c.gold : c.border, backgroundColor: elegido ? c.gold : c.cardBgAlt },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          t.body,
+                          { color: elegido ? c.onGold : c.textSoft, fontFamily: 'Jost_700Bold', fontSize: 15 },
+                        ]}
+                      >
+                        {valor}
+                      </Text>
+                    </Presionable>
+                  );
+                })}
+              </View>
+            </View>
+          </>
+        )}
+      </ScrollView>
+    </HojaDesdeAbajo>
   );
 }
 
+/** Botones en tipo oración y a tamaño de lectura (`GoldButton` va en versales espaciadas por defecto). */
+const TEXTO_DE_BOTON = { fontSize: 15, letterSpacing: 0 } as const;
+
 const estilos = StyleSheet.create({
-  fondo: { flex: 1, justifyContent: 'center', padding: 16 },
-  tarjeta: { borderRadius: 16, borderWidth: 1, maxHeight: '92%', overflow: 'hidden' },
-  encabezado: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 18, borderBottomWidth: 1 },
-  // 48×48 es el piso de área táctil del proyecto, y con 50-60 años no es un detalle.
-  botonCerrar: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
-  puntos: { flexDirection: 'row', gap: 6, paddingHorizontal: 18, paddingTop: 14 },
+  cuerpo: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, gap: 18 },
+  etiqueta: { fontFamily: 'Jost_500Medium', fontSize: 14, letterSpacing: 0 },
+  puntos: { flexDirection: 'row', gap: 6 },
   punto: { flex: 1, height: 4, borderRadius: 2 },
   entrada: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, minHeight: 52 },
   recordatorio: { borderWidth: 1, borderRadius: 12, padding: 14 },
@@ -436,6 +440,8 @@ const estilos = StyleSheet.create({
   enlaceCompletar: { marginTop: 8, minHeight: 48, justifyContent: 'center' },
   escala: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   puntoEscala: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  pie: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 18, borderTopWidth: 1 },
-  botonAtras: { minWidth: 88, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
+  pie: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  // 48 de alto: el piso de área táctil del proyecto, y con 50-60 años no es un detalle.
+  botonAtras: { minWidth: 88, minHeight: 52, alignItems: 'center', justifyContent: 'center' },
+  enlaceOpcional: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
 });

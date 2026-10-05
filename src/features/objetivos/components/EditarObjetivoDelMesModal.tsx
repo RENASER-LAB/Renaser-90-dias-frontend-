@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { Icon } from '../../../components/Icon';
-import { VeloModal } from '../../../components/VeloModal';
+import { GoldButton } from '../../../components/GoldButton';
+import { HojaDesdeAbajo } from '../../../components/hojaDesdeAbajo/HojaDesdeAbajo';
 import { useTheme } from '../../../theme/ThemeContext';
 import type { MesDelPlan } from '../api/planMensualApi';
 
@@ -58,72 +58,64 @@ export function EditarObjetivoDelMesModal({
   const limpio = valor.trim().replace(',', '.');
   const invalido = limpio !== '' && (!Number.isFinite(Number(limpio)) || Number(limpio) <= 0);
 
+  /*
+   * Hoja desde abajo (2026-10-05) en vez de la ventana centrada: su ✕ tiene 44 de área (antes un
+   * ícono de 16 con `hitSlop`), y se cierra también arrastrándola o tocando el fondo. `contenido`
+   * porque es un solo campo: la hoja mide lo que lleva.
+   */
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={cerrar}>
-      <VeloModal onCerrar={cerrar} style={estilos.velo}>
-        <View style={[estilos.tarjeta, { backgroundColor: c.cardBg, borderColor: c.border }]}>
-          <View style={estilos.encabezado}>
-            <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
-              OBJETIVO DEL MES {mes?.numeroMes ?? ''}
-            </Text>
-            <Pressable onPress={cerrar} hitSlop={12} accessibilityLabel="Cerrar">
-              <Icon name="close" size={16} color={c.textSoft} />
-            </Pressable>
-          </View>
+    <HojaDesdeAbajo
+      visible={visible}
+      alCerrar={cerrar}
+      titulo={mes ? `Objetivo del mes ${mes.numeroMes}` : 'Objetivo del mes'}
+      pie={
+        <GoldButton
+          label={guardando ? 'Guardando…' : 'Guardar'}
+          onPress={guardar}
+          disabled={guardando || invalido}
+          textStyle={{ fontSize: 15, letterSpacing: 0 }}
+        />
+      }
+    >
+      <View style={estilos.cuerpo}>
+        <Text style={[t.body, { color: c.text }]}>
+          ¿Dónde quieres estar al Día {mes?.diaDeCierre ?? ''}?
+        </Text>
 
-          <Text style={[t.body, { color: c.text, marginTop: 8 }]}>
-            ¿Dónde quieres estar al Día {mes?.diaDeCierre ?? ''}?
-          </Text>
-
-          <View style={estilos.fila}>
-            <TextInput
-              value={valor}
-              onChangeText={nuevo => {
-                setTocado(true);
-                setTexto(nuevo);
-              }}
-              keyboardType="decimal-pad"
-              placeholder="—"
-              placeholderTextColor={c.micro}
-              style={[
-                estilos.campo,
-                t.body,
-                { color: c.text, borderColor: invalido ? c.danger : c.border, backgroundColor: c.bg },
-              ]}
-              accessibilityLabel="Cifra del mes"
-            />
-            {!!unidad.trim() && (
-              <Text style={[t.body, { color: c.textSoft, marginLeft: 8 }]}>{unidad.trim()}</Text>
-            )}
-          </View>
-
-          {/* Vacío es una respuesta válida: deja el mes sin número, no rompe nada. Cero no: el
-              servidor lo rechaza porque una meta de cero necesita punto de partida para medirse. */}
-          <Text style={[t.micro, { color: invalido ? c.danger : c.micro, marginTop: 6, fontSize: 12 }]}>
-            {invalido ? 'Tiene que ser un número mayor que cero.' : 'Déjalo vacío para quitar la cifra.'}
-          </Text>
-
-          <Pressable
-            onPress={guardar}
-            disabled={guardando || invalido}
-            style={[estilos.boton, { backgroundColor: c.gold, opacity: guardando || invalido ? 0.5 : 1 }]}
-            accessibilityRole="button"
-          >
-            <Text style={[t.micro, { color: c.textStrong, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
-              {guardando ? 'GUARDANDO…' : 'GUARDAR'}
-            </Text>
-          </Pressable>
+        <View style={estilos.fila}>
+          <TextInput
+            value={valor}
+            onChangeText={nuevo => {
+              setTocado(true);
+              setTexto(nuevo);
+            }}
+            keyboardType="decimal-pad"
+            placeholder="—"
+            placeholderTextColor={c.tabInactive}
+            style={[
+              estilos.campo,
+              t.body,
+              { color: c.text, borderColor: invalido ? c.danger : c.border, backgroundColor: c.cardBgAlt },
+            ]}
+            accessibilityLabel="Cifra del mes"
+          />
+          {!!unidad.trim() && (
+            <Text style={[t.body, { color: c.textSoft, marginLeft: 8 }]}>{unidad.trim()}</Text>
+          )}
         </View>
-      </VeloModal>
-    </Modal>
+
+        {/* Vacío es una respuesta válida: deja el mes sin número, no rompe nada. Cero no: el
+            servidor lo rechaza porque una meta de cero necesita punto de partida para medirse. */}
+        <Text style={[t.small, { color: invalido ? c.danger : c.micro, marginTop: 6 }]}>
+          {invalido ? 'Tiene que ser un número mayor que cero.' : 'Déjalo vacío para quitar la cifra.'}
+        </Text>
+      </View>
+    </HojaDesdeAbajo>
   );
 }
 
 const estilos = StyleSheet.create({
-  velo: { backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', padding: 24 },
-  tarjeta: { borderWidth: 1, borderRadius: 18, padding: 20 },
-  encabezado: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  cuerpo: { paddingHorizontal: 20, paddingTop: 4 },
   fila: { flexDirection: 'row', alignItems: 'center', marginTop: 10 },
-  campo: { flex: 1, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12 },
-  boton: { marginTop: 18, borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
+  campo: { flex: 1, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, minHeight: 48 },
 });

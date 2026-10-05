@@ -18,7 +18,8 @@ const usos = (fuente: string) => fuente.split('{...barraAlDesplazar}').length - 
 /** Archivo → cuántas listas verticales con el comportamiento. */
 const PANTALLAS: Record<string, number> = {
   'src/screens/HoyScreen.tsx': 1,
-  'src/screens/PlanScreen.tsx': 3,
+  // Plan: la vista principal y Objetivos (la sub-vista «Hábitos 7 días» se borró el 2026-10-05).
+  'src/screens/PlanScreen.tsx': 2,
   'src/screens/TrainingScreen.tsx': 1,
   // Muro, Testimonios/Ranking, Classroom (catálogo, curso y lección) y Tribu.
   'src/screens/ComunidadScreen.tsx': 6,

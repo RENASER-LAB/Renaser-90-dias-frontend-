@@ -11,7 +11,8 @@ import type { EjeObjetivo, ItemPlanDiario, RocaDiariaApi } from '../types/objeti
 import { ETIQUETA_EJE } from '../types/objetivos.types';
 import { textoParaEmpezarAAgendar } from '../utils/ventanasDePlanificacion';
 import { AgendarAccionesModal } from './AgendarAccionesModal';
-import { Icon } from '../../../components/Icon';
+import { Icon, TAMANO_ICONO } from '../../../components/Icon';
+import { Presionable } from '../../../components/Presionable';
 import { useAuth } from '../../../context/AuthContext';
 import { RecordatorioDeAcciones } from './RecordatorioDeAcciones';
 
@@ -87,18 +88,17 @@ export function TarjetaAccionesDelDia({ diaria, semanal, semanalParaAgendar, dia
 
   return (
     <View style={[estilos.tarjeta, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
+      {/* `target` queda solo acá (2026-10-05): es «lo que hay que acertar hoy». Tipo oración. */}
       <View style={estilos.encabezado}>
-        <Icon name="target" size={18} color={c.goldInk} />
-        <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1, fontSize: 12 }]}>
-          3. TUS ACCIONES · DÍA {diaPrograma}
-        </Text>
+        <Icon name="target" size={TAMANO_ICONO.normal} color={c.goldInk} />
+        <Text style={[t.small, estilos.rotulo, { color: c.goldInk }]}>Tus acciones · día {diaPrograma}</Text>
       </View>
 
       {!hayPlanSemanal ? (
         <Text style={[t.body, { color: c.textSoft, fontSize: 15, marginTop: 8, lineHeight: 22 }]}>
           {semanalParaAgendar
             ? SIN_LA_SEMANA_QUE_EMPIEZA
-            : 'Primero arma tu semana. Las acciones del día salen de las que escribiste en tu Mapa, no se escriben sueltas.'}
+            : 'Primero arma tu semana: de ahí salen tus acciones.'}
         </Text>
       ) : cubos.length > 0 ? (
         <View style={{ gap: 10, marginTop: 10 }}>
@@ -106,9 +106,7 @@ export function TarjetaAccionesDelDia({ diaria, semanal, semanalParaAgendar, dia
             <View key={cubo.titulo} style={{ gap: 10 }}>
               {/* El rótulo sale de en qué cubo lo puso el servidor, no del reloj del teléfono:
                   a las 00:41 el dispositivo puede estar un día adelante del participante. */}
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
-                {cubo.titulo.toUpperCase()}
-              </Text>
+              <Text style={[t.small, estilos.rotulo, { color: c.goldInk }]}>{cubo.titulo}</Text>
               {cubo.rocas.map(roca => (
             <View key={roca.id} style={[estilos.fila, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
               {/* El color es la regla de Pareto, no decoración: la VERDE va primero y desbloquea
@@ -129,8 +127,11 @@ export function TarjetaAccionesDelDia({ diaria, semanal, semanalParaAgendar, dia
                   </Text>
                 ))}
               </View>
+              {/* Ícono y no el carácter «✓», que cada teléfono dibuja distinto. */}
               {roca.completada && (
-                <Text style={[t.small, { color: c.success, fontFamily: 'Jost_700Bold', fontSize: 14 }]}>✓</Text>
+                <View accessible accessibilityLabel="Cumplida">
+                  <Icon name="checkCircle" size={TAMANO_ICONO.normal} color={c.success} />
+                </View>
               )}
                 </View>
               ))}
@@ -144,11 +145,12 @@ export function TarjetaAccionesDelDia({ diaria, semanal, semanalParaAgendar, dia
               viernes — justo lo que el dueño pidió poder hacer ("planifico para todo lo que
               queda"). Se vio probando: la tarjeta mostraba el plan de hoy y el botón desaparecía. */}
           {puedeAgendar ? (
-            <Pressable onPress={() => setAgendando(true)} hitSlop={10}>
+            /* 48 de alto (2026-10-05): era un texto suelto con `hitSlop`, sin área propia. */
+            <Presionable onPress={() => setAgendando(true)} accessibilityRole="button" style={estilos.enlace}>
               <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 15 }]}>
                 Agendar otro día
               </Text>
-            </Pressable>
+            </Presionable>
           ) : (
             <Text style={[t.small, { color: c.textSoft, fontSize: 14, lineHeight: 20 }]}>{SIN_LA_SEMANA_QUE_EMPIEZA}</Text>
           )}
@@ -177,7 +179,7 @@ export function TarjetaAccionesDelDia({ diaria, semanal, semanalParaAgendar, dia
           eje abierto — las alarmas son de todas. Mismo control que Yo → Alarmas. */}
       {hayPlanSemanal && user?.id ? (
         <View style={{ marginTop: 16, gap: 8 }}>
-          <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>RECORDATORIOS</Text>
+          <Text style={[t.small, estilos.rotulo, { color: c.goldInk }]}>Recordatorios</Text>
           <RecordatorioDeAcciones userId={user.id} rocas={todasLasRocas} />
         </View>
       ) : null}
@@ -223,6 +225,9 @@ function colorDePareto(color: RocaDiariaApi['color'], c: Palette): string {
 const estilos = StyleSheet.create({
   tarjeta: { borderWidth: 1, borderRadius: 14, padding: 16 },
   encabezado: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  /** Rótulo en tipo oración (2026-10-05): reemplaza a las versales espaciadas. */
+  rotulo: { fontFamily: 'Jost_500Medium', fontSize: 14, lineHeight: 20, letterSpacing: 0 },
+  enlace: { minHeight: 48, justifyContent: 'center', alignSelf: 'flex-start' },
   fila: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 12, padding: 14 },
   marca: { width: 6, height: 34, borderRadius: 3 },
   /*

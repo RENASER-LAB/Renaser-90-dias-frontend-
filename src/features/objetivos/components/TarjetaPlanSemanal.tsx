@@ -9,7 +9,7 @@ import { EJES, ETIQUETA_EJE } from '../types/objetivos.types';
 import { textoVentanaSemanal } from '../utils/ventanasDePlanificacion';
 import { PlanSemanalModal } from './PlanSemanalModal';
 import { RevisionSemanalModal } from './RevisionSemanalModal';
-import { Icon } from '../../../components/Icon';
+import { Icon, TAMANO_ICONO } from '../../../components/Icon';
 
 /**
  * Parte 2 del plan: la semana.
@@ -85,11 +85,11 @@ export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, semanaQueE
 
   return (
     <View style={[estilos.tarjeta, { borderColor: c.border, backgroundColor: c.cardBg }]}>
+      {/* `calendarRange` dorado (2026-10-05): era `zap` —los puntos en Hoy— con el texto en verde, que
+          en la app quiere decir «cumplido». Tipo oración en vez de «2. TU SEMANA 03». */}
       <View style={estilos.encabezado}>
-        <Icon name="zap" size={18} color={c.goldInk} />
-        <Text style={[t.micro, { color: c.success, fontFamily: 'Jost_700Bold', letterSpacing: 1, fontSize: 12 }]}>
-          2. TU SEMANA {String(numeroSemana).padStart(2, '0')}
-        </Text>
+        <Icon name="calendarRange" size={TAMANO_ICONO.normal} color={c.goldInk} />
+        <Text style={[t.small, estilos.rotulo, { color: c.goldInk }]}>Tu semana {numeroSemana}</Text>
       </View>
 
       {semanal.estado === 'cargando' && (
@@ -98,9 +98,10 @@ export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, semanaQueE
 
       {semanal.estado === 'bloqueada' && (
         <View style={{ gap: 12, marginTop: 8 }}>
+          {/* Dos renglones (2026-10-05, decisión del dueño de acortar): antes nombraba los tres ejes,
+              que el selector de arriba ya muestra. */}
           <Text style={[t.body, { color: c.textSoft, fontSize: 15, lineHeight: 22 }]}>
-            Primero define tus tres objetivos de 90 días: uno de cuerpo, uno de negocio y dinero, y
-            uno de relaciones. La semana se arma a partir de ellos.
+            Primero define tus tres objetivos de 90 días: la semana se arma a partir de ellos.
           </Text>
           {!!onIrAlMapa && (
             <Pressable onPress={onIrAlMapa} style={[estilos.boton, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
@@ -121,8 +122,7 @@ export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, semanaQueE
       {semanal.estado === 'sin_planificar' && !semanaQueEmpieza && (
         <View style={{ gap: 12, marginTop: 8 }}>
           <Text style={[t.body, { color: c.textSoft, fontSize: 15, lineHeight: 22 }]}>
-            Todavía no armaste esta semana. Con tu eje principal alcanza; los otros dos los sumas
-            cuando quieras.
+            Todavía no la armaste. Con tu eje principal alcanza.
           </Text>
           <Pressable
             onPress={() => setPlanificando(true)}
@@ -152,9 +152,7 @@ export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, semanaQueE
             if (!roca) {
               return (
                 <View key={eje} style={[estilos.bloqueEje, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
-                  <Text style={[t.micro, { color: c.textSoft, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
-                    {ETIQUETA_EJE[eje].toUpperCase()}
-                  </Text>
+                  <Text style={[t.small, estilos.rotulo, { color: c.textSoft }]}>{ETIQUETA_EJE[eje]}</Text>
                   <Text style={[t.body, { color: c.textSoft, fontSize: 15, marginTop: 4, lineHeight: 21 }]}>
                     {semanaQueEmpieza ? 'Esta semana no le pusiste objetivo.' : 'Todavía no le pusiste objetivo esta semana.'}
                   </Text>
@@ -173,9 +171,7 @@ export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, semanaQueE
             const cerrada = roca.autoevaluacionFin != null;
             return (
               <View key={eje} style={[estilos.bloqueEje, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
-                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
-                  {ETIQUETA_EJE[eje].toUpperCase()}
-                </Text>
+                <Text style={[t.small, estilos.rotulo, { color: c.goldInk }]}>{ETIQUETA_EJE[eje]}</Text>
                 <Text style={[t.body, { color: c.textStrong, fontSize: 16, marginTop: 4, lineHeight: 22 }]}>
                   {roca.titulo}
                 </Text>
@@ -204,8 +200,8 @@ export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, semanaQueE
           sostiene las acciones del lunes: sin su objetivo, agendarlas da NO_WEEKLY_ROCK. */}
       {semanaQueEmpieza && semanal.estado !== 'cargando' && semanal.estado !== 'bloqueada' && (
         <View style={[estilos.bloqueEje, { borderColor: c.gold, backgroundColor: c.cardBgAlt, marginTop: 12 }]}>
-          <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
-            LA QUE EMPIEZA EL LUNES · SEMANA {String(semanaQueEmpieza.numeroSemana).padStart(2, '0')}
+          <Text style={[t.small, estilos.rotulo, { color: c.goldInk }]}>
+            La que empieza el lunes · semana {semanaQueEmpieza.numeroSemana}
           </Text>
           {semanaQueEmpieza.semanal.estado === 'cargando' ? (
             <Text style={[t.small, { color: c.textSoft, fontSize: 15, marginTop: 4 }]}>Cargando…</Text>
@@ -263,6 +259,8 @@ export function TarjetaPlanSemanal({ semanal, maestras, numeroSemana, semanaQueE
 const estilos = StyleSheet.create({
   tarjeta: { borderWidth: 1, borderRadius: 14, padding: 16 },
   encabezado: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  /** Rótulo en tipo oración (2026-10-05): reemplaza a las versales espaciadas. */
+  rotulo: { fontFamily: 'Jost_500Medium', fontSize: 14, lineHeight: 20, letterSpacing: 0 },
   bloqueEje: { borderWidth: 1, borderRadius: 12, padding: 14 },
   boton: { minHeight: 48, borderWidth: 1, borderRadius: 10, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 },
   enlace: { marginTop: 8, minHeight: 48, justifyContent: 'center' },

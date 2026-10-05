@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { GoldButton } from '../../../components/GoldButton';
 import { RuedaHoraPicker } from '../../habits/components/RuedaHoraPicker';
@@ -14,7 +14,10 @@ import { FilaDeDiasDelPlan } from '../../habits/components/FilaDeDiasDelPlan';
 import { DIAS_DEL_PLAN, fechasIsoDeLaSemana, type DiaDelPlan } from '../../habits/utils/semanaDelPlan';
 import { diaAgendable, diaInicialDelPlanificador, textoDeLaFilaDeDias } from '../utils/ventanasDePlanificacion';
 import { posicionarPorEje } from '../hooks/useRocasDiarias';
-import { Icon } from '../../../components/Icon';
+import { HojaDesdeAbajo } from '../../../components/hojaDesdeAbajo/HojaDesdeAbajo';
+import { Icon, TAMANO_ICONO } from '../../../components/Icon';
+import { Presionable } from '../../../components/Presionable';
+import { tacto } from '../../../utils/tacto';
 
 /**
  * Elegir qué acciones críticas van hoy, y a qué hora.
@@ -267,222 +270,221 @@ export function AgendarAccionesModal({
     );
   };
 
+  /** Cambiar de día en la fila: un «tic» cuando de verdad cambia. */
+  const elegirDia = (dia: DiaDelPlan) => {
+    if (dia !== diaElegido) tacto.seleccion();
+    setDiaElegido(dia);
+  };
+
+  /*
+   * Hoja desde abajo (2026-10-05) en vez de la ventana centrada, con el mismo contenido. La ✕ (y
+   * arrastrar, tocar el fondo o atrás) cierra la hoja entera; para salir de la rueda sin elegir hora
+   * está «Cancelar», abajo. `grande` porque es la lista más larga de Plan.
+   */
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCerrar}>
-      <View style={[estilos.fondo, { backgroundColor: 'rgba(0,0,0,0.7)' }]}>
-        <View style={[estilos.tarjeta, { backgroundColor: c.cardBg, borderColor: c.border }]}>
-          <View style={[estilos.encabezado, { borderBottomColor: c.divider }]}>
-            <View style={{ flex: 1 }}>
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1, fontSize: 12 }]}>
-                {eligiendoHoraDe ? 'ELEGIR HORA' : 'AGENDAR MIS ACCIONES'}
-              </Text>
-              <Text style={[t.small, { color: c.textSoft, fontSize: 14, marginTop: 2 }]} numberOfLines={2}>
-                {eligiendoHoraDe ? eligiendoHoraDe.split('|')[1] : 'Elige hasta tres por eje. La hora es opcional.'}
-              </Text>
-            </View>
-            <Pressable
-              onPress={() => (eligiendoHoraDe ? setEligiendoHoraDe(null) : onCerrar())}
-              hitSlop={16}
-              style={estilos.botonCerrar}
-            >
-              <Icon name="close" size={18} color={c.textSoft} />
-            </Pressable>
+    <HojaDesdeAbajo
+      visible={visible}
+      alCerrar={onCerrar}
+      titulo={eligiendoHoraDe ? 'Elegir hora' : 'Agendar mis acciones'}
+      subtitulo={eligiendoHoraDe ? eligiendoHoraDe.split('|')[1] : 'Elige hasta tres por eje. La hora es opcional.'}
+      tamano="grande"
+      pie={
+        eligiendoHoraDe ? (
+          <View style={{ gap: 4 }}>
+            <GoldButton label="Listo" onPress={confirmarHora} textStyle={TEXTO_DE_BOTON} />
+            <Presionable onPress={() => setEligiendoHoraDe(null)} accessibilityRole="button" style={estilos.enlacePie}>
+              <Text style={[t.small, { color: c.textSoft, fontFamily: 'Jost_500Medium', fontSize: 14 }]}>Cancelar</Text>
+            </Presionable>
+          </View>
+        ) : (
+          <View>
+            <GoldButton
+              label={guardando ? 'Agendando…' : `Agendar ${elegidas.length > 0 ? `(${elegidas.length})` : ''}`.trim()}
+              onPress={guardar}
+              disabled={elegidas.length === 0 || guardando}
+              textStyle={TEXTO_DE_BOTON}
+            />
+            {/* Se muestra la fecha exacta que se va a mandar, en vez de decir "hoy": el
+                dispositivo puede estar en otro día que el participante. */}
+            <Text style={[t.small, { color: c.textSoft, fontSize: 13, marginTop: 8, textAlign: 'center' }]}>
+              Se agendan para el {fechaAGuardar} y aparecen en Entrenamiento, en Vida y Negocio
+            </Text>
+          </View>
+        )
+      }
+    >
+      {eligiendoHoraDe ? (
+        <View style={{ paddingHorizontal: 20, paddingTop: 8, gap: 14 }}>
+          <Text style={[t.body, { color: c.textStrong, fontSize: 30, textAlign: 'center' }]}>
+            {String(horaEnCurso.hora).padStart(2, '0')}:{String(horaEnCurso.minuto).padStart(2, '0')}
+          </Text>
+          <RuedaHoraPicker
+            horaInicial={horaEnCurso.hora}
+            minutoInicial={horaEnCurso.minuto}
+            onCambiar={(hora, minuto) => setHoraEnCurso({ hora, minuto })}
+          />
+          <Pressable onPress={quitarHora} style={[estilos.botonHora, { borderColor: c.border, marginLeft: 0 }]}>
+            <Text style={[t.body, { color: c.textSoft, fontSize: 15 }]}>Dejarla sin hora</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={estilos.cuerpo} keyboardShouldPersistTaps="handled">
+          {/* QUÉ DÍA. La misma fila que el planificador de hábitos de Training —el dueño pidió
+              esa interfaz— pero con la regla de las acciones: hoy SÍ se agenda mientras la
+              ventana nocturna no haya abierto. Ver `diaAgendable`. */}
+          <View style={{ gap: 4 }}>
+            <Text style={[t.small, estilos.etiqueta, { color: c.goldInk }]}>¿Qué día?</Text>
+            <FilaDeDiasDelPlan
+              corre={TODOS_LOS_DIAS}
+              enEdicion={[diaElegido]}
+              planificable={dia => diaAgendable(dia)}
+              onAlternarDia={elegirDia}
+            />
+            <Text style={[t.small, { color: c.textSoft, fontSize: 12.5, marginTop: 5, lineHeight: 17 }]}>
+              {textoDeLaFilaDeDias()}
+            </Text>
           </View>
 
-          {eligiendoHoraDe ? (
-            <View style={{ padding: 18, gap: 14 }}>
-              <Text style={[t.body, { color: c.textStrong, fontSize: 30, textAlign: 'center' }]}>
-                {String(horaEnCurso.hora).padStart(2, '0')}:{String(horaEnCurso.minuto).padStart(2, '0')}
+          {disponibles.map(({ eje, roca, acciones }) => (
+            <View key={eje} style={{ gap: 10 }}>
+              <Text style={[t.small, estilos.etiqueta, { color: c.goldInk }]}>
+                {ETIQUETA_EJE[eje]}  ·  {cuantasDe(eje)}/{MAXIMO_POR_EJE}
               </Text>
-              <RuedaHoraPicker
-                horaInicial={horaEnCurso.hora}
-                minutoInicial={horaEnCurso.minuto}
-                onCambiar={(hora, minuto) => setHoraEnCurso({ hora, minuto })}
-              />
-              <Pressable onPress={quitarHora} style={[estilos.botonHora, { borderColor: c.border, marginLeft: 0 }]}>
-                <Text style={[t.body, { color: c.textSoft, fontSize: 15 }]}>Dejarla sin hora</Text>
-              </Pressable>
-            </View>
-          ) : (
-            <ScrollView contentContainerStyle={{ padding: 18, gap: 18 }}>
-              {/* QUÉ DÍA. La misma fila que el planificador de hábitos de Training —el dueño pidió
-                  esa interfaz— pero con la regla de las acciones: hoy SÍ se agenda mientras la
-                  ventana nocturna no haya abierto. Ver `diaAgendable`. */}
-              <View style={{ gap: 4 }}>
-                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 12 }]}>
-                  ¿QUÉ DÍA?
-                </Text>
-                <FilaDeDiasDelPlan
-                  corre={TODOS_LOS_DIAS}
-                  enEdicion={[diaElegido]}
-                  planificable={dia => diaAgendable(dia)}
-                  onAlternarDia={setDiaElegido}
-                />
-                <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5, marginTop: 5, lineHeight: 14 }]}>
-                  {textoDeLaFilaDeDias()}
-                </Text>
-              </View>
+              <Text style={[t.small, { color: c.textSoft, fontSize: 14, lineHeight: 20 }]}>{roca.titulo}</Text>
+              {opcionesDe(eje, acciones).map(accion => {
+                const indice = indiceDe(eje, accion.texto);
+                const elegida = indice >= 0;
+                const clave = `${eje}|${accion.texto}`;
+                const hora = elegida ? elegidas[indice].hora : '';
+                const pasos = elegida ? elegidas[indice].pasos : [];
+                const tope = !elegida && cuantasDe(eje) >= MAXIMO_POR_EJE;
+                const dias = diasEscritos(accion.dias);
+                return (
+                  <View key={accion.texto} style={{ gap: 6 }}>
+                    <Pressable
+                      onPress={() => alternar(eje, accion.texto)}
+                      disabled={tope}
+                      style={[
+                        estilos.opcion,
+                        {
+                          borderColor: elegida ? c.gold : c.border,
+                          backgroundColor: elegida ? c.cardBgAlt : c.cardBg,
+                          opacity: tope ? 0.45 : 1,
+                        },
+                      ]}
+                    >
+                      <View
+                        style={[
+                          estilos.casilla,
+                          { borderColor: elegida ? c.gold : c.border, backgroundColor: elegida ? c.gold : 'transparent' },
+                        ]}
+                      >
+                        {elegida && <Icon name="check" size={TAMANO_ICONO.chico} color={c.onGold} />}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[t.body, { color: c.textStrong, fontSize: 15, lineHeight: 21 }]}>
+                          {accion.texto}
+                        </Text>
+                        {/* El ritmo que la persona le puso en el Mapa. Sin esto, "por qué viene
+                            marcada" no se puede contestar mirando la pantalla. */}
+                        {!!dias && (
+                          <Text style={[t.micro, { color: tocaHoy(accion) ? c.goldInk : c.micro, fontSize: 12, marginTop: 2 }]}>
+                            {dias}{tocaHoy(accion) ? '  ·  hoy' : ''}
+                          </Text>
+                        )}
+                      </View>
+                    </Pressable>
+                    {elegida && (
+                      <Pressable
+                        onPress={() => abrirRueda(clave, hora)}
+                        style={[estilos.botonHora, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
+                      >
+                        <Text style={[t.body, { color: hora ? c.goldInk : c.textSoft, fontSize: 15, fontFamily: 'Jost_700Bold' }]}>
+                          {hora ? `A las ${hora}` : 'Ponerle hora (opcional)'}
+                        </Text>
+                      </Pressable>
+                    )}
 
-              {disponibles.map(({ eje, roca, acciones }) => (
-                <View key={eje} style={{ gap: 10 }}>
-                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 12 }]}>
-                    {ETIQUETA_EJE[eje].toUpperCase()}  ·  {cuantasDe(eje)}/{MAXIMO_POR_EJE}
-                  </Text>
-                  <Text style={[t.small, { color: c.textSoft, fontSize: 14, lineHeight: 20 }]}>{roca.titulo}</Text>
-                  {opcionesDe(eje, acciones).map(accion => {
-                    const indice = indiceDe(eje, accion.texto);
-                    const elegida = indice >= 0;
-                    const clave = `${eje}|${accion.texto}`;
-                    const hora = elegida ? elegidas[indice].hora : '';
-                    const pasos = elegida ? elegidas[indice].pasos : [];
-                    const tope = !elegida && cuantasDe(eje) >= MAXIMO_POR_EJE;
-                    const dias = diasEscritos(accion.dias);
-                    return (
-                      <View key={accion.texto} style={{ gap: 6 }}>
-                        <Pressable
-                          onPress={() => alternar(eje, accion.texto)}
-                          disabled={tope}
-                          style={[
-                            estilos.opcion,
-                            {
-                              borderColor: elegida ? c.gold : c.border,
-                              backgroundColor: elegida ? c.cardBgAlt : c.cardBg,
-                              opacity: tope ? 0.45 : 1,
-                            },
-                          ]}
-                        >
-                          <View
+                    {/* LOS PASOS (V61). Aparecen solo si la persona los pide: arranca sin
+                        ningún campo y cada toque agrega uno, hasta tres.
+
+                        Es deliberado que no haya tres cajas esperando. Un objetivo del día
+                        puede ser una sola cosa que no necesita desglose, y tres campos vacíos
+                        en pantalla se leen como una obligación — que es exactamente lo que
+                        llevaba a rellenar por rellenar cuando estas acciones vivían, de a tres
+                        y obligatorias, colgando de la semana. */}
+                    {elegida && (
+                      <View style={{ gap: 6, marginLeft: 38 }}>
+                        {pasos.map((paso, indice) => (
+                          <TextInput
+                            key={indice}
+                            value={paso}
+                            onChangeText={texto => cambiarPaso(clave, indice, texto)}
+                            placeholder={`Paso ${indice + 1}`}
+                            placeholderTextColor={c.chevron}
                             style={[
-                              estilos.casilla,
-                              { borderColor: elegida ? c.gold : c.border, backgroundColor: elegida ? c.gold : 'transparent' },
+                              estilos.paso,
+                              { borderColor: c.border, backgroundColor: c.cardBg, color: c.textStrong },
                             ]}
-                          >
-                            {elegida && <Text style={{ color: c.onGold, fontSize: 14, fontFamily: 'Jost_700Bold' }}>✓</Text>}
-                          </View>
-                          <View style={{ flex: 1 }}>
-                            <Text style={[t.body, { color: c.textStrong, fontSize: 15, lineHeight: 21 }]}>
-                              {accion.texto}
-                            </Text>
-                            {/* El ritmo que la persona le puso en el Mapa. Sin esto, "por qué viene
-                                marcada" no se puede contestar mirando la pantalla. */}
-                            {!!dias && (
-                              <Text style={[t.micro, { color: tocaHoy(accion) ? c.goldInk : c.micro, fontSize: 12, marginTop: 2 }]}>
-                                {dias}{tocaHoy(accion) ? '  ·  hoy' : ''}
-                              </Text>
-                            )}
-                          </View>
-                        </Pressable>
-                        {elegida && (
-                          <Pressable
-                            onPress={() => abrirRueda(clave, hora)}
-                            style={[estilos.botonHora, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
-                          >
-                            <Text style={[t.body, { color: hora ? c.goldInk : c.textSoft, fontSize: 15, fontFamily: 'Jost_700Bold' }]}>
-                              {hora ? `A las ${hora}` : 'Ponerle hora (opcional)'}
+                          />
+                        ))}
+                        {pasos.length < MAXIMO_PASOS && (
+                          <Pressable onPress={() => agregarPaso(clave)} hitSlop={10}>
+                            <Text style={[t.small, { color: c.goldInk, fontSize: 14, fontFamily: 'Jost_700Bold' }]}>
+                              {pasos.length === 0 ? '+ Desglosarla en pasos (opcional)' : '+ Otro paso'}
                             </Text>
                           </Pressable>
                         )}
-
-                        {/* LOS PASOS (V61). Aparecen solo si la persona los pide: arranca sin
-                            ningún campo y cada toque agrega uno, hasta tres.
-
-                            Es deliberado que no haya tres cajas esperando. Un objetivo del día
-                            puede ser una sola cosa que no necesita desglose, y tres campos vacíos
-                            en pantalla se leen como una obligación — que es exactamente lo que
-                            llevaba a rellenar por rellenar cuando estas acciones vivían, de a tres
-                            y obligatorias, colgando de la semana. */}
-                        {elegida && (
-                          <View style={{ gap: 6, marginLeft: 38 }}>
-                            {pasos.map((paso, indice) => (
-                              <TextInput
-                                key={indice}
-                                value={paso}
-                                onChangeText={texto => cambiarPaso(clave, indice, texto)}
-                                placeholder={`Paso ${indice + 1}`}
-                                placeholderTextColor={c.chevron}
-                                style={[
-                                  estilos.paso,
-                                  { borderColor: c.border, backgroundColor: c.cardBg, color: c.textStrong },
-                                ]}
-                              />
-                            ))}
-                            {pasos.length < MAXIMO_PASOS && (
-                              <Pressable onPress={() => agregarPaso(clave)} hitSlop={10}>
-                                <Text style={[t.small, { color: c.goldInk, fontSize: 14, fontFamily: 'Jost_700Bold' }]}>
-                                  {pasos.length === 0 ? '+ Desglosarla en pasos (opcional)' : '+ Otro paso'}
-                                </Text>
-                              </Pressable>
-                            )}
-                          </View>
-                        )}
                       </View>
-                    );
-                  })}
-                  {/*
-                    > **Agregado el 2026-09-23.** Antes solo se podía elegir de lo que la persona
-                    > había escrito el día 7 en el Mapa. El dueño lo vio en pantalla: *"no puedo
-                    > agregar otro, puedo agendar lo que yo quiera"*. El tope de tres por eje se
-                    > mantiene porque lo impone la base (`posicion BETWEEN 1 AND 3`), no la pantalla.
-                  */}
-                  {cuantasDe(eje) < MAXIMO_POR_EJE && (
-                    <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-                      <TextInput
-                        value={escribiendo[eje] ?? ''}
-                        onChangeText={texto => setEscribiendo(previo => ({ ...previo, [eje]: texto }))}
-                        onSubmitEditing={() => agregarPropia(eje)}
-                        returnKeyType="done"
-                        placeholder="Escribe otra acción tuya"
-                        placeholderTextColor={c.chevron}
-                        style={[
-                          estilos.paso,
-                          { flex: 1, borderColor: c.border, backgroundColor: c.cardBg, color: c.textStrong },
-                        ]}
-                      />
-                      <Pressable onPress={() => agregarPropia(eje)} hitSlop={10}>
-                        <Text style={[t.small, { color: c.goldInk, fontSize: 15, fontFamily: 'Jost_700Bold' }]}>
-                          Agregar
-                        </Text>
-                      </Pressable>
-                    </View>
-                  )}
+                    )}
+                  </View>
+                );
+              })}
+              {/*
+                > **Agregado el 2026-09-23.** Antes solo se podía elegir de lo que la persona
+                > había escrito el día 7 en el Mapa. El dueño lo vio en pantalla: *"no puedo
+                > agregar otro, puedo agendar lo que yo quiera"*. El tope de tres por eje se
+                > mantiene porque lo impone la base (`posicion BETWEEN 1 AND 3`), no la pantalla.
+              */}
+              {cuantasDe(eje) < MAXIMO_POR_EJE && (
+                <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                  <TextInput
+                    value={escribiendo[eje] ?? ''}
+                    onChangeText={texto => setEscribiendo(previo => ({ ...previo, [eje]: texto }))}
+                    onSubmitEditing={() => agregarPropia(eje)}
+                    returnKeyType="done"
+                    placeholder="Escribe otra acción tuya"
+                    placeholderTextColor={c.chevron}
+                    style={[
+                      estilos.paso,
+                      { flex: 1, borderColor: c.border, backgroundColor: c.cardBg, color: c.textStrong },
+                    ]}
+                  />
+                  <Pressable onPress={() => agregarPropia(eje)} hitSlop={10}>
+                    <Text style={[t.small, { color: c.goldInk, fontSize: 15, fontFamily: 'Jost_700Bold' }]}>
+                      Agregar
+                    </Text>
+                  </Pressable>
                 </View>
-              ))}
-            </ScrollView>
-          )}
+              )}
+            </View>
+          ))}
+        </ScrollView>
+      )}
 
-          <View style={[estilos.pie, { borderTopColor: c.divider }]}>
-            {eligiendoHoraDe ? (
-              <GoldButton label="LISTO" onPress={confirmarHora} />
-            ) : (
-              <GoldButton
-                label={guardando ? 'AGENDANDO…' : `AGENDAR ${elegidas.length > 0 ? `(${elegidas.length})` : ''}`.trim()}
-                onPress={guardar}
-                disabled={elegidas.length === 0 || guardando}
-              />
-            )}
-            {!eligiendoHoraDe && (
-              <Text style={[t.small, { color: c.textSoft, fontSize: 13, marginTop: 8, textAlign: 'center' }]}>
-                {/* Se muestra la fecha exacta que se va a mandar, en vez de decir "hoy": el
-                  dispositivo puede estar en otro día que el participante. */}
-              Se agendan para el {fechaAGuardar} y aparecen en Entrenamiento, en Vida y Negocio
-              </Text>
-            )}
-          </View>
-        </View>
-      </View>
-
-    </Modal>
+    </HojaDesdeAbajo>
   );
 }
 
+/** Botones en tipo oración y a tamaño de lectura (`GoldButton` va en versales espaciadas por defecto). */
+const TEXTO_DE_BOTON = { fontSize: 15, letterSpacing: 0 } as const;
+
 const estilos = StyleSheet.create({
-  fondo: { flex: 1, justifyContent: 'center', padding: 16 },
-  tarjeta: { borderRadius: 16, borderWidth: 1, maxHeight: '92%', overflow: 'hidden' },
-  encabezado: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 18, borderBottomWidth: 1 },
-  botonCerrar: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
+  cuerpo: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12, gap: 18 },
+  etiqueta: { fontFamily: 'Jost_500Medium', fontSize: 14, letterSpacing: 0 },
+  enlacePie: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   opcion: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 12, padding: 14, minHeight: 56 },
   casilla: { width: 26, height: 26, borderRadius: 6, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   botonHora: { minHeight: 48, borderWidth: 1, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginLeft: 38 },
   paso: { minHeight: 48, borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, fontSize: 15 },
-  pie: { padding: 18, borderTopWidth: 1 },
 });
