@@ -68,7 +68,8 @@ describe('Hoy: textos en tipo oración', () => {
       expect({ viejo, esta: HOY.includes(viejo) }).toEqual({ viejo, esta: false });
     }
     expect(HOY).toMatch(/Día \{diaConocido \?\? '—'\} de \{DIAS_DEL_PROGRAMA\}/);
-    expect(HOY).toMatch(/\{puntosLiga\} pts/);
+    // Desde el 2026-10-05 sin dato dice «— pts» (ver `hoySinDatosInventados.test.ts`).
+    expect(HOY).toMatch(/\{puntosLiga \?\? '—'\} pts/);
     expect(HOY).toMatch(/>\s*Tu acompañante\s*</);
   });
 
