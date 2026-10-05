@@ -37,10 +37,13 @@ export function MenuDelMensaje({
   alResponder,
   alCopiar,
   puedeCopiar,
+  alTerminarDeCerrar,
 }: AccionesDelMensaje & {
   /** El mensaje del menú; `null` con la hoja cerrada. */
   mensaje: ChatMessage | null;
   alCerrar: () => void;
+  /** La hoja ya bajó y se fue: ahí recién se puede abrir el teclado del campo (ver `HojaDesdeAbajo`). */
+  alTerminarDeCerrar?: () => void;
 }) {
   const cita = mensaje ? citaDeMensajeCargado(mensaje) : null;
   const opciones = mensaje ? opcionesDelMensaje(mensaje, puedeCopiar) : [];
@@ -58,6 +61,7 @@ export function MenuDelMensaje({
     <HojaDesdeAbajo
       visible={mensaje !== null}
       alCerrar={alCerrar}
+      alTerminarDeCerrar={alTerminarDeCerrar}
       titulo={cita ? (cita.esMia ? 'Tu mensaje' : `Mensaje de ${cita.autor}`) : 'Mensaje'}
       subtitulo={cita?.resumen}
       etiquetaCerrar="Cerrar las opciones del mensaje"

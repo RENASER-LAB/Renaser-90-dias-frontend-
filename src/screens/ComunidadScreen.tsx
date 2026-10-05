@@ -567,7 +567,13 @@ function VerMasOMenos({ abierto }: { abierto: boolean }) {
   const { c, t } = useTheme();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-      <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>{abierto ? 'Ver menos' : 'Ver más'}</Text>
+      {/* `paddingRight: 1` (2026-10-05, emulador Android): en el detalle del curso se leía «Ver» y
+          un hueco antes del chevron. La caja del texto medía lo justo y, al ajustarla a píxeles
+          enteros, quedaba una fracción de píxel más angosta que la frase: «más»/«menos» pasaba a
+          un segundo renglón que la caja (de un renglón de alto) no mostraba. En la tarjeta de la
+          lista no pasaba porque ahí la caja caía en otra posición y redondeaba para arriba. 1 dp
+          son 1 a 3 píxeles: más que lo que se pierde al redondear, en cualquier densidad. */}
+      <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', paddingRight: 1 }]}>{abierto ? 'Ver menos' : 'Ver más'}</Text>
       {/* `chevron` apunta a la derecha: 90° baja (se abre), −90° sube (se cierra). */}
       <View style={{ transform: [{ rotate: abierto ? '-90deg' : '90deg' }] }}>
         <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.goldInk} />
@@ -1013,11 +1019,25 @@ export default function ComunidadScreen() {
     Keyboard.dismiss();
     setMensajeDelMenu(mensaje);
   }, []);
+  /*
+   * Como WhatsApp: elegir «Responder» deja el teclado listo para escribir. El campo se enfoca cuando
+   * la hoja del menú ya se fue (`alTerminarDeCerrar`), no a un tiempo fijo.
+   *
+   * > **Corregido 2026-10-05.** Decía `setTimeout(() => campo.focus(), 250)`. En Android la hoja
+   * > tarda 200 ms en bajar y después se desmonta su `Modal`: a los 250 ms la ventana con el foco
+   * > seguía siendo la del `Modal`, el campo quedaba con el cursor y el teclado no se abría (había
+   * > que tocar el campo otra vez). En la web no pasaba. Visto en el emulador Pixel 6.
+   */
+  const enfocarAlCerrarElMenu = useRef(false);
   const responderA = useCallback((mensaje: ChatMessage) => {
     setMensajeDelMenu(null);
     setCitando(mensaje);
-    // Como WhatsApp: elegir «Responder» deja el teclado listo para escribir.
-    setTimeout(() => campoDelChatRef.current?.focus(), 250);
+    enfocarAlCerrarElMenu.current = true;
+  }, []);
+  const alTerminarDeCerrarElMenu = useCallback(() => {
+    if (!enfocarAlCerrarElMenu.current) return;
+    enfocarAlCerrarElMenu.current = false;
+    campoDelChatRef.current?.focus();
   }, []);
   const copiarMensaje = useCallback((texto: string) => {
     setMensajeDelMenu(null);
@@ -4107,15 +4127,23 @@ export default function ComunidadScreen() {
           de modo que en un dispositivo donde la ventana SÍ se encoja el resultado da 0 y no
           agrega nada. No hay riesgo de levantar el composer de más.
 
-          `keyboardVerticalOffset={insets.top}`: el alto lo mide contra su padre (el SafeAreaView),
-          cuyo origen ya está por debajo del inset de arriba, mientras que la posición del teclado
-          viene en coordenadas de pantalla. Sin compensar esa diferencia la barra quedaba justo
-          esos píxeles por debajo del borde del teclado — medio tapada.
+          Sin `keyboardVerticalOffset` (= 0). React Native resta `y + alto` de esta vista (de su
+          `onLayout`, relativo al padre) menos el borde del teclado (coordenadas de pantalla). El
+          padre es el `SafeAreaView`, que empieza en el borde de arriba de la PANTALLA y aplica el
+          inset como padding: la `y` de esta vista ya trae `insets.top` adentro, así que las dos
+          cuentas están en el mismo sistema y no hay nada que compensar.
+
+          > **Corregido 2026-10-05.** Decía `keyboardVerticalOffset={insets.top}`, con la idea de
+          > que el origen del padre «ya estaba por debajo del inset de arriba». Desde que la
+          > conversación va a pantalla completa ya no es así, y el inset se contaba dos veces: en
+          > Android (Pixel 6, emulador) la barra de escribir quedaba flotando 48 dp por encima del
+          > teclado, con una franja vacía del color del chat en medio. Medido: la vista en
+          > `y = 48,76`, alto `841,52` (fondo en 890,29 = 914,29 − 24 del inset de abajo), teclado
+          > con `screenY = 577,90`; con `insets.top` el relleno daba 361,14 en vez de 312,38.
         */
         <KeyboardAvoidingView
           style={{ flex: 1, backgroundColor: paletaDelChat.fondo }}
           behavior="padding"
-          keyboardVerticalOffset={insets.top}
         >
           {/* Cabecera estilo WhatsApp (2026-09-26): avatar, nombre y «Grupo · N integrantes» /
               «Aprendiz · 1 a 1» / «En línea». Tocarla abre la info (en un grupo, sus integrantes).
@@ -4342,6 +4370,7 @@ export default function ComunidadScreen() {
           alResponder={responderA}
           alCopiar={copiarMensaje}
           puedeCopiar={puedeCopiar}
+          alTerminarDeCerrar={alTerminarDeCerrarElMenu}
         />
       )}
 

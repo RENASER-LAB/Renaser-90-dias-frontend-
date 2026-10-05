@@ -74,6 +74,13 @@ export interface HojaDesdeAbajoProps {
   visible: boolean;
   /** La persona pidió cerrarla (gesto, fondo, ✕, atrás). Quien la usa debe poner `visible` en `false`. */
   alCerrar: () => void;
+  /**
+   * Ya se fue del todo: terminó de bajar y su `Modal` se desmontó. Para lo que no puede pasar con la
+   * hoja todavía encima. En Android, enfocar un campo de la pantalla de abajo mientras el `Modal`
+   * sigue en pantalla deja el cursor puesto y el teclado cerrado: la ventana con el foco es la del
+   * `Modal`, y el sistema ignora el pedido de abrir el teclado (visto en el emulador, 2026-10-05).
+   */
+  alTerminarDeCerrar?: () => void;
   titulo: string;
   /** Una línea bajo el título; p. ej. la fecha que se está eligiendo, en vivo. */
   subtitulo?: string;
@@ -96,6 +103,8 @@ const SIN_SELECCION_EN_WEB = (Platform.OS === 'web' ? { userSelect: 'none' } : n
 /** Lo que queda de fondo oscuro arriba de una hoja `grande`: que se lea como hoja, no como pantalla. */
 const AIRE_ARRIBA_GRANDE = 40;
 const ANCHO_MAXIMO = 560;
+/** Lo que se espera en Android, ya desmontado el `Modal`, para avisar que la hoja se fue (`alTerminarDeCerrar`). */
+export const ESPERA_VENTANA_ANDROID_MS = 150;
 
 export function HojaDesdeAbajo(props: HojaDesdeAbajoProps) {
   const { visible, alCerrar } = props;
@@ -127,6 +136,9 @@ export function HojaDesdeAbajo(props: HojaDesdeAbajoProps) {
   reducido$.current = reducido;
   const alCerrar$ = useRef(alCerrar);
   alCerrar$.current = alCerrar;
+  const alTerminarDeCerrar$ = useRef(props.alTerminarDeCerrar);
+  alTerminarDeCerrar$.current = props.alTerminarDeCerrar;
+  const estabaPresente = useRef(presente);
 
   const desmontar = () => {
     if (!saliendo.current) return;
@@ -196,6 +208,22 @@ export function HojaDesdeAbajo(props: HojaDesdeAbajoProps) {
     // Sólo reacciona a que se abra o se cierre.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
+
+  /* Recién cuando el `Modal` ya no está se avisa que se fue. En Android, además, se espera a que la
+     ventana de abajo recupere el foco: el `Modal` es otra ventana del sistema, se cierra después de
+     que React lo desmonta, y un campo enfocado antes de eso se queda sin teclado. Medido en el
+     emulador: enfocando al desmontar, el teclado no se abría; 100 ms después, 3 de 3 veces sí. */
+  useEffect(() => {
+    const seFue = estabaPresente.current && !presente;
+    estabaPresente.current = presente;
+    if (!seFue) return undefined;
+    if (Platform.OS !== 'android') {
+      alTerminarDeCerrar$.current?.();
+      return undefined;
+    }
+    const reloj = setTimeout(() => alTerminarDeCerrar$.current?.(), ESPERA_VENTANA_ANDROID_MS);
+    return () => clearTimeout(reloj);
+  }, [presente]);
 
   const alMedir = (evento: LayoutChangeEvent) => {
     alto.set(evento.nativeEvent.layout.height);
