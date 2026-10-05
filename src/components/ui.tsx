@@ -186,7 +186,11 @@ const styles = StyleSheet.create({
      desalinea otra vez del contenido de la pantalla. */
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, paddingTop: 8, minHeight: 46 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  headerBtn: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
+  /* Caja de 44 × 44, el mínimo de un área táctil (2026-10-05, pedido del dueño: el engranaje de Yo y el
+     botón de Comunidad). Era de 38, y en la web no hay `hitSlop`: el área tocable era la caja.
+     El ícono sigue de 24 y en el mismo lugar: los márgenes de −3 hacen que la caja ocupe en la fila lo
+     mismo que la de 38, así que la cabecera mide igual (46) con o sin botón y no se mueve nada de abajo. */
+  headerBtn: { width: 44, height: 44, margin: -3, alignItems: 'center', justifyContent: 'center' },
   themeBtn: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11, borderBottomWidth: 1 },
 });
