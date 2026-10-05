@@ -1,12 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Alert } from '../../../components/Alerta';
+import { ConfirmacionEnLinea } from '../../../components/ConfirmacionEnLinea';
 import { GoldButton } from '../../../components/GoldButton';
-import { Icon } from '../../../components/Icon';
-import { useResponsive } from '../../../theme/responsive';
+import { Icon, TAMANO_ICONO } from '../../../components/Icon';
+import { Presionable } from '../../../components/Presionable';
+import { HojaDesdeAbajo } from '../../../components/hojaDesdeAbajo/HojaDesdeAbajo';
+import { OpcionDeHoja } from '../../../components/hojaDesdeAbajo/HojaDeOpciones';
 import { useTheme } from '../../../theme/ThemeContext';
+import { tacto } from '../../../utils/tacto';
 import { mensajeDeError } from '../../../services/http/apiClient';
 import { useAuth } from '../../auth/context/AuthContext';
 import * as habitsApi from '../../habits/api/habitsApi';
@@ -99,16 +103,38 @@ import { horaDelEditor, preferenciaTrasGuardar, textoDelCambioProgramado } from 
  *
  * Lo que se guarda rige **desde mañana**: el día en curso no se reacomoda (D-91), y por eso esta
  * pantalla organiza la semana y no el día de hoy.
+ *
+ * ## LA HOJA DE SIEMPRE (rediseño de Training, 2026-10-05)
+ *
+ * Era una hoja hecha a mano (agarradera decorativa, borde dorado, «× CERRAR» y «← VOLVER» en
+ * versalitas de 11). Ahora es `HojaDesdeAbajo` grande: se arrastra para cerrarla, la ✕ y la ‹ son de
+ * 44, y el atrás de Android vuelve un paso (la ‹) antes de cerrar. Los textos van en tipo oración a
+ * 15–17 px, los emojis de hábito pasaron a íconos de línea, «Pausar…» es una hoja de opciones y los
+ * avisos de éxito son una línea que se va sola (`ConfirmacionEnLinea`); los errores siguen en diálogo.
  */
 
 interface Props {
   visible: boolean;
-  /** Nombre de la dimensión abierta — solo para el encabezado. */
+  /**
+   * La dimensión abierta, en versales (`CUERPO`): la clave que entienden la categoría del hábito
+   * nuevo y los recordatorios.
+   */
   dimension: string;
+  /** Cómo se lee en el título (`Cuerpo`). Sin él, la clave tal cual. */
+  nombreDimension?: string;
   /** Los hábitos de esa dimensión, tal cual los tiene `TrainingScreen`. */
   habits: HabitItem[];
   onCerrar: () => void;
-  onGuardado: () => void;
+  /** Hubo cambios: Training recarga. Con texto, lo confirma en línea (el hábito recién creado). */
+  onGuardado: (confirmacion?: string) => void;
+}
+
+/** Los botones de la hoja, en tipo oración y a tamaño de lectura (no las versalitas de 11 del botón). */
+const TEXTO_DE_BOTON = { fontSize: 16, letterSpacing: 0 } as const;
+
+/** «LUN, MIÉ» → «lun, mié», para leerlo dentro de una frase. */
+function diasEnFrase(dias: DiaDelPlan[]): string {
+  return dias.join(', ').toLowerCase();
 }
 
 /** Un hábito de catálogo: los únicos que se pueden planificar. */
@@ -178,10 +204,21 @@ function avisosDelServidor(p: PreferenciaHabitoApi | undefined): number[] {
   return [p.reminderMinutesBefore ?? 0];
 }
 
-export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar, onGuardado }: Props) {
+export function PlanificarDimensionModal({ visible, dimension, nombreDimension, habits, onCerrar, onGuardado }: Props) {
   const { c, t } = useTheme();
-  const { isTablet, contentMaxWidth } = useResponsive();
   const insets = useSafeAreaInsets();
+  const nombre = nombreDimension ?? dimension;
+  /** El hábito al que se le está eligiendo hasta cuándo pausarlo (hoja de opciones). */
+  const [pausando, setPausando] = useState<HabitoPlanificable | null>(null);
+  /**
+   * Lo que se acaba de guardar, en una línea que se va sola (2026-10-05). Antes cada guardado abría
+   * un diálogo («Horario guardado», «Listo») que había que cerrar para seguir.
+   */
+  const [confirmacion, setConfirmacion] = useState<{ clave: number; texto: string } | null>(null);
+  const confirmar = (texto: string) => {
+    tacto.logro();
+    setConfirmacion({ clave: Date.now(), texto });
+  };
   const { user } = useAuth();
   const claveUsuario = user?.id ?? 'anon';
 
@@ -303,6 +340,8 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
     setIconoNuevo(null);
     setGuardados({});
     setHuboEscritura(false);
+    setConfirmacion(null);
+    setPausando(null);
     (async () => {
       try {
         const [prefs, desbloqueos] = await Promise.all([
@@ -463,12 +502,15 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
       Alert.alert('Hábito obligatorio', 'Este hábito es parte del programa y no se puede pausar.');
       return;
     }
-    // Dos plazos y nada más, porque son los dos que el backend sabe cumplir de verdad.
-    Alert.alert(`Pausar "${h.title}"`, '¿Hasta cuándo lo pausamos?', [
-      { text: 'Solo hoy', onPress: () => void aplicarEstado(h.habitoId, false, hoyIso) },
-      { text: 'Hasta que yo lo reactive', onPress: () => void aplicarEstado(h.habitoId, false) },
-      { text: 'Cancelar', style: 'cancel' },
-    ]);
+    // Dos plazos y nada más, porque son los dos que el backend sabe cumplir de verdad. Se eligen en
+    // una hoja de opciones (2026-10-05; antes, un diálogo de tres botones). Cancelar es cerrarla.
+    setPausando(h);
+  };
+
+  const pausarHasta = (h: HabitoPlanificable, soloHoy: boolean) => {
+    tacto.seleccion();
+    setPausando(null);
+    void aplicarEstado(h.habitoId, false, soloHoy ? hoyIso : undefined);
   };
 
   /**
@@ -513,11 +555,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
       );
       return;
     }
-    Alert.alert(
-      'Horario guardado',
-      `“${h.title}” queda a las ${horaTexto} los ${guardados.join(', ').toLowerCase()}, todas las semanas.` +
-        '\n\nEmpieza a regir mañana: el día en curso no se reacomoda.',
-    );
+    confirmar(`Queda a las ${horaTexto} los ${diasEnFrase(guardados)}, desde mañana.`);
   };
 
   /** Devuelve un día al horario general. */
@@ -559,10 +597,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
       }));
       setHuboEscritura(true);
       setDiasEnEdicion([]);
-      Alert.alert(
-        'Listo',
-        `“${h.title}” no va los ${dias.join(', ').toLowerCase()}. El resto de la semana sigue igual.`,
-      );
+      confirmar(`No va los ${diasEnFrase(dias)}. El resto de la semana sigue igual.`);
     } catch (e) {
       Alert.alert(
         'No pudimos apagarlo',
@@ -578,6 +613,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
    * que es el orden en que los avisos llegan y también en el que el programador los recorre.
    */
   const alternarAntelacion = (minutos: number) => {
+    tacto.seleccion();
     avisosTocadosRef.current = true;
     setAntelaciones(prev =>
       prev.includes(minutos) ? prev.filter(x => x !== minutos) : [...prev, minutos].sort((a, b) => b - a),
@@ -680,10 +716,10 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
       setHuboEscritura(true);
       setHabitoEnEdicion(null);
       const cuando = resultado.deferredEffectiveDate
-        ? formatearFechaLarga(resultado.deferredEffectiveDate)
-        : 'el día siguiente';
-      const mensaje = `“${h.title}” queda a las ${horaTexto}.` +
-        (resultado.deferred ? `\n\nEmpieza a regir ${cuando}: el día en curso no se reacomoda.` : '') +
+        ? `el ${formatearFechaLarga(resultado.deferredEffectiveDate)}`
+        : 'mañana';
+      const corto = `«${h.title}» queda a las ${horaTexto}` + (resultado.deferred ? ` desde ${cuando}.` : '.');
+      const mensaje = corto +
         (avisoImposible
           ? `\n\nEl recordatorio quedó guardado, pero ${recordatorios.HAY_RECORDATORIOS_WEB ? 'este navegador no tiene el permiso Web Push' : 'este teléfono no tiene permiso para avisarte'}. Habilita las notificaciones para recibir las dos alertas.`
           : '');
@@ -697,10 +733,13 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
           { text: 'Ahora no', style: 'cancel' },
           { text: 'Permitir', onPress: () => void abrirPermisoDeAlarmasExactas() },
         ]);
+      } else if (avisoImposible) {
+        // Sin permiso el aviso no va a sonar: eso hay que leerlo, así que va en diálogo.
+        Alert.alert('Hora guardada', mensaje);
       } else if (conAviso && (await hayQueRecordarAlarmaExacta(claveUsuario))) {
-        Alert.alert('Listo', `${mensaje}\n\n${LINEA_ALARMA_EXACTA_PENDIENTE}`);
+        confirmar(`${corto} ${LINEA_ALARMA_EXACTA_PENDIENTE}`);
       } else {
-        Alert.alert('Listo', mensaje);
+        confirmar(corto);
       }
     } catch (e) {
       Alert.alert('No pudimos guardar la hora', mensajeDeError(e, 'Intenta de nuevo en unos segundos.'));
@@ -776,6 +815,7 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
    * hábito que no corre ningún día no es un hábito, es una fila que no genera nada.
    */
   const alternarDiaNuevo = (dia: DiaDelPlan) => {
+    if (!(diasNuevo.has(dia) && diasNuevo.size === 1)) tacto.seleccion();
     setDiasNuevo(prev => {
       const siguiente = new Set(prev);
       if (siguiente.has(dia)) {
@@ -819,12 +859,12 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
       setIconoNuevo(null);
       setDiasNuevo(new Set(DIAS_DEL_PLAN));
       // Acá SÍ se recarga todo: el hábito nuevo no está en `habits`, que viene de la pantalla de
-      // atrás, así que la única forma de verlo es que Training vuelva a pedir su lista.
-      onGuardado();
+      // atrás, así que la única forma de verlo es que Training vuelva a pedir su lista. La hoja se
+      // cierra y Training lo confirma en línea, arriba de la lista (2026-10-05; antes, un diálogo).
       const cuando = diasNuevo.size === DIAS_DEL_PLAN.length
         ? 'todos los días'
-        : DIAS_DEL_PLAN.filter(d => diasNuevo.has(d)).join(' · ');
-      Alert.alert('Hábito creado', `“${titulo}” queda a las ${horaTexto}, ${cuando}.`);
+        : `los ${diasEnFrase(DIAS_DEL_PLAN.filter(d => diasNuevo.has(d)))}`;
+      onGuardado(`Hábito creado: «${titulo}», a las ${horaTexto}, ${cuando}.`);
     } catch (e) {
       Alert.alert('No pudimos crear el hábito', mensajeDeError(e, 'Intenta de nuevo en unos segundos.'));
     } finally {
@@ -840,6 +880,9 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
    * `Pressable` de la fila y abría también el editor, detrás del diálogo de pausa. En el teléfono no
    * pasaba porque el interruptor nativo se queda con el toque. Se ve igual: el borde y el relleno de
    * la fila son los de siempre, repartidos entre las dos partes.
+   *
+   * 2026-10-05: el ícono de línea del hábito en vez del emoji, el título a 16, la hora a 14 y
+   * «Guardado» / «Pausado» en tipo oración a 14 (eran versalitas de 10).
    */
   const filaDeHabito = (h: HabitoPlanificable) => {
     const horaGuardada = guardados[h.habitoId];
@@ -851,30 +894,39 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
         key={h.habitoId}
         style={[styles.filaHabito, { borderColor: c.border, opacity: activo ? 1 : 0.55 }]}
       >
-        <Pressable onPress={() => abrirHabito(h)} style={styles.filaHabitoAbrir}>
-          <View style={styles.iconoHabito}>
-            <Text style={styles.emojiHabito}>{h.icon ?? '🎯'}</Text>
+        <Presionable
+          onPress={() => abrirHabito(h)}
+          accessibilityRole="button"
+          accessibilityLabel={`${h.title}, ${tieneHora ? `a las ${horaActual}` : 'sin hora'}${activo ? '' : ', pausado'}`}
+          contenedorStyle={styles.filaHabitoAbrirArea}
+          style={styles.filaHabitoAbrir}
+        >
+          <View style={[styles.iconoHabito, { backgroundColor: c.goldWash }]}>
+            <Icon name={h.icon ?? 'target'} size={TAMANO_ICONO.normal} color={c.goldInk} />
           </View>
 
-          <View style={{ flex: 1, flexShrink: 1, gap: 1 }}>
-            <Text style={[t.body, { color: c.text, fontSize: 13.5 }]} numberOfLines={2}>
+          <View style={{ flex: 1, flexShrink: 1, gap: 2 }}>
+            <Text style={[t.body, { color: c.text, fontSize: 16 }]} numberOfLines={2}>
               {h.title}
             </Text>
             <View style={styles.filaMeta}>
-              <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5 }]}>
+              <Text style={[t.small, styles.hora, { color: c.textSoft }]}>
                 {tieneHora ? horaActual : 'Toca para ponerle hora'}
               </Text>
               {horaGuardada && (
-                <Text style={[t.micro, { color: c.success, fontSize: 10, fontFamily: 'Jost_700Bold' }]}>✓ GUARDADO</Text>
+                <View style={styles.marca}>
+                  <Icon name="check" size={TAMANO_ICONO.chico} color={c.success} />
+                  <Text style={[t.small, styles.marcaTexto, { color: c.success }]}>Guardado</Text>
+                </View>
               )}
               {!activo && (
-                <Text style={[t.micro, { color: c.danger, fontSize: 10, fontFamily: 'Jost_700Bold' }]}>PAUSADO</Text>
+                <Text style={[t.small, styles.marcaTexto, { color: c.danger }]}>Pausado</Text>
               )}
             </View>
           </View>
 
-          <Icon name="chevron" size={14} color={c.chevron} />
-        </Pressable>
+          <Icon name="chevron" size={TAMANO_ICONO.normal} color={c.chevron} />
+        </Presionable>
 
         {h.isDeactivatable === false ? (
           // SIN `hitSlop`: el candado ya mide 48×48, de sobra para el dedo (AGENTS.md §4), y el
@@ -883,9 +935,14 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
           // flecha de "abrir" en un hábito OBLIGATORIO disparaba "no se puede pausar" en vez de
           // abrir el editor: la hora de los obligatorios no había forma de cambiarla desde acá.
           // Los no obligatorios llevan un Switch en ese lugar, sin hitSlop, y por eso no fallaban.
-          <Pressable onPress={() => alternarActivo(h)} style={styles.candado}>
-            <Icon name="lock" size={16} color={c.tabInactive} />
-          </Pressable>
+          <Presionable
+            onPress={() => alternarActivo(h)}
+            accessibilityRole="button"
+            accessibilityLabel={`${h.title} es obligatorio del programa`}
+            style={styles.candado}
+          >
+            <Icon name="lock" size={TAMANO_ICONO.normal} color={c.tabInactive} />
+          </Presionable>
         ) : (
           <Switch
             value={activo}
@@ -904,753 +961,541 @@ export function PlanificarDimensionModal({ visible, dimension, habits, onCerrar,
     ? horaDelEditor(preferencias.get(habitoEnEdicion.habitoId), habitoEnEdicion.time)
     : null;
 
+  /** Una pastilla de recordatorio: elegida = borde dorado y relleno, como antes; texto a 14. */
+  const pastilla = (on: boolean) => [
+    styles.pastillaAntelacion,
+    { borderColor: on ? c.gold : c.border, backgroundColor: on ? c.cardBgAlt : 'transparent' },
+  ];
+  const textoPastilla = (on: boolean) => [t.small, styles.textoPastilla, { color: on ? c.goldInk : c.textSoft }];
+  const rotulo = [t.body, styles.rotulo, { color: c.goldInk }];
+
+  const lineaConfirmacion = confirmacion ? (
+    <ConfirmacionEnLinea key={confirmacion.clave} texto={confirmacion.texto} onTerminar={() => setConfirmacion(null)} />
+  ) : null;
+
+  const paso: 'lista' | 'habito' | 'nuevo' = creando ? 'nuevo' : habitoEnEdicion ? 'habito' : 'lista';
+  const tituloDeLaHoja =
+    paso === 'habito' && habitoEnEdicion ? habitoEnEdicion.title
+      : paso === 'nuevo' ? `Hábito nuevo en ${nombre}`
+        : `Planificar ${nombre}`;
+  const subtituloDeLaHoja =
+    estado !== 'listo' ? undefined
+      : paso === 'habito' ? `Ahora: ${horasDelHabitoAbierto?.ahora || 'sin hora'}`
+        : paso === 'nuevo' ? 'Es tuyo: puedes pausarlo cuando quieras.'
+          : 'Toca uno para cambiarle la hora.';
+
+  const pie =
+    estado === 'listo' && paso === 'habito' && habitoEnEdicion ? (
+      <GoldButton
+        label={
+          guardando
+            ? 'Guardando…'
+            : diasEnEdicion.length === 0
+              ? `Guardar ${horaTexto} · todos los días`
+              : `Guardar ${horaTexto} · ${diasEnFrase(diasEnEdicion)}`
+        }
+        onPress={() => intentarGuardar(habitoEnEdicion)}
+        disabled={guardando}
+        textStyle={TEXTO_DE_BOTON}
+        style={{ width: '100%' }}
+      />
+    ) : estado === 'listo' && paso === 'nuevo' ? (
+      <GoldButton
+        label={guardando ? 'Creando…' : `Crear a las ${horaTexto}`}
+        onPress={() => void crearHabito()}
+        disabled={guardando}
+        textStyle={TEXTO_DE_BOTON}
+        style={{ width: '100%' }}
+      />
+    ) : undefined;
+
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={creando ? () => setCreando(false) : habitoEnEdicion ? volverALaLista : cerrar}
-    >
-      <View style={styles.overlay}>
-        <Pressable style={{ flex: 1 }} onPress={cerrar} />
+    <>
+      <HojaDesdeAbajo
+        visible={visible}
+        alCerrar={cerrar}
+        alVolver={paso === 'nuevo' ? () => setCreando(false) : paso === 'habito' ? volverALaLista : undefined}
+        etiquetaVolver="Volver a la lista"
+        etiquetaCerrar="Cerrar Planificar"
+        titulo={tituloDeLaHoja}
+        subtitulo={subtituloDeLaHoja}
+        tamano="grande"
+        pie={pie}
+      >
+        {estado === 'cargando' && (
+          <Text style={[t.body, styles.estadoCentrado, { color: c.textSoft }]}>Cargando horarios…</Text>
+        )}
 
-        <View
-          style={[
-            styles.hoja,
-            {
-              backgroundColor: c.cardBg,
-              borderColor: c.gold,
-              paddingBottom: Math.max(insets.bottom, 12),
-              maxWidth: contentMaxWidth,
-              alignSelf: isTablet ? 'center' : 'stretch',
-              width: isTablet ? '100%' : undefined,
-            },
-          ]}
-        >
-          <View style={[styles.agarre, { backgroundColor: c.border }]} />
+        {estado === 'error' && (
+          <Text style={[t.body, styles.estadoCentrado, { color: c.textSoft }]}>
+            No pudimos cargar los horarios de esta dimensión.
+          </Text>
+        )}
 
-          <View style={[styles.encabezado, { borderBottomColor: c.divider }]}>
-            {habitoEnEdicion || creando ? (
-              <Pressable
-                onPress={creando ? () => setCreando(false) : volverALaLista}
-                hitSlop={12}
-                style={styles.volver}
+        {/* =================================================================== */}
+        {/* PASO 1 — LA LISTA. Encontrar el hábito y, si hace falta, apagarlo.  */}
+        {/* La ayuda de arriba quedó en una línea en el subtítulo de la hoja:   */}
+        {/* el interruptor se explica solo (2026-10-05).                        */}
+        {/* =================================================================== */}
+        {estado === 'listo' && paso === 'lista' && (
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            style={{ flex: 1 }}
+            contentContainerStyle={[styles.cuerpoLista, { paddingBottom: Math.max(insets.bottom, 12) + 12 }]}
+            showsVerticalScrollIndicator={false}
+          >
+            {lineaConfirmacion}
+
+            {planificables.length === 0 && (
+              <Text style={[t.body, { color: c.textSoft, paddingVertical: 16 }]}>
+                Todavía no hay hábitos en esta dimensión.
+              </Text>
+            )}
+
+            {porSeccion().map(({ seccion, habitos }) => {
+              const plegada = plegadas.has(seccion);
+              const esSinHora = seccion === 'sinHora';
+              const etiqueta = esSinHora ? 'Sin hora todavía' : 'Tu día';
+              return (
+                <View key={seccion} style={{ gap: 8 }}>
+                  {/* Antes: «🕗 TU DÍA (7) ▾» y «⏳ SIN HORA TODAVÍA» en versalitas de 11, con el
+                      triángulo de texto. Ahora reloj o reloj de arena de línea y un chevron. */}
+                  <Presionable
+                    onPress={() => alternarSeccion(seccion)}
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded: !plegada }}
+                    accessibilityLabel={`${etiqueta}, ${habitos.length} ${habitos.length === 1 ? 'hábito' : 'hábitos'}`}
+                    style={[styles.cabezaSeccion, { borderBottomColor: c.divider }]}
+                  >
+                    <Icon name={esSinHora ? 'hourglass' : 'clock'} size={TAMANO_ICONO.normal} color={c.goldInk} />
+                    <Text style={[t.body, styles.rotulo, { color: c.textStrong, flex: 1 }]}>
+                      {etiqueta} ({habitos.length})
+                    </Text>
+                    <View style={{ transform: [{ rotate: plegada ? '0deg' : '90deg' }] }}>
+                      <Icon name="chevron" size={TAMANO_ICONO.normal} color={c.textSoft} />
+                    </View>
+                  </Presionable>
+
+                  {!plegada && habitos.map(h => filaDeHabito(h))}
+                </View>
+              );
+            })}
+
+            {/* Crear un hábito propio, en la dimensión que está abierta. Solo en las cuatro que
+                son categorías de verdad: VIDA Y NEGOCIO son rocas, de otro módulo.
+                2026-10-05: una fila más de la lista, con su «+», en vez del recuadro punteado en
+                versalitas. */}
+            {categoriaDeLaDimension && (
+              <Presionable
+                onPress={() => {
+                  const inicio = INICIO_DE_JORNADA_MIN;
+                  setHora(Math.floor(inicio / 60));
+                  setMinuto(inicio % 60);
+                  setSemillaRueda(n => n + 1);
+                  setTituloNuevo('');
+                  setIconoNuevo(null);
+                  setDiasNuevo(new Set(DIAS_DEL_PLAN));
+                  setConfirmacion(null);
+                  setCreando(true);
+                }}
+                accessibilityRole="button"
+                style={[styles.crearHabito, { borderColor: c.border }]}
               >
-                <Icon name="arrowLeft" size={14} color={c.goldInk} />
-                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>VOLVER</Text>
-              </Pressable>
-            ) : (
-              <View style={{ flex: 1 }}>
-                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>PLANIFICAR</Text>
-                <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 15 }]} numberOfLines={1}>
-                  {dimension}
+                <View style={[styles.iconoHabito, { backgroundColor: c.goldWash }]}>
+                  <Icon name="plus" size={TAMANO_ICONO.normal} color={c.goldInk} />
+                </View>
+                <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_500Medium', fontSize: 16 }]}>
+                  Crear un hábito
+                </Text>
+              </Presionable>
+            )}
+          </ScrollView>
+        )}
+
+        {/* =================================================================== */}
+        {/* PASO 2 — UN HÁBITO. Una sola decisión: a qué hora.                  */}
+        {/* Sin scroll a propósito: las ruedas se pelearían por el dedo con un   */}
+        {/* ScrollView (AGENTS.md §2). El botón de guardar va fijo en el pie.    */}
+        {/* =================================================================== */}
+        {estado === 'listo' && paso === 'habito' && habitoEnEdicion && (
+          <View style={styles.cuerpo}>
+            {lineaConfirmacion}
+
+            {/* El cambio ya guardado que todavía no rige (D-91), con la misma frase que la tarjeta
+                del hábito en Plan. Sin esto, «Ahora: 09:00» parecía decir que el cambio no se
+                había guardado (PLN-02). Solo aparece cuando hay uno: la hoja no tiene scroll y cada
+                renglón empuja el botón de guardar. */}
+            {horasDelHabitoAbierto?.programado && (
+              <View style={[styles.cambioProgramado, { backgroundColor: c.goldWash }]}>
+                <Icon name="clock" size={TAMANO_ICONO.chico} color={c.goldInk} />
+                <Text style={[t.body, { color: c.goldInk, fontSize: 16, lineHeight: 22, flexShrink: 1 }]}>
+                  {textoDelCambioProgramado(horasDelHabitoAbierto.programado)}
                 </Text>
               </View>
             )}
-            <Pressable onPress={cerrar} hitSlop={12} style={styles.cerrar}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                <Icon name="close" size={12} color={c.goldInk} />
-                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>CERRAR</Text>
-              </View>
-            </Pressable>
-          </View>
 
-          {estado === 'cargando' && (
-            <Text style={[t.body, { color: c.textSoft, textAlign: 'center', paddingVertical: 40, fontSize: 14 }]}>
-              Cargando horarios…
-            </Text>
-          )}
-
-          {estado === 'error' && (
-            <Text style={[t.body, { color: c.textSoft, textAlign: 'center', paddingVertical: 40, fontSize: 14 }]}>
-              No pudimos cargar los horarios de esta dimensión.
-            </Text>
-          )}
-
-          {/* =================================================================== */}
-          {/* PASO 1 — LA LISTA. Encontrar el hábito y, si hace falta, apagarlo.  */}
-          {/* =================================================================== */}
-          {estado === 'listo' && habitoEnEdicion === null && !creando && (
-            <>
-              <Text style={[t.body, { color: c.textSoft, fontSize: 12.5, marginTop: 10, lineHeight: 17 }]}>
-                Toca un hábito para cambiarle la hora. El interruptor de la derecha lo prende o lo apaga.
+            {/* Los bloques del día (madrugada / mañana / tarde / noche) se sacaron el
+                2026-09-08 por decisión del cliente: no los quiere ver. Con ellos se fue el
+                "✎ AJUSTAR", que era la única forma de moverlos. La hora se elige libre en la
+                rueda y ya — es lo mismo que pedía el caso de quien trabaja de noche. */}
+            <View style={{ paddingTop: 4, paddingBottom: 2 }}>
+              <RuedaHoraPicker
+                key={`rueda-${semillaRueda}`}
+                horaInicial={hora}
+                minutoInicial={minuto}
+                onCambiar={(h, m) => {
+                  setHora(h);
+                  setMinuto(m);
+                }}
+              />
+            </View>
+            {/* LOS DÍAS, tocables (V39). Tocar uno pasa a editar SU hora; tocarlo de nuevo vuelve
+                al horario general. Cada pastilla muestra la hora que rige ese día, así que la fila
+                entera se lee de un vistazo: "los lunes 05:00, el resto 09:00". */}
+            <View style={styles.filaTituloCompacta}>
+              <Text style={rotulo} numberOfLines={1}>
+                {diasEnEdicion.length === 0 ? 'Todos los días' : `Solo ${diasEnFrase(diasEnEdicion)}`}
               </Text>
+              {diasEnEdicion.length > 0 && (
+                <Presionable
+                  onPress={volverATodos}
+                  accessibilityRole="button"
+                  accessibilityLabel="Volver a todos los días"
+                  style={styles.enlaceTodos}
+                >
+                  <Icon name="arrowLeft" size={TAMANO_ICONO.chico} color={c.goldInk} />
+                  <Text style={[t.small, styles.marcaTexto, { color: c.goldInk }]}>Todos</Text>
+                </Presionable>
+              )}
+            </View>
+            {/* La fila salió a `FilaDeDiasDelPlan` (2026-09-22) para que el planificador de las
+                acciones del día use la MISMA, en vez de una copia. Acá no cambió nada: los mismos
+                días, el mismo candado de D-91 y las mismas medidas. */}
+            <FilaDeDiasDelPlan
+              corre={diasDe(habitoEnEdicion)}
+              horarios={horarioSemanal}
+              enEdicion={diasEnEdicion}
+              onAlternarDia={alternarDia}
+            />
+            {/* La ayuda, corta (2026-10-05; eran dos frases a 10,5 px). */}
+            <Text style={[t.small, { color: c.textSoft, marginTop: 6 }]}>
+              {diasEnEdicion.length === 0
+                ? 'Toca un día para darle su propia hora. Hoy y lo pasado van con candado.'
+                : `Solo ${diasEnFrase(diasEnEdicion)}, todas las semanas. Hoy no cambia.`}
+            </Text>
 
-              <ScrollView
-                keyboardShouldPersistTaps="handled"
-                style={{ flexShrink: 1, marginTop: 10 }}
-                contentContainerStyle={{ gap: 10, paddingBottom: 6 }}
-                showsVerticalScrollIndicator={false}
+            {/* Apagar esos días, o volver a encenderlos. Se ofrece una cosa o la otra según cómo
+                estén los marcados: mostrar las dos sería pedir que la persona adivine cuál aplica.
+                "No hacer" es una decisión de peso: botón con borde y alto de toque cómodo
+                (AGENTS.md §4). En un hábito OBLIGATORIO no aparece: esos se pueden mover de hora
+                pero no sacar. 2026-10-05: ⊘ y ↺ de texto pasan a íconos de línea. */}
+            {diasEnEdicion.length > 0
+              && habitoEnEdicion.isDeactivatable !== false
+              && diasEnEdicion.every(d => horarioSemanal[d]?.activo !== false) && (
+              <Presionable
+                onPress={() => void apagarDias(habitoEnEdicion, diasEnEdicion)}
+                accessibilityRole="button"
+                style={[styles.accionApagar, { borderColor: c.danger }]}
               >
-                {planificables.length === 0 && (
-                  <Text style={[t.body, { color: c.textSoft, fontSize: 13, paddingVertical: 16 }]}>
-                    Todavía no hay hábitos en esta dimensión.
-                  </Text>
-                )}
+                <Icon name="ban" size={TAMANO_ICONO.normal} color={c.danger} />
+                <Text style={[t.body, styles.textoAccion, { color: c.danger }]}>
+                  No hacerlo los {diasEnFrase(diasEnEdicion)}
+                </Text>
+              </Presionable>
+            )}
 
-                {porSeccion().map(({ seccion, habitos }) => {
-                  const plegada = plegadas.has(seccion);
-                  const esSinHora = seccion === 'sinHora';
-                  return (
-                    <View key={seccion} style={{ gap: 8 }}>
-                      <Pressable
-                        onPress={() => alternarSeccion(seccion)}
-                        style={[styles.cabezaSeccion, { borderBottomColor: c.divider }]}
-                      >
-                        <View style={{ flex: 1, flexShrink: 1 }}>
-                          <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
-                            {esSinHora ? '⏳ SIN HORA TODAVÍA' : '🕗 TU DÍA'} ({habitos.length})
-                          </Text>
-                        </View>
-                        <Text style={[t.micro, { color: c.goldInk, fontSize: 12 }]}>{plegada ? '▸' : '▾'}</Text>
-                      </Pressable>
+            {diasEnEdicion.length > 0 && diasEnEdicion.every(d => horarioSemanal[d]?.activo === false) && (
+              <Presionable
+                onPress={() => void quitarDias(habitoEnEdicion, diasEnEdicion)}
+                accessibilityRole="button"
+                style={[styles.accionApagar, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}
+              >
+                <Icon name="rotateCcw" size={TAMANO_ICONO.normal} color={c.goldInk} />
+                <Text style={[t.body, styles.textoAccion, { color: c.goldInk }]}>
+                  Volver a hacerlo los {diasEnFrase(diasEnEdicion)}
+                </Text>
+              </Presionable>
+            )}
 
-                      {!plegada && habitos.map(h => filaDeHabito(h))}
-                    </View>
-                  );
-                })}
+            {/* Los obligatorios se pueden mover de hora, no sacar. Decirlo evita que alguien
+                busque un botón que no está. */}
+            {diasEnEdicion.length > 0 && habitoEnEdicion.isDeactivatable === false && (
+              <View style={[styles.accionApagar, { borderColor: c.border }]}>
+                <Icon name="lock" size={TAMANO_ICONO.chico} color={c.tabInactive} />
+                <Text style={[t.small, { color: c.textSoft, flexShrink: 1 }]}>
+                  Obligatorio del programa: puedes cambiarle la hora, no sacarlo
+                </Text>
+              </View>
+            )}
 
-                {/* Crear un hábito propio, en la dimensión que está abierta. Solo en las cuatro que
-                    son categorías de verdad: VIDA Y NEGOCIO son rocas, de otro módulo. */}
-                {categoriaDeLaDimension && (
-                  <Pressable
-                    onPress={() => {
-                      const inicio = INICIO_DE_JORNADA_MIN;
-                      setHora(Math.floor(inicio / 60));
-                      setMinuto(inicio % 60);
-                      setSemillaRueda(n => n + 1);
-                      setTituloNuevo('');
-                      setIconoNuevo(null);
-                      setDiasNuevo(new Set(DIAS_DEL_PLAN));
-                      setCreando(true);
-                    }}
-                    style={[styles.crearHabito, { borderColor: c.gold }]}
+            {/* Solo cuando TODOS los marcados tienen hora propia Y están encendidos: ofrecer
+                "quitar la hora" de un día apagado no significa nada. */}
+            {diasEnEdicion.length > 0
+              && diasEnEdicion.every(d => horarioSemanal[d]?.propio && horarioSemanal[d]?.activo !== false) && (
+              <Presionable
+                onPress={() => void quitarDias(habitoEnEdicion, diasEnEdicion)}
+                accessibilityRole="button"
+                hitSlop={8}
+                style={{ marginTop: 8, minHeight: 44, justifyContent: 'center' }}
+              >
+                <Text style={[t.small, { color: c.textSoft, textDecorationLine: 'underline' }]}>
+                  Quitar la hora propia de {diasEnFrase(diasEnEdicion)}
+                </Text>
+              </Presionable>
+            )}
+
+            {/* En Android es alarma local; en web es Web Push y los dos avisos salen del
+                scheduler del backend. Expo Go sigue sin ofrecer el canal remoto. */}
+            {/* E-408: guardar días no guarda el recordatorio; con días elegidos no se ofrece. */}
+            {recordatorios.HAY_RECORDATORIOS && diasEnEdicion.length > 0 && (
+              <Text style={[t.small, { color: c.textSoft, marginTop: 12 }]}>
+                El recordatorio se elige sin días marcados.
+              </Text>
+            )}
+            {recordatorios.HAY_RECORDATORIOS && diasEnEdicion.length === 0 && (
+              <>
+                <Text style={[rotulo, { marginTop: 14 }]}>
+                  Recordatorio{antelaciones.length > 1 ? ` · ${antelaciones.length} avisos` : ''}
+                </Text>
+                <View style={styles.filaAntelaciones}>
+                  {/* "Sin aviso" no es una opción más: es el conjunto vacío, y por eso va aparte
+                      y no compite con las otras tres. */}
+                  <Presionable
+                    onPress={() => { tacto.seleccion(); avisosTocadosRef.current = true; setAntelaciones([]); }}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: antelaciones.length === 0 }}
+                    contenedorStyle={styles.pastillaArea}
+                    style={pastilla(antelaciones.length === 0)}
                   >
-                    <Icon name="plus" size={14} color={c.goldInk} />
-                    <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
-                      CREAR UN HÁBITO EN {dimension}
-                    </Text>
-                  </Pressable>
+                    <Text style={textoPastilla(antelaciones.length === 0)} numberOfLines={1}>Sin aviso</Text>
+                  </Presionable>
+                  {/* Las sugeridas MAS las que la persona haya escrito, en orden de tiempo:
+                      primero el aviso que llega antes. "A la hora" va al final, aparte, porque
+                      no es una antelacion sino el momento exacto. */}
+                  {antelacionesAMostrar(ANTELACIONES_SUGERIDAS, antelaciones).map(minutos => {
+                    const on = antelaciones.includes(minutos);
+                    return (
+                      <Presionable
+                        key={minutos}
+                        onPress={() => alternarAntelacion(minutos)}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: on }}
+                        accessibilityLabel={`${etiquetaDeAntelacion(minutos)}${on ? ', activado' : ''}`}
+                        contenedorStyle={styles.pastillaArea}
+                        style={pastilla(on)}
+                      >
+                        <Text style={textoPastilla(on)} numberOfLines={1}>
+                          {etiquetaDeAntelacion(minutos)}
+                        </Text>
+                      </Presionable>
+                    );
+                  })}
+                  <Presionable
+                    onPress={() => alternarAntelacion(0)}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: antelaciones.includes(0) }}
+                    accessibilityLabel={`A la hora exacta${antelaciones.includes(0) ? ', activado' : ''}`}
+                    contenedorStyle={styles.pastillaArea}
+                    style={pastilla(antelaciones.includes(0))}
+                  >
+                    <Text style={textoPastilla(antelaciones.includes(0))} numberOfLines={1}>A la hora</Text>
+                  </Presionable>
+                  {/* "Otra" ABRE UNA RUEDA, no un teclado (2026-09-21). Era un `TextInput` con
+                      `keyboardType="number-pad"`: al tocarlo el teclado del sistema subía y
+                      tapaba el propio campo, así que se escribía a ciegas. La rueda se despliega
+                      debajo y solo cuando se pide, porque cada píxel de alto empuja el botón de
+                      guardar fuera de la hoja. */}
+                  <Presionable
+                    onPress={alternarRuedaOtra}
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded: ruedaOtraAbierta }}
+                    accessibilityLabel="Otra antelación, elegir los minutos en una rueda"
+                    contenedorStyle={styles.pastillaArea}
+                    style={pastilla(ruedaOtraAbierta)}
+                  >
+                    <Text style={textoPastilla(ruedaOtraAbierta)} numberOfLines={1}>Otra</Text>
+                  </Presionable>
+                </View>
+
+                {/* La rueda y su botón van en UNA fila horizontal: apilados sumaban casi 200 px
+                    de alto y el botón de guardar se caía de la hoja. Al lado, la rueda cuesta
+                    sus 132 px y nada más. */}
+                {ruedaOtraAbierta && (
+                  <View style={styles.filaRuedaOtra}>
+                    <RuedaAntelacionPicker
+                      minutosIniciales={arranqueDeLaRuedaOtra.current}
+                      onCambiar={setMinutosOtra}
+                    />
+                    <Presionable
+                      onPress={agregarAntelacionDeLaRueda}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Añadir ${etiquetaDeAntelacion(minutosOtra)}`}
+                      contenedorStyle={styles.pastillaArea}
+                      style={[pastilla(true), styles.conIcono]}
+                    >
+                      {/* El botón repite lo que marca la rueda, igual que el de guardar repite
+                          la hora: es la confirmación de lo que se va a añadir, y de paso dice
+                          que esos números sueltos son minutos. */}
+                      <Icon name="plus" size={TAMANO_ICONO.chico} color={c.goldInk} />
+                      <Text style={textoPastilla(true)} numberOfLines={1}>
+                        Añadir {etiquetaDeAntelacion(minutosOtra)}
+                      </Text>
+                    </Presionable>
+                  </View>
                 )}
-              </ScrollView>
+              </>
+            )}
+          </View>
+        )}
+
+        {/* =================================================================== */}
+        {/* PASO 3 — HÁBITO NUEVO. Nombre y hora, nada más: la categoría sale de */}
+        {/* la dimensión que ya está abierta y los días son todos.               */}
+        {/* =================================================================== */}
+        {estado === 'listo' && paso === 'nuevo' && (
+          <View style={styles.cuerpo}>
+            <TextInput
+              value={tituloNuevo}
+              onChangeText={setTituloNuevo}
+              placeholder="Caminar 30 minutos"
+              placeholderTextColor={c.tabInactive}
+              accessibilityLabel="Nombre del hábito"
+              style={[styles.campoTitulo, { borderColor: c.border, color: c.text, backgroundColor: c.cardBgAlt }]}
+              maxLength={80}
+              returnKeyType="done"
+            />
+
+            <Text style={[rotulo, { marginTop: 14 }]}>Elige un ícono</Text>
+            {/* Los mismos iconos del catálogo, no una lista aparte: así un hábito propio se ve
+                igual de curado que uno del programa. Sin elegir ninguno se guarda `null` y el
+                hábito hereda el de su categoría, que es como nacían todos hasta ahora.
+                2026-10-05: de línea, por la misma clave (antes, la grilla de emojis). */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ flexGrow: 0 }}
+              contentContainerStyle={styles.grillaIconos}
+              keyboardShouldPersistTaps="handled"
+            >
+              {ICONOS_ELEGIBLES.map(({ clave, icono, nombre: nombreDelIcono }) => {
+                const elegido = iconoNuevo === clave;
+                return (
+                  <Presionable
+                    key={clave}
+                    onPress={() => {
+                      tacto.seleccion();
+                      setIconoNuevo(elegido ? null : clave);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: elegido }}
+                    accessibilityLabel={nombreDelIcono}
+                    style={[
+                      styles.opcionIcono,
+                      {
+                        borderColor: elegido ? c.gold : c.border,
+                        backgroundColor: elegido ? c.goldWash : 'transparent',
+                      },
+                    ]}
+                  >
+                    <Icon name={icono} size={TAMANO_ICONO.grande} color={elegido ? c.goldInk : c.textSoft} />
+                  </Presionable>
+                );
+              })}
+            </ScrollView>
+
+            <Text style={[rotulo, { marginTop: 12 }]}>¿A qué hora?</Text>
+            <View style={{ paddingTop: 4 }}>
+              <RuedaHoraPicker
+                key={`rueda-nuevo-${semillaRueda}`}
+                horaInicial={hora}
+                minutoInicial={minuto}
+                onCambiar={(h, m) => {
+                  setHora(h);
+                  setMinuto(m);
+                }}
+              />
+            </View>
+            {/* Los días en que corre. Volvió el 2026-09-08, cuando el backend pasó a aceptar
+                `activeWeekdays`: antes era un campo que la app mostraba y el servidor tiraba a la
+                basura, y por eso E-137 lo sacó del modal. */}
+            <Text style={[rotulo, { marginTop: 12 }]}>¿Qué días?</Text>
+            <View style={styles.filaDias}>
+              {DIAS_DEL_PLAN.map(dia => {
+                const corre = diasNuevo.has(dia);
+                return (
+                  <Presionable
+                    key={dia}
+                    onPress={() => alternarDiaNuevo(dia)}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: corre }}
+                    contenedorStyle={{ flex: 1 }}
+                    style={[
+                      styles.pastillaDia,
+                      {
+                        borderColor: corre ? c.gold : c.border,
+                        backgroundColor: corre ? c.cardBgAlt : 'transparent',
+                      },
+                    ]}
+                  >
+                    <Text style={[t.small, styles.textoPastilla, { color: corre ? c.goldInk : c.textSoft }]}>
+                      {dia.charAt(0) + dia.slice(1).toLowerCase()}
+                    </Text>
+                  </Presionable>
+                );
+              })}
+            </View>
+            <Text style={[t.small, { color: c.textSoft, marginTop: 8 }]}>
+              {diasNuevo.size === DIAS_DEL_PLAN.length
+                ? 'Los 7 días. Toca uno para sacarlo.'
+                : `${diasNuevo.size} ${diasNuevo.size === 1 ? 'día' : 'días'} por semana.`}
+              {' '}Un hábito propio no vence.
+            </Text>
+          </View>
+        )}
+      </HojaDesdeAbajo>
+
+      {/* «¿Hasta cuándo lo pausamos?» (2026-10-05): una hoja con las dos opciones que el backend sabe
+          cumplir, encima de la de Planificar. Era un diálogo de tres botones; cancelar es cerrarla. */}
+      <HojaDesdeAbajo
+        visible={pausando !== null}
+        alCerrar={() => setPausando(null)}
+        titulo={pausando ? `Pausar «${pausando.title}»` : 'Pausar'}
+        subtitulo="¿Hasta cuándo?"
+        etiquetaCerrar="No pausar"
+      >
+        <View style={{ paddingBottom: 4 }}>
+          {pausando && (
+            <>
+              <OpcionDeHoja etiqueta="Solo hoy" detalle="Vuelve mañana" elegida={false} alTocar={() => pausarHasta(pausando, true)} />
+              <OpcionDeHoja etiqueta="Hasta que yo lo reactive" elegida={false} alTocar={() => pausarHasta(pausando, false)} />
             </>
           )}
-
-          {/* =================================================================== */}
-          {/* PASO 2 — UN HÁBITO. Una sola decisión: a qué hora.                  */}
-          {/* =================================================================== */}
-          {estado === 'listo' && habitoEnEdicion !== null && (
-            <View style={{ flexShrink: 1 }}>
-              <View style={styles.cabezalHabito}>
-                <View style={styles.iconoHabitoGrande}>
-                  <Text style={styles.emojiHabitoGrande}>{habitoEnEdicion.icon ?? '🎯'}</Text>
-                </View>
-                <View style={{ flex: 1, flexShrink: 1 }}>
-                  <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 15 }]} numberOfLines={2}>
-                    {habitoEnEdicion.title}
-                  </Text>
-                  <Text style={[t.micro, { color: c.textSoft, fontSize: 11 }]}>
-                    Ahora: {horasDelHabitoAbierto?.ahora || 'sin hora'}
-                  </Text>
-                </View>
-              </View>
-
-              {/* El cambio ya guardado que todavía no rige (D-91), con la misma frase que la tarjeta
-                  del hábito en Plan. Sin esto, «Ahora: 09:00» parecía decir que el cambio no se
-                  había guardado (PLN-02). Solo aparece cuando hay uno: la hoja no tiene scroll y cada
-                  renglón empuja el botón de guardar. */}
-              {horasDelHabitoAbierto?.programado && (
-                <View style={[styles.cambioProgramado, { backgroundColor: c.goldWash }]}>
-                  <Icon name="clock" size={16} color={c.goldInk} />
-                  <Text style={[t.body, { color: c.goldInk, fontSize: 16, lineHeight: 22, flexShrink: 1 }]}>
-                    {textoDelCambioProgramado(horasDelHabitoAbierto.programado)}
-                  </Text>
-                </View>
-              )}
-
-              {/* Los bloques del día (madrugada / mañana / tarde / noche) se sacaron el
-                  2026-09-08 por decisión del cliente: no los quiere ver. Con ellos se fue el
-                  "✎ AJUSTAR", que era la única forma de moverlos. La hora se elige libre en la
-                  rueda y ya — es lo mismo que pedía el caso de quien trabaja de noche. */}
-              <View style={{ paddingTop: 8, paddingBottom: 2 }}>
-                <RuedaHoraPicker
-                  key={`rueda-${semillaRueda}`}
-                  horaInicial={hora}
-                  minutoInicial={minuto}
-                  onCambiar={(h, m) => {
-                    setHora(h);
-                    setMinuto(m);
-                  }}
-                />
-              </View>
-              {/* El alcance real del guardado. Describe, no promete: la hora es una sola para todos
-                  los días en que el hábito corre. */}
-              {/* LOS DÍAS, ahora sí tocables (V39). Tocar uno pasa a editar SU hora; tocarlo de
-                  nuevo vuelve al horario general. Cada pastilla muestra la hora que rige ese día,
-                  así que la fila entera se lee de un vistazo: "los lunes 05:00, el resto 09:00". */}
-              <View style={styles.filaTituloCompacta}>
-                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]} numberOfLines={1}>
-                  {diasEnEdicion.length === 0 ? 'TODOS LOS DÍAS' : `SOLO ${diasEnEdicion.join(' · ')}`}
-                </Text>
-                {diasEnEdicion.length > 0 && (
-                  <Pressable onPress={volverATodos} hitSlop={10}>
-                    <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 10.5 }]}>
-                      ← TODOS
-                    </Text>
-                  </Pressable>
-                )}
-              </View>
-              {/* La fila salió a `FilaDeDiasDelPlan` (2026-09-22) para que el planificador de las
-                  acciones del día use la MISMA, en vez de una copia. Acá no cambió nada: los mismos
-                  días, el mismo candado de D-91 y las mismas medidas. */}
-              <FilaDeDiasDelPlan
-                corre={diasDe(habitoEnEdicion)}
-                horarios={horarioSemanal}
-                enEdicion={diasEnEdicion}
-                onAlternarDia={alternarDia}
-              />
-              <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5, marginTop: 5, lineHeight: 14 }]}>
-                {diasEnEdicion.length === 0
-                  ? 'Toca uno o varios días para darles su propia hora. Lo de hoy y lo que ya pasó va con candado: se planifica de mañana en adelante.'
-                  : `Solo ${diasEnEdicion.join(', ').toLowerCase()}, todas las semanas. El día en curso no se reacomoda.`}
-              </Text>
-
-              {/* Apagar esos días, o volver a encenderlos. Se ofrece una cosa o la otra según cómo
-                  estén los marcados: mostrar las dos sería pedir que la persona adivine cuál aplica. */}
-              {/* "No hacer" es una decisión de peso y estaba como un renglón de texto perdido entre
-                  otros dos. Ahora es un botón con borde y alto de toque cómodo (AGENTS.md §4): se
-                  ve, se entiende que es una acción, y no se toca sin querer.
-                  En un hábito OBLIGATORIO no aparece: esos se pueden mover de hora pero no sacar. */}
-              {diasEnEdicion.length > 0
-                && habitoEnEdicion.isDeactivatable !== false
-                && diasEnEdicion.every(d => horarioSemanal[d]?.activo !== false) && (
-                <Pressable
-                  onPress={() => void apagarDias(habitoEnEdicion, diasEnEdicion)}
-                  style={[styles.accionApagar, { borderColor: c.danger }]}
-                >
-                  <Text style={[t.micro, { color: c.danger, fontSize: 11.5, fontFamily: 'Jost_700Bold' }]}>
-                    ⊘ NO HACERLO LOS {diasEnEdicion.join(', ')}
-                  </Text>
-                </Pressable>
-              )}
-
-              {diasEnEdicion.length > 0 && diasEnEdicion.every(d => horarioSemanal[d]?.activo === false) && (
-                <Pressable
-                  onPress={() => void quitarDias(habitoEnEdicion, diasEnEdicion)}
-                  style={[styles.accionApagar, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}
-                >
-                  <Text style={[t.micro, { color: c.goldInk, fontSize: 11.5, fontFamily: 'Jost_700Bold' }]}>
-                    ↺ VOLVER A HACERLO LOS {diasEnEdicion.join(', ')}
-                  </Text>
-                </Pressable>
-              )}
-
-              {/* Los obligatorios se pueden mover de hora, no sacar. Decirlo evita que alguien
-                  busque un botón que no está. */}
-              {diasEnEdicion.length > 0 && habitoEnEdicion.isDeactivatable === false && (
-                <View style={[styles.accionApagar, { borderColor: c.border, flexDirection: 'row', gap: 8 }]}>
-                  <Icon name="lock" size={13} color={c.tabInactive} />
-                  <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5 }]}>
-                    Obligatorio del programa: puedes cambiarle la hora, no sacarlo
-                  </Text>
-                </View>
-              )}
-
-              {/* Solo cuando TODOS los marcados tienen hora propia Y están encendidos: ofrecer
-                  "quitar la hora" de un día apagado no significa nada. */}
-              {diasEnEdicion.length > 0
-                && diasEnEdicion.every(d => horarioSemanal[d]?.propio && horarioSemanal[d]?.activo !== false) && (
-                <Pressable
-                  onPress={() => void quitarDias(habitoEnEdicion, diasEnEdicion)}
-                  hitSlop={8}
-                  style={{ marginTop: 8, minHeight: 36, justifyContent: 'center' }}
-                >
-                  <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5 }]}>
-                    Quitar la hora propia de {diasEnEdicion.join(', ').toLowerCase()} y volver al horario general
-                  </Text>
-                </Pressable>
-              )}
-
-              {/* En Android es alarma local; en web es Web Push y los dos avisos salen del
-                  scheduler del backend. Expo Go sigue sin ofrecer el canal remoto. */}
-              {/* E-408: guardar días no guarda el recordatorio; con días elegidos no se ofrece. */}
-              {recordatorios.HAY_RECORDATORIOS && diasEnEdicion.length > 0 && (
-                <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5, marginTop: 12 }]}>
-                  El recordatorio se elige sin días marcados.
-                </Text>
-              )}
-              {recordatorios.HAY_RECORDATORIOS && diasEnEdicion.length === 0 && (
-                <>
-                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', marginTop: 12 }]}>
-                    RECORDATORIO {antelaciones.length > 1 ? `(${antelaciones.length} avisos)` : ''}
-                  </Text>
-                  <View style={styles.filaAntelaciones}>
-                    {/* "Sin aviso" no es una opción más: es el conjunto vacío, y por eso va aparte
-                        y no compite con las otras tres. */}
-                    <Pressable
-                      onPress={() => { avisosTocadosRef.current = true; setAntelaciones([]); }}
-                      style={[
-                        styles.pastillaAntelacion,
-                        {
-                          borderColor: antelaciones.length === 0 ? c.gold : c.border,
-                          backgroundColor: antelaciones.length === 0 ? c.cardBgAlt : 'transparent',
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          t.micro,
-                          {
-                            fontSize: 10.5,
-                            fontFamily: 'Jost_700Bold',
-                            color: antelaciones.length === 0 ? c.goldInk : c.textSoft,
-                          },
-                        ]}
-                        numberOfLines={1}
-                      >
-                        Sin aviso
-                      </Text>
-                    </Pressable>
-                    {/* Las sugeridas MAS las que la persona haya escrito, en orden de tiempo:
-                        primero el aviso que llega antes. "A la hora" va al final, aparte, porque
-                        no es una antelacion sino el momento exacto. */}
-                    {antelacionesAMostrar(ANTELACIONES_SUGERIDAS, antelaciones).map(minutos => {
-                      const on = antelaciones.includes(minutos);
-                      return (
-                        <Pressable
-                          key={minutos}
-                          onPress={() => alternarAntelacion(minutos)}
-                          accessibilityRole="button"
-                          accessibilityState={{ selected: on }}
-                          accessibilityLabel={`${etiquetaDeAntelacion(minutos)}${on ? ', activado' : ''}`}
-                          style={[
-                            styles.pastillaAntelacion,
-                            {
-                              borderColor: on ? c.gold : c.border,
-                              backgroundColor: on ? c.cardBgAlt : 'transparent',
-                            },
-                          ]}
-                        >
-                          <Text
-                            style={[t.micro, { fontSize: 10.5, fontFamily: 'Jost_700Bold', color: on ? c.goldInk : c.textSoft }]}
-                            numberOfLines={1}
-                          >
-                            {etiquetaDeAntelacion(minutos)}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                    <Pressable
-                      onPress={() => alternarAntelacion(0)}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: antelaciones.includes(0) }}
-                      accessibilityLabel={`A la hora exacta${antelaciones.includes(0) ? ', activado' : ''}`}
-                      style={[
-                        styles.pastillaAntelacion,
-                        {
-                          borderColor: antelaciones.includes(0) ? c.gold : c.border,
-                          backgroundColor: antelaciones.includes(0) ? c.cardBgAlt : 'transparent',
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          t.micro,
-                          {
-                            fontSize: 10.5,
-                            fontFamily: 'Jost_700Bold',
-                            color: antelaciones.includes(0) ? c.goldInk : c.textSoft,
-                          },
-                        ]}
-                        numberOfLines={1}
-                      >
-                        A la hora
-                      </Text>
-                    </Pressable>
-                    {/* "Otra" ABRE UNA RUEDA, no un teclado (2026-09-21). Era un `TextInput` con
-                        `keyboardType="number-pad"`: al tocarlo el teclado del sistema subía y
-                        tapaba el propio campo, así que se escribía a ciegas. La hoja no tiene
-                        scroll a propósito —un ScrollView acá se pelearía con las ruedas por el
-                        dedo (AGENTS.md §2)—, así que no había a dónde correr el campo: la salida
-                        fue sacar el teclado. La rueda se despliega debajo y solo cuando se pide,
-                        porque cada píxel de alto empuja el botón de guardar fuera de la hoja. */}
-                    <Pressable
-                      onPress={alternarRuedaOtra}
-                      accessibilityRole="button"
-                      accessibilityState={{ expanded: ruedaOtraAbierta }}
-                      accessibilityLabel="Otra antelación, elegir los minutos en una rueda"
-                      style={[
-                        styles.pastillaAntelacion,
-                        {
-                          borderColor: ruedaOtraAbierta ? c.gold : c.border,
-                          backgroundColor: ruedaOtraAbierta ? c.cardBgAlt : 'transparent',
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          t.micro,
-                          {
-                            fontSize: 10.5,
-                            fontFamily: 'Jost_700Bold',
-                            color: ruedaOtraAbierta ? c.goldInk : c.textSoft,
-                          },
-                        ]}
-                        numberOfLines={1}
-                      >
-                        Otra
-                      </Text>
-                    </Pressable>
-                  </View>
-
-                  {/* La rueda y su botón van en UNA fila horizontal: apilados sumaban casi 200 px
-                      de alto y el botón de guardar se caía de la hoja. Al lado, la rueda cuesta
-                      sus 132 px y nada más. */}
-                  {ruedaOtraAbierta && (
-                    <View style={styles.filaRuedaOtra}>
-                      <RuedaAntelacionPicker
-                        minutosIniciales={arranqueDeLaRuedaOtra.current}
-                        onCambiar={setMinutosOtra}
-                      />
-                      <Pressable
-                        onPress={agregarAntelacionDeLaRueda}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Añadir ${etiquetaDeAntelacion(minutosOtra)}`}
-                        style={[
-                          styles.pastillaAntelacion,
-                          { borderColor: c.gold, backgroundColor: c.cardBgAlt },
-                        ]}
-                      >
-                        {/* El botón repite lo que marca la rueda, igual que el de guardar repite
-                            la hora: es la confirmación de lo que se va a añadir, y de paso dice
-                            que esos números sueltos son minutos. */}
-                        <Text
-                          style={[t.micro, { fontSize: 10.5, fontFamily: 'Jost_700Bold', color: c.goldInk }]}
-                          numberOfLines={1}
-                        >
-                          + Añadir {etiquetaDeAntelacion(minutosOtra)}
-                        </Text>
-                      </Pressable>
-                    </View>
-                  )}
-                </>
-              )}
-
-              <GoldButton
-                label={
-                  guardando
-                    ? 'GUARDANDO…'
-                    : diasEnEdicion.length === 0
-                      ? `GUARDAR ${horaTexto} · TODOS LOS DÍAS`
-                      : `GUARDAR ${horaTexto} · ${diasEnEdicion.join(' ')}`
-                }
-                onPress={() => intentarGuardar(habitoEnEdicion)}
-                disabled={guardando}
-                style={{ width: '100%', marginTop: 14 }}
-              />
-            </View>
-          )}
-
-          {/* =================================================================== */}
-          {/* PASO 3 — HÁBITO NUEVO. Nombre y hora, nada más: la categoría sale de */}
-          {/* la dimensión que ya está abierta y los días son todos.               */}
-          {/* =================================================================== */}
-          {estado === 'listo' && creando && (
-            <View style={{ flexShrink: 1 }}>
-              <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 15, marginTop: 12 }]}>
-                Hábito nuevo en {dimension}
-              </Text>
-              <Text style={[t.micro, { color: c.textSoft, fontSize: 11, marginTop: 2, marginBottom: 10 }]}>
-                Es tuyo: puedes pausarlo o sacarlo cuando quieras.
-              </Text>
-
-              <TextInput
-                value={tituloNuevo}
-                onChangeText={setTituloNuevo}
-                placeholder="Caminar 30 minutos"
-                placeholderTextColor={c.tabInactive}
-                style={[styles.campoTitulo, { borderColor: c.border, color: c.text, backgroundColor: c.cardBgAlt }]}
-                maxLength={80}
-                returnKeyType="done"
-              />
-
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', marginTop: 16 }]}>ELIGE UN ICONO</Text>
-              {/* Los mismos iconos del catálogo, no una lista aparte: así un hábito propio se ve
-                  igual de curado que uno del programa. Sin elegir ninguno se guarda `null` y el
-                  hábito hereda el de su categoría, que es como nacían todos hasta ahora. */}
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.grillaIconos}
-                keyboardShouldPersistTaps="handled"
-              >
-                {ICONOS_ELEGIBLES.map(({ clave, emoji }) => {
-                  const elegido = iconoNuevo === clave;
-                  return (
-                    <Pressable
-                      key={clave}
-                      onPress={() => setIconoNuevo(elegido ? null : clave)}
-                      style={[
-                        styles.opcionIcono,
-                        {
-                          borderColor: elegido ? c.gold : c.border,
-                          backgroundColor: elegido ? c.cardBgAlt : 'transparent',
-                        },
-                      ]}
-                    >
-                      <Text style={styles.emojiHabito}>{emoji}</Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', marginTop: 16 }]}>¿A QUÉ HORA?</Text>
-              <View style={{ paddingTop: 4 }}>
-                <RuedaHoraPicker
-                  key={`rueda-nuevo-${semillaRueda}`}
-                  horaInicial={hora}
-                  minutoInicial={minuto}
-                  onCambiar={(h, m) => {
-                    setHora(h);
-                    setMinuto(m);
-                  }}
-                />
-              </View>
-              {/* Los días en que corre. Volvió el 2026-09-08, cuando el backend pasó a aceptar
-                  `activeWeekdays`: antes era un campo que la app mostraba y el servidor tiraba a la
-                  basura, y por eso E-137 lo sacó del modal. */}
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', marginTop: 16 }]}>¿QUÉ DÍAS?</Text>
-              <View style={styles.filaDias}>
-                {DIAS_DEL_PLAN.map(dia => {
-                  const corre = diasNuevo.has(dia);
-                  return (
-                    <Pressable
-                      key={dia}
-                      onPress={() => alternarDiaNuevo(dia)}
-                      style={[
-                        styles.pastillaDia,
-                        {
-                          borderColor: corre ? c.gold : c.border,
-                          backgroundColor: corre ? c.cardBgAlt : 'transparent',
-                          minHeight: 40,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[t.micro, {
-                          fontSize: 11,
-                          fontFamily: 'Jost_700Bold',
-                          color: corre ? c.goldInk : c.textSoft,
-                        }]}
-                      >
-                        {dia}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-              <Text style={[t.micro, { color: c.textSoft, fontSize: 10.5, textAlign: 'center', lineHeight: 15 }]}>
-                {diasNuevo.size === DIAS_DEL_PLAN.length
-                  ? 'Corre los 7 días. Toca un día para sacarlo.'
-                  : `Corre ${diasNuevo.size} ${diasNuevo.size === 1 ? 'día' : 'días'} por semana.`}
-                {'\n'}Un hábito propio no vence: la hora lo ubica en tu jornada.
-              </Text>
-
-              <GoldButton
-                label={guardando ? 'CREANDO…' : `CREAR A LAS ${horaTexto}`}
-                onPress={() => void crearHabito()}
-                disabled={guardando}
-                style={{ width: '100%', marginTop: 16 }}
-              />
-            </View>
-          )}
         </View>
-      </View>
-    </Modal>
+      </HojaDesdeAbajo>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
+  estadoCentrado: {
+    textAlign: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  cuerpoLista: {
+    gap: 10,
+    paddingHorizontal: 20,
+    paddingTop: 4,
+  },
+  cuerpo: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.78)',
-    justifyContent: 'flex-end',
+    paddingHorizontal: 20,
   },
-  hoja: {
-    maxHeight: '92%',
-    borderTopWidth: 1.5,
-    borderLeftWidth: 1.5,
-    borderRightWidth: 1.5,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 16,
-    paddingTop: 8,
-  },
-  agarre: {
-    width: 42,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginBottom: 10,
-  },
-  encabezado: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderBottomWidth: 1,
-    paddingBottom: 10,
-    gap: 10,
-  },
-  volver: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    minHeight: 44,
-  },
-  cerrar: {
-    minHeight: 44,
-    justifyContent: 'center',
-  },
-  cabezalHabito: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginTop: 12,
-    marginBottom: 4,
-  },
-  iconoHabitoGrande: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emojiHabitoGrande: {
-    fontSize: 28,
-    lineHeight: 34,
-  },
-  // «Desde el lunes 28 de septiembre: 09:30» (PLN-02): el mismo lavado dorado que la tarjeta del
-  // hábito en Plan, a lo ancho de la hoja para que entre en un renglón a 16 px.
-  cambioProgramado: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    marginTop: 6,
-  },
-  filaTituloCompacta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 10,
-    marginBottom: 6,
-    gap: 10,
-  },
-  // Cuatro bloques en una sola fila dejarían el rango ilegible en un teléfono angosto; `47%` los
-  // acomoda en 2x2 y en tablet vuelven a entrar de a cuatro solos.
-  filaDias: {
-    flexDirection: 'row',
-    gap: 6,
-    marginTop: 6,
-  },
-  // Alto para TRES renglones: la letra del día, su número del mes y la hora que rige ese día.
-  // Subió de 48 a 58 al agregarse el número: con 48 los tres se apretaban y el de la hora quedaba
-  // recortado en pantallas compactas. Sigue por encima del mínimo de AGENTS.md §4.
-  pastillaDia: {
-    flex: 1,
-    minHeight: 58,
-    paddingVertical: 4,
-    borderRadius: 10,
-    borderWidth: 1.2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cabezaSeccion: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderBottomWidth: 1,
-    paddingBottom: 6,
-    minHeight: 40,
-    gap: 10,
-  },
-  // Tira HORIZONTAL y no una grilla que envuelve: 17 iconos en dos o tres filas empujaban la rueda
-  // fuera de la hoja, y un ScrollView vertical acá adentro se pelearía con las ruedas por el dedo
-  // (AGENTS.md §2). En horizontal no compiten: cada uno se lleva su propio eje.
-  filaAntelaciones: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 6,
-  },
-  /* La rueda de "Otra" y su botón, uno al lado del otro. `alignItems: 'center'` para que el
-     botón quede a la altura de la franja central de la rueda, que es la fila que cuenta. */
-  filaRuedaOtra: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginTop: 6,
-  },
-  /* 31 % y no 47 %: desde que se puede elegir una antelación propia hay hasta seis elementos en
-     esta fila, y a dos por renglón el botón de guardar quedaba fuera de la hoja —que no tiene
-     scroll a propósito—. A tres por renglón entran en el mismo alto de antes. La altura de 44 no
-     se toca: es el mínimo cómodo para el dedo (AGENTS.md §4). */
-  pastillaAntelacion: {
-    flexGrow: 1,
-    minWidth: '31%',
-    minHeight: 44,
-    borderWidth: 1.2,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-  },
-  grillaIconos: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingVertical: 8,
-    paddingRight: 8,
-  },
-  opcionIcono: {
-    width: 46,
-    height: 46,
-    borderRadius: 13,
-    borderWidth: 1.2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  crearHabito: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    borderWidth: 1.2,
-    borderStyle: 'dashed',
-    borderRadius: 12,
-    minHeight: 52,
-    marginTop: 4,
-  },
-  campoTitulo: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    minHeight: 52,
+  /** Rótulo de un bloque de la hoja: tipo oración a 15 (eran versalitas de 10,5–11). */
+  rotulo: {
     fontSize: 15,
-    fontFamily: 'Jost_400Regular',
-  },
-  // Alto de toque cómodo y borde propio: "no hacerlo" es una decisión de peso y tiene que verse
-  // como una acción, no como una nota al pie (AGENTS.md §4).
-  accionApagar: {
-    minHeight: 48,
-    borderWidth: 1.2,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-    marginTop: 10,
+    lineHeight: 20,
+    fontFamily: 'Jost_500Medium',
   },
   // La fila tiene dos partes (PLN-03): lo que abre el editor y, al lado, el interruptor o el candado.
   // El relleno de siempre (10 por lado) quedó repartido: el derecho acá, el resto en `filaHabitoAbrir`.
@@ -1661,16 +1506,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 12,
     paddingRight: 10,
-    minHeight: 56,
+    minHeight: 60,
+  },
+  filaHabitoAbrirArea: {
+    flex: 1,
+    flexShrink: 1,
+    alignSelf: 'stretch',
   },
   // Se estira al alto de la fila y lleva su relleno: tocar arriba o abajo del título sigue abriendo.
   filaHabitoAbrir: {
     flex: 1,
-    flexShrink: 1,
-    alignSelf: 'stretch',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
     paddingLeft: 10,
     paddingVertical: 10,
   },
@@ -1681,16 +1529,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // `lineHeight` explícito: sin él, en Android un emoji se recorta por arriba dentro de su caja.
-  emojiHabito: {
-    fontSize: 20,
-    lineHeight: 26,
-  },
   filaMeta: {
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 10,
+  },
+  hora: {
+    fontSize: 14,
+    fontVariant: ['tabular-nums'],
+  },
+  marca: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  marcaTexto: {
+    fontSize: 14,
+    fontFamily: 'Jost_500Medium',
   },
   // 48×48 y no 44: es el mínimo cómodo de AGENTS.md §4, y hace innecesario el `hitSlop` que le
   // robaba el toque al chevron de la fila. Crece 2px por lado, que caben en el `gap` de 8.
@@ -1700,6 +1556,145 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     marginVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cabezaSeccion: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    minHeight: 44,
+    gap: 10,
+  },
+  crearHabito: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderRadius: 12,
+    minHeight: 56,
+    paddingHorizontal: 10,
+    marginTop: 4,
+  },
+  // «Desde el lunes 28 de septiembre: 09:30» (PLN-02): el mismo lavado dorado que la tarjeta del
+  // hábito en Plan, a lo ancho de la hoja para que entre en un renglón a 16 px.
+  cambioProgramado: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginBottom: 4,
+  },
+  filaTituloCompacta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 6,
+    marginBottom: 6,
+    gap: 10,
+    minHeight: 44,
+  },
+  enlaceTodos: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    minHeight: 44,
+    paddingHorizontal: 4,
+  },
+  // Alto de toque cómodo y borde propio: "no hacerlo" es una decisión de peso y tiene que verse
+  // como una acción, no como una nota al pie (AGENTS.md §4).
+  accionApagar: {
+    flexDirection: 'row',
+    gap: 8,
+    minHeight: 48,
+    borderWidth: 1.2,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    marginTop: 10,
+  },
+  textoAccion: {
+    fontFamily: 'Jost_500Medium',
+    flexShrink: 1,
+  },
+  filaAntelaciones: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 6,
+  },
+  /* 31 % y no 47 %: desde que se puede elegir una antelación propia hay hasta seis elementos en
+     esta fila, y a dos por renglón el botón de guardar quedaba fuera de la hoja —que no tiene
+     scroll a propósito—. A tres por renglón entran en el mismo alto de antes. La altura de 44 no
+     se toca: es el mínimo cómodo para el dedo (AGENTS.md §4). El ancho va en el área táctil
+     (`Presionable`), el dibujo la llena. */
+  pastillaArea: {
+    flexGrow: 1,
+    minWidth: '31%',
+  },
+  pastillaAntelacion: {
+    minHeight: 44,
+    borderWidth: 1.2,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  textoPastilla: {
+    fontSize: 14,
+    fontFamily: 'Jost_500Medium',
+  },
+  conIcono: {
+    flexDirection: 'row',
+    gap: 4,
+    paddingHorizontal: 10,
+  },
+  /* La rueda de "Otra" y su botón, uno al lado del otro. `alignItems: 'center'` para que el
+     botón quede a la altura de la franja central de la rueda, que es la fila que cuenta. */
+  filaRuedaOtra: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 6,
+  },
+  campoTitulo: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    minHeight: 52,
+    fontSize: 16,
+    fontFamily: 'Jost_400Regular',
+  },
+  // Tira HORIZONTAL y no una grilla que envuelve: 17 iconos en dos o tres filas empujaban la rueda
+  // fuera de la hoja, y un ScrollView vertical acá adentro se pelearía con las ruedas por el dedo
+  // (AGENTS.md §2). En horizontal no compiten: cada uno se lleva su propio eje.
+  grillaIconos: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingVertical: 8,
+    paddingRight: 8,
+  },
+  opcionIcono: {
+    width: 48,
+    height: 48,
+    borderRadius: 13,
+    borderWidth: 1.2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filaDias: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 6,
+  },
+  pastillaDia: {
+    minHeight: 44,
+    paddingVertical: 4,
+    borderRadius: 10,
+    borderWidth: 1.2,
     alignItems: 'center',
     justifyContent: 'center',
   },

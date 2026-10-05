@@ -92,7 +92,7 @@ const habito = (titulo: string, habitoId: string, hora: string, desactivable = t
   tieneTrackHoy: true,
   habitoId,
   isDeactivatable: desactivable,
-  icon: '🥗',
+  icon: 'salad',
 });
 const JUGO = habito('JUGO VERDE', 'h-jugo', '09:00');
 const CLASE = habito('Clase diaria', 'h-clase', '14:59', false);
@@ -179,8 +179,14 @@ describe('PLN-03: el interruptor de pausa no abre el editor', () => {
     expect(raiz.root.findAll(n => n.type === Switch)).toHaveLength(1);
     // Ningún `onPress` envuelve al interruptor: en la web, su clic llegaría a ese `onPress`.
     expect(tocablesQueContienen(raiz, n => n.type === Switch)).toHaveLength(0);
-    // El candado es su propio botón, y nada más lo envuelve.
-    expect(tocablesQueContienen(raiz, n => n.props.name === 'lock')).toHaveLength(1);
+    // El candado es su propio botón, y nada más lo envuelve. Desde 2026-10-05 ese botón es un
+    // `Presionable` (que lleva adentro su `Pressable`): son dos nodos con `onPress`, los dos sin el
+    // título de la fila. Si el candado viviera dentro de la fila, uno de ellos llevaría el título.
+    const envuelvenAlCandado = tocablesQueContienen(raiz, n => n.props.name === 'lock');
+    expect(envuelvenAlCandado.length).toBeGreaterThan(0);
+    for (const nodo of envuelvenAlCandado) {
+      expect(nodo.findAll(n => (n.type as unknown) === 'Text')).toHaveLength(0);
+    }
   });
 
   it('la fila se sigue tocando para abrir el editor', async () => {
@@ -223,7 +229,7 @@ describe('PLN-02: el editor avisa el cambio de hora que rige desde mañana', () 
     await act(async () => {
       mockRueda.mock.lastCall![0].onCambiar(9, 30);
     });
-    const [guardar] = raiz.root.findAll(n => typeof n.props.label === 'string' && n.props.label.startsWith('GUARDAR 09:30'));
+    const [guardar] = raiz.root.findAll(n => typeof n.props.label === 'string' && n.props.label.startsWith('Guardar 09:30'));
     await act(async () => {
       guardar.props.onPress();
     });
@@ -256,11 +262,12 @@ describe('E-408: lo que se ve en el recordatorio es lo que se guarda', () => {
     return boton.length > 0 && boton[0].props.accessibilityState?.selected === true;
   };
   const volver = async (r: ReactTestRenderer) => {
-    const [boton] = tocablesQueContienen(r, n => (n.type as unknown) === 'Text' && n.props.children === 'VOLVER');
+    // La ‹ de la hoja (2026-10-05): un ícono con nombre para el lector de pantalla, sin texto.
+    const [boton] = r.root.findAll(n => typeof n.props.onPress === 'function' && n.props.accessibilityLabel === 'Volver a la lista');
     await act(async () => { boton.props.onPress(); });
   };
   const guardar = async (r: ReactTestRenderer) => {
-    const [boton] = r.root.findAll(n => typeof n.props.label === 'string' && n.props.label.startsWith('GUARDAR'));
+    const [boton] = r.root.findAll(n => typeof n.props.label === 'string' && n.props.label.startsWith('Guardar'));
     await act(async () => { boton.props.onPress(); });
     await esperar();
   };

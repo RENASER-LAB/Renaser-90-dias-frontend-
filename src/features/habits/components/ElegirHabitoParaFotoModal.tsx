@@ -1,8 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, Modal, Pressable, ScrollView, ActivityIndicator, StyleSheet, Platform } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, StyleSheet, Platform, useWindowDimensions } from 'react-native';
 
-import { Icon } from '../../../components/Icon';
+import { Icon, TAMANO_ICONO } from '../../../components/Icon';
+import { Presionable } from '../../../components/Presionable';
+import { HojaDesdeAbajo } from '../../../components/hojaDesdeAbajo/HojaDesdeAbajo';
 import { useTheme } from '../../../theme/ThemeContext';
+import { tacto } from '../../../utils/tacto';
 import { mensajeDeError } from '../../../services/http/apiClient';
 import { obtenerCatalogo, obtenerTracksDeHoy } from '../api/habitsApi';
 import { habitosParaFotoDeHoy, type HabitoParaFoto } from '../utils/habitosParaFotoDeHoy';
@@ -20,6 +23,11 @@ import { tituloVisible } from '../utils/renombreDeHabito';
  * > quitado ese mismo día) y subía la foto por su cuenta, cerrando el registro sin respuesta. Eso
  * > se saltaba el «¿Qué sentiste?» obligatorio de los rituales (D-172). Ahora solo elige y deja la
  * > subida al flujo común.
+ *
+ * **Hoja desde abajo (rediseño de Training, 2026-10-05).** Era una hoja hecha a mano con «Cerrar» de
+ * texto. Ahora es la `HojaDesdeAbajo` de la app, del alto de lo que lleva (`contenido`: son pocos
+ * hábitos, y una hoja casi entera con dos filas se vería vacía): se arrastra, tiene la ✕ de 44, las
+ * filas se hunden al tocarlas y elegir vibra con el «tic» de selección.
  */
 
 type Props = {
@@ -54,87 +62,76 @@ export function ElegirHabitoParaFotoModal({ visible, onCerrar, onElegir, titulos
     if (visible) void cargar();
   }, [visible, cargar]);
 
+  const { height: altoVentana } = useWindowDimensions();
+
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onCerrar}>
-      <View style={styles.fondo}>
-        <View style={[styles.hoja, { backgroundColor: c.bg, borderColor: c.border }]}>
-          <View style={styles.encabezado}>
-            <Text style={[t.cardTitle, { color: c.text, flex: 1 }]}>¿De qué hábito es la foto?</Text>
-            <Pressable onPress={onCerrar} accessibilityRole="button" accessibilityLabel="Cerrar" hitSlop={10}>
-              <Text style={[t.body, { color: c.micro }]}>Cerrar</Text>
-            </Pressable>
-          </View>
+    <HojaDesdeAbajo
+      visible={visible}
+      alCerrar={onCerrar}
+      titulo="¿De qué hábito es la foto?"
+      subtitulo="Elige uno y se abre la cámara"
+      etiquetaCerrar="Cerrar sin elegir"
+    >
+      <View style={styles.cuerpo}>
+        {cargando && <ActivityIndicator color={c.goldInk} style={{ marginVertical: 20 }} />}
 
-          {cargando && <ActivityIndicator color={c.goldInk} style={{ marginVertical: 20 }} />}
+        {error !== null && <Text style={[t.body, { color: c.danger }]}>{error}</Text>}
 
-          {error !== null && <Text style={[t.small, { color: c.danger }]}>{error}</Text>}
+        {!cargando && opciones.length === 0 && error === null && (
+          <Text style={[t.body, { color: c.textSoft, paddingVertical: 16 }]}>
+            Hoy no tienes hábitos pendientes con foto.
+          </Text>
+        )}
 
-          {!cargando && opciones.length === 0 && error === null && (
-            <Text style={[t.body, { color: c.micro, paddingVertical: 16 }]}>
-              Hoy no tienes hábitos pendientes con foto.
-            </Text>
-          )}
-
-          <ScrollView style={{ maxHeight: 320 }} showsVerticalScrollIndicator={false}>
-            {opciones.map(opcion => {
-              const { track } = opcion;
-              const titulo = tituloVisible({ id: track.habitoId, title: track.tituloHabito }, titulos);
-              return (
-                <Pressable
-                  key={track.id}
-                  onPress={() => onElegir(opcion)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Subir la foto de ${titulo}`}
-                  style={[styles.fila, { borderColor: c.border, backgroundColor: c.cardBg }]}
-                >
-                  <View style={{ flex: 1, gap: 2 }}>
-                    <Text style={[t.cardTitle, { color: c.text, fontSize: 14.5 }]} numberOfLines={1}>
-                      {titulo}
+        <ScrollView style={{ maxHeight: Math.round(altoVentana * 0.5) }} showsVerticalScrollIndicator={false}>
+          {opciones.map(opcion => {
+            const { track } = opcion;
+            const titulo = tituloVisible({ id: track.habitoId, title: track.tituloHabito }, titulos);
+            return (
+              <Presionable
+                key={track.id}
+                onPress={() => {
+                  tacto.seleccion();
+                  onElegir(opcion);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={`Subir la foto de ${titulo}`}
+                style={[styles.fila, { borderColor: c.border, backgroundColor: c.cardBg }]}
+              >
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={[t.cardTitle, { color: c.text }]} numberOfLines={1}>
+                    {titulo}
+                  </Text>
+                  {/* Sin puntos informados no se inventa un número: la línea no aparece. */}
+                  {typeof track.puntosEnJuego === 'number' && (
+                    <Text style={[t.small, { color: c.textSoft }]}>
+                      {track.puntosEnJuego}
+                      {typeof track.puntosMaximos === 'number' ? ` / ${track.puntosMaximos}` : ''} pts en juego
                     </Text>
-                    {/* Sin puntos informados no se inventa un número: la línea no aparece. */}
-                    {typeof track.puntosEnJuego === 'number' && (
-                      <Text style={[t.small, { color: c.micro }]}>
-                        {track.puntosEnJuego}
-                        {typeof track.puntosMaximos === 'number' ? ` / ${track.puntosMaximos}` : ''} pts en juego
-                      </Text>
-                    )}
-                  </View>
-                  <Icon name="camera" size={16} color={c.goldInk} />
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        </View>
+                  )}
+                </View>
+                <Icon name="camera" size={TAMANO_ICONO.normal} color={c.goldInk} />
+              </Presionable>
+            );
+          })}
+        </ScrollView>
       </View>
-    </Modal>
+    </HojaDesdeAbajo>
   );
 }
 
 const styles = StyleSheet.create({
-  fondo: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.45)',
-  },
-  hoja: {
-    gap: 10,
-    padding: 18,
-    paddingBottom: 28,
-    borderTopWidth: 1,
-    borderTopLeftRadius: 18,
-    borderTopRightRadius: 18,
-  },
-  encabezado: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
+  cuerpo: {
+    gap: 4,
+    paddingHorizontal: 20,
+    paddingBottom: 8,
   },
   fila: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    padding: 14,
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     marginTop: 8,
     borderWidth: 1,
     borderRadius: 12,

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 
-import { Icon } from '../../../components/Icon';
+import { Icon, TAMANO_ICONO } from '../../../components/Icon';
+import { Presionable } from '../../../components/Presionable';
 import { useTheme } from '../../../theme/ThemeContext';
 import type { HabitItem } from '../../../screens/TrainingScreen';
 
@@ -88,50 +89,62 @@ export function ProximoAVencerCard({ habits, onAbrir }: Props) {
   const puntos = habit.pointsAtStake;
   const maximo = habit.maxPoints;
 
+  /*
+   * Rediseño de Training (2026-10-05): el cronómetro de Lucide (`timer`) dice «se acaba el
+   * tiempo»; el asterisco de antes era el mismo dibujo de Espíritu, de «Ponerle otro nombre» y de El
+   * Método. Arriba, lo que urge («Vence en 12 min», a 16) y no el rótulo en versalitas de 10,5.
+   */
   return (
-    <Pressable
+    <Presionable
       onPress={() => onAbrir(habit)}
       accessibilityRole="button"
-      accessibilityLabel={`Próximo a vencer: ${habit.title}. Quedan ${tiempoRestante(habit.deadline, ahora)}.`}
+      accessibilityLabel={`Próximo a vencer: ${habit.title}. Vence en ${tiempoRestante(habit.deadline, ahora)}.`}
       style={[styles.card, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}
     >
       <View style={styles.encabezado}>
-        <Icon name="spark" size={14} color={c.goldInk} />
-        <Text style={[t.micro, { color: c.goldInk }]}>PRÓXIMO A VENCER</Text>
+        <Icon name="timer" size={TAMANO_ICONO.normal} color={c.goldInk} />
+        <Text style={[t.cardTitle, styles.vence, { color: c.goldInk }]}>
+          Vence en {tiempoRestante(habit.deadline, ahora)}
+        </Text>
       </View>
 
-      <Text style={[t.cardTitle, { color: c.text, fontSize: 15.5 }]} numberOfLines={2}>
-        {habit.title}
-      </Text>
-
       <View style={styles.pie}>
-        <Text style={[t.body, { color: c.text, fontSize: 13.5 }]}>
-          Te quedan {tiempoRestante(habit.deadline, ahora)}
+        <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 17, flexShrink: 1 }]} numberOfLines={2}>
+          {habit.title}
         </Text>
         {/* Sin puntos informados (backend viejo, o hábito ya terminal) no se inventa un número:
             simplemente no se muestra la parte de puntos. */}
         {typeof puntos === 'number' && (
-          <Text style={[t.cardTitle, { color: c.goldInk, fontSize: 13.5 }]}>
+          <Text style={[t.small, styles.puntos, { color: c.textSoft }]}>
             {puntos}
             {typeof maximo === 'number' ? ` / ${maximo}` : ''} pts en juego
           </Text>
         )}
       </View>
-    </Pressable>
+    </Presionable>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
     gap: 6,
-    padding: 14,
-    borderRadius: 14,
+    padding: 16,
+    borderRadius: 16,
     borderWidth: 1,
   },
   encabezado: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
+  },
+  vence: {
+    fontSize: 16,
+    fontVariant: ['tabular-nums'],
+  },
+  puntos: {
+    fontSize: 14,
+    fontFamily: 'Jost_500Medium',
+    fontVariant: ['tabular-nums'],
   },
   pie: {
     flexDirection: 'row',

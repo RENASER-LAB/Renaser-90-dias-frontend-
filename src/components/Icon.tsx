@@ -10,7 +10,8 @@ export type IconName =
   | 'close' | 'target' | 'thumbsUp' | 'mic' | 'search'
   | 'forward' | 'imagePlus'
   | 'smile' | 'trash' | 'checkCheck' | 'reply' | 'copy'
-  | 'newspaper' | 'bookOpen' | 'quote' | 'globe' | 'headset' | 'messageCircle' | 'video' | 'fileText' | 'link' | 'pencil' | 'idCard' | 'layoutGrid';
+  | 'newspaper' | 'bookOpen' | 'quote' | 'globe' | 'headset' | 'messageCircle' | 'video' | 'fileText' | 'link' | 'pencil' | 'idCard' | 'layoutGrid'
+  | 'timer' | 'flame' | 'badgeCheck' | 'hourglass' | 'ban' | 'rotateCcw' | 'audioLines' | 'sunrise' | 'sunMedium' | 'moonStar' | 'glassWater' | 'showerHead' | 'footprints' | 'salad' | 'utensils' | 'utensilsCrossed' | 'bookOpenText' | 'headphones' | 'notebookPen' | 'handHeart' | 'smartphoneOff';
 
 /**
  * Grosor del trazo, en píxeles REALES de pantalla, a cualquier tamaño (decisión del dueño,
@@ -584,6 +585,161 @@ export function Icon({ name, size = 20, color, strokeWidth }: Props) {
         <Svg width={size} height={size} viewBox="0 0 24 24">
           <Rect {...s24} x={8} y={8} width={14} height={14} rx={2} />
           <Path {...s24} d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+        </Svg>
+      );
+    /* Training */
+    /* Forma de referencia: Lucide (licencia ISC), caja de 24 y trazo `s24` (rediseño de Training,
+       2026-10-05). Reemplazan el asterisco de «Próximo a vencer» (`timer`), la gota de la racha
+       (`flame`), la cámara de «Evidencia Sellada» (`badgeCheck`), los ⏳ ⊘ ↺ de texto de Planificar
+       y los 17 emojis de hábito, uno por clave del catálogo (`features/habits/utils/iconosDeHabito`).
+       `smartphoneOff` es el `smartphone` de Lucide con la raya de sus íconos «-off». */
+    case 'timer':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M10 2h4M12 14l3-3" />
+          <Circle {...s24} cx={12} cy={14} r={8} />
+        </Svg>
+      );
+    case 'flame':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
+        </Svg>
+      );
+    case 'badgeCheck':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z" />
+          <Path {...s24} d="m9 12 2 2 4-4" />
+        </Svg>
+      );
+    case 'hourglass':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M5 22h14M5 2h14" />
+          <Path {...s24} d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22" />
+          <Path {...s24} d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2" />
+        </Svg>
+      );
+    case 'ban':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Circle {...s24} cx={12} cy={12} r={10} />
+          <Path {...s24} d="m4.9 4.9 14.2 14.2" />
+        </Svg>
+      );
+    case 'rotateCcw':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+          <Path {...s24} d="M3 3v5h5" />
+        </Svg>
+      );
+    case 'audioLines':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M2 10v3M6 6v11M10 3v18M14 8v7M18 5v13M22 10v3" />
+        </Svg>
+      );
+    case 'sunrise':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M12 2v8M4.93 10.93l1.41 1.41M2 18h2M20 18h2M19.07 10.93l-1.41 1.41M22 22H2M8 6l4-4 4 4" />
+          <Path {...s24} d="M16 18a4 4 0 0 0-8 0" />
+        </Svg>
+      );
+    case 'sunMedium':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Circle {...s24} cx={12} cy={12} r={3} />
+          <Path {...s24} d="M12 3v1M12 20v1M3 12h1M20 12h1M18.364 5.636l-.707.707M6.343 17.657l-.707.707M5.636 5.636l.707.707M17.657 17.657l.707.707" />
+        </Svg>
+      );
+    case 'moonStar':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+          <Path {...s24} d="M19 3v4M21 5h-4" />
+        </Svg>
+      );
+    case 'glassWater':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M5.116 4.104A1 1 0 0 1 6.11 3h11.78a1 1 0 0 1 .994 1.105L17.19 20.21A2 2 0 0 1 15.2 22H8.8a2 2 0 0 1-2-1.79z" />
+          <Path {...s24} d="M6 12a5 5 0 0 1 6 0 5 5 0 0 0 6 0" />
+        </Svg>
+      );
+    case 'showerHead':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="m4 4 2.5 2.5M13.5 6.5a4.95 4.95 0 0 0-7 7M15 5 5 15" />
+          <Path {...s24} d="M14 17v.01M10 16v.01M13 13v.01M16 10v.01M11 20v.01M17 14v.01M20 11v.01" />
+        </Svg>
+      );
+    case 'footprints':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z" />
+          <Path {...s24} d="M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z" />
+          <Path {...s24} d="M16 17h4M4 13h4" />
+        </Svg>
+      );
+    case 'salad':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M7 21h10M12 21a9 9 0 0 0 9-9H3a9 9 0 0 0 9 9Z" />
+          <Path {...s24} d="M11.38 12a2.4 2.4 0 0 1-.4-4.77 2.4 2.4 0 0 1 3.2-2.77 2.4 2.4 0 0 1 3.47-.63 2.4 2.4 0 0 1 3.37 3.37 2.4 2.4 0 0 1-1.1 3.7 2.51 2.51 0 0 1 .03 1.1" />
+          <Path {...s24} d="m13 12 4-4M10.9 7.25A3.99 3.99 0 0 0 4 10c0 .73.2 1.41.54 2" />
+        </Svg>
+      );
+    case 'utensils':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20" />
+          <Path {...s24} d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" />
+        </Svg>
+      );
+    case 'utensilsCrossed':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="m16 2-2.3 2.3a3 3 0 0 0 0 4.2l1.8 1.8a3 3 0 0 0 4.2 0L22 8" />
+          <Path {...s24} d="M15 15 3.3 3.3a4.2 4.2 0 0 0 0 6l7.3 7.3c.7.7 2 .7 2.8 0L15 15Zm0 0 7 7" />
+          <Path {...s24} d="m2.1 21.8 6.4-6.3M19 5l-7 7" />
+        </Svg>
+      );
+    case 'bookOpenText':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M12 7v14M16 12h2M16 8h2M6 12h2M6 8h2" />
+          <Path {...s24} d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z" />
+        </Svg>
+      );
+    case 'headphones':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3" />
+        </Svg>
+      );
+    case 'notebookPen':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4M2 6h4M2 10h4M2 14h4M2 18h4" />
+          <Path {...s24} d="M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z" />
+        </Svg>
+      );
+    case 'handHeart':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M11 14h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 16" />
+          <Path {...s24} d="m7 20 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9M2 15l6 6" />
+          <Path {...s24} d="M19.5 8.5c.7-.7 1.5-1.6 1.5-2.7A2.73 2.73 0 0 0 16 4a2.78 2.78 0 0 0-5 1.8c0 1.2.8 2 1.5 2.8L16 12Z" />
+        </Svg>
+      );
+    case 'smartphoneOff':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Rect {...s24} x={5} y={2} width={14} height={20} rx={2} />
+          <Path {...s24} d="M12 18h.01M2 2l20 20" />
         </Svg>
       );
     case 'chevron':

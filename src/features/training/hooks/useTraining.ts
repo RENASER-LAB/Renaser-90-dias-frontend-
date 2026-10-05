@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PlanHabit } from '../../../screens/PlanScreen';
 import type { HabitItem } from '../../../screens/TrainingScreen';
 import { medicionPedidaDe } from '../../habits/utils/registroConFoto';
+import { iconoDeLineaDeHabito } from '../../habits/utils/iconosDeHabito';
 import { mensajeDeError } from '../../../services/http/apiClient';
 import type { HabitoCatalogoApi, TrackDelDiaApi } from '../../habits/types/habits.types';
 import { cargarEntrenamiento, type DatosEntrenamiento } from '../api/cargarEntrenamiento';
@@ -102,6 +103,10 @@ export function useTraining() {
     const categoriaPorHabito = new Map(catalogo.map(h => [h.id, h.category]));
     const claveSistemaPorHabito = new Map(catalogo.map(h => [h.id, h.systemKey ?? null]));
     const exigenciaPorHabito = new Map(catalogo.map(h => [h.id, h.evidenceRequirement]));
+    // El ícono de línea sale del CATÁLOGO (clave del ícono + clave de sistema), no del emoji que arma
+    // `mapearPlanHabit` para Plan: Despertar y Dormir comparten `SLEEP` y solo la clave de sistema
+    // los separa (rediseño de Training, 2026-10-05).
+    const iconoPorHabito = new Map(catalogo.map(h => [h.id, iconoDeLineaDeHabito(h)]));
 
     return inventario
       .map((habito): HabitItem | null => {
@@ -125,7 +130,7 @@ export function useTraining() {
           done: false,
           habitoId: habito.id,
           isDeactivatable: habito.isDeactivatable,
-          icon: habito.icon,
+          icon: iconoPorHabito.get(habito.id),
           evidenceRequirement: exigenciaPorHabito.get(habito.id),
           diasCatalogo: habito.days,
           hasEvidence: false,
@@ -175,6 +180,10 @@ export function useTraining() {
           estado: track.estado,
           hasEvidence: track.tieneEvidencia ?? false,
           respuestaTexto: track.respuestaTexto ?? null,
+          // Para decir en la misma tarjeta cuándo se cumplió y cuánto pagó (decisión del dueño del
+          // 2026-10-05: tocar uno ya cumplido no abre un diálogo). Los dos los manda el servidor.
+          completadoEn: track.completadoEn ?? null,
+          puntosOtorgados: track.puntosOtorgados ?? null,
           pointsAtStake: track.puntosEnJuego ?? null,
           maxPoints: track.puntosMaximos ?? null,
           deadline: track.plazoEvidencia ?? null,

@@ -87,6 +87,13 @@ export interface HojaDesdeAbajoProps {
   /** Lo que va fijo abajo (el botón «Listo»). */
   pie?: React.ReactNode;
   etiquetaCerrar?: string;
+  /**
+   * Una hoja con pasos (la de Planificar de Training, 2026-10-05): con esto, una ‹ a la izquierda del
+   * título vuelve al paso anterior, y el atrás de Android también vuelve en vez de cerrar la hoja. La
+   * ✕, el fondo y el arrastre siguen cerrándola entera. Sin esta prop la hoja es la de siempre.
+   */
+  alVolver?: () => void;
+  etiquetaVolver?: string;
   children: React.ReactNode;
 }
 
@@ -107,7 +114,19 @@ export function HojaDesdeAbajo(props: HojaDesdeAbajoProps) {
    */
   const ultimaAbierta = useRef(props);
   if (visible) ultimaAbierta.current = props;
-  const { titulo, subtitulo, tamano = 'contenido', bajoElTitulo, pie, etiquetaCerrar = 'Cerrar', children } = ultimaAbierta.current;
+  const {
+    titulo,
+    subtitulo,
+    tamano = 'contenido',
+    bajoElTitulo,
+    pie,
+    etiquetaCerrar = 'Cerrar',
+    alVolver,
+    etiquetaVolver = 'Volver',
+    children,
+  } = ultimaAbierta.current;
+  const alVolver$ = useRef(props.alVolver);
+  alVolver$.current = props.alVolver;
 
   const { c, t, mode } = useTheme();
   const insets = useSafeAreaInsets();
@@ -290,7 +309,7 @@ export function HojaDesdeAbajo(props: HojaDesdeAbajoProps) {
       animationType="none"
       statusBarTranslucent
       navigationBarTranslucent
-      onRequestClose={() => alCerrar$.current()}
+      onRequestClose={() => (alVolver$.current ? alVolver$.current() : alCerrar$.current())}
     >
       <View style={styles.raiz}>
         <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: colorVelo }, estiloVelo]}>
@@ -326,6 +345,19 @@ export function HojaDesdeAbajo(props: HojaDesdeAbajoProps) {
                   <View style={[styles.agarradera, { backgroundColor: c.borderStrong }]} />
                 </View>
                 <View style={styles.filaTitulo}>
+                  {alVolver ? (
+                    <Pressable
+                      onPress={() => alVolver$.current?.()}
+                      accessibilityRole="button"
+                      accessibilityLabel={etiquetaVolver}
+                      style={({ pressed }) => [styles.volver, { opacity: pressed ? 0.6 : 1 }]}
+                    >
+                      {/* El chevron del proyecto apunta a la derecha: se rota, como en `CabeceraAdmin`. */}
+                      <View style={{ transform: [{ rotate: '180deg' }] }}>
+                        <Icon name="chevron" size={20} color={c.textSoft} />
+                      </View>
+                    </Pressable>
+                  ) : null}
                   <View style={styles.textos}>
                     <Text
                       ref={titulo$}
@@ -438,6 +470,13 @@ const styles = StyleSheet.create({
   titulo: {
     fontSize: 18,
     lineHeight: 24,
+  },
+  volver: {
+    width: 44,
+    height: 44,
+    marginLeft: -12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   cerrar: {
     width: 44,

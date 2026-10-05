@@ -1,13 +1,13 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { Alert } from '../../../components/Alerta';
 import { FormField } from '../../../components/FormField';
 import { GoldButton } from '../../../components/GoldButton';
-import { Icon } from '../../../components/Icon';
-import { VeloModal } from '../../../components/VeloModal';
-import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
+import { Presionable } from '../../../components/Presionable';
+import { HojaDesdeAbajo } from '../../../components/hojaDesdeAbajo/HojaDesdeAbajo';
+import { useAltoMaximoDelCuerpo } from '../../../components/hojaDesdeAbajo/altoDelCuerpo';
 import { mensajeDeError } from '../../../services/http/apiClient';
-import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
 import {
   errorDeMotivo,
@@ -36,9 +36,23 @@ import {
  * (`DELETE .../rename`), y pasada la ventana de renombre el backend lo rechaza igual que al
  * cambio — por eso este modal no se abre fuera de esa ventana (lo decide quien lo monta).
  *
- * No se cierra tocando fuera **cuando hay texto escrito**: perder el motivo a medio escribir por
- * un toque al borde es justo lo que advierte `VeloModal` en su propia documentación.
+ * ## Hoja desde abajo (rediseño de Training, 2026-10-05)
+ *
+ * Era una ventana centrada con «SOLO PARA TI» en versalitas y una ✕ de 14. Ahora es la
+ * `HojaDesdeAbajo` de la app, con el botón fijo abajo.
+ *
+ * > **Corregido 2026-10-05.** Acá decía que no se cerraba tocando fuera con texto escrito, para no
+ * > perder el motivo a medio escribir. Una hoja se cierra con un gesto (arrastrarla, tocar el fondo)
+ * > y no puede negarse, así que el cuidado es otro: lo escrito se GUARDA como borrador de ese hábito
+ * > mientras la app está abierta, y vuelve al reabrirla. Se borra al guardar o al quitar el nombre.
  */
+
+/** Lo escrito sin guardar, por hábito (título del catálogo), mientras la app está abierta. */
+const borradores = new Map<string, { titulo: string; motivo: string }>();
+
+/** El botón, en tipo oración y a tamaño de lectura. */
+const TEXTO_DE_BOTON = { fontSize: 16, letterSpacing: 0 } as const;
+const RESERVA_CABECERA_Y_PIE = 260;
 
 interface RenombrarHabitoModalProps {
   visible: boolean;
@@ -62,7 +76,7 @@ export function RenombrarHabitoModal({
   onCerrar,
 }: RenombrarHabitoModalProps) {
   const { c, t } = useTheme();
-  const { horizontalPadding } = useResponsive();
+  const altoMaximo = useAltoMaximoDelCuerpo(RESERVA_CABECERA_Y_PIE);
 
   const [titulo, setTitulo] = useState('');
   const [motivo, setMotivo] = useState('');
@@ -72,29 +86,32 @@ export function RenombrarHabitoModal({
   const [errorServidor, setErrorServidor] = useState<string | null>(null);
 
   // Cada apertura arranca del nombre que el hábito tiene HOY, no de lo que quedó de la vez
-  // anterior. El motivo sí arranca vacío: es el de ESTE cambio, no el del anterior.
+  // anterior. El motivo sí arranca vacío: es el de ESTE cambio, no el del anterior. Salvo que haya
+  // un borrador de este hábito (se cerró la hoja con algo escrito): ahí vuelve lo escrito.
   useEffect(() => {
     if (!visible) return;
-    setTitulo(tituloActual ?? '');
-    setMotivo('');
+    const borrador = borradores.get(tituloCatalogo);
+    setTitulo(borrador?.titulo ?? tituloActual ?? '');
+    setMotivo(borrador?.motivo ?? '');
     setIntentoGuardar(false);
     setErrorServidor(null);
     setGuardando(false);
-  }, [visible, tituloActual]);
+  }, [visible, tituloActual, tituloCatalogo]);
+
+  /** Si la hoja sigue a la vista (lo lee un guardado que termina después de cerrarla). */
+  const abierta = useRef(visible);
+  abierta.current = visible;
 
   const errorTitulo = intentoGuardar ? errorDeTituloPersonal(titulo) : null;
   const errorMotivo = intentoGuardar ? errorDeMotivo(motivo) : null;
   const hayTextoSinGuardar = titulo.trim() !== (tituloActual ?? '').trim() || motivo.trim().length > 0;
 
-  const cerrarSiSePuede = useCallback(() => {
-    if (guardando) return;
+  /** Cerrar siempre se puede (arrastrar no se puede negar): lo escrito queda de borrador. */
+  const cerrar = () => {
+    if (hayTextoSinGuardar) borradores.set(tituloCatalogo, { titulo, motivo });
+    else borradores.delete(tituloCatalogo);
     onCerrar();
-  }, [guardando, onCerrar]);
-
-  useSystemBackHandler(() => {
-    cerrarSiSePuede();
-    return true;
-  }, visible);
+  };
 
   const guardar = async () => {
     setIntentoGuardar(true);
@@ -103,11 +120,14 @@ export function RenombrarHabitoModal({
     setErrorServidor(null);
     try {
       await onGuardar(titulo, motivo);
+      borradores.delete(tituloCatalogo);
       onCerrar();
     } catch (error) {
       // El mensaje del backend gana: dice cosas que la app no sabría decir, como que la ventana
       // para cambiarlo ya se cerró.
-      setErrorServidor(mensajeDeError(error, 'No pudimos guardar el nombre nuevo.'));
+      const mensaje = mensajeDeError(error, 'No pudimos guardar el nombre nuevo.');
+      setErrorServidor(mensaje);
+      if (!abierta.current) Alert.alert('No pudimos cambiar el nombre', mensaje);
     } finally {
       setGuardando(false);
     }
@@ -119,154 +139,100 @@ export function RenombrarHabitoModal({
     setErrorServidor(null);
     try {
       await onQuitar();
+      borradores.delete(tituloCatalogo);
       onCerrar();
     } catch (error) {
-      setErrorServidor(mensajeDeError(error, 'No pudimos volver al nombre original.'));
+      const mensaje = mensajeDeError(error, 'No pudimos volver al nombre original.');
+      setErrorServidor(mensaje);
+      if (!abierta.current) Alert.alert('No pudimos volver al nombre original', mensaje);
     } finally {
       setGuardando(false);
     }
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={cerrarSiSePuede}>
-      <VeloModal
-        // Con texto a medio escribir, tocar fuera NO cierra: se perdería lo tipeado.
-        onCerrar={hayTextoSinGuardar ? () => {} : cerrarSiSePuede}
-        style={styles.velo}
-        etiqueta="Cerrar el cambio de nombre"
-      >
-        <View
-          style={[
-            styles.tarjeta,
-            { backgroundColor: c.bg, borderColor: c.borderStrong, paddingHorizontal: horizontalPadding },
-          ]}
-        >
-          {/* UN SOLO contenedor de scroll (AGENTS.md §2): con el teclado abierto en una pantalla
-              corta los dos campos y los botones no entran. */}
-          <ScrollView
-            contentContainerStyle={styles.contenido}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            <View style={styles.encabezado}>
-              <View style={{ flex: 1 }}>
-                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
-                  SOLO PARA TI
-                </Text>
-                <Text style={[t.cardTitle, { color: c.textStrong, marginTop: 3 }]} numberOfLines={2}>
-                  {tituloCatalogo}
-                </Text>
-              </View>
-              <Pressable
-                onPress={cerrarSiSePuede}
-                accessibilityRole="button"
-                accessibilityLabel="Cerrar"
-                hitSlop={12}
-                style={styles.cerrar}
-              >
-                <Icon name="close" size={14} color={c.goldInk} />
-              </Pressable>
-            </View>
-
-            <Text style={[t.small, { color: c.textSoft }]}>
-              Ponele el nombre de lo que sí vas a hacer. Cambia el rótulo y nada más: la hora, los
-              puntos y la evidencia siguen siendo los mismos, y nadie más lo ve.
-            </Text>
-
-            <FormField
-              label="CÓMO LO VAS A LLAMAR"
-              value={titulo}
-              onChangeText={setTitulo}
-              placeholder="Mi bebida de la mañana"
-              maxLength={MAXIMO_TITULO_PERSONAL}
-              error={errorTitulo}
-              autoCapitalize="sentences"
-              containerStyle={{ marginTop: 4 }}
-            />
-
-            <FormField
-              label="¿POR QUÉ TE QUEDA MEJOR ASÍ?"
-              helperText="Una línea alcanza. Queda guardado con el cambio."
-              value={motivo}
-              onChangeText={setMotivo}
-              placeholder="El limón en ayunas me cae mal"
-              maxLength={MAXIMO_MOTIVO}
-              error={errorMotivo}
-              multiline
-              numberOfLines={3}
-              autoCapitalize="sentences"
-            />
-
-            {errorServidor !== null && (
-              <View style={[styles.errorCaja, { backgroundColor: c.dangerWash, borderColor: c.danger }]}>
-                <Text style={[t.small, { color: c.danger, flexShrink: 1 }]}>{errorServidor}</Text>
-              </View>
-            )}
-
-            <GoldButton
-              label="GUARDAR EL NOMBRE"
-              onPress={() => void guardar()}
-              loading={guardando}
-              style={{ width: '100%', marginTop: 4 }}
-            />
-
-            {onQuitar && (
-              <Pressable
-                onPress={() => void quitar()}
-                disabled={guardando}
-                accessibilityRole="button"
-                accessibilityLabel="Volver al nombre original"
-                style={styles.botonSecundario}
-                hitSlop={8}
-              >
-                <Text style={[t.small, { color: c.textSoft, fontSize: 14 }]}>
-                  Volver al nombre original
-                </Text>
-              </Pressable>
-            )}
-
-            {guardando && <ActivityIndicator color={c.gold} />}
-          </ScrollView>
+    <HojaDesdeAbajo
+      visible={visible}
+      alCerrar={cerrar}
+      titulo={tituloCatalogo}
+      subtitulo="Cambiar el nombre · solo para ti"
+      etiquetaCerrar="Cerrar el cambio de nombre"
+      pie={
+        <View style={{ gap: 4 }}>
+          <GoldButton
+            label="Guardar el nombre"
+            onPress={() => void guardar()}
+            loading={guardando}
+            textStyle={TEXTO_DE_BOTON}
+            style={{ width: '100%' }}
+          />
+          {onQuitar && (
+            <Presionable
+              onPress={() => void quitar()}
+              disabled={guardando}
+              accessibilityRole="button"
+              accessibilityLabel="Volver al nombre original"
+              style={styles.botonSecundario}
+            >
+              <Text style={[t.body, { color: c.textSoft }]}>Volver al nombre original</Text>
+            </Presionable>
+          )}
         </View>
-      </VeloModal>
-    </Modal>
+      }
+    >
+      {/* UN SOLO contenedor de scroll (AGENTS.md §2): con el teclado abierto en una pantalla
+          corta los dos campos no entran. Con tope de alto: el botón queda a la vista. */}
+      <ScrollView
+        style={{ maxHeight: altoMaximo }}
+        contentContainerStyle={styles.contenido}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Más corto (2026-10-05) y «Ponle», no «Ponele». */}
+        <Text style={[t.body, { color: c.textSoft }]}>
+          Ponle el nombre de lo que sí vas a hacer. Solo cambia el rótulo: la hora, los puntos y la
+          evidencia siguen igual.
+        </Text>
+
+        <FormField
+          label="Cómo lo vas a llamar"
+          value={titulo}
+          onChangeText={setTitulo}
+          placeholder="Mi bebida de la mañana"
+          maxLength={MAXIMO_TITULO_PERSONAL}
+          error={errorTitulo}
+          autoCapitalize="sentences"
+        />
+
+        <FormField
+          label="¿Por qué te queda mejor así?"
+          helperText="Una línea alcanza."
+          value={motivo}
+          onChangeText={setMotivo}
+          placeholder="El limón en ayunas me cae mal"
+          maxLength={MAXIMO_MOTIVO}
+          error={errorMotivo}
+          multiline
+          numberOfLines={3}
+          autoCapitalize="sentences"
+        />
+
+        {errorServidor !== null && (
+          <View style={[styles.errorCaja, { backgroundColor: c.dangerWash, borderColor: c.danger }]}>
+            <Text style={[t.small, { color: c.danger, flexShrink: 1 }]}>{errorServidor}</Text>
+          </View>
+        )}
+      </ScrollView>
+    </HojaDesdeAbajo>
   );
 }
 
 const styles = StyleSheet.create({
-  velo: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.62)',
-    justifyContent: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 24,
-  },
-  tarjeta: {
-    width: '100%',
-    maxWidth: 560,
-    maxHeight: '100%',
-    flexShrink: 1,
-    borderWidth: 1.5,
-    borderRadius: 22,
-    overflow: 'hidden',
-  },
   contenido: {
-    flexGrow: 1,
-    gap: 12,
-    paddingTop: 18,
-    paddingBottom: 28,
-  },
-  encabezado: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-  },
-  /** 48 px de lado: pulsación cómoda con una sola mano (AGENTS.md §4). */
-  cerrar: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
+    gap: 14,
+    paddingHorizontal: 20,
+    paddingTop: 4,
+    paddingBottom: 8,
   },
   errorCaja: {
     flexDirection: 'row',

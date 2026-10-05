@@ -1,21 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { GoldButton } from '../../../components/GoldButton';
-import { useResponsive } from '../../../theme/responsive';
+import { Presionable } from '../../../components/Presionable';
+import { HojaDesdeAbajo } from '../../../components/hojaDesdeAbajo/HojaDesdeAbajo';
+import { useAltoMaximoDelCuerpo } from '../../../components/hojaDesdeAbajo/altoDelCuerpo';
 import { useTheme } from '../../../theme/ThemeContext';
 import { RESUMEN_MAX_LENGTH, RESUMEN_MIN_LENGTH } from '../api/claseDiariaApi';
 import type { ClaseDiariaApi } from '../types/academy.types';
-import { Icon } from '../../../components/Icon';
+import { Icon, TAMANO_ICONO } from '../../../components/Icon';
 
 /**
  * Cierre de la Clase Diaria: la persona escribe qué entendió de la clase de hoy y recién con eso
@@ -35,7 +28,21 @@ import { Icon } from '../../../components/Icon';
  *
  * El largo del resumen lo valida el backend (400 si no cumple); acá se avisa ANTES de mandar para
  * que la persona no escriba y se lleve un error después.
+ *
+ * ## Hoja desde abajo (rediseño de Training, 2026-10-05)
+ *
+ * Era una ventana centrada con borde dorado, «CLASE DIARIA» en versalitas, una «›» de texto y
+ * «ENVIAR Y COMPLETAR». Ahora es la `HojaDesdeAbajo` de la app, en tipo oración, con el botón fijo
+ * abajo. Como una hoja se cierra con un gesto, lo escrito queda de borrador de ESA lección mientras
+ * la app está abierta (regla 2: cerrar sigue siendo gratis, y ahora además no borra lo escrito).
  */
+
+/** Lo escrito sin enviar, por lección, mientras la app está abierta. */
+const borradores = new Map<string, string>();
+
+/** El botón, en tipo oración y a tamaño de lectura. */
+const TEXTO_DE_BOTON = { fontSize: 16, letterSpacing: 0 } as const;
+const RESERVA_CABECERA_Y_PIE = 220;
 
 interface ClaseDiariaModalProps {
   visible: boolean;
@@ -71,7 +78,7 @@ export function ClaseDiariaModal({
   onCerrar,
 }: ClaseDiariaModalProps) {
   const { c, t } = useTheme();
-  const { isTablet, contentMaxWidth } = useResponsive();
+  const altoMaximo = useAltoMaximoDelCuerpo(RESERVA_CABECERA_Y_PIE);
   const [resumen, setResumen] = useState('');
   // Solo se pinta el borde de error DESPUÉS de un intento de envío: marcar en rojo un campo que
   // todavía está vacío porque recién se abrió el modal es hostil, no informativo.
@@ -79,12 +86,22 @@ export function ClaseDiariaModal({
 
   const yaCompletada = Boolean(resumenGuardado && resumenGuardado.trim().length > 0);
 
-  // Se reinicia en cada apertura: el borrador de ayer no debe reaparecer sobre la clase de hoy.
+  // Se reinicia en cada apertura: el borrador de ayer no debe reaparecer sobre la clase de hoy. El
+  // borrador es por LECCIÓN, así que el de otra clase no aparece; el de esta, sí.
+  const leccionId = clase?.leccionId ?? null;
   useEffect(() => {
     if (!visible) return;
-    setResumen(resumenGuardado ?? '');
+    setResumen(resumenGuardado ?? (leccionId ? borradores.get(leccionId) : undefined) ?? '');
     setIntentoDeEnvio(false);
-  }, [visible, resumenGuardado]);
+  }, [visible, resumenGuardado, leccionId]);
+
+  const cerrar = () => {
+    if (leccionId && !resumenGuardado) {
+      if (resumen.trim()) borradores.set(leccionId, resumen);
+      else borradores.delete(leccionId);
+    }
+    onCerrar();
+  };
 
   const limpio = resumen.trim();
   const largo = limpio.length;
@@ -95,232 +112,187 @@ export function ClaseDiariaModal({
   const handleEnviar = () => {
     setIntentoDeEnvio(true);
     if (!puedeEnviar || !clase?.leccionId) return;
+    // Lo enviado ya no es borrador: si el envío falla, la hoja sigue abierta con el texto.
+    borradores.delete(clase.leccionId);
     onEnviar(clase.leccionId, limpio);
   };
 
   const mostrarErrorDeLargo = intentoDeEnvio && muyCorto;
 
+  const pidiendoResumen = !cargando && !error && disponible && Boolean(clase) && !yaCompletada;
+
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCerrar}>
-      <View style={styles.overlay}>
-        <View
-          style={[
-            styles.card,
-            {
-              borderColor: c.gold,
-              backgroundColor: c.cardBg,
-              maxWidth: contentMaxWidth,
-              width: isTablet ? '100%' : undefined,
-              alignSelf: 'center',
-            },
-          ]}
-        >
-          <View style={[styles.header, { borderBottomColor: c.divider }]}>
-            <View style={{ flex: 1, flexShrink: 1 }}>
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
-                {yaCompletada ? 'TU RESUMEN DE HOY' : 'CLASE DIARIA'}
-              </Text>
-              <Text
-                style={[t.cardTitle, { color: c.textStrong, fontSize: 15 }]}
-                numberOfLines={2}
-              >
-                {clase?.leccionTitulo ?? 'Tu clase de hoy'}
-              </Text>
-            </View>
-            <Pressable onPress={onCerrar} hitSlop={12} style={styles.cerrar}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                <Icon name="close" size={12} color={c.goldInk} />
-                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>Cerrar</Text>
-              </View>
-            </Pressable>
+    <HojaDesdeAbajo
+      visible={visible}
+      alCerrar={cerrar}
+      titulo={clase?.leccionTitulo ?? 'Tu clase de hoy'}
+      subtitulo={yaCompletada ? 'Tu resumen de hoy' : 'Clase diaria'}
+      etiquetaCerrar="Cerrar la clase diaria"
+      pie={
+        pidiendoResumen ? (
+          <GoldButton
+            label="Enviar y completar"
+            onPress={handleEnviar}
+            loading={enviando}
+            disabled={enviando}
+            textStyle={TEXTO_DE_BOTON}
+            style={{ width: '100%' }}
+          />
+        ) : undefined
+      }
+    >
+      {/* UN solo contenedor de scroll, con tope de alto: el teclado no tapa el botón. */}
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        style={{ maxHeight: altoMaximo }}
+        contentContainerStyle={styles.cuerpo}
+      >
+        {cargando && (
+          <View style={styles.centrado}>
+            <ActivityIndicator color={c.goldInk} />
+            <Text style={[t.body, { color: c.textSoft, marginTop: 10 }]}>
+              Buscando tu clase de hoy…
+            </Text>
           </View>
+        )}
 
-          {/*
-            UN solo contenedor de scroll, sin `maxHeight` fijo: la tarjeta ya está acotada por el
-            padding del overlay y el ScrollView se encarga del resto cuando entra el teclado.
-          */}
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 8 }}
-          >
-            {cargando && (
-              <View style={styles.centrado}>
-                <ActivityIndicator color={c.goldInk} />
-                <Text style={[t.body, { color: c.textSoft, fontSize: 14, marginTop: 10 }]}>
-                  Buscando tu clase de hoy…
+        {!cargando && error && (
+          <View style={styles.centrado}>
+            <Text style={[t.body, { color: c.text, textAlign: 'center' }]}>{error}</Text>
+          </View>
+        )}
+
+        {!cargando && !error && clase?.status === 'not_started' && (
+          <View style={styles.centrado}>
+            <Text style={[t.body, { color: c.text, textAlign: 'center' }]}>
+              Todavía no arrancaste tus 90 días, así que aún no hay clase asignada. Cuando
+              empiece tu programa, tu clase del día aparece acá.
+            </Text>
+          </View>
+        )}
+
+        {!cargando && !error && clase?.status === 'coming_soon' && (
+          <View style={styles.centrado}>
+            <Text style={[t.body, { color: c.text, textAlign: 'center' }]}>
+              Hoy (día {clase.programDay}) no hay clase publicada. Vuelve mañana.
+            </Text>
+          </View>
+        )}
+
+        {!cargando && !error && disponible && clase && (
+          <>
+            {/* La clase ya se vio: al tocar el habito sin verla, TrainingScreen navega
+                directo a la leccion y este modal no llega a abrirse (ver `abrirClaseDiaria`).
+                Este enlace queda como acceso para repasarla, no como el paso previo.
+                2026-10-05: el libro de Cursos y un chevron de ícono (era una «›» de texto). */}
+            <Presionable
+              onPress={() => onIrALaLeccion(clase)}
+              accessibilityRole="button"
+              accessibilityLabel={`Volver a ver la clase: ${clase.leccionTitulo}`}
+              style={[
+                styles.enlaceLeccion,
+                { borderColor: c.borderStrong, backgroundColor: c.cardBgAlt },
+              ]}
+            >
+              <Icon name="bookOpen" size={TAMANO_ICONO.normal} color={c.goldInk} />
+              <View style={{ flex: 1, flexShrink: 1, gap: 2 }}>
+                <Text style={[t.small, { color: c.textSoft }]}>
+                  Día {clase.programDay} · {clase.cursoTitulo ?? 'Tu curso'}
+                </Text>
+                <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>
+                  Volver a ver la clase
                 </Text>
               </View>
-            )}
+              <Icon name="chevron" size={TAMANO_ICONO.normal} color={c.goldInk} />
+            </Presionable>
 
-            {!cargando && error && (
-              <View style={styles.centrado}>
-                <Text style={[t.body, { color: c.text, fontSize: 14, textAlign: 'center' }]}>
-                  {error}
-                </Text>
-              </View>
-            )}
-
-            {!cargando && !error && clase?.status === 'not_started' && (
-              <View style={styles.centrado}>
-                <Text style={[t.body, { color: c.text, fontSize: 14, textAlign: 'center' }]}>
-                  Todavía no arrancaste tus 90 días, así que aún no hay clase asignada. Cuando
-                  empiece tu programa, tu clase del día aparece acá.
-                </Text>
-              </View>
-            )}
-
-            {!cargando && !error && clase?.status === 'coming_soon' && (
-              <View style={styles.centrado}>
-                <Text style={[t.body, { color: c.text, fontSize: 14, textAlign: 'center' }]}>
-                  Hoy (día {clase.programDay}) no hay clase publicada. Vuelve mañana.
-                </Text>
-              </View>
-            )}
-
-            {!cargando && !error && disponible && clase && (
-              <>
-                {/* La clase ya se vio: al tocar el habito sin verla, TrainingScreen navega
-                    directo a la leccion y este modal no llega a abrirse (ver `abrirClaseDiaria`).
-                    Este enlace queda como acceso para repasarla, no como el paso previo. */}
-                <Pressable
-                  onPress={() => onIrALaLeccion(clase)}
+            {yaCompletada ? (
+              /* Paso 2, ya hecho: se muestra lo que escribió, sin volver a pedirlo. */
+              <View style={{ marginTop: 16, gap: 8 }}>
+                <View style={styles.filaHecho}>
+                  <Icon name="checkCircle" size={TAMANO_ICONO.chico} color={c.success} />
+                  <Text style={[t.body, styles.rotulo, { color: c.success }]}>Clase completada</Text>
+                </View>
+                <View
                   style={[
-                    styles.enlaceLeccion,
-                    { borderColor: c.borderStrong, backgroundColor: c.cardBgAlt },
+                    styles.resumenLeido,
+                    { borderColor: c.border, backgroundColor: c.cardBgAlt },
                   ]}
                 >
-                  <View style={{ flex: 1, flexShrink: 1, gap: 2 }}>
-                    <Text style={[t.micro, { color: c.micro, fontFamily: 'Jost_700Bold', fontSize: 10.5 }]}>
-                      DÍA {clase.programDay} · {clase.cursoTitulo ?? 'TU CURSO'}
-                    </Text>
-                    <Text
-                      style={[t.body, { color: c.textStrong, fontSize: 14.5, fontFamily: 'Jost_500Medium' }]}
-                    >
-                      {clase.leccionTitulo}
-                    </Text>
-                    <Text style={[t.micro, { color: c.textSoft, fontSize: 12 }]}>
-                      Toca para volver a ver la clase
-                    </Text>
-                  </View>
-                  <Text style={[t.cardTitle, { color: c.goldInk, fontSize: 20 }]}>›</Text>
-                </Pressable>
+                  <Text style={[t.body, { color: c.text }]}>{resumenGuardado}</Text>
+                </View>
+              </View>
+            ) : (
+              /* Paso 2: contar qué entendió. Sin esto, el hábito NO se cierra. */
+              <View style={{ marginTop: 16, gap: 8 }}>
+                <Text style={[t.body, styles.rotulo, { color: c.textStrong }]}>
+                  ¿Qué entendiste de la clase?
+                </Text>
+                <Text style={[t.small, { color: c.textSoft }]}>
+                  Con tus palabras, lo que te llevas de hoy. Mínimo {RESUMEN_MIN_LENGTH} letras.
+                </Text>
+                <TextInput
+                  value={resumen}
+                  onChangeText={setResumen}
+                  multiline
+                  // El corte duro acá evita que la persona escriba 2500 letras y las pierda
+                  // al recibir un 400 del backend.
+                  maxLength={RESUMEN_MAX_LENGTH}
+                  editable={!enviando}
+                  textAlignVertical="top"
+                  placeholder="Hoy entendí que…"
+                  placeholderTextColor={c.textSoft}
+                  accessibilityLabel="Qué entendiste de la clase"
+                  style={[
+                    styles.input,
+                    {
+                      borderColor: mostrarErrorDeLargo ? c.danger : c.border,
+                      backgroundColor: c.cardBgAlt,
+                      color: c.text,
+                    },
+                  ]}
+                />
+                <View style={styles.contadorFila}>
+                  <Text
+                    style={[
+                      t.small,
+                      {
+                        color: mostrarErrorDeLargo ? c.danger : c.textSoft,
+                        flexShrink: 1,
+                        fontVariant: ['tabular-nums'],
+                      },
+                    ]}
+                  >
+                    {mostrarErrorDeLargo
+                      ? `Te faltan ${RESUMEN_MIN_LENGTH - largo} letras`
+                      : `${largo} / ${RESUMEN_MAX_LENGTH}`}
+                  </Text>
+                </View>
 
-                {yaCompletada ? (
-                  /* Paso 2, ya hecho: se muestra lo que escribió, sin volver a pedirlo. */
-                  <View style={{ marginTop: 16, gap: 8 }}>
-                    <Text style={[t.micro, { color: c.success, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
-                      ✓ CLASE COMPLETADA
-                    </Text>
-                    <View
-                      style={[
-                        styles.resumenLeido,
-                        { borderColor: c.border, backgroundColor: c.cardBgAlt },
-                      ]}
-                    >
-                      <Text style={[t.body, { color: c.text, fontSize: 14.5, lineHeight: 21 }]}>
-                        {resumenGuardado}
-                      </Text>
-                    </View>
-                  </View>
-                ) : (
-                  /* Paso 2: contar qué entendió. Sin esto, el hábito NO se cierra. */
-                  <View style={{ marginTop: 16, gap: 8 }}>
-                    <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
-                      ¿QUÉ ENTENDISTE DE LA CLASE?
-                    </Text>
-                    <Text style={[t.body, { color: c.textSoft, fontSize: 13 }]}>
-                      Escribe con tus palabras lo que te llevas de hoy. Mínimo{' '}
-                      {RESUMEN_MIN_LENGTH} letras.
-                    </Text>
-                    <TextInput
-                      value={resumen}
-                      onChangeText={setResumen}
-                      multiline
-                      // El corte duro acá evita que la persona escriba 2500 letras y las pierda
-                      // al recibir un 400 del backend.
-                      maxLength={RESUMEN_MAX_LENGTH}
-                      editable={!enviando}
-                      textAlignVertical="top"
-                      placeholder="Hoy entendí que…"
-                      placeholderTextColor={c.textSoft}
-                      style={[
-                        styles.input,
-                        {
-                          borderColor: mostrarErrorDeLargo ? c.danger : c.border,
-                          backgroundColor: c.cardBgAlt,
-                          color: c.text,
-                        },
-                      ]}
-                    />
-                    <View style={styles.contadorFila}>
-                      <Text
-                        style={[
-                          t.micro,
-                          {
-                            color: mostrarErrorDeLargo ? c.danger : c.textSoft,
-                            fontSize: 11.5,
-                            flexShrink: 1,
-                          },
-                        ]}
-                      >
-                        {mostrarErrorDeLargo
-                          ? `Te faltan ${RESUMEN_MIN_LENGTH - largo} letras`
-                          : `${largo} / ${RESUMEN_MAX_LENGTH}`}
-                      </Text>
-                    </View>
-
-                    {errorEnvio && (
-                      <Text style={[t.body, { color: c.danger, fontSize: 13.5 }]}>
-                        {errorEnvio}
-                      </Text>
-                    )}
-
-                    <GoldButton
-                      label="ENVIAR Y COMPLETAR"
-                      onPress={handleEnviar}
-                      loading={enviando}
-                      disabled={enviando}
-                      style={{ width: '100%', marginTop: 4 }}
-                    />
-                  </View>
+                {errorEnvio && (
+                  <Text style={[t.body, { color: c.danger }]}>
+                    {errorEnvio}
+                  </Text>
                 )}
-              </>
+              </View>
             )}
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
+          </>
+        )}
+      </ScrollView>
+    </HojaDesdeAbajo>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.85)',
-    justifyContent: 'center',
-    padding: 20,
+  cuerpo: {
+    paddingHorizontal: 20,
+    paddingTop: 4,
+    paddingBottom: 8,
   },
-  card: {
-    borderWidth: 1.5,
-    borderRadius: 22,
-    padding: 16,
-    // Techo relativo a la pantalla, no un número fijo: la tarjeta nunca tapa los bordes y el
-    // ScrollView de adentro es el ÚNICO que scrollea (no hay otro contenedor de scroll encima).
-    maxHeight: '86%',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    borderBottomWidth: 1,
-    paddingBottom: 10,
-    marginBottom: 12,
-    gap: 10,
-  },
-  cerrar: {
-    minHeight: 48,
-    justifyContent: 'center',
+  rotulo: {
+    fontSize: 16,
+    fontFamily: 'Jost_500Medium',
   },
   centrado: {
     alignItems: 'center',
@@ -330,20 +302,24 @@ const styles = StyleSheet.create({
   enlaceLeccion: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
     borderWidth: 1,
     borderRadius: 14,
-    padding: 14,
-    minHeight: 52,
-    width: '100%',
-    flexWrap: 'wrap',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    minHeight: 56,
+  },
+  filaHecho: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   input: {
     borderWidth: 1,
     borderRadius: 12,
     padding: 12,
-    fontSize: 14.5,
-    lineHeight: 21,
+    fontSize: 16,
+    lineHeight: 22,
     fontFamily: 'Jost_400Regular',
     minHeight: 132,
     width: '100%',

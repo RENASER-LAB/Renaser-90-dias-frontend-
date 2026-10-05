@@ -1,20 +1,12 @@
 import { useAudioPlayer, useAudioPlayerStatus, setAudioModeAsync } from 'expo-audio';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GoldButton } from '../../../components/GoldButton';
-import { Icon } from '../../../components/Icon';
-import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
-import { useResponsive } from '../../../theme/responsive';
+import { Icon, TAMANO_ICONO } from '../../../components/Icon';
+import { Presionable } from '../../../components/Presionable';
+import { HojaDesdeAbajo } from '../../../components/hojaDesdeAbajo/HojaDesdeAbajo';
 import { useTheme } from '../../../theme/ThemeContext';
 import { RESPUESTA_MAX_LENGTH, RESPUESTA_MIN_LENGTH } from '../api/spiritApi';
 import { preguntasDelDia } from '../data/preguntasPastilla';
@@ -41,6 +33,11 @@ import type { AudioGuiado } from '../types/audioGuiado';
  *    lo escrito.
  * 4. **Ya entregado = solo lectura.** Si el día ya está `submitted`, se muestra lo que escribió y
  *    el audio para volver a escucharlo, sin formulario.
+ *
+ * **Hoja desde abajo (rediseño de Training, 2026-10-05).** Era una hoja hecha a mano (agarradera
+ * decorativa, ✕ de 17 y «PASTILLA RENASER» en versalitas). Ahora es la `HojaDesdeAbajo` grande de
+ * la app: se arrastra para cerrarla —y cerrar guarda el borrador, como siempre—, «Anterior» y
+ * «Registrar» van fijos abajo y la pregunta en tipo oración. El atrás de Android lo cablea la hoja.
  *
  * ## Nota de rendimiento (requisito: que suene en menos de 3 segundos)
  *
@@ -102,7 +99,7 @@ export function PastillaRenacerModal({
   onCerrar,
 }: PastillaRenacerModalProps) {
   const { c, t } = useTheme();
-  const { isTablet, horizontalPadding, contentMaxWidth } = useResponsive();
+  const insets = useSafeAreaInsets();
 
   const yaEntregado = audio?.yaEntregado ?? false;
   const fuente = audio?.audioUrl ?? null;
@@ -208,14 +205,11 @@ export function PastillaRenacerModal({
     onCerrar();
   }, [audio, yaEntregado, userId, preguntas, respuestas, indice, onCerrar]);
 
-  /**
-   * Gesto lateral del sistema / botón atrás: cierra el modal, nunca la app (AGENTS.md §6). Con el
-   * mismo camino que la ✕, así que también guarda el borrador.
+  /*
+   * Gesto lateral del sistema / botón atrás: cierra la hoja, nunca la app (AGENTS.md §6). Lo cablea
+   * `HojaDesdeAbajo` (el atrás de Android cierra su `Modal`) por el mismo camino que la ✕, el fondo
+   * y el arrastre: `cerrar`, que guarda el borrador.
    */
-  useSystemBackHandler(() => {
-    cerrar();
-    return true;
-  }, visible);
 
   const cambiarRespuesta = useCallback((texto: string) => {
     setRespuestas(previas => {
@@ -255,176 +249,152 @@ export function PastillaRenacerModal({
     onEntregar(textoAEntregar);
   }, [actualMuyCorta, esUltima, todasCompletas, audio, onEntregar, textoAEntregar]);
 
-  const anchoTarjeta = contentMaxWidth;
+  const enFormulario = !cargando && !error && Boolean(audio) && !yaEntregado && borradorListo;
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={cerrar}>
-      <View style={styles.backdrop}>
-        {/* Tocar el fondo cierra: mismo camino que la ✕, así que también guarda el borrador. */}
-        <Pressable style={styles.zonaFondo} onPress={cerrar} accessibilityLabel="Cerrar" />
+    <HojaDesdeAbajo
+      visible={visible}
+      alCerrar={cerrar}
+      titulo={audio?.titulo ?? 'Tu audio de hoy'}
+      subtitulo={audio ? `${audio.rotulo} · ${audio.subtitulo}` : 'Pastilla Renaser'}
+      etiquetaCerrar="Cerrar el audio"
+      tamano="grande"
+      pie={
+        enFormulario ? (
+          <View style={styles.acciones}>
+            {indice > 0 ? (
+              <GoldButton
+                label="Anterior"
+                variant="outline"
+                onPress={() => {
+                  setIntentoDeEnvio(false);
+                  setIndice(i => i - 1);
+                }}
+                textStyle={TEXTO_DE_BOTON}
+                style={styles.botonSecundario}
+              />
+            ) : null}
+            <GoldButton
+              label={esUltima ? 'Registrar' : 'Siguiente'}
+              loading={enviando}
+              onPress={avanzar}
+              textStyle={TEXTO_DE_BOTON}
+              style={styles.botonPrincipal}
+            />
+          </View>
+        ) : undefined
+      }
+    >
+      {/* UN SOLO scroll en toda la hoja (AGENTS.md §2): el reproductor y el formulario van
+          dentro del mismo contenedor, sin scroll anidado. */}
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        style={{ flex: 1 }}
+        contentContainerStyle={[styles.contenido, { paddingBottom: enFormulario ? 12 : Math.max(insets.bottom, 12) + 24 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {cargando ? (
+          <View style={styles.centrado}>
+            <ActivityIndicator color={c.goldInk} />
+          </View>
+        ) : error ? (
+          <Text style={[t.body, { color: c.danger }]}>{error}</Text>
+        ) : !audio ? (
+          <Text style={[t.body, { color: c.textSoft }]}>
+            Todavía no tienes una Pastilla disponible. Aparece a partir del día 8 de tu programa.
+          </Text>
+        ) : (
+          <>
+            <Reproductor
+              hayAudio={Boolean(fuente)}
+              reproduciendo={estadoAudio.playing}
+              cargandoAudio={!estadoAudio.isLoaded || estadoAudio.isBuffering}
+              posicion={estadoAudio.currentTime}
+              duracion={estadoAudio.duration}
+              onAlternar={alternarReproduccion}
+            />
 
-        <View
-          style={[
-            styles.hoja,
-            {
-              backgroundColor: c.cardBg,
-              borderColor: c.border,
-              paddingHorizontal: horizontalPadding,
-              maxWidth: anchoTarjeta,
-              alignSelf: isTablet ? 'center' : 'stretch',
-            },
-          ]}
-        >
-          <View style={styles.asa} />
-
-          {/* UN SOLO scroll en toda la hoja (AGENTS.md §2): el reproductor y el formulario van
-              dentro del mismo contenedor, sin scroll anidado. */}
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={styles.contenido}
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={styles.encabezado}>
-              <View style={styles.tituloBloque}>
-                <Text style={[t.micro, { color: c.goldInk }]}>{audio?.rotulo ?? 'PASTILLA RENASER'}</Text>
-                <Text style={[t.cardTitle, { color: c.text, marginTop: 4 }]}>
-                  {audio?.titulo ?? 'Tu audio de hoy'}
-                </Text>
-                {audio ? (
-                  <Text style={[t.small, { color: c.textSoft, marginTop: 2 }]}>
-                    {audio.subtitulo}
+            {yaEntregado ? (
+              <View style={styles.bloque}>
+                <View style={styles.filaHecho}>
+                  <Icon name="checkCircle" size={TAMANO_ICONO.normal} color={c.success} />
+                  <Text style={[t.body, { color: c.success, fontFamily: 'Jost_500Medium' }]}>
+                    Registrado. Ya contestaste este audio.
                   </Text>
-                ) : null}
+                </View>
+                <Text style={[t.body, { color: c.text, marginTop: 12 }]}>
+                  {audio.resumenEntregado}
+                </Text>
               </View>
-              <Pressable
-                onPress={cerrar}
-                style={styles.botonCerrar}
-                hitSlop={12}
-                accessibilityLabel="Cerrar"
-              >
-                <Icon name="close" size={17} color={c.textSoft} />
-              </Pressable>
-            </View>
-
-            {cargando ? (
+            ) : !borradorListo ? (
               <View style={styles.centrado}>
                 <ActivityIndicator color={c.goldInk} />
               </View>
-            ) : error ? (
-              <Text style={[t.body, { color: c.danger }]}>{error}</Text>
-            ) : !audio ? (
-              <Text style={[t.body, { color: c.textSoft }]}>
-                Todavía no tienes una Pastilla disponible. Aparece a partir del día 8 de tu programa.
-              </Text>
             ) : (
-              <>
-                <Reproductor
-                  hayAudio={Boolean(fuente)}
-                  reproduciendo={estadoAudio.playing}
-                  cargandoAudio={!estadoAudio.isLoaded || estadoAudio.isBuffering}
-                  posicion={estadoAudio.currentTime}
-                  duracion={estadoAudio.duration}
-                  onAlternar={alternarReproduccion}
+              <View style={styles.bloque}>
+                {preguntas.length > 1 ? (
+                  <Text style={[t.small, styles.cuenta, { color: c.textSoft }]}>
+                    Pregunta {indice + 1} de {preguntas.length}
+                  </Text>
+                ) : null}
+                <Text style={[t.body, { color: c.textStrong, fontSize: 17, lineHeight: 24, marginBottom: 10 }]}>
+                  {preguntas[indice]}
+                </Text>
+
+                <TextInput
+                  value={actual}
+                  onChangeText={cambiarRespuesta}
+                  multiline
+                  maxLength={RESPUESTA_MAX_LENGTH}
+                  textAlignVertical="top"
+                  placeholder="Escribe lo que te dejó este audio…"
+                  placeholderTextColor={c.textSoft}
+                  accessibilityLabel={preguntas[indice]}
+                  style={[
+                    styles.campo,
+                    t.body,
+                    {
+                      fontSize: 16,
+                      color: c.text,
+                      backgroundColor: c.bg,
+                      borderColor:
+                        intentoDeEnvio && actualMuyCorta ? c.danger : c.border,
+                    },
+                  ]}
                 />
+                <Text
+                  style={[
+                    t.small,
+                    styles.cuenta,
+                    {
+                      color: intentoDeEnvio && actualMuyCorta ? c.danger : c.textSoft,
+                      marginTop: 6,
+                    },
+                  ]}
+                >
+                  {intentoDeEnvio && actualMuyCorta
+                    ? `Escribe al menos ${RESPUESTA_MIN_LENGTH} caracteres.`
+                    : `${largoActual}/${RESPUESTA_MAX_LENGTH}`}
+                </Text>
 
-                {yaEntregado ? (
-                  <View style={styles.bloque}>
-                    <View style={styles.filaHecho}>
-                      <Icon name="checkCircle" size={18} color={c.success} />
-                      <Text style={[t.small, { color: c.success, marginLeft: 8 }]}>
-                        Registrado. Ya contestaste este audio.
-                      </Text>
-                    </View>
-                    <Text style={[t.body, { color: c.text, marginTop: 12 }]}>
-                      {audio.resumenEntregado}
-                    </Text>
-                  </View>
-                ) : !borradorListo ? (
-                  <View style={styles.centrado}>
-                    <ActivityIndicator color={c.goldInk} />
-                  </View>
-                ) : (
-                  <View style={styles.bloque}>
-                    {preguntas.length > 1 ? (
-                      <Text style={[t.micro, { color: c.textSoft, marginBottom: 6 }]}>
-                        PREGUNTA {indice + 1} DE {preguntas.length}
-                      </Text>
-                    ) : null}
-                    <Text style={[t.body, { color: c.text, marginBottom: 10 }]}>
-                      {preguntas[indice]}
-                    </Text>
+                {errorEnvio ? (
+                  <Text style={[t.small, { color: c.danger, marginTop: 8 }]}>{errorEnvio}</Text>
+                ) : null}
 
-                    <TextInput
-                      value={actual}
-                      onChangeText={cambiarRespuesta}
-                      multiline
-                      maxLength={RESPUESTA_MAX_LENGTH}
-                      textAlignVertical="top"
-                      placeholder="Escribe lo que te dejó este audio…"
-                      placeholderTextColor={c.textSoft}
-                      style={[
-                        styles.campo,
-                        t.body,
-                        {
-                          color: c.text,
-                          backgroundColor: c.bg,
-                          borderColor:
-                            intentoDeEnvio && actualMuyCorta ? c.danger : c.border,
-                        },
-                      ]}
-                    />
-                    <Text
-                      style={[
-                        t.small,
-                        {
-                          color: intentoDeEnvio && actualMuyCorta ? c.danger : c.textSoft,
-                          marginTop: 6,
-                        },
-                      ]}
-                    >
-                      {intentoDeEnvio && actualMuyCorta
-                        ? `Escribe al menos ${RESPUESTA_MIN_LENGTH} caracteres.`
-                        : `${largoActual}/${RESPUESTA_MAX_LENGTH}`}
-                    </Text>
-
-                    {errorEnvio ? (
-                      <Text style={[t.small, { color: c.danger, marginTop: 8 }]}>{errorEnvio}</Text>
-                    ) : null}
-
-                    <View style={styles.acciones}>
-                      {indice > 0 ? (
-                        <GoldButton
-                          label="Anterior"
-                          variant="outline"
-                          onPress={() => {
-                            setIntentoDeEnvio(false);
-                            setIndice(i => i - 1);
-                          }}
-                          style={styles.botonSecundario}
-                        />
-                      ) : null}
-                      <GoldButton
-                        label={esUltima ? 'Registrar' : 'Siguiente'}
-                        loading={enviando}
-                        onPress={avanzar}
-                        style={styles.botonPrincipal}
-                      />
-                    </View>
-
-                    <Text style={[t.small, { color: c.textSoft, marginTop: 10 }]}>
-                      Si cierras, guardamos lo que escribiste y vuelves donde estabas.
-                    </Text>
-                  </View>
-                )}
-              </>
+                <Text style={[t.small, { color: c.textSoft, marginTop: 10 }]}>
+                  Si cierras, guardamos lo que escribiste.
+                </Text>
+              </View>
             )}
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
+          </>
+        )}
+      </ScrollView>
+    </HojaDesdeAbajo>
   );
 }
 
+/** Los botones de la hoja, en tipo oración y a tamaño de lectura. */
+const TEXTO_DE_BOTON = { fontSize: 16, letterSpacing: 0 } as const;
 
 function segundosAReloj(segundos: number): string {
   if (!Number.isFinite(segundos) || segundos < 0) return '0:00';
@@ -474,7 +444,7 @@ function Reproductor({
 
   return (
     <View style={[styles.reproductor, { backgroundColor: c.bg, borderColor: c.border }]}>
-      <Pressable
+      <Presionable
         onPress={onAlternar}
         style={[styles.botonPlay, { borderColor: c.gold }]}
         accessibilityRole="button"
@@ -484,15 +454,15 @@ function Reproductor({
         {cargandoAudio && !reproduciendo ? (
           <ActivityIndicator color={c.goldInk} />
         ) : (
-          <Icon name={reproduciendo ? 'pause' : 'play'} size={22} color={c.goldInk} />
+          <Icon name={reproduciendo ? 'pause' : 'play'} size={TAMANO_ICONO.grande} color={c.goldInk} />
         )}
-      </Pressable>
+      </Presionable>
 
       <View style={styles.avanceBloque}>
         <View style={[styles.barra, { backgroundColor: c.border }]}>
           <View style={[styles.barraLlena, { backgroundColor: c.gold, width: `${avance * 100}%` }]} />
         </View>
-        <Text style={[t.small, { color: c.textSoft, marginTop: 6 }]}>
+        <Text style={[t.small, styles.cuenta, { color: c.textSoft, marginTop: 6 }]}>
           {segundosAReloj(posicion)} / {segundosAReloj(duracion)}
           {cargandoAudio ? '  ·  cargando…' : ''}
         </Text>
@@ -502,30 +472,7 @@ function Reproductor({
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' },
-  // El fondo tocable ocupa lo que la hoja deja libre arriba: cerrar tocando afuera.
-  zonaFondo: { flex: 1 },
-  hoja: {
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
-    borderWidth: StyleSheet.hairlineWidth,
-    // Tope de alto para que la hoja no tape la pantalla entera en teléfonos altos (20:9).
-    maxHeight: '88%',
-    width: '100%',
-    paddingTop: 8,
-  },
-  asa: {
-    alignSelf: 'center',
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: 'rgba(150,150,150,0.45)',
-    marginBottom: 10,
-  },
-  contenido: { flexGrow: 1, paddingBottom: 36 },
-  encabezado: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16 },
-  tituloBloque: { flex: 1, flexShrink: 1, paddingRight: 12 },
-  botonCerrar: { minWidth: 48, minHeight: 48, alignItems: 'flex-end', justifyContent: 'center' },
+  contenido: { flexGrow: 1, paddingHorizontal: 20, paddingTop: 4 },
   centrado: { paddingVertical: 28, alignItems: 'center' },
   reproductor: {
     flexDirection: 'row',
@@ -548,14 +495,16 @@ const styles = StyleSheet.create({
   barra: { height: 4, borderRadius: 2, width: '100%', overflow: 'hidden' },
   barraLlena: { height: 4, borderRadius: 2 },
   bloque: { marginTop: 20 },
-  filaHecho: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
+  filaHecho: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
+  /** Cifras que cambian (la cuenta de letras, el tiempo): ancho fijo por dígito. */
+  cuenta: { fontVariant: ['tabular-nums'] },
   campo: {
     minHeight: 120,
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: 14,
     padding: 14,
   },
-  acciones: { flexDirection: 'row', alignItems: 'center', marginTop: 18, gap: 12, flexWrap: 'wrap' },
+  acciones: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   botonSecundario: { flexGrow: 1, flexShrink: 1, minWidth: 120 },
   botonPrincipal: { flexGrow: 2, flexShrink: 1, minWidth: 140 },
 });
