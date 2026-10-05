@@ -388,8 +388,11 @@ export default function HoyScreen() {
 
 
   /* Tipo oración (rediseño de Hoy, 2026-10-05): el nombre de la fase tal como lo escribe el documento
-     del cliente («El Ciclo Alquímico»), sin pasarlo a versales. */
-  const faseNombre = rotuloDeFase(resumen?.fase) || 'Programa activo';
+     del cliente («El Ciclo Alquímico»), sin pasarlo a versales.
+     > **Corregido 2026-10-05 (decisión del dueño).** Sin `/home` (o con una fase que la app no conoce)
+     > decía «Programa activo»: un dato inventado, el mismo error que los «100 pts» y el «DÍA 1 DE 90».
+     > Ahora dice «—», como los puntos y la racha. */
+  const faseNombre = rotuloDeFase(resumen?.fase);
   /**
    * `null` = todavía no sabemos en qué día está, porque la carga falló o no terminó.
    *
@@ -603,8 +606,11 @@ export default function HoyScreen() {
             separa de lo que sigue es el espacio, no un contorno. */}
         <View style={styles.programStatusBar}>
           <View style={{ flex: 1 }}>
-            <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
-              {faseNombre}
+            <Text
+              style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}
+              accessibilityLabel={faseNombre === null ? 'Fase del programa: sin datos' : undefined}
+            >
+              {faseNombre ?? '—'}
             </Text>
             <Text style={[t.cardTitle, styles.cifras, { color: c.textStrong, fontSize: 15, marginTop: 3 }]}>
               Día {diaConocido ?? '—'} de {DIAS_DEL_PROGRAMA}
