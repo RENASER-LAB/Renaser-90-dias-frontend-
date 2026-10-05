@@ -3,8 +3,13 @@ import { StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GoldCircle } from '../../../components/ui';
+import { LinearGradient } from 'expo-linear-gradient';
+
+import { Presionable } from '../../../components/Presionable';
+import { useTheme } from '../../../theme/ThemeContext';
 import { useAuth } from '../../auth/context/AuthContext';
+import { NOMBRE_ACOMPANANTE } from '../data/agentes';
+import { OrbeQuieto } from './OrbeQuieto';
 import { RenasiaPanel } from '../screens/RenasiaPanel';
 import { useMapaRenacimientoAbierto } from '../../mapa-renacimiento/MapaRenacimientoContext';
 import { useHayChatEnPantalla } from '../state/chatEnPantalla';
@@ -23,11 +28,16 @@ import { useBarraInferior } from '../../../navigation/barraAlDesplazar/BarraInfe
  * <p>Solo aparece con sesión iniciada: en el login y durante el onboarding no tiene sentido, y
  * además el backend rechaza las rutas de `/renasia` sin sesión real.
  *
- * <p>Todo el estilo sale de los tokens del tema y de `GoldCircle`, el mismo componente que ya usa
- * el resto de la app. No hay un solo color ni medida inventada acá.
+ * <p>Todo el estilo sale de los tokens del tema: el mismo disco dorado (`goldGrad`) que `GoldCircle`.
+ * No hay un solo color ni medida inventada acá.
+ *
+ * > **Corregido 2026-10-05.** Decía que el botón ERA `GoldCircle`. Ya no: `GoldCircle` solo recibe un
+ * > nombre de `Icon`, y el botón lleva el orbe de SER (`OrbeQuieto`), con nombre para el lector de
+ * > pantalla y la respuesta al dedo de `Presionable`.
  */
 export function RenasiaLauncher() {
   const { isAuthenticated, isOnboardingCompleted } = useAuth();
+  const { c } = useTheme();
   const insets = useSafeAreaInsets();
   const [visible, setVisible] = useState(false);
   const hayChatEnPantalla = useHayChatEnPantalla();
@@ -74,7 +84,24 @@ export function RenasiaLauncher() {
       */}
       {!hayChatEnPantalla && !mapaAbierto && (
         <Animated.View style={[styles.posicion, { bottom: insets.bottom + ALTO_TAB_BAR + SEPARACION }, acompanaALaBarra]}>
-          <GoldCircle size={DIAMETRO} icon="chat" onPress={() => setVisible(true)} />
+          {/* El orbe de SER, no el globo de chat (2026-10-05, decisión del dueño). Por qué el orbe y no
+              el fénix: ver `OrbeQuieto`. Antes era `GoldCircle` con `chat` —el mismo globo de «Comentar»,
+              del Muro y del soporte—, sin nombre para el lector de pantalla. */}
+          <Presionable
+            onPress={() => setVisible(true)}
+            accessibilityRole="button"
+            accessibilityLabel={`Hablar con ${NOMBRE_ACOMPANANTE}, tu acompañante`}
+            style={[styles.disco, { width: DIAMETRO, height: DIAMETRO, borderRadius: DIAMETRO / 2 }]}
+          >
+            <LinearGradient
+              colors={c.goldGrad}
+              start={{ x: 0.2, y: 0 }}
+              end={{ x: 0.8, y: 1 }}
+              style={styles.relleno}
+            >
+              <OrbeQuieto size={Math.round(DIAMETRO * 0.62)} color={c.onGold} />
+            </LinearGradient>
+          </Presionable>
         </Animated.View>
       )}
 
@@ -103,4 +130,6 @@ export const ESPACIO_PARA_LANZADOR = DIAMETRO + SEPARACION + 20;
 
 const styles = StyleSheet.create({
   posicion: { position: 'absolute', right: 18 },
+  disco: { overflow: 'hidden' },
+  relleno: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 });
