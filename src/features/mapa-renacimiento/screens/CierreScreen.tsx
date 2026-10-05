@@ -8,7 +8,7 @@ import { PantallaPaso } from '../components/PantallaPaso';
 import type { PropsPaso } from './props';
 
 /** V11 · Cierre. Texto final aprobado (§10.1). No cuenta como paso; abre el Día 8, no el inicio genérico. */
-export function CierreScreen({ estado, onSalir }: PropsPaso) {
+export function CierreScreen({ estado, onSalir, dias }: PropsPaso) {
   const { c, t } = useTheme();
   const { mapa } = estado;
   const filas: { icono: 'zap' | 'stack' | 'award' | 'calendar'; titulo: string; detalle: string }[] = [
@@ -18,13 +18,13 @@ export function CierreScreen({ estado, onSalir }: PropsPaso) {
     { icono: 'calendar', titulo: 'Próximo control: 7 días', detalle: 'Revisa tu avance y ajusta' },
   ];
   return (
-    <PantallaPaso paso={null} boton={{ label: 'Comenzar mis 83 días', onPress: onSalir }}>
+    <PantallaPaso paso={null} boton={{ label: dias.botonDelCierre, onPress: onSalir }}>
       <Text style={[t.micro, { color: c.goldInk, letterSpacing: 2, marginTop: 24 }]}>FELICIDADES</Text>
       <Text style={[t.hero, { color: c.textStrong, fontSize: 28, letterSpacing: 0.5, marginTop: 8, fontFamily: 'Jost_400Regular' }]}>
         Tu mapa está activo.
       </Text>
       <Text style={[t.body, { color: c.text, lineHeight: 23, marginTop: 16 }]}>
-        Has completado la fase Diseño de tu Mapa. Desde hoy tienes una ruta clara para convertir tus decisiones en resultados observables durante los próximos 83 días.
+        {dias.cierre}
       </Text>
       <Text style={[t.body, { color: c.text, lineHeight: 23, marginTop: 12 }]}>
         No necesitas hacerlo perfecto. Necesitas sostenerlo, medirlo y volver cada vez que te desvíes.

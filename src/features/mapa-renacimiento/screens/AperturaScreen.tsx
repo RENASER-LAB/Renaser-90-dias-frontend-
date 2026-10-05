@@ -4,19 +4,18 @@ import { Text, View } from 'react-native';
 import { Icon } from '../../../components/Icon';
 import { Row } from '../../../components/ui';
 import { useTheme } from '../../../theme/ThemeContext';
-import { useProgramaDia } from '../../programa/hooks/useProgramaDia';
 import { PantallaPaso } from '../components/PantallaPaso';
-import { textosDeApertura } from '../textosDeApertura';
 import type { PropsPaso } from './props';
 
 /**
  * V01 · Apertura. Texto visible aprobado en el manual (§3 V01), con el día y los días que quedan
- * del programa real en vez del «DÍA 7» y los «83 días» escritos a mano (`textosDeApertura`).
+ * del programa real en vez del «DÍA 7» y los «83 días» escritos a mano (`textosDeApertura`). El día
+ * lo lee el flujo una vez para todos los pasos (`dias`); hasta el 2026-10-05 lo leía esta pantalla.
  */
-export function AperturaScreen({ estado, onSalir }: PropsPaso) {
+export function AperturaScreen({ estado, onSalir, dias }: PropsPaso) {
   const { c, t } = useTheme();
   const { mapa, siguiente } = estado;
-  const textos = textosDeApertura(useProgramaDia());
+  const textos = dias.apertura;
   const hayProgreso = mapa.estado !== 'no_iniciado' && mapa.pasoActual > 1;
   return (
     <PantallaPaso

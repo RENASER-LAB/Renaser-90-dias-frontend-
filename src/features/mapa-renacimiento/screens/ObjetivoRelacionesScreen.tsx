@@ -8,7 +8,7 @@ import type { ObjetivoRelaciones } from '../tipos';
 import type { PropsPaso } from './props';
 
 /** V05 · Objetivo 3 · Relaciones (§3 V05). Conducta propia; se rechaza controlar a un tercero. */
-export function ObjetivoRelacionesScreen({ estado, numeroDePaso }: PropsPaso) {
+export function ObjetivoRelacionesScreen({ estado, numeroDePaso, dias }: PropsPaso) {
   const { mapa, actualizar, siguiente, anterior } = estado;
   const o = mapa.relaciones;
   const [editando, setEditando] = useState(false);
@@ -36,7 +36,7 @@ export function ObjetivoRelacionesScreen({ estado, numeroDePaso }: PropsPaso) {
         faltan: avisos.filter(a => a.bloquea).map(a => a.mensaje),
       }}
     >
-      <Pregunta>¿Qué relación quieres fortalecer o transformar durante los próximos 83 días?</Pregunta>
+      <Pregunta>{dias.relaciones}</Pregunta>
 
       <Etiqueta>Vínculo</Etiqueta>
       <Pastillas opciones={VINCULOS} valor={o.vinculo} onCambiar={v => cambiar({ vinculo: v })} />

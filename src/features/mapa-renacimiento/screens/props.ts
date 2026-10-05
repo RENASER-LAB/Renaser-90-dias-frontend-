@@ -1,9 +1,17 @@
 import type { EstadoMapaRenacimiento } from '../hooks/useMapaRenacimiento';
+import type { TextosConLosDiasQueQuedan } from '../textosDeApertura';
 
 /** Lo que recibe cada vista del flujo. `onSalir` cierra el mapa entero (V01 atrás, V11 terminar). */
 export interface PropsPaso {
   estado: EstadoMapaRenacimiento;
   onSalir: () => void;
+  /**
+   * Los textos que dependen del día real del programa (el día de la apertura, «los próximos 75
+   * días»…), armados UNA vez por el flujo con `useProgramaDia` (2026-10-05). Antes cada pantalla
+   * tenía «83 días» escrito a mano; leer el día en cada una pediría `/home` en cada paso y el texto
+   * saltaría de «lo que queda del programa» al número al terminar de cargar.
+   */
+  dias: TextosConLosDiasQueQuedan;
   /**
    * En qué número de paso se está mostrando esta pantalla.
    *

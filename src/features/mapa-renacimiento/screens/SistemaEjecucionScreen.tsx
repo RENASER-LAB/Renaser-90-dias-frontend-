@@ -17,7 +17,7 @@ import { idLocal, type PropsPaso } from './props';
 const ICONO: Record<Area, 'heart' | 'briefcase' | 'users'> = { salud: 'heart', negocio_dinero: 'briefcase', relaciones: 'users' };
 
 /** V06 · Sistema de ejecución (§3 V06): 1–2 acciones por objetivo, máximo 6, sin verbos vagos. */
-export function SistemaEjecucionScreen({ estado }: PropsPaso) {
+export function SistemaEjecucionScreen({ estado, dias }: PropsPaso) {
   const { c, t } = useTheme();
   const { mapa, actualizar, siguiente, anterior } = estado;
   const total = mapa.acciones.length;
@@ -74,7 +74,7 @@ export function SistemaEjecucionScreen({ estado }: PropsPaso) {
         );
       })}
 
-      <Avisos avisos={avisosDeCarga(mapa.acciones)} />
+      <Avisos avisos={avisosDeCarga(mapa.acciones, dias.lapso)} />
       <Text style={[t.micro, { color: c.micro, marginTop: 14, textAlign: 'center' }]}>{total}/{LIMITES.accionesTotales} acciones</Text>
     </PantallaPaso>
   );

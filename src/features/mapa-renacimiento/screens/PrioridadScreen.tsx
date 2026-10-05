@@ -16,7 +16,7 @@ const ICONO: Record<Area, 'heart' | 'briefcase' | 'users'> = {
 };
 
 /** V02 · Prioridad principal. Selección única; no excluye a las otras áreas (§3 V02). */
-export function PrioridadScreen({ estado }: PropsPaso) {
+export function PrioridadScreen({ estado, dias }: PropsPaso) {
   const { c, t } = useTheme();
   const { mapa, actualizar, siguiente, anterior } = estado;
   return (
@@ -25,7 +25,7 @@ export function PrioridadScreen({ estado }: PropsPaso) {
       onAtras={anterior}
       boton={{ label: 'Continuar', onPress: siguiente, disabled: !mapa.prioridad, faltan: ['elegir el área que más impacto tendría'] }}
     >
-      <Pregunta>Si durante estos 83 días solo pudieras transformar profundamente un área, ¿cuál tendría mayor impacto en tu vida?</Pregunta>
+      <Pregunta>{dias.prioridad}</Pregunta>
       <Apoyo>Trabajarás las tres. Esta elección solo define cuál tendrá prioridad cuando debas decidir.</Apoyo>
       <View style={{ marginTop: 22, gap: 12 }}>
         {AREAS.map(area => {
