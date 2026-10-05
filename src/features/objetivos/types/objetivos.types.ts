@@ -19,6 +19,17 @@ export const ETIQUETA_EJE: Record<EjeObjetivo, string> = {
 };
 
 /**
+ * El nombre corto, para donde los tres van en una fila: el selector de eje de Objetivos (2026-10-05,
+ * «Cuerpo / Negocio / Relaciones», como lo dijo el dueño). Con «Negocio y dinero» el segmento del
+ * medio no entra en un teléfono de 360 px.
+ */
+export const ETIQUETA_CORTA_EJE: Record<EjeObjetivo, string> = {
+  CUERPO: 'Cuerpo',
+  TRABAJO: 'Negocio',
+  RELACIONES: 'Relaciones',
+};
+
+/**
  * `RocaMaestraResponse` del backend.
  *
  * `meta`, `avance`, `unidad` y `porcentaje` vienen en `null` cuando el objetivo es puramente

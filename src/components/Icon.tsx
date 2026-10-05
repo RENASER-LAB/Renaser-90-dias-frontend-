@@ -11,6 +11,7 @@ export type IconName =
   | 'forward' | 'imagePlus'
   | 'smile' | 'trash' | 'checkCheck' | 'reply' | 'copy'
   | 'gauge' | 'map' | 'listChecks' | 'flame' | 'flag'
+  | 'activity' | 'heartHandshake' | 'calendarRange'
   | 'newspaper' | 'bookOpen' | 'quote' | 'globe' | 'headset' | 'messageCircle' | 'video' | 'fileText' | 'link' | 'pencil' | 'idCard' | 'layoutGrid'
   | 'lifeBuoy' | 'alarmClock' | 'settings' | 'images' | 'compass' | 'package' | 'signature'
   | 'timer' | 'badgeCheck' | 'hourglass' | 'ban' | 'rotateCcw' | 'audioLines' | 'sunrise' | 'sunMedium' | 'moonStar' | 'glassWater' | 'showerHead' | 'footprints' | 'salad' | 'utensils' | 'utensilsCrossed' | 'bookOpenText' | 'headphones' | 'notebookPen' | 'handHeart' | 'smartphoneOff';
@@ -835,6 +836,32 @@ export function Icon({ name, size = 20, color, strokeWidth }: Props) {
         <Svg width={size} height={size} viewBox="0 0 24 24">
           <Rect {...s24} x={5} y={2} width={14} height={20} rx={2} />
           <Path {...s24} d="M12 18h.01M2 2l20 20" />
+        </Svg>
+      );
+    /* Plan */
+    /* Rediseño de Plan (2026-10-05). Trazos de Lucide (ISC) en su caja de 24, con `s24`.
+       `activity` y `heartHandshake` son Cuerpo y Relaciones (`iconoDelEje`; Relaciones usaba
+       `users`, que es Tribu) y `calendarRange` es «Tu semana» (era `zap`, que en Hoy son los puntos).
+       Plan usa además `flag` (bloque de Hoy) para el objetivo de 90 días y `compass` (bloque de Yo)
+       para el Código Renaser, así `target` queda solo en «Tus acciones». */
+    case 'activity':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2" />
+        </Svg>
+      );
+    case 'heartHandshake':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+          <Path {...s24} d="M12 5 9.04 7.96a2.17 2.17 0 0 0 0 3.08c.82.82 2.13.85 3 .07l2.07-1.9a2.82 2.82 0 0 1 3.79 0l2.96 2.66M18 15l-2-2M15 18l-2-2" />
+        </Svg>
+      );
+    case 'calendarRange':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Rect {...s24} x={3} y={4} width={18} height={18} rx={2} />
+          <Path {...s24} d="M16 2v4M3 10h18M8 2v4M17 14h-6M13 18H7M7 14h.01M17 18h.01" />
         </Svg>
       );
     case 'chevron':

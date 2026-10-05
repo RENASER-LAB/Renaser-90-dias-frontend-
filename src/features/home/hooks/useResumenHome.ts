@@ -34,7 +34,20 @@ export const DIAS_DEL_PROGRAMA = 90;
 export interface FaseDelPrograma {
   numero: number;
   nombre: string;
+  /** `'Días 8–34'`: se arma con `primerDia` y `ultimoDia`, no se escribe aparte. */
   rango: string;
+  /**
+   * Los días de programa que abarca, como números (2026-10-05). Los pidió el dibujo de «Arquitectura
+   * de tiempo» de Plan, que mide cada fase por su largo: antes eran solo texto y la pantalla habría
+   * tenido que copiar los cortes a mano o leerlos del rótulo. Son los del backend
+   * (`users.api.FasePrograma`: la Fase II arranca el 8, la III el 35, la IV el 65).
+   */
+  primerDia: number;
+  ultimoDia: number;
+}
+
+function fase(numero: number, nombre: string, primerDia: number, ultimoDia: number): FaseDelPrograma {
+  return { numero, nombre, rango: `Días ${primerDia}–${ultimoDia}`, primerDia, ultimoDia };
 }
 
 /** Las claves del backend, en orden de programa. Sirve para recorrer las fases sin repetir la lista. */
@@ -48,10 +61,10 @@ export const CLAVES_DE_FASE = [
 export type ClaveDeFase = (typeof CLAVES_DE_FASE)[number];
 
 const FASES_DEL_PROGRAMA: Record<ClaveDeFase, FaseDelPrograma> = {
-  PHASE_1_REBIRTH: { numero: 1, nombre: 'El Espejo', rango: 'Días 1–7' },
-  PHASE_2_DEVELOPMENT: { numero: 2, nombre: 'El Ciclo Alquímico', rango: 'Días 8–34' },
-  PHASE_3_ALCHEMIST_WARRIOR: { numero: 3, nombre: 'El Maestro Interno', rango: 'Días 35–64' },
-  PHASE_4_ASCENSION: { numero: 4, nombre: 'Sistema de Alto Rendimiento', rango: 'Días 65–90' },
+  PHASE_1_REBIRTH: fase(1, 'El Espejo', 1, 7),
+  PHASE_2_DEVELOPMENT: fase(2, 'El Ciclo Alquímico', 8, 34),
+  PHASE_3_ALCHEMIST_WARRIOR: fase(3, 'El Maestro Interno', 35, 64),
+  PHASE_4_ASCENSION: fase(4, 'Sistema de Alto Rendimiento', 65, 90),
 };
 
 /**
