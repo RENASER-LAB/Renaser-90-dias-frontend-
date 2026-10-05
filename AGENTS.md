@@ -155,9 +155,32 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     del dueño: «Me gustaría mejorar el diseño. Estamos en una app móvil y veo cosas como si fuera una
     web, tipo el registro, que lo hace por fases». Cambia la FORMA, no el contenido. Lo que cambia y
     nada más:
-    * **Login:** las pestañas «Iniciar sesión / Crear cuenta» pasan a `ControlSegmentado` (píldora que
-      se desplaza, 250 ms, háptico de selección). Cada campo declara `autoComplete`/`textContentType`
-      y su tecla de acción encadena al siguiente o envía. Mismos textos, placeholders y flujo.
+    * **Login:** cada campo declara `autoComplete`/`textContentType` y su tecla de acción encadena al
+      siguiente o envía.
+      > Corregido 2026-10-05 (mismo día). Decía además: «las pestañas «Iniciar sesión / Crear cuenta»
+      > pasan a `ControlSegmentado` (píldora que se desplaza, 250 ms, háptico de selección). Mismos
+      > textos, placeholders y flujo». El rediseño del login de abajo quitó las pestañas; el
+      > `ControlSegmentado` sigue en la ficha (tipo de documento).
+    * **Rediseño del login (ampliación autorizada por el dueño el 2026-10-05, con la imagen que generó
+      él):** `LoginScreen` pasa a cabecera a sangre (~54 % de la pantalla; ~30 % en «Solicitar
+      acceso») con el fénix entero, cola incluida, que se funde con el fondo en un degradado largo
+      de nueve paradas, sin onda ni línea (`features/auth/components/CabeceraDelIngreso`, imágenes
+      `assets/login/cabecera.webp` y `cabecera-oscura.webp`, 1024 × 1536; si no cargan,
+      `IlustracionTopografica`), «Iniciar sesión» apoyado sobre el final del degradado, en la
+      serif con un subrayado dorado, los dos campos (`CampoDelIngreso`), «¿Olvidaste tu
+      contraseña?» bajo la contraseña, «Ingresar» fijo abajo que sube con el teclado
+      (`BotonDelIngreso`) y al pie «¿No tienes cuenta? Solicitar acceso». Crear cuenta deja de ser
+      pestaña: es la vista «Solicitar acceso» (cabecera más baja, mismos campos, «¿Ya tienes
+      cuenta? Iniciar sesión», flecha y atrás del sistema vuelven al login). Se quitaron el botón
+      de luna (del login y de `MarcoDePaso`: el modo oscuro se elige en Yo; antes de entrar se ve
+      el modo guardado, o el claro), «Google · Próximamente», el separador «o accede con» y la
+      frase del pie. No se agregó «Recordarme»: la sesión ya queda guardada. Movimiento: entrada escalonada (título, campos,
+      botón; 8 px, 50 ms entre cada uno, < 400 ms) y, si el ingreso se rechaza, el mensaje bajo el
+      campo, sacudida de 280 ms y vibración de error; con «reducir movimiento», solo fundido.
+      **No cambia:** `login`, los mensajes de error, la sesión, la recuperación de contraseña, el
+      alta por solicitud aprobada (mismo hook, mismas validaciones y endpoints) ni los pasos que
+      siguen (código, acuse), que sólo pasan a la cabecera baja. El botón de acceso se llama ahora
+      «Ingresar» también para el lector de pantalla (antes «Continuar»; e2e y Maestro ajustados).
     * **Ficha Inicial:** los tres capítulos se muestran en doce pasos cortos (`data/pasosFicha.ts`)
       dentro de `MarcoDePaso` (botón principal fijo abajo que sube con el teclado, barra fina de
       avance en vez de «CAPÍTULO 1 DE 3», atrás con la flecha o el gesto del sistema = un paso). Las
