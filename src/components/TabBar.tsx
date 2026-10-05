@@ -10,7 +10,22 @@ import { Icon, IconName } from './Icon';
 import { pestanasOcultas } from '../navigation/pestanasOcultas';
 import { useBarraInferior } from '../navigation/barraAlDesplazar/BarraInferior';
 
-const ICONS: Record<string, IconName> = { Hoy: 'sun', Plan: 'doc', Training: 'diamond', Comunidad: 'users', Yo: 'user' };
+/**
+ * El ícono de cada pestaña, **todos en este mapa** —también el del botón dorado de TRAINING—: cambiar
+ * uno, o volver atrás, es cambiar una línea.
+ *
+ * > **Cambiado el 2026-10-05**, pedido del dueño: «la parte de abajo, íconos que le correspondan».
+ * > Eran `sun` (Hoy), `doc` (Plan), `diamond` (Training, fijo en el botón central y fuera de este
+ * > mapa), `users` (Comunidad) y `user` (Yo): no decían qué hay en cada pestaña, y los cinco ya
+ * > significaban otra cosa dentro de la app (el sol es el modo claro de Ajustes y el ritual del
+ * > mediodía; la hoja, un recurso de lección o una evidencia de texto; el diamante, la fase 2 del
+ * > programa; `users`, la Tribu; `user`, «Editar perfil»). Ahora: la casa de «inicio» para el tablero
+ * > del día, la planilla para el plan, el brazo de 💪 para el entrenamiento diario, un grupo de tres
+ * > (la Tribu es de dos) para la comunidad y la persona en un círculo de «mi cuenta» para Yo.
+ * > El dueño eligió este juego (el 2) entre las opciones del mosaico `barra-iconos-opciones.png`;
+ * > `barraDePestanasIconos.test.ts` frena que se repita un dibujo que ya significa otra cosa.
+ */
+const ICONS: Record<string, IconName> = { Hoy: 'house', Plan: 'clipboardList', Training: 'bicepsFlexed', Comunidad: 'usersThree', Yo: 'circleUser' };
 const LABELS: Record<string, string> = { Hoy: 'HOY', Plan: 'PLAN', Training: 'TRAINING', Comunidad: 'COMUNIDAD', Yo: 'YO' };
 
 /**
@@ -130,7 +145,7 @@ export function TabBar({ state, navigation, descriptors }: BottomTabBarProps) {
                       end={{ x: 0.8, y: 1 }}
                       style={[styles.center, { width: centerSize, height: centerSize, borderRadius: centerSize / 2 }]}
                     >
-                      <Icon name="diamond" size={rs(18)} color={c.onGold} />
+                      <Icon name={ICONS[route.name]} size={rs(18)} color={c.onGold} />
                     </LinearGradient>
                   </View>
                   <Text style={[t.tab, { color: focused ? c.goldInk : c.tabInactive }]} numberOfLines={1} adjustsFontSizeToFit>
