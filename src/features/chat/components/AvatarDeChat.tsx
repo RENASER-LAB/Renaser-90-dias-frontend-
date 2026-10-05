@@ -29,10 +29,13 @@ const FENIX = require('../../../../assets/imagenes/fenix-renaser.png');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const TARJETA = require('../../../../assets/imagenes/tarjeta-renaser.jpg');
 
+/* > Corregido 2026-10-05. Grupo y comunidad llevaban el mismo sello (`users`) y el soporte el globo
+   > de chat, que lleva toda fila de esta lista. Ahora: grupo `users`, comunidad `globe` (el mundo
+   > entero del programa), soporte `headset` (alguien que atiende). */
 const SELLO: Partial<Record<TipoDeAvatar, IconName>> = {
   celula: 'users',
-  global: 'users',
-  soporte: 'chat',
+  global: 'globe',
+  soporte: 'headset',
 };
 
 /**

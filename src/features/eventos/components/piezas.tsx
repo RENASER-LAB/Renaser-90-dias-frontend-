@@ -30,7 +30,8 @@ export function BotonVolver({ etiqueta, onPress }: { etiqueta: string; onPress: 
       hitSlop={8}
       style={({ pressed }) => [estilos.volver, { opacity: pressed ? 0.7 : 1 }]}
     >
-      <Icon name="arrowLeft" size={18} color={c.goldInk} />
+      {/* La flecha de volver va a 24 en toda Comunidad (2026-10-05); el área ya es de 48. */}
+      <Icon name="arrowLeft" size={24} color={c.goldInk} />
       <Text style={[estilos.volverTexto, { color: c.goldInk }]}>{etiqueta}</Text>
     </Pressable>
   );

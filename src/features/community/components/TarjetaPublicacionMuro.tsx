@@ -1,7 +1,9 @@
 import React, { memo } from 'react';
 import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { Icon } from '../../../components/Icon';
+import { Icon, TAMANO_ICONO } from '../../../components/Icon';
+import { AvatarPersona } from '../../../components/ui';
+import { ConfirmacionEnLinea } from '../../../components/ConfirmacionEnLinea';
 import type { CommentItem, PostItem } from '../../../screens/ComunidadScreen';
 import { useTheme } from '../../../theme/ThemeContext';
 import { space } from '../../../theme/tokens';
@@ -31,6 +33,8 @@ export type AccionesPublicacion = {
   elegirFotoComentario: (postId: string) => void;
   escribirComentario: (postId: string, texto: string) => void;
   enviarComentario: (postId: string) => void;
+  /** La confirmación en línea de esta publicación terminó de irse. */
+  cerrarConfirmacion: (postId: string) => void;
 };
 
 type Props = {
@@ -45,6 +49,8 @@ type Props = {
   textoComentario: string;
   fotoComentario: FotoMuroNormalizada | null | undefined;
   comentariosExpandidos: Record<string, boolean>;
+  /** «Compartida en …», debajo de las acciones, cuando ESTA publicación se acaba de compartir. */
+  confirmacion?: { clave: number; texto: string } | null;
   acciones: AccionesPublicacion;
 };
 
@@ -67,6 +73,7 @@ function TarjetaPublicacionMuroBase({
   textoComentario,
   fotoComentario,
   comentariosExpandidos,
+  confirmacion,
   acciones,
 }: Props) {
   const { c, t } = useTheme();
@@ -90,9 +97,8 @@ function TarjetaPublicacionMuroBase({
         {/* Header del Post */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <View style={[styles.avatarCircle, { backgroundColor: c.goldWash }]}>
-              <Text style={{ fontSize: 14 }}>{post.avatar}</Text>
-            </View>
+            {/* Su foto o sus iniciales (2026-10-05). Antes era el emoji 👤, el mismo para todos. */}
+            <AvatarPersona nombre={post.author} avatarUrl={post.avatarUrl} size={36} />
             <View>
               <Text style={[t.cardTitle, { color: c.textStrong }]}>{post.author}</Text>
               <Text style={[t.small, { color: c.micro }]}>
@@ -211,21 +217,44 @@ function TarjetaPublicacionMuroBase({
           </View>
         )}
 
-        {/* Solo el recuento de comentarios. Las reacciones bajaron a la fila de
-            acciones, al MISMO nivel que Like, Comentar y Compartir. */}
+        {/* El resumen: quién reaccionó y cuántos comentarios, A LA IZQUIERDA (2026-10-05).
+            > Corregido 2026-10-05. Decía que las reacciones bajaban a la fila de acciones, al mismo
+            > nivel que Like, Comentar y Compartir, con la chapa empujada al borde derecho. Ese borde
+            > es justo donde flota el botón de SER: al desplazar el Muro la chapa quedaba debajo de él
+            > y no se podía tocar. Ahora va acá, a la izquierda, como en Facebook, y la fila de acciones
+            > queda solo con las tres acciones. La chapa ES el botón: lleva su propia etiqueta. */}
         <View style={styles.reactionsSummaryRow}>
+          <Pressable
+            onPress={() => acciones.verReacciones(post.id)}
+            accessibilityRole="button"
+            accessibilityLabel={
+              post.likes === 1
+                ? 'Una reacción. Toca para ver quién reaccionó'
+                : `${post.likes} reacciones. Toca para ver quién reaccionó`
+            }
+            hitSlop={6}
+            style={styles.rxCountBotonFila}
+          >
+            <View style={[styles.rxCountBadge, { backgroundColor: c.goldWash }]}>
+              <Icon name="thumbsUp" size={TAMANO_ICONO.chico} color={c.goldInk} />
+              <Text style={[styles.rxCountTexto, { color: c.goldInk }]}>{post.likes}</Text>
+            </View>
+          </Pressable>
           <Pressable
             onPress={() => acciones.alternarComentarios(post.id)}
             hitSlop={8}
             style={{ minHeight: 48, justifyContent: 'center' }}
           >
-            <Text style={[t.small, { color: c.textSoft }]}>
-              {post.comments.length} Comentarios
+            <Text style={[t.small, styles.cifras, { color: c.textSoft }]}>
+              {post.comments.length === 1 ? '1 comentario' : `${post.comments.length} comentarios`}
             </Text>
           </Pressable>
         </View>
 
-        {/* Botones de Acción: Like, Comentar, Compartir */}
+        {/* Las tres acciones (2026-10-05): ícono de 20 y texto de 14, en un solo color neutro; «Me
+            gusta» pasa a dorado y negrita cuando ya lo diste (el color no es la única señal). Antes:
+            íconos de 14, texto de 10,5 en versales y un color distinto por botón (verde, dorado, gris)
+            que no significaba nada. */}
         <View style={[styles.actionButtonsRow, { borderTopColor: c.divider }]}>
           <Pressable
             onPress={() => acciones.alternarLike(post.id)}
@@ -236,21 +265,19 @@ function TarjetaPublicacionMuroBase({
           >
             <Icon
               name="thumbsUp"
-              size={14}
-              color={post.userReaction === 'like' ? c.success : c.textSoft}
+              size={TAMANO_ICONO.normal}
+              color={post.userReaction === 'like' ? c.goldInk : c.textSoft}
             />
             <Text
               numberOfLines={1}
               style={[
-                t.micro,
-                {
-                  color: post.userReaction === 'like' ? c.success : c.textSoft,
-                  fontFamily: 'Jost_700Bold',
-                  fontSize: 10.5,
-                },
+                styles.actionTexto,
+                post.userReaction === 'like'
+                  ? { color: c.goldInk, fontFamily: 'Jost_700Bold' }
+                  : { color: c.textSoft },
               ]}
             >
-              Like
+              Me gusta
             </Text>
           </Pressable>
 
@@ -260,45 +287,35 @@ function TarjetaPublicacionMuroBase({
             accessibilityLabel="Ver y escribir comentarios"
             style={({ pressed }) => [styles.actionBtn, pressed && { backgroundColor: c.goldWash }]}
           >
-            <Icon name="chat" size={14} color={c.goldInk} />
-            <Text numberOfLines={1} style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 10.5 }]}>
+            <Icon name="messageCircle" size={TAMANO_ICONO.normal} color={c.textSoft} />
+            <Text numberOfLines={1} style={[styles.actionTexto, { color: c.textSoft }]}>
               Comentar
             </Text>
           </Pressable>
 
+          {/* `share` (tres nodos) queda hasta que entre `forward`, que agrega otro trabajo en paralelo. */}
           <Pressable
             onPress={() => acciones.compartir(post.id)}
             accessibilityRole="button"
             accessibilityLabel="Compartir la publicacion"
             style={({ pressed }) => [styles.actionBtn, pressed && { backgroundColor: c.goldWash }]}
           >
-            <Icon name="share" size={14} color={c.textSoft} />
-            <Text numberOfLines={1} style={[t.micro, { color: c.textSoft, fontFamily: 'Jost_700Bold', fontSize: 10.5 }]}>
+            <Icon name="share" size={TAMANO_ICONO.normal} color={c.textSoft} />
+            <Text numberOfLines={1} style={[styles.actionTexto, { color: c.textSoft }]}>
               Compartir
             </Text>
           </Pressable>
-
-          {/* Las reacciones, a la derecha y en la MISMA fila que las tres acciones.
-              `marginLeft: 'auto'` las empuja al borde sin estirar los botones.
-              La chapa ES el botón: ya no hay un "Ver quién reaccionó ›" que lo
-              explique, así que lleva su propia etiqueta para el lector de pantalla. */}
-          <Pressable
-            onPress={() => acciones.verReacciones(post.id)}
-            accessibilityRole="button"
-            accessibilityLabel={
-              post.likes === 1
-                ? 'Una reacción. Toca para ver quién reaccionó'
-                : `${post.likes} reacciones. Toca para ver quién reaccionó`
-            }
-            hitSlop={10}
-            style={styles.rxCountBotonFila}
-          >
-            <View style={[styles.rxCountBadge, { backgroundColor: c.successWash }]}>
-              <Icon name="thumbsUp" size={11} color={c.success} />
-              <Text style={[styles.rxCountTexto, { color: c.success }]}>{post.likes}</Text>
-            </View>
-          </Pressable>
         </View>
+
+        {confirmacion ? (
+          <View style={{ marginTop: 8 }}>
+            <ConfirmacionEnLinea
+              key={confirmacion.clave}
+              texto={confirmacion.texto}
+              onTerminar={() => acciones.cerrarConfirmacion(post.id)}
+            />
+          </View>
+        ) : null}
 
         {/* Comentarios con Fotos */}
         {commentsVisible && (
@@ -347,12 +364,30 @@ function TarjetaPublicacionMuroBase({
                   )}
 
                   <View style={{ flexDirection: 'row', gap: 12, marginTop: 6, alignItems: 'center' }}>
+                    {/* Con estado (2026-10-05): gris si no votaste, dorado y en negrita si sí. Antes el
+                        pulgar era siempre verde y no decía si ya lo habías tocado. */}
                     <Pressable
                       onPress={() => acciones.votarComentario(post.id, cItem.id)}
-                      style={{ flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 48 }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Me gusta este comentario. ${cItem.likes}`}
+                      accessibilityState={{ selected: cItem.userReaction === 'like' }}
+                      hitSlop={6}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 48, minWidth: 48 }}
                     >
-                      <Icon name="thumbsUp" size={13} color={c.success} />
-                      <Text style={[t.small, { color: cItem.userReaction === 'like' ? c.success : c.textSoft }]}>
+                      <Icon
+                        name="thumbsUp"
+                        size={TAMANO_ICONO.chico}
+                        color={cItem.userReaction === 'like' ? c.goldInk : c.textSoft}
+                      />
+                      <Text
+                        style={[
+                          t.small,
+                          styles.cifras,
+                          cItem.userReaction === 'like'
+                            ? { color: c.goldInk, fontFamily: 'Jost_700Bold' }
+                            : { color: c.textSoft },
+                        ]}
+                      >
                         {cItem.likes}
                       </Text>
                     </Pressable>
@@ -386,9 +421,10 @@ function TarjetaPublicacionMuroBase({
                     resizeMode="cover"
                   />
                   <View style={{ flex: 1 }}>
-                    <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
-                      📷 Foto adjunta
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Icon name="image" size={TAMANO_ICONO.chico} color={c.goldInk} />
+                      <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>Foto adjunta</Text>
+                    </View>
                     <Text style={[t.small, { color: c.textSoft }]}>
                       Lista para enviar con tu comentario
                     </Text>
@@ -404,12 +440,15 @@ function TarjetaPublicacionMuroBase({
               )}
 
               <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                {/* `image` y no `camera`: el botón abre la GALERÍA, no la cámara (2026-10-05). */}
                 <Pressable
                   onPress={() => acciones.elegirFotoComentario(post.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Adjuntar una foto de la galería"
                   style={[styles.attachPhotoBtn, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
                   hitSlop={6}
                 >
-                  <Icon name="camera" size={14} color={c.goldInk} />
+                  <Icon name="image" size={TAMANO_ICONO.normal} color={c.goldInk} />
                 </Pressable>
 
                 <TextInput
@@ -420,11 +459,16 @@ function TarjetaPublicacionMuroBase({
                   style={[styles.commentInput, { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.text }]}
                 />
 
+                {/* El mismo botón redondo con `send` del chat (2026-10-05): era un rectángulo con
+                    «Enviar» escrito, el único envío de la app que no se parecía a los demás. */}
                 <Pressable
                   onPress={() => acciones.enviarComentario(post.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Enviar comentario"
+                  hitSlop={4}
                   style={[styles.sendCommentBtn, { backgroundColor: c.gold }]}
                 >
-                  <Text style={[t.small, { color: c.onGold, fontFamily: 'Jost_700Bold' }]}>Enviar</Text>
+                  <Icon name="send" size={TAMANO_ICONO.normal} color={c.onGold} />
                 </Pressable>
               </View>
             </View>
@@ -444,13 +488,8 @@ const styles = StyleSheet.create({
     borderRadius: space.radius,
     padding: space.cardPad,
   },
-  avatarCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  /** Cifras que cambian en pantalla: ancho de dígito fijo (AGENTS.md §4). */
+  cifras: { fontVariant: ['tabular-nums'] },
   dayBadge: {
     borderRadius: space.radiusSm,
     paddingHorizontal: 8,
@@ -502,21 +541,22 @@ const styles = StyleSheet.create({
      iba 8 px encima de otro y sólo agregaba ruido. Lo reemplaza el aire. */
   reactionsSummaryRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 12,
+    gap: 12,
+    marginTop: 8,
   },
   rxCountBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 7,
-    paddingVertical: 4,
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: space.radiusSm,
   },
   rxCountTexto: {
-    fontSize: 10.5,
+    fontSize: 13,
     fontFamily: 'Jost_700Bold',
+    fontVariant: ['tabular-nums'],
   },
   actionButtonsRow: {
     flexDirection: 'row',
@@ -538,24 +578,30 @@ const styles = StyleSheet.create({
     /* 48px minimos (AGENTS.md 4): con `paddingVertical: 6` la fila medía ~26 y era la accion
        mas usada del Muro. `flexShrink` en la etiqueta evita que "Compartir" empuje la fila. */
     minHeight: 48,
-    gap: 5,
+    gap: 6,
     paddingVertical: 6,
     /* 8, no 4 ni 12. Sin `flex: 1` el respiro lateral es lo único que separa "Like" de
        "Comentar", así que 4 los pegaba. Pero con 12 los tres botones sumaban 280 px y llenaban
        justo la tarjeta de 281: quedaban agrupados a la izquierda y no se notaba, porque no
-       sobraba sitio. Con 8 sobran ~25 px a la derecha y el agrupamiento SE VE. */
-    paddingHorizontal: 8,
+       sobraba sitio. Con 8 sobran ~25 px a la derecha y el agrupamiento SE VE.
+       > Corregido 2026-10-05: ahora 4. Con íconos de 20 y texto de 14 (pedido del dueño) los tres
+       > botones con 8 medían ~294 px y a 360 de ancho se cortaban en «Me gu…», «Comen…». Con 4
+       > miden ~282 y entran en la tarjeta de 286; ya no se pegan, porque cada uno empieza con su
+       > ícono de 20, que es lo que los separa a la vista. */
+    paddingHorizontal: 4,
     borderRadius: space.radiusSm,
   },
+  /** Texto de lectura (14), no versal de 10,5: es la acción más usada del Muro. */
+  actionTexto: {
+    fontFamily: 'Jost_500Medium',
+    fontSize: 14,
+    flexShrink: 1,
+  },
+  /** La chapa de reacciones, al principio del resumen. Misma altura de toque que las acciones. */
   rxCountBotonFila: {
-    /* Empuja la chapa al borde derecho sin estirar los botones, que siguen agrupados a la
-       izquierda. Misma altura de toque que ellos. */
-    marginLeft: 'auto',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     minHeight: 48,
-    paddingLeft: 8,
   },
   commentsSection: {
     marginTop: 12,
@@ -598,6 +644,9 @@ const styles = StyleSheet.create({
   /* Era `fontSize: 12`: por debajo del mínimo de input de AGENTS.md §4 (14–15.5). */
   commentInput: {
     flex: 1,
+    /* Sin esto, en la web el campo no baja de su ancho propio y empujaba el botón de enviar fuera
+       de la tarjeta a 360 px. */
+    minWidth: 0,
     borderWidth: 1,
     borderRadius: space.radiusSm,
     paddingHorizontal: 12,
@@ -605,10 +654,11 @@ const styles = StyleSheet.create({
     minHeight: 48,
     fontSize: 15,
   },
+  /* Redondo como el del chat, a 48 como el de adjuntar (AGENTS.md §4: 48–52). */
   sendCommentBtn: {
-    borderRadius: space.radiusSm,
-    paddingHorizontal: 14,
-    minHeight: 48,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },

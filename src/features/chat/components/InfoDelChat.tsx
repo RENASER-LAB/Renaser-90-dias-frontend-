@@ -252,7 +252,8 @@ export function FilaDeIntegranteDelChat({
                 { borderColor: c.gold, backgroundColor: pressed ? c.cardBg : c.goldWash },
               ]}
             >
-              <Icon name="doc" size={20} color={c.goldInk} />
+              {/* `idCard` (2026-10-05): la ficha de una persona, no una hoja suelta (`doc`). */}
+              <Icon name="idCard" size={20} color={c.goldInk} />
               <Text style={[styles.botonFichaTexto, { color: c.goldInk }]}>Ver ficha</Text>
             </Pressable>
           </View>
@@ -264,7 +265,8 @@ export function FilaDeIntegranteDelChat({
               accessibilityLabel={`Escribirle a ${integrante.nombre}`}
               style={({ pressed }) => [styles.botonChat, pressed && { backgroundColor: c.goldWash }]}
             >
-              <Icon name="chat" size={24} color={c.goldInk} />
+              {/* El mismo globo que «Escribir» en Tribu (2026-10-05). */}
+              <Icon name="messageCircle" size={24} color={c.goldInk} />
             </Pressable>
           )}
         </View>
@@ -279,7 +281,7 @@ export function FilaDeIntegranteDelChat({
         <View style={styles.columnaDeLaFila}>
           <NombreYMarca integrante={integrante} />
         </View>
-        {integrante.abreChat && <Icon name="chat" size={24} color={c.goldInk} />}
+        {integrante.abreChat && <Icon name="messageCircle" size={24} color={c.goldInk} />}
       </View>
     </>
   );

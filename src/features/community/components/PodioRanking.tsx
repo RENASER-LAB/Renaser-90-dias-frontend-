@@ -557,7 +557,8 @@ function ColumnaPodio({
         {vacio ? nombreVacio : puesto.name}
       </Text>
       <Text style={[t.micro, styles.puntaje, { color: vacio ? c.micro : destacado ? c.goldInk : c.textSoft }]}>
-        {vacio ? '—' : destacado ? `🔥 ${puesto.score}` : puesto.score}
+        {/* La cifra sola (2026-10-05): el primero llevaba un 🔥 y la tabla un ⚡ para el mismo dato. */}
+        {vacio ? '—' : puesto.score}
       </Text>
 
       {/* LA CAJA: tapa en fuga + cara frontal. */}

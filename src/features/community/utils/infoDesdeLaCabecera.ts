@@ -28,11 +28,16 @@ export function conversacionDelGrupo<T extends { type: string; celulaId: string 
   return conversaciones.find(c => c.type === 'celula' && c.celulaId === grupoId) ?? null;
 }
 
-/** Lo que recibe `ScreenHeader`: con grupo, la ⓘ y su acción; sin grupo, nada. */
+/**
+ * Lo que recibe `ScreenHeader`: con grupo, el botón y su acción; sin grupo, nada.
+ *
+ * > **Corregido 2026-10-05.** Era una ⓘ (`info`), que se lee «ayuda», no «tu grupo». Ahora es el
+ * > ícono de personas (`users`), con su nombre para el lector de pantalla.
+ */
 export function botonDeInfoDelGrupo(
   grupo: CelulaDelAprendiz | null,
   abrir: (grupoId: string) => void
-): { right?: 'info'; onPressRight?: () => void } {
+): { right?: 'users'; onPressRight?: () => void; etiquetaRight?: string } {
   if (!grupo) return {};
-  return { right: 'info', onPressRight: () => abrir(grupo.cellId) };
+  return { right: 'users', onPressRight: () => abrir(grupo.cellId), etiquetaRight: `Ver la información de ${grupo.cellName}` };
 }

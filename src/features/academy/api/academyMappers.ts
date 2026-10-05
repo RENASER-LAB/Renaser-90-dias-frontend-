@@ -38,15 +38,19 @@ function inferirTipo(videoTipo: string | null, tieneCuerpo: boolean, recursosCou
   return 'text';
 }
 
+/**
+ * La línea de debajo del título de una lección. Sin emoji delante desde el 2026-10-05: la fila ya
+ * dibuja el ícono del tipo (`video`, `fileText`, `pencil`) a la izquierda, y el 🎥/📄/✍️ lo repetía.
+ */
 function metaLite(l: LeccionLiteApi, tipo: ResourceType): string {
   if (tipo === 'video') {
     const dur = formatearDuracionMs(l.videoDuracionMs);
-    return dur ? `🎥 Video · ${dur}` : '🎥 Video';
+    return dur ? `Video · ${dur}` : 'Video';
   }
   if (tipo === 'doc') {
-    return l.recursosCount === 1 ? '📄 1 recurso adjunto' : `📄 ${l.recursosCount} recursos adjuntos`;
+    return l.recursosCount === 1 ? '1 recurso adjunto' : `${l.recursosCount} recursos adjuntos`;
   }
-  return '✍️ Lectura';
+  return 'Lectura';
 }
 
 /** Nodo del árbol (`GET /cursos/{id}/secciones`) — sin cuerpo ni videoUrl todavía, ver `LeccionLiteApi`. */
@@ -97,7 +101,8 @@ export function mapearCursoConSecciones(mc: MiCursoApi, secciones: SeccionConLec
   return {
     id: mc.id,
     title: mc.titulo,
-    category: mc.acceso === 'abierto' ? 'CURSO ABIERTO' : 'CURSO RESTRINGIDO',
+    // Tipo oración (2026-10-05): era «CURSO ABIERTO» / «CURSO RESTRINGIDO» en versales.
+    category: mc.acceso === 'abierto' ? 'Curso abierto' : 'Curso restringido',
     summary: mc.descripcion || '',
     progressPercent,
     totalResources: totalRecursos,
@@ -124,7 +129,7 @@ export function mapearCursoBloqueado(cb: CursoBloqueadoApi): CourseItem {
   return {
     id: cb.id,
     title: cb.titulo,
-    category: 'CURSO BLOQUEADO',
+    category: 'Curso bloqueado',
     summary: '', // CursoBloqueadoResponse no trae descripción
     progressPercent: 0,
     totalResources: 0,
@@ -211,13 +216,13 @@ export function extraerCamposDetalle(detalle: LeccionDetalleApi): Partial<Lesson
     tipo === 'video'
       ? (() => {
           const dur = formatearDuracionMs(leccion.videoDuracionMs);
-          return dur ? `🎥 Video · ${dur}` : '🎥 Video';
+          return dur ? `Video · ${dur}` : 'Video';
         })()
       : tipo === 'doc'
         ? recursos.length === 1
-          ? '📄 1 recurso adjunto'
-          : `📄 ${recursos.length} recursos adjuntos`
-        : '✍️ Lectura';
+          ? '1 recurso adjunto'
+          : `${recursos.length} recursos adjuntos`
+        : 'Lectura';
   return {
     type: tipo,
     meta,

@@ -48,9 +48,9 @@ describe('tablasDeRanking', () => {
 
   it('en Kilómetros el número son km con coma; en las demás, puntos como siempre', () => {
     expect(textoDelPuntaje('kilometros', 42.2)).toBe('42,2 km');
-    expect(textoDelPuntaje('general', 91.5)).toBe('91.5 Pts');
+    expect(textoDelPuntaje('general', 91.5)).toBe('91.5 pts');
     expect(textoDeMiPuntaje('kilometros', 7.5)).toBe('7,5 km recorridos');
-    expect(textoDeMiPuntaje('coherencia', 80)).toBe('⚡ 80 Pts de Coherencia');
+    expect(textoDeMiPuntaje('coherencia', 80)).toBe('80 pts de coherencia');
     expect(invitacionSinPosiciones('kilometros')).toContain('kilómetros');
   });
 });

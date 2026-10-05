@@ -1,7 +1,8 @@
 import React from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { Icon } from '../../../components/Icon';
+import { Icon, TAMANO_ICONO } from '../../../components/Icon';
+import { Presionable } from '../../../components/Presionable';
 import type { ChatConversation } from '../../../screens/ComunidadScreen';
 import { useTheme } from '../../../theme/ThemeContext';
 import { rotuloDeLaSeccion } from '../utils/seccionDeSoportes';
@@ -35,7 +36,8 @@ export function SeccionDeSoportes(props: {
 
   return (
     <View style={estilos.seccion}>
-      <Pressable
+      {/* La cabecera se hunde al apoyar el dedo (2026-10-05, `Presionable`). */}
+      <Presionable
         onPress={props.onAlternar}
         accessibilityRole="button"
         accessibilityState={{ expanded: abierta }}
@@ -50,13 +52,15 @@ export function SeccionDeSoportes(props: {
         )}
         {/* `chevron` apunta a la derecha: 90° baja (plegada), −90° sube (abierta). */}
         <View style={{ transform: [{ rotate: abierta ? '-90deg' : '90deg' }] }}>
-          <Icon name="chevron" size={16} color={c.goldInk} />
+          <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.goldInk} />
         </View>
-      </Pressable>
+      </Presionable>
 
       {abierta && (
         <>
+          {/* Con lupa (2026-10-05): sin ella el buscador parecía un campo cualquiera del formulario. */}
           <View style={[estilos.buscador, { backgroundColor: c.cardBg, borderColor: c.border }]}>
+            <Icon name="search" size={TAMANO_ICONO.normal} color={c.textSoft} />
             <TextInput
               value={props.texto}
               onChangeText={props.onCambiarTexto}
@@ -145,6 +149,7 @@ const estilos = StyleSheet.create({
   buscador: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 10,
     minHeight: 52,
     borderRadius: 12,
     borderWidth: 1,

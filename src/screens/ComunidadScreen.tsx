@@ -36,8 +36,12 @@ import { alumnoDesdeLaInfo } from '../features/mentor/utils/alumnoDesdeLaInfo';
 import { loQueTapaComunidad, SIN_VISTAS_DEL_MENTOR, vistasDelMentor } from '../features/mentor/utils/vistasDelMentor';
 import { entradaAlGrupoVisible } from '../features/mentor/utils/entradaAlGrupo';
 import { MicroLabel, ScreenHeader, AvatarPersona } from '../components/ui';
-import { Icon, IconName } from '../components/Icon';
+import { Icon, IconName, TAMANO_ICONO } from '../components/Icon';
 import { GoldButton } from '../components/GoldButton';
+import { Presionable } from '../components/Presionable';
+import { ConfirmacionEnLinea } from '../components/ConfirmacionEnLinea';
+import { tacto } from '../utils/tacto';
+import { separacionDeLaFila } from '../features/community/utils/filaDeMedallones';
 import { useAuth } from '../features/auth/context/AuthContext';
 import { useWallFeed } from '../features/community/hooks/useWallFeed';
 import { useWallReactions } from '../features/community/hooks/useWallReactions';
@@ -227,6 +231,8 @@ export interface PostItem {
   id: string;
   author: string;
   avatar: string;
+  /** La foto del autor (`WallPostResponse.authorAvatarUrl`); sin ella, sus iniciales (`AvatarPersona`). */
+  avatarUrl?: string | null;
   cell: string;
   /**
    * Día de programa del autor CUANDO publicó. `null` = no corresponde mostrarlo.
@@ -480,15 +486,20 @@ export type SeccionComunidad =
  * Los tickets al mentor no están, y no es que se hayan movido: el apartado entero se retiró de la
  * app el 2026-09-07 a pedido del dueño del proyecto (ver la nota junto a `tieneGrupo`).
  */
-const SECCIONES: { id: SeccionComunidad; icon: IconName; label: string }[] = [
-  { id: 'muro', icon: 'chat', label: 'Muro' },
+export const SECCIONES: { id: SeccionComunidad; icon: IconName; label: string }[] = [
+  /* Íconos del 2026-10-05 (inventario de Comunidad): el Muro era el globo de chat —el mismo de
+     «Comentar», «Escribir» y Soporte—, Cursos un cilindro de base de datos y Testimonios la estrella
+     de «favorito», la única rellena de la fila. Ahora: periódico, libro abierto y comillas. */
+  { id: 'muro', icon: 'newspaper', label: 'Muro' },
   /* 2026-09-26 (E-5, decisión del dueño): los eventos se ven sobre todo acá. Segunda, al lado del
      Muro, para que se vea sin deslizar la fila. Ver `features/eventos/components/SeccionEventos`. */
   { id: 'eventos', icon: 'calendar', label: 'Eventos' },
-  { id: 'classroom', icon: 'stack', label: 'Classroom' },
+  /* «Cursos» y no «Classroom» (decisión del dueño, 2026-10-05). Solo cambia el texto visible: la
+     clave `classroom` sigue siendo la de siempre en el estado, las rutas y los atajos desde Training. */
+  { id: 'classroom', icon: 'bookOpen', label: 'Cursos' },
   { id: 'tribu', icon: 'users', label: 'Tribu' },
   { id: 'ranking', icon: 'trophy', label: 'Ranking' },
-  { id: 'testimonios', icon: 'star', label: 'Testimonios' },
+  { id: 'testimonios', icon: 'quote', label: 'Testimonios' },
 ];
 
 /*
@@ -505,9 +516,52 @@ const SECCIONES: { id: SeccionComunidad; icon: IconName; label: string }[] = [
  * venga del servidor.
  */
 
+/**
+ * El ícono de cada tipo de lección (2026-10-05). Eran emojis (🎥 📄 🔗 ✍️), y una lección bloqueada
+ * cambiaba el suyo por 🔒 —que además se repetía con el `lock` de la derecha—. Ahora el tipo queda
+ * siempre a la izquierda y el estado, uno solo, a la derecha.
+ */
+const ICONO_POR_TIPO_DE_LECCION: Record<ResourceType, IconName> = {
+  video: 'video',
+  doc: 'fileText',
+  link: 'link',
+  text: 'pencil',
+};
+
 /** El aire entre dos publicaciones del Muro: el mismo `gap` que tenían dentro del `.map`. */
 function SeparadorDePublicaciones() {
   return <View style={{ height: space.gap }} />;
+}
+
+/**
+ * «Ver más» / «Ver menos» del resumen de un curso, con el chevron girado hacia donde se abre
+ * (2026-10-05). Eran «Ver más... ▼» y «Ver menos ▲»: dos triángulos de la fuente del sistema, que
+ * cambian de forma entre Android, iOS y web y no toman el color del tema.
+ */
+/** «Siguiente» / «Finalizar» de la lección, con ícono en vez del «›» y el «🔒» escritos (2026-10-05). */
+function SiguienteOFinalizar({ texto, abierto }: { texto: string; abierto: boolean }) {
+  const { c, t } = useTheme();
+  const color = abierto ? c.goldInk : c.textSoft;
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+      <Text style={[t.body, { color, fontFamily: abierto ? 'Jost_700Bold' : 'Jost_500Medium' }]}>{texto}</Text>
+      {/* Con la lección sin completar, un candado (de línea, no 🔒); completada, el chevron. */}
+      <Icon name={abierto ? 'chevron' : 'lock'} size={TAMANO_ICONO.chico} color={color} />
+    </View>
+  );
+}
+
+function VerMasOMenos({ abierto }: { abierto: boolean }) {
+  const { c, t } = useTheme();
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+      <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>{abierto ? 'Ver menos' : 'Ver más'}</Text>
+      {/* `chevron` apunta a la derecha: 90° baja (se abre), −90° sube (se cierra). */}
+      <View style={{ transform: [{ rotate: abierto ? '-90deg' : '90deg' }] }}>
+        <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.goldInk} />
+      </View>
+    </View>
+  );
 }
 
 /** Sin conversación abierta: la misma lista vacía siempre, para no recalcular nada en cada render. */
@@ -521,12 +575,22 @@ export default function ComunidadScreen() {
   // D-99: el chat dentro de un curso le dice a Sparkie en que dia del programa va la persona.
   const { diaPrograma } = useProgramaDia();
   const isDark = mode === 'dark';
-  const { rs, isTablet, horizontalPadding, contentMaxWidth } = useResponsive();
+  const { rs, isTablet, horizontalPadding, contentMaxWidth, width: anchoPantalla } = useResponsive();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const mentorPhoto = rs(50);
   const avatarSize = rs(42);
   const medallionSize = rs(40);
+  /* La fila de medallones deja ASOMAR medio medallón cuando no entra entera (2026-10-05): así se ve
+     que se desliza. Ver `separacionDeLaFila`. */
+  const [anchoFilaSecciones, setAnchoFilaSecciones] = useState(0);
+  const anchoMedallon = medallionSize + 26;
+  const filaDeSecciones = separacionDeLaFila({
+    anchoVisible: anchoFilaSecciones || anchoPantalla,
+    relleno: horizontalPadding,
+    anchoMedallon,
+    cantidad: SECCIONES.length,
+  });
   // Nombre real de quien está usando la app, para las publicaciones y comentarios propios del
   // Muro — reemplaza el "Kelin Arango" fijo del mock por el dato de la sesión.
   const nombreUsuario = user?.name?.trim() || 'Tú';
@@ -753,6 +817,25 @@ export default function ComunidadScreen() {
   // mano: se pasa siempre por `irASeccion`, que además limpia el sub-estado de la sección que se
   // deja.
   const [seccionActiva, setSeccionActiva] = useState<SeccionComunidad>('muro');
+  /*
+   * La sección elegida queda ENTERA a la vista en la fila (2026-10-05). Con el medallón que asoma por
+   * la mitad, tocarlo dejaba su etiqueta cortada contra el borde («Ranl…»). Solo se mueve si hace
+   * falta: tocar una que ya se ve entera no desplaza nada. La posición se guarda en una referencia,
+   * no en el estado: desplazar la fila no vuelve a dibujar la pantalla.
+   */
+  const filaDeSeccionesRef = useRef<ScrollView>(null);
+  const desplazamientoDeLaFila = useRef(0);
+  useEffect(() => {
+    const indice = SECCIONES.findIndex(seccion => seccion.id === seccionActiva);
+    if (indice < 0 || anchoFilaSecciones <= 0) return;
+    const inicio = horizontalPadding + indice * (anchoMedallon + filaDeSecciones.separacion);
+    const fin = inicio + anchoMedallon;
+    const desde = desplazamientoDeLaFila.current;
+    const hasta = desde + anchoFilaSecciones;
+    if (inicio >= desde && fin <= hasta) return;
+    const destino = fin > hasta ? fin + horizontalPadding - anchoFilaSecciones : inicio - horizontalPadding;
+    filaDeSeccionesRef.current?.scrollTo({ x: Math.max(0, destino), animated: true });
+  }, [seccionActiva, anchoFilaSecciones, anchoMedallon, filaDeSecciones.separacion, horizontalPadding]);
   /* Eventos (E-5): el evento que pidió un aviso (`/eventos/{id}`) y el «atrás» de su sección, que
      vuelve del detalle o del formulario a la lista antes de dejar la sección. */
   const [eventoPedido, setEventoPedido] = useState<string | null>(null);
@@ -1154,6 +1237,20 @@ export default function ComunidadScreen() {
       leccionScrollRef.current?.scrollTo({ y: 0, animated: false });
     }
   }, [leccionMostrada?.id]);
+
+  /*
+   * CONFIRMACIONES EN LÍNEA (2026-10-05). Los avisos de éxito dejaron de ser diálogos: se dicen en
+   * una línea junto a lo que se hizo y se van solos (`ConfirmacionEnLinea`). Tres lugares:
+   * - el Muro, debajo de «¿Qué conquistaste hoy?» (publicar y cerrar el hábito del post diario);
+   * - la publicación que se compartió a un chat, debajo de sus acciones;
+   * - Cursos (lección completada, curso terminado), arriba de lo que quede a la vista.
+   * `clave` cambia con cada acción nueva: la línea se vuelve a montar y empieza de cero. Si sólo cambia
+   * el texto (el hábito se cerró un momento después de publicar), sigue la misma línea, más tiempo.
+   */
+  type Confirmacion = { clave: number; texto: string };
+  const [confirmacionMuro, setConfirmacionMuro] = useState<Confirmacion | null>(null);
+  const [confirmacionDePublicacion, setConfirmacionDePublicacion] = useState<(Confirmacion & { postId: string }) | null>(null);
+  const [confirmacionCursos, setConfirmacionCursos] = useState<Confirmacion | null>(null);
 
   // Ventana Externa de Publicación a Pantalla Completa
   const [createPostModalVisible, setCreatePostModalVisible] = useState(false);
@@ -1762,40 +1859,46 @@ export default function ComunidadScreen() {
       void AsyncStorage.setItem(claveStorageCompletadas, JSON.stringify(nuevoEstado)).catch(() => {});
       void recargarCursos();
 
+      /* Los avisos de éxito de acá eran diálogos («¡Excelente Progreso! 🦅», «¡Curso Completado!
+         🏆🦅») que había que cerrar para seguir. Desde el 2026-10-05 son una línea arriba de lo que
+         queda a la vista, con el háptico de logro en el mismo instante (`ConfirmacionEnLinea`). */
       if (estabaCompleta) {
-        Alert.alert('Lección actualizada', 'La lección se ha marcado como pendiente.');
+        setConfirmacionCursos({ clave: Date.now(), texto: 'La lección volvió a quedar pendiente.' });
         return;
       }
 
       // La lección fue completada con éxito
       if (isLastLesson || !nextLesson) {
         // Última lección del curso -> llevar al panel general donde están todos los cursos (Req 4)
+        const tituloDelCurso = selectedCourse?.title;
         setFullScreenLesson(null);
         setSelectedCourseId(null);
-        Alert.alert(
-          '¡Curso Completado! 🏆🦅',
-          '¡Felicitaciones! Has completado todas las lecciones del curso y finalizado tu recorrido.'
-        );
+        setConfirmacionCursos({
+          clave: Date.now(),
+          texto: tituloDelCurso
+            ? `¡Curso completado! Terminaste todas las lecciones de «${tituloDelCurso}».`
+            : '¡Curso completado! Terminaste todas sus lecciones.',
+        });
+        tacto.logro();
       } else {
         // Lección intermedia -> avanzar a la siguiente lección sucesivamente (Req 3)
         if (nextLesson.locked) {
           const faltan = nextLesson.diasFaltantes ?? 0;
-          Alert.alert(
-            '¡Excelente Progreso! 🦅',
-            `Lección completada con éxito.\n\nLa siguiente lección ("${nextLesson.title}") se desbloqueará en ${
+          setConfirmacionCursos({
+            clave: Date.now(),
+            texto: `Lección completada. La siguiente («${nextLesson.title}») se desbloquea en ${
               faltan > 0 ? `${faltan} día${faltan === 1 ? '' : 's'}` : 'tu próximo día de programa'
-            }.`
-          );
+            }.`,
+          });
+          tacto.logro();
         } else {
           // Con `leccion.id`: la anterior de la siguiente es ESTA, que el servidor acaba de dar por
           // completada. El estado de la pantalla recién se entera en el próximo render; sin esto la
           // regla secuencial la leía pendiente, avisaba «Lección no disponible 🔒» nombrándola a
           // ella y no abría la siguiente (TRB-04, e2e web del 2026-09-27).
           handleAbrirLeccion(nextLesson, false, leccion.id);
-          Alert.alert(
-            '¡Excelente Progreso! 🦅',
-            `Lección completada con éxito. Avanzando a: "${nextLesson.title}".`
-          );
+          setConfirmacionCursos({ clave: Date.now(), texto: `Lección completada. Sigues con «${nextLesson.title}».` });
+          tacto.logro();
         }
       }
     } catch (e) {
@@ -2106,10 +2209,14 @@ export default function ComunidadScreen() {
   const handleShareToConversation = async (post: PostItem, conv: ChatConversation) => {
     try {
       await compartirPublicacionEnChat(conv, post.id);
-      Alert.alert(
-        '¡Publicación Compartida! 🦅',
-        `Se ha compartido con éxito en "${conv.title}".`
-      );
+      /* En línea, debajo de las acciones de ESA publicación, y no en un diálogo (2026-10-05). El
+         nombre es el visible (el de un grupo sale de `/me/cells`), no el «Mi Grupo» del servidor. */
+      setConfirmacionDePublicacion({
+        clave: Date.now(),
+        postId: post.id,
+        texto: `Compartida en «${nombreVisibleDeConversacion(conv)}».`,
+      });
+      tacto.logro();
     } catch (e) {
       Alert.alert('No se pudo compartir', mensajeDeError(e, 'Intenta de nuevo en un momento.'));
     }
@@ -2218,10 +2325,12 @@ export default function ComunidadScreen() {
     // Training muestra la tarjeta del hábito y carga una sola vez al montarse: sin este aviso, la
     // persona lee "completado" acá y vuelve a encontrar la tarjeta sin tildar.
     avisarPostDiarioCerrado();
-    Alert.alert(
-      '¡Hábito completado! 🦅',
-      'Tu hábito "Post diario en comunidad" se completó con éxito.'
-    );
+    /* La misma línea que dijo «Publicado» cambia el texto (sin otro háptico: es la misma acción).
+       Antes era un diálogo «¡Hábito completado! 🦅» que tapaba la publicación recién hecha. */
+    setConfirmacionMuro(previa => ({
+      clave: previa?.clave ?? Date.now(),
+      texto: 'Publicado. Tu hábito «Post diario en comunidad» se completó con éxito.',
+    }));
   };
 
   const handlePublishPost = async () => {
@@ -2251,10 +2360,15 @@ export default function ComunidadScreen() {
     setAttachedPhotos([]);
     setCategoriaSeleccionada(null);
     setCreatePostModalVisible(false);
+    // Al principio del Muro, donde aparece la publicación nueva y su confirmación (2026-10-05).
+    muroListaRef.current?.scrollToOffset({ offset: 0, animated: true });
 
     setSubiendoPublicacion(true);
     try {
       await publicarOptimista(texto, fotos, nombreUsuario, categoria);
+      // Confirmada por el backend: se dice en línea y vibra una vez (`tacto.logro`).
+      setConfirmacionMuro({ clave: Date.now(), texto: 'Publicado en el Muro.' });
+      tacto.logro();
       // El arranque guiado espera este momento para pasar al Pacto. Se avisa DESPUÉS del `await`,
       // con la publicación ya confirmada por el backend, y nunca en el `catch`: un post que falló
       // y se revirtió no es un primer post. El aviso solo adelanta lo que igual se confirma contra
@@ -2355,6 +2469,8 @@ export default function ComunidadScreen() {
     elegirFotoComentario: postId => void handlePickCommentPhoto(postId),
     escribirComentario: (postId, texto) => setCommentInputs(prev => ({ ...prev, [postId]: texto })),
     enviarComentario: postId => void handleAddComment(postId),
+    cerrarConfirmacion: postId =>
+      setConfirmacionDePublicacion(actual => (actual?.postId === postId ? null : actual)),
   };
   const accionesPublicacion = useMemo<AccionesPublicacion>(
     () => ({
@@ -2373,6 +2489,7 @@ export default function ComunidadScreen() {
       elegirFotoComentario: id => accionesVigentes.current!.elegirFotoComentario(id),
       escribirComentario: (id, texto) => accionesVigentes.current!.escribirComentario(id, texto),
       enviarComentario: id => accionesVigentes.current!.enviarComentario(id),
+      cerrarConfirmacion: id => accionesVigentes.current!.cerrarConfirmacion(id),
     }),
     []
   );
@@ -2388,10 +2505,12 @@ export default function ComunidadScreen() {
         textoComentario={commentInputs[item.id] || ''}
         fotoComentario={commentPhotos[item.id]}
         comentariosExpandidos={expandedComments}
+        confirmacion={confirmacionDePublicacion?.postId === item.id ? confirmacionDePublicacion : null}
         acciones={accionesPublicacion}
       />
     ),
     [
+      confirmacionDePublicacion,
       expandedPosts,
       openComments,
       publicacionDestacada,
@@ -2543,20 +2662,38 @@ export default function ComunidadScreen() {
         </Text>
 
         <ScrollView
-          onLayout={encabezado.medir.fila}
+          ref={filaDeSeccionesRef}
+          onScroll={e => {
+            desplazamientoDeLaFila.current = e.nativeEvent.contentOffset.x;
+          }}
+          scrollEventThrottle={32}
+          onLayout={e => {
+            encabezado.medir.fila(e);
+            setAnchoFilaSecciones(e.nativeEvent.layout.width);
+          }}
           keyboardShouldPersistTaps="handled"
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: horizontalPadding, gap: 12, alignItems: 'flex-start' }}
+          accessibilityRole="tablist"
+          accessibilityHint={filaDeSecciones.desliza ? 'Desliza para ver más secciones' : undefined}
+          contentContainerStyle={{ paddingHorizontal: horizontalPadding, gap: filaDeSecciones.separacion, alignItems: 'flex-start' }}
         >
           {SECCIONES.map(s => {
             const activa = seccionActiva === s.id;
             return (
-              <Pressable
+              /* Se hunde al apoyar el dedo (`Presionable`, 0.97 en 120 ms) y vibra con un «tic» al
+                 CAMBIAR de sección; tocar la que ya está abierta no vibra (2026-10-05). */
+              <Presionable
                 key={s.id}
-                onPress={() => irASeccion(s.id)}
+                onPress={() => {
+                  if (!activa) tacto.seleccion();
+                  irASeccion(s.id);
+                }}
                 hitSlop={6}
-                style={{ alignItems: 'center', gap: 6, width: medallionSize + 26 }}
+                accessibilityRole="tab"
+                accessibilityLabel={s.label}
+                accessibilityState={{ selected: activa }}
+                style={{ alignItems: 'center', gap: 6, width: anchoMedallon }}
               >
                 <View
                   style={[
@@ -2571,7 +2708,7 @@ export default function ComunidadScreen() {
                     },
                   ]}
                 >
-                  <Icon name={s.icon} size={rs(18)} color={activa ? '#1E1B18' : c.goldInk} strokeWidth={1.15} />
+                  <Icon name={s.icon} size={TAMANO_ICONO.normal} color={activa ? c.onGold : c.goldInk} />
                 </View>
                 <Text
                   numberOfLines={1}
@@ -2588,7 +2725,7 @@ export default function ComunidadScreen() {
                 >
                   {s.label}
                 </Text>
-              </Pressable>
+              </Presionable>
             );
           })}
         </ScrollView>
@@ -2613,15 +2750,16 @@ export default function ComunidadScreen() {
           renderItem={renderPublicacion}
           ListHeaderComponent={
             <View style={{ gap: space.gap, paddingTop: 10, marginBottom: space.gap }}>
-              {/* Botón Ventana Externa de Publicación */}
-              <Pressable
+              {/* Botón Ventana Externa de Publicación. Se hunde al apoyar el dedo (2026-10-05) y lleva
+                  TU foto o tus iniciales: el águila que había no eras tú. */}
+              <Presionable
                 onPress={() => setCreatePostModalVisible(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Crear una publicación"
                 style={[styles.createPostBar, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-                  <View style={[styles.avatarCircle, { backgroundColor: c.goldWash }]}>
-                    <Text style={{ fontSize: 13 }}>🦅</Text>
-                  </View>
+                  <AvatarPersona nombre={nombreUsuario} avatarUrl={user?.avatarUrl} size={36} />
                   <View style={{ flex: 1, gap: 3 }}>
                     <Text style={[t.body, { color: c.textStrong, fontFamily: 'Jost_500Medium' }]}>
                       ¿Qué conquistaste hoy, {primerNombreUsuario}?
@@ -2634,9 +2772,19 @@ export default function ComunidadScreen() {
                   </View>
                 </View>
                 <View style={[styles.plusBadge, { backgroundColor: c.gold }]}>
-                  <Text style={{ color: c.onGold, fontFamily: 'Jost_700Bold', fontSize: 16 }}>+</Text>
+                  <Icon name="plus" size={TAMANO_ICONO.normal} color={c.onGold} />
                 </View>
-              </Pressable>
+              </Presionable>
+
+              {/* «Publicado», y después «tu hábito quedó completo»: en línea, debajo de donde se
+                  empezó a escribir, sin diálogo que tocar (2026-10-05). */}
+              {confirmacionMuro && (
+                <ConfirmacionEnLinea
+                  key={confirmacionMuro.clave}
+                  texto={confirmacionMuro.texto}
+                  onTerminar={() => setConfirmacionMuro(null)}
+                />
+              )}
 
               {/* Estados de carga/error del feed real — sin componentes nuevos, solo texto con
                   los mismos tokens que ya usa el resto de la pantalla. */}
@@ -2649,9 +2797,12 @@ export default function ComunidadScreen() {
                 <Text style={[t.body, { color: c.danger }]}>{muroError}</Text>
               )}
               {!muroCargando && !muroError && posts.length === 0 && (
-                <Text style={[t.body, { color: c.textSoft }]}>
-                  Todavía no hay publicaciones. ¡Sé el primero en compartir tu victoria!
-                </Text>
+                <View style={{ alignItems: 'center', gap: 10, paddingVertical: 20 }}>
+                  <Icon name="newspaper" size={28} color={c.goldInk} />
+                  <Text style={[t.body, { color: c.textSoft, textAlign: 'center' }]}>
+                    Todavía no hay publicaciones. ¡Sé el primero en compartir tu victoria!
+                  </Text>
+                </View>
               )}
             </View>
           }
@@ -2768,9 +2919,13 @@ export default function ComunidadScreen() {
               */}
               <View style={[styles.mediaLunaCard, { borderColor: c.border, backgroundColor: c.cardBg }]}>
                 <View style={styles.mediaLunaContent}>
+                  {/* Estado vacío con su ícono, el mismo de la sección (2026-10-05). */}
+                  <View style={{ marginBottom: 10 }}>
+                    <Icon name="quote" size={28} color={c.goldInk} />
+                  </View>
                   <View style={[styles.badgePill, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-                    <Text style={[t.micro, { color: c.goldInk, fontSize: 10.5, fontFamily: 'Jost_700Bold' }]}>
-                      PRÓXIMAMENTE
+                    <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
+                      Próximamente
                     </Text>
                   </View>
                   <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 16, marginTop: 10 }]}>
@@ -2847,7 +3002,9 @@ export default function ComunidadScreen() {
 
               {rankingCargando && !podioTop1 ? (
                 <View style={[styles.myRankCard, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-                  <Text style={{ fontSize: 26, marginBottom: 8 }}>🏆</Text>
+                  <View style={{ marginBottom: 8 }}>
+                    <Icon name="trophy" size={28} color={c.goldInk} />
+                  </View>
                   <Text style={[t.cardTitle, { color: c.textStrong }]}>
                     Cargando el ranking oficial...
                   </Text>
@@ -2877,7 +3034,10 @@ export default function ComunidadScreen() {
                       "puedes ser el próximo" deja de ser cierto para el primer puesto. */}
                   {!podioTop1 && (
                     <View style={[styles.myRankCard, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-                      <Text style={{ fontSize: 24, marginBottom: 8 }}>🏆</Text>
+                      {/* El trofeo de línea, como el de la sección (2026-10-05); era el emoji 🏆. */}
+                      <View style={{ marginBottom: 8 }}>
+                        <Icon name="trophy" size={28} color={c.goldInk} />
+                      </View>
                       <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 18, lineHeight: 25 }]}>
                         Tú puedes ser el próximo líder del ranking
                       </Text>
@@ -2935,7 +3095,7 @@ export default function ComunidadScreen() {
                         {u.name}
                       </Text>
                       <Text style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
-                        ⚡ {u.scoreText}
+                        {u.scoreText}
                       </Text>
                     </EntradaEscalonada>
                   ))}
@@ -2966,6 +3126,13 @@ export default function ComunidadScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={{ gap: space.gap, paddingTop: 10, paddingBottom: 28 }}>
+            {confirmacionCursos && (
+              <ConfirmacionEnLinea
+                key={confirmacionCursos.clave}
+                texto={confirmacionCursos.texto}
+                onTerminar={() => setConfirmacionCursos(null)}
+              />
+            )}
             {/* Estados de carga/error/vacío del catálogo real — sin componentes nuevos, mismo
                 patrón de texto plano que ya usa el Muro más arriba en esta pantalla. */}
             {cursosCargando && courses.length === 0 && (
@@ -2977,14 +3144,20 @@ export default function ComunidadScreen() {
               <Text style={[t.body, { color: c.danger }]}>{cursosError}</Text>
             )}
             {!cursosCargando && !cursosError && courses.length === 0 && (
-              <Text style={[t.body, { color: c.textSoft }]}>
-                Todavía no tienes cursos disponibles para tu día de programa.
-              </Text>
+              <View style={{ alignItems: 'center', gap: 10, paddingVertical: 20 }}>
+                <Icon name="bookOpen" size={28} color={c.goldInk} />
+                <Text style={[t.body, { color: c.textSoft, textAlign: 'center' }]}>
+                  Todavía no tienes cursos disponibles para tu día de programa.
+                </Text>
+              </View>
             )}
             {courses.map(course => (
-              <Pressable
+              /* La tarjeta entera se hunde al apoyar el dedo (2026-10-05, `Presionable`). */
+              <Presionable
                 key={course.id}
                 onPress={() => handleAbrirCurso(course)}
+                accessibilityRole="button"
+                accessibilityLabel={course.locked ? `${course.title}. Bloqueado` : `Abrir el curso ${course.title}`}
                 style={[
                   styles.courseCard,
                   { borderColor: c.border, backgroundColor: c.cardBg },
@@ -3002,7 +3175,7 @@ export default function ComunidadScreen() {
                 <View style={styles.courseCoverHeader}>
                   <CursoPortada url={course.coverUrl} />
                   <View style={[styles.courseCategoryBadge, { backgroundColor: 'rgba(0,0,0,0.65)' }]}>
-                    <Text style={[t.micro, { color: c.goldInk, fontSize: 10.5, fontFamily: 'Jost_700Bold' }]}>
+                    <Text style={[t.small, { color: c.goldInk, fontSize: 12, lineHeight: 16, fontFamily: 'Jost_700Bold' }]}>
                       {course.category}
                     </Text>
                   </View>
@@ -3032,9 +3205,7 @@ export default function ComunidadScreen() {
                           hitSlop={8}
                           style={{ alignSelf: 'flex-start', minHeight: 48, justifyContent: 'center' }}
                         >
-                          <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
-                            {expandedCourseSummaries[course.id] ? 'Ver menos ▲' : 'Ver más... ▼'}
-                          </Text>
+                          <VerMasOMenos abierto={!!expandedCourseSummaries[course.id]} />
                         </Pressable>
                       )}
                     </View>
@@ -3052,13 +3223,13 @@ export default function ComunidadScreen() {
                       <View style={[styles.progressBarFill, { width: `${obtenerProgresoCurso(course)}%`, backgroundColor: c.gold }]} />
                     </View>
                   </View>
-                  <View style={[styles.exploreBtn, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}>
-                    <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 0.5 }]}>
-                      EXPLORAR CONTENIDO ›
-                    </Text>
+                  {/* Tipo oración y el chevron de verdad (2026-10-05): era «EXPLORAR CONTENIDO ›». */}
+                  <View style={[styles.exploreBtn, { borderColor: c.gold, backgroundColor: c.cardBgAlt, flexDirection: 'row', gap: 8 }]}>
+                    <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>Explorar contenido</Text>
+                    <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.goldInk} />
                   </View>
                 </View>
-              </Pressable>
+              </Presionable>
             ))}
           </View>
         </ScrollView>
@@ -3084,17 +3255,29 @@ export default function ComunidadScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
+            {/* Flecha de 24 en un área de 48 y tipo oración (2026-10-05): era una flecha de 14 junto a
+                «VOLVER A CURSOS» en versales espaciadas. */}
             <Pressable
               onPress={() => setSelectedCourseId(null)}
+              accessibilityRole="button"
+              accessibilityLabel="Volver a los cursos"
               style={styles.backBtnRow}
               hitSlop={8}
             >
-              <Icon name="arrowLeft" size={14} color={c.goldInk} />
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
-                VOLVER A CURSOS
-              </Text>
+              <Icon name="arrowLeft" size={TAMANO_ICONO.grande} color={c.goldInk} />
+              <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_500Medium' }]}>Volver a los cursos</Text>
             </Pressable>
           </View>
+
+          {confirmacionCursos && (
+            <View style={{ marginTop: 12 }}>
+              <ConfirmacionEnLinea
+                key={confirmacionCursos.clave}
+                texto={confirmacionCursos.texto}
+                onTerminar={() => setConfirmacionCursos(null)}
+              />
+            </View>
+          )}
 
           <View style={[styles.courseHeaderBox, { borderColor: c.border, backgroundColor: c.cardBg, overflow: 'hidden' }]}>
             {selectedCourse.coverUrl ? (
@@ -3124,9 +3307,7 @@ export default function ComunidadScreen() {
                     hitSlop={8}
                     style={{ alignSelf: 'flex-start', minHeight: 48, justifyContent: 'center' }}
                   >
-                    <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
-                      {expandedCourseSummaries[selectedCourse.id] ? 'Ver menos ▲' : 'Ver más... ▼'}
-                    </Text>
+                    <VerMasOMenos abierto={!!expandedCourseSummaries[selectedCourse.id]} />
                   </Pressable>
                 )}
               </View>
@@ -3148,9 +3329,17 @@ export default function ComunidadScreen() {
                     const bloqueada = !!lesson.locked || bloqueadaPorSecuencia;
 
                     return (
-                      <Pressable
+                      /* Fila de lección (2026-10-05): a la izquierda el TIPO, siempre (video, documento,
+                         enlace, lectura), con íconos de línea en vez de 🎥📄🔗✍️; a la derecha el
+                         ESTADO: un solo candado si está bloqueada (antes eran dos, 🔒 y `lock`), el
+                         chevron si se puede abrir, o «Hecho» con su ✓. Se hunde al apoyar el dedo. */
+                      <Presionable
                         key={lesson.id}
                         onPress={() => handleAbrirLeccion(lesson)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${lesson.title}. ${
+                          completada ? 'Completada' : bloqueada ? 'Bloqueada' : lesson.meta
+                        }`}
                         style={[
                           styles.lessonItemRow,
                           {
@@ -3168,17 +3357,7 @@ export default function ComunidadScreen() {
                             { backgroundColor: completada ? c.goldWash : c.divider },
                           ]}
                         >
-                          <Text style={{ fontSize: 15 }}>
-                            {bloqueada
-                              ? '🔒'
-                              : lesson.type === 'video'
-                              ? '🎥'
-                              : lesson.type === 'doc'
-                              ? '📄'
-                              : lesson.type === 'link'
-                              ? '🔗'
-                              : '✍️'}
-                          </Text>
+                          <Icon name={ICONO_POR_TIPO_DE_LECCION[lesson.type]} size={TAMANO_ICONO.normal} color={c.goldInk} />
                         </View>
                         <View style={{ flex: 1 }}>
                           <Text
@@ -3193,22 +3372,21 @@ export default function ComunidadScreen() {
                           >
                             {lesson.title}
                           </Text>
-                          <Text style={[t.small, { color: completada ? c.goldInk : c.micro, fontSize: 12.5 }]}>
-                            {completada ? '✓ Completada' : lesson.meta}
+                          <Text style={[t.small, { color: completada ? c.goldInk : c.micro, fontSize: 13 }]}>
+                            {completada ? 'Completada' : lesson.meta}
                           </Text>
                         </View>
                         {completada ? (
-                          <View style={[styles.completedBadgePill, { backgroundColor: c.goldWash }]}>
-                            <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
-                              ✓ HECHO
-                            </Text>
+                          <View style={[styles.completedBadgePill, { backgroundColor: c.goldWash, flexDirection: 'row', gap: 4 }]}>
+                            <Icon name="check" size={TAMANO_ICONO.chico} color={c.goldInk} />
+                            <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>Hecho</Text>
                           </View>
                         ) : bloqueada ? (
-                          <Icon name="lock" size={13} color={c.textSoft} />
+                          <Icon name="lock" size={TAMANO_ICONO.normal} color={c.textSoft} />
                         ) : (
-                          <Icon name="chevron" size={12} color={c.goldInk} />
+                          <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.goldInk} />
                         )}
-                      </Pressable>
+                      </Presionable>
                     );
                   })}
                 </View>
@@ -3242,17 +3420,29 @@ export default function ComunidadScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={[styles.detailTopBar, { borderBottomColor: c.divider }]}>
+            {/* Vuelve a la lista de lecciones del curso. Flecha de 24 en 48 y tipo oración (2026-10-05):
+                decía «VOLVER A LA SECCIÓN», y la «sección» era el curso. */}
             <Pressable
               onPress={() => setFullScreenLesson(null)}
+              accessibilityRole="button"
+              accessibilityLabel="Volver al curso"
               style={styles.backBtnRow}
               hitSlop={8}
             >
-              <Icon name="arrowLeft" size={14} color={c.goldInk} />
-              <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>
-                VOLVER A LA SECCIÓN
-              </Text>
+              <Icon name="arrowLeft" size={TAMANO_ICONO.grande} color={c.goldInk} />
+              <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_500Medium' }]}>Volver al curso</Text>
             </Pressable>
           </View>
+
+          {confirmacionCursos && (
+            <View style={{ marginTop: 12 }}>
+              <ConfirmacionEnLinea
+                key={confirmacionCursos.clave}
+                texto={confirmacionCursos.texto}
+                onTerminar={() => setConfirmacionCursos(null)}
+              />
+            </View>
+          )}
 
           <View style={[styles.lessonInfoCard, { borderColor: c.border, backgroundColor: c.cardBg, marginTop: 10 }]}>
             <Text style={[t.screenTitle, { color: c.textStrong, fontSize: 22, lineHeight: 28 }]}>
@@ -3308,11 +3498,16 @@ export default function ComunidadScreen() {
               </View>
             )}
 
+            {/* Tipo oración y el ✓ como ícono (2026-10-05): eran «✓ MARCAR LECCIÓN COMO COMPLETADA» y
+                «↺ QUITAR DE COMPLETADAS», con los símbolos escritos dentro del texto. */}
             <GoldButton
-              label={esLeccionCompletada(leccionMostrada.id, currentLessonIndex) ? '↺ QUITAR DE COMPLETADAS' : '✓ MARCAR LECCIÓN COMO COMPLETADA'}
+              label={esLeccionCompletada(leccionMostrada.id, currentLessonIndex) ? 'Quitar de completadas' : 'Marcar como completada'}
+              icon={esLeccionCompletada(leccionMostrada.id, currentLessonIndex) ? undefined : 'check'}
+              iconPosition="left"
               loading={actualizandoCompletado}
               onPress={() => handleAlternarLeccionCompletada(leccionMostrada)}
               style={{ width: '100%', marginTop: space.gapLg }}
+              textStyle={{ fontSize: 15, letterSpacing: 0 }}
             />
 
             {/* Fila de navegación sucesiva entre lecciones (Req 3 y 4) */}
@@ -3323,9 +3518,12 @@ export default function ComunidadScreen() {
                   style={[styles.exploreBtn, { flex: 1, borderColor: c.border, backgroundColor: c.cardBgAlt, paddingVertical: 10 }]}
                   hitSlop={6}
                 >
-                  <Text style={[t.micro, { color: c.textSoft, fontFamily: 'Jost_700Bold' }]}>
-                    ‹ ANTERIOR
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <View style={{ transform: [{ rotate: '180deg' }] }}>
+                      <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.textSoft} />
+                    </View>
+                    <Text style={[t.body, { color: c.textSoft, fontFamily: 'Jost_500Medium' }]}>Anterior</Text>
+                  </View>
                 </Pressable>
               ) : (
                 <View style={{ flex: 1 }} />
@@ -3362,17 +3560,10 @@ export default function ComunidadScreen() {
                   ]}
                   hitSlop={6}
                 >
-                  <Text
-                    style={[
-                      t.micro,
-                      {
-                        color: esLeccionCompletada(leccionMostrada.id, currentLessonIndex) ? c.goldInk : c.textSoft,
-                        fontFamily: 'Jost_700Bold',
-                      },
-                    ]}
-                  >
-                    {esLeccionCompletada(leccionMostrada.id, currentLessonIndex) ? 'SIGUIENTE ›' : 'SIGUIENTE 🔒'}
-                  </Text>
+                  <SiguienteOFinalizar
+                    texto="Siguiente"
+                    abierto={esLeccionCompletada(leccionMostrada.id, currentLessonIndex)}
+                  />
                 </Pressable>
               ) : isLastLesson ? (
                 <Pressable
@@ -3402,17 +3593,10 @@ export default function ComunidadScreen() {
                   ]}
                   hitSlop={6}
                 >
-                  <Text
-                    style={[
-                      t.micro,
-                      {
-                        color: esLeccionCompletada(leccionMostrada.id, currentLessonIndex) ? c.goldInk : c.textSoft,
-                        fontFamily: 'Jost_700Bold',
-                      },
-                    ]}
-                  >
-                    {esLeccionCompletada(leccionMostrada.id, currentLessonIndex) ? 'FINALIZAR ›' : 'FINALIZAR 🔒'}
-                  </Text>
+                  <SiguienteOFinalizar
+                    texto="Finalizar"
+                    abierto={esLeccionCompletada(leccionMostrada.id, currentLessonIndex)}
+                  />
                 </Pressable>
               ) : (
                 <View style={{ flex: 1 }} />
@@ -3501,7 +3685,7 @@ export default function ComunidadScreen() {
           {veLaEntradaAlGrupoQueAcompana ? (
             <View style={styles.tribuBloqueInicial}>
               <MicroLabel>Acompañamiento</MicroLabel>
-              <Pressable
+              <Presionable
                 onPress={() => despacharVista({ tipo: 'abrir-mi-grupo' })}
                 accessibilityRole="button"
                 accessibilityLabel="Abrir el grupo que acompañas"
@@ -3521,8 +3705,8 @@ export default function ComunidadScreen() {
                         : 'Ver el grupo que acompañas'}
                   </Text>
                 </View>
-                <Icon name="chevron" size={16} color={c.goldInk} />
-              </Pressable>
+                <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.goldInk} />
+              </Presionable>
             </View>
           ) : null}
 
@@ -3600,7 +3784,8 @@ export default function ComunidadScreen() {
                 "VER TODOS": el área pulsable es de más de 48 px de alto y ocupa el ancho entero
                 (AGENTS.md §4). Los avatares van en su propio renglón con `flexWrap` para que en
                 una pantalla de 320 px no empujen el rótulo fuera de la tarjeta. */}
-            <Pressable
+            {/* Toda la fila se hunde al apoyar el dedo (2026-10-05, `Presionable`). */}
+            <Presionable
               onPress={() => setIntegrantesAbiertos(abiertos => !abiertos)}
               disabled={integrantesDelGrupo.length === 0}
               accessibilityRole="button"
@@ -3625,16 +3810,14 @@ export default function ComunidadScreen() {
 
                 {integrantesDelGrupo.length > 0 && (
                   <View style={styles.tribuVerTodos}>
-                    <Text
-                      numberOfLines={1}
-                      style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 0.8 }]}
-                    >
-                      {integrantesAbiertos ? 'OCULTAR' : 'VER TODOS'}
+                    {/* Tipo oración (2026-10-05): era «VER TODOS» / «OCULTAR» en versales espaciadas. */}
+                    <Text numberOfLines={1} style={[t.body, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
+                      {integrantesAbiertos ? 'Ocultar' : 'Ver todos'}
                     </Text>
                     {/* El ícono `chevron` apunta a la derecha: girado 90° baja (cerrado, "se
                         abre hacia abajo") y −90° sube (abierto, "se cierra"). */}
                     <View style={{ transform: [{ rotate: integrantesAbiertos ? '-90deg' : '90deg' }] }}>
-                      <Icon name="chevron" size={14} color={c.goldInk} />
+                      <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.goldInk} />
                     </View>
                   </View>
                 )}
@@ -3677,7 +3860,7 @@ export default function ComunidadScreen() {
                   )}
                 </View>
               )}
-            </Pressable>
+            </Presionable>
           </View>
 
           {/* -------------------------------------------------------------------------------
@@ -3692,14 +3875,9 @@ export default function ComunidadScreen() {
           ------------------------------------------------------------------------------- */}
           {integrantesAbiertos && (
             <View style={styles.tribuIntegrantes}>
-              <Text
-                style={[
-                  t.micro,
-                  styles.cifras,
-                  { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 },
-                ]}
-              >
-                INTEGRANTES ({integrantesDelGrupo.length})
+              {/* El mismo rótulo que «Formación Renaser» y «Directos» (2026-10-05): era «INTEGRANTES (N)». */}
+              <Text style={[t.micro, styles.cifras, { color: c.micro }]}>
+                Integrantes ({integrantesDelGrupo.length})
               </Text>
 
               {tribuCargando && integrantesDelGrupo.length === 0 && (
@@ -3785,9 +3963,10 @@ export default function ComunidadScreen() {
             </Text>
           )}
           {!conversacionesCargando && !conversacionesError && directos.length === 0 && (
-            <Text style={[t.body, { color: c.textSoft, marginTop: space.gapLg }]}>
-              Todavía no tienes conversaciones uno a uno.
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: space.gapLg }}>
+              <Icon name="messageCircle" size={TAMANO_ICONO.normal} color={c.goldInk} />
+              <Text style={[t.body, { color: c.textSoft, flex: 1 }]}>Todavía no tienes conversaciones uno a uno.</Text>
+            </View>
           )}
 
           {/* Los 1 a 1. Los grupos ya salieron arriba, en Formación Renaser. */}
@@ -4703,10 +4882,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
+  /* 44 y no 28 (2026-10-05): el «+» era un carácter de 16 px en un círculo de 28. */
   plusBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
