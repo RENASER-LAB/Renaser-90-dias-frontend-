@@ -49,7 +49,9 @@ export function conLaCopiaLocal(mensaje: WireMensaje, uriLocal: string): WireMen
  * sí se avisa con un error claro en vez de dejar la pantalla como si nada hubiera pasado.
  */
 export function useEnvioMediaChat(conversationId: string | null,
-                                    alEnviar: (mensaje: WireMensaje) => void) {
+                                    alEnviar: (mensaje: WireMensaje) => void,
+                                    /** D-251: el mensaje al que responde lo próximo que se mande, si hay cita. */
+                                    respondiendoA: { id: string } | null = null) {
   // El grabador se crea recién al tocar «grabar», nunca al montar Comunidad (E-424): si el
   // micrófono no está disponible, falla ese botón y no la pantalla.
   const grabador = useGrabadorDeVoz();
@@ -84,6 +86,7 @@ export function useEnvioMediaChat(conversationId: string | null,
           mime: archivo.mimeType,
           durationSeconds,
           text,
+          replyToId: respondiendoA?.id,
         });
         alEnviar(conLaCopiaLocal(mensaje, archivo.uri));
         return true;
@@ -96,7 +99,7 @@ export function useEnvioMediaChat(conversationId: string | null,
         setEnviando(false);
       }
     },
-    [conversationId, alEnviar],
+    [conversationId, alEnviar, respondiendoA],
   );
 
   const enviarSticker = useCallback(async (sticker: StickerRenaser): Promise<boolean> => {

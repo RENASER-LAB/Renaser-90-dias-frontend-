@@ -33,6 +33,7 @@ import { coloresDelChat } from '../coloresDelChat';
 import { FilaDeConversacion } from '../FilaDeConversacion';
 import { InfoDelChat } from '../InfoDelChat';
 import { AvatarDeChat, FotoDelGrupo, FotoDelPrograma } from '../AvatarDeChat';
+import { Icon } from '../../../../components/Icon';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -53,6 +54,13 @@ function textos(raiz: ReactTestRenderer): string {
 }
 
 const COLORES = coloresDelChat(light, false);
+
+/** Las marcas de enviado/leído que dibuja la burbuja (íconos, desde el 2026-10-05). */
+function marcas(raiz: ReactTestRenderer): string[] {
+  return raiz.root
+    .findAll(n => n.type === Icon && (n.props.name === 'check' || n.props.name === 'checkCheck'))
+    .map(n => n.props.name as string);
+}
 
 describe('FilaDeConversacion', () => {
   it('muestra nombre, vista previa, hora y el contador de no leídos', () => {
@@ -131,23 +139,23 @@ describe('BurbujaDeMensaje', () => {
   });
 
   it('lo propio no lleva nombre y marca «✓» (guardado), no «✓✓»', () => {
-    const todo = textos(
-      dibujar(
-        React.createElement(BurbujaDeMensaje, {
-          mensaje: { ...base, isMe: true },
-          enGrupo: true,
-          primeroDeLaTanda: true,
-          ultimoDeLaTanda: true,
-          colores: COLORES,
-          audioActivo: false,
-          alActivarAudio: () => undefined,
-          onAbrirFoto: () => undefined,
-        })
-      )
+    const raiz = dibujar(
+      React.createElement(BurbujaDeMensaje, {
+        mensaje: { ...base, isMe: true },
+        enGrupo: true,
+        primeroDeLaTanda: true,
+        ultimoDeLaTanda: true,
+        colores: COLORES,
+        audioActivo: false,
+        alActivarAudio: () => undefined,
+        onAbrirFoto: () => undefined,
+      })
     );
+    const todo = textos(raiz);
     expect(todo).not.toContain('Ana López');
-    expect(todo).toContain('21:04 ✓');
-    expect(todo).not.toContain('✓✓');
+    expect(todo).toContain('21:04');
+    // 2026-10-05: las marcas son íconos (`check` / `checkCheck`), ya no caracteres.
+    expect(marcas(raiz)).toEqual(['check']);
   });
 
   it('una foto se dibuja dentro de la burbuja y se abre al tocarla', () => {
@@ -333,7 +341,7 @@ describe('BurbujaDeMensaje de un mensaje del programa', () => {
     const todo = textos(raiz);
     expect(todo).toContain('Formación Renaser');
     expect(todo).toContain('¡Bienvenida, Ana!');
-    expect(todo).not.toContain('✓');
+    expect(marcas(raiz)).toEqual([]);
     const fenix = raiz.root.findAll(n => (n.type as unknown) === 'Image' && n.props.accessibilityLabel === 'Formación Renaser');
     expect(fenix).toHaveLength(1);
   });

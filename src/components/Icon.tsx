@@ -8,7 +8,8 @@ export type IconName =
   | 'fire' | 'play' | 'pause' | 'plus' | 'chat' | 'send' | 'calendar' | 'award' | 'share' | 'filter'
   | 'dumbbell' | 'volume' | 'star' | 'checkCircle' | 'camera' | 'image'
   | 'close' | 'target' | 'thumbsUp' | 'mic' | 'search'
-  | 'forward' | 'imagePlus';
+  | 'forward' | 'imagePlus'
+  | 'smile' | 'trash' | 'checkCheck' | 'reply' | 'copy';
 
 type Props = { name: IconName; size?: number; color: string; strokeWidth?: number };
 
@@ -415,6 +416,41 @@ export function Icon({ name, size = 20, color, strokeWidth = 1.1 }: Props) {
           <Path {...s} d="M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5" />
           <Path {...s} d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
           <Circle {...s} cx={9} cy={9} r={2} />
+        </Svg>
+      );
+    /* Comunidad · chat (2026-10-05): trazos de Lucide (smile, trash-2, check-check, reply, copy) en
+       su caja de 24, de línea y con el grosor común de `s`. `trash` es el trash-2 de Lucide, con las
+       dos rayas: se lee «papelera» también a 20 px. */
+    case 'smile':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Circle {...s} cx={12} cy={12} r={10} />
+          <Path {...s} d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" />
+        </Svg>
+      );
+    case 'trash':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s} d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2M10 11v6M14 11v6" />
+        </Svg>
+      );
+    case 'checkCheck':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s} d="M18 6 7 17l-5-5M22 10l-7.5 7.5L13 16" />
+        </Svg>
+      );
+    case 'reply':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s} d="M9 17l-5-5 5-5M20 18v-2a4 4 0 0 0-4-4H4" />
+        </Svg>
+      );
+    case 'copy':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Rect {...s} x={8} y={8} width={14} height={14} rx={2} />
+          <Path {...s} d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
         </Svg>
       );
     case 'chevron':

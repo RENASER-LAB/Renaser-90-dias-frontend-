@@ -2,6 +2,7 @@ import type { ChatConversation, ChatMessage, ChatMessageType } from '../../../sc
 import { horaCorta, horaDeLaLista, vistaPreviaDelMensaje } from '../utils/formatoChat';
 import { estadoDeEntrega } from '../utils/lecturaDelChat';
 import { nombreDelSticker } from '../utils/stickersRenaser';
+import { citaDelServidor } from '../utils/citaDelMensaje';
 import type {
   WireConversacionResumen,
   WireMensaje,
@@ -274,6 +275,7 @@ export function mapearMensaje(wire: WireMensaje, actorId: string | null | undefi
     createdAt: wire.createdAt,
     senderId: wire.senderId ?? undefined,
     senderAvatarUrl: wire.senderAvatarUrl ?? null,
+    cita: citaDelServidor(wire),
   };
 }
 

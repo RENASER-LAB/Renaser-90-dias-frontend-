@@ -31,6 +31,43 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * La marca sale de `marcaDelLink`, que lee el dominio igual que `nombreDelLink`: el logo y el texto no pueden
       decir dos servicios distintos. Ningún texto, botón ni etiqueta accesible cambia.
     * **Hace falta un APK nuevo** (la app no se actualiza por aire).
+  * **Excepción autorizada por el dueño del producto — 2026-10-05 — tab `Comunidad` (chat): responder y
+    copiar un mensaje, descartar una nota de voz, y la barra de escribir y las burbujas del rediseño**
+    (backend D-251). El dueño respondió «sí» a (a) un menú al mantener presionado un mensaje con copiar y
+    responder, y (b) un botón para descartar una nota de voz mientras se graba («hoy cortar = enviar sí o
+    sí»); y aprobó el rediseño de Comunidad (mosaico `comunidad-iconos-inventario.png`, filas «Barra de
+    escribir», «Grabando», «Nota de voz», «Burbuja»). Lo que cambia y nada más:
+    * **Menú del mensaje**: mantener presionada una burbuja (también su foto o su cita; 350 ms) vibra
+      (`tacto.mantener`), tiñe su renglón y abre una hoja desde abajo (`chat/components/MenuDelMensaje`,
+      sobre `HojaDesdeAbajo`) con «Responder» y, si hay texto escrito por alguien y el teléfono puede,
+      «Copiar» (`expo-clipboard`; «Copiado» flota un momento sobre los mensajes). No había ninguna
+      acción previa en el toque largo.
+    * **Responder**: «Respondiendo a…» encima del campo (autor —«Tú» en dorado—, una línea con lo que
+      decía o el ícono del adjunto, miniatura de la foto o del sticker, y ✕), entra con fundido y 8 px en
+      180 ms. Lo próximo que se mande —texto, foto, sticker o nota de voz— viaja con `replyToId`; sin
+      cita el cuerpo del POST es el de siempre. En la burbuja, la cita va arriba
+      (`CitaDeRespuesta.CitaEnLaBurbuja`); tocarla lleva al mensaje si está cargado y lo tiñe un
+      momento. Si el citado ya no está, «Mensaje eliminado» sin autor. La cita sale de
+      `chat/utils/citaDelMensaje.ts`: del servidor (`replyTo`, `replyToDeleted`) o, con un backend
+      anterior a D-251 que devuelve solo `replyToId` al enviar, del mensaje citado ya cargado. Los campos
+      nuevos del esquema son tolerantes: un resumen roto pierde la cita, no la página.
+    * **Barra de escribir**: dentro del campo, a la izquierda, los stickers con el ícono `smile` (antes la
+      imagen de un sticker de 32 px); a la derecha la galería (`image`) y la cámara (`camera`), cada una
+      directa: se quitó la ventana centrada «Enviar una foto — ¿De dónde la sacamos?». Los cuatro
+      botones del campo son `Presionable` de 44.
+    * **Grabando**: a la izquierda la papelera (`trash`, en rojo) descarta la nota sin mandarla, con un
+      golpe háptico (`tacto.descartar`) y sin alerta. Enviar sigue igual.
+    * **Burbujas**: la nota de voz con `play` / `pause` de `Icon` en un botón de 44 con `Presionable`
+      (antes «▶ ⏸» de texto, que Android pintaba como emoji); «✓» / «✓✓» pasan a los íconos `check` /
+      `checkCheck` de 16, en los mismos colores.
+    * Íconos nuevos en `components/Icon.tsx` (Lucide, caja de 24, de línea, grosor común):
+      `smile`, `trash`, `checkCheck`, `reply`, `copy`.
+    * **Dependencia nueva: `expo-clipboard`** (código nativo). Se carga recién al copiar
+      (`chat/utils/portapapeles.ts`): un binario sin el módulo no ofrece «Copiar» y no revienta. **Hace
+      falta un APK nuevo** (que de todos modos ya es build completo por `expo-haptics`).
+    No cambian las secciones de Comunidad, el Muro, compartir, las reacciones, el selector de stickers
+    (solo el botón que lo abre), crear publicación ni el ranking. Una excepción puntual **no abre** el
+    tab: cualquier otro cambio sobre los cinco principales vuelve a necesitar autorización explícita.
   * **Excepción autorizada por el dueño del producto — 2026-10-02 — tab `Yo` y Administración: eliminar cuenta
     (backend D-243).** Pedido del dueño (textual: «El propio usuario, desde Yo → "Eliminar mi cuenta"»), porque
     Google Play exige poder eliminar la cuenta desde la app y desde un enlace web. Todo vive en
@@ -333,6 +370,9 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       > la LECTURA (la entrega sigue sin saberla). «✓» es que el servidor guardó el mensaje y «✓✓»
       > dorado que lo leyeron; en la comunidad queda un solo «✓». Ver el punto de la doble marca, más
       > abajo.
+      > **Actualizado 2026-10-05.** La barra ya no es «evidencia y cámara adentro»: desde el rediseño de
+      > Comunidad lleva stickers (`smile`) a la izquierda y galería y cámara a la derecha, y «✓» / «✓✓»
+      > son íconos. Ver la excepción del 2026-10-05 (responder y copiar), más arriba.
     * **Ampliada el 2026-09-26 (noche), tercer pedido del dueño mirando el emulador — conversación
       a pantalla completa, franja blanca, conteo de integrantes y chat en vivo.**
       * **Pantalla completa, como WhatsApp**: con una conversación abierta (o su info) no se ven la
