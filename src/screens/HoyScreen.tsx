@@ -931,8 +931,10 @@ export default function HoyScreen() {
             <Card>
               <View style={styles.encabezadoTarjeta}>
                 <MicroLabel>Hábitos de hoy</MicroLabel>
+                {/* La cifra va con la misma letra que el rótulo (13, negrita, sin espaciar; 2026-10-05):
+                    a 10,5 y espaciada quedaba más chica y corrida respecto de «Hábitos de hoy». */}
                 {cifrasDeHabitos(resumen?.habitosHoy) !== null ? (
-                  <Text style={[t.micro, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
+                  <Text style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
                     {cifrasDeHabitos(resumen?.habitosHoy)}
                   </Text>
                 ) : null}
@@ -974,7 +976,7 @@ export default function HoyScreen() {
               <View style={{ flex: 1 }}>
                 <View style={styles.encabezadoTarjeta}>
                   <MicroLabel>Acciones y objetivos</MicroLabel>
-                  <Text style={[t.micro, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
+                  <Text style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
                     {resumen?.rocasHoy ? `${resumen.rocasHoy.completados}/${resumen.rocasHoy.total}` : 'Pareto 80/20'}
                   </Text>
                 </View>
@@ -1018,7 +1020,7 @@ export default function HoyScreen() {
                   <View style={{ flex: 1 }}>
                     <View style={styles.wallActivityHeader}>
                       <MicroLabel>Última evidencia del muro</MicroLabel>
-                      <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
+                      <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
                         {tiempoRelativo(ultimaPublicacion.createdAt)}
                       </Text>
                     </View>

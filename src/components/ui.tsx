@@ -44,9 +44,21 @@ export function AvatarPersona({
   );
 }
 
+/**
+ * El rótulo de sección de toda la app («Hábitos de hoy», «Fase actual», «Directos», el rótulo de un
+ * campo…): 13 px, `Jost_700Bold`, sin espaciar, como «Coherencia» y «Racha» de Hoy.
+ *
+ * > **Corregido 2026-10-05 (decisión del dueño).** Era `t.micro`: 10,5 px, `Jost_500Medium` y
+ * > `letterSpacing: 1.1`. El espaciado estaba pensado para versalitas, pero desde el rediseño los
+ * > rótulos van en tipo oración, y en minúsculas ese aire se lee «H á b i t o s». La jerarquía la
+ * > marcan el peso y el color, no las letras separadas (AGENTS.md §4). El token `t.micro` no cambió:
+ * > lo siguen usando a mano otras etiquetas que todavía van en versales.
+ */
+const ESTILO_DEL_ROTULO = { fontFamily: 'Jost_700Bold', letterSpacing: 0 } as const;
+
 export function MicroLabel({ children }: { children: React.ReactNode }) {
   const { c, t } = useTheme();
-  return <Text style={[t.micro, { color: c.micro }]}>{children}</Text>;
+  return <Text style={[t.small, ESTILO_DEL_ROTULO, { color: c.micro }]}>{children}</Text>;
 }
 
 export function Card({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {
