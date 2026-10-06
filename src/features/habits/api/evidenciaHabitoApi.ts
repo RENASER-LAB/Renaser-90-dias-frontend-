@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { avisarHabitoCumplido } from '../eventos/habitoCumplido';
 import { apiFetch } from '../../../services/http/apiClient';
 import { validarRespuesta } from './habitsSchemas';
 
@@ -217,5 +218,7 @@ export async function completarRegistro(
       ...(valorMedido != null ? { valorMedido } : {}),
     },
   });
-  return validarRespuesta(registroCompletadoSchema, r, 'POST /api/v1/habit-tracks/{id}/complete');
+  const completado = validarRespuesta(registroCompletadoSchema, r, 'POST /api/v1/habit-tracks/{id}/complete');
+  avisarHabitoCumplido();
+  return completado;
 }
