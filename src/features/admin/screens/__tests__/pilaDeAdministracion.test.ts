@@ -2,6 +2,9 @@ import { describe, expect, it, jest } from '@jest/globals';
 
 // Solo se prueba `pilaInicial`: las pantallas no se montan.
 jest.mock('../AdminInicioScreen', () => ({}));
+jest.mock('../AnimalDeFaseDetalleScreen', () => ({}));
+jest.mock('../AnimalesDeFaseAdminScreen', () => ({}));
+jest.mock('../../hooks/useAnimalesDeFaseAdmin', () => ({}));
 jest.mock('../BienvenidaAdminScreen', () => ({}));
 jest.mock('../FichaAprendizScreen', () => ({}));
 jest.mock('../GrupoDetalleScreen', () => ({}));

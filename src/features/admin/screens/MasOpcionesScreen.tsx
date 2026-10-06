@@ -27,11 +27,13 @@ export function MasOpcionesScreen({
   onAbrirStaff,
   onAbrirGuias,
   onAbrirBienvenida,
+  onAbrirImagenesDeFases,
 }: {
   onVolver: () => void;
   onAbrirStaff: () => void;
   onAbrirGuias: () => void;
   onAbrirBienvenida: () => void;
+  onAbrirImagenesDeFases: () => void;
 }) {
   const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
@@ -49,6 +51,12 @@ export function MasOpcionesScreen({
       titulo: 'Bienvenida',
       detalle: 'La tarjeta y los mensajes que recibe quien entra al programa',
       onPress: onAbrirBienvenida,
+    },
+    /* El animal de cada fase de Yo, con vista previa (pedido del dueño del 06/10, backend D-258). */
+    {
+      titulo: 'Imágenes de las fases',
+      detalle: 'El animal que ve cada aprendiz en Yo, con vista previa',
+      onPress: onAbrirImagenesDeFases,
     },
     {
       titulo: 'Equipo y roles',

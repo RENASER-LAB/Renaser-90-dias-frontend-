@@ -6,7 +6,10 @@ import { CajaContenidoScreen } from '../../caja/screens/CajaContenidoScreen';
 import { CajaDetalleScreen } from '../../caja/screens/CajaDetalleScreen';
 import { CajaListaScreen } from '../../caja/screens/CajaListaScreen';
 import { AdminInicioScreen } from './AdminInicioScreen';
+import { AnimalDeFaseDetalleScreen } from './AnimalDeFaseDetalleScreen';
+import { AnimalesDeFaseAdminScreen } from './AnimalesDeFaseAdminScreen';
 import { BienvenidaAdminScreen } from './BienvenidaAdminScreen';
+import { useAnimalesDeFaseAdmin } from '../hooks/useAnimalesDeFaseAdmin';
 import { FichaAprendizScreen } from './FichaAprendizScreen';
 import { GrupoDetalleScreen } from './GrupoDetalleScreen';
 import { GrupoFormScreen } from './GrupoFormScreen';
@@ -43,6 +46,8 @@ type Vista =
   | { nombre: 'staff' }
   | { nombre: 'guias' }
   | { nombre: 'bienvenida' }
+  | { nombre: 'animales-fases' }
+  | { nombre: 'animal-fase'; numero: number }
   | { nombre: 'mas' }
   | { nombre: 'caja' }
   | { nombre: 'caja-detalle'; aprendizId: string }
@@ -83,6 +88,7 @@ export function pilaTrasEliminarCuenta(pila: Vista[]): Vista[] {
 export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => void; abrirEn?: EntradaDeAdmin }) {
   const [pila, setPila] = useState<Vista[]>(() => pilaInicial(abrirEn));
   const vista = pila[pila.length - 1];
+  const animalesDeFase = useAnimalesDeFaseAdmin(vista.nombre === 'animales-fases' || vista.nombre === 'animal-fase');
 
   const entrar = (siguiente: Vista) => setPila(p => [...p, siguiente]);
   /* Volver desde la raíz sale a Mi programa. Sin este caso, el gesto en la primera pantalla no
@@ -176,6 +182,16 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
       return <GuiasRecepcionScreen onVolver={volver} />;
     case 'bienvenida':
       return <BienvenidaAdminScreen onVolver={volver} />;
+    case 'animales-fases':
+      return (
+        <AnimalesDeFaseAdminScreen
+          estado={animalesDeFase}
+          onAbrirFase={numero => entrar({ nombre: 'animal-fase', numero })}
+          onVolver={volver}
+        />
+      );
+    case 'animal-fase':
+      return <AnimalDeFaseDetalleScreen numero={vista.numero} estado={animalesDeFase} onVolver={volver} />;
     case 'mas':
       return (
         <MasOpcionesScreen
@@ -183,6 +199,7 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
           onAbrirStaff={() => entrar({ nombre: 'staff' })}
           onAbrirGuias={() => entrar({ nombre: 'guias' })}
           onAbrirBienvenida={() => entrar({ nombre: 'bienvenida' })}
+          onAbrirImagenesDeFases={() => entrar({ nombre: 'animales-fases' })}
         />
       );
     default:
