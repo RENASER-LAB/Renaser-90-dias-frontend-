@@ -1295,6 +1295,38 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     cambia**: sus acciones siguen con el modal de antes.
     Una excepción puntual **no abre** el tab: cualquier otro cambio sobre los cinco principales
     vuelve a necesitar autorización explícita.
+  * **Cambio por pedido del dueño — 2026-10-06 — tab `Hoy`, el botón de SER y su panel: el fénix vivo** (entrega del
+    diseñador PHOENIX_MASTER v3.3, `rive-react-native` 9.8.5). Lo que cambia y nada más:
+    * **El fénix** vive en `src/features/fenix/`: `rive/` es la entrega (Director `phoenixMaster.ts` intacto,
+      `PhoenixTargets.tsx`, `PhoenixMascot.tsx` adaptado: solo la variante `master`, sin `PhoenixStage`, que no se usa);
+      `assets/rive/` tiene `phoenix_master_v3_3.riv` y los 5 PNG de respaldo de 512. La vista Rive entra por
+      `rive/vistaRive.native.tsx`; en la **web** (`vistaRive.tsx`) no hay Rive ni `.riv`: se ve la imagen fija del ánimo.
+      Metro lleva `riv` en `assetExts` y Jest un doble de `rive-react-native` (`jest.setup.js`).
+    * **Ánimo = color del semáforo que manda el servidor** (VERDE alegre, AMARILLO serio, ROJO triste, SIN_DATOS o sin
+      dato neutral; `fenix/utils/animoDelFenix`). Nada se recalcula en la app.
+    * **Una sola fuente del color** (`semaforo/estado/semaforoVigente` + `useSemaforoVigente`): Hoy publica lo que ya lee
+      (`/home` y, si se pidió, `/me/semaforo`), sin peticiones de más; se vuelve a leer (`/me/semaforo?semanas=1`) solo al
+      volver la app al frente tras ≥ 15 min y después de cumplir un hábito (aviso `habits/eventos/habitoCumplido`, que
+      emite `completarRegistro`). Sin sondeo; si falla, neutral. Solo el aprendiz (`TRAINEE`): admin, alquimista, mentor y
+      líder no piden nada y su fénix de SER es neutral.
+    * **Tarjeta del semáforo de Hoy**: el fénix de 88 px a la izquierda de la palabra (`life` 0.4). **Detalle**: de 140 px
+      junto a la cifra.
+    * **Botón flotante de SER**: el fénix reemplaza al orbe; disco del color de las tarjetas con borde dorado (dorado
+      sobre dorado no se leía) y el ave desborda un poco el círculo. Mismo toque (52), acción y etiqueta. **Panel de SER**:
+      el fénix en el encabezado (era el orbe de 38) y, con la conversación vacía, uno de 140 abajo (era el de 64); nunca los
+      dos a la vez. El orbe (`OrbeQuieto`) queda en `ChatDelCurso`, `AccionDelAcompanante` y la baldosa de SER en Yo.
+    * **Estados de la conversación** (`fenix/utils/conversacionDeSer`, solo los que el chat tiene): escuchando (dictado),
+      pensando (esperando la respuesta), hablando (la respuesta llegando por escrito; el panel no lee en voz alta), error
+      (`trgRetry`) y el saludo al abrir el panel en reposo. Al volver a reposo queda el ánimo del semáforo.
+    * **Cumplir un hábito**: el fénix del botón asiente 700 ms (`fenix/utils/asentir`). Sin superposición ni sonido.
+    * **Celebración corta** (`CelebracionFenix`, 180 px abajo sobre la barra, no bloquea, se salta tocándola, sin sonido):
+      racha de 30 y de 7 (`rachaActual` de `/home`, sin repetir la misma racha) y todos los hábitos del día. **Máximo una por
+      día por cuenta** (`fenix.celebracion.<id>` en el teléfono). **Fase nueva**: no se le suma el fénix; el momento
+      «¡Entraste en la Fase N!» de Yo ya es la celebración y ocupa el día. **Graduación: fuera** (`/home` no la dice;
+      `diaPrograma` se queda en 90 después del día 90).
+    * **«Reducir movimiento»**: el rig sigue montado y quieto; sin saludo, asentir, boca ni salto; la celebración es el
+      fénix quieto 1,6 s.
+    * **Hace falta un APK nuevo** (módulo nativo nuevo): el fénix animado no se ve en ningún teléfono sin esa build.
   * **Excepción autorizada por el dueño del producto — 2026-09-25 — tab `Hoy`, tarjeta del semáforo.**
     Autorizada junto con el diseño del semáforo de cumplimiento del aprendiz (D-168; el contrato vive
     en el backend, `docs/arquitectura/SEMAFORO_DEL_APRENDIZ.md`). El alcance es **solo** la tarjeta
