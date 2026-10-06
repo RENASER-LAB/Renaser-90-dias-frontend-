@@ -47,9 +47,9 @@ export type CallbacksMensajeRenasia = {
 };
 
 /**
- * D-102: con quién se habla y, si es el tutor de cursos, sobre qué. `courseId` y `scope` solo
- * viajan con `COURSE_TUTOR` — el acompañante no tiene curso ni ámbito, y el backend los
- * descartaría igual.
+ * Con quién se habla y, si SER se abrió desde un curso, sobre qué (D-255: `courseId` y `scope`
+ * eran solo de Sparkie, el tutor de cursos retirado). Un backend anterior a D-255 los descarta para
+ * el acompañante sin error, así que mandarlos no depende del despliegue.
  */
 export type OpcionesEnvioRenasia = {
   agent: AgenteRenasia;
@@ -82,10 +82,9 @@ function esAbort(error: unknown): boolean {
 
 function armarCuerpo(question: string, opciones: OpcionesEnvioRenasia): PreguntarRenasiaBody {
   const body: PreguntarRenasiaBody = { question, agent: opciones.agent };
-  if (opciones.agent === 'COURSE_TUTOR') {
-    if (opciones.courseId) body.courseId = opciones.courseId;
-    if (opciones.scope) body.scope = opciones.scope;
-  }
+  // D-255: SER abierto desde un curso manda el curso y el ámbito (antes solo Sparkie los mandaba).
+  if (opciones.courseId) body.courseId = opciones.courseId;
+  if (opciones.scope) body.scope = opciones.scope;
   if (opciones.canal === 'VOZ') body.canal = 'VOZ';
   return body;
 }

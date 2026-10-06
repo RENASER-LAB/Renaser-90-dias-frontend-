@@ -1,32 +1,22 @@
 import type { AgenteRenasia } from '../types/renasia.types';
 
 /**
- * LOS DOS ASISTENTES DEL PROGRAMA, Y SUS NOMBRES VISIBLES, VIVEN ACÁ Y EN NINGÚN OTRO LADO (D-102).
+ * EL ASISTENTE DEL PROGRAMA, Y SU NOMBRE VISIBLE, VIVEN ACÁ Y EN NINGÚN OTRO LADO.
  *
- * Pedido del dueño (2026-09-04), textual: "Sparkie: su objetivo es ayudar en los cursos. El otro
- * agente, que será un chat aparte, será durante su progreso de 90 días. No los juntes en un mismo."
- *
- * Hasta hoy la app tenía UN asistente con dos modos (D-97 lo rebautizó "Sparkie" en todas partes,
- * D-100 le agregó un `scope` por curso). Eso fue un error de interpretación y acá se deshace:
- *
- * - `COMPANION`: el acompañante de los 90 días. Hábitos, días del programa, cómo está armada la
- *   app, orientación, ánimo. Es el del botón flotante (`RenasiaLauncher`) y el que saluda en el
- *   arranque (`features/sparkie`, ver la nota en `sparkie/data/asistente.ts`).
- * - `COURSE_TUTOR`: Sparkie, el tutor de los cursos. Vive al pie del curso y de la lección en
- *   Recursos Exclusivos (`ChatDelCurso`) y responde sobre ese contenido.
- *
- * Cada uno tiene su historial en el backend (`GET /api/v1/renasia/mensajes?agent=`), su prompt de
- * sistema y su nombre. Nunca se mezclan.
- *
- * El dueño confirmó "SER, la inteligencia de RENASER" para el acompañante (2026-09-07).
- * Solo cambia su nombre visible; las rutas, historiales y el tutor Sparkie siguen separados.
+ * Historia, para que nadie la "arregle" de vuelta:
+ * - D-102 (2026-09-04): el dueño pidió dos asistentes, textual: "Sparkie: su objetivo es ayudar en
+ *   los cursos. El otro agente, que será un chat aparte, será durante su progreso de 90 días. No los
+ *   juntes en un mismo." Hubo `COMPANION` (el acompañante, botón flotante) y `COURSE_TUTOR`
+ *   (Sparkie, al pie del curso y de la lección en Classroom).
+ * - 2026-09-07: el dueño confirmó "SER, la inteligencia de RENASER" para el acompañante.
+ * - D-255 (2026-10-06): el dueño retiró a Sparkie, textual: «Me dijeron que quites a Sparkie, porque
+ *   los usuarios se confunden, y que SER haga lo mismo». Queda SER: el botón del curso abre a SER
+ *   con el curso y la lección como contexto (`ChatDelCurso`), y SER busca en el material de los
+ *   cursos. El backend sigue respondiendo `COURSE_TUTOR` con SER para el APK ya instalado.
  */
 
 /** Nombre visible del acompañante de los 90 días. */
 export const NOMBRE_ACOMPANANTE = 'SER';
-
-/** Nombre visible del tutor de cursos. Confirmado por el dueño. */
-export const NOMBRE_TUTOR_CURSOS = 'Sparkie';
 
 export type PerfilAgente = {
   nombre: string;
@@ -44,16 +34,9 @@ export const AGENTES: Record<AgenteRenasia, PerfilAgente> = {
     vacioTitulo: `Habla con ${NOMBRE_ACOMPANANTE.toUpperCase()}`,
     // E-141: la frase terminaba con "Cada respuesta cita las lecciones exactas de las que sale."
     // Se quitó junto con los chips de lecciones citadas: era una promesa a la persona sobre algo
-    // que la pantalla ya no muestra.
+    // que la pantalla ya no muestra. D-255: suma los cursos, que antes eran de Sparkie.
     vacioParrafo:
-      'Pregúntale por tus hábitos, por el día en que vas, por cómo está armada la app o por cualquier duda del programa.',
-  },
-  COURSE_TUTOR: {
-    nombre: NOMBRE_TUTOR_CURSOS,
-    subtitulo: 'Tu tutor dentro de este curso',
-    vacioTitulo: `Pregúntale a ${NOMBRE_TUTOR_CURSOS.toUpperCase()}`,
-    vacioParrafo:
-      'Sobre lo que dice esta lección, cómo aplicarla hoy o cualquier duda del curso. Si la pregunta se va del tema, te orienta con lo más cercano del curso en vez de negarse.',
+      'Pregúntale por tus hábitos, por el día en que vas, por lo que enseñan tus cursos, por cómo está armada la app o por cualquier duda del programa.',
   },
 };
 

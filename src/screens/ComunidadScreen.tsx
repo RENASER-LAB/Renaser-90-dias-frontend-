@@ -590,7 +590,7 @@ const UMBRAL_DEL_BUSCADOR = 12;
 
 export default function ComunidadScreen() {
   const { c, t, mode } = useTheme();
-  // D-99: el chat dentro de un curso le dice a Sparkie en que dia del programa va la persona.
+  // D-99: el chat dentro de un curso le dice a SER (antes Sparkie, D-255) en que dia del programa va la persona.
   const { diaPrograma } = useProgramaDia();
   const isDark = mode === 'dark';
   const { rs, isTablet, horizontalPadding, contentMaxWidth, width: anchoPantalla } = useResponsive();
@@ -3493,7 +3493,7 @@ export default function ComunidadScreen() {
             ))}
           </View>
 
-          {/* D-99: preguntarle a Sparkie sobre ESTE curso, al pie de la lista de lecciones. */}
+          {/* D-99/D-255: preguntarle a SER sobre ESTE curso (era Sparkie), al pie de la lista de lecciones. */}
           <ChatDelCurso cursoId={selectedCourse.id} cursoTitulo={selectedCourse.title} diaPrograma={diaPrograma} />
         </ScrollView>
       )}
@@ -3703,7 +3703,7 @@ export default function ComunidadScreen() {
             </View>
           </View>
 
-          {/* D-99: preguntarle a Sparkie sobre ESTA leccion, al pie, despues del contenido. */}
+          {/* D-99/D-255: preguntarle a SER sobre ESTA leccion (era Sparkie), al pie, despues del contenido. */}
           <ChatDelCurso
             cursoId={selectedCourse?.id ?? null}
             cursoTitulo={selectedCourse?.title ?? 'este curso'}
