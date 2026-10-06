@@ -1014,8 +1014,10 @@ export default function YoScreen() {
               volver al centro en cada línea y es el gesto de plantilla que esta pasada viene a
               quitar. Y el párrafo estaba a 11 px: es texto de lectura, va en `t.body` (15/22). */}
           <View style={{ gap: 8 }}>
+            {/* «Tu proceso» y no «Tu proceso completo» (dueño, 2026-10-05): junto a «1 de 2 etapas
+                completadas» se leía como «ya terminé». */}
             <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 20, lineHeight: 27 }]}>
-              Tu proceso completo
+              Tu proceso
             </Text>
             <Text style={[t.body, { color: c.textSoft }]}>
               Dos etapas para poner por escrito quién eras, quién eres y en quién te estás convirtiendo. Cada etapa se guarda al terminarla.
