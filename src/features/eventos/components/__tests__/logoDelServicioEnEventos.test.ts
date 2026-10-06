@@ -7,7 +7,7 @@
  * Contra el código anterior fallan las que buscan `LogoDeMarca`: la tarjeta dibujaba `play` para
  * cualquier link y el detalle solo decía «Es por Google Meet.».
  */
-import { describe, expect, it, jest } from '@jest/globals';
+import { afterEach, describe, expect, it, jest } from '@jest/globals';
 import React from 'react';
 import TestRenderer, { act, type ReactTestRenderer } from 'react-test-renderer';
 
@@ -62,11 +62,21 @@ function ocurrencia(id: string, tipoUbicacion: TipoUbicacion, valorUbicacion: st
   };
 }
 
+// Se desmonta todo al terminar cada prueba: el detalle usa `useAhora`, cuyo `setInterval` de 30 s
+// seguía vivo y volvía a dibujar con el entorno de Jest ya cerrado; Jest salía con código 1 aunque
+// las pruebas pasaran (E-570).
+const dibujados: ReactTestRenderer[] = [];
+
+afterEach(() => {
+  act(() => dibujados.splice(0).forEach(r => r.unmount()));
+});
+
 function dibujar(elemento: React.ReactElement): ReactTestRenderer {
   let raiz!: ReactTestRenderer;
   act(() => {
     raiz = TestRenderer.create(elemento);
   });
+  dibujados.push(raiz);
   return raiz;
 }
 
