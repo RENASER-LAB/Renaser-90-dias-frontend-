@@ -33,6 +33,10 @@ import { TarjetaSemaforoGruposHoy } from '../features/semaforo/components/Tarjet
 import { SemaforoScreen } from '../features/semaforo/screens/SemaforoScreen';
 import { SemaforoGruposScreen } from '../features/semaforo/screens/SemaforoGruposScreen';
 import { useMiSemaforo } from '../features/semaforo/hooks/useMiSemaforo';
+import { useColorDelSemaforoVigente, usePublicarSemaforoDeHoy } from '../features/semaforo/estado/useSemaforoVigente';
+import { CelebracionFenix } from '../features/fenix/components/CelebracionFenix';
+import { useCelebracionDelDia } from '../features/fenix/hooks/useCelebracionDelDia';
+import { animoDelSemaforo } from '../features/fenix/utils/animoDelFenix';
 import { useResumenPorGrupos } from '../features/semaforo/hooks/useLecturaPorSemana';
 import {
   comoAbrirElSemaforoDelGrupo,
@@ -162,6 +166,14 @@ export default function HoyScreen() {
   /* Si `/home` ya trae los 7 dias (campo aditivo del backend), la tarjeta no necesita
      `/me/semaforo`: se pide solo con el detalle abierto. Sin ese campo, como antes. */
   const miSemaforo = useMiSemaforo(hayQuePedirMiSemaforo(resumen?.semaforo, enSemaforo));
+  /* El fénix (2026-10-06): lo ya leído pasa al color vigente compartido con el botón de SER (sin pedir nada más), y
+     los hitos del día que ya trae `/home` (racha de 7 y 30, todos los hábitos) se celebran una vez por día. */
+  usePublicarSemaforoDeHoy(resumen?.semaforo, Boolean(resumen), miSemaforo.detalle);
+  const celebracion = useCelebracionDelDia(
+    user?.id,
+    resumen ? { rachaActual: resumen.rachaActual, habitosHoy: resumen.habitosHoy } : null,
+  );
+  const animoDelSemaforoVigente = animoDelSemaforo(useColorDelSemaforoVigente());
   /* Semaforo por grupos (D-168): la pantalla propia del LIDER DE MENTORES, como la bandeja de
      tickets. UNA lectura, compartida por su tarjeta (que aparece solo si el servidor ya respondio
      que existe) y su pantalla. Para cualquier otro rol no se pide nada. */
@@ -1129,6 +1141,9 @@ export default function HoyScreen() {
         onTomarFoto={pedido => void tomarFotoDelOrbe(pedido)}
       />
       <RegistroConFotoModal {...registroConFoto.modal} />
+      {celebracion.hito ? (
+        <CelebracionFenix hito={celebracion.hito} animo={animoDelSemaforoVigente} onTerminar={celebracion.terminar} />
+      ) : null}
     </SafeAreaView>
   );
 }

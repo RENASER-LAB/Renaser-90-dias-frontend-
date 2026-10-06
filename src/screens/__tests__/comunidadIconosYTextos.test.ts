@@ -134,10 +134,12 @@ describe('Comunidad: los avisos de éxito ya no interrumpen', () => {
 });
 
 describe('el botón flotante de SER', () => {
-  it('lleva el orbe de SER y un nombre, no el globo de chat', () => {
+  // Corregido 2026-10-06: el orbe (`OrbeQuieto`) pasó a ser el fénix vivo de SER (`FenixDeSer`), pedido del dueño.
+  it('lleva el fénix de SER y un nombre, no el globo de chat', () => {
     const lanzador = sinComentarios(leer('features/renasia/components/RenasiaLauncher.tsx'));
     expect(lanzador).not.toMatch(/icon="chat"/);
-    expect(lanzador).toMatch(/<OrbeQuieto /);
+    expect(lanzador).not.toMatch(/<OrbeQuieto /);
+    expect(lanzador).toMatch(/<FenixDeSer\s+lugar="boton"/);
     expect(lanzador).toMatch(/accessibilityLabel=\{`Hablar con \$\{NOMBRE_ACOMPANANTE\}, tu acompañante`\}/);
   });
 });

@@ -3,13 +3,12 @@ import { StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { LinearGradient } from 'expo-linear-gradient';
-
 import { Presionable } from '../../../components/Presionable';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useAuth } from '../../auth/context/AuthContext';
 import { NOMBRE_ACOMPANANTE } from '../data/agentes';
-import { OrbeQuieto } from './OrbeQuieto';
+import { FenixDeSer } from '../../fenix/components/FenixDeSer';
+import { useMantenerSemaforoVigente } from '../../semaforo/estado/useSemaforoVigente';
 import { RenasiaPanel } from '../screens/RenasiaPanel';
 import { useMapaRenacimientoAbierto } from '../../mapa-renacimiento/MapaRenacimientoContext';
 import { useHayChatEnPantalla } from '../state/chatEnPantalla';
@@ -37,7 +36,10 @@ import { ALTO_TAB_BAR, DIAMETRO, MARGEN_DERECHO, SEPARACION } from './lugarDelLa
  * > pantalla y la respuesta al dedo de `Presionable`.
  */
 export function RenasiaLauncher() {
-  const { isAuthenticated, isOnboardingCompleted } = useAuth();
+  const { isAuthenticated, isOnboardingCompleted, user } = useAuth();
+  /* El color vigente del semáforo que leen el fénix de este botón y el de la tarjeta de Hoy (2026-10-06): este botón
+     vive sobre todas las pantallas, así que es el lugar de mantenerlo al día (vuelta al frente, hábito cumplido). */
+  useMantenerSemaforoVigente(user?.role, isAuthenticated ? user?.id : null);
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
   const [visible, setVisible] = useState(false);
@@ -86,23 +88,27 @@ export function RenasiaLauncher() {
       */}
       {!hayChatEnPantalla && !mapaAbierto && (
         <Animated.View style={[styles.posicion, { bottom: insets.bottom + ALTO_TAB_BAR + SEPARACION }, acompanaALaBarra]}>
-          {/* El orbe de SER, no el globo de chat (2026-10-05, decisión del dueño). Por qué el orbe y no
-              el fénix: ver `OrbeQuieto`. Antes era `GoldCircle` con `chat` —el mismo globo de «Comentar»,
-              del Muro y del soporte—, sin nombre para el lector de pantalla. */}
+          {/* El fénix vivo es la cara de SER (2026-10-06, pedido del dueño): en el ánimo del semáforo propio, con
+              los estados de la conversación y un asentir al cumplir un hábito (`FenixDeSer`).
+              > **Corregido 2026-10-06.** Era el orbe de SER (`OrbeQuieto`) sobre el disco dorado (2026-10-05). El
+              > fénix dorado sobre dorado no se leía: el disco pasa a ser el de las tarjetas, con un borde dorado,
+              > y el fénix desborda un poco el círculo (alas y cresta) para que se reconozca a 52 px. Mismo tamaño de
+              > toque (52), misma acción y misma etiqueta. */}
           <Presionable
             onPress={() => setVisible(true)}
             accessibilityRole="button"
             accessibilityLabel={`Hablar con ${NOMBRE_ACOMPANANTE}, tu acompañante`}
-            style={[styles.disco, { width: DIAMETRO, height: DIAMETRO, borderRadius: DIAMETRO / 2 }]}
+            style={[
+              styles.disco,
+              { width: DIAMETRO, height: DIAMETRO, borderRadius: DIAMETRO / 2, backgroundColor: c.cardBg, borderColor: c.gold },
+            ]}
           >
-            <LinearGradient
-              colors={c.goldGrad}
-              start={{ x: 0.2, y: 0 }}
-              end={{ x: 0.8, y: 1 }}
-              style={styles.relleno}
-            >
-              <OrbeQuieto size={Math.round(DIAMETRO * 0.62)} color={c.onGold} />
-            </LinearGradient>
+            <FenixDeSer
+              lugar="boton"
+              size={TAMANO_FENIX}
+              etiqueta={`Fénix de ${NOMBRE_ACOMPANANTE}`}
+              style={styles.fenix}
+            />
           </Presionable>
         </Animated.View>
       )}
@@ -120,8 +126,19 @@ export function RenasiaLauncher() {
  */
 export { ESPACIO_PARA_LANZADOR } from './lugarDelLanzador';
 
+/** El fénix es más grande que el disco: el dibujo deja aire alrededor (sombra, brasas) y así el ave se lee a 52 px. */
+const TAMANO_FENIX = Math.round(DIAMETRO * 1.25);
+
 const styles = StyleSheet.create({
   posicion: { position: 'absolute', right: MARGEN_DERECHO },
-  disco: { overflow: 'hidden' },
-  relleno: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  disco: {
+    borderWidth: 1.5,
+    overflow: 'visible',
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 5,
+  },
+  fenix: { position: 'absolute', left: (DIAMETRO - TAMANO_FENIX) / 2 - 1.5, top: (DIAMETRO - TAMANO_FENIX) / 2 - 5 },
 });

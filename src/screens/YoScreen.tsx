@@ -40,6 +40,7 @@ import { diasDeLaFase } from '../features/yo/utils/diasDeLaFase';
 import { useAnimalesDeFase } from '../features/yo/hooks/useAnimalesDeFase';
 import { estadoDeLasFases } from '../features/yo/utils/estadoDeLasFases';
 import { useCambioDeFase } from '../features/yo/hooks/useCambioDeFase';
+import { registrarCelebracionFuera } from '../features/fenix/estado/celebracionDelDia';
 import {
   origenTrasCambio,
   TITULO_DE_VISTA,
@@ -264,6 +265,10 @@ export default function YoScreen() {
   const fasesConAnimal = estadoDeLasFases(resumen?.fase);
   const faseActual = fasesConAnimal.find(f => f.estado === 'actual') ?? null;
   const celebrarFase = useCambioDeFase(user?.id, resumen?.fase);
+  /* «¡Entraste en la Fase N!» es la celebración de ese día (2026-10-06): el fénix no suma otra encima en Hoy. */
+  useEffect(() => {
+    if (celebrarFase && user?.id) void registrarCelebracionFuera(user.id, new Date());
+  }, [celebrarFase, user?.id]);
   const animalesConfigurados = useAnimalesDeFase();
   const moreSize = rs(56);
 

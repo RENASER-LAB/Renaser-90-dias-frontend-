@@ -13,6 +13,7 @@ import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher'
 import { CifraDelSemaforo } from '../components/CifraDelSemaforo';
 import { ControlDePausa } from '../components/ControlDePausa';
 import { EtiquetaSemaforo } from '../components/EtiquetaSemaforo';
+import { FenixDelSemaforo } from '../../fenix/components/FenixDelSemaforo';
 import { FilaDelDia } from '../components/FilaDelDia';
 import { GraficoDeDias, GraficoDeSemanas } from '../components/graficos';
 import type { EstadoMiSemaforo } from '../hooks/useMiSemaforo';
@@ -169,8 +170,14 @@ function Detalle({
           (vigente?.diasConDatos != null ? `. ${textoDiasConDatos(vigente.diasConDatos)}.` : '.')
         }
       >
-        <CifraDelSemaforo porcentaje={vigente?.porcentaje ?? null} color={color} tamano="grande" />
-        <EtiquetaSemaforo color={color} etiqueta={vigente?.etiqueta} tamano="grande" />
+        {/* El fénix en el ánimo del semáforo (2026-10-06), más grande y más vivo que en la tarjeta de Hoy (§8.4). */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <View style={{ gap: 8, flexShrink: 1 }}>
+            <CifraDelSemaforo porcentaje={vigente?.porcentaje ?? null} color={color} tamano="grande" />
+            <EtiquetaSemaforo color={color} etiqueta={vigente?.etiqueta} tamano="grande" />
+          </View>
+          <FenixDelSemaforo size={140} life={0.8} />
+        </View>
         {vigente?.diasConDatos != null ? (
           <Text style={[cuerpo, { color: c.textSoft }]}>{textoDiasConDatos(vigente.diasConDatos)}</Text>
         ) : null}

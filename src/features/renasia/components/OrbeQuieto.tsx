@@ -5,6 +5,12 @@ import Svg, { Circle } from 'react-native-svg';
  * El orbe de SER, quieto y en miniatura: el ícono del botón flotante (2026-10-05, decisión del dueño:
  * «deja el globo de chat y pasa a un ícono propio»).
  *
+ * > **Corregido 2026-10-06.** El botón flotante y el panel de SER ya no usan este orbe: el dueño pidió que la cara de
+ * > SER sea el fénix vivo (`features/fenix/components/FenixDeSer`), en el ánimo del semáforo. Lo de abajo («por qué el
+ * > orbe y no el fénix») explica la decisión del 2026-10-05 y queda como historia. El orbe sigue en la entrada de SER
+ * > dentro de un curso (`ChatDelCurso`), en la hoja de acción de la voz (`AccionDelAcompanante`) y en la baldosa de
+ * > SER en Yo: ahí es un ícono de 20–36 px, y un fénix vivo a ese tamaño sería un lienzo más sin que se lea.
+ *
  * **Por qué el orbe y no el fénix.** Los dos existen en la app, y cada uno ya dice algo:
  * - El **orbe** es la cara de SER. En Hoy, bajo «TU ACOMPAÑANTE», SER es una esfera de puntos dorados
  *   (`OrbeAcompanante` → `OrbeDePuntos`). El botón flotante abre al MISMO acompañante: con el orbe, las

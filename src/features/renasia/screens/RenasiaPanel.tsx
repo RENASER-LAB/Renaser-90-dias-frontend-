@@ -27,7 +27,9 @@ import { REGLAS_DE_ACCION } from '../../objetivos/utils/registroDeAccionConFoto'
 import { useRegistroConFoto } from '../../habits/hooks/useRegistroConFoto';
 import { RegistroConFotoModal } from '../../habits/components/RegistroConFotoModal';
 import { MensajeBurbuja } from '../components/MensajeBurbuja';
-import { OrbeQuieto } from '../components/OrbeQuieto';
+import { FenixDeSer } from '../../fenix/components/FenixDeSer';
+import { publicarEstadoDeSer } from '../../fenix/estado/estadoDeSer';
+import { estadoDeLaConversacion, type UltimaRespuesta } from '../../fenix/utils/conversacionDeSer';
 import { AGENTES, nombreVisible } from '../data/agentes';
 import type { AgenteRenasia, PedidoDeFotoUI } from '../types/renasia.types';
 
@@ -47,6 +49,10 @@ export interface RenasiaPanelProps {
    */
   contexto?: { etiqueta: string; ambito: string; cursoId?: string | null };
 }
+
+/** El fénix del encabezado (era el orbe de 38) y el de la bienvenida con la conversación vacía (era el de 64). */
+const TAMANO_FENIX_ENCABEZADO = 48;
+const TAMANO_FENIX_BIENVENIDA = 140;
 
 /** Altura mínima de controles táctiles (AGENTS.md: 48–52px para pulsación cómoda con una mano). */
 const ALTURA_MIN_CONTROL = 50;
@@ -110,6 +116,18 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
   };
   const scrollRef = useRef<ScrollView>(null);
 
+  /* El fénix de SER refleja la conversación (2026-10-06): se publica el estado para el del encabezado y el del botón
+     flotante. Solo con estados que este chat ya tiene (`conversacionDeSer`). Al cerrar el panel vuelve a reposo. */
+  const ultima = mensajes[mensajes.length - 1];
+  const ultimaRespuesta: UltimaRespuesta = ultima && ultima.autor === 'asistente' ? ultima : null;
+  const estadoDeSer = estadoDeLaConversacion({ escuchando: dictado.escuchando, enviando, ultimaRespuesta });
+  useEffect(() => {
+    publicarEstadoDeSer(visible ? estadoDeSer : 'reposo');
+  }, [visible, estadoDeSer]);
+  useEffect(() => () => publicarEstadoDeSer('reposo'), []);
+  /* Un solo fénix en el panel: el grande de la bienvenida mientras no hay mensajes, y el del encabezado después. */
+  const sinConversacion = !cargandoHistorial && !errorHistorial && mensajes.length === 0;
+
   // Soporte para gestos nativos de Android / Xiaomi: deslizar desde el borde (o el botón físico
   // de retroceso) cierra el panel en vez de dejar que el sistema navegue por debajo de él.
   useSystemBackHandler(() => {
@@ -142,10 +160,10 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
           style={[styles.header, { borderBottomColor: c.divider, paddingHorizontal: horizontalPadding }]}
         >
           <View style={styles.headerTitulo}>
-            {/* Rediseño de Hoy (2026-10-05): SER se presenta con su orbe, el mismo del centro de Hoy y
-                del botón flotante que abre este chat. Era el globo `chat` en un medallón, que en la
-                app es «Comentar» y el soporte. El globo lo conservaba Sparkie hasta D-255. */}
-            <OrbeQuieto size={38} color={c.goldInk} />
+            {/* SER se presenta con el fénix vivo, el mismo del botón flotante que abre este chat (2026-10-06).
+                > **Corregido 2026-10-06.** Era su orbe (`OrbeQuieto` de 38, rediseño de Hoy del 2026-10-05), y antes
+                > el globo `chat`. Con la conversación vacía el fénix está en grande abajo, así que acá no se repite. */}
+            {sinConversacion ? null : <FenixDeSer lugar="panel" size={TAMANO_FENIX_ENCABEZADO} etiqueta={`Fénix de ${nombre}`} />}
             <View style={{ flexShrink: 1 }}>
               <Text style={[t.cardTitle, { color: c.textStrong }]}>{perfil.nombre}</Text>
               <Text style={[t.small, { color: c.textSoft, fontSize: 12.5 }]} numberOfLines={1}>
@@ -216,7 +234,7 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
               </View>
             ) : mensajes.length === 0 ? (
               <View style={styles.centro}>
-                <OrbeQuieto size={64} color={c.goldInk} />
+                <FenixDeSer lugar="panel" size={TAMANO_FENIX_BIENVENIDA} etiqueta={`Fénix de ${nombre}`} />
                 <Text style={[t.cardTitle, { color: c.textStrong, textAlign: 'center', marginTop: 14 }]}>
                   {perfil.vacioTitulo}
                 </Text>

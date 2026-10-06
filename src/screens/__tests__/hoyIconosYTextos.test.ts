@@ -105,9 +105,11 @@ describe('Hoy: tacto', () => {
 describe('el chat de SER (cabecera y vacío)', () => {
   const PANEL = sinComentarios(leer('features/renasia/screens/RenasiaPanel.tsx'));
 
-  it('SER se presenta con su orbe, en la cabecera y en el vacío (D-255: sin el globo de Sparkie)', () => {
-    const orbes = [...PANEL.matchAll(/<OrbeQuieto size=\{(\d+)\}/g)].map(m => Number(m[1]));
-    expect(orbes).toEqual([38, 64]);
+  // Corregido 2026-10-06: era el orbe de 38 y de 64 (`OrbeQuieto`); ahora el fénix vivo de SER, uno solo a la vez.
+  it('SER se presenta con su fénix, en la cabecera y en el vacío (D-255: sin el globo de Sparkie)', () => {
+    expect(PANEL).not.toMatch(/<OrbeQuieto/);
+    const fenix = [...PANEL.matchAll(/<FenixDeSer lugar="panel" size=\{(\w+)\}/g)].map(m => m[1]);
+    expect(fenix).toEqual(['TAMANO_FENIX_ENCABEZADO', 'TAMANO_FENIX_BIENVENIDA']);
     expect(iconos(PANEL)).not.toContain('chat');
   });
 
