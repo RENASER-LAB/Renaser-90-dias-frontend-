@@ -2,19 +2,18 @@ import React, { useEffect, useRef } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
-import { useAuth } from '../../auth/context/AuthContext';
 import { alCumplirUnHabito } from '../../habits/eventos/habitoCumplido';
-import { tieneSemaforoPropio, useColorDelSemaforoVigente } from '../../semaforo/estado/useSemaforoVigente';
 import { useEstadoDeSer } from '../estado/estadoDeSer';
 import type { PhoenixMascotHandle } from '../rive/PhoenixMascot';
 import type { PhoenixDirector } from '../rive/phoenixMaster';
-import { animoDelBotonDeSer } from '../utils/animoDelFenix';
+import { useAnimoDeSer } from '../hooks/useAnimoDeSer';
 import { asentir } from '../utils/asentir';
 import { planDelEstado, type EstadoDeSer } from '../utils/conversacionDeSer';
 import { FenixVivo } from './FenixVivo';
 
 /**
- * El fénix como cara de SER (2026-10-06, pedido del dueño: reemplaza al orbe del botón flotante y del panel).
+ * El fénix VIVO como cara de SER (2026-10-06, pedido del dueño): el del botón flotante y el del panel. Donde el orbe
+ * era un ícono chico (el curso, la hoja de la voz, Yo) va `FenixDeSerQuieto`.
  *
  * - **Ánimo**: el del semáforo propio (`semaforoVigente`); neutral para quien no se mide (staff).
  * - **Conversación**: refleja el estado del chat (`estadoDeSer`): escuchando, pensando, hablando, error. Al volver a
@@ -35,9 +34,7 @@ export function FenixDeSer({
   style?: StyleProp<ViewStyle>;
 }) {
   const fenix = useRef<PhoenixMascotHandle>(null);
-  const { user } = useAuth();
-  const color = useColorDelSemaforoVigente();
-  const animo = animoDelBotonDeSer(tieneSemaforoPropio(user?.role), color);
+  const animo = useAnimoDeSer();
   const estado = useEstadoDeSer();
   const reducido = useReducedMotion();
 

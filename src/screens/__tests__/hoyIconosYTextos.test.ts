@@ -124,10 +124,11 @@ describe('el chat de SER (cabecera y vacío)', () => {
     expect(campo.slice(0, campo.indexOf('/>'))).toMatch(/\{\.\.\.propsDelCampoDelChat\(\)\}/);
   });
 
-  it('la propuesta de SER lleva su orbe y los botones en tipo oración', () => {
+  // Corregido 2026-10-06: era el orbe (`<OrbeQuieto size={TAMANO_ICONO.normal}`); ahora el fénix de SER.
+  it('la propuesta de SER lleva su fénix y los botones en tipo oración', () => {
     const hoja = sinComentarios(leer('features/renasia/components/AccionDelAcompanante.tsx'));
     expect(iconos(hoja)).not.toContain('spark');
-    expect(hoja).toMatch(/<OrbeQuieto size=\{TAMANO_ICONO\.normal\}/);
+    expect(hoja).toMatch(/<FenixDeSerQuieto size=\{TAMANO_FENIX_EN_LINEA\}/);
     for (const texto of ['CANCELAR', 'CONFIRMAR', 'TOMAR FOTO']) expect(hoja).not.toContain(texto);
     for (const texto of ['"Cancelar"', '"Confirmar"', '"Tomar foto"']) expect(hoja).toContain(texto);
   });

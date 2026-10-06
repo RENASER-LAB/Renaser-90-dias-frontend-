@@ -48,11 +48,12 @@ describe('sin Sparkie en la app (D-255)', () => {
     expect(conSparkie).toEqual([]);
   });
 
-  it('el botón del curso abre a SER, con su nombre y su orbe', () => {
+  // Corregido 2026-10-06: «y su orbe» (`<OrbeQuieto size={36}`); ahora el fénix de SER, pedido del dueño.
+  it('el botón del curso abre a SER, con su nombre y su fénix', () => {
     const boton = sinComentarios(fs.readFileSync(path.join(RAIZ, 'features/renasia/components/ChatDelCurso.tsx'), 'utf8'));
     expect(boton).toMatch(/agent="COMPANION"/);
     expect(boton).toMatch(/Pregúntale a \{NOMBRE_ACOMPANANTE\}/);
-    expect(boton).toMatch(/<OrbeQuieto size=\{36\}/);
+    expect(boton).toMatch(/<FenixDeSerQuieto size=\{44\}/);
   });
 });
 

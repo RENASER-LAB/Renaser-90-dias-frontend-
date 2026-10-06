@@ -30,8 +30,8 @@ import { Presionable } from '../components/Presionable';
 import { ConfirmacionEnLinea } from '../components/ConfirmacionEnLinea';
 import { tacto } from '../utils/tacto';
 import { CabeceraAdmin } from '../features/admin/components/CabeceraAdmin';
-import { OrbeQuieto } from '../features/renasia/components/OrbeQuieto';
-import { FilaDeAjuste, GrupoDeAjustes, TAMANO_ICONO_BALDOSA } from '../features/yo/components/FilasDeAjustes';
+import { FenixDeSerQuieto } from '../features/fenix/components/FenixDeSerQuieto';
+import { FilaDeAjuste, GrupoDeAjustes, LADO_BALDOSA } from '../features/yo/components/FilasDeAjustes';
 import { MetodoEnPaginas, type FaseDelMetodo } from '../features/yo/components/MetodoEnPaginas';
 import { PactoFirmado } from '../features/yo/components/PactoFirmado';
 import { TarjetaDeFase } from '../features/yo/components/TarjetaDeFase';
@@ -935,7 +935,7 @@ export default function YoScreen() {
                   mismo de la dimensión «Mente»). */}
               {mostrarMemoria(memoriaRenasia.memoria) ? (
                 <FilaDeAjuste
-                  baldosa={<OrbeQuieto size={TAMANO_ICONO_BALDOSA + 4} color={c.onGold} />}
+                  baldosa={<FenixDeSerQuieto size={LADO_BALDOSA} />}
                   titulo={`Lo que ${NOMBRE_ACOMPANANTE} recuerda de ti`}
                   detalle="Míralo y bórralo cuando quieras"
                   etiqueta={`Ver lo que ${NOMBRE_ACOMPANANTE} recuerda de ti`}

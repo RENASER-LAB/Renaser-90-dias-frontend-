@@ -9,7 +9,7 @@ import type { EstadoPropuestaUI, PedidoDeFotoUI, PropuestaUI } from '../types/re
 import { elegirAccionVisible, elegirPedidoVisible, primeraFrase, resumenCorto } from '../utils/accionDelOrbe';
 import { TEXTO_ACCION_REGISTRADA, TEXTO_REGISTRADO } from '../utils/pedidosDeFoto';
 import { estadoVisible } from '../utils/propuestas';
-import { OrbeQuieto } from './OrbeQuieto';
+import { FenixDeSerQuieto } from '../../fenix/components/FenixDeSerQuieto';
 import { ESPACIO_PARA_LANZADOR } from './RenasiaLauncher';
 
 /**
@@ -18,6 +18,8 @@ import { ESPACIO_PARA_LANZADOR } from './RenasiaLauncher';
  * resto de la app).
  */
 const TEXTO_DE_BOTON = { fontSize: 15, letterSpacing: 0 } as const;
+/** El fénix de SER en la línea de la propuesta: más que el ícono de 20, para que el ave se reconozca. */
+const TAMANO_FENIX_EN_LINEA = 28;
 
 type Props = {
   propuestas: PropuestaUI[];
@@ -95,9 +97,9 @@ export function AccionDelAcompanante({ propuestas, onConfirmar, onCancelar, pedi
               accessibilityLabel={conDetalle ? 'Ocultar el detalle' : 'Ver el detalle de la propuesta'}
               style={[styles.linea, styles.lineaPulsable]}
             >
-              {/* Quien propone es SER: su orbe, el mismo del botón flotante y del chat. Era el
-                  asterisco `spark`, el mismo dibujo que tenía el Mapa en la tarjeta de al lado. */}
-              <OrbeQuieto size={TAMANO_ICONO.normal} color={c.goldInk} />
+              {/* Quien propone es SER: su fénix, el mismo del botón flotante y del chat (2026-10-06; era su orbe,
+                  `OrbeQuieto` de 20, y antes el asterisco `spark`). A 28 el ave se reconoce en la línea. */}
+              <FenixDeSerQuieto size={TAMANO_FENIX_EN_LINEA} />
               <Text style={[t.body, styles.texto, { color: c.text }]} numberOfLines={conDetalle ? 8 : 2}>
                 {conDetalle ? propuesta.resumen : resumenCorto(propuesta.resumen)}
               </Text>

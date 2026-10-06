@@ -10,21 +10,8 @@ export function animoDelSemaforo(color: ColorSemaforo | null | undefined): Phoen
   return moodFromSemaforo(color);
 }
 
-/** El fénix del botón de SER: el ánimo del semáforo propio, o neutral para quien no se mide (staff). */
+/** El fénix de SER: el ánimo del semáforo propio, o neutral para quien no se mide (staff). */
 export function animoDelBotonDeSer(conSemaforoPropio: boolean, color: ColorSemaforo | null): PhoenixMood {
   return conSemaforoPropio ? animoDelSemaforo(color) : 'neutral';
 }
 
-/** Lo que dice el lector de pantalla del fénix de la tarjeta: la misma palabra que la tarjeta. */
-export function nombreDelAnimo(animo: PhoenixMood): string {
-  switch (animo) {
-    case 'alegre':
-      return 'contento';
-    case 'serio':
-      return 'atento';
-    case 'triste':
-      return 'decaído';
-    default:
-      return 'tranquilo';
-  }
-}

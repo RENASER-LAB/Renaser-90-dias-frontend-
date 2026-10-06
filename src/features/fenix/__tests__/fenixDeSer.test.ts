@@ -9,6 +9,8 @@ import { act } from 'react-test-renderer';
 import { avisarHabitoCumplido } from '../../habits/eventos/habitoCumplido';
 import { semaforoVigente } from '../../semaforo/estado/useSemaforoVigente';
 import { FenixDeSer } from '../components/FenixDeSer';
+import { FenixDeSerQuieto } from '../components/FenixDeSerQuieto';
+import { PHOENIX_STATIC_IMAGES } from '../rive/PhoenixMascot';
 import { publicarEstadoDeSer } from '../estado/estadoDeSer';
 import { crear, desmontarTodo, disparos, emitir, ultimaVistaRive, valoresDe, vistasRive } from './ayudasDePrueba';
 
@@ -103,5 +105,21 @@ describe('la conversación', () => {
     act(() => publicarEstadoDeSer('error'));
     expect(disparos(rive)).toContain('trgRetry');
     act(() => raiz.unmount());
+  });
+});
+
+describe('el fénix quieto de SER (curso, hoja de la voz, Yo)', () => {
+  const imagen = () => crear(React.createElement(FenixDeSerQuieto, { size: 44 })).root.findAll(n => n.props.testID === 'fenix-de-ser-quieto')[0];
+
+  it('la imagen del ánimo del semáforo vigente, sin Rive', () => {
+    act(() => semaforoVigente.publicar('AMARILLO'));
+    expect(imagen().props.source).toBe(PHOENIX_STATIC_IMAGES.serio);
+  });
+
+  it('sin dato, neutral; y para el staff, neutral aunque haya color', () => {
+    expect(imagen().props.source).toBe(PHOENIX_STATIC_IMAGES.neutral);
+    mockSesion.rol = 'ADMIN';
+    act(() => semaforoVigente.publicar('VERDE'));
+    expect(imagen().props.source).toBe(PHOENIX_STATIC_IMAGES.neutral);
   });
 });

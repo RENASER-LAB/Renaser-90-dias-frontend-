@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useTheme } from '../../../theme/ThemeContext';
 import { NOMBRE_ACOMPANANTE } from '../data/agentes';
-import { OrbeQuieto } from './OrbeQuieto';
+import { FenixDeSerQuieto } from '../../fenix/components/FenixDeSerQuieto';
 import { RenasiaPanel } from '../screens/RenasiaPanel';
 import { marcarChatMontado } from '../state/chatEnPantalla';
 
@@ -53,9 +53,11 @@ export function ChatDelCurso({ cursoId, cursoTitulo, leccionTitulo, diaPrograma 
         accessibilityLabel={`Preguntarle a ${NOMBRE_ACOMPANANTE} sobre este curso`}
         style={[styles.boton, { borderColor: c.gold, backgroundColor: c.cardBg }]}
       >
-        {/* El orbe de SER, el mismo del centro de Hoy y del panel. Era el globo `chat` de Sparkie. */}
+        {/* El fénix de SER en el ánimo del semáforo, el mismo del botón flotante y del panel (2026-10-06; era el orbe
+            de SER, `OrbeQuieto` de 36, y antes el globo `chat` de Sparkie). Desborda un poco la caja de 36: el dibujo
+            deja aire alrededor. */}
         <View style={styles.icono}>
-          <OrbeQuieto size={36} color={c.goldInk} />
+          <FenixDeSerQuieto size={44} />
         </View>
         <View style={{ flexShrink: 1 }}>
           <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 14 }]}>

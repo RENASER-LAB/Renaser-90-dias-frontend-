@@ -60,8 +60,9 @@ describe('Ajustes estilo iOS', () => {
     for (const icono of ['user', 'idCard', 'listChecks', 'images', 'compass', 'bell', 'alarmClock', 'trash', 'logout', 'package', 'lifeBuoy']) {
       expect(yo).toContain(`icono="${icono}"`);
     }
-    // «Lo que SER recuerda» con el orbe de SER, no con el cerebro de «Mente».
-    expect(yo).toMatch(/baldosa=\{<OrbeQuieto /);
+    // «Lo que SER recuerda» con la cara de SER, no con el cerebro de «Mente». Corregido 2026-10-06: era el orbe
+    // (`OrbeQuieto`); ahora el fénix de SER (pedido del dueño).
+    expect(yo).toMatch(/baldosa=\{<FenixDeSerQuieto /);
     for (const viejo of ['"stack"', '"brain"', '"heart"', '"clock"', '"spark"']) expect(yo).not.toContain(`name=${viejo}`);
   });
 

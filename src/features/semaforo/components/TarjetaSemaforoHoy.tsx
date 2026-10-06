@@ -10,10 +10,6 @@ import { formatearPorcentaje, palabraDelSemaforo, textoDiasConDatos } from '../u
 import { CifraDelSemaforo } from './CifraDelSemaforo';
 import { EtiquetaSemaforo } from './EtiquetaSemaforo';
 import { GraficoDeDias } from './graficos';
-import { FenixDelSemaforo } from '../../fenix/components/FenixDelSemaforo';
-
-/** 80–120 px según la entrega; 88 deja lugar a la palabra y la cifra en un teléfono de 360 de ancho. */
-const TAMANO_FENIX = 88;
 
 /**
  * La tarjeta del semáforo en Hoy: color + palabra + porcentaje + días con datos + siete barritas.
@@ -64,8 +60,6 @@ export function TarjetaSemaforoHoy({
         <MicroLabel>Tu semáforo · últimos 7 días</MicroLabel>
 
         <View style={estilos.cuerpo}>
-          {/* El fénix en el ánimo del semáforo (2026-10-06, pedido del dueño; entrega v3.3 §8.4): vivo pero calmo. */}
-          <FenixDelSemaforo size={TAMANO_FENIX} life={0.4} />
           <View style={estilos.textos}>
             <EtiquetaSemaforo color={semaforo.color} etiqueta={semaforo.etiqueta} />
             {detalle ? <Text style={[t.small, { color: c.textSoft, fontSize: 14 }]}>{detalle}</Text> : null}
@@ -88,6 +82,6 @@ const estilos = StyleSheet.create({
   /* La misma caja que `Card` (borde 1, radio 16, relleno 17): una tarjeta más del día. */
   tarjeta: { borderWidth: 1, borderRadius: 16, padding: 17, width: '100%', flexDirection: 'row', alignItems: 'center', gap: 12 },
   contenido: { flex: 1 },
-  cuerpo: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 8 },
+  cuerpo: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 12 },
   textos: { flex: 1, flexShrink: 1, gap: 4 },
 });
