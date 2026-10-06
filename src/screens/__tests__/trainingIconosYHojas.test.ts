@@ -39,11 +39,15 @@ describe('Training: sin emojis ni glifos de texto haciendo de ícono', () => {
     }
   });
 
-  it('el asterisco queda solo para Espíritu y el corazón solo para Emociones', () => {
+  it('los íconos de Espíritu y Emociones son solo de su dimensión: la pantalla no dibuja otro', () => {
     expect(PROXIMO).not.toContain("name=\"spark\"");
     expect(PROXIMO).toContain('name="timer"');
-    expect((TRAINING.match(/'spark'/g) ?? []).length).toBe(1);
-    expect((TRAINING.match(/'heart'/g) ?? []).length).toBe(1);
+    // Desde el 2026-10-05 el ícono de cada dimensión sale de `ICONO_DE_LA_DIMENSION` (Espíritu
+    // pasó de `spark` a `sparkles`): la pantalla ya no nombra ninguno de los cinco. Antes se
+    // contaba un `'spark'` y un `'heart'`, los de su propia tabla.
+    for (const icono of ['spark', 'sparkles', 'heart', 'brain', 'body', 'activity', 'briefcase']) {
+      expect({ icono, veces: (TRAINING.match(new RegExp(`['"]${icono}['"]`, 'g')) ?? []).length }).toEqual({ icono, veces: 0 });
+    }
     expect(TRAINING).toMatch(/<Icon name="pencil"/);
   });
 

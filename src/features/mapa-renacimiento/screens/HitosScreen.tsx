@@ -8,10 +8,9 @@ import { PantallaPaso } from '../components/PantallaPaso';
 import { Apoyo, Entrada, Pregunta } from '../components/Piezas';
 import { DIAS_HITO, ETIQUETA_AREA, faltantesDeHitos, hitosCompletos, hitosSugeridos } from '../reglas';
 import type { Area, DiaHito } from '../tipos';
-import { AREAS, objetivoDe } from '../tipos';
+import { AREAS, EJE_POR_AREA, objetivoDe } from '../tipos';
+import { iconoDelEje } from '../../objetivos/utils/iconoDelEje';
 import type { PropsPaso } from './props';
-
-const ICONO: Record<Area, 'heart' | 'briefcase' | 'users'> = { salud: 'heart', negocio_dinero: 'briefcase', relaciones: 'users' };
 
 /** V08 · Hitos (§3 V08): tres por objetivo, sugeridos con progresión no lineal y editables. */
 export function HitosScreen({ estado }: PropsPaso) {
@@ -42,7 +41,9 @@ export function HitosScreen({ estado }: PropsPaso) {
       {AREAS.map(area => (
         <View key={area} style={[styles.bloque, { borderColor: c.border, backgroundColor: c.cardBg }]}>
           <Row gap={8}>
-            <Icon name={ICONO[area]} size={14} color={c.goldInk} />
+            {/* El ícono del eje, como en Prioridad, Sistema de ejecución y Plan (2026-10-05): este paso
+                tenía su propia tabla con los de antes (Salud con el corazón, Relaciones con `users`). */}
+            <Icon name={iconoDelEje(EJE_POR_AREA[area])} size={14} color={c.goldInk} />
             <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 14 }]}>{ETIQUETA_AREA[area]}</Text>
           </Row>
           <Row gap={8} align="flex-start" style={{ marginTop: 12 }}>

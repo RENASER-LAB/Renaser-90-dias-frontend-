@@ -15,7 +15,8 @@ export type IconName =
   | 'activity' | 'heartHandshake' | 'calendarRange'
   | 'newspaper' | 'bookOpen' | 'quote' | 'globe' | 'headset' | 'messageCircle' | 'video' | 'fileText' | 'link' | 'pencil' | 'idCard' | 'layoutGrid'
   | 'lifeBuoy' | 'alarmClock' | 'settings' | 'images' | 'compass' | 'package' | 'signature'
-  | 'timer' | 'badgeCheck' | 'hourglass' | 'ban' | 'rotateCcw' | 'audioLines' | 'sunrise' | 'sunMedium' | 'moonStar' | 'glassWater' | 'showerHead' | 'footprints' | 'salad' | 'utensils' | 'utensilsCrossed' | 'bookOpenText' | 'headphones' | 'notebookPen' | 'handHeart' | 'smartphoneOff';
+  | 'timer' | 'badgeCheck' | 'hourglass' | 'ban' | 'rotateCcw' | 'audioLines' | 'sunrise' | 'sunMedium' | 'moonStar' | 'glassWater' | 'showerHead' | 'footprints' | 'salad' | 'utensils' | 'utensilsCrossed' | 'bookOpenText' | 'headphones' | 'notebookPen' | 'handHeart' | 'smartphoneOff'
+  | 'sparkles';
 
 /**
  * Grosor del trazo, en píxeles REALES de pantalla, a cualquier tamaño (decisión del dueño,
@@ -391,20 +392,6 @@ export function Icon({ name, size = 20, color, strokeWidth }: Props) {
         <Svg width={size} height={size} viewBox="0 0 22 22">
           <Circle {...s22} cx={11} cy={4} r={1.9} />
           <Path {...s22} d="M11 6.2v6.4M11 7.6 4.8 10M11 7.6 17.2 10M11 12.6 7.8 19.6M11 12.6l3.2 7" />
-        </Svg>
-      );
-    case 'brain':
-      return (
-        <Svg width={size} height={size} viewBox="0 0 22 22">
-          <Path {...s22} d="M11 4.2v13.4" />
-          <Path {...s22} d="M11 5.6a3 3 0 0 0-5 2.2 2.6 2.6 0 0 0-.6 4.4A2.8 2.8 0 0 0 8 17.2a3 3 0 0 0 3-1.6" />
-          <Path {...s22} d="M11 5.6a3 3 0 0 1 5 2.2 2.6 2.6 0 0 1 .6 4.4A2.8 2.8 0 0 1 14 17.2a3 3 0 0 1-3-1.6" />
-        </Svg>
-      );
-    case 'heart':
-      return (
-        <Svg width={size} height={size} viewBox="0 0 22 22">
-          <Path {...s22} d="M11 18.2S3.6 13.6 3.6 8.9A3.9 3.9 0 0 1 11 7a3.9 3.9 0 0 1 7.4 1.9c0 4.7-7.4 9.3-7.4 9.3z" />
         </Svg>
       );
     case 'spark':
@@ -910,6 +897,36 @@ export function Icon({ name, size = 20, color, strokeWidth }: Props) {
           <Circle {...s24} cx={12} cy={12} r={10} />
           <Circle {...s24} cx={12} cy={10} r={3} />
           <Path {...s24} d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662" />
+        </Svg>
+      );
+    /* Dimensiones */
+    /* Los íconos de las cinco dimensiones de Training (pedido del dueño, 2026-10-05). Cuál va con cada
+       una se decide en UN lugar: `ICONO_DE_LA_DIMENSION` (`features/training/utils/iconoDeLaDimension`).
+       Forma de Lucide (ISC), caja de 24 y trazo `s24`. `brain` y `heart` mantienen el nombre y cambian
+       de dibujo (eran trazos propios en caja de 22), así que cambian también donde ya se usaban (el
+       cuestionario del onboarding, el «Protocolo de retorno» del Mapa). `sparkles` es Espíritu; el
+       asterisco `spark` sigue en Sparkie, el Pacto, la firma, el onboarding y el Mapa. Cuerpo es
+       `activity` (bloque «Plan») y Vida y negocio `briefcase`: los mismos de los ejes Cuerpo y Negocio. */
+    case 'brain':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M12 18V5M15 13a4.17 4.17 0 0 1-3-4 4.17 4.17 0 0 1-3 4" />
+          <Path {...s24} d="M17.598 6.5A3 3 0 1 0 12 5a3 3 0 1 0-5.598 1.5M17.997 5.125a4 4 0 0 1 2.526 5.77M18 18a4 4 0 0 0 2-7.464" />
+          <Path {...s24} d="M19.967 17.483A4 4 0 1 1 12 18a4 4 0 1 1-7.967-.517M6 18a4 4 0 0 1-2-7.464M6.003 5.125a4 4 0 0 0-2.526 5.77" />
+        </Svg>
+      );
+    case 'heart':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5" />
+        </Svg>
+      );
+    case 'sparkles':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" />
+          <Path {...s24} d="M20 2v4M22 4h-4" />
+          <Circle {...s24} cx={4} cy={20} r={2} />
         </Svg>
       );
     case 'chevron':

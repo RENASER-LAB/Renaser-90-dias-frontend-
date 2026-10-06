@@ -46,10 +46,11 @@ function grososReales(nombre: IconName, size: number, strokeWidth?: number): num
 
 const DE_LINEA: IconName[] = [
   'search', 'users', 'calendar', 'bell', 'trophy', 'lock', 'image', 'camera', 'thumbsUp', 'send', // caja de 20
-  'clock', 'heart', 'brain', 'stack', // caja de 22
+  'clock', 'stack', // caja de 22
   'newspaper', 'bookOpen', 'quote', 'globe', 'headset', 'messageCircle', 'video', 'fileText', 'link', 'pencil', 'idCard', 'layoutGrid', // caja de 24
   'forward', 'imagePlus', 'smile', 'trash', 'checkCheck', 'reply', 'copy', // caja de 24, de las hojas y del chat (entraron en paralelo)
   'lifeBuoy', 'alarmClock', 'settings', 'images', 'listChecks', 'compass', 'package', 'signature', // caja de 24, de Yo (2026-10-05)
+  'brain', 'heart', 'sparkles', // caja de 24, de las dimensiones (2026-10-05; `brain` y `heart` eran de 22)
   'chevron', 'arrow', 'filter', 'volume',
 ];
 

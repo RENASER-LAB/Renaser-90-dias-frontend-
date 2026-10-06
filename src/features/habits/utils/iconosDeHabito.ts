@@ -1,8 +1,15 @@
 /**
  * El icono de cada hábito, a partir de la clave que manda el backend.
  *
- * **Este archivo no importa NADA en tiempo de ejecución**, igual que `semanaDelPlan.ts` y
- * `momentosDelDia.ts`: el único import es de tipo (`IconName`) y desaparece al compilar.
+ * **Este archivo no importa ninguna pantalla ni nada nativo**, igual que `semanaDelPlan.ts` y
+ * `momentosDelDia.ts`.
+ *
+ * > **Precisado el 2026-10-05.** Decía «no importa NADA en tiempo de ejecución: el único import es
+ * > de tipo (`IconName`)». Desde que el ícono de cada dimensión vive en un solo lugar, el respaldo
+ * > por categoría se lee de `training/utils/iconoDeLaDimension` y `dimensionDelHabito`: dos tablas
+ * > que tampoco importan nada en tiempo de ejecución (salvo `iconoDelEje`, otra tabla igual), así
+ * > que no hay ciclo ni se arrastra una pantalla. Importar una pantalla o un módulo nativo sigue
+ * > prohibido.
  *
  * ## POR QUÉ EXISTE (2026-09-07)
  *
@@ -35,6 +42,8 @@
  * tocar el backend.
  */
 import type { IconName } from '../../../components/Icon';
+import { DIMENSION_POR_CATEGORIA } from '../../training/utils/dimensionDelHabito';
+import { ICONO_DE_LA_DIMENSION } from '../../training/utils/iconoDeLaDimension';
 
 /**
  * Las 17 claves reales del catálogo con su ícono de línea. Se ordenan como el día para que se lean
@@ -72,13 +81,14 @@ const ICONO_DE_LINEA_POR_CLAVE_DE_SISTEMA: Readonly<Record<string, IconName>> = 
   WAKE_UP: 'sunrise',
 };
 
-/** El de la categoría: el respaldo de un hábito sin icono propio (los personales que no eligieron). */
-export const ICONO_DE_LINEA_POR_CATEGORIA: Readonly<Record<string, IconName>> = {
-  BODY: 'body',
-  MIND: 'brain',
-  CONSCIENCE: 'heart',
-  SPIRIT: 'spark',
-};
+/**
+ * El de la categoría: el respaldo de un hábito sin icono propio (los personales que no eligieron).
+ * Es el ícono de su dimensión (`ICONO_DE_LA_DIMENSION`), no una tabla aparte: hasta el 2026-10-05
+ * era una copia (`body`, `brain`, `heart`, `spark`) que podía separarse de la de Training.
+ */
+export const ICONO_DE_LINEA_POR_CATEGORIA: Readonly<Record<string, IconName>> = Object.fromEntries(
+  Object.entries(DIMENSION_POR_CATEGORIA).map(([categoria, dimension]) => [categoria, ICONO_DE_LA_DIMENSION[dimension]]),
+);
 
 const ICONO_DE_LINEA_POR_DEFECTO: IconName = 'target';
 

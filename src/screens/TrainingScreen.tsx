@@ -49,6 +49,7 @@ import type { ClaseDiariaApi } from '../features/academy/types/academy.types';
 import { irAPestana } from '../navigation/navegacionRef';
 import { dimensionAAbrir } from '../features/training/utils/aperturaDesdeAviso';
 import type { DimensionDeTraining } from '../features/training/utils/dimensionDelHabito';
+import { iconoDeLaDimension } from '../features/training/utils/iconoDeLaDimension';
 import { useProgramaDia } from '../features/programa/hooks/useProgramaDia';
 import * as recordatorios from '../features/habits/notificaciones/recordatoriosDeHabito';
 import {
@@ -169,14 +170,14 @@ export interface HabitItem {
   medicion?: MedicionPedida | null;
 }
 
+/** El ícono de cada una NO está acá: sale de `ICONO_DE_LA_DIMENSION` (`iconoDeLaDimension`), la fuente única. */
 interface DimensionConfig {
-  key: 'CUERPO' | 'MENTE' | 'EMOCIONES' | 'ESPÍRITU' | 'VIDA Y NEGOCIO';
+  key: DimensionDeTraining;
   /** La clave en versales: la que entienden la hoja de Planificar y los recordatorios. */
   title: string;
   /** Lo que se LEE (2026-10-05): tipo oración, como el resto de la app. */
   nombre: string;
   sub: string;
-  icon: IconName;
 }
 
 const DIMENSIONES_CONFIG: DimensionConfig[] = [
@@ -185,35 +186,30 @@ const DIMENSIONES_CONFIG: DimensionConfig[] = [
     title: 'CUERPO',
     nombre: 'Cuerpo',
     sub: 'Fuerza somática · Movilidad · Energía',
-    icon: 'body',
   },
   {
     key: 'MENTE',
     title: 'MENTE',
     nombre: 'Mente',
     sub: 'Enfoque · Mentalidad · Aprendizaje',
-    icon: 'brain',
   },
   {
     key: 'EMOCIONES',
     title: 'EMOCIONES',
     nombre: 'Emociones',
     sub: 'Gestión Emocional · Relaciones · Propósito',
-    icon: 'heart',
   },
   {
     key: 'ESPÍRITU',
     title: 'ESPÍRITU',
     nombre: 'Espíritu',
     sub: 'Propósito · Fe · Gratitud',
-    icon: 'spark',
   },
   {
     key: 'VIDA Y NEGOCIO',
     title: 'VIDA Y NEGOCIO',
     nombre: 'Vida y negocio',
     sub: 'Hábitos · Entorno · Estilo de Vida · Estrategia',
-    icon: 'briefcase',
   },
 ];
 
@@ -1050,7 +1046,7 @@ export default function TrainingScreen() {
                         },
                       ]}
                     >
-                      <Icon name={d.icon} size={TAMANO_ICONO.normal} color={c.goldInk} />
+                      <Icon name={iconoDeLaDimension(d.key)} size={TAMANO_ICONO.normal} color={c.goldInk} />
                     </View>
 
                     <View style={{ flex: 1, gap: 2 }}>
@@ -1113,7 +1109,7 @@ export default function TrainingScreen() {
             <View style={[styles.dimSummaryCard, { borderColor: c.border, backgroundColor: c.cardBg }]}>
               <View style={styles.dimSummaryHeader}>
                 <View style={[styles.dimAvatarMedallion, { backgroundColor: c.goldWash }]}>
-                  <Icon name={selectedDimension.icon} size={TAMANO_ICONO.grande} color={c.goldInk} />
+                  <Icon name={iconoDeLaDimension(selectedDimension.key)} size={TAMANO_ICONO.grande} color={c.goldInk} />
                 </View>
                 <View style={{ flex: 1, gap: 4 }}>
                   <Text style={[t.body, { color: c.textSoft }]}>

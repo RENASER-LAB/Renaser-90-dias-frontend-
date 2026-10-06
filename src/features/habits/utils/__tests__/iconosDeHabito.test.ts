@@ -32,8 +32,9 @@ describe('iconoDeLineaDeHabito', () => {
   });
 
   it('sin clave propia cae en la de la dimensión o la categoría, nunca queda sin ícono', () => {
-    expect(iconoDeLineaDeHabito({ iconKey: null }, 'body')).toBe('body');
-    expect(iconoDeLineaDeHabito({ iconKey: 'NUEVA', category: 'SPIRIT' })).toBe('spark');
+    expect(iconoDeLineaDeHabito({ iconKey: null }, 'activity')).toBe('activity');
+    // Espíritu era el asterisco `spark` hasta el 2026-10-05; ahora `sparkles`, el de su dimensión.
+    expect(iconoDeLineaDeHabito({ iconKey: 'NUEVA', category: 'SPIRIT' })).toBe('sparkles');
     expect(iconoDeLineaDeHabito({})).toBe('target');
   });
 
