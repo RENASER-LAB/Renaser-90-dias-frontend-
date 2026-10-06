@@ -11,6 +11,7 @@ import type { Asistencia, Ocurrencia } from '../types/eventos.types';
 import { sePuedeEditarEnLaApp } from '../utils/formularioDeEvento';
 import { linkParaUnirme, marcaDelLink, nombreDelLink } from '../utils/linkDelEvento';
 import { duracionEnPalabras, fechaYHora } from '../utils/textosDeFecha';
+import { EspacioSobreFlotantes } from './asistencia/EspacioSobreFlotantes';
 import { HojaQuienRespondio } from './asistencia/HojaQuienRespondio';
 import { TarjetaDeAsistencia } from './asistencia/TarjetaDeAsistencia';
 import { BotonVolver, EtiquetaAsistencia, LETRA, Parrafo } from './piezas';
@@ -162,6 +163,9 @@ export function DetalleDelEvento({
           />
         </View>
       ) : null}
+
+      {/* El último botón («Cancelar evento») no puede quedar debajo de los flotantes de SER. */}
+      <EspacioSobreFlotantes />
 
       {lista ? (
         <HojaQuienRespondio

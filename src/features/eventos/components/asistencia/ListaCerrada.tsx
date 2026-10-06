@@ -10,6 +10,7 @@ import type { Ocurrencia } from '../../types/eventos.types';
 import { fechaConMes, resumirLista, textoEnLaListaCerrada, type MomentoDeLaLista } from '../../utils/asistencia';
 import { horaEnZona } from '../../utils/zonaHoraria';
 import { BotonVolver, LETRA } from '../piezas';
+import { EspacioSobreFlotantes } from './EspacioSobreFlotantes';
 import { Etiqueta, FilaDePersona, Vacio } from './piezasDeAsistencia';
 
 type Quienes = 'asistieron' | 'faltaron';
@@ -121,6 +122,7 @@ export function ListaCerrada({
         ) : null}
         <BotonSecundario etiqueta="Compartir" icono="share" estilo={estilos.mitad} onPress={onCompartir} />
       </View>
+      <EspacioSobreFlotantes />
     </View>
   );
 }

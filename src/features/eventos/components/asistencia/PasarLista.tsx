@@ -15,6 +15,7 @@ import { horaEnZona } from '../../utils/zonaHoraria';
 import { BotonVolver, LETRA } from '../piezas';
 import type { PersonaDeLaLista, EstadoDeLlegada } from '../../types/asistencia.types';
 import { CirculoDeLlegada } from './CirculoDeLlegada';
+import { EspacioSobreFlotantes } from './EspacioSobreFlotantes';
 import { Etiqueta, FilaDePersona, Vacio } from './piezasDeAsistencia';
 
 type Quienes = 'voy' | 'todos';
@@ -149,6 +150,7 @@ export function PasarLista({
         onPress={confirmarCierre}
       />
       {hayPendientes ? <Text style={[estilos.ayuda, { color: c.textSoft }]}>Guardando las últimas marcas…</Text> : null}
+      <EspacioSobreFlotantes />
     </View>
   );
 }
