@@ -930,7 +930,9 @@ export default function HoyScreen() {
           >
             <Card>
               <View style={styles.encabezadoTarjeta}>
-                <MicroLabel>Hábitos de hoy</MicroLabel>
+                <View style={styles.rotuloDeLaFila}>
+                  <MicroLabel>Hábitos de hoy</MicroLabel>
+                </View>
                 {/* La cifra va con la misma letra que el rótulo (13, negrita, sin espaciar; 2026-10-05):
                     a 10,5 y espaciada quedaba más chica y corrida respecto de «Hábitos de hoy». */}
                 {cifrasDeHabitos(resumen?.habitosHoy) !== null ? (
@@ -975,7 +977,9 @@ export default function HoyScreen() {
             <View style={styles.between}>
               <View style={{ flex: 1 }}>
                 <View style={styles.encabezadoTarjeta}>
-                  <MicroLabel>Acciones y objetivos</MicroLabel>
+                  <View style={styles.rotuloDeLaFila}>
+                    <MicroLabel>Acciones y objetivos</MicroLabel>
+                  </View>
                   <Text style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
                     {resumen?.rocasHoy ? `${resumen.rocasHoy.completados}/${resumen.rocasHoy.total}` : 'Pareto 80/20'}
                   </Text>
@@ -1019,7 +1023,9 @@ export default function HoyScreen() {
                 <View style={styles.between}>
                   <View style={{ flex: 1 }}>
                     <View style={styles.wallActivityHeader}>
-                      <MicroLabel>Última evidencia del muro</MicroLabel>
+                      <View style={styles.rotuloDeLaFila}>
+                        <MicroLabel>Última evidencia del muro</MicroLabel>
+                      </View>
                       <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
                         {tiempoRelativo(ultimaPublicacion.createdAt)}
                       </Text>
@@ -1224,6 +1230,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
+  },
+  /**
+   * El rótulo de una fila con algo a la derecha se queda con todo el ancho que sobra.
+   *
+   * > **Agregado 2026-10-05.** En el emulador Android, Hoy mostraba «Acciones y» en vez de «Acciones
+   * > y objetivos»: el rótulo, suelto en la fila, medía justo lo que su texto (334 px) y Android lo
+   * > partía en dos líneas por una fracción de píxel; la segunda, «objetivos», quedaba fuera del alto
+   * > de una línea y no se veía. Pasó al quitar el espaciado de letras (088f91d): con otros anchos
+   * > ningún rótulo caía justo en el borde. En la web no pasa. Con el rótulo estirado hasta la cifra
+   * > ya no hay borde que rozar, diga lo que diga el texto.
+   */
+  rotuloDeLaFila: {
+    flex: 1,
   },
   insight: {
     flexDirection: 'row',
