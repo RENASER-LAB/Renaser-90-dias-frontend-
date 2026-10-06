@@ -19,7 +19,7 @@ export const CHAPTERS_CONFIG: ChapterConfig[] = [
     id: 2,
     title: 'DESCANSO Y SALUD',
     subtitle: 'Capítulo 2 · Horas de sueño, calidad y medicación',
-    icon: 'body',
+    icon: 'activity',
   },
   {
     id: 3,

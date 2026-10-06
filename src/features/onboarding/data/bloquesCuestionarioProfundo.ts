@@ -43,7 +43,7 @@ export interface BloqueCuestionarioProfundo {
 }
 
 export const BLOQUES_CUESTIONARIO_PROFUNDO: readonly BloqueCuestionarioProfundo[] = [
-  { numero: 1, titulo: 'Cuerpo', icono: 'body', flujo: 'ficha_inicial', seccion: 'cuerpo' },
+  { numero: 1, titulo: 'Cuerpo', icono: 'activity', flujo: 'ficha_inicial', seccion: 'cuerpo' },
   { numero: 2, titulo: 'Mente y Patrones', icono: 'brain', flujo: 'ficha_inicial', seccion: 'mente_y_patrones' },
   {
     numero: 3,
