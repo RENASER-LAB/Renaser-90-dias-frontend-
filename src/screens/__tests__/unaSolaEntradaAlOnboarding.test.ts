@@ -61,10 +61,12 @@ describe('Yo sin versales espaciadas', () => {
       expect(yo).toMatch(new RegExp(`<Text style=\\{\\[t\\.small, styles\\.rotulo, [^\\]]*\\]\\}>${rotulo}</Text>`));
     }
     expect(yo).toMatch(/rotulo: \{ fontFamily: 'Jost_700Bold', letterSpacing: 0 \}/);
-    expect(yo).toContain("Día {resumen?.diaPrograma ?? '—'} de {DIAS_DEL_PROGRAMA}");
-    // Cambió el 2026-10-06 (animales por fase): el rótulo de la fase ya no es `rotuloDeFase(...)` suelto,
-    // sino «Fase N · nombre» junto al animal, armado con la misma fase del resumen.
-    expect(yo).toContain('`Fase ${faseActual.numero} · ${faseActual.nombre}`');
+    // Cambió el 2026-10-06 (tarjeta de fase «B», D-258): el día del programa y el rótulo de la fase ya no son
+    // texto suelto de Yo. Los dice `TarjetaDeFase` («FASE N DE 4», «Día N de 90 en total») con la misma fase
+    // y el mismo día del resumen, que Yo le pasa por props.
+    expect(yo).toContain('diaDelPrograma={resumen?.diaPrograma ?? null}');
+    expect(yo).toContain('diasDelPrograma={DIAS_DEL_PROGRAMA}');
+    expect(yo).toContain('nombreDeLaFase={faseActual.nombre}');
   });
 
   it('la racha dice «días» como Hoy, y el «%» de coherencia aparece solo con cifra', () => {
