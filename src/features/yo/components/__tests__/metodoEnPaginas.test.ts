@@ -3,6 +3,8 @@
  * una tarjeta que «giraba» con el `Animated` de React Native, flechas, y puntos de 8 px tocables.
  */
 import { describe, expect, it, jest } from '@jest/globals';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import React from 'react';
 import { Text } from 'react-native';
 import TestRenderer, { act, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
@@ -13,6 +15,7 @@ jest.mock('../../../../theme/ThemeContext', () => {
 });
 
 import { MetodoEnPaginas, paginaEn, type FaseDelMetodo } from '../MetodoEnPaginas';
+import { DIAMETRO, MARGEN_DERECHO, SEPARACION } from '../../../renasia/components/lugarDelLanzador';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -26,14 +29,14 @@ const FASES: FaseDelMetodo[] = [1, 2, 3, 4].map(numero => ({
   puntos: ['Un punto'],
 }));
 
-function dibujar(): ReactTestRenderer {
+function dibujar(anchoDePantalla = 412, margenLateral = 24): ReactTestRenderer {
   let raiz!: ReactTestRenderer;
   act(() => {
-    raiz = TestRenderer.create(React.createElement(MetodoEnPaginas, { fases: FASES, margenLateral: 24 }));
+    raiz = TestRenderer.create(React.createElement(MetodoEnPaginas, { fases: FASES, margenLateral }));
   });
-  // El ancho llega con el primer `onLayout`: un teléfono de 412.
+  // El ancho llega con el primer `onLayout`: por defecto, un teléfono de 412.
   const [medidor] = raiz.root.findAll((n: ReactTestInstance) => typeof n.props.onLayout === 'function');
-  act(() => medidor.props.onLayout({ nativeEvent: { layout: { width: 412, height: 600, x: 0, y: 0 } } }));
+  act(() => medidor.props.onLayout({ nativeEvent: { layout: { width: anchoDePantalla, height: 600, x: 0, y: 0 } } }));
   return raiz;
 }
 
@@ -71,5 +74,50 @@ describe('el método en páginas', () => {
     const botones = raiz.root.findAll(n => n.props.accessibilityRole === 'button' && typeof n.props.onPress === 'function');
     // `Presionable` y su `Pressable` llevan las mismas props: se cuentan los nombres, no los nodos.
     expect([...new Set(botones.map(b => b.props.accessibilityLabel))]).toEqual(['Siguiente fase']);
+  });
+});
+
+/**
+ * Prueba en Android (2026-10-05): el orbe de SER tapaba el borde derecho de «Siguiente fase». La
+ * vista ya dejaba `ESPACIO_PARA_LANZADOR` al final, pero eso solo sirve para lo último de la lista;
+ * en reposo, el botón quedaba justo a la altura del orbe y ocupando todo el ancho.
+ */
+describe('«Siguiente fase» deja libre el lugar del botón de SER', () => {
+  /** El área que se toca (el `Pressable` de afuera, el que no se hunde): sus márgenes. */
+  function margenesDelBoton(raiz: ReactTestRenderer) {
+    const [area] = raiz.root.findAll(
+      n => n.props.accessibilityLabel === 'Siguiente fase' && typeof n.props.onPress === 'function' && n.props.pressRetentionOffset !== undefined,
+    );
+    const estilo = [area.props.style].flat(3).reduce((a, b) => ({ ...a, ...(b || {}) }), {}) as {
+      marginHorizontal?: number;
+      marginLeft?: number;
+      marginRight?: number;
+    };
+    return {
+      izquierda: estilo.marginLeft ?? estilo.marginHorizontal ?? 0,
+      derecha: estilo.marginRight ?? estilo.marginHorizontal ?? 0,
+    };
+  }
+
+  it.each([
+    [412, 24],
+    [360, 20],
+  ])('en un teléfono de %i con margen %i, el botón termina antes que el orbe y queda centrado', (ancho, margen) => {
+    const { izquierda, derecha } = margenesDelBoton(dibujar(ancho, margen));
+    const bordeDerechoDelBoton = ancho - margen - derecha;
+    const bordeIzquierdoDelOrbe = ancho - MARGEN_DERECHO - DIAMETRO;
+    expect(bordeIzquierdoDelOrbe - bordeDerechoDelBoton).toBeGreaterThanOrEqual(SEPARACION);
+    expect(izquierda).toBe(derecha);
+  });
+
+  it('con márgenes anchos (tableta) no hace falta entrar nada', () => {
+    expect(margenesDelBoton(dibujar(900, 120))).toEqual({ izquierda: 0, derecha: 0 });
+  });
+
+  it('la frase de abajo de El Método también corta antes de esa franja', () => {
+    const yo = readFileSync(join(__dirname, '..', '..', '..', '..', 'screens', 'YoScreen.tsx'), 'utf8');
+    expect(yo).toMatch(
+      /<Text style=\{\[t\.small, \{ color: c\.micro, paddingRight: entradaParaElLanzador\(horizontalPadding\) \}\]\}>Desliza para pasar de fase\./,
+    );
   });
 });

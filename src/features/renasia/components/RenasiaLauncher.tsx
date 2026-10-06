@@ -14,6 +14,7 @@ import { RenasiaPanel } from '../screens/RenasiaPanel';
 import { useMapaRenacimientoAbierto } from '../../mapa-renacimiento/MapaRenacimientoContext';
 import { useHayChatEnPantalla } from '../state/chatEnPantalla';
 import { useBarraInferior } from '../../../navigation/barraAlDesplazar/BarraInferior';
+import { ALTO_TAB_BAR, DIAMETRO, MARGEN_DERECHO, SEPARACION } from './lugarDelLanzador';
 
 /**
  * Botón flotante que abre al ACOMPAÑANTE de los 90 días (`agent: 'COMPANION'`, D-102), más el
@@ -110,26 +111,16 @@ export function RenasiaLauncher() {
   );
 }
 
-/**
- * Alto aproximado de `TabBar` sin contar el área segura, que se suma aparte. Si algún día la barra
- * cambia de alto, este número es lo único que hay que mover para que el botón no se le monte.
+/*
+ * Las medidas (alto de la barra, separación, diámetro, margen derecho) y `ESPACIO_PARA_LANZADOR`
+ * viven en `lugarDelLanzador.ts` desde el 2026-10-05, con los mismos números: así una vista puede
+ * reservarle lugar al botón sin cargar este archivo, que arrastra el panel entero. Se reexporta
+ * `ESPACIO_PARA_LANZADOR` para que las pantallas que ya lo importaban de acá no cambien.
  */
-const ALTO_TAB_BAR = 62;
-const SEPARACION = 16;
-const DIAMETRO = 52;
-
-/**
- * Hueco que cada pantalla con scroll debe dejar al final de su contenido para que este boton
- * flotante no tape la ultima tarjeta ni, peor, un control pulsable (pasaba con "Compartir" en
- * el Muro). Se exporta desde aqui para que el dia que el boton cambie de tamano o de
- * separacion no haya que perseguir el numero por cinco pantallas.
- *
- * Cubre el minimo de 36 que pide AGENTS.md 2 con holgura.
- */
-export const ESPACIO_PARA_LANZADOR = DIAMETRO + SEPARACION + 20;
+export { ESPACIO_PARA_LANZADOR } from './lugarDelLanzador';
 
 const styles = StyleSheet.create({
-  posicion: { position: 'absolute', right: 18 },
+  posicion: { position: 'absolute', right: MARGEN_DERECHO },
   disco: { overflow: 'hidden' },
   relleno: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 });

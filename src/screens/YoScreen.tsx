@@ -60,6 +60,7 @@ import { MapaRenacimientoFlow } from '../features/mapa-renacimiento/MapaRenacimi
 import { elegirFotoDePerfil } from '../features/auth/utils/elegirFotoDePerfil';
 import * as authApi from '../features/auth/api/authApi';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
+import { entradaParaElLanzador } from '../features/renasia/components/lugarDelLanzador';
 import { MemoriaDeRenasia } from '../features/renasia/components/MemoriaDeRenasia';
 import { useMemoriaDeRenasia } from '../features/renasia/hooks/useMemoriaDeRenasia';
 import { mostrarMemoria } from '../features/renasia/utils/memoria';
@@ -1614,8 +1615,10 @@ export default function YoScreen() {
 
             <MetodoEnPaginas fases={METODO_FASES} margenLateral={horizontalPadding} />
 
-            {/* Era `t.micro` forzado a 12 y centrado: una frase se lee, no se rotula. */}
-            <Text style={[t.small, { color: c.micro }]}>Desliza para pasar de fase. Lee una en 20 segundos y vuelve cuando quieras.</Text>
+            {/* Era `t.micro` forzado a 12 y centrado: una frase se lee, no se rotula. Corta antes de la
+                franja del botón flotante de SER, como «Siguiente fase» (2026-10-05): en una pantalla
+                alta queda en reposo a su altura. */}
+            <Text style={[t.small, { color: c.micro, paddingRight: entradaParaElLanzador(horizontalPadding) }]}>Desliza para pasar de fase. Lee una en 20 segundos y vuelve cuando quieras.</Text>
           </View>
         </ScrollView>
       )}

@@ -15,6 +15,7 @@ import { Icon, TAMANO_ICONO, type IconName } from '../../../components/Icon';
 import { Presionable } from '../../../components/Presionable';
 import { useTheme } from '../../../theme/ThemeContext';
 import { space } from '../../../theme/tokens';
+import { entradaParaElLanzador } from '../../renasia/components/lugarDelLanzador';
 
 export interface FaseDelMetodo {
   numero: number;
@@ -53,7 +54,11 @@ export function paginaEn(x: number, paso: number, total: number): number {
  * - Los puntos son solo un indicador: siguen al dedo (se enciende el de la página a la vista) en el
  *   hilo de la interfaz, y no se tocan. Para el lector de pantalla son un control ajustable: «Fase 2 de 4», y deslizar
  *   arriba o abajo cambia de fase.
- * - Debajo queda una sola acción escrita, «Siguiente fase», para quien no desliza.
+ * - Debajo queda una sola acción escrita, «Siguiente fase», para quien no desliza. Entra de los dos
+ *   lados lo justo para no meterse debajo del botón flotante de SER (prueba en Android del
+ *   2026-10-05: en reposo quedaba a su altura y el orbe le tapaba el borde derecho). El hueco de
+ *   abajo de la vista (`ESPACIO_PARA_LANZADOR`) no alcanzaba: solo despeja lo último al llegar al
+ *   final. Entra de los dos lados y no solo del derecho para seguir centrado bajo los puntos.
  * - Los colores pastel a mano (`#90CAF9`, `#FFE082`…) se fueron: el amarillo no se veía sobre crema.
  *   Todo sale del tema.
  *
@@ -137,6 +142,7 @@ export function MetodoEnPaginas({ fases, margenLateral }: { fases: FaseDelMetodo
         onPress={() => irA(ultima ? 0 : pagina + 1)}
         accessibilityRole="button"
         accessibilityLabel={ultima ? 'Volver a la fase 1' : 'Siguiente fase'}
+        contenedorStyle={{ marginHorizontal: entradaParaElLanzador(margenLateral) }}
         style={[estilos.siguiente, { borderColor: c.borderStrong, backgroundColor: c.cardBg }]}
       >
         <Text style={[estilos.siguienteTexto, { color: c.textStrong }]}>{ultima ? 'Volver a la fase 1' : 'Siguiente fase'}</Text>
@@ -224,5 +230,6 @@ const estilos = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
   },
-  siguienteTexto: { fontFamily: 'Jost_500Medium', fontSize: 16 },
+  // `flexShrink`: en un teléfono angosto, con el botón más corto, el texto baja de línea en vez de salirse.
+  siguienteTexto: { fontFamily: 'Jost_500Medium', fontSize: 16, flexShrink: 1, textAlign: 'center' },
 });
