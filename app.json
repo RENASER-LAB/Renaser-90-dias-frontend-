@@ -90,7 +90,9 @@
             "./assets/sonidos/relajar_campanitas.mp3",
             "./assets/sonidos/relajar_lluvia.mp3",
             "./assets/sonidos/relajar_ruido_marron.mp3"
-          ]
+          ],
+          "icon": "./assets/notification-icon.png",
+          "color": "#B2924F"
         }
       ],
       "expo-sharing",
