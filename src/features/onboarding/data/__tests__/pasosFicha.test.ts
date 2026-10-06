@@ -152,3 +152,28 @@ describe('Volver a donde se estaba al reabrir la app', () => {
     expect(indiceDesdeBorrador(Number.NaN, Number.NaN)).toBe(0);
   });
 });
+
+describe('«Sobre ti»: solo mayores de 18 (2026-10-06)', () => {
+  const HOY = { dia: 6, mes: 10, anio: 2026 };
+  const conFecha = (fechaNacimiento: string) => ficha({ identidad: { sexo: 'Femenino', fechaNacimiento } });
+
+  it('17 años y 364 días: no deja seguir, con un aviso claro', () => {
+    expect(validarPaso('sobreTi', conFecha('07/10/2008'), HOY)).toEqual({
+      titulo: 'Solo para mayores de 18',
+      mensaje: 'Renaser es solo para mayores de 18 años.',
+    });
+  });
+
+  it('18 justos hoy: sí', () => {
+    expect(validarPaso('sobreTi', conFecha('06/10/2008'), HOY)).toBeNull();
+    expect(validarPaso('sobreTi', conFecha('15/06/1995'), HOY)).toBeNull();
+  });
+
+  it('una ficha guardada con 14 años (la regla vieja) vuelve a «Sobre ti» antes de guardar', () => {
+    const vieja = ficha({ identidad: { ...IDENTIDAD_COMPLETA, fechaNacimiento: '15/06/2012' } });
+    expect(validarCapitulo(0, vieja, HOY)).toEqual({
+      indice: 1,
+      aviso: { titulo: 'Solo para mayores de 18', mensaje: 'Renaser es solo para mayores de 18 años.' },
+    });
+  });
+});

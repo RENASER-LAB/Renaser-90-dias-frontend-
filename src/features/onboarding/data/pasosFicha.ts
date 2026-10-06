@@ -1,4 +1,5 @@
 import { FichaInicialData } from '../types/onboarding.types';
+import { esMayorDeEdad, hoyEnLima, partirFecha, type FechaPartida } from '../../../components/fechaEnRuedas/logicaDeFecha';
 import { CHAPTERS_CONFIG } from './chaptersConfig';
 
 /**
@@ -86,6 +87,8 @@ const AVISOS = {
   sexo: { titulo: 'Sexo requerido', mensaje: 'Por favor selecciona una opción de sexo.' },
   documento: { titulo: 'Documento requerido', mensaje: 'Por favor ingresa tu número de documento de identidad.' },
   fecha: { titulo: 'Fecha requerida', mensaje: 'Por favor selecciona tu fecha de nacimiento.' },
+  // 2026-10-06, decisión del dueño: solo mayores de 18 (D-80). La única regla nueva desde el rediseño.
+  edad: { titulo: 'Solo para mayores de 18', mensaje: 'Renaser es solo para mayores de 18 años.' },
   whatsapp: { titulo: 'WhatsApp requerido', mensaje: 'Por favor ingresa tu número de WhatsApp para contacto con tu mentor.' },
   horas: { titulo: 'Horas de sueño requeridas', mensaje: 'Por favor ingresa tus horas promedio de sueño (entre 0 y 24).' },
   medicacion: { titulo: 'Medicación requerida', mensaje: 'Por favor especifica tu medicación y el motivo de la toma.' },
@@ -99,17 +102,18 @@ const AVISOS = {
  * Lo que le falta a UN paso para poder seguir, o `null` si está completo.
  *
  * Las reglas son las de la validación por capítulo que había antes, repartidas en el paso donde
- * vive cada campo. Ninguna regla nueva y ninguna menos: `validarCapitulo` de abajo, que las junta
- * de nuevo, da lo mismo que daba la vieja `validateChapter`.
+ * vive cada campo. `validarCapitulo` de abajo, que las junta de nuevo, da lo mismo que daba la
+ * vieja `validateChapter`, más una regla nueva (2026-10-06): la fecha de nacimiento tiene que ser de
+ * alguien con 18 años cumplidos en el día de Lima (`hoy`, inyectable para las pruebas).
  */
-export function validarPaso(id: IdPasoFicha, ficha: FichaInicialData): AvisoDePaso | null {
+export function validarPaso(id: IdPasoFicha, ficha: FichaInicialData, hoy: FechaPartida = hoyEnLima()): AvisoDePaso | null {
   const { identidad, salud, consentimiento } = ficha;
   switch (id) {
     case 'nombre':
       return identidad.nombre.trim().length < 3 ? AVISOS.nombre : null;
     case 'sobreTi':
       if (!identidad.sexo) return AVISOS.sexo;
-      return identidad.fechaNacimiento.trim() ? null : AVISOS.fecha;
+      return validarFechaDeNacimiento(identidad.fechaNacimiento, hoy);
     case 'documento':
       return identidad.numeroDocumento.trim().length < 4 ? AVISOS.documento : null;
     case 'whatsapp':
@@ -127,6 +131,12 @@ export function validarPaso(id: IdPasoFicha, ficha: FichaInicialData): AvisoDePa
       // familia, trabajo, ubicación, expectativa y temor no tenían campos obligatorios.
       return null;
   }
+}
+
+function validarFechaDeNacimiento(valor: string, hoy: FechaPartida): AvisoDePaso | null {
+  if (!valor.trim()) return AVISOS.fecha;
+  const fecha = partirFecha(valor);
+  return fecha && !esMayorDeEdad(fecha, hoy) ? AVISOS.edad : null;
 }
 
 /** Índice global (0..11) del primer paso de un capítulo. */
@@ -178,11 +188,12 @@ export function indiceDesdeBorrador(capitulo: number, pasoEnCapitulo?: number): 
 export function validarCapitulo(
   capitulo: number,
   ficha: FichaInicialData,
+  hoy: FechaPartida = hoyEnLima(),
 ): { indice: number; aviso: AvisoDePaso } | null {
   for (let i = 0; i < TOTAL_PASOS_FICHA; i++) {
     const paso = PASOS_FICHA[i];
     if (paso.capitulo !== capitulo) continue;
-    const aviso = validarPaso(paso.id, ficha);
+    const aviso = validarPaso(paso.id, ficha, hoy);
     if (aviso) return { indice: i, aviso };
   }
   return null;

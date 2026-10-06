@@ -10,11 +10,15 @@ import { ARRIBA_FILA_CENTRAL, ALTO_FILA_RUEDA, RuedaDeValores } from './fechaEnR
 import {
   FECHA_POR_DEFECTO,
   MESES,
+  acotarAFechaMaxima,
   aniosElegibles,
   ajustarDia,
   armarFecha,
-  diasDelMes,
+  diasElegibles,
   fechaEnPalabras,
+  fechaMaximaDeNacimiento,
+  hoyEnLima,
+  mesesElegibles,
   partirFecha,
   type FechaPartida,
 } from './fechaEnRuedas/logicaDeFecha';
@@ -39,6 +43,9 @@ interface DatePickerFieldProps {
  * código nativo; en Android además es un calendario de mes, incómodo para ir 30 años atrás.
  *
  * El campo guarda lo mismo que siempre, `"DD/MM/AAAA"`. Ver `fechaEnRuedas/logicaDeFecha.ts`.
+ *
+ * Desde 2026-10-06 las ruedas no llegan más allá de la fecha de quien cumple 18 hoy en Lima: en el
+ * año tope sólo están los meses hasta el actual, y en ese mes los días hasta hoy.
  */
 export function DatePickerField({ label, value, onChange, helperText, error }: DatePickerFieldProps) {
   const { c, t } = useTheme();
@@ -46,13 +53,27 @@ export function DatePickerField({ label, value, onChange, helperText, error }: D
   const [borrador, setBorrador] = useState<FechaPartida>(() => partirFecha(value) ?? FECHA_POR_DEFECTO);
 
   const elegida = partirFecha(value);
-  const anioActual = new Date().getFullYear();
+  const hoy = hoyEnLima();
+  const anioActual = hoy.anio;
+  const maxima = fechaMaximaDeNacimiento(hoy);
+  const { dia: diaTope, mes: mesTope, anio: anioTope } = maxima;
 
   const dias = useMemo(
-    () => Array.from({ length: diasDelMes(borrador.mes, borrador.anio) }, (_, i) => ({ valor: i + 1, texto: String(i + 1) })),
-    [borrador.mes, borrador.anio],
+    () =>
+      Array.from({ length: diasElegibles(borrador.mes, borrador.anio, { dia: diaTope, mes: mesTope, anio: anioTope }) }, (_, i) => ({
+        valor: i + 1,
+        texto: String(i + 1),
+      })),
+    [borrador.mes, borrador.anio, diaTope, mesTope, anioTope],
   );
-  const meses = useMemo(() => MESES.map((mes, i) => ({ valor: i + 1, texto: mes })), []);
+  const meses = useMemo(
+    () =>
+      MESES.slice(0, mesesElegibles(borrador.anio, { dia: diaTope, mes: mesTope, anio: anioTope })).map((mes, i) => ({
+        valor: i + 1,
+        texto: mes,
+      })),
+    [borrador.anio, diaTope, mesTope, anioTope],
+  );
   const anios = useMemo(
     () => aniosElegibles(anioActual, elegida?.anio).map(anio => ({ valor: anio, texto: String(anio) })),
     [anioActual, elegida?.anio],
@@ -63,9 +84,12 @@ export function DatePickerField({ label, value, onChange, helperText, error }: D
     setAbierta(true);
   };
 
-  const cambiar = (parte: Partial<FechaPartida>) => setBorrador(previo => ajustarDia({ ...previo, ...parte }));
+  const cambiar = (parte: Partial<FechaPartida>) =>
+    setBorrador(previo => acotarAFechaMaxima(ajustarDia({ ...previo, ...parte }), maxima));
 
   const confirmar = () => {
+    // Sin acotar acá: lo que se guarda es lo que muestran las ruedas. Una fecha vieja de menor de
+    // 18 que la persona no tocó la frena la validación del paso «Sobre ti», con su aviso.
     onChange(armarFecha(ajustarDia(borrador)));
     setAbierta(false);
   };
