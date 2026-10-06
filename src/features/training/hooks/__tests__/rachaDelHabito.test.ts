@@ -19,8 +19,8 @@ import { useTraining } from '../useTraining';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-const catalogo = (id: string): HabitoCatalogoApi =>
-  ({ id, title: id, category: 'BODY', evidenceRequirement: 'OPTIONAL', systemKey: null }) as unknown as HabitoCatalogoApi;
+const catalogo = (id: string, extra: Partial<HabitoCatalogoApi> = {}): HabitoCatalogoApi =>
+  ({ id, title: id, category: 'BODY', evidenceRequirement: 'OPTIONAL', systemKey: null, ...extra }) as unknown as HabitoCatalogoApi;
 
 const enElPlan = (id: string): PlanHabit =>
   ({ id, title: id, time: '07:00', locked: false, isOptional: false, isDeactivatable: true, days: {} }) as unknown as PlanHabit;
@@ -47,13 +47,21 @@ const trackDeHoy = (habitoId: string, extra: Partial<TrackDelDiaApi>): TrackDelD
   }) as TrackDelDiaApi;
 
 /**
- * Cuatro tarjetas: DORMIR con la racha del servidor (5), JUGO con un backend anterior (sin el
- * campo), CAMINAR sin track de hoy (no le toca o está en pausa) y una roca.
+ * Seis tarjetas: DORMIR con la racha del servidor (5), JUGO con un backend anterior (sin el
+ * campo), CAMINAR sin track de hoy (no le toca o está en pausa) y sin racha en el catálogo, LEER
+ * sin track de hoy y con su racha congelada en el catálogo (7), AGUA con racha 0, y una roca.
  */
 const DATOS: DatosEntrenamiento = {
   tracks: [trackDeHoy('dormir', { rachaDias: 5 }), trackDeHoy('jugo', {}), trackDeHoy('agua', { rachaDias: 0 })],
-  catalogo: [catalogo('dormir'), catalogo('jugo'), catalogo('caminar'), catalogo('agua')],
-  planHabits: [enElPlan('dormir'), enElPlan('jugo'), enElPlan('caminar'), enElPlan('agua')],
+  catalogo: [
+    // El catálogo trae la racha de todos; con track manda la del track (son el mismo cálculo).
+    catalogo('dormir', { rachaDias: 5 }),
+    catalogo('jugo'),
+    catalogo('caminar'),
+    catalogo('leer', { rachaDias: 7 }),
+    catalogo('agua', { rachaDias: 0 }),
+  ],
+  planHabits: [enElPlan('dormir'), enElPlan('jugo'), enElPlan('caminar'), enElPlan('leer'), enElPlan('agua')],
   rocas: [{ id: 'roca-1', titulo: 'Llamar a tres clientes', completada: false } as DatosEntrenamiento['rocas'][number]],
   rocasConEvidencia: new Set(),
 };
@@ -89,7 +97,7 @@ describe('Training: la racha de cada hábito', () => {
     expect(porHabito.get('agua')).toBe(0);
   });
 
-  it('sin el campo (backend anterior), sin track de hoy o en una roca: null, nunca un 0 inventado', async () => {
+  it('sin el campo (backend anterior, con o sin track de hoy) o en una roca: null, nunca un 0 inventado', async () => {
     const { habits } = await ultimoEstado();
     const porHabito = new Map(habits.map(h => [h.habitoId ?? h.id, h.streak]));
 
@@ -97,6 +105,27 @@ describe('Training: la racha de cada hábito', () => {
     expect(porHabito.get('caminar')).toBeNull();
     expect(porHabito.get('roca-1')).toBeNull();
     expect(habits.find(h => h.habitoId === 'caminar')?.tieneTrackHoy).toBe(false);
+  });
+
+  /**
+   * Decisión del dueño (2026-10-05): «mostrar la racha congelada de un hábito que hoy no tiene track
+   * (no le toca hoy o está en pausa)». Contra el código anterior falla: la tarjeta sin track fijaba
+   * `streak: null` y no dibujaba la llama aunque el servidor supiera la racha.
+   */
+  it('sin track de hoy, muestra la racha congelada que manda el catálogo', async () => {
+    const { habits } = await ultimoEstado();
+    const leer = habits.find(h => h.habitoId === 'leer');
+
+    expect(leer?.tieneTrackHoy).toBe(false);
+    expect(leer?.streak).toBe(7);
+  });
+
+  it('el catálogo acepta `rachaDias`, lo deja pasar ausente o null, y rechaza un número negativo', () => {
+    const base = { ...catalogo('leer'), description: null, habitType: 'CHECKBOX', isOptional: false, isSystemHabit: true, isDeactivatable: true };
+    expect(habitsSchemas.catalogo.safeParse([{ ...base, rachaDias: 7 }]).success).toBe(true);
+    expect(habitsSchemas.catalogo.safeParse([base]).success).toBe(true);
+    expect(habitsSchemas.catalogo.safeParse([{ ...base, rachaDias: null }]).success).toBe(true);
+    expect(habitsSchemas.catalogo.safeParse([{ ...base, rachaDias: -1 }]).success).toBe(false);
   });
 
   it('el esquema acepta `rachaDias`, lo deja pasar ausente o null, y rechaza un número negativo', () => {

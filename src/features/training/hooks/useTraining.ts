@@ -107,6 +107,9 @@ export function useTraining() {
     // `mapearPlanHabit` para Plan: Despertar y Dormir comparten `SLEEP` y solo la clave de sistema
     // los separa (rediseño de Training, 2026-10-05).
     const iconoPorHabito = new Map(catalogo.map(h => [h.id, iconoDeLineaDeHabito(h)]));
+    // D-254 (decisión del dueño del 2026-10-05): la racha congelada de un hábito que hoy no tiene track
+    // (no le toca hoy o está en pausa) viene en `GET /api/v1/habits`, con la misma regla que la del track.
+    const rachaPorHabito = new Map(catalogo.map(h => [h.id, h.rachaDias ?? null]));
 
     return inventario
       .map((habito): HabitItem | null => {
@@ -126,8 +129,9 @@ export function useTraining() {
           title: habito.title,
           time: habito.time,
           tag: habito.isOptional ? 'Opcional' : 'Innegociable',
-          // Sin track de hoy no hay racha del servidor (D-254): no se muestra, en vez de un 0 inventado.
-          streak: null,
+          // Sin track de hoy, la racha congelada del catálogo (D-254). Si el servidor no la manda, `null`
+          // y no se dibuja: nunca un 0 inventado. Con track, la de abajo (`track.rachaDias`) la pisa.
+          streak: rachaPorHabito.get(habito.id) ?? null,
           done: false,
           habitoId: habito.id,
           isDeactivatable: habito.isDeactivatable,

@@ -39,6 +39,13 @@ const habitoCatalogoSchema = z
     unlockDay: z.number().optional(),
     daysUntilUnlock: z.number().optional(),
     locked: z.boolean().optional(),
+    /**
+     * D-254 del backend (decisión del dueño del 2026-10-05): la racha de ESTE hábito hasta hoy, la misma
+     * regla y el mismo cálculo que `rachaDias` del track. Existe para el hábito que hoy no tiene track (no
+     * le toca hoy o está en pausa): su racha queda congelada y Training la muestra igual. `nullish()`: un
+     * backend anterior no lo manda, y ahí la tarjeta no muestra racha — nunca un «0 días» inventado.
+     */
+    rachaDias: z.number().int().nonnegative().nullish(),
   })
   .passthrough();
 
