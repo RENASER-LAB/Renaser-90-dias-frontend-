@@ -24,4 +24,8 @@ const config = getDefaultConfig(__dirname);
 // reached`) y Metro se caía al arrancar (2026-09-30).
 config.resolver.blockList = [/\/graphify-out\/.*/, /\/\.claude\/.*/];
 
+// El fénix vivo (`assets/rive/phoenix_master_v3_3.riv`, 2026-10-06): Metro no conoce la extensión `.riv` y sin esto
+// el `require` del archivo no se resuelve («Unable to resolve module ...riv»). Va como asset, igual que un PNG.
+config.resolver.assetExts.push('riv');
+
 module.exports = config;

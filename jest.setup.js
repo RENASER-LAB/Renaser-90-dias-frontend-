@@ -26,3 +26,31 @@ jest.mock('react-native-reanimated', () => {
     },
   };
 });
+
+/**
+ * `rive-react-native` (el fénix vivo, 2026-10-06) es un componente nativo: en Jest no hay vista que lo dibuje. El doble
+ * es una `View` que guarda sus props y expone los métodos del ref que usa el fénix (`fireState`, `setInputState`) como
+ * `jest.fn`, para que una prueba pueda simular `PHOENIX_READY` llamando a `onRiveEventReceived`.
+ */
+jest.mock('rive-react-native', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  /** El ref de cada vista montada, en orden: la prueba mira qué disparos e inputs recibió. */
+  const instancias = [];
+  const Rive = React.forwardRef((props, ref) => {
+    const handle = React.useRef(null);
+    if (handle.current === null) {
+      handle.current = { fireState: jest.fn(), setInputState: jest.fn() };
+      instancias.push(handle.current);
+    }
+    React.useImperativeHandle(ref, () => handle.current, []);
+    return React.createElement(View, { testID: 'rive-del-fenix', ...props });
+  });
+  return {
+    __esModule: true,
+    default: Rive,
+    Fit: { Contain: 'contain' },
+    Alignment: { Center: 'center' },
+    __instancias: instancias,
+  };
+});
