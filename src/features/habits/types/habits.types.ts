@@ -44,6 +44,13 @@ export interface HabitoCatalogoApi {
    * icono de categoría no podía hacer. `null` en los personales; ausente contra un backend viejo.
    */
   iconKey?: string | null;
+  /**
+   * D-254 del backend (2026-10-05): la racha de este hábito hasta hoy (días programados seguidos
+   * cumplidos), con la misma regla que `TrackDelDiaApi.rachaDias`. Training la usa para el hábito sin
+   * track de hoy (no le toca o está en pausa: la racha queda congelada). `undefined`/null contra un
+   * backend anterior: la tarjeta no muestra racha.
+   */
+  rachaDias?: number | null;
 }
 
 /** La Clase Diaria: el hábito que abre la lección del día y pide un resumen para cerrarse. */

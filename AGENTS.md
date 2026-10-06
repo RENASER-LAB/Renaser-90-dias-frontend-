@@ -304,6 +304,15 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       toca hoy o está en pausa) y en las rocas de Vida y negocio, la tarjeta no dibuja la llama
       (`HabitItem.streak` es `number | null`). Con 0 sigue la llama gris y «0 días».
     * **Hace falta un APK nuevo** (la app no se actualiza por aire); el APK publicado ignora el campo nuevo.
+  * **Cambio por pedido del dueño — 2026-10-05 — tab `Training`: la racha congelada del hábito sin track de hoy**
+    (D-254 del backend, decisión 2 del dueño: «mostrar la racha congelada de un hábito que hoy no tiene track (no
+    le toca hoy o está en pausa)»). Lo que cambia y nada más:
+    * **De dónde sale**: `rachaDias` de cada hábito de `GET /api/v1/habits` (el catálogo con el que Training arma
+      las tarjetas sin track), misma regla y mismo cálculo que el del track. No va en `GET /habit-unlocks`: ahí
+      solo hay fila de los hábitos elegidos o pausados, y un hábito que hoy no toca por día de la semana no la tiene.
+    * **La tarjeta sin track** dibuja la llama igual que las demás (gris con 0). Si el campo no viene (backend
+      anterior), no dibuja nada. Con track sigue mandando `rachaDias` del track.
+    * **Hace falta un APK nuevo**; el APK publicado ignora el campo.
   * **Cambio por pedido del dueño — 2026-10-05 — tabs `Hoy` y `Yo`: ajustes al rediseño** (decisiones del dueño del
     mismo día sobre lo ya integrado en `rediseno-junto`). Lo que cambia y nada más:
     * **Una sola entrada a «Mi onboarding»**: se quitó la fila «Mi ficha y Pacto» de Yo, que abría la misma vista. Se
