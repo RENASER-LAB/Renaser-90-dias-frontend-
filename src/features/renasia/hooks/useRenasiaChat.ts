@@ -78,8 +78,8 @@ function conPropuesta(
 }
 
 /**
- * D-102: con quién se habla. `courseId` y `ambito` solo tienen sentido para `COURSE_TUTOR`
- * (Sparkie): el curso acota el contexto que el backend recupera, y `ambito` ("el curso X, lección
+ * Con quién se habla (SER) y, si se abrió desde un curso, cuál (D-255: eran de Sparkie, el tutor
+ * retirado): el curso acota el contexto que el backend recupera, y `ambito` ("el curso X, lección
  * Y") va al prompt de sistema en un campo aparte (`scope`, D-100) — la pregunta se guarda tal cual
  * la escribió la persona. El primer intento (D-99) lo concatenaba al texto y el contexto terminaba
  * guardado como mensaje del aprendiz y visible al recargar.
@@ -95,8 +95,8 @@ export type OpcionesRenasiaChat = {
  * más la conversación en vivo (`POST /api/v1/renasia/mensajes`, streaming). Mismo criterio que
  * `useWallFeed` en `community`: la pantalla no arma llamadas de red sueltas, las pide acá.
  *
- * Cada instancia del hook es de UN agente: el panel del acompañante carga y escribe el historial
- * del acompañante, el de Sparkie el de Sparkie. Nunca se mezclan (D-102).
+ * El historial es el de SER: el panel del flotante y el del curso muestran la misma conversación
+ * (D-255; hasta ahí Sparkie tenía el suyo, D-102).
  *
  * El historial llega del backend con la página más reciente primero — mismo criterio de
  * paginación por cursor que `GET /api/v1/wall` — así que acá se invierte cada página antes de

@@ -4,11 +4,11 @@ import type { DestinoDeFoto } from '../../habits/utils/destinoDeFoto';
  * Espejo del contrato de los asistentes conversacionales del programa, endpoints bajo
  * `/api/v1/renasia`.
  *
- * D-102: son DOS asistentes sobre el mismo endpoint, separados por `agent`:
- * - `COMPANION`: el acompañante de los 90 días (botón flotante, saludo de arranque).
- * - `COURSE_TUTOR`: Sparkie, el tutor de cursos (al pie del curso y de la lección).
- * Cada uno tiene su historial (`GET ...?agent=`) y su prompt de sistema en el backend; nunca se
- * mezclan. Los nombres visibles viven en `data/agentes.ts`.
+ * Un solo asistente: SER, el acompañante (`agent: 'COMPANION'`). D-102 había separado a Sparkie, el
+ * tutor de cursos (`COURSE_TUTOR`), con su historial y su prompt; D-255 (2026-10-06) lo retiró a
+ * pedido del dueño: «quita a Sparkie, porque los usuarios se confunden, y que SER haga lo mismo».
+ * El backend sigue aceptando `COURSE_TUTOR` (el APK instalado lo manda) y lo responde SER; esta app
+ * ya no lo usa. El nombre visible vive en `data/agentes.ts`.
  *
  * Dos formas de mensaje conviven a propósito:
  * - `MensajeRenasiaApi`: la fila tal cual la devuelve `GET /api/v1/renasia/mensajes` (historial).
@@ -18,16 +18,16 @@ import type { DestinoDeFoto } from '../../habits/utils/destinoDeFoto';
  *   hasta que el backend los persiste.
  */
 
-/** Con cuál de los dos asistentes se habla. Mismos valores que `agent` en el wire. */
-export type AgenteRenasia = 'COMPANION' | 'COURSE_TUTOR';
+/** Con quién se habla: SER. Mismo valor que `agent` en el wire (D-255: sin `COURSE_TUTOR`). */
+export type AgenteRenasia = 'COMPANION';
 
 /** Cuerpo de `POST /api/v1/renasia/mensajes` (`PreguntarRenasiaRequest`). */
 export type PreguntarRenasiaBody = {
   question: string;
   agent: AgenteRenasia;
-  /** Solo `COURSE_TUTOR`: acota el contexto recuperado a las lecciones visibles de ese curso. */
+  /** SER abierto desde un curso (D-255): acota el material recuperado a las lecciones visibles de ese curso. */
   courseId?: string;
-  /** Solo `COURSE_TUTOR` (D-100): "el curso X, lección Y". Va al prompt de sistema, nunca dentro de la pregunta. */
+  /** SER abierto desde un curso (D-100, D-255): "el curso X, lección Y". Va al prompt de sistema, nunca dentro de la pregunta. */
   scope?: string;
   /**
    * D-158: `VOZ` cuando la pregunta llega por el orbe de Hoy; el acompañante responde corto y como

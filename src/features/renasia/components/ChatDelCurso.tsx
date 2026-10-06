@@ -1,30 +1,25 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Icon } from '../../../components/Icon';
 import { useTheme } from '../../../theme/ThemeContext';
-import { NOMBRE_TUTOR_CURSOS } from '../data/agentes';
+import { NOMBRE_ACOMPANANTE } from '../data/agentes';
+import { OrbeQuieto } from './OrbeQuieto';
 import { RenasiaPanel } from '../screens/RenasiaPanel';
 import { marcarChatMontado } from '../state/chatEnPantalla';
 
 /**
- * SPARKIE, el tutor de cursos, DENTRO de un curso de "Recursos Exclusivos" (D-99, D-102): un
- * botón al pie de la vista del curso o de la lección, que abre el panel de Sparkie
- * (`agent: 'COURSE_TUTOR'`) acotado a lo que la persona está viendo. Preguntas sobre el curso,
- * sobre la lección del día, o sobre cómo aplicarla — y si la pregunta se sale del contenido, que
- * oriente con lo más cercano en vez de negarse: esa regla vive en el prompt de sistema de Sparkie
- * en el backend (`sparkie-cursos.st`).
+ * SER DENTRO de un curso de Classroom: un botón al pie de la vista del curso o de la lección que
+ * abre el chat de SER sabiendo qué está mirando la persona.
  *
- * Es OTRO asistente que el del botón flotante (el acompañante de los 90 días): historial propio,
- * prompt propio, nombre propio. El dueño lo pidió así, textual: "No los juntes en un mismo."
- *
- * El acotamiento viaja al backend como `scope` (D-100) y termina en el prompt de sistema; la
- * pregunta se guarda limpia. `cursoId` acota además el contexto que el backend recupera a las
- * lecciones visibles de ese curso. En el panel se ve como etiqueta, para que la persona sepa
- * sobre qué está hablando.
+ * D-255 (2026-10-06): este botón abría a Sparkie, el tutor de cursos (`COURSE_TUTOR`, D-99/D-102).
+ * El dueño lo retiró, textual: «Me dijeron que quites a Sparkie, porque los usuarios se confunden,
+ * y que SER haga lo mismo». Ahora abre a SER (`COMPANION`) con el mismo contexto que tenía Sparkie:
+ * `cursoId` acota el material que el backend recupera a las lecciones visibles de ese curso, y
+ * `ambito` ("el curso X, la lección Y") va al prompt de sistema, nunca dentro de la pregunta. Es la
+ * misma conversación que la del orbe y el botón flotante: un solo asistente, un solo historial.
  */
 interface ChatDelCursoProps {
-  /** Id del curso (`selectedCourse.id`). Sin él, Sparkie responde con todo lo visible. */
+  /** Id del curso (`selectedCourse.id`). Sin él, SER busca en todo lo visible. */
   cursoId?: string | null;
   cursoTitulo: string;
   leccionTitulo?: string | null;
@@ -36,8 +31,8 @@ export function ChatDelCurso({ cursoId, cursoTitulo, leccionTitulo, diaPrograma 
   const { c, t } = useTheme();
   const [visible, setVisible] = useState(false);
 
-  // D-101: mientras este boton exista en pantalla, el flotante del acompanante se esconde. Dos
-  // entradas a dos asistentes en la misma vista confunden, y dentro de un curso la correcta es esta.
+  // D-101: mientras este botón exista en pantalla, el flotante de SER se esconde. Dos entradas en
+  // la misma vista confunden, y dentro de un curso la correcta es esta: lleva el curso de contexto.
   useEffect(() => marcarChatMontado(), []);
 
   // D-100: solo el QUE (curso, leccion, dia). El COMO responder vive en el prompt de sistema del
@@ -55,24 +50,25 @@ export function ChatDelCurso({ cursoId, cursoTitulo, leccionTitulo, diaPrograma 
       <Pressable
         onPress={() => setVisible(true)}
         accessibilityRole="button"
-        accessibilityLabel={`Preguntarle a ${NOMBRE_TUTOR_CURSOS} sobre este curso`}
+        accessibilityLabel={`Preguntarle a ${NOMBRE_ACOMPANANTE} sobre este curso`}
         style={[styles.boton, { borderColor: c.gold, backgroundColor: c.cardBg }]}
       >
-        <View style={[styles.icono, { backgroundColor: c.gold }]}>
-          <Icon name="chat" size={16} color="#1E1B18" />
+        {/* El orbe de SER, el mismo del centro de Hoy y del panel. Era el globo `chat` de Sparkie. */}
+        <View style={styles.icono}>
+          <OrbeQuieto size={36} color={c.goldInk} />
         </View>
         <View style={{ flexShrink: 1 }}>
           <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 14 }]}>
-            Pregúntale a {NOMBRE_TUTOR_CURSOS}
+            Pregúntale a {NOMBRE_ACOMPANANTE}
           </Text>
           <Text style={[t.small, { color: c.textSoft, fontSize: 12.5 }]} numberOfLines={2}>
-            Sobre {leccionTitulo ? 'esta leccion' : 'este curso'} y como aplicarlo hoy
+            Sobre {leccionTitulo ? 'esta lección' : 'este curso'} y cómo aplicarlo hoy
           </Text>
         </View>
       </Pressable>
 
       <RenasiaPanel
-        agent="COURSE_TUTOR"
+        agent="COMPANION"
         visible={visible}
         onClose={() => setVisible(false)}
         contexto={contexto}
@@ -97,7 +93,6 @@ const styles = StyleSheet.create({
   icono: {
     width: 36,
     height: 36,
-    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },

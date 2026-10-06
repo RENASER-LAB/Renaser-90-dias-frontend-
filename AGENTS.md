@@ -76,7 +76,7 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       con `listChecks` (era el sol de la pestaña); el autor de la última evidencia con `AvatarPersona` (era un
       `user` igual para todos) y «1 foto» con `image` 16 (era `camera` y «1 evidencia»); el evento con `calendar`
       20. La propuesta flotante de SER, la cabecera y el vacío de su chat llevan `OrbeQuieto` (eran `spark` y el
-      globo `chat`); el chat de Sparkie conserva el globo. El Código Renaser conserva `target` hasta que entre
+      globo `chat`); el chat de Sparkie conservaba el globo (Sparkie se retiró el 2026-10-06, D-255). El Código Renaser conserva `target` hasta que entre
       `compass` del rediseño de Plan.
     * **Tipo oración** en lugar de versales: fase, «Día 15 de 90», «Coherencia», «Racha», «días», «Tu
       acompañante», «Ver en el chat» (14 con chevron de 16), los estados del Código Renaser («En espera»,
@@ -304,6 +304,18 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       toca hoy o está en pausa) y en las rocas de Vida y negocio, la tarjeta no dibuja la llama
       (`HabitItem.streak` es `number | null`). Con 0 sigue la llama gris y «0 días».
     * **Hace falta un APK nuevo** (la app no se actualiza por aire); el APK publicado ignora el campo nuevo.
+  * **Cambio por pedido del dueño — 2026-10-06 — tab `Comunidad` (Classroom): sin Sparkie, el curso abre a SER**
+    (D-255 del backend; textual: «Me dijeron que quites a Sparkie, porque los usuarios se confunden, y que SER haga lo
+    mismo»). Lo que cambia y nada más:
+    * **El botón al pie del curso y de la lección** (`ChatDelCurso`) dice «Pregúntale a SER», lleva el orbe de SER y
+      abre su chat (`agent: 'COMPANION'`) con el curso y la lección de contexto (`courseId` y `scope`, que ahora viajan
+      también con SER). Es la misma conversación que la del orbe y el botón flotante. Dentro del curso el flotante se
+      sigue escondiendo (D-101): la entrada es el botón del curso.
+    * **No hay más `COURSE_TUTOR` ni nombre «Sparkie» en la app** (`AgenteRenasia` es solo `'COMPANION'`; el panel
+      siempre muestra el orbe). `SparkieOverlay` y `features/sparkie` siguen con ese nombre técnico: son el arranque
+      guiado y ya se presentan como SER.
+    * **El APK instalado sigue abriendo a «Sparkie»** en el curso hasta reinstalar; el backend nuevo lo responde con
+      SER y muestra ahí el historial de SER. **Hace falta un APK nuevo** para que el nombre desaparezca.
   * **Cambio por pedido del dueño — 2026-10-05 — tab `Training`: la racha congelada del hábito sin track de hoy**
     (D-254 del backend, decisión 2 del dueño: «mostrar la racha congelada de un hábito que hoy no tiene track (no
     le toca hoy o está en pausa)»). Lo que cambia y nada más:

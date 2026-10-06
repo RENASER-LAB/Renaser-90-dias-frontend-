@@ -5,8 +5,8 @@ import { avisarPropuestaConfirmada } from '../events/avisoPropuestaConfirmada';
 
 /**
  * `GET /api/v1/renasia/mensajes?agent=` — historial paginado por cursor DEL AGENTE pedido
- * (D-102: el acompañante y Sparkie tienen historiales separados; sin `agent` el backend asume el
- * acompañante, pero acá se manda siempre para que ningún panel cargue el historial equivocado).
+ * (D-102; desde D-255 el único es SER. Sin `agent` el backend asume el acompañante, pero acá se
+ * manda siempre, como siempre se mandó).
  *
  * Acá solo vive el "cómo se llama": qué hacer con la respuesta (invertir el orden, pegarla con
  * lo que ya había en pantalla) es de `hooks/useRenasiaChat`, no de esta capa — mismo criterio que

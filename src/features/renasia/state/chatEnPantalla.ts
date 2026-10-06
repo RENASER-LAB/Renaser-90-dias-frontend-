@@ -10,8 +10,9 @@ import { useSyncExternalStore } from 'react';
  *
  * <p>Lo encienden hoy dos pantallas, por el mismo motivo:
  * <ul>
- *   <li>`ChatDelCurso` (Sparkie): dentro de un curso la entrada que corresponde es la del tutor,
- *   y el dueño vio las dos entradas duplicadas en la misma pantalla.</li>
+ *   <li>`ChatDelCurso`: dentro de un curso la entrada que corresponde es la del curso (SER con el
+ *   curso de contexto; era Sparkie hasta D-255), y el dueño vio las dos entradas duplicadas en la
+ *   misma pantalla.</li>
  *   <li>La sala de chat de Comunidad: ahí el flotante se monta justo encima de la barra de
  *   escribir y tapa el botón de enviar. Además es un chat sobre otro chat — la burbuja de la IA
  *   no tiene por qué estar flotando sobre una conversación entre personas.</li>

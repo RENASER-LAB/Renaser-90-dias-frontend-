@@ -33,15 +33,14 @@ import type { AgenteRenasia, PedidoDeFotoUI } from '../types/renasia.types';
 
 export interface RenasiaPanelProps {
   /**
-   * D-102: con cuál de los dos asistentes habla este panel. Decide el nombre en el header, el
-   * historial que se carga y el prompt que usa el backend. `RenasiaLauncher` monta el
-   * acompañante (`COMPANION`); `ChatDelCurso` monta a Sparkie (`COURSE_TUTOR`).
+   * Con quién habla este panel: SER (`COMPANION`). D-255 retiró a Sparkie (`COURSE_TUTOR`), que
+   * era el otro valor; `RenasiaLauncher` y `ChatDelCurso` montan los dos a SER.
    */
   agent: AgenteRenasia;
   visible: boolean;
   onClose: () => void;
   /**
-   * Solo para `COURSE_TUTOR`: el curso/lección sobre el que se pregunta. `etiqueta` se muestra
+   * Solo cuando se abre desde un curso: el curso/lección sobre el que se pregunta. `etiqueta` se muestra
    * bajo el nombre para que la persona sepa sobre qué está preguntando; `ambito` viaja al backend
    * en un campo aparte (`scope`, D-100) y va al prompt de sistema, nunca dentro de la pregunta;
    * `cursoId` acota el contexto que el backend recupera a las lecciones de ese curso.
@@ -53,11 +52,11 @@ export interface RenasiaPanelProps {
 const ALTURA_MIN_CONTROL = 50;
 
 /**
- * Panel de conversación con uno de los dos asistentes del programa (D-102). Autocontenido: se
+ * Panel de conversación con SER, el asistente del programa. Autocontenido: se
  * monta donde se decida pasándole `agent`, `visible` y `onClose`. A propósito NO está conectado
  * a ninguna pantalla de tab — AGENTS.md prohíbe tocar `HoyScreen`, `PlanScreen`, `TrainingScreen`,
  * `ComunidadScreen`, `YoScreen` o `RootNavigator.tsx`; la entrada la cuelgan `RenasiaLauncher`
- * (flotante, acompañante) y `ChatDelCurso` (al pie del curso, Sparkie).
+ * (flotante) y `ChatDelCurso` (al pie del curso, con el curso de contexto; antes era Sparkie, D-255).
  */
 export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanelProps) {
   const { c, t } = useTheme();
@@ -145,14 +144,8 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
           <View style={styles.headerTitulo}>
             {/* Rediseño de Hoy (2026-10-05): SER se presenta con su orbe, el mismo del centro de Hoy y
                 del botón flotante que abre este chat. Era el globo `chat` en un medallón, que en la
-                app es «Comentar» y el soporte. Sparkie (el tutor de los cursos) conserva el suyo. */}
-            {agent === 'COMPANION' ? (
-              <OrbeQuieto size={38} color={c.goldInk} />
-            ) : (
-              <View style={[styles.medallion, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
-                <Icon name="chat" size={18} color={c.goldInk} />
-              </View>
-            )}
+                app es «Comentar» y el soporte. El globo lo conservaba Sparkie hasta D-255. */}
+            <OrbeQuieto size={38} color={c.goldInk} />
             <View style={{ flexShrink: 1 }}>
               <Text style={[t.cardTitle, { color: c.textStrong }]}>{perfil.nombre}</Text>
               <Text style={[t.small, { color: c.textSoft, fontSize: 12.5 }]} numberOfLines={1}>
@@ -223,13 +216,7 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
               </View>
             ) : mensajes.length === 0 ? (
               <View style={styles.centro}>
-                {agent === 'COMPANION' ? (
-                  <OrbeQuieto size={64} color={c.goldInk} />
-                ) : (
-                  <View style={[styles.medallionGrande, { borderColor: c.gold, backgroundColor: c.cardBg }]}>
-                    <Icon name="chat" size={28} color={c.goldInk} />
-                  </View>
-                )}
+                <OrbeQuieto size={64} color={c.goldInk} />
                 <Text style={[t.cardTitle, { color: c.textStrong, textAlign: 'center', marginTop: 14 }]}>
                   {perfil.vacioTitulo}
                 </Text>
@@ -359,22 +346,6 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   headerTitulo: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 1 },
-  medallion: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  medallionGrande: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   cerrarBtn: {
     width: 44,
     height: 44,

@@ -105,9 +105,10 @@ describe('Hoy: tacto', () => {
 describe('el chat de SER (cabecera y vacío)', () => {
   const PANEL = sinComentarios(leer('features/renasia/screens/RenasiaPanel.tsx'));
 
-  it('SER se presenta con su orbe, en la cabecera y en el vacío; Sparkie conserva su globo', () => {
-    const orbes = [...PANEL.matchAll(/agent === 'COMPANION' \? \(\s*<OrbeQuieto size=\{(\d+)\}/g)].map(m => Number(m[1]));
+  it('SER se presenta con su orbe, en la cabecera y en el vacío (D-255: sin el globo de Sparkie)', () => {
+    const orbes = [...PANEL.matchAll(/<OrbeQuieto size=\{(\d+)\}/g)].map(m => Number(m[1]));
     expect(orbes).toEqual([38, 64]);
+    expect(iconos(PANEL)).not.toContain('chat');
   });
 
   it('cerrar es un ✕ de 24 en 44, sin disco', () => {

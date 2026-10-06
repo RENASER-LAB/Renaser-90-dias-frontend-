@@ -18,8 +18,8 @@ import { ALTO_TAB_BAR, DIAMETRO, MARGEN_DERECHO, SEPARACION } from './lugarDelLa
 
 /**
  * Botón flotante que abre al ACOMPAÑANTE de los 90 días (`agent: 'COMPANION'`, D-102), más el
- * panel que abre. Sparkie, el tutor de cursos, NO entra por acá: su entrada es `ChatDelCurso`, al
- * pie del curso y de la lección.
+ * panel que abre. Dentro de un curso la entrada a SER es `ChatDelCurso`, al pie del curso y de la
+ * lección, que le pasa el curso de contexto (antes abría a Sparkie, retirado en D-255).
  *
  * <p>Vive acá y no dentro de una pantalla de tab a propósito. `AGENTS.md` prohíbe alterar las
  * cinco pantallas principales, y además el acompañante tiene que poder abrirse desde cualquiera
@@ -64,7 +64,8 @@ export function RenasiaLauncher() {
   // orden inverso — un flotante que aparece y desaparece al resolverse la consulta se ve roto.
   if (!isAuthenticated || !isOnboardingCompleted) return null;
   // D-101: con un chat abierto —el de un curso, o una conversacion de Comunidad— el flotante se
-  // esconde. En el curso porque la entrada que corresponde es la de Sparkie; en Comunidad porque
+  // esconde. En el curso porque la entrada que corresponde es la del curso (SER con el curso de
+  // contexto, D-255); en Comunidad porque
   // se monta justo encima de la barra de escribir y tapa el boton de enviar, y porque una burbuja
   // de IA flotando sobre una conversacion entre personas no tiene por que estar ahi.
   // Se esconde el boton pero NO el panel: si la persona ya tenia abierto al acompanante, no se le
