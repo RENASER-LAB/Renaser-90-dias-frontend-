@@ -28,6 +28,7 @@
     "expo-sharing": "~57.0.22",
     "expo-speech": "~57.0.3",
     "expo-speech-recognition": "^57.1.0",
+    "expo-splash-screen": "~57.0.9",
     "expo-status-bar": "~57.0.1",
     "expo-thinking-orbs": "^0.2.1",
     "expo-web-browser": "~57.0.2",
