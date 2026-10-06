@@ -36,6 +36,8 @@ describe('el interruptor', () => {
     const { boton } = dibujar({ valor: true });
     expect(boton.props.accessibilityLabel).toBe('Modo oscuro');
     expect(boton.props.accessibilityState).toEqual({ checked: true, disabled: false });
+    // La web solo lee `aria-checked` (react-native-web 0.21).
+    expect(boton.props['aria-checked']).toBe(true);
   });
 
   it('al tocarlo pide el valor contrario y da un solo «tic»', () => {
@@ -49,6 +51,7 @@ describe('el interruptor', () => {
     const { boton } = dibujar({ deshabilitado: true });
     expect(boton.props.disabled).toBe(true);
     expect(boton.props.accessibilityState).toEqual({ checked: false, disabled: true });
+    expect(boton.props['aria-checked']).toBe(false);
   });
 
   it('el área táctil llega a 48 aunque el riel mida 31', () => {

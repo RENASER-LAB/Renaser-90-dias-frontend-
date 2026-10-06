@@ -91,6 +91,9 @@ export function Interruptor({
       accessibilityRole="switch"
       accessibilityLabel={etiqueta}
       accessibilityState={{ checked: valor, disabled: deshabilitado }}
+      // react-native-web 0.21 ignora `accessibilityState`: sin `aria-checked` el lector de pantalla
+      // de la web no dice si está activado (medido con Playwright: `checked: null`).
+      aria-checked={valor}
       hitSlop={8}
       style={[estilos.area, deshabilitado && estilos.deshabilitado]}
     >
