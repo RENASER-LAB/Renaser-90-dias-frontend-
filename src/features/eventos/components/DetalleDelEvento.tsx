@@ -1,14 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Linking, StyleSheet, Text, View } from 'react-native';
 
 import { Alert } from '../../../components/Alerta';
 import { BotonPeligro, BotonPrincipal, BotonSecundario } from '../../../components/Legible';
 import { LogoDeMarca } from '../../../components/LogoDeMarca';
 import { useTheme } from '../../../theme/ThemeContext';
+import { useAhora } from '../hooks/useAhora';
+import { useAsistenciaDelEvento } from '../hooks/useAsistenciaDelEvento';
 import type { Asistencia, Ocurrencia } from '../types/eventos.types';
 import { sePuedeEditarEnLaApp } from '../utils/formularioDeEvento';
 import { linkParaUnirme, marcaDelLink, nombreDelLink } from '../utils/linkDelEvento';
 import { duracionEnPalabras, fechaYHora } from '../utils/textosDeFecha';
+import { HojaQuienRespondio } from './asistencia/HojaQuienRespondio';
+import { TarjetaDeAsistencia } from './asistencia/TarjetaDeAsistencia';
 import { BotonVolver, EtiquetaAsistencia, LETRA, Parrafo } from './piezas';
 
 /**
@@ -17,20 +21,29 @@ import { BotonVolver, EtiquetaAsistencia, LETRA, Parrafo } from './piezas';
  *
  * Una acción principal por pantalla: si todavía no respondió, «Voy»; si ya dijo que va y hay link,
  * «Unirme». Lo demás son botones con borde.
+ *
+ * **Asistencia (D-256, 2026-10-06).** Para quien creó el evento, el Admin, el Alquimista y el Líder de
+ * mentores (`verAsistencia`), la tarjeta «Asistencia» con quién respondió y «Pasar lista». Si el
+ * servidor no la entrega (backend viejo, 404; sin permiso, 403), no aparece.
  */
 export function DetalleDelEvento({
   oc,
   puedeGestionar,
+  verAsistencia = false,
   enviando,
   onVolver,
+  onPasarLista,
   onResponder,
   onEditar,
   onCancelar,
 }: {
   oc: Ocurrencia;
   puedeGestionar: boolean;
+  /** Quien creó el evento, Admin, Alquimista o Líder de mentores (`puedeVerAsistencia`). */
+  verAsistencia?: boolean;
   enviando: boolean;
   onVolver: () => void;
+  onPasarLista?: () => void;
   onResponder: (respuesta: Exclude<Asistencia, null>) => void;
   onEditar: () => void;
   /** `todas` = el evento entero; si no, solo esta fecha (eventos que se repiten). */
@@ -43,6 +56,9 @@ export function DetalleDelEvento({
   const duracion = duracionEnPalabras(oc.duracionMinutos);
   const vas = oc.asistencia === 'GOING';
   const noVas = oc.asistencia === 'NOT_GOING';
+  const ahora = useAhora();
+  const { lista } = useAsistenciaDelEvento(evento.id, oc.inicioOcurrencia, verAsistencia);
+  const [hojaAbierta, setHojaAbierta] = useState(false);
 
   const unirme = async () => {
     if (!link) return;
@@ -97,6 +113,16 @@ export function DetalleDelEvento({
         <Parrafo tono="fuerte">Lugar: {evento.valorUbicacion}</Parrafo>
       ) : null}
 
+      {lista ? (
+        <TarjetaDeAsistencia
+          lista={lista}
+          zona={evento.zona}
+          ahoraMs={ahora}
+          onVerRespuestas={() => setHojaAbierta(true)}
+          onPasarLista={() => onPasarLista?.()}
+        />
+      ) : null}
+
       <View style={{ gap: 10 }}>
         <Text style={[estilos.subtitulo, { color: c.textStrong }]}>¿Vas a ir?</Text>
         {vas ? (
@@ -135,6 +161,18 @@ export function DetalleDelEvento({
             onPress={() => confirmarCancelacion(true)}
           />
         </View>
+      ) : null}
+
+      {lista ? (
+        <HojaQuienRespondio
+          visible={hojaAbierta}
+          alCerrar={() => setHojaAbierta(false)}
+          eventoId={evento.id}
+          inicioOcurrencia={oc.inicioOcurrencia}
+          titulo={oc.titulo}
+          iniciaEn={oc.iniciaEn}
+          zona={evento.zona}
+        />
       ) : null}
     </View>
   );

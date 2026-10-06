@@ -37,6 +37,8 @@ import { subirPortada, type PortadaElegida } from '../utils/portadaDelEvento';
 import { guardarVistaPreferida, leerVistaPreferida, VISTA_POR_DEFECTO, type VistaDeEventos } from '../utils/vistaPreferida';
 import { fechaEnZona, zonaDelTelefono } from '../utils/zonaHoraria';
 import { puedeGestionarEventos } from '../utils/permisosDeEventos';
+import { puedeVerAsistencia } from '../utils/asistencia';
+import { PantallaDeAsistencia } from './asistencia/PantallaDeAsistencia';
 import { useTheme } from '../../../theme/ThemeContext';
 import { CalendarioDelMes } from './CalendarioDelMes';
 import { DetalleDelEvento } from './DetalleDelEvento';
@@ -49,7 +51,8 @@ import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar
 
 type Vista =
   | { nombre: 'lista' }
-  | { nombre: 'detalle'; eventoId: string; inicioOcurrencia: string | null }
+  /** `pasandoLista`: «Pasar lista» o la lista cerrada de esa fecha (D-256); «atrás» vuelve al detalle. */
+  | { nombre: 'detalle'; eventoId: string; inicioOcurrencia: string | null; pasandoLista?: boolean }
   | { nombre: 'formulario'; original: Evento | null }
   | { nombre: 'agenda' };
 
@@ -191,6 +194,10 @@ export function SeccionEventos({
   useEffect(() => {
     volverRef.current = () => {
       if (vista.nombre === 'lista') return false;
+      if (vista.nombre === 'detalle' && vista.pasandoLista) {
+        setVista({ ...vista, pasandoLista: false });
+        return true;
+      }
       volverALista();
       return true;
     };
@@ -397,12 +404,26 @@ export function SeccionEventos({
         </View>
       );
     }
+    if (vista.pasandoLista) {
+      return (
+        <PantallaDeAsistencia
+          key={`${oc.evento.id}|${oc.inicioOcurrencia}`}
+          oc={oc}
+          onVolver={() => setVista({ ...vista, pasandoLista: false })}
+          envolver={envolver}
+        />
+      );
+    }
     return envolver(
       <DetalleDelEvento
         oc={oc}
         puedeGestionar={gestiona}
+        verAsistencia={puedeVerAsistencia(rol, userId, oc.evento.creadoPor)}
         enviando={enviando}
         onVolver={volverALista}
+        onPasarLista={() =>
+          setVista({ nombre: 'detalle', eventoId: oc.evento.id, inicioOcurrencia: oc.inicioOcurrencia, pasandoLista: true })
+        }
         onResponder={r => void alResponder(oc, r)}
         onEditar={() => {
           setErrorFormulario(null);
