@@ -34,6 +34,10 @@ import { OrbeQuieto } from '../features/renasia/components/OrbeQuieto';
 import { FilaDeAjuste, GrupoDeAjustes, TAMANO_ICONO_BALDOSA } from '../features/yo/components/FilasDeAjustes';
 import { MetodoEnPaginas, type FaseDelMetodo } from '../features/yo/components/MetodoEnPaginas';
 import { PactoFirmado } from '../features/yo/components/PactoFirmado';
+import { EmblemaDeFase } from '../features/yo/components/EmblemaDeFase';
+import { FilaDeFases } from '../features/yo/components/FilaDeFases';
+import { estadoDeLasFases } from '../features/yo/utils/estadoDeLasFases';
+import { useCambioDeFase } from '../features/yo/hooks/useCambioDeFase';
 import {
   origenTrasCambio,
   TITULO_DE_VISTA,
@@ -255,6 +259,9 @@ export default function YoScreen() {
   const { rs, isTablet, horizontalPadding, contentMaxWidth } = useResponsive();
   const { user, logout, actualizarPerfil, refrescarPerfil } = useAuth();
   const { resumen } = useResumenHome();
+  const fasesConAnimal = estadoDeLasFases(resumen?.fase);
+  const faseActual = fasesConAnimal.find(f => f.estado === 'actual') ?? null;
+  const celebrarFase = useCambioDeFase(user?.id, resumen?.fase);
   const moreSize = rs(56);
 
   /* «Tu Evolución»: el cumplimiento de cada día de la ventana del semáforo. Mismas fuentes que la
@@ -599,18 +606,34 @@ export default function YoScreen() {
               fase y el día iban en versales espaciadas («TU EVOLUCIÓN», «EL CICLO ALQUÍMICO», «DÍA 15
               DE 90»), lo único de Yo que había quedado así después del rediseño. */}
           <View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-              <Text style={[t.small, styles.rotulo, { color: c.textSoft }]}>Tu evolución</Text>
-              <Text style={[t.small, styles.rotulo, { color: c.goldInk, flexShrink: 1, textAlign: 'right' }]}>
-                {rotuloDeFase(resumen?.fase) ?? ''}
-              </Text>
+            <Text style={[t.small, styles.rotulo, { color: c.textSoft }]}>Tu evolución</Text>
+            {/* El animal de tu fase (pedido del dueño, 2026-10-06): representa a quien lo mira. Sale
+                de `resumen.fase`, la misma que ya pintaba el rótulo; acá no hay ninguna regla de días. */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 10 }}>
+              {faseActual ? (
+                <EmblemaDeFase animal={faseActual.animal} estado="actual" tamano={84} celebrar={celebrarFase} />
+              ) : null}
+              <View style={{ flex: 1, gap: 2 }}>
+                {celebrarFase && faseActual ? (
+                  <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
+                    ¡Entraste en la Fase {faseActual.numero}!
+                  </Text>
+                ) : null}
+                <Text style={[t.small, styles.rotulo, { color: c.goldInk }]}>
+                  {faseActual ? `Fase ${faseActual.numero} · ${faseActual.nombre}` : ''}
+                </Text>
+                {/* Mismo tratamiento que en Hoy: el día del programa es el dato del bloque, no una
+                    micro-etiqueta. A 10.5 px competía con el rótulo de arriba; a 15 con cifras
+                    tabulares se lee y no se corre de lugar al pasar del día 9 al 10. */}
+                <Text style={[t.cardTitle, styles.cifras, { color: c.textStrong, fontSize: 15 }]}>
+                  Día {resumen?.diaPrograma ?? '—'} de {DIAS_DEL_PROGRAMA}
+                </Text>
+                {faseActual ? <Text style={[t.small, { color: c.textSoft }]}>Tu animal: {faseActual.animal.nombre}</Text> : null}
+              </View>
             </View>
-            {/* Mismo tratamiento que en Hoy: el día del programa es el dato del bloque, no una
-                micro-etiqueta. A 10.5 px competía con el rótulo de arriba; a 15 con cifras
-                tabulares se lee y no se corre de lugar al pasar del día 9 al 10. */}
-            <Text style={[t.cardTitle, styles.cifras, { color: c.textStrong, fontSize: 15, marginTop: 4 }]}>
-              Día {resumen?.diaPrograma ?? '—'} de {DIAS_DEL_PROGRAMA}
-            </Text>
+            <View style={{ marginTop: 16 }}>
+              <FilaDeFases fases={fasesConAnimal} />
+            </View>
             {/* La curva era un dibujo fijo (ver `curvaDeEvolucion`). Ahora es el cumplimiento de
                 cada día del semáforo; con menos de dos días medidos no se dibuja. */}
             {curva ? (

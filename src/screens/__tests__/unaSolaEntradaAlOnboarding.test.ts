@@ -62,7 +62,9 @@ describe('Yo sin versales espaciadas', () => {
     }
     expect(yo).toMatch(/rotulo: \{ fontFamily: 'Jost_700Bold', letterSpacing: 0 \}/);
     expect(yo).toContain("Día {resumen?.diaPrograma ?? '—'} de {DIAS_DEL_PROGRAMA}");
-    expect(yo).toContain("{rotuloDeFase(resumen?.fase) ?? ''}");
+    // Cambió el 2026-10-06 (animales por fase): el rótulo de la fase ya no es `rotuloDeFase(...)` suelto,
+    // sino «Fase N · nombre» junto al animal, armado con la misma fase del resumen.
+    expect(yo).toContain('`Fase ${faseActual.numero} · ${faseActual.nombre}`');
   });
 
   it('la racha dice «días» como Hoy, y el «%» de coherencia aparece solo con cifra', () => {
