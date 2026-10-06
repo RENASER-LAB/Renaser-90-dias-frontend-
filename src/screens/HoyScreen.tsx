@@ -48,8 +48,6 @@ import {
 import { AdminScreen, type EntradaDeAdmin } from '../features/admin/screens/AdminScreen';
 import { TarjetaAdminHoy } from '../features/admin/components/TarjetaAdminHoy';
 import { TarjetaConfrontacion } from '../features/confrontacion/components/TarjetaConfrontacion';
-import { ParticulaDeRitmo } from '../features/home/components/ParticulaDeRitmo';
-import { ritmoDelDia } from '../features/home/utils/ritmoDelDia';
 import { useCapacidades } from '../features/admin/hooks/useCapacidades';
 import { MiCelulaScreen } from '../features/mentor/screens/MiCelulaScreen';
 import { AlumnoScreen } from '../features/mentor/screens/AlumnoScreen';
@@ -376,15 +374,6 @@ export default function HoyScreen() {
 
   // Roca Prioritaria de Hoy: Posición 1 (Pareto Verde) o la primera disponible
   const rocaPrioritaria = rocas.find(r => r.posicion === 1) || rocas[0] || null;
-  /* El ritmo del día: lo que decide si la partícula del hero viaja, va lento o se detiene.
-     Se calcula con lo ÚNICO que hoy se mueve de verdad —hábitos y roca cumplidos— y no con
-     coherencia ni racha, que el backend no calcula (`ritmoDelDia` lo explica con la evidencia).
-     La regla vive afuera, en una función pura y probada; acá solo se le pasan los datos. */
-  const ritmo = ritmoDelDia({
-    habitosCompletados: resumen?.habitosHoy?.completados ?? 0,
-    habitosTotal: resumen?.habitosHoy?.total ?? 0,
-    rocaCompletada: rocaPrioritaria ? rocaPrioritaria.completada : null,
-  });
   const evidenciasUltimaPublicacion = ultimaPublicacion?.media ?? [];
 
   /* Los anillos son decorado: se derivan del hueco REAL que queda, no de medidas fijas.
@@ -395,8 +384,6 @@ export default function HoyScreen() {
      los anillos, sin `minHeight` suelto que sobresalga. */
   const anchoContenido = (isTablet ? Math.min(560, width) : width) - horizontalPadding * 2;
   const heroSize = Math.min(anchoContenido, rs(isShort ? 206 : 252));
-  const ringDiameters = [heroSize, heroSize * 0.82, heroSize * 0.64, heroSize * 0.46].map(Math.round);
-  const ringColors = [c.ring1, c.ring2, c.ring3, c.ring2];
 
 
   /* Tipo oración (rediseño de Hoy, 2026-10-05): el nombre de la fase tal como lo escribe el documento
@@ -718,26 +705,7 @@ export default function HoyScreen() {
 
         <Aparicion retardo={140}>
         <View style={[styles.hero, { height: heroSize }]}>
-          {ringDiameters.map((d, i) => {
-            const size = d;
-            return (
-              <View
-                key={d}
-                style={[
-                  styles.ring,
-                  {
-                    width: size,
-                    height: size,
-                    borderRadius: size / 2,
-                    borderColor: ringColors[i],
-                  },
-                ]}
-              />
-            );
-          })}
-          {/* La partícula orbita sobre el anillo exterior: es el único radio donde no se cruza
-              con el texto del centro en un teléfono chico. */}
-          <ParticulaDeRitmo ritmo={ritmo.ritmo} diametro={ringDiameters[0]} />
+          {/* Sin anillos ni partícula detrás: el fénix es el centro y va sin fondo (pedido del dueño, 2026-10-06). */}
           {/* El centro del hero es el acompañante por voz (pedido del dueño, 2026-09-23). Antes
               decía "TU ÚNICO FOCO / AHORA" (o la roca prioritaria del día) y llevaba a Plan; ese
               dato se le pregunta ahora al propio acompañante ("¿cuál es mi foco de hoy?"), que lo

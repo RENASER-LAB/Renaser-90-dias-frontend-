@@ -204,6 +204,10 @@ const PhoenixMascotInner = forwardRef<PhoenixMascotHandle, PhoenixMascotProps>(f
 
   const handleError = useCallback(
     (error: RNRiveError) => {
+      // Solo un .riv que no se puede dibujar pasa a la imagen. El runtime nativo avisa además errores que
+      // no impiden animar, como DataBindingError (este .riv no trae ViewModel): tratarlos como fallo dejaba
+      // la foto fija en el teléfono aunque el fénix cargaba bien (E-572).
+      if (!esErrorQueImpideDibujar(error)) return;
       readyRef.current = false;
       failedRef.current = true;
       setFailed(true);
@@ -328,3 +332,18 @@ export default PhoenixMascot;
 const styles = StyleSheet.create({
   container: { alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', overflow: 'visible' },
 });
+
+/** Los errores con los que el fénix no se puede dibujar. El resto (enlace de datos, un input o texto que no existe,
+ * un asset sin usar) no impide animar y no debe cambiarlo por la imagen. */
+const ERRORES_QUE_IMPIDEN_DIBUJAR: ReadonlySet<string> = new Set([
+  'FileNotFound',
+  'UnsupportedRuntimeVersion',
+  'IncorrectRiveFileUrl',
+  'MalformedFile',
+  'IncorrectArtboardName',
+  'IncorrectStateMachineName',
+]);
+
+export function esErrorQueImpideDibujar(error: RNRiveError): boolean {
+  return ERRORES_QUE_IMPIDEN_DIBUJAR.has(String(error?.type));
+}

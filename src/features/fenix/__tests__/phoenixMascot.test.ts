@@ -56,9 +56,19 @@ describe('PhoenixMascot en el teléfono', () => {
 
   it('si el .riv no carga, muestra la imagen del ánimo', () => {
     const { raiz } = montar({ mood: 'serio' });
-    act(() => vistasRive(raiz)[0].props.onError({ message: 'roto' }));
+    act(() => vistasRive(raiz)[0].props.onError({ message: 'roto', type: 'MalformedFile' }));
     const imagen = raiz.root.findAll(n => n.type === Image)[0];
     expect(imagen.props.source).toBe(require('../../../../assets/rive/phoenix_serio.png'));
+    act(() => raiz.unmount());
+  });
+
+  // E-572: en Android el runtime avisa DataBindingError porque este .riv no trae ViewModel, y antes
+  // cualquier error cambiaba el fénix vivo por la foto fija aunque el .riv se dibujaba bien.
+  it('un aviso que no impide dibujar (enlace de datos) NO cambia el fénix por la imagen', () => {
+    const { raiz } = montar({ mood: 'serio' });
+    act(() => vistasRive(raiz)[0].props.onError({ message: 'sin ViewModel', type: 'DataBindingError' }));
+    expect(vistasRive(raiz)).toHaveLength(1);
+    expect(raiz.root.findAll(n => n.type === Image)).toHaveLength(0);
     act(() => raiz.unmount());
   });
 

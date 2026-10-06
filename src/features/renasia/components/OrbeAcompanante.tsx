@@ -1,7 +1,6 @@
-import React, { useEffect, useRef } from "react";
-import { AccessibilityInfo, Animated, Easing, Pressable, StyleSheet, View } from "react-native";
+import React, { useRef } from "react";
+import { Pressable, StyleSheet, View } from "react-native";
 
-import { useTheme } from "../../../theme/ThemeContext";
 import { FenixDeSer, type FenixDeSerHandle } from "../../fenix/components/FenixDeSer";
 import { FenixDeSerQuieto } from "../../fenix/components/FenixDeSerQuieto";
 import type { FaseDeVoz } from "../hooks/useConversacionPorVoz";
@@ -12,14 +11,6 @@ const ETIQUETA: Record<FaseDeVoz, string> = {
   escuchando: "Terminé de hablar",
   pensando: "Tu acompañante está pensando",
   hablando: "Callar a tu acompañante",
-};
-
-/** Cuánto dura un latido del halo mientras la voz está activa: rápido al escuchar y al hablar, lento al pensar. */
-const LATIDO_MS: Record<FaseDeVoz, number> = {
-  reposo: 3200,
-  escuchando: 900,
-  pensando: 1600,
-  hablando: 650,
 };
 
 /** El dibujo del fénix deja aire alrededor (sombra, brasas): se dibuja más grande que el área de toque. */
@@ -52,10 +43,8 @@ type Props = {
  * > la web ahora se ve la foto del ánimo. `OrbeDePuntos`, `orbes.ts` y `ritmoDelOrbe.ts` quedan sin usar.
  */
 export function OrbeAcompanante({ fase, diametro, onTocar, onMantener, deshabilitado }: Props) {
-  const { c } = useTheme();
   const aLaVista = useOrbeALaVista();
   const fenix = useRef<FenixDeSerHandle>(null);
-  const activo = fase !== "reposo";
   const lado = Math.round(diametro * ESCALA_DEL_FENIX);
   const centrado = { left: (diametro - lado) / 2, top: (diametro - lado) / 2 };
 
@@ -73,13 +62,6 @@ export function OrbeAcompanante({ fase, diametro, onTocar, onMantener, deshabili
         { width: diametro, height: diametro, opacity: deshabilitado ? 0.5 : pressed ? 0.85 : 1 },
       ]}
     >
-      {activo ? <HaloQueLate fase={fase} diametro={diametro} color={c.gold} /> : null}
-      {activo ? (
-        <View
-          pointerEvents="none"
-          style={[styles.halo, { width: diametro, height: diametro, borderRadius: diametro / 2, borderColor: c.gold }]}
-        />
-      ) : null}
       {/* La vista Rive se queda con los toques: sin `pointerEvents="none"`, tocar el fénix no llegaba al botón. */}
       <View pointerEvents="none" style={[styles.fenix, centrado]}>
         {aLaVista ? (
@@ -92,54 +74,7 @@ export function OrbeAcompanante({ fase, diametro, onTocar, onMantener, deshabili
   );
 }
 
-/** Un halo dorado tenue que se expande y se apaga, solo con la voz activa. Quieto con «reducir movimiento». */
-function HaloQueLate({ fase, diametro, color }: { fase: FaseDeVoz; diametro: number; color: string }) {
-  const latido = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    let vivo = true;
-    let bucle: Animated.CompositeAnimation | null = null;
-    latido.setValue(0);
-    AccessibilityInfo.isReduceMotionEnabled()
-      .then((reducido) => {
-        if (!vivo || reducido) return;
-        bucle = Animated.loop(
-          Animated.timing(latido, {
-            toValue: 1,
-            duration: LATIDO_MS[fase],
-            easing: Easing.out(Easing.quad),
-            useNativeDriver: true,
-          }),
-        );
-        bucle.start();
-      })
-      .catch(() => undefined);
-    return () => {
-      vivo = false;
-      bucle?.stop();
-    };
-  }, [fase, latido]);
-
-  return (
-    <Animated.View
-      pointerEvents="none"
-      style={[
-        styles.halo,
-        {
-          width: diametro,
-          height: diametro,
-          borderRadius: diametro / 2,
-          backgroundColor: color,
-          opacity: latido.interpolate({ inputRange: [0, 1], outputRange: [0.22, 0] }),
-          transform: [{ scale: latido.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1.35] }) }],
-        },
-      ]}
-    />
-  );
-}
-
 const styles = StyleSheet.create({
   contenedor: { alignItems: "center", justifyContent: "center" },
-  halo: { position: "absolute", borderWidth: 1 },
   fenix: { position: "absolute" },
 });
