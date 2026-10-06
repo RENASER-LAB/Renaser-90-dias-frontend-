@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import { celebradorDelCentro } from '../estado/celebracionEnElCentro';
 import { tomarCelebracionDeHoy } from '../estado/celebracionDelDia';
 import type { DatosDelDia, HitoDelFenix } from '../utils/hitosDelFenix';
 
 /**
- * El hito que el fénix celebra ahora en Hoy, o `null`. Mira los datos de `/home` cada vez que cambian (al volver a Hoy
- * después de cumplir el último hábito, por ejemplo) y respeta el tope de una por día. `terminar` la saca de pantalla.
+ * Celebra los hitos del día que trae `/home` (al volver a Hoy después de cumplir el último hábito, por ejemplo),
+ * respetando el tope de una por día. Si el fénix vivo del centro de Hoy está (`celebracionEnElCentro`), salta ÉL y
+ * el hook no devuelve nada; si no, devuelve el hito para la superposición `CelebracionFenix`. `terminar` la saca.
  */
 export function useCelebracionDelDia(
   usuarioId: string | null | undefined,
@@ -22,7 +24,10 @@ export function useCelebracionDelDia(
     const habitosHoy = completados === null || total === null ? null : { completados, total };
     tomarCelebracionDeHoy(usuarioId, { rachaActual: racha, habitosHoy }, new Date())
       .then(nuevo => {
-        if (vivo && nuevo) setHito(nuevo);
+        if (!vivo || !nuevo) return;
+        const centro = celebradorDelCentro();
+        if (centro) void centro();
+        else setHito(nuevo);
       })
       .catch(() => {
         /* sin almacenamiento no hay celebración */

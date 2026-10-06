@@ -1,10 +1,10 @@
 /**
- * El ánimo del fénix sale del color que manda el servidor, y la cara de SER de los estados que el chat ya tiene.
+ * El ánimo del fénix sale del color que manda el servidor, y su cara de las fases que la voz de Hoy ya tiene.
  */
 import { describe, expect, it } from '@jest/globals';
 
 import { animoDelBotonDeSer, animoDelSemaforo } from '../utils/animoDelFenix';
-import { estadoDeLaConversacion, planDelEstado } from '../utils/conversacionDeSer';
+import { planDelEstado } from '../utils/conversacionDeSer';
 
 describe('semáforo → ánimo', () => {
   it('VERDE alegre, AMARILLO serio, ROJO triste, SIN_DATOS neutral', () => {
@@ -26,25 +26,7 @@ describe('semáforo → ánimo', () => {
   });
 });
 
-describe('estado de la conversación con SER', () => {
-  const vacia = { texto: '', enProgreso: true };
-  it('escuchando gana sobre todo lo demás', () => {
-    expect(estadoDeLaConversacion({ escuchando: true, enviando: true, ultimaRespuesta: vacia })).toBe('escuchando');
-  });
-  it('enviando con la burbuja vacía es pensando; con texto llegando, hablando', () => {
-    expect(estadoDeLaConversacion({ escuchando: false, enviando: true, ultimaRespuesta: vacia })).toBe('pensando');
-    expect(
-      estadoDeLaConversacion({ escuchando: false, enviando: true, ultimaRespuesta: { texto: 'Hola', enProgreso: true } }),
-    ).toBe('hablando');
-  });
-  it('una respuesta fallida es error; sin nada en curso, reposo', () => {
-    expect(
-      estadoDeLaConversacion({ escuchando: false, enviando: false, ultimaRespuesta: { texto: '', error: 'Sin red' } }),
-    ).toBe('error');
-    expect(estadoDeLaConversacion({ escuchando: false, enviando: false, ultimaRespuesta: { texto: 'Listo' } })).toBe('reposo');
-    expect(estadoDeLaConversacion({ escuchando: false, enviando: false, ultimaRespuesta: null })).toBe('reposo');
-  });
-
+describe('la fase de la voz en el fénix del centro', () => {
   it('cada estado usa el contrato del .riv: thinking + trgThinking, boca al hablar, retry al fallar', () => {
     expect(planDelEstado('pensando', false)).toEqual({ expresion: 'thinking', hablar: false, disparo: 'think' });
     expect(planDelEstado('hablando', false)).toEqual({ expresion: 'happy', hablar: true, disparo: null });

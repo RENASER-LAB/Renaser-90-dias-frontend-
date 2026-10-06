@@ -1,17 +1,22 @@
 /**
- * El fénix de SER: ánimo del semáforo propio (neutral para el staff), estados de la conversación, y al cumplir UN
- * hábito solo asiente — nunca la celebración corta, que es de los hitos.
+ * El fénix vivo del centro de Hoy: ánimo del semáforo propio (neutral para el staff), fase de la voz, saludo, toque,
+ * asentir al cumplir UN hábito (nunca la celebración corta) y celebración de los hitos por su canal. El botón y el
+ * panel de SER son foto fija: nunca montan Rive.
  */
-import { afterEach, describe, expect, it, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
+import fs from 'fs';
+import path from 'path';
 import React from 'react';
 import { act } from 'react-test-renderer';
 
 import { avisarHabitoCumplido } from '../../habits/eventos/habitoCumplido';
 import { semaforoVigente } from '../../semaforo/estado/useSemaforoVigente';
-import { FenixDeSer } from '../components/FenixDeSer';
+import { FenixDeSer, olvidarSaludoParaPruebas, type FenixDeSerHandle } from '../components/FenixDeSer';
 import { FenixDeSerQuieto } from '../components/FenixDeSerQuieto';
+import { celebradorDelCentro } from '../estado/celebracionEnElCentro';
 import { PHOENIX_STATIC_IMAGES } from '../rive/PhoenixMascot';
-import { publicarEstadoDeSer } from '../estado/estadoDeSer';
+import { PhoenixDirector } from '../rive/phoenixMaster';
+import type { EstadoDeSer } from '../utils/conversacionDeSer';
 import { crear, desmontarTodo, disparos, emitir, ultimaVistaRive, valoresDe, vistasRive } from './ayudasDePrueba';
 
 const mockSesion = { rol: 'TRAINEE', reducido: false };
@@ -24,102 +29,131 @@ jest.mock('react-native-reanimated', () => ({
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-function montar(lugar: 'boton' | 'panel') {
-  const raiz = crear(React.createElement(FenixDeSer, { lugar, size: 64, etiqueta: 'Fénix de SER' }));
+function elemento(estado: EstadoDeSer, ref?: React.Ref<FenixDeSerHandle>) {
+  return React.createElement(FenixDeSer, { ref, estado, size: 160, etiqueta: 'Fénix, tu acompañante' });
+}
+
+function montar(estado: EstadoDeSer = 'reposo', ref?: React.Ref<FenixDeSerHandle>) {
+  const raiz = crear(elemento(estado, ref));
   const rive = ultimaVistaRive();
   act(() => emitir(vistasRive(raiz)[0], 'PHOENIX_READY'));
   return { raiz, rive };
 }
 
+beforeEach(() => olvidarSaludoParaPruebas());
+
 afterEach(() => {
   desmontarTodo();
   mockSesion.rol = 'TRAINEE';
   mockSesion.reducido = false;
-  act(() => {
-    semaforoVigente.reiniciar();
-    publicarEstadoDeSer('reposo');
-  });
+  act(() => semaforoVigente.reiniciar());
 });
 
-describe('ánimo del fénix de SER', () => {
-  it('el aprendiz: el del semáforo vigente (ROJO → triste)', () => {
+describe('ánimo y vida', () => {
+  it('el aprendiz: el del semáforo vigente (ROJO → triste), con la vida autónoma encendida', () => {
     act(() => semaforoVigente.publicar('ROJO'));
-    const { raiz, rive } = montar('boton');
+    const { rive } = montar();
     expect(valoresDe(rive, 'mood')).toEqual([3]);
-    act(() => raiz.unmount());
   });
 
   it('el staff (mentor): neutral aunque haya un color publicado', () => {
     mockSesion.rol = 'MENTOR';
     act(() => semaforoVigente.publicar('ROJO'));
-    const { raiz, rive } = montar('boton');
+    const { rive } = montar();
     expect(valoresDe(rive, 'mood')).not.toContain(3);
-    act(() => raiz.unmount());
   });
 });
 
-describe('al cumplir UN hábito', () => {
-  it('el botón asiente (cara contenta, parpadeo) y no dispara la celebración corta', () => {
-    const { raiz, rive } = montar('boton');
+describe('momentos', () => {
+  it('saluda la primera vez en la sesión, no al volver a montarse', () => {
+    const saludo = jest.spyOn(PhoenixDirector.prototype, 'react');
+    montar();
+    expect(saludo.mock.calls.map(c => c[0])).toEqual(['welcome']);
+    desmontarTodo();
+    montar();
+    expect(saludo).toHaveBeenCalledTimes(1);
+    saludo.mockRestore();
+  });
+
+  it('el toque dispara trgTap', () => {
+    const ref = React.createRef<FenixDeSerHandle>();
+    const { rive } = montar('reposo', ref);
+    act(() => ref.current!.tocado());
+    expect(disparos(rive)).toContain('trgTap');
+  });
+
+  it('UN hábito: asiente (cara contenta, parpadeo) y no dispara la celebración corta', () => {
+    const { rive } = montar();
     act(() => avisarHabitoCumplido());
     expect(valoresDe(rive, 'emotion')).toContain(1);
     expect(disparos(rive)).toContain('trgBlink');
     expect(disparos(rive)).not.toContain('trgCelebrateShort');
     expect(disparos(rive)).not.toContain('trgSuccess');
-    act(() => raiz.unmount());
   });
 
-  it('con «reducir movimiento», nada', () => {
+  it('los hitos se celebran en él: se anota como celebrador y dispara trgCelebrateShort', () => {
+    const { rive } = montar();
+    const celebrar = celebradorDelCentro();
+    expect(celebrar).not.toBeNull();
+    act(() => void celebrar!());
+    expect(disparos(rive)).toContain('trgCelebrateShort');
+    desmontarTodo();
+    expect(celebradorDelCentro()).toBeNull();
+  });
+
+  it('con «reducir movimiento»: ni toque, ni asentir, ni celebrador', () => {
     mockSesion.reducido = true;
-    const { raiz, rive } = montar('boton');
+    const ref = React.createRef<FenixDeSerHandle>();
+    const { rive } = montar('reposo', ref);
     rive.fireState.mockClear();
-    act(() => avisarHabitoCumplido());
+    act(() => {
+      ref.current!.tocado();
+      avisarHabitoCumplido();
+    });
     expect(disparos(rive)).toEqual([]);
-    act(() => raiz.unmount());
-  });
-
-  it('el fénix del panel no asiente (solo el del botón)', () => {
-    const { raiz, rive } = montar('panel');
-    rive.fireState.mockClear();
-    act(() => avisarHabitoCumplido());
-    expect(disparos(rive)).not.toContain('trgBlink');
-    act(() => raiz.unmount());
+    expect(celebradorDelCentro()).toBeNull();
   });
 });
 
-describe('la conversación', () => {
-  it('pensando: cara de pensar y trgThinking; hablando: boca; al volver a reposo, cara neutral y boca cerrada', () => {
-    const { raiz, rive } = montar('boton');
-    act(() => publicarEstadoDeSer('pensando'));
+describe('la voz', () => {
+  it('pensando: cara de pensar y trgThinking; hablando: boca; al volver a reposo, boca cerrada', () => {
+    const { raiz, rive } = montar();
+    act(() => raiz.update(elemento('pensando')));
     expect(disparos(rive)).toContain('trgThinking');
     expect(valoresDe(rive, 'emotion')).toContain(4);
-    act(() => publicarEstadoDeSer('hablando'));
+    act(() => raiz.update(elemento('hablando')));
     expect(valoresDe(rive, 'isTalking')).toContain(true);
-    act(() => publicarEstadoDeSer('reposo'));
+    act(() => raiz.update(elemento('reposo')));
     expect(valoresDe(rive, 'isTalking').at(-1)).toBe(false);
-    act(() => raiz.unmount());
-  });
-
-  it('error: trgRetry', () => {
-    const { raiz, rive } = montar('boton');
-    act(() => publicarEstadoDeSer('error'));
-    expect(disparos(rive)).toContain('trgRetry');
-    act(() => raiz.unmount());
   });
 });
 
-describe('el fénix quieto de SER (curso, hoja de la voz, Yo)', () => {
-  const imagen = () => crear(React.createElement(FenixDeSerQuieto, { size: 44 })).root.findAll(n => n.props.testID === 'fenix-de-ser-quieto')[0];
+describe('el botón flotante y el panel de SER: foto fija', () => {
+  const RAIZ = path.resolve(__dirname, '../../..');
+  const leer = (r: string) => fs.readFileSync(path.join(RAIZ, r), 'utf8');
 
-  it('la imagen del ánimo del semáforo vigente, sin Rive', () => {
+  it('no montan el fénix vivo, solo la foto del ánimo', () => {
+    for (const archivo of ['features/renasia/components/RenasiaLauncher.tsx', 'features/renasia/screens/RenasiaPanel.tsx']) {
+      const fuente = leer(archivo);
+      expect(fuente).not.toMatch(/<FenixDeSer[\s>]/);
+      expect(fuente).not.toMatch(/<FenixVivo|<PhoenixMascot/);
+      expect(fuente).toMatch(/<FenixDeSerQuieto /);
+    }
+  });
+
+  it('la foto sigue al semáforo y no monta Rive', () => {
     act(() => semaforoVigente.publicar('AMARILLO'));
-    expect(imagen().props.source).toBe(PHOENIX_STATIC_IMAGES.serio);
+    const raiz = crear(React.createElement(FenixDeSerQuieto, { size: 64 }));
+    expect(raiz.root.findAll(n => n.props.testID === 'fenix-de-ser-quieto')[0].props.source).toBe(PHOENIX_STATIC_IMAGES.serio);
+    expect(raiz.root.findAll(n => n.props.testID === 'rive-del-fenix')).toHaveLength(0);
   });
 
   it('sin dato, neutral; y para el staff, neutral aunque haya color', () => {
-    expect(imagen().props.source).toBe(PHOENIX_STATIC_IMAGES.neutral);
+    const foto = () =>
+      crear(React.createElement(FenixDeSerQuieto, { size: 44 })).root.findAll(n => n.props.testID === 'fenix-de-ser-quieto')[0];
+    expect(foto().props.source).toBe(PHOENIX_STATIC_IMAGES.neutral);
     mockSesion.rol = 'ADMIN';
     act(() => semaforoVigente.publicar('VERDE'));
-    expect(imagen().props.source).toBe(PHOENIX_STATIC_IMAGES.neutral);
+    expect(foto().props.source).toBe(PHOENIX_STATIC_IMAGES.neutral);
   });
 });

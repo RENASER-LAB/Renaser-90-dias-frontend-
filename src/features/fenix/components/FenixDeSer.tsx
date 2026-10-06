@@ -1,62 +1,60 @@
-import React, { useEffect, useRef } from 'react';
+import React, { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
 import { alCumplirUnHabito } from '../../habits/eventos/habitoCumplido';
-import { useEstadoDeSer } from '../estado/estadoDeSer';
+import { anotarCelebrador } from '../estado/celebracionEnElCentro';
+import { useAnimoDeSer } from '../hooks/useAnimoDeSer';
 import type { PhoenixMascotHandle } from '../rive/PhoenixMascot';
 import type { PhoenixDirector } from '../rive/phoenixMaster';
-import { useAnimoDeSer } from '../hooks/useAnimoDeSer';
 import { asentir } from '../utils/asentir';
 import { planDelEstado, type EstadoDeSer } from '../utils/conversacionDeSer';
 import { FenixVivo } from './FenixVivo';
 
+/** Lo que el centro de Hoy le pide al fénix fuera de su estado: la reacción al toque. */
+export type FenixDeSerHandle = { tocado: () => void };
+
+/** Una vez por sesión de la app: el saludo es un momento, no algo que se repite al volver a Hoy. */
+let yaSaludo = false;
+
 /**
- * El fénix VIVO como cara de SER (2026-10-06, pedido del dueño): el del botón flotante y el del panel. Donde el orbe
- * era un ícono chico (el curso, la hoja de la voz, Yo) va `FenixDeSerQuieto`.
+ * El ÚNICO fénix vivo de la app (2026-10-06, pedido del dueño): el del centro de Hoy, que reemplaza al orbe del
+ * acompañante. Todo lo animado del fénix ocurre acá; el botón flotante y el panel de SER son foto fija
+ * (`FenixDeSerQuieto`). Lo que hace, con la entrega v3.3 completa:
  *
- * - **Ánimo**: el del semáforo propio (`semaforoVigente`); neutral para quien no se mide (staff).
- * - **Conversación**: refleja el estado del chat (`estadoDeSer`): escuchando, pensando, hablando, error. Al volver a
- *   reposo queda el ánimo del semáforo.
- * - **`lugar="boton"`**: asiente 700 ms cada vez que se cumple un hábito (`asentir`).
- * - **`lugar="panel"`**: saluda al abrirse el panel (`trgWelcome` vía `react('welcome')`).
- * - Con «reducir movimiento»: ni saludo ni asentir; de la conversación, solo la cara.
+ * - **Ánimo** del semáforo propio (neutral para el staff) y **vida autónoma** (`alive`, `life` 1).
+ * - **Voz**: refleja la fase (`estado`) — escuchando, pensando (`trgThinking`), hablando (boca) — y vuelve al ánimo.
+ * - **Saludo** (`trgWelcome` vía `react('welcome')`) la primera vez que aparece en la sesión.
+ * - **Toque**: `trgTap` al apoyar el dedo (`tocado`), además de lo que haga el botón que lo contiene.
+ * - **Asiente** 700 ms al cumplir un hábito (`asentir`).
+ * - **Celebración corta** de los hitos: se anota como celebrador (`celebracionEnElCentro`) y Hoy se la pide.
+ *
+ * Con «reducir movimiento»: sin saludo, toque, asentir ni celebración; de la voz, solo la cara.
  */
-export function FenixDeSer({
-  size,
-  lugar,
-  etiqueta,
-  style,
-}: {
-  size: number;
-  lugar: 'boton' | 'panel';
-  etiqueta: string;
-  style?: StyleProp<ViewStyle>;
-}) {
+export const FenixDeSer = forwardRef<
+  FenixDeSerHandle,
+  { size: number; estado: EstadoDeSer; etiqueta: string; style?: StyleProp<ViewStyle> }
+>(function FenixDeSer({ size, estado, etiqueta, style }, ref) {
   const fenix = useRef<PhoenixMascotHandle>(null);
   const animo = useAnimoDeSer();
-  const estado = useEstadoDeSer();
   const reducido = useReducedMotion();
 
-  /* Saluda solo si el panel se abre en reposo: el fénix del encabezado aparece también con la primera pregunta, y
-     ahí ya está pensando — un saludo encima sería un gesto sin motivo. */
-  const enReposoAlMontar = useRef(estado === 'reposo').current;
-
   useEstadoReflejado(fenix, estado, reducido);
-  useMomentoPropio(fenix, lugar === 'panel' && !enReposoAlMontar ? null : lugar, reducido);
+  useMomentosDelFenix(fenix, reducido);
+  useImperativeHandle(
+    ref,
+    () => ({
+      tocado: () => {
+        if (!reducido) directorDe(fenix)?.trigger('tap');
+      },
+    }),
+    [reducido],
+  );
 
   return (
-    <FenixVivo
-      ref={fenix}
-      size={size}
-      animo={animo}
-      life={lugar === 'boton' ? 0.5 : 0.8}
-      etiqueta={etiqueta}
-      style={style}
-      testID={`fenix-de-ser-${lugar}`}
-    />
+    <FenixVivo ref={fenix} size={size} animo={animo} life={1} etiqueta={etiqueta} style={style} testID="fenix-de-ser" />
   );
-}
+});
 
 function directorDe(fenix: React.RefObject<PhoenixMascotHandle | null>): PhoenixDirector | null {
   return fenix.current?.director() ?? null;
@@ -78,16 +76,29 @@ function useEstadoReflejado(fenix: React.RefObject<PhoenixMascotHandle | null>, 
   }, [fenix, estado, reducido]);
 }
 
-function useMomentoPropio(fenix: React.RefObject<PhoenixMascotHandle | null>, lugar: 'boton' | 'panel' | null, reducido: boolean) {
+/** Saludo, asentir y celebración: los momentos que no dependen de la voz. Nada con «reducir movimiento». */
+function useMomentosDelFenix(fenix: React.RefObject<PhoenixMascotHandle | null>, reducido: boolean) {
   useEffect(() => {
-    if (reducido || lugar === null) return;
-    if (lugar === 'panel') {
+    if (reducido) return;
+    if (!yaSaludo && directorDe(fenix)) {
+      yaSaludo = true;
       void fenix.current?.react('welcome');
-      return;
     }
-    return alCumplirUnHabito(() => {
+    const sinHabito = alCumplirUnHabito(() => {
       const director = directorDe(fenix);
       if (director) asentir(director);
     });
-  }, [fenix, lugar, reducido]);
+    const sinCelebrador = directorDe(fenix)
+      ? anotarCelebrador(() => fenix.current?.celebrateShort() ?? Promise.resolve())
+      : () => undefined;
+    return () => {
+      sinHabito();
+      sinCelebrador();
+    };
+  }, [fenix, reducido]);
+}
+
+/** Solo para pruebas: vuelve a permitir el saludo. */
+export function olvidarSaludoParaPruebas(): void {
+  yaSaludo = false;
 }

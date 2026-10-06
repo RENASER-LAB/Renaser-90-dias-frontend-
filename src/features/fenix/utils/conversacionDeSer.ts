@@ -1,37 +1,11 @@
 import type { Expression } from '../rive/phoenixMaster';
 
 /**
- * Los estados de la conversación con SER que el fénix refleja (2026-10-06, pedido del dueño). Son SOLO los que el chat
- * del panel ya tiene (`RenasiaPanel` + `useRenasiaChat` + `useDictado`); no se inventa ninguno:
- *
- * | Estado        | De dónde sale en el chat                                                    |
- * |---------------|------------------------------------------------------------------------------|
- * | `escuchando`  | `dictado.escuchando` (el micrófono del panel, si el teléfono lo tiene)        |
- * | `pensando`    | `enviando` y la burbuja del asistente todavía vacía (esperando la respuesta)  |
- * | `hablando`    | `enviando` y la respuesta ya llegando por el stream (`enProgreso` con texto)  |
- * | `error`       | la última respuesta falló (`error` en la burbuja)                             |
- * | `reposo`      | nada de lo anterior                                                          |
- *
- * La **bienvenida** no es un estado sino un momento: abrir el panel (lo dispara el fénix del panel al montarse).
- * El panel **no lee en voz alta**: «hablando» es la respuesta llegando por escrito. La voz de SER (escuchar y hablar)
- * vive en el orbe de Hoy, que no cambia con este trabajo.
+ * Las fases de la voz del acompañante que el fénix del centro de Hoy refleja (2026-10-06, pedido del dueño). Son las
+ * de `useConversacionPorVoz` (`FaseDeVoz`: reposo, escuchando, pensando, hablando) más `error`, que el plan sabe
+ * dibujar (`trgRetry`) aunque la voz de Hoy hoy no lo use como fase. No se inventa ninguna.
  */
 export type EstadoDeSer = 'reposo' | 'escuchando' | 'pensando' | 'hablando' | 'error';
-
-export type UltimaRespuesta = { texto: string; enProgreso?: boolean; error?: string | null } | null;
-
-export function estadoDeLaConversacion(params: {
-  escuchando: boolean;
-  enviando: boolean;
-  ultimaRespuesta: UltimaRespuesta;
-}): EstadoDeSer {
-  const { escuchando, enviando, ultimaRespuesta } = params;
-  if (escuchando) return 'escuchando';
-  if (ultimaRespuesta?.error) return 'error';
-  if (enviando && ultimaRespuesta?.enProgreso && ultimaRespuesta.texto.length > 0) return 'hablando';
-  if (enviando) return 'pensando';
-  return 'reposo';
-}
 
 /**
  * Qué hace el fénix en cada estado, con los nombres del contrato del `.riv` (§3): `emotion` (expresión), `isTalking`

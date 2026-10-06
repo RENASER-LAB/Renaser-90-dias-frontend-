@@ -1,43 +1,11 @@
-import React, { useEffect, useRef, useState } from "react";
-import {
-  AccessibilityInfo,
-  Animated,
-  Easing,
-  Pressable,
-  StyleSheet,
-  View,
-} from "react-native";
+import React, { useEffect, useRef } from "react";
+import { AccessibilityInfo, Animated, Easing, Pressable, StyleSheet, View } from "react-native";
 
-import { Icon } from "../../../components/Icon";
 import { useTheme } from "../../../theme/ThemeContext";
+import { FenixDeSer, type FenixDeSerHandle } from "../../fenix/components/FenixDeSer";
+import { FenixDeSerQuieto } from "../../fenix/components/FenixDeSerQuieto";
 import type { FaseDeVoz } from "../hooks/useConversacionPorVoz";
 import { useOrbeALaVista } from "../hooks/useOrbeALaVista";
-import { cargarOrbes } from "../utils/orbes";
-import { FPS_MAXIMO_DEL_ORBE } from "../utils/ritmoDelOrbe";
-
-const ORBES = cargarOrbes();
-
-/**
- * Qué animación del paquete corresponde a cada fase (pedido del dueño, 2026-09-23):
- * reposo = tranquilo, escuchando = listening, pensando = solving, hablando = composing.
- */
-const ANIMACION: Record<
-  FaseDeVoz,
-  "searching" | "listening" | "solving" | "composing"
-> = {
-  reposo: "searching",
-  escuchando: "listening",
-  pensando: "solving",
-  hablando: "composing",
-};
-
-/** En reposo va lento: tiene que invitar a tocarlo, no parecer ocupado. */
-const TEMPO: Record<FaseDeVoz, number> = {
-  reposo: 0.35,
-  escuchando: 1,
-  pensando: 1,
-  hablando: 0.9,
-};
 
 const ETIQUETA: Record<FaseDeVoz, string> = {
   reposo: "Hablarle a tu acompañante",
@@ -46,7 +14,7 @@ const ETIQUETA: Record<FaseDeVoz, string> = {
   hablando: "Callar a tu acompañante",
 };
 
-/** Cuánto dura un latido de los halos del orbe simple en cada fase. */
+/** Cuánto dura un latido del halo mientras la voz está activa: rápido al escuchar y al hablar, lento al pensar. */
 const LATIDO_MS: Record<FaseDeVoz, number> = {
   reposo: 3200,
   escuchando: 900,
@@ -54,9 +22,12 @@ const LATIDO_MS: Record<FaseDeVoz, number> = {
   hablando: 650,
 };
 
+/** El dibujo del fénix deja aire alrededor (sombra, brasas): se dibuja más grande que el área de toque. */
+const ESCALA_DEL_FENIX = 1.2;
+
 type Props = {
   fase: FaseDeVoz;
-  /** Diámetro del área del orbe (~140 en Hoy). */
+  /** Diámetro del área del orbe (~140 en Hoy). Es también el área de toque. */
   diametro: number;
   onTocar: () => void;
   /** Mantener presionado: cierra la conversación en vivo (E-458). Sin conversación abierta no viene. */
@@ -65,85 +36,33 @@ type Props = {
 };
 
 /**
- * El orbe del acompañante en el centro de Hoy (pedido del dueño, 2026-09-23; reemplaza a "TU ÚNICO
- * FOCO / AHORA"). Tocable: escucha, piensa y habla (`useConversacionPorVoz`).
+ * El acompañante en el centro de Hoy: tocarlo y hablarle (`useConversacionPorVoz`). Desde el 2026-10-06 (pedido del
+ * dueño) su cara es el **fénix vivo** (`FenixDeSer`), el único de la app: ánimo del semáforo, vida autónoma, la fase de
+ * la voz, el saludo, el toque, el asentir al cumplir un hábito y la celebración de los hitos.
  *
- * Es un orbe de razonamiento de `expo-thinking-orbs`: una nube de puntos en 3D que cambia de
- * animación según la fase, teñida con el dorado de la marca (`goldInk` → `gold`) sobre un halo
- * crema, sin fondo gris. Si el paquete no carga, queda el orbe simple de halos dorados.
+ * **Funciona igual que el orbe**: el mismo botón, el mismo tamaño de toque, las mismas etiquetas por fase, mantener
+ * presionado para cerrar, deshabilitado y la opacidad al apoyar. Mientras la voz está activa queda el aro dorado fino
+ * de antes y, debajo, un halo que late con el ritmo de la fase (dice «te escucho» sin texto).
  *
- * > Corregido 2026-09-23: la versión anterior dibujaba el orbe líquido del shader guardado en
- * > `docs/pendientes/`; al verlo en el teléfono el dueño lo reemplazó por este ("se ve feo").
+ * Cuando Hoy no se ve (otra pestaña, app en segundo plano: `useOrbeALaVista`) el fénix pasa a la foto fija del ánimo:
+ * el lienzo Rive no dibuja para nadie (entrega v3.3 §8.9; el mismo motivo por el que el orbe se pausaba).
  *
- * Reducir movimiento: el orbe se congela en su pose (y la fase se dice con texto debajo).
- *
- * > Corregido 2026-09-26 ("en mi Xiaomi se laguea feo"): ya no se usa `<ThinkingOrb>` del paquete
- * > sino `OrbeDePuntos`, que dibuja con el mismo motor pero con tope de cuadros por segundo
- * > (`FPS_MAXIMO_DEL_ORBE`), se detiene cuando Hoy no se ve (`useOrbeALaVista`) y graba cada punto con
- * > una llamada nativa menos. Antes corría a la frecuencia de la pantalla y nunca paraba.
+ * > **Corregido 2026-10-06.** Era la nube de puntos de `expo-thinking-orbs` (`OrbeDePuntos`, con tope de cuadros por
+ * > el lag del Xiaomi, 2026-09-26) y, en la web o si fallaba Skia, un disco dorado con micrófono (`OrbeSimple`). En
+ * > la web ahora se ve la foto del ánimo. `OrbeDePuntos`, `orbes.ts` y `ritmoDelOrbe.ts` quedan sin usar.
  */
-export function OrbeAcompanante(props: Props) {
-  const simple = <OrbeSimple {...props} diametro={Math.round(props.diametro * 0.62)} />;
-  return ORBES ? (
-    <SiFallaElOrbe alternativa={simple}>
-      <OrbeDeRazonamiento {...props} />
-    </SiFallaElOrbe>
-  ) : (
-    simple
-  );
-}
-
-/**
- * Si el orbe animado revienta al dibujar (Skia en un teléfono que no lo soporta, como pasó en web
- * con E-255), queda el orbe simple en vez de Hoy entero en blanco. React solo atrapa errores de
- * render con un componente de clase.
- */
-class SiFallaElOrbe extends React.Component<
-  { alternativa: React.ReactNode; children: React.ReactNode },
-  { fallo: boolean }
-> {
-  state = { fallo: false };
-
-  static getDerivedStateFromError() {
-    return { fallo: true };
-  }
-
-  render() {
-    return this.state.fallo ? this.props.alternativa : this.props.children;
-  }
-}
-
-function useMovimientoReducido(): boolean {
-  const [reducido, setReducido] = useState(false);
-  useEffect(() => {
-    let vivo = true;
-    AccessibilityInfo.isReduceMotionEnabled()
-      .then((valor) => {
-        if (vivo) setReducido(valor);
-      })
-      .catch(() => undefined);
-    const suscripcion = AccessibilityInfo.addEventListener(
-      "reduceMotionChanged",
-      setReducido,
-    );
-    return () => {
-      vivo = false;
-      suscripcion.remove();
-    };
-  }, []);
-  return reducido;
-}
-
-function OrbeDeRazonamiento({ fase, diametro, onTocar, onMantener, deshabilitado }: Props) {
-  const { c, mode } = useTheme();
-  const reducido = useMovimientoReducido();
+export function OrbeAcompanante({ fase, diametro, onTocar, onMantener, deshabilitado }: Props) {
+  const { c } = useTheme();
   const aLaVista = useOrbeALaVista();
-  const { OrbeDePuntos } = ORBES!;
-  const oscuro = mode === "dark";
+  const fenix = useRef<FenixDeSerHandle>(null);
+  const activo = fase !== "reposo";
+  const lado = Math.round(diametro * ESCALA_DEL_FENIX);
+  const centrado = { left: (diametro - lado) / 2, top: (diametro - lado) / 2 };
 
   return (
     <Pressable
       onPress={onTocar}
+      onPressIn={() => fenix.current?.tocado()}
       onLongPress={onMantener}
       accessibilityHint={onMantener ? "Mantén presionado para cerrar la conversación" : undefined}
       disabled={deshabilitado}
@@ -151,50 +70,30 @@ function OrbeDeRazonamiento({ fase, diametro, onTocar, onMantener, deshabilitado
       accessibilityLabel={ETIQUETA[fase]}
       style={({ pressed }) => [
         styles.contenedor,
-        {
-          width: diametro,
-          height: diametro,
-          opacity: deshabilitado ? 0.5 : pressed ? 0.85 : 1,
-        },
+        { width: diametro, height: diametro, opacity: deshabilitado ? 0.5 : pressed ? 0.85 : 1 },
       ]}
     >
-      {/* Sin disco de fondo: los anillos de Hoy ya lo enmarcan, y un círculo relleno lo aplanaba
-          (se veía como un plato beige con puntos). Solo un aro fino dorado mientras está activo. */}
-      {fase !== "reposo" ? (
+      {activo ? <HaloQueLate fase={fase} diametro={diametro} color={c.gold} /> : null}
+      {activo ? (
         <View
           pointerEvents="none"
-          style={[
-            styles.halo,
-            {
-              width: diametro,
-              height: diametro,
-              borderRadius: diametro / 2,
-              borderColor: c.gold,
-            },
-          ]}
+          style={[styles.halo, { width: diametro, height: diametro, borderRadius: diametro / 2, borderColor: c.gold }]}
         />
       ) : null}
-      {/* El lienzo de Skia se queda con los toques: sin esto, tocar el orbe no llegaba al botón. */}
-      <View pointerEvents="none">
-        <OrbeDePuntos
-          estado={ANIMACION[fase]}
-          tamano={diametro}
-          oscuro={oscuro}
-          color={c.goldInk}
-          colorHasta={oscuro ? "#E5C689" : c.gold}
-          velocidad={TEMPO[fase]}
-          escalaDePunto={1.9}
-          fpsMaximo={FPS_MAXIMO_DEL_ORBE[fase]}
-          activo={aLaVista && !reducido}
-          movimientoReducido={reducido}
-        />
+      {/* La vista Rive se queda con los toques: sin `pointerEvents="none"`, tocar el fénix no llegaba al botón. */}
+      <View pointerEvents="none" style={[styles.fenix, centrado]}>
+        {aLaVista ? (
+          <FenixDeSer ref={fenix} estado={fase} size={lado} etiqueta="Fénix, tu acompañante" />
+        ) : (
+          <FenixDeSerQuieto size={lado} />
+        )}
       </View>
     </Pressable>
   );
 }
 
-function OrbeSimple({ fase, diametro, onTocar, onMantener, deshabilitado }: Props) {
-  const { c } = useTheme();
+/** Un halo dorado tenue que se expande y se apaga, solo con la voz activa. Quieto con «reducir movimiento». */
+function HaloQueLate({ fase, diametro, color }: { fase: FaseDeVoz; diametro: number; color: string }) {
   const latido = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -221,84 +120,26 @@ function OrbeSimple({ fase, diametro, onTocar, onMantener, deshabilitado }: Prop
     };
   }, [fase, latido]);
 
-  const activo = fase !== "reposo";
-  const halo = (desfase: number) => {
-    const t = Animated.modulo(Animated.add(latido, desfase), 1);
-    return {
-      opacity: t.interpolate({
-        inputRange: [0, 1],
-        outputRange: [activo ? 0.45 : 0.18, 0],
-      }),
-      transform: [
-        {
-          scale: t.interpolate({
-            inputRange: [0, 1],
-            outputRange: [1, activo ? 1.55 : 1.25],
-          }),
-        },
-      ],
-    };
-  };
-
   return (
-    <View style={[styles.contenedor, { width: diametro, height: diametro }]}>
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          styles.halo,
-          {
-            width: diametro,
-            height: diametro,
-            borderRadius: diametro / 2,
-            backgroundColor: c.gold,
-          },
-          halo(0),
-        ]}
-      />
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          styles.halo,
-          {
-            width: diametro,
-            height: diametro,
-            borderRadius: diametro / 2,
-            backgroundColor: c.gold,
-          },
-          halo(0.5),
-        ]}
-      />
-      <Pressable
-        onPress={onTocar}
-        onLongPress={onMantener}
-        accessibilityHint={onMantener ? "Mantén presionado para cerrar la conversación" : undefined}
-        disabled={deshabilitado}
-        accessibilityRole="button"
-        accessibilityLabel={ETIQUETA[fase]}
-        style={({ pressed }) => [
-          styles.nucleo,
-          {
-            width: diametro,
-            height: diametro,
-            borderRadius: diametro / 2,
-            backgroundColor: c.gold,
-            opacity: deshabilitado ? 0.5 : pressed ? 0.85 : 1,
-          },
-        ]}
-      >
-        <Icon
-          name={fase === "hablando" ? "volume" : "mic"}
-          size={Math.round(diametro * 0.34)}
-          color={c.onGold}
-          strokeWidth={1.4}
-        />
-      </Pressable>
-    </View>
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        styles.halo,
+        {
+          width: diametro,
+          height: diametro,
+          borderRadius: diametro / 2,
+          backgroundColor: color,
+          opacity: latido.interpolate({ inputRange: [0, 1], outputRange: [0.22, 0] }),
+          transform: [{ scale: latido.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1.35] }) }],
+        },
+      ]}
+    />
   );
 }
 
 const styles = StyleSheet.create({
   contenedor: { alignItems: "center", justifyContent: "center" },
   halo: { position: "absolute", borderWidth: 1 },
-  nucleo: { alignItems: "center", justifyContent: "center" },
+  fenix: { position: "absolute" },
 });

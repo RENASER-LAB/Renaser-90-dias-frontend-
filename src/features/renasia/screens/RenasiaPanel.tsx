@@ -27,9 +27,7 @@ import { REGLAS_DE_ACCION } from '../../objetivos/utils/registroDeAccionConFoto'
 import { useRegistroConFoto } from '../../habits/hooks/useRegistroConFoto';
 import { RegistroConFotoModal } from '../../habits/components/RegistroConFotoModal';
 import { MensajeBurbuja } from '../components/MensajeBurbuja';
-import { FenixDeSer } from '../../fenix/components/FenixDeSer';
-import { publicarEstadoDeSer } from '../../fenix/estado/estadoDeSer';
-import { estadoDeLaConversacion, type UltimaRespuesta } from '../../fenix/utils/conversacionDeSer';
+import { FenixDeSerQuieto } from '../../fenix/components/FenixDeSerQuieto';
 import { AGENTES, nombreVisible } from '../data/agentes';
 import type { AgenteRenasia, PedidoDeFotoUI } from '../types/renasia.types';
 
@@ -116,15 +114,6 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
   };
   const scrollRef = useRef<ScrollView>(null);
 
-  /* El fénix de SER refleja la conversación (2026-10-06): se publica el estado para el del encabezado y el del botón
-     flotante. Solo con estados que este chat ya tiene (`conversacionDeSer`). Al cerrar el panel vuelve a reposo. */
-  const ultima = mensajes[mensajes.length - 1];
-  const ultimaRespuesta: UltimaRespuesta = ultima && ultima.autor === 'asistente' ? ultima : null;
-  const estadoDeSer = estadoDeLaConversacion({ escuchando: dictado.escuchando, enviando, ultimaRespuesta });
-  useEffect(() => {
-    publicarEstadoDeSer(visible ? estadoDeSer : 'reposo');
-  }, [visible, estadoDeSer]);
-  useEffect(() => () => publicarEstadoDeSer('reposo'), []);
   /* Un solo fénix en el panel: el grande de la bienvenida mientras no hay mensajes, y el del encabezado después. */
   const sinConversacion = !cargandoHistorial && !errorHistorial && mensajes.length === 0;
 
@@ -160,10 +149,11 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
           style={[styles.header, { borderBottomColor: c.divider, paddingHorizontal: horizontalPadding }]}
         >
           <View style={styles.headerTitulo}>
-            {/* SER se presenta con el fénix vivo, el mismo del botón flotante que abre este chat (2026-10-06).
+            {/* SER se presenta con el fénix en foto fija (el ánimo del semáforo), el mismo del botón que abre este chat
+                (2026-10-06). El fénix vivo es solo el del centro de Hoy.
                 > **Corregido 2026-10-06.** Era su orbe (`OrbeQuieto` de 38, rediseño de Hoy del 2026-10-05), y antes
                 > el globo `chat`. Con la conversación vacía el fénix está en grande abajo, así que acá no se repite. */}
-            {sinConversacion ? null : <FenixDeSer lugar="panel" size={TAMANO_FENIX_ENCABEZADO} etiqueta={`Fénix de ${nombre}`} />}
+            {sinConversacion ? null : <FenixDeSerQuieto size={TAMANO_FENIX_ENCABEZADO} />}
             <View style={{ flexShrink: 1 }}>
               <Text style={[t.cardTitle, { color: c.textStrong }]}>{perfil.nombre}</Text>
               <Text style={[t.small, { color: c.textSoft, fontSize: 12.5 }]} numberOfLines={1}>
@@ -234,7 +224,7 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
               </View>
             ) : mensajes.length === 0 ? (
               <View style={styles.centro}>
-                <FenixDeSer lugar="panel" size={TAMANO_FENIX_BIENVENIDA} etiqueta={`Fénix de ${nombre}`} />
+                <FenixDeSerQuieto size={TAMANO_FENIX_BIENVENIDA} />
                 <Text style={[t.cardTitle, { color: c.textStrong, textAlign: 'center', marginTop: 14 }]}>
                   {perfil.vacioTitulo}
                 </Text>
