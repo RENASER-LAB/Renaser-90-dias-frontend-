@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Alert } from '../../../components/Alerta';
 import { ConfirmacionEnLinea } from '../../../components/ConfirmacionEnLinea';
 import { GoldButton } from '../../../components/GoldButton';
 import { Icon, TAMANO_ICONO } from '../../../components/Icon';
+import { Interruptor } from '../../../components/Interruptor';
 import { Presionable } from '../../../components/Presionable';
 import { HojaDesdeAbajo } from '../../../components/hojaDesdeAbajo/HojaDesdeAbajo';
 import { OpcionDeHoja } from '../../../components/hojaDesdeAbajo/HojaDeOpciones';
@@ -944,12 +945,13 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
             <Icon name="lock" size={TAMANO_ICONO.normal} color={c.tabInactive} />
           </Presionable>
         ) : (
-          <Switch
-            value={activo}
-            disabled={enVuelo.has(h.habitoId)}
-            onValueChange={() => alternarActivo(h)}
-            trackColor={{ false: '#332C20', true: c.gold }}
-            thumbColor={activo ? '#1E1B18' : '#888'}
+          // `Interruptor` y no el `Switch` con colores a mano (prueba en Android, 2026-10-05): en
+          // oscuro el pulgar casi desaparecía. Sigue AL LADO de lo que abre el editor (PLN-03).
+          <Interruptor
+            valor={activo}
+            deshabilitado={enVuelo.has(h.habitoId)}
+            onCambiar={() => alternarActivo(h)}
+            etiqueta={h.title}
           />
         )}
       </View>

@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import React from 'react';
-import { Switch } from 'react-native';
 import TestRenderer, { act, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
 
 import type { PreferenciaHabitoApi } from '../../../habits/types/habits.types';
@@ -76,6 +75,7 @@ jest.mock('../../../habits/api/habitsApi', () => ({
   cambiarEstadoHabito: async () => undefined,
 }));
 
+import { Interruptor } from '../../../../components/Interruptor';
 import { PlanificarDimensionModal } from '../PlanificarDimensionModal';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -176,9 +176,10 @@ describe('PLN-03: el interruptor de pausa no abre el editor', () => {
     mockPreferencias.mockResolvedValue([preferencia('h-jugo', '09:00'), preferencia('h-clase', '14:59')]);
     raiz = await montar();
 
-    expect(raiz.root.findAll(n => n.type === Switch)).toHaveLength(1);
+    // Desde 2026-10-05 es el `Interruptor` de la app, no el `Switch` con colores a mano.
+    expect(raiz.root.findAll(n => n.type === Interruptor)).toHaveLength(1);
     // Ningún `onPress` envuelve al interruptor: en la web, su clic llegaría a ese `onPress`.
-    expect(tocablesQueContienen(raiz, n => n.type === Switch)).toHaveLength(0);
+    expect(tocablesQueContienen(raiz, n => n.type === Interruptor)).toHaveLength(0);
     // El candado es su propio botón, y nada más lo envuelve. Desde 2026-10-05 ese botón es un
     // `Presionable` (que lleva adentro su `Pressable`): son dos nodos con `onPress`, los dos sin el
     // título de la fila. Si el candado viviera dentro de la fila, uno de ellos llevaría el título.
@@ -187,6 +188,20 @@ describe('PLN-03: el interruptor de pausa no abre el editor', () => {
     for (const nodo of envuelvenAlCandado) {
       expect(nodo.findAll(n => (n.type as unknown) === 'Text')).toHaveLength(0);
     }
+  });
+
+  it('tocar el interruptor de un hábito activo pide el plazo de la pausa, y no abre el editor', async () => {
+    mockPreferencias.mockResolvedValue([preferencia('h-jugo', '09:00'), preferencia('h-clase', '14:59')]);
+    raiz = await montar();
+    const [interruptor] = raiz.root.findAll(n => n.type === Interruptor);
+    expect(interruptor.props).toEqual(expect.objectContaining({ valor: true, deshabilitado: false, etiqueta: 'JUGO VERDE' }));
+    const [boton] = interruptor.findAll(n => n.props.accessibilityRole === 'switch' && typeof n.props.onPress === 'function');
+    await act(async () => {
+      boton.props.onPress();
+    });
+    const todo = textos(raiz);
+    expect(todo).toContain('Pausar «JUGO VERDE»');
+    expect(todo).not.toContain('Ahora: 09:00');
   });
 
   it('la fila se sigue tocando para abrir el editor', async () => {

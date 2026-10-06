@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Alert } from '../../../components/Alerta';
+import { Interruptor } from '../../../components/Interruptor';
 import { BotonSecundario } from '../../../components/Legible';
 import { useTheme } from '../../../theme/ThemeContext';
 import { HoraPickerModal } from '../../habits/components/HoraPickerModal';
@@ -143,13 +144,12 @@ export function RecordatorioDeAcciones({ userId, rocas }: { userId: string; roca
               {prefs.diarioActivo ? `Todos los días a las ${prefs.horaDiaria}.` : 'Apagado en este teléfono.'}
             </Text>
           </View>
-          <Switch
-            value={prefs.diarioActivo}
-            disabled={ocupado}
-            onValueChange={v => void cambiarDiario(v)}
-            accessibilityLabel="Recordarme mis acciones del día"
-            trackColor={{ false: '#332C20', true: c.gold }}
-            thumbColor={prefs.diarioActivo ? '#1E1B18' : '#888'}
+          {/* `Interruptor` y no el `Switch` con colores a mano (prueba en Android, 2026-10-05). */}
+          <Interruptor
+            valor={prefs.diarioActivo}
+            deshabilitado={ocupado}
+            onCambiar={v => void cambiarDiario(v)}
+            etiqueta="Recordarme mis acciones del día"
           />
         </View>
         <View style={{ paddingBottom: 14 }}>

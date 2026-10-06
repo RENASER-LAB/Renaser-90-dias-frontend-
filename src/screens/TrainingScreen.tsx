@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Switch, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
 import { Alert } from '../components/Alerta';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BORDES_DE_UNA_PESTANA } from '../navigation/bordesDeUnaPestana';
@@ -13,6 +13,7 @@ import { ScreenHeader } from '../components/ui';
 import { Icon, IconName, TAMANO_ICONO } from '../components/Icon';
 import { Presionable } from '../components/Presionable';
 import { ConfirmacionEnLinea } from '../components/ConfirmacionEnLinea';
+import { Interruptor } from '../components/Interruptor';
 import { ControlSegmentado } from '../components/ControlSegmentado';
 import { tacto } from '../utils/tacto';
 import {
@@ -920,11 +921,12 @@ export default function TrainingScreen() {
                     Te avisamos a las 19:00 para revisar a qué hora va cada hábito
                   </Text>
                 </View>
-                <Switch
-                  value={repasoSemanal}
-                  onValueChange={valor => void alternarRepasoSemanal(valor)}
-                  trackColor={{ false: '#332C20', true: c.gold }}
-                  thumbColor={repasoSemanal ? '#1E1B18' : '#888'}
+                {/* `Interruptor` y no el `Switch` con colores a mano: en oscuro el pulgar encendido
+                    casi desaparecía y el riel apagado no se veía (prueba en Android, 2026-10-05). */}
+                <Interruptor
+                  valor={repasoSemanal}
+                  onCambiar={valor => void alternarRepasoSemanal(valor)}
+                  etiqueta="Arma tu semana los domingos"
                 />
               </View>
             )}

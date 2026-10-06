@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '../../../components/Icon';
+import { Interruptor } from '../../../components/Interruptor';
 import { BotonPrincipal, BotonSecundario } from '../../../components/Legible';
 import { useTheme } from '../../../theme/ThemeContext';
 import { CursoPortada } from '../../academy/components/CursoPortada';
@@ -192,12 +193,11 @@ export function FormularioDelEvento({
           <Text style={[estilos.opcionTexto, { color: c.textStrong }]}>Avisar a todos al guardarlo</Text>
           <Parrafo>Les llega un aviso con el nombre del evento.</Parrafo>
         </View>
-        <Switch
-          value={form.notificarAlCrear}
-          onValueChange={v => cambiar('notificarAlCrear', v)}
-          accessibilityLabel="Avisar a todos al guardarlo"
-          trackColor={{ false: '#332C20', true: c.gold }}
-          thumbColor={form.notificarAlCrear ? '#1E1B18' : '#888'}
+        {/* `Interruptor` y no el `Switch` con colores a mano (prueba en Android, 2026-10-05). */}
+        <Interruptor
+          valor={form.notificarAlCrear}
+          onCambiar={v => cambiar('notificarAlCrear', v)}
+          etiqueta="Avisar a todos al guardarlo"
         />
       </View>
 
