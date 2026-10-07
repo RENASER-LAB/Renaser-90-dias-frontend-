@@ -13,7 +13,7 @@ import { dark } from '../../../../theme/tokens';
 import { TarjetaDeFase } from '../TarjetaDeFase';
 
 const ANIMAL = { nombre: 'Gorila', imagen: 1, imagenDeRespaldo: 2 };
-const BASE = { numero: 2, totalDeFases: 4, nombreDeLaFase: 'El Ciclo Alquímico', animal: ANIMAL, diasDelPrograma: 90 };
+const BASE = { numero: 2, totalDeFases: 4, nombreDeLaFase: 'El Ciclo Alquímico', rango: 'Días 8–34', animal: ANIMAL, diasDelPrograma: 90 };
 
 function textos(props: Partial<React.ComponentProps<typeof TarjetaDeFase>>): string {
   let raiz!: ReactTestRenderer;
@@ -32,6 +32,13 @@ describe('TarjetaDeFase', () => {
     expect(t).toContain('Día 8 de 27');
     expect(t).toContain('de esta fase');
     expect(t).toContain('Día 15 de 90 en total');
+  });
+
+  it('dice los mismos días de la fase que Plan («Días 8–34»), junto a «FASE 2 DE 4»', () => {
+    // Pedido del dueño, 2026-10-06: «los mismos días que salen en Plan, en "Arquitectura de tiempo"».
+    // Contra el código anterior falla: la tarjeta solo decía «Día 23 de 27 de esta fase».
+    const t = textos({ diasDeLaFase: { dia: 23, total: 27 }, diaDelPrograma: 30 });
+    expect(t).toContain('FASE 2 DE 4|Días 8–34');
   });
 
   it('sin días de la fase no hay barra ni «de esta fase»: no se inventa un avance', () => {

@@ -17,8 +17,8 @@ import { ControlSegmentado } from '../components/ControlSegmentado';
 import { ConfirmacionEnLinea } from '../components/ConfirmacionEnLinea';
 import { HojaDesdeAbajo } from '../components/hojaDesdeAbajo/HojaDesdeAbajo';
 import { tacto } from '../utils/tacto';
-import { useProgramaDia } from '../features/programa/hooks/useProgramaDia';
-import { descripcionDeFase } from '../features/home/hooks/useResumenHome';
+import { useResumenHome } from '../features/home/hooks/useResumenHome';
+import { faseEnCurso } from '../features/home/utils/faseEnCurso';
 import type { DiaDelPlan } from '../features/habits/utils/semanaDelPlan';
 import { useMapaRenacimientoAbierto } from '../features/mapa-renacimiento/MapaRenacimientoContext';
 import { cifraEscrita } from '../features/objetivos/api/planMensualApi';
@@ -134,8 +134,20 @@ export default function PlanScreen() {
   /* Al cambiar de sub-vista la barra de pestañas vuelve a la vista (ver `navigation/barraAlDesplazar`). */
   const barraAlDesplazar = useOcultarBarraAlDesplazar({ vista: activeSubView });
 
-  // Dia real del programa: antes el 37, el arco y la fase estaban escritos a mano.
-  const { diaPrograma, fase, loading: cargandoDiaPrograma } = useProgramaDia();
+  /**
+   * Día real del programa y fase: antes el 37, el arco y la fase estaban escritos a mano.
+   *
+   * > **Corregido 2026-10-06 (pedido del dueño: «en Yo las fases deben ser iguales que en Plan»).** Esto
+   * > venía de `useProgramaDia`, que lee `/home` una sola vez al montar la pestaña; Yo lo relee cada vez
+   * > que vuelve al foco (`useResumenHome`). Con la app abierta al cambiar el día, Plan se quedaba en el
+   * > de ayer: en el paso del 34 al 35, Yo decía «Fase 3 · El Maestro Interno» y Plan seguía en «02 ·
+   * > El Ciclo Alquímico». Ahora las dos pestañas leen el mismo hook y la misma cuenta (`faseEnCurso`).
+   */
+  const { resumen, cargando } = useResumenHome();
+  const diaPrograma = resumen?.diaPrograma ?? 0;
+  const fase = resumen?.fase ?? null;
+  /* Solo la primera carga es «cargando»: al volver al foco se relee sin vaciar el arco ni los tramos. */
+  const cargandoDiaPrograma = resumen === null && cargando;
 
   /**
    * La fase del aprendiz, **la que dice el backend**, no una calculada acá.
@@ -147,10 +159,10 @@ export default function PlanScreen() {
    * Es `null` mientras la respuesta viaja, y también ante una fase que esta versión de la app no
    * conozca. En los dos casos no se dibuja el rótulo: mejor nada que un dato inventado.
    */
-  const faseActual = descripcionDeFase(fase);
   /* `null` mientras la carga no termina o el programa no arranco (dia 0): la arquitectura de
      tiempo no debe mostrar avance inventado, igual que Hoy no muestra un dia que no sabe. */
   const diaConocido = cargandoDiaPrograma || diaPrograma <= 0 ? null : diaPrograma;
+  const faseActual = faseEnCurso(fase, diaConocido);
   /**
    * «Arquitectura de tiempo»: las cuatro fases con su largo real (2026-10-05, decisión del dueño).
    *
@@ -161,7 +173,7 @@ export default function PlanScreen() {
    * > la misma fuente que el rótulo de arriba, y la que está en curso la marca el backend.
    */
   const tramos = useMemo(() => tramosDeLasFases(diaConocido, fase), [diaConocido, fase]);
-  const faseEnCurso = tramos.find(tramo => tramo.estado === 'en_curso') ?? null;
+  const tramoEnCurso = tramos.find(tramo => tramo.estado === 'en_curso') ?? null;
 
   // Modal / hoja del objetivo de 90 días
   const [editGoalModalVisible, setEditGoalModalVisible] = useState(false);
@@ -592,8 +604,8 @@ export default function PlanScreen() {
               style={styles.rielDeFases}
               accessible
               accessibilityLabel={
-                faseEnCurso && diaConocido !== null
-                  ? `Fase ${faseEnCurso.numero} de ${tramos.length}, día ${diaConocido} de 90`
+                tramoEnCurso && diaConocido !== null
+                  ? `Fase ${tramoEnCurso.numero} de ${tramos.length}, día ${diaConocido} de 90`
                   : `Las ${tramos.length} fases del programa`
               }
             >

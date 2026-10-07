@@ -1,4 +1,5 @@
-import { CLAVES_DE_FASE, FASES_EN_ORDEN, type ClaveDeFase } from '../../home/hooks/useResumenHome';
+import { FASES_EN_ORDEN, type ClaveDeFase } from '../../home/hooks/useResumenHome';
+import { faseEnCurso } from '../../home/utils/faseEnCurso';
 
 /**
  * Los tramos del dibujo «Arquitectura de tiempo» de Plan: **las cuatro fases del programa**, cada
@@ -9,8 +10,8 @@ import { CLAVES_DE_FASE, FASES_EN_ORDEN, type ClaveDeFase } from '../../home/hoo
  * > pantalla, y la de abajo no existe en el método. Ahora sale de `FASES_EN_ORDEN`, la misma fuente
  * > que el rótulo de arriba, Hoy y Yo; ningún número de día se escribe acá.
  *
- * - **Cuál está en curso lo dice el backend** (`fase` de `GET /api/v1/home`), como el rótulo de
- *   arriba: así los dos no pueden contradecirse. Sin ese dato (o con una clave que la app no conoce)
+ * - **Cuál está en curso lo dice el backend** (`fase` de `GET /api/v1/home`), leída con `faseEnCurso`,
+ *   la misma función del rótulo de arriba y de la tarjeta de Yo: así los tres no pueden contradecirse. Sin ese dato (o con una clave que la app no conoce)
  *   se deduce del día.
  * - **El relleno sale del día**: lo cumplido de cada fase, de 0 a 1. Sin día conocido (cargando, o
  *   el programa no arrancó) no se rellena nada: mejor vacío que inventado.
@@ -46,8 +47,8 @@ export function tramosDeLasFases(dia: number | null, faseDelBackend: string | nu
 }
 
 function indiceEnCurso(dia: number | null, faseDelBackend: string | null | undefined): number | null {
-  const delBackend = CLAVES_DE_FASE.indexOf(faseDelBackend as ClaveDeFase);
-  if (delBackend >= 0) return delBackend;
+  const delBackend = faseEnCurso(faseDelBackend, dia);
+  if (delBackend) return FASES_EN_ORDEN.findIndex(f => f.clave === delBackend.clave);
   if (dia === null) return null;
   const porDia = FASES_EN_ORDEN.findIndex(f => dia >= f.primerDia && dia <= f.ultimoDia);
   if (porDia >= 0) return porDia;

@@ -7,7 +7,7 @@ import { useTheme } from '../../../theme/ThemeContext';
 import type { Palette } from '../../../theme/tokens';
 import { tacto } from '../../../utils/tacto';
 import type { AnimalParaLaTarjeta } from '../utils/animalConfigurado';
-import type { DiasDeLaFase } from '../utils/diasDeLaFase';
+import type { DiasDeLaFase } from '../../home/utils/faseEnCurso';
 
 const ENTRADA = { damping: 14, stiffness: 170, reduceMotion: ReduceMotion.System } as const;
 const ALTO = 262;
@@ -29,6 +29,9 @@ function tamanoDelTitulo(nombre: string) {
  *
  * - `imagen` es la configurada o la de la app; si no carga (URL vencida, sin red) cae a
  *   `imagenDeRespaldo`.
+ * - `rango` («Días 8–34») es el mismo texto que Plan muestra en «Fase actual» y en «Arquitectura de
+ *   tiempo» (pedido del dueño, 2026-10-06: «los mismos días que salen en Plan»). Va junto a «FASE 2 DE 4»,
+ *   como en Plan va junto al «02».
  * - `celebrar` (sólo la primera vez que se entra en una fase): el animal aterriza desde un 82 % con un
  *   resorte corto y una sola vibración. Con «reducir movimiento» el sistema salta la animación.
  */
@@ -36,6 +39,7 @@ export function TarjetaDeFase({
   numero,
   totalDeFases,
   nombreDeLaFase,
+  rango,
   animal,
   diasDeLaFase,
   diaDelPrograma,
@@ -46,6 +50,8 @@ export function TarjetaDeFase({
   numero: number;
   totalDeFases: number;
   nombreDeLaFase: string;
+  /** «Días 8–34», de `FASES_EN_ORDEN`: el mismo rótulo de Plan. */
+  rango: string;
   animal: AnimalParaLaTarjeta;
   diasDeLaFase?: DiasDeLaFase | null;
   diaDelPrograma?: number | null;
@@ -74,7 +80,7 @@ export function TarjetaDeFase({
     <View
       accessible
       accessibilityLabel={
-        `Fase ${numero} de ${totalDeFases}, ${nombreDeLaFase}. Tu animal: ${animal.nombre}.` +
+        `Fase ${numero} de ${totalDeFases}, ${nombreDeLaFase}, ${rango.toLowerCase()}. Tu animal: ${animal.nombre}.` +
         (diasDeLaFase ? ` Día ${diasDeLaFase.dia} de ${diasDeLaFase.total} de esta fase.` : '') +
         (dichoDelDia ? ` ${dichoDelDia}.` : '')
       }
@@ -109,9 +115,12 @@ export function TarjetaDeFase({
               ¡Entraste en la Fase {numero}!
             </Text>
           ) : null}
-          <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1.4 }]}>
-            FASE {numero} DE {totalDeFases}
-          </Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 10 }}>
+            <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1.4 }]}>
+              FASE {numero} DE {totalDeFases}
+            </Text>
+            <Text style={[t.small, { color: c.micro }]}>{rango}</Text>
+          </View>
           <Text style={{ fontFamily: 'Fraunces_700Bold', ...tamanoDelTitulo(nombreDeLaFase), letterSpacing: -0.5, color: c.textStrong, marginTop: 6 }}>
             {nombreDeLaFase}
           </Text>

@@ -220,6 +220,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **Días dentro de la fase**: `utils/diasDeLaFase.ts` los saca de `FASES_EN_ORDEN` (la única tabla de fases de la app, con
       los cortes del backend 1/8/35/65). El backend aún no manda inicio y fin de la fase en `/home`; cuando lo haga, se
       cambia esa función. Sin fase o sin día no se dibuja la barra.
+      > **Corregido 2026-10-06 (`fase-en-yo`).** `utils/diasDeLaFase.ts` ya no existe: la cuenta vive en
+      > `features/home/utils/faseEnCurso.ts`, la misma que usa Plan (ver la entrada de abajo).
     * **Imagen y nombre configurados** (backend D-258, `GET /api/v1/phase-animals`): `useAnimalesDeFase` + `animalConfigurado`.
       Sin nada configurado, sin red o si la imagen no carga, se usa la de `assets/fases/` (respaldo). La imagen remota lleva
       `cacheKey` = su ruta (la URL firmada cambia cada hora).
@@ -230,6 +232,18 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       defecto» (diálogo de confirmación y `ConfirmacionEnLinea` al terminar). Validación previa de tipo (PNG/WebP), peso (2 MB) y
       medidas (256–4096 px) con los mismos límites del servidor, que decide al confirmar.
     * **Hace falta un APK nuevo** y el backend con D-258 (V94).
+  * **Cambio por pedido del dueño — 2026-10-06 — tabs `Yo` y `Plan`: la misma fase en las dos** («En Yo las fases están con
+    bug: deben ser iguales que en Plan […] los mismos días que salen en Plan, en "Arquitectura de tiempo"»). Lo que cambia y
+    nada más:
+    * **Una sola cuenta de la fase**: `features/home/utils/faseEnCurso.ts` (número, nombre, rango «Días 8–34» y «Día N de M de
+      esta fase», con la fase que manda el backend en `/home` y los cortes de `FASES_EN_ORDEN`). La leen la tarjeta de Yo,
+      «Fase actual» y «Arquitectura de tiempo» de Plan y la vista previa de Administración. Se quitó `yo/utils/diasDeLaFase.ts`.
+    * **Plan lee `/home` con `useResumenHome`** (como Yo y Hoy), que relee al volver al foco. Antes usaba `useProgramaDia`, que lo
+      lee una sola vez al montar la pestaña: con la app abierta al cambiar el día, Plan se quedaba en el de ayer (del 34 al 35, Yo
+      decía «Fase 3 · El Maestro Interno» y Plan «02 · El Ciclo Alquímico»). Solo la primera carga cuenta como «cargando», así
+      el arco y los tramos no se vacían al volver.
+    * **La tarjeta de Yo dice el rango de Plan**: «FASE 2 DE 4  Días 8–34» (el rango en el color `micro`, como en Plan junto al
+      «02»). El resto del diseño B no cambia. Sin APK nuevo no se ve en el teléfono.
   * **Cambio por pedido del dueño — 2026-10-05 — tab `Yo`: Yo y el Centro de Perfil y Ajustes** (rediseño aprobado
     por el dueño: mosaico `trainingyo-iconos-inventario.png`, filas de Yo y Ajustes, y sus decisiones 10, 12 y 14).
     Lo que cambia y nada más:
