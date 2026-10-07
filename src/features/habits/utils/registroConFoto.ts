@@ -69,6 +69,46 @@ export function totalConHoy(medicion: MedicionPedida, texto: string): number {
 /** Un registro terminal ya no acepta evidencia ni cierre: el backend los rechaza. */
 const ESTADOS_VENCIDOS: ReadonlySet<string> = new Set(['EXPIRADO', 'FALLIDO']);
 
+const MESES = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+];
+
+/**
+ * «5 de octubre» desde la `fechaEjecucion` del registro (`YYYY-MM-DD`). Se lee el texto y no se pasa
+ * por `Date`: un `new Date('2026-10-05')` es la medianoche UTC, que en Lima ya es el 4.
+ */
+export function diaDelRegistro(fechaEjecucion: string | null | undefined): string | null {
+  const partes = /^(\d{4})-(\d{2})-(\d{2})/.exec(fechaEjecucion ?? '');
+  if (!partes) return null;
+  const mes = MESES[Number(partes[2]) - 1];
+  return mes ? `${Number(partes[3])} de ${mes}` : null;
+}
+
+/**
+ * El aviso de un registro que ya no se puede registrar (D-259 del backend, regla del dueño del 2026-10-06:
+ * «un hábito se registra durante su día aunque se le haya pasado la hora; solo los del día»).
+ *
+ * `EXPIRADO` quiere decir que su día ya terminó (el servidor solo vence lo de un día cerrado). Antes
+ * decía «Este hábito ya venció · Pasó el plazo para registrarlo hoy»: sonaba a que pasada la hora ya no
+ * se podía, que es justo lo contrario de la regla. `FALLIDO` es una sesión rota del Santuario.
+ */
+export function avisoDeHabitoCerrado(
+  estado: string | null | undefined,
+  fechaEjecucion?: string | null,
+): { titulo: string; mensaje: string } {
+  if (estado === 'FALLIDO') {
+    return { titulo: 'Este hábito ya cerró', mensaje: 'Su sesión no se completó, así que ya no acepta evidencia.' };
+  }
+  const dia = diaDelRegistro(fechaEjecucion);
+  return {
+    titulo: 'Este hábito ya cerró',
+    mensaje: dia
+      ? `Este hábito era del ${dia}; ese día ya cerró. Solo se registran los hábitos del día.`
+      : 'Era de un día que ya cerró. Solo se registran los hábitos del día.',
+  };
+}
+
 export type EstadoParaFoto =
   /**
    * Se puede registrar. `evidenciaYaSubida`: un intento anterior ya dejó la evidencia. `medicion`
@@ -76,7 +116,8 @@ export type EstadoParaFoto =
    */
   | { tipo: 'disponible'; evidenciaYaSubida: boolean; medicion?: MedicionPedida }
   | { tipo: 'completado' }
-  | { tipo: 'vencido' }
+  /** Su día ya cerró (`EXPIRADO`) o su sesión se rompió (`FALLIDO`): ya no se registra. */
+  | { tipo: 'vencido'; estado?: string; fechaEjecucion?: string }
   /** El registro no está entre los de hoy: la pantalla quedó abierta de un día para otro. */
   | { tipo: 'no-es-de-hoy' }
   /**
@@ -98,10 +139,12 @@ export function estadoParaFoto(
   const track = tracks.find(t => t.id === registroId);
   if (!track) return { tipo: 'no-es-de-hoy' };
   if (track.estado === 'COMPLETADO') return { tipo: 'completado' };
-  if (ESTADOS_VENCIDOS.has(track.estado)) return { tipo: 'vencido' };
-  // Pasado `plazoEvidencia` el hábito sigue PENDIENTE y el backend lo acepta: paga 0 puntos y queda
-  // como tarde (el 409 por vencido se quitó a propósito). Bloquearlo acá era más estricto que el
-  // backend y que la app de antes (E-280): solo cortan EXPIRADO y FALLIDO.
+  if (ESTADOS_VENCIDOS.has(track.estado)) {
+    return { tipo: 'vencido', estado: track.estado, fechaEjecucion: track.fechaEjecucion };
+  }
+  // Pasado `plazoEvidencia` el hábito sigue PENDIENTE y el backend lo acepta hasta que termina su día:
+  // paga menos o 0 puntos y queda como tarde. Bloquearlo acá era más estricto que el backend y que la
+  // app de antes (E-280): solo cortan EXPIRADO (su día ya cerró) y FALLIDO.
   const medicion = medicionPedidaDe(track);
   return { tipo: 'disponible', evidenciaYaSubida: track.tieneEvidencia === true, ...(medicion ? { medicion } : {}) };
 }
@@ -116,10 +159,7 @@ export function avisoParaFoto(
     case 'completado':
       return { titulo: 'Ya está registrado', mensaje: 'Este hábito ya quedó cumplido hoy.' };
     case 'vencido':
-      return {
-        titulo: 'Este hábito ya venció',
-        mensaje: 'Pasó el plazo para registrarlo hoy, así que ya no acepta evidencia.',
-      };
+      return avisoDeHabitoCerrado(estado.estado, estado.fechaEjecucion);
     case 'no-es-de-hoy':
       return {
         titulo: 'Tu día cambió',

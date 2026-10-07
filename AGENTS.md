@@ -1294,6 +1294,14 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **`Training` — VER sobre un hábito ya cumplido ya no abre el modal de subida**: muestra lo
       que se escribió. Antes subía otra vez y terminaba en un `/complete` que el backend rechaza.
       Tampoco se abre la cámara para un registro `EXPIRADO`/`FALLIDO`.
+      > **Corregido 2026-10-06 (D-259 del backend).** El aviso de ese caso decía «Este hábito ya venció ·
+      > Pasó el plazo para registrarlo hoy», y `habitoDelMomento` contaba `EXPIRADO` como accionable. Regla
+      > confirmada por el dueño: **un hábito se registra durante su día aunque se le haya pasado la hora
+      > (vencer la hora solo baja los puntos); solo los del día.** `EXPIRADO` = su día ya cerró: el aviso dice
+      > «Este hábito era del 5 de octubre; ese día ya cerró» (`avisoDeHabitoCerrado`), vale también en web y en
+      > el modal genérico, y el «hábito del momento» ya no lo ofrece. Un `PENDIENTE` pasado su `plazoEvidencia`
+      > se sigue registrando, y su tarjeta dice «Todavía puedes registrarlo hoy, sin puntos / con menos puntos»
+      > (`avisoDeHoraPasada`). El servidor responde 409 a un registro de un día ya cerrado.
     * **`Hoy` — la hoja del orbe** muestra el pedido de foto del acompañante (evento `evidencia`)
       con **"Tomar foto"**, que abre la misma cámara y la misma pantalla partida. Nada más de Hoy
       cambia; al registrarse, Hoy relee el resumen y el hábito del momento.

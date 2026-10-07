@@ -43,7 +43,10 @@ export function agregarPedido(pedidos: readonly PedidoDeFotoUI[] | undefined, nu
   return actuales.some(p => p.registroId === nuevo.registroId) ? [...actuales] : [...actuales, nuevo];
 }
 
-/** Pasado `venceEn`, el botón se deshabilita. Es cosmético: quien decide es el registro del servidor. */
+/**
+ * Pasado `venceEn`, el botón se deshabilita. Es cosmético: quien decide es el registro del servidor. `venceEn` es el
+ * fin del día local del participante (no la hora del hábito): pasada la hora todavía se puede registrar.
+ */
 export function estadoVisibleDelPedido(pedido: PedidoDeFotoUI, ahoraMs: number): EstadoPedidoDeFotoUI {
   if (pedido.estado !== 'pendiente') return pedido.estado;
   const vence = Date.parse(pedido.venceEn);
@@ -61,7 +64,7 @@ export function cambioTrasIniciar(resultado: ResultadoDeInicio, destino: Destino
     case 'completado':
       return { estado: 'registrado', mensaje: esAccion ? 'Ya estaba registrada.' : 'Ya estaba registrado.' };
     case 'vencido':
-      return { estado: 'vencido', mensaje: esAccion ? 'Era de otro día.' : 'Este hábito ya venció.' };
+      return { estado: 'vencido', mensaje: esAccion ? 'Era de otro día.' : 'Ese día ya cerró: solo se registran los hábitos del día.' };
     case 'no-es-de-hoy':
       return { estado: 'vencido', mensaje: 'Era de otro día.' };
     default:

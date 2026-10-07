@@ -122,7 +122,9 @@ const trackDelDiaSchema = z
      *   terminal (hecho, vencido o fallido) — no hay nada en juego en lo que ya pasó.
      * - `puntosMaximos`: el techo de la escala, para poder decir "6 de 10" sin que el cliente
      *   tenga que conocer la constante (que es del backend, D-97, y puede cambiar).
-     * - `plazoEvidencia`: instante ISO en que el hábito se bloquea. Es lo que permite la cuenta
+     * - `plazoEvidencia`: instante ISO en que el hábito deja de dar puntos. NO lo bloquea: se puede
+     *   registrar hasta el fin de su día, con 0 puntos (D-259 del backend; corregido 2026-10-06, decía
+     *   «instante en que el hábito se bloquea»). Es lo que permite la cuenta
      *   regresiva y ordenar "el próximo a vencer" sin recalcular ninguna ventana ni conocer la
      *   zona horaria del aprendiz. Null si el hábito no vence.
      */

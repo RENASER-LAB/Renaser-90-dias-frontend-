@@ -50,7 +50,7 @@ export function TarjetaFotoDeHabito({ pedido, onTomarFoto }: Props) {
 
       {estado === 'vencido' ? (
         <Text style={[t.small, { color: c.textSoft, fontSize: 13 }]}>
-          {pedido.mensaje || 'Ya pasó el plazo para registrarlo.'}
+          {pedido.mensaje || 'Su día ya cerró: solo se registran los hábitos del día.'}
         </Text>
       ) : null}
     </View>

@@ -32,8 +32,9 @@ const REFRESCO_MS = 30_000;
  * El más próximo a vencer entre los que TODAVÍA se pueden entregar.
  *
  * Descarta los hechos (`done`), los que no vencen (`deadline` nulo) y los que ya se pasaron: un
- * hábito vencido no está "por vencer", y mostrarlo con "hace 2 h" sería empujar a la persona a
- * algo que ya no puede hacer.
+ * hábito cuyo plazo ya pasó no está "por vencer". Se puede registrar igual hasta el fin de su día,
+ * sin puntos, y eso lo dice su tarjeta (`avisoDeHoraPasada`). *Corregido 2026-10-06: decía «sería
+ * empujar a la persona a algo que ya no puede hacer».*
  */
 export function proximoAVencer(habits: HabitItem[], ahora: number): HabitItem | null {
   let proximo: HabitItem | null = null;

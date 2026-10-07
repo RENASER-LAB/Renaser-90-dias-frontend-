@@ -6,7 +6,9 @@ import { describe, expect, it, jest } from '@jest/globals';
 import { ApiError } from '../../../../services/http/apiClient';
 import type { TrackDelDiaApi } from '../../types/habits.types';
 import {
+  avisoDeHabitoCerrado,
   avisoParaFoto,
+  diaDelRegistro,
   estadoParaFoto,
   formatoKm,
   leerKilometros,
@@ -293,5 +295,36 @@ describe('KILÓMETROS DIARIOS (D-226)', () => {
       deps,
     );
     expect(deps.completar).toHaveBeenCalledWith('r-1', null, null);
+  });
+});
+
+/**
+ * D-259 del backend (regla del dueño, 2026-10-06): «un hábito se registra durante su día aunque se le haya pasado
+ * la hora; solo los del día». Falla contra el código anterior, que decía «Este hábito ya venció · Pasó el plazo para
+ * registrarlo hoy» de un registro EXPIRADO, que es de un día que ya terminó.
+ */
+describe('aviso de un hábito cuyo día ya cerró', () => {
+  it('nombra el día del registro, leído del texto y no de un Date en UTC', () => {
+    expect(diaDelRegistro('2026-10-05')).toBe('5 de octubre');
+    expect(diaDelRegistro('2026-01-31')).toBe('31 de enero');
+    expect(diaDelRegistro(null)).toBeNull();
+  });
+
+  it('EXPIRADO: dice de qué día era y que ese día ya cerró', () => {
+    const estado = estadoParaFoto([track({ estado: 'EXPIRADO', fechaEjecucion: '2026-10-05' })], 'r-1', AHORA);
+    expect(avisoParaFoto(estado)).toEqual({
+      titulo: 'Este hábito ya cerró',
+      mensaje: 'Este hábito era del 5 de octubre; ese día ya cerró. Solo se registran los hábitos del día.',
+    });
+  });
+
+  it('ya no dice que pasó el plazo de hoy', () => {
+    const aviso = avisoDeHabitoCerrado('EXPIRADO', '2026-10-05');
+    expect(aviso.mensaje).not.toMatch(/plazo|hoy/);
+  });
+
+  it('un PENDIENTE pasado su plazoEvidencia sigue disponible: lo tarde del mismo día se registra', () => {
+    const tarde = track({ estado: 'PENDIENTE', plazoEvidencia: '2026-09-26T13:10:00Z' });
+    expect(estadoParaFoto([tarde], 'r-1', AHORA).tipo).toBe('disponible');
   });
 });
