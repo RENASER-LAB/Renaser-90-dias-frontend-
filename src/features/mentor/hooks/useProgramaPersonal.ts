@@ -84,5 +84,7 @@ export function useProgramaPersonal(activo: boolean, usuarioId?: string | null) 
     }
   }, [usuarioId]);
 
-  return { visible: puedeActivar && !pospuesto, activando, error, activar, posponer };
+  /* `puedeActivar` sin el «Ahora no» (D-260): Training y Yo ofrecen empezar aunque se haya
+     pospuesto en Hoy. Antes «Ahora no» escondía la única entrada para siempre. */
+  return { visible: puedeActivar && !pospuesto, puedeActivar, activando, error, activar, posponer };
 }

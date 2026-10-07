@@ -1363,6 +1363,25 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       > entrada «el momento de cumplir un hábito» de abajo.
     * **«Reducir movimiento»**: el rig sigue montado y quieto; sin saludo, toque, asentir, boca ni salto.
     * **Hace falta un APK nuevo** (módulo nativo nuevo): el fénix animado no se ve en ningún teléfono sin esa build.
+  * **Cambio por pedido del dueño — 2026-10-07 — tabs `Training`, `Hoy` y `Yo`: «Elegir mi Día 1» para el personal**
+    (backend D-260, E-577). Captura del dueño con una cuenta ADMIN: Training decía «Todavía no elegiste tu Día 1» y no
+    había dónde elegirlo. Regla del dueño: el personal (MENTOR, LÍDER DE MENTORES, ADMIN, ALQUIMISTA) elige su Día 1 con
+    el mismo selector y la misma regla que el aprendiz, y su programa empieza ese día sin descontar nada. Lo que cambia y
+    nada más:
+    * **Fila sin Día 1, cualquier rol:** botón «Elegir mi Día 1» (`programa/components/BotonElegirDiaUno`) que abre
+      `ActivarProgramaScreen` **tal cual** —mismas fechas del servidor, mismo `POST /onboarding/activate-program`— a
+      pantalla completa, con flecha para volver (prop `alVolver`, solo fuera del onboarding; en el onboarding la pantalla
+      sigue sin «volver» y tragándose el gesto). Está en la tarjeta de Training y, como tarjeta «Todavía no elegiste tu
+      Día 1», en Hoy y Yo (`EntradaAlProgramaPropio`, que solo consulta con `inscrito` y día 0). Al elegir, el aviso se va
+      solo (`useArranqueDelPrograma` acepta una `version` para volver a consultar).
+    * **Sin fila (personal que nunca empezó):** Training muestra la invitación «Hacer mi programa de 90 días · Empezar»
+      en vez de «No pudimos cargar tu entrenamiento» con el uuid. La tarjeta salió de Hoy a
+      `programa/components/InvitacionProgramaPropio` (mismo texto, mismos botones); «Empezar» sigue siendo
+      `POST /mentor/activate-tracking`, que arranca hoy.
+    * **«Ahora no»** sigue escondiendo la invitación solo en Hoy; Yo la ofrece siempre que el servidor diga
+      `canStartProgram` (`useProgramaPersonal` devuelve además `puedeActivar`, sin el pospuesto).
+    * Nada depende del nombre del rol (los dos idiomas: `MENTOR_LEAD`/`LIDER_MENTORES`, `ALCHEMIST`/`ALQUIMISTA`): lo
+      decide el servidor (`activated`, `canStartProgram`). El flujo del aprendiz no cambia.
   * **Cambio por pedido del dueño — 2026-10-07 — tab `Training` y el botón de SER: el momento de cumplir un hábito**
     («cuando alguien completa un hábito no hay animación… lo quiero lo más fluido posible»; propuesta aprobada por el
     dueño). Lo que cambia y nada más:

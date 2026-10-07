@@ -26,6 +26,12 @@ import { mensajeDeError } from '../../../services/http/apiClient';
 
 interface ActivarProgramaScreenProps {
   onActivated: () => void;
+  /**
+   * Volver sin elegir. Solo fuera del onboarding (D-260): el personal abre esta misma pantalla
+   * desde «Elegir mi Día 1» en Training, Hoy o Yo, y ahí sí tiene a dónde volver. En el onboarding
+   * no viene, y la pantalla sigue tragándose el gesto de retroceso como siempre.
+   */
+  alVolver?: () => void;
 }
 
 const NOMBRES_DIA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
@@ -54,7 +60,7 @@ function formatearFecha(iso: string): string {
   return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
 
-export function ActivarProgramaScreen({ onActivated }: ActivarProgramaScreenProps) {
+export function ActivarProgramaScreen({ onActivated, alVolver }: ActivarProgramaScreenProps) {
   const { c, t } = useTheme();
 
   const [cargando, setCargando] = useState(true);
@@ -63,9 +69,13 @@ export function ActivarProgramaScreen({ onActivated }: ActivarProgramaScreenProp
   const [confirmando, setConfirmando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // No hay a dónde volver desde acá: Términos ya quedó firmado y guardado. Tragarse el gesto de
-  // retroceso evita que la persona salga a mitad de elegir su fecha de inicio.
-  useSystemBackHandler(() => true, true);
+  // En el onboarding no hay a dónde volver desde acá: Términos ya quedó firmado y guardado. Tragarse
+  // el gesto de retroceso evita que la persona salga a mitad de elegir su fecha de inicio. Fuera
+  // del onboarding (`alVolver`), atrás cierra la pantalla sin elegir nada.
+  useSystemBackHandler(() => {
+    alVolver?.();
+    return true;
+  }, true);
 
   useEffect(() => {
     let vigente = true;
@@ -110,6 +120,8 @@ export function ActivarProgramaScreen({ onActivated }: ActivarProgramaScreenProp
 
   return (
     <MarcoDePaso
+      alVolver={alVolver}
+      accesibilidadVolver={alVolver ? 'Volver sin elegir' : undefined}
       pie={
         <GoldButton
           label="CONFIRMAR MI DÍA 1"
@@ -123,7 +135,9 @@ export function ActivarProgramaScreen({ onActivated }: ActivarProgramaScreenProp
       {/* Mismos textos; el encabezado va como en el resto del onboarding desde el 2026-10-05
           (alineado a la izquierda, sin el medallón con el calendario). */}
       <View style={styles.headerBlock}>
-        <Text style={[t.micro, { color: c.micro, textTransform: 'uppercase' }]}>Un último paso</Text>
+        <Text style={[t.micro, { color: c.micro, textTransform: 'uppercase' }]}>
+          {alVolver ? 'Tu programa' : 'Un último paso'}
+        </Text>
         <Text accessibilityRole="header" style={[t.screenTitle, { color: c.textStrong }]}>
           Elige tu Día 1
         </Text>

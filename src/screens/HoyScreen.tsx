@@ -20,7 +20,7 @@ import { tacto } from '../utils/tacto';
 import { Aparicion } from '../components/Aparicion';
 import { useEsMentor } from '../features/mentor/hooks/useEsMentor';
 import { useCelulaQueAcompano } from '../features/mentor/hooks/useCelulaQueAcompano';
-import { useProgramaPersonal } from '../features/mentor/hooks/useProgramaPersonal';
+import { EntradaAlProgramaPropio } from '../features/programa/components/EntradaAlProgramaPropio';
 import { TarjetaMentorHoy } from '../features/mentor/components/TarjetaMentorHoy';
 import { entradaAlGrupoVisible, esLiderDeMentores, esOtroDeMisGrupos } from '../features/mentor/utils/entradaAlGrupo';
 import { TarjetaBandejaHoy } from '../features/tickets/components/TarjetaBandejaHoy';
@@ -114,10 +114,7 @@ export default function HoyScreen() {
   /* Ya no `esMentor`: la invitacion al programa propio es para todo el staff, ADMIN y ALQUIMISTA
      incluidos. Atarla a "es mentor" los dejaba fuera de un programa que el backend si les
      permitia iniciar — el bloqueo estaba aca, no en el permiso (ARF-16). */
-  const programaPersonal = useProgramaPersonal(
-    esMentor || capacidades.administrar || capacidades.puedeIniciarPrograma,
-    user?.id ?? null,
-  );
+  const programaPropioActivo = esMentor || capacidades.administrar || capacidades.puedeIniciarPrograma;
   const [enAdministracion, setEnAdministracion] = useState(false);
   /* La bandeja de tickets: la unica pantalla propia del LIDER DE MENTORES. Se monta como estado
      de Hoy, igual que Administracion y que las vistas del mentor — no como un tab nuevo. */
@@ -804,54 +801,16 @@ export default function HoyScreen() {
             <TarjetaSemaforoGruposHoy onAbrir={() => setEnSemaforoGrupos(true)} />
           ) : null}
 
-          {/*
-            Invitación secundaria, no un bloqueo. Acompañar no exige cursar (D-07), así que esto
-            es una oferta: quien dice "Ahora no" sigue trabajando igual y no pierde ningún dato —
-            posponer no llama a nada, y menos al DELETE, que borraría la participación entera.
-          */}
-          {programaPersonal.visible ? (
-            <Card>
-              <MicroLabel>Tu programa</MicroLabel>
-              <Text style={[t.cardTitle, { color: c.textStrong, marginTop: 8 }]}>
-                Hacer mi programa de 90 días
-              </Text>
-              {/* Era `fontSize: 13`, por debajo del mínimo de párrafo de AGENTS.md §4 (14–15.5).
-                  Se usa `t.body` tal cual: 15/22, que es lo que el token ya define. */}
-              <Text style={[t.body, { color: c.textSoft, marginTop: 8 }]}>
-                Puedes recorrerlo tú también: tus hábitos, tus objetivos y tu Mapa, con tu propio
-                día. No cambia nada de lo que ves como acompañante.
-              </Text>
-              {programaPersonal.error ? (
-                <Text style={[t.small, { color: c.danger, marginTop: 10 }]}>
-                  {programaPersonal.error}
-                </Text>
-              ) : null}
-              <View style={{ flexDirection: 'row', gap: 10, marginTop: 18, flexWrap: 'wrap' }}>
-                <Pressable
-                  onPress={() => void programaPersonal.activar()}
-                  disabled={programaPersonal.activando}
-                  accessibilityRole="button"
-                  accessibilityState={{ disabled: programaPersonal.activando }}
-                  style={[
-                    estilosPrograma.principal,
-                    { backgroundColor: c.gold, opacity: programaPersonal.activando ? 0.6 : 1 },
-                  ]}
-                >
-                  <Text style={[t.body, { color: c.onGold, fontFamily: 'Jost_700Bold' }]}>
-                    {programaPersonal.activando ? 'Activando…' : 'Empezar'}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => void programaPersonal.posponer()}
-                  accessibilityRole="button"
-                  accessibilityLabel="Ahora no. No se borra nada."
-                  style={[estilosPrograma.secundario, { borderColor: c.border }]}
-                >
-                  <Text style={[t.body, { color: c.textSoft }]}>Ahora no</Text>
-                </Pressable>
-              </View>
-            </Card>
-          ) : null}
+          {/* El programa propio (D-260): «Hacer mi programa de 90 días» a quien no tiene fila y, a quien
+              la tiene sin Día 1, «Elegir mi Día 1». La tarjeta vive en `EntradaAlProgramaPropio`,
+              la misma de Yo y Training. «Ahora no» sigue siendo solo de Hoy. */}
+          <EntradaAlProgramaPropio
+            lugar="hoy"
+            activo={programaPropioActivo}
+            usuarioId={user?.id ?? null}
+            inscrito={resumen?.inscrito}
+            diaPrograma={resumen?.diaPrograma}
+          />
 
           {/* Código Renaser. Va PRIMERO durante los días 1-7 y sólo entonces: es lo único de esta
               pantalla con un plazo de una hora, y el día 8 desaparece por completo (mismo corte
@@ -1269,26 +1228,3 @@ const styles = StyleSheet.create({
   },
 });
 
-/**
- * Botones de la invitación al programa personal. 48 px: pulsables con una sola mano.
- *
- * El borde de `secundario` **se conserva a propósito**, aunque viva dentro de una tarjeta que ya
- * tiene el suyo: es un control, no decoración. Sin contorno, "Ahora no" queda como texto suelto
- * al lado de un botón relleno, y para alguien de 40–60 deja de parecer pulsable. La regla de esta
- * pasada es quitar los bordes que sólo adornan, no los que dicen "esto se toca".
- */
-const estilosPrograma = StyleSheet.create({
-  principal: {
-    minHeight: 48,
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-    borderRadius: space.radiusSm,
-  },
-  secundario: {
-    minHeight: 48,
-    justifyContent: 'center',
-    paddingHorizontal: 18,
-    borderRadius: space.radiusSm,
-    borderWidth: 1,
-  },
-});

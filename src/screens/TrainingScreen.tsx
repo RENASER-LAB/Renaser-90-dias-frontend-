@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
 import { Alert } from '../components/Alerta';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -60,6 +60,9 @@ import {
   formatearFechaLarga,
   useArranqueDelPrograma,
 } from '../features/programa/hooks/useArranqueDelPrograma';
+import { useProgramaPersonal } from '../features/mentor/hooks/useProgramaPersonal';
+import { BotonElegirDiaUno } from '../features/programa/components/BotonElegirDiaUno';
+import { InvitacionProgramaPropio } from '../features/programa/components/InvitacionProgramaPropio';
 import { borradorEspiritu } from '../features/spirit/storage/borradorEspiritu';
 import type { DayOfWeek } from './PlanScreen';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
@@ -264,8 +267,15 @@ export default function TrainingScreen() {
    * empieza pasado mañana o más tarde. Si esa regla cambia, tiene que cambiar en un solo lugar y
    * valer para las dos pantallas.
    */
-  const { diaPrograma, loading: cargandoDiaPrograma } = useProgramaDia();
-  const arranque = useArranqueDelPrograma(!cargandoDiaPrograma && diaPrograma === 0);
+  const {
+    diaPrograma,
+    inscrito,
+    loading: cargandoDiaPrograma,
+    recargar: recargarDiaPrograma,
+  } = useProgramaDia();
+  /* D-260: tras «Elegir mi Día 1» se vuelve a preguntar, y el aviso de abajo se va solo. */
+  const [versionArranque, setVersionArranque] = useState(0);
+  const arranque = useArranqueDelPrograma(!cargandoDiaPrograma && diaPrograma === 0, versionArranque);
   const programaSinArrancar =
     arranque.estado === 'PENDIENTE_ELEGIR' || arranque.estado === 'ESPERANDO_INICIO';
 
@@ -425,6 +435,17 @@ export default function TrainingScreen() {
    */
   const [pastillaVisible, setPastillaVisible] = useState(false);
   const { user } = useAuth();
+  /* D-260: quien no tiene fila en el programa (personal que nunca empezó) veía «No pudimos cargar tu
+     entrenamiento» con «Participante no encontrado: <uuid>». Si el servidor dice que puede empezar
+     (`canStartProgram`), se le muestra la invitación de Hoy en lugar del error. Solo se pregunta
+     cuando `/home` dice que no está inscrito: el aprendiz y quien ya cursa no pagan la llamada. */
+  const programaPropio = useProgramaPersonal(!cargandoDiaPrograma && !inscrito, user?.id ?? null);
+  const sinProgramaPropio = programaPropio.puedeActivar;
+  const alActivarProgramaPropio = useCallback(() => {
+    setVersionArranque(v => v + 1);
+    void recargarDiaPrograma();
+    void recargarEntrenamiento();
+  }, [recargarDiaPrograma, recargarEntrenamiento]);
   // Renombrar las dos bebidas (D-127). Va ACA y no solo en Plan: la subvista de habitos de Plan
   // no tiene quien la abra --`setActiveSubView('habitos')` no se llama desde ningun lado--, asi
   // que el boton que vivia alla era inalcanzable. Esta lista, en cambio, es la que la persona
@@ -904,8 +925,19 @@ export default function TrainingScreen() {
                     diaAnterior(arranque.fechaInicio),
                   )} vas a poder organizar tus hábitos y entregar evidencia; hasta entonces no hay nada que hacer acá.`}
             </Text>
+            {/* D-260: el aviso pedía elegir y no había dónde. Abre el selector del onboarding. */}
+            {arranque.estado === 'PENDIENTE_ELEGIR' ? (
+              <View style={{ marginTop: 4 }}>
+                <BotonElegirDiaUno onActivado={alActivarProgramaPropio} />
+              </View>
+            ) : null}
           </View>
         )}
+
+        {/* Sin programa propio (D-260): la invitación de Hoy, no el error técnico. */}
+        {sinProgramaPropio && selectedDimension === null ? (
+          <InvitacionProgramaPropio programa={programaPropio} onActivado={alActivarProgramaPropio} />
+        ) : null}
 
         {/* ========================================================================= */}
         {/* VISTA 1: CATÁLOGO DE LAS 5 DIMENSIONES PRINCIPALES                        */}
@@ -977,7 +1009,7 @@ export default function TrainingScreen() {
               </View>
             )}
 
-            {!cargandoBackend && errorBackend !== null && (
+            {!cargandoBackend && errorBackend !== null && !sinProgramaPropio && (
               <View
                 style={{
                   gap: 12,
@@ -1013,7 +1045,7 @@ export default function TrainingScreen() {
             )}
 
             <View style={{ gap: 12 }}>
-              {!cargandoBackend && errorBackend === null && DIMENSIONES_CONFIG.map(d => {
+              {!cargandoBackend && errorBackend === null && !sinProgramaPropio && DIMENSIONES_CONFIG.map(d => {
                 const dimHabits = habits.filter(h => h.dimension === d.key);
                 // Dice "CUMPLIDOS" y no "EVIDENCIAS" (2026-09-05, pedido del dueño: que se
                 // distingan). El número cuenta ítems del día ya dados por hechos — y la mitad

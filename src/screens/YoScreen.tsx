@@ -23,6 +23,7 @@ import { useSystemBackHandler } from '../hooks/useSystemBackHandler';
 import { MicroLabel, ScreenHeader } from '../components/ui';
 import { AdminScreen } from '../features/admin/screens/AdminScreen';
 import { useCapacidades } from '../features/admin/hooks/useCapacidades';
+import { EntradaAlProgramaPropio } from '../features/programa/components/EntradaAlProgramaPropio';
 import { Icon, TAMANO_ICONO, type IconName } from '../components/Icon';
 import { GoldButton } from '../components/GoldButton';
 import { Interruptor } from '../components/Interruptor';
@@ -610,6 +611,17 @@ export default function YoScreen() {
               <Text style={[t.small, { color: c.micro, marginTop: 3 }]}>{profileEmail}</Text>
             </View>
           </View>
+
+          {/* El programa propio (D-260): la entrada que queda después de «Ahora no» en Hoy (antes la
+              invitación desaparecía para siempre) y «Elegir mi Día 1» para quien tiene la fila sin
+              elegir. Solo la ve el personal: para el aprendiz no hay nada que mostrar acá. */}
+          <EntradaAlProgramaPropio
+            lugar="yo"
+            activo={capacidades.puedeIniciarPrograma}
+            usuarioId={user?.id ?? null}
+            inscrito={resumen?.inscrito}
+            diaPrograma={resumen?.diaPrograma}
+          />
 
           {/* Tu evolución. Tipo oración, como Hoy (pedido del dueño del 2026-10-05): el rótulo, la
               fase y el día iban en versales espaciadas («TU EVOLUCIÓN», «EL CICLO ALQUÍMICO», «DÍA 15

@@ -52,7 +52,12 @@ function fechaCivil(fecha: Date): string {
   ).padStart(2, '0')}`;
 }
 
-export function useArranqueDelPrograma(habilitado: boolean): ArranquePrograma {
+/**
+ * `version` (D-260): cambiarla vuelve a consultar. La usa quien acaba de elegir su Día 1 desde
+ * «Elegir mi Día 1» (Training, Hoy, Yo): sin esto el aviso «Todavía no elegiste tu Día 1» seguía en
+ * pantalla después de elegirlo, porque `habilitado` no cambia (el día sigue en 0 hasta que llega).
+ */
+export function useArranqueDelPrograma(habilitado: boolean, version = 0): ArranquePrograma {
   const [arranque, setArranque] = useState<ArranquePrograma>({ estado: 'CARGANDO' });
 
   const consultar = useCallback(async () => {
@@ -84,7 +89,9 @@ export function useArranqueDelPrograma(habilitado: boolean): ArranquePrograma {
       // de red. Nunca bloquear por no saber.
       setArranque({ estado: 'EN_CURSO' });
     }
-  }, [habilitado]);
+    // `version` solo existe para volver a consultar: no se lee adentro.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [habilitado, version]);
 
   useEffect(() => {
     consultar();
