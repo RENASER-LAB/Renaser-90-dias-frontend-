@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Text, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
@@ -8,10 +8,10 @@ import type { Palette } from '../../../theme/tokens';
 import { tacto } from '../../../utils/tacto';
 import type { AnimalParaLaTarjeta } from '../utils/animalConfigurado';
 import type { DiasDeLaFase } from '../../home/utils/faseEnCurso';
+import { medidasDeLaTarjetaDeFase, PADDING_DE_LA_TARJETA, SALIDA_POR_LA_DERECHA } from '../utils/medidasDeLaTarjetaDeFase';
 
 const ENTRADA = { damping: 14, stiffness: 170, reduceMotion: ReduceMotion.System } as const;
 const ALTO = 262;
-const LADO_DEL_ANIMAL = 240;
 
 /** Un nombre largo («Sistema de Alto Rendimiento») baja un punto para no pisar al animal. */
 function tamanoDelTitulo(nombre: string) {
@@ -32,6 +32,9 @@ function tamanoDelTitulo(nombre: string) {
  * - `rango` («Días 8–34») es el mismo texto que Plan muestra en «Fase actual» y en «Arquitectura de
  *   tiempo» (pedido del dueño, 2026-10-06: «los mismos días que salen en Plan»). Va junto a «FASE 2 DE 4»,
  *   como en Plan va junto al «02».
+ * - **El animal nunca tapa el texto** (2026-10-06): su tamaño y el ancho reservado a la columna de texto
+ *   salen de `medidasDeLaTarjetaDeFase` con el ancho real de la tarjeta (`onLayout`) y la letra del sistema.
+ *   A 360 px el gorila de 240 px quedaba encima de «de esta fase» y «en total».
  * - `celebrar` (sólo la primera vez que se entra en una fase): el animal aterriza desde un 82 % con un
  *   resorte corto y una sola vibración. Con «reducir movimiento» el sistema salta la animación.
  */
@@ -63,6 +66,10 @@ export function TarjetaDeFase({
   const c = paleta ?? tema.c;
   const { t } = tema;
   const [fallo, setFallo] = useState(false);
+  const ventana = useWindowDimensions();
+  /* Hasta el primer `onLayout` se estima con la ventana (Yo deja 18 px por lado); después manda el ancho real. */
+  const [ancho, setAncho] = useState<number | null>(null);
+  const { ladoDelAnimal, reservaDerecha } = medidasDeLaTarjetaDeFase(ancho ?? ventana.width - 36, ventana.fontScale);
   const escala = useSharedValue(1);
 
   useEffect(() => setFallo(false), [animal.imagen]);
@@ -84,6 +91,7 @@ export function TarjetaDeFase({
         (diasDeLaFase ? ` Día ${diasDeLaFase.dia} de ${diasDeLaFase.total} de esta fase.` : '') +
         (dichoDelDia ? ` ${dichoDelDia}.` : '')
       }
+      onLayout={e => setAncho(e.nativeEvent.layout.width)}
       style={{ minHeight: ALTO, borderRadius: 26, overflow: 'hidden', borderWidth: 1, borderColor: c.border, backgroundColor: c.cardBg }}
     >
       <LinearGradient
@@ -95,20 +103,20 @@ export function TarjetaDeFase({
       />
       <Animated.View
         pointerEvents="none"
-        style={[{ position: 'absolute', right: -26, bottom: -14, width: LADO_DEL_ANIMAL, height: LADO_DEL_ANIMAL }, estiloAnimal]}
+        style={[{ position: 'absolute', right: -SALIDA_POR_LA_DERECHA, bottom: -14, width: ladoDelAnimal, height: ladoDelAnimal }, estiloAnimal]}
       >
         <Image
           source={fallo ? animal.imagenDeRespaldo : animal.imagen}
           onError={() => setFallo(true)}
           contentFit="contain"
           contentPosition="bottom right"
-          style={{ width: LADO_DEL_ANIMAL, height: LADO_DEL_ANIMAL }}
+          style={{ width: ladoDelAnimal, height: ladoDelAnimal }}
           accessibilityIgnoresInvertColors
         />
       </Animated.View>
       {/* Una sola columna con el texto de arriba y los días abajo: si un nombre largo da otra línea, la tarjeta
           crece en vez de que los dos bloques se pisen. */}
-      <View style={{ flex: 1, minHeight: ALTO - 2, padding: 20, paddingRight: 160, justifyContent: 'space-between', gap: 14 }}>
+      <View style={{ flex: 1, minHeight: ALTO - 2, padding: PADDING_DE_LA_TARJETA, paddingRight: reservaDerecha, justifyContent: 'space-between', gap: 14 }}>
         <View>
           {celebrar ? (
             <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', marginBottom: 2 }]}>
@@ -128,7 +136,7 @@ export function TarjetaDeFase({
             Tu animal: <Text style={{ fontFamily: 'Jost_500Medium', color: c.textStrong }}>{animal.nombre}</Text>
           </Text>
         </View>
-        <View style={{ width: 170 }}>
+        <View>
           {diasDeLaFase ? (
             <>
               <Text style={[t.body, { color: c.textStrong, fontFamily: 'Jost_500Medium', fontSize: 17 }]}>

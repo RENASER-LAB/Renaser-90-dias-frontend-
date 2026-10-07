@@ -244,6 +244,12 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       el arco y los tramos no se vacían al volver.
     * **La tarjeta de Yo dice el rango de Plan**: «FASE 2 DE 4  Días 8–34» (el rango en el color `micro`, como en Plan junto al
       «02»). El resto del diseño B no cambia. Sin APK nuevo no se ve en el teléfono.
+    * **El animal nunca tapa el texto** (de 320 a 430 px y con letra del sistema grande): `utils/medidasDeLaTarjetaDeFase.ts`
+      calcula, con el ancho real de la tarjeta (`onLayout`) y `fontScale`, cuánto mide el animal (112–240 px) y cuánto ancho
+      se reserva a la columna de texto, que termina siempre antes de la caja del animal. El texto manda: en un teléfono
+      angosto el animal se achica y sigue saliendo por el borde derecho; con la columna más angosta, «Días 8–34» puede bajar
+      a su propia línea. Antes el animal medía 240 px fijos y a 360 px tapaba «de esta fase» y «en total». Vale también para
+      la vista previa de Administración (mismo componente).
   * **Cambio por pedido del dueño — 2026-10-05 — tab `Yo`: Yo y el Centro de Perfil y Ajustes** (rediseño aprobado
     por el dueño: mosaico `trainingyo-iconos-inventario.png`, filas de Yo y Ajustes, y sus decisiones 10, 12 y 14).
     Lo que cambia y nada más:
