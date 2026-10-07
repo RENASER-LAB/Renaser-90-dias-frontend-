@@ -162,20 +162,6 @@ export async function capacidadesDePrograma(): Promise<ContextoMentorApi['capabi
 }
 
 /**
- * `POST /api/v1/mentor/activate-tracking` — inicia el programa personal de 90 días.
- *
- * Solo el propio actor: el endpoint no acepta el id de nadie más, así que no hay forma de
- * activarle el programa a otra persona por esta vía.
- *
- * NO existe la contraparte automática: `DELETE` borra la participación y con ella el progreso.
- * Que "Ahora no" fuera un DELETE convertiría un "todavía no" en una pérdida de datos, así que
- * posponer es simplemente no llamar a nada.
- */
-export async function activarProgramaPersonal(): Promise<void> {
-  await apiFetch<unknown>('/api/v1/mentor/activate-tracking', { method: 'POST' });
-}
-
-/**
  * La semana de un aprendiz. `inicio` en formato YYYY-MM-DD; sin él, el servidor devuelve la
  * semana en curso **en la zona del alumno** — que no es necesariamente la del mentor ni la del
  * teléfono, así que no se calcula acá.

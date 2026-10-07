@@ -5,6 +5,7 @@ import { Card, MicroLabel } from '../../../components/ui';
 import { useTheme } from '../../../theme/ThemeContext';
 import { space } from '../../../theme/tokens';
 import type { useProgramaPersonal } from '../../mentor/hooks/useProgramaPersonal';
+import { BotonElegirDiaUno } from './BotonElegirDiaUno';
 
 type ProgramaPersonal = ReturnType<typeof useProgramaPersonal>;
 
@@ -18,6 +19,11 @@ type ProgramaPersonal = ReturnType<typeof useProgramaPersonal>;
  *
  * Invitación secundaria, no un bloqueo. Acompañar no exige cursar (D-07), así que es una oferta:
  * «Ahora no» (solo en Hoy) no llama a nada, y menos al DELETE, que borraría la participación entera.
+ *
+ * D-261 (decisión del dueño del 2026-10-07: «que elija el día como los demás»): el botón ya no es
+ * «Empezar» (`POST /mentor/activate-tracking`, que arrancaba HOY). Es «Elegir mi Día 1», que abre el
+ * selector del aprendiz (`BotonElegirDiaUno` → `ActivarProgramaScreen`): las mismas fechas que da el
+ * servidor, y al confirmar el `POST /onboarding/activate-program` le crea la fila con esa fecha.
  */
 export function InvitacionProgramaPropio({
   programa,
@@ -26,7 +32,7 @@ export function InvitacionProgramaPropio({
 }: {
   programa: ProgramaPersonal;
   conAhoraNo?: boolean;
-  /** Después de empezar, para que la pantalla que la muestra se relea (Training). */
+  /** Después de elegir el Día 1, para que la pantalla que la muestra se relea (Training). */
   onActivado?: () => void;
 }) {
   const { c, t } = useTheme();
@@ -39,23 +45,13 @@ export function InvitacionProgramaPropio({
         Puedes recorrerlo tú también: tus hábitos, tus objetivos y tu Mapa, con tu propio día. No cambia
         nada de lo que ves como acompañante.
       </Text>
-      {programa.error ? (
-        <Text style={[t.small, { color: c.danger, marginTop: 10 }]}>{programa.error}</Text>
-      ) : null}
-      <View style={{ flexDirection: 'row', gap: 10, marginTop: 18, flexWrap: 'wrap' }}>
-        <Pressable
-          onPress={async () => {
-            if (await programa.activar()) onActivado?.();
+      <View style={{ flexDirection: 'row', gap: 10, marginTop: 18, flexWrap: 'wrap', alignItems: 'center' }}>
+        <BotonElegirDiaUno
+          onActivado={() => {
+            programa.alEmpezar();
+            onActivado?.();
           }}
-          disabled={programa.activando}
-          accessibilityRole="button"
-          accessibilityState={{ disabled: programa.activando }}
-          style={[estilos.principal, { backgroundColor: c.gold, opacity: programa.activando ? 0.6 : 1 }]}
-        >
-          <Text style={[t.body, { color: c.onGold, fontFamily: 'Jost_700Bold' }]}>
-            {programa.activando ? 'Activando…' : 'Empezar'}
-          </Text>
-        </Pressable>
+        />
         {conAhoraNo ? (
           <Pressable
             onPress={() => void programa.posponer()}
@@ -72,7 +68,7 @@ export function InvitacionProgramaPropio({
 }
 
 /**
- * Botones de la invitación al programa personal. 48 px: pulsables con una sola mano.
+ * «Ahora no» de la invitación al programa personal. 48 px: pulsable con una sola mano.
  *
  * El borde de `secundario` **se conserva a propósito**, aunque viva dentro de una tarjeta que ya
  * tiene el suyo: es un control, no decoración. Sin contorno, "Ahora no" queda como texto suelto
@@ -80,12 +76,6 @@ export function InvitacionProgramaPropio({
  * pasada es quitar los bordes que sólo adornan, no los que dicen "esto se toca".
  */
 const estilos = StyleSheet.create({
-  principal: {
-    minHeight: 48,
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-    borderRadius: space.radiusSm,
-  },
   secundario: {
     minHeight: 48,
     justifyContent: 'center',

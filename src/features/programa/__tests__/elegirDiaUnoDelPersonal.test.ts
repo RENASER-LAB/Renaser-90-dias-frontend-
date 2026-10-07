@@ -174,20 +174,57 @@ describe.each(PERSONAL)('$rol', persona => {
     expect(mockActivarPrograma).not.toHaveBeenCalled();
   });
 
-  it('sin fila: Hoy invita a empezar, con «Ahora no»; Yo invita sin «Ahora no»', async () => {
-    mockActivarPersonal.mockResolvedValue();
+  it('sin fila: Hoy invita a elegir el Día 1, con «Ahora no»; Yo invita sin «Ahora no»', async () => {
     const hoy = await montar('hoy', persona, true, false);
-    expect(textos(hoy)).toEqual(expect.arrayContaining(['Hacer mi programa de 90 días', 'Empezar', 'Ahora no']));
-    // Sin fila no hay Día 1 que consultar: el pedido que daba 404 ni se hace.
+    expect(textos(hoy)).toEqual(expect.arrayContaining(['Hacer mi programa de 90 días', 'Elegir mi Día 1', 'Ahora no']));
+    // D-261: ya no hay «Empezar» (activate-tracking, arrancaba hoy).
+    expect(textos(hoy)).not.toContain('Empezar');
+    // Sin fila no hay Día 1 que consultar al montar: el pedido solo se hace al abrir el selector.
     expect(mockConsultarActivacion).not.toHaveBeenCalled();
     act(() => raiz?.unmount());
 
     const yo = await montar('yo', persona, true, false);
-    expect(textos(yo)).toEqual(expect.arrayContaining(['Hacer mi programa de 90 días', 'Empezar']));
+    expect(textos(yo)).toEqual(expect.arrayContaining(['Hacer mi programa de 90 días', 'Elegir mi Día 1']));
     expect(textos(yo)).not.toContain('Ahora no');
-    await tocar(yo, 'Empezar');
-    expect(mockActivarPersonal).toHaveBeenCalledTimes(1);
-    expect(textos(yo)).not.toContain('Hacer mi programa de 90 días');
+  });
+
+  /**
+   * D-261 (decisión del dueño del 2026-10-07: «que elija el día como los demás»). Contra el código
+   * anterior falla: el botón era «Empezar» y llamaba a `POST /mentor/activate-tracking`.
+   */
+  it.each(['hoy', 'yo'] as const)('sin fila, en %s: la invitación abre el selector, elige con el servidor y no llama a activate-tracking', async lugar => {
+    mockConsultarActivacion.mockResolvedValue({ activated: false, validStartDates: FECHAS, startDate: null });
+    mockActivarPrograma.mockResolvedValue({});
+    const r = await montar(lugar, persona, true, false);
+    expect(modal(r).props.visible).toBe(false);
+
+    await tocar(r, 'Elegir mi Día 1');
+    expect(modal(r).props.visible).toBe(true);
+    expect(textos(r)).toContain('Elige tu Día 1');
+    expect(textos(r)).toContain('Jueves 8 de octubre');
+
+    await tocar(r, 'Viernes 9 de octubre');
+    await tocar(r, 'CONFIRMAR MI DÍA 1');
+
+    expect(mockActivarPrograma).toHaveBeenCalledWith({ startDate: '2026-10-09' });
+    expect(mockActivarPersonal).not.toHaveBeenCalled();
+    expect(textos(r)).not.toContain('Hacer mi programa de 90 días');
+  });
+
+  it('sin fila, volver del selector deja la invitación como estaba', async () => {
+    mockConsultarActivacion.mockResolvedValue({ activated: false, validStartDates: FECHAS, startDate: null });
+    const r = await montar('hoy', persona, true, false);
+
+    await tocar(r, 'Elegir mi Día 1');
+    const [volver] = r.root.findAll(n => n.props?.accessibilityLabel === 'Volver sin elegir' && typeof n.props.onPress === 'function');
+    await act(async () => {
+      volver.props.onPress();
+    });
+
+    expect(modal(r).props.visible).toBe(false);
+    expect(mockActivarPrograma).not.toHaveBeenCalled();
+    expect(mockActivarPersonal).not.toHaveBeenCalled();
+    expect(textos(r)).toEqual(expect.arrayContaining(['Hacer mi programa de 90 días', 'Ahora no']));
   });
 
   it('«Ahora no» en Hoy: Hoy deja de ofrecerlo y Yo lo sigue ofreciendo', async () => {
@@ -217,7 +254,7 @@ describe.each(PERSONAL)('$rol', persona => {
 
     // Queda una sola invitación, la de Yo, y sin «Ahora no».
     expect(textos(raiz!).filter((t: string) => t === 'Hacer mi programa de 90 días')).toHaveLength(1);
-    expect(textos(raiz!)).toContain('Empezar');
+    expect(textos(raiz!)).toContain('Elegir mi Día 1');
     expect(textos(raiz!)).not.toContain('Ahora no');
     expect(mockActivarPersonal).not.toHaveBeenCalled();
   });
@@ -240,6 +277,23 @@ describe('Training y el onboarding (código fuente)', () => {
     expect(TRAINING).toContain('!cargandoBackend && errorBackend !== null && !sinProgramaPropio && (');
     expect(TRAINING).toMatch(/sinProgramaPropio && selectedDimension === null \? \(\s*<InvitacionProgramaPropio/);
     expect(TRAINING).toContain('useProgramaPersonal(!cargandoDiaPrograma && !inscrito');
+  });
+
+  it('ninguna pantalla llama a POST /mentor/activate-tracking (D-261): el personal sin fila elige su Día 1', () => {
+    const archivos: string[] = [];
+    const recorrer = (dir: string) => {
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        const ruta = path.join(dir, e.name);
+        if (e.isDirectory()) {
+          if (e.name !== '__tests__') recorrer(ruta);
+        } else if (/\.tsx?$/.test(e.name)) {
+          archivos.push(ruta);
+        }
+      }
+    };
+    recorrer(RAIZ);
+    const llaman = archivos.filter(a => sinComentarios(fs.readFileSync(a, 'utf-8')).includes('/mentor/activate-tracking'));
+    expect(llaman).toEqual([]);
   });
 
   it('el onboarding del aprendiz no cambia: el selector va sin «volver»', () => {

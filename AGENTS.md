@@ -1378,6 +1378,16 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       en vez de «No pudimos cargar tu entrenamiento» con el uuid. La tarjeta salió de Hoy a
       `programa/components/InvitacionProgramaPropio` (mismo texto, mismos botones); «Empezar» sigue siendo
       `POST /mentor/activate-tracking`, que arranca hoy.
+      > **Corregido 2026-10-07 (D-261, decisión del dueño: «que elija el día como los demás»).** Decía que «Empezar»
+      > seguía siendo `POST /mentor/activate-tracking` (arranque HOY). Ahora el botón de la invitación, en Hoy, Training y
+      > Yo, es **«Elegir mi Día 1»** (`BotonElegirDiaUno`, el mismo de arriba) y abre `ActivarProgramaScreen`; al confirmar,
+      > `POST /onboarding/activate-program` le **crea la fila** con la fecha elegida (Día 1 ese día, sin ajuste). La app ya
+      > no llama a `activate-tracking` (se borró `activarProgramaPersonal` de `mentorApi`; `useProgramaPersonal` cambió
+      > `activar`/`activando`/`error` por `alEmpezar`, que solo esconde la invitación después de elegir). El backend
+      > conserva `activate-tracking` igual para los APK 1.5.0 y anteriores. **Necesita el backend con D-261 antes que el
+      > APK:** con un backend anterior, el selector de quien no tiene fila muestra «No pudimos cargar las fechas…» (404).
+      > Prueba: `programa/__tests__/elegirDiaUnoDelPersonal.test.ts` (la invitación abre el selector, elige con el
+      > servidor y no llama a `activate-tracking`; ninguna pantalla contiene `/mentor/activate-tracking`).
     * **«Ahora no»** sigue escondiendo la invitación solo en Hoy; Yo la ofrece siempre que el servidor diga
       `canStartProgram` (`useProgramaPersonal` devuelve además `puedeActivar`, sin el pospuesto).
     * Nada depende del nombre del rol (los dos idiomas: `MENTOR_LEAD`/`LIDER_MENTORES`, `ALCHEMIST`/`ALQUIMISTA`): lo

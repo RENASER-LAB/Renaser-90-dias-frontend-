@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { activarProgramaPersonal, capacidadesDePrograma } from '../api/mentorApi';
+import { capacidadesDePrograma } from '../api/mentorApi';
 
 const PREFIJO_POSPUESTO = 'renaser.programa-personal.pospuesto.v2';
 
@@ -31,8 +31,6 @@ function clavePospuesto(usuarioId: string): string {
 export function useProgramaPersonal(activo: boolean, usuarioId?: string | null) {
   const [puedeActivar, setPuedeActivar] = useState(false);
   const [pospuesto, setPospuesto] = useState(true);
-  const [activando, setActivando] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
     if (!activo) return;
@@ -57,20 +55,10 @@ export function useProgramaPersonal(activo: boolean, usuarioId?: string | null) 
     void cargar();
   }, [cargar]);
 
-  const activar = useCallback(async () => {
-    setActivando(true);
-    setError(null);
-    try {
-      await activarProgramaPersonal();
-      setPuedeActivar(false);
-      return true;
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'No se pudo activar tu programa.');
-      return false;
-    } finally {
-      setActivando(false);
-    }
-  }, []);
+  /* D-261: ya no hay un «Empezar» que active hoy (`POST /mentor/activate-tracking`, D-07). La
+     invitación abre el selector del Día 1 —el mismo del aprendiz—, que crea la fila con la fecha
+     elegida; esto solo deja de ofrecer la invitación cuando ya eligió. */
+  const alEmpezar = useCallback(() => setPuedeActivar(false), []);
 
   /** No borra nada: solo deja de ofrecerlo a ESTA cuenta en este dispositivo. */
   const posponer = useCallback(async () => {
@@ -86,5 +74,5 @@ export function useProgramaPersonal(activo: boolean, usuarioId?: string | null) 
 
   /* `puedeActivar` sin el «Ahora no» (D-260): Training y Yo ofrecen empezar aunque se haya
      pospuesto en Hoy. Antes «Ahora no» escondía la única entrada para siempre. */
-  return { visible: puedeActivar && !pospuesto, puedeActivar, activando, error, activar, posponer };
+  return { visible: puedeActivar && !pospuesto, puedeActivar, alEmpezar, posponer };
 }
