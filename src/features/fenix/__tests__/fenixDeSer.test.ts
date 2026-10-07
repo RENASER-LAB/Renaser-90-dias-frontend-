@@ -115,6 +115,46 @@ describe('la voz', () => {
     act(() => raiz.update(elemento('reposo')));
     expect(valoresDe(rive, 'isTalking').at(-1)).toBe(false);
   });
+
+  // Queja del dueño (2026-10-07): «probé y nada». Cada fase se aplicaba UNA vez y el fénix quedaba como en reposo.
+  describe('cada fase se sostiene mientras dura', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+    const pasar = (ms: number) => act(() => void jest.advanceTimersByTime(ms));
+
+    it('pensando: trgThinking vuelve a dispararse y la mirada alterna a cada lado', () => {
+      const { raiz, rive } = montar();
+      act(() => raiz.update(elemento('pensando')));
+      pasar(6000);
+      expect(disparos(rive).filter(d => d === 'trgThinking').length).toBeGreaterThanOrEqual(3);
+      const gazeX = valoresDe(rive, 'gazeX') as number[];
+      expect(Math.max(...gazeX)).toBeGreaterThan(0.3);
+      expect(Math.min(...gazeX)).toBeLessThan(-0.3);
+    });
+
+    it('hablando: la boca abre y cierra (visemas) y hay gesto de explicar', () => {
+      const { raiz, rive } = montar();
+      act(() => raiz.update(elemento('hablando')));
+      pasar(3000);
+      const boca = valoresDe(rive, 'mouth') as number[];
+      expect(Math.max(...boca)).toBeGreaterThan(2.5);
+      expect(Math.min(...boca)).toBeLessThan(0.8);
+      expect(disparos(rive)).toContain('trgExplain');
+    });
+
+    it('escuchando: se inclina hacia ti y ladea la cabeza', () => {
+      const { raiz, rive } = montar();
+      act(() => raiz.update(elemento('escuchando')));
+      pasar(4000);
+      expect(Math.max(...(valoresDe(rive, 'bodyLean') as number[]))).toBeGreaterThan(0.3);
+      const ladeo = valoresDe(rive, 'headRoll') as number[];
+      expect(Math.max(...ladeo) - Math.min(...ladeo)).toBeGreaterThan(0.3);
+    });
+  });
 });
 
 describe('el botón flotante y el panel de SER: foto fija', () => {

@@ -1343,8 +1343,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       líder no piden nada y su fénix es neutral.
     * **Centro de Hoy** (`OrbeAcompanante`, era la nube de puntos de `expo-thinking-orbs` y en la web un disco con
       micrófono): el fénix vivo (`FenixDeSer`), el ÚNICO de la app, con todo lo de la entrega: ánimo, vida autónoma
-      (`alive`, `life` 1), fase de la voz (escuchando = cara atenta, pensando = `trgThinking`, hablando = boca
-      `isTalking`), saludo (`trgWelcome`, una vez por sesión), `trgTap` al apoyar el dedo, asentir 700 ms al cumplir un
+      (`alive`, `life` 1), fase de la voz (sostenida mientras dura: ver la entrada «el fénix se mueve al escucharte,
+      pensar y hablar» del 2026-10-07), saludo (`trgWelcome`, una vez por sesión), `trgTap` al apoyar el dedo, asentir 700 ms al cumplir un
       hábito y la celebración corta de los hitos. **Funciona igual**: el mismo botón, área de toque (el diámetro),
       etiquetas por fase, mantener para cerrar y deshabilitado; con la voz activa, el aro dorado fino de antes y un halo
       que late con el ritmo de la fase. Con Hoy fuera de la vista (`useOrbeALaVista`) el centro pasa a la foto fija.
@@ -1453,6 +1453,26 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       tarjeta queda igual.
     * **Límite**: la Pastilla y la Clase diaria se cierran por su propio endpoint y no emiten `habitoCumplido`; si una de
       ellas es la última del día, la pantalla sale al volver a Hoy o Yo.
+  * **Cambio por pedido del dueño — 2026-10-07 — tab `Hoy` (el centro): el fénix se mueve al escucharte, pensar y
+    hablar** («no se está usando el movimiento cuando te escucha, cuando razona/piensa y cuando habla; probé y nada»).
+    Lo que cambia y nada más (el `.riv` y el dibujo, sin tocar):
+    > **Corregido 2026-10-07.** La entrada del fénix (2026-10-06) decía «escuchando = cara atenta, pensando =
+    > `trgThinking`, hablando = boca `isTalking`». Era eso y solo una vez al entrar a la fase; después el fénix quedaba
+    > como en reposo (E-583 del backend).
+    * **Cada fase se sostiene mientras dura** (`fenix/utils/actuacionDeVoz`, plan en `conversacionDeSer`): postura,
+      vaivén, disparo repetido, boca y parpadeos con timers propios hasta la fase siguiente; la vida autónoma (`alive`)
+      se apaga mientras tanto (sus miradas a un costado peleaban con la fase).
+      | Fase | Qué se mueve |
+      |---|---|
+      | Escuchando | `emotion` curious, se inclina (`bodyLean` 0.5, `headPitch` 0.15), mirada al frente (`gazeX/Y` 0, `lifeGaze` 0.1), ladea la cabeza (`headRoll` 0.45 ↔ −0.15 cada 1,6 s), parpadeo cada 3,2 s; con la voz en vivo, el volumen del micrófono estira el pecho (`bodyStretch` ≤ 0.3) y sube las alas |
+      | Pensando | `emotion` thinking, `trgThinking` cada 2,8 s mientras dure, mira arriba (`gazeY` 0.6, `headPitch` 0.4) y alterna a cada lado (`gazeX` ±0.4, `headRoll` −0.5 ↔ 0.3 cada 1,1 s), `energy` 0.3 |
+      | Hablando | `emotion` happy, `isTalking` + visemas sintéticos con `director.speak` (sílabas de 110–190 ms, tandas de 0,9 s), `trgExplain` al empezar y cada 6,5 s, alas alternadas (`wingL/R` 0.45/0.15 ↔ 0.15/0.42) con cabeceo, mirada al frente, `energy` 0.7 |
+      | Reposo | vuelve suave (≈ 0,7 s) a la postura del dibujo, cara neutral, boca cerrada, `lifeGaze` 1, la `energy` del ánimo y `alive`; el ánimo del semáforo (`mood`) nunca se toca |
+    * **Volumen del micrófono**: aviso `renasia/events/nivelDelMicrofono` (no estado de React: llega varias veces por
+      segundo), emitido por `useConversacionEnVivo` con el micrófono abierto. La voz de siempre (dictado) no lo tiene.
+    * **«Reducir movimiento»**: una pose quieta por fase (cara y postura al instante), sin disparos, boca, vaivén,
+      parpadeos ni micrófono.
+    * **Límite**: el Director no cancela un `speak` en curso; al callarse, la boca puede moverse hasta 0,9 s más.
   * **Excepción autorizada por el dueño del producto — 2026-09-25 — tab `Hoy`, tarjeta del semáforo.**
     Autorizada junto con el diseño del semáforo de cumplimiento del aprendiz (D-168; el contrato vive
     en el backend, `docs/arquitectura/SEMAFORO_DEL_APRENDIZ.md`). El alcance es **solo** la tarjeta

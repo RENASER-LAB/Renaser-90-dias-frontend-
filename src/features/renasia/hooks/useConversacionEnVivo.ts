@@ -4,6 +4,7 @@ import type * as ModuloDosVias from '@speechmatics/expo-two-way-audio';
 
 import { getTokenSesion } from '../../../services/http/apiClient';
 import { leerEventoEnVivo, urlDeVozEnVivo, type EventoEnVivo } from '../api/vozEnVivo';
+import { avisarNivelDelMicrofono } from '../events/nivelDelMicrofono';
 import {
   accionDelToque,
   cerrarPorInactividad,
@@ -207,9 +208,9 @@ export function useConversacionEnVivo(): ConversacionEnVivo {
 
   /** Alguien hablando cerca del teléfono cuenta como actividad, aunque todavía no haya transcripción. */
   const alVolumen = useCallback((evento: { data: number }) => {
-    if (evento.data >= VOLUMEN_DE_VOZ && parlanteRef.current.microfonoAbierto(Date.now())) {
-      actividadRef.current = Date.now();
-    }
+    if (!parlanteRef.current.microfonoAbierto(Date.now())) return;
+    avisarNivelDelMicrofono(evento.data);
+    if (evento.data >= VOLUMEN_DE_VOZ) actividadRef.current = Date.now();
   }, []);
   escucharAudio('onInputVolumeLevelData', alVolumen);
 
