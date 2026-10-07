@@ -82,14 +82,15 @@ export function TarjetaDeFase({
   const estiloAnimal = useAnimatedStyle(() => ({ transform: [{ scale: escala.get() }] }));
 
   const avance = diasDeLaFase ? Math.min(1, diasDeLaFase.dia / diasDeLaFase.total) : 0;
-  const dichoDelDia = diaDelPrograma != null ? `Día ${diaDelPrograma} de ${diasDelPrograma} en total` : null;
+  const dichoDelDia = diaDelPrograma != null ? `Día ${diaDelPrograma} de ${diasDelPrograma}` : null;
+  const loQueQueda = diasDeLaFase ? queQuedaDeLaFase(diasDeLaFase) : null;
   return (
     <View
       accessible
       accessibilityLabel={
         `Fase ${numero} de ${totalDeFases}, ${nombreDeLaFase}, ${rango.toLowerCase()}. Tu animal: ${animal.nombre}.` +
-        (diasDeLaFase ? ` Día ${diasDeLaFase.dia} de ${diasDeLaFase.total} de esta fase.` : '') +
-        (dichoDelDia ? ` ${dichoDelDia}.` : '')
+        (dichoDelDia ? ` ${dichoDelDia}.` : '') +
+        (loQueQueda ? ` ${loQueQueda}.` : '')
       }
       onLayout={e => setAncho(e.nativeEvent.layout.width)}
       style={{ minHeight: ALTO, borderRadius: 26, overflow: 'hidden', borderWidth: 1, borderColor: c.border, backgroundColor: c.cardBg }}
@@ -136,21 +137,29 @@ export function TarjetaDeFase({
             Tu animal: <Text style={{ fontFamily: 'Jost_500Medium', color: c.textStrong }}>{animal.nombre}</Text>
           </Text>
         </View>
+        {/* El número grande es el MISMO día que Plan y Hoy («Día 30 de 90»); la barra y la línea de abajo cuentan la
+            fase. Antes el grande era «Día 23 de 27 de esta fase» y no coincidía con el día que el dueño ve en Plan. */}
         <View>
+          {dichoDelDia ? (
+            <Text style={[t.body, { color: c.textStrong, fontFamily: 'Jost_500Medium', fontSize: 17 }]}>{dichoDelDia}</Text>
+          ) : null}
           {diasDeLaFase ? (
             <>
-              <Text style={[t.body, { color: c.textStrong, fontFamily: 'Jost_500Medium', fontSize: 17 }]}>
-                Día {diasDeLaFase.dia} de {diasDeLaFase.total}{' '}
-                <Text style={{ fontFamily: 'Jost_400Regular', color: c.textSoft, fontSize: 15 }}>de esta fase</Text>
-              </Text>
               <View style={{ height: 8, borderRadius: 4, backgroundColor: c.border, marginTop: 10, marginBottom: 8, overflow: 'hidden' }}>
                 <View style={{ width: `${avance * 100}%`, height: '100%', borderRadius: 4, backgroundColor: c.gold }} />
               </View>
+              <Text style={[t.small, { color: c.textSoft, fontSize: 14 }]}>{loQueQueda}</Text>
             </>
           ) : null}
-          {dichoDelDia ? <Text style={[t.small, { color: c.textSoft, fontSize: 14 }]}>{dichoDelDia}</Text> : null}
         </View>
       </View>
     </View>
   );
+}
+
+/** Lo que falta de la fase, con las mismas cuentas que «Días 8–34» de Plan: el día 34 de esa fase es el último. */
+export function queQuedaDeLaFase({ dia, total }: DiasDeLaFase): string {
+  const quedan = total - dia;
+  if (quedan <= 0) return 'Último día de esta fase';
+  return quedan === 1 ? 'Te queda 1 día en esta fase' : `Te quedan ${quedan} días en esta fase`;
 }

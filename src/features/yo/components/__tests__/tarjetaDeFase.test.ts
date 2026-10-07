@@ -29,9 +29,22 @@ describe('TarjetaDeFase', () => {
     expect(t).toContain('El Ciclo Alquímico');
     expect(t).toContain('Tu animal: ');
     expect(t).toContain('Gorila');
-    expect(t).toContain('Día 8 de 27');
-    expect(t).toContain('de esta fase');
-    expect(t).toContain('Día 15 de 90 en total');
+    expect(t).toContain('Día 15 de 90');
+    expect(t).toContain('Te quedan 19 días en esta fase');
+  });
+
+  it('el número grande es el MISMO día que Plan (Día 30 de 90), no el día dentro de la fase', () => {
+    // Pedido del dueño, 2026-10-06 («ajusta el texto, no coincide»): en el día 30 la tarjeta decía «Día 23 de 27»
+    // mientras Plan y Hoy hablaban del día 30. Contra el código anterior falla.
+    const t = textos({ diasDeLaFase: { dia: 23, total: 27 }, diaDelPrograma: 30 });
+    expect(t).toContain('Día 30 de 90');
+    expect(t).not.toContain('Día 23 de 27');
+    expect(t).toContain('Te quedan 4 días en esta fase');
+  });
+
+  it('el último día de la fase lo dice así, sin «te quedan 0»', () => {
+    expect(textos({ diasDeLaFase: { dia: 27, total: 27 }, diaDelPrograma: 34 })).toContain('Último día de esta fase');
+    expect(textos({ diasDeLaFase: { dia: 26, total: 27 }, diaDelPrograma: 33 })).toContain('Te queda 1 día en esta fase');
   });
 
   it('dice los mismos días de la fase que Plan («Días 8–34»), junto a «FASE 2 DE 4»', () => {
@@ -43,8 +56,8 @@ describe('TarjetaDeFase', () => {
 
   it('sin días de la fase no hay barra ni «de esta fase»: no se inventa un avance', () => {
     const t = textos({ diasDeLaFase: null, diaDelPrograma: 15 });
-    expect(t).not.toContain('de esta fase');
-    expect(t).toContain('Día 15 de 90 en total');
+    expect(t).not.toContain('en esta fase');
+    expect(t).toContain('Día 15 de 90');
   });
 
   it('«¡Entraste en la Fase N!» solo cuando toca celebrar', () => {
