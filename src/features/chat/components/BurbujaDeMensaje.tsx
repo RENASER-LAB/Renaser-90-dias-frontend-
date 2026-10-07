@@ -9,6 +9,7 @@ import { useTheme } from '../../../theme/ThemeContext';
 import { CURVA_SALIDA } from '../../../theme/movimiento';
 import { colorDeRemitente } from '../utils/formatoChat';
 import { fuenteDeImagenDelChat } from '../utils/fuenteDeImagenDelChat';
+import { altoDeLaFotoDelChat } from '../utils/altoDeLaFotoDelChat';
 import { llevaDobleMarca } from '../utils/lecturaDelChat';
 import { FotoDelPrograma } from './AvatarDeChat';
 import { BurbujaAudioChat } from './BurbujaAudioChat';
@@ -220,7 +221,7 @@ export function BurbujaDeMensaje({
             {/* El fondo ocupa ya el tamaño final: mientras baja, la burbuja no salta. */}
             <Image
               source={fuente}
-              style={[styles.foto, { backgroundColor: c.divider }]}
+              style={[styles.foto, { height: altoDeLaFotoDelChat(mensaje.mediaPath), backgroundColor: c.divider }]}
               contentFit="cover"
               cachePolicy="memory-disk"
               transition={TRANSICION_MS}
