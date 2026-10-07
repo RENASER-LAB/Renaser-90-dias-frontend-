@@ -43,7 +43,9 @@ export function useMantenerSemaforoVigente(
   usuarioId: string | null | undefined,
   almacen: AlmacenDelSemaforoVigente = semaforoVigente,
 ): void {
-  const habilitado = Boolean(usuarioId) && tieneSemaforoPropio(rol);
+  // Cualquier cuenta con sesión: el personal que hace su programa personal también tiene semáforo (E-576). Quien no
+  // tiene recibe `aplica: false` o un error y queda en neutral.
+  const habilitado = Boolean(usuarioId);
 
   useEffect(() => {
     almacen.reiniciar();

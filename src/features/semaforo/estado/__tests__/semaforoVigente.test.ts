@@ -116,14 +116,14 @@ describe('useMantenerSemaforoVigente', () => {
     espia.mockRestore();
   });
 
-  it.each(['ADMIN', 'ALCHEMIST', 'MENTOR', 'MENTOR_LEAD'])('%s: sin semáforo propio, ninguna petición', async rol => {
-    const { almacen, leer } = almacenDePrueba(async () => 'VERDE');
-    const { oyentes, raiz, espia } = montar(rol, almacen);
-    expect(oyentes).toHaveLength(0);
+  // E-576: el personal que hace su programa personal tiene semáforo; el almacén se mantiene igual que para el aprendiz.
+  it.each(['ADMIN', 'ALCHEMIST', 'MENTOR', 'MENTOR_LEAD'])('%s: también refresca tras cumplir un hábito', async rol => {
+    const { almacen, leer } = almacenDePrueba(async () => 'ROJO');
+    const { raiz, espia } = montar(rol, almacen);
     await act(async () => {
       avisarHabitoCumplido();
     });
-    expect(leer).not.toHaveBeenCalled();
+    expect(leer).toHaveBeenCalled();
     act(() => raiz.unmount());
     espia.mockRestore();
   });

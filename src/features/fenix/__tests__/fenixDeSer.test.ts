@@ -56,11 +56,12 @@ describe('ánimo y vida', () => {
     expect(valoresDe(rive, 'mood')).toEqual([3]);
   });
 
-  it('el staff (mentor): neutral aunque haya un color publicado', () => {
-    mockSesion.rol = 'MENTOR';
+  // E-576: un administrador con su programa personal y el semáforo en rojo veía al fénix neutral (se ve alegre).
+  it.each(['ADMIN', 'MENTOR', 'MENTOR_LEAD'])('%s con su semáforo en rojo: el fénix está triste', rol => {
+    mockSesion.rol = rol;
     act(() => semaforoVigente.publicar('ROJO'));
     const { rive } = montar();
-    expect(valoresDe(rive, 'mood')).not.toContain(3);
+    expect(valoresDe(rive, 'mood')).toContain(3);
   });
 });
 
@@ -148,12 +149,12 @@ describe('el botón flotante y el panel de SER: foto fija', () => {
     expect(raiz.root.findAll(n => n.props.testID === 'rive-del-fenix')).toHaveLength(0);
   });
 
-  it('sin dato, neutral; y para el staff, neutral aunque haya color', () => {
+  it('sin dato, neutral; con color, el del semáforo, sea cual sea el rol', () => {
     const foto = () =>
       crear(React.createElement(FenixDeSerQuieto, { size: 44 })).root.findAll(n => n.props.testID === 'fenix-de-ser-quieto')[0];
     expect(foto().props.source).toBe(PHOENIX_STATIC_IMAGES.neutral);
     mockSesion.rol = 'ADMIN';
-    act(() => semaforoVigente.publicar('VERDE'));
-    expect(foto().props.source).toBe(PHOENIX_STATIC_IMAGES.neutral);
+    act(() => semaforoVigente.publicar('ROJO'));
+    expect(foto().props.source).toBe(PHOENIX_STATIC_IMAGES.triste);
   });
 });
