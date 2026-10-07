@@ -606,7 +606,7 @@ export default function HoyScreen() {
           <View style={{ flex: 1 }}>
             <Text
               style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}
-              accessibilityLabel={faseNombre === null ? 'Fase del programa: sin datos' : undefined}
+              accessibilityLabel={`Fase del programa: ${faseNombre ?? 'sin datos'}`}
             >
               {faseNombre ?? '—'}
             </Text>
