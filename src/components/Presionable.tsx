@@ -20,6 +20,7 @@ export function Presionable({
   children,
   style,
   contenedorStyle,
+  escalaAlApretar = ESCALA_APRETADO,
   disabled,
   onPressIn,
   onPressOut,
@@ -30,6 +31,11 @@ export function Presionable({
   style?: StyleProp<ViewStyle>;
   /** Estilo del área táctil que la contiene (p. ej. `flex: 1` dentro de una fila). No se hunde. */
   contenedorStyle?: StyleProp<ViewStyle>;
+  /**
+   * Cuánto se hunde al apretar (por defecto `ESCALA_APRETADO`, 0.97). Solo para un control chico que es EL gesto de
+   * su pantalla, como el check de un hábito (0.92, 2026-10-07): a 28 px, el 3 % no se ve.
+   */
+  escalaAlApretar?: number;
 }) {
   const escala = useSharedValue(1);
   const estiloEscala = useAnimatedStyle(() => ({ transform: [{ scale: escala.get() }] }));
@@ -42,7 +48,7 @@ export function Presionable({
       style={contenedorStyle}
       pressRetentionOffset={16}
       onPressIn={e => {
-        if (!disabled) escala.set(withTiming(ESCALA_APRETADO, config));
+        if (!disabled) escala.set(withTiming(escalaAlApretar, config));
         onPressIn?.(e);
       }}
       onPressOut={e => {

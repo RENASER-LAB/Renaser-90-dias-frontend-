@@ -70,18 +70,18 @@ afterEach(() => {
 
 describe('la decisión', () => {
   it('los puntos: el número del servidor; con 0 o sin dato no sale número, sale «Registrado»', () => {
-    expect(textoDePuntos(10)).toBe('+10');
+    expect(textoDePuntos(10)).toBe('+10 pts');
     expect(textoDePuntos(0)).toBe('Registrado');
     expect(textoDePuntos(null)).toBe('Registrado');
     expect(textoDePuntos(undefined)).toBe('Registrado');
   });
 
   it('con movimiento: el check rebota y los puntos suben', () => {
-    expect(planDelMomento(10, false)).toEqual({ check: 'rebote', puntos: '+10', puntosSuben: true });
+    expect(planDelMomento(10, false)).toEqual({ check: 'rebote', puntos: '+10 pts', puntosSuben: true });
   });
 
   it('con «reducir movimiento»: solo check y puntos, sin rebote ni subida ni salto del fénix', () => {
-    expect(planDelMomento(10, true)).toEqual({ check: 'fundido', puntos: '+10', puntosSuben: false });
+    expect(planDelMomento(10, true)).toEqual({ check: 'fundido', puntos: '+10 pts', puntosSuben: false });
     expect(fenixSalta(true)).toBe(false);
     expect(fenixSalta(false)).toBe(true);
   });
@@ -126,11 +126,11 @@ function textoDeLosPuntos(raiz: ReturnType<typeof crear>): string | null {
 }
 
 describe('el check de la tarjeta', () => {
-  it('al cumplirse: el disco se llena, rebota con resorte desde 0.8 y sube «+10»', () => {
+  it('al cumplirse desde una hoja: el disco se llena, rebota con resorte desde 0.8 y sube «+10 pts»', () => {
     const raiz = crear(check(false));
     act(() => avisarHabitoCumplido({ registroId: 'r1', puntosOtorgados: 10 }));
     act(() => raiz.update(check(true)));
-    expect(textoDeLosPuntos(raiz)).toBe('+10');
+    expect(textoDeLosPuntos(raiz)).toBe('+10 pts');
     expect(mockAnimaciones).toContainEqual({ tipo: 'timing', destino: ESCALA_INICIAL_DEL_CHECK });
     expect(mockAnimaciones).toContainEqual({ tipo: 'spring', destino: 1 });
     expect(mockAnimaciones.some(a => a.destino === 0 && a.tipo === 'spring')).toBe(false);
@@ -154,7 +154,7 @@ describe('el check de la tarjeta', () => {
     const raiz = crear(check(false));
     act(() => avisarHabitoCumplido({ registroId: 'r1', puntosOtorgados: 10 }));
     act(() => raiz.update(check(true)));
-    expect(textoDeLosPuntos(raiz)).toBe('+10');
+    expect(textoDeLosPuntos(raiz)).toBe('+10 pts');
     expect(mockAnimaciones.filter(a => a.tipo === 'spring')).toEqual([]);
     expect(mockAnimaciones).not.toContainEqual({ tipo: 'timing', destino: ESCALA_INICIAL_DEL_CHECK });
   });

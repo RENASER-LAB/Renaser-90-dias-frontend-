@@ -31,6 +31,9 @@ import { EvidenciaHabitoModal } from '../features/habits/components/EvidenciaHab
 import { RegistroConFotoModal } from '../features/habits/components/RegistroConFotoModal';
 import { useRegistroConFoto } from '../features/habits/hooks/useRegistroConFoto';
 import { CheckDelHabito } from '../features/habits/celebracion/CheckDelHabito';
+import { BrilloDeLaTarjeta, TituloQueSeTacha } from '../features/habits/celebracion/TarjetaQueCelebra';
+import { cerrarConRespuestaInmediata } from '../features/habits/celebracion/momentoEnLaTarjeta';
+import { ESCALA_APRETADO_DEL_CHECK } from '../features/habits/celebracion/momentoDelHabito';
 import { estaVencido, seRegistraConFoto } from '../features/training/utils/registroConFotoEnTraining';
 import { avisoDeHabitoCerrado, preguntaQueSintio, type MedicionPedida } from '../features/habits/utils/registroConFoto';
 import { sellarRocaDiaria } from '../features/objetivos/utils/sellarRocaDiaria';
@@ -623,7 +626,8 @@ export default function TrainingScreen() {
       return;
     }
     try {
-      const resultado = await cerrarUnaVez(habit.id);
+      // El check responde ya, en el mismo toque (2026-10-07); la tarjeta se marca recién con la respuesta.
+      const resultado = await cerrarConRespuestaInmediata(habit.id, () => cerrarUnaVez(habit.id));
       // `en-curso` = el primer toque todavía está en camino, y es el que marca la tarjeta.
       if (resultado === 'en-curso') return;
       tacto.logro(); // como en `completarHabitoSimple` (2026-10-07): el logro, una vez, con el check
@@ -683,7 +687,8 @@ export default function TrainingScreen() {
    */
   const completarHabitoSimple = async (habit: HabitItem) => {
     try {
-      const resultado = await cerrarUnaVez(habit.id);
+      // El check se llena a medias y respira mientras el servidor confirma; si falla, vuelve atrás (2026-10-07).
+      const resultado = await cerrarConRespuestaInmediata(habit.id, () => cerrarUnaVez(habit.id));
       // Mismo doble toque que Despertar (TRN-02): el segundo no sale ni avisa un error falso.
       if (resultado === 'en-curso') return;
       // El háptico de logro en el mismo instante en que el check se llena (2026-10-07): este cierre era el único
@@ -1300,6 +1305,9 @@ export default function TrainingScreen() {
                         },
                       ]}
                     >
+                      {/* El brillo dorado del borde al cumplirse con la tarjeta a la vista (2026-10-07). Primero
+                          en la tarjeta: queda DEBAJO del contenido, y el «+N pts» que sube no lo cruza. */}
+                      <BrilloDeLaTarjeta registroId={habit.id} color={c.gold} radio={space.radius} />
                       <View style={styles.habitFila}>
                       {/* Checkbox circular interactivo — deshabilitado sin track de hoy: no hay
                           ningún registro real que marcar (ver `tieneTrackHoy` en HabitItem).
@@ -1314,6 +1322,7 @@ export default function TrainingScreen() {
                         }}
                         disabled={!operable}
                         hitSlop={12}
+                        escalaAlApretar={ESCALA_APRETADO_DEL_CHECK}
                         accessibilityRole="checkbox"
                         accessibilityState={{ checked: habit.done, disabled: !operable }}
                         accessibilityLabel={habit.done ? `${titulo}, cumplido` : `Marcar ${titulo}`}
@@ -1365,21 +1374,23 @@ export default function TrainingScreen() {
                           {habit.icon ? (
                             <Icon name={habit.icon} size={TAMANO_ICONO.normal} color={habit.done ? c.success : c.goldInk} />
                           ) : null}
-                          <Text
+                          {/* 2026-10-07: si se cumple con la tarjeta a la vista, la raya se dibuja; si ya
+                              estaba cumplido, el `line-through` de siempre (`TituloQueSeTacha`). */}
+                          <TituloQueSeTacha
+                            registroId={habit.id}
+                            texto={titulo}
+                            cumplido={habit.done}
+                            colorDeLaRaya={c.textStrong}
                             style={[
                               t.body,
                               {
-                                flex: 1,
                                 fontSize: 16,
                                 color: habit.done ? c.textStrong : c.text,
                                 fontFamily: habit.done ? 'Jost_500Medium' : 'Jost_400Regular',
-                                textDecorationLine: habit.done ? 'line-through' : 'none',
                                 opacity: habit.done ? 0.85 : 1,
                               },
                             ]}
-                          >
-                            {titulo}
-                          </Text>
+                          />
                         </View>
 
                         {/* `flexWrap`: a tamaño de lectura, "Durante el día" + "Entregada"

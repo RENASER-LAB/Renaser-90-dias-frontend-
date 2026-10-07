@@ -74,7 +74,8 @@ describe('TrainingScreen', () => {
   it('Despertar/Dormir y los hábitos sin evidencia cierran con el cierre sin repetir', () => {
     for (const nombre of ['registrarSoloHora', 'completarHabitoSimple']) {
       const cuerpo = cuerpoDe(nombre);
-      expect(cuerpo.includes('await cerrarUnaVez(habit.id)')).toBe(true);
+      // 2026-10-07: por `cerrarConRespuestaInmediata`, para que el check responda en el mismo toque (E-579).
+      expect(cuerpo.includes('await cerrarConRespuestaInmediata(habit.id, () => cerrarUnaVez(habit.id))')).toBe(true);
       expect(cuerpo.includes('completarRegistro(')).toBe(false);
     }
   });

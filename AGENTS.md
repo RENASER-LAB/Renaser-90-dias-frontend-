@@ -1408,6 +1408,23 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **«Reducir movimiento»**: el check y los puntos aparecen con un fundido, sin rebote ni subida; el fénix no salta.
     * Las decisiones están en `habits/celebracion/momentoDelHabito.ts` (puras, probadas). Solo `transform`/`opacity` en el
       hilo de la interfaz: cumplir un hábito vuelve a dibujar ese check, no la lista.
+    * **Segunda vuelta, mismo día** (el dueño lo probó: «No veo nada, mejora esos aspectos. Lo quiero lo más fluido
+      posible»). En el emulador, tras tocar el check pasaban ~1–2 s sin ningún cambio y después todo aparecía de golpe;
+      el «+N» (13 px, 22 px de subida) y el salto del fénix (7 px) no se percibían. Lo que cambia:
+      * **Respuesta en el mismo toque**: al apoyar el dedo el check se hunde a 0.92 (`Presionable` acepta
+        `escalaAlApretar`; el resto de la app sigue en 0.97); al soltar, en los cierres directos (Despertar/Dormir y los
+        hábitos sin evidencia obligatoria) el disco aparece a medio llenar y respira suave hasta la respuesta
+        (`habits/celebracion/momentoEnLaTarjeta.ts`, `cerrarConRespuestaInmediata`). La tarjeta (`done`) sigue
+        marcándose SOLO con la respuesta del servidor (V-2). Si el servidor falla, el check se vacía en 180 ms y sale el
+        diálogo de error de siempre.
+      * **Al confirmar**: «pop» del check (1.15 → resorte a 1), ✓, la raya del tachado se dibuja de izquierda a derecha
+        (`TituloQueSeTacha`), brillo dorado en el borde de la tarjeta (`BrilloDeLaTarjeta`, opacidad) y «+N pts» en una
+        pastilla de 16 px dorada que sube 32 px en ~820 ms. Todo arranca en el mismo cuadro en que la tarjeta se dibuja
+        cumplida (`useLayoutEffect`). Si el cierre vino de una hoja (evidencia, foto, Pastilla), espera 220 ms a que la
+        hoja se vaya. El fénix del botón salta 11 px y crece a 1.1.
+      * **Vibración**: el «tic» de selección al tocar (ya existía) y el logro al confirmar (ya existía): dos sensaciones
+        distintas para dos hechos distintos, ninguna repetida.
+      * **«Reducir movimiento»**: solo fundidos (medio llenado quieto, ✓, raya y puntos por opacidad; brillo igual).
   * **Excepción autorizada por el dueño del producto — 2026-09-25 — tab `Hoy`, tarjeta del semáforo.**
     Autorizada junto con el diseño del semáforo de cumplimiento del aprendiz (D-168; el contrato vive
     en el backend, `docs/arquitectura/SEMAFORO_DEL_APRENDIZ.md`). El alcance es **solo** la tarjeta
