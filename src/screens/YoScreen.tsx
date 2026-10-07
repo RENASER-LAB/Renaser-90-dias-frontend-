@@ -36,9 +36,9 @@ import { MetodoEnPaginas, type FaseDelMetodo } from '../features/yo/components/M
 import { PactoFirmado } from '../features/yo/components/PactoFirmado';
 import { TarjetaDeFase } from '../features/yo/components/TarjetaDeFase';
 import { animalConfigurado } from '../features/yo/utils/animalConfigurado';
-import { diasDeLaFase } from '../features/yo/utils/diasDeLaFase';
+import { faseEnCurso } from '../features/home/utils/faseEnCurso';
 import { useAnimalesDeFase } from '../features/yo/hooks/useAnimalesDeFase';
-import { estadoDeLasFases } from '../features/yo/utils/estadoDeLasFases';
+import { ANIMAL_DE_FASE } from '../features/yo/data/animalesDeFase';
 import { useCambioDeFase } from '../features/yo/hooks/useCambioDeFase';
 import { registrarCelebracionFuera } from '../features/fenix/estado/celebracionDelDia';
 import {
@@ -262,8 +262,9 @@ export default function YoScreen() {
   const { rs, isTablet, horizontalPadding, contentMaxWidth } = useResponsive();
   const { user, logout, actualizarPerfil, refrescarPerfil } = useAuth();
   const { resumen } = useResumenHome();
-  const fasesConAnimal = estadoDeLasFases(resumen?.fase);
-  const faseActual = fasesConAnimal.find(f => f.estado === 'actual') ?? null;
+  /* La misma cuenta que «Fase actual» y «Arquitectura de tiempo» de Plan (`faseEnCurso`): número, nombre,
+     rango y día dentro de la fase salen de un solo lugar, así Yo no puede decir otra cosa que Plan. */
+  const faseActual = faseEnCurso(resumen?.fase, resumen?.diaPrograma);
   const celebrarFase = useCambioDeFase(user?.id, resumen?.fase);
   /* «¡Entraste en la Fase N!» es la celebración de ese día (2026-10-06): el fénix no suma otra encima en Hoy. */
   useEffect(() => {
@@ -617,15 +618,16 @@ export default function YoScreen() {
             <Text style={[t.small, styles.rotulo, { color: c.textSoft }]}>Tu evolución</Text>
             {/* La tarjeta de tu fase (diseño B elegido por el dueño, 2026-10-06): el animal, la fase y los
                 días. Es el mismo componente que previsualiza Administración. La fase sale de
-                `resumen.fase`; los días de la fase, de la tabla de fases de la app (`diasDeLaFase`). */}
+                `resumen.fase`; el rango y los días de la fase, de `faseEnCurso`, lo mismo que lee Plan. */}
             {faseActual ? (
               <View style={{ marginTop: 10 }}>
                 <TarjetaDeFase
                   numero={faseActual.numero}
-                  totalDeFases={fasesConAnimal.length}
+                  totalDeFases={FASES_EN_ORDEN.length}
                   nombreDeLaFase={faseActual.nombre}
-                  animal={animalConfigurado(faseActual.animal, animalesConfigurados[faseActual.numero])}
-                  diasDeLaFase={diasDeLaFase(resumen?.fase, resumen?.diaPrograma)}
+                  rango={faseActual.rango}
+                  animal={animalConfigurado(ANIMAL_DE_FASE[faseActual.clave], animalesConfigurados[faseActual.numero])}
+                  diasDeLaFase={faseActual.diasDeLaFase}
                   diaDelPrograma={resumen?.diaPrograma ?? null}
                   diasDelPrograma={DIAS_DEL_PROGRAMA}
                   celebrar={celebrarFase}

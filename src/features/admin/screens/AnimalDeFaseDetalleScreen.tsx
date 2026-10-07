@@ -244,6 +244,7 @@ function VistaPrevia({
           numero={ejemplo.numero}
           totalDeFases={FASES_EN_ORDEN.length}
           nombreDeLaFase={ejemplo.nombreDeLaFase}
+          rango={ejemplo.rango}
           animal={animal}
           diasDeLaFase={ejemplo.diasDeLaFase}
           diaDelPrograma={ejemplo.diaDelPrograma}
