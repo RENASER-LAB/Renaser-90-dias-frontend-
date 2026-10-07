@@ -44,7 +44,7 @@ describe('Hoy sin datos inventados', () => {
     expect(HOY).toContain('const faseNombre = rotuloDeFase(resumen?.fase);');
     expect(HOY).toContain("{faseNombre ?? '—'}");
     // El lector de pantalla no lee «raya»: dice que no hay dato.
-    expect(HOY).toContain("accessibilityLabel={faseNombre === null ? 'Fase del programa: sin datos' : undefined}");
+    expect(HOY).toContain("accessibilityLabel={`Fase del programa: ${faseNombre ?? 'sin datos'}`}");
   });
 
   it('la tarjeta del Mapa usa la cuenta de la apertura del Mapa: sin día conocido, sin número', () => {
