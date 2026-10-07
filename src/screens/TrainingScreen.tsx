@@ -30,6 +30,7 @@ import { ProximoAVencerCard } from '../features/training/components/ProximoAVenc
 import { EvidenciaHabitoModal } from '../features/habits/components/EvidenciaHabitoModal';
 import { RegistroConFotoModal } from '../features/habits/components/RegistroConFotoModal';
 import { useRegistroConFoto } from '../features/habits/hooks/useRegistroConFoto';
+import { CheckDelHabito } from '../features/habits/celebracion/CheckDelHabito';
 import { estaVencido, seRegistraConFoto } from '../features/training/utils/registroConFotoEnTraining';
 import { avisoDeHabitoCerrado, preguntaQueSintio, type MedicionPedida } from '../features/habits/utils/registroConFoto';
 import { sellarRocaDiaria } from '../features/objetivos/utils/sellarRocaDiaria';
@@ -603,7 +604,9 @@ export default function TrainingScreen() {
     try {
       const resultado = await cerrarUnaVez(habit.id);
       // `en-curso` = el primer toque todavía está en camino, y es el que marca la tarjeta.
-      if (resultado !== 'en-curso') reflejarCierreConfirmado(habit.id);
+      if (resultado === 'en-curso') return;
+      tacto.logro(); // como en `completarHabitoSimple` (2026-10-07): el logro, una vez, con el check
+      reflejarCierreConfirmado(habit.id);
     } catch (e) {
       Alert.alert('No pudimos registrar la hora', mensajeDeError(e, 'Intenta de nuevo en unos segundos.'));
     }
@@ -661,7 +664,11 @@ export default function TrainingScreen() {
     try {
       const resultado = await cerrarUnaVez(habit.id);
       // Mismo doble toque que Despertar (TRN-02): el segundo no sale ni avisa un error falso.
-      if (resultado !== 'en-curso') reflejarCierreConfirmado(habit.id);
+      if (resultado === 'en-curso') return;
+      // El háptico de logro en el mismo instante en que el check se llena (2026-10-07): este cierre era el único
+      // de Training sin él (los demás lo tienen por `confirmar`). Uno por cierre: el doble toque no llega acá.
+      tacto.logro();
+      reflejarCierreConfirmado(habit.id);
     } catch (e) {
       Alert.alert('No pudimos marcarlo', mensajeDeError(e, 'Intenta de nuevo en unos segundos.'));
     }
@@ -1281,13 +1288,14 @@ export default function TrainingScreen() {
                         style={[
                           styles.habitCheckCircle,
                           {
-                            borderColor: habit.done ? c.success : c.tabInactive,
-                            backgroundColor: habit.done ? c.success : 'transparent',
+                            borderColor: habit.done ? c.gold : c.tabInactive,
                             opacity: operable ? 1 : 0.35,
                           },
                         ]}
                       >
-                        {habit.done && <Icon name="check" size={TAMANO_ICONO.chico} color={c.bg} strokeWidth={2.2} />}
+                        {/* 2026-10-07 (pedido del dueño): al cumplirse, el disco se llena de DORADO con un
+                            rebote y sube el «+N» que pagó el servidor. Antes el ✓ aparecía de golpe en verde. */}
+                        <CheckDelHabito registroId={habit.id} cumplido={habit.done} />
                       </Presionable>
 
                       {/* Habit Info & Tap to open Evidence */}

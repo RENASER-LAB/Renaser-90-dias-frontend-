@@ -135,6 +135,8 @@ export default function HoyScreen() {
      pantalla partida de Training. Al registrarse, Hoy relee el resumen y el hábito del momento. */
   const registroConFoto = useRegistroConFoto({
     onCompletado: (registroId, _resultado, _titulo, destino) => {
+      // El logro, una vez, cuando el servidor confirmó (2026-10-07): este cierre no vibraba.
+      tacto.logro();
       voz.cambiarPedidoDeFoto(registroId, cambioAlRegistrar(destino));
       void recargarResumen();
       void recargarHabitoAhora();

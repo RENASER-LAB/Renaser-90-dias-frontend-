@@ -1359,8 +1359,26 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       `CelebracionFenix` (180 px abajo, no bloquea, se salta tocándola). Sin sonido. **Fase nueva**: no se le suma el
       fénix; «¡Entraste en la Fase N!» de Yo ocupa el día. **Graduación: fuera** (`/home` no la dice; `diaPrograma` se
       queda en 90 después del día 90). **Un hábito suelto** solo hace asentir al fénix del centro.
+      > **Corregido 2026-10-07.** Además, la foto del botón flotante da un saltito (`transform`, sin Rive): ver la
+      > entrada «el momento de cumplir un hábito» de abajo.
     * **«Reducir movimiento»**: el rig sigue montado y quieto; sin saludo, toque, asentir, boca ni salto.
     * **Hace falta un APK nuevo** (módulo nativo nuevo): el fénix animado no se ve en ningún teléfono sin esa build.
+  * **Cambio por pedido del dueño — 2026-10-07 — tab `Training` y el botón de SER: el momento de cumplir un hábito**
+    («cuando alguien completa un hábito no hay animación… lo quiero lo más fluido posible»; propuesta aprobada por el
+    dueño). Lo que cambia y nada más:
+    * **El check de la tarjeta de Training** (`habits/celebracion/CheckDelHabito`): al pasar a cumplido se llena de
+      **dorado** (antes verde, de golpe) y rebota desde 0.8 con un resorte (~300 ms). Montarse ya cumplido no anima.
+    * **Los puntos**: sobre el check sube «+N» y se desvanece (~600 ms). N es `puntosOtorgados` del SERVIDOR, que ahora
+      viaja en el aviso `habitoCumplido` (`{ registroId, puntosOtorgados }`); con 0, o en la Pastilla y la Clase diaria
+      (su endpoint no los devuelve), dice «Registrado». La línea «Evidencia entregada · +N pts» sigue igual.
+    * **El fénix del botón flotante de SER** (`fenix/components/FenixDeSerQueSalta`) da un saltito (~500 ms) con cada
+      hábito cumplido. Sigue siendo la foto fija: es un `transform`, **nunca** Rive.
+    * **Vibración `tacto.logro`, una por cierre**: la dispara la pantalla que cerró. Se agregó donde faltaba (Despertar/
+      Dormir y los hábitos sin evidencia en Training; el registro con foto desde Hoy y desde el panel de SER).
+    * **Todos los del día**: la celebración corta que ya existía (una por día, al volver a Hoy). Nada nuevo la llama.
+    * **«Reducir movimiento»**: el check y los puntos aparecen con un fundido, sin rebote ni subida; el fénix no salta.
+    * Las decisiones están en `habits/celebracion/momentoDelHabito.ts` (puras, probadas). Solo `transform`/`opacity` en el
+      hilo de la interfaz: cumplir un hábito vuelve a dibujar ese check, no la lista.
   * **Excepción autorizada por el dueño del producto — 2026-09-25 — tab `Hoy`, tarjeta del semáforo.**
     Autorizada junto con el diseño del semáforo de cumplimiento del aprendiz (D-168; el contrato vive
     en el backend, `docs/arquitectura/SEMAFORO_DEL_APRENDIZ.md`). El alcance es **solo** la tarjeta

@@ -219,6 +219,6 @@ export async function completarRegistro(
     },
   });
   const completado = validarRespuesta(registroCompletadoSchema, r, 'POST /api/v1/habit-tracks/{id}/complete');
-  avisarHabitoCumplido();
+  avisarHabitoCumplido({ registroId, puntosOtorgados: completado.puntosOtorgados });
   return completado;
 }

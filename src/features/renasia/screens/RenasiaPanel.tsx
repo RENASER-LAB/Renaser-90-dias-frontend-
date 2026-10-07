@@ -17,6 +17,7 @@ import { useTheme } from '../../../theme/ThemeContext';
 import { useResponsive } from '../../../theme/responsive';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { Icon, TAMANO_ICONO } from '../../../components/Icon';
+import { tacto } from '../../../utils/tacto';
 import { propsDelCampoDelChat } from '../../chat/utils/campoDelChat';
 import { useRenasiaChat } from '../hooks/useRenasiaChat';
 import { useDictado } from '../hooks/useDictado';
@@ -100,8 +101,11 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
    * se muestra.
    */
   const registroConFoto = useRegistroConFoto({
-    onCompletado: (registroId, _resultado, _titulo, destino) =>
-      cambiarPedidoDeFoto(registroId, cambioAlRegistrar(destino)),
+    onCompletado: (registroId, _resultado, _titulo, destino) => {
+      // El logro, una vez, cuando el servidor confirmó (2026-10-07): este cierre no vibraba.
+      tacto.logro();
+      cambiarPedidoDeFoto(registroId, cambioAlRegistrar(destino));
+    },
     // D-178: la tarjeta de una acción del día sube a los endpoints de rocas.
     destinos: { roca: REGLAS_DE_ACCION },
   });

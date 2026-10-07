@@ -109,7 +109,7 @@ describe('useMantenerSemaforoVigente', () => {
     });
     expect(leer).toHaveBeenCalledTimes(1);
     await act(async () => {
-      avisarHabitoCumplido();
+      avisarHabitoCumplido({ registroId: 'r1', puntosOtorgados: 10 });
     });
     expect(leer).toHaveBeenCalledTimes(2);
     act(() => raiz.unmount());
@@ -121,7 +121,7 @@ describe('useMantenerSemaforoVigente', () => {
     const { almacen, leer } = almacenDePrueba(async () => 'ROJO');
     const { raiz, espia } = montar(rol, almacen);
     await act(async () => {
-      avisarHabitoCumplido();
+      avisarHabitoCumplido({ registroId: 'r1', puntosOtorgados: 10 });
     });
     expect(leer).toHaveBeenCalled();
     act(() => raiz.unmount());

@@ -85,7 +85,7 @@ describe('momentos', () => {
 
   it('UN hábito: asiente (cara contenta, parpadeo) y no dispara la celebración corta', () => {
     const { rive } = montar();
-    act(() => avisarHabitoCumplido());
+    act(() => avisarHabitoCumplido({ registroId: 'r1', puntosOtorgados: 10 }));
     expect(valoresDe(rive, 'emotion')).toContain(1);
     expect(disparos(rive)).toContain('trgBlink');
     expect(disparos(rive)).not.toContain('trgCelebrateShort');
@@ -109,7 +109,7 @@ describe('momentos', () => {
     rive.fireState.mockClear();
     act(() => {
       ref.current!.tocado();
-      avisarHabitoCumplido();
+      avisarHabitoCumplido({ registroId: 'r1', puntosOtorgados: 10 });
     });
     expect(disparos(rive)).toEqual([]);
     expect(celebradorDelCentro()).toBeNull();
@@ -138,8 +138,12 @@ describe('el botón flotante y el panel de SER: foto fija', () => {
       const fuente = leer(archivo);
       expect(fuente).not.toMatch(/<FenixDeSer[\s>]/);
       expect(fuente).not.toMatch(/<FenixVivo|<PhoenixMascot/);
-      expect(fuente).toMatch(/<FenixDeSerQuieto /);
+      // 2026-10-07: el botón lleva `FenixDeSerQueSalta`, la misma foto con un saltito (transform) al cumplir un hábito.
+      expect(fuente).toMatch(/<FenixDeSerQuieto |<FenixDeSerQueSalta /);
     }
+    const queSalta = leer('features/fenix/components/FenixDeSerQueSalta.tsx');
+    expect(queSalta).toMatch(/<FenixDeSerQuieto /);
+    expect(queSalta).not.toMatch(/<FenixDeSer[\s>]|<FenixVivo|<PhoenixMascot|rive-react-native/);
   });
 
   it('la foto sigue al semáforo y no monta Rive', () => {

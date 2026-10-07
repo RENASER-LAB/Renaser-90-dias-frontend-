@@ -7,7 +7,7 @@ import { Presionable } from '../../../components/Presionable';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useAuth } from '../../auth/context/AuthContext';
 import { NOMBRE_ACOMPANANTE } from '../data/agentes';
-import { FenixDeSerQuieto } from '../../fenix/components/FenixDeSerQuieto';
+import { FenixDeSerQueSalta } from '../../fenix/components/FenixDeSerQueSalta';
 import { useMantenerSemaforoVigente } from '../../semaforo/estado/useSemaforoVigente';
 import { RenasiaPanel } from '../screens/RenasiaPanel';
 import { useMapaRenacimientoAbierto } from '../../mapa-renacimiento/MapaRenacimientoContext';
@@ -89,7 +89,9 @@ export function RenasiaLauncher() {
       {!hayChatEnPantalla && !mapaAbierto && (
         <Animated.View style={[styles.posicion, { bottom: insets.bottom + ALTO_TAB_BAR + SEPARACION }, acompanaALaBarra]}>
           {/* El fénix es la cara de SER (2026-10-06, pedido del dueño): acá es FOTO FIJA en el ánimo del semáforo
-              propio (`FenixDeSerQuieto`), sin Rive ni animación. Todo lo vivo del fénix está en el centro de Hoy.
+              propio (`FenixDeSerQuieto`), sin Rive. Todo lo vivo del fénix está en el centro de Hoy.
+              2026-10-07: la foto da un saltito al cumplirse un hábito (`FenixDeSerQueSalta`, un transform).
+              > **Corregido 2026-10-07.** Decía «sin Rive ni animación»: sigue sin Rive, ahora con ese saltito.
               > **Corregido 2026-10-06.** Era el orbe de SER (`OrbeQuieto`) sobre el disco dorado (2026-10-05). El
               > fénix dorado sobre dorado no se leía: el disco pasa a ser el de las tarjetas, con un borde dorado,
               > y el fénix desborda un poco el círculo (alas y cresta) para que se reconozca a 52 px. Mismo tamaño de
@@ -103,7 +105,7 @@ export function RenasiaLauncher() {
               { width: DIAMETRO, height: DIAMETRO, borderRadius: DIAMETRO / 2, backgroundColor: c.cardBg, borderColor: c.gold },
             ]}
           >
-            <FenixDeSerQuieto size={TAMANO_FENIX} style={styles.fenix} />
+            <FenixDeSerQueSalta size={TAMANO_FENIX} style={styles.fenix} />
           </Presionable>
         </Animated.View>
       )}

@@ -139,7 +139,8 @@ describe('el botón flotante de SER', () => {
     const lanzador = sinComentarios(leer('features/renasia/components/RenasiaLauncher.tsx'));
     expect(lanzador).not.toMatch(/icon="chat"/);
     expect(lanzador).not.toMatch(/<OrbeQuieto /);
-    expect(lanzador).toMatch(/<FenixDeSerQuieto size=\{TAMANO_FENIX\}/);
+    // 2026-10-07: la misma foto fija, que da un saltito al cumplir un hábito (`FenixDeSerQueSalta`).
+    expect(lanzador).toMatch(/<FenixDeSerQueSalta size=\{TAMANO_FENIX\}/);
     expect(lanzador).toMatch(/accessibilityLabel=\{`Hablar con \$\{NOMBRE_ACOMPANANTE\}, tu acompañante`\}/);
   });
 });
