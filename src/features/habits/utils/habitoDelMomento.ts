@@ -22,11 +22,13 @@
  *  - **`sin-datos`** — el backend no devolvió tracks. Día 0, cuenta recién aprobada, o un fallo:
  *    la pantalla vuelve al texto genérico de siempre en vez de inventar un hábito.
  *
- * **Accionable NO es "no terminal".** `EXPIRADO` cuenta como accionable a propósito: el backend
- * dejó que un hábito vencido se pueda completar igual (`EstadoRegistro`, "registrar tarde es
- * información"), y ocultarlo acá sería contradecir esa decisión desde la pantalla. `FALLIDO`
- * queda fuera: lo escribe el barrido nocturno cuando el día ya CERRÓ, y no se puede hacer nada
- * con él.
+ * **Accionable es PENDIENTE o EN_CURSO**, aunque se le haya pasado la hora: el backend lo acepta
+ * hasta el fin de su día, con menos puntos o ninguno. `EXPIRADO`, `FALLIDO` y `COMPLETADO` no.
+ *
+ * > **Corregido 2026-10-06 (D-259 del backend).** Decía que `EXPIRADO` contaba como accionable «a
+ * > propósito: el backend dejó que un hábito vencido se pueda completar igual». Desde E-534 el servidor
+ * > solo vence lo de un día que ya terminó, y la regla del dueño (2026-10-06) es «solo los del día»: un
+ * > `EXPIRADO` ya no se registra, así que ofrecerlo como «lo que te toca» era mandar a la persona a un 409.
  *
  * Este archivo no importa nada de la app salvo `aMinutos`, que ya existía — mismo criterio que
  * `momentosDelDia.ts`: es una decisión pura sobre datos, y se puede razonar sin montar nada.
@@ -35,7 +37,7 @@ import type { TrackDelDiaApi } from '../types/habits.types';
 import { aMinutos } from './momentosDelDia';
 
 /** Estados de `EstadoRegistro` (backend) que ya no admiten acción de la persona. */
-const SIN_ACCION_POSIBLE = new Set(['COMPLETADO', 'FALLIDO']);
+const SIN_ACCION_POSIBLE = new Set(['COMPLETADO', 'FALLIDO', 'EXPIRADO']);
 
 export type EstadoHabitoDelMomento = 'ahora' | 'proximo' | 'todo-hecho' | 'sin-datos';
 

@@ -107,3 +107,34 @@ export type SeccionDeLaDimension = 'habitos' | 'guias';
 export function seccionesDeLaDimension(cantidadDeGuias: number): SeccionDeLaDimension[] {
   return cantidadDeGuias > 0 ? ['habitos', 'guias'] : ['habitos'];
 }
+
+/** Lo que mira {@link avisoDeHoraPasada}: el estado crudo y los puntos/plazo que manda el servidor. */
+export interface HabitoConPlazo {
+  done: boolean;
+  estado?: string;
+  pointsAtStake?: number | null;
+  maxPoints?: number | null;
+  deadline?: string | null;
+}
+
+/**
+ * La línea de un hábito pendiente al que ya se le pasó la hora (regla del dueño, 2026-10-06: «un hábito se
+ * puede registrar durante su día aunque se le haya pasado la hora: vencer la hora solo afecta los puntos»).
+ *
+ * - Pasado su `deadline` (el `plazoEvidencia` del servidor): «Todavía puedes registrarlo hoy, sin puntos».
+ * - Antes, si el servidor ya paga menos que el máximo (los 10 minutos de gracia): «…, con menos puntos».
+ * - Si no, nada: a tiempo o en la extensión, que paga completo.
+ *
+ * Los puntos no se calculan acá (la escala es del servidor); el reloj sí, porque `pointsAtStake` se leyó al
+ * cargar la pantalla y el plazo puede pasar con la pantalla abierta. Sin `deadline` el hábito no vence en el día.
+ */
+export function avisoDeHoraPasada(h: HabitoConPlazo, ahoraMs: number): string | null {
+  if (h.done || (h.estado !== 'PENDIENTE' && h.estado !== 'EN_CURSO') || !h.deadline) return null;
+  const plazo = Date.parse(h.deadline);
+  if (Number.isFinite(plazo) && plazo <= ahoraMs) return 'Todavía puedes registrarlo hoy, sin puntos';
+  if (h.pointsAtStake === 0) return 'Todavía puedes registrarlo hoy, sin puntos';
+  if (typeof h.pointsAtStake === 'number' && typeof h.maxPoints === 'number' && h.pointsAtStake < h.maxPoints) {
+    return 'Todavía puedes registrarlo hoy, con menos puntos';
+  }
+  return null;
+}

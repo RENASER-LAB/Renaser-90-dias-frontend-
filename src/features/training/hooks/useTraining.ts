@@ -183,6 +183,7 @@ export function useTraining() {
           done: track.estado === 'COMPLETADO',
           // Crudo, para distinguir EXPIRADO/FALLIDO de pendiente: `done` los junta a los tres.
           estado: track.estado,
+          fechaEjecucion: track.fechaEjecucion ?? null,
           hasEvidence: track.tieneEvidencia ?? false,
           respuestaTexto: track.respuestaTexto ?? null,
           // Para decir en la misma tarjeta cuándo se cumplió y cuánto pagó (decisión del dueño del

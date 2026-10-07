@@ -10,6 +10,7 @@ import { describe, expect, it } from '@jest/globals';
 import {
   accionDeLaTarjeta,
   avisoDeEvidenciaEntregada,
+  avisoDeHoraPasada,
   detalleDelCumplido,
   horaLocal,
   muestraElCumplidoEnLaTarjeta,
@@ -81,5 +82,31 @@ describe('«Guías y audios» (decisión 8)', () => {
   it('se esconde sin contenido y vuelve cuando lo tenga', () => {
     expect(seccionesDeLaDimension(0)).toEqual(['habitos']);
     expect(seccionesDeLaDimension(2)).toEqual(['habitos', 'guias']);
+  });
+});
+
+/**
+ * Regla del dueño (2026-10-06): pasada la hora, el hábito se registra igual durante su día, con menos puntos o
+ * ninguno. Antes la tarjeta no decía nada y el aviso «próximo a vencer» simplemente desaparecía.
+ */
+describe('avisoDeHoraPasada', () => {
+  const AHORA = Date.parse('2026-10-06T20:00:00Z');
+  const base = { done: false, estado: 'PENDIENTE', maxPoints: 10 };
+
+  it('pasado su plazo: todavía puedes registrarlo hoy, sin puntos', () => {
+    expect(avisoDeHoraPasada({ ...base, pointsAtStake: 10, deadline: '2026-10-06T16:10:00Z' }, AHORA))
+      .toBe('Todavía puedes registrarlo hoy, sin puntos');
+  });
+
+  it('en la gracia, cuando ya paga menos: con menos puntos', () => {
+    expect(avisoDeHoraPasada({ ...base, pointsAtStake: 7, deadline: '2026-10-06T20:05:00Z' }, AHORA))
+      .toBe('Todavía puedes registrarlo hoy, con menos puntos');
+  });
+
+  it('a tiempo, hecho, sin plazo o ya cerrado: nada', () => {
+    expect(avisoDeHoraPasada({ ...base, pointsAtStake: 10, deadline: '2026-10-06T23:00:00Z' }, AHORA)).toBeNull();
+    expect(avisoDeHoraPasada({ ...base, done: true, deadline: '2026-10-06T16:10:00Z' }, AHORA)).toBeNull();
+    expect(avisoDeHoraPasada({ ...base, deadline: null }, AHORA)).toBeNull();
+    expect(avisoDeHoraPasada({ ...base, estado: 'EXPIRADO', deadline: '2026-10-05T16:10:00Z' }, AHORA)).toBeNull();
   });
 });

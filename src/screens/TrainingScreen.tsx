@@ -19,6 +19,7 @@ import { tacto } from '../utils/tacto';
 import {
   accionDeLaTarjeta,
   avisoDeEvidenciaEntregada,
+  avisoDeHoraPasada,
   detalleDelCumplido,
   muestraElCumplidoEnLaTarjeta,
   seccionesDeLaDimension,
@@ -30,7 +31,7 @@ import { EvidenciaHabitoModal } from '../features/habits/components/EvidenciaHab
 import { RegistroConFotoModal } from '../features/habits/components/RegistroConFotoModal';
 import { useRegistroConFoto } from '../features/habits/hooks/useRegistroConFoto';
 import { estaVencido, seRegistraConFoto } from '../features/training/utils/registroConFotoEnTraining';
-import { preguntaQueSintio, type MedicionPedida } from '../features/habits/utils/registroConFoto';
+import { avisoDeHabitoCerrado, preguntaQueSintio, type MedicionPedida } from '../features/habits/utils/registroConFoto';
 import { sellarRocaDiaria } from '../features/objetivos/utils/sellarRocaDiaria';
 import { PlanificarDimensionModal } from '../features/training/components/PlanificarDimensionModal';
 import { completarRegistro, confirmarEvidencia } from '../features/habits/api/evidenciaHabitoApi';
@@ -109,6 +110,8 @@ export interface HabitItem {
    * `undefined` en las rocas y en los hábitos sin track de hoy.
    */
   estado?: string;
+  /** `YYYY-MM-DD` del registro de hoy: para decir de qué día era uno que ya cerró. */
+  fechaEjecucion?: string | null;
   note?: string;
   /**
    * Clave FUNCIONAL del hábito de catálogo (`DAILY_CLASS`, `PASTILLA_RENACER`…), `null` en las
@@ -754,11 +757,14 @@ export default function TrainingScreen() {
       alternarCumplido(habit.id);
       return;
     }
+    // D-259: su día ya cerró (EXPIRADO) o su sesión se rompió (FALLIDO). Va antes de elegir el camino para que
+    // valga también en web y en el modal genérico, que antes abrían igual y terminaban en el 409 del servidor.
+    if (estaVencido(habit.estado)) {
+      const aviso = avisoDeHabitoCerrado(habit.estado, habit.fechaEjecucion);
+      Alert.alert(aviso.titulo, aviso.mensaje);
+      return;
+    }
     if (seRegistraConFoto(habit, Platform.OS === 'web')) {
-      if (estaVencido(habit.estado)) {
-        Alert.alert('Este hábito ya venció', 'Pasó el plazo para registrarlo hoy, así que ya no acepta evidencia.');
-        return;
-      }
       void registroConFoto.iniciar(
         {
           registroId: habit.id,
@@ -1349,6 +1355,11 @@ export default function TrainingScreen() {
                                 Entregada
                               </Text>
                             </View>
+                          )}
+                          {avisoDeHoraPasada(habit, Date.now()) && (
+                            <Text style={[t.small, { color: c.textSoft }]}>
+                              {avisoDeHoraPasada(habit, Date.now())}
+                            </Text>
                           )}
                           {!habit.tieneTrackHoy && (
                             <Text style={[t.small, { color: c.textSoft, fontStyle: 'italic' }]}>

@@ -85,8 +85,15 @@ describe('qué cuenta como pendiente', () => {
     expect([r.estado, r.titulo]).toEqual(['todo-hecho', null]);
   });
 
-  it('un hábito EXPIRADO sigue siendo accionable: el backend deja registrarlo tarde', () => {
-    expect(habitoDelMomento([track('a', 'AGUA', '09:00:00', 'EXPIRADO')], enHora(13)).titulo).toBe('AGUA');
+  // Corregido 2026-10-06 (D-259 del backend): decía «un hábito EXPIRADO sigue siendo accionable: el backend
+  // deja registrarlo tarde». EXPIRADO es de un día que ya cerró y ya no se registra; lo tarde del mismo día
+  // sigue PENDIENTE y sigue siendo lo que te toca (prueba de abajo).
+  it('un hábito EXPIRADO ya no es accionable: su día cerró', () => {
+    expect(habitoDelMomento([track('a', 'AGUA', '09:00:00', 'EXPIRADO')], enHora(13)).estado).toBe('todo-hecho');
+  });
+
+  it('un PENDIENTE al que se le pasó la hora sigue siendo lo que te toca: se registra durante su día', () => {
+    expect(habitoDelMomento([track('a', 'AGUA', '06:00:00', 'PENDIENTE')], enHora(23)).titulo).toBe('AGUA');
   });
 
   it('un FALLIDO no: lo cierra el barrido nocturno y ya no se puede hacer nada', () => {
