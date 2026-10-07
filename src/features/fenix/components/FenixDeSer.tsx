@@ -3,7 +3,6 @@ import type { StyleProp, ViewStyle } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
 import { alCumplirUnHabito } from '../../habits/eventos/habitoCumplido';
-import { anotarCelebrador } from '../estado/celebracionEnElCentro';
 import { useAnimoDeSer } from '../hooks/useAnimoDeSer';
 import type { PhoenixMascotHandle } from '../rive/PhoenixMascot';
 import type { PhoenixDirector } from '../rive/phoenixMaster';
@@ -27,9 +26,11 @@ let yaSaludo = false;
  * - **Saludo** (`trgWelcome` vía `react('welcome')`) la primera vez que aparece en la sesión.
  * - **Toque**: `trgTap` al apoyar el dedo (`tocado`), además de lo que haga el botón que lo contiene.
  * - **Asiente** 700 ms al cumplir un hábito (`asentir`).
- * - **Celebración corta** de los hitos: se anota como celebrador (`celebracionEnElCentro`) y Hoy se la pide.
  *
- * Con «reducir movimiento»: sin saludo, toque, asentir ni celebración; de la voz, solo la cara.
+ * Los hitos del día (todos los hábitos, rachas, fase nueva) ya no los celebra él: son la pantalla completa
+ * (`PantallaDeCelebracion`, 2026-10-07), y mientras está, este fénix pasa a su foto fija (`OrbeAcompanante`).
+ *
+ * Con «reducir movimiento»: sin saludo, toque ni asentir; de la voz, solo la cara.
  */
 export const FenixDeSer = forwardRef<
   FenixDeSerHandle,
@@ -76,7 +77,7 @@ function useEstadoReflejado(fenix: React.RefObject<PhoenixMascotHandle | null>, 
   }, [fenix, estado, reducido]);
 }
 
-/** Saludo, asentir y celebración: los momentos que no dependen de la voz. Nada con «reducir movimiento». */
+/** Saludo y asentir: los momentos que no dependen de la voz. Nada con «reducir movimiento». */
 function useMomentosDelFenix(fenix: React.RefObject<PhoenixMascotHandle | null>, reducido: boolean) {
   useEffect(() => {
     if (reducido) return;
@@ -88,13 +89,7 @@ function useMomentosDelFenix(fenix: React.RefObject<PhoenixMascotHandle | null>,
       const director = directorDe(fenix);
       if (director) asentir(director);
     });
-    const sinCelebrador = directorDe(fenix)
-      ? anotarCelebrador(() => fenix.current?.celebrateShort() ?? Promise.resolve())
-      : () => undefined;
-    return () => {
-      sinHabito();
-      sinCelebrador();
-    };
+    return sinHabito;
   }, [fenix, reducido]);
 }
 

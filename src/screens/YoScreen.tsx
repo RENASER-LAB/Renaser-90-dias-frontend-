@@ -40,8 +40,7 @@ import { animalConfigurado } from '../features/yo/utils/animalConfigurado';
 import { faseEnCurso } from '../features/home/utils/faseEnCurso';
 import { useAnimalesDeFase } from '../features/yo/hooks/useAnimalesDeFase';
 import { ANIMAL_DE_FASE } from '../features/yo/data/animalesDeFase';
-import { useCambioDeFase } from '../features/yo/hooks/useCambioDeFase';
-import { registrarCelebracionFuera } from '../features/fenix/estado/celebracionDelDia';
+import { useCelebracionDelDia } from '../features/fenix/hooks/useCelebracionDelDia';
 import {
   origenTrasCambio,
   TITULO_DE_VISTA,
@@ -266,11 +265,12 @@ export default function YoScreen() {
   /* La misma cuenta que «Fase actual» y «Arquitectura de tiempo» de Plan (`faseEnCurso`): número, nombre,
      rango y día dentro de la fase salen de un solo lugar, así Yo no puede decir otra cosa que Plan. */
   const faseActual = faseEnCurso(resumen?.fase, resumen?.diaPrograma);
-  const celebrarFase = useCambioDeFase(user?.id, resumen?.fase);
-  /* «¡Entraste en la Fase N!» es la celebración de ese día (2026-10-06): el fénix no suma otra encima en Hoy. */
-  useEffect(() => {
-    if (celebrarFase && user?.id) void registrarCelebracionFuera(user.id, new Date());
-  }, [celebrarFase, user?.id]);
+  /* «¡Entraste en la Fase N!» es la pantalla completa de celebración desde el 2026-10-07 (pedido del dueño: reemplaza
+     el momento chico de esta tarjeta). Yo también la revisa con lo que ya leyó, por si la fase nueva se ve acá primero. */
+  useCelebracionDelDia(
+    user?.id,
+    resumen ? { rachaActual: resumen.rachaActual, habitosHoy: resumen.habitosHoy, fase: resumen.fase } : null,
+  );
   const animalesConfigurados = useAnimalesDeFase();
   const moreSize = rs(56);
 
@@ -642,7 +642,6 @@ export default function YoScreen() {
                   diasDeLaFase={faseActual.diasDeLaFase}
                   diaDelPrograma={resumen?.diaPrograma ?? null}
                   diasDelPrograma={DIAS_DEL_PROGRAMA}
-                  celebrar={celebrarFase}
                 />
               </View>
             ) : null}

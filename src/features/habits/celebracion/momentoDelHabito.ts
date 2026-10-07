@@ -9,7 +9,7 @@
  * | Al confirmar el servidor | relleno dorado completo con un «pop» (1.15 → resorte a 1), el ✓, tachado que se dibuja, brillo dorado en el borde, «+N pts» que sube 32 px, saltito del fénix de SER; vibración de logro | ~800 ms |
  * | Si el servidor falla   | el check se vacía con un fundido corto; el error de siempre                  | 180 ms      |
  * | Desde una hoja (evidencia, foto, Pastilla) | lo mismo que al confirmar, 220 ms después: lo que tarda la hoja en irse | — |
- * | Todos los del día      | la celebración corta que ya existe (`useCelebracionDelDia`)                  | 2,5 s       |
+ * | Todos los del día      | la pantalla completa «¡Día completo!» (`fenix/components/PantallaDeCelebracion`), 1 s después | ~3,8 s |
  *
  * > **Corregido 2026-10-07 (segunda vuelta).** La primera versión esperaba la respuesta del servidor sin mover nada
  * > (~1–2 s en el emulador) y después animaba de golpe: «+N» de 13 px que subía 22 px en 600 ms, rebote desde 0.8 y un
@@ -17,7 +17,7 @@
  * > (`momentoEnLaTarjeta.ts`), los puntos se leen (16 px en una pastilla, suben 32 px) y el fénix salta 11 px.
  *
  * Acá vive la DECISIÓN (pura, probada sin dibujar); los componentes solo la ejecutan en el hilo de la interfaz. Esto
- * no celebra el día: ese hito sigue siendo de `tomarCelebracionDeHoy` (una vez al día, al volver a Hoy), y nada de lo
+ * no celebra el día: ese hito es de `tomarCelebracionDeHoy` (una vez al día, donde ocurra, 2026-10-07), y nada de lo
  * que hay acá lo llama, para que nunca haya dos celebraciones.
  *
  * Con «reducir movimiento» (apple-design §14: menos y más suave, no cero): todo es fundido — sin escala, sin

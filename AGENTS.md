@@ -1361,6 +1361,9 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       queda en 90 después del día 90). **Un hábito suelto** solo hace asentir al fénix del centro.
       > **Corregido 2026-10-07.** Además, la foto del botón flotante da un saltito (`transform`, sin Rive): ver la
       > entrada «el momento de cumplir un hábito» de abajo.
+      > **Corregido 2026-10-07 (segunda vez).** Los hitos ya no son la celebración corta del fénix del centro ni la
+      > superposición `CelebracionFenix` (borradas, con `celebracionEnElCentro`), y la fase nueva SÍ se celebra: todo
+      > pasó a la pantalla completa. Ver la entrada «pantalla completa para los momentos grandes» de abajo.
     * **«Reducir movimiento»**: el rig sigue montado y quieto; sin saludo, toque, asentir, boca ni salto.
     * **Hace falta un APK nuevo** (módulo nativo nuevo): el fénix animado no se ve en ningún teléfono sin esa build.
   * **Cambio por pedido del dueño — 2026-10-07 — tabs `Training`, `Hoy` y `Yo`: «Elegir mi Día 1» para el personal**
@@ -1405,6 +1408,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **Vibración `tacto.logro`, una por cierre**: la dispara la pantalla que cerró. Se agregó donde faltaba (Despertar/
       Dormir y los hábitos sin evidencia en Training; el registro con foto desde Hoy y desde el panel de SER).
     * **Todos los del día**: la celebración corta que ya existía (una por día, al volver a Hoy). Nada nuevo la llama.
+      > **Corregido 2026-10-07.** Ahora es la pantalla completa «¡Día completo!» y sale donde se cumple el último hábito
+      > (ver «pantalla completa para los momentos grandes»).
     * **«Reducir movimiento»**: el check y los puntos aparecen con un fundido, sin rebote ni subida; el fénix no salta.
     * Las decisiones están en `habits/celebracion/momentoDelHabito.ts` (puras, probadas). Solo `transform`/`opacity` en el
       hilo de la interfaz: cumplir un hábito vuelve a dibujar ese check, no la lista.
@@ -1425,6 +1430,29 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       * **Vibración**: el «tic» de selección al tocar (ya existía) y el logro al confirmar (ya existía): dos sensaciones
         distintas para dos hechos distintos, ninguna repetida.
       * **«Reducir movimiento»**: solo fundidos (medio llenado quieto, ✓, raya y puntos por opacidad; brillo igual).
+  * **Cambio por pedido del dueño — 2026-10-07 — tabs `Hoy`, `Training` y `Yo`: pantalla completa para los momentos
+    grandes** («para los momentos grandes, pantalla completa… nuevas mejoras para destacar»). Lo que cambia y nada más:
+    * **Qué la abre** (`fenix/utils/hitosDelFenix`, solo datos de `/home`): todos los hábitos del día («¡Día completo!»),
+      racha de 7 y de 30 («7 días seguidos» con el número grande) y fase nueva («¡Entraste en la Fase N · nombre!» con el
+      animal configurado D-258 junto al fénix). **Una por día por cuenta** (`fenix.celebracion.<id>`); si coinciden, la de
+      mayor jerarquía (fase > racha 30 > racha 7 > día completo) y las otras como línea dentro de la misma pantalla. La
+      fase vista sigue en `yo.faseVista.<id>`; una fase que llega con el día ocupado sale al día siguiente. Graduación
+      fuera (ya documentado). **Un hábito suelto nunca la abre**: sigue con su momento chico.
+    * **Dónde**: la dibuja `fenix/components/AnfitrionDeCelebraciones`, montado en `App.tsx` sobre el navegador. Después
+      de cada hábito cumplido (aviso `habitoCumplido`) espera 1 s (que se vea el momento chico), relee `/home` y revisa;
+      Hoy y Yo revisan con el `/home` que ya leen (`useCelebracionDelDia`). Así sale en Training, Hoy o Yo.
+    * **Qué muestra** (`PantallaDeCelebracion`): velo crema/oscuro al 97 % (sin desenfoque: `expo-blur` pediría un APK
+      nuevo), el fénix Rive grande con `trgCelebrate`, brasas doradas sutiles, «+N puntos hoy» (suma de
+      `puntosOtorgados` de `/habit-tracks/today`) y la racha de `/home` con contadores que suben en el hilo de la
+      interfaz, «Seguir». Se cierra sola a los 3,8 s (no con lector de pantalla), tocando, con «Seguir» o con «atrás».
+      Entrada desde escala 0.96 + opacidad con resorte; salida de 180 ms. Sin sonido; `tacto.hito()` (logro + golpe
+      pesado) una vez al aparecer.
+    * **Un solo lienzo Rive**: mientras está, el fénix del centro de Hoy pasa a su foto (`OrbeAcompanante`).
+    * **«Reducir movimiento»**: el fénix es su imagen quieta, solo fundidos, sin brasas, números ya puestos.
+    * **Yo**: ya no hace el momento chico «¡Entraste en la Fase N!» de la tarjeta (se borró `useCambioDeFase`); la
+      tarjeta queda igual.
+    * **Límite**: la Pastilla y la Clase diaria se cierran por su propio endpoint y no emiten `habitoCumplido`; si una de
+      ellas es la última del día, la pantalla sale al volver a Hoy o Yo.
   * **Excepción autorizada por el dueño del producto — 2026-09-25 — tab `Hoy`, tarjeta del semáforo.**
     Autorizada junto con el diseño del semáforo de cumplimiento del aprendiz (D-168; el contrato vive
     en el backend, `docs/arquitectura/SEMAFORO_DEL_APRENDIZ.md`). El alcance es **solo** la tarjeta

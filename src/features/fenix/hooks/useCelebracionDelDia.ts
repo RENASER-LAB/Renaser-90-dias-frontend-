@@ -1,42 +1,21 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
-import { celebradorDelCentro } from '../estado/celebracionEnElCentro';
-import { tomarCelebracionDeHoy } from '../estado/celebracionDelDia';
-import type { DatosDelDia, HitoDelFenix } from '../utils/hitosDelFenix';
+import { revisarHitosDelDia, type ResumenParaCelebrar } from '../estado/revisarHitosDelDia';
 
 /**
- * Celebra los hitos del día que trae `/home` (al volver a Hoy después de cumplir el último hábito, por ejemplo),
- * respetando el tope de una por día. Si el fénix vivo del centro de Hoy está (`celebracionEnElCentro`), salta ÉL y
- * el hook no devuelve nada; si no, devuelve el hito para la superposición `CelebracionFenix`. `terminar` la saca.
+ * Hoy mira los hitos del día con lo que acaba de leer de `/home` (al abrir la app, al volver a Hoy). Si hay uno libre
+ * hoy, la pantalla completa la dibuja el anfitrión de `App.tsx`; este hook no dibuja nada. Lo que se cumple en otra
+ * pestaña (Training) lo revisa el anfitrión al cumplirse cada hábito.
  */
-export function useCelebracionDelDia(
-  usuarioId: string | null | undefined,
-  datos: DatosDelDia | null,
-): { hito: HitoDelFenix | null; terminar: () => void } {
-  const [hito, setHito] = useState<HitoDelFenix | null>(null);
+export function useCelebracionDelDia(usuarioId: string | null | undefined, datos: ResumenParaCelebrar | null): void {
   const racha = datos?.rachaActual ?? null;
   const completados = datos?.habitosHoy?.completados ?? null;
   const total = datos?.habitosHoy?.total ?? null;
+  const fase = datos?.fase ?? null;
 
   useEffect(() => {
-    if (!usuarioId || (racha === null && total === null)) return;
-    let vivo = true;
+    if (!usuarioId || (racha === null && total === null && fase === null)) return;
     const habitosHoy = completados === null || total === null ? null : { completados, total };
-    tomarCelebracionDeHoy(usuarioId, { rachaActual: racha, habitosHoy }, new Date())
-      .then(nuevo => {
-        if (!vivo || !nuevo) return;
-        const centro = celebradorDelCentro();
-        if (centro) void centro();
-        else setHito(nuevo);
-      })
-      .catch(() => {
-        /* sin almacenamiento no hay celebración */
-      });
-    return () => {
-      vivo = false;
-    };
-  }, [usuarioId, racha, completados, total]);
-
-  const terminar = useCallback(() => setHito(null), []);
-  return { hito, terminar };
+    void revisarHitosDelDia(usuarioId, { rachaActual: racha, habitosHoy, fase });
+  }, [usuarioId, racha, completados, total, fase]);
 }

@@ -1,6 +1,6 @@
 /**
  * El fénix vivo del centro de Hoy: ánimo del semáforo propio (neutral para el staff), fase de la voz, saludo, toque,
- * asentir al cumplir UN hábito (nunca la celebración corta) y celebración de los hitos por su canal. El botón y el
+ * asentir al cumplir UN hábito (nunca una celebración: los hitos son la pantalla completa). El botón y el
  * panel de SER son foto fija: nunca montan Rive.
  */
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
@@ -13,7 +13,6 @@ import { avisarHabitoCumplido } from '../../habits/eventos/habitoCumplido';
 import { semaforoVigente } from '../../semaforo/estado/useSemaforoVigente';
 import { FenixDeSer, olvidarSaludoParaPruebas, type FenixDeSerHandle } from '../components/FenixDeSer';
 import { FenixDeSerQuieto } from '../components/FenixDeSerQuieto';
-import { celebradorDelCentro } from '../estado/celebracionEnElCentro';
 import { PHOENIX_STATIC_IMAGES } from '../rive/PhoenixMascot';
 import { PhoenixDirector } from '../rive/phoenixMaster';
 import type { EstadoDeSer } from '../utils/conversacionDeSer';
@@ -92,17 +91,7 @@ describe('momentos', () => {
     expect(disparos(rive)).not.toContain('trgSuccess');
   });
 
-  it('los hitos se celebran en él: se anota como celebrador y dispara trgCelebrateShort', () => {
-    const { rive } = montar();
-    const celebrar = celebradorDelCentro();
-    expect(celebrar).not.toBeNull();
-    act(() => void celebrar!());
-    expect(disparos(rive)).toContain('trgCelebrateShort');
-    desmontarTodo();
-    expect(celebradorDelCentro()).toBeNull();
-  });
-
-  it('con «reducir movimiento»: ni toque, ni asentir, ni celebrador', () => {
+  it('con «reducir movimiento»: ni toque ni asentir', () => {
     mockSesion.reducido = true;
     const ref = React.createRef<FenixDeSerHandle>();
     const { rive } = montar('reposo', ref);
@@ -112,7 +101,6 @@ describe('momentos', () => {
       avisarHabitoCumplido({ registroId: 'r1', puntosOtorgados: 10 });
     });
     expect(disparos(rive)).toEqual([]);
-    expect(celebradorDelCentro()).toBeNull();
   });
 });
 

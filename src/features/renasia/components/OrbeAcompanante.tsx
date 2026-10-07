@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 
 import { FenixDeSer, type FenixDeSerHandle } from "../../fenix/components/FenixDeSer";
 import { FenixDeSerQuieto } from "../../fenix/components/FenixDeSerQuieto";
+import { useMomentoGrande } from "../../fenix/estado/momentoGrande";
 import type { FaseDeVoz } from "../hooks/useConversacionPorVoz";
 import { useOrbeALaVista } from "../hooks/useOrbeALaVista";
 
@@ -36,7 +37,8 @@ type Props = {
  * de antes y, debajo, un halo que late con el ritmo de la fase (dice «te escucho» sin texto).
  *
  * Cuando Hoy no se ve (otra pestaña, app en segundo plano: `useOrbeALaVista`) el fénix pasa a la foto fija del ánimo:
- * el lienzo Rive no dibuja para nadie (entrega v3.3 §8.9; el mismo motivo por el que el orbe se pausaba).
+ * el lienzo Rive no dibuja para nadie (entrega v3.3 §8.9; el mismo motivo por el que el orbe se pausaba). Lo mismo
+ * mientras está la pantalla completa de celebración (`momentoGrande`, 2026-10-07): un solo lienzo Rive a la vez.
  *
  * > **Corregido 2026-10-06.** Era la nube de puntos de `expo-thinking-orbs` (`OrbeDePuntos`, con tope de cuadros por
  * > el lag del Xiaomi, 2026-09-26) y, en la web o si fallaba Skia, un disco dorado con micrófono (`OrbeSimple`). En
@@ -44,6 +46,7 @@ type Props = {
  */
 export function OrbeAcompanante({ fase, diametro, onTocar, onMantener, deshabilitado }: Props) {
   const aLaVista = useOrbeALaVista();
+  const celebrando = useMomentoGrande() !== null;
   const fenix = useRef<FenixDeSerHandle>(null);
   const lado = Math.round(diametro * ESCALA_DEL_FENIX);
   const centrado = { left: (diametro - lado) / 2, top: (diametro - lado) / 2 };
@@ -64,7 +67,7 @@ export function OrbeAcompanante({ fase, diametro, onTocar, onMantener, deshabili
     >
       {/* La vista Rive se queda con los toques: sin `pointerEvents="none"`, tocar el fénix no llegaba al botón. */}
       <View pointerEvents="none" style={[styles.fenix, centrado]}>
-        {aLaVista ? (
+        {aLaVista && !celebrando ? (
           <FenixDeSer ref={fenix} estado={fase} size={lado} etiqueta="Fénix, tu acompañante" />
         ) : (
           <FenixDeSerQuieto size={lado} />

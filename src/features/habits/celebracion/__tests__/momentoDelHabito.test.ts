@@ -11,7 +11,7 @@ import React from 'react';
 import { act } from 'react-test-renderer';
 
 import { FenixDeSerQueSalta } from '../../../fenix/components/FenixDeSerQueSalta';
-import { anotarCelebrador } from '../../../fenix/estado/celebracionEnElCentro';
+import { momentoGrandeActual } from '../../../fenix/estado/momentoGrande';
 import { crear, desmontarTodo } from '../../../fenix/__tests__/ayudasDePrueba';
 import { completarRegistro } from '../../api/evidenciaHabitoApi';
 import { alCumplirUnHabito, avisarHabitoCumplido, tomarPuntosDe } from '../../eventos/habitoCumplido';
@@ -194,15 +194,12 @@ describe('el fénix del botón de SER', () => {
 });
 
 describe('la celebración del día no se duplica', () => {
-  it('cumplir un hábito (check y fénix del botón) nunca pide la celebración corta', () => {
-    const celebrar = jest.fn(() => Promise.resolve());
-    const quitar = anotarCelebrador(celebrar);
+  it('cumplir un hábito (check y fénix del botón) nunca abre la pantalla completa', () => {
     const raiz = crear(check(false));
     crear(fenix());
     act(() => avisarHabitoCumplido({ registroId: 'r1', puntosOtorgados: 10 }));
     act(() => raiz.update(check(true)));
-    expect(celebrar).not.toHaveBeenCalled();
-    quitar();
+    expect(momentoGrandeActual()).toBeNull();
   });
 
   it('nada del momento lee ni anota la celebración del día', () => {
@@ -212,7 +209,7 @@ describe('la celebración del día no se duplica', () => {
         .readFileSync(path.join(__dirname, archivo), 'utf8')
         .replace(/\/\*[\s\S]*?\*\//g, '')
         .replace(/\/\/.*$/gm, '');
-      expect(codigo).not.toMatch(/celebradorDelCentro|tomarCelebracionDeHoy|celebrateShort|anotarCelebrador/);
+      expect(codigo).not.toMatch(/tomarCelebracionDeHoy|revisarHitosDelDia|momentoGrande|celebrateShort|PantallaDeCelebracion/);
     }
   });
 });

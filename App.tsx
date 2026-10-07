@@ -21,6 +21,7 @@ import { AbridorDeEventos } from './src/features/eventos/components/AbridorDeEve
 import { AbridorDeAvisos } from './src/features/alarmas/components/AbridorDeAvisos';
 import { RearmadorDeAlarmas } from './src/features/alarmas/components/RearmadorDeAlarmas';
 import { SincronizadorDeAcciones } from './src/features/objetivos/components/SincronizadorDeAcciones';
+import { AnfitrionDeCelebraciones } from './src/features/fenix/components/AnfitrionDeCelebraciones';
 
 function Shell() {
   const { mode, c } = useTheme();
@@ -63,6 +64,10 @@ function Shell() {
           primer plano, solo si la persona pidio ese aviso. No pinta nada. Ver
           `features/objetivos/notificaciones/recordatoriosDeAcciones.ts`. */}
       <SincronizadorDeAcciones />
+      {/* La pantalla completa de los momentos grandes (día completo, rachas de 7 y 30, fase nueva), una por día,
+          donde ocurra el hito. Aca arriba por el mismo motivo que los otros: ninguna pantalla la dibuja. Se quita
+          borrando esta linea. Ver `features/fenix/components/AnfitrionDeCelebraciones.tsx`. */}
+      <AnfitrionDeCelebraciones />
       {/* Dibuja los Alert en el build web, donde el Alert de react-native-web es un metodo vacio
           que nunca ejecuta los onPress de sus botones (E-144). En movil no pinta nada. */}
       <AnfitrionAlerta />

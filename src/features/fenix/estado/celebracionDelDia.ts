@@ -1,16 +1,30 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { claveDelDia, hitoDelDia, rachaCelebradaTrasMirar, type DatosDelDia, type HitoDelFenix } from '../utils/hitosDelFenix';
+import { hayQueCelebrar } from '../../yo/utils/estadoDeLasFases';
+import { claveDelDia, hitosDelDia, rachaCelebradaTrasMirar, type DatosDelDia, type HitoDelFenix } from '../utils/hitosDelFenix';
 
 /**
- * «Máximo una celebración por día por usuario», guardado en el teléfono (AsyncStorage, como `yo.faseVista`). Se anota
- * en el momento de DECIDIR, no al terminar: si la app se cierra a mitad del salto, no se repite.
+ * «Máximo una pantalla de celebración por día por cuenta», guardado en el teléfono (AsyncStorage). Se anota en el
+ * momento de DECIDIR, no al cerrar: si la app se cierra a mitad de la pantalla, no se repite.
+ *
+ * La última fase vista sigue en la clave de siempre (`yo.faseVista.<id>`, la que usaba el momento chico de Yo): quien
+ * ya vio su fase en Yo no la vuelve a celebrar. Una fase nueva que llega con el día ya ocupado no se pierde: queda sin
+ * anotar y se celebra al día siguiente.
  *
  * Sin almacenamiento disponible no se celebra: la celebración es un extra, nunca algo que pueda fallar.
  */
 const PREFIJO = 'fenix.celebracion.';
+const FASE_VISTA = 'yo.faseVista.';
 
 type Registro = { dia: string | null; racha: number | null };
+
+/** Lo que se muestra: la pantalla de mayor jerarquía y, como líneas, los otros hitos que coincidieron. */
+export type CelebracionDeHoy = { principal: HitoDelFenix; otros: HitoDelFenix[] };
+
+export type DatosParaCelebrar = Omit<DatosDelDia, 'faseNueva'> & {
+  /** El número de la fase de `/home` (1–4), o `null` si no se sabe. */
+  faseNumero: number | null;
+};
 
 async function leer(usuarioId: string): Promise<Registro> {
   const crudo = await AsyncStorage.getItem(PREFIJO + usuarioId);
@@ -30,25 +44,35 @@ async function guardar(usuarioId: string, registro: Registro): Promise<void> {
   await AsyncStorage.setItem(PREFIJO + usuarioId, JSON.stringify(registro));
 }
 
-/** El hito a celebrar hoy, o `null`. Si hay uno, ya queda anotado: una segunda llamada el mismo día da `null`. */
-export async function tomarCelebracionDeHoy(usuarioId: string, datos: DatosDelDia, hoy: Date): Promise<HitoDelFenix | null> {
-  const registro = await leer(usuarioId);
-  const dia = claveDelDia(hoy);
-  const yaHubo = registro.dia === dia;
-  const hito = yaHubo ? null : hitoDelDia(datos, registro.racha);
-  const racha = rachaCelebradaTrasMirar(datos.rachaActual, registro.racha, hito);
-  if (hito || racha !== registro.racha) await guardar(usuarioId, { dia: hito ? dia : registro.dia, racha });
-  return hito;
+async function leerFaseVista(usuarioId: string): Promise<number | null> {
+  const guardada = await AsyncStorage.getItem(FASE_VISTA + usuarioId);
+  return guardada === null || !Number.isFinite(Number(guardada)) ? null : Number(guardada);
 }
 
 /**
- * Otra celebración de la app ocupó el día (el momento «¡Entraste en la Fase N!» de Yo): el fénix no suma otra encima.
+ * La primera vez se anota la fase sin celebrar; una más alta se anota solo cuando se celebra (si el día ya estaba
+ * ocupado, queda pendiente para mañana).
  */
-export async function registrarCelebracionFuera(usuarioId: string, hoy: Date): Promise<void> {
-  try {
-    const registro = await leer(usuarioId);
-    await guardar(usuarioId, { ...registro, dia: claveDelDia(hoy) });
-  } catch {
-    /* sin almacenamiento: a lo sumo, el fénix celebra algo el mismo día */
+async function anotarFase(usuarioId: string, vista: number | null, numero: number | null, celebrada: boolean) {
+  if (numero === null) return;
+  if (vista === null || (celebrada && numero > vista)) await AsyncStorage.setItem(FASE_VISTA + usuarioId, String(numero));
+}
+
+/** La celebración de hoy, o `null`. Si hay una, ya queda anotada: una segunda llamada el mismo día da `null`. */
+export async function tomarCelebracionDeHoy(
+  usuarioId: string,
+  datos: DatosParaCelebrar,
+  hoy: Date,
+): Promise<CelebracionDeHoy | null> {
+  const [registro, faseVista] = await Promise.all([leer(usuarioId), leerFaseVista(usuarioId)]);
+  const dia = claveDelDia(hoy);
+  const faseNueva = hayQueCelebrar(faseVista, datos.faseNumero);
+  const hitos = registro.dia === dia ? [] : hitosDelDia({ ...datos, faseNueva }, registro.racha);
+  const racha = rachaCelebradaTrasMirar(datos.rachaActual, registro.racha, hitos);
+  if (hitos.length > 0 || racha !== registro.racha) {
+    await guardar(usuarioId, { dia: hitos.length > 0 ? dia : registro.dia, racha });
   }
+  await anotarFase(usuarioId, faseVista, datos.faseNumero, hitos.includes('fase'));
+  if (hitos.length === 0) return null;
+  return { principal: hitos[0], otros: hitos.slice(1) };
 }

@@ -61,6 +61,20 @@ export const tacto = {
     }
   },
 
+  /**
+   * Un momento grande (la pantalla completa de celebración, 2026-10-07): el logro con un segundo golpe más pesado
+   * detrás, para que se distinga del logro de cada hábito. Una sola vez, al aparecer la pantalla.
+   */
+  hito(): void {
+    if (Platform.OS === 'android') {
+      vibrarEnAndroid(Haptics.AndroidHaptics.Confirm, Haptics.AndroidHaptics.Virtual_Key);
+      setTimeout(() => vibrarEnAndroid(Haptics.AndroidHaptics.Long_Press, Haptics.AndroidHaptics.Long_Press), 110);
+    } else if (Platform.OS === 'ios') {
+      sinRomper(Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success));
+      setTimeout(() => sinRomper(Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)), 110);
+    }
+  },
+
   /* Comunidad · chat (2026-10-05). */
 
   /** Mantener presionado abrió un menú (el de un mensaje del chat): el «toc» del sistema. */
