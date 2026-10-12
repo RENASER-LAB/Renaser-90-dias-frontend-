@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import * as onboardingApi from '../../onboarding/api/onboardingApi';
+import { ApiError } from '../../../services/http/apiClient';
+import { escucharDiaUnoElegido } from '../events/avisoDiaUnoElegido';
 
 /**
  * Por qué el aprendiz todavía no puede planificar (D-84).
@@ -22,6 +24,7 @@ import * as onboardingApi from '../../onboarding/api/onboardingApi';
 
 export type ArranquePrograma =
   | { estado: 'CARGANDO' }
+  | { estado: 'ERROR'; reintentar: () => void; mensaje?: string }
   | { estado: 'EN_CURSO' }
   | { estado: 'PENDIENTE_ELEGIR' }
   | { estado: 'ESPERANDO_INICIO'; fechaInicio: string };
@@ -57,47 +60,55 @@ function fechaCivil(fecha: Date): string {
  * «Elegir mi Día 1» (Training, Hoy, Yo): sin esto el aviso «Todavía no elegiste tu Día 1» seguía en
  * pantalla después de elegirlo, porque `habilitado` no cambia (el día sigue en 0 hasta que llega).
  */
-export function useArranqueDelPrograma(habilitado: boolean, version = 0): ArranquePrograma {
-  const [arranque, setArranque] = useState<ArranquePrograma>({ estado: 'CARGANDO' });
-
-  const consultar = useCallback(async () => {
-    if (!habilitado) {
-      setArranque({ estado: 'EN_CURSO' });
-      return;
-    }
-    setArranque({ estado: 'CARGANDO' });
-    try {
-      const estado = await onboardingApi.consultarActivacionPrograma();
-      // D-90: se compara la fecha contra HOY. Antes bastaba con que existiera `startDate` para
-      // declarar ESPERANDO_INICIO, y una fecha de inicio YA PASADA dejaba la pantalla anunciando
-      // "empezás el jueves 3 de septiembre" el viernes 4 — con las 7 pildoras de dia apagadas y
-      // la lista de habitos en `display: none`. Ese era el reclamo de "estando en el dia no
-      // puedo editar mis habitos": no habia nada que tocar. Una fecha de arranque en el pasado
-      // no puede significar "todavia no arranco", diga lo que diga el contador de dias.
-      if (estado.activated && estado.startDate && empiezaDespuesDeManana(estado.startDate)) {
-        setArranque({ estado: 'ESPERANDO_INICIO', fechaInicio: estado.startDate });
-      } else if (estado.activated) {
-        // Activado pero sin fecha: backend viejo, o staff con seguimiento personal. No hay
-        // nada que explicarle al aprendiz, así que no se lo bloquea.
-        setArranque({ estado: 'EN_CURSO' });
-      } else {
-        setArranque({ estado: 'PENDIENTE_ELEGIR' });
-      }
-    } catch {
-      // Un aviso es decoración y no puede costarle nada a la pantalla que lo muestra: si la
-      // consulta falla, Plan se dibuja como siempre en vez de quedar bloqueado por un error
-      // de red. Nunca bloquear por no saber.
-      setArranque({ estado: 'EN_CURSO' });
-    }
-    // `version` solo existe para volver a consultar: no se lee adentro.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [habilitado, version]);
+export function useArranqueDelPrograma(habilitado: boolean, version = 0, usuarioId?: string | null): ArranquePrograma {
+  const [intento, setIntento] = useState(0);
+  const consultaActual = `${usuarioId ?? ''}:${habilitado}:${version}:${intento}`;
+  const [resultado, setResultado] = useState<{ consulta: string | null; arranque: ArranquePrograma }>({
+    consulta: null, arranque: { estado: 'CARGANDO' },
+  });
+  const reintentar = useCallback(() => setIntento(v => v + 1), []);
+  useEffect(() => escucharDiaUnoElegido(reintentar), [reintentar]);
 
   useEffect(() => {
-    consultar();
-  }, [consultar]);
+    if (!habilitado) return;
+    let vigente = true;
+    const poner = (arranque: ArranquePrograma) => {
+      if (vigente) setResultado({ consulta: consultaActual, arranque });
+    };
+    poner({ estado: 'CARGANDO' });
+    void (async () => {
+      try {
+        const estado = await onboardingApi.consultarActivacionPrograma();
+        if (!vigente) return;
+        // D-90: se compara la fecha contra HOY. Antes bastaba con que existiera `startDate` para
+        // declarar ESPERANDO_INICIO, y una fecha de inicio YA PASADA dejaba la pantalla anunciando
+        // "empezás el jueves 3 de septiembre" el viernes 4 — con las 7 pildoras de dia apagadas y
+        // la lista de habitos en `display: none`. Ese era el reclamo de "estando en el dia no
+        // puedo editar mis habitos": no habia nada que tocar. Una fecha de arranque en el pasado
+        // no puede significar "todavia no arranco", diga lo que diga el contador de dias.
+        if (estado.activated && estado.startDate && empiezaDespuesDeManana(estado.startDate)) {
+          poner({ estado: 'ESPERANDO_INICIO', fechaInicio: estado.startDate });
+        } else if (estado.activated) {
+          // Activado pero sin fecha: backend viejo, o staff con seguimiento personal. No hay
+          // nada que explicarle al aprendiz, así que no se lo bloquea.
+          poner({ estado: 'EN_CURSO' });
+        } else {
+          poner({ estado: 'PENDIENTE_ELEGIR' });
+        }
+      } catch (error) {
+        // No saber no equivale a haber empezado: antes ocultaba la única entrada al selector.
+        poner({ estado: 'ERROR', reintentar,
+          mensaje: error instanceof ApiError && error.status === 404
+            ? 'No encontramos tu inscripción al programa. Pide al equipo que revise tu cuenta.'
+            : undefined });
+      }
+    })();
+    return () => { vigente = false; };
+  }, [habilitado, consultaActual, reintentar]);
 
-  return arranque;
+  if (!habilitado) return { estado: 'EN_CURSO' };
+  // No hay un cuadro con el resultado anterior mientras el efecto arranca la consulta nueva.
+  return resultado.consulta === consultaActual ? resultado.arranque : { estado: 'CARGANDO' };
 }
 
 /** `2026-09-05` → `sábado 5 de septiembre`. Sin `Date` para no arrastrar la zona del

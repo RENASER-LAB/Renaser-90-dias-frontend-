@@ -8,6 +8,7 @@ import { useDiaUnoPorElegir } from '../hooks/useDiaUnoPorElegir';
 import { entradaAlProgramaPropio } from '../utils/entradaAlProgramaPropio';
 import { BotonElegirDiaUno } from './BotonElegirDiaUno';
 import { InvitacionProgramaPropio } from './InvitacionProgramaPropio';
+import { AvisoConsultaDiaUno } from './AvisoConsultaDiaUno';
 
 /**
  * La entrada al programa propio en Hoy y en Yo (D-260).
@@ -24,6 +25,8 @@ export function EntradaAlProgramaPropio({
   usuarioId,
   inscrito,
   diaPrograma,
+  errorCapacidades = false,
+  reintentarCapacidades,
 }: {
   lugar: 'hoy' | 'yo';
   /** Si esta cuenta puede tener un programa opcional (personal). Para el aprendiz, `false`. */
@@ -31,15 +34,24 @@ export function EntradaAlProgramaPropio({
   usuarioId: string | null;
   inscrito: boolean | undefined;
   diaPrograma: number | undefined;
+  errorCapacidades?: boolean;
+  reintentarCapacidades?: () => void;
 }) {
   const programa = useProgramaPersonal(activo, usuarioId);
-  const diaUno = useDiaUnoPorElegir(inscrito, diaPrograma);
+  const diaUno = useDiaUnoPorElegir(inscrito, diaPrograma, usuarioId);
   const entrada = entradaAlProgramaPropio({
     diaUnoPorElegir: diaUno.porElegir,
     puedeEmpezar: lugar === 'hoy' ? programa.visible : programa.puedeActivar,
   });
 
   if (entrada === 'ELEGIR_DIA_UNO') return <TarjetaElegirDiaUno onActivado={diaUno.alElegir} />;
+  if (diaUno.error || programa.error || errorCapacidades) {
+    return <AvisoConsultaDiaUno mensaje={diaUno.mensaje} reintentar={() => {
+      diaUno.reintentar();
+      programa.recargar();
+      reintentarCapacidades?.();
+    }} />;
+  }
   if (entrada === 'EMPEZAR') return <InvitacionProgramaPropio programa={programa} conAhoraNo={lugar === 'hoy'} />;
   return null;
 }

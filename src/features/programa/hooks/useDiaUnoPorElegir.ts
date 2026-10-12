@@ -10,9 +10,13 @@ import { useArranqueDelPrograma } from './useArranqueDelPrograma';
  * fila, no paga la llamada. `alElegir` vuelve a consultar después de elegir, para que la tarjeta se
  * vaya sola.
  */
-export function useDiaUnoPorElegir(inscrito: boolean | undefined, diaPrograma: number | undefined) {
+export function useDiaUnoPorElegir(inscrito: boolean | undefined, diaPrograma: number | undefined, usuarioId?: string | null) {
   const [version, setVersion] = useState(0);
-  const arranque = useArranqueDelPrograma(inscrito === true && diaPrograma === 0, version);
+  const arranque = useArranqueDelPrograma(inscrito === true && diaPrograma === 0, version, usuarioId);
   const alElegir = useCallback(() => setVersion(v => v + 1), []);
-  return { porElegir: arranque.estado === 'PENDIENTE_ELEGIR', alElegir };
+  return { porElegir: arranque.estado === 'PENDIENTE_ELEGIR',
+    error: arranque.estado === 'ERROR',
+    mensaje: arranque.estado === 'ERROR' ? arranque.mensaje : undefined,
+    reintentar: arranque.estado === 'ERROR' ? arranque.reintentar : alElegir,
+    alElegir };
 }

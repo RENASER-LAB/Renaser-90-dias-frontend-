@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { capacidadesDePrograma } from '../../mentor/api/mentorApi';
+import { escucharDiaUnoElegido } from '../../programa/events/avisoDiaUnoElegido';
 
 export type Capacidades = {
   /** Muestra la entrada a Administración. */
@@ -29,10 +30,15 @@ const NINGUNA: Capacidades = { administrar: false, puedeIniciarPrograma: false, 
 export function useCapacidades() {
   const [capacidades, setCapacidades] = useState<Capacidades>(NINGUNA);
   const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(false);
+  const consultaActual = useRef(0);
 
   const cargar = useCallback(async () => {
+    const consulta = ++consultaActual.current;
     setCargando(true);
     const respuesta = await capacidadesDePrograma();
+    if (consulta !== consultaActual.current) return;
+    setError(respuesta === null);
     setCapacidades(
       respuesta
         ? {
@@ -47,7 +53,9 @@ export function useCapacidades() {
 
   useEffect(() => {
     void cargar();
+    return () => { consultaActual.current += 1; };
   }, [cargar]);
+  useEffect(() => escucharDiaUnoElegido(() => { void cargar(); }), [cargar]);
 
-  return { capacidades, cargando, recargar: cargar };
+  return { capacidades, cargando, error, recargar: cargar };
 }

@@ -66,6 +66,7 @@ import {
 import { useProgramaPersonal } from '../features/mentor/hooks/useProgramaPersonal';
 import { BotonElegirDiaUno } from '../features/programa/components/BotonElegirDiaUno';
 import { InvitacionProgramaPropio } from '../features/programa/components/InvitacionProgramaPropio';
+import { AvisoConsultaDiaUno } from '../features/programa/components/AvisoConsultaDiaUno';
 import { borradorEspiritu } from '../features/spirit/storage/borradorEspiritu';
 import type { DayOfWeek } from './PlanScreen';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
@@ -278,7 +279,8 @@ export default function TrainingScreen() {
   } = useProgramaDia();
   /* D-260: tras «Elegir mi Día 1» se vuelve a preguntar, y el aviso de abajo se va solo. */
   const [versionArranque, setVersionArranque] = useState(0);
-  const arranque = useArranqueDelPrograma(!cargandoDiaPrograma && diaPrograma === 0, versionArranque);
+  const { user } = useAuth();
+  const arranque = useArranqueDelPrograma(!cargandoDiaPrograma && diaPrograma === 0, versionArranque, user?.id);
   const programaSinArrancar =
     arranque.estado === 'PENDIENTE_ELEGIR' || arranque.estado === 'ESPERANDO_INICIO';
 
@@ -437,13 +439,14 @@ export default function TrainingScreen() {
    * de 3 segundos). Ver el javadoc de `useEspiritu`.
    */
   const [pastillaVisible, setPastillaVisible] = useState(false);
-  const { user } = useAuth();
   /* D-260: quien no tiene fila en el programa (personal que nunca empezó) veía «No pudimos cargar tu
      entrenamiento» con «Participante no encontrado: <uuid>». Si el servidor dice que puede empezar
      (`canStartProgram`), se le muestra la invitación de Hoy en lugar del error. Solo se pregunta
      cuando `/home` dice que no está inscrito: el aprendiz y quien ya cursa no pagan la llamada. */
   const programaPropio = useProgramaPersonal(!cargandoDiaPrograma && !inscrito, user?.id ?? null);
   const sinProgramaPropio = programaPropio.puedeActivar;
+  const comprobandoPrograma = cargandoDiaPrograma || arranque.estado === 'CARGANDO' || programaPropio.cargando;
+  const programaSinConfirmar = comprobandoPrograma || arranque.estado === 'ERROR' || programaPropio.error;
   const alActivarProgramaPropio = useCallback(() => {
     setVersionArranque(v => v + 1);
     void recargarDiaPrograma();
@@ -905,6 +908,14 @@ export default function TrainingScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
+        {arranque.estado === 'ERROR' || programaPropio.error ? (
+          <AvisoConsultaDiaUno mensaje={arranque.estado === 'ERROR' ? arranque.mensaje : undefined} reintentar={() => {
+            setVersionArranque(v => v + 1);
+            programaPropio.recargar();
+            void recargarDiaPrograma();
+            void recargarEntrenamiento();
+          }} />
+        ) : null}
         {/* =================================================================== */}
         {/* PROGRAMA SIN ARRANCAR — la misma compuerta que Plan tiene desde D-84.  */}
         {/* Va arriba de las dos vistas porque el motivo no depende de si estás    */}
@@ -960,7 +971,7 @@ export default function TrainingScreen() {
             </View>
 
             {/* Aviso de los domingos. Solo donde puede sonar de verdad. */}
-            {recordatorios.HAY_RECORDATORIOS_LOCALES && repasoSemanal !== null && !programaSinArrancar && (
+            {recordatorios.HAY_RECORDATORIOS_LOCALES && repasoSemanal !== null && !programaSinArrancar && !programaSinConfirmar && (
               <View style={[styles.repasoSemanal, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
                 <Icon name="calendar" size={TAMANO_ICONO.normal} color={c.goldInk} />
                 <View style={{ flex: 1, flexShrink: 1, gap: 2 }}>
@@ -985,7 +996,7 @@ export default function TrainingScreen() {
                 2026-09-05). Se dibuja solo si hay alguno vivo con plazo: cuando el dia esta
                 cerrado, la tarjeta simplemente no aparece. Tocarla abre ese habito directamente,
                 sin obligar a adivinar en que dimension estaba. */}
-            {!cargandoBackend && errorBackend === null && (
+            {!cargandoBackend && !programaSinConfirmar && !programaSinArrancar && errorBackend === null && (
               <ProximoAVencerCard habits={habits} onAbrir={openEvidenceModal} />
             )}
 
@@ -1000,7 +1011,7 @@ export default function TrainingScreen() {
 
             {/* Mientras carga o si falla. Antes se dibujaban 17 hábitos inventados, 11 de ellos
                 ya marcados como hechos y con evidencia. */}
-            {cargandoBackend && (
+            {(cargandoBackend || comprobandoPrograma) && (
               <View style={{ gap: 12 }} accessibilityLabel="Cargando tu entrenamiento">
                 {[0, 1, 2, 3, 4].map(i => (
                   <View
@@ -1014,7 +1025,7 @@ export default function TrainingScreen() {
               </View>
             )}
 
-            {!cargandoBackend && errorBackend !== null && !sinProgramaPropio && (
+            {!cargandoBackend && !programaSinConfirmar && errorBackend !== null && !sinProgramaPropio && (
               <View
                 style={{
                   gap: 12,
@@ -1050,7 +1061,7 @@ export default function TrainingScreen() {
             )}
 
             <View style={{ gap: 12 }}>
-              {!cargandoBackend && errorBackend === null && !sinProgramaPropio && DIMENSIONES_CONFIG.map(d => {
+              {!cargandoBackend && !programaSinConfirmar && errorBackend === null && !sinProgramaPropio && DIMENSIONES_CONFIG.map(d => {
                 const dimHabits = habits.filter(h => h.dimension === d.key);
                 // Dice "CUMPLIDOS" y no "EVIDENCIAS" (2026-09-05, pedido del dueño: que se
                 // distingan). El número cuenta ítems del día ya dados por hechos — y la mitad
@@ -1219,7 +1230,7 @@ export default function TrainingScreen() {
                 {/* Solo aparece si hay algo que planificar: las rocas de VIDA Y      */}
                 {/* NEGOCIO no son hábitos de este módulo y no traen `habitoId`.      */}
                 {/* =============================================================== */}
-                {habitosPlanificables > 0 && !programaSinArrancar && (
+                {habitosPlanificables > 0 && !programaSinArrancar && !programaSinConfirmar && (
                   <Presionable
                     onPress={() => setPlanificarVisible(true)}
                     accessibilityRole="button"
@@ -1289,7 +1300,7 @@ export default function TrainingScreen() {
 
                   {/* Multiple Habits Card List */}
                   {currentDimensionHabits.map(habit => {
-                    const operable = habit.tieneTrackHoy && !programaSinArrancar;
+                    const operable = habit.tieneTrackHoy && !programaSinArrancar && !programaSinConfirmar;
                     const accion = accionDeLaTarjeta(habit);
                     const titulo = tituloVisible({ id: habit.habitoId ?? habit.id, title: habit.title }, renombre.titulos);
                     const desplegado = cumplidoAbierto === habit.id && habit.done;

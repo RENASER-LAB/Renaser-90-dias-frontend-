@@ -139,6 +139,8 @@ function altaDesde(accion: AccionMotora, metaCorta: string): AltaHabitoPersonal 
 
 export interface EstadoMapaRenacimiento {
   mapa: MapaRenacimiento;
+  /** El cierre puede recuperar sus cantidades sin inventar un borrador en un dispositivo nuevo. */
+  conteosGuardados?: { acciones: number; reemplazos: number } | null;
   cargando: boolean;
   activando: boolean;
   errorActivacion: string | null;
@@ -153,6 +155,7 @@ export interface EstadoMapaRenacimiento {
 
 export function useMapaRenacimiento(userId: string): EstadoMapaRenacimiento {
   const [mapa, setMapa] = useState<MapaRenacimiento>(mapaVacio);
+  const [conteosGuardados, setConteosGuardados] = useState<{ acciones: number; reemplazos: number } | null>(null);
   const [cargando, setCargando] = useState(true);
   const [activando, setActivando] = useState(false);
   const [errorActivacion, setErrorActivacion] = useState<string | null>(null);
@@ -184,10 +187,14 @@ export function useMapaRenacimiento(userId: string): EstadoMapaRenacimiento {
       cargado.current = true;
       setCargando(false);
 
-      if (base.estado === 'activo') return;
+      // Un dispositivo nuevo no tiene las listas locales. Antes solo se recuperaba la marca
+      // «activo» y el cierre mostraba 0 acciones y 0 reemplazos, aunque el servidor tuviera ambos.
+      // También se consulta un cierre vacío que ya se hubiera guardado con ese comportamiento.
+      if (base.estado === 'activo' && base.acciones.length > 0 && base.reemplazos.length > 0) return;
       try {
         const servidor = await consultarMapa();
         if (!vigente || !servidor.stageCompleted) return;
+        setConteosGuardados({ acciones: servidor.actions.length, reemplazos: servidor.protocols.length });
         const confirmado: MapaRenacimiento = { ...base, estado: 'activo', pasoActual: 11 };
         setMapa(confirmado);
         /* Se escribe aqui ademas del autoguardado, y no sobra: aquel espera 250 ms y su
@@ -421,5 +428,5 @@ export function useMapaRenacimiento(userId: string): EstadoMapaRenacimiento {
     }
   }, [mapa, actualizar]);
 
-  return { mapa, cargando, activando, errorActivacion, actualizar, irA, siguiente, anterior, redactarObjetivo, activar };
+  return { mapa, conteosGuardados, cargando, activando, errorActivacion, actualizar, irA, siguiente, anterior, redactarObjetivo, activar };
 }

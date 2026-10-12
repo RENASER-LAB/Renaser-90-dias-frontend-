@@ -58,7 +58,7 @@ export async function obtenerEstado(): Promise<EstadoOnboardingApi> {
  * backend). `validStartDates` viene vacío si el programa ya está activado.
  */
 export async function consultarActivacionPrograma(): Promise<EstadoActivacionProgramaApi> {
-  const r = await apiFetch<unknown>('/api/v1/onboarding/activate-program');
+  const r = await apiFetch<unknown>('/api/v1/onboarding/activate-program', { timeoutMs: 15_000 });
   return validarRespuesta<EstadoActivacionProgramaApi>(
     estadoActivacionProgramaSchema,
     r,
@@ -72,7 +72,7 @@ export async function consultarActivacionPrograma(): Promise<EstadoActivacionPro
  * una fecha distinta el backend responde 409 (`ApiError.esConflicto`).
  */
 export async function activarPrograma(input: ActivarProgramaInput): Promise<ActivarProgramaApi> {
-  const r = await apiFetch<unknown>('/api/v1/onboarding/activate-program', { method: 'POST', body: input });
+  const r = await apiFetch<unknown>('/api/v1/onboarding/activate-program', { method: 'POST', body: input, timeoutMs: 15_000 });
   return validarRespuesta<ActivarProgramaApi>(activarProgramaSchema, r, 'POST /api/v1/onboarding/activate-program');
 }
 

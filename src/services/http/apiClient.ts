@@ -138,6 +138,8 @@ type OpcionesPeticion = {
   body?: unknown;
   /** Endpoints públicos (login, alta, OTP) no necesitan mandar sesión. */
   conSesion?: boolean;
+  /** Límite opcional para lecturas cortas; las subidas y operaciones largas conservan su espera. */
+  timeoutMs?: number;
 };
 
 /**
@@ -170,7 +172,7 @@ function mensajeSinCuerpoLegible(status: number): string {
 }
 
 export async function apiFetch<T>(ruta: string, opciones: OpcionesPeticion = {}): Promise<T> {
-  const { method = 'GET', body, conSesion = true } = opciones;
+  const { method = 'GET', body, conSesion = true, timeoutMs } = opciones;
 
   const headers: Record<string, string> = { Accept: 'application/json' };
   const esFormulario = typeof FormData !== 'undefined' && body instanceof FormData;
@@ -188,50 +190,62 @@ export async function apiFetch<T>(ruta: string, opciones: OpcionesPeticion = {})
     registrarPedido(`${method} ${ruta}`);
   }
 
-  let respuesta: Response;
+  const controlador = timeoutMs ? new AbortController() : undefined;
+  const limite = timeoutMs ? setTimeout(() => controlador?.abort(), timeoutMs) : undefined;
   try {
-    respuesta = await fetch(`${API_CONFIG.BASE_URL}${ruta}`, {
-      method,
-      headers,
-      body: body === undefined ? undefined : esFormulario ? (body as FormData) : JSON.stringify(body),
-    });
-  } catch (error) {
-    // fetch solo rechaza cuando no hubo respuesta: backend apagado, IP mal puesta, sin red.
-    // Un 4xx/5xx SÍ resuelve, y se maneja más abajo.
-    throw new ApiError(0, 'No se pudo conectar con el servidor. Revisa que el backend esté corriendo.', error);
-  }
-
-  // La hora del servidor viaja en CADA respuesta. De acá sale el desfase con el reloj del
-  // teléfono, que el Código Renaser necesita para no abrir y cerrar sus franjas a destiempo.
-  registrarHoraDelServidor(respuesta.headers.get('Date'));
-
-  // El backend renueva el identificador de sesión al iniciarla; si viene, se guarda.
-  const tokenNuevo = respuesta.headers.get(HEADER_SESION);
-  if (tokenNuevo) {
-    setTokenSesion(tokenNuevo);
-  }
-
-  if (!respuesta.ok) {
-    const { mensaje, cuerpo } = await leerMensajeDeError(respuesta);
-    // Un 401 en una request que mandó sesión no es "credenciales mal": es el token vencido. Se
-    // cierra en UN lugar para que la app mande al login, en vez de que cada pantalla falle por su
-    // cuenta y la persona concluya que la app se rompió.
-    //
-    // Deliberadamente NO incluye al 403: ahí el backend también responde "cuenta suspendida", y
-    // tratarlo como vencimiento mandaría a loguearse una y otra vez a quien no puede entrar.
-    const sesionVencida = respuesta.status === 401 && tokenEnviado !== null;
-    if (sesionVencida) {
-      notificarSesionVencida();
+    let respuesta: Response;
+    try {
+      respuesta = await fetch(`${API_CONFIG.BASE_URL}${ruta}`, {
+        method,
+        headers,
+        body: body === undefined ? undefined : esFormulario ? (body as FormData) : JSON.stringify(body),
+        ...(controlador ? { signal: controlador.signal } : {}),
+      });
+    } catch (error) {
+      // fetch solo rechaza cuando no hubo respuesta: backend apagado, IP mal puesta, sin red.
+      // Un 4xx/5xx SÍ resuelve, y se maneja más abajo.
+      throw new ApiError(0, 'No se pudo conectar con el servidor. Revisa que el backend esté corriendo.', error);
     }
-    throw new ApiError(respuesta.status, mensaje, cuerpo, sesionVencida);
-  }
 
-  if (respuesta.status === 204) {
-    return undefined as T;
-  }
+    // La hora del servidor viaja en CADA respuesta. De acá sale el desfase con el reloj del
+    // teléfono, que el Código Renaser necesita para no abrir y cerrar sus franjas a destiempo.
+    registrarHoraDelServidor(respuesta.headers.get('Date'));
 
-  const texto = await respuesta.text();
-  return (texto ? JSON.parse(texto) : undefined) as T;
+    // El backend renueva el identificador de sesión al iniciarla; si viene, se guarda.
+    const tokenNuevo = respuesta.headers.get(HEADER_SESION);
+    if (tokenNuevo) {
+      setTokenSesion(tokenNuevo);
+    }
+
+    if (!respuesta.ok) {
+      const { mensaje, cuerpo } = await leerMensajeDeError(respuesta);
+      // Un 401 en una request que mandó sesión no es "credenciales mal": es el token vencido. Se
+      // cierra en UN lugar para que la app mande al login, en vez de que cada pantalla falle por su
+      // cuenta y la persona concluya que la app se rompió.
+      //
+      // Deliberadamente NO incluye al 403: ahí el backend también responde "cuenta suspendida", y
+      // tratarlo como vencimiento mandaría a loguearse una y otra vez a quien no puede entrar.
+      const sesionVencida = respuesta.status === 401 && tokenEnviado !== null;
+      if (sesionVencida) {
+        notificarSesionVencida();
+      }
+      throw new ApiError(respuesta.status, mensaje, cuerpo, sesionVencida);
+    }
+
+    if (respuesta.status === 204) {
+      return undefined as T;
+    }
+
+    const texto = await respuesta.text();
+    return (texto ? JSON.parse(texto) : undefined) as T;
+  } catch (error) {
+    if (controlador?.signal.aborted) {
+      throw new ApiError(0, 'El servidor tardó en responder. Intenta de nuevo.', error);
+    }
+    throw error;
+  } finally {
+    if (limite !== undefined) clearTimeout(limite);
+  }
 }
 
 /**

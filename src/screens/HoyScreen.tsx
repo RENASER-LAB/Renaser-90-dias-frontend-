@@ -108,7 +108,7 @@ export default function HoyScreen() {
   /* Quien puede administrar lo dice el SERVIDOR, no el rol leido en el telefono. Un rol nuevo
      manana no dejaria la entrada colgada, y una capacidad falseada abre pantallas vacias: cada
      endpoint vuelve a autorizar (SDD 003, ARF-15). */
-  const { capacidades, cargando: cargandoCapacidades } = useCapacidades();
+  const { capacidades, cargando: cargandoCapacidades, error: errorCapacidades, recargar: recargarCapacidades } = useCapacidades();
   /* Ya no `esMentor`: la invitacion al programa propio es para todo el staff, ADMIN y ALQUIMISTA
      incluidos. Atarla a "es mentor" los dejaba fuera de un programa que el backend si les
      permitia iniciar — el bloqueo estaba aca, no en el permiso (ARF-16). */
@@ -365,9 +365,10 @@ export default function HoyScreen() {
       cargarRocas(),
       recargarUltimaPublicacion(),
       recargarHabitoAhora(),
+      recargarCapacidades(),
     ]);
     setRefreshing(false);
-  }, [recargarResumen, cargarRocas, recargarUltimaPublicacion, recargarHabitoAhora, recargarSemaforo]);
+  }, [recargarResumen, cargarRocas, recargarUltimaPublicacion, recargarHabitoAhora, recargarSemaforo, recargarCapacidades]);
 
   // Roca Prioritaria de Hoy: Posición 1 (Pareto Verde) o la primera disponible
   const rocaPrioritaria = rocas.find(r => r.posicion === 1) || rocas[0] || null;
@@ -808,6 +809,8 @@ export default function HoyScreen() {
             usuarioId={user?.id ?? null}
             inscrito={resumen?.inscrito}
             diaPrograma={resumen?.diaPrograma}
+            errorCapacidades={errorCapacidades}
+            reintentarCapacidades={() => void recargarCapacidades()}
           />
 
           {/* Código Renaser. Va PRIMERO durante los días 1-7 y sólo entonces: es lo único de esta
@@ -1222,4 +1225,3 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
-
