@@ -10,11 +10,13 @@ import type { PropsPaso } from './props';
 /** V11 · Cierre. Texto final aprobado (§10.1). No cuenta como paso; abre el Día 8, no el inicio genérico. */
 export function CierreScreen({ estado, onSalir, dias }: PropsPaso) {
   const { c, t } = useTheme();
-  const { mapa } = estado;
+  const { mapa, conteosGuardados } = estado;
+  const acciones = mapa.acciones.length || conteosGuardados?.acciones || 0;
+  const reemplazos = mapa.reemplazos.length || conteosGuardados?.reemplazos || 0;
   const filas: { icono: 'zap' | 'stack' | 'award' | 'calendar'; titulo: string; detalle: string }[] = [
     { icono: 'zap', titulo: '3 objetivos', detalle: 'Cuerpo, negocio y relaciones' },
-    { icono: 'stack', titulo: `${mapa.acciones.length} acciones semanales`, detalle: 'Tu sistema de ejecución, ya en tus hábitos' },
-    { icono: 'award', titulo: `${mapa.reemplazos.length} reemplazo${mapa.reemplazos.length === 1 ? '' : 's'}`, detalle: 'Para mantener el rumbo' },
+    { icono: 'stack', titulo: `${acciones} acciones semanales`, detalle: 'Tu sistema de ejecución, ya en tus hábitos' },
+    { icono: 'award', titulo: `${reemplazos} reemplazo${reemplazos === 1 ? '' : 's'}`, detalle: 'Para mantener el rumbo' },
     { icono: 'calendar', titulo: 'Próximo control: 7 días', detalle: 'Revisa tu avance y ajusta' },
   ];
   return (

@@ -152,7 +152,7 @@ export async function capacidadesDePrograma(): Promise<ContextoMentorApi['capabi
   try {
     const contexto = validarRespuesta<ContextoMentorApi>(
       contextoMentorSchema,
-      await apiFetch<unknown>('/api/v1/mentor/context'),
+      await apiFetch<unknown>('/api/v1/mentor/context', { timeoutMs: 15_000 }),
       'GET /api/v1/mentor/context',
     );
     return contexto.capabilities;

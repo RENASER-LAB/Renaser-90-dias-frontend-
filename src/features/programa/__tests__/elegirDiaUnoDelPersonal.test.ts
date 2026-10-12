@@ -204,6 +204,10 @@ describe.each(PERSONAL)('$rol', persona => {
     expect(textos(r)).toContain('Jueves 8 de octubre');
 
     await tocar(r, 'Viernes 9 de octubre');
+    // Elegir crea la fila: las otras pestañas releen capacidades y ya no pueden iniciar otra.
+    mockCapacidades.mockResolvedValue({ programRequired: false, canStartProgram: false,
+      canAccompany: false, canAdminister: persona.administra });
+    mockConsultarActivacion.mockResolvedValue({ activated: true, validStartDates: [], startDate: '2026-10-09' });
     await tocar(r, 'CONFIRMAR MI DÍA 1');
 
     expect(mockActivarPrograma).toHaveBeenCalledWith({ startDate: '2026-10-09' });
@@ -274,7 +278,7 @@ describe('Training y el onboarding (código fuente)', () => {
   });
 
   it('sin fila no muestra el error con el uuid: muestra la invitación', () => {
-    expect(TRAINING).toContain('!cargandoBackend && errorBackend !== null && !sinProgramaPropio && (');
+    expect(TRAINING).toContain('!cargandoBackend && !programaSinConfirmar && errorBackend !== null && !sinProgramaPropio && (');
     expect(TRAINING).toMatch(/sinProgramaPropio && selectedDimension === null \? \(\s*<InvitacionProgramaPropio/);
     expect(TRAINING).toContain('useProgramaPersonal(!cargandoDiaPrograma && !inscrito');
   });

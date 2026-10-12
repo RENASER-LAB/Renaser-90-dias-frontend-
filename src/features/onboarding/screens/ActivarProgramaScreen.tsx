@@ -7,7 +7,8 @@ import { MarcoDePaso } from '../components/MarcoDePaso';
 import { OpcionElegible } from '../components/OpcionElegible';
 import { tacto } from '../../../utils/tacto';
 import * as onboardingApi from '../api/onboardingApi';
-import { mensajeDeError } from '../../../services/http/apiClient';
+import { ApiError, mensajeDeError } from '../../../services/http/apiClient';
+import { avisarDiaUnoElegido } from '../../programa/events/avisoDiaUnoElegido';
 
 /**
  * Último paso del onboarding, entre Términos y el Home: elegir el Día 1 del programa. (El Pacto —
@@ -68,6 +69,7 @@ export function ActivarProgramaScreen({ onActivated, alVolver }: ActivarPrograma
   const [seleccionada, setSeleccionada] = useState<string | null>(null);
   const [confirmando, setConfirmando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [consulta, setConsulta] = useState(0);
 
   // En el onboarding no hay a dónde volver desde acá: Términos ya quedó firmado y guardado. Tragarse
   // el gesto de retroceso evita que la persona salga a mitad de elegir su fecha de inicio. Fuera
@@ -79,6 +81,9 @@ export function ActivarProgramaScreen({ onActivated, alVolver }: ActivarPrograma
 
   useEffect(() => {
     let vigente = true;
+    setCargando(true);
+    setFechas([]);
+    setSeleccionada(null);
     (async () => {
       try {
         const estado = await onboardingApi.consultarActivacionPrograma();
@@ -86,6 +91,7 @@ export function ActivarProgramaScreen({ onActivated, alVolver }: ActivarPrograma
         if (estado.activated) {
           // Ya estaba activado (ej. la persona cerró la app a mitad de este paso y volvió): no
           // hay nada que elegir, seguir directo al Home.
+          avisarDiaUnoElegido();
           onActivated();
           return;
         }
@@ -101,7 +107,7 @@ export function ActivarProgramaScreen({ onActivated, alVolver }: ActivarPrograma
     return () => {
       vigente = false;
     };
-  }, [onActivated]);
+  }, [onActivated, consulta]);
 
   const handleConfirmar = async () => {
     if (!seleccionada || confirmando) return;
@@ -110,9 +116,17 @@ export function ActivarProgramaScreen({ onActivated, alVolver }: ActivarPrograma
     try {
       await onboardingApi.activarPrograma({ startDate: seleccionada });
       tacto.logro();
+      avisarDiaUnoElegido();
       onActivated();
     } catch (e) {
-      setError(mensajeDeError(e, 'No pudimos activar tu programa. Revisa tu conexión e inténtalo de nuevo.'));
+      if (e instanceof ApiError && (e.status === 400 || e.status === 409)) {
+        setError(e.status === 400
+          ? 'Las fechas disponibles cambiaron. Elige tu Día 1 nuevamente.'
+          : 'Vamos a comprobar el Día 1 que ya elegiste.');
+        setConsulta(v => v + 1);
+      } else {
+        setError(mensajeDeError(e, 'No pudimos activar tu programa. Revisa tu conexión e inténtalo de nuevo.'));
+      }
     } finally {
       setConfirmando(false);
     }
@@ -167,6 +181,14 @@ export function ActivarProgramaScreen({ onActivated, alVolver }: ActivarPrograma
       {error ? (
         <View style={[styles.alertBox, { backgroundColor: c.dangerWash, borderColor: c.danger }]}>
           <Text style={[t.small, { color: c.danger, textAlign: 'center' }]}>{error}</Text>
+        </View>
+      ) : null}
+      {error && !cargando && fechas.length === 0 ? (
+        <View style={{ marginTop: 16 }}>
+          <GoldButton label="Reintentar Día 1" onPress={() => {
+            setError(null);
+            setConsulta(v => v + 1);
+          }} />
         </View>
       ) : null}
     </MarcoDePaso>

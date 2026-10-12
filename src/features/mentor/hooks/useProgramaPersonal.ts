@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { capacidadesDePrograma } from '../api/mentorApi';
+import { escucharDiaUnoElegido } from '../../programa/events/avisoDiaUnoElegido';
 
 const PREFIJO_POSPUESTO = 'renaser.programa-personal.pospuesto.v2';
 
@@ -31,29 +32,50 @@ function clavePospuesto(usuarioId: string): string {
 export function useProgramaPersonal(activo: boolean, usuarioId?: string | null) {
   const [puedeActivar, setPuedeActivar] = useState(false);
   const [pospuesto, setPospuesto] = useState(true);
-
-  const cargar = useCallback(async () => {
-    if (!activo) return;
-    const capacidades = await capacidadesDePrograma();
-    setPuedeActivar(capacidades?.canStartProgram === true);
-    if (!usuarioId) {
-      // Sin saber de quién es la sesión no se puede leer una preferencia por cuenta. Se ofrece:
-      // mostrar de más es reversible con un toque; esconder de más no se nota nunca.
-      setPospuesto(false);
-      return;
-    }
-    try {
-      const { default: AsyncStorage } = await import('@react-native-async-storage/async-storage');
-      setPospuesto((await AsyncStorage.getItem(clavePospuesto(usuarioId))) === 'si');
-    } catch {
-      // Sin almacenamiento la invitación se muestra: mejor ofrecerla de más que esconderla.
-      setPospuesto(false);
-    }
-  }, [activo, usuarioId]);
+  const [error, setError] = useState(false);
+  const [cargando, setCargando] = useState(activo);
+  const [intento, setIntento] = useState(0);
+  const consultaActual = `${activo}:${usuarioId ?? ''}:${intento}`;
+  const [consultaTerminada, setConsultaTerminada] = useState<string | null>(null);
+  const recargar = useCallback(() => setIntento(v => v + 1), []);
+  useEffect(() => escucharDiaUnoElegido(recargar), [recargar]);
 
   useEffect(() => {
-    void cargar();
-  }, [cargar]);
+    let vigente = true;
+    setPuedeActivar(false);
+    setPospuesto(true);
+    setError(false);
+    setCargando(activo);
+    if (!activo) return;
+    void (async () => {
+      try {
+        const capacidades = await capacidadesDePrograma();
+        if (!vigente) return;
+        setError(capacidades === null);
+        setPuedeActivar(capacidades?.canStartProgram === true);
+        if (!usuarioId) {
+          // Sin saber de quién es la sesión no se puede leer una preferencia por cuenta. Se ofrece:
+          // mostrar de más es reversible con un toque; esconder de más no se nota nunca.
+          setPospuesto(false);
+          return;
+        }
+        try {
+          const { default: AsyncStorage } = await import('@react-native-async-storage/async-storage');
+          const pospuestoDeLaCuenta = (await AsyncStorage.getItem(clavePospuesto(usuarioId))) === 'si';
+          if (vigente) setPospuesto(pospuestoDeLaCuenta);
+        } catch {
+          // Sin almacenamiento la invitación se muestra: mejor ofrecerla de más que esconderla.
+          if (vigente) setPospuesto(false);
+        }
+      } finally {
+        if (vigente) {
+          setCargando(false);
+          setConsultaTerminada(consultaActual);
+        }
+      }
+    })();
+    return () => { vigente = false; };
+  }, [activo, usuarioId, consultaActual]);
 
   /* D-261: ya no hay un «Empezar» que active hoy (`POST /mentor/activate-tracking`, D-07). La
      invitación abre el selector del Día 1 —el mismo del aprendiz—, que crea la fila con la fecha
@@ -74,5 +96,8 @@ export function useProgramaPersonal(activo: boolean, usuarioId?: string | null) 
 
   /* `puedeActivar` sin el «Ahora no» (D-260): Training y Yo ofrecen empezar aunque se haya
      pospuesto en Hoy. Antes «Ahora no» escondía la única entrada para siempre. */
-  return { visible: puedeActivar && !pospuesto, puedeActivar, alEmpezar, posponer };
+  // El efecto se ejecuta después del render: sus datos previos no deben asomar mientras recarga.
+  const confirmado = activo && consultaTerminada === consultaActual;
+  return { visible: confirmado && puedeActivar && !pospuesto, puedeActivar: confirmado && puedeActivar,
+    alEmpezar, posponer, error: confirmado && error, cargando: activo && (!confirmado || cargando), recargar };
 }

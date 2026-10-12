@@ -14,7 +14,7 @@ import { homeSchemas, validarRespuesta } from './homeSchemas';
  * lea un solo nombre en los dos conteos.
  */
 export async function obtenerResumenHome(): Promise<ResumenHomeApi> {
-  const r = await apiFetch<unknown>('/api/v1/home');
+  const r = await apiFetch<unknown>('/api/v1/home', { timeoutMs: 15_000 });
   return aResumenHome(validarRespuesta(homeSchemas.resumen, r, 'GET /api/v1/home'));
 }
 

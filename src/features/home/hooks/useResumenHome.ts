@@ -1,9 +1,10 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { mensajeDeError } from '../../../services/http/apiClient';
 import { obtenerResumenHome } from '../api/homeApi';
 import type { ResumenHomeApi } from '../types/home.types';
+import { escucharDiaUnoElegido } from '../../programa/events/avisoDiaUnoElegido';
 
 export const DIAS_DEL_PROGRAMA = 90;
 
@@ -118,18 +119,24 @@ export function useResumenHome(): EstadoResumenHome {
   const [resumen, setResumen] = useState<ResumenHomeApi | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const consultaActual = useRef(0);
+  useEffect(() => () => { consultaActual.current += 1; }, []);
 
   const recargar = useCallback(async () => {
+    const consulta = ++consultaActual.current;
     setCargando(true);
     try {
-      setResumen(await obtenerResumenHome());
+      const respuesta = await obtenerResumenHome();
+      if (consulta !== consultaActual.current) return;
+      setResumen(respuesta);
       setError(null);
     } catch (e) {
-      setError(mensajeDeError(e, 'No pudimos cargar tu día. Revisa tu conexión.'));
+      if (consulta === consultaActual.current) setError(mensajeDeError(e, 'No pudimos cargar tu día. Revisa tu conexión.'));
     } finally {
-      setCargando(false);
+      if (consulta === consultaActual.current) setCargando(false);
     }
   }, []);
+  useEffect(() => escucharDiaUnoElegido(() => { void recargar(); }), [recargar]);
 
   useFocusEffect(
     useCallback(() => {

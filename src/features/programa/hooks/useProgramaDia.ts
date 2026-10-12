@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { apiFetch } from '../../../services/http/apiClient';
+import { escucharDiaUnoElegido } from '../events/avisoDiaUnoElegido';
 
 /**
  * El día de programa real del aprendiz (1 a 90) y su fase, desde `GET /api/v1/home`.
@@ -23,11 +24,14 @@ type EstadoPrograma = {
 export function useProgramaDia() {
   const [estado, setEstado] = useState<EstadoPrograma>({ diaPrograma: 0, fase: null, inscrito: false });
   const [loading, setLoading] = useState(true);
+  const consultaActual = useRef(0);
 
   const recargar = useCallback(async () => {
+    const consulta = ++consultaActual.current;
     setLoading(true);
     try {
-      const r = await apiFetch<{ diaPrograma?: number; fase?: string; inscrito?: boolean }>('/api/v1/home');
+      const r = await apiFetch<{ diaPrograma?: number; fase?: string; inscrito?: boolean }>('/api/v1/home', { timeoutMs: 15_000 });
+      if (consulta !== consultaActual.current) return;
       setEstado({
         diaPrograma: typeof r?.diaPrograma === 'number' ? r.diaPrograma : 0,
         fase: r?.fase ?? null,
@@ -36,15 +40,17 @@ export function useProgramaDia() {
     } catch {
       // Sin datos se deja el día en 0: es el estado "todavía no arrancó", que la pantalla ya sabe
       // representar. Nunca inventar un día para que el medidor se vea lleno.
-      setEstado({ diaPrograma: 0, fase: null, inscrito: false });
+      if (consulta === consultaActual.current) setEstado({ diaPrograma: 0, fase: null, inscrito: false });
     } finally {
-      setLoading(false);
+      if (consulta === consultaActual.current) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     void recargar();
+    return () => { consultaActual.current += 1; };
   }, [recargar]);
+  useEffect(() => escucharDiaUnoElegido(() => { void recargar(); }), [recargar]);
 
   return { ...estado, loading, recargar };
 }

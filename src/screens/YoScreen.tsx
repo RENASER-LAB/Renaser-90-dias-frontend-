@@ -352,7 +352,7 @@ export default function YoScreen() {
   const memoriaRenasia = useMemoriaDeRenasia(activeView === 'hub' || activeView === 'memoria_renasia');
   /* Segunda puerta a Administracion, ademas de la de Hoy. Dos entradas y ningun sexto tab: el
      administrador llega desde donde este, y los cinco tabs quedan como estaban (SDD 003, ARF-01). */
-  const { capacidades } = useCapacidades();
+  const { capacidades, error: errorCapacidades, recargar: recargarCapacidades } = useCapacidades();
   const [enAdministracion, setEnAdministracion] = useState(false);
   /* Caja Renaser (D-219, pedido del dueño del 28/09): la fila «Tu Caja Renaser» y su pantalla. La
      fila aparece solo si el servidor dice que hay algo que mostrarle (desde el día 8, sin pausa y en
@@ -621,6 +621,8 @@ export default function YoScreen() {
             usuarioId={user?.id ?? null}
             inscrito={resumen?.inscrito}
             diaPrograma={resumen?.diaPrograma}
+            errorCapacidades={errorCapacidades}
+            reintentarCapacidades={() => void recargarCapacidades()}
           />
 
           {/* Tu evolución. Tipo oración, como Hoy (pedido del dueño del 2026-10-05): el rótulo, la

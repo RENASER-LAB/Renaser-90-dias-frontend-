@@ -1664,6 +1664,29 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
 
 ---
 
+  * **Corrección encontrada en el E2E del Mapa del Poder por rol — 2026-10-10 (backend E-592).**
+    Al abrir el mapa activo desde otro navegador, el cierre decía «0 acciones semanales» y «0 reemplazos»
+    aunque el servidor hubiera guardado tres y uno. `useMapaRenacimiento` recupera los conteos del mismo
+    `GET /mapa-renacimiento`; `CierreScreen` los usa cuando no hay listas locales. También corrige un cierre
+    vacío guardado por la versión anterior. No reconstruir un borrador vacío ni mandarlo al servidor.
+    `mapaEnOtroDispositivo.test.ts` cubre ambos casos; `e2e/mapa-poder/` pasó los cinco roles con login, Día 1,
+    diez pasos y otro navegador. Sin permisos ni endpoints nuevos. **Hace falta una versión nueva de la app.**
+
+  * **Recuperación del Día 1 de cuentas anteriores — 2026-10-10 (backend E-594/E-596/E-597).**
+    Pedido del dueño: verificar quienes nunca eligieron su inicio después de actualizar la app y evitar
+    entradas escondidas, parpadeos y cargas interminables. Hoy, Yo y Training ofrecen el selector a una
+    participación pendiente; el personal sin fila conserva la invitación opcional, y «Ahora no» pertenece
+    a esa cuenta. No asignar automáticamente una fecha ni reiniciar un programa activo o completado.
+    Un fallo muestra «Reintentar Día 1»; las consultas cortas y la confirmación vencen a los 15 s.
+    Los datos de la consulta anterior no deben aparecer ni un render al recargar o cambiar de usuario.
+    Confirmar invalida las lecturas de las pestañas montadas; una respuesta o error anterior no debe
+    reemplazar la relectura nueva (`lecturasDiaUnoFueraDeOrden.test.ts`). Un 400 refresca fechas; un 409 relee la
+    elección existente; una respuesta perdida permite repetir la misma fecha. La matriz E2E vive en
+    `playwright.dia-uno.config.ts` y su preparación y alcance en `e2e/mapa-poder/README.md`.
+    **Requiere publicar ambos proyectos:** el backend serializa la elección por usuario hasta el commit.
+    Verificación final del 2026-10-12: 34/34 E2E de Día 1 y 5/5 mapas completos, cero reintentos,
+    fallos, errores u omitidos. JUnit y persistencia SQL en `artifacts/e2e-dia-uno/` y `artifacts/e2e-mapa/`.
+
 ## 2. 📱 RESPONSIVIDAD UNIVERSAL (XIAOMI, ANDROID, IOS Y TABLETS)
 * **Cero Doble Scroll**: NUNCA coloques un contenedor con `maxHeight` fijo o scroll interno dentro de otro `ScrollView`. Toda pantalla debe tener UN ÚNICO contenedor de scroll fluido con `contentContainerStyle={{ flexGrow: 1, paddingBottom: 36 }}`.
 * **Adaptabilidad a Xiaomi y Pantallas Altas (20:9 / 19.5:9)**:
