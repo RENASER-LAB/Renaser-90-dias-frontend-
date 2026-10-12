@@ -27,6 +27,29 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     y usa **`s24`** —con `s` saldría a 1,46 px; `grosorDeIconos.test.ts` lo frena—. Nada de emojis como
     íconos: cambian de forma entre Android, iOS y web e ignoran el color del tema.
 * **Integridad del Core**: NUNCA alterar, romper ni desconfigurar las pantallas existentes ni los tabs principales (`Hoy`, `Plan`, `Training`, `Comunidad`, `Yo`).
+  * **Cambio por pedido del dueño — 2026-10-12 — Administración (estado de `Hoy`): «Hábitos del programa», con
+    audiencia por rol** (backend D-264; spec y plan en `Renaser-90-dias-backend/specs/001-habitos-por-rol/`, flujo
+    spec-kit con las decisiones del dueño). Lo que cambia y nada más:
+    * **Más opciones → «Hábitos del programa»** (solo ADMIN y ALQUIMISTA: Administración ya se muestra por
+      `canAdminister`): la lista del catálogo global con a quién llega cada hábito («Para todos» o «Mentor · Líder de
+      mentores»), filtro por rol con los roles y nombres que manda el servidor (`GET /api/v1/admin/habits/roles`),
+      Activos / Inactivos y «Rige desde mañana» solo cuando el servidor lo dice (`targetRolesStartTomorrow`: un cambio
+      de roles guardado hoy; un hábito recién creado rige desde ya y no lo lleva, E-601). «Nuevo» y cada fila abren el formulario
+      (`HabitoProgramaFormScreen`): nombre y tipo (solo al crear), descripción, dimensión, evidencia, «Es opcional»,
+      «Obligatorio en intoxicación» y **«¿Para quién es?»**: `Interruptor` «Para todos los roles» (encendido por
+      defecto) y, apagado, una `Checkbox` por rol (al menos una; marcar los cinco se guarda como cinco, no como «para
+      todos»). Activar / Desactivar y Eliminar (con registros, el 409 ofrece «Desactivar»). Aviso en los hábitos con
+      reglas propias. Salir con cambios pregunta. `ConfirmacionEnLinea` + `tacto.logro()` al guardar.
+    * **La fila «Catálogo de hábitos» de «Desde el panel web» pasa a «Horarios, guías y audioterapias»**: eso sigue
+      fuera de la app.
+    * **Ningún tab cambia de forma.** Training, Plan y Hoy muestran menos hábitos solo si el servidor ya no le manda a
+      esa persona un hábito de otro rol (el filtro es 100 % del servidor, desde el día siguiente al cambio).
+    * Movimiento (`emil-design-eng`): el filtro y las opciones cambian al instante; las casillas de rol entran con un
+      fundido de 180 ms (con «reducir movimiento», al instante); `Presionable` en filas y chips.
+    * **Hace falta un APK nuevo** y el backend con V96. Contra un backend anterior la pantalla muestra todo «Para
+      todos», sin filtro de rol.
+    * **Probado de punta a punta en el emulador** contra el backend local con base clonada (nunca producción): los
+      casos T040–T054 y sus capturas están en `specs/001-habitos-por-rol/e2e.md` del backend.
   * **Cambio por pedido del dueño — 2026-10-05 — tab `Plan`: sin la vista muerta de hábitos, selector de eje,
     las cuatro fases, íconos por eje y hojas desde abajo** (rediseño aprobado por el dueño según la auditoría:
     mosaico `hoyplan-iconos-inventario.png`, filas de Plan; respuesta literal «1 sí, 2 sí, 3 sí, 4 fases que

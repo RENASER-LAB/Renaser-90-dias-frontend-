@@ -28,12 +28,14 @@ export function MasOpcionesScreen({
   onAbrirGuias,
   onAbrirBienvenida,
   onAbrirImagenesDeFases,
+  onAbrirHabitosDelPrograma,
 }: {
   onVolver: () => void;
   onAbrirStaff: () => void;
   onAbrirGuias: () => void;
   onAbrirBienvenida: () => void;
   onAbrirImagenesDeFases: () => void;
+  onAbrirHabitosDelPrograma: () => void;
 }) {
   const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
@@ -57,6 +59,13 @@ export function MasOpcionesScreen({
       titulo: 'Imágenes de las fases',
       detalle: 'El animal que ve cada aprendiz en Yo, con vista previa',
       onPress: onAbrirImagenesDeFases,
+    },
+    /* El catálogo global y a qué roles llega cada hábito (pedido del dueño del 12/10, backend D-264, spec
+       001-habitos-por-rol). Los horarios, guías y audioterapias siguen en la web (fila de abajo). */
+    {
+      titulo: 'Hábitos del programa',
+      detalle: 'Crear y editar los hábitos de todos, y elegir a qué roles llega cada uno',
+      onPress: onAbrirHabitosDelPrograma,
     },
     {
       titulo: 'Equipo y roles',
@@ -91,9 +100,9 @@ export function MasOpcionesScreen({
    */
   const enLaWeb = [
     {
-      titulo: 'Catálogo de hábitos',
-      detalle: 'Crear, editar, guías, horarios y audioterapias',
-      motivo: 'El formulario de un hábito son más de veinte campos y un audio por subir.',
+      titulo: 'Horarios, guías y audioterapias',
+      detalle: 'Lo que acompaña a cada hábito del programa',
+      motivo: 'Son tramos por día del programa, textos largos y audios por subir.',
     },
     {
       titulo: 'Invitar y editar cuentas',

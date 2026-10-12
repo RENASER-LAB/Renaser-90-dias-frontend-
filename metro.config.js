@@ -22,7 +22,14 @@ const config = getDefaultConfig(__dirname);
 // `.claude/worktrees/` guarda las copias de trabajo de los agentes, cada una con su node_modules:
 // vigilarlas agotaba el límite del sistema (`ENOSPC: System limit for number of file watchers
 // reached`) y Metro se caía al arrancar (2026-09-30).
-config.resolver.blockList = [/\/graphify-out\/.*/, /\/\.claude\/.*/];
+//
+// > **Corregido 2026-10-12 (E-600 del backend).** Decía `/\/\.claude\/.*/`, sin anclar: bloqueaba
+// > CUALQUIER ruta con `/.claude/`, también la raíz de un worktree (que vive en
+// > `.claude/worktrees/<rama>/`). Desde un worktree Metro no veía ni `index.ts` y la app quedaba en
+// > «Unable to resolve module ./index». Ahora las dos exclusiones se anclan a la raíz de ESTE
+// > proyecto: en el checkout principal bloquean lo mismo que antes.
+const raiz = __dirname.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+config.resolver.blockList = [new RegExp(`^${raiz}/graphify-out/.*`), new RegExp(`^${raiz}/\\.claude/.*`)];
 
 // El fénix vivo (`assets/rive/phoenix_master_v3_3.riv`, 2026-10-06): Metro no conoce la extensión `.riv` y sin esto
 // el `require` del archivo no se resuelve («Unable to resolve module ...riv»). Va como asset, igual que un PNG.

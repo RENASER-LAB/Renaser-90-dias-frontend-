@@ -9,6 +9,9 @@ import { AdminInicioScreen } from './AdminInicioScreen';
 import { AnimalDeFaseDetalleScreen } from './AnimalDeFaseDetalleScreen';
 import { AnimalesDeFaseAdminScreen } from './AnimalesDeFaseAdminScreen';
 import { BienvenidaAdminScreen } from './BienvenidaAdminScreen';
+import { useHabitosProgramaAdmin } from '../hooks/useHabitosProgramaAdmin';
+import { HabitosProgramaAdminScreen } from './HabitosProgramaAdminScreen';
+import { HabitoProgramaFormScreen } from './HabitoProgramaFormScreen';
 import { useAnimalesDeFaseAdmin } from '../hooks/useAnimalesDeFaseAdmin';
 import { FichaAprendizScreen } from './FichaAprendizScreen';
 import { GrupoDetalleScreen } from './GrupoDetalleScreen';
@@ -48,6 +51,8 @@ type Vista =
   | { nombre: 'bienvenida' }
   | { nombre: 'animales-fases' }
   | { nombre: 'animal-fase'; numero: number }
+  | { nombre: 'habitos-programa' }
+  | { nombre: 'habito-programa'; id: string | null }
   | { nombre: 'mas' }
   | { nombre: 'caja' }
   | { nombre: 'caja-detalle'; aprendizId: string }
@@ -89,6 +94,7 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
   const [pila, setPila] = useState<Vista[]>(() => pilaInicial(abrirEn));
   const vista = pila[pila.length - 1];
   const animalesDeFase = useAnimalesDeFaseAdmin(vista.nombre === 'animales-fases' || vista.nombre === 'animal-fase');
+  const habitosDelPrograma = useHabitosProgramaAdmin(vista.nombre === 'habitos-programa');
 
   const entrar = (siguiente: Vista) => setPila(p => [...p, siguiente]);
   /* Volver desde la raíz sale a Mi programa. Sin este caso, el gesto en la primera pantalla no
@@ -192,6 +198,17 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
       );
     case 'animal-fase':
       return <AnimalDeFaseDetalleScreen numero={vista.numero} estado={animalesDeFase} onVolver={volver} />;
+    case 'habitos-programa':
+      return (
+        <HabitosProgramaAdminScreen
+          estado={habitosDelPrograma}
+          onAbrir={id => entrar({ nombre: 'habito-programa', id })}
+          onNuevo={() => entrar({ nombre: 'habito-programa', id: null })}
+          onVolver={volver}
+        />
+      );
+    case 'habito-programa':
+      return <HabitoProgramaFormScreen id={vista.id} estado={habitosDelPrograma} onVolver={volver} />;
     case 'mas':
       return (
         <MasOpcionesScreen
@@ -200,6 +217,7 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
           onAbrirGuias={() => entrar({ nombre: 'guias' })}
           onAbrirBienvenida={() => entrar({ nombre: 'bienvenida' })}
           onAbrirImagenesDeFases={() => entrar({ nombre: 'animales-fases' })}
+          onAbrirHabitosDelPrograma={() => entrar({ nombre: 'habitos-programa' })}
         />
       );
     default:
