@@ -1500,9 +1500,9 @@ export default function ComunidadScreen() {
   /* Spec 002: lo que se pidió mientras una sección estaba apagada quedó en error; al volver, se pide de nuevo. Eventos
      no lo necesita: su sección se vuelve a montar y lee sola. */
   useAlVolverAPrenderse(CLAVES.muro, () => void recargarMuro());
-  useAlVolverAPrenderse(CLAVES.cursos, () => void recargarCursos());
-  useAlVolverAPrenderse(CLAVES.chat, () => void recargarConversaciones());
-  useAlVolverAPrenderse(CLAVES.ranking, () => void recargarRanking());
+  useAlVolverAPrenderse(CLAVES.cursos, () => recursosPedidos.cursos && void recargarCursos());
+  useAlVolverAPrenderse(CLAVES.chat, () => recursosPedidos.conversaciones && void recargarConversaciones());
+  useAlVolverAPrenderse(CLAVES.ranking, () => recursosPedidos.ranking && void recargarRanking());
 
   /**
    * Qué tabla se está mirando. El backend manda las TRES en la misma respuesta
