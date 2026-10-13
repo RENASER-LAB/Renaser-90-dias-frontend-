@@ -51,6 +51,7 @@ const DE_LINEA: IconName[] = [
   'forward', 'imagePlus', 'smile', 'trash', 'checkCheck', 'reply', 'copy', // caja de 24, de las hojas y del chat (entraron en paralelo)
   'lifeBuoy', 'alarmClock', 'settings', 'images', 'listChecks', 'compass', 'package', 'signature', // caja de 24, de Yo (2026-10-05)
   'brain', 'heart', 'sparkles', // caja de 24, de las dimensiones (2026-10-05; `brain` y `heart` eran de 22)
+  'wrench', // caja de 24, el aviso de mantenimiento (spec 002, 2026-10-13)
   'chevron', 'arrow', 'filter', 'volume',
 ];
 

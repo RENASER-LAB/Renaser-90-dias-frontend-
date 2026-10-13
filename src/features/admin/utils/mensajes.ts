@@ -23,6 +23,8 @@ export function mensajeDeFallo(error: unknown, alFallar: string): string {
     if (error.esDeRed) return 'Sin conexión con el servidor. Revisa tu red y vuelve a intentar.';
     if (error.esNoAutenticado) return 'Tu sesión venció. Vuelve a entrar.';
     if (error.esProhibido) return 'Tu cuenta no tiene permiso para esto.';
+    // Spec 002: apagado por Soporte TI. El mensaje es el aviso que escribió Soporte TI (o el genérico del servidor).
+    if (error.esFuncionalidadApagada && error.message.trim()) return error.message;
     if (CON_MOTIVO.has(error.status) && !/^Error \d{3}$/.test(error.message.trim())) {
       return mensajeDeError(error, alFallar);
     }

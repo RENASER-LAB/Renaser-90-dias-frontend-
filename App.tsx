@@ -22,6 +22,7 @@ import { AbridorDeAvisos } from './src/features/alarmas/components/AbridorDeAvis
 import { RearmadorDeAlarmas } from './src/features/alarmas/components/RearmadorDeAlarmas';
 import { SincronizadorDeAcciones } from './src/features/objetivos/components/SincronizadorDeAcciones';
 import { AnfitrionDeCelebraciones } from './src/features/fenix/components/AnfitrionDeCelebraciones';
+import { FuncionalidadesProvider } from './src/features/plataforma/estado/FuncionalidadesProvider';
 
 function Shell() {
   const { mode, c } = useTheme();
@@ -99,6 +100,9 @@ export default function App() {
     <SafeAreaProvider>
       <ThemeProvider initial={scheme === 'dark' ? 'dark' : 'light'}>
         <AuthProvider>
+          {/* Los interruptores de Soporte TI (spec 002): qué está apagado para esta sesión. Relee al entrar, al
+              volver al frente, cada 60 s y cuando el servidor responde 503 FUNCIONALIDAD_APAGADA. */}
+          <FuncionalidadesProvider>
           {/* El Mapa de Renacimiento (Día 7) se abre a pantalla completa por encima de las
               pestañas; este proveedor guarda si está abierto. Ver RootNavigator. */}
           <MapaRenacimientoProvider>
@@ -108,6 +112,7 @@ export default function App() {
               <Shell />
             </RadarProvider>
           </MapaRenacimientoProvider>
+          </FuncionalidadesProvider>
         </AuthProvider>
       </ThemeProvider>
     </SafeAreaProvider>
