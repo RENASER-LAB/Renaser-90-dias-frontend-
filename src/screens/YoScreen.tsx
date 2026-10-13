@@ -84,6 +84,8 @@ import { EliminarMiCuentaScreen } from '../features/cuenta/screens/EliminarMiCue
 import { etiquetaParaElAprendiz } from '../features/caja/utils/estadosDeCaja';
 import { useMiEmergencia } from '../features/emergencia/hooks/useMiEmergencia';
 import { EmergenciaScreen } from '../features/emergencia/screens/EmergenciaScreen';
+import { ConsolaSoporteTiScreen } from '../features/soporte-ti/screens/ConsolaSoporteTiScreen';
+import { esSoporteTi } from '../features/soporte-ti/utils/rolSoporteTi';
 import { useMiSemaforo } from '../features/semaforo/hooks/useMiSemaforo';
 import { hayQuePedirMiSemaforo } from '../features/semaforo/utils/entradasDelSemaforo';
 import { curvaDeEvolucion } from '../features/semaforo/utils/curvaDeEvolucion';
@@ -366,6 +368,10 @@ export default function YoScreen() {
      un aprendiz, desde el Día 0 (el servidor responde 403 a quien no lo es). Pedir no cambia el día. */
   const miEmergencia = useMiEmergencia();
   const [enEmergencia, setEnEmergencia] = useState(false);
+  /* Consola Soporte TI (spec 002, aprobada por el dueño el 2026-10-13): solo para la cuenta con ese rol, que se asigna
+     por script en la base. A pantalla completa, como Administración; el servidor responde 403 a cualquier otro rol. */
+  const [enSoporteTi, setEnSoporteTi] = useState(false);
+  const veSoporteTi = esSoporteTi(user?.role);
   const rutaDeYo = useRoute();
   const navegacionDeYo = useNavigation();
   useEffect(() => {
@@ -528,6 +534,10 @@ export default function YoScreen() {
         }}
       />
     ) : null;
+  }
+
+  if (enSoporteTi && veSoporteTi) {
+    return <ConsolaSoporteTiScreen onSalir={() => setEnSoporteTi(false)} />;
   }
 
   if (enAdministracion && capacidades.administrar) {
@@ -801,6 +811,17 @@ export default function YoScreen() {
                 titulo="Tu Caja Renaser"
                 detalle={etiquetaParaElAprendiz(miCaja.caja.estado)}
                 onPress={() => setEnCaja(true)}
+              />
+            ) : null}
+            {/* SOPORTE TI (spec 002) — solo la cuenta con ese rol: los interruptores de la app y su auditoría */}
+            {veSoporteTi ? (
+              <FilaDeAjuste
+                key="soporte-ti"
+                icono="toggleRight"
+                titulo="Soporte TI"
+                detalle="Interruptores y auditoría"
+                etiqueta="Abrir la consola Soporte TI"
+                onPress={() => setEnSoporteTi(true)}
               />
             ) : null}
             {/* ADMINISTRACIÓN — solo si el servidor dice que esta cuenta puede */}

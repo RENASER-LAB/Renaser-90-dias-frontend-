@@ -1772,6 +1772,15 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
         galería y cámara (`chat.fotos`) avisan en un diálogo en vez de empezar.
       * **Training**: con `habitos` apagado, el aviso ocupa la pestaña (la cabecera queda).
       * Al volver a prenderse, Muro, Cursos, chats, Ranking y Training vuelven a pedir sus datos.
+    * **`Yo` → «Soporte TI»** (`features/soporte-ti/`): una fila más en la lista de Yo, con el ícono `toggleRight`
+      (nuevo, Lucide), visible SOLO para el rol `IT_SUPPORT` / `SOPORTE_TI` (lo asigna el dueño por script en la base;
+      no está en `ROLES_ASIGNABLES` y se nombra «Soporte TI» en Administración, chat y muro). Abre la consola a pantalla
+      completa, como Administración: la contraseña la desbloquea (token en memoria, 15 min sin uso; un 423 vuelve a
+      pedirla); lista por área con buscador y filtro (Todas / Apagadas / Críticas), estado de cada una y el circuito
+      automático de la IA; el detalle con `Interruptor` general y por rol, aviso (≤ 200) y motivo obligatorio; lo
+      crítico pide la contraseña otra vez (`X-Reautenticacion`, también si el servidor responde 428); versión optimista
+      (un 409 relee y avisa); auditoría de a 20. Errores en diálogo, lo guardado con `ConfirmacionEnLinea`. El atrás del
+      sistema sube un nivel en cada vista.
     * **No se tocaron**: Plan, la barra de pestañas, la forma de ninguna sección cuando está prendida, los textos de
       error de siempre, el login ni el onboarding.
     * **Hace falta un APK nuevo** (la app no se actualiza por aire). El APK publicado (1.5.0) no lee los interruptores:

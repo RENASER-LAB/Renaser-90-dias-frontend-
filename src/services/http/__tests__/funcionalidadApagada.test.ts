@@ -119,3 +119,18 @@ describe('503 FUNCIONALIDAD_APAGADA', () => {
     expect(otro).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('un 401 que es contraseña mal (consola Soporte TI)', () => {
+  it('no cierra la sesión de la app', async () => {
+    responder(401, { message: 'Contraseña incorrecta' });
+    const oyente = jest.fn();
+    const { suscribirSesionVencida, getTokenSesion } = jest.requireActual<typeof import('../apiClient')>('../apiClient');
+    const baja = suscribirSesionVencida(oyente);
+    const error = (await apiFetch('/api/v1/soporte-ti/desbloqueo', { method: 'POST', body: {}, el401EsContrasena: true }).catch(e => e)) as ApiError;
+    baja();
+    expect(error.status).toBe(401);
+    expect(error.sesionVencida).toBe(false);
+    expect(oyente).not.toHaveBeenCalled();
+    expect(getTokenSesion()).toBe('sesion-1');
+  });
+});

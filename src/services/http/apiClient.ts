@@ -208,6 +208,12 @@ type OpcionesPeticion = {
    * consola Soporte TI). No pisan `Accept`, `Content-Type` ni la sesión: esas las pone `apiFetch`.
    */
   cabeceras?: Record<string, string>;
+  /**
+   * Un 401 de este pedido NO es la sesión vencida sino una contraseña mal, aunque el pedido lleve sesión: la consola
+   * Soporte TI pide la contraseña de nuevo (`POST /soporte-ti/desbloqueo`, spec 002) y responde 401 si no es. Sin
+   * esto, equivocarse de contraseña cerraba la sesión entera.
+   */
+  el401EsContrasena?: boolean;
 };
 
 /** Lo que devuelve {@link apiFetchConRespuesta}: el código, el cuerpo (si hubo) y las cabeceras. */
@@ -264,7 +270,7 @@ export async function apiFetchConRespuesta<T>(
 }
 
 async function pedir<T>(ruta: string, opciones: OpcionesPeticion, aceptar304: boolean): Promise<RespuestaConCabeceras<T>> {
-  const { method = 'GET', body, conSesion = true, timeoutMs, cabeceras } = opciones;
+  const { method = 'GET', body, conSesion = true, timeoutMs, cabeceras, el401EsContrasena = false } = opciones;
 
   const headers: Record<string, string> = { ...(cabeceras ?? {}), Accept: 'application/json' };
   const esFormulario = typeof FormData !== 'undefined' && body instanceof FormData;
@@ -328,7 +334,7 @@ async function pedir<T>(ruta: string, opciones: OpcionesPeticion, aceptar304: bo
       //
       // Deliberadamente NO incluye al 403: ahí el backend también responde "cuenta suspendida", y
       // tratarlo como vencimiento mandaría a loguearse una y otra vez a quien no puede entrar.
-      const sesionVencida = respuesta.status === 401 && tokenEnviado !== null;
+      const sesionVencida = respuesta.status === 401 && tokenEnviado !== null && !el401EsContrasena;
       if (sesionVencida) {
         notificarSesionVencida();
       }

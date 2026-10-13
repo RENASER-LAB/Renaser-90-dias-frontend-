@@ -17,7 +17,7 @@ export type IconName =
   | 'lifeBuoy' | 'alarmClock' | 'settings' | 'images' | 'compass' | 'package' | 'signature'
   | 'timer' | 'badgeCheck' | 'hourglass' | 'ban' | 'rotateCcw' | 'audioLines' | 'sunrise' | 'sunMedium' | 'moonStar' | 'glassWater' | 'showerHead' | 'footprints' | 'salad' | 'utensils' | 'utensilsCrossed' | 'bookOpenText' | 'headphones' | 'notebookPen' | 'handHeart' | 'smartphoneOff'
   | 'sparkles'
-  | 'wrench';
+  | 'wrench' | 'toggleRight';
 
 /**
  * Grosor del trazo, en píxeles REALES de pantalla, a cualquier tamaño (decisión del dueño,
@@ -932,11 +932,20 @@ export function Icon({ name, size = 20, color, strokeWidth }: Props) {
       );
     /* Plataforma */
     /* Spec 002 (2026-10-13): `wrench` es el aviso de mantenimiento de una funcionalidad apagada por Soporte TI
-       (`AvisoDeMantenimiento`); no se usa para otra cosa. Forma de Lucide (ISC), caja de 24 y trazo `s24`. */
+       (`AvisoDeMantenimiento`) y `toggleRight` la entrada a la consola Soporte TI; ninguno se usa para otra cosa.
+       Forma de Lucide (ISC), caja de 24 y trazo `s24`. */
     case 'wrench':
       return (
         <Svg width={size} height={size} viewBox="0 0 24 24">
           <Path {...s24} d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.106-3.105c.32-.322.863-.22.983.218a6 6 0 0 1-8.259 7.057l-7.91 7.91a1 1 0 0 1-2.999-3l7.91-7.91a6 6 0 0 1 7.057-8.259c.438.12.54.662.219.984z" />
+        </Svg>
+      );
+    /* La entrada a la consola Soporte TI en Yo (spec 002): un interruptor, lo que la consola prende y apaga. */
+    case 'toggleRight':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Circle {...s24} cx={15} cy={12} r={3} />
+          <Rect {...s24} x={2} y={5} width={20} height={14} rx={7} />
         </Svg>
       );
     case 'chevron':
