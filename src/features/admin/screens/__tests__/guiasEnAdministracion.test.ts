@@ -27,9 +27,12 @@ describe('Guías del grupo inicial en Administración', () => {
     expect(mas).toMatch(/onPress: onAbrirGuias/);
   });
 
-  it('Equipo y roles aclara que no es un rol y lleva directo', () => {
+  // Corregido 2026-10-13 (backend D-265): desde que existe el ROL «Guía de aprendiz», el aviso dice que son dos cosas.
+  it('Equipo y roles aclara que no es el rol Guía de aprendiz y lleva directo', () => {
     const staff = leer('StaffRolesScreen.tsx');
-    expect(staff).toMatch(/Guía del grupo inicial no es un rol: se asigna en Administración → Guías del grupo inicial\./);
+    expect(staff).toMatch(
+      /El guía del grupo inicial no es el rol Guía de aprendiz: se asigna en Administración → Guías del grupo\s+inicial\./,
+    );
     expect(staff).toMatch(/onPress=\{onAbrirGuias\}/);
   });
 

@@ -28,10 +28,11 @@ export const AVATAR_POR_DEFECTO = '👤';
 
 /** Mismo criterio que `chat/api/chatMappers.ts:ETIQUETA_ROL`: se duplica acá en vez de
  * importarse de `chat` a propósito (cada feature es dueña de su propia traducción,
- * AGENTS.md), son 5 líneas y evita acoplar `community` a `chat`. */
+ * AGENTS.md), son 6 líneas y evita acoplar `community` a `chat`. */
 const ETIQUETA_ROL: Record<string, string> = {
   TRAINEE: 'Aprendiz',
   MENTOR: 'Mentor',
+  TRAINEE_GUIDE: 'Guía de aprendiz',
   MENTOR_LEAD: 'Líder de Mentores',
   ADMIN: 'Administrador',
   ALCHEMIST: 'Alquimista',

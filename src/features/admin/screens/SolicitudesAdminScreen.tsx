@@ -8,9 +8,17 @@ import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
 import { aprobarSolicitud, listarAprendices, listarSolicitudes, rechazarSolicitud } from '../api/adminApi';
+import type { RolAsignable } from '../api/adminApi';
 import type { SolicitudApi } from '../api/adminSchemas';
 import { AvisoBreve } from '../components/AvisoBreve';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
+import { ChipDeOpcion } from '../components/ChipDeOpcion';
+import {
+  etiquetaDeRol,
+  queImplicaEntrarComo,
+  ROL_AL_APROBAR_POR_DEFECTO,
+  ROLES_ASIGNABLES,
+} from '../utils/rolesAsignables';
 import { quedanPorTraer, sinLaDecidida, sumarPagina, textoVerMas } from '../utils/paginasDeSolicitudes';
 import { confirmar, avisar } from '../utils/dialogo';
 import { mensajeDeAltaAprobada, mensajeDeFallo } from '../utils/mensajes';
@@ -38,6 +46,10 @@ import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar
  * > ningún lado. Ahora hay «Ver más». Y aprobar ya no abre un diálogo que hay que cerrar: la
  * > solicitud sale de la lista y el resultado llega como aviso breve (`AvisoBreve`). Rechazar sigue
  * > pidiendo confirmación, porque no se deshace.
+ *
+ * **El rol se elige al aprobar** (backend D-265, pedido del dueño del 2026-10-13): cada solicitud ofrece los seis
+ * roles con Aprendiz marcado. Aprobar como aprendiz sigue siendo UN toque y sin cuerpo en el pedido (lo de siempre);
+ * con otro rol se confirma, porque da más acceso, y el servidor lo aplica como el cambio de rol de «Equipo y roles».
  */
 export function SolicitudesAdminScreen({
   onVolver,
@@ -61,6 +73,9 @@ export function SolicitudesAdminScreen({
   const [sinGrupo, setSinGrupo] = useState<number | null>(null);
   const [avisoFinal, setAvisoFinal] = useState<string | null>(null);
   const cerrarAviso = useCallback(() => setAvisoFinal(null), []);
+  /** El rol elegido en cada solicitud; la que no está, entra como aprendiz. */
+  const [rolDe, setRolDe] = useState<Record<string, RolAsignable>>({});
+  const rolElegido = (id: string): RolAsignable => rolDe[id] ?? ROL_AL_APROBAR_POR_DEFECTO;
 
   useSystemBackHandler(() => {
     onVolver();
@@ -121,8 +136,26 @@ export function SolicitudesAdminScreen({
    * segunda— y el resultado llega como aviso breve abajo, sin diálogo que cerrar.
    */
   const aprobar = async (solicitud: SolicitudApi) => {
+    const rol = rolElegido(solicitud.id);
+    const nombre = solicitud.fullName ?? 'esta persona';
+    if (rol !== ROL_AL_APROBAR_POR_DEFECTO) {
+      const acepto = await confirmar(
+        `¿Aprobar a ${nombre} como ${etiquetaDeRol(rol)}?`,
+        `${queImplicaEntrarComo(rol)} Puedes cambiarlo después en Equipo y roles.`,
+        { ok: `Aprobar como ${etiquetaDeRol(rol)}` },
+      );
+      if (!acepto) return;
+    }
     setTrabajando(solicitud.id);
     try {
+      if (rol !== ROL_AL_APROBAR_POR_DEFECTO) {
+        await aprobarSolicitud(solicitud.id, rol);
+        quitarDeLaLista(solicitud.id);
+        /* Con otro rol no entra al grupo de bienvenida (el servidor lo saltea), así que la cola de «sin grupo» no
+           dice nada de esta persona: el aviso dice con qué rol entró y nada más. */
+        setAvisoFinal(`Cuenta aprobada: ${nombre} entró como ${etiquetaDeRol(rol)}.`);
+        return;
+      }
       await aprobarSolicitud(solicitud.id);
       quitarDeLaLista(solicitud.id);
       /* Se vuelve a consultar la cola de "sin grupo" ANTES de decir nada: así el mensaje describe
@@ -222,12 +255,31 @@ export function SolicitudesAdminScreen({
               {solicitud.fullName ?? 'Sin nombre'}
             </Text>
             <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>{solicitud.email ?? 'Sin correo'}</Text>
+            <Text style={[t.body, { color: c.textSoft, fontSize: 16, marginTop: 10 }]}>Entra como</Text>
+            <View
+              accessibilityRole="radiogroup"
+              accessibilityLabel={`Rol con el que entra ${solicitud.fullName ?? 'esta persona'}`}
+              style={estilos.roles}
+            >
+              {ROLES_ASIGNABLES.map(rol => (
+                <ChipDeOpcion
+                  key={rol.clave}
+                  etiqueta={rol.etiqueta}
+                  activo={rolElegido(solicitud.id) === rol.clave}
+                  deshabilitado={trabajando === solicitud.id}
+                  onPress={() => setRolDe(actuales => ({ ...actuales, [solicitud.id]: rol.clave }))}
+                />
+              ))}
+            </View>
             <View style={estilos.acciones}>
+              {/* Siempre «Aprobar»: con el rol en el botón, «Aprobar como Líder de mentores» ocupaba tres renglones y la
+                  tarjeta cambiaba de alto con cada chip (E2E 2026-10-13). El rol se ve en el chip marcado, lo dice el
+                  lector de pantalla y lo repite la confirmación. */}
               <BotonPrincipal
                 etiqueta={trabajando === solicitud.id ? 'Aprobando…' : 'Aprobar'}
                 onPress={() => void aprobar(solicitud)}
                 deshabilitado={trabajando === solicitud.id}
-                accessibilityLabel={`Aprobar a ${solicitud.fullName ?? 'esta persona'}`}
+                accessibilityLabel={`Aprobar a ${solicitud.fullName ?? 'esta persona'} como ${etiquetaDeRol(rolElegido(solicitud.id))}`}
                 estilo={estilos.boton}
               />
               <BotonPeligro
@@ -257,5 +309,6 @@ export function SolicitudesAdminScreen({
 const estilos = StyleSheet.create({
   tarjeta: { borderRadius: 14, borderWidth: 1, padding: 16, width: '100%' },
   acciones: { flexDirection: 'row', gap: 10, marginTop: 12, flexWrap: 'wrap' },
+  roles: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 6 },
   boton: { flexGrow: 1, flexBasis: 130 },
 });

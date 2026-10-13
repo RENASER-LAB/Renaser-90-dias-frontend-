@@ -79,6 +79,7 @@ const AVATAR_POR_TIPO: Record<TipoChat, string> = {
 const ETIQUETA_ROL: Record<string, string> = {
   TRAINEE: 'Aprendiz',
   MENTOR: 'Mentor',
+  TRAINEE_GUIDE: 'Guía de aprendiz',
   MENTOR_LEAD: 'Líder de Mentores',
   ADMIN: 'Administrador',
   ALCHEMIST: 'Alquimista',

@@ -11,6 +11,7 @@ import { cambiarRolDeUsuario, listarAprendices, listarStaff, mentoresDisponibles
 import type { RolAsignable } from '../api/adminApi';
 import type { UsuarioStaffApi } from '../api/adminSchemas';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
+import { ROLES_ASIGNABLES, etiquetaDeRol } from '../utils/rolesAsignables';
 import { confirmar, avisar } from '../utils/dialogo';
 import {
   botonDeMasAprendices,
@@ -20,6 +21,7 @@ import {
 import {
   mentoresQueFaltan,
   personaDeStaff,
+  ROLES_EN_MENTORES,
   ROLES_SOLO_EN_STAFF,
   type PersonaDelPadron,
 } from '../utils/staff';
@@ -47,14 +49,8 @@ const STAFF_POR_PAGINA = 50;
  */
 const MENTORES_POR_PAGINA = 200;
 
-/** Los cinco, con el nombre que usa la gente y no el del enum. */
-const ROLES: Array<{ clave: RolAsignable; etiqueta: string }> = [
-  { clave: 'TRAINEE', etiqueta: 'Aprendiz' },
-  { clave: 'MENTOR', etiqueta: 'Mentor' },
-  { clave: 'MENTOR_LEAD', etiqueta: 'Líder de mentores' },
-  { clave: 'ADMIN', etiqueta: 'Administrador' },
-  { clave: 'ALCHEMIST', etiqueta: 'Alquimista' },
-];
+/** Los seis, en `utils/rolesAsignables` (los mismos que ofrece la aprobación de solicitudes, backend D-265). */
+const ROLES = ROLES_ASIGNABLES;
 
 /**
  * Dónde queda la persona después de cambiarle el rol. La confirmación lo dice con esta frase.
@@ -67,15 +63,13 @@ const ROLES: Array<{ clave: RolAsignable; etiqueta: string }> = [
  */
 const DONDE_QUEDA: Record<RolAsignable, string> = {
   TRAINEE: 'Va a aparecer en la lista de aprendices.',
-  MENTOR: 'Va a aparecer en la lista de mentores.',
+  TRAINEE_GUIDE: 'Va a aparecer en la lista de mentores y guías, y acompaña grupos igual que un mentor.',
+  MENTOR: 'Va a aparecer en la lista de mentores y guías.',
   MENTOR_LEAD: 'Va a aparecer en la sección Equipo.',
   ADMIN: 'Va a aparecer en la sección Equipo, y va a poder entrar a Administración.',
   ALCHEMIST: 'Va a aparecer en la sección Equipo, y va a poder entrar a Administración.',
 };
 
-/* `Map<string, …>` y no `Map<RolAsignable, …>`: el listado de staff trae el rol del servidor, y
-   uno que esta versión no conozca tiene que poder buscarse acá sin que TypeScript lo impida. */
-const ETIQUETA = new Map<string, string>(ROLES.map(r => [r.clave as string, r.etiqueta]));
 
 type Persona = PersonaDelPadron;
 
@@ -100,7 +94,7 @@ function FilaDePersona({
   onElegir: (rol: RolAsignable) => void;
 }) {
   const { c, t } = useTheme();
-  const rotuloActual = ETIQUETA.get(persona.rol) ?? persona.rol;
+  const rotuloActual = etiquetaDeRol(persona.rol);
 
   return (
     <View style={[estilos.tarjeta, { backgroundColor: c.cardBg, borderColor: desplegada ? c.goldInk : c.border }]}>
@@ -169,8 +163,12 @@ function FilaDePersona({
  * | Sección | De dónde sale | Qué rol muestra |
  * |---|---|---|
  * | Staff | `GET /admin/staff?role=` (líder, admin, alquimista) | El que manda el servidor |
- * | Mentores | `GET /admin/cells/mentores` + `GET /admin/staff?role=MENTOR` | MENTOR |
- * | Aprendices | `GET /admin/trainees` | TRAINEE, deducido de la lista de origen |
+ * | Mentores y guías | `GET /admin/cells/mentores` + `GET /admin/staff?role=MENTOR` y `role=TRAINEE_GUIDE` | El que manda el servidor (`role`; sin él, MENTOR) |
+ * | Aprendices | `GET /admin/trainees?role=TRAINEE` | TRAINEE |
+ *
+ * > **Corregido 2026-10-13 (E-605).** «Aprendices» pedía `/admin/trainees` sin filtro y rotulaba TRAINEE a toda
+ * > fila; desde D-138 ese listado trae a las cinco cuentas, así que el personal con programa propio salía también
+ * > acá, como «Aprendiz». Ahora pide `role=TRAINEE` y el total cuadra con lo que se ve.
  *
  * > **Corregido 2026-09-15.** Acá decía que *«el panel solo sabe listar dos roles»* y que ascender
  * > a alguien a líder de mentores, administrador o alquimista lo hacía **desaparecer** de la
@@ -254,8 +252,10 @@ export function StaffRolesScreen({ onVolver, onAbrirGuias }: { onVolver: () => v
     setCargando(true);
     setError(null);
     try {
+      /* `rol: 'TRAINEE'` (E-605): desde D-138 `/admin/trainees` trae a todas las cuentas, y esta sección rotulaba
+         «Aprendiz» al personal con programa propio, que además ya sale en su propia sección. */
       const [pagAprendices, listaMentores] = await Promise.all([
-        listarAprendices({ pagina, tamano: POR_PAGINA, busqueda: busquedaAplicada }),
+        listarAprendices({ pagina, tamano: POR_PAGINA, busqueda: busquedaAplicada, rol: 'TRAINEE' }),
         mentoresDisponibles(),
       ]);
       const nuevos: Persona[] = pagAprendices.content.map(a => ({
@@ -271,7 +271,8 @@ export function StaffRolesScreen({ onVolver, onAbrirGuias }: { onVolver: () => v
           id: m.userId,
           nombre: m.fullName ?? 'Sin nombre',
           detalle: m.cellId ? 'Acompaña un grupo' : 'Sin grupo asignado',
-          rol: 'MENTOR',
+          // Un backend anterior a D-265 no manda `role`: ahí todos los de esta lista son mentores.
+          rol: m.role ?? 'MENTOR',
         })),
       );
     } catch (e) {
@@ -309,16 +310,16 @@ export function StaffRolesScreen({ onVolver, onAbrirGuias }: { onVolver: () => v
     setCargandoStaff(true);
     setErrorStaff(null);
     try {
-      const [paginas, paginaMentores] = await Promise.all([
+      const [paginas, paginasMentores] = await Promise.all([
         Promise.all(ROLES_SOLO_EN_STAFF.map(rol => listarStaff({ rol, tamano: STAFF_POR_PAGINA }))),
-        listarStaff({ rol: 'MENTOR', tamano: MENTORES_POR_PAGINA }),
+        Promise.all(ROLES_EN_MENTORES.map(rol => listarStaff({ rol, tamano: MENTORES_POR_PAGINA }))),
       ]);
       setStaff(paginas.flatMap(p => p.content).map(personaDeStaff));
       /* Solo los tres de conducción: el total que se muestra abajo es el de la sección Staff, y
          sumarle los mentores diría que faltan filas que están en otra sección. */
       setTotalStaff(paginas.reduce((suma, p) => suma + p.total, 0));
-      setMentoresDeStaff(paginaMentores.content);
-      setTotalMentoresDeStaff(paginaMentores.total);
+      setMentoresDeStaff(paginasMentores.flatMap(p => p.content));
+      setTotalMentoresDeStaff(paginasMentores.reduce((suma, p) => suma + p.total, 0));
     } catch (e) {
       setStaff([]);
       setTotalStaff(null);
@@ -379,12 +380,12 @@ export function StaffRolesScreen({ onVolver, onAbrirGuias }: { onVolver: () => v
       setAbierta(null);
       return;
     }
-    const etiqueta = ETIQUETA.get(nuevo) ?? nuevo;
+    const etiqueta = etiquetaDeRol(nuevo);
     const donde = DONDE_QUEDA[nuevo];
 
     const acepto = await confirmar(
       `¿Hacer ${etiqueta} a ${persona.nombre}?`,
-      `${persona.nombre} pasa de ${ETIQUETA.get(persona.rol) ?? persona.rol} a ${etiqueta}.\n\n${donde}`,
+      `${persona.nombre} pasa de ${etiquetaDeRol(persona.rol)} a ${etiqueta}.\n\n${donde}`,
       { ok: `Sí, hacer ${etiqueta}` },
     );
     if (!acepto) return;
@@ -432,20 +433,24 @@ export function StaffRolesScreen({ onVolver, onAbrirGuias }: { onVolver: () => v
           gap: 14,
         }}
       >
+        {/* > **Corregido 2026-10-13 (D-265).** Decía «Al aprobar una solicitud la persona entra siempre como
+            > aprendiz»: desde D-265 el rol se elige al aprobar. */}
         <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]}>
-          Al aprobar una solicitud la persona entra siempre como aprendiz. Acá se le cambia el rol.
+          El rol se elige al aprobar la solicitud. Acá se le cambia después.
         </Text>
 
-        {/* El dueño buscaba al «Guía» entre los roles y no estaba (01/10, D-242): no es un rol, es
-            una designación por cohorte. Se dice acá y se lleva directo a donde se asigna. */}
+        {/* El dueño buscaba al «Guía» entre los roles y no estaba (01/10, D-242): el del grupo inicial es una
+            designación por cohorte. Desde D-265 existe además el ROL «Guía de aprendiz», así que el aviso dice que
+            son dos cosas distintas y lleva directo a donde se asigna la otra. */}
         <Pressable
           onPress={onAbrirGuias}
           accessibilityRole="button"
-          accessibilityLabel="Guía del grupo inicial no es un rol. Abrir Guías del grupo inicial"
+          accessibilityLabel="El guía del grupo inicial no es el rol Guía de aprendiz. Abrir Guías del grupo inicial"
           style={[estilos.aviso, { borderColor: c.border }]}
         >
           <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]}>
-            Guía del grupo inicial no es un rol: se asigna en Administración → Guías del grupo inicial.{' '}
+            El guía del grupo inicial no es el rol Guía de aprendiz: se asigna en Administración → Guías del grupo
+            inicial.{' '}
             <Text style={{ color: c.goldInk, fontWeight: '500' }}>Abrir</Text>
           </Text>
         </Pressable>
@@ -482,7 +487,7 @@ export function StaffRolesScreen({ onVolver, onAbrirGuias }: { onVolver: () => v
               todas sus filas, y prometer de más es lo que hace dudar del resto de la pantalla. */}
           <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]}>
             Líderes de mentores, administradores y alquimistas, con el rol que dice el servidor.
-            Los mentores están más abajo.
+            Los mentores y guías de aprendiz están más abajo.
           </Text>
           {errorStaff ? (
             <Text style={[t.body, { color: c.danger, fontSize: 16 }]}>{errorStaff}</Text>
@@ -516,7 +521,7 @@ export function StaffRolesScreen({ onVolver, onAbrirGuias }: { onVolver: () => v
             Una cuenta suspendida se reconoce en su propia línea —«Mentor · Cuenta suspendida ·
             correo»—, así que no hace falta una sección aparte para explicar por qué está ahí. */}
         <View style={{ gap: 10 }}>
-          <TituloDeSeccion>Mentores ({mentoresVisibles.length})</TituloDeSeccion>
+          <TituloDeSeccion>Mentores y guías ({mentoresVisibles.length})</TituloDeSeccion>
           {/* Qué falta averiguar, o que todavía no hay mentores — nunca las dos cosas, y el «no
               hay» solo cuando se pudo comprobar. Callar un fallo dejaría esta sección con cara de
               estar completa; afirmar el vacío sin haberlo mirado es peor todavía.
@@ -543,7 +548,7 @@ export function StaffRolesScreen({ onVolver, onAbrirGuias }: { onVolver: () => v
               completa: el que falte va a ser justo el que alguien vino a buscar. */}
           {totalMentoresDeStaff !== null && totalMentoresDeStaff > mentoresDeStaff.length ? (
             <Text style={[t.body, { color: c.micro, fontSize: 16, lineHeight: 23 }]}>
-              El servidor dice que hay {totalMentoresDeStaff} mentores y acá entraron{' '}
+              El servidor dice que hay {totalMentoresDeStaff} mentores y guías y acá entraron{' '}
               {mentoresDeStaff.length}: puede faltar alguno con la cuenta suspendida.
             </Text>
           ) : null}

@@ -16,11 +16,12 @@ import { etiquetaDeEstadoDeCuenta } from './staff';
 export type FilaDeGuia = { id: string; nombre: string; detalle: string };
 
 /** Quiénes se ofrecen para agregar: el staff, en este orden (el Líder de Mentores primero). */
-export const ROLES_CANDIDATOS_A_GUIA: readonly RolDeStaff[] = ['MENTOR_LEAD', 'MENTOR', 'ADMIN', 'ALCHEMIST'];
+export const ROLES_CANDIDATOS_A_GUIA: readonly RolDeStaff[] = ['MENTOR_LEAD', 'MENTOR', 'TRAINEE_GUIDE', 'ADMIN', 'ALCHEMIST'];
 
 const ETIQUETA_DE_ROL: Record<string, string> = {
   TRAINEE: 'Aprendiz',
   MENTOR: 'Mentor',
+  TRAINEE_GUIDE: 'Guía de aprendiz',
   MENTOR_LEAD: 'Líder de mentores',
   ADMIN: 'Administrador',
   ALCHEMIST: 'Alquimista',

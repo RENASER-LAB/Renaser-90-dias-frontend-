@@ -69,7 +69,7 @@ export function MasOpcionesScreen({
     },
     {
       titulo: 'Equipo y roles',
-      detalle: 'Cambiar el rol de una cuenta: aprendiz, mentor, líder, administrador o alquimista',
+      detalle: 'Cambiar el rol de una cuenta: aprendiz, guía de aprendiz, mentor, líder, administrador o alquimista',
       onPress: onAbrirStaff,
     },
     /* El guía no es un rol (pedido del dueño del 01/10, backend D-242): va al lado de «Equipo y

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Alert as AlertNativo, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import type { AlertOptions } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 
 /**
@@ -62,10 +63,29 @@ function encolar(pedido: Pedido) {
   else pendientes.push(pedido);
 }
 
+/**
+ * Cuándo el atrás de Android (y tocar fuera) cierra el diálogo nativo, y qué hace al cerrarlo (E-606). El `Alert` de
+ * Android no se deja cerrar así salvo con `cancelable: true`, y quedaba abierto hasta tocar un botón. La regla es la
+ * del diálogo de web (`descartar`):
+ *
+ * - con un botón `cancel`, cerrar es elegirlo (una confirmación se resuelve como «no»);
+ * - sin botones, o con botones que no hacen nada, se cierra sin más;
+ * - con botones que hacen algo y ninguno es `cancel` (una elección obligada), no se cierra: nunca se decide por
+ *   la persona.
+ *
+ * iOS ignora estas opciones: ahí los diálogos del sistema no se cierran con un gesto.
+ */
+export function opcionesNativasDeDescarte(botones?: readonly BotonAlerta[]): AlertOptions {
+  const cancelar = botones?.find(b => b.style === 'cancel');
+  if (cancelar) return { cancelable: true, onDismiss: () => cancelar.onPress?.() };
+  const algunoHaceAlgo = (botones ?? []).some(b => b.onPress !== undefined);
+  return { cancelable: !algunoHaceAlgo };
+}
+
 export const Alert = {
   alert(titulo: string, mensaje?: string, botones?: BotonAlerta[]): void {
     if (Platform.OS !== 'web') {
-      AlertNativo.alert(titulo, mensaje, botones);
+      AlertNativo.alert(titulo, mensaje, botones, opcionesNativasDeDescarte(botones));
       return;
     }
     // Sin botones, React Native muestra un unico "OK". Se replica para que el dialogo de web

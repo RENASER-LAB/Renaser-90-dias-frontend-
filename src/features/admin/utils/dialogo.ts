@@ -1,5 +1,7 @@
 import { Alert, Platform } from 'react-native';
 
+import { opcionesNativasDeDescarte } from '../../../components/Alerta';
+
 /**
  * Diálogos que funcionan también en web.
  *
@@ -22,7 +24,8 @@ export function avisar(titulo: string, mensaje?: string): void {
     }
     return;
   }
-  Alert.alert(titulo, mensaje);
+  // E-606: el atrás de Android lo cierra (sin botones no hay nada que elegir).
+  Alert.alert(titulo, mensaje, undefined, opcionesNativasDeDescarte());
 }
 
 /**
@@ -49,13 +52,15 @@ export function confirmar(
   }
 
   return new Promise(resolve => {
-    Alert.alert(titulo, mensaje, [
-      { text: textoCancelar, style: 'cancel', onPress: () => resolve(false) },
+    const botones = [
+      { text: textoCancelar, style: 'cancel' as const, onPress: () => resolve(false) },
       {
         text: textoOk,
-        style: opciones?.destructivo ? 'destructive' : 'default',
+        style: opciones?.destructivo ? ('destructive' as const) : ('default' as const),
         onPress: () => resolve(true),
       },
-    ]);
+    ];
+    // E-606: el atrás de Android (o tocar fuera) cierra la confirmación como «Cancelar»; antes no la cerraba.
+    Alert.alert(titulo, mensaje, botones, opcionesNativasDeDescarte(botones));
   });
 }
