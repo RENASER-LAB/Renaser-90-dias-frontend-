@@ -27,6 +27,8 @@ export interface RankingAgregadoDto {
    * anterior no lo manda.
    */
   kilometros?: EntradaRankingDto[];
+  /** D-266 del backend: días de gimnasio desde el Día 1 (`puntaje` son días). Opcional: un backend anterior no lo manda. */
+  gimnasio?: EntradaRankingDto[];
 }
 
 /**

@@ -1735,6 +1735,16 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       `components/Alerta.tsx`, que usan `Alert` y `admin/utils/dialogo.ts`); una elección obligada no se cierra.
     * **Hace falta el backend con D-265 antes que el APK** (un backend anterior ignora el rol al aprobar) y un APK nuevo.
 
+  * **Cambio por pedido del dueño — 2026-10-13 — tabs `Training` y `Comunidad` (ranking): el hábito GIMNASIO y su
+    pestaña** (backend D-266). Pedido: «activar el hábito de gimnasio y que salga en el ranking también, igual que los
+    demás: una foto y nada más». Lo que cambia y nada más:
+    * **Training**: aparece GIMNASIO para todos, opcional, con el ícono de pesas que ya tenía (`WORKOUT`). Es foto y
+      listo, sin «¿Qué sentiste?» (solo los rituales preguntan, D-172): el flujo no se tocó. Lo pone el backend (V99).
+    * **Comunidad → Ranking**: cuarta pestaña «Gimnasio» con los días de gimnasio desde el Día 1 («12 días», «1 día»;
+      sin quien tiene 0, como Kilómetros). `ControlSegmentado` suma `achicarTexto` (apagado por defecto): con cuatro
+      opciones en 360 dp el texto se achica hasta un 85 % en vez de cortarse con «…». Solo el ranking lo usa.
+    * **Hace falta un APK nuevo** para la pestaña; el APK publicado ya ve y registra el hábito.
+
 ## 2. 📱 RESPONSIVIDAD UNIVERSAL (XIAOMI, ANDROID, IOS Y TABLETS)
 * **Cero Doble Scroll**: NUNCA coloques un contenedor con `maxHeight` fijo o scroll interno dentro de otro `ScrollView`. Toda pantalla debe tener UN ÚNICO contenedor de scroll fluido con `contentContainerStyle={{ flexGrow: 1, paddingBottom: 36 }}`.
 * **Adaptabilidad a Xiaomi y Pantallas Altas (20:9 / 19.5:9)**:

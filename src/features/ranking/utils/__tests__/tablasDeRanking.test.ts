@@ -1,5 +1,6 @@
 /**
- * Pestañas del ranking de Comunidad, con «Kilómetros» (D-226 del backend, decisión del dueño 2026-09-29).
+ * Pestañas del ranking de Comunidad, con «Kilómetros» (D-226 del backend, decisión del dueño 2026-09-29) y
+ * «Gimnasio» (D-266, 2026-10-13).
  */
 import { describe, expect, it } from '@jest/globals';
 
@@ -27,11 +28,22 @@ const DATOS: RankingAgregadoDto = {
   coherenciaIndividual: [entrada('c', 1, 80)],
   general: [entrada('g', 1, 91.5)],
   kilometros: [entrada('ana', 1, 42.2), entrada('beto', 2, 7.5), entrada('carla', 3, 0)],
+  gimnasio: [entrada('beto', 1, 12), entrada('ana', 2, 1), entrada('carla', 3, 0)],
 };
 
 describe('tablasDeRanking', () => {
-  it('son tres pestañas: General, Coherencia y Kilómetros, en ese orden', () => {
-    expect(TABLAS_DE_RANKING.map(t => t.titulo)).toEqual(['General', 'Coherencia', 'Kilómetros']);
+  it('son cuatro pestañas: General, Coherencia, Kilómetros y Gimnasio, en ese orden', () => {
+    expect(TABLAS_DE_RANKING.map(t => t.titulo)).toEqual(['General', 'Coherencia', 'Kilómetros', 'Gimnasio']);
+  });
+
+  it('Gimnasio lee su lista sin quien tiene 0, cuenta en días y un backend anterior la deja vacía', () => {
+    expect(entradasDeLaTabla(DATOS, 'gimnasio').map(e => e.participanteId)).toEqual(['beto', 'ana']);
+    expect(textoDelPuntaje('gimnasio', 12)).toBe('12 días');
+    expect(textoDelPuntaje('gimnasio', 1)).toBe('1 día');
+    expect(textoDeMiPuntaje('gimnasio', 3)).toBe('3 días de gimnasio');
+    expect(invitacionSinPosiciones('gimnasio')).toContain('gimnasio');
+    const { gimnasio: _sinGimnasio, ...viejo } = DATOS;
+    expect(entradasDeLaTabla(viejo, 'gimnasio')).toEqual([]);
   });
 
   it('cada pestaña lee su lista; en Kilómetros no aparece quien todavía no registró ninguno', () => {

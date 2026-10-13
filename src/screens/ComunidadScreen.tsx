@@ -3091,6 +3091,7 @@ export default function ComunidadScreen() {
                   valor={tipoRanking}
                   onCambiar={setTipoRanking}
                   accessibilityLabel="Tabla del ranking"
+                  achicarTexto
                 />
               </View>
               {/* Qué mide la tabla que se está mirando: tres listas de números sin rótulo no se
