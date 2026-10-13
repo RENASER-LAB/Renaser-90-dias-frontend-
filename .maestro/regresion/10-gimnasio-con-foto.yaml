@@ -1,0 +1,25 @@
+# 10 — GIMNASIO (D-266): Training → Cuerpo → GIMNASIO → «Subir» abre la cámara directo → foto → queda cumplido.
+# Es foto y nada más: sin pregunta (las de «¿Qué sentiste?» son de los rituales), la app registra sola al aceptar la foto.
+# Precondición: el aprendiz tiene GIMNASIO en su día de hoy y sin registrar; fotos en local (fotos-local + adb reverse).
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-cuerpo.yaml
+- scrollUntilVisible:
+    element: "Subir: GIMNASIO"
+    direction: DOWN
+- assertVisible:
+    text: "Opcional"
+    above: "Subir: GIMNASIO"
+- takeScreenshot: 10a-gimnasio-opcional
+- tapOn: "Subir: GIMNASIO"
+- runFlow: ../comun/tomar-foto.yaml
+- assertNotVisible: ".*sentiste.*"
+- runFlow: ../comun/cerrar-aviso-dev.yaml
+- scrollUntilVisible:
+    element: "GIMNASIO, cumplido"
+    direction: DOWN
+    timeout: 30000
+- assertVisible: "Ver: GIMNASIO"
+- takeScreenshot: 10c-gimnasio-cumplido
