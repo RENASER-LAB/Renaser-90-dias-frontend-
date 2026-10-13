@@ -1,5 +1,5 @@
 import { Alert } from '../../../components/Alerta';
-import { textoDelAviso } from '../components/AvisoDeMantenimiento';
+import { textoDelAviso } from './textoDelAviso';
 import type { EstadoDeUnaFuncionalidad } from '../estado/evaluacion';
 
 /**

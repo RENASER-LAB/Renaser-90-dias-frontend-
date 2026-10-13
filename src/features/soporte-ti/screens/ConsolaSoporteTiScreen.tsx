@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { useReleerFuncionalidades } from '../../plataforma/estado/FuncionalidadesProvider';
+import { useReleerFuncionalidades } from '../../plataforma/estado/contexto';
 import { cerrarConsola, consolaAbierta } from '../estado/sesionDeConsola';
 import { useConsolaSoporteTi } from '../hooks/useConsolaSoporteTi';
 import { nombreDe } from '../utils/consola';

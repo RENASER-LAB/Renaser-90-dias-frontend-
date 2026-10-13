@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 
 import { evaluarFuncionalidad, type EstadoDeUnaFuncionalidad } from './evaluacion';
-import { useEstadoDeFuncionalidades } from './FuncionalidadesProvider';
+import { useEstadoDeFuncionalidades } from './contexto';
 
 /**
  * ¿Está prendida esta funcionalidad para la sesión? (spec 002, contrato §8). `aviso` es el texto que escribió Soporte
