@@ -1,0 +1,20 @@
+# 05 — Administrador en Tribu: el chat global primero y su info con integrantes y buscador.
+# cuenta: admin
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "COMUNIDAD"
+- tapOn: "Tribu"
+- extendedWaitUntil:
+    visible: "Formación Renaser"
+    timeout: 20000
+- takeScreenshot: 05a-lista-admin
+# El admin ve todos los grupos; el global puede quedar más abajo según el último mensaje.
+- scrollUntilVisible:
+    element: "Formación Renaser Global"
+    direction: DOWN
+    timeout: 60000
+- tapOn: "Formación Renaser Global"
+- tapOn: "Información del chat"
+- assertVisible: "[0-9]+ integrantes"
+- takeScreenshot: 05b-info-global

@@ -1,0 +1,20 @@
+# 07 — Yo: «Tu evolución» y Ajustes por el engranaje, con sus grupos y «Mis evidencias».
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- assertVisible: "Tu evolución"
+- takeScreenshot: 07a-yo
+- tapOn: "Ajustes"
+- extendedWaitUntil:
+    visible: "Perfil"
+    timeout: 10000
+- assertVisible: "Tu proceso"
+- assertVisible: "Mi onboarding"
+- takeScreenshot: 07b-ajustes
+- scrollUntilVisible:
+    element: "Cerrar sesión"
+    direction: DOWN
+- assertVisible: "Eliminar mi cuenta"
+- takeScreenshot: 07c-ajustes-final

@@ -1,0 +1,8 @@
+# Training → Cuerpo, desde cualquier pestaña.
+appId: com.renaser.app
+---
+- tapOn: "TRAINING"
+- tapOn: "Cuerpo: .*"
+- extendedWaitUntil:
+    visible: "Prácticas activas.*"
+    timeout: 15000

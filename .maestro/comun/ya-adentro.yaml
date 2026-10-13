@@ -1,0 +1,8 @@
+# Punto de partida de todo flujo: la sesión ya la abrió `correr.sh` (por adb; ver el README). Acá solo se despejan las
+# capas que aparecen al entrar y se confirma que se ve la barra de pestañas.
+appId: com.renaser.app
+---
+- runFlow: despejar-capas.yaml
+- extendedWaitUntil:
+    visible: "TRAINING"
+    timeout: 30000

@@ -1,0 +1,28 @@
+# 21 — Administración → Personas → una ficha y vuelta paso a paso con el atrás del sistema.
+# cuenta: admin
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "HOY"
+- scrollUntilVisible:
+    element: "Abrir Administración"
+    direction: DOWN
+- tapOn: "Abrir Administración"
+- extendedWaitUntil:
+    visible: "Operación del programa"
+    timeout: 15000
+- scrollUntilVisible:
+    element: "Personas"
+    direction: DOWN
+- tapOn: "Personas"
+- extendedWaitUntil:
+    visible: "Buscar por nombre o correo"
+    timeout: 15000
+- tapOn: "Abrir ficha de .*"
+- takeScreenshot: 21a-ficha
+- back
+- assertVisible: "Buscar por nombre o correo"
+- back
+- assertVisible: "Operación del programa"
+- back
+- assertVisible: "Abrir Administración"

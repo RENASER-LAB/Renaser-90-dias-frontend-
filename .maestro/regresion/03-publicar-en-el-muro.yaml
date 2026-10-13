@@ -1,0 +1,51 @@
+# 03 — Publicar en el Muro con una foto de la galería y ver que el post diario queda cumplido.
+# Precondición: la galería del emulador tiene al menos una foto (la deja el flujo 01 o 10) y el aprendiz no publicó hoy.
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "COMUNIDAD"
+- tapOn: "Muro"
+- tapOn: "Crear una publicación"
+- extendedWaitUntil:
+    visible: "Nueva publicación"
+    timeout: 15000
+- tapOn: "Texto de la publicación"
+- inputText: "M-ok-1"
+- hideKeyboard
+- tapOn: "Agregar una foto"
+- extendedWaitUntil:
+    visible: "Photo taken on.*"
+    timeout: 20000
+- tapOn:
+    text: "Photo taken on.*"
+    index: 0
+- runFlow:
+    when:
+      visible: "Done"
+    commands:
+      - tapOn: "Done"
+- runFlow:
+    when:
+      visible: "Listo"
+    commands:
+      - tapOn: "Listo"
+- extendedWaitUntil:
+    visible: "Quitar la foto 1"
+    timeout: 20000
+- takeScreenshot: 03a-publicacion-lista
+- tapOn: "Publicar"
+# La primera publicación abre la guía de SER («Ya eres parte»): se deja para más tarde.
+- extendedWaitUntil:
+    visible: "Más tarde"
+    timeout: 20000
+    optional: true
+- runFlow:
+    when:
+      visible: "Más tarde"
+    commands:
+      - tapOn: "Más tarde"
+- extendedWaitUntil:
+    visible: "M-ok-1"
+    timeout: 30000
+- takeScreenshot: 03b-post-en-el-muro

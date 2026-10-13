@@ -23,7 +23,7 @@ const RAIZ = path.resolve(__dirname, '..', '..');
  * - **Código que no usa nadie** (los capítulos viejos de la ficha y el cuestionario profundo: ningún
  *   archivo los importa). Si vuelven a usarse, que se salgan de esta lista y pasen la prueba.
  * - **Administración → grupo**: sus rótulos son también los selectores de las pruebas de punta a punta
- *   (`e2e/admin-alquimista/E03-E07-grupos.spec.ts`, `.maestro/admin-alquimista/E04-crear-grupo.yaml`);
+ *   (`e2e/admin-alquimista/E03-E07-grupos.spec.ts`, `.maestro/regresion/22-admin-crear-grupo-teclado.yaml`);
  *   cambiarlos es otro trabajo.
  */
 const FUERA = new Set([
