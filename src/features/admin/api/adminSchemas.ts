@@ -72,6 +72,8 @@ export const mentorCandidatoSchema = z
     cellIds: z.array(z.string()).nullish(),
     /** NEGOCIO | MENTE | RELACIONES, o `null` si no la declaró. Nunca se rellena. */
     specialty: z.string().nullish(),
+    /** MENTOR o TRAINEE_GUIDE (backend D-265). Opcional: un backend anterior no lo manda y todos son mentores. */
+    role: z.string().nullish(),
   })
   .passthrough();
 

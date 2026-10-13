@@ -20,6 +20,8 @@ import { useSemaforoDelGrupo } from '../../semaforo/hooks/useLecturaPorSemana';
 import { seOcultaLaSeccion } from '../../semaforo/utils/entradasDelSemaforo';
 import { CargandoCelula, EstadoCelula } from '../components/EstadoCelula';
 import { esOtroDeMisGrupos } from '../utils/entradaAlGrupo';
+import { insigniaDeQuienAcompana } from '../utils/insigniaDeQuienAcompana';
+import { useAuth } from '../../../context/AuthContext';
 import { FilaAlumno } from '../components/FilaAlumno';
 import type { FalloCelula, VistaCelula } from '../hooks/useCelulaQueAcompano';
 import type { AlumnoConEstado } from '../types/mentor.types';
@@ -109,6 +111,8 @@ export function MiCelulaScreen({
   );
   const semaforo = useSemaforoDelGrupo(vista ? { quien: 'mentor', grupoId: vista.celula.id } : null);
   const sinSemaforo = seOcultaLaSeccion(semaforo);
+  const { user } = useAuth();
+  const insignia = insigniaDeQuienAcompana(user?.role);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
@@ -127,7 +131,7 @@ export function MiCelulaScreen({
         </Pressable>
         <View style={[estilos.insignia, { borderColor: c.gold, backgroundColor: c.goldWash }]}>
           <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 14 /* metadato */ }]}>
-            MENTOR
+            {insignia}
           </Text>
         </View>
       </View>

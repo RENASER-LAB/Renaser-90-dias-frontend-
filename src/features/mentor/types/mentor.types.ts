@@ -15,8 +15,11 @@
  * (`TRAINEE`, `MENTOR`, `MENTOR_LEAD`...) en `RolUsuarioSqlMapper` y `RolesCatalogo`. Con dos
  * juegos de nombres vivos en el mismo sistema, comprobar solo uno es la clase de fallo que no
  * avisa: la tarjeta simplemente no aparecería, y nadie sabría por qué.
+ *
+ * El Guía de aprendiz (backend D-265, `TRAINEE_GUIDE` / `GUIA_APRENDIZ`) hace todo lo que hace un mentor: ve
+ * «Mi grupo» y sus aprendices igual.
  */
-export const ROL_MENTOR = ['MENTOR', 'MENTOR_LEAD', 'LIDER_MENTORES'] as const;
+export const ROL_MENTOR = ['MENTOR', 'TRAINEE_GUIDE', 'GUIA_APRENDIZ', 'MENTOR_LEAD', 'LIDER_MENTORES'] as const;
 
 /**
  * Quién responde por el grupo ahora mismo.

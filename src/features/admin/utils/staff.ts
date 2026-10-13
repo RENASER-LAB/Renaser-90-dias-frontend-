@@ -44,6 +44,12 @@ export type PersonaDelPadron = {
 export const ROLES_SOLO_EN_STAFF: readonly RolDeStaff[] = ['MENTOR_LEAD', 'ADMIN', 'ALCHEMIST'];
 
 /**
+ * Los roles de la sección «Mentores y guías»: los que acompañan grupos (backend D-265). `/admin/cells/mentores` trae a
+ * los ACTIVOS de los dos; estos se piden aparte a `/admin/staff` para sumar a los que ese listado no trae.
+ */
+export const ROLES_EN_MENTORES: readonly RolDeStaff[] = ['MENTOR', 'TRAINEE_GUIDE'];
+
+/**
  * Cómo se nombra el estado de una cuenta, o `null` cuando no hace falta nombrarlo.
  *
  * `ACTIVE` devuelve `null` porque es lo esperable: rotular cada fila con «Activa» convierte la

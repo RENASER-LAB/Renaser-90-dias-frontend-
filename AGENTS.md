@@ -1710,6 +1710,31 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     Verificación final del 2026-10-12: 34/34 E2E de Día 1 y 5/5 mapas completos, cero reintentos,
     fallos, errores u omitidos. JUnit y persistencia SQL en `artifacts/e2e-dia-uno/` y `artifacts/e2e-mapa/`.
 
+  * **Cambio por pedido del dueño — 2026-10-13 — Administración (estado de `Hoy`) y `Comunidad` (info del chat): el
+    rol «Guía de aprendiz», el rol al aprobar y dos arreglos** (backend D-265, E-605, E-606). Textual: «cuando llega
+    una solicitud el sistema debe mostrar todos los roles… los guía de aprendiz es lo mismo para el tema de mentor, lo
+    mismo grupos, y simplemente que así lo clasifica la persona». El dueño eligió rol propio y elegirlo al aprobar. Lo
+    que cambia y nada más:
+    * **Seis roles** (`admin/utils/rolesAsignables.ts`, una sola lista para las dos pantallas): Aprendiz, **Guía de
+      aprendiz** (`TRAINEE_GUIDE`; `GUIA_APRENDIZ` en la base), Mentor, Líder de mentores, Administrador, Alquimista. El
+      guía ve todo lo del mentor (`ROL_MENTOR`, «Mi grupo», sus aprendices); no es el guía del grupo inicial (D-242).
+    * **Solicitudes**: cada una ofrece los seis roles en chips (`ChipDeOpcion`, sin animación al elegir) con Aprendiz
+      marcado. Aprobar como aprendiz sigue siendo un toque y el mismo pedido sin cuerpo; con otro rol pide confirmación
+      («¿Aprobar a … como …?», da más acceso) y el aviso dice con qué rol entró. El botón dice siempre «Aprobar»: con
+      el rol adentro crecía a tres renglones y la tarjeta cambiaba de alto con cada chip.
+    * **Equipo y roles**: el guía entre los roles, la sección «Mentores y guías» con el rol de cada uno (`role` de
+      `/admin/cells/mentores`; sin él, Mentor) y los suspendidos de los dos roles, y el aviso del grupo inicial dice que
+      no es el rol Guía de aprendiz. **E-605:** «Aprendices» pide `role=TRAINEE` y ya no rotula «Aprendiz» al personal
+      con programa propio (ni lo repite, y el total cuadra).
+    * **Chat**: en la info, un guía fuera del grupo que acompaña se lee «Guía de aprendiz» (en su grupo, «Mentor»).
+    * **«Mi grupo»** (`MiCelulaScreen`): el sello de la cabecera dice «GUÍA DE APRENDIZ» a la guía y «MENTOR» a cualquier
+      otro que acompañe (`mentor/utils/insigniaDeQuienAcompana`). «Más opciones» nombra los seis roles.
+    * **E2E en el emulador** (backend `docs/informes/e2e-guia-de-aprendiz-2026-10-13.md`): aprobar con cada rol, el atrás
+      en las confirmaciones, Equipo y roles, hábitos por rol, la guía al frente de un grupo y entrando con su cuenta.
+    * **E-606:** el atrás de Android cierra los diálogos nativos como «Cancelar» (`opcionesNativasDeDescarte` en
+      `components/Alerta.tsx`, que usan `Alert` y `admin/utils/dialogo.ts`); una elección obligada no se cierra.
+    * **Hace falta el backend con D-265 antes que el APK** (un backend anterior ignora el rol al aprobar) y un APK nuevo.
+
 ## 2. 📱 RESPONSIVIDAD UNIVERSAL (XIAOMI, ANDROID, IOS Y TABLETS)
 * **Cero Doble Scroll**: NUNCA coloques un contenedor con `maxHeight` fijo o scroll interno dentro de otro `ScrollView`. Toda pantalla debe tener UN ÚNICO contenedor de scroll fluido con `contentContainerStyle={{ flexGrow: 1, paddingBottom: 36 }}`.
 * **Adaptabilidad a Xiaomi y Pantallas Altas (20:9 / 19.5:9)**:

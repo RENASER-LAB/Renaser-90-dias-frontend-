@@ -104,7 +104,7 @@ export type MentorDelGrupo = {
  * /conversations/{id}/participants`); antes eran solo «Mentor» y «Aprendiz», porque la lista era de un
  * grupo y salía de dónde venía cada uno.
  */
-export type RolEnElGrupo = 'Mentor' | 'Aprendiz' | 'Admin' | 'Alquimista';
+export type RolEnElGrupo = 'Mentor' | 'Guía de aprendiz' | 'Aprendiz' | 'Admin' | 'Alquimista';
 
 export type IntegranteDeLaInfo = {
   /** Clave de la fila: `'mentor'` o el id del aprendiz. */
@@ -234,6 +234,8 @@ function filaDelMentor(mentor: MentorDelGrupo | null, yoId: string | null | unde
 
 const MARCA_POR_ROL: Record<string, RolEnElGrupo> = {
   MENTOR: 'Mentor',
+  /** Backend D-265: un guía fuera del grupo que acompaña (en ese grupo llega como MENTOR). */
+  GUIA_APRENDIZ: 'Guía de aprendiz',
   APRENDIZ: 'Aprendiz',
   ADMIN: 'Admin',
   ALQUIMISTA: 'Alquimista',

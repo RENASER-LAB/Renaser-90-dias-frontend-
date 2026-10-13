@@ -281,6 +281,12 @@ describe('integrantesDelChat: la lista de cualquier chat, para cualquier rol', (
     expect(filas.map(f => f.rol)).toEqual(['Mentor', 'Aprendiz', 'Admin', 'Alquimista']);
   });
 
+  it('backend D-265: un guía de aprendiz fuera de su grupo se lee «Guía de aprendiz»', () => {
+    const filas = integrantesDelChat({ participantes: [persona('1', 'Gina', 'GUIA_APRENDIZ')], tipo: 'global' });
+
+    expect(filas[0].rol).toBe('Guía de aprendiz');
+  });
+
   it('la comunidad: el aprendiz ve a todos y le puede escribir a cada uno, pero no ve fichas', () => {
     const filas = integrantesDelChat({
       participantes: [persona('u-ana', 'Ana Pérez', 'APRENDIZ', true), persona('u-beto', 'Beto Díaz', 'APRENDIZ')],

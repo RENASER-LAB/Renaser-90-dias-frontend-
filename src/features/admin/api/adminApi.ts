@@ -266,6 +266,8 @@ export async function listarAprendices(opciones: {
   tamano?: number;
   busqueda?: string | null;
   soloSinGrupo?: boolean;
+  /** Solo las cuentas de ese rol (backend E-605). Sin él vienen todas, staff incluido (D-138). */
+  rol?: RolAsignable;
 }): Promise<PaginaAprendicesApi> {
   const params = new URLSearchParams({
     page: String(opciones.pagina ?? 0),
@@ -273,6 +275,7 @@ export async function listarAprendices(opciones: {
   });
   if (opciones.busqueda && opciones.busqueda.trim()) params.set('q', opciones.busqueda.trim());
   if (opciones.soloSinGrupo) params.set('withoutGroup', 'true');
+  if (opciones.rol) params.set('role', opciones.rol);
 
   return validarRespuesta<PaginaAprendicesApi>(
     paginaAprendicesSchema,
@@ -440,13 +443,23 @@ export async function listarSolicitudes(
   );
 }
 
-export async function aprobarSolicitud(id: string): Promise<void> {
-  await apiFetch<unknown>(`/api/v1/account-requests/${encodeURIComponent(id)}/approve`, { method: 'POST' });
+/**
+ * `POST /api/v1/account-requests/{id}/approve`. Con `rol` (backend D-265) la persona entra con ese rol: el servidor
+ * la aprueba como aprendiz y le cambia el rol en la misma transacción, igual que «Equipo y roles». Sin `rol` no se
+ * manda cuerpo y entra como aprendiz, como siempre. Un backend anterior a D-265 ignora el cuerpo: por eso el
+ * backend sale antes que el APK.
+ */
+export async function aprobarSolicitud(id: string, rol?: RolAsignable): Promise<void> {
+  await apiFetch<unknown>(`/api/v1/account-requests/${encodeURIComponent(id)}/approve`, {
+    method: 'POST',
+    ...(rol ? { body: { role: rol } } : {}),
+  });
 }
 
-/** Los cinco roles que el backend acepta en `PATCH /users/{id}/role`. `ASSISTANT` existe en el
- * enum de la base pero el contrato de la API lo rechaza con 400: no se ofrece. */
-export type RolAsignable = 'TRAINEE' | 'MENTOR' | 'MENTOR_LEAD' | 'ADMIN' | 'ALCHEMIST';
+/** Los seis roles que el backend acepta en `PATCH /users/{id}/role` y al aprobar. `TRAINEE_GUIDE` es el Guía de
+ * aprendiz (D-265). `ASSISTANT` existe en el enum de la base pero el contrato de la API lo rechaza con 400: no se
+ * ofrece. */
+export type RolAsignable = 'TRAINEE' | 'TRAINEE_GUIDE' | 'MENTOR' | 'MENTOR_LEAD' | 'ADMIN' | 'ALCHEMIST';
 
 /**
  * `PATCH /api/v1/users/{id}/role`.
