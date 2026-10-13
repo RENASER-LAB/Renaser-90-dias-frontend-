@@ -1,0 +1,22 @@
+# Lo que la app (o Android) pone encima justo después de entrar: el permiso de avisos, la guía de SER y el aviso de
+# desarrollo. Todo opcional: si no aparece, sigue.
+appId: com.renaser.app
+---
+- waitForAnimationToEnd:
+    timeout: 4000
+- runFlow:
+    when:
+      visible: "Allow"
+    commands:
+      - tapOn: "Allow"
+- runFlow:
+    when:
+      visible: "Permitir"
+    commands:
+      - tapOn: "Permitir"
+- runFlow:
+    when:
+      visible: "Posponer la guía de SER"
+    commands:
+      - tapOn: "Posponer la guía de SER"
+- runFlow: cerrar-aviso-dev.yaml

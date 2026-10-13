@@ -1,0 +1,20 @@
+# Cámara del emulador (escena virtual): da el permiso si lo pide, dispara y acepta.
+appId: com.renaser.app
+---
+- runFlow:
+    when:
+      visible: "While using the app"
+    commands:
+      - tapOn: "While using the app"
+- extendedWaitUntil:
+    visible:
+      id: "com.android.camera2:id/shutter_button"
+    timeout: 40000
+- tapOn:
+    id: "com.android.camera2:id/shutter_button"
+- extendedWaitUntil:
+    visible:
+      id: "com.android.camera2:id/done_button"
+    timeout: 15000
+- tapOn:
+    id: "com.android.camera2:id/done_button"

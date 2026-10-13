@@ -1,0 +1,33 @@
+# 08 — Planificar Cuerpo: DESPERTAR acepta cualquier hora (22:00) y se guarda.
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-cuerpo.yaml
+- tapOn: "Planificar Cuerpo"
+- extendedWaitUntil:
+    visible: "Planificar Cuerpo"
+    timeout: 10000
+# La fila se anuncia «DESPERTAR, sin hora» o «DESPERTAR, a las 22:00». Con «DESPERTAR» a secas se tocaba el
+# interruptor, que se llama igual y abre «Pausar».
+- tapOn: "DESPERTAR, (sin hora|a las .*)"
+- extendedWaitUntil:
+    visible: "Guardar .*"
+    timeout: 10000
+- repeat:
+    while:
+      notVisible: "Guardar 22:00.*"
+    times: 24
+    commands:
+      # Una fila de la columna de la hora (arriba de la hoja, ~26 % del ancho y del alto): hacia arriba suma una hora.
+      - swipe:
+          start: "26%,28%"
+          end: "26%,23%"
+          duration: 400
+- assertVisible: "Guardar 22:00.*"
+- takeScreenshot: 08a-despertar-22
+- tapOn: "Guardar 22:00.*"
+- extendedWaitUntil:
+    notVisible: "Guardar 22:00.*"
+    timeout: 15000
+- takeScreenshot: 08b-despertar-guardado

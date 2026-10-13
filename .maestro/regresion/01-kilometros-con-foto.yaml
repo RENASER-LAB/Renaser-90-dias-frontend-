@@ -1,0 +1,28 @@
+# 01 — KILÓMETROS DIARIOS (D-226): Training → Cuerpo → «Subir» → foto → «¿Cuántos km recorriste hoy?» → 3,5 → cumplido.
+# Precondición: el aprendiz tiene el hábito en su día de hoy y sin registrar; fotos en local (fotos-local + adb reverse).
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-cuerpo.yaml
+- scrollUntilVisible:
+    element: "Subir: KILÓMETROS DIARIOS"
+    direction: DOWN
+- tapOn: "Subir: KILÓMETROS DIARIOS"
+- runFlow: ../comun/tomar-foto.yaml
+- extendedWaitUntil:
+    visible: "¿Cuántos km recorriste hoy?"
+    timeout: 15000
+- assertVisible: "Total recorrido: .* km"
+- tapOn: "¿Cuántos km recorriste hoy?"
+- inputText: "3,5"
+- hideKeyboard
+- assertVisible: "Total recorrido: .*3,5 km"
+- takeScreenshot: 01a-kilometros-escritos
+- tapOn: "REGISTRAR"
+- runFlow: ../comun/cerrar-aviso-dev.yaml
+- scrollUntilVisible:
+    element: "KILÓMETROS DIARIOS, cumplido"
+    direction: DOWN
+    timeout: 30000
+- takeScreenshot: 01b-kilometros-cumplido

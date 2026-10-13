@@ -1,0 +1,19 @@
+# 11 — Comunidad → Ranking: cuatro pestañas en una línea y «Gimnasio» con los días desde el Día 1 (D-266).
+# Precondición: corte del día hecho (05:05 UTC o POST /api/v1/admin/ranking/snapshots) con al menos un día de gimnasio.
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "COMUNIDAD"
+- tapOn: "Ranking"
+- assertVisible: "General"
+- assertVisible: "Coherencia"
+- assertVisible: "Kilómetros"
+- tapOn: "Gimnasio: Días de gimnasio desde tu Día 1"
+- assertVisible: "Días de gimnasio desde tu Día 1"
+# Alguien de la tabla con sus días (el podio dice «1 día», «12 días»); la fila propia depende de quién mira.
+- assertVisible: "[0-9]+ días?"
+- takeScreenshot: 11a-ranking-gimnasio
+- tapOn: "Kilómetros: Km recorridos desde tu Día 1"
+- assertVisible: "Km recorridos desde tu Día 1"
+- takeScreenshot: 11b-ranking-kilometros

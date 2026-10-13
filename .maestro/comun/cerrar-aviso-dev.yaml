@@ -1,0 +1,9 @@
+# Cierra el aviso amarillo de la build de desarrollo («Open debugger to view warnings»), que tapa la barra de pestañas.
+appId: com.renaser.app
+---
+- runFlow:
+    when:
+      visible: "Open debugger to view warnings."
+    commands:
+      - tapOn:
+          point: "92%,92%"

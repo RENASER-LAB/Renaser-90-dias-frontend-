@@ -1,0 +1,26 @@
+# 22 — Crear un grupo con el teclado abierto: el botón de guardar no queda debajo del teclado; volver no crea nada.
+# cuenta: admin
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "HOY"
+- scrollUntilVisible:
+    element: "Abrir Administración"
+    direction: DOWN
+- tapOn: "Abrir Administración"
+- extendedWaitUntil:
+    visible: "Operación del programa"
+    timeout: 15000
+- scrollUntilVisible:
+    element: "Grupos"
+    direction: DOWN
+- tapOn: "Grupos"
+- tapOn: "Crear"
+- tapOn: "Fénix"
+- inputText: "GrupoM"
+- takeScreenshot: 22a-teclado-abierto
+- hideKeyboard
+- assertVisible: "Crear grupo"
+- back
+- back
+- assertVisible: "Operación del programa"

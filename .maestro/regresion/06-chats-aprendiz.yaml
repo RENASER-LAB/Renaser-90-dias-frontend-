@@ -1,0 +1,19 @@
+# 06 — Aprendiz en Tribu: ve el chat global y el de su grupo, y la info del global con integrantes.
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "COMUNIDAD"
+- tapOn: "Tribu"
+- extendedWaitUntil:
+    visible: "Formación Renaser"
+    timeout: 20000
+- takeScreenshot: 06a-lista-aprendiz
+- scrollUntilVisible:
+    element: "Formación Renaser Global"
+    direction: DOWN
+    timeout: 60000
+- tapOn: "Formación Renaser Global"
+- tapOn: "Información del chat"
+- assertVisible: "[0-9]+ integrantes"
+- takeScreenshot: 06b-info-global
