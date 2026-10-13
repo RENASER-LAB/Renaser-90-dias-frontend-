@@ -155,6 +155,11 @@ import {
 import { ApiError, mensajeDeError } from '../services/http/apiClient';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
 import { SeccionEventos } from '../features/eventos/components/SeccionEventos';
+import { AvisoDeMantenimiento } from '../features/plataforma/components/AvisoDeMantenimiento';
+import { SeccionEnMantenimiento } from '../features/plataforma/components/SeccionEnMantenimiento';
+import { useAlVolverAPrenderse, useFuncionalidad } from '../features/plataforma/estado/useFuncionalidad';
+import { avisarSiEstaApagada } from '../features/plataforma/utils/avisarSiEstaApagada';
+import { CLAVES, claveDeLaConversacion, claveDeLaSeccionDeComunidad } from '../features/plataforma/utils/clavesDeLaApp';
 import { useOcultarBarraAlDesplazar } from '../navigation/barraAlDesplazar/BarraInferior';
 import { useEncabezadoAlDesplazar } from '../navigation/barraAlDesplazar/useEncabezadoAlDesplazar';
 import Reanimated from 'react-native-reanimated';
@@ -887,6 +892,11 @@ export default function ComunidadScreen() {
    * legible de "estoy en Tribu" para las cuatro vistas que la componen.
    */
   const enTribu = seccionActiva === 'tribu';
+  /* Spec 002 (interruptores de Soporte TI): la sección abierta apagada muestra el aviso de mantenimiento en su lugar
+     (Muro, Eventos, Cursos y Ranking enteros; en Tribu, la lista de chats). El resto lo bloquea el servidor. */
+  const funcionalidadDeLaSeccion = useFuncionalidad(claveDeLaSeccionDeComunidad(seccionActiva));
+  const seccionEnMantenimiento = !funcionalidadDeLaSeccion.prendida;
+  const publicarEnElMuro = useFuncionalidad(CLAVES.muroPublicar);
   // Se guarda el ID, no el objeto: `courses` (de `useCursos`) es la única fuente de verdad, así
   // que `selectedCourse` sale siempre DERIVADO más abajo. Si se guardara el objeto entero (como
   // hacía el mock) quedaría una copia vieja congelada en el momento del toque, y una acción
@@ -1099,6 +1109,10 @@ export default function ComunidadScreen() {
   );
   const elementosDelChat = useMemo(() => elementosDeLaListaInvertida(mensajesDelChat, new Date()), [mensajesDelChat]);
   const chatEsDeGrupo = activeChat !== null && activeChat.type !== 'direct';
+  /* Spec 002: la conversación abierta según su tipo (grupo, comunidad, soporte, 1 a 1) y sus adjuntos. */
+  const chatDeLaSala = useFuncionalidad(claveDeLaConversacion(activeChat?.type));
+  const audioDelChat = useFuncionalidad(CLAVES.chatAudio);
+  const fotosDelChat = useFuncionalidad(CLAVES.chatFotos);
   /**
    * Tocar una cita lleva al mensaje citado si está en lo cargado (D-251): la lista se mueve hasta
    * dejarlo al medio y su renglón se tiñe un momento. Si todavía no se cargó (es más viejo que la
@@ -1153,9 +1167,9 @@ export default function ComunidadScreen() {
     setPosts,
     loading: muroCargando,
     error: muroError,
-    // `recargar` ya no se desestructura acá: la carga inicial la dispara el propio hook y publicar
-    // ya no recarga el feed entero (inserta la publicación nueva). El hook lo sigue exponiendo
-    // para el día que haya un "deslizar para refrescar", que hoy la pantalla no tiene.
+    // La carga inicial la dispara el propio hook y publicar ya no recarga el feed entero (inserta la
+    // publicación nueva). `recargar` se usa solo al volver el Muro de mantenimiento (spec 002).
+    recargar: recargarMuro,
     reaccionar: reaccionarPublicacion,
     cargarComentarios,
     agregarComentario: agregarComentarioRemoto,
@@ -1482,7 +1496,13 @@ export default function ComunidadScreen() {
   const tieneGrupo = miCelula?.assigned === true && tieneMentor;
 
   // Sub-módulo: Ranking Real del Backend
-  const { rankingData, loading: rankingCargando, error: rankingError } = useRanking(recursosPedidos.ranking);
+  const { rankingData, loading: rankingCargando, error: rankingError, recargar: recargarRanking } = useRanking(recursosPedidos.ranking);
+  /* Spec 002: lo que se pidió mientras una sección estaba apagada quedó en error; al volver, se pide de nuevo. Eventos
+     no lo necesita: su sección se vuelve a montar y lee sola. */
+  useAlVolverAPrenderse(CLAVES.muro, () => void recargarMuro());
+  useAlVolverAPrenderse(CLAVES.cursos, () => void recargarCursos());
+  useAlVolverAPrenderse(CLAVES.chat, () => void recargarConversaciones());
+  useAlVolverAPrenderse(CLAVES.ranking, () => void recargarRanking());
 
   /**
    * Qué tabla se está mirando. El backend manda las TRES en la misma respuesta
@@ -2861,7 +2881,24 @@ export default function ComunidadScreen() {
         Hoy: ahora eso lo hace `scrollToIndex` (ver `publicacionPedida`). La paginación pasó de
         `onScroll` + `estaCercaDelFinal` a `onEndReached`, que es lo mismo sin medir a mano.
       */}
-      {seccionActiva === 'muro' && (
+      {/* Spec 002: el Muro apagado por Soporte TI muestra el aviso en su lugar. */}
+      {seccionActiva === 'muro' && seccionEnMantenimiento && (
+        <SeccionEnMantenimiento
+          {...barraAlDesplazar}
+          aviso={funcionalidadDeLaSeccion.aviso}
+          contentContainerStyle={[
+            styles.content,
+            {
+              paddingHorizontal: horizontalPadding,
+              maxWidth: contentMaxWidth,
+              alignSelf: isTablet ? 'center' : 'stretch',
+              width: isTablet ? '100%' : undefined,
+            },
+            rellenoDelEncabezado,
+          ]}
+        />
+      )}
+      {seccionActiva === 'muro' && !seccionEnMantenimiento && (
         <FlatList
           {...barraAlDesplazar}
           ref={muroListaRef}
@@ -2872,6 +2909,9 @@ export default function ComunidadScreen() {
             <View style={{ gap: space.gap, paddingTop: 10, marginBottom: space.gap }}>
               {/* Botón Ventana Externa de Publicación. Se hunde al apoyar el dedo (2026-10-05) y lleva
                   TU foto o tus iniciales: el águila que había no eras tú. */}
+              {/* Spec 002: «Publicar» apagado → el aviso en el lugar de la barra; el muro se sigue leyendo. */}
+              {!publicarEnElMuro.prendida ? <AvisoDeMantenimiento aviso={publicarEnElMuro.aviso} /> : null}
+              {publicarEnElMuro.prendida ? (
               <Presionable
                 onPress={() => setCreatePostModalVisible(true)}
                 accessibilityRole="button"
@@ -2895,6 +2935,7 @@ export default function ComunidadScreen() {
                   <Icon name="plus" size={TAMANO_ICONO.normal} color={c.onGold} />
                 </View>
               </Presionable>
+              ) : null}
 
               {/* «Publicado», y después «tu hábito quedó completo»: en línea, debajo de donde se
                   empezó a escribir, sin diálogo que tocar (2026-10-05). */}
@@ -2976,7 +3017,23 @@ export default function ComunidadScreen() {
       {/* ========================================================================= */}
       {/* El `ScrollView` es de la sección desde el arreglo del 26/09 (la lista no se refrescaba): su
           pull-to-refresh necesita el estado de la lectura. Mismo estilo de contenido que antes. */}
-      {seccionActiva === 'eventos' && (
+      {seccionActiva === 'eventos' && seccionEnMantenimiento && (
+        <SeccionEnMantenimiento
+          {...barraAlDesplazar}
+          aviso={funcionalidadDeLaSeccion.aviso}
+          contentContainerStyle={[
+            styles.content,
+            {
+              paddingHorizontal: horizontalPadding,
+              maxWidth: contentMaxWidth,
+              alignSelf: isTablet ? 'center' : 'stretch',
+              width: isTablet ? '100%' : undefined,
+            },
+            rellenoDelEncabezado,
+          ]}
+        />
+      )}
+      {seccionActiva === 'eventos' && !seccionEnMantenimiento && (
         <SeccionEventos
           userId={user?.id ?? null}
           rol={user?.role}
@@ -3061,7 +3118,13 @@ export default function ComunidadScreen() {
           )}
 
           {/* PESTAÑA 3: PODIO RANKING */}
-          {seccionActiva === 'ranking' && (
+          {/* Spec 002: el Ranking apagado por Soporte TI muestra el aviso en su lugar. */}
+          {seccionActiva === 'ranking' && seccionEnMantenimiento && (
+            <View style={{ paddingTop: 10, paddingBottom: 28 }}>
+              <AvisoDeMantenimiento aviso={funcionalidadDeLaSeccion.aviso} />
+            </View>
+          )}
+          {seccionActiva === 'ranking' && !seccionEnMantenimiento && (
             <View style={{ gap: space.gap, paddingTop: 10, paddingBottom: 28 }}>
               {/*
                 El podio se pinta SIEMPRE, con puntos o sin ellos (decisión del dueño del proyecto,
@@ -3209,7 +3272,24 @@ export default function ComunidadScreen() {
       {/* ========================================================================= */}
       {/* SECCIÓN CLASSROOM: CATÁLOGO DE CURSOS                                     */}
       {/* ========================================================================= */}
-      {inExclusiveResources && selectedCourse === null && fullScreenLesson === null && (
+      {/* Spec 002: Cursos apagado por Soporte TI → el aviso en lugar del catálogo, del curso y de la lección. */}
+      {inExclusiveResources && seccionEnMantenimiento && (
+        <SeccionEnMantenimiento
+          {...barraAlDesplazar}
+          aviso={funcionalidadDeLaSeccion.aviso}
+          contentContainerStyle={[
+            styles.content,
+            {
+              paddingHorizontal: horizontalPadding,
+              maxWidth: contentMaxWidth,
+              alignSelf: isTablet ? 'center' : 'stretch',
+              width: isTablet ? '100%' : undefined,
+            },
+            rellenoDelEncabezado,
+          ]}
+        />
+      )}
+      {inExclusiveResources && !seccionEnMantenimiento && selectedCourse === null && fullScreenLesson === null && (
         <ScrollView
           {...barraAlDesplazar}
           keyboardShouldPersistTaps="handled"
@@ -3338,7 +3418,7 @@ export default function ComunidadScreen() {
       {/* ========================================================================= */}
       {/* VISTA 3.1: DETALLE DEL CURSO (SECCIONES Y RECURSOS)                       */}
       {/* ========================================================================= */}
-      {inExclusiveResources && selectedCourse !== null && fullScreenLesson === null && (
+      {inExclusiveResources && !seccionEnMantenimiento && selectedCourse !== null && fullScreenLesson === null && (
         <ScrollView
           {...barraAlDesplazar}
           keyboardShouldPersistTaps="handled"
@@ -3502,7 +3582,7 @@ export default function ComunidadScreen() {
       {/* ========================================================================= */}
       {/* VISTA 3.2: LECCIÓN A PANTALLA COMPLETA (VIDEO, DOC, LINK, ESCRITO)        */}
       {/* ========================================================================= */}
-      {inExclusiveResources && leccionMostrada !== null && (
+      {inExclusiveResources && !seccionEnMantenimiento && leccionMostrada !== null && (
         <ScrollView
           {...barraAlDesplazar}
           keyboardShouldPersistTaps="handled"
@@ -4003,6 +4083,14 @@ export default function ComunidadScreen() {
               encoger el texto para que "💬 DIRECTOS" entrara en media fila. Sin ellos la palabra
               entra entera y se lee a tamaño completo.
           ------------------------------------------------------------------------------- */}
+          {/* Spec 002: con el chat apagado por Soporte TI, el aviso en lugar de la lista de chats (Formación Renaser,
+              Directos y soportes). La tarjeta del grupo de arriba no es chat y se queda. */}
+          {seccionEnMantenimiento ? (
+            <View style={{ marginTop: space.gapLg, paddingBottom: 28 }}>
+              <AvisoDeMantenimiento aviso={funcionalidadDeLaSeccion.aviso} />
+            </View>
+          ) : (
+          <>
           <View style={styles.tribuConversaciones}>
             <MicroLabel>Formación Renaser</MicroLabel>
 
@@ -4107,6 +4195,8 @@ export default function ComunidadScreen() {
               />
             </View>
           )}
+          </>
+          )}
         </ScrollView>
       )}
 
@@ -4197,6 +4287,14 @@ export default function ComunidadScreen() {
               `maintainVisibleContentPosition`, puesto SOLO mientras está arriba
               (`posicionAMantener`). El «↓» con los nuevos y la bajada al mandar uno propio los
               decide `useBajadaDelChat`. */}
+          {/* Spec 002: esta conversación apagada (por su tipo, o el chat entero) → el aviso en lugar de los mensajes y de
+              la barra de escribir; la cabecera queda para volver. */}
+          {!chatDeLaSala.prendida ? (
+            <View style={[styles.chatMensajes, { paddingHorizontal: horizontalPadding, paddingTop: 16 }]}>
+              <AvisoDeMantenimiento aviso={chatDeLaSala.aviso} />
+            </View>
+          ) : null}
+          {chatDeLaSala.prendida && (
           <View style={styles.chatMensajes}>
             <FlatList
               key={activeChat.id}
@@ -4237,6 +4335,7 @@ export default function ComunidadScreen() {
               </View>
             ) : null}
           </View>
+          )}
 
           {/*
             Barra de escribir, con la gramática de WhatsApp: mientras se graba, la barra entera
@@ -4254,12 +4353,12 @@ export default function ComunidadScreen() {
               la cámara (`camera`), cada una directa (antes un solo botón con la ventana «¿Cámara o
               Galería?»). Grabando, a la izquierda la papelera para descartar. Encima, «Respondiendo
               a…» cuando se eligió Responder en el menú de un mensaje (D-251). */}
-          {citando ? (
+          {citando && chatDeLaSala.prendida ? (
             <View style={{ backgroundColor: paletaDelChat.fondo, paddingTop: 4 }}>
               <BarraDeCita cita={citaDeMensajeCargado(citando)} colores={paletaDelChat} onCerrar={() => setCitando(null)} />
             </View>
           ) : null}
-          {!grabando && avisoDelLargoDelMensaje(chatInputText) ? (
+          {chatDeLaSala.prendida && !grabando && avisoDelLargoDelMensaje(chatInputText) ? (
             <Text
               accessibilityLiveRegion="polite"
               style={[styles.chatAviso, { color: c.textSoft, backgroundColor: paletaDelChat.fondo, paddingVertical: 4 }]}
@@ -4267,6 +4366,7 @@ export default function ComunidadScreen() {
               {avisoDelLargoDelMensaje(chatInputText)}
             </Text>
           ) : null}
+          {chatDeLaSala.prendida && (
           <View style={[styles.chatInputBar, { backgroundColor: paletaDelChat.fondo }]}>
             <View style={[styles.chatCampo, { backgroundColor: paletaDelChat.ajena, borderColor: c.border }]}>
               {grabando ? (
@@ -4289,7 +4389,7 @@ export default function ComunidadScreen() {
               ) : (
                 <>
                   <Presionable
-                    onPress={() => { Keyboard.dismiss(); setStickersVisible(true); }}
+                    onPress={() => { if (avisarSiEstaApagada(fotosDelChat)) return; Keyboard.dismiss(); setStickersVisible(true); }}
                     disabled={enviandoMedia}
                     style={[styles.mediaOptionBtn, { opacity: enviandoMedia ? 0.4 : 1 }]}
                     accessibilityRole="button"
@@ -4312,7 +4412,7 @@ export default function ComunidadScreen() {
                     accessibilityLabel="Escribe un mensaje"
                   />
                   <Presionable
-                    onPress={() => handleAdjuntarFoto('galeria')}
+                    onPress={() => avisarSiEstaApagada(fotosDelChat) || handleAdjuntarFoto('galeria')}
                     disabled={enviandoMedia}
                     style={[styles.mediaOptionBtn, { opacity: enviandoMedia ? 0.4 : 1 }]}
                     accessibilityRole="button"
@@ -4321,7 +4421,7 @@ export default function ComunidadScreen() {
                     <Icon name="image" size={24} color={c.goldInk} />
                   </Presionable>
                   <Presionable
-                    onPress={() => handleAdjuntarFoto('camara')}
+                    onPress={() => avisarSiEstaApagada(fotosDelChat) || handleAdjuntarFoto('camara')}
                     disabled={enviandoMedia}
                     style={[styles.mediaOptionBtn, { opacity: enviandoMedia ? 0.4 : 1 }]}
                     accessibilityRole="button"
@@ -4351,7 +4451,7 @@ export default function ComunidadScreen() {
               </Pressable>
             ) : (
               <Pressable
-                onPress={() => void alternarGrabacion()}
+                onPress={() => avisarSiEstaApagada(audioDelChat) || void alternarGrabacion()}
                 disabled={enviandoMedia}
                 style={[styles.sendBtnGold, { backgroundColor: c.gold, opacity: enviandoMedia ? 0.4 : 1 }]}
                 accessibilityLabel="Grabar una nota de voz"
@@ -4360,6 +4460,7 @@ export default function ComunidadScreen() {
               </Pressable>
             )}
           </View>
+          )}
 
         </KeyboardAvoidingView>
       )}

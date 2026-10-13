@@ -11,6 +11,9 @@ import { TEXTO_ACCION_REGISTRADA, TEXTO_REGISTRADO } from '../utils/pedidosDeFot
 import { estadoVisible } from '../utils/propuestas';
 import { FenixDeSerQuieto } from '../../fenix/components/FenixDeSerQuieto';
 import { ESPACIO_PARA_LANZADOR } from './RenasiaLauncher';
+import { AvisoDeMantenimiento } from '../../plataforma/components/AvisoDeMantenimiento';
+import { useFuncionalidad } from '../../plataforma/estado/useFuncionalidad';
+import { CLAVES } from '../../plataforma/utils/clavesDeLaApp';
 
 /**
  * Los botones de la hoja en tipo oración (rediseño de Hoy, 2026-10-05): «Cancelar», «Confirmar» y
@@ -56,6 +59,8 @@ export function AccionDelAcompanante({ propuestas, onConfirmar, onCancelar, pedi
   const { c, t } = useTheme();
   const [, volverAEvaluar] = useState(0);
   const [detalleDe, setDetalleDe] = useState<string | null>(null);
+  /* Spec 002: con las propuestas apagadas por Soporte TI, en lugar de «Cancelar» y «Confirmar» va el aviso. */
+  const propuestasDeSer = useFuncionalidad(CLAVES.iaPropuestas);
   const accion = elegirAccionVisible(propuestas, Date.now());
   const pedido = onTomarFoto ? elegirPedidoVisible(pedidosDeFoto, Date.now()) : null;
 
@@ -107,25 +112,29 @@ export function AccionDelAcompanante({ propuestas, onConfirmar, onCancelar, pedi
                 <Text style={[t.micro, { color: c.textSoft }]}>+{otrasPendientes}</Text>
               ) : null}
             </Pressable>
-            <View style={styles.botones}>
-              <GoldButton
-                label="Cancelar"
-                variant="outline"
-                onPress={() => onCancelar(propuesta.id)}
-                disabled={enCurso}
-                loading={estado === 'cancelando'}
-                style={styles.boton}
-                textStyle={TEXTO_DE_BOTON}
-              />
-              <GoldButton
-                label="Confirmar"
-                onPress={() => onConfirmar(propuesta.id)}
-                disabled={enCurso}
-                loading={estado === 'confirmando'}
-                style={styles.boton}
-                textStyle={TEXTO_DE_BOTON}
-              />
-            </View>
+            {!propuestasDeSer.prendida && !enCurso ? (
+              <AvisoDeMantenimiento aviso={propuestasDeSer.aviso} />
+            ) : (
+              <View style={styles.botones}>
+                <GoldButton
+                  label="Cancelar"
+                  variant="outline"
+                  onPress={() => onCancelar(propuesta.id)}
+                  disabled={enCurso}
+                  loading={estado === 'cancelando'}
+                  style={styles.boton}
+                  textStyle={TEXTO_DE_BOTON}
+                />
+                <GoldButton
+                  label="Confirmar"
+                  onPress={() => onConfirmar(propuesta.id)}
+                  disabled={enCurso}
+                  loading={estado === 'confirmando'}
+                  style={styles.boton}
+                  textStyle={TEXTO_DE_BOTON}
+                />
+              </View>
+            )}
           </>
         ) : (
           <View style={styles.linea}>

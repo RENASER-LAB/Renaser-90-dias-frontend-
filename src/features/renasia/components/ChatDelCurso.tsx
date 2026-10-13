@@ -6,6 +6,9 @@ import { NOMBRE_ACOMPANANTE } from '../data/agentes';
 import { FenixDeSerQuieto } from '../../fenix/components/FenixDeSerQuieto';
 import { RenasiaPanel } from '../screens/RenasiaPanel';
 import { marcarChatMontado } from '../state/chatEnPantalla';
+import { AvisoDeMantenimiento } from '../../plataforma/components/AvisoDeMantenimiento';
+import { useFuncionalidad } from '../../plataforma/estado/useFuncionalidad';
+import { CLAVES } from '../../plataforma/utils/clavesDeLaApp';
 
 /**
  * SER DENTRO de un curso de Classroom: un botón al pie de la vista del curso o de la lección que
@@ -30,6 +33,8 @@ interface ChatDelCursoProps {
 export function ChatDelCurso({ cursoId, cursoTitulo, leccionTitulo, diaPrograma }: ChatDelCursoProps) {
   const { c, t } = useTheme();
   const [visible, setVisible] = useState(false);
+  /* Spec 002: con el chat de SER apagado por Soporte TI, en lugar del botón va el aviso (no se abre un panel vacío). */
+  const chatDeSer = useFuncionalidad(CLAVES.iaChat);
 
   // D-101: mientras este botón exista en pantalla, el flotante de SER se esconde. Dos entradas en
   // la misma vista confunden, y dentro de un curso la correcta es esta: lleva el curso de contexto.
@@ -44,6 +49,14 @@ export function ChatDelCurso({ cursoId, cursoTitulo, leccionTitulo, diaPrograma 
     const etiqueta = leccionTitulo ? `${cursoTitulo} · ${leccionTitulo}` : cursoTitulo;
     return { etiqueta, ambito: partes.join(', '), cursoId: cursoId ?? null };
   }, [cursoId, cursoTitulo, leccionTitulo, diaPrograma]);
+
+  if (!chatDeSer.prendida) {
+    return (
+      <View style={{ marginTop: 14 }}>
+        <AvisoDeMantenimiento aviso={chatDeSer.aviso} />
+      </View>
+    );
+  }
 
   return (
     <>

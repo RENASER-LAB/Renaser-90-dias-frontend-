@@ -6,6 +6,8 @@ import { FenixDeSerQuieto } from "../../fenix/components/FenixDeSerQuieto";
 import { useMomentoGrande } from "../../fenix/estado/momentoGrande";
 import type { FaseDeVoz } from "../hooks/useConversacionPorVoz";
 import { useOrbeALaVista } from "../hooks/useOrbeALaVista";
+import { useFuncionalidad } from "../../plataforma/estado/useFuncionalidad";
+import { CLAVES } from "../../plataforma/utils/clavesDeLaApp";
 
 const ETIQUETA: Record<FaseDeVoz, string> = {
   reposo: "Hablarle a tu acompañante",
@@ -46,6 +48,10 @@ type Props = {
  */
 export function OrbeAcompanante({ fase, diametro, onTocar, onMantener, deshabilitado }: Props) {
   const aLaVista = useOrbeALaVista();
+  /* Spec 002: con el chat de SER apagado (o SER entera) el orbe no puede contestar: queda quieto y apagado, y Hoy
+     muestra el aviso de mantenimiento debajo. Con solo «IA → voz» apagada sigue andando con la voz del teléfono. */
+  const chatDeSer = useFuncionalidad(CLAVES.iaChat);
+  const apagado = deshabilitado || !chatDeSer.prendida;
   const celebrando = useMomentoGrande() !== null;
   const fenix = useRef<FenixDeSerHandle>(null);
   const lado = Math.round(diametro * ESCALA_DEL_FENIX);
@@ -57,12 +63,13 @@ export function OrbeAcompanante({ fase, diametro, onTocar, onMantener, deshabili
       onPressIn={() => fenix.current?.tocado()}
       onLongPress={onMantener}
       accessibilityHint={onMantener ? "Mantén presionado para cerrar la conversación" : undefined}
-      disabled={deshabilitado}
+      disabled={apagado}
       accessibilityRole="button"
-      accessibilityLabel={ETIQUETA[fase]}
+      accessibilityLabel={chatDeSer.prendida ? ETIQUETA[fase] : "Tu acompañante está en mantenimiento"}
+      accessibilityState={{ disabled: apagado }}
       style={({ pressed }) => [
         styles.contenedor,
-        { width: diametro, height: diametro, opacity: deshabilitado ? 0.5 : pressed ? 0.85 : 1 },
+        { width: diametro, height: diametro, opacity: apagado ? 0.5 : pressed ? 0.85 : 1 },
       ]}
     >
       {/* La vista Rive se queda con los toques: sin `pointerEvents="none"`, tocar el fénix no llegaba al botón. */}

@@ -1,5 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 
+import { useFuncionalidad } from '../../plataforma/estado/useFuncionalidad';
+import { CLAVES } from '../../plataforma/utils/clavesDeLaApp';
 import { useConversacionEnVivo } from './useConversacionEnVivo';
 import { useConversacionPorVoz, type ConversacionPorVoz } from './useConversacionPorVoz';
 
@@ -32,7 +34,10 @@ export function useVozDelOrbe(): ConversacionPorVoz {
   const cerradaAdredeRef = useRef(false);
 
   const enPausa = Date.now() < descartadaHastaMs;
-  const usarEnVivo = enVivo.disponible && !enPausa;
+  /* Spec 002, US2: con «IA → voz» apagada no se abre la voz en vivo (el servidor la cerraría con 1013): se usa la de
+     siempre, cuyo audio el servidor manda a la voz del teléfono (204). */
+  const vozDeSer = useFuncionalidad(CLAVES.iaVoz);
+  const usarEnVivo = enVivo.disponible && !enPausa && vozDeSer.prendida;
   const enSesion = enVivo.fase !== 'reposo';
 
   const tocar = useCallback(() => {

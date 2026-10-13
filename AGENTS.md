@@ -1745,6 +1745,38 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       opciones en 360 dp el texto se achica hasta un 85 % en vez de cortarse con «…». Solo el ranking lo usa.
     * **Hace falta un APK nuevo** para la pestaña; el APK publicado ya ve y registra el hábito.
 
+  * **Cambio por pedido del dueño — 2026-10-13 — los cinco tabs: aviso de mantenimiento cuando una funcionalidad está
+    apagada (spec 002)** (interruptores de Soporte TI, fase 1; spec, plan §D8 y contrato en
+    `Renaser-90-dias-backend/specs/002-soporte-ti-interruptores/`, aprobados por el dueño el 2026-10-13). Lo que cambia y
+    nada más:
+    * **La app lee qué está apagado para su sesión** (`features/plataforma/`): `GET /api/v1/funcionalidades/mias` con
+      `ETag` / `If-None-Match` (304), al entrar, al volver al frente, cada 60 s y cuando el servidor responde 503
+      `FUNCIONALIDAD_APAGADA` (lo detecta `apiFetch`, y el SSE de SER). Guarda la última lectura por cuenta; sin datos
+      ni red, todo prendido (el servidor igual bloquea). `useFuncionalidad(clave) → { prendida, aviso }`; una hija de
+      una madre apagada se ve apagada. `apiFetch` suma `cabeceras` y `apiFetchConRespuesta` (código, cabeceras, 304).
+    * **`AvisoDeMantenimiento`** (ícono `wrench` nuevo, Lucide en caja de 24, solo para esto): el aviso que escribió
+      Soporte TI en texto de 16 —o «Esta función está en mantenimiento. Vuelve a intentarlo en un rato.»— y
+      «Reintentar», que relee. Se anuncia al lector de pantalla. Entra con fundido y 6 px en 260 ms (con «reducir
+      movimiento», solo fundido). Va EN EL LUGAR de la funcionalidad: no desaparece nada.
+    * **Dónde se tapa** (lo crítico; el resto ya lo protege el servidor con su 503 y el aviso como mensaje):
+      * **SER**: el panel abre con el aviso en lugar de la conversación (`ia.chat`, y `ia` por ser su madre) y no pide
+        el historial; el botón «Pregúntale a SER» del curso pasa a ser el aviso; el botón flotante sigue y dice «En
+        mantenimiento» al lector; el orbe de Hoy queda quieto y apagado, el rótulo dice «En mantenimiento» y el aviso va
+        debajo del hero; con solo `ia.voz` apagada no se abre la voz en vivo y el orbe sigue con la voz del teléfono;
+        con `ia.propuestas` apagada, el aviso en lugar de «Cancelar» / «Confirmar» (tarjeta del chat y hoja de Hoy).
+      * **Comunidad**: Muro (`muro`), Eventos (`eventos`), Cursos (`cursos`: catálogo, curso y lección) y Ranking
+        (`ranking`) muestran el aviso en lugar de la sección; «Publicar» (`muro.publicar`) pone el aviso en el lugar de
+        la barra de crear publicación; en Tribu, el aviso reemplaza la lista de chats (`chat`) y la tarjeta del grupo
+        queda; en la sala, según el tipo (`chat.grupos`, `chat.global`, `chat.soporte`, `chat.directos`), el aviso
+        reemplaza mensajes y barra de escribir (la cabecera queda para volver); el micrófono (`chat.audio`) y stickers,
+        galería y cámara (`chat.fotos`) avisan en un diálogo en vez de empezar.
+      * **Training**: con `habitos` apagado, el aviso ocupa la pestaña (la cabecera queda).
+      * Al volver a prenderse, Muro, Cursos, chats, Ranking y Training vuelven a pedir sus datos.
+    * **No se tocaron**: Plan, la barra de pestañas, la forma de ninguna sección cuando está prendida, los textos de
+      error de siempre, el login ni el onboarding.
+    * **Hace falta un APK nuevo** (la app no se actualiza por aire). El APK publicado (1.5.0) no lee los interruptores:
+      ve el aviso como el mensaje de error del 503.
+
 ## 2. 📱 RESPONSIVIDAD UNIVERSAL (XIAOMI, ANDROID, IOS Y TABLETS)
 * **Cero Doble Scroll**: NUNCA coloques un contenedor con `maxHeight` fijo o scroll interno dentro de otro `ScrollView`. Toda pantalla debe tener UN ÚNICO contenedor de scroll fluido con `contentContainerStyle={{ flexGrow: 1, paddingBottom: 36 }}`.
 * **Adaptabilidad a Xiaomi y Pantallas Altas (20:9 / 19.5:9)**:

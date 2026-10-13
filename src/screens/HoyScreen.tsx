@@ -73,6 +73,9 @@ import { RenasiaPanel } from '../features/renasia/screens/RenasiaPanel';
 import { muestraTerminar, rotuloDelOrbe, tocarEmpiezaAEscuchar } from '../features/renasia/utils/rotuloDelOrbe';
 import { BotonTerminarConversacion } from '../features/renasia/components/BotonTerminarConversacion';
 import { useVozDelOrbe } from '../features/renasia/hooks/useVozDelOrbe';
+import { AvisoDeMantenimiento } from '../features/plataforma/components/AvisoDeMantenimiento';
+import { useFuncionalidad } from '../features/plataforma/estado/useFuncionalidad';
+import { CLAVES } from '../features/plataforma/utils/clavesDeLaApp';
 import { cambioAlRegistrar, cambioTrasIniciar, estadoVisibleDelPedido, solicitudDelPedido } from '../features/renasia/utils/pedidosDeFoto';
 import { REGLAS_DE_ACCION } from '../features/objetivos/utils/registroDeAccionConFoto';
 import type { PedidoDeFotoUI } from '../features/renasia/types/renasia.types';
@@ -124,6 +127,8 @@ export default function HoyScreen() {
   // El orbe del centro (2026-09-23): conversación por voz con el acompañante, y su chat para
   // confirmar propuestas o leer la respuesta completa.
   const voz = useVozDelOrbe();
+  /* Spec 002: SER apagada por Soporte TI → el orbe queda quieto y debajo va el aviso de mantenimiento. */
+  const chatDeSer = useFuncionalidad(CLAVES.iaChat);
   const [chatDelOrbeAbierto, setChatDelOrbeAbierto] = useState(false);
   /* "Tomar foto" en la hoja del orbe (autorizado por el dueño el 2026-09-26, ver AGENTS.md): el
      acompañante pidió la foto de un hábito (evento `evidencia`) y se abre la cámara y la misma
@@ -724,7 +729,7 @@ export default function HoyScreen() {
               numberOfLines={2}
               style={[t.small, { color: c.textSoft, marginTop: isShort ? 10 : 14, textAlign: 'center', paddingHorizontal: 24 }]}
             >
-              {rotuloDelOrbe(voz.fase, voz.disponible, voz.terminar !== undefined)}
+              {chatDeSer.prendida ? rotuloDelOrbe(voz.fase, voz.disponible, voz.terminar !== undefined) : 'En mantenimiento'}
             </Text>
             {voz.terminar && muestraTerminar(voz.fase, voz.terminar) ? (
               <BotonTerminarConversacion onPress={voz.terminar} />
@@ -732,6 +737,7 @@ export default function HoyScreen() {
           </View>
         </View>
 
+        {!chatDeSer.prendida ? <AvisoDeMantenimiento aviso={chatDeSer.aviso} /> : null}
         {voz.loQueDijiste || voz.respuesta || voz.error || voz.aviso ? (
           <View style={[styles.conversacionVoz, { borderColor: c.border, backgroundColor: c.cardBg }]}>
             {voz.loQueDijiste ? (
