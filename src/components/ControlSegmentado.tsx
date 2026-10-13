@@ -37,6 +37,12 @@ interface ControlSegmentadoProps<T extends string> {
   /** `tab` cuando cambia lo que se ve debajo (login); `radio` cuando es un dato del formulario. */
   rol?: 'tab' | 'radio';
   accessibilityLabel?: string;
+  /**
+   * Con cuatro opciones en un teléfono de 360 dp cada segmento queda en ~65 dp y «Coherencia» se cortaba con «…»
+   * (ranking, D-266 del backend). Con esto el texto se achica hasta un 85 % antes de cortarse. Apagado por defecto:
+   * los controles de dos o tres opciones entran enteros y no cambian.
+   */
+  achicarTexto?: boolean;
 }
 
 /** Aire entre la pista y la píldora. */
@@ -48,6 +54,7 @@ export function ControlSegmentado<T extends string>({
   onCambiar,
   rol = 'tab',
   accessibilityLabel,
+  achicarTexto = false,
 }: ControlSegmentadoProps<T>) {
   const { c, t } = useTheme();
   const [anchoPista, setAnchoPista] = useState(0);
@@ -119,6 +126,8 @@ export function ControlSegmentado<T extends string>({
           >
             <Text
               numberOfLines={1}
+              adjustsFontSizeToFit={achicarTexto}
+              minimumFontScale={achicarTexto ? 0.85 : undefined}
               style={[
                 t.body,
                 styles.etiqueta,
