@@ -25,6 +25,7 @@ const ETIQUETA_DE_ROL: Record<string, string> = {
   MENTOR_LEAD: 'Líder de mentores',
   ADMIN: 'Administrador',
   ALCHEMIST: 'Alquimista',
+  IT_SUPPORT: 'Soporte TI',
 };
 
 /** Un rol desconocido se muestra crudo: mejor eso que inventarle un nombre. */
