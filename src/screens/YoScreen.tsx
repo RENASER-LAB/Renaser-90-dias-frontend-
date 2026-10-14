@@ -71,7 +71,7 @@ import { entradaParaElLanzador } from '../features/renasia/components/lugarDelLa
 import { MemoriaDeRenasia } from '../features/renasia/components/MemoriaDeRenasia';
 import { useMemoriaDeRenasia } from '../features/renasia/hooks/useMemoriaDeRenasia';
 import { mostrarMemoria } from '../features/renasia/utils/memoria';
-import { abrirPoliticaDePrivacidad } from '../features/legal/enlacesLegales';
+import { abrirEliminarCuentaEnLaWeb, abrirPoliticaDePrivacidad } from '../features/legal/enlacesLegales';
 import { NOMBRE_ACOMPANANTE } from '../features/renasia/data/agentes';
 import { useMisEvidencias } from '../features/evidence/hooks/useMisEvidencias';
 import { resumenDeEvidencias } from '../features/evidence/resumenDeEvidencias';
@@ -1033,14 +1033,15 @@ export default function YoScreen() {
                 pantalla. «Cerrar sesión» estaba dos veces (en Yo y acá): queda esta, sin «›» porque
                 no abre nada, lo hace. */}
             <GrupoDeAjustes>
-              {esDisponible(CLAVES.cuentaEliminar) ? (
+              {/* Spec 002, fase 2: esta fila NUNCA se esconde (Google Play exige que se encuentre). Si la pantalla de la
+                  app no está disponible para la cuenta (`cuenta.eliminar` en `noDisponibles`), abre la página pública
+                  `/eliminar-cuenta` en el navegador. */}
               <FilaDeAjuste
                 icono="trash"
                 titulo="Eliminar mi cuenta"
                 peligro
-                onPress={() => setEliminandoCuenta(true)}
+                onPress={() => (esDisponible(CLAVES.cuentaEliminar) ? setEliminandoCuenta(true) : void abrirEliminarCuentaEnLaWeb())}
               />
-              ) : null}
               <FilaDeAjuste
                 icono="logout"
                 titulo="Cerrar sesión"

@@ -1799,8 +1799,10 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       botones de fotos y stickers y el de grabar (queda «Enviar»), el botón flotante de SER, su panel y el del curso, los
       botones de las propuestas, la voz en vivo, «Crear evento» y la asistencia; en Hoy las tarjetas de Administración,
       Mi grupo, Mis mentores, tickets, semáforo y próximo evento; en Yo la Evidencia, la Caja, Administración, la
-      emergencia, Perfil, Mis evidencias, Notificaciones, «Lo que SER recuerda» y «Eliminar mi cuenta»; y las filas de
-      Administración (raíz y «Más opciones»). El fénix de Hoy, sin SER, queda como imagen (su ánimo a la vista).
+      emergencia, Perfil, Mis evidencias, Notificaciones y «Lo que SER recuerda»; y las filas de Administración (raíz y
+      «Más opciones»). El fénix de Hoy, sin SER, queda como imagen (su ánimo a la vista). **«Eliminar mi cuenta» nunca se
+      esconde** (Google Play exige que se encuentre): con `cuenta.eliminar` no disponible, la fila abre la página pública
+      `/eliminar-cuenta` en el navegador (`abrirEliminarCuentaEnLaWeb`, `features/legal/enlacesLegales.ts`).
     * **Pestaña sin nada disponible**: Training, o Comunidad sin ninguna sección con interruptor (Testimonios sola no la
       sostiene), quedan con «Esta sección todavía no está disponible para tu cuenta.» (`SeccionNoDisponible`), sin el
       ícono de mantenimiento ni «Reintentar». Las pestañas nunca desaparecen.
