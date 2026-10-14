@@ -1,0 +1,40 @@
+# 37 — Consola Soporte TI, despliegue (spec 002, fase 2, US4): empezar `eventos` en 5 %, ver «En despliegue · 5 %» en la
+# lista y volver a «Para todos». Se deja como estaba.
+# Precondición: `eventos` sin despliegue. Cuenta Soporte TI con una contraseña corta (Maestro #3667, ver el README).
+# cuenta: soporte
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-consola.yaml
+- tapOn:
+    id: "buscador-consola"
+- inputText: "event"
+- tapOn: "Eventos\\..*"
+- scrollUntilVisible:
+    element: "Despliegue\\..*"
+    direction: DOWN
+- tapOn: "Despliegue\\..*"
+- extendedWaitUntil:
+    visible: "Para todos · ahora"
+    timeout: 30000
+- tapOn: "5 %"
+- tapOn:
+    id: "campo-motivo-despliegue"
+- inputText: "E2E"
+- hideKeyboard
+- tapOn: "Empezar en 5 %"
+- extendedWaitUntil:
+    visible: "Listo: 5 %\\..*"
+    timeout: 30000
+- assertVisible: "5 % · ahora"
+- takeScreenshot: 37a-despliegue-en-5
+- tapOn: "Para todos"
+- tapOn:
+    id: "campo-motivo-despliegue"
+- inputText: "E2E"
+- hideKeyboard
+- tapOn: "Prender para todos"
+- extendedWaitUntil:
+    visible: "Listo: la tienen todos\\..*"
+    timeout: 30000
+- takeScreenshot: 37b-despliegue-para-todos

@@ -116,6 +116,7 @@ export function FuncionalidadesConsolaScreen({
             autoCapitalize="none"
             autoCorrect={false}
             accessibilityLabel="Buscar una funcionalidad"
+            testID="buscador-consola"
             style={[t.body, estilos.campo, { color: c.text }]}
           />
         </View>

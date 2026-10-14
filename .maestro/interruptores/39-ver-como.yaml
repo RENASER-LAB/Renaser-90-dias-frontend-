@@ -1,0 +1,25 @@
+# 39 — Consola Soporte TI, «ver como» (spec 002, fase 2, US5): entrar como Mentor, ver la franja fija «Viendo como
+# Mentor · Salir», salir y volver a la consola.
+# Precondición: el backend con «ver como» (B3) y la cuenta de prueba del rol. Cuenta Soporte TI con contraseña corta.
+# cuenta: soporte
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-consola.yaml
+- tapOn: "Ver como\\..*"
+- tapOn: "Ver como Mentor"
+- extendedWaitUntil:
+    visible:
+      id: "franja-ver-como"
+    timeout: 30000
+- assertVisible: "Viendo como Mentor"
+- takeScreenshot: 39a-viendo-como-mentor
+- tapOn: "Salir de ver como Mentor"
+- extendedWaitUntil:
+    notVisible:
+      id: "franja-ver-como"
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Auditoría"
+    timeout: 30000
+- takeScreenshot: 39b-de-vuelta-en-la-consola

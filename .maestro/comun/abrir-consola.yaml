@@ -1,0 +1,22 @@
+# Abre la consola Soporte TI desde Yo y la desbloquea con la contraseña de la cuenta (`CONTRASENA`, la pasa `correr.sh`
+# con `-e` a los flujos `# cuenta: soporte`). Si la consola ya estaba abierta (15 min sin uso), sigue de largo.
+appId: com.renaser.app
+---
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Abrir la consola Soporte TI"
+    direction: DOWN
+    timeout: 20000
+- tapOn: "Abrir la consola Soporte TI"
+- runFlow:
+    when:
+      visible:
+        id: "campo-contrasena-consola"
+    commands:
+      - tapOn:
+          id: "campo-contrasena-consola"
+      - inputText: ${CONTRASENA}
+      - tapOn: "Desbloquear"
+- extendedWaitUntil:
+    visible: "Auditoría"
+    timeout: 30000

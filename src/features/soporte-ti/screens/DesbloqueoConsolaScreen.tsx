@@ -120,6 +120,7 @@ export function DesbloqueoConsolaScreen({
           onSubmitEditing={() => void entrar()}
           icon="lock"
           error={error}
+          testID="campo-contrasena-consola"
         />
         <BotonPrincipal etiqueta="Desbloquear" onPress={() => void entrar()} cargando={enviando} />
       </ScrollView>

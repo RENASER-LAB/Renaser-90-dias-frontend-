@@ -1,0 +1,32 @@
+# 40 — «Ver como» en solo lectura (spec 002, fase 2, §5): como Aprendiz, dar «Me gusta» en el Muro se rechaza (403
+# MODO_SOLO_LECTURA) y se dice en la franja, sin diálogo. Al final, salir.
+# Precondición: el backend con «ver como» (B3) y al menos una publicación en el Muro de la cuenta de prueba.
+# cuenta: soporte
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-consola.yaml
+- tapOn: "Ver como\\..*"
+- tapOn: "Ver como Aprendiz"
+- extendedWaitUntil:
+    visible:
+      id: "franja-ver-como"
+    timeout: 30000
+- runFlow: ../comun/despejar-capas.yaml
+- tapOn: "COMUNIDAD"
+- tapOn: "Muro"
+- scrollUntilVisible:
+    element: "Reaccionar a la publicacion"
+    direction: DOWN
+    timeout: 30000
+- tapOn: "Reaccionar a la publicacion"
+- extendedWaitUntil:
+    visible: "Solo lectura: eso no se guardó\\."
+    timeout: 15000
+- assertNotVisible: "OK"
+- takeScreenshot: 40a-solo-lectura-en-la-franja
+- tapOn: "Salir de ver como Aprendiz"
+- extendedWaitUntil:
+    notVisible:
+      id: "franja-ver-como"
+    timeout: 30000

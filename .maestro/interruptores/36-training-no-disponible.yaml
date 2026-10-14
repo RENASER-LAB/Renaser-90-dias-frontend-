@@ -1,0 +1,17 @@
+# 36 — Esconder lo no disponible (spec 002, fase 2): con `habitos` en despliegue solo para probadores, Training queda
+# con el texto neutro «Esta sección todavía no está disponible para tu cuenta.», sin el ícono de mantenimiento.
+# Precondición (QA por la consola, con contraseña: `habitos` es crítica): `habitos` → Despliegue → «Solo probadores»,
+# sin el aprendiz. Después, «Para todos».
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "TRAINING"
+- extendedWaitUntil:
+    visible:
+      id: "seccion-no-disponible"
+    timeout: 30000
+- assertVisible: "Esta sección todavía no está disponible para tu cuenta\\."
+- assertNotVisible:
+    id: "aviso-de-mantenimiento"
+- takeScreenshot: 36a-training-no-disponible

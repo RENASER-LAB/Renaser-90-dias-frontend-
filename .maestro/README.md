@@ -13,6 +13,12 @@ local (nunca contra producción).
   necesita que antes se apague una funcionalidad por la consola Soporte TI (lo dice arriba de cada archivo) y que después
   se vuelva a prender. Se corren de a uno, `.maestro/correr.sh .maestro/interruptores/<flujo>.yaml`, con la precondición
   puesta.
+  Fase 2 (34–40): lo no disponible que se esconde (34–36, con la precondición de un despliegue «Solo probadores»), y la
+  consola: despliegue (37), roles personalizados (38) y «ver como» (39–40). Los de la consola son `# cuenta: soporte`:
+  piden `E2E_SOPORTE_EMAIL` y `E2E_SOPORTE_PASSWORD` (la cuenta Soporte TI de la base local) y desbloquean la consola con
+  esa contraseña (`comun/abrir-consola.yaml`). **Esa cuenta necesita una contraseña corta** (≤ 8 letras): Maestro la
+  escribe con `inputText`, que tarda ~10 s por letra (ver abajo). 37 y 38 dejan todo como estaba; 39 y 40 necesitan el
+  backend con «ver como» (B3).
 
 ## Cómo correrla
 
@@ -24,6 +30,7 @@ local (nunca contra producción).
    ```bash
    E2E_APRENDIZ_EMAIL=… E2E_APRENDIZ_PASSWORD=… E2E_ADMIN_EMAIL=… E2E_ADMIN_PASSWORD=… \
      .maestro/correr.sh                    # toda la suite
+   # los de la consola Soporte TI, además: E2E_SOPORTE_EMAIL=… E2E_SOPORTE_PASSWORD=…
    .maestro/correr.sh .maestro/regresion/10-gimnasio-con-foto.yaml   # un flujo
    ```
 

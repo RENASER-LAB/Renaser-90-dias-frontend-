@@ -285,6 +285,7 @@ export function RolConsolaScreen({
           onChangeText={v => cambiar('nombre', v.slice(0, LARGO_MAXIMO_DEL_NOMBRE))}
           maxLength={LARGO_MAXIMO_DEL_NOMBRE}
           placeholder="Ej.: Mentor junior"
+          testID="campo-nombre-rol"
         />
         <FormField
           label="Descripción"
@@ -369,6 +370,7 @@ export function RolConsolaScreen({
           value={formulario.motivo}
           onChangeText={v => cambiar('motivo', v)}
           placeholder="Ej.: Mentores nuevos sin pasar lista todavía."
+          testID="campo-motivo-rol"
           multiline
           numberOfLines={2}
           error={faltaMotivo ? 'Escribe el motivo del cambio.' : null}

@@ -376,6 +376,7 @@ export function DespliegueConsolaScreen({
                       setMotivo(v);
                     }}
                     placeholder="Ej.: Sin errores en las últimas 24 horas."
+                    testID="campo-motivo-despliegue"
                     multiline
                     numberOfLines={2}
                     error={faltaMotivo ? 'Escribe el motivo del cambio.' : null}
