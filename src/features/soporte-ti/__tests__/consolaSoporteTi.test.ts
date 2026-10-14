@@ -254,6 +254,20 @@ describe('lo que decide la consola', () => {
   it('auditoría y circuito en palabras', () => {
     expect(resumenDelCambio({ antes: { prendidaGlobal: true }, despues: { prendidaGlobal: false } })).toBe('Prendida para todos → Apagada para todos');
     expect(resumenDelCambio({ antes: null, despues: null })).toBeNull();
+    // Hallazgo del QA del 13/10: apagar solo para un rol se leía «Prendida para todos (cambiaron los roles o el aviso)».
+    const foto = (prendidaGlobal: boolean, apagadaPara: string[], aviso: string | null = null) => ({ prendidaGlobal, apagadaPara, aviso });
+    expect(resumenDelCambio({ antes: foto(true, []), despues: foto(true, ['TRAINEE']) })).toBe('Prendida para todos → Apagada para Aprendiz');
+    expect(resumenDelCambio({ antes: foto(true, ['TRAINEE']), despues: foto(true, []) })).toBe('Apagada para Aprendiz → Prendida para todos');
+    expect(resumenDelCambio({ antes: foto(true, []), despues: foto(true, ['MENTOR', 'TRAINEE', 'ADMIN']) })).toBe(
+      'Prendida para todos → Apagada para Aprendiz, Mentor y Administrador',
+    );
+    expect(resumenDelCambio({ antes: foto(true, ['TRAINEE']), despues: foto(true, ['TRAINEE'], 'Vuelve a las 18:00') })).toBe(
+      'Apagada para Aprendiz (cambió el aviso)',
+    );
+    // Sin `apagadaPara`, los roles se leen de `porRol`.
+    expect(resumenDelCambio({ antes: { prendidaGlobal: true, porRol: { TRAINEE: true } }, despues: { prendidaGlobal: true, porRol: { TRAINEE: false, MENTOR: true } } })).toBe(
+      'Prendida para todos → Apagada para Aprendiz',
+    );
     expect(hayMasPaginas(0, 20, 20, 45)).toBe(true);
     expect(hayMasPaginas(2, 5, 20, 45)).toBe(false);
     expect(hayMasPaginas(0, 20, 20, null)).toBe(true);

@@ -232,18 +232,40 @@ export function actorDe(cambio: CambioAuditado): string | null {
   return cambio.actor?.nombre?.trim() || cambio.actorNombre?.trim() || null;
 }
 
-/** «Prendida para todos → Apagada para todos» cuando `antes` y `despues` traen `prendidaGlobal`; si no, `null`. */
-export function resumenDelCambio(cambio: CambioAuditado): string | null {
-  const leer = (valor: unknown): boolean | null => {
-    if (!valor || typeof valor !== 'object') return null;
-    const global = (valor as { prendidaGlobal?: unknown }).prendidaGlobal;
-    return typeof global === 'boolean' ? global : null;
+/**
+ * El estado de una foto de la auditoría en palabras: «Apagada para todos», «Prendida para todos» o «Apagada para
+ * Aprendiz y Mentor». Los roles salen de `apagadaPara` (lo manda el backend en cada foto) o, si falta, de `porRol`.
+ * `null` si la foto no trae `prendidaGlobal`.
+ */
+function estadoDeLaFoto(foto: unknown): string | null {
+  if (!foto || typeof foto !== 'object') return null;
+  const { prendidaGlobal, apagadaPara, porRol } = foto as { prendidaGlobal?: unknown; apagadaPara?: unknown; porRol?: unknown };
+  if (typeof prendidaGlobal !== 'boolean') return null;
+  if (!prendidaGlobal) return 'Apagada para todos';
+  const roles = Array.isArray(apagadaPara)
+    ? apagadaPara.filter((r): r is string => typeof r === 'string')
+    : porRol && typeof porRol === 'object'
+      ? Object.entries(porRol as Record<string, unknown>).filter(([, prendida]) => prendida === false).map(([rol]) => rol)
+      : [];
+  if (roles.length === 0) return 'Prendida para todos';
+  const orden = (rol: string) => {
+    const i = (ORDEN_DE_ROLES as readonly string[]).indexOf(rol);
+    return i < 0 ? ORDEN_DE_ROLES.length : i;
   };
-  const antes = leer(cambio.antes);
-  const despues = leer(cambio.despues);
+  const nombres = [...new Set(roles)].sort((a, b) => orden(a) - orden(b) || a.localeCompare(b)).map(etiquetaDeRol);
+  const lista = nombres.length === 1 ? nombres[0] : `${nombres.slice(0, -1).join(', ')} y ${nombres[nombres.length - 1]}`;
+  return `Apagada para ${lista}`;
+}
+
+/**
+ * «Prendida para todos → Apagada para Aprendiz» con las fotos `antes` y `despues` del cambio; si el estado no cambió,
+ * fue el aviso: «Apagada para Aprendiz (cambió el aviso)». `null` si alguna foto no se puede leer.
+ */
+export function resumenDelCambio(cambio: CambioAuditado): string | null {
+  const antes = estadoDeLaFoto(cambio.antes);
+  const despues = estadoDeLaFoto(cambio.despues);
   if (antes === null || despues === null) return null;
-  const texto = (v: boolean) => (v ? 'Prendida para todos' : 'Apagada para todos');
-  return antes === despues ? `${texto(despues)} (cambiaron los roles o el aviso)` : `${texto(antes)} → ${texto(despues)}`;
+  return antes === despues ? `${despues} (cambió el aviso)` : `${antes} → ${despues}`;
 }
 
 /** ¿Hay otra página? Con `total` (de elementos) se calcula; sin él, si la página llegó llena. */
