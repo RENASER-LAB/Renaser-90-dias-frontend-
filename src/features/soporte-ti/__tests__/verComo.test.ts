@@ -54,7 +54,16 @@ jest.mock('../../auth/api/googleAuth', () => ({ loginConGoogle: jest.fn() }));
 jest.mock('../../../navigation/navegacionRef', () => ({ irAPestana: jest.fn(() => true), pestanaDisponible: jest.fn(() => true) }));
 
 import { Alert } from '../../../components/Alerta';
-import { getTokenSesion, notificarModoSoloLectura, setTokenSesion } from '../../../services/http/apiClient';
+import {
+  apiFetch,
+  enModoSoloLectura,
+  getTokenSesion,
+  notificarModoSoloLectura,
+  ponerModoSoloLectura,
+  setTokenSesion,
+  suscribirModoSoloLectura,
+} from '../../../services/http/apiClient';
+import { marcarConversacionLeida } from '../../chat/api/chatApi';
 import { olvidarErroresSinDialogo } from '../../../services/http/erroresSinDialogo';
 import { AuthProvider, useAuth } from '../../auth/context/AuthContext';
 import { registrarTokenPushNativo } from '../../mentor/notificaciones/pushNativo';
@@ -76,6 +85,8 @@ let pedidos: Pedido[] = [];
 let sinRed = false;
 let verComoResponde: { status: number; token?: string | null } = { status: 200, token: 'tok-prueba' };
 let meDeLaPrueba: { status: number } = { status: 200 };
+/** Lo que responde cualquier otra escritura con la sesión de prueba (D-270: 403 MODO_SOLO_LECTURA). */
+const SOLO_LECTURA = { message: 'Estás viendo la app como otro rol: no se puede cambiar nada.', codigo: 'MODO_SOLO_LECTURA' };
 
 const SOPORTE = { id: 'u-ti', email: 'ti@renaser.pe', role: 'IT_SUPPORT', status: 'ACTIVE', fullName: 'Ricardo TI', avatarUrl: null };
 const PRUEBA = { id: 'u-prueba-mentor', email: 'ver-como+mentor@renaser.invalid', role: 'MENTOR', status: 'ACTIVE', fullName: 'Prueba · Mentor', avatarUrl: null };
@@ -106,6 +117,14 @@ function instalarServidor() {
     } else if (r === '/api/v1/soporte-ti/ver-como' && pedido.method === 'DELETE') {
       status = 204;
       cuerpo = undefined;
+      // D-270: la respuesta trae `X-Auth-Token` vacío; no es una sesión nueva.
+      cabeceras['X-Auth-Token'] = '';
+    } else if (r === '/api/v1/vencida') {
+      status = 401;
+      cuerpo = { codigo: 'VER_COMO_VENCIDO', message: 'Se terminó el tiempo de «ver como».' };
+    } else if (pedido.method !== 'GET' && sesion === 'tok-prueba') {
+      status = 403;
+      cuerpo = SOLO_LECTURA;
     }
     return {
       ok: status >= 200 && status < 300,
@@ -147,6 +166,7 @@ beforeEach(() => {
   cerrarConsola();
   abrirConsola('tok-consola');
   setTokenSesion(null);
+  ponerModoSoloLectura(false);
   mockGuardado.set('token', 'tok-soporte');
   instalarServidor();
   jest.spyOn(AccessibilityInfo, 'announceForAccessibility').mockImplementation(() => undefined);
@@ -297,6 +317,65 @@ describe('entrar y salir (AuthProvider de verdad)', () => {
   });
 });
 
+describe('el contrato final de «ver como» (D-270)', () => {
+  it('en solo lectura las escrituras de fondo no salen; las de la persona sí, y su 403 llega a la franja', async () => {
+    const sesion = await montarApp();
+    await act(async () => {
+      await sesion().entrarAVerComo({ rol: 'MENTOR' }, 'Mentor');
+    });
+    expect(enModoSoloLectura()).toBe(true);
+    const antes = pedidos.length;
+    await marcarConversacionLeida('c-1');
+    expect(pedidos.length).toBe(antes);
+    const mensajes: (string | null)[] = [];
+    const baja = suscribirModoSoloLectura(m => mensajes.push(m));
+    await apiFetch('/api/v1/wall', { method: 'POST', body: {} }).catch(() => undefined);
+    baja();
+    expect(mensajes).toEqual([SOLO_LECTURA.message]);
+    // Salir apaga el modo y no toma el `X-Auth-Token` vacío de la respuesta del DELETE como sesión.
+    await act(async () => {
+      await sesion().salirDeVerComo();
+    });
+    expect(enModoSoloLectura()).toBe(false);
+    expect(getTokenSesion()).toBe('tok-soporte');
+  });
+
+  it('un 403 MODO_SOLO_LECTURA de una escritura de fondo es silencioso', async () => {
+    setTokenSesion('tok-prueba');
+    const mensajes: (string | null)[] = [];
+    const baja = suscribirModoSoloLectura(m => mensajes.push(m));
+    await apiFetch('/api/v1/chat/conversations/c-1/read', { method: 'POST', deFondo: true }).catch(() => undefined);
+    baja();
+    expect(mensajes).toEqual([]);
+  });
+
+  it('un 401 VER_COMO_VENCIDO vuelve a Soporte TI, sin diálogo de sesión vencida', async () => {
+    const sesion = await montarApp();
+    await act(async () => {
+      await sesion().entrarAVerComo({ rol: 'MENTOR' }, 'Mentor');
+    });
+    const nativo = jest.spyOn(AlertNativo, 'alert').mockImplementation(() => undefined);
+    let error: unknown;
+    await act(async () => {
+      error = await apiFetch('/api/v1/vencida').catch(e => e);
+      await new Promise(r => setTimeout(r, 20));
+    });
+    Alert.alert('No se pudo cargar', (error as Error).message);
+    expect(nativo).not.toHaveBeenCalled();
+    expect(sesion().user?.id).toBe('u-ti');
+    expect(sesion().verComo).toBeNull();
+    expect(getTokenSesion()).toBe('tok-soporte');
+  });
+
+  it('el ERROR de un SEND en solo lectura no es una caída de la conexión', () => {
+    // La conexión está simulada arriba (`conexionChat`); la función se toma del módulo real.
+    const { esRechazoDeSoloLectura } = jest.requireActual<typeof import('../../chat/tiempoReal/conexionStomp')>('../../chat/tiempoReal/conexionStomp');
+    expect(esRechazoDeSoloLectura({ comando: 'ERROR', cabeceras: { message: 'MODO_SOLO_LECTURA: no se puede enviar' }, cuerpo: '' })).toBe(true);
+    expect(esRechazoDeSoloLectura({ comando: 'ERROR', cabeceras: { message: 'Sin permiso' }, cuerpo: '' })).toBe(false);
+    expect(esRechazoDeSoloLectura({ comando: 'MESSAGE', cabeceras: { message: 'MODO_SOLO_LECTURA:' }, cuerpo: '' })).toBe(false);
+  });
+});
+
 describe('la pantalla «Ver como» de la consola', () => {
   const rp = (parcial: Partial<RolPersonalizadoConsola>): RolPersonalizadoConsola => ({ id: 'r-1', nombre: 'Mentor junior', rolBase: 'MENTOR', activo: true, ...parcial });
 
@@ -329,6 +408,12 @@ describe('la pantalla «Ver como» de la consola', () => {
       mentor.props.onPress();
     });
     expect(alerta.mock.calls.at(-1)?.[0]).toBe('Todavía no está disponible');
+    // Con un rol personalizado, el 404 es que ese rol ya no existe.
+    const [juniorBorrado] = raiz!.root.findAll(n => n.props.accessibilityLabel === 'Ver como Mentor junior' && typeof n.props.onPress === 'function');
+    await act(async () => {
+      juniorBorrado.props.onPress();
+    });
+    expect(alerta.mock.calls.at(-1)?.[0]).toBe('Ese rol ya no existe');
 
     verComoResponde = { status: 200, token: 'tok-prueba' };
     const [junior] = raiz!.root.findAll(n => n.props.accessibilityLabel === 'Ver como Mentor junior' && typeof n.props.onPress === 'function');

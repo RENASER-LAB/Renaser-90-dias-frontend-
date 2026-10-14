@@ -160,7 +160,7 @@ export async function obtenerAvisosDeAcompanamiento(): Promise<AvisoApi[]> {
 }
 
 export async function marcarAvisoLeido(id: number): Promise<void> {
-  await apiFetch<unknown>(`/api/v1/notifications/${id}/read`, { method: 'PUT' });
+  await apiFetch<unknown>(`/api/v1/notifications/${id}/read`, { method: 'PUT', deFondo: true });
 }
 
 const RUTA_DE_ALUMNO = /^\/mentor\/groups\/([^/]+)\/learners\/([^/]+)$/;

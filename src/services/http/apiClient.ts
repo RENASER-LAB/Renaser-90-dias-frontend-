@@ -87,6 +87,24 @@ export const CODIGO_FUNCIONALIDAD_APAGADA = 'FUNCIONALIDAD_APAGADA';
 export const CODIGO_FUNCIONALIDAD_NO_DISPONIBLE = 'FUNCIONALIDAD_NO_DISPONIBLE';
 /** El 403 de una escritura desde «ver como» (contrato `fase-2.md` §5). */
 export const CODIGO_MODO_SOLO_LECTURA = 'MODO_SOLO_LECTURA';
+/** El 401 de una sesión de «ver como» vencida (D-270): se vuelve a Soporte TI, no es la sesión de Soporte TI vencida. */
+export const CODIGO_VER_COMO_VENCIDO = 'VER_COMO_VENCIDO';
+
+/*
+ * «Ver como» en curso (spec 002, fase 2, D-270): la sesión de la app es de solo lectura. Lo pone `AuthContext` al
+ * entrar y lo saca al salir. Con él, las escrituras **de fondo** (`deFondo`: el token de push, marcar leído, confirmar
+ * alarmas) no salen: el servidor las rechazaría con 403 y no hay nada que decirle a nadie.
+ */
+let modoSoloLectura = false;
+
+export function ponerModoSoloLectura(activo: boolean): void {
+  modoSoloLectura = activo;
+}
+
+/** ¿La sesión de la app es la de solo lectura de «ver como»? (para lo que no debe ni intentarse, como la voz en vivo). */
+export function enModoSoloLectura(): boolean {
+  return modoSoloLectura;
+}
 
 let tokenSesion: string | null = null;
 
@@ -296,6 +314,11 @@ type OpcionesPeticion = {
    * sesión de la cuenta de prueba, y quien pidió decide cuándo cambiarse a ella).
    */
   noTomarSesionDeLaRespuesta?: boolean;
+  /**
+   * Una escritura que la app hace sola, sin que la persona la pida (el token de push, marcar leído, confirmar alarmas).
+   * En «ver como» no sale (responde como un 204 vacío) y, si igual llega un 403 `MODO_SOLO_LECTURA`, no se avisa.
+   */
+  deFondo?: boolean;
 };
 
 /** Lo que devuelve {@link apiFetchConRespuesta}: el código, el cuerpo (si hubo) y las cabeceras. */
@@ -361,7 +384,11 @@ async function pedir<T>(ruta: string, opciones: OpcionesPeticion, aceptar304: bo
     el401EsContrasena = false,
     sesion,
     noTomarSesionDeLaRespuesta = false,
+    deFondo = false,
   } = opciones;
+  if (deFondo && modoSoloLectura && method !== 'GET') {
+    return { status: 204, datos: undefined, cabecera: () => null };
+  }
   // Con `sesion` el pedido va con esa (y lo que pase con ella no toca la de la app).
   const sesionPropia = sesion !== undefined;
 
@@ -426,8 +453,11 @@ async function pedir<T>(ruta: string, opciones: OpcionesPeticion, aceptar304: bo
       const codigo = codigoDelCuerpo(cuerpo);
       if (respuesta.status === 404 && codigo === CODIGO_FUNCIONALIDAD_NO_DISPONIBLE) {
         notificarFuncionalidadNoDisponible(cuerpo);
-      } else if (respuesta.status === 403 && codigo === CODIGO_MODO_SOLO_LECTURA && !sesionPropia) {
+      } else if (respuesta.status === 403 && codigo === CODIGO_MODO_SOLO_LECTURA && !sesionPropia && !deFondo) {
         notificarModoSoloLectura(cuerpo);
+      } else if (respuesta.status === 401 && codigo === CODIGO_VER_COMO_VENCIDO) {
+        // La vuelta a Soporte TI la hace el oyente de la sesión vencida; el aviso de la pantalla no se abre.
+        registrarErrorSinDialogo(typeof (cuerpo as { message?: unknown })?.message === 'string' ? (cuerpo as { message: string }).message : null);
       }
       // Un 401 en una request que mandó sesión no es "credenciales mal": es el token vencido. Se
       // cierra en UN lugar para que la app mande al login, en vez de que cada pantalla falle por su

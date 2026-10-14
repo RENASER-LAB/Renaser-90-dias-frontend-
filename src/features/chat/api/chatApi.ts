@@ -70,7 +70,8 @@ export async function obtenerPresencia(conversationId: string): Promise<string[]
 }
 
 export async function marcarConversacionLeida(conversationId: string): Promise<void> {
-  await apiFetch<unknown>(`/api/v1/chat/conversations/${conversationId}/read`, { method: 'POST' });
+  // De fondo (spec 002, fase 2): en «ver como» no se marca nada como leído.
+  await apiFetch<unknown>(`/api/v1/chat/conversations/${conversationId}/read`, { method: 'POST', deFondo: true });
 }
 
 export async function obtenerMensajes(conversationId: string, cursor?: string): Promise<WireMensajesPage> {

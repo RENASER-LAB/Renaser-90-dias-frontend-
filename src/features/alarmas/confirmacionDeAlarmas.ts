@@ -58,7 +58,7 @@ const porDefecto: DependenciasDeConfirmacion = {
   },
   alarmaExacta: () => estadoDeAlarmaExacta(),
   enviar: async token => {
-    await apiFetch('/api/v1/push-tokens/alarmas-locales', { method: 'POST', body: { token } });
+    await apiFetch('/api/v1/push-tokens/alarmas-locales', { method: 'POST', body: { token }, deFondo: true });
   },
 };
 

@@ -146,7 +146,7 @@ describe('las pantallas grandes tapan con el aviso (código)', () => {
 
   it('el orbe de Hoy: quieto con SER apagada, y sin voz en vivo con «IA → voz» apagada', () => {
     expect(leer('src/features/renasia/components/OrbeAcompanante.tsx')).toMatch(/const apagado = deshabilitado \|\| !chatDeSer\.prendida \|\| sinSer;/);
-    expect(leer('src/features/renasia/hooks/useVozDelOrbe.ts')).toMatch(/const usarEnVivo = enVivo\.disponible && !enPausa && vozDeSer\.prendida && vozDeSer\.disponible;/);
+    expect(leer('src/features/renasia/hooks/useVozDelOrbe.ts')).toMatch(/const usarEnVivo = enVivo\.disponible && !enPausa && vozDeSer\.prendida && vozDeSer\.disponible && !enModoSoloLectura\(\);/);
     const hoy = leer('src/screens/HoyScreen.tsx');
     expect(hoy).toMatch(/\{chatDeSer\.disponible && !chatDeSer\.prendida \? <AvisoDeMantenimiento aviso=\{chatDeSer\.aviso\} \/> : null\}/);
   });

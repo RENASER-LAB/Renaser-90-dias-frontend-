@@ -174,6 +174,8 @@ async function enviarAlBackend(token: string): Promise<void> {
   await apiFetch('/api/v1/push-tokens', {
     method: 'POST',
     body: { platform: Platform.OS === 'ios' ? 'IOS' : 'ANDROID', token },
+    // De fondo (spec 002, fase 2): en «ver como» el teléfono no se registra para la cuenta de prueba.
+    deFondo: true,
   });
 }
 

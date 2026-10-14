@@ -17,6 +17,7 @@ import {
   ApiError,
   cargarTokenPersistido,
   getTokenSesion,
+  ponerModoSoloLectura,
   setTokenSesion,
   suscribirSesionVencida,
 } from '../../../services/http/apiClient';
@@ -183,6 +184,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       let token: string | null;
       if (pendiente) {
         void cerrarSesionDePrueba(pendiente.tokenDePrueba);
+        ponerModoSoloLectura(false);
         setTokenSesion(pendiente.tokenSoporte);
         await olvidarVerComo();
         token = pendiente.tokenSoporte;
@@ -270,7 +272,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     // En «ver como» no se registra el teléfono para la cuenta de prueba (solo lectura: el servidor lo rechazaría).
     if (!verComoRef.current) void registrarTokenPushNativo();
-    const dejarDeEscucharToken = escucharRotacionDeToken();
+    // Tampoco se escucha la rotación del token en «ver como» (el registro sería otra escritura de fondo).
+    const dejarDeEscucharToken = verComoRef.current ? () => undefined : escucharRotacionDeToken();
     const dejarDeEscucharAvisos = escucharAperturaDeAviso();
     return () => {
       dejarDeEscucharToken();
@@ -446,12 +449,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const nombre = prueba.nombreDelRol ?? etiqueta;
     await guardarVerComo({ tokenSoporte, usuarioSoporte, tokenDePrueba: prueba.token, etiqueta: nombre, venceEn: prueba.venceEn });
     conexionChat.cerrarTodo();
+    // Solo lectura desde ya: ninguna escritura de fondo sale con la sesión de prueba (D-270).
+    ponerModoSoloLectura(true);
     setTokenSesion(prueba.token);
     let api: Awaited<ReturnType<typeof authApi.perfilActual>>;
     try {
       api = await authApi.perfilActual();
     } catch (e) {
       // No se pudo ni leer la cuenta de prueba: se vuelve a la de Soporte TI como si nada.
+      ponerModoSoloLectura(false);
       setTokenSesion(tokenSoporte);
       await olvidarVerComo();
       void cerrarSesionDePrueba(prueba.token);
@@ -477,6 +483,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     void cerrarSesionDePrueba(guardado.tokenDePrueba);
     conexionChat.cerrarTodo();
+    ponerModoSoloLectura(false);
     setTokenSesion(guardado.tokenSoporte);
     await olvidarVerComo();
     await alarmasListas(guardado.usuarioSoporte.id).catch(() => undefined);
@@ -497,6 +504,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const enVerComo = verComoActual();
     if (enVerComo) {
       void cerrarSesionDePrueba(enVerComo.tokenDePrueba);
+      ponerModoSoloLectura(false);
       setTokenSesion(enVerComo.tokenSoporte);
       void olvidarVerComo();
       setVerComo(null);

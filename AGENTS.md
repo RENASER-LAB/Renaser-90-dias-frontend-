@@ -1829,8 +1829,11 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       (`MainTabs` lleva `key` por cuenta). **En los cinco tabs**, mientras dura, una franja fija arriba, en el flujo,
       «Viendo como Mentor · Salir» (`FranjaVerComo`, en `App.tsx`; la app queda debajo sin borde seguro de arriba).
       Salir funciona sin red, cierra la sesión de prueba si puede y vuelve a Yo con la consola abierta (parámetro
-      `abrirSoporteTi`). Un 401 o el vencimiento de la sesión de prueba vuelven a Soporte TI, no al login; abrir la app con
-      «ver como» guardado vuelve a Soporte TI. En solo lectura no se registra el push.
+      `abrirSoporteTi`). Un 401 (también `VER_COMO_VENCIDO`, sin diálogo) o el vencimiento de la sesión de prueba vuelven
+      a Soporte TI, no al login; abrir la app con «ver como» guardado vuelve a Soporte TI. En solo lectura (D-270) no sale
+      ninguna escritura de fondo (`deFondo` en `apiFetch`: token de push, marcar leído un chat o un aviso, confirmar
+      alarmas) y, si alguna recibe 403, es silenciosa; el orbe no intenta la voz en vivo; un ERROR `MODO_SOLO_LECTURA:`
+      del WebSocket no cierra ni reconecta la conexión.
     * **Auditoría de la consola**: «Despliegue 5 % → 25 %», «Probadores 3 → 4», «Rol “Mentor junior” creado» (y borrado,
       desactivado, renombrado, funcionalidades) y «Vio la app como Mentor».
     * **Administración**: Equipo y roles y Solicitudes ofrecen los roles de `GET /admin/roles-asignables` (los seis y,

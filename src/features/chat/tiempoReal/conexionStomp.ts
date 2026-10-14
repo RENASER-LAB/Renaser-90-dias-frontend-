@@ -226,6 +226,9 @@ class ConexionStomp {
     }
 
     if (trama.comando === 'ERROR') {
+      // «Ver como» (spec 002, fase 2, D-270): un SEND desde la sesión de solo lectura recibe un ERROR
+      // `MODO_SOLO_LECTURA: …`. No es la conexión la que falló: no se cierra ni se reconecta por eso.
+      if (esRechazoDeSoloLectura(trama)) return;
       // El servidor rechazó algo (una suscripción sin permiso, una sesión vencida) y por
       // protocolo cierra a continuación. No se reintenta en bucle contra un rechazo: se deja
       // que `onclose` aplique la espera creciente.
@@ -339,4 +342,11 @@ export const conexionChat = new ConexionStomp();
 /** Destino STOMP de una conversación. Es el único que el servidor autoriza a escuchar. */
 export function destinoDeConversacion(conversacionId: string): string {
   return `/topic/conversaciones/${conversacionId}`;
+}
+
+/** ¿Es el ERROR con que el servidor rechaza un SEND de «ver como»? (D-270: su `message` empieza con `MODO_SOLO_LECTURA:`). */
+export function esRechazoDeSoloLectura(trama: Pick<TramaStomp, 'comando' | 'cabeceras' | 'cuerpo'>): boolean {
+  if (trama.comando !== 'ERROR') return false;
+  const mensaje = trama.cabeceras.message ?? '';
+  return mensaje.startsWith('MODO_SOLO_LECTURA:') || (typeof trama.cuerpo === 'string' && trama.cuerpo.startsWith('MODO_SOLO_LECTURA:'));
 }
