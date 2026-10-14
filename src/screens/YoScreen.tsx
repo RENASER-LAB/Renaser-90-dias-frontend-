@@ -86,6 +86,8 @@ import { useMiEmergencia } from '../features/emergencia/hooks/useMiEmergencia';
 import { EmergenciaScreen } from '../features/emergencia/screens/EmergenciaScreen';
 import { ConsolaSoporteTiScreen } from '../features/soporte-ti/screens/ConsolaSoporteTiScreen';
 import { esSoporteTi } from '../features/soporte-ti/utils/rolSoporteTi';
+import { useDisponibilidad } from '../features/plataforma/estado/useFuncionalidad';
+import { CLAVES } from '../features/plataforma/utils/clavesDeLaApp';
 import { useMiSemaforo } from '../features/semaforo/hooks/useMiSemaforo';
 import { hayQuePedirMiSemaforo } from '../features/semaforo/utils/entradasDelSemaforo';
 import { curvaDeEvolucion } from '../features/semaforo/utils/curvaDeEvolucion';
@@ -360,6 +362,9 @@ export default function YoScreen() {
      fila aparece solo si el servidor dice que hay algo que mostrarle (desde el día 8, sin pausa y en
      Perú). El aviso `/caja` llega con `abrirCaja` (lo deja `AbridorDeAvisos`, D-218). */
   const miCaja = useMiCaja();
+  /* Spec 002, fase 2 (decisión P1 del dueño): una fila que lleva a algo que esta cuenta todavía no tiene (despliegue,
+     rol personalizado) no se dibuja. No es el aviso de mantenimiento: eso es para lo apagado. */
+  const esDisponible = useDisponibilidad();
   const [enCaja, setEnCaja] = useState(false);
   /* «Eliminar mi cuenta» (backend D-243, autorizado por el dueño el 02/10: Google Play exige poder
      eliminar la cuenta desde la app). A pantalla completa, como la Caja y Administración. */
@@ -726,6 +731,7 @@ export default function YoScreen() {
           </View>
 
           {/* EVIDENCIA */}
+          {esDisponible(CLAVES.evidencias) ? (
           <View>
             <MicroLabel>Evidencia</MicroLabel>
             {/* Antes: tres cajas "FOTO" fijas y un "+6" escrito a mano, que daban a entender
@@ -786,6 +792,7 @@ export default function YoScreen() {
               </View>
             )}
           </View>
+          ) : null}
 
           {/* Corregido 2026-09-29: acá estaban «Reflexión diaria» e «Identidad», dos tarjetas que al
               tocarlas solo mostraban un aviso con una frase fija, y «Patrones», un gráfico dibujado
@@ -804,7 +811,7 @@ export default function YoScreen() {
               > lugar. Quedó solo la de Ajustes (Ajustes → Mi onboarding → El Pacto / el Mapa). */}
           <GrupoDeAjustes>
             {/* TU CAJA RENASER (D-219) — solo si el servidor dice que hay algo que mostrarle */}
-            {miCaja.visible && miCaja.caja ? (
+            {miCaja.visible && miCaja.caja && esDisponible(CLAVES.caja) ? (
               <FilaDeAjuste
                 key="caja"
                 icono="package"
@@ -825,7 +832,7 @@ export default function YoScreen() {
               />
             ) : null}
             {/* ADMINISTRACIÓN — solo si el servidor dice que esta cuenta puede */}
-            {capacidades.administrar ? (
+            {capacidades.administrar && esDisponible(CLAVES.admin) ? (
               <FilaDeAjuste
                 key="administracion"
                 icono="users"
@@ -836,7 +843,7 @@ export default function YoScreen() {
               />
             ) : null}
             {/* TUVE UNA EMERGENCIA (D-244): solo si el servidor dice que esta cuenta puede pedirlo. */}
-            {miEmergencia.visible ? (
+            {miEmergencia.visible && esDisponible(CLAVES.emergencia) ? (
               <FilaDeAjuste
                 key="emergencia"
                 icono="lifeBuoy"
@@ -903,6 +910,7 @@ export default function YoScreen() {
               registro de logros), «3 fases» (son 4) y «Video de bienvenida» (no hay video).
               Ahora dicen solo lo que existe; los conteos salen de los datos. */}
           <View style={{ gap: space.gapLg, paddingBottom: 28 }}>
+            {esDisponible(CLAVES.perfil) ? (
             <GrupoDeAjustes titulo="Perfil">
               <FilaDeAjuste
                 icono="user"
@@ -917,6 +925,7 @@ export default function YoScreen() {
                 onPress={() => setActiveView('info_perfil')}
               />
             </GrupoDeAjustes>
+            ) : null}
 
             <GrupoDeAjustes titulo="Tu proceso">
               <FilaDeAjuste
@@ -925,6 +934,7 @@ export default function YoScreen() {
                 detalle="El Pacto y tu Mapa de Renacimiento"
                 onPress={() => setActiveView('onboarding')}
               />
+              {esDisponible(CLAVES.evidencias) ? (
               <FilaDeAjuste
                 icono="images"
                 titulo="Mis evidencias"
@@ -936,6 +946,7 @@ export default function YoScreen() {
                 })}
                 onPress={() => setActiveView('evidencias')}
               />
+              ) : null}
             </GrupoDeAjustes>
 
             {/* Decisión del cliente (2026-09-04): "Espejo de la Sombra" (catarsis privada +
@@ -953,12 +964,14 @@ export default function YoScreen() {
             </GrupoDeAjustes>
 
             <GrupoDeAjustes titulo="Preferencias">
+              {esDisponible(CLAVES.notificaciones) ? (
               <FilaDeAjuste
                 icono="bell"
                 titulo="Notificaciones"
                 detalle="Qué avisos te llegan"
                 onPress={() => setActiveView('notificaciones')}
               />
+              ) : null}
               {/* E-10 (26/09, decisión del dueño): una sección para personalizar las alarmas. */}
               <FilaDeAjuste
                 icono="alarmClock"
@@ -969,7 +982,7 @@ export default function YoScreen() {
               {/* D-167: solo si la memoria está encendida, o si quedó algo de antes para borrar. La
                   baldosa es el orbe de SER, su cara en Hoy y en el botón flotante (era un cerebro, el
                   mismo de la dimensión «Mente»). */}
-              {mostrarMemoria(memoriaRenasia.memoria) ? (
+              {mostrarMemoria(memoriaRenasia.memoria) && esDisponible(CLAVES.ia) ? (
                 <FilaDeAjuste
                   baldosa={<FenixDeSerQuieto size={LADO_BALDOSA} />}
                   titulo={`Lo que ${NOMBRE_ACOMPANANTE} recuerda de ti`}
@@ -1013,12 +1026,14 @@ export default function YoScreen() {
                 pantalla. «Cerrar sesión» estaba dos veces (en Yo y acá): queda esta, sin «›» porque
                 no abre nada, lo hace. */}
             <GrupoDeAjustes>
+              {esDisponible(CLAVES.cuentaEliminar) ? (
               <FilaDeAjuste
                 icono="trash"
                 titulo="Eliminar mi cuenta"
                 peligro
                 onPress={() => setEliminandoCuenta(true)}
               />
+              ) : null}
               <FilaDeAjuste
                 icono="logout"
                 titulo="Cerrar sesión"

@@ -37,7 +37,8 @@ export function useVozDelOrbe(): ConversacionPorVoz {
   /* Spec 002, US2: con «IA → voz» apagada no se abre la voz en vivo (el servidor la cerraría con 1013): se usa la de
      siempre, cuyo audio el servidor manda a la voz del teléfono (204). */
   const vozDeSer = useFuncionalidad(CLAVES.iaVoz);
-  const usarEnVivo = enVivo.disponible && !enPausa && vozDeSer.prendida;
+  // Fase 2: la voz que todavía no le toca a esta cuenta se trata como apagada (el orbe sigue con la voz del teléfono).
+  const usarEnVivo = enVivo.disponible && !enPausa && vozDeSer.prendida && vozDeSer.disponible;
   const enSesion = enVivo.fase !== 'reposo';
 
   const tocar = useCallback(() => {

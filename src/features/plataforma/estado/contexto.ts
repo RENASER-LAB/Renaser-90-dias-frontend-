@@ -19,6 +19,7 @@ const SIN_ALMACEN: EstadoDeFuncionalidades = Object.freeze({
   version: null,
   etag: null,
   apagadas: Object.freeze({}),
+  noDisponibles: Object.freeze({}),
   origen: 'nada',
 });
 const sinSuscripcion = () => () => undefined;

@@ -2,6 +2,7 @@ import { API_CONFIG } from '../../config/apiConfig';
 import { almacenamientoSeguro } from '../storage/almacenamientoSeguro';
 import { registrarHoraDelServidor } from './relojServidor';
 import { registrarPedido } from './medicionDePedidos';
+import { registrarErrorSinDialogo } from './erroresSinDialogo';
 
 /**
  * Cliente HTTP contra el backend Java (Spring Boot).
@@ -68,10 +69,24 @@ export class ApiError extends Error {
   get esFuncionalidadApagada(): boolean {
     return this.status === 503 && this.codigo === CODIGO_FUNCIONALIDAD_APAGADA;
   }
+
+  /** Lo pedido no le corresponde a esta sesión (404 `FUNCIONALIDAD_NO_DISPONIBLE`, fase 2 de la spec 002). */
+  get esFuncionalidadNoDisponible(): boolean {
+    return this.status === 404 && this.codigo === CODIGO_FUNCIONALIDAD_NO_DISPONIBLE;
+  }
+
+  /** Soporte TI está viendo la app como otro rol y esto escribía (403 `MODO_SOLO_LECTURA`, fase 2 de la spec 002). */
+  get esModoSoloLectura(): boolean {
+    return this.status === 403 && this.codigo === CODIGO_MODO_SOLO_LECTURA;
+  }
 }
 
 /** El código del 503 de un interruptor apagado (contrato de la spec 002, §2). */
 export const CODIGO_FUNCIONALIDAD_APAGADA = 'FUNCIONALIDAD_APAGADA';
+/** El 404 de una funcionalidad que esta sesión todavía no tiene (contrato `fase-2.md` §1). */
+export const CODIGO_FUNCIONALIDAD_NO_DISPONIBLE = 'FUNCIONALIDAD_NO_DISPONIBLE';
+/** El 403 de una escritura desde «ver como» (contrato `fase-2.md` §5). */
+export const CODIGO_MODO_SOLO_LECTURA = 'MODO_SOLO_LECTURA';
 
 let tokenSesion: string | null = null;
 
@@ -149,6 +164,63 @@ export function notificarFuncionalidadApagada(cuerpo: unknown): void {
       // Un oyente roto no tapa a los demás ni al error del pedido.
     }
   });
+}
+
+/**
+ * Quién quiere enterarse de que el servidor dijo «esto no es para tu cuenta» (404 `FUNCIONALIDAD_NO_DISPONIBLE`, fase 2):
+ * el estado de los interruptores, que esconde la entrada y relee.
+ */
+type OyenteFuncionalidadNoDisponible = (clave: string | null) => void;
+const oyentesFuncionalidadNoDisponible = new Set<OyenteFuncionalidadNoDisponible>();
+
+export function suscribirFuncionalidadNoDisponible(oyente: OyenteFuncionalidadNoDisponible): () => void {
+  oyentesFuncionalidadNoDisponible.add(oyente);
+  return () => {
+    oyentesFuncionalidadNoDisponible.delete(oyente);
+  };
+}
+
+export function notificarFuncionalidadNoDisponible(cuerpo: unknown): void {
+  const json = (cuerpo && typeof cuerpo === 'object' ? cuerpo : {}) as { funcionalidad?: unknown; message?: unknown };
+  const clave = typeof json.funcionalidad === 'string' && json.funcionalidad ? json.funcionalidad : null;
+  registrarErrorSinDialogo(typeof json.message === 'string' ? json.message : null);
+  oyentesFuncionalidadNoDisponible.forEach(oyente => {
+    try {
+      oyente(clave);
+    } catch {
+      // Un oyente roto no tapa a los demás.
+    }
+  });
+}
+
+/** Quién quiere enterarse de una escritura rechazada por «ver como» (403 `MODO_SOLO_LECTURA`): la franja de arriba. */
+type OyenteModoSoloLectura = (mensaje: string | null) => void;
+const oyentesModoSoloLectura = new Set<OyenteModoSoloLectura>();
+
+export function suscribirModoSoloLectura(oyente: OyenteModoSoloLectura): () => void {
+  oyentesModoSoloLectura.add(oyente);
+  return () => {
+    oyentesModoSoloLectura.delete(oyente);
+  };
+}
+
+export function notificarModoSoloLectura(cuerpo: unknown): void {
+  const json = (cuerpo && typeof cuerpo === 'object' ? cuerpo : {}) as { message?: unknown };
+  const mensaje = typeof json.message === 'string' && json.message.trim() ? json.message.trim() : null;
+  registrarErrorSinDialogo(mensaje);
+  oyentesModoSoloLectura.forEach(oyente => {
+    try {
+      oyente(mensaje);
+    } catch {
+      // Un oyente roto no tapa a los demás.
+    }
+  });
+}
+
+function codigoDelCuerpo(cuerpo: unknown): string | null {
+  return cuerpo && typeof cuerpo === 'object' && typeof (cuerpo as { codigo?: unknown }).codigo === 'string'
+    ? ((cuerpo as { codigo: string }).codigo)
+    : null;
 }
 
 /** ¿Este cuerpo de error es el de un interruptor apagado? */
@@ -327,6 +399,14 @@ async function pedir<T>(ruta: string, opciones: OpcionesPeticion, aceptar304: bo
       // su camino: quien pidió muestra `message`, que es el aviso escrito por Soporte TI.
       if (esCuerpoDeFuncionalidadApagada(respuesta.status, cuerpo)) {
         notificarFuncionalidadApagada(cuerpo);
+      }
+      // Fase 2: lo que no le toca a esta sesión se esconde (relee los interruptores, sin diálogo), y una escritura desde
+      // «ver como» se dice en la franja de arriba, sin diálogo.
+      const codigo = codigoDelCuerpo(cuerpo);
+      if (respuesta.status === 404 && codigo === CODIGO_FUNCIONALIDAD_NO_DISPONIBLE) {
+        notificarFuncionalidadNoDisponible(cuerpo);
+      } else if (respuesta.status === 403 && codigo === CODIGO_MODO_SOLO_LECTURA) {
+        notificarModoSoloLectura(cuerpo);
       }
       // Un 401 en una request que mandó sesión no es "credenciales mal": es el token vencido. Se
       // cierra en UN lugar para que la app mande al login, en vez de que cada pantalla falle por su

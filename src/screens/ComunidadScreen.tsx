@@ -157,7 +157,14 @@ import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLau
 import { SeccionEventos } from '../features/eventos/components/SeccionEventos';
 import { AvisoDeMantenimiento } from '../features/plataforma/components/AvisoDeMantenimiento';
 import { SeccionEnMantenimiento } from '../features/plataforma/components/SeccionEnMantenimiento';
-import { useAlVolverAPrenderse, useFuncionalidad } from '../features/plataforma/estado/useFuncionalidad';
+import {
+  useAlDejarDeEstarDisponible,
+  useAlVolverAPrenderse,
+  useDisponibilidad,
+  useFuncionalidad,
+} from '../features/plataforma/estado/useFuncionalidad';
+import { SeccionNoDisponible } from '../features/plataforma/components/SeccionNoDisponible';
+import { conversacionesDisponibles, seccionesDisponibles, seccionQueSeMuestra } from '../features/plataforma/utils/loQueSeEsconde';
 import { avisarSiEstaApagada } from '../features/plataforma/utils/avisarSiEstaApagada';
 import { CLAVES, claveDeLaConversacion, claveDeLaSeccionDeComunidad } from '../features/plataforma/utils/clavesDeLaApp';
 import { useOcultarBarraAlDesplazar } from '../navigation/barraAlDesplazar/BarraInferior';
@@ -608,11 +615,14 @@ export default function ComunidadScreen() {
      que se desliza. Ver `separacionDeLaFila`. */
   const [anchoFilaSecciones, setAnchoFilaSecciones] = useState(0);
   const anchoMedallon = medallionSize + 26;
+  /* Spec 002, fase 2: las secciones que se dibujan (lo no disponible para esta cuenta no se dibuja; ver `seccionActiva`). */
+  const esDisponible = useDisponibilidad();
+  const seccionesVisibles = useMemo(() => seccionesDisponibles(SECCIONES, esDisponible), [esDisponible]);
   const filaDeSecciones = separacionDeLaFila({
     anchoVisible: anchoFilaSecciones || anchoPantalla,
     relleno: horizontalPadding,
     anchoMedallon,
-    cantidad: SECCIONES.length,
+    cantidad: Math.max(seccionesVisibles.length, 1),
   });
   // Nombre real de quien está usando la app, para las publicaciones y comentarios propios del
   // Muro — reemplaza el "Kelin Arango" fijo del mock por el dato de la sesión.
@@ -839,7 +849,17 @@ export default function ComunidadScreen() {
   // Única fuente de verdad de "en qué sección estoy" (ver `SeccionComunidad`). Nunca se escribe a
   // mano: se pasa siempre por `irASeccion`, que además limpia el sub-estado de la sección que se
   // deja.
-  const [seccionActiva, setSeccionActiva] = useState<SeccionComunidad>('muro');
+  const [seccionElegida, setSeccionActiva] = useState<SeccionComunidad>('muro');
+  /* Spec 002, fase 2 (decisión P1 del dueño): una sección que a esta cuenta todavía no le toca (un despliegue en el que
+     no entró, algo que su rol personalizado no tiene) NO se dibuja en la fila. Si era la abierta, se muestra la primera
+     que quede, sin parpadeo: `seccionActiva` sale de la elegida y de lo que está a la vista. Si no queda ninguna con
+     interruptor, la pestaña entera dice que todavía no está disponible (ver el `return` de abajo). */
+  const seccionActiva = seccionQueSeMuestra(seccionElegida, seccionesVisibles);
+  const comunidadSinSecciones = seccionesVisibles.length === 0;
+  useEffect(() => {
+    // La elegida se escondió: queda elegida la que se muestra, para no volver a saltar si reaparece.
+    if (seccionActiva !== seccionElegida) setSeccionActiva(seccionActiva);
+  }, [seccionActiva, seccionElegida]);
   /*
    * La sección elegida queda ENTERA a la vista en la fila (2026-10-05). Con el medallón que asoma por
    * la mitad, tocarlo dejaba su etiqueta cortada contra el borde («Ranl…»). Solo se mueve si hace
@@ -849,7 +869,7 @@ export default function ComunidadScreen() {
   const filaDeSeccionesRef = useRef<ScrollView>(null);
   const desplazamientoDeLaFila = useRef(0);
   useEffect(() => {
-    const indice = SECCIONES.findIndex(seccion => seccion.id === seccionActiva);
+    const indice = seccionesVisibles.findIndex(seccion => seccion.id === seccionActiva);
     if (indice < 0 || anchoFilaSecciones <= 0) return;
     const inicio = horizontalPadding + indice * (anchoMedallon + filaDeSecciones.separacion);
     const fin = inicio + anchoMedallon;
@@ -858,7 +878,7 @@ export default function ComunidadScreen() {
     if (inicio >= desde && fin <= hasta) return;
     const destino = fin > hasta ? fin + horizontalPadding - anchoFilaSecciones : inicio - horizontalPadding;
     filaDeSeccionesRef.current?.scrollTo({ x: Math.max(0, destino), animated: true });
-  }, [seccionActiva, anchoFilaSecciones, anchoMedallon, filaDeSecciones.separacion, horizontalPadding]);
+  }, [seccionActiva, seccionesVisibles, anchoFilaSecciones, anchoMedallon, filaDeSecciones.separacion, horizontalPadding]);
   /* Eventos (E-5): el evento que pidió un aviso (`/eventos/{id}`) y el «atrás» de su sección, que
      vuelve del detalle o del formulario a la lista antes de dejar la sección. */
   const [eventoPedido, setEventoPedido] = useState<string | null>(null);
@@ -1113,6 +1133,14 @@ export default function ComunidadScreen() {
   const chatDeLaSala = useFuncionalidad(claveDeLaConversacion(activeChat?.type));
   const audioDelChat = useFuncionalidad(CLAVES.chatAudio);
   const fotosDelChat = useFuncionalidad(CLAVES.chatFotos);
+  /* Spec 002, fase 2: una sala cuyo tipo de chat ya no le toca a esta cuenta se cierra sola, sin diálogo (vuelve a la
+     lista, donde ese chat tampoco se lista). Vale también si llegó abierta por un aviso o un «Escribirle». */
+  useEffect(() => {
+    if (activeChat && !chatDeLaSala.disponible) {
+      setGroupInfoVisible(false);
+      setActiveChat(null);
+    }
+  }, [activeChat, chatDeLaSala.disponible]);
   /**
    * Tocar una cita lleva al mensaje citado si está en lo cargado (D-251): la lista se mueve hasta
    * dejarlo al medio y su renglón se tiñe un momento. Si todavía no se cargó (es más viejo que la
@@ -2564,10 +2592,12 @@ export default function ComunidadScreen() {
   /* 2026-09-29, pedido del dueño: «Formación Renaser Global» va SIEMPRE primero y el resto de los
      grupos sigue por el último mensaje. Importa sobre todo al Admin y al Alquimista, que ven todos
      los grupos; para los demás roles no cambia nada visible más que fijar el general arriba. */
+  /* Spec 002, fase 2: un tipo de chat que a esta cuenta todavía no le toca (`chat.grupos`, `chat.directos`…) no se lista. */
+  const conversacionesALaVista = conversacionesDisponibles(conversations, esDisponible);
   const gruposDeFormacion = conElGlobalPrimero(
-    ordenarPorActividad(conversations.filter(conv => TIPOS_DE_FORMACION.includes(conv.type))),
+    ordenarPorActividad(conversacionesALaVista.filter(conv => TIPOS_DE_FORMACION.includes(conv.type))),
   );
-  const directos = ordenarPorActividad(conversations.filter(conv => conv.type === 'direct'));
+  const directos = ordenarPorActividad(conversacionesALaVista.filter(conv => conv.type === 'direct'));
   /* «Ahora» para las horas de la lista («21:04», «Ayer», «lun»): se toma en cada render, que es
      cuando la lista cambia. */
   const ahoraDeLaLista = new Date();
@@ -2708,6 +2738,23 @@ export default function ComunidadScreen() {
       />
     );
   }
+  /* Spec 002, fase 2: si ninguna sección de Comunidad le toca a esta cuenta, la pestaña queda (nunca desaparece) con un
+     texto neutro, sin el ícono de mantenimiento: no está en arreglo, todavía no la tiene. */
+  if (comunidadSinSecciones) {
+    return (
+      <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: c.bg }}>
+        <ScreenHeader title="COMUNIDAD" />
+        <SeccionNoDisponible
+          contentContainerStyle={{
+            paddingHorizontal: horizontalPadding,
+            maxWidth: contentMaxWidth,
+            alignSelf: isTablet ? 'center' : 'stretch',
+            width: isTablet ? '100%' : undefined,
+          }}
+        />
+      </SafeAreaView>
+    );
+  }
   if (loQueTapa === 'mi-grupo') {
     return (
       <MiCelulaScreen
@@ -2818,7 +2865,7 @@ export default function ComunidadScreen() {
           accessibilityHint={filaDeSecciones.desliza ? 'Desliza para ver más secciones' : undefined}
           contentContainerStyle={{ paddingHorizontal: horizontalPadding, gap: filaDeSecciones.separacion, alignItems: 'flex-start' }}
         >
-          {SECCIONES.map(s => {
+          {seccionesVisibles.map(s => {
             const activa = seccionActiva === s.id;
             return (
               /* Se hunde al apoyar el dedo (`Presionable`, 0.97 en 120 ms) y vibra con un «tic» al
@@ -2910,8 +2957,9 @@ export default function ComunidadScreen() {
               {/* Botón Ventana Externa de Publicación. Se hunde al apoyar el dedo (2026-10-05) y lleva
                   TU foto o tus iniciales: el águila que había no eras tú. */}
               {/* Spec 002: «Publicar» apagado → el aviso en el lugar de la barra; el muro se sigue leyendo. */}
-              {!publicarEnElMuro.prendida ? <AvisoDeMantenimiento aviso={publicarEnElMuro.aviso} /> : null}
-              {publicarEnElMuro.prendida ? (
+              {/* Fase 2: si «Publicar» no le toca a esta cuenta, la barra no se dibuja (ni el aviso). */}
+              {publicarEnElMuro.disponible && !publicarEnElMuro.prendida ? <AvisoDeMantenimiento aviso={publicarEnElMuro.aviso} /> : null}
+              {publicarEnElMuro.disponible && publicarEnElMuro.prendida ? (
               <Presionable
                 onPress={() => setCreatePostModalVisible(true)}
                 accessibilityRole="button"
@@ -4388,6 +4436,8 @@ export default function ComunidadScreen() {
                 </>
               ) : (
                 <>
+                  {/* Fase 2: sin «Fotos y stickers» para esta cuenta, los tres botones no se dibujan. */}
+                  {fotosDelChat.disponible ? (
                   <Presionable
                     onPress={() => { if (avisarSiEstaApagada(fotosDelChat)) return; Keyboard.dismiss(); setStickersVisible(true); }}
                     disabled={enviandoMedia}
@@ -4397,6 +4447,7 @@ export default function ComunidadScreen() {
                   >
                     <Icon name="smile" size={24} color={c.goldInk} />
                   </Presionable>
+                  ) : null}
                   <TextInput
                     ref={campoDelChatRef}
                     value={chatInputText}
@@ -4411,6 +4462,8 @@ export default function ComunidadScreen() {
                     style={[styles.chatTextoCampo, styles.textInputChat, { color: c.text }]}
                     accessibilityLabel="Escribe un mensaje"
                   />
+                  {fotosDelChat.disponible ? (
+                  <>
                   <Presionable
                     onPress={() => avisarSiEstaApagada(fotosDelChat) || handleAdjuntarFoto('galeria')}
                     disabled={enviandoMedia}
@@ -4429,6 +4482,8 @@ export default function ComunidadScreen() {
                   >
                     <Icon name="camera" size={24} color={c.goldInk} />
                   </Presionable>
+                  </>
+                  ) : null}
                 </>
               )}
             </View>
@@ -4446,6 +4501,16 @@ export default function ComunidadScreen() {
                 onPress={() => void handleEnviarTextoReal()}
                 style={[styles.sendBtnGold, { backgroundColor: c.gold }]}
                 accessibilityLabel="Enviar mensaje"
+              >
+                <Icon name="send" size={22} color={c.onGold} />
+              </Pressable>
+            ) : !audioDelChat.disponible ? (
+              /* Fase 2: sin notas de voz para esta cuenta, el botón redondo es «Enviar», apagado hasta que haya texto. */
+              <Pressable
+                disabled
+                style={[styles.sendBtnGold, { backgroundColor: c.gold, opacity: 0.4 }]}
+                accessibilityLabel="Enviar mensaje"
+                accessibilityState={{ disabled: true }}
               >
                 <Icon name="send" size={22} color={c.onGold} />
               </Pressable>

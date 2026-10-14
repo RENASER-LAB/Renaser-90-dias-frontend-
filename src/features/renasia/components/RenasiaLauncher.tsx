@@ -91,7 +91,8 @@ export function RenasiaLauncher() {
         Una sola vista absoluta del tamaño del botón, no una capa a pantalla completa: así no hay
         nada que pueda comerse los toques de la pantalla que esté debajo.
       */}
-      {!hayChatEnPantalla && !mapaAbierto && (
+      {/* Spec 002, fase 2: si SER todavía no le toca a esta cuenta, el botón no se dibuja (no es mantenimiento). */}
+      {!hayChatEnPantalla && !mapaAbierto && chatDeSer.disponible && (
         <Animated.View style={[styles.posicion, { bottom: insets.bottom + ALTO_TAB_BAR + SEPARACION }, acompanaALaBarra]}>
           {/* El fénix es la cara de SER (2026-10-06, pedido del dueño): acá es FOTO FIJA en el ánimo del semáforo
               propio (`FenixDeSerQuieto`), sin Rive. Todo lo vivo del fénix está en el centro de Hoy.

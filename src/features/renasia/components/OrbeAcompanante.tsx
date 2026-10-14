@@ -51,7 +51,10 @@ export function OrbeAcompanante({ fase, diametro, onTocar, onMantener, deshabili
   /* Spec 002: con el chat de SER apagado (o SER entera) el orbe no puede contestar: queda quieto y apagado, y Hoy
      muestra el aviso de mantenimiento debajo. Con solo «IA → voz» apagada sigue andando con la voz del teléfono. */
   const chatDeSer = useFuncionalidad(CLAVES.iaChat);
-  const apagado = deshabilitado || !chatDeSer.prendida;
+  /* Fase 2: si SER todavía no le toca a esta cuenta, el fénix queda como imagen (su ánimo sigue a la vista), sin ser un
+     botón ni verse apagado: no está en mantenimiento, la persona no tiene a SER. */
+  const sinSer = !chatDeSer.disponible;
+  const apagado = deshabilitado || !chatDeSer.prendida || sinSer;
   const celebrando = useMomentoGrande() !== null;
   const fenix = useRef<FenixDeSerHandle>(null);
   const lado = Math.round(diametro * ESCALA_DEL_FENIX);
@@ -64,12 +67,12 @@ export function OrbeAcompanante({ fase, diametro, onTocar, onMantener, deshabili
       onLongPress={onMantener}
       accessibilityHint={onMantener ? "Mantén presionado para cerrar la conversación" : undefined}
       disabled={apagado}
-      accessibilityRole="button"
-      accessibilityLabel={chatDeSer.prendida ? ETIQUETA[fase] : "Tu acompañante está en mantenimiento"}
-      accessibilityState={{ disabled: apagado }}
+      accessibilityRole={sinSer ? "image" : "button"}
+      accessibilityLabel={sinSer ? "Tu fénix" : chatDeSer.prendida ? ETIQUETA[fase] : "Tu acompañante está en mantenimiento"}
+      accessibilityState={sinSer ? undefined : { disabled: apagado }}
       style={({ pressed }) => [
         styles.contenedor,
-        { width: diametro, height: diametro, opacity: apagado ? 0.5 : pressed ? 0.85 : 1 },
+        { width: diametro, height: diametro, opacity: sinSer ? 1 : apagado ? 0.5 : pressed ? 0.85 : 1 },
       ]}
     >
       {/* La vista Rive se queda con los toques: sin `pointerEvents="none"`, tocar el fénix no llegaba al botón. */}

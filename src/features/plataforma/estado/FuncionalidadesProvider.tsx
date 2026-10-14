@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { AppState } from 'react-native';
 
-import { suscribirFuncionalidadApagada } from '../../../services/http/apiClient';
+import { suscribirFuncionalidadApagada, suscribirFuncionalidadNoDisponible } from '../../../services/http/apiClient';
 import { useAuth } from '../../auth/context/AuthContext';
 import { leerMisFuncionalidades } from '../api/funcionalidadesApi';
 import { crearAlmacenDeFuncionalidades, type AlmacenDeFuncionalidades } from './almacenDeFuncionalidades';
@@ -23,7 +23,7 @@ export const funcionalidades: AlmacenDeFuncionalidades = crearAlmacenDeFuncional
  * - al entrar una cuenta (carga lo guardado de esa cuenta y lee el servidor) y al salir (todo prendido);
  * - al volver la app al frente;
  * - cada 60 s mientras está al frente (en segundo plano no se pide nada);
- * - cuando `apiFetch` ve un 503 `FUNCIONALIDAD_APAGADA`.
+ * - cuando `apiFetch` ve un 503 `FUNCIONALIDAD_APAGADA` o un 404 `FUNCIONALIDAD_NO_DISPONIBLE` (fase 2).
  *
  * Va en `App.tsx`, dentro de `AuthProvider`. Esta versión recibe la cuenta y el almacén por props (las pruebas la usan
  * así); la de la app es {@link FuncionalidadesProvider}, que toma la cuenta de la sesión.
@@ -61,10 +61,12 @@ export function ProveedorDeFuncionalidades({
       }
     });
     const sinAvisos = suscribirFuncionalidadApagada(apagada => almacen.recibirApagada(apagada));
+    const sinNoDisponibles = suscribirFuncionalidadNoDisponible(clave => almacen.recibirNoDisponible(clave));
     return () => {
       parar();
       frente.remove();
       sinAvisos();
+      sinNoDisponibles();
     };
   }, [almacen, cuenta]);
 

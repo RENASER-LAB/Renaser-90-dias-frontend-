@@ -2,9 +2,13 @@ import { fetch as expoFetch } from 'expo/fetch';
 
 import { API_CONFIG } from '../../../config/apiConfig';
 import {
+  CODIGO_FUNCIONALIDAD_NO_DISPONIBLE,
+  CODIGO_MODO_SOLO_LECTURA,
   esCuerpoDeFuncionalidadApagada,
   getTokenSesion,
   notificarFuncionalidadApagada,
+  notificarFuncionalidadNoDisponible,
+  notificarModoSoloLectura,
   notificarSesionVencida,
 } from '../../../services/http/apiClient';
 import { destinoDeEvidencia } from '../../habits/utils/destinoDeFoto';
@@ -108,6 +112,9 @@ async function leerMensajeDeError(respuesta: Awaited<ReturnType<typeof expoFetch
     // Spec 002: SER apagada por Soporte TI (o por el circuito de la IA) responde 503 FUNCIONALIDAD_APAGADA antes de
     // abrir el stream. Como este pedido no pasa por `apiFetch`, el estado de los interruptores se avisa acá.
     if (esCuerpoDeFuncionalidadApagada(respuesta.status, json)) notificarFuncionalidadApagada(json);
+    // Fase 2: lo que no le toca a esta sesión se esconde, y «ver como» no escribe (los dos sin diálogo).
+    if (respuesta.status === 404 && json?.codigo === CODIGO_FUNCIONALIDAD_NO_DISPONIBLE) notificarFuncionalidadNoDisponible(json);
+    if (respuesta.status === 403 && json?.codigo === CODIGO_MODO_SOLO_LECTURA) notificarModoSoloLectura(json);
     return json?.message || `Error ${respuesta.status}`;
   } catch {
     return texto;

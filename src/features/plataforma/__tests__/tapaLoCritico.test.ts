@@ -145,10 +145,10 @@ describe('las pantallas grandes tapan con el aviso (código)', () => {
   });
 
   it('el orbe de Hoy: quieto con SER apagada, y sin voz en vivo con «IA → voz» apagada', () => {
-    expect(leer('src/features/renasia/components/OrbeAcompanante.tsx')).toMatch(/const apagado = deshabilitado \|\| !chatDeSer\.prendida;/);
-    expect(leer('src/features/renasia/hooks/useVozDelOrbe.ts')).toMatch(/const usarEnVivo = enVivo\.disponible && !enPausa && vozDeSer\.prendida;/);
+    expect(leer('src/features/renasia/components/OrbeAcompanante.tsx')).toMatch(/const apagado = deshabilitado \|\| !chatDeSer\.prendida \|\| sinSer;/);
+    expect(leer('src/features/renasia/hooks/useVozDelOrbe.ts')).toMatch(/const usarEnVivo = enVivo\.disponible && !enPausa && vozDeSer\.prendida && vozDeSer\.disponible;/);
     const hoy = leer('src/screens/HoyScreen.tsx');
-    expect(hoy).toMatch(/\{!chatDeSer\.prendida \? <AvisoDeMantenimiento aviso=\{chatDeSer\.aviso\} \/> : null\}/);
+    expect(hoy).toMatch(/\{chatDeSer\.disponible && !chatDeSer\.prendida \? <AvisoDeMantenimiento aviso=\{chatDeSer\.aviso\} \/> : null\}/);
   });
 
   it('Comunidad: el Muro, «Publicar», las secciones, la lista de chats, la sala y sus adjuntos', () => {
@@ -156,7 +156,7 @@ describe('las pantallas grandes tapan con el aviso (código)', () => {
     expect(comunidad).toMatch(/useFuncionalidad\(claveDeLaSeccionDeComunidad\(seccionActiva\)\)/);
     expect(comunidad).toMatch(/\{seccionActiva === 'muro' && seccionEnMantenimiento && \(\s*<SeccionEnMantenimiento/);
     expect(comunidad).toMatch(/\{seccionActiva === 'muro' && !seccionEnMantenimiento && \(\s*<FlatList/);
-    expect(comunidad).toMatch(/\{!publicarEnElMuro\.prendida \? <AvisoDeMantenimiento aviso=\{publicarEnElMuro\.aviso\} \/> : null\}/);
+    expect(comunidad).toMatch(/\{publicarEnElMuro\.disponible && !publicarEnElMuro\.prendida \? <AvisoDeMantenimiento aviso=\{publicarEnElMuro\.aviso\} \/> : null\}/);
     expect(comunidad).toMatch(/\{seccionActiva === 'eventos' && !seccionEnMantenimiento && \(\s*<SeccionEventos/);
     expect(comunidad).toMatch(/\{seccionActiva === 'ranking' && !seccionEnMantenimiento && \(/);
     expect(comunidad).toMatch(/\{inExclusiveResources && seccionEnMantenimiento && \(/);

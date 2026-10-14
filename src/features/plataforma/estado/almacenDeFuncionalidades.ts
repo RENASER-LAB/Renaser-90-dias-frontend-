@@ -1,6 +1,12 @@
 import type { FuncionalidadApagadaRecibida } from '../../../services/http/apiClient';
 import type { LecturaDeFuncionalidades } from '../api/funcionalidadesApi';
-import { listaDesdeMapa, mapaDesdeLista, type MapaDeApagadas } from './evaluacion';
+import {
+  listaDesdeMapa,
+  mapaDeNoDisponibles,
+  mapaDesdeLista,
+  type MapaDeApagadas,
+  type MapaDeNoDisponibles,
+} from './evaluacion';
 import type { LecturaGuardada } from './memoriaLocal';
 
 /**
@@ -16,12 +22,16 @@ import type { LecturaGuardada } from './memoriaLocal';
  *   descarta.
  * - **Un 503 visto manda al instante.** La clave que el servidor dijo apagada se marca ya (con su aviso) y se relee
  *   sin `If-None-Match`, por si el apagado vino del circuito automático de la IA y la versión no cambió.
+ * - **Lo no disponible se esconde** (fase 2, decisión P1 del dueño): `noDisponibles` de `/mias`; un 404
+ *   `FUNCIONALIDAD_NO_DISPONIBLE` marca esa clave al instante y relee, igual que un 503.
  */
 export type EstadoDeFuncionalidades = {
   cuenta: string | null;
   version: number | null;
   etag: string | null;
   apagadas: MapaDeApagadas;
+  /** Lo que a esta sesión todavía no le toca (fase 2). Vacío sin datos: todo disponible. */
+  noDisponibles: MapaDeNoDisponibles;
   /** De dónde salió lo que se ve: nada todavía (todo prendido), lo guardado en el teléfono o el servidor. */
   origen: 'nada' | 'guardado' | 'servidor';
 };
@@ -42,18 +52,29 @@ export type AlmacenDeFuncionalidades = {
   releer: (opciones?: { sinCondicion?: boolean }) => Promise<void>;
   /** `apiFetch` vio un 503 `FUNCIONALIDAD_APAGADA`. */
   recibirApagada: (apagada: FuncionalidadApagadaRecibida) => void;
+  /** `apiFetch` vio un 404 `FUNCIONALIDAD_NO_DISPONIBLE` (fase 2). */
+  recibirNoDisponible: (clave: string | null) => void;
 };
+
+const NINGUNA_NO_DISPONIBLE: MapaDeNoDisponibles = Object.freeze({});
 
 const SIN_CUENTA: EstadoDeFuncionalidades = Object.freeze({
   cuenta: null,
   version: null,
   etag: null,
   apagadas: Object.freeze({}),
+  noDisponibles: NINGUNA_NO_DISPONIBLE,
   origen: 'nada',
 });
 
 function vacioPara(cuenta: string | null): EstadoDeFuncionalidades {
-  return cuenta === null ? SIN_CUENTA : { ...SIN_CUENTA, cuenta, apagadas: {} };
+  return cuenta === null ? SIN_CUENTA : { ...SIN_CUENTA, cuenta, apagadas: {}, noDisponibles: NINGUNA_NO_DISPONIBLE };
+}
+
+/** Misma lista de claves (en cualquier orden): no se vuelve a dibujar nada si no cambió. */
+function mismasClaves(a: MapaDeNoDisponibles, b: MapaDeNoDisponibles): boolean {
+  const claves = Object.keys(a);
+  return claves.length === Object.keys(b).length && claves.every(clave => Object.prototype.hasOwnProperty.call(b, clave));
 }
 
 export function crearAlmacenDeFuncionalidades(deps: DependenciasDelAlmacen): AlmacenDeFuncionalidades {
@@ -88,8 +109,15 @@ export function crearAlmacenDeFuncionalidades(deps: DependenciasDelAlmacen): Alm
         return;
       }
       const apagadas = mapaDesdeLista(lectura.apagadas);
-      poner({ cuenta, version: lectura.version, etag: lectura.etag, apagadas, origen: 'servidor' });
-      await deps.guardar(cuenta, { version: lectura.version, etag: lectura.etag, apagadas: listaDesdeMapa(apagadas) });
+      const leidas = mapaDeNoDisponibles(lectura.noDisponibles);
+      const noDisponibles = mismasClaves(leidas, estado.noDisponibles) ? estado.noDisponibles : leidas;
+      poner({ cuenta, version: lectura.version, etag: lectura.etag, apagadas, noDisponibles, origen: 'servidor' });
+      await deps.guardar(cuenta, {
+        version: lectura.version,
+        etag: lectura.etag,
+        apagadas: listaDesdeMapa(apagadas),
+        noDisponibles: Object.keys(noDisponibles),
+      });
     } catch {
       // Sin red o un cuerpo raro: se queda lo último que se sabía (guardado o del servidor), o todo prendido.
     }
@@ -138,6 +166,7 @@ export function crearAlmacenDeFuncionalidades(deps: DependenciasDelAlmacen): Alm
         version: guardada.version,
         etag: guardada.etag,
         apagadas: { ...mapaDesdeLista(guardada.apagadas), ...estado.apagadas },
+        noDisponibles: Object.freeze({ ...mapaDeNoDisponibles(guardada.noDisponibles), ...estado.noDisponibles }),
         origen: 'guardado',
       });
     }
@@ -155,6 +184,14 @@ export function crearAlmacenDeFuncionalidades(deps: DependenciasDelAlmacen): Alm
     void releer({ sinCondicion: true });
   }
 
+  function recibirNoDisponible(clave: string | null): void {
+    if (estado.cuenta === null) return;
+    if (clave && !Object.prototype.hasOwnProperty.call(estado.noDisponibles, clave)) {
+      poner({ ...estado, noDisponibles: Object.freeze({ ...estado.noDisponibles, [clave]: true as const }) });
+    }
+    void releer({ sinCondicion: true });
+  }
+
   return {
     estado: () => estado,
     releyendo: () => releyendo,
@@ -167,5 +204,6 @@ export function crearAlmacenDeFuncionalidades(deps: DependenciasDelAlmacen): Alm
     cambiarCuenta,
     releer,
     recibirApagada,
+    recibirNoDisponible,
   };
 }

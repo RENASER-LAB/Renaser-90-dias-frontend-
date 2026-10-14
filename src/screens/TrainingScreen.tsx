@@ -76,6 +76,7 @@ import { esRenombrable, tituloVisible } from '../features/habits/utils/renombreD
 import { useAuth } from '../features/auth/context/AuthContext';
 import { useOcultarBarraAlDesplazar } from '../navigation/barraAlDesplazar/BarraInferior';
 import { SeccionEnMantenimiento } from '../features/plataforma/components/SeccionEnMantenimiento';
+import { SeccionNoDisponible } from '../features/plataforma/components/SeccionNoDisponible';
 import { useAlVolverAPrenderse, useFuncionalidad } from '../features/plataforma/estado/useFuncionalidad';
 import { CLAVES } from '../features/plataforma/utils/clavesDeLaApp';
 
@@ -896,6 +897,23 @@ export default function TrainingScreen() {
    */
   const GUIAS_DE_LA_DIMENSION = 0;
   const secciones = seccionesDeLaDimension(GUIAS_DE_LA_DIMENSION);
+
+  /* Spec 002, fase 2: si «Hábitos» todavía no le toca a esta cuenta (despliegue, rol personalizado), la pestaña queda
+     con un texto neutro, sin el ícono de mantenimiento: no está en arreglo, todavía no lo tiene. */
+  if (!habitosPrendidos.disponible) {
+    return (
+      <SafeAreaView edges={BORDES_DE_UNA_PESTANA} style={{ flex: 1, backgroundColor: c.bg }}>
+        <ScreenHeader title="TRAINING" />
+        <SeccionNoDisponible
+          {...barraAlDesplazar}
+          contentContainerStyle={[
+            styles.content,
+            { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth, alignSelf: isTablet ? 'center' : 'stretch', width: isTablet ? '100%' : undefined },
+          ]}
+        />
+      </SafeAreaView>
+    );
+  }
 
   /* Spec 002: con «Hábitos» apagado por Soporte TI, el aviso de mantenimiento ocupa la pestaña (la cabecera queda). */
   if (!habitosPrendidos.prendida) {

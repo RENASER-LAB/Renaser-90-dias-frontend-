@@ -74,7 +74,7 @@ import { muestraTerminar, rotuloDelOrbe, tocarEmpiezaAEscuchar } from '../featur
 import { BotonTerminarConversacion } from '../features/renasia/components/BotonTerminarConversacion';
 import { useVozDelOrbe } from '../features/renasia/hooks/useVozDelOrbe';
 import { AvisoDeMantenimiento } from '../features/plataforma/components/AvisoDeMantenimiento';
-import { useFuncionalidad } from '../features/plataforma/estado/useFuncionalidad';
+import { useDisponibilidad, useFuncionalidad } from '../features/plataforma/estado/useFuncionalidad';
 import { CLAVES } from '../features/plataforma/utils/clavesDeLaApp';
 import { cambioAlRegistrar, cambioTrasIniciar, estadoVisibleDelPedido, solicitudDelPedido } from '../features/renasia/utils/pedidosDeFoto';
 import { REGLAS_DE_ACCION } from '../features/objetivos/utils/registroDeAccionConFoto';
@@ -129,6 +129,8 @@ export default function HoyScreen() {
   const voz = useVozDelOrbe();
   /* Spec 002: SER apagada por Soporte TI → el orbe queda quieto y debajo va el aviso de mantenimiento. */
   const chatDeSer = useFuncionalidad(CLAVES.iaChat);
+  /* Spec 002, fase 2: las tarjetas que llevan a algo que esta cuenta todavía no tiene no se dibujan. */
+  const esDisponible = useDisponibilidad();
   const [chatDelOrbeAbierto, setChatDelOrbeAbierto] = useState(false);
   /* "Tomar foto" en la hoja del orbe (autorizado por el dueño el 2026-09-26, ver AGENTS.md): el
      acompañante pidió la foto de un hábito (evento `evidencia`) y se abre la cámara y la misma
@@ -729,7 +731,7 @@ export default function HoyScreen() {
               numberOfLines={2}
               style={[t.small, { color: c.textSoft, marginTop: isShort ? 10 : 14, textAlign: 'center', paddingHorizontal: 24 }]}
             >
-              {chatDeSer.prendida ? rotuloDelOrbe(voz.fase, voz.disponible, voz.terminar !== undefined) : 'En mantenimiento'}
+              {!chatDeSer.disponible ? '' : chatDeSer.prendida ? rotuloDelOrbe(voz.fase, voz.disponible, voz.terminar !== undefined) : 'En mantenimiento'}
             </Text>
             {voz.terminar && muestraTerminar(voz.fase, voz.terminar) ? (
               <BotonTerminarConversacion onPress={voz.terminar} />
@@ -737,7 +739,8 @@ export default function HoyScreen() {
           </View>
         </View>
 
-        {!chatDeSer.prendida ? <AvisoDeMantenimiento aviso={chatDeSer.aviso} /> : null}
+        {/* Fase 2: SER que todavía no le toca a esta cuenta no muestra el aviso de mantenimiento (no está en arreglo). */}
+        {chatDeSer.disponible && !chatDeSer.prendida ? <AvisoDeMantenimiento aviso={chatDeSer.aviso} /> : null}
         {voz.loQueDijiste || voz.respuesta || voz.error || voz.aviso ? (
           <View style={[styles.conversacionVoz, { borderColor: c.border, backgroundColor: c.cardBg }]}>
             {voz.loQueDijiste ? (
@@ -773,7 +776,8 @@ export default function HoyScreen() {
         <Aparicion retardo={210} style={{ paddingBottom: 24 }}>
         <View style={{ gap: space.gap }}>
           {/* Solo para ADMIN/ALQUIMISTA. El resto de Hoy no cambia para nadie. */}
-          {capacidades.administrar ? <TarjetaAdminHoy onAbrir={() => setEnAdministracion(true)} /> : null}
+          {/* Spec 002, fase 2: una entrada que todavía no le toca a esta cuenta (despliegue, rol personalizado) no se dibuja. */}
+          {capacidades.administrar && esDisponible(CLAVES.admin) ? <TarjetaAdminHoy onAbrir={() => setEnAdministracion(true)} /> : null}
 
           {/* Solo para quien acompana una celula. El resto de Hoy no cambia.
 
@@ -781,7 +785,7 @@ export default function HoyScreen() {
               como mentor, pero el backend no le deja tener grupo asignado, asi que esta tarjeta
               le decia para siempre que no tiene aprendices. Para todos los demas roles la
               funcion devuelve exactamente lo que devolvia `esMentor`. */}
-          {entradaAlGrupoVisible({ esMentor, rol: user?.role, fallo: celula.fallo }) ? (
+          {entradaAlGrupoVisible({ esMentor, rol: user?.role, fallo: celula.fallo }) && esDisponible(CLAVES.mentorMiGrupo) ? (
             <TarjetaMentorHoy
               onAbrir={() => setVistaMentor('celula')}
               vista={celula.vista}
@@ -796,13 +800,13 @@ export default function HoyScreen() {
               asi que Hoy no cambia para nadie mas. */}
           {/* Solo para el LIDER DE MENTORES: su padron, la ficha de cada mentor y el reporte del mes
               (SDD 002, D-241). Para el resto la condicion es falsa: Hoy no cambia. */}
-          {esLider ? <TarjetaMentoresHoy onAbrir={() => setEnMisMentores(true)} /> : null}
+          {esLider && esDisponible(CLAVES.lider) ? <TarjetaMentoresHoy onAbrir={() => setEnMisMentores(true)} /> : null}
 
-          {esLider ? <TarjetaBandejaHoy onAbrir={() => setEnBandejaTickets(true)} /> : null}
+          {esLider && esDisponible(CLAVES.tickets) ? <TarjetaBandejaHoy onAbrir={() => setEnBandejaTickets(true)} /> : null}
 
           {/* Solo para el LIDER DE MENTORES, y solo si el servidor ya tiene el resumen por grupos
               (con 404 o 403 no aparece). Para el resto esta condicion es falsa: Hoy no cambia. */}
-          {esLider && entradaDelResumenVisible(semaforoGrupos) ? (
+          {esLider && entradaDelResumenVisible(semaforoGrupos) && esDisponible(CLAVES.semaforo) ? (
             <TarjetaSemaforoGruposHoy onAbrir={() => setEnSemaforoGrupos(true)} />
           ) : null}
 
@@ -911,7 +915,7 @@ export default function HoyScreen() {
           {/* Semaforo de cumplimiento (D-168). Entre Habitos y Acciones porque junta las dos cosas.
               Solo si `/home` dice que la persona se mide: con `null` —no se mide, o un backend que
               todavia no lo manda— Hoy queda exactamente como estaba. */}
-          {resumen?.semaforo ? (
+          {resumen?.semaforo && esDisponible(CLAVES.semaforo) ? (
             <TarjetaSemaforoHoy
               semaforo={resumen.semaforo}
               dias={diasParaLaTarjeta(resumen.semaforo, miSemaforo.detalle)}
@@ -1032,7 +1036,7 @@ export default function HoyScreen() {
           {/* Próximo Evento / Mentoría (si el backend lo devuelve). Tocarla abre su detalle en
               Comunidad → Eventos (E-5, decisión del dueño del 2026-09-26): la misma entrada que usa
               el aviso del evento (`abrirEventoId`). */}
-          {resumen?.proximoEvento && (
+          {resumen?.proximoEvento && esDisponible(CLAVES.eventos) && (
             <Presionable
               onPress={() =>
                 (navigation as any).navigate('Comunidad', {

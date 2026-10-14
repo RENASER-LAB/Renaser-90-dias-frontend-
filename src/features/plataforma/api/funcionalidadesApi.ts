@@ -15,6 +15,12 @@ export const misFuncionalidadesSchema = z
   .object({
     version: z.number(),
     apagadas: z.array(z.object({ clave: z.string(), aviso: z.string().nullish() }).passthrough()),
+    /**
+     * Fase 2 (contrato `fase-2.md` §1): lo que a esta persona todavía no le toca (un despliegue en el que no entró,
+     * algo que su rol personalizado no tiene). La app lo ESCONDE, no muestra el aviso. Aditivo y tolerante: un backend
+     * de la fase 1 no lo manda (todo disponible) y un elemento que no es texto se descarta.
+     */
+    noDisponibles: z.array(z.unknown()).nullish(),
   })
   .passthrough();
 
@@ -26,7 +32,23 @@ export type FuncionalidadApagada = { clave: string; aviso: string | null };
 export type LecturaDeFuncionalidades =
   /** 304: nada cambió desde la última lectura (mismo `ETag`). */
   | { tipo: 'sin_cambios' }
-  | { tipo: 'nueva'; version: number; etag: string | null; apagadas: FuncionalidadApagada[] };
+  | {
+      tipo: 'nueva';
+      version: number;
+      etag: string | null;
+      apagadas: FuncionalidadApagada[];
+      /** Las claves que esta sesión no tiene (fase 2). Sin el campo, ninguna: todo disponible. */
+      noDisponibles?: string[];
+    };
+
+/** Las claves no disponibles tal como se usan: solo texto no vacío, sin repetir. */
+export function limpiarNoDisponibles(lista: readonly unknown[] | null | undefined): string[] {
+  const claves = new Set<string>();
+  for (const clave of lista ?? []) {
+    if (typeof clave === 'string' && clave.trim()) claves.add(clave.trim());
+  }
+  return [...claves];
+}
 
 /** El aviso tal como se muestra: sin espacios sobrantes; vacío = sin aviso. */
 export function limpiarAviso(aviso: string | null | undefined): string | null {
@@ -53,5 +75,6 @@ export async function leerMisFuncionalidades(etag: string | null): Promise<Lectu
     version: resultado.data.version,
     etag: respuesta.cabecera('ETag'),
     apagadas: resultado.data.apagadas.map(a => ({ clave: a.clave, aviso: limpiarAviso(a.aviso) })),
+    noDisponibles: limpiarNoDisponibles(resultado.data.noDisponibles),
   };
 }
