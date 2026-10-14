@@ -1,0 +1,14 @@
+# 33 — Interruptores (spec 002): con `ia` apagada para Aprendiz, el panel de SER abre con el aviso y no pide el historial.
+# Precondición (QA por la consola): `ia` apagada para TRAINEE con el aviso «SER vuelve en un rato».
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "HOY"
+- tapOn: "Hablar con SER, tu acompañante.*"
+- extendedWaitUntil:
+    visible:
+      id: "aviso-de-mantenimiento"
+    timeout: 30000
+- assertVisible: "En mantenimiento\\. SER vuelve en un rato.*"
+- takeScreenshot: 33a-ser-en-mantenimiento

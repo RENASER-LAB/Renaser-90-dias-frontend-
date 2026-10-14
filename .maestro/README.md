@@ -9,6 +9,10 @@ local (nunca contra producción).
   cuenta que pide el flujo (`# cuenta: aprendiz|admin`, arriba del archivo).
 - `comun/`: subflujos (`ya-adentro`, despejar capas, abrir Cuerpo, tomar una foto con la cámara del emulador).
 - `regresion/`: un flujo por caso, ordenados por número. Cada uno dice arriba qué prueba y su precondición.
+- `interruptores/` (spec 002): el aviso de mantenimiento en Tribu, el Muro, Training y SER. **No corren solos**: cada uno
+  necesita que antes se apague una funcionalidad por la consola Soporte TI (lo dice arriba de cada archivo) y que después
+  se vuelva a prender. Se corren de a uno, `.maestro/correr.sh .maestro/interruptores/<flujo>.yaml`, con la precondición
+  puesta.
 
 ## Cómo correrla
 

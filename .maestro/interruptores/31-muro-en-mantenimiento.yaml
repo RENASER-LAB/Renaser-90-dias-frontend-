@@ -1,0 +1,16 @@
+# 31 — Interruptores (spec 002): con `muro` apagado para todos, Comunidad → Muro muestra el aviso, sin texto propio
+# (el genérico).
+# Precondición (QA por la consola, con contraseña: apagar para todos es crítico): `muro` apagado para todos, sin aviso.
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "COMUNIDAD"
+- tapOn: "Muro"
+- extendedWaitUntil:
+    visible:
+      id: "aviso-de-mantenimiento"
+    timeout: 30000
+- assertVisible: "En mantenimiento\\. Esta función está en mantenimiento.*"
+- assertNotVisible: "Crear una publicación"
+- takeScreenshot: 31a-muro-en-mantenimiento
