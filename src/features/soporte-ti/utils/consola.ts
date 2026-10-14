@@ -235,6 +235,9 @@ const TIPO_DE_CAMBIO: Record<string, string> = {
   AUTOMATICO: 'Automático',
   DESBLOQUEO: 'Desbloqueo de la consola',
   REAUTENTICACION: 'Confirmación con contraseña',
+  /* Fase 2 (contrato `fase-2.md` §4.5 y §5). */
+  ROL_PERSONALIZADO: 'Rol personalizado',
+  VER_COMO: 'Ver como',
 };
 
 export function tipoDeCambio(tipo: string | null | undefined): string {
@@ -270,15 +273,124 @@ function estadoDeLaFoto(foto: unknown): string | null {
   return `Apagada para ${lista}`;
 }
 
+// ---------------------------------------------------------------------------------------------------------------------
+// Fase 2: despliegue, roles personalizados y «ver como» en la auditoría
+// ---------------------------------------------------------------------------------------------------------------------
+
+type FotoDeDespliegue = { porcentaje: number | null; probadores: number | null } | null;
+
+const esObjeto = (x: unknown): x is Record<string, unknown> => !!x && typeof x === 'object' && !Array.isArray(x);
+const numeroO = (x: unknown): number | null => (typeof x === 'number' && Number.isFinite(x) ? x : null);
+
+/** `{ despliegue: { porcentaje, probadores } }` o `{ despliegue: null }` (contrato §3.4); `undefined` si no es eso. */
+function fotoDeDespliegue(foto: unknown): FotoDeDespliegue | undefined {
+  if (!esObjeto(foto) || !('despliegue' in foto)) return undefined;
+  const d = foto.despliegue;
+  if (!esObjeto(d)) return null;
+  return { porcentaje: numeroO(d.porcentaje), probadores: numeroO(d.probadores) };
+}
+
+function escalonEnPalabras(porcentaje: number | null): string {
+  if (porcentaje === null) return '—';
+  if (porcentaje >= 100) return 'para todos';
+  if (porcentaje <= 0) return 'solo probadores';
+  return `${porcentaje} %`;
+}
+
+/** «Despliegue 5 % → 25 %», «Probadores 3 → 4», «Despliegue empezado: 5 %», «Despliegue terminado: para todos». */
+function resumenDeDespliegue(antes: FotoDeDespliegue, despues: FotoDeDespliegue): string | null {
+  if (!antes && !despues) return null;
+  if (!antes && despues) return `Despliegue empezado: ${escalonEnPalabras(despues.porcentaje)}`;
+  if (antes && !despues) return 'Despliegue terminado: para todos';
+  const a = antes!;
+  const d = despues!;
+  const partes: string[] = [];
+  if (a.porcentaje !== d.porcentaje) partes.push(`Despliegue ${escalonEnPalabras(a.porcentaje)} → ${escalonEnPalabras(d.porcentaje)}`);
+  if (a.probadores !== d.probadores && a.probadores !== null && d.probadores !== null) partes.push(`Probadores ${a.probadores} → ${d.probadores}`);
+  return partes.length > 0 ? partes.join(' · ') : `Despliegue: ${escalonEnPalabras(d.porcentaje)}`;
+}
+
+type FotoDeRol = { nombre: string | null; activo: boolean | null; funcionalidades: number | null };
+
+function fotoDeRol(foto: unknown): FotoDeRol | null {
+  if (!esObjeto(foto) || (!('nombre' in foto) && !('rolBase' in foto))) return null;
+  return {
+    nombre: typeof foto.nombre === 'string' && foto.nombre.trim() ? foto.nombre.trim() : null,
+    activo: typeof foto.activo === 'boolean' ? foto.activo : null,
+    funcionalidades: Array.isArray(foto.funcionalidades) ? foto.funcionalidades.length : null,
+  };
+}
+
+/** «Rol “Mentor junior” creado», «… desactivado», «… renombrado a “…”», «… funcionalidades 12 → 10». */
+function resumenDeRol(cambio: CambioAuditado): string | null {
+  const antes = fotoDeRol(cambio.antes);
+  const despues = fotoDeRol(cambio.despues);
+  const nombre = despues?.nombre ?? antes?.nombre;
+  const rol = nombre ? `Rol “${nombre}”` : 'Rol';
+  const movidas = esObjeto(cambio.despues) ? numeroO(cambio.despues.personasMovidas) : null;
+  if (movidas !== null) {
+    const quien = antes?.nombre ? `Rol “${antes.nombre}”` : rol;
+    return `${quien}: ${movidas} ${movidas === 1 ? 'persona pasó' : 'personas pasaron'} a otro rol`;
+  }
+  if (!antes && despues) return `${rol} creado`;
+  if (antes && !despues) return `${rol} borrado`;
+  if (!antes || !despues) return null;
+  if (antes.activo === true && despues.activo === false) return `${rol} desactivado`;
+  if (antes.activo === false && despues.activo === true) return `${rol} reactivado`;
+  if (antes.nombre && despues.nombre && antes.nombre !== despues.nombre) return `Rol “${antes.nombre}” renombrado a “${despues.nombre}”`;
+  if (antes.funcionalidades !== null && despues.funcionalidades !== null && antes.funcionalidades !== despues.funcionalidades) {
+    return `${rol}: funcionalidades ${antes.funcionalidades} → ${despues.funcionalidades}`;
+  }
+  return `${rol} editado`;
+}
+
+/** El rol de una foto de «ver como»: `{ rol: "MENTOR" }` o `{ rolPersonalizado: { nombre } | "nombre" }`. */
+function rolDeVerComo(foto: unknown): string | null {
+  if (!esObjeto(foto)) return null;
+  const rp = foto.rolPersonalizado;
+  if (esObjeto(rp) && typeof rp.nombre === 'string' && rp.nombre.trim()) return rp.nombre.trim();
+  if (typeof rp === 'string' && rp.trim()) return rp.trim();
+  if (typeof foto.rol === 'string' && foto.rol.trim()) return etiquetaDeRol(foto.rol.trim());
+  return null;
+}
+
+/** «Vio la app como Mentor» al entrar; «Dejó de ver la app como Mentor» si solo trae el `antes`. */
+function resumenDeVerComo(cambio: CambioAuditado): string | null {
+  const entro = rolDeVerComo(cambio.despues);
+  if (entro) return `Vio la app como ${entro}`;
+  const salio = rolDeVerComo(cambio.antes);
+  return salio ? `Dejó de ver la app como ${salio}` : 'Vio la app como otro rol';
+}
+
 /**
  * «Prendida para todos → Apagada para Aprendiz» con las fotos `antes` y `despues` del cambio; si el estado no cambió,
  * fue el aviso: «Apagada para Aprendiz (cambió el aviso)». `null` si alguna foto no se puede leer.
+ *
+ * Fase 2: entiende también el despliegue («Despliegue 5 % → 25 %», «Probadores 3 → 4»), los roles personalizados
+ * («Rol “Mentor junior” creado») y «ver como» («Vio la app como Mentor»).
  */
 export function resumenDelCambio(cambio: CambioAuditado): string | null {
+  const tipo = cambio.tipo?.toUpperCase();
+  if (tipo === 'VER_COMO') return resumenDeVerComo(cambio);
+  if (tipo === 'ROL_PERSONALIZADO' || cambio.clave?.startsWith('rp:')) return resumenDeRol(cambio);
+  const despliegueAntes = fotoDeDespliegue(cambio.antes);
+  const despliegueDespues = fotoDeDespliegue(cambio.despues);
+  if (despliegueAntes !== undefined || despliegueDespues !== undefined) {
+    return resumenDeDespliegue(despliegueAntes ?? null, despliegueDespues ?? null);
+  }
   const antes = estadoDeLaFoto(cambio.antes);
   const despues = estadoDeLaFoto(cambio.despues);
   if (antes === null || despues === null) return null;
   return antes === despues ? `${despues} (cambió el aviso)` : `${antes} → ${despues}`;
+}
+
+/**
+ * El nombre que encabeza una fila de la auditoría: el de la funcionalidad. La clave de un rol personalizado (`rp:<id>`)
+ * no se muestra: el resumen ya nombra al rol.
+ */
+export function nombreDeLaFilaDeAuditoria(clave: string | null | undefined, nombres: ReadonlyMap<string, string>): string | null {
+  if (!clave || clave.startsWith('rp:')) return null;
+  return nombres.get(clave) ?? clave;
 }
 
 /** ¿Hay otra página? Con `total` (de elementos) se calcula; sin él, si la página llegó llena. */

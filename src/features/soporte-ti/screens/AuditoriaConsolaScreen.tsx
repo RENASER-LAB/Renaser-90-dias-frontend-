@@ -12,11 +12,12 @@ import { mensajeDeFallo } from '../../admin/utils/mensajes';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/lugarDelLanzador';
 import { leerAuditoria, TAMANO_DE_PAGINA_DE_AUDITORIA } from '../api/soporteTiApi';
 import type { CambioAuditado } from '../api/soporteTiSchemas';
-import { actorDe, fechaYHora, hayMasPaginas, queHacerConElError, resumenDelCambio, tipoDeCambio } from '../utils/consola';
+import { actorDe, fechaYHora, hayMasPaginas, nombreDeLaFilaDeAuditoria, queHacerConElError, resumenDelCambio, tipoDeCambio } from '../utils/consola';
 
 /**
  * La auditoría de la consola (spec 002, FR-007): cada cambio, desbloqueo, confirmación con contraseña y apertura o
- * cierre del circuito de la IA, del más nuevo al más viejo, de a 20. Solo lectura: no se edita ni se borra desde
+ * cierre del circuito de la IA —y, desde la fase 2, los escalones y probadores del despliegue, los roles personalizados
+ * y «ver como»—, del más nuevo al más viejo, de a 20. Solo lectura: no se edita ni se borra desde
  * ninguna parte. Abierta desde una funcionalidad, muestra la suya; «Todas» quita el filtro.
  */
 export function AuditoriaConsolaScreen({
@@ -109,7 +110,7 @@ export function AuditoriaConsolaScreen({
         {filas.map((cambio, i) => {
           const resumen = resumenDelCambio(cambio);
           const actor = actorDe(cambio);
-          const nombre = cambio.clave ? nombres.get(cambio.clave) ?? cambio.clave : null;
+          const nombre = nombreDeLaFilaDeAuditoria(cambio.clave, nombres);
           return (
             <View key={cambio.id ?? `${cambio.creadoEn}-${i}`} style={[estilos.fila, { backgroundColor: c.cardBg, borderColor: c.border }]}>
               <Text style={[t.small, { color: c.textSoft, fontSize: 13 }]}>
