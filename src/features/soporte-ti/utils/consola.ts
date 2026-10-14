@@ -80,6 +80,12 @@ export function textoDelEstado(estado: EstadoEnLaConsola): string {
   }
 }
 
+/** La cabecera de la lista: «Todo prendido», «1 apagada», «3 apagadas». */
+export function cuantasApagadas(apagadas: number): string {
+  if (apagadas === 0) return 'Todo prendido';
+  return `${apagadas} ${apagadas === 1 ? 'apagada' : 'apagadas'}`;
+}
+
 export function estaApagada(estado: EstadoEnLaConsola): boolean {
   return estado.tipo !== 'prendida';
 }

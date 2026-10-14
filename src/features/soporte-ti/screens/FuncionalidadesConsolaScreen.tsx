@@ -15,6 +15,7 @@ import type { FuncionalidadConsola, ParteDelCircuito } from '../api/soporteTiSch
 import type { EstadoDeLaConsola } from '../hooks/useConsolaSoporteTi';
 import {
   agruparPorArea,
+  cuantasApagadas,
   estaApagada,
   estadoEnLaConsola,
   nombreDe,
@@ -69,7 +70,7 @@ export function FuncionalidadesConsolaScreen({
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
       <CabeceraAdmin
         titulo="Soporte TI"
-        subtitulo={funcionalidades ? (apagadas === 0 ? 'Todo prendido' : `${apagadas} apagadas`) : 'Interruptores de la app'}
+        subtitulo={funcionalidades ? cuantasApagadas(apagadas) : 'Interruptores de la app'}
         onVolver={onSalir}
         accion={{ etiqueta: 'Auditoría', onPress: onAuditoria }}
       />

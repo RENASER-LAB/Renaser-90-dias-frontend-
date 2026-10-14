@@ -42,6 +42,7 @@ import { FuncionalidadConsolaScreen } from '../screens/FuncionalidadConsolaScree
 import {
   agruparPorArea,
   cambioDesde,
+  cuantasApagadas,
   esCambioCritico,
   estadoEnLaConsola,
   faltaParaGuardar,
@@ -269,6 +270,7 @@ describe('lo que decide la consola', () => {
     expect(resumenDelCambio({ antes: { prendidaGlobal: true, porRol: { TRAINEE: true } }, despues: { prendidaGlobal: true, porRol: { TRAINEE: false, MENTOR: true } } })).toBe(
       'Prendida para todos → Apagada para Aprendiz',
     );
+    expect([0, 1, 3].map(cuantasApagadas)).toEqual(['Todo prendido', '1 apagada', '3 apagadas']);
     expect(hayMasPaginas(0, 20, 20, 45)).toBe(true);
     expect(hayMasPaginas(2, 5, 20, 45)).toBe(false);
     expect(hayMasPaginas(0, 20, 20, null)).toBe(true);
