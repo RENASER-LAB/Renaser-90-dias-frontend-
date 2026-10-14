@@ -1819,9 +1819,11 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       tabla por hora. Lo que se usa sin cuenta (`desplegable: false`, hoy el alta pública) no se ofrece desplegar. La lista
       dice «En despliegue · 25 %» y suma el filtro «Despliegue».
     * **Soporte TI → «Roles»**: los roles personalizados, activos e inactivos («N activos de 20»); crear o editar con
-      nombre, descripción, de qué rol hereda (los seis, nunca Soporte TI; solo al crear) y el árbol de funcionalidades de
-      esa base (marcar una madre marca a sus hijas); «Activo», «Pasar sus personas a otro rol» y «Borrar rol» (un 409 con
-      personas ofrece pasarlas antes). Motivo obligatorio en todo.
+      nombre (hasta 60), descripción (hasta 280), de qué rol hereda (los seis, nunca Soporte TI; al editar, solo sin
+      personas) y el árbol de funcionalidades de esa base (marcar una madre marca a sus hijas); «Activo», «Pasar sus
+      personas a otro rol» y «Borrar rol» (los dos piden la contraseña; un 409 con personas ofrece pasarlas antes) y «Ver
+      su historial» (la auditoría con la clave `rp:<id>`). Motivo obligatorio en todo; un 409 muestra el mensaje del
+      servidor salvo que sea otra versión.
     * **Soporte TI → «Ver como»**: los seis roles base (sin Soporte TI) y los personalizados activos. Entrar guarda aparte
       la sesión de Soporte TI y su perfil (memoria y almacenamiento seguro) y la app se arma de nuevo como la ve ese rol
       (`MainTabs` lleva `key` por cuenta). **En los cinco tabs**, mientras dura, una franja fija arriba, en el flujo,
