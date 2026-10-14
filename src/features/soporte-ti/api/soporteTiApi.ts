@@ -3,6 +3,9 @@ import { validarRespuesta } from '../../mentor/api/mentorSchemas';
 import { abrirConsola, cerrarConsola, renovarConsola, tokenDeConsola } from '../estado/sesionDeConsola';
 import {
   circuitoSchema,
+  listaDeRolesSchema,
+  reemplazoSchema,
+  rolPersonalizadoConsolaSchema,
   despliegueSchema,
   listaDePersonasSchema,
   desbloqueoSchema,
@@ -10,6 +13,9 @@ import {
   listaDeFuncionalidadesSchema,
   paginaDeAuditoriaSchema,
   type CambioDeDespliegue,
+  type CambioDeRol,
+  type RolNuevo,
+  type RolPersonalizadoConsola,
   type CambioDeFuncionalidad,
   type DespliegueApi,
   type PersonaBuscada,
@@ -149,4 +155,53 @@ export async function quitarProbador(clave: string, usuarioId: string): Promise<
 export async function buscarPersonas(texto: string): Promise<PersonaBuscada[]> {
   const ruta = `/personas?q=${encodeURIComponent(texto.trim())}`;
   return validarRespuesta(listaDePersonasSchema, await enLaConsola<unknown>(ruta), `GET ${BASE_SOPORTE_TI}${ruta}`);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Fase 2 — roles personalizados (contrato `fase-2.md` §4.5)
+// ---------------------------------------------------------------------------------------------------------------------
+
+const conReautenticacion = (reautenticacion?: string | null) => (reautenticacion ? { 'X-Reautenticacion': reautenticacion } : undefined);
+
+export async function listarRoles(): Promise<RolPersonalizadoConsola[]> {
+  return validarRespuesta(listaDeRolesSchema, await enLaConsola<unknown>('/roles'), `GET ${BASE_SOPORTE_TI}/roles`);
+}
+
+/** 400: base Soporte TI, nombre repetido, una clave fuera de la base o más de 20 activos. */
+export async function crearRol(rol: RolNuevo, reautenticacion?: string | null): Promise<RolPersonalizadoConsola> {
+  return validarRespuesta(
+    rolPersonalizadoConsolaSchema,
+    await enLaConsola<unknown>('/roles', { method: 'POST', body: rol }, conReautenticacion(reautenticacion)),
+    `POST ${BASE_SOPORTE_TI}/roles`,
+  );
+}
+
+/** 409 versión vieja · 400. */
+export async function editarRol(id: string, cambio: CambioDeRol, reautenticacion?: string | null): Promise<RolPersonalizadoConsola> {
+  const ruta = `/roles/${encodeURIComponent(id)}`;
+  return validarRespuesta(
+    rolPersonalizadoConsolaSchema,
+    await enLaConsola<unknown>(ruta, { method: 'PUT', body: cambio }, conReautenticacion(reautenticacion)),
+    `PUT ${BASE_SOPORTE_TI}${ruta}`,
+  );
+}
+
+/** 409 si tiene personas asignadas: hay que reemplazarlo antes. */
+export async function borrarRol(id: string, motivo: string, reautenticacion?: string | null): Promise<void> {
+  await enLaConsola<unknown>(
+    `/roles/${encodeURIComponent(id)}?motivo=${encodeURIComponent(motivo.trim())}`,
+    { method: 'DELETE' },
+    conReautenticacion(reautenticacion),
+  );
+}
+
+/** Pasa a todas sus personas a otro rol personalizado de la misma base, o a ninguno (`null`: solo el rol base). */
+export async function reemplazarRol(id: string, rolDestinoId: string | null, motivo: string, reautenticacion?: string | null): Promise<number | null> {
+  const ruta = `/roles/${encodeURIComponent(id)}/reemplazar`;
+  const respuesta = validarRespuesta<{ personasMovidas?: number | null }>(
+    reemplazoSchema,
+    (await enLaConsola<unknown>(ruta, { method: 'POST', body: { rolDestinoId, motivo: motivo.trim() } }, conReautenticacion(reautenticacion))) ?? {},
+    `POST ${BASE_SOPORTE_TI}${ruta}`,
+  );
+  return respuesta.personasMovidas ?? null;
 }

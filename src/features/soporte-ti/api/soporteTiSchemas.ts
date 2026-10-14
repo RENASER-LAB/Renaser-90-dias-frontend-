@@ -136,3 +136,46 @@ export const personaBuscadaSchema = z
   .passthrough();
 export type PersonaBuscada = z.infer<typeof personaBuscadaSchema>;
 export const listaDePersonasSchema = z.array(personaBuscadaSchema);
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Fase 2 — roles personalizados (contrato `fase-2.md` §4.5)
+// ---------------------------------------------------------------------------------------------------------------------
+
+export const rolPersonalizadoConsolaSchema = z
+  .object({
+    id: z.string(),
+    clave: z.string().nullish(),
+    nombre: z.string(),
+    descripcion: z.string().nullish(),
+    rolBase: z.string(),
+    activo: z.boolean().nullish(),
+    funcionalidades: z.array(z.string()).nullish(),
+    personas: z.number().nullish(),
+    version: z.number().nullish(),
+    actualizadoPor: personaSchema.nullish(),
+    actualizadoEn: z.string().nullish(),
+  })
+  .passthrough();
+export type RolPersonalizadoConsola = z.infer<typeof rolPersonalizadoConsolaSchema>;
+export const listaDeRolesSchema = z.array(rolPersonalizadoConsolaSchema);
+
+/** `POST /soporte-ti/roles`. La base no se cambia después: el `PUT` no la lleva. */
+export interface RolNuevo {
+  nombre: string;
+  descripcion: string | null;
+  rolBase: string;
+  funcionalidades: string[];
+  motivo: string;
+}
+
+/** `PUT /soporte-ti/roles/{id}`. `version` es la que se leyó: 409 si cambió. */
+export interface CambioDeRol {
+  nombre: string;
+  descripcion: string | null;
+  funcionalidades: string[];
+  activo: boolean;
+  motivo: string;
+  version: number | undefined;
+}
+
+export const reemplazoSchema = z.object({ personasMovidas: z.number().nullish() }).passthrough();

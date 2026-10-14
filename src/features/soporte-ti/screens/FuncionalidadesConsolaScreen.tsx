@@ -44,11 +44,17 @@ export function FuncionalidadesConsolaScreen({
   estado,
   onAbrir,
   onAuditoria,
+  onRoles,
+  onVerComo,
   onSalir,
 }: {
   estado: EstadoDeLaConsola;
   onAbrir: (clave: string) => void;
   onAuditoria: () => void;
+  /** Fase 2: los roles personalizados. */
+  onRoles?: () => void;
+  /** Fase 2: ver la app como otro rol, en solo lectura. */
+  onVerComo?: () => void;
   onSalir: () => void;
 }) {
   const { c, t } = useTheme();
@@ -91,6 +97,13 @@ export function FuncionalidadesConsolaScreen({
           gap: 14,
         }}
       >
+        {onRoles || onVerComo ? (
+          <View style={{ gap: 8 }}>
+            {onRoles ? <FilaDeHerramienta titulo="Roles" detalle="Roles que heredan de uno base, con sus funcionalidades" onPress={onRoles} /> : null}
+            {onVerComo ? <FilaDeHerramienta titulo="Ver como" detalle="La app como la ve otro rol, sin cambiar nada" onPress={onVerComo} /> : null}
+          </View>
+        ) : null}
+
         {circuito && circuito.length > 0 ? <TarjetaDelCircuito partes={circuito} /> : null}
 
         <View style={[estilos.buscador, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
@@ -174,6 +187,25 @@ function FilaDeFuncionalidad({
         <Text style={[t.body, { color: apagada ? c.danger : c.textSoft, fontSize: 16, lineHeight: 22 }]}>{texto}</Text>
         {enDespliegue ? <Text style={[t.body, { color: c.goldInk, fontSize: 16, lineHeight: 22 }]}>{enDespliegue}</Text> : null}
         <Text style={[t.small, { color: c.textSoft, fontSize: 13 }]}>{funcionalidad.clave}</Text>
+      </View>
+      <Icon name="chevron" size={16} color={c.chevron} />
+    </Presionable>
+  );
+}
+
+/** Una entrada de la consola que no es una funcionalidad (fase 2: «Roles», «Ver como»). Se hunde al apretar. */
+function FilaDeHerramienta({ titulo, detalle, onPress }: { titulo: string; detalle: string; onPress: () => void }) {
+  const { c, t } = useTheme();
+  return (
+    <Presionable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${titulo}. ${detalle}`}
+      style={[estilos.fila, { backgroundColor: c.cardBg, borderColor: c.border }]}
+    >
+      <View style={{ flex: 1, flexShrink: 1, gap: 2 }}>
+        <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>{titulo}</Text>
+        <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 22 }]}>{detalle}</Text>
       </View>
       <Icon name="chevron" size={16} color={c.chevron} />
     </Presionable>
