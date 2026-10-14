@@ -37,13 +37,13 @@ esperar() { # esperar <patrón> <intentos>
   return 1
 }
 
-# adb shell input text: los espacios van como %s y los caracteres del shell, escapados. En tandas de 6 letras: de una
-# sola vez, el teclado a veces se comía letras y la contraseña llegaba incompleta.
+# adb shell input text: los espacios van como %s y los caracteres del shell, escapados. En tandas de 3 letras con una
+# pausa: de una sola vez (y a veces en tandas de 6) el teclado se comía letras y la contraseña llegaba incompleta.
 escribir() {
   local texto=$1 i
-  for ((i = 0; i < ${#texto}; i += 6)); do
-    adb shell input text "$(printf '%s' "${texto:i:6}" | sed -e 's/[][\\&|;<>()$`"'"'"' *?#~!{}]/\\&/g' -e 's/ /%s/g')"
-    sleep 0.3
+  for ((i = 0; i < ${#texto}; i += 3)); do
+    adb shell input text "$(printf '%s' "${texto:i:3}" | sed -e 's/[][\\&|;<>()$`"'"'"' *?#~!{}]/\\&/g' -e 's/ /%s/g')"
+    sleep 0.5
   done
 }
 

@@ -1,8 +1,19 @@
-# Punto de partida de todo flujo: la sesión ya la abrió `correr.sh` (por adb; ver el README). Acá solo se despejan las
-# capas que aparecen al entrar y se confirma que se ve la barra de pestañas.
+# Punto de partida de todo flujo: la sesión ya la abrió `correr.sh` (por adb; ver el README). Acá se despejan las capas
+# que aparecen al entrar (permiso de avisos, guía de SER, aviso de desarrollo) y se confirma que se ve la barra de
+# pestañas. La guía de SER puede llegar unos segundos después del permiso: por eso se despeja hasta tres veces.
 appId: com.renaser.app
 ---
 - runFlow: despejar-capas.yaml
+- repeat:
+    while:
+      notVisible: "TRAINING"
+    times: 3
+    commands:
+      - extendedWaitUntil:
+          visible: "TRAINING"
+          timeout: 5000
+          optional: true
+      - runFlow: despejar-capas.yaml
 - extendedWaitUntil:
     visible: "TRAINING"
     timeout: 30000
