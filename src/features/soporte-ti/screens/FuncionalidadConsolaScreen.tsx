@@ -5,7 +5,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Alert } from '../../../components/Alerta';
 import { ConfirmacionEnLinea } from '../../../components/ConfirmacionEnLinea';
 import { FormField } from '../../../components/FormField';
+import { Icon } from '../../../components/Icon';
 import { Interruptor } from '../../../components/Interruptor';
+import { Presionable } from '../../../components/Presionable';
 import { BotonPrincipal, BotonSecundario, TituloDeSeccion } from '../../../components/Legible';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { useResponsive } from '../../../theme/responsive';
@@ -34,6 +36,7 @@ import {
   textoDelEstado,
   type FormularioDeFuncionalidad,
 } from '../utils/consola';
+import { textoDeDespliegueEnLaLista } from '../utils/despliegue';
 import { Insignia } from './FuncionalidadesConsolaScreen';
 
 /**
@@ -54,6 +57,7 @@ export function FuncionalidadConsolaScreen({
   onReleer,
   onBloqueada,
   onAuditoria,
+  onDespliegue,
   onVolver,
 }: {
   funcionalidad: FuncionalidadConsola;
@@ -63,6 +67,8 @@ export function FuncionalidadConsolaScreen({
   onReleer: () => Promise<FuncionalidadConsola[] | null>;
   onBloqueada: () => void;
   onAuditoria: (clave: string) => void;
+  /** Fase 2: abre el despliegue progresivo de esta funcionalidad. */
+  onDespliegue?: (clave: string) => void;
   onVolver: () => void;
 }) {
   const { c, t } = useTheme();
@@ -238,6 +244,29 @@ export function FuncionalidadConsolaScreen({
                 />
               </View>
             ))}
+          </View>
+        ) : null}
+
+        {onDespliegue ? (
+          <View style={{ gap: 10 }}>
+            <TituloDeSeccion>Despliegue</TituloDeSeccion>
+            <Presionable
+              onPress={() =>
+                void (async () => {
+                  if (cambiado && !(await confirmar('¿Ir al despliegue sin guardar?', 'Se pierden los cambios de esta funcionalidad.', { ok: 'Ir' }))) return;
+                  onDespliegue(f.clave);
+                })()
+              }
+              accessibilityRole="button"
+              accessibilityLabel={`Despliegue. ${textoDeDespliegueEnLaLista(f) ?? 'La tienen todos'}`}
+              style={[estilos.interruptor, { backgroundColor: c.cardBg, borderColor: c.border }]}
+            >
+              <View style={{ flex: 1, flexShrink: 1 }}>
+                <Text style={fuerte}>{textoDeDespliegueEnLaLista(f) ?? 'La tienen todos'}</Text>
+                <Text style={ayuda}>Probadores, escalones (5 → 25 → 50 → 100 %) y las últimas 24 horas.</Text>
+              </View>
+              <Icon name="chevron" size={16} color={c.chevron} />
+            </Presionable>
           </View>
         ) : null}
 

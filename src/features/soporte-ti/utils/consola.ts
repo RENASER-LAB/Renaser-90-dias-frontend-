@@ -101,7 +101,13 @@ export function normalizar(texto: string): string {
   return texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 }
 
-export type FiltroDeLaConsola = 'todas' | 'apagadas' | 'criticas';
+export type FiltroDeLaConsola = 'todas' | 'apagadas' | 'criticas' | 'despliegue';
+
+/** ¿Está en despliegue? (fase 2: `despliegue` del catálogo con un porcentaje menor que 100). */
+function estaEnDespliegue(f: FuncionalidadConsola): boolean {
+  const p = f.despliegue?.porcentaje;
+  return typeof p === 'number' && p < 100;
+}
 
 /** Las funcionalidades por área, en el orden del servidor, filtradas por el buscador (nombre, clave, área o descripción). */
 export function agruparPorArea(
@@ -114,6 +120,7 @@ export function agruparPorArea(
   for (const f of todas) {
     if (filtro === 'criticas' && !f.critica) continue;
     if (filtro === 'apagadas' && !estaApagada(estadoEnLaConsola(f, todas))) continue;
+    if (filtro === 'despliegue' && !estaEnDespliegue(f)) continue;
     if (texto && !normalizar([f.nombre, f.clave, f.area, f.descripcion].filter(Boolean).join(' ')).includes(texto)) continue;
     const area = f.area?.trim() || 'Otras';
     grupos.set(area, [...(grupos.get(area) ?? []), f]);

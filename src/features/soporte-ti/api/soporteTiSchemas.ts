@@ -31,6 +31,11 @@ export const funcionalidadConsolaSchema = z
     actualizadoPor: personaSchema.nullish(),
     actualizadoEn: z.string().nullish(),
     circuito: z.object({ estado: z.string(), proximaPrueba: z.string().nullish() }).passthrough().nullish(),
+    /** Fase 2 (contrato `fase-2.md` §3.4): `null` o ausente = no está en despliegue (la tienen todos). */
+    despliegue: z
+      .object({ porcentaje: z.number(), probadores: z.number().nullish() })
+      .passthrough()
+      .nullish(),
   })
   .passthrough();
 export type FuncionalidadConsola = z.infer<typeof funcionalidadConsolaSchema>;
@@ -83,3 +88,51 @@ export const parteDelCircuitoSchema = z
   .passthrough();
 export type ParteDelCircuito = z.infer<typeof parteDelCircuitoSchema>;
 export const circuitoSchema = z.array(parteDelCircuitoSchema);
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Fase 2 — despliegue progresivo (contrato `fase-2.md` §3.4)
+// ---------------------------------------------------------------------------------------------------------------------
+
+const conteoSchema = z.object({ pedidos: z.number().nullish(), errores: z.number().nullish() }).passthrough();
+
+export const metricaDeHoraSchema = z
+  .object({
+    hora: z.string(),
+    dentro: conteoSchema.nullish(),
+    fuera: conteoSchema.nullish(),
+  })
+  .passthrough();
+export type MetricaDeHora = z.infer<typeof metricaDeHoraSchema>;
+
+export const probadorSchema = z
+  .object({ id: z.string(), nombre: z.string().nullish(), email: z.string().nullish() })
+  .passthrough();
+export type Probador = z.infer<typeof probadorSchema>;
+
+export const despliegueSchema = z
+  .object({
+    clave: z.string().nullish(),
+    enDespliegue: z.boolean().nullish(),
+    porcentaje: z.number().nullish(),
+    version: z.number().nullish(),
+    iniciadoEn: z.string().nullish(),
+    actualizadoPor: personaSchema.nullish(),
+    actualizadoEn: z.string().nullish(),
+    probadores: z.array(probadorSchema).nullish(),
+    metricas: z.array(metricaDeHoraSchema).nullish(),
+  })
+  .passthrough();
+export type DespliegueApi = z.infer<typeof despliegueSchema>;
+
+/** Lo que manda un escalón (`PUT …/despliegue`). `100` termina el despliegue: la tienen todos. */
+export interface CambioDeDespliegue {
+  porcentaje: number;
+  motivo: string;
+  version?: number;
+}
+
+export const personaBuscadaSchema = z
+  .object({ id: z.string(), nombre: z.string().nullish(), email: z.string().nullish(), rol: z.string().nullish() })
+  .passthrough();
+export type PersonaBuscada = z.infer<typeof personaBuscadaSchema>;
+export const listaDePersonasSchema = z.array(personaBuscadaSchema);

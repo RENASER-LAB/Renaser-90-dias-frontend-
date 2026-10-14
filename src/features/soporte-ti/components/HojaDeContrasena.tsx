@@ -18,10 +18,13 @@ export function HojaDeContrasena({
   enviando,
   onConfirmar,
   onCerrar,
+  explicacion,
 }: {
   visible: boolean;
   /** El nombre de la funcionalidad que se cambia. */
   nombre: string;
+  /** Por qué se pide (fase 2: un escalón del despliegue, un rol). Sin ella, la del apagado de la fase 1. */
+  explicacion?: string;
   error: string | null;
   enviando: boolean;
   onConfirmar: (contrasena: string) => void;
@@ -48,8 +51,8 @@ export function HojaDeContrasena({
     >
       <View style={{ gap: 14, paddingBottom: 8 }}>
         <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]}>
-          Es un cambio crítico: apaga algo para todos o toca una función marcada como crítica. Se avisa a Administración y al
-          Alquimista.
+          {explicacion ??
+            'Es un cambio crítico: apaga algo para todos o toca una función marcada como crítica. Se avisa a Administración y al Alquimista.'}
         </Text>
         <FormField
           label="Contraseña"

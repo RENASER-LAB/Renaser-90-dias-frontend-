@@ -3,11 +3,16 @@ import { validarRespuesta } from '../../mentor/api/mentorSchemas';
 import { abrirConsola, cerrarConsola, renovarConsola, tokenDeConsola } from '../estado/sesionDeConsola';
 import {
   circuitoSchema,
+  despliegueSchema,
+  listaDePersonasSchema,
   desbloqueoSchema,
   funcionalidadConsolaSchema,
   listaDeFuncionalidadesSchema,
   paginaDeAuditoriaSchema,
+  type CambioDeDespliegue,
   type CambioDeFuncionalidad,
+  type DespliegueApi,
+  type PersonaBuscada,
   type DesbloqueoApi,
   type FuncionalidadConsola,
   type PaginaDeAuditoria,
@@ -101,4 +106,47 @@ export async function leerAuditoria(filtros: { clave?: string | null; pagina?: n
 
 export async function leerCircuitoDeLaIa(): Promise<ParteDelCircuito[]> {
   return validarRespuesta(circuitoSchema, await enLaConsola<unknown>('/ia/circuito'), `GET ${BASE_SOPORTE_TI}/ia/circuito`);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Fase 2 — despliegue progresivo (contrato `fase-2.md` §3.4)
+// ---------------------------------------------------------------------------------------------------------------------
+
+const rutaDelDespliegue = (clave: string) => `/funcionalidades/${encodeURIComponent(clave)}/despliegue`;
+
+/** El despliegue de una funcionalidad: porcentaje, probadores y las métricas de las últimas 24 h, por hora. */
+export async function leerDespliegue(clave: string): Promise<DespliegueApi> {
+  const ruta = rutaDelDespliegue(clave);
+  return validarRespuesta(despliegueSchema, await enLaConsola<unknown>(ruta), `GET ${BASE_SOPORTE_TI}${ruta}`);
+}
+
+/**
+ * Pone el porcentaje (0–100; 100 termina el despliegue). 409 versión vieja · 428 crítico sin reautenticación · 400 sin
+ * motivo, clave anti-bloqueo o porcentaje fuera de rango.
+ */
+export async function cambiarDespliegue(clave: string, cambio: CambioDeDespliegue, reautenticacion?: string | null): Promise<DespliegueApi> {
+  const ruta = rutaDelDespliegue(clave);
+  return validarRespuesta(
+    despliegueSchema,
+    await enLaConsola<unknown>(ruta, { method: 'PUT', body: cambio }, reautenticacion ? { 'X-Reautenticacion': reautenticacion } : undefined),
+    `PUT ${BASE_SOPORTE_TI}${ruta}`,
+  );
+}
+
+/** Suma una probadora (la tiene aunque su cubeta quede fuera). 404 persona inexistente · 409 no está en despliegue. */
+export async function sumarProbador(clave: string, usuarioId: string, motivo?: string | null): Promise<void> {
+  await enLaConsola<unknown>(`${rutaDelDespliegue(clave)}/probadores/${encodeURIComponent(usuarioId)}`, {
+    method: 'PUT',
+    body: motivo?.trim() ? { motivo: motivo.trim() } : {},
+  });
+}
+
+export async function quitarProbador(clave: string, usuarioId: string): Promise<void> {
+  await enLaConsola<unknown>(`${rutaDelDespliegue(clave)}/probadores/${encodeURIComponent(usuarioId)}`, { method: 'DELETE' });
+}
+
+/** Busca personas activas por nombre o correo, sin tildes (máx. 20, sin cuentas de prueba). */
+export async function buscarPersonas(texto: string): Promise<PersonaBuscada[]> {
+  const ruta = `/personas?q=${encodeURIComponent(texto.trim())}`;
+  return validarRespuesta(listaDePersonasSchema, await enLaConsola<unknown>(ruta), `GET ${BASE_SOPORTE_TI}${ruta}`);
 }

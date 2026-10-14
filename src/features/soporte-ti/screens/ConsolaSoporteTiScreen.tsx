@@ -6,10 +6,16 @@ import { useConsolaSoporteTi } from '../hooks/useConsolaSoporteTi';
 import { nombreDe } from '../utils/consola';
 import { AuditoriaConsolaScreen } from './AuditoriaConsolaScreen';
 import { DesbloqueoConsolaScreen } from './DesbloqueoConsolaScreen';
+import { DespliegueConsolaScreen } from './DespliegueConsolaScreen';
 import { FuncionalidadConsolaScreen } from './FuncionalidadConsolaScreen';
 import { FuncionalidadesConsolaScreen } from './FuncionalidadesConsolaScreen';
 
-type Vista = { tipo: 'lista' } | { tipo: 'detalle'; clave: string } | { tipo: 'auditoria'; clave: string | null };
+type Vista =
+  | { tipo: 'lista' }
+  | { tipo: 'detalle'; clave: string }
+  | { tipo: 'auditoria'; clave: string | null }
+  /** Fase 2: el despliegue progresivo de una funcionalidad (desde su detalle). */
+  | { tipo: 'despliegue'; clave: string };
 
 /** Cada cuánto se mira si la consola ya pasó sus 15 minutos sin uso (con la pantalla abierta). */
 const REVISAR_BLOQUEO_MS = 30_000;
@@ -65,6 +71,24 @@ export function ConsolaSoporteTiScreen({ onSalir }: { onSalir: () => void }) {
     return <AuditoriaConsolaScreen clave={vista.clave} nombres={nombres} onBloqueada={bloquear} onVolver={() => setVista(volverA)} />;
   }
 
+  if (vista.tipo === 'despliegue') {
+    const funcionalidad = estado.funcionalidades?.find(f => f.clave === vista.clave);
+    if (funcionalidad) {
+      return (
+        <DespliegueConsolaScreen
+          key={funcionalidad.clave}
+          funcionalidad={funcionalidad}
+          onCambiado={resumen => {
+            estado.cambiarDespliegueDeLaFila(funcionalidad.clave, resumen);
+            void releerInterruptores();
+          }}
+          onBloqueada={bloquear}
+          onVolver={() => setVista({ tipo: 'detalle', clave: funcionalidad.clave })}
+        />
+      );
+    }
+  }
+
   if (vista.tipo === 'detalle') {
     const funcionalidad = estado.funcionalidades?.find(f => f.clave === vista.clave);
     if (funcionalidad) {
@@ -80,6 +104,7 @@ export function ConsolaSoporteTiScreen({ onSalir }: { onSalir: () => void }) {
           onReleer={estado.recargar}
           onBloqueada={bloquear}
           onAuditoria={clave => setVista({ tipo: 'auditoria', clave })}
+          onDespliegue={clave => setVista({ tipo: 'despliegue', clave })}
           onVolver={() => setVista({ tipo: 'lista' })}
         />
       );
