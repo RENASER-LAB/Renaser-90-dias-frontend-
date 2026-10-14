@@ -120,6 +120,11 @@ export const despliegueSchema = z
     actualizadoEn: z.string().nullish(),
     probadores: z.array(probadorSchema).nullish(),
     metricas: z.array(metricaDeHoraSchema).nullish(),
+    /**
+     * Aditivo (contrato §3.4, 2026-10-14): `false` en lo que se usa sin cuenta (`rolesQueLaUsan` vacío; hoy solo
+     * `registro`): sin persona no hay cubeta y un despliegue no tendría efecto. Sin el campo (backend anterior), `true`.
+     */
+    desplegable: z.boolean().nullish(),
   })
   .passthrough();
 export type DespliegueApi = z.infer<typeof despliegueSchema>;

@@ -395,6 +395,33 @@ describe('la pantalla del despliegue', () => {
   });
 });
 
+describe('lo que se usa sin cuenta (contrato §3.4, aditivo del 2026-10-14)', () => {
+  it('con `desplegable: false` no se ofrece empezar ni sumar probadores; sin el campo, sí', async () => {
+    await montar(funcionalidad({ clave: 'registro', nombre: 'Solicitar acceso' }), () => ok({ clave: 'registro', enDespliegue: false, desplegable: false, metricas: [] }));
+    expect(textos()).toContain('Se usa sin cuenta: no se puede desplegar por partes.');
+    expect(raiz!.root.findAll(n => n.props.accessibilityLabel === 'Solo probadores')).toHaveLength(0);
+    expect(textos().some(x => x.startsWith('Probadores ('))).toBe(false);
+    act(() => raiz?.unmount());
+
+    await montar(funcionalidad(), () => ok({ clave: 'eventos', enDespliegue: false, metricas: [] }));
+    expect(textos()).not.toContain('Se usa sin cuenta: no se puede desplegar por partes.');
+    expect(raiz!.root.findAll(n => n.props.accessibilityLabel === 'Solo probadores').length).toBeGreaterThan(0);
+  });
+
+  it('un 409 DESPLIEGUE_SIN_CUENTA muestra el mensaje del servidor (no es una versión vieja)', async () => {
+    const alerta = jest.spyOn(AlertNativo, 'alert').mockImplementation(() => undefined);
+    await montar(funcionalidad(), p =>
+      p.method === 'PUT'
+        ? { status: 409, cuerpo: { codigo: 'DESPLIEGUE_SIN_CUENTA', funcionalidad: 'eventos', message: 'Esta funcionalidad se usa sin cuenta; un despliegue no tendría efecto.' } }
+        : ok({ clave: 'eventos', enDespliegue: false, metricas: [] }),
+    );
+    await presionar('5 %');
+    await escribir(MOTIVO, 'Probar');
+    await presionar('Empezar en 5 %');
+    expect(alerta.mock.calls.at(-1)?.slice(0, 2)).toEqual(['No se puede desplegar', 'Esta funcionalidad se usa sin cuenta; un despliegue no tendría efecto.']);
+  });
+});
+
 describe('el gráfico de 24 h', () => {
   it('dibuja las dos series con leyenda, y tocar elige la hora más cercana', async () => {
     const horas = horasDeMetricas(HORAS);

@@ -40,6 +40,17 @@ export function porcentajeVigente(d: DespliegueApi | null | undefined): number |
   return Math.max(0, p);
 }
 
+/** ¿Se puede desplegar por partes? Lo que se usa sin cuenta no (`desplegable: false`); sin el campo, sí. */
+export function esDesplegable(d: DespliegueApi | null | undefined): boolean {
+  return d?.desplegable !== false;
+}
+
+/** El 409 de empezar el despliegue de algo que se usa sin cuenta (contrato §3.4). */
+export const CODIGO_DESPLIEGUE_SIN_CUENTA = 'DESPLIEGUE_SIN_CUENTA';
+
+/** Lo que se lee en lugar de los escalones cuando no se puede desplegar. */
+export const TEXTO_SIN_CUENTA = 'Se usa sin cuenta: no se puede desplegar por partes.';
+
 /** El escalón siguiente al porcentaje actual (sin despliegue, no hay siguiente: ya la tienen todos). */
 export function escalonSiguiente(actual: number | null): number | null {
   if (actual === null) return null;

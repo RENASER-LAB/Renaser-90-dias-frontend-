@@ -92,7 +92,7 @@ const CATALOGO = [
   f('eventos'),
   f('eventos.asistencia', { rolesQueLaUsan: ['MENTOR', 'ADMIN'] }),
   f('admin', { area: 'Administración', rolesQueLaUsan: ['ADMIN', 'ALCHEMIST'] }),
-  f('perfil', { area: 'Perfil', rolesQueLaUsan: null }),
+  f('registro', { area: 'Alta', rolesQueLaUsan: [] }),
 ];
 
 const rol = (parcial: Partial<RolPersonalizadoConsola> = {}): RolPersonalizadoConsola => ({
@@ -123,14 +123,14 @@ afterEach(() => {
 });
 
 describe('lo que deciden los roles (lógica pura)', () => {
-  it('solo las funcionalidades que usa la base (sin lista = de todos)', () => {
-    expect(funcionalidadesDeLaBase(CATALOGO, 'TRAINEE').map(x => x.clave)).toEqual(['chat', 'chat.grupos', 'chat.audio', 'eventos', 'perfil']);
-    expect(funcionalidadesDeLaBase(CATALOGO, 'ADMIN').map(x => x.clave)).toEqual(['eventos.asistencia', 'admin', 'perfil']);
+  it('solo las funcionalidades que usa la base (sin roles = se usa sin cuenta, de ninguna)', () => {
+    expect(funcionalidadesDeLaBase(CATALOGO, 'TRAINEE').map(x => x.clave)).toEqual(['chat', 'chat.grupos', 'chat.audio', 'eventos']);
+    expect(funcionalidadesDeLaBase(CATALOGO, 'ADMIN').map(x => x.clave)).toEqual(['eventos.asistencia', 'admin']);
   });
 
   it('el árbol por área: cada madre seguida de sus hijas, con su nivel', () => {
     const arbol = arbolPorArea(funcionalidadesDeLaBase(CATALOGO, 'MENTOR'));
-    expect(arbol.map(g => g.area)).toEqual(['Chat', 'Comunidad', 'Perfil']);
+    expect(arbol.map(g => g.area)).toEqual(['Chat', 'Comunidad']);
     expect(arbol[1].nodos.map(n => [n.funcionalidad.clave, n.nivel])).toEqual([
       ['eventos', 0],
       ['eventos.asistencia', 1],
@@ -147,7 +147,7 @@ describe('lo que deciden los roles (lógica pura)', () => {
   });
 
   it('al cambiar de base al crear, se suelta lo que no es de la nueva', () => {
-    expect([...soloDeLaBase(new Set(['chat', 'admin', 'perfil']), CATALOGO, 'TRAINEE')].sort()).toEqual(['chat', 'perfil']);
+    expect([...soloDeLaBase(new Set(['chat', 'admin', 'registro']), CATALOGO, 'TRAINEE')].sort()).toEqual(['chat']);
   });
 
   it('nombre obligatorio, único y distinto de los seis; base; al menos una; motivo; tope de 20', () => {

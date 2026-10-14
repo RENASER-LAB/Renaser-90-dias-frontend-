@@ -43,14 +43,11 @@ export function cuantosActivos(roles: readonly RolPersonalizadoConsola[]): strin
 // ---------------------------------------------------------------------------------------------------------------------
 
 /**
- * Las funcionalidades que el rol base usa (`rolesQueLaUsan`). Una sin esa lista se toma como de todos, igual que en la
- * fase 1 (`rolesDeLaFuncionalidad`): el servidor rechaza con 400 la que no corresponda.
+ * Las funcionalidades que el rol base usa (`rolesQueLaUsan`, contrato §4.3: «solo claves del catálogo que el rol base
+ * usa»). Una sin roles se usa sin cuenta (hoy, el alta pública; contrato §3.4): no es de ningún rol y no se ofrece.
  */
 export function funcionalidadesDeLaBase(catalogo: readonly FuncionalidadConsola[], base: string): FuncionalidadConsola[] {
-  return catalogo.filter(f => {
-    const usan = f.rolesQueLaUsan?.filter(Boolean) ?? [];
-    return usan.length === 0 || usan.includes(base);
-  });
+  return catalogo.filter(f => (f.rolesQueLaUsan ?? []).includes(base));
 }
 
 export type NodoDelArbol = { funcionalidad: FuncionalidadConsola; nivel: number };

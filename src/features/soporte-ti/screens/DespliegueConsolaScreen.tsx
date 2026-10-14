@@ -26,7 +26,10 @@ import { HojaDeContrasena } from '../components/HojaDeContrasena';
 import { fechaYHora, nombreDe, queHacerConElError } from '../utils/consola';
 import {
   cifra,
+  CODIGO_DESPLIEGUE_SIN_CUENTA,
+  esDesplegable,
   ESCALONES,
+  TEXTO_SIN_CUENTA,
   esEscalonCritico,
   faltaParaElEscalon,
   horaCorta,
@@ -97,6 +100,8 @@ export function DespliegueConsolaScreen({
   const probadores: Probador[] = despliegue?.probadores ?? [];
   const horas = horasDeMetricas(despliegue?.metricas);
   const enDespliegue = actual !== null;
+  /* Lo que se usa sin cuenta (hoy, el alta pública) no se despliega: no se ofrece empezar (contrato §3.4). */
+  const sinCuenta = !esDesplegable(despliegue) && !enDespliegue;
   const critico = elegido !== null && esEscalonCritico(f, actual, elegido);
 
   const avisarResumen = useCallback(
@@ -200,7 +205,11 @@ export function DespliegueConsolaScreen({
       });
     } catch (e) {
       const que = queHacerConElError(e);
-      if (que === 'desbloquear') onBloqueada();
+      if (e instanceof ApiError && e.status === 409 && e.codigo === CODIGO_DESPLIEGUE_SIN_CUENTA) {
+        // No es una versión vieja: el servidor dice por qué no se puede. Se muestra su mensaje y se relee.
+        await recargar();
+        Alert.alert('No se puede desplegar', e.message || TEXTO_SIN_CUENTA);
+      } else if (que === 'desbloquear') onBloqueada();
       else if (que === 'reautenticar') {
         setErrorContrasena(null);
         setPidiendoContrasena(true);
@@ -329,6 +338,8 @@ export function DespliegueConsolaScreen({
               <TituloDeSeccion detalle="5 → 25 → 50 → 100 %. Cada persona cae siempre en el mismo grupo: subir no saca a nadie.">
                 Escalón
               </TituloDeSeccion>
+              {sinCuenta ? <Text style={ayuda}>{TEXTO_SIN_CUENTA}</Text> : null}
+              {sinCuenta ? null : (
               <View accessibilityRole="radiogroup" accessibilityLabel="Escalón del despliegue" style={estilos.chips}>
                 {ESCALONES.map(e => {
                   const esElDeAhora = (actual ?? PARA_TODOS) === e;
@@ -346,6 +357,7 @@ export function DespliegueConsolaScreen({
                   );
                 })}
               </View>
+              )}
               {critico ? (
                 <Text style={ayuda}>
                   {elegido === 0 && !enDespliegue
@@ -379,6 +391,7 @@ export function DespliegueConsolaScreen({
               {confirmacion ? <ConfirmacionEnLinea key={confirmacion.clave} texto={confirmacion.texto} onTerminar={() => setConfirmacion(null)} /> : null}
             </View>
 
+            {sinCuenta ? null : (
             <View style={{ gap: 10 }}>
               <TituloDeSeccion detalle="La tienen siempre, aunque el porcentaje no les toque.">{`Probadores (${probadores.length})`}</TituloDeSeccion>
               {probadores.map(p => (
@@ -452,6 +465,7 @@ export function DespliegueConsolaScreen({
                 <Text style={ayuda}>Para sumar probadores, primero empieza el despliegue (por ejemplo, «Solo probadores»).</Text>
               )}
             </View>
+            )}
 
             <View style={{ gap: 10 }}>
               <TituloDeSeccion detalle="Pedidos y errores del servidor, por hora, de quienes la tienen y de quienes no.">
