@@ -1,3 +1,4 @@
+import { ApiError } from '../../../services/http/apiClient';
 import { etiquetaDeRol, ROLES_ASIGNABLES } from '../../admin/utils/rolesAsignables';
 import type { CambioDeRol, FuncionalidadConsola, RolNuevo, RolPersonalizadoConsola } from '../api/soporteTiSchemas';
 import { nombreDe, normalizar } from './consola';
@@ -240,8 +241,45 @@ export function cambioDeRolDesde(formulario: FormularioDeRol, rol: RolPersonaliz
   };
 }
 
+/** Los `codigo` con que el servidor rechaza un cambio de rol (`ApiErrorConCodigo`, backend `d523cb21`). */
+export const CODIGOS_DE_ROLES = {
+  versionCambiada: 'VERSION_CAMBIADA',
+  rolConPersonas: 'ROL_CON_PERSONAS',
+  nombreRepetido: 'NOMBRE_REPETIDO',
+  maximoDeRoles: 'MAXIMO_DE_ROLES',
+} as const;
+
+export type RechazoDelRol =
+  /** 409: otro cambio llegó antes. Releer y avisar. */
+  | 'version_cambiada'
+  /** 409: cambiar la base o borrar con personas. Mostrar el mensaje y ofrecer pasarlas. */
+  | 'rol_con_personas'
+  /** 400: el nombre es de otro rol. El error va bajo el campo. */
+  | 'nombre_repetido'
+  /** 400: ya hay 20 activos. El mensaje. */
+  | 'maximo_de_roles'
+  /** 409 sin `codigo` (backend anterior): se resuelve releyendo la versión. */
+  | 'conflicto_sin_codigo'
+  | 'otro';
+
+/** Qué hacer con un rechazo del servidor a un cambio de rol, por su `codigo` (sin `codigo`, el respaldo de antes). */
+export function rechazoDelRol(error: unknown): RechazoDelRol {
+  if (!(error instanceof ApiError)) return 'otro';
+  switch (error.codigo) {
+    case CODIGOS_DE_ROLES.versionCambiada:
+      return 'version_cambiada';
+    case CODIGOS_DE_ROLES.rolConPersonas:
+      return 'rol_con_personas';
+    case CODIGOS_DE_ROLES.nombreRepetido:
+      return 'nombre_repetido';
+    case CODIGOS_DE_ROLES.maximoDeRoles:
+      return 'maximo_de_roles';
+  }
+  return error.status === 409 && !error.codigo ? 'conflicto_sin_codigo' : 'otro';
+}
+
 /**
- * Un 409 del `PUT` puede ser una versión vieja (otro cambio llegó antes) o una regla de negocio (cambiar la base con
+ * Respaldo para un backend sin `codigo`: un 409 del `PUT` puede ser una versión vieja (otro cambio llegó antes) o una regla de negocio (cambiar la base con
  * personas, pasarse de 20 activos): no hay código que los distinga. Si la versión releída es otra, fue otro cambio.
  */
 export function fueOtroCambio(enviada: number | null | undefined, releida: RolPersonalizadoConsola | undefined): boolean {

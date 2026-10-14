@@ -31,7 +31,7 @@ jest.mock('../../../services/storage/almacenamientoSeguro', () => ({
   },
 }));
 
-import { setTokenSesion } from '../../../services/http/apiClient';
+import { ApiError, setTokenSesion } from '../../../services/http/apiClient';
 import { borrarRol, crearRol, desbloquear, editarRol, listarRoles, reemplazarRol } from '../api/soporteTiApi';
 import type { FuncionalidadConsola, RolPersonalizadoConsola } from '../api/soporteTiSchemas';
 import { HojaDeContrasena } from '../components/HojaDeContrasena';
@@ -45,6 +45,7 @@ import {
   claveDelRol,
   fueOtroCambio,
   puedeCambiarDeBase,
+  rechazoDelRol,
   cuantosActivos,
   descendientes,
   destinosDeReemplazo,
@@ -393,7 +394,7 @@ describe('detalles de B2 (base, 409, largos, historial)', () => {
     expect(alerta.mock.calls.at(-1)?.slice(0, 2)).toEqual(['No se pudo guardar', 'Ya hay 20 roles activos.']);
     versionReleida = 6;
     await presionar('Guardar cambios');
-    expect(alerta.mock.calls.at(-1)?.[0]).toBe('Alguien lo cambió antes');
+    expect(alerta.mock.calls.at(-1)?.[0]).toBe('Alguien cambió este rol');
   });
 
   it('un 409 al crear (20 activos) muestra el mensaje del servidor', async () => {
@@ -416,6 +417,82 @@ describe('detalles de B2 (base, 409, largos, historial)', () => {
       boton.props.onPress();
     });
     expect(onAuditoria).toHaveBeenCalledWith('rp:r-1');
+  });
+});
+
+describe('los rechazos con `codigo` (ApiErrorConCodigo, backend d523cb21)', () => {
+  const rechazo = (status: number, codigo: string, message: string): Respuesta => ({ status, cuerpo: { message, timestamp: '2026-10-14T20:00:00Z', codigo } });
+
+  it('cada código, su manera; sin código, el respaldo', () => {
+    expect(rechazoDelRol(new ApiError(409, 'x', { codigo: 'VERSION_CAMBIADA' }))).toBe('version_cambiada');
+    expect(rechazoDelRol(new ApiError(409, 'x', { codigo: 'ROL_CON_PERSONAS' }))).toBe('rol_con_personas');
+    expect(rechazoDelRol(new ApiError(400, 'x', { codigo: 'NOMBRE_REPETIDO' }))).toBe('nombre_repetido');
+    expect(rechazoDelRol(new ApiError(400, 'x', { codigo: 'MAXIMO_DE_ROLES' }))).toBe('maximo_de_roles');
+    expect(rechazoDelRol(new ApiError(409, 'x', { message: 'x' }))).toBe('conflicto_sin_codigo');
+    expect(rechazoDelRol(new ApiError(400, 'x', { message: 'x' }))).toBe('otro');
+    expect(rechazoDelRol(new Error('x'))).toBe('otro');
+  });
+
+  it('VERSION_CAMBIADA relee el rol y avisa', async () => {
+    const alerta = jest.spyOn(AlertNativo, 'alert').mockImplementation(() => undefined);
+    const existente = rol();
+    const props = await montar({ rol: existente, roles: [existente] }, () => rechazo(409, 'VERSION_CAMBIADA', 'La versión cambió.'));
+    await escribir('Ej.: Mentor junior', 'Otro');
+    await escribir(MOTIVO, 'Renombre');
+    await presionar('Guardar cambios');
+    expect(props.onReleer).toHaveBeenCalledTimes(1);
+    expect(alerta.mock.calls.at(-1)?.[0]).toBe('Alguien cambió este rol');
+  });
+
+  it('ROL_CON_PERSONAS al cambiar la base: el mensaje y «Pasar personas» abre el reemplazo', async () => {
+    jest.spyOn(AlertNativo, 'alert').mockImplementation((_t, _m, botones) => {
+      botones?.find(b => b.text === 'Pasar personas')?.onPress?.();
+    });
+    const existente = rol({ personas: 0 });
+    await montar({ rol: existente, roles: [existente] }, () => rechazo(409, 'ROL_CON_PERSONAS', 'El rol tiene 2 personas: no cambia de base.'));
+    await presionar('Aprendiz');
+    await escribir(MOTIVO, 'Otra base');
+    await presionar('Guardar cambios');
+    const alerta = AlertNativo.alert as unknown as jest.Mock;
+    expect(alerta.mock.calls.at(-1)?.slice(0, 2)).toEqual(['Todavía tiene personas', 'El rol tiene 2 personas: no cambia de base.']);
+    const hoja = raiz!.root.findAll(n => n.props.titulo === 'Pasar sus personas' && typeof n.props.alCerrar === 'function')[0];
+    expect(hoja.props.visible).toBe(true);
+  });
+
+  it('ROL_CON_PERSONAS al borrar: el mensaje del servidor', async () => {
+    const alerta = jest.spyOn(AlertNativo, 'alert').mockImplementation((_t, _m, botones) => {
+      if (botones?.some(b => b.text === 'Borrar')) botones.find(b => b.text === 'Borrar')?.onPress?.();
+    });
+    const existente = rol();
+    await montar({ rol: existente, roles: [existente] }, () => rechazo(409, 'ROL_CON_PERSONAS', 'El rol tiene 3 personas.'));
+    await escribir(MOTIVO, 'Sin uso');
+    await presionar('Borrar rol');
+    expect(alerta.mock.calls.at(-1)?.slice(0, 2)).toEqual(['Todavía tiene personas', 'El rol tiene 3 personas.']);
+  });
+
+  it('NOMBRE_REPETIDO va bajo el campo del nombre, sin diálogo; escribir lo borra', async () => {
+    const alerta = jest.spyOn(AlertNativo, 'alert').mockImplementation(() => undefined);
+    await montar({}, () => rechazo(400, 'NOMBRE_REPETIDO', 'Ya existe un rol con ese nombre.'));
+    await escribir('Ej.: Mentor junior', 'Mentor senior');
+    await presionar('Mentor');
+    await presionar('Marcar todas');
+    await escribir(MOTIVO, 'Prueba');
+    await presionar('Crear rol');
+    expect(alerta).not.toHaveBeenCalled();
+    expect(textos()).toContain('Ya existe un rol con ese nombre.');
+    await escribir('Ej.: Mentor junior', 'Mentor senior 2');
+    expect(textos()).not.toContain('Ya existe un rol con ese nombre.');
+  });
+
+  it('MAXIMO_DE_ROLES muestra el mensaje', async () => {
+    const alerta = jest.spyOn(AlertNativo, 'alert').mockImplementation(() => undefined);
+    await montar({}, () => rechazo(400, 'MAXIMO_DE_ROLES', 'Ya hay 20 roles personalizados activos.'));
+    await escribir('Ej.: Mentor junior', 'Nuevo');
+    await presionar('Mentor');
+    await presionar('Marcar todas');
+    await escribir(MOTIVO, 'Prueba');
+    await presionar('Crear rol');
+    expect(alerta.mock.calls.at(-1)?.slice(0, 2)).toEqual(['No se pudo guardar', 'Ya hay 20 roles personalizados activos.']);
   });
 });
 

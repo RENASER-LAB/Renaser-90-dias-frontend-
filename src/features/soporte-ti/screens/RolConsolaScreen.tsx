@@ -33,6 +33,7 @@ import {
   LARGO_MAXIMO_DE_LA_DESCRIPCION_DEL_ROL,
   LARGO_MAXIMO_DEL_NOMBRE_DEL_ROL,
   puedeCambiarDeBase,
+  rechazoDelRol,
   destinosDeReemplazo,
   faltaParaGuardarElRol,
   formularioDeRolDesde,
@@ -89,6 +90,8 @@ export function RolConsolaScreen({
   const { horizontalPadding, contentMaxWidth } = useResponsive();
   const [formulario, setFormulario] = useState<FormularioDeRol>(() => formularioDeRolDesde(rol));
   const [faltaMotivo, setFaltaMotivo] = useState(false);
+  /** `NOMBRE_REPETIDO`: el mensaje del servidor bajo el campo del nombre. */
+  const [errorDelNombre, setErrorDelNombre] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [confirmacion, setConfirmacion] = useState<{ clave: number; texto: string } | null>(null);
   const [reemplazando, setReemplazando] = useState(false);
@@ -129,6 +132,7 @@ export function RolConsolaScreen({
 
   const cambiar = <K extends keyof FormularioDeRol>(campo: K, valor: FormularioDeRol[K]) => {
     if (campo === 'motivo') setFaltaMotivo(false);
+    if (campo === 'nombre') setErrorDelNombre(null);
     setFormulario(actual => ({ ...actual, [campo]: valor }));
   };
 
@@ -165,11 +169,27 @@ export function RolConsolaScreen({
       setConfirmacion({ clave: Date.now(), texto: rol ? 'Rol guardado. Rige en unos segundos.' : `Rol «${guardado.nombre}» creado.` });
     } catch (e) {
       if (await atenderError(e, { tipo: 'guardar' })) return;
-      // Un 409 al editar puede ser otro cambio que llegó antes o una regla del servidor (la base con personas, 20
-      // activos): se relee y, si la versión es la misma, se muestra el mensaje del servidor. Al crear, siempre es regla.
-      const releidos = rol && queHacerConElError(e) === 'releer' ? await onReleer() : null;
-      if (rol && fueOtroCambio(rol.version, releidos?.find(r => r.id === rol.id))) {
-        Alert.alert('Alguien lo cambió antes', 'Mientras lo editabas, este rol cambió. Ya ves cómo quedó: revisa y vuelve a guardar (tu motivo sigue escrito).');
+      const rechazo = rechazoDelRol(e);
+      const mensaje = e instanceof ApiError && e.message ? e.message : null;
+      if (rechazo === 'version_cambiada') {
+        await onReleer();
+        Alert.alert('Alguien cambió este rol', 'Revisa cómo quedó y vuelve a guardar (tu motivo sigue escrito).');
+      } else if (rechazo === 'rol_con_personas') {
+        if (await confirmar('Todavía tiene personas', mensaje ?? 'Con personas asignadas la base no se cambia.', { ok: 'Pasar personas' })) abrirReemplazo();
+      } else if (rechazo === 'nombre_repetido') {
+        tacto.error();
+        setErrorDelNombre(mensaje ?? 'Ya hay un rol con ese nombre.');
+      } else if (rechazo === 'maximo_de_roles') {
+        Alert.alert('No se pudo guardar', mensaje ?? 'Ya hay 20 roles activos.');
+      } else if (rechazo === 'conflicto_sin_codigo') {
+        // Backend sin `codigo`: un 409 al editar puede ser otro cambio o una regla. Se relee y, si la versión es la
+        // misma, se muestra el mensaje del servidor. Al crear, siempre es regla.
+        const releidos = rol ? await onReleer() : null;
+        if (rol && fueOtroCambio(rol.version, releidos?.find(r => r.id === rol.id))) {
+          Alert.alert('Alguien cambió este rol', 'Revisa cómo quedó y vuelve a guardar (tu motivo sigue escrito).');
+        } else {
+          Alert.alert('No se pudo guardar', mensajeDeFallo(e, 'Vuelve a intentarlo en un momento.'));
+        }
       } else {
         Alert.alert('No se pudo guardar', mensajeDeFallo(e, 'Vuelve a intentarlo en un momento.'));
       }
@@ -200,8 +220,10 @@ export function RolConsolaScreen({
       onBorrado(rol.id);
     } catch (e) {
       if (await atenderError(e, { tipo: 'borrar' })) return;
-      if (e instanceof ApiError && e.status === 409) {
-        if (await confirmar('Todavía tiene personas', 'Un rol con personas no se borra. ¿Las pasas antes a otro rol?', { ok: 'Pasar a otro rol' })) abrirReemplazo();
+      const rechazo = rechazoDelRol(e);
+      if (rechazo === 'rol_con_personas' || rechazo === 'conflicto_sin_codigo') {
+        const mensaje = rechazo === 'rol_con_personas' && e instanceof ApiError && e.message ? e.message : 'Un rol con personas no se borra. ¿Las pasas antes a otro rol?';
+        if (await confirmar('Todavía tiene personas', mensaje, { ok: 'Pasar personas' })) abrirReemplazo();
       } else {
         Alert.alert('No se pudo borrar', mensajeDeFallo(e, 'Vuelve a intentarlo en un momento.'));
       }
@@ -295,6 +317,7 @@ export function RolConsolaScreen({
           onChangeText={v => cambiar('nombre', v.slice(0, LARGO_MAXIMO_DEL_NOMBRE_DEL_ROL))}
           maxLength={LARGO_MAXIMO_DEL_NOMBRE_DEL_ROL}
           placeholder="Ej.: Mentor junior"
+          error={errorDelNombre}
           testID="campo-nombre-rol"
         />
         <FormField

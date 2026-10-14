@@ -1822,8 +1822,11 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       nombre (hasta 60), descripción (hasta 280), de qué rol hereda (los seis, nunca Soporte TI; al editar, solo sin
       personas) y el árbol de funcionalidades de esa base (marcar una madre marca a sus hijas); «Activo», «Pasar sus
       personas a otro rol» y «Borrar rol» (los dos piden la contraseña; un 409 con personas ofrece pasarlas antes) y «Ver
-      su historial» (la auditoría con la clave `rp:<id>`). Motivo obligatorio en todo; un 409 muestra el mensaje del
-      servidor salvo que sea otra versión.
+      su historial» (la auditoría con la clave `rp:<id>`). Motivo obligatorio en todo. Los rechazos van por su `codigo`:
+      `VERSION_CAMBIADA` relee y avisa, `ROL_CON_PERSONAS` muestra el mensaje y ofrece «Pasar personas»,
+      `NOMBRE_REPETIDO` va bajo el campo del nombre y `MAXIMO_DE_ROLES` muestra el mensaje (sin `codigo`, se relee la
+      versión). El aviso «Soporte TI cambió un rol» (`OPERACION_PLATAFORMA`, sin ruta) no tiene pantalla: tocarlo solo
+      abre la app.
     * **Soporte TI → «Ver como»**: los seis roles base (sin Soporte TI) y los personalizados activos. Entrar guarda aparte
       la sesión de Soporte TI y su perfil (memoria y almacenamiento seguro) y la app se arma de nuevo como la ve ese rol
       (`MainTabs` lleva `key` por cuenta). **En los cinco tabs**, mientras dura, una franja fija arriba, en el flujo,
