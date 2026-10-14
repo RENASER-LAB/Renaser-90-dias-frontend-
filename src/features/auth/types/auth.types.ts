@@ -14,6 +14,8 @@ export type UsuarioApi = {
   avatarUrl: string | null;
   bio: string | null;
   department: string | null;
+  /** Spec 002, fase 2: su rol personalizado, solo si está activo y hereda de `role` (que sigue siendo el base). */
+  rolPersonalizado?: { id?: string | null; nombre?: string | null } | null;
 };
 
 export type ProveedorSocial = 'GOOGLE' | 'APPLE' | 'FACEBOOK';
@@ -80,4 +82,6 @@ export type User = {
   avatarUrl: string | null;
   bio?: string | null;
   department?: string | null;
+  /** Spec 002, fase 2: su rol personalizado, si tiene (para mostrar su nombre donde se muestre el rol). */
+  rolPersonalizado?: { id: string; nombre: string } | null;
 };

@@ -40,7 +40,11 @@ describe('roles personalizados', () => {
     expect(resumenDelCambio(cambio(foto(), foto({ descripcion: 'Otra' })))).toBe('Rol “Mentor junior” editado');
   });
 
-  it('el reemplazo en bloque, si el servidor manda cuántas personas se movieron', () => {
+  it('el reemplazo en bloque: cuántas personas y a qué rol (o al base solo)', () => {
+    expect(resumenDelCambio(cambio(foto(), { personasMovidas: 3, reemplazadoPor: { id: 'r-2', nombre: 'Mentor senior' } }))).toBe(
+      'Rol “Mentor junior”: 3 personas pasaron a “Mentor senior”',
+    );
+    expect(resumenDelCambio(cambio(foto(), { personasMovidas: 1, reemplazadoPor: null }))).toBe('Rol “Mentor junior”: 1 persona pasó al rol base solo');
     expect(resumenDelCambio(cambio(foto(), { personasMovidas: 3 }))).toBe('Rol “Mentor junior”: 3 personas pasaron a otro rol');
   });
 

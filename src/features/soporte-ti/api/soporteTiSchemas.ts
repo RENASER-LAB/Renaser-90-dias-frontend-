@@ -181,6 +181,8 @@ export interface CambioDeRol {
   activo: boolean;
   motivo: string;
   version: number | undefined;
+  /** Solo si cambió: sin personas cambia la base; con personas el servidor responde 409. */
+  rolBase?: string;
 }
 
 export const reemplazoSchema = z.object({ personasMovidas: z.number().nullish() }).passthrough();

@@ -329,8 +329,13 @@ function resumenDeRol(cambio: CambioAuditado): string | null {
   const rol = nombre ? `Rol “${nombre}”` : 'Rol';
   const movidas = esObjeto(cambio.despues) ? numeroO(cambio.despues.personasMovidas) : null;
   if (movidas !== null) {
+    // B2: `despues` trae `personasMovidas` y `reemplazadoPor {id, nombre}` (o `null`: quedan con el rol base solo).
     const quien = antes?.nombre ? `Rol “${antes.nombre}”` : rol;
-    return `${quien}: ${movidas} ${movidas === 1 ? 'persona pasó' : 'personas pasaron'} a otro rol`;
+    const cuantas = `${movidas} ${movidas === 1 ? 'persona pasó' : 'personas pasaron'}`;
+    const reemplazo = esObjeto(cambio.despues) ? cambio.despues.reemplazadoPor : undefined;
+    if (esObjeto(reemplazo) && typeof reemplazo.nombre === 'string' && reemplazo.nombre.trim()) return `${quien}: ${cuantas} a “${reemplazo.nombre.trim()}”`;
+    if (reemplazo === null) return `${quien}: ${cuantas} al rol base solo`;
+    return `${quien}: ${cuantas} a otro rol`;
   }
   if (!antes && despues) return `${rol} creado`;
   if (antes && !despues) return `${rol} borrado`;

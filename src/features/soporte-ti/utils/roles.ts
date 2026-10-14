@@ -8,8 +8,21 @@ import { nombreDe, normalizar } from './consola';
  * pruebas. El servidor decide de verdad (400 / 409); esto evita el viaje de ida y vuelta y explica antes.
  */
 
-/** Hasta cuántos activos (contrato §4.3). */
+/** Hasta cuántos activos (contrato §4.3; el servidor responde 409 al pasarse). */
 export const MAXIMO_DE_ROLES_ACTIVOS = 20;
+/** Largos que valida el servidor (B2): nombre de 1 a 60, descripción hasta 280. */
+export const LARGO_MAXIMO_DEL_NOMBRE_DEL_ROL = 60;
+export const LARGO_MAXIMO_DE_LA_DESCRIPCION_DEL_ROL = 280;
+
+/** La clave de un rol personalizado: la de la auditoría y la de `GET /admin/roles-asignables` (`rp:<id>`). */
+export function claveDelRol(rol: Pick<RolPersonalizadoConsola, 'id' | 'clave'>): string {
+  return rol.clave?.trim() || `rp:${rol.id}`;
+}
+
+/** ¿Se le puede cambiar la base? Solo sin personas (con personas el servidor responde 409). */
+export function puedeCambiarDeBase(rol: RolPersonalizadoConsola | null): boolean {
+  return !rol || (rol.personas ?? 0) === 0;
+}
 
 /** Los seis roles base, en el orden de siempre (los de `ROLES_ASIGNABLES`; Soporte TI no está). */
 export const ROLES_BASE = ROLES_ASIGNABLES;
@@ -183,6 +196,11 @@ export function faltaParaGuardarElRol(
   const nombre = formulario.nombre.trim();
   if (rol && !hayCambiosEnElRol(formulario, rol)) return 'No cambiaste nada todavía.';
   if (!nombre) return 'Escribe el nombre del rol.';
+  if (nombre.length > LARGO_MAXIMO_DEL_NOMBRE_DEL_ROL) return `El nombre puede tener hasta ${LARGO_MAXIMO_DEL_NOMBRE_DEL_ROL} caracteres.`;
+  if (formulario.descripcion.trim().length > LARGO_MAXIMO_DE_LA_DESCRIPCION_DEL_ROL) {
+    return `La descripción puede tener hasta ${LARGO_MAXIMO_DE_LA_DESCRIPCION_DEL_ROL} caracteres.`;
+  }
+  if (rol && formulario.rolBase !== rol.rolBase && !puedeCambiarDeBase(rol)) return 'Con personas asignadas no se cambia la base: pásalas antes a otro rol.';
   if (NOMBRES_RESERVADOS.some(r => normalizar(r) === normalizar(nombre))) return `«${nombre}» es el nombre de un rol base: elige otro.`;
   if (todos.some(r => r.id !== rol?.id && normalizar(r.nombre) === normalizar(nombre))) return `Ya hay un rol que se llama «${nombre}».`;
   if (!formulario.rolBase) return 'Elige de qué rol hereda.';
@@ -208,6 +226,7 @@ export function rolNuevoDesde(formulario: FormularioDeRol): RolNuevo {
   };
 }
 
+/** El cuerpo del `PUT`. `rolBase` va solo si cambió (B2: sin personas cambia la base; con personas, 409). */
 export function cambioDeRolDesde(formulario: FormularioDeRol, rol: RolPersonalizadoConsola): CambioDeRol {
   const descripcion = formulario.descripcion.trim();
   return {
@@ -217,7 +236,16 @@ export function cambioDeRolDesde(formulario: FormularioDeRol, rol: RolPersonaliz
     activo: formulario.activo,
     motivo: formulario.motivo.trim(),
     version: rol.version ?? undefined,
+    ...(formulario.rolBase && formulario.rolBase !== rol.rolBase ? { rolBase: formulario.rolBase } : {}),
   };
+}
+
+/**
+ * Un 409 del `PUT` puede ser una versión vieja (otro cambio llegó antes) o una regla de negocio (cambiar la base con
+ * personas, pasarse de 20 activos): no hay código que los distinga. Si la versión releída es otra, fue otro cambio.
+ */
+export function fueOtroCambio(enviada: number | null | undefined, releida: RolPersonalizadoConsola | undefined): boolean {
+  return releida !== undefined && typeof enviada === 'number' && typeof releida.version === 'number' && releida.version !== enviada;
 }
 
 /** A dónde se pueden pasar las personas de un rol: otro activo de la misma base, o ninguno (`null`: el rol base solo). */

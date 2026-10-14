@@ -5,6 +5,7 @@ import { cerrarConsola, consolaAbierta } from '../estado/sesionDeConsola';
 import { useConsolaSoporteTi } from '../hooks/useConsolaSoporteTi';
 import { useRolesConsola } from '../hooks/useRolesConsola';
 import { nombreDe } from '../utils/consola';
+import { claveDelRol } from '../utils/roles';
 import { AuditoriaConsolaScreen } from './AuditoriaConsolaScreen';
 import { DesbloqueoConsolaScreen } from './DesbloqueoConsolaScreen';
 import { DespliegueConsolaScreen } from './DespliegueConsolaScreen';
@@ -62,6 +63,11 @@ export function ConsolaSoporteTiScreen({ onSalir }: { onSalir: () => void }) {
   }, [abierta, bloquear]);
 
   const nombres = useMemo(() => new Map((estado.funcionalidades ?? []).map(f => [f.clave, nombreDe(f)])), [estado.funcionalidades]);
+  /* Con los roles personalizados por su clave (`rp:<id>`), para el filtro de la auditoría de un rol. */
+  const nombresConRoles = useMemo(
+    () => new Map([...nombres, ...(roles.roles ?? []).map(r => [claveDelRol(r), `Rol «${r.nombre}»`] as [string, string])]),
+    [nombres, roles.roles],
+  );
 
   if (!abierta) {
     return (
@@ -77,8 +83,10 @@ export function ConsolaSoporteTiScreen({ onSalir }: { onSalir: () => void }) {
   }
 
   if (vista.tipo === 'auditoria') {
-    const volverA: Vista = vista.clave ? { tipo: 'detalle', clave: vista.clave } : { tipo: 'lista' };
-    return <AuditoriaConsolaScreen clave={vista.clave} nombres={nombres} onBloqueada={bloquear} onVolver={() => setVista(volverA)} />;
+    // Fase 2: la auditoría de un rol personalizado se filtra por su clave (`rp:<id>`) y vuelve al rol.
+    const deUnRol = vista.clave?.startsWith('rp:') ? vista.clave.slice(3) : null;
+    const volverA: Vista = deUnRol ? { tipo: 'rol', id: deUnRol } : vista.clave ? { tipo: 'detalle', clave: vista.clave } : { tipo: 'lista' };
+    return <AuditoriaConsolaScreen clave={vista.clave} nombres={nombresConRoles} onBloqueada={bloquear} onVolver={() => setVista(volverA)} />;
   }
 
   if (vista.tipo === 'verComo') {
@@ -104,6 +112,7 @@ export function ConsolaSoporteTiScreen({ onSalir }: { onSalir: () => void }) {
           }}
           onReleer={roles.recargar}
           onBloqueada={bloquear}
+          onAuditoria={clave => setVista({ tipo: 'auditoria', clave })}
           onVolver={() => setVista({ tipo: 'roles' })}
         />
       );

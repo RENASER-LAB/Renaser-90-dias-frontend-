@@ -42,6 +42,9 @@ import {
   alternarMarca,
   arbolPorArea,
   cambioDeRolDesde,
+  claveDelRol,
+  fueOtroCambio,
+  puedeCambiarDeBase,
   cuantosActivos,
   descendientes,
   destinosDeReemplazo,
@@ -342,6 +345,77 @@ describe('crear y editar un rol', () => {
       hoja.props.onConfirmar('secreta');
     });
     expect(pedidos.at(-1)!.headers['X-Reautenticacion']).toBe('reaut-1');
+  });
+});
+
+describe('detalles de B2 (base, 409, largos, historial)', () => {
+  it('la base se cambia solo sin personas, y el PUT la lleva solo si cambió', () => {
+    const sinPersonas = rol({ personas: 0 });
+    expect(puedeCambiarDeBase(sinPersonas)).toBe(true);
+    expect(puedeCambiarDeBase(rol())).toBe(false);
+    expect(puedeCambiarDeBase(null)).toBe(true);
+    const form = { ...formularioDeRolDesde(sinPersonas), motivo: 'm' };
+    expect(cambioDeRolDesde(form, sinPersonas)).not.toHaveProperty('rolBase');
+    expect(cambioDeRolDesde({ ...form, rolBase: 'TRAINEE' }, sinPersonas)).toMatchObject({ rolBase: 'TRAINEE' });
+    expect(faltaParaGuardarElRol({ ...formularioDeRolDesde(rol()), rolBase: 'TRAINEE', motivo: 'm' }, rol(), [rol()])).toMatch(/no se cambia la base/);
+  });
+
+  it('descripción hasta 280; la clave del rol es rp:<id>; un 409 con otra versión fue otro cambio', () => {
+    const existente = rol();
+    expect(faltaParaGuardarElRol({ ...formularioDeRolDesde(existente), descripcion: 'x'.repeat(281), motivo: 'm' }, existente, [existente])).toMatch(/280/);
+    expect(claveDelRol({ id: 'r-1', clave: null })).toBe('rp:r-1');
+    expect(claveDelRol({ id: 'r-1', clave: 'rp:r-1' })).toBe('rp:r-1');
+    expect(fueOtroCambio(5, rol({ version: 6 }))).toBe(true);
+    expect(fueOtroCambio(5, rol({ version: 5 }))).toBe(false);
+    expect(fueOtroCambio(5, undefined)).toBe(false);
+  });
+
+  it('editar sin personas: cambiar de base va en el PUT', async () => {
+    const sinPersonas = rol({ personas: 0 });
+    await montar({ rol: sinPersonas, roles: [sinPersonas] }, () => ok({ ...sinPersonas, rolBase: 'TRAINEE', version: 6 }));
+    await presionar('Aprendiz');
+    await escribir(MOTIVO, 'Otra base');
+    await presionar('Guardar cambios');
+    expect(pedidos[0]).toMatchObject({ method: 'PUT', body: { rolBase: 'TRAINEE', version: 5 } });
+  });
+
+  it('un 409 al editar con la misma versión muestra el mensaje del servidor; con otra, «Alguien lo cambió antes»', async () => {
+    const alerta = jest.spyOn(AlertNativo, 'alert').mockImplementation(() => undefined);
+    const existente = rol();
+    let versionReleida = 5;
+    const onReleer = jest.fn(async () => [rol({ version: versionReleida })]);
+    await montar({ rol: existente, roles: [existente], onReleer }, () => ({ status: 409, cuerpo: { message: 'Ya hay 20 roles activos.' } }));
+    await presionar('Rol activo');
+    await presionar('Rol activo');
+    await escribir('Ej.: Mentor junior', 'Otro nombre');
+    await escribir(MOTIVO, 'Renombre');
+    await presionar('Guardar cambios');
+    expect(alerta.mock.calls.at(-1)?.slice(0, 2)).toEqual(['No se pudo guardar', 'Ya hay 20 roles activos.']);
+    versionReleida = 6;
+    await presionar('Guardar cambios');
+    expect(alerta.mock.calls.at(-1)?.[0]).toBe('Alguien lo cambió antes');
+  });
+
+  it('un 409 al crear (20 activos) muestra el mensaje del servidor', async () => {
+    const alerta = jest.spyOn(AlertNativo, 'alert').mockImplementation(() => undefined);
+    await montar({}, () => ({ status: 409, cuerpo: { message: 'Ya hay 20 roles activos.' } }));
+    await escribir('Ej.: Mentor junior', 'Nuevo');
+    await presionar('Mentor');
+    await presionar('Marcar todas');
+    await escribir(MOTIVO, 'Prueba');
+    await presionar('Crear rol');
+    expect(alerta.mock.calls.at(-1)?.slice(0, 2)).toEqual(['No se pudo guardar', 'Ya hay 20 roles activos.']);
+  });
+
+  it('«Ver su historial» abre la auditoría con la clave del rol', async () => {
+    const existente = rol();
+    const onAuditoria = jest.fn();
+    await montar({ rol: existente, roles: [existente], onAuditoria }, () => ok(existente));
+    const [boton] = raiz!.root.findAll(n => n.props.etiqueta === 'Ver su historial' && typeof n.props.onPress === 'function');
+    await act(async () => {
+      boton.props.onPress();
+    });
+    expect(onAuditoria).toHaveBeenCalledWith('rp:r-1');
   });
 });
 

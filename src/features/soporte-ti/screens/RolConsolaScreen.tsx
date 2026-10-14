@@ -28,6 +28,11 @@ import {
   alternarMarca,
   arbolPorArea,
   cambioDeRolDesde,
+  claveDelRol,
+  fueOtroCambio,
+  LARGO_MAXIMO_DE_LA_DESCRIPCION_DEL_ROL,
+  LARGO_MAXIMO_DEL_NOMBRE_DEL_ROL,
+  puedeCambiarDeBase,
   destinosDeReemplazo,
   faltaParaGuardarElRol,
   formularioDeRolDesde,
@@ -39,7 +44,6 @@ import {
   type FormularioDeRol,
 } from '../utils/roles';
 
-const LARGO_MAXIMO_DEL_NOMBRE = 60;
 const SANGRIA_POR_NIVEL = 18;
 
 type Pendiente = { tipo: 'guardar' } | { tipo: 'borrar' } | { tipo: 'reemplazar'; destino: string | null };
@@ -65,6 +69,7 @@ export function RolConsolaScreen({
   onBorrado,
   onReleer,
   onBloqueada,
+  onAuditoria,
   onVolver,
 }: {
   /** `null` = rol nuevo. */
@@ -73,7 +78,10 @@ export function RolConsolaScreen({
   catalogo: readonly FuncionalidadConsola[];
   onGuardado: (rol: RolPersonalizadoConsola) => void;
   onBorrado: (id: string) => void;
-  onReleer: () => Promise<unknown>;
+  /** Relee los roles; devuelve la lista (o `null` si no se pudo). */
+  onReleer: () => Promise<RolPersonalizadoConsola[] | null>;
+  /** Abre la auditoría filtrada por la clave del rol (`rp:<id>`). */
+  onAuditoria?: (clave: string) => void;
   onBloqueada: () => void;
   onVolver: () => void;
 }) {
@@ -157,8 +165,10 @@ export function RolConsolaScreen({
       setConfirmacion({ clave: Date.now(), texto: rol ? 'Rol guardado. Rige en unos segundos.' : `Rol «${guardado.nombre}» creado.` });
     } catch (e) {
       if (await atenderError(e, { tipo: 'guardar' })) return;
-      if (queHacerConElError(e) === 'releer') {
-        await onReleer();
+      // Un 409 al editar puede ser otro cambio que llegó antes o una regla del servidor (la base con personas, 20
+      // activos): se relee y, si la versión es la misma, se muestra el mensaje del servidor. Al crear, siempre es regla.
+      const releidos = rol && queHacerConElError(e) === 'releer' ? await onReleer() : null;
+      if (rol && fueOtroCambio(rol.version, releidos?.find(r => r.id === rol.id))) {
         Alert.alert('Alguien lo cambió antes', 'Mientras lo editabas, este rol cambió. Ya ves cómo quedó: revisa y vuelve a guardar (tu motivo sigue escrito).');
       } else {
         Alert.alert('No se pudo guardar', mensajeDeFallo(e, 'Vuelve a intentarlo en un momento.'));
@@ -282,26 +292,33 @@ export function RolConsolaScreen({
           label="Nombre"
           helperText="Único, y distinto de los seis roles base."
           value={formulario.nombre}
-          onChangeText={v => cambiar('nombre', v.slice(0, LARGO_MAXIMO_DEL_NOMBRE))}
-          maxLength={LARGO_MAXIMO_DEL_NOMBRE}
+          onChangeText={v => cambiar('nombre', v.slice(0, LARGO_MAXIMO_DEL_NOMBRE_DEL_ROL))}
+          maxLength={LARGO_MAXIMO_DEL_NOMBRE_DEL_ROL}
           placeholder="Ej.: Mentor junior"
           testID="campo-nombre-rol"
         />
         <FormField
           label="Descripción"
-          helperText="Opcional. Para qué sirve este rol."
+          helperText={`Opcional. Para qué sirve este rol. ${formulario.descripcion.length} de ${LARGO_MAXIMO_DE_LA_DESCRIPCION_DEL_ROL}.`}
           value={formulario.descripcion}
-          onChangeText={v => cambiar('descripcion', v)}
+          onChangeText={v => cambiar('descripcion', v.slice(0, LARGO_MAXIMO_DE_LA_DESCRIPCION_DEL_ROL))}
+          maxLength={LARGO_MAXIMO_DE_LA_DESCRIPCION_DEL_ROL}
           placeholder="Ej.: Mentores en su primer mes, sin pasar lista."
           multiline
           numberOfLines={2}
         />
 
         <View style={{ gap: 10 }}>
-          <TituloDeSeccion detalle={rol ? 'La base no se cambia: si hace falta otra, crea otro rol.' : 'Hace todo lo de esa base, salvo lo que no marques abajo.'}>
+          <TituloDeSeccion
+            detalle={
+              puedeCambiarDeBase(rol)
+                ? 'Hace todo lo de esa base, salvo lo que no marques abajo.'
+                : 'Con personas asignadas la base no se cambia: pásalas antes a otro rol.'
+            }
+          >
             Hereda de
           </TituloDeSeccion>
-          {rol ? (
+          {rol && !puedeCambiarDeBase(rol) ? (
             <Text style={fuerte}>{etiquetaDeRol(rol.rolBase)}</Text>
           ) : (
             <View accessibilityRole="radiogroup" accessibilityLabel="De qué rol hereda" style={estilos.chips}>
@@ -384,6 +401,18 @@ export function RolConsolaScreen({
             {personas > 0 ? <BotonSecundario etiqueta="Pasar sus personas a otro rol" onPress={abrirReemplazo} deshabilitado={ocupado} /> : null}
             <BotonPeligro etiqueta="Borrar rol" onPress={() => void borrar()} deshabilitado={ocupado} />
             {personas > 0 ? <Text style={ayuda}>Con personas no se borra: pásalas antes a otro rol, o desactívalo.</Text> : null}
+            <Text style={ayuda}>Borrar y pasar sus personas te piden la contraseña.</Text>
+            {onAuditoria ? (
+              <BotonSecundario
+                etiqueta="Ver su historial"
+                onPress={() =>
+                  void (async () => {
+                    if (cambiado && !(await confirmar('¿Ir al historial sin guardar?', 'Se pierden los cambios de este rol.', { ok: 'Ir' }))) return;
+                    onAuditoria(claveDelRol(rol));
+                  })()
+                }
+              />
+            ) : null}
           </View>
         ) : null}
       </ScrollView>
@@ -426,7 +455,7 @@ export function RolConsolaScreen({
       <HojaDeContrasena
         visible={pendiente !== null}
         nombre={rol?.nombre ?? (formulario.nombre.trim() || 'Rol nuevo')}
-        explicacion="El servidor pide tu contraseña para este cambio de rol."
+        explicacion="Borrar un rol o pasar sus personas a otro es un cambio crítico: confirma con tu contraseña."
         error={errorContrasena}
         enviando={confirmandoContrasena}
         onConfirmar={contrasena => void confirmarConContrasena(contrasena)}
