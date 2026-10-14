@@ -1786,6 +1786,62 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **Hace falta un APK nuevo** (la app no se actualiza por aire). El APK publicado (1.5.0) no lee los interruptores:
       ve el aviso como el mensaje de error del 503.
 
+  * **Cambio por pedido del dueño — 2026-10-14 — los cinco tabs y Administración: lo no disponible se esconde, y la
+    consola Soporte TI suma despliegue, roles personalizados y «ver como» (spec 002, fase 2)** (contrato
+    `Renaser-90-dias-backend/specs/002-soporte-ti-interruptores/contracts/fase-2.md`, con las decisiones del dueño del
+    2026-10-14: P1 esconder, P2 cuentas de prueba en solo lectura, P3 hábitos solo con los seis roles base, P4 «ver como»
+    incluye los personalizados, P5 métricas de 24 h). Lo que cambia y nada más:
+    * **Lo que a una cuenta todavía no le toca se esconde** (`features/plataforma/`): `GET /funcionalidades/mias` suma
+      `noDisponibles` (sin el campo, todo disponible; se guarda por cuenta como lo apagado) y `useFuncionalidad` dice
+      `disponible`. No es el aviso de mantenimiento (ese es para lo apagado): la entrada **no se dibuja**. Dónde: los
+      medallones de Comunidad (si la abierta se esconde, se muestra la primera que quede, sin parpadeo), «Crear una
+      publicación», «Me gusta» y «Comentar» del Muro, los chats por tipo en Tribu y la sala abierta (se cierra sola), los
+      botones de fotos y stickers y el de grabar (queda «Enviar»), el botón flotante de SER, su panel y el del curso, los
+      botones de las propuestas, la voz en vivo, «Crear evento» y la asistencia; en Hoy las tarjetas de Administración,
+      Mi grupo, Mis mentores, tickets, semáforo y próximo evento; en Yo la Evidencia, la Caja, Administración, la
+      emergencia, Perfil, Mis evidencias, Notificaciones, «Lo que SER recuerda» y «Eliminar mi cuenta»; y las filas de
+      Administración (raíz y «Más opciones»). El fénix de Hoy, sin SER, queda como imagen (su ánimo a la vista).
+    * **Pestaña sin nada disponible**: Training, o Comunidad sin ninguna sección con interruptor (Testimonios sola no la
+      sostiene), quedan con «Esta sección todavía no está disponible para tu cuenta.» (`SeccionNoDisponible`), sin el
+      ícono de mantenimiento ni «Reintentar». Las pestañas nunca desaparecen.
+    * **Sin diálogo**: un 404 `FUNCIONALIDAD_NO_DISPONIBLE` (lo detecta `apiFetch`, y el SSE de SER) marca la clave y
+      relee `/mias`; un 403 `MODO_SOLO_LECTURA` se dice en la franja de «ver como». El aviso con que la pantalla responde a
+      cualquiera de los dos no se abre (`services/http/erroresSinDialogo.ts`, que consultan `components/Alerta` y
+      `admin/utils/dialogo`): solo se omite un aviso sin botones que llega enseguida del error o repite su texto; una
+      confirmación nunca se traga.
+    * **Yo → Soporte TI → detalle → «Despliegue»**: el escalón de ahora, los escalones 5 / 25 / 50 % y «Para todos» (bajar
+      uno es tocar el de al lado), motivo obligatorio, versión optimista; empezar uno, empezarlo «Solo probadores» o
+      bajarle el porcentaje a algo crítico pide la contraseña (también ante un 428). Probadores: buscar
+      (`GET /soporte-ti/personas`), sumar y quitar. Últimas 24 h: cifras dentro / fuera y dos gráficos de líneas (pedidos y
+      errores 5xx, dorado y azul pizarra validados con la skill `dataviz` en claro y oscuro; tocar elige la hora) más la
+      tabla por hora. Lo que se usa sin cuenta (`desplegable: false`, hoy el alta pública) no se ofrece desplegar. La lista
+      dice «En despliegue · 25 %» y suma el filtro «Despliegue».
+    * **Soporte TI → «Roles»**: los roles personalizados, activos e inactivos («N activos de 20»); crear o editar con
+      nombre, descripción, de qué rol hereda (los seis, nunca Soporte TI; solo al crear) y el árbol de funcionalidades de
+      esa base (marcar una madre marca a sus hijas); «Activo», «Pasar sus personas a otro rol» y «Borrar rol» (un 409 con
+      personas ofrece pasarlas antes). Motivo obligatorio en todo.
+    * **Soporte TI → «Ver como»**: los seis roles base (sin Soporte TI) y los personalizados activos. Entrar guarda aparte
+      la sesión de Soporte TI y su perfil (memoria y almacenamiento seguro) y la app se arma de nuevo como la ve ese rol
+      (`MainTabs` lleva `key` por cuenta). **En los cinco tabs**, mientras dura, una franja fija arriba, en el flujo,
+      «Viendo como Mentor · Salir» (`FranjaVerComo`, en `App.tsx`; la app queda debajo sin borde seguro de arriba).
+      Salir funciona sin red, cierra la sesión de prueba si puede y vuelve a Yo con la consola abierta (parámetro
+      `abrirSoporteTi`). Un 401 o el vencimiento de la sesión de prueba vuelven a Soporte TI, no al login; abrir la app con
+      «ver como» guardado vuelve a Soporte TI. En solo lectura no se registra el push.
+    * **Auditoría de la consola**: «Despliegue 5 % → 25 %», «Probadores 3 → 4», «Rol “Mentor junior” creado» (y borrado,
+      desactivado, renombrado, funcionalidades) y «Vio la app como Mentor».
+    * **Administración**: Equipo y roles y Solicitudes ofrecen los roles de `GET /admin/roles-asignables` (los seis y,
+      debajo, «Mentor junior · hereda de Mentor»; sin el endpoint, los seis) y mandan `rolPersonalizadoId` al asignar o
+      aprobar. Donde se lee el rol de alguien (Equipo y roles, la info de integrantes del chat, quién reaccionó en el
+      Muro) va el nombre del personalizado si viene. **Hábitos del programa no cambia** (P3).
+    * Movimiento (`emil-design-eng`, `animate-expo`): nada nuevo se anima salvo el texto de solo lectura de la franja
+      (fundido de 180 ms; con «reducir movimiento», al instante). Chips, escalones, filtros y casillas cambian en el acto;
+      las filas usan `Presionable`; lo guardado, `ConfirmacionEnLinea` y `tacto.logro`.
+    * **No se tocaron**: Plan, la forma de la barra de pestañas, el login, el onboarding ni la forma de ninguna sección
+      que esté disponible.
+    * **Hace falta un APK nuevo** y el backend de la fase 2 (A2 despliegue, B2 roles, B3 «ver como»). Contra el backend de
+      la fase 1 todo se ve disponible, la consola no tiene despliegue ni roles (sus lecturas fallan con su error en el
+      lugar) y «Ver como» avisa que el servidor todavía no lo tiene. Maestro: `.maestro/interruptores/34–40`.
+
 ## 2. 📱 RESPONSIVIDAD UNIVERSAL (XIAOMI, ANDROID, IOS Y TABLETS)
 * **Cero Doble Scroll**: NUNCA coloques un contenedor con `maxHeight` fijo o scroll interno dentro de otro `ScrollView`. Toda pantalla debe tener UN ÚNICO contenedor de scroll fluido con `contentContainerStyle={{ flexGrow: 1, paddingBottom: 36 }}`.
 * **Adaptabilidad a Xiaomi y Pantallas Altas (20:9 / 19.5:9)**:
