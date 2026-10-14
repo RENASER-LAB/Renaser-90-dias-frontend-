@@ -65,6 +65,14 @@ export const almacenamientoSeguro = {
   leerToken: () => sinRomper(() => leerCrudo(CLAVE_TOKEN), null),
   borrarToken: () => sinRomper(() => borrarCrudo(CLAVE_TOKEN), undefined),
 
+  /**
+   * Otra credencial por su clave (spec 002, fase 2: la sesión de Soporte TI guardada aparte mientras está en «ver
+   * como»). Mismo almacenamiento y misma regla: nunca tumba la app.
+   */
+  guardarDato: (clave: string, valor: string) => sinRomper(() => guardarCrudo(clave, valor), undefined),
+  leerDato: (clave: string) => sinRomper(() => leerCrudo(clave), null),
+  borrarDato: (clave: string) => sinRomper(() => borrarCrudo(clave), undefined),
+
   guardarSolicitud: (id: string) => sinRomper(() => guardarCrudo(CLAVE_SOLICITUD, id), undefined),
   leerSolicitud: () => sinRomper(() => leerCrudo(CLAVE_SOLICITUD), null),
   borrarSolicitud: () => sinRomper(() => borrarCrudo(CLAVE_SOLICITUD), undefined),

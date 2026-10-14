@@ -286,6 +286,16 @@ type OpcionesPeticion = {
    * esto, equivocarse de contraseña cerraba la sesión entera.
    */
   el401EsContrasena?: boolean;
+  /**
+   * La sesión con la que va ESTE pedido, en vez de la de la app (fase 2, «ver como»: cerrar la sesión de prueba al
+   * salir, aunque la app ya volvió a la de Soporte TI). `null` = sin sesión.
+   */
+  sesion?: string | null;
+  /**
+   * No tomar el `X-Auth-Token` que venga en la respuesta como la sesión de la app («ver como»: la respuesta trae la
+   * sesión de la cuenta de prueba, y quien pidió decide cuándo cambiarse a ella).
+   */
+  noTomarSesionDeLaRespuesta?: boolean;
 };
 
 /** Lo que devuelve {@link apiFetchConRespuesta}: el código, el cuerpo (si hubo) y las cabeceras. */
@@ -342,7 +352,18 @@ export async function apiFetchConRespuesta<T>(
 }
 
 async function pedir<T>(ruta: string, opciones: OpcionesPeticion, aceptar304: boolean): Promise<RespuestaConCabeceras<T>> {
-  const { method = 'GET', body, conSesion = true, timeoutMs, cabeceras, el401EsContrasena = false } = opciones;
+  const {
+    method = 'GET',
+    body,
+    conSesion = true,
+    timeoutMs,
+    cabeceras,
+    el401EsContrasena = false,
+    sesion,
+    noTomarSesionDeLaRespuesta = false,
+  } = opciones;
+  // Con `sesion` el pedido va con esa (y lo que pase con ella no toca la de la app).
+  const sesionPropia = sesion !== undefined;
 
   const headers: Record<string, string> = { ...(cabeceras ?? {}), Accept: 'application/json' };
   const esFormulario = typeof FormData !== 'undefined' && body instanceof FormData;
@@ -350,7 +371,7 @@ async function pedir<T>(ruta: string, opciones: OpcionesPeticion, aceptar304: bo
     headers['Content-Type'] = 'application/json';
   }
   // Se guarda si la request LLEVÓ sesión: de eso depende qué significa un 401 más abajo.
-  const tokenEnviado = conSesion ? tokenSesion : null;
+  const tokenEnviado = !conSesion ? null : sesionPropia ? sesion ?? null : tokenSesion;
   if (tokenEnviado) {
     headers[HEADER_SESION] = tokenEnviado;
   }
@@ -383,7 +404,7 @@ async function pedir<T>(ruta: string, opciones: OpcionesPeticion, aceptar304: bo
 
     // El backend renueva el identificador de sesión al iniciarla; si viene, se guarda.
     const tokenNuevo = respuesta.headers.get(HEADER_SESION);
-    if (tokenNuevo) {
+    if (tokenNuevo && !noTomarSesionDeLaRespuesta && !sesionPropia) {
       setTokenSesion(tokenNuevo);
     }
 
@@ -405,7 +426,7 @@ async function pedir<T>(ruta: string, opciones: OpcionesPeticion, aceptar304: bo
       const codigo = codigoDelCuerpo(cuerpo);
       if (respuesta.status === 404 && codigo === CODIGO_FUNCIONALIDAD_NO_DISPONIBLE) {
         notificarFuncionalidadNoDisponible(cuerpo);
-      } else if (respuesta.status === 403 && codigo === CODIGO_MODO_SOLO_LECTURA) {
+      } else if (respuesta.status === 403 && codigo === CODIGO_MODO_SOLO_LECTURA && !sesionPropia) {
         notificarModoSoloLectura(cuerpo);
       }
       // Un 401 en una request que mandó sesión no es "credenciales mal": es el token vencido. Se
@@ -414,7 +435,7 @@ async function pedir<T>(ruta: string, opciones: OpcionesPeticion, aceptar304: bo
       //
       // Deliberadamente NO incluye al 403: ahí el backend también responde "cuenta suspendida", y
       // tratarlo como vencimiento mandaría a loguearse una y otra vez a quien no puede entrar.
-      const sesionVencida = respuesta.status === 401 && tokenEnviado !== null && !el401EsContrasena;
+      const sesionVencida = respuesta.status === 401 && tokenEnviado !== null && !el401EsContrasena && !sesionPropia;
       if (sesionVencida) {
         notificarSesionVencida();
       }

@@ -12,6 +12,7 @@ import { FuncionalidadConsolaScreen } from './FuncionalidadConsolaScreen';
 import { FuncionalidadesConsolaScreen } from './FuncionalidadesConsolaScreen';
 import { RolConsolaScreen } from './RolConsolaScreen';
 import { RolesConsolaScreen } from './RolesConsolaScreen';
+import { VerComoConsolaScreen } from './VerComoConsolaScreen';
 
 type Vista =
   | { tipo: 'lista' }
@@ -21,7 +22,9 @@ type Vista =
   | { tipo: 'despliegue'; clave: string }
   /** Fase 2: los roles personalizados y uno de ellos (`id: null` = nuevo). */
   | { tipo: 'roles' }
-  | { tipo: 'rol'; id: string | null };
+  | { tipo: 'rol'; id: string | null }
+  /** Fase 2: ver la app como otro rol, en solo lectura. */
+  | { tipo: 'verComo' };
 
 /** Cada cuánto se mira si la consola ya pasó sus 15 minutos sin uso (con la pantalla abierta). */
 const REVISAR_BLOQUEO_MS = 30_000;
@@ -48,7 +51,7 @@ export function ConsolaSoporteTiScreen({ onSalir }: { onSalir: () => void }) {
     setAviso(AVISO_DE_BLOQUEO);
   }, []);
   const estado = useConsolaSoporteTi(abierta, bloquear);
-  const roles = useRolesConsola(abierta && (vista.tipo === 'roles' || vista.tipo === 'rol'), bloquear);
+  const roles = useRolesConsola(abierta && (vista.tipo === 'roles' || vista.tipo === 'rol' || vista.tipo === 'verComo'), bloquear);
 
   useEffect(() => {
     if (!abierta) return;
@@ -76,6 +79,10 @@ export function ConsolaSoporteTiScreen({ onSalir }: { onSalir: () => void }) {
   if (vista.tipo === 'auditoria') {
     const volverA: Vista = vista.clave ? { tipo: 'detalle', clave: vista.clave } : { tipo: 'lista' };
     return <AuditoriaConsolaScreen clave={vista.clave} nombres={nombres} onBloqueada={bloquear} onVolver={() => setVista(volverA)} />;
+  }
+
+  if (vista.tipo === 'verComo') {
+    return <VerComoConsolaScreen roles={roles.roles} onBloqueada={bloquear} onVolver={() => setVista({ tipo: 'lista' })} />;
   }
 
   if (vista.tipo === 'rol') {
@@ -163,6 +170,7 @@ export function ConsolaSoporteTiScreen({ onSalir }: { onSalir: () => void }) {
       onAbrir={clave => setVista({ tipo: 'detalle', clave })}
       onAuditoria={() => setVista({ tipo: 'auditoria', clave: null })}
       onRoles={() => setVista({ tipo: 'roles' })}
+      onVerComo={() => setVista({ tipo: 'verComo' })}
       onSalir={onSalir}
     />
   );

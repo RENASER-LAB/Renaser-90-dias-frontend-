@@ -58,5 +58,8 @@ export function RootNavigator() {
   if (mapa.abierto && user) {
     return <MapaRenacimientoFlow userId={user.id} onSalir={mapa.cerrar} />;
   }
-  return <MainTabs />;
+  /* `key` por cuenta (spec 002, fase 2, «ver como»): al cambiarse a la cuenta de prueba, o al volver a la de Soporte TI,
+     las pestañas se arman de nuevo, sin estado ni pantallas abiertas de la otra cuenta. Para el login de siempre no
+     cambia nada (las pestañas ya se montan de cero). */
+  return <MainTabs key={user?.id ?? 'sin-cuenta'} />;
 }

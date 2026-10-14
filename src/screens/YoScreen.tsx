@@ -385,6 +385,13 @@ export default function YoScreen() {
     setEnCaja(true);
     (navegacionDeYo as unknown as { setParams: (p: Record<string, unknown>) => void }).setParams({ abrirCaja: undefined });
   }, [rutaDeYo.params, navegacionDeYo]);
+  /* Spec 002, fase 2: al salir de «ver como» la franja trae de vuelta a Yo con `abrirSoporteTi`: se reabre la consola. */
+  useEffect(() => {
+    const params = rutaDeYo.params as { abrirSoporteTi?: boolean } | undefined;
+    if (!params?.abrirSoporteTi) return;
+    if (veSoporteTi) setEnSoporteTi(true);
+    (navegacionDeYo as unknown as { setParams: (p: Record<string, unknown>) => void }).setParams({ abrirSoporteTi: undefined });
+  }, [rutaDeYo.params, navegacionDeYo, veSoporteTi]);
   useEffect(() => {
     // Un aviso viejo de una caja que ya no se le muestra no deja la pantalla esperando abierta.
     if (enCaja && !miCaja.cargando && !miCaja.visible) setEnCaja(false);
