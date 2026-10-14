@@ -9,6 +9,7 @@ import { useTheme } from '../../../theme/ThemeContext';
 import { CabeceraAdmin } from '../../admin/components/CabeceraAdmin';
 import { ChipDeOpcion } from '../../admin/components/ChipDeOpcion';
 import { mensajeDeFallo } from '../../admin/utils/mensajes';
+import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/lugarDelLanzador';
 import { leerAuditoria, TAMANO_DE_PAGINA_DE_AUDITORIA } from '../api/soporteTiApi';
 import type { CambioAuditado } from '../api/soporteTiSchemas';
 import { actorDe, fechaYHora, hayMasPaginas, queHacerConElError, resumenDelCambio, tipoDeCambio } from '../utils/consola';
@@ -87,7 +88,7 @@ export function AuditoriaConsolaScreen({
         style={{ flex: 1 }}
         contentContainerStyle={{
           flexGrow: 1,
-          paddingBottom: 36,
+          paddingBottom: 36 + ESPACIO_PARA_LANZADOR,
           paddingHorizontal: horizontalPadding,
           maxWidth: contentMaxWidth,
           width: '100%',

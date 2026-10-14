@@ -5,7 +5,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import React from 'react';
-import { AccessibilityInfo, Alert as AlertNativo, Text, TextInput } from 'react-native';
+import { AccessibilityInfo, Alert as AlertNativo, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
 import TestRenderer, { act, type ReactTestRenderer } from 'react-test-renderer';
 
 jest.mock('../../../theme/ThemeContext', () => {
@@ -32,6 +32,7 @@ jest.mock('../../../services/storage/almacenamientoSeguro', () => ({
 }));
 
 import { ApiError, setTokenSesion } from '../../../services/http/apiClient';
+import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/lugarDelLanzador';
 import { cambiarFuncionalidad, desbloquear, leerAuditoria, listarFuncionalidades } from '../api/soporteTiApi';
 import type { FuncionalidadConsola } from '../api/soporteTiSchemas';
 import { HojaDeContrasena } from '../components/HojaDeContrasena';
@@ -319,6 +320,14 @@ describe('detalle de una funcionalidad', () => {
   beforeEach(async () => {
     servidor(() => ok({ token: 'tok-1' }));
     await desbloquear('secreta', 'CONSOLA');
+  });
+
+  // Hallazgo del QA del 13/10: con la lista al final, el botón flotante de SER tapaba el borde de «Guardar con contraseña».
+  it('el final de la lista sube por encima del botón flotante de SER', async () => {
+    servidor(() => ok(funcionalidad()));
+    await montar(funcionalidad());
+    const [lista] = raiz!.root.findAll(n => n.type === ScrollView);
+    expect(StyleSheet.flatten(lista.props.contentContainerStyle).paddingBottom).toBeGreaterThanOrEqual(36 + ESPACIO_PARA_LANZADOR);
   });
 
   it('sin motivo no guarda: avisa en un diálogo y marca el campo', async () => {

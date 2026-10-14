@@ -10,6 +10,7 @@ import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
 import { CabeceraAdmin } from '../../admin/components/CabeceraAdmin';
+import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/lugarDelLanzador';
 import type { FuncionalidadConsola, ParteDelCircuito } from '../api/soporteTiSchemas';
 import type { EstadoDeLaConsola } from '../hooks/useConsolaSoporteTi';
 import {
@@ -78,7 +79,7 @@ export function FuncionalidadesConsolaScreen({
         refreshControl={<RefreshControl refreshing={cargando && funcionalidades !== null} onRefresh={() => void recargar()} tintColor={c.goldInk} colors={[c.goldInk]} />}
         contentContainerStyle={{
           flexGrow: 1,
-          paddingBottom: 36,
+          paddingBottom: 36 + ESPACIO_PARA_LANZADOR,
           paddingHorizontal: horizontalPadding,
           maxWidth: contentMaxWidth,
           width: '100%',

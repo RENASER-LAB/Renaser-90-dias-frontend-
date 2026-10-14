@@ -15,6 +15,7 @@ import { CabeceraAdmin } from '../../admin/components/CabeceraAdmin';
 import { confirmar } from '../../admin/utils/dialogo';
 import { mensajeDeFallo } from '../../admin/utils/mensajes';
 import { etiquetaDeRol } from '../../admin/utils/rolesAsignables';
+import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/lugarDelLanzador';
 import { cambiarFuncionalidad, desbloquear } from '../api/soporteTiApi';
 import type { FuncionalidadConsola } from '../api/soporteTiSchemas';
 import { HojaDeContrasena } from '../components/HojaDeContrasena';
@@ -180,7 +181,7 @@ export function FuncionalidadConsolaScreen({
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{
           flexGrow: 1,
-          paddingBottom: 36,
+          paddingBottom: 36 + ESPACIO_PARA_LANZADOR,
           paddingHorizontal: horizontalPadding,
           maxWidth: contentMaxWidth,
           width: '100%',

@@ -12,6 +12,7 @@ import { useTheme } from '../../../theme/ThemeContext';
 import { tacto } from '../../../utils/tacto';
 import { CabeceraAdmin } from '../../admin/components/CabeceraAdmin';
 import { mensajeDeFallo } from '../../admin/utils/mensajes';
+import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/lugarDelLanzador';
 import { desbloquear } from '../api/soporteTiApi';
 import { MINUTOS_DE_LA_CONSOLA } from '../estado/sesionDeConsola';
 import { queHacerConElError } from '../utils/consola';
@@ -81,7 +82,7 @@ export function DesbloqueoConsolaScreen({
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{
           flexGrow: 1,
-          paddingBottom: 36,
+          paddingBottom: 36 + ESPACIO_PARA_LANZADOR,
           paddingHorizontal: horizontalPadding,
           maxWidth: contentMaxWidth,
           width: '100%',
