@@ -1,4 +1,5 @@
-import type { RolAsignable } from '../api/adminApi';
+import type { OpcionDeRol, RolAsignable } from '../api/adminApi';
+import type { RolPersonalizadoDeLaPersona } from '../api/adminSchemas';
 import { ETIQUETA_SOPORTE_TI, ROLES_SOPORTE_TI } from '../../soporte-ti/utils/rolSoporteTi';
 
 /**
@@ -48,5 +49,60 @@ export function queImplicaEntrarComo(rol: RolAsignable): string {
       return 'Puede entrar a Administración y no pasa por el grupo de bienvenida.';
     case 'TRAINEE':
       return 'Hace el programa y entra al grupo de bienvenida.';
+    default:
+      return '';
   }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Spec 002, fase 2: los roles personalizados (contrato `fase-2.md` §4.5)
+// ---------------------------------------------------------------------------------------------------------------------
+
+/** Los seis de siempre como opciones: lo que se ofrece sin `GET /admin/roles-asignables` (backend anterior). */
+export const OPCIONES_BASE: readonly OpcionDeRol[] = ROLES_ASIGNABLES.map(r => ({
+  clave: r.clave,
+  nombre: r.etiqueta,
+  rolBase: r.clave,
+  rolPersonalizadoId: null,
+}));
+
+const SIN_SOPORTE_TI = (rol: string) => !ROLES_SOPORTE_TI.includes(rol.trim().toUpperCase() as (typeof ROLES_SOPORTE_TI)[number]);
+
+/**
+ * Las opciones para elegir, en el orden en que se ofrecen: los seis base (con el nombre de siempre) y, debajo, los
+ * personalizados activos que mandó el servidor, cada uno con su base. Sin respuesta o vacía, los seis. Soporte TI nunca
+ * se ofrece, ni como base.
+ */
+export function opcionesDeRol(delServidor: readonly OpcionDeRol[] | null | undefined): OpcionDeRol[] {
+  if (!delServidor || delServidor.length === 0) return [...OPCIONES_BASE];
+  const personalizados = delServidor.filter(o => o.rolPersonalizadoId && SIN_SOPORTE_TI(o.rolBase));
+  return [...OPCIONES_BASE, ...personalizados];
+}
+
+/** El nombre del rol de una persona: el de su rol personalizado si tiene; si no, el del rol base. */
+export function etiquetaDeLaPersona(rol: string, rolPersonalizado?: RolPersonalizadoDeLaPersona): string {
+  return rolPersonalizado?.nombre?.trim() || etiquetaDeRol(rol);
+}
+
+/** ¿Es la opción que la persona tiene hoy? Un rol personalizado se compara por id; uno base, sin personalizado. */
+export function esLaOpcionDeLaPersona(opcion: OpcionDeRol, persona: { rol: string; rolPersonalizado?: RolPersonalizadoDeLaPersona }): boolean {
+  if (opcion.rolPersonalizadoId) return persona.rolPersonalizado?.id === opcion.rolPersonalizadoId;
+  return opcion.rolBase === persona.rol && !persona.rolPersonalizado?.id;
+}
+
+/** La opción de siempre al aprobar: Aprendiz, sin rol personalizado. */
+export function esLaOpcionPorDefecto(opcion: OpcionDeRol): boolean {
+  return opcion.rolBase === ROL_AL_APROBAR_POR_DEFECTO && !opcion.rolPersonalizadoId;
+}
+
+/** Qué implica entrar con esa opción, en una frase para la confirmación (la base y, si es personalizado, su límite). */
+export function queImplicaLaOpcion(opcion: OpcionDeRol): string {
+  const base = queImplicaEntrarComo(opcion.rolBase as RolAsignable);
+  if (!opcion.rolPersonalizadoId) return base;
+  return [`Hereda de ${etiquetaDeRol(opcion.rolBase)}, con solo las funcionalidades de «${opcion.nombre}».`, base].filter(Boolean).join(' ');
+}
+
+/** La etiqueta de una opción en la lista: «Mentor junior · hereda de Mentor» para un personalizado. */
+export function etiquetaDeLaOpcion(opcion: OpcionDeRol): string {
+  return opcion.rolPersonalizadoId ? `${opcion.nombre} · hereda de ${etiquetaDeRol(opcion.rolBase)}` : opcion.nombre;
 }

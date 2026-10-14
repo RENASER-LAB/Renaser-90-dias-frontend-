@@ -1,5 +1,5 @@
 import type { RolDeStaff } from '../api/adminApi';
-import type { UsuarioStaffApi } from '../api/adminSchemas';
+import type { RolPersonalizadoDeLaPersona, UsuarioStaffApi } from '../api/adminSchemas';
 
 /**
  * Cómo se lee una persona en el padrón de «Staff y roles».
@@ -24,6 +24,8 @@ export type PersonaDelPadron = {
    * crudo en vez de fingir que es uno de los cinco conocidos.
    */
   rol: string;
+  /** Spec 002, fase 2: su rol personalizado, si tiene (`rol` sigue siendo el base). */
+  rolPersonalizado?: RolPersonalizadoDeLaPersona;
 };
 
 /**
@@ -85,6 +87,7 @@ export function personaDeStaff(usuario: UsuarioStaffApi): PersonaDelPadron {
     // línea, así que en un teléfono angosto se pierde el correo y nunca el «Cuenta suspendida».
     detalle: estado ? `${estado} · ${correo}` : correo,
     rol: usuario.role,
+    rolPersonalizado: usuario.rolPersonalizado ?? null,
   };
 }
 

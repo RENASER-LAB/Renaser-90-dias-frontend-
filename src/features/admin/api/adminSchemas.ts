@@ -59,6 +59,26 @@ export const cohorteAdminSchema = z
   })
   .passthrough();
 
+/**
+ * Spec 002, fase 2 (contrato `fase-2.md` §4.5): el rol personalizado de una persona, si tiene. Aditivo y tolerante:
+ * `role` sigue siendo el base y un backend anterior no lo manda.
+ */
+export const rolPersonalizadoDeLaPersonaSchema = z
+  .object({ id: z.string().nullish(), nombre: z.string().nullish() })
+  .passthrough()
+  .nullish();
+export type RolPersonalizadoDeLaPersona = { id?: string | null; nombre?: string | null } | null | undefined;
+
+/** `GET /api/v1/admin/roles-asignables`: los seis base (`clave` = el rol) y los personalizados activos (`"rp:" + id`). */
+export const rolAsignableOpcionSchema = z
+  .object({
+    clave: z.string(),
+    nombre: z.string().nullish(),
+    rolBase: z.string(),
+    rolPersonalizadoId: z.string().nullish(),
+  })
+  .passthrough();
+
 export const mentorCandidatoSchema = z
   .object({
     userId: z.string(),
@@ -74,6 +94,7 @@ export const mentorCandidatoSchema = z
     specialty: z.string().nullish(),
     /** MENTOR o TRAINEE_GUIDE (backend D-265). Opcional: un backend anterior no lo manda y todos son mentores. */
     role: z.string().nullish(),
+    rolPersonalizado: rolPersonalizadoDeLaPersonaSchema,
   })
   .passthrough();
 
@@ -112,6 +133,7 @@ export const aprendizAdminSchema = z
      * y anulable: un backend anterior no lo manda.
      */
     deletionScheduledFor: z.string().nullish(),
+    rolPersonalizado: rolPersonalizadoDeLaPersonaSchema,
   })
   .passthrough();
 
@@ -168,6 +190,7 @@ export const usuarioStaffSchema = z
     avatarUrl: z.string().nullish(),
     bio: z.string().nullish(),
     department: z.string().nullish(),
+    rolPersonalizado: rolPersonalizadoDeLaPersonaSchema,
   })
   .passthrough();
 
@@ -256,6 +279,7 @@ export const detalleAprendizSchema = z
     status: z.string().nullish(),
     /** D-243: cerró su cuenta y se borra en esa fecha (ISO). Ausente o `null` = nada pendiente. */
     deletionScheduledFor: z.string().nullish(),
+    rolPersonalizado: rolPersonalizadoDeLaPersonaSchema,
   })
   .passthrough();
 

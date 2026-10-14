@@ -272,7 +272,8 @@ export function integrantesDelChat(params: {
     nombreCompleto: p.nombre,
     avatarUrl: p.avatarUrl?.trim() || null,
     fotoPath: p.fotoPath?.trim() || null,
-    rol: MARCA_POR_ROL[p.rol] ?? capitalizar(p.rol),
+    // Spec 002, fase 2: con rol personalizado se lee su nombre («Mentor junior»); si no, el rol base.
+    rol: (p.rolPersonalizado?.nombre?.trim() as RolEnElGrupo | undefined) || (MARCA_POR_ROL[p.rol] ?? capitalizar(p.rol)),
     esYo: p.esUnoMismo,
     abreChat: !p.esUnoMismo,
     abreFicha: puedeVerFichas && p.rol === 'APRENDIZ' && !p.esUnoMismo,

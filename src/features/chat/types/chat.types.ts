@@ -228,6 +228,8 @@ export interface WireParticipante {
   esUnoMismo: boolean;
   fotoPath?: string | null;
   avatarUrl?: string | null;
+  /** Spec 002, fase 2: su rol personalizado, si tiene (se muestra su nombre en lugar del rol base). */
+  rolPersonalizado?: { id?: string | null; nombre?: string | null } | null;
 }
 
 /** `ParticipantesDelChatResponse`. `total` cuenta la búsqueda entera, no la página. */

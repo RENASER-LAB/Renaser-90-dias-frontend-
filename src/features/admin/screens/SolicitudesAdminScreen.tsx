@@ -8,17 +8,13 @@ import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
 import { aprobarSolicitud, listarAprendices, listarSolicitudes, rechazarSolicitud } from '../api/adminApi';
-import type { RolAsignable } from '../api/adminApi';
+import type { OpcionDeRol } from '../api/adminApi';
+import { useOpcionesDeRol } from '../hooks/useOpcionesDeRol';
 import type { SolicitudApi } from '../api/adminSchemas';
 import { AvisoBreve } from '../components/AvisoBreve';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
 import { ChipDeOpcion } from '../components/ChipDeOpcion';
-import {
-  etiquetaDeRol,
-  queImplicaEntrarComo,
-  ROL_AL_APROBAR_POR_DEFECTO,
-  ROLES_ASIGNABLES,
-} from '../utils/rolesAsignables';
+import { esLaOpcionPorDefecto, etiquetaDeLaOpcion, queImplicaLaOpcion, ROL_AL_APROBAR_POR_DEFECTO } from '../utils/rolesAsignables';
 import { quedanPorTraer, sinLaDecidida, sumarPagina, textoVerMas } from '../utils/paginasDeSolicitudes';
 import { confirmar, avisar } from '../utils/dialogo';
 import { mensajeDeAltaAprobada, mensajeDeFallo } from '../utils/mensajes';
@@ -50,6 +46,10 @@ import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar
  * **El rol se elige al aprobar** (backend D-265, pedido del dueño del 2026-10-13): cada solicitud ofrece los seis
  * roles con Aprendiz marcado. Aprobar como aprendiz sigue siendo UN toque y sin cuerpo en el pedido (lo de siempre);
  * con otro rol se confirma, porque da más acceso, y el servidor lo aplica como el cambio de rol de «Equipo y roles».
+ *
+ * **Spec 002, fase 2 (contrato §4.5):** los roles salen de `GET /admin/roles-asignables`: los seis base y, debajo, los
+ * personalizados activos (cada uno dice de cuál hereda). Elegir uno manda además `rolPersonalizadoId`. Sin el endpoint,
+ * los seis de siempre.
  */
 export function SolicitudesAdminScreen({
   onVolver,
@@ -73,9 +73,13 @@ export function SolicitudesAdminScreen({
   const [sinGrupo, setSinGrupo] = useState<number | null>(null);
   const [avisoFinal, setAvisoFinal] = useState<string | null>(null);
   const cerrarAviso = useCallback(() => setAvisoFinal(null), []);
-  /** El rol elegido en cada solicitud; la que no está, entra como aprendiz. */
-  const [rolDe, setRolDe] = useState<Record<string, RolAsignable>>({});
-  const rolElegido = (id: string): RolAsignable => rolDe[id] ?? ROL_AL_APROBAR_POR_DEFECTO;
+  /** La opción elegida en cada solicitud (su `clave`); la que no está, entra como aprendiz. */
+  const opciones = useOpcionesDeRol();
+  const [rolDe, setRolDe] = useState<Record<string, string>>({});
+  const rolElegido = (id: string): OpcionDeRol =>
+    opciones.find(o => o.clave === (rolDe[id] ?? ROL_AL_APROBAR_POR_DEFECTO)) ??
+    opciones.find(o => o.clave === ROL_AL_APROBAR_POR_DEFECTO) ??
+    opciones[0];
 
   useSystemBackHandler(() => {
     onVolver();
@@ -138,22 +142,23 @@ export function SolicitudesAdminScreen({
   const aprobar = async (solicitud: SolicitudApi) => {
     const rol = rolElegido(solicitud.id);
     const nombre = solicitud.fullName ?? 'esta persona';
-    if (rol !== ROL_AL_APROBAR_POR_DEFECTO) {
+    const porDefecto = esLaOpcionPorDefecto(rol);
+    if (!porDefecto) {
       const acepto = await confirmar(
-        `¿Aprobar a ${nombre} como ${etiquetaDeRol(rol)}?`,
-        `${queImplicaEntrarComo(rol)} Puedes cambiarlo después en Equipo y roles.`,
-        { ok: `Aprobar como ${etiquetaDeRol(rol)}` },
+        `¿Aprobar a ${nombre} como ${rol.nombre}?`,
+        `${queImplicaLaOpcion(rol)} Puedes cambiarlo después en Equipo y roles.`,
+        { ok: `Aprobar como ${rol.nombre}` },
       );
       if (!acepto) return;
     }
     setTrabajando(solicitud.id);
     try {
-      if (rol !== ROL_AL_APROBAR_POR_DEFECTO) {
-        await aprobarSolicitud(solicitud.id, rol);
+      if (!porDefecto) {
+        await aprobarSolicitud(solicitud.id, rol.rolBase, rol.rolPersonalizadoId);
         quitarDeLaLista(solicitud.id);
         /* Con otro rol no entra al grupo de bienvenida (el servidor lo saltea), así que la cola de «sin grupo» no
            dice nada de esta persona: el aviso dice con qué rol entró y nada más. */
-        setAvisoFinal(`Cuenta aprobada: ${nombre} entró como ${etiquetaDeRol(rol)}.`);
+        setAvisoFinal(`Cuenta aprobada: ${nombre} entró como ${rol.nombre}.`);
         return;
       }
       await aprobarSolicitud(solicitud.id);
@@ -261,11 +266,11 @@ export function SolicitudesAdminScreen({
               accessibilityLabel={`Rol con el que entra ${solicitud.fullName ?? 'esta persona'}`}
               style={estilos.roles}
             >
-              {ROLES_ASIGNABLES.map(rol => (
+              {opciones.map(rol => (
                 <ChipDeOpcion
                   key={rol.clave}
-                  etiqueta={rol.etiqueta}
-                  activo={rolElegido(solicitud.id) === rol.clave}
+                  etiqueta={etiquetaDeLaOpcion(rol)}
+                  activo={rolElegido(solicitud.id).clave === rol.clave}
                   deshabilitado={trabajando === solicitud.id}
                   onPress={() => setRolDe(actuales => ({ ...actuales, [solicitud.id]: rol.clave }))}
                 />
@@ -279,7 +284,7 @@ export function SolicitudesAdminScreen({
                 etiqueta={trabajando === solicitud.id ? 'Aprobando…' : 'Aprobar'}
                 onPress={() => void aprobar(solicitud)}
                 deshabilitado={trabajando === solicitud.id}
-                accessibilityLabel={`Aprobar a ${solicitud.fullName ?? 'esta persona'} como ${etiquetaDeRol(rolElegido(solicitud.id))}`}
+                accessibilityLabel={`Aprobar a ${solicitud.fullName ?? 'esta persona'} como ${rolElegido(solicitud.id).nombre}`}
                 estilo={estilos.boton}
               />
               <BotonPeligro
