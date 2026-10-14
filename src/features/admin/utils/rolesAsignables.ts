@@ -1,4 +1,5 @@
 import type { RolAsignable } from '../api/adminApi';
+import { ETIQUETA_SOPORTE_TI, ROLES_SOPORTE_TI } from '../../soporte-ti/utils/rolSoporteTi';
 
 /**
  * Los seis roles que se pueden dar, con el nombre que usa la gente y no el del enum, en el orden en que se ofrecen.
@@ -16,8 +17,12 @@ export const ROLES_ASIGNABLES: ReadonlyArray<{ clave: RolAsignable; etiqueta: st
   { clave: 'ALCHEMIST', etiqueta: 'Alquimista' },
 ];
 
-/* `Map<string, …>`: el servidor puede mandar un rol que esta versión no conoce, y tiene que poder buscarse. */
-const ETIQUETA = new Map<string, string>(ROLES_ASIGNABLES.map(r => [r.clave as string, r.etiqueta]));
+/* `Map<string, …>`: el servidor puede mandar un rol que esta versión no conoce, y tiene que poder buscarse.
+   Soporte TI (spec 002) tiene nombre pero NO es asignable: se nombra acá y no está en `ROLES_ASIGNABLES`. */
+const ETIQUETA = new Map<string, string>([
+  ...ROLES_ASIGNABLES.map(r => [r.clave as string, r.etiqueta] as [string, string]),
+  ...ROLES_SOPORTE_TI.map(r => [r, ETIQUETA_SOPORTE_TI] as [string, string]),
+]);
 
 /** El nombre de un rol; uno desconocido se muestra tal cual llega (mejor eso que inventarle un nombre). */
 export function etiquetaDeRol(rol: string): string {

@@ -6,9 +6,11 @@ appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml
 - runFlow: ../comun/abrir-cuerpo.yaml
+# Centrada: abajo a la derecha, el botón «Subir» queda debajo del botón flotante de SER y el toque abre su chat.
 - scrollUntilVisible:
     element: "Subir: GIMNASIO"
     direction: DOWN
+    centerElement: true
 - assertVisible:
     text: "Opcional"
     above: "Subir: GIMNASIO"

@@ -31,6 +31,9 @@ import { MensajeBurbuja } from '../components/MensajeBurbuja';
 import { FenixDeSerQuieto } from '../../fenix/components/FenixDeSerQuieto';
 import { AGENTES, nombreVisible } from '../data/agentes';
 import type { AgenteRenasia, PedidoDeFotoUI } from '../types/renasia.types';
+import { AvisoDeMantenimiento } from '../../plataforma/components/AvisoDeMantenimiento';
+import { useFuncionalidad } from '../../plataforma/estado/useFuncionalidad';
+import { CLAVES } from '../../plataforma/utils/clavesDeLaApp';
 
 export interface RenasiaPanelProps {
   /**
@@ -84,6 +87,9 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
     cancelarPropuesta,
     cambiarPedidoDeFoto,
   } = useRenasiaChat({ agent, courseId: contexto?.cursoId, ambito: contexto?.ambito });
+  /* Spec 002: con el chat de SER apagado por Soporte TI (o SER entera, o el circuito de la IA abierto), el panel se
+     abre igual y en lugar de la conversación muestra el aviso. No se pide el historial: el servidor respondería 503. */
+  const chatDeSer = useFuncionalidad(CLAVES.iaChat);
 
   const [texto, setTexto] = useState('');
   // Dictado por voz (plan de IA v2.1 §3.5): lo dictado se suma al campo y la persona lo revisa
@@ -119,7 +125,8 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
   const scrollRef = useRef<ScrollView>(null);
 
   /* Un solo fénix en el panel: el grande de la bienvenida mientras no hay mensajes, y el del encabezado después. */
-  const sinConversacion = !cargandoHistorial && !errorHistorial && mensajes.length === 0;
+  /* Con el aviso de mantenimiento no hay fénix grande abajo: el del encabezado se queda. */
+  const sinConversacion = chatDeSer.prendida && !cargandoHistorial && !errorHistorial && mensajes.length === 0;
 
   // Soporte para gestos nativos de Android / Xiaomi: deslizar desde el borde (o el botón físico
   // de retroceso) cierra el panel en vez de dejar que el sistema navegue por debajo de él.
@@ -129,12 +136,13 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
   }, visible);
 
   useEffect(() => {
-    if (visible) {
+    if (visible && chatDeSer.prendida) {
       void cargarHistorialInicial();
     }
-    // Solo al abrir: no queremos recargar el historial completo en cada re-render del panel.
+    // Solo al abrir (o cuando SER vuelve de mantenimiento con el panel abierto): no queremos recargar el historial
+    // completo en cada re-render del panel.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible]);
+  }, [visible, chatDeSer.prendida]);
 
   const handleEnviar = () => {
     const paraEnviar = texto;
@@ -186,160 +194,177 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
           encoge—, y `insets.top` compensa que el alto se mide contra el SafeAreaView mientras que
           el teclado se reporta en coordenadas de pantalla. Mismo arreglo que el chat de Comunidad.
         */}
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior="padding"
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : insets.top}
-        >
-          <ScrollView
-            ref={scrollRef}
+        {chatDeSer.prendida ? (
+          <KeyboardAvoidingView
             style={{ flex: 1 }}
-            contentContainerStyle={[
-              styles.scrollContent,
-              {
-                flexGrow: 1,
-                paddingBottom: 36,
-                paddingHorizontal: horizontalPadding,
-                maxWidth: contentMaxWidth,
-                alignSelf: isTablet ? 'center' : 'stretch',
-                width: isTablet ? '100%' : undefined,
-              },
-            ]}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-            onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
+            behavior="padding"
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : insets.top}
           >
-            {cargandoHistorial ? (
-              <View style={styles.centro}>
-                <ActivityIndicator color={c.goldInk} />
-              </View>
-            ) : errorHistorial ? (
-              <View style={styles.centro}>
-                <Text style={[t.body, { color: c.textSoft, textAlign: 'center', fontSize: 14.5 }]}>
-                  {errorHistorial}
-                </Text>
+            <ScrollView
+              ref={scrollRef}
+              style={{ flex: 1 }}
+              contentContainerStyle={[
+                styles.scrollContent,
+                {
+                  flexGrow: 1,
+                  paddingBottom: 36,
+                  paddingHorizontal: horizontalPadding,
+                  maxWidth: contentMaxWidth,
+                  alignSelf: isTablet ? 'center' : 'stretch',
+                  width: isTablet ? '100%' : undefined,
+                },
+              ]}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
+            >
+              {cargandoHistorial ? (
+                <View style={styles.centro}>
+                  <ActivityIndicator color={c.goldInk} />
+                </View>
+              ) : errorHistorial ? (
+                <View style={styles.centro}>
+                  <Text style={[t.body, { color: c.textSoft, textAlign: 'center', fontSize: 14.5 }]}>
+                    {errorHistorial}
+                  </Text>
+                  <Pressable
+                    onPress={() => void cargarHistorialInicial()}
+                    accessibilityRole="button"
+                    style={[styles.reintentarHistorialBtn, { borderColor: c.gold }]}
+                  >
+                    <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>Reintentar</Text>
+                  </Pressable>
+                </View>
+              ) : mensajes.length === 0 ? (
+                <View style={styles.centro}>
+                  <FenixDeSerQuieto size={TAMANO_FENIX_BIENVENIDA} />
+                  <Text style={[t.cardTitle, { color: c.textStrong, textAlign: 'center', marginTop: 14 }]}>
+                    {perfil.vacioTitulo}
+                  </Text>
+                  <Text
+                    style={[
+                      t.body,
+                      { color: c.textSoft, textAlign: 'center', marginTop: 8, fontSize: 14.5, lineHeight: 21 },
+                    ]}
+                  >
+                    {perfil.vacioParrafo}
+                  </Text>
+                </View>
+              ) : (
+                <>
+                  {hayMasAntiguos && (
+                    <Pressable
+                      onPress={() => void cargarMasAntiguos()}
+                      disabled={cargandoMasAntiguos}
+                      accessibilityRole="button"
+                      style={styles.cargarMasBtn}
+                    >
+                      {cargandoMasAntiguos ? (
+                        <ActivityIndicator size="small" color={c.goldInk} />
+                      ) : (
+                        <Text style={[t.small, { color: c.goldInk, fontSize: 14, fontFamily: 'Jost_700Bold' }]}>
+                          Ver mensajes anteriores
+                        </Text>
+                      )}
+                    </Pressable>
+                  )}
+                  {mensajes.map(m => (
+                    <MensajeBurbuja
+                      key={m.id}
+                      mensaje={m}
+                      nombreAsistente={nombre}
+                      onReintentar={reintentarMensaje}
+                      onConfirmarPropuesta={confirmarPropuesta}
+                      onCancelarPropuesta={cancelarPropuesta}
+                      onTomarFoto={pedido => void tomarFoto(pedido)}
+                    />
+                  ))}
+                </>
+              )}
+            </ScrollView>
+
+            {dictado.error ? (
+              <Text
+                style={[t.small, { color: c.danger, fontSize: 12.5, paddingHorizontal: horizontalPadding, paddingTop: 6 }]}
+              >
+                {dictado.error}
+              </Text>
+            ) : null}
+
+            {/* Input */}
+            <View
+              style={[styles.inputBar, { borderTopColor: c.divider, paddingHorizontal: horizontalPadding }]}
+            >
+              {dictado.disponible && (
                 <Pressable
-                  onPress={() => void cargarHistorialInicial()}
+                  onPress={dictado.escuchando ? dictado.detener : dictado.empezar}
+                  disabled={enviando}
                   accessibilityRole="button"
-                  style={[styles.reintentarHistorialBtn, { borderColor: c.gold }]}
-                >
-                  <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>Reintentar</Text>
-                </Pressable>
-              </View>
-            ) : mensajes.length === 0 ? (
-              <View style={styles.centro}>
-                <FenixDeSerQuieto size={TAMANO_FENIX_BIENVENIDA} />
-                <Text style={[t.cardTitle, { color: c.textStrong, textAlign: 'center', marginTop: 14 }]}>
-                  {perfil.vacioTitulo}
-                </Text>
-                <Text
+                  accessibilityLabel={dictado.escuchando ? 'Dejar de dictar' : 'Dictar por voz'}
                   style={[
-                    t.body,
-                    { color: c.textSoft, textAlign: 'center', marginTop: 8, fontSize: 14.5, lineHeight: 21 },
+                    styles.enviarBtn,
+                    {
+                      backgroundColor: dictado.escuchando ? c.danger : c.cardBgAlt,
+                      borderWidth: 1,
+                      borderColor: dictado.escuchando ? c.danger : c.border,
+                      opacity: enviando ? 0.5 : 1,
+                    },
                   ]}
                 >
-                  {perfil.vacioParrafo}
-                </Text>
-              </View>
-            ) : (
-              <>
-                {hayMasAntiguos && (
-                  <Pressable
-                    onPress={() => void cargarMasAntiguos()}
-                    disabled={cargandoMasAntiguos}
-                    accessibilityRole="button"
-                    style={styles.cargarMasBtn}
-                  >
-                    {cargandoMasAntiguos ? (
-                      <ActivityIndicator size="small" color={c.goldInk} />
-                    ) : (
-                      <Text style={[t.small, { color: c.goldInk, fontSize: 14, fontFamily: 'Jost_700Bold' }]}>
-                        Ver mensajes anteriores
-                      </Text>
-                    )}
-                  </Pressable>
-                )}
-                {mensajes.map(m => (
-                  <MensajeBurbuja
-                    key={m.id}
-                    mensaje={m}
-                    nombreAsistente={nombre}
-                    onReintentar={reintentarMensaje}
-                    onConfirmarPropuesta={confirmarPropuesta}
-                    onCancelarPropuesta={cancelarPropuesta}
-                    onTomarFoto={pedido => void tomarFoto(pedido)}
-                  />
-                ))}
-              </>
-            )}
-          </ScrollView>
-
-          {dictado.error ? (
-            <Text
-              style={[t.small, { color: c.danger, fontSize: 12.5, paddingHorizontal: horizontalPadding, paddingTop: 6 }]}
-            >
-              {dictado.error}
-            </Text>
-          ) : null}
-
-          {/* Input */}
-          <View
-            style={[styles.inputBar, { borderTopColor: c.divider, paddingHorizontal: horizontalPadding }]}
-          >
-            {dictado.disponible && (
+                  <Icon name="mic" size={20} color={dictado.escuchando ? '#FFFFFF' : c.goldInk} />
+                </Pressable>
+              )}
+              <TextInput
+                value={dictado.escuchando && dictado.parcial ? unirDictado(texto, dictado.parcial) : texto}
+                onChangeText={setTexto}
+                placeholder={dictado.escuchando ? 'Te escucho…' : `Escríbele a ${nombre}…`}
+                placeholderTextColor={c.textSoft}
+                style={[
+                  styles.input,
+                  { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.text, fontSize: rs(14.5) },
+                ]}
+                multiline
+                // Un renglón en la web, como en el teléfono y como el chat de Comunidad (`propsDelCampoDelChat`).
+                {...propsDelCampoDelChat()}
+                editable={!enviando && !dictado.escuchando}
+                maxLength={LARGO_MAXIMO_PREGUNTA}
+                onSubmitEditing={handleEnviar}
+                blurOnSubmit={false}
+              />
               <Pressable
-                onPress={dictado.escuchando ? dictado.detener : dictado.empezar}
-                disabled={enviando}
+                onPress={handleEnviar}
+                disabled={enviando || !texto.trim()}
                 accessibilityRole="button"
-                accessibilityLabel={dictado.escuchando ? 'Dejar de dictar' : 'Dictar por voz'}
+                accessibilityLabel="Enviar pregunta"
                 style={[
                   styles.enviarBtn,
-                  {
-                    backgroundColor: dictado.escuchando ? c.danger : c.cardBgAlt,
-                    borderWidth: 1,
-                    borderColor: dictado.escuchando ? c.danger : c.border,
-                    opacity: enviando ? 0.5 : 1,
-                  },
+                  { backgroundColor: c.gold, opacity: enviando || !texto.trim() ? 0.5 : 1 },
                 ]}
               >
-                <Icon name="mic" size={20} color={dictado.escuchando ? '#FFFFFF' : c.goldInk} />
+                {enviando ? (
+                  <ActivityIndicator size="small" color={c.onGold} />
+                ) : (
+                  <Icon name="send" size={18} color={c.onGold} />
+                )}
               </Pressable>
-            )}
-            <TextInput
-              value={dictado.escuchando && dictado.parcial ? unirDictado(texto, dictado.parcial) : texto}
-              onChangeText={setTexto}
-              placeholder={dictado.escuchando ? 'Te escucho…' : `Escríbele a ${nombre}…`}
-              placeholderTextColor={c.textSoft}
-              style={[
-                styles.input,
-                { borderColor: c.border, backgroundColor: c.cardBgAlt, color: c.text, fontSize: rs(14.5) },
-              ]}
-              multiline
-              // Un renglón en la web, como en el teléfono y como el chat de Comunidad (`propsDelCampoDelChat`).
-              {...propsDelCampoDelChat()}
-              editable={!enviando && !dictado.escuchando}
-              maxLength={LARGO_MAXIMO_PREGUNTA}
-              onSubmitEditing={handleEnviar}
-              blurOnSubmit={false}
-            />
-            <Pressable
-              onPress={handleEnviar}
-              disabled={enviando || !texto.trim()}
-              accessibilityRole="button"
-              accessibilityLabel="Enviar pregunta"
-              style={[
-                styles.enviarBtn,
-                { backgroundColor: c.gold, opacity: enviando || !texto.trim() ? 0.5 : 1 },
-              ]}
-            >
-              {enviando ? (
-                <ActivityIndicator size="small" color={c.onGold} />
-              ) : (
-                <Icon name="send" size={18} color={c.onGold} />
-              )}
-            </Pressable>
-          </View>
-        </KeyboardAvoidingView>
+            </View>
+          </KeyboardAvoidingView>
+        ) : (
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{
+              flexGrow: 1,
+              paddingTop: 16,
+              paddingBottom: 36,
+              paddingHorizontal: horizontalPadding,
+              maxWidth: contentMaxWidth,
+              alignSelf: isTablet ? 'center' : 'stretch',
+              width: isTablet ? '100%' : undefined,
+            }}
+          >
+            <AvisoDeMantenimiento aviso={chatDeSer.aviso} />
+          </ScrollView>
+        )}
       </SafeAreaView>
 
       <RegistroConFotoModal {...registroConFoto.modal} />

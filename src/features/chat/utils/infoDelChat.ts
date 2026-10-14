@@ -104,7 +104,7 @@ export type MentorDelGrupo = {
  * /conversations/{id}/participants`); antes eran solo «Mentor» y «Aprendiz», porque la lista era de un
  * grupo y salía de dónde venía cada uno.
  */
-export type RolEnElGrupo = 'Mentor' | 'Guía de aprendiz' | 'Aprendiz' | 'Admin' | 'Alquimista';
+export type RolEnElGrupo = 'Mentor' | 'Guía de aprendiz' | 'Aprendiz' | 'Admin' | 'Alquimista' | 'Soporte TI';
 
 export type IntegranteDeLaInfo = {
   /** Clave de la fila: `'mentor'` o el id del aprendiz. */
@@ -239,6 +239,9 @@ const MARCA_POR_ROL: Record<string, RolEnElGrupo> = {
   APRENDIZ: 'Aprendiz',
   ADMIN: 'Admin',
   ALQUIMISTA: 'Alquimista',
+  /* Spec 002: la cuenta Soporte TI (en la base, `SOPORTE_TI`). */
+  SOPORTE_TI: 'Soporte TI',
+  IT_SUPPORT: 'Soporte TI',
 };
 
 /**

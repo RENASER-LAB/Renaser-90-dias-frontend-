@@ -1,0 +1,14 @@
+# 32 — Interruptores (spec 002): con `habitos` apagado para Aprendiz, Training muestra el aviso en vez de las dimensiones.
+# Precondición (QA por la consola): `habitos` apagado para TRAINEE con el aviso «Training vuelve en un rato».
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "TRAINING"
+- extendedWaitUntil:
+    visible:
+      id: "aviso-de-mantenimiento"
+    timeout: 30000
+- assertVisible: "En mantenimiento\\. Training vuelve en un rato.*"
+- assertNotVisible: "Cuerpo: .*"
+- takeScreenshot: 32a-training-en-mantenimiento

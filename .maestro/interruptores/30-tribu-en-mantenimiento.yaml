@@ -1,0 +1,17 @@
+# 30 — Interruptores (spec 002): con `chat` apagado para Aprendiz, Comunidad → Tribu muestra el aviso de mantenimiento con
+# el texto que escribió Soporte TI, en vez de la lista de chats.
+# Precondición (la pone el QA por la consola antes de correrlo): `chat` apagado para TRAINEE con el aviso
+# «Chat en pausa por una prueba E2E».
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "COMUNIDAD"
+- tapOn: "Tribu"
+- extendedWaitUntil:
+    visible:
+      id: "aviso-de-mantenimiento"
+    timeout: 30000
+- assertVisible: "En mantenimiento\\. Chat en pausa por una prueba E2E.*"
+- assertNotVisible: "Formación Renaser Global"
+- takeScreenshot: 30a-tribu-en-mantenimiento

@@ -83,6 +83,9 @@ const ETIQUETA_ROL: Record<string, string> = {
   MENTOR_LEAD: 'Líder de Mentores',
   ADMIN: 'Administrador',
   ALCHEMIST: 'Alquimista',
+  /* Spec 002: el rol Soporte TI, en los dos idiomas (API y base). */
+  IT_SUPPORT: 'Soporte TI',
+  SOPORTE_TI: 'Soporte TI',
 };
 
 function traducirRol(role: string): string {

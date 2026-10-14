@@ -54,7 +54,24 @@ export class ApiError extends Error {
   get esDeRed(): boolean {
     return this.status === 0;
   }
+
+  /**
+   * El `codigo` que el backend suma a algunos errores (`FUNCIONALIDAD_APAGADA`, `CONSOLA_BLOQUEADA`,
+   * `REAUTENTICACION_REQUERIDA`; spec 002). `null` si el cuerpo no lo trae.
+   */
+  get codigo(): string | null {
+    const cuerpo = this.body as { codigo?: unknown } | null;
+    return cuerpo && typeof cuerpo === 'object' && typeof cuerpo.codigo === 'string' ? cuerpo.codigo : null;
+  }
+
+  /** Un interruptor de Soporte TI apagó lo que se pidió (503 `FUNCIONALIDAD_APAGADA`, spec 002). El aviso es `message`. */
+  get esFuncionalidadApagada(): boolean {
+    return this.status === 503 && this.codigo === CODIGO_FUNCIONALIDAD_APAGADA;
+  }
 }
+
+/** El código del 503 de un interruptor apagado (contrato de la spec 002, §2). */
+export const CODIGO_FUNCIONALIDAD_APAGADA = 'FUNCIONALIDAD_APAGADA';
 
 let tokenSesion: string | null = null;
 
@@ -96,6 +113,52 @@ export function notificarSesionVencida(): void {
   yaSeAvisoElVencimiento = true;
   setTokenSesion(null);
   oyentesSesionVencida.forEach(oyente => oyente());
+}
+
+/**
+ * Quién quiere enterarse de que el servidor respondió «esto está apagado» (503 `FUNCIONALIDAD_APAGADA`,
+ * spec 002): el estado de los interruptores (`features/plataforma`), que muestra el aviso y relee.
+ * Una lista, por lo mismo que la de la sesión vencida.
+ */
+export type FuncionalidadApagadaRecibida = { clave: string | null; aviso: string | null };
+type OyenteFuncionalidadApagada = (apagada: FuncionalidadApagadaRecibida) => void;
+const oyentesFuncionalidadApagada = new Set<OyenteFuncionalidadApagada>();
+
+export function suscribirFuncionalidadApagada(oyente: OyenteFuncionalidadApagada): () => void {
+  oyentesFuncionalidadApagada.add(oyente);
+  return () => {
+    oyentesFuncionalidadApagada.delete(oyente);
+  };
+}
+
+/**
+ * Avisa que el servidor rechazó un pedido porque su funcionalidad está apagada. Lo llama `apiFetch` solo; es
+ * público porque el chat de SER no pasa por `apiFetch` (lee SSE a mano, `renasia/api/renasiaStream.ts`).
+ * Un oyente que falla no impide que se entere el resto.
+ */
+export function notificarFuncionalidadApagada(cuerpo: unknown): void {
+  const json = (cuerpo && typeof cuerpo === 'object' ? cuerpo : {}) as { funcionalidad?: unknown; message?: unknown };
+  const apagada: FuncionalidadApagadaRecibida = {
+    clave: typeof json.funcionalidad === 'string' && json.funcionalidad ? json.funcionalidad : null,
+    aviso: typeof json.message === 'string' && json.message.trim() ? json.message : null,
+  };
+  oyentesFuncionalidadApagada.forEach(oyente => {
+    try {
+      oyente(apagada);
+    } catch {
+      // Un oyente roto no tapa a los demás ni al error del pedido.
+    }
+  });
+}
+
+/** ¿Este cuerpo de error es el de un interruptor apagado? */
+export function esCuerpoDeFuncionalidadApagada(status: number, cuerpo: unknown): boolean {
+  return (
+    status === 503 &&
+    !!cuerpo &&
+    typeof cuerpo === 'object' &&
+    (cuerpo as { codigo?: unknown }).codigo === CODIGO_FUNCIONALIDAD_APAGADA
+  );
 }
 
 export function getTokenSesion(): string | null {
@@ -140,6 +203,25 @@ type OpcionesPeticion = {
   conSesion?: boolean;
   /** Límite opcional para lecturas cortas; las subidas y operaciones largas conservan su espera. */
   timeoutMs?: number;
+  /**
+   * Cabeceras extra (spec 002: `If-None-Match` de los interruptores, `X-Consola-Token` y `X-Reautenticacion` de la
+   * consola Soporte TI). No pisan `Accept`, `Content-Type` ni la sesión: esas las pone `apiFetch`.
+   */
+  cabeceras?: Record<string, string>;
+  /**
+   * Un 401 de este pedido NO es la sesión vencida sino una contraseña mal, aunque el pedido lleve sesión: la consola
+   * Soporte TI pide la contraseña de nuevo (`POST /soporte-ti/desbloqueo`, spec 002) y responde 401 si no es. Sin
+   * esto, equivocarse de contraseña cerraba la sesión entera.
+   */
+  el401EsContrasena?: boolean;
+};
+
+/** Lo que devuelve {@link apiFetchConRespuesta}: el código, el cuerpo (si hubo) y las cabeceras. */
+export type RespuestaConCabeceras<T> = {
+  status: number;
+  /** `undefined` en un 204 o un 304. */
+  datos: T | undefined;
+  cabecera: (nombre: string) => string | null;
 };
 
 /**
@@ -172,9 +254,25 @@ function mensajeSinCuerpoLegible(status: number): string {
 }
 
 export async function apiFetch<T>(ruta: string, opciones: OpcionesPeticion = {}): Promise<T> {
-  const { method = 'GET', body, conSesion = true, timeoutMs } = opciones;
+  return (await pedir<T>(ruta, opciones, false)).datos as T;
+}
 
-  const headers: Record<string, string> = { Accept: 'application/json' };
+/**
+ * Como {@link apiFetch}, pero deja ver el código y las cabeceras de la respuesta, y toma un **304** como respuesta
+ * válida (sin cuerpo) en vez de como error. Existe para la lectura condicional de los interruptores
+ * (`ETag` / `If-None-Match`, spec 002); el resto de la app sigue con `apiFetch`.
+ */
+export async function apiFetchConRespuesta<T>(
+  ruta: string,
+  opciones: OpcionesPeticion = {},
+): Promise<RespuestaConCabeceras<T>> {
+  return pedir<T>(ruta, opciones, true);
+}
+
+async function pedir<T>(ruta: string, opciones: OpcionesPeticion, aceptar304: boolean): Promise<RespuestaConCabeceras<T>> {
+  const { method = 'GET', body, conSesion = true, timeoutMs, cabeceras, el401EsContrasena = false } = opciones;
+
+  const headers: Record<string, string> = { ...(cabeceras ?? {}), Accept: 'application/json' };
   const esFormulario = typeof FormData !== 'undefined' && body instanceof FormData;
   if (body !== undefined && !esFormulario) {
     headers['Content-Type'] = 'application/json';
@@ -217,15 +315,26 @@ export async function apiFetch<T>(ruta: string, opciones: OpcionesPeticion = {})
       setTokenSesion(tokenNuevo);
     }
 
+    const cabecera = (nombre: string) => respuesta.headers.get(nombre);
+
+    if (aceptar304 && respuesta.status === 304) {
+      return { status: 304, datos: undefined, cabecera };
+    }
+
     if (!respuesta.ok) {
       const { mensaje, cuerpo } = await leerMensajeDeError(respuesta);
+      // Un interruptor de Soporte TI apagó esto (spec 002): el estado de la app se entera y relee. El error sigue
+      // su camino: quien pidió muestra `message`, que es el aviso escrito por Soporte TI.
+      if (esCuerpoDeFuncionalidadApagada(respuesta.status, cuerpo)) {
+        notificarFuncionalidadApagada(cuerpo);
+      }
       // Un 401 en una request que mandó sesión no es "credenciales mal": es el token vencido. Se
       // cierra en UN lugar para que la app mande al login, en vez de que cada pantalla falle por su
       // cuenta y la persona concluya que la app se rompió.
       //
       // Deliberadamente NO incluye al 403: ahí el backend también responde "cuenta suspendida", y
       // tratarlo como vencimiento mandaría a loguearse una y otra vez a quien no puede entrar.
-      const sesionVencida = respuesta.status === 401 && tokenEnviado !== null;
+      const sesionVencida = respuesta.status === 401 && tokenEnviado !== null && !el401EsContrasena;
       if (sesionVencida) {
         notificarSesionVencida();
       }
@@ -233,11 +342,11 @@ export async function apiFetch<T>(ruta: string, opciones: OpcionesPeticion = {})
     }
 
     if (respuesta.status === 204) {
-      return undefined as T;
+      return { status: 204, datos: undefined, cabecera };
     }
 
     const texto = await respuesta.text();
-    return (texto ? JSON.parse(texto) : undefined) as T;
+    return { status: respuesta.status, datos: (texto ? JSON.parse(texto) : undefined) as T, cabecera };
   } catch (error) {
     if (controlador?.signal.aborted) {
       throw new ApiError(0, 'El servidor tardó en responder. Intenta de nuevo.', error);

@@ -20,9 +20,11 @@ const PANTALLAS: Record<string, number> = {
   'src/screens/HoyScreen.tsx': 1,
   // Plan: la vista principal y Objetivos (la sub-vista «Hábitos 7 días» se borró el 2026-10-05).
   'src/screens/PlanScreen.tsx': 2,
-  'src/screens/TrainingScreen.tsx': 1,
-  // Muro, Testimonios/Ranking, Classroom (catálogo, curso y lección) y Tribu.
-  'src/screens/ComunidadScreen.tsx': 6,
+  // Training y, con «Hábitos» apagado por Soporte TI, su aviso de mantenimiento (spec 002).
+  'src/screens/TrainingScreen.tsx': 2,
+  // Muro, Testimonios/Ranking, Classroom (catálogo, curso y lección) y Tribu; y el aviso de mantenimiento que
+  // reemplaza al Muro, a Eventos y a Cursos cuando Soporte TI los apaga (spec 002).
+  'src/screens/ComunidadScreen.tsx': 9,
   'src/features/eventos/components/SeccionEventos.tsx': 1,
   'src/screens/YoScreen.tsx': 11,
   // Administración

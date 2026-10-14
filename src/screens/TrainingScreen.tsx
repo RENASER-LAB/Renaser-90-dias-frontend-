@@ -75,6 +75,9 @@ import { useRenombreLocal } from '../features/habits/hooks/useRenombreDeHabito';
 import { esRenombrable, tituloVisible } from '../features/habits/utils/renombreDeHabito';
 import { useAuth } from '../features/auth/context/AuthContext';
 import { useOcultarBarraAlDesplazar } from '../navigation/barraAlDesplazar/BarraInferior';
+import { SeccionEnMantenimiento } from '../features/plataforma/components/SeccionEnMantenimiento';
+import { useAlVolverAPrenderse, useFuncionalidad } from '../features/plataforma/estado/useFuncionalidad';
+import { CLAVES } from '../features/plataforma/utils/clavesDeLaApp';
 
 /**
  * Habitos con FLUJO PROPIO: no se cierran con el checkbox ni subiendo un archivo. Se ramifica por
@@ -233,6 +236,8 @@ const DIMENSIONES_CONFIG: DimensionConfig[] = [
 
 export default function TrainingScreen() {
   const barraAlDesplazar = useOcultarBarraAlDesplazar();
+  /* Spec 002: el interruptor «Hábitos». Al volver de mantenimiento se relee lo que falló mientras estaba apagado. */
+  const habitosPrendidos = useFuncionalidad(CLAVES.habitos);
   const { c, t } = useTheme();
   const { rs, isTablet, horizontalPadding, contentMaxWidth } = useResponsive();
   const medallionSize = rs(42);
@@ -256,6 +261,7 @@ export default function TrainingScreen() {
     error: errorBackend,
     recargar: recargarEntrenamiento,
   } = useTraining();
+  useAlVolverAPrenderse(CLAVES.habitos, () => void recargarEntrenamiento());
   // Solo en desarrollo: pedidos al montar y tiempo hasta tener datos (V-1, 26/09/2026).
   useMedicionDePantalla('Training', !cargandoBackend);
   /**
@@ -890,6 +896,23 @@ export default function TrainingScreen() {
    */
   const GUIAS_DE_LA_DIMENSION = 0;
   const secciones = seccionesDeLaDimension(GUIAS_DE_LA_DIMENSION);
+
+  /* Spec 002: con «Hábitos» apagado por Soporte TI, el aviso de mantenimiento ocupa la pestaña (la cabecera queda). */
+  if (!habitosPrendidos.prendida) {
+    return (
+      <SafeAreaView edges={BORDES_DE_UNA_PESTANA} style={{ flex: 1, backgroundColor: c.bg }}>
+        <ScreenHeader title="TRAINING" />
+        <SeccionEnMantenimiento
+          {...barraAlDesplazar}
+          aviso={habitosPrendidos.aviso}
+          contentContainerStyle={[
+            styles.content,
+            { paddingHorizontal: horizontalPadding, maxWidth: contentMaxWidth, alignSelf: isTablet ? 'center' : 'stretch', width: isTablet ? '100%' : undefined },
+          ]}
+        />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView edges={BORDES_DE_UNA_PESTANA} style={{ flex: 1, backgroundColor: c.bg }}>

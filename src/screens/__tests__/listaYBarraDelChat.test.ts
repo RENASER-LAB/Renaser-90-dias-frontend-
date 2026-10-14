@@ -61,8 +61,9 @@ describe('la barra de escribir del chat', () => {
     const texto = fs.readFileSync(COMUNIDAD, 'utf-8');
     expect(texto).not.toMatch(/STICKERS_RENASER\[0\]\.imagen/);
     expect(texto).toMatch(/<Icon name="smile" size=\{24\}/);
-    expect(texto).toMatch(/onPress=\{\(\) => handleAdjuntarFoto\('galeria'\)\}/);
-    expect(texto).toMatch(/onPress=\{\(\) => handleAdjuntarFoto\('camara'\)\}/);
+    // Spec 002: con «Fotos y stickers» apagado por Soporte TI, el toque avisa en vez de abrir la galería o la cámara.
+    expect(texto).toMatch(/onPress=\{\(\) => avisarSiEstaApagada\(fotosDelChat\) \|\| handleAdjuntarFoto\('galeria'\)\}/);
+    expect(texto).toMatch(/onPress=\{\(\) => avisarSiEstaApagada\(fotosDelChat\) \|\| handleAdjuntarFoto\('camara'\)\}/);
     expect(texto).toMatch(/accessibilityLabel="Tomar una foto con la cámara"/);
     expect(texto).not.toMatch(/Alert\.alert\('Enviar una foto'/);
   });

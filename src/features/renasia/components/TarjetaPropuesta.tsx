@@ -6,6 +6,9 @@ import { useTheme } from '../../../theme/ThemeContext';
 import { useResponsive } from '../../../theme/responsive';
 import type { EstadoPropuestaUI, PropuestaUI } from '../types/renasia.types';
 import { admiteAcciones, estadoVisible } from '../utils/propuestas';
+import { AvisoDeMantenimiento } from '../../plataforma/components/AvisoDeMantenimiento';
+import { useFuncionalidad } from '../../plataforma/estado/useFuncionalidad';
+import { CLAVES } from '../../plataforma/utils/clavesDeLaApp';
 
 /** Los botones en tipo oración a 15, sin el espaciado de versales de `GoldButton`. */
 const TEXTO_DE_BOTON = { fontSize: 15, letterSpacing: 0 } as const;
@@ -49,6 +52,9 @@ export function TarjetaPropuesta({ propuesta, onConfirmar, onCancelar }: Props) 
   const cierre = textoDeCierre(estado, propuesta.mensaje);
   const colorCierre = estado === 'confirmada' ? c.success : estado === 'fallida' ? c.danger : c.textSoft;
   const ocupado = estado === 'confirmando' || estado === 'cancelando';
+  /* Spec 002: con las propuestas apagadas por Soporte TI, en lugar de los botones va el aviso (el servidor igual
+     rechazaría confirmar o cancelar con un 503). */
+  const propuestasDeSer = useFuncionalidad(CLAVES.iaPropuestas);
 
   return (
     <View style={[styles.tarjeta, { borderColor: c.borderStrong, backgroundColor: c.cardBgAlt }]}>
@@ -59,7 +65,11 @@ export function TarjetaPropuesta({ propuesta, onConfirmar, onCancelar }: Props) 
         {propuesta.resumen}
       </Text>
 
-      {(admiteAcciones(estado) || ocupado) && (
+      {admiteAcciones(estado) && !ocupado && !propuestasDeSer.prendida ? (
+        <AvisoDeMantenimiento aviso={propuestasDeSer.aviso} />
+      ) : null}
+
+      {(admiteAcciones(estado) || ocupado) && (propuestasDeSer.prendida || ocupado) && (
         <View style={styles.botones}>
           <GoldButton
             label="Cancelar"

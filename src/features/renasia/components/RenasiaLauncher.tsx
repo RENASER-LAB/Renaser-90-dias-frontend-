@@ -14,6 +14,8 @@ import { useMapaRenacimientoAbierto } from '../../mapa-renacimiento/MapaRenacimi
 import { useHayChatEnPantalla } from '../state/chatEnPantalla';
 import { useBarraInferior } from '../../../navigation/barraAlDesplazar/BarraInferior';
 import { ALTO_TAB_BAR, DIAMETRO, MARGEN_DERECHO, SEPARACION } from './lugarDelLanzador';
+import { useFuncionalidad } from '../../plataforma/estado/useFuncionalidad';
+import { CLAVES } from '../../plataforma/utils/clavesDeLaApp';
 
 /**
  * Botón flotante que abre al ACOMPAÑANTE de los 90 días (`agent: 'COMPANION'`, D-102), más el
@@ -44,6 +46,9 @@ export function RenasiaLauncher() {
   const insets = useSafeAreaInsets();
   const [visible, setVisible] = useState(false);
   const hayChatEnPantalla = useHayChatEnPantalla();
+  /* Spec 002: con el chat de SER apagado el botón sigue (la funcionalidad no desaparece) y el panel abre con el aviso
+     de mantenimiento; el lector de pantalla lo dice antes de tocar. */
+  const chatDeSer = useFuncionalidad(CLAVES.iaChat);
   const { abierto: mapaAbierto } = useMapaRenacimientoAbierto();
   /* «Ocultar la barra al desplazar» (2026-10-02): cuando la barra de pestañas baja, el botón baja
      lo mismo y queda a la misma distancia del borde de abajo, en vez de quedar colgado sobre un
@@ -100,6 +105,7 @@ export function RenasiaLauncher() {
             onPress={() => setVisible(true)}
             accessibilityRole="button"
             accessibilityLabel={`Hablar con ${NOMBRE_ACOMPANANTE}, tu acompañante`}
+            accessibilityHint={chatDeSer.prendida ? undefined : 'En mantenimiento'}
             style={[
               styles.disco,
               { width: DIAMETRO, height: DIAMETRO, borderRadius: DIAMETRO / 2, backgroundColor: c.cardBg, borderColor: c.gold },

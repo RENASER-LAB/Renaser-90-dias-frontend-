@@ -1,23 +1,34 @@
 # 01 — KILÓMETROS DIARIOS (D-226): Training → Cuerpo → «Subir» → foto → «¿Cuántos km recorriste hoy?» → 3,5 → cumplido.
 # Precondición: el aprendiz tiene el hábito en su día de hoy y sin registrar; fotos en local (fotos-local + adb reverse).
+# Lo de días anteriores no importa: el flujo mide cuánto sube el total.
 # cuenta: aprendiz
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml
 - runFlow: ../comun/abrir-cuerpo.yaml
+# Centrada: abajo a la derecha, el botón «Subir» queda debajo del botón flotante de SER y el toque abre su chat.
 - scrollUntilVisible:
     element: "Subir: KILÓMETROS DIARIOS"
     direction: DOWN
+    centerElement: true
 - tapOn: "Subir: KILÓMETROS DIARIOS"
 - runFlow: ../comun/tomar-foto.yaml
 - extendedWaitUntil:
     visible: "¿Cuántos km recorriste hoy?"
     timeout: 15000
-- assertVisible: "Total recorrido: .* km"
+# «Total recorrido» es lo que ya registró en el programa más lo de hoy: con otro día ya registrado no es 3,5. Se lee
+# antes de escribir y se exige que suba exactamente 3,5 (en el QA del 14/10 la cuenta traía 3,5 de ayer: 7 km).
+- copyTextFrom:
+    text: "Total recorrido: .* km"
+- evalScript: ${output.totalAntes = parseFloat(maestro.copiedText.replace(/[^0-9,]/g, '').replace(',', '.')) || 0}
 - tapOn: "¿Cuántos km recorriste hoy?"
 - inputText: "3,5"
 - hideKeyboard
-- assertVisible: "Total recorrido: .*3,5 km"
+- copyTextFrom:
+    text: "Total recorrido: .* km"
+- assertTrue:
+    condition: ${Math.abs(parseFloat(maestro.copiedText.replace(/[^0-9,]/g, '').replace(',', '.')) - (output.totalAntes + 3.5)) < 0.01}
+    label: "El total sube 3,5 km"
 - takeScreenshot: 01a-kilometros-escritos
 - tapOn: "REGISTRAR"
 - runFlow: ../comun/cerrar-aviso-dev.yaml

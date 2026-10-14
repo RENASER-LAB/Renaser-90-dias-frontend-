@@ -1,7 +1,12 @@
 import { fetch as expoFetch } from 'expo/fetch';
 
 import { API_CONFIG } from '../../../config/apiConfig';
-import { getTokenSesion, notificarSesionVencida } from '../../../services/http/apiClient';
+import {
+  esCuerpoDeFuncionalidadApagada,
+  getTokenSesion,
+  notificarFuncionalidadApagada,
+  notificarSesionVencida,
+} from '../../../services/http/apiClient';
 import { destinoDeEvidencia } from '../../habits/utils/destinoDeFoto';
 import { nombreVisible } from '../data/agentes';
 import type {
@@ -100,6 +105,9 @@ async function leerMensajeDeError(respuesta: Awaited<ReturnType<typeof expoFetch
   if (!texto) return `Error ${respuesta.status}`;
   try {
     const json = JSON.parse(texto);
+    // Spec 002: SER apagada por Soporte TI (o por el circuito de la IA) responde 503 FUNCIONALIDAD_APAGADA antes de
+    // abrir el stream. Como este pedido no pasa por `apiFetch`, el estado de los interruptores se avisa acá.
+    if (esCuerpoDeFuncionalidadApagada(respuesta.status, json)) notificarFuncionalidadApagada(json);
     return json?.message || `Error ${respuesta.status}`;
   } catch {
     return texto;
