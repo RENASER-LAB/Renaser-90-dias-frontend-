@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { avisarHabitoCumplido } from '../eventos/habitoCumplido';
 import { apiFetch } from '../../../services/http/apiClient';
 import { validarRespuesta } from './habitsSchemas';
+import { ejecutarEnRegistroVigente } from './registroVigente';
 
 /**
  * Camino GENÉRICO de evidencia de hábitos: los que no tienen flujo propio (Clase Diaria, Post
@@ -69,10 +70,12 @@ export async function solicitarUrlSubidaEvidencia(
   registroId: string,
   tipoContenido: string,
 ): Promise<UrlSubidaEvidencia> {
-  const r = await apiFetch<unknown>(`/api/v1/habit-tracks/${registroId}/evidence/upload-url`, {
-    method: 'POST',
-    body: { tipoContenido },
-  });
+  const r = await ejecutarEnRegistroVigente(registroId, () =>
+    apiFetch<unknown>(`/api/v1/habit-tracks/${registroId}/evidence/upload-url`, {
+      method: 'POST',
+      body: { tipoContenido },
+    }),
+  );
   return validarRespuesta(
     urlSubidaEvidenciaSchema,
     r,
@@ -143,18 +146,20 @@ export async function confirmarEvidencia(
     contenidoTexto?: string | null;
   },
 ): Promise<EvidenciaRegistrada> {
-  const r = await apiFetch<unknown>(`/api/v1/habit-tracks/${registroId}/evidence`, {
-    method: 'POST',
-    body: {
-      tipo: evidencia.tipo,
-      bucket: evidencia.bucket ?? null,
-      rutaStorage: evidencia.rutaStorage ?? null,
-      contenidoTexto: evidencia.contenidoTexto ?? null,
-      timestampExif: null,
-      gpsLat: null,
-      gpsLng: null,
-    },
-  });
+  const r = await ejecutarEnRegistroVigente(registroId, () =>
+    apiFetch<unknown>(`/api/v1/habit-tracks/${registroId}/evidence`, {
+      method: 'POST',
+      body: {
+        tipo: evidencia.tipo,
+        bucket: evidencia.bucket ?? null,
+        rutaStorage: evidencia.rutaStorage ?? null,
+        contenidoTexto: evidencia.contenidoTexto ?? null,
+        timestampExif: null,
+        gpsLat: null,
+        gpsLng: null,
+      },
+    }),
+  );
   return validarRespuesta(evidenciaRegistradaSchema, r, 'POST /api/v1/habit-tracks/{id}/evidence');
 }
 
@@ -210,14 +215,16 @@ export async function completarRegistro(
   respuestaTexto?: string | null,
   valorMedido?: number | null,
 ): Promise<RegistroCompletado> {
-  const r = await apiFetch<unknown>(`/api/v1/habit-tracks/${registroId}/complete`, {
-    method: 'POST',
-    body: {
-      respuestaTexto: respuestaTexto?.trim() ? respuestaTexto.trim() : null,
-      calificacionProductividad: null,
-      ...(valorMedido != null ? { valorMedido } : {}),
-    },
-  });
+  const r = await ejecutarEnRegistroVigente(registroId, () =>
+    apiFetch<unknown>(`/api/v1/habit-tracks/${registroId}/complete`, {
+      method: 'POST',
+      body: {
+        respuestaTexto: respuestaTexto?.trim() ? respuestaTexto.trim() : null,
+        calificacionProductividad: null,
+        ...(valorMedido != null ? { valorMedido } : {}),
+      },
+    }),
+  );
   const completado = validarRespuesta(registroCompletadoSchema, r, 'POST /api/v1/habit-tracks/{id}/complete');
   avisarHabitoCumplido({ registroId, puntosOtorgados: completado.puntosOtorgados });
   return completado;

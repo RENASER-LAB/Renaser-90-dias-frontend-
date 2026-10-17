@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import React from 'react';
-import TestRenderer, { act } from 'react-test-renderer';
+import TestRenderer, { act, type ReactTestRenderer } from 'react-test-renderer';
 
 import type { DatosEntrenamiento } from '../../api/cargarEntrenamiento';
 
@@ -29,6 +29,8 @@ const DATOS: DatosEntrenamiento = {
 };
 
 type Estado = ReturnType<typeof useTraining>;
+const montados: ReactTestRenderer[] = [];
+afterEach(() => { act(() => { montados.splice(0).forEach(raiz => raiz.unmount()); }); });
 
 /** Monta el hook y anota cada estado que la pantalla hubiera dibujado. */
 async function montar() {
@@ -38,7 +40,7 @@ async function montar() {
     return null;
   }
   await act(async () => {
-    TestRenderer.create(React.createElement(Sonda));
+    montados.push(TestRenderer.create(React.createElement(Sonda)));
   });
   return estados;
 }
@@ -93,6 +95,6 @@ describe('useTraining: refresco silencioso', () => {
     mockCargar.mockRejectedValue(new Error('sin red'));
     const estados = await montar();
 
-    expect(estados[estados.length - 1].error).toBe('No pudimos cargar tu entrenamiento');
+    expect(estados[estados.length - 1].error).toBe('No pudimos actualizar tus hábitos. Revisa tu conexión e inténtalo de nuevo.');
   });
 });

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
 import { Alert } from '../components/Alerta';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BORDES_DE_UNA_PESTANA } from '../navigation/bordesDeUnaPestana';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useIsFocused, useNavigation, useRoute } from '@react-navigation/native';
 import { useTheme } from '../theme/ThemeContext';
 import { space } from '../theme/tokens';
 import { useResponsive } from '../theme/responsive';
@@ -40,6 +40,7 @@ import { sellarRocaDiaria } from '../features/objetivos/utils/sellarRocaDiaria';
 import { PlanificarDimensionModal } from '../features/training/components/PlanificarDimensionModal';
 import { completarRegistro, confirmarEvidencia } from '../features/habits/api/evidenciaHabitoApi';
 import { crearCierreSinRepetir } from '../features/habits/utils/cierreDeRegistro';
+import { ejecutarEnRegistroVigente } from '../features/habits/api/registroVigente';
 import { mensajeDeError } from '../services/http/apiClient';
 import { CLAVE_SISTEMA_PASTILLA_RENACER } from '../features/spirit/api/spiritApi';
 import { escucharPropuestaConfirmada } from '../features/renasia/events/avisoPropuestaConfirmada';
@@ -235,6 +236,7 @@ const DIMENSIONES_CONFIG: DimensionConfig[] = [
 // arranca en [] y dibuja esqueleto / error / estado vacío según corresponda.
 
 export default function TrainingScreen() {
+  const trainingActivo = useIsFocused();
   const barraAlDesplazar = useOcultarBarraAlDesplazar();
   /* Spec 002: el interruptor «Hábitos». Al volver de mantenimiento se relee lo que falló mientras estaba apagado. */
   const habitosPrendidos = useFuncionalidad(CLAVES.habitos);
@@ -260,7 +262,7 @@ export default function TrainingScreen() {
     loading: cargandoBackend,
     error: errorBackend,
     recargar: recargarEntrenamiento,
-  } = useTraining();
+  } = useTraining(trainingActivo);
   useAlVolverAPrenderse(CLAVES.habitos, () => void recargarEntrenamiento());
   // Solo en desarrollo: pedidos al montar y tiempo hasta tener datos (V-1, 26/09/2026).
   useMedicionDePantalla('Training', !cargandoBackend);
@@ -316,6 +318,9 @@ export default function TrainingScreen() {
     if (!cargandoBackend && !errorBackend) {
       setHabits(habitsDelBackend);
       setPlanHabits(planHabitsDelBackend);
+    } else {
+      setHabits([]);
+      setPlanHabits([]);
     }
   }, [cargandoBackend, errorBackend, habitsDelBackend, planHabitsDelBackend]);
 
@@ -499,6 +504,8 @@ export default function TrainingScreen() {
     }
   };
   const espiritu = useEspiritu();
+  /** ID elegido al abrir: una recarga nunca debe convertir una entrega de ayer en la de hoy. */
+  const pastillaSolicitada = useRef<string | null>(null);
   /** El dia en curso, o el ya entregado de hoy para poder releer lo que escribio. */
   const diaDePastilla = espiritu.diaEnCurso ?? espiritu.diaEntregadoHoy;
 
@@ -601,7 +608,14 @@ export default function TrainingScreen() {
    * silencioso trae el resto, porque el backend es la unica fuente de verdad.
    */
   const handleEnviarResumen = async (leccionId: string, resumen: string) => {
-    const enviado = await claseDiaria.enviarResumen(leccionId, resumen);
+    if (!habitoClaseDiaria) return;
+    let enviado: boolean;
+    try {
+      enviado = await ejecutarEnRegistroVigente(habitoClaseDiaria.id, () => claseDiaria.enviarResumen(leccionId, resumen));
+    } catch (error) {
+      Alert.alert('No pudimos registrar la clase', mensajeDeError(error, 'Actualiza tus hábitos e inténtalo de nuevo.'));
+      return;
+    }
     if (!enviado) return;
     cerrarClaseDiaria();
     if (habitoClaseDiaria) {
@@ -770,6 +784,7 @@ export default function TrainingScreen() {
     // es editable desde el panel admin, y emparejar por texto haria desaparecer la funcion en
     // silencio el dia que alguien lo renombre.
     if (habit.systemKey === CLAVE_SISTEMA_PASTILLA_RENACER) {
+      pastillaSolicitada.current = habit.id;
       setPastillaVisible(true);
       return;
     }
@@ -830,16 +845,23 @@ export default function TrainingScreen() {
    * Si el envio falla, el modal SIGUE ABIERTO con lo escrito: nada se marca de forma optimista.
    */
   const handleEntregarPastilla = async (dia: number, texto: string) => {
-    const enviado = await espiritu.entregar(dia, texto);
+    const registroId = pastillaSolicitada.current;
+    if (!registroId) return;
+    let enviado: boolean;
+    try {
+      enviado = await ejecutarEnRegistroVigente(registroId, () => espiritu.entregar(dia, texto));
+    } catch (error) {
+      Alert.alert('No pudimos registrar la Pastilla', mensajeDeError(error, 'Actualiza tus hábitos e inténtalo de nuevo.'));
+      return;
+    }
     if (!enviado) return;
     // El borrador ya no representa nada: la respuesta esta en el servidor.
     if (user?.id) {
       await borradorEspiritu.borrar(user.id, dia);
     }
     setPastillaVisible(false);
-    // El track de la Pastilla se ubica por su clave de sistema: el endpoint de Espíritu no
-    // devuelve el id del registro que cerró.
-    const trackPastilla = habits.find(h => h.systemKey === CLAVE_SISTEMA_PASTILLA_RENACER && h.tieneTrackHoy);
+    // Mantiene el ID elegido al abrir; el endpoint de Espíritu no devuelve el ID del hábito.
+    const trackPastilla = habits.find(h => h.id === registroId);
     if (trackPastilla) {
       reflejarCierreConfirmado(trackPastilla.id);
     } else {
@@ -870,7 +892,7 @@ export default function TrainingScreen() {
 
 
   // Filter habits for selected dimension
-  const currentDimensionHabits = selectedDimension
+  const currentDimensionHabits = selectedDimension && !cargandoBackend && !errorBackend
     ? habits.filter(h => h.dimension === selectedDimension.key)
     : [];
 
@@ -1301,7 +1323,23 @@ export default function TrainingScreen() {
 
                   {/* Sin hábitos en esta dimensión: es un estado legítimo (día 0, plan sin
                       generar), no un hueco que haya que tapar con datos de relleno. */}
-                  {currentDimensionHabits.length === 0 && (
+                  {(cargandoBackend || errorBackend) && (
+                    <View style={{ gap: 12 }}>
+                      <Text style={[t.body, { color: c.textSoft }]} accessibilityLiveRegion="polite">
+                        {errorBackend ?? 'Actualizando tus hábitos…'}
+                      </Text>
+                      {errorBackend && (
+                        <Presionable
+                          onPress={() => void recargarEntrenamiento(true)}
+                          accessibilityRole="button"
+                          style={{ minHeight: 48, justifyContent: 'center' }}
+                        >
+                          <Text style={[t.body, { color: c.goldInk }]}>Reintentar</Text>
+                        </Presionable>
+                      )}
+                    </View>
+                  )}
+                  {!cargandoBackend && !errorBackend && currentDimensionHabits.length === 0 && (
                     <View
                       style={{
                         gap: 8,

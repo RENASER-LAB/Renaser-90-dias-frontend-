@@ -54,7 +54,11 @@ jest.mock('react-native-reanimated', () => {
   };
 });
 const mockApiFetch = jest.fn<(...a: unknown[]) => Promise<unknown>>();
-jest.mock('../../../../services/http/apiClient', () => ({ apiFetch: (...a: unknown[]) => mockApiFetch(...a) }));
+jest.mock('../../../../services/http/apiClient', () => ({
+  ...jest.requireActual<typeof import('../../../../services/http/apiClient')>('../../../../services/http/apiClient'),
+  apiFetch: (...a: unknown[]) => mockApiFetch(...a),
+}));
+jest.mock('../../api/habitsApi', () => ({ obtenerTracksDeHoy: async () => [{ id: 'r1', estado: 'PENDIENTE' }] }));
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
