@@ -17,7 +17,7 @@ Spec canónica en el backend: [comportamiento](../../../Renaser-90-dias-backend/
 
 Hace falta publicar el backend y una versión nueva de la app/APK para disponer del cierre preciso. La integración HTTP del bug pasó con PostgreSQL/Redis descartables y reloj controlado; el resultado final de las baterías completas se registra en el enlace de validación.
 
-**Verificación final:** frontend 340 suites y 2.806 pruebas de Jest, TypeScript sin errores y exportación web correcta. Backend `TZ=UTC ./mvnw -B clean verify`: 6.279 unitarias y 406 de integración, cero fallos, errores u omitidas. No se generó APK ni se comprobó cámara nativa en emulador en esta tarea.
+**Verificación de la app integrada con `master`:** 346 suites y 2.874 pruebas de Jest, TypeScript sin errores y exportación web correcta. Los resultados completos del backend y sus límites se conservan en la [validación canónica](../../../Renaser-90-dias-backend/specs/002-habitos-cambio-de-dia/validation.md). No se generó APK ni se comprobó cámara nativa en emulador en esta tarea.
 
 ## Regla confirmada por el dueño
 
