@@ -70,7 +70,7 @@ export function obtenerTracksDeHoy(): Promise<TrackDelDiaApi[]> {
 }
 
 async function pedirTracksDeHoy(): Promise<TrackDelDiaApi[]> {
-  const r = await apiFetch<unknown>('/api/v1/habit-tracks/today');
+  const r = await apiFetch<unknown>('/api/v1/habit-tracks/today', { timeoutMs: 15_000 });
   return validarRespuesta(habitsSchemas.tracksDeHoy, r, 'GET /api/v1/habit-tracks/today');
 }
 

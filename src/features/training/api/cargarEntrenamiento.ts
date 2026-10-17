@@ -1,5 +1,6 @@
 import type { PlanHabit } from '../../../screens/PlanScreen';
 import * as habitsApi from '../../habits/api/habitsApi';
+import { obtenerDiaDeHabitos, type ContextoDelDia } from '../../habits/api/diaDeHabitosApi';
 import { cargarPlanHabitos } from '../../habits/hooks/usePlanHabitos';
 import type { HabitoCatalogoApi, TrackDelDiaApi } from '../../habits/types/habits.types';
 import type { EvidenciaApi, RocaDiariaApi } from '../types/training.types';
@@ -7,6 +8,7 @@ import * as trainingApi from './trainingApi';
 
 /** Todo lo que Training necesita para pintarse, leído en una sola ronda. */
 export type DatosEntrenamiento = {
+  contexto?: ContextoDelDia | null;
   tracks: TrackDelDiaApi[];
   /** Solo para lo que `PlanHabit` no trae: la categoría cruda (BODY/MIND/...) y `systemKey`. */
   catalogo: HabitoCatalogoApi[];
@@ -35,8 +37,8 @@ export type DatosEntrenamiento = {
  */
 export async function cargarEntrenamiento(): Promise<DatosEntrenamiento> {
   const catalogoPedido = habitsApi.obtenerCatalogo();
-  const [tracks, catalogo, planHabits, rocas, evidencias] = await Promise.all([
-    habitsApi.obtenerTracksDeHoy(),
+  const [dia, catalogo, planHabits, rocas, evidencias] = await Promise.all([
+    obtenerDiaDeHabitos(),
     catalogoPedido,
     cargarPlanHabitos(catalogoPedido),
     trainingApi.obtenerRocasDeHoy().catch(e => {
@@ -49,7 +51,8 @@ export async function cargarEntrenamiento(): Promise<DatosEntrenamiento> {
     }),
   ]);
   return {
-    tracks,
+    tracks: dia.tracks,
+    contexto: dia.contexto,
     catalogo,
     planHabits,
     rocas,

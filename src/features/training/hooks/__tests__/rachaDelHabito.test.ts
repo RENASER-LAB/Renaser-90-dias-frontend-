@@ -1,8 +1,8 @@
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import * as fs from 'fs';
 import * as path from 'path';
 import React from 'react';
-import TestRenderer, { act } from 'react-test-renderer';
+import TestRenderer, { act, type ReactTestRenderer } from 'react-test-renderer';
 
 import type { PlanHabit } from '../../../../screens/PlanScreen';
 import type { HabitoCatalogoApi, TrackDelDiaApi } from '../../../habits/types/habits.types';
@@ -18,6 +18,8 @@ jest.mock('../../../../services/http/apiClient', () => ({
 import { useTraining } from '../useTraining';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+const montados: ReactTestRenderer[] = [];
+afterEach(() => { act(() => { montados.splice(0).forEach(raiz => raiz.unmount()); }); });
 
 const catalogo = (id: string, extra: Partial<HabitoCatalogoApi> = {}): HabitoCatalogoApi =>
   ({ id, title: id, category: 'BODY', evidenceRequirement: 'OPTIONAL', systemKey: null, ...extra }) as unknown as HabitoCatalogoApi;
@@ -73,7 +75,7 @@ async function ultimoEstado() {
     return null;
   }
   await act(async () => {
-    TestRenderer.create(React.createElement(Sonda));
+    montados.push(TestRenderer.create(React.createElement(Sonda)));
   });
   return ultimo as unknown as ReturnType<typeof useTraining>;
 }
