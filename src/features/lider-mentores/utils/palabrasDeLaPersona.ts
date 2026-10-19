@@ -170,3 +170,27 @@ export function textoDelFalloDeEvidencia(motivo: 'no_disponible' | 'sin_permiso'
       return { texto: 'No pudimos abrir la evidencia. Vuelve a intentarlo.', reintentar: true };
   }
 }
+
+/**
+ * Por qué no se pudo abrir la publicación del post diario. Se lee en `GET /wall/{id}`, que sirve a su autor, al
+ * liderazgo y al mentor o la guía que acompaña HOY al autor: otra cuenta (o un mentor que ya no lo acompaña) recibe
+ * 403, que se dice con todas sus letras; una publicación borrada u oculta, 404. Repetir no ayuda en ninguno de los dos.
+ */
+export function textoDelFalloDeLaPublicacion(motivo: 'no_disponible' | 'sin_permiso' | 'sin_red' | 'error'): {
+  texto: string;
+  reintentar: boolean;
+} {
+  switch (motivo) {
+    case 'no_disponible':
+      return { texto: 'Ya no está disponible.', reintentar: false };
+    case 'sin_permiso':
+      return {
+        texto: 'No puedes ver esta publicación: solo la ven quien la escribió, el liderazgo y quien acompaña hoy a su grupo.',
+        reintentar: false,
+      };
+    case 'sin_red':
+      return { texto: 'No pudimos conectar. Revisa tu conexión y vuelve a intentarlo.', reintentar: true };
+    default:
+      return { texto: 'No pudimos abrir la publicación. Vuelve a intentarlo.', reintentar: true };
+  }
+}

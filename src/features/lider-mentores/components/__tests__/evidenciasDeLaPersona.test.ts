@@ -56,10 +56,6 @@ jest.mock('../../api/cumplimientoDelLiderApi', () => {
     obtenerPublicacion: (id: string) => mockPublicacion(id),
   };
 });
-const mockIrAPestana = jest.fn<(nombre: string, params?: Record<string, unknown>) => boolean>();
-jest.mock('../../../../navigation/navegacionRef', () => ({
-  irAPestana: (nombre: string, params?: Record<string, unknown>) => mockIrAPestana(nombre, params),
-}));
 
 import { ApiError } from '../../../../services/http/apiClient';
 import { EvidenciaNoSeAbrio } from '../../api/cumplimientoDelLiderApi';
@@ -100,7 +96,6 @@ async function tocar(r: ReactTestRenderer, parte: string): Promise<void> {
 beforeEach(() => {
   mockLeer.mockReset();
   mockPublicacion.mockReset();
-  mockIrAPestana.mockReset();
 });
 
 const FOTO = { id: 'e1', tipo: 'FOTO', subidaEn: null };
@@ -231,16 +226,26 @@ describe('la publicación del post diario', () => {
     expect(textos(r)).toContain('Ya no está disponible.');
   });
 
-  it('si el servidor no la deja leer desde acá (403) se ofrece abrirla en el Muro', async () => {
+  it('si el servidor no deja leerla a esta cuenta (403) lo dice con claridad, sin remitir al Muro ni hablar de «evidencia»', async () => {
     mockPublicacion.mockRejectedValue(new ApiError(403, 'No'));
-    mockIrAPestana.mockReturnValue(true);
     const r = await montar(React.createElement(VerPublicacion, { publicacionId: 'pub7', titulo: 'Post diario' }));
     await tocar(r, 'Ver la publicación');
-    expect(textos(r)).toContain('Tu cuenta no puede abrir esta evidencia.');
-    await tocar(r, 'Abrir en el Muro');
-    expect(mockIrAPestana).toHaveBeenCalledWith('Comunidad', { abrirPublicacionId: 'pub7' });
-    // La hoja se cierra para que el Muro quede a la vista.
-    expect(textos(r)).not.toContain('HOJA: Publicación en el Muro');
+    expect(textos(r)).toContain('No puedes ver esta publicación');
+    expect(textos(r)).not.toMatch(/evidencia/i);
+    // El mentor y administración ya la leen en `/wall/{id}`: no hace falta el respaldo del Muro.
+    expect(tocables(r).map(n => n.props.accessibilityLabel as string)).not.toContain('Abrir en el Muro');
+    expect(tocables(r).map(n => n.props.accessibilityLabel as string)).not.toContain('Reintentar');
+  });
+
+  it('un fallo de red ofrece «Reintentar» y vuelve a pedir la publicación', async () => {
+    mockPublicacion.mockRejectedValueOnce(new ApiError(0, 'Sin red'));
+    mockPublicacion.mockResolvedValueOnce({ id: 'pub1', autor: 'Ana', avatarUrl: null, texto: 'Hola', creadaEn: null, fotos: [] });
+    const r = await montar(React.createElement(VerPublicacion, { publicacionId: 'pub1', titulo: 'Post diario' }));
+    await tocar(r, 'Ver la publicación');
+    expect(textos(r)).toContain('No pudimos conectar');
+    await tocar(r, 'Reintentar');
+    expect(mockPublicacion).toHaveBeenCalledTimes(2);
+    expect(textos(r)).toContain('Hola');
   });
 });
 

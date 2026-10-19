@@ -115,13 +115,14 @@ const semanaSchema = z
 const fotoSchema = z.object({ url: z.string(), mimeType: z.string().nullish() }).passthrough();
 
 /**
- * La publicación del Muro (§4). El contrato no fija los nombres de campo: se lee con los del Muro
- * (`wallSchemas`, `WallPostResponse`), que es la vista de publicación que ya existe. Todo opcional: una
- * publicación de solo texto o de solo foto sirve.
+ * La publicación del Muro (§4, `GET /api/v1/wall/{id}`): `id, authorId, authorName, authorAvatarUrl, text,
+ * createdAt, media[{url, mimeType}]`, los nombres del Muro. Todo opcional: una publicación de solo texto o de
+ * solo foto sirve.
  */
 const publicacionSchema = z
   .object({
     id: z.string().nullish(),
+    authorId: z.string().nullish(),
     authorName: z.string().nullish(),
     authorAvatarUrl: z.string().nullish(),
     text: z.string().nullish(),
@@ -283,7 +284,7 @@ function esFotoDeLaRed(foto: z.infer<typeof fotoSchema>): boolean {
   return /^https?:\/\//i.test(foto.url);
 }
 
-/** `GET /leadership/publications/{id}`. */
+/** `GET /wall/{id}`. */
 export function aPublicacionDelMuro(crudo: PublicacionCruda): PublicacionDelMuro {
   return {
     id: crudo.id ?? null,

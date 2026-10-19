@@ -12,6 +12,7 @@ import {
   resumenDeLaSemanaEnPalabras,
   rolEnPalabras,
   textoDelFalloDeEvidencia,
+  textoDelFalloDeLaPublicacion,
   tipoDeEvidenciaEnPalabras,
 } from '../palabrasDeLaPersona';
 
@@ -183,5 +184,27 @@ describe('cuando una evidencia no se abre', () => {
     expect(textoDelFalloDeEvidencia('sin_permiso').reintentar).toBe(false);
     expect(textoDelFalloDeEvidencia('sin_red').reintentar).toBe(true);
     expect(textoDelFalloDeEvidencia('error').reintentar).toBe(true);
+  });
+});
+
+describe('cuando una publicación del Muro no se abre', () => {
+  it('«Ya no está disponible» (404): la publicación se borró o se ocultó, y repetir no sirve', () => {
+    expect(textoDelFalloDeLaPublicacion('no_disponible')).toEqual({ texto: 'Ya no está disponible.', reintentar: false });
+  });
+
+  it('sin permiso (403) dice quién sí la ve, en palabras, y no habla de «evidencia»', () => {
+    const { texto, reintentar } = textoDelFalloDeLaPublicacion('sin_permiso');
+    expect(reintentar).toBe(false);
+    expect(texto).toMatch(/publicación/);
+    expect(texto).not.toMatch(/evidencia/i);
+    expect(texto).toMatch(/quien acompaña hoy a su grupo/);
+  });
+
+  it('sin red y error ofrecen reintentar, y hablan de la publicación', () => {
+    for (const motivo of ['sin_red', 'error'] as const) {
+      const { texto, reintentar } = textoDelFalloDeLaPublicacion(motivo);
+      expect(reintentar).toBe(true);
+      expect(texto).not.toMatch(/evidencia/i);
+    }
   });
 });

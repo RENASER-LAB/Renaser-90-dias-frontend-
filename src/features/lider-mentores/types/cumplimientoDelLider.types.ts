@@ -98,7 +98,7 @@ export interface SemanaDePersona {
   dias: DiaDeLaPersona[];
 }
 
-/** `GET /api/v1/leadership/publications/{id}`: la publicación del Muro del post diario. */
+/** `GET /api/v1/wall/{id}`: la publicación del Muro del post diario. */
 export interface PublicacionDelMuro {
   id: string | null;
   autor: string | null;

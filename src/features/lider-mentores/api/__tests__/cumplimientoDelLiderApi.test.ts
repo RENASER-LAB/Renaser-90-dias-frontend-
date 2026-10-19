@@ -30,7 +30,8 @@ describe('las rutas del líder (contrato)', () => {
     expect(rutaDeLaSemanaDePersona('g1', 'p1', '2026-10-16')).toBe(
       '/api/v1/leadership/groups/g1/people/p1/week?semanaHasta=2026-10-16',
     );
-    expect(rutaDeLaPublicacion('pub1')).toBe('/api/v1/leadership/publications/pub1');
+    /* La publicación es un recurso del Muro (contrato §4), no del líder: la leen también el mentor y administración. */
+    expect(rutaDeLaPublicacion('pub1')).toBe('/api/v1/wall/pub1');
   });
 
   it('un id con `/` o `%` no cambia a qué ruta se llama', () => {
@@ -68,9 +69,28 @@ describe('las lecturas', () => {
     await expect(obtenerSemanaDePersona('g1', 'p1')).rejects.toThrow(/Respuesta inesperada/);
   });
 
-  it('la publicación del Muro', async () => {
-    mockApiFetch.mockResolvedValueOnce({ id: 'pub1', text: 'Hola', authorName: 'Ana' });
-    expect(await obtenerPublicacion('pub1')).toMatchObject({ texto: 'Hola', autor: 'Ana' });
+  it('la publicación del Muro se lee en `GET /wall/{id}` con la forma del contrato', async () => {
+    mockApiFetch.mockResolvedValueOnce({
+      id: 'pub1',
+      authorId: 'u1',
+      authorName: 'Ana',
+      authorAvatarUrl: null,
+      text: 'Hola',
+      createdAt: '2026-10-14T16:00:00Z',
+      media: [{ url: 'https://s3/foto.jpg?firma=1', mimeType: 'image/jpeg' }],
+    });
+    expect(await obtenerPublicacion('pub1')).toMatchObject({
+      id: 'pub1',
+      autor: 'Ana',
+      texto: 'Hola',
+      creadaEn: '2026-10-14T16:00:00Z',
+      fotos: [{ url: 'https://s3/foto.jpg?firma=1' }],
+    });
+    expect(mockApiFetch).toHaveBeenCalledWith('/api/v1/wall/pub1', undefined);
+  });
+
+  it('un id de publicación con `/` no cambia a qué ruta se llama', () => {
+    expect(rutaDeLaPublicacion('a/b')).toBe('/api/v1/wall/a%2Fb');
   });
 });
 

@@ -38,9 +38,13 @@ export function rutaDeLaSemanaDePersona(grupoId: string, personaId: string, sema
   return conSemana(`${BASE}/groups/${tramo(grupoId)}/people/${tramo(personaId)}/week`, semanaHasta);
 }
 
-/** §4: una publicación del Muro. */
+/**
+ * §4: una publicación del Muro. Es un recurso del Muro (`/wall/{id}`) y no del líder: la leen su autor, el
+ * liderazgo y el mentor o la guía que acompaña HOY al autor, así que sirve a las tres fichas (líder, mentor y
+ * administración). Cualquier otra cuenta recibe 403, y una que ya no existe, 404.
+ */
 export function rutaDeLaPublicacion(publicacionId: string): string {
-  return `${BASE}/publications/${tramo(publicacionId)}`;
+  return `/api/v1/wall/${tramo(publicacionId)}`;
 }
 
 /** La lista del grupo. Pedirla no deja registro: el registro lo deja abrir la ficha de una persona. */
@@ -68,10 +72,14 @@ export async function obtenerSemanaDePersona(
   return semana.personaId ? semana : { ...semana, personaId };
 }
 
+/**
+ * La publicación del post diario. Las URL de sus fotos vencen a los 15 minutos: se pide al abrirla, no antes.
+ * Un 403 y un 404 llegan como `ApiError` para que quien la muestre los diga distinto.
+ */
 export async function obtenerPublicacion(publicacionId: string): Promise<PublicacionDelMuro> {
   const respuesta = await apiFetch<unknown>(rutaDeLaPublicacion(publicacionId));
   return aPublicacionDelMuro(
-    validarRespuesta(cumplimientoDelLiderSchemas.publicacion, respuesta, 'GET /leadership/publications/{id}'),
+    validarRespuesta(cumplimientoDelLiderSchemas.publicacion, respuesta, 'GET /wall/{id}'),
   );
 }
 

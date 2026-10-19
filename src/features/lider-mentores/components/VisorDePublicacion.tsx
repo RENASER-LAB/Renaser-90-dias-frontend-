@@ -6,7 +6,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HojaDesdeAbajo } from '../../../components/hojaDesdeAbajo/HojaDesdeAbajo';
 import { BotonSecundario } from '../../../components/Legible';
 import { AvatarPersona } from '../../../components/ui';
-import { irAPestana } from '../../../navigation/navegacionRef';
 import { useTheme } from '../../../theme/ThemeContext';
 import { ApiError } from '../../../services/http/apiClient';
 import { claveDeCacheDeLaFoto } from '../../evidence/utils/fotoDeEvidencia';
@@ -14,7 +13,7 @@ import { momentoDeCalculo } from '../../semaforo/utils/lecturaDelSemaforo';
 import { obtenerPublicacion } from '../api/cumplimientoDelLiderApi';
 import type { MotivoSinEvidencia } from '../api/cumplimientoDelLiderApi';
 import type { PublicacionDelMuro } from '../types/cumplimientoDelLider.types';
-import { textoDelFalloDeEvidencia } from '../utils/palabrasDeLaPersona';
+import { textoDelFalloDeLaPublicacion } from '../utils/palabrasDeLaPersona';
 import { BotonDeEvidencia } from './BotonDeEvidencia';
 
 /**
@@ -26,8 +25,10 @@ import { BotonDeEvidencia } from './BotonDeEvidencia';
  * juntos: quien lo pone solo pasa el id. La publicación se pide AL ABRIR la hoja (sus fotos llevan una
  * firma que vence), y una publicación que ya no existe dice «Ya no está disponible» sin tumbar la ficha.
  *
- * Si el servidor no deja leerla desde acá (403: la lectura es del liderazgo), la hoja ofrece abrirla en el
- * Muro, donde cualquier participante la puede ver; no se queda en un callejón sin salida.
+ * La lectura es `GET /wall/{id}`, que abre a su autor, al liderazgo y al mentor o la guía que acompaña HOY al
+ * autor. Quien ya no cumple eso (403) lee por qué, con todas sus letras; no hay respaldo en el Muro: las tres
+ * fichas que ofrecen «Ver publicación» son de quienes sí pueden leerla, y mandar a otro lado a quien el servidor
+ * acaba de rechazar solo escondería el rechazo.
  */
 export function VerPublicacion({ publicacionId, titulo }: { publicacionId: string; titulo: string }) {
   const [abierta, setAbierta] = useState(false);
@@ -48,7 +49,7 @@ export function VerPublicacion({ publicacionId, titulo }: { publicacionId: strin
         tamano="grande"
         etiquetaCerrar="Cerrar la publicación"
       >
-        <CuerpoDeLaPublicacion publicacionId={publicacionId} alAbrirEnElMuro={() => setAbierta(false)} />
+        <CuerpoDeLaPublicacion publicacionId={publicacionId} />
       </HojaDesdeAbajo>
     </>
   );
@@ -68,14 +69,7 @@ function motivoDe(e: unknown): MotivoSinEvidencia {
   return 'error';
 }
 
-function CuerpoDeLaPublicacion({
-  publicacionId,
-  alAbrirEnElMuro,
-}: {
-  publicacionId: string;
-  /** Cierra la hoja: el Muro se abre detrás. */
-  alAbrirEnElMuro: () => void;
-}) {
+function CuerpoDeLaPublicacion({ publicacionId }: { publicacionId: string }) {
   const { c, t } = useTheme();
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
@@ -112,18 +106,9 @@ function CuerpoDeLaPublicacion({
         </View>
       ) : lectura.estado === 'fallo' ? (
         <View style={{ gap: 10 }}>
-          <Text style={texto}>{textoDelFalloDeEvidencia(lectura.motivo).texto}</Text>
-          {textoDelFalloDeEvidencia(lectura.motivo).reintentar ? (
+          <Text style={texto}>{textoDelFalloDeLaPublicacion(lectura.motivo).texto}</Text>
+          {textoDelFalloDeLaPublicacion(lectura.motivo).reintentar ? (
             <BotonSecundario etiqueta="Reintentar" onPress={() => setVuelta(v => v + 1)} />
-          ) : null}
-          {lectura.motivo === 'sin_permiso' ? (
-            <BotonSecundario
-              etiqueta="Abrir en el Muro"
-              icono="newspaper"
-              onPress={() => {
-                if (irAPestana('Comunidad', { abrirPublicacionId: publicacionId })) alAbrirEnElMuro();
-              }}
-            />
           ) : null}
         </View>
       ) : (
