@@ -53,6 +53,13 @@ Numerados `RL-nn` para no colisionar con los `RF-01..RF-30` del SDD 001.
 | RL-07 | MIENTRAS el líder consulte a un mentor, EL SISTEMA **no** le expone el expediente individual de ningún aprendiz —hábitos, evidencias, mapa ni chats ajenos—; los aprendices solo aparecen contados y agregados. **Alcance, no prohibición**: la especificación del cliente §2.3 sí le concede auditar expedientes y reasignar aprendices; el dueño acotó esta entrega a la gestión de mentores (DL-02, DL-07) y esa parte queda para el SDD 001. Ver [clarifications.md](clarifications.md). |
 | RL-08 | SI el líder pide un mentor que no existe o no está a su alcance, ENTONCES EL SISTEMA responde con el error de la convención existente y **no devuelve una lista vacía disfrazada de éxito**. |
 
+> **Corregido 2026-10-19 (spec 005).** RL-07 decía que el líder no ve «el expediente individual de ningún aprendiz»
+> y que los aprendices «solo aparecen contados y agregados». Eso era un límite de alcance de esta entrega, no una
+> prohibición, y el dueño lo levantó para una vista concreta: desde el semáforo por grupos el líder abre un grupo y ve
+> a cada persona con su nombre, su cumplimiento de la semana y sus evidencias (`specs/005-lider-cumplimiento-por-persona/`
+> en el backend). **Sigue sin ver** el Mapa de Renacimiento, los objetivos escritos, los chats ni la ficha inicial, y la
+> ficha de un mentor (RL-06) sigue sin traer aprendices por su nombre.
+
 ### Seguimiento contra el programa
 
 | ID | Requisito |
