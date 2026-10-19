@@ -433,6 +433,24 @@ export function rutaDelAvisoDeHabito(habitoId: string, dimension?: string | null
   return categoria ? `${base}?dimension=${categoria}` : base;
 }
 
+/**
+ * El identificador de la alarma local del aviso de inicio de un hábito (spec 007, FR-014): el mismo `tag`
+ * que el servidor manda en su push de respaldo (`habito-{habitoId}-inicio`, `AvisoDeHabito.etiqueta()`).
+ *
+ * `expo-notifications` muestra una alarma local con su `identifier` como `tag` de la notificación, y en
+ * Android el push del servidor se muestra con `data.tag` como identificador: si los dos coinciden, el que
+ * llega segundo REEMPLAZA al primero en la bandeja en vez de apilarse. Pasa con el teléfono que no
+ * confirmó sus alarmas (versión vieja, más de un día sin abrir la app, sin permiso de alarmas exactas) y
+ * por eso recibe también el respaldo.
+ *
+ * Solo se le pone a UNA alarma por hábito: la antelación más temprana, que es la que el servidor conoce
+ * (`minutos_recordatorio`, ver `CLAVE_ANTELACIONES`). Los identificadores son únicos por pedido, así que
+ * las demás antelaciones, que son solo del teléfono, siguen con el UUID que les pone la librería.
+ */
+export function identificadorDelAvisoDeInicio(habitoId: string): string {
+  return `habito-${habitoId}-inicio`;
+}
+
 function contenidoDelAviso(
   titulo: string,
   minutosAntes: number,
@@ -494,12 +512,17 @@ export async function programar(
     await asegurarCanal(canal);
     const ids: string[] = [];
     // De la más temprana a la más tardía, que es el orden en que van a sonar.
-    for (const minutosAntes of [...antelaciones].sort((a, b) => b - a)) {
+    for (const [i, minutosAntes] of [...antelaciones].sort((a, b) => b - a).entries()) {
       // Restar puede cruzar la medianoche (07:00 con 90 de antelación son las 05:30 del mismo día;
       // 00:30 con 45 son las 23:45 del anterior). El módulo se normaliza para que nunca quede
       // negativo, que es el caso en que `DAILY` recibiría una hora inválida.
       const minutos = ((h * 60 + m - minutosAntes) % MINUTOS_POR_DIA + MINUTOS_POR_DIA) % MINUTOS_POR_DIA;
       const id = await N.scheduleNotificationAsync({
+        // Solo la primera (la antelación más temprana, la que conoce el servidor) comparte identidad con su
+        // push de respaldo (spec 007, FR-014). Va por posición y no por valor: con una antelación repetida,
+        // dos pedidos con el mismo identificador se reemplazarían entre sí. Programar de nuevo el mismo
+        // hábito reemplaza la alarma (mismo identificador, mismo `PendingIntent`), no la duplica.
+        ...(i === 0 ? { identifier: identificadorDelAvisoDeInicio(habitoId) } : {}),
         content: contenidoDelAviso(titulo, minutosAntes, horaHHmm, canal, rutaDelAvisoDeHabito(habitoId, opciones.dimension)),
         trigger: {
           type: N.SchedulableTriggerInputTypes.DAILY,
