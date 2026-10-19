@@ -1,0 +1,19 @@
+# cuenta: aprendiz (días 1 a 7, con el Código Renaser de esta hora ya registrado en el servidor)
+# Corrección del 2026-10-19: al entrar, el formulario no se abre mientras la app no sabe si la hora ya se respondió,
+# y no queda una capa oscura encima de Hoy. La tarjeta del Código Renaser aparece directamente en «Registrado».
+appId: com.renaser.app
+---
+- runFlow: ../comun/despejar-capas.yaml
+- extendedWaitUntil:
+    visible: "TRAINING"
+    timeout: 30000
+- assertNotVisible: "¿Dónde estás ahora mismo\\?"
+- scrollUntilVisible:
+    element: "Registrado"
+    direction: DOWN
+    timeout: 20000
+- assertVisible: "Listo por esta hora.*"
+- tapOn: "PLAN"
+- assertVisible: "PLAN"
+- tapOn: "HOY"
+- takeScreenshot: codigo-renaser-registrado

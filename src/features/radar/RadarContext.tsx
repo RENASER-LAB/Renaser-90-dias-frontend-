@@ -154,6 +154,9 @@ export function RadarProvider({ children }: { children: React.ReactNode }) {
   }, [diaPrograma]);
   const obligatorio = rolObligadoAlRadar(user?.role);
 
+  /* Sólo `abierto` tiene slot a responder. En `cargando` (todavía no se sabe si esta hora ya se
+     respondió, 2026-10-19) NO hay slot: el formulario no se abre ni se marca la capa obligatoria
+     —`CodigoRenaserOverlay`— hasta que la lectura confirme que de verdad hay que pedirlo. */
   const slot = radar.estado.tipo === 'abierto' ? radar.estado.slot : null;
   /* Cuántos minutos lleva abierta la franja. `minutosParaCerrar` va de 60 a 1, así que su
      complemento son los minutos transcurridos desde la hora en punto. */

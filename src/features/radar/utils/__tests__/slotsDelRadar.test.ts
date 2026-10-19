@@ -132,6 +132,58 @@ describe('relojes que no coinciden', () => {
   });
 });
 
+describe('todavía no se sabe si esta hora ya se respondió (2026-10-19)', () => {
+  // Mientras `GET /radar/latest` no responde, «no hay registro» es solo «no lo sé»: el formulario
+  // no puede abrirse para cerrarse 300 ms después si la hora ya estaba respondida.
+  it('en una hora con slot, sin lectura, no está abierto: está cargando ese slot', () => {
+    const estado = estadoDelRadar({ diaPrograma: 3, ultimoEnvioIso: null, lecturaPendiente: true, ahora: enHora(10, 30) });
+    expect(estado).toEqual({
+      tipo: 'cargando',
+      slot: { hora: 10, etiqueta: '10:00', cierraA: '11:00' },
+    });
+  });
+
+  it('la lectura pendiente no inventa nada fuera de la ventana ni fuera de los días 1 a 7', () => {
+    expect(estadoDelRadar({ diaPrograma: 3, ultimoEnvioIso: null, lecturaPendiente: true, ahora: enHora(7, 59) }).tipo)
+      .toBe('fuera-de-ventana');
+    expect(estadoDelRadar({ diaPrograma: 0, ultimoEnvioIso: null, lecturaPendiente: true, ahora: enHora(10) }).tipo)
+      .toBe('apagado');
+    expect(estadoDelRadar({ diaPrograma: 8, ultimoEnvioIso: null, lecturaPendiente: true, ahora: enHora(10) }).tipo)
+      .toBe('apagado');
+  });
+
+  it('una lectura vieja (otra hora, otra cuenta) no cuenta mientras se espera la nueva', () => {
+    expect(estadoDelRadar({
+      diaPrograma: 3,
+      ultimoEnvioIso: enHora(10, 5).toISOString(),
+      lecturaPendiente: true,
+      ahora: enHora(10, 30),
+    }).tipo).toBe('cargando');
+  });
+
+  it('la marca local de un envío hecho en ESTE teléfono sí lo da por respondido, sin esperar la lectura', () => {
+    expect(estadoDelRadar({
+      diaPrograma: 3,
+      ultimoEnvioIso: null,
+      envioLocalIso: enHora(10, 29).toISOString(),
+      lecturaPendiente: true,
+      ahora: enHora(10, 30),
+    }).tipo).toBe('respondido');
+  });
+
+  it('sin lectura pendiente (o sin decir nada) todo sigue como antes', () => {
+    expect(estadoDelRadar({ diaPrograma: 3, ultimoEnvioIso: null, lecturaPendiente: false, ahora: enHora(10, 30) }).tipo)
+      .toBe('abierto');
+    expect(estadoDelRadar({ diaPrograma: 3, ultimoEnvioIso: null, ahora: enHora(10, 30) }).tipo).toBe('abierto');
+    expect(estadoDelRadar({
+      diaPrograma: 3,
+      ultimoEnvioIso: enHora(10, 5).toISOString(),
+      lecturaPendiente: false,
+      ahora: enHora(10, 30),
+    }).tipo).toBe('respondido');
+  });
+});
+
 describe('bordes y datos rotos', () => {
   it('a las 07:59 todavía no empezó, y dice a qué hora empieza', () => {
     const estado = estadoDelRadar({ diaPrograma: 3, ultimoEnvioIso: null, ahora: enHora(7, 59) });

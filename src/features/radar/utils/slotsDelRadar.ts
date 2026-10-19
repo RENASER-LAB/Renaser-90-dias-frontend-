@@ -32,6 +32,12 @@ export type EstadoRadar =
   | { tipo: 'apagado'; motivo: 'desactivado' | 'programa-sin-arrancar' | 'etapa-terminada' }
   /** Es un día con Código Renaser, pero esta hora no tiene slot. */
   | { tipo: 'fuera-de-ventana'; proximaHora: number | null }
+  /**
+   * Es una hora con slot, pero todavía no se sabe si ya se respondió: falta la lectura del servidor
+   * (`GET /radar/latest`). NO es `abierto`: abrir el formulario sin saberlo lo abría y cerraba a los
+   * ~300 ms cuando la hora ya estaba respondida (2026-10-19). Nada lo muestra ni lo exige.
+   */
+  | { tipo: 'cargando'; slot: SlotRadar }
   /** Hay que responderlo ahora. */
   | { tipo: 'abierto'; slot: SlotRadar; minutosParaCerrar: number }
   /** Ya respondido EN ESTA HORA. */
@@ -91,10 +97,24 @@ export function estadoDelRadar(params: {
    * seguir pidiéndolo en pantalla.
    */
   envioLocalIso?: string | null;
+  /**
+   * `true` = todavía no llegó la lectura del último registro de ESTA hora (primera lectura, cambio de
+   * hora o de fecha, otra cuenta). Con `ultimoEnvioIso` en `null` no se puede distinguir «no hay
+   * registro» de «aún no lo sé», así que quien lee lo dice acá. Sólo importa dentro de un slot: el
+   * resto de los estados no dependen de lo respondido.
+   */
+  lecturaPendiente?: boolean;
   ahora: Date;
   cfg?: ConfigRadar;
 }): EstadoRadar {
-  const { diaPrograma, ultimoEnvioIso, envioLocalIso = null, ahora, cfg = CONFIG_RADAR } = params;
+  const {
+    diaPrograma,
+    ultimoEnvioIso,
+    envioLocalIso = null,
+    lecturaPendiente = false,
+    ahora,
+    cfg = CONFIG_RADAR,
+  } = params;
 
   if (!cfg.activo) return { tipo: 'apagado', motivo: 'desactivado' };
   if (diaPrograma < cfg.primerDia) return { tipo: 'apagado', motivo: 'programa-sin-arrancar' };
@@ -112,7 +132,17 @@ export function estadoDelRadar(params: {
     cierraA: horaEnPunto(hora + 1),
   };
 
-  if (envioEnElMismoSlot(ultimoEnvioIso, ahora) || envioEnElMismoSlot(envioLocalIso, ahora)) {
+  /* La marca de ESTE dispositivo manda sobre la espera: un envío hecho acá ya está confirmado por el
+     servidor y no hace falta leer nada más para cerrar el formulario. */
+  if (envioEnElMismoSlot(envioLocalIso, ahora)) {
+    return { tipo: 'respondido', slot, proximaHora: proximaHoraConSlot(ahora, cfg) };
+  }
+
+  // Lo que se sabe del servidor sólo vale cuando la lectura es la de esta hora: antes, ni una cosa ni
+  // la otra. `abierto` no puede salir de «todavía no lo sé».
+  if (lecturaPendiente) return { tipo: 'cargando', slot };
+
+  if (envioEnElMismoSlot(ultimoEnvioIso, ahora)) {
     return { tipo: 'respondido', slot, proximaHora: proximaHoraConSlot(ahora, cfg) };
   }
 

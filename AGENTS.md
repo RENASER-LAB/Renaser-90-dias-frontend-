@@ -13,6 +13,22 @@ medianoche. Spec canónica: backend `specs/002-habitos-cambio-de-dia/` (D-268/E-
 Hace falta publicar el backend nuevo para el cierre preciso y una versión nueva de la app/APK;
 con backend anterior se mantiene la validación previa y la actualización periódica.
 
+## Corrección autorizada — 2026-10-19 — Código Renaser sin parpadeo y con el 409
+
+Pedido del dueño: arreglar dos fallos del Código Renaser (días 1–7, sobre Hoy) vistos en el emulador.
+Lo que cambia y nada más: (1) mientras no se sabe si la hora en curso ya se respondió —primera lectura
+de `GET /api/v1/radar/latest`, y cada recarga al cambiar de hora, fecha o cuenta, o al volver el radar
+tras el Mapa— el estado del radar es `cargando` y no `abierto`: el formulario (`CodigoRenaserModal`) no se
+abre y no se anota la capa obligatoria; la tarjeta de Hoy no dibuja nada hasta tener la lectura. Si la
+lectura falla (red, 5xx) se abre igual, sin parpadeo; un 403 sigue apagando. Antes el formulario se abría y
+se cerraba ~300 ms después, y en Android dejaba una ventana vacía y oscura sobre Hoy hasta recargar la app.
+(2) El backend rechaza con 409 un segundo registro en la misma hora (índice `radar_un_registro_por_hora`):
+la app relee `/radar/latest` y, si cae en la hora en curso, lo da por registrado (el formulario se cierra y
+la tarjeta dice «Registrado», sin anunciar puntos); si no lo confirma, muestra un aviso propio en vez del
+texto genérico del servidor. No cambian el diseño, los textos de la tarjeta ni del formulario, las
+preguntas, los horarios ni los tabs. No hace falta backend nuevo; sí hace falta un APK nuevo (la app no se
+actualiza por aire).
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
