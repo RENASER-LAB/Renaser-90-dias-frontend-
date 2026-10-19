@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Interruptor } from '../../../components/Interruptor';
 import { BotonSecundario } from '../../../components/Legible';
 import { useTheme } from '../../../theme/ThemeContext';
+import { useEsMentor } from '../../mentor/hooks/useEsMentor';
 import { guardarTema, obtenerPreferencias, temasVisibles, type Preferencias, type TemaDeAviso } from '../api/preferenciasDeNotificacion';
 
 /**
@@ -12,6 +13,8 @@ import { guardarTema, obtenerPreferencias, temasVisibles, type Preferencias, typ
  */
 export function InterruptoresDeAvisos() {
   const { c } = useTheme();
+  /* «Revisiones de tu líder» (spec 005) es solo para quien acompaña un grupo. */
+  const acompanaUnGrupo = useEsMentor();
   const [preferencias, setPreferencias] = useState<Preferencias | null>(null);
   const [fallo, setFallo] = useState(false);
   const [guardando, setGuardando] = useState<string | null>(null);
@@ -58,7 +61,7 @@ export function InterruptoresDeAvisos() {
   }
   if (!preferencias) return <Text style={texto}>Cargando tus avisos…</Text>;
 
-  const temas = temasVisibles(preferencias);
+  const temas = temasVisibles(preferencias, { acompanaUnGrupo });
   return (
     <View style={{ gap: 10 }}>
       <Text style={texto}>Elige qué avisos te llegan al teléfono. Lo que apagues sigue en tu bandeja.</Text>
