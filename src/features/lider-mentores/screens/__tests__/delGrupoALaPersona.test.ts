@@ -10,6 +10,9 @@ import type { SemanaDePersona } from '../../types/cumplimientoDelLider.types';
  * Del semáforo por grupos a la semana de una persona (spec 005, US1): las tarjetas se abren SOLO si el servidor
  * lo dice (FR-021), la lista del grupo trae a quien no se mide con su %, la persona se ve día por día con la falta
  * de datos dicha en palabras, y el retroceso del sistema sube un nivel a la vez.
+ *
+ * **La ventana del resumen manda en todo** (decisión del dueño del 2026-10-19): el resumen, la lista y la ficha abren
+ * en los mismos 7 días, con el mismo rótulo y las mismas flechas; lo que la lista está mirando es lo que abre la ficha.
  */
 
 jest.mock('../../../../theme/ThemeContext', () => {
@@ -104,13 +107,13 @@ function resumen(grupos: ReturnType<typeof grupo>[]): LecturaDeGrupos {
   };
 }
 
-/** La lista del líder sin `semanaHasta`: la ÚLTIMA SEMANA CERRADA (sábado→viernes), no los últimos 7 días. */
+/** La lista del líder sin `semanaHasta`: la misma ventana vigente del resumen, los 7 días que terminan ayer. */
 const LISTA: SemaforoDelGrupo = {
   grupoId: 'g1',
   grupoNombre: 'Fénix',
-  desde: '2026-10-10',
-  hasta: '2026-10-16',
-  cerrada: true,
+  desde: '2026-10-12',
+  hasta: '2026-10-18',
+  cerrada: false,
   resumen: { verde: 0, amarillo: 0, rojo: 1, sinDatos: 0, total: 1 },
   aprendices: [
     { aprendizId: 'u1', nombre: 'Ana Pérez', avatarUrl: null, porcentaje: 30.5, color: 'ROJO', etiqueta: 'Con problemas', diasConDatos: 5, dias: [] },
@@ -136,8 +139,8 @@ function semana(cambios: Partial<SemanaDePersona> = {}): SemanaDePersona {
     nombre: 'Ana Pérez',
     avatarUrl: null,
     rol: 'TRAINEE',
-    desde: '2026-10-17',
-    hasta: '2026-10-23',
+    desde: '2026-10-12',
+    hasta: '2026-10-18',
     zona: 'America/Lima',
     semanaEnCurso: true,
     cerrada: false,
@@ -299,15 +302,19 @@ describe('del grupo a la persona', () => {
     expect(textos(r)).toContain('Reintentar');
   });
 
-  it('la lista del grupo se rotula como la semana cerrada que es, no como «los últimos 7 días»', async () => {
+  it('la lista del grupo se rotula IGUAL que el resumen: los mismos 7 días, sin otro texto para la misma ventana', async () => {
     mockTabla.mockResolvedValue(LISTA);
     const r = await montar(resumen([grupo('g1', 'Fénix', true)]));
+    const delResumen = textos(r);
     await tocar(r, 'Abrir el semáforo del grupo');
     const t = textos(r);
-    expect(t).toContain('Semana cerrada');
-    expect(t).toContain('Del sábado 10 al viernes 16 de octubre');
-    expect(t).not.toContain('Últimos 7 días');
-    // El siguiente de la semana más nueva no existe; el anterior sí, y ninguno promete «los últimos 7 días».
+    for (const igual of ['Últimos 7 días', 'Del lunes 12 al domingo 18 de octubre']) {
+      expect(delResumen).toContain(igual);
+      expect(t).toContain(igual);
+    }
+    expect(t).not.toContain('Semana cerrada');
+    expect(t).not.toContain('Del sábado 10 al viernes 16 de octubre');
+    // Las mismas flechas: anterior sí; siguiente no existe desde la ventana vigente.
     expect(botones(r)).toContain('Semana anterior');
     expect(botones(r)).not.toContain('Volver a los últimos 7 días');
   });
@@ -318,13 +325,14 @@ describe('del grupo a la persona', () => {
     const r = await montar(resumen([grupo('g1', 'Fénix', true)]));
     await tocar(r, 'Abrir el semáforo del grupo');
     await tocar(r, 'Ana Pérez');
-    /* El resumen está en «últimos 7 días» y la lista abrió sin fecha: la ficha se abre en el `hasta` de la LISTA
-       (el viernes 16), no sin fecha (que sería la semana en curso, otra distinta). */
-    expect(mockSemana).toHaveBeenCalledWith('g1', 'u1', '2026-10-16');
+    /* El resumen está en «últimos 7 días», la lista abrió ahí y la ficha también: sin fecha es la misma ventana
+       vigente, la que el servidor devuelve a las tres. */
+    expect(mockSemana).toHaveBeenCalledWith('g1', 'u1', null);
     const t = textos(r);
-    expect(t).toContain('Esta semana');
+    expect(t).toContain('Últimos 7 días');
+    expect(t).toContain('Del lunes 12 al domingo 18 de octubre');
+    expect(t).not.toContain('Esta semana');
     expect(botones(r)).not.toContain('Volver a esta semana');
-    expect(t).toContain('Del sábado 17 al viernes 23 de octubre');
     expect(t).toContain('Sábado 17 de octubre');
     expect(t).toContain('En pausa · Día 49');
     expect(t).toContain('Domingo 18 de octubre');
@@ -340,7 +348,7 @@ describe('del grupo a la persona', () => {
   });
 
   it('la lista parada en una semana anterior abre a la persona en ESA semana', async () => {
-    mockTabla.mockResolvedValue({ ...LISTA, desde: '2026-10-03', hasta: '2026-10-09' });
+    mockTabla.mockResolvedValue({ ...LISTA, desde: '2026-10-03', hasta: '2026-10-09', cerrada: true });
     mockSemana.mockResolvedValue(semana({ semanaEnCurso: false, cerrada: true, desde: '2026-10-03', hasta: '2026-10-09' }));
     const lectura = {
       ...resumen([grupo('g1', 'Fénix', true)]),
@@ -353,21 +361,53 @@ describe('del grupo a la persona', () => {
     await tocar(r, 'Ana Pérez');
     expect(mockSemana).toHaveBeenCalledWith('g1', 'u1', '2026-10-09');
     expect(textos(r)).toContain('Semana cerrada');
-    // Desde una semana pasada hay un atajo a la semana en curso (FR-010); la en curso no lo necesita.
-    expect(botones(r)).toContain('Volver a esta semana');
+    expect(textos(r)).toContain('Del sábado 3 al viernes 9 de octubre');
   });
 
-  it('desde la última semana cerrada de la lista, la ficha puede ir a la semana en curso con «siguiente»', async () => {
+  it('la ficha abre en lo que la lista está mirando AHORA, aunque se haya movido con ‹ después de entrar', async () => {
+    mockTabla.mockResolvedValueOnce(LISTA);
+    mockTabla.mockResolvedValueOnce({ ...LISTA, desde: '2026-10-10', hasta: '2026-10-16', cerrada: true });
+    mockSemana.mockResolvedValue(semana({ semanaEnCurso: false, cerrada: true, desde: '2026-10-10', hasta: '2026-10-16' }));
+    const r = await montar(resumen([grupo('g1', 'Fénix', true)]));
+    await tocar(r, 'Abrir el semáforo del grupo');
+    await tocar(r, 'Semana anterior');
+    expect(mockTabla).toHaveBeenLastCalledWith('g1', '2026-10-16');
+    await tocar(r, 'Ana Pérez');
+    expect(mockSemana).toHaveBeenCalledWith('g1', 'u1', '2026-10-16');
+    expect(textos(r)).toContain('Del sábado 10 al viernes 16 de octubre');
+  });
+
+  it('en la ficha, ‹ y › mueven la ventana como en el resumen: de la vigente a la última semana cerrada y de vuelta', async () => {
     mockTabla.mockResolvedValue(LISTA);
+    mockSemana.mockResolvedValueOnce(semana());
     mockSemana.mockResolvedValueOnce(semana({ semanaEnCurso: false, cerrada: true, desde: '2026-10-10', hasta: '2026-10-16' }));
     mockSemana.mockResolvedValueOnce(semana());
     const r = await montar(resumen([grupo('g1', 'Fénix', true)]));
     await tocar(r, 'Abrir el semáforo del grupo');
     await tocar(r, 'Ana Pérez');
+    expect(mockSemana).toHaveBeenLastCalledWith('g1', 'u1', null);
+
+    await tocar(r, 'Semana anterior');
     expect(mockSemana).toHaveBeenLastCalledWith('g1', 'u1', '2026-10-16');
-    await tocar(r, 'Semana siguiente');
-    expect(mockSemana).toHaveBeenLastCalledWith('g1', 'u1', '2026-10-23');
-    expect(textos(r)).toContain('Esta semana');
+    expect(textos(r)).toContain('Semana cerrada');
+    expect(textos(r)).toContain('Del sábado 10 al viernes 16 de octubre');
+
+    // Desde la semana cerrada más nueva, › vuelve a los últimos 7 días, y lo dice igual que el resumen.
+    await tocar(r, 'Volver a los últimos 7 días');
+    expect(mockSemana).toHaveBeenLastCalledWith('g1', 'u1', null);
+    expect(textos(r)).toContain('Últimos 7 días');
+  });
+
+  it('en la ficha no hay flecha hacia el futuro ni antes del inicio del programa', async () => {
+    mockTabla.mockResolvedValue(LISTA);
+    mockSemana.mockResolvedValue(semana({ primeraSemana: '2026-10-17' }));
+    const r = await montar(resumen([grupo('g1', 'Fénix', true)]));
+    await tocar(r, 'Abrir el semáforo del grupo');
+    await tocar(r, 'Ana Pérez');
+    const flechas = botonesTocables(r).filter(n => ['Semana anterior', 'Semana siguiente'].includes(n.props.accessibilityLabel as string));
+    // Ni siguiente (no hay futuro) ni anterior (empezó el sábado 17, dentro de la ventana): las dos apagadas.
+    expect(flechas).toHaveLength(2);
+    expect(flechas.map(f => f.props.disabled)).toEqual([true, true]);
   });
 
   it('el mentor o la guía con programa propio se abre igual: su rol, «no se mide», su %, y sin días ni conteos', async () => {
@@ -395,48 +435,35 @@ describe('del grupo a la persona', () => {
     // Sin días no hay nada que contar: ceros que parezcan incumplimiento, jamás.
     expect(t).not.toContain('0 cumplidos');
     expect(t).toContain('Luisa Rojas lleva su propio programa y no se mide en el semáforo: no hay días que mostrar.');
-    expect(t).not.toContain('No hay nada que mostrar de esta semana.');
+    expect(t).not.toContain('No hay nada que mostrar de estos días.');
     // Es el mentor del grupo: no hay a quién avisar.
     expect(botones(r).some(b => b.startsWith('Avisar a su mentor'))).toBe(false);
   });
 
-  it('la semana en curso avisa que el porcentaje todavía puede cambiar; una cerrada no', async () => {
+  it('la ventana termina ayer: no hay aviso de que el porcentaje puede cambiar ni tarjetas de días por venir', async () => {
     mockTabla.mockResolvedValue(LISTA);
     mockSemana.mockResolvedValue(semana());
     const r = await montar(resumen([grupo('g1', 'Fénix', true)]));
     await tocar(r, 'Abrir el semáforo del grupo');
     await tocar(r, 'Ana Pérez');
-    expect(textos(r)).toContain('La semana sigue en curso: el porcentaje puede cambiar.');
-
-    mockSemana.mockResolvedValue(semana({ semanaEnCurso: false, cerrada: true, desde: '2026-10-10', hasta: '2026-10-16' }));
-    const otra = await montar(resumen([grupo('g1', 'Fénix', true)]));
-    await tocar(otra, 'Abrir el semáforo del grupo');
-    await tocar(otra, 'Ana Pérez');
-    expect(textos(otra)).not.toContain('el porcentaje puede cambiar');
+    expect(textos(r)).not.toContain('el porcentaje puede cambiar');
+    expect(textos(r)).not.toContain('Este día todavía no llega');
   });
 
-  it('hoy y los días que vienen se ven en la semana en curso, y los que vienen no se abren', async () => {
+  it('hoy (con el viernes de hoy) se ve con sus hábitos reales y dice que todavía no cierra', async () => {
     mockTabla.mockResolvedValue(LISTA);
     mockSemana.mockResolvedValue(
       semana({
-        dias: [
-          { fecha: '2026-10-19', diaDePrograma: 51, motivo: 'EN_CURSO', obligaciones: semana().dias[1].obligaciones, acciones: [] },
-          { fecha: '2026-10-20', diaDePrograma: null, motivo: 'FUTURO', obligaciones: [], acciones: [] },
-          { fecha: '2026-10-21', diaDePrograma: null, motivo: 'FUTURO', obligaciones: [], acciones: [] },
-        ],
+        dias: [{ fecha: '2026-10-23', diaDePrograma: 55, motivo: 'EN_CURSO', obligaciones: semana().dias[1].obligaciones, acciones: [] }],
       }),
     );
     const r = await montar(resumen([grupo('g1', 'Fénix', true)]));
     await tocar(r, 'Abrir el semáforo del grupo');
     await tocar(r, 'Ana Pérez');
     const t = textos(r);
-    expect(t).toContain('Lunes 19 de octubre');
-    expect(t).toContain('1 de 2 hábitos cumplidos · Hoy, todavía sin cerrar · Día 51');
-    expect(t).toContain('Martes 20 de octubre');
-    expect(t.match(/Este día todavía no llega/g)).toHaveLength(2);
-    // Hoy se abre (es el más reciente con hábitos); los futuros no son botones.
-    expect(botones(r).filter(b => /^(Martes 20|Miércoles 21)/.test(b))).toEqual([]);
-    expect(botones(r).some(b => b.startsWith('Lunes 19 de octubre'))).toBe(true);
+    expect(t).toContain('Viernes 23 de octubre');
+    expect(t).toContain('1 de 2 hábitos cumplidos · Hoy, todavía sin cerrar · Día 55');
+    expect(botones(r).some(b => b.startsWith('Viernes 23 de octubre'))).toBe(true);
   });
 
   it('si la semana falla: error con «Reintentar» y nada de otra persona', async () => {
@@ -456,7 +483,7 @@ describe('del grupo a la persona', () => {
     const r = await montar(resumen([grupo('g1', 'Fénix', true)]));
     await tocar(r, 'Abrir el semáforo del grupo');
     await tocar(r, 'Ana Pérez');
-    expect(textos(r)).toContain('No hay nada que mostrar de esta semana.');
+    expect(textos(r)).toContain('No hay nada que mostrar de estos días.');
   });
 });
 
@@ -468,7 +495,7 @@ describe('el retroceso del sistema sube un nivel a la vez', () => {
     const r = await montar(resumen([grupo('g1', 'Fénix', true)]), onSalir);
     await tocar(r, 'Abrir el semáforo del grupo');
     await tocar(r, 'Ana Pérez');
-    expect(textos(r)).toContain('Esta semana');
+    expect(textos(r)).toContain('Ritual de la mañana');
 
     await atras(); // persona → grupo
     expect(textos(r)).toContain('Primero quienes más lo necesitan');

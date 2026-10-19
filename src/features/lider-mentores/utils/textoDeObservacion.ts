@@ -4,21 +4,22 @@ import { NOMBRE_DE_OBSERVACION, fechaCorta } from './lecturaDeMentores';
 
 /**
  * La persona de la que habla una observación al mentor (spec 005, FR-014, R-7): el servidor la guarda como
- * `personId` y `weekStart` (el sábado que abre la semana), y la app arma el mensaje del chat con su nombre.
+ * `personId` y `weekStart` (el primer día de los 7 que el líder estaba mirando), y la app arma el mensaje del chat con
+ * su nombre.
  */
 export interface SobreUnaPersona {
   personaId: string;
   nombre: string;
-  /** El sábado que abre la semana de la que se habla. */
+  /** El primer día de los 7 de los que se habla (el `desde` de la ventana de la ficha). */
   semanaDesde: string;
-  /** El viernes que la cierra. */
+  /** El último. */
   semanaHasta: string;
 }
 
 /**
  * El texto que se manda por el chat directo al mentor. Sin persona va EXACTAMENTE lo que el líder escribió y
- * confirmó (RL-14, RL-16). Con persona **empieza con su nombre** y la semana —`Ana Pérez · semana del sábado 17
- * al viernes 23 de octubre`— y sigue lo escrito en otra línea, para que el mentor sepa de quién y de cuándo se
+ * confirmó (RL-14, RL-16). Con persona **empieza con su nombre** y los 7 días —`Ana Pérez · semana del lunes 12
+ * al domingo 18 de octubre`— y sigue lo escrito en otra línea, para que el mentor sepa de quién y de cuándo se
  * habla sin abrir nada.
  */
 export function textoParaElChat(texto: string, sobre?: SobreUnaPersona): string {

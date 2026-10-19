@@ -5,7 +5,6 @@ import { SemaforoGruposScreen } from '../../semaforo/screens/SemaforoGruposScree
 import type { AprendizDelSemaforo, GrupoDelResumen } from '../../semaforo/types/semaforo.types';
 import { useGrupoDelLider } from '../hooks/useGrupoDelLider';
 import { GrupoDelLiderScreen } from './GrupoDelLiderScreen';
-import { inicioDeLaListaDelLider, viernesParaLaFicha } from '../utils/inicioDeLaLista';
 import { PersonaDelLiderScreen } from './PersonaDelLiderScreen';
 
 /**
@@ -15,6 +14,11 @@ import { PersonaDelLiderScreen } from './PersonaDelLiderScreen';
  * Es estado de Hoy, como la bandeja de tickets y «Mis mentores» (sin sexta pestaña): `HoyScreen` solo
  * cambia `SemaforoGruposScreen` por esta, que lo envuelve. Cada nivel registra su retroceso del sistema y
  * vuelve al anterior: persona ← grupo ← resumen ← Hoy.
+ *
+ * **La ventana del resumen manda en todo** (decisión del dueño del 2026-10-19): al tocar un grupo, la lista abre en los
+ * MISMOS 7 días que mostraba el resumen (`inicio`: posición y ancla), y al tocar una persona, la ficha abre en la ventana
+ * que la lista tenía en ese momento. Las tres se rotulan con el mismo texto (`NavegacionDeSemanas`) y sus flechas ‹ ›
+ * mueven la ventana igual, de 7 en 7 días, sin llegar nunca al futuro. Es lo que ya hace Administración.
  *
  * El resumen por grupos conserva la semana en que estaba al volver de un grupo (`conservarSemana`).
  */
@@ -41,8 +45,8 @@ export function CumplimientoDelLiderScreen({
           setGrupo({
             grupoId: abierto.grupoId,
             nombre: abierto.grupoNombre?.trim() || 'Grupo sin nombre',
-            /* La misma semana, pero con el ancla de la lista (la última cerrada), no la del resumen (ayer). */
-            inicio: inicioDeLaListaDelLider(inicio),
+            /* La lista abre en LA MISMA ventana que el resumen: la posición y el ancla con que se estaba mirando. */
+            inicio,
           });
         }}
       />
@@ -64,7 +68,7 @@ function FlujoDelGrupo({
   onVolver: () => void;
 }) {
   const lista = useGrupoDelLider(grupo.grupoId, grupo.inicio);
-  const [persona, setPersona] = useState<{ fila: AprendizDelSemaforo; semanaHasta: string | null } | null>(null);
+  const [persona, setPersona] = useState<{ fila: AprendizDelSemaforo; inicio: InicioSemanal } | null>(null);
 
   if (persona) {
     return (
@@ -75,7 +79,7 @@ function FlujoDelGrupo({
         personaId={persona.fila.aprendizId}
         nombre={persona.fila.nombre?.trim() || 'Persona sin nombre'}
         avatarUrl={persona.fila.avatarUrl}
-        semanaHasta={persona.semanaHasta}
+        inicio={persona.inicio}
         onVolver={() => setPersona(null)}
       />
     );
@@ -86,9 +90,8 @@ function FlujoDelGrupo({
       lectura={lista}
       onVolver={onVolver}
       onAbrirPersona={fila =>
-        /* La ficha se abre SIEMPRE en el `hasta` de la lista que se está viendo. Sin fecha, la lista da la última
-           semana cerrada y la ficha la semana en curso: dos semanas distintas bajo el mismo rótulo. */
-        setPersona({ fila, semanaHasta: viernesParaLaFicha(lista.datos?.hasta) })
+        /* La ficha abre en la ventana que la lista está mirando ahora (la del resumen, o la que se eligió con ‹ ›). */
+        setPersona({ fila, inicio: lista.inicio })
       }
     />
   );

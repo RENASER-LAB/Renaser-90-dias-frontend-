@@ -74,7 +74,7 @@ export function queSePuedeAbrir(o: ObligacionDeLaPersona): { evidencia: boolean;
  * Por qué un día no tiene porcentaje, en una frase corta para la cabecera del día. `null` si el día se midió.
  *
  * Ninguna suena a incumplimiento ni a «sin datos»: `EN_CURSO` es hoy (el día corre y el semáforo solo mide los
- * días que cierran) y `FUTURO` es un día que todavía no llega (la semana en curso se muestra entera).
+ * días que cierran) y `FUTURO` es un día que todavía no llega (el servidor ya no lo manda; se lee igual por si acaso).
  */
 export function motivoDelDiaEnPalabras(motivo: string | null): string | null {
   switch (motivo) {

@@ -23,7 +23,10 @@ const BASE = '/api/v1/leadership';
 /** Un tramo de la ruta, escapado: un id con `/` o `%` no puede cambiar a qué ruta se llama. */
 const tramo = encodeURIComponent;
 
-/** Sin `semanaHasta`, la semana vigente; con él (un viernes), esa semana de sábado a viernes. */
+/**
+ * Sin `semanaHasta`, la ventana vigente del resumen (los 7 días que terminan ayer); con él (un viernes que ya llegó),
+ * esa semana de sábado a viernes. La lista y la ficha leen lo mismo que el resumen por grupos.
+ */
 function conSemana(ruta: string, semanaHasta?: string | null): string {
   return semanaHasta ? `${ruta}?semanaHasta=${tramo(semanaHasta)}` : ruta;
 }

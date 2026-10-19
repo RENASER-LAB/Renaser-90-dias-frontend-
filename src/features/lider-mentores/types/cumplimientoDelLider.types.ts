@@ -61,9 +61,10 @@ export interface DiaDeLaPersona {
   diaDePrograma: number | null;
   /**
    * Por qué el día no tiene porcentaje: `SIN_NADA_PLANIFICADO`, `NO_ACTIVADO`, `PENDIENTE_DE_CALCULO`,
-   * `CUENTA_SUSPENDIDA`, `PAUSADO`, `FUERA_DEL_PROGRAMA` y, en la semana en curso, `EN_CURSO` (hoy: tiene datos
-   * reales, pero el semáforo solo mide los días cerrados) y `FUTURO` (un día que no llegó: sin obligaciones, sin
-   * acciones y con `diaDePrograma` null). Se dice en palabras; **nunca** se cuenta como incumplido.
+   * `CUENTA_SUSPENDIDA`, `PAUSADO`, `FUERA_DEL_PROGRAMA` y `EN_CURSO` (hoy, que solo llega al pedir el viernes de
+   * hoy: tiene datos reales, pero el semáforo solo mide los días cerrados). `FUTURO` (un día que no llegó) ya no lo
+   * manda el servidor —la ventana no llega al futuro—, pero la app lo sigue leyendo sin romperse. Se dice en
+   * palabras; **nunca** se cuenta como incumplido.
    */
   motivo: string | null;
   obligaciones: ObligacionDeLaPersona[];
@@ -86,14 +87,14 @@ export interface SemanaDePersona {
   avatarUrl: string | null;
   /** `TRAINEE`, `MENTOR`, `TRAINEE_GUIDE`…; `null` si el servidor no lo dijo. */
   rol: string | null;
-  /** El sábado que abre la semana. */
+  /** El primer día de los 7 que se miran: la ventana del resumen (los que terminan ayer) o el sábado de una semana. */
   desde: string;
-  /** El viernes que la cierra. */
+  /** El último día: ayer en la ventana vigente, o el viernes que cierra la semana elegida. */
   hasta: string;
   zona: string | null;
-  /** `true` en la semana de hoy (`!cerrada`): no hay una siguiente, el futuro no se mide. */
+  /** `!cerrada`: la semana en la que cae el último día todavía no cerró (la vigente de un lunes, por ejemplo). */
   semanaEnCurso: boolean;
-  /** La semana ya cerró: su porcentaje es definitivo. En la semana en curso todavía puede cambiar. */
+  /** El último día cae en una semana ya cerrada: sale del calendario del servidor. */
   cerrada: boolean;
   /**
    * El sábado que abre la semana del Día 1 de la persona; antes de ahí no hay nada que ver. `null` mientras no

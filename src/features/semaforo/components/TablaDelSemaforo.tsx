@@ -106,17 +106,14 @@ export function VistaSemaforoDelGrupo({
   lectura,
   onAbrirAprendiz,
   partirPorAyuda: partir = false,
-  navegacionComoSemana = false,
 }: {
   lectura: LecturaDelGrupo;
   onAbrirAprendiz?: (aprendizId: string) => (() => void) | undefined;
   partirPorAyuda?: boolean;
-  /** La lista del líder: sin fecha da la última semana cerrada, no los últimos 7 días (ver `NavegacionDeSemanas`). */
-  navegacionComoSemana?: boolean;
 }) {
   return (
     <View style={{ gap: 14 }}>
-      <NavegacionDeSemanas lectura={lectura} comoSemana={navegacionComoSemana} />
+      <NavegacionDeSemanas lectura={lectura} />
       {lectura.datos ? (
         <TablaDelSemaforo grupo={lectura.datos} onAbrirAprendiz={onAbrirAprendiz} partirPorAyuda={partir} />
       ) : lectura.fallo ? (

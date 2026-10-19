@@ -13,7 +13,8 @@ import { PALABRA_NO_SE_MIDE, palabraParaQuienAcompana, rolEnPalabras } from '../
 import { formatearPorcentaje } from '../../semaforo/utils/lecturaDelSemaforo';
 import { DiaDeLaPersona } from '../components/DiaDeLaPersona';
 import { Linea, MarcoDelLider } from '../components/MarcoDelLider';
-import { NavegacionDeLaSemana } from '../components/NavegacionDeLaSemana';
+import { NavegacionDeSemanas } from '../../semaforo/components/NavegacionDeSemanas';
+import type { InicioSemanal } from '../../semaforo/hooks/useLecturaPorSemana';
 import { useSemanaDePersona, type LecturaDeLaSemana } from '../hooks/useSemanaDePersona';
 import type { SemanaDePersona } from '../types/cumplimientoDelLider.types';
 import { escribirleA } from '../utils/irAlChat';
@@ -21,12 +22,15 @@ import { resumenDeLaSemanaEnPalabras } from '../utils/palabrasDeLaPersona';
 import { ObservarScreen } from './ObservarScreen';
 
 /**
- * La semana de una persona del grupo, para el líder (spec 005, US1; `GET /leadership/groups/{g}/people/{p}/week`).
+ * Los 7 días de una persona del grupo, para el líder (spec 005, US1; `GET /leadership/groups/{g}/people/{p}/week`).
  *
- * De sábado a viernes, día por día, con lo que la persona tenía ESE día (no los hábitos de hoy proyectados
- * hacia atrás). Arriba, quién es, su color y su porcentaje de la semana —los mismos que ve el administrador:
- * salen del mismo cálculo— y debajo la navegación entre semanas: hacia atrás hasta el inicio de su programa, y
- * sin semanas futuras.
+ * **Son los mismos 7 días que mostraba la lista del grupo y, antes, el resumen por grupos** (decisión del dueño del
+ * 2026-10-19: «la ventana del resumen manda en todo»): abre en la ventana que recibe en `inicio` y su navegación
+ * (`NavegacionDeSemanas`) rotula y mueve esa ventana igual que las otras dos pantallas, de 7 en 7 días, hacia atrás
+ * hasta el inicio de su programa y sin llegar nunca al futuro.
+ *
+ * Día por día, con lo que la persona tenía ESE día (no los hábitos de hoy proyectados hacia atrás). Arriba, quién es,
+ * su color y su porcentaje de esos días —los mismos que ve la lista y el administrador: salen del mismo cálculo—.
  *
  * - **Cada día es una cabecera que se abre**: un día a la vez, el más reciente con hábitos a la vista. La
  *   falta de datos (pausa, antes del Día 1, nada programado) se dice con su motivo, nunca como incumplimiento.
@@ -34,9 +38,8 @@ import { ObservarScreen } from './ObservarScreen';
  *   vacía los datos en el mismo render del cambio, y «Reintentar» vuelve a pedir lo mismo.
  * - **Abrir la ficha deja un registro** de la consulta en el servidor (FR-016): la lectura se hace al abrir y
  *   al cambiar de semana, no en cada foco.
- * - **Hoy y los días que vienen**: la semana en curso se muestra entera. Hoy trae sus hábitos reales y dice que
- *   todavía no cierra; los días que no llegan son tarjetas quietas. Mientras la semana siga abierta, una línea
- *   avisa que el porcentaje puede cambiar (`cerrada` del servidor).
+ * - **Sin días por venir**: la ventana termina ayer (o, con el viernes de hoy, hoy: «Hoy, todavía sin cerrar»), así
+ *   que no hay tarjetas de días futuros ni un aviso de que el porcentaje puede cambiar.
  * - **El mentor o la guía con programa propio** (`NO_SE_MIDE`) llega sin días: se dice su rol y que no se mide,
  *   con su porcentaje, y no se cuentan hábitos (ceros que parecerían incumplimiento).
  * - **Dos acciones** (US3): «Escribirle» abre el chat 1 a 1 con la persona, vacío y sin enviar nada
@@ -52,7 +55,7 @@ export function PersonaDelLiderScreen({
   personaId,
   nombre,
   avatarUrl,
-  semanaHasta,
+  inicio,
   onVolver,
 }: {
   grupoId: string;
@@ -61,11 +64,11 @@ export function PersonaDelLiderScreen({
   /** El de la fila que se tocó: está a la vista antes de que llegue la semana. */
   nombre: string;
   avatarUrl: string | null;
-  /** El viernes de la semana en que estaba la lista; `null` = la semana en curso. */
-  semanaHasta: string | null;
+  /** La ventana que estaba mirando la lista (posición y ancla); ausente = la vigente. */
+  inicio?: InicioSemanal;
   onVolver: () => void;
 }) {
-  const lectura = useSemanaDePersona(grupoId, personaId, semanaHasta);
+  const lectura = useSemanaDePersona(grupoId, personaId, inicio);
   const datos = lectura.datos;
 
   /* El día abierto se guarda junto con la semana a la que pertenece: al cambiar de semana vuelve solo al día
@@ -116,15 +119,7 @@ export function PersonaDelLiderScreen({
         datos={datos}
       />
 
-      <NavegacionDeLaSemana
-        titulo={lectura.rotulo.titulo}
-        rango={lectura.rotulo.rango}
-        puedeAnterior={lectura.puedeAnterior}
-        puedeSiguiente={lectura.puedeSiguiente}
-        onAnterior={lectura.anterior}
-        onSiguiente={lectura.siguiente}
-        onVolverAEstaSemana={lectura.puedeVolverAEstaSemana ? lectura.volverAEstaSemana : undefined}
-      />
+      <NavegacionDeSemanas lectura={lectura} />
 
       <CuerpoDeLaSemana lectura={lectura} nombre={nombreVisible} diaAbierto={diaAbierto} alAlternarDia={alternarDia} />
 
@@ -145,7 +140,7 @@ export function PersonaDelLiderScreen({
               deshabilitado={!datos}
               accessibilityLabel={`Avisar a su mentor sobre ${nombreVisible}`}
             />
-            <Linea>{`Le deja a ${mentor.nombre?.trim() || 'su mentor'} una observación sobre ${nombreVisible} y esta semana.`}</Linea>
+            <Linea>{`Le deja a ${mentor.nombre?.trim() || 'su mentor'} una observación sobre ${nombreVisible} y los días que estás viendo.`}</Linea>
           </>
         ) : null}
       </View>
@@ -207,11 +202,6 @@ function EstadoDeLaSemana({ datos }: { datos: SemanaDePersona }) {
           {resumenDeLaSemanaEnPalabras(datos.resumen)}
         </Text>
       ) : null}
-      {!datos.cerrada && cifra ? (
-        <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 22 }]}>
-          La semana sigue en curso: el porcentaje puede cambiar.
-        </Text>
-      ) : null}
     </View>
   );
 }
@@ -233,7 +223,7 @@ function CuerpoDeLaSemana({
       <Linea>
         {datos.noSeMide
           ? `${nombre} lleva su propio programa y no se mide en el semáforo: no hay días que mostrar.`
-          : 'No hay nada que mostrar de esta semana.'}
+          : 'No hay nada que mostrar de estos días.'}
       </Linea>
     ) : (
       <View style={{ gap: 10 }}>

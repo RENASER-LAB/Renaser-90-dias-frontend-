@@ -33,8 +33,9 @@ import { VerPublicacion } from './VisorDePublicacion';
  *   vacío) y su palabra («Cumplido», «Venció»…).
  * - **La falta de datos no es incumplimiento**: un día en pausa, antes del Día 1 o sin hábitos dice su motivo
  *   en palabras, sin marcas de fallo.
- * - **Hoy y los días que vienen** (semana en curso): hoy muestra sus hábitos reales y dice que todavía no cierra;
- *   un día que no llegó (`FUTURO`) es una tarjeta quieta, sin chevron ni nada que abrir, con la fecha en gris.
+ * - **Hoy** (solo al pedir el viernes de hoy): muestra sus hábitos reales y dice que todavía no cierra. Un día que no
+ *   llegó (`FUTURO`) es una tarjeta quieta, sin chevron ni nada que abrir, con la fecha en gris: el servidor ya no los
+ *   manda (la ventana no llega al futuro), pero si llegara uno no se rompe nada.
  * - Abrir y cerrar un día es instantáneo, sin animación: se hace varias veces por visita y lo que importa es
  *   leer.
  */

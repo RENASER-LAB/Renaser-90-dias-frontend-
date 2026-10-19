@@ -66,8 +66,8 @@ function semana(cambios: Partial<SemanaDePersona> = {}): SemanaDePersona {
     nombre: 'Ana Pérez',
     avatarUrl: null,
     rol: 'TRAINEE',
-    desde: '2026-10-17',
-    hasta: '2026-10-23',
+    desde: '2026-10-12',
+    hasta: '2026-10-18',
     zona: 'America/Lima',
     semanaEnCurso: true,
     cerrada: false,
@@ -94,7 +94,6 @@ async function montar(datos: SemanaDePersona, personaId = 'u1'): Promise<ReactTe
         personaId,
         nombre: 'Ana Pérez',
         avatarUrl: null,
-        semanaHasta: null,
         onVolver: () => undefined,
       }),
     );
@@ -153,7 +152,7 @@ describe('«Escribirle»', () => {
     await act(async () => {
       r = TestRenderer.create(
         React.createElement(PersonaDelLiderScreen, {
-          grupoId: 'g1', grupoNombre: 'Fénix', personaId: 'u1', nombre: 'Ana Pérez', avatarUrl: null, semanaHasta: null, onVolver: () => undefined,
+          grupoId: 'g1', grupoNombre: 'Fénix', personaId: 'u1', nombre: 'Ana Pérez', avatarUrl: null, onVolver: () => undefined,
         }),
       );
     });
@@ -201,7 +200,7 @@ describe('«Avisar a su mentor»', () => {
 
     expect(mockEnviarPorChat).toHaveBeenCalledWith(
       'm1',
-      'Ana Pérez · semana del sábado 17 al viernes 23 de octubre\nAna lleva tres días sin el ritual de la mañana.',
+      'Ana Pérez · semana del lunes 12 al domingo 18 de octubre\nAna lleva tres días sin el ritual de la mañana.',
     );
     expect(mockRegistrar).toHaveBeenCalledTimes(1);
     const [mentorId, nueva] = mockRegistrar.mock.calls[0];
@@ -210,11 +209,11 @@ describe('«Avisar a su mentor»', () => {
       tipo: 'ALERTA',
       texto: 'Ana lleva tres días sin el ritual de la mañana.',
       mensajeId: 'msg-1',
-      sobre: { personaId: 'u1', semanaDesde: '2026-10-17' },
+      sobre: { personaId: 'u1', semanaDesde: '2026-10-12' },
     });
   });
 
-  it('al guardar vuelve a la ficha en la misma semana, con el aviso y sin volver a pedirla', async () => {
+  it('al guardar vuelve a la ficha en la misma ventana, con el aviso y sin volver a pedirla', async () => {
     mockRegistrar.mockResolvedValue({});
     const r = await montar(semana());
     expect(mockSemana).toHaveBeenCalledTimes(1);
@@ -223,7 +222,7 @@ describe('«Avisar a su mentor»', () => {
     await tocar(r, 'Guardar');
     expect(textos(r)).toContain('AVISO: Observación guardada.');
     expect(mockLogro).toHaveBeenCalledTimes(1);
-    expect(textos(r)).toContain('Esta semana');
+    expect(textos(r)).toContain('Últimos 7 días');
     expect(mockSemana).toHaveBeenCalledTimes(1);
     expect(mockEnviarPorChat).not.toHaveBeenCalled();
   });

@@ -1803,6 +1803,9 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     ve nombre y todas las evidencias, la semana del semáforo de sábado a viernes, avisa a su mentor o le escribe a la
     persona, y el mentor se entera con un resumen al día). Amplía el límite de alcance RL-07 de `specs/002-lider-de-mentores/`
     («ningún aprendiz por su nombre»), que era de alcance y no una prohibición. Lo que cambia y nada más:
+    > **Corregido 2026-10-19.** «La semana del semáforo de sábado a viernes» de la presentación ya no es el período por
+    > defecto: tras el E2E el dueño decidió que **la ventana del resumen manda en todo** (el resumen, la lista y la ficha
+    > leen los mismos 7 días). Ver «La lista del grupo» y «Los 7 días de la persona».
     * **Hoy → «Semáforo por grupos» (solo líder)**: cada tarjeta de grupo se abre a la lista de sus personas **solo si el
       servidor manda `puedeAbrirse`** (el grupo tiene mentor y la funcionalidad está prendida). Con un backend anterior el
       campo falta, las tarjetas no se abren y el texto es el de siempre (FR-021). `HoyScreen` solo cambia
@@ -1813,20 +1816,33 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **La lista del grupo** (`GrupoDelLiderScreen`, `VistaSemaforoDelGrupo` de siempre): nombre, color y % de la semana, en
       el orden del servidor (rojo primero; la app no reordena). El mentor o la guía con programa propio salen con su % y
       «No se mide en el semáforo» (`AprendizDelSemaforo.noSeMide`; el orden del servidor es rojo, amarillo, sin datos,
-      verde y «no se mide» al final). Un grupo sin nadie dice «Este grupo todavía no tiene personas». **La semana por
-      defecto** (contrato del 2026-10-19): la lista sin fecha trae la **última semana cerrada** (sábado→viernes; se
-      rotula «Semana cerrada», no «Últimos 7 días» como el resumen), y la ficha sin fecha la **semana en curso**; por
-      eso, al abrir una persona desde la lista, la app le pasa SIEMPRE el `hasta` de la lista
-      (`utils/inicioDeLaLista`).
-    * **La semana de la persona** (`PersonaDelLiderScreen`): de sábado a viernes, un día por cabecera que se abre (el más
-      reciente con hábitos viene abierto; sin animación), con lo que tenía ESE día, cada hábito con su estado en palabras y
-      con forma, y la falta de datos (pausa, antes del Día 1, nada programado) con su motivo y nunca como incumplimiento.
-      Semanas anteriores hasta el inicio del programa (`primeraSemana`, el sábado de la semana del Día 1; `null` mientras
-      no eligió su Día 1: la app no inventa un tope); sin semanas futuras. En la semana en curso, hoy (`motivo`
-      `EN_CURSO`) muestra sus hábitos reales y dice «Hoy, todavía sin cerrar»; los días que vienen (`FUTURO`) son tarjetas
-      quietas, sin nada que abrir, que dicen «Este día todavía no llega» (ni incumplimiento ni «sin datos»), y la
-      cabecera avisa que el porcentaje puede cambiar mientras la semana no cierre (`cerrada`). El mentor o la guía con
+      verde y «no se mide» al final). Un grupo sin nadie dice «Este grupo todavía no tiene personas». **La ventana es la
+      del resumen por grupos**: al tocar un grupo la lista abre en los MISMOS 7 días que mostraba el resumen (la posición y
+      el ancla con que se estaba mirando), con el mismo rótulo («Últimos 7 días · Del lunes 12 al domingo 18 de octubre»,
+      o «Semana cerrada · Del sábado 10 al viernes 16») y las mismas flechas ‹ ›; al tocar una persona, la ficha abre en
+      la ventana que la lista tenía en ese momento. Es lo que ya hace Administración (`SemaforoGrupoAdminScreen`).
+      > **Corregido 2026-10-19 (decisión del dueño tras el E2E: «la ventana del resumen manda en todo»; E-629 (d) del
+      > backend).** Esta línea decía que la lista sin fecha traía la **última semana cerrada** (sábado→viernes, «Semana
+      > cerrada», no «Últimos 7 días») y la ficha la **semana en curso**, y que por eso la app le pasaba a la ficha el `hasta`
+      > de la lista (`utils/inicioDeLaLista`, `viernesParaLaFicha`, `comoSemana`, que se borraron). Eran dos ventanas
+      > distintas a la vista: el resumen decía «lunes 12 al domingo 18» y la lista «sábado 10 al viernes 16», y la misma
+      > persona salía con 50 % y con 47,6 %. Ahora el servidor lee las tres con la misma regla y la app reutiliza la
+      > mecánica del resumen: `useLecturaPorSemana` y `NavegacionDeSemanas`, de 7 en 7 días, sin llegar al futuro.
+    * **Los 7 días de la persona** (`PersonaDelLiderScreen`): los mismos de la lista y del resumen, un día por cabecera que
+      se abre (el más reciente con hábitos viene abierto; sin animación), con lo que tenía ESE día, cada hábito con su
+      estado en palabras y con forma, y la falta de datos (pausa, antes del Día 1, nada programado) con su motivo y nunca
+      como incumplimiento. ‹ lleva a la última semana cerrada y de ahí de 7 en 7 días, hasta el inicio del programa
+      (`primeraSemana`, el sábado de la semana del Día 1; `null` mientras no eligió su Día 1: la app no inventa un tope);
+      › vuelve a «Últimos 7 días», y nunca hay un día futuro. Hoy (`motivo` `EN_CURSO`) solo aparece si se pide el viernes
+      de hoy, y dice «Hoy, todavía sin cerrar». El mentor o la guía con
       programa propio (`NO_SE_MIDE`) llega sin días: su rol, «No se mide en el semáforo» y su %, sin contar hábitos.
+      > **Corregido 2026-10-19 (misma decisión del dueño).** Decía «de sábado a viernes … hasta el inicio del programa; sin
+      > semanas futuras. En la semana en curso, … los días que vienen (`FUTURO`) son tarjetas quietas … «Este día todavía no
+      > llega», y la cabecera avisa que el porcentaje puede cambiar mientras la semana no cierre». Con la ventana del
+      > resumen no hay semana en curso ni días por venir, así que se fueron el aviso del porcentaje y el atajo «Volver a
+      > esta semana» (las flechas son las del resumen); la app sigue leyendo `FUTURO` sin romperse por si un servidor lo
+      > mandara. «Avisar a su mentor» ya no dice «esta semana» sino «los días que estás viendo», y una ventana sin días
+      > dice «No hay nada que mostrar de estos días».
       Las acciones de los objetivos son `COMPLETADA` (con su foto) o `PENDIENTE`. Cargando, vacío y error con «Reintentar»; al
       cambiar de persona o de semana no queda a la vista el dato anterior ni por un instante. **Cada lectura de una ficha deja
       un registro de consulta en el servidor** (FR-016); la app la hace al abrir y al cambiar de semana, no en cada foco.

@@ -42,9 +42,19 @@ export interface LecturaPorSemana<T> {
   inicio: InicioSemanal;
 }
 
+/** Lo que una lectura puede pedir además de leer: hoy, dónde termina el camino hacia atrás. */
+export interface OpcionesDeLaLectura<T> {
+  /**
+   * De la respuesta, el viernes más viejo al que se puede ir (la ficha del líder no ofrece ventanas anteriores al
+   * Día 1 de la persona). Lo último que llegó manda, y se olvida al cambiar de `clave`.
+   */
+  primerViernes?: (datos: T) => string | null;
+}
+
 /**
- * Una lectura del semáforo que se puede mirar semana por semana: la tabla de un grupo (§4.3) y el
- * resumen por grupos (§4.4) comparten la forma y la navegación, y solo cambia a quién se pregunta.
+ * Una lectura del semáforo que se puede mirar semana por semana: la tabla de un grupo (§4.3), el
+ * resumen por grupos (§4.4) y, para el líder, la lista de un grupo y la ficha de una persona (spec 005)
+ * comparten la forma y la navegación, y solo cambia a quién se pregunta. Así los cinco se mueven igual.
  *
  * - Arranca en la ventana vigente (sin `semanaHasta`), que es lo que el contrato da por defecto.
  * - "Anterior" y "siguiente" van por semanas sábado→viernes, calculadas desde el `hasta` que
@@ -61,12 +71,16 @@ export function useLecturaPorSemana<T extends VentanaSemanal>(
   leer: (semanaHasta: string | null) => Promise<T>,
   clave: string | null,
   inicio?: InicioSemanal,
+  opciones?: OpcionesDeLaLectura<T>,
 ): LecturaPorSemana<T> {
   const leerActual = useRef(leer);
   leerActual.current = leer;
+  const opcionesActuales = useRef(opciones);
+  opcionesActuales.current = opciones;
 
   const [posicion, setPosicion] = useState<PosicionSemanal>(inicio?.posicion ?? VIGENTE);
   const [hastaVigente, setHastaVigente] = useState<string | null>(inicio?.hastaVigente ?? null);
+  const [primerViernes, setPrimerViernes] = useState<string | null>(null);
   const [datos, setDatos] = useState<T | null>(null);
   const [cargando, setCargando] = useState(clave !== null);
   const [fallo, setFallo] = useState<FalloSemaforo | null>(null);
@@ -82,6 +96,7 @@ export function useLecturaPorSemana<T extends VentanaSemanal>(
     setClaveVista(clave);
     setPosicion(VIGENTE);
     setHastaVigente(null);
+    setPrimerViernes(null);
     setDatos(null);
     setFallo(null);
     setDetalleDelFallo(null);
@@ -105,6 +120,9 @@ export function useLecturaPorSemana<T extends VentanaSemanal>(
         setDetalleDelFallo(null);
         /* El ancla de la navegación: solo la ventana vigente la fija. */
         if (semanaHasta === null) setHastaVigente(nuevo.hasta);
+        /* El tope hacia atrás, si esta lectura lo tiene: si una respuesta no lo trae, queda el que ya se sabía. */
+        const tope = opcionesActuales.current?.primerViernes?.(nuevo) ?? null;
+        if (tope) setPrimerViernes(tope);
       })
       .catch((e: unknown) => {
         if (miTurno !== turno.current) return;
@@ -135,7 +153,7 @@ export function useLecturaPorSemana<T extends VentanaSemanal>(
 
   const recargar = useCallback(() => setVuelta(v => v + 1), []);
 
-  const anteriorPosicion = semanaAnterior(posicion, hastaVigente);
+  const anteriorPosicion = semanaAnterior(posicion, hastaVigente, primerViernes);
   const siguientePosicion = semanaSiguiente(posicion, hastaVigente);
 
   return {

@@ -14,8 +14,9 @@ import { Linea, MarcoDelLider } from '../components/MarcoDelLider';
  *
  * - **El orden es del servidor** (FR-007): rojo, amarillo, sin datos, verde y «no se mide» al final; dentro de
  *   cada color, de menor a mayor porcentaje. La app no reordena.
- * - **La semana por defecto es la última cerrada** (sábado→viernes), no «los últimos 7 días» del resumen: la
- *   navegación se rotula como semana (`navegacionComoSemana`).
+ * - **La ventana es la del resumen por grupos** (decisión del dueño del 2026-10-19: «la ventana del resumen manda en
+ *   todo»): abre en los mismos 7 días que se miraban al tocar el grupo, con el mismo rótulo y las mismas flechas
+ *   (`NavegacionDeSemanas`), y no tiene una semana propia.
  * - **Quien lleva su propio programa en el grupo** (el mentor o la guía de aprendiz) aparece con su % y con
  *   «No se mide en el semáforo» en lugar del color.
  * - **Cada fila se abre** a la semana de esa persona.
@@ -45,7 +46,7 @@ export function GrupoDelLiderScreen({
     <MarcoDelLider titulo={lectura.datos?.grupoNombre?.trim() || nombre} onVolver={onVolver}>
       {sinNadie ? (
         <>
-          <NavegacionDeSemanas lectura={lectura} comoSemana />
+          <NavegacionDeSemanas lectura={lectura} />
           <Linea>Este grupo todavía no tiene personas.</Linea>
         </>
       ) : (
@@ -53,7 +54,6 @@ export function GrupoDelLiderScreen({
           {personas ? <Linea>Primero quienes más lo necesitan. Toca a una persona para ver su semana.</Linea> : null}
           <VistaSemaforoDelGrupo
             lectura={lectura}
-            navegacionComoSemana
             onAbrirAprendiz={id => {
               const persona = personas?.find(p => p.aprendizId === id);
               return persona ? () => onAbrirPersona(persona) : undefined;
