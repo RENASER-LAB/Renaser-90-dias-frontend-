@@ -314,6 +314,9 @@ describe('entrar y salir (AuthProvider de verdad)', () => {
     Alert.alert('No se pudo guardar', 'Estás viendo la app como otro rol: no se puede cambiar nada.');
     expect(nativo).not.toHaveBeenCalled();
     expect(textos()).toContain(TEXTO_SOLO_LECTURA);
+    // El bloque de la franja es `accessible`: Android (y Maestro) solo leen su etiqueta, que tiene que decir el aviso.
+    const etiquetas = raiz!.root.findAll(n => typeof n.props.accessibilityLabel === 'string').map(n => n.props.accessibilityLabel as string);
+    expect(etiquetas).toContain(`Viendo como Mentor. ${TEXTO_SOLO_LECTURA}`);
   });
 });
 

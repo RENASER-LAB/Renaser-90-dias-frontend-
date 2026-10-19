@@ -33,6 +33,8 @@ export function FranjaVerComo() {
   const insets = useSafeAreaInsets();
   const [saliendo, setSaliendo] = useState(false);
   const [rechazo, setRechazo] = useState(0);
+  /* Mientras se ve el aviso, la etiqueta del bloque lo dice: el bloque es `accessible` y solo expone su etiqueta. */
+  const [avisoALaVista, setAvisoALaVista] = useState(false);
   const opacidad = useSharedValue(0);
   const activa = Boolean(verComo);
 
@@ -45,8 +47,12 @@ export function FranjaVerComo() {
     if (!rechazo) return;
     const fundido = { duration: FUNDIDO_MS, easing: CURVA_SALIDA, reduceMotion: ReduceMotion.System };
     opacidad.set(withTiming(1, fundido));
+    setAvisoALaVista(true);
     AccessibilityInfo.announceForAccessibility?.(TEXTO_SOLO_LECTURA);
-    const reloj = setTimeout(() => opacidad.set(withTiming(0, fundido)), SOLO_LECTURA_VISIBLE_MS);
+    const reloj = setTimeout(() => {
+      opacidad.set(withTiming(0, fundido));
+      setAvisoALaVista(false);
+    }, SOLO_LECTURA_VISIBLE_MS);
     return () => clearTimeout(reloj);
   }, [rechazo, opacidad]);
 
@@ -83,7 +89,7 @@ export function FranjaVerComo() {
     >
       <View style={estilos.fila}>
         <Icon name="eye" size={TAMANO_ICONO.normal} color={c.goldInk} />
-        <View style={{ flex: 1, flexShrink: 1 }} accessible accessibilityRole="header" accessibilityLabel={`Viendo como ${verComo.etiqueta}. Solo lectura`}>
+        <View style={{ flex: 1, flexShrink: 1 }} accessible accessibilityRole="header" accessibilityLabel={`Viendo como ${verComo.etiqueta}. ${avisoALaVista ? TEXTO_SOLO_LECTURA : 'Solo lectura'}`}>
           <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_500Medium' }]} numberOfLines={1}>
             Viendo como {verComo.etiqueta}
           </Text>
