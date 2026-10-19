@@ -68,7 +68,7 @@
     "test:e2e:native": "maestro test .maestro/regresion",
     "test": "jest --runInBand",
     "test:watch": "jest --runInBand --watch",
-    "postinstall": "node scripts/arreglar-thinking-orbs.js && node scripts/arreglar-two-way-audio.js && node scripts/arreglar-parlante-two-way-audio.js && node scripts/arreglar-screens-removal-listener.js"
+    "postinstall": "node scripts/arreglar-thinking-orbs.js && node scripts/arreglar-two-way-audio.js && node scripts/arreglar-parlante-two-way-audio.js && node scripts/arreglar-screens-removal-listener.js && node scripts/arreglar-alarmas-tipo-despertador.js"
   },
   "private": true
 }

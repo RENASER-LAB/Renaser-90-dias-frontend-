@@ -31,6 +31,19 @@ import { ARCHIVO_CAMPANA, archivoDelCanal } from './sonidoDeAlarma';
  * Despertar, el Código Renaser y las acciones de los objetivos (desde 2026-09-26: el diario y el de
  * cada acción con hora, que son `DAILY` y `DATE` y entran solos) siguen sirviendo para cancelarlas.
  *
+ * ## También las pasa a «tipo despertador» (spec 007, 2026-10-19)
+ *
+ * Desde la spec 007 `expo-notifications` está parchado en `postinstall`
+ * (`scripts/arreglar-alarmas-tipo-despertador.js`): al programar, toda alarma que no sea de intervalo
+ * usa `AlarmManager.setAlarmClock` si hay permiso de alarmas exactas (suena a su hora en Doze y el
+ * sistema la muestra como «próxima alarma»). Este rearmado NO necesita cambios para convertir las que
+ * ya estaban instaladas con el tipo anterior: el `PendingIntent` que se le entrega al sistema es el
+ * mismo (la URI lleva el identificador y el código de pedido es fijo), así que `scheduleNotificationAsync`
+ * con el mismo identificador REEMPLAZA la alarma vieja por la de tipo despertador, sin duplicarla. Las
+ * que este rearmado deja para después (una diaria recién vencida, ver «Lo que NO se toca») se convierten
+ * solas al sonar: la librería las vuelve a programar con el mismo parche. La prueba de sonido de 3 s
+ * (`TIME_INTERVAL`) no se rearma ni es despertador: no aparece como próxima alarma.
+ *
  * No necesita servidor, no inventa alarmas (solo las que ya estaban) y no pide permisos. No hay forma
  * de saber desde JS si el permiso ya se dio sin un módulo nativo nuevo; por eso corre siempre, y el
  * intervalo mínimo lo hace barato.
