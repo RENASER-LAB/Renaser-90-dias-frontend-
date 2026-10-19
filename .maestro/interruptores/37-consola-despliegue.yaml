@@ -9,6 +9,7 @@ appId: com.renaser.app
 - tapOn:
     id: "buscador-consola"
 - inputText: "event"
+- hideKeyboard
 - tapOn: "Eventos\\..*"
 - scrollUntilVisible:
     element: "Despliegue\\..*"
