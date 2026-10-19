@@ -71,6 +71,7 @@ import type { RolPersonalizadoConsola } from '../api/soporteTiSchemas';
 import { abrirConsola, cerrarConsola } from '../estado/sesionDeConsola';
 import { opcionesDeVerComo, VerComoConsolaScreen } from '../screens/VerComoConsolaScreen';
 import { FranjaVerComo, TEXTO_SOLO_LECTURA } from '../verComo/FranjaVerComo';
+import { tomarPestanaAlMontar } from '../../../navigation/pestanaAlMontar';
 import { reiniciarVerComoEnMemoria } from '../verComo/sesionVerComo';
 import { abrirSesionDePrueba, cerrarSesionDePrueba } from '../verComo/verComoApi';
 
@@ -240,8 +241,8 @@ describe('entrar y salir (AuthProvider de verdad)', () => {
     expect(mockGuardado.has('renaser.sesion.verComo')).toBe(false);
     expect(pedidos.some(p => p.method === 'DELETE' && p.headers['X-Auth-Token'] === 'tok-prueba')).toBe(true);
     expect(textos()).not.toContain('Viendo como Mentor');
-    const { irAPestana } = jest.requireMock('../../../navigation/navegacionRef') as { irAPestana: jest.Mock };
-    expect(irAPestana).toHaveBeenCalledWith('Yo', { abrirSoporteTi: true });
+    // Las pestañas de Soporte TI se arman de nuevo y arrancan en Yo con la consola: el pedido queda para ellas.
+    expect(tomarPestanaAlMontar()).toEqual({ nombre: 'Yo', params: { abrirSoporteTi: true } });
   });
 
   it('si no se puede leer la cuenta de prueba, todo queda como estaba', async () => {

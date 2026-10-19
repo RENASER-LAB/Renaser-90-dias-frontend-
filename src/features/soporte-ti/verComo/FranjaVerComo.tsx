@@ -6,6 +6,7 @@ import { SafeAreaInsetsContext, useSafeAreaInsets } from 'react-native-safe-area
 import { Icon, TAMANO_ICONO } from '../../../components/Icon';
 import { Presionable } from '../../../components/Presionable';
 import { irAPestana, pestanaDisponible } from '../../../navigation/navegacionRef';
+import { pedirPestanaAlMontar, tomarPestanaAlMontar } from '../../../navigation/pestanaAlMontar';
 import { suscribirModoSoloLectura } from '../../../services/http/apiClient';
 import { CURVA_SALIDA } from '../../../theme/movimiento';
 import { useTheme } from '../../../theme/ThemeContext';
@@ -75,8 +76,10 @@ export function FranjaVerComo() {
     if (saliendo) return;
     setSaliendo(true);
     try {
+      // Las pestañas de Soporte TI se arman de nuevo al salir: que arranquen en Yo con la consola abierta.
+      pedirPestanaAlMontar({ nombre: 'Yo', params: { abrirSoporteTi: true } });
       await salirDeVerComo();
-      volverALaConsola();
+      volverALaConsolaSiNoSeRearmo();
     } finally {
       setSaliendo(false);
     }
@@ -136,19 +139,14 @@ export function SinBordeDeArriba({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Después de salir, las pestañas se vuelven a armar (otra cuenta): se espera a que Yo exista y se abre la consola,
- * que es de donde se vino. Si en 3 s no está (la app quedó en otra pantalla), no se insiste.
+ * Respaldo: si las pestañas no se volvieron a armar (no debería pasar: cambia la cuenta), el pedido sigue sin tomar y se
+ * navega directo a Yo.
  */
-function volverALaConsola(): void {
-  const hasta = Date.now() + 3000;
-  const intentar = () => {
-    if (pestanaDisponible('Yo')) {
-      irAPestana('Yo', { abrirSoporteTi: true });
-      return;
-    }
-    if (Date.now() < hasta) setTimeout(intentar, 100);
-  };
-  setTimeout(intentar, 0);
+function volverALaConsolaSiNoSeRearmo(): void {
+  setTimeout(() => {
+    const pendiente = tomarPestanaAlMontar();
+    if (pendiente && pestanaDisponible(pendiente.nombre)) irAPestana(pendiente.nombre, pendiente.params);
+  }, 1500);
 }
 
 const estilos = StyleSheet.create({

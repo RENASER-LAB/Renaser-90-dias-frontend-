@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { TabBar } from '../components/TabBar';
 import HoyScreen from '../screens/HoyScreen';
@@ -11,17 +11,25 @@ import { OnboardingFlow } from '../features/onboarding/screens/OnboardingFlow';
 import { MapaRenacimientoFlow } from '../features/mapa-renacimiento/MapaRenacimientoFlow';
 import { useMapaRenacimientoAbierto } from '../features/mapa-renacimiento/MapaRenacimientoContext';
 import { useAuth } from '../context/AuthContext';
+import { tomarPestanaAlMontar } from './pestanaAlMontar';
 
 const Tab = createBottomTabNavigator();
 
 function MainTabs() {
+  // Al volver de «ver como», las pestañas nuevas arrancan en Yo con la consola (ver `pestanaAlMontar`).
+  const [inicial] = useState(tomarPestanaAlMontar);
+  const paramsDe = (nombre: string) => (inicial?.nombre === nombre ? inicial.params : undefined);
   return (
-    <Tab.Navigator screenOptions={{ headerShown: false }} tabBar={props => <TabBar {...props} />}>
-      <Tab.Screen name="Hoy" component={HoyScreen} />
-      <Tab.Screen name="Plan" component={PlanScreen} />
-      <Tab.Screen name="Training" component={TrainingScreen} />
-      <Tab.Screen name="Comunidad" component={ComunidadScreen} />
-      <Tab.Screen name="Yo" component={YoScreen} />
+    <Tab.Navigator
+      initialRouteName={inicial?.nombre}
+      screenOptions={{ headerShown: false }}
+      tabBar={props => <TabBar {...props} />}
+    >
+      <Tab.Screen name="Hoy" component={HoyScreen} initialParams={paramsDe('Hoy')} />
+      <Tab.Screen name="Plan" component={PlanScreen} initialParams={paramsDe('Plan')} />
+      <Tab.Screen name="Training" component={TrainingScreen} initialParams={paramsDe('Training')} />
+      <Tab.Screen name="Comunidad" component={ComunidadScreen} initialParams={paramsDe('Comunidad')} />
+      <Tab.Screen name="Yo" component={YoScreen} initialParams={paramsDe('Yo')} />
     </Tab.Navigator>
   );
 }
