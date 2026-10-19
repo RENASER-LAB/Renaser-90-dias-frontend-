@@ -8,7 +8,11 @@ import { completarRegistro } from '../../api/evidenciaHabitoApi';
 import { alCumplirUnHabito } from '../habitoCumplido';
 
 const mockApiFetch = jest.fn<(...a: unknown[]) => Promise<unknown>>();
-jest.mock('../../../../services/http/apiClient', () => ({ apiFetch: (...a: unknown[]) => mockApiFetch(...a) }));
+jest.mock('../../../../services/http/apiClient', () => ({
+  ...jest.requireActual<typeof import('../../../../services/http/apiClient')>('../../../../services/http/apiClient'),
+  apiFetch: (...a: unknown[]) => mockApiFetch(...a),
+}));
+jest.mock('../../api/habitsApi', () => ({ obtenerTracksDeHoy: async () => [{ id: 'r1', estado: 'PENDIENTE' }] }));
 
 const respuesta = { id: 'r1', estado: 'COMPLETADO', puntosOtorgados: 5, respuestaTexto: null, completadoEn: null };
 

@@ -26,6 +26,10 @@ function responderSegunRuta(ruta: string): Promise<unknown> {
   if (ruta === '/api/v1/habit-preferences') return Promise.resolve({ habits: [] });
   if (ruta === '/api/v1/habit-unlocks') return Promise.resolve({ enabled: true, items: [] });
   if (ruta === '/api/v1/habit-tracks/today') return Promise.resolve([]);
+  if (ruta === '/api/v1/habit-tracks/today/snapshot') return Promise.resolve({
+    fechaLocal: '2026-10-17', zonaHoraria: 'America/Lima', ahoraServidor: '2026-10-17T12:00:00Z',
+    cierraEn: '2026-10-18T05:00:00Z', tracks: [],
+  });
   if (ruta === '/api/v1/rocks/today') return Promise.resolve([]);
   if (ruta.startsWith('/api/v1/evidence')) return Promise.resolve({ evidencias: [], nextCursor: null });
   return Promise.reject(new Error(`ruta no esperada: ${ruta}`));
@@ -52,7 +56,7 @@ describe('cargarEntrenamiento', () => {
         '/api/v1/habits',
         '/api/v1/habit-preferences',
         '/api/v1/habit-unlocks',
-        '/api/v1/habit-tracks/today',
+        '/api/v1/habit-tracks/today/snapshot',
         '/api/v1/rocks/today',
         '/api/v1/evidence?tipoDestino=ROCA_DIARIA',
       ]),
