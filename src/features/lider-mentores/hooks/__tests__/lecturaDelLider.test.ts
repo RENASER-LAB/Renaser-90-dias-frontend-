@@ -164,6 +164,29 @@ describe('la semana de una persona', () => {
     expect(ultima.puedeSiguiente).toBe(false);
   });
 
+  it('desde una semana pasada hay un atajo a la semana en curso; en la en curso no hace falta', async () => {
+    mockSemana.mockResolvedValueOnce(semana('2026-10-23', { semanaEnCurso: true }));
+    await montar();
+    expect(ultima.puedeVolverAEstaSemana).toBe(false);
+    mockSemana.mockResolvedValueOnce(semana('2026-10-16'));
+    await act(async () => {
+      ultima.anterior();
+    });
+    mockSemana.mockResolvedValueOnce(semana('2026-10-09'));
+    await act(async () => {
+      ultima.anterior();
+    });
+    expect(ultima.puedeVolverAEstaSemana).toBe(true);
+    mockSemana.mockResolvedValueOnce(semana('2026-10-23', { semanaEnCurso: true }));
+    await act(async () => {
+      ultima.volverAEstaSemana();
+    });
+    // La en curso se pide sin fecha: la define el servidor.
+    expect(mockSemana).toHaveBeenLastCalledWith('g1', 'p1', null);
+    expect(ultima.datos?.semanaEnCurso).toBe(true);
+    expect(ultima.puedeVolverAEstaSemana).toBe(false);
+  });
+
   it('si falla: error con «Reintentar», sin datos viejos; reintentar vuelve a pedir lo mismo', async () => {
     mockSemana.mockResolvedValueOnce(semana('2026-10-23', { semanaEnCurso: true }));
     await montar();

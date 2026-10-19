@@ -305,6 +305,7 @@ describe('del grupo a la persona', () => {
     expect(mockSemana).toHaveBeenCalledWith('g1', 'u1', null);
     const t = textos(r);
     expect(t).toContain('Esta semana');
+    expect(botones(r)).not.toContain('Volver a esta semana');
     expect(t).toContain('Del sábado 17 al viernes 23 de octubre');
     expect(t).toContain('Sábado 17 de octubre');
     expect(t).toContain('En pausa · Día 49');
@@ -334,6 +335,8 @@ describe('del grupo a la persona', () => {
     await tocar(r, 'Ana Pérez');
     expect(mockSemana).toHaveBeenCalledWith('g1', 'u1', '2026-10-16');
     expect(textos(r)).toContain('Semana cerrada');
+    // Desde una semana pasada hay un atajo a la semana en curso (FR-010); la en curso no lo necesita.
+    expect(botones(r)).toContain('Volver a esta semana');
   });
 
   it('el mentor o la guía con programa propio se abre igual, y dice que no se mide', async () => {

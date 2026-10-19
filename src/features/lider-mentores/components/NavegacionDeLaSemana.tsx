@@ -23,6 +23,7 @@ export function NavegacionDeLaSemana({
   puedeSiguiente,
   onAnterior,
   onSiguiente,
+  onVolverAEstaSemana,
 }: {
   titulo: string;
   rango: string | null;
@@ -30,24 +31,38 @@ export function NavegacionDeLaSemana({
   puedeSiguiente: boolean;
   onAnterior: () => void;
   onSiguiente: () => void;
+  /** Si viene, se ofrece «Volver a esta semana»: un atajo a la semana en curso desde una semana pasada. */
+  onVolverAEstaSemana?: () => void;
 }) {
   const { c, t } = useTheme();
 
   return (
-    <View style={estilos.fila}>
-      <Flecha icono="arrowLeft" etiqueta="Semana anterior" habilitada={puedeAnterior} onPress={onAnterior} />
-      <View
-        style={estilos.centro}
-        accessible
-        accessibilityLiveRegion="polite"
-        accessibilityLabel={rango ? `${titulo}. ${rango}` : titulo}
-      >
-        <Text style={[t.cardTitle, { color: c.textStrong, textAlign: 'center' }]}>{titulo}</Text>
-        {rango ? (
-          <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 22, textAlign: 'center' }]}>{rango}</Text>
-        ) : null}
+    <View style={{ gap: 4 }}>
+      <View style={estilos.fila}>
+        <Flecha icono="arrowLeft" etiqueta="Semana anterior" habilitada={puedeAnterior} onPress={onAnterior} />
+        <View
+          style={estilos.centro}
+          accessible
+          accessibilityLiveRegion="polite"
+          accessibilityLabel={rango ? `${titulo}. ${rango}` : titulo}
+        >
+          <Text style={[t.cardTitle, { color: c.textStrong, textAlign: 'center' }]}>{titulo}</Text>
+          {rango ? (
+            <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 22, textAlign: 'center' }]}>{rango}</Text>
+          ) : null}
+        </View>
+        <Flecha icono="arrow" etiqueta="Semana siguiente" habilitada={puedeSiguiente} onPress={onSiguiente} />
       </View>
-      <Flecha icono="arrow" etiqueta="Semana siguiente" habilitada={puedeSiguiente} onPress={onSiguiente} />
+      {onVolverAEstaSemana ? (
+        <Presionable
+          onPress={onVolverAEstaSemana}
+          accessibilityRole="button"
+          accessibilityLabel="Volver a esta semana"
+          style={estilos.volver}
+        >
+          <Text style={[t.body, { color: c.goldInk, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>Volver a esta semana</Text>
+        </Presionable>
+      ) : null}
     </View>
   );
 }
@@ -84,6 +99,8 @@ function Flecha({
 const estilos = StyleSheet.create({
   fila: { flexDirection: 'row', alignItems: 'center', gap: 10, width: '100%' },
   centro: { flex: 1, minWidth: 0, alignItems: 'center', gap: 2 },
+  /* 48 de alto: se toca con el pulgar sin apuntar. */
+  volver: { alignSelf: 'center', minHeight: 48, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center' },
   /* 48 × 48: el mínimo cómodo para una sola mano (AGENTS.md §4). */
   flecha: { width: 48, height: 48, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
 });

@@ -21,8 +21,12 @@ export interface LecturaDeLaSemana {
   detalleDelFallo: string | null;
   puedeAnterior: boolean;
   puedeSiguiente: boolean;
+  /** Se está mirando una semana pasada: hay un atajo a la semana en curso (FR-010). */
+  puedeVolverAEstaSemana: boolean;
   anterior: () => void;
   siguiente: () => void;
+  /** Salta a la semana en curso sin recorrer las de en medio. */
+  volverAEstaSemana: () => void;
   recargar: () => void;
 }
 
@@ -137,6 +141,12 @@ export function useSemanaDePersona(grupoId: string, personaId: string, inicio?: 
     irA(ancla.viernesEnCurso !== null && destino >= ancla.viernesEnCurso ? null : destino);
   };
 
+  /* Pasadas varias semanas atrás, volver de a una es tedioso: un atajo a la en curso, que define el servidor. */
+  const puedeVolverAEstaSemana = !enCurso;
+  const volverAEstaSemana = () => {
+    if (puedeVolverAEstaSemana) irA(null);
+  };
+
   const recargar = useCallback(() => setVuelta(v => v + 1), []);
 
   return {
@@ -148,8 +158,10 @@ export function useSemanaDePersona(grupoId: string, personaId: string, inicio?: 
     detalleDelFallo,
     puedeAnterior,
     puedeSiguiente,
+    puedeVolverAEstaSemana,
     anterior,
     siguiente,
+    volverAEstaSemana,
     recargar,
   };
 }

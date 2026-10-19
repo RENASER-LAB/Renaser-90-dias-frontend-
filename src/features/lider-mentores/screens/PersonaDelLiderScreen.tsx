@@ -118,6 +118,7 @@ export function PersonaDelLiderScreen({
         puedeSiguiente={lectura.puedeSiguiente}
         onAnterior={lectura.anterior}
         onSiguiente={lectura.siguiente}
+        onVolverAEstaSemana={lectura.puedeVolverAEstaSemana ? lectura.volverAEstaSemana : undefined}
       />
 
       <CuerpoDeLaSemana lectura={lectura} nombre={nombreVisible} diaAbierto={diaAbierto} alAlternarDia={alternarDia} />
