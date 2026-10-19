@@ -55,6 +55,9 @@ const porDefecto: DependenciasDePuestaAlDia = {
 };
 
 let ultima: number | null = null;
+/** Termina cuando la corrida en curso termina; `null` si no hay ninguna. Ver {@link esperarLaPuestaAlDia}. */
+let corridaEnCurso: Promise<void> | null = null;
+let terminarCorrida: (() => void) | null = null;
 /** Con quién corrió la última vez: al entrar alguien (o cambiar de cuenta) se corre ya, sin intervalo. */
 let ultimoUsuario: string | null = null;
 let corriendo = false;
@@ -66,6 +69,21 @@ export function olvidarUltimaPuestaAlDia(): void {
   ultimoUsuario = null;
   corriendo = false;
   otraVuelta = null;
+  terminarCorrida?.();
+  corridaEnCurso = null;
+  terminarCorrida = null;
+}
+
+/**
+ * Espera a que termine la puesta al día que está corriendo, si hay una (spec 007, historia 2). Quien quiere
+ * decir «ya volvimos a poner tus alarmas» (`AvisoDeAlarmasBorradas`) llama a `ponerAlDiaLasAlarmas`, pero
+ * si `RearmadorDeAlarmas` ya arrancó una, esa llamada vuelve de inmediato sin haber esperado nada. Sin
+ * corrida en curso, vuelve al instante. Si al terminar una arranca otra (la de la cuenta que entró mientras
+ * corría la del arranque sin sesión), espera también a esa. No lanza: una corrida que falla también termina.
+ */
+export async function esperarLaPuestaAlDia(): Promise<void> {
+  // En bucle: al terminar la corrida del arranque sin sesión puede arrancar la de la cuenta que entró.
+  while (corridaEnCurso) await corridaEnCurso;
 }
 
 /** `null` si no correspondía correr (sin alarmas locales, intervalo mínimo, o ya había una en curso). */
@@ -84,6 +102,9 @@ export async function ponerAlDiaLasAlarmas(
   corriendo = true;
   ultima = ahoraMs;
   ultimoUsuario = userId;
+  corridaEnCurso = new Promise<void>(resolver => {
+    terminarCorrida = resolver;
+  });
   try {
     const rearmadas = await deps.rearmar(ahoraMs).catch(() => null);
     if (!userId) {
@@ -100,6 +121,9 @@ export async function ponerAlDiaLasAlarmas(
     return { rearmadas, convertidas, armadas, conRuta, confirmacion };
   } finally {
     corriendo = false;
+    terminarCorrida?.();
+    terminarCorrida = null;
+    corridaEnCurso = null;
     const siguiente = otraVuelta;
     otraVuelta = null;
     if (siguiente) void ponerAlDiaLasAlarmas(siguiente.userId, Date.now(), siguiente.deps).catch(() => {});
