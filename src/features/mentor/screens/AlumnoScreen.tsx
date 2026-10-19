@@ -21,6 +21,7 @@ import { VerPublicacion } from '../../lider-mentores/components/VisorDePublicaci
 import { useSemanaDelAlumno } from '../hooks/useSemanaDelAlumno';
 import { diasDesde } from '../reglas';
 import { diaInicialDelDetalle } from '../utils/diaInicialDelDetalle';
+import { etiquetaDeEntrega } from '../utils/etiquetaDeEntrega';
 import { subtituloDelAlumno } from '../utils/subtituloDelAlumno';
 import type { AlumnoConEstado } from '../types/mentor.types';
 import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
@@ -319,7 +320,7 @@ export function AlumnoScreen({
                               </Text>
                               {o.entrega !== 'NO_REQUERIDA' ? (
                                 <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>
-                                  {etiquetaDeEntrega(o.entrega, o.revision)}
+                                  {etiquetaDeEntrega(o.entrega, o.revision, o.publicacionId ?? null)}
                                 </Text>
                               ) : null}
                               {o.evidenciaId ? (
@@ -422,21 +423,6 @@ function colorDeEstado(estado: string, c: ReturnType<typeof useTheme>['c']): str
   if (estado === 'COMPLETADO') return c.success;
   if (estado === 'FALLIDO' || estado === 'EXPIRADO') return c.danger;
   return c.textSoft;
-}
-
-/** La entrega y su revisión son dos hechos: se dicen los dos, no uno mezclado. */
-function etiquetaDeEntrega(entrega: string, revision: string | null): string {
-  if (entrega === 'SIN_ENTREGA') return 'Evidencia sin entregar';
-  switch (revision) {
-    case 'VALIDA':
-      return 'Evidencia entregada · verificada';
-    case 'RECHAZADA':
-      return 'Evidencia entregada · rechazada';
-    case 'REVISION_MANUAL':
-      return 'Evidencia entregada · en revisión';
-    default:
-      return 'Evidencia entregada · pendiente de revisión';
-  }
 }
 
 const estilos = StyleSheet.create({
