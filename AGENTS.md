@@ -1,6 +1,18 @@
 # Expo HAS CHANGED
 Read the exact versioned docs at https://docs.expo.dev/versions/v57.0.0/ before writing any code.
 
+## Corrección autorizada — 2026-10-17 — hábitos al cambiar de día
+
+Pedido del dueño: continuar con spec-kit e implementar el bug documentado del 17 de octubre;
+después de leer la spec, indicó «sigue nomás». Lo que cambia y nada más: Training actualiza e invalida
+los registros al cierre del día del participante y al recuperar foco/actividad; los caminos compartidos
+de evidencia y cierre (también avisos/SER), y las entregas de Clase/Pastilla abiertas desde Training,
+comprueban el ID original antes de enviar. Un rechazo por día cerrado recarga y avisa; no reasigna
+el intento ni anuncia puntos. Se conservan los diseños, los tabs y las sesiones especiales que cruzan
+medianoche. Spec canónica: backend `specs/002-habitos-cambio-de-dia/` (D-268/E-615).
+Hace falta publicar el backend nuevo para el cierre preciso y una versión nueva de la app/APK;
+con backend anterior se mantiene la validación previa y la actualización periódica.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:

@@ -10,6 +10,7 @@ import {
   subirEvidenciaDeArchivo,
 } from '../api/evidenciaHabitoApi';
 import { obtenerTracksDeHoy } from '../api/habitsApi';
+import { DiaDeHabitosCambiadoError } from '../api/registroVigente';
 import { fotoPendiente } from '../storage/fotoPendiente';
 import { archivoDeResultadoDeCamara, tomarFotoConCamara, type ArchivoEvidencia } from '../utils/capturarEvidencia';
 import { RechazoParaMostrar, type DestinoDeFoto, type ReglasDelDestino } from '../utils/destinoDeFoto';
@@ -285,6 +286,7 @@ export function useRegistroConFoto(opciones: OpcionesRegistroConFoto) {
       await opcionesRef.current.onCompletado(actual.registroId, resultado, actual.titulo, actual.destino ?? 'habito');
     } catch (e) {
       setError(mensajeDelFallo(e));
+      if (e instanceof DiaDeHabitosCambiadoError) opcionesRef.current.onDiaCambiado?.();
     } finally {
       ocupadoRef.current = false;
       setEnviando(false);

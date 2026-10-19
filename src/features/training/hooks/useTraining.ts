@@ -9,6 +9,9 @@ import type { HabitoCatalogoApi, TrackDelDiaApi } from '../../habits/types/habit
 import { cargarEntrenamiento, type DatosEntrenamiento } from '../api/cargarEntrenamiento';
 import type { RocaDiariaApi } from '../types/training.types';
 import { DIMENSION_POR_CATEGORIA } from '../utils/dimensionDelHabito';
+import { milisegundosDelDia } from '../../habits/api/diaDeHabitosApi';
+import { escucharDiaDeHabitosCambiado } from '../../habits/eventos/diaDeHabitosCambiado';
+import { useActualizacionDelDia } from './useActualizacionDelDia';
 
 /**
  * Alimenta `TrainingScreen` con datos reales, agrupados por dimensión.
@@ -42,7 +45,7 @@ const SIN_PLAN: PlanHabit[] = [];
 const SIN_ROCAS: RocaDiariaApi[] = [];
 const SIN_EVIDENCIA: Set<string> = new Set();
 
-export function useTraining() {
+export function useTraining(activa = true) {
   const [datos, setDatos] = useState<DatosEntrenamiento | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +53,8 @@ export function useTraining() {
   const hayDatos = useRef(false);
   /** Numera las cargas para que una respuesta vieja no pise a una más nueva. */
   const ultimaCarga = useRef(0);
+  const datosActuales = useRef(datos);
+  datosActuales.current = datos;
 
   /**
    * Relee Training del backend.
@@ -63,17 +68,33 @@ export function useTraining() {
    * acción que lo disparó ya la confirmó el servidor, y cambiar la pantalla por un error por no
    * haber podido RELEER sería peor que mostrar el dato de hace un segundo.
    */
-  const recargar = useCallback(async () => {
+  const recargar = useCallback(async (invalidar = false) => {
     const esta = ++ultimaCarga.current;
+    const contexto = datosActuales.current?.contexto;
+    const diaCerrado = contexto != null && milisegundosDelDia(contexto) <= 0;
+    if (invalidar || diaCerrado) {
+      hayDatos.current = false;
+      datosActuales.current = null;
+      setDatos(null);
+    }
     const silencioso = hayDatos.current;
     if (!silencioso) {
       setLoading(true);
       setError(null);
     }
     try {
-      const nuevos = await cargarEntrenamiento();
+      let nuevos = await cargarEntrenamiento();
+      // La petición pudo empezar antes del corte y terminar después: no pintar ese snapshot.
+      if (nuevos.contexto && milisegundosDelDia(nuevos.contexto) <= 0) {
+        if (esta !== ultimaCarga.current) return;
+        nuevos = await cargarEntrenamiento();
+        if (nuevos.contexto && milisegundosDelDia(nuevos.contexto) <= 0) {
+          throw new Error('Tu día cambió. Necesitamos actualizar tus hábitos. Inténtalo de nuevo.');
+        }
+      }
       if (esta !== ultimaCarga.current) return;
       hayDatos.current = true;
+      datosActuales.current = nuevos;
       setDatos(nuevos);
       setError(null);
     } catch (e) {
@@ -81,22 +102,25 @@ export function useTraining() {
       if (silencioso) {
         console.warn('[Training] no se pudo refrescar; queda lo que ya estaba en pantalla:', e);
       } else {
-        setError(mensajeDeError(e, 'No pudimos cargar tu entrenamiento'));
+        setError(mensajeDeError(e, 'No pudimos actualizar tus hábitos. Revisa tu conexión e inténtalo de nuevo.'));
       }
     } finally {
       if (esta === ultimaCarga.current) setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    void recargar();
-  }, [recargar]);
+  useActualizacionDelDia({ activa, contexto: datos?.contexto, actualizar: recargar });
+  useEffect(() => escucharDiaDeHabitosCambiado(() => { void recargar(true); }), [recargar]);
+  useEffect(() => () => { ultimaCarga.current += 1; }, []);
 
-  const tracks = datos?.tracks ?? SIN_TRACKS;
-  const catalogo = datos?.catalogo ?? SIN_CATALOGO;
-  const inventario = datos?.planHabits ?? SIN_PLAN;
-  const rocas = datos?.rocas ?? SIN_ROCAS;
-  const rocasConEvidencia = datos?.rocasConEvidencia ?? SIN_EVIDENCIA;
+  // Volver a la pestaña provoca un render antes del efecto de foco. No ofrecer ayer ni ese cuadro.
+  const diaVencido = datos?.contexto != null && milisegundosDelDia(datos.contexto) <= 0;
+  const vigentes = diaVencido ? null : datos;
+  const tracks = vigentes?.tracks ?? SIN_TRACKS;
+  const catalogo = vigentes?.catalogo ?? SIN_CATALOGO;
+  const inventario = vigentes?.planHabits ?? SIN_PLAN;
+  const rocas = vigentes?.rocas ?? SIN_ROCAS;
+  const rocasConEvidencia = vigentes?.rocasConEvidencia ?? SIN_EVIDENCIA;
 
   /** Inventario completo para la hoja Planificar, incluidos hábitos sin track de hoy. */
   const planHabits = useMemo(() => {
@@ -233,7 +257,7 @@ export function useTraining() {
   return {
     habits,
     planHabits,
-    loading,
+    loading: loading || diaVencido,
     error,
     recargar,
   };
