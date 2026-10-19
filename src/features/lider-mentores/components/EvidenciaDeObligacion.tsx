@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,6 +12,7 @@ import { claveDeCacheDeLaFoto } from '../../evidence/utils/fotoDeEvidencia';
 import { EvidenciaNoSeAbrio, leerEvidencia, type EvidenciaLeida, type MotivoSinEvidencia } from '../api/cumplimientoDelLiderApi';
 import type { EvidenciaDeLaObligacion } from '../types/cumplimientoDelLider.types';
 import { textoDelFalloDeEvidencia, tipoDeEvidenciaEnPalabras } from '../utils/palabrasDeLaPersona';
+import { respuestaYaLeidaComoEvidencia } from '../utils/respuestaRepetida';
 import { BotonDeEvidencia } from './BotonDeEvidencia';
 import { ReproductorDeAudio } from './ReproductorDeAudio';
 
@@ -73,6 +74,9 @@ function CuerpoDeLaEvidencia({
   const { c, t } = useTheme();
   const insets = useSafeAreaInsets();
   const variasEvidencias = evidencias.length > 1;
+  // Los textos que ya se leyeron como evidencia: si «Lo que escribió» dice lo mismo, no se repite (E-629 (b)).
+  const [textosLeidos, setTextosLeidos] = useState<string[]>([]);
+  const alLeerTexto = useCallback((texto: string) => setTextosLeidos(previos => [...previos, texto]), []);
 
   return (
     <ScrollView
@@ -86,10 +90,10 @@ function CuerpoDeLaEvidencia({
               {`${tipoDeEvidenciaEnPalabras(evidencia.tipo)} ${i + 1} de ${evidencias.length}`}
             </Text>
           ) : null}
-          <VistaDeEvidencia evidencia={evidencia} titulo={titulo} />
+          <VistaDeEvidencia evidencia={evidencia} titulo={titulo} alLeerTexto={alLeerTexto} />
         </View>
       ))}
-      {respuestaTexto ? (
+      {respuestaTexto && !respuestaYaLeidaComoEvidencia(respuestaTexto, textosLeidos) ? (
         <View style={{ gap: 6 }}>
           <Text accessibilityRole="header" style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_700Bold' }]}>
             Lo que escribió
@@ -109,7 +113,15 @@ type Lectura =
   | { estado: 'fallo'; motivo: MotivoSinEvidencia };
 
 /** Una evidencia: pide su enlace (o su texto) al montarse y la dibuja según su tipo. */
-function VistaDeEvidencia({ evidencia, titulo }: { evidencia: EvidenciaDeLaObligacion; titulo: string }) {
+function VistaDeEvidencia({
+  evidencia,
+  titulo,
+  alLeerTexto,
+}: {
+  evidencia: EvidenciaDeLaObligacion;
+  titulo: string;
+  alLeerTexto: (texto: string) => void;
+}) {
   const { c, t } = useTheme();
   const [lectura, setLectura] = useState<Lectura>({ estado: 'cargando' });
   const [vuelta, setVuelta] = useState(0);
@@ -119,7 +131,9 @@ function VistaDeEvidencia({ evidencia, titulo }: { evidencia: EvidenciaDeLaOblig
     setLectura({ estado: 'cargando' });
     leerEvidencia(evidencia.id, evidencia.tipo).then(
       leida => {
-        if (vigente) setLectura({ estado: 'lista', evidencia: leida });
+        if (!vigente) return;
+        setLectura({ estado: 'lista', evidencia: leida });
+        if (leida.tipo === 'TEXTO') alLeerTexto(leida.texto);
       },
       (e: unknown) => {
         if (vigente) setLectura({ estado: 'fallo', motivo: e instanceof EvidenciaNoSeAbrio ? e.motivo : 'error' });
@@ -128,7 +142,7 @@ function VistaDeEvidencia({ evidencia, titulo }: { evidencia: EvidenciaDeLaOblig
     return () => {
       vigente = false;
     };
-  }, [evidencia.id, evidencia.tipo, vuelta]);
+  }, [evidencia.id, evidencia.tipo, vuelta, alLeerTexto]);
 
   if (lectura.estado === 'cargando') {
     return (
