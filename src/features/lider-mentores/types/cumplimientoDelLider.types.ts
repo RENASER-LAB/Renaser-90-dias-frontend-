@@ -44,7 +44,11 @@ export interface ObligacionDeLaPersona {
   publicacionId: string | null;
 }
 
-/** Una acción del día de los objetivos (la «roca» diaria) con su foto, si la tiene. */
+/**
+ * Una acción del día de los objetivos (la «roca» diaria) con su foto, si la tiene. `estado` es `COMPLETADA` o
+ * `PENDIENTE` (contrato §2): una acción se completa solo entregando evidencia, así que la completada trae
+ * `evidenciaId` y la pendiente no.
+ */
 export interface AccionDeLaPersona {
   id: string;
   titulo: string;
@@ -56,8 +60,10 @@ export interface DiaDeLaPersona {
   fecha: string;
   diaDePrograma: number | null;
   /**
-   * Por qué el día no tiene nada que medir: `NO_ACTIVADO`, `PAUSADO`, `CUENTA_SUSPENDIDA`,
-   * `SIN_NADA_PLANIFICADO`. Se dice en palabras; **nunca** se cuenta como incumplido.
+   * Por qué el día no tiene porcentaje: `SIN_NADA_PLANIFICADO`, `NO_ACTIVADO`, `PENDIENTE_DE_CALCULO`,
+   * `CUENTA_SUSPENDIDA`, `PAUSADO`, `FUERA_DEL_PROGRAMA` y, en la semana en curso, `EN_CURSO` (hoy: tiene datos
+   * reales, pero el semáforo solo mide los días cerrados) y `FUTURO` (un día que no llegó: sin obligaciones, sin
+   * acciones y con `diaDePrograma` null). Se dice en palabras; **nunca** se cuenta como incumplido.
    */
   motivo: string | null;
   obligaciones: ObligacionDeLaPersona[];
@@ -78,16 +84,26 @@ export interface SemanaDePersona {
   personaId: string;
   nombre: string | null;
   avatarUrl: string | null;
+  /** `TRAINEE`, `MENTOR`, `TRAINEE_GUIDE`…; `null` si el servidor no lo dijo. */
+  rol: string | null;
   /** El sábado que abre la semana. */
   desde: string;
   /** El viernes que la cierra. */
   hasta: string;
   zona: string | null;
-  /** `true` en la semana de hoy: no hay una siguiente (el futuro no se mide). */
+  /** `true` en la semana de hoy (`!cerrada`): no hay una siguiente, el futuro no se mide. */
   semanaEnCurso: boolean;
-  /** El sábado de la primera semana del programa de la persona; antes de ahí no hay nada que ver. */
+  /** La semana ya cerró: su porcentaje es definitivo. En la semana en curso todavía puede cambiar. */
+  cerrada: boolean;
+  /**
+   * El sábado que abre la semana del Día 1 de la persona; antes de ahí no hay nada que ver. `null` mientras no
+   * eligió su Día 1: entonces la app no inventa un tope y es el servidor quien contesta cada semana.
+   */
   primeraSemana: string | null;
-  /** `null` si el grupo no tiene mentor vigente: ahí «Avisar a su mentor» no aparece. */
+  /**
+   * `null` si el grupo no tiene mentor vigente **o si la persona es el propio mentor del grupo**: en los dos
+   * casos «Avisar a su mentor» no aparece.
+   */
   mentor: MentorDeLaPersona | null;
   resumen: ResumenDeLaSemana | null;
   /** Sin porcentaje no hay color (`SIN_DATOS`). Con `noSeMide`, el color es `SIN_DATOS` y el % sí se muestra. */

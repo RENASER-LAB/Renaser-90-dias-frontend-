@@ -43,6 +43,21 @@ describe('la lista del grupo (contrato §1)', () => {
     expect(lista.aprendices.map(a => a.aprendizId)).toEqual(['a', 'b', 'c']);
   });
 
+  it('el orden del contrato (rojo, amarillo, sin datos, verde y «no se mide» al final) llega intacto', () => {
+    const orden = ['ROJO', 'ROJO', 'AMARILLO', 'SIN_DATOS', 'VERDE', 'VERDE', 'NO_SE_MIDE'];
+    const lista = leerTabla(
+      orden.map((color, i) => ({
+        ...FILA,
+        aprendizId: `p${i}`,
+        color,
+        porcentaje: color === 'SIN_DATOS' ? null : color === 'NO_SE_MIDE' ? 90 : 10 + i * 10,
+        rol: color === 'NO_SE_MIDE' ? 'MENTOR' : 'TRAINEE',
+      })),
+    );
+    expect(lista.aprendices.map(a => a.aprendizId)).toEqual(['p0', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6']);
+    expect(lista.aprendices.map(a => a.noSeMide ?? false)).toEqual([false, false, false, false, false, false, true]);
+  });
+
   it('el mentor o la guía con programa propio: «no se mide», sin color pero CON su %', () => {
     const lista = leerTabla([
       { ...FILA, aprendizId: 'm', nombre: 'Luisa', color: 'NO_SE_MIDE', etiqueta: 'No se mide en el semáforo', porcentaje: 88.2, rol: 'MENTOR' },
@@ -136,6 +151,41 @@ describe('la semana de una persona (contrato §2)', () => {
     });
   });
 
+  it('trae el rol de la persona y si la semana ya cerró', () => {
+    expect(leerSemana(semana({ rol: 'trainee', cerrada: false, semanaEnCurso: true }))).toMatchObject({
+      rol: 'TRAINEE',
+      cerrada: false,
+      semanaEnCurso: true,
+    });
+    expect(leerSemana(semana({ rol: 'TRAINEE_GUIDE', cerrada: true, semanaEnCurso: false }))).toMatchObject({
+      rol: 'TRAINEE_GUIDE',
+      cerrada: true,
+      semanaEnCurso: false,
+    });
+  });
+
+  it('sin `rol` no se inventa uno; si falta uno de los dos avisos de la semana, sale del otro', () => {
+    expect(leerSemana(semana({ rol: null })).rol).toBeNull();
+    expect(leerSemana(semana({ semanaEnCurso: undefined, cerrada: true }))).toMatchObject({ semanaEnCurso: false, cerrada: true });
+    expect(leerSemana(semana({ semanaEnCurso: undefined, cerrada: false }))).toMatchObject({ semanaEnCurso: true, cerrada: false });
+    expect(leerSemana(semana({ semanaEnCurso: false, cerrada: undefined }))).toMatchObject({ semanaEnCurso: false, cerrada: true });
+    expect(leerSemana(semana({ semanaEnCurso: true, cerrada: undefined }))).toMatchObject({ semanaEnCurso: true, cerrada: false });
+  });
+
+  it('`primeraSemana` es el sábado de la semana del Día 1, o null si todavía no lo eligió', () => {
+    expect(leerSemana(semana({ primeraSemana: '2026-08-15' })).primeraSemana).toBe('2026-08-15');
+    expect(leerSemana(semana({ primeraSemana: null })).primeraSemana).toBeNull();
+    expect(leerSemana(semana({ primeraSemana: undefined })).primeraSemana).toBeNull();
+  });
+
+  it('el mentor o la guía con programa propio: «no se mide», sin días y con su rol; el mentor del grupo es null', () => {
+    const s = leerSemana(
+      semana({ rol: 'MENTOR', color: 'NO_SE_MIDE', etiqueta: 'No se mide en el semáforo', porcentaje: 81, mentor: null }, []),
+    );
+    expect(s).toMatchObject({ rol: 'MENTOR', noSeMide: true, color: 'SIN_DATOS', porcentaje: 81, mentor: null });
+    expect(s.dias).toEqual([]);
+  });
+
   it('un grupo sin mentor vigente: `mentor` null, y «Avisar a su mentor» no tiene a quién', () => {
     expect(leerSemana(semana({ mentor: null })).mentor).toBeNull();
     expect(leerSemana(semana({ mentor: undefined })).mentor).toBeNull();
@@ -195,6 +245,37 @@ describe('la semana de una persona (contrato §2)', () => {
   it('el motivo del día se conserva para decirlo en palabras (nunca como ✗)', () => {
     const s = leerSemana(semana({}, [{ fecha: '2026-10-17', motivo: 'PAUSADO', obligaciones: [] }]));
     expect(s.dias[0].motivo).toBe('PAUSADO');
+  });
+
+  it('hoy (`EN_CURSO`, con sus datos reales) y los días que vienen (`FUTURO`, sin día de programa) se conservan', () => {
+    const s = leerSemana(
+      semana({}, [
+        { fecha: '2026-10-19', diaDePrograma: 51, motivo: 'EN_CURSO', obligaciones: [OBLIGACION], acciones: [{ id: 'a1', titulo: 'Llamar', estado: 'PENDIENTE', evidenciaId: null }] },
+        { fecha: '2026-10-20', diaDePrograma: null, motivo: 'FUTURO', obligaciones: [], acciones: [] },
+      ]),
+    );
+    expect(s.dias[0]).toMatchObject({ diaDePrograma: 51, motivo: 'EN_CURSO' });
+    expect(s.dias[0].obligaciones).toHaveLength(1);
+    expect(s.dias[1]).toMatchObject({ diaDePrograma: null, motivo: 'FUTURO', obligaciones: [], acciones: [] });
+  });
+
+  it('una acción COMPLETADA trae su evidencia; una PENDIENTE no', () => {
+    const s = leerSemana(
+      semana({}, [
+        {
+          fecha: '2026-10-17',
+          obligaciones: [],
+          acciones: [
+            { id: 'a1', titulo: 'Llamar a 3 clientes', estado: 'COMPLETADA', evidenciaId: 'e2' },
+            { id: 'a2', titulo: 'Escribir el guion', estado: 'PENDIENTE', evidenciaId: null },
+          ],
+        },
+      ]),
+    );
+    expect(s.dias[0].acciones).toEqual([
+      { id: 'a1', titulo: 'Llamar a 3 clientes', estado: 'COMPLETADA', evidenciaId: 'e2' },
+      { id: 'a2', titulo: 'Escribir el guion', estado: 'PENDIENTE', evidenciaId: null },
+    ]);
   });
 
   it('las acciones del día vienen con su evidencia', () => {

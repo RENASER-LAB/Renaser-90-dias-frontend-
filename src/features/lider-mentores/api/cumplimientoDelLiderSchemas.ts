@@ -96,11 +96,13 @@ const semanaSchema = z
     personaId: z.string().nullish(),
     nombre: z.string().nullish(),
     avatarUrl: z.string().nullish(),
+    rol: z.string().nullish(),
     /** Imprescindibles: sin las fechas no se puede decir qué semana es ni navegar a otra. */
     desde: z.string(),
     hasta: z.string(),
     zona: z.string().nullish(),
     semanaEnCurso: z.boolean().nullish(),
+    cerrada: z.boolean().nullish(),
     primeraSemana: z.string().nullish(),
     mentor: z.object({ id: z.string(), nombre: z.string().nullish() }).passthrough().nullish(),
     resumen: resumenSchema.nullish(),
@@ -250,6 +252,9 @@ function aResumen(crudo: SemanaCruda['resumen']): ResumenDeLaSemana | null {
  */
 export function aSemanaDePersona(crudo: SemanaCruda): SemanaDePersona {
   const noSeMide = crudo.color === COLOR_NO_SE_MIDE;
+  /* `semanaEnCurso` y `cerrada` son lo mismo dicho al revés (el servidor manda las dos): si falta una, sale de
+     la otra; si faltan las dos, la semana se toma por cerrada, que es la que no promete un siguiente. */
+  const semanaEnCurso = crudo.semanaEnCurso ?? (crudo.cerrada == null ? false : !crudo.cerrada);
   const lectura = noSeMide
     ? { color: 'SIN_DATOS' as const, etiqueta: null, porcentaje: finito(crudo.porcentaje) }
     : aLecturaDelPromedio(crudo.color, crudo.etiqueta, crudo.porcentaje);
@@ -258,10 +263,12 @@ export function aSemanaDePersona(crudo: SemanaCruda): SemanaDePersona {
     personaId: crudo.personaId ?? '',
     nombre: crudo.nombre?.trim() ? crudo.nombre.trim() : null,
     avatarUrl: crudo.avatarUrl ?? null,
+    rol: rolDe(crudo.rol),
     desde: crudo.desde,
     hasta: crudo.hasta,
     zona: crudo.zona ?? null,
-    semanaEnCurso: crudo.semanaEnCurso ?? false,
+    semanaEnCurso,
+    cerrada: crudo.cerrada ?? !semanaEnCurso,
     primeraSemana: crudo.primeraSemana ?? null,
     mentor: crudo.mentor ? { id: crudo.mentor.id, nombre: crudo.mentor.nombre ?? null } : null,
     resumen: aResumen(crudo.resumen),

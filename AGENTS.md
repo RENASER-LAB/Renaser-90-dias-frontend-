@@ -1817,7 +1817,13 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **La semana de la persona** (`PersonaDelLiderScreen`): de sábado a viernes, un día por cabecera que se abre (el más
       reciente con hábitos viene abierto; sin animación), con lo que tenía ESE día, cada hábito con su estado en palabras y
       con forma, y la falta de datos (pausa, antes del Día 1, nada programado) con su motivo y nunca como incumplimiento.
-      Semanas anteriores hasta el inicio del programa; sin semanas futuras. Cargando, vacío y error con «Reintentar»; al
+      Semanas anteriores hasta el inicio del programa (`primeraSemana`, el sábado de la semana del Día 1; `null` mientras
+      no eligió su Día 1: la app no inventa un tope); sin semanas futuras. En la semana en curso, hoy (`motivo`
+      `EN_CURSO`) muestra sus hábitos reales y dice «Hoy, todavía sin cerrar»; los días que vienen (`FUTURO`) son tarjetas
+      quietas, sin nada que abrir, que dicen «Este día todavía no llega» (ni incumplimiento ni «sin datos»), y la
+      cabecera avisa que el porcentaje puede cambiar mientras la semana no cierre (`cerrada`). El mentor o la guía con
+      programa propio (`NO_SE_MIDE`) llega sin días: su rol, «No se mide en el semáforo» y su %, sin contar hábitos.
+      Las acciones de los objetivos son `COMPLETADA` (con su foto) o `PENDIENTE`. Cargando, vacío y error con «Reintentar»; al
       cambiar de persona o de semana no queda a la vista el dato anterior ni por un instante. **Cada lectura de una ficha deja
       un registro de consulta en el servidor** (FR-016); la app la hace al abrir y al cambiar de semana, no en cada foco.
     * **Evidencias** (hoja desde abajo, `EvidenciaDeObligacion`): foto, texto, audio (`expo-audio`, que ya estaba) y video

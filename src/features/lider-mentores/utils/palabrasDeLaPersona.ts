@@ -70,7 +70,12 @@ export function queSePuedeAbrir(o: ObligacionDeLaPersona): { evidencia: boolean;
   return { evidencia: o.evidencias.length > 0 || o.respuestaTexto !== null, publicacion: o.publicacionId !== null };
 }
 
-/** Por qué un día no tiene nada que medir. `null` si el día no trae motivo. */
+/**
+ * Por qué un día no tiene porcentaje, en una frase corta para la cabecera del día. `null` si el día se midió.
+ *
+ * Ninguna suena a incumplimiento ni a «sin datos»: `EN_CURSO` es hoy (el día corre y el semáforo solo mide los
+ * días que cierran) y `FUTURO` es un día que todavía no llega (la semana en curso se muestra entera).
+ */
 export function motivoDelDiaEnPalabras(motivo: string | null): string | null {
   switch (motivo) {
     case null:
@@ -83,8 +88,33 @@ export function motivoDelDiaEnPalabras(motivo: string | null): string | null {
       return 'Todavía no empezaba su programa';
     case 'SIN_NADA_PLANIFICADO':
       return 'Nada programado este día';
+    case 'PENDIENTE_DE_CALCULO':
+      return 'Todavía sin calcular';
+    case 'FUERA_DEL_PROGRAMA':
+      return 'Fuera del programa';
+    case 'EN_CURSO':
+      return 'Hoy, todavía sin cerrar';
+    case 'FUTURO':
+      return 'Este día todavía no llega';
     default:
       return 'Sin hábitos que medir este día';
+  }
+}
+
+/**
+ * Lo que dice un día abierto que no tiene hábitos ni acciones. Hoy y los días que vienen no dicen «no hay nada que
+ * medir»: hoy se mide cuando cierra, y el futuro todavía no existe.
+ */
+export function textoDelDiaVacio(motivo: string | null): string {
+  switch (motivo) {
+    case 'FUTURO':
+      return 'Este día todavía no llega.';
+    case 'EN_CURSO':
+      return 'Hoy todavía no tiene nada registrado. El día se mide cuando cierra.';
+    default: {
+      const palabras = motivoDelDiaEnPalabras(motivo);
+      return palabras ? `${palabras}. No hay nada que medir este día.` : 'Sin hábitos programados este día.';
+    }
   }
 }
 
@@ -96,22 +126,16 @@ export function dichoDeLaObligacion(o: ObligacionDeLaPersona): string {
     .join(' ');
 }
 
-/** La palabra del estado de una acción del día; `null` si el estado no se entiende (no se afirma nada). */
+/**
+ * La palabra del estado de una acción del día. El contrato manda dos: `COMPLETADA` (solo se completa entregando
+ * evidencia) y `PENDIENTE`. Cualquier otro valor no se afirma (`null`): no se inventa un «no cumplida».
+ */
 export function accionEnPalabras(a: AccionDeLaPersona): string | null {
   switch (a.estado) {
     case 'COMPLETADA':
-    case 'COMPLETADO':
-    case 'CUMPLIDA':
       return 'Cumplida';
     case 'PENDIENTE':
-    case 'EN_CURSO':
-    case 'ACTIVA':
       return 'Pendiente';
-    case 'FALLIDA':
-    case 'EXPIRADA':
-    case 'NO_CUMPLIDA':
-    case 'VENCIDA':
-      return 'No cumplida';
     default:
       return null;
   }

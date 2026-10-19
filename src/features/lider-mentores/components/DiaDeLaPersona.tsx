@@ -19,6 +19,7 @@ import {
   estadoDeLaObligacionEnPalabras,
   motivoDelDiaEnPalabras,
   queSePuedeAbrir,
+  textoDelDiaVacio,
 } from '../utils/palabrasDeLaPersona';
 import { EvidenciaDeObligacion } from './EvidenciaDeObligacion';
 import { VerPublicacion } from './VisorDePublicacion';
@@ -32,6 +33,8 @@ import { VerPublicacion } from './VisorDePublicacion';
  *   vacío) y su palabra («Cumplido», «Venció»…).
  * - **La falta de datos no es incumplimiento**: un día en pausa, antes del Día 1 o sin hábitos dice su motivo
  *   en palabras, sin marcas de fallo.
+ * - **Hoy y los días que vienen** (semana en curso): hoy muestra sus hábitos reales y dice que todavía no cierra;
+ *   un día que no llegó (`FUTURO`) es una tarjeta quieta, sin chevron ni nada que abrir, con la fecha en gris.
  * - Abrir y cerrar un día es instantáneo, sin animación: se hace varias veces por visita y lo que importa es
  *   leer.
  */
@@ -47,6 +50,22 @@ export function DiaDeLaPersona({
   const { c, t } = useTheme();
   const fecha = primeraEnMayuscula(fechaLarga(dia.fecha));
   const resumen = resumenDelDia(dia);
+
+  /* Un día que no llegó no tiene nada que abrir: sin cabecera tocable, sin chevron y con la fecha en gris. */
+  if (dia.motivo === 'FUTURO') {
+    return (
+      <View
+        accessible
+        accessibilityLabel={`${fecha}. ${resumen}`}
+        style={[estilos.tarjeta, estilos.cabecera, { borderColor: c.border, backgroundColor: c.cardBg }]}
+      >
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={[t.cardTitle, { color: c.textSoft }]}>{fecha}</Text>
+          <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 22, marginTop: 2 }]}>{resumen}</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={[estilos.tarjeta, { borderColor: c.border, backgroundColor: c.cardBg }]}>
@@ -88,13 +107,12 @@ function resumenDelDia(dia: DiaDeLaPersonaDatos): string {
 function CuerpoDelDia({ dia }: { dia: DiaDeLaPersonaDatos }) {
   const { c, t } = useTheme();
   const vacio = dia.obligaciones.length === 0 && dia.acciones.length === 0;
-  const motivo = motivoDelDiaEnPalabras(dia.motivo);
 
   return (
     <View style={[estilos.cuerpo, { borderTopColor: c.divider }]}>
       {vacio ? (
         <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23, paddingVertical: 12 }]}>
-          {motivo ? `${motivo}. No hay nada que medir este día.` : 'Sin hábitos programados este día.'}
+          {textoDelDiaVacio(dia.motivo)}
         </Text>
       ) : null}
       {dia.obligaciones.map((obligacion, i) => (
@@ -156,7 +174,7 @@ function FilaDeAccion({ accion, primera }: { accion: AccionDeLaPersona; primera:
 
   return (
     <View style={[estilos.fila, { borderTopColor: c.divider, borderTopWidth: primera ? 0 : 1 }]}>
-      <MarcaDelEstado estado={cumplida ? 'COMPLETADO' : estado === 'No cumplida' ? 'FALLIDO' : 'PENDIENTE'} />
+      <MarcaDelEstado estado={cumplida ? 'COMPLETADO' : 'PENDIENTE'} />
       <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
         <View accessible accessibilityLabel={estado ? `${accion.titulo}. ${estado}.` : `${accion.titulo}.`} style={{ gap: 2 }}>
           <Text style={[t.body, { color: c.textStrong, fontSize: 16, lineHeight: 22, fontFamily: 'Jost_500Medium' }]}>

@@ -9,7 +9,7 @@ import { tacto } from '../../../utils/tacto';
 import { diaInicialDelDetalle } from '../../mentor/utils/diaInicialDelDetalle';
 import { CargandoLectura, FalloDeLectura } from '../../semaforo/components/EstadoDeLectura';
 import { EtiquetaSemaforo } from '../../semaforo/components/EtiquetaSemaforo';
-import { PALABRA_NO_SE_MIDE, palabraParaQuienAcompana } from '../../semaforo/utils/ayudaDelSemaforo';
+import { PALABRA_NO_SE_MIDE, palabraParaQuienAcompana, rolEnPalabras } from '../../semaforo/utils/ayudaDelSemaforo';
 import { formatearPorcentaje } from '../../semaforo/utils/lecturaDelSemaforo';
 import { DiaDeLaPersona } from '../components/DiaDeLaPersona';
 import { Linea, MarcoDelLider } from '../components/MarcoDelLider';
@@ -34,6 +34,11 @@ import { ObservarScreen } from './ObservarScreen';
  *   vacía los datos en el mismo render del cambio, y «Reintentar» vuelve a pedir lo mismo.
  * - **Abrir la ficha deja un registro** de la consulta en el servidor (FR-016): la lectura se hace al abrir y
  *   al cambiar de semana, no en cada foco.
+ * - **Hoy y los días que vienen**: la semana en curso se muestra entera. Hoy trae sus hábitos reales y dice que
+ *   todavía no cierra; los días que no llegan son tarjetas quietas. Mientras la semana siga abierta, una línea
+ *   avisa que el porcentaje puede cambiar (`cerrada` del servidor).
+ * - **El mentor o la guía con programa propio** (`NO_SE_MIDE`) llega sin días: se dice su rol y que no se mide,
+ *   con su porcentaje, y no se cuentan hábitos (ceros que parecerían incumplimiento).
  * - **Dos acciones** (US3): «Escribirle» abre el chat 1 a 1 con la persona, vacío y sin enviar nada
  *   (FR-015), y «Avisar a su mentor» deja una observación sobre ella y la semana (FR-014; no aparece si el
  *   grupo no tiene mentor). La observación se escribe en `ObservarScreen`; la ficha sigue montada debajo, así
@@ -179,12 +184,13 @@ function EncabezadoDeLaPersona({
 function EstadoDeLaSemana({ datos }: { datos: SemanaDePersona }) {
   const { c, t } = useTheme();
   const cifra = datos.porcentaje !== null ? formatearPorcentaje(datos.porcentaje) : null;
+  const rol = rolEnPalabras(datos.rol);
   return (
     <View style={{ gap: 4 }}>
       <View style={estilos.estado}>
         {datos.noSeMide ? (
           <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 22, flexShrink: 1 }]}>
-            {PALABRA_NO_SE_MIDE}
+            {rol ? `${rol} · ${PALABRA_NO_SE_MIDE}` : PALABRA_NO_SE_MIDE}
           </Text>
         ) : (
           <EtiquetaSemaforo color={datos.color} etiqueta={palabraParaQuienAcompana(datos.color, datos.etiqueta)} />
@@ -195,9 +201,15 @@ function EstadoDeLaSemana({ datos }: { datos: SemanaDePersona }) {
           </Text>
         ) : null}
       </View>
-      {datos.resumen ? (
+      {/* Quien no se mide no trae días: contar sus hábitos daría ceros que parecen incumplimiento. */}
+      {datos.resumen && !datos.noSeMide ? (
         <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 22 }]}>
           {resumenDeLaSemanaEnPalabras(datos.resumen)}
+        </Text>
+      ) : null}
+      {!datos.cerrada && cifra ? (
+        <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 22 }]}>
+          La semana sigue en curso: el porcentaje puede cambiar.
         </Text>
       ) : null}
     </View>
@@ -218,7 +230,11 @@ function CuerpoDeLaSemana({
   const datos = lectura.datos;
   if (datos) {
     return datos.dias.length === 0 ? (
-      <Linea>No hay nada que mostrar de esta semana.</Linea>
+      <Linea>
+        {datos.noSeMide
+          ? `${nombre} lleva su propio programa y no se mide en el semáforo: no hay días que mostrar.`
+          : 'No hay nada que mostrar de esta semana.'}
+      </Linea>
     ) : (
       <View style={{ gap: 10 }}>
         {datos.dias.map(dia => (

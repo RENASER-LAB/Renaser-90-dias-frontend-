@@ -8,6 +8,7 @@ import {
   entregaEnPalabras,
   estadoDeLaObligacionEnPalabras,
   motivoDelDiaEnPalabras,
+  textoDelDiaVacio,
   queSePuedeAbrir,
   resumenDeLaSemanaEnPalabras,
   rolEnPalabras,
@@ -101,20 +102,55 @@ describe('qué se puede abrir de un hábito', () => {
   });
 });
 
+/** Los ocho motivos que el servidor puede mandar para un día sin porcentaje (contrato §2). */
+const MOTIVOS_DEL_CONTRATO = [
+  'SIN_NADA_PLANIFICADO',
+  'NO_ACTIVADO',
+  'PENDIENTE_DE_CALCULO',
+  'CUENTA_SUSPENDIDA',
+  'PAUSADO',
+  'FUERA_DEL_PROGRAMA',
+  'FUTURO',
+  'EN_CURSO',
+];
+
 describe('el motivo de un día sin nada que medir', () => {
   it('se dice en palabras, nunca como incumplimiento', () => {
     expect(motivoDelDiaEnPalabras('PAUSADO')).toBe('En pausa');
     expect(motivoDelDiaEnPalabras('CUENTA_SUSPENDIDA')).toBe('Cuenta en pausa');
     expect(motivoDelDiaEnPalabras('NO_ACTIVADO')).toBe('Todavía no empezaba su programa');
     expect(motivoDelDiaEnPalabras('SIN_NADA_PLANIFICADO')).toBe('Nada programado este día');
-    for (const motivo of ['PAUSADO', 'CUENTA_SUSPENDIDA', 'NO_ACTIVADO', 'SIN_NADA_PLANIFICADO']) {
-      expect(motivoDelDiaEnPalabras(motivo)).not.toMatch(/no cumpl|incumpl|fall|✗/i);
+    expect(motivoDelDiaEnPalabras('PENDIENTE_DE_CALCULO')).toBe('Todavía sin calcular');
+    expect(motivoDelDiaEnPalabras('FUERA_DEL_PROGRAMA')).toBe('Fuera del programa');
+    for (const motivo of MOTIVOS_DEL_CONTRATO) {
+      expect(motivoDelDiaEnPalabras(motivo)).not.toMatch(/no cumpl|incumpl|fall|sin datos|✗/i);
     }
+  });
+
+  it('hoy y los días que vienen tienen sus propias palabras: ni incumplimiento ni «sin datos»', () => {
+    expect(motivoDelDiaEnPalabras('EN_CURSO')).toBe('Hoy, todavía sin cerrar');
+    expect(motivoDelDiaEnPalabras('FUTURO')).toBe('Este día todavía no llega');
   });
 
   it('un motivo nuevo del servidor se dice en neutro, y sin motivo no hay nada que decir', () => {
     expect(motivoDelDiaEnPalabras('OTRO_MOTIVO')).toBe('Sin hábitos que medir este día');
     expect(motivoDelDiaEnPalabras(null)).toBeNull();
+  });
+});
+
+describe('lo que dice un día abierto que no tiene nada', () => {
+  it('un día que todavía no llega lo dice, sin hablar de «medir»', () => {
+    expect(textoDelDiaVacio('FUTURO')).toBe('Este día todavía no llega.');
+  });
+
+  it('hoy dice que se mide al cerrar, no que no haya nada que medir', () => {
+    expect(textoDelDiaVacio('EN_CURSO')).toBe('Hoy todavía no tiene nada registrado. El día se mide cuando cierra.');
+  });
+
+  it('los demás motivos siguen diciendo por qué no hay nada que medir', () => {
+    expect(textoDelDiaVacio('PAUSADO')).toBe('En pausa. No hay nada que medir este día.');
+    expect(textoDelDiaVacio('FUERA_DEL_PROGRAMA')).toBe('Fuera del programa. No hay nada que medir este día.');
+    expect(textoDelDiaVacio(null)).toBe('Sin hábitos programados este día.');
   });
 });
 
@@ -130,11 +166,11 @@ describe('lo que se oye al llegar a un hábito', () => {
 describe('las acciones del día', () => {
   const a = (estado: string): AccionDeLaPersona => ({ id: 'a1', titulo: 'Llamar a 3 clientes', estado, evidenciaId: null });
 
-  it('hecha, pendiente y no cumplida; un estado raro no se afirma', () => {
+  it('el contrato manda dos estados: completada (con su evidencia) y pendiente; uno raro no se afirma', () => {
     expect(accionEnPalabras(a('COMPLETADA'))).toBe('Cumplida');
     expect(accionEnPalabras(a('PENDIENTE'))).toBe('Pendiente');
-    expect(accionEnPalabras(a('FALLIDA'))).toBe('No cumplida');
     expect(accionEnPalabras(a('QUIEN SABE'))).toBeNull();
+    expect(accionEnPalabras(a(''))).toBeNull();
   });
 });
 

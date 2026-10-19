@@ -308,3 +308,56 @@ describe('cada hábito del día ofrece lo que de verdad hay para ver', () => {
     expect(mockLeer).toHaveBeenCalledWith('e5', null);
   });
 });
+
+describe('hoy y los días que vienen (contrato §2: `EN_CURSO` y `FUTURO`)', () => {
+  function diaConMotivo(motivo: string | null, extra: Partial<DiaDatos> = {}): DiaDatos {
+    return { fecha: '2026-10-21', diaDePrograma: null, motivo, obligaciones: [], acciones: [], ...extra };
+  }
+
+  it('un día que todavía no llega lo dice y no se abre: no es incumplimiento ni «sin datos»', async () => {
+    const r = await montar(React.createElement(DiaDeLaPersona, { dia: diaConMotivo('FUTURO'), abierto: false, alAlternar: () => undefined }));
+    expect(textos(r)).toContain('Miércoles 21 de octubre');
+    expect(textos(r)).toContain('Este día todavía no llega');
+    expect(textos(r)).not.toMatch(/sin datos|no cumpl|incumpl|sin hábitos programados/i);
+    // No hay nada que abrir: ni cabecera tocable ni chevron.
+    expect(tocables(r)).toHaveLength(0);
+  });
+
+  it('hoy (`EN_CURSO`) muestra sus hábitos reales y dice que el día todavía no cierra', async () => {
+    const r = await verDia(
+      diaConMotivo('EN_CURSO', {
+        diaDePrograma: 51,
+        obligaciones: [obligacion({ estado: 'COMPLETADO' }), obligacion({ registroId: 'r2', titulo: 'Agua tibia', estado: 'PENDIENTE' })],
+      }),
+    );
+    expect(textos(r)).toContain('1 de 2 hábitos cumplidos · Hoy, todavía sin cerrar · Día 51');
+    expect(textos(r)).toContain('Ritual de la mañana');
+    expect(textos(r)).toContain('Agua tibia');
+    // El hábito que falta está pendiente, no «no cumplido».
+    expect(textos(r)).toContain('Pendiente');
+    expect(textos(r)).not.toMatch(/no cumplido|venció/i);
+  });
+
+  it('hoy sin nada registrado dice que el día se mide al cerrar, no que no haya nada que medir', async () => {
+    const r = await verDia(diaConMotivo('EN_CURSO', { diaDePrograma: 51 }));
+    expect(textos(r)).toContain('Hoy todavía no tiene nada registrado. El día se mide cuando cierra.');
+    expect(textos(r)).not.toContain('No hay nada que medir este día.');
+  });
+});
+
+describe('las acciones del día en una semana en curso', () => {
+  it('una acción pendiente no ofrece evidencia; una completada, la suya', async () => {
+    mockLeer.mockResolvedValue({ tipo: 'FOTO', url: 'https://s3/roca.jpg' });
+    const r = await verDia(
+      dia([], [
+        { id: 'a1', titulo: 'Llamar a 3 clientes', estado: 'COMPLETADA', evidenciaId: 'e5' },
+        { id: 'a2', titulo: 'Escribir el guion', estado: 'PENDIENTE', evidenciaId: null },
+      ]),
+    );
+    const botones = tocables(r).map(n => n.props.accessibilityLabel as string);
+    expect(botones).toContain('Ver evidencia de Llamar a 3 clientes');
+    expect(botones.filter(b => /Escribir el guion/.test(b))).toEqual([]);
+    expect(textos(r)).toContain('Cumplida');
+    expect(textos(r)).toContain('Pendiente');
+  });
+});
