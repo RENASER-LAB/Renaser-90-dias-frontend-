@@ -416,8 +416,9 @@ export function RolConsolaScreen({
           error={faltaMotivo ? 'Escribe el motivo del cambio.' : null}
         />
 
-        <BotonPrincipal etiqueta={rol ? 'Guardar cambios' : 'Crear rol'} onPress={() => void guardar()} cargando={ocupado} deshabilitado={ocupado || (rol !== null && !cambiado)} />
+        {/* Arriba del botón: debajo quedaba fuera de la pantalla, porque el botón se toca al pie (Maestro, flujo 38). */}
         {confirmacion ? <ConfirmacionEnLinea key={confirmacion.clave} texto={confirmacion.texto} onTerminar={() => setConfirmacion(null)} /> : null}
+        <BotonPrincipal etiqueta={rol ? 'Guardar cambios' : 'Crear rol'} onPress={() => void guardar()} cargando={ocupado} deshabilitado={ocupado || (rol !== null && !cambiado)} />
 
         {rol ? (
           <View style={{ gap: 10, marginTop: 8 }}>

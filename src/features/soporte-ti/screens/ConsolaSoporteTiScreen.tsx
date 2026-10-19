@@ -12,6 +12,7 @@ import { DespliegueConsolaScreen } from './DespliegueConsolaScreen';
 import { FuncionalidadConsolaScreen } from './FuncionalidadConsolaScreen';
 import { FuncionalidadesConsolaScreen } from './FuncionalidadesConsolaScreen';
 import { RolConsolaScreen } from './RolConsolaScreen';
+import { montajeDelRol, vistaTrasCrearRol } from '../utils/montajeDelRol';
 import { RolesConsolaScreen } from './RolesConsolaScreen';
 import { VerComoConsolaScreen } from './VerComoConsolaScreen';
 
@@ -23,7 +24,8 @@ type Vista =
   | { tipo: 'despliegue'; clave: string }
   /** Fase 2: los roles personalizados y uno de ellos (`id: null` = nuevo). */
   | { tipo: 'roles' }
-  | { tipo: 'rol'; id: string | null }
+  /** `montaje` mantiene montada la pantalla de un rol recién creado (si no, el aviso «Rol … creado.» se perdía). */
+  | { tipo: 'rol'; id: string | null; montaje?: string }
   /** Fase 2: ver la app como otro rol, en solo lectura. */
   | { tipo: 'verComo' };
 
@@ -98,13 +100,13 @@ export function ConsolaSoporteTiScreen({ onSalir }: { onSalir: () => void }) {
     if (!vista.id || rol) {
       return (
         <RolConsolaScreen
-          key={vista.id ?? 'nuevo'}
+          key={montajeDelRol(vista)}
           rol={rol}
           roles={roles.roles ?? []}
           catalogo={estado.funcionalidades ?? []}
           onGuardado={guardado => {
             roles.ponerRol(guardado);
-            if (!vista.id) setVista({ tipo: 'rol', id: guardado.id });
+            if (!vista.id) setVista(vistaTrasCrearRol(guardado.id));
           }}
           onBorrado={id => {
             roles.quitarRol(id);
