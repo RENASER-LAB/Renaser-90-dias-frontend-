@@ -167,6 +167,13 @@ export interface AprendizDelSemaforo {
   diasConDatos: number | null;
   /** Los días en su forma corta, del más viejo al más nuevo. Vacío si la persona no se mide. */
   dias: DiaDelSemaforo[];
+  /**
+   * Solo en la lista del líder (spec 005): el mentor o la guía con programa propio, que tiene su %
+   * pero no color («No se mide en el semáforo»). Ausente en las demás tablas.
+   */
+  noSeMide?: boolean;
+  /** Solo en la lista del líder: `MENTOR`, `TRAINEE_GUIDE`… Opcional, solo para decir quién es. */
+  rol?: string | null;
 }
 
 /** `GET /api/v1/mentor/groups/{groupId}/semaforo` y `GET /api/v1/admin/semaforo/groups/{groupId}`. */
@@ -200,6 +207,12 @@ export interface GrupoDelResumen {
   colorDelPromedio: ColorSemaforo | null;
   /** La palabra de ese color; `null` si no vino (la etiqueta pone la del color). */
   etiquetaDelPromedio: string | null;
+  /**
+   * Si la tarjeta se abre a la lista de personas del grupo (spec 005, `puedeAbrirse` del servidor:
+   * tiene mentor y la funcionalidad está prendida). `false` si no vino: con un backend anterior las
+   * tarjetas siguen sin abrirse (FR-021).
+   */
+  puedeAbrirse: boolean;
 }
 
 /** `GET /api/v1/semaforo/groups`: líder de mentores, administración y alquimista. */

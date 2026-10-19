@@ -250,6 +250,8 @@ const grupoDelResumenSchema = z
     /** El color del promedio y su palabra. String y no enum, como en todo el cable. */
     color: z.string().nullish(),
     etiqueta: z.string().nullish(),
+    /** Spec 005: la tarjeta se abre a las personas del grupo. Opcional: un backend anterior no lo manda. */
+    puedeAbrirse: z.boolean().nullish(),
   })
   .passthrough();
 
@@ -458,6 +460,7 @@ function aGrupoDelResumen(crudo: GrupoDelResumenCrudo): GrupoDelResumen {
     promedio: lectura ? lectura.porcentaje : promedio,
     colorDelPromedio: lectura ? lectura.color : null,
     etiquetaDelPromedio: lectura ? lectura.etiqueta : null,
+    puedeAbrirse: crudo.puedeAbrirse === true,
   };
 }
 

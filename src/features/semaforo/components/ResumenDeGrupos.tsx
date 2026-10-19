@@ -1,8 +1,9 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '../../../components/Icon';
 import { TituloDeSeccion } from '../../../components/Legible';
+import { Presionable } from '../../../components/Presionable';
 import { useTheme } from '../../../theme/ThemeContext';
 import type { LecturaDeGrupos } from '../hooks/useLecturaPorSemana';
 import type { GrupoDelResumen } from '../types/semaforo.types';
@@ -17,19 +18,29 @@ import { NavegacionDeSemanas } from './NavegacionDeSemanas';
  * cada color y el promedio. **Sin un solo nombre de aprendiz** (RL-07): la respuesta no los trae y
  * esta vista no tiene dónde ponerlos.
  *
- * Lo usan el líder de mentores (solo mirar) y Administración (tocar un grupo abre su tabla, con
- * nombres, por la puerta de administración).
+ * Lo usan el líder de mentores y Administración (tocar un grupo abre su tabla, con nombres, por la
+ * puerta de administración).
+ *
+ * > **Spec 005 (2026-10-19).** El líder también abre sus grupos (a las personas, con su cumplimiento y sus
+ * > evidencias), pero solo los que el servidor dice que se pueden abrir (`puedeAbrirse`: tiene mentor y la
+ * > funcionalidad está prendida). Con un backend anterior el campo falta y las tarjetas siguen sin abrirse.
  */
 export function ResumenDeGrupos({
   lectura,
   onAbrirGrupo,
   ayudaPorGrupo,
+  soloSiPuedeAbrirse = false,
 }: {
   lectura: LecturaDeGrupos;
-  /** Sin esto las tarjetas no se tocan: el líder ve cantidades, no personas. */
+  /** Sin esto las tarjetas no se tocan. */
   onAbrirGrupo?: (grupo: GrupoDelResumen) => void;
   /** Una línea bajo «Por grupo» que dice qué se puede hacer (o por qué no hay nombres). */
   ayudaPorGrupo?: string;
+  /**
+   * Solo se abren los grupos con `puedeAbrirse` (el líder, spec 005, FR-021). Administración deja esto
+   * apagado: abre todos como siempre.
+   */
+  soloSiPuedeAbrirse?: boolean;
 }) {
   const { c, t } = useTheme();
   const datos = lectura.datos;
@@ -61,7 +72,9 @@ export function ResumenDeGrupos({
                 <TarjetaDeGrupo
                   key={grupo.grupoId}
                   grupo={grupo}
-                  onPress={onAbrirGrupo ? () => onAbrirGrupo(grupo) : undefined}
+                  onPress={
+                    onAbrirGrupo && (!soloSiPuedeAbrirse || grupo.puedeAbrirse) ? () => onAbrirGrupo(grupo) : undefined
+                  }
                 />
               ))}
             </View>
@@ -129,15 +142,16 @@ function TarjetaDeGrupo({ grupo, onPress }: { grupo: GrupoDelResumen; onPress?: 
       </View>
     );
   }
+  /* `Presionable`: la tarjeta se hunde al apoyar el dedo (respuesta al tacto, AGENTS.md). */
   return (
-    <Pressable
+    <Presionable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${dicho}. Abrir el semáforo del grupo.`}
-      style={({ pressed }) => [caja, { backgroundColor: pressed ? c.goldWash : c.cardBg }]}
+      style={[caja, { backgroundColor: c.cardBg }]}
     >
       {contenido}
-    </Pressable>
+    </Presionable>
   );
 }
 

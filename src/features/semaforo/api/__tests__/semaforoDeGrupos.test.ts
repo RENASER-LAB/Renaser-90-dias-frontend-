@@ -271,6 +271,7 @@ describe('el resumen por grupos (§4.4)', () => {
           promedio: 76.4,
           colorDelPromedio: 'AMARILLO',
           etiquetaDelPromedio: 'Requiere atención',
+          puedeAbrirse: false,
         },
       ],
     });
@@ -334,7 +335,7 @@ describe('el resumen por grupos (§4.4)', () => {
     });
     expect(JSON.stringify(resumen)).not.toContain('Ana Pérez');
     expect(Object.keys(resumen.grupos[0]).sort()).toEqual([
-      'colorDelPromedio', 'etiquetaDelPromedio', 'grupoId', 'grupoNombre', 'mentorNombre', 'promedio', 'resumen', 'sinMentor',
+      'colorDelPromedio', 'etiquetaDelPromedio', 'grupoId', 'grupoNombre', 'mentorNombre', 'promedio', 'puedeAbrirse', 'resumen', 'sinMentor',
     ]);
   });
 
@@ -348,7 +349,7 @@ describe('el resumen por grupos (§4.4)', () => {
       grupos: [
         {
           grupoId: 'g-1', grupoNombre: null, mentorNombre: null, sinMentor: false, resumen: null, promedio: null,
-          colorDelPromedio: null, etiquetaDelPromedio: null,
+          colorDelPromedio: null, etiquetaDelPromedio: null, puedeAbrirse: false,
         },
       ],
     });
@@ -375,5 +376,20 @@ describe('grupo sin mentor en el resumen (D-240)', () => {
       ],
     });
     expect(resumen.grupos.map((g: { sinMentor: boolean }) => g.sinMentor)).toEqual([true, false]);
+  });
+});
+
+describe('tarjetas que se abren (spec 005, FR-021)', () => {
+  it('solo con `puedeAbrirse: true`; si falta, viene en null o con otra forma, no se abre', () => {
+    const resumen = aResumenPorGrupos({
+      desde: '2026-10-17', hasta: '2026-10-23',
+      grupos: [
+        { grupoId: 'a', puedeAbrirse: true },
+        { grupoId: 'b', puedeAbrirse: false },
+        { grupoId: 'c', puedeAbrirse: null },
+        { grupoId: 'd' },
+      ],
+    });
+    expect(resumen.grupos.map(g => g.puedeAbrirse)).toEqual([true, false, false, false]);
   });
 });
