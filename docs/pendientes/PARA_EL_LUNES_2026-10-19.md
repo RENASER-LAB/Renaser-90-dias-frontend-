@@ -43,3 +43,20 @@ La app abre y recupera la pantalla afectada sin permanecer negra o blanca. Si fa
 - La autorización funcional del líder queda limitada a consulta por grupo y persona.
 - Al implementar, comprobar los permisos en backend y la navegación en la app, y registrar la validación del problema de pantalla en dispositivo.
 - Identificar qué versión del backend y de la app necesita publicarse; generar un APK nuevo si la corrección nativa lo requiere.
+
+## Decisiones del dueño del 19 de octubre (preguntas para la spec 005 del líder)
+
+Se responden antes de escribir la spec `005-lider-cumplimiento-por-persona`. Corrigen el alcance de arriba: el líder ya no solo consulta.
+
+- **Entrada:** desde el semáforo por grupos (`SemaforoGruposScreen`). Tocar un grupo lista a sus personas.
+- **Lista del grupo:** nombre, color del semáforo de la semana y % de hábitos cumplidos, con los rojos primero.
+- **Quiénes aparecen:** los aprendices y también quien lleve su propio programa de 90 días en ese grupo (mentor o guía). Nunca cuentas de prueba (`usuarios.es_cuenta_de_prueba`).
+- **Qué ve:** nombre y **todas las evidencias**: de hábitos (foto, texto, audio, video y «¿Qué sentiste?»), de las acciones de objetivos (rocas), las respuestas de la Pastilla y la Audioterapia, y el post diario del Muro. Esto reemplaza la decisión del 01/10 de «ningún aprendiz por su nombre» para esta vista.
+- **Período:** la semana del semáforo (de sábado a viernes), día por día, con selector para ir a semanas anteriores.
+- **Alcance:** todos los grupos.
+- **Acciones:** avisar a su mentor (una observación sobre la persona) y escribirle a la persona (chat 1 a 1). No edita hábitos, no registra en nombre de nadie, no aprueba evidencias ni cambia roles.
+- **Aviso al mentor:** un resumen diario: «Hoy tu líder revisó a …».
+- **Soporte TI:** una clave de funcionalidad propia en el catálogo, que se pueda apagar sin apagar el resto del líder.
+- **Antes de la spec:** corregir el bug del post diario (se publica, pero el hábito sigue sin ✓ y la evidencia queda en blanco).
+
+Coordinación: el agente de Soporte TI (fase 2) no toca esta vista; pide `@Funcionalidad` en los endpoints nuevos. El agente 006 (mensaje del semáforo) toca `SemaforoScreen`, `TarjetaSemaforoHoy`, `lecturaDelSemaforo` y `semaforoSchemas`, sin tocar `SemaforoGruposScreen`; en el esquema cada uno suma solo campos opcionales.
