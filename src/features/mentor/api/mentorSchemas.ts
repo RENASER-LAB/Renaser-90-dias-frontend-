@@ -125,6 +125,11 @@ export const semanaAlumnoSchema = z
                 entregadaEn: z.string().nullable(),
                 revision: z.string().nullable(),
                 evidenciaId: z.string().nullable(),
+                /**
+                 * Spec 005 (R-6): en el post diario, la publicación del Muro con la que se cumplió. Opcional y
+                 * tolerante: un backend anterior no lo manda, y un valor raro pierde el botón, no la semana.
+                 */
+                publicacionId: z.string().nullish().catch(null),
               })
               .passthrough(),
           ),

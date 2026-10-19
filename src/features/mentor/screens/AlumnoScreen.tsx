@@ -17,6 +17,7 @@ import { TarjetaSemaforoDeAprendiz } from '../../semaforo/components/TarjetaSema
 import { ChipDeCaja } from '../../caja/components/ChipDeCaja';
 import { abrirConversacionDirecta } from '../../chat/api/chatApi';
 import { urlDeEvidencia } from '../../evidence/api/evidenceApi';
+import { VerPublicacion } from '../../lider-mentores/components/VisorDePublicacion';
 import { useSemanaDelAlumno } from '../hooks/useSemanaDelAlumno';
 import { diasDesde } from '../reglas';
 import { diaInicialDelDetalle } from '../utils/diaInicialDelDetalle';
@@ -336,6 +337,9 @@ export function AlumnoScreen({
                                   </Text>
                                 </Pressable>
                               ) : null}
+                              {/* Spec 005 (R-6): el post diario se cumple publicando en el Muro, y esa publicación es
+                                  su evidencia; antes decía «sin evidencia». */}
+                              {o.publicacionId ? <VerPublicacion publicacionId={o.publicacionId} titulo={o.titulo} /> : null}
                             </View>
                           </View>
                         ))

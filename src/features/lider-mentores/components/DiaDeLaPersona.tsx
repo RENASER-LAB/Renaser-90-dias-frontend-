@@ -18,7 +18,10 @@ import {
   entregaEnPalabras,
   estadoDeLaObligacionEnPalabras,
   motivoDelDiaEnPalabras,
+  queSePuedeAbrir,
 } from '../utils/palabrasDeLaPersona';
+import { EvidenciaDeObligacion } from './EvidenciaDeObligacion';
+import { VerPublicacion } from './VisorDePublicacion';
 
 /**
  * Un día de la semana de la persona (spec 005, FR-009): una cabecera que se toca —la fecha y, debajo, cuántos
@@ -118,6 +121,7 @@ function FilaDeObligacion({ obligacion, primera }: { obligacion: ObligacionDeLaP
   const { c, t } = useTheme();
   const estado = estadoDeLaObligacionEnPalabras(obligacion);
   const entrega = entregaEnPalabras(obligacion);
+  const abrir = queSePuedeAbrir(obligacion);
 
   return (
     <View style={[estilos.fila, { borderTopColor: c.divider, borderTopWidth: primera ? 0 : 1 }]}>
@@ -130,6 +134,16 @@ function FilaDeObligacion({ obligacion, primera }: { obligacion: ObligacionDeLaP
           <Text style={[t.body, { color: colorDelEstado(obligacion.estado, c), fontSize: 16, lineHeight: 22 }]}>{estado}</Text>
           {entrega ? <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 22 }]}>{entrega}</Text> : null}
         </View>
+        {abrir.evidencia ? (
+          <EvidenciaDeObligacion
+            titulo={obligacion.titulo}
+            evidencias={obligacion.evidencias}
+            respuestaTexto={obligacion.respuestaTexto}
+          />
+        ) : null}
+        {abrir.publicacion && obligacion.publicacionId ? (
+          <VerPublicacion publicacionId={obligacion.publicacionId} titulo={obligacion.titulo} />
+        ) : null}
       </View>
     </View>
   );
@@ -152,6 +166,12 @@ function FilaDeAccion({ accion, primera }: { accion: AccionDeLaPersona; primera:
             <Text style={[t.body, { color: cumplida ? c.success : c.textSoft, fontSize: 16, lineHeight: 22 }]}>{estado}</Text>
           ) : null}
         </View>
+        {accion.evidenciaId ? (
+          <EvidenciaDeObligacion
+            titulo={accion.titulo}
+            evidencias={[{ id: accion.evidenciaId, tipo: null, subidaEn: null }]}
+          />
+        ) : null}
       </View>
     </View>
   );

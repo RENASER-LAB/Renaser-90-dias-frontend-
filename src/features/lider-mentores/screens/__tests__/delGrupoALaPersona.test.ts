@@ -25,6 +25,9 @@ jest.mock('react-native-safe-area-context', () => {
 jest.mock('../../../renasia/components/RenasiaLauncher', () => ({ ESPACIO_PARA_LANZADOR: 0 }));
 jest.mock('../../../../navigation/barraAlDesplazar/BarraInferior', () => ({ useOcultarBarraAlDesplazar: () => ({}) }));
 jest.mock('../../../semaforo/components/graficos', () => ({ GraficoDeDias: () => null, GraficoDeSemanas: () => null }));
+/* El visor de evidencias trae el reproductor de las lecciones (WebView) y el de audio: módulos nativos que Jest no tiene. */
+jest.mock('../../../academy/components/LeccionVideoPlayer', () => ({ LeccionVideoPlayer: () => null }));
+jest.mock('../../components/ReproductorDeAudio', () => ({ ReproductorDeAudio: () => null }));
 
 /** Los retrocesos del sistema registrados por las pantallas montadas; el último es el que atiende el gesto. */
 const retrocesos: Array<{ actual: () => boolean | void }> = [];
