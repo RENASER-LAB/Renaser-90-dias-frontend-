@@ -10,9 +10,11 @@ export type Capacidades = {
   puedeIniciarPrograma: boolean;
   /** Acompaña al menos un grupo vigente. */
   acompana: boolean;
+  /** Ofrece «Descargar» la imagen del podio en Comunidad → Ranking (spec 006; permiso del servidor). */
+  exportarRanking: boolean;
 };
 
-const NINGUNA: Capacidades = { administrar: false, puedeIniciarPrograma: false, acompana: false };
+const NINGUNA: Capacidades = { administrar: false, puedeIniciarPrograma: false, acompana: false, exportarRanking: false };
 
 /**
  * Qué puede hacer esta cuenta, según el servidor.
@@ -45,6 +47,8 @@ export function useCapacidades() {
             administrar: respuesta.canAdminister === true,
             puedeIniciarPrograma: respuesta.canStartProgram === true,
             acompana: respuesta.canAccompany === true,
+            /* Solo un `true` explícito: un backend anterior no manda el campo y entonces no hay botón. */
+            exportarRanking: respuesta.canExportRanking === true,
           }
         : NINGUNA,
     );

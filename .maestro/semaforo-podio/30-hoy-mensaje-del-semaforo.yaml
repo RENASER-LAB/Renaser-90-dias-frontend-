@@ -1,0 +1,16 @@
+# cuenta: aprendiz
+# Spec 006, US1/US2: el mensaje del día con su sticker en la tarjeta del semáforo de Hoy.
+# MAESTRO_ESPERA: un fragmento del texto que /home manda hoy para esta cuenta (lo calcula correr-006.py).
+appId: com.renaser.app
+---
+- runFlow: despejar-entrada-006.yaml
+# No `ya-adentro.yaml`: la barra de pestañas se esconde si Hoy ya se desplazó (D-246) y «TRAINING» no se vería.
+- extendedWaitUntil:
+    visible: "HOY"
+    timeout: 30000
+- scrollUntilVisible:
+    element: ".*${MAESTRO_ESPERA}.*"
+    direction: DOWN
+    timeout: 30000
+- assertVisible: ".*${MAESTRO_ESPERA}.*"
+- takeScreenshot: hoy-${MAESTRO_CASO}

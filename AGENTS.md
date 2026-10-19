@@ -1798,6 +1798,55 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **Hace falta un APK nuevo** (la app no se actualiza por aire). El APK publicado (1.5.0) no lee los interruptores:
       ve el aviso como el mensaje de error del 503.
 
+  * **Cambio por pedido del dueño — 2026-10-19 — tab `Hoy`: la tarjeta del semáforo con el mensaje del día y el
+    sticker del búho** (backend spec 006, `Renaser-90-dias-backend/specs/006-mensaje-semaforo-y-podio/`). Textual: «El
+    mensaje que acompaña los semáforos tiene que ser mucho más personalizado, no solo que muestre el porcentaje avanzado
+    en el día». Lo que cambia y nada más:
+    * **El mensaje** (`semaforo.mensaje` de `GET /api/v1/home`: `{ id, texto, sticker }`): entre la palabra del color y
+      las siete barras de `TarjetaSemaforoHoy`, un sticker del búho de 56 y el texto en una burbuja de lavado dorado
+      (`MensajeDelSemaforo`; Jost 15, color de texto del tema, en claro y oscuro). Lo elige y lo redacta el servidor
+      —uno por persona y por día, con su nombre, el hábito que más le cuesta o el que mejor le va y cuánto le falta para
+      el siguiente color—: la app NO transforma el texto. Sale todos los días, también sin color (inicio, pausa, sin
+      programa, cuenta en pausa, graduado). El lector de pantalla lo lee: el texto se suma a la etiqueta de la tarjeta.
+    * **Los 15 stickers** (WebP de 512, sin texto en la imagen, 5 dorados para lo que se celebra y 10 azules) viven en
+      `assets/stickers/semaforo/`, y `semaforo/data/stickersDelSemaforo.ts` es el único lugar que los nombra (la prueba
+      frena que el catálogo del servidor use uno que falte). Un nombre desconocido, vacío o una imagen que no carga
+      dejan solo el texto, sin hueco.
+    * **Tolerante a todo lo de afuera**: el campo es aditivo y `.nullish().catch(null)`. Un mensaje mal formado, vacío o
+      con una llave `{…}` sin reemplazar se pierde SOLO él: la tarjeta sigue y Inicio no se cae. Con `mensaje: null`
+      (backend anterior, nadie a quien medir, ningún candidato) la tarjeta es exactamente la de antes.
+    * **Movimiento** (`emil-design-eng`, `animate-expo`): lo ve una vez al día, así que un fundido de 180 ms con
+      ease-out y solo `opacity` (hilo de la interfaz); con «reducir movimiento», sin animación. `key={mensaje.id}`: un
+      mensaje distinto se vuelve a fundir; el mismo con datos nuevos (los «faltan» bajan al cumplir un hábito), no.
+    * **No cambian**: la palabra del color, el porcentaje, «N de 7 días con datos», las barras, el detalle del semáforo
+      (`SemaforoScreen`), el aviso del sábado, las tarjetas del mentor, del líder y de administración ni el resto de Hoy.
+    * **Hace falta un APK nuevo y el backend con V110.** La app nueva contra un backend anterior muestra la tarjeta como
+      hoy; el APK publicado ignora el campo.
+
+  * **Cambio por pedido del dueño — 2026-10-19 — tab `Comunidad` → Ranking: «Descargar» la imagen del podio** (la misma
+    spec 006 del backend). Textual: «Que haya opción para descargar en los podios». Lo que cambia y nada más:
+    * **El botón**: junto a la línea de lo que mide la tabla, «Descargar» (`BotonDescargarPodio`: `Presionable` de 48 con
+      el ícono `forward`, «Preparando…» mientras trabaja). **Solo con el permiso del servidor**: `capabilities.canExportRanking`
+      de `GET /api/v1/mentor/context` (líder de mentores, alquimista, administrador y Soporte TI;
+      `useCapacidades().capacidades.exportarRanking`). Para aprendiz, guía, mentor y un backend anterior la fila es la de
+      siempre. La consulta se hace al abrir Ranking, no al abrir Comunidad.
+    * **La imagen**: vertical 9:16 de 1080 × 1920 px de la tabla que se está mirando (General, Coherencia, Kilómetros o
+      Gimnasio): el fénix de Renaser, el nombre de la tabla, la fecha del corte en español de Perú, el podio PLANO de
+      los tres primeros (oro, plata, bronce) y del 4.º al 10.º, con nombre completo («…» si no cabe) y puntaje, siempre
+      en la paleta oscura de la marca y con Fraunces solo en el título. Son las mismas filas que la pantalla en el
+      momento del toque; con menos de 10 personas salen las que hay y los lugares del podio sin nadie se ven libres. La
+      arma el teléfono con lo que ya tiene (`GET /ranking`): no hay endpoint nuevo ni se guarda nada en el servidor.
+    * **Cómo sale**: `TarjetaDelPodioParaCompartir` (540 × 960 dp, el doble en la imagen) se monta fuera de pantalla solo
+      mientras se genera, se captura con `react-native-view-shot` (`captureRef`, PNG) y se comparte con `expo-sharing`
+      (hoja del sistema: WhatsApp, historias, «Guardar imagen»); en la web baja el archivo
+      `podio-<tabla>-<fecha>.png`. Cancelar la hoja no es un error; un fallo avisa con un diálogo; vibración
+      `tacto.logro()` al terminar. **Sin dependencias nuevas** (las dos ya estaban). Todo vive en `features/ranking/`.
+    * **En `ComunidadScreen.tsx` solo cambia** la línea bajo el selector de tabla: pasa a ser una fila con el texto y,
+      a la derecha, el botón.
+    * **No cambian**: las tablas, el podio animado de la app, el selector, «Tu posición» ni las demás secciones.
+    * **Hace falta un APK nuevo y el backend con V110** (la capacidad la publica el backend; contra uno anterior no hay
+      botón).
+
 ## 2. 📱 RESPONSIVIDAD UNIVERSAL (XIAOMI, ANDROID, IOS Y TABLETS)
 * **Cero Doble Scroll**: NUNCA coloques un contenedor con `maxHeight` fijo o scroll interno dentro de otro `ScrollView`. Toda pantalla debe tener UN ÚNICO contenedor de scroll fluido con `contentContainerStyle={{ flexGrow: 1, paddingBottom: 36 }}`.
 * **Adaptabilidad a Xiaomi y Pantallas Altas (20:9 / 19.5:9)**:
