@@ -125,6 +125,27 @@ export interface SemaforoDeHoy {
    * backend anterior, o mal formado—, y entonces la tarjeta los saca de `/me/semaforo` como antes.
    */
   dias: DiaDelSemaforo[] | null;
+  /**
+   * El mensaje del día con su sticker (spec 006 del backend). Campo aditivo: `null` si no vino —un backend
+   * anterior, nadie a quien medir, ningún candidato— o vino mal formado, y entonces la tarjeta se ve como
+   * antes, sin hueco.
+   */
+  mensaje: MensajeDelSemaforo | null;
+}
+
+/**
+ * Lo que le dice el programa a la persona junto a su semáforo. El servidor lo elige (uno por persona y por
+ * día, sin repetir en 14 días) y lo escribe con sus datos ya puestos: la app NO lo transforma.
+ */
+export interface MensajeDelSemaforo {
+  /** Estable durante el día mientras no cambie el color o el caso. */
+  id: string;
+  texto: string;
+  /**
+   * El nombre de uno de los 15 stickers del búho (`dorado-orgulloso`, `azul-firme`…), o `null`. Un nombre que
+   * esta versión no conoce se muestra sin imagen (`data/stickersDelSemaforo`).
+   */
+  sticker: string | null;
 }
 
 // ------------------------------------------------------------------------------------------

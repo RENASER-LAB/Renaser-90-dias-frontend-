@@ -1,0 +1,14 @@
+# cuenta: aprendiz
+# Spec 006, US3: sin permiso (Mentor, Guía, Aprendiz) el Ranking no muestra «Descargar».
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "COMUNIDAD"
+- tapOn:
+    text: "Ranking"
+    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible: ".*(pts|km).*"
+    timeout: 40000
+- assertNotVisible: "Descargar"
+- takeScreenshot: ranking-${MAESTRO_CASO}

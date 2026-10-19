@@ -59,6 +59,8 @@ describe('GET /api/v1/home con el campo semaforo', () => {
       pausado: false,
       /* Sin el campo aditivo `dias`: `null`, y la tarjeta saca las barras de `/me/semaforo`. */
       dias: null,
+      /* Ni el aditivo `mensaje` (spec 006): `null`, y la tarjeta queda como antes. */
+      mensaje: null,
     });
   });
 

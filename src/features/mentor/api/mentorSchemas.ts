@@ -39,6 +39,12 @@ export const contextoMentorSchema = z
          * sin capacidad declarada la entrada no aparece, que es el lado seguro del error.
          */
         canAdminister: z.boolean().nullish(),
+        /**
+         * Si la app ofrece «Descargar» en Comunidad → Ranking (spec 006 del backend, permiso `EXPORT_RANKING`:
+         * líder de mentores, alquimista, administrador y Soporte TI). Mismo criterio que `canAdminister`:
+         * `.nullish()` porque un backend anterior no lo manda, y sin capacidad declarada no hay botón.
+         */
+        canExportRanking: z.boolean().nullish(),
       })
       .passthrough(),
     assignments: z.array(
