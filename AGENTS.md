@@ -1812,8 +1812,12 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       cambia**: sigue abriendo todos sus grupos como siempre.
     * **La lista del grupo** (`GrupoDelLiderScreen`, `VistaSemaforoDelGrupo` de siempre): nombre, color y % de la semana, en
       el orden del servidor (rojo primero; la app no reordena). El mentor o la guía con programa propio salen con su % y
-      «No se mide en el semáforo» (`AprendizDelSemaforo.noSeMide`). Un grupo sin nadie dice «Este grupo todavía no tiene
-      personas».
+      «No se mide en el semáforo» (`AprendizDelSemaforo.noSeMide`; el orden del servidor es rojo, amarillo, sin datos,
+      verde y «no se mide» al final). Un grupo sin nadie dice «Este grupo todavía no tiene personas». **La semana por
+      defecto** (contrato del 2026-10-19): la lista sin fecha trae la **última semana cerrada** (sábado→viernes; se
+      rotula «Semana cerrada», no «Últimos 7 días» como el resumen), y la ficha sin fecha la **semana en curso**; por
+      eso, al abrir una persona desde la lista, la app le pasa SIEMPRE el `hasta` de la lista
+      (`utils/inicioDeLaLista`).
     * **La semana de la persona** (`PersonaDelLiderScreen`): de sábado a viernes, un día por cabecera que se abre (el más
       reciente con hábitos viene abierto; sin animación), con lo que tenía ESE día, cada hábito con su estado en palabras y
       con forma, y la falta de datos (pausa, antes del Día 1, nada programado) con su motivo y nunca como incumplimiento.

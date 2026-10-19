@@ -104,12 +104,13 @@ function resumen(grupos: ReturnType<typeof grupo>[]): LecturaDeGrupos {
   };
 }
 
+/** La lista del líder sin `semanaHasta`: la ÚLTIMA SEMANA CERRADA (sábado→viernes), no los últimos 7 días. */
 const LISTA: SemaforoDelGrupo = {
   grupoId: 'g1',
   grupoNombre: 'Fénix',
-  desde: '2026-10-12',
-  hasta: '2026-10-18',
-  cerrada: false,
+  desde: '2026-10-10',
+  hasta: '2026-10-16',
+  cerrada: true,
   resumen: { verde: 0, amarillo: 0, rojo: 1, sinDatos: 0, total: 1 },
   aprendices: [
     { aprendizId: 'u1', nombre: 'Ana Pérez', avatarUrl: null, porcentaje: 30.5, color: 'ROJO', etiqueta: 'Con problemas', diasConDatos: 5, dias: [] },
@@ -298,13 +299,28 @@ describe('del grupo a la persona', () => {
     expect(textos(r)).toContain('Reintentar');
   });
 
+  it('la lista del grupo se rotula como la semana cerrada que es, no como «los últimos 7 días»', async () => {
+    mockTabla.mockResolvedValue(LISTA);
+    const r = await montar(resumen([grupo('g1', 'Fénix', true)]));
+    await tocar(r, 'Abrir el semáforo del grupo');
+    const t = textos(r);
+    expect(t).toContain('Semana cerrada');
+    expect(t).toContain('Del sábado 10 al viernes 16 de octubre');
+    expect(t).not.toContain('Últimos 7 días');
+    // El siguiente de la semana más nueva no existe; el anterior sí, y ninguno promete «los últimos 7 días».
+    expect(botones(r)).toContain('Semana anterior');
+    expect(botones(r)).not.toContain('Volver a los últimos 7 días');
+  });
+
   it('tocar a una persona abre su semana: día por día, la pausa dicha en palabras y nunca como incumplida', async () => {
     mockTabla.mockResolvedValue(LISTA);
     mockSemana.mockResolvedValue(semana());
     const r = await montar(resumen([grupo('g1', 'Fénix', true)]));
     await tocar(r, 'Abrir el semáforo del grupo');
     await tocar(r, 'Ana Pérez');
-    expect(mockSemana).toHaveBeenCalledWith('g1', 'u1', null);
+    /* El resumen está en «últimos 7 días» y la lista abrió sin fecha: la ficha se abre en el `hasta` de la LISTA
+       (el viernes 16), no sin fecha (que sería la semana en curso, otra distinta). */
+    expect(mockSemana).toHaveBeenCalledWith('g1', 'u1', '2026-10-16');
     const t = textos(r);
     expect(t).toContain('Esta semana');
     expect(botones(r)).not.toContain('Volver a esta semana');
@@ -324,21 +340,34 @@ describe('del grupo a la persona', () => {
   });
 
   it('la lista parada en una semana anterior abre a la persona en ESA semana', async () => {
-    mockTabla.mockResolvedValue(LISTA);
-    mockSemana.mockResolvedValue(semana({ semanaEnCurso: false, desde: '2026-10-10', hasta: '2026-10-16' }));
+    mockTabla.mockResolvedValue({ ...LISTA, desde: '2026-10-03', hasta: '2026-10-09' });
+    mockSemana.mockResolvedValue(semana({ semanaEnCurso: false, cerrada: true, desde: '2026-10-03', hasta: '2026-10-09' }));
     const lectura = {
       ...resumen([grupo('g1', 'Fénix', true)]),
-      posicion: { modo: 'semana', semanaHasta: '2026-10-16' } as const,
-      inicio: { posicion: { modo: 'semana', semanaHasta: '2026-10-16' } as const, hastaVigente: '2026-10-18' },
+      posicion: { modo: 'semana', semanaHasta: '2026-10-09' } as const,
+      inicio: { posicion: { modo: 'semana', semanaHasta: '2026-10-09' } as const, hastaVigente: '2026-10-18' },
     };
     const r = await montar(lectura);
     await tocar(r, 'Abrir el semáforo del grupo');
-    expect(mockTabla).toHaveBeenCalledWith('g1', '2026-10-16');
+    expect(mockTabla).toHaveBeenCalledWith('g1', '2026-10-09');
     await tocar(r, 'Ana Pérez');
-    expect(mockSemana).toHaveBeenCalledWith('g1', 'u1', '2026-10-16');
+    expect(mockSemana).toHaveBeenCalledWith('g1', 'u1', '2026-10-09');
     expect(textos(r)).toContain('Semana cerrada');
     // Desde una semana pasada hay un atajo a la semana en curso (FR-010); la en curso no lo necesita.
     expect(botones(r)).toContain('Volver a esta semana');
+  });
+
+  it('desde la última semana cerrada de la lista, la ficha puede ir a la semana en curso con «siguiente»', async () => {
+    mockTabla.mockResolvedValue(LISTA);
+    mockSemana.mockResolvedValueOnce(semana({ semanaEnCurso: false, cerrada: true, desde: '2026-10-10', hasta: '2026-10-16' }));
+    mockSemana.mockResolvedValueOnce(semana());
+    const r = await montar(resumen([grupo('g1', 'Fénix', true)]));
+    await tocar(r, 'Abrir el semáforo del grupo');
+    await tocar(r, 'Ana Pérez');
+    expect(mockSemana).toHaveBeenLastCalledWith('g1', 'u1', '2026-10-16');
+    await tocar(r, 'Semana siguiente');
+    expect(mockSemana).toHaveBeenLastCalledWith('g1', 'u1', '2026-10-23');
+    expect(textos(r)).toContain('Esta semana');
   });
 
   it('el mentor o la guía con programa propio se abre igual: su rol, «no se mide», su %, y sin días ni conteos', async () => {

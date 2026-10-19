@@ -5,6 +5,7 @@ import { SemaforoGruposScreen } from '../../semaforo/screens/SemaforoGruposScree
 import type { AprendizDelSemaforo, GrupoDelResumen } from '../../semaforo/types/semaforo.types';
 import { useGrupoDelLider } from '../hooks/useGrupoDelLider';
 import { GrupoDelLiderScreen } from './GrupoDelLiderScreen';
+import { inicioDeLaListaDelLider, viernesParaLaFicha } from '../utils/inicioDeLaLista';
 import { PersonaDelLiderScreen } from './PersonaDelLiderScreen';
 
 /**
@@ -37,7 +38,12 @@ export function CumplimientoDelLiderScreen({
         conservarSemana={yaAbrioUnGrupo.current}
         onAbrirGrupo={(abierto: GrupoDelResumen, inicio) => {
           yaAbrioUnGrupo.current = true;
-          setGrupo({ grupoId: abierto.grupoId, nombre: abierto.grupoNombre?.trim() || 'Grupo sin nombre', inicio });
+          setGrupo({
+            grupoId: abierto.grupoId,
+            nombre: abierto.grupoNombre?.trim() || 'Grupo sin nombre',
+            /* La misma semana, pero con el ancla de la lista (la última cerrada), no la del resumen (ayer). */
+            inicio: inicioDeLaListaDelLider(inicio),
+          });
         }}
       />
     );
@@ -80,8 +86,9 @@ function FlujoDelGrupo({
       lectura={lista}
       onVolver={onVolver}
       onAbrirPersona={fila =>
-        /* La ficha se abre en la semana que la lista estaba mirando; en la ventana vigente, la en curso. */
-        setPersona({ fila, semanaHasta: lista.posicion.modo === 'semana' ? lista.posicion.semanaHasta : null })
+        /* La ficha se abre SIEMPRE en el `hasta` de la lista que se está viendo. Sin fecha, la lista da la última
+           semana cerrada y la ficha la semana en curso: dos semanas distintas bajo el mismo rótulo. */
+        setPersona({ fila, semanaHasta: viernesParaLaFicha(lista.datos?.hasta) })
       }
     />
   );
