@@ -73,7 +73,7 @@ export function VerComoConsolaScreen({
       tacto.error();
       if (queHacerConElError(e) === 'desbloquear') onBloqueada();
       else if (e instanceof ApiError && e.status === 404 && 'rolPersonalizadoId' in opcion.eleccion) {
-        // D-270: 404 = ese rol personalizado ya no existe.
+        // D-273: 404 = ese rol personalizado ya no existe.
         Alert.alert('Ese rol ya no existe', 'Lo borraron mientras mirabas la lista. Vuelve a abrir «Ver como».');
       } else if (e instanceof ApiError && e.status === 404) Alert.alert('Todavía no está disponible', 'El servidor todavía no tiene «Ver como».');
       else Alert.alert('No se pudo entrar', mensajeDeFallo(e, 'Vuelve a intentarlo en un momento.'));

@@ -39,7 +39,7 @@ export function useVozDelOrbe(): ConversacionPorVoz {
      siempre, cuyo audio el servidor manda a la voz del teléfono (204). */
   const vozDeSer = useFuncionalidad(CLAVES.iaVoz);
   // Fase 2: la voz que todavía no le toca a esta cuenta se trata como apagada (el orbe sigue con la voz del teléfono).
-  // «Ver como» (D-270): la voz en vivo responde 403 en el handshake; ni se intenta.
+  // «Ver como» (D-273): la voz en vivo responde 403 en el handshake; ni se intenta.
   const usarEnVivo = enVivo.disponible && !enPausa && vozDeSer.prendida && vozDeSer.disponible && !enModoSoloLectura();
   const enSesion = enVivo.fase !== 'reposo';
 

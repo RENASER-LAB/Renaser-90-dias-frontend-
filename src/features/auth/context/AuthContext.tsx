@@ -449,7 +449,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const nombre = prueba.nombreDelRol ?? etiqueta;
     await guardarVerComo({ tokenSoporte, usuarioSoporte, tokenDePrueba: prueba.token, etiqueta: nombre, venceEn: prueba.venceEn });
     conexionChat.cerrarTodo();
-    // Solo lectura desde ya: ninguna escritura de fondo sale con la sesión de prueba (D-270).
+    // Solo lectura desde ya: ninguna escritura de fondo sale con la sesión de prueba (D-273).
     ponerModoSoloLectura(true);
     setTokenSesion(prueba.token);
     let api: Awaited<ReturnType<typeof authApi.perfilActual>>;

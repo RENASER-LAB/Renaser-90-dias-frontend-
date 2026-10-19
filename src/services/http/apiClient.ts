@@ -87,11 +87,11 @@ export const CODIGO_FUNCIONALIDAD_APAGADA = 'FUNCIONALIDAD_APAGADA';
 export const CODIGO_FUNCIONALIDAD_NO_DISPONIBLE = 'FUNCIONALIDAD_NO_DISPONIBLE';
 /** El 403 de una escritura desde «ver como» (contrato `fase-2.md` §5). */
 export const CODIGO_MODO_SOLO_LECTURA = 'MODO_SOLO_LECTURA';
-/** El 401 de una sesión de «ver como» vencida (D-270): se vuelve a Soporte TI, no es la sesión de Soporte TI vencida. */
+/** El 401 de una sesión de «ver como» vencida (D-273): se vuelve a Soporte TI, no es la sesión de Soporte TI vencida. */
 export const CODIGO_VER_COMO_VENCIDO = 'VER_COMO_VENCIDO';
 
 /*
- * «Ver como» en curso (spec 002, fase 2, D-270): la sesión de la app es de solo lectura. Lo pone `AuthContext` al
+ * «Ver como» en curso (spec 002, fase 2, D-273): la sesión de la app es de solo lectura. Lo pone `AuthContext` al
  * entrar y lo saca al salir. Con él, las escrituras **de fondo** (`deFondo`: el token de push, marcar leído, confirmar
  * alarmas) no salen: el servidor las rechazaría con 403 y no hay nada que decirle a nadie.
  */

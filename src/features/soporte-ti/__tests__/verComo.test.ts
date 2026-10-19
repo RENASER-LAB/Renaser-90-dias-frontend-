@@ -85,7 +85,7 @@ let pedidos: Pedido[] = [];
 let sinRed = false;
 let verComoResponde: { status: number; token?: string | null } = { status: 200, token: 'tok-prueba' };
 let meDeLaPrueba: { status: number } = { status: 200 };
-/** Lo que responde cualquier otra escritura con la sesión de prueba (D-270: 403 MODO_SOLO_LECTURA). */
+/** Lo que responde cualquier otra escritura con la sesión de prueba (D-273: 403 MODO_SOLO_LECTURA). */
 const SOLO_LECTURA = { message: 'Estás viendo la app como otro rol: no se puede cambiar nada.', codigo: 'MODO_SOLO_LECTURA' };
 
 const SOPORTE = { id: 'u-ti', email: 'ti@renaser.pe', role: 'IT_SUPPORT', status: 'ACTIVE', fullName: 'Ricardo TI', avatarUrl: null };
@@ -117,7 +117,7 @@ function instalarServidor() {
     } else if (r === '/api/v1/soporte-ti/ver-como' && pedido.method === 'DELETE') {
       status = 204;
       cuerpo = undefined;
-      // D-270: la respuesta trae `X-Auth-Token` vacío; no es una sesión nueva.
+      // D-273: la respuesta trae `X-Auth-Token` vacío; no es una sesión nueva.
       cabeceras['X-Auth-Token'] = '';
     } else if (r === '/api/v1/vencida') {
       status = 401;
@@ -317,7 +317,7 @@ describe('entrar y salir (AuthProvider de verdad)', () => {
   });
 });
 
-describe('el contrato final de «ver como» (D-270)', () => {
+describe('el contrato final de «ver como» (D-273)', () => {
   it('en solo lectura las escrituras de fondo no salen; las de la persona sí, y su 403 llega a la franja', async () => {
     const sesion = await montarApp();
     await act(async () => {

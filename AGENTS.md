@@ -1845,7 +1845,7 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       «Viendo como Mentor · Salir» (`FranjaVerComo`, en `App.tsx`; la app queda debajo sin borde seguro de arriba).
       Salir funciona sin red, cierra la sesión de prueba si puede y vuelve a Yo con la consola abierta (parámetro
       `abrirSoporteTi`). Un 401 (también `VER_COMO_VENCIDO`, sin diálogo) o el vencimiento de la sesión de prueba vuelven
-      a Soporte TI, no al login; abrir la app con «ver como» guardado vuelve a Soporte TI. En solo lectura (D-270) no sale
+      a Soporte TI, no al login; abrir la app con «ver como» guardado vuelve a Soporte TI. En solo lectura (D-273) no sale
       ninguna escritura de fondo (`deFondo` en `apiFetch`: token de push, marcar leído un chat o un aviso, confirmar
       alarmas) y, si alguna recibe 403, es silenciosa; el orbe no intenta la voz en vivo; un ERROR `MODO_SOLO_LECTURA:`
       del WebSocket no cierra ni reconecta la conexión.
