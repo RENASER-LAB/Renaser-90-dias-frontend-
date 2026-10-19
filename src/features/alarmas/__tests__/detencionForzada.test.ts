@@ -19,7 +19,13 @@ jest.mock('expo-notifications', () => ({
 
 import { soltarAlarmasDeLaCuenta } from '../alarmasDeLaCuenta';
 import { usarModuloDeAlarmas, type DetencionForzada } from '../alarmaExactaNativa';
-import { revisarDetencionForzada } from '../detencionForzada';
+import {
+  fotoDeLasAlarmasAlAbrir,
+  olvidarLaFotoDeLasAlarmas,
+  type DependenciasDeAlarmasVivas,
+  type EstadoDeLasAlarmas,
+} from '../alarmasVivas';
+import { revisarDetencionForzada, type DependenciasDeLaDetencion } from '../detencionForzada';
 
 const REVISADA = (id: string) => `renaser.alarmas.detencionRevisada.${id}`;
 const AVISADA = (id: string) => `renaser.alarmas.avisoDetencion.${id}`;
@@ -47,6 +53,7 @@ async function cuentaYaRevisada(userId: string, desde: number = REVISION_PREVIA)
 beforeEach(async () => {
   await AsyncStorage.clear();
   await cuentaYaRevisada('u-1');
+  olvidarLaFotoDeLasAlarmas();
   detencionForzadaDesde.mockReset();
   usarModuloDeAlarmas({
     puedeProgramarAlarmasExactas: () => true,
@@ -199,5 +206,88 @@ describe('(f) al cerrar sesión', () => {
     expect(await AsyncStorage.getItem(REVISADA('u-1'))).toBeNull();
     expect(await AsyncStorage.getItem(AVISADA('u-1'))).toBeNull();
     expect(await AsyncStorage.getItem('renaser.alarmas.sonido.u-1')).toBe('campana');
+  });
+});
+
+/** Las dos señales a mano: lo que dice el historial del sistema y lo que dicen las alarmas vivas. */
+function senales(historial: DetencionForzada, alarmas: EstadoDeLasAlarmas | Error): DependenciasDeLaDetencion {
+  return {
+    consultar: () => historial,
+    alarmas: async () => {
+      if (alarmas instanceof Error) throw alarmas;
+      return alarmas;
+    },
+  };
+}
+
+describe('refuerzo FR-020: las alarmas ya no están, diga lo que diga el motivo de salida (T052)', () => {
+  it('sin detención en el historial pero con las alarmas borradas: avisa igual', async () => {
+    expect(await revisarDetencionForzada('u-1', AHORA, senales(SIN_DETENCION, 'borradas'))).toBe('avisar');
+    expect(await AsyncStorage.getItem(AVISADA('u-1'))).toBe('2026-10-19');
+    // No hubo instante de detención: se anota hasta ahora, como siempre.
+    expect(await AsyncStorage.getItem(REVISADA('u-1'))).toBe(String(AHORA.getTime()));
+  });
+
+  it('las dos señales juntas son un solo aviso', async () => {
+    const cuando = AHORA.getTime() - 60_000;
+    expect(await revisarDetencionForzada('u-1', AHORA, senales(detenidaA(cuando), 'borradas'))).toBe('avisar');
+    expect(await AsyncStorage.getItem(REVISADA('u-1'))).toBe(String(cuando));
+    // La segunda apertura del mismo día no insiste.
+    const mas = new Date(AHORA.getTime() + 3_600_000);
+    expect(await revisarDetencionForzada('u-1', mas, senales(SIN_DETENCION, 'borradas'))).toBe('nada');
+  });
+
+  it('respeta una vez por día', async () => {
+    expect(await revisarDetencionForzada('u-1', AHORA, senales(SIN_DETENCION, 'borradas'))).toBe('avisar');
+    const luego = new Date(AHORA.getTime() + 2 * 3_600_000);
+    expect(await revisarDetencionForzada('u-1', luego, senales(SIN_DETENCION, 'borradas'))).toBe('nada');
+    const manana = new Date(AHORA.getTime() + UN_DIA_MS);
+    expect(await revisarDetencionForzada('u-1', manana, senales(SIN_DETENCION, 'borradas'))).toBe('avisar');
+    expect(await AsyncStorage.getItem(AVISADA('u-1'))).toBe('2026-10-20');
+  });
+
+  it('nunca la primera vez de la cuenta: sin revisión anterior solo se anota, aunque parezcan borradas', async () => {
+    const consultar = jest.fn<(desdeMs: number) => DetencionForzada>(() => SIN_DETENCION);
+    const alarmas = jest.fn<() => Promise<EstadoDeLasAlarmas>>(async () => 'borradas');
+    expect(await revisarDetencionForzada('u-nueva', AHORA, { consultar, alarmas })).toBe('nada');
+    expect(await AsyncStorage.getItem(REVISADA('u-nueva'))).toBe(String(AHORA.getTime()));
+    expect(await AsyncStorage.getItem(AVISADA('u-nueva'))).toBeNull();
+  });
+
+  it.each<[string, EstadoDeLasAlarmas]>([
+    ['vivas', 'vivas'],
+    ['no se sabe', 'no_se_sabe'],
+  ])('alarmas %s y sin detención: no avisa', async (_nombre, estado) => {
+    expect(await revisarDetencionForzada('u-1', AHORA, senales(SIN_DETENCION, estado))).toBe('nada');
+    expect(await AsyncStorage.getItem(AVISADA('u-1'))).toBeNull();
+    expect(await AsyncStorage.getItem(REVISADA('u-1'))).toBe(String(AHORA.getTime()));
+  });
+
+  it('con la detención en el historial las alarmas «vivas» no la desmienten: el historial manda', async () => {
+    expect(await revisarDetencionForzada('u-1', AHORA, senales(detenidaA(AHORA.getTime() - 1000), 'vivas'))).toBe('avisar');
+  });
+
+  it('si no se pueden comprobar las alarmas (lanza), vale solo el historial y nada lanza', async () => {
+    await expect(revisarDetencionForzada('u-1', AHORA, senales(SIN_DETENCION, new Error('boom')))).resolves.toBe('nada');
+    await expect(
+      revisarDetencionForzada('u-1', AHORA, senales(detenidaA(AHORA.getTime() - 1000), new Error('boom'))),
+    ).resolves.toBe('avisar');
+  });
+
+  it('por defecto usa la foto de las alarmas tomada al abrir la app, antes de rearmar', async () => {
+    const deps: DependenciasDeAlarmasVivas = {
+      permiso: () => 'concedido',
+      proximaAlarmaPropia: () => 'ninguna',
+      programadas: async () => [{ identifier: 'a', content: {}, trigger: { type: 'daily', hour: 7, minute: 0 } }],
+      ahora: () => AHORA.getTime(),
+    };
+    void fotoDeLasAlarmasAlAbrir(deps);
+    moduloQueDice(SIN_DETENCION);
+    expect(await revisarDetencionForzada('u-1', AHORA)).toBe('avisar');
+  });
+
+  it('un APK sin la función nueva (sin foto útil) no cambia lo de antes: sin detención, nada', async () => {
+    moduloQueDice(SIN_DETENCION);
+    expect(await revisarDetencionForzada('u-1', AHORA)).toBe('nada');
   });
 });

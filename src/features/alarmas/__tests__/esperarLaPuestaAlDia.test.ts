@@ -122,3 +122,56 @@ describe('esperarLaPuestaAlDia', () => {
     await expect(esperarLaPuestaAlDia()).resolves.toBeUndefined();
   });
 });
+
+describe('la foto de las alarmas vivas (spec 007, FR-020)', () => {
+  it('se toma ANTES de rearmar: el rearmado deja las alarmas puestas y borraría la prueba de que no estaban', async () => {
+    const orden: string[] = [];
+    const deps: DependenciasDePuestaAlDia = {
+      fotoDeLasAlarmas: () => {
+        orden.push('foto');
+      },
+      rearmar: async () => {
+        orden.push('rearmar');
+        return 2;
+      },
+      completarDiferidos: async () => 0,
+      preferencias: async () => [],
+      armarQueFaltan: async () => 0,
+      agregarRutas: async () => 0,
+      confirmar: async () => 'confirmado',
+    };
+    await ponerAlDiaLasAlarmas(null, Date.UTC(2026, 9, 19, 12, 0), deps);
+    expect(orden).toEqual(['foto', 'rearmar']);
+  });
+
+  it('también cuando no corresponde correr (intervalo mínimo): pedirla es barato y siempre antes', async () => {
+    const foto = jest.fn();
+    const deps: DependenciasDePuestaAlDia = {
+      fotoDeLasAlarmas: foto,
+      rearmar: async () => 0,
+      completarDiferidos: async () => 0,
+      preferencias: async () => [],
+      armarQueFaltan: async () => 0,
+      agregarRutas: async () => 0,
+      confirmar: async () => 'confirmado',
+    };
+    await ponerAlDiaLasAlarmas('u-1', Date.UTC(2026, 9, 19, 12, 0), deps);
+    await ponerAlDiaLasAlarmas('u-1', Date.UTC(2026, 9, 19, 12, 1), deps);
+    expect(foto).toHaveBeenCalledTimes(2);
+  });
+
+  it('si pedir la foto falla, la puesta al día sigue', async () => {
+    const deps: DependenciasDePuestaAlDia = {
+      fotoDeLasAlarmas: () => {
+        throw new Error('boom');
+      },
+      rearmar: async () => 1,
+      completarDiferidos: async () => 0,
+      preferencias: async () => [],
+      armarQueFaltan: async () => 0,
+      agregarRutas: async () => 0,
+      confirmar: async () => 'confirmado',
+    };
+    await expect(ponerAlDiaLasAlarmas(null, Date.UTC(2026, 9, 19, 12, 0), deps)).resolves.toMatchObject({ rearmadas: 1 });
+  });
+});

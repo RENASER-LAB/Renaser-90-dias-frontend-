@@ -38,6 +38,14 @@ import java.util.Locale
  * - [abrirPantallaDeLaMarca] (`abrirAjusteDeLaMarca`): abre «Inicio de aplicaciones» (o el equivalente) de la
  *   marca; si no existe, la lista de optimización de batería del sistema y, por último, los ajustes de Renaser.
  *
+ * ## Refuerzos generales (2026-10-19, FR-020 a FR-022): que no dependa de que una marca cuente bien por qué salió
+ *
+ * - [leerProximaAlarmaPropia] (`proximaAlarmaPropia`): ¿la «próxima alarma» del sistema es de Renaser? Si la app
+ *   tiene alarmas programadas y el sistema no tiene ninguna suya, el teléfono las borró aunque el motivo de
+ *   salida no lo diga. Lo decide la app (`alarmasVivas.ts`); acá solo se lee.
+ * - [MARCAS_QUE_DETIENEN_APPS] (FR-022): en esas marcas, en Android 11 a 14, una salida por «quitar de recientes»
+ *   también borra las alarmas, así que cuenta como detención. En las demás no (probado en el emulador).
+ *
  * Nunca se pide la excepción directa de optimización de batería: Google Play la restringe a apps que no son
  * de reloj ni de llamadas. Solo se ABRE una pantalla del sistema y la persona decide. Como `startActivity`
  * con un componente explícito no necesita visibilidad del paquete, el manifiesto no declara `queries`: se
@@ -77,6 +85,40 @@ class RenaserAlarmasModule : Module() {
     /** `'pantalla_de_la_marca' | 'lista_de_bateria' | 'ajustes_de_la_app' | 'ninguna'`: lo que se abrió. */
     Function("abrirAjusteDeLaMarca") {
       abrirPantallaDeLaMarca()
+    }
+
+    /**
+     * `'propia' | 'de_otra_app' | 'ninguna' | 'desconocido'`: de quién es la «próxima alarma» del sistema
+     * (la que Android muestra con el ícono del despertador). `propia` si la puso Renaser, `de_otra_app` si es
+     * del reloj de la persona u otra app, `ninguna` si el sistema no tiene ninguna, `desconocido` si no se pudo
+     * leer.
+     */
+    Function("proximaAlarmaPropia") {
+      leerProximaAlarmaPropia()
+    }
+  }
+
+  // --- ¿Siguen vivas las alarmas? ------------------------------------------------------------------
+
+  /**
+   * Las alarmas de Renaser son del tipo despertador (`setAlarmClock`, parche de `expo-notifications`) y llevan
+   * como `showIntent` un `PendingIntent` creado por esta app: por eso el sistema las devuelve en
+   * `getNextAlarmClock()` con `creatorPackage` igual a nuestro paquete. `getNextAlarmClock()` existe desde
+   * Android 5 (API 21) y `creatorPackage`, desde Android 4.2 (API 17). Es GLOBAL: si la próxima alarma es del
+   * reloj de la persona, no se puede decir nada de las nuestras (`de_otra_app`). Un `showIntent` ausente
+   * tampoco se puede atribuir a Renaser. Nunca lanza.
+   */
+  private fun leerProximaAlarmaPropia(): String {
+    try {
+      val contexto = appContext.reactContext ?: return "desconocido"
+      val gestor = contexto.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return "desconocido"
+      val proxima = gestor.nextAlarmClock ?: return "ninguna"
+      val propia = proxima.showIntent?.creatorPackage == contexto.packageName
+      Log.i("RenaserAlarmas", "proxima alarma del sistema: " + (if (propia) "de Renaser" else "de otra app"))
+      return if (propia) "propia" else "de_otra_app"
+    } catch (e: Exception) {
+      Log.w("RenaserAlarmas", "No se pudo leer la proxima alarma del sistema: " + e.javaClass.simpleName)
+      return "desconocido"
     }
   }
 
@@ -125,9 +167,13 @@ class RenaserAlarmasModule : Module() {
     return detenidaEn(cuando, motivo)
   }
 
-  /** Android 11–14: la salida `REASON_USER_REQUESTED` más nueva que `desdeMs` que no sea quitar de recientes. */
+  /**
+   * Android 11–14: la salida `REASON_USER_REQUESTED` más nueva que `desdeMs`. Una salida por quitar de recientes
+   * solo cuenta en las marcas que detienen apps (FR-022: allí SÍ borra las alarmas); en las demás se descarta.
+   */
   private fun detencionEnLasSalidas(gestor: ActivityManager, paquete: String, desdeMs: Long): Map<String, Any?> {
     val salidas = gestor.getHistoricalProcessExitReasons(paquete, 0, SALIDAS_A_REVISAR)
+    val quitarDeRecientesCuenta = marcaQueDetieneApps(marcaEnMinusculas())
     var detencion: ApplicationExitInfo? = null
     var descartada: ApplicationExitInfo? = null
     for (salida in salidas) {
@@ -135,13 +181,17 @@ class RenaserAlarmasModule : Module() {
       // Todo lo posterior a la última revisión va al log: sirve para medir qué reporta cada marca.
       Log.i("RenaserAlarmas", "salida " + salida.toString() + " descripcion=" + salida.description)
       if (salida.reason != ApplicationExitInfo.REASON_USER_REQUESTED) continue
-      if (esQuitarDeRecientes(salida.toString(), salida.description)) {
+      if (esQuitarDeRecientes(salida.toString(), salida.description) && !quitarDeRecientesCuenta) {
         if (descartada == null || salida.timestamp > descartada.timestamp) descartada = salida
       } else if (detencion == null || salida.timestamp > detencion.timestamp) {
         detencion = salida
       }
     }
-    if (detencion != null) return detenidaEn(detencion.timestamp, resumen(detencion))
+    if (detencion != null) {
+      val porRecientes = esQuitarDeRecientes(detencion.toString(), detencion.description)
+      val motivo = (if (porRecientes) "quitada de recientes en una marca que detiene apps: " else "") + resumen(detencion)
+      return detenidaEn(detencion.timestamp, motivo)
+    }
     // Sin detención: el motivo de lo descartado (si lo hubo) se devuelve igual, para el log de quien mide.
     val motivo = descartada?.let { resumen(it) }
     return mapOf("detenida" to false, "cuando" to null, "motivo" to motivo)
@@ -169,7 +219,7 @@ class RenaserAlarmasModule : Module() {
       val actividad = appContext.currentActivity
       val contexto: Context = actividad ?: appContext.reactContext ?: return "ninguna"
       val sinActividad = actividad == null
-      val marca = (Build.MANUFACTURER + " " + Build.BRAND).lowercase(Locale.ROOT)
+      val marca = marcaEnMinusculas()
       val guia = guiaDeLaMarca(marca)
 
       for (pantalla in guia.pantallas) {
@@ -202,6 +252,9 @@ class RenaserAlarmasModule : Module() {
     return "ninguna"
   }
 
+  /** `Build.MANUFACTURER + " " + Build.BRAND` en minúsculas: el fabricante y la marca pueden ser distintos. */
+  private fun marcaEnMinusculas(): String = (Build.MANUFACTURER + " " + Build.BRAND).lowercase(Locale.ROOT)
+
   /** `true` si la pantalla se abrió. Una que no existe o no es pública en este teléfono no es un error. */
   private fun intentarAbrir(contexto: Context, intento: Intent, sinActividad: Boolean): Boolean {
     return try {
@@ -227,6 +280,17 @@ class RenaserAlarmasModule : Module() {
 
 /** Lo que devuelve `detencionForzadaDesde` cuando no hubo detención o no se pudo saber. */
 private val SIN_DETENCION: Map<String, Any?> = mapOf("detenida" to false, "cuando" to null, "motivo" to null)
+
+/**
+ * Las marcas que detienen apps (FR-021 y FR-022): al quitar Renaser de recientes, o por el ahorro de batería, el
+ * sistema la trata como detención forzada y borra sus alarmas. La app (`utils/marcaDelTelefono.ts`) reconoce las
+ * mismas, y `moduloNativoDeAlarmas.test.ts` vigila que las dos listas no se desfasen.
+ */
+private val MARCAS_QUE_DETIENEN_APPS =
+  listOf("honor", "huawei", "xiaomi", "redmi", "poco", "oppo", "realme", "oneplus", "vivo", "iqoo", "samsung")
+
+/** `marca` es `Build.MANUFACTURER + " " + Build.BRAND` en minúsculas. */
+private fun marcaQueDetieneApps(marca: String): Boolean = MARCAS_QUE_DETIENEN_APPS.any { it in marca }
 
 /** Una pantalla del fabricante. `conDatosDeLaApp`: pide en el intento el paquete y el nombre de la app (Xiaomi). */
 private class PantallaDeLaMarca(val paquete: String, val clase: String, val conDatosDeLaApp: Boolean = false)

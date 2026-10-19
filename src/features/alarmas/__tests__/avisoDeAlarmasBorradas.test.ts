@@ -28,7 +28,11 @@ jest.mock('../../../context/AuthContext', () => ({
   useAuth: () => ({ user: mockSesion.userId ? { id: mockSesion.userId } : null }),
 }));
 
-/** El orden en que corrió cada paso: primero se ponen al día las alarmas, después se revisa la detención. */
+/**
+ * El orden en que corrió cada paso: primero la foto de las alarmas vivas (FR-020: ANTES de rearmar, si no el
+ * rearmado las dejaría puestas y no se vería que el teléfono las había borrado), después se ponen al día las
+ * alarmas y por último se revisa la detención.
+ */
 const mockOrden: string[] = [];
 jest.mock('../ponerAlDiaLasAlarmas', () => ({
   ponerAlDiaLasAlarmas: jest.fn(async () => {
@@ -37,6 +41,12 @@ jest.mock('../ponerAlDiaLasAlarmas', () => ({
   }),
   esperarLaPuestaAlDia: jest.fn(async () => {
     mockOrden.push('esperar');
+  }),
+}));
+jest.mock('../alarmasVivas', () => ({
+  fotoDeLasAlarmasAlAbrir: jest.fn(async () => {
+    mockOrden.push('foto');
+    return 'vivas';
   }),
 }));
 jest.mock('../detencionForzada', () => ({
@@ -59,7 +69,9 @@ const mockAlerta = jest.fn();
 jest.mock('../../../components/Alerta', () => ({ Alert: { alert: (...a: unknown[]) => mockAlerta(...a) } }));
 
 import { usarModuloDeAlarmas } from '../alarmaExactaNativa';
+import { fotoDeLasAlarmasAlAbrir } from '../alarmasVivas';
 import { revisarDetencionForzada } from '../detencionForzada';
+import { pedirLaGuiaPreventiva } from '../pedidoDeLaGuia';
 import { esperarLaPuestaAlDia, ponerAlDiaLasAlarmas } from '../ponerAlDiaLasAlarmas';
 import {
   AvisoDeAlarmasBorradas,
@@ -67,6 +79,7 @@ import {
   TEXTO_DEL_AVISO,
   TITULO_DEL_AVISO,
 } from '../components/AvisoDeAlarmasBorradas';
+import { TEXTO_PREVENTIVO, TITULO_PREVENTIVO } from '../data/guiasPorMarca';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -93,6 +106,10 @@ beforeEach(() => {
     abrirAjusteDeLaMarca,
   });
   // Las implementaciones se vuelven a poner en cada prueba: `restoreAllMocks` las puede haber borrado.
+  jest.mocked(fotoDeLasAlarmasAlAbrir).mockImplementation(async () => {
+    mockOrden.push('foto');
+    return 'vivas';
+  });
   jest.mocked(ponerAlDiaLasAlarmas).mockImplementation(async () => {
     mockOrden.push('ponerAlDia');
     return null;
@@ -176,9 +193,9 @@ describe('cuándo aparece', () => {
     expect(todo).toContain('Ahora no');
   });
 
-  it('las alarmas se ponen al día primero (esperando la corrida en curso) y recién después se revisa', async () => {
+  it('la foto de las alarmas vivas va primero; luego se ponen al día (esperando la corrida en curso) y recién después se revisa', async () => {
     await abrir();
-    expect(mockOrden).toEqual(['ponerAlDia', 'esperar', 'revisar']);
+    expect(mockOrden).toEqual(['foto', 'ponerAlDia', 'esperar', 'revisar']);
     expect(ponerAlDiaLasAlarmas).toHaveBeenCalledWith('u-1');
     expect(esperarLaPuestaAlDia).toHaveBeenCalledTimes(1);
     expect(revisarDetencionForzada).toHaveBeenCalledWith('u-1');
@@ -298,5 +315,103 @@ describe('el atrás del sistema', () => {
     });
     await vaciar();
     expect(hayHoja()).toBe(false);
+  });
+});
+
+describe('la guía preventiva (FR-021): la misma hoja, antes de que pase', () => {
+  /** Lo que el guardado del recordatorio pide: el aviso de «tu teléfono cerró» no tiene nada que ver. */
+  async function pedirLaGuia() {
+    await act(async () => {
+      expect(pedirLaGuiaPreventiva()).toBe(true);
+    });
+    await vaciar();
+  }
+
+  beforeEach(() => {
+    jest.mocked(revisarDetencionForzada).mockImplementation(async () => {
+      mockOrden.push('revisar');
+      return 'nada';
+    });
+  });
+
+  it('sale con el texto preventivo y la línea de la marca, sin decir que el teléfono ya cerró nada', async () => {
+    await abrir();
+    expect(hayHoja()).toBe(false);
+    await pedirLaGuia();
+
+    expect(hayHoja()).toBe(true);
+    const todo = textos();
+    expect(todo).toContain(TITULO_PREVENTIVO);
+    expect(todo).toContain(TEXTO_PREVENTIVO);
+    expect(todo).toContain(LINEA_HONOR_PARA_LAS_PRUEBAS);
+    expect(todo).not.toContain(TITULO_DEL_AVISO);
+    expect(todo).not.toContain(TEXTO_DEL_AVISO);
+    expect(todo).toContain('Ajustarlo');
+    expect(todo).toContain('Ahora no');
+  });
+
+  it('«Ajustarlo» abre la pantalla de la marca y cierra la hoja; «Ahora no» solo la cierra', async () => {
+    await abrir();
+    await pedirLaGuia();
+    await tocar('Ajustarlo');
+    expect(abrirAjusteDeLaMarca).toHaveBeenCalledTimes(1);
+    expect(hayHoja()).toBe(false);
+
+    await pedirLaGuia();
+    await tocar('Ahora no');
+    expect(abrirAjusteDeLaMarca).toHaveBeenCalledTimes(1);
+    expect(hayHoja()).toBe(false);
+  });
+
+  it('el atrás del sistema también la cierra', async () => {
+    await abrir();
+    await pedirLaGuia();
+    expect(mockAtras.activo).toBe(true);
+    await act(async () => {
+      mockAtras.alAtras?.();
+    });
+    await vaciar();
+    expect(hayHoja()).toBe(false);
+  });
+
+  it('el aviso de «tu teléfono cerró» sigue siendo el de siempre cuando toca, aunque antes se haya ofrecido la guía', async () => {
+    await abrir();
+    await pedirLaGuia();
+    await tocar('Ahora no');
+    jest.mocked(revisarDetencionForzada).mockImplementation(async () => 'avisar');
+    olvidarLaRevisionDeEstaApertura();
+    act(() => raiz!.unmount());
+    raiz = null;
+    await abrir();
+    expect(textos()).toContain(TITULO_DEL_AVISO);
+    expect(textos()).not.toContain(TITULO_PREVENTIVO);
+  });
+
+  it('en iOS y en la web no escucha: nadie la recibe y no se marca como ofrecida', async () => {
+    for (const sistema of ['ios', 'web'] as const) {
+      jest.replaceProperty(Platform, 'OS', sistema);
+      await abrir();
+      expect(pedirLaGuiaPreventiva()).toBe(false);
+      act(() => raiz?.unmount());
+      raiz = null;
+    }
+  });
+
+  it('si la hoja de «tu teléfono cerró Renaser» ya está abierta no se le pone otra encima y el pedido no cuenta', async () => {
+    jest.mocked(revisarDetencionForzada).mockImplementation(async () => 'avisar');
+    await abrir();
+    expect(textos()).toContain(TITULO_DEL_AVISO);
+    await act(async () => {
+      expect(pedirLaGuiaPreventiva()).toBe(false);
+    });
+    expect(textos()).toContain(TITULO_DEL_AVISO);
+    expect(textos()).not.toContain(TITULO_PREVENTIVO);
+  });
+
+  it('al desmontarse deja de escuchar', async () => {
+    await abrir();
+    act(() => raiz!.unmount());
+    raiz = null;
+    expect(pedirLaGuiaPreventiva()).toBe(false);
   });
 });

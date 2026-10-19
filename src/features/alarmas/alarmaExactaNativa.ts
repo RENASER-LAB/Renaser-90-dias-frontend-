@@ -32,6 +32,15 @@ export interface DetencionForzada {
 /** Qué pantalla abrió `abrirAjusteDeLaMarca`: la de la marca, la lista de batería del sistema o los ajustes de Renaser. */
 export type AjusteDeLaMarcaAbierto = 'pantalla_de_la_marca' | 'lista_de_bateria' | 'ajustes_de_la_app' | 'ninguna';
 
+/**
+ * De quién es la «próxima alarma» del sistema (la que Android muestra con el ícono del despertador): `propia` si la
+ * puso Renaser, `de_otra_app` si es del reloj de la persona u otra app, `ninguna` si el sistema no tiene ninguna,
+ * `desconocido` si no se pudo leer o el APK no trae la función (spec 007, refuerzo FR-020).
+ */
+export type ProximaAlarmaPropia = 'propia' | 'de_otra_app' | 'ninguna' | 'desconocido';
+
+const ESTADOS_DE_LA_PROXIMA_ALARMA: readonly ProximaAlarmaPropia[] = ['propia', 'de_otra_app', 'ninguna', 'desconocido'];
+
 const PASOS_DE_LA_MARCA: readonly AjusteDeLaMarcaAbierto[] = [
   'pantalla_de_la_marca',
   'lista_de_bateria',
@@ -40,14 +49,15 @@ const PASOS_DE_LA_MARCA: readonly AjusteDeLaMarcaAbierto[] = [
 ];
 
 /**
- * Las dos funciones de la spec 007 son OPCIONALES: un APK compilado antes de ellas tiene el módulo (las
- * dos de arriba) pero no estas, y la app no puede caerse por eso (`contracts/modulo-renaser-alarmas.md`).
+ * Las tres funciones de la spec 007 son OPCIONALES: un APK compilado antes de ellas tiene el módulo (las
+ * dos primeras) pero no estas, y la app no puede caerse por eso (`contracts/modulo-renaser-alarmas.md`).
  */
 interface ModuloDeAlarmas {
   puedeProgramarAlarmasExactas(): boolean | null;
   abrirAjusteDeAlarmasExactas(): boolean;
   detencionForzadaDesde?(desdeMs: number): DetencionForzada;
   abrirAjusteDeLaMarca?(): AjusteDeLaMarcaAbierto;
+  proximaAlarmaPropia?(): ProximaAlarmaPropia;
 }
 
 let modulo: ModuloDeAlarmas | null | undefined;
@@ -136,5 +146,21 @@ export function abrirAjusteDeLaMarca(): AjusteDeLaMarcaAbierto {
     return PASOS_DE_LA_MARCA.includes(paso) ? paso : 'ninguna';
   } catch {
     return 'ninguna';
+  }
+}
+
+/**
+ * ¿De quién es la «próxima alarma» del sistema? (spec 007, refuerzo FR-020). Es global: si la persona tiene
+ * una alarma del reloj antes que las de Renaser, devuelve `de_otra_app` y no se puede decir nada de las
+ * nuestras. `desconocido` en un APK sin la función, en iOS, en la web o si el sistema falla. No lanza.
+ */
+export function proximaAlarmaPropia(): ProximaAlarmaPropia {
+  const nativo = moduloNativo();
+  if (!nativo?.proximaAlarmaPropia) return 'desconocido';
+  try {
+    const estado = nativo.proximaAlarmaPropia();
+    return ESTADOS_DE_LA_PROXIMA_ALARMA.includes(estado) ? estado : 'desconocido';
+  } catch {
+    return 'desconocido';
   }
 }

@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { detencionForzadaDesde, type DetencionForzada } from './alarmaExactaNativa';
+import { fotoDeLasAlarmasAlAbrir, type EstadoDeLasAlarmas } from './alarmasVivas';
 
 /**
  * ¿El teléfono detuvo Renaser a la fuerza desde la última vez que se revisó? Y, si sí, ¿hay que avisarlo
@@ -22,9 +23,17 @@ import { detencionForzadaDesde, type DetencionForzada } from './alarmaExactaNati
  *
  * ## Qué decide
  *
- * `'avisar'` solo si hubo una detención nueva y hoy no se avisó. En todos los demás casos —sin detención,
- * ya se avisó hoy, un APK sin la función nativa— `'nada'`. El instante revisado se guarda siempre: la misma
- * detención no vuelve a contar mañana.
+ * `'avisar'` solo si hay señal de que el teléfono borró las alarmas y hoy no se avisó. Dos señales, cualquiera
+ * de las dos basta (spec 007, refuerzo FR-020):
+ *
+ * 1. **El historial del sistema** dice que detuvo la app a la fuerza desde la última revisión (FR-006; en las
+ *    marcas que detienen apps, también «quitar de recientes», FR-022).
+ * 2. **Las alarmas ya no están**: la app tenía alarmas programadas a futuro y el sistema no tiene ninguna
+ *    «próxima alarma» de Renaser (`alarmasVivas.ts`). Cubre a las marcas que no cuentan bien el motivo de salida.
+ *    Se usa la lectura tomada al abrir la app, ANTES de rearmar.
+ *
+ * En todos los demás casos —sin señal, ya se avisó hoy, un APK sin la función nativa— `'nada'`. El instante
+ * revisado se guarda siempre: la misma detención no vuelve a contar mañana.
  *
  * ## La primera revisión no avisa
  *
@@ -47,9 +56,23 @@ export type ResultadoDeLaRevision = 'avisar' | 'nada';
 export interface DependenciasDeLaDetencion {
   /** La lectura del módulo nativo; ante un APK sin la función devuelve «sin detención». */
   consultar: (desdeMs: number) => DetencionForzada;
+  /** Si las alarmas siguen vivas, leído al abrir la app antes de rearmar (FR-020). */
+  alarmas: () => Promise<EstadoDeLasAlarmas>;
 }
 
-const porDefecto: DependenciasDeLaDetencion = { consultar: detencionForzadaDesde };
+const porDefecto: DependenciasDeLaDetencion = {
+  consultar: detencionForzadaDesde,
+  alarmas: () => fotoDeLasAlarmasAlAbrir(),
+};
+
+/** Si no se pudo saber, no se avisa por esta vía: vale solo el historial del sistema. */
+async function alarmasSegun(deps: DependenciasDeLaDetencion): Promise<EstadoDeLasAlarmas> {
+  try {
+    return await deps.alarmas();
+  } catch {
+    return 'no_se_sabe';
+  }
+}
 
 /** La fecha de HOY en el teléfono (no la de UTC: a las 22:00 en Lima, UTC ya es mañana), `AAAA-MM-DD`. */
 function fechaLocal(fecha: Date): string {
@@ -77,9 +100,10 @@ export async function revisarDetencionForzada(
       return 'nada';
     }
     const lectura = deps.consultar(desdeMs);
+    const alarmasBorradas = (await alarmasSegun(deps)) === 'borradas';
     const hoy = fechaLocal(ahora);
     const yaAvisoHoy = (await AsyncStorage.getItem(PREFIJO_AVISO_DETENCION + userId)) === hoy;
-    const avisar = lectura.detenida && !yaAvisoHoy;
+    const avisar = (lectura.detenida || alarmasBorradas) && !yaAvisoHoy;
 
     // Lo revisado se anota siempre: la detención de hoy no cuenta otra vez mañana.
     const revisadoHasta = lectura.detenida && lectura.cuando !== null ? lectura.cuando : ahora.getTime();

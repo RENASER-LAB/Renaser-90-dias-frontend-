@@ -6,6 +6,7 @@ import {
   HAY_RECORDATORIOS_LOCALES,
   recordatoriosPorHabito,
 } from '../habits/notificaciones/recordatoriosDeHabito';
+import { fotoDeLasAlarmasAlAbrir } from './alarmasVivas';
 import { confirmarAlarmasAlServidor, type ResultadoDeConfirmacion } from './confirmacionDeAlarmas';
 import { agruparAvisosQueCoinciden } from './avisosJuntos';
 import { agregarRutaALasAlarmasDeHabitos, rearmarAlarmasProgramadas, tocaRearmar } from './rearmarAlarmas';
@@ -22,10 +23,20 @@ import { agregarRutaALasAlarmasDeHabitos, rearmarAlarmasProgramadas, tocaRearmar
  * 4. **La ruta** en las alarmas de hábitos de antes de D-218, para que tocarlas abra Training.
  * 5. **Confirmar** al servidor: con esto el push de inicio deja de ir también a este teléfono.
  *
+ * **Paso 0 (spec 007, FR-020):** antes de rearmar se toma la foto de «¿siguen vivas las alarmas?»
+ * (`alarmasVivas.ts`). Rearmar las vuelve a poner y el sistema ya no dejaría ver que el teléfono las había
+ * borrado; `AvisoDeAlarmasBorradas` usa esa foto, no una lectura posterior.
+ *
  * Un paso que falla no impide los demás, salvo la confirmación: si no se pudo leer lo que el servidor
  * sabe (paso 3), no se confirma — mejor un aviso de más que uno de menos.
  */
 export interface DependenciasDePuestaAlDia {
+  /**
+   * Toma la lectura de «¿siguen vivas las alarmas?» (spec 007, FR-020). Va ANTES de rearmar: rearmar vuelve a poner
+   * las alarmas y el sistema siempre diría que están. Idempotente: solo la primera del proceso toma la foto.
+   * Opcional para las pruebas de antes.
+   */
+  fotoDeLasAlarmas?: () => void;
   rearmar: (ahoraMs: number) => Promise<number | null>;
   completarDiferidos: (userId: string, ahora: Date) => Promise<number>;
   preferencias: () => Promise<PreferenciaHabitoApi[]>;
@@ -45,6 +56,9 @@ export interface ResultadoDePuestaAlDia {
 }
 
 const porDefecto: DependenciasDePuestaAlDia = {
+  fotoDeLasAlarmas: () => {
+    void fotoDeLasAlarmasAlAbrir();
+  },
   rearmar: ahoraMs => rearmarAlarmasProgramadas(ahoraMs),
   completarDiferidos: (userId, ahora) => completarCambiosDiferidos(userId, ahora),
   preferencias: () => habitsApi.obtenerPreferencias(),
@@ -93,6 +107,12 @@ export async function ponerAlDiaLasAlarmas(
   deps: DependenciasDePuestaAlDia = porDefecto,
 ): Promise<ResultadoDePuestaAlDia | null> {
   if (!HAY_RECORDATORIOS_LOCALES) return null;
+  // Antes de cualquier otra cosa, y también cuando luego no corresponde correr: es barato y solo la primera cuenta.
+  try {
+    deps.fotoDeLasAlarmas?.();
+  } catch {
+    // La foto es un refuerzo: si falla, la puesta al día sigue como siempre.
+  }
   if (corriendo) {
     // Entró alguien mientras corría la vuelta sin sesión del arranque: se corre al terminar esa.
     if (userId !== ultimoUsuario) otraVuelta = { userId, deps };

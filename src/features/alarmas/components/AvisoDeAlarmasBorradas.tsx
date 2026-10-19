@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import { GoldButton } from '../../../components/GoldButton';
@@ -8,8 +8,10 @@ import { useAuth } from '../../../context/AuthContext';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { useTheme } from '../../../theme/ThemeContext';
 import { abrirGuiaDeLaMarca } from '../abrirGuiaDeLaMarca';
-import { lineaDeLaGuia } from '../data/guiasPorMarca';
+import { lineaDeLaGuia, TEXTO_PREVENTIVO, TITULO_PREVENTIVO } from '../data/guiasPorMarca';
+import { fotoDeLasAlarmasAlAbrir } from '../alarmasVivas';
 import { revisarDetencionForzada, type ResultadoDeLaRevision } from '../detencionForzada';
+import { alPedirLaGuiaPreventiva } from '../pedidoDeLaGuia';
 import { esperarLaPuestaAlDia, ponerAlDiaLasAlarmas } from '../ponerAlDiaLasAlarmas';
 import { marcaDelTelefono } from '../utils/marcaDelTelefono';
 
@@ -33,6 +35,16 @@ import { marcaDelTelefono } from '../utils/marcaDelTelefono';
  * Quitar la app de recientes en un Android sin capa del fabricante, o que el sistema la cierre por memoria,
  * no avisa nada.
  *
+ * ## Refuerzos generales (spec 007, FR-020 y FR-021)
+ *
+ * - **No depende del motivo de salida**: antes de rearmar se toma la foto de si las alarmas siguen vivas
+ *   ({@link fotoDeLasAlarmasAlAbrir}); si la app tenía alarmas programadas y el sistema no tiene ninguna suya,
+ *   también se avisa, aunque la marca no cuente por qué salió el proceso.
+ * - **La misma hoja, antes de que pase**: en las marcas que detienen apps, la primera vez que la persona activa un
+ *   recordatorio (`guiaPreventiva.ts`, llamada al guardar en Training) se muestra con texto preventivo («En tu
+ *   teléfono, Renaser necesita un ajuste para que tus alarmas suenen siempre.») y el botón «Ajustarlo». Si ya hay
+ *   otra hoja abierta, no se le pone una encima.
+ *
  * Vive en `App.tsx`, por encima del navegador, junto a `RearmadorDeAlarmas`: ninguna pestaña cambia. Con la
  * hoja cerrada no pinta nada.
  *
@@ -45,6 +57,9 @@ import { marcaDelTelefono } from '../utils/marcaDelTelefono';
 export const TITULO_DEL_AVISO = 'Tu teléfono cerró Renaser';
 /** Dos frases, en tuteo (dueño, 28/09: «mucho texto marea al usuario»). La línea de la marca va aparte. */
 export const TEXTO_DEL_AVISO = 'Por eso no sonaron tus alarmas. Ya las volvimos a poner.';
+
+/** `borradas`: el teléfono ya cerró Renaser. `preventiva`: la guía antes de que pase (FR-021). */
+type ModoDeLaHoja = 'borradas' | 'preventiva';
 
 /** Los botones de la hoja van en tipo oración, sin espaciar (como los demás pies de hoja). */
 const TEXTO_DE_BOTON = { fontSize: 16, letterSpacing: 0 } as const;
@@ -65,6 +80,9 @@ export function olvidarLaRevisionDeEstaApertura(): void {
 
 async function revisarAlAbrir(userId: string): Promise<ResultadoDeLaRevision> {
   try {
+    // FR-020: la foto de las alarmas va ANTES de rearmar, o el rearmado las dejaría puestas y no se vería el borrado.
+    // Normalmente ya la tomó la primera puesta al día del proceso; esto solo asegura el orden.
+    void fotoDeLasAlarmasAlAbrir();
     await ponerAlDiaLasAlarmas(userId).catch(() => null);
     // Si `RearmadorDeAlarmas` ya tenía una corrida en marcha, la de arriba volvió sin esperarla.
     await esperarLaPuestaAlDia();
@@ -79,7 +97,21 @@ export function AvisoDeAlarmasBorradas() {
   const { c, t } = useTheme();
   const userId = user?.id ?? null;
   const [visible, setVisible] = useState(false);
+  // Qué dice la hoja. No se reinicia al cerrar: durante la salida la hoja sigue mostrando lo mismo.
+  const [modo, setModo] = useState<ModoDeLaHoja>('borradas');
+  // Para que el pedido de la guía preventiva sepa, sin esperar a un render, si ya hay una hoja abierta.
+  const abierta = useRef(false);
   const linea = useMemo(() => lineaDeLaGuia(marcaDelTelefono()), []);
+
+  const abrirHoja = useCallback((cual: ModoDeLaHoja) => {
+    abierta.current = true;
+    setModo(cual);
+    setVisible(true);
+  }, []);
+  const cerrar = useCallback(() => {
+    abierta.current = false;
+    setVisible(false);
+  }, []);
 
   useEffect(() => {
     if (Platform.OS !== 'android' || !userId) return undefined;
@@ -88,35 +120,51 @@ export function AvisoDeAlarmasBorradas() {
     void revisionDeEstaApertura.then(resultado => {
       if (!vigente || resultado !== 'avisar' || yaSeMostroEnEstaApertura) return;
       yaSeMostroEnEstaApertura = true;
-      setVisible(true);
+      abrirHoja('borradas');
     });
     return () => {
       vigente = false;
     };
-  }, [userId]);
+  }, [userId, abrirHoja]);
 
-  const cerrar = useCallback(() => setVisible(false), []);
+  // FR-021: la guía antes de que pase. Solo Android; si ya hay otra hoja abierta, responde que no (no se marca).
+  useEffect(() => {
+    if (Platform.OS !== 'android') return undefined;
+    return alPedirLaGuiaPreventiva(() => {
+      if (abierta.current) return false;
+      abrirHoja('preventiva');
+      return true;
+    });
+  }, [abrirHoja]);
+
   // El gesto atrás del sistema cierra la hoja y no minimiza la app (AGENTS.md §6).
   const alAtras = useCallback(() => {
-    setVisible(false);
+    cerrar();
     return true;
-  }, []);
+  }, [cerrar]);
   useSystemBackHandler(alAtras, visible);
 
   const arreglar = useCallback(() => {
-    setVisible(false);
+    cerrar();
     void abrirGuiaDeLaMarca();
-  }, []);
+  }, [cerrar]);
+
+  const preventiva = modo === 'preventiva';
 
   return (
     <HojaDesdeAbajo
       visible={visible}
       alCerrar={cerrar}
-      titulo={TITULO_DEL_AVISO}
+      titulo={preventiva ? TITULO_PREVENTIVO : TITULO_DEL_AVISO}
       etiquetaCerrar="Cerrar el aviso"
       pie={
         <View style={estilos.pie}>
-          <GoldButton label="Arreglarlo" onPress={arreglar} textStyle={TEXTO_DE_BOTON} style={estilos.ancho} />
+          <GoldButton
+            label={preventiva ? 'Ajustarlo' : 'Arreglarlo'}
+            onPress={arreglar}
+            textStyle={TEXTO_DE_BOTON}
+            style={estilos.ancho}
+          />
           <Presionable
             onPress={cerrar}
             accessibilityRole="button"
@@ -130,7 +178,7 @@ export function AvisoDeAlarmasBorradas() {
       }
     >
       <View style={estilos.cuerpo}>
-        <Text style={[t.body, estilos.texto, { color: c.textStrong }]}>{TEXTO_DEL_AVISO}</Text>
+        <Text style={[t.body, estilos.texto, { color: c.textStrong }]}>{preventiva ? TEXTO_PREVENTIVO : TEXTO_DEL_AVISO}</Text>
         <View style={[estilos.guia, { backgroundColor: c.cardBgAlt, borderColor: c.border }]}>
           <Text style={[t.body, estilos.texto, { color: c.textSoft }]}>{linea}</Text>
         </View>

@@ -4,8 +4,9 @@ import { Alert } from '../../components/Alerta';
 import { abrirAjusteDeLaMarca, type AjusteDeLaMarcaAbierto } from './alarmaExactaNativa';
 
 /**
- * Lo que hace el botón de la guía de batería, en Yo → Alarmas y en el aviso de «tu teléfono cerró Renaser»
- * (spec 007, historia 2, FR-008): abrir la pantalla donde se evita que el teléfono cierre la app.
+ * Lo que hace el botón de la guía de batería, en Yo → Alarmas, en el aviso de «tu teléfono cerró Renaser» y en la
+ * guía preventiva de la primera vez (spec 007, historia 2, FR-008 y FR-021): abrir la pantalla donde se evita que el
+ * teléfono cierre la app.
  *
  * 1. La del fabricante, si la hay («Inicio de aplicaciones» en Honor y Huawei…); si no, la lista de batería
  *    del sistema; si no, los ajustes de Renaser (todo eso lo decide el módulo nativo).
