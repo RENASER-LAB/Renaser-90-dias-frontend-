@@ -55,6 +55,37 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     y usa **`s24`** —con `s` saldría a 1,46 px; `grosorDeIconos.test.ts` lo frena—. Nada de emojis como
     íconos: cambian de forma entre Android, iOS y web e ignoran el color del tema.
 * **Integridad del Core**: NUNCA alterar, romper ni desconfigurar las pantallas existentes ni los tabs principales (`Hoy`, `Plan`, `Training`, `Comunidad`, `Yo`).
+  * **Cambio por pedido del dueño — 2026-10-20 — tab `Training` → Planificar: días solo con íconos, «Otra» en su
+    lugar y pantalla completa** (spec 011 del backend, `specs/011-editor-por-pasos/`; pedido con una captura del
+    editor de Descanso profundo: «que ocupe todo, y cuando le doy "Otra" se sobrepone lo de abajo»; después de comparar
+    20 diseños el dueño decidió quedarse con el editor actual: «no era tanto cambio al final»). Solo cambia la FORMA
+    de tres cosas. Lo que cambia y nada más:
+    * **Los días llevan solo íconos**: la pastilla de cada día de `FilaDeDiasDelPlan` dibuja la campana (o la campana
+      tachada si el día va sin aviso) y el reloj si tiene alarma propia, y ya no escribe «30′», «30′ +1» ni «a la hora».
+      Con un solo ícono va a 16 y con dos a 14, como antes. Las siete pastillas siguen midiendo lo mismo y alineando
+      letra, número y hora: el bloque de abajo es solo la fila de íconos (16) y el chip baja de 88 a 76. La etiqueta
+      del lector de pantalla sigue nombrando la lista completa de avisos. La misma fila la usa el recordatorio de las
+      acciones (Plan y Yo → Alarmas, spec 010): también deja de escribir el aviso. `resumenDelAvisoDelDia` ya no trae
+      `corto`.
+    * **«Otra» se elige en su lugar**: tocarla agrega y marca el aviso de arranque (15, o el mayor de los que ya rigen,
+      como abría la rueda; si ya existe no se duplica) y abre, DENTRO de lo que se desliza y justo debajo de las
+      opciones del recordatorio, la fila «−  15 min antes  +» (botones redondos de 48, minutos a 18 en negrita, borde
+      dorado). «−» y «+» ("Cinco minutos menos" / "Cinco minutos más") cambian ESE aviso de 5 en 5, entre 1 y 60 (un
+      valor que no es múltiplo de 5 se mueve de 5 en 5 desde ahí) y lo reemplazan en la lista sin duplicar y en el orden
+      de siempre; en el tope el botón se apaga. Volver a tocar «Otra» cierra la fila y el aviso queda; tocar su pastilla
+      lo desmarca y cierra la fila; «Sin aviso» sigue siendo exclusivo y también la cierra. Vale con días marcados
+      (el aviso va a esos días, spec 008). Si la fila nace debajo de lo que se ve, se lleva a la vista. Entra con un
+      fundido de 160 ms (con «reducir movimiento», al instante). Se borró la rueda `RuedaAntelacionPicker` y su botón
+      «Añadir», que se montaban encima del contenido; la lógica vive en `training/utils/avisoOtra.ts`.
+    * **Pantalla completa**: `HojaDesdeAbajo` suma `tamano="completa"` (todo el alto disponible, hasta debajo de la
+      barra de estado; `grande` de las demás hojas no cambia) y la hoja de Planificar la usa en sus tres pasos —la
+      lista, el editor y «Hábito nuevo»— para que no cambie de alto al entrar a un hábito. Al final de lo que se
+      desliza queda más aire (32) para que «Cómo suena» se lea entero por encima del botón fijo de guardar. Volver, la
+      ✕, arrastrar y el atrás de Android funcionan igual.
+    * **No cambian**: la hora, el resto del recordatorio, «Cómo suena», los textos, lo que se guarda (los mismos
+      pedidos), las alarmas y el backend (no se repiten las pruebas E2E de alarmas), Plan ni los demás tabs.
+      **Hace falta un AAB/APK nuevo** (solo JavaScript: no hay código nativo nuevo, pero la app no se actualiza por
+      aire).
   * **Cambio por pedido del dueño — 2026-10-19 — alarmas como el despertador, aviso cuando el teléfono las
     borra y guía por marca (tab `Yo` → Alarmas, una hoja global y, en Training → Planificar, una oferta única de la
     guía)** (spec 007 del backend, `specs/007-alarmas-confiables/`; pedido: «los usuarios dicen que sus alarmas no
