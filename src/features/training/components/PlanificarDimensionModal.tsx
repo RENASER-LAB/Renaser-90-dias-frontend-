@@ -48,6 +48,7 @@ import {
   LINEA_ALARMA_EXACTA_PENDIENTE,
   TEXTO_PEDIDO_ALARMA_EXACTA,
 } from '../../alarmas/pedirAlarmaExacta';
+import { ofrecerLaGuiaPreventiva } from '../../alarmas/guiaPreventiva';
 import { horaDelEditor, preferenciaTrasGuardar, textoDelCambioProgramado } from '../utils/horaDelEditor';
 
 /**
@@ -728,7 +729,9 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
       // sola vez— en vez de dejar que suene hasta 40 min tarde sin que nadie lo sepa.
       // Después, si sigue negado, solo una línea corta; el diálogo no vuelve a abrirse (dueño, 28/09).
       const conAviso = antelaciones.length > 0 && ok;
+      let pidioElPermiso = false;
       if (conAviso && (await hayQuePedirAlarmaExactaAlGuardar(claveUsuario))) {
+        pidioElPermiso = true;
         await anotarQueSePidioAlarmaExacta(claveUsuario);
         Alert.alert('Listo', `${mensaje}\n\n${TEXTO_PEDIDO_ALARMA_EXACTA}`, [
           { text: 'Ahora no', style: 'cancel' },
@@ -742,6 +745,10 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
       } else {
         confirmar(corto);
       }
+      // Spec 007 (FR-021): en las marcas que detienen apps (Honor, Xiaomi, Samsung…), la primera vez que se activa un
+      // recordatorio se ofrece, una vez, la guía de la marca ANTES de que el teléfono borre la alarma. Si este guardado
+      // ya pidió el permiso de alarmas exactas no se le suma otra hoja encima: queda para el próximo. Nunca bloquea.
+      if (conAviso && !pidioElPermiso) void ofrecerLaGuiaPreventiva(claveUsuario);
     } catch (e) {
       Alert.alert('No pudimos guardar la hora', mensajeDeError(e, 'Intenta de nuevo en unos segundos.'));
     } finally {

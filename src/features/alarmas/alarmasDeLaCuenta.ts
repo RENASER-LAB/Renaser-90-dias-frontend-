@@ -45,6 +45,11 @@ const PREFIJOS_DE_ALARMAS = [
   'renaser.eventos.alarmas.',
   'renaser.objetivos.recordatorios.acciones.',
   'renaser.objetivos.recordatorios.diario.',
+  // Spec 007: lo que el teléfono anota de la detención forzada. Es de la cuenta y de su día: no pasa a la siguiente.
+  'renaser.alarmas.detencionRevisada.',
+  'renaser.alarmas.avisoDetencion.',
+  // Spec 007, refuerzo FR-021: si ya se le ofreció la guía de su marca antes de que pasara. También es de la cuenta.
+  'renaser.alarmas.guiaPreventiva.',
 ];
 const PREFIJO_REPASO = 'renaser.habitos.repasoSemanal.';
 

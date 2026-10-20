@@ -20,6 +20,8 @@ const mockAlerta = jest.fn<(titulo: string, mensaje?: string) => void>();
 const mockRueda = jest.fn<(props: { horaInicial: number; minutoInicial: number; onCambiar: (h: number, m: number) => void }) => void>();
 const mockPreferencias = jest.fn<() => Promise<PreferenciaHabitoApi[]>>();
 const mockCambiarHorario = jest.fn<(...args: unknown[]) => Promise<{ deferred: boolean; deferredEffectiveDate?: string | null }>>();
+const mockPedirPermisoExacto = jest.fn<() => Promise<boolean>>();
+const mockOfrecerGuia = jest.fn<(userId: string) => Promise<boolean>>();
 
 jest.mock('../../../../theme/ThemeContext', () => {
   const tokens = jest.requireActual<typeof import('../../../../theme/tokens')>('../../../../theme/tokens');
@@ -61,10 +63,16 @@ jest.mock('../../../habits/notificaciones/recordatoriosDeHabito', () => ({
 // D-217: la hoja pide «Alarmas y recordatorios» con el primer recordatorio; acá no hay sistema que
 // consultar, así que nunca hace falta pedirlo.
 jest.mock('../../../alarmas/pedirAlarmaExacta', () => ({
-  hayQuePedirAlarmaExactaAlGuardar: async () => false,
+  hayQuePedirAlarmaExactaAlGuardar: () => mockPedirPermisoExacto(),
   anotarQueSePidioAlarmaExacta: async () => undefined,
+  hayQueRecordarAlarmaExacta: async () => false,
   abrirPermisoDeAlarmasExactas: async () => 'ninguna',
   TEXTO_PEDIDO_ALARMA_EXACTA: '',
+  LINEA_ALARMA_EXACTA_PENDIENTE: '',
+}));
+// Spec 007 (FR-021): la guía de la marca se ofrece al guardar un recordatorio. Acá no hay marca ni hoja que la muestre.
+jest.mock('../../../alarmas/guiaPreventiva', () => ({
+  ofrecerLaGuiaPreventiva: (userId: string) => mockOfrecerGuia(userId),
 }));
 jest.mock('../../../habits/api/habitsApi', () => ({
   obtenerPreferencias: () => mockPreferencias(),
@@ -164,6 +172,8 @@ beforeEach(() => {
   mockFilaDias.mockReset();
   mockAntelacionesDe.mockReset();
   mockAntelacionesDe.mockImplementation(async () => []);
+  mockPedirPermisoExacto.mockReset().mockResolvedValue(false);
+  mockOfrecerGuia.mockReset().mockResolvedValue(false);
 });
 
 afterEach(() => {
@@ -328,5 +338,55 @@ describe('E-408: lo que se ve en el recordatorio es lo que se guarda', () => {
     expect(raiz.root.findAll(n => n.props.accessibilityLabel?.startsWith?.('A la hora exacta')).length).toBeGreaterThan(0);
     await act(async () => { mockFilaDias.mock.lastCall![0].onAlternarDia('VIE'); });
     expect(raiz.root.findAll(n => n.props.accessibilityLabel?.startsWith?.('A la hora exacta'))).toHaveLength(0);
+  });
+});
+
+/**
+ * Spec 007, refuerzo FR-021: en las marcas que detienen apps, la primera vez que se guarda un recordatorio se ofrece
+ * la guía de la marca. Acá se prueba CUÁNDO la pide la hoja (la decisión de marca y la hoja viven en `alarmas/`).
+ */
+describe('FR-021: la guía de la marca al guardar un recordatorio', () => {
+  const alternarALaHora = async (r: ReactTestRenderer) => {
+    const [aLaHora] = r.root.findAll(n => typeof n.props.onPress === 'function'
+      && typeof n.props.accessibilityLabel === 'string' && n.props.accessibilityLabel.startsWith('A la hora exacta'));
+    await act(async () => { aLaHora.props.onPress(); });
+  };
+  const guardar = async (r: ReactTestRenderer) => {
+    const [boton] = r.root.findAll(n => typeof n.props.label === 'string' && n.props.label.startsWith('Guardar'));
+    await act(async () => { boton.props.onPress(); });
+    await esperar();
+  };
+
+  beforeEach(() => {
+    mockPreferencias.mockResolvedValue([preferencia('h-jugo', '09:00')]);
+    mockCambiarHorario.mockResolvedValue({ deferred: true, deferredEffectiveDate: '2026-09-29' });
+  });
+
+  it('al guardar un hábito CON recordatorio, la pide para esta cuenta', async () => {
+    raiz = await montar();
+    await abrir(raiz, 'JUGO VERDE');
+    await alternarALaHora(raiz);
+    await guardar(raiz);
+    expect(mockCambiarHorario).toHaveBeenCalledTimes(1);
+    expect(mockOfrecerGuia).toHaveBeenCalledTimes(1);
+    expect(mockOfrecerGuia).toHaveBeenCalledWith('u-1');
+  });
+
+  it('al guardar una hora SIN recordatorio, no', async () => {
+    raiz = await montar();
+    await abrir(raiz, 'JUGO VERDE');
+    await guardar(raiz);
+    expect(mockCambiarHorario).toHaveBeenCalledTimes(1);
+    expect(mockOfrecerGuia).not.toHaveBeenCalled();
+  });
+
+  it('si ese mismo guardado ya pide el permiso de alarmas exactas, no se le suma otra hoja encima', async () => {
+    mockPedirPermisoExacto.mockResolvedValue(true);
+    raiz = await montar();
+    await abrir(raiz, 'JUGO VERDE');
+    await alternarALaHora(raiz);
+    await guardar(raiz);
+    expect(mockAlerta).toHaveBeenCalledWith('Listo', expect.any(String));
+    expect(mockOfrecerGuia).not.toHaveBeenCalled();
   });
 });

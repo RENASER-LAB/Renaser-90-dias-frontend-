@@ -115,7 +115,12 @@ describe('cuatro hábitos a las 12:00 (E-410)', () => {
     const conSonido = doce.filter(a => suena(a.trigger.channelId));
     expect(conSonido).toHaveLength(1);
     expect(conSonido[0].content.title).toBe('4 hábitos a las 12:00');
-    expect(conSonido[0].content.body).toBe('AGUA TIBIA CON LIMÓN · JUGO VERDE · PRIMERA COMIDA (ROMPO EL AYUNO) · ÚLTIMA COMIDA DEL DÍA');
+    // Nombra a los cuatro, sin importar en qué orden: lo decide el orden de los identificadores, y desde la
+    // spec 007 el de la antelación más temprana es `habito-{habitoId}-inicio` (antes un UUID al azar; esta
+    // librería de mentira los numeraba en orden de creación, y la prueba se apoyaba en eso).
+    expect((conSonido[0].content.body ?? '').split(' · ').sort()).toEqual(
+      ['AGUA TIBIA CON LIMÓN', 'JUGO VERDE', 'PRIMERA COMIDA (ROMPO EL AYUNO)', 'ÚLTIMA COMIDA DEL DÍA'].sort(),
+    );
     // Con «Voz», la frase genérica: la voz de un hábito solo sabe decir su nombre.
     expect(conSonido[0].trigger.channelId).toBe('recordatorios-habitos-voz');
     expect(doce.filter(a => a.trigger.channelId === CANAL_EN_SILENCIO.id)).toHaveLength(3);

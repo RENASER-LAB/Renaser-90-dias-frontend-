@@ -41,6 +41,9 @@ jest.mock('expo-notifications', () => ({
 
 import {
   INTERVALO_MINIMO_MS,
+  MARGEN_CON_ALARMA_EXACTA_MS,
+  MARGEN_RECIEN_VENCIDA_MS,
+  margenDeRecienVencida,
   olvidarUltimaCorrida,
   planDeRearmado,
   rearmarAlarmasProgramadas,
@@ -191,5 +194,23 @@ describe('al abrir y al volver a primer plano', () => {
     mockSistema.set('h', habito('h', 6, 0));
     expect(await rearmarAlarmasProgramadas(AHORA, 'ios')).toBeNull();
     expect(mockProgramadas).toHaveLength(0);
+  });
+});
+
+// E-639 (spec 007): con alarmas exactas, una diaria que sonó hace media hora se vuelve a poner. Con el
+// margen de 2 h, si Honor detenía la app poco después de una alarma, la de mañana no volvía al abrirla.
+describe('el margen de la diaria recién vencida depende de si las alarmas salen exactas', () => {
+  it('con permiso (o sin necesidad de pedirlo) es de minutos; sin permiso o sin saber, de 2 h', () => {
+    expect(margenDeRecienVencida('concedido')).toBe(MARGEN_CON_ALARMA_EXACTA_MS);
+    expect(margenDeRecienVencida('no_hace_falta')).toBe(MARGEN_CON_ALARMA_EXACTA_MS);
+    expect(margenDeRecienVencida('denegado')).toBe(MARGEN_RECIEN_VENCIDA_MS);
+    expect(margenDeRecienVencida('desconocido')).toBe(MARGEN_RECIEN_VENCIDA_MS);
+  });
+
+  it('una diaria que sonó hace 30 min se rearma con alarmas exactas y se deja con inexactas', async () => {
+    mockSistema.set('h-0930', habito('h-0930', 9, 30));
+    expect(await rearmarAlarmasProgramadas(AHORA, 'android', MARGEN_CON_ALARMA_EXACTA_MS)).toBe(1);
+    olvidarUltimaCorrida();
+    expect(await rearmarAlarmasProgramadas(AHORA, 'android', MARGEN_RECIEN_VENCIDA_MS)).toBe(0);
   });
 });

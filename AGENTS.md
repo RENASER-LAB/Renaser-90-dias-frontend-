@@ -55,6 +55,39 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     y usa **`s24`** —con `s` saldría a 1,46 px; `grosorDeIconos.test.ts` lo frena—. Nada de emojis como
     íconos: cambian de forma entre Android, iOS y web e ignoran el color del tema.
 * **Integridad del Core**: NUNCA alterar, romper ni desconfigurar las pantallas existentes ni los tabs principales (`Hoy`, `Plan`, `Training`, `Comunidad`, `Yo`).
+  * **Cambio por pedido del dueño — 2026-10-19 — alarmas como el despertador, aviso cuando el teléfono las
+    borra y guía por marca (tab `Yo` → Alarmas, una hoja global y, en Training → Planificar, una oferta única de la
+    guía)** (spec 007 del backend, `specs/007-alarmas-confiables/`; pedido: «los usuarios dicen que sus alarmas no
+    suenan», teléfonos Honor; decisión «la alarma… así como la alarma en Android… procede»; después, «arregla en
+    general también, no es ese dispositivo, por si acaso»). Lo que cambia y nada más:
+    * **Toda alarma programada por la app es una alarma del usuario** (`AlarmManager.setAlarmClock`) cuando hay permiso
+      «Alarmas y recordatorios»: suena a su hora aunque el teléfono esté en reposo, y Android la muestra como «próxima
+      alarma» con el ícono del despertador. Lo hace un parche de `postinstall` a `expo-notifications`
+      (`scripts/arreglar-alarmas-tipo-despertador.js`, vigilado por `alarmasTipoDespertador.test.ts`). Vale para
+      hábitos, Despertar, eventos, objetivos, Código Renaser y el repaso del domingo; la prueba de sonido (intervalo de
+      3 s) no. Sin el permiso, como antes. Canales, voces, sonidos, ruta y avisos agrupados no cambian.
+    * **La alarma del primer aviso de cada hábito se llama `habito-{id}-inicio`**, igual que el `tag` del push de
+      respaldo del servidor: si llegan los dos, queda uno solo en la bandeja.
+    * **Hoja al abrir la app** (`AvisoDeAlarmasBorradas`, montada en `App.tsx` junto a `RearmadorDeAlarmas`): si el
+      teléfono borró las alarmas, se rearman y aparece, como mucho una vez por día y nunca la primera vez de la
+      cuenta, «Tu teléfono cerró Renaser» con la línea de su marca, «Arreglarlo» y «Ahora no». Se considera borradas
+      por **cualquiera de dos señales** (módulo `renaser-alarmas`, Android): (1) el historial del sistema dice que
+      detuvo la app a la fuerza (Android 11+; en Honor, Huawei, Xiaomi/Redmi/POCO, Oppo/Realme/OnePlus, Vivo/iQOO y
+      Samsung, de Android 11 a 14, también «quitar de recientes», porque allí borra las alarmas); (2) la app tenía
+      alarmas programadas a futuro y el sistema no tiene ninguna «próxima alarma» de Renaser (`alarmasVivas.ts`,
+      leído ANTES de rearmar). Si la próxima alarma es de otra app o falta el permiso «Alarmas y recordatorios», esa
+      segunda señal calla: nunca avisa en falso por ahí.
+    * **La misma hoja, antes de que pase** (`guiaPreventiva.ts`): en esas marcas, la primera vez que la persona
+      guarda un recordatorio en Training → Planificar, se ofrece una sola vez (por cuenta, en este teléfono) con el
+      título «Un ajuste para tus alarmas», «En tu teléfono, Renaser necesita un ajuste para que tus alarmas suenen
+      siempre.», la línea de su marca y «Ajustarlo» / «Ahora no». Si ese guardado ya pidió el permiso de alarmas
+      exactas no se le suma otra hoja encima. En otras marcas no sale nada.
+    * **Yo → Alarmas**: la guía de batería dice el camino de la marca del teléfono (Honor/Huawei «Inicio de
+      aplicaciones», Xiaomi, Samsung, Oppo/Realme/OnePlus, Vivo) y su botón abre esa pantalla si existe; si no, la
+      lista de batería o los ajustes de Renaser. Nunca se pide la excepción directa de batería (política de Play).
+    * **No cambian**: el resto de Yo, el resto de Planificar (horas, días, el pedido del permiso de alarmas exactas),
+      los interruptores de avisos (`InterruptoresDeAvisos`, spec 005), los demás tabs.
+      **Hace falta un APK nuevo** (código nativo) y, para el texto con la hora y el `tag`, el backend de la spec 007.
   * **Cambio por pedido del dueño — 2026-10-12 — Administración (estado de `Hoy`): «Hábitos del programa», con
     audiencia por rol** (backend D-264; spec y plan en `Renaser-90-dias-backend/specs/001-habitos-por-rol/`, flujo
     spec-kit con las decisiones del dueño). Lo que cambia y nada más:
