@@ -64,30 +64,34 @@ describe('sin la prop (Plan): la fila de siempre', () => {
 
 describe('con la prop (editor de Planificar)', () => {
   const avisos: Partial<Record<DiaDelPlan, AvisoDeUnDiaEnLaFila>> = {
-    'SÁB': { corto: '30′', largo: 'Aviso 30 minutos antes', sinAviso: false },
-    DOM: { corto: 'sin aviso', largo: 'Sin aviso', sinAviso: true },
-    JUE: { corto: 'a la hora', largo: 'Aviso a la hora', sinAviso: false },
+    'SÁB': { largo: 'Aviso 30 minutos antes', sinAviso: false },
+    DOM: { largo: 'Sin aviso', sinAviso: true },
+    JUE: { largo: 'Aviso a la hora', sinAviso: false },
   };
 
-  it('dibuja la campana con los minutos solo en los días con aviso propio, y la campana tachada sin aviso', () => {
+  it('dibuja la campana solo en los días con aviso propio, y la campana tachada sin aviso; nada escrito (spec 011)', () => {
     const r = montar({ avisoDelDia: dia => avisos[dia] ?? null });
     expect(iconos(r).filter(n => n === 'bell')).toHaveLength(2);
     expect(iconos(r).filter(n => n === 'bellOff')).toHaveLength(1);
-    expect(textos(r)).toEqual(expect.arrayContaining(['30′', 'a la hora']));
-    // El día sin aviso no escribe «sin aviso»: va la campana tachada, y el lector de pantalla lo dice.
+    // Ni los minutos («30′», «a la hora», «30′ +1») ni «sin aviso» se escriben en el chip: solo íconos.
+    expect(textos(r).join(' ')).not.toMatch(/′|a la hora|sin aviso|hora\b.*\+/i);
     expect(textos(r)).not.toContain('sin aviso');
   });
 
-  it('las campanas son de 16, el tamaño de uso junto a texto chico, y el texto va a 13 y en negrita', () => {
+  it('cada chip lleva solo la letra del día, su número y la hora: ningún texto del aviso', () => {
+    const r = montar({ avisoDelDia: dia => avisos[dia] ?? null });
+    for (const pastilla of pastillas(r)) {
+      const hijos = pastilla.findAll(n => (n.type as unknown) === 'Text');
+      // La letra, el número del mes y la hora (o su «·»): tres textos, ni uno más.
+      expect(hijos).toHaveLength(3);
+    }
+  });
+
+  it('las campanas son de 16, el tamaño de uso de un solo ícono', () => {
     const r = montar({ avisoDelDia: dia => avisos[dia] ?? null });
     const campanas = r.root.findAll(n => n.props.name === 'bell' && n.props.size !== undefined);
     expect(campanas.length).toBeGreaterThan(0);
     for (const c of campanas) expect(c.props.size).toBe(16);
-    const minutos = r.root.findAll(n => (n.type as unknown) === 'Text' && React.Children.toArray(n.props.children).includes('30′'))[0];
-    const estilo = Object.assign({}, ...[minutos.props.style].flat(3).filter(Boolean));
-    expect(estilo).toMatchObject({ fontSize: 13, fontFamily: 'Jost_700Bold' });
-    // Nunca gris tenue: el color de los minutos no es el del texto suave.
-    expect(estilo.color).toBeDefined();
   });
 
   it('cada pastilla se anuncia completa: día, hora y aviso', () => {
@@ -143,7 +147,7 @@ describe('con «cómo suena» propio de un día (spec 009)', () => {
   });
 
   it('el reloj convive con la campana del aviso propio del mismo día', () => {
-    const avisos: Partial<Record<DiaDelPlan, AvisoDeUnDiaEnLaFila>> = { 'SÁB': { corto: '30′', largo: 'Aviso 30 minutos antes', sinAviso: false } };
+    const avisos: Partial<Record<DiaDelPlan, AvisoDeUnDiaEnLaFila>> = { 'SÁB': { largo: 'Aviso 30 minutos antes', sinAviso: false } };
     const r = montar({ avisoDelDia: dia => avisos[dia] ?? null, alarmaDelDia: dia => alarmas[dia] ?? null });
     expect(iconos(r)).toEqual(expect.arrayContaining(['bell', 'alarmClock']));
   });
@@ -161,12 +165,12 @@ describe('con «cómo suena» propio de un día (spec 009)', () => {
   });
 });
 
-describe('E-643: el chip no se deforma con varios avisos', () => {
+describe('E-643 y spec 011: el chip no se deforma con varios avisos y no escribe los minutos', () => {
   /** Jueves con cuatro avisos y alarma propia; sábado con un aviso; domingo sin aviso; el resto, sin nada. */
   const avisos: Partial<Record<DiaDelPlan, AvisoDeUnDiaEnLaFila>> = {
-    JUE: { corto: '30′ +3', largo: 'Avisos 30, 10 y 5 minutos antes y a la hora', sinAviso: false },
-    'SÁB': { corto: '30′', largo: 'Aviso 30 minutos antes', sinAviso: false },
-    DOM: { corto: 'sin aviso', largo: 'Sin aviso', sinAviso: true },
+    JUE: { largo: 'Avisos 30, 10 y 5 minutos antes y a la hora', sinAviso: false },
+    'SÁB': { largo: 'Aviso 30 minutos antes', sinAviso: false },
+    DOM: { largo: 'Sin aviso', sinAviso: true },
   };
   const alarmas: Partial<Record<DiaDelPlan, AlarmaDeUnDiaEnLaFila>> = { JUE: { largo: 'Alarma propia: sin sonido, vibra' } };
   const montarDeVerdad = () => montar({ avisoDelDia: dia => avisos[dia] ?? null, alarmaDelDia: dia => alarmas[dia] ?? null });
@@ -178,31 +182,21 @@ describe('E-643: el chip no se deforma con varios avisos', () => {
     expect(estilos).toHaveLength(7);
     expect(new Set(estilos.map(e => e.minHeight)).size).toBe(1);
     expect(estilos.every(e => e.justifyContent === 'flex-start' && e.paddingTop === 6)).toBe(true);
-    // La altura de siempre de un chip sin aviso (58) no se usa: con el bloque de abajo mide más, igual para todos.
+    // La altura de siempre de un chip sin aviso (58) no se usa: con la fila de íconos de abajo mide más, igual para todos.
     expect(estilos[0].minHeight).toBeGreaterThan(58);
+    // Sin el texto de los minutos (spec 011) el chip es más bajo que con él (88).
+    expect(estilos[0].minHeight).toBeLessThan(88);
   });
 
   it('todos reservan el mismo bloque de abajo (con o sin íconos) y la misma fila para la hora o el candado', () => {
     const r = montarDeVerdad();
     for (const pastilla of pastillas(r)) {
-      const bandas = pastilla.findAll(n => estiloDe(n).minHeight === 34 && estiloDe(n).alignSelf === 'stretch');
+      // El bloque de abajo es solo la fila de íconos: 16 de alto, ya sin renglón de texto (spec 011).
+      const bandas = pastilla.findAll(n => estiloDe(n).minHeight === 16 && estiloDe(n).alignSelf === 'stretch');
       expect(bandas.length).toBeGreaterThan(0);
       const filasDeHora = pastilla.findAll(n => estiloDe(n).height === 14 && estiloDe(n).justifyContent === 'center');
       expect(filasDeHora.length).toBeGreaterThan(0);
     }
-  });
-
-  it('el resumen es UNA línea que se achica en vez de partirse: «30′ +3»', () => {
-    const r = montarDeVerdad();
-    const resumen = r.root.findAll(n => (n.type as unknown) === 'Text' && React.Children.toArray(n.props.children).includes('30′ +3'));
-    expect(resumen).toHaveLength(1);
-    const props = resumen[0].props;
-    expect(props.numberOfLines).toBe(1);
-    expect(props.adjustsFontSizeToFit).toBe(true);
-    expect(props.minimumFontScale).toBeGreaterThanOrEqual(0.7);
-    expect(props.minimumFontScale).toBeLessThanOrEqual(0.9);
-    // Ocupa el ancho del chip, centrado: no empuja a sus vecinos.
-    expect(estiloDe(resumen[0])).toMatchObject({ alignSelf: 'stretch', textAlign: 'center', fontSize: 13 });
   });
 
   it('la lista completa no se escribe en el chip: la oye el lector de pantalla', () => {
@@ -228,8 +222,8 @@ describe('E-643: el chip no se deforma con varios avisos', () => {
     const r = montarDeVerdad();
     const delJueves = pastillas(r).find(p => String(p.props.accessibilityLabel).startsWith('Jueves'))!;
     const textosDelChip = delJueves.findAll(n => (n.type as unknown) === 'Text');
-    // La letra, el número, la hora y el resumen: cuatro textos, todos acotados a 1,15.
-    expect(textosDelChip.length).toBeGreaterThanOrEqual(4);
+    // La letra, el número y la hora: tres textos (ya no hay resumen de minutos), todos acotados a 1,15.
+    expect(textosDelChip.length).toBe(3);
     for (const t of textosDelChip) expect(t.props.maxFontSizeMultiplier).toBeLessThanOrEqual(1.15);
   });
 
@@ -245,6 +239,6 @@ describe('E-643: el chip no se deforma con varios avisos', () => {
     const r = montar();
     const estilos = pastillas(r).map(estiloDe);
     expect(estilos.every(e => e.minHeight === 58 && e.justifyContent === 'center')).toBe(true);
-    expect(r.root.findAll(n => estiloDe(n).minHeight === 34 && estiloDe(n).alignSelf === 'stretch')).toHaveLength(0);
+    expect(r.root.findAll(n => estiloDe(n).minHeight === 16 && estiloDe(n).alignSelf === 'stretch')).toHaveLength(0);
   });
 });

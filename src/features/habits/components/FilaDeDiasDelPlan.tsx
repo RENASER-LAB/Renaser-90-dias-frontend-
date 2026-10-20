@@ -28,12 +28,11 @@ import { DIAS_DEL_PLAN, diasDelMesDeLaSemana, esPlanificable, type DiaDelPlan } 
  */
 
 /**
- * El aviso propio de un día (spec 008): lo que dice el chip bajo la hora y lo que lee el lector de pantalla. Lo
- * calcula quien usa la fila (`resumenDelAvisoDelDia`, del editor de Planificar); la fila solo lo dibuja.
+ * El aviso propio de un día (spec 008): lo que lee el lector de pantalla y si el día va sin aviso. Lo calcula quien usa
+ * la fila (`resumenDelAvisoDelDia`, del editor de Planificar); la fila solo lo dibuja. El chip no escribe los minutos
+ * (spec 011): dibuja la campana, o la campana tachada con `sinAviso`.
  */
 export interface AvisoDeUnDiaEnLaFila {
-  /** «30′», «a la hora», «30′ +1». Con `sinAviso`, no se escribe: va la campana tachada. */
-  corto: string;
   /** «Aviso 30 minutos antes»: lo que dice el lector de pantalla. */
   largo: string;
   sinAviso: boolean;
@@ -87,9 +86,9 @@ interface FilaDeDiasDelPlanProps {
   planificable?: (dia: DiaDelPlan) => boolean;
   /**
    * Spec 008, **opcional**: el aviso propio de cada día. Si devuelve algo, el chip lo dibuja debajo de la hora
-   * (campana de línea de 16 con el texto, o la campana tachada si el día va sin aviso) y toda la fila pasa a
-   * anunciarse completa al lector de pantalla. Sin esta prop —Plan no la pasa— la fila es exactamente la de
-   * siempre.
+   * (solo el ícono: la campana, o la campana tachada si el día va sin aviso; los minutos no se escriben, spec 011) y
+   * toda la fila pasa a anunciarse completa al lector de pantalla. Sin esta prop —Plan no la pasa— la fila es
+   * exactamente la de siempre.
    */
   avisoDelDia?: (dia: DiaDelPlan) => AvisoDeUnDiaEnLaFila | null;
   /**
@@ -122,7 +121,8 @@ export function FilaDeDiasDelPlan({
    * E-643: con el aviso o la alarma propios por día (el editor de Planificar), cada chip reserva SIEMPRE el mismo
    * bloque de abajo, tenga o no campana y reloj: los siete miden lo mismo y la letra, el número y la hora quedan
    * alineados. Antes el chip crecía con lo que llevara (la campana, los minutos en dos o tres renglones, el reloj) y un
-   * día con varios avisos «se deformaba» respecto de los demás. Sin esas props (Plan) la fila es la de siempre.
+   * día con varios avisos «se deformaba» respecto de los demás. Desde la spec 011 el bloque es solo la fila de íconos
+   * (los minutos ya no se escriben), así que el chip es más bajo. Sin esas props (Plan) la fila es la de siempre.
    */
   const conBanda = Boolean(avisoDelDia || alarmaDelDia);
   const acotado = conBanda ? ({ maxFontSizeMultiplier: MAXIMO_DE_LETRA_EN_EL_CHIP } as const) : {};
@@ -208,11 +208,11 @@ export function FilaDeDiasDelPlan({
               {diasDelMes[dia]}
             </Text>
             {conBanda ? <View style={estilos.filaDeLaHora}>{horaOCandado}</View> : horaOCandado}
-            {/* El bloque de abajo (spec 008 y 009, E-643): UNA fila de íconos —la campana del aviso propio, o la tachada
-                si el día va sin aviso, y el reloj de la alarma propia; los dos de 14 si conviven, uno solo de 16— y UNA
-                línea de texto con el aviso más temprano y cuántos más («30′ +3»), que se achica en vez de partirse.
-                La lista completa de avisos la oye el lector de pantalla en la etiqueta de la pastilla, no acá. Con alto
-                contraste (dorado oscuro, o el color sobre dorado al editar): es poco lugar, pero nunca gris tenue. */}
+            {/* El bloque de abajo (spec 008 y 009, E-643, 011): UNA fila de íconos —la campana del aviso propio, o la
+                tachada si el día va sin aviso, y el reloj de la alarma propia; los dos de 14 si conviven, uno solo de
+                16—. Sin texto: los minutos no se escriben en el chip (spec 011); la lista completa de avisos la oye el
+                lector de pantalla en la etiqueta de la pastilla, no acá. Con alto contraste (dorado oscuro, o el color
+                sobre dorado al editar): es poco lugar, pero nunca gris tenue. */}
             {conBanda && (
               <View style={estilos.banda} accessible={false} importantForAccessibility="no-hide-descendants">
                 {(aviso || alarma) && (
@@ -220,17 +220,6 @@ export function FilaDeDiasDelPlan({
                     {aviso && <Icon name={aviso.sinAviso ? 'bellOff' : 'bell'} size={conAmbos ? 14 : 16} color={colorDelAviso} />}
                     {alarma && <Icon name="alarmClock" size={conAmbos ? 14 : 16} color={colorDelAviso} />}
                   </View>
-                )}
-                {aviso && !aviso.sinAviso && (
-                  <Text
-                    {...acotado}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.75}
-                    style={[t.micro, estilos.textoDelAviso, { color: colorDelAviso }]}
-                  >
-                    {aviso.corto}
-                  </Text>
                 )}
               </View>
             )}
@@ -280,18 +269,10 @@ const estilos = StyleSheet.create({
     justifyContent: 'center',
   },
   // E-643: con el aviso y la alarma por día todos los chips son iguales: los datos de arriba pegados arriba y siempre
-  // el mismo bloque de abajo, vacío o no (antes se centraban, y un chip con campana desalineaba a los demás).
-  pastillaConBanda: { minHeight: 88, paddingTop: 6, paddingBottom: 4, justifyContent: 'flex-start' },
+  // el mismo bloque de abajo, vacío o no (antes se centraban, y un chip con campana desalineaba a los demás). Spec 011:
+  // sin el texto de los minutos el bloque es solo la fila de íconos (16), y el chip baja de 88 a 76.
+  pastillaConBanda: { minHeight: 76, paddingTop: 6, paddingBottom: 4, justifyContent: 'flex-start' },
   filaDeLaHora: { height: 14, alignItems: 'center', justifyContent: 'center' },
-  banda: { alignSelf: 'stretch', minHeight: 34, alignItems: 'center', justifyContent: 'flex-start', marginTop: 4 },
+  banda: { alignSelf: 'stretch', minHeight: 16, alignItems: 'center', justifyContent: 'flex-start', marginTop: 4 },
   iconos: { height: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2 },
-  // Una línea y ancho acotado: «30′ +3» se achica hasta 0,75 en vez de partirse en dos renglones.
-  textoDelAviso: {
-    alignSelf: 'stretch',
-    fontSize: 13,
-    lineHeight: 16,
-    fontFamily: 'Jost_700Bold',
-    textAlign: 'center',
-    letterSpacing: 0,
-  },
 });
