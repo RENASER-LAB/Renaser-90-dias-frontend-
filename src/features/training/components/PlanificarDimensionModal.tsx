@@ -1000,7 +1000,11 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
             desde: resultado.deferredEffectiveDate,
           }, antelaciones, { dimension, dias: diasParaLasAlarmas, alarma: (alarmaNueva ?? alarmaGeneral) ?? undefined })
           : await recordatorios.programar(claveUsuario, h.habitoId, h.title, horaTexto, antelaciones, {
-            dimension, dias: diasParaLasAlarmas, alarma: (alarmaNueva ?? alarmaGeneral) ?? undefined,
+            dimension,
+            // E-642: la hora general cambió en el acto, así que los días sin hora propia pasan a ella (la que traían
+            // resuelta del servidor es la de antes del cambio).
+            dias: diasParaLasAlarmas?.map(d => (d.hora === null ? { ...d, horaResuelta: horaTexto } : d)),
+            alarma: (alarmaNueva ?? alarmaGeneral) ?? undefined,
           });
       const avisoImposible = antelaciones.length > 0 && !ok;
       // El horario local se actualiza acá y no recargando todo: recargar con la hoja abierta

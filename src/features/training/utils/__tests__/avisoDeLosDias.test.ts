@@ -152,10 +152,11 @@ describe('diasDelEditor y las alarmas', () => {
     }), [10]);
     const propios = diasPropiosDelEditor(dias);
     expect(propios).toHaveLength(7);
-    expect(propios.find(d => d.iso === 4)).toEqual({ iso: 4, activo: true, hora: '09:00', avisos: null });
-    expect(propios.find(d => d.iso === 6)).toEqual({ iso: 6, activo: true, hora: null, avisos: [30] });
-    expect(propios.find(d => d.iso === 7)).toEqual({ iso: 7, activo: false, hora: null, avisos: null });
-    expect(propios.find(d => d.iso === 1)).toEqual({ iso: 1, activo: true, hora: null, avisos: null });
+    // `horaResuelta` (E-642): la hora que rige ese día según el servidor, propia o no.
+    expect(propios.find(d => d.iso === 4)).toEqual({ iso: 4, activo: true, hora: '09:00', horaResuelta: '09:00', avisos: null });
+    expect(propios.find(d => d.iso === 6)).toEqual({ iso: 6, activo: true, hora: null, horaResuelta: '07:00', avisos: [30] });
+    expect(propios.find(d => d.iso === 7)).toEqual({ iso: 7, activo: false, hora: null, horaResuelta: '07:00', avisos: null });
+    expect(propios.find(d => d.iso === 1)).toEqual({ iso: 1, activo: true, hora: null, horaResuelta: '07:00', avisos: null });
   });
 
   it('mismoAviso compara conjuntos', () => {

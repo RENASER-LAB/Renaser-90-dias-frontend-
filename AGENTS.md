@@ -2060,7 +2060,11 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       vibración también es del canal, así que cada combinación es un canal (`habits/notificaciones/utils/combinacionDeAlarma`):
       el del tono de Yo → Alarmas (como siempre), ese mismo con el sufijo **`-sinvib`** (`enableVibrate: false`), el de
       **solo vibrar** que ya existía, y el de **voz del hábito** (o la frase general), con o sin `-sinvib`. Los canales
-      `-sinvib` están en `ARCHIVO_POR_CANAL` (el rearmado nombra el archivo correcto). La combinación viaja en
+      `-sinvib` están en `ARCHIVO_POR_CANAL` (el rearmado nombra el archivo correcto).
+      > **Corregido 2026-10-20 (E-642).** Un día sin hora propia usaba la `triggerTime` de arriba del ítem de
+      > `GET /habit-preferences`, que el servidor resuelve para HOY: si hoy tenía hora propia (martes a las 11:29), el
+      > sábado quedaba a las 10:59 en vez de las 06:30. Cada día usa ahora su propia `weekdays[i].triggerTime` (`horaResuelta`).
+      La combinación viaja en
       `data.alarma` del aviso (solo si no es la de siempre), así que cambiar el tono en Yo → Alarmas y el aviso agrupado
       de dos hábitos a la misma hora conservan cómo suena cada uno (un grupo suena y vibra si alguno lo pide). Un día con
       combinación propia pasa al esquema por día como uno con hora o aviso propios (misma regla que el servidor: su push

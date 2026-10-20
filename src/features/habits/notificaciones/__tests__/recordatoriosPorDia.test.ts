@@ -160,7 +160,8 @@ describe('FR-008: la alarma suena a la hora de cada día', () => {
 
   it('el cruce de medianoche: 00:10 con 30 min antes suena a las 23:40 del día anterior', async () => {
     await recordatorios.programar(USUARIO, GYM, TITULO, '00:10', [30], {
-      dias: diasPropiosDe(semana({ 7: { active: false } })),
+      // La hora que el servidor resuelve para cada día es la general: las 00:10.
+      dias: diasPropiosDe(semana({ 7: { active: false } }).map(d => ({ ...d, triggerTime: '00:10:00' }))),
     });
     // El jueves (4) suena el miércoles (expo 4) y sigue identificándose como del jueves.
     expect(resumen()).toContain('habito-h-gym-d4-0 weekly expo4 23:40');
@@ -382,5 +383,38 @@ describe('el cambio de hora que rige desde mañana (D-91) con alarmas por día',
     expect(tocados).toBe(1);
     expect(resumen().every(l => l.includes(' weekly '))).toBe(true);
     expect(resumen()).toContain('habito-h-gym-d3-0 weekly expo4 08:00');
+  });
+});
+
+describe('E-642: la hora de arriba del ítem es la de HOY, no la general', () => {
+  /**
+   * El E2E: hoy martes con hora propia (11:29). `GET /habit-preferences` trae arriba `triggerTime: 11:29` (resuelta para
+   * hoy) y, en `weekdays`, la hora de cada día: martes 11:29 y los demás 07:00. La app usaba la de arriba para los días
+   * sin hora propia y el sábado quedó a las 10:59 (11:29 menos 30 min) en vez de las 06:30.
+   */
+  it('la puesta al día deja cada día a SU hora: el sábado a las 06:30 y solo el martes a las 10:59', async () => {
+    const hoyConHoraPropia = semana({ 2: { customTime: true, triggerTime: '11:29:00' } });
+    const tocados = await recordatorios.ajustarRecordatoriosAlServidor(USUARIO, [
+      preferencia({ triggerTime: '11:29:00', reminderMinutesBefore: 30, weekdays: hoyConHoraPropia }),
+    ]);
+    expect(tocados).toBe(1);
+    const lineas = resumen();
+    expect(lineas).toHaveLength(7);
+    expect(lineas).toContain('habito-h-gym-d6-0 weekly expo7 06:30');
+    expect(lineas).toContain('habito-h-gym-d2-0 weekly expo3 10:59');
+    expect(lineas.filter(l => l.endsWith('10:59'))).toHaveLength(1);
+    // Y el cuerpo del aviso del sábado dice la hora del sábado.
+    expect(mockLista.get('habito-h-gym-d6-0')!.content.body).toBe('Te toca a las 07:00.');
+  });
+
+  it('mañana, cuando el martes ya no es «hoy», nada cambia: la firma del plan es la misma y no se rehace', async () => {
+    const dias = semana({ 2: { customTime: true, triggerTime: '11:29:00' } });
+    await recordatorios.ajustarRecordatoriosAlServidor(USUARIO, [preferencia({ triggerTime: '11:29:00', reminderMinutesBefore: 30, weekdays: dias })]);
+    // Al día siguiente (miércoles) la hora de arriba es la de ese día: 07:00. Los días traen lo mismo que ayer.
+    const tocados = await recordatorios.ajustarRecordatoriosAlServidor(USUARIO, [
+      preferencia({ triggerTime: '07:00:00', reminderMinutesBefore: 30, weekdays: dias }),
+    ]);
+    expect(tocados).toBe(0);
+    expect(resumen()).toContain('habito-h-gym-d6-0 weekly expo7 06:30');
   });
 });

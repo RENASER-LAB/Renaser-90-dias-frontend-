@@ -776,6 +776,15 @@ export async function programar(
  * Devuelve `null` si no había nada que mover (o en web, donde el aviso lo manda el servidor con la
  * hora nueva), y si no, lo que devolvió `programar`.
  */
+/**
+ * Los días recordados para reprogramar, SIN la hora que el servidor había resuelto para cada uno (E-642). Quien cambia
+ * la hora general sin leer el servidor (Plan, Yo → Alarmas) no tiene las horas resueltas de ahora: las que se
+ * recordaban son de antes del cambio, y un día sin hora propia tiene que seguir a la general nueva.
+ */
+function sinHorasResueltas(dias: readonly DiaPropio[] | null): DiaPropio[] | null {
+  return dias ? dias.map(({ horaResuelta: _recordada, ...resto }) => resto) : null;
+}
+
 export async function reprogramarTrasCambioDeHora(
   userId: string,
   habitoId: string,
@@ -787,7 +796,7 @@ export async function reprogramarTrasCambioDeHora(
   const antelaciones = await antelacionesDe(userId, habitoId);
   // Spec 008: si el hábito tenía alarmas por día, se vuelven a armar con lo propio de cada día (un día con hora
   // propia no se mueve con la general). Sin días, o sin ninguna alarma, es lo de siempre.
-  const dias = (await esquemaGuardado(userId, habitoId))?.dias ?? null;
+  const dias = sinHorasResueltas((await esquemaGuardado(userId, habitoId))?.dias ?? null);
   if (sinNingunAviso(habitoId, horaHHmm, antelaciones, dias)) return null;
   return programar(userId, habitoId, titulo, horaHHmm, antelaciones, { dimension, dias });
 }
@@ -812,7 +821,7 @@ export async function reprogramarTrasCambioDiferido(
 ): Promise<boolean | null> {
   if (!HAY_RECORDATORIOS_LOCALES) return null;
   const antelaciones = await antelacionesDe(userId, habitoId);
-  const dias = (await esquemaGuardado(userId, habitoId))?.dias ?? null;
+  const dias = sinHorasResueltas((await esquemaGuardado(userId, habitoId))?.dias ?? null);
   if (sinNingunAviso(habitoId, cambio.horaNueva, antelaciones, dias)) return null;
   return programarConCambioDiferido(userId, habitoId, titulo, cambio, antelaciones, { dimension, ahora, dias });
 }

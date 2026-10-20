@@ -248,6 +248,8 @@ export function diasPropiosDelEditor(dias: Readonly<Record<string, DiaDelEditor>
         iso: ISO_DEL_NOMBRE_DE_LA_PANTALLA[dia],
         activo: d.activo,
         hora: d.propio && d.activo ? d.hora : null,
+        // E-642: la hora que rige ese día según el servidor, para que un día sin hora propia no tome la de hoy.
+        ...(d.hora ? { horaResuelta: d.hora } : {}),
         avisos: d.avisoPropio && d.aviso ? [...d.aviso] : null,
         // Spec 009: «cómo suena» solo si es propio del día; si no, el día sigue a la general.
         ...(d.alarmaPropia && d.alarma ? { alarma: { ...d.alarma } } : {}),

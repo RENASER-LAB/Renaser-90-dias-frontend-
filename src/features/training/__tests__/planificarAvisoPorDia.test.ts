@@ -358,9 +358,9 @@ describe('FR-009 / E-640: tras guardar, las alarmas del teléfono se rehacen con
     expect(mockProgramar).toHaveBeenCalledTimes(1);
     const [usuario, habito, titulo, hora, generales, opciones] = mockProgramar.mock.calls[0] as [string, string, string, string, number[], { dias: Array<{ iso: number; avisos: number[] | null; hora: string | null; activo: boolean }> }];
     expect([usuario, habito, titulo, hora, generales]).toEqual(['u-1', 'h-jugo', 'JUGO VERDE', '07:00', [10]]);
-    expect(opciones.dias.find(d => d.iso === 6)).toEqual({ iso: 6, activo: true, hora: null, avisos: [30] });
-    expect(opciones.dias.find(d => d.iso === 7)).toEqual({ iso: 7, activo: true, hora: null, avisos: [30] });
-    expect(opciones.dias.find(d => d.iso === 1)).toEqual({ iso: 1, activo: true, hora: null, avisos: null });
+    expect(opciones.dias.find(d => d.iso === 6)).toEqual({ iso: 6, activo: true, hora: null, horaResuelta: '07:00', avisos: [30] });
+    expect(opciones.dias.find(d => d.iso === 7)).toEqual({ iso: 7, activo: true, hora: null, horaResuelta: '07:00', avisos: [30] });
+    expect(opciones.dias.find(d => d.iso === 1)).toEqual({ iso: 1, activo: true, hora: null, horaResuelta: '07:00', avisos: null });
   });
 
   it('guardar la hora general sin días marcados conserva lo propio de cada día (E8)', async () => {
@@ -378,6 +378,23 @@ describe('FR-009 / E-640: tras guardar, las alarmas del teléfono se rehacen con
     expect(avisos).toEqual([10, 0]);
     expect(opciones.dias.find(d => d.iso === 6)).toMatchObject({ avisos: [30] });
     expect(opciones.dias.find(d => d.iso === 4)).toMatchObject({ hora: '09:00' });
+  });
+});
+
+describe('E-642: las alarmas por día usan la hora de cada día', () => {
+  it('guardar la hora general (sin diferir) pasa a la hora nueva los días sin hora propia; el que tiene la suya no se mueve', async () => {
+    mockSemana.mockResolvedValue(semana({ THURSDAY: { custom: true, triggerTime: '09:00:00' } }));
+    mockCambiarHorario.mockResolvedValue({ deferred: false });
+    const r = await montar();
+    await abrirElHabito(r);
+    await act(async () => { mockRueda.mock.lastCall![0].onCambiar(8, 15); });
+    await pulsarGuardar(r);
+    expect(mockProgramar).toHaveBeenCalledTimes(1);
+    const [, , , hora, , opciones] = mockProgramar.mock.calls[0] as [string, string, string, string, number[], { dias: Array<{ iso: number; hora: string | null; horaResuelta?: string }> }];
+    expect(hora).toBe('08:15');
+    // Los que la siguen, a la nueva (no a la que traían resuelta de antes del cambio); el jueves, a la suya.
+    expect(opciones.dias.filter(d => d.iso !== 4).every(d => d.hora === null && d.horaResuelta === '08:15')).toBe(true);
+    expect(opciones.dias.find(d => d.iso === 4)).toMatchObject({ hora: '09:00', horaResuelta: '09:00' });
   });
 });
 

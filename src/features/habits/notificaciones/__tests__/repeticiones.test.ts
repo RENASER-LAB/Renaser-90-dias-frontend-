@@ -167,6 +167,18 @@ describe('qué repeticiones lleva un hábito (puro)', () => {
     expect(jueves[0].horaDelDia).toBe('09:00');
   });
 
+  it('E-642: un día sin hora propia repite a la hora que el servidor le resolvió, no a la de arriba (que es la de hoy)', () => {
+    const pedidos = planDeRepeticiones(entrada({
+      horaGeneral: '11:29',
+      dias: [dia(2, { hora: '11:29', horaResuelta: '11:29' }), dia(6, { horaResuelta: '07:00' })],
+    }), MARTES_6AM);
+    const de = (f: string) => pedidos.filter(p => p.fecha === f).map(p => p.instanteMs);
+    expect(de('20261024')).toEqual([fecha(2026, 10, 24, 7, 5).getTime(), fecha(2026, 10, 24, 7, 10).getTime()]);
+    expect(de('20261020')).toEqual([fecha(2026, 10, 20, 11, 34).getTime(), fecha(2026, 10, 20, 11, 39).getTime()]);
+    // Un día que el servidor no informa cae en la general.
+    expect(de('20261021')).toEqual([fecha(2026, 10, 21, 11, 34).getTime(), fecha(2026, 10, 21, 11, 39).getTime()]);
+  });
+
   it('con un cambio de hora pendiente, cada día usa la hora que rige en SU fecha (D-91)', () => {
     const pedidos = planDeRepeticiones(entrada({
       cambio: { horaDeHoy: '07:00', horaNueva: '10:00', desde: '2026-10-22' },

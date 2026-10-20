@@ -108,10 +108,14 @@ export function habitoDeLaRuta(ruta: unknown): string | null {
 /** La hora que rige para el día `fecha` (local): la propia, o la general; con un cambio pendiente, la de esa fecha. */
 function horaDelDia(entrada: EntradaDeRepeticiones, propio: DiaPropio | undefined, fecha: Date): string | null {
   if (propio?.hora) return horaCorta(propio.hora);
+  // E-642: un día sin hora propia va a la hora que el servidor resolvió para ESE día, no a la de hoy.
+  const resuelta = horaCorta(propio?.horaResuelta);
   if (entrada.cambio) {
-    return horaCorta(fechaLocal(fecha) < entrada.cambio.desde ? entrada.cambio.horaDeHoy : entrada.cambio.horaNueva);
+    return fechaLocal(fecha) < entrada.cambio.desde
+      ? (resuelta ?? horaCorta(entrada.cambio.horaDeHoy))
+      : horaCorta(entrada.cambio.horaNueva);
   }
-  return horaCorta(entrada.horaGeneral);
+  return resuelta ?? horaCorta(entrada.horaGeneral);
 }
 
 /**

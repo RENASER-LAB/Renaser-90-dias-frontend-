@@ -86,9 +86,10 @@ describe('el esquema lo decide la misma regla que el servidor', () => {
 
   it('el endpoint del hábito dice `custom` y la lista `customTime`: se leen los dos', () => {
     const dia = (d: Partial<DiaDelHabitoApi>) => diasPropiosDe([{ weekday: 'THURSDAY', triggerTime: '09:00:00', ...d }]);
-    expect(dia({ custom: true })).toEqual([{ iso: 4, activo: true, hora: '09:00', avisos: null }]);
-    expect(dia({ customTime: true })).toEqual([{ iso: 4, activo: true, hora: '09:00', avisos: null }]);
-    expect(dia({ custom: false })).toEqual([{ iso: 4, activo: true, hora: null, avisos: null }]);
+    // `horaResuelta` (E-642) es la hora que el servidor da para ESE día, propia o no.
+    expect(dia({ custom: true })).toEqual([{ iso: 4, activo: true, hora: '09:00', horaResuelta: '09:00', avisos: null }]);
+    expect(dia({ customTime: true })).toEqual([{ iso: 4, activo: true, hora: '09:00', horaResuelta: '09:00', avisos: null }]);
+    expect(dia({ custom: false })).toEqual([{ iso: 4, activo: true, hora: null, horaResuelta: '09:00', avisos: null }]);
   });
 
   it('un aviso propio sin aviso («sin aviso») es una lista vacía; uno que no se puede leer, el general', () => {
@@ -137,7 +138,8 @@ describe('FR-008: cada día suena a SU hora menos SU antelación', () => {
   });
 
   it('un día sin hora propia sigue a la hora general cuando esta cambia; uno con hora propia no', () => {
-    const dias = diasPropiosDe(semana({ 6: { customTime: true, triggerTime: '09:00:00' } }));
+    // La general pasó a las 08:00: el servidor ya resuelve cada día con ella (menos el que tiene hora propia).
+    const dias = diasPropiosDe(semana({ 6: { customTime: true, triggerTime: '09:00:00' } }, '08:00:00'));
     const pedidos = porDia(planDeAlarmas({ habitoId: HABITO, horaGeneral: '08:00', avisosGenerales: [10], dias }));
     expect(leer(pedidos.find(p => p.diaIso === 2)!)).toBe('habito-h-gym-d2-0 expo3 07:50');
     expect(leer(pedidos.find(p => p.diaIso === 6)!)).toBe('habito-h-gym-d6-0 expo7 08:50');
@@ -178,7 +180,10 @@ describe('FR-008: cada día suena a SU hora menos SU antelación', () => {
   });
 
   it('sin hora general ni propia, el día no suena; con hora propia sí', () => {
-    const dias = diasPropiosDe(semana({ 3: { customTime: true, triggerTime: '18:30:00' } }));
+    // Sin hora general el servidor no resuelve hora para los días sin la suya (`triggerTime: null`).
+    const dias = diasPropiosDe(NOMBRES.map(weekday => weekday === 'WEDNESDAY'
+      ? { weekday, triggerTime: '18:30:00', active: true, reminderEnabled: true, reminderMinutesList: [10], customTime: true }
+      : { weekday, triggerTime: null, active: true, reminderEnabled: true, reminderMinutesList: [10], customTime: false }));
     const pedidos = porDia(planDeAlarmas({ habitoId: HABITO, horaGeneral: null, avisosGenerales: [10], dias }));
     expect(pedidos.map(leer)).toEqual(['habito-h-gym-d3-0 expo4 18:20']);
   });
@@ -224,7 +229,11 @@ describe('identificadores y firma estables', () => {
     const otra = diasPropiosDe(semana({ 4: { customReminder: true, reminderMinutesList: [30] } }));
     const a = planDeAlarmas({ habitoId: HABITO, horaGeneral: '07:00', avisosGenerales: [10], dias: base });
     const b = planDeAlarmas({ habitoId: HABITO, horaGeneral: '07:00', avisosGenerales: [10], dias: otra });
-    const c = planDeAlarmas({ habitoId: HABITO, horaGeneral: '08:00', avisosGenerales: [10], dias: base });
+    // La general a las 08:00 (el servidor resuelve los días con ella): otra hora, otra firma.
+    const c = planDeAlarmas({
+      habitoId: HABITO, horaGeneral: '08:00', avisosGenerales: [10],
+      dias: diasPropiosDe(semana({ 4: { customReminder: true, reminderMinutesList: [0] } }, '08:00:00')),
+    });
     expect(firmaDelPlan(a)).not.toBe(firmaDelPlan(b));
     expect(firmaDelPlan(a)).not.toBe(firmaDelPlan(c));
     expect(firmaDelPlan({ esquema: 'diario' })).toBe('diario');
@@ -279,5 +288,44 @@ describe('el cambio de hora general que rige desde mañana (D-91)', () => {
     }));
     expect(pedidos.every(p => p.disparo.tipo === 'semanal')).toBe(true);
     expect(leer(pedidos.find(p => p.diaIso === 2)!)).toBe('habito-h-gym-d2-0 expo3 08:00');
+  });
+});
+
+describe('E-642: un día sin hora propia usa la hora que el servidor resuelve PARA ESE DÍA, no la de hoy', () => {
+  /**
+   * El bug del E2E: `GET /habit-preferences` trae arriba `triggerTime` resuelta para HOY. Hoy martes tiene hora
+   * propia (11:29), así que esa «hora general» era la del martes, y el sábado —sin hora propia, a las 07:00— quedó
+   * a las 10:59 (11:29 menos 30 min). Los demás días ya traen la hora correcta en `weekdays[i].triggerTime`.
+   */
+  const conHoyDistinta = () => diasPropiosDe(semana({ 2: { customTime: true, triggerTime: '11:29:00' } }));
+
+  it('el sábado sigue a las 07:00 (06:30 con 30 min antes) aunque la de arriba sea la del martes', () => {
+    const pedidos = porDia(planDeAlarmas({ habitoId: HABITO, horaGeneral: '11:29', avisosGenerales: [30], dias: conHoyDistinta() }));
+    const de = (iso: number) => leer(pedidos.find(p => p.diaIso === iso)!);
+    expect(de(6)).toBe('habito-h-gym-d6-0 expo7 06:30');
+    expect(de(2)).toBe('habito-h-gym-d2-0 expo3 10:59');
+    // Todos los demás, a su hora.
+    expect(pedidos.filter(p => p.diaIso !== 2).every(p => leer(p).endsWith('06:30'))).toBe(true);
+    expect(pedidos.find(p => p.diaIso === 6)!.horaDelDia).toBe('07:00');
+  });
+
+  it('con un cambio de hora general pendiente, hasta su fecha cada día sigue a SU hora y desde la fecha va la nueva', () => {
+    const ahora = new Date(2026, 9, 20, 6, 0); // martes
+    const plan = planDeAlarmas({
+      habitoId: HABITO, horaGeneral: '11:29', avisosGenerales: [30], dias: conHoyDistinta(),
+      cambio: { horaDeHoy: '11:29', horaNueva: '09:00', desde: '2026-10-24' }, ahora,
+    });
+    const sabado = porDia(plan).find(p => p.diaIso === 6)!;
+    // El sábado 24 ya rige la hora nueva.
+    expect(sabado.disparo).toEqual({ tipo: 'fecha', instanteMs: new Date(2026, 9, 24, 8, 30).getTime() });
+    const viernes = porDia(plan).find(p => p.diaIso === 5)!;
+    // El viernes 23 todavía va a su hora de siempre (07:00), no a la del martes.
+    expect(viernes.disparo).toEqual({ tipo: 'fecha', instanteMs: new Date(2026, 9, 23, 6, 30).getTime() });
+  });
+
+  it('sin la hora resuelta del día (un backend que no la informa) se usa la general, como antes', () => {
+    const dias = [{ iso: 6 as const, activo: true, hora: null, avisos: [30] }];
+    const pedidos = porDia(planDeAlarmas({ habitoId: HABITO, horaGeneral: '08:00', avisosGenerales: [10], dias }));
+    expect(leer(pedidos.find(p => p.diaIso === 6)!)).toBe('habito-h-gym-d6-0 expo7 07:30');
   });
 });

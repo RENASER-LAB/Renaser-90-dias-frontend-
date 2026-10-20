@@ -81,6 +81,14 @@ export interface DiaPropio {
   /** Antelaciones propias, en minutos. `[]` = ese día sin aviso. `null` = el aviso general. */
   avisos: number[] | null;
   /**
+   * `HH:mm` que el servidor RESUELVE para ese día (`weekdays[i].triggerTime`): la propia si la tiene y, si no, la
+   * general. Es lo que manda para un día sin hora propia (E-642): la `triggerTime` de arriba del ítem de
+   * `GET /habit-preferences` está resuelta para HOY, así que si hoy tiene hora propia (martes a las 11:29) no es la
+   * general, y usarla para los demás días ponía el sábado a las 10:59 en vez de las 06:30. Ausente = el servidor no la
+   * informa o es un `DiaPropio` de antes de este arreglo: se usa la general.
+   */
+  horaResuelta?: string | null;
+  /**
    * Spec 009: cómo suena la alarma ESE día, si es propia. Ausente o `null` = la general del hábito. Es opcional
    * para que lo anterior a la spec (y sus pruebas) siga siendo un `DiaPropio` válido.
    */
@@ -130,11 +138,13 @@ export function diasPropiosDe(weekdays: readonly DiaDelHabitoApi[] | null | unde
     }
     // Spec 009: la combinación solo cuenta si es propia del día; si no, el día sigue a la general.
     const alarma = d.customAlarm === true ? combinacionDeLaApi(d.alarm) : null;
+    const horaResuelta = horaCorta(d.triggerTime);
     propios.push({
       iso,
       activo: d.active !== false,
       hora: horaPropia,
       avisos,
+      ...(horaResuelta ? { horaResuelta } : {}),
       ...(alarma ? { alarma } : {}),
       ...(d.customAlarm === true && !alarma ? { alarmaPropiaSinDato: true } : {}),
     });
@@ -259,6 +269,12 @@ export function planDeAlarmas(entrada: EntradaDelPlan): PlanDeAlarmas {
     : null;
   const cambioPendiente = cambio !== null && fechaLocal(ahora) < cambio.desde;
   const horaGeneral = cambio && !cambioPendiente ? cambio.horaNueva : horaCorta(entrada.horaGeneral);
+  /**
+   * La hora de un día SIN hora propia: la que el servidor resolvió para ese día (E-642), salvo que un cambio general
+   * ya rija (ahí manda la hora nueva) o no la haya informado (la general).
+   */
+  const horaDeUnDiaSinHoraPropia = (propio: DiaPropio | undefined): string | null =>
+    cambio && !cambioPendiente ? horaGeneral : (horaCorta(propio?.horaResuelta) ?? horaGeneral);
 
   const pedidos: PedidoDeAlarmaDelDia[] = [];
   for (const iso of DIAS_ISO) {
@@ -270,8 +286,10 @@ export function planDeAlarmas(entrada: EntradaDelPlan): PlanDeAlarmas {
     const sigueAlGeneral = horaPropia === null;
     const alarma = combinacionDelDia(entrada.alarmaGeneral, propio?.alarma);
     if (sigueAlGeneral && cambioPendiente && cambio) {
+      // Hasta la fecha del cambio, ese día sigue a SU hora resuelta (no a la de hoy, que puede ser propia de otro día).
+      const delDia = { ...cambio, horaDeHoy: horaCorta(propio?.horaResuelta) ?? cambio.horaDeHoy };
       antelaciones.forEach((antes, n) => {
-        const proxima = proximaConCambio(iso, antes, cambio, ahora);
+        const proxima = proximaConCambio(iso, antes, delDia, ahora);
         if (!proxima) return;
         pedidos.push({
           identificador: identificadorDelAvisoDelDia(entrada.habitoId, iso, n),
@@ -284,7 +302,7 @@ export function planDeAlarmas(entrada: EntradaDelPlan): PlanDeAlarmas {
       });
       continue;
     }
-    const hora = horaPropia ?? horaGeneral;
+    const hora = horaPropia ?? horaDeUnDiaSinHoraPropia(propio);
     if (!hora) continue;
     antelaciones.forEach((antes, n) => {
       pedidos.push({
