@@ -1973,6 +1973,48 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **Hace falta un APK nuevo y el backend con V110** (la capacidad la publica el backend; contra uno anterior no hay
       botón).
 
+  * **Cambio por pedido del dueño — 2026-10-20 — tab `Training` → Planificar: el recordatorio por día** (spec 008 del
+    backend, `specs/008-recordatorio-por-dia/`, D-282 y E-640). Textual, sobre la captura del editor de GIMNASIO: «los
+    recordatorios también deben de ser por día, no en general, arregla eso para continuar». Lo que cambia y nada más:
+    * **El editor de un hábito** (`PlanificarDimensionModal`, paso 2) se ordena en tres bloques con su rótulo
+      `MicroLabel`: **Hora** (la rueda, fija arriba), **Días** y **Recordatorio**. Debajo de la rueda todo se desliza
+      (`ScrollView`, barra visible) para que, con días marcados, entren el recordatorio y los botones por día en un
+      teléfono bajo o con la letra grande; la rueda de «Otra» queda fuera de lo que se desliza (dos ruedas anidadas se
+      pelean por el dedo). Las opciones del recordatorio miden 48 y van a 16 px; la ayuda, a 16.
+    * **Con días marcados se elige el aviso** de esos días («Recordatorio de sáb, dom»), con las mismas opciones del
+      general. La línea «El recordatorio se elige sin días marcados» queda **solo** contra un backend que no informa
+      `customReminder` (anterior a V111). Si los días marcados tienen avisos distintos no se marca ninguno (tampoco «Sin
+      aviso») y se lee «Estos días tienen avisos distintos» (15 px); lo que se elija se pone a todos los marcados.
+    * **Se guarda solo lo tocado** (`training/utils/avisoDeLosDias`): sin mover la rueda cada día conserva su hora y solo
+      cambia el aviso («Guardar aviso · sáb, dom»; `PUT .../weekdays/{wd}/reminder`, que no gasta el cupo de reacomodos);
+      moviendo la rueda se guarda la hora («Guardar 07:00 · sáb, dom», como hasta ahora) y, si también se tocó el aviso,
+      las dos («Guardar hora y aviso · …»). Los días van con su nombre corto y no con la inicial («M, M» no distingue).
+      Hoy y los días pasados siguen con candado, para la hora y para el aviso.
+    * **El chip de cada día** (`FilaDeDiasDelPlan`, prop **opcional** `avisoDelDia`; Plan y «Agendar acciones» no la
+      pasan y su fila es la de siempre) dibuja bajo la hora la campana de línea (`bell`; `bellOff` nueva, Lucide en caja
+      de 24, para «sin aviso») de 16 con «30′», «a la hora» o «30′ +1», a 13 px y con el dorado de alto contraste; solo en
+      los días cuyo aviso propio difiere del general. Con la prop, cada pastilla se anuncia completa al lector de
+      pantalla («Sábado 24, 09:00, aviso 30 minutos antes»). Tocar un día vibra (`tacto.seleccion()`).
+    * **«Dejar sáb como los demás días»** (antes «Quitar la hora propia de sáb») quita la hora **y** el aviso propios.
+    * Debajo del recordatorio queda un lugar vacío (`espacio-para-tipos-de-alarma`) para los tipos de alarma, que van en
+      otra spec: no muestra nada.
+    * **La alarma del teléfono dejó de ignorar la hora de cada día (E-640)**: una sola alarma `DAILY` a la hora general
+      hacía sonar el jueves a las 07:00 aunque fuera a las 09:00. Con la misma regla del servidor —algún día con hora
+      propia, aviso propio o apagado—, `recordatoriosDeHabito.programar` pone una alarma `WEEKLY` por día encendido y
+      por antelación, a la hora de ese día (`habits/notificaciones/utils/alarmasPorDia`), con el identificador
+      `habito-{id}-d{1..7}-{n}` (lunes = 1; la más temprana de cada día es `-0`, la etiqueta del push de respaldo). Un
+      aviso que cruza la medianoche suena el día anterior. Sin ningún día distinto queda el esquema diario **tal cual**,
+      con `habito-{id}-inicio`. Se conservan el canal y la voz por hábito, la ruta de Training, la puesta al día con el
+      servidor (compara la firma de lo programado y no repite trabajo), el rearmado de la spec 007 y el aviso agrupado
+      (E-410: dos semanales del mismo día y hora se juntan; una semanal y una diaria no). Guardar, quitar o apagar días
+      en el editor relee la semana y rehace las alarmas. Mientras un cambio de hora general espera su fecha (D-91), los
+      días que siguen la general llevan una alarma de fecha, que la puesta al día convierte en semanal.
+    * **Compatibilidad**: todo campo nuevo es opcional. Contra un backend anterior (sin `weekdays` ni `customReminder`)
+      la app no ofrece aviso por día y todo es como hoy; un hábito sin días distintos no ve ningún cambio.
+    * **No hace falta APK nuevo** (solo JavaScript): hace falta el backend con V111 antes. No cambian Plan, Hoy, los otros
+      tabs ni las alarmas de Despertar de Yo → Alarmas (no conocen los días: si el hábito tenía días distintos, la
+      próxima puesta al día —al abrir la app— las deja por día otra vez).
+
 ## 2. 📱 RESPONSIVIDAD UNIVERSAL (XIAOMI, ANDROID, IOS Y TABLETS)
 * **Cero Doble Scroll**: NUNCA coloques un contenedor con `maxHeight` fijo o scroll interno dentro de otro `ScrollView`. Toda pantalla debe tener UN ÚNICO contenedor de scroll fluido con `contentContainerStyle={{ flexGrow: 1, paddingBottom: 36 }}`.
 * **Adaptabilidad a Xiaomi y Pantallas Altas (20:9 / 19.5:9)**:

@@ -27,6 +27,23 @@ import { DIAS_DEL_PLAN, diasDelMesDeLaSemana, esPlanificable, type DiaDelPlan } 
  * qué pasa.
  */
 
+/**
+ * El aviso propio de un día (spec 008): lo que dice el chip bajo la hora y lo que lee el lector de pantalla. Lo
+ * calcula quien usa la fila (`resumenDelAvisoDelDia`, del editor de Planificar); la fila solo lo dibuja.
+ */
+export interface AvisoDeUnDiaEnLaFila {
+  /** «30′», «a la hora», «30′ +1». Con `sinAviso`, no se escribe: va la campana tachada. */
+  corto: string;
+  /** «Aviso 30 minutos antes»: lo que dice el lector de pantalla. */
+  largo: string;
+  sinAviso: boolean;
+}
+
+/** Cómo se llama cada día para el lector de pantalla (la pastilla dibuja solo su inicial). */
+const NOMBRE_COMPLETO_DEL_DIA: Record<DiaDelPlan, string> = {
+  LUN: 'Lunes', MAR: 'Martes', 'MIÉ': 'Miércoles', JUE: 'Jueves', VIE: 'Viernes', 'SÁB': 'Sábado', DOM: 'Domingo',
+};
+
 /** Lo que rige un día concreto. `undefined` = ese día usa el horario general. */
 export interface HoraDelDia {
   /** `HH:mm` que rige ese día. */
@@ -59,6 +76,13 @@ interface FilaDeDiasDelPlanProps {
    * sabe contra qué endpoint va.
    */
   planificable?: (dia: DiaDelPlan) => boolean;
+  /**
+   * Spec 008, **opcional**: el aviso propio de cada día. Si devuelve algo, el chip lo dibuja debajo de la hora
+   * (campana de línea de 16 con el texto, o la campana tachada si el día va sin aviso) y toda la fila pasa a
+   * anunciarse completa al lector de pantalla. Sin esta prop —Plan no la pasa— la fila es exactamente la de
+   * siempre.
+   */
+  avisoDelDia?: (dia: DiaDelPlan) => AvisoDeUnDiaEnLaFila | null;
   onAlternarDia: (dia: DiaDelPlan) => void;
 }
 
@@ -67,6 +91,7 @@ export function FilaDeDiasDelPlan({
   horarios,
   enEdicion,
   planificable = esPlanificable,
+  avisoDelDia,
   onAlternarDia,
 }: FilaDeDiasDelPlanProps) {
   const { c, t } = useTheme();
@@ -83,11 +108,20 @@ export function FilaDeDiasDelPlan({
         // no va a hacer. Las acciones del día traen la suya — ver la prop.
         const sePuede = planificable(dia);
         const bloqueado = !corriendo || !sePuede;
+        const aviso = avisoDelDia && corriendo && sePuede ? avisoDelDia(dia) : null;
+        const colorDelAviso = editando ? c.onGold : c.goldInk;
         return (
           <Pressable
             key={dia}
             onPress={() => !bloqueado && onAlternarDia(dia)}
             disabled={bloqueado}
+            {...(avisoDelDia
+              ? {
+                accessibilityRole: 'button' as const,
+                accessibilityLabel: etiquetaDelDia(dia, diasDelMes[dia], delDia, corriendo, sePuede, aviso),
+                accessibilityState: { selected: editando, disabled: bloqueado },
+              }
+              : {})}
             style={[
               estilos.pastilla,
               {
@@ -130,11 +164,45 @@ export function FilaDeDiasDelPlan({
                 {delDia?.activo === false ? 'no va' : (delDia?.hora ?? '·')}
               </Text>
             )}
+            {/* El aviso propio del día (spec 008): la campana de línea de 16 y, debajo, los minutos. Con alto
+                contraste (dorado oscuro, o el color sobre dorado cuando se está editando) y a 13: es poco lugar,
+                pero nunca gris tenue. El lector de pantalla lo oye en la etiqueta de la pastilla, no acá. */}
+            {aviso && (
+              <View style={estilos.aviso} accessible={false} importantForAccessibility="no-hide-descendants">
+                <Icon name={aviso.sinAviso ? 'bellOff' : 'bell'} size={16} color={colorDelAviso} />
+                {!aviso.sinAviso && (
+                  <Text
+                    style={[t.micro, estilos.textoDelAviso, { color: colorDelAviso }]}
+                    numberOfLines={2}
+                  >
+                    {aviso.corto}
+                  </Text>
+                )}
+              </View>
+            )}
           </Pressable>
         );
       })}
     </View>
   );
+}
+
+/** «Sábado 24, 09:00, aviso 30 minutos antes»: la pastilla completa para el lector de pantalla. */
+function etiquetaDelDia(
+  dia: DiaDelPlan,
+  diaDelMes: string,
+  delDia: HoraDelDia | undefined,
+  corriendo: boolean,
+  sePuede: boolean,
+  aviso: AvisoDeUnDiaEnLaFila | null,
+): string {
+  const partes = [`${NOMBRE_COMPLETO_DEL_DIA[dia]} ${diaDelMes}`];
+  if (!corriendo) partes.push('el hábito no corre ese día');
+  else if (!sePuede) partes.push('ya no se puede cambiar');
+  else if (delDia?.activo === false) partes.push('no va');
+  else if (delDia?.hora) partes.push(delDia.hora);
+  if (aviso) partes.push(aviso.largo.charAt(0).toLowerCase() + aviso.largo.slice(1));
+  return partes.join(', ');
 }
 
 /**
@@ -155,4 +223,8 @@ const estilos = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Spec 008: la campana sobre sus minutos, centrados. Los minutos pueden pasar a dos renglones («a la» / «hora»)
+  // en una pastilla de ~40 px: las pastillas de la fila se estiran todas al alto de la más alta.
+  aviso: { alignItems: 'center', marginTop: 2 },
+  textoDelAviso: { fontSize: 13, lineHeight: 15, fontFamily: 'Jost_700Bold', textAlign: 'center', letterSpacing: 0 },
 });

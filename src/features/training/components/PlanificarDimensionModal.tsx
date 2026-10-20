@@ -8,6 +8,7 @@ import { GoldButton } from '../../../components/GoldButton';
 import { Icon, TAMANO_ICONO } from '../../../components/Icon';
 import { Interruptor } from '../../../components/Interruptor';
 import { Presionable } from '../../../components/Presionable';
+import { MicroLabel } from '../../../components/ui';
 import { HojaDesdeAbajo } from '../../../components/hojaDesdeAbajo/HojaDesdeAbajo';
 import { OpcionDeHoja } from '../../../components/hojaDesdeAbajo/HojaDeOpciones';
 import { useTheme } from '../../../theme/ThemeContext';
@@ -50,6 +51,20 @@ import {
 } from '../../alarmas/pedirAlarmaExacta';
 import { ofrecerLaGuiaPreventiva } from '../../alarmas/guiaPreventiva';
 import { horaDelEditor, preferenciaTrasGuardar, textoDelCambioProgramado } from '../utils/horaDelEditor';
+import {
+  avisoInicialDeLosMarcados,
+  avisoOrdenado,
+  diasDelEditor,
+  diasEnFrase,
+  diasPropiosDelEditor,
+  mismoAviso,
+  queGuardar,
+  resumenDelAvisoDelDia,
+  servidorInformaAvisosPorDia,
+  textoDelBoton,
+  type DiaDelEditor,
+  type QueGuardar,
+} from '../utils/avisoDeLosDias';
 
 /**
  * PLANIFICAR los hábitos de una dimensión: a qué hora va cada uno, y prenderlo o apagarlo.
@@ -133,11 +148,6 @@ interface Props {
 
 /** Los botones de la hoja, en tipo oración y a tamaño de lectura (no las versalitas de 11 del botón). */
 const TEXTO_DE_BOTON = { fontSize: 16, letterSpacing: 0 } as const;
-
-/** «LUN, MIÉ» → «lun, mié», para leerlo dentro de una frase. */
-function diasEnFrase(dias: DiaDelPlan[]): string {
-  return dias.join(', ').toLowerCase();
-}
 
 /** Un hábito de catálogo: los únicos que se pueden planificar. */
 type HabitoPlanificable = HabitItem & { habitoId: string };
@@ -273,8 +283,19 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
    */
   const [diasEnEdicion, setDiasEnEdicion] = useState<DiaDelPlan[]>([]);
   /** La hora de cada día, tal cual la resolvió el servidor. `propio` = tiene hora propia. */
-  const [horarioSemanal, setHorarioSemanal] =
-    useState<Record<string, { hora: string | null; propio: boolean; activo: boolean }>>({});
+  const [horarioSemanal, setHorarioSemanal] = useState<Record<string, DiaDelEditor>>({});
+  /**
+   * El aviso GENERAL ya guardado del hábito abierto: el que usan los días sin aviso propio (spec 008). Aparte de
+   * `antelaciones`, que es lo que se está editando sin días marcados y puede no estar guardado todavía.
+   */
+  const [avisoGeneral, setAvisoGeneral] = useState<number[]>([]);
+  /**
+   * Con días marcados: el aviso que la persona eligió para ellos, o `null` si no tocó nada (se muestra el que
+   * tienen en común). Solo si lo tocó se guarda el aviso: «solo lo que se tocó».
+   */
+  const [avisoDiasTocado, setAvisoDiasTocado] = useState<number[] | null>(null);
+  /** Los minutos en que arrancó la rueda de la hora: moverla es lo que hace que se guarde la hora de los días. */
+  const [arranqueDeLaRueda, setArranqueDeLaRueda] = useState<number | null>(null);
   /**
    * Los avisos del hábito abierto, en minutos antes. Vacío = sin aviso.
    *
@@ -394,6 +415,30 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
   const volverALaLista = () => setHabitoEnEdicion(null);
 
   /**
+   * Pide los siete días del hábito y los deja en pantalla: la hora de cada uno, si está apagado y, desde la
+   * spec 008, su aviso. Devuelve lo leído, o `null` si no se pudo (sin horario semanal la pantalla sigue
+   * sirviendo para el horario general, que es el caso de siempre) o si el servidor no trajo ningún día
+   * (`soloSiHayDatos`: no se pisa lo que hay con nada).
+   *
+   * Si mientras tanto se abrió otro hábito, devuelve lo leído sin ponerlo en pantalla.
+   */
+  const cargarSemana = async (
+    habitoId: string,
+    general: number[],
+    soloSiHayDatos = false,
+  ): Promise<Record<string, DiaDelEditor> | null> => {
+    try {
+      const dias = await habitsApi.obtenerHorarioSemanal(habitoId);
+      if (soloSiHayDatos && dias.length === 0) return null;
+      const leidos = diasDelEditor(dias, general);
+      if (abiertoRef.current === habitoId) setHorarioSemanal(leidos);
+      return leidos;
+    } catch {
+      return null;
+    }
+  };
+
+  /**
    * Abre el editor de UN hábito con su hora ya cargada. Ese es el camino principal.
    *
    * La rueda arranca en la hora que rige DE MAÑANA EN ADELANTE: si hay un cambio guardado que todavía
@@ -407,46 +452,32 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
     setHora(Math.floor(inicial / 60));
     setMinuto(inicial % 60);
     setSemillaRueda(n => n + 1);
+    setArranqueDeLaRueda(inicial);
     setDiasEnEdicion([]);
     setHorarioSemanal({});
+    setAvisoDiasTocado(null);
     // La rueda de "Otra" es del hábito que se estaba mirando: abrir otro con ella desplegada
     // mostraría los minutos del anterior sobre un recordatorio que todavía no terminó de cargar.
     setRuedaOtraAbierta(false);
-    // Se pide DESPUÉS de abrir, no antes: el toque tiene que responder ya. Mientras llega, las
-    // pastillas muestran el día sin hora, que es lo honesto.
-    void (async () => {
-      try {
-        const dias = await habitsApi.obtenerHorarioSemanal(h.habitoId);
-        const porNombre = new Map(dias.map(d => [d.weekday, d]));
-        setHorarioSemanal(
-          Object.fromEntries(
-            DIAS_DEL_PLAN.map(dia => {
-              const d = porNombre.get(NOMBRE_ISO_DEL_DIA[dia]);
-              return [dia, {
-                hora: d?.triggerTime?.slice(0, 5) ?? null,
-                propio: d?.custom ?? false,
-                // `?? true` para un backend anterior a V40, donde todos los días estaban encendidos.
-                activo: d?.active ?? true,
-              }];
-            }),
-          ),
-        );
-      } catch {
-        // Sin horario semanal la pantalla sigue sirviendo para el horario general, que es el caso
-        // de siempre. No se rompe nada: las pastillas quedan sin hora.
-      }
-    })();
     const previa = preferencias.get(h.habitoId);
     // E-408: lo que muestra el recordatorio sale YA de lo que dice el servidor, no de lo que quedó del
     // hábito abierto antes. Después, si el teléfono tiene sus avisos guardados, se usan esos, pero solo
     // si sigue abierto este mismo hábito y la persona todavía no tocó nada: una lectura que llega tarde
     // no puede pisar lo que se eligió (se veía «A la hora» y se guardaba sin recordatorio).
-    setAntelaciones(avisosDelServidor(previa));
+    const delServidor = avisosDelServidor(previa);
+    setAntelaciones(delServidor);
+    setAvisoGeneral(delServidor);
     abiertoRef.current = h.habitoId;
     avisosTocadosRef.current = false;
+    // Se pide DESPUÉS de abrir, no antes: el toque tiene que responder ya. Mientras llega, las
+    // pastillas muestran el día sin hora, que es lo honesto.
+    void cargarSemana(h.habitoId, delServidor);
     void recordatorios.antelacionesDe(claveUsuario, h.habitoId).then(locales => {
       if (abiertoRef.current !== h.habitoId || avisosTocadosRef.current) return;
-      if (locales.length > 0 && previa?.reminderEnabled !== false) setAntelaciones(locales);
+      if (locales.length > 0 && previa?.reminderEnabled !== false) {
+        setAntelaciones(locales);
+        setAvisoGeneral(locales);
+      }
     });
     setHabitoEnEdicion(h);
   };
@@ -455,10 +486,55 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
   const volverATodos = () => setDiasEnEdicion([]);
 
   const alternarDia = (dia: DiaDelPlan) => {
+    tacto.seleccion();
     setDiasEnEdicion(prev => prev.includes(dia)
       ? prev.filter(d => d !== dia)
       : DIAS_DEL_PLAN.filter(d => d === dia || prev.includes(d)));
   };
+
+  /* ------------------------------------------------------------------------------------------------
+   * El recordatorio de cada día (spec 008, D-282)
+   * ---------------------------------------------------------------------------------------------- */
+
+  const enModoDias = diasEnEdicion.length > 0;
+  /**
+   * `true` si el servidor informa el aviso de cada día (desde la spec 008). Con un backend anterior no se
+   * ofrece elegirlo con días marcados y la pantalla se comporta como siempre (FR-014).
+   */
+  const avisoPorDiaDisponible = servidorInformaAvisosPorDia(horarioSemanal);
+  const inicialDeLosMarcados = avisoInicialDeLosMarcados(diasEnEdicion.map(d => horarioSemanal[d]?.aviso ?? []));
+  /** Con días de avisos distintos, y mientras no se elija uno: no se muestra ninguno elegido. */
+  const avisosDistintos = enModoDias && avisoDiasTocado === null && inicialDeLosMarcados === 'distintos';
+  /**
+   * El aviso que muestra la sección Recordatorio: sin días, el general que se está editando; con días, lo que se
+   * eligió para ellos o, si no se tocó nada, lo que tienen en común.
+   */
+  const avisoMostrado: number[] = enModoDias
+    ? (avisoDiasTocado ?? (Array.isArray(inicialDeLosMarcados) ? inicialDeLosMarcados : []))
+    : antelaciones;
+  /** Un cambio de aviso: va a los días marcados si los hay, y si no al general (como siempre). */
+  const cambiarAviso = (siguiente: (previo: number[]) => number[]) => {
+    if (enModoDias) {
+      setAvisoDiasTocado(siguiente(avisoMostrado));
+      return;
+    }
+    avisosTocadosRef.current = true;
+    setAntelaciones(siguiente);
+  };
+  /**
+   * Al pasar de «todos los días» a días marcados (y de vuelta) el alcance del recordatorio cambia: lo que se
+   * había elegido para unos días no se lleva al general, ni la rueda de «Otra» abierta de uno al otro.
+   */
+  useEffect(() => {
+    setAvisoDiasTocado(null);
+    setRuedaOtraAbierta(false);
+  }, [enModoDias]);
+  /** La hora de la rueda cambió respecto de donde arrancó: lo que hace que se guarde la hora de los días. */
+  const movioLaRueda = arranqueDeLaRueda !== null && hora * 60 + minuto !== arranqueDeLaRueda;
+  /** Qué se guardaría ahora con los días marcados. Sin avisos por día en el servidor, la hora, como siempre. */
+  const queSeGuarda: QueGuardar = enModoDias && avisoPorDiaDisponible
+    ? queGuardar({ movioLaRueda, cambioElAviso: avisoDiasTocado !== null })
+    : 'hora';
 
   /**
    * El interruptor de UN hábito. Escribe en el acto y se refleja de forma optimista; si el backend
@@ -516,34 +592,100 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
   };
 
   /**
-   * Guarda la hora de UN día de la semana (V39) y se queda en la pantalla: lo normal es configurar
-   * varios días seguidos, y volver a la lista despues de cada uno seria hacerlo entrar de nuevo.
+   * Las alarmas de ESTE teléfono para el hábito, con lo propio de cada día (spec 008, E-640).
+   *
+   * Hasta la spec 008 guardar la hora de un día no tocaba la alarma del teléfono, que seguía sonando a la hora
+   * general todos los días. Ahora, tras cualquier cambio de los días, las alarmas del hábito se vuelven a armar
+   * con la hora y el aviso de cada uno (`dias`), a la hora general que rige (y a la del cambio que espera su
+   * fecha, D-91) y con el aviso general ya guardado.
+   *
+   * Solo en el teléfono (en la web las manda el servidor) y solo si el servidor ya informa los avisos por día:
+   * contra un backend anterior las alarmas siguen siendo diarias, como siempre. Devuelve `true` si quedaron
+   * puestas, `false` si no se pudo (sin permiso de avisos) y `null` si no correspondía.
    */
-  const guardarDias = async (h: HabitoPlanificable, dias: DiaDelPlan[]) => {
+  const reprogramarAlarmas = async (
+    h: HabitoPlanificable,
+    semana: Record<string, DiaDelEditor> | null,
+  ): Promise<boolean | null> => {
+    if (!recordatorios.HAY_RECORDATORIOS_LOCALES || !semana || !servidorInformaAvisosPorDia(semana)) return null;
+    try {
+      const horas = horaDelEditor(preferencias.get(h.habitoId), h.time);
+      const dias = diasPropiosDelEditor(semana);
+      if (horas.programado) {
+        return await recordatorios.programarConCambioDiferido(claveUsuario, h.habitoId, h.title, {
+          horaDeHoy: horas.ahora,
+          horaNueva: horas.programado.hora,
+          desde: horas.programado.desde,
+        }, avisoGeneral, { dimension, dias });
+      }
+      return await recordatorios.programar(claveUsuario, h.habitoId, h.title, horas.ahora, avisoGeneral, { dimension, dias });
+    } catch {
+      return null;
+    }
+  };
+
+  /** Los días ya cambiados en el servidor: se vuelven a leer (la verdad es la suya) y las alarmas se rehacen. */
+  const releerYReprogramar = async (h: HabitoPlanificable): Promise<boolean | null> => {
+    const semana = await cargarSemana(h.habitoId, avisoGeneral, true);
+    return reprogramarAlarmas(h, semana ?? (servidorInformaAvisosPorDia(horarioSemanal) ? horarioSemanal : null));
+  };
+
+  /** «30 min antes y a la hora»: el aviso dicho en una frase. */
+  const avisoEnFrase = (aviso: readonly number[]): string =>
+    aviso.length === 0 ? 'sin aviso' : avisoOrdenado(aviso).map(m => etiquetaDeAntelacion(m).toLowerCase()).join(' y ');
+
+  /**
+   * Guarda lo que se tocó de UNOS días de la semana (V39, y V111 para el aviso) y se queda en la pantalla: lo
+   * normal es configurar varios días seguidos, y volver a la lista despues de cada uno seria hacerlo entrar de
+   * nuevo.
+   *
+   * - `'hora'`: la hora de la rueda para cada día (lo de siempre).
+   * - `'aviso'`: solo el aviso; cada día conserva su hora y no se gasta cupo semanal.
+   * - `'ambos'`: las dos.
+   */
+  const guardarDias = async (h: HabitoPlanificable, dias: DiaDelPlan[], que: QueGuardar) => {
     setGuardando(true);
     const limite = preferencias.get(h.habitoId)?.limitTime ?? null;
+    const aviso = que === 'hora' ? null : avisoMostrado;
     const fallidos: DiaDelPlan[] = [];
     const guardados: DiaDelPlan[] = [];
     // En serie y no en paralelo: son escrituras sobre las mismas filas del aprendiz, y así un
     // fallo suelto queda identificado por día en vez de tumbar la tanda entera.
     for (const dia of dias) {
       try {
-        await habitsApi.fijarHorarioDelDia(h.habitoId, NOMBRE_ISO_DEL_DIA[dia], `${horaTexto}:00`, limite);
+        if (que !== 'aviso') {
+          await habitsApi.fijarHorarioDelDia(h.habitoId, NOMBRE_ISO_DEL_DIA[dia], `${horaTexto}:00`, limite);
+        }
+        if (aviso) {
+          await habitsApi.fijarAvisoDelDia(h.habitoId, NOMBRE_ISO_DEL_DIA[dia], aviso.length > 0, aviso);
+        }
         guardados.push(dia);
       } catch {
         fallidos.push(dia);
       }
     }
+    let alarmaPuesta: boolean | null = null;
     if (guardados.length > 0) {
       setHorarioSemanal(prev => ({
         ...prev,
-        ...Object.fromEntries(guardados.map(d => [d, { hora: horaTexto, propio: true, activo: true }])),
+        ...Object.fromEntries(guardados.map(d => [d, {
+          ...prev[d],
+          hora: que === 'aviso' ? (prev[d]?.hora ?? null) : horaTexto,
+          propio: que === 'aviso' ? (prev[d]?.propio ?? false) : true,
+          activo: que === 'aviso' ? (prev[d]?.activo ?? true) : true,
+          aviso: aviso ?? prev[d]?.aviso ?? null,
+          avisoPropio: aviso ? !mismoAviso(aviso, avisoGeneral) : (prev[d]?.avisoPropio ?? false),
+        }])),
       }));
       setHuboEscritura(true);
+      if (que !== 'aviso') setArranqueDeLaRueda(hora * 60 + minuto);
+      alarmaPuesta = await releerYReprogramar(h);
     }
     setGuardando(false);
-    // Quedan marcados SOLO los que fallaron: reintentar es volver a tocar el botón.
+    // Quedan marcados SOLO los que fallaron: reintentar es volver a tocar el botón. El aviso elegido se
+    // conserva para ese reintento; si todo salió bien, vuelve a mostrarse el que tienen los días.
     setDiasEnEdicion(fallidos);
+    if (fallidos.length === 0) setAvisoDiasTocado(null);
 
     // Confirmar SIEMPRE, no solo cuando algo sale mal.
     //
@@ -551,16 +693,44 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
     // > la base para saber si había pasado algo. Guardar el horario general sí avisaba; guardar
     // > días era mudo. Un guardado silencioso se siente igual que uno que falló.
     if (fallidos.length > 0) {
+      const queSeGuardo = que === 'aviso' ? 'quedó con el aviso nuevo' : `quedaron a las ${horaTexto}`;
       Alert.alert(
         'Se guardó a medias',
-        `${guardados.join(', ') || 'Ninguno'} quedaron a las ${horaTexto}. No pudimos con ${fallidos.join(', ')}.`,
+        `${guardados.join(', ') || 'Ninguno'} ${queSeGuardo}. No pudimos con ${fallidos.join(', ')}.`,
       );
       return;
     }
-    confirmar(`Queda a las ${horaTexto} los ${diasEnFrase(guardados)}, desde mañana.`);
+    const cuales = diasEnFrase(guardados);
+    const corto = que === 'aviso'
+      ? (aviso && aviso.length > 0 ? `Queda con aviso ${avisoEnFrase(aviso)} los ${cuales}.` : `Queda sin aviso los ${cuales}.`)
+      : que === 'ambos' && aviso
+        ? `Queda a las ${horaTexto}, ${aviso.length > 0 ? `con aviso ${avisoEnFrase(aviso)}` : 'sin aviso'}, los ${cuales}, desde mañana.`
+        : `Queda a las ${horaTexto} los ${cuales}, desde mañana.`;
+    // El aviso nuevo se oye con la alarma del teléfono: igual que al guardar la hora general, la primera vez se
+    // pide «Alarmas y recordatorios» y se ofrece la guía de la marca. Sin alarma puesta (sin permiso de avisos)
+    // se dice, en un diálogo: es algo que hay que leer.
+    const conAviso = Boolean(aviso && aviso.length > 0) && alarmaPuesta === true;
+    if (aviso && aviso.length > 0 && alarmaPuesta === false) {
+      Alert.alert('Aviso guardado', `${corto}\n\nEl aviso quedó guardado, pero este teléfono no tiene permiso para avisarte. Habilita las notificaciones para recibirlo.`);
+      return;
+    }
+    let pidioElPermiso = false;
+    if (conAviso && (await hayQuePedirAlarmaExactaAlGuardar(claveUsuario))) {
+      pidioElPermiso = true;
+      await anotarQueSePidioAlarmaExacta(claveUsuario);
+      Alert.alert('Listo', `${corto}\n\n${TEXTO_PEDIDO_ALARMA_EXACTA}`, [
+        { text: 'Ahora no', style: 'cancel' },
+        { text: 'Permitir', onPress: () => void abrirPermisoDeAlarmasExactas() },
+      ]);
+    } else if (conAviso && (await hayQueRecordarAlarmaExacta(claveUsuario))) {
+      confirmar(`${corto} ${LINEA_ALARMA_EXACTA_PENDIENTE}`);
+    } else {
+      confirmar(corto);
+    }
+    if (conAviso && !pidioElPermiso) void ofrecerLaGuiaPreventiva(claveUsuario);
   };
 
-  /** Devuelve un día al horario general. */
+  /** Devuelve un día al horario general: sin hora propia ni aviso propio. */
   const quitarDias = async (h: HabitoPlanificable, dias: DiaDelPlan[]) => {
     setGuardando(true);
     try {
@@ -570,10 +740,18 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
       const general = horaDe(h.habitoId, h.time);
       setHorarioSemanal(prev => ({
         ...prev,
-        ...Object.fromEntries(dias.map(d => [d, { hora: general || null, propio: false, activo: true }])),
+        ...Object.fromEntries(dias.map(d => [d, {
+          hora: general || null,
+          propio: false,
+          activo: true,
+          // Sin aviso propio el día vuelve al general (el servidor borra la fila entera).
+          aviso: prev[d]?.aviso === null || prev[d]?.aviso === undefined ? null : [...avisoGeneral],
+          avisoPropio: false,
+        }])),
       }));
       setHuboEscritura(true);
       volverATodos();
+      void releerYReprogramar(h);
     } catch (e) {
       Alert.alert('No pudimos quitarlo', mensajeDeError(e, 'Intenta de nuevo en unos segundos.'));
     } finally {
@@ -600,6 +778,8 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
       setHuboEscritura(true);
       setDiasEnEdicion([]);
       confirmar(`No va los ${diasEnFrase(dias)}. El resto de la semana sigue igual.`);
+      // Un día apagado no suena: las alarmas del teléfono se rehacen sin él.
+      void releerYReprogramar(h);
     } catch (e) {
       Alert.alert(
         'No pudimos apagarlo',
@@ -616,8 +796,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
    */
   const alternarAntelacion = (minutos: number) => {
     tacto.seleccion();
-    avisosTocadosRef.current = true;
-    setAntelaciones(prev =>
+    cambiarAviso(prev =>
       prev.includes(minutos) ? prev.filter(x => x !== minutos) : [...prev, minutos].sort((a, b) => b - a),
     );
   };
@@ -634,7 +813,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
       setRuedaOtraAbierta(false);
       return;
     }
-    const arranque = minutosDeArranqueDeLaRueda(antelaciones);
+    const arranque = minutosDeArranqueDeLaRueda(avisoMostrado);
     arranqueDeLaRuedaOtra.current = arranque;
     setMinutosOtra(arranque);
     setRuedaOtraAbierta(true);
@@ -648,8 +827,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
    * la rueda abierta taparía la confirmación de lo que se acaba de hacer.
    */
   const agregarAntelacionDeLaRueda = () => {
-    avisosTocadosRef.current = true;
-    setAntelaciones(prev => (
+    cambiarAviso(prev => (
       prev.includes(minutosOtra) ? prev : [...prev, minutosOtra].sort((a, b) => b - a)
     ));
     setRuedaOtraAbierta(false);
@@ -658,6 +836,9 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
   /** Guarda la hora GENERAL del hábito —todos los días— y vuelve a la lista. */
   const guardarHora = async (h: HabitoPlanificable) => {
     setGuardando(true);
+    // Spec 008: las alarmas del hábito respetan lo propio de cada día (un día con hora o aviso propio no sigue
+    // el cambio general). Solo si el servidor ya informa los días; si no, diarias como siempre.
+    const diasParaLasAlarmas = servidorInformaAvisosPorDia(horarioSemanal) ? diasPropiosDelEditor(horarioSemanal) : undefined;
     try {
       // El navegador solo permite abrir el permiso Web Push dentro de una accion del usuario.
       // Se hace antes del PATCH para conservar ese gesto; el backend se actualiza igual aunque
@@ -693,8 +874,8 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
             horaDeHoy: horaDelEditor(previa, h.time).ahora,
             horaNueva: horaTexto,
             desde: resultado.deferredEffectiveDate,
-          }, antelaciones, { dimension })
-          : await recordatorios.programar(claveUsuario, h.habitoId, h.title, horaTexto, antelaciones, { dimension });
+          }, antelaciones, { dimension, dias: diasParaLasAlarmas })
+          : await recordatorios.programar(claveUsuario, h.habitoId, h.title, horaTexto, antelaciones, { dimension, dias: diasParaLasAlarmas });
       const avisoImposible = antelaciones.length > 0 && !ok;
       // El horario local se actualiza acá y no recargando todo: recargar con la hoja abierta
       // reordenaría la lista debajo del dedo. Diferido (D-91), la hora de hoy no cambia y el cambio
@@ -715,6 +896,11 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
         return siguiente;
       });
       setGuardados(prev => ({ ...prev, [h.habitoId]: horaTexto }));
+      // El aviso general ya guardado es el nuevo; los días sin aviso propio lo siguen.
+      setAvisoGeneral([...antelaciones]);
+      setHorarioSemanal(prev => Object.fromEntries(Object.entries(prev).map(([dia, d]) => [
+        dia, d.aviso !== null && !d.avisoPropio ? { ...d, aviso: [...antelaciones] } : d,
+      ])));
       setHuboEscritura(true);
       setHabitoEnEdicion(null);
       const cuando = resultado.deferredEffectiveDate
@@ -767,7 +953,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
    */
   const intentarGuardar = (h: HabitoPlanificable) => {
     if (diasEnEdicion.length > 0) {
-      void guardarDias(h, diasEnEdicion);
+      void guardarDias(h, diasEnEdicion, queSeGuarda);
       return;
     }
     void guardarHora(h);
@@ -975,7 +1161,8 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
     styles.pastillaAntelacion,
     { borderColor: on ? c.gold : c.border, backgroundColor: on ? c.cardBgAlt : 'transparent' },
   ];
-  const textoPastilla = (on: boolean) => [t.small, styles.textoPastilla, { color: on ? c.goldInk : c.textSoft }];
+  // 16 px: las opciones del recordatorio se leen de un vistazo, sin acercar el teléfono (spec 008).
+  const textoPastilla = (on: boolean) => [t.small, styles.textoPastilla, styles.textoDeOpcion, { color: on ? c.goldInk : c.textSoft }];
   const rotulo = [t.body, styles.rotulo, { color: c.goldInk }];
 
   const lineaConfirmacion = confirmacion ? (
@@ -996,13 +1183,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
   const pie =
     estado === 'listo' && paso === 'habito' && habitoEnEdicion ? (
       <GoldButton
-        label={
-          guardando
-            ? 'Guardando…'
-            : diasEnEdicion.length === 0
-              ? `Guardar ${horaTexto} · todos los días`
-              : `Guardar ${horaTexto} · ${diasEnFrase(diasEnEdicion)}`
-        }
+        label={textoDelBoton({ guardando, dias: diasEnEdicion, que: queSeGuarda, hora: horaTexto })}
         onPress={() => intentarGuardar(habitoEnEdicion)}
         disabled={guardando}
         textStyle={TEXTO_DE_BOTON}
@@ -1122,9 +1303,13 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
         )}
 
         {/* =================================================================== */}
-        {/* PASO 2 — UN HÁBITO. Una sola decisión: a qué hora.                  */}
-        {/* Sin scroll a propósito: las ruedas se pelearían por el dedo con un   */}
-        {/* ScrollView (AGENTS.md §2). El botón de guardar va fijo en el pie.    */}
+        {/* PASO 2 — UN HÁBITO. Tres bloques, siempre en este orden: la HORA, los */}
+        {/* DÍAS y el RECORDATORIO, cada uno con su rótulo (spec 008).            */}
+        {/* La rueda de la hora queda fija arriba y lo demás se desliza debajo: con */}
+        {/* los días marcados, el recordatorio y los botones por día no entran en */}
+        {/* un teléfono bajo, ni con la letra del sistema grande. Las dos ruedas no */}
+        {/* se anidan (AGENTS.md §2): la de «Otra» va fuera de lo que se desliza. */}
+        {/* El botón de guardar va fijo en el pie.                                */}
         {/* =================================================================== */}
         {estado === 'listo' && paso === 'habito' && habitoEnEdicion && (
           <View style={styles.cuerpo}>
@@ -1132,8 +1317,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
 
             {/* El cambio ya guardado que todavía no rige (D-91), con la misma frase que la tarjeta
                 del hábito en Plan. Sin esto, «Ahora: 09:00» parecía decir que el cambio no se
-                había guardado (PLN-02). Solo aparece cuando hay uno: la hoja no tiene scroll y cada
-                renglón empuja el botón de guardar. */}
+                había guardado (PLN-02). Solo aparece cuando hay uno. */}
             {horasDelHabitoAbierto?.programado && (
               <View style={[styles.cambioProgramado, { backgroundColor: c.goldWash }]}>
                 <Icon name="clock" size={TAMANO_ICONO.chico} color={c.goldInk} />
@@ -1143,11 +1327,11 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
               </View>
             )}
 
-            {/* Los bloques del día (madrugada / mañana / tarde / noche) se sacaron el
-                2026-09-08 por decisión del cliente: no los quiere ver. Con ellos se fue el
-                "✎ AJUSTAR", que era la única forma de moverlos. La hora se elige libre en la
+            {/* HORA. Los bloques del día (madrugada / mañana / tarde / noche) se sacaron el
+                2026-09-08 por decisión del cliente: no los quiere ver. La hora se elige libre en la
                 rueda y ya — es lo mismo que pedía el caso de quien trabaja de noche. */}
-            <View style={{ paddingTop: 4, paddingBottom: 2 }}>
+            <View style={styles.bloqueDeLaHora}>
+              <MicroLabel>Hora</MicroLabel>
               <RuedaHoraPicker
                 key={`rueda-${semillaRueda}`}
                 horaInicial={hora}
@@ -1158,201 +1342,234 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
                 }}
               />
             </View>
-            {/* LOS DÍAS, tocables (V39). Tocar uno pasa a editar SU hora; tocarlo de nuevo vuelve
-                al horario general. Cada pastilla muestra la hora que rige ese día, así que la fila
-                entera se lee de un vistazo: "los lunes 05:00, el resto 09:00". */}
-            <View style={styles.filaTituloCompacta}>
-              <Text style={rotulo} numberOfLines={1}>
-                {diasEnEdicion.length === 0 ? 'Todos los días' : `Solo ${diasEnFrase(diasEnEdicion)}`}
+
+            <ScrollView
+              style={styles.cuerpoDesplazable}
+              contentContainerStyle={styles.contenidoDesplazable}
+              keyboardShouldPersistTaps="handled"
+              // La barra queda visible mientras hay algo más abajo (el recordatorio): quien no desliza no se
+              // entera de que sigue, y las personas mayores no suelen probar si la hoja se mueve.
+              persistentScrollbar
+            >
+              {/* DÍAS, tocables (V39). Tocar uno pasa a editar SU hora y su aviso; tocarlo de nuevo vuelve
+                  al horario general. Cada pastilla muestra la hora que rige ese día y, si su aviso es
+                  distinto del general, la campana con los minutos: la fila entera se lee de un vistazo. */}
+              <View style={styles.filaTituloCompacta}>
+                <View style={styles.rotuloDeLosDias}>
+                  <MicroLabel>{diasEnEdicion.length === 0 ? 'Todos los días' : `Solo ${diasEnFrase(diasEnEdicion)}`}</MicroLabel>
+                </View>
+                {diasEnEdicion.length > 0 && (
+                  <Presionable
+                    onPress={volverATodos}
+                    accessibilityRole="button"
+                    accessibilityLabel="Volver a todos los días"
+                    style={styles.enlaceTodos}
+                  >
+                    <Icon name="arrowLeft" size={TAMANO_ICONO.chico} color={c.goldInk} />
+                    <Text style={[t.small, styles.textoDelEnlace, { color: c.goldInk }]}>Todos</Text>
+                  </Presionable>
+                )}
+              </View>
+              {/* La fila salió a `FilaDeDiasDelPlan` (2026-09-22) para que el planificador de las
+                  acciones del día use la MISMA, en vez de una copia. Acá no cambió nada: los mismos
+                  días, el mismo candado de D-91 y las mismas medidas. Con el aviso por día (spec 008) suma,
+                  solo acá, la campana de los días con aviso propio. */}
+              <FilaDeDiasDelPlan
+                corre={diasDe(habitoEnEdicion)}
+                horarios={horarioSemanal}
+                enEdicion={diasEnEdicion}
+                onAlternarDia={alternarDia}
+                avisoDelDia={recordatorios.HAY_RECORDATORIOS && avisoPorDiaDisponible
+                  ? (dia => {
+                    const d = horarioSemanal[dia];
+                    return d && d.avisoPropio && d.activo ? resumenDelAvisoDelDia(d.aviso, avisoGeneral) : null;
+                  })
+                  : undefined}
+              />
+              {/* La ayuda, corta (2026-10-05; eran dos frases a 10,5 px). */}
+              <Text style={[t.small, styles.ayuda, { color: c.textSoft }]}>
+                {diasEnEdicion.length === 0
+                  ? (recordatorios.HAY_RECORDATORIOS && avisoPorDiaDisponible
+                    ? 'Toca un día para darle su propia hora y aviso. Hoy y lo pasado van con candado.'
+                    : 'Toca un día para darle su propia hora. Hoy y lo pasado van con candado.')
+                  : `Solo ${diasEnFrase(diasEnEdicion)}, todas las semanas. Hoy no cambia.`}
               </Text>
-              {diasEnEdicion.length > 0 && (
+
+              {/* Apagar esos días, o volver a encenderlos. Se ofrece una cosa o la otra según cómo
+                  estén los marcados: mostrar las dos sería pedir que la persona adivine cuál aplica.
+                  "No hacer" es una decisión de peso: botón con borde y alto de toque cómodo
+                  (AGENTS.md §4). En un hábito OBLIGATORIO no aparece: esos se pueden mover de hora
+                  pero no sacar. 2026-10-05: ⊘ y ↺ de texto pasan a íconos de línea. */}
+              {diasEnEdicion.length > 0
+                && habitoEnEdicion.isDeactivatable !== false
+                && diasEnEdicion.every(d => horarioSemanal[d]?.activo !== false) && (
                 <Presionable
-                  onPress={volverATodos}
+                  onPress={() => void apagarDias(habitoEnEdicion, diasEnEdicion)}
                   accessibilityRole="button"
-                  accessibilityLabel="Volver a todos los días"
-                  style={styles.enlaceTodos}
+                  style={[styles.accionApagar, { borderColor: c.danger }]}
                 >
-                  <Icon name="arrowLeft" size={TAMANO_ICONO.chico} color={c.goldInk} />
-                  <Text style={[t.small, styles.marcaTexto, { color: c.goldInk }]}>Todos</Text>
+                  <Icon name="ban" size={TAMANO_ICONO.normal} color={c.danger} />
+                  <Text style={[t.body, styles.textoAccion, { color: c.danger }]}>
+                    No hacerlo los {diasEnFrase(diasEnEdicion)}
+                  </Text>
                 </Presionable>
               )}
-            </View>
-            {/* La fila salió a `FilaDeDiasDelPlan` (2026-09-22) para que el planificador de las
-                acciones del día use la MISMA, en vez de una copia. Acá no cambió nada: los mismos
-                días, el mismo candado de D-91 y las mismas medidas. */}
-            <FilaDeDiasDelPlan
-              corre={diasDe(habitoEnEdicion)}
-              horarios={horarioSemanal}
-              enEdicion={diasEnEdicion}
-              onAlternarDia={alternarDia}
-            />
-            {/* La ayuda, corta (2026-10-05; eran dos frases a 10,5 px). */}
-            <Text style={[t.small, { color: c.textSoft, marginTop: 6 }]}>
-              {diasEnEdicion.length === 0
-                ? 'Toca un día para darle su propia hora. Hoy y lo pasado van con candado.'
-                : `Solo ${diasEnFrase(diasEnEdicion)}, todas las semanas. Hoy no cambia.`}
-            </Text>
 
-            {/* Apagar esos días, o volver a encenderlos. Se ofrece una cosa o la otra según cómo
-                estén los marcados: mostrar las dos sería pedir que la persona adivine cuál aplica.
-                "No hacer" es una decisión de peso: botón con borde y alto de toque cómodo
-                (AGENTS.md §4). En un hábito OBLIGATORIO no aparece: esos se pueden mover de hora
-                pero no sacar. 2026-10-05: ⊘ y ↺ de texto pasan a íconos de línea. */}
-            {diasEnEdicion.length > 0
-              && habitoEnEdicion.isDeactivatable !== false
-              && diasEnEdicion.every(d => horarioSemanal[d]?.activo !== false) && (
-              <Presionable
-                onPress={() => void apagarDias(habitoEnEdicion, diasEnEdicion)}
-                accessibilityRole="button"
-                style={[styles.accionApagar, { borderColor: c.danger }]}
-              >
-                <Icon name="ban" size={TAMANO_ICONO.normal} color={c.danger} />
-                <Text style={[t.body, styles.textoAccion, { color: c.danger }]}>
-                  No hacerlo los {diasEnFrase(diasEnEdicion)}
-                </Text>
-              </Presionable>
-            )}
+              {diasEnEdicion.length > 0 && diasEnEdicion.every(d => horarioSemanal[d]?.activo === false) && (
+                <Presionable
+                  onPress={() => void quitarDias(habitoEnEdicion, diasEnEdicion)}
+                  accessibilityRole="button"
+                  style={[styles.accionApagar, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}
+                >
+                  <Icon name="rotateCcw" size={TAMANO_ICONO.normal} color={c.goldInk} />
+                  <Text style={[t.body, styles.textoAccion, { color: c.goldInk }]}>
+                    Volver a hacerlo los {diasEnFrase(diasEnEdicion)}
+                  </Text>
+                </Presionable>
+              )}
 
-            {diasEnEdicion.length > 0 && diasEnEdicion.every(d => horarioSemanal[d]?.activo === false) && (
-              <Presionable
-                onPress={() => void quitarDias(habitoEnEdicion, diasEnEdicion)}
-                accessibilityRole="button"
-                style={[styles.accionApagar, { borderColor: c.gold, backgroundColor: c.cardBgAlt }]}
-              >
-                <Icon name="rotateCcw" size={TAMANO_ICONO.normal} color={c.goldInk} />
-                <Text style={[t.body, styles.textoAccion, { color: c.goldInk }]}>
-                  Volver a hacerlo los {diasEnFrase(diasEnEdicion)}
-                </Text>
-              </Presionable>
-            )}
-
-            {/* Los obligatorios se pueden mover de hora, no sacar. Decirlo evita que alguien
-                busque un botón que no está. */}
-            {diasEnEdicion.length > 0 && habitoEnEdicion.isDeactivatable === false && (
-              <View style={[styles.accionApagar, { borderColor: c.border }]}>
-                <Icon name="lock" size={TAMANO_ICONO.chico} color={c.tabInactive} />
-                <Text style={[t.small, { color: c.textSoft, flexShrink: 1 }]}>
-                  Obligatorio del programa: puedes cambiarle la hora, no sacarlo
-                </Text>
-              </View>
-            )}
-
-            {/* Solo cuando TODOS los marcados tienen hora propia Y están encendidos: ofrecer
-                "quitar la hora" de un día apagado no significa nada. */}
-            {diasEnEdicion.length > 0
-              && diasEnEdicion.every(d => horarioSemanal[d]?.propio && horarioSemanal[d]?.activo !== false) && (
-              <Presionable
-                onPress={() => void quitarDias(habitoEnEdicion, diasEnEdicion)}
-                accessibilityRole="button"
-                hitSlop={8}
-                style={{ marginTop: 8, minHeight: 44, justifyContent: 'center' }}
-              >
-                <Text style={[t.small, { color: c.textSoft, textDecorationLine: 'underline' }]}>
-                  Quitar la hora propia de {diasEnFrase(diasEnEdicion)}
-                </Text>
-              </Presionable>
-            )}
-
-            {/* En Android es alarma local; en web es Web Push y los dos avisos salen del
-                scheduler del backend. Expo Go sigue sin ofrecer el canal remoto. */}
-            {/* E-408: guardar días no guarda el recordatorio; con días elegidos no se ofrece. */}
-            {recordatorios.HAY_RECORDATORIOS && diasEnEdicion.length > 0 && (
-              <Text style={[t.small, { color: c.textSoft, marginTop: 12 }]}>
-                El recordatorio se elige sin días marcados.
-              </Text>
-            )}
-            {recordatorios.HAY_RECORDATORIOS && diasEnEdicion.length === 0 && (
-              <>
-                <Text style={[rotulo, { marginTop: 14 }]}>
-                  Recordatorio{antelaciones.length > 1 ? ` · ${antelaciones.length} avisos` : ''}
-                </Text>
-                <View style={styles.filaAntelaciones}>
-                  {/* "Sin aviso" no es una opción más: es el conjunto vacío, y por eso va aparte
-                      y no compite con las otras tres. */}
-                  <Presionable
-                    onPress={() => { tacto.seleccion(); avisosTocadosRef.current = true; setAntelaciones([]); }}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: antelaciones.length === 0 }}
-                    contenedorStyle={styles.pastillaArea}
-                    style={pastilla(antelaciones.length === 0)}
-                  >
-                    <Text style={textoPastilla(antelaciones.length === 0)} numberOfLines={1}>Sin aviso</Text>
-                  </Presionable>
-                  {/* Las sugeridas MAS las que la persona haya escrito, en orden de tiempo:
-                      primero el aviso que llega antes. "A la hora" va al final, aparte, porque
-                      no es una antelacion sino el momento exacto. */}
-                  {antelacionesAMostrar(ANTELACIONES_SUGERIDAS, antelaciones).map(minutos => {
-                    const on = antelaciones.includes(minutos);
-                    return (
-                      <Presionable
-                        key={minutos}
-                        onPress={() => alternarAntelacion(minutos)}
-                        accessibilityRole="button"
-                        accessibilityState={{ selected: on }}
-                        accessibilityLabel={`${etiquetaDeAntelacion(minutos)}${on ? ', activado' : ''}`}
-                        contenedorStyle={styles.pastillaArea}
-                        style={pastilla(on)}
-                      >
-                        <Text style={textoPastilla(on)} numberOfLines={1}>
-                          {etiquetaDeAntelacion(minutos)}
-                        </Text>
-                      </Presionable>
-                    );
-                  })}
-                  <Presionable
-                    onPress={() => alternarAntelacion(0)}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: antelaciones.includes(0) }}
-                    accessibilityLabel={`A la hora exacta${antelaciones.includes(0) ? ', activado' : ''}`}
-                    contenedorStyle={styles.pastillaArea}
-                    style={pastilla(antelaciones.includes(0))}
-                  >
-                    <Text style={textoPastilla(antelaciones.includes(0))} numberOfLines={1}>A la hora</Text>
-                  </Presionable>
-                  {/* "Otra" ABRE UNA RUEDA, no un teclado (2026-09-21). Era un `TextInput` con
-                      `keyboardType="number-pad"`: al tocarlo el teclado del sistema subía y
-                      tapaba el propio campo, así que se escribía a ciegas. La rueda se despliega
-                      debajo y solo cuando se pide, porque cada píxel de alto empuja el botón de
-                      guardar fuera de la hoja. */}
-                  <Presionable
-                    onPress={alternarRuedaOtra}
-                    accessibilityRole="button"
-                    accessibilityState={{ expanded: ruedaOtraAbierta }}
-                    accessibilityLabel="Otra antelación, elegir los minutos en una rueda"
-                    contenedorStyle={styles.pastillaArea}
-                    style={pastilla(ruedaOtraAbierta)}
-                  >
-                    <Text style={textoPastilla(ruedaOtraAbierta)} numberOfLines={1}>Otra</Text>
-                  </Presionable>
+              {/* Los obligatorios se pueden mover de hora, no sacar. Decirlo evita que alguien
+                  busque un botón que no está. */}
+              {diasEnEdicion.length > 0 && habitoEnEdicion.isDeactivatable === false && (
+                <View style={[styles.accionApagar, { borderColor: c.border }]}>
+                  <Icon name="lock" size={TAMANO_ICONO.chico} color={c.tabInactive} />
+                  <Text style={[t.small, styles.ayudaDeLaAccion, { color: c.textSoft }]}>
+                    Obligatorio del programa: puedes cambiarle la hora, no sacarlo
+                  </Text>
                 </View>
+              )}
 
-                {/* La rueda y su botón van en UNA fila horizontal: apilados sumaban casi 200 px
-                    de alto y el botón de guardar se caía de la hoja. Al lado, la rueda cuesta
-                    sus 132 px y nada más. */}
-                {ruedaOtraAbierta && (
-                  <View style={styles.filaRuedaOtra}>
-                    <RuedaAntelacionPicker
-                      minutosIniciales={arranqueDeLaRuedaOtra.current}
-                      onCambiar={setMinutosOtra}
-                    />
+              {/* Solo cuando TODOS los marcados tienen hora o aviso propios Y están encendidos: ofrecer
+                  «quitar» de un día apagado no significa nada. Devuelve el día al horario general: sin hora
+                  ni aviso propios (FR-006). */}
+              {diasEnEdicion.length > 0
+                && diasEnEdicion.every(d => (horarioSemanal[d]?.propio || horarioSemanal[d]?.avisoPropio) && horarioSemanal[d]?.activo !== false) && (
+                <Presionable
+                  onPress={() => void quitarDias(habitoEnEdicion, diasEnEdicion)}
+                  accessibilityRole="button"
+                  hitSlop={8}
+                  style={styles.enlaceQuitar}
+                >
+                  <Text style={[t.small, styles.textoDelEnlace, { color: c.textSoft, textDecorationLine: 'underline' }]}>
+                    {avisoPorDiaDisponible
+                      ? `Dejar ${diasEnFrase(diasEnEdicion)} como los demás días`
+                      : `Quitar la hora propia de ${diasEnFrase(diasEnEdicion)}`}
+                  </Text>
+                </Presionable>
+              )}
+
+              {/* RECORDATORIO. En Android es alarma local; en web es Web Push y los dos avisos salen del
+                  scheduler del backend. Expo Go sigue sin ofrecer el canal remoto.
+                  Sin días marcados es el general (lo usan los días sin aviso propio); con días marcados
+                  es el de ESOS días (spec 008). Contra un backend anterior, que no informa avisos por día,
+                  guardar días no guarda el aviso: no se ofrece (E-408). */}
+              {recordatorios.HAY_RECORDATORIOS && enModoDias && !avisoPorDiaDisponible && (
+                <Text style={[t.small, styles.ayuda, { color: c.textSoft, marginTop: 12 }]}>
+                  El recordatorio se elige sin días marcados.
+                </Text>
+              )}
+              {recordatorios.HAY_RECORDATORIOS && (!enModoDias || avisoPorDiaDisponible) && (
+                <>
+                  <View style={styles.rotuloDelRecordatorio}>
+                    <MicroLabel>
+                      {enModoDias
+                        ? `Recordatorio de ${diasEnFrase(diasEnEdicion)}`
+                        : `Recordatorio${antelaciones.length > 1 ? ` · ${antelaciones.length} avisos` : ''}`}
+                    </MicroLabel>
+                  </View>
+                  {avisosDistintos && (
+                    <Text style={[t.small, styles.lineaDeAvisosDistintos, { color: c.text }]}>
+                      Estos días tienen avisos distintos
+                    </Text>
+                  )}
+                  <View style={styles.filaAntelaciones}>
+                    {/* "Sin aviso" no es una opción más: es el conjunto vacío, y por eso va aparte
+                        y no compite con las otras tres. Con avisos distintos no hay ninguno elegido,
+                        tampoco este. */}
                     <Presionable
-                      onPress={agregarAntelacionDeLaRueda}
+                      onPress={() => { tacto.seleccion(); cambiarAviso(() => []); }}
                       accessibilityRole="button"
-                      accessibilityLabel={`Añadir ${etiquetaDeAntelacion(minutosOtra)}`}
+                      accessibilityState={{ selected: avisoMostrado.length === 0 && !avisosDistintos }}
                       contenedorStyle={styles.pastillaArea}
-                      style={[pastilla(true), styles.conIcono]}
+                      style={pastilla(avisoMostrado.length === 0 && !avisosDistintos)}
                     >
-                      {/* El botón repite lo que marca la rueda, igual que el de guardar repite
-                          la hora: es la confirmación de lo que se va a añadir, y de paso dice
-                          que esos números sueltos son minutos. */}
-                      <Icon name="plus" size={TAMANO_ICONO.chico} color={c.goldInk} />
-                      <Text style={textoPastilla(true)} numberOfLines={1}>
-                        Añadir {etiquetaDeAntelacion(minutosOtra)}
-                      </Text>
+                      <Text style={textoPastilla(avisoMostrado.length === 0 && !avisosDistintos)}>Sin aviso</Text>
+                    </Presionable>
+                    {/* Las sugeridas MAS las que la persona haya escrito, en orden de tiempo:
+                        primero el aviso que llega antes. "A la hora" va al final, aparte, porque
+                        no es una antelacion sino el momento exacto. */}
+                    {antelacionesAMostrar(ANTELACIONES_SUGERIDAS, avisoMostrado).map(minutos => {
+                      const on = avisoMostrado.includes(minutos);
+                      return (
+                        <Presionable
+                          key={minutos}
+                          onPress={() => alternarAntelacion(minutos)}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: on }}
+                          accessibilityLabel={`${etiquetaDeAntelacion(minutos)}${on ? ', activado' : ''}`}
+                          contenedorStyle={styles.pastillaArea}
+                          style={pastilla(on)}
+                        >
+                          <Text style={textoPastilla(on)}>{etiquetaDeAntelacion(minutos)}</Text>
+                        </Presionable>
+                      );
+                    })}
+                    <Presionable
+                      onPress={() => alternarAntelacion(0)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: avisoMostrado.includes(0) }}
+                      accessibilityLabel={`A la hora exacta${avisoMostrado.includes(0) ? ', activado' : ''}`}
+                      contenedorStyle={styles.pastillaArea}
+                      style={pastilla(avisoMostrado.includes(0))}
+                    >
+                      <Text style={textoPastilla(avisoMostrado.includes(0))}>A la hora</Text>
+                    </Presionable>
+                    {/* "Otra" ABRE UNA RUEDA, no un teclado (2026-09-21). Era un `TextInput` con
+                        `keyboardType="number-pad"`: al tocarlo el teclado del sistema subía y
+                        tapaba el propio campo, así que se escribía a ciegas. La rueda se despliega
+                        abajo y solo cuando se pide. */}
+                    <Presionable
+                      onPress={alternarRuedaOtra}
+                      accessibilityRole="button"
+                      accessibilityState={{ expanded: ruedaOtraAbierta }}
+                      accessibilityLabel="Otra antelación, elegir los minutos en una rueda"
+                      contenedorStyle={styles.pastillaArea}
+                      style={pastilla(ruedaOtraAbierta)}
+                    >
+                      <Text style={textoPastilla(ruedaOtraAbierta)}>Otra</Text>
                     </Presionable>
                   </View>
-                )}
-              </>
+                </>
+              )}
+
+              {/* Lugar para los futuros TIPOS DE ALARMA (spec 008, FR-015): van debajo del recordatorio, en
+                  otra spec. Esta solo deja el espacio y no muestra nada. */}
+              <View testID="espacio-para-tipos-de-alarma" style={styles.espacioParaTiposDeAlarma} />
+            </ScrollView>
+
+            {/* La rueda de «Otra» y su botón, uno al lado del otro, fuera de lo que se desliza (dos
+                ruedas anidadas se pelearían por el dedo). `alignItems: 'center'` para que el botón quede
+                a la altura de la franja central de la rueda, que es la fila que cuenta. */}
+            {recordatorios.HAY_RECORDATORIOS && ruedaOtraAbierta && (
+              <View style={styles.filaRuedaOtra}>
+                <RuedaAntelacionPicker
+                  minutosIniciales={arranqueDeLaRuedaOtra.current}
+                  onCambiar={setMinutosOtra}
+                />
+                <Presionable
+                  onPress={agregarAntelacionDeLaRueda}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Añadir ${etiquetaDeAntelacion(minutosOtra)}`}
+                  contenedorStyle={styles.pastillaArea}
+                  style={[pastilla(true), styles.conIcono]}
+                >
+                  {/* El botón repite lo que marca la rueda, igual que el de guardar repite
+                      la hora: es la confirmación de lo que se va a añadir, y de paso dice
+                      que esos números sueltos son minutos. */}
+                  <Icon name="plus" size={TAMANO_ICONO.chico} color={c.goldInk} />
+                  <Text style={textoPastilla(true)}>Añadir {etiquetaDeAntelacion(minutosOtra)}</Text>
+                </Presionable>
+              </View>
             )}
           </View>
         )}
@@ -1609,8 +1826,63 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    minHeight: 44,
+    minHeight: 48,
     paddingHorizontal: 4,
+  },
+  textoDelEnlace: {
+    fontSize: 16,
+    fontFamily: 'Jost_500Medium',
+  },
+  rotuloDeLosDias: {
+    flexShrink: 1,
+  },
+  enlaceQuitar: {
+    marginTop: 8,
+    minHeight: 48,
+    justifyContent: 'center',
+  },
+  // La rueda de la hora con su rótulo, fija arriba: lo demás se desliza debajo.
+  bloqueDeLaHora: {
+    paddingTop: 4,
+    paddingBottom: 2,
+    gap: 2,
+  },
+  cuerpoDesplazable: {
+    flex: 1,
+  },
+  contenidoDesplazable: {
+    paddingBottom: 12,
+  },
+  ayuda: {
+    fontSize: 16,
+    lineHeight: 22,
+    marginTop: 6,
+  },
+  ayudaDeLaAccion: {
+    fontSize: 16,
+    lineHeight: 22,
+    flexShrink: 1,
+  },
+  rotuloDelRecordatorio: {
+    marginTop: 18,
+    minHeight: 24,
+    justifyContent: 'center',
+  },
+  // «Estos días tienen avisos distintos»: a 15 px y con el color del texto, nunca el gris tenue (pedido del dueño).
+  lineaDeAvisosDistintos: {
+    fontSize: 15,
+    lineHeight: 21,
+    fontFamily: 'Jost_500Medium',
+    marginTop: 2,
+  },
+  // Reservado para los tipos de alarma: sin alto ni margen, no se ve ni mueve nada.
+  espacioParaTiposDeAlarma: {
+    height: 0,
+  },
+  textoDeOpcion: {
+    fontSize: 16,
+    lineHeight: 22,
+    textAlign: 'center',
   },
   // Alto de toque cómodo y borde propio: "no hacerlo" es una decisión de peso y tiene que verse
   // como una acción, no como una nota al pie (AGENTS.md §4).
@@ -1645,7 +1917,7 @@ const styles = StyleSheet.create({
     minWidth: '31%',
   },
   pastillaAntelacion: {
-    minHeight: 44,
+    minHeight: 48,
     borderWidth: 1.2,
     borderRadius: 11,
     alignItems: 'center',
