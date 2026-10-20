@@ -1,6 +1,7 @@
 import { NOMBRE_ISO_DEL_DIA, type DiaDelPlan } from '../../habits/utils/semanaDelPlan';
 import type { DiaDeLaSemanaApi } from '../../habits/types/habits.types';
 import type { DiaIso, DiaPropio } from '../../habits/notificaciones/utils/alarmasPorDia';
+import { combinacionDeLaApi, type CombinacionDeAlarma } from '../../habits/notificaciones/utils/combinacionDeAlarma';
 
 /**
  * El recordatorio de cada día de la semana en el editor de «Planificar» (spec 008, D-282). Puro: decide qué
@@ -42,6 +43,29 @@ export function avisoInicialDeLosMarcados(avisosDeLosMarcados: readonly Aviso[])
 export type QueGuardar = 'hora' | 'aviso' | 'ambos';
 
 /**
+ * Lo que se guarda con los días marcados, sumando «Cómo suena» (spec 009). `'ninguno'` = ni la hora ni el aviso:
+ * solo se tocó «Cómo suena», así que cada día conserva su hora y su aviso («solo lo que toqué»).
+ */
+export type QueGuardarConAlarma = QueGuardar | 'ninguno';
+
+/**
+ * Qué se guarda cuando además puede haberse tocado «Cómo suena». Lo de siempre (`queGuardar`) con una excepción: si
+ * solo se tocó «Cómo suena» —la rueda quieta y el aviso sin cambios—, no se guarda la hora de la rueda.
+ */
+export function queGuardarConAlarma({
+  movioLaRueda,
+  cambioElAviso,
+  cambioLaAlarma,
+}: {
+  movioLaRueda: boolean;
+  cambioElAviso: boolean;
+  cambioLaAlarma: boolean;
+}): QueGuardarConAlarma {
+  if (cambioLaAlarma && !movioLaRueda && !cambioElAviso) return 'ninguno';
+  return queGuardar({ movioLaRueda, cambioElAviso });
+}
+
+/**
  * Qué se guarda con los días marcados. Sin mover la rueda cada día conserva su hora y solo cambia el aviso;
  * si se movió la rueda, se guarda la hora (y el aviso, si también se tocó). Sin tocar nada, lo de siempre: la
  * hora de la rueda, que es lo que hace hoy el botón.
@@ -61,24 +85,33 @@ export function diasEnFrase(dias: readonly DiaDelPlan[]): string {
  * El botón de guardar del editor: «Guardar 07:00 · todos los días», «Guardar 07:00 · sáb, dom»,
  * «Guardar aviso · sáb, dom» o «Guardar hora y aviso · sáb, dom». Los días van con su nombre corto y no con la
  * inicial: «M, M» no distingue martes de miércoles.
+ *
+ * Spec 009: si solo se cambió «Cómo suena» dice «Guardar alarma · sáb» (o «… · todos los días»); si se cambió junto con
+ * lo demás lo suma («Guardar aviso y alarma», «Guardar hora y alarma», «Guardar hora, aviso y alarma»). Sin días
+ * marcados el botón guarda la hora general y, si se tocó, también «Cómo suena», sin decirlo en el texto.
  */
 export function textoDelBoton({
   guardando,
   dias,
   que,
   hora,
+  alarma = false,
 }: {
   guardando: boolean;
   dias: readonly DiaDelPlan[];
-  que: QueGuardar;
+  que: QueGuardarConAlarma;
   hora: string;
+  /** Se tocó «Cómo suena»: se guarda junto con lo demás. */
+  alarma?: boolean;
 }): string {
   if (guardando) return 'Guardando…';
-  if (dias.length === 0) return `Guardar ${hora} · todos los días`;
+  const soloLaAlarma = que === 'ninguno' && alarma;
+  if (dias.length === 0) return soloLaAlarma ? 'Guardar alarma · todos los días' : `Guardar ${hora} · todos los días`;
   const cuales = diasEnFrase(dias);
-  if (que === 'aviso') return `Guardar aviso · ${cuales}`;
-  if (que === 'ambos') return `Guardar hora y aviso · ${cuales}`;
-  return `Guardar ${hora} · ${cuales}`;
+  if (soloLaAlarma) return `Guardar alarma · ${cuales}`;
+  if (que === 'aviso') return alarma ? `Guardar aviso y alarma · ${cuales}` : `Guardar aviso · ${cuales}`;
+  if (que === 'ambos') return alarma ? `Guardar hora, aviso y alarma · ${cuales}` : `Guardar hora y aviso · ${cuales}`;
+  return alarma ? `Guardar hora y alarma · ${cuales}` : `Guardar ${hora} · ${cuales}`;
 }
 
 /** Lo que dice el chip de un día cuyo aviso es distinto del general. */
@@ -142,6 +175,13 @@ export interface DiaDelEditor {
   aviso: number[] | null;
   /** `true` si el aviso es propio de ese día. */
   avisoPropio: boolean;
+  /**
+   * Spec 009: cómo suena la alarma ese día, ya resuelta (la propia o la general). `null`/ausente = el servidor no
+   * informa «Cómo suena» (backend anterior): el editor no lo ofrece.
+   */
+  alarma?: CombinacionDeAlarma | null;
+  /** Spec 009: `true` si «cómo suena» es propio de ese día. */
+  alarmaPropia?: boolean;
 }
 
 /**
@@ -162,6 +202,9 @@ export function diasDelEditor(dias: readonly DiaDeLaSemanaApi[], avisoGeneral: A
       else if (d.reminderMinutesList && d.reminderMinutesList.length > 0) aviso = avisoOrdenado(d.reminderMinutesList);
       else aviso = avisoOrdenado(avisoGeneral);
     }
+    // Spec 009: «cómo suena». Solo hay datos si el servidor manda `customAlarm`; sin él (backend anterior) el día no
+    // lleva los campos y el editor no ofrece «Cómo suena».
+    const informaAlarma = typeof d?.customAlarm === 'boolean';
     resultado[dia] = {
       hora: d?.triggerTime?.slice(0, 5) ?? null,
       // `?? false`: un día que el servidor no trajo no tiene nada propio.
@@ -170,6 +213,7 @@ export function diasDelEditor(dias: readonly DiaDeLaSemanaApi[], avisoGeneral: A
       activo: d?.active ?? true,
       aviso,
       avisoPropio: d?.customReminder === true,
+      ...(informaAlarma ? { alarma: combinacionDeLaApi(d?.alarm), alarmaPropia: d?.customAlarm === true } : {}),
     };
   }
   return resultado;
@@ -179,6 +223,12 @@ export function diasDelEditor(dias: readonly DiaDeLaSemanaApi[], avisoGeneral: A
 export function servidorInformaAvisosPorDia(dias: Readonly<Record<string, DiaDelEditor>>): boolean {
   const lista = Object.values(dias);
   return lista.length > 0 && lista.every(d => d.aviso !== null);
+}
+
+/** `true` si el servidor informa «cómo suena» de cada uno de los siete días (spec 009): ahí se ofrece elegirlo. */
+export function servidorInformaAlarmaPorDia(dias: Readonly<Record<string, DiaDelEditor>>): boolean {
+  const lista = Object.values(dias);
+  return lista.length > 0 && lista.every(d => (d.alarma ?? null) !== null);
 }
 
 const ISO_DEL_NOMBRE_DE_LA_PANTALLA: Readonly<Record<DiaDelPlan, DiaIso>> = {
@@ -199,6 +249,9 @@ export function diasPropiosDelEditor(dias: Readonly<Record<string, DiaDelEditor>
         activo: d.activo,
         hora: d.propio && d.activo ? d.hora : null,
         avisos: d.avisoPropio && d.aviso ? [...d.aviso] : null,
+        // Spec 009: «cómo suena» solo si es propio del día; si no, el día sigue a la general.
+        ...(d.alarmaPropia && d.alarma ? { alarma: { ...d.alarma } } : {}),
+        ...(d.alarmaPropia && !d.alarma ? { alarmaPropiaSinDato: true } : {}),
       };
     });
 }

@@ -39,6 +39,15 @@ export interface AvisoDeUnDiaEnLaFila {
   sinAviso: boolean;
 }
 
+/**
+ * «Cómo suena» propio de un día (spec 009): lo que dice el lector de pantalla. En el chip solo va un reloj de alarma
+ * chico, sin texto: «sin texto largo», como la campana del aviso (008).
+ */
+export interface AlarmaDeUnDiaEnLaFila {
+  /** «Alarma propia: sin sonido, vibra»: lo que dice el lector de pantalla. */
+  largo: string;
+}
+
 /** Cómo se llama cada día para el lector de pantalla (la pastilla dibuja solo su inicial). */
 const NOMBRE_COMPLETO_DEL_DIA: Record<DiaDelPlan, string> = {
   LUN: 'Lunes', MAR: 'Martes', 'MIÉ': 'Miércoles', JUE: 'Jueves', VIE: 'Viernes', 'SÁB': 'Sábado', DOM: 'Domingo',
@@ -83,6 +92,11 @@ interface FilaDeDiasDelPlanProps {
    * siempre.
    */
   avisoDelDia?: (dia: DiaDelPlan) => AvisoDeUnDiaEnLaFila | null;
+  /**
+   * Spec 009, **opcional**: «cómo suena» propio de cada día. Si devuelve algo, el chip dibuja un reloj de alarma de 16
+   * (el aviso propio lleva su campana) y la etiqueta del lector lo suma. Plan no la pasa y no cambia.
+   */
+  alarmaDelDia?: (dia: DiaDelPlan) => AlarmaDeUnDiaEnLaFila | null;
   onAlternarDia: (dia: DiaDelPlan) => void;
 }
 
@@ -92,6 +106,7 @@ export function FilaDeDiasDelPlan({
   enEdicion,
   planificable = esPlanificable,
   avisoDelDia,
+  alarmaDelDia,
   onAlternarDia,
 }: FilaDeDiasDelPlanProps) {
   const { c, t } = useTheme();
@@ -109,16 +124,17 @@ export function FilaDeDiasDelPlan({
         const sePuede = planificable(dia);
         const bloqueado = !corriendo || !sePuede;
         const aviso = avisoDelDia && corriendo && sePuede ? avisoDelDia(dia) : null;
+        const alarma = alarmaDelDia && corriendo && sePuede ? alarmaDelDia(dia) : null;
         const colorDelAviso = editando ? c.onGold : c.goldInk;
         return (
           <Pressable
             key={dia}
             onPress={() => !bloqueado && onAlternarDia(dia)}
             disabled={bloqueado}
-            {...(avisoDelDia
+            {...(avisoDelDia || alarmaDelDia
               ? {
                 accessibilityRole: 'button' as const,
-                accessibilityLabel: etiquetaDelDia(dia, diasDelMes[dia], delDia, corriendo, sePuede, aviso),
+                accessibilityLabel: etiquetaDelDia(dia, diasDelMes[dia], delDia, corriendo, sePuede, aviso, alarma),
                 accessibilityState: { selected: editando, disabled: bloqueado },
               }
               : {})}
@@ -180,6 +196,12 @@ export function FilaDeDiasDelPlan({
                 )}
               </View>
             )}
+            {/* «Cómo suena» propio (spec 009): un reloj de alarma de 16, sin texto. */}
+            {alarma && (
+              <View style={estilos.aviso} accessible={false} importantForAccessibility="no-hide-descendants">
+                <Icon name="alarmClock" size={16} color={colorDelAviso} />
+              </View>
+            )}
           </Pressable>
         );
       })}
@@ -195,6 +217,7 @@ function etiquetaDelDia(
   corriendo: boolean,
   sePuede: boolean,
   aviso: AvisoDeUnDiaEnLaFila | null,
+  alarma: AlarmaDeUnDiaEnLaFila | null = null,
 ): string {
   const partes = [`${NOMBRE_COMPLETO_DEL_DIA[dia]} ${diaDelMes}`];
   if (!corriendo) partes.push('el hábito no corre ese día');
@@ -202,6 +225,7 @@ function etiquetaDelDia(
   else if (delDia?.activo === false) partes.push('no va');
   else if (delDia?.hora) partes.push(delDia.hora);
   if (aviso) partes.push(aviso.largo.charAt(0).toLowerCase() + aviso.largo.slice(1));
+  if (alarma) partes.push(alarma.largo.charAt(0).toLowerCase() + alarma.largo.slice(1));
   return partes.join(', ');
 }
 

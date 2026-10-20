@@ -19,6 +19,14 @@ import * as habitsApi from '../../habits/api/habitsApi';
 import { FilaDeDiasDelPlan } from '../../habits/components/FilaDeDiasDelPlan';
 import { RuedaAntelacionPicker } from '../../habits/components/RuedaAntelacionPicker';
 import { RuedaHoraPicker } from '../../habits/components/RuedaHoraPicker';
+import {
+  combinacionALaApi,
+  combinacionDeLaApi,
+  COMBINACION_POR_DEFECTO,
+  mismaCombinacion,
+  type CombinacionDeAlarma,
+} from '../../habits/notificaciones/utils/combinacionDeAlarma';
+import type { SonidoDeAlarma } from '../../alarmas/sonidoDeAlarma';
 import { ICONOS_ELEGIBLES } from '../../habits/utils/iconosDeHabito';
 import * as recordatorios from '../../habits/notificaciones/recordatoriosDeHabito';
 import { formatearFechaLarga } from '../../programa/hooks/useArranqueDelPrograma';
@@ -58,13 +66,27 @@ import {
   diasEnFrase,
   diasPropiosDelEditor,
   mismoAviso,
-  queGuardar,
+  queGuardarConAlarma,
   resumenDelAvisoDelDia,
+  servidorInformaAlarmaPorDia,
   servidorInformaAvisosPorDia,
   textoDelBoton,
   type DiaDelEditor,
-  type QueGuardar,
+  type QueGuardarConAlarma,
 } from '../utils/avisoDeLosDias';
+import {
+  alTocarUnaFila,
+  combinacionResultante,
+  estadosIniciales,
+  estadosMostrados,
+  hayCambios,
+  mensajesEnLinea,
+  motivoDeAtenuacion,
+  reglaIncumplidaDeLaSeleccion,
+  resumenDeLaCombinacion,
+  type Tocados,
+} from '../utils/comoSuena';
+import { SeccionComoSuena } from './SeccionComoSuena';
 
 /**
  * PLANIFICAR los hábitos de una dimensión: a qué hora va cada uno, y prenderlo o apagarlo.
@@ -294,6 +316,17 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
    * tienen en común). Solo si lo tocó se guarda el aviso: «solo lo que se tocó».
    */
   const [avisoDiasTocado, setAvisoDiasTocado] = useState<number[] | null>(null);
+  /**
+   * «Cómo suena» (spec 009). `alarmaGeneral`: la combinación general ya guardada del hábito abierto (`null` = el
+   * servidor no la informa, backend anterior: no se ofrece «Cómo suena»). `alarmaTocada`: los interruptores que la
+   * persona tocó para lo que está editando (los días marcados, o el hábito entero): lo único que se guarda.
+   */
+  const [alarmaGeneral, setAlarmaGeneral] = useState<CombinacionDeAlarma | null>(null);
+  const [alarmaTocada, setAlarmaTocada] = useState<Tocados>({});
+  /** El tono de Yo → Alarmas: manda sobre «Sonido» y explica la fila de «Voz» (ver `combinacionDeAlarma`). */
+  const [tonoDeYo, setTonoDeYo] = useState<SonidoDeAlarma>('sistema');
+  /** El scroll de la hoja, para llevar a la vista la regla que impide guardar. */
+  const desplazableRef = useRef<ScrollView>(null);
   /** Los minutos en que arrancó la rueda de la hora: moverla es lo que hace que se guarde la hora de los días. */
   const [arranqueDeLaRueda, setArranqueDeLaRueda] = useState<number | null>(null);
   /**
@@ -456,6 +489,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
     setDiasEnEdicion([]);
     setHorarioSemanal({});
     setAvisoDiasTocado(null);
+    setAlarmaTocada({});
     // La rueda de "Otra" es del hábito que se estaba mirando: abrir otro con ella desplegada
     // mostraría los minutos del anterior sobre un recordatorio que todavía no terminó de cargar.
     setRuedaOtraAbierta(false);
@@ -467,11 +501,20 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
     const delServidor = avisosDelServidor(previa);
     setAntelaciones(delServidor);
     setAvisoGeneral(delServidor);
+    // Spec 009: «cómo suena» de siempre del hábito, tal como lo dice el servidor (`null` si no lo informa).
+    setAlarmaGeneral(combinacionDeLaApi(previa?.alarm));
     abiertoRef.current = h.habitoId;
     avisosTocadosRef.current = false;
     // Se pide DESPUÉS de abrir, no antes: el toque tiene que responder ya. Mientras llega, las
     // pastillas muestran el día sin hora, que es lo honesto.
     void cargarSemana(h.habitoId, delServidor);
+    // El tono de Yo → Alarmas, para no ofrecer lo que no suena. Si no se puede leer, el de siempre.
+    void Promise.resolve()
+      .then(() => recordatorios.sonidoDe(claveUsuario, h.habitoId))
+      .then(tono => {
+        if (abiertoRef.current === h.habitoId) setTonoDeYo(tono);
+      })
+      .catch(() => undefined);
     void recordatorios.antelacionesDe(claveUsuario, h.habitoId).then(locales => {
       if (abiertoRef.current !== h.habitoId || avisosTocadosRef.current) return;
       if (locales.length > 0 && previa?.reminderEnabled !== false) {
@@ -527,14 +570,54 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
    */
   useEffect(() => {
     setAvisoDiasTocado(null);
+    setAlarmaTocada({});
     setRuedaOtraAbierta(false);
   }, [enModoDias]);
   /** La hora de la rueda cambió respecto de donde arrancó: lo que hace que se guarde la hora de los días. */
   const movioLaRueda = arranqueDeLaRueda !== null && hora * 60 + minuto !== arranqueDeLaRueda;
+
+  /* ------------------------------------------------------------------------------------------------
+   * Cómo suena (spec 009)
+   * ---------------------------------------------------------------------------------------------- */
+
+  /**
+   * `true` si se ofrece «Cómo suena»: solo en el teléfono (en la web no hay alarmas locales) y solo si el servidor la
+   * informa —la general sin días marcados; la de cada uno de los siete días con días marcados—. Contra un backend
+   * anterior la hoja es la de siempre (FR-011).
+   */
+  const alarmaPorDiaDisponible = servidorInformaAlarmaPorDia(horarioSemanal);
+  const hayComoSuena = recordatorios.HAY_RECORDATORIOS_LOCALES && (enModoDias ? alarmaPorDiaDisponible : alarmaGeneral !== null);
+  /** La combinación de siempre del hábito, para los días que no tienen la suya. */
+  const generalDeComoSuena = alarmaGeneral ?? COMBINACION_POR_DEFECTO;
+  /** La combinación de cada día que se está editando (o la general, sin días marcados). */
+  const combinacionesEnEdicion: CombinacionDeAlarma[] = enModoDias
+    ? diasEnEdicion.map(d => horarioSemanal[d]?.alarma ?? generalDeComoSuena)
+    : [generalDeComoSuena];
+  const inicialesDeComoSuena = estadosIniciales(combinacionesEnEdicion);
+  const mostradosDeComoSuena = estadosMostrados(inicialesDeComoSuena, alarmaTocada);
+  /** Se tocó algo que cambia lo que ya estaba (tocar y dejarlo como estaba no cuenta). */
+  const cambioLaAlarma = hayComoSuena && hayCambios(combinacionesEnEdicion, alarmaTocada);
+  const reglaDeComoSuena = hayComoSuena ? reglaIncumplidaDeLaSeleccion(combinacionesEnEdicion, alarmaTocada) : null;
+  /** Sin aviso (o el hábito apagado ese día) no hay alarma que decidir: la sección se ve atenuada y se explica. */
+  const motivoDeAtenuarComoSuena = hayComoSuena
+    ? motivoDeAtenuacion({
+      sinAviso: avisoMostrado.length === 0 && !avisosDistintos,
+      todosApagados: enModoDias && diasEnEdicion.every(d => horarioSemanal[d]?.activo === false),
+      conDias: enModoDias,
+      cuantosDias: diasEnEdicion.length,
+    })
+    : null;
   /** Qué se guardaría ahora con los días marcados. Sin avisos por día en el servidor, la hora, como siempre. */
-  const queSeGuarda: QueGuardar = enModoDias && avisoPorDiaDisponible
-    ? queGuardar({ movioLaRueda, cambioElAviso: avisoDiasTocado !== null })
+  const queSeGuarda: QueGuardarConAlarma = enModoDias && avisoPorDiaDisponible
+    ? queGuardarConAlarma({ movioLaRueda, cambioElAviso: avisoDiasTocado !== null, cambioLaAlarma })
     : 'hora';
+  /** Sin días marcados: ¿solo se tocó «Cómo suena»? Entonces no se toca la hora ni el aviso general (ni su cupo). */
+  const soloLaAlarmaGeneral = !enModoDias && cambioLaAlarma && !movioLaRueda && mismoAviso(antelaciones, avisoGeneral);
+  /** Un toque en un interruptor de «Cómo suena». */
+  const tocarComoSuena = (clave: Parameters<typeof alTocarUnaFila>[2]) => {
+    tacto.seleccion();
+    setAlarmaTocada(prev => alTocarUnaFila(inicialesDeComoSuena, prev, clave));
+  };
 
   /**
    * El interruptor de UN hábito. Escribe en el acto y se refleja de forma optimista; si el backend
@@ -606,28 +689,35 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
   const reprogramarAlarmas = async (
     h: HabitoPlanificable,
     semana: Record<string, DiaDelEditor> | null,
+    /** Spec 009: la combinación general que acaba de quedar (si no se pasa, la que tiene la pantalla). */
+    alarmaDelHabito: CombinacionDeAlarma | null = alarmaGeneral,
   ): Promise<boolean | null> => {
     if (!recordatorios.HAY_RECORDATORIOS_LOCALES || !semana || !servidorInformaAvisosPorDia(semana)) return null;
     try {
       const horas = horaDelEditor(preferencias.get(h.habitoId), h.time);
       const dias = diasPropiosDelEditor(semana);
+      // `undefined` y no `null` cuando el servidor no informa «cómo suena»: que el teléfono conserve la que tenía.
+      const alarma = alarmaDelHabito ?? undefined;
       if (horas.programado) {
         return await recordatorios.programarConCambioDiferido(claveUsuario, h.habitoId, h.title, {
           horaDeHoy: horas.ahora,
           horaNueva: horas.programado.hora,
           desde: horas.programado.desde,
-        }, avisoGeneral, { dimension, dias });
+        }, avisoGeneral, { dimension, dias, alarma });
       }
-      return await recordatorios.programar(claveUsuario, h.habitoId, h.title, horas.ahora, avisoGeneral, { dimension, dias });
+      return await recordatorios.programar(claveUsuario, h.habitoId, h.title, horas.ahora, avisoGeneral, { dimension, dias, alarma });
     } catch {
       return null;
     }
   };
 
   /** Los días ya cambiados en el servidor: se vuelven a leer (la verdad es la suya) y las alarmas se rehacen. */
-  const releerYReprogramar = async (h: HabitoPlanificable): Promise<boolean | null> => {
+  const releerYReprogramar = async (
+    h: HabitoPlanificable,
+    alarmaDelHabito: CombinacionDeAlarma | null = alarmaGeneral,
+  ): Promise<boolean | null> => {
     const semana = await cargarSemana(h.habitoId, avisoGeneral, true);
-    return reprogramarAlarmas(h, semana ?? (servidorInformaAvisosPorDia(horarioSemanal) ? horarioSemanal : null));
+    return reprogramarAlarmas(h, semana ?? (servidorInformaAvisosPorDia(horarioSemanal) ? horarioSemanal : null), alarmaDelHabito);
   };
 
   /** «30 min antes y a la hora»: el aviso dicho en una frase. */
@@ -635,29 +725,41 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
     aviso.length === 0 ? 'sin aviso' : avisoOrdenado(aviso).map(m => etiquetaDeAntelacion(m).toLowerCase()).join(' y ');
 
   /**
-   * Guarda lo que se tocó de UNOS días de la semana (V39, y V111 para el aviso) y se queda en la pantalla: lo
-   * normal es configurar varios días seguidos, y volver a la lista despues de cada uno seria hacerlo entrar de
-   * nuevo.
+   * Guarda lo que se tocó de UNOS días de la semana (V39, V111 para el aviso y V112 para «cómo suena») y se queda en
+   * la pantalla: lo normal es configurar varios días seguidos, y volver a la lista despues de cada uno seria hacerlo
+   * entrar de nuevo.
    *
    * - `'hora'`: la hora de la rueda para cada día (lo de siempre).
    * - `'aviso'`: solo el aviso; cada día conserva su hora y no se gasta cupo semanal.
    * - `'ambos'`: las dos.
+   * - `'ninguno'`: ni la hora ni el aviso; solo «cómo suena» (`alarma`).
+   *
+   * `alarma` suma «cómo suena» a lo que se guarde: cada día recibe SU combinación (lo que ya tenía, con los
+   * interruptores tocados encima) y no se gasta cupo semanal.
    */
-  const guardarDias = async (h: HabitoPlanificable, dias: DiaDelPlan[], que: QueGuardar) => {
+  const guardarDias = async (h: HabitoPlanificable, dias: DiaDelPlan[], que: QueGuardarConAlarma, alarma: boolean) => {
     setGuardando(true);
     const limite = preferencias.get(h.habitoId)?.limitTime ?? null;
-    const aviso = que === 'hora' ? null : avisoMostrado;
+    const guardaHora = que === 'hora' || que === 'ambos';
+    const aviso = que === 'aviso' || que === 'ambos' ? avisoMostrado : null;
     const fallidos: DiaDelPlan[] = [];
     const guardados: DiaDelPlan[] = [];
+    /** Lo que quedó de «cómo suena» en cada día guardado, para reflejarlo en la pantalla. */
+    const alarmaDeCadaDia: Partial<Record<DiaDelPlan, CombinacionDeAlarma>> = {};
     // En serie y no en paralelo: son escrituras sobre las mismas filas del aprendiz, y así un
     // fallo suelto queda identificado por día en vez de tumbar la tanda entera.
     for (const dia of dias) {
       try {
-        if (que !== 'aviso') {
+        if (guardaHora) {
           await habitsApi.fijarHorarioDelDia(h.habitoId, NOMBRE_ISO_DEL_DIA[dia], `${horaTexto}:00`, limite);
         }
         if (aviso) {
           await habitsApi.fijarAvisoDelDia(h.habitoId, NOMBRE_ISO_DEL_DIA[dia], aviso.length > 0, aviso);
+        }
+        if (alarma) {
+          const nueva = combinacionResultante(horarioSemanal[dia]?.alarma ?? generalDeComoSuena, alarmaTocada);
+          await habitsApi.fijarAlarmaDelDia(h.habitoId, NOMBRE_ISO_DEL_DIA[dia], nueva);
+          alarmaDeCadaDia[dia] = nueva;
         }
         guardados.push(dia);
       } catch {
@@ -668,24 +770,32 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
     if (guardados.length > 0) {
       setHorarioSemanal(prev => ({
         ...prev,
-        ...Object.fromEntries(guardados.map(d => [d, {
-          ...prev[d],
-          hora: que === 'aviso' ? (prev[d]?.hora ?? null) : horaTexto,
-          propio: que === 'aviso' ? (prev[d]?.propio ?? false) : true,
-          activo: que === 'aviso' ? (prev[d]?.activo ?? true) : true,
-          aviso: aviso ?? prev[d]?.aviso ?? null,
-          avisoPropio: aviso ? !mismoAviso(aviso, avisoGeneral) : (prev[d]?.avisoPropio ?? false),
-        }])),
+        ...Object.fromEntries(guardados.map(d => {
+          const nueva = alarmaDeCadaDia[d];
+          return [d, {
+            ...prev[d],
+            hora: guardaHora ? horaTexto : (prev[d]?.hora ?? null),
+            propio: guardaHora ? true : (prev[d]?.propio ?? false),
+            activo: guardaHora ? true : (prev[d]?.activo ?? true),
+            aviso: aviso ?? prev[d]?.aviso ?? null,
+            avisoPropio: aviso ? !mismoAviso(aviso, avisoGeneral) : (prev[d]?.avisoPropio ?? false),
+            // El servidor deja el día heredando si la combinación es igual a la general; se relee enseguida.
+            ...(nueva ? { alarma: nueva, alarmaPropia: !mismaCombinacion(nueva, generalDeComoSuena) } : {}),
+          }];
+        })),
       }));
       setHuboEscritura(true);
-      if (que !== 'aviso') setArranqueDeLaRueda(hora * 60 + minuto);
+      if (guardaHora) setArranqueDeLaRueda(hora * 60 + minuto);
       alarmaPuesta = await releerYReprogramar(h);
     }
     setGuardando(false);
     // Quedan marcados SOLO los que fallaron: reintentar es volver a tocar el botón. El aviso elegido se
     // conserva para ese reintento; si todo salió bien, vuelve a mostrarse el que tienen los días.
     setDiasEnEdicion(fallidos);
-    if (fallidos.length === 0) setAvisoDiasTocado(null);
+    if (fallidos.length === 0) {
+      setAvisoDiasTocado(null);
+      setAlarmaTocada({});
+    }
 
     // Confirmar SIEMPRE, no solo cuando algo sale mal.
     //
@@ -693,7 +803,9 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
     // > la base para saber si había pasado algo. Guardar el horario general sí avisaba; guardar
     // > días era mudo. Un guardado silencioso se siente igual que uno que falló.
     if (fallidos.length > 0) {
-      const queSeGuardo = que === 'aviso' ? 'quedó con el aviso nuevo' : `quedaron a las ${horaTexto}`;
+      const queSeGuardo = que === 'ninguno'
+        ? 'quedó con su alarma nueva'
+        : que === 'aviso' ? 'quedó con el aviso nuevo' : `quedaron a las ${horaTexto}`;
       Alert.alert(
         'Se guardó a medias',
         `${guardados.join(', ') || 'Ninguno'} ${queSeGuardo}. No pudimos con ${fallidos.join(', ')}.`,
@@ -701,16 +813,21 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
       return;
     }
     const cuales = diasEnFrase(guardados);
-    const corto = que === 'aviso'
-      ? (aviso && aviso.length > 0 ? `Queda con aviso ${avisoEnFrase(aviso)} los ${cuales}.` : `Queda sin aviso los ${cuales}.`)
-      : que === 'ambos' && aviso
-        ? `Queda a las ${horaTexto}, ${aviso.length > 0 ? `con aviso ${avisoEnFrase(aviso)}` : 'sin aviso'}, los ${cuales}, desde mañana.`
-        : `Queda a las ${horaTexto} los ${cuales}, desde mañana.`;
+    const sumaAlarma = alarma && que !== 'ninguno' ? ' Cómo suena también quedó guardado.' : '';
+    const corto = que === 'ninguno'
+      ? `Cómo suena quedó guardado los ${cuales}.`
+      : que === 'aviso'
+        ? (aviso && aviso.length > 0 ? `Queda con aviso ${avisoEnFrase(aviso)} los ${cuales}.` : `Queda sin aviso los ${cuales}.`) + sumaAlarma
+        : que === 'ambos' && aviso
+          ? `Queda a las ${horaTexto}, ${aviso.length > 0 ? `con aviso ${avisoEnFrase(aviso)}` : 'sin aviso'}, los ${cuales}, desde mañana.` + sumaAlarma
+          : `Queda a las ${horaTexto} los ${cuales}, desde mañana.` + sumaAlarma;
     // El aviso nuevo se oye con la alarma del teléfono: igual que al guardar la hora general, la primera vez se
     // pide «Alarmas y recordatorios» y se ofrece la guía de la marca. Sin alarma puesta (sin permiso de avisos)
     // se dice, en un diálogo: es algo que hay que leer.
-    const conAviso = Boolean(aviso && aviso.length > 0) && alarmaPuesta === true;
-    if (aviso && aviso.length > 0 && alarmaPuesta === false) {
+    // Solo «cómo suena»: el aviso que suena es el que ya estaba (la sección se atenúa sin aviso).
+    const hayAviso = aviso ? aviso.length > 0 : que === 'ninguno';
+    const conAviso = hayAviso && alarmaPuesta === true;
+    if (hayAviso && alarmaPuesta === false) {
       Alert.alert('Aviso guardado', `${corto}\n\nEl aviso quedó guardado, pero este teléfono no tiene permiso para avisarte. Habilita las notificaciones para recibirlo.`);
       return;
     }
@@ -730,7 +847,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
     if (conAviso && !pidioElPermiso) void ofrecerLaGuiaPreventiva(claveUsuario);
   };
 
-  /** Devuelve un día al horario general: sin hora propia ni aviso propio. */
+  /** Devuelve un día al horario general: sin hora, aviso ni «cómo suena» propios. */
   const quitarDias = async (h: HabitoPlanificable, dias: DiaDelPlan[]) => {
     setGuardando(true);
     try {
@@ -747,6 +864,10 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
           // Sin aviso propio el día vuelve al general (el servidor borra la fila entera).
           aviso: prev[d]?.aviso === null || prev[d]?.aviso === undefined ? null : [...avisoGeneral],
           avisoPropio: false,
+          // Spec 009: el servidor borra también la combinación del día (FR-010): vuelve a la general.
+          ...(prev[d]?.alarma === undefined || prev[d]?.alarma === null
+            ? {}
+            : { alarma: { ...generalDeComoSuena }, alarmaPropia: false }),
         }])),
       }));
       setHuboEscritura(true);
@@ -839,7 +960,10 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
     // Spec 008: las alarmas del hábito respetan lo propio de cada día (un día con hora o aviso propio no sigue
     // el cambio general). Solo si el servidor ya informa los días; si no, diarias como siempre.
     const diasParaLasAlarmas = servidorInformaAvisosPorDia(horarioSemanal) ? diasPropiosDelEditor(horarioSemanal) : undefined;
+    // Spec 009: si además se tocó «Cómo suena», se guarda primero (no gasta cupo y, si falla, no se toca nada más).
+    const alarmaNueva = hayComoSuena && cambioLaAlarma ? combinacionResultante(generalDeComoSuena, alarmaTocada) : null;
     try {
+      if (alarmaNueva) await habitsApi.fijarAlarmaGeneral(h.habitoId, alarmaNueva);
       // El navegador solo permite abrir el permiso Web Push dentro de una accion del usuario.
       // Se hace antes del PATCH para conservar ese gesto; el backend se actualiza igual aunque
       // la persona rechace el permiso y la alerta final lo deja claro.
@@ -874,27 +998,32 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
             horaDeHoy: horaDelEditor(previa, h.time).ahora,
             horaNueva: horaTexto,
             desde: resultado.deferredEffectiveDate,
-          }, antelaciones, { dimension, dias: diasParaLasAlarmas })
-          : await recordatorios.programar(claveUsuario, h.habitoId, h.title, horaTexto, antelaciones, { dimension, dias: diasParaLasAlarmas });
+          }, antelaciones, { dimension, dias: diasParaLasAlarmas, alarma: (alarmaNueva ?? alarmaGeneral) ?? undefined })
+          : await recordatorios.programar(claveUsuario, h.habitoId, h.title, horaTexto, antelaciones, {
+            dimension, dias: diasParaLasAlarmas, alarma: (alarmaNueva ?? alarmaGeneral) ?? undefined,
+          });
       const avisoImposible = antelaciones.length > 0 && !ok;
       // El horario local se actualiza acá y no recargando todo: recargar con la hoja abierta
       // reordenaría la lista debajo del dedo. Diferido (D-91), la hora de hoy no cambia y el cambio
       // queda pendiente, como lo devolverá el servidor al reabrir la hoja (PLN-02).
       setPreferencias(prev => {
         const siguiente = new Map(prev);
-        siguiente.set(
-          h.habitoId,
-          preferenciaTrasGuardar(prev.get(h.habitoId), {
-            habitoId: h.habitoId,
-            titulo: h.title,
-            horaDeLaTarjeta: h.time,
-            horaNueva: horaTexto,
-            recordatorio,
-            resultado,
-          }),
-        );
+        const guardada = preferenciaTrasGuardar(prev.get(h.habitoId), {
+          habitoId: h.habitoId,
+          titulo: h.title,
+          horaDeLaTarjeta: h.time,
+          horaNueva: horaTexto,
+          recordatorio,
+          resultado,
+        });
+        siguiente.set(h.habitoId, alarmaNueva ? { ...guardada, alarm: combinacionALaApi(alarmaNueva) } : guardada);
         return siguiente;
       });
+      if (alarmaNueva) {
+        // Los días que no tienen la suya la siguen: lo que muestra el editor al reabrir sale de acá y de la semana.
+        setAlarmaGeneral(alarmaNueva);
+        setAlarmaTocada({});
+      }
       setGuardados(prev => ({ ...prev, [h.habitoId]: horaTexto }));
       // El aviso general ya guardado es el nuevo; los días sin aviso propio lo siguen.
       setAvisoGeneral([...antelaciones]);
@@ -943,6 +1072,40 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
   };
 
   /**
+   * Guarda SOLO «cómo suena» del hábito entero (sin días marcados y sin tocar la hora ni el aviso): no hay motivo para
+   * volver a mandar la hora, que además podría gastar el cupo semanal. Rehace las alarmas del teléfono con la
+   * combinación nueva y vuelve a la lista, como al guardar la hora.
+   */
+  const guardarAlarmaGeneral = async (h: HabitoPlanificable) => {
+    setGuardando(true);
+    try {
+      const nueva = combinacionResultante(generalDeComoSuena, alarmaTocada);
+      await habitsApi.fijarAlarmaGeneral(h.habitoId, nueva);
+      setAlarmaGeneral(nueva);
+      setAlarmaTocada({});
+      setPreferencias(prev => {
+        const previa = prev.get(h.habitoId);
+        return previa ? new Map(prev).set(h.habitoId, { ...previa, alarm: combinacionALaApi(nueva) }) : prev;
+      });
+      setHuboEscritura(true);
+      // Los días sin «cómo suena» propio siguen a la general: se relee la semana y se rehacen las alarmas.
+      const alarmaPuesta = await releerYReprogramar(h, nueva);
+      setHabitoEnEdicion(null);
+      const resumen = resumenDeLaCombinacion(nueva);
+      const corto = `«${h.title}» suena así: ${resumen}.`;
+      if (alarmaPuesta === false) {
+        Alert.alert('Guardado', `${corto}\n\nEl teléfono no tiene permiso para avisarte. Habilita las notificaciones para que suene.`);
+      } else {
+        confirmar(corto);
+      }
+    } catch (e) {
+      Alert.alert('No pudimos guardar cómo suena', mensajeDeError(e, 'Intenta de nuevo en unos segundos.'));
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  /**
    * Guarda, y nada más.
    *
    * **Sacado el 2026-09-08 junto con los bloques del día**: acá había un aviso —"despertarse de
@@ -952,8 +1115,19 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
    * trabaja de noche duerme a las 09:00 y no tiene por qué justificarse ante un diálogo.
    */
   const intentarGuardar = (h: HabitoPlanificable) => {
+    // Spec 009: sonido y vibración no pueden quedar los dos apagados. La regla ya se lee en línea bajo la fila; acá
+    // solo se frena el guardado, con el «tic» de error, y se lleva a la vista (es el último bloque de la hoja).
+    if (cambioLaAlarma && reglaDeComoSuena) {
+      tacto.error();
+      desplazableRef.current?.scrollToEnd({ animated: true });
+      return;
+    }
     if (diasEnEdicion.length > 0) {
-      void guardarDias(h, diasEnEdicion, queSeGuarda);
+      void guardarDias(h, diasEnEdicion, queSeGuarda, cambioLaAlarma);
+      return;
+    }
+    if (soloLaAlarmaGeneral) {
+      void guardarAlarmaGeneral(h);
       return;
     }
     void guardarHora(h);
@@ -1183,7 +1357,13 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
   const pie =
     estado === 'listo' && paso === 'habito' && habitoEnEdicion ? (
       <GoldButton
-        label={textoDelBoton({ guardando, dias: diasEnEdicion, que: queSeGuarda, hora: horaTexto })}
+        label={textoDelBoton({
+          guardando,
+          dias: diasEnEdicion,
+          que: soloLaAlarmaGeneral ? 'ninguno' : queSeGuarda,
+          hora: horaTexto,
+          alarma: cambioLaAlarma,
+        })}
         onPress={() => intentarGuardar(habitoEnEdicion)}
         disabled={guardando}
         textStyle={TEXTO_DE_BOTON}
@@ -1344,6 +1524,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
             </View>
 
             <ScrollView
+              ref={desplazableRef}
               style={styles.cuerpoDesplazable}
               contentContainerStyle={styles.contenidoDesplazable}
               keyboardShouldPersistTaps="handled"
@@ -1385,12 +1566,22 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
                     return d && d.avisoPropio && d.activo ? resumenDelAvisoDelDia(d.aviso, avisoGeneral) : null;
                   })
                   : undefined}
+                alarmaDelDia={recordatorios.HAY_RECORDATORIOS_LOCALES && alarmaPorDiaDisponible
+                  ? (dia => {
+                    const d = horarioSemanal[dia];
+                    return d && d.alarmaPropia && d.alarma && d.activo
+                      ? { largo: `Alarma propia: ${resumenDeLaCombinacion(d.alarma)}` }
+                      : null;
+                  })
+                  : undefined}
               />
               {/* La ayuda, corta (2026-10-05; eran dos frases a 10,5 px). */}
               <Text style={[t.small, styles.ayuda, { color: c.textSoft }]}>
                 {diasEnEdicion.length === 0
                   ? (recordatorios.HAY_RECORDATORIOS && avisoPorDiaDisponible
-                    ? 'Toca un día para darle su propia hora y aviso. Hoy y lo pasado van con candado.'
+                    ? (alarmaPorDiaDisponible
+                      ? 'Toca un día para darle su propia hora, aviso y alarma. Hoy y lo pasado van con candado.'
+                      : 'Toca un día para darle su propia hora y aviso. Hoy y lo pasado van con candado.')
                     : 'Toca un día para darle su propia hora. Hoy y lo pasado van con candado.')
                   : `Solo ${diasEnFrase(diasEnEdicion)}, todas las semanas. Hoy no cambia.`}
               </Text>
@@ -1443,7 +1634,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
                   «quitar» de un día apagado no significa nada. Devuelve el día al horario general: sin hora
                   ni aviso propios (FR-006). */}
               {diasEnEdicion.length > 0
-                && diasEnEdicion.every(d => (horarioSemanal[d]?.propio || horarioSemanal[d]?.avisoPropio) && horarioSemanal[d]?.activo !== false) && (
+                && diasEnEdicion.every(d => (horarioSemanal[d]?.propio || horarioSemanal[d]?.avisoPropio || horarioSemanal[d]?.alarmaPropia) && horarioSemanal[d]?.activo !== false) && (
                 <Presionable
                   onPress={() => void quitarDias(habitoEnEdicion, diasEnEdicion)}
                   accessibilityRole="button"
@@ -1451,7 +1642,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
                   style={styles.enlaceQuitar}
                 >
                   <Text style={[t.small, styles.textoDelEnlace, { color: c.textSoft, textDecorationLine: 'underline' }]}>
-                    {avisoPorDiaDisponible
+                    {avisoPorDiaDisponible || alarmaPorDiaDisponible
                       ? `Dejar ${diasEnFrase(diasEnEdicion)} como los demás días`
                       : `Quitar la hora propia de ${diasEnFrase(diasEnEdicion)}`}
                   </Text>
@@ -1542,9 +1733,22 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
                 </>
               )}
 
-              {/* Lugar para los futuros TIPOS DE ALARMA (spec 008, FR-015): van debajo del recordatorio, en
-                  otra spec. Esta solo deja el espacio y no muestra nada. */}
-              <View testID="espacio-para-tipos-de-alarma" style={styles.espacioParaTiposDeAlarma} />
+              {/* CÓMO SUENA (spec 009): el lugar que dejó la 008 debajo del recordatorio. Cuatro interruptores
+                  grandes —sonido, vibración, voz y repetir—; con días marcados valen para esos días, y sin días
+                  marcados para el hábito entero. Es el último bloque: hora → días → recordatorio → cómo suena →
+                  guardar (FR-012). Contra un backend anterior, que no la informa, el espacio queda vacío. */}
+              <View testID="espacio-para-tipos-de-alarma" style={hayComoSuena ? undefined : styles.espacioParaTiposDeAlarma}>
+                {hayComoSuena ? (
+                  <SeccionComoSuena
+                    titulo={enModoDias ? `Cómo suena de ${diasEnFrase(diasEnEdicion)}` : 'Cómo suena'}
+                    mostrados={mostradosDeComoSuena}
+                    mensajes={mensajesEnLinea({ mostrados: mostradosDeComoSuena, regla: reglaDeComoSuena, tonoDeYo })}
+                    vozPorElTono={tonoDeYo === 'voz'}
+                    atenuada={motivoDeAtenuarComoSuena}
+                    alTocar={tocarComoSuena}
+                  />
+                ) : null}
+              </View>
             </ScrollView>
 
             {/* La rueda de «Otra» y su botón, uno al lado del otro, fuera de lo que se desliza (dos

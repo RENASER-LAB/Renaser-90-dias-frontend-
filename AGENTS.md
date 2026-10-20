@@ -1997,7 +1997,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       pantalla («Sábado 24, 09:00, aviso 30 minutos antes»). Tocar un día vibra (`tacto.seleccion()`).
     * **«Dejar sáb como los demás días»** (antes «Quitar la hora propia de sáb») quita la hora **y** el aviso propios.
     * Debajo del recordatorio queda un lugar vacío (`espacio-para-tipos-de-alarma`) para los tipos de alarma, que van en
-      otra spec: no muestra nada.
+      otra spec: no muestra nada. (> Ocupado el 2026-10-20 por «Cómo suena» de la spec 009, más abajo; sigue vacío
+      contra un backend que no la informa.)
     * **La alarma del teléfono dejó de ignorar la hora de cada día (E-640)**: una sola alarma `DAILY` a la hora general
       hacía sonar el jueves a las 07:00 aunque fuera a las 09:00. Con la misma regla del servidor —algún día con hora
       propia, aviso propio o apagado—, `recordatoriosDeHabito.programar` pone una alarma `WEEKLY` por día encendido y
@@ -2014,6 +2015,74 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **No hace falta APK nuevo** (solo JavaScript): hace falta el backend con V111 antes. No cambian Plan, Hoy, los otros
       tabs ni las alarmas de Despertar de Yo → Alarmas (no conocen los días: si el hábito tenía días distintos, la
       próxima puesta al día —al abrir la app— las deja por día otra vez).
+
+  * **Cambio por pedido del dueño — 2026-10-20 — tab `Training` → Planificar: cómo suena la alarma** (spec 009 del
+    backend, `specs/009-tipos-de-alarma/`, D-283 y V112; se apoya en la 008). Textual: «abajo saldrá los diferentes
+    tipos de alarmas que pondremos… debajo de los recordatorios», con un interruptor grande como referencia; «para que
+    sea más agradable visual para los usuarios y recuerda que es por día totalmente personalizable… es para personas de
+    40 años para arriba y que sea cómodo». Lo que cambia y nada más:
+    * **Sección «Cómo suena»** (`training/components/SeccionComoSuena`), en el lugar que dejó la 008 debajo del
+      recordatorio (`espacio-para-tipos-de-alarma`). La hoja queda en este orden, cada bloque con su `MicroLabel`:
+      **Hora → Días → Recordatorio → Cómo suena → Guardar**. Cuatro filas: **Sonido** («Suena el tono que elegiste en
+      Yo → Alarmas»), **Vibración** («El teléfono vibra»), **Voz que dice el hábito** («Una voz dice el nombre del
+      hábito») y **Repetir si no la atiendo** («Vuelve a sonar a los 5 y a los 10 minutos»). Sin aviso, o con el hábito
+      apagado ese día, la sección se atenúa, no se puede tocar y dice por qué («Este día no tiene aviso»).
+    * **`InterruptorGrande`** (`components/InterruptorGrande.tsx`), componente nuevo y aparte: **no reemplaza ni cambia
+      a `Interruptor`**, que sigue con 51 × 31 en Yo, Plan, Training y Eventos. La fila entera es el área de toque (56 o
+      más de alto), con el rótulo a 17 px y la explicación a 15; riel de 72 × 40, pulgar blanco de 34 con sombra suave,
+      dorado del tema encendido y gris apagado con «Sí» / «No» dentro del riel (el estado no depende solo del color:
+      el gris mide 3,2 : 1 contra la tarjeta en claro y 3,4 : 1 en oscuro). Estado **«Varía»** (los días marcados no
+      coinciden): riel gris, pulgar en el medio con un guion y la palabra «Varía»; al tocarlo pasa a encendido para todos.
+      Rol `switch`, `checked` (`mixed` en «Varía»), el rótulo como nombre y la explicación como ayuda. El pulgar se
+      mueve 180 ms con la curva de la app (Reanimated, hilo de la interfaz) y al instante con «reducir movimiento»;
+      `tacto.seleccion()` una vez por cambio.
+    * **Reglas, dichas en línea bajo la fila que las causa** (nada de diálogos): **sonido y vibración no pueden quedar
+      los dos apagados** (se puede apagar el segundo para no trabar la mano, pero la línea lo explica —«Si no quieres
+      alarma, elige «Sin aviso» en Recordatorio»—, no deja guardar y vibra con `tacto.error()`); **la voz necesita el
+      sonido** (apagar «Sonido» apaga «Voz» y la deshabilita con «La voz necesita el sonido»; encender «Voz» enciende
+      «Sonido»). Estas dos reglas las agregó el equipo y se le avisan al dueño (Clarifications de la spec).
+    * **El tono de Yo → Alarmas sigue mandando** con «Sonido» encendido y «Voz» apagada. Si ese tono ya es «Voz», las
+      alarmas siguen diciendo el hábito aunque la combinación traiga `voice: false` (el servidor no conoce el tono): la
+      fila de voz se ve encendida y fija, con «Ya habla porque tu tono en Yo → Alarmas es «Voz»». Si es «Solo vibrar»,
+      la fila de sonido avisa que no va a sonar. Una alarma nunca queda muda: sin sonido ni vibración, vibra.
+    * **Por día, igual que la hora y el aviso (008)**: sin días marcados vale para el hábito entero (`PUT
+      /habit-preferences/{id}/alarm`); con días marcados, solo para esos (`PUT …/weekdays/{wd}/alarm`). Los cuatro
+      campos viajan siempre. **Se guarda solo lo tocado** y no gasta cupo: «Guardar alarma · sáb» si solo se cambió «Cómo
+      suena» (ni la hora ni el aviso se vuelven a mandar), «Guardar hora y alarma · …», «Guardar aviso y alarma · …» o
+      «Guardar hora, aviso y alarma · …» si también se cambió lo otro; lo que no se tocó conserva, día por día, lo que
+      cada día tenía. Sin días marcados y solo «Cómo suena»: «Guardar alarma · todos los días». Si se cambia con la hora,
+      «cómo suena» se guarda primero y, si falla, no se toca nada más. **«Dejar sáb como los demás días»** quita también
+      la combinación propia (el servidor la borra con la fila del día).
+    * **El chip del día** (`FilaDeDiasDelPlan`, prop **opcional** `alarmaDelDia`; Plan y «Agendar acciones» no la
+      pasan): un día con combinación propia lleva un reloj de alarma de 16 (`alarmClock`, sin texto), junto a la campana
+      del aviso propio. El lector de pantalla lo suma a la etiqueta: «Sábado 24, 09:00, alarma propia: sin sonido, vibra».
+    * **La alarma del teléfono suena como dice el día** (sin código nativo ni sonidos nuevos): en Android la
+      vibración también es del canal, así que cada combinación es un canal (`habits/notificaciones/utils/combinacionDeAlarma`):
+      el del tono de Yo → Alarmas (como siempre), ese mismo con el sufijo **`-sinvib`** (`enableVibrate: false`), el de
+      **solo vibrar** que ya existía, y el de **voz del hábito** (o la frase general), con o sin `-sinvib`. Los canales
+      `-sinvib` están en `ARCHIVO_POR_CANAL` (el rearmado nombra el archivo correcto). La combinación viaja en
+      `data.alarma` del aviso (solo si no es la de siempre), así que cambiar el tono en Yo → Alarmas y el aviso agrupado
+      de dos hábitos a la misma hora conservan cómo suena cada uno (un grupo suena y vibra si alguno lo pide). Un día con
+      combinación propia pasa al esquema por día como uno con hora o aviso propios (misma regla que el servidor: su push
+      de respaldo lleva la etiqueta `habito-{id}-d{iso}-0`); sin combinaciones el esquema diario queda idéntico, con los
+      mismos identificadores y el mismo contenido. El teléfono recuerda la combinación general para que Plan o Yo, que
+      reprograman sin saber de ella, no la pierdan.
+    * **Repetir si no la atiendo** (`habits/notificaciones/repeticiones.ts`): alarmas de **fecha** a +5 y +10 min de la
+      hora del hábito (solo esa; las de antes no se repiten) en una **ventana de 7 días** (hoy y los 6 siguientes), con
+      el identificador `habito-{id}-rep-{AAAAMMDD}-{5|10}` (la fecha es la del día del hábito). Se arman al guardar y la
+      puesta al día (`ajustarRecordatoriosAlServidor`, al abrir la app y al volver a primer plano) renueva la ventana
+      sin tocar lo que ya está igual. **Tocar cualquier alarma del hábito o completarlo cancela las de HOY** y se anota
+      que ese día ya se atendió, para que la renovación no las resucite; las de mañana siguen. Un toque viejo (la última
+      respuesta que devuelve la librería al abrir la app en frío) no cuenta. Cerrar sesión las borra con sus notas.
+      **Límite aceptado:** si la persona no abre la app en 7 días, las repeticiones se acaban (la alarma principal
+      sigue). Tampoco se cancelan al cumplir el hábito por la Pastilla o la Clase diaria (su endpoint no emite
+      `habitoCumplido`), ni al cumplirlo desde otro teléfono o la web, salvo que se toque la alarma.
+    * **Compatibilidad**: todo campo nuevo (`alarm`, `customAlarm`) es opcional y una combinación que no se entiende se
+      descarta sola sin tumbar la lista de preferencias. Contra un backend anterior no se muestra «Cómo suena» y todo
+      queda como la 008; un APK anterior con el backend nuevo ignora los campos y suena como hoy. En la web no se
+      muestra (no hay alarmas locales).
+    * **No hace falta APK nuevo** (solo JavaScript; ni `package.json`, ni `app.json`, ni código nativo): hace falta el
+      backend con **V112** antes. No cambian `Interruptor`, Yo → Alarmas, Plan, Hoy ni los otros tabs.
 
 ## 2. 📱 RESPONSIVIDAD UNIVERSAL (XIAOMI, ANDROID, IOS Y TABLETS)
 * **Cero Doble Scroll**: NUNCA coloques un contenedor con `maxHeight` fijo o scroll interno dentro de otro `ScrollView`. Toda pantalla debe tener UN ÚNICO contenedor de scroll fluido con `contentContainerStyle={{ flexGrow: 1, paddingBottom: 36 }}`.

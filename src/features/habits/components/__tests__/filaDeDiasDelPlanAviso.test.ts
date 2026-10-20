@@ -11,7 +11,7 @@ jest.mock('../../../../theme/ThemeContext', () => {
   };
 });
 
-import { FilaDeDiasDelPlan, type AvisoDeUnDiaEnLaFila } from '../FilaDeDiasDelPlan';
+import { FilaDeDiasDelPlan, type AlarmaDeUnDiaEnLaFila, type AvisoDeUnDiaEnLaFila } from '../FilaDeDiasDelPlan';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -118,5 +118,44 @@ describe('con la prop (editor de Planificar)', () => {
       pastillas(r)[5].props.onPress();
     });
     expect(alternar).toHaveBeenCalledWith('SÁB');
+  });
+});
+
+describe('con «cómo suena» propio de un día (spec 009)', () => {
+  const alarmas: Partial<Record<DiaDelPlan, AlarmaDeUnDiaEnLaFila>> = {
+    'SÁB': { largo: 'Alarma propia: sin sonido, vibra' },
+    VIE: { largo: 'Alarma propia: con voz, vibra, se repite' },
+  };
+
+  it('sin la prop no dibuja ningún reloj de alarma (Plan no cambia)', () => {
+    const r = montar({ avisoDelDia: () => null });
+    expect(iconos(r)).not.toContain('alarmClock');
+  });
+
+  it('dibuja un reloj de alarma de 16, sin texto, solo en los días con combinación propia', () => {
+    const r = montar({ avisoDelDia: () => null, alarmaDelDia: dia => alarmas[dia] ?? null });
+    const relojes = r.root.findAll(n => n.props.name === 'alarmClock' && n.props.size !== undefined);
+    expect(relojes).toHaveLength(2);
+    for (const reloj of relojes) expect(reloj.props.size).toBe(16);
+    // «Sin texto largo»: nada de lo que dice el lector de pantalla aparece escrito en el chip.
+    expect(textos(r).join(' ')).not.toMatch(/Alarma propia/);
+  });
+
+  it('el reloj convive con la campana del aviso propio del mismo día', () => {
+    const avisos: Partial<Record<DiaDelPlan, AvisoDeUnDiaEnLaFila>> = { 'SÁB': { corto: '30′', largo: 'Aviso 30 minutos antes', sinAviso: false } };
+    const r = montar({ avisoDelDia: dia => avisos[dia] ?? null, alarmaDelDia: dia => alarmas[dia] ?? null });
+    expect(iconos(r)).toEqual(expect.arrayContaining(['bell', 'alarmClock']));
+  });
+
+  it('la pastilla se anuncia con su alarma propia, aun sin aviso propio', () => {
+    const r = montar({ alarmaDelDia: dia => alarmas[dia] ?? null });
+    const etiquetas = pastillas(r).map(p => p.props.accessibilityLabel as string);
+    expect(etiquetas.find(e => e.startsWith('Sábado'))).toMatch(/^Sábado \d\d, 09:00, alarma propia: sin sonido, vibra$/);
+    expect(etiquetas.find(e => e.startsWith('Lunes'))).toMatch(/^Lunes \d\d, 07:00$/);
+  });
+
+  it('un día bloqueado por el candado no muestra el reloj', () => {
+    const r = montar({ planificable: dia => dia !== 'SÁB', alarmaDelDia: dia => alarmas[dia] ?? null });
+    expect(iconos(r).filter(n => n === 'alarmClock')).toHaveLength(1); // solo el viernes
   });
 });
