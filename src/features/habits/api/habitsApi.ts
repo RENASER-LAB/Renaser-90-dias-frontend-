@@ -166,6 +166,32 @@ export async function fijarHorarioDelDia(
 }
 
 /**
+ * `PUT .../weekdays/{weekday}/reminder` — fija el AVISO de UN día de la semana, todas las semanas (spec 008, D-282).
+ *
+ * Es aparte de la hora a propósito (FR-013): un APK anterior que guarda la hora de un día no puede borrar el
+ * aviso, y quien solo cambia el aviso no toca la hora de ningún día. **No consume el cupo semanal** de
+ * cambios de horario: no reacomoda nada, igual que apagar un día.
+ *
+ * - `activo: false`: ese día va sin aviso (la lista se ignora y puede ir vacía).
+ * - `activo: true`: `antelaciones` lleva una o más (minutos antes; `0` = a la hora). Si coincide con el aviso
+ *   general, el servidor deja el día heredándolo.
+ *
+ * Contra un backend anterior responde 404/405: quien lo llama debe haber visto antes `customReminder` en
+ * `obtenerHorarioSemanal` y no ofrecer este camino si no vino.
+ */
+export async function fijarAvisoDelDia(
+  habitId: string,
+  weekday: string,
+  activo: boolean,
+  antelaciones: readonly number[],
+): Promise<void> {
+  await apiFetch<unknown>(`/api/v1/habit-preferences/${habitId}/weekdays/${weekday}/reminder`, {
+    method: 'PUT',
+    body: { reminderEnabled: activo, reminderMinutesList: activo ? [...antelaciones] : [] },
+  });
+}
+
+/**
  * `DELETE .../weekdays/{weekday}/active` — apaga el hábito ESE día de la semana, siempre.
  *
  * Distinto de apagar por fecha (`/days/{date}`), que vale para un día y no se repite. Devuelve 409

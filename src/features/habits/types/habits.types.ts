@@ -120,21 +120,44 @@ export interface AltaHabitoPersonal {
 }
 
 /**
+ * Un día de la semana de un hábito, con lo que el servidor resolvió para él (V39, V40 y, desde la spec 008,
+ * V111). Es la forma COMÚN de `GET /habit-preferences/{id}/weekdays` y de `weekdays` dentro de cada ítem de
+ * `GET /habit-preferences`: todo lo que no es el nombre del día es opcional, porque un backend anterior no
+ * manda lo nuevo y porque la lista no repite `limitTime`.
+ *
+ * - `custom` (el endpoint del hábito) y `customTime` (la lista) dicen lo mismo: ese día tiene hora propia.
+ *   Se leen los dos (`diasPropiosDe`): el contrato los nombra distinto y no se adivina cuál llega.
+ * - `reminderEnabled` y `reminderMinutesList` son el aviso RESUELTO del día: el propio o, si no tiene, el
+ *   general. `customReminder` dice si es propio. Sin `customReminder` el backend no sabe de avisos por día.
+ */
+export interface DiaDelHabitoApi {
+  /** Nombre de `DayOfWeek`: `MONDAY`..`SUNDAY`. */
+  weekday: string;
+  /** `HH:mm:ss`, ya resuelta para ese día. */
+  triggerTime?: string | null;
+  /** `false` = ese día está apagado, todas las semanas (V40). Ausente contra un backend viejo. */
+  active?: boolean;
+  /** Spec 008: el aviso resuelto del día. */
+  reminderEnabled?: boolean;
+  reminderMinutesList?: number[] | null;
+  customTime?: boolean;
+  custom?: boolean;
+  /** Spec 008: `true` solo si el aviso es propio del día. Ausente = el backend no informa avisos por día. */
+  customReminder?: boolean;
+}
+
+/**
  * Un día de `GET /api/v1/habit-preferences/{habitId}/weekdays` — la hora de ESE día (V39).
  *
  * Vienen los siete siempre, resueltos por el servidor: `custom` dice si ese día tiene hora propia
  * o si hereda la general. La pantalla no mezcla nada — esa mezcla es la precedencia y vive en el
  * backend, para que no existan dos implementaciones de la misma regla.
  */
-export interface DiaDeLaSemanaApi {
-  /** Nombre de `DayOfWeek`: `MONDAY`..`SUNDAY`. */
-  weekday: string;
+export interface DiaDeLaSemanaApi extends DiaDelHabitoApi {
   /** `HH:mm:ss`, ya resuelta para ese día. */
   triggerTime: string | null;
   limitTime: string | null;
   custom: boolean;
-  /** `false` = ese día está apagado, todas las semanas (V40). Ausente contra un backend viejo. */
-  active?: boolean;
 }
 
 /** Un ítem de `GET /api/v1/habit-preferences` — el horario, propio o el del catálogo. */
@@ -171,6 +194,11 @@ export interface PreferenciaHabitoApi {
    * de que el cambio no se guardó.
    */
   pendingChange: CambioProgramadoApi | null;
+  /**
+   * Spec 008: los siete días ya resueltos (hora y aviso de cada uno). Ausente contra un backend anterior:
+   * ahí la app se comporta como siempre, con una alarma diaria a la hora general.
+   */
+  weekdays?: DiaDelHabitoApi[];
 }
 
 /** `effectiveDate` es `YYYY-MM-DD`; las horas son `HH:mm:ss` crudas, igual que el resto del wire. */

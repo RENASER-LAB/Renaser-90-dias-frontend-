@@ -23,7 +23,7 @@ import {
  * ## Qué hace
  *
  * - **`soltarAlarmasDeLaCuenta`** (al cerrar sesión, y al entrar con OTRA cuenta): cancela todo lo
- *   programado y borra lo que el teléfono guarda de esas alarmas (ids, horas, cambios con fecha).
+ *   programado y borra lo que el teléfono guarda de esas alarmas (ids, horas, cambios con fecha, alarmas por día).
  *   Quedan las PREFERENCIAS de cada persona (sonido, antelaciones, aviso diario de objetivos): son por
  *   usuario y no suenan solas. El repaso de los domingos, que solo se guarda como la id de su alarma,
  *   queda marcado como «pedido, sin alarma» (`REPASO_SIN_ALARMA`) para volver a armarlo.
@@ -42,6 +42,8 @@ const PREFIJOS_DE_ALARMAS = [
   'renaser.habitos.recordatorio.',
   'renaser.habitos.hora.',
   'renaser.habitos.diferido.',
+  // Spec 008: la firma y los días propios de un hábito con alarmas por día. Sin sus alarmas no sirven.
+  'renaser.habitos.esquema.',
   'renaser.eventos.alarmas.',
   'renaser.objetivos.recordatorios.acciones.',
   'renaser.objetivos.recordatorios.diario.',
