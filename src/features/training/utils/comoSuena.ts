@@ -1,4 +1,5 @@
 import type { SonidoDeAlarma } from '../../alarmas/sonidoDeAlarma';
+import { FRASE_GENERICA_DE_HABITOS, vozDelHabito, type HabitoConVoz } from '../../alarmas/vozDeLosHabitos';
 import {
   reglaIncumplida,
   type ClaveDeLaCombinacion,
@@ -40,13 +41,29 @@ export interface FilaDeComoSuena {
   descripcion: string;
 }
 
+/** Lo que dice la fila «Voz» de un hábito con voz propia: su nombre. */
+export const DESCRIPCION_VOZ_PROPIA = 'Una voz dice el nombre del hábito';
+/** Lo que dice la fila «Voz» de un hábito sin voz propia (propio, renombrado o nuevo): la frase general. */
+export const DESCRIPCION_VOZ_GENERAL = `Este hábito dice la frase general: «${FRASE_GENERICA_DE_HABITOS}»`;
+
 /** Las cuatro filas, en este orden (research R7). */
 export const FILAS_DE_COMO_SUENA: ReadonlyArray<FilaDeComoSuena> = [
   { clave: 'sonido', etiqueta: 'Sonido', descripcion: 'Suena el tono que elegiste en Yo → Alarmas' },
   { clave: 'vibracion', etiqueta: 'Vibración', descripcion: 'El teléfono vibra' },
-  { clave: 'voz', etiqueta: 'Voz que dice el hábito', descripcion: 'Una voz dice el nombre del hábito' },
+  { clave: 'voz', etiqueta: 'Voz que dice el hábito', descripcion: DESCRIPCION_VOZ_PROPIA },
   { clave: 'repetir', etiqueta: 'Repetir si no la atiendo', descripcion: 'Vuelve a sonar a los 5 y a los 10 minutos' },
 ];
+
+/**
+ * Las cuatro filas para ESTE hábito. Solo cambia lo que explica la fila «Voz»: con voz propia dice su nombre y sin ella
+ * (hábito propio, renombrado o nuevo que aún no tiene audio) dice la frase general, para que la persona no espere oír el
+ * nombre y escuche otra cosa. Quién tiene voz propia lo decide `vozDelHabito`, la MISMA función con la que se elige el
+ * canal de la alarma (`canalDeAlarma`): la explicación no puede contradecir lo que de verdad suena. Sin hábito, la general.
+ */
+export function filasDeComoSuena(habito: HabitoConVoz | undefined): ReadonlyArray<FilaDeComoSuena> {
+  const descripcionDeLaVoz = vozDelHabito(habito) ? DESCRIPCION_VOZ_PROPIA : DESCRIPCION_VOZ_GENERAL;
+  return FILAS_DE_COMO_SUENA.map(fila => (fila.clave === 'voz' ? { ...fila, descripcion: descripcionDeLaVoz } : fila));
+}
 
 export const MENSAJE_SONIDO_O_VIBRACION =
   'Deja encendido el sonido o la vibración. Si no quieres alarma, elige «Sin aviso» en Recordatorio.';

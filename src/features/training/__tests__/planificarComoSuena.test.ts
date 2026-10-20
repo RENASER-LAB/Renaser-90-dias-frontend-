@@ -109,6 +109,10 @@ const JUGO: HabitItem = {
   hasEvidence: false, tieneTrackHoy: true, habitoId: 'h-jugo', isDeactivatable: true, icon: 'salad',
 };
 
+/** GIMNASIO del catálogo (`V99` del backend): tiene voz propia si conserva su id y su título. */
+const GIMNASIO_ID = 'ec0f2b08-3a18-4ff4-8e2b-243e5220d211';
+const gimnasio = (title: string): HabitItem => ({ ...JUGO, id: 'track-gym', title, habitoId: GIMNASIO_ID, icon: 'dumbbell' as HabitItem['icon'] });
+
 type Alarma = { sound: boolean; vibration: boolean; voice: boolean; repeat: boolean };
 const DE_SIEMPRE: Alarma = { sound: true, vibration: true, voice: false, repeat: false };
 
@@ -139,12 +143,12 @@ async function esperar() {
 
 let raiz: ReactTestRenderer | null = null;
 
-async function montar(): Promise<ReactTestRenderer> {
+async function montar(habito: HabitItem = JUGO): Promise<ReactTestRenderer> {
   let r!: ReactTestRenderer;
   await act(async () => {
     r = TestRenderer.create(
       React.createElement(PlanificarDimensionModal, {
-        visible: true, dimension: 'CUERPO', habits: [JUGO], onCerrar: () => undefined, onGuardado: () => undefined,
+        visible: true, dimension: 'CUERPO', habits: [habito], onCerrar: () => undefined, onGuardado: () => undefined,
       }),
     );
   });
@@ -160,9 +164,9 @@ function textos(r: ReactTestRenderer): string {
     .join(' | ');
 }
 
-async function abrirElHabito(r: ReactTestRenderer) {
+async function abrirElHabito(r: ReactTestRenderer, titulo = 'JUGO VERDE') {
   const filas = r.root.findAll(n => typeof n.props.onPress === 'function'
-    && n.findAll(x => (x.type as unknown) === 'Text' && x.props.children === 'JUGO VERDE').length > 0);
+    && n.findAll(x => (x.type as unknown) === 'Text' && x.props.children === titulo).length > 0);
   await act(async () => {
     filas[filas.length - 1].props.onPress();
   });
@@ -232,9 +236,11 @@ describe('la sección «Cómo suena»', () => {
     await abrirElHabito(r);
     const todo = textos(r);
     for (const rotulo of ['Sonido', 'Vibración', 'Voz que dice el hábito', 'Repetir si no la atiendo']) expect(todo).toContain(rotulo);
-    for (const explicacion of ['Suena el tono que elegiste en Yo → Alarmas', 'El teléfono vibra', 'Una voz dice el nombre del hábito', 'Vuelve a sonar a los 5 y a los 10 minutos']) {
+    // JUGO (`h-jugo`) no es un hábito del catálogo: no tiene voz propia y su fila de voz dice la frase general.
+    for (const explicacion of ['Suena el tono que elegiste en Yo → Alarmas', 'El teléfono vibra', 'Este hábito dice la frase general: «Tu hábito está por empezar»', 'Vuelve a sonar a los 5 y a los 10 minutos']) {
       expect(todo).toContain(explicacion);
     }
+    expect(todo).not.toContain('Una voz dice el nombre del hábito');
     expect(todo.indexOf('Hora')).toBeLessThan(todo.indexOf('Todos los días'));
     expect(todo.indexOf('Todos los días')).toBeLessThan(todo.indexOf('Recordatorio'));
     expect(todo.indexOf('Recordatorio')).toBeLessThan(todo.indexOf('Cómo suena'));
@@ -242,6 +248,26 @@ describe('la sección «Cómo suena»', () => {
     // Va en el lugar que dejó la 008, y es lo último de lo que se desliza.
     const [espacio] = r.root.findAll(n => n.props.testID === 'espacio-para-tipos-de-alarma');
     expect(React.Children.count(espacio.props.children)).toBe(1);
+  });
+
+  it('un hábito del catálogo con voz propia dice que la voz dice su nombre; renombrado, dice la frase general', async () => {
+    mockPreferencias.mockResolvedValue([preferencia(DE_SIEMPRE, { habitId: GIMNASIO_ID })]);
+    const delCatalogo = await montar(gimnasio('GIMNASIO'));
+    await abrirElHabito(delCatalogo, 'GIMNASIO');
+    expect(textos(delCatalogo)).toContain('Una voz dice el nombre del hábito');
+    expect(textos(delCatalogo)).not.toContain('frase general');
+    act(() => delCatalogo.unmount());
+
+    // El mismo hábito con otro nombre ya no es el del catálogo: la alarma dice la frase general y la fila lo avisa.
+    const renombrado = await montar(gimnasio('Mi gimnasio'));
+    await abrirElHabito(renombrado, 'Mi gimnasio');
+    const todo = textos(renombrado);
+    expect(todo).toContain('Este hábito dice la frase general: «Tu hábito está por empezar»');
+    expect(todo).not.toContain('Una voz dice el nombre del hábito');
+    // Las otras tres filas no cambian.
+    for (const explicacion of ['Suena el tono que elegiste en Yo → Alarmas', 'El teléfono vibra', 'Vuelve a sonar a los 5 y a los 10 minutos']) {
+      expect(todo).toContain(explicacion);
+    }
   });
 
   it('cada fila es un interruptor con su estado: lo de siempre es sonido y vibración encendidos, voz y repetir apagados', async () => {

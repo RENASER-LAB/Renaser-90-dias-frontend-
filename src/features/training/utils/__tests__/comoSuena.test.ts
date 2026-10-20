@@ -5,15 +5,20 @@
  */
 import { describe, expect, it } from '@jest/globals';
 
+import tablaDeVoces from '../../../alarmas/vocesDeLasAlarmas.json';
+import { canalDeAlarma } from '../../../alarmas/sonidoDeAlarma';
 import type { CombinacionDeAlarma } from '../../../habits/notificaciones/utils/combinacionDeAlarma';
 import type { DiaDeLaSemanaApi } from '../../../habits/types/habits.types';
 import { diasDelEditor, diasPropiosDelEditor, queGuardarConAlarma, servidorInformaAlarmaPorDia, textoDelBoton } from '../avisoDeLosDias';
 import {
   alTocarUnaFila,
   combinacionResultante,
+  DESCRIPCION_VOZ_GENERAL,
+  DESCRIPCION_VOZ_PROPIA,
   estadosIniciales,
   estadosMostrados,
   FILAS_DE_COMO_SUENA,
+  filasDeComoSuena,
   hayCambios,
   MENSAJE_SONIDO_O_VIBRACION,
   MENSAJE_TONO_SOLO_VIBRAR,
@@ -52,6 +57,53 @@ describe('las cuatro filas', () => {
       'Vuelve a sonar a los 5 y a los 10 minutos',
     ]);
     expect(FILAS_DE_COMO_SUENA.map(f => f.clave)).toEqual(['sonido', 'vibracion', 'voz', 'repetir']);
+  });
+});
+
+describe('la explicación de la fila «Voz» según el hábito', () => {
+  const GIMNASIO = { id: 'ec0f2b08-3a18-4ff4-8e2b-243e5220d211', titulo: 'GIMNASIO' };
+  const voz = (habito: { id: string; titulo: string } | undefined) => filasDeComoSuena(habito).find(f => f.clave === 'voz')!.descripcion;
+
+  it('con voz propia dice que la voz dice su nombre; sin ella, la frase general', () => {
+    expect(DESCRIPCION_VOZ_PROPIA).toBe('Una voz dice el nombre del hábito');
+    expect(DESCRIPCION_VOZ_GENERAL).toBe('Este hábito dice la frase general: «Tu hábito está por empezar»');
+    expect(voz(GIMNASIO)).toBe(DESCRIPCION_VOZ_PROPIA);
+    expect(voz({ id: 'ea87fdec-d4c1-4c4f-9e61-1557bc7255d1', titulo: 'Kilómetros diarios' })).toBe(DESCRIPCION_VOZ_PROPIA);
+  });
+
+  it('la frase general sale de la misma tabla que el audio: si cambia allí, cambia acá', () => {
+    expect(DESCRIPCION_VOZ_GENERAL).toContain(tablaDeVoces.genericas.habitos.dice.replace(/\.$/, ''));
+  });
+
+  it('renombrado, propio, nuevo o sin hábito: la frase general (no se promete un nombre que no se va a oír)', () => {
+    expect(voz({ ...GIMNASIO, titulo: 'Mi gimnasio' })).toBe(DESCRIPCION_VOZ_GENERAL);
+    expect(voz({ id: 'h-propio', titulo: 'Leer' })).toBe(DESCRIPCION_VOZ_GENERAL);
+    expect(voz({ id: '00000000-0000-0000-0000-000000000000', titulo: 'HÁBITO NUEVO DEL PANEL' })).toBe(DESCRIPCION_VOZ_GENERAL);
+    expect(voz(undefined)).toBe(DESCRIPCION_VOZ_GENERAL);
+  });
+
+  it('solo cambia la fila de voz: las otras tres y el orden son los de siempre', () => {
+    for (const habito of [GIMNASIO, { id: 'h-propio', titulo: 'Leer' }, undefined]) {
+      const filas = filasDeComoSuena(habito);
+      expect(filas.map(f => f.clave)).toEqual(['sonido', 'vibracion', 'voz', 'repetir']);
+      expect(filas.filter(f => f.clave !== 'voz')).toEqual(FILAS_DE_COMO_SUENA.filter(f => f.clave !== 'voz'));
+      expect(filas.find(f => f.clave === 'voz')?.etiqueta).toBe('Voz que dice el hábito');
+    }
+  });
+
+  it('dice lo mismo que suena: para cada hábito de la tabla y para uno cualquiera, coincide con el canal de la alarma', () => {
+    const habitos = [
+      ...tablaDeVoces.habitos.map(h => ({ id: h.habitoId, titulo: h.tituloDelCatalogo })),
+      ...tablaDeVoces.habitos.map(h => ({ id: h.habitoId, titulo: `${h.tituloDelCatalogo} (renombrado)` })),
+      { id: 'h-propio', titulo: 'Leer' },
+    ];
+    for (const habito of habitos) {
+      const suenaSuNombre = canalDeAlarma('habitos', 'voz', habito).sonidoDelCanal !== 'voz_habito.mp3';
+      expect({ habito, dice: voz(habito) }).toEqual({
+        habito,
+        dice: suenaSuNombre ? DESCRIPCION_VOZ_PROPIA : DESCRIPCION_VOZ_GENERAL,
+      });
+    }
   });
 });
 

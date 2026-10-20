@@ -4,9 +4,10 @@ import { StyleSheet, Text, View } from 'react-native';
 import { InterruptorGrande, type ValorDelInterruptorGrande } from '../../../components/InterruptorGrande';
 import { MicroLabel } from '../../../components/ui';
 import { useTheme } from '../../../theme/ThemeContext';
+import type { HabitoConVoz } from '../../alarmas/vozDeLosHabitos';
 import type { ClaveDeLaCombinacion } from '../../habits/notificaciones/utils/combinacionDeAlarma';
 import {
-  FILAS_DE_COMO_SUENA,
+  filasDeComoSuena,
   vozDeshabilitada,
   type EstadosDeLaSeccion,
   type MensajesEnLinea,
@@ -27,10 +28,13 @@ import {
  *   error, en rojo): «La voz necesita el sonido»; «Deja encendido el sonido o la vibración…». Nada de diálogos.
  * - Sin aviso (o con el hábito apagado ese día) la sección no tiene qué decidir: se ve atenuada, sin poder tocarse, y
  *   una línea a contraste pleno dice por qué y qué hacer.
+ * - La fila «Voz» dice lo que de verdad va a sonar: el nombre del hábito si tiene voz propia, o la frase general
+ *   («Tu hábito está por empezar») si es propio, renombrado o nuevo y aún no tiene audio (`filasDeComoSuena`).
  */
 
 export function SeccionComoSuena({
   titulo,
+  habito,
   mostrados,
   mensajes,
   vozPorElTono = false,
@@ -39,6 +43,8 @@ export function SeccionComoSuena({
 }: {
   /** El rótulo del bloque: «Cómo suena», o «Cómo suena de sáb, dom» con días marcados. */
   titulo: string;
+  /** El hábito que se edita (id y nombre que ve la persona): de él depende si la voz dice su nombre o la frase general. */
+  habito?: HabitoConVoz;
   mostrados: EstadosDeLaSeccion;
   mensajes: MensajesEnLinea;
   /** El tono de Yo → Alarmas ya es «Voz»: la voz está encendida por él y no se cambia desde acá. */
@@ -70,7 +76,7 @@ export function SeccionComoSuena({
         </View>
       )}
 
-      {FILAS_DE_COMO_SUENA.map(({ clave, etiqueta, descripcion }, i) => {
+      {filasDeComoSuena(habito).map(({ clave, etiqueta, descripcion }, i) => {
         const esVoz = clave === 'voz';
         const valor: ValorDelInterruptorGrande = esVoz && vozPorElTono && mostrados.sonido === true ? true : mostrados[clave];
         const sinTocar = atenuada !== null || (esVoz && (vozDeshabilitada(mostrados) || vozPorElTono));

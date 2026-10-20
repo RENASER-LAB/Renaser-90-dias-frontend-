@@ -1745,6 +1745,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
                 {hayComoSuena ? (
                   <SeccionComoSuena
                     titulo={enModoDias ? `Cómo suena de ${diasEnFrase(diasEnEdicion)}` : 'Cómo suena'}
+                    habito={habitoEnEdicion ? { id: habitoEnEdicion.habitoId, titulo: habitoEnEdicion.title } : undefined}
                     mostrados={mostradosDeComoSuena}
                     mensajes={mensajesEnLinea({ mostrados: mostradosDeComoSuena, regla: reglaDeComoSuena, tonoDeYo })}
                     vozPorElTono={tonoDeYo === 'voz'}

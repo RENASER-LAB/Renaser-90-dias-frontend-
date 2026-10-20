@@ -2111,7 +2111,10 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       «Quimnasio»), en `vocesDeLasAlarmas.json`, con `voz_habito_kilometros_diarios.mp3` (17 KB) y
       `voz_habito_gimnasio.mp3` (15 KB) en `assets/sonidos/` y en `sounds` de `app.json`. Los siete de `V9` que siguen
       apagados no tienen voz: si se activan desde «Hábitos del programa», dicen la frase general hasta que se les grabe.
-      **Los audios van dentro del APK: hace falta un APK nuevo** para oírlos.
+      **Los audios van dentro del APK: hace falta un APK nuevo** para oírlos. En «Cómo suena», la fila **Voz** de un
+      hábito sin voz propia (propio, renombrado o nuevo) dice «Este hábito dice la frase general: «Tu hábito está por
+      empezar»» en vez de «Una voz dice el nombre del hábito» (`filasDeComoSuena`, con `vozDelHabito`, la misma función
+      que elige el canal de la alarma).
     * **No hace falta APK nuevo** (solo JavaScript; ni `package.json`, ni `app.json`, ni código nativo): hace falta el
       backend con **V112** antes. No cambian `Interruptor`, Yo → Alarmas, Plan, Hoy ni los otros tabs.
       > **Corregido 2026-10-20.** Con las voces nuevas de arriba (`app.json` y dos MP3) **sí hace falta un APK nuevo**.
