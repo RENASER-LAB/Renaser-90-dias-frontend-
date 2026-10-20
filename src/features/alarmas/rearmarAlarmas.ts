@@ -7,6 +7,7 @@ import {
   HAY_RECORDATORIOS_LOCALES,
   rutaDelAvisoDeHabito,
 } from '../habits/notificaciones/recordatoriosDeHabito';
+import { estadoDeAlarmaExacta, type EstadoDeAlarmaExacta } from './alarmaExactaNativa';
 import { ARCHIVO_CAMPANA, archivoDelCanal } from './sonidoDeAlarma';
 
 /**
@@ -57,12 +58,27 @@ import { ARCHIVO_CAMPANA, archivoDelCanal } from './sonidoDeAlarma';
  * - Una diaria o semanal cuya hora nominal fue hace menos de `MARGEN_RECIEN_VENCIDA_MS`: con la alarma
  *   inexacta puede estar todavía por sonar (hasta una hora tarde), y re-programarla la movería al día
  *   (o a la semana) siguiente — se perdería la de hoy. Al sonar, la librería la re-arma sola, ya exacta.
+ *   **Con alarmas exactas el margen es de `MARGEN_CON_ALARMA_EXACTA_MS`** (spec 007, E-639): la de tipo
+ *   despertador suena a su hora, así que pasada la hora ya sonó o el teléfono la borró. Con 2 h, si el
+ *   teléfono detenía Renaser (Honor) poco después de una alarma, al abrir la app no se volvía a poner la de
+ *   mañana: el sistema ya no la tenía y el rearmado la salteaba.
  * - Una que se canceló mientras esto corría: antes de re-programar cada una se relee la lista. Si no,
  *   re-crear un id que Plan o «No voy» acababan de cancelar dejaría una alarma huérfana sonando.
  */
 
 export const INTERVALO_MINIMO_MS = 10 * 60 * 1000;
 export const MARGEN_RECIEN_VENCIDA_MS = 2 * 60 * 60 * 1000;
+/**
+ * Con permiso de alarmas exactas (o un Android que no lo pide): solo lo que puede estar entregándose en este
+ * momento. Pasados 30 s, la de tipo despertador ya sonó o el teléfono la borró. Lo que queda: si el teléfono
+ * detiene Renaser dentro de esos 30 s, la de mañana vuelve en la próxima puesta al día (≥ 10 min).
+ */
+export const MARGEN_CON_ALARMA_EXACTA_MS = 30 * 1000;
+
+/** Cuánto respetar una diaria o semanal recién vencida, según si las alarmas salen exactas. Pura. */
+export function margenDeRecienVencida(estado: EstadoDeAlarmaExacta): number {
+  return estado === 'concedido' || estado === 'no_hace_falta' ? MARGEN_CON_ALARMA_EXACTA_MS : MARGEN_RECIEN_VENCIDA_MS;
+}
 
 /** Lo que devuelve `getAllScheduledNotificationsAsync` en Android (lo que usa esto). */
 export interface AlarmaProgramada {
@@ -211,6 +227,7 @@ export function olvidarUltimaCorrida(): void {
 export async function rearmarAlarmasProgramadas(
   ahoraMs: number = Date.now(),
   plataforma: string = Platform.OS,
+  margenMs: number = margenDeRecienVencida(estadoDeAlarmaExacta(plataforma)),
 ): Promise<number | null> {
   if (!HAY_RECORDATORIOS_LOCALES || plataforma !== 'android') return null;
   if (corriendo || !tocaRearmar(ultimaCorrida, ahoraMs)) return null;
@@ -219,7 +236,7 @@ export async function rearmarAlarmasProgramadas(
   corriendo = true;
   ultimaCorrida = ahoraMs;
   try {
-    const plan = planDeRearmado((await N.getAllScheduledNotificationsAsync()) as AlarmaProgramada[], ahoraMs);
+    const plan = planDeRearmado((await N.getAllScheduledNotificationsAsync()) as AlarmaProgramada[], ahoraMs, margenMs);
     let rearmadas = 0;
     for (const pedido of plan) {
       try {
