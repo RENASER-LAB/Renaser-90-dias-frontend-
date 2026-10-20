@@ -10,6 +10,7 @@ import {
   filasDeComoSuena,
   vozDeshabilitada,
   type EstadosDeLaSeccion,
+  type FilaDeComoSuena,
   type MensajesEnLinea,
   type MotivoDeAtenuacion,
 } from '../utils/comoSuena';
@@ -35,6 +36,7 @@ import {
 export function SeccionComoSuena({
   titulo,
   habito,
+  filas,
   mostrados,
   mensajes,
   vozPorElTono = false,
@@ -45,6 +47,11 @@ export function SeccionComoSuena({
   titulo: string;
   /** El hábito que se edita (id y nombre que ve la persona): de él depende si la voz dice su nombre o la frase general. */
   habito?: HabitoConVoz;
+  /**
+   * Spec 010: las cuatro filas, si no son las de un hábito. Las acciones de los objetivos no tienen voz propia: su fila
+   * «Voz» dice la frase de objetivos. Sin esto, las de `filasDeComoSuena(habito)`, como siempre.
+   */
+  filas?: ReadonlyArray<FilaDeComoSuena>;
   mostrados: EstadosDeLaSeccion;
   mensajes: MensajesEnLinea;
   /** El tono de Yo → Alarmas ya es «Voz»: la voz está encendida por él y no se cambia desde acá. */
@@ -76,7 +83,7 @@ export function SeccionComoSuena({
         </View>
       )}
 
-      {filasDeComoSuena(habito).map(({ clave, etiqueta, descripcion }, i) => {
+      {(filas ?? filasDeComoSuena(habito)).map(({ clave, etiqueta, descripcion }, i) => {
         const esVoz = clave === 'voz';
         const valor: ValorDelInterruptorGrande = esVoz && vozPorElTono && mostrados.sonido === true ? true : mostrados[clave];
         const sinTocar = atenuada !== null || (esVoz && (vozDeshabilitada(mostrados) || vozPorElTono));

@@ -71,6 +71,9 @@ export const ARCHIVO_VOZ_GENERICA = {
 /** Lo que dice la frase general de los hábitos, sin el punto final: «Tu hábito está por empezar». */
 export const FRASE_GENERICA_DE_HABITOS = tabla.genericas.habitos.dice.replace(/\.$/, '');
 
+/** Lo que dice la frase general de las acciones de los objetivos, sin el punto final: «Tienes acciones de tus objetivos por hacer». */
+export const FRASE_GENERICA_DE_OBJETIVOS = tabla.genericas.objetivos.dice.replace(/\.$/, '');
+
 /** Mayúsculas, tildes y espacios de más no cuentan: `DÍA SIN CELULAR` es `Día sin celular`. */
 export function mismoTitulo(a: string, b: string): boolean {
   const normal = (s: string) =>

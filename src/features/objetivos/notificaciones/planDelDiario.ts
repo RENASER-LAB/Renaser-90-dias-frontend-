@@ -23,6 +23,9 @@ import {
  * `weekdayDeExpo` hace la traducción en un solo lugar.
  */
 
+/** El texto de siempre del recordatorio diario: fijo, porque una alarma que suena sola no puede contar las que quedan. */
+export const TEXTO_DIARIO = { titulo: 'Tus acciones del día', cuerpo: 'Revisa las acciones de tus objetivos de hoy.' };
+
 export interface PedidoDelDiario {
   identificador: string;
   /** El día de la semana, ISO. */

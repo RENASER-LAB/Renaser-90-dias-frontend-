@@ -2137,7 +2137,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       texto); lo mismo con los recordatorios y las horas distintas. «Dejar sáb como los demás días» devuelve esos días a la
       general. Tipo oración, tuteo, 16–17 px, opciones de 48.
     * **Qué se puede elegir por día**: encender o apagar «Recordarme mis acciones del día» (`Interruptor`, el de siempre),
-      su hora y el aviso antes de cada acción con hora (sin aviso, 30 min, 10 min, a la hora; se pueden varias). Lo que un
+      su hora, el aviso antes de cada acción con hora (sin aviso, 30 min, 10 min, a la hora; se pueden varias, como
+      siempre: para pasar de «10 min» a «30 min» se apaga una y se enciende la otra) y **cómo suena** (más abajo). Lo que un
       día no dice lo hereda de la general, campo por campo; lo que queda igual a la general vuelve a seguirla.
     * **Todo en el teléfono, por cuenta, como hoy** (FR-007): sin servidor y sin endpoints nuevos. Las preferencias son
       las de siempre (`diarioActivo`, `horaDiaria`, `antelaciones`), que **pasan a ser la configuración general sin
@@ -2151,8 +2152,49 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       Objetivos, el agrupado de avisos a la misma hora (E-410), el rearmado de la spec 007 y la puesta al día al abrir la
       app (`SincronizadorDeAcciones`, que ahora mira si algún día pide aviso). Cerrar sesión borra todo, también las
       semanales; al volver, el recordatorio por día se arma como estaba.
-    * **No hace falta APK nuevo** (solo JavaScript; ni `package.json`, ni `app.json`, ni código nativo) ni backend. No
-      cambian los otros tabs, ni Plan o Yo en nada más.
+    * **«Cómo suena»** (`training/components/SeccionComoSuena` con una prop nueva y opcional `filas`; los hábitos no la
+      pasan): debajo del aviso, las **mismas cuatro filas, reglas y medidas que en los hábitos (009)** con el
+      `InterruptorGrande` (filas de 56, 17 / 15 px): **Sonido**, **Vibración**, **Voz** («Una voz dice: «Tienes acciones de
+      tus objetivos por hacer»», la voz de objetivos que ya existe; no se graba nada) y **Repetir si no la atiendo**. Mismas
+      reglas, dichas en línea: sonido y vibración no pueden quedar los dos apagados; la voz necesita el sonido; con el tono
+      «Voz» de Yo → Alarmas la voz ya habla; con «Solo vibrar» el sonido avisa que no suena. Con días que no coinciden el
+      interruptor dice **«Varía»**; tocarlo lo enciende para todos. Sin recordatorio diario ni aviso no hay alarma que
+      decidir: la sección se atenúa y lo dice («Enciende el recordatorio o elige un aviso para elegir cómo suena»). Sin días
+      marcados se guarda en el acto (salvo que deje sonido y vibración apagados: espera, con su aviso, a que se encienda
+      uno); con días marcados, con «Guardar cambios · sáb» y solo lo tocado (`training/utils/comoSuena` es el de los
+      hábitos, sin duplicar). El chip del día con combinación propia lleva el reloj de alarma de 16 y el lector de pantalla
+      dice «alarma propia: sin sonido, vibra». Yo → Alarmas le pasa al control su tono (`tonoDeYo`) porque lo cambia en la
+      misma pantalla.
+    * **La alarma suena como dice el día** (`objetivos/notificaciones/canalDeObjetivos`, que usa `canalDeLaCombinacion` de
+      los hábitos con el tipo `objetivos`): `recordatorios-objetivos-vib`, `…-sinvib`, `…-vibrar-vib` (solo vibrar) y
+      `…-voz-vib`, con el tono de Yo → Alarmas (`…-campana-vib`, etc.). **E-641 (vibrar por defecto) también vale para
+      objetivos**: el canal base `recordatorios-objetivos` no vibra, así que toda alarma de las acciones sale ahora por un
+      canal que dice si vibra. Los canales de hábitos y de eventos no cambian. La combinación viaja en `data.alarma` del
+      aviso solo si no es la de siempre (el contenido de siempre queda idéntico), y forma parte de la clave de la alarma de
+      fecha: cambiar cómo suena un día rehace solo las alarmas de ese día. El cambio de tono de Yo → Alarmas y el aviso
+      agrupado (E-410) conservan la combinación de cada una; un grupo de acciones suena y vibra si alguna lo pide.
+    * **Al actualizar sin tocar nada** (SC-003): la puesta al día pasa las alarmas de las acciones ya programadas —el
+      recordatorio diario y el aviso de cada acción— al canal que vibra sin cambiar su hora, su identificador ni su texto
+      (`ponerLasAlarmasDeAccionesEnSuCanal`, como `ponerLasAlarmasDeHabitosEnSuCanal`): suenan a la misma hora de siempre y
+      ahora vibran. Un teléfono que borró las alarmas (spec 007) las recupera con el rearmado, que conserva el canal y los
+      datos de cada una.
+    * **Repetir si no la atiendo** (`objetivos/notificaciones/repeticionesDeAcciones`, puro en `planDeRepeticionesDeAcciones`):
+      alarmas de **fecha** a +5 y +10 min de la **hora de la acción** (solo esa: el aviso 30 min antes no se repite; solo
+      acciones con hora, sin cumplir y de un día con aviso) con el identificador `accion-{rocaId}-rep-{AAAAMMDD}-{5|10}`, y
+      a +5 y +10 min de la hora del **recordatorio diario** en una ventana de 7 días (`acciones-diario-rep-{AAAAMMDD}-{5|10}`),
+      que renueva `SincronizadorDeAcciones` al abrir la app. Las de las acciones se arman con la lista que se acaba de leer:
+      una acción cumplida, movida o borrada deja de repetir en esa lectura. **Tocar la alarma de la acción** (lleva su
+      `rocaId` en los datos solo cuando repite) **o el recordatorio** (`diario`), o **sellar la acción** (`sellarRocaDiaria`),
+      cancela las de HOY y se anota que ya se atendió (`renaser.objetivos.recordatorios.atendidas`, unos días) para que la
+      puesta al día no las resucite; un toque viejo no cuenta. Como las de los hábitos, no se agrupan. Cerrar sesión las
+      borra con sus notas. **Límites aceptados:** cumplir la acción desde otro teléfono o la web no cancela las de este
+      hasta que la app lea la lista; un aviso agrupado atiende solo a la acción del primero del grupo; las alarmas de
+      acciones que ya estaban puestas antes de esta versión no llevan la acción en sus datos, así que tocarlas no cancela
+      repeticiones hasta que se guarde cualquier cambio en el control (que las rehace).
+    * **Compatibilidad**: todo campo nuevo es opcional; una combinación guardada que dejaría la alarma muda se descarta sola.
+    * **No hace falta APK nuevo** (solo JavaScript; ni `package.json`, ni `app.json`, ni código nativo: la voz de objetivos
+      y los sonidos ya van dentro del APK, y los canales `-vib` / `-sinvib` se crean desde JavaScript al programar) ni
+      backend. No cambian los otros tabs, ni Plan o Yo en nada más.
 
 ## 2. 📱 RESPONSIVIDAD UNIVERSAL (XIAOMI, ANDROID, IOS Y TABLETS)
 * **Cero Doble Scroll**: NUNCA coloques un contenedor con `maxHeight` fijo o scroll interno dentro de otro `ScrollView`. Toda pantalla debe tener UN ÚNICO contenedor de scroll fluido con `contentContainerStyle={{ flexGrow: 1, paddingBottom: 36 }}`.

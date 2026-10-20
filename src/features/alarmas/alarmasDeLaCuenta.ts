@@ -51,6 +51,8 @@ const PREFIJOS_DE_ALARMAS = [
   'renaser.eventos.alarmas.',
   'renaser.objetivos.recordatorios.acciones.',
   'renaser.objetivos.recordatorios.diario.',
+  // Spec 010: qué repeticiones de las acciones y del recordatorio diario ya se atendieron. Sin sus alarmas no sirven.
+  'renaser.objetivos.recordatorios.atendidas',
   // Spec 007: lo que el teléfono anota de la detención forzada. Es de la cuenta y de su día: no pasa a la siguiente.
   'renaser.alarmas.detencionRevisada.',
   'renaser.alarmas.avisoDetencion.',

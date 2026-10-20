@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Alert } from '../../../components/Alerta';
@@ -10,14 +10,29 @@ import { Presionable } from '../../../components/Presionable';
 import { MicroLabel } from '../../../components/ui';
 import { useTheme } from '../../../theme/ThemeContext';
 import { tacto } from '../../../utils/tacto';
+import { preferenciasDeAlarmas } from '../../alarmas/preferenciasDeAlarmas';
+import type { SonidoDeAlarma } from '../../alarmas/sonidoDeAlarma';
 import { FilaDeDiasDelPlan } from '../../habits/components/FilaDeDiasDelPlan';
 import { HoraPickerModal } from '../../habits/components/HoraPickerModal';
 import { HAY_RECORDATORIOS_LOCALES } from '../../habits/notificaciones/recordatoriosDeHabito';
 import { etiquetaDeAntelacion } from '../../habits/utils/etiquetaDeAntelacion';
+import type { ClaveDeLaCombinacion } from '../../habits/notificaciones/utils/combinacionDeAlarma';
 import { DIAS_DEL_PLAN, type DiaDelPlan } from '../../habits/utils/semanaDelPlan';
+import { SeccionComoSuena } from '../../training/components/SeccionComoSuena';
 import { diasEnFrase, resumenDelAvisoDelDia } from '../../training/utils/avisoDeLosDias';
+import {
+  alTocarUnaFila,
+  hayCambios as hayCambiosEnComoSuena,
+  mensajesEnLinea,
+  reglaIncumplidaDeLaSeleccion,
+  resumenDeLaCombinacion,
+} from '../../training/utils/comoSuena';
 import * as objetivosApi from '../api/objetivosApi';
 import { huellaDelDiario, planDelRecordatorioDiario } from '../notificaciones/planDelDiario';
+import {
+  FILAS_DE_COMO_SUENA_DE_LAS_ACCIONES,
+  motivoDeAtenuacionDeLasAcciones,
+} from '../notificaciones/comoSuenaDeLasAcciones';
 import {
   conCambios,
   dejarComoLosDemas,
@@ -39,6 +54,7 @@ import {
   sincronizarAlarmasDeAcciones,
 } from '../notificaciones/recordatoriosDeAcciones';
 import {
+  ajustesEnEdicion,
   cambioDelBorrador,
   hayCambiosPorGuardar,
   vistaDelRecordatorio,
@@ -82,17 +98,37 @@ const conMayuscula = (texto: string) => texto.charAt(0).toUpperCase() + texto.sl
  *
  * En web y en Expo Go no hay alarmas locales: no pinta nada.
  */
-export function RecordatorioDeAcciones({ userId, rocas }: { userId: string; rocas?: RocaDiariaApi[] }) {
+export function RecordatorioDeAcciones({
+  userId,
+  rocas,
+  tonoDeYo: tonoQueLlega,
+}: {
+  userId: string;
+  rocas?: RocaDiariaApi[];
+  /**
+   * El tono de Yo → Alarmas, si la pantalla ya lo tiene (Yo lo tiene y lo cambia en la misma pantalla). Sin él, se lee al
+   * abrir. Decide qué avisa «Cómo suena»: con el tono «Voz» la voz ya habla; con «Solo vibrar» el sonido no suena.
+   */
+  tonoDeYo?: SonidoDeAlarma;
+}) {
   const { c } = useTheme();
   const [prefs, setPrefs] = useState<PreferenciasDeAcciones>(PREFERENCIAS_DE_ACCIONES_POR_DEFECTO);
+  // Lo último que se guardó, al instante (no espera al próximo dibujo): quien toca dos veces seguidas parte de lo último.
+  const prefsRef = useRef(prefs);
+  prefsRef.current = prefs;
+  const cola = useRef<Promise<unknown>>(Promise.resolve());
   const [diasEnEdicion, setDiasEnEdicion] = useState<DiaDelPlan[]>([]);
   const [borrador, setBorrador] = useState<Borrador>({});
   const [eligiendoHora, setEligiendoHora] = useState(false);
   const [ocupado, setOcupado] = useState(false);
   const [confirmacion, setConfirmacion] = useState<{ clave: number; texto: string } | null>(null);
+  const [tonoLeido, setTonoLeido] = useState<SonidoDeAlarma>('sistema');
+  const tonoDeYo = tonoQueLlega ?? tonoLeido;
 
   useEffect(() => {
-    if (HAY_RECORDATORIOS_LOCALES) void preferenciasDeAcciones(userId).then(setPrefs);
+    if (!HAY_RECORDATORIOS_LOCALES) return;
+    void preferenciasDeAcciones(userId).then(setPrefs);
+    void preferenciasDeAlarmas(userId).then(p => setTonoLeido(p.sonido)).catch(() => undefined);
   }, [userId]);
 
   // Qué de la lista le importa a las alarmas: si esto no cambia, no se toca nada.
@@ -117,6 +153,10 @@ export function RecordatorioDeAcciones({ userId, rocas }: { userId: string; roca
   const vista = useMemo(() => vistaDelRecordatorio(prefs, marcados, borrador), [prefs, marcados, borrador]);
   const hayCambios = enModoDias && hayCambiosPorGuardar(prefs, marcados, borrador);
   const frase = diasEnFrase(diasEnEdicion);
+
+  // «Cómo suena» (spec 010): las combinaciones de lo que se está editando y las reglas sobre lo tocado.
+  const combinaciones = useMemo(() => ajustesEnEdicion(prefs, marcados).map(d => d.alarma), [prefs, marcados]);
+  const reglaDeComoSuena = reglaIncumplidaDeLaSeleccion(combinaciones, borrador.alarma ?? {});
 
   const anunciar = (texto: string) => setConfirmacion({ clave: Date.now(), texto });
 
@@ -144,30 +184,44 @@ export function RecordatorioDeAcciones({ userId, rocas }: { userId: string; roca
    * Guarda las preferencias nuevas y deja las alarmas como dicen. Solo toca lo que cambió: el recordatorio diario si
    * cambió algo suyo y los avisos de las acciones si cambió algún aviso. Si hace falta alarmas y el teléfono no da
    * permiso, no cambia nada y lo dice. Devuelve `true` si quedó guardado.
+   *
+   * Recibe CÓMO construir las preferencias nuevas a partir de las últimas guardadas, y las aplicaciones van una detrás de
+   * otra: dos toques seguidos en «Cómo suena» (que no se apagan mientras se guarda) no se pisan ni dejan dos alarmas
+   * diarias, y el segundo parte de lo que dejó el primero.
    */
   const aplicar = useCallback(
-    async (nuevas: PreferenciasDeAcciones): Promise<boolean> => {
-      setOcupado(true);
-      try {
-        const cambioElDiario = huellaDelDiario(nuevas) !== huellaDelDiario(prefs);
-        const cambioLosAvisos = huellaDeLosAvisos(nuevas) !== huellaDeLosAvisos(prefs);
-        const pideAlarmas = (cambioElDiario && hayDiarioEnAlgunDia(nuevas)) || (cambioLosAvisos && hayAvisoEnAlgunDia(nuevas));
-        if (pideAlarmas && !(await pedirPermisoDeAvisos())) {
-          Alert.alert('Falta el permiso', SIN_PERMISO);
+    (construir: (previas: PreferenciasDeAcciones) => PreferenciasDeAcciones): Promise<boolean> => {
+      const ahora = async (): Promise<boolean> => {
+        setOcupado(true);
+        try {
+          const previas = prefsRef.current;
+          const nuevas = construir(previas);
+          const cambioElDiario = huellaDelDiario(nuevas) !== huellaDelDiario(previas);
+          const cambioLosAvisos = huellaDeLosAvisos(nuevas) !== huellaDeLosAvisos(previas);
+          const pideAlarmas = (cambioElDiario && hayDiarioEnAlgunDia(nuevas)) || (cambioLosAvisos && hayAvisoEnAlgunDia(nuevas));
+          if (pideAlarmas && !(await pedirPermisoDeAvisos())) {
+            Alert.alert('Falta el permiso', SIN_PERMISO);
+            return false;
+          }
+          prefsRef.current = nuevas;
+          setPrefs(nuevas);
+          await guardarPreferenciasDeAcciones(userId, nuevas);
+          if (cambioElDiario && !(await ponerElRecordatorioDiario(userId, nuevas)) && hayDiarioEnAlgunDia(nuevas)) {
+            Alert.alert('Falta el permiso', SIN_PERMISO);
+          }
+          if (cambioLosAvisos) await rehacerLosAvisos(nuevas);
+          return true;
+        } catch {
           return false;
+        } finally {
+          setOcupado(false);
         }
-        setPrefs(nuevas);
-        await guardarPreferenciasDeAcciones(userId, nuevas);
-        if (cambioElDiario && !(await ponerElRecordatorioDiario(userId, nuevas)) && hayDiarioEnAlgunDia(nuevas)) {
-          Alert.alert('Falta el permiso', SIN_PERMISO);
-        }
-        if (cambioLosAvisos) await rehacerLosAvisos(nuevas);
-        return true;
-      } finally {
-        setOcupado(false);
-      }
+      };
+      const turno = cola.current.then(ahora, ahora);
+      cola.current = turno.catch(() => undefined);
+      return turno;
     },
-    [prefs, userId, rehacerLosAvisos],
+    [userId, rehacerLosAvisos],
   );
 
   if (!HAY_RECORDATORIOS_LOCALES) return null;
@@ -187,7 +241,7 @@ export function RecordatorioDeAcciones({ userId, rocas }: { userId: string; roca
       setBorrador(previo => ({ ...previo, ...cambio }));
       return;
     }
-    void aplicar(conCambios(prefs, [], cambioDelBorrador(cambio)));
+    void aplicar(previas => conCambios(previas, [], cambioDelBorrador(cambio)));
   };
 
   const tocarElDiario = (encender: boolean) => cambiar({ diarioActivo: encender });
@@ -206,9 +260,28 @@ export function RecordatorioDeAcciones({ userId, rocas }: { userId: string; roca
     cambiar({ antelaciones: nuevas });
   };
 
+  /**
+   * Un toque en un interruptor de «Cómo suena». Con días marcados queda en el borrador. Sin días marcados se guarda en el
+   * acto, salvo que deje el sonido y la vibración apagados: eso no se puede guardar, y la selección espera, con su aviso en
+   * línea, a que se encienda uno.
+   */
+  const tocarComoSuena = (clave: ClaveDeLaCombinacion) => {
+    const tocados = alTocarUnaFila(vista.comoSuena.iniciales, borrador.alarma ?? {}, clave);
+    if (enModoDias || reglaIncumplidaDeLaSeleccion(combinaciones, tocados)) {
+      setBorrador(previo => ({ ...previo, alarma: tocados }));
+      return;
+    }
+    setBorrador(previo => ({ ...previo, alarma: undefined }));
+    if (hayCambiosEnComoSuena(combinaciones, tocados)) void aplicar(previas => conCambios(previas, [], { alarma: tocados }));
+  };
+
   const guardarLosDias = async () => {
-    const nuevas = conCambios(prefs, marcados, cambioDelBorrador(borrador));
-    if (!(await aplicar(nuevas))) return;
+    if (reglaDeComoSuena) {
+      // La regla ya está dicha en línea; acá solo se avisa al tacto que así no se guarda.
+      tacto.error();
+      return;
+    }
+    if (!(await aplicar(previas => conCambios(previas, marcados, cambioDelBorrador(borrador))))) return;
     tacto.logro();
     anunciar(`Guardado para ${frase}.`);
     setBorrador({});
@@ -216,7 +289,7 @@ export function RecordatorioDeAcciones({ userId, rocas }: { userId: string; roca
   };
 
   const dejarComoLosDemasDias = async () => {
-    if (!(await aplicar(dejarComoLosDemas(prefs, marcados)))) return;
+    if (!(await aplicar(previas => dejarComoLosDemas(previas, marcados)))) return;
     tacto.logro();
     anunciar(`Quedó igual que los demás días: ${frase}.`);
     setBorrador({});
@@ -251,6 +324,12 @@ export function RecordatorioDeAcciones({ userId, rocas }: { userId: string; roca
     ...ANTELACIONES_DE_ACCIONES.map(m => ({ minutos: m, etiqueta: etiquetaDeAntelacion(m) })),
   ];
   const sinAviso = vista.aviso.mostrado.length === 0 && !vista.aviso.distintos;
+  // Ni recordatorio diario ni aviso en lo que se edita: «Cómo suena» no tiene qué decidir.
+  const motivoDeAtenuar = motivoDeAtenuacionDeLasAcciones({
+    sinAlarmas: !vista.diario.valor && !vista.diario.distintos && sinAviso,
+    conDias: enModoDias,
+    cuantosDias: marcados.length,
+  });
 
   return (
     <View style={{ gap: 12 }}>
@@ -287,11 +366,15 @@ export function RecordatorioDeAcciones({ userId, rocas }: { userId: string; roca
             const d = semana[isoDelDia(dia) - 1];
             return d.propio.antelaciones ? resumenDelAvisoDelDia(d.antelaciones, prefs.antelaciones) : null;
           }}
+          alarmaDelDia={dia => {
+            const d = semana[isoDelDia(dia) - 1];
+            return d.propio.alarma ? { largo: `Alarma propia: ${resumenDeLaCombinacion(d.alarma)}` } : null;
+          }}
         />
         <Text style={[estilos.ayuda, { color: c.textSoft }]}>
           {enModoDias
             ? `Solo ${frase}, todas las semanas. Hoy no cambia.`
-            : 'Toca un día para darle su propio recordatorio y aviso. Hoy y lo pasado van con candado.'}
+            : 'Toca un día para darle su propio recordatorio, aviso y alarma. Hoy y lo pasado van con candado.'}
         </Text>
         {enModoDias && algunMarcadoTienePropio && (
           <Presionable
@@ -362,6 +445,18 @@ export function RecordatorioDeAcciones({ userId, rocas }: { userId: string; roca
           })}
         </View>
       </View>
+
+      {/* Cómo suena (spec 010): las mismas cuatro filas, reglas y medidas que en los hábitos. Es el último bloque, antes de
+          guardar: días → recordatorio → aviso → cómo suena → guardar. */}
+      <SeccionComoSuena
+        titulo={enModoDias ? `Cómo suena de ${frase}` : 'Cómo suena'}
+        filas={FILAS_DE_COMO_SUENA_DE_LAS_ACCIONES}
+        mostrados={vista.comoSuena.mostrados}
+        mensajes={mensajesEnLinea({ mostrados: vista.comoSuena.mostrados, regla: reglaDeComoSuena, tonoDeYo })}
+        vozPorElTono={tonoDeYo === 'voz'}
+        atenuada={motivoDeAtenuar}
+        alTocar={tocarComoSuena}
+      />
 
       {hayCambios && (
         <BotonPrincipal

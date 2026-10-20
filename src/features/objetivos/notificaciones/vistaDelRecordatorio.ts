@@ -96,7 +96,9 @@ export function vistaDelRecordatorio(
   const iniciales = estadosIniciales(dias.map(d => d.alarma));
   const comoSuena = {
     iniciales,
-    mostrados: estadosMostrados(iniciales, enModoDias ? (borrador.alarma ?? {}) : {}),
+    // Lo tocado va encima también sin días marcados: ahí solo queda una selección que todavía no se puede guardar
+    // (sonido y vibración apagados), que la pantalla muestra con su aviso en línea.
+    mostrados: estadosMostrados(iniciales, borrador.alarma ?? {}),
   };
 
   return { diario, hora, aviso, comoSuena };

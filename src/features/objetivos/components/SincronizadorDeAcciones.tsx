@@ -5,7 +5,8 @@ import { useAuth } from '../../../context/AuthContext';
 import { HAY_RECORDATORIOS_LOCALES } from '../../habits/notificaciones/recordatoriosDeHabito';
 import { tocaRearmar } from '../../alarmas/rearmarAlarmas';
 import * as objetivosApi from '../api/objetivosApi';
-import { hayAvisoEnAlgunDia } from '../notificaciones/preferenciasPorDia';
+import { hayAvisoEnAlgunDia, hayDiarioEnAlgunDia } from '../notificaciones/preferenciasPorDia';
+import { sincronizarRepeticionesDelDiario } from '../notificaciones/repeticionesDeAcciones';
 import {
   leerAccionesAgendadas,
   preferenciasDeAcciones,
@@ -43,7 +44,11 @@ export function SincronizadorDeAcciones(): null {
       if (userId === ultimoUsuario && !tocaRearmar(ultima, ahora)) return;
       ultima = ahora;
       ultimoUsuario = userId;
-      if (!hayAvisoEnAlgunDia(await preferenciasDeAcciones(userId))) return;
+      const prefs = await preferenciasDeAcciones(userId);
+      // La ventana de 7 días de las repeticiones del recordatorio diario se renueva aunque no haya avisos por acción (no
+      // depende de la lista de acciones). Quien no usa el recordatorio diario no paga ni esta lectura.
+      if (hayDiarioEnAlgunDia(prefs)) await sincronizarRepeticionesDelDiario(userId, { prefs });
+      if (!hayAvisoEnAlgunDia(prefs)) return;
       const leidas = await leerAccionesAgendadas({
         agendadas: objetivosApi.obtenerRocasAgendadas,
         hoy: objetivosApi.obtenerRocasDeHoy,

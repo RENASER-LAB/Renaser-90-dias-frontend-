@@ -2,7 +2,7 @@
 import type * as TipoNotificaciones from 'expo-notifications';
 
 import { planDeRearmado, type AlarmaProgramada, type PedidoDeRearmado } from './rearmarAlarmas';
-import { canalDeAlarma, type CanalDeAlarma, type SonidoDeAlarma, type TipoDeAlarma } from './sonidoDeAlarma';
+import type { CanalDeAlarma, SonidoDeAlarma, TipoDeAlarma } from './sonidoDeAlarma';
 import {
   canalDeLaCombinacion,
   combinacionGuardada,
@@ -112,9 +112,9 @@ export function canalDelGrupo(
   combinaciones: ReadonlyArray<CombinacionDeAlarma | undefined> = [],
 ): CanalDeAlarma {
   const tipo = tipos.every(t => t === 'objetivos') ? 'objetivos' : 'habitos';
-  if (tipo === 'objetivos') return canalDeAlarma(tipo, sonido);
   // E-641: un grupo con hábitos sale por un canal `-vib` o `-sinvib` (el base de hábitos no vibra), aunque ningún
-  // miembro tenga «cómo suena» propio: ahí es la combinación de siempre.
+  // miembro tenga «cómo suena» propio: ahí es la combinación de siempre. Spec 010: lo mismo para un grupo de acciones de
+  // los objetivos (su canal base tampoco vibra).
   const todas = (combinaciones.length > 0 ? combinaciones : [undefined]).map(c => c ?? COMBINACION_POR_DEFECTO);
   return canalDeLaCombinacion(tipo, sonido, {
     sonido: todas.some(c => c.sonido),
@@ -245,7 +245,16 @@ async function agruparAhora(userId: string, ahoraMs: number): Promise<number> {
       }
     }
     for (const id of await acciones.idsDeRecordatoriosDeAcciones(userId)) {
-      if (porId.has(id)) miembros.set(id, { tipo: 'objetivos', canalNormal: canalDeAlarma('objetivos', sonido) });
+      const alarma = porId.get(id);
+      if (!alarma) continue;
+      // Spec 010: cómo suena esta alarma de las acciones, si no es lo de siempre; sin eso, la de siempre, que sale por el
+      // canal `-vib` (el base de objetivos no vibra, E-641).
+      const combinacion = combinacionGuardada((alarma.content?.data as Datos | undefined)?.alarma) ?? undefined;
+      miembros.set(id, {
+        tipo: 'objetivos',
+        canalNormal: canalDeLaCombinacion('objetivos', sonido, combinacion ?? COMBINACION_POR_DEFECTO),
+        combinacion,
+      });
     }
     const { pedidos, canales } = planDeAvisosJuntos(programadas, miembros, sonido, ahoraMs);
     if (pedidos.length === 0) return 0;

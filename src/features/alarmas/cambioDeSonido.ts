@@ -7,10 +7,11 @@ import {
   sonidoDe,
 } from '../habits/notificaciones/recordatoriosDeHabito';
 import { idsDeRecordatoriosDeAcciones } from '../objetivos/notificaciones/recordatoriosDeAcciones';
+import { idsDeRepeticionesDeAcciones } from '../objetivos/notificaciones/repeticionesDeAcciones';
 import { agruparAvisosQueCoinciden } from './avisosJuntos';
+import { preferenciasDeAlarmas } from './preferenciasDeAlarmas';
 import { planDeRearmado, type AlarmaProgramada, type PedidoDeRearmado } from './rearmarAlarmas';
 import {
-  canalDeAlarma,
   SUFIJO_CON_VIBRACION,
   SUFIJO_SIN_VIBRACION,
   type CanalDeAlarma,
@@ -91,6 +92,31 @@ export function canalDelHabitoProgramado(
     const tono = typeof sonido === 'function' ? sonido(habitoId) : sonido;
     return canalDeLaCombinacion('habitos', tono, combinacion, habito);
   };
+}
+
+/**
+ * Pura: el canal de una alarma de las acciones de los objetivos ya programada (spec 010). Cómo suena (sin vibración, solo
+ * vibrar, voz) viaja en el aviso (`data.alarma`): el tono nuevo de Yo → Alarmas cambia el sonido, no si vibra o habla. Sin
+ * combinación propia es la de siempre (sonido y vibración), que sale por el canal `-vib`: el canal base de objetivos no
+ * vibra (E-641).
+ */
+export function canalDelObjetivoProgramado(sonido: SonidoDeAlarma): (alarma: AlarmaProgramada) => CanalDeAlarma {
+  return alarma => {
+    const datos = alarma.content?.data as Record<string, unknown> | null | undefined;
+    return canalDeLaCombinacion('objetivos', sonido, combinacionGuardada(datos?.alarma) ?? COMBINACION_POR_DEFECTO);
+  };
+}
+
+/**
+ * Los canales base de objetivos —los de antes de la spec 010 (E-641)— no vibran. Toda alarma de las acciones sale ahora por
+ * un canal `-vib` o `-sinvib`; este es el que ya no corresponde. Los de hábitos, eventos y `avisos-juntos-sin-sonido` no
+ * son de acá.
+ */
+export function esCanalAnteriorDeObjetivos(canalId: unknown): boolean {
+  return typeof canalId === 'string'
+    && canalId.startsWith('recordatorios-objetivos')
+    && !canalId.endsWith(SUFIJO_CON_VIBRACION)
+    && !canalId.endsWith(SUFIJO_SIN_VIBRACION);
 }
 
 /**
@@ -183,6 +209,36 @@ export async function ponerLasAlarmasDeHabitosEnSuCanal(userId: string, ahoraMs:
   }
 }
 
+/**
+ * E-641 para las acciones de los objetivos (spec 010, decisión del dueño: vibrar por defecto también en objetivos): pasa al
+ * canal que vibra (`-vib`, o `-sinvib` si su combinación lo pide) las alarmas de las acciones —el recordatorio diario y el
+ * aviso de cada acción— que siguen en un canal base de antes. Cada una conserva su identificador, su hora y su texto: es el
+ * mismo pedido con otro canal, como en los hábitos. Es lo que hace que, al actualizar sin tocar nada, suenen a la misma
+ * hora de siempre y ahora vibren (SC-003).
+ *
+ * Idempotente y barata: con todo ya migrado, es una lectura de lo programado y nada más. Corre en cada puesta al día
+ * (`ponerAlDiaLasAlarmas`). Devuelve cuántas pasó.
+ */
+export async function ponerLasAlarmasDeAccionesEnSuCanal(userId: string, ahoraMs: number = Date.now()): Promise<number> {
+  const N = cargarNotificaciones();
+  if (!N) return 0;
+  try {
+    const programadas = (await N.getAllScheduledNotificationsAsync()) as AlarmaProgramada[];
+    const anteriores = new Set(
+      programadas
+        .filter(p => esCanalAnteriorDeObjetivos((p?.trigger as { channelId?: unknown } | null)?.channelId))
+        .map(p => p.identifier),
+    );
+    if (anteriores.size === 0) return 0;
+    const ids = (await idsDeRecordatoriosDeAcciones(userId)).filter(id => anteriores.has(id));
+    if (ids.length === 0) return 0;
+    const tono = (await preferenciasDeAlarmas(userId)).sonido;
+    return await cambiarSonidoDeLasProgramadas(ids, canalDelObjetivoProgramado(tono), ahoraMs);
+  } catch {
+    return 0;
+  }
+}
+
 /** Los recordatorios de todos los hábitos de la persona: cada uno a su canal del sonido nuevo. */
 export async function cambiarSonidoDeLosHabitos(
   userId: string,
@@ -234,6 +290,12 @@ export async function pasarAlarmasAlSonido(
   // > dejaba en «06:00 todos los días». `cambiarSonidoDeLosHabitos` conserva cada disparador tal cual.
   if (despertar) await fijarSonido(userId, despertar.habitoId, sonido);
   await cambiarSonidoDeLosHabitos(userId, sonido, ahoraMs);
-  await cambiarSonidoDeLasProgramadas(await idsDeRecordatoriosDeAcciones(userId), canalDeAlarma('objetivos', sonido), ahoraMs);
+  // Spec 010: cada alarma de las acciones conserva SU combinación (sin vibración, solo vibrar, voz); las repeticiones
+  // («Repetir si no la atiendo») no están entre los ids guardados, pero también suenan con el tono elegido.
+  await cambiarSonidoDeLasProgramadas(
+    [...(await idsDeRecordatoriosDeAcciones(userId)), ...(await idsDeRepeticionesDeAcciones())],
+    canalDelObjetivoProgramado(sonido),
+    ahoraMs,
+  );
   await agruparAvisosQueCoinciden(userId, ahoraMs);
 }

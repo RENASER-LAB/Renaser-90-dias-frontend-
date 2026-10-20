@@ -9,7 +9,7 @@ import {
 import { fotoDeLasAlarmasAlAbrir } from './alarmasVivas';
 import { confirmarAlarmasAlServidor, type ResultadoDeConfirmacion } from './confirmacionDeAlarmas';
 import { agruparAvisosQueCoinciden } from './avisosJuntos';
-import { ponerLasAlarmasDeHabitosEnSuCanal } from './cambioDeSonido';
+import { ponerLasAlarmasDeAccionesEnSuCanal, ponerLasAlarmasDeHabitosEnSuCanal } from './cambioDeSonido';
 import { agregarRutaALasAlarmasDeHabitos, rearmarAlarmasProgramadas, tocaRearmar } from './rearmarAlarmas';
 
 /**
@@ -23,7 +23,8 @@ import { agregarRutaALasAlarmasDeHabitos, rearmarAlarmasProgramadas, tocaRearmar
  *    reinstalación), cancela lo que se apagó y ajusta lo que cambió en otro dispositivo.
  * 4. **La ruta** en las alarmas de hábitos de antes de D-218, para que tocarlas abra Training.
  *    4 bis (E-641): las alarmas de hábitos que siguen en un canal de antes, que no vibra, pasan al canal `-vib`
- *    (`ponerLasAlarmasDeHabitosEnSuCanal`), con la misma hora y el mismo identificador.
+ *    (`ponerLasAlarmasDeHabitosEnSuCanal`), con la misma hora y el mismo identificador. Spec 010: y lo mismo con las de las
+ *    acciones de los objetivos (`ponerLasAlarmasDeAccionesEnSuCanal`).
  * 5. **Confirmar** al servidor: con esto el push de inicio deja de ir también a este teléfono.
  *
  * El paso 3 también deja al día cómo suena cada hábito (spec 009) y RENUEVA la ventana de 7 días de las repeticiones
@@ -78,7 +79,9 @@ const porDefecto: DependenciasDePuestaAlDia = {
   agregarRutas: async (userId, ahoraMs) => agregarRutaALasAlarmasDeHabitos(await recordatoriosPorHabito(userId), ahoraMs),
   confirmar: () => confirmarAlarmasAlServidor(),
   agrupar: (userId, ahoraMs) => agruparAvisosQueCoinciden(userId, ahoraMs),
-  canales: (userId, ahoraMs) => ponerLasAlarmasDeHabitosEnSuCanal(userId, ahoraMs),
+  // E-641: hábitos y, desde la spec 010, las acciones de los objetivos (el recordatorio diario y el aviso de cada acción).
+  canales: async (userId, ahoraMs) =>
+    (await ponerLasAlarmasDeHabitosEnSuCanal(userId, ahoraMs)) + (await ponerLasAlarmasDeAccionesEnSuCanal(userId, ahoraMs)),
 };
 
 let ultima: number | null = null;

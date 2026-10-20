@@ -195,6 +195,12 @@ export function antelacionesDeLaFecha(prefs: PreferenciasDeAcciones, fecha: stri
   return iso ? resolverDia(prefs, iso).antelaciones : [...prefs.antelaciones];
 }
 
+/** Cómo suenan las alarmas de las acciones de esa fecha: las de su día de la semana. Sin fecha válida, las generales. */
+export function alarmaDeLaFecha(prefs: PreferenciasDeAcciones, fecha: string): CombinacionDeAlarma {
+  const iso = diaIsoDeFecha(fecha);
+  return iso ? resolverDia(prefs, iso).alarma : { ...alarmaGeneral(prefs) };
+}
+
 /* ------------------------------------------------------------------------------------------------
  * Cambiar
  * ---------------------------------------------------------------------------------------------- */

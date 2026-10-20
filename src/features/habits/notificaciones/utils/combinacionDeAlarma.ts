@@ -35,7 +35,10 @@ import type { CombinacionDeAlarmaApi } from '../../types/habits.types';
  * > encendida se usaba el canal de siempre. Medido en el emulador, los canales que ya existían (`recordatorios-habitos`,
  * > `-campana`, `-voz-…`) NO vibran: Android crea un canal sin vibración si no se le pide, y un canal no se puede
  * > cambiar después. Por eso toda alarma de HÁBITO sale por un canal con la vibración dicha de forma explícita: `-vib`
- * > (nuevo) o `-sinvib`. El canal base queda solo para eventos, objetivos y el repaso del domingo.
+ * > (nuevo) o `-sinvib`. El canal base queda solo para eventos y el repaso del domingo.
+ * >
+ * > **Ampliado 2026-10-20 (spec 010).** Las acciones de los objetivos usan esta misma tabla con el tipo `objetivos`
+ * > (`objetivos/notificaciones/canalDeObjetivos.ts`): también vibran por defecto, y su canal base ya no se usa.
  *
  * ## Dos decisiones para no cambiar lo que ya funciona
  *
@@ -140,7 +143,7 @@ export function combinacionEfectiva(c: CombinacionDeAlarma, tonoDeYo: SonidoDeAl
  * El canal de Android por el que sale una alarma con esta combinación (tabla de arriba). Siempre dice
  * explícitamente si vibra (`vibra`), para que un canal nuevo no dependa del valor por defecto del teléfono.
  *
- * @param tipo `habitos` es el único que hoy usa combinaciones; se deja el tipo por el nombre de los canales.
+ * @param tipo `habitos` y, desde la spec 010, `objetivos` (las acciones); se deja el tipo por el nombre de los canales.
  * @param tonoDeYo el tono elegido en Yo → Alarmas.
  * @param habito para la voz: con él, dice su nombre (si es del catálogo y no fue renombrado); sin él, la frase general.
  */

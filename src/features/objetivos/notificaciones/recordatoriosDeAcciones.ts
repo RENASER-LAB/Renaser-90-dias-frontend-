@@ -6,23 +6,47 @@ import {
   HAY_RECORDATORIOS_LOCALES,
   pedirPermiso,
 } from '../../habits/notificaciones/recordatoriosDeHabito';
-import { preferenciasDeAlarmas } from '../../alarmas/preferenciasDeAlarmas';
-import { canalDeAlarma, type CanalDeAlarma } from '../../alarmas/sonidoDeAlarma';
+import {
+  codigoDeLaCombinacion,
+  COMBINACION_POR_DEFECTO,
+  esLaCombinacionPorDefecto,
+  type CombinacionDeAlarma,
+} from '../../habits/notificaciones/utils/combinacionDeAlarma';
+import type { CanalDeAlarma } from '../../alarmas/sonidoDeAlarma';
 // Solo se LEE (no se toca `features/eventos/`): es la conversión fecha + hora de pared → instante que
 // ya está probada allá. Duplicarla sería tener dos lugares donde equivocarse con la zona.
 import { instanteEnZona, zonaDelTelefono } from '../../eventos/utils/zonaHoraria';
 import type { RocaDiariaApi } from '../types/objetivos.types';
-import { planDelRecordatorioDiario } from './planDelDiario';
+import { guardarPreferenciasDeAcciones, preferenciasDeAcciones } from './almacenDePreferencias';
+import { canalDeLaAlarmaDeObjetivos } from './canalDeObjetivos';
+import { planDelRecordatorioDiario, TEXTO_DIARIO } from './planDelDiario';
 import {
+  alarmaDeLaFecha,
   antelacionesDeLaFecha,
   esHora,
   leerPreferenciasDeAcciones,
   PREFERENCIAS_DE_ACCIONES_POR_DEFECTO,
   type PreferenciasDeAcciones,
 } from './preferenciasPorDia';
+import {
+  cancelarRepeticionesDeLasAcciones,
+  cancelarRepeticionesDelDiario,
+  sincronizarRepeticionesDeLasAcciones,
+  sincronizarRepeticionesDelDiario,
+} from './repeticionesDeAcciones';
+import { rutaDelAvisoDeAccion } from './rutaDelAvisoDeAccion';
 
-// Las preferencias (y su lectura) viven en `preferenciasPorDia.ts`; se reexportan para quien ya las importaba de acá.
-export { leerPreferenciasDeAcciones, PREFERENCIAS_DE_ACCIONES_POR_DEFECTO, type PreferenciasDeAcciones };
+// Las preferencias (y su lectura) viven en `preferenciasPorDia.ts` y `almacenDePreferencias.ts`; se reexportan para quien
+// ya las importaba de acá.
+export {
+  guardarPreferenciasDeAcciones,
+  leerPreferenciasDeAcciones,
+  preferenciasDeAcciones,
+  PREFERENCIAS_DE_ACCIONES_POR_DEFECTO,
+  rutaDelAvisoDeAccion,
+  TEXTO_DIARIO,
+  type PreferenciasDeAcciones,
+};
 
 /**
  * Los recordatorios de las acciones de los objetivos (las rocas del día), en el teléfono
@@ -68,29 +92,8 @@ export { leerPreferenciasDeAcciones, PREFERENCIAS_DE_ACCIONES_POR_DEFECTO, type 
 
 export const ANTELACIONES_DE_ACCIONES: readonly number[] = [30, 10, 0];
 
-const CLAVE_PREFERENCIAS = 'renaser.objetivos.recordatorios.preferencias.';
 const CLAVE_DIARIO = 'renaser.objetivos.recordatorios.diario.';
 const CLAVE_ACCIONES = 'renaser.objetivos.recordatorios.acciones.';
-
-export async function preferenciasDeAcciones(userId: string): Promise<PreferenciasDeAcciones> {
-  try {
-    return leerPreferenciasDeAcciones(await AsyncStorage.getItem(CLAVE_PREFERENCIAS + userId));
-  } catch {
-    return PREFERENCIAS_DE_ACCIONES_POR_DEFECTO;
-  }
-}
-
-export async function guardarPreferenciasDeAcciones(userId: string, p: PreferenciasDeAcciones): Promise<void> {
-  try {
-    await AsyncStorage.setItem(CLAVE_PREFERENCIAS + userId, JSON.stringify(p));
-  } catch {
-    // Guardar una preferencia no puede tumbar la pantalla.
-  }
-}
-
-async function canalDeObjetivos(userId: string): Promise<CanalDeAlarma> {
-  return canalDeAlarma('objetivos', (await preferenciasDeAlarmas(userId)).sonido);
-}
 
 async function cancelarIds(ids: string[]): Promise<void> {
   const N = cargarNotificaciones();
@@ -107,8 +110,6 @@ async function cancelarIds(ids: string[]): Promise<void> {
 /* ------------------------------------------------------------------------------------------------
  * 1. El recordatorio diario
  * ---------------------------------------------------------------------------------------------- */
-
-export const TEXTO_DIARIO = { titulo: 'Tus acciones del día', cuerpo: 'Revisa las acciones de tus objetivos de hoy.' };
 
 /**
  * Los ids del recordatorio diario guardados. Una alarma diaria (lo de siempre) se guarda como su id suelto; las
@@ -134,15 +135,20 @@ async function idsDelDiario(userId: string): Promise<string[]> {
   }
 }
 
-/** Quita el recordatorio diario (la alarma diaria o las semanales de cada día). Idempotente. */
+/**
+ * Quita el recordatorio diario (la alarma diaria o las semanales de cada día) y sus repeticiones («Repetir si no la
+ * atiendo»). Idempotente.
+ */
 export async function cancelarRecordatorioDiario(userId: string): Promise<void> {
   if (!HAY_RECORDATORIOS_LOCALES) return;
   try {
     const ids = await idsDelDiario(userId);
-    if (ids.length === 0) return;
-    await cancelarIds(ids);
-    await AsyncStorage.removeItem(CLAVE_DIARIO + userId);
-    await reagrupar(userId);
+    if (ids.length > 0) {
+      await cancelarIds(ids);
+      await AsyncStorage.removeItem(CLAVE_DIARIO + userId);
+    }
+    await cancelarRepeticionesDelDiario();
+    if (ids.length > 0) await reagrupar(userId);
   } catch {
     // Sin poder leer, no hay id que cancelar.
   }
@@ -155,7 +161,11 @@ export async function cancelarRecordatorioDiario(userId: string): Promise<void> 
  *
  * Devuelve `false` si no se pudo (sin permiso, web, Expo Go).
  */
-export async function ponerElRecordatorioDiario(userId: string, prefsDadas?: PreferenciasDeAcciones): Promise<boolean> {
+export async function ponerElRecordatorioDiario(
+  userId: string,
+  prefsDadas?: PreferenciasDeAcciones,
+  ahora: Date = new Date(),
+): Promise<boolean> {
   const N = cargarNotificaciones();
   if (!N) return false;
   const prefs = prefsDadas ?? (await preferenciasDeAcciones(userId));
@@ -164,23 +174,40 @@ export async function ponerElRecordatorioDiario(userId: string, prefsDadas?: Pre
   if (plan.esquema === 'ninguno' || (plan.esquema === 'porDia' && plan.pedidos.length === 0)) return true;
   try {
     if (!(await pedirPermiso())) return false;
-    const canal = await canalDeObjetivos(userId);
-    await asegurarCanal(canal);
-    const contenido = { title: TEXTO_DIARIO.titulo, body: TEXTO_DIARIO.cuerpo, sound: canal.sonidoDelAviso };
+    // Cada día suena como dice SU combinación: el canal es el de ella (varios canales si los días suenan distinto).
+    const canales = new Map<string, CanalDeAlarma>();
+    const canalDe = async (alarma: CombinacionDeAlarma): Promise<CanalDeAlarma> => {
+      const canal = await canalDeLaAlarmaDeObjetivos(userId, alarma);
+      if (!canales.has(canal.id)) {
+        await asegurarCanal(canal);
+        canales.set(canal.id, canal);
+      }
+      return canal;
+    };
+    const contenido = (canal: CanalDeAlarma, alarma: CombinacionDeAlarma) => ({
+      title: TEXTO_DIARIO.titulo,
+      body: TEXTO_DIARIO.cuerpo,
+      sound: canal.sonidoDelAviso,
+      // Cómo suena viaja en el aviso SOLO si no es lo de siempre (así el cambio de sonido de Yo → Alarmas y el aviso
+      // agrupado la conservan); `diario` es lo que dice, al tocarlo, qué recordatorio se atendió.
+      ...(esLaCombinacionPorDefecto(alarma) ? {} : { data: { diario: true, alarma } }),
+    });
     if (plan.esquema === 'diario') {
       const [h, m] = plan.hora.split(':').map(Number);
+      const canal = await canalDe(plan.alarma);
       const id = await N.scheduleNotificationAsync({
-        content: contenido,
+        content: contenido(canal, plan.alarma),
         trigger: { type: N.SchedulableTriggerInputTypes.DAILY, hour: h, minute: m, channelId: canal.id },
       });
       await AsyncStorage.setItem(CLAVE_DIARIO + userId, id);
     } else {
       const ids: string[] = [];
       for (const pedido of plan.pedidos) {
+        const canal = await canalDe(pedido.alarma);
         ids.push(
           await N.scheduleNotificationAsync({
             identifier: pedido.identificador,
-            content: contenido,
+            content: contenido(canal, pedido.alarma),
             trigger: {
               type: N.SchedulableTriggerInputTypes.WEEKLY,
               weekday: pedido.weekday,
@@ -193,6 +220,7 @@ export async function ponerElRecordatorioDiario(userId: string, prefsDadas?: Pre
       }
       await AsyncStorage.setItem(CLAVE_DIARIO + userId, JSON.stringify(ids));
     }
+    await sincronizarRepeticionesDelDiario(userId, { ahora, prefs });
     await reagrupar(userId);
     return true;
   } catch {
@@ -216,7 +244,11 @@ export async function programarRecordatorioDiario(userId: string, horaHHmm: stri
  * ---------------------------------------------------------------------------------------------- */
 
 export interface AlarmaDeAccion {
-  /** `rocaId|instante`: si cambia la hora o la antelación, cambia la clave y se reemplaza. */
+  /**
+   * `rocaId|instante`: si cambia la hora o la antelación, cambia la clave y se reemplaza. Con una combinación «cómo suena»
+   * que no es la de siempre (spec 010) suma `|codigo`: cambiar cómo suena un día rehace solo las alarmas de ese día. Las
+   * de siempre conservan la clave de antes, así que actualizar la app no rehace nada.
+   */
   clave: string;
   fecha: string;
   instanteMs: number;
@@ -224,11 +256,10 @@ export interface AlarmaDeAccion {
   cuerpo: string;
   /** Adónde lleva tocarla: Plan → Objetivos en el eje de la acción (D-218). */
   ruta: string;
-}
-
-/** `/objetivos/{fecha}?eje={eje}`: la entiende `destinoDeRuta` y la abre `AbridorDeAvisos` (D-218). */
-export function rutaDelAvisoDeAccion(roca: Pick<RocaDiariaApi, 'fecha' | 'eje'>): string {
-  return `/objetivos/${roca.fecha}?eje=${roca.eje}`;
+  /** La acción de la que es: lo que, al tocar la alarma, dice qué repeticiones se atendieron. */
+  rocaId: string;
+  /** Cómo suena ESE día (spec 010). */
+  alarma: CombinacionDeAlarma;
 }
 
 export interface AlarmaDeAccionGuardada {
@@ -251,6 +282,7 @@ export function alarmasDeseadas(
   antelaciones: readonly number[] | AntelacionesDeLaFecha,
   ahoraMs: number,
   zona: string | null,
+  alarmaDeLaFecha?: (fecha: string) => CombinacionDeAlarma,
 ): AlarmaDeAccion[] {
   const deseadas: AlarmaDeAccion[] = [];
   const vistas = new Set<string>();
@@ -262,9 +294,10 @@ export function alarmasDeseadas(
     const aLaHora = instanteEnZona(roca.fecha, hora, zona);
     if (aLaHora === null) continue;
     const delDia = typeof antelaciones === 'function' ? antelaciones(roca.fecha) : antelaciones;
+    const alarma = alarmaDeLaFecha?.(roca.fecha) ?? COMBINACION_POR_DEFECTO;
     for (const minutos of [...delDia].sort((a, b) => b - a)) {
       const instanteMs = aLaHora - minutos * 60_000;
-      const clave = `${roca.id}|${instanteMs}`;
+      const clave = `${roca.id}|${instanteMs}${esLaCombinacionPorDefecto(alarma) ? '' : `|${codigoDeLaCombinacion(alarma)}`}`;
       if (instanteMs <= ahoraMs || vistas.has(clave)) continue;
       vistas.add(clave);
       deseadas.push({
@@ -274,6 +307,8 @@ export function alarmasDeseadas(
         titulo: minutos > 0 ? `En ${minutos} min: ${roca.titulo}` : roca.titulo,
         cuerpo: `Te toca a las ${hora}.`,
         ruta: rutaDelAvisoDeAccion(roca),
+        rocaId: roca.id,
+        alarma,
       });
     }
   }
@@ -364,33 +399,53 @@ async function sincronizarAhora(
   const fechas = new Set([...(opciones.fechasDeLaLista ?? []), ...rocas.map(r => r.fecha)]);
   const plan = planDeAlarmasDeAcciones({
     guardadas,
-    deseadas: alarmasDeseadas(rocas, fecha => antelacionesDeLaFecha(prefs, fecha), ahoraMs, zona),
+    deseadas: alarmasDeseadas(
+      rocas,
+      fecha => antelacionesDeLaFecha(prefs, fecha),
+      ahoraMs,
+      zona,
+      fecha => alarmaDeLaFecha(prefs, fecha),
+    ),
     fechas,
     ahoraMs,
   });
-  if (plan.cancelar.length === 0 && plan.programar.length === 0) return;
-  for (const clave of plan.cancelar) {
-    await cancelarIds([guardadas[clave].id]);
-    delete guardadas[clave];
-  }
-  const permiso = plan.programar.length > 0 && (await N.getPermissionsAsync().catch(() => ({ granted: false }))).granted;
-  if (permiso) {
-    const canal = await canalDeObjetivos(userId);
-    await asegurarCanal(canal);
-    for (const alarma of plan.programar) {
-      try {
-        const id = await N.scheduleNotificationAsync({
-          content: { title: alarma.titulo, body: alarma.cuerpo, sound: canal.sonidoDelAviso, data: { route: alarma.ruta } },
-          trigger: { type: N.SchedulableTriggerInputTypes.DATE, date: new Date(alarma.instanteMs), channelId: canal.id },
-        });
-        guardadas[alarma.clave] = { id, fecha: alarma.fecha, instanteMs: alarma.instanteMs };
-      } catch {
-        // Una que falla no impide las demás; la próxima lectura la vuelve a intentar.
+  if (plan.cancelar.length > 0 || plan.programar.length > 0) {
+    for (const clave of plan.cancelar) {
+      await cancelarIds([guardadas[clave].id]);
+      delete guardadas[clave];
+    }
+    const permiso = plan.programar.length > 0 && (await N.getPermissionsAsync().catch(() => ({ granted: false }))).granted;
+    if (permiso) {
+      // Cada acción sale por el canal de la combinación de SU día (varios canales si los días suenan distinto).
+      const canales = new Map<string, CanalDeAlarma>();
+      for (const alarma of plan.programar) {
+        try {
+          const canal = await canalDeLaAlarmaDeObjetivos(userId, alarma.alarma);
+          if (!canales.has(canal.id)) {
+            await asegurarCanal(canal);
+            canales.set(canal.id, canal);
+          }
+          // La ruta y, solo si no es lo de siempre, cómo suena; con «Repetir», también la acción, para que tocar esta
+          // alarma sepa qué repeticiones atendió. Sin combinación propia el contenido es el de antes.
+          const data: Record<string, unknown> = { route: alarma.ruta };
+          if (!esLaCombinacionPorDefecto(alarma.alarma)) data.alarma = alarma.alarma;
+          if (alarma.alarma.repetir) data.rocaId = alarma.rocaId;
+          const id = await N.scheduleNotificationAsync({
+            content: { title: alarma.titulo, body: alarma.cuerpo, sound: canal.sonidoDelAviso, data },
+            trigger: { type: N.SchedulableTriggerInputTypes.DATE, date: new Date(alarma.instanteMs), channelId: canal.id },
+          });
+          guardadas[alarma.clave] = { id, fecha: alarma.fecha, instanteMs: alarma.instanteMs };
+        } catch {
+          // Una que falla no impide las demás; la próxima lectura la vuelve a intentar.
+        }
       }
     }
+    await escribirGuardadas(userId, guardadas);
+    await reagrupar(userId);
   }
-  await escribirGuardadas(userId, guardadas);
-  await reagrupar(userId);
+  // «Repetir si no la atiendo»: aunque las alarmas de aviso no cambiaran, una acción cumplida o movida deja sin repetición
+  // a la suya, y una que cambió de «cómo suena» las gana.
+  await sincronizarRepeticionesDeLasAcciones(userId, { rocas, fechas, prefs, ahoraMs, zona });
 }
 
 /**
@@ -408,12 +463,16 @@ async function reagrupar(userId: string): Promise<void> {
   }
 }
 
-/** Quita todas las alarmas de acciones de esta persona en este teléfono (no el recordatorio diario). */
+/**
+ * Quita todas las alarmas de acciones de esta persona en este teléfono, con las repeticiones de cada acción (no el
+ * recordatorio diario ni las suyas).
+ */
 export async function cancelarTodasLasAlarmasDeAcciones(userId: string): Promise<void> {
   if (!HAY_RECORDATORIOS_LOCALES) return;
   return enCola(async () => {
     const guardadas = await leerGuardadas(userId);
     await cancelarIds(Object.values(guardadas).map(g => g.id));
+    await cancelarRepeticionesDeLasAcciones();
     await escribirGuardadas(userId, {});
     await reagrupar(userId);
   });

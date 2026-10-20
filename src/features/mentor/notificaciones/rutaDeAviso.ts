@@ -111,6 +111,7 @@ function atender(respuesta: TipoNotificaciones.NotificationResponse | null): voi
   const datos = respuesta.notification.request.content.data as { route?: unknown } | null;
   anotarRutaDeAviso(datos?.route);
   atenderLasRepeticionesDelHabito(datos?.route, respuesta.notification.date);
+  atenderLasRepeticionesDeObjetivos(datos, respuesta.notification.date);
 }
 
 /**
@@ -126,6 +127,23 @@ function atenderLasRepeticionesDelHabito(ruta: unknown, entregadaEnMs: unknown):
     void atenderLaAlarmaDeUnHabito(ruta, entregadaEnMs).catch(() => undefined);
   } catch {
     // Sin esto el aviso se abre igual; las repeticiones de hoy sonarían, que es lo mismo que antes de la spec.
+  }
+}
+
+/**
+ * Spec 010 («Repetir si no la atiendo» en las acciones de los objetivos): tocar la alarma de una acción, o el recordatorio
+ * diario, es atenderlos, y sus repeticiones de hoy dejan de sonar. Solo las alarmas cuya combinación repite llevan la acción
+ * (`rocaId`) o `diario` en sus datos. Mismo cuidado que arriba: se carga acá adentro y un fallo no rompe la apertura.
+ */
+function atenderLasRepeticionesDeObjetivos(datos: unknown, entregadaEnMs: unknown): void {
+  const d = datos as { rocaId?: unknown; diario?: unknown } | null;
+  if (!d || (typeof d.rocaId !== 'string' && d.diario !== true)) return;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { atenderLaAlarmaDeObjetivos } = require('../../objetivos/notificaciones/repeticionesDeAcciones') as typeof import('../../objetivos/notificaciones/repeticionesDeAcciones');
+    void atenderLaAlarmaDeObjetivos(datos, entregadaEnMs).catch(() => undefined);
+  } catch {
+    // Sin esto el aviso se abre igual; las repeticiones de hoy sonarían, que es lo mismo que sin «Repetir».
   }
 }
 

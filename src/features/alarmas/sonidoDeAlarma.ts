@@ -60,7 +60,13 @@ import { ARCHIVO_VOZ_GENERICA, VOCES_DE_HABITOS, vozDelHabito, type HabitoConVoz
  * > Medido en el emulador: los canales ya creados (`recordatorios-habitos`, `-campana`…) NO vibran —Android crea un
  * > canal sin vibración si no se le pide—, así que «Vibración: sí» no vibraba. Decisión del dueño: vibrar por defecto.
  * > Las alarmas de HÁBITOS pasan siempre por un canal `-vib` (nuevo, `enableVibrate: true`) o `-sinvib`; el canal base
- * > queda para eventos, objetivos y el repaso del domingo, que no cambian.
+ * > queda para eventos y el repaso del domingo, que no cambian.
+ * >
+ * > **Ampliado 2026-10-20 (spec 010, decisión del dueño: las acciones reciben lo mismo que los hábitos).** Las alarmas de las
+ * > acciones de los objetivos también salen siempre por un canal `-vib` o `-sinvib` (`recordatorios-objetivos-vib`, etc.):
+ * > no hizo falta ninguna función nueva, `conVibracion` y `sinVibracion` valen para cualquier tipo, y `ARCHIVO_POR_CANAL` ya
+ * > nombra el archivo de cada variante. El canal base de objetivos (`recordatorios-objetivos`) queda solo para lo que ya
+ * > estaba programado antes, que la puesta al día pasa al canal que vibra (`ponerLasAlarmasDeAccionesEnSuCanal`).
  *
  * ## iOS
  *

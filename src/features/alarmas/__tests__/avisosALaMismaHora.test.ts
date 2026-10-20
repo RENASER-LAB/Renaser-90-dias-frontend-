@@ -164,7 +164,8 @@ describe('cuatro hábitos a las 12:00 (E-410)', () => {
     const { pedidos } = planDeAvisosJuntos(programadas, miembros, 'sistema', instante - 3_600_000);
 
     expect(pedidos.map(p => [p.content.title, (p.trigger as { channelId: string }).channelId])).toEqual([
-      ['3 acciones a las 12:00', 'recordatorios-objetivos'],
+      // E-641 (spec 010): un grupo de acciones también sale por un canal que dice si vibra; el base no vibra.
+      ['3 acciones a las 12:00', 'recordatorios-objetivos-vib'],
       ['Acción 2', CANAL_EN_SILENCIO.id],
       ['Acción 3', CANAL_EN_SILENCIO.id],
     ]);
