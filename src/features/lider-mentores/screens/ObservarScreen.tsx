@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { StyleSheet, TextInput } from 'react-native';
 
 import { Checkbox } from '../../../components/Checkbox';
+import { ControlSegmentado } from '../../../components/ControlSegmentado';
 import { BotonPrincipal } from '../../../components/Legible';
 import { useTheme } from '../../../theme/ThemeContext';
 import { avisar } from '../../admin/utils/dialogo';
@@ -10,6 +11,9 @@ import type { TipoObservacion } from '../api/liderMentoresSchemas';
 import { Linea, MarcoDelLider } from '../components/MarcoDelLider';
 import { enviarPorChat } from '../utils/irAlChat';
 import { VERBO_DE_OBSERVACION } from '../utils/lecturaDeMentores';
+import { avisoAlGuardarObservacion, textoParaElChat, type SobreUnaPersona } from '../utils/textoDeObservacion';
+
+const TIPOS: TipoObservacion[] = ['RECONOCIMIENTO', 'SUGERENCIA', 'ALERTA'];
 
 const LARGO_MAXIMO = 1000;
 
@@ -26,6 +30,11 @@ const AYUDA: Record<TipoObservacion, string> = {
  * chat directo exactamente lo escrito y después se registra con el id del mensaje; si el chat falla, la
  * observación se guarda igual y se dice (RL-16). La clave de operación se fija al abrir la pantalla:
  * un segundo toque o un reintento no crean dos.
+ *
+ * **Sobre una persona** (spec 005, FR-014, «Avisar a su mentor» desde la ficha del líder): con `sobre` la
+ * observación es la de siempre —el mismo buzón, las mismas reglas— pero lleva a la persona y la semana
+ * (`personId`, `weekStart`), el líder elige si reconoce, sugiere o alerta, y el mensaje que va por el chat
+ * empieza con el nombre de la persona. Sin `sobre`, la pantalla es exactamente la de antes.
  */
 export function ObservarScreen({
   mentorId,
@@ -33,14 +42,18 @@ export function ObservarScreen({
   tipo,
   onVolver,
   onGuardada,
+  sobre,
 }: {
   mentorId: string;
   nombre: string;
+  /** Con `sobre`, el tipo con que arranca el selector. */
   tipo: TipoObservacion;
   onVolver: () => void;
   onGuardada: (aviso: string) => void;
+  sobre?: SobreUnaPersona;
 }) {
   const { c } = useTheme();
+  const [tipoElegido, setTipoElegido] = useState<TipoObservacion>(tipo);
   const [texto, setTexto] = useState('');
   const [enviar, setEnviar] = useState(false);
   const [guardando, setGuardando] = useState(false);
@@ -56,16 +69,17 @@ export function ObservarScreen({
     }
     setGuardando(true);
     if (enviar && mensajeEnviado.current === null) {
-      mensajeEnviado.current = await enviarPorChat(mentorId, texto.trim());
+      mensajeEnviado.current = await enviarPorChat(mentorId, textoParaElChat(texto, sobre));
     }
     try {
       await registrarObservacion(mentorId, {
-        tipo,
+        tipo: tipoElegido,
         texto: texto.trim(),
         claveOperacion: clave.current,
         mensajeId: mensajeEnviado.current,
+        sobre: sobre ? { personaId: sobre.personaId, semanaDesde: sobre.semanaDesde } : undefined,
       });
-      onGuardada(avisoAlGuardar(enviar, mensajeEnviado.current !== null));
+      onGuardada(avisoAlGuardarObservacion(enviar, mensajeEnviado.current !== null));
     } catch {
       avisar('No se pudo guardar', 'Revisa tu conexión y vuelve a tocar «Guardar». Lo que escribiste sigue aquí.');
     } finally {
@@ -74,8 +88,20 @@ export function ObservarScreen({
   };
 
   return (
-    <MarcoDelLider titulo={`${VERBO_DE_OBSERVACION[tipo]} a ${nombre}`} onVolver={onVolver}>
-      <Linea>{AYUDA[tipo]}</Linea>
+    <MarcoDelLider titulo={sobre ? `Avisar a ${nombre}` : `${VERBO_DE_OBSERVACION[tipo]} a ${nombre}`} onVolver={onVolver}>
+      {sobre ? (
+        <>
+          <Linea fuerte>{`Sobre ${sobre.nombre.trim() || 'esta persona'}`}</Linea>
+          <ControlSegmentado<TipoObservacion>
+            opciones={TIPOS.map(valor => ({ valor, etiqueta: VERBO_DE_OBSERVACION[valor] }))}
+            valor={tipoElegido}
+            onCambiar={setTipoElegido}
+            rol="radio"
+            accessibilityLabel="Qué quieres decirle"
+          />
+        </>
+      ) : null}
+      <Linea>{AYUDA[tipoElegido]}</Linea>
       <TextInput
         value={texto}
         onChangeText={setTexto}
@@ -91,16 +117,15 @@ export function ObservarScreen({
         checked={enviar}
         onToggle={setEnviar}
         title="Enviárselo también por el chat"
-        subtitle="Le llega como mensaje tuyo, tal como lo escribiste."
+        subtitle={
+          sobre
+            ? `Le llega como mensaje tuyo, con el nombre de ${sobre.nombre.trim() || 'la persona'} y la semana al principio.`
+            : 'Le llega como mensaje tuyo, tal como lo escribiste.'
+        }
       />
       <BotonPrincipal etiqueta="Guardar" onPress={guardar} cargando={guardando} deshabilitado={vacio} />
     </MarcoDelLider>
   );
-}
-
-function avisoAlGuardar(queriaEnviar: boolean, seEnvio: boolean): string {
-  if (!queriaEnviar) return 'Observación guardada.';
-  return seEnvio ? 'Observación guardada y enviada por el chat.' : 'Observación guardada. No se pudo enviar por el chat.';
 }
 
 const estilos = StyleSheet.create({

@@ -84,7 +84,7 @@ describe('quién necesita ayuda (S-1)', () => {
 describe('¿A quién atiendo hoy? (S-4)', () => {
   const grupo = (id: string, r: ResumenPorColor | null): GrupoDelResumen => ({
     grupoId: id, grupoNombre: id, mentorNombre: null, sinMentor: false, resumen: r, promedio: null,
-    colorDelPromedio: null, etiquetaDelPromedio: null,
+    colorDelPromedio: null, etiquetaDelPromedio: null, puedeAbrirse: false,
   });
 
   it('solo pide la tabla de los grupos con alguien en rojo o amarillo (incluidos los sin mentor)', () => {

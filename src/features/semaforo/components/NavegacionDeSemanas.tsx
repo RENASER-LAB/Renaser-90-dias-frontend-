@@ -19,7 +19,9 @@ type Navegable = Pick<
  * de lectura; las flechas, a los costados, de 48 × 48. Desde la semana cerrada más nueva, "siguiente"
  * vuelve a los últimos 7 días, y lo dice.
  *
- * Solo props: no sabe si mira un grupo o el resumen de todos.
+ * Solo props: no sabe si mira un grupo, el resumen de todos o la ficha de una persona. Las TRES pantallas del líder
+ * (el resumen por grupos, la lista de un grupo y la ficha de una persona; spec 005) usan esta misma navegación: el
+ * mismo rótulo para los mismos días y las mismas flechas, porque la ventana del resumen manda en todo.
  */
 export function NavegacionDeSemanas({ lectura }: { lectura: Navegable }) {
   const { c, t } = useTheme();

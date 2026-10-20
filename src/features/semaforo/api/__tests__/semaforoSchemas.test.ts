@@ -372,6 +372,8 @@ describe('el campo `semaforo` de GET /api/v1/home (§4.2)', () => {
       pausado: false,
       /* El ejemplo del contrato no trae `dias` (aditivo): sin ellos, `null`, y Hoy los pide a `/me/semaforo`. */
       dias: null,
+      /* Tampoco trae `mensaje` (aditivo, spec 006): `null`, y la tarjeta se ve como antes. */
+      mensaje: null,
     });
   });
 
@@ -388,6 +390,7 @@ describe('el campo `semaforo` de GET /api/v1/home (§4.2)', () => {
       diasConDatos: 0,
       pausado: true,
       dias: null,
+      mensaje: null,
     });
   });
 
@@ -400,6 +403,7 @@ describe('el campo `semaforo` de GET /api/v1/home (§4.2)', () => {
       diasConDatos: null,
       pausado: false,
       dias: null,
+      mensaje: null,
     });
   });
 });

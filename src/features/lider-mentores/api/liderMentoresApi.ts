@@ -43,6 +43,11 @@ export interface NuevaObservacion {
   claveOperacion: string;
   /** El mensaje del chat en el que ya se mandó; null si no se mandó o si falló. */
   mensajeId: string | null;
+  /**
+   * Spec 005 (R-7): la observación es sobre una persona de uno de los grupos del mentor, en una semana. Sin esto
+   * el cuerpo es el de siempre, campo por campo.
+   */
+  sobre?: { personaId: string; semanaDesde: string };
 }
 
 export async function registrarObservacion(mentorId: string, nueva: NuevaObservacion): Promise<ObservacionApi> {
@@ -56,6 +61,7 @@ export async function registrarObservacion(mentorId: string, nueva: NuevaObserva
         sentByChat: nueva.mensajeId !== null,
         messageId: nueva.mensajeId,
         operationKey: nueva.claveOperacion,
+        ...(nueva.sobre ? { personId: nueva.sobre.personaId, weekStart: nueva.sobre.semanaDesde } : {}),
       },
     }),
     'POST /leadership/mentors/{id}/observations',

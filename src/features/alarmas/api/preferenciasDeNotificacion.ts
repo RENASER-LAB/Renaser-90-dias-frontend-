@@ -20,11 +20,17 @@ import { apiFetch } from '../../../services/http/apiClient';
  * | Resumen semanal  | `RESUMEN_SEMANAL`                         |
  *
  * | Mensajes         | `MENSAJE_CHAT`                            |
+ * | Revisiones de tu líder | `REVISION_DEL_LIDER` (spec 005, solo quien acompaña un grupo) |
  *
  * > **Corregido 2026-09-29 (D-221 del backend).** Decía: «"Mi grupo y mensajes" (`MENSAJE_CHAT`,
  * > `MENSAJE_MENTOR`) no está: al 26/09 ningún código del backend emite esos tipos». Desde D-221 el
  * > backend avisa cada mensaje de chat con `MENSAJE_CHAT`, así que «Mensajes» apaga algo de verdad.
  * > `MENSAJE_MENTOR` sigue sin emisor y sigue afuera.
+ *
+ * > **Spec 005 (2026-10-19).** «Revisiones de tu líder» (`REVISION_DEL_LIDER`): el resumen de las 20:00 que
+ * > recibe un mentor cuando su líder revisó a alguien de su grupo ese día. Es **solo para quien acompaña un
+ * > grupo** (el servidor se lo manda a esos mentores): para el resto el interruptor no se ofrece, aunque el
+ * > servidor lo liste.
  *
  * ## Tolerancia a un backend viejo
  *
@@ -34,10 +40,12 @@ import { apiFetch } from '../../../services/http/apiClient';
  */
 
 export interface TemaDeAviso {
-  clave: 'eventos' | 'logros' | 'resumen' | 'mensajes';
+  clave: 'eventos' | 'logros' | 'resumen' | 'mensajes' | 'revisiones';
   nombre: string;
   detalle: string;
   tipos: readonly string[];
+  /** Solo se ofrece a quien acompaña un grupo (mentor, guía de aprendiz, líder): ver `temasVisibles`. */
+  soloParaQuienAcompana?: boolean;
 }
 
 export const TEMAS: readonly TemaDeAviso[] = [
@@ -64,6 +72,13 @@ export const TEMAS: readonly TemaDeAviso[] = [
     nombre: 'Resumen semanal',
     detalle: 'El sábado, cómo te fue en la semana',
     tipos: ['RESUMEN_SEMANAL'],
+  },
+  {
+    clave: 'revisiones',
+    nombre: 'Revisiones de tu líder',
+    detalle: 'Un aviso a las 8 de la noche si tu líder revisó a alguien de tu grupo',
+    tipos: ['REVISION_DEL_LIDER'],
+    soloParaQuienAcompana: true,
   },
 ];
 
@@ -94,10 +109,20 @@ export async function guardarTema(tema: TemaDeAviso, encendido: boolean): Promis
   return leer(respuesta, 'PATCH /api/v1/notification-preferences');
 }
 
-/** Los temas que este servidor sabe guardar, con su estado. Encendido = todos sus tipos encendidos. */
-export function temasVisibles(preferencias: Preferencias): Array<TemaDeAviso & { encendido: boolean }> {
-  return TEMAS.filter(tema => tema.tipos.every(tipo => tipo in preferencias)).map(tema => ({
-    ...tema,
-    encendido: tema.tipos.every(tipo => preferencias[tipo] === true),
-  }));
+/**
+ * Los temas que este servidor sabe guardar, con su estado. Encendido = todos sus tipos encendidos.
+ *
+ * `acompanaUnGrupo`: quien no acompaña un grupo no ve los temas que son solo para quien lo hace (spec 005).
+ * Sin decirlo, no se ofrecen.
+ */
+export function temasVisibles(
+  preferencias: Preferencias,
+  { acompanaUnGrupo = false }: { acompanaUnGrupo?: boolean } = {},
+): Array<TemaDeAviso & { encendido: boolean }> {
+  return TEMAS.filter(tema => !tema.soloParaQuienAcompana || acompanaUnGrupo)
+    .filter(tema => tema.tipos.every(tipo => tipo in preferencias))
+    .map(tema => ({
+      ...tema,
+      encendido: tema.tipos.every(tipo => preferencias[tipo] === true),
+    }));
 }

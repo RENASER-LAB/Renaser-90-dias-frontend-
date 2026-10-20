@@ -11,16 +11,15 @@ import { Linea, MarcoDelLider } from '../components/MarcoDelLider';
 import { SemaforoDelMentor } from '../components/SemaforoDelMentor';
 import { useLecturaDelLider } from '../hooks/useLecturaDelLider';
 import {
-  NOMBRE_DE_OBSERVACION,
   VERBO_DE_OBSERVACION,
   evaluacionEnPalabras,
-  fechaCorta,
   gruposEnPalabras,
   nombreDelMes,
   pendientesEnPalabras,
   respuestasEnPalabras,
 } from '../utils/lecturaDeMentores';
 import { escribirleAlMentor } from '../utils/irAlChat';
+import { encabezadoDeLaObservacion } from '../utils/textoDeObservacion';
 
 const TIPOS: TipoObservacion[] = ['RECONOCIMIENTO', 'SUGERENCIA', 'ALERTA'];
 
@@ -111,7 +110,7 @@ function Ficha({ ficha, onObservar }: { ficha: FichaApi; onObservar: (tipo: Tipo
           ficha.recentObservations.map(o => (
             <Text key={o.id} style={[estilos.observacion, { color: c.textSoft }]}>
               <Text style={{ color: c.textStrong, fontFamily: 'Jost_500Medium' }}>
-                {`${fechaCorta(o.createdAt)} · ${NOMBRE_DE_OBSERVACION[o.type]}${o.sentByChat ? ' · enviada' : ''}`}
+                {encabezadoDeLaObservacion(o)}
               </Text>
               {`\n${o.text}`}
             </Text>

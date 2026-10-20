@@ -8,6 +8,7 @@ import type {
   DiaDelSemaforo,
   EstadoDiaSemaforo,
   GrupoDelResumen,
+  MensajeDelSemaforo,
   PausaDelSemaforo,
   ResumenPorColor,
   ResumenPorGrupos,
@@ -175,6 +176,36 @@ const diasDeHoyTolerantes = z
   });
 
 /**
+ * El mensaje del día que acompaña al semáforo (spec 006 del backend, contrato `home-semaforo-mensaje`):
+ * `{ id, texto, sticker }`, ya redactado por el servidor, sin llaves y en tuteo. Aditivo y TOLERANTE: con su
+ * propio `.catch`, un mensaje mal formado pierde SOLO el mensaje —la tarjeta queda como antes— y no la tarjeta
+ * entera ni Inicio. En desarrollo se avisa, igual que `diasDeHoyTolerantes`.
+ *
+ * - `texto` no puede venir vacío ni con una llave `{` o `}`: una variable sin reemplazar («{nombre}») se
+ *   vería como un error de la app. El servidor lo garantiza; esto es solo el cinturón de seguridad.
+ * - `sticker` es opcional y se lee como texto abierto: un nombre que esta versión no conoce no tumba nada
+ *   (la tarjeta muestra solo el texto), y uno que ni siquiera es texto se ignora sin perder el mensaje.
+ */
+const mensajeDelSemaforoSchema = z
+  .object({
+    id: z.string(),
+    texto: z
+      .string()
+      .refine(texto => texto.trim().length > 0, 'el texto viene vacío')
+      .refine(texto => !/[{}]/.test(texto), 'el texto trae una variable sin reemplazar'),
+    sticker: z.string().nullish().catch(null),
+  })
+  .passthrough();
+
+const mensajeTolerante = mensajeDelSemaforoSchema.nullish().catch(({ error }) => {
+  if (__DEV__) {
+    const detalle = error.issues.map(i => `${i.path.join('.') || '(raíz)'}: ${i.message}`).join(' | ');
+    console.warn(`GET /api/v1/home: "semaforo.mensaje" no tiene la forma esperada y se ignora — ${detalle}`);
+  }
+  return null;
+});
+
+/**
  * El campo `semaforo` de `GET /api/v1/home`. Solo `color` es imprescindible; lo demás, si falta, se
  * deja de mostrar. Quien lo incrusta en `/home` lo envuelve además en un `.catch`: un semáforo mal
  * formado esconde la tarjeta, nunca tira Inicio.
@@ -188,6 +219,8 @@ export const semaforoDeHoySchema = z
     pausado: z.boolean().nullish(),
     /** Aditivo: los 7 días cortos. Con ellos la tarjeta no necesita una segunda petición. */
     dias: diasDeHoyTolerantes,
+    /** Aditivo (spec 006): el mensaje del día con su sticker. Un backend anterior no lo manda. */
+    mensaje: mensajeTolerante,
   })
   .passthrough();
 
@@ -250,6 +283,8 @@ const grupoDelResumenSchema = z
     /** El color del promedio y su palabra. String y no enum, como en todo el cable. */
     color: z.string().nullish(),
     etiqueta: z.string().nullish(),
+    /** Spec 005: la tarjeta se abre a las personas del grupo. Opcional: un backend anterior no lo manda. */
+    puedeAbrirse: z.boolean().nullish(),
   })
   .passthrough();
 
@@ -401,7 +436,14 @@ export function aSemaforoDeHoy(crudo: SemaforoDeHoyCrudo): SemaforoDeHoy {
     diasConDatos: crudo.diasConDatos ?? null,
     pausado: crudo.pausado ?? false,
     dias: crudo.dias ? aDias(crudo.dias) : null,
+    mensaje: aMensajeDelSemaforo(crudo.mensaje),
   };
+}
+
+/** El mensaje del día tal cual lo redactó el servidor: la app no toca el texto. `null` si no vino. */
+function aMensajeDelSemaforo(crudo: SemaforoDeHoyCrudo['mensaje']): MensajeDelSemaforo | null {
+  if (!crudo) return null;
+  return { id: crudo.id, texto: crudo.texto, sticker: crudo.sticker ?? null };
 }
 
 function aResumenPorColor(crudo: ResumenPorColorCrudo | null | undefined): ResumenPorColor | null {
@@ -458,6 +500,7 @@ function aGrupoDelResumen(crudo: GrupoDelResumenCrudo): GrupoDelResumen {
     promedio: lectura ? lectura.porcentaje : promedio,
     colorDelPromedio: lectura ? lectura.color : null,
     etiquetaDelPromedio: lectura ? lectura.etiqueta : null,
+    puedeAbrirse: crudo.puedeAbrirse === true,
   };
 }
 

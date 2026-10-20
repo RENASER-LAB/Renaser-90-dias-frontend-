@@ -10,7 +10,7 @@ import { horaEnPunto, type EstadoRadar } from '../utils/slotsDelRadar';
 /**
  * El Código Renaser en la pantalla de Hoy.
  *
- * Cuatro estados, y sólo uno pide algo:
+ * Cuatro estados que se dibujan, y sólo uno pide algo:
  *
  *  - **abierto** — borde dorado, marcado como innegociable, con el botón para responder.
  *  - **respondido** — confirmación tranquila y cuándo es el siguiente. No desaparece: que se vea
@@ -19,6 +19,7 @@ import { horaEnPunto, type EstadoRadar } from '../utils/slotsDelRadar';
  *    empieza. Pasado el último slot del día no se dibuja nada: recordarle a alguien a las 23:00
  *    algo que ya no puede hacer es ruido.
  *  - **apagado** — nada. Día 0, día 8 en adelante, o el interruptor general.
+ *  - **cargando** — nada, hasta saber si esta hora ya se respondió (ver `useRadarDelDia`).
  *
  * No hay estado "atrasado" y no lo va a haber: los slots que pasaron no se acumulan (ver
  * `config/configRadar.ts`).
@@ -43,7 +44,10 @@ export function TarjetaCodigoRenaser({
 }) {
   const { c, t } = useTheme();
 
-  if (estado.tipo === 'apagado') return null;
+  /* `cargando` (2026-10-19): todavía no se sabe si esta hora ya se respondió. Ni «Abierto» ni «En
+     espera» serían ciertos, así que no se dibuja nada —como en `apagado`— hasta que llegue la lectura;
+     la tarjeta aparece ya en su estado verdadero, sin pasar por uno equivocado. */
+  if (estado.tipo === 'apagado' || estado.tipo === 'cargando') return null;
 
   if (estado.tipo === 'fuera-de-ventana') {
     if (estado.proximaHora === null) return null;

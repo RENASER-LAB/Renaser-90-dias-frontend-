@@ -33,6 +33,11 @@
  * perdidos sería inventar en el móvil una deuda que el servidor no conoce, y el resultado
  * práctico sería el peor: alguien que abre la app a las 19:00 del día 3 se encontraría 11
  * formularios apilados.
+ *
+ * > **Corregido 2026-10-19.** «Log append-only» ya no es del todo cierto: el índice único
+ * > `radar_un_registro_por_hora` del backend acepta UN registro por hora y responde 409 al segundo.
+ * > Lo demás sigue igual (sin plazo, sin «pendiente», sin «uno por día»). La app trata ese 409 como
+ * > «ya registrado» si `GET /radar/latest` lo confirma (`hooks/useRadarDelDia`).
  */
 export interface ConfigRadar {
   /** Interruptor general. En `false` el Código Renaser no aparece en ningún lado. */

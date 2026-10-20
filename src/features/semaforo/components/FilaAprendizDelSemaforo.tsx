@@ -6,7 +6,12 @@ import { useTheme } from '../../../theme/ThemeContext';
 import type { AprendizDelSemaforo } from '../types/semaforo.types';
 import { coloresDelSemaforo } from '../utils/coloresDelSemaforo';
 import { dichoDelAprendiz, formatearPorcentaje, textoDiasConDatos } from '../utils/lecturaDelSemaforo';
-import { palabraParaQuienAcompana } from '../utils/ayudaDelSemaforo';
+import {
+  PALABRA_NO_SE_MIDE,
+  dichoDeQuienNoSeMide,
+  palabraParaQuienAcompana,
+  rolEnPalabras,
+} from '../utils/ayudaDelSemaforo';
 import { EtiquetaSemaforo } from './EtiquetaSemaforo';
 import { GraficoDeDias } from './graficos';
 
@@ -17,6 +22,10 @@ import { GraficoDeDias } from './graficos';
  *
  * Sin datos no hay número: la fila dice «Todavía sin actividad para medir», nunca «0 %». Con `onPress`
  * se abre su ficha (el mentor y, desde el 26/09, también administración); sin él la fila es solo lectura.
+ *
+ * Spec 005, lista del líder: quien tiene su propio programa en el grupo (el mentor o la guía de aprendiz,
+ * `noSeMide`) no tiene color ni palabra de color: la fila dice «No se mide en el semáforo» con su rol, y su
+ * porcentaje sí se muestra.
  */
 export function FilaAprendizDelSemaforo({
   aprendiz,
@@ -32,6 +41,8 @@ export function FilaAprendizDelSemaforo({
   const { tinta } = coloresDelSemaforo(aprendiz.color, c);
   const borde = { borderTopColor: c.divider, borderTopWidth: primera ? 0 : 1 };
 
+  const dicho = aprendiz.noSeMide ? dichoDeQuienNoSeMide(aprendiz) : dichoDelAprendiz(aprendiz);
+
   const contenido = (
     <>
       <View style={estilos.cabecera}>
@@ -44,7 +55,13 @@ export function FilaAprendizDelSemaforo({
         {onPress ? <Icon name="chevron" size={14} color={c.chevron} /> : null}
       </View>
       <View style={estilos.estado}>
-        <EtiquetaSemaforo color={aprendiz.color} etiqueta={palabraParaQuienAcompana(aprendiz.color, aprendiz.etiqueta)} />
+        {aprendiz.noSeMide ? (
+          <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 22, flexShrink: 1 }]}>
+            {[rolEnPalabras(aprendiz.rol), PALABRA_NO_SE_MIDE].filter(Boolean).join(' · ')}
+          </Text>
+        ) : (
+          <EtiquetaSemaforo color={aprendiz.color} etiqueta={palabraParaQuienAcompana(aprendiz.color, aprendiz.etiqueta)} />
+        )}
         {aprendiz.diasConDatos !== null ? (
           <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 22 }]}>
             {textoDiasConDatos(aprendiz.diasConDatos)}
@@ -61,7 +78,7 @@ export function FilaAprendizDelSemaforo({
 
   if (!onPress) {
     return (
-      <View style={[estilos.fila, borde]} accessible accessibilityLabel={dichoDelAprendiz(aprendiz)}>
+      <View style={[estilos.fila, borde]} accessible accessibilityLabel={dicho}>
         {contenido}
       </View>
     );
@@ -71,7 +88,7 @@ export function FilaAprendizDelSemaforo({
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${dichoDelAprendiz(aprendiz)} Abrir su detalle.`}
+      accessibilityLabel={`${dicho} Abrir su detalle.`}
       style={({ pressed }) => [estilos.fila, borde, { backgroundColor: pressed ? c.goldWash : 'transparent' }]}
     >
       {contenido}

@@ -13,6 +13,22 @@ medianoche. Spec canónica: backend `specs/002-habitos-cambio-de-dia/` (D-268/E-
 Hace falta publicar el backend nuevo para el cierre preciso y una versión nueva de la app/APK;
 con backend anterior se mantiene la validación previa y la actualización periódica.
 
+## Corrección autorizada — 2026-10-19 — Código Renaser sin parpadeo y con el 409
+
+Pedido del dueño: arreglar dos fallos del Código Renaser (días 1–7, sobre Hoy) vistos en el emulador.
+Lo que cambia y nada más: (1) mientras no se sabe si la hora en curso ya se respondió —primera lectura
+de `GET /api/v1/radar/latest`, y cada recarga al cambiar de hora, fecha o cuenta, o al volver el radar
+tras el Mapa— el estado del radar es `cargando` y no `abierto`: el formulario (`CodigoRenaserModal`) no se
+abre y no se anota la capa obligatoria; la tarjeta de Hoy no dibuja nada hasta tener la lectura. Si la
+lectura falla (red, 5xx) se abre igual, sin parpadeo; un 403 sigue apagando. Antes el formulario se abría y
+se cerraba ~300 ms después, y en Android dejaba una ventana vacía y oscura sobre Hoy hasta recargar la app.
+(2) El backend rechaza con 409 un segundo registro en la misma hora (índice `radar_un_registro_por_hora`):
+la app relee `/radar/latest` y, si cae en la hora en curso, lo da por registrado (el formulario se cierra y
+la tarjeta dice «Registrado», sin anunciar puntos); si no lo confirma, muestra un aviso propio en vez del
+texto genérico del servidor. No cambian el diseño, los textos de la tarjeta ni del formulario, las
+preguntas, los horarios ni los tabs. No hace falta backend nuevo; sí hace falta un APK nuevo (la app no se
+actualiza por aire).
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
@@ -1797,6 +1813,132 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       error de siempre, el login ni el onboarding.
     * **Hace falta un APK nuevo** (la app no se actualiza por aire). El APK publicado (1.5.0) no lee los interruptores:
       ve el aviso como el mensaje de error del 503.
+  * **Cambio por pedido del dueño — 2026-10-19 — tab `Hoy` (semáforo por grupos del líder), las fichas del mentor y de
+    administración, y `Yo` → Notificaciones: el líder de mentores ve el cumplimiento de cada persona por grupo** (spec 005,
+    en el backend: `specs/005-lider-cumplimiento-por-persona/`; decisiones del dueño del 19/10: baja del grupo a la persona,
+    ve nombre y todas las evidencias, la semana del semáforo de sábado a viernes, avisa a su mentor o le escribe a la
+    persona, y el mentor se entera con un resumen al día). Amplía el límite de alcance RL-07 de `specs/002-lider-de-mentores/`
+    («ningún aprendiz por su nombre»), que era de alcance y no una prohibición. Lo que cambia y nada más:
+    > **Corregido 2026-10-19.** «La semana del semáforo de sábado a viernes» de la presentación ya no es el período por
+    > defecto: tras el E2E el dueño decidió que **la ventana del resumen manda en todo** (el resumen, la lista y la ficha
+    > leen los mismos 7 días). Ver «La lista del grupo» y «Los 7 días de la persona».
+    * **Hoy → «Semáforo por grupos» (solo líder)**: cada tarjeta de grupo se abre a la lista de sus personas **solo si el
+      servidor manda `puedeAbrirse`** (el grupo tiene mentor y la funcionalidad está prendida). Con un backend anterior el
+      campo falta, las tarjetas no se abren y el texto es el de siempre (FR-021). `HoyScreen` solo cambia
+      `SemaforoGruposScreen` por `CumplimientoDelLiderScreen`, que lo envuelve y maneja por dentro persona ← grupo ←
+      resumen ← Hoy (cada nivel con su retroceso del sistema); no hay otra vista de Hoy ni pestaña nueva. Las tarjetas del
+      resumen pasan a `Presionable`. **El recorrido de Administración y Alquimista (Semáforo → grupo → persona) no
+      cambia**: sigue abriendo todos sus grupos como siempre.
+    * **La lista del grupo** (`GrupoDelLiderScreen`, `VistaSemaforoDelGrupo` de siempre): nombre, color y % de la semana, en
+      el orden del servidor (rojo primero; la app no reordena). El mentor o la guía con programa propio salen con su % y
+      «No se mide en el semáforo» (`AprendizDelSemaforo.noSeMide`; el orden del servidor es rojo, amarillo, sin datos,
+      verde y «no se mide» al final). Un grupo sin nadie dice «Este grupo todavía no tiene personas». **La ventana es la
+      del resumen por grupos**: al tocar un grupo la lista abre en los MISMOS 7 días que mostraba el resumen (la posición y
+      el ancla con que se estaba mirando), con el mismo rótulo («Últimos 7 días · Del lunes 12 al domingo 18 de octubre»,
+      o «Semana cerrada · Del sábado 10 al viernes 16») y las mismas flechas ‹ ›; al tocar una persona, la ficha abre en
+      la ventana que la lista tenía en ese momento. Es lo que ya hace Administración (`SemaforoGrupoAdminScreen`).
+      > **Corregido 2026-10-19 (decisión del dueño tras el E2E: «la ventana del resumen manda en todo»; E-629 (d) del
+      > backend).** Esta línea decía que la lista sin fecha traía la **última semana cerrada** (sábado→viernes, «Semana
+      > cerrada», no «Últimos 7 días») y la ficha la **semana en curso**, y que por eso la app le pasaba a la ficha el `hasta`
+      > de la lista (`utils/inicioDeLaLista`, `viernesParaLaFicha`, `comoSemana`, que se borraron). Eran dos ventanas
+      > distintas a la vista: el resumen decía «lunes 12 al domingo 18» y la lista «sábado 10 al viernes 16», y la misma
+      > persona salía con 50 % y con 47,6 %. Ahora el servidor lee las tres con la misma regla y la app reutiliza la
+      > mecánica del resumen: `useLecturaPorSemana` y `NavegacionDeSemanas`, de 7 en 7 días, sin llegar al futuro.
+    * **Los 7 días de la persona** (`PersonaDelLiderScreen`): los mismos de la lista y del resumen, un día por cabecera que
+      se abre (el más reciente con hábitos viene abierto; sin animación), con lo que tenía ESE día, cada hábito con su
+      estado en palabras y con forma, y la falta de datos (pausa, antes del Día 1, nada programado) con su motivo y nunca
+      como incumplimiento. ‹ lleva a la última semana cerrada y de ahí de 7 en 7 días, hasta el inicio del programa
+      (`primeraSemana`, el sábado de la semana del Día 1; `null` mientras no eligió su Día 1: la app no inventa un tope);
+      › vuelve a «Últimos 7 días», y nunca hay un día futuro. Hoy (`motivo` `EN_CURSO`) solo aparece si se pide el viernes
+      de hoy, y dice «Hoy, todavía sin cerrar». El mentor o la guía con
+      programa propio (`NO_SE_MIDE`) llega sin días: su rol, «No se mide en el semáforo» y su %, sin contar hábitos.
+      > **Corregido 2026-10-19 (misma decisión del dueño).** Decía «de sábado a viernes … hasta el inicio del programa; sin
+      > semanas futuras. En la semana en curso, … los días que vienen (`FUTURO`) son tarjetas quietas … «Este día todavía no
+      > llega», y la cabecera avisa que el porcentaje puede cambiar mientras la semana no cierre». Con la ventana del
+      > resumen no hay semana en curso ni días por venir, así que se fueron el aviso del porcentaje y el atajo «Volver a
+      > esta semana» (las flechas son las del resumen); la app sigue leyendo `FUTURO` sin romperse por si un servidor lo
+      > mandara. «Avisar a su mentor» ya no dice «esta semana» sino «los días que estás viendo», y una ventana sin días
+      > dice «No hay nada que mostrar de estos días».
+      Las acciones de los objetivos son `COMPLETADA` (con su foto) o `PENDIENTE`. Cargando, vacío y error con «Reintentar»; al
+      cambiar de persona o de semana no queda a la vista el dato anterior ni por un instante. **Cada lectura de una ficha deja
+      un registro de consulta en el servidor** (FR-016); la app la hace al abrir y al cambiar de semana, no en cada foco.
+    * **Evidencias** (hoja desde abajo, `EvidenciaDeObligacion`): foto, texto, audio (`expo-audio`, que ya estaba) y video
+      (el reproductor de las lecciones), con lo que la persona escribió («¿Qué sentiste?», respuestas de la Pastilla) debajo;
+      la foto de las acciones de los objetivos; y «Ver publicación» para el post diario (`VisorDePublicacion`). **El
+      enlace de un archivo se pide al abrir la hoja** (vence a los diez minutos). Una evidencia que ya no existe dice «Ya no
+      está disponible» y la ficha sigue. Un hábito cumplido sin evidencia dice «Cumplido · sin evidencia» y no ofrece un botón
+      que no abre nada.
+    * **Dos acciones en la ficha**: «Escribirle» abre o reutiliza el 1 a 1 con la persona y **no envía nada**; «Avisar a su
+      mentor» reutiliza `ObservarScreen` (la observación de siempre, con tipo, texto y envío opcional por chat) y suma la
+      persona y la semana (`personId`, `weekStart`); el mensaje del chat empieza con el nombre de la persona. No aparece si
+      el grupo no tiene mentor ni cuando la persona es el propio mentor. «Lo que le dijiste», en la ficha del mentor
+      (`FichaMentorScreen`), nombra a la persona de las observaciones nuevas.
+    * **Fichas del mentor (`AlumnoScreen`) y de administración (`FichaAprendizScreen`)**: el post diario muestra «Ver
+      publicación» cuando el servidor manda `publicacionId` (campo opcional; antes decían «sin evidencia»). La publicación se
+      lee en `GET /api/v1/wall/{id}` (es del Muro, no de `/leadership/`): la abren su autor, el liderazgo y el mentor o la guía
+      que acompaña HOY al autor. Un 403 dice «No puedes ver esta publicación…» y un 404 «Ya no está disponible»; no hay
+      respaldo «Abrir en el Muro» (el mentor ya la lee desde su ficha).
+      La ficha del mentor dice «Publicado en el Muro» —y no «pendiente de revisión»— del post diario cumplido, y la hoja de
+      evidencia del líder no repite el texto que ya leyó como evidencia (hallazgos del E2E del 2026-10-19: E-629 (b) y (c) del
+      backend).
+    * **`Yo` → Notificaciones**: un interruptor nuevo, «Revisiones de tu líder» (`REVISION_DEL_LIDER`), **solo para quien
+      acompaña un grupo** y solo si el servidor lo lista. Es el aviso de las 20:00 con las personas de su grupo que su líder
+      revisó ese día; tocarlo abre «Mi grupo» en su semáforo con la ruta que ya existía. Los demás interruptores no cambian.
+    * **No se tocan**: las formas de los cinco tabs, Training ni Plan; el semáforo propio del aprendiz; ni los permisos (los
+      decide el servidor y vuelve a autorizar cada lectura; el líder solo lee a la persona). Sin dependencias nuevas.
+    * **Hace falta publicar el backend primero** (V109 y las lecturas `/leadership/…`) y un APK nuevo. Con el APK nuevo
+      contra el backend anterior no se rompe nada: las tarjetas no se abren.
+    Una excepción puntual **no abre** el tab: cualquier otro cambio sobre los cinco principales vuelve a necesitar
+    autorización explícita.
+
+  * **Cambio por pedido del dueño — 2026-10-19 — tab `Hoy`: la tarjeta del semáforo con el mensaje del día y el
+    sticker del búho** (backend spec 006, `Renaser-90-dias-backend/specs/006-mensaje-semaforo-y-podio/`). Textual: «El
+    mensaje que acompaña los semáforos tiene que ser mucho más personalizado, no solo que muestre el porcentaje avanzado
+    en el día». Lo que cambia y nada más:
+    * **El mensaje** (`semaforo.mensaje` de `GET /api/v1/home`: `{ id, texto, sticker }`): entre la palabra del color y
+      las siete barras de `TarjetaSemaforoHoy`, un sticker del búho de 56 y el texto en una burbuja de lavado dorado
+      (`MensajeDelSemaforo`; Jost 15, color de texto del tema, en claro y oscuro). Lo elige y lo redacta el servidor
+      —uno por persona y por día, con su nombre, el hábito que más le cuesta o el que mejor le va y cuánto le falta para
+      el siguiente color—: la app NO transforma el texto. Sale todos los días, también sin color (inicio, pausa, sin
+      programa, cuenta en pausa, graduado). El lector de pantalla lo lee: el texto se suma a la etiqueta de la tarjeta.
+    * **Los 15 stickers** (WebP de 512, sin texto en la imagen, 5 dorados para lo que se celebra y 10 azules) viven en
+      `assets/stickers/semaforo/`, y `semaforo/data/stickersDelSemaforo.ts` es el único lugar que los nombra (la prueba
+      frena que el catálogo del servidor use uno que falte). Un nombre desconocido, vacío o una imagen que no carga
+      dejan solo el texto, sin hueco.
+    * **Tolerante a todo lo de afuera**: el campo es aditivo y `.nullish().catch(null)`. Un mensaje mal formado, vacío o
+      con una llave `{…}` sin reemplazar se pierde SOLO él: la tarjeta sigue y Inicio no se cae. Con `mensaje: null`
+      (backend anterior, nadie a quien medir, ningún candidato) la tarjeta es exactamente la de antes.
+    * **Movimiento** (`emil-design-eng`, `animate-expo`): lo ve una vez al día, así que un fundido de 180 ms con
+      ease-out y solo `opacity` (hilo de la interfaz); con «reducir movimiento», sin animación. `key={mensaje.id}`: un
+      mensaje distinto se vuelve a fundir; el mismo con datos nuevos (los «faltan» bajan al cumplir un hábito), no.
+    * **No cambian**: la palabra del color, el porcentaje, «N de 7 días con datos», las barras, el detalle del semáforo
+      (`SemaforoScreen`), el aviso del sábado, las tarjetas del mentor, del líder y de administración ni el resto de Hoy.
+    * **Hace falta un APK nuevo y el backend con V110.** La app nueva contra un backend anterior muestra la tarjeta como
+      hoy; el APK publicado ignora el campo.
+
+  * **Cambio por pedido del dueño — 2026-10-19 — tab `Comunidad` → Ranking: «Descargar» la imagen del podio** (la misma
+    spec 006 del backend). Textual: «Que haya opción para descargar en los podios». Lo que cambia y nada más:
+    * **El botón**: junto a la línea de lo que mide la tabla, «Descargar» (`BotonDescargarPodio`: `Presionable` de 48 con
+      el ícono `forward`, «Preparando…» mientras trabaja). **Solo con el permiso del servidor**: `capabilities.canExportRanking`
+      de `GET /api/v1/mentor/context` (líder de mentores, alquimista, administrador y Soporte TI;
+      `useCapacidades().capacidades.exportarRanking`). Para aprendiz, guía, mentor y un backend anterior la fila es la de
+      siempre. La consulta se hace al abrir Ranking, no al abrir Comunidad.
+    * **La imagen**: vertical 9:16 de 1080 × 1920 px de la tabla que se está mirando (General, Coherencia, Kilómetros o
+      Gimnasio): el fénix de Renaser, el nombre de la tabla, la fecha del corte en español de Perú, el podio PLANO de
+      los tres primeros (oro, plata, bronce) y del 4.º al 10.º, con nombre completo («…» si no cabe) y puntaje, siempre
+      en la paleta oscura de la marca y con Fraunces solo en el título. Son las mismas filas que la pantalla en el
+      momento del toque; con menos de 10 personas salen las que hay y los lugares del podio sin nadie se ven libres. La
+      arma el teléfono con lo que ya tiene (`GET /ranking`): no hay endpoint nuevo ni se guarda nada en el servidor.
+    * **Cómo sale**: `TarjetaDelPodioParaCompartir` (540 × 960 dp, el doble en la imagen) se monta fuera de pantalla solo
+      mientras se genera, se captura con `react-native-view-shot` (`captureRef`, PNG) y se comparte con `expo-sharing`
+      (hoja del sistema: WhatsApp, historias, «Guardar imagen»); en la web baja el archivo
+      `podio-<tabla>-<fecha>.png`. Cancelar la hoja no es un error; un fallo avisa con un diálogo; vibración
+      `tacto.logro()` al terminar. **Sin dependencias nuevas** (las dos ya estaban). Todo vive en `features/ranking/`.
+    * **En `ComunidadScreen.tsx` solo cambia** la línea bajo el selector de tabla: pasa a ser una fila con el texto y,
+      a la derecha, el botón.
+    * **No cambian**: las tablas, el podio animado de la app, el selector, «Tu posición» ni las demás secciones.
+    * **Hace falta un APK nuevo y el backend con V110** (la capacidad la publica el backend; contra uno anterior no hay
+      botón).
 
 ## 2. 📱 RESPONSIVIDAD UNIVERSAL (XIAOMI, ANDROID, IOS Y TABLETS)
 * **Cero Doble Scroll**: NUNCA coloques un contenedor con `maxHeight` fijo o scroll interno dentro de otro `ScrollView`. Toda pantalla debe tener UN ÚNICO contenedor de scroll fluido con `contentContainerStyle={{ flexGrow: 1, paddingBottom: 36 }}`.

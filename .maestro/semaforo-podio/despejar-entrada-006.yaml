@@ -1,0 +1,32 @@
+# Capas que aparecen al entrar con algunas cuentas de la 006 y que `ya-adentro.yaml` no conoce:
+# - INICIO (primeros 7 días): el Código Renaser de la hora, «Innegociable», tapa Hoy hasta registrarlo.
+# - CUENTA_PAUSADA: al reactivarse llega un aviso del soporte y la app abre ese chat.
+appId: com.renaser.app
+---
+# Primero el permiso de avisos y las capas de siempre: el permiso puede tapar el Código Renaser.
+- runFlow: ../comun/despejar-capas.yaml
+- extendedWaitUntil:
+    visible: "TRAINING|¿Dónde estás ahora mismo\\?|Soporte · Equipo Renaser"
+    timeout: 20000
+    optional: true
+- runFlow:
+    when:
+      visible: "¿Dónde estás ahora mismo\\?"
+    commands:
+      - tapOn: "Estoy…"
+      - inputText: "Probando la app"
+      - tapOn: "Estoy pensando en…"
+      - inputText: "El mensaje del semaforo"
+      - hideKeyboard
+      - tapOn: "Siento…"
+      - inputText: "Calma"
+      - hideKeyboard
+      - tapOn: "Estoy evitando…"
+      - inputText: "Nada"
+      - hideKeyboard
+      - tapOn: "Registrar"
+- runFlow:
+    when:
+      visible: "Soporte · Equipo Renaser"
+    commands:
+      - back
