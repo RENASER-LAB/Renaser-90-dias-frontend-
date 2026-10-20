@@ -154,8 +154,9 @@ import { SeccionComoSuena } from './SeccionComoSuena';
  * ## LA HOJA DE SIEMPRE (rediseño de Training, 2026-10-05)
  *
  * Era una hoja hecha a mano (agarradera decorativa, borde dorado, «× CERRAR» y «← VOLVER» en
- * versalitas de 11). Ahora es `HojaDesdeAbajo` grande: se arrastra para cerrarla, la ✕ y la ‹ son de
- * 44, y el atrás de Android vuelve un paso (la ‹) antes de cerrar. Los textos van en tipo oración a
+ * versalitas de 11). Ahora es `HojaDesdeAbajo` (`completa` desde la spec 011: todo el alto disponible, hasta debajo
+ * de la barra de estado, en la lista y en el editor, para que la hoja no cambie de alto al entrar a un hábito): se
+ * arrastra para cerrarla, la ✕ y la ‹ son de 44, y el atrás de Android vuelve un paso (la ‹) antes de cerrar. Los textos van en tipo oración a
  * 15–17 px, los emojis de hábito pasaron a íconos de línea, «Pausar…» es una hoja de opciones y los
  * avisos de éxito son una línea que se va sola (`ConfirmacionEnLinea`); los errores siguen en diálogo.
  */
@@ -1416,7 +1417,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
         etiquetaCerrar="Cerrar Planificar"
         titulo={tituloDeLaHoja}
         subtitulo={subtituloDeLaHoja}
-        tamano="grande"
+        tamano="completa"
         pie={pie}
       >
         {estado === 'cargando' && (
@@ -2099,8 +2100,9 @@ const styles = StyleSheet.create({
   cuerpoDesplazable: {
     flex: 1,
   },
+  // Aire de sobra al final (spec 011): «Cómo suena» se lee entero por encima del botón fijo de guardar, que no lo tapa.
   contenidoDesplazable: {
-    paddingBottom: 12,
+    paddingBottom: 32,
   },
   ayuda: {
     fontSize: 16,

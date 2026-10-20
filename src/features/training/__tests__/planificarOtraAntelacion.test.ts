@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import React from 'react';
-import { ScrollView } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
 import { Presionable } from '../../../components/Presionable';
+import { HojaDesdeAbajo } from '../../../components/hojaDesdeAbajo/HojaDesdeAbajo';
 import TestRenderer, { act, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
 
 import type { DiaDeLaSemanaApi, PreferenciaHabitoApi } from '../../habits/types/habits.types';
@@ -444,5 +445,27 @@ describe('las reglas de siempre', () => {
     expect(mockCambiarHorario.mock.calls[0][3]).toEqual({ activo: true, minutosAntes: 20, lista: [20] });
     expect(mockProgramar).toHaveBeenCalledTimes(1);
     expect(mockProgramar.mock.calls[0][4]).toEqual([20]);
+  });
+});
+
+describe('el editor ocupa toda la pantalla (spec 011)', () => {
+  it('la hoja de Planificar es `completa` en la lista y en el editor de un hábito', async () => {
+    const r = await montar();
+    const hoja = () => r.root.findAll(n => (n.type as unknown) === HojaDesdeAbajo)[0];
+    expect(hoja().props.tamano).toBe('completa');
+    await abrirElHabito(r);
+    expect(hoja().props.tamano).toBe('completa');
+  });
+
+  it('al final de lo que se desliza queda aire de sobra para que «Cómo suena» se lea entero sobre el botón fijo', async () => {
+    const r = await montar();
+    await abrirElHabito(r);
+    const desplazableDelEditor = r.root.findAll(n => (n.type as unknown) === ScrollView && n.props.persistentScrollbar === true)[0];
+    expect(desplazableDelEditor).toBeDefined();
+    const contenido = StyleSheet.flatten(desplazableDelEditor.props.contentContainerStyle) as { paddingBottom?: number };
+    expect(contenido.paddingBottom ?? 0).toBeGreaterThanOrEqual(24);
+    // El botón de guardar no va dentro de lo que se desliza: es el pie fijo de la hoja.
+    expect(desplazableDelEditor.findAll(n => typeof n.props.label === 'string' && n.props.label.startsWith('Guardar'))).toHaveLength(0);
+    expect(guardar(r)).toBeDefined();
   });
 });
