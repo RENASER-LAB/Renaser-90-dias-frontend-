@@ -3,7 +3,11 @@ import {
   cargarNotificaciones,
   pedirPermiso,
 } from '../habits/notificaciones/recordatoriosDeHabito';
-import { canalDeAlarma, SONIDOS, type SonidoDeAlarma } from './sonidoDeAlarma';
+import {
+  canalDeLaCombinacion,
+  COMBINACION_POR_DEFECTO,
+} from '../habits/notificaciones/utils/combinacionDeAlarma';
+import { SONIDOS, type SonidoDeAlarma } from './sonidoDeAlarma';
 import { HABITO_DE_MUESTRA } from './vozDeLosHabitos';
 
 /**
@@ -35,8 +39,9 @@ async function sonarPrueba(sonido: SonidoDeAlarma, enSegundos: number | null): P
   if (!N) return false;
   try {
     if (!(await pedirPermiso())) return false;
-    // Por el canal de hábitos: con «Voz», la del hábito de muestra.
-    const canal = canalDeAlarma('habitos', sonido, HABITO_DE_MUESTRA);
+    // Por el canal de hábitos, el MISMO de una alarma de hábito de verdad (E-641: con la vibración encendida, el
+    // canal `-vib`): lo que se oye y se siente es lo que va a sonar. Con «Voz», la del hábito de muestra.
+    const canal = canalDeLaCombinacion('habitos', sonido, COMBINACION_POR_DEFECTO, HABITO_DE_MUESTRA);
     await asegurarCanal(canal);
     await N.scheduleNotificationAsync({
       identifier: ID_DE_LA_PRUEBA,

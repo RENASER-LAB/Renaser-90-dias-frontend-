@@ -72,6 +72,7 @@ import { AuthProvider, useAuth } from '../../auth/context/AuthContext';
 import * as recordatorios from '../../habits/notificaciones/recordatoriosDeHabito';
 import {
   guardarPreferenciasDeAcciones,
+  ponerElRecordatorioDiario,
   PREFERENCIAS_DE_ACCIONES_POR_DEFECTO,
   programarRecordatorioDiario,
 } from '../../objetivos/notificaciones/recordatoriosDeAcciones';
@@ -156,5 +157,45 @@ describe('las alarmas locales son de una cuenta (E-413)', () => {
     const titulos = [...mockLista.values()].map(a => a.content.title).sort();
     expect(titulos).toEqual(['Arma tu semana', 'Tus acciones del día']);
     expect(await recordatorios.tieneRepasoSemanal('u-admin')).toBe(true);
+  });
+});
+
+describe('el recordatorio de las acciones por día (spec 010) también es de una cuenta', () => {
+  const POR_DIA = {
+    ...PREFERENCIAS_DE_ACCIONES_POR_DEFECTO,
+    diarioActivo: true,
+    horaDiaria: '07:00',
+    dias: { 6: { horaDiaria: '09:00' }, 7: { diarioActivo: false } },
+  };
+
+  it('al cerrar sesión no queda ninguna de las alarmas semanales, y al volver a entrar vuelve cada día a su hora', async () => {
+    const { sesion } = await montar();
+    await entrarComo(sesion, 'u-admin');
+    await guardarPreferenciasDeAcciones('u-admin', POR_DIA);
+    await ponerElRecordatorioDiario('u-admin');
+    expect(mockLista.size).toBe(6);
+
+    await act(async () => {
+      sesion().logout();
+      await new Promise(r => setTimeout(r, 0));
+    });
+    expect(mockLista.size).toBe(0);
+
+    await entrarComo(sesion, 'u-admin');
+    await rearmarLoLocalDeLaCuenta('u-admin');
+
+    expect(mockLista.size).toBe(6);
+    const sabado = mockLista.get('acciones-diario-d6');
+    expect(sabado?.trigger).toMatchObject({ type: 'weekly', weekday: 7, hour: 9, minute: 0 });
+    expect(mockLista.has('acciones-diario-d7')).toBe(false);
+  });
+
+  it('al entrar con otra cuenta se sueltan las de la anterior', async () => {
+    const { sesion } = await montar();
+    await entrarComo(sesion, 'u-admin');
+    await guardarPreferenciasDeAcciones('u-admin', POR_DIA);
+    await ponerElRecordatorioDiario('u-admin');
+    await entrarComo(sesion, 'u-otra');
+    expect(mockLista.size).toBe(0);
   });
 });

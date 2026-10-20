@@ -12,6 +12,24 @@ import {
 import { preferenciasDeAlarmas } from '../../alarmas/preferenciasDeAlarmas';
 import { categoriaDeDimension } from '../../training/utils/dimensionDelHabito';
 import type { PreferenciaHabitoApi } from '../types/habits.types';
+import {
+  canalDeLaCombinacion,
+  combinacionDeLaApi,
+  combinacionGuardada as leerCombinacionGuardada,
+  COMBINACION_POR_DEFECTO,
+  esLaCombinacionPorDefecto,
+  mismaCombinacion,
+  type CombinacionDeAlarma,
+} from './utils/combinacionDeAlarma';
+import {
+  diasPropiosDe,
+  firmaDelPlan,
+  horaCorta,
+  planDeAlarmas,
+  usaEsquemaPorDia,
+  type DiaPropio,
+  type PedidoDeAlarmaDelDia,
+} from './utils/alarmasPorDia';
 // SOLO tipos: `import type` se borra al compilar, así que esto NO carga el módulo en runtime. Ver
 // el bloque "POR QUÉ NO SE IMPORTA ARRIBA" más abajo — importarlo de verdad rompe Expo Go.
 import type * as TipoNotificaciones from 'expo-notifications';
@@ -274,6 +292,9 @@ export async function asegurarCanal(canal: CanalDeAlarma = CANAL_ANDROID): Promi
     name: canal.nombre,
     importance: N.AndroidImportance.HIGH,
     ...(canal.sonidoDelCanal === undefined ? {} : { sound: canal.sonidoDelCanal }),
+    // Spec 009: la vibración también es del canal. Solo se dice cuando el canal la trae (los de «Cómo suena»):
+    // los de siempre no cambian, y un canal ya creado ignora estas opciones de todos modos.
+    ...(canal.vibra === undefined ? {} : { enableVibrate: canal.vibra }),
   });
 }
 
@@ -345,6 +366,85 @@ function claveDe(userId: string, habitoId: string): string {
   return `${PREFIJO_CLAVE}${userId}.${habitoId}`;
 }
 
+/**
+ * Lo que el teléfono recuerda de un hábito con alarmas POR DÍA (spec 008): la firma del plan que programó (para
+ * saber, sin tocar la librería, si ya es lo que corresponde) y lo propio de cada día (para que quien cambia la
+ * hora general sin saber de días —Plan— no deje el hábito en el esquema diario). Sin esta clave, el hábito está
+ * en el esquema diario, como siempre.
+ */
+const PREFIJO_ESQUEMA = 'renaser.habitos.esquema.';
+
+interface EsquemaGuardado {
+  firma: string;
+  dias: DiaPropio[];
+}
+
+function claveEsquema(userId: string, habitoId: string): string {
+  return `${PREFIJO_ESQUEMA}${userId}.${habitoId}`;
+}
+
+async function esquemaGuardado(userId: string, habitoId: string): Promise<EsquemaGuardado | null> {
+  return sinRomper(async () => {
+    const crudo = await AsyncStorage.getItem(claveEsquema(userId, habitoId));
+    if (!crudo) return null;
+    const leido = JSON.parse(crudo) as Partial<EsquemaGuardado>;
+    return typeof leido.firma === 'string' && Array.isArray(leido.dias) ? { firma: leido.firma, dias: leido.dias } : null;
+  }, null);
+}
+
+/**
+ * Spec 009: «cómo suena» la alarma GENERAL del hábito en este teléfono: la combinación con la que se programó, solo si
+ * no es la de siempre. Sirve para que quien reprograma sin saber de «Cómo suena» (Plan al cambiar la hora, Yo →
+ * Alarmas con Despertar) no pierda la elección. Lo propio de cada día vive en `esquemaGuardado`.
+ */
+const PREFIJO_COMBINACION = 'renaser.habitos.combinacion.';
+
+function claveCombinacion(userId: string, habitoId: string): string {
+  return `${PREFIJO_COMBINACION}${userId}.${habitoId}`;
+}
+
+/** La combinación general con la que quedó este hábito en el teléfono, o `null` (la de siempre). */
+export async function combinacionGeneralGuardada(userId: string, habitoId: string): Promise<CombinacionDeAlarma | null> {
+  return sinRomper(async () => {
+    const crudo = await AsyncStorage.getItem(claveCombinacion(userId, habitoId));
+    return crudo ? leerCombinacionGuardada(JSON.parse(crudo)) : null;
+  }, null);
+}
+
+async function guardarCombinacionGeneral(userId: string, habitoId: string, alarma: CombinacionDeAlarma | null): Promise<void> {
+  await sinRomper(async () => {
+    if (alarma && !esLaCombinacionPorDefecto(alarma)) {
+      await AsyncStorage.setItem(claveCombinacion(userId, habitoId), JSON.stringify(alarma));
+    } else {
+      await AsyncStorage.removeItem(claveCombinacion(userId, habitoId));
+    }
+  }, undefined);
+}
+
+/**
+ * Spec 009: pone las repeticiones del hábito. El módulo se carga acá adentro porque él importa este (un import de ida y
+ * vuelta dejaría uno sin cargar), igual que `reagrupar` con `avisosJuntos`. No tira.
+ */
+async function sincronizarLasRepeticiones(
+  userId: string,
+  habitoId: string,
+  titulo: string,
+  entrada: {
+    horaGeneral: string | null;
+    avisosGenerales: readonly number[];
+    dias: readonly DiaPropio[] | null | undefined;
+    alarmaGeneral: CombinacionDeAlarma | null | undefined;
+    cambio?: CambioDiferido | null;
+    dimension?: string | null;
+  },
+): Promise<void> {
+  await sinRomper(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { sincronizarRepeticiones } = require('./repeticiones') as typeof import('./repeticiones');
+    await sincronizarRepeticiones(userId, { habitoId, titulo, ...entrada });
+  }, undefined);
+}
+
 /** Cancela TODAS las alarmas de ese hábito. Idempotente. */
 export async function cancelar(userId: string, habitoId: string): Promise<void> {
   const N = notificaciones();
@@ -357,6 +457,15 @@ export async function cancelar(userId: string, habitoId: string): Promise<void> 
       await N.cancelScheduledNotificationAsync(id);
     }
     await AsyncStorage.removeItem(clave);
+  }, undefined);
+  // Las alarmas por día (spec 008) se acaban de cancelar con las demás; lo que se recordaba de ellas, también.
+  await sinRomper(() => AsyncStorage.removeItem(claveEsquema(userId, habitoId)), undefined);
+  // Spec 009: y sus repeticiones, y cómo sonaba. Quien reprograma lo lee ANTES de cancelar (`programar`).
+  await sinRomper(() => AsyncStorage.removeItem(claveCombinacion(userId, habitoId)), undefined);
+  await sinRomper(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { cancelarRepeticiones } = require('./repeticiones') as typeof import('./repeticiones');
+    await cancelarRepeticiones(habitoId);
   }, undefined);
   // Un cambio de hora que esperaba su fecha (D-217) deja de tener sentido: lo que se cancela, se
   // cancela entero.
@@ -419,6 +528,19 @@ export interface OpcionesDelAviso {
    * Sin ella el aviso igual abre Training, y la pantalla busca el hábito por su id.
    */
   dimension?: string | null;
+  /**
+   * Spec 008: lo propio de cada día de la semana (hora, aviso, apagado). Si algún día es distinto, el hábito
+   * pasa al esquema POR DÍA (una alarma semanal por día y antelación, a la hora de ese día). Sin esto, o con
+   * todos los días iguales, queda el esquema diario de siempre. Quien no sabe de días (Yo → Alarmas con
+   * Despertar) no lo pasa: el hábito vuelve al esquema diario hasta la próxima puesta al día, que lo corrige.
+   */
+  dias?: readonly DiaPropio[] | null;
+  /**
+   * Spec 009: «cómo suena» la alarma general del hábito (la de los días que no tienen la suya). `undefined` = la que
+   * este teléfono ya tenía para el hábito (quien reprograma sin saber de «Cómo suena» no la pierde); `null` = la de
+   * siempre (sonido y vibración, sin voz propia, sin repetir).
+   */
+  alarma?: CombinacionDeAlarma | null;
 }
 
 /**
@@ -457,6 +579,7 @@ function contenidoDelAviso(
   horaHHmm: string,
   canal: CanalDeAlarma,
   ruta: string,
+  alarma?: CombinacionDeAlarma | null,
 ): TipoNotificaciones.NotificationContentInput {
   return {
     title: tituloDelAviso(titulo, minutosAntes),
@@ -464,19 +587,98 @@ function contenidoDelAviso(
     // `true` y no `'default'`: la cadena se interpreta como el nombre de un archivo de sonido
     // propio, y la librería se queja de no encontrarlo. El booleano pide el del sistema.
     sound: canal.sonidoDelAviso,
-    data: { route: ruta },
+    // Spec 009: cómo suena, SOLO si no es lo de siempre. Así el cambio de sonido de Yo → Alarmas y el aviso agrupado
+    // (que re-programan la alarma ya puesta, sin saber del hábito) mantienen el canal que le toca. Ausente = la de siempre.
+    data: alarma && !esLaCombinacionPorDefecto(alarma) ? { route: ruta, alarma } : { route: ruta },
   };
 }
 
+/** El canal de una alarma de este hábito con esta combinación y el tono de Yo → Alarmas (spec 009). */
+async function canalDeLaAlarma(
+  userId: string,
+  habitoId: string,
+  titulo: string,
+  alarma: CombinacionDeAlarma | null | undefined,
+): Promise<CanalDeAlarma> {
+  return canalDeLaCombinacion('habitos', await sonidoDe(userId, habitoId), alarma ?? COMBINACION_POR_DEFECTO, {
+    id: habitoId,
+    titulo,
+  });
+}
+
 /**
- * Programa los avisos diarios de un hábito: uno por cada antelación elegida.
+ * Pone en el teléfono las alarmas del esquema POR DÍA (spec 008): una por día encendido y por antelación,
+ * semanales, con el identificador del día. Deja anotado lo que hace falta para no repetir el trabajo (la firma)
+ * y para que un cambio de hora general hecho desde otra pantalla respete los días (lo propio de cada uno).
+ *
+ * Corre dentro de un `sinRomper` del llamador, ya con permiso. Devuelve `true`.
+ */
+async function ponerLasAlarmasPorDia(
+  N: typeof TipoNotificaciones,
+  userId: string,
+  habitoId: string,
+  titulo: string,
+  pedidos: readonly PedidoDeAlarmaDelDia[],
+  antelacionesGenerales: readonly number[],
+  horaAnotada: HoraProgramada,
+  opciones: OpcionesDelAviso,
+): Promise<boolean> {
+  const tono = await sonidoDe(userId, habitoId);
+  // Spec 009: cada día puede sonar de otra manera, así que el canal es el de SU combinación (varios canales por hábito).
+  const canales = new Map<string, CanalDeAlarma>();
+  const canalDe = async (alarma: CombinacionDeAlarma): Promise<CanalDeAlarma> => {
+    const canal = canalDeLaCombinacion('habitos', tono, alarma, { id: habitoId, titulo });
+    if (!canales.has(canal.id)) {
+      await asegurarCanal(canal);
+      canales.set(canal.id, canal);
+    }
+    return canal;
+  };
+  const ruta = rutaDelAvisoDeHabito(habitoId, opciones.dimension);
+  const ids: string[] = [];
+  for (const pedido of pedidos) {
+    const canal = await canalDe(pedido.alarma);
+    const trigger = pedido.disparo.tipo === 'semanal'
+      ? {
+        type: N.SchedulableTriggerInputTypes.WEEKLY,
+        weekday: pedido.disparo.weekday,
+        hour: pedido.disparo.hora,
+        minute: pedido.disparo.minuto,
+        channelId: canal.id,
+      }
+      : { type: N.SchedulableTriggerInputTypes.DATE, date: new Date(pedido.disparo.instanteMs), channelId: canal.id };
+    // El identificador es el del día (`habito-{id}-d{iso}-{n}`): programar de nuevo el mismo día REEMPLAZA la
+    // alarma en vez de duplicarla, y el `-0` es la etiqueta del push de respaldo del servidor (research R6).
+    ids.push(await N.scheduleNotificationAsync({
+      identifier: pedido.identificador,
+      content: contenidoDelAviso(titulo, pedido.minutosAntes, pedido.horaDelDia, canal, ruta, pedido.alarma),
+      trigger,
+    }));
+  }
+  await AsyncStorage.setItem(claveDe(userId, habitoId), JSON.stringify(ids));
+  if (antelacionesGenerales.length > 0) {
+    await AsyncStorage.setItem(CLAVE_ANTELACIONES + `${userId}.${habitoId}`, JSON.stringify(antelacionesGenerales));
+  }
+  await AsyncStorage.setItem(claveHora(userId, habitoId), JSON.stringify(horaAnotada));
+  const guardado: EsquemaGuardado = { firma: firmaDelPlan({ esquema: 'porDia', pedidos: [...pedidos] }), dias: [...(opciones.dias ?? [])] };
+  await AsyncStorage.setItem(claveEsquema(userId, habitoId), JSON.stringify(guardado));
+  await guardarCombinacionGeneral(userId, habitoId, opciones.alarma ?? null);
+  return true;
+}
+
+/**
+ * Programa los avisos de un hábito: uno por cada antelación elegida.
  *
  * Cancela primero el anterior: si no, cambiar la hora dejaría sonando la alarma vieja y sumaría
  * una nueva cada vez. Devuelve `false` si no se pudo (sin permiso, o web).
  *
- * @param horaHHmm hora del hábito, `HH:mm`.
- * @param antelaciones cuántos minutos antes avisar, uno por aviso. `0` = a la hora exacta;
- *                     vacío = sin aviso. Se programa una alarma diaria por cada uno.
+ * **Esquema (spec 008).** Sin `opciones.dias`, o con todos los días iguales, es una alarma DIARIA por antelación,
+ * como siempre. Con algún día distinto (hora propia, aviso propio o apagado) es una alarma SEMANAL por día y
+ * antelación, a la hora de ese día: la diaria ignoraba la hora de cada día (E-640).
+ *
+ * @param horaHHmm hora GENERAL del hábito, `HH:mm`.
+ * @param antelaciones el aviso general: cuántos minutos antes avisar, uno por aviso. `0` = a la hora exacta;
+ *                     vacío = sin aviso. Los días con aviso propio usan el suyo.
  */
 export async function programar(
   userId: string,
@@ -486,10 +688,17 @@ export async function programar(
   antelaciones: number[],
   opciones: OpcionesDelAviso = {},
 ): Promise<boolean> {
+  // Spec 009: «cómo suena» la general. Se lee ANTES de `cancelar`, que borra lo que el teléfono recordaba del hábito.
+  const alarma = opciones.alarma !== undefined ? opciones.alarma : await combinacionGeneralGuardada(userId, habitoId);
+  const opcionesConAlarma: OpcionesDelAviso = { ...opciones, alarma };
+  const plan = planDeAlarmas({
+    habitoId, horaGeneral: horaCorta(horaHHmm), avisosGenerales: antelaciones, dias: opciones.dias, alarmaGeneral: alarma,
+  });
+  const sinAvisos = plan.esquema === 'porDia' ? plan.pedidos.length === 0 : antelaciones.length === 0;
   if (HAY_RECORDATORIOS_WEB) {
     // Web no tiene scheduler local: la suscripción se registra una vez y los dos avisos los
     // despacha el backend para esta persona. Con antelaciones vacías no hay nada que habilitar.
-    if (antelaciones.length === 0) return true;
+    if (sinAvisos) return true;
     return registrarSuscripcionWebPush();
   }
   const N = notificaciones();
@@ -501,14 +710,20 @@ export async function programar(
   // dejaría las dos sonando, y cada guardado sumaría una más.
   await cancelar(userId, habitoId);
   const claveSet = CLAVE_ANTELACIONES + `${userId}.${habitoId}`;
-  if (antelaciones.length === 0) {
-    await sinRomper(() => AsyncStorage.removeItem(claveSet), undefined);
+  if (sinAvisos) {
+    // Por día y sin ninguna alarma (todos apagados, o sin aviso): el aviso general se recuerda igual.
+    if (antelaciones.length === 0) await sinRomper(() => AsyncStorage.removeItem(claveSet), undefined);
+    else await sinRomper(() => AsyncStorage.setItem(claveSet, JSON.stringify(antelaciones)), undefined);
     return true;
   }
   const ok = await sinRomper(async () => {
     if (!(await pedirPermiso())) return false;
-    // Con el hábito: con «Voz», uno del catálogo dice su nombre y sale por su propio canal.
-    const canal = canalDeAlarma('habitos', await sonidoDe(userId, habitoId), { id: habitoId, titulo });
+    if (plan.esquema === 'porDia') {
+      return ponerLasAlarmasPorDia(N, userId, habitoId, titulo, plan.pedidos, antelaciones, { hora: horaHHmm }, opcionesConAlarma);
+    }
+    // Con el hábito: con «Voz», uno del catálogo dice su nombre y sale por su propio canal. Spec 009: y el canal
+    // sale de «cómo suena» (sin vibración, solo vibrar, voz).
+    const canal = await canalDeLaAlarma(userId, habitoId, titulo, alarma);
     await asegurarCanal(canal);
     const ids: string[] = [];
     // De la más temprana a la más tardía, que es el orden en que van a sonar.
@@ -523,7 +738,7 @@ export async function programar(
         // dos pedidos con el mismo identificador se reemplazarían entre sí. Programar de nuevo el mismo
         // hábito reemplaza la alarma (mismo identificador, mismo `PendingIntent`), no la duplica.
         ...(i === 0 ? { identifier: identificadorDelAvisoDeInicio(habitoId) } : {}),
-        content: contenidoDelAviso(titulo, minutosAntes, horaHHmm, canal, rutaDelAvisoDeHabito(habitoId, opciones.dimension)),
+        content: contenidoDelAviso(titulo, minutosAntes, horaHHmm, canal, rutaDelAvisoDeHabito(habitoId, opciones.dimension), alarma),
         trigger: {
           type: N.SchedulableTriggerInputTypes.DAILY,
           hour: Math.floor(minutos / 60),
@@ -536,9 +751,15 @@ export async function programar(
     await AsyncStorage.setItem(claveDe(userId, habitoId), JSON.stringify(ids));
     await AsyncStorage.setItem(claveSet, JSON.stringify(antelaciones));
     await AsyncStorage.setItem(claveHora(userId, habitoId), JSON.stringify({ hora: horaHHmm }));
+    await guardarCombinacionGeneral(userId, habitoId, alarma);
     return true;
   }, false);
-  if (ok) await reagrupar(userId);
+  if (ok) {
+    await sincronizarLasRepeticiones(userId, habitoId, titulo, {
+      horaGeneral: horaHHmm, avisosGenerales: antelaciones, dias: opciones.dias, alarmaGeneral: alarma, dimension: opciones.dimension,
+    });
+    await reagrupar(userId);
+  }
   return ok;
 }
 
@@ -555,6 +776,15 @@ export async function programar(
  * Devuelve `null` si no había nada que mover (o en web, donde el aviso lo manda el servidor con la
  * hora nueva), y si no, lo que devolvió `programar`.
  */
+/**
+ * Los días recordados para reprogramar, SIN la hora que el servidor había resuelto para cada uno (E-642). Quien cambia
+ * la hora general sin leer el servidor (Plan, Yo → Alarmas) no tiene las horas resueltas de ahora: las que se
+ * recordaban son de antes del cambio, y un día sin hora propia tiene que seguir a la general nueva.
+ */
+function sinHorasResueltas(dias: readonly DiaPropio[] | null): DiaPropio[] | null {
+  return dias ? dias.map(({ horaResuelta: _recordada, ...resto }) => resto) : null;
+}
+
 export async function reprogramarTrasCambioDeHora(
   userId: string,
   habitoId: string,
@@ -564,8 +794,17 @@ export async function reprogramarTrasCambioDeHora(
 ): Promise<boolean | null> {
   if (!HAY_RECORDATORIOS_LOCALES) return null;
   const antelaciones = await antelacionesDe(userId, habitoId);
-  if (antelaciones.length === 0) return null;
-  return programar(userId, habitoId, titulo, horaHHmm, antelaciones, { dimension });
+  // Spec 008: si el hábito tenía alarmas por día, se vuelven a armar con lo propio de cada día (un día con hora
+  // propia no se mueve con la general). Sin días, o sin ninguna alarma, es lo de siempre.
+  const dias = sinHorasResueltas((await esquemaGuardado(userId, habitoId))?.dias ?? null);
+  if (sinNingunAviso(habitoId, horaHHmm, antelaciones, dias)) return null;
+  return programar(userId, habitoId, titulo, horaHHmm, antelaciones, { dimension, dias });
+}
+
+/** `true` si con estos avisos generales y estos días el hábito no tendría ninguna alarma que mover. */
+function sinNingunAviso(habitoId: string, horaGeneral: string, antelaciones: readonly number[], dias: readonly DiaPropio[] | null): boolean {
+  const plan = planDeAlarmas({ habitoId, horaGeneral: horaCorta(horaGeneral), avisosGenerales: antelaciones, dias });
+  return plan.esquema === 'porDia' ? plan.pedidos.length === 0 : antelaciones.length === 0;
 }
 
 /**
@@ -582,8 +821,9 @@ export async function reprogramarTrasCambioDiferido(
 ): Promise<boolean | null> {
   if (!HAY_RECORDATORIOS_LOCALES) return null;
   const antelaciones = await antelacionesDe(userId, habitoId);
-  if (antelaciones.length === 0) return null;
-  return programarConCambioDiferido(userId, habitoId, titulo, cambio, antelaciones, { dimension, ahora });
+  const dias = sinHorasResueltas((await esquemaGuardado(userId, habitoId))?.dias ?? null);
+  if (sinNingunAviso(habitoId, cambio.horaNueva, antelaciones, dias)) return null;
+  return programarConCambioDiferido(userId, habitoId, titulo, cambio, antelaciones, { dimension, ahora, dias });
 }
 
 /** `true` si esta persona tiene puesto el repaso semanal en ESTE teléfono. */
@@ -725,20 +965,46 @@ export async function programarConCambioDiferido(
   antelaciones: number[],
   opciones: OpcionesDelAviso & { ahora?: Date } = {},
 ): Promise<boolean> {
-  if (HAY_RECORDATORIOS_WEB) return antelaciones.length === 0 ? true : registrarSuscripcionWebPush();
+  const ahora = opciones.ahora ?? new Date();
+  // Spec 009: «cómo suena» la general; se lee antes de `cancelar` (ver `programar`).
+  const alarma = opciones.alarma !== undefined ? opciones.alarma : await combinacionGeneralGuardada(userId, habitoId);
+  const opcionesConAlarma = { ...opciones, alarma };
+  // Spec 008: con algún día distinto, el hábito va por día (alarmas semanales); los días que siguen la hora
+  // general esperan la fecha del cambio con una alarma de fecha cada uno (`planDeAlarmas`).
+  const plan = planDeAlarmas({
+    habitoId, horaGeneral: horaCorta(cambio.horaNueva), avisosGenerales: antelaciones, dias: opciones.dias, cambio, ahora,
+    alarmaGeneral: alarma,
+  });
+  const sinAvisos = plan.esquema === 'porDia' ? plan.pedidos.length === 0 : antelaciones.length === 0;
+  if (HAY_RECORDATORIOS_WEB) return sinAvisos ? true : registrarSuscripcionWebPush();
   const N = notificaciones();
   if (!N || !esHoraHHmm(cambio.horaDeHoy) || !esHoraHHmm(cambio.horaNueva)) return false;
   await cancelar(userId, habitoId);
   const claveSet = CLAVE_ANTELACIONES + `${userId}.${habitoId}`;
-  if (antelaciones.length === 0) {
-    await sinRomper(() => AsyncStorage.removeItem(claveSet), undefined);
+  if (sinAvisos) {
+    if (antelaciones.length === 0) await sinRomper(() => AsyncStorage.removeItem(claveSet), undefined);
+    else await sinRomper(() => AsyncStorage.setItem(claveSet, JSON.stringify(antelaciones)), undefined);
     return true;
   }
-  const ahora = opciones.ahora ?? new Date();
+  if (plan.esquema === 'porDia') {
+    const hecho = await sinRomper(async () => {
+      if (!(await pedirPermiso())) return false;
+      return ponerLasAlarmasPorDia(N, userId, habitoId, titulo, plan.pedidos, antelaciones,
+        { hora: cambio.horaNueva, desde: cambio.desde }, opcionesConAlarma);
+    }, false);
+    if (hecho) {
+      await sincronizarLasRepeticiones(userId, habitoId, titulo, {
+        horaGeneral: cambio.horaNueva, avisosGenerales: antelaciones, dias: opciones.dias, alarmaGeneral: alarma, cambio,
+        dimension: opciones.dimension,
+      });
+      await reagrupar(userId);
+    }
+    return hecho;
+  }
   const ruta = rutaDelAvisoDeHabito(habitoId, opciones.dimension);
   const ok = await sinRomper(async () => {
     if (!(await pedirPermiso())) return false;
-    const canal = canalDeAlarma('habitos', await sonidoDe(userId, habitoId), { id: habitoId, titulo });
+    const canal = await canalDeLaAlarma(userId, habitoId, titulo, alarma);
     await asegurarCanal(canal);
     const ids: string[] = [];
     const pendientes: Pendiente[] = [];
@@ -747,14 +1013,14 @@ export async function programarConCambioDiferido(
       const deHoy = instanteDelAviso(hoy, cambio.horaDeHoy, antes);
       if (hoy < cambio.desde && deHoy.getTime() > ahora.getTime()) {
         ids.push(await N.scheduleNotificationAsync({
-          content: contenidoDelAviso(titulo, antes, cambio.horaDeHoy, canal, ruta),
+          content: contenidoDelAviso(titulo, antes, cambio.horaDeHoy, canal, ruta, alarma),
           trigger: { type: N.SchedulableTriggerInputTypes.DATE, date: deHoy, channelId: canal.id },
         }));
       }
       const primera = instanteDelAviso(cambio.desde, cambio.horaNueva, antes);
       const hora = primera.getHours();
       const minuto = primera.getMinutes();
-      const contenido = contenidoDelAviso(titulo, antes, cambio.horaNueva, canal, ruta);
+      const contenido = contenidoDelAviso(titulo, antes, cambio.horaNueva, canal, ruta, alarma);
       if (primeraDeUnaDiaria(ahora, hora, minuto).getTime() >= primera.getTime()) {
         ids.push(await N.scheduleNotificationAsync({
           content: contenido,
@@ -772,13 +1038,20 @@ export async function programarConCambioDiferido(
     await AsyncStorage.setItem(claveDe(userId, habitoId), JSON.stringify(ids));
     await AsyncStorage.setItem(claveSet, JSON.stringify(antelaciones));
     await AsyncStorage.setItem(claveHora(userId, habitoId), JSON.stringify({ hora: cambio.horaNueva, desde: cambio.desde }));
+    await guardarCombinacionGeneral(userId, habitoId, alarma);
     if (pendientes.length > 0) {
       const registro: RegistroDiferido = { titulo, horaNueva: cambio.horaNueva, dimension: opciones.dimension ?? null, pendientes };
       await AsyncStorage.setItem(claveDiferido(userId, habitoId), JSON.stringify(registro));
     }
     return true;
   }, false);
-  if (ok) await reagrupar(userId);
+  if (ok) {
+    await sincronizarLasRepeticiones(userId, habitoId, titulo, {
+      horaGeneral: cambio.horaNueva, avisosGenerales: antelaciones, dias: opciones.dias, alarmaGeneral: alarma, cambio,
+      dimension: opciones.dimension,
+    });
+    await reagrupar(userId);
+  }
   return ok;
 }
 
@@ -812,7 +1085,8 @@ async function completarUno(
   if (!crudo) return 0;
   const registro = JSON.parse(crudo) as RegistroDiferido;
   const ids = leerIds((await AsyncStorage.getItem(claveDe(userId, habitoId))) ?? '[]');
-  const canal = canalDeAlarma('habitos', await sonidoDe(userId, habitoId), { id: habitoId, titulo: registro.titulo });
+  const alarma = await combinacionGeneralGuardada(userId, habitoId);
+  const canal = await canalDeLaAlarma(userId, habitoId, registro.titulo, alarma);
   const quedan: Pendiente[] = [];
   let convertidas = 0;
   for (const p of registro.pendientes) {
@@ -825,7 +1099,7 @@ async function completarUno(
     await asegurarCanal(canal);
     const nueva = await N.scheduleNotificationAsync({
       content: contenidoDelAviso(registro.titulo, p.antes, registro.horaNueva, canal,
-        rutaDelAvisoDeHabito(habitoId, registro.dimension)),
+        rutaDelAvisoDeHabito(habitoId, registro.dimension), alarma),
       trigger: {
         type: N.SchedulableTriggerInputTypes.DAILY,
         hour: primera.getHours(),
@@ -895,6 +1169,16 @@ export async function ajustarRecordatoriosAlServidor(
   let tocados = 0;
   for (const p of preferencias) {
     const tieneAlarma = (conAlarma.get(p.habitId)?.length ?? 0) > 0;
+    // Spec 008: un hábito con algún día distinto va por día. Se decide ANTES del aviso general, porque un día
+    // puede tener aviso propio aunque el general esté apagado.
+    const dias = diasPropiosDe(p.weekdays);
+    if (usaEsquemaPorDia(dias)) {
+      if (await ajustarPorDia(userId, p, dias as DiaPropio[], tieneAlarma, permiso, opciones)) tocados++;
+      continue;
+    }
+    // Venía por día y ya no hay ningún día distinto: aunque los avisos y la hora coincidan, las alarmas
+    // semanales se rehacen como diarias.
+    const veniaPorDia = (await esquemaGuardado(userId, p.habitId)) !== null;
     if (p.reminderEnabled === false) {
       if (tieneAlarma) {
         await cancelar(userId, p.habitId);
@@ -904,15 +1188,61 @@ export async function ajustarRecordatoriosAlServidor(
       continue;
     }
     if (!permiso || p.reminderEnabled !== true || p.reminderMinutesBefore == null || !p.triggerTime) continue;
-    if (await ajustarUno(userId, p, tieneAlarma, opciones)) tocados++;
+    if (await ajustarUno(userId, p, tieneAlarma, veniaPorDia, opciones)) tocados++;
   }
+  // Spec 009: la ventana de 7 días de las repeticiones se renueva en cada puesta al día, con lo que dice el servidor.
+  await renovarLasRepeticiones(userId, preferencias, permiso, opciones);
   return tocados;
+}
+
+/**
+ * Spec 009 («Repetir si no la atiendo»): deja las repeticiones de todos los hábitos como las pide el servidor —las
+ * de hoy y los 6 días siguientes—, salvo las de un día que la persona ya atendió. Es la renovación de la ventana:
+ * sin ella, las repeticiones se acabarían a los 7 días de programarlas. Corre después de armar las alarmas
+ * principales y no pide permiso: sin él, solo quita las que hubiera.
+ */
+async function renovarLasRepeticiones(
+  userId: string,
+  preferencias: ReadonlyArray<PreferenciaHabitoApi>,
+  permiso: boolean,
+  opciones: { ahora?: Date; dimensionDe?: (habitoId: string) => string | null },
+): Promise<void> {
+  await sinRomper(async () => {
+    const N = notificaciones();
+    if (!N) return;
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { sincronizarRepeticiones } = require('./repeticiones') as typeof import('./repeticiones');
+    // Una sola lectura de lo programado para todos los hábitos: cada uno mira solo sus propias repeticiones.
+    const programadas = (await N.getAllScheduledNotificationsAsync?.()) as unknown;
+    const lista = Array.isArray(programadas) ? programadas : [];
+    for (const p of preferencias) {
+      const hora = horaCorta(p.triggerTime);
+      const generalActivo = p.reminderEnabled === true && p.reminderMinutesBefore != null;
+      const avisosGenerales = generalActivo ? avisosSegunElServidor(p, await antelacionesDe(userId, p.habitId)) : [];
+      const horaNueva = horaCorta(p.pendingChange?.triggerTime);
+      const cambio = hora && horaNueva && p.pendingChange?.effectiveDate
+        ? { horaDeHoy: hora, horaNueva, desde: p.pendingChange.effectiveDate }
+        : null;
+      await sincronizarRepeticiones(userId, {
+        habitoId: p.habitId,
+        titulo: p.title,
+        dimension: opciones.dimensionDe?.(p.habitId) ?? null,
+        horaGeneral: hora,
+        avisosGenerales,
+        dias: diasPropiosDe(p.weekdays),
+        alarmaGeneral: combinacionDeLaApi(p.alarm) ?? (await combinacionGeneralGuardada(userId, p.habitId)),
+        cambio,
+        permiso,
+      }, { ahora: opciones.ahora, programadas: lista });
+    }
+  }, undefined);
 }
 
 async function ajustarUno(
   userId: string,
   p: PreferenciaHabitoApi,
   tieneAlarma: boolean,
+  veniaPorDia: boolean,
   opciones: { ahora?: Date; dimensionDe?: (habitoId: string) => string | null },
 ): Promise<boolean> {
   const delTelefono = await antelacionesDe(userId, p.habitId);
@@ -921,16 +1251,72 @@ async function ajustarUno(
   const cambio = p.pendingChange?.triggerTime && p.pendingChange.effectiveDate
     ? { horaNueva: p.pendingChange.triggerTime.slice(0, 5), desde: p.pendingChange.effectiveDate }
     : null;
+  // Spec 009: «cómo suena» según el servidor (`null` si el backend no la manda: ahí se conserva la del teléfono).
+  const alarmaDelServidor = combinacionDeLaApi(p.alarm);
   if (tieneAlarma) {
     const anotada = await horaProgramada(userId, p.habitId);
     const horaCambio = anotada !== null && (cambio
       ? anotada.hora !== cambio.horaNueva || anotada.desde !== cambio.desde
       : anotada.hora !== hora);
-    if (mismoConjunto(avisos, delTelefono) && !horaCambio) return false;
+    const cambioElSonido = alarmaDelServidor !== null
+      && !mismaCombinacion(alarmaDelServidor, (await combinacionGeneralGuardada(userId, p.habitId)) ?? COMBINACION_POR_DEFECTO);
+    if (mismoConjunto(avisos, delTelefono) && !horaCambio && !veniaPorDia && !cambioElSonido) return false;
   }
   const dimension = opciones.dimensionDe?.(p.habitId) ?? null;
+  const alarma = alarmaDelServidor ?? undefined;
   return cambio
     ? programarConCambioDiferido(userId, p.habitId, p.title,
-      { horaDeHoy: hora, horaNueva: cambio.horaNueva, desde: cambio.desde }, avisos, { dimension, ahora: opciones.ahora })
-    : programar(userId, p.habitId, p.title, hora, avisos, { dimension });
+      { horaDeHoy: hora, horaNueva: cambio.horaNueva, desde: cambio.desde }, avisos, { dimension, ahora: opciones.ahora, alarma })
+    : programar(userId, p.habitId, p.title, hora, avisos, { dimension, alarma });
+}
+
+/**
+ * El hábito con algún día distinto (spec 008): deja las alarmas del teléfono como las del plan por día, y no
+ * toca la librería si ya lo están (la firma del plan guardada coincide). Corre al abrir la app: no pide permiso.
+ *
+ * - El aviso general sale del servidor como siempre (`avisosSegunElServidor`); si está apagado, queda vacío y
+ *   solo suenan los días con aviso propio.
+ * - Sin hora general el hábito no tiene recordatorio (ni general ni por día): no se toca.
+ * - Con un cambio de hora general pendiente (D-91), los días que siguen la general esperan su fecha.
+ * - Sin ninguna alarma que poner (todos apagados, o todos sin aviso), cancela las que hubiera.
+ */
+async function ajustarPorDia(
+  userId: string,
+  p: PreferenciaHabitoApi,
+  dias: readonly DiaPropio[],
+  tieneAlarma: boolean,
+  permiso: boolean,
+  opciones: { ahora?: Date; dimensionDe?: (habitoId: string) => string | null },
+): Promise<boolean> {
+  const hora = horaCorta(p.triggerTime);
+  if (!hora) return false;
+  const delTelefono = await antelacionesDe(userId, p.habitId);
+  const generalActivo = p.reminderEnabled === true && p.reminderMinutesBefore != null;
+  const avisosGenerales = generalActivo ? avisosSegunElServidor(p, delTelefono) : [];
+  const horaNueva = horaCorta(p.pendingChange?.triggerTime);
+  const cambio = horaNueva && p.pendingChange?.effectiveDate
+    ? { horaDeHoy: hora, horaNueva, desde: p.pendingChange.effectiveDate }
+    : null;
+  // Spec 009: la general según el servidor; sin ella (backend anterior), la que este teléfono ya tenía.
+  const alarmaGeneral = combinacionDeLaApi(p.alarm) ?? (await combinacionGeneralGuardada(userId, p.habitId));
+  const plan = planDeAlarmas({
+    habitoId: p.habitId, horaGeneral: hora, avisosGenerales, dias, cambio, ahora: opciones.ahora, alarmaGeneral,
+  });
+  const pedidos = plan.esquema === 'porDia' ? plan.pedidos : [];
+  if (pedidos.length === 0) {
+    if (!tieneAlarma) return false;
+    await cancelar(userId, p.habitId);
+    if (avisosGenerales.length === 0) {
+      await sinRomper(() => AsyncStorage.removeItem(CLAVE_ANTELACIONES + `${userId}.${p.habitId}`), undefined);
+    }
+    return true;
+  }
+  if (!permiso) return false;
+  if (tieneAlarma && (await esquemaGuardado(userId, p.habitId))?.firma === firmaDelPlan(plan)) return false;
+  const dimension = opciones.dimensionDe?.(p.habitId) ?? null;
+  return cambio
+    ? programarConCambioDiferido(userId, p.habitId, p.title, cambio, avisosGenerales, {
+      dimension, ahora: opciones.ahora, dias, alarma: alarmaGeneral,
+    })
+    : programar(userId, p.habitId, p.title, hora, avisosGenerales, { dimension, dias, alarma: alarmaGeneral });
 }

@@ -147,13 +147,13 @@ describe('cambiar la hora de un hábito desde Plan', () => {
     await recordatorios.programar(USUARIO, HABITO, 'Despertar', '06:30', [0]);
     mockProgramadas.length = 0;
     await recordatorios.reprogramarTrasCambioDeHora(USUARIO, HABITO, 'Despertar', '05:00');
-    expect(mockProgramadas[0].trigger.channelId).toBe('recordatorios-habitos-campana');
+    expect(mockProgramadas[0].trigger.channelId).toBe('recordatorios-habitos-campana-vib');
     expect(mockProgramadas[0].content.sound).toBe('campana_renaser.wav');
   });
 
-  it('sin sonido elegido sale por el canal de siempre', async () => {
+  it('sin sonido elegido sale por el canal de siempre, el que vibra (E-641)', async () => {
     await recordatorios.programar(USUARIO, HABITO, 'Despertar', '06:30', [0]);
-    expect(mockProgramadas[0].trigger.channelId).toBe('recordatorios-habitos');
+    expect(mockProgramadas[0].trigger.channelId).toBe('recordatorios-habitos-vib');
     expect(mockProgramadas[0].content.sound).toBe(true);
   });
 });

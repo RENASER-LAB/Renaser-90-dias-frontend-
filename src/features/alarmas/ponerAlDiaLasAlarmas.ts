@@ -9,6 +9,7 @@ import {
 import { fotoDeLasAlarmasAlAbrir } from './alarmasVivas';
 import { confirmarAlarmasAlServidor, type ResultadoDeConfirmacion } from './confirmacionDeAlarmas';
 import { agruparAvisosQueCoinciden } from './avisosJuntos';
+import { ponerLasAlarmasDeAccionesEnSuCanal, ponerLasAlarmasDeHabitosEnSuCanal } from './cambioDeSonido';
 import { agregarRutaALasAlarmasDeHabitos, rearmarAlarmasProgramadas, tocaRearmar } from './rearmarAlarmas';
 
 /**
@@ -21,7 +22,14 @@ import { agregarRutaALasAlarmasDeHabitos, rearmarAlarmasProgramadas, tocaRearmar
  * 3. **Lo que dice el servidor** (`GET /habit-preferences`): arma lo que falta (teléfono nuevo,
  *    reinstalación), cancela lo que se apagó y ajusta lo que cambió en otro dispositivo.
  * 4. **La ruta** en las alarmas de hábitos de antes de D-218, para que tocarlas abra Training.
+ *    4 bis (E-641): las alarmas de hábitos que siguen en un canal de antes, que no vibra, pasan al canal `-vib`
+ *    (`ponerLasAlarmasDeHabitosEnSuCanal`), con la misma hora y el mismo identificador. Spec 010: y lo mismo con las de las
+ *    acciones de los objetivos (`ponerLasAlarmasDeAccionesEnSuCanal`).
  * 5. **Confirmar** al servidor: con esto el push de inicio deja de ir también a este teléfono.
+ *
+ * El paso 3 también deja al día cómo suena cada hábito (spec 009) y RENUEVA la ventana de 7 días de las repeticiones
+ * de «Repetir si no la atiendo» (`habits/notificaciones/repeticiones.ts`): sin esa renovación, que corre cada vez que
+ * la app se abre, las repeticiones se acabarían a la semana.
  *
  * **Paso 0 (spec 007, FR-020):** antes de rearmar se toma la foto de «¿siguen vivas las alarmas?»
  * (`alarmasVivas.ts`). Rearmar las vuelve a poner y el sistema ya no dejaría ver que el teléfono las había
@@ -45,6 +53,11 @@ export interface DependenciasDePuestaAlDia {
   confirmar: () => Promise<ResultadoDeConfirmacion>;
   /** E-410: los avisos que coinciden suenan una sola vez. Opcional para las pruebas de antes. */
   agrupar?: (userId: string, ahoraMs: number) => Promise<number>;
+  /**
+   * E-641: pasa al canal que vibra las alarmas de hábitos que siguen en un canal de antes. Va ANTES de agrupar (que
+   * ordena los avisos con los canales ya nuevos). Opcional para las pruebas de antes.
+   */
+  canales?: (userId: string, ahoraMs: number) => Promise<number>;
 }
 
 export interface ResultadoDePuestaAlDia {
@@ -66,6 +79,9 @@ const porDefecto: DependenciasDePuestaAlDia = {
   agregarRutas: async (userId, ahoraMs) => agregarRutaALasAlarmasDeHabitos(await recordatoriosPorHabito(userId), ahoraMs),
   confirmar: () => confirmarAlarmasAlServidor(),
   agrupar: (userId, ahoraMs) => agruparAvisosQueCoinciden(userId, ahoraMs),
+  // E-641: hábitos y, desde la spec 010, las acciones de los objetivos (el recordatorio diario y el aviso de cada acción).
+  canales: async (userId, ahoraMs) =>
+    (await ponerLasAlarmasDeHabitosEnSuCanal(userId, ahoraMs)) + (await ponerLasAlarmasDeAccionesEnSuCanal(userId, ahoraMs)),
 };
 
 let ultima: number | null = null;
@@ -135,7 +151,9 @@ export async function ponerAlDiaLasAlarmas(
       .then(preferencias => deps.armarQueFaltan(userId, preferencias))
       .catch(() => null);
     const conRuta = await deps.agregarRutas(userId, ahoraMs).catch(() => 0);
-    // 4 bis. Los que coinciden a la misma hora: suena uno que nombra a todos (E-410).
+    // 4 bis (E-641). Las alarmas de hábitos que seguían en un canal de antes (sin vibración) pasan al que vibra.
+    await deps.canales?.(userId, ahoraMs).catch(() => 0);
+    // 4 ter. Los que coinciden a la misma hora: suena uno que nombra a todos (E-410).
     await deps.agrupar?.(userId, ahoraMs).catch(() => 0);
     const confirmacion = armadas === null ? 'sin_lectura_del_servidor' : await deps.confirmar();
     return { rearmadas, convertidas, armadas, conRuta, confirmacion };

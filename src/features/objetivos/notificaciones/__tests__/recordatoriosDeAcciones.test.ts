@@ -164,7 +164,8 @@ describe('sincronizar con el teléfono', () => {
     await sincronizarAlarmasDeAcciones(USUARIO, [roca({ id: 'r1' })], opciones);
     expect(programadas()).toHaveLength(1);
     const [, pedido] = programadas()[0];
-    expect(pedido.trigger).toMatchObject({ type: 'date', channelId: 'recordatorios-objetivos' });
+    // E-641 (spec 010): por el canal de objetivos que vibra (`-vib`); el base no vibra.
+    expect(pedido.trigger).toMatchObject({ type: 'date', channelId: 'recordatorios-objetivos-vib' });
     expect((pedido.trigger.date as Date).getTime()).toBe(Date.UTC(2026, 8, 26, 11, 50));
   });
 
@@ -193,7 +194,7 @@ describe('sincronizar con el teléfono', () => {
     await sincronizarAlarmasDeAcciones(USUARIO, [roca({ id: 'r1' })], opciones);
     const [, pedido] = programadas()[0];
     expect(pedido.content.sound).toBe('voz_objetivos.mp3');
-    expect(pedido.trigger.channelId).toBe('recordatorios-objetivos-voz');
+    expect(pedido.trigger.channelId).toBe('recordatorios-objetivos-voz-vib');
   });
 
   it('sin permiso no programa nada (no lo pide: corre al abrir, no por un toque)', async () => {
@@ -219,7 +220,7 @@ describe('«Recordarme mis acciones del día»', () => {
     expect(await programarRecordatorioDiario(USUARIO, '08:15')).toBe(true);
     expect(programadas()).toHaveLength(1);
     const [id, pedido] = programadas()[0];
-    expect(pedido.trigger).toMatchObject({ type: 'daily', hour: 8, minute: 15, channelId: 'recordatorios-objetivos' });
+    expect(pedido.trigger).toMatchObject({ type: 'daily', hour: 8, minute: 15, channelId: 'recordatorios-objetivos-vib' });
     expect(pedido.content).toMatchObject({ title: TEXTO_DIARIO.titulo, body: 'Revisa las acciones de tus objetivos de hoy.' });
     expect(await idsDeRecordatoriosDeAcciones(USUARIO)).toEqual([id]);
   });

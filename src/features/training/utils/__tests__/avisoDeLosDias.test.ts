@@ -1,0 +1,208 @@
+import { describe, expect, it } from '@jest/globals';
+
+import type { DiaDeLaSemanaApi } from '../../../habits/types/habits.types';
+import {
+  avisoInicialDeLosMarcados,
+  diasDelEditor,
+  diasPropiosDelEditor,
+  mismoAviso,
+  queGuardar,
+  resumenDelAvisoDelDia,
+  servidorInformaAvisosPorDia,
+  textoDelBoton,
+} from '../avisoDeLosDias';
+
+/**
+ * El recordatorio de cada día en el editor de «Planificar» (spec 008). Las reglas son las respuestas del dueño
+ * del 2026-10-20: avisos distintos → ninguno elegido; guardar solo lo tocado; el chip dice el aviso solo si
+ * difiere del general.
+ */
+describe('avisoInicialDeLosMarcados', () => {
+  it('sin días marcados no hay nada que derivar: manda el general', () => {
+    expect(avisoInicialDeLosMarcados([])).toBeNull();
+  });
+
+  it('un día, o varios con el mismo aviso: ese aviso, ordenado de mayor a menor', () => {
+    expect(avisoInicialDeLosMarcados([[30]])).toEqual([30]);
+    expect(avisoInicialDeLosMarcados([[10, 30], [30, 10], [30, 10]])).toEqual([30, 10]);
+    expect(avisoInicialDeLosMarcados([[], []])).toEqual([]);
+  });
+
+  it('avisos distintos: «distintos» (no se elige ninguno)', () => {
+    expect(avisoInicialDeLosMarcados([[30], [10]])).toBe('distintos');
+    expect(avisoInicialDeLosMarcados([[30], [30], []])).toBe('distintos');
+    expect(avisoInicialDeLosMarcados([[30, 0], [30]])).toBe('distintos');
+  });
+});
+
+describe('queGuardar: solo lo que se tocó', () => {
+  it('sin mover la rueda, solo el aviso', () => {
+    expect(queGuardar({ movioLaRueda: false, cambioElAviso: true })).toBe('aviso');
+  });
+  it('moviendo la rueda y el aviso, los dos', () => {
+    expect(queGuardar({ movioLaRueda: true, cambioElAviso: true })).toBe('ambos');
+  });
+  it('moviendo solo la rueda, la hora', () => {
+    expect(queGuardar({ movioLaRueda: true, cambioElAviso: false })).toBe('hora');
+  });
+  it('sin tocar nada, lo de siempre: la hora de la rueda', () => {
+    expect(queGuardar({ movioLaRueda: false, cambioElAviso: false })).toBe('hora');
+  });
+});
+
+describe('textoDelBoton', () => {
+  const base = { guardando: false, hora: '07:00' };
+  it('sin días: la hora para todos los días', () => {
+    expect(textoDelBoton({ ...base, dias: [], que: 'hora' })).toBe('Guardar 07:00 · todos los días');
+  });
+  it('con días y solo el aviso: «Guardar aviso» con los días', () => {
+    expect(textoDelBoton({ ...base, dias: ['SÁB', 'DOM'], que: 'aviso' })).toBe('Guardar aviso · sáb, dom');
+  });
+  it('con días y la hora: la hora con los días (como hasta ahora)', () => {
+    expect(textoDelBoton({ ...base, dias: ['SÁB', 'DOM'], que: 'hora' })).toBe('Guardar 07:00 · sáb, dom');
+  });
+  it('con los dos: hora y aviso', () => {
+    expect(textoDelBoton({ ...base, dias: ['MAR', 'MIÉ'], que: 'ambos' })).toBe('Guardar hora y aviso · mar, mié');
+  });
+  it('guardando', () => {
+    expect(textoDelBoton({ ...base, guardando: true, dias: ['SÁB'], que: 'aviso' })).toBe('Guardando…');
+  });
+});
+
+describe('resumenDelAvisoDelDia: lo que dice el chip', () => {
+  it('igual al general: nada (el día lo hereda y no se ve como propio)', () => {
+    expect(resumenDelAvisoDelDia([10], [10])).toBeNull();
+    expect(resumenDelAvisoDelDia([0, 30], [30, 0])).toBeNull();
+    expect(resumenDelAvisoDelDia([], [])).toBeNull();
+  });
+
+  it('el servidor no lo informa: nada', () => {
+    expect(resumenDelAvisoDelDia(null, [10])).toBeNull();
+    expect(resumenDelAvisoDelDia(undefined, [10])).toBeNull();
+  });
+
+  it('30 minutos: «30′», con el texto completo para el lector de pantalla', () => {
+    expect(resumenDelAvisoDelDia([30], [10])).toEqual({ corto: '30′', largo: 'Aviso 30 minutos antes', sinAviso: false });
+  });
+
+  it('a la hora: «hora» en el chip (cabe en una línea) y «a la hora» completo para el lector de pantalla', () => {
+    expect(resumenDelAvisoDelDia([0], [10])).toEqual({ corto: 'hora', largo: 'Aviso a la hora', sinAviso: false });
+  });
+
+  it('sin aviso: la campana tachada', () => {
+    expect(resumenDelAvisoDelDia([], [10])).toEqual({ corto: 'sin aviso', largo: 'Sin aviso', sinAviso: true });
+  });
+
+  it('más de una hora y varios avisos', () => {
+    // El chip mide ~40 px: «1 h 30′» (7 caracteres) se partía en dos renglones; ahora son minutos hasta 99 y horas justas.
+    expect(resumenDelAvisoDelDia([90], [10])).toMatchObject({ corto: '90′', largo: 'Aviso 1 hora y 30 minutos antes' });
+    expect(resumenDelAvisoDelDia([60], [10])).toMatchObject({ corto: '60′', largo: 'Aviso 1 hora antes' });
+    expect(resumenDelAvisoDelDia([120], [10])).toMatchObject({ corto: '2 h', largo: 'Aviso 2 horas antes' });
+    expect(resumenDelAvisoDelDia([150], [10])).toMatchObject({ corto: '150′', largo: 'Aviso 2 horas y 30 minutos antes' });
+    expect(resumenDelAvisoDelDia([0, 30], [10])).toEqual({
+      corto: '30′ +1',
+      largo: 'Avisos 30 minutos antes y a la hora',
+      sinAviso: false,
+    });
+  });
+
+  it('un día sin aviso cuando el general también está apagado no se marca; con el general encendido sí', () => {
+    expect(resumenDelAvisoDelDia([], [])).toBeNull();
+    expect(resumenDelAvisoDelDia([30], [])).not.toBeNull();
+  });
+});
+
+describe('resumenDelAvisoDelDia con VARIOS avisos (E-643): el chip no se deforma', () => {
+  it('cuatro avisos (30, 10, 5 min antes y a la hora): el más temprano y cuántos más, y la lista completa para el lector', () => {
+    expect(resumenDelAvisoDelDia([30, 10, 5, 0], [10])).toEqual({
+      corto: '30′ +3',
+      largo: 'Avisos 30, 10 y 5 minutos antes y a la hora',
+      sinAviso: false,
+    });
+  });
+
+  it('da igual el orden y los repetidos: siempre el más temprano', () => {
+    expect(resumenDelAvisoDelDia([5, 0, 30, 10, 30], [10])).toMatchObject({ corto: '30′ +3' });
+    expect(resumenDelAvisoDelDia([0, 5], [10])).toEqual({
+      corto: '5′ +1', largo: 'Avisos 5 minutos antes y a la hora', sinAviso: false,
+    });
+  });
+
+  it('dos avisos con minutos: «30 y 10 minutos antes»; con a la hora, se suma al final', () => {
+    expect(resumenDelAvisoDelDia([30, 10], [0])).toMatchObject({ corto: '30′ +1', largo: 'Avisos 30 y 10 minutos antes' });
+    expect(resumenDelAvisoDelDia([30, 0], [10])).toMatchObject({ corto: '30′ +1', largo: 'Avisos 30 minutos antes y a la hora' });
+  });
+
+  it('con horas en la lista: se agrupan en minutos hasta las tres horas y, si no, cada uno dice su unidad', () => {
+    expect(resumenDelAvisoDelDia([90, 30, 0], [10])).toMatchObject({ corto: '90′ +2', largo: 'Avisos 90 y 30 minutos antes y a la hora' });
+    expect(resumenDelAvisoDelDia([240, 30], [10])).toMatchObject({ corto: '4 h +1', largo: 'Avisos 4 horas antes y 30 minutos antes' });
+  });
+
+  it('el texto del chip es siempre corto: una línea de pocos caracteres, aunque haya muchos avisos', () => {
+    const casos: number[][] = [[0], [1], [5], [30], [99], [100], [150], [1440], [30, 10], [30, 10, 5, 0], [1440, 120, 60, 30, 10, 5, 1, 0], [999, 1]];
+    for (const aviso of casos) {
+      const r = resumenDelAvisoDelDia(aviso, [7]);
+      expect(r).not.toBeNull();
+      // «30′», «2 h», «hora» o «150′ +7»: nunca la lista completa ni un renglón largo.
+      expect(r!.corto).toMatch(/^(\d+′|\d+ h|hora)( \+\d)?$/);
+      expect(r!.corto.length).toBeLessThanOrEqual(8);
+      expect(r!.corto).not.toContain('\n');
+    }
+  });
+});
+
+describe('diasDelEditor y las alarmas', () => {
+  const dia = (weekday: string, extra: Partial<DiaDeLaSemanaApi> = {}): DiaDeLaSemanaApi => ({
+    weekday, triggerTime: '07:00:00', limitTime: null, custom: false, active: true, ...extra,
+  });
+  const semana = (cambios: Record<string, Partial<DiaDeLaSemanaApi>> = {}): DiaDeLaSemanaApi[] =>
+    ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'].map(w => dia(w, {
+      reminderEnabled: true, reminderMinutesList: [10], customReminder: false, ...cambios[w],
+    }));
+
+  it('lee hora, si es propia, si está encendido y el aviso de cada día', () => {
+    const dias = diasDelEditor(semana({
+      SATURDAY: { custom: true, triggerTime: '09:00:00', reminderMinutesList: [30], customReminder: true },
+      SUNDAY: { reminderEnabled: false, reminderMinutesList: [], customReminder: true },
+    }), [10]);
+    expect(dias['SÁB']).toEqual({ hora: '09:00', propio: true, activo: true, aviso: [30], avisoPropio: true });
+    expect(dias['DOM']).toMatchObject({ aviso: [], avisoPropio: true });
+    expect(dias['LUN']).toEqual({ hora: '07:00', propio: false, activo: true, aviso: [10], avisoPropio: false });
+  });
+
+  it('un backend anterior no manda `customReminder`: el aviso por día no se ofrece', () => {
+    const dias = diasDelEditor([dia('MONDAY'), dia('TUESDAY')], [10]);
+    expect(dias['LUN'].aviso).toBeNull();
+    expect(servidorInformaAvisosPorDia(dias)).toBe(false);
+    expect(servidorInformaAvisosPorDia({})).toBe(false);
+  });
+
+  it('con el aviso informado en los siete días, sí se ofrece', () => {
+    expect(servidorInformaAvisosPorDia(diasDelEditor(semana(), [10]))).toBe(true);
+  });
+
+  it('un día «activo» sin lista cae en el aviso general', () => {
+    const dias = diasDelEditor(semana({ MONDAY: { reminderMinutesList: null } }), [30, 0]);
+    expect(dias['LUN'].aviso).toEqual([30, 0]);
+  });
+
+  it('para las alarmas: la hora solo si es propia y el aviso solo si es propio', () => {
+    const dias = diasDelEditor(semana({
+      THURSDAY: { custom: true, triggerTime: '09:00:00' },
+      SATURDAY: { reminderMinutesList: [30], customReminder: true },
+      SUNDAY: { active: false },
+    }), [10]);
+    const propios = diasPropiosDelEditor(dias);
+    expect(propios).toHaveLength(7);
+    // `horaResuelta` (E-642): la hora que rige ese día según el servidor, propia o no.
+    expect(propios.find(d => d.iso === 4)).toEqual({ iso: 4, activo: true, hora: '09:00', horaResuelta: '09:00', avisos: null });
+    expect(propios.find(d => d.iso === 6)).toEqual({ iso: 6, activo: true, hora: null, horaResuelta: '07:00', avisos: [30] });
+    expect(propios.find(d => d.iso === 7)).toEqual({ iso: 7, activo: false, hora: null, horaResuelta: '07:00', avisos: null });
+    expect(propios.find(d => d.iso === 1)).toEqual({ iso: 1, activo: true, hora: null, horaResuelta: '07:00', avisos: null });
+  });
+
+  it('mismoAviso compara conjuntos', () => {
+    expect(mismoAviso([0, 30], [30, 0])).toBe(true);
+    expect(mismoAviso([30], [30, 0])).toBe(false);
+  });
+});

@@ -11,7 +11,12 @@
  * > (`FenixDeSer`); el botón era foto fija sin reacción. El aviso ahora lleva QUÉ registro se cerró y los puntos que
  * > pagó el servidor, para que la tarjeta del hábito muestre «+N» sin calcular nada (pedido del dueño, 2026-10-07).
  */
-export type HabitoCumplido = { registroId: string; puntosOtorgados: number };
+/**
+ * `habitoId` (spec 009, 2026-10-20): de QUÉ hábito es el registro, para que las repeticiones de su alarma dejen de
+ * sonar hoy (`repeticiones.atenderAlCumplirUnHabito`). Opcional: sale del registro vigente que ya se leyó para
+ * validar el día, y si no se pudo saber, el aviso viaja sin él.
+ */
+export type HabitoCumplido = { registroId: string; puntosOtorgados: number; habitoId?: string };
 
 type Oyente = (cumplido: HabitoCumplido) => void;
 

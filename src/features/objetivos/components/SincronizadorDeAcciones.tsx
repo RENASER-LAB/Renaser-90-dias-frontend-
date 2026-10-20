@@ -5,6 +5,8 @@ import { useAuth } from '../../../context/AuthContext';
 import { HAY_RECORDATORIOS_LOCALES } from '../../habits/notificaciones/recordatoriosDeHabito';
 import { tocaRearmar } from '../../alarmas/rearmarAlarmas';
 import * as objetivosApi from '../api/objetivosApi';
+import { hayAvisoEnAlgunDia, hayDiarioEnAlgunDia } from '../notificaciones/preferenciasPorDia';
+import { sincronizarRepeticionesDelDiario } from '../notificaciones/repeticionesDeAcciones';
 import {
   leerAccionesAgendadas,
   preferenciasDeAcciones,
@@ -24,7 +26,8 @@ let ultimoUsuario: string | null = null;
  * > **Corregido 2026-09-28 (D-217).** Decía «pone las de hoy y mañana»: una acción del viernes agendada
  * > el martes no tenía alarma hasta que la app se abriera el jueves. Con un backend anterior sigue así.
  *
- * Solo si la persona pidió aviso antes de sus acciones: quien no lo usa no paga las dos lecturas.
+ * Solo si la persona pidió aviso antes de sus acciones en algún día de la semana (spec 010): quien no lo usa no paga las
+ * dos lecturas.
  * Vive en `App.tsx`, junto a `RearmadorDeAlarmas`: ninguna pestaña cambia. No pinta nada.
  */
 export function SincronizadorDeAcciones(): null {
@@ -41,7 +44,11 @@ export function SincronizadorDeAcciones(): null {
       if (userId === ultimoUsuario && !tocaRearmar(ultima, ahora)) return;
       ultima = ahora;
       ultimoUsuario = userId;
-      if ((await preferenciasDeAcciones(userId)).antelaciones.length === 0) return;
+      const prefs = await preferenciasDeAcciones(userId);
+      // La ventana de 7 días de las repeticiones del recordatorio diario se renueva aunque no haya avisos por acción (no
+      // depende de la lista de acciones). Quien no usa el recordatorio diario no paga ni esta lectura.
+      if (hayDiarioEnAlgunDia(prefs)) await sincronizarRepeticionesDelDiario(userId, { prefs });
+      if (!hayAvisoEnAlgunDia(prefs)) return;
       const leidas = await leerAccionesAgendadas({
         agendadas: objetivosApi.obtenerRocasAgendadas,
         hoy: objetivosApi.obtenerRocasDeHoy,

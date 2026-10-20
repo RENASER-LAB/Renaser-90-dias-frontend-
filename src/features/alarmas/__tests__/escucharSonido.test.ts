@@ -53,11 +53,11 @@ describe('escuchar un sonido antes de elegirlo', () => {
       {
         identifier: 'renaser-prueba-de-sonido',
         content: { title: 'Así suena tu alarma', body: 'Lluvia. Esta es una prueba de Renaser.', sound: 'relajar_lluvia.mp3' },
-        trigger: { channelId: 'recordatorios-habitos-relajar-lluvia' },
+        trigger: { channelId: 'recordatorios-habitos-relajar-lluvia-vib' },
       },
     ]);
     expect(mockCanales).toEqual([
-      expect.objectContaining({ id: 'recordatorios-habitos-relajar-lluvia', sound: 'relajar_lluvia.mp3' }),
+      expect.objectContaining({ id: 'recordatorios-habitos-relajar-lluvia-vib', sound: 'relajar_lluvia.mp3' }),
     ]);
   });
 
@@ -65,7 +65,7 @@ describe('escuchar un sonido antes de elegirlo', () => {
     await escucharSonido('voz');
     expect(mockPedidos[0]).toMatchObject({
       content: { body: 'Con «Voz», cada hábito dice su nombre. Este es Despertar.', sound: 'voz_habito_despertar.mp3' },
-      trigger: { channelId: 'recordatorios-habitos-voz-despertar' },
+      trigger: { channelId: 'recordatorios-habitos-voz-despertar-vib' },
     });
   });
 
@@ -86,7 +86,7 @@ describe('escuchar un sonido antes de elegirlo', () => {
     expect(mockPedidos[0]).toMatchObject({
       identifier: 'renaser-prueba-de-sonido',
       content: { body: 'Campanas. Esta es una prueba de Renaser.', sound: 'alertar_campana.mp3' },
-      trigger: { type: 'timeInterval', seconds: 3, channelId: 'recordatorios-habitos-alertar-campana' },
+      trigger: { type: 'timeInterval', seconds: 3, channelId: 'recordatorios-habitos-alertar-campana-vib' },
     });
   });
 });
