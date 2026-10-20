@@ -32,6 +32,7 @@
     "expo-status-bar": "~57.0.1",
     "expo-thinking-orbs": "^0.2.1",
     "expo-web-browser": "~57.0.2",
+    "lottie-react-native": "~7.3.8",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
