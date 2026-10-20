@@ -67,16 +67,19 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       del lector de pantalla sigue nombrando la lista completa de avisos. La misma fila la usa el recordatorio de las
       acciones (Plan y Yo → Alarmas, spec 010): también deja de escribir el aviso. `resumenDelAvisoDelDia` ya no trae
       `corto`.
-    * **«Otra» se elige en su lugar**: tocarla agrega y marca el aviso de arranque (15, o el mayor de los que ya rigen,
-      como abría la rueda; si ya existe no se duplica) y abre, DENTRO de lo que se desliza y justo debajo de las
-      opciones del recordatorio, la fila «−  15 min antes  +» (botones redondos de 48, minutos a 18 en negrita, borde
-      dorado). «−» y «+» ("Cinco minutos menos" / "Cinco minutos más") cambian ESE aviso de 5 en 5, entre 1 y 60 (un
-      valor que no es múltiplo de 5 se mueve de 5 en 5 desde ahí) y lo reemplazan en la lista sin duplicar y en el orden
-      de siempre; en el tope el botón se apaga. Volver a tocar «Otra» cierra la fila y el aviso queda; tocar su pastilla
-      lo desmarca y cierra la fila; «Sin aviso» sigue siendo exclusivo y también la cierra. Vale con días marcados
-      (el aviso va a esos días, spec 008). Si la fila nace debajo de lo que se ve, se lleva a la vista. Entra con un
-      fundido de 160 ms (con «reducir movimiento», al instante). Se borró la rueda `RuedaAntelacionPicker` y su botón
-      «Añadir», que se montaban encima del contenido; la lógica vive en `training/utils/avisoOtra.ts`.
+    * **«Otra» se elige en su lugar y SUMA un aviso**: tocarla agrega un aviso nuevo y lo marca —los que había (30, 10,
+      «a la hora», los personalizados) quedan— y abre, DENTRO de lo que se desliza y justo debajo de las opciones del
+      recordatorio, la fila «−  15 min antes  +» (botones redondos de 48, minutos a 18 en negrita, borde dorado). Arranca
+      en 15; si 15 ya está, en el siguiente valor libre múltiplo de 5 (hacia arriba hasta 60 y, si no hay, hacia abajo);
+      sin ningún valor libre no suma nada. «−» y «+» ("Cinco minutos menos" / "Cinco minutos más") cambian SOLO ese
+      aviso, de 5 en 5 entre 1 y 60, SALTANDO los avisos que ya existen (nunca pisan ni duplican otro; un valor que no
+      es múltiplo de 5 se mueve de 5 en 5 desde ahí); sin un valor libre en esa dirección el botón se apaga. Mientras ese
+      aviso siga marcado, volver a tocar «Otra» solo abre o cierra la fila (no suma otro); tocar su pastilla lo desmarca
+      y cierra la fila (el siguiente toque en «Otra» suma uno nuevo); «Sin aviso» sigue siendo exclusivo y también la
+      cierra; cambiar entre todos los días y días marcados la cierra y suelta el aviso. Vale con días marcados (el aviso
+      va a esos días, spec 008). Si la fila nace debajo de lo que se ve, se lleva a la vista. Entra con un fundido de
+      160 ms (con «reducir movimiento», al instante). Se borró la rueda `RuedaAntelacionPicker` y su botón «Añadir»,
+      que se montaban encima del contenido; la lógica vive en `training/utils/avisoOtra.ts`.
     * **Pantalla completa**: `HojaDesdeAbajo` suma `tamano="completa"` (todo el alto disponible, hasta debajo de la
       barra de estado; `grande` de las demás hojas no cambia) y la hoja de Planificar la usa en sus tres pasos —la
       lista, el editor y «Hábito nuevo»— para que no cambie de alto al entrar a un hábito. Al final de lo que se

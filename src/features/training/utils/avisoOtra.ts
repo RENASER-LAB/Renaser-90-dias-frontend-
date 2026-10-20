@@ -1,18 +1,25 @@
 import {
   MAXIMO_MINUTOS_RUEDA_ANTELACION,
   MINIMO_MINUTOS_ANTELACION,
-  minutosDeArranqueDeLaRueda,
+  MINUTOS_OTRA_POR_DEFECTO,
 } from '../../habits/utils/etiquetaDeAntelacion';
 
 /**
- * «Otra» en el recordatorio del editor de Planificar (spec 011). Puro: decide qué aviso se agrega al tocar «Otra» y
- * cómo cambia con «−» y «+»; el componente solo lo pinta.
+ * «Otra» en el recordatorio del editor de Planificar (spec 011). Puro: decide qué aviso SUMA «Otra» y cómo lo mueven
+ * «−» y «+»; el componente solo lo pinta.
  *
  * Antes «Otra» desplegaba una rueda de 1 a 60 minutos FUERA de lo que se desliza, con un botón «Añadir», y se montaba
- * encima del contenido. Ahora «Otra» agrega y marca el aviso de arranque ya, y debajo de las opciones se abre la fila
- * «−  15 min antes  +», dentro del desplazamiento, que mueve ESE aviso de 5 en 5. El rango es el de siempre (1 a 60):
- * lo guardado fuera de él (un aviso de 90 de cuando se escribía a mano) sigue vivo en su pastilla; esta fila no lo
- * toca.
+ * encima del contenido. Ahora tocar «Otra» SUMA un aviso nuevo y lo marca ya —los que había quedan—, y debajo de las
+ * opciones se abre la fila «−  15 min antes  +», dentro del desplazamiento, que mueve SOLO ese aviso de 5 en 5.
+ *
+ * - **Arranca en 15.** Si 15 ya está, el siguiente valor libre múltiplo de 5: primero hacia arriba hasta 60 y, si no
+ *   hay, hacia abajo. Sin ningún valor libre no suma nada.
+ * - **«−» y «+» saltan los avisos que ya existen**: nunca pisan ni duplican otro. Sin un valor libre en esa dirección,
+ *   el botón se apaga.
+ * - **Los demás avisos no cambian nunca** (30, 10, «a la hora», los personalizados que ya había).
+ *
+ * El rango es el de siempre (1 a 60): lo guardado fuera de él (un aviso de 90 de cuando se escribía a mano) sigue
+ * vivo en su pastilla; esta fila no lo toca.
  */
 
 /** Cuánto mueven «−» y «+». */
@@ -22,8 +29,17 @@ export const PASO_DE_OTRA = 5;
 export const MINIMO_DE_OTRA = MINIMO_MINUTOS_ANTELACION;
 export const MAXIMO_DE_OTRA = MAXIMO_MINUTOS_RUEDA_ANTELACION;
 
+/** Donde arranca el aviso de «Otra» (15), si está libre. */
+export const ARRANQUE_DE_OTRA = MINUTOS_OTRA_POR_DEFECTO;
+
 /** Un sentido del paso: `1` = «+», `-1` = «−». */
 export type SentidoDeOtra = 1 | -1;
+
+/** Los múltiplos de 5 que ofrece «Otra» al sumar un aviso: 5, 10 … 60. */
+const MULTIPLOS_DE_OTRA: readonly number[] = Array.from(
+  { length: Math.floor(MAXIMO_DE_OTRA / PASO_DE_OTRA) },
+  (_, i) => (i + 1) * PASO_DE_OTRA,
+);
 
 /** El conjunto de avisos en el orden de siempre del editor: de la antelación mayor a la menor, sin repetir. */
 function ordenados(avisos: readonly number[]): number[] {
@@ -35,37 +51,62 @@ function dentroDelRango(minutos: number): number {
 }
 
 /**
- * Al tocar «Otra»: el aviso de arranque —15, o el mayor de los que ya rigen, como abría la rueda— queda en la
- * lista y marcado. Si ya estaba no se duplica: sigue marcado y es el que la fila va a mover.
+ * Los minutos del aviso nuevo de «Otra»: 15 si está libre; si no, el siguiente libre múltiplo de 5 hacia arriba hasta
+ * 60 y, si no hay, hacia abajo. `null` si los doce múltiplos de 5 ya están puestos.
  */
-export function abrirOtra(avisos: readonly number[]): { avisos: number[]; minutos: number } {
-  const minutos = minutosDeArranqueDeLaRueda(avisos);
+export function minutosParaUnaOtraNueva(avisos: readonly number[]): number | null {
+  const ocupados = new Set(avisos);
+  const haciaArriba = MULTIPLOS_DE_OTRA.filter(m => m >= ARRANQUE_DE_OTRA);
+  const haciaAbajo = MULTIPLOS_DE_OTRA.filter(m => m < ARRANQUE_DE_OTRA).reverse();
+  return [...haciaArriba, ...haciaAbajo].find(m => !ocupados.has(m)) ?? null;
+}
+
+/**
+ * Al tocar «Otra» por primera vez: SUMA un aviso nuevo (los que había quedan) y lo deja marcado, en el orden de
+ * siempre. `null` si no hay ningún valor libre: entonces no suma nada y no hay fila que abrir.
+ */
+export function abrirOtra(avisos: readonly number[]): { avisos: number[]; minutos: number } | null {
+  const minutos = minutosParaUnaOtraNueva(avisos);
+  if (minutos === null) return null;
   return { avisos: ordenados([...avisos, minutos]), minutos };
 }
 
 /**
- * A dónde va el aviso con «−» o «+»: de 5 en 5 desde donde está, con tope en 1 y en 60. Un valor que no es múltiplo
- * de 5 se mueve de 5 en 5 desde ahí (12 → 17), no se redondea.
+ * A dónde va el aviso de «Otra» con «−» o «+»: de 5 en 5 desde donde está, con tope en 1 y en 60, SALTANDO los valores
+ * que ya existen en la lista (otro aviso nunca se pisa ni se duplica). Un valor que no es múltiplo de 5 se mueve de 5 en
+ * 5 desde ahí (12 → 17); un paso que se pasaría del tope cae en el tope (58 → 60). `null` si en esa dirección no hay
+ * ningún valor libre.
  */
-export function minutosTrasElPaso(minutos: number, sentido: SentidoDeOtra): number {
-  return dentroDelRango(dentroDelRango(minutos) + sentido * PASO_DE_OTRA);
+export function siguienteLibreDeOtra(minutos: number, sentido: SentidoDeOtra, avisos: readonly number[]): number | null {
+  const otros = new Set(avisos.filter(m => m !== minutos));
+  const tope = sentido === 1 ? MAXIMO_DE_OTRA : MINIMO_DE_OTRA;
+  let candidato = dentroDelRango(minutos);
+  while (candidato !== tope) {
+    candidato = sentido === 1
+      ? Math.min(candidato + PASO_DE_OTRA, tope)
+      : Math.max(candidato - PASO_DE_OTRA, tope);
+    if (!otros.has(candidato)) return candidato;
+  }
+  return null;
 }
 
-/** `false` en el tope: «+» en 60 y «−» en 1 no hacen nada y se ven apagados. */
-export function sePuedeMover(minutos: number, sentido: SentidoDeOtra): boolean {
-  return minutosTrasElPaso(minutos, sentido) !== dentroDelRango(minutos);
+/** `false` si en esa dirección no hay un valor libre (el tope, o todo ocupado hasta el tope): el botón se apaga. */
+export function sePuedeMover(minutos: number, sentido: SentidoDeOtra, avisos: readonly number[]): boolean {
+  return siguienteLibreDeOtra(minutos, sentido, avisos) !== null;
 }
 
 /**
- * «−» o «+»: cambia ESE aviso en la lista. El anterior sale y el nuevo entra marcado, sin duplicar (si ya estaba, la
- * lista no crece) y en el orden de siempre. Los demás avisos —incluido «a la hora», el 0— no se tocan.
+ * «−» o «+»: cambia SOLO el aviso de «Otra» en la lista. El anterior sale y el nuevo entra marcado, sin pisar ni duplicar
+ * otro, y en el orden de siempre. Los demás avisos —incluido «a la hora», el 0— no se tocan. Sin valor libre en esa
+ * dirección no cambia nada.
  */
 export function moverAvisoDeOtra(
   avisos: readonly number[],
   minutos: number,
   sentido: SentidoDeOtra,
 ): { avisos: number[]; minutos: number } {
-  const siguiente = minutosTrasElPaso(minutos, sentido);
+  const siguiente = siguienteLibreDeOtra(minutos, sentido, avisos);
+  if (siguiente === null) return { avisos: [...avisos], minutos };
   return { avisos: ordenados([...avisos.filter(m => m !== minutos), siguiente]), minutos: siguiente };
 }
 

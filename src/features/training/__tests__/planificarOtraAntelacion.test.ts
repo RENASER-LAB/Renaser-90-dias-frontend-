@@ -9,10 +9,10 @@ import type { DiaDeLaSemanaApi, PreferenciaHabitoApi } from '../../habits/types/
 import type { HabitItem } from '../../../screens/TrainingScreen';
 
 /**
- * «Otra» en la hoja «PLANIFICAR» de Training, montada de verdad (spec 011). Al tocar «Otra» se agrega y marca el
- * aviso de arranque y, DENTRO de lo que se desliza y debajo de las opciones, se abre la fila «−  15 min antes  +»
- * que lo mueve de 5 en 5 entre 1 y 60. Antes era una rueda fuera del desplazamiento con un botón «Añadir», que se
- * montaba encima del contenido.
+ * «Otra» en la hoja «PLANIFICAR» de Training, montada de verdad (spec 011). Tocar «Otra» SUMA un aviso nuevo (15, o el
+ * siguiente libre) y lo marca —los que había quedan— y, DENTRO de lo que se desliza y debajo de las opciones, abre la
+ * fila «−  15 min antes  +», que mueve SOLO ese aviso de 5 en 5 entre 1 y 60, saltando los que ya existen. Antes era una
+ * rueda fuera del desplazamiento con un botón «Añadir», que se montaba encima del contenido.
  */
 
 const mockAlerta = jest.fn<(titulo: string, mensaje?: string) => void>();
@@ -239,16 +239,32 @@ afterEach(() => {
   raiz = null;
 });
 
+/** Los avisos del hábito abierto, tal como los trae el servidor (la lista general). */
+function conAvisosGenerales(avisos: number[]) {
+  mockPreferencias.mockResolvedValue([preferencia({
+    reminderEnabled: avisos.length > 0,
+    reminderMinutesBefore: avisos.length > 0 ? Math.max(...avisos) : null,
+    reminderMinutesList: avisos,
+  })]);
+  mockSemana.mockResolvedValue(semana({
+    MONDAY: { reminderMinutesList: avisos, reminderEnabled: avisos.length > 0 },
+    TUESDAY: { reminderMinutesList: avisos, reminderEnabled: avisos.length > 0 },
+    WEDNESDAY: { reminderMinutesList: avisos, reminderEnabled: avisos.length > 0 },
+    THURSDAY: { reminderMinutesList: avisos, reminderEnabled: avisos.length > 0 },
+    FRIDAY: { reminderMinutesList: avisos, reminderEnabled: avisos.length > 0 },
+    SATURDAY: { reminderMinutesList: avisos, reminderEnabled: avisos.length > 0 },
+    SUNDAY: { reminderMinutesList: avisos, reminderEnabled: avisos.length > 0 },
+  }));
+}
+const ordenadas = (r: ReactTestRenderer): string[] => elegidas(r).sort();
+
 describe('tocar «Otra»', () => {
-  it('sin avisos: agrega y marca 15 min antes, y abre la fila «−  15 min antes  +» (sin «Sin aviso» marcado)', async () => {
+  it('SUMA un aviso nuevo: con 10 min antes ya marcado queda el 10 y se agrega 15', async () => {
     const r = await montar();
     await abrirElHabito(r);
-    await tocarSinAviso(r);
-    expect(elegidas(r)).toEqual(['Sin aviso']);
-    expect(filaDeOtra(r)).toBeUndefined();
-
+    expect(elegidas(r)).toEqual(['10 min antes']);
     await tocarOtra(r);
-    expect(elegidas(r)).toEqual(['15 min antes']);
+    expect(ordenadas(r)).toEqual(['10 min antes', '15 min antes']);
     expect(filaDeOtra(r)).toBeDefined();
     expect(textoDeLaFila(r)).toContain('15 min antes');
     // Los botones se anuncian con su acción, no con el signo.
@@ -256,32 +272,67 @@ describe('tocar «Otra»', () => {
     expect(botonDeLaFila(r, 'Cinco minutos más')).toBeDefined();
   });
 
-  it('si el aviso de arranque ya existe (10 min antes) no se duplica: queda marcado y la fila parte de él', async () => {
-    const r = await montar();
-    await abrirElHabito(r);
-    expect(elegidas(r)).toEqual(['10 min antes']);
-    await tocarOtra(r);
-    expect(elegidas(r)).toEqual(['10 min antes']);
-    const pastillasDe10 = r.root.findAll(n => (n.type as unknown) === Presionable && String(n.props.accessibilityLabel).startsWith('10 min antes'));
-    expect(pastillasDe10).toHaveLength(1);
-    expect(textoDeLaFila(r)).toContain('10 min antes');
-  });
-
-  it('volver a tocar «Otra» cierra la fila y el aviso queda', async () => {
+  it('sin avisos: agrega y marca 15 min antes (y «Sin aviso» deja de estar marcado)', async () => {
     const r = await montar();
     await abrirElHabito(r);
     await tocarSinAviso(r);
+    expect(elegidas(r)).toEqual(['Sin aviso']);
+    expect(filaDeOtra(r)).toBeUndefined();
+    await tocarOtra(r);
+    expect(elegidas(r)).toEqual(['15 min antes']);
+    expect(textoDeLaFila(r)).toContain('15 min antes');
+  });
+
+  it('con 30 min antes y a la hora marcados: suma 15 y quedan los tres', async () => {
+    const r = await montar();
+    await abrirElHabito(r);
+    await tocarSinAviso(r);
+    await tocar(r, '30 min antes');
+    await tocar(r, 'A la hora exacta');
+    expect(ordenadas(r)).toEqual(['30 min antes', 'A la hora exacta']);
+    await tocarOtra(r);
+    expect(ordenadas(r)).toEqual(['15 min antes', '30 min antes', 'A la hora exacta']);
+    expect(textoDeLaFila(r)).toContain('15 min antes');
+  });
+
+  it('con 15 ya existente arranca en 20 y deja el 15', async () => {
+    conAvisosGenerales([15]);
+    const r = await montar();
+    await abrirElHabito(r);
+    expect(elegidas(r)).toEqual(['15 min antes']);
+    await tocarOtra(r);
+    expect(ordenadas(r)).toEqual(['15 min antes', '20 min antes']);
+    expect(textoDeLaFila(r)).toContain('20 min antes');
+  });
+
+  it('volver a tocar «Otra» solo cierra la fila y el aviso queda; otro toque la abre sin sumar otro', async () => {
+    const r = await montar();
+    await abrirElHabito(r);
     await tocarOtra(r);
     expect(filaDeOtra(r)).toBeDefined();
     await tocarOtra(r);
     expect(filaDeOtra(r)).toBeUndefined();
-    expect(elegidas(r)).toEqual(['15 min antes']);
+    expect(ordenadas(r)).toEqual(['10 min antes', '15 min antes']);
+    await tocarOtra(r);
+    expect(filaDeOtra(r)).toBeDefined();
+    expect(textoDeLaFila(r)).toContain('15 min antes');
+    expect(ordenadas(r)).toEqual(['10 min antes', '15 min antes']);
+  });
+
+  it('sin ningún valor libre no suma nada y no abre la fila', async () => {
+    conAvisosGenerales([60, 55, 50, 45, 40, 35, 30, 25, 20, 15, 10, 5]);
+    const r = await montar();
+    await abrirElHabito(r);
+    const antes = ordenadas(r);
+    expect(antes).toHaveLength(12);
+    await tocarOtra(r);
+    expect(filaDeOtra(r)).toBeUndefined();
+    expect(ordenadas(r)).toEqual(antes);
   });
 
   it('la fila vive DENTRO de lo que se desliza y no hay rueda ni «Añadir» por encima de nada', async () => {
     const r = await montar();
     await abrirElHabito(r);
-    await tocarSinAviso(r);
     await tocarOtra(r);
     const desplazables = r.root.findAll(n => (n.type as unknown) === ScrollView);
     expect(desplazables.some(s => s.findAll(n => n.props.testID === FILA).length > 0)).toBe(true);
@@ -292,7 +343,6 @@ describe('tocar «Otra»', () => {
   it('va debajo de las opciones del recordatorio: después de «Otra» en el orden de la pantalla', async () => {
     const r = await montar();
     await abrirElHabito(r);
-    await tocarSinAviso(r);
     await tocarOtra(r);
     const todo = textos(r);
     expect(todo.indexOf('A la hora')).toBeLessThan(todo.indexOf('Otra'));
@@ -301,26 +351,38 @@ describe('tocar «Otra»', () => {
 });
 
 describe('«+» y «−»', () => {
-  it('«+» sube de 5 en 5 y cambia la pastilla del aviso (sin dejar el anterior)', async () => {
+  it('«+» sube de 5 en 5 SOLO el aviso de «Otra»: el 10 queda y el 15 pasa a 20', async () => {
     const r = await montar();
     await abrirElHabito(r);
-    await tocarSinAviso(r);
     await tocarOtra(r);
     await pulsar(r, 'Cinco minutos más');
     expect(textoDeLaFila(r)).toContain('20 min antes');
-    expect(elegidas(r)).toEqual(['20 min antes']);
+    expect(ordenadas(r)).toEqual(['10 min antes', '20 min antes']);
     await pulsar(r, 'Cinco minutos más');
-    expect(elegidas(r)).toEqual(['25 min antes']);
+    expect(ordenadas(r)).toEqual(['10 min antes', '25 min antes']);
   });
 
-  it('«−» baja de 5 en 5', async () => {
+  it('«−» baja de 5 en 5 y SALTA el 10 que ya existe: del 15 va al 5', async () => {
+    const r = await montar();
+    await abrirElHabito(r);
+    await tocarOtra(r);
+    await pulsar(r, 'Cinco minutos menos');
+    expect(textoDeLaFila(r)).toContain('5 min antes');
+    expect(ordenadas(r)).toEqual(['10 min antes', '5 min antes']);
+  });
+
+  it('«+» desde 25 con 30 existente salta a 35 y el 30 queda marcado', async () => {
     const r = await montar();
     await abrirElHabito(r);
     await tocarSinAviso(r);
-    await tocarOtra(r);
-    await pulsar(r, 'Cinco minutos menos');
-    expect(textoDeLaFila(r)).toContain('10 min antes');
-    expect(elegidas(r)).toEqual(['10 min antes']);
+    await tocar(r, '30 min antes');
+    await tocarOtra(r); // 15
+    await pulsar(r, 'Cinco minutos más'); // 20
+    await pulsar(r, 'Cinco minutos más'); // 25
+    expect(ordenadas(r)).toEqual(['25 min antes', '30 min antes']);
+    await pulsar(r, 'Cinco minutos más'); // salta el 30
+    expect(textoDeLaFila(r)).toContain('35 min antes');
+    expect(ordenadas(r)).toEqual(['30 min antes', '35 min antes']);
   });
 
   it('tope en 60: «+» se apaga y no pasa de ahí', async () => {
@@ -347,18 +409,16 @@ describe('«+» y «−»', () => {
     expect(apagado(botonDeLaFila(r, 'Cinco minutos más'))).toBe(false);
   });
 
-  it('no duplica: si el aviso al que llega ya estaba, queda uno solo y marcado', async () => {
+  it('sin un valor libre en esa dirección el botón queda apagado (arriba ocupado: 60 y 55)', async () => {
+    conAvisosGenerales([60, 55]);
     const r = await montar();
     await abrirElHabito(r);
-    await tocarSinAviso(r);
-    await tocar(r, '10 min antes');
-    await tocarOtra(r); // parte del mayor que rige: 10
-    await pulsar(r, 'Cinco minutos más'); // 10 → 15
-    await tocar(r, '10 min antes'); // vuelve a marcar el sugerido: ahora hay 15 y 10
-    expect(elegidas(r).sort()).toEqual(['10 min antes', '15 min antes']);
-    await pulsar(r, 'Cinco minutos menos'); // 15 → 10, que ya estaba
-    expect(elegidas(r)).toEqual(['10 min antes']);
-    expect(textoDeLaFila(r)).toContain('10 min antes');
+    await tocarOtra(r); // 15
+    for (let i = 0; i < 7; i += 1) await pulsar(r, 'Cinco minutos más'); // … hasta 50
+    expect(textoDeLaFila(r)).toContain('50 min antes');
+    expect(ordenadas(r)).toEqual(['1 h antes', '50 min antes', '55 min antes']);
+    expect(apagado(botonDeLaFila(r, 'Cinco minutos más'))).toBe(true);
+    expect(apagado(botonDeLaFila(r, 'Cinco minutos menos'))).toBe(false);
   });
 
   it('no toca «A la hora» ni los otros avisos', async () => {
@@ -367,48 +427,57 @@ describe('«+» y «−»', () => {
     await tocarSinAviso(r);
     await tocar(r, 'A la hora exacta');
     await tocar(r, '30 min antes');
-    await tocarOtra(r); // el mayor que rige: 30
-    await pulsar(r, 'Cinco minutos más');
-    expect(elegidas(r).sort()).toEqual(['35 min antes', 'A la hora exacta']);
+    await tocarOtra(r); // 15
+    await pulsar(r, 'Cinco minutos más'); // 20
+    expect(ordenadas(r)).toEqual(['20 min antes', '30 min antes', 'A la hora exacta']);
+    await pulsar(r, 'Cinco minutos menos'); // 15
+    expect(ordenadas(r)).toEqual(['15 min antes', '30 min antes', 'A la hora exacta']);
   });
 });
 
 describe('las reglas de siempre', () => {
-  it('tocar la pastilla del aviso de «Otra» lo desmarca y cierra la fila', async () => {
+  it('tocar la pastilla del aviso de «Otra» lo desmarca y cierra la fila; los demás quedan', async () => {
     const r = await montar();
     await abrirElHabito(r);
-    await tocarSinAviso(r);
     await tocarOtra(r);
     await tocar(r, '15 min antes');
     expect(filaDeOtra(r)).toBeUndefined();
-    // Sin avisos queda «Sin aviso», como al desmarcar cualquier otra pastilla.
-    expect(elegidas(r)).toEqual(['Sin aviso']);
+    expect(elegidas(r)).toEqual(['10 min antes']);
+  });
+
+  it('después de desmarcarlo, «Otra» suma uno nuevo (15 vuelve a estar libre)', async () => {
+    const r = await montar();
+    await abrirElHabito(r);
+    await tocarOtra(r);
+    await tocar(r, '15 min antes');
+    await tocarOtra(r);
+    expect(ordenadas(r)).toEqual(['10 min antes', '15 min antes']);
+    expect(filaDeOtra(r)).toBeDefined();
   });
 
   it('«Sin aviso» es exclusivo: vacía los avisos y cierra la fila', async () => {
     const r = await montar();
     await abrirElHabito(r);
-    await tocarSinAviso(r);
     await tocarOtra(r);
     await tocar(r, 'A la hora exacta');
-    expect(elegidas(r).sort()).toEqual(['15 min antes', 'A la hora exacta']);
+    expect(ordenadas(r)).toEqual(['10 min antes', '15 min antes', 'A la hora exacta']);
     await tocarSinAviso(r);
     expect(elegidas(r)).toEqual(['Sin aviso']);
     expect(filaDeOtra(r)).toBeUndefined();
   });
 
-  it('con días marcados el aviso va a ESOS días y se guarda solo el aviso', async () => {
+  it('con días marcados el aviso va a ESOS días y se guarda solo el aviso (suma, no reemplaza)', async () => {
     const r = await montar();
     await abrirElHabito(r);
     await marcar('SÁB', 'DOM');
-    await tocarSinAviso(r);
-    await tocarOtra(r);
-    await pulsar(r, 'Cinco minutos más');
-    expect(elegidas(r)).toEqual(['20 min antes']);
+    expect(elegidas(r)).toEqual(['10 min antes']);
+    await tocarOtra(r); // suma 15
+    await pulsar(r, 'Cinco minutos más'); // 20
+    expect(ordenadas(r)).toEqual(['10 min antes', '20 min antes']);
     expect(guardar(r).props.label).toBe('Guardar aviso · sáb, dom');
     await pulsarGuardar(r);
-    expect(mockFijarAviso).toHaveBeenCalledWith('h-jugo', 'SATURDAY', true, [20]);
-    expect(mockFijarAviso).toHaveBeenCalledWith('h-jugo', 'SUNDAY', true, [20]);
+    expect(mockFijarAviso).toHaveBeenCalledWith('h-jugo', 'SATURDAY', true, [20, 10]);
+    expect(mockFijarAviso).toHaveBeenCalledWith('h-jugo', 'SUNDAY', true, [20, 10]);
     expect(mockFijarHora).not.toHaveBeenCalled();
   });
 
@@ -424,27 +493,32 @@ describe('las reglas de siempre', () => {
     expect(filaDeOtra(r)).toBeDefined();
   });
 
-  it('cambiar entre todos los días y días marcados cierra la fila', async () => {
+  it('cambiar entre todos los días y días marcados cierra la fila y suelta el aviso: «Otra» vuelve a sumar uno nuevo', async () => {
     const r = await montar();
     await abrirElHabito(r);
-    await tocarSinAviso(r);
     await tocarOtra(r);
     expect(filaDeOtra(r)).toBeDefined();
     await marcar('SÁB');
     expect(filaDeOtra(r)).toBeUndefined();
+    await marcar('SÁB'); // vuelve a todos los días
+    expect(filaDeOtra(r)).toBeUndefined();
+    // El 15 de antes sigue en el general; «Otra» ya no lo considera suyo: suma uno nuevo.
+    expect(ordenadas(r)).toEqual(['10 min antes', '15 min antes']);
+    await tocarOtra(r);
+    expect(ordenadas(r)).toEqual(['10 min antes', '15 min antes', '20 min antes']);
+    expect(textoDeLaFila(r)).toContain('20 min antes');
   });
 
-  it('lo que se guarda sin días marcados es el aviso que dejó la fila', async () => {
+  it('lo que se guarda sin días marcados son los avisos que dejó la fila, con el que ya había', async () => {
     const r = await montar();
     await abrirElHabito(r);
-    await tocarSinAviso(r);
     await tocarOtra(r);
     await pulsar(r, 'Cinco minutos más');
     await pulsarGuardar(r);
     expect(mockCambiarHorario).toHaveBeenCalledTimes(1);
-    expect(mockCambiarHorario.mock.calls[0][3]).toEqual({ activo: true, minutosAntes: 20, lista: [20] });
+    expect(mockCambiarHorario.mock.calls[0][3]).toEqual({ activo: true, minutosAntes: 20, lista: [20, 10] });
     expect(mockProgramar).toHaveBeenCalledTimes(1);
-    expect(mockProgramar.mock.calls[0][4]).toEqual([20]);
+    expect(mockProgramar.mock.calls[0][4]).toEqual([20, 10]);
   });
 });
 

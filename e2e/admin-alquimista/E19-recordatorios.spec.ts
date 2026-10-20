@@ -19,11 +19,12 @@ import { ENTORNO } from './soporte/entorno';
  * **Cambió el control, no el invariante (2026-09-21 y 2026-10-20).** "Otra" era un campo de texto con
  * teclado numérico —que en el teléfono se abría ENCIMA del propio campo—, después una rueda de 1 a 60
  * minutos con un botón «Añadir» (fuera de lo que se desliza, y se montaba encima del contenido) y, desde
- * la spec 011, una fila «−  15 min antes  +» dentro de lo que se desliza: tocar "Otra" agrega y marca el
- * aviso de arranque, y «+» y «−» lo mueven de 5 en 5 entre 1 y 60. Por eso aquí ya no se comprueba que el
- * campo rechace `0` ni `9999`: en 1 a 60 esos valores no existen, no hay nada que rechazar. Lo que se
- * comprueba en su lugar es que la fila abre en el aviso que ya rige y que sus botones lo llevan, de 5 en
- * 5, hasta el valor pedido.
+ * la spec 011, una fila «−  15 min antes  +» dentro de lo que se desliza: tocar "Otra" SUMA un aviso nuevo
+ * (15, o el siguiente libre) y lo marca —los que había quedan—, y «+» y «−» mueven SOLO ese aviso de 5 en 5
+ * entre 1 y 60, saltando los que ya existen. Por eso aquí ya no se comprueba que el campo rechace `0` ni
+ * `9999`: en 1 a 60 esos valores no existen, no hay nada que rechazar. Lo que se comprueba en su lugar es
+ * que "Otra" suma uno (los marcados antes siguen marcados) y que sus botones llevan ese aviso, de 5 en 5,
+ * hasta el valor pedido.
  *
  * **Por qué la cuenta ADMIN y no la de aprendiz.** `e2e-aprendiz` tiene el onboarding sin
  * completar, así que al entrar por la interfaz cae en la Ficha Inicial y nunca llega a las
@@ -38,6 +39,10 @@ const HABITO = /despertar/i;
  *  dos, que es lo que hace medible la regla de "el servidor se queda con la mayor". */
 const PROPIA_MINUTOS = 45;
 
+/** Los avisos que están marcados ahora (cada pastilla encendida se anuncia «…, activado»). */
+const avisosMarcados = (page: import('@playwright/test').Page) =>
+  page.getByRole('button', { name: /(min antes|h antes|A la hora exacta), activado$/ });
+
 /** Los minutos que dice la fila de "Otra": «45 min antes» → 45. */
 async function minutosDeLaFila(fila: import('@playwright/test').Locator): Promise<number> {
   const texto = (await fila.innerText()).match(/(\d+) min antes/);
@@ -48,7 +53,8 @@ async function minutosDeLaFila(fila: import('@playwright/test').Locator): Promis
 /**
  * Lleva el aviso de "Otra" hasta un minuto concreto con «+» y «−», de 5 en 5 (la fila no deja escribir:
  * es el único camino). Se lee lo que dice la fila en cada paso y no se asume desde dónde parte: arranca
- * en el aviso que ya rige o en 15.
+ * en 15, o en el siguiente libre si ya había uno. Si el camino pasa por un aviso que ya existe, la fila
+ * lo salta sola.
  */
 async function llevarLaFilaHasta(
   page: import('@playwright/test').Page,
@@ -123,8 +129,12 @@ test('E19 · una antelación escrita a mano se guarda, y el servidor se queda co
     await expect(otra).toBeVisible({ timeout: 15_000 });
     const fila = page.getByTestId('fila-otra-antelacion');
     await expect(fila, 'la fila solo existe tras tocar "Otra"').toBeHidden();
+    const marcadosAntes = await avisosMarcados(page).count();
     await otra.click();
     await expect(fila).toBeVisible({ timeout: 10_000 });
+    // "Otra" SUMA un aviso: los que ya estaban marcados siguen marcados y hay uno más.
+    await expect(avisosMarcados(page), '"Otra" suma un aviso y no cambia los que había')
+      .toHaveCount(marcadosAntes + 1, { timeout: 10_000 });
 
     /* La fila dice cuál es el aviso que mueve, igual que el botón de guardar dice la hora. Se lleva con «+» y «−»
        hasta el valor pedido: si un paso no entrara, el texto diría otro número. */
@@ -135,6 +145,8 @@ test('E19 · una antelación escrita a mano se guarda, y el servidor se queda co
     await expect(pastillaPropia).toBeVisible();
     await expect(pastillaPropia, 'la pastilla del aviso de "Otra" queda marcada, no solo presente')
       .toHaveAccessibleName(`${PROPIA_MINUTOS} min antes, activado`);
+    // Mover el aviso de "Otra" no apagó ni cambió ninguno de los que ya había.
+    await expect(avisosMarcados(page)).toHaveCount(marcadosAntes + 1);
 
     await page.getByRole('button', { name: /guardar/i }).first().click();
 
