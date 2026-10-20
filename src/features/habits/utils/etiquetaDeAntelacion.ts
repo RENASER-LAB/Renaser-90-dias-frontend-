@@ -41,7 +41,8 @@ export function etiquetaDeAntelacion(minutos: number): string {
 }
 
 /**
- * Hasta dónde llega la RUEDA de "Otra": una hora.
+ * Hasta dónde llega "Otra": una hora. (Desde la spec 011 ya no es una rueda sino la fila «−  15 min antes  +», que
+ * mueve de 5 en 5 con este mismo tope; el nombre de la constante es de cuando era la rueda.)
  *
  * No es el tope de lo que el sistema acepta —{@link MAXIMO_MINUTOS_ANTELACION} sigue siendo un
  * día y el programador de alarmas sigue tomando cualquier valor—, es el tope de lo que la rueda

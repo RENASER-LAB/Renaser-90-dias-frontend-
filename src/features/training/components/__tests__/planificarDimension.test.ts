@@ -42,7 +42,6 @@ jest.mock('../../../habits/components/RuedaHoraPicker', () => ({
     return null;
   },
 }));
-jest.mock('../../../habits/components/RuedaAntelacionPicker', () => ({ RuedaAntelacionPicker: () => null }));
 const mockFilaDias = jest.fn<(props: { onAlternarDia: (dia: string) => void }) => void>();
 jest.mock('../../../habits/components/FilaDeDiasDelPlan', () => ({
   FilaDeDiasDelPlan: (props: { onAlternarDia: (dia: string) => void }) => {
