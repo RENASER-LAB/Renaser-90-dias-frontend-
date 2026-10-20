@@ -193,6 +193,17 @@ describe('alarmas de expo-notifications como alarma del reloj (setAlarmClock)', 
     expect(pasos[pasos.length - 1]).toBe('node scripts/arreglar-alarmas-tipo-despertador.js');
   });
 
+  // E-637: Expo 57 enlaza `expo-notifications` como .aar precompilado (`local-maven-repo`) y el Kotlin
+  // parchado en `node_modules` no se compilaba: el APK salía con `setExactAndAllowWhileIdle` (flags=0x5,
+  // sin «Next alarm clock» en `dumpsys alarm`). Solo `buildFromSource` hace que gradle use el código.
+  it('expo-notifications se compila desde el código parchado y no desde el .aar precompilado', () => {
+    const paquete = JSON.parse(fs.readFileSync(path.join(__dirname, '../../package.json'), 'utf8')) as {
+      expo?: { autolinking?: { android?: { buildFromSource?: string[] } } };
+    };
+    const desdeElCodigo = paquete.expo?.autolinking?.android?.buildFromSource ?? [];
+    expect(desdeElCodigo.some(patron => new RegExp(patron).test('expo-notifications'))).toBe(true);
+  });
+
   it('el expo-notifications instalado está parchado (o cambió de versión y hay que revisar el parche)', () => {
     const raiz = path.join(__dirname, '../../node_modules/expo-notifications');
     const version: string = JSON.parse(fs.readFileSync(path.join(raiz, 'package.json'), 'utf8')).version;
