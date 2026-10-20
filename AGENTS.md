@@ -1995,6 +1995,16 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       de 24, para «sin aviso») de 16 con «30′», «a la hora» o «30′ +1», a 13 px y con el dorado de alto contraste; solo en
       los días cuyo aviso propio difiere del general. Con la prop, cada pastilla se anuncia completa al lector de
       pantalla («Sábado 24, 09:00, aviso 30 minutos antes»). Tocar un día vibra (`tacto.seleccion()`).
+      > **Corregido 2026-10-20 (E-643, captura del dueño: «se deforma»).** Un día con varios avisos agrandaba su chip
+      > (la campana, los minutos en dos o tres renglones y, con la 009, el reloj de la alarma propia) y desalineaba a los
+      > demás. Ahora, en el editor, **los siete chips reservan el mismo bloque de abajo**, lleven o no campana y reloj: los
+      > datos de arriba (letra, número, hora o candado) quedan pegados arriba y alineados, y abajo hay UNA fila de íconos
+      > (campana y reloj de 14 si conviven; solos, de 16) y UNA línea de texto de ancho acotado que se achica
+      > (`adjustsFontSizeToFit`, hasta 0,75) en vez de partirse. El texto es el aviso más temprano y cuántos más («30′ +3»);
+      > nunca la lista, que la oye el lector de pantalla en la etiqueta («Avisos 30, 10 y 5 minutos antes y a la hora»).
+      > Formatos: minutos hasta 99, horas justas desde 100 («2 h») y **«hora»** para el aviso a la hora exacta (antes «a la
+      > hora» y «1 h 30′», que no cabían en una línea). Con la letra del sistema grande la escala de los textos del chip
+      > se acota a 1,15. Plan y «Agendar acciones» no pasan las props y su chip es el de siempre.
     * **«Dejar sáb como los demás días»** (antes «Quitar la hora propia de sáb») quita la hora **y** el aviso propios.
     * Debajo del recordatorio queda un lugar vacío (`espacio-para-tipos-de-alarma`) para los tipos de alarma, que van en
       otra spec: no muestra nada. (> Ocupado el 2026-10-20 por «Cómo suena» de la spec 009, más abajo; sigue vacío

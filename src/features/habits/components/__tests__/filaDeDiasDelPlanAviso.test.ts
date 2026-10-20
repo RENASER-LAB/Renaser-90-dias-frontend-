@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, jest } from '@jest/globals';
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import TestRenderer, { act, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
 
 import { DIAS_DEL_PLAN, type DiaDelPlan } from '../../utils/semanaDelPlan';
@@ -157,5 +158,93 @@ describe('con «cómo suena» propio de un día (spec 009)', () => {
   it('un día bloqueado por el candado no muestra el reloj', () => {
     const r = montar({ planificable: dia => dia !== 'SÁB', alarmaDelDia: dia => alarmas[dia] ?? null });
     expect(iconos(r).filter(n => n === 'alarmClock')).toHaveLength(1); // solo el viernes
+  });
+});
+
+describe('E-643: el chip no se deforma con varios avisos', () => {
+  /** Jueves con cuatro avisos y alarma propia; sábado con un aviso; domingo sin aviso; el resto, sin nada. */
+  const avisos: Partial<Record<DiaDelPlan, AvisoDeUnDiaEnLaFila>> = {
+    JUE: { corto: '30′ +3', largo: 'Avisos 30, 10 y 5 minutos antes y a la hora', sinAviso: false },
+    'SÁB': { corto: '30′', largo: 'Aviso 30 minutos antes', sinAviso: false },
+    DOM: { corto: 'sin aviso', largo: 'Sin aviso', sinAviso: true },
+  };
+  const alarmas: Partial<Record<DiaDelPlan, AlarmaDeUnDiaEnLaFila>> = { JUE: { largo: 'Alarma propia: sin sonido, vibra' } };
+  const montarDeVerdad = () => montar({ avisoDelDia: dia => avisos[dia] ?? null, alarmaDelDia: dia => alarmas[dia] ?? null });
+  const estiloDe = (nodo: ReactTestInstance) => (StyleSheet.flatten(nodo.props.style) ?? {}) as Record<string, unknown>;
+
+  it('los siete chips tienen la misma altura mínima y el mismo alineado, lleven o no campana y reloj', () => {
+    const r = montarDeVerdad();
+    const estilos = pastillas(r).map(estiloDe);
+    expect(estilos).toHaveLength(7);
+    expect(new Set(estilos.map(e => e.minHeight)).size).toBe(1);
+    expect(estilos.every(e => e.justifyContent === 'flex-start' && e.paddingTop === 6)).toBe(true);
+    // La altura de siempre de un chip sin aviso (58) no se usa: con el bloque de abajo mide más, igual para todos.
+    expect(estilos[0].minHeight).toBeGreaterThan(58);
+  });
+
+  it('todos reservan el mismo bloque de abajo (con o sin íconos) y la misma fila para la hora o el candado', () => {
+    const r = montarDeVerdad();
+    for (const pastilla of pastillas(r)) {
+      const bandas = pastilla.findAll(n => estiloDe(n).minHeight === 34 && estiloDe(n).alignSelf === 'stretch');
+      expect(bandas.length).toBeGreaterThan(0);
+      const filasDeHora = pastilla.findAll(n => estiloDe(n).height === 14 && estiloDe(n).justifyContent === 'center');
+      expect(filasDeHora.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('el resumen es UNA línea que se achica en vez de partirse: «30′ +3»', () => {
+    const r = montarDeVerdad();
+    const resumen = r.root.findAll(n => (n.type as unknown) === 'Text' && React.Children.toArray(n.props.children).includes('30′ +3'));
+    expect(resumen).toHaveLength(1);
+    const props = resumen[0].props;
+    expect(props.numberOfLines).toBe(1);
+    expect(props.adjustsFontSizeToFit).toBe(true);
+    expect(props.minimumFontScale).toBeGreaterThanOrEqual(0.7);
+    expect(props.minimumFontScale).toBeLessThanOrEqual(0.9);
+    // Ocupa el ancho del chip, centrado: no empuja a sus vecinos.
+    expect(estiloDe(resumen[0])).toMatchObject({ alignSelf: 'stretch', textAlign: 'center', fontSize: 13 });
+  });
+
+  it('la lista completa no se escribe en el chip: la oye el lector de pantalla', () => {
+    const r = montarDeVerdad();
+    expect(textos(r).join(' ')).not.toMatch(/30, 10 y 5|minutos antes/);
+    const jueves = pastillas(r).map(p => p.props.accessibilityLabel as string).find(e => e.startsWith('Jueves'))!;
+    expect(jueves).toMatch(/aviso?s 30, 10 y 5 minutos antes y a la hora, alarma propia: sin sonido, vibra$/i);
+  });
+
+  it('campana y reloj conviven en una sola fila, de 14 cada uno; solos, de 16', () => {
+    const r = montarDeVerdad();
+    const delJueves = pastillas(r).find(p => String(p.props.accessibilityLabel).startsWith('Jueves'))!;
+    const iconosDelJueves = delJueves.findAll(n => typeof n.props.name === 'string' && n.props.size !== undefined);
+    expect(iconosDelJueves.map(n => [n.props.name, n.props.size])).toEqual([['bell', 14], ['alarmClock', 14]]);
+    const delSabado = pastillas(r).find(p => String(p.props.accessibilityLabel).startsWith('Sábado'))!;
+    expect(delSabado.findAll(n => n.props.name === 'bell').map(n => n.props.size)).toEqual([16]);
+    // La fila de íconos es la misma para todos: una sola, de 16 de alto, en fila.
+    const filas = delJueves.findAll(n => (n.type as unknown) === 'View' && estiloDe(n).flexDirection === 'row' && estiloDe(n).height === 16);
+    expect(filas).toHaveLength(1);
+  });
+
+  it('con la letra del sistema grande (1,3) el chip no crece sin tope: todo el texto acota su escala', () => {
+    const r = montarDeVerdad();
+    const delJueves = pastillas(r).find(p => String(p.props.accessibilityLabel).startsWith('Jueves'))!;
+    const textosDelChip = delJueves.findAll(n => (n.type as unknown) === 'Text');
+    // La letra, el número, la hora y el resumen: cuatro textos, todos acotados a 1,15.
+    expect(textosDelChip.length).toBeGreaterThanOrEqual(4);
+    for (const t of textosDelChip) expect(t.props.maxFontSizeMultiplier).toBeLessThanOrEqual(1.15);
+  });
+
+  it('un chip con candado también reserva el bloque, sin moverse', () => {
+    const r = montar({ planificable: dia => dia !== 'MAR', avisoDelDia: dia => avisos[dia] ?? null, alarmaDelDia: dia => alarmas[dia] ?? null });
+    const estilos = pastillas(r).map(estiloDe);
+    expect(new Set(estilos.map(e => e.minHeight)).size).toBe(1);
+    const martes = pastillas(r).find(p => String(p.props.accessibilityLabel).startsWith('Martes'))!;
+    expect(martes.findAll(n => n.props.name === 'lock')).toHaveLength(1);
+  });
+
+  it('sin las props (Plan) el chip es el de siempre: 58 de alto y centrado, sin bloque de abajo', () => {
+    const r = montar();
+    const estilos = pastillas(r).map(estiloDe);
+    expect(estilos.every(e => e.minHeight === 58 && e.justifyContent === 'center')).toBe(true);
+    expect(r.root.findAll(n => estiloDe(n).minHeight === 34 && estiloDe(n).alignSelf === 'stretch')).toHaveLength(0);
   });
 });

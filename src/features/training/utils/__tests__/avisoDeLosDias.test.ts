@@ -85,8 +85,8 @@ describe('resumenDelAvisoDelDia: lo que dice el chip', () => {
     expect(resumenDelAvisoDelDia([30], [10])).toEqual({ corto: '30′', largo: 'Aviso 30 minutos antes', sinAviso: false });
   });
 
-  it('a la hora', () => {
-    expect(resumenDelAvisoDelDia([0], [10])).toEqual({ corto: 'a la hora', largo: 'Aviso a la hora', sinAviso: false });
+  it('a la hora: «hora» en el chip (cabe en una línea) y «a la hora» completo para el lector de pantalla', () => {
+    expect(resumenDelAvisoDelDia([0], [10])).toEqual({ corto: 'hora', largo: 'Aviso a la hora', sinAviso: false });
   });
 
   it('sin aviso: la campana tachada', () => {
@@ -94,8 +94,11 @@ describe('resumenDelAvisoDelDia: lo que dice el chip', () => {
   });
 
   it('más de una hora y varios avisos', () => {
-    expect(resumenDelAvisoDelDia([90], [10])).toMatchObject({ corto: '1 h 30′', largo: 'Aviso 1 hora y 30 minutos antes' });
+    // El chip mide ~40 px: «1 h 30′» (7 caracteres) se partía en dos renglones; ahora son minutos hasta 99 y horas justas.
+    expect(resumenDelAvisoDelDia([90], [10])).toMatchObject({ corto: '90′', largo: 'Aviso 1 hora y 30 minutos antes' });
+    expect(resumenDelAvisoDelDia([60], [10])).toMatchObject({ corto: '60′', largo: 'Aviso 1 hora antes' });
     expect(resumenDelAvisoDelDia([120], [10])).toMatchObject({ corto: '2 h', largo: 'Aviso 2 horas antes' });
+    expect(resumenDelAvisoDelDia([150], [10])).toMatchObject({ corto: '150′', largo: 'Aviso 2 horas y 30 minutos antes' });
     expect(resumenDelAvisoDelDia([0, 30], [10])).toEqual({
       corto: '30′ +1',
       largo: 'Avisos 30 minutos antes y a la hora',
@@ -106,6 +109,45 @@ describe('resumenDelAvisoDelDia: lo que dice el chip', () => {
   it('un día sin aviso cuando el general también está apagado no se marca; con el general encendido sí', () => {
     expect(resumenDelAvisoDelDia([], [])).toBeNull();
     expect(resumenDelAvisoDelDia([30], [])).not.toBeNull();
+  });
+});
+
+describe('resumenDelAvisoDelDia con VARIOS avisos (E-643): el chip no se deforma', () => {
+  it('cuatro avisos (30, 10, 5 min antes y a la hora): el más temprano y cuántos más, y la lista completa para el lector', () => {
+    expect(resumenDelAvisoDelDia([30, 10, 5, 0], [10])).toEqual({
+      corto: '30′ +3',
+      largo: 'Avisos 30, 10 y 5 minutos antes y a la hora',
+      sinAviso: false,
+    });
+  });
+
+  it('da igual el orden y los repetidos: siempre el más temprano', () => {
+    expect(resumenDelAvisoDelDia([5, 0, 30, 10, 30], [10])).toMatchObject({ corto: '30′ +3' });
+    expect(resumenDelAvisoDelDia([0, 5], [10])).toEqual({
+      corto: '5′ +1', largo: 'Avisos 5 minutos antes y a la hora', sinAviso: false,
+    });
+  });
+
+  it('dos avisos con minutos: «30 y 10 minutos antes»; con a la hora, se suma al final', () => {
+    expect(resumenDelAvisoDelDia([30, 10], [0])).toMatchObject({ corto: '30′ +1', largo: 'Avisos 30 y 10 minutos antes' });
+    expect(resumenDelAvisoDelDia([30, 0], [10])).toMatchObject({ corto: '30′ +1', largo: 'Avisos 30 minutos antes y a la hora' });
+  });
+
+  it('con horas en la lista: se agrupan en minutos hasta las tres horas y, si no, cada uno dice su unidad', () => {
+    expect(resumenDelAvisoDelDia([90, 30, 0], [10])).toMatchObject({ corto: '90′ +2', largo: 'Avisos 90 y 30 minutos antes y a la hora' });
+    expect(resumenDelAvisoDelDia([240, 30], [10])).toMatchObject({ corto: '4 h +1', largo: 'Avisos 4 horas antes y 30 minutos antes' });
+  });
+
+  it('el texto del chip es siempre corto: una línea de pocos caracteres, aunque haya muchos avisos', () => {
+    const casos: number[][] = [[0], [1], [5], [30], [99], [100], [150], [1440], [30, 10], [30, 10, 5, 0], [1440, 120, 60, 30, 10, 5, 1, 0], [999, 1]];
+    for (const aviso of casos) {
+      const r = resumenDelAvisoDelDia(aviso, [7]);
+      expect(r).not.toBeNull();
+      // «30′», «2 h», «hora» o «150′ +7»: nunca la lista completa ni un renglón largo.
+      expect(r!.corto).toMatch(/^(\d+′|\d+ h|hora)( \+\d)?$/);
+      expect(r!.corto.length).toBeLessThanOrEqual(8);
+      expect(r!.corto).not.toContain('\n');
+    }
   });
 });
 

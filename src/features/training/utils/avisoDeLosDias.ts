@@ -116,28 +116,64 @@ export function textoDelBoton({
 
 /** Lo que dice el chip de un día cuyo aviso es distinto del general. */
 export interface AvisoDelChip {
-  /** Corto, para el poco espacio del chip: «30′», «a la hora», «sin aviso», «30′ +1». */
+  /**
+   * Corto, de UNA línea y ancho acotado (E-643): un chip mide ~40 px y no puede crecer. Con un aviso: «30′», «2 h»
+   * o «hora» (a la hora). Con varios: el MÁS TEMPRANO y cuántos más, «30′ +3»; nunca la lista completa. «sin aviso»
+   * no se escribe (va la campana tachada).
+   */
   corto: string;
-  /** Completo, para el lector de pantalla: «Aviso 30 minutos antes». */
+  /** Completo, para el lector de pantalla: «Aviso 30 minutos antes», «Avisos 30, 10 y 5 minutos antes y a la hora». */
   largo: string;
   /** `true` = ese día va sin aviso: el chip dibuja la campana tachada y no escribe el texto. */
   sinAviso: boolean;
 }
 
+/**
+ * Una antelación en el chip, en pocos caracteres (E-643): minutos hasta 99 y, desde 100, horas si es justa («2 h») o
+ * minutos si no («150′»). Antes «1 h 30′» (7 caracteres) no entraba en un chip de 40 px y lo partía en dos renglones.
+ */
 function minutosCortos(m: number): string {
-  if (m < 60) return `${m}′`;
-  const horas = Math.floor(m / 60);
-  const resto = m % 60;
-  return resto === 0 ? `${horas} h` : `${horas} h ${resto}′`;
+  if (m < 100) return `${m}′`;
+  return m % 60 === 0 ? `${m / 60} h` : `${m}′`;
+}
+
+/** Cómo se dice una antelación sola en el chip: «hora» para la que es a la hora exacta (cabe donde «a la hora» no). */
+function antelacionEnElChip(m: number): string {
+  return m === 0 ? 'hora' : minutosCortos(m);
 }
 
 function minutosLargos(m: number): string {
   if (m === 0) return 'a la hora';
+  if (m === 1) return '1 minuto antes';
   if (m < 60) return `${m} minutos antes`;
   const horas = Math.floor(m / 60);
   const resto = m % 60;
   const h = horas === 1 ? '1 hora' : `${horas} horas`;
   return resto === 0 ? `${h} antes` : `${h} y ${resto} minutos antes`;
+}
+
+/** «a, b y c»: una lista dicha en una frase. */
+function enFrase(partes: readonly string[]): string {
+  if (partes.length <= 1) return partes.join('');
+  return `${partes.slice(0, -1).join(', ')} y ${partes[partes.length - 1]}`;
+}
+
+/**
+ * La lista completa de avisos para el lector de pantalla: «30, 10 y 5 minutos antes y a la hora». Si ninguno pasa de
+ * las tres horas se agrupan bajo un solo «minutos antes» («90 y 30 minutos antes»); si alguno pasa, cada uno dice su
+ * unidad.
+ */
+function avisosEnFrase(avisos: readonly number[]): string {
+  const antes = avisos.filter(m => m > 0);
+  const alaHora = avisos.includes(0);
+  let frase: string;
+  if (antes.length > 1 && antes.every(m => m < 180)) {
+    frase = `${enFrase(antes.map(String))} minutos antes`;
+  } else {
+    frase = enFrase(antes.map(minutosLargos));
+  }
+  if (!alaHora) return frase;
+  return frase ? `${frase} y a la hora` : 'a la hora';
 }
 
 /**
@@ -151,14 +187,15 @@ export function resumenDelAvisoDelDia(avisoDelDia: Aviso | null | undefined, avi
   const [primero, ...mas] = avisos;
   if (mas.length === 0) {
     return {
-      corto: primero === 0 ? 'a la hora' : minutosCortos(primero),
+      corto: antelacionEnElChip(primero),
       largo: primero === 0 ? 'Aviso a la hora' : `Aviso ${minutosLargos(primero)}`,
       sinAviso: false,
     };
   }
+  // Varios: el más temprano y cuántos más; la lista completa solo la oye el lector de pantalla.
   return {
-    corto: `${primero === 0 ? 'a la hora' : minutosCortos(primero)} +${mas.length}`,
-    largo: `Avisos ${avisos.map(minutosLargos).join(' y ')}`,
+    corto: `${antelacionEnElChip(primero)} +${mas.length}`,
+    largo: `Avisos ${avisosEnFrase(avisos)}`,
     sinAviso: false,
   };
 }

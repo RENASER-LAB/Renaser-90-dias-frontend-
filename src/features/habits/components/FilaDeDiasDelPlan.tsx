@@ -100,6 +100,13 @@ interface FilaDeDiasDelPlanProps {
   onAlternarDia: (dia: DiaDelPlan) => void;
 }
 
+/**
+ * Cuánto puede crecer la letra del sistema dentro de un chip del editor (E-643). Un chip mide ~40 px de ancho: sin tope,
+ * con la letra grande (1,3) el día, su número, la hora y los avisos lo estiraban y lo cortaban. Con 1,15 sigue siendo más
+ * grande que lo normal y cabe; el detalle completo está en la etiqueta que oye el lector de pantalla.
+ */
+const MAXIMO_DE_LETRA_EN_EL_CHIP = 1.15;
+
 export function FilaDeDiasDelPlan({
   corre,
   horarios,
@@ -111,6 +118,14 @@ export function FilaDeDiasDelPlan({
 }: FilaDeDiasDelPlanProps) {
   const { c, t } = useTheme();
   const diasDelMes = diasDelMesDeLaSemana();
+  /**
+   * E-643: con el aviso o la alarma propios por día (el editor de Planificar), cada chip reserva SIEMPRE el mismo
+   * bloque de abajo, tenga o no campana y reloj: los siete miden lo mismo y la letra, el número y la hora quedan
+   * alineados. Antes el chip crecía con lo que llevara (la campana, los minutos en dos o tres renglones, el reloj) y un
+   * día con varios avisos «se deformaba» respecto de los demás. Sin esas props (Plan) la fila es la de siempre.
+   */
+  const conBanda = Boolean(avisoDelDia || alarmaDelDia);
+  const acotado = conBanda ? ({ maxFontSizeMultiplier: MAXIMO_DE_LETRA_EN_EL_CHIP } as const) : {};
 
   return (
     <View style={estilos.fila}>
@@ -126,41 +141,15 @@ export function FilaDeDiasDelPlan({
         const aviso = avisoDelDia && corriendo && sePuede ? avisoDelDia(dia) : null;
         const alarma = alarmaDelDia && corriendo && sePuede ? alarmaDelDia(dia) : null;
         const colorDelAviso = editando ? c.onGold : c.goldInk;
-        return (
-          <Pressable
-            key={dia}
-            onPress={() => !bloqueado && onAlternarDia(dia)}
-            disabled={bloqueado}
-            {...(avisoDelDia || alarmaDelDia
-              ? {
-                accessibilityRole: 'button' as const,
-                accessibilityLabel: etiquetaDelDia(dia, diasDelMes[dia], delDia, corriendo, sePuede, aviso, alarma),
-                accessibilityState: { selected: editando, disabled: bloqueado },
-              }
-              : {})}
-            style={[
-              estilos.pastilla,
-              {
-                borderColor: editando ? c.gold : c.border,
-                backgroundColor: editando ? c.gold : 'transparent',
-                opacity: bloqueado ? 0.35 : 1,
-              },
-            ]}
-          >
-            <Text
-              style={[t.micro, { fontSize: 12, fontFamily: 'Jost_700Bold', color: editando ? c.onGold : c.textSoft }]}
-            >
-              {dia.charAt(0)}
-            </Text>
-            {/* El día del mes: convierte "el martes" en "el martes 09". */}
-            <Text
-              style={[t.micro, { fontSize: 11, fontFamily: 'Jost_700Bold', color: editando ? c.onGold : c.textSoft }]}
-            >
-              {diasDelMes[dia]}
-            </Text>
+        const conAmbos = aviso !== null && alarma !== null;
+
+        // La hora que rige ese día, o el candado si ya no se puede cambiar.
+        const horaOCandado = (
+          <>
             {corriendo && !sePuede && <Icon name="lock" size={11} color={c.tabInactive} />}
             {corriendo && sePuede && (
               <Text
+                {...acotado}
                 style={[
                   t.micro,
                   {
@@ -180,26 +169,69 @@ export function FilaDeDiasDelPlan({
                 {delDia?.activo === false ? 'no va' : (delDia?.hora ?? '·')}
               </Text>
             )}
-            {/* El aviso propio del día (spec 008): la campana de línea de 16 y, debajo, los minutos. Con alto
-                contraste (dorado oscuro, o el color sobre dorado cuando se está editando) y a 13: es poco lugar,
-                pero nunca gris tenue. El lector de pantalla lo oye en la etiqueta de la pastilla, no acá. */}
-            {aviso && (
-              <View style={estilos.aviso} accessible={false} importantForAccessibility="no-hide-descendants">
-                <Icon name={aviso.sinAviso ? 'bellOff' : 'bell'} size={16} color={colorDelAviso} />
-                {!aviso.sinAviso && (
+          </>
+        );
+
+        return (
+          <Pressable
+            key={dia}
+            onPress={() => !bloqueado && onAlternarDia(dia)}
+            disabled={bloqueado}
+            {...(conBanda
+              ? {
+                accessibilityRole: 'button' as const,
+                accessibilityLabel: etiquetaDelDia(dia, diasDelMes[dia], delDia, corriendo, sePuede, aviso, alarma),
+                accessibilityState: { selected: editando, disabled: bloqueado },
+              }
+              : {})}
+            style={[
+              estilos.pastilla,
+              conBanda && estilos.pastillaConBanda,
+              {
+                borderColor: editando ? c.gold : c.border,
+                backgroundColor: editando ? c.gold : 'transparent',
+                opacity: bloqueado ? 0.35 : 1,
+              },
+            ]}
+          >
+            <Text
+              {...acotado}
+              style={[t.micro, { fontSize: 12, fontFamily: 'Jost_700Bold', color: editando ? c.onGold : c.textSoft }]}
+            >
+              {dia.charAt(0)}
+            </Text>
+            {/* El día del mes: convierte "el martes" en "el martes 09". */}
+            <Text
+              {...acotado}
+              style={[t.micro, { fontSize: 11, fontFamily: 'Jost_700Bold', color: editando ? c.onGold : c.textSoft }]}
+            >
+              {diasDelMes[dia]}
+            </Text>
+            {conBanda ? <View style={estilos.filaDeLaHora}>{horaOCandado}</View> : horaOCandado}
+            {/* El bloque de abajo (spec 008 y 009, E-643): UNA fila de íconos —la campana del aviso propio, o la tachada
+                si el día va sin aviso, y el reloj de la alarma propia; los dos de 14 si conviven, uno solo de 16— y UNA
+                línea de texto con el aviso más temprano y cuántos más («30′ +3»), que se achica en vez de partirse.
+                La lista completa de avisos la oye el lector de pantalla en la etiqueta de la pastilla, no acá. Con alto
+                contraste (dorado oscuro, o el color sobre dorado al editar): es poco lugar, pero nunca gris tenue. */}
+            {conBanda && (
+              <View style={estilos.banda} accessible={false} importantForAccessibility="no-hide-descendants">
+                {(aviso || alarma) && (
+                  <View style={estilos.iconos}>
+                    {aviso && <Icon name={aviso.sinAviso ? 'bellOff' : 'bell'} size={conAmbos ? 14 : 16} color={colorDelAviso} />}
+                    {alarma && <Icon name="alarmClock" size={conAmbos ? 14 : 16} color={colorDelAviso} />}
+                  </View>
+                )}
+                {aviso && !aviso.sinAviso && (
                   <Text
+                    {...acotado}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.75}
                     style={[t.micro, estilos.textoDelAviso, { color: colorDelAviso }]}
-                    numberOfLines={2}
                   >
                     {aviso.corto}
                   </Text>
                 )}
-              </View>
-            )}
-            {/* «Cómo suena» propio (spec 009): un reloj de alarma de 16, sin texto. */}
-            {alarma && (
-              <View style={estilos.aviso} accessible={false} importantForAccessibility="no-hide-descendants">
-                <Icon name="alarmClock" size={16} color={colorDelAviso} />
               </View>
             )}
           </Pressable>
@@ -247,8 +279,19 @@ const estilos = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // Spec 008: la campana sobre sus minutos, centrados. Los minutos pueden pasar a dos renglones («a la» / «hora»)
-  // en una pastilla de ~40 px: las pastillas de la fila se estiran todas al alto de la más alta.
-  aviso: { alignItems: 'center', marginTop: 2 },
-  textoDelAviso: { fontSize: 13, lineHeight: 15, fontFamily: 'Jost_700Bold', textAlign: 'center', letterSpacing: 0 },
+  // E-643: con el aviso y la alarma por día todos los chips son iguales: los datos de arriba pegados arriba y siempre
+  // el mismo bloque de abajo, vacío o no (antes se centraban, y un chip con campana desalineaba a los demás).
+  pastillaConBanda: { minHeight: 88, paddingTop: 6, paddingBottom: 4, justifyContent: 'flex-start' },
+  filaDeLaHora: { height: 14, alignItems: 'center', justifyContent: 'center' },
+  banda: { alignSelf: 'stretch', minHeight: 34, alignItems: 'center', justifyContent: 'flex-start', marginTop: 4 },
+  iconos: { height: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2 },
+  // Una línea y ancho acotado: «30′ +3» se achica hasta 0,75 en vez de partirse en dos renglones.
+  textoDelAviso: {
+    alignSelf: 'stretch',
+    fontSize: 13,
+    lineHeight: 16,
+    fontFamily: 'Jost_700Bold',
+    textAlign: 'center',
+    letterSpacing: 0,
+  },
 });
