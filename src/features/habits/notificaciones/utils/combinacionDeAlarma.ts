@@ -26,10 +26,16 @@ import type { CombinacionDeAlarmaApi } from '../../types/habits.types';
  *
  * | Sonido | Vibración | Voz | Canal |
  * |---|---|---|---|
- * | sí | sí | no | el del sonido de Yo → Alarmas (el de siempre) |
+ * | sí | sí | no | el del sonido de Yo → Alarmas + `-vib` (`enableVibrate: true`) |
  * | sí | no | no | ese mismo + `-sinvib` (`enableVibrate: false`) |
- * | no | sí | — | «solo vibrar» (el que ya existía) |
- * | sí | sí/no | sí | el de voz del hábito (o la frase general), con o sin `-sinvib` |
+ * | no | sí | — | «solo vibrar» + `-vib` |
+ * | sí | sí/no | sí | el de voz del hábito (o la frase general), con `-vib` o `-sinvib` |
+ *
+ * > **Corregido 2026-10-20 (E-641, decisión del dueño: vibrar por defecto).** Esta tabla decía que con vibración
+ * > encendida se usaba el canal de siempre. Medido en el emulador, los canales que ya existían (`recordatorios-habitos`,
+ * > `-campana`, `-voz-…`) NO vibran: Android crea un canal sin vibración si no se le pide, y un canal no se puede
+ * > cambiar después. Por eso toda alarma de HÁBITO sale por un canal con la vibración dicha de forma explícita: `-vib`
+ * > (nuevo) o `-sinvib`. El canal base queda solo para eventos, objetivos y el repaso del domingo.
  *
  * ## Dos decisiones para no cambiar lo que ya funciona
  *

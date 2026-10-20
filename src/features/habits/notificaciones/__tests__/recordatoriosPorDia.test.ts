@@ -52,7 +52,8 @@ jest.mock('expo-notifications', () => ({
 
 import * as recordatorios from '../recordatoriosDeHabito';
 import { soltarAlarmasDeLaCuenta } from '../../../alarmas/alarmasDeLaCuenta';
-import { canalDeAlarma, SONIDO_POR_DEFECTO } from '../../../alarmas/sonidoDeAlarma';
+import { SONIDO_POR_DEFECTO } from '../../../alarmas/sonidoDeAlarma';
+import { canalDeLaCombinacion, COMBINACION_POR_DEFECTO } from '../utils/combinacionDeAlarma';
 import type { DiaDelHabitoApi, PreferenciaHabitoApi } from '../../types/habits.types';
 import { diasPropiosDe } from '../utils/alarmasPorDia';
 
@@ -132,7 +133,7 @@ describe('FR-008: la alarma suena a la hora de cada día', () => {
     await recordatorios.programar(USUARIO, GYM, TITULO, '07:00', [10], {
       dimension: 'CUERPO', dias: diasPropiosDe(semana(JUEVES_A_LA_HORA)),
     });
-    const canal = canalDeAlarma('habitos', SONIDO_POR_DEFECTO, { id: GYM, titulo: TITULO });
+    const canal = canalDeLaCombinacion('habitos', SONIDO_POR_DEFECTO, COMBINACION_POR_DEFECTO, { id: GYM, titulo: TITULO });
     for (const a of mockLista.values()) {
       expect((a.trigger as { channelId: string }).channelId).toBe(canal.id);
       expect(a.content.data?.route).toBe('/habitos/h-gym?dimension=BODY');

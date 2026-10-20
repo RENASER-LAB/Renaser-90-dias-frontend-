@@ -7,7 +7,6 @@ import {
   canalDeLaCombinacion,
   combinacionGuardada,
   COMBINACION_POR_DEFECTO,
-  esLaCombinacionPorDefecto,
   type CombinacionDeAlarma,
 } from '../habits/notificaciones/utils/combinacionDeAlarma';
 
@@ -113,9 +112,10 @@ export function canalDelGrupo(
   combinaciones: ReadonlyArray<CombinacionDeAlarma | undefined> = [],
 ): CanalDeAlarma {
   const tipo = tipos.every(t => t === 'objetivos') ? 'objetivos' : 'habitos';
-  const propias = combinaciones.filter((c): c is CombinacionDeAlarma => c !== undefined && !esLaCombinacionPorDefecto(c));
-  if (tipo === 'objetivos' || propias.length === 0) return canalDeAlarma(tipo, sonido);
-  const todas = combinaciones.map(c => c ?? COMBINACION_POR_DEFECTO);
+  if (tipo === 'objetivos') return canalDeAlarma(tipo, sonido);
+  // E-641: un grupo con hábitos sale por un canal `-vib` o `-sinvib` (el base de hábitos no vibra), aunque ningún
+  // miembro tenga «cómo suena» propio: ahí es la combinación de siempre.
+  const todas = (combinaciones.length > 0 ? combinaciones : [undefined]).map(c => c ?? COMBINACION_POR_DEFECTO);
   return canalDeLaCombinacion(tipo, sonido, {
     sonido: todas.some(c => c.sonido),
     vibracion: todas.some(c => c.vibracion),
@@ -238,9 +238,8 @@ async function agruparAhora(userId: string, ahoraMs: number): Promise<number> {
         const combinacion = combinacionGuardada((alarma.content?.data as Datos | undefined)?.alarma) ?? undefined;
         miembros.set(id, {
           tipo: 'habitos',
-          canalNormal: combinacion
-            ? canalDeLaCombinacion('habitos', sonidoDelHabito, combinacion, { id: habitoId, titulo })
-            : canalDeAlarma('habitos', sonidoDelHabito, { id: habitoId, titulo }),
+          // E-641: sin combinación propia, la de siempre, que sale por el canal `-vib` (el base no vibra).
+          canalNormal: canalDeLaCombinacion('habitos', sonidoDelHabito, combinacion ?? COMBINACION_POR_DEFECTO, { id: habitoId, titulo }),
           combinacion,
         });
       }

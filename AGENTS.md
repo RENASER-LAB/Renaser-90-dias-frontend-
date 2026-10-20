@@ -2058,9 +2058,19 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       del aviso propio. El lector de pantalla lo suma a la etiqueta: «Sábado 24, 09:00, alarma propia: sin sonido, vibra».
     * **La alarma del teléfono suena como dice el día** (sin código nativo ni sonidos nuevos): en Android la
       vibración también es del canal, así que cada combinación es un canal (`habits/notificaciones/utils/combinacionDeAlarma`):
-      el del tono de Yo → Alarmas (como siempre), ese mismo con el sufijo **`-sinvib`** (`enableVibrate: false`), el de
-      **solo vibrar** que ya existía, y el de **voz del hábito** (o la frase general), con o sin `-sinvib`. Los canales
-      `-sinvib` están en `ARCHIVO_POR_CANAL` (el rearmado nombra el archivo correcto).
+      el del tono de Yo → Alarmas con el sufijo **`-vib`** (`enableVibrate: true`), ese mismo con **`-sinvib`**
+      (`enableVibrate: false`), el de **solo vibrar** (también `-vib`) y el de **voz del hábito** (o la frase general),
+      con `-vib` o `-sinvib`. Los canales `-vib` y `-sinvib` están en `ARCHIVO_POR_CANAL` (el rearmado nombra el archivo
+      correcto).
+      > **Corregido 2026-10-20 (E-641, decisión del dueño: vibrar por defecto).** Decía que con la vibración encendida
+      > la alarma salía por el canal de siempre. Medido con `dumpsys notification` en el emulador, los canales que ya
+      > existían (`recordatorios-habitos`, `-campana`…) NO vibran —Android crea un canal sin vibración si no se le pide
+      > y no se puede cambiar después—, así que «Vibración: sí» no vibraba. Ahora **toda alarma de HÁBITO sale por un
+      > canal `-vib` o `-sinvib`**, creado con la vibración dicha de forma explícita; los canales base quedan solo para
+      > eventos, objetivos y el repaso del domingo, que no cambian. Al actualizar, la puesta al día pasa las alarmas de
+      > hábitos ya programadas (y sus repeticiones) al canal que corresponde sin cambiar su hora ni su identificador
+      > (`ponerLasAlarmasDeHabitosEnSuCanal`, como el cambio de sonido), y «Probar el sonido» de Yo → Alarmas también sale
+      > por el canal que vibra.
       > **Corregido 2026-10-20 (E-642).** Un día sin hora propia usaba la `triggerTime` de arriba del ítem de
       > `GET /habit-preferences`, que el servidor resuelve para HOY: si hoy tenía hora propia (martes a las 11:29), el
       > sábado quedaba a las 10:59 en vez de las 06:30. Cada día usa ahora su propia `weekdays[i].triggerTime` (`horaResuelta`).

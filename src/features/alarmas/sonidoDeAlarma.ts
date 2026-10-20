@@ -50,10 +50,17 @@ import { ARCHIVO_VOZ_GENERICA, VOCES_DE_HABITOS, vozDelHabito, type HabitoConVoz
  *
  * La vibración también es del canal, y un canal no se cambia después de creado. Los interruptores «Sonido»,
  * «Vibración» y «Voz» de Training → Planificar eligen POR CUÁL canal sale cada alarma (sin código nativo, sin archivos
- * nuevos): el mismo canal con el sufijo `-sinvib` (`enableVibrate: false`) cuando no debe vibrar, el de «solo vibrar»
- * cuando no debe sonar, y el de voz del hábito con «Voz». La tabla y las reglas están en
- * `habits/notificaciones/utils/combinacionDeAlarma.ts`; acá solo la variante `-sinvib` (`sinVibracion`) y que
- * `archivoDelCanal` la conozca, para que el rearmado nombre el archivo correcto.
+ * nuevos): el mismo canal con el sufijo `-vib` (`enableVibrate: true`) cuando debe vibrar, con `-sinvib`
+ * (`enableVibrate: false`) cuando no, el de «solo vibrar» (también con `-vib`) cuando no debe sonar, y el de voz del
+ * hábito con «Voz». La tabla y las reglas están en `habits/notificaciones/utils/combinacionDeAlarma.ts`; acá solo
+ * las variantes (`conVibracion`, `sinVibracion`) y que `archivoDelCanal` las conozca, para que el rearmado nombre el
+ * archivo correcto.
+ *
+ * > **Corregido 2026-10-20 (E-641).** Decía que con vibración encendida la alarma salía por el canal de siempre.
+ * > Medido en el emulador: los canales ya creados (`recordatorios-habitos`, `-campana`…) NO vibran —Android crea un
+ * > canal sin vibración si no se le pide—, así que «Vibración: sí» no vibraba. Decisión del dueño: vibrar por defecto.
+ * > Las alarmas de HÁBITOS pasan siempre por un canal `-vib` (nuevo, `enableVibrate: true`) o `-sinvib`; el canal base
+ * > queda para eventos, objetivos y el repaso del domingo, que no cambian.
  *
  * ## iOS
  *
@@ -155,30 +162,43 @@ export interface CanalDeAlarma {
   /** Lo que va en el contenido de la notificación (iOS y Android viejos). */
   sonidoDelAviso: boolean | string;
   /**
-   * Spec 009: si el canal vibra. `undefined` = el canal de siempre, del que no se dice nada (los de eventos y
-   * objetivos, y los que ya existían en los teléfonos). `false` = canal «sin vibración» (`enableVibrate: false`);
-   * `true` = vibra, dicho de forma explícita al crearlo. Es del canal y no se puede cambiar después de creado:
-   * por eso «sin vibración» es siempre un canal con su propio id (`sinVibracion`).
+   * Spec 009: si el canal vibra, DICHO de forma explícita al crearlo. `undefined` = el canal de siempre, del que no
+   * se dice nada: los de eventos y objetivos, el del repaso del domingo y los que ya existían en los teléfonos. Esos
+   * NO vibran (Android crea un canal sin vibración si no se le pide; medido en el emulador, E-641). `true` = canal
+   * `-vib`, creado con `enableVibrate: true`; `false` = canal `-sinvib`, creado con `enableVibrate: false`. Es del
+   * canal y no se puede cambiar después de creado: por eso cada una es un canal con su propio id.
    */
   vibra?: boolean;
 }
 
 /** Spec 009: el sufijo del id de un canal que no vibra. El mismo sonido, otro canal. */
 export const SUFIJO_SIN_VIBRACION = '-sinvib';
+/** Spec 009, E-641: el sufijo del id de un canal que SÍ vibra (creado con `enableVibrate: true`). */
+export const SUFIJO_CON_VIBRACION = '-vib';
 
 /**
  * Spec 009 («Cómo suena»): el mismo canal, pero sin vibración. En Android la vibración es del canal, igual que el
  * sonido, y un canal no se puede cambiar después de creado: se crea otro con `enableVibrate: false` y este id.
- * Idempotente. El canal de «solo vibrar» no tiene variante: sin sonido y sin vibración no avisaría nada.
+ * Idempotente. Se aplica al canal BASE (el de `canalDeAlarma`). El canal de «solo vibrar» no tiene variante: sin
+ * sonido y sin vibración no avisaría nada.
  */
 export function sinVibracion(canal: CanalDeAlarma): CanalDeAlarma {
   if (canal.vibra === false) return canal;
   return { ...canal, id: `${canal.id}${SUFIJO_SIN_VIBRACION}`, nombre: `${canal.nombre} (sin vibración)`, vibra: false };
 }
 
-/** Spec 009: el mismo canal, con la vibración dicha de forma explícita (al crearlo, `enableVibrate: true`). */
+/**
+ * Spec 009, E-641: el mismo canal, pero que vibra DE VERDAD. Los canales de hábitos que ya estaban en los teléfonos
+ * (`recordatorios-habitos`, `-campana`, `-voz-…`) se crearon sin pedir vibración y no vibran; como un canal no se
+ * puede cambiar, la vibración encendida es siempre un canal NUEVO con el sufijo `-vib` y `enableVibrate: true`.
+ * Idempotente. Se aplica al canal BASE (el de `canalDeAlarma`).
+ *
+ * Decisión del dueño (2026-10-20): vibrar por defecto. Por eso toda alarma de hábito sale por un canal `-vib` o
+ * `-sinvib`, nunca por el base: ningún canal de hábitos depende del valor por defecto de Android.
+ */
 export function conVibracion(canal: CanalDeAlarma): CanalDeAlarma {
-  return canal.vibra === true ? canal : { ...canal, vibra: true };
+  if (canal.vibra === true) return canal;
+  return { ...canal, id: `${canal.id}${SUFIJO_CON_VIBRACION}`, nombre: `${canal.nombre} (con vibración)`, vibra: true };
 }
 
 function conArchivo(id: string, nombre: string, archivo: string): CanalDeAlarma {
@@ -228,8 +248,12 @@ const ARCHIVO_POR_CANAL: ReadonlyMap<string, string> = (() => {
     }
   }
   for (const voz of VOCES_DE_HABITOS) mapa.set(idDelCanalDeVoz(voz.clave), voz.archivo);
-  // Spec 009: cada canal con archivo tiene su variante «sin vibración» (mismo archivo, otro id).
-  for (const [id, archivo] of [...mapa]) mapa.set(`${id}${SUFIJO_SIN_VIBRACION}`, archivo);
+  // Spec 009: cada canal con archivo tiene su variante «sin vibración» y su variante «con vibración» (mismo archivo,
+  // otro id): el rearmado nombra el archivo correcto por cualquiera de los tres ids.
+  for (const [id, archivo] of [...mapa]) {
+    mapa.set(`${id}${SUFIJO_SIN_VIBRACION}`, archivo);
+    mapa.set(`${id}${SUFIJO_CON_VIBRACION}`, archivo);
+  }
   return mapa;
 })();
 

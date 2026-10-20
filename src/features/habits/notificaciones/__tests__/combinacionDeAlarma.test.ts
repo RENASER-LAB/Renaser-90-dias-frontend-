@@ -18,6 +18,7 @@ import {
   canalDeAlarma,
   conVibracion,
   sinVibracion,
+  SUFIJO_CON_VIBRACION,
   SUFIJO_SIN_VIBRACION,
 } from '../../../alarmas/sonidoDeAlarma';
 import type { DiaDelHabitoApi } from '../../types/habits.types';
@@ -93,16 +94,20 @@ describe('la combinación de siempre y su lectura', () => {
   });
 });
 
-describe('el canal de cada combinación (tabla de la spec)', () => {
-  it('sonido sí, vibración sí, voz no: el canal de siempre, el del tono de Yo → Alarmas', () => {
+describe('el canal de cada combinación (tabla de la spec, con E-641)', () => {
+  it('sonido sí, vibración sí, voz no: el canal del tono de Yo → Alarmas, pero el que VIBRA (`-vib`, enableVibrate: true)', () => {
     const canal = canalDeLaCombinacion('habitos', 'sistema', c(true, true), PROPIO);
-    expect(canal.id).toBe('recordatorios-habitos');
-    expect(canal.id).toBe(canalDeAlarma('habitos', 'sistema').id);
+    // E-641: el canal base (`recordatorios-habitos`) ya existe en los teléfonos sin vibración y no se puede cambiar.
+    expect(canal.id).toBe('recordatorios-habitos-vib');
+    expect(canal.id).not.toBe(canalDeAlarma('habitos', 'sistema').id);
     expect(canal.vibra).toBe(true);
-    expect(canalDeLaCombinacion('habitos', 'campana', c(true, true), PROPIO).id).toBe('recordatorios-habitos-campana');
+    expect(canal.sonidoDelCanal).toBe(canalDeAlarma('habitos', 'sistema').sonidoDelCanal);
+    expect(canalDeLaCombinacion('habitos', 'campana', c(true, true), PROPIO)).toMatchObject({
+      id: 'recordatorios-habitos-campana-vib', vibra: true, sonidoDelCanal: 'campana_renaser.wav',
+    });
   });
 
-  it('sonido sí, vibración no: ese mismo canal con «-sinvib» y sin vibrar', () => {
+  it('sonido sí, vibración no: ese mismo canal con «-sinvib» y sin vibrar, dicho de forma explícita', () => {
     const canal = canalDeLaCombinacion('habitos', 'sistema', c(true, false), PROPIO);
     expect(canal).toMatchObject({ id: `recordatorios-habitos${SUFIJO_SIN_VIBRACION}`, vibra: false });
     // Conserva el sonido del canal de base.
@@ -112,68 +117,93 @@ describe('el canal de cada combinación (tabla de la spec)', () => {
     });
   });
 
-  it('sin sonido y con vibración: el canal «solo vibrar» que ya existía, que vibra', () => {
-    const canal = canalDeLaCombinacion('habitos', 'campana', c(false, true), PROPIO);
-    expect(canal).toMatchObject({ id: 'recordatorios-habitos-vibrar', sonidoDelCanal: null, sonidoDelAviso: false, vibra: true });
+  it('ningún canal de hábitos depende del valor por defecto de Android: todos dicen si vibran', () => {
+    const tonos = ['sistema', 'campana', 'voz', 'vibrar', 'alertar-marimba', 'relajar-lluvia'] as const;
+    for (const tono of tonos) {
+      for (const vibracion of [true, false]) {
+        for (const voz of [true, false]) {
+          for (const sonido of [true, false]) {
+            const canal = canalDeLaCombinacion('habitos', tono, c(sonido, vibracion, voz), DEL_CATALOGO);
+            expect(typeof canal.vibra).toBe('boolean');
+            // El id lo dice: `-vib` si vibra y `-sinvib` si no. Nunca el id base.
+            expect(canal.id.endsWith(canal.vibra ? SUFIJO_CON_VIBRACION : SUFIJO_SIN_VIBRACION)).toBe(true);
+          }
+        }
+      }
+    }
   });
 
-  it('voz: el canal de voz del hábito del catálogo; un hábito propio, la frase general', () => {
+  it('sin sonido y con vibración: «solo vibrar», también con «-vib» (el de antes pudo crearse sin vibrar)', () => {
+    const canal = canalDeLaCombinacion('habitos', 'campana', c(false, true), PROPIO);
+    expect(canal).toMatchObject({ id: 'recordatorios-habitos-vibrar-vib', sonidoDelCanal: null, sonidoDelAviso: false, vibra: true });
+  });
+
+  it('voz: el canal de voz del hábito del catálogo; un hábito propio, la frase general; los dos con vibración', () => {
     const catalogo = canalDeLaCombinacion('habitos', 'sistema', c(true, true, true), DEL_CATALOGO);
-    expect(catalogo.id).toBe(canalDeAlarma('habitos', 'voz', DEL_CATALOGO).id);
-    expect(catalogo.id).toBe('recordatorios-habitos-voz-despertar');
+    expect(catalogo.id).toBe('recordatorios-habitos-voz-despertar-vib');
     expect(catalogo.vibra).toBe(true);
     const propio = canalDeLaCombinacion('habitos', 'sistema', c(true, true, true), PROPIO);
-    expect(propio).toMatchObject({ id: 'recordatorios-habitos-voz', sonidoDelCanal: 'voz_habito.mp3' });
+    expect(propio).toMatchObject({ id: 'recordatorios-habitos-voz-vib', sonidoDelCanal: 'voz_habito.mp3' });
   });
 
   it('voz sin vibración: el canal de voz con «-sinvib», con el mismo archivo', () => {
     const canal = canalDeLaCombinacion('habitos', 'sistema', c(true, false, true), PROPIO);
     expect(canal).toMatchObject({ id: 'recordatorios-habitos-voz-sinvib', vibra: false, sonidoDelCanal: 'voz_habito.mp3' });
     const delCatalogo = canalDeLaCombinacion('habitos', 'sistema', c(true, false, true), DEL_CATALOGO);
-    expect(delCatalogo.id).toBe(`${canalDeAlarma('habitos', 'voz', DEL_CATALOGO).id}-sinvib`);
+    expect(delCatalogo.id).toBe('recordatorios-habitos-voz-despertar-sinvib');
   });
 
   it('la voz sin sonido no existe: se queda sin voz y solo vibra', () => {
-    expect(canalDeLaCombinacion('habitos', 'sistema', c(false, true, true), DEL_CATALOGO).id).toBe('recordatorios-habitos-vibrar');
+    expect(canalDeLaCombinacion('habitos', 'sistema', c(false, true, true), DEL_CATALOGO).id).toBe('recordatorios-habitos-vibrar-vib');
   });
 
   it('el tono de Yo → Alarmas manda cuando «Sonido» está encendido y «Voz» apagada', () => {
-    expect(canalDeLaCombinacion('habitos', 'alertar-marimba', c(true, true), PROPIO).id).toBe('recordatorios-habitos-alertar-marimba');
+    expect(canalDeLaCombinacion('habitos', 'alertar-marimba', c(true, true), PROPIO).id).toBe('recordatorios-habitos-alertar-marimba-vib');
     expect(canalDeLaCombinacion('habitos', 'relajar-lluvia', c(true, false), PROPIO).id).toBe('recordatorios-habitos-relajar-lluvia-sinvib');
   });
 
   it('si el tono de Yo ya es «Voz», las alarmas siguen diciendo el hábito aunque el servidor traiga voice=false', () => {
     const canal = canalDeLaCombinacion('habitos', 'voz', c(true, true), DEL_CATALOGO);
-    expect(canal.id).toBe(canalDeAlarma('habitos', 'voz', DEL_CATALOGO).id);
+    expect(canal.id).toBe('recordatorios-habitos-voz-despertar-vib');
     // Pero sin sonido en la combinación, no suena (la combinación manda sobre Yo).
-    expect(canalDeLaCombinacion('habitos', 'voz', c(false, true), DEL_CATALOGO).id).toBe('recordatorios-habitos-vibrar');
+    expect(canalDeLaCombinacion('habitos', 'voz', c(false, true), DEL_CATALOGO).id).toBe('recordatorios-habitos-vibrar-vib');
   });
 
   it('si el tono de Yo es «Solo vibrar», solo vibra; salvo que el hábito pida voz', () => {
-    expect(canalDeLaCombinacion('habitos', 'vibrar', c(true, true), PROPIO).id).toBe('recordatorios-habitos-vibrar');
-    expect(canalDeLaCombinacion('habitos', 'vibrar', c(true, false), PROPIO).id).toBe('recordatorios-habitos-vibrar');
-    expect(canalDeLaCombinacion('habitos', 'vibrar', c(true, true, true), PROPIO).id).toBe('recordatorios-habitos-voz');
+    expect(canalDeLaCombinacion('habitos', 'vibrar', c(true, true), PROPIO).id).toBe('recordatorios-habitos-vibrar-vib');
+    expect(canalDeLaCombinacion('habitos', 'vibrar', c(true, false), PROPIO).id).toBe('recordatorios-habitos-vibrar-vib');
+    expect(canalDeLaCombinacion('habitos', 'vibrar', c(true, true, true), PROPIO).id).toBe('recordatorios-habitos-voz-vib');
   });
 
   it('una alarma nunca queda muda: sin sonido ni vibración (un dato roto), vibra', () => {
     expect(canalDeLaCombinacion('habitos', 'sistema', c(false, false), PROPIO)).toMatchObject({
-      id: 'recordatorios-habitos-vibrar', vibra: true,
+      id: 'recordatorios-habitos-vibrar-vib', vibra: true,
     });
     expect(combinacionEfectiva(c(false, false), 'sistema')).toEqual(c(false, true));
     expect(combinacionEfectiva(c(true, false), 'vibrar')).toEqual(c(false, true));
   });
 
-  it('el canal «sin vibración» es idempotente y el de «con vibración» no cambia el id', () => {
+  it('los canales de eventos y objetivos NO cambian: siguen siendo los de siempre (fuera del alcance de E-641)', () => {
+    expect(canalDeAlarma('eventos', 'sistema')).toMatchObject({ id: 'recordatorios-eventos' });
+    expect(canalDeAlarma('eventos', 'sistema').vibra).toBeUndefined();
+    expect(canalDeAlarma('objetivos', 'campana').id).toBe('recordatorios-objetivos-campana');
+    expect(canalDeAlarma('habitos', 'sistema').id).toBe('recordatorios-habitos');
+  });
+
+  it('«sin vibración» y «con vibración» son idempotentes y cada uno agrega su sufijo al canal base', () => {
     const base = canalDeAlarma('habitos', 'sistema');
     const sin = sinVibracion(base);
     expect(sinVibracion(sin)).toBe(sin);
-    expect(conVibracion(base)).toMatchObject({ id: base.id, vibra: true });
-    expect(conVibracion(conVibracion(base)).vibra).toBe(true);
+    const con = conVibracion(base);
+    expect(conVibracion(con)).toBe(con);
+    expect(con).toMatchObject({ id: `${base.id}${SUFIJO_CON_VIBRACION}`, vibra: true });
+    expect(con.nombre).toBe('Recordatorios de hábitos (con vibración)');
+    expect(sin.nombre).toBe('Recordatorios de hábitos (sin vibración)');
   });
 });
 
-describe('los canales «-sinvib» y el rearmado (archivoDelCanal)', () => {
-  it('el rearmado sabe qué archivo suena por cada canal «sin vibración», con el mismo archivo que el canal de base', () => {
+describe('los canales «-vib» y «-sinvib» y el rearmado (archivoDelCanal)', () => {
+  it('el rearmado sabe qué archivo suena por cada variante, con el mismo archivo que el canal de base', () => {
     const bases = [
       canalDeAlarma('habitos', 'campana'),
       canalDeAlarma('habitos', 'voz'),
@@ -183,15 +213,18 @@ describe('los canales «-sinvib» y el rearmado (archivoDelCanal)', () => {
     ];
     for (const base of bases) {
       expect(typeof base.sonidoDelCanal).toBe('string');
-      expect(archivoDelCanal(`${base.id}${SUFIJO_SIN_VIBRACION}`)).toBe(base.sonidoDelCanal);
+      for (const sufijo of [SUFIJO_SIN_VIBRACION, SUFIJO_CON_VIBRACION]) {
+        expect(archivoDelCanal(`${base.id}${sufijo}`)).toBe(base.sonidoDelCanal);
+      }
       expect(archivoDelCanal(base.id)).toBe(base.sonidoDelCanal);
     }
   });
 
   it('los canales sin archivo propio no inventan uno', () => {
     expect(archivoDelCanal('recordatorios-habitos-sinvib')).toBeNull();
-    expect(archivoDelCanal('recordatorios-habitos-vibrar')).toBeNull();
-    expect(archivoDelCanal('otra-cosa-sinvib')).toBeNull();
+    expect(archivoDelCanal('recordatorios-habitos-vib')).toBeNull();
+    expect(archivoDelCanal('recordatorios-habitos-vibrar-vib')).toBeNull();
+    expect(archivoDelCanal('otra-cosa-vib')).toBeNull();
   });
 });
 

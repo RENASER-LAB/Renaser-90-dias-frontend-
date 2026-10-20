@@ -139,9 +139,10 @@ describe('pasar las alarmas ya programadas al sonido nuevo', () => {
       AHORA,
     );
     expect(plan.map(p => [p.identifier, (p.trigger as { channelId: string }).channelId, p.content.sound])).toEqual([
-      ['d-30', 'recordatorios-habitos-voz-despertar', 'voz_habito_despertar.mp3'],
-      ['d-0', 'recordatorios-habitos-voz-despertar', 'voz_habito_despertar.mp3'],
-      ['leer', 'recordatorios-habitos-voz', 'voz_habito.mp3'],
+      // E-641: toda alarma de hábito sale por un canal que dice si vibra (`-vib`); el de antes no vibra.
+      ['d-30', 'recordatorios-habitos-voz-despertar-vib', 'voz_habito_despertar.mp3'],
+      ['d-0', 'recordatorios-habitos-voz-despertar-vib', 'voz_habito_despertar.mp3'],
+      ['leer', 'recordatorios-habitos-voz-vib', 'voz_habito.mp3'],
     ]);
     // El texto del aviso no cambia: el nombre sigue escrito.
     expect(plan[0].content.title).toBe('En 30 min: DESPERTAR');
@@ -154,7 +155,7 @@ describe('pasar las alarmas ya programadas al sonido nuevo', () => {
       canalDelHabitoProgramado(new Map([['d-0', DESPERTAR]]), 'voz'),
       AHORA,
     );
-    expect((pedido.trigger as { channelId: string }).channelId).toBe('recordatorios-habitos-voz-despertar');
+    expect((pedido.trigger as { channelId: string }).channelId).toBe('recordatorios-habitos-voz-despertar-vib');
   });
 
   it('el título del aviso se lee de vuelta: «En N min: X» → X', () => {
@@ -177,14 +178,14 @@ describe('pasar las alarmas ya programadas al sonido nuevo', () => {
       AHORA,
     )).toEqual([]);
     expect(planDeCambioDeSonido(
-      [diaria('d', 5, 'recordatorios-habitos-voz-despertar', 'DESPERTAR')],
+      [diaria('d', 5, 'recordatorios-habitos-voz-despertar-vib', 'DESPERTAR')],
       new Set(['d']),
       canalDelHabitoProgramado(new Map([['d', DESPERTAR]]), 'voz'),
       AHORA,
     )).toEqual([]);
   });
 
-  it('volver a «El del teléfono» manda el sonido del sistema y el canal de siempre', () => {
+  it('volver a «El del teléfono» manda el sonido del sistema y el canal que vibra', () => {
     const [pedido] = planDeCambioDeSonido(
       [diaria('mia', 21, 'recordatorios-habitos-voz-despertar', 'DESPERTAR')],
       new Set(['mia']),
@@ -192,7 +193,7 @@ describe('pasar las alarmas ya programadas al sonido nuevo', () => {
       AHORA + 5 * MIN,
     );
     expect(pedido.content.sound).toBe(true);
-    expect((pedido.trigger as { channelId: string }).channelId).toBe('recordatorios-habitos');
+    expect((pedido.trigger as { channelId: string }).channelId).toBe('recordatorios-habitos-vib');
   });
 
   it('a un sonido para relajar: todos los hábitos al mismo canal, el de la lluvia', () => {
@@ -203,8 +204,8 @@ describe('pasar las alarmas ya programadas al sonido nuevo', () => {
       AHORA,
     );
     expect(plan.map(p => (p.trigger as { channelId: string }).channelId)).toEqual([
-      'recordatorios-habitos-relajar-lluvia',
-      'recordatorios-habitos-relajar-lluvia',
+      'recordatorios-habitos-relajar-lluvia-vib',
+      'recordatorios-habitos-relajar-lluvia-vib',
     ]);
     expect(plan.every(p => p.content.sound === 'relajar_lluvia.mp3')).toBe(true);
   });

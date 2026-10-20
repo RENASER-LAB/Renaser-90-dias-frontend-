@@ -285,7 +285,7 @@ describe('las repeticiones en el teléfono', () => {
     expect(new Date((primera.trigger as { date: Date }).date).getTime()).toBe(fecha(2026, 10, 20, 7, 5).getTime());
     expect(primera.content).toMatchObject({ title: 'Gimnasio', body: 'Te tocaba a las 07:00.' });
     expect(primera.content.data?.route).toBe('/habitos/h-gym?dimension=BODY');
-    expect((primera.trigger as { channelId: string }).channelId).toBe('recordatorios-habitos');
+    expect((primera.trigger as { channelId: string }).channelId).toBe('recordatorios-habitos-vib');
     // La alarma de siempre sigue: la diaria con la etiqueta del push (spec 007).
     expect(mockLista.get('habito-h-gym-inicio')).toBeDefined();
   });
@@ -311,7 +311,7 @@ describe('las repeticiones en el teléfono', () => {
     });
     expect(puestas()).toEqual(['habito-h-gym-rep-20261024-10', 'habito-h-gym-rep-20261024-5']);
     const sabado = mockLista.get('habito-h-gym-rep-20261024-5')!;
-    expect((sabado.trigger as { channelId: string }).channelId).toBe('recordatorios-habitos-vibrar');
+    expect((sabado.trigger as { channelId: string }).channelId).toBe('recordatorios-habitos-vibrar-vib');
     expect(sabado.content.data?.alarma).toEqual(c(false, true, false, true));
   });
 

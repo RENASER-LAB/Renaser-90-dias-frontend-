@@ -233,6 +233,6 @@ describe('lo demás que usa los ids de las alarmas no se entera', () => {
 
     expect(cambiadas).toBe(2);
     expect(mockLista.size).toBe(2);
-    expect(mockLista.get(idDeInicio(AGUA.id))?.trigger.channelId).toBe('recordatorios-habitos-relajar-cuenco');
+    expect(mockLista.get(idDeInicio(AGUA.id))?.trigger.channelId).toBe('recordatorios-habitos-relajar-cuenco-vib');
   });
 });

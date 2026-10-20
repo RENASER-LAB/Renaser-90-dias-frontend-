@@ -100,6 +100,24 @@ describe('poner al día las alarmas y recién ahí confirmar', () => {
     expect(r?.confirmacion).toBe('confirmado');
   });
 
+  it('E-641: pasa al canal que vibra las alarmas de hábitos de antes, después de las rutas y antes de ordenar los avisos', async () => {
+    const { deps, orden } = dependencias({
+      canales: async (userId, ahoraMs) => { orden.push(`canales:${userId}:${ahoraMs}`); return 3; },
+      agrupar: async () => { orden.push('agrupar'); return 0; },
+    });
+    const ahora = Date.UTC(2026, 8, 29, 4, 0);
+    const r = await ponerAlDiaLasAlarmas('u-1', ahora, deps);
+    expect(orden).toEqual(['rearmar', 'diferidos', 'servidor', 'armar', 'rutas', `canales:u-1:${ahora}`, 'agrupar', 'confirmar']);
+    expect(r?.confirmacion).toBe('confirmado');
+  });
+
+  it('E-641: si pasar de canal falla, lo demás sigue y se confirma igual', async () => {
+    const { deps, orden } = dependencias({ canales: async () => { throw new Error('boom'); } });
+    const r = await ponerAlDiaLasAlarmas('u-1', Date.UTC(2026, 8, 29, 4, 0), deps);
+    expect(orden).toEqual(['rearmar', 'diferidos', 'servidor', 'armar', 'rutas', 'confirmar']);
+    expect(r?.confirmacion).toBe('confirmado');
+  });
+
   it('si no pudo leer lo que sabe el servidor, no confirma: mejor un aviso de más que uno de menos', async () => {
     const { deps, orden } = dependencias({ preferencias: async () => { throw new Error('sin red'); } });
     const r = await ponerAlDiaLasAlarmas('u-1', Date.UTC(2026, 8, 29, 4, 0), deps);

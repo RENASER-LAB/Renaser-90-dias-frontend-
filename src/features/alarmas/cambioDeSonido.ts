@@ -4,14 +4,22 @@ import {
   fijarSonido,
   habitoDelAviso,
   recordatoriosPorHabito,
+  sonidoDe,
 } from '../habits/notificaciones/recordatoriosDeHabito';
 import { idsDeRecordatoriosDeAcciones } from '../objetivos/notificaciones/recordatoriosDeAcciones';
 import { agruparAvisosQueCoinciden } from './avisosJuntos';
 import { planDeRearmado, type AlarmaProgramada, type PedidoDeRearmado } from './rearmarAlarmas';
-import { canalDeAlarma, type CanalDeAlarma, type SonidoDeAlarma } from './sonidoDeAlarma';
+import {
+  canalDeAlarma,
+  SUFIJO_CON_VIBRACION,
+  SUFIJO_SIN_VIBRACION,
+  type CanalDeAlarma,
+  type SonidoDeAlarma,
+} from './sonidoDeAlarma';
 import {
   canalDeLaCombinacion,
   combinacionGuardada,
+  COMBINACION_POR_DEFECTO,
 } from '../habits/notificaciones/utils/combinacionDeAlarma';
 
 /**
@@ -67,17 +75,34 @@ export function planDeCambioDeSonido(
  */
 export function canalDelHabitoProgramado(
   habitoDeLaAlarma: ReadonlyMap<string, string>,
-  sonido: SonidoDeAlarma,
+  sonido: SonidoDeAlarma | ((habitoId: string | undefined) => SonidoDeAlarma),
 ): (alarma: AlarmaProgramada) => CanalDeAlarma {
   return alarma => {
     const habitoId = habitoDeLaAlarma.get(alarma.identifier);
-    const titulo = habitoDelAviso(alarma.content?.title ?? '');
+    // Un aviso que lleva a un grupo guarda el texto original en `data.avisoOriginal`: de ahí sale el nombre del hábito.
+    const datos = alarma.content?.data as Record<string, unknown> | null | undefined;
+    const original = datos?.avisoOriginal as { title?: string | null } | undefined;
+    const titulo = habitoDelAviso(original?.title ?? alarma.content?.title ?? '');
     const habito = habitoId ? { id: habitoId, titulo } : undefined;
-    // Spec 009: una alarma con «cómo suena» propio (sin vibración, solo vibrar, voz) conserva su combinación: el
-    // sonido nuevo de Yo → Alarmas cambia el tono, no si vibra o habla. Sin ella, el canal de siempre.
-    const combinacion = combinacionGuardada((alarma.content?.data as Record<string, unknown> | null | undefined)?.alarma);
-    return combinacion ? canalDeLaCombinacion('habitos', sonido, combinacion, habito) : canalDeAlarma('habitos', sonido, habito);
+    // Spec 009: cómo suena la alarma (sin vibración, solo vibrar, voz) viaja en el aviso: el sonido nuevo de Yo →
+    // Alarmas cambia el tono, no si vibra o habla. E-641: sin combinación propia es la de siempre (sonido y
+    // vibración), que sale por el canal `-vib`: los canales base de hábitos no vibran.
+    const combinacion = combinacionGuardada(datos?.alarma) ?? COMBINACION_POR_DEFECTO;
+    const tono = typeof sonido === 'function' ? sonido(habitoId) : sonido;
+    return canalDeLaCombinacion('habitos', tono, combinacion, habito);
   };
+}
+
+/**
+ * Los canales base de hábitos —los de antes de E-641— no vibran. Toda alarma de hábito sale ahora por un canal `-vib` o
+ * `-sinvib` (vibración dicha de forma explícita); este es el que ya no corresponde. `avisos-juntos-sin-sonido` no es
+ * de acá: lo ordena `avisosJuntos`.
+ */
+export function esCanalAnteriorDeHabitos(canalId: unknown): boolean {
+  return typeof canalId === 'string'
+    && canalId.startsWith('recordatorios-habitos')
+    && !canalId.endsWith(SUFIJO_CON_VIBRACION)
+    && !canalId.endsWith(SUFIJO_SIN_VIBRACION);
 }
 
 /** Devuelve cuántas pasó a su canal nuevo. En web y Expo Go no hace nada. */
@@ -108,6 +133,51 @@ export async function cambiarSonidoDeLasProgramadas(
       }
     }
     return cambiadas;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * E-641 (decisión del dueño: vibrar por defecto): pasa al canal que vibra (`-vib`, o `-sinvib` si la combinación del
+ * día lo pide) las alarmas de hábitos que siguen en un canal base de antes, que no vibra. Cada una conserva su
+ * identificador, su hora y su texto: es el mismo pedido con otro canal, como el cambio de sonido. Alcanza a los
+ * recordatorios de cada hábito y a sus repeticiones. El tono de cada hábito es el suyo (`sonidoDe`: el de Yo → Alarmas
+ * o el que se le fijó, como Despertar).
+ *
+ * Idempotente y barata: con todo ya migrado, es una lectura de lo programado y nada más. Corre en cada puesta al día
+ * (`ponerAlDiaLasAlarmas`), antes de ordenar los avisos que coinciden. Devuelve cuántas pasó.
+ */
+export async function ponerLasAlarmasDeHabitosEnSuCanal(userId: string, ahoraMs: number = Date.now()): Promise<number> {
+  const N = cargarNotificaciones();
+  if (!N) return 0;
+  try {
+    const programadas = (await N.getAllScheduledNotificationsAsync()) as AlarmaProgramada[];
+    const anteriores = programadas.filter(p => esCanalAnteriorDeHabitos((p?.trigger as { channelId?: unknown } | null)?.channelId));
+    if (anteriores.length === 0) return 0;
+    const habitoDeLaAlarma = new Map<string, string>();
+    for (const [habitoId, ids] of await recordatoriosPorHabito(userId)) {
+      for (const id of ids) habitoDeLaAlarma.set(id, habitoId);
+    }
+    try {
+      // Se carga acá adentro: ese módulo importa al de hábitos, igual que este.
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { repeticionesProgramadas } = require('../habits/notificaciones/repeticiones') as typeof import('../habits/notificaciones/repeticiones');
+      for (const [id, habitoId] of await repeticionesProgramadas()) habitoDeLaAlarma.set(id, habitoId);
+    } catch {
+      // Sin repeticiones que pasar, lo demás sigue igual.
+    }
+    const ids = anteriores.map(p => p.identifier).filter(id => habitoDeLaAlarma.has(id));
+    if (ids.length === 0) return 0;
+    const tonos = new Map<string, SonidoDeAlarma>();
+    for (const habitoId of new Set(ids.map(id => habitoDeLaAlarma.get(id) as string))) {
+      tonos.set(habitoId, await sonidoDe(userId, habitoId));
+    }
+    return await cambiarSonidoDeLasProgramadas(
+      ids,
+      canalDelHabitoProgramado(habitoDeLaAlarma, habitoId => (habitoId && tonos.get(habitoId)) || 'sistema'),
+      ahoraMs,
+    );
   } catch {
     return 0;
   }
