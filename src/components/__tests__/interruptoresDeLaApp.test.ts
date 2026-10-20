@@ -42,7 +42,7 @@ describe('los interruptores de la app', () => {
       /<Interruptor\s+valor=\{activo\}\s+deshabilitado=\{enVuelo\.has\(h\.habitoId\)\}\s+onCambiar=\{\(\) => alternarActivo\(h\)\}/,
     );
     expect(leer('features/objetivos/components/RecordatorioDeAcciones.tsx')).toMatch(
-      /<Interruptor\s+valor=\{prefs\.diarioActivo\}\s+deshabilitado=\{ocupado\}\s+onCambiar=\{v => void cambiarDiario\(v\)\}\s+etiqueta="Recordarme mis acciones del día"/,
+      /<Interruptor\s+valor=\{vista\.diario\.valor\}\s+deshabilitado=\{ocupado\}\s+onCambiar=\{v => void tocarElDiario\(v\)\}\s+etiqueta="Recordarme mis acciones del día"/,
     );
     expect(leer('features/eventos/components/FormularioDelEvento.tsx')).toMatch(
       /<Interruptor\s+valor=\{form\.notificarAlCrear\}\s+onCambiar=\{v => cambiar\('notificarAlCrear', v\)\}\s+etiqueta="Avisar a todos al guardarlo"/,

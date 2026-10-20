@@ -2119,6 +2119,41 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       backend con **V112** antes. No cambian `Interruptor`, Yo → Alarmas, Plan, Hoy ni los otros tabs.
       > **Corregido 2026-10-20.** Con las voces nuevas de arriba (`app.json` y dos MP3) **sí hace falta un APK nuevo**.
 
+  * **Cambio por pedido del dueño — 2026-10-20 — tabs `Plan` y `Yo` → Alarmas: las acciones de los objetivos por día y
+    cómo suenan** (spec 010 del backend, `specs/010-acciones-por-dia/`; se apoya en la 008 y la 009). Textual, después de
+    probar las dos en el emulador: «tenemos que probar que esto también funcione con las acciones diarias que son los
+    objetivos», y aclarando: «me refiero a lo nuevo que estábamos agregando, que también lo tenga». Lo que cambia y nada
+    más:
+    * **El mismo control en los dos lugares** (`objetivos/components/RecordatorioDeAcciones`: «Recordatorios» de «Tus
+      acciones» en Plan y «Acciones de tus objetivos» en Yo → Alarmas) suma arriba la **fila de los siete días de los
+      hábitos** (`FilaDeDiasDelPlan`, sin tocarla: usa sus props opcionales). El número bajo cada día es la hora de su
+      recordatorio diario; la campana con «30′», «hora» o «30′ +1», el aviso propio (solo si difiere del general). **Hoy y
+      lo pasado van con candado** (`esPlanificable`, la misma regla que los hábitos): rige desde la próxima vez.
+    * **Dos modos, como el editor de Planificar.** Sin días marcados («Todos los días») todo se guarda en el acto, como
+      siempre. Con días marcados («Solo sáb, dom») lo que se toca queda en un borrador y se guarda con **«Guardar
+      cambios · sáb, dom»**, que solo aparece si algo cambió. **Se guarda solo lo tocado** (`conCambios`): la hora que no
+      se movió y el aviso que no se eligió siguen como cada día los tenía. Si los días marcados tienen avisos distintos no
+      se marca ninguna opción (tampoco «Sin aviso») y se lee **«Estos días tienen avisos distintos»** (15 px, color del
+      texto); lo mismo con los recordatorios y las horas distintas. «Dejar sáb como los demás días» devuelve esos días a la
+      general. Tipo oración, tuteo, 16–17 px, opciones de 48.
+    * **Qué se puede elegir por día**: encender o apagar «Recordarme mis acciones del día» (`Interruptor`, el de siempre),
+      su hora y el aviso antes de cada acción con hora (sin aviso, 30 min, 10 min, a la hora; se pueden varias). Lo que un
+      día no dice lo hereda de la general, campo por campo; lo que queda igual a la general vuelve a seguirla.
+    * **Todo en el teléfono, por cuenta, como hoy** (FR-007): sin servidor y sin endpoints nuevos. Las preferencias son
+      las de siempre (`diarioActivo`, `horaDiaria`, `antelaciones`), que **pasan a ser la configuración general sin
+      migrar nada**, más dos campos opcionales (`dias` y `alarma`) que solo existen si la persona los usa
+      (`objetivos/notificaciones/preferenciasPorDia`, puro). Quien actualiza y no toca nada sigue con lo que tenía.
+    * **Las alarmas.** Recordatorio diario: sin días distintos (encendido, hora o cómo suena) es **UNA alarma diaria**, la
+      de siempre, con su id guardado suelto; con algún día distinto, **una alarma semanal por día encendido**, a la hora de
+      ese día, con el identificador estable `acciones-diario-d{1..7}` (lunes = 1; `objetivos/notificaciones/planDelDiario`).
+      Aviso antes de cada acción: alarmas de **fecha**, como hoy, pero con las antelaciones del día de la semana de **su
+      fecha** (el aviso de una acción del sábado es el del sábado, aunque se lea el martes). Se conservan la ruta a Plan →
+      Objetivos, el agrupado de avisos a la misma hora (E-410), el rearmado de la spec 007 y la puesta al día al abrir la
+      app (`SincronizadorDeAcciones`, que ahora mira si algún día pide aviso). Cerrar sesión borra todo, también las
+      semanales; al volver, el recordatorio por día se arma como estaba.
+    * **No hace falta APK nuevo** (solo JavaScript; ni `package.json`, ni `app.json`, ni código nativo) ni backend. No
+      cambian los otros tabs, ni Plan o Yo en nada más.
+
 ## 2. 📱 RESPONSIVIDAD UNIVERSAL (XIAOMI, ANDROID, IOS Y TABLETS)
 * **Cero Doble Scroll**: NUNCA coloques un contenedor con `maxHeight` fijo o scroll interno dentro de otro `ScrollView`. Toda pantalla debe tener UN ÚNICO contenedor de scroll fluido con `contentContainerStyle={{ flexGrow: 1, paddingBottom: 36 }}`.
 * **Adaptabilidad a Xiaomi y Pantallas Altas (20:9 / 19.5:9)**:

@@ -5,6 +5,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { HAY_RECORDATORIOS_LOCALES } from '../../habits/notificaciones/recordatoriosDeHabito';
 import { tocaRearmar } from '../../alarmas/rearmarAlarmas';
 import * as objetivosApi from '../api/objetivosApi';
+import { hayAvisoEnAlgunDia } from '../notificaciones/preferenciasPorDia';
 import {
   leerAccionesAgendadas,
   preferenciasDeAcciones,
@@ -24,7 +25,8 @@ let ultimoUsuario: string | null = null;
  * > **Corregido 2026-09-28 (D-217).** Decía «pone las de hoy y mañana»: una acción del viernes agendada
  * > el martes no tenía alarma hasta que la app se abriera el jueves. Con un backend anterior sigue así.
  *
- * Solo si la persona pidió aviso antes de sus acciones: quien no lo usa no paga las dos lecturas.
+ * Solo si la persona pidió aviso antes de sus acciones en algún día de la semana (spec 010): quien no lo usa no paga las
+ * dos lecturas.
  * Vive en `App.tsx`, junto a `RearmadorDeAlarmas`: ninguna pestaña cambia. No pinta nada.
  */
 export function SincronizadorDeAcciones(): null {
@@ -41,7 +43,7 @@ export function SincronizadorDeAcciones(): null {
       if (userId === ultimoUsuario && !tocaRearmar(ultima, ahora)) return;
       ultima = ahora;
       ultimoUsuario = userId;
-      if ((await preferenciasDeAcciones(userId)).antelaciones.length === 0) return;
+      if (!hayAvisoEnAlgunDia(await preferenciasDeAcciones(userId))) return;
       const leidas = await leerAccionesAgendadas({
         agendadas: objetivosApi.obtenerRocasAgendadas,
         hoy: objetivosApi.obtenerRocasDeHoy,

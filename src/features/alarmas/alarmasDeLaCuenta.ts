@@ -7,9 +7,10 @@ import {
   REPASO_SIN_ALARMA,
 } from '../habits/notificaciones/recordatoriosDeHabito';
 import {
+  ponerElRecordatorioDiario,
   preferenciasDeAcciones,
-  programarRecordatorioDiario,
 } from '../objetivos/notificaciones/recordatoriosDeAcciones';
+import { hayDiarioEnAlgunDia } from '../objetivos/notificaciones/preferenciasPorDia';
 
 /**
  * Las alarmas locales son de UNA cuenta (E-413, 28/09).
@@ -102,7 +103,8 @@ export async function rearmarLoLocalDeLaCuenta(userId: string): Promise<void> {
     if (!(await N.getPermissionsAsync()).granted) return;
     const diario = await AsyncStorage.getItem(`renaser.objetivos.recordatorios.diario.${userId}`);
     const prefs = await preferenciasDeAcciones(userId);
-    if (prefs.diarioActivo && !diario) await programarRecordatorioDiario(userId, prefs.horaDiaria);
+    // Spec 010: el diario puede ser una alarma por día; vuelve como estaba si algún día lo tiene encendido.
+    if (hayDiarioEnAlgunDia(prefs) && !diario) await ponerElRecordatorioDiario(userId, prefs);
     if ((await AsyncStorage.getItem(PREFIJO_REPASO + userId)) === REPASO_SIN_ALARMA) await programarRepasoSemanal(userId);
   } catch {
     // Se vuelve a intentar la próxima vez que se abra la app.

@@ -12,6 +12,17 @@ import { canalDeAlarma, type CanalDeAlarma } from '../../alarmas/sonidoDeAlarma'
 // ya está probada allá. Duplicarla sería tener dos lugares donde equivocarse con la zona.
 import { instanteEnZona, zonaDelTelefono } from '../../eventos/utils/zonaHoraria';
 import type { RocaDiariaApi } from '../types/objetivos.types';
+import { planDelRecordatorioDiario } from './planDelDiario';
+import {
+  antelacionesDeLaFecha,
+  esHora,
+  leerPreferenciasDeAcciones,
+  PREFERENCIAS_DE_ACCIONES_POR_DEFECTO,
+  type PreferenciasDeAcciones,
+} from './preferenciasPorDia';
+
+// Las preferencias (y su lectura) viven en `preferenciasPorDia.ts`; se reexportan para quien ya las importaba de acá.
+export { leerPreferenciasDeAcciones, PREFERENCIAS_DE_ACCIONES_POR_DEFECTO, type PreferenciasDeAcciones };
 
 /**
  * Los recordatorios de las acciones de los objetivos (las rocas del día), en el teléfono
@@ -30,11 +41,21 @@ import type { RocaDiariaApi } from '../types/objetivos.types';
  *    que no puede contar a esa hora cuántas quedan pendientes. Contarlas al programar mentiría en
  *    cuanto la persona cumpla una desde otro lado.
  * 2. **Aviso antes de cada acción con hora**: las mismas opciones que un hábito —sin aviso, 30 o 10
- *    min antes, a la hora (se pueden varias)—, pero UNA elección para todas: las acciones se agendan
- *    de nuevo cada día, y pedir la antelación de cada una cada vez es justo lo que no se le pide a
- *    alguien de 50-60 años. Son alarmas de FECHA (una acción es de un día, no se repite), y se ponen
- *    al día cada vez que la app lee la lista: se quitan las de acciones cumplidas, movidas o que ya no
- *    están.
+ *    min antes, a la hora (se pueden varias)—, pero UNA elección para todas las acciones de un mismo
+ *    día: las acciones se agendan de nuevo cada día, y pedir la antelación de cada una cada vez es
+ *    justo lo que no se le pide a alguien de 50-60 años. Son alarmas de FECHA (una acción es de un día,
+ *    no se repite), y se ponen al día cada vez que la app lee la lista: se quitan las de acciones
+ *    cumplidas, movidas o que ya no están.
+ *
+ * ## Por día de la semana (spec 010, 2026-10-20)
+ *
+ * Los dos recordatorios se pueden elegir distinto para cada día de la semana, como las horas y los
+ * avisos de los hábitos (008): la hora y el encendido del recordatorio diario, y las antelaciones del
+ * aviso. Lo que un día no dice lo hereda de la general (`preferenciasPorDia.ts`, que es pura). Sin días
+ * distintos el recordatorio diario es UNA alarma diaria, como siempre; con alguno distinto, una semanal
+ * por día (`planDelDiario.ts`). El aviso de cada acción usa las antelaciones del día de SU fecha.
+ *
+ * Todo sigue en el teléfono, por cuenta: sin servidor y sin endpoints nuevos.
  *
  * ## La hora
  *
@@ -47,49 +68,9 @@ import type { RocaDiariaApi } from '../types/objetivos.types';
 
 export const ANTELACIONES_DE_ACCIONES: readonly number[] = [30, 10, 0];
 
-export interface PreferenciasDeAcciones {
-  /** El recordatorio diario «Recordarme mis acciones del día». */
-  diarioActivo: boolean;
-  /** `HH:mm` del recordatorio diario, en la hora del teléfono. */
-  horaDiaria: string;
-  /** Minutos antes de cada acción con hora. Vacío = sin aviso; `0` = a la hora. */
-  antelaciones: number[];
-}
-
-/**
- * Apagado y sin aviso: nadie recibe una alarma que no pidió. Las 08:00 son solo la hora con la que
- * ABRE el selector la primera vez (no hay regla del programa sobre esto; es un valor de arranque).
- */
-export const PREFERENCIAS_DE_ACCIONES_POR_DEFECTO: PreferenciasDeAcciones = {
-  diarioActivo: false,
-  horaDiaria: '08:00',
-  antelaciones: [],
-};
-
 const CLAVE_PREFERENCIAS = 'renaser.objetivos.recordatorios.preferencias.';
 const CLAVE_DIARIO = 'renaser.objetivos.recordatorios.diario.';
 const CLAVE_ACCIONES = 'renaser.objetivos.recordatorios.acciones.';
-
-const esHora = (x: unknown): x is string => typeof x === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(x);
-
-/** Lee lo guardado. Cualquier cosa rara cae al valor por defecto, campo por campo. */
-export function leerPreferenciasDeAcciones(crudo: string | null): PreferenciasDeAcciones {
-  const d = PREFERENCIAS_DE_ACCIONES_POR_DEFECTO;
-  if (!crudo) return d;
-  try {
-    const leido = JSON.parse(crudo) as Partial<Record<keyof PreferenciasDeAcciones, unknown>>;
-    const antelaciones = Array.isArray(leido.antelaciones)
-      ? [...new Set(leido.antelaciones.filter((x): x is number => typeof x === 'number' && Number.isFinite(x) && x >= 0))]
-      : d.antelaciones;
-    return {
-      diarioActivo: typeof leido.diarioActivo === 'boolean' ? leido.diarioActivo : d.diarioActivo,
-      horaDiaria: esHora(leido.horaDiaria) ? leido.horaDiaria : d.horaDiaria,
-      antelaciones,
-    };
-  } catch {
-    return d;
-  }
-}
 
 export async function preferenciasDeAcciones(userId: string): Promise<PreferenciasDeAcciones> {
   try {
@@ -129,13 +110,37 @@ async function cancelarIds(ids: string[]): Promise<void> {
 
 export const TEXTO_DIARIO = { titulo: 'Tus acciones del día', cuerpo: 'Revisa las acciones de tus objetivos de hoy.' };
 
-/** Quita el recordatorio diario. Idempotente. */
+/**
+ * Los ids del recordatorio diario guardados. Una alarma diaria (lo de siempre) se guarda como su id suelto; las
+ * semanales por día, como una lista JSON. Se leen los dos formatos: el teléfono que ya tenía el diario puesto no
+ * pierde el id (y con él, la posibilidad de cancelarlo).
+ */
+function leerIdsDelDiario(crudo: string | null): string[] {
+  if (!crudo) return [];
+  if (!crudo.startsWith('[')) return [crudo];
+  try {
+    const lista = JSON.parse(crudo);
+    return Array.isArray(lista) ? lista.filter((x): x is string => typeof x === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+async function idsDelDiario(userId: string): Promise<string[]> {
+  try {
+    return leerIdsDelDiario(await AsyncStorage.getItem(CLAVE_DIARIO + userId));
+  } catch {
+    return [];
+  }
+}
+
+/** Quita el recordatorio diario (la alarma diaria o las semanales de cada día). Idempotente. */
 export async function cancelarRecordatorioDiario(userId: string): Promise<void> {
   if (!HAY_RECORDATORIOS_LOCALES) return;
   try {
-    const id = await AsyncStorage.getItem(CLAVE_DIARIO + userId);
-    if (!id) return;
-    await cancelarIds([id]);
+    const ids = await idsDelDiario(userId);
+    if (ids.length === 0) return;
+    await cancelarIds(ids);
     await AsyncStorage.removeItem(CLAVE_DIARIO + userId);
     await reagrupar(userId);
   } catch {
@@ -144,28 +149,66 @@ export async function cancelarRecordatorioDiario(userId: string): Promise<void> 
 }
 
 /**
- * Pone el recordatorio diario a `horaHHmm` (hora del teléfono). Reemplaza el anterior: programarlo
- * dos veces deja UNO. Devuelve `false` si no se pudo (sin permiso, web, Expo Go, hora inválida).
+ * Deja puesto el recordatorio diario como dicen las preferencias (las guardadas, o las que se pasen): reemplaza el
+ * anterior, así que ponerlo dos veces deja lo mismo. Sin días distintos, UNA alarma diaria a la hora general; con
+ * alguno distinto, una semanal por día encendido (`planDelDiario.ts`). Apagado en todos los días: no queda ninguna.
+ *
+ * Devuelve `false` si no se pudo (sin permiso, web, Expo Go).
  */
-export async function programarRecordatorioDiario(userId: string, horaHHmm: string): Promise<boolean> {
+export async function ponerElRecordatorioDiario(userId: string, prefsDadas?: PreferenciasDeAcciones): Promise<boolean> {
   const N = cargarNotificaciones();
-  if (!N || !esHora(horaHHmm)) return false;
+  if (!N) return false;
+  const prefs = prefsDadas ?? (await preferenciasDeAcciones(userId));
+  const plan = planDelRecordatorioDiario(prefs);
   await cancelarRecordatorioDiario(userId);
+  if (plan.esquema === 'ninguno' || (plan.esquema === 'porDia' && plan.pedidos.length === 0)) return true;
   try {
     if (!(await pedirPermiso())) return false;
     const canal = await canalDeObjetivos(userId);
     await asegurarCanal(canal);
-    const [h, m] = horaHHmm.split(':').map(Number);
-    const id = await N.scheduleNotificationAsync({
-      content: { title: TEXTO_DIARIO.titulo, body: TEXTO_DIARIO.cuerpo, sound: canal.sonidoDelAviso },
-      trigger: { type: N.SchedulableTriggerInputTypes.DAILY, hour: h, minute: m, channelId: canal.id },
-    });
-    await AsyncStorage.setItem(CLAVE_DIARIO + userId, id);
+    const contenido = { title: TEXTO_DIARIO.titulo, body: TEXTO_DIARIO.cuerpo, sound: canal.sonidoDelAviso };
+    if (plan.esquema === 'diario') {
+      const [h, m] = plan.hora.split(':').map(Number);
+      const id = await N.scheduleNotificationAsync({
+        content: contenido,
+        trigger: { type: N.SchedulableTriggerInputTypes.DAILY, hour: h, minute: m, channelId: canal.id },
+      });
+      await AsyncStorage.setItem(CLAVE_DIARIO + userId, id);
+    } else {
+      const ids: string[] = [];
+      for (const pedido of plan.pedidos) {
+        ids.push(
+          await N.scheduleNotificationAsync({
+            identifier: pedido.identificador,
+            content: contenido,
+            trigger: {
+              type: N.SchedulableTriggerInputTypes.WEEKLY,
+              weekday: pedido.weekday,
+              hour: pedido.hora,
+              minute: pedido.minuto,
+              channelId: canal.id,
+            },
+          }),
+        );
+      }
+      await AsyncStorage.setItem(CLAVE_DIARIO + userId, JSON.stringify(ids));
+    }
     await reagrupar(userId);
     return true;
   } catch {
     return false;
   }
+}
+
+/**
+ * Pone el recordatorio diario a `horaHHmm` (hora del teléfono) como hora GENERAL, encendido, con lo propio de cada
+ * día que haya guardado. Reemplaza el anterior: programarlo dos veces deja UNO. Devuelve `false` si no se pudo (sin
+ * permiso, web, Expo Go, hora inválida).
+ */
+export async function programarRecordatorioDiario(userId: string, horaHHmm: string): Promise<boolean> {
+  if (!esHora(horaHHmm)) return false;
+  const guardadas = await preferenciasDeAcciones(userId);
+  return ponerElRecordatorioDiario(userId, { ...guardadas, diarioActivo: true, horaDiaria: horaHHmm });
 }
 
 /* ------------------------------------------------------------------------------------------------
@@ -194,10 +237,18 @@ export interface AlarmaDeAccionGuardada {
   instanteMs: number;
 }
 
-/** Pura: qué alarmas corresponden a estas acciones, con estas antelaciones, a partir de `ahoraMs`. */
+/** Las antelaciones que rigen las acciones de una fecha `YYYY-MM-DD`: las de su día de la semana (spec 010). */
+export type AntelacionesDeLaFecha = (fecha: string) => readonly number[];
+
+/**
+ * Pura: qué alarmas corresponden a estas acciones, con estas antelaciones, a partir de `ahoraMs`.
+ *
+ * `antelaciones` es una lista fija para todas las acciones (así era antes de la spec 010) o una función que dice
+ * cuáles rigen para la fecha de cada una: el aviso de una acción del sábado es el del sábado.
+ */
 export function alarmasDeseadas(
   rocas: RocaDiariaApi[],
-  antelaciones: readonly number[],
+  antelaciones: readonly number[] | AntelacionesDeLaFecha,
   ahoraMs: number,
   zona: string | null,
 ): AlarmaDeAccion[] {
@@ -210,7 +261,8 @@ export function alarmasDeseadas(
     const hora = roca.horaInicio.slice(0, 5);
     const aLaHora = instanteEnZona(roca.fecha, hora, zona);
     if (aLaHora === null) continue;
-    for (const minutos of [...antelaciones].sort((a, b) => b - a)) {
+    const delDia = typeof antelaciones === 'function' ? antelaciones(roca.fecha) : antelaciones;
+    for (const minutos of [...delDia].sort((a, b) => b - a)) {
       const instanteMs = aLaHora - minutos * 60_000;
       const clave = `${roca.id}|${instanteMs}`;
       if (instanteMs <= ahoraMs || vistas.has(clave)) continue;
@@ -307,12 +359,12 @@ async function sincronizarAhora(
   if (!N) return;
   const ahoraMs = opciones.ahoraMs ?? Date.now();
   const zona = opciones.zona === undefined ? zonaDelTelefono() : opciones.zona;
-  const { antelaciones } = await preferenciasDeAcciones(userId);
+  const prefs = await preferenciasDeAcciones(userId);
   const guardadas = await leerGuardadas(userId);
   const fechas = new Set([...(opciones.fechasDeLaLista ?? []), ...rocas.map(r => r.fecha)]);
   const plan = planDeAlarmasDeAcciones({
     guardadas,
-    deseadas: alarmasDeseadas(rocas, antelaciones, ahoraMs, zona),
+    deseadas: alarmasDeseadas(rocas, fecha => antelacionesDeLaFecha(prefs, fecha), ahoraMs, zona),
     fechas,
     ahoraMs,
   });
@@ -376,12 +428,8 @@ export async function pedirPermisoDeAvisos(): Promise<boolean> {
 export async function idsDeRecordatoriosDeAcciones(userId: string): Promise<string[]> {
   if (!HAY_RECORDATORIOS_LOCALES) return [];
   const ids = Object.values(await leerGuardadas(userId)).map(g => g.id);
-  try {
-    const diario = await AsyncStorage.getItem(CLAVE_DIARIO + userId);
-    if (diario) ids.push(diario);
-  } catch {
-    // Sin el diario, se pasan las demás.
-  }
+  // El diario puede ser una alarma diaria o una semanal por día (spec 010).
+  ids.push(...(await idsDelDiario(userId)));
   return ids;
 }
 
