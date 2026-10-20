@@ -976,7 +976,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
   };
 
   /**
-   * «−» o «+»: cambia SOLO el aviso de «Otra», de 5 en 5 entre 1 y 60 y saltando los avisos que ya existen, en su pastilla y
+   * «−» o «+»: cambia SOLO el aviso de «Otra», por múltiplos de 5 entre 5 y 60 y saltando los avisos que ya existen, en su pastilla y
    * en la lista. Los demás avisos no se tocan.
    */
   const moverOtra = (sentido: SentidoDeOtra) => {

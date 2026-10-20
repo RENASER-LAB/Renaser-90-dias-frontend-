@@ -72,9 +72,11 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       recordatorio, la fila «−  15 min antes  +» (botones redondos de 48, minutos a 18 en negrita, borde dorado). Arranca
       en 15; si 15 ya está, en el siguiente valor libre múltiplo de 5 (hacia arriba hasta 60 y, si no hay, hacia abajo);
       sin ningún valor libre no suma nada. «−» y «+» ("Cinco minutos menos" / "Cinco minutos más") cambian SOLO ese
-      aviso, de 5 en 5 entre 1 y 60, SALTANDO los avisos que ya existen (nunca pisan ni duplican otro; un valor que no
-      es múltiplo de 5 se mueve de 5 en 5 desde ahí); sin un valor libre en esa dirección el botón se apaga. Mientras ese
-      aviso siga marcado, volver a tocar «Otra» solo abre o cierra la fila (no suma otro); tocar su pastilla lo desmarca
+      aviso, SOLO por múltiplos de 5 entre 5 y 60 (en 5 «−» se apaga y en 60 «+» se apaga), SALTANDO los avisos que ya
+      existen (nunca pisan ni duplican otro; un valor guardado antes que no sea múltiplo de 5, como un 7 de la rueda
+      vieja, vuelve a la cuadrícula: «+» lo lleva al siguiente, 7 → 10, y «−» al anterior, 7 → 5); sin un valor libre en
+      esa dirección el botón también se apaga. Mientras ese aviso siga marcado, volver a tocar «Otra» solo abre o cierra
+      la fila (no suma otro); tocar su pastilla lo desmarca
       y cierra la fila (el siguiente toque en «Otra» suma uno nuevo); «Sin aviso» sigue siendo exclusivo y también la
       cierra; cambiar entre todos los días y días marcados la cierra y suelta el aviso. Vale con días marcados (el aviso
       va a esos días, spec 008). Si la fila nace debajo de lo que se ve, se lleva a la vista. Entra con un fundido de

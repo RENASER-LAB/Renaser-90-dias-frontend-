@@ -15,14 +15,14 @@ import {
 
 /**
  * «Otra» del recordatorio (spec 011): SUMA un aviso nuevo y lo marca, y la fila «− 15 min antes +» mueve SOLO ese aviso
- * de 5 en 5 entre 1 y 60, saltando los que ya existen. Los demás avisos nunca cambian.
+ * por múltiplos de 5 entre 5 y 60, saltando los que ya existen. Los demás avisos nunca cambian.
  */
 const MULTIPLOS = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60];
 
 describe('los topes y el paso', () => {
-  it('de 5 en 5, entre 1 y 60, y arranca en 15', () => {
+  it('de 5 en 5, entre 5 y 60, y arranca en 15', () => {
     expect(PASO_DE_OTRA).toBe(5);
-    expect(MINIMO_DE_OTRA).toBe(1);
+    expect(MINIMO_DE_OTRA).toBe(5);
     expect(MAXIMO_DE_OTRA).toBe(60);
     expect(ARRANQUE_DE_OTRA).toBe(15);
   });
@@ -100,7 +100,7 @@ describe('abrirOtra: lo que pasa al tocar «Otra»', () => {
   });
 });
 
-describe('siguienteLibreDeOtra: «+» y «−» de 5 en 5', () => {
+describe('siguienteLibreDeOtra: «+» y «−» por múltiplos de 5, entre 5 y 60', () => {
   it('suma y resta cinco', () => {
     expect(siguienteLibreDeOtra(15, 1, [15])).toBe(20);
     expect(siguienteLibreDeOtra(15, -1, [15])).toBe(10);
@@ -108,68 +108,88 @@ describe('siguienteLibreDeOtra: «+» y «−» de 5 en 5', () => {
     expect(siguienteLibreDeOtra(10, -1, [10])).toBe(5);
   });
 
-  it('un valor que no es múltiplo de 5 se mueve de 5 en 5 desde ahí', () => {
-    expect(siguienteLibreDeOtra(12, 1, [12])).toBe(17);
-    expect(siguienteLibreDeOtra(12, -1, [12])).toBe(7);
-    expect(siguienteLibreDeOtra(1, 1, [1])).toBe(6);
-    expect(siguienteLibreDeOtra(6, -1, [6])).toBe(1);
+  it('un valor que no es múltiplo de 5 vuelve a la cuadrícula: «+» al siguiente, «−» al anterior', () => {
+    expect(siguienteLibreDeOtra(7, 1, [7])).toBe(10);
+    expect(siguienteLibreDeOtra(7, -1, [7])).toBe(5);
+    expect(siguienteLibreDeOtra(12, 1, [12])).toBe(15);
+    expect(siguienteLibreDeOtra(12, -1, [12])).toBe(10);
+    expect(siguienteLibreDeOtra(58, 1, [58])).toBe(60);
+    expect(siguienteLibreDeOtra(58, -1, [58])).toBe(55);
+  });
+
+  it('desde 1 «+» va a 5 (y no a 6, 11, 16…): no se sale de la cuadrícula', () => {
+    expect(siguienteLibreDeOtra(1, 1, [1])).toBe(5);
+    expect(siguienteLibreDeOtra(3, 1, [3])).toBe(5);
+    expect(siguienteLibreDeOtra(4, 1, [4])).toBe(5);
   });
 
   it('salta los valores que ya existen: desde 25 con 30 existente, «+» va a 35', () => {
     expect(siguienteLibreDeOtra(25, 1, [30, 25])).toBe(35);
     expect(siguienteLibreDeOtra(25, 1, [35, 30, 25])).toBe(40);
     expect(siguienteLibreDeOtra(20, -1, [20, 15, 10])).toBe(5);
+    // Un valor suelto también salta los ocupados: 7 → (10 ocupado) → 15.
+    expect(siguienteLibreDeOtra(7, 1, [10, 7])).toBe(15);
+    expect(siguienteLibreDeOtra(12, -1, [10, 12])).toBe(5);
   });
 
   it('el 0 («a la hora») y los avisos fuera del rango no estorban', () => {
-    expect(siguienteLibreDeOtra(5, -1, [5, 0])).toBe(1);
+    expect(siguienteLibreDeOtra(5, 1, [5, 0])).toBe(10);
     expect(siguienteLibreDeOtra(55, 1, [90, 55, 0])).toBe(60);
+    expect(siguienteLibreDeOtra(10, -1, [10, 0])).toBe(5);
   });
 
-  it('tope en 60: ni «+» lo pasa; un paso que se pasaría cae en 60', () => {
+  it('tope en 60: «+» se apaga; un valor suelto cerca del tope cae en 60', () => {
     expect(siguienteLibreDeOtra(60, 1, [60])).toBeNull();
     expect(siguienteLibreDeOtra(58, 1, [58])).toBe(60);
     expect(siguienteLibreDeOtra(57, 1, [57])).toBe(60);
+    expect(siguienteLibreDeOtra(56, 1, [56])).toBe(60);
   });
 
-  it('tope en 1: ni «−» lo baja; un paso que se pasaría cae en 1', () => {
+  it('tope en 5: «−» se apaga, y por debajo de 5 tampoco hay a dónde bajar', () => {
+    expect(siguienteLibreDeOtra(5, -1, [5])).toBeNull();
+    expect(siguienteLibreDeOtra(3, -1, [3])).toBeNull();
     expect(siguienteLibreDeOtra(1, -1, [1])).toBeNull();
-    expect(siguienteLibreDeOtra(3, -1, [3])).toBe(1);
-    expect(siguienteLibreDeOtra(5, -1, [5])).toBe(1);
   });
 
   it('sin un valor libre en esa dirección no hay siguiente', () => {
     // 55 con el 60 ocupado: arriba no queda nada.
     expect(siguienteLibreDeOtra(55, 1, [60, 55])).toBeNull();
-    // 10 con 5 y 1 ocupados: abajo no queda nada.
-    expect(siguienteLibreDeOtra(10, -1, [10, 5, 1])).toBeNull();
+    // 15 con 10 y 5 ocupados: abajo no queda nada.
+    expect(siguienteLibreDeOtra(15, -1, [15, 10, 5])).toBeNull();
     // Pero en la otra dirección sí.
     expect(siguienteLibreDeOtra(55, -1, [60, 55])).toBe(50);
+    expect(siguienteLibreDeOtra(15, 1, [15, 10, 5])).toBe(20);
   });
 
-  it('el 1 es un valor libre más: «−» desde 5 llega a 1 si está libre', () => {
-    expect(siguienteLibreDeOtra(5, -1, [5])).toBe(1);
+  it('el 5 es el piso: «−» desde 10 llega a 5 si está libre, no a 1', () => {
+    expect(siguienteLibreDeOtra(10, -1, [10])).toBe(5);
+  });
+
+  it('un valor guardado por encima de la cuadrícula (90) no tiene a dónde subir y «−» lo lleva al tope', () => {
+    expect(siguienteLibreDeOtra(90, 1, [90])).toBeNull();
+    expect(siguienteLibreDeOtra(90, -1, [90])).toBe(60);
   });
 });
 
 describe('sePuedeMover: los botones sin valor libre se apagan', () => {
-  it('«+» se apaga en 60 y «−» en 1; en el medio, los dos andan', () => {
+  it('«+» se apaga en 60 y «−» en 5; en el medio, los dos andan', () => {
     expect(sePuedeMover(60, 1, [60])).toBe(false);
     expect(sePuedeMover(60, -1, [60])).toBe(true);
-    expect(sePuedeMover(1, -1, [1])).toBe(false);
-    expect(sePuedeMover(1, 1, [1])).toBe(true);
+    expect(sePuedeMover(5, -1, [5])).toBe(false);
+    expect(sePuedeMover(5, 1, [5])).toBe(true);
     expect(sePuedeMover(15, 1, [15])).toBe(true);
     expect(sePuedeMover(15, -1, [15])).toBe(true);
   });
 
-  it('cerca del tope todavía hay un paso (58 sube a 60, 3 baja a 1)', () => {
+  it('cerca del tope todavía hay un paso (58 sube a 60, 7 baja a 5)', () => {
     expect(sePuedeMover(58, 1, [58])).toBe(true);
-    expect(sePuedeMover(3, -1, [3])).toBe(true);
+    expect(sePuedeMover(7, -1, [7])).toBe(true);
   });
 
   it('también se apaga si lo que queda en esa dirección está ocupado', () => {
     expect(sePuedeMover(55, 1, [60, 55])).toBe(false);
     expect(sePuedeMover(55, -1, [60, 55])).toBe(true);
+    expect(sePuedeMover(10, -1, [10, 5])).toBe(false);
   });
 });
 
@@ -209,14 +229,24 @@ describe('moverAvisoDeOtra: cambia SOLO el aviso de «Otra»', () => {
 
   it('en el tope, o sin valor libre en esa dirección, no cambia nada', () => {
     expect(moverAvisoDeOtra([60], 60, 1)).toEqual({ avisos: [60], minutos: 60 });
-    expect(moverAvisoDeOtra([1], 1, -1)).toEqual({ avisos: [1], minutos: 1 });
+    expect(moverAvisoDeOtra([5], 5, -1)).toEqual({ avisos: [5], minutos: 5 });
     expect(moverAvisoDeOtra([60, 55], 55, 1)).toEqual({ avisos: [60, 55], minutos: 55 });
   });
 
-  it('un valor suelto (no múltiplo de 5) sigue de 5 en 5 desde ahí', () => {
-    expect(moverAvisoDeOtra([12], 12, 1)).toEqual({ avisos: [17], minutos: 17 });
+  it('un valor suelto (no múltiplo de 5) vuelve a la cuadrícula: 7 → 10 con «+» y 7 → 5 con «−»', () => {
+    expect(moverAvisoDeOtra([7], 7, 1)).toEqual({ avisos: [10], minutos: 10 });
+    expect(moverAvisoDeOtra([7], 7, -1)).toEqual({ avisos: [5], minutos: 5 });
     expect(moverAvisoDeOtra([58], 58, 1)).toEqual({ avisos: [60], minutos: 60 });
-    expect(moverAvisoDeOtra([3], 3, -1)).toEqual({ avisos: [1], minutos: 1 });
+    expect(moverAvisoDeOtra([30, 7, 0], 7, 1)).toEqual({ avisos: [30, 10, 0], minutos: 10 });
+  });
+
+  it('desde 1, «+» da 5 y de ahí sigue de 5 en 5 sin salirse de la cuadrícula', () => {
+    let estado = moverAvisoDeOtra([1], 1, 1);
+    expect(estado).toEqual({ avisos: [5], minutos: 5 });
+    estado = moverAvisoDeOtra(estado.avisos, estado.minutos, 1);
+    expect(estado).toEqual({ avisos: [10], minutos: 10 });
+    estado = moverAvisoDeOtra(estado.avisos, estado.minutos, 1);
+    expect(estado).toEqual({ avisos: [15], minutos: 15 });
   });
 
   it('no toca «a la hora» ni los avisos de afuera de la fila (90)', () => {
@@ -238,9 +268,9 @@ describe('moverAvisoDeOtra: cambia SOLO el aviso de «Otra»', () => {
     expect(estado).toEqual({ avisos: [60, 30, 0], minutos: 60 });
     estado = moverAvisoDeOtra(estado.avisos, estado.minutos, -1);
     expect(estado).toEqual({ avisos: [55, 30, 0], minutos: 55 });
-    // Hacia abajo salta el 30 y llega al piso: 1.
+    // Hacia abajo salta el 30 y llega al piso: 5 (no baja a 1).
     for (let i = 0; i < 20; i += 1) estado = moverAvisoDeOtra(estado.avisos, estado.minutos, -1);
-    expect(estado).toEqual({ avisos: [30, 1, 0], minutos: 1 });
+    expect(estado).toEqual({ avisos: [30, 5, 0], minutos: 5 });
   });
 });
 

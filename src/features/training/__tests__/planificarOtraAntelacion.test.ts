@@ -11,7 +11,7 @@ import type { HabitItem } from '../../../screens/TrainingScreen';
 /**
  * «Otra» en la hoja «PLANIFICAR» de Training, montada de verdad (spec 011). Tocar «Otra» SUMA un aviso nuevo (15, o el
  * siguiente libre) y lo marca —los que había quedan— y, DENTRO de lo que se desliza y debajo de las opciones, abre la
- * fila «−  15 min antes  +», que mueve SOLO ese aviso de 5 en 5 entre 1 y 60, saltando los que ya existen. Antes era una
+ * fila «−  15 min antes  +», que mueve SOLO ese aviso por múltiplos de 5 entre 5 y 60, saltando los que ya existen. Antes era una
  * rueda fuera del desplazamiento con un botón «Añadir», que se montaba encima del contenido.
  */
 
@@ -362,13 +362,15 @@ describe('«+» y «−»', () => {
     expect(ordenadas(r)).toEqual(['10 min antes', '25 min antes']);
   });
 
-  it('«−» baja de 5 en 5 y SALTA el 10 que ya existe: del 15 va al 5', async () => {
+  it('«−» baja de 5 en 5 y SALTA el 10 que ya existe: del 15 va al 5 (el piso)', async () => {
     const r = await montar();
     await abrirElHabito(r);
     await tocarOtra(r);
     await pulsar(r, 'Cinco minutos menos');
     expect(textoDeLaFila(r)).toContain('5 min antes');
     expect(ordenadas(r)).toEqual(['10 min antes', '5 min antes']);
+    // Y desde el piso, «−» está apagado: el 10 sigue marcado y nada se pisa.
+    expect(apagado(botonDeLaFila(r, 'Cinco minutos menos'))).toBe(true);
   });
 
   it('«+» desde 25 con 30 existente salta a 35 y el 30 queda marcado', async () => {
@@ -397,16 +399,24 @@ describe('«+» y «−»', () => {
     expect(apagado(botonDeLaFila(r, 'Cinco minutos menos'))).toBe(false);
   });
 
-  it('tope en 1: «−» se apaga y no baja de ahí', async () => {
+  it('tope en 5: «−» se apaga en 5 y no baja a 1; «+» vuelve a andar', async () => {
     const r = await montar();
     await abrirElHabito(r);
     await tocarSinAviso(r);
-    await tocarOtra(r);
-    for (let i = 0; i < 6; i += 1) await pulsar(r, 'Cinco minutos menos');
-    expect(textoDeLaFila(r)).toContain('1 min antes');
-    expect(elegidas(r)).toEqual(['1 min antes']);
+    await tocarOtra(r); // 15
+    await pulsar(r, 'Cinco minutos menos'); // 10
+    expect(apagado(botonDeLaFila(r, 'Cinco minutos menos'))).toBe(false);
+    await pulsar(r, 'Cinco minutos menos'); // 5
+    expect(textoDeLaFila(r)).toContain('5 min antes');
+    expect(elegidas(r)).toEqual(['5 min antes']);
     expect(apagado(botonDeLaFila(r, 'Cinco minutos menos'))).toBe(true);
     expect(apagado(botonDeLaFila(r, 'Cinco minutos más'))).toBe(false);
+    // Aunque se insista, no baja a 1.
+    await pulsar(r, 'Cinco minutos menos');
+    expect(textoDeLaFila(r)).toContain('5 min antes');
+    expect(elegidas(r)).toEqual(['5 min antes']);
+    await pulsar(r, 'Cinco minutos más');
+    expect(textoDeLaFila(r)).toContain('10 min antes');
   });
 
   it('sin un valor libre en esa dirección el botón queda apagado (arriba ocupado: 60 y 55)', async () => {

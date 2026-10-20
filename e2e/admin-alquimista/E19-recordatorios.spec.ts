@@ -20,9 +20,9 @@ import { ENTORNO } from './soporte/entorno';
  * teclado numérico —que en el teléfono se abría ENCIMA del propio campo—, después una rueda de 1 a 60
  * minutos con un botón «Añadir» (fuera de lo que se desliza, y se montaba encima del contenido) y, desde
  * la spec 011, una fila «−  15 min antes  +» dentro de lo que se desliza: tocar "Otra" SUMA un aviso nuevo
- * (15, o el siguiente libre) y lo marca —los que había quedan—, y «+» y «−» mueven SOLO ese aviso de 5 en 5
- * entre 1 y 60, saltando los que ya existen. Por eso aquí ya no se comprueba que el campo rechace `0` ni
- * `9999`: en 1 a 60 esos valores no existen, no hay nada que rechazar. Lo que se comprueba en su lugar es
+ * (15, o el siguiente libre) y lo marca —los que había quedan—, y «+» y «−» mueven SOLO ese aviso por
+ * múltiplos de 5 entre 5 y 60, saltando los que ya existen. Por eso aquí ya no se comprueba que el campo
+ * rechace `0` ni `9999`: en 5 a 60 esos valores no existen, no hay nada que rechazar. Lo que se comprueba en su lugar es
  * que "Otra" suma uno (los marcados antes siguen marcados) y que sus botones llevan ese aviso, de 5 en 5,
  * hasta el valor pedido.
  *

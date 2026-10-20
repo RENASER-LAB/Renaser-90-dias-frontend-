@@ -1,6 +1,5 @@
 import {
   MAXIMO_MINUTOS_RUEDA_ANTELACION,
-  MINIMO_MINUTOS_ANTELACION,
   MINUTOS_OTRA_POR_DEFECTO,
 } from '../../habits/utils/etiquetaDeAntelacion';
 
@@ -14,19 +13,20 @@ import {
  *
  * - **Arranca en 15.** Si 15 ya está, el siguiente valor libre múltiplo de 5: primero hacia arriba hasta 60 y, si no
  *   hay, hacia abajo. Sin ningún valor libre no suma nada.
- * - **«−» y «+» saltan los avisos que ya existen**: nunca pisan ni duplican otro. Sin un valor libre en esa dirección,
- *   el botón se apaga.
+ * - **«−» y «+» se mueven SOLO por múltiplos de 5, entre 5 y 60**, y saltan los avisos que ya existen: nunca pisan ni
+ *   duplican otro. En 5 «−» se apaga y en 60 «+» se apaga; sin un valor libre en esa dirección, también.
  * - **Los demás avisos no cambian nunca** (30, 10, «a la hora», los personalizados que ya había).
  *
- * El rango es el de siempre (1 a 60): lo guardado fuera de él (un aviso de 90 de cuando se escribía a mano) sigue
- * vivo en su pastilla; esta fila no lo toca.
+ * Lo guardado fuera de la cuadrícula (un 7 de la rueda vieja, un 90 de cuando se escribía a mano) sigue vivo en su
+ * pastilla; esta fila no lo toca. Si algún día un valor así fuera el de «Otra», «+» lo lleva al múltiplo de 5 siguiente
+ * (7 → 10) y «−» al anterior (7 → 5): vuelve a la cuadrícula.
  */
 
 /** Cuánto mueven «−» y «+». */
 export const PASO_DE_OTRA = 5;
 
-/** Los topes de la fila: los de la rueda que reemplaza. */
-export const MINIMO_DE_OTRA = MINIMO_MINUTOS_ANTELACION;
+/** Los topes de la fila: de 5 a 60, la cuadrícula de «Otra» (el 1 de la rueda vieja no es parte de ella). */
+export const MINIMO_DE_OTRA = PASO_DE_OTRA;
 export const MAXIMO_DE_OTRA = MAXIMO_MINUTOS_RUEDA_ANTELACION;
 
 /** Donde arranca el aviso de «Otra» (15), si está libre. */
@@ -44,10 +44,6 @@ const MULTIPLOS_DE_OTRA: readonly number[] = Array.from(
 /** El conjunto de avisos en el orden de siempre del editor: de la antelación mayor a la menor, sin repetir. */
 function ordenados(avisos: readonly number[]): number[] {
   return [...new Set(avisos)].sort((a, b) => b - a);
-}
-
-function dentroDelRango(minutos: number): number {
-  return Math.min(Math.max(Math.round(minutos), MINIMO_DE_OTRA), MAXIMO_DE_OTRA);
 }
 
 /**
@@ -72,20 +68,19 @@ export function abrirOtra(avisos: readonly number[]): { avisos: number[]; minuto
 }
 
 /**
- * A dónde va el aviso de «Otra» con «−» o «+»: de 5 en 5 desde donde está, con tope en 1 y en 60, SALTANDO los valores
- * que ya existen en la lista (otro aviso nunca se pisa ni se duplica). Un valor que no es múltiplo de 5 se mueve de 5 en
- * 5 desde ahí (12 → 17); un paso que se pasaría del tope cae en el tope (58 → 60). `null` si en esa dirección no hay
- * ningún valor libre.
+ * A dónde va el aviso de «Otra» con «−» o «+»: al múltiplo de 5 siguiente (o anterior) entre 5 y 60, SALTANDO los valores
+ * que ya existen en la lista (otro aviso nunca se pisa ni se duplica). Un valor que no es múltiplo de 5 vuelve a la
+ * cuadrícula: con «+» sube al múltiplo siguiente (7 → 10) y con «−» baja al anterior (7 → 5). `null` si en esa dirección
+ * no hay ningún valor libre: en 5 «−» y en 60 «+» no tienen a dónde ir.
  */
 export function siguienteLibreDeOtra(minutos: number, sentido: SentidoDeOtra, avisos: readonly number[]): number | null {
   const otros = new Set(avisos.filter(m => m !== minutos));
-  const tope = sentido === 1 ? MAXIMO_DE_OTRA : MINIMO_DE_OTRA;
-  let candidato = dentroDelRango(minutos);
-  while (candidato !== tope) {
-    candidato = sentido === 1
-      ? Math.min(candidato + PASO_DE_OTRA, tope)
-      : Math.max(candidato - PASO_DE_OTRA, tope);
+  let candidato = sentido === 1
+    ? (Math.floor(minutos / PASO_DE_OTRA) + 1) * PASO_DE_OTRA
+    : Math.min((Math.ceil(minutos / PASO_DE_OTRA) - 1) * PASO_DE_OTRA, MAXIMO_DE_OTRA);
+  while (candidato >= MINIMO_DE_OTRA && candidato <= MAXIMO_DE_OTRA) {
     if (!otros.has(candidato)) return candidato;
+    candidato += sentido * PASO_DE_OTRA;
   }
   return null;
 }
