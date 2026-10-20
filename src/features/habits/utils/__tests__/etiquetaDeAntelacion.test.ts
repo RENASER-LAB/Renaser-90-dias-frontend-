@@ -4,9 +4,6 @@ import {
   antelacionesAMostrar,
   etiquetaDeAntelacion,
   MAXIMO_MINUTOS_ANTELACION,
-  MAXIMO_MINUTOS_RUEDA_ANTELACION,
-  minutosDeArranqueDeLaRueda,
-  MINUTOS_OTRA_POR_DEFECTO,
 } from '../etiquetaDeAntelacion';
 
 describe('etiquetaDeAntelacion', () => {
@@ -36,38 +33,6 @@ describe('etiquetaDeAntelacion', () => {
   it('un valor imposible no rompe la pastilla', () => {
     expect(etiquetaDeAntelacion(Number.NaN)).toBe('A la hora');
     expect(etiquetaDeAntelacion(-5)).toBe('A la hora');
-  });
-});
-
-describe('minutosDeArranqueDeLaRueda', () => {
-  it('sin ningún aviso puesto, abre en el valor por defecto y no en el primero de la rueda', () => {
-    expect(minutosDeArranqueDeLaRueda([])).toBe(MINUTOS_OTRA_POR_DEFECTO);
-  });
-
-  it('abre en el aviso que ya rige', () => {
-    expect(minutosDeArranqueDeLaRueda([10])).toBe(10);
-  });
-
-  it('con varios avisos abre en el mayor, que es el que llega antes', () => {
-    expect(minutosDeArranqueDeLaRueda([10, 45, 30])).toBe(45);
-  });
-
-  it('"a la hora" no es un punto de la rueda: con solo el cero abre en el valor por defecto', () => {
-    expect(minutosDeArranqueDeLaRueda([0])).toBe(MINUTOS_OTRA_POR_DEFECTO);
-    expect(minutosDeArranqueDeLaRueda([0, 10])).toBe(10);
-  });
-
-  it('un valor guardado más grande que la rueda la abre en el tope, sin tocar el dato', () => {
-    const guardadas = [90];
-    expect(minutosDeArranqueDeLaRueda(guardadas)).toBe(MAXIMO_MINUTOS_RUEDA_ANTELACION);
-    expect(minutosDeArranqueDeLaRueda([MAXIMO_MINUTOS_ANTELACION])).toBe(MAXIMO_MINUTOS_RUEDA_ANTELACION);
-    // Lo que importa del caso: la lista de avisos sigue igual, el clamp es solo de la vista.
-    expect(guardadas).toEqual([90]);
-  });
-
-  it('un valor imposible no deja a la rueda sin punto de arranque', () => {
-    expect(minutosDeArranqueDeLaRueda([Number.NaN])).toBe(MINUTOS_OTRA_POR_DEFECTO);
-    expect(minutosDeArranqueDeLaRueda([-5])).toBe(MINUTOS_OTRA_POR_DEFECTO);
   });
 });
 

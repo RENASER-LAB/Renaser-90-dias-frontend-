@@ -188,7 +188,8 @@ describe('la fila de los siete días (la de los hábitos)', () => {
     const r = await montar({ ...BASE, dias: { 6: { horaDiaria: '09:00', antelaciones: [30] }, 7: { diarioActivo: false } } });
     const t = textos(r);
     expect(t).toContain('09:00');
-    expect(t).toContain('30′');
+    // El chip no escribe los minutos del aviso (spec 011): solo la campana; el lector de pantalla los oye completos.
+    expect(t).not.toContain('30′');
     // Los días como el general muestran la general.
     expect(t).toContain('07:00');
     // Y el sábado lo dice completo para el lector de pantalla.

@@ -1,10 +1,14 @@
 import { describe, expect, it } from '@jest/globals';
 import {
+  AIRE_ARRIBA_GRANDE,
   FRACCION_PARA_CERRAR,
+  altoDeLaHoja,
   amortiguar,
   decidirAlSoltar,
+  elCuerpoSeEstira,
   opacidadDelVelo,
   posicionAlArrastrar,
+  rellenoSuperiorDeLaHoja,
 } from '../logicaDeLaHoja';
 
 /**
@@ -77,5 +81,40 @@ describe('opacidadDelVelo', () => {
     expect(opacidadDelVelo(-40, ALTO)).toBe(1);
     expect(opacidadDelVelo(ALTO * 2, ALTO)).toBe(0);
     expect(opacidadDelVelo(100, 0)).toBe(0);
+  });
+});
+
+describe('el tamaño de la hoja (spec 011)', () => {
+  const VENTANA = 800;
+  const BARRA = 32;
+
+  it('`grande` sigue como siempre: casi toda la pantalla, con 40 de fondo oscuro arriba', () => {
+    expect(AIRE_ARRIBA_GRANDE).toBe(40);
+    expect(altoDeLaHoja('grande', VENTANA, BARRA)).toBe(VENTANA - BARRA - 40);
+    expect(rellenoSuperiorDeLaHoja('grande', BARRA)).toBe(BARRA + 8);
+  });
+
+  it('`completa` ocupa TODO el alto disponible: hasta debajo de la barra de estado', () => {
+    expect(altoDeLaHoja('completa', VENTANA, BARRA)).toBe(VENTANA - BARRA);
+    // La hoja llega justo a la barra de estado: su tope (`maxHeight: 100 %` del contenedor) no la recorta.
+    expect(rellenoSuperiorDeLaHoja('completa', BARRA)).toBe(BARRA);
+    expect(VENTANA - (altoDeLaHoja('completa', VENTANA, BARRA) ?? 0)).toBe(rellenoSuperiorDeLaHoja('completa', BARRA));
+  });
+
+  it('`completa` es más alta que `grande`, y `contenido` no fija el alto', () => {
+    expect(altoDeLaHoja('completa', VENTANA, BARRA)!).toBeGreaterThan(altoDeLaHoja('grande', VENTANA, BARRA)!);
+    expect(altoDeLaHoja('contenido', VENTANA, BARRA)).toBeUndefined();
+    expect(rellenoSuperiorDeLaHoja('contenido', BARRA)).toBe(BARRA + 8);
+  });
+
+  it('con o sin barra de estado (insets en 0) sigue llenando el alto', () => {
+    expect(altoDeLaHoja('completa', VENTANA, 0)).toBe(VENTANA);
+    expect(rellenoSuperiorDeLaHoja('completa', 0)).toBe(0);
+  });
+
+  it('el cuerpo se estira en `grande` y `completa`, no en `contenido`', () => {
+    expect(elCuerpoSeEstira('grande')).toBe(true);
+    expect(elCuerpoSeEstira('completa')).toBe(true);
+    expect(elCuerpoSeEstira('contenido')).toBe(false);
   });
 });

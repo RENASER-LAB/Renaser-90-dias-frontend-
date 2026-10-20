@@ -29,7 +29,7 @@ const mockFilaDias = jest.fn<(props: FilaProps) => void>();
 type FilaProps = {
   onAlternarDia: (dia: string) => void;
   enEdicion: string[];
-  avisoDelDia?: (dia: string) => { corto: string; largo: string; sinAviso: boolean } | null;
+  avisoDelDia?: (dia: string) => { largo: string; sinAviso: boolean } | null;
 };
 
 jest.mock('../../../theme/ThemeContext', () => {
@@ -51,7 +51,6 @@ jest.mock('../../habits/components/RuedaHoraPicker', () => ({
     return null;
   },
 }));
-jest.mock('../../habits/components/RuedaAntelacionPicker', () => ({ RuedaAntelacionPicker: () => null }));
 jest.mock('../../habits/components/FilaDeDiasDelPlan', () => ({
   FilaDeDiasDelPlan: (props: FilaProps) => {
     mockFilaDias(props);
@@ -337,8 +336,8 @@ describe('el chip de cada día', () => {
     await abrirElHabito(r);
     const { avisoDelDia } = mockFilaDias.mock.lastCall![0];
     expect(avisoDelDia).toBeDefined();
-    expect(avisoDelDia!('SÁB')).toEqual({ corto: '30′', largo: 'Aviso 30 minutos antes', sinAviso: false });
-    expect(avisoDelDia!('DOM')).toEqual({ corto: 'sin aviso', largo: 'Sin aviso', sinAviso: true });
+    expect(avisoDelDia!('SÁB')).toEqual({ largo: 'Aviso 30 minutos antes', sinAviso: false });
+    expect(avisoDelDia!('DOM')).toEqual({ largo: 'Sin aviso', sinAviso: true });
     expect(avisoDelDia!('VIE')).toBeNull();
     expect(avisoDelDia!('LUN')).toBeNull();
   });

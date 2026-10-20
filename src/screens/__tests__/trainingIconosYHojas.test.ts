@@ -113,7 +113,8 @@ describe('Training: hojas desde abajo', () => {
       expect({ nombre, hoja: codigo.includes('<HojaDesdeAbajo'), modalPropio: /<Modal\b/.test(codigo) })
         .toEqual({ nombre, hoja: true, modalPropio: false });
     }
-    expect(PLANIFICAR).toMatch(/tamano="grande"/);
+    // Spec 011: Planificar ocupa toda la pantalla (la lista y el editor, para que la hoja no cambie de alto).
+    expect(PLANIFICAR).toMatch(/tamano="completa"/);
     expect(PASTILLA).toMatch(/tamano="grande"/);
   });
 

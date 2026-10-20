@@ -31,9 +31,13 @@ import {
   CURVA_CAJON,
   DURACION_HOJA_MS,
   UMBRAL_PARA_ARRASTRAR,
+  altoDeLaHoja,
   decidirAlSoltar,
+  elCuerpoSeEstira,
   opacidadDelVelo,
   posicionAlArrastrar,
+  rellenoSuperiorDeLaHoja,
+  type TamanoDeLaHoja,
 } from './logicaDeLaHoja';
 
 /**
@@ -86,9 +90,11 @@ export interface HojaDesdeAbajoProps {
   subtitulo?: string;
   /**
    * `contenido`: tan alta como lo que lleva (la fecha). `grande`: casi toda la pantalla, siempre
-   * igual de alta, para las listas con buscador (filtrar no la hace saltar).
+   * igual de alta, para las listas con buscador (filtrar no la hace saltar). `completa` (spec 011, el editor de
+   * Planificar): todo el alto disponible, hasta debajo de la barra de estado, sin que asome la pantalla de atrás;
+   * es explícita para no cambiar las demás hojas `grande` de la app.
    */
-  tamano?: 'contenido' | 'grande';
+  tamano?: TamanoDeLaHoja;
   /** Lo que va pegado al título y también sirve para arrastrar la hoja (el buscador). */
   bajoElTitulo?: React.ReactNode;
   /** Lo que va fijo abajo (el botón «Listo»). */
@@ -107,8 +113,6 @@ export interface HojaDesdeAbajoProps {
 /** En la web, arrastrar la cabecera con el mouse seleccionaba el título como texto. */
 const SIN_SELECCION_EN_WEB = (Platform.OS === 'web' ? { userSelect: 'none' } : null) as object | null;
 
-/** Lo que queda de fondo oscuro arriba de una hoja `grande`: que se lea como hoja, no como pantalla. */
-const AIRE_ARRIBA_GRANDE = 40;
 const ANCHO_MAXIMO = 560;
 /** Lo que se espera en Android, ya desmontado el `Modal`, para avisar que la hoja se fue (`alTerminarDeCerrar`). */
 export const ESPERA_VENTANA_ANDROID_MS = 150;
@@ -328,7 +332,7 @@ export function HojaDesdeAbajo(props: HojaDesdeAbajoProps) {
   if (!presente) return null;
 
   const colorVelo = mode === 'dark' ? 'rgba(0,0,0,0.62)' : 'rgba(17,16,13,0.42)';
-  const altoGrande = altoVentana - insets.top - AIRE_ARRIBA_GRANDE;
+  const altoFijo = altoDeLaHoja(tamano, altoVentana, insets.top);
 
   return (
     <Modal
@@ -352,7 +356,7 @@ export function HojaDesdeAbajo(props: HojaDesdeAbajoProps) {
           />
         </Animated.View>
 
-        <KeyboardAvoidingView behavior="padding" style={[styles.raiz, styles.dejaPasar, { paddingTop: insets.top + 8 }]}>
+        <KeyboardAvoidingView behavior="padding" style={[styles.raiz, styles.dejaPasar, { paddingTop: rellenoSuperiorDeLaHoja(tamano, insets.top) }]}>
           <View style={[styles.anclaAbajo, styles.dejaPasar]}>
             <Animated.View
               accessibilityViewIsModal
@@ -363,7 +367,7 @@ export function HojaDesdeAbajo(props: HojaDesdeAbajoProps) {
                 {
                   backgroundColor: c.cardBg,
                   borderColor: mode === 'dark' ? c.border : 'transparent',
-                  height: tamano === 'grande' ? altoGrande : undefined,
+                  height: altoFijo,
                 },
                 estiloHoja,
               ]}
@@ -415,7 +419,7 @@ export function HojaDesdeAbajo(props: HojaDesdeAbajoProps) {
                 {bajoElTitulo}
               </View>
 
-              <View style={tamano === 'grande' ? styles.cuerpoGrande : undefined}>{children}</View>
+              <View style={elCuerpoSeEstira(tamano) ? styles.cuerpoGrande : undefined}>{children}</View>
 
               {pie ? <View style={[styles.pie, { paddingBottom: Math.max(insets.bottom, 12) + 4 }]}>{pie}</View> : null}
               {!pie && tamano === 'contenido' ? <View style={{ height: Math.max(insets.bottom, 12) }} /> : null}

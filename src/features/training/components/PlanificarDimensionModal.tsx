@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, View, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
+import Animated, { FadeIn, ReduceMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Alert } from '../../../components/Alerta';
@@ -12,12 +13,12 @@ import { MicroLabel } from '../../../components/ui';
 import { HojaDesdeAbajo } from '../../../components/hojaDesdeAbajo/HojaDesdeAbajo';
 import { OpcionDeHoja } from '../../../components/hojaDesdeAbajo/HojaDeOpciones';
 import { useTheme } from '../../../theme/ThemeContext';
+import { CURVA_SALIDA } from '../../../theme/movimiento';
 import { tacto } from '../../../utils/tacto';
 import { mensajeDeError } from '../../../services/http/apiClient';
 import { useAuth } from '../../auth/context/AuthContext';
 import * as habitsApi from '../../habits/api/habitsApi';
 import { FilaDeDiasDelPlan } from '../../habits/components/FilaDeDiasDelPlan';
-import { RuedaAntelacionPicker } from '../../habits/components/RuedaAntelacionPicker';
 import { RuedaHoraPicker } from '../../habits/components/RuedaHoraPicker';
 import {
   combinacionALaApi,
@@ -46,8 +47,6 @@ import type { HabitItem } from '../../../screens/TrainingScreen';
 import {
   antelacionesAMostrar,
   etiquetaDeAntelacion,
-  minutosDeArranqueDeLaRueda,
-  MINUTOS_OTRA_POR_DEFECTO,
 } from '../../habits/utils/etiquetaDeAntelacion';
 import {
   abrirPermisoDeAlarmasExactas,
@@ -59,6 +58,13 @@ import {
 } from '../../alarmas/pedirAlarmaExacta';
 import { ofrecerLaGuiaPreventiva } from '../../alarmas/guiaPreventiva';
 import { horaDelEditor, preferenciaTrasGuardar, textoDelCambioProgramado } from '../utils/horaDelEditor';
+import {
+  abrirOtra,
+  desplazamientoParaVerLaFila,
+  moverAvisoDeOtra,
+  sePuedeMover,
+  type SentidoDeOtra,
+} from '../utils/avisoOtra';
 import {
   avisoInicialDeLosMarcados,
   avisoOrdenado,
@@ -146,8 +152,9 @@ import { SeccionComoSuena } from './SeccionComoSuena';
  * ## LA HOJA DE SIEMPRE (rediseño de Training, 2026-10-05)
  *
  * Era una hoja hecha a mano (agarradera decorativa, borde dorado, «× CERRAR» y «← VOLVER» en
- * versalitas de 11). Ahora es `HojaDesdeAbajo` grande: se arrastra para cerrarla, la ✕ y la ‹ son de
- * 44, y el atrás de Android vuelve un paso (la ‹) antes de cerrar. Los textos van en tipo oración a
+ * versalitas de 11). Ahora es `HojaDesdeAbajo` (`completa` desde la spec 011: todo el alto disponible, hasta debajo
+ * de la barra de estado, en la lista y en el editor, para que la hoja no cambie de alto al entrar a un hábito): se
+ * arrastra para cerrarla, la ✕ y la ‹ son de 44, y el atrás de Android vuelve un paso (la ‹) antes de cerrar. Los textos van en tipo oración a
  * 15–17 px, los emojis de hábito pasaron a íconos de línea, «Pausar…» es una hoja de opciones y los
  * avisos de éxito son una línea que se va sola (`ConfirmacionEnLinea`); los errores siguen en diálogo.
  */
@@ -170,6 +177,9 @@ interface Props {
 
 /** Los botones de la hoja, en tipo oración y a tamaño de lectura (no las versalitas de 11 del botón). */
 const TEXTO_DE_BOTON = { fontSize: 16, letterSpacing: 0 } as const;
+
+/** La fila de «Otra» entra con un fundido corto (spec 011); con «reducir movimiento» del sistema, al instante. */
+const ENTRADA_DE_OTRA = FadeIn.duration(160).easing(CURVA_SALIDA).reduceMotion(ReduceMotion.System);
 
 /** Un hábito de catálogo: los únicos que se pueden planificar. */
 type HabitoPlanificable = HabitItem & { habitoId: string };
@@ -340,18 +350,18 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
   const abiertoRef = useRef<string | null>(null);
   const avisosTocadosRef = useRef(false);
   /**
-   * Si la rueda de "Otra" está desplegada. Cerrada por defecto: la hoja no tiene scroll y cada
-   * píxel de alto que se ocupa empuja el botón de guardar hacia afuera — ya pasó una vez.
+   * Si la fila de "Otra" («−  15 min antes  +») está abierta. Va DENTRO de lo que se desliza, justo debajo de las
+   * opciones (spec 011): antes era una rueda fuera del desplazamiento que se montaba encima del contenido.
    */
-  const [ruedaOtraAbierta, setRuedaOtraAbierta] = useState(false);
-  /** Lo que marca la rueda de "Otra" ahora mismo. Es lo que dice el botón de al lado. */
-  const [minutosOtra, setMinutosOtra] = useState(MINUTOS_OTRA_POR_DEFECTO);
+  const [filaOtraAbierta, setFilaOtraAbierta] = useState(false);
   /**
-   * Dónde ABRE la rueda de "Otra". Es ref y no estado a propósito: `RuedaAntelacionPicker` es no
-   * controlada, así que si el valor inicial cambiara en cada giro la rueda saltaría sola debajo
-   * del dedo. Se fija una vez, al desplegarla, y la rueda lo lee al montarse.
+   * El aviso que SUMÓ "Otra" en este hábito o estos días (`null` = todavía no sumó ninguno). Es el único que mueven «−» y
+   * «+». Mientras siga marcado, volver a tocar "Otra" solo abre o cierra la fila: no suma otro.
    */
-  const arranqueDeLaRuedaOtra = useRef(MINUTOS_OTRA_POR_DEFECTO);
+  const [minutosOtra, setMinutosOtra] = useState<number | null>(null);
+  /** Cuánto se desplazó lo que se desliza y cuánto alto se ve: para llevar a la vista la fila cuando se abre. */
+  const desplazamientoY = useRef(0);
+  const alturaVisible = useRef(0);
   const [hora, setHora] = useState(6);
   const [minuto, setMinuto] = useState(0);
   /**
@@ -490,9 +500,10 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
     setHorarioSemanal({});
     setAvisoDiasTocado(null);
     setAlarmaTocada({});
-    // La rueda de "Otra" es del hábito que se estaba mirando: abrir otro con ella desplegada
+    // La fila de "Otra" y su aviso son del hábito que se estaba mirando: abrir otro con ella abierta
     // mostraría los minutos del anterior sobre un recordatorio que todavía no terminó de cargar.
-    setRuedaOtraAbierta(false);
+    setFilaOtraAbierta(false);
+    setMinutosOtra(null);
     const previa = preferencias.get(h.habitoId);
     // E-408: lo que muestra el recordatorio sale YA de lo que dice el servidor, no de lo que quedó del
     // hábito abierto antes. Después, si el teléfono tiene sus avisos guardados, se usan esos, pero solo
@@ -565,14 +576,28 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
     setAntelaciones(siguiente);
   };
   /**
+   * La fila de «Otra» se ve mientras está abierta Y el aviso que mueve sigue marcado: si se desmarca ese aviso, se
+   * pasa a «Sin aviso» o se cambian los días marcados, ya no hay nada que mover y la fila no queda colgada.
+   */
+  const filaOtraVisible = filaOtraAbierta && minutosOtra !== null && avisoMostrado.includes(minutosOtra);
+  /**
    * Al pasar de «todos los días» a días marcados (y de vuelta) el alcance del recordatorio cambia: lo que se
-   * había elegido para unos días no se lleva al general, ni la rueda de «Otra» abierta de uno al otro.
+   * había elegido para unos días no se lleva al general, ni la fila de «Otra» abierta de uno al otro.
    */
   useEffect(() => {
     setAvisoDiasTocado(null);
     setAlarmaTocada({});
-    setRuedaOtraAbierta(false);
   }, [enModoDias]);
+  /**
+   * El aviso de «Otra» es de los días que se están editando: al cambiar cuáles están marcados (o pasar a todos los días y
+   * volver) el recordatorio que se ve es otro, y el aviso que sumó «Otra» ya no es "el suyo". Cierra la fila y suelta el
+   * aviso; el siguiente toque en «Otra» suma uno nuevo.
+   */
+  const clavePorLosDias = diasEnEdicion.join(',');
+  useEffect(() => {
+    setFilaOtraAbierta(false);
+    setMinutosOtra(null);
+  }, [clavePorLosDias]);
   /** La hora de la rueda cambió respecto de donde arrancó: lo que hace que se guarde la hora de los días. */
   const movioLaRueda = arranqueDeLaRueda !== null && hora * 60 + minuto !== arranqueDeLaRueda;
 
@@ -917,41 +942,56 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
    */
   const alternarAntelacion = (minutos: number) => {
     tacto.seleccion();
+    // Desmarcar el aviso que mueve la fila de «Otra» la cierra: el aviso ya no está y no hay nada que mover.
+    if (filaOtraVisible && minutos === minutosOtra && avisoMostrado.includes(minutos)) setFilaOtraAbierta(false);
     cambiarAviso(prev =>
       prev.includes(minutos) ? prev.filter(x => x !== minutos) : [...prev, minutos].sort((a, b) => b - a),
     );
   };
 
-  /**
-   * Despliega o pliega la rueda de "Otra".
-   *
-   * Al desplegarla se fija dónde abre: en el aviso que ya rige, no en el primer valor de la lista.
-   * Abrir siempre en "1 min antes" obligaría a girar media rueda a quien solo quiere corregir de
-   * 30 a 35.
-   */
-  const alternarRuedaOtra = () => {
-    if (ruedaOtraAbierta) {
-      setRuedaOtraAbierta(false);
-      return;
-    }
-    const arranque = minutosDeArranqueDeLaRueda(avisoMostrado);
-    arranqueDeLaRuedaOtra.current = arranque;
-    setMinutosOtra(arranque);
-    setRuedaOtraAbierta(true);
+  /** «Sin aviso» es exclusivo: vacía el conjunto y, con él, la fila de «Otra». */
+  const elegirSinAviso = () => {
+    tacto.seleccion();
+    setFilaOtraAbierta(false);
+    cambiarAviso(() => []);
   };
 
   /**
-   * Añade lo que marca la rueda. Queda ENCENDIDA al añadirla: nadie elige un número para después
-   * tener que tocarlo, y una pastilla nueva apagada parece que no se guardó.
-   *
-   * Se pliega la rueda después: la pastilla recién añadida aparece en la fila de arriba, y dejar
-   * la rueda abierta taparía la confirmación de lo que se acaba de hacer.
+   * Toca «Otra» (spec 011). SUMA un aviso nuevo y lo deja marcado —los que había quedan—, y abre debajo la fila
+   * «−  15 min antes  +» para ajustarlo. Arranca en 15, o en el siguiente valor libre si 15 ya está; sin ningún valor
+   * libre no suma nada. Si el aviso de «Otra» ya está en este hábito o estos días y sigue marcado, solo abre o cierra la
+   * fila (el aviso queda); para quitarlo se toca su pastilla, como cualquier otro.
    */
-  const agregarAntelacionDeLaRueda = () => {
-    cambiarAviso(prev => (
-      prev.includes(minutosOtra) ? prev : [...prev, minutosOtra].sort((a, b) => b - a)
-    ));
-    setRuedaOtraAbierta(false);
+  const alternarOtra = () => {
+    tacto.seleccion();
+    if (minutosOtra !== null && avisoMostrado.includes(minutosOtra)) {
+      setFilaOtraAbierta(!filaOtraAbierta);
+      return;
+    }
+    const nueva = abrirOtra(avisoMostrado);
+    if (nueva === null) return;
+    cambiarAviso(() => nueva.avisos);
+    setMinutosOtra(nueva.minutos);
+    setFilaOtraAbierta(true);
+  };
+
+  /**
+   * «−» o «+»: cambia SOLO el aviso de «Otra», por múltiplos de 5 entre 5 y 60 y saltando los avisos que ya existen, en su pastilla y
+   * en la lista. Los demás avisos no se tocan.
+   */
+  const moverOtra = (sentido: SentidoDeOtra) => {
+    if (minutosOtra === null || !sePuedeMover(minutosOtra, sentido, avisoMostrado)) return;
+    tacto.seleccion();
+    const desde = minutosOtra;
+    setMinutosOtra(moverAvisoDeOtra(avisoMostrado, desde, sentido).minutos);
+    cambiarAviso(prev => moverAvisoDeOtra(prev, desde, sentido).avisos);
+  };
+
+  /** Al abrirse, lleva la fila a la vista si nació debajo de lo que se ve (un teléfono bajo). */
+  const alAbrirseLaFilaOtra = (evento: LayoutChangeEvent) => {
+    const { y, height } = evento.nativeEvent.layout;
+    const destino = desplazamientoParaVerLaFila(y, height, desplazamientoY.current, alturaVisible.current);
+    if (destino !== null) desplazableRef.current?.scrollTo({ y: destino, animated: true });
   };
 
   /** Guarda la hora GENERAL del hábito —todos los días— y vuelve a la lista. */
@@ -1393,7 +1433,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
         etiquetaCerrar="Cerrar Planificar"
         titulo={tituloDeLaHoja}
         subtitulo={subtituloDeLaHoja}
-        tamano="grande"
+        tamano="completa"
         pie={pie}
       >
         {estado === 'cargando' && (
@@ -1492,7 +1532,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
         {/* La rueda de la hora queda fija arriba y lo demás se desliza debajo: con */}
         {/* los días marcados, el recordatorio y los botones por día no entran en */}
         {/* un teléfono bajo, ni con la letra del sistema grande. Las dos ruedas no */}
-        {/* se anidan (AGENTS.md §2): la de «Otra» va fuera de lo que se desliza. */}
+        {/* se anidan (AGENTS.md §2). «Otra» es una fila «−  +» dentro de lo que se desliza.  */}
         {/* El botón de guardar va fijo en el pie.                                */}
         {/* =================================================================== */}
         {estado === 'listo' && paso === 'habito' && habitoEnEdicion && (
@@ -1535,6 +1575,10 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
               // La barra queda visible mientras hay algo más abajo (el recordatorio): quien no desliza no se
               // entera de que sigue, y las personas mayores no suelen probar si la hoja se mueve.
               persistentScrollbar
+              // Cuánto se ve y cuánto se desplazó, solo para llevar a la vista la fila de «Otra» al abrirla (refs, no estado).
+              onLayout={(e: LayoutChangeEvent) => { alturaVisible.current = e.nativeEvent.layout.height; }}
+              onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => { desplazamientoY.current = e.nativeEvent.contentOffset.y; }}
+              scrollEventThrottle={32}
             >
               {/* DÍAS, tocables (V39). Tocar uno pasa a editar SU hora y su aviso; tocarlo de nuevo vuelve
                   al horario general. Cada pastilla muestra la hora que rige ese día y, si su aviso es
@@ -1682,7 +1726,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
                         y no compite con las otras tres. Con avisos distintos no hay ninguno elegido,
                         tampoco este. */}
                     <Presionable
-                      onPress={() => { tacto.seleccion(); cambiarAviso(() => []); }}
+                      onPress={elegirSinAviso}
                       accessibilityRole="button"
                       accessibilityState={{ selected: avisoMostrado.length === 0 && !avisosDistintos }}
                       contenedorStyle={styles.pastillaArea}
@@ -1719,21 +1763,58 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
                     >
                       <Text style={textoPastilla(avisoMostrado.includes(0))}>A la hora</Text>
                     </Presionable>
-                    {/* "Otra" ABRE UNA RUEDA, no un teclado (2026-09-21). Era un `TextInput` con
-                        `keyboardType="number-pad"`: al tocarlo el teclado del sistema subía y
-                        tapaba el propio campo, así que se escribía a ciegas. La rueda se despliega
-                        abajo y solo cuando se pide. */}
+                    {/* "Otra" SUMA un aviso nuevo (15, o el siguiente libre), lo marca y abre debajo la fila «−  15 min antes  +» (spec 011).
+                        Antes abría una rueda fuera de lo que se desliza (2026-09-21 reemplazó un campo con teclado, que
+                        tapaba el propio campo); la rueda se montaba encima del contenido. */}
                     <Presionable
-                      onPress={alternarRuedaOtra}
+                      onPress={alternarOtra}
                       accessibilityRole="button"
-                      accessibilityState={{ expanded: ruedaOtraAbierta }}
-                      accessibilityLabel="Otra antelación, elegir los minutos en una rueda"
+                      accessibilityState={{ expanded: filaOtraVisible }}
+                      accessibilityLabel="Otra antelación, elegir los minutos con más o menos"
                       contenedorStyle={styles.pastillaArea}
-                      style={pastilla(ruedaOtraAbierta)}
+                      style={pastilla(filaOtraVisible)}
                     >
-                      <Text style={textoPastilla(ruedaOtraAbierta)}>Otra</Text>
+                      <Text style={textoPastilla(filaOtraVisible)}>Otra</Text>
                     </Presionable>
                   </View>
+                  {/* La fila de «Otra», dentro de lo que se desliza y debajo de las opciones: nada queda encima de
+                      nada. Entra con un fundido corto (con «reducir movimiento», al instante). */}
+                  {filaOtraVisible && minutosOtra !== null && (
+                    <Animated.View
+                      entering={ENTRADA_DE_OTRA}
+                      onLayout={alAbrirseLaFilaOtra}
+                      testID="fila-otra-antelacion"
+                      style={styles.filaOtra}
+                    >
+                      <Presionable
+                        onPress={() => moverOtra(-1)}
+                        disabled={!sePuedeMover(minutosOtra, -1, avisoMostrado)}
+                        accessibilityRole="button"
+                        accessibilityLabel="Cinco minutos menos"
+                        accessibilityState={{ disabled: !sePuedeMover(minutosOtra, -1, avisoMostrado) }}
+                        style={[styles.botonDeOtra, { borderColor: c.gold, opacity: sePuedeMover(minutosOtra, -1, avisoMostrado) ? 1 : 0.35 }]}
+                      >
+                        <Text maxFontSizeMultiplier={1.2} style={[styles.signoDeOtra, { color: c.goldInk }]}>−</Text>
+                      </Presionable>
+                      <Text
+                        accessibilityLiveRegion="polite"
+                        maxFontSizeMultiplier={1.3}
+                        style={[styles.minutosDeOtra, { color: c.textStrong }]}
+                      >
+                        {etiquetaDeAntelacion(minutosOtra)}
+                      </Text>
+                      <Presionable
+                        onPress={() => moverOtra(1)}
+                        disabled={!sePuedeMover(minutosOtra, 1, avisoMostrado)}
+                        accessibilityRole="button"
+                        accessibilityLabel="Cinco minutos más"
+                        accessibilityState={{ disabled: !sePuedeMover(minutosOtra, 1, avisoMostrado) }}
+                        style={[styles.botonDeOtra, { borderColor: c.gold, opacity: sePuedeMover(minutosOtra, 1, avisoMostrado) ? 1 : 0.35 }]}
+                      >
+                        <Text maxFontSizeMultiplier={1.2} style={[styles.signoDeOtra, { color: c.goldInk }]}>+</Text>
+                      </Presionable>
+                    </Animated.View>
+                  )}
                 </>
               )}
 
@@ -1756,30 +1837,6 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
               </View>
             </ScrollView>
 
-            {/* La rueda de «Otra» y su botón, uno al lado del otro, fuera de lo que se desliza (dos
-                ruedas anidadas se pelearían por el dedo). `alignItems: 'center'` para que el botón quede
-                a la altura de la franja central de la rueda, que es la fila que cuenta. */}
-            {recordatorios.HAY_RECORDATORIOS && ruedaOtraAbierta && (
-              <View style={styles.filaRuedaOtra}>
-                <RuedaAntelacionPicker
-                  minutosIniciales={arranqueDeLaRuedaOtra.current}
-                  onCambiar={setMinutosOtra}
-                />
-                <Presionable
-                  onPress={agregarAntelacionDeLaRueda}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Añadir ${etiquetaDeAntelacion(minutosOtra)}`}
-                  contenedorStyle={styles.pastillaArea}
-                  style={[pastilla(true), styles.conIcono]}
-                >
-                  {/* El botón repite lo que marca la rueda, igual que el de guardar repite
-                      la hora: es la confirmación de lo que se va a añadir, y de paso dice
-                      que esos números sueltos son minutos. */}
-                  <Icon name="plus" size={TAMANO_ICONO.chico} color={c.goldInk} />
-                  <Text style={textoPastilla(true)}>Añadir {etiquetaDeAntelacion(minutosOtra)}</Text>
-                </Presionable>
-              </View>
-            )}
           </View>
         )}
 
@@ -2059,8 +2116,9 @@ const styles = StyleSheet.create({
   cuerpoDesplazable: {
     flex: 1,
   },
+  // Aire de sobra al final (spec 011): «Cómo suena» se lee entero por encima del botón fijo de guardar, que no lo tapa.
   contenidoDesplazable: {
-    paddingBottom: 12,
+    paddingBottom: 32,
   },
   ayuda: {
     fontSize: 16,
@@ -2142,13 +2200,37 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: 10,
   },
-  /* La rueda de "Otra" y su botón, uno al lado del otro. `alignItems: 'center'` para que el
-     botón quede a la altura de la franja central de la rueda, que es la fila que cuenta. */
-  filaRuedaOtra: {
+  /* La fila de "Otra" (spec 011): «−  15 min antes  +» centrada, debajo de las opciones y dentro de lo que se
+     desliza. Botones redondos de 48 (AGENTS.md §4) con borde dorado; los minutos, a 18 en negrita. */
+  filaOtra: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginTop: 6,
+    justifyContent: 'center',
+    gap: 16,
+    marginTop: 12,
+  },
+  botonDeOtra: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  signoDeOtra: {
+    fontFamily: 'Jost_700Bold',
+    fontSize: 26,
+    lineHeight: 30,
+    includeFontPadding: false,
+  },
+  minutosDeOtra: {
+    flexShrink: 1,
+    minWidth: 128,
+    textAlign: 'center',
+    fontFamily: 'Jost_700Bold',
+    fontSize: 18,
+    lineHeight: 24,
+    fontVariant: ['tabular-nums'],
   },
   campoTitulo: {
     borderWidth: 1,
