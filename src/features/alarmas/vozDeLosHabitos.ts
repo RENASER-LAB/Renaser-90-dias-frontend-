@@ -8,9 +8,11 @@ import tabla from './vocesDeLasAlarmas.json';
  *
  * `vocesDeLasAlarmas.json` es la ÚNICA fuente: lo lee esta app para elegir el audio y lo lee
  * `scripts/sonidos/generar-sonidos.sh` para generarlo. Cada fila es un hábito del catálogo del
- * backend (los 18 activos de `V4__catalogo_habitos_default.sql`), con su id, su título del catálogo,
- * una `clave` (el archivo es `voz_habito_<clave>.mp3`) y lo que dice. Dos rituales de la mañana
- * comparten audio: dicen lo mismo.
+ * backend, con su id, su título del catálogo, una `clave` (el archivo es `voz_habito_<clave>.mp3`) y lo
+ * que dice: los 18 activos de `V4__catalogo_habitos_default.sql` y, desde el 2026-10-20, los dos que el
+ * catálogo activó después, «KILÓMETROS DIARIOS» (`V84`) y «GIMNASIO» (`V99`; era «ENTRENAMIENTO FÍSICO»
+ * de `V9`, con el mismo id). Dos rituales de la mañana comparten audio: dicen lo mismo.
+ * Un hábito de sistema nuevo se suma igual: ver `scripts/sonidos/generar-sonidos.sh`.
  *
  * ## Por qué por id Y por título
  *

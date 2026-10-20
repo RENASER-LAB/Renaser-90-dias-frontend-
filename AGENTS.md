@@ -2105,8 +2105,16 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       descarta sola sin tumbar la lista de preferencias. Contra un backend anterior no se muestra «Cómo suena» y todo
       queda como la 008; un APK anterior con el backend nuevo ignora los campos y suena como hoy. En la web no se
       muestra (no hay alarmas locales).
+    * **Voces de los hábitos de sistema que faltaban** (decisión del dueño, 2026-10-20: «grabar los que faltan + frase
+      clara para el resto»): «KILÓMETROS DIARIOS» (`V84`) y «GIMNASIO» (`V99`, era «ENTRENAMIENTO FÍSICO» de `V9`) dicen
+      su nombre con la voz Dora, igual que los 18 de `V4`: «Kilómetros diarios.» y «Al gimnasio.» (sola, «Gimnasio» sale
+      «Quimnasio»), en `vocesDeLasAlarmas.json`, con `voz_habito_kilometros_diarios.mp3` (17 KB) y
+      `voz_habito_gimnasio.mp3` (15 KB) en `assets/sonidos/` y en `sounds` de `app.json`. Los siete de `V9` que siguen
+      apagados no tienen voz: si se activan desde «Hábitos del programa», dicen la frase general hasta que se les grabe.
+      **Los audios van dentro del APK: hace falta un APK nuevo** para oírlos.
     * **No hace falta APK nuevo** (solo JavaScript; ni `package.json`, ni `app.json`, ni código nativo): hace falta el
       backend con **V112** antes. No cambian `Interruptor`, Yo → Alarmas, Plan, Hoy ni los otros tabs.
+      > **Corregido 2026-10-20.** Con las voces nuevas de arriba (`app.json` y dos MP3) **sí hace falta un APK nuevo**.
 
 ## 2. 📱 RESPONSIVIDAD UNIVERSAL (XIAOMI, ANDROID, IOS Y TABLETS)
 * **Cero Doble Scroll**: NUNCA coloques un contenedor con `maxHeight` fijo o scroll interno dentro de otro `ScrollView`. Toda pantalla debe tener UN ÚNICO contenedor de scroll fluido con `contentContainerStyle={{ flexGrow: 1, paddingBottom: 36 }}`.

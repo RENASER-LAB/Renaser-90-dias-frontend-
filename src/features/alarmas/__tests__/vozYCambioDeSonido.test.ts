@@ -29,6 +29,9 @@ const JUGO_VERDE = '00006bd5-ab74-4317-b022-ae2e3a878d55';
 const AGUA_TIBIA = '66507383-7219-43ab-aa42-2fbc76152b82';
 const RITUAL_MANANA = '4dee0fa3-e285-4b7d-b062-ad0001dde314';
 const RITUAL_DOMINGO = '60d6c870-df03-4d36-8a88-8c7411ae406b';
+/** Los dos que el catálogo activó después de V4: `V84` (KILÓMETROS DIARIOS) y `V99` (GIMNASIO, era ENTRENAMIENTO FÍSICO). */
+const KILOMETROS_DIARIOS = 'ea87fdec-d4c1-4c4f-9e61-1557bc7255d1';
+const GIMNASIO = 'ec0f2b08-3a18-4ff4-8e2b-243e5220d211';
 
 describe('la voz: cada hábito del catálogo dice su nombre', () => {
   it('«Voz» sigue siendo una opción de Yo → Alarmas y se guarda', () => {
@@ -71,6 +74,26 @@ describe('la voz: cada hábito del catálogo dice su nombre', () => {
     expect(ARCHIVO_VOZ).toEqual({ habitos: 'voz_habito.mp3', eventos: 'voz_evento.mp3', objetivos: 'voz_objetivos.mp3' });
   });
 
+  it('KILÓMETROS DIARIOS y GIMNASIO (los activos después de V4) también dicen su nombre, por id y título', () => {
+    expect(canalDeAlarma('habitos', 'voz', { id: KILOMETROS_DIARIOS, titulo: 'KILÓMETROS DIARIOS' })).toEqual({
+      id: 'recordatorios-habitos-voz-kilometros_diarios',
+      nombre: 'Recordatorios de hábitos (voz: Kilómetros diarios)',
+      sonidoDelCanal: 'voz_habito_kilometros_diarios.mp3',
+      sonidoDelAviso: 'voz_habito_kilometros_diarios.mp3',
+    });
+    expect(canalDeAlarma('habitos', 'voz', { id: GIMNASIO, titulo: 'Gimnasio' })).toMatchObject({
+      id: 'recordatorios-habitos-voz-gimnasio',
+      sonidoDelCanal: 'voz_habito_gimnasio.mp3',
+    });
+    // «Al gimnasio»: dicha sola, «Gimnasio» sale «Quimnasio» (la /x/ del principio, trampa 5 de generar_voces.py).
+    expect(vozDelHabito({ id: GIMNASIO, titulo: 'GIMNASIO' })?.dice).toBe('Al gimnasio');
+    expect(vozDelHabito({ id: KILOMETROS_DIARIOS, titulo: 'kilometros diarios' })?.dice).toBe('Kilómetros diarios');
+    // El título viejo de V9 (antes de V99) o uno renombrado ya no es el del catálogo: frase general, no un nombre que no es.
+    expect(vozDelHabito({ id: GIMNASIO, titulo: 'ENTRENAMIENTO FÍSICO' })).toBeNull();
+    expect(vozDelHabito({ id: KILOMETROS_DIARIOS, titulo: 'Mis pasos' })).toBeNull();
+    expect(canalDeAlarma('habitos', 'voz', { id: GIMNASIO, titulo: 'Mi gimnasio' })).toMatchObject({ id: 'recordatorios-habitos-voz', sonidoDelCanal: 'voz_habito.mp3' });
+  });
+
   it('los dos rituales de la mañana dicen lo mismo y comparten audio y canal', () => {
     const semana = canalDeAlarma('habitos', 'voz', { id: RITUAL_MANANA, titulo: 'RITUAL TIERRA - AGUA - FUEGO (mañana)' });
     const domingo = canalDeAlarma('habitos', 'voz', { id: RITUAL_DOMINGO, titulo: 'RITUAL DE MAÑANA (domingo)' });
@@ -78,15 +101,15 @@ describe('la voz: cada hábito del catálogo dice su nombre', () => {
     expect(semana.sonidoDelCanal).toBe('voz_habito_ritual_manana.mp3');
   });
 
-  it('la tabla: los 18 hábitos del catálogo, ids únicos, y una misma clave dice siempre lo mismo', () => {
-    expect(tabla.habitos).toHaveLength(18);
-    expect(new Set(tabla.habitos.map(h => h.habitoId)).size).toBe(18);
+  it('la tabla: los 20 hábitos del catálogo, ids únicos, y una misma clave dice siempre lo mismo', () => {
+    expect(tabla.habitos).toHaveLength(20);
+    expect(new Set(tabla.habitos.map(h => h.habitoId)).size).toBe(20);
     for (const h of tabla.habitos) {
       expect(h.clave).toMatch(/^[a-z][a-z0-9_]*$/);
       expect(h.dice).toMatch(/^\S.*\.$/);
       expect(tabla.habitos.filter(o => o.clave === h.clave).every(o => o.dice === h.dice)).toBe(true);
     }
-    expect(VOCES_DE_HABITOS).toHaveLength(17);
+    expect(VOCES_DE_HABITOS).toHaveLength(19);
   });
 
   it('el rearmado nombra el archivo del canal: la voz de un hábito no vuelve con la campana ni con la genérica', () => {
