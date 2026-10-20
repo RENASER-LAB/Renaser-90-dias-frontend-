@@ -130,6 +130,19 @@ export interface AltaHabitoPersonal {
  * - `reminderEnabled` y `reminderMinutesList` son el aviso RESUELTO del día: el propio o, si no tiene, el
  *   general. `customReminder` dice si es propio. Sin `customReminder` el backend no sabe de avisos por día.
  */
+/**
+ * «Cómo suena» la alarma (spec 009, V112): los cuatro interruptores tal como viajan. Se lee con
+ * `combinacionDeLaApi` (`notificaciones/utils/combinacionDeAlarma`), que devuelve `null` si algo no se entiende.
+ */
+export interface CombinacionDeAlarmaApi {
+  sound: boolean;
+  vibration: boolean;
+  /** La voz dice el nombre del hábito. Necesita `sound`. */
+  voice: boolean;
+  /** Vuelve a sonar a los 5 y a los 10 minutos si no se atiende. */
+  repeat: boolean;
+}
+
 export interface DiaDelHabitoApi {
   /** Nombre de `DayOfWeek`: `MONDAY`..`SUNDAY`. */
   weekday: string;
@@ -144,6 +157,10 @@ export interface DiaDelHabitoApi {
   custom?: boolean;
   /** Spec 008: `true` solo si el aviso es propio del día. Ausente = el backend no informa avisos por día. */
   customReminder?: boolean;
+  /** Spec 009: cómo suena la alarma ese día, ya resuelta (la propia o la general). Ausente = backend anterior. */
+  alarm?: CombinacionDeAlarmaApi | null;
+  /** Spec 009: `true` solo si la combinación es propia del día. Ausente = el backend no informa «cómo suena». */
+  customAlarm?: boolean;
 }
 
 /**
@@ -199,6 +216,11 @@ export interface PreferenciaHabitoApi {
    * ahí la app se comporta como siempre, con una alarma diaria a la hora general.
    */
   weekdays?: DiaDelHabitoApi[];
+  /**
+   * Spec 009: cómo suena la alarma del hábito (la general, ya resuelta). Ausente contra un backend anterior: la
+   * pantalla no ofrece «Cómo suena» y las alarmas suenan como siempre.
+   */
+  alarm?: CombinacionDeAlarmaApi | null;
 }
 
 /** `effectiveDate` es `YYYY-MM-DD`; las horas son `HH:mm:ss` crudas, igual que el resto del wire. */

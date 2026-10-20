@@ -3,6 +3,13 @@ import type * as TipoNotificaciones from 'expo-notifications';
 
 import { planDeRearmado, type AlarmaProgramada, type PedidoDeRearmado } from './rearmarAlarmas';
 import { canalDeAlarma, type CanalDeAlarma, type SonidoDeAlarma, type TipoDeAlarma } from './sonidoDeAlarma';
+import {
+  canalDeLaCombinacion,
+  combinacionGuardada,
+  COMBINACION_POR_DEFECTO,
+  esLaCombinacionPorDefecto,
+  type CombinacionDeAlarma,
+} from '../habits/notificaciones/utils/combinacionDeAlarma';
 
 /**
  * Varios avisos a la misma hora: suena UNO que los nombra a todos (E-410, pedido del dueño del 28/09:
@@ -45,6 +52,11 @@ export interface MiembroDeAviso {
   tipo: Extract<TipoDeAlarma, 'habitos' | 'objetivos'>;
   /** El canal que le toca cuando suena sola: su sonido y, con «Voz», su propia voz. */
   canalNormal: CanalDeAlarma;
+  /**
+   * Spec 009: «cómo suena» este aviso, si no es lo de siempre (lo lleva el aviso en `data.alarma`). Con él, el grupo
+   * que lo incluye suena si ALGUNO de sus miembros quiere sonido o vibración, en vez de callarlo por ser el primero.
+   */
+  combinacion?: CombinacionDeAlarma;
 }
 
 interface TextoDelAviso {
@@ -89,9 +101,27 @@ export function textoDelGrupo(tipos: ReadonlyArray<MiembroDeAviso['tipo']>, nomb
   return { title: `${n} ${que} a las ${hora}`, body: `${visibles}${resto}` };
 }
 
-/** El canal del aviso que lleva al grupo: el sonido elegido; con «Voz», la frase genérica del tipo. */
-export function canalDelGrupo(tipos: ReadonlyArray<MiembroDeAviso['tipo']>, sonido: SonidoDeAlarma): CanalDeAlarma {
-  return canalDeAlarma(tipos.every(t => t === 'objetivos') ? 'objetivos' : 'habitos', sonido);
+/**
+ * El canal del aviso que lleva al grupo: el sonido elegido; con «Voz», la frase genérica del tipo.
+ *
+ * Spec 009: si algún miembro tiene «cómo suena» propio, el grupo suena si alguno quiere sonido (y vibra si alguno
+ * quiere vibrar; con voz si alguno la pide, con la frase genérica). Sin ninguno propio, lo de siempre.
+ */
+export function canalDelGrupo(
+  tipos: ReadonlyArray<MiembroDeAviso['tipo']>,
+  sonido: SonidoDeAlarma,
+  combinaciones: ReadonlyArray<CombinacionDeAlarma | undefined> = [],
+): CanalDeAlarma {
+  const tipo = tipos.every(t => t === 'objetivos') ? 'objetivos' : 'habitos';
+  const propias = combinaciones.filter((c): c is CombinacionDeAlarma => c !== undefined && !esLaCombinacionPorDefecto(c));
+  if (tipo === 'objetivos' || propias.length === 0) return canalDeAlarma(tipo, sonido);
+  const todas = combinaciones.map(c => c ?? COMBINACION_POR_DEFECTO);
+  return canalDeLaCombinacion(tipo, sonido, {
+    sonido: todas.some(c => c.sonido),
+    vibracion: todas.some(c => c.vibracion),
+    voz: todas.some(c => c.voz),
+    repetir: false,
+  });
 }
 
 function conTexto(
@@ -154,7 +184,7 @@ export function planDeAvisosJuntos(
     const tipos = orden.map(p => miembros.get(p.identifier)!.tipo);
     const originales = orden.map(p => textoOriginal(p.content));
     const [lleva, ...resto] = orden;
-    const canal = canalDelGrupo(tipos, sonido);
+    const canal = canalDelGrupo(tipos, sonido, orden.map(p => miembros.get(p.identifier)!.combinacion));
     const texto = textoDelGrupo(tipos, originales.map(o => o.title ?? ''), hora);
     pedir(lleva, conTexto(lleva.content, texto, canal, originales[0]), canal);
     resto.forEach((p, i) => pedir(p, conTexto(p.content, originales[i + 1], CANAL_EN_SILENCIO, null), CANAL_EN_SILENCIO));
@@ -204,7 +234,15 @@ async function agruparAhora(userId: string, ahoraMs: number): Promise<number> {
         if (!alarma) continue;
         const original = (alarma.content?.data as Datos | undefined)?.avisoOriginal as TextoDelAviso | undefined;
         const titulo = habitos.habitoDelAviso(original?.title ?? alarma.content?.title ?? '');
-        miembros.set(id, { tipo: 'habitos', canalNormal: canalDeAlarma('habitos', sonidoDelHabito, { id: habitoId, titulo }) });
+        // Spec 009: cómo suena esta alarma, si no es lo de siempre; sin eso, el canal de siempre.
+        const combinacion = combinacionGuardada((alarma.content?.data as Datos | undefined)?.alarma) ?? undefined;
+        miembros.set(id, {
+          tipo: 'habitos',
+          canalNormal: combinacion
+            ? canalDeLaCombinacion('habitos', sonidoDelHabito, combinacion, { id: habitoId, titulo })
+            : canalDeAlarma('habitos', sonidoDelHabito, { id: habitoId, titulo }),
+          combinacion,
+        });
       }
     }
     for (const id of await acciones.idsDeRecordatoriosDeAcciones(userId)) {

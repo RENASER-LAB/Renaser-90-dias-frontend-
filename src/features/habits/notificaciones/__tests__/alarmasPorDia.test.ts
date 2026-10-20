@@ -73,6 +73,17 @@ describe('el esquema lo decide la misma regla que el servidor', () => {
     expect(usaEsquemaPorDia(diasPropiosDe(semana()))).toBe(false);
   });
 
+  it('spec 009: un día con «cómo suena» propio (customAlarm) también lo pasa al esquema por día: es una fila del servidor', () => {
+    const propia = { customAlarm: true, alarm: { sound: false, vibration: true, voice: false, repeat: false } };
+    expect(usaEsquemaPorDia(diasPropiosDe(semana({ 5: propia })))).toBe(true);
+    // Solo importa que sea propia: sin `customAlarm` (o en `false`) el día sigue a la general.
+    expect(usaEsquemaPorDia(diasPropiosDe(semana({ 5: { alarm: propia.alarm } })))).toBe(false);
+    expect(usaEsquemaPorDia(diasPropiosDe(semana({ 5: { customAlarm: false, alarm: propia.alarm } })))).toBe(false);
+    // Y el plan sale por día, con la etiqueta del push de respaldo de cada día (`-d{iso}-0`).
+    const plan = planDeAlarmas({ habitoId: HABITO, horaGeneral: '07:00', avisosGenerales: [10], dias: diasPropiosDe(semana({ 5: propia })) });
+    expect(porDia(plan).map(p => p.identificador)).toEqual([1, 2, 3, 4, 5, 6, 7].map(i => `habito-h-gym-d${i}-0`));
+  });
+
   it('el endpoint del hábito dice `custom` y la lista `customTime`: se leen los dos', () => {
     const dia = (d: Partial<DiaDelHabitoApi>) => diasPropiosDe([{ weekday: 'THURSDAY', triggerTime: '09:00:00', ...d }]);
     expect(dia({ custom: true })).toEqual([{ iso: 4, activo: true, hora: '09:00', avisos: null }]);

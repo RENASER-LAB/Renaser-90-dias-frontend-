@@ -1,4 +1,11 @@
 import type { DiaDelHabitoApi } from '../../types/habits.types';
+import {
+  codigoDeLaCombinacion,
+  combinacionDeLaApi,
+  combinacionDelDia,
+  esLaCombinacionPorDefecto,
+  type CombinacionDeAlarma,
+} from './combinacionDeAlarma';
 
 /**
  * Qué alarmas del teléfono lleva un hábito cuando cada día de la semana puede tener su propia hora, su
@@ -21,7 +28,7 @@ import type { DiaDelHabitoApi } from '../../types/habits.types';
  *   sus alarmas y recibe también el push, el segundo REEMPLAZA al primero en la bandeja en vez de apilarse.
  *
  * La regla de cuál esquema se usa es la del servidor («el hábito tiene al menos una fila en
- * `horario_semanal_habito`»): hora propia, aviso propio o día apagado.
+ * `horario_semanal_habito`»): hora propia, aviso propio, «cómo suena» propio (spec 009) o día apagado.
  *
  * ## El número del día de la semana
  *
@@ -73,6 +80,17 @@ export interface DiaPropio {
   hora: string | null;
   /** Antelaciones propias, en minutos. `[]` = ese día sin aviso. `null` = el aviso general. */
   avisos: number[] | null;
+  /**
+   * Spec 009: cómo suena la alarma ESE día, si es propia. Ausente o `null` = la general del hábito. Es opcional
+   * para que lo anterior a la spec (y sus pruebas) siga siendo un `DiaPropio` válido.
+   */
+  alarma?: CombinacionDeAlarma | null;
+  /**
+   * Spec 009: el servidor dice que ese día tiene «cómo suena» propio (`customAlarm`) pero la combinación no se pudo
+   * leer. Aun así el día es una fila semanal para el servidor —su push lleva la etiqueta del día—, así que el esquema
+   * es por día; la combinación que suena es la general. Solo se pone en ese caso raro.
+   */
+  alarmaPropiaSinDato?: boolean;
 }
 
 const MINUTOS_POR_DIA = 24 * 60;
@@ -110,14 +128,25 @@ export function diasPropiosDe(weekdays: readonly DiaDelHabitoApi[] | null | unde
       if (d.reminderEnabled === false) avisos = [];
       else if (d.reminderMinutesList && d.reminderMinutesList.length > 0) avisos = [...d.reminderMinutesList];
     }
-    propios.push({ iso, activo: d.active !== false, hora: horaPropia, avisos });
+    // Spec 009: la combinación solo cuenta si es propia del día; si no, el día sigue a la general.
+    const alarma = d.customAlarm === true ? combinacionDeLaApi(d.alarm) : null;
+    propios.push({
+      iso,
+      activo: d.active !== false,
+      hora: horaPropia,
+      avisos,
+      ...(alarma ? { alarma } : {}),
+      ...(d.customAlarm === true && !alarma ? { alarmaPropiaSinDato: true } : {}),
+    });
   }
   return propios.length > 0 ? propios : null;
 }
 
-/** La regla común con el servidor: algún día con hora propia, aviso propio o apagado. */
+/** La regla común con el servidor: algún día con hora propia, aviso propio, «cómo suena» propio o apagado. */
 export function usaEsquemaPorDia(dias: readonly DiaPropio[] | null | undefined): boolean {
-  return (dias ?? []).some(d => !d.activo || d.hora !== null || d.avisos !== null);
+  return (dias ?? []).some(
+    d => !d.activo || d.hora !== null || d.avisos !== null || (d.alarma ?? null) !== null || d.alarmaPropiaSinDato === true,
+  );
 }
 
 /** `habito-{id}-d{iso}-{n}`: el mismo identificador que la etiqueta del push del servidor (`-0`). */
@@ -142,6 +171,8 @@ export interface PedidoDeAlarmaDelDia {
   /** `HH:mm` a la que va el hábito ese día: lo que dice el cuerpo del aviso («Te toca a las …»). */
   horaDelDia: string;
   disparo: DisparoDeAlarma;
+  /** Spec 009: cómo suena ESE día (la propia o la general): por qué canal sale y si vuelve a sonar. */
+  alarma: CombinacionDeAlarma;
 }
 
 /** Un cambio de hora general que espera su fecha: hoy rige `horaDeHoy`; desde `desde` (`YYYY-MM-DD`), `horaNueva`. */
@@ -163,6 +194,8 @@ export interface EntradaDelPlan {
   dias: readonly DiaPropio[] | null | undefined;
   /** Un cambio de hora general que todavía no rige (solo cuenta en el esquema por día). */
   cambio?: CambioDeHoraGeneral | null;
+  /** Spec 009: cómo suena la alarma del hábito (la general). `null`/`undefined` = la de siempre. */
+  alarmaGeneral?: CombinacionDeAlarma | null;
   /** «Ahora», para el cambio con fecha. Por defecto, el reloj. */
   ahora?: Date;
 }
@@ -173,13 +206,13 @@ function ordenadas(antelaciones: readonly number[]): number[] {
 }
 
 /** El día ISO de una fecha local (1 = lunes … 7 = domingo). */
-function isoDe(fecha: Date): DiaIso {
+export function isoDe(fecha: Date): DiaIso {
   return (((fecha.getDay() + 6) % 7) + 1) as DiaIso;
 }
 
 const dos = (n: number) => String(n).padStart(2, '0');
 
-function fechaLocal(d: Date): string {
+export function fechaLocal(d: Date): string {
   return `${d.getFullYear()}-${dos(d.getMonth() + 1)}-${dos(d.getDate())}`;
 }
 
@@ -235,6 +268,7 @@ export function planDeAlarmas(entrada: EntradaDelPlan): PlanDeAlarmas {
     const antelaciones = ordenadas(propio?.avisos ?? entrada.avisosGenerales);
     if (antelaciones.length === 0) continue;
     const sigueAlGeneral = horaPropia === null;
+    const alarma = combinacionDelDia(entrada.alarmaGeneral, propio?.alarma);
     if (sigueAlGeneral && cambioPendiente && cambio) {
       antelaciones.forEach((antes, n) => {
         const proxima = proximaConCambio(iso, antes, cambio, ahora);
@@ -245,6 +279,7 @@ export function planDeAlarmas(entrada: EntradaDelPlan): PlanDeAlarmas {
           minutosAntes: antes,
           horaDelDia: proxima.hora,
           disparo: { tipo: 'fecha', instanteMs: proxima.instanteMs },
+          alarma,
         });
       });
       continue;
@@ -258,6 +293,7 @@ export function planDeAlarmas(entrada: EntradaDelPlan): PlanDeAlarmas {
         minutosAntes: antes,
         horaDelDia: hora,
         disparo: disparoSemanal(iso, hora, antes),
+        alarma,
       });
     });
   }
@@ -274,7 +310,10 @@ export function firmaDelPlan(plan: PlanDeAlarmas): string {
     .map(p => {
       const d = p.disparo;
       const cuando = d.tipo === 'semanal' ? `s${d.weekday}-${dos(d.hora)}:${dos(d.minuto)}` : `f${d.instanteMs}`;
-      return `${p.identificador}@${cuando}/${p.horaDelDia}`;
+      // Spec 009: cómo suena solo entra en la firma si no es lo de siempre, para que un plan de antes de la spec
+      // (que ya tiene su firma guardada) siga siendo el mismo y no se rehaga sin motivo.
+      const suena = esLaCombinacionPorDefecto(p.alarma) ? '' : `~${codigoDeLaCombinacion(p.alarma)}`;
+      return `${p.identificador}@${cuando}/${p.horaDelDia}${suena}`;
     })
     .sort()
     .join('|');

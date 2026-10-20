@@ -46,6 +46,15 @@ import { ARCHIVO_VOZ_GENERICA, VOCES_DE_HABITOS, vozDelHabito, type HabitoConVoz
  * > pidió que diga el nombre del hábito; los audios pasan a MP3 (Android los busca por nombre, sin
  * > extensión: `voz_habito` sigue siendo `voz_habito`) y `generar-voces-provisionales.sh` ya no existe.
  *
+ * ## «Cómo suena» (spec 009, 2026-10-20)
+ *
+ * La vibración también es del canal, y un canal no se cambia después de creado. Los interruptores «Sonido»,
+ * «Vibración» y «Voz» de Training → Planificar eligen POR CUÁL canal sale cada alarma (sin código nativo, sin archivos
+ * nuevos): el mismo canal con el sufijo `-sinvib` (`enableVibrate: false`) cuando no debe vibrar, el de «solo vibrar»
+ * cuando no debe sonar, y el de voz del hábito con «Voz». La tabla y las reglas están en
+ * `habits/notificaciones/utils/combinacionDeAlarma.ts`; acá solo la variante `-sinvib` (`sinVibracion`) y que
+ * `archivoDelCanal` la conozca, para que el rearmado nombre el archivo correcto.
+ *
  * ## iOS
  *
  * iOS solo acepta WAV, AIFF o CAF en un aviso: con un MP3 suena el sonido del sistema. Hoy la app
@@ -145,6 +154,31 @@ export interface CanalDeAlarma {
   sonidoDelCanal: string | null | undefined;
   /** Lo que va en el contenido de la notificación (iOS y Android viejos). */
   sonidoDelAviso: boolean | string;
+  /**
+   * Spec 009: si el canal vibra. `undefined` = el canal de siempre, del que no se dice nada (los de eventos y
+   * objetivos, y los que ya existían en los teléfonos). `false` = canal «sin vibración» (`enableVibrate: false`);
+   * `true` = vibra, dicho de forma explícita al crearlo. Es del canal y no se puede cambiar después de creado:
+   * por eso «sin vibración» es siempre un canal con su propio id (`sinVibracion`).
+   */
+  vibra?: boolean;
+}
+
+/** Spec 009: el sufijo del id de un canal que no vibra. El mismo sonido, otro canal. */
+export const SUFIJO_SIN_VIBRACION = '-sinvib';
+
+/**
+ * Spec 009 («Cómo suena»): el mismo canal, pero sin vibración. En Android la vibración es del canal, igual que el
+ * sonido, y un canal no se puede cambiar después de creado: se crea otro con `enableVibrate: false` y este id.
+ * Idempotente. El canal de «solo vibrar» no tiene variante: sin sonido y sin vibración no avisaría nada.
+ */
+export function sinVibracion(canal: CanalDeAlarma): CanalDeAlarma {
+  if (canal.vibra === false) return canal;
+  return { ...canal, id: `${canal.id}${SUFIJO_SIN_VIBRACION}`, nombre: `${canal.nombre} (sin vibración)`, vibra: false };
+}
+
+/** Spec 009: el mismo canal, con la vibración dicha de forma explícita (al crearlo, `enableVibrate: true`). */
+export function conVibracion(canal: CanalDeAlarma): CanalDeAlarma {
+  return canal.vibra === true ? canal : { ...canal, vibra: true };
 }
 
 function conArchivo(id: string, nombre: string, archivo: string): CanalDeAlarma {
@@ -194,6 +228,8 @@ const ARCHIVO_POR_CANAL: ReadonlyMap<string, string> = (() => {
     }
   }
   for (const voz of VOCES_DE_HABITOS) mapa.set(idDelCanalDeVoz(voz.clave), voz.archivo);
+  // Spec 009: cada canal con archivo tiene su variante «sin vibración» (mismo archivo, otro id).
+  for (const [id, archivo] of [...mapa]) mapa.set(`${id}${SUFIJO_SIN_VIBRACION}`, archivo);
   return mapa;
 })();
 

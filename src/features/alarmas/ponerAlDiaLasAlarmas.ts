@@ -23,6 +23,10 @@ import { agregarRutaALasAlarmasDeHabitos, rearmarAlarmasProgramadas, tocaRearmar
  * 4. **La ruta** en las alarmas de hábitos de antes de D-218, para que tocarlas abra Training.
  * 5. **Confirmar** al servidor: con esto el push de inicio deja de ir también a este teléfono.
  *
+ * El paso 3 también deja al día cómo suena cada hábito (spec 009) y RENUEVA la ventana de 7 días de las repeticiones
+ * de «Repetir si no la atiendo» (`habits/notificaciones/repeticiones.ts`): sin esa renovación, que corre cada vez que
+ * la app se abre, las repeticiones se acabarían a la semana.
+ *
  * **Paso 0 (spec 007, FR-020):** antes de rearmar se toma la foto de «¿siguen vivas las alarmas?»
  * (`alarmasVivas.ts`). Rearmar las vuelve a poner y el sistema ya no dejaría ver que el teléfono las había
  * borrado; `AvisoDeAlarmasBorradas` usa esa foto, no una lectura posterior.

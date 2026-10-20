@@ -110,6 +110,23 @@ function atender(respuesta: TipoNotificaciones.NotificationResponse | null): voi
 
   const datos = respuesta.notification.request.content.data as { route?: unknown } | null;
   anotarRutaDeAviso(datos?.route);
+  atenderLasRepeticionesDelHabito(datos?.route, respuesta.notification.date);
+}
+
+/**
+ * Spec 009 («Repetir si no la atiendo»): tocar CUALQUIER alarma de un hábito es atenderlo, y sus repeticiones de hoy
+ * dejan de sonar. El módulo se carga acá adentro, no arriba: arrastra las alarmas locales y este archivo lo importa
+ * el contexto de sesión. Un fallo no puede romper la apertura del aviso, que es lo que importa.
+ */
+function atenderLasRepeticionesDelHabito(ruta: unknown, entregadaEnMs: unknown): void {
+  if (typeof ruta !== 'string' || !ruta.startsWith('/habitos/')) return;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { atenderLaAlarmaDeUnHabito } = require('../../habits/notificaciones/repeticiones') as typeof import('../../habits/notificaciones/repeticiones');
+    void atenderLaAlarmaDeUnHabito(ruta, entregadaEnMs).catch(() => undefined);
+  } catch {
+    // Sin esto el aviso se abre igual; las repeticiones de hoy sonarían, que es lo mismo que antes de la spec.
+  }
 }
 
 /**

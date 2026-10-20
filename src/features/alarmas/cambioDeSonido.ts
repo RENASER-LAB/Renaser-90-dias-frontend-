@@ -9,6 +9,10 @@ import { idsDeRecordatoriosDeAcciones } from '../objetivos/notificaciones/record
 import { agruparAvisosQueCoinciden } from './avisosJuntos';
 import { planDeRearmado, type AlarmaProgramada, type PedidoDeRearmado } from './rearmarAlarmas';
 import { canalDeAlarma, type CanalDeAlarma, type SonidoDeAlarma } from './sonidoDeAlarma';
+import {
+  canalDeLaCombinacion,
+  combinacionGuardada,
+} from '../habits/notificaciones/utils/combinacionDeAlarma';
 
 /**
  * Pasa al sonido nuevo las alarmas ya programadas que se le indiquen, sin tocar su hora ni su texto
@@ -68,7 +72,11 @@ export function canalDelHabitoProgramado(
   return alarma => {
     const habitoId = habitoDeLaAlarma.get(alarma.identifier);
     const titulo = habitoDelAviso(alarma.content?.title ?? '');
-    return canalDeAlarma('habitos', sonido, habitoId ? { id: habitoId, titulo } : undefined);
+    const habito = habitoId ? { id: habitoId, titulo } : undefined;
+    // Spec 009: una alarma con «cómo suena» propio (sin vibración, solo vibrar, voz) conserva su combinación: el
+    // sonido nuevo de Yo → Alarmas cambia el tono, no si vibra o habla. Sin ella, el canal de siempre.
+    const combinacion = combinacionGuardada((alarma.content?.data as Record<string, unknown> | null | undefined)?.alarma);
+    return combinacion ? canalDeLaCombinacion('habitos', sonido, combinacion, habito) : canalDeAlarma('habitos', sonido, habito);
   };
 }
 
@@ -114,6 +122,15 @@ export async function cambiarSonidoDeLosHabitos(
   const habitoDeLaAlarma = new Map<string, string>();
   for (const [habitoId, ids] of await recordatoriosPorHabito(userId)) {
     for (const id of ids) habitoDeLaAlarma.set(id, habitoId);
+  }
+  // Spec 009: las repeticiones («Repetir si no la atiendo») no están entre los ids guardados del hábito, pero también
+  // suenan con el tono elegido. Se cargan acá adentro: ese módulo importa al de hábitos, igual que este.
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { repeticionesProgramadas } = require('../habits/notificaciones/repeticiones') as typeof import('../habits/notificaciones/repeticiones');
+    for (const [id, habitoId] of await repeticionesProgramadas()) habitoDeLaAlarma.set(id, habitoId);
+  } catch {
+    // Sin repeticiones que pasar, el resto del cambio de sonido sigue igual.
   }
   return cambiarSonidoDeLasProgramadas(
     [...habitoDeLaAlarma.keys()],

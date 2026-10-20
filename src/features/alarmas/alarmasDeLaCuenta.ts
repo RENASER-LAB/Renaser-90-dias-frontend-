@@ -44,6 +44,9 @@ const PREFIJOS_DE_ALARMAS = [
   'renaser.habitos.diferido.',
   // Spec 008: la firma y los días propios de un hábito con alarmas por día. Sin sus alarmas no sirven.
   'renaser.habitos.esquema.',
+  // Spec 009: cómo sonaba la alarma general del hábito y los días ya atendidos (repeticiones). Sin las alarmas no sirven.
+  'renaser.habitos.combinacion.',
+  'renaser.habitos.repeticiones.atendidas.',
   'renaser.eventos.alarmas.',
   'renaser.objetivos.recordatorios.acciones.',
   'renaser.objetivos.recordatorios.diario.',

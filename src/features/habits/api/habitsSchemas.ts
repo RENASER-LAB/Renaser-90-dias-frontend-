@@ -53,6 +53,16 @@ const habitoCatalogoSchema = z
  * Lo que comparten los días de `GET .../weekdays` y los de `weekdays` en la lista de preferencias
  * (spec 008). Todo lo nuevo es opcional: un backend anterior no lo manda y la app tiene que seguir igual.
  */
+/**
+ * Spec 009: la combinación de «Cómo suena». Si no se entiende (un booleano que falta, otro tipo), se descarta SOLA:
+ * no puede tumbar la lista de la que dependen las alarmas de todos los hábitos al abrir la app.
+ */
+const combinacionDeAlarmaSchema = z
+  .object({ sound: z.boolean(), vibration: z.boolean(), voice: z.boolean(), repeat: z.boolean() })
+  .passthrough()
+  .nullish()
+  .catch(undefined);
+
 const diaDelHabitoCampos = {
   // Nombre de `DayOfWeek`: MONDAY..SUNDAY, mismo vocabulario que `activeWeekdays`.
   weekday: z.string(),
@@ -65,6 +75,9 @@ const diaDelHabitoCampos = {
   reminderMinutesList: z.array(z.number()).nullish(),
   customReminder: z.boolean().optional(),
   customTime: z.boolean().optional(),
+  // Spec 009: cómo suena ese día y si es propio. Opcionales: un backend anterior no los manda.
+  alarm: combinacionDeAlarmaSchema,
+  customAlarm: z.boolean().optional(),
 };
 
 /** `GET /api/v1/habit-preferences/{habitId}/weekdays` — los 7 días ya resueltos (V39). */
@@ -113,6 +126,8 @@ const preferenciaHabitoSchema = z
     customized: z.boolean(),
     // Spec 008: los siete días ya resueltos. Ausente contra un backend anterior.
     weekdays: diasDeLaListaSchema,
+    // Spec 009: cómo suena la alarma del hábito (la general). Ausente contra un backend anterior.
+    alarm: combinacionDeAlarmaSchema,
     // Se valida de verdad en vez de `z.unknown()`: es el dato que sostiene el aviso "desde
     // cuándo rige el horario nuevo", así que si el backend cambia su forma conviene enterarse
     // acá y no con un `undefined` silencioso dentro de la tarjeta.

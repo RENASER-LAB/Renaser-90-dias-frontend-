@@ -1,5 +1,6 @@
 import { ApiError } from '../../../services/http/apiClient';
 import { obtenerTracksDeHoy } from './habitsApi';
+import type { TrackDelDiaApi } from '../types/habits.types';
 import { avisarDiaDeHabitosCambiado } from '../eventos/diaDeHabitosCambiado';
 
 export class DiaDeHabitosCambiadoError extends Error {
@@ -20,8 +21,16 @@ export function esRechazoPorDiaCerrado(error: unknown): boolean {
   );
 }
 
-/** Comparar el ID, nunca buscar un reemplazo por habitoId. El backend decide la carrera final. */
-export async function ejecutarEnRegistroVigente<T>(registroId: string, escribir: () => Promise<T>): Promise<T> {
+/**
+ * Comparar el ID, nunca buscar un reemplazo por habitoId. El backend decide la carrera final.
+ *
+ * `escribir` recibe el registro vigente ya leído (spec 009): quien necesite saber de qué hábito es no tiene que
+ * volver a pedirlo. Quien no lo necesita sigue pasando una función sin parámetros.
+ */
+export async function ejecutarEnRegistroVigente<T>(
+  registroId: string,
+  escribir: (track: TrackDelDiaApi) => Promise<T>,
+): Promise<T> {
   let tracks;
   try {
     tracks = await obtenerTracksDeHoy();
@@ -32,7 +41,7 @@ export async function ejecutarEnRegistroVigente<T>(registroId: string, escribir:
   const track = tracks.find(actual => actual.id === registroId);
   if (!track || track.estado === 'EXPIRADO') rechazarDiaAnterior();
   try {
-    return await escribir();
+    return await escribir(track);
   } catch (error) {
     if (esRechazoPorDiaCerrado(error)) rechazarDiaAnterior();
     throw error;
