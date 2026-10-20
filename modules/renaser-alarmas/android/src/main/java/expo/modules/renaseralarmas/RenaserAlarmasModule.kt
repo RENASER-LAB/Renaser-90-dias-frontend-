@@ -9,7 +9,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
-import android.os.Process
 import android.os.SystemClock
 import android.provider.Settings
 import android.util.Log
@@ -148,23 +147,34 @@ class RenaserAlarmasModule : Module() {
     }
   }
 
-  /** Android 15+: algún arranque de ESTE proceso vino después de una detención forzada. */
+  /**
+   * Android 15+: algún arranque posterior a `desdeMs` vino después de una detención forzada.
+   *
+   * E-638: no se filtra por `pid`. En el emulador (Android 17) los arranques en frío quedan con `pid=0` en el
+   * historial, así que comparar con `Process.myPid()` no encontraba nunca el arranque forzado. Se ubica cada
+   * arranque por su instante de lanzamiento (`START_TIMESTAMP_LAUNCH`, nanos de `elapsedRealtime`) pasado a
+   * hora de reloj.
+   */
   private fun detencionEnElArranque(gestor: ActivityManager, desdeMs: Long): Map<String, Any?> {
-    val propio = Process.myPid()
-    val arranques = gestor.getHistoricalProcessStartReasons(ARRANQUES_A_REVISAR).filter { it.pid == propio }
-    for (arranque in arranques) {
+    val ahoraReloj = System.currentTimeMillis()
+    val ahoraElapsedNanos = SystemClock.elapsedRealtimeNanos()
+    var forzado: Pair<Long, android.app.ApplicationStartInfo>? = null
+    for (arranque in gestor.getHistoricalProcessStartReasons(ARRANQUES_A_REVISAR)) {
+      val lanzadoNanos = arranque.startupTimestamps[android.app.ApplicationStartInfo.START_TIMESTAMP_LAUNCH] ?: continue
+      val cuando = ahoraReloj - (ahoraElapsedNanos - lanzadoNanos) / 1_000_000
+      if (cuando <= desdeMs) continue
       Log.i(
         "RenaserAlarmas",
-        "arranque pid=" + arranque.pid + " forzado=" + arranque.wasForceStopped() + " tipo=" + arranque.startType +
+        "arranque forzado=" + arranque.wasForceStopped() + " tipo=" + arranque.startType +
           " razon=" + arranque.reason + " estado=" + arranque.startupState,
       )
+      // Solo en frío: una detención forzada mata el proceso, así que el arranque que la sigue es COLD. Un arranque
+      // tibio o caliente del mismo proceso (tocar un aviso con la app viva) hereda `wasForceStopped` y la contaba otra vez.
+      val enFrio = arranque.startType == android.app.ApplicationStartInfo.START_TYPE_COLD
+      if (enFrio && arranque.wasForceStopped() && (forzado == null || cuando > forzado.first)) forzado = cuando to arranque
     }
-    val forzado = arranques.firstOrNull { it.wasForceStopped() } ?: return SIN_DETENCION
-    // Cuándo arrancó este proceso, en hora de reloj: ahora menos lo que lleva vivo.
-    val cuando = System.currentTimeMillis() - (SystemClock.elapsedRealtime() - Process.getStartElapsedRealtime())
-    val motivo = "arranque forzado=true tipo=" + forzado.startType + " razon=" + forzado.reason + " pid=" + forzado.pid
-    if (cuando <= desdeMs) return SIN_DETENCION
-    return detenidaEn(cuando, motivo)
+    val (cuando, arranque) = forzado ?: return SIN_DETENCION
+    return detenidaEn(cuando, "arranque forzado=true tipo=" + arranque.startType + " razon=" + arranque.reason)
   }
 
   /**

@@ -105,9 +105,10 @@ export async function revisarDetencionForzada(
     const yaAvisoHoy = (await AsyncStorage.getItem(PREFIJO_AVISO_DETENCION + userId)) === hoy;
     const avisar = (lectura.detenida || alarmasBorradas) && !yaAvisoHoy;
 
-    // Lo revisado se anota siempre: la detención de hoy no cuenta otra vez mañana.
-    const revisadoHasta = lectura.detenida && lectura.cuando !== null ? lectura.cuando : ahora.getTime();
-    await AsyncStorage.setItem(PREFIJO_DETENCION_REVISADA + userId, String(revisadoHasta));
+    // Lo revisado se anota siempre, hasta AHORA: la detención de hoy no cuenta otra vez mañana. No hasta
+    // `lectura.cuando` (E-638): el módulo recalcula ese instante en cada lectura con unos ms de diferencia, y la
+    // misma detención volvía a quedar «después» de lo revisado.
+    await AsyncStorage.setItem(PREFIJO_DETENCION_REVISADA + userId, String(ahora.getTime()));
     if (avisar) await AsyncStorage.setItem(PREFIJO_AVISO_DETENCION + userId, hoy);
     return avisar ? 'avisar' : 'nada';
   } catch {

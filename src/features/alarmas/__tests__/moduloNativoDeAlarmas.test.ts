@@ -52,6 +52,15 @@ describe('el Kotlin del módulo', () => {
     expect(kotlin).toMatch(/SDK_INT\s*<\s*Build\.VERSION_CODES\.R/);
   });
 
+  // E-638: en el emulador (Android 17) los arranques en frío quedan con pid=0; filtrar por myPid() no
+  // encontraba nunca el arranque forzado y la hoja no salía.
+  it('ubica el arranque forzado por su instante de lanzamiento, no por el pid', () => {
+    expect(kotlin).not.toMatch(/it\.pid\s*==/);
+    expect(kotlin).toContain('START_TIMESTAMP_LAUNCH');
+    // Un arranque tibio o caliente hereda wasForceStopped del proceso: solo cuenta el arranque en frío.
+    expect(kotlin).toContain('START_TYPE_COLD');
+  });
+
   it('cada marca de la guía tiene sus pantallas en el orden de research R3, y nada lanza', () => {
     for (const componente of [
       'com.hihonor.systemmanager',

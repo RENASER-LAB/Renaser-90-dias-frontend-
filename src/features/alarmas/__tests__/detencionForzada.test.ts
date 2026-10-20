@@ -63,14 +63,15 @@ beforeEach(async () => {
 });
 
 describe('cuando el sistema detuvo la app a la fuerza', () => {
-  it('(a) avisa, guarda cuándo fue y la fecha local del aviso', async () => {
+  it('(a) avisa, guarda hasta ahora lo revisado y la fecha local del aviso', async () => {
     const cuando = AHORA.getTime() - 60_000;
     moduloQueDice(detenidaA(cuando));
 
     expect(await revisarDetencionForzada('u-1', AHORA)).toBe('avisar');
 
     expect(await AsyncStorage.getItem(AVISADA('u-1'))).toBe('2026-10-19');
-    expect(await AsyncStorage.getItem(REVISADA('u-1'))).toBe(String(cuando));
+    // E-638: hasta AHORA y no hasta `cuando`, que el módulo recalcula con unos ms de diferencia en cada lectura.
+    expect(await AsyncStorage.getItem(REVISADA('u-1'))).toBe(String(AHORA.getTime()));
   });
 
   it('la primera vez en este teléfono NO avisa, aunque el sistema diga que arrancó tras una detención', async () => {
@@ -108,7 +109,7 @@ describe('cuando el sistema detuvo la app a la fuerza', () => {
     expect(await revisarDetencionForzada('u-1', otraVez)).toBe('nada');
 
     expect(await AsyncStorage.getItem(AVISADA('u-1'))).toBe('2026-10-19');
-    expect(await AsyncStorage.getItem(REVISADA('u-1'))).toBe(String(segunda));
+    expect(await AsyncStorage.getItem(REVISADA('u-1'))).toBe(String(otraVez.getTime()));
   });
 
   it('otro día vuelve a avisar, como mucho una vez por día', async () => {
@@ -231,7 +232,7 @@ describe('refuerzo FR-020: las alarmas ya no están, diga lo que diga el motivo 
   it('las dos señales juntas son un solo aviso', async () => {
     const cuando = AHORA.getTime() - 60_000;
     expect(await revisarDetencionForzada('u-1', AHORA, senales(detenidaA(cuando), 'borradas'))).toBe('avisar');
-    expect(await AsyncStorage.getItem(REVISADA('u-1'))).toBe(String(cuando));
+    expect(await AsyncStorage.getItem(REVISADA('u-1'))).toBe(String(AHORA.getTime()));
     // La segunda apertura del mismo día no insiste.
     const mas = new Date(AHORA.getTime() + 3_600_000);
     expect(await revisarDetencionForzada('u-1', mas, senales(SIN_DETENCION, 'borradas'))).toBe('nada');
