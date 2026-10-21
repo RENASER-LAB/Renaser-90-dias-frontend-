@@ -71,7 +71,8 @@ import type { RolPersonalizadoConsola } from '../api/soporteTiSchemas';
 import { abrirConsola, cerrarConsola } from '../estado/sesionDeConsola';
 import { opcionesDeVerComo, VerComoConsolaScreen } from '../screens/VerComoConsolaScreen';
 import { FranjaVerComo, TEXTO_SOLO_LECTURA } from '../verComo/FranjaVerComo';
-import { tomarPestanaAlMontar } from '../../../navigation/pestanaAlMontar';
+import { irAPestana } from '../../../navigation/navegacionRef';
+import { pedirPestanaAlMontar, tomarPestanaAlMontar, verPestanaAlMontar } from '../../../navigation/pestanaAlMontar';
 import { reiniciarVerComoEnMemoria } from '../verComo/sesionVerComo';
 import { abrirSesionDePrueba, cerrarSesionDePrueba } from '../verComo/verComoApi';
 
@@ -241,8 +242,30 @@ describe('entrar y salir (AuthProvider de verdad)', () => {
     expect(mockGuardado.has('renaser.sesion.verComo')).toBe(false);
     expect(pedidos.some(p => p.method === 'DELETE' && p.headers['X-Auth-Token'] === 'tok-prueba')).toBe(true);
     expect(textos()).not.toContain('Viendo como Mentor');
-    // Las pestañas de Soporte TI se arman de nuevo y arrancan en Yo con la consola: el pedido queda para ellas.
+    // Las pestañas de Soporte TI se arman de nuevo y arrancan en Yo con la consola: el pedido queda para ellas, y mirarlo
+    // no lo consume (lo consume `MainTabs` cuando navegó, o el respaldo de la franja).
+    expect(verPestanaAlMontar()).toEqual({ nombre: 'Yo', params: { abrirSoporteTi: true } });
     expect(tomarPestanaAlMontar()).toEqual({ nombre: 'Yo', params: { abrirSoporteTi: true } });
+  });
+
+  it('si a los 1500 ms nadie atendió el pedido (las pestañas no navegaron), la franja navega a Yo con la consola', async () => {
+    pedirPestanaAlMontar(null);
+    (irAPestana as jest.Mock).mockClear();
+    const sesion = await montarApp();
+    await act(async () => {
+      await sesion().entrarAVerComo({ rol: 'MENTOR' }, 'Mentor');
+    });
+    const [salir] = raiz!.root.findAll(n => n.props.accessibilityLabel === 'Salir de ver como Mentor' && typeof n.props.onPress === 'function');
+    await act(async () => {
+      salir.props.onPress();
+    });
+    expect(irAPestana).not.toHaveBeenCalled();
+    await act(async () => {
+      await new Promise(r => setTimeout(r, 1600));
+    });
+    expect(irAPestana).toHaveBeenCalledWith('Yo', { abrirSoporteTi: true });
+    // Ya consumido: nadie más lo toma.
+    expect(verPestanaAlMontar()).toBeNull();
   });
 
   it('si no se puede leer la cuenta de prueba, todo queda como estaba', async () => {

@@ -139,8 +139,9 @@ export function SinBordeDeArriba({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Respaldo: si las pestañas no se volvieron a armar (no debería pasar: cambia la cuenta), el pedido sigue sin tomar y se
- * navega directo a Yo.
+ * Respaldo: `MainTabs` consume el pedido y navega apenas el navegador nuevo está listo (`atenderPestanaPedida`). Si a los
+ * 1500 ms el pedido sigue sin consumir (las pestañas no se armaron o no pudieron navegar), se toma acá y se navega
+ * directo a Yo. Si ya se consumió, no hace nada.
  */
 function volverALaConsolaSiNoSeRearmo(): void {
   setTimeout(() => {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { TabBar } from '../components/TabBar';
 import HoyScreen from '../screens/HoyScreen';
@@ -11,13 +11,17 @@ import { OnboardingFlow } from '../features/onboarding/screens/OnboardingFlow';
 import { MapaRenacimientoFlow } from '../features/mapa-renacimiento/MapaRenacimientoFlow';
 import { useMapaRenacimientoAbierto } from '../features/mapa-renacimiento/MapaRenacimientoContext';
 import { useAuth } from '../context/AuthContext';
-import { tomarPestanaAlMontar } from './pestanaAlMontar';
+import { atenderPestanaPedida } from './navegacionAlMontar';
+import { verPestanaAlMontar } from './pestanaAlMontar';
 
 const Tab = createBottomTabNavigator();
 
 function MainTabs() {
-  // Al volver de «ver como», las pestañas nuevas arrancan en Yo con la consola (ver `pestanaAlMontar`).
-  const [inicial] = useState(tomarPestanaAlMontar);
+  // Al volver de «ver como», las pestañas nuevas arrancan en Yo con la consola (ver `pestanaAlMontar`). Esto solo MIRA
+  // el pedido: React Navigation ignora `initialRouteName` / `initialParams` cuando el contenedor ya traía el estado de
+  // las pestañas anteriores (es el mismo `NavigationContainer`), así que el efecto de abajo lo consume y navega.
+  const [inicial] = useState(verPestanaAlMontar);
+  useEffect(() => atenderPestanaPedida(), []);
   const paramsDe = (nombre: string) => (inicial?.nombre === nombre ? inicial.params : undefined);
   return (
     <Tab.Navigator
