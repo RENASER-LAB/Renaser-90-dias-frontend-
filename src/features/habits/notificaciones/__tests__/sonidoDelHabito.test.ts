@@ -43,9 +43,9 @@ beforeEach(async () => {
 });
 
 describe('sonido de los recordatorios de hábitos', () => {
-  it('sin elegir nada, el del teléfono por el canal de siempre (nada cambia para quien no tocó Alarmas)', async () => {
+  it('sin elegir nada, el sonido del teléfono por el canal que vibra (E-641: el de antes no vibra)', async () => {
     await recordatorios.programar(USUARIO, 'h-leer', 'Leer', '21:30', [10]);
-    expect(mockProgramadas[0].trigger.channelId).toBe('recordatorios-habitos');
+    expect(mockProgramadas[0].trigger.channelId).toBe('recordatorios-habitos-vib');
     expect(mockProgramadas[0].content.sound).toBe(true);
   });
 
@@ -54,7 +54,7 @@ describe('sonido de los recordatorios de hábitos', () => {
     await recordatorios.programar(USUARIO, 'h-leer', 'Leer', '21:30', [0]);
     expect(mockProgramadas[0]).toMatchObject({
       content: { title: 'Leer', sound: 'voz_habito.mp3' },
-      trigger: { channelId: 'recordatorios-habitos-voz' },
+      trigger: { channelId: 'recordatorios-habitos-voz-vib' },
     });
   });
 
@@ -62,15 +62,15 @@ describe('sonido de los recordatorios de hábitos', () => {
     await guardarPreferenciasDeAlarmas(USUARIO, { eventosActivas: true, sonido: 'voz' });
     await recordatorios.programar(USUARIO, JUGO_VERDE, 'JUGO VERDE', '09:00', [10, 0]);
     expect(mockProgramadas.map(p => [p.content.title, p.content.sound, p.trigger.channelId])).toEqual([
-      ['En 10 min: JUGO VERDE', 'voz_habito_jugo_verde.mp3', 'recordatorios-habitos-voz-jugo_verde'],
-      ['JUGO VERDE', 'voz_habito_jugo_verde.mp3', 'recordatorios-habitos-voz-jugo_verde'],
+      ['En 10 min: JUGO VERDE', 'voz_habito_jugo_verde.mp3', 'recordatorios-habitos-voz-jugo_verde-vib'],
+      ['JUGO VERDE', 'voz_habito_jugo_verde.mp3', 'recordatorios-habitos-voz-jugo_verde-vib'],
     ]);
   });
 
   it('con «Voz», el mismo hábito renombrado dice la frase genérica (no el nombre que ya no tiene)', async () => {
     await guardarPreferenciasDeAlarmas(USUARIO, { eventosActivas: true, sonido: 'voz' });
     await recordatorios.programar(USUARIO, JUGO_VERDE, 'Agua con miel', '09:00', [0]);
-    expect(mockProgramadas[0].trigger.channelId).toBe('recordatorios-habitos-voz');
+    expect(mockProgramadas[0].trigger.channelId).toBe('recordatorios-habitos-voz-vib');
   });
 
   it('con un sonido para alertar, cualquier hábito sale por el canal de ese sonido', async () => {
@@ -78,7 +78,7 @@ describe('sonido de los recordatorios de hábitos', () => {
     await recordatorios.programar(USUARIO, JUGO_VERDE, 'JUGO VERDE', '09:00', [0]);
     expect(mockProgramadas[0]).toMatchObject({
       content: { sound: 'alertar_kalimba.mp3' },
-      trigger: { channelId: 'recordatorios-habitos-alertar-kalimba' },
+      trigger: { channelId: 'recordatorios-habitos-alertar-kalimba-vib' },
     });
   });
 

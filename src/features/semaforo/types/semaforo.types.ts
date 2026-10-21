@@ -125,6 +125,27 @@ export interface SemaforoDeHoy {
    * backend anterior, o mal formado—, y entonces la tarjeta los saca de `/me/semaforo` como antes.
    */
   dias: DiaDelSemaforo[] | null;
+  /**
+   * El mensaje del día con su sticker (spec 006 del backend). Campo aditivo: `null` si no vino —un backend
+   * anterior, nadie a quien medir, ningún candidato— o vino mal formado, y entonces la tarjeta se ve como
+   * antes, sin hueco.
+   */
+  mensaje: MensajeDelSemaforo | null;
+}
+
+/**
+ * Lo que le dice el programa a la persona junto a su semáforo. El servidor lo elige (uno por persona y por
+ * día, sin repetir en 14 días) y lo escribe con sus datos ya puestos: la app NO lo transforma.
+ */
+export interface MensajeDelSemaforo {
+  /** Estable durante el día mientras no cambie el color o el caso. */
+  id: string;
+  texto: string;
+  /**
+   * El nombre de uno de los 15 stickers del búho (`dorado-orgulloso`, `azul-firme`…), o `null`. Un nombre que
+   * esta versión no conoce se muestra sin imagen (`data/stickersDelSemaforo`).
+   */
+  sticker: string | null;
 }
 
 // ------------------------------------------------------------------------------------------
@@ -167,6 +188,13 @@ export interface AprendizDelSemaforo {
   diasConDatos: number | null;
   /** Los días en su forma corta, del más viejo al más nuevo. Vacío si la persona no se mide. */
   dias: DiaDelSemaforo[];
+  /**
+   * Solo en la lista del líder (spec 005): el mentor o la guía con programa propio, que tiene su %
+   * pero no color («No se mide en el semáforo»). Ausente en las demás tablas.
+   */
+  noSeMide?: boolean;
+  /** Solo en la lista del líder: `MENTOR`, `TRAINEE_GUIDE`… Opcional, solo para decir quién es. */
+  rol?: string | null;
 }
 
 /** `GET /api/v1/mentor/groups/{groupId}/semaforo` y `GET /api/v1/admin/semaforo/groups/{groupId}`. */
@@ -200,6 +228,12 @@ export interface GrupoDelResumen {
   colorDelPromedio: ColorSemaforo | null;
   /** La palabra de ese color; `null` si no vino (la etiqueta pone la del color). */
   etiquetaDelPromedio: string | null;
+  /**
+   * Si la tarjeta se abre a la lista de personas del grupo (spec 005, `puedeAbrirse` del servidor:
+   * tiene mentor y la funcionalidad está prendida). `false` si no vino: con un backend anterior las
+   * tarjetas siguen sin abrirse (FR-021).
+   */
+  puedeAbrirse: boolean;
 }
 
 /** `GET /api/v1/semaforo/groups`: líder de mentores, administración y alquimista. */

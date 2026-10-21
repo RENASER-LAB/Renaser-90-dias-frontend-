@@ -20,6 +20,7 @@ import { RenombrarHabitoOverlay } from './src/features/habits/components/Renombr
 import { AbridorDeEventos } from './src/features/eventos/components/AbridorDeEventos';
 import { AbridorDeAvisos } from './src/features/alarmas/components/AbridorDeAvisos';
 import { RearmadorDeAlarmas } from './src/features/alarmas/components/RearmadorDeAlarmas';
+import { AvisoDeAlarmasBorradas } from './src/features/alarmas/components/AvisoDeAlarmasBorradas';
 import { SincronizadorDeAcciones } from './src/features/objetivos/components/SincronizadorDeAcciones';
 import { AnfitrionDeCelebraciones } from './src/features/fenix/components/AnfitrionDeCelebraciones';
 import { FuncionalidadesProvider } from './src/features/plataforma/estado/FuncionalidadesProvider';
@@ -68,6 +69,11 @@ function Shell() {
           (mismo id, contenido y hora): las de antes del permiso de alarmas exactas quedan exactas.
           No pinta nada. Ver `features/alarmas/rearmarAlarmas.ts`. */}
       <RearmadorDeAlarmas />
+      {/* Si el sistema detuvo Renaser a la fuerza desde la última vez (Honor y Huawei lo hacen al quitarla
+          de recientes), el teléfono borró las alarmas: una hoja corta lo dice una vez por día y lleva al
+          ajuste de la marca. Corre después de poner al día las alarmas. Con la hoja cerrada no pinta
+          nada. Ver `features/alarmas/components/AvisoDeAlarmasBorradas.tsx`. */}
+      <AvisoDeAlarmasBorradas />
       {/* Pone al dia las alarmas de las acciones con hora (hoy y manana) al abrir y al volver a
           primer plano, solo si la persona pidio ese aviso. No pinta nada. Ver
           `features/objetivos/notificaciones/recordatoriosDeAcciones.ts`. */}

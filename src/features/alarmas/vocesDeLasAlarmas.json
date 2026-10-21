@@ -22,6 +22,8 @@
     { "habitoId": "bb0b1cd0-18df-4bcd-9a4e-9e1c63905c0d", "tituloDelCatalogo": "AUDIOTERAPIA SEMANAL", "clave": "audioterapia", "dice": "Audioterapia semanal." },
     { "habitoId": "358caf57-519f-4b12-8cbe-c7094d0523d8", "tituloDelCatalogo": "DESCANSO PROFUNDO", "clave": "descanso_profundo", "dice": "Descanso profundo." },
     { "habitoId": "60d6c870-df03-4d36-8a88-8c7411ae406b", "tituloDelCatalogo": "RITUAL DE MAÑANA (domingo)", "clave": "ritual_manana", "dice": "Ritual de la mañana." },
-    { "habitoId": "3a922b73-6d11-48f9-89c2-abc453ca6ef7", "tituloDelCatalogo": "AGUA E HIDRATACIÓN (domingo)", "clave": "agua_hidratacion", "dice": "Agua e hidratación." }
+    { "habitoId": "3a922b73-6d11-48f9-89c2-abc453ca6ef7", "tituloDelCatalogo": "AGUA E HIDRATACIÓN (domingo)", "clave": "agua_hidratacion", "dice": "Agua e hidratación." },
+    { "habitoId": "ea87fdec-d4c1-4c4f-9e61-1557bc7255d1", "tituloDelCatalogo": "KILÓMETROS DIARIOS", "clave": "kilometros_diarios", "dice": "Kilómetros diarios." },
+    { "habitoId": "ec0f2b08-3a18-4ff4-8e2b-243e5220d211", "tituloDelCatalogo": "GIMNASIO", "clave": "gimnasio", "dice": "Al gimnasio." }
   ]
 }

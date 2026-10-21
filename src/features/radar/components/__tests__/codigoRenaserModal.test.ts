@@ -26,8 +26,9 @@ jest.mock('expo-linear-gradient', () => {
   return { LinearGradient: View };
 });
 jest.mock('../../../../hooks/useSystemBackHandler', () => ({ useSystemBackHandler: () => undefined }));
+const mockBorrarBorrador = jest.fn(async (..._args: unknown[]) => undefined);
 jest.mock('../../storage/borradorRadar', () => ({
-  borrarBorrador: async () => undefined,
+  borrarBorrador: (...args: unknown[]) => mockBorrarBorrador(...args),
   guardarBorrador: async () => undefined,
   leerBorrador: async () => null,
   limpiarBorradoresViejos: async () => undefined,
@@ -42,7 +43,9 @@ import type { CheckInRadarApi } from '../../types/radar.types';
 const onEnviar = jest.fn(async (_c: CheckInRadarApi) => true);
 const slot = { hora: 14, etiqueta: '14:00', cierraA: '15:00' } as never;
 
-function montar(): ReactTestRenderer {
+const onCerrar = jest.fn();
+
+function montar(extra: { usuarioId?: string | null } = {}): ReactTestRenderer {
   let r!: ReactTestRenderer;
   act(() => {
     r = TestRenderer.create(
@@ -54,8 +57,9 @@ function montar(): ReactTestRenderer {
         enviando: false,
         error: null,
         onEnviar,
-        onCerrar: () => undefined,
+        onCerrar,
         onLimpiarError: () => undefined,
+        ...extra,
       }),
     );
   });
@@ -87,7 +91,10 @@ async function tocarRegistrar(r: ReactTestRenderer) {
 
 describe('Código Renaser: «Registrar» con algo sin responder', () => {
   beforeEach(() => {
-    onEnviar.mockClear();
+    onEnviar.mockReset();
+    onEnviar.mockResolvedValue(true);
+    onCerrar.mockClear();
+    mockBorrarBorrador.mockClear();
   });
 
   it('sin el nivel de energía no llama al servidor y dice QUÉ falta, fuera del scroll (a la vista, junto al botón)', async () => {
@@ -113,5 +120,47 @@ describe('Código Renaser: «Registrar» con algo sin responder', () => {
     await tocarRegistrar(r);
 
     expect(onEnviar).toHaveBeenCalledWith(expect.objectContaining({ energyLevel: 7, whatAmIDoing: 'algo' }));
+  });
+});
+
+/**
+ * Un envío que el hook da por registrado (`true`) cierra el formulario y borra el borrador. Vale igual
+ * cuando el servidor respondió 409 «esta hora ya tiene registro» y `useRadarDelDia` lo confirmó
+ * releyendo `/radar/latest` (2026-10-19): para el formulario es un envío más que salió bien.
+ */
+describe('Código Renaser: lo que pasa al volver de enviar', () => {
+  beforeEach(() => {
+    onEnviar.mockReset();
+    onCerrar.mockClear();
+    mockBorrarBorrador.mockClear();
+  });
+
+  function llenar(r: ReactTestRenderer) {
+    escribirLasCuatro(r);
+    act(() => {
+      r.root.findAll((n: ReactTestInstance) => n.type === SliderRating)[0].props.onChange(7);
+    });
+  }
+
+  it('si el envío salió bien (o se confirmó el 409), cierra y borra el borrador', async () => {
+    onEnviar.mockResolvedValue(true);
+    const r = montar({ usuarioId: 'u1' });
+    llenar(r);
+
+    await tocarRegistrar(r);
+
+    expect(onCerrar).toHaveBeenCalledTimes(1);
+    expect(mockBorrarBorrador).toHaveBeenCalledTimes(1);
+  });
+
+  it('si no se pudo registrar, no cierra y conserva lo escrito', async () => {
+    onEnviar.mockResolvedValue(false);
+    const r = montar({ usuarioId: 'u1' });
+    llenar(r);
+
+    await tocarRegistrar(r);
+
+    expect(onCerrar).not.toHaveBeenCalled();
+    expect(mockBorrarBorrador).not.toHaveBeenCalled();
   });
 });

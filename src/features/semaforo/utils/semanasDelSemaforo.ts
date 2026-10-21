@@ -61,15 +61,36 @@ export function primerViernesCerrado(hastaVigente: string): string | null {
   return viernes === hastaVigente ? sumarDias(viernes, -7) : viernes;
 }
 
-/** Una semana más atrás. `null` si no se puede: sin ancla todavía, o ya en el tope. */
-export function semanaAnterior(posicion: PosicionSemanal, hastaVigente: string | null): PosicionSemanal | null {
+/**
+ * El viernes que cierra la primera semana del programa de una persona: el primer viernes desde `primeraSemana` (el
+ * contrato del líder manda el sábado en que abre; un viernes ya es su propio cierre). `null` si no se sabe: entonces no
+ * se inventa un tope y es el servidor quien contesta, con la ventana vacía y su motivo.
+ */
+export function primerViernesDelPrograma(primeraSemana: string | null | undefined): string | null {
+  const d = primeraSemana ? leerFecha(primeraSemana) : null;
+  if (!d || !primeraSemana) return null;
+  return sumarDias(primeraSemana, (VIERNES - d.getUTCDay() + 7) % 7);
+}
+
+/**
+ * Una semana más atrás. `null` si no se puede: sin ancla todavía, o ya en el tope.
+ *
+ * @param primerViernes el viernes más viejo al que se puede ir (el que cierra la primera semana del programa de una
+ *   persona, `primerViernesDelPrograma`): la ficha del líder no ofrece ventanas anteriores a su Día 1. Sin él, el
+ *   límite es el de siempre, `SEMANAS_HACIA_ATRAS`.
+ */
+export function semanaAnterior(
+  posicion: PosicionSemanal,
+  hastaVigente: string | null,
+  primerViernes?: string | null,
+): PosicionSemanal | null {
   if (!hastaVigente) return null;
   const primero = primerViernesCerrado(hastaVigente);
   if (!primero) return null;
-  if (posicion.modo === 'vigente') return { modo: 'semana', semanaHasta: primero };
-  const anterior = sumarDias(posicion.semanaHasta, -7);
-  const tope = sumarDias(primero, -7 * (SEMANAS_HACIA_ATRAS - 1));
-  return anterior < tope ? null : { modo: 'semana', semanaHasta: anterior };
+  const masViejo = sumarDias(primero, -7 * (SEMANAS_HACIA_ATRAS - 1));
+  const tope = primerViernes && primerViernes > masViejo ? primerViernes : masViejo;
+  const destino = posicion.modo === 'vigente' ? primero : sumarDias(posicion.semanaHasta, -7);
+  return destino < tope ? null : { modo: 'semana', semanaHasta: destino };
 }
 
 /**

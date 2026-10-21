@@ -110,6 +110,41 @@ function atender(respuesta: TipoNotificaciones.NotificationResponse | null): voi
 
   const datos = respuesta.notification.request.content.data as { route?: unknown } | null;
   anotarRutaDeAviso(datos?.route);
+  atenderLasRepeticionesDelHabito(datos?.route, respuesta.notification.date);
+  atenderLasRepeticionesDeObjetivos(datos, respuesta.notification.date);
+}
+
+/**
+ * Spec 009 («Repetir si no la atiendo»): tocar CUALQUIER alarma de un hábito es atenderlo, y sus repeticiones de hoy
+ * dejan de sonar. El módulo se carga acá adentro, no arriba: arrastra las alarmas locales y este archivo lo importa
+ * el contexto de sesión. Un fallo no puede romper la apertura del aviso, que es lo que importa.
+ */
+function atenderLasRepeticionesDelHabito(ruta: unknown, entregadaEnMs: unknown): void {
+  if (typeof ruta !== 'string' || !ruta.startsWith('/habitos/')) return;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { atenderLaAlarmaDeUnHabito } = require('../../habits/notificaciones/repeticiones') as typeof import('../../habits/notificaciones/repeticiones');
+    void atenderLaAlarmaDeUnHabito(ruta, entregadaEnMs).catch(() => undefined);
+  } catch {
+    // Sin esto el aviso se abre igual; las repeticiones de hoy sonarían, que es lo mismo que antes de la spec.
+  }
+}
+
+/**
+ * Spec 010 («Repetir si no la atiendo» en las acciones de los objetivos): tocar la alarma de una acción, o el recordatorio
+ * diario, es atenderlos, y sus repeticiones de hoy dejan de sonar. Solo las alarmas cuya combinación repite llevan la acción
+ * (`rocaId`) o `diario` en sus datos. Mismo cuidado que arriba: se carga acá adentro y un fallo no rompe la apertura.
+ */
+function atenderLasRepeticionesDeObjetivos(datos: unknown, entregadaEnMs: unknown): void {
+  const d = datos as { rocaId?: unknown; diario?: unknown } | null;
+  if (!d || (typeof d.rocaId !== 'string' && d.diario !== true)) return;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { atenderLaAlarmaDeObjetivos } = require('../../objetivos/notificaciones/repeticionesDeAcciones') as typeof import('../../objetivos/notificaciones/repeticionesDeAcciones');
+    void atenderLaAlarmaDeObjetivos(datos, entregadaEnMs).catch(() => undefined);
+  } catch {
+    // Sin esto el aviso se abre igual; las repeticiones de hoy sonarían, que es lo mismo que sin «Repetir».
+  }
 }
 
 /**

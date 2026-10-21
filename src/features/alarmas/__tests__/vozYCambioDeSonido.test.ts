@@ -29,6 +29,9 @@ const JUGO_VERDE = '00006bd5-ab74-4317-b022-ae2e3a878d55';
 const AGUA_TIBIA = '66507383-7219-43ab-aa42-2fbc76152b82';
 const RITUAL_MANANA = '4dee0fa3-e285-4b7d-b062-ad0001dde314';
 const RITUAL_DOMINGO = '60d6c870-df03-4d36-8a88-8c7411ae406b';
+/** Los dos que el catálogo activó después de V4: `V84` (KILÓMETROS DIARIOS) y `V99` (GIMNASIO, era ENTRENAMIENTO FÍSICO). */
+const KILOMETROS_DIARIOS = 'ea87fdec-d4c1-4c4f-9e61-1557bc7255d1';
+const GIMNASIO = 'ec0f2b08-3a18-4ff4-8e2b-243e5220d211';
 
 describe('la voz: cada hábito del catálogo dice su nombre', () => {
   it('«Voz» sigue siendo una opción de Yo → Alarmas y se guarda', () => {
@@ -71,6 +74,26 @@ describe('la voz: cada hábito del catálogo dice su nombre', () => {
     expect(ARCHIVO_VOZ).toEqual({ habitos: 'voz_habito.mp3', eventos: 'voz_evento.mp3', objetivos: 'voz_objetivos.mp3' });
   });
 
+  it('KILÓMETROS DIARIOS y GIMNASIO (los activos después de V4) también dicen su nombre, por id y título', () => {
+    expect(canalDeAlarma('habitos', 'voz', { id: KILOMETROS_DIARIOS, titulo: 'KILÓMETROS DIARIOS' })).toEqual({
+      id: 'recordatorios-habitos-voz-kilometros_diarios',
+      nombre: 'Recordatorios de hábitos (voz: Kilómetros diarios)',
+      sonidoDelCanal: 'voz_habito_kilometros_diarios.mp3',
+      sonidoDelAviso: 'voz_habito_kilometros_diarios.mp3',
+    });
+    expect(canalDeAlarma('habitos', 'voz', { id: GIMNASIO, titulo: 'Gimnasio' })).toMatchObject({
+      id: 'recordatorios-habitos-voz-gimnasio',
+      sonidoDelCanal: 'voz_habito_gimnasio.mp3',
+    });
+    // «Al gimnasio»: dicha sola, «Gimnasio» sale «Quimnasio» (la /x/ del principio, trampa 5 de generar_voces.py).
+    expect(vozDelHabito({ id: GIMNASIO, titulo: 'GIMNASIO' })?.dice).toBe('Al gimnasio');
+    expect(vozDelHabito({ id: KILOMETROS_DIARIOS, titulo: 'kilometros diarios' })?.dice).toBe('Kilómetros diarios');
+    // El título viejo de V9 (antes de V99) o uno renombrado ya no es el del catálogo: frase general, no un nombre que no es.
+    expect(vozDelHabito({ id: GIMNASIO, titulo: 'ENTRENAMIENTO FÍSICO' })).toBeNull();
+    expect(vozDelHabito({ id: KILOMETROS_DIARIOS, titulo: 'Mis pasos' })).toBeNull();
+    expect(canalDeAlarma('habitos', 'voz', { id: GIMNASIO, titulo: 'Mi gimnasio' })).toMatchObject({ id: 'recordatorios-habitos-voz', sonidoDelCanal: 'voz_habito.mp3' });
+  });
+
   it('los dos rituales de la mañana dicen lo mismo y comparten audio y canal', () => {
     const semana = canalDeAlarma('habitos', 'voz', { id: RITUAL_MANANA, titulo: 'RITUAL TIERRA - AGUA - FUEGO (mañana)' });
     const domingo = canalDeAlarma('habitos', 'voz', { id: RITUAL_DOMINGO, titulo: 'RITUAL DE MAÑANA (domingo)' });
@@ -78,15 +101,15 @@ describe('la voz: cada hábito del catálogo dice su nombre', () => {
     expect(semana.sonidoDelCanal).toBe('voz_habito_ritual_manana.mp3');
   });
 
-  it('la tabla: los 18 hábitos del catálogo, ids únicos, y una misma clave dice siempre lo mismo', () => {
-    expect(tabla.habitos).toHaveLength(18);
-    expect(new Set(tabla.habitos.map(h => h.habitoId)).size).toBe(18);
+  it('la tabla: los 20 hábitos del catálogo, ids únicos, y una misma clave dice siempre lo mismo', () => {
+    expect(tabla.habitos).toHaveLength(20);
+    expect(new Set(tabla.habitos.map(h => h.habitoId)).size).toBe(20);
     for (const h of tabla.habitos) {
       expect(h.clave).toMatch(/^[a-z][a-z0-9_]*$/);
       expect(h.dice).toMatch(/^\S.*\.$/);
       expect(tabla.habitos.filter(o => o.clave === h.clave).every(o => o.dice === h.dice)).toBe(true);
     }
-    expect(VOCES_DE_HABITOS).toHaveLength(17);
+    expect(VOCES_DE_HABITOS).toHaveLength(19);
   });
 
   it('el rearmado nombra el archivo del canal: la voz de un hábito no vuelve con la campana ni con la genérica', () => {
@@ -139,9 +162,10 @@ describe('pasar las alarmas ya programadas al sonido nuevo', () => {
       AHORA,
     );
     expect(plan.map(p => [p.identifier, (p.trigger as { channelId: string }).channelId, p.content.sound])).toEqual([
-      ['d-30', 'recordatorios-habitos-voz-despertar', 'voz_habito_despertar.mp3'],
-      ['d-0', 'recordatorios-habitos-voz-despertar', 'voz_habito_despertar.mp3'],
-      ['leer', 'recordatorios-habitos-voz', 'voz_habito.mp3'],
+      // E-641: toda alarma de hábito sale por un canal que dice si vibra (`-vib`); el de antes no vibra.
+      ['d-30', 'recordatorios-habitos-voz-despertar-vib', 'voz_habito_despertar.mp3'],
+      ['d-0', 'recordatorios-habitos-voz-despertar-vib', 'voz_habito_despertar.mp3'],
+      ['leer', 'recordatorios-habitos-voz-vib', 'voz_habito.mp3'],
     ]);
     // El texto del aviso no cambia: el nombre sigue escrito.
     expect(plan[0].content.title).toBe('En 30 min: DESPERTAR');
@@ -154,7 +178,7 @@ describe('pasar las alarmas ya programadas al sonido nuevo', () => {
       canalDelHabitoProgramado(new Map([['d-0', DESPERTAR]]), 'voz'),
       AHORA,
     );
-    expect((pedido.trigger as { channelId: string }).channelId).toBe('recordatorios-habitos-voz-despertar');
+    expect((pedido.trigger as { channelId: string }).channelId).toBe('recordatorios-habitos-voz-despertar-vib');
   });
 
   it('el título del aviso se lee de vuelta: «En N min: X» → X', () => {
@@ -177,14 +201,14 @@ describe('pasar las alarmas ya programadas al sonido nuevo', () => {
       AHORA,
     )).toEqual([]);
     expect(planDeCambioDeSonido(
-      [diaria('d', 5, 'recordatorios-habitos-voz-despertar', 'DESPERTAR')],
+      [diaria('d', 5, 'recordatorios-habitos-voz-despertar-vib', 'DESPERTAR')],
       new Set(['d']),
       canalDelHabitoProgramado(new Map([['d', DESPERTAR]]), 'voz'),
       AHORA,
     )).toEqual([]);
   });
 
-  it('volver a «El del teléfono» manda el sonido del sistema y el canal de siempre', () => {
+  it('volver a «El del teléfono» manda el sonido del sistema y el canal que vibra', () => {
     const [pedido] = planDeCambioDeSonido(
       [diaria('mia', 21, 'recordatorios-habitos-voz-despertar', 'DESPERTAR')],
       new Set(['mia']),
@@ -192,7 +216,7 @@ describe('pasar las alarmas ya programadas al sonido nuevo', () => {
       AHORA + 5 * MIN,
     );
     expect(pedido.content.sound).toBe(true);
-    expect((pedido.trigger as { channelId: string }).channelId).toBe('recordatorios-habitos');
+    expect((pedido.trigger as { channelId: string }).channelId).toBe('recordatorios-habitos-vib');
   });
 
   it('a un sonido para relajar: todos los hábitos al mismo canal, el de la lluvia', () => {
@@ -203,8 +227,8 @@ describe('pasar las alarmas ya programadas al sonido nuevo', () => {
       AHORA,
     );
     expect(plan.map(p => (p.trigger as { channelId: string }).channelId)).toEqual([
-      'recordatorios-habitos-relajar-lluvia',
-      'recordatorios-habitos-relajar-lluvia',
+      'recordatorios-habitos-relajar-lluvia-vib',
+      'recordatorios-habitos-relajar-lluvia-vib',
     ]);
     expect(plan.every(p => p.content.sound === 'relajar_lluvia.mp3')).toBe(true);
   });

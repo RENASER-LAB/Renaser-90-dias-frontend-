@@ -1,9 +1,11 @@
-import React from 'react';
-import { Linking, Platform, StyleSheet, Text, View } from 'react-native';
+import React, { useMemo } from 'react';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 
-import { Alert } from '../../../components/Alerta';
 import { BotonSecundario } from '../../../components/Legible';
 import { useTheme } from '../../../theme/ThemeContext';
+import { abrirGuiaDeLaMarca } from '../abrirGuiaDeLaMarca';
+import { lineaDeLaGuia } from '../data/guiasPorMarca';
+import { marcaDelTelefono } from '../utils/marcaDelTelefono';
 
 /**
  * Yo → Alarmas: cómo evitar que el teléfono borre las alarmas (D-217, 2026-09-28).
@@ -13,29 +15,24 @@ import { useTheme } from '../../../theme/ThemeContext';
  * hasta que se vuelve a abrir la app. En ese estado **tampoco llega el push del servidor**: Android no le
  * entrega nada a una app detenida. Lo único que lo evita es que el teléfono no la detenga.
  *
- * El botón abre los ajustes de Renaser; desde ahí se entra a Batería. No hay una pantalla común a todas
- * las marcas para ir directo a «Sin restricciones».
+ * > **Cambiado 2026-10-19 (spec 007).** Decía a todos «en Batería elige “Sin restricciones”», que en Honor
+ * > y Huawei no existe: ahí el ajuste está en «Inicio de aplicaciones» → «Gestionar automáticamente». Ahora
+ * > la línea es la de la marca del teléfono (`data/guiasPorMarca.ts`) y el botón abre la pantalla de esa
+ * > marca si existe; si no, la lista de batería del sistema o los ajustes de Renaser (`abrirGuiaDeLaMarca`).
+ * > Una marca desconocida ve el texto de siempre. No se pide la excepción directa de optimización de batería.
  */
-/** Dos frases como máximo (dueño, 28/09: «mucho texto marea al usuario»). */
-export const TEXTO_DE_BATERIA =
-  'Para que tus alarmas no se borren, en Batería elige «Sin restricciones» y no cierres Renaser a la fuerza.';
+// Se sigue exportando desde acá: es el texto de las marcas desconocidas y lo importan otras pruebas.
+export { TEXTO_DE_BATERIA } from '../data/guiasPorMarca';
 
 export function GuiaDeBateria() {
   const { c } = useTheme();
+  const linea = useMemo(() => lineaDeLaGuia(marcaDelTelefono()), []);
   if (Platform.OS !== 'android') return null;
-
-  const abrir = async () => {
-    try {
-      await Linking.openSettings();
-    } catch {
-      Alert.alert('No se pudo abrir', 'Abre los Ajustes del teléfono, entra a Apps → Renaser → Batería.');
-    }
-  };
 
   return (
     <View style={[estilos.caja, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-      <Text style={[estilos.cuerpo, { color: c.textSoft }]}>{TEXTO_DE_BATERIA}</Text>
-      <BotonSecundario etiqueta="Abrir ajustes" onPress={() => void abrir()} />
+      <Text style={[estilos.cuerpo, { color: c.textSoft }]}>{linea}</Text>
+      <BotonSecundario etiqueta="Abrir ajustes" onPress={() => void abrirGuiaDeLaMarca()} />
     </View>
   );
 }

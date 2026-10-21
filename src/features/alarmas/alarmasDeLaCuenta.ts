@@ -7,9 +7,10 @@ import {
   REPASO_SIN_ALARMA,
 } from '../habits/notificaciones/recordatoriosDeHabito';
 import {
+  ponerElRecordatorioDiario,
   preferenciasDeAcciones,
-  programarRecordatorioDiario,
 } from '../objetivos/notificaciones/recordatoriosDeAcciones';
+import { hayDiarioEnAlgunDia } from '../objetivos/notificaciones/preferenciasPorDia';
 
 /**
  * Las alarmas locales son de UNA cuenta (E-413, 28/09).
@@ -23,7 +24,7 @@ import {
  * ## Qué hace
  *
  * - **`soltarAlarmasDeLaCuenta`** (al cerrar sesión, y al entrar con OTRA cuenta): cancela todo lo
- *   programado y borra lo que el teléfono guarda de esas alarmas (ids, horas, cambios con fecha).
+ *   programado y borra lo que el teléfono guarda de esas alarmas (ids, horas, cambios con fecha, alarmas por día).
  *   Quedan las PREFERENCIAS de cada persona (sonido, antelaciones, aviso diario de objetivos): son por
  *   usuario y no suenan solas. El repaso de los domingos, que solo se guarda como la id de su alarma,
  *   queda marcado como «pedido, sin alarma» (`REPASO_SIN_ALARMA`) para volver a armarlo.
@@ -42,9 +43,21 @@ const PREFIJOS_DE_ALARMAS = [
   'renaser.habitos.recordatorio.',
   'renaser.habitos.hora.',
   'renaser.habitos.diferido.',
+  // Spec 008: la firma y los días propios de un hábito con alarmas por día. Sin sus alarmas no sirven.
+  'renaser.habitos.esquema.',
+  // Spec 009: cómo sonaba la alarma general del hábito y los días ya atendidos (repeticiones). Sin las alarmas no sirven.
+  'renaser.habitos.combinacion.',
+  'renaser.habitos.repeticiones.atendidas.',
   'renaser.eventos.alarmas.',
   'renaser.objetivos.recordatorios.acciones.',
   'renaser.objetivos.recordatorios.diario.',
+  // Spec 010: qué repeticiones de las acciones y del recordatorio diario ya se atendieron. Sin sus alarmas no sirven.
+  'renaser.objetivos.recordatorios.atendidas',
+  // Spec 007: lo que el teléfono anota de la detención forzada. Es de la cuenta y de su día: no pasa a la siguiente.
+  'renaser.alarmas.detencionRevisada.',
+  'renaser.alarmas.avisoDetencion.',
+  // Spec 007, refuerzo FR-021: si ya se le ofreció la guía de su marca antes de que pasara. También es de la cuenta.
+  'renaser.alarmas.guiaPreventiva.',
 ];
 const PREFIJO_REPASO = 'renaser.habitos.repasoSemanal.';
 
@@ -92,7 +105,8 @@ export async function rearmarLoLocalDeLaCuenta(userId: string): Promise<void> {
     if (!(await N.getPermissionsAsync()).granted) return;
     const diario = await AsyncStorage.getItem(`renaser.objetivos.recordatorios.diario.${userId}`);
     const prefs = await preferenciasDeAcciones(userId);
-    if (prefs.diarioActivo && !diario) await programarRecordatorioDiario(userId, prefs.horaDiaria);
+    // Spec 010: el diario puede ser una alarma por día; vuelve como estaba si algún día lo tiene encendido.
+    if (hayDiarioEnAlgunDia(prefs) && !diario) await ponerElRecordatorioDiario(userId, prefs);
     if ((await AsyncStorage.getItem(PREFIJO_REPASO + userId)) === REPASO_SIN_ALARMA) await programarRepasoSemanal(userId);
   } catch {
     // Se vuelve a intentar la próxima vez que se abra la app.

@@ -215,17 +215,24 @@ export async function completarRegistro(
   respuestaTexto?: string | null,
   valorMedido?: number | null,
 ): Promise<RegistroCompletado> {
-  const r = await ejecutarEnRegistroVigente(registroId, () =>
-    apiFetch<unknown>(`/api/v1/habit-tracks/${registroId}/complete`, {
+  let habitoId: string | undefined;
+  const r = await ejecutarEnRegistroVigente(registroId, track => {
+    habitoId = track?.habitoId;
+    return apiFetch<unknown>(`/api/v1/habit-tracks/${registroId}/complete`, {
       method: 'POST',
       body: {
         respuestaTexto: respuestaTexto?.trim() ? respuestaTexto.trim() : null,
         calificacionProductividad: null,
         ...(valorMedido != null ? { valorMedido } : {}),
       },
-    }),
-  );
+    });
+  });
   const completado = validarRespuesta(registroCompletadoSchema, r, 'POST /api/v1/habit-tracks/{id}/complete');
-  avisarHabitoCumplido({ registroId, puntosOtorgados: completado.puntosOtorgados });
+  avisarHabitoCumplido({
+    registroId,
+    puntosOtorgados: completado.puntosOtorgados,
+    // Spec 009: de qué hábito es, para cancelar las repeticiones de su alarma de hoy. Sin dato, no se manda la clave.
+    ...(habitoId ? { habitoId } : {}),
+  });
   return completado;
 }

@@ -21,7 +21,7 @@ const dia = (fecha: string): DiaDelSemaforo => ({
 });
 
 const deHoy = (dias: DiaDelSemaforo[] | null): SemaforoDeHoy => ({
-  color: 'VERDE', etiqueta: 'Al día', porcentaje: 80, diasConDatos: 7, pausado: false, dias,
+  color: 'VERDE', etiqueta: 'Al día', porcentaje: 80, diasConDatos: 7, pausado: false, dias, mensaje: null,
 });
 
 const detalle = (dias: DiaDelSemaforo[]): DetalleDelSemaforo => ({

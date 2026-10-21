@@ -143,6 +143,7 @@ import { abrirConversacionDirecta } from '../features/chat/api/chatApi';
 import type { CitaDelMensaje, WireMensaje } from '../features/chat/types/chat.types';
 import { marcarChatMontado } from '../features/renasia/state/chatEnPantalla';
 import { useRanking } from '../features/ranking/hooks/useRanking';
+import { BotonDescargarPodio } from '../features/ranking/components/BotonDescargarPodio';
 import {
   entradasDeLaTabla,
   miEntradaEnLaTabla,
@@ -3206,10 +3207,16 @@ export default function ComunidadScreen() {
                 />
               </View>
               {/* Qué mide la tabla que se está mirando: tres listas de números sin rótulo no se
-                  distinguen entre sí. */}
-              <Text style={[t.small, { color: c.textSoft, marginBottom: 12 }]}>
-                {TABLAS_DE_RANKING.find(tabla => tabla.clave === tipoRanking)?.explica}
-              </Text>
+                  distinguen entre sí.
+                  > Ampliado 2026-10-19 (spec 006 del backend). Junto a esa línea, «Descargar» (la imagen del
+                  > podio para compartir): solo lo dibuja `BotonDescargarPodio` si el servidor da el permiso
+                  > `canExportRanking`; sin él la fila es la de siempre, con el texto a todo el ancho. */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                <Text style={[t.small, { color: c.textSoft, flex: 1 }]}>
+                  {TABLAS_DE_RANKING.find(tabla => tabla.clave === tipoRanking)?.explica}
+                </Text>
+                <BotonDescargarPodio entradas={apiRankingEntries} tabla={tipoRanking} fechaDelCorte={rankingData?.fecha} />
+              </View>
 
               {rankingCargando && !podioTop1 ? (
                 <View style={[styles.myRankCard, { borderColor: c.border, backgroundColor: c.cardBg }]}>

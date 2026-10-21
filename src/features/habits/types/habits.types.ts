@@ -120,21 +120,61 @@ export interface AltaHabitoPersonal {
 }
 
 /**
+ * Un día de la semana de un hábito, con lo que el servidor resolvió para él (V39, V40 y, desde la spec 008,
+ * V111). Es la forma COMÚN de `GET /habit-preferences/{id}/weekdays` y de `weekdays` dentro de cada ítem de
+ * `GET /habit-preferences`: todo lo que no es el nombre del día es opcional, porque un backend anterior no
+ * manda lo nuevo y porque la lista no repite `limitTime`.
+ *
+ * - `custom` (el endpoint del hábito) y `customTime` (la lista) dicen lo mismo: ese día tiene hora propia.
+ *   Se leen los dos (`diasPropiosDe`): el contrato los nombra distinto y no se adivina cuál llega.
+ * - `reminderEnabled` y `reminderMinutesList` son el aviso RESUELTO del día: el propio o, si no tiene, el
+ *   general. `customReminder` dice si es propio. Sin `customReminder` el backend no sabe de avisos por día.
+ */
+/**
+ * «Cómo suena» la alarma (spec 009, V112): los cuatro interruptores tal como viajan. Se lee con
+ * `combinacionDeLaApi` (`notificaciones/utils/combinacionDeAlarma`), que devuelve `null` si algo no se entiende.
+ */
+export interface CombinacionDeAlarmaApi {
+  sound: boolean;
+  vibration: boolean;
+  /** La voz dice el nombre del hábito. Necesita `sound`. */
+  voice: boolean;
+  /** Vuelve a sonar a los 5 y a los 10 minutos si no se atiende. */
+  repeat: boolean;
+}
+
+export interface DiaDelHabitoApi {
+  /** Nombre de `DayOfWeek`: `MONDAY`..`SUNDAY`. */
+  weekday: string;
+  /** `HH:mm:ss`, ya resuelta para ese día. */
+  triggerTime?: string | null;
+  /** `false` = ese día está apagado, todas las semanas (V40). Ausente contra un backend viejo. */
+  active?: boolean;
+  /** Spec 008: el aviso resuelto del día. */
+  reminderEnabled?: boolean;
+  reminderMinutesList?: number[] | null;
+  customTime?: boolean;
+  custom?: boolean;
+  /** Spec 008: `true` solo si el aviso es propio del día. Ausente = el backend no informa avisos por día. */
+  customReminder?: boolean;
+  /** Spec 009: cómo suena la alarma ese día, ya resuelta (la propia o la general). Ausente = backend anterior. */
+  alarm?: CombinacionDeAlarmaApi | null;
+  /** Spec 009: `true` solo si la combinación es propia del día. Ausente = el backend no informa «cómo suena». */
+  customAlarm?: boolean;
+}
+
+/**
  * Un día de `GET /api/v1/habit-preferences/{habitId}/weekdays` — la hora de ESE día (V39).
  *
  * Vienen los siete siempre, resueltos por el servidor: `custom` dice si ese día tiene hora propia
  * o si hereda la general. La pantalla no mezcla nada — esa mezcla es la precedencia y vive en el
  * backend, para que no existan dos implementaciones de la misma regla.
  */
-export interface DiaDeLaSemanaApi {
-  /** Nombre de `DayOfWeek`: `MONDAY`..`SUNDAY`. */
-  weekday: string;
+export interface DiaDeLaSemanaApi extends DiaDelHabitoApi {
   /** `HH:mm:ss`, ya resuelta para ese día. */
   triggerTime: string | null;
   limitTime: string | null;
   custom: boolean;
-  /** `false` = ese día está apagado, todas las semanas (V40). Ausente contra un backend viejo. */
-  active?: boolean;
 }
 
 /** Un ítem de `GET /api/v1/habit-preferences` — el horario, propio o el del catálogo. */
@@ -171,6 +211,16 @@ export interface PreferenciaHabitoApi {
    * de que el cambio no se guardó.
    */
   pendingChange: CambioProgramadoApi | null;
+  /**
+   * Spec 008: los siete días ya resueltos (hora y aviso de cada uno). Ausente contra un backend anterior:
+   * ahí la app se comporta como siempre, con una alarma diaria a la hora general.
+   */
+  weekdays?: DiaDelHabitoApi[];
+  /**
+   * Spec 009: cómo suena la alarma del hábito (la general, ya resuelta). Ausente contra un backend anterior: la
+   * pantalla no ofrece «Cómo suena» y las alarmas suenan como siempre.
+   */
+  alarm?: CombinacionDeAlarmaApi | null;
 }
 
 /** `effectiveDate` es `YYYY-MM-DD`; las horas son `HH:mm:ss` crudas, igual que el resto del wire. */

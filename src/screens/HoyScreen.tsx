@@ -26,12 +26,12 @@ import { entradaAlGrupoVisible, esLiderDeMentores, esOtroDeMisGrupos } from '../
 import { TarjetaBandejaHoy } from '../features/tickets/components/TarjetaBandejaHoy';
 import { BandejaTicketsScreen } from '../features/tickets/screens/BandejaTicketsScreen';
 import { TarjetaMentoresHoy } from '../features/lider-mentores/components/TarjetaMentoresHoy';
+import { CumplimientoDelLiderScreen } from '../features/lider-mentores/screens/CumplimientoDelLiderScreen';
 import { LiderMentoresScreen } from '../features/lider-mentores/screens/LiderMentoresScreen';
 import { alAbrirAviso, consumirRutaPendiente } from '../features/mentor/notificaciones/rutaDeAviso';
 import { TarjetaSemaforoHoy } from '../features/semaforo/components/TarjetaSemaforoHoy';
 import { TarjetaSemaforoGruposHoy } from '../features/semaforo/components/TarjetaSemaforoGruposHoy';
 import { SemaforoScreen } from '../features/semaforo/screens/SemaforoScreen';
-import { SemaforoGruposScreen } from '../features/semaforo/screens/SemaforoGruposScreen';
 import { useMiSemaforo } from '../features/semaforo/hooks/useMiSemaforo';
 import { usePublicarSemaforoDeHoy } from '../features/semaforo/estado/useSemaforoVigente';
 import { useCelebracionDelDia } from '../features/fenix/hooks/useCelebracionDelDia';
@@ -540,9 +540,11 @@ export default function HoyScreen() {
   if (enMisMentores && esLider) {
     return <LiderMentoresScreen onSalir={() => setEnMisMentores(false)} />;
   }
-  /* Misma forma que la bandeja: la otra pantalla propia del lider de mentores. */
+  /* Misma forma que la bandeja: la otra pantalla propia del lider de mentores. Desde la spec 005 (2026-10-19)
+     el resumen por grupos baja al grupo y a la persona: `CumplimientoDelLiderScreen` lo envuelve y maneja esos
+     niveles por dentro (persona ← grupo ← resumen ← Hoy), sin otra vista de Hoy. */
   if (enSemaforoGrupos && esLider) {
-    return <SemaforoGruposScreen lectura={semaforoGrupos} onVolver={() => setEnSemaforoGrupos(false)} />;
+    return <CumplimientoDelLiderScreen lectura={semaforoGrupos} onSalir={() => setEnSemaforoGrupos(false)} />;
   }
   if (esMentor && vistaMentor === 'alumno' && alumnoAbierto) {
     return (

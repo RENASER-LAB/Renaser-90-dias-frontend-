@@ -107,3 +107,39 @@ export function opacidadDelVelo(y: number, altoHoja: number): number {
   const fraccion = 1 - y / altoHoja;
   return Math.max(0, Math.min(1, fraccion));
 }
+
+/** Cómo de alta es la hoja: tan alta como su contenido, casi toda la pantalla, o toda. */
+export type TamanoDeLaHoja = 'contenido' | 'grande' | 'completa';
+
+/** Lo que queda de fondo oscuro arriba de una hoja `grande`: que se lea como hoja, no como pantalla. */
+export const AIRE_ARRIBA_GRANDE = 40;
+
+/** Lo que separa a la hoja de la barra de estado en las que no son `completa` (el relleno del contenedor). */
+export const AIRE_BAJO_LA_BARRA_DE_ESTADO = 8;
+
+/**
+ * El alto fijo de la hoja, o `undefined` si crece con lo que lleva (`contenido`).
+ *
+ * - `grande`: casi toda la pantalla, con `AIRE_ARRIBA_GRANDE` de fondo oscuro arriba.
+ * - `completa` (spec 011, el editor de Planificar): TODO el alto disponible, hasta debajo de la barra de estado. No
+ *   asoma la pantalla de atrás, salvo el borde redondeado de arriba.
+ */
+export function altoDeLaHoja(tamano: TamanoDeLaHoja, altoVentana: number, insetSuperior: number): number | undefined {
+  if (tamano === 'grande') return altoVentana - insetSuperior - AIRE_ARRIBA_GRANDE;
+  if (tamano === 'completa') return altoVentana - insetSuperior;
+  return undefined;
+}
+
+/**
+ * El relleno de arriba del contenedor que aloja a la hoja: la barra de estado y, salvo en la `completa`, un poco de
+ * aire. La `completa` va pegada a la barra de estado; con el aire de siempre su tope (`maxHeight: 100 %`) la
+ * recortaría 8 px.
+ */
+export function rellenoSuperiorDeLaHoja(tamano: TamanoDeLaHoja, insetSuperior: number): number {
+  return tamano === 'completa' ? insetSuperior : insetSuperior + AIRE_BAJO_LA_BARRA_DE_ESTADO;
+}
+
+/** Si el cuerpo de la hoja se estira a lo que sobra del alto fijo (`grande` y `completa`) o mide lo que lleva. */
+export function elCuerpoSeEstira(tamano: TamanoDeLaHoja): boolean {
+  return tamano !== 'contenido';
+}

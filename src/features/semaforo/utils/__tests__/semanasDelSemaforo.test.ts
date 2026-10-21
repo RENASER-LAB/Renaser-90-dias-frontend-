@@ -6,6 +6,7 @@ import {
   claveDePosicion,
   esViernes,
   primerViernesCerrado,
+  primerViernesDelPrograma,
   rangoDePosicion,
   semanaAnterior,
   semanaSiguiente,
@@ -129,5 +130,51 @@ describe('qué días cubre cada posición, antes de que llegue la respuesta', ()
   it('una clave por posición, para no repetir una lectura', () => {
     expect(claveDePosicion(VIGENTE)).toBe('vigente');
     expect(claveDePosicion(semana('2026-09-18'))).toBe('2026-09-18');
+  });
+});
+
+describe('el inicio del programa de una persona, como tope hacia atrás (ficha del líder, spec 005)', () => {
+  /* Ana empezó la semana del sábado 29 de agosto: su primera semana cierra el viernes 4 de septiembre. */
+  it('un sábado (así lo manda el contrato) cierra su viernes seis días después', () => {
+    expect(primerViernesDelPrograma('2026-08-29')).toBe('2026-09-04');
+  });
+
+  it('un viernes ya es su propio cierre; cualquier día de la semana cae en el viernes siguiente', () => {
+    expect(primerViernesDelPrograma('2026-09-04')).toBe('2026-09-04');
+    expect(primerViernesDelPrograma('2026-08-31')).toBe('2026-09-04');
+  });
+
+  it('una fecha ilegible no inventa un tope', () => {
+    expect(primerViernesDelPrograma('mañana')).toBeNull();
+    expect(primerViernesDelPrograma(null)).toBeNull();
+    expect(primerViernesDelPrograma(undefined)).toBeNull();
+  });
+
+  it('desde una semana, se llega a la primera del programa pero no se pasa', () => {
+    const tope = '2026-09-04';
+    expect(semanaAnterior(semana('2026-09-11'), '2026-09-24', tope)).toEqual(semana('2026-09-04'));
+    expect(semanaAnterior(semana('2026-09-04'), '2026-09-24', tope)).toBeNull();
+  });
+
+  it('desde la vigente, la última semana cerrada solo si el programa ya había empezado en ella', () => {
+    /* Hoy es lunes 19 de octubre: la vigente termina el domingo 18 y la última cerrada es la del viernes 16. */
+    expect(semanaAnterior(VIGENTE, '2026-10-18', '2026-10-16')).toEqual(semana('2026-10-16'));
+    /* Inés empezó el sábado 17: su primera semana cierra el viernes 23, así que antes de la vigente no hay nada. */
+    expect(semanaAnterior(VIGENTE, '2026-10-18', primerViernesDelPrograma('2026-10-17'))).toBeNull();
+  });
+
+  it('sin tope (el programa sin Día 1, o la lista de un grupo) manda el límite de siempre', () => {
+    expect(semanaAnterior(semana('2026-09-11'), '2026-09-24', null)).toEqual(semana('2026-09-04'));
+    expect(semanaAnterior(semana('2026-09-11'), '2026-09-24', undefined)).toEqual(semana('2026-09-04'));
+  });
+
+  it('un tope más viejo que las 13 semanas no las alarga', () => {
+    let posicion: PosicionSemanal | null = VIGENTE;
+    let pasos = 0;
+    while (posicion && pasos < 40) {
+      posicion = semanaAnterior(posicion, '2026-09-24', '2026-01-02');
+      if (posicion) pasos++;
+    }
+    expect(pasos).toBe(SEMANAS_HACIA_ATRAS);
   });
 });

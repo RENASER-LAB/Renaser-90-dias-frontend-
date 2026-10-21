@@ -87,6 +87,10 @@ export const observacionSchema = z
     sentByChat: z.boolean(),
     messageId: z.string().nullable().optional(),
     createdAt: z.string(),
+    /** Spec 005 (R-7): sobre quién y de qué semana. Opcionales: las de antes no los tienen. */
+    personId: z.string().nullish(),
+    personName: z.string().nullish(),
+    weekStart: z.string().nullish(),
   })
   .passthrough();
 

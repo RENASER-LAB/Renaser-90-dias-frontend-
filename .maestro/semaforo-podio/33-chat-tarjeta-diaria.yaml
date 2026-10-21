@@ -1,0 +1,21 @@
+# cuenta: aprendiz
+# Spec 006, US4 (D-281): la tarjeta diaria del semáforo en el chat de soporte suma un mensaje personalizado debajo de
+# «Hoy llevas N % de tus hábitos.». La manda el backend a las 23:50 de la persona; correr-006.py pone la cuenta en una
+# zona donde ya pasó y calcula MAESTRO_CHAT (el nombre del chat) y MAESTRO_ESPERA (un fragmento del mensaje).
+appId: com.renaser.app
+---
+- runFlow: despejar-entrada-006.yaml
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "COMUNIDAD"
+- tapOn: "Tribu"
+- scrollUntilVisible:
+    element: ".*${MAESTRO_CHAT}.*"
+    direction: DOWN
+    timeout: 20000
+- tapOn: ".*${MAESTRO_CHAT}.*"
+- extendedWaitUntil:
+    visible: ".*Hoy llevas.*"
+    timeout: 15000
+- assertVisible: ".*${MAESTRO_ESPERA}.*"
+- takeScreenshot: chat-${MAESTRO_CASO}
+- back

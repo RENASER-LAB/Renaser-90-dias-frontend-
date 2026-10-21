@@ -4,7 +4,7 @@ import type {
   GrupoDelResumen,
   ResumenPorColor,
 } from '../types/semaforo.types';
-import { PALABRA_SIN_ACTIVIDAD, palabraDelSemaforo, rangoDeFechas, sumarDias } from './lecturaDelSemaforo';
+import { PALABRA_SIN_ACTIVIDAD, formatearPorcentaje, palabraDelSemaforo, rangoDeFechas, sumarDias } from './lecturaDelSemaforo';
 import { viernesHasta } from './semanasDelSemaforo';
 import { aAprendizDelSemaforo } from '../api/semaforoSchemas';
 
@@ -196,3 +196,34 @@ export function notaDelCierreSemanal(
   return `La semana ${rangoDeFechas(semana.desde, semana.hasta)} ya cerró; lo que ${verbo} después no la cambia.`;
 }
 
+
+// ------------------------------------------------------------------------------------------
+// Spec 005: la lista de personas del grupo para el líder
+// ------------------------------------------------------------------------------------------
+
+/**
+ * Lo que dice la fila de quien tiene su propio programa en el grupo (el mentor o la guía de aprendiz): el
+ * semáforo solo mide aprendices, así que no hay color ni palabra de color, pero su porcentaje sí se muestra.
+ */
+export const PALABRA_NO_SE_MIDE = 'No se mide en el semáforo';
+
+/** Quién es esa persona, en palabras. `null` si el rol no es uno de los que llevan programa propio en un grupo. */
+export function rolEnPalabras(rol: string | null | undefined): string | null {
+  switch (rol) {
+    case 'MENTOR':
+      return 'Mentor';
+    case 'TRAINEE_GUIDE':
+    case 'GUIA_APRENDIZ':
+      return 'Guía de aprendiz';
+    default:
+      return null;
+  }
+}
+
+/** Lo que se oye al llegar a la fila de quien no se mide: `Luisa. Mentor. No se mide en el semáforo, 88.2 %.` */
+export function dichoDeQuienNoSeMide(aprendiz: Pick<AprendizDelSemaforo, 'nombre' | 'porcentaje' | 'rol'>): string {
+  const nombre = aprendiz.nombre?.trim() || 'Persona sin nombre';
+  const rol = rolEnPalabras(aprendiz.rol);
+  const cifra = aprendiz.porcentaje !== null ? `, ${formatearPorcentaje(aprendiz.porcentaje)}` : '';
+  return `${nombre}.${rol ? ` ${rol}.` : ''} ${PALABRA_NO_SE_MIDE}${cifra}.`;
+}

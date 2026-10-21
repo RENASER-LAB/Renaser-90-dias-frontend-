@@ -81,11 +81,11 @@ const ULTIMA = { id: '3a8a82a0-787d-46bc-a69e-b29c110a37bc', titulo: 'ÚLTIMA CO
 const DESPERTAR = { id: '899a2151-e98c-4b61-a46c-b55134240d17', titulo: 'DESPERTAR' };
 
 /**
- * Suena todo canal menos el de los que van callados y el de «solo vibrar». (`asegurarCanal` no crea
- * canales fuera de Android y jest corre como iOS, así que se mira el id.)
+ * Suena todo canal menos el de los que van callados y el de «solo vibrar» (que, desde E-641, es `-vibrar-vib`).
+ * (`asegurarCanal` no crea canales fuera de Android y jest corre como iOS, así que se mira el id.)
  */
 function suena(canalId: unknown): boolean {
-  return canalId !== CANAL_EN_SILENCIO.id && !String(canalId).endsWith('-vibrar');
+  return canalId !== CANAL_EN_SILENCIO.id && !/-vibrar(-vib)?$/.test(String(canalId));
 }
 
 function aLas(hora: number, minuto: number): Salida[] {
@@ -115,9 +115,14 @@ describe('cuatro hábitos a las 12:00 (E-410)', () => {
     const conSonido = doce.filter(a => suena(a.trigger.channelId));
     expect(conSonido).toHaveLength(1);
     expect(conSonido[0].content.title).toBe('4 hábitos a las 12:00');
-    expect(conSonido[0].content.body).toBe('AGUA TIBIA CON LIMÓN · JUGO VERDE · PRIMERA COMIDA (ROMPO EL AYUNO) · ÚLTIMA COMIDA DEL DÍA');
+    // Nombra a los cuatro, sin importar en qué orden: lo decide el orden de los identificadores, y desde la
+    // spec 007 el de la antelación más temprana es `habito-{habitoId}-inicio` (antes un UUID al azar; esta
+    // librería de mentira los numeraba en orden de creación, y la prueba se apoyaba en eso).
+    expect((conSonido[0].content.body ?? '').split(' · ').sort()).toEqual(
+      ['AGUA TIBIA CON LIMÓN', 'JUGO VERDE', 'PRIMERA COMIDA (ROMPO EL AYUNO)', 'ÚLTIMA COMIDA DEL DÍA'].sort(),
+    );
     // Con «Voz», la frase genérica: la voz de un hábito solo sabe decir su nombre.
-    expect(conSonido[0].trigger.channelId).toBe('recordatorios-habitos-voz');
+    expect(conSonido[0].trigger.channelId).toBe('recordatorios-habitos-voz-vib');
     expect(doce.filter(a => a.trigger.channelId === CANAL_EN_SILENCIO.id)).toHaveLength(3);
   });
 
@@ -129,10 +134,10 @@ describe('cuatro hábitos a las 12:00 (E-410)', () => {
 
     const [jugo] = aLas(12, 0);
     expect(jugo.content.title).toBe('JUGO VERDE');
-    expect(jugo.trigger.channelId).toBe('recordatorios-habitos-voz-jugo_verde');
+    expect(jugo.trigger.channelId).toBe('recordatorios-habitos-voz-jugo_verde-vib');
     const [agua] = aLas(7, 0);
     expect(agua.content.title).toBe('AGUA TIBIA CON LIMÓN');
-    expect(agua.trigger.channelId).toBe('recordatorios-habitos-voz-agua_tibia');
+    expect(agua.trigger.channelId).toBe('recordatorios-habitos-voz-agua_tibia-vib');
   });
 
   it('con dos sonidos distintos también suena uno', async () => {
@@ -143,7 +148,7 @@ describe('cuatro hábitos a las 12:00 (E-410)', () => {
 
     const conSonido = aLas(12, 0).filter(a => suena(a.trigger.channelId));
     expect(conSonido).toHaveLength(1);
-    expect(conSonido[0].trigger.channelId).toBe('recordatorios-habitos-relajar-cuenco');
+    expect(conSonido[0].trigger.channelId).toBe('recordatorios-habitos-relajar-cuenco-vib');
   });
 
   it('acciones de objetivos a la misma hora: una sola suena', () => {
@@ -159,7 +164,8 @@ describe('cuatro hábitos a las 12:00 (E-410)', () => {
     const { pedidos } = planDeAvisosJuntos(programadas, miembros, 'sistema', instante - 3_600_000);
 
     expect(pedidos.map(p => [p.content.title, (p.trigger as { channelId: string }).channelId])).toEqual([
-      ['3 acciones a las 12:00', 'recordatorios-objetivos'],
+      // E-641 (spec 010): un grupo de acciones también sale por un canal que dice si vibra; el base no vibra.
+      ['3 acciones a las 12:00', 'recordatorios-objetivos-vib'],
       ['Acción 2', CANAL_EN_SILENCIO.id],
       ['Acción 3', CANAL_EN_SILENCIO.id],
     ]);
@@ -214,7 +220,7 @@ describe('cambiar el sonido en Yo → Alarmas no toca horas (E-412)', () => {
       real.mockRestore();
     }
     const [suya] = mockLista.values();
-    expect(suya.trigger.channelId).toBe('recordatorios-habitos-relajar-cuenco');
+    expect(suya.trigger.channelId).toBe('recordatorios-habitos-relajar-cuenco-vib');
   });
 });
 
@@ -239,6 +245,6 @@ describe('Yo → Alarmas: el aviso diario de objetivos y la antelación (E-410)'
 
     const [jugo] = aLas(8, 0);
     expect(jugo.content.title).toBe('JUGO VERDE');
-    expect(jugo.trigger.channelId).toBe('recordatorios-habitos-voz-jugo_verde');
+    expect(jugo.trigger.channelId).toBe('recordatorios-habitos-voz-jugo_verde-vib');
   });
 });

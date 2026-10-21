@@ -11,6 +11,7 @@ import { useTheme } from '../../../theme/ThemeContext';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
 import { abrirConversacionDirecta } from '../../chat/api/chatApi';
 import { urlDeEvidencia } from '../../evidence/api/evidenceApi';
+import { VerPublicacion } from '../../lider-mentores/components/VisorDePublicacion';
 import { RejillaSemanal } from '../../mentor/components/RejillaSemanal';
 import { diaInicialDelDetalle } from '../../mentor/utils/diaInicialDelDetalle';
 import { TarjetaSemaforoDeAprendiz } from '../../semaforo/components/TarjetaSemaforoDeAprendiz';
@@ -403,6 +404,9 @@ export function FichaAprendizScreen({
                         </Text>
                       </Pressable>
                     ) : null}
+                    {/* Spec 005 (R-6): el post diario se cumple publicando en el Muro, y esa publicación es su
+                        evidencia; antes la ficha decía «sin evidencia». */}
+                    {o.publicacionId ? <VerPublicacion publicacionId={o.publicacionId} titulo={o.titulo} /> : null}
                   </View>
                 ))}
               </View>

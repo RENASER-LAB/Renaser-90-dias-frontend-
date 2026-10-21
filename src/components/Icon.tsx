@@ -17,7 +17,8 @@ export type IconName =
   | 'lifeBuoy' | 'alarmClock' | 'settings' | 'images' | 'compass' | 'package' | 'signature'
   | 'timer' | 'badgeCheck' | 'hourglass' | 'ban' | 'rotateCcw' | 'audioLines' | 'sunrise' | 'sunMedium' | 'moonStar' | 'glassWater' | 'showerHead' | 'footprints' | 'salad' | 'utensils' | 'utensilsCrossed' | 'bookOpenText' | 'headphones' | 'notebookPen' | 'handHeart' | 'smartphoneOff'
   | 'sparkles'
-  | 'wrench' | 'toggleRight';
+  | 'wrench' | 'toggleRight'
+  | 'bellOff';
 
 /**
  * Grosor del trazo, en píxeles REALES de pantalla, a cualquier tamaño (decisión del dueño,
@@ -851,6 +852,18 @@ export function Icon({ name, size = 20, color, strokeWidth }: Props) {
         <Svg width={size} height={size} viewBox="0 0 24 24">
           <Rect {...s24} x={3} y={4} width={18} height={18} rx={2} />
           <Path {...s24} d="M16 2v4M3 10h18M8 2v4M17 14h-6M13 18H7M7 14h.01M17 18h.01" />
+        </Svg>
+      );
+    /* Planificar */
+    /* La campana tachada del chip de un día sin aviso (spec 008: el día va sin recordatorio). Forma de Lucide
+       (ISC, `bell-off`) en caja de 24 y trazo `s24`; la campana con aviso es `bell`. */
+    case 'bellOff':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M10.268 21a2 2 0 0 0 3.464 0" />
+          <Path {...s24} d="M17 17H4a1 1 0 0 1-.74-1.673C4.59 13.956 6 12.499 6 8a6 6 0 0 1 .258-1.742" />
+          <Path {...s24} d="m2 2 20 20" />
+          <Path {...s24} d="M8.668 3.01A6 6 0 0 1 18 8c0 2.687.77 4.653 1.707 6.05" />
         </Svg>
       );
     /* Barra de pestañas */

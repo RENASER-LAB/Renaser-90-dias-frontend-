@@ -1,0 +1,22 @@
+# cuenta: admin
+# Spec 006, US3: con permiso (Admin, Alquimista, Líder, Soporte TI) aparece «Descargar» y abre la hoja de compartir.
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "COMUNIDAD"
+- tapOn:
+    text: "Ranking"
+    retryTapIfNoChange: true
+- extendedWaitUntil:
+    visible: "Descargar"
+    timeout: 40000
+- takeScreenshot: ranking-${MAESTRO_CASO}
+- tapOn: "Descargar"
+- extendedWaitUntil:
+    visible: ".*(Compartir|Share|Copy|Copiar|Nearby|Gmail|Drive|Mensajes|Messages).*"
+    timeout: 20000
+- takeScreenshot: compartir-${MAESTRO_CASO}
+- back
+- extendedWaitUntil:
+    visible: "Descargar"
+    timeout: 15000

@@ -268,7 +268,7 @@ export function SeccionAlarmas({ userId }: { userId: string }) {
 
       <View style={{ gap: 8 }}>
         <Text style={[estilos.titulo, { color: c.textStrong }]}>Acciones de tus objetivos</Text>
-        <RecordatorioDeAcciones userId={userId} />
+        <RecordatorioDeAcciones userId={userId} tonoDeYo={prefs.sonido} />
       </View>
 
       <View style={{ gap: 8 }}>

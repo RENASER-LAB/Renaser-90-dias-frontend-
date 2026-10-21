@@ -8,9 +8,11 @@ import tabla from './vocesDeLasAlarmas.json';
  *
  * `vocesDeLasAlarmas.json` es la ÚNICA fuente: lo lee esta app para elegir el audio y lo lee
  * `scripts/sonidos/generar-sonidos.sh` para generarlo. Cada fila es un hábito del catálogo del
- * backend (los 18 activos de `V4__catalogo_habitos_default.sql`), con su id, su título del catálogo,
- * una `clave` (el archivo es `voz_habito_<clave>.mp3`) y lo que dice. Dos rituales de la mañana
- * comparten audio: dicen lo mismo.
+ * backend, con su id, su título del catálogo, una `clave` (el archivo es `voz_habito_<clave>.mp3`) y lo
+ * que dice: los 18 activos de `V4__catalogo_habitos_default.sql` y, desde el 2026-10-20, los dos que el
+ * catálogo activó después, «KILÓMETROS DIARIOS» (`V84`) y «GIMNASIO» (`V99`; era «ENTRENAMIENTO FÍSICO»
+ * de `V9`, con el mismo id). Dos rituales de la mañana comparten audio: dicen lo mismo.
+ * Un hábito de sistema nuevo se suma igual: ver `scripts/sonidos/generar-sonidos.sh`.
  *
  * ## Por qué por id Y por título
  *
@@ -65,6 +67,12 @@ export const ARCHIVO_VOZ_GENERICA = {
   eventos: tabla.genericas.eventos.archivo,
   objetivos: tabla.genericas.objetivos.archivo,
 } as const;
+
+/** Lo que dice la frase general de los hábitos, sin el punto final: «Tu hábito está por empezar». */
+export const FRASE_GENERICA_DE_HABITOS = tabla.genericas.habitos.dice.replace(/\.$/, '');
+
+/** Lo que dice la frase general de las acciones de los objetivos, sin el punto final: «Tienes acciones de tus objetivos por hacer». */
+export const FRASE_GENERICA_DE_OBJETIVOS = tabla.genericas.objetivos.dice.replace(/\.$/, '');
 
 /** Mayúsculas, tildes y espacios de más no cuentan: `DÍA SIN CELULAR` es `Día sin celular`. */
 export function mismoTitulo(a: string, b: string): boolean {
