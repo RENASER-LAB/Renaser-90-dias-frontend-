@@ -24,10 +24,10 @@ appId: com.renaser.app
 - inputText: "E2E"
 - hideKeyboard
 - tapOn: "Empezar en 5 %"
+# El aviso «Listo: 5 %.» dura 4 s y cada paso de Maestro tarda ~10 s en esta build: se comprueba lo que queda.
 - extendedWaitUntil:
-    visible: "Listo: 5 %\\..*"
+    visible: "5 % · ahora"
     timeout: 30000
-- assertVisible: "5 % · ahora"
 - takeScreenshot: 37a-despliegue-en-5
 - tapOn: "Para todos"
 - tapOn:
@@ -36,6 +36,6 @@ appId: com.renaser.app
 - hideKeyboard
 - tapOn: "Prender para todos"
 - extendedWaitUntil:
-    visible: "Listo: la tienen todos\\..*"
+    visible: "Para todos · ahora"
     timeout: 30000
 - takeScreenshot: 37b-despliegue-para-todos

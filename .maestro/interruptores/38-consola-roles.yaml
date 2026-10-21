@@ -26,14 +26,17 @@ appId: com.renaser.app
     id: "campo-motivo-rol"
 - inputText: "E2E"
 - hideKeyboard
+- scrollUntilVisible:
+    element: "Crear rol"
+    direction: DOWN
 - tapOn: "Crear rol"
-- extendedWaitUntil:
-    visible: "Rol «E2E junior» creado\\."
-    timeout: 30000
-- takeScreenshot: 38a-rol-creado
+# El aviso «Rol … creado.» dura 4 s y cada paso de Maestro tarda ~10 s en esta build: se comprueba que el rol ya
+# existe (solo un rol guardado ofrece «Borrar rol»).
 - scrollUntilVisible:
     element: "Borrar rol"
     direction: DOWN
+    timeout: 30000
+- takeScreenshot: 38a-rol-creado
 - tapOn: "Borrar rol"
 - tapOn: "(?i)borrar"
 - extendedWaitUntil:

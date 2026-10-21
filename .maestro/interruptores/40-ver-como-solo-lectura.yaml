@@ -20,10 +20,11 @@ appId: com.renaser.app
     direction: DOWN
     timeout: 30000
 - tapOn: "Reaccionar a la publicacion"
-- extendedWaitUntil:
-    visible: "Solo lectura: eso no se guardó\\."
-    timeout: 15000
+# «Solo lectura: eso no se guardó.» se ve 4 s en la franja y cada paso de Maestro tarda ~10 s en esta build: acá se
+# comprueba lo que queda (ningún diálogo y la franja en «Solo lectura»); el texto pasajero se mira con mobile-mcp.
 - assertNotVisible: "OK"
+- assertVisible:
+    id: "franja-ver-como"
 - takeScreenshot: 40a-solo-lectura-en-la-franja
 - tapOn: "Salir de ver como Aprendiz"
 - extendedWaitUntil:
