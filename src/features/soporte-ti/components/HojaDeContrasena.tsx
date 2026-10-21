@@ -56,6 +56,7 @@ export function HojaDeContrasena({
         </Text>
         <FormField
           label="Contraseña"
+          testID="campo-contrasena-confirmacion"
           value={contrasena}
           onChangeText={setContrasena}
           secureTextEntry

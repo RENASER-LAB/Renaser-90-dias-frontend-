@@ -37,8 +37,28 @@ appId: com.renaser.app
     direction: DOWN
     timeout: 30000
 - takeScreenshot: 38a-rol-creado
+# Borrar pide motivo (queda en la auditoría) y, por ser crítico, la contraseña.
+- scrollUntilVisible:
+    element:
+      id: "campo-motivo-rol"
+    direction: DOWN
+- tapOn:
+    id: "campo-motivo-rol"
+- inputText: "E2E"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Borrar rol"
+    direction: DOWN
 - tapOn: "Borrar rol"
 - tapOn: "(?i)borrar"
+- extendedWaitUntil:
+    visible: "Confirma con tu contraseña"
+    timeout: 30000
+- tapOn:
+    id: "campo-contrasena-confirmacion"
+- inputText: ${CONTRASENA}
+- hideKeyboard
+- tapOn: "Confirmar cambio"
 - extendedWaitUntil:
     visible: "Nuevo rol"
     timeout: 30000
