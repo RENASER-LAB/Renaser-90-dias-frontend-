@@ -6,7 +6,7 @@ import { Alert } from '../../../components/Alerta';
 import { ConfirmacionEnLinea } from '../../../components/ConfirmacionEnLinea';
 import { FormField } from '../../../components/FormField';
 import { Icon } from '../../../components/Icon';
-import { Interruptor } from '../../../components/Interruptor';
+import { InterruptorDeConsola } from '../components/InterruptorDeConsola';
 import { Presionable } from '../../../components/Presionable';
 import { BotonPrincipal, BotonSecundario, TituloDeSeccion } from '../../../components/Legible';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
@@ -224,7 +224,7 @@ export function FuncionalidadConsolaScreen({
               <Text style={fuerte}>Prendida para todos</Text>
               <Text style={ayuda}>{formulario.prendidaGlobal ? 'Cada rol, según lo de abajo.' : 'Nadie la usa: ven el aviso.'}</Text>
             </View>
-            <Interruptor etiqueta="Prendida para todos" valor={formulario.prendidaGlobal} onCambiar={v => cambiar('prendidaGlobal', v)} />
+            <InterruptorDeConsola etiqueta="Prendida para todos" valor={formulario.prendidaGlobal} onCambiar={v => cambiar('prendidaGlobal', v)} />
           </View>
         </View>
 
@@ -236,7 +236,7 @@ export function FuncionalidadConsolaScreen({
             {roles.map(rol => (
               <View key={rol} style={[estilos.interruptor, { backgroundColor: c.cardBg, borderColor: c.border, opacity: formulario.prendidaGlobal ? 1 : 0.6 }]}>
                 <Text style={[...fuerte, { flex: 1, flexShrink: 1 }]}>{etiquetaDeRol(rol)}</Text>
-                <Interruptor
+                <InterruptorDeConsola
                   etiqueta={`Prendida para ${etiquetaDeRol(rol)}`}
                   valor={formulario.porRol[rol] !== false}
                   deshabilitado={!formulario.prendidaGlobal}

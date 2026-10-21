@@ -1878,6 +1878,12 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       crítico pide la contraseña otra vez (`X-Reautenticacion`, también si el servidor responde 428); versión optimista
       (un 409 relee y avisa); auditoría de a 20. Errores en diálogo, lo guardado con `ConfirmacionEnLinea`. El atrás del
       sistema sube un nivel en cada vista.
+    * **Cambio por pedido del dueño — 2026-10-21: la consola usa su propio interruptor con ✕ / ✓ en el pulgar**
+      (`features/soporte-ti/components/InterruptorDeConsola`: mismo riel y mismas medidas que `Interruptor`, ✕ con el pulgar a la
+      izquierda cuando está apagado y ✓ a la derecha cuando está prendido; el pulgar viaja 180 ms con ease-out fuerte y las marcas
+      se cruzan con un fundido, al instante con «reducir movimiento»). Solo en las pantallas de la consola (detalle de la
+      funcionalidad y del rol): el resto de la app, y el componente `Interruptor`, siguen igual; `interruptorDeConsola.test.ts`
+      frena que la consola vuelva a importar `Interruptor`. **Hace falta un APK nuevo** (la app no se actualiza por aire).
     * **No se tocaron**: Plan, la barra de pestañas, la forma de ninguna sección cuando está prendida, los textos de
       error de siempre, el login ni el onboarding.
     * **Hace falta un APK nuevo** (la app no se actualiza por aire). El APK publicado (1.5.0) no lee los interruptores:

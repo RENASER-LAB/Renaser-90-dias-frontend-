@@ -7,7 +7,7 @@ import { Checkbox } from '../../../components/Checkbox';
 import { ConfirmacionEnLinea } from '../../../components/ConfirmacionEnLinea';
 import { FormField } from '../../../components/FormField';
 import { HojaDesdeAbajo } from '../../../components/hojaDesdeAbajo/HojaDesdeAbajo';
-import { Interruptor } from '../../../components/Interruptor';
+import { InterruptorDeConsola } from '../components/InterruptorDeConsola';
 import { BotonPeligro, BotonPrincipal, BotonSecundario, TituloDeSeccion } from '../../../components/Legible';
 import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { ApiError } from '../../../services/http/apiClient';
@@ -400,7 +400,7 @@ export function RolConsolaScreen({
               <Text style={fuerte}>Activo</Text>
               <Text style={ayuda}>{formulario.activo ? 'Se puede asignar y rige para sus personas.' : 'Sus personas quedan con el rol base solo, sin restricciones.'}</Text>
             </View>
-            <Interruptor etiqueta="Rol activo" valor={formulario.activo} onCambiar={v => cambiar('activo', v)} />
+            <InterruptorDeConsola etiqueta="Rol activo" valor={formulario.activo} onCambiar={v => cambiar('activo', v)} />
           </View>
         ) : null}
 
