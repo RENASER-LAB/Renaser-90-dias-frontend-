@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { z } from 'zod';
 
-import { limpiarAviso, type FuncionalidadApagada } from '../api/funcionalidadesApi';
+import { limpiarAviso, limpiarNoDisponibles, type FuncionalidadApagada } from '../api/funcionalidadesApi';
 
 /**
  * La última lectura de los interruptores, guardada por cuenta en el teléfono (spec 002, FR-012): sin red, la app
@@ -11,7 +11,13 @@ import { limpiarAviso, type FuncionalidadApagada } from '../api/funcionalidadesA
  * AsyncStorage y no el almacenamiento seguro: no es una credencial. Ninguna operación puede tumbar la app: un fallo
  * de lectura es «no hay nada guardado» y uno de escritura se ignora (la próxima lectura del servidor lo arregla).
  */
-export type LecturaGuardada = { version: number; etag: string | null; apagadas: FuncionalidadApagada[] };
+export type LecturaGuardada = {
+  version: number;
+  etag: string | null;
+  apagadas: FuncionalidadApagada[];
+  /** Fase 2: lo que esa cuenta no tiene. Una lectura guardada por la fase 1 no lo trae (todo disponible). */
+  noDisponibles?: string[];
+};
 
 const PREFIJO = 'renaser.plataforma.funcionalidades.';
 
@@ -20,6 +26,7 @@ const guardadoSchema = z
     version: z.number(),
     etag: z.string().nullish(),
     apagadas: z.array(z.object({ clave: z.string(), aviso: z.string().nullish() }).passthrough()),
+    noDisponibles: z.array(z.unknown()).nullish(),
   })
   .passthrough();
 
@@ -45,6 +52,7 @@ export async function recuperarLectura(cuenta: string): Promise<LecturaGuardada 
       version: resultado.data.version,
       etag: resultado.data.etag ?? null,
       apagadas: resultado.data.apagadas.map(a => ({ clave: a.clave, aviso: limpiarAviso(a.aviso) })),
+      noDisponibles: limpiarNoDisponibles(resultado.data.noDisponibles),
     };
   } catch {
     return null;

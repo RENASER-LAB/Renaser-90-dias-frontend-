@@ -50,6 +50,9 @@ export function ChatDelCurso({ cursoId, cursoTitulo, leccionTitulo, diaPrograma 
     return { etiqueta, ambito: partes.join(', '), cursoId: cursoId ?? null };
   }, [cursoId, cursoTitulo, leccionTitulo, diaPrograma]);
 
+  /* Spec 002, fase 2: SER que todavía no le toca a esta cuenta: el botón del curso no se dibuja. */
+  if (!chatDeSer.disponible) return null;
+
   if (!chatDeSer.prendida) {
     return (
       <View style={{ marginTop: 14 }}>

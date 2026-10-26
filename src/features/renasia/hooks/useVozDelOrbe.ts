@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 
+import { enModoSoloLectura } from '../../../services/http/apiClient';
 import { useFuncionalidad } from '../../plataforma/estado/useFuncionalidad';
 import { CLAVES } from '../../plataforma/utils/clavesDeLaApp';
 import { useConversacionEnVivo } from './useConversacionEnVivo';
@@ -37,7 +38,9 @@ export function useVozDelOrbe(): ConversacionPorVoz {
   /* Spec 002, US2: con «IA → voz» apagada no se abre la voz en vivo (el servidor la cerraría con 1013): se usa la de
      siempre, cuyo audio el servidor manda a la voz del teléfono (204). */
   const vozDeSer = useFuncionalidad(CLAVES.iaVoz);
-  const usarEnVivo = enVivo.disponible && !enPausa && vozDeSer.prendida;
+  // Fase 2: la voz que todavía no le toca a esta cuenta se trata como apagada (el orbe sigue con la voz del teléfono).
+  // «Ver como» (D-273): la voz en vivo responde 403 en el handshake; ni se intenta.
+  const usarEnVivo = enVivo.disponible && !enPausa && vozDeSer.prendida && vozDeSer.disponible && !enModoSoloLectura();
   const enSesion = enVivo.fase !== 'reposo';
 
   const tocar = useCallback(() => {

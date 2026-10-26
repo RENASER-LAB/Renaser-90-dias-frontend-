@@ -1,0 +1,16 @@
+# 34 — Esconder lo no disponible (spec 002, fase 2, decisión P1): con `eventos` en despliegue solo para probadores y el
+# aprendiz fuera, Comunidad NO dibuja el medallón «Eventos» ni el aviso de mantenimiento (no está apagado: no le toca).
+# Precondición (QA por la consola, con contraseña: empezar en 0 % es crítico): `eventos` → Despliegue → «Solo
+# probadores», sin el aprendiz de la suite entre los probadores. Después, «Para todos».
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "COMUNIDAD"
+- extendedWaitUntil:
+    visible: "Muro"
+    timeout: 30000
+- assertNotVisible: "Eventos"
+- assertNotVisible:
+    id: "aviso-de-mantenimiento"
+- takeScreenshot: 34a-comunidad-sin-eventos

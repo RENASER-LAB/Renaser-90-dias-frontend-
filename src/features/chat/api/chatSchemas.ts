@@ -197,6 +197,8 @@ const wireParticipanteSchema = z
     esUnoMismo: z.boolean(),
     fotoPath: z.string().nullish(),
     avatarUrl: z.string().nullish(),
+    /** Spec 002, fase 2 (contrato §4.5): su rol personalizado, si tiene. Aditivo; `rol` sigue siendo el base. */
+    rolPersonalizado: z.object({ id: z.string().nullish(), nombre: z.string().nullish() }).passthrough().nullish(),
   })
   .passthrough();
 

@@ -8,10 +8,11 @@ import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
 import { cambiarRolDeUsuario, listarAprendices, listarStaff, mentoresDisponibles } from '../api/adminApi';
-import type { RolAsignable } from '../api/adminApi';
+import type { OpcionDeRol, RolAsignable } from '../api/adminApi';
+import { useOpcionesDeRol } from '../hooks/useOpcionesDeRol';
 import type { UsuarioStaffApi } from '../api/adminSchemas';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
-import { ROLES_ASIGNABLES, etiquetaDeRol } from '../utils/rolesAsignables';
+import { esLaOpcionDeLaPersona, etiquetaDeLaOpcion, etiquetaDeLaPersona, etiquetaDeRol } from '../utils/rolesAsignables';
 import { confirmar, avisar } from '../utils/dialogo';
 import {
   botonDeMasAprendices,
@@ -49,8 +50,11 @@ const STAFF_POR_PAGINA = 50;
  */
 const MENTORES_POR_PAGINA = 200;
 
-/** Los seis, en `utils/rolesAsignables` (los mismos que ofrece la aprobación de solicitudes, backend D-265). */
-const ROLES = ROLES_ASIGNABLES;
+/*
+ * Los roles que se ofrecen salen de `useOpcionesDeRol` (spec 002, fase 2): los seis base de `utils/rolesAsignables` (los
+ * mismos de la aprobación de solicitudes, backend D-265) y, debajo, los personalizados activos de
+ * `GET /admin/roles-asignables`. Sin ese endpoint, los seis.
+ */
 
 /**
  * Dónde queda la persona después de cambiarle el rol. La confirmación lo dice con esta frase.
@@ -82,19 +86,22 @@ type Persona = PersonaDelPadron;
  */
 function FilaDePersona({
   persona,
+  opciones,
   desplegada,
   guardando,
   onAlternar,
   onElegir,
 }: {
   persona: Persona;
+  opciones: readonly OpcionDeRol[];
   desplegada: boolean;
   guardando: string | null;
   onAlternar: () => void;
-  onElegir: (rol: RolAsignable) => void;
+  onElegir: (opcion: OpcionDeRol) => void;
 }) {
   const { c, t } = useTheme();
-  const rotuloActual = etiquetaDeRol(persona.rol);
+  // Spec 002, fase 2: el nombre de su rol personalizado si tiene; si no, el del rol base.
+  const rotuloActual = etiquetaDeLaPersona(persona.rol, persona.rolPersonalizado);
 
   return (
     <View style={[estilos.tarjeta, { backgroundColor: c.cardBg, borderColor: desplegada ? c.goldInk : c.border }]}>
@@ -119,15 +126,16 @@ function FilaDePersona({
       {desplegada ? (
         <View style={{ gap: 8, paddingHorizontal: 12, paddingBottom: 12 }}>
           <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>Elige el rol nuevo:</Text>
-          {ROLES.map(rol => {
-            const actual = rol.clave === persona.rol;
+          {opciones.map(rol => {
+            const actual = esLaOpcionDeLaPersona(rol, persona);
+            const etiqueta = etiquetaDeLaOpcion(rol);
             return (
               <Pressable
                 key={rol.clave}
                 disabled={actual || guardando !== null}
-                onPress={() => onElegir(rol.clave)}
+                onPress={() => onElegir(rol)}
                 accessibilityRole="button"
-                accessibilityLabel={actual ? `${rol.etiqueta}, es el rol actual` : `Hacer ${rol.etiqueta}`}
+                accessibilityLabel={actual ? `${rol.nombre}, es el rol actual` : `Hacer ${rol.nombre}`}
                 style={[
                   estilos.opcionRol,
                   {
@@ -143,7 +151,7 @@ function FilaDePersona({
                     { color: actual ? c.goldInk : c.textStrong, fontSize: 16, fontWeight: actual ? '700' : '400' },
                   ]}
                 >
-                  {actual ? `✓ ${rol.etiqueta} (rol actual)` : rol.etiqueta}
+                  {actual ? `✓ ${etiqueta} (rol actual)` : etiqueta}
                 </Text>
               </Pressable>
             );
@@ -226,6 +234,7 @@ export function StaffRolesScreen({ onVolver, onAbrirGuias }: { onVolver: () => v
   const [errorStaff, setErrorStaff] = useState<string | null>(null);
   const [totalAprendices, setTotalAprendices] = useState<number | null>(null);
   const [cambiados, setCambiados] = useState<Persona[]>([]);
+  const opciones = useOpcionesDeRol();
   const [abierta, setAbierta] = useState<string | null>(null);
   const [guardando, setGuardando] = useState<string | null>(null);
   const [cargando, setCargando] = useState(true);
@@ -263,6 +272,7 @@ export function StaffRolesScreen({ onVolver, onAbrirGuias }: { onVolver: () => v
         nombre: a.fullName ?? 'Sin nombre',
         detalle: a.email ?? `Día ${a.programDay}`,
         rol: 'TRAINEE',
+        rolPersonalizado: a.rolPersonalizado ?? null,
       }));
       setAprendices(previos => (pagina === 0 ? nuevos : [...previos, ...nuevos]));
       setTotalAprendices(pagAprendices.total);
@@ -273,6 +283,7 @@ export function StaffRolesScreen({ onVolver, onAbrirGuias }: { onVolver: () => v
           detalle: m.cellId ? 'Acompaña un grupo' : 'Sin grupo asignado',
           // Un backend anterior a D-265 no manda `role`: ahí todos los de esta lista son mentores.
           rol: m.role ?? 'MENTOR',
+          rolPersonalizado: m.rolPersonalizado ?? null,
         })),
       );
     } catch (e) {
@@ -375,26 +386,34 @@ export function StaffRolesScreen({ onVolver, onAbrirGuias }: { onVolver: () => v
     hayFilas: mentoresVisibles.length > 0,
   });
 
-  const aplicar = async (persona: Persona, nuevo: RolAsignable) => {
-    if (nuevo === persona.rol) {
+  const aplicar = async (persona: Persona, nuevo: OpcionDeRol) => {
+    if (esLaOpcionDeLaPersona(nuevo, persona)) {
       setAbierta(null);
       return;
     }
-    const etiqueta = etiquetaDeRol(nuevo);
-    const donde = DONDE_QUEDA[nuevo];
+    const etiqueta = nuevo.nombre;
+    const donde = DONDE_QUEDA[nuevo.rolBase as RolAsignable] ?? '';
+    /* Spec 002, fase 2: un rol personalizado dice de cuál hereda; el servidor lo asigna con `rolPersonalizadoId`. */
+    const herencia = nuevo.rolPersonalizadoId
+      ? `Hereda de ${etiquetaDeRol(nuevo.rolBase)}, con solo las funcionalidades de «${nuevo.nombre}».\n\n`
+      : '';
 
     const acepto = await confirmar(
       `¿Hacer ${etiqueta} a ${persona.nombre}?`,
-      `${persona.nombre} pasa de ${etiquetaDeRol(persona.rol)} a ${etiqueta}.\n\n${donde}`,
+      `${persona.nombre} pasa de ${etiquetaDeLaPersona(persona.rol, persona.rolPersonalizado)} a ${etiqueta}.\n\n${herencia}${donde}`,
       { ok: `Sí, hacer ${etiqueta}` },
     );
     if (!acepto) return;
 
     setGuardando(persona.id);
     try {
-      await cambiarRolDeUsuario(persona.id, nuevo);
+      await cambiarRolDeUsuario(persona.id, nuevo.rolBase, nuevo.rolPersonalizadoId);
       setCambiados(previos => [
-        { ...persona, rol: nuevo },
+        {
+          ...persona,
+          rol: nuevo.rolBase,
+          rolPersonalizado: nuevo.rolPersonalizadoId ? { id: nuevo.rolPersonalizadoId, nombre: nuevo.nombre } : null,
+        },
         ...previos.filter(p => p.id !== persona.id),
       ]);
       setAbierta(null);
@@ -464,6 +483,7 @@ export function StaffRolesScreen({ onVolver, onAbrirGuias }: { onVolver: () => v
               <FilaDePersona
                 key={`cambiado-${persona.id}`}
                 persona={persona}
+                opciones={opciones}
                 desplegada={abierta === persona.id}
                 guardando={guardando}
                 onAlternar={() => setAbierta(abierta === persona.id ? null : persona.id)}
@@ -502,6 +522,7 @@ export function StaffRolesScreen({ onVolver, onAbrirGuias }: { onVolver: () => v
             <FilaDePersona
               key={`staff-${persona.id}`}
               persona={persona}
+              opciones={opciones}
               desplegada={abierta === persona.id}
               guardando={guardando}
               onAlternar={() => setAbierta(abierta === persona.id ? null : persona.id)}
@@ -556,6 +577,7 @@ export function StaffRolesScreen({ onVolver, onAbrirGuias }: { onVolver: () => v
             <FilaDePersona
                 key={`mentor-${persona.id}`}
                 persona={persona}
+                opciones={opciones}
                 desplegada={abierta === persona.id}
                 guardando={guardando}
                 onAlternar={() => setAbierta(abierta === persona.id ? null : persona.id)}
@@ -582,6 +604,7 @@ export function StaffRolesScreen({ onVolver, onAbrirGuias }: { onVolver: () => v
             <FilaDePersona
                 key={`aprendiz-${persona.id}`}
                 persona={persona}
+                opciones={opciones}
                 desplegada={abierta === persona.id}
                 guardando={guardando}
                 onAlternar={() => setAbierta(abierta === persona.id ? null : persona.id)}

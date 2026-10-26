@@ -19,6 +19,13 @@ export const WEB_PUBLICA_POR_DEFECTO = 'https://renaser-90-dias-frontend-livid.v
 export const RUTA_POLITICA_DE_PRIVACIDAD = '/privacidad/';
 
 /**
+ * La página pública para eliminar la cuenta (D-243, la que pide Google Play): `public/eliminar-cuenta/index.html`,
+ * servida por la regla propia de `vercel.json`. La app la abre cuando su pantalla de «Eliminar mi cuenta» no está
+ * disponible para la cuenta (spec 002, fase 2): la fila nunca se esconde.
+ */
+export const RUTA_ELIMINAR_CUENTA = '/eliminar-cuenta';
+
+/**
  * El correo de contacto de Renaser para privacidad, derechos ARCO y soporte de quien ya no puede
  * entrar a la app (cuenta cerrada). Lo dio el dueño el 2026-10-06; es el mismo que publican
  * `public/privacidad/` y `public/eliminar-cuenta/`.
@@ -44,8 +51,26 @@ export function destinoDePoliticaDePrivacidad(plataforma: string, base?: string)
   return plataforma === 'web' ? RUTA_POLITICA_DE_PRIVACIDAD : urlDePoliticaDePrivacidad(base);
 }
 
+/** URL absoluta de la página pública para eliminar la cuenta. */
+export function urlDeEliminarCuenta(base?: string): string {
+  return `${baseWebPublica(base)}${RUTA_ELIMINAR_CUENTA}`;
+}
+
+/** Como la Política: en web la ruta del propio sitio, en nativo la absoluta. */
+export function destinoDeEliminarCuenta(plataforma: string, base?: string): string {
+  return plataforma === 'web' ? RUTA_ELIMINAR_CUENTA : urlDeEliminarCuenta(base);
+}
+
 export async function abrirPoliticaDePrivacidad(): Promise<void> {
-  const destino = destinoDePoliticaDePrivacidad(Platform.OS);
+  await abrirPaginaPublica(destinoDePoliticaDePrivacidad(Platform.OS));
+}
+
+/** Abre `/eliminar-cuenta` en el navegador (en web, en otra pestaña). */
+export async function abrirEliminarCuentaEnLaWeb(): Promise<void> {
+  await abrirPaginaPublica(destinoDeEliminarCuenta(Platform.OS));
+}
+
+async function abrirPaginaPublica(destino: string): Promise<void> {
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
     window.open(destino, '_blank', 'noopener');
     return;

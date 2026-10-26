@@ -65,11 +65,12 @@ export function TarjetaPropuesta({ propuesta, onConfirmar, onCancelar }: Props) 
         {propuesta.resumen}
       </Text>
 
-      {admiteAcciones(estado) && !ocupado && !propuestasDeSer.prendida ? (
+      {/* Fase 2: si las propuestas todavía no le tocan a esta cuenta, ni botones ni aviso (queda el texto). */}
+      {propuestasDeSer.disponible && admiteAcciones(estado) && !ocupado && !propuestasDeSer.prendida ? (
         <AvisoDeMantenimiento aviso={propuestasDeSer.aviso} />
       ) : null}
 
-      {(admiteAcciones(estado) || ocupado) && (propuestasDeSer.prendida || ocupado) && (
+      {propuestasDeSer.disponible && (admiteAcciones(estado) || ocupado) && (propuestasDeSer.prendida || ocupado) && (
         <View style={styles.botones}>
           <GoldButton
             label="Cancelar"

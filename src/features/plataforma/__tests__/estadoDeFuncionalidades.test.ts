@@ -91,6 +91,7 @@ describe('almacén de funcionalidades', () => {
       version: 42,
       etag: '"v42"',
       apagadas: [{ clave: 'chat.audio', aviso: 'Las notas de voz vuelven mañana.' }],
+      noDisponibles: [],
     });
     expect(oyente).toHaveBeenCalled();
   });
@@ -209,7 +210,8 @@ describe('memoria local por cuenta', () => {
 
   it('guarda y recupera por cuenta; un JSON roto es «nada guardado»', async () => {
     await guardarLectura('u-1', { version: 2, etag: '"v2"', apagadas: [{ clave: 'muro', aviso: '  ' }] });
-    expect(await recuperarLectura('u-1')).toEqual({ version: 2, etag: '"v2"', apagadas: [{ clave: 'muro', aviso: null }] });
+    // `noDisponibles` es de la fase 2: una lectura guardada por la fase 1 no lo trae y se lee como ninguna.
+    expect(await recuperarLectura('u-1')).toEqual({ version: 2, etag: '"v2"', apagadas: [{ clave: 'muro', aviso: null }], noDisponibles: [] });
     expect(await recuperarLectura('u-2')).toBeNull();
 
     await AsyncStorage.setItem(claveDeLaCuenta('u-3'), '{roto');
@@ -258,6 +260,8 @@ describe('GET /api/v1/funcionalidades/mias (fetch simulado)', () => {
         { clave: 'chat.audio', aviso: 'Vuelven mañana.' },
         { clave: 'ia.voz', aviso: null },
       ],
+      // Un backend de la fase 1 no manda `noDisponibles`: todo disponible.
+      noDisponibles: [],
     });
   });
 

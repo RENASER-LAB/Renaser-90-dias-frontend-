@@ -1,0 +1,17 @@
+# 35 — Esconder lo no disponible (spec 002, fase 2): con `muro.publicar` en despliegue solo para probadores, el Muro se
+# lee pero la barra «Crear una publicación» no se dibuja, y tampoco el aviso de mantenimiento.
+# Precondición (QA por la consola): `muro.publicar` → Despliegue → «Solo probadores», sin el aprendiz. Después, «Para
+# todos».
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "COMUNIDAD"
+- tapOn: "Muro"
+- extendedWaitUntil:
+    visible: "Muro"
+    timeout: 30000
+- assertNotVisible: "Crear una publicación"
+- assertNotVisible:
+    id: "aviso-de-mantenimiento"
+- takeScreenshot: 35a-muro-sin-publicar

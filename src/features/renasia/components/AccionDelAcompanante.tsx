@@ -61,7 +61,8 @@ export function AccionDelAcompanante({ propuestas, onConfirmar, onCancelar, pedi
   const [detalleDe, setDetalleDe] = useState<string | null>(null);
   /* Spec 002: con las propuestas apagadas por Soporte TI, en lugar de «Cancelar» y «Confirmar» va el aviso. */
   const propuestasDeSer = useFuncionalidad(CLAVES.iaPropuestas);
-  const accion = elegirAccionVisible(propuestas, Date.now());
+  /* Fase 2: si las propuestas todavía no le tocan a esta cuenta, la hoja no muestra ninguna (no hay nada que decidir). */
+  const accion = propuestasDeSer.disponible ? elegirAccionVisible(propuestas, Date.now()) : null;
   const pedido = onTomarFoto ? elegirPedidoVisible(pedidosDeFoto, Date.now()) : null;
 
   // Una acción ya resuelta se queda unos segundos y después la hoja se retira sola.

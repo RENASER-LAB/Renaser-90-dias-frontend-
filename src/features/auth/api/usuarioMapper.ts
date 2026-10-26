@@ -16,5 +16,9 @@ export function aUsuario(api: UsuarioApi): User {
     avatarUrl: api.avatarUrl,
     bio: api.bio ?? null,
     department: api.department ?? null,
+    rolPersonalizado:
+      api.rolPersonalizado?.id && api.rolPersonalizado.nombre?.trim()
+        ? { id: api.rolPersonalizado.id, nombre: api.rolPersonalizado.nombre.trim() }
+        : null,
   };
 }

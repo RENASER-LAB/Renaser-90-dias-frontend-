@@ -24,11 +24,14 @@ import {
   textoDelEstado,
   type FiltroDeLaConsola,
 } from '../utils/consola';
+import { textoDeDespliegueEnLaLista } from '../utils/despliegue';
 
 const FILTROS: readonly { valor: FiltroDeLaConsola; etiqueta: string }[] = [
   { valor: 'todas', etiqueta: 'Todas' },
   { valor: 'apagadas', etiqueta: 'Apagadas' },
   { valor: 'criticas', etiqueta: 'Críticas' },
+  /* Fase 2: lo que está llegando de a poco (despliegue progresivo). */
+  { valor: 'despliegue', etiqueta: 'Despliegue' },
 ];
 
 /**
@@ -41,11 +44,17 @@ export function FuncionalidadesConsolaScreen({
   estado,
   onAbrir,
   onAuditoria,
+  onRoles,
+  onVerComo,
   onSalir,
 }: {
   estado: EstadoDeLaConsola;
   onAbrir: (clave: string) => void;
   onAuditoria: () => void;
+  /** Fase 2: los roles personalizados. */
+  onRoles?: () => void;
+  /** Fase 2: ver la app como otro rol, en solo lectura. */
+  onVerComo?: () => void;
   onSalir: () => void;
 }) {
   const { c, t } = useTheme();
@@ -88,6 +97,13 @@ export function FuncionalidadesConsolaScreen({
           gap: 14,
         }}
       >
+        {onRoles || onVerComo ? (
+          <View style={{ gap: 8 }}>
+            {onRoles ? <FilaDeHerramienta titulo="Roles" detalle="Roles que heredan de uno base, con sus funcionalidades" onPress={onRoles} /> : null}
+            {onVerComo ? <FilaDeHerramienta titulo="Ver como" detalle="La app como la ve otro rol, sin cambiar nada" onPress={onVerComo} /> : null}
+          </View>
+        ) : null}
+
         {circuito && circuito.length > 0 ? <TarjetaDelCircuito partes={circuito} /> : null}
 
         <View style={[estilos.buscador, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
@@ -100,10 +116,11 @@ export function FuncionalidadesConsolaScreen({
             autoCapitalize="none"
             autoCorrect={false}
             accessibilityLabel="Buscar una funcionalidad"
+            testID="buscador-consola"
             style={[t.body, estilos.campo, { color: c.text }]}
           />
         </View>
-        <ControlSegmentado rol="radio" accessibilityLabel="Qué funcionalidades ver" opciones={FILTROS} valor={filtro} onCambiar={setFiltro} />
+        <ControlSegmentado rol="radio" accessibilityLabel="Qué funcionalidades ver" opciones={FILTROS} valor={filtro} onCambiar={setFiltro} achicarTexto />
 
         {cargando && !funcionalidades ? <Text style={cuerpo}>Cargando las funcionalidades…</Text> : null}
         {!cargando && fallo && !funcionalidades ? (
@@ -117,7 +134,13 @@ export function FuncionalidadesConsolaScreen({
 
         {funcionalidades && grupos.length === 0 ? (
           <Text style={cuerpo}>
-            {busqueda.trim() ? `Ninguna funcionalidad coincide con «${busqueda.trim()}».` : filtro === 'apagadas' ? 'No hay nada apagado.' : 'No hay funcionalidades.'}
+            {busqueda.trim()
+              ? `Ninguna funcionalidad coincide con «${busqueda.trim()}».`
+              : filtro === 'apagadas'
+                ? 'No hay nada apagado.'
+                : filtro === 'despliegue'
+                  ? 'Nada está en despliegue.'
+                  : 'No hay funcionalidades.'}
           </Text>
         ) : null}
 
@@ -147,11 +170,12 @@ function FilaDeFuncionalidad({
   const estado = estadoEnLaConsola(funcionalidad, todas);
   const apagada = estaApagada(estado);
   const texto = textoDelEstado(estado);
+  const enDespliegue = textoDeDespliegueEnLaLista(funcionalidad);
   return (
     <Presionable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${nombreDe(funcionalidad)}. ${texto}${funcionalidad.critica ? '. Crítica' : ''}`}
+      accessibilityLabel={`${nombreDe(funcionalidad)}. ${texto}${funcionalidad.critica ? '. Crítica' : ''}${enDespliegue ? `. ${enDespliegue}` : ''}`}
       style={[estilos.fila, { backgroundColor: c.cardBg, borderColor: apagada ? c.danger : c.border }]}
     >
       <View style={{ flex: 1, flexShrink: 1, gap: 2 }}>
@@ -162,7 +186,27 @@ function FilaDeFuncionalidad({
           {funcionalidad.critica ? <Insignia texto="Crítica" /> : null}
         </View>
         <Text style={[t.body, { color: apagada ? c.danger : c.textSoft, fontSize: 16, lineHeight: 22 }]}>{texto}</Text>
+        {enDespliegue ? <Text style={[t.body, { color: c.goldInk, fontSize: 16, lineHeight: 22 }]}>{enDespliegue}</Text> : null}
         <Text style={[t.small, { color: c.textSoft, fontSize: 13 }]}>{funcionalidad.clave}</Text>
+      </View>
+      <Icon name="chevron" size={16} color={c.chevron} />
+    </Presionable>
+  );
+}
+
+/** Una entrada de la consola que no es una funcionalidad (fase 2: «Roles», «Ver como»). Se hunde al apretar. */
+function FilaDeHerramienta({ titulo, detalle, onPress }: { titulo: string; detalle: string; onPress: () => void }) {
+  const { c, t } = useTheme();
+  return (
+    <Presionable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${titulo}. ${detalle}`}
+      style={[estilos.fila, { backgroundColor: c.cardBg, borderColor: c.border }]}
+    >
+      <View style={{ flex: 1, flexShrink: 1, gap: 2 }}>
+        <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>{titulo}</Text>
+        <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 22 }]}>{detalle}</Text>
       </View>
       <Icon name="chevron" size={16} color={c.chevron} />
     </Presionable>

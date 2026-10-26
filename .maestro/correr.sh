@@ -2,7 +2,9 @@
 # Corre la suite de regresión de Maestro en el emulador, flujo por flujo, en local (nunca contra producción).
 #
 # Uso:  E2E_APRENDIZ_EMAIL=… E2E_APRENDIZ_PASSWORD=… E2E_ADMIN_EMAIL=… E2E_ADMIN_PASSWORD=… .maestro/correr.sh [flujo…]
-#       Sin argumentos corre todo .maestro/regresion/ en orden. Cada flujo dice arriba `# cuenta: aprendiz|admin`.
+#       Sin argumentos corre todo .maestro/regresion/ en orden. Cada flujo dice arriba `# cuenta: aprendiz|admin|soporte`.
+#       Los flujos `# cuenta: soporte` (consola Soporte TI, spec 002 fase 2) piden además E2E_SOPORTE_EMAIL y
+#       E2E_SOPORTE_PASSWORD; la contraseña llega al flujo como `CONTRASENA` (desbloquea la consola).
 #
 # Por qué la sesión se abre acá, por adb, y no con `launchApp` + `inputText` de Maestro (Maestro #3667, abierto al
 # 2026-10-13): la build de desarrollo tarda más de 2 s en tomar la pantalla de bienvenida de Android, el sistema deja
@@ -86,7 +88,11 @@ entrar() { # entrar <correo> <clave>: un reintento si no entró (la causa típic
   return 1
 }
 
-tapar() { sed -u -e "s/${E2E_APRENDIZ_PASSWORD//\//\\/}/••••/g" -e "s/${E2E_ADMIN_PASSWORD//\//\\/}/••••/g"; }
+tapar() {
+  local soporte=${E2E_SOPORTE_PASSWORD:-}
+  sed -u -e "s/${E2E_APRENDIZ_PASSWORD//\//\\/}/••••/g" -e "s/${E2E_ADMIN_PASSWORD//\//\\/}/••••/g" \
+    ${soporte:+-e "s/${soporte//\//\\/}/••••/g"}
+}
 
 # Android deja un solo cliente de automatización a la vez: el servidor de mobile-mcp (mobilecli) en el teléfono bloquea
 # `uiautomator dump` y el driver de Maestro. Se cierra; mobile-mcp lo vuelve a abrir solo cuando se lo usa.
@@ -99,14 +105,21 @@ flujos=("$@")
 ok=0; mal=0; malos=()
 for f in "${flujos[@]}"; do
   echo "▶ $(basename "$f")"
+  extra=()
   if grep -q '^# cuenta: admin' "$f"; then
     correo=$E2E_ADMIN_EMAIL; clave=$E2E_ADMIN_PASSWORD
+  elif grep -q '^# cuenta: soporte' "$f"; then
+    if [ -z "${E2E_SOPORTE_EMAIL:-}" ] || [ -z "${E2E_SOPORTE_PASSWORD:-}" ]; then
+      echo "  falta E2E_SOPORTE_EMAIL / E2E_SOPORTE_PASSWORD para $(basename "$f")" >&2
+      mal=$((mal+1)); malos+=("$(basename "$f")"); echo "✘ $(basename "$f")"; continue
+    fi
+    correo=$E2E_SOPORTE_EMAIL; clave=$E2E_SOPORTE_PASSWORD; extra=(-e "CONTRASENA=$E2E_SOPORTE_PASSWORD")
   else
     correo=$E2E_APRENDIZ_EMAIL; clave=$E2E_APRENDIZ_PASSWORD
   fi
   estado=1
   if entrar "$correo" "$clave"; then
-    ~/.maestro/bin/maestro test "$f" --test-output-dir "$SALIDA" 2>&1 | tapar | grep -E "COMPLETED|FAILED|Flow "
+    ~/.maestro/bin/maestro test "${extra[@]}" "$f" --test-output-dir "$SALIDA" 2>&1 | tapar | grep -E "COMPLETED|FAILED|Flow "
     estado=${PIPESTATUS[0]}
   fi
   if [ "$estado" -eq 0 ]; then

@@ -1,6 +1,7 @@
 import { Alert, Platform } from 'react-native';
 
 import { opcionesNativasDeDescarte } from '../../../components/Alerta';
+import { debeOmitirseElDialogo } from '../../../services/http/erroresSinDialogo';
 
 /**
  * Diálogos que funcionan también en web.
@@ -18,6 +19,8 @@ const ES_WEB = Platform.OS === 'web';
 
 /** Aviso de un solo botón (info o error). */
 export function avisar(titulo: string, mensaje?: string): void {
+  // Spec 002, fase 2: un 404 «no disponible» o un 403 «solo lectura» no van en diálogo (ver `erroresSinDialogo`).
+  if (debeOmitirseElDialogo(titulo, mensaje)) return;
   if (ES_WEB) {
     if (typeof window !== 'undefined' && typeof window.alert === 'function') {
       window.alert(mensaje ? `${titulo}\n\n${mensaje}` : titulo);

@@ -36,16 +36,19 @@ describe('roles asignables', () => {
 describe('pantallas de Administración', () => {
   const leer = (archivo: string) => readFileSync(join(__dirname, '..', '..', 'screens', archivo), 'utf8');
 
-  it('la aprobación ofrece los seis roles y solo manda el rol cuando no es el de siempre', () => {
+  /* Spec 002, fase 2: los roles salen de `useOpcionesDeRol` (los seis base de `ROLES_ASIGNABLES` y los personalizados
+     de `GET /admin/roles-asignables`); con un personalizado va además `rolPersonalizadoId`. */
+  it('la aprobación ofrece los roles asignables y solo manda el rol cuando no es el de siempre', () => {
     const solicitudes = leer('SolicitudesAdminScreen.tsx');
-    expect(solicitudes).toMatch(/ROLES_ASIGNABLES\.map\(/);
-    expect(solicitudes).toMatch(/await aprobarSolicitud\(solicitud\.id, rol\);/);
+    expect(solicitudes).toMatch(/const opciones = useOpcionesDeRol\(\);/);
+    expect(solicitudes).toMatch(/\{opciones\.map\(rol => \(/);
+    expect(solicitudes).toMatch(/await aprobarSolicitud\(solicitud\.id, rol\.rolBase, rol\.rolPersonalizadoId\);/);
     expect(solicitudes).toMatch(/await aprobarSolicitud\(solicitud\.id\);/);
   });
 
   it('Equipo y roles usa la misma lista y pide role=TRAINEE para la sección de aprendices', () => {
     const staff = leer('StaffRolesScreen.tsx');
-    expect(staff).toMatch(/const ROLES = ROLES_ASIGNABLES;/);
+    expect(staff).toMatch(/const opciones = useOpcionesDeRol\(\);/);
     expect(staff).toMatch(/listarAprendices\(\{ pagina, tamano: POR_PAGINA, busqueda: busquedaAplicada, rol: 'TRAINEE' \}\)/);
   });
 });

@@ -90,6 +90,12 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
   /* Spec 002: con el chat de SER apagado por Soporte TI (o SER entera, o el circuito de la IA abierto), el panel se
      abre igual y en lugar de la conversación muestra el aviso. No se pide el historial: el servidor respondería 503. */
   const chatDeSer = useFuncionalidad(CLAVES.iaChat);
+  /* Spec 002, fase 2: si SER todavía no le toca a esta cuenta (despliegue, rol personalizado), el panel no se abre y,
+     si estaba abierto, se cierra solo, sin diálogo. Las entradas (botón flotante, orbe, curso) tampoco se dibujan. */
+  const serDisponible = chatDeSer.disponible;
+  useEffect(() => {
+    if (visible && !serDisponible) onClose();
+  }, [visible, serDisponible, onClose]);
 
   const [texto, setTexto] = useState('');
   // Dictado por voz (plan de IA v2.1 §3.5): lo dictado se suma al campo y la persona lo revisa
@@ -154,7 +160,7 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
   if (!visible) return null;
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose} statusBarTranslucent>
+    <Modal visible={visible && serDisponible} animationType="slide" onRequestClose={onClose} statusBarTranslucent>
       <SafeAreaView style={[styles.root, { backgroundColor: c.bg }]} edges={['top', 'bottom']}>
         {/* Header */}
         <View

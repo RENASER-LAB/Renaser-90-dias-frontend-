@@ -1,5 +1,5 @@
 import React from 'react';
-import { useColorScheme } from 'react-native';
+import { useColorScheme, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
@@ -24,6 +24,7 @@ import { AvisoDeAlarmasBorradas } from './src/features/alarmas/components/AvisoD
 import { SincronizadorDeAcciones } from './src/features/objetivos/components/SincronizadorDeAcciones';
 import { AnfitrionDeCelebraciones } from './src/features/fenix/components/AnfitrionDeCelebraciones';
 import { FuncionalidadesProvider } from './src/features/plataforma/estado/FuncionalidadesProvider';
+import { FranjaVerComo, SinBordeDeArriba } from './src/features/soporte-ti/verComo/FranjaVerComo';
 
 function Shell() {
   const { mode, c } = useTheme();
@@ -31,8 +32,14 @@ function Shell() {
     ? { ...DefaultTheme, colors: { ...DefaultTheme.colors, background: c.bg } }
     : { ...DarkTheme, colors: { ...DarkTheme.colors, background: c.bg } };
   return (
-    /* La `ref` la usa el arranque guiado para llevar al Muro desde fuera del arbol de navegacion
-       (ver `navigation/navegacionRef.ts`). No cambia nada del comportamiento del contenedor. */
+    /* «Ver como» (spec 002, fase 2): mientras Soporte TI ve la app como otro rol, la franja fija va arriba, en el flujo,
+       y todo lo demás debajo (sin borde seguro de arriba: lo pone la franja). Sin «ver como» la franja no dibuja nada y
+       la app queda exactamente como antes. */
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
+    <FranjaVerComo />
+    <SinBordeDeArriba>
+    {/* La `ref` la usa el arranque guiado para llevar al Muro desde fuera del arbol de navegacion
+        (ver `navigation/navegacionRef.ts`). No cambia nada del comportamiento del contenedor. */}
     <NavigationContainer ref={navegacionRef} theme={navTheme}>
       {/* «Ocultar la barra al desplazar» (2026-10-02): la barra de pestañas y el botón del
           acompañante leen de acá si la barra está escondida. Ver `navigation/barraAlDesplazar`. */}
@@ -80,6 +87,8 @@ function Shell() {
       <AnfitrionAlerta />
       </BarraInferiorProvider>
     </NavigationContainer>
+    </SinBordeDeArriba>
+    </View>
   );
 }
 

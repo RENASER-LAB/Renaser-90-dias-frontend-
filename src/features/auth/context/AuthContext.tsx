@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef } from 'react';
 
 import { registrarTokenPushNativo, escucharRotacionDeToken, olvidarTokenPushRegistrado } from '../../mentor/notificaciones/pushNativo';
 import { escucharAperturaDeAviso, olvidarRutaPendiente } from '../../mentor/notificaciones/rutaDeAviso';
@@ -16,9 +16,13 @@ import { capacidadesDePrograma } from '../../mentor/api/mentorApi';
 import {
   ApiError,
   cargarTokenPersistido,
+  getTokenSesion,
+  ponerModoSoloLectura,
   setTokenSesion,
   suscribirSesionVencida,
 } from '../../../services/http/apiClient';
+import { abrirSesionDePrueba, cerrarSesionDePrueba, type EleccionVerComo } from '../../soporte-ti/verComo/verComoApi';
+import { guardarVerComo, olvidarVerComo, recuperarVerComo, verComoActual } from '../../soporte-ti/verComo/sesionVerComo';
 import {
   USUARIO_DEMO_APPLE,
   USUARIO_DEMO_EXISTENTE,
@@ -83,6 +87,10 @@ async function resolverGateDeIngreso(): Promise<boolean> {
 }
 
 export type { User } from '../types/auth.types';
+export type { EleccionVerComo } from '../../soporte-ti/verComo/verComoApi';
+
+/** Soporte TI viendo la app como otro rol, en solo lectura (spec 002, fase 2, §5): lo que dice la franja de arriba. */
+export type VerComoEnCurso = { etiqueta: string; venceEn: string | null };
 
 type AuthContextType = {
   user: User | null;
@@ -111,6 +119,15 @@ type AuthContextType = {
   demoLogin: () => void;
   demoNewUser: () => void;
   logout: () => void;
+  /** «Ver como» en curso (`null` si no). */
+  verComo: VerComoEnCurso | null;
+  /**
+   * Entra a «ver como» (desde la consola Soporte TI): guarda aparte la sesión de Soporte TI, se cambia a la de la cuenta
+   * de prueba y la app se vuelve a armar como la ve ese rol. Si algo falla antes de cambiarse, sigue todo como estaba.
+   */
+  entrarAVerComo: (eleccion: EleccionVerComo, etiqueta: string) => Promise<void>;
+  /** Vuelve a la sesión de Soporte TI. Funciona sin red: restaura lo guardado y cierra la de prueba si puede. */
+  salirDeVerComo: () => Promise<void>;
 };
 
 const AuthCtx = createContext<AuthContextType | null>(null);
@@ -144,6 +161,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * (en cualquiera de los dos sentidos).
    */
   const [onboardingResuelto, setOnboardingResuelto] = useState<boolean>(false);
+  /* «Ver como» (spec 002, fase 2): la franja lo lee de acá; la referencia, los efectos que no deben actuar en solo
+     lectura (el registro del push, que el servidor rechazaría con 403). */
+  const [verComo, setVerComo] = useState<VerComoEnCurso | null>(null);
+  const verComoRef = useRef<VerComoEnCurso | null>(null);
+  verComoRef.current = verComo;
 
   /**
    * Rehidrata la sesión al abrir la app: lee el token guardado en el Keychain/Keystore y pregunta
@@ -156,7 +178,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let vigente = true;
     (async () => {
-      const token = await cargarTokenPersistido();
+      /* Spec 002, fase 2: si la app se cerró en «ver como», se vuelve a la sesión de Soporte TI (no sobrevive a un
+         reinicio) y la de prueba se cierra en el servidor si se puede. */
+      const pendiente = await recuperarVerComo();
+      let token: string | null;
+      if (pendiente) {
+        void cerrarSesionDePrueba(pendiente.tokenDePrueba);
+        ponerModoSoloLectura(false);
+        setTokenSesion(pendiente.tokenSoporte);
+        await olvidarVerComo();
+        token = pendiente.tokenSoporte;
+      } else {
+        token = await cargarTokenPersistido();
+      }
       if (!token) {
         if (vigente) setSesionCargando(false);
         return;
@@ -205,6 +239,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * avisar.
    */
   useEffect(() => suscribirSesionVencida(() => {
+    // En «ver como», lo que vence es la sesión de prueba (30 min): se vuelve a la de Soporte TI, no al login.
+    if (verComoActual()) {
+      void volverDeVerComoRef.current();
+      return;
+    }
     setUser(null);
     setIsOnboardingCompleted(false);
     setOnboardingResuelto(false);
@@ -231,8 +270,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       olvidarTokenPushRegistrado();
       return;
     }
-    void registrarTokenPushNativo();
-    const dejarDeEscucharToken = escucharRotacionDeToken();
+    // En «ver como» no se registra el teléfono para la cuenta de prueba (solo lectura: el servidor lo rechazaría).
+    if (!verComoRef.current) void registrarTokenPushNativo();
+    // Tampoco se escucha la rotación del token en «ver como» (el registro sería otra escritura de fondo).
+    const dejarDeEscucharToken = verComoRef.current ? () => undefined : escucharRotacionDeToken();
     const dejarDeEscucharAvisos = escucharAperturaDeAviso();
     return () => {
       dejarDeEscucharToken();
@@ -395,7 +436,79 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setOnboardingResuelto(true);
   }, []);
 
+  /**
+   * «Ver como» (spec 002, fase 2, §5). Entrar: la sesión de Soporte TI y su perfil se guardan aparte ANTES de cambiarse,
+   * así salir siempre puede volver, aun sin red. Las alarmas locales se tratan como un cambio de cuenta (E-413): las de
+   * la cuenta de prueba no quedan sonando al volver.
+   */
+  const entrarAVerComo = useCallback(async (eleccion: EleccionVerComo, etiqueta: string) => {
+    const tokenSoporte = getTokenSesion();
+    const usuarioSoporte = user;
+    if (!tokenSoporte || !usuarioSoporte) throw new Error('No hay una sesión de Soporte TI para guardar.');
+    const prueba = await abrirSesionDePrueba(eleccion);
+    const nombre = prueba.nombreDelRol ?? etiqueta;
+    await guardarVerComo({ tokenSoporte, usuarioSoporte, tokenDePrueba: prueba.token, etiqueta: nombre, venceEn: prueba.venceEn });
+    conexionChat.cerrarTodo();
+    // Solo lectura desde ya: ninguna escritura de fondo sale con la sesión de prueba (D-273).
+    ponerModoSoloLectura(true);
+    setTokenSesion(prueba.token);
+    let api: Awaited<ReturnType<typeof authApi.perfilActual>>;
+    try {
+      api = await authApi.perfilActual();
+    } catch (e) {
+      // No se pudo ni leer la cuenta de prueba: se vuelve a la de Soporte TI como si nada.
+      ponerModoSoloLectura(false);
+      setTokenSesion(tokenSoporte);
+      await olvidarVerComo();
+      void cerrarSesionDePrueba(prueba.token);
+      throw e;
+    }
+    await alarmasListas(api.id).catch(() => undefined);
+    setVerComo({ etiqueta: nombre, venceEn: prueba.venceEn });
+    setUser(aUsuario(api));
+    setOnboardingResuelto(false);
+    try {
+      setIsOnboardingCompleted(await resolverGateDeIngreso());
+    } catch {
+      setIsOnboardingCompleted(true);
+    }
+    setOnboardingResuelto(true);
+  }, [user]);
+
+  const salirDeVerComo = useCallback(async () => {
+    const guardado = verComoActual();
+    if (!guardado) {
+      setVerComo(null);
+      return;
+    }
+    void cerrarSesionDePrueba(guardado.tokenDePrueba);
+    conexionChat.cerrarTodo();
+    ponerModoSoloLectura(false);
+    setTokenSesion(guardado.tokenSoporte);
+    await olvidarVerComo();
+    await alarmasListas(guardado.usuarioSoporte.id).catch(() => undefined);
+    setVerComo(null);
+    setUser(guardado.usuarioSoporte);
+    setIsOnboardingCompleted(true);
+    setOnboardingResuelto(true);
+    // El perfil se pone al día por detrás; sin red, queda el guardado.
+    void authApi.perfilActual().then(api => setUser(aUsuario(api)), () => undefined);
+  }, []);
+  /* El oyente de la sesión vencida se registra una sola vez: llama a la versión vigente por esta referencia. */
+  const volverDeVerComoRef = useRef(salirDeVerComo);
+  volverDeVerComoRef.current = salirDeVerComo;
+
   const logout = useCallback(() => {
+    /* Cerrar sesión en «ver como» cierra las dos: la de prueba (en el servidor, si se puede) y la de Soporte TI, que
+       se restaura un instante para que `cerrarSesion` la cierre a ella. */
+    const enVerComo = verComoActual();
+    if (enVerComo) {
+      void cerrarSesionDePrueba(enVerComo.tokenDePrueba);
+      ponerModoSoloLectura(false);
+      setTokenSesion(enVerComo.tokenSoporte);
+      void olvidarVerComo();
+      setVerComo(null);
+    }
     // Se limpia el estado local sin esperar al servidor: cerrar sesión nunca debe poder fallar
     // desde el punto de vista de quien usa la app. authApi ya descarta el token igual.
     //
@@ -436,6 +549,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       demoLogin,
       demoNewUser,
       logout,
+      verComo,
+      entrarAVerComo,
+      salirDeVerComo,
     }),
     [
       user,
@@ -456,6 +572,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       demoLogin,
       demoNewUser,
       logout,
+      verComo,
+      entrarAVerComo,
+      salirDeVerComo,
     ]
   );
 

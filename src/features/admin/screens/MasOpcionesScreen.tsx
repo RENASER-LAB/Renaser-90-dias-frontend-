@@ -12,6 +12,8 @@ import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher'
 import { avisar } from '../utils/dialogo';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
 import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
+import { useDisponibilidad } from '../../plataforma/estado/useFuncionalidad';
+import { CLAVES } from '../../plataforma/utils/clavesDeLaApp';
 
 /**
  * Lo institucional que se usa de vez en cuando.
@@ -46,19 +48,23 @@ export function MasOpcionesScreen({
     return true;
   });
 
-  const enLaApp: Array<{ titulo: string; detalle: string; onPress: () => void }> = [
+  /* Spec 002, fase 2: lo que esta cuenta todavía no tiene (despliegue, rol personalizado) no se dibuja. */
+  const esDisponible = useDisponibilidad();
+  const enLaApp: Array<{ titulo: string; detalle: string; onPress: () => void; clave?: string }> = [
     /* La portada de la tarjeta y los tres mensajes de bienvenida (pedido del dueño del 27/09,
        backend D-210). Vive acá y no en la raíz: se cambia de vez en cuando (A-3). */
     {
       titulo: 'Bienvenida',
       detalle: 'La tarjeta y los mensajes que recibe quien entra al programa',
       onPress: onAbrirBienvenida,
+      clave: CLAVES.adminBienvenida,
     },
     /* El animal de cada fase de Yo, con vista previa (pedido del dueño del 06/10, backend D-258). */
     {
       titulo: 'Imágenes de las fases',
       detalle: 'El animal que ve cada aprendiz en Yo, con vista previa',
       onPress: onAbrirImagenesDeFases,
+      clave: CLAVES.adminFases,
     },
     /* El catálogo global y a qué roles llega cada hábito (pedido del dueño del 12/10, backend D-264, spec
        001-habitos-por-rol). Los horarios, guías y audioterapias siguen en la web (fila de abajo). */
@@ -66,11 +72,13 @@ export function MasOpcionesScreen({
       titulo: 'Hábitos del programa',
       detalle: 'Crear y editar los hábitos de todos, y elegir a qué roles llega cada uno',
       onPress: onAbrirHabitosDelPrograma,
+      clave: CLAVES.adminHabitos,
     },
     {
       titulo: 'Equipo y roles',
       detalle: 'Cambiar el rol de una cuenta: aprendiz, guía de aprendiz, mentor, líder, administrador o alquimista',
       onPress: onAbrirStaff,
+      clave: CLAVES.adminEquipo,
     },
     /* El guía no es un rol (pedido del dueño del 01/10, backend D-242): va al lado de «Equipo y
        roles» para que se encuentre donde se lo busca. */
@@ -139,7 +147,7 @@ export function MasOpcionesScreen({
       >
         <View style={{ gap: 10 }}>
           <TituloDeSeccion>Desde acá</TituloDeSeccion>
-          {enLaApp.map(item => (
+          {enLaApp.filter(item => esDisponible(item.clave)).map(item => (
             <Pressable
               key={item.titulo}
               onPress={item.onPress}

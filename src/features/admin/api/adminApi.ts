@@ -13,6 +13,7 @@ import {
   paginaAprendicesSchema,
   paginaSolicitudesSchema,
   paginaStaffSchema,
+  rolAsignableOpcionSchema,
   type AprendizCandidatoApi,
   type CohorteAdminApi,
   type DetalleAprendizApi,
@@ -449,11 +450,33 @@ export async function listarSolicitudes(
  * manda cuerpo y entra como aprendiz, como siempre. Un backend anterior a D-265 ignora el cuerpo: por eso el
  * backend sale antes que el APK.
  */
-export async function aprobarSolicitud(id: string, rol?: RolAsignable): Promise<void> {
+/**
+ * Aprobar una solicitud. Sin rol, el pedido de siempre (sin cuerpo: entra como aprendiz). Con un rol personalizado
+ * (spec 002, fase 2, contrato §4.5), además `rolPersonalizadoId`: el rol base sale de él.
+ */
+export async function aprobarSolicitud(id: string, rol?: RolAsignable | string, rolPersonalizadoId?: string | null): Promise<void> {
+  const cuerpo = rol ? { role: rol, ...(rolPersonalizadoId ? { rolPersonalizadoId } : {}) } : null;
   await apiFetch<unknown>(`/api/v1/account-requests/${encodeURIComponent(id)}/approve`, {
     method: 'POST',
-    ...(rol ? { body: { role: rol } } : {}),
+    ...(cuerpo ? { body: cuerpo } : {}),
   });
+}
+
+/** Una opción de rol para elegir (Equipo y roles, Solicitudes): un rol base o un personalizado que hereda de uno. */
+export type OpcionDeRol = { clave: string; nombre: string; rolBase: string; rolPersonalizadoId: string | null };
+
+/**
+ * `GET /api/v1/admin/roles-asignables` (spec 002, fase 2, contrato §4.5): los seis base y los personalizados activos.
+ * Un backend sin el endpoint (404) o una respuesta rara dejan los seis de siempre: quien llama lo resuelve con
+ * `opcionesDeRol` (`utils/rolesAsignables`).
+ */
+export async function listarRolesAsignables(): Promise<OpcionDeRol[]> {
+  const lista = validarRespuesta<z.infer<typeof rolAsignableOpcionSchema>[]>(
+    z.array(rolAsignableOpcionSchema),
+    await apiFetch<unknown>('/api/v1/admin/roles-asignables', { timeoutMs: 15_000 }),
+    'GET /api/v1/admin/roles-asignables',
+  );
+  return lista.map(o => ({ clave: o.clave, nombre: o.nombre?.trim() || o.clave, rolBase: o.rolBase, rolPersonalizadoId: o.rolPersonalizadoId ?? null }));
 }
 
 /** Los seis roles que el backend acepta en `PATCH /users/{id}/role` y al aprobar. `TRAINEE_GUIDE` es el Guía de
@@ -468,13 +491,14 @@ export type RolAsignable = 'TRAINEE' | 'TRAINEE_GUIDE' | 'MENTOR' | 'MENTOR_LEAD
  * Al promover a MENTOR el backend crea el perfil de mentor si falta, asi que no hace falta un
  * segundo paso desde aca.
  */
-export async function cambiarRolDeUsuario(usuarioId: string, nuevoRol: RolAsignable): Promise<void> {
+export async function cambiarRolDeUsuario(usuarioId: string, nuevoRol: RolAsignable | string, rolPersonalizadoId?: string | null): Promise<void> {
   await apiFetch<unknown>(`/api/v1/users/${encodeURIComponent(usuarioId)}/role`, {
     method: 'PATCH',
     // `apiFetch` ya hace `JSON.stringify(body)`: acá va el objeto crudo, como el resto de este
     // archivo. Pasar un string lo codificaba dos veces y el backend respondía 400 «cuerpo
     // malformado». E18 no lo vio porque probó la API directa, no esta función.
-    body: { newRole: nuevoRol },
+    // Spec 002, fase 2: con `rolPersonalizadoId` el rol base sale de él; sin él, el servidor le quita el que tuviera.
+    body: { newRole: nuevoRol, ...(rolPersonalizadoId ? { rolPersonalizadoId } : {}) },
   });
 }
 

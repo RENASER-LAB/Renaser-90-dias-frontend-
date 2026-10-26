@@ -37,6 +37,8 @@ import { subirPortada, type PortadaElegida } from '../utils/portadaDelEvento';
 import { guardarVistaPreferida, leerVistaPreferida, VISTA_POR_DEFECTO, type VistaDeEventos } from '../utils/vistaPreferida';
 import { fechaEnZona, zonaDelTelefono } from '../utils/zonaHoraria';
 import { puedeGestionarEventos } from '../utils/permisosDeEventos';
+import { useDisponibilidad } from '../../plataforma/estado/useFuncionalidad';
+import { CLAVES } from '../../plataforma/utils/clavesDeLaApp';
 import { puedeVerAsistencia } from '../utils/asistencia';
 import { PantallaDeAsistencia } from './asistencia/PantallaDeAsistencia';
 import { useTheme } from '../../../theme/ThemeContext';
@@ -113,7 +115,11 @@ export function SeccionEventos({
   rellenoDelEncabezado?: number;
 }) {
   const { c } = useTheme();
-  const gestiona = puedeGestionarEventos(rol);
+  /* Spec 002, fase 2: crear/editar (`eventos.gestion`) y la asistencia (`eventos.asistencia`) que esta cuenta todavía no
+     tiene (despliegue, rol personalizado) no se dibujan. */
+  const esDisponible = useDisponibilidad();
+  const gestiona = puedeGestionarEventos(rol) && esDisponible(CLAVES.eventosGestion);
+  const asistenciaDisponible = esDisponible('eventos.asistencia');
   const { ocurrencias, cargando, refrescando, fallo, yaLeido, recargar, responder, quitarDeLaLista } = useEventos(
     userId,
     true,
@@ -418,7 +424,7 @@ export function SeccionEventos({
       <DetalleDelEvento
         oc={oc}
         puedeGestionar={gestiona}
-        verAsistencia={puedeVerAsistencia(rol, userId, oc.evento.creadoPor)}
+        verAsistencia={asistenciaDisponible && puedeVerAsistencia(rol, userId, oc.evento.creadoPor)}
         enviando={enviando}
         onVolver={volverALista}
         onPasarLista={() =>

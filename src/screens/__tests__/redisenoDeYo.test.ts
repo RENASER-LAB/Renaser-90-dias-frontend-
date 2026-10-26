@@ -30,7 +30,10 @@ describe('una sola de cada cosa (decisión 10)', () => {
 
   it('«Eliminar mi cuenta» es una fila roja de Ajustes, no un enlace subrayado en Yo', () => {
     expect(yo.match(/setEliminandoCuenta\(true\)/g)).toHaveLength(1);
-    expect(yo).toMatch(/titulo="Eliminar mi cuenta"\s+peligro\s+onPress=\{\(\) => setEliminandoCuenta\(true\)\}/);
+    // Spec 002, fase 2: nunca se esconde; sin la pantalla de la app (no disponible), abre la página pública.
+    expect(yo).toMatch(
+      /titulo="Eliminar mi cuenta"\s+peligro\s+onPress=\{\(\) => \(esDisponible\(CLAVES\.cuentaEliminar\) \? setEliminandoCuenta\(true\) : void abrirEliminarCuentaEnLaWeb\(\)\)\}/,
+    );
     expect(yo).not.toContain("textDecorationLine: 'underline'");
     // Va en el último grupo de Ajustes, junto a cerrar sesión.
     const ultimoGrupo = yo.slice(yo.lastIndexOf('<GrupoDeAjustes>'));

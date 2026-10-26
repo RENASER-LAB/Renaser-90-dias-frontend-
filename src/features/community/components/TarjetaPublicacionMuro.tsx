@@ -7,6 +7,8 @@ import { ConfirmacionEnLinea } from '../../../components/ConfirmacionEnLinea';
 import type { CommentItem, PostItem } from '../../../screens/ComunidadScreen';
 import { useTheme } from '../../../theme/ThemeContext';
 import { space } from '../../../theme/tokens';
+import { useFuncionalidad } from '../../plataforma/estado/useFuncionalidad';
+import { CLAVES } from '../../plataforma/utils/clavesDeLaApp';
 import type { FotoMuroNormalizada } from '../utils/normalizarImagen';
 import { PROPORCION_POR_DEFECTO } from '../utils/proporcionImagen';
 import { FotoMuro } from './FotoMuro';
@@ -77,8 +79,10 @@ function TarjetaPublicacionMuroBase({
   acciones,
 }: Props) {
   const { c, t } = useTheme();
+  const reacciones = useFuncionalidad(CLAVES.muroReacciones);
+  const comentarios = useFuncionalidad(CLAVES.muroComentarios);
   const isExpanded = expandida;
-  const commentsVisible = comentariosAbiertos;
+  const commentsVisible = comentariosAbiertos && comentarios.disponible;
 
   return (
       <View
@@ -256,6 +260,8 @@ function TarjetaPublicacionMuroBase({
             íconos de 14, texto de 10,5 en versales y un color distinto por botón (verde, dorado, gris)
             que no significaba nada. */}
         <View style={[styles.actionButtonsRow, { borderTopColor: c.divider }]}>
+          {/* Spec 002, fase 2: «Me gusta» y «Comentar» que esta cuenta todavía no tiene no se dibujan. */}
+          {reacciones.disponible ? (
           <Pressable
             onPress={() => acciones.alternarLike(post.id)}
             accessibilityRole="button"
@@ -280,7 +286,9 @@ function TarjetaPublicacionMuroBase({
               Me gusta
             </Text>
           </Pressable>
+          ) : null}
 
+          {comentarios.disponible ? (
           <Pressable
             onPress={() => acciones.alternarComentarios(post.id)}
             accessibilityRole="button"
@@ -292,6 +300,7 @@ function TarjetaPublicacionMuroBase({
               Comentar
             </Text>
           </Pressable>
+          ) : null}
 
           <Pressable
             onPress={() => acciones.compartir(post.id)}

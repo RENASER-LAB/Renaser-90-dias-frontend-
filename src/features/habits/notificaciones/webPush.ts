@@ -75,6 +75,7 @@ export async function registrarSuscripcionWebPush(): Promise<boolean> {
         platform: 'WEB',
         token: JSON.stringify({ endpoint, keys: { p256dh, auth } }),
       },
+      deFondo: true,
     });
     return true;
   } catch {

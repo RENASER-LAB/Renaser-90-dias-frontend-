@@ -17,6 +17,19 @@ import { etiquetaDeLaFilaDeAtencion } from '../utils/etiquetaDeAtencion';
 import type { PersonaDeFicha, SeccionAdmin } from '../types/admin.types';
 import { usePendientesAdmin } from '../hooks/usePendientesAdmin';
 import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
+import { useDisponibilidad } from '../../plataforma/estado/useFuncionalidad';
+import { CLAVES } from '../../plataforma/utils/clavesDeLaApp';
+
+/** La funcionalidad del catálogo de cada sección de la raíz (spec 002). «Más opciones» no tiene una propia. */
+const CLAVE_DE_LA_SECCION_ADMIN: Readonly<Record<SeccionAdmin, string | null>> = {
+  inicio: null,
+  grupos: CLAVES.adminGrupos,
+  personas: CLAVES.adminPersonas,
+  solicitudes: CLAVES.adminSolicitudes,
+  semaforo: CLAVES.semaforo,
+  caja: CLAVES.caja,
+  mas: null,
+};
 
 /**
  * La raíz de Administración: a quién atender, qué hay pendiente y por dónde se entra.
@@ -56,7 +69,9 @@ export function AdminInicioScreen({
     return true;
   });
 
-  const colas: Array<{
+  /* Spec 002, fase 2: lo que esta cuenta todavía no tiene (despliegue, rol personalizado) no se dibuja. */
+  const esDisponible = useDisponibilidad();
+  const todasLasColas: Array<{
     clave: SeccionAdmin;
     titulo: string;
     queCuenta: string;
@@ -85,14 +100,16 @@ export function AdminInicioScreen({
       fallo: pendientes.falloSolicitudes,
     },
   ];
+  const colas = todasLasColas.filter(cola => esDisponible(CLAVE_DE_LA_SECCION_ADMIN[cola.clave]));
 
-  const mas: Array<{ clave: SeccionAdmin; titulo: string; detalle: string }> = [
+  const todoLoDemas: Array<{ clave: SeccionAdmin; titulo: string; detalle: string }> = [
     /* Semáforo de cumplimiento (D-168): el resumen por grupos y, al tocar uno, su tabla con nombres. */
     { clave: 'semaforo', titulo: 'Semáforo', detalle: 'Cuánto cumplió cada grupo, semana a semana' },
     /* Caja Renaser (D-219, 28/09): armar, enviar y seguir la caja de quien pasó la Fase 1. */
     { clave: 'caja', titulo: 'Caja Renaser', detalle: 'Armar, enviar y seguir cada caja' },
     { clave: 'mas', titulo: 'Más opciones', detalle: 'Bienvenida, equipo, catálogo, soporte y comunidad' },
   ];
+  const mas = todoLoDemas.filter(seccion => esDisponible(CLAVE_DE_LA_SECCION_ADMIN[seccion.clave]));
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>

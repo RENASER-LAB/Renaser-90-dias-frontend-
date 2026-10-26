@@ -41,6 +41,12 @@ const ETIQUETA_ROL: Record<string, string> = {
   SOPORTE_TI: 'Soporte TI',
 };
 
+/** El nombre del rol personalizado que venga en una fila (spec 002, fase 2), o `null`. */
+function nombreDelRolPersonalizado(fila: unknown): string | null {
+  const rp = (fila as { rolPersonalizado?: { nombre?: unknown } | null } | null)?.rolPersonalizado;
+  return rp && typeof rp.nombre === 'string' && rp.nombre.trim() ? rp.nombre.trim() : null;
+}
+
 function mapearMedia(media: WallPost['media']): PostItem['media'] {
   return media.map((m, idx) => {
     const esVideo = m.mimeType.startsWith('video/');
@@ -138,7 +144,8 @@ export function mapearReaccion(item: WallReactionItem): ReactionUser {
   return {
     id: item.userId,
     name: item.name?.trim() || 'Miembro Renaser',
-    role: item.role ? (ETIQUETA_ROL[item.role] ?? item.role) : '',
+    // Spec 002, fase 2: si el servidor manda el rol personalizado, se lee su nombre (aditivo y tolerante).
+    role: nombreDelRolPersonalizado(item) ?? (item.role ? (ETIQUETA_ROL[item.role] ?? item.role) : ''),
     avatar: AVATAR_POR_DEFECTO,
     // La hoja de reacciones (2026-10-05) sí dibuja la foto: `AvatarPersona`, con iniciales si no hay.
     avatarUrl: item.avatarUrl ?? null,

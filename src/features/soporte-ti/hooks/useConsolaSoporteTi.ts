@@ -53,7 +53,12 @@ export function useConsolaSoporteTi(activa: boolean, alBloquearse: () => void) {
     setFuncionalidades(actual => (actual ? actual.map(f => (f.clave === nueva.clave ? nueva : f)) : actual));
   }, []);
 
-  return { funcionalidades, circuito, cargando, fallo, recargar, reemplazar };
+  /** Fase 2: el despliegue cambió (escalón o probadores): la fila se pone al día sin releer el catálogo. */
+  const cambiarDespliegueDeLaFila = useCallback((clave: string, despliegue: { porcentaje: number; probadores: number } | null) => {
+    setFuncionalidades(actual => (actual ? actual.map(f => (f.clave === clave ? { ...f, despliegue } : f)) : actual));
+  }, []);
+
+  return { funcionalidades, circuito, cargando, fallo, recargar, reemplazar, cambiarDespliegueDeLaFila };
 }
 
 export type EstadoDeLaConsola = ReturnType<typeof useConsolaSoporteTi>;

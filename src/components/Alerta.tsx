@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Alert as AlertNativo, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { AlertOptions } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
+import { debeOmitirseElDialogo } from '../services/http/erroresSinDialogo';
 
 /**
  * Reemplazo de `Alert` de React Native que TAMBIEN funciona en la web.
@@ -84,6 +85,9 @@ export function opcionesNativasDeDescarte(botones?: readonly BotonAlerta[]): Ale
 
 export const Alert = {
   alert(titulo: string, mensaje?: string, botones?: BotonAlerta[]): void {
+    // Spec 002, fase 2: el aviso con que una pantalla responde a un 404 «no disponible» o a un 403 «solo lectura» no se
+    // abre (la entrada se esconde sola; la franja de «ver como» lo dice en línea). Ver `erroresSinDialogo`.
+    if (debeOmitirseElDialogo(titulo, mensaje, botones)) return;
     if (Platform.OS !== 'web') {
       AlertNativo.alert(titulo, mensaje, botones, opcionesNativasDeDescarte(botones));
       return;

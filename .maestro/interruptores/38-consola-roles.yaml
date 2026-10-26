@@ -1,0 +1,66 @@
+# 38 — Consola Soporte TI, roles personalizados (spec 002, fase 2, US7): crear «E2E junior» que hereda de Mentor con el
+# chat marcado, desactivarlo y borrarlo. Se deja como estaba.
+# Precondición: el backend con los roles personalizados (B2) y menos de 20 activos. Cuenta Soporte TI con una
+# contraseña corta (ver el README).
+# cuenta: soporte
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-consola.yaml
+- tapOn: "Roles\\..*"
+- tapOn: "Nuevo rol"
+- tapOn:
+    id: "campo-nombre-rol"
+- inputText: "E2E junior"
+- hideKeyboard
+- tapOn: "Mentor"
+- scrollUntilVisible:
+    element: "Chat\\..*"
+    direction: DOWN
+- tapOn: "Chat\\..*"
+- scrollUntilVisible:
+    element:
+      id: "campo-motivo-rol"
+    direction: DOWN
+- tapOn:
+    id: "campo-motivo-rol"
+- inputText: "E2E"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Crear rol"
+    direction: DOWN
+- tapOn: "Crear rol"
+# El aviso «Rol … creado.» dura 4 s y cada paso de Maestro tarda ~10 s en esta build: se comprueba que el rol ya
+# existe (solo un rol guardado ofrece «Borrar rol»).
+- scrollUntilVisible:
+    element: "Borrar rol"
+    direction: DOWN
+    timeout: 30000
+- takeScreenshot: 38a-rol-creado
+# Borrar pide motivo (queda en la auditoría) y, por ser crítico, la contraseña.
+- scrollUntilVisible:
+    element:
+      id: "campo-motivo-rol"
+    direction: DOWN
+- tapOn:
+    id: "campo-motivo-rol"
+- inputText: "E2E"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Borrar rol"
+    direction: DOWN
+- tapOn: "Borrar rol"
+- tapOn: "(?i)borrar"
+- extendedWaitUntil:
+    visible: "Confirma con tu contraseña"
+    timeout: 30000
+- tapOn:
+    id: "campo-contrasena-confirmacion"
+- inputText: ${CONTRASENA}
+- hideKeyboard
+- tapOn: "Confirmar cambio"
+- extendedWaitUntil:
+    visible: "Nuevo rol"
+    timeout: 30000
+- assertNotVisible: "E2E junior"
+- takeScreenshot: 38b-rol-borrado
