@@ -1,10 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import * as habitsApi from '../api/habitsApi';
 import { alCumplirUnHabito } from '../eventos/habitoCumplido';
+import type { PreferenciaHabitoApi } from '../types/habits.types';
+import { anotarCumplido } from './cumplidoDeHoy';
 import {
+  ajustarRecordatoriosAlServidor,
   asegurarCanal,
   cargarNotificaciones,
   HAY_RECORDATORIOS_LOCALES,
+  recordatoriosPorHabito,
   rutaDelAvisoDeHabito,
   sonidoDe,
 } from './recordatoriosDeHabito';
@@ -49,9 +54,11 @@ import {
  *
  * ## Límites conocidos
  *
- * - La Pastilla Renacer y la Clase diaria se cierran por su propio endpoint, que no emite `habitoCumplido`: si
- *   una de ellas se cumple sin tocar la alarma, sus repeticiones de ese día suenan igual.
  * - Un hábito cumplido desde OTRO teléfono o desde la web no avisa a este: sus repeticiones de hoy suenan igual.
+ *
+ * > **Corregido 2026-10-27 (issue #33).** Decía también que la Pastilla Renacer y la Clase diaria, que se cierran por su
+ * > propio endpoint, no cancelaban sus repeticiones. Ahora llaman a `alCumplirElHabito` al confirmar el servidor, que
+ * > además silencia el resto de las alarmas de hoy (el puente de `recordatoriosDeHabito.ts`).
  * - Android calla el segundo sonido de una misma app en el mismo segundo: si la repetición de un hábito cae en el
  *   mismo minuto que la alarma de otro, una de las dos puede no sonar (ya pasa con las alarmas principales y por
  *   eso existe `avisosJuntos`, que no agrupa las repeticiones).
@@ -233,8 +240,9 @@ export async function repeticionesProgramadas(): Promise<Map<string, string>> {
  * La persona atendió el hábito (tocó una de sus alarmas o lo completó): las repeticiones de hoy dejan de sonar y
  * no se vuelven a poner. Las de mañana en adelante siguen. Idempotente; nunca lanza.
  */
-export async function atenderHabito(habitoId: string, ahora: Date = new Date()): Promise<void> {
-  const hoy = fechaCompacta(ahora);
+export async function atenderHabito(habitoId: string, ahora: Date = new Date(), dia?: string): Promise<void> {
+  // `dia` (`AAAAMMDD`): el día del hábito que se cumplió, si no es el de hoy (Dormir cumplido pasada la medianoche).
+  const hoy = dia ?? fechaCompacta(ahora);
   const atendidos = new Set<string>([hoy]);
   const N = cargarNotificaciones();
   if (N) {
@@ -278,9 +286,45 @@ export async function atenderLaAlarmaDeUnHabito(
   return habitoId;
 }
 
-/** Escucha «se cumplió un hábito» y lo da por atendido. Devuelve cómo dejar de escuchar. */
-export function atenderAlCumplirUnHabito(): () => void {
+/**
+ * El hábito se cumplió hoy (issue #33, 2026-10-27): no suena nada más de él en el resto del día, y mañana suena normal.
+ *
+ * 1. **Anota** que se cumplió hoy (`cumplidoDeHoy.ts`). Es lo primero y no depende de nada: desde ese momento cualquier
+ *    `programar` del hábito —Plan al mover la hora, Training al guardar, la puesta al día— lo respeta.
+ * 2. **Atiende** el hábito: las repeticiones +5/+10 de hoy se cancelan y no vuelven (`atenderHabito`).
+ * 3. **Pone el puente**: si el hábito tiene alarmas en este teléfono, lee sus preferencias —lo mismo que lee la puesta al
+ *    día— y vuelve a poner sus alarmas SOLO para ese hábito (`ajustarRecordatoriosAlServidor`), que con la nota sabe
+ *    reemplazar las que se repiten por alarmas de fecha desde mañana (`ponerElPuenteSiHoyYaSeCumplio`). Si ya no queda
+ *    ningún aviso de hoy por sonar no toca ninguna alarma. Un hábito sin alarmas en el teléfono no hace ningún pedido.
+ *
+ * Vale para todos los cierres de un hábito: el aviso `habitoCumplido` de `completarRegistro` (Training, la hoja de
+ * evidencia, el registro con foto, el acompañante) y los que cierran por su propio endpoint, la Pastilla Renacer y la
+ * Clase diaria, que llaman a esta función directamente al confirmar el servidor. Si el pedido de las preferencias falla,
+ * la nota ya quedó y la próxima puesta al día lo deja como corresponde. Idempotente; nunca lanza.
+ */
+export async function alCumplirElHabito(
+  userId: string,
+  habitoId: string,
+  opciones: { ahora?: Date; fecha?: string; preferencias?: () => Promise<PreferenciaHabitoApi[]> } = {},
+): Promise<void> {
+  if (!userId || !habitoId || !HAY_RECORDATORIOS_LOCALES) return;
+  const ahora = opciones.ahora ?? new Date();
+  // El día del HÁBITO (`fechaEjecucion` del registro, `YYYY-MM-DD`), que no siempre es el de hoy: Dormir cumplido a las
+  // 00:40 es del día anterior y no debe apagar lo que le queda al de hoy. Sin dato, el de hoy según el teléfono.
+  const dia = /^\d{4}-\d{2}-\d{2}$/.test(opciones.fecha ?? '') ? (opciones.fecha as string).replace(/-/g, '') : fechaCompacta(ahora);
+  await sinRomper(async () => {
+    await anotarCumplido(userId, habitoId, dia);
+    await atenderHabito(habitoId, ahora, dia);
+    if (((await recordatoriosPorHabito(userId)).get(habitoId)?.length ?? 0) === 0) return;
+    const preferencias = await (opciones.preferencias ?? habitsApi.obtenerPreferencias)();
+    const propia = preferencias.find(p => p.habitId === habitoId);
+    if (propia) await ajustarRecordatoriosAlServidor(userId, [propia], { ahora });
+  }, undefined);
+}
+
+/** Escucha «se cumplió un hábito» y lo da por cumplido hoy. Devuelve cómo dejar de escuchar. */
+export function atenderAlCumplirUnHabito(userId: string): () => void {
   return alCumplirUnHabito(cumplido => {
-    if (cumplido.habitoId) void atenderHabito(cumplido.habitoId).catch(() => undefined);
+    if (cumplido.habitoId) void alCumplirElHabito(userId, cumplido.habitoId, { fecha: cumplido.fecha }).catch(() => undefined);
   });
 }

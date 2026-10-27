@@ -211,7 +211,7 @@ export interface EntradaDelPlan {
 }
 
 /** De la más temprana a la más tardía (la mayor antelación primero), sin repetir ni valores inválidos. */
-function ordenadas(antelaciones: readonly number[]): number[] {
+export function ordenadas(antelaciones: readonly number[]): number[] {
   return [...new Set(antelaciones.filter(a => Number.isFinite(a) && a >= 0))].sort((a, b) => b - a);
 }
 

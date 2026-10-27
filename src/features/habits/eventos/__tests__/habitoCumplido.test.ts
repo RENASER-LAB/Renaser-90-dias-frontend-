@@ -12,7 +12,9 @@ jest.mock('../../../../services/http/apiClient', () => ({
   ...jest.requireActual<typeof import('../../../../services/http/apiClient')>('../../../../services/http/apiClient'),
   apiFetch: (...a: unknown[]) => mockApiFetch(...a),
 }));
-jest.mock('../../api/habitsApi', () => ({ obtenerTracksDeHoy: async () => [{ id: 'r1', estado: 'PENDIENTE' }] }));
+jest.mock('../../api/habitsApi', () => ({
+  obtenerTracksDeHoy: async () => [{ id: 'r1', estado: 'PENDIENTE', habitoId: 'h1', fechaEjecucion: '2026-10-20' }],
+}));
 
 const respuesta = { id: 'r1', estado: 'COMPLETADO', puntosOtorgados: 5, respuestaTexto: null, completadoEn: null };
 
@@ -23,6 +25,15 @@ describe('aviso de hábito cumplido', () => {
     const quitar = alCumplirUnHabito(oyente);
     await completarRegistro('r1');
     expect(oyente).toHaveBeenCalledTimes(1);
+    quitar();
+  });
+
+  it('el aviso trae de qué hábito es y de qué día (issue #33: Dormir cumplido pasada la medianoche es del día anterior)', async () => {
+    mockApiFetch.mockResolvedValueOnce(respuesta);
+    const oyente = jest.fn();
+    const quitar = alCumplirUnHabito(oyente);
+    await completarRegistro('r1');
+    expect(oyente).toHaveBeenCalledWith({ registroId: 'r1', puntosOtorgados: 5, habitoId: 'h1', fecha: '2026-10-20' });
     quitar();
   });
 

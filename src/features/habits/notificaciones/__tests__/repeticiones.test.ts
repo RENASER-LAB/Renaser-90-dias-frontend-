@@ -52,6 +52,7 @@ jest.mock('expo-notifications', () => ({
 import * as Notificaciones from 'expo-notifications';
 
 import { soltarAlarmasDeLaCuenta } from '../../../alarmas/alarmasDeLaCuenta';
+import * as habitsApi from '../../api/habitsApi';
 import { avisarHabitoCumplido } from '../../eventos/habitoCumplido';
 import type { DiaDelHabitoApi, PreferenciaHabitoApi } from '../../types/habits.types';
 import * as recordatorios from '../recordatoriosDeHabito';
@@ -353,13 +354,15 @@ describe('las repeticiones en el teléfono', () => {
 
   it('completar el hábito cancela las de hoy (el aviso `habitoCumplido` con su hábito)', async () => {
     await recordatorios.programar(USUARIO, GYM, TITULO, '07:00', [0], { alarma: REPITE });
-    const dejarDeEscuchar = repeticiones.atenderAlCumplirUnHabito();
+    // Cumplir un hábito con alarmas también relee sus preferencias (issue #33): acá salen de un doble, no de la red.
+    const leer = jest.spyOn(habitsApi, 'obtenerPreferencias').mockResolvedValue([preferencia()]);
+    const dejarDeEscuchar = repeticiones.atenderAlCumplirUnHabito(USUARIO);
     try {
       avisarHabitoCumplido({ registroId: 'r-1', puntosOtorgados: 8, habitoId: GYM });
-      await new Promise(resolver => setImmediate(resolver));
-      await new Promise(resolver => setImmediate(resolver));
+      await new Promise(resolver => setTimeout(resolver, 50));
     } finally {
       dejarDeEscuchar();
+      leer.mockRestore();
     }
     expect(puestas()).toHaveLength(12);
     expect(puestas().some(i => i.includes('20261020'))).toBe(false);
@@ -367,7 +370,7 @@ describe('las repeticiones en el teléfono', () => {
 
   it('un cierre sin saber de qué hábito es no cancela nada', async () => {
     await recordatorios.programar(USUARIO, GYM, TITULO, '07:00', [0], { alarma: REPITE });
-    const dejarDeEscuchar = repeticiones.atenderAlCumplirUnHabito();
+    const dejarDeEscuchar = repeticiones.atenderAlCumplirUnHabito(USUARIO);
     try {
       avisarHabitoCumplido({ registroId: 'r-1', puntosOtorgados: 8 });
       await new Promise(resolver => setImmediate(resolver));

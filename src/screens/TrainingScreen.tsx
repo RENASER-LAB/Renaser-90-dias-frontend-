@@ -59,6 +59,7 @@ import type { DimensionDeTraining } from '../features/training/utils/dimensionDe
 import { iconoDeLaDimension } from '../features/training/utils/iconoDeLaDimension';
 import { useProgramaDia } from '../features/programa/hooks/useProgramaDia';
 import * as recordatorios from '../features/habits/notificaciones/recordatoriosDeHabito';
+import { alCumplirElHabito } from '../features/habits/notificaciones/repeticiones';
 import {
   diaAnterior,
   formatearFechaLarga,
@@ -611,13 +612,21 @@ export default function TrainingScreen() {
   const handleEnviarResumen = async (leccionId: string, resumen: string) => {
     if (!habitoClaseDiaria) return;
     let enviado: boolean;
+    let habitoId: string | undefined;
+    let fechaDelHabito: string | undefined;
     try {
-      enviado = await ejecutarEnRegistroVigente(habitoClaseDiaria.id, () => claseDiaria.enviarResumen(leccionId, resumen));
+      enviado = await ejecutarEnRegistroVigente(habitoClaseDiaria.id, track => {
+        habitoId = track.habitoId;
+        fechaDelHabito = track.fechaEjecucion;
+        return claseDiaria.enviarResumen(leccionId, resumen);
+      });
     } catch (error) {
       Alert.alert('No pudimos registrar la clase', mensajeDeError(error, 'Actualiza tus hábitos e inténtalo de nuevo.'));
       return;
     }
     if (!enviado) return;
+    // Issue #33: esta clase cierra por su propio endpoint (no emite `habitoCumplido`); sus alarmas de hoy dejan de sonar igual.
+    if (user?.id && habitoId) void alCumplirElHabito(user.id, habitoId, { fecha: fechaDelHabito }).catch(() => undefined);
     cerrarClaseDiaria();
     if (habitoClaseDiaria) {
       reflejarCierreConfirmado(habitoClaseDiaria.id);
@@ -849,13 +858,21 @@ export default function TrainingScreen() {
     const registroId = pastillaSolicitada.current;
     if (!registroId) return;
     let enviado: boolean;
+    let habitoId: string | undefined;
+    let fechaDelHabito: string | undefined;
     try {
-      enviado = await ejecutarEnRegistroVigente(registroId, () => espiritu.entregar(dia, texto));
+      enviado = await ejecutarEnRegistroVigente(registroId, track => {
+        habitoId = track.habitoId;
+        fechaDelHabito = track.fechaEjecucion;
+        return espiritu.entregar(dia, texto);
+      });
     } catch (error) {
       Alert.alert('No pudimos registrar la Pastilla', mensajeDeError(error, 'Actualiza tus hábitos e inténtalo de nuevo.'));
       return;
     }
     if (!enviado) return;
+    // Issue #33: la Pastilla cierra por su propio endpoint (no emite `habitoCumplido`); sus alarmas de hoy dejan de sonar igual.
+    if (user?.id && habitoId) void alCumplirElHabito(user.id, habitoId, { fecha: fechaDelHabito }).catch(() => undefined);
     // El borrador ya no representa nada: la respuesta esta en el servidor.
     if (user?.id) {
       await borradorEspiritu.borrar(user.id, dia);

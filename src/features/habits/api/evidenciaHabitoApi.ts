@@ -216,8 +216,10 @@ export async function completarRegistro(
   valorMedido?: number | null,
 ): Promise<RegistroCompletado> {
   let habitoId: string | undefined;
+  let fecha: string | undefined;
   const r = await ejecutarEnRegistroVigente(registroId, track => {
     habitoId = track?.habitoId;
+    fecha = track?.fechaEjecucion;
     return apiFetch<unknown>(`/api/v1/habit-tracks/${registroId}/complete`, {
       method: 'POST',
       body: {
@@ -233,6 +235,8 @@ export async function completarRegistro(
     puntosOtorgados: completado.puntosOtorgados,
     // Spec 009: de qué hábito es, para cancelar las repeticiones de su alarma de hoy. Sin dato, no se manda la clave.
     ...(habitoId ? { habitoId } : {}),
+    // Issue #33: el día del hábito (puede no ser «hoy» del reloj: Dormir cumplido pasada la medianoche).
+    ...(fecha ? { fecha } : {}),
   });
   return completado;
 }
