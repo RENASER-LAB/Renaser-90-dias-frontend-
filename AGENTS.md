@@ -2001,6 +2001,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **No se tocan**: el recorrido del líder, los cinco tabs, el semáforo propio del aprendiz ni la ficha del mentor
       (`AlumnoScreen`), que sigue abriendo el archivo en el navegador y diciendo «no hay archivo que abrir» ante un texto: el
       mismo cambio le serviría, pero no estaba en el pedido.
+      > **Corregido 2026-10-27 (mismo día).** La ficha del mentor sí cambió: ver «la ficha del mentor abre las evidencias dentro
+      > de la app», más abajo.
     * **Compatibilidad**: contra un backend sin `puedeAbrirse` (anterior a la spec 005) las tarjetas de grupo siguen abriendo la
       tabla y la persona abre su ficha, como antes; el botón «Ver sus días y evidencias» de la ficha se ve y, si el servidor
       responde 404, lo dice. **Hace falta un APK nuevo** (solo JavaScript: no hay código nativo nuevo, pero la app no se
@@ -2010,6 +2012,27 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       `24-admin-ficha-ver-sus-dias.yaml` (necesitan un grupo con mentor y una persona con evidencias; `E2E_PERSONA` elige a quién).
     Una excepción puntual **no abre** el tab: cualquier otro cambio sobre los cinco principales vuelve a necesitar
     autorización explícita.
+
+  * **Corrección — 2026-10-27 — la ficha del mentor abre las evidencias dentro de la app** (seguimiento del cambio de
+    Administración de arriba; sin backend nuevo). La ficha de un aprendiz que ve el MENTOR o la GUÍA de aprendiz
+    (`AlumnoScreen`, desde «Mi grupo» o desde la info del chat del grupo con `alumnoDesdeLaInfo`: es la misma pantalla)
+    abría cada evidencia con `Linking.openURL` en el navegador y, ante una de texto, decía «no hay archivo que abrir» sin
+    mostrar lo escrito. Si el dueño no la quiere acá, se revierte solo el commit de este cambio. Lo que cambia y nada más:
+    * **«Ver evidencia»** (en «Detalle de hábitos (lunes a domingo)») abre la hoja del líder (`EvidenciaDeObligacion`): foto,
+      audio, video y **texto** dentro de la app. El enlace se sigue pidiendo al abrir la hoja (vence a los diez minutos).
+      Se quitaron de la ficha `Linking`, `urlDeEvidencia` y su estado de «Abriendo…». «Ver publicación» del post diario queda.
+    * **El servidor ya lo permite**: `GET /evidence/{id}` y `/evidence/{id}/url` responden al dueño, a quien actúa como mentor
+      (`MENTOR` y `TRAINEE_GUIDE`) **si es el asignado a esa persona** (`participantes_programa.mentor_id`), al líder y a
+      Administración (`EvidenciaService.requireDuenoOAdmin`). Un mentor que ya no acompaña a esa persona recibe 403 y la hoja
+      dice «Tu cuenta no puede abrir esta evidencia.», sin romper la ficha. El javadoc de clase de `EvidenciaController` quedó
+      atrás y habla solo del dueño y ADMIN; mandan el código del servicio y el `scope` de cada método.
+    * **Cambia el nombre accesible** del botón: «Ver evidencia de <hábito>» (antes «Ver la evidencia de <hábito>»), el mismo
+      de la ficha de Administración y la del líder. Mismas medidas (48 px de alto, 16 px).
+    * **No se tocan**: el resto de la ficha, `EvidenciaDeObligacion` (ninguna prop nueva), el líder ni Administración.
+    * **Pruebas**: Jest `evidenciasEnLaFichaDelMentor` (la hoja recibe el id de la evidencia, el texto se ve, un 403 no rompe la
+      ficha, no se llama a `Linking.openURL`, vale con la ficha abierta desde la info del grupo).
+    * **Hace falta un APK nuevo** (solo JavaScript: no hay código nativo nuevo, pero la app no se actualiza por aire); backend
+      nuevo, ninguno.
 
   * **Cambio por pedido del dueño — 2026-10-19 — tab `Hoy`: la tarjeta del semáforo con el mensaje del día y el
     sticker del búho** (backend spec 006, `Renaser-90-dias-backend/specs/006-mensaje-semaforo-y-podio/`). Textual: «El

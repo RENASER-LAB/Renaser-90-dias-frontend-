@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon } from '../../../components/Icon';
@@ -16,7 +16,7 @@ import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher'
 import { TarjetaSemaforoDeAprendiz } from '../../semaforo/components/TarjetaSemaforoDeAprendiz';
 import { ChipDeCaja } from '../../caja/components/ChipDeCaja';
 import { abrirConversacionDirecta } from '../../chat/api/chatApi';
-import { urlDeEvidencia } from '../../evidence/api/evidenceApi';
+import { EvidenciaDeObligacion } from '../../lider-mentores/components/EvidenciaDeObligacion';
 import { VerPublicacion } from '../../lider-mentores/components/VisorDePublicacion';
 import { useSemanaDelAlumno } from '../hooks/useSemanaDelAlumno';
 import { diasDesde } from '../reglas';
@@ -74,28 +74,6 @@ export function AlumnoScreen({
     diasConContenido.find(d => d.fecha === diaInicialDelDetalle(diasConContenido)) ??
     null;
   const [abriendoChat, setAbriendoChat] = useState(false);
-  const [abriendoEvidencia, setAbriendoEvidencia] = useState<string | null>(null);
-
-  /*
-   * La URL se pide en el momento de abrir, nunca antes. Vence a los diez minutos, así que
-   * traerlas por adelantado para las obligaciones de la semana dejaría casi todas vencidas sin
-   * usarse — y cada una es una llave que abre el archivo sin volver a pasar por el backend.
-   */
-  const verEvidencia = async (evidenciaId: string) => {
-    setAbriendoEvidencia(evidenciaId);
-    try {
-      const url = await urlDeEvidencia(evidenciaId);
-      if (!url) {
-        Alert.alert('Sin archivo', 'Esta evidencia es de texto: no hay archivo que abrir.');
-        return;
-      }
-      await Linking.openURL(url);
-    } catch {
-      Alert.alert('No se pudo abrir', 'Revisa tu conexión e inténtalo de nuevo.');
-    } finally {
-      setAbriendoEvidencia(null);
-    }
-  };
 
   /*
    * Abre el 1 a 1 que ya existe con esta persona (o lo crea) y NO manda nada. El SDD es
@@ -323,20 +301,14 @@ export function AlumnoScreen({
                                   {etiquetaDeEntrega(o.entrega, o.revision, o.publicacionId ?? null)}
                                 </Text>
                               ) : null}
+                              {/* La misma hoja que usa el líder: foto, audio, video y TEXTO se ven dentro de la app, sin
+                                  salir al navegador. El enlace se pide al abrirla (vence a los diez minutos) y el tipo se
+                                  averigua al abrir. El servidor deja leerla al mentor o la guía asignados a este aprendiz. */}
                               {o.evidenciaId ? (
-                                <Pressable
-                                  onPress={() => void verEvidencia(o.evidenciaId as string)}
-                                  disabled={abriendoEvidencia === o.evidenciaId}
-                                  accessibilityRole="button"
-                                  accessibilityLabel={`Ver la evidencia de ${o.titulo}`}
-                                  style={[estilos.verEvidencia, { borderColor: c.goldInk }]}
-                                >
-                                  <Icon name="image" size={16} color={c.goldInk} />
-                                  <Text style={[t.body, { color: c.goldInk, fontSize: 16,
-                                    fontFamily: 'Jost_500Medium' }]}>
-                                    {abriendoEvidencia === o.evidenciaId ? 'Abriendo…' : 'Ver evidencia'}
-                                  </Text>
-                                </Pressable>
+                                <EvidenciaDeObligacion
+                                  titulo={o.titulo}
+                                  evidencias={[{ id: o.evidenciaId, tipo: null, subidaEn: null }]}
+                                />
                               ) : null}
                               {/* Spec 005 (R-6): el post diario se cumple publicando en el Muro, y esa publicación es
                                   su evidencia; antes decía «sin evidencia». */}
@@ -429,18 +401,6 @@ const estilos = StyleSheet.create({
   barra: { flexDirection: 'row', alignItems: 'center', paddingTop: 10, paddingBottom: 6 },
   volver: { flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 48 },
   contenido: { flexGrow: 1, paddingTop: 8, paddingBottom: ESPACIO_PARA_LANZADOR },
-  // 48 px: pulsable sin apuntar, dentro de una fila de obligación.
-  verEvidencia: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: 8,
-    minHeight: 48,
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginTop: 6,
-  },
   navegacion: { flexDirection: 'row', gap: 10, marginBottom: 12 },
   // 48 px de alto, con palabra: una flecha sola no se entiende (A-1).
   flecha: {
