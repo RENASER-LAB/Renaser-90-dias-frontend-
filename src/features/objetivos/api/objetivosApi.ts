@@ -42,9 +42,13 @@ export async function obtenerRocasMaestras(): Promise<RocaMaestraApi[]> {
  */
 export async function definirRocaMaestra(
   eje: EjeObjetivo,
-  definicion: DefinicionRocaMaestra
+  definicion: DefinicionRocaMaestra,
+  opciones: { desdeElMapa?: boolean } = {},
 ): Promise<RocaMaestraApi> {
-  const r = await apiFetch<unknown>(`/api/v1/rocks/master/${eje}`, { method: 'PUT', body: definicion });
+  // Backend D-284 (issue #20): la activación del Mapa manda `origen: 'MAPA'` y el servidor deja que su objetivo reemplace
+  // al que se definió antes en Plan. Plan no manda nada (un `origen` distinto de `MAPA` es 400).
+  const body = opciones.desdeElMapa ? { ...definicion, origen: 'MAPA' as const } : definicion;
+  const r = await apiFetch<unknown>(`/api/v1/rocks/master/${eje}`, { method: 'PUT', body });
   return validarRespuesta(objetivosSchemas.rocaMaestra, r, `PUT /api/v1/rocks/master/${eje}`);
 }
 

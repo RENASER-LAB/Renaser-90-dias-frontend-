@@ -2437,6 +2437,60 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       la fase 1 todo se ve disponible, la consola no tiene despliegue ni roles (sus lecturas fallan con su error en el
       lugar) y «Ver como» avisa que el servidor todavía no lo tiene. Maestro: `.maestro/interruptores/34–40`.
 
+  * **Cambio por pedido del dueño — 2026-10-27 — tab `Plan`: los objetivos esperan al Mapa de Renacimiento (issue #37)**
+    (backend #20: una aprendiz escribió su objetivo de 90 días en Plan sin haber activado el Mapa y, al activarlo, el
+    servidor le respondió `409 ROCA_MAESTRA_FIJA`, porque el objetivo ya quedaba fijo). Textual: «Bloqueemos objetivos
+    diciendo desde el inicio que debe hacer el Mapa de Renacimiento, porque si no, más bugs encontraremos.» El Mapa sigue
+    siendo opcional en el resto de la app: nada se vuelve pantalla obligatoria. Lo que cambia y nada más:
+    * **Plan → Objetivos sin Mapa activo** (`PuertaDelMapa`, en lugar de lo que había debajo del título «Objetivos» y su
+      flecha de volver): no hay selector de eje, ni «Editar» / «Avance», ni la cifra del mes, ni la semana, ni las
+      acciones —todo cuelga del objetivo de 90 días—. En su lugar, una tarjeta de borde dorado con el ícono `map`, el
+      título **«Primero tu Mapa de Renacimiento»**, «Tu objetivo de 90 días nace de tu Mapa, así que primero lo armas
+      allí. Toma de 15 a 20 minutos.» y el botón **«Hacer mi Mapa»**, que abre el MISMO flujo que la tarjeta del Mapa de
+      Hoy (`abrirMapa` de `MapaRenacimientoContext`: el Mapa reemplaza a las pestañas). Texto de 16, botón de 52, sin
+      animación (se ve de vez en cuando y no reemplaza nada que se esté usando). **Con el Mapa activo, Plan es
+      exactamente el de siempre.**
+    * **Cómo se sabe si el Mapa está activo** (`objetivos/hooks/usePuertaDeObjetivos`, decisión pura en
+      `objetivos/utils/puertaDeObjetivos`): lo mismo que lee la tarjeta de Hoy —«activo» en el borrador del teléfono o
+      `GET /api/v1/mapa-renacimiento` con `stageCompleted`, que solo puede confirmar—. A diferencia de Hoy, Plan no
+      sigue «utilizable» con lo local si la red cae. Mientras se lee: «Comprobando tu Mapa…», sin tarjeta ni
+      formularios (sin parpadeo: la primera lectura es «comprobando» y una relectura conserva lo ya confirmado). Si no
+      se pudo leer y el teléfono no dice «activo»: «No pudimos comprobar tu Mapa de Renacimiento. Revisa tu conexión e
+      inténtalo de nuevo.» con **«Reintentar»**; no se deja pasar ni se bloquea. Se relee al abrir Objetivos y al
+      volver del Mapa. Al cambiar de cuenta no queda a la vista la lectura de la anterior ni un render.
+    * **Un build sin el Mapa no bloquea nada**: la regla `EXPO_PUBLIC_MAPA_DIA7` (en desarrollo siempre; en un build
+      publicado solo con `on`, como en `eas.json`) se movió a `mapa-renacimiento/utils/mapaHabilitado` y la usan Hoy y
+      Plan. Si ese build no ofrece el Mapa, tampoco se le pide a nadie.
+    * **Plan, pantalla principal**: «Toca cada una para escribir tu objetivo.» solo con el Mapa activo; sin él dice
+      «Tus objetivos nacen de tu Mapa de Renacimiento.» (y mientras se comprueba, nada). Las tarjetas de prioridades
+      siguen abriendo Objetivos, que dice lo mismo con su botón.
+    * **Hoy, solo texto** (los dos textos cuando el Mapa no está activo; Hoy no cambia de forma, y el Día 0 y el Mapa
+      siguen igual): la tarjeta del Mapa dice «Tu plan para {lapso} empieza aquí: de este Mapa nacen tus objetivos.
+      15–20 min.» (era «Convierte lo aprendido en un plan claro para …») y la línea de «Acciones y objetivos» sin objetivo
+      dice «Tu objetivo de 90 días nace de tu Mapa de Renacimiento.» (era «Define tu objetivo en Plan para sostener la
+      dirección.», que mandaba a un lugar donde ya no se puede).
+    * **Rechazo del servidor, tolerante**: `PUT /api/v1/rocks/master/{eje}` puede responder `MAPA_PENDIENTE` (código
+      tentativo, 409 o 403; el backend lo decide). `useRocasMaestras.definir` devuelve `mapaPendiente: true` con el
+      mensaje del servidor (`objetivos/utils/mapaPendiente`) y Plan lo muestra con «Ahora no» / **«Hacer mi Mapa»**; el
+      resto de los rechazos sigue como siempre (su mensaje tal cual, `ROCA_MAESTRA_FIJA` relee la lista). Contra un
+      backend que no lo conoce nada de esto se activa. La app ya no llega ahí sin Mapa: es el caso de borde en que el
+      teléfono creía el Mapa activo y el servidor no.
+    * **Caminos que escribían el objetivo de 90 días** (revisados): (1) Plan → Objetivos → «Editar» / «Avance»
+      (`useRocasMaestras.definir`) —bloqueado sin Mapa—; (2) el Mapa al activarse (`useMapaRenacimiento.activar`) —no se
+      tocó—; ninguno más en la app. Lo que cuelga del objetivo (mes, semana, acciones, «Armar mi semana», agendar) vive
+      dentro de Objetivos y queda detrás de la misma tarjeta. El acompañante SER propone «armar el plan de rocas» como
+      una propuesta genérica que aplica el servidor (la app solo dibuja «Cancelar» / «Confirmar»): la regla de ahí la
+      tiene que dar el backend.
+    * **Pendiente de contrato con el backend**: `activar()` del Mapa escribe las tres rocas (`PUT /rocks/master`)
+      ANTES de marcar la etapa (`POST /mapa-renacimiento/completar`). Si el servidor rechaza la roca porque la etapa
+      todavía no está completa, activar el Mapa se rompería a sí mismo: el backend tiene que aceptar las rocas que
+      llegan desde el flujo del Mapa. No se cambió el orden de esas llamadas. Tampoco se resolvió la persona que ya
+      tiene objetivos sin Mapa (queda tras la tarjeta hasta que lo active; ver arriba el 409 `ROCA_MAESTRA_FIJA`, que es
+      de backend #20).
+    * **Hace falta un APK nuevo** (solo JavaScript: ni `package.json`, ni `app.json`, ni código nativo; la app no se
+      actualiza por aire). **Compatibilidad**: contra un backend anterior la app se comporta igual (la puerta sale del
+      Mapa que ya existe, no de un campo nuevo). No cambian los cinco tabs en nada más, ni el Mapa, ni los hábitos.
+
 ## 2. 📱 RESPONSIVIDAD UNIVERSAL (XIAOMI, ANDROID, IOS Y TABLETS)
 * **Cero Doble Scroll**: NUNCA coloques un contenedor con `maxHeight` fijo o scroll interno dentro de otro `ScrollView`. Toda pantalla debe tener UN ÚNICO contenedor de scroll fluido con `contentContainerStyle={{ flexGrow: 1, paddingBottom: 36 }}`.
 * **Adaptabilidad a Xiaomi y Pantallas Altas (20:9 / 19.5:9)**:

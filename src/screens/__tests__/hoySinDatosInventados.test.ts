@@ -49,7 +49,8 @@ describe('Hoy sin datos inventados', () => {
 
   it('la tarjeta del Mapa usa la cuenta de la apertura del Mapa: sin día conocido, sin número', () => {
     expect(HOY).toMatch(/lapsoQueQueda\(\s*diasQueQuedanSiSeSabe\(\{ diaPrograma: resumen\?\.diaPrograma, inscrito: resumen\?\.inscrito, cargando: false \}\),?\s*\)/);
-    expect(HOY).toContain('`Convierte lo aprendido en un plan claro para ${lapsoDelMapa}. 15–20 min.`');
+    // Corregido 2026-10-27 (issue #37): dice de dónde salen los objetivos de Plan; la cuenta del lapso no cambia.
+    expect(HOY).toContain('`Tu plan para ${lapsoDelMapa} empieza aquí: de este Mapa nacen tus objetivos. 15–20 min.`');
     expect(HOY).not.toMatch(/los próximos \$\{/);
   });
 });

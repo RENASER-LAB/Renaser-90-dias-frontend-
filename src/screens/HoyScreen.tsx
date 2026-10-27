@@ -64,6 +64,7 @@ import { tiempoRelativo } from '../features/community/utils/tiempoRelativo';
 import { useAuth } from '../context/AuthContext';
 import { useMapaRenacimientoAbierto } from '../features/mapa-renacimiento/MapaRenacimientoContext';
 import { useEstadoMapa } from '../features/mapa-renacimiento/hooks/useEstadoMapa';
+import { mapaHabilitado } from '../features/mapa-renacimiento/utils/mapaHabilitado';
 import type { RocaDiariaApi } from '../features/training/types/training.types';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
 import { OrbeAcompanante } from '../features/renasia/components/OrbeAcompanante';
@@ -418,10 +419,17 @@ export default function HoyScreen() {
   //
   // Sigue siendo opcional: nadie queda trabado por no llenarlo.
   //
+  // > **Corregido 2026-10-27 (issue #37, decisión del dueño).** «Sigue siendo opcional» vale para la app, no para los
+  // > objetivos de Plan: el objetivo de 90 días nace del Mapa y queda fijo, y escribirlo en Plan sin Mapa lo dejaba
+  // > chocando con el Mapa al activarlo (`409 ROCA_MAESTRA_FIJA`, backend #20). Plan → Objetivos espera al Mapa
+  // > (`usePuertaDeObjetivos`): sin Mapa activo muestra «Primero tu Mapa de Renacimiento» con «Hacer mi Mapa». Hoy, el
+  // > resto de la app y el Día 0 no cambian: nada obliga a hacer el Mapa. Esta tarjeta solo lo dice desde el inicio.
+  //
   // Interruptor de salida a producción: en desarrollo siempre; en un build de producción SOLO si
   // EXPO_PUBLIC_MAPA_DIA7=on (variable de Vercel/EAS, inlined al compilar). Se conserva — encender
   // el flujo sigue siendo un acto deliberado y no un efecto del merge.
-  const MAPA_DIA7_HABILITADO = __DEV__ || process.env.EXPO_PUBLIC_MAPA_DIA7 === 'on';
+  // (La regla vive ahora en `mapaHabilitado()`: Plan la necesita igual, 2026-10-27.)
+  const MAPA_DIA7_HABILITADO = mapaHabilitado();
   // Decía "83 días", que era 90 − 7 y valía mientras el Mapa vivía en el Día 7. Desde que arranca
   // en el Día 0 ese número miente: quien lo abre el primer día tiene 90 por delante, no 83.
   // La cuenta vive en `diasQueQuedan` desde el 2026-10-05: la apertura del Mapa usa la misma.
@@ -441,7 +449,7 @@ export default function HoyScreen() {
     : estadoMapa === 'en_progreso' || estadoMapa === 'listo_para_revision' ? 'Continúa tu mapa' : 'Diseña tu mapa';
   const detalleMapa = estadoMapa === 'activo'
     ? `Tus objetivos, acciones y protocolo de retorno para ${lapsoDelMapa}.`
-    : `Convierte lo aprendido en un plan claro para ${lapsoDelMapa}. 15–20 min.`;
+    : `Tu plan para ${lapsoDelMapa} empieza aquí: de este Mapa nacen tus objetivos. 15–20 min.`;
   /* Los dos textos de la primera tarjeta. El estado lo decide `habitoDelMomento`; acá solo se
      redacta. `sin-datos` cae al texto genérico de siempre —Día 0, cuenta recién aprobada, o el
      endpoint falló— porque inventar un hábito sería peor que no decir nada. */
@@ -948,7 +956,9 @@ export default function HoyScreen() {
                 <Text style={[t.small, { color: c.textSoft, marginTop: 5 }]}>
                   {rocaPrioritaria
                     ? `Foco: "${rocaPrioritaria.titulo}"`
-                    : 'Define tu objetivo en Plan para sostener la dirección.'}
+                    : mostrarMapa && estadoMapa !== null && estadoMapa !== 'activo'
+                      ? 'Tu objetivo de 90 días nace de tu Mapa de Renacimiento.'
+                      : 'Define tu objetivo en Plan para sostener la dirección.'}
                 </Text>
               </View>
               <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.chevron} />
