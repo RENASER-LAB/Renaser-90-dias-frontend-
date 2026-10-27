@@ -1966,6 +1966,51 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     Una excepción puntual **no abre** el tab: cualquier otro cambio sobre los cinco principales vuelve a necesitar
     autorización explícita.
 
+  * **Cambio por pedido del dueño — 2026-10-27 — Administración (estado de `Hoy`): Administración y Alquimista ven las
+    evidencias como el líder** (sin backend nuevo; el servidor ya les da a los tres roles —MENTOR_LEAD, ADMIN y ALCHEMIST—
+    `GET /leadership/groups/{g}/people/{p}/week`, `GET /evidence/{id}` y `/evidence/{id}/url`). Pedido: Administración y
+    Alquimista «no encuentran todas las evidencias» de los hábitos de un aprendiz; el dueño aprobó la opción 1, que usen la
+    misma vista que ya tiene el líder (spec 005, más arriba). Lo que cambia y nada más:
+    * **«Ver evidencia» de la ficha** (`FichaAprendizScreen`, «Detalle de hábitos (lunes a domingo)») abre la hoja del líder
+      (`EvidenciaDeObligacion`): foto, audio, video y **texto** dentro de la app. Antes salía al navegador con
+      `Linking.openURL`, y una evidencia de texto decía «no hay archivo que abrir» sin mostrar lo escrito. Vale para cualquier
+      aprendiz, con o sin grupo; el enlace se sigue pidiendo al abrir la hoja. `evidenciasEnLaFicha.test.ts` frena volver a
+      `Linking` o a `urlDeEvidencia` en la ficha.
+    * **Semáforo → grupo → persona** (`SemaforoGrupoAdminScreen`): si el resumen por grupos dice que el grupo se abre
+      (`puedeAbrirse`: tiene mentor y la funcionalidad está prendida), tocar a la persona abre sus **días y evidencias**
+      (`PersonaDelLiderScreen`, vista nueva `persona-semaforo` de la pila de `AdminScreen`) en la MISMA ventana que se miraba,
+      como el líder (que va directo a la persona): los 7 días, el «¿Qué sentiste?», las fotos de las acciones de los objetivos,
+      «Ver publicación», «Escribirle» y «Avisar a su mentor». Con un grupo sin mentor abre su ficha, como siempre. **Desde sus
+      días, «Ver su ficha» lleva a la ficha** (cambiar día, Caja, eliminar cuenta, semáforo propio), que así sigue a un toque;
+      no se ofrece el camino de vuelta ficha → días → ficha. El atrás del sistema y la flecha suben un nivel cada vez.
+    * **Ficha → «Ver sus días y evidencias»** (botón nuevo sobre «Detalle de hábitos», solo si la persona tiene grupo, `cellId`):
+      abre la misma vista con el grupo de la persona, en la ventana vigente y con «Su grupo» de rótulo. **El servidor responde
+      404** si el grupo no es regular con mentor vigente (la recepción, un grupo sin mentor), si la persona hoy no está en ese
+      grupo o si no se muestra (sin participación en el programa, cuenta suspendida o de prueba; `PersonasDelGrupo` del
+      backend): la pantalla lo dice —«No se pueden mostrar sus días desde acá: su grupo todavía no tiene mentor o la persona no
+      figura hoy en él. Sus evidencias se ven en su ficha…»— en lugar del «todavía no está disponible» genérico (que promete
+      que aparecerá solo), y se vuelve a la ficha. Un fallo de red o un 5xx siguen con su «Reintentar». La ficha por sí sola
+      sigue sirviendo a cualquier aprendiz.
+    * **`PersonaDelLiderScreen`** suma dos props opcionales, `avisoSiNoSeAbre` y `alAbrirFicha`: sin ellas es exactamente la
+      pantalla del líder, que no cambia en nada. Las decisiones puras (a dónde lleva tocar a la persona, si la ficha ofrece sus
+      días, el texto del 404) viven en `admin/utils/susDiasYEvidencias.ts`. Tras «Eliminar cuenta» en una ficha abierta desde sus
+      días, la pila tampoco vuelve a los días de esa persona (`pilaTrasEliminarCuenta`).
+    * **Permisos, sin cambios**: «Avisar a su mentor» lo pueden registrar ADMIN y ALCHEMIST (`AccesoDeLiderazgo` y el permiso
+      `FOLLOW_UP_MENTOR` del backend), así que no se oculta; la observación queda a nombre de quien avisa. **Cada lectura de
+      una persona deja un registro de consulta en el servidor** (FR-016) con el rol con el que se miró, también la de un ADMIN.
+    * **No se tocan**: el recorrido del líder, los cinco tabs, el semáforo propio del aprendiz ni la ficha del mentor
+      (`AlumnoScreen`), que sigue abriendo el archivo en el navegador y diciendo «no hay archivo que abrir» ante un texto: el
+      mismo cambio le serviría, pero no estaba en el pedido.
+    * **Compatibilidad**: contra un backend sin `puedeAbrirse` (anterior a la spec 005) las tarjetas de grupo siguen abriendo la
+      tabla y la persona abre su ficha, como antes; el botón «Ver sus días y evidencias» de la ficha se ve y, si el servidor
+      responde 404, lo dice. **Hace falta un APK nuevo** (solo JavaScript: no hay código nativo nuevo, pero la app no se
+      actualiza por aire); backend nuevo, ninguno.
+    * **Pruebas**: Jest (`diasYEvidenciasDesdeAdministracion`, `evidenciasEnLaFicha`, `personaDelLiderDesdeAdministracion`,
+      `susDiasYEvidencias`, `pilaDeAdministracion`) y Maestro `regresion/23-admin-semaforo-persona-evidencias.yaml` y
+      `24-admin-ficha-ver-sus-dias.yaml` (necesitan un grupo con mentor y una persona con evidencias; `E2E_PERSONA` elige a quién).
+    Una excepción puntual **no abre** el tab: cualquier otro cambio sobre los cinco principales vuelve a necesitar
+    autorización explícita.
+
   * **Cambio por pedido del dueño — 2026-10-19 — tab `Hoy`: la tarjeta del semáforo con el mensaje del día y el
     sticker del búho** (backend spec 006, `Renaser-90-dias-backend/specs/006-mensaje-semaforo-y-podio/`). Textual: «El
     mensaje que acompaña los semáforos tiene que ser mucho más personalizado, no solo que muestre el porcentaje avanzado

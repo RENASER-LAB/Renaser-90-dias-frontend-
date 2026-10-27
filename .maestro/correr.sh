@@ -117,6 +117,10 @@ for f in "${flujos[@]}"; do
   else
     correo=$E2E_APRENDIZ_EMAIL; clave=$E2E_APRENDIZ_PASSWORD
   fi
+  # E2E_PERSONA y E2E_GRUPO (opcionales), para los flujos 23 y 24: parte del nombre de la persona (por defecto «a») y del
+  # grupo. Van siempre: Maestro no deja que `-e` pise un `env:` del flujo, así que los flujos no traen valor propio.
+  extra+=(-e "PERSONA=${E2E_PERSONA:-a}")
+  extra+=(-e "GRUPO=${E2E_GRUPO:-}")
   estado=1
   if entrar "$correo" "$clave"; then
     ~/.maestro/bin/maestro test "${extra[@]}" "$f" --test-output-dir "$SALIDA" 2>&1 | tapar | grep -E "COMPLETED|FAILED|Flow "

@@ -46,5 +46,11 @@ local (nunca contra producción).
 - **Recrear la actividad no sirve de atajo**: suelta la animación trabada, pero `expo-image-picker` queda con su
   lanzador registrado en la actividad vieja y la cámara falla («unregistered ActivityResultLauncher»).
 
+Los flujos 23 y 24 (Administración: los días y las evidencias de una persona, como el líder) necesitan datos concretos:
+un grupo con mentor y una persona con evidencias en los últimos 7 días (23), o una persona con grupo (24). Con
+`E2E_PERSONA=<parte del nombre>` `correr.sh` elige a quién tocan (sin ella, «a»: la primera que coincida) y con
+`E2E_GRUPO=<parte del nombre del grupo>` el 23 abre ese grupo en vez del primero con mentor. Ejemplo:
+`E2E_PERSONA=APRENDIZ1 E2E_GRUPO="Hábitos por rol"`. Lo que cada uno necesita está arriba de su archivo.
+
 Los flujos que registran algo (01, 03, 10) necesitan que el hábito o la publicación estén pendientes ese día; si ya se
 hicieron, se usa otra cuenta o una base recién clonada.

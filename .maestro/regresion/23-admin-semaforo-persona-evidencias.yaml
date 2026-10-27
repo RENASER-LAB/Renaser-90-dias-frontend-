@@ -1,0 +1,103 @@
+# 23 — Administración → Semáforo → un grupo con mentor → una persona: sus días y sus evidencias en la hoja del líder
+# (dentro de la app, no en el navegador), «Ver su ficha» y la vuelta paso a paso con el atrás del sistema.
+# cuenta: admin
+#
+# Precondición (datos del backend local, base clonada):
+#   - La cuenta E2E_ADMIN es ADMIN o ALCHEMIST.
+#   - Un grupo regular CON mentor vigente (si no tiene mentor, el servidor no abre sus personas y el flujo cae en la ficha).
+#   - En ese grupo, una persona con al menos una evidencia en los últimos 7 días del resumen (ideal: una de texto —la
+#     Audioterapia o un «¿Qué sentiste?»— y una de foto). El día más reciente con hábitos viene abierto.
+#   - Sin variable, toca a la primera persona de la lista (la que más lo necesita): puede no tener evidencias. Con
+#     `E2E_PERSONA=<parte del nombre>` (correr.sh la pasa como PERSONA) toca a esa persona, y `E2E_GRUPO=<parte del
+#     nombre del grupo>` (llega como GRUPO) abre ese grupo en vez del primero con mentor.
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "HOY"
+- scrollUntilVisible:
+    element: "Abrir Administración"
+    direction: DOWN
+- tapOn: "Abrir Administración"
+- extendedWaitUntil:
+    visible: "Operación del programa"
+    timeout: 15000
+- scrollUntilVisible:
+    element: "Semáforo"
+    direction: DOWN
+- tapOn: "Semáforo"
+- extendedWaitUntil:
+    visible: "Toca un grupo para ver a cada aprendiz."
+    timeout: 30000
+- takeScreenshot: 23a-resumen-por-grupos
+
+# Un grupo con mentor: su tarjeta dice «Mentor: …» y se puede abrir.
+- scrollUntilVisible:
+    element: ".*${GRUPO}.*Mentor: .*Abrir el semáforo del grupo.*"
+    direction: DOWN
+    timeout: 60000
+- tapOn: ".*${GRUPO}.*Mentor: .*Abrir el semáforo del grupo.*"
+- extendedWaitUntil:
+    visible: ".*Abrir su detalle.*"
+    timeout: 30000
+- takeScreenshot: 23b-tabla-del-grupo
+
+# La persona: abre SUS DÍAS (la vista del líder), no la ficha.
+- tapOn: ".*${PERSONA}.*Abrir su detalle.*"
+- extendedWaitUntil:
+    notVisible: ".*Abrir su detalle.*"
+    timeout: 30000
+- scrollUntilVisible:
+    element: "Ver evidencia de .*"
+    direction: DOWN
+    timeout: 60000
+- takeScreenshot: 23c-sus-dias
+- tapOn: "Ver evidencia de .*"
+
+# Lo que queda en pantalla: la hoja con la evidencia dentro de la app. Ni «Abriendo…» colgado, ni el navegador, ni el
+# viejo «no hay archivo que abrir», ni un fallo.
+- extendedWaitUntil:
+    visible: "Cerrar la evidencia"
+    timeout: 20000
+- extendedWaitUntil:
+    notVisible: "Abriendo…"
+    timeout: 30000
+- assertVisible: "Evidencia"
+- assertNotVisible: "Ya no está disponible."
+- assertNotVisible: "Tu cuenta no puede abrir esta evidencia."
+- assertNotVisible: "No pudimos .*"
+- assertNotVisible: ".*no hay archivo que abrir.*"
+- takeScreenshot: 23d-evidencia-en-la-hoja
+- tapOn: "Cerrar la evidencia"
+- extendedWaitUntil:
+    notVisible: "Cerrar la evidencia"
+    timeout: 10000
+
+# «Ver su ficha»: desde sus días se llega a la ficha de administración (cambiar día, caja, eliminar), sin círculo.
+- scrollUntilVisible:
+    element: "Ver su ficha"
+    direction: DOWN
+    timeout: 30000
+- tapOn: "Ver su ficha"
+# La ficha abre arriba (cabecera, día del programa, semáforo); su detalle de hábitos queda más abajo.
+- extendedWaitUntil:
+    visible: "Cambiar día del programa"
+    timeout: 45000
+- scrollUntilVisible:
+    element: "Detalle de hábitos .*"
+    direction: DOWN
+    timeout: 30000
+- assertNotVisible: "Ver sus días y evidencias"
+- takeScreenshot: 23e-ficha-desde-sus-dias
+
+# El atrás del sistema sube un nivel cada vez: ficha → sus días → tabla del grupo → resumen → Administración.
+- back
+- scrollUntilVisible:
+    element: "Ver su ficha"
+    direction: DOWN
+    timeout: 60000
+- back
+- assertVisible: ".*Abrir su detalle.*"
+- back
+- assertVisible: "Toca un grupo para ver a cada aprendiz."
+- back
+- assertVisible: "Operación del programa"

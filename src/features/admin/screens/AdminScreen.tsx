@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 
 import type { InicioSemanal } from '../../semaforo/hooks/useLecturaPorSemana';
 import type { PersonaDeFicha } from '../types/admin.types';
+import { AVISO_SI_NO_SE_ABREN_SUS_DIAS, NOMBRE_DEL_GRUPO_SIN_DATO, fichaOfreceSusDias } from '../utils/susDiasYEvidencias';
+import { PersonaDelLiderScreen } from '../../lider-mentores/screens/PersonaDelLiderScreen';
 import { CajaContenidoScreen } from '../../caja/screens/CajaContenidoScreen';
 import { CajaDetalleScreen } from '../../caja/screens/CajaDetalleScreen';
 import { CajaListaScreen } from '../../caja/screens/CajaListaScreen';
@@ -45,7 +47,19 @@ type Vista =
   | { nombre: 'ficha'; aprendiz: PersonaDeFicha }
   | { nombre: 'solicitudes' }
   | { nombre: 'semaforo' }
-  | { nombre: 'semaforo-grupo'; grupoId: string; grupoNombre: string | null; inicio: InicioSemanal }
+  | { nombre: 'semaforo-grupo'; grupoId: string; grupoNombre: string | null; inicio: InicioSemanal; puedeAbrirse: boolean }
+  /* Los días y evidencias de una persona (la vista del líder). Desde el semáforo trae la ventana que se miraba; desde
+     la ficha, no (abre en la vigente) y `grupoNombre` es null. */
+  | {
+      nombre: 'persona-semaforo';
+      grupoId: string;
+      grupoNombre: string | null;
+      aprendiz: PersonaDeFicha;
+      avatarUrl: string | null;
+      inicio?: InicioSemanal;
+      /** Se llegó desde el semáforo: ahí «Ver su ficha» es el camino a la ficha. Desde la ficha ya está debajo. */
+      conBotonDeFicha: boolean;
+    }
   | { nombre: 'staff' }
   | { nombre: 'guias' }
   | { nombre: 'bienvenida' }
@@ -80,9 +94,16 @@ export function pilaInicial(abrirEn: EntradaDeAdmin): Vista[] {
  * si se abrió desde otro lado (semáforo, inicio, chat), la ficha se reemplaza por Personas.
  */
 export function pilaTrasEliminarCuenta(pila: Vista[]): Vista[] {
-  const sinFicha = pila[pila.length - 1]?.nombre === 'ficha' ? pila.slice(0, -1) : pila;
-  if (sinFicha[sinFicha.length - 1]?.nombre === 'personas') return sinFicha;
-  return [...sinFicha, { nombre: 'personas', soloSinGrupo: false }];
+  const ultima = pila[pila.length - 1];
+  const sinFicha = ultima?.nombre === 'ficha' ? pila.slice(0, -1) : pila;
+  /* Si la ficha se abrió desde los días de esa misma persona, tampoco se vuelve a ellos: su cuenta ya no existe. */
+  const debajo = sinFicha[sinFicha.length - 1];
+  const sinSusDias =
+    ultima?.nombre === 'ficha' && debajo?.nombre === 'persona-semaforo' && debajo.aprendiz.id === ultima.aprendiz.id
+      ? sinFicha.slice(0, -1)
+      : sinFicha;
+  if (sinSusDias[sinSusDias.length - 1]?.nombre === 'personas') return sinSusDias;
+  return [...sinSusDias, { nombre: 'personas', soloSinGrupo: false }];
 }
 
 /**
@@ -145,6 +166,19 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
           onVolver={volver}
           onAbrirCaja={aprendizId => entrar({ nombre: 'caja-detalle', aprendizId })}
           onCuentaEliminada={() => setPila(pilaTrasEliminarCuenta)}
+          onVerSusDias={
+            fichaOfreceSusDias(vista.aprendiz, pila[pila.length - 2])
+              ? grupoId =>
+                  entrar({
+                    nombre: 'persona-semaforo',
+                    grupoId,
+                    grupoNombre: null,
+                    aprendiz: vista.aprendiz,
+                    avatarUrl: null,
+                    conBotonDeFicha: false,
+                  })
+              : undefined
+          }
         />
       );
     case 'caja':
@@ -168,7 +202,13 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
         <SemaforoAdminScreen
           onVolver={volver}
           onAbrirGrupo={(grupo, inicio) =>
-            entrar({ nombre: 'semaforo-grupo', grupoId: grupo.grupoId, grupoNombre: grupo.grupoNombre, inicio })
+            entrar({
+              nombre: 'semaforo-grupo',
+              grupoId: grupo.grupoId,
+              grupoNombre: grupo.grupoNombre,
+              inicio,
+              puedeAbrirse: grupo.puedeAbrirse,
+            })
           }
         />
       );
@@ -178,8 +218,36 @@ export function AdminScreen({ onSalir, abrirEn = 'inicio' }: { onSalir: () => vo
           grupoId={vista.grupoId}
           grupoNombre={vista.grupoNombre}
           inicio={vista.inicio}
+          puedeAbrirse={vista.puedeAbrirse}
           onVolver={volver}
           onAbrirAprendiz={aprendiz => entrar({ nombre: 'ficha', aprendiz })}
+          onAbrirDiasYEvidencias={({ persona, avatarUrl, inicio }) =>
+            entrar({
+              nombre: 'persona-semaforo',
+              grupoId: vista.grupoId,
+              grupoNombre: vista.grupoNombre,
+              aprendiz: persona,
+              avatarUrl,
+              inicio,
+              conBotonDeFicha: true,
+            })
+          }
+        />
+      );
+    case 'persona-semaforo':
+      return (
+        <PersonaDelLiderScreen
+          /* Otra persona es otra cosa que mirar: su lectura y su día abierto desde cero. */
+          key={`${vista.grupoId}|${vista.aprendiz.id}`}
+          grupoId={vista.grupoId}
+          grupoNombre={vista.grupoNombre?.trim() || NOMBRE_DEL_GRUPO_SIN_DATO}
+          personaId={vista.aprendiz.id}
+          nombre={vista.aprendiz.fullName?.trim() || 'Persona sin nombre'}
+          avatarUrl={vista.avatarUrl}
+          inicio={vista.inicio}
+          onVolver={volver}
+          avisoSiNoSeAbre={AVISO_SI_NO_SE_ABREN_SUS_DIAS}
+          alAbrirFicha={vista.conBotonDeFicha ? () => entrar({ nombre: 'ficha', aprendiz: vista.aprendiz }) : undefined}
         />
       );
     case 'staff':

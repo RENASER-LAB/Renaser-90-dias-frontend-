@@ -23,6 +23,7 @@ jest.mock('../StaffRolesScreen', () => ({}));
 jest.mock('../../../caja/screens/CajaContenidoScreen', () => ({}));
 jest.mock('../../../caja/screens/CajaDetalleScreen', () => ({}));
 jest.mock('../../../caja/screens/CajaListaScreen', () => ({}));
+jest.mock('../../../lider-mentores/screens/PersonaDelLiderScreen', () => ({}));
 
 import { pilaInicial, pilaTrasEliminarCuenta } from '../AdminScreen';
 
@@ -69,6 +70,49 @@ describe('la pila tras eliminar una cuenta', () => {
     expect(pilaTrasEliminarCuenta([{ nombre: 'inicio' }, { nombre: 'semaforo' }, ficha])).toEqual([
       { nombre: 'inicio' },
       { nombre: 'semaforo' },
+      { nombre: 'personas', soloSinGrupo: false },
+    ]);
+  });
+
+  it('si la ficha se abrió desde los días de esa persona (semáforo), tampoco se vuelve a ellos: su cuenta ya no existe', () => {
+    const aprendiz = { id: 'a-1', fullName: 'Ana' };
+    const susDias = {
+      nombre: 'persona-semaforo' as const,
+      grupoId: 'g-1',
+      grupoNombre: 'Fénix',
+      aprendiz,
+      avatarUrl: null,
+      conBotonDeFicha: true,
+    };
+    const semaforoGrupo = {
+      nombre: 'semaforo-grupo' as const,
+      grupoId: 'g-1',
+      grupoNombre: 'Fénix',
+      inicio: { posicion: { modo: 'vigente' as const }, hastaVigente: null },
+      puedeAbrirse: true,
+    };
+
+    expect(pilaTrasEliminarCuenta([{ nombre: 'inicio' }, { nombre: 'semaforo' }, semaforoGrupo, susDias, ficha])).toEqual([
+      { nombre: 'inicio' },
+      { nombre: 'semaforo' },
+      semaforoGrupo,
+      { nombre: 'personas', soloSinGrupo: false },
+    ]);
+  });
+
+  it('los días de OTRA persona debajo de la ficha se conservan', () => {
+    const otraPersona = {
+      nombre: 'persona-semaforo' as const,
+      grupoId: 'g-1',
+      grupoNombre: null,
+      aprendiz: { id: 'a-9', fullName: 'Beto' },
+      avatarUrl: null,
+      conBotonDeFicha: false,
+    };
+
+    expect(pilaTrasEliminarCuenta([{ nombre: 'inicio' }, otraPersona, ficha])).toEqual([
+      { nombre: 'inicio' },
+      otraPersona,
       { nombre: 'personas', soloSinGrupo: false },
     ]);
   });
