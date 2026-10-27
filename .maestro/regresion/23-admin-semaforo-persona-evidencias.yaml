@@ -8,10 +8,9 @@
 #   - En ese grupo, una persona con al menos una evidencia en los últimos 7 días del resumen (ideal: una de texto —la
 #     Audioterapia o un «¿Qué sentiste?»— y una de foto). El día más reciente con hábitos viene abierto.
 #   - Sin variable, toca a la primera persona de la lista (la que más lo necesita): puede no tener evidencias. Con
-#     `E2E_PERSONA=<parte del nombre>` (correr.sh la pasa como PERSONA) toca a esa persona.
+#     `E2E_PERSONA=<parte del nombre>` (correr.sh la pasa como PERSONA) toca a esa persona, y `E2E_GRUPO=<parte del
+#     nombre del grupo>` (llega como GRUPO) abre ese grupo en vez del primero con mentor.
 appId: com.renaser.app
-env:
-  PERSONA: ""
 ---
 - runFlow: ../comun/ya-adentro.yaml
 - tapOn: "HOY"
@@ -33,10 +32,10 @@ env:
 
 # Un grupo con mentor: su tarjeta dice «Mentor: …» y se puede abrir.
 - scrollUntilVisible:
-    element: ".*Mentor: .*Abrir el semáforo del grupo.*"
+    element: ".*${GRUPO}.*Mentor: .*Abrir el semáforo del grupo.*"
     direction: DOWN
     timeout: 60000
-- tapOn: ".*Mentor: .*Abrir el semáforo del grupo.*"
+- tapOn: ".*${GRUPO}.*Mentor: .*Abrir el semáforo del grupo.*"
 - extendedWaitUntil:
     visible: ".*Abrir su detalle.*"
     timeout: 30000
@@ -79,8 +78,13 @@ env:
     direction: DOWN
     timeout: 30000
 - tapOn: "Ver su ficha"
+# La ficha abre arriba (cabecera, día del programa, semáforo); su detalle de hábitos queda más abajo.
 - extendedWaitUntil:
-    visible: "Detalle de hábitos .*"
+    visible: "Cambiar día del programa"
+    timeout: 45000
+- scrollUntilVisible:
+    element: "Detalle de hábitos .*"
+    direction: DOWN
     timeout: 30000
 - assertNotVisible: "Ver sus días y evidencias"
 - takeScreenshot: 23e-ficha-desde-sus-dias
