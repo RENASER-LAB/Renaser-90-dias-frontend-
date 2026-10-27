@@ -1,0 +1,67 @@
+# 24 — Administración → Personas → la ficha de alguien con grupo → «Ver sus días y evidencias» (la vista del líder) y vuelta.
+# cuenta: admin
+#
+# Precondición (datos del backend local, base clonada):
+#   - La cuenta E2E_ADMIN es ADMIN o ALCHEMIST.
+#   - Una persona con grupo (su fila de Personas dice «Día N», sin «Sin grupo»). Se busca por una parte corta de su
+#     nombre: `E2E_PERSONA=<parte del nombre>` (correr.sh la pasa como PERSONA; ≤ 4 letras, `inputText` es lento). Sin
+#     variable se busca «a» y se toca a la primera: puede no tener grupo y entonces el flujo falla en el botón.
+#   - Si su grupo no tiene mentor, o no empezó su programa, el servidor no abre sus días (404): la pantalla lo dice y
+#     el flujo lo comprueba. Con mentor, se ven sus días y «Escribirle».
+appId: com.renaser.app
+env:
+  PERSONA: "a"
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "HOY"
+- scrollUntilVisible:
+    element: "Abrir Administración"
+    direction: DOWN
+- tapOn: "Abrir Administración"
+- extendedWaitUntil:
+    visible: "Operación del programa"
+    timeout: 15000
+- scrollUntilVisible:
+    element: "Personas"
+    direction: DOWN
+- tapOn: "Personas"
+- extendedWaitUntil:
+    visible: "Buscar por nombre o correo"
+    timeout: 15000
+- tapOn: "Buscar por nombre o correo"
+- inputText: ${PERSONA}
+- hideKeyboard
+- extendedWaitUntil:
+    visible: "Abrir ficha de .*"
+    timeout: 20000
+- tapOn: "Abrir ficha de .*"
+- extendedWaitUntil:
+    visible: "Detalle de hábitos .*"
+    timeout: 30000
+- takeScreenshot: 24a-ficha
+
+# La entrada solo existe con grupo.
+- assertVisible: "Ver los días y las evidencias de .*"
+- tapOn: "Ver los días y las evidencias de .*"
+- extendedWaitUntil:
+    notVisible: "Detalle de hábitos .*"
+    timeout: 30000
+
+# O se abren sus días (con «Escribirle» al pie) o el servidor no los abre y la pantalla dice por qué; nunca queda una
+# rueda colgada ni el «todavía no está disponible» que promete que aparecerá solo.
+- extendedWaitUntil:
+    visible: ".*(Escribirle|No se pueden mostrar sus días desde acá).*"
+    timeout: 60000
+- assertNotVisible: ".*todavía no está disponible.*"
+- takeScreenshot: 24b-sus-dias-desde-la-ficha
+
+# No hay botón a la ficha: ya está justo debajo. El atrás vuelve a la ficha y de ahí a Personas.
+- assertNotVisible: "Ver su ficha"
+- back
+- extendedWaitUntil:
+    visible: "Detalle de hábitos .*"
+    timeout: 20000
+- back
+- assertVisible: "Buscar por nombre o correo"
+- back
+- assertVisible: "Operación del programa"

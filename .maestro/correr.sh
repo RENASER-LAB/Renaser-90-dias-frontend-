@@ -117,6 +117,8 @@ for f in "${flujos[@]}"; do
   else
     correo=$E2E_APRENDIZ_EMAIL; clave=$E2E_APRENDIZ_PASSWORD
   fi
+  # E2E_PERSONA (opcional): una parte del nombre de la persona que tocan los flujos 23 y 24; llega como PERSONA.
+  [ -z "${E2E_PERSONA:-}" ] || extra+=(-e "PERSONA=$E2E_PERSONA")
   estado=1
   if entrar "$correo" "$clave"; then
     ~/.maestro/bin/maestro test "${extra[@]}" "$f" --test-output-dir "$SALIDA" 2>&1 | tapar | grep -E "COMPLETED|FAILED|Flow "
