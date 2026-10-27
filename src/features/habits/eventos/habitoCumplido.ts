@@ -15,8 +15,12 @@
  * `habitoId` (spec 009, 2026-10-20): de QUÉ hábito es el registro, para que las repeticiones de su alarma dejen de
  * sonar hoy (`repeticiones.atenderAlCumplirUnHabito`). Opcional: sale del registro vigente que ya se leyó para
  * validar el día, y si no se pudo saber, el aviso viaja sin él.
+ *
+ * `fecha` (issue #33, 2026-10-27): el día del hábito de ese registro, `YYYY-MM-DD` (`fechaEjecucion` del track, el día del
+ * participante). Un hábito se cumple a veces pasada la medianoche —Dormir a las 00:40 es del día anterior—: lo que se
+ * silencia en el teléfono es lo que le quedaba a ESE día, no a «hoy» según el reloj. Opcional por lo mismo que `habitoId`.
  */
-export type HabitoCumplido = { registroId: string; puntosOtorgados: number; habitoId?: string };
+export type HabitoCumplido = { registroId: string; puntosOtorgados: number; habitoId?: string; fecha?: string };
 
 type Oyente = (cumplido: HabitoCumplido) => void;
 

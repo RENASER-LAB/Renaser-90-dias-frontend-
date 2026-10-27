@@ -48,6 +48,8 @@ const PREFIJOS_DE_ALARMAS = [
   // Spec 009: cómo sonaba la alarma general del hábito y los días ya atendidos (repeticiones). Sin las alarmas no sirven.
   'renaser.habitos.combinacion.',
   'renaser.habitos.repeticiones.atendidas.',
+  // Issue #33: la nota de «este hábito se cumplió hoy» y si tiene un puente de alarmas armado. Sin las alarmas no sirve.
+  'renaser.habitos.cumplido.',
   'renaser.eventos.alarmas.',
   'renaser.objetivos.recordatorios.acciones.',
   'renaser.objetivos.recordatorios.diario.',

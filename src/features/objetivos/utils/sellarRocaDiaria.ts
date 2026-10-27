@@ -62,9 +62,10 @@ export async function sellarRocaDiaria(
 
 /**
  * La acción quedó sellada: las repeticiones de su alarma («Repetir si no la atiendo», spec 010) dejan de sonar y no se
- * vuelven a poner. Pasan por acá todos los cierres de una acción (Training, el registro con foto, el acompañante). Se
- * carga acá adentro para no arrastrar las alarmas locales a quien solo sube una evidencia, y un fallo no puede deshacer una
- * acción que el servidor ya selló.
+ * vuelven a poner, y su aviso «antes de la acción» que todavía no sonó también se cancela (issue #33, 2026-10-27). Pasan
+ * por acá todos los cierres de una acción (Training, el registro con foto, el acompañante). Se carga acá adentro para no
+ * arrastrar las alarmas locales a quien solo sube una evidencia, y un fallo no puede deshacer una acción que el servidor
+ * ya selló. El recordatorio diario general no se toca.
  */
 async function dejarDeRepetirLaAccion(rocaId: string): Promise<void> {
   try {
@@ -73,5 +74,12 @@ async function dejarDeRepetirLaAccion(rocaId: string): Promise<void> {
     await atenderLaAccion(rocaId);
   } catch {
     // Las repeticiones de hoy sonarían una vez más; la acción ya quedó sellada.
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { cancelarElAvisoDeLaAccion } = require('../notificaciones/recordatoriosDeAcciones') as typeof import('../notificaciones/recordatoriosDeAcciones');
+    await cancelarElAvisoDeLaAccion(rocaId);
+  } catch {
+    // El aviso se quita en la próxima lectura de la lista, como antes; la acción ya quedó sellada.
   }
 }

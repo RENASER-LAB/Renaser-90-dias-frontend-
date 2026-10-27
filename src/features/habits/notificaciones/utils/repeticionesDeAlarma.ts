@@ -105,8 +105,11 @@ export function habitoDeLaRuta(ruta: unknown): string | null {
   }
 }
 
-/** La hora que rige para el día `fecha` (local): la propia, o la general; con un cambio pendiente, la de esa fecha. */
-function horaDelDia(entrada: EntradaDeRepeticiones, propio: DiaPropio | undefined, fecha: Date): string | null {
+/**
+ * La hora que rige para el día `fecha` (local): la propia, o la general; con un cambio pendiente, la de esa fecha.
+ * Se exporta para el puente de un hábito cumplido (`puenteDeAlarmas.ts`), que necesita la misma cuenta por día.
+ */
+export function horaDelDia(entrada: EntradaDeRepeticiones, propio: DiaPropio | undefined, fecha: Date): string | null {
   if (propio?.hora) return horaCorta(propio.hora);
   // E-642: un día sin hora propia va a la hora que el servidor resolvió para ESE día, no a la de hoy.
   const resuelta = horaCorta(propio?.horaResuelta);

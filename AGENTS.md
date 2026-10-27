@@ -29,6 +29,71 @@ texto genérico del servidor. No cambian el diseño, los textos de la tarjeta ni
 preguntas, los horarios ni los tabs. No hace falta backend nuevo; sí hace falta un APK nuevo (la app no se
 actualiza por aire).
 
+## Corrección autorizada — 2026-10-27 — los recordatorios de un hábito cumplido ya no suenan ese día (issue #33)
+
+Pedido del dueño: «Despertar cumplido a las 06:00 y la alarma de las 06:30 suena igual; con avisos de 30, 10 y a la hora,
+cumplir tras el primero no apaga los que faltan». El backend no es la causa (`AvisoHabitoService` no manda push de respaldo de
+un registro terminado): es la alarma local. Las de un hábito se repiten solas (`DAILY` por antelación, o `WEEKLY` por día,
+specs 007–009) y una alarma que se repite no deja saltar un día: cancelarla borra la de mañana, y dejarla puesta la deja sonar.
+Al cumplir solo se cancelaban las repeticiones +5/+10 (spec 009). Lo que cambia y nada más:
+* **Un hábito cumplido hoy no suena nada más ese día, y mañana suena normal.** Al confirmar el servidor el cierre
+  (`alCumplirElHabito`, en `habits/notificaciones/repeticiones.ts`): (1) se anota que el hábito se cumplió en ese día
+  (`cumplidoDeHoy.ts`, `renaser.habitos.cumplido.<cuenta>.<hábito>` = `{ dia, puenteDe }`; se borra al cerrar sesión);
+  (2) se atiende como siempre (las repeticiones de hoy se cancelan y no vuelven); (3) si el hábito tiene alarmas en este
+  teléfono y a ese día todavía le queda algún aviso, se lee `GET /habit-preferences` —lo mismo que lee la puesta al día— y se
+  vuelven a poner SOLO las alarmas de ese hábito (`ajustarRecordatoriosAlServidor`), que con la nota reemplaza las que se
+  repiten por un **puente**: una alarma de FECHA por cada aviso de los 7 días siguientes, saltando hoy
+  (`utils/puenteDeAlarmas.ts`, puro; `ponerElPuenteSiHoyYaSeCumplio`). Mismo texto, canal, ruta y datos («cómo suena»,
+  `data.alarma`). Si ya sonaron todos los avisos de hoy no se toca ninguna alarma (no se gasta el puente); un hábito sin
+  alarmas en el teléfono no hace ningún pedido.
+* **Identificadores.** En el esquema por día el puente usa los mismos de siempre, `habito-{id}-d{1..7}-{n}` (una ventana de 7
+  días no repite ningún día de la semana); en el diario, el primer aviso lleva `habito-{id}-inicio` y los demás
+  `habito-{id}-pte-{AAAAMMDD}-{n}` (una alarma de fecha por día no puede compartir identificador). Así el tag del push de
+  respaldo del servidor (spec 007) sigue juntándose con la alarma en la bandeja, y volver al esquema normal con el mismo
+  identificador REEMPLAZA la alarma en vez de duplicarla. Los ids del puente se guardan con los del hábito
+  (`renaser.habitos.recordatorio.*`): `cancelar`, el cambio de sonido de Yo → Alarmas, `ponerLasAlarmasDeHabitosEnSuCanal`,
+  el aviso agrupado (E-410), el rearmado de la spec 007 y `alarmasVivas` lo tratan como cualquier otra alarma de fecha.
+* **Cómo se revierte.** La regla es «puente armado si y solo si el hábito se cumplió HOY y le quedan avisos por sonar»
+  (`puenteQueCorresponde`). La puesta al día que corre al abrir la app y al volver a primer plano compara lo armado con lo que
+  corresponde (`hayQueConciliarElPuente`) y, si no coincide, vuelve a poner las alarmas del hábito aunque nada más haya
+  cambiado: al día siguiente —o el mismo día, cuando ya sonaron todos los avisos— deja las `DAILY`/`WEEKLY` de siempre. Mientras
+  coincide no toca nada (no cancela y pone en cada apertura). Converge también si el cumplido llegó mientras corría otra puesta
+  al día, o sin red (la nota ya quedó; solo se pierde el apagado inmediato).
+* **Reprogramar el mismo día.** `programar` y `programarConCambioDiferido` leen la nota: si Plan mueve la hora, Training guarda el
+  editor, Yo → Alarmas toca Despertar, o se apaga y se vuelve a encender el aviso el mismo día en que ya se cumplió, hoy no vuelve
+  a sonar. `cancelar` quita el puente (sus ids van con los del hábito) y lo marca desarmado, pero deja la nota de «se cumplió hoy».
+* **El día es el del HÁBITO.** El aviso `habitoCumplido` trae ahora `fecha` (la `fechaEjecucion` del registro, `YYYY-MM-DD`). Un
+  hábito se cumple a veces pasada la medianoche —Dormir a las 00:40 es del día anterior—: eso no apaga lo que le queda al de hoy,
+  ni sus repeticiones (`atenderHabito` recibe el día). Los avisos se atribuyen al día del hábito, no al instante en que suenan: el de
+  las 23:40 de esta noche de un hábito a las 00:10 es el de mañana y el puente lo conserva. «Hoy» para las alarmas es el del reloj del
+  teléfono, como siempre.
+* **Otros caminos de cumplir.** La Pastilla Renacer y la Clase diaria cierran por su propio endpoint y no emiten `habitoCumplido`
+  (tampoco las celebraciones): `TrainingScreen` llama a `alCumplirElHabito` directamente al confirmar el servidor, con el
+  `habitoId` y la `fecha` del registro vigente. La Audioterapia, Despertar/Dormir, el registro con foto y SER ya pasaban por
+  `completarRegistro`.
+* **Acciones de los objetivos (spec 010).** Al sellar una acción (`sellarRocaDiaria`) también se cancela su aviso «antes de la
+  acción» que todavía no sonó (`cancelarElAvisoDeLaAccion`: son alarmas de fecha de esa acción), además de sus repeticiones. Las
+  entradas guardadas se dejan: una lista leída antes del sello no vuelve a programarlas, y la primera que ya trae la acción
+  cumplida las limpia. El recordatorio diario general y las demás acciones no se tocan.
+* **No cambian**: ningún diseño, texto ni tab; los canales (`-vib`/`-sinvib`), las voces, «cómo suena», «Repetir si no la atiendo»
+  y sus «atendidas», el rearmado de la spec 007, `ponerLasAlarmasDeHabitosEnSuCanal`, el aviso agrupado, cerrar sesión (suelta las
+  alarmas y la nota), el push de respaldo del servidor ni el backend. Un hábito no cumplido suena exactamente igual que antes.
+* **Compatibilidad.** Sin backend nuevo. Contra un servidor que no manda `weekdays` ni `alarm`, o una app sin permiso de avisos,
+  se comporta como antes (sin permiso no arma nada). La nota y el puente son locales: no viajan.
+* **Límites aceptados.** (1) Si la persona no abre la app en 7 días después de cumplir, el puente se acaba (como las
+  repeticiones); la primera apertura lo revierte. (2) Un hábito cumplido desde OTRO teléfono o la web, o que el servidor cierra por su
+  cuenta (el post diario al publicar), no avisa a este: sus alarmas de hoy suenan igual. Leer los registros de hoy en cada puesta al
+  día sumaría un pedido por apertura; no se hizo. (3) Con el puente, un aviso de fecha de un hábito y la diaria de otro a la misma
+  hora no se juntan en un solo aviso (E-410 solo junta el mismo tipo de disparador): Android puede callar el sonido del segundo hasta
+  que la puesta al día revierte el puente. (4) El peor caso son 7 alarmas de fecha por aviso de cada hábito cumplido ese día
+  (Android admite unas 500 por app). (5) Si `GET /habit-preferences` falla justo al cumplir, el apagado espera a la próxima puesta
+  al día (que corre al volver a primer plano, con 10 min de intervalo mínimo).
+* **Pruebas:** `puenteDeAlarmas.test.ts` (qué le queda a hoy, el puente, los identificadores), `habitoCumplidoSilenciaAlarmas.test.ts`
+  (cumplir apaga el resto de hoy en el esquema diario y por día, mañana suena normal, reprogramar el mismo día, cumplir pasada la
+  medianoche, cambio de sonido, rearmado, aviso agrupado y cerrar sesión), `habitoCumplido.test.ts` (el aviso trae el día) y
+  `sellarRocaYRepeticiones.test.ts` (el aviso de la acción sellada).
+* **Hace falta un APK nuevo** (solo JavaScript: no hay código nativo nuevo, pero la app no se actualiza por aire).
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:

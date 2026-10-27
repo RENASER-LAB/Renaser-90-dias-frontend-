@@ -13,6 +13,8 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 
 type Pedido = { identifier?: string; content: Record<string, unknown>; trigger: Record<string, unknown> };
 const mockLista = new Map<string, Pedido & { identifier: string }>();
+// Un contador y no `mockLista.size + 1`: con alarmas canceladas de por medio el tamaño baja y el identificador se repetiría.
+let mockSiguiente = 1;
 
 jest.mock('expo-notifications', () => ({
   setNotificationHandler: jest.fn(),
@@ -22,7 +24,7 @@ jest.mock('expo-notifications', () => ({
   AndroidImportance: { HIGH: 4, DEFAULT: 3 },
   SchedulableTriggerInputTypes: { DAILY: 'daily', WEEKLY: 'weekly', DATE: 'date' },
   scheduleNotificationAsync: jest.fn(async (p: Pedido) => {
-    const identifier = p.identifier ?? `uuid-${mockLista.size + 1}`;
+    const identifier = p.identifier ?? `uuid-${mockSiguiente++}`;
     mockLista.set(identifier, { ...p, identifier });
     return identifier;
   }),
@@ -46,7 +48,11 @@ jest.mock('../../../habits/api/evidenciaHabitoApi', () => ({
   subirArchivoAS3: jest.fn(),
 }));
 
-import { guardarPreferenciasDeAcciones, sincronizarAlarmasDeAcciones } from '../../notificaciones/recordatoriosDeAcciones';
+import {
+  guardarPreferenciasDeAcciones,
+  ponerElRecordatorioDiario,
+  sincronizarAlarmasDeAcciones,
+} from '../../notificaciones/recordatoriosDeAcciones';
 import type { RocaDiariaApi } from '../../types/objetivos.types';
 import { sellarRocaDiaria } from '../sellarRocaDiaria';
 
@@ -58,9 +64,14 @@ const SABADO: RocaDiariaApi = {
   completadaEn: null, puntosOtorgados: 0, bloqueada: false, acciones: [],
 };
 const repeticiones = () => [...mockLista.keys()].filter(id => id.includes('-rep-')).sort();
+/** Los avisos «antes de la acción» de una acción (no sus repeticiones ni el recordatorio diario), por título. */
+const avisosDe = (titulo: string) => [...mockLista.values()]
+  .filter(a => !a.identifier.includes('-rep-') && (a.content.title === titulo || a.content.title === `En 30 min: ${titulo}`));
+const OTRA: RocaDiariaApi = { ...SABADO, id: 'otra', titulo: 'Escribir', horaInicio: '09:00:00' };
 
 beforeEach(async () => {
   mockLista.clear();
+  mockSiguiente = 1;
   mockRegistrar.mockClear();
   await AsyncStorage.clear();
   jest.replaceProperty(Platform, 'OS', 'android');
@@ -91,6 +102,54 @@ describe('sellar una acción', () => {
     mockRegistrar.mockRejectedValueOnce(new Error('409'));
     await expect(sellarRocaDiaria('sab', { archivo: null, texto: 'Lo hice' })).rejects.toThrow('409');
     expect(repeticiones()).toHaveLength(2);
+  });
+
+  it('issue #33: su aviso «antes de la acción» que todavía no sonó también se cancela, y la lista vieja no lo resucita', async () => {
+    await guardarPreferenciasDeAcciones(USUARIO, {
+      diarioActivo: false, horaDiaria: '08:00', antelaciones: [30, 0], alarma: { sonido: true, vibracion: true, voz: false, repetir: false },
+    });
+    await sincronizarAlarmasDeAcciones(USUARIO, [SABADO, OTRA], { ahoraMs: MADRUGADA_UTC, zona: 'America/Lima' });
+    expect(avisosDe('Llamar')).toHaveLength(2); // 06:30 y 07:00
+    expect(avisosDe('Escribir')).toHaveLength(2);
+
+    await sellarRocaDiaria('sab', { archivo: null, texto: 'Lo hice' });
+    expect(avisosDe('Llamar')).toEqual([]);
+    // La de otra acción sigue en pie.
+    expect(avisosDe('Escribir')).toHaveLength(2);
+
+    // La lista todavía la trae sin cumplir (Plan no la releyó): el aviso no vuelve.
+    await sincronizarAlarmasDeAcciones(USUARIO, [SABADO, OTRA], { ahoraMs: MADRUGADA_UTC, zona: 'America/Lima' });
+    expect(avisosDe('Llamar')).toEqual([]);
+    expect(avisosDe('Escribir')).toHaveLength(2);
+
+    // La lectura que ya la trae cumplida deja todo limpio, y una acción nueva con el mismo título sí vuelve a avisar.
+    await sincronizarAlarmasDeAcciones(USUARIO, [{ ...SABADO, completada: true }, OTRA], { ahoraMs: MADRUGADA_UTC, zona: 'America/Lima' });
+    expect(avisosDe('Llamar')).toEqual([]);
+    await sincronizarAlarmasDeAcciones(USUARIO, [{ ...SABADO, id: 'sab-2' }, OTRA], { ahoraMs: MADRUGADA_UTC, zona: 'America/Lima' });
+    expect(avisosDe('Llamar')).toHaveLength(2);
+  });
+
+  it('sellar una acción no toca el recordatorio diario general', async () => {
+    await guardarPreferenciasDeAcciones(USUARIO, {
+      diarioActivo: true, horaDiaria: '08:00', antelaciones: [0], alarma: { sonido: true, vibracion: true, voz: false, repetir: false },
+    });
+    await ponerElRecordatorioDiario(USUARIO);
+    await sincronizarAlarmasDeAcciones(USUARIO, [SABADO], { ahoraMs: MADRUGADA_UTC, zona: 'America/Lima' });
+    const diarias = () => [...mockLista.values()].filter(a => (a.trigger as { type?: string }).type === 'daily');
+    expect(diarias()).toHaveLength(1);
+    await sellarRocaDiaria('sab', { archivo: null, texto: 'Lo hice' });
+    expect(diarias()).toHaveLength(1);
+    expect(avisosDe('Llamar')).toEqual([]);
+  });
+
+  it('si el servidor rechaza el sello, el aviso sigue (la acción no se cumplió)', async () => {
+    await guardarPreferenciasDeAcciones(USUARIO, {
+      diarioActivo: false, horaDiaria: '08:00', antelaciones: [0], alarma: { sonido: true, vibracion: true, voz: false, repetir: false },
+    });
+    await sincronizarAlarmasDeAcciones(USUARIO, [SABADO], { ahoraMs: MADRUGADA_UTC, zona: 'America/Lima' });
+    mockRegistrar.mockRejectedValueOnce(new Error('409'));
+    await expect(sellarRocaDiaria('sab', { archivo: null, texto: 'Lo hice' })).rejects.toThrow('409');
+    expect(avisosDe('Llamar')).toHaveLength(1);
   });
 
   it('sin alarmas locales (o con la librería caída) sellar funciona igual', async () => {

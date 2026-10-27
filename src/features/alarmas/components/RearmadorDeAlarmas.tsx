@@ -15,7 +15,8 @@ import { atenderAlCumplirUnHabito } from '../../habits/notificaciones/repeticion
  * > sesión para lo demás; sin ella, sigue re-armando igual.
  *
  * Spec 009: también escucha «se cumplió un hábito» para que las repeticiones de su alarma de hoy dejen de sonar
- * («Repetir si no la atiendo»; `habits/notificaciones/repeticiones.ts`).
+ * («Repetir si no la atiendo»; `habits/notificaciones/repeticiones.ts`). Desde el issue #33 (2026-10-27) eso incluye todo
+ * lo demás que le quedaba por sonar ese día: un hábito cumplido no suena más hasta mañana.
  *
  * Vive en `App.tsx`, por encima del navegador, como `AbridorDeAvisos`: ninguna pestaña cambia.
  * No pinta nada.
@@ -37,7 +38,7 @@ export function RearmadorDeAlarmas(): null {
   // Con sesión: completar un hábito es atenderlo. Sin sesión no hay alarmas de nadie que cancelar.
   useEffect(() => {
     if (!userId) return;
-    return atenderAlCumplirUnHabito();
+    return atenderAlCumplirUnHabito(userId);
   }, [userId]);
   return null;
 }

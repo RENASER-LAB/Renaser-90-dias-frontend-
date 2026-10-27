@@ -29,7 +29,16 @@ import {
   usaEsquemaPorDia,
   type DiaPropio,
   type PedidoDeAlarmaDelDia,
+  type PlanDeAlarmas,
 } from './utils/alarmasPorDia';
+import {
+  anotarPuenteArmado,
+  anotarPuenteDesarmado,
+  leerNotaDeCumplido,
+  quitarNotaDeCumplido,
+} from './cumplidoDeHoy';
+import { planDelPuente, puenteQueCorresponde } from './utils/puenteDeAlarmas';
+import { fechaCompacta, type EntradaDeRepeticiones } from './utils/repeticionesDeAlarma';
 // SOLO tipos: `import type` se borra al compilar, así que esto NO carga el módulo en runtime. Ver
 // el bloque "POR QUÉ NO SE IMPORTA ARRIBA" más abajo — importarlo de verdad rompe Expo Go.
 import type * as TipoNotificaciones from 'expo-notifications';
@@ -97,6 +106,17 @@ import type * as TipoNotificaciones from 'expo-notifications';
  * **En Android 14+ el permiso se declara pero no se concede solo**: la persona tiene que activar
  * "Alarmas y recordatorios" para esta app en los ajustes del sistema. Sin eso, la alarma sigue
  * siendo inexacta — el permiso es condición necesaria, no suficiente.
+ *
+ * ## UN HÁBITO CUMPLIDO NO SUENA EL RESTO DEL DÍA (issue #33, 2026-10-27)
+ *
+ * Las alarmas de un hábito se repiten solas (`DAILY`, o `WEEKLY` por día) y una alarma que se repite no deja saltar un
+ * día: cancelarla borra la de mañana, y dejarla puesta la deja sonar. Despertar cumplido a las 06:00 sonaba igual a las
+ * 06:30. Al cumplir el hábito (`repeticiones.alCumplirElHabito`) se anota en `cumplidoDeHoy.ts` y, si le quedan avisos a
+ * hoy, `programar` pone en lugar de las alarmas que se repiten un PUENTE de alarmas de FECHA desde mañana, 7 días
+ * (`utils/puenteDeAlarmas.ts`), con el mismo texto, canal y datos. El día siguiente (o cuando ya sonaron todos los avisos
+ * de hoy) la puesta al día vuelve al esquema normal. Mientras haya nota de cumplido de hoy, cualquier `programar` del hábito
+ * —Plan, Training, Yo → Alarmas— lo respeta. Los ids del puente se guardan con los del hábito, así que `cancelar`, el
+ * cambio de sonido, el aviso agrupado y el rearmado lo tratan como cualquier otra alarma.
  *
  * ## POR QUÉ SE GUARDA EL IDENTIFICADOR
  *
@@ -471,6 +491,10 @@ export async function cancelar(userId: string, habitoId: string): Promise<void> 
   // cancela entero.
   await sinRomper(() => AsyncStorage.removeItem(claveDiferido(userId, habitoId)), undefined);
   await sinRomper(() => AsyncStorage.removeItem(claveHora(userId, habitoId)), undefined);
+  // Issue #33: el puente de un hábito cumplido va entre las alarmas que se acaban de cancelar (sus ids se guardan con los
+  // del hábito), así que ya no está. La nota de «se cumplió hoy» NO se borra: reprogramar el hábito el mismo día (Plan, la
+  // puesta al día) tiene que seguir sabiendo que hoy no debe sonar.
+  await anotarPuenteDesarmado(userId, habitoId);
   await reagrupar(userId);
 }
 
@@ -667,6 +691,88 @@ async function ponerLasAlarmasPorDia(
 }
 
 /**
+ * Issue #33 (2026-10-27): si el hábito ya se cumplió HOY y a hoy todavía le queda algún aviso por sonar, pone en lugar de
+ * las alarmas que se repiten el PUENTE: una alarma de FECHA por cada aviso de los próximos 7 días, saltando hoy
+ * (`planDelPuente`), con el mismo texto, canal y datos. Una alarma diaria o semanal no se puede saltar solo por hoy, y
+ * esa era la causa de que Despertar cumplido a las 06:00 sonara igual a las 06:30.
+ *
+ * Deja guardado lo mismo que las otras puestas (ids, avisos generales, hora, días y cómo suena), para que quien reprograma
+ * sin saber de esto (Plan al mover la hora) y la puesta al día del servidor vean un hábito normal, y anota en la nota de
+ * «se cumplió hoy» que el puente está armado. Corre con las alarmas anteriores ya canceladas y con permiso.
+ *
+ * Devuelve `true` si puso el puente (el llamador NO pone el esquema normal) y `false` si no hace falta: no se cumplió hoy,
+ * o ya sonaron todos los avisos de hoy (no se gasta el puente).
+ */
+async function ponerElPuenteSiHoyYaSeCumplio(
+  N: typeof TipoNotificaciones,
+  userId: string,
+  habitoId: string,
+  titulo: string,
+  entrada: EntradaDeRepeticiones,
+  antelacionesGenerales: readonly number[],
+  horaAnotada: HoraProgramada,
+  opciones: OpcionesDelAviso,
+  planNormal: PlanDeAlarmas,
+  ahora: Date,
+): Promise<boolean> {
+  const hoy = fechaCompacta(ahora);
+  const nota = await leerNotaDeCumplido(userId, habitoId);
+  if (!nota || nota.dia !== hoy) return false;
+  const puente = planDelPuente(entrada, ahora);
+  if (puente.quedanHoy === 0) return false;
+  const tono = await sonidoDe(userId, habitoId);
+  const canales = new Map<string, CanalDeAlarma>();
+  const ruta = rutaDelAvisoDeHabito(habitoId, opciones.dimension);
+  const ids: string[] = [];
+  try {
+    for (const pedido of puente.pedidos) {
+      const canal = canalDeLaCombinacion('habitos', tono, pedido.alarma, { id: habitoId, titulo });
+      if (!canales.has(canal.id)) {
+        await asegurarCanal(canal);
+        canales.set(canal.id, canal);
+      }
+      ids.push(await N.scheduleNotificationAsync({
+        identifier: pedido.identificador,
+        content: contenidoDelAviso(titulo, pedido.minutosAntes, pedido.horaDelDia, canal, ruta, pedido.alarma),
+        trigger: { type: N.SchedulableTriggerInputTypes.DATE, date: new Date(pedido.instanteMs), channelId: canal.id },
+      }));
+    }
+  } finally {
+    // Lo que alcanzó a ponerse queda guardado aunque una falle: sin sus ids nadie podría cancelarlo.
+    await AsyncStorage.setItem(claveDe(userId, habitoId), JSON.stringify(ids));
+  }
+  if (antelacionesGenerales.length > 0) {
+    await AsyncStorage.setItem(CLAVE_ANTELACIONES + `${userId}.${habitoId}`, JSON.stringify(antelacionesGenerales));
+  }
+  await AsyncStorage.setItem(claveHora(userId, habitoId), JSON.stringify(horaAnotada));
+  if (planNormal.esquema === 'porDia') {
+    const guardado: EsquemaGuardado = { firma: firmaDelPlan(planNormal), dias: [...(opciones.dias ?? [])] };
+    await AsyncStorage.setItem(claveEsquema(userId, habitoId), JSON.stringify(guardado));
+  }
+  await guardarCombinacionGeneral(userId, habitoId, opciones.alarma ?? null);
+  await anotarPuenteArmado(userId, habitoId, hoy);
+  return true;
+}
+
+/**
+ * ¿El puente de este hábito está como tiene que estar? No, si hay uno armado que ya no corresponde (el día pasó, o ya
+ * sonaron todos los avisos de hoy) o si el hábito se cumplió hoy, todavía le quedan avisos y no hay puente armado (el
+ * cumplido llegó mientras corría otra puesta, o sin saber de las alarmas). Con `true`, la puesta al día vuelve a poner
+ * las alarmas del hábito aunque nada más haya cambiado: `programar` deja el estado que corresponde, así que converge.
+ */
+async function hayQueConciliarElPuente(userId: string, entrada: EntradaDeRepeticiones, ahora: Date): Promise<boolean> {
+  const nota = await leerNotaDeCumplido(userId, entrada.habitoId);
+  if (!nota) return false;
+  const quiere = puenteQueCorresponde(nota.dia, entrada, ahora);
+  if (nota.puenteDe !== quiere) return true;
+  // Sin puente y de un día que ya pasó, la nota no sirve más.
+  if (nota.puenteDe === null && nota.dia < fechaCompacta(ahora)) {
+    await quitarNotaDeCumplido(userId, entrada.habitoId);
+  }
+  return false;
+}
+
+/**
  * Programa los avisos de un hábito: uno por cada antelación elegida.
  *
  * Cancela primero el anterior: si no, cambiar la hora dejaría sonando la alarma vieja y sumaría
@@ -686,8 +792,9 @@ export async function programar(
   titulo: string,
   horaHHmm: string,
   antelaciones: number[],
-  opciones: OpcionesDelAviso = {},
+  opciones: OpcionesDelAviso & { ahora?: Date } = {},
 ): Promise<boolean> {
+  const ahora = opciones.ahora ?? new Date();
   // Spec 009: «cómo suena» la general. Se lee ANTES de `cancelar`, que borra lo que el teléfono recordaba del hábito.
   const alarma = opciones.alarma !== undefined ? opciones.alarma : await combinacionGeneralGuardada(userId, habitoId);
   const opcionesConAlarma: OpcionesDelAviso = { ...opciones, alarma };
@@ -718,6 +825,15 @@ export async function programar(
   }
   const ok = await sinRomper(async () => {
     if (!(await pedirPermiso())) return false;
+    // Issue #33: un hábito ya cumplido hoy no suena el resto del día (el esquema que se repite no sabe saltarse un día).
+    const entradaDelPuente: EntradaDeRepeticiones = {
+      habitoId, horaGeneral: horaCorta(horaHHmm), avisosGenerales: antelaciones, dias: opciones.dias, alarmaGeneral: alarma,
+    };
+    if (await ponerElPuenteSiHoyYaSeCumplio(
+      N, userId, habitoId, titulo, entradaDelPuente, antelaciones, { hora: horaHHmm }, opcionesConAlarma, plan, ahora,
+    )) {
+      return true;
+    }
     if (plan.esquema === 'porDia') {
       return ponerLasAlarmasPorDia(N, userId, habitoId, titulo, plan.pedidos, antelaciones, { hora: horaHHmm }, opcionesConAlarma);
     }
@@ -986,9 +1102,18 @@ export async function programarConCambioDiferido(
     else await sinRomper(() => AsyncStorage.setItem(claveSet, JSON.stringify(antelaciones)), undefined);
     return true;
   }
+  // Issue #33: la misma entrada que el plan, para el puente de un hábito ya cumplido hoy.
+  const entradaDelPuente: EntradaDeRepeticiones = {
+    habitoId, horaGeneral: horaCorta(cambio.horaNueva), avisosGenerales: antelaciones, dias: opciones.dias, alarmaGeneral: alarma, cambio,
+  };
   if (plan.esquema === 'porDia') {
     const hecho = await sinRomper(async () => {
       if (!(await pedirPermiso())) return false;
+      if (await ponerElPuenteSiHoyYaSeCumplio(
+        N, userId, habitoId, titulo, entradaDelPuente, antelaciones, { hora: cambio.horaNueva, desde: cambio.desde }, opcionesConAlarma, plan, ahora,
+      )) {
+        return true;
+      }
       return ponerLasAlarmasPorDia(N, userId, habitoId, titulo, plan.pedidos, antelaciones,
         { hora: cambio.horaNueva, desde: cambio.desde }, opcionesConAlarma);
     }, false);
@@ -1004,6 +1129,11 @@ export async function programarConCambioDiferido(
   const ruta = rutaDelAvisoDeHabito(habitoId, opciones.dimension);
   const ok = await sinRomper(async () => {
     if (!(await pedirPermiso())) return false;
+    if (await ponerElPuenteSiHoyYaSeCumplio(
+      N, userId, habitoId, titulo, entradaDelPuente, antelaciones, { hora: cambio.horaNueva, desde: cambio.desde }, opcionesConAlarma, plan, ahora,
+    )) {
+      return true;
+    }
     const canal = await canalDeLaAlarma(userId, habitoId, titulo, alarma);
     await asegurarCanal(canal);
     const ids: string[] = [];
@@ -1155,6 +1285,11 @@ export function avisosSegunElServidor(p: PreferenciaHabitoApi, delTelefono: read
  * - Activo y con alarma → la reprograma si cambiaron los avisos, la hora o el cambio pendiente. La hora
  *   solo se compara si el teléfono la anotó (las alarmas de antes de D-217 no la tienen).
  * - Con cambio pendiente, respetando su fecha.
+ * - **Issue #33 (2026-10-27): el puente de un hábito cumplido.** Un hábito que se cumplió hoy y todavía tiene avisos por
+ *   sonar lleva alarmas de fecha desde mañana en lugar de las que se repiten (`ponerElPuenteSiHoyYaSeCumplio`). Esta
+ *   puesta al día lo compara con lo que corresponde (`hayQueConciliarElPuente`) y lo arma, lo deja o vuelve al esquema
+ *   normal —cuando el día pasó, o ya sonaron todos los avisos de hoy—, aunque nada más haya cambiado. Converge: no se
+ *   rehace en cada apertura mientras esté como debe.
  * - **No pide permiso**: corre al abrir la app. Sin permiso de avisos no arma nada (sí cancela).
  */
 export async function ajustarRecordatoriosAlServidor(
@@ -1260,14 +1395,23 @@ async function ajustarUno(
       : anotada.hora !== hora);
     const cambioElSonido = alarmaDelServidor !== null
       && !mismaCombinacion(alarmaDelServidor, (await combinacionGeneralGuardada(userId, p.habitId)) ?? COMBINACION_POR_DEFECTO);
-    if (mismoConjunto(avisos, delTelefono) && !horaCambio && !veniaPorDia && !cambioElSonido) return false;
+    // Issue #33: un hábito cumplido hoy tiene su puente armado (o debería); si no está como corresponde, se rehacen.
+    const hayQueConciliar = await hayQueConciliarElPuente(userId, {
+      habitoId: p.habitId,
+      horaGeneral: hora,
+      avisosGenerales: avisos,
+      dias: null,
+      alarmaGeneral: alarmaDelServidor ?? (await combinacionGeneralGuardada(userId, p.habitId)),
+      cambio: cambio ? { horaDeHoy: hora, horaNueva: cambio.horaNueva, desde: cambio.desde } : null,
+    }, opciones.ahora ?? new Date());
+    if (mismoConjunto(avisos, delTelefono) && !horaCambio && !veniaPorDia && !cambioElSonido && !hayQueConciliar) return false;
   }
   const dimension = opciones.dimensionDe?.(p.habitId) ?? null;
   const alarma = alarmaDelServidor ?? undefined;
   return cambio
     ? programarConCambioDiferido(userId, p.habitId, p.title,
       { horaDeHoy: hora, horaNueva: cambio.horaNueva, desde: cambio.desde }, avisos, { dimension, ahora: opciones.ahora, alarma })
-    : programar(userId, p.habitId, p.title, hora, avisos, { dimension, alarma });
+    : programar(userId, p.habitId, p.title, hora, avisos, { dimension, alarma, ahora: opciones.ahora });
 }
 
 /**
@@ -1312,11 +1456,17 @@ async function ajustarPorDia(
     return true;
   }
   if (!permiso) return false;
-  if (tieneAlarma && (await esquemaGuardado(userId, p.habitId))?.firma === firmaDelPlan(plan)) return false;
+  if (tieneAlarma && (await esquemaGuardado(userId, p.habitId))?.firma === firmaDelPlan(plan)) {
+    // Issue #33: aunque las alarmas sean las que corresponden, el puente de un hábito cumplido hoy puede no estarlo.
+    const hayQueConciliar = await hayQueConciliarElPuente(userId, {
+      habitoId: p.habitId, horaGeneral: hora, avisosGenerales, dias, alarmaGeneral, cambio,
+    }, opciones.ahora ?? new Date());
+    if (!hayQueConciliar) return false;
+  }
   const dimension = opciones.dimensionDe?.(p.habitId) ?? null;
   return cambio
     ? programarConCambioDiferido(userId, p.habitId, p.title, cambio, avisosGenerales, {
       dimension, ahora: opciones.ahora, dias, alarma: alarmaGeneral,
     })
-    : programar(userId, p.habitId, p.title, hora, avisosGenerales, { dimension, dias, alarma: alarmaGeneral });
+    : programar(userId, p.habitId, p.title, hora, avisosGenerales, { dimension, dias, alarma: alarmaGeneral, ahora: opciones.ahora });
 }
