@@ -478,6 +478,37 @@ export async function cancelarTodasLasAlarmasDeAcciones(userId: string): Promise
   });
 }
 
+/**
+ * Quita el aviso «antes de la acción» de UNA acción que acaba de sellarse (issue #33, 2026-10-27): una acción cumplida
+ * no avisa más. Hasta ahora ese aviso solo se cancelaba en la próxima lectura de la lista (al abrir Plan o la app), y
+ * entre medio sonaba aunque la acción ya estuviera hecha. Son alarmas de fecha de esa acción: se cancelan en el sistema.
+ * Solo las de esa acción: el recordatorio diario y las demás acciones no se tocan.
+ *
+ * **Las entradas guardadas se dejan.** Si se borraran, una lectura de la lista anterior al sello (Plan sin releer) las
+ * volvería a programar. Con la entrada puesta no se reprograma, y la primera lectura que ya trae la acción cumplida la
+ * quita sola (`planDeAlarmasDeAcciones`: lo que la lista desmiente se cancela y se olvida). Idempotente. No sabe de qué
+ * cuenta es la acción —`sellarRocaDiaria` no recibe la cuenta—, así que mira las de este teléfono (hay una cuenta con
+ * alarmas por vez: `prepararAlarmasPara` suelta las de otra).
+ */
+export async function cancelarElAvisoDeLaAccion(rocaId: string): Promise<void> {
+  if (!HAY_RECORDATORIOS_LOCALES || !rocaId) return;
+  return enCola(async () => {
+    try {
+      const claves = (await AsyncStorage.getAllKeys()).filter(k => k.startsWith(CLAVE_ACCIONES));
+      for (const clave of claves) {
+        const userId = clave.slice(CLAVE_ACCIONES.length);
+        const propias = Object.entries(await leerGuardadas(userId)).filter(([k]) => k.startsWith(`${rocaId}|`));
+        if (propias.length === 0) continue;
+        await cancelarIds(propias.map(([, g]) => g.id));
+        // Si esta acción era la que llevaba el aviso de un grupo, el otro vuelve a sonar solo con su texto y su sonido.
+        await reagrupar(userId);
+      }
+    } catch {
+      // Sin poder leer lo guardado, el aviso se quita en la próxima lectura de la lista, como antes.
+    }
+  });
+}
+
 /** Pide el permiso de avisos (para cuando la persona enciende algo con un toque). */
 export async function pedirPermisoDeAvisos(): Promise<boolean> {
   return pedirPermiso();
