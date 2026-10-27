@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Alert } from '../../../components/Alerta';
@@ -10,7 +10,7 @@ import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
 import { abrirConversacionDirecta } from '../../chat/api/chatApi';
-import { urlDeEvidencia } from '../../evidence/api/evidenceApi';
+import { EvidenciaDeObligacion } from '../../lider-mentores/components/EvidenciaDeObligacion';
 import { VerPublicacion } from '../../lider-mentores/components/VisorDePublicacion';
 import { RejillaSemanal } from '../../mentor/components/RejillaSemanal';
 import { diaInicialDelDetalle } from '../../mentor/utils/diaInicialDelDetalle';
@@ -46,6 +46,10 @@ import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar
  *
  * La evaluación no se calcula acá. Los números que se muestran son los que devuelve el servidor.
  *
+ * **Las evidencias se abren en la hoja del líder** (`EvidenciaDeObligacion`, 2026-10-27): foto, audio, video y
+ * texto dentro de la app, para cualquier aprendiz con o sin grupo. Antes «Ver evidencia» salía al navegador
+ * y una evidencia de texto decía «no hay archivo que abrir» sin mostrar lo escrito.
+ *
  * **La única escritura es el día del programa** (pedido del dueño, 26/09; backend D-82): corregir
  * a mano el reloj de alguien que viajó o empezó tarde. No toca cumplimiento: mueve la fecha desde
  * la que se cuentan sus 90 días y deja constancia de quién y por qué.
@@ -70,7 +74,6 @@ export function FichaAprendizScreen({
   const { semana, sinDatos, cargando, fallo, desplazar } = useSemanaAdministrativa(aprendiz.id);
   const [diaElegido, setDiaElegido] = useState<string | null>(null);
   const [abriendoChat, setAbriendoChat] = useState(false);
-  const [abriendoEvidencia, setAbriendoEvidencia] = useState<string | null>(null);
   const programa = useDetalleAprendiz(aprendiz.id);
   const [cambiandoDia, setCambiandoDia] = useState(false);
   const [avisoFinal, setAvisoFinal] = useState<string | null>(null);
@@ -130,23 +133,6 @@ export function FichaAprendizScreen({
     } finally {
       setRecuperando(false);
       void programa.recargar();
-    }
-  };
-
-  /** La URL se pide al abrir y no antes: vence a los diez minutos y es una llave al archivo. */
-  const verEvidencia = async (evidenciaId: string) => {
-    setAbriendoEvidencia(evidenciaId);
-    try {
-      const url = await urlDeEvidencia(evidenciaId);
-      if (!url) {
-        avisar('Sin archivo', 'Esta evidencia es de texto: no hay archivo que abrir.');
-        return;
-      }
-      await Linking.openURL(url);
-    } catch {
-      avisar('No se pudo abrir', 'Revisa tu conexión e inténtalo de nuevo.');
-    } finally {
-      setAbriendoEvidencia(null);
     }
   };
 
@@ -392,17 +378,13 @@ export function FichaAprendizScreen({
                       {etiquetaDeEstado(o.estadoHabito)} · {etiquetaDeEntrega(o.entrega)}
                       {o.revision ? ` · revisión: ${o.revision.toLowerCase()}` : ''}
                     </Text>
+                    {/* La misma hoja que usa el líder: foto, audio, video y TEXTO se ven dentro de la app, sin salir al
+                        navegador. El enlace se pide al abrirla (vence a los diez minutos) y el tipo se averigua al abrir. */}
                     {o.evidenciaId ? (
-                      <Pressable
-                        onPress={() => verEvidencia(o.evidenciaId as string)}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Ver la evidencia de ${o.titulo}`}
-                        style={[estilos.accion, { borderColor: c.goldInk }]}
-                      >
-                        <Text style={[t.body, { color: c.goldInk, fontSize: 16, fontWeight: '500' }]}>
-                          {abriendoEvidencia === o.evidenciaId ? 'Abriendo…' : 'Ver evidencia'}
-                        </Text>
-                      </Pressable>
+                      <EvidenciaDeObligacion
+                        titulo={o.titulo}
+                        evidencias={[{ id: o.evidenciaId, tipo: null, subidaEn: null }]}
+                      />
                     ) : null}
                     {/* Spec 005 (R-6): el post diario se cumple publicando en el Muro, y esa publicación es su
                         evidencia; antes la ficha decía «sin evidencia». */}
@@ -470,5 +452,4 @@ const estilos = StyleSheet.create({
   flecha: { flex: 1, minHeight: 48, alignItems: 'center', justifyContent: 'center', borderRadius: 12, borderWidth: 1 },
   dias: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   dia: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 14, borderRadius: 999, borderWidth: 1 },
-  accion: { minHeight: 48, justifyContent: 'center', alignSelf: 'flex-start', paddingHorizontal: 14, borderRadius: 12, borderWidth: 1, marginTop: 4 },
 });

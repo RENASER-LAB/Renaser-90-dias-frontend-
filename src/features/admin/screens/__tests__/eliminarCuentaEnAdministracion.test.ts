@@ -32,7 +32,8 @@ jest.mock('../../../../components/Alerta', () => ({
 }));
 jest.mock('../../../auth/context/AuthContext', () => ({ useAuth: () => ({ user: mockUsuario }) }));
 jest.mock('../../../chat/api/chatApi', () => ({ abrirConversacionDirecta: async () => ({ id: 'c1' }) }));
-jest.mock('../../../evidence/api/evidenceApi', () => ({ urlDeEvidencia: async () => null }));
+/* La hoja de la evidencia trae el reproductor de video (WebView), un módulo nativo que Jest no tiene: acá no se abre. */
+jest.mock('../../../lider-mentores/components/EvidenciaDeObligacion', () => ({ EvidenciaDeObligacion: () => null }));
 jest.mock('../../../mentor/components/RejillaSemanal', () => ({ RejillaSemanal: () => null }));
 jest.mock('../../../semaforo/components/TarjetaSemaforoDeAprendiz', () => ({ TarjetaSemaforoDeAprendiz: () => null }));
 jest.mock('../../../caja/components/ChipDeCaja', () => ({ ChipDeCaja: () => null }));
