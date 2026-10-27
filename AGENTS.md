@@ -2013,7 +2013,7 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     Una excepción puntual **no abre** el tab: cualquier otro cambio sobre los cinco principales vuelve a necesitar
     autorización explícita.
 
-  * **Corrección — 2026-10-27 — la ficha del mentor abre las evidencias dentro de la app** (seguimiento del cambio de
+  * **Corrección — 2026-10-27 — la ficha del mentor abre las evidencias dentro de la app** (issue #34; seguimiento del cambio de
     Administración de arriba; sin backend nuevo). La ficha de un aprendiz que ve el MENTOR o la GUÍA de aprendiz
     (`AlumnoScreen`, desde «Mi grupo» o desde la info del chat del grupo con `alumnoDesdeLaInfo`: es la misma pantalla)
     abría cada evidencia con `Linking.openURL` en el navegador y, ante una de texto, decía «no hay archivo que abrir» sin
