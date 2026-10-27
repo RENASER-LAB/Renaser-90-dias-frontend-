@@ -48,6 +48,9 @@ import { ObservarScreen } from './ObservarScreen';
  *   que al volver está en la misma semana, sin releerse (ni registrar otra consulta).
  *
  * Un único scroll (`MarcoDelLider`); el retroceso del sistema vuelve a la lista del grupo.
+ *
+ * **Administración y Alquimista la usan igual** (2026-10-27): el servidor les da la misma lectura que al líder. Con las
+ * dos props opcionales que siguen cambia solo lo que dice la pantalla; sin ellas es exactamente la del líder.
  */
 export function PersonaDelLiderScreen({
   grupoId,
@@ -57,6 +60,8 @@ export function PersonaDelLiderScreen({
   avatarUrl,
   inicio,
   onVolver,
+  avisoSiNoSeAbre,
+  alAbrirFicha,
 }: {
   grupoId: string;
   grupoNombre: string;
@@ -67,6 +72,13 @@ export function PersonaDelLiderScreen({
   /** La ventana que estaba mirando la lista (posición y ancla); ausente = la vigente. */
   inicio?: InicioSemanal;
   onVolver: () => void;
+  /**
+   * Lo que se lee cuando el servidor no abre a la persona (404: grupo sin mentor, persona que ya no está en ese grupo o que no se
+   * muestra), en lugar del «todavía no está disponible» genérico. Solo lo pasa Administración; el líder nunca llega a un 404.
+   */
+  avisoSiNoSeAbre?: string;
+  /** Un botón «Ver su ficha» al pie, para quien tiene otra vista de la persona (la ficha de administración). */
+  alAbrirFicha?: () => void;
 }) {
   const lectura = useSemanaDePersona(grupoId, personaId, inicio);
   const datos = lectura.datos;
@@ -121,7 +133,13 @@ export function PersonaDelLiderScreen({
 
       <NavegacionDeSemanas lectura={lectura} />
 
-      <CuerpoDeLaSemana lectura={lectura} nombre={nombreVisible} diaAbierto={diaAbierto} alAlternarDia={alternarDia} />
+      <CuerpoDeLaSemana
+        lectura={lectura}
+        nombre={nombreVisible}
+        diaAbierto={diaAbierto}
+        alAlternarDia={alternarDia}
+        avisoSiNoSeAbre={avisoSiNoSeAbre}
+      />
 
       <View style={estilos.acciones}>
         <BotonPrincipal
@@ -142,6 +160,14 @@ export function PersonaDelLiderScreen({
             />
             <Linea>{`Le deja a ${mentor.nombre?.trim() || 'su mentor'} una observación sobre ${nombreVisible} y los días que estás viendo.`}</Linea>
           </>
+        ) : null}
+        {alAbrirFicha ? (
+          <BotonSecundario
+            etiqueta="Ver su ficha"
+            icono="idCard"
+            onPress={alAbrirFicha}
+            accessibilityLabel={`Ver la ficha de ${nombreVisible}`}
+          />
         ) : null}
       </View>
     </MarcoDelLider>
@@ -211,11 +237,13 @@ function CuerpoDeLaSemana({
   nombre,
   diaAbierto,
   alAlternarDia,
+  avisoSiNoSeAbre,
 }: {
   lectura: LecturaDeLaSemana;
   nombre: string;
   diaAbierto: string | null;
   alAlternarDia: (fecha: string) => void;
+  avisoSiNoSeAbre?: string;
 }) {
   const datos = lectura.datos;
   if (datos) {
@@ -233,6 +261,7 @@ function CuerpoDeLaSemana({
       </View>
     );
   }
+  if (lectura.fallo === 'no_disponible' && avisoSiNoSeAbre) return <Linea>{avisoSiNoSeAbre}</Linea>;
   if (lectura.fallo) {
     return (
       <FalloDeLectura

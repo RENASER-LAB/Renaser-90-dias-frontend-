@@ -28,6 +28,7 @@ import { useDetalleAprendiz } from '../hooks/useDetalleAprendiz';
 import { useSemanaAdministrativa } from '../hooks/useSemanaAdministrativa';
 import { disponibilidadDelCambio, textoDelUltimoAjuste } from '../utils/diaDelPrograma';
 import { fechaCorta, hoyIso } from '../utils/fechas';
+import { grupoParaVerSusDias } from '../utils/susDiasYEvidencias';
 import { CambiarDiaScreen } from './CambiarDiaScreen';
 import { EliminarCuentaAdminScreen } from './EliminarCuentaAdminScreen';
 import { rotuloDeFase } from '../../home/hooks/useResumenHome';
@@ -59,6 +60,7 @@ export function FichaAprendizScreen({
   onVolver,
   onAbrirCaja,
   onCuentaEliminada,
+  onVerSusDias,
 }: {
   aprendiz: PersonaDeFicha;
   onVolver: () => void;
@@ -66,6 +68,11 @@ export function FichaAprendizScreen({
   onAbrirCaja?: (aprendizId: string) => void;
   /** D-243: tras «Eliminar cuenta» (204). Sin esto, se vuelve con `onVolver`. */
   onCuentaEliminada?: () => void;
+  /**
+   * «Ver sus días y evidencias»: abre la vista del líder (sus 7 días, evidencias, «¿Qué sentiste?» y acciones) con el
+   * grupo de la persona. Solo se muestra con grupo; sin esto, la ficha es la de siempre.
+   */
+  onVerSusDias?: (grupoId: string) => void;
 }) {
   const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
@@ -97,6 +104,7 @@ export function FichaAprendizScreen({
   }, [semana]);
 
   const detalle = semana?.dias.find(d => d.fecha === diaElegido) ?? null;
+  const grupoDeSusDias = onVerSusDias ? grupoParaVerSusDias(aprendiz) : null;
   const nombre = aprendiz.fullName?.trim() || 'Aprendiz sin nombre';
   /* El día que trae el servidor al abrir la ficha gana sobre el de la fila que la abrió. */
   const datosDeCabecera = lineasDeCabecera(
@@ -264,6 +272,17 @@ export function FichaAprendizScreen({
           origen={{ quien: 'admin', aprendizId: aprendiz.id }}
           onPress={onAbrirCaja ? () => onAbrirCaja(aprendiz.id) : undefined}
         />
+
+        {/* Lo mismo que ve el líder, día por día: evidencias de todo tipo, «¿Qué sentiste?» y fotos de las acciones.
+            Con grupo y mentor; si el servidor no la abre (404), la pantalla dice por qué y se vuelve acá. */}
+        {grupoDeSusDias && onVerSusDias ? (
+          <BotonSecundario
+            etiqueta="Ver sus días y evidencias"
+            icono="listChecks"
+            onPress={() => onVerSusDias(grupoDeSusDias)}
+            accessibilityLabel={`Ver los días y las evidencias de ${nombre}`}
+          />
+        ) : null}
 
         {/* La semana de lunes a domingo, plegada y con su nombre verdadero. Antes se titulaba
             «Cumplimiento de la semana» y competía con el semáforo, que va de sábado a viernes. */}

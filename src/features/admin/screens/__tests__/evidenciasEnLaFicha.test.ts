@@ -121,11 +121,17 @@ function semanaConEvidencias(): SemanaAlumnoApi {
   } as SemanaAlumnoApi;
 }
 
-async function montar(): Promise<ReactTestRenderer> {
+async function montar(
+  extra: { cellId?: string | null; onVerSusDias?: (grupoId: string) => void } = {},
+): Promise<ReactTestRenderer> {
   let r!: ReactTestRenderer;
   await act(async () => {
     r = TestRenderer.create(
-      React.createElement(FichaAprendizScreen, { aprendiz: { id: 'a-1', fullName: 'Ana Pérez', cellId: null }, onVolver: () => undefined }),
+      React.createElement(FichaAprendizScreen, {
+        aprendiz: { id: 'a-1', fullName: 'Ana Pérez', cellId: extra.cellId ?? null },
+        onVolver: () => undefined,
+        onVerSusDias: extra.onVerSusDias,
+      }),
     );
   });
   return r;
@@ -194,6 +200,26 @@ describe('«Ver evidencia» en la ficha de administración', () => {
       'Ver evidencia de Ritual de la mañana',
       'Ver evidencia de Audioterapia semanal',
     ]);
+  });
+});
+
+describe('«Ver sus días y evidencias» en la ficha', () => {
+  it('con grupo, abre la vista del líder con el grupo de la persona', async () => {
+    const abrir = jest.fn<(grupoId: string) => void>();
+    const r = await montar({ cellId: 'g-7', onVerSusDias: abrir });
+    await tocar(r, 'Ver los días y las evidencias de Ana Pérez');
+    expect(abrir).toHaveBeenCalledWith('g-7');
+    expect(textos(r)).toContain('Ver sus días y evidencias');
+  });
+
+  it('sin grupo no se ofrece: no hay nada que pedirle al servidor', async () => {
+    const r = await montar({ cellId: null, onVerSusDias: jest.fn() });
+    expect(tocables(r).some(n => (n.props.accessibilityLabel as string).includes('Ver los días y las evidencias'))).toBe(false);
+  });
+
+  it('sin la conexión de quien la abre, la ficha es la de siempre', async () => {
+    const r = await montar({ cellId: 'g-7' });
+    expect(tocables(r).some(n => (n.props.accessibilityLabel as string).includes('Ver los días y las evidencias'))).toBe(false);
   });
 });
 

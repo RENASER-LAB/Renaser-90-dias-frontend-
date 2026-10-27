@@ -10,6 +10,7 @@ import { VistaSemaforoDelGrupo } from '../../semaforo/components/TablaDelSemafor
 import { useSemaforoDelGrupo, type InicioSemanal } from '../../semaforo/hooks/useLecturaPorSemana';
 import { CabeceraAdmin } from '../components/CabeceraAdmin';
 import type { PersonaDeFicha } from '../types/admin.types';
+import { destinoDeLaPersonaDelSemaforo } from '../utils/susDiasYEvidencias';
 import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 
 /**
@@ -23,21 +24,31 @@ import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar
  *
  * > **Corregido 2026-09-26.** Decía «las filas no se abren: la persona se mira en su ficha
  * > (Personas)». Eso obligaba a salir, ir a Personas y buscarla por nombre.
+ *
+ * **Sus días y evidencias, como el líder** (2026-10-27): si el servidor dice que el grupo se puede abrir
+ * (`puedeAbrirse`: tiene mentor), tocar a una persona abre sus días y evidencias (`PersonaDelLiderScreen`) en la
+ * ventana que se está mirando, con un botón a su ficha; con un grupo sin mentor, su ficha de siempre.
  */
 export function SemaforoGrupoAdminScreen({
   grupoId,
   grupoNombre,
   inicio,
+  puedeAbrirse = false,
   onVolver,
   onAbrirAprendiz,
+  onAbrirDiasYEvidencias,
 }: {
   grupoId: string;
   /** El nombre que ya se conocía por el resumen, para no dejar la cabecera vacía mientras carga. */
   grupoNombre: string | null;
   inicio?: InicioSemanal;
+  /** Lo dijo el resumen por grupos para ESTE grupo: tiene mentor y se puede bajar a sus personas. */
+  puedeAbrirse?: boolean;
   onVolver: () => void;
   /** Abre la ficha de la persona tocada. Se reusa la ficha de Personas. */
   onAbrirAprendiz: (persona: PersonaDeFicha) => void;
+  /** Abre sus días y evidencias en la ventana que se está mirando. Sin esto, la persona siempre abre su ficha. */
+  onAbrirDiasYEvidencias?: (abierta: { persona: PersonaDeFicha; avatarUrl: string | null; inicio: InicioSemanal }) => void;
 }) {
   const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c } = useTheme();
@@ -72,7 +83,11 @@ export function SemaforoGrupoAdminScreen({
           lectura={lectura}
           onAbrirAprendiz={aprendizId => {
             const fila = lectura.datos?.aprendices.find(a => a.aprendizId === aprendizId);
-            return () => onAbrirAprendiz({ id: aprendizId, fullName: fila?.nombre ?? null, cellId: grupoId });
+            const persona: PersonaDeFicha = { id: aprendizId, fullName: fila?.nombre ?? null, cellId: grupoId };
+            if (onAbrirDiasYEvidencias && destinoDeLaPersonaDelSemaforo({ puedeAbrirse }) === 'dias-y-evidencias') {
+              return () => onAbrirDiasYEvidencias({ persona, avatarUrl: fila?.avatarUrl ?? null, inicio: lectura.inicio });
+            }
+            return () => onAbrirAprendiz(persona);
           }}
         />
       </ScrollView>
