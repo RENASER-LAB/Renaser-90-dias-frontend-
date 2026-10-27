@@ -362,7 +362,7 @@ export function useMapaRenacimiento(userId: string): EstadoMapaRenacimiento {
     let creados = { ...mapa.habitosCreados };
     try {
       for (const area of AREAS) {
-        await objetivosApi.definirRocaMaestra(EJE_POR_AREA[area], definicionDesde(objetivoDe(mapa, area)));
+        await objetivosApi.definirRocaMaestra(EJE_POR_AREA[area], definicionDesde(objetivoDe(mapa, area)), { desdeElMapa: true });
       }
       for (const accion of mapa.acciones) {
         if (creados[accion.id]) continue;
