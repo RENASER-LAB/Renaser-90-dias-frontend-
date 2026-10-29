@@ -171,7 +171,7 @@ describe('el Código Renaser de una persona (spec 012)', () => {
     const pagina = await obtenerRadarDePersona('g1', 'p1');
     expect(mockApiFetch).toHaveBeenCalledWith('/api/v1/leadership/groups/g1/people/p1/radar', undefined);
     expect(pagina.entries[0].horaPrevista).toBe(14);
-    expect(pagina.miRadar).toEqual({ encendido: true, horas: [9, 14, 20] });
+    expect(pagina.miRadar).toEqual({ encendido: true, horas: [9, 14, 20], dias: [] });
     expect(pagina.nextCursor).toBeNull();
   });
 
