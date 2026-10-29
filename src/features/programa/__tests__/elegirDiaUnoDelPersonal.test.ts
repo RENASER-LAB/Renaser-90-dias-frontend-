@@ -278,8 +278,10 @@ describe('Training y el onboarding (código fuente)', () => {
   });
 
   it('sin fila no muestra el error con el uuid: muestra la invitación', () => {
-    expect(TRAINING).toContain('!cargandoBackend && !programaSinConfirmar && errorBackend !== null && !sinProgramaPropio && (');
-    expect(TRAINING).toMatch(/sinProgramaPropio && selectedDimension === null \? \(\s*<InvitacionProgramaPropio/);
+    // Training por hora (spec 014): la lista —y con ella el error— solo se monta con programa confirmado y fila propia; sin
+    // fila, en su lugar va la invitación de Hoy. (Antes eran dos condiciones sobre `errorBackend` y `selectedDimension`.)
+    expect(TRAINING).toMatch(/!programaSinConfirmar && !sinProgramaPropio && !programaSinArrancar \? \(\s*<TrainingPorHora/);
+    expect(TRAINING).toMatch(/\{sinProgramaPropio \? \(\s*<InvitacionProgramaPropio/);
     expect(TRAINING).toContain('useProgramaPersonal(!cargandoDiaPrograma && !inscrito');
   });
 
