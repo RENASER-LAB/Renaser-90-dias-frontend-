@@ -84,6 +84,10 @@ import { EliminarMiCuentaScreen } from '../features/cuenta/screens/EliminarMiCue
 import { etiquetaParaElAprendiz } from '../features/caja/utils/estadosDeCaja';
 import { useMiEmergencia } from '../features/emergencia/hooks/useMiEmergencia';
 import { EmergenciaScreen } from '../features/emergencia/screens/EmergenciaScreen';
+import { configDeMiRadar } from '../features/radar/hooks/useConfigDeMiRadar';
+import { useRadar } from '../features/radar/RadarContext';
+import { MiRadarScreen } from '../features/radar/screens/MiRadarScreen';
+import { miRadarCorresponde, textoDeMiRadar } from '../features/radar/utils/miRadar';
 import { ConsolaSoporteTiScreen } from '../features/soporte-ti/screens/ConsolaSoporteTiScreen';
 import { esSoporteTi } from '../features/soporte-ti/utils/rolSoporteTi';
 import { useDisponibilidad } from '../features/plataforma/estado/useFuncionalidad';
@@ -373,6 +377,16 @@ export default function YoScreen() {
      un aprendiz, desde el Día 0 (el servidor responde 403 a quien no lo es). Pedir no cambia el día. */
   const miEmergencia = useMiEmergencia();
   const [enEmergencia, setEnEmergencia] = useState(false);
+  /* Mi Radar (spec 012, pedido del dueño del 2026-10-29): el Código Renaser desde el día 8, que la persona enciende y
+     configura. La fila va justo debajo de «Tuve una emergencia», SOLO desde el día 8 y si el servidor lo ofrece (con un
+     backend anterior no hay fila). A pantalla completa, como la emergencia. El aviso `/mi-radar` llega con
+     `abrirMiRadar`; `miRadarPorAviso` hace que, si la hora en curso es una de las elegidas y no tiene registro, abra
+     también el formulario. */
+  const { miRadar: lecturaDeMiRadar } = useRadar();
+  const configMiRadar = configDeMiRadar(lecturaDeMiRadar.lectura);
+  const veMiRadar = miRadarCorresponde(resumen?.diaPrograma) && configMiRadar !== null;
+  const [enMiRadar, setEnMiRadar] = useState(false);
+  const [miRadarPorAviso, setMiRadarPorAviso] = useState(false);
   /* Consola Soporte TI (spec 002, aprobada por el dueño el 2026-10-13): solo para la cuenta con ese rol, que se asigna
      por script en la base. A pantalla completa, como Administración; el servidor responde 403 a cualquier otro rol. */
   const [enSoporteTi, setEnSoporteTi] = useState(false);
@@ -385,6 +399,18 @@ export default function YoScreen() {
     setEnCaja(true);
     (navegacionDeYo as unknown as { setParams: (p: Record<string, unknown>) => void }).setParams({ abrirCaja: undefined });
   }, [rutaDeYo.params, navegacionDeYo]);
+  useEffect(() => {
+    const params = rutaDeYo.params as { abrirMiRadar?: boolean } | undefined;
+    if (!params?.abrirMiRadar) return;
+    setMiRadarPorAviso(true);
+    setEnMiRadar(true);
+    (navegacionDeYo as unknown as { setParams: (p: Record<string, unknown>) => void }).setParams({ abrirMiRadar: undefined });
+  }, [rutaDeYo.params, navegacionDeYo]);
+  useEffect(() => {
+    // Un aviso viejo, o un backend que ya no lo ofrece, no deja la pantalla esperando abierta. Mientras se lee, espera.
+    const sinMiRadar = lecturaDeMiRadar.lectura.estado === 'no-disponible' || (resumen != null && !miRadarCorresponde(resumen.diaPrograma));
+    if (enMiRadar && sinMiRadar) setEnMiRadar(false);
+  }, [enMiRadar, lecturaDeMiRadar.lectura.estado, resumen]);
   /* Spec 002, fase 2: al salir de «ver como» la franja trae de vuelta a Yo con `abrirSoporteTi`: se reabre la consola. */
   useEffect(() => {
     const params = rutaDeYo.params as { abrirSoporteTi?: boolean } | undefined;
@@ -568,6 +594,10 @@ export default function YoScreen() {
     return (
       <EmergenciaScreen mia={miEmergencia.mia} onVolver={() => setEnEmergencia(false)} onEnviado={miEmergencia.recargar} />
     );
+  }
+
+  if (enMiRadar && veMiRadar) {
+    return <MiRadarScreen abrirDesdeAviso={miRadarPorAviso} onVolver={() => setEnMiRadar(false)} />;
   }
 
 
@@ -857,6 +887,20 @@ export default function YoScreen() {
                 titulo="Tuve una emergencia"
                 etiqueta="Tuve una emergencia: pedir volver a un día del programa"
                 onPress={() => setEnEmergencia(true)}
+              />
+            ) : null}
+            {/* MI RADAR (spec 012): desde el día 8, justo debajo de la emergencia. Su estado en una línea. */}
+            {veMiRadar && configMiRadar ? (
+              <FilaDeAjuste
+                key="mi-radar"
+                icono="compass"
+                titulo="Mi Radar"
+                detalle={textoDeMiRadar(configMiRadar)}
+                etiqueta={`Mi Radar. ${textoDeMiRadar(configMiRadar)}`}
+                onPress={() => {
+                  setMiRadarPorAviso(false);
+                  setEnMiRadar(true);
+                }}
               />
             ) : null}
           </GrupoDeAjustes>

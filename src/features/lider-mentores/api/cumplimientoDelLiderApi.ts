@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 import { ApiError, apiFetch } from '../../../services/http/apiClient';
 import { urlDeEvidencia } from '../../evidence/api/evidenceApi';
+import { radarSchemas, validarRespuesta as validarRespuestaDelRadar } from '../../radar/api/radarSchemas';
+import type { HistorialRadarApi } from '../../radar/types/radar.types';
 import type { SemaforoDelGrupo } from '../../semaforo/types/semaforo.types';
 import type { PublicacionDelMuro, SemanaDePersona } from '../types/cumplimientoDelLider.types';
 import {
@@ -41,6 +43,12 @@ export function rutaDeLaSemanaDePersona(grupoId: string, personaId: string, sema
   return conSemana(`${BASE}/groups/${tramo(grupoId)}/people/${tramo(personaId)}/week`, semanaHasta);
 }
 
+/** Spec 012: el Código Renaser de una persona del grupo, con el estado de su Mi Radar. Paginado por cursor. */
+export function rutaDelRadarDePersona(grupoId: string, personaId: string, cursor?: string | null): string {
+  const ruta = `${BASE}/groups/${tramo(grupoId)}/people/${tramo(personaId)}/radar`;
+  return cursor ? `${ruta}?cursor=${tramo(cursor)}` : ruta;
+}
+
 /**
  * §4: una publicación del Muro. Es un recurso del Muro (`/wall/{id}`) y no del líder: la leen su autor, el
  * liderazgo y el mentor o la guía que acompaña HOY al autor, así que sirve a las tres fichas (líder, mentor y
@@ -73,6 +81,25 @@ export async function obtenerSemanaDePersona(
   );
   /* Si el servidor no repitió quién es, es a quien se pidió. */
   return semana.personaId ? semana : { ...semana, personaId };
+}
+
+/**
+ * Spec 012: el Código Renaser de una persona, para el líder, el administrador y el alquimista (la misma forma que
+ * `/radar/history`, con `miRadar`). Una página es de 84 registros, de los más nuevos a los más viejos. **No deja registro
+ * de consulta** (la ficha ya lo dejó al abrirse). Un 404 o un 403 los lee quien la muestra como «no hay sección».
+ */
+export async function obtenerRadarDePersona(
+  grupoId: string,
+  personaId: string,
+  cursor?: string | null,
+): Promise<HistorialRadarApi> {
+  const respuesta = await apiFetch<unknown>(rutaDelRadarDePersona(grupoId, personaId, cursor));
+  const pagina = validarRespuestaDelRadar<HistorialRadarApi>(
+    radarSchemas.historial,
+    respuesta,
+    'GET /leadership/groups/{g}/people/{p}/radar',
+  );
+  return { entries: pagina.entries, nextCursor: pagina.nextCursor ?? null, miRadar: pagina.miRadar ?? null };
 }
 
 /**

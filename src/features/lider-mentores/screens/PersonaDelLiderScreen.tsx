@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { ConfirmacionEnLinea } from '../../../components/ConfirmacionEnLinea';
@@ -6,11 +6,13 @@ import { BotonPrincipal, BotonSecundario } from '../../../components/Legible';
 import { AvatarPersona } from '../../../components/ui';
 import { useTheme } from '../../../theme/ThemeContext';
 import { tacto } from '../../../utils/tacto';
+import { CodigoRenaserDelAlumno } from '../../mentor/components/CodigoRenaserDelAlumno';
 import { diaInicialDelDetalle } from '../../mentor/utils/diaInicialDelDetalle';
 import { CargandoLectura, FalloDeLectura } from '../../semaforo/components/EstadoDeLectura';
 import { EtiquetaSemaforo } from '../../semaforo/components/EtiquetaSemaforo';
 import { PALABRA_NO_SE_MIDE, palabraParaQuienAcompana, rolEnPalabras } from '../../semaforo/utils/ayudaDelSemaforo';
 import { formatearPorcentaje } from '../../semaforo/utils/lecturaDelSemaforo';
+import { obtenerRadarDePersona } from '../api/cumplimientoDelLiderApi';
 import { DiaDeLaPersona } from '../components/DiaDeLaPersona';
 import { Linea, MarcoDelLider } from '../components/MarcoDelLider';
 import { NavegacionDeSemanas } from '../../semaforo/components/NavegacionDeSemanas';
@@ -82,6 +84,11 @@ export function PersonaDelLiderScreen({
 }) {
   const lectura = useSemanaDePersona(grupoId, personaId, inicio);
   const datos = lectura.datos;
+  /* Spec 012: su Código Renaser y su Mi Radar (solo lectura). Se pide una vez por persona, no al cambiar de semana. */
+  const cargarRadar = useMemo(
+    () => (cursor?: string | null) => obtenerRadarDePersona(grupoId, personaId, cursor),
+    [grupoId, personaId],
+  );
 
   /* El día abierto se guarda junto con la semana a la que pertenece: al cambiar de semana vuelve solo al día
      más reciente con hábitos, sin un efecto que corra un render tarde. */
@@ -140,6 +147,8 @@ export function PersonaDelLiderScreen({
         alAlternarDia={alternarDia}
         avisoSiNoSeAbre={avisoSiNoSeAbre}
       />
+
+      <CodigoRenaserDelAlumno cargar={cargarRadar} />
 
       <View style={estilos.acciones}>
         <BotonPrincipal

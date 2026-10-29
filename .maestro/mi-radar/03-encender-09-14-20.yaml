@@ -1,0 +1,41 @@
+# 03 — Encender Mi Radar con las horas sugeridas (09:00, 14:00 y 20:00) y guardar (escenario 3).
+# cuenta: aprendiz (día 10 con Mi Radar apagado; correr después de 02)
+# Después hay que mirar `adb shell dumpsys alarm` / `dumpsys notification`: solo esas tres horas (lo hace el informe, no el flujo).
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Apagado"
+    direction: DOWN
+- tapOn: "Apagado"
+- extendedWaitUntil:
+    visible: "Te preguntamos cómo estás a las horas que elijas\\."
+    timeout: 15000
+# Encender solo muestra las horas sugeridas: no se guarda hasta tocar «Guardar y encender».
+- tapOn: "Te preguntamos cómo estás a las horas que elijas\\."
+- scrollUntilVisible:
+    element: "Tus horas"
+    direction: DOWN
+- assertVisible: "3 de 12 horas elegidas"
+# La fila de los siete días (por día de la semana): sin días marcados, «Todos los días» y las horas de siempre.
+- assertVisible: "Todos los días"
+- assertVisible: "Toca un día para darle sus propias horas o dejarlo sin Radar\\."
+- assertVisible: "Guardar y encender"
+- takeScreenshot: 03a-encendido-sin-guardar
+- tapOn: "Guardar y encender"
+# La confirmación en línea («Mi Radar encendido · 09:00, 14:00 y 20:00») se va sola a los pocos segundos y Maestro tarda
+# ~10 s por toque: no se puede exigir. Lo que prueba que quedó guardado es lo que solo existe encendido: «Registrar ahora»
+# (o «Ya registraste esta hora» si la hora en curso ya tiene registro).
+- extendedWaitUntil:
+    visible: "Registrar ahora|Ya registraste esta hora"
+    timeout: 30000
+- takeScreenshot: 03b-encendido-guardado
+# Ya encendido: «Hoy» con la hora elegida que ya pasó y los horarios con «Guardar» oculto.
+- assertVisible: "09:00 · Sin registro"
+- assertNotVisible: "Guardar horarios"
+- back
+- extendedWaitUntil:
+    visible: "Encendido · 09:00, 14:00 y 20:00"
+    timeout: 15000
+- takeScreenshot: 03c-yo-fila-encendida

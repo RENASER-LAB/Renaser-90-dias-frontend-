@@ -1,0 +1,19 @@
+# 06 — Abrir la app a una hora elegida: Hoy NO tiene la tarjeta del Código Renaser y el formulario NO se abre solo (escenario 6).
+# cuenta: aprendiz (día 10 con Mi Radar encendido, la hora en curso entre las elegidas y SIN registro)
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- assertNotVisible: "¿Dónde estás ahora mismo\\?"
+- assertNotVisible: "Código Renaser.*"
+- assertNotVisible: "Responder el Código Renaser de esta hora"
+- takeScreenshot: 06a-hoy
+- scroll
+- assertNotVisible: "Código Renaser.*"
+- assertNotVisible: "¿Dónde estás ahora mismo\\?"
+- scroll
+- assertNotVisible: "Código Renaser.*"
+- takeScreenshot: 06b-hoy-abajo
+# Tras unos segundos, el formulario sigue sin abrirse (antes del día 8 aparecía solo).
+- waitForAnimationToEnd:
+    timeout: 5000
+- assertNotVisible: "¿Dónde estás ahora mismo\\?"

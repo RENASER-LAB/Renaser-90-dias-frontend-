@@ -20,13 +20,14 @@ import type { DestinoDeAviso } from '../features/mentor/api/avisosApi';
  * Las rutas del mentor y del semáforo no pasan por acá: las atienden sus pantallas, como siempre.
  */
 
-export type TipoQueAbreUnaPestana = 'evento' | 'habito' | 'objetivo' | 'caja' | 'cajaAdmin' | 'chat';
+export type TipoQueAbreUnaPestana = 'evento' | 'habito' | 'objetivo' | 'caja' | 'miRadar' | 'cajaAdmin' | 'chat';
 
 export const TIPOS_QUE_ABREN_UNA_PESTANA: readonly TipoQueAbreUnaPestana[] = [
   'evento',
   'habito',
   'objetivo',
   'caja',
+  'miRadar',
   'cajaAdmin',
   'chat',
 ];
@@ -40,6 +41,8 @@ const PESTANA: Record<TipoQueAbreUnaPestana, string> = {
   habito: 'Training',
   objetivo: 'Plan',
   caja: 'Yo',
+  // Spec 012: el aviso de Mi Radar abre Yo → Mi Radar, con el mismo estilo de parámetro que la Caja.
+  miRadar: 'Yo',
   cajaAdmin: 'Hoy',
   // D-221 (2026-09-29): el aviso de un mensaje abre esa conversación en Comunidad → Tribu, con el
   // mismo parámetro que ya usa «Escribirle» desde la ficha de un aprendiz.
@@ -59,6 +62,8 @@ export function pestanaDelDestino(
       return { pestana: PESTANA.objetivo, params: { abrirObjetivosFecha: destino.fecha, abrirObjetivosEje: destino.eje } };
     case 'caja':
       return { pestana: PESTANA.caja, params: { abrirCaja: true } };
+    case 'miRadar':
+      return { pestana: PESTANA.miRadar, params: { abrirMiRadar: true } };
     case 'cajaAdmin':
       return { pestana: PESTANA.cajaAdmin, params: { abrirCajaAprendizId: destino.aprendizId } };
     case 'chat':
@@ -82,7 +87,7 @@ export type ResultadoDeApertura = 'abierto' | 'esperando' | 'nada';
  * Código Renaser ni el Pacto.
  */
 /* D-221: el chat también espera. Un mensaje del grupo no puede tapar el Código Renaser ni el Pacto. */
-const ESPERAN_A_LAS_CAPAS: ReadonlySet<TipoQueAbreUnaPestana> = new Set(['habito', 'objetivo', 'caja', 'cajaAdmin', 'chat']);
+const ESPERAN_A_LAS_CAPAS: ReadonlySet<TipoQueAbreUnaPestana> = new Set(['habito', 'objetivo', 'caja', 'miRadar', 'cajaAdmin', 'chat']);
 
 export function intentarAbrirAvisoPendiente(deps: DependenciasDeApertura): ResultadoDeApertura {
   let esperando = false;

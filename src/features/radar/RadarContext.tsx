@@ -7,8 +7,15 @@ import { obtenerResumenHome } from '../home/api/homeApi';
 import { useArranqueGuiado } from '../sparkie/hooks/useArranqueGuiado';
 import { CONFIG_RADAR, rolObligadoAlRadar } from './config/configRadar';
 import { sincronizarRecordatoriosDeRadar } from './notificaciones/recordatoriosDeRadar';
+import {
+  MI_RADAR_PENDIENTE,
+  configDeMiRadar,
+  useConfigDeMiRadar,
+  type LecturaDeMiRadar,
+} from './hooks/useConfigDeMiRadar';
 import { useRadarDelDia } from './hooks/useRadarDelDia';
-import type { CheckInRadarApi } from './types/radar.types';
+import { claveDeMiRadar, miRadarCorresponde } from './utils/miRadar';
+import type { CheckInRadarApi, MiRadarApi } from './types/radar.types';
 import type { EstadoRadar, SlotRadar } from './utils/slotsDelRadar';
 
 /**
@@ -54,6 +61,15 @@ interface ValorRadar {
   error: string | null;
   enviar: (checkIn: CheckInRadarApi) => Promise<boolean>;
   limpiarError: () => void;
+  /**
+   * Mi Radar de esta cuenta (spec 012): lo guardado en el servidor, desde el día 8. La fila de Yo, su pantalla y los avisos
+   * del teléfono leen esto y nada más. Los días 1 a 7 no se pide: queda `pendiente`.
+   */
+  miRadar: {
+    lectura: LecturaDeMiRadar;
+    guardar: (config: MiRadarApi) => Promise<MiRadarApi>;
+    recargar: () => void;
+  };
 }
 
 const SIN_RADAR: ValorRadar = {
@@ -68,6 +84,7 @@ const SIN_RADAR: ValorRadar = {
   error: null,
   enviar: async () => false,
   limpiarError: () => {},
+  miRadar: { lectura: MI_RADAR_PENDIENTE, guardar: async config => config, recargar: () => {} },
 };
 
 const RadarContext = createContext<ValorRadar>(SIN_RADAR);
@@ -144,14 +161,28 @@ export function RadarProvider({ children }: { children: React.ReactNode }) {
   const puedePedirse = arranqueTerminado && !mapaAbierto;
   const radar = useRadarDelDia(puedePedirse ? diaPrograma : null, user?.id ?? null);
 
-  /* Las doce alarmas diarias. Se sincronizan con el DÍA DE PROGRAMA, no con `puedePedirse`: los
+  /* Mi Radar (spec 012): se lee solo desde el día 8. Los días 1 a 7 este hook no pide nada. */
+  const miRadar = useConfigDeMiRadar(diaPrograma, user?.id ?? null);
+  const configMiRadar = configDeMiRadar(miRadar.lectura);
+  /* La clave de lo que importa a los avisos (encendido, horas y días con horas propias): leer de nuevo lo mismo (al abrir
+     Mi Radar) no los reprograma. */
+  const huellaDeMiRadar = claveDeMiRadar(configMiRadar);
+
+  /* Las alarmas diarias. Se sincronizan con el DÍA DE PROGRAMA, no con `puedePedirse`: los
      avisos tienen que seguir puestos aunque en este momento el Mapa esté abierto o el arranque
      guiado sin terminar —esas son razones para no interrumpir AHORA, no para dejar a alguien sin
-     recordatorio a las 15:00. Al salir de la ventana (día 8) se cancelan solas. */
+     recordatorio a las 15:00. Los días 1 a 7 son las doce de siempre. Al salir de la ventana (día 8) se cancelan
+     solas, y desde ahí suenan las que la persona eligió en Mi Radar, si lo encendió. Mientras no se sabe qué tiene
+     Mi Radar (se está leyendo, o la lectura falló) no se toca lo programado. */
   useEffect(() => {
     if (diaPrograma === null) return;
-    void sincronizarRecordatoriosDeRadar(diaPrograma);
-  }, [diaPrograma]);
+    if (miRadarCorresponde(diaPrograma) && (miRadar.lectura.estado === 'pendiente' || miRadar.lectura.estado === 'fallo')) {
+      return;
+    }
+    void sincronizarRecordatoriosDeRadar(diaPrograma, configMiRadar, user?.id ?? null);
+    // `configMiRadar` se lee por su clave: una lectura nueva con lo mismo no reprograma.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [diaPrograma, miRadar.lectura.estado, huellaDeMiRadar, user?.id]);
   const obligatorio = rolObligadoAlRadar(user?.role);
 
   /* Sólo `abierto` tiene slot a responder. En `cargando` (todavía no se sabe si esta hora ya se
@@ -197,9 +228,10 @@ export function RadarProvider({ children }: { children: React.ReactNode }) {
       error: radar.error,
       enviar: radar.enviar,
       limpiarError: radar.limpiarError,
+      miRadar,
     }),
     [radar.estado, radar.enviando, radar.error, radar.enviar, radar.limpiarError, slot, obligatorio, abierto,
-      abrir, cerrar, minutosDesdeQueAbrio],
+      abrir, cerrar, minutosDesdeQueAbrio, miRadar],
   );
 
   return <RadarContext.Provider value={valor}>{children}</RadarContext.Provider>;

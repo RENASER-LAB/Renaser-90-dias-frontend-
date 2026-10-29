@@ -254,6 +254,67 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **No cambian**: el resto de Yo, el resto de Planificar (horas, días, el pedido del permiso de alarmas exactas),
       los interruptores de avisos (`InterruptoresDeAvisos`, spec 005), los demás tabs.
       **Hace falta un APK nuevo** (código nativo) y, para el texto con la hora y el `tag`, el backend de la spec 007.
+  * **Cambio por pedido del dueño — 2026-10-29 — tab `Yo` (y las fichas del mentor, del líder y de Administración): Mi Radar
+    desde el día 8** (spec 012 del backend, `specs/012-mi-radar-en-yo/`; textual: «el radar son los primeros 7 días y se
+    activa… ahora la persona puede activarlo individualmente y que le aparezca»). Lo que cambia y nada más:
+    * **Yo → fila «Mi Radar»** (`compass`), justo debajo de «Tuve una emergencia», **solo desde el día 8** y solo si el
+      servidor la ofrece (`GET /api/v1/radar/mi-radar`; un 404 o 403 la esconde). Dice `Encendido · 09:00, 14:00 y 20:00` o
+      `Apagado` y abre `MiRadarScreen` a pantalla completa. Los días 1 a 7 no hay fila: el Código Renaser se abre solo.
+    * **`MiRadarScreen`**: el `InterruptorGrande` «Mi Radar» primero; apagado no hay registrar ni horarios. Encender muestra
+      las horas (`ChipDeOpcion`, de 03:00 a 23:00, hasta 12; vienen 09:00, 14:00 y 20:00) y se guarda con «Guardar y
+      encender»; apagar rige en el acto. Encendido: «Registrar ahora» (el `CodigoRenaserModal` de siempre, que se puede
+      cerrar, con el mismo envío y el mismo 409), «Hoy» (las horas elegidas que ya pasaron con su registro o «Sin
+      registro») y las horas. Siempre: historial por día con «Ver más» y Patrones (desde 3 registros, cada uno con «en N
+      registros»), y «Lo ves tú, tu mentor y el equipo que coordina tu grupo.». Las horas se validan en la app y en el
+      servidor (`utils/miRadar.ts`, `MI_RADAR`).
+    * **Avisos del teléfono**: los mismos identificadores, canal y minuto. Los días 1 a 7, las doce de 08:00 a 19:00 **sin
+      ningún cambio**; desde el día 8, solo las horas elegidas con Mi Radar encendido, con `data.route = '/mi-radar'`:
+      tocarlos abre Yo → Mi Radar y, si la hora en curso es una elegida sin registro, también el formulario. Una
+      invitación única el día 8 a las 09:00, que el teléfono programa una vez por cuenta durante los días 1 a 7 y se cancela
+      si se enciende Mi Radar.
+    * **Fichas** (solo lectura): `CodigoRenaserDelAlumno` recibe cómo cargar y muestra `Mi Radar: encendido · …` o
+      `apagado` y la hora prevista de cada registro. La usan `AlumnoScreen` (mentor), `FichaAprendizScreen` (administrador
+      y alquimista, solo con grupo) y `PersonaDelLiderScreen` (líder; estos dos con
+      `GET /api/v1/leadership/groups/{g}/people/{p}/radar`). Un 403 o 404 esconde la sección.
+    * **Por día de la semana, como los hábitos en Planificar (cuarta ronda, 2026-10-29)** (textual: «no harán la acción
+      todos los días, es molestoso… igual que los hábitos… recuerda la experiencia de uso para hacerlo más fácil»). Lo que
+      cambia y nada más, sobre lo de arriba (que sigue valiendo para «Todos los días»):
+      * **Forma**: `{ encendido, horas, dias: [{ dia: 1..7, horas }] }`, lunes = 1. `horas` valen para todos los días; un día en
+        `dias` tiene horas propias (de 1 a 12) y con `[]` es «Sin Radar ese día»; un día que no está sigue las de todos. El
+        esquema es tolerante: sin `dias` (backend anterior) ningún día tiene horas propias, y un día roto se pierde solo él.
+        **`horasDelDia(config, diaIso)` (`utils/miRadar.ts`) es la única función que dice qué horas tiene un día**: «Hoy»,
+        «Registrar ahora», los avisos y el resumen la usan. Lo de editar días marcados (borrador, qué se guarda) vive en
+        `utils/diasDeMiRadar.ts`.
+      * **Pantalla**: bajo «Tus horas», la fila de los siete días de Planificar (`FilaDeDiasDelPlan`, sin tocarla; ningún día con
+        candado: cambiar rige en el acto). Cada día con horas propias lleva la campana y el que va sin Radar, la campana tachada;
+        el lector de pantalla dice «Sábado 31, horas propias: 11:00» / «Domingo 1, sin Radar». **Sin días marcados**: «Todos los
+        días» y las horas de siempre, con «Guardar horarios» / «Guardar y encender» (conserva los días propios que ya había).
+        **Con días marcados**: «Solo sáb, dom», el `InterruptorGrande` «Sin Radar ese día» / «Sin Radar estos días» (con «Varía»
+        si no coinciden) y los mismos chips de horas, y se guarda con **«Guardar horas · sáb, dom»** (o «Guardar y encender · sáb»
+        si Mi Radar aún está apagado): solo lo tocado, y un día que queda con las mismas horas que todos **vuelve a seguirlos**.
+        Si los marcados tienen horas distintas no se marca ninguna y se lee «Estos días tienen horas distintas» (lo que se elija
+        se pone a todos). «Dejar sáb como los demás días» le quita lo propio. Sin horas y sin «Sin Radar»: «Elige al menos una hora
+        o marca «Sin Radar» para esos días». Cada modo tiene su borrador y no se mezclan. Sin animaciones nuevas (el interruptor
+        grande ya anima su pulgar); el tacto de siempre en cada toque y en los errores.
+      * **Avisos del teléfono**: sin ningún día distinto, las alarmas DIARIAS de siempre (`renaser.radar.slot.HH`); con algún día
+        distinto, **una alarma SEMANAL por día y por hora de ese día** (`renaser.radar.slot.d{1..7}.HH`, lunes = 1; el disparador
+        `WEEKLY` de expo numera el domingo como 1: `weekdayDeExpo`), como Planificar con los hábitos (spec 008). Un día sin Radar
+        no tiene ninguna. Cancelar cubre los dos esquemas. Los días 1 a 7 no cambian (las doce diarias, con su prueba). **Tope de
+        iOS: 64 avisos pendientes por app** y con días distintos pueden ser hasta 84; hoy la app es solo Android, que no tiene
+        tope. Si algún día sale en iOS hay que recortar en `horasDeAviso`.
+      * **«Hoy»** usa las horas de **hoy**; en un día sin Radar no hay «Registrar ahora»: dice «Hoy no tienes Mi Radar» (el
+        servidor lo rechaza con un 409). «Hoy» va **en orden de hora, del más temprano al más tarde** (registros y «Sin registro»
+        juntos); antes iba del más nuevo al más viejo. El historial de otros días sigue del más nuevo al más viejo.
+      * **Resumen de la fila de Yo y de las fichas** (`textoDeMiRadar`): `Encendido · 09:00, 14:00 y 20:00 · sáb 11:00 · dom sin
+        Radar`; los días que quedan igual van juntos (`sáb y dom 11:00`, `lun, mié y vie sin Radar`). Con todos los días iguales
+        es el de antes. Es una sola línea que, si es larga, se parte en renglones y nunca se corta con «…».
+      * **Hace falta el backend con `dias`** (`GET/PUT /radar/mi-radar`, `POST /radar` que rechaza un día sin Radar, y
+        `horaPrevista` calculada con las horas del día) y un APK nuevo. Un backend sin `dias` los ignora y devuelve solo las
+        horas de todos los días: la app lo lee como «ningún día tiene horas propias» y no inventa nada.
+    * **No cambian**: los días 1 a 7, **Hoy** (desde el día 8 no muestra nada del Radar, con Mi Radar encendido o apagado),
+      el formulario, los demás tabs ni Plan. Sin dependencias nuevas.
+    * **Hace falta el backend con V119 antes y un APK nuevo** (la app no se actualiza por aire). Contra un backend anterior
+      no aparece la fila y los días 1 a 7 siguen igual.
   * **Cambio por pedido del dueño — 2026-10-12 — Administración (estado de `Hoy`): «Hábitos del programa», con
     audiencia por rol** (backend D-264; spec y plan en `Renaser-90-dias-backend/specs/001-habitos-por-rol/`, flujo
     spec-kit con las decisiones del dueño). Lo que cambia y nada más:

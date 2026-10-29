@@ -6,42 +6,47 @@ import { Card } from '../../../components/ui';
 import { TituloDeSeccion } from '../../../components/Legible';
 import { useTheme } from '../../../theme/ThemeContext';
 import { ENERGIA_MAXIMA, PREGUNTAS_RADAR } from '../../radar/config/configRadar';
+import { useHistorialDeRadar, type CargarHistorialDeRadar } from '../../radar/hooks/useHistorialDeRadar';
 import type { RegistroRadarApi } from '../../radar/types/radar.types';
-import { useCodigoRenaserDelAlumno } from '../hooks/useCodigoRenaserDelAlumno';
+import { textoDeLaHoraDelRegistro, textoDeMiRadarEnLaFicha } from '../../radar/utils/miRadar';
 import { diaLargo } from '../utils/fechasLegibles';
 
 /**
- * El Código Renaser del aprendiz: lo que escribió, hora por hora, durante sus primeros días.
+ * El Código Renaser de una persona: lo que escribió, hora por hora, y —desde la spec 012— si encendió Mi Radar y a qué
+ * horas. La ven su mentor, el líder de mentores, el administrador y el alquimista, cada uno en su ficha.
  *
  * **Esto es texto íntimo.** Alguien contestó "¿qué evito?" a las once de la mañana de su tercer
  * día. Por eso la sección no lo decora: sin iconos, sin colores de estado, sin insignias y sin
  * ninguna cifra que resuma o puntúe a la persona. Se muestra agrupado por día y ordenado por
- * hora, y nada más — leerlo es el objetivo, no medirlo.
+ * hora, y nada más — leerlo es el objetivo, no medirlo. Solo se lee: acá nadie registra, enciende ni apaga.
  *
  * Las cuatro preguntas salen de `PREGUNTAS_RADAR`, las mismas constantes con las que se le
- * preguntaron. Copiarlas acá con otras palabras haría que el mentor lea un enunciado distinto
+ * preguntaron. Copiarlas acá con otras palabras haría que quien lee vea un enunciado distinto
  * del que la persona contestó.
+ *
+ * ## Cada ficha dice cómo cargar
+ *
+ * `cargar(cursor)` es de cada ficha: el mentor pide `/mentor/groups/{g}/learners/{u}/radar`, y el líder, el administrador
+ * y el alquimista, `/leadership/groups/{g}/people/{p}/radar`. La sección no sabe de rutas ni de roles (el servidor decide
+ * quién lee). `cargar` tiene que ser estable (un `useMemo` por persona); `null` = no hay a quién preguntarle (la persona no
+ * tiene grupo) y la sección no se dibuja.
  *
  * ## Vacío es el caso normal
  *
- * El Código Renaser se apaga el día 8 y no vuelve, así que un aprendiz que va por el día 40 no
- * tiene registros nuevos. Una lista vacía es eso, no un fallo: una línea y se termina.
+ * Quien aún no registró, o apagó Mi Radar, no tiene registros nuevos. Una lista vacía es eso, no un fallo: una línea y
+ * se termina.
  *
  * ## Si el endpoint no está, acá no hay nada
  *
- * Un 404 (sin desplegar) o un 403 (ya no acompaña a esta persona) no dibujan la sección.
+ * Un 404 (sin desplegar, o esa persona no se muestra) o un 403 (ya no acompaña a esta persona) no dibujan la sección.
  */
-export function CodigoRenaserDelAlumno({ grupoId, alumnoId }: { grupoId: string | null; alumnoId: string }) {
+export function CodigoRenaserDelAlumno({ cargar }: { cargar: CargarHistorialDeRadar | null }) {
   const { c, t } = useTheme();
-  const { dias, hayMas, cargando, cargandoMas, fallo, cargarMas } = useCodigoRenaserDelAlumno(
-    grupoId,
-    alumnoId,
-  );
+  const { dias, miRadar, hayMas, cargando, cargandoMas, fallo, cargarMas } = useHistorialDeRadar(cargar);
 
-  if (fallo === 'no_disponible' || fallo === 'sin_permiso' || fallo === 'sin_celula') return null;
-  /* Sin grupo no hay a quién preguntarle: no se dibuja un "Sin registros" que en realidad
-     significa "no pregunté". */
-  if (!grupoId) return null;
+  if (fallo === 'no_disponible' || fallo === 'sin_permiso') return null;
+  /* Sin a quién preguntarle no se dibuja un "Sin registros" que en realidad significa "no pregunté". */
+  if (!cargar) return null;
 
   return (
     <Aparicion retardo={200} style={{ marginTop: 20 }}>
@@ -55,10 +60,17 @@ export function CodigoRenaserDelAlumno({ grupoId, alumnoId }: { grupoId: string 
               ? 'No se pudieron cargar sus registros. Revisa tu conexión y vuelve a entrar.'
               : 'No se pudieron cargar sus registros.'}
           </Text>
-        ) : dias.length === 0 ? (
-          <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>Sin registros.</Text>
         ) : (
           <>
+            {/* Spec 012: si encendió Mi Radar, a qué horas y qué días van distinto («… · sáb 11:00 · dom sin Radar»). Un
+                backend anterior no lo manda y la línea no está. Es una sola línea que, si es larga, se parte en renglones:
+                nunca se corta con «…». */}
+            {miRadar ? (
+              <Text style={[t.body, { color: c.textStrong, fontSize: 16, lineHeight: 23, fontFamily: 'Jost_500Medium', marginBottom: 4 }]}>
+                {textoDeMiRadarEnLaFicha(miRadar)}
+              </Text>
+            ) : null}
+            {dias.length === 0 ? <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>Sin registros.</Text> : null}
             {dias.map((dia, indice) => (
               <View key={dia.fecha ?? 'sin-fecha'} style={indice > 0 ? estilos.diaSiguiente : undefined}>
                 <Text style={[t.body, { color: c.text, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>
@@ -101,9 +113,14 @@ function RegistroDeHora({ registro, hora }: { registro: RegistroRadarApi; hora: 
   return (
     <View style={[estilos.registro, { borderColor: c.border }]}>
       <View style={estilos.cabecera}>
-        {/* El guion es literal: si no se pudo leer la hora, no se inventa ninguna. */}
-        <Text style={[t.micro, { color: c.micro, fontSize: 14 /* metadato */ }]}>{hora ?? '—'}</Text>
-        <Text style={[t.micro, { color: c.textSoft, fontSize: 14 /* metadato */ }]}>
+        {/* El guion es literal: si no se pudo leer la hora, no se inventa ninguna. Con hora prevista (Mi Radar, spec 012):
+            «Prevista 14:00 · respondida 14:06». */}
+        {/* `flexShrink: 1` (E2E de la spec 012): «Prevista 14:00 · respondida 14:04» es largo y, sin poder partirse, la
+            energía salía de la tarjeta por la derecha. La hora se parte en dos renglones; la energía no se encoge. */}
+        <Text style={[t.micro, { color: c.micro, fontSize: 14 /* metadato */, flexShrink: 1 }]}>
+          {textoDeLaHoraDelRegistro(hora, registro.horaPrevista)}
+        </Text>
+        <Text style={[t.micro, { color: c.textSoft, fontSize: 14 /* metadato */, flexShrink: 0 }]}>
           Energía {registro.energyLevel} / {ENERGIA_MAXIMA}
         </Text>
       </View>

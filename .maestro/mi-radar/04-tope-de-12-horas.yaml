@@ -1,0 +1,36 @@
+# 04 — Marcar 12 horas y no dejar la 13.ª: dice «Puedes elegir hasta 12» (escenario 4). No se guarda nada.
+# cuenta: aprendiz (día 10 con Mi Radar encendido en 09:00, 14:00 y 20:00; correr después de 03)
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Encendido · 09:00, 14:00 y 20:00"
+    direction: DOWN
+- tapOn: "Encendido · 09:00, 14:00 y 20:00"
+- scrollUntilVisible:
+    element: "Tus horas"
+    direction: DOWN
+- assertVisible: "3 de 12 horas elegidas"
+- scrollUntilVisible:
+    element: "03:00"
+    direction: DOWN
+- tapOn: "03:00"
+- tapOn: "04:00"
+- tapOn: "05:00"
+- tapOn: "06:00"
+- tapOn: "07:00"
+- tapOn: "08:00"
+- tapOn: "10:00"
+- tapOn: "11:00"
+- tapOn: "12:00"
+- assertVisible: "12 de 12 horas elegidas"
+- takeScreenshot: 04a-doce-horas
+# La 13.ª no se marca y la pantalla dice por qué.
+- tapOn: "15:00"
+- assertVisible: "Puedes elegir hasta 12"
+- assertVisible: "12 de 12 horas elegidas"
+- takeScreenshot: 04b-no-deja-la-13
+# Nada se guardó: al salir y volver siguen las tres horas de antes.
+- back
+- assertVisible: "Encendido · 09:00, 14:00 y 20:00"
