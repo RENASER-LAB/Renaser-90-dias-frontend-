@@ -163,12 +163,10 @@ export function subtituloDeLaFila(
   if (item.tipo === 'accion') {
     return { marca: textoDeLaMarca, texto: 'Acción de tus objetivos', tonoDeAviso: false };
   }
-  const partes: string[] = [];
-  if (item.dimension) partes.push(item.dimension);
+  // Pedido del dueño (2026-10-29): la fila de un hábito es solo su nombre; la dimensión y los puntos van en la hoja.
+  // Atrasado, la invitación a cumplir, sin hablar de puntos.
   const aviso = modo === 'atrasado' && item.habit ? avisoDeHoraPasada(item.habit, ahoraMs) : null;
-  if (aviso) return { marca: textoDeLaMarca, texto: [...partes, aviso].join(' · '), tonoDeAviso: true };
-  if (item.puntos != null && modo !== 'planificado') partes.push(`${item.puntos} pts`);
-  return { marca: textoDeLaMarca, texto: partes.join(' · '), tonoDeAviso: false };
+  return { marca: textoDeLaMarca, texto: aviso ?? '', tonoDeAviso: false };
 }
 
 /* ------------------------------------------------------------------------------------------------
@@ -233,7 +231,7 @@ export function metaDeLaHoja(item: ItemDelDia, modo: ModoDeLaFila): string {
   const partes: string[] = [];
   if (item.dimension) partes.push(item.dimension);
   partes.push(item.hora ?? 'sin hora');
-  if (item.puntos != null && modo !== 'hecho' && modo !== 'cerrado' && modo !== 'planificado') partes.push(`${item.puntos} pts`);
+  if (item.puntos != null && modo === 'hoy') partes.push(`${item.puntos} pts`);
   // La racha (D-254) la calcula el servidor; sin el dato —un backend anterior, una acción— no se dibuja, nunca «0 días».
   const racha = item.habit?.streak;
   if (racha != null && (modo === 'hoy' || modo === 'atrasado' || modo === 'hecho')) {

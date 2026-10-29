@@ -221,6 +221,9 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       la racha de cada hábito ahora se lee en su hoja (no en la tarjeta).
     * **Hace falta un APK nuevo** (la app no se actualiza por aire) y el backend con `GET /habit-tracks/day`; contra
       un backend anterior los días anteriores muestran lo planificado.
+    * **Ajuste del dueño, mismo día:** la fila de un hábito es solo su nombre (la dimensión y los puntos pasan a la hoja,
+      abajo), y lo atrasado ya no habla de puntos: «Todavía puedes cumplir tu compromiso hoy». Cuándo se avisa no cambia, y
+      el servidor paga igual que antes (D-259).
   * **Cambio por pedido del dueño — 2026-10-19 — alarmas como el despertador, aviso cuando el teléfono las
     borra y guía por marca (tab `Yo` → Alarmas, una hoja global y, en Training → Planificar, una oferta única de la
     guía)** (spec 007 del backend, `specs/007-alarmas-confiables/`; pedido: «los usuarios dicen que sus alarmas no

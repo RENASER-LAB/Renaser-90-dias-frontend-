@@ -189,19 +189,20 @@ describe('a dónde lleva el toque (un día que NO es hoy)', () => {
 });
 
 describe('lo que dice la fila', () => {
-  it('«Cuerpo · 8 pts»; el primero de la lista abre con «Te toca ahora» o «Lo que sigue»', () => {
+  it('la fila de un hábito es solo su nombre (pedido del dueño, 2026-10-29); el primero abre con «Te toca ahora» o «Lo que sigue»', () => {
     const ahora = Date.now();
-    expect(subtituloDeLaFila(item({ puntos: 8 }), 'hoy', null, ahora)).toEqual({ marca: null, texto: 'Cuerpo · 8 pts', tonoDeAviso: false });
+    expect(subtituloDeLaFila(item({ puntos: 8 }), 'hoy', null, ahora)).toEqual({ marca: null, texto: '', tonoDeAviso: false });
     expect(subtituloDeLaFila(item({ puntos: 8 }), 'hoy', 'ahora', ahora).marca).toBe('Te toca ahora');
     expect(subtituloDeLaFila(item({ puntos: 8 }), 'hoy', 'sigue', ahora).marca).toBe('Lo que sigue');
   });
 
-  it('atrasado, usa el texto de menos puntos de D-259 que ya existe', () => {
+  it('atrasado, invita a cumplir el compromiso, sin hablar de puntos ni en rojo (pedido del dueño, 2026-10-29)', () => {
     const ahora = Date.parse('2026-10-29T12:00:00Z');
     const atrasado = item({}, { estado: 'PENDIENTE', pointsAtStake: 6, maxPoints: 10, deadline: '2026-10-29T20:00:00Z' });
     const sub = subtituloDeLaFila(atrasado, 'atrasado', null, ahora);
-    expect(sub.texto).toBe('Cuerpo · Todavía puedes registrarlo hoy, con menos puntos');
-    expect(sub.tonoDeAviso).toBe(true);
+    expect(sub.texto).toBe('Todavía puedes cumplir tu compromiso hoy');
+    expect(sub.texto).not.toMatch(/punto/i);
+    expect(sub.tonoDeAviso).toBe(false);
   });
 
   it('un evento dice dónde es; una acción, que es de los objetivos', () => {
@@ -212,7 +213,7 @@ describe('lo que dice la fila', () => {
   });
 
   it('un día planificado no promete puntos', () => {
-    expect(subtituloDeLaFila(item({ puntos: 10 }, null), 'planificado', null, Date.now()).texto).toBe('Cuerpo');
+    expect(subtituloDeLaFila(item({ puntos: 10 }, null), 'planificado', null, Date.now()).texto).toBe('');
   });
 });
 
