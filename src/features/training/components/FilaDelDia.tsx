@@ -101,13 +101,15 @@ export function FilaDelDia({
           },
         ]}
       />
-      <Text style={[t.small, { color: c.textSoft }]} numberOfLines={fontScale > 1.15 ? 4 : 2}>
-        {sub.marca ? <Text style={{ color: c.goldInk, fontFamily: 'Jost_700Bold' }}>{sub.marca}</Text> : null}
-        {sub.marca && sub.texto ? ' · ' : ''}
-        {sub.texto ? (
-          <Text style={sub.tonoDeAviso ? { color: c.danger, fontFamily: 'Jost_500Medium' } : undefined}>{sub.texto}</Text>
-        ) : null}
-      </Text>
+      {sub.marca || sub.texto ? (
+        <Text style={[t.small, { color: c.textSoft }]} numberOfLines={fontScale > 1.15 ? 4 : 2}>
+          {sub.marca ? <Text style={{ color: c.goldInk, fontFamily: 'Jost_700Bold' }}>{sub.marca}</Text> : null}
+          {sub.marca && sub.texto ? ' · ' : ''}
+          {sub.texto ? (
+            <Text style={sub.tonoDeAviso ? { color: c.danger, fontFamily: 'Jost_500Medium' } : undefined}>{sub.texto}</Text>
+          ) : null}
+        </Text>
+      ) : null}
     </View>
   );
 

@@ -103,7 +103,8 @@ describe('La hoja del hábito', () => {
   it('atrasado: lo dice con el texto de menos puntos de siempre', () => {
     montar(item({}, { pointsAtStake: 6, maxPoints: 10, deadline: '2026-10-29T20:00:00Z' }), 'atrasado');
     expect(textos()).toContain('Se te pasó la hora: ');
-    expect(textos()).toContain('todavía puedes registrarlo hoy, con menos puntos');
+    expect(textos()).toContain('todavía puedes cumplir tu compromiso hoy');
+    expect(textos()).not.toMatch(/menos puntos|sin puntos/);
     expect(textos()).toContain('Tomar foto');
   });
 

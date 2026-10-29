@@ -93,14 +93,14 @@ describe('avisoDeHoraPasada', () => {
   const AHORA = Date.parse('2026-10-06T20:00:00Z');
   const base = { done: false, estado: 'PENDIENTE', maxPoints: 10 };
 
-  it('pasado su plazo: todavía puedes registrarlo hoy, sin puntos', () => {
+  it('pasado su plazo: todavía puedes cumplir tu compromiso (sin hablar de puntos)', () => {
     expect(avisoDeHoraPasada({ ...base, pointsAtStake: 10, deadline: '2026-10-06T16:10:00Z' }, AHORA))
-      .toBe('Todavía puedes registrarlo hoy, sin puntos');
+      .toBe('Todavía puedes cumplir tu compromiso hoy');
   });
 
-  it('en la gracia, cuando ya paga menos: con menos puntos', () => {
+  it('en la gracia, cuando ya paga menos: el mismo aviso, sin hablar de puntos', () => {
     expect(avisoDeHoraPasada({ ...base, pointsAtStake: 7, deadline: '2026-10-06T20:05:00Z' }, AHORA))
-      .toBe('Todavía puedes registrarlo hoy, con menos puntos');
+      .toBe('Todavía puedes cumplir tu compromiso hoy');
   });
 
   it('a tiempo, hecho, sin plazo o ya cerrado: nada', () => {

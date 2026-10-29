@@ -128,13 +128,17 @@ export interface HabitoConPlazo {
  * Los puntos no se calculan acá (la escala es del servidor); el reloj sí, porque `pointsAtStake` se leyó al
  * cargar la pantalla y el plazo puede pasar con la pantalla abierta. Sin `deadline` el hábito no vence en el día.
  */
+/** Lo que se dice de un hábito al que se le pasó la hora: el compromiso sigue, sin hablar de puntos. */
+export const AVISO_DE_HORA_PASADA = 'Todavía puedes cumplir tu compromiso hoy';
+
 export function avisoDeHoraPasada(h: HabitoConPlazo, ahoraMs: number): string | null {
   if (h.done || (h.estado !== 'PENDIENTE' && h.estado !== 'EN_CURSO') || !h.deadline) return null;
   const plazo = Date.parse(h.deadline);
-  if (Number.isFinite(plazo) && plazo <= ahoraMs) return 'Todavía puedes registrarlo hoy, sin puntos';
-  if (h.pointsAtStake === 0) return 'Todavía puedes registrarlo hoy, sin puntos';
+  // Corregido 2026-10-29 (pedido del dueño): no se habla de puntos perdidos, se invita a cumplir. Cuándo sale no cambia.
+  if (Number.isFinite(plazo) && plazo <= ahoraMs) return AVISO_DE_HORA_PASADA;
+  if (h.pointsAtStake === 0) return AVISO_DE_HORA_PASADA;
   if (typeof h.pointsAtStake === 'number' && typeof h.maxPoints === 'number' && h.pointsAtStake < h.maxPoints) {
-    return 'Todavía puedes registrarlo hoy, con menos puntos';
+    return AVISO_DE_HORA_PASADA;
   }
   return null;
 }
