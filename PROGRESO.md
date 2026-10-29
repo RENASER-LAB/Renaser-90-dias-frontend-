@@ -38,6 +38,10 @@ el mismo molde en el backend, ya desde master.
   tipo despertador (`expo-notifications`, spec 007) y los dos de `expo-two-way-audio`. Es el falso rojo que cinco PR
   explicaron a mano (#30, #32, #35, #36, #38). Ojo: un build debug local hecho desde ese checkout sale **sin** esos
   arreglos. `npm run verificar` los aplica, pero no con otra sesión probando: correrlo cuando se libere.
+- **Spec 012 «Mi Radar en Yo»** (otra sesión, rama `012-mi-radar-en-yo`, V119): su autorización del tab Yo va en
+  `AGENTS.md`, en un bloque propio al final de §1. Si la 012 entra a master antes que el #48, al rebasar el #48
+  hay que mover ese bloque a `docs/producto/yo.md` con su fila en el índice. Si el #48 entra antes, lo mueve esa
+  sesión.
 - **El fénix**: `fix/fenix-cuello` (#39) queda como está, por decisión del dueño (2026-10-29). El fénix 3D con
   Blender quedó descartado.
 
