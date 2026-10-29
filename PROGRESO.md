@@ -49,7 +49,9 @@ el mismo molde en el backend, ya desde master.
   (`.github/ISSUE_TEMPLATE/bug.yml`) y plantilla de PR, sobre las listas del curso; `apk_publicado` en
   `funcionalidades.json` (Play Store del 20/10 y `eas build:list`). PR #48 abierto.
 - **Verificado**: la salida del hook es JSON válido y trae rama, pendientes y los bugs de GitHub; el YAML del
-  formulario es válido. El hook corre recién al abrir una sesión nueva.
+  formulario es válido. El hook corre recién al abrir una sesión nueva. El CI del PR #48 (tipos y Jest completo)
+  pasó en verde en `c990fe7` y en `0d348b1`.
+- **Sin correr en local**: los parches de postinstall (máquina ocupada por otra sesión).
 
 ### 2026-10-29 — harness del frontend (paso 3)
 
