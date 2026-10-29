@@ -1,0 +1,65 @@
+name: Bug
+description: Algo de la app no hace lo que debería. Primero el issue, después el arreglo (AGENTS.md).
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Estos campos son los de la bitácora de errores: lo que se escribe acá es lo que la próxima persona va a buscar
+        cuando vea el mismo síntoma. Para probarlo, **nunca contra producción**: backend local, base clonada y build debug.
+  - type: textarea
+    id: sintoma
+    attributes:
+      label: Qué pasa
+      description: El síntoma tal cual, sin interpretarlo. Si hay un mensaje, cópialo literal; si es algo que se ve, una captura.
+      placeholder: «te toca a las 07:00» llega a las 8:58
+    validations:
+      required: true
+  - type: dropdown
+    id: donde
+    attributes:
+      label: Dónde
+      options:
+        - Hoy
+        - Plan
+        - Training
+        - Comunidad
+        - Yo
+        - Alarmas y avisos
+        - Ingreso u onboarding
+        - Administración o liderazgo
+        - Otro
+    validations:
+      required: true
+  - type: textarea
+    id: reproducir
+    attributes:
+      label: Cómo reproducirlo
+      description: Pasos, con qué rol o cuenta, en qué teléfono o en la web, y si pasa siempre o a veces.
+      placeholder: |
+        1. Con una cuenta de aprendiz…
+        2. …
+    validations:
+      required: true
+  - type: textarea
+    id: esperado
+    attributes:
+      label: Qué se espera
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: En qué versión
+      description: El APK de Play (por fecha o número de build), un build debug local o la web. Ver «apk_publicado» en funcionalidades.json.
+      placeholder: Play del 2026-10-20 · debug local de master · web
+  - type: textarea
+    id: causa
+    attributes:
+      label: Causa (si ya se sabe)
+      description: La causa real, no la primera sospecha. Se puede completar al arreglarlo.
+  - type: textarea
+    id: evitarlo
+    attributes:
+      label: Qué prueba o regla evitaría que vuelva
+      description: Se completa al arreglarlo. Una corrección que se repite se vuelve una prueba, no un párrafo (lección 10 de learn-harness-engineering).

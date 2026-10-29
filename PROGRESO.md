@@ -18,9 +18,9 @@ que poder comprobarse: lo que no comprobaste dice «sin confirmar». Es corto a 
 
 ## Siguiente paso
 
-Harness del frontend, rama `harness/agents-corto`: correr `npm run verificar` completo cuando se libere la máquina
-(aplica los parches que faltan y corre el Jest completo) y el paso 5 (plantillas de issue y de PR). Después, el mismo
-molde en el backend, ya desde master.
+Harness del frontend (PR #48, rama `harness/agents-corto`): pasos 1 a 5 hechos. Falta correr `npm run verificar`
+completo cuando se libere la máquina (aplica los parches que faltan) y que el dueño revise y fusione el PR. Después,
+el mismo molde en el backend, ya desde master.
 
 ## Pendientes
 
@@ -42,6 +42,14 @@ molde en el backend, ya desde master.
   Blender quedó descartado.
 
 ## Sesiones (las cinco últimas)
+
+### 2026-10-29 — harness del frontend (pasos 4 y 5)
+
+- **Hecho**: hook SessionStart (`scripts/inicio-de-sesion.mjs`, en `.claude/settings.json`); formulario de bug
+  (`.github/ISSUE_TEMPLATE/bug.yml`) y plantilla de PR, sobre las listas del curso; `apk_publicado` en
+  `funcionalidades.json` (Play Store del 20/10 y `eas build:list`). PR #48 abierto.
+- **Verificado**: la salida del hook es JSON válido y trae rama, pendientes y los bugs de GitHub; el YAML del
+  formulario es válido. El hook corre recién al abrir una sesión nueva.
 
 ### 2026-10-29 — harness del frontend (paso 3)
 

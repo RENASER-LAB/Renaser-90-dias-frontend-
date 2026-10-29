@@ -32,9 +32,10 @@ informe nunca se escriben acá (`src/__tests__/harness/agentsCorto.test.ts` lo f
 
 ## Cómo se trabaja
 
-- **Un bug, primero un issue.** `gh issue create --label bug` en el repo que corresponda, con qué pasa, cómo
-  reproducirlo y qué se espera. Después la rama; el PR lo cierra con `Closes #N`. Al cerrarlo, una entrada E-NN en
-  la bitácora del backend: síntoma literal, causa real, cómo evitarlo y el PR.
+- **Un bug, primero un issue.** `gh issue create --label bug` en el repo que corresponda, con los campos de
+  `.github/ISSUE_TEMPLATE/bug.yml` (qué pasa tal cual, dónde, cómo reproducirlo, qué se espera, en qué versión).
+  Después la rama; el PR sigue `.github/pull_request_template.md` y lo cierra con `Closes #N`. Al cerrarlo, una
+  entrada E-NN en la bitácora del backend: síntoma literal, causa real, cómo evitarlo y el PR.
 - **Una funcionalidad o un bug por rama y por commit.** Sin `Co-Authored-By` ni pie de herramienta en commits ni PR.
 - **Nunca se prueba contra producción**: backend local con base clonada, build debug y emulador.
 - **La máquina se comparte**: antes de levantar un backend, el emulador, Maestro o el jest completo, pregunta a las
