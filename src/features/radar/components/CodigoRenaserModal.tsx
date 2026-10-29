@@ -65,6 +65,7 @@ export function CodigoRenaserModal({
   onEnviar,
   onCerrar,
   onLimpiarError,
+  textoDelPie,
 }: {
   visible: boolean;
   /** El slot que se está respondiendo. `null` mientras no hay ninguno abierto. */
@@ -78,6 +79,8 @@ export function CodigoRenaserModal({
   onEnviar: (checkIn: CheckInRadarApi) => Promise<boolean>;
   onCerrar: () => void;
   onLimpiarError: () => void;
+  /** Lo que dice bajo «Registrar». Sin esto, lo de la semana 1 (Mi Radar, desde el día 8, dice otra cosa). */
+  textoDelPie?: string;
 }) {
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth, isShort } = useResponsive();
@@ -300,12 +303,13 @@ export function CodigoRenaserModal({
               disabled={enviando}
             />
             <Text style={[t.micro, { color: c.micro, fontSize: 11, textAlign: 'center' }]}>
-              {obligatorio
+              {textoDelPie ??
+                (obligatorio
                 /* Texto pedido por el dueño (2026-09-18). Antes decía "Se pide una vez por hora
                    durante los primeros N días": describía el sistema en pasiva —quién pide, a
                    quién— en vez de decirle a la persona qué tiene que hacer. */
                 ? `Completa las preguntas cada hora. Durante los primeros ${CONFIG_RADAR.ultimoDia} días.`
-                : 'Puedes cerrarlo; vuelve a ofrecerse la hora que viene.'}
+                : 'Puedes cerrarlo; vuelve a ofrecerse la hora que viene.')}
             </Text>
           </View>
         </KeyboardAvoidingView>

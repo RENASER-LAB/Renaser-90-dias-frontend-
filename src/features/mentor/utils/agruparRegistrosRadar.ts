@@ -53,6 +53,12 @@ function horaDe(d: Date): string {
   return `${dosDigitos(d.getHours())}:${dosDigitos(d.getMinutes())}`;
 }
 
+/** `HH:mm` en la zona del dispositivo, o `null` si `createdAt` no se pudo leer. La misma hora que usa el agrupado. */
+export function horaLocalDelRegistro(createdAt: string): string | null {
+  const fecha = new Date(createdAt);
+  return Number.isNaN(fecha.getTime()) ? null : horaDe(fecha);
+}
+
 /**
  * Agrupa por día, de lo más nuevo a lo más viejo, y dentro de cada día también.
  *

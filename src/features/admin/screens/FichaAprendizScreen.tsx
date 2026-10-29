@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -12,6 +12,8 @@ import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher'
 import { abrirConversacionDirecta } from '../../chat/api/chatApi';
 import { EvidenciaDeObligacion } from '../../lider-mentores/components/EvidenciaDeObligacion';
 import { VerPublicacion } from '../../lider-mentores/components/VisorDePublicacion';
+import { obtenerRadarDePersona } from '../../lider-mentores/api/cumplimientoDelLiderApi';
+import { CodigoRenaserDelAlumno } from '../../mentor/components/CodigoRenaserDelAlumno';
 import { RejillaSemanal } from '../../mentor/components/RejillaSemanal';
 import { diaInicialDelDetalle } from '../../mentor/utils/diaInicialDelDetalle';
 import { TarjetaSemaforoDeAprendiz } from '../../semaforo/components/TarjetaSemaforoDeAprendiz';
@@ -105,6 +107,13 @@ export function FichaAprendizScreen({
 
   const detalle = semana?.dias.find(d => d.fecha === diaElegido) ?? null;
   const grupoDeSusDias = onVerSusDias ? grupoParaVerSusDias(aprendiz) : null;
+  /* Spec 012: su Código Renaser y su Mi Radar, por la lectura del liderazgo, que pide el grupo de la persona. Sin grupo
+     (o en un grupo sin mentor, que el servidor responde 404) la sección no se dibuja. */
+  const grupoDelRadar = grupoParaVerSusDias(aprendiz);
+  const cargarRadar = useMemo(
+    () => (grupoDelRadar ? (cursor?: string | null) => obtenerRadarDePersona(grupoDelRadar, aprendiz.id, cursor) : null),
+    [grupoDelRadar, aprendiz.id],
+  );
   const nombre = aprendiz.fullName?.trim() || 'Aprendiz sin nombre';
   /* El día que trae el servidor al abrir la ficha gana sobre el de la fila que la abrió. */
   const datosDeCabecera = lineasDeCabecera(
@@ -414,6 +423,9 @@ export function FichaAprendizScreen({
             ) : null}
           </View>
         </SeccionPlegable>
+
+        {/* Spec 012: su Código Renaser (los días 1 a 7 y los de Mi Radar), solo lectura. */}
+        <CodigoRenaserDelAlumno cargar={cargarRadar} />
 
         {/* D-243: solo ADMIN o ALQUIMISTA, nunca sobre sí mismo; sobre un ADMIN o ALQUIMISTA, solo un ADMIN. */}
         {ofrecerEliminar ? (

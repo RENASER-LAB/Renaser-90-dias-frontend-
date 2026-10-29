@@ -1,0 +1,43 @@
+# 11 — Administración (o Alquimista): en la ficha de la persona, el mismo bloque «CÓDIGO RENASER» con el estado de Mi Radar
+# y sus registros (escenario 11).
+# cuenta: admin (la ranura E2E_ADMIN_* apunta a Administración o a Alquimista según quién se pruebe). E2E_PERSONA = parte
+# del nombre del aprendiz. Precondición: igual que el flujo 10.
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "HOY"
+- scrollUntilVisible:
+    element: "Abrir Administración"
+    direction: DOWN
+- tapOn: "Abrir Administración"
+- extendedWaitUntil:
+    visible: "Operación del programa"
+    timeout: 15000
+- scrollUntilVisible:
+    element: "Personas"
+    direction: DOWN
+- tapOn: "Personas"
+- extendedWaitUntil:
+    visible: "Buscar por nombre o correo"
+    timeout: 15000
+- tapOn: "Buscar por nombre o correo"
+- inputText: ${PERSONA}
+- hideKeyboard
+- extendedWaitUntil:
+    visible: "Abrir ficha de .*"
+    timeout: 20000
+- tapOn: "Abrir ficha de .*"
+- scrollUntilVisible:
+    element: "CÓDIGO RENASER"
+    direction: DOWN
+    timeout: 60000
+- scrollUntilVisible:
+    element: "Mi Radar: encendido · 09:00, 14:00 y 20:00"
+    direction: DOWN
+    timeout: 30000
+- assertVisible: "Mi Radar: encendido · 09:00, 14:00 y 20:00"
+- scrollUntilVisible:
+    element: "Prevista 14:00 · respondida .*"
+    direction: DOWN
+    timeout: 30000
+- takeScreenshot: 11-ficha-de-administracion-codigo-renaser

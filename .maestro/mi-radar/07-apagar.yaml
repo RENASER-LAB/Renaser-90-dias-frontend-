@@ -1,0 +1,34 @@
+# 07 — Apagar Mi Radar rige en el acto: sin «Registrar ahora» ni horarios, y el historial sigue (escenario 7).
+# cuenta: aprendiz (día 10 con Mi Radar encendido; correr después de 05, para que haya un registro)
+# Después hay que mirar `dumpsys alarm` / `dumpsys notification`: ningún aviso de Mi Radar (lo hace el informe, no el flujo).
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Encendido · .*"
+    direction: DOWN
+- tapOn: "Encendido · .*"
+- extendedWaitUntil:
+    visible: "Registrar ahora|Ya registraste esta hora"
+    timeout: 20000
+- tapOn: "Te preguntamos cómo estás a las horas que elijas\\."
+# La confirmación en línea («Mi Radar apagado») se va sola a los pocos segundos y Maestro tarda en llegar: no se exige.
+# Lo que prueba que apagó es que desaparecen «Registrar ahora» y los horarios.
+- extendedWaitUntil:
+    notVisible: "Tus horas"
+    timeout: 30000
+- assertNotVisible: "Registrar ahora"
+- assertNotVisible: "Ya registraste esta hora"
+- assertNotVisible: "Tus horas"
+- takeScreenshot: 07a-apagado
+# Apagarlo no borra nada: el registro sigue en el historial.
+- scrollUntilVisible:
+    element: "Sentí: c"
+    direction: DOWN
+- takeScreenshot: 07b-historial-sigue
+- back
+- extendedWaitUntil:
+    visible: "Apagado"
+    timeout: 15000
+- takeScreenshot: 07c-yo-apagado
