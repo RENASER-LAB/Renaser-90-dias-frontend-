@@ -27,7 +27,7 @@ appId: com.renaser.app
       visible: "¿Qué entendiste de la clase\\?"
     commands:
       - tapOn: "Hoy entendí que.*"
-      - inputText: "Entendi lo que importa hoy"
+      - inputText: "Entendi bastante"
       - hideKeyboard
       - tapOn: "Enviar y completar"
       - extendedWaitUntil:
