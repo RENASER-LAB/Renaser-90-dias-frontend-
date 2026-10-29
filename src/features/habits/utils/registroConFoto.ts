@@ -66,6 +66,38 @@ export function totalConHoy(medicion: MedicionPedida, texto: string): number {
   return Math.round((medicion.totalPrevio + (leerKilometros(texto) ?? 0)) * 100) / 100;
 }
 
+/**
+ * Lo que se SABE de si el registro pide los km, y de dónde sale (#42, 2026-10-29). Tres respuestas, y la tercera
+ * es la que faltaba:
+ *
+ * - un objeto: pide los km (hoy solo KILÓMETROS DIARIOS);
+ * - `null`: se sabe que no pide nada;
+ * - `undefined`: NO se sabe. Pasa cuando no se pudo leer el registro del servidor (sin red) y quien llamó no traía
+ *   la pista (el chat y el orbe de SER, cuyo evento no la manda). Antes se tomaba por `null`: el hábito de km se
+ *   abría SIN el campo, se enviaba solo y el servidor respondía 400 una y otra vez.
+ *
+ * `estado.sinLectura`: el registro no se leyó (falló la consulta, o en web no se consulta antes de la cámara) y lo que
+ * trae es la pista de quien llamó. `pista`: lo que quien llamó ya sabía (`undefined` si no sabe nada): Training y Yo
+ * la sacan del track (`null` o un objeto), y una foto pendiente la guarda al abrir la cámara.
+ */
+export function medicionQueSeSabe(
+  estado: { medicion?: MedicionPedida; sinLectura?: boolean },
+  pista: MedicionPedida | null | undefined,
+): MedicionPedida | null | undefined {
+  if (estado.medicion) return estado.medicion;
+  if (pista) return pista;
+  return estado.sinLectura ? pista : null;
+}
+
+/**
+ * Si el rechazo del servidor es el 400 de «escribe cuántos km recorriste» (`PoliticaKilometros`: «Escribe cuántos km
+ * recorriste hoy para registrar este hábito…»). No hay un código estable en la respuesta, así que se reconoce por
+ * el estado y por la palabra «km» del mensaje; quien lo usa solo actúa si el campo todavía no estaba a la vista.
+ */
+export function pideLosKm(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 400 && /\bkm\b|kil[oó]metros/i.test(error.message);
+}
+
 /** Un registro terminal ya no acepta evidencia ni cierre: el backend los rechaza. */
 const ESTADOS_VENCIDOS: ReadonlySet<string> = new Set(['EXPIRADO', 'FALLIDO']);
 
@@ -112,9 +144,11 @@ export function avisoDeHabitoCerrado(
 export type EstadoParaFoto =
   /**
    * Se puede registrar. `evidenciaYaSubida`: un intento anterior ya dejó la evidencia. `medicion`
-   * (D-226): el registro pide un número; ausente si no lo pide o si no se sabe (web sin consultar).
+   * (D-226): el registro pide un número; ausente si no lo pide o si no se sabe. `sinLectura` (#42): este estado NO
+   * salió del servidor (falló la consulta, o en web no se consulta antes de la cámara): la ausencia de `medicion`
+   * no quiere decir «no pide nada» (ver {@link medicionQueSeSabe}).
    */
-  | { tipo: 'disponible'; evidenciaYaSubida: boolean; medicion?: MedicionPedida }
+  | { tipo: 'disponible'; evidenciaYaSubida: boolean; medicion?: MedicionPedida; sinLectura?: boolean }
   | { tipo: 'completado' }
   /** Su día ya cerró (`EXPIRADO`) o su sesión se rompió (`FALLIDO`): ya no se registra. */
   | { tipo: 'vencido'; estado?: string; fechaEjecucion?: string }
