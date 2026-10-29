@@ -10,7 +10,7 @@ import {
   subirEvidenciaDeArchivo,
 } from '../api/evidenciaHabitoApi';
 import { obtenerTracksDeHoy } from '../api/habitsApi';
-import { DiaDeHabitosCambiadoError } from '../api/registroVigente';
+import { DiaDeHabitosCambiadoError, MENSAJE_SIN_CONEXION_PARA_REGISTRAR } from '../api/registroVigente';
 import { fotoPendiente } from '../storage/fotoPendiente';
 import {
   archivoDeResultadoDeCamara,
@@ -22,6 +22,8 @@ import { RechazoParaMostrar, type DestinoDeFoto, type ReglasDelDestino } from '.
 import {
   avisoParaFoto,
   estadoParaFoto,
+  medicionQueSeSabe,
+  pideLosKm,
   registrarConFoto,
   seOfreceGaleria,
   type DependenciasDelRegistro,
@@ -45,6 +47,10 @@ export type SolicitudDeFoto = {
   /**
    * D-226: pista de quien llama de que el registro pide los km (p. ej. Training ya tiene el track).
    * La que manda es la del servidor al consultar el registro fresco; esta vale si no se pudo consultar.
+   *
+   * **Tres valores, y la diferencia importa (#42):** un objeto = pide los km; `null` = quien llama SABE que no
+   * pide nada (Training y Yo, que leen el track); `undefined` = no sabe (el chat y el orbe de SER: su evento no
+   * trae el dato). Sin red, el `undefined` no se toma por «no pide nada»: no se abre (ver {@link ResultadoDeInicio}).
    */
   medicion?: MedicionPedida | null;
 };
@@ -59,7 +65,13 @@ export type RegistroConFotoAbierto = SolicitudDeFoto & {
 };
 
 /** Cómo terminó el toque. Las tarjetas del chat y del orbe se actualizan con esto. */
-export type ResultadoDeInicio = 'abierto' | 'cancelado' | 'ocupado' | Exclude<EstadoParaFoto['tipo'], 'disponible'>;
+export type ResultadoDeInicio =
+  | 'abierto'
+  | 'cancelado'
+  | 'ocupado'
+  /** #42: no se pudo leer el registro y no se sabe si pide los km: no se abrió nada y se avisó (con «Reintentar»). */
+  | 'sin-conexion'
+  | Exclude<EstadoParaFoto['tipo'], 'disponible'>;
 
 export type OpcionesRegistroConFoto = {
   /** El backend ya cerró el registro. Los puntos son los que devolvió él, nunca un número local. */
@@ -150,21 +162,39 @@ function mensajeDelFallo(error: unknown): string {
 /**
  * D-226: si el registro pide los km. Lo dice el servidor en el estado fresco; en web ese estado no se
  * consulta antes de la cámara (el navegador la bloquearía), así que se consulta DESPUÉS de la foto,
- * cuando ya no hay gesto que cuidar. Sin red, vale la pista de quien llamó.
+ * cuando ya no hay gesto que cuidar.
+ *
+ * `previa` es lo que ya se sabía ({@link medicionQueSeSabe}): si no es `undefined`, vale. Si lo es —nunca se leyó el
+ * registro y quien llamó no traía la pista—, se lee ahora; y si tampoco se puede, devuelve `undefined`: NO se sabe, y
+ * quien llama no abre la pantalla (#42). Antes devolvía `null` («no pide nada») y el hábito de km se enviaba sin km.
  */
 async function medicionDelRegistro(
   reglas: ReglasDelDestino,
   solicitud: SolicitudDeFoto,
-  estado: Extract<EstadoParaFoto, { tipo: 'disponible' }>,
-): Promise<MedicionPedida | null> {
-  if (estado.medicion) return estado.medicion;
-  if (Platform.OS !== 'web' || solicitud.destino === 'roca') return solicitud.medicion ?? null;
+  previa: MedicionPedida | null | undefined,
+): Promise<MedicionPedida | null | undefined> {
+  if (previa !== undefined) return previa;
   try {
     const fresco = await reglas.estadoFresco(solicitud.registroId);
-    return fresco.tipo === 'disponible' ? fresco.medicion ?? null : solicitud.medicion ?? null;
+    return fresco.tipo === 'disponible' ? medicionQueSeSabe(fresco, solicitud.medicion) : solicitud.medicion ?? null;
   } catch {
-    return solicitud.medicion ?? null;
+    return undefined;
   }
+}
+
+/**
+ * El servidor acaba de pedir los km de un registro que se abrió sin el campo: los datos del campo (el total recorrido
+ * antes de hoy) se leen del registro si se puede, y si no, el campo sale igual con el total en 0 (la pantalla solo
+ * lo usa para mostrar «Total recorrido»; lo que se manda es lo que la persona escriba).
+ */
+async function medicionTrasElRechazo(reglas: ReglasDelDestino, registroId: string): Promise<MedicionPedida> {
+  try {
+    const fresco = await reglas.estadoFresco(registroId);
+    if (fresco.tipo === 'disponible' && fresco.medicion) return fresco.medicion;
+  } catch {
+    // Sin la lectura el campo sale igual.
+  }
+  return { unidad: 'KILOMETROS', totalPrevio: 0 };
 }
 
 /**
@@ -213,12 +243,13 @@ export function useRegistroConFoto(opciones: OpcionesRegistroConFoto) {
       // En web la cámara solo se abre si se llama "enseguida" después del toque: esperar una
       // consulta de red haría que el navegador la bloquee en silencio. Ahí se confía en el
       // manejo de errores del envío.
-      if (Platform.OS === 'web') return { tipo: 'disponible', evidenciaYaSubida: pistaEvidencia };
+      if (Platform.OS === 'web') return { tipo: 'disponible', evidenciaYaSubida: pistaEvidencia, sinLectura: true };
       try {
         return await reglas.estadoFresco(registroId);
       } catch {
-        // Sin red no se bloquea: el envío va a fallar con un mensaje claro y la foto se conserva.
-        return { tipo: 'disponible', evidenciaYaSubida: pistaEvidencia };
+        // Sin red no se bloquea: el envío va a fallar con un mensaje claro y la foto se conserva. Pero queda
+        // marcado que NO se leyó: de lo que pide el registro (los km) no se sabe nada de esta lectura (#42).
+        return { tipo: 'disponible', evidenciaYaSubida: pistaEvidencia, sinLectura: true };
       }
     },
     [],
@@ -250,6 +281,23 @@ export function useRegistroConFoto(opciones: OpcionesRegistroConFoto) {
     origenRef.current = null;
     setOrigen(null);
     resolver?.(elegido);
+  }, []);
+
+  /**
+   * #42: no se pudo leer el registro y no se sabe si pide los km. No se abre la cámara ni la pantalla «a ciegas»: se
+   * avisa con el mensaje de conexión de siempre y se ofrece reintentar (el mismo toque, desde cero).
+   */
+  const iniciarRef = useRef<((solicitud: SolicitudDeFoto, evidenciaYaSubida?: boolean) => Promise<ResultadoDeInicio>) | null>(
+    null,
+  );
+  const avisarSinConexion = useCallback((solicitud?: SolicitudDeFoto, evidenciaYaSubida?: boolean): 'sin-conexion' => {
+    Alert.alert('Sin conexión', MENSAJE_SIN_CONEXION_PARA_REGISTRAR, [
+      { text: 'Ahora no', style: 'cancel' },
+      ...(solicitud
+        ? [{ text: 'Reintentar', onPress: () => void iniciarRef.current?.(solicitud, evidenciaYaSubida) }]
+        : []),
+    ]);
+    return 'sin-conexion';
   }, []);
 
   /**
@@ -299,31 +347,39 @@ export function useRegistroConFoto(opciones: OpcionesRegistroConFoto) {
           avisarSiNoSePuede(estado, solicitud.destino);
           return estado.tipo;
         }
+        // Lo que se sabe de si pide los km: del servidor, de la pista de quien llamó, o nada. Una acción del día
+        // (`'roca'`) no mide nada.
+        const previa = solicitud.destino === 'roca' ? null : medicionQueSeSabe(estado, solicitud.medicion);
+        // No se sabe y todavía no hay nada abierto: se avisa antes de la cámara, para no pedir una foto que no se
+        // podría registrar bien. En web no se lee antes de la cámara (el navegador la bloquearía): ahí se vuelve a
+        // leer después de la foto.
+        if (previa === undefined && Platform.OS !== 'web') return avisarSinConexion(solicitud, evidenciaYaSubida);
         if (estado.evidenciaYaSubida) {
           // La foto ya está en el servidor de un intento anterior: no se pide otra (duplicaría la
           // evidencia). Solo falta la respuesta y el cierre.
-          const medicion = await medicionDelRegistro(reglas, solicitud, estado);
+          const medicion = await medicionDelRegistro(reglas, solicitud, previa);
+          if (medicion === undefined) return avisarSinConexion(solicitud, evidenciaYaSubida);
           abrir({ ...solicitud, archivo: null, evidenciaYaSubida: true, medicion });
           return 'abierto';
         }
-        const desde = await origenDeLaFoto(
-          solicitud.titulo,
-          estado.medicion ?? solicitud.medicion,
-          solicitud.destino,
-        );
+        // De dónde sale la foto (#41), con lo que ya se sabe de los km (#42: `previa`; si no se sabe, no se ofrece la galería).
+        const desde = await origenDeLaFoto(solicitud.titulo, previa, solicitud.destino);
         if (!desde) return 'cancelado';
-        const archivo = await sacarFoto(solicitud, desde);
+        // La foto pendiente de Android se anota con lo que ya se sabe de los km (`previa`).
+        const archivo = await sacarFoto({ ...solicitud, medicion: previa }, desde);
         if (!archivo) return 'cancelado';
         await esperarCierreDeLaCamara();
-        const medicion = await medicionDelRegistro(reglas, solicitud, estado);
+        const medicion = await medicionDelRegistro(reglas, solicitud, previa);
+        if (medicion === undefined) return avisarSinConexion(solicitud, evidenciaYaSubida);
         abrir({ ...solicitud, archivo, evidenciaYaSubida: false, medicion });
         return 'abierto';
       } finally {
         ocupadoRef.current = false;
       }
     },
-    [abrir, avisarSiNoSePuede, origenDeLaFoto, sacarFoto, verificar],
+    [abrir, avisarSiNoSePuede, avisarSinConexion, origenDeLaFoto, sacarFoto, verificar],
   );
+  iniciarRef.current = iniciar;
 
   /** "Tomar otra" desde la pantalla partida. La respuesta escrita no se pierde. */
   const retomarFoto = useCallback(async () => {
@@ -361,6 +417,14 @@ export function useRegistroConFoto(opciones: OpcionesRegistroConFoto) {
       setRespuesta('');
       await opcionesRef.current.onCompletado(actual.registroId, resultado, actual.titulo, actual.destino ?? 'habito');
     } catch (e) {
+      if (actual.destino !== 'roca' && !actual.medicion && pideLosKm(e)) {
+        // El servidor pide los km y la pantalla no tenía el campo (no se supo a tiempo que este hábito los pide). No
+        // se repite el mismo envío —daría el mismo 400 en bucle—: se muestra el campo y la persona los escribe. La
+        // evidencia ya quedó subida (`alConfirmarEvidencia`) y el reintento solo cierra.
+        const medicion = await medicionTrasElRechazo(reglas, actual.registroId);
+        setRegistro(previo => (previo && previo.registroId === actual.registroId ? { ...previo, medicion } : previo));
+        return;
+      }
       setError(mensajeDelFallo(e));
       if (e instanceof DiaDeHabitosCambiadoError) opcionesRef.current.onDiaCambiado?.();
     } finally {
@@ -410,6 +474,17 @@ export function useRegistroConFoto(opciones: OpcionesRegistroConFoto) {
       if (!archivo) return;
       const estado = await verificar(reglas, contexto.registroId, false);
       if (avisarSiNoSePuede(estado, contexto.destino)) return;
+      // Lo que se sabía de los km al abrir la cámara (`contexto.medicion`) vale si ahora no se puede leer el
+      // registro. Si tampoco hay nada (`undefined`), no se abre a ciegas: se avisa; la foto pendiente no se puede
+      // reintentar (se ofrece una sola vez), así que sin «Reintentar»: vuelve a tocar el hábito.
+      const medicion =
+        contexto.destino === 'roca' || estado.tipo !== 'disponible'
+          ? null
+          : medicionQueSeSabe(estado, contexto.medicion);
+      if (medicion === undefined) {
+        avisarSinConexion();
+        return;
+      }
       abrir({
         registroId: contexto.registroId,
         titulo: contexto.titulo,
@@ -417,12 +492,12 @@ export function useRegistroConFoto(opciones: OpcionesRegistroConFoto) {
         destino: contexto.destino,
         archivo,
         evidenciaYaSubida: estado.tipo === 'disponible' && estado.evidenciaYaSubida,
-        medicion: estado.tipo === 'disponible' ? estado.medicion ?? null : null,
+        medicion,
       });
     } finally {
       ocupadoRef.current = false;
     }
-  }, [abrir, avisarSiNoSePuede, verificar]);
+  }, [abrir, avisarSiNoSePuede, avisarSinConexion, verificar]);
 
   const modal: PropsRegistroConFotoModal = {
     registro,
