@@ -21,3 +21,19 @@ export function dimensionAAbrir(
   if (habito) return habito.dimension;
   return cargando ? 'esperar' : null;
 }
+
+/**
+ * Spec 014 (Training por hora): el aviso de un hábito ya no abre una dimensión —las dimensiones salieron de la pantalla
+ * principal—, abre el hábito mismo, como al tocar su fila. Devuelve el hábito de HOY al que apunta el aviso, `'esperar'`
+ * si todavía están cargando (y puede aparecer), o `null` si no hay tal hábito hoy (pausado, no le toca): Training queda
+ * en su lista. El aviso lleva el `habitoId` del catálogo; el registro de hoy es `id`.
+ */
+export function habitoAAbrir<H extends { id: string; habitoId?: string | null; tieneTrackHoy: boolean }>(
+  pedido: { habitoId: string },
+  habitos: ReadonlyArray<H>,
+  cargando: boolean,
+): H | 'esperar' | null {
+  const habito = habitos.find(h => h.habitoId === pedido.habitoId && h.tieneTrackHoy);
+  if (habito) return habito;
+  return cargando ? 'esperar' : null;
+}

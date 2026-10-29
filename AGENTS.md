@@ -156,6 +156,71 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       pedidos), las alarmas y el backend (no se repiten las pruebas E2E de alarmas), Plan ni los demás tabs.
       **Hace falta un AAB/APK nuevo** (solo JavaScript: no hay código nativo nuevo, pero la app no se actualiza por
       aire).
+  * **Cambio por pedido del dueño — 2026-10-29 — tab `Training`: Training por hora (spec 014)** (spec, vista previa
+    aprobada y decisiones del dueño en `Renaser-90-dias-backend/specs/014-training-por-hora/`; pedido: «vamos con ese
+    diseño en Training, me gusta», con urgencia). Lo que cambia y nada más:
+    * **La pantalla** (`features/training/components/TrainingPorHora`): «TRAINING» con la fase y el día («El Espejo · Día
+      3 de 90») y el engranaje a la derecha; el día elegido en serif («Jueves 29») con su resumen («4 de 12 hechos · 46
+      pts», los puntos son los que pagó el servidor); la semana de lunes a domingo —la que se VIVE, el domingo no salta
+      a la siguiente como la de planificar— y, debajo, UNA lista con los hábitos, las acciones del día y los eventos,
+      por la hora planificada. **Ya no se ven afuera** las cinco dimensiones, «Arma tu semana los domingos» ni la tarjeta
+      «Próximo a vencer» (el primero de la lista ya lo es; `ProximoAVencerCard` queda sin uso, con su prueba).
+    * **La lista de hoy** (`utils/listaDelDia`, pura y probada): lo que sigue por hora, y el primero dice «Te toca ahora»
+      (su hora ya llegó) o «Lo que sigue»; después «Sin hora»; después «Se te pasó la hora · todavía puedes registrarlos
+      hoy», con el texto de menos puntos de D-259 que ya existe (`avisoDeHoraPasada`); al final, plegado, «N hechos
+      hoy». Un pendiente queda atrasado cuando llega la hora del siguiente ítem con hora del día (también lo hecho o un
+      evento); el último nunca. Los eventos terminados salen (sin duración se suponen 60 min, la misma hora de gracia de
+      `listarProximos`); un evento nunca se atrasa. Un hábito sin registro hoy (pausado, no le toca) no está; uno
+      pausado después de generarse su registro y aún sin hacer, tampoco. Un registro cuyo día ya cerró (`EXPIRADO`) va
+      aparte, con candado, y abre el aviso de siempre. Lo que se acaba de cumplir se despide en su lugar ~1,2 s (el check
+      se llena de dorado y sube su «+N», `habitoCumplido`), sale con un fundido de 160 ms y la lista se acomoda;
+      con «reducir movimiento», sin desplazamiento.
+    * **Un toque, una hoja** (`HojaDelHabito`, `HojaDesdeAbajo`): el nombre, la hora, los puntos y la racha del servidor;
+      la guía plegada («Guía de esta práctica», lo que el equipo cargó en `guia` del registro de hoy:
+      `queHacer`, `comoHacerlo` y el mantra; sin guía la sección no existe) y, fijo abajo, el botón del registro de su
+      tipo: «Tomar foto», «Escuchar el audio», «Ver la clase», «Publicar en el Muro», «Subir evidencia», «Marcar como
+      hecha» (acciones) y, en Despertar y Dormir, «Marcar como hecho», que registra la hora. El botón cierra la hoja y abre
+      **el registro de siempre por los mismos caminos** (`openEvidenceModal`, `useRegistroConFoto`, `PastillaRenacerModal`, la
+      Clase, el Muro, `sellarRocaDiaria`): no se tocó ningún pedido al servidor ni cómo se emite `habitoCumplido`. **Sin
+      guía no hay hoja**: el toque abre directo el registro de siempre (que ya es su hoja o la cámara), sin otro «Subir»;
+      Despertar y Dormir siempre pasan por la hoja (marcar es inmediato). El ✓ de la fila, solo en lo que se cierra sin
+      abrir nada (Despertar/Dormir y la evidencia opcional sin flujo propio), marca en el acto. Lo hecho abre su hoja con
+      «Cumplido a las 06:12 · +8 pts» y lo que escribió; la Pastilla y la Clase conservan su ventana de solo lectura. Un
+      evento lleva a su detalle en Comunidad → Eventos (`abrirEventoId`). El aviso del teléfono que abre un hábito
+      (`aperturaDesdeAviso.habitoAAbrir`) lo abre como al tocar su fila, ya no la dimensión.
+    * **Un día anterior: sin registrar NUNCA** (regla explícita del dueño: «nunca debería llegar» a subir algo). Se lee
+      `GET /api/v1/habit-tracks/day?date=` (solo de ayer hacia atrás, hasta el lunes y no antes del Día 1; el servidor
+      responde 400 a cualquier otra fecha y la app ni la pide) **solo cuando la persona toca ese día**: nunca al abrir
+      Training, al volver al foco ni en un efecto. Una lectura por fecha y por cuenta en memoria de la sesión
+      (`utils/lecturaDeDiasCerrados`, `useDiasCerrados`): tocar el mismo día otra vez usa la guardada, dos toques
+      seguidos comparten el pedido en vuelo, un error no se reintenta solo («Reintentar»), un 400/403/404 o una respuesta
+      que no calza es «sin datos» definitivo, y cambiar de cuenta o de semana limpia la memoria. Con datos: ✓ en lo hecho
+      y candado en lo demás, y tocar uno **solo dice** «Ya hecho» o «Ese día ya cerró. No se puede registrar.» (una línea
+      que se va sola). Un día sin registros dice «Ese día no tuviste hábitos registrados.». Sin lectura, con error o con
+      una respuesta que no calza: lo planificado, con «Lo que hiciste ese día está en Yo → Mis evidencias.», sin ✓ ni
+      candados inventados. Un día anterior no muestra puntos en juego, racha, «Se te pasó la hora» ni «Te toca ahora».
+      **En un día anterior no se monta ningún componente de registro** (`TrainingScreen` no monta la hoja de evidencia, la
+      cámara, la Pastilla ni la Clase) y lo que haya quedado abierto se cierra; si cambia el día con una hoja abierta, se
+      cierra y el registro de siempre vuelve a comprobar el día antes de enviar (spec 002). Pruebas:
+      `diaAnteriorSinRegistro.test.ts` (ningún registro ni escritura: `/complete`, `/evidence`, `/rocks/…`; un solo
+      pedido por día) y `trainingDiaAnteriorSinRegistro.test.ts`.
+    * **Un día que viene**: lo planificado de ese día de la semana (los hábitos con la hora de ESE día, `habit-preferences`
+      `weekdays[i].triggerTime` de la spec 008; las acciones de esa fecha, `GET /rocks/upcoming`; los eventos), sin
+      botones ni toques. Las horas y las acciones se piden recién al tocar un día que no es hoy, una vez por semana y cuenta.
+    * **El engranaje → «Tus prácticas»** (`PracticasDeTraining`, pantalla completa con `CabeceraAdmin`; el atrás del
+      sistema sube un nivel por vez: `navegacionDePracticas`): **solo para planificar, ninguna fila registra**. Lleva
+      «Arma tu semana los domingos» (el mismo `Interruptor`, ahora `useRepasoSemanal`) y las cinco dimensiones con su avance
+      de hoy; cada una abre su detalle: «Planificar <dimensión>» —el `PlanificarDimensionModal` de siempre, con su pausa
+      «Solo hoy» / «Hasta que yo lo reactive» y las specs 008 a 011—, la lista de sus hábitos (tocar uno abre su editor
+      en Planificar: prop nueva y opcional `abrirEnHabitoId`) y «Cambiar nombre» en las dos bebidas renombrables
+      (D-127). Las acciones de los objetivos se siguen planificando en Plan.
+    * **No cambia**: cómo se registra cada tipo ni los pedidos al servidor, `habitoCumplido`, la actualización al
+      cambiar de día (`useActualizacionDelDia`), abrir desde un aviso, los momentos del check y el «+N pts», las
+      confirmaciones en línea, el interruptor `habitos` de Soporte TI, la barra que se esconde al desplazar, la invitación
+      y los avisos del Día 1, ni Plan, Hoy, Yo y Comunidad. Sale de la pantalla principal, a «Tus prácticas» o a la hoja:
+      la racha de cada hábito ahora se lee en su hoja (no en la tarjeta).
+    * **Hace falta un APK nuevo** (la app no se actualiza por aire) y el backend con `GET /habit-tracks/day`; contra
+      un backend anterior los días anteriores muestran lo planificado.
   * **Cambio por pedido del dueño — 2026-10-19 — alarmas como el despertador, aviso cuando el teléfono las
     borra y guía por marca (tab `Yo` → Alarmas, una hoja global y, en Training → Planificar, una oferta única de la
     guía)** (spec 007 del backend, `specs/007-alarmas-confiables/`; pedido: «los usuarios dicen que sus alarmas no

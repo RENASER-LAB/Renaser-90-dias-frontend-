@@ -1,0 +1,55 @@
+# T09 — La semana (spec 014). Un día ANTERIOR es el resultado de lo planificado: lo hecho con ✓ y lo no subido con candado; tocar el
+# candado dice «Ese día ya cerró. No se puede registrar.» y no abre ningún registro; tocar un ✓ dice «Ya hecho». Un día que
+# VIENE muestra lo planificado, sin botones.
+# Precondición: `sembrar-2-datos.sql` (registros del lunes 26, martes 27 y miércoles 28) y hoy = jueves 29/10/2026 (zona Lima).
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-training.yaml
+- tapOn: "Miércoles 28"
+- extendedWaitUntil:
+    visible: "Miércoles 28"
+    timeout: 20000
+- assertVisible: ".* de .* hechos · ese día ya cerró"
+- extendedWaitUntil:
+    visible: "17:30, Clase diaria.*"
+    timeout: 20000
+- assertNotVisible: "Subir|Tomar foto|Ver la clase|Marcar .*"
+- takeScreenshot: T09a-miercoles-check-y-candado
+- tapOn: "17:30, Clase diaria.*"
+# El aviso dura 4 s y en el emulador el toque de Maestro tarda hasta ~14 s en volver: la frase se lee de forma opcional y lo que
+# no puede faltar es que NO se abra nada para registrar.
+- assertVisible:
+    text: "Ese día ya cerró\\. No se puede registrar\\."
+    optional: true
+- assertNotVisible: "Tomar foto|Ver la clase|Guía de esta práctica"
+- takeScreenshot: T09b-candado
+- tapOn: "06:00, AGUA TIBIA CON LIMÓN.*"
+- assertVisible:
+    text: "Ya hecho"
+    optional: true
+- assertNotVisible: "Tomar foto|Ver la clase|Guía de esta práctica|Entregar evidencia"
+- tapOn: "Martes 27"
+- extendedWaitUntil:
+    visible: ".* de .* hechos · ese día ya cerró"
+    timeout: 20000
+- takeScreenshot: T09c-martes
+- tapOn: "Lunes 26"
+- extendedWaitUntil:
+    visible: ".* de .* hechos · ese día ya cerró"
+    timeout: 20000
+- takeScreenshot: T09d-lunes
+- tapOn: "Domingo 1"
+- extendedWaitUntil:
+    visible: "Así quedó planificado\\. Se registra ese día\\."
+    timeout: 20000
+- assertNotVisible: "Subir|Tomar foto|Ver la clase|Escuchar|Publicar|Marcar .*"
+- takeScreenshot: T09e-domingo-planificado
+- tapOn: "Viernes 30"
+- extendedWaitUntil:
+    visible: "Así quedó planificado\\. Se registra ese día\\."
+    timeout: 20000
+- assertNotVisible: "Subir|Tomar foto|Ver la clase|Escuchar|Publicar|Marcar .*"
+- tapOn: "Jueves 29, hoy"
+- assertVisible: ".* de .* hechos · .* pts"

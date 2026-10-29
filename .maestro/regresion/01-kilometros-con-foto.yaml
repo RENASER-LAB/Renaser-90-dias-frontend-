@@ -1,17 +1,25 @@
-# 01 — KILÓMETROS DIARIOS (D-226): Training → Cuerpo → «Subir» → foto → «¿Cuántos km recorriste hoy?» → 3,5 → cumplido.
+# 01 — KILÓMETROS DIARIOS (D-226): Training (lista por hora, spec 014) → su fila → («Tomar foto» si el hábito trae guía) → foto →
+# «¿Cuántos km recorriste hoy?» → 3,5 → sale de la lista y queda en «N hechos hoy».
 # Precondición: el aprendiz tiene el hábito en su día de hoy y sin registrar; fotos en local (fotos-local + adb reverse).
 # Lo de días anteriores no importa: el flujo mide cuánto sube el total.
 # cuenta: aprendiz
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml
-- runFlow: ../comun/abrir-cuerpo.yaml
-# Centrada: abajo a la derecha, el botón «Subir» queda debajo del botón flotante de SER y el toque abre su chat.
+- runFlow: ../comun/abrir-training.yaml
+# Centrada: abajo a la derecha, la fila queda debajo del botón flotante de SER y el toque abre su chat.
 - scrollUntilVisible:
-    element: "Subir: KILÓMETROS DIARIOS"
+    element: ".*KILÓMETROS DIARIOS.*"
     direction: DOWN
     centerElement: true
-- tapOn: "Subir: KILÓMETROS DIARIOS"
+    timeout: 30000
+- tapOn: ".*KILÓMETROS DIARIOS.*"
+# Con guía cargada, la fila abre la hoja con «Tomar foto»; sin guía, abre la cámara directo.
+- runFlow:
+    when:
+      visible: "Tomar foto"
+    commands:
+      - tapOn: "Tomar foto"
 - runFlow: ../comun/tomar-foto.yaml
 - extendedWaitUntil:
     visible: "¿Cuántos km recorriste hoy?"
@@ -32,8 +40,16 @@ appId: com.renaser.app
 - takeScreenshot: 01a-kilometros-escritos
 - tapOn: "REGISTRAR"
 - runFlow: ../comun/cerrar-aviso-dev.yaml
+- extendedWaitUntil:
+    notVisible: "[0-9:]+, KILÓMETROS DIARIOS(, Te toca ahora|, Lo que sigue)?"
+    timeout: 30000
 - scrollUntilVisible:
-    element: "KILÓMETROS DIARIOS, cumplido"
+    element: ".* hechos? hoy"
     direction: DOWN
     timeout: 30000
+- tapOn: ".* hechos? hoy"
+- scrollUntilVisible:
+    element: ".*KILÓMETROS DIARIOS, hecho"
+    direction: DOWN
+    timeout: 20000
 - takeScreenshot: 01b-kilometros-cumplido

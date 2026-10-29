@@ -1,4 +1,5 @@
-# 32 — Interruptores (spec 002): con `habitos` apagado para Aprendiz, Training muestra el aviso en vez de las dimensiones.
+# 32 — Interruptores (spec 002): con `habitos` apagado para Aprendiz, Training muestra el aviso en vez de la lista por hora (spec 014;
+# antes, de las dimensiones).
 # Precondición (QA por la consola): `habitos` apagado para TRAINEE con el aviso «Training vuelve en un rato».
 # cuenta: aprendiz
 appId: com.renaser.app
@@ -10,5 +11,7 @@ appId: com.renaser.app
       id: "aviso-de-mantenimiento"
     timeout: 30000
 - assertVisible: "En mantenimiento\\. Training vuelve en un rato.*"
+- assertNotVisible: ".*(Te toca ahora|Lo que sigue|Se te pasó la hora).*"
+- assertNotVisible: ".* de .* hechos · .* pts"
 - assertNotVisible: "Cuerpo: .*"
 - takeScreenshot: 32a-training-en-mantenimiento

@@ -1,0 +1,37 @@
+# T05 — La Pastilla Renacer desde la lista: su fila abre el audio y las dos preguntas de siempre (no pasa por una hoja de guía
+# si el catálogo no trae una); al registrar sale de la lista.
+# Precondición: `reset-hoy.sql`. (El audio puede quedar en «cargando…» en local: no hace falta oírlo para registrar.)
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-training.yaml
+- scrollUntilVisible:
+    element: ".*Pastilla Renacer.*"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- tapOn: ".*Pastilla Renacer.*"
+- extendedWaitUntil:
+    visible: "Pregunta 1 de 2"
+    timeout: 20000
+- takeScreenshot: T05a-pastilla-pregunta-1
+- tapOn: "Escribe lo que te dejó este audio.*"
+- inputText: "Calma"
+- hideKeyboard
+- tapOn: "Siguiente"
+- extendedWaitUntil:
+    visible: "Pregunta 2 de 2"
+    timeout: 10000
+- tapOn: "Escribe lo que te dejó este audio.*"
+- inputText: "Paz"
+- hideKeyboard
+- tapOn: "Registrar"
+- runFlow: ../comun/cerrar-aviso-dev.yaml
+- extendedWaitUntil:
+    notVisible: "Pregunta 2 de 2"
+    timeout: 30000
+- extendedWaitUntil:
+    notVisible: "07:30, Pastilla Renacer.*"
+    timeout: 20000
+- takeScreenshot: T05b-pastilla-registrada

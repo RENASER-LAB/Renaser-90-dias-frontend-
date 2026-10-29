@@ -1,0 +1,10 @@
+# Training (spec 014): la lista por hora del día de hoy. Espera a que cargue el resumen del día.
+appId: com.renaser.app
+---
+- tapOn: "TRAINING"
+- extendedWaitUntil:
+    visible: "Tus prácticas: planificar"
+    timeout: 20000
+- extendedWaitUntil:
+    visible: ".* de .* hechos · .* pts|Hoy no tienes nada planificado\\."
+    timeout: 20000

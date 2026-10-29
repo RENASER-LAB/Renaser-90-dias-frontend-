@@ -1,0 +1,36 @@
+# T04 — El ✓ de la fila marca sin abrir nada: DESPERTAR (sin hora) y DORMIR registran la hora y salen de la lista.
+# Precondición: `reset-hoy.sql`.
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-training.yaml
+- scrollUntilVisible:
+    element: "Marcar DORMIR"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- tapOn: "Marcar DORMIR"
+- assertNotVisible: "Guía de esta práctica"
+- extendedWaitUntil:
+    notVisible: "Marcar DORMIR"
+    timeout: 20000
+- scrollUntilVisible:
+    element: "Marcar DESPERTAR"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- tapOn: "Marcar DESPERTAR"
+- extendedWaitUntil:
+    notVisible: "Marcar DESPERTAR"
+    timeout: 20000
+- scrollUntilVisible:
+    element: ".* hechos? hoy"
+    direction: DOWN
+    timeout: 30000
+- tapOn: ".* hechos? hoy"
+- scrollUntilVisible:
+    element: "22:30, DORMIR.*"
+    direction: DOWN
+    timeout: 20000
+- takeScreenshot: T04a-dormir-y-despertar-hechos

@@ -138,12 +138,12 @@ describe('Training: la racha de cada hábito', () => {
     expect(habitsSchemas.tracksDeHoy.safeParse([{ ...base, rachaDias: -1 }]).success).toBe(false);
   });
 
-  it('la tarjeta solo dibuja la llama si hay racha, y ya no queda ningún `streak: 0` fijo', () => {
+  it('la racha solo se dice si hay dato (spec 014: en la hoja del hábito), y ya no queda ningún `streak: 0` fijo', () => {
     const raiz = path.resolve(__dirname, '..', '..', '..', '..');
-    const pantalla = fs.readFileSync(path.join(raiz, 'screens/TrainingScreen.tsx'), 'utf-8');
+    const fila = fs.readFileSync(path.join(raiz, 'features/training/utils/filaDelDia.ts'), 'utf-8');
     const hook = fs.readFileSync(path.join(raiz, 'features/training/hooks/useTraining.ts'), 'utf-8');
 
-    expect(pantalla).toMatch(/\{habit\.streak != null && \(\s*<View style=\{styles\.racha\}/);
+    expect(fila).toMatch(/racha != null/);
     expect(hook).not.toMatch(/streak: 0/);
   });
 });

@@ -35,8 +35,9 @@ describe('los interruptores de la app', () => {
   });
 
   it('cada uno conserva su valor y su acción: solo cambia el control', () => {
-    expect(leer('screens/TrainingScreen.tsx')).toMatch(
-      /<Interruptor\s+valor=\{repasoSemanal\}\s+onCambiar=\{valor => void alternarRepasoSemanal\(valor\)\}\s+etiqueta="Arma tu semana los domingos"/,
+    // Spec 014: «Arma tu semana los domingos» pasó a «Tus prácticas» (el engranaje de Training), con el mismo control.
+    expect(leer('features/training/components/PracticasDeTraining.tsx')).toMatch(
+      /<Interruptor\s+valor=\{repaso\.valor\}\s+onCambiar=\{valor => void repaso\.alternar\(valor\)\}\s+etiqueta="Arma tu semana los domingos"/,
     );
     expect(leer('features/training/components/PlanificarDimensionModal.tsx')).toMatch(
       /<Interruptor\s+valor=\{activo\}\s+deshabilitado=\{enVuelo\.has\(h\.habitoId\)\}\s+onCambiar=\{\(\) => alternarActivo\(h\)\}/,

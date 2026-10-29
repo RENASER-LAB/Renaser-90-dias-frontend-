@@ -1,27 +1,38 @@
-# 10 — GIMNASIO (D-266): Training → Cuerpo → GIMNASIO → «Subir» abre la cámara directo → foto → queda cumplido.
+# 10 — GIMNASIO (D-266): Training (lista por hora, spec 014) → su fila → («Tomar foto» si el hábito trae guía) → foto → queda hecho.
 # Es foto y nada más: sin pregunta (las de «¿Qué sentiste?» son de los rituales), la app registra sola al aceptar la foto.
 # Precondición: el aprendiz tiene GIMNASIO en su día de hoy y sin registrar; fotos en local (fotos-local + adb reverse).
 # cuenta: aprendiz
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml
-- runFlow: ../comun/abrir-cuerpo.yaml
-# Centrada: abajo a la derecha, el botón «Subir» queda debajo del botón flotante de SER y el toque abre su chat.
+- runFlow: ../comun/abrir-training.yaml
+# Centrada: abajo a la derecha, la fila queda debajo del botón flotante de SER y el toque abre su chat.
 - scrollUntilVisible:
-    element: "Subir: GIMNASIO"
+    element: ".*GIMNASIO.*"
     direction: DOWN
     centerElement: true
-- assertVisible:
-    text: "Opcional"
-    above: "Subir: GIMNASIO"
-- takeScreenshot: 10a-gimnasio-opcional
-- tapOn: "Subir: GIMNASIO"
+    timeout: 30000
+- takeScreenshot: 10a-gimnasio-en-la-lista
+- tapOn: ".*GIMNASIO.*"
+# Con guía cargada, la fila abre la hoja con «Tomar foto»; sin guía, abre la cámara directo.
+- runFlow:
+    when:
+      visible: "Tomar foto"
+    commands:
+      - tapOn: "Tomar foto"
 - runFlow: ../comun/tomar-foto.yaml
 - assertNotVisible: ".*sentiste.*"
 - runFlow: ../comun/cerrar-aviso-dev.yaml
+- extendedWaitUntil:
+    notVisible: "[0-9:]+, GIMNASIO(, Te toca ahora|, Lo que sigue)?"
+    timeout: 30000
 - scrollUntilVisible:
-    element: "GIMNASIO, cumplido"
+    element: ".* hechos? hoy"
     direction: DOWN
     timeout: 30000
-- assertVisible: "Ver: GIMNASIO"
+- tapOn: ".* hechos? hoy"
+- scrollUntilVisible:
+    element: ".*GIMNASIO, hecho"
+    direction: DOWN
+    timeout: 20000
 - takeScreenshot: 10c-gimnasio-cumplido
