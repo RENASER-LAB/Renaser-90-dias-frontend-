@@ -18,9 +18,15 @@ que poder comprobarse: lo que no comprobaste dice «sin confirmar». Es corto a 
 
 ## Siguiente paso
 
-Harness del frontend (PR #48, rama `harness/agents-corto`): pasos 1 a 5 hechos. Falta correr `npm run verificar`
-completo cuando se libere la máquina (aplica los parches que faltan) y que el dueño revise y fusione el PR. Después,
-el mismo molde en el backend, ya desde master.
+Harness del frontend (PR #48, rama `harness/agents-corto`): pasos 1 a 5 hechos. El dueño quiere cerrarlo del todo,
+«con aristas y estado» (2026-10-29, pausado hasta el día siguiente). Queda por elegir con él:
+- **Qué son las aristas**: de qué depende cada funcionalidad, qué pasos de estado son válidos, las dos cosas o
+  el grafo de graphify.
+- **Backend**: si arranca desde master sin esperar al #48.
+- **Las alertas de Dependabot**: qué hacer con ellas (ver Pendientes).
+
+Además falta correr `npm run verificar` completo cuando se libere la máquina, para que aplique los parches que
+faltan, y que el dueño revise y fusione el PR.
 
 ## Pendientes
 
@@ -28,6 +34,10 @@ el mismo molde en el backend, ya desde master.
   afecta. El detalle está en `docs/pendientes/SEGURIDAD_JAVA_BACKEND_2026-10-23.md`, que todavía **no está
   commiteado**: solo existe en el checkout principal (rama `fix/fenix-cuello`). Producción no está verificada ni
   parcheada. Se muda al progreso del backend cuando lo tenga.
+- **11 alertas de Dependabot en master** (vistas el 2026-10-29): 1 crítica (`shell-quote`), 6 altas y 4
+  moderadas, todas de dependencias indirectas; `node-forge` todavía no tiene versión arreglada. Sin issue
+  todavía. El arreglo va en su propia rama y toca solo el `package-lock.json`, porque el `node_modules` se
+  comparte entre sesiones.
 - **`ROCKS_EXIGIR_MAPA_ACTIVO`**: encenderlo en producción solo cuando esté publicado el APK que trae #38.
 - **Constitución**: la copia del backend sigue en 1.0.0; igualarla a la 1.0.1 de acá.
 - **`tasks.md` desactualizados**: los PR #27, #28 y #29 registran su validación, pero sus specs dejaron tareas sin
