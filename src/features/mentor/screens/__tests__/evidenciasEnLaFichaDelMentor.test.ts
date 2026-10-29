@@ -58,6 +58,8 @@ jest.mock('../../../lider-mentores/components/VisorDePublicacion', () => ({ VerP
 jest.mock('../../components/RejillaSemanal', () => ({ RejillaSemanal: () => null }));
 jest.mock('../../components/HabitosDelAlumno', () => ({ HabitosDelAlumno: () => null }));
 jest.mock('../../components/CodigoRenaserDelAlumno', () => ({ CodigoRenaserDelAlumno: () => null }));
+/* Spec 015: la ficha suma su tiempo libre de la semana (su propia lectura y su `Aparicion`); estas pruebas son de otra cosa. */
+jest.mock('../../../huecos/components/TiempoLibreDeLaSemana', () => ({ TiempoLibreDeLaSemana: () => null }));
 jest.mock('../../../semaforo/components/TarjetaSemaforoDeAprendiz', () => ({ TarjetaSemaforoDeAprendiz: () => null }));
 jest.mock('../../../caja/components/ChipDeCaja', () => ({ ChipDeCaja: () => null }));
 jest.mock('../../../chat/api/chatApi', () => ({ abrirConversacionDirecta: jest.fn() }));

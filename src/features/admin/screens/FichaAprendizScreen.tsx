@@ -14,6 +14,9 @@ import { EvidenciaDeObligacion } from '../../lider-mentores/components/Evidencia
 import { VerPublicacion } from '../../lider-mentores/components/VisorDePublicacion';
 import { obtenerRadarDePersona } from '../../lider-mentores/api/cumplimientoDelLiderApi';
 import { CodigoRenaserDelAlumno } from '../../mentor/components/CodigoRenaserDelAlumno';
+import { obtenerHuecosDePersona } from '../../huecos/api/huecosApi';
+import { TiempoLibreDeLaSemana } from '../../huecos/components/TiempoLibreDeLaSemana';
+import type { CargarHuecos } from '../../huecos/types/huecos.types';
 import { RejillaSemanal } from '../../mentor/components/RejillaSemanal';
 import { diaInicialDelDetalle } from '../../mentor/utils/diaInicialDelDetalle';
 import { TarjetaSemaforoDeAprendiz } from '../../semaforo/components/TarjetaSemaforoDeAprendiz';
@@ -112,6 +115,12 @@ export function FichaAprendizScreen({
   const grupoDelRadar = grupoParaVerSusDias(aprendiz);
   const cargarRadar = useMemo(
     () => (grupoDelRadar ? (cursor?: string | null) => obtenerRadarDePersona(grupoDelRadar, aprendiz.id, cursor) : null),
+    [grupoDelRadar, aprendiz.id],
+  );
+  /* Spec 015: su tiempo libre de la semana, por la misma lectura del liderazgo y con el mismo grupo. Una función estable por
+     persona: es la llave de lo que la sección guarda mientras la ficha está abierta. */
+  const cargarHuecos = useMemo<CargarHuecos | null>(
+    () => (grupoDelRadar ? (lunes?: string | null) => obtenerHuecosDePersona(grupoDelRadar, aprendiz.id, lunes) : null),
     [grupoDelRadar, aprendiz.id],
   );
   const nombre = aprendiz.fullName?.trim() || 'Aprendiz sin nombre';
@@ -426,6 +435,9 @@ export function FichaAprendizScreen({
 
         {/* Spec 012: su Código Renaser (los días 1 a 7 y los de Mi Radar), solo lectura. */}
         <CodigoRenaserDelAlumno cargar={cargarRadar} />
+
+        {/* Spec 015: lo que le queda libre entre lo que planificó, de lunes a domingo (solo lectura). */}
+        <TiempoLibreDeLaSemana cargar={cargarHuecos} />
 
         {/* D-243: solo ADMIN o ALQUIMISTA, nunca sobre sí mismo; sobre un ADMIN o ALQUIMISTA, solo un ADMIN. */}
         {ofrecerEliminar ? (

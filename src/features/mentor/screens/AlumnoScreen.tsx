@@ -19,6 +19,9 @@ import { abrirConversacionDirecta } from '../../chat/api/chatApi';
 import { EvidenciaDeObligacion } from '../../lider-mentores/components/EvidenciaDeObligacion';
 import { VerPublicacion } from '../../lider-mentores/components/VisorDePublicacion';
 import { obtenerRadarDeAlumno } from '../api/mentorApi';
+import { obtenerHuecosDeAlumno } from '../../huecos/api/huecosApi';
+import { TiempoLibreDeLaSemana } from '../../huecos/components/TiempoLibreDeLaSemana';
+import type { CargarHuecos } from '../../huecos/types/huecos.types';
 import { useSemanaDelAlumno } from '../hooks/useSemanaDelAlumno';
 import { diasDesde } from '../reglas';
 import { diaInicialDelDetalle } from '../utils/diaInicialDelDetalle';
@@ -65,6 +68,12 @@ export function AlumnoScreen({
   /* Cómo pide el mentor el Código Renaser de esta persona (la ruta de siempre). Sin grupo no hay a quién preguntarle. */
   const cargarRadar = useMemo(
     () => (grupoId ? (cursor?: string | null) => obtenerRadarDeAlumno(grupoId, alumno.participanteId, cursor) : null),
+    [grupoId, alumno.participanteId],
+  );
+  /* Spec 015: su tiempo libre de la semana, por la ruta del mentor. Una función estable por persona: es la llave de lo
+     que la sección guarda mientras la ficha está abierta. */
+  const cargarHuecos = useMemo<CargarHuecos | null>(
+    () => (grupoId ? (lunes?: string | null) => obtenerHuecosDeAlumno(grupoId, alumno.participanteId, lunes) : null),
     [grupoId, alumno.participanteId],
   );
 
@@ -343,6 +352,8 @@ export function AlumnoScreen({
         */}
         <HabitosDelAlumno grupoId={grupoId} alumnoId={alumno.participanteId} />
         <CodigoRenaserDelAlumno cargar={cargarRadar} />
+        {/* Spec 015: lo que le queda libre entre lo que planificó, de lunes a domingo (solo lectura). */}
+        <TiempoLibreDeLaSemana cargar={cargarHuecos} />
 
       </ScrollView>
     </SafeAreaView>

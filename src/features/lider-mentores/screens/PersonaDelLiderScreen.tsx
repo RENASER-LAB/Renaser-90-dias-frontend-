@@ -12,6 +12,9 @@ import { CargandoLectura, FalloDeLectura } from '../../semaforo/components/Estad
 import { EtiquetaSemaforo } from '../../semaforo/components/EtiquetaSemaforo';
 import { PALABRA_NO_SE_MIDE, palabraParaQuienAcompana, rolEnPalabras } from '../../semaforo/utils/ayudaDelSemaforo';
 import { formatearPorcentaje } from '../../semaforo/utils/lecturaDelSemaforo';
+import { obtenerHuecosDePersona } from '../../huecos/api/huecosApi';
+import { TiempoLibreDeLaSemana } from '../../huecos/components/TiempoLibreDeLaSemana';
+import type { CargarHuecos } from '../../huecos/types/huecos.types';
 import { obtenerRadarDePersona } from '../api/cumplimientoDelLiderApi';
 import { DiaDeLaPersona } from '../components/DiaDeLaPersona';
 import { Linea, MarcoDelLider } from '../components/MarcoDelLider';
@@ -89,6 +92,12 @@ export function PersonaDelLiderScreen({
     () => (cursor?: string | null) => obtenerRadarDePersona(grupoId, personaId, cursor),
     [grupoId, personaId],
   );
+  /* Spec 015: su tiempo libre de la semana. Una sola vez por persona (la sección tiene su propia semana y guarda lo que
+     lee), no al cambiar de semana de arriba. */
+  const cargarHuecos = useMemo<CargarHuecos>(
+    () => (lunes?: string | null) => obtenerHuecosDePersona(grupoId, personaId, lunes),
+    [grupoId, personaId],
+  );
 
   /* El día abierto se guarda junto con la semana a la que pertenece: al cambiar de semana vuelve solo al día
      más reciente con hábitos, sin un efecto que corra un render tarde. */
@@ -149,6 +158,7 @@ export function PersonaDelLiderScreen({
       />
 
       <CodigoRenaserDelAlumno cargar={cargarRadar} />
+      <TiempoLibreDeLaSemana cargar={cargarHuecos} />
 
       <View style={estilos.acciones}>
         <BotonPrincipal

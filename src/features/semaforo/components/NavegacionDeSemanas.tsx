@@ -57,7 +57,11 @@ export function NavegacionDeSemanas({ lectura }: { lectura: Navegable }) {
   );
 }
 
-function Flecha({
+/**
+ * La flecha de 48 × 48 que usa esta navegación. Se exporta para la de los huecos de horario (spec 015), que mueve la
+ * semana de lunes a domingo con la misma flecha y no con la ventana de 7 días del semáforo.
+ */
+export function Flecha({
   icono,
   etiqueta,
   habilitada,

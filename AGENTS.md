@@ -318,6 +318,52 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       > «hábito y Radar en una tarjeta» de abajo. Los días 1 a 7, el formulario y el resto de lo que dice esta línea siguen igual.
     * **Hace falta el backend con V119 antes y un APK nuevo** (la app no se actualiza por aire). Contra un backend anterior
       no aparece la fila y los días 1 a 7 siguen igual.
+  * **Cambio por pedido del dueño — 2026-10-29 — fichas del mentor, del líder y de Administración: tiempo libre de la
+    semana (spec 015)** (spec 015 del backend, `specs/015-huecos-de-horario/`; pedido: buscar los huecos de horario que dejan
+    los hábitos, acciones y eventos que la persona planifica, para recapitular. Decisión del dueño del 2026-10-29: en esta
+    primera versión **la persona no lo ve**; lo ve solo su acompañamiento, en su ficha y en solo lectura —«no lo ve todavía;
+    solo en su ficha lo ven los mentores, y también los líderes, alquimista y administrador»—, y solo se calcula y se muestra,
+    sin sugerencias). Lo que cambia y nada más:
+    * **Una sección nueva «Tiempo libre de la semana»** (`features/huecos/components/TiempoLibreDeLaSemana`), **debajo de la del
+      Radar** (`CodigoRenaserDelAlumno`) en `AlumnoScreen` (mentor o guía), `FichaAprendizScreen` (administrador y alquimista,
+      solo si la persona tiene grupo) y `PersonaDelLiderScreen` (líder; Administración la usa igual). Recibe `cargar(semana)`, como
+      la del Radar, y no sabe de rutas ni de roles: el mentor pide `GET /api/v1/mentor/groups/{g}/learners/{u}/huecos?semana=` y
+      los otros tres `GET /api/v1/leadership/groups/{g}/people/{p}/huecos?semana=` (`huecos/api/huecosApi`; `semana` es el
+      lunes). **Nada para la propia persona**: ni Yo, ni Training, ni Plan, ni Hoy.
+    * **Qué se lee**: arriba, la semana de lunes a domingo con ‹ › («Semana en curso» o «Semana cerrada» cuando el servidor dice
+      `cerrada`, y «Del 26 de octubre al 1 de noviembre»); el resumen —«Tiempo ocupado» y «Tiempo libre» en horas y minutos, «Lo
+      real de la semana»: `32 a tiempo · 6 tarde · 4 sin cumplir` (no se escribe si no hay nada que contar) y «Huecos que se
+      repiten»: `Lun, mié y jue · 15:00–17:00`, o «Ningún hueco se repite esta semana.»—; y los siete días, cada uno con su
+      ventana (`De 05:30 a 22:30`, o «Sin Despertar ni Dormir: todo el día» si es `null`) y sus huecos de 30 minutos o más
+      (`15:00–17:00 · 2 h`; un día sin ninguno dice «Sin huecos de 30 min o más»). **Si la semana trae 8 huecos o más, cada día
+      se pliega** (botón de 48 con chevron y una línea «2 huecos»); con menos se lee de corrido. Abrir un día es instantáneo, sin
+      animación, y al cambiar de semana vuelven a quedar plegados. Todo calculado por el servidor: la app no suma ni cuenta.
+    * **Semanas**: la primera lectura es la semana en curso de la persona (sin `semana`: el servidor sabe su zona). ‹ llega
+      hasta `primeraSemana` y › hasta la semana en curso; nunca se pide el futuro ni antes de su primera semana (el servidor
+      respondería 400). Sin `primeraSemana` no se inventa un tope: ‹ queda apagado. Las flechas dicen «Tiempo libre: semana
+      anterior» / «…siguiente» y no «Semana anterior», que ya son las del semáforo en la ficha del líder (`Flecha` de
+      `semaforo/components/NavegacionDeSemanas` pasó a exportarse, sin otro cambio).
+    * **Un pedido por semana**: `huecos/hooks/useHuecosDeLaSemana` guarda cada semana leída mientras la ficha está abierta (un
+      almacén por función `cargar`, que cada ficha arma con `useMemo` por persona y se libera con ella): ir y volver, volver a
+      dibujar, volver a montar la sección (la ficha del líder pasa por «Avisar a su mentor» y regresa) o que dos secciones pidan
+      lo mismo a la vez no repite ningún pedido. No hay lectura al enfocar ni sondeo. Un fallo se recuerda y no se reintenta
+      solo; «Reintentar» lo pide otra vez.
+    * **Cuándo no aparece**: un 403 (otro rol, cuenta suspendida o ya no la acompaña) o un 404 (backend sin la ruta) esconden la
+      sección, sin error; sin grupo no hay a quién preguntarle. **Mientras llega la primera lectura tampoco se dibuja nada**
+      (un marco con «Cargando…» que se retira con un 404 sería un parpadeo; la sección va al final de la ficha). Los demás
+      fallos se dicen («No se pudo cargar el tiempo libre de esta semana.» y, sin red, «Revisa tu conexión.») con «Reintentar» de
+      48. Al cambiar a una semana no leída, la tarjeta conserva las flechas y el rango y dice «Cargando el tiempo libre…» sin
+      mostrar los datos de otra semana.
+    * **Esquema tolerante** (`huecos/api/huecosSchemas`): lo único indispensable es `semana`; un día, un hueco, un hueco repetido
+      o el resumen que no se entienden se pierden ELLOS y no la sección; `ventana` ausente o rota cuenta el día entero; los
+      minutos que no llegan salen de las dos horas; una cifra que falta es «—», no «0 min». Acepta `HH:mm:ss` y `24:00`.
+    * **Textos**: tipo oración, 16–17 px, tuteo donde hable la app; áreas de 48 en flechas, días y «Reintentar»; el lector de
+      pantalla oye cada hueco como «De 15:00 a 17:00, 2 horas». Sin íconos nuevos ni colores de estado: es texto de lectura.
+      Entra con `Aparicion` como las otras secciones de la ficha.
+    * **No cambian**: el Radar, el semáforo, los 7 días de la ficha del líder, Hoy, Plan, Training, Yo ni los otros tabs. Sin
+      dependencias nuevas.
+    * **Hace falta el backend con la spec 015 antes y un APK nuevo** (la app no se actualiza por aire). Contra un backend anterior
+      la sección no aparece (404) y las fichas quedan como hoy.
   * **Cambio por pedido del dueño — 2026-10-29 — tabs `Hoy` y `Plan`: hábito y Radar en una tarjeta, y las acciones de hoy por
     eje (spec 016)** (spec, vista previa aprobada y decisiones del dueño en `Renaser-90-dias-backend/specs/016-hoy-y-plan/`;
     pedido sobre la vista previa: «así bro, pero más centrado, para que sea CX/UX» —Hoy, opción A «Lado a lado»— y «el de acá,
