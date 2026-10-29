@@ -1,0 +1,364 @@
+{
+  "proyecto": "Renaser 90 días — app",
+  "actualizado": "2026-10-29",
+  "reglas": {
+    "una_en_curso_por_sesion": "Cada sesión trabaja una sola funcionalidad hasta verificarla o dejarla bloqueada con el motivo.",
+    "pasando_exige_evidencia": "Solo pasa a «pasando» con evidencia que se pueda revisar: un PR, un archivo del repo o un enlace. Lo controla src/__tests__/harness/estado.test.ts.",
+    "no_se_borra_para_esconder": "Una funcionalidad no se quita ni se cambia de estado para tapar lo que falta: se anota en «pendiente»."
+  },
+  "leyenda": {
+    "sin_empezar": "Hay spec o pedido, pero no hay código en master.",
+    "en_curso": "Alguien la está haciendo ahora, en la rama que dice «rama».",
+    "bloqueada": "No puede avanzar hasta resolver lo que dice «pendiente».",
+    "sin_verificar": "Está en master, pero no hay evidencia registrada de que se haya probado de punta a punta.",
+    "pasando": "Está en master y la verificación pedida corrió en verde; la evidencia está en «evidencia»."
+  },
+  "leyenda_publicacion": {
+    "backend": {
+      "en_produccion": "Fusionado en el backend y desplegado por el CD.",
+      "falta_desplegar": "Fusionado, pero el CD no lo desplegó.",
+      "no_aplica": "No necesita backend.",
+      "sin_confirmar": "No se sabe."
+    },
+    "app": {
+      "publicada": "Está en el APK que tienen los teléfonos.",
+      "falta_apk": "Hace falta un APK nuevo para que llegue a los teléfonos.",
+      "no_aplica": "No cambia la app.",
+      "sin_confirmar": "No se sabe qué trae el último APK publicado."
+    }
+  },
+  "funcionalidades": [
+    {
+      "id": "app-001-mentoria-acompanamiento",
+      "titulo": "Mentoría y acompañamiento",
+      "spec": "specs/001-mentoria-acompanamiento/",
+      "prs": {
+        "app": [],
+        "backend": []
+      },
+      "estado": "sin_verificar",
+      "evidencia": [],
+      "publicacion": {
+        "backend": "en_produccion",
+        "app": "publicada"
+      },
+      "pendiente": "validation.md dice «plan de pruebas; no ejecutado». Registrar qué casos V01–V19 se probaron y con qué resultado."
+    },
+    {
+      "id": "app-002-lider-de-mentores",
+      "titulo": "Líder de mentores: «Mis mentores», ficha, observaciones y reporte del mes",
+      "spec": "specs/002-lider-de-mentores/",
+      "prs": {
+        "app": [],
+        "backend": []
+      },
+      "estado": "sin_verificar",
+      "evidencia": [],
+      "publicacion": {
+        "backend": "en_produccion",
+        "app": "publicada"
+      },
+      "pendiente": "validation.md dice «plan de pruebas. No ejecutado». Registrar qué casos VL-xx se probaron."
+    },
+    {
+      "id": "app-003-admin-alquimista",
+      "titulo": "Administración y Alquimista",
+      "spec": "specs/003-admin-alquimista/",
+      "prs": {
+        "app": [],
+        "backend": []
+      },
+      "estado": "pasando",
+      "evidencia": [
+        "specs/003-admin-alquimista/E2E_RESULTADOS.md",
+        "specs/003-admin-alquimista/SMOKE_NATIVO.md"
+      ],
+      "publicacion": {
+        "backend": "en_produccion",
+        "app": "publicada"
+      },
+      "pendiente": "Lo que quedó fuera está en specs/003-admin-alquimista/PENDIENTES.md."
+    },
+    {
+      "id": "001-habitos-por-rol",
+      "titulo": "Hábitos del programa con audiencia por rol (Administración)",
+      "spec": "backend:specs/001-habitos-por-rol/",
+      "prs": {
+        "app": [],
+        "backend": []
+      },
+      "estado": "pasando",
+      "evidencia": [
+        "backend:specs/001-habitos-por-rol/e2e.md"
+      ],
+      "publicacion": {
+        "backend": "en_produccion",
+        "app": "publicada"
+      },
+      "pendiente": ""
+    },
+    {
+      "id": "002-habitos-cambio-de-dia",
+      "titulo": "Training se actualiza al cambiar de día y no deja registrar en ayer",
+      "spec": "backend:specs/002-habitos-cambio-de-dia/",
+      "prs": {
+        "app": [
+          26
+        ],
+        "backend": [
+          14
+        ]
+      },
+      "estado": "sin_verificar",
+      "evidencia": [
+        "PR #26: Jest 346 suites en verde"
+      ],
+      "publicacion": {
+        "backend": "en_produccion",
+        "app": "publicada"
+      },
+      "pendiente": "El PR solo registra Jest; falta la prueba en el emulador al cruzar la medianoche."
+    },
+    {
+      "id": "002-soporte-ti-interruptores",
+      "titulo": "Soporte TI: interruptores por funcionalidad y rol, aviso de mantenimiento y consola en Yo",
+      "spec": "backend:specs/002-soporte-ti-interruptores/",
+      "prs": {
+        "app": [
+          31
+        ],
+        "backend": [
+          19
+        ]
+      },
+      "estado": "pasando",
+      "evidencia": [
+        "PR #31: Maestro 30–40 y regresión en verde, Jest 4017, tsc 0"
+      ],
+      "publicacion": {
+        "backend": "en_produccion",
+        "app": "falta_apk"
+      },
+      "pendiente": "La fase 1 entró por merge directo (ca2e692, 2026-10-14), sin PR, y ya está en los teléfonos; la fase 2 (#31) falta en el APK."
+    },
+    {
+      "id": "003-kilometros-medidos",
+      "titulo": "Kilómetros del día medidos por el teléfono, sin otra app",
+      "spec": "backend:specs/003-kilometros-medidos/",
+      "prs": {
+        "app": [],
+        "backend": []
+      },
+      "estado": "sin_empezar",
+      "evidencia": [],
+      "publicacion": {
+        "backend": "no_aplica",
+        "app": "no_aplica"
+      },
+      "pendiente": "Solo hay spec.md (sin plan ni tareas) y el módulo nativo renaser-pasos no existe en master. Los bugs #41 y #42 son del hábito de kilómetros con foto que ya existe."
+    },
+    {
+      "id": "005-lider-cumplimiento-por-persona",
+      "titulo": "El líder ve el cumplimiento de cada persona por grupo, con sus evidencias",
+      "spec": "backend:specs/005-lider-cumplimiento-por-persona/",
+      "prs": {
+        "app": [
+          27
+        ],
+        "backend": [
+          15
+        ]
+      },
+      "estado": "pasando",
+      "evidencia": [
+        "PR #27: E2E con mobile-mcp y Maestro 11/11, Jest 3198",
+        "backend:specs/005-lider-cumplimiento-por-persona/e2e.md"
+      ],
+      "publicacion": {
+        "backend": "en_produccion",
+        "app": "publicada"
+      },
+      "pendiente": "tasks.md deja sin marcar T046, T051 y T057."
+    },
+    {
+      "id": "006-mensaje-semaforo-y-podio",
+      "titulo": "Mensaje del día en el semáforo de Hoy y «Descargar» el podio del Ranking",
+      "spec": "backend:specs/006-mensaje-semaforo-y-podio/",
+      "prs": {
+        "app": [
+          27
+        ],
+        "backend": [
+          15
+        ]
+      },
+      "estado": "pasando",
+      "evidencia": [
+        "PR #27: E2E con mobile-mcp y Maestro 11/11, Jest 3198"
+      ],
+      "publicacion": {
+        "backend": "en_produccion",
+        "app": "publicada"
+      },
+      "pendiente": ""
+    },
+    {
+      "id": "007-alarmas-confiables",
+      "titulo": "Alarmas de hábitos como el despertador y aviso cuando el teléfono las borra",
+      "spec": "backend:specs/007-alarmas-confiables/",
+      "prs": {
+        "app": [
+          28
+        ],
+        "backend": [
+          16
+        ]
+      },
+      "estado": "pasando",
+      "evidencia": [
+        "PR #28: quickstart en Android 17 y 14, Maestro 07, 08, 01, 03 y 05"
+      ],
+      "publicacion": {
+        "backend": "en_produccion",
+        "app": "publicada"
+      },
+      "pendiente": "T047: probar en un Honor real (el pedido nació de teléfonos Honor). T048 sin marcar."
+    },
+    {
+      "id": "008-recordatorio-por-dia",
+      "titulo": "Recordatorio por día al planificar un hábito",
+      "spec": "backend:specs/008-recordatorio-por-dia/",
+      "prs": {
+        "app": [
+          29
+        ],
+        "backend": [
+          17
+        ]
+      },
+      "estado": "pasando",
+      "evidencia": [
+        "PR #29: E2E en el emulador con la pantalla apagada, Maestro 07, 08, 01 y 10"
+      ],
+      "publicacion": {
+        "backend": "en_produccion",
+        "app": "publicada"
+      },
+      "pendiente": "tasks.md deja sin marcar T032–T035 aunque el PR registra la validación."
+    },
+    {
+      "id": "009-tipos-de-alarma",
+      "titulo": "Cómo suena la alarma de cada día (sonido, vibración, voz, repetir)",
+      "spec": "backend:specs/009-tipos-de-alarma/",
+      "prs": {
+        "app": [
+          29
+        ],
+        "backend": [
+          17
+        ]
+      },
+      "estado": "pasando",
+      "evidencia": [
+        "PR #29: E2E en el emulador con la pantalla apagada, Maestro 07, 08, 01 y 10"
+      ],
+      "publicacion": {
+        "backend": "en_produccion",
+        "app": "publicada"
+      },
+      "pendiente": "tasks.md deja sin marcar T024–T026."
+    },
+    {
+      "id": "010-acciones-por-dia",
+      "titulo": "Las acciones de los objetivos por día y cómo suenan",
+      "spec": "backend:specs/010-acciones-por-dia/",
+      "prs": {
+        "app": [
+          29
+        ],
+        "backend": []
+      },
+      "estado": "pasando",
+      "evidencia": [
+        "PR #29: E2E en el emulador con la pantalla apagada, Maestro 07, 08, 01 y 10"
+      ],
+      "publicacion": {
+        "backend": "no_aplica",
+        "app": "publicada"
+      },
+      "pendiente": "tasks.md deja sin marcar T001 y T011."
+    },
+    {
+      "id": "011-editor-por-pasos",
+      "titulo": "Planificar: días solo con íconos, «Otra» en su lugar y pantalla completa",
+      "spec": "backend:specs/011-editor-por-pasos/",
+      "prs": {
+        "app": [
+          30
+        ],
+        "backend": []
+      },
+      "estado": "pasando",
+      "evidencia": [
+        "PR #30: E2E en el emulador, 8 casos en verde, tsc 0"
+      ],
+      "publicacion": {
+        "backend": "no_aplica",
+        "app": "sin_confirmar"
+      },
+      "pendiente": "La carpeta specs/011-editor-por-pasos no está en master del backend. APK: está en la build 110 del 20/10 y no en la 109; falta saber cuál de las dos subió a Play."
+    },
+    {
+      "id": "admin-evidencias-como-el-lider",
+      "titulo": "Administración y Alquimista ven las evidencias como el líder",
+      "spec": "",
+      "prs": {
+        "app": [
+          32
+        ],
+        "backend": []
+      },
+      "estado": "pasando",
+      "evidencia": [
+        "PR #32: Maestro 23 y 24 en el emulador"
+      ],
+      "publicacion": {
+        "backend": "sin_confirmar",
+        "app": "falta_apk"
+      },
+      "pendiente": ""
+    },
+    {
+      "id": "plan-objetivos-esperan-al-mapa",
+      "titulo": "Plan: los objetivos esperan al Mapa de Renacimiento (issue #37)",
+      "spec": "",
+      "prs": {
+        "app": [
+          38
+        ],
+        "backend": [
+          21
+        ]
+      },
+      "estado": "pasando",
+      "evidencia": [
+        "PR #38: E2E en el emulador con una cuenta de aprendiz con objetivo y sin Mapa"
+      ],
+      "publicacion": {
+        "backend": "en_produccion",
+        "app": "falta_apk"
+      },
+      "pendiente": "Encender ROCKS_EXIGIR_MAPA_ACTIVO en producción solo cuando el APK con #38 esté publicado."
+    }
+  ],
+  "apk_publicado": {
+    "verificado": "2026-10-29",
+    "fuente": "Play Store («Updated on Oct 20, 2026», 1.5.0) y eas build:list",
+    "builds_del_dia": [
+      "107 · f273242 (#28)",
+      "109 · 8a88539 (#29)",
+      "110 · af3a7c7 = ef453ec (#30)"
+    ],
+    "nota": "Las versiones salen los viernes; con appVersionSource remote el nombre sigue en 1.5.0 y sube el número de build."
+  }
+}

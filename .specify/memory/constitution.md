@@ -1,5 +1,12 @@
 <!--
 Sync Impact Report
+- Version change: 1.0.0 → 1.0.1 (2026-10-29, PATCH: aclara redacción, aprobada por el dueño)
+- Principio VI: las excepciones de los cinco tabs se anotan en `docs/producto/` del frontend (un
+  archivo por dominio y una fila en su índice), ya no en `AGENTS.md`, que vuelve a ser un mapa corto.
+  La regla no cambia: sin autorización explícita no se toca un tab, y una excepción no lo abre.
+- TODO pendiente: igualar la copia del backend (`.specify/memory/constitution.md`) a esta versión.
+
+Sync Impact Report anterior
 - Version change: (plantilla sin completar) → 1.0.0
 - Principios: los siete son nuevos (primera adopción).
   I. Las dependencias apuntan al dominio
@@ -89,8 +96,8 @@ sin tocar reglas.
 ### VI. Los cinco tabs no se tocan sin autorización
 
 - Hoy, Plan, Training, Comunidad y Yo MUST NOT alterarse sin autorización explícita del dueño. Toda
-  excepción se anota en `AGENTS.md` con fecha, alcance y «lo que cambia y nada más»; una excepción
-  no abre el tab.
+  excepción se anota en `docs/producto/` del frontend (en el archivo de su dominio y con una fila en
+  su índice) con fecha, alcance y «lo que cambia y nada más»; una excepción no abre el tab.
 - Pantallas: un solo scroll, márgenes de `useResponsive()`, áreas táctiles de 48–52 px, Jost
   (nunca pesos ultrafinos), tipo oración, contraste del tema en claro y oscuro, validación antes de
   avanzar, `useSystemBackHandler` en toda vista hija u hoja.
@@ -133,4 +140,4 @@ sin tocar reglas.
 - Cumplimiento: cada plan lleva su Constitution Check; cada revisión verifica los siete principios.
   Toda complejidad que los tensione se justifica en la tabla *Complexity Tracking* del plan.
 
-**Version**: 1.0.0 | **Ratified**: 2026-10-12 | **Last Amended**: 2026-10-12
+**Version**: 1.0.1 | **Ratified**: 2026-10-12 | **Last Amended**: 2026-10-29
