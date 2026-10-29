@@ -10,8 +10,10 @@ que poder comprobarse: lo que no comprobaste dice «sin confirmar». Es corto a 
 - **App, master**: `70db1d0` (#38, 2026-10-27). CI de master en verde (tipos y Jest).
 - **Backend, producción**: el CD despliega cada merge a master; el último salió verde el 2026-10-29 a las 15:06
   (#29, BouncyCastle para el Web Push, E-650). Todo lo fusionado en el backend está en producción.
-- **APK publicado**: sin confirmar. `app.json` dice 1.5.0. Lo fusionado desde el 2026-10-13 no llega a los teléfonos
-  sin un APK nuevo: ver `publicacion.app` en `funcionalidades.json`.
+- **APK publicado**: el del **2026-10-20** (Play Store, 1.5.0; las versiones salen los viernes). Ese día hubo tres
+  builds de producción en EAS: 107 (#28), 109 (#29) y 110 (= #30, spec 011); falta saber si subió la 109 o la 110.
+  **No está en los teléfonos**: #31 (Soporte TI fase 2), #32, #35, #36 y #38. Ver `publicacion.app` en
+  `funcionalidades.json`.
 - **Bugs abiertos de la app**: #39 a #43 (`gh issue list --label bug --state open`).
 
 ## Siguiente paso
