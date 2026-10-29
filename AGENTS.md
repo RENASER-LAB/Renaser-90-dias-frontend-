@@ -11,7 +11,8 @@ informe nunca se escriben acá (`src/__tests__/harness/agentsCorto.test.ts` lo f
 
 1. `pwd`, `git status --short` y `git log --oneline -5`: confirma el repo, la rama y si estás en un worktree. No
    mezcles tu trabajo con cambios ajenos sin commitear.
-2. Bugs abiertos: `gh issue list --label bug --state open`.
+2. Lee `PROGRESO.md` (qué está verificado, qué sigue y qué quedó pendiente) y, si vas a trabajar una
+   funcionalidad, su fila en `funcionalidades.json`. Bugs abiertos: `gh issue list --label bug --state open`.
 3. **Antes de tocar uno de los cinco tabs**, lee en `docs/producto/README.md` las entradas de ese tab: qué autorizó
    el dueño y qué no se puede cambiar.
 4. Para entender código, primero el grafo (`graphify query`, ver `CLAUDE.md`); después los archivos.
@@ -20,6 +21,8 @@ informe nunca se escriben acá (`src/__tests__/harness/agentsCorto.test.ts` lo f
 
 | Qué | Dónde |
 |---|---|
+| Estado de hoy, siguiente paso y pendientes | `PROGRESO.md` |
+| Cada funcionalidad: estado, evidencia, si está en producción y si falta APK | `funcionalidades.json` |
 | Lo que el dueño autorizó en cada tab (historial) | `docs/producto/README.md` |
 | Specs (las nuevas viven en el backend) | `specs/README.md` |
 | Constitución de spec-kit (la misma en los dos repos) | `.specify/memory/constitution.md` |
@@ -47,13 +50,17 @@ Solo con evidencia que se pueda volver a correr, no porque el código se vea bie
 1. `npm run typecheck` y `npm test` en verde.
 2. Si se ve en la app: la suite de Maestro (`.maestro/`) y los casos de la spec con mobile-mcp en el emulador, con
    capturas. Solo JavaScript → el build debug instalado con Metro; cambios nativos → build nuevo.
-3. La evidencia queda en el PR o en la spec, y lo que no se pudo verificar se dice con todas sus letras.
+3. La evidencia queda en el PR o en la spec, y lo que no se pudo verificar se dice con todas sus letras. En
+   `funcionalidades.json`, nada pasa a `pasando` sin esa evidencia (`estado.test.ts` lo frena).
 4. Docs al día (`docs/producto/`, la spec) y `graphify update .`.
 
 ## Al cerrar la sesión
 
-Deja el repo listo para que otra sesión siga sin adivinar: nada a medio hacer sin anotar, el trabajo seguro
-commiteado en su rama, lo pendiente o roto escrito (en el issue, la spec o el PR) y el grafo al día.
+Deja el repo listo para que otra sesión siga sin adivinar:
+
+1. `PROGRESO.md`: el estado verificado, el siguiente paso, los pendientes y tu sesión (solo las cinco últimas).
+2. `funcionalidades.json`: el estado de lo que tocaste, con su evidencia.
+3. Nada a medio hacer sin anotar, el trabajo seguro commiteado en su rama y `graphify update .`.
 
 ---
 
