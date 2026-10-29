@@ -47,9 +47,11 @@ informe nunca se escriben acá (`src/__tests__/harness/agentsCorto.test.ts` lo f
 
 Solo con evidencia que se pueda volver a correr, no porque el código se vea bien:
 
-1. `npm run typecheck` y `npm test` en verde.
-2. Si se ve en la app: la suite de Maestro (`.maestro/`) y los casos de la spec con mobile-mcp en el emulador, con
-   capturas. Solo JavaScript → el build debug instalado con Metro; cambios nativos → build nuevo.
+1. `npm run verificar` en verde (sale con 0): parches de postinstall, tipos y Jest completo, con un resumen para
+   pegar en el PR. Si otra sesión tiene la máquina, se frena antes de lo pesado; mientras tanto, `-- --rapido`
+   corre solo las pruebas de lo cambiado, pero eso no cierra nada (sale con 2).
+2. Si se ve en la app: `npm run verificar -- --e2e` (la suite de Maestro) y los casos de la spec con mobile-mcp en
+   el emulador, con capturas. Solo JavaScript → el build debug instalado con Metro; cambios nativos → build nuevo.
 3. La evidencia queda en el PR o en la spec, y lo que no se pudo verificar se dice con todas sus letras. En
    `funcionalidades.json`, nada pasa a `pasando` sin esa evidencia (`estado.test.ts` lo frena).
 4. Docs al día (`docs/producto/`, la spec) y `graphify update .`.
