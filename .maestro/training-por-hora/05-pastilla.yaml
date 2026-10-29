@@ -1,5 +1,6 @@
 # T05 — La Pastilla Renacer desde la lista: su fila abre el audio y las dos preguntas de siempre (no pasa por una hoja de guía
 # si el catálogo no trae una); al registrar sale de la lista.
+# Cada respuesta pide al menos 15 letras (`RESPUESTA_MIN_LENGTH`).
 # Precondición: `reset-hoy.sql`. (El audio puede quedar en «cargando…» en local: no hace falta oírlo para registrar.)
 # cuenta: aprendiz
 appId: com.renaser.app
@@ -17,14 +18,14 @@ appId: com.renaser.app
     timeout: 20000
 - takeScreenshot: T05a-pastilla-pregunta-1
 - tapOn: "Escribe lo que te dejó este audio.*"
-- inputText: "Calma"
+- inputText: "Senti mucha calma"
 - hideKeyboard
 - tapOn: "Siguiente"
 - extendedWaitUntil:
     visible: "Pregunta 2 de 2"
     timeout: 10000
 - tapOn: "Escribe lo que te dejó este audio.*"
-- inputText: "Paz"
+- inputText: "Me llevo mucha paz"
 - hideKeyboard
 - tapOn: "Registrar"
 - runFlow: ../comun/cerrar-aviso-dev.yaml
