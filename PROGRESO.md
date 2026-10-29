@@ -19,8 +19,8 @@ que poder comprobarse: lo que no comprobaste dice «sin confirmar». Es corto a 
 ## Siguiente paso
 
 Harness del frontend, rama `harness/agents-corto`: correr `npm run verificar` completo cuando se libere la máquina
-(aplica los parches que faltan y corre el Jest completo) y decidir los pasos 4 y 5 (hook de inicio de sesión y
-plantilla de bugs). Después, el mismo molde en el backend, ya desde master.
+(aplica los parches que faltan y corre el Jest completo) y el paso 5 (plantillas de issue y de PR). Después, el mismo
+molde en el backend, ya desde master.
 
 ## Pendientes
 

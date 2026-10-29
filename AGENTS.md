@@ -12,7 +12,8 @@ informe nunca se escriben acá (`src/__tests__/harness/agentsCorto.test.ts` lo f
 1. `pwd`, `git status --short` y `git log --oneline -5`: confirma el repo, la rama y si estás en un worktree. No
    mezcles tu trabajo con cambios ajenos sin commitear.
 2. Lee `PROGRESO.md` (qué está verificado, qué sigue y qué quedó pendiente) y, si vas a trabajar una
-   funcionalidad, su fila en `funcionalidades.json`. Bugs abiertos: `gh issue list --label bug --state open`.
+   funcionalidad, su fila en `funcionalidades.json`. Bugs abiertos: `gh issue list --label bug --state open`. En
+   Claude Code, el hook de inicio (`scripts/inicio-de-sesion.mjs`) ya te pone el resumen al abrir la sesión.
 3. **Antes de tocar uno de los cinco tabs**, lee en `docs/producto/README.md` las entradas de ese tab: qué autorizó
    el dueño y qué no se puede cambiar.
 4. Para entender código, primero el grafo (`graphify query`, ver `CLAUDE.md`); después los archivos.
