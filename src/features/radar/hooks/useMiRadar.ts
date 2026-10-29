@@ -3,13 +3,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { useMinutoActual } from '../../../hooks/useMinutoActual';
 import { mensajeDeError } from '../../../services/http/apiClient';
-import { isoDe } from '../../habits/notificaciones/utils/alarmasPorDia';
 import { obtenerHistorial } from '../api/radarApi';
-import { MI_RADAR } from '../config/configRadar';
 import { useRadar } from '../RadarContext';
 import type { CheckInRadarApi, DiaDeMiRadarApi, MiRadarApi } from '../types/radar.types';
-import { elementosDeHoy, horasDelDia, patronesDeMiRadar, validarDias, validarHoras } from '../utils/miRadar';
-import { envioEnElMismoSlot } from '../utils/slotsDelRadar';
+import { patronesDeMiRadar, resumenDeMiRadarHoy, validarDias, validarHoras } from '../utils/miRadar';
 import { configDeMiRadar } from './useConfigDeMiRadar';
 import { useHistorialDeRadar } from './useHistorialDeRadar';
 
@@ -43,26 +40,14 @@ export function useMiRadar() {
     recargarConfig();
   }, [recargarConfig]);
 
-  const horaEnCurso = ahora.getHours();
-  const diaDeHoy = isoDe(ahora);
-  /** Las horas de HOY: las propias de este día de la semana si las tiene, o las de todos los días. */
-  const horasDeHoy = useMemo(() => horasDelDia(config, diaDeHoy), [config, diaDeHoy]);
-  /** Hoy hay Mi Radar: está encendido y este día de la semana no va «Sin Radar». Si no, no hay «Registrar ahora». */
-  const hoyTieneRadar = Boolean(config?.encendido) && horasDeHoy.length > 0;
-
-  /** Hoy: cada registro y cada hora elegida de hoy que ya pasó sin respuesta, en orden de hora. Solo con Mi Radar encendido. */
-  const hoy = useMemo(
-    () => (config?.encendido ? elementosDeHoy(horasDeHoy, historial.registros, ahora) : []),
-    [config?.encendido, horasDeHoy, historial.registros, ahora],
+  /* Lo de HOY (horas de hoy, si hay Mi Radar hoy, lo respondido, el horario y si la hora en curso pide un registro) sale
+     de una sola cuenta, `resumenDeMiRadarHoy`, la misma que usa la mitad del Radar de Hoy. */
+  const { hoyTieneRadar, hoy, yaRegistroEstaHora, dentroDelHorario, horaEnCursoPendiente } = useMemo(
+    () => resumenDeMiRadarHoy(config, historial.registros, ahora),
+    [config, historial.registros, ahora],
   );
 
   const patrones = useMemo(() => patronesDeMiRadar(historial.registros), [historial.registros]);
-
-  const yaRegistroEstaHora = historial.registros.some(r => envioEnElMismoSlot(r.createdAt, ahora));
-  /** Mi Radar funciona de 03:00 a 23:59: de madrugada no se registra y la app no lo ofrece. */
-  const dentroDelHorario = horaEnCurso >= MI_RADAR.primeraHora;
-  /** La hora en curso es una de las elegidas y todavía no tiene registro: el aviso que se acaba de tocar pide esto. */
-  const horaEnCursoPendiente = hoyTieneRadar && horasDeHoy.includes(horaEnCurso) && !yaRegistroEstaHora;
 
   /**
    * Enciende (con estas horas para todos los días y estos días con horas propias), cambia las horas o apaga. Valida igual

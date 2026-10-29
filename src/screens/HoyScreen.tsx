@@ -56,8 +56,7 @@ import {
   DIAS_DEL_PROGRAMA,
 } from '../features/home/hooks/useResumenHome';
 import { useHabitoDelMomento } from '../features/habits/hooks/useHabitoDelMomento';
-import { useRadar } from '../features/radar/RadarContext';
-import { TarjetaCodigoRenaser } from '../features/radar/components/TarjetaCodigoRenaser';
+import { TarjetaHabitoYRadar } from '../features/home/components/TarjetaHabitoYRadar';
 import { obtenerRocasDeHoy } from '../features/training/api/trainingApi';
 import { useUltimaPublicacionMuro } from '../features/community/hooks/useUltimaPublicacionMuro';
 import { tiempoRelativo } from '../features/community/utils/tiempoRelativo';
@@ -98,9 +97,6 @@ export default function HoyScreen() {
      `useFocusEffect` tiene que correr con la pantalla montada, y porque el pull-to-refresh de
      Hoy también lo recarga. */
   const { habito: habitoAhora, recargar: recargarHabitoAhora } = useHabitoDelMomento();
-  /* Código Renaser. El estado vive en `RadarProvider` (App.tsx) porque el formulario se dibuja
-     por encima del navegador: acá sólo se lee para pintar la tarjeta y poder reabrirlo. */
-  const radar = useRadar();
   const { user } = useAuth();
   /* Rol Mentor. Se monta DENTRO de Hoy y no como sexta pestaña: AGENTS.md 1 prohibe tocar los
      cinco tabs, y ademas el mentor sigue siendo aprendiz — su propio programa no cambia. */
@@ -833,17 +829,6 @@ export default function HoyScreen() {
             reintentarCapacidades={() => void recargarCapacidades()}
           />
 
-          {/* Código Renaser. Va PRIMERO durante los días 1-7 y sólo entonces: es lo único de esta
-              pantalla con un plazo de una hora, y el día 8 desaparece por completo (mismo corte
-              que el traslado fuera del grupo de bienvenida). A partir de ahí la primera tarjeta
-              vuelve a ser la de hábitos. */}
-          <TarjetaCodigoRenaser
-            estado={radar.estado}
-            obligatorio={radar.obligatorio}
-            minutosParaAbrir={radar.minutosParaAbrir}
-            onResponder={radar.abrir}
-          />
-
           {/* Tarjeta Mapa de Renacimiento */}
           {mostrarMapa ? (
             <Presionable onPress={abrirMapa} accessibilityRole="button" accessibilityLabel={`${tituloMapa}. ${detalleMapa}`}>
@@ -879,48 +864,23 @@ export default function HoyScreen() {
             </Presionable>
           ) : null}
 
-          {/* Tarjeta Hábitos de Hoy — EL HÁBITO DE ESTA HORA, no una frase fija.
-              Antes decía siempre "Lidera tu energía diaria" con el contador al lado: el contador
-              dice cuánto falta, nunca QUÉ toca. Ahora el título es el hábito que la persona tiene
-              delante (`useHabitoDelMomento`) y toca lleva a Training, que es donde se opera. */}
-          <Presionable
-            onPress={() => (navigation as any).navigate('Training')}
-            accessibilityRole="button"
-            accessibilityLabel={
-              habitoAhora.titulo ? `Abrir Training: ${habitoAhora.titulo}` : 'Abrir Training'
-            }
-          >
-            <Card>
-              <View style={styles.encabezadoTarjeta}>
-                <View style={styles.rotuloDeLaFila}>
-                  <MicroLabel>Hábitos de hoy</MicroLabel>
-                </View>
-                {/* La cifra va con la misma letra que el rótulo (13, negrita, sin espaciar; 2026-10-05):
-                    a 10,5 y espaciada quedaba más chica y corrida respecto de «Hábitos de hoy». */}
-                {cifrasDeHabitos(resumen?.habitosHoy) !== null ? (
-                  <Text style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
-                    {cifrasDeHabitos(resumen?.habitosHoy)}
-                  </Text>
-                ) : null}
-              </View>
-              {/* Una lista con tildes (`listChecks`) y no el sol: el sol es la pestaña HOY, y de noche
-                  seguía saliendo. */}
-              <View style={styles.insight}>
-                <Icon name="listChecks" size={TAMANO_ICONO.normal} color={c.goldInk} />
-                <View style={{ gap: 5, flex: 1 }}>
-                  <Text style={[t.cardTitle, { color: c.text }]} numberOfLines={2}>
-                    {tituloHabitoAhora}
-                  </Text>
-                  <Text style={[t.small, { color: c.textSoft }]}>
-                    {detalleHabitoAhora}
-                  </Text>
-                </View>
-                <View style={styles.chevronCentrado}>
-                  <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.chevron} />
-                </View>
-              </View>
-            </Card>
-          </Presionable>
+          {/* Hábitos de hoy y el Radar, en una tarjeta de dos mitades iguales y centradas (spec 016, 2026-10-29).
+              Izquierda: EL HÁBITO DE ESTA HORA, no una frase fija (`useHabitoDelMomento`); toca lleva a Training, que es donde
+              se opera. Derecha: el Radar. Los días 1 a 7 reemplaza a la tarjeta aparte del Código Renaser, que iba primera;
+              desde el día 8 dice si Mi Radar está apagado, qué sigue o que hoy no hay. Qué dice y qué hace cada caso vive en
+              `features/radar/utils/mitadDelRadar.ts`. Sin Día 1 (o sin Mi Radar en el backend) es solo la mitad de hábitos. */}
+          <TarjetaHabitoYRadar
+            habitos={{
+              cifra: cifrasDeHabitos(resumen?.habitosHoy),
+              titulo: tituloHabitoAhora,
+              detalle: detalleHabitoAhora,
+              etiquetaAccesible: habitoAhora.titulo ? `Abrir Training: ${habitoAhora.titulo}` : 'Abrir Training',
+            }}
+            onAbrirTraining={() => (navigation as any).navigate('Training')}
+            diaPrograma={resumen?.diaPrograma}
+            inscrito={resumen?.inscrito}
+            onAbrirMiRadar={() => (navigation as any).navigate('Yo', { abrirMiRadar: true })}
+          />
 
           {/* Semaforo de cumplimiento (D-168). Entre Habitos y Acciones porque junta las dos cosas.
               Solo si `/home` dice que la persona se mide: con `null` —no se mide, o un backend que
@@ -1213,10 +1173,6 @@ const styles = StyleSheet.create({
     gap: 12,
     alignItems: 'flex-start',
     marginTop: 14,
-  },
-  /** El chevron de «entrar» de una fila `insight` (que alinea arriba): centrado en el alto de la fila. */
-  chevronCentrado: {
-    alignSelf: 'center',
   },
   /** El chevron a la altura del título de la tarjeta (solo el Mapa: ver el comentario de la tarjeta). */
   chevronDelTitulo: {

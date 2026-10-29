@@ -313,8 +313,77 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
         horas de todos los días: la app lo lee como «ningún día tiene horas propias» y no inventa nada.
     * **No cambian**: los días 1 a 7, **Hoy** (desde el día 8 no muestra nada del Radar, con Mi Radar encendido o apagado),
       el formulario, los demás tabs ni Plan. Sin dependencias nuevas.
+      > **Corregido 2026-10-29 (spec 016, decisión del dueño).** Lo de **Hoy** ya no es cierto: desde el día 8, Hoy sí muestra
+      > el Radar, como la mitad derecha de la tarjeta «Hábitos de hoy» (apagado, «Tu hora», «Tu Radar de hoy»…). Ver la entrada
+      > «hábito y Radar en una tarjeta» de abajo. Los días 1 a 7, el formulario y el resto de lo que dice esta línea siguen igual.
     * **Hace falta el backend con V119 antes y un APK nuevo** (la app no se actualiza por aire). Contra un backend anterior
       no aparece la fila y los días 1 a 7 siguen igual.
+  * **Cambio por pedido del dueño — 2026-10-29 — tabs `Hoy` y `Plan`: hábito y Radar en una tarjeta, y las acciones de hoy por
+    eje (spec 016)** (spec, vista previa aprobada y decisiones del dueño en `Renaser-90-dias-backend/specs/016-hoy-y-plan/`;
+    pedido sobre la vista previa: «así bro, pero más centrado, para que sea CX/UX» —Hoy, opción A «Lado a lado»— y «el de acá,
+    el B, creo que me agrada más; procede y la spec» —Plan, opción B «Por eje»—). Lo que cambia y nada más:
+    * **Hoy — «Hábitos de hoy» y el Radar en una tarjeta** (`features/home/components/TarjetaHabitoYRadar`, en el lugar de la
+      tarjeta de hábitos, después del Mapa): dos mitades **iguales y centradas** —ícono, rótulo con su chevron, una línea de
+      estado, título y detalle, al centro a lo ancho y a lo alto; la fila las estira a la más alta— con una línea fina entre
+      las dos. Con la letra grande del sistema (`fontScale` > 1,15) pasan una debajo de la otra y nada se corta. Mitades de 48
+      o más. Responden al dedo con el fondo lavado de oro, **no** con la escala de `Presionable` (una mitad que se hundiera
+      dentro de una tarjeta de bordes comunes se vería rota); **sin movimiento propio** (es lo más visto de Hoy y lo que cambia
+      tiene que leerse en el acto). Izquierda: la de siempre (cifra, hábito de esta hora, lo que queda) → Training. **Se borró
+      la tarjeta aparte del Código Renaser** (`TarjetaCodigoRenaser`), que en los días 1 a 7 iba primera: la mitad la reemplaza
+      y no se duplica.
+    * **La mitad del Radar** (qué dice y qué hace, en `radar/utils/mitadDelRadar.ts`, sin React):
+      | Cuándo | Dice | Al tocarla |
+      |---|---|---|
+      | Días 1 a 7, hora pendiente | «Código Renaser · 13:00 · Innegociable» (o «Abierto»), «¿Dónde estás ahora mismo?», cuándo cierra | el formulario de siempre, **obligatorio** para el aprendiz (`RadarContext.abrir`; el que se abre solo y por encima del navegador no cambió) |
+      | Días 1 a 7, hora registrada | «Registrado», «Listo por esta hora. El siguiente a las 14:00.» | hoja «Ya lo registraste»: lo respondido y cuándo es el siguiente |
+      | Antes del primer registro del día | «En espera», «El primer registro del día es a las 08:00.» | nada (no es un botón) |
+      | Día 8 o más, Mi Radar apagado | «Mi Radar · Apagado», «Planifica tu Radar» | Yo → Mi Radar (`abrirMiRadar`) |
+      | Encendido, una hora elegida pendiente | «Mi Radar · 14:00 · Tu hora», «Responde hasta las 15:00» | el formulario ahí mismo (`CodigoRenaserModal`, **se puede cerrar**, pie de Mi Radar) |
+      | Encendido, esa hora ya registrada | «Registrado», «La siguiente a las 20:00.» | hoja «Ya lo registraste» |
+      | Encendido, sin hora pendiente ahora | «Encendido», «Próxima a las 20:00», «Hoy respondiste 2 de 3.» | hoja «Tu Radar de hoy»: las horas de hoy con su estado (Respondida 09:04 / Sin registro / Es tu hora / Prevista), «Registrar ahora» si se puede y «Cambiar mis horas» → Yo → Mi Radar |
+      | Encendido, hoy sin Radar | «Hoy no tienes Mi Radar» | Yo → Mi Radar |
+      | Sin Día 1, backend sin Mi Radar (404/403), Mi Radar sin poder leerse, o **mientras no se sabe** | nada: queda solo la mitad de hábitos, a todo el ancho | — |
+      Lo que sigue a una hoja (el formulario, Yo) espera a que la hoja se vaya del todo (`alTerminarDeCerrar`, como las de
+      Training). «Registrar ahora» solo aparece cuando el servidor lo aceptaría; si no, dice por qué («Hoy no tienes Mi Radar»,
+      «Mi Radar funciona de 03:00 a 23:59.», «Ya registraste esta hora»).
+    * **Una sola lógica, sin duplicar**: las horas de hoy y la hora en curso salen de `resumenDeMiRadarHoy` (`utils/miRadar.ts`,
+      sobre `horasDelDia`), que ahora usa también `useMiRadar` de Yo; el envío es el de `RadarContext` (`radar.enviar`: el mismo
+      `POST /radar` y el mismo 409 que se relee y se da por registrado); `HOY_SIN_RADAR`, `FUERA_DE_HORARIO` y el pie del
+      formulario viven en `utils/miRadar.ts` (las pantallas los siguen exportando).
+    * **Sin pedidos nuevos que se repitan** (`radar/hooks/useRadarEnHoy`): los días 1 a 7 lee lo mismo que ya leía
+      (`/radar/latest`, por `RadarContext`) y **no** el historial, salvo cuando se abre una hoja; desde el día 8 usa la lectura
+      de Mi Radar de `RadarContext` y, solo con Mi Radar encendido, el historial de siempre (`GET /radar/history`, el de Yo → Mi
+      Radar). Al volver a Hoy relee en silencio lo respondido (pudo responderse desde Yo) y, si Mi Radar no se había podido
+      leer, lo intenta otra vez. **Mientras no se sabe qué hora está respondida no se dibuja la mitad** (la misma regla del
+      2026-10-19: «Tu hora» sin saberlo es el parpadeo que ya costó arreglar).
+    * **Plan — «Tus acciones de hoy», por eje** (`objetivos/components/TarjetaAccionesDeHoyPorEje`): **se quitó el arco
+      «Día 20 de 90»** (`ArcoDelDia` y su prueba se borraron: nada más lo usaba). En su lugar, arriba de «Fase actual», una
+      tarjeta con «Tus acciones de hoy · 2 de 6», el subtítulo «Jueves 29 · día 20 de 90» (la fecha de las acciones, el día de
+      `/home`; lo que no se sabe no se inventa), una barrita por acción y una fila por eje que tenga acciones hoy, **en el orden
+      de las prioridades** (el principal primero): ícono del eje (`iconoDelEje`), «n de m», un símbolo por acción y «Sigue: X ·
+      16:00», «Se te pasó: X» o «Todo cumplido». Los símbolos tienen forma, no solo color: ✓ cumplida (`checkCircle`), círculo
+      vacío pendiente, reloj rojo «se te pasó la hora» (`clock`) y candado si espera a la verde por Pareto (`lock`).
+      Reglas (`objetivos/utils/accionesDeHoy.ts`): cumplida manda sobre todo; una bloqueada por Pareto es candado aunque su hora
+      haya pasado; **«se te pasó» es solo «pendiente y su hora ya pasó»** (Training es más generoso: una acción queda atrasada
+      cuando llega la hora del siguiente ítem del día, hábitos incluidos, y Plan no lee los hábitos); la que sigue es la primera
+      sin cumplir en orden de hora, sin contar las que esperan a la verde. Sin acciones hoy: «Hoy no tienes acciones agendadas.
+      Agéndalas desde tus objetivos: toca una prioridad clave y elige «Agendar mis acciones».».
+    * **La hoja de un eje** (`HojaDesdeAbajo`): sus acciones de hoy con hora, nombre, estado en palabras («Cumplida 10:14»,
+      «Pendiente», «Se te pasó la hora · todavía puedes registrarla hoy», «Se abre al completar la primera») y su símbolo, y
+      fijo abajo «Registrar en Training». **Plan solo muestra:** el botón no registra nada, lleva a Training con
+      `abrirAccionId` —la acción que sigue de ese eje—, cuando la hoja ya se fue. `TrainingScreen` consume ese parámetro una
+      vez (como `abrirHabitoId`): si la acción sigue entre las de hoy la abre como al tocar su fila; si no, Training queda en
+      su lista. Es lo único que cambia en Training.
+    * **Una lectura por visita** (`objetivos/hooks/useAccionesDeHoy`): `GET /rocks/today`, la misma que Hoy y Training ya
+      hacen, cada vez que Plan vuelve al foco (y al volver de Objetivos, porque la tarjeta solo existe en la vista principal).
+      Con un fallo conserva lo último que leyó y ofrece «Reintentar».
+    * **No cambian**: «Fase actual», «Prioridades clave», «Arquitectura de tiempo», la vista de Objetivos, las demás tarjetas
+      de Hoy, el formulario de los días 1 a 7, los avisos, Training (salvo `abrirAccionId`), Yo, Comunidad ni la barra.
+      Sin dependencias nuevas ni backend nuevo.
+    * **Anotado, no inventado**: la vista previa decía «Pendiente · en 20 min» en la hoja del eje; no hay regla para ese
+      umbral y no se dibuja. Tampoco había diseño para «En espera» (antes del primer registro de los días 1 a 7) ni para el día
+      sin Radar: llevan los textos de arriba (los de la tarjeta de antes y los de Yo → Mi Radar).
+    * **Hace falta un APK nuevo** (la app no se actualiza por aire).
   * **Cambio por pedido del dueño — 2026-10-12 — Administración (estado de `Hoy`): «Hábitos del programa», con
     audiencia por rol** (backend D-264; spec y plan en `Renaser-90-dias-backend/specs/001-habitos-por-rol/`, flujo
     spec-kit con las decisiones del dueño). Lo que cambia y nada más:

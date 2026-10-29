@@ -284,6 +284,27 @@ export default function TrainingScreen() {
 
   /** El hábito de hoy que `TrainingPorHora` tiene que abrir (se consume al abrirlo). */
   const [aperturaPedida, setAperturaPedida] = useState<{ registroId: string; vez: number } | null>(null);
+
+  /**
+   * Entrada desde Plan (spec 016, 2026-10-29): «Registrar en Training» de «Tus acciones de hoy» trae `abrirAccionId`, el id de
+   * la acción de hoy (una `RocaDiariaApi`: es el `id` de su fila). Se abre como al tocar su fila, en cuanto cargan; si ya
+   * no está entre las de hoy (se cumplió desde otro teléfono, o cambió el día) Training queda en su lista, sin error.
+   */
+  const [accionPedida, setAccionPedida] = useState<string | null>(null);
+  useEffect(() => {
+    const id = (route.params as { abrirAccionId?: string } | undefined)?.abrirAccionId;
+    if (!id) return;
+    setAccionPedida(id);
+    (navigation as unknown as { setParams: (p: Record<string, unknown>) => void }).setParams({ abrirAccionId: undefined });
+  }, [route.params, navigation]);
+  useEffect(() => {
+    if (!accionPedida || cargandoBackend) return;
+    if (!errorBackend && habits.some(h => h.id === accionPedida && h.tieneTrackHoy)) {
+      setPracticas(PRACTICAS_CERRADAS);
+      setAperturaPedida({ registroId: accionPedida, vez: Date.now() });
+    }
+    setAccionPedida(null);
+  }, [accionPedida, habits, cargandoBackend, errorBackend]);
   useEffect(() => {
     if (!habitoPedido) return;
     const habito = habitoAAbrir(habitoPedido, habits, cargandoBackend);

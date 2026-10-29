@@ -15,9 +15,10 @@
  * avisos del teléfono y el texto de la fila la usan, y ninguna otra mira `dias` por su cuenta. Lo de editar días
  * marcados (borrador, qué se guarda) vive en `diasDeMiRadar.ts`.
  */
+import { isoDe } from '../../habits/notificaciones/utils/alarmasPorDia';
 import { CONFIG_RADAR, MI_RADAR } from '../config/configRadar';
 import type { DiaDeMiRadarApi, MiRadarApi, RegistroRadarApi } from '../types/radar.types';
-import { horaEnPunto, horasConSlot } from './slotsDelRadar';
+import { envioEnElMismoSlot, horaEnPunto, horasConSlot } from './slotsDelRadar';
 
 /** ¿Desde este día del programa se puede tener Mi Radar? Con el Código Renaser apagado del todo, no. */
 export function miRadarCorresponde(diaPrograma: number | null | undefined): boolean {
@@ -256,7 +257,7 @@ export type ElementoDeHoy =
   | { tipo: 'registro'; registro: RegistroRadarApi }
   | { tipo: 'sin-registro'; hora: number };
 
-function mismoDia(a: Date, b: Date): boolean {
+export function mismoDia(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
@@ -292,6 +293,36 @@ export function elementosDeHoy(
       .map(hora => ({ tipo: 'sin-registro' as const, hora })),
   ];
   return elementos.sort((a, b) => minutos(a) - minutos(b));
+}
+
+/** En lugar de «Registrar ahora» en un día que va «Sin Radar» (el servidor lo rechazaría con un 409). */
+export const HOY_SIN_RADAR = 'Hoy no tienes Mi Radar';
+
+/** Lo que se dice cuando se intenta registrar de madrugada (el servidor responde lo mismo con un 409). */
+export const FUERA_DE_HORARIO = `Mi Radar funciona de ${horaEnPunto(MI_RADAR.primeraHora)} a 23:59.`;
+
+/** Lo que dice el formulario de Mi Radar bajo «Registrar»: se puede cerrar y lo escrito queda en el teléfono. */
+export const TEXTO_DEL_PIE_DE_MI_RADAR = 'Puedes cerrarlo; tu borrador queda guardado en este teléfono.';
+
+/**
+ * Lo de HOY en Mi Radar, derivado de lo guardado, los registros leídos y el reloj. **Una sola cuenta** para Yo → Mi Radar
+ * (`useMiRadar`) y la mitad del Radar de Hoy (spec 016): las dos dicen lo mismo de la hora en curso.
+ *
+ *  - `horasDeHoy`: las horas de HOY (`horasDelDia`): un día con horas propias o sin Radar no usa las de todos.
+ *  - `hoyTieneRadar`: encendido y este día de la semana no va «Sin Radar». Si no, no hay «Registrar ahora».
+ *  - `hoy`: cada registro y cada hora elegida que ya pasó sin respuesta, en orden de hora. Solo con Mi Radar encendido.
+ *  - `yaRegistroEstaHora`: hay un registro en la hora en curso.
+ *  - `dentroDelHorario`: Mi Radar funciona de 03:00 a 23:59; de madrugada no se registra y la app no lo ofrece.
+ *  - `horaEnCursoPendiente`: la hora en curso es una de las elegidas y todavía no tiene registro (lo que pide un aviso).
+ */
+export function resumenDeMiRadarHoy(config: MiRadarApi | null | undefined, registros: readonly RegistroRadarApi[], ahora: Date) {
+  const horasDeHoy = horasDelDia(config, isoDe(ahora));
+  const hoyTieneRadar = Boolean(config?.encendido) && horasDeHoy.length > 0;
+  const hoy = config?.encendido ? elementosDeHoy(horasDeHoy, registros, ahora) : [];
+  const yaRegistroEstaHora = registros.some(r => envioEnElMismoSlot(r.createdAt, ahora));
+  const dentroDelHorario = ahora.getHours() >= MI_RADAR.primeraHora;
+  const horaEnCursoPendiente = hoyTieneRadar && horasDeHoy.includes(ahora.getHours()) && !yaRegistroEstaHora;
+  return { horasDeHoy, hoyTieneRadar, hoy, yaRegistroEstaHora, dentroDelHorario, horaEnCursoPendiente };
 }
 
 // ---------------------------------------------------------------------------------------------------------------

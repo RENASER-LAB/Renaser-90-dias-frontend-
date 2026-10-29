@@ -34,7 +34,10 @@ import {
   vistaDeLosDias,
 } from '../utils/diasDeMiRadar';
 import {
+  FUERA_DE_HORARIO,
+  HOY_SIN_RADAR,
   MENSAJE_DEMASIADAS_HORAS,
+  TEXTO_DEL_PIE_DE_MI_RADAR,
   type PatronesDeMiRadar,
   alternarHora,
   claveDeMiRadar,
@@ -47,14 +50,10 @@ import { horaEnPunto, type SlotRadar } from '../utils/slotsDelRadar';
 
 /** Lo que dice la pantalla de quién puede leer lo que se registra: nunca «solo tú» (FR-016). */
 export const QUIEN_LO_VE = 'Lo ves tú, tu mentor y el equipo que coordina tu grupo.';
-/** Lo que dice cuando se intenta registrar de madrugada (el servidor responde lo mismo con un 409). */
-export const FUERA_DE_HORARIO = `Mi Radar funciona de ${horaEnPunto(MI_RADAR.primeraHora)} a 23:59.`;
-/** En lugar de «Registrar ahora» en un día que va «Sin Radar» (el servidor lo rechazaría con un 409). */
-export const HOY_SIN_RADAR = 'Hoy no tienes Mi Radar';
+/* «Hoy no tienes Mi Radar» y el pie del formulario viven en `utils/miRadar.ts`: la mitad del Radar de Hoy (spec 016) dice lo mismo. */
+export { FUERA_DE_HORARIO, HOY_SIN_RADAR };
 
 const SIN_CONFIG: MiRadarApi = { encendido: false, horas: [], dias: [] };
-
-const TEXTO_DEL_PIE = 'Puedes cerrarlo; tu borrador queda guardado en este teléfono.';
 
 /**
  * Yo → Mi Radar (spec 012, pedido del dueño del 2026-10-29): el Código Renaser de los primeros siete días, **desde el
@@ -446,7 +445,7 @@ export function MiRadarScreen({ onVolver, abrirDesdeAviso = false }: { onVolver:
         onEnviar={mi.registrar}
         onCerrar={() => setFormularioAbierto(false)}
         onLimpiarError={mi.limpiarErrorAlRegistrar}
-        textoDelPie={TEXTO_DEL_PIE}
+        textoDelPie={TEXTO_DEL_PIE_DE_MI_RADAR}
       />
     </SafeAreaView>
   );

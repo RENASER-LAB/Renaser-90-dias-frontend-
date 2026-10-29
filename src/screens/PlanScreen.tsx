@@ -4,7 +4,6 @@ import { Alert } from '../components/Alerta';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BORDES_DE_UNA_PESTANA } from '../navigation/bordesDeUnaPestana';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ArcoDelDia } from '../features/programa/components/ArcoDelDia';
 import { useTheme } from '../theme/ThemeContext';
 import { space } from '../theme/tokens';
 import { useResponsive } from '../theme/responsive';
@@ -26,6 +25,7 @@ import { cifraEscrita } from '../features/objetivos/api/planMensualApi';
 import { EditarObjetivoDelMesModal } from '../features/objetivos/components/EditarObjetivoDelMesModal';
 import { usePlanMensual } from '../features/objetivos/hooks/usePlanMensual';
 import { NivelesDelPlan } from '../features/objetivos/components/NivelesDelPlan';
+import { TarjetaAccionesDeHoyPorEje } from '../features/objetivos/components/TarjetaAccionesDeHoyPorEje';
 import { PuertaDelMapa } from '../features/objetivos/components/PuertaDelMapa';
 import { usePuertaDeObjetivos } from '../features/objetivos/hooks/usePuertaDeObjetivos';
 import { useRocasMaestras } from '../features/objetivos/hooks/useRocasMaestras';
@@ -126,9 +126,7 @@ const TEXTO_DE_BOTON = { fontSize: 15, letterSpacing: 0 } as const;
 
 export default function PlanScreen() {
   const { c, t } = useTheme();
-  const { rs, isTablet, horizontalPadding, contentMaxWidth } = useResponsive();
-  const gaugeW = rs(228);
-  const gaugeH = rs(120);
+  const { isTablet, horizontalPadding, contentMaxWidth } = useResponsive();
 
   // =========================================================================
   // ESTADOS DE NAVEGACIÓN
@@ -505,8 +503,10 @@ export default function PlanScreen() {
               iba además el lema «Enfocado. Estratégico. Real.», que no decía nada de la persona. */}
           <Text style={[t.body, { color: c.textSoft, paddingTop: 6 }]}>Tu mapa de los próximos 90 días</Text>
 
-          {/* GAUGE DE 90 DÍAS — se llena desde el día 0 hasta el actual al entrar (ArcoDelDia). */}
-          <ArcoDelDia dia={diaPrograma} ancho={gaugeW} alto={gaugeH} />
+          {/* TUS ACCIONES DE HOY, POR EJE (spec 016, 2026-10-29, pedido del dueño). Ocupa el lugar del arco «Día 20 de 90»
+              (`ArcoDelDia`, que se quitó de Plan): el día del programa ahora va en el subtítulo de la tarjeta. Plan solo
+              muestra; registrar sigue siendo en Training. */}
+          <TarjetaAccionesDeHoyPorEje diaPrograma={diaConocido} ejesEnOrden={ejesOrdenados} />
 
           {/* FASE ACTUAL — la que dice el backend. Apilado: los nombres de fase son largos
               («Sistema de Alto Rendimiento») y en una fila se espachurraban. */}
