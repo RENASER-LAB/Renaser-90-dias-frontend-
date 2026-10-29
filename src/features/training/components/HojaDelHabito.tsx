@@ -68,7 +68,6 @@ export function HojaDelHabito({
       alCerrar={onCerrar}
       alTerminarDeCerrar={alTerminarDeCerrar}
       titulo={item.titulo}
-      subtitulo={metaDeLaHoja(item, modo)}
       tamano="contenido"
       pie={
         accion ? (
@@ -104,8 +103,8 @@ export function HojaDelHabito({
       >
         {modo === 'atrasado' && !item.hecho ? (
           <Text style={[t.body, { color: c.textSoft }]}>
-            <Text style={{ color: c.danger, fontFamily: 'Jost_700Bold' }}>Se te pasó la hora: </Text>
-            {avisoDeLaHora ? avisoDeLaHora.charAt(0).toLowerCase() + avisoDeLaHora.slice(1) : 'todavía puedes registrarlo hoy.'}
+            <Text style={{ color: c.textStrong, fontFamily: 'Jost_700Bold' }}>Se te pasó la hora: </Text>
+            {(avisoDeLaHora ?? 'Todavía puedes cumplir tu compromiso hoy').replace(/^T/, 't')}.
           </Text>
         ) : null}
 
@@ -150,6 +149,9 @@ export function HojaDelHabito({
             ) : null}
           </View>
         ) : null}
+
+        {/* Pedido del dueño (2026-10-29): la dimensión, la hora y los puntos van abajo, no en la fila ni arriba. */}
+        <Text style={[t.small, { color: c.textSoft }]}>{metaDeLaHoja(item, modo)}</Text>
       </ScrollView>
     </HojaDesdeAbajo>
   );

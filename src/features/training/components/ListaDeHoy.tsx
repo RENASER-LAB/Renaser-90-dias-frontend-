@@ -83,7 +83,7 @@ export function ListaDeHoy({
       {lista.atrasados.length > 0 ? (
         <View style={estilos.grupo}>
           <View style={estilos.rotulo}>
-            <MicroLabel>Se te pasó la hora · todavía puedes registrarlos hoy</MicroLabel>
+            <MicroLabel>Se te pasó la hora · todavía puedes cumplir tu compromiso</MicroLabel>
           </View>
           {lista.atrasados.map(item => fila(item, modoDeHoy('atrasados')))}
         </View>
