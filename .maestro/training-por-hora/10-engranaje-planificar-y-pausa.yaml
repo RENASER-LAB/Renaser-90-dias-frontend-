@@ -7,7 +7,10 @@ appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml
 - runFlow: ../comun/abrir-training.yaml
-- assertVisible: ".*Meditar 10 minutos.*"
+- scrollUntilVisible:
+    element: ".*Meditar 10 minutos.*"
+    direction: DOWN
+    timeout: 30000
 - tapOn: "Tus prácticas: planificar"
 - extendedWaitUntil:
     visible: "Tus prácticas"
