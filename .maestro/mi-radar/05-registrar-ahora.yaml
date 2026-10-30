@@ -52,4 +52,5 @@ appId: com.renaser.app
     when:
       true: ${!output.elegida}
     commands:
-      - assertNotVisible: "Prevista .*"
+      # Solo la de la hora en curso: el historial puede traer otras «Prevista HH:00» de horas elegidas más temprano.
+      - assertNotVisible: ${output.prevista}
