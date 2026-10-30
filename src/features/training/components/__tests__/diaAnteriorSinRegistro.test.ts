@@ -105,7 +105,7 @@ function Envoltorio({ activa = true, cuenta }: { activa?: boolean; cuenta: strin
     onReintentar: () => undefined,
     cuentaId: cuenta,
     habits: [
-      habito('ver', 'Agua tibia', '06:00'), // evidencia opcional: lleva ✓
+      habito('ver', 'Agua tibia', '06:00'), // evidencia opcional: «Subir» y la hoja (sin círculo desde el 30/10)
       habito('foto', 'Ducha fría', '07:00', { evidenceRequirement: 'REQUIRED' }), // exige foto: «Subir»
     ],
     planHabits: [],
@@ -183,20 +183,24 @@ afterEach(() => {
 });
 
 describe('HOY: lo que ofrece la lista (la línea base de las pruebas de abajo)', () => {
-  it('un hábito sin evidencia obligatoria lleva ✓ y uno que exige foto, «Subir»; tocar el segundo abre su registro', async () => {
+  it('los dos llevan «Subir» y ninguno el círculo (pedido del dueño, 30/10); tocar el que exige foto abre su registro', async () => {
     await montar();
-    expect(casillas(raiz!)).toHaveLength(1);
+    expect(casillas(raiz!)).toHaveLength(0);
     expect(textos(raiz!)).toContain('Subir');
     await pulsar(conEtiqueta(raiz!, 'Ducha fría'));
     expect(onRegistrar).toHaveBeenCalledTimes(1);
     expect(onRegistrar.mock.calls[0][0].id).toBe('foto');
   });
 
-  it('el ✓ marca sin abrir nada', async () => {
+  it('en lo opcional, «Subir» abre directo su registro y el nombre abre la hoja (con «Marcar como hecho»)', async () => {
     await montar();
-    await pulsar(casillas(raiz!)[0]);
-    expect(onMarcar).toHaveBeenCalledTimes(1);
-    expect(hayModal(raiz!)).toBe(false);
+    await pulsar(conEtiqueta(raiz!, 'Subir evidencia de Agua tibia'));
+    expect(onRegistrar).toHaveBeenCalledTimes(1);
+    expect(onRegistrar.mock.calls[0][0].id).toBe('ver');
+    expect(onMarcar).not.toHaveBeenCalled();
+    await pulsar(conEtiqueta(raiz!, 'Agua tibia'));
+    expect(hayModal(raiz!)).toBe(true);
+    expect(textos(raiz!)).toContain('Marcar como hecho');
   });
 
   it('abrir Training no pide ningún día anterior (ni nada de planificación)', async () => {
