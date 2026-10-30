@@ -43,6 +43,11 @@ interface ControlSegmentadoProps<T extends string> {
    * los controles de dos o tres opciones entran enteros y no cambian.
    */
   achicarTexto?: boolean;
+  /**
+   * La píldora salta a la elegida sin recorrido (spec 018, el control de papel de Hoy): lo que se usa decenas de veces al
+   * día no se anima. Apagado por defecto: los demás controles conservan sus 250 ms.
+   */
+  sinAnimacion?: boolean;
 }
 
 /** Aire entre la pista y la píldora. */
@@ -55,6 +60,7 @@ export function ControlSegmentado<T extends string>({
   rol = 'tab',
   accessibilityLabel,
   achicarTexto = false,
+  sinAnimacion = false,
 }: ControlSegmentadoProps<T>) {
   const { c, t } = useTheme();
   const [anchoPista, setAnchoPista] = useState(0);
@@ -67,8 +73,8 @@ export function ControlSegmentado<T extends string>({
   useEffect(() => {
     if (anchoSegmento <= 0) return;
     const destino = indice * anchoSegmento;
-    if (!yaUbicada.current) {
-      // Primera medida: la píldora se pone en su lugar sin recorrido.
+    if (!yaUbicada.current || sinAnimacion) {
+      // Primera medida (o un control que no se anima): la píldora se pone en su lugar sin recorrido.
       yaUbicada.current = true;
       desplazamiento.set(destino);
       return;
@@ -80,7 +86,7 @@ export function ControlSegmentado<T extends string>({
         reduceMotion: ReduceMotion.System,
       }),
     );
-  }, [indice, anchoSegmento, desplazamiento]);
+  }, [indice, anchoSegmento, desplazamiento, sinAnimacion]);
 
   const estiloPildora = useAnimatedStyle(() => ({
     transform: [{ translateX: desplazamiento.get() }],

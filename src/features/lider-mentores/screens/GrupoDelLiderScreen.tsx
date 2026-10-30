@@ -21,6 +21,9 @@ import { Linea, MarcoDelLider } from '../components/MarcoDelLider';
  *   «No se mide en el semáforo» en lugar del color.
  * - **Cada fila se abre** a la semana de esa persona.
  *
+ * **Spec 018: sin el párrafo de ayuda de arriba** («Primero quienes más lo necesitan. Toca a una persona para ver su semana.»):
+ * el orden se ve en los colores y cada fila lleva su chevron.
+ *
  * Un grupo sin nadie dice «Este grupo todavía no tiene personas» y no deja una lista vacía muda. La lectura
  * la hace quien monta la pantalla (`useGrupoDelLider`): así, al volver de una persona, la lista sigue en la
  * semana en que estaba.
@@ -51,7 +54,6 @@ export function GrupoDelLiderScreen({
         </>
       ) : (
         <>
-          {personas ? <Linea>Primero quienes más lo necesitan. Toca a una persona para ver su semana.</Linea> : null}
           <VistaSemaforoDelGrupo
             lectura={lectura}
             onAbrirAprendiz={id => {

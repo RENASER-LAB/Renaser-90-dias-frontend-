@@ -187,6 +187,22 @@ describe('«Avisar a su mentor»', () => {
     expect(textos(r)).toContain('Alertar');
   });
 
+  it('spec 018: la ayuda de cada tipo es el texto de relleno del campo, no un renglón aparte; la casilla no se explica', async () => {
+    const r = await montar(semana());
+    await tocar(r, 'Avisar a su mentor sobre Ana Pérez');
+    const campo = () => r.root.findAll(n => typeof n.props.onChangeText === 'function' && n.props.multiline === true)[0];
+    expect(campo().props.placeholder).toBe('Lo que podría cambiar');
+    expect(textos(r)).not.toContain('Lo que podría cambiar');
+
+    const segmentado = r.root.findAll(n => typeof n.props.onCambiar === 'function')[0];
+    await act(async () => {
+      segmentado.props.onCambiar('ALERTA');
+    });
+    expect(campo().props.placeholder).toBe('Lo que va mal y hay que atender');
+    expect(textos(r)).toContain('Enviárselo también por el chat');
+    expect(textos(r)).not.toContain('Le llega como mensaje tuyo');
+  });
+
   it('guarda con la persona y la semana, y manda por el chat un mensaje que empieza con su nombre', async () => {
     mockEnviarPorChat.mockResolvedValue('msg-1');
     mockRegistrar.mockResolvedValue({});

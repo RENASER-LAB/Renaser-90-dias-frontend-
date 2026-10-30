@@ -17,6 +17,7 @@ import { TiempoLibreDeLaSemana } from '../../huecos/components/TiempoLibreDeLaSe
 import type { CargarHuecos } from '../../huecos/types/huecos.types';
 import { obtenerRadarDePersona } from '../api/cumplimientoDelLiderApi';
 import { DiaDeLaPersona } from '../components/DiaDeLaPersona';
+import { RespuestasDeLaPersona } from '../components/RespuestasDeLaPersona';
 import { Linea, MarcoDelLider } from '../components/MarcoDelLider';
 import { NavegacionDeSemanas } from '../../semaforo/components/NavegacionDeSemanas';
 import type { InicioSemanal } from '../../semaforo/hooks/useLecturaPorSemana';
@@ -53,6 +54,11 @@ import { ObservarScreen } from './ObservarScreen';
  *   que al volver está en la misma semana, sin releerse (ni registrar otra consulta).
  *
  * Un único scroll (`MarcoDelLider`); el retroceso del sistema vuelve a la lista del grupo.
+ *
+ * **Spec 018: arriba, dos respuestas.** Lo primero que se ve al tocar a una persona es «¿Programó?» (Sí o No, con sus hábitos
+ * con hora y sus acciones agendadas de hoy) y «¿Subió evidencias?» (de los hábitos de estos 7 días que la piden), en dos
+ * tarjetas iguales (`RespuestasDeLaPersona`); el detalle de los días va debajo, igual que antes. Y menos texto: se quitaron
+ * los párrafos que repetían lo que ya se ve (qué hace «Avisar a su mentor», por qué no hay días del mentor).
  *
  * **Administración y Alquimista la usan igual** (2026-10-27): el servidor les da la misma lectura que al líder. Con las
  * dos props opcionales que siguen cambia solo lo que dice la pantalla; sin ellas es exactamente la del líder.
@@ -147,6 +153,8 @@ export function PersonaDelLiderScreen({
         datos={datos}
       />
 
+      {datos ? <RespuestasDeLaPersona datos={datos} /> : null}
+
       <NavegacionDeSemanas lectura={lectura} />
 
       <CuerpoDeLaSemana
@@ -177,7 +185,6 @@ export function PersonaDelLiderScreen({
               deshabilitado={!datos}
               accessibilityLabel={`Avisar a su mentor sobre ${nombreVisible}`}
             />
-            <Linea>{`Le deja a ${mentor.nombre?.trim() || 'su mentor'} una observación sobre ${nombreVisible} y los días que estás viendo.`}</Linea>
           </>
         ) : null}
         {alAbrirFicha ? (
@@ -266,13 +273,9 @@ function CuerpoDeLaSemana({
 }) {
   const datos = lectura.datos;
   if (datos) {
-    return datos.dias.length === 0 ? (
-      <Linea>
-        {datos.noSeMide
-          ? `${nombre} lleva su propio programa y no se mide en el semáforo: no hay días que mostrar.`
-          : 'No hay nada que mostrar de estos días.'}
-      </Linea>
-    ) : (
+    /* Quien no se mide ya lo dice su encabezado («Mentor · No se mide en el semáforo»): no se repite en un renglón más. */
+    if (datos.dias.length === 0) return datos.noSeMide ? null : <Linea>No hay nada que mostrar de estos días.</Linea>;
+    return (
       <View style={{ gap: 10 }}>
         {datos.dias.map(dia => (
           <DiaDeLaPersona key={dia.fecha} dia={dia} abierto={diaAbierto === dia.fecha} alAlternar={() => alAlternarDia(dia.fecha)} />

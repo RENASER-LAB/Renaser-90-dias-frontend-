@@ -86,7 +86,7 @@ function Cuerpo({ reporte }: { reporte: ReporteApi }) {
     <>
       {reporte.ranked.length > 0 ? (
         <View style={{ gap: 10 }}>
-          <TituloDeSeccion detalle="De mayor a menor evaluación.">Mentores</TituloDeSeccion>
+          <TituloDeSeccion>Mentores</TituloDeSeccion>
           {reporte.ranked.map(e => <Entrada key={e.mentor.userId} entrada={e} reporte={reporte} />)}
         </View>
       ) : null}

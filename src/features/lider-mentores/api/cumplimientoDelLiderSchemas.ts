@@ -90,6 +90,22 @@ const resumenSchema = z
   })
   .passthrough();
 
+/**
+ * Spec 018. Aditivo y tolerante: un campo mal formado (un número que no es número, un booleano que falta) se pierde SOLO
+ * él —`.catch(null)`— y la ficha sigue sin la tarjeta «¿Programó?». Una cuenta imposible (más con hora que en total) también:
+ * mostrar «12 de 5» sería peor que no mostrar nada.
+ */
+const programacionSchema = z
+  .object({
+    habitosConHora: z.number().int().min(0),
+    habitosTotal: z.number().int().min(1),
+    accionesConHora: z.number().int().min(0),
+    accionesTotal: z.number().int().min(0),
+    programo: z.boolean(),
+  })
+  .passthrough()
+  .refine(p => p.habitosConHora <= p.habitosTotal && p.accionesConHora <= p.accionesTotal, 'la cuenta no cuadra');
+
 const semanaSchema = z
   .object({
     grupoId: z.string().nullish(),
@@ -111,6 +127,7 @@ const semanaSchema = z
     etiqueta: z.string().nullish(),
     porcentaje: z.number().nullish(),
     dias: z.array(diaSchema).nullish(),
+    programacion: programacionSchema.nullish().catch(null),
   })
   .passthrough();
 
@@ -277,6 +294,15 @@ export function aSemanaDePersona(crudo: SemanaCruda): SemanaDePersona {
     dias: (crudo.dias ?? [])
       .map(aDia)
       .sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0)),
+    programacion: crudo.programacion
+      ? {
+          habitosConHora: crudo.programacion.habitosConHora,
+          habitosTotal: crudo.programacion.habitosTotal,
+          accionesConHora: crudo.programacion.accionesConHora,
+          accionesTotal: crudo.programacion.accionesTotal,
+          programo: crudo.programacion.programo,
+        }
+      : null,
   };
 }
 

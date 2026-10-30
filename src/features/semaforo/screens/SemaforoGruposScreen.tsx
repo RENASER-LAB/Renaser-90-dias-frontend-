@@ -27,6 +27,9 @@ import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar
  * si mostrar la entrada; al abrirse vuelve a la ventana vigente y la relee, porque el barrido corre
  * cada hora y la entrada pudo quedar abierta desde temprano.
  *
+ * **Spec 018: sin la línea de ayuda bajo «Por grupo»** («Toca un grupo para ver a sus personas.» / «Solo cantidades: …»). Las
+ * tarjetas que se abren llevan su chevron y las que no, no lo llevan: la línea repetía lo que ya se ve.
+ *
  * Un único scroll, cuerpo de 16 px y controles de 48 px (§5).
  */
 export function SemaforoGruposScreen({
@@ -60,8 +63,6 @@ export function SemaforoGruposScreen({
   useEffect(() => {
     if (!conservar.current) volverAVigente.current();
   }, []);
-
-  const sePuedeAbrir = Boolean(onAbrirGrupo) && Boolean(lectura.datos?.grupos.some(g => g.puedeAbrirse));
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
@@ -97,11 +98,6 @@ export function SemaforoGruposScreen({
       >
         <ResumenDeGrupos
           lectura={lectura}
-          ayudaPorGrupo={
-            sePuedeAbrir
-              ? 'Toca un grupo para ver a sus personas.'
-              : 'Solo cantidades: a cada aprendiz lo acompaña y lo ve su mentor.'
-          }
           onAbrirGrupo={onAbrirGrupo ? grupo => onAbrirGrupo(grupo, lectura.inicio) : undefined}
           soloSiPuedeAbrirse
         />

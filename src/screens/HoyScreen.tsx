@@ -23,14 +23,16 @@ import { useCelulaQueAcompano } from '../features/mentor/hooks/useCelulaQueAcomp
 import { EntradaAlProgramaPropio } from '../features/programa/components/EntradaAlProgramaPropio';
 import { TarjetaMentorHoy } from '../features/mentor/components/TarjetaMentorHoy';
 import { entradaAlGrupoVisible, esLiderDeMentores, esOtroDeMisGrupos } from '../features/mentor/utils/entradaAlGrupo';
-import { TarjetaBandejaHoy } from '../features/tickets/components/TarjetaBandejaHoy';
 import { BandejaTicketsScreen } from '../features/tickets/screens/BandejaTicketsScreen';
-import { TarjetaMentoresHoy } from '../features/lider-mentores/components/TarjetaMentoresHoy';
-import { CumplimientoDelLiderScreen } from '../features/lider-mentores/screens/CumplimientoDelLiderScreen';
+import { CumplimientoDelLiderScreen, type GrupoAbierto } from '../features/lider-mentores/screens/CumplimientoDelLiderScreen';
 import { LiderMentoresScreen } from '../features/lider-mentores/screens/LiderMentoresScreen';
 import { alAbrirAviso, consumirRutaPendiente } from '../features/mentor/notificaciones/rutaDeAviso';
 import { TarjetaSemaforoHoy } from '../features/semaforo/components/TarjetaSemaforoHoy';
-import { TarjetaSemaforoGruposHoy } from '../features/semaforo/components/TarjetaSemaforoGruposHoy';
+import { ControlDePapelDeHoy } from '../features/hoy-por-papel/components/ControlDePapelDeHoy';
+import { MiGrupoEnHoy } from '../features/hoy-por-papel/components/MiGrupoEnHoy';
+import { MisMentoresEnHoy } from '../features/hoy-por-papel/components/MisMentoresEnHoy';
+import { usePapelDeHoy } from '../features/hoy-por-papel/hooks/usePapelDeHoy';
+import { papelesDeHoy } from '../features/hoy-por-papel/utils/papelesDeHoy';
 import { SemaforoScreen } from '../features/semaforo/screens/SemaforoScreen';
 import { useMiSemaforo } from '../features/semaforo/hooks/useMiSemaforo';
 import { usePublicarSemaforoDeHoy } from '../features/semaforo/estado/useSemaforoVigente';
@@ -39,7 +41,6 @@ import { useResumenPorGrupos } from '../features/semaforo/hooks/useLecturaPorSem
 import {
   comoAbrirElSemaforoDelGrupo,
   diasParaLaTarjeta,
-  entradaDelResumenVisible,
   hayQuePedirMiSemaforo,
   quienAbreElResumenPorGrupos,
 } from '../features/semaforo/utils/entradasDelSemaforo';
@@ -155,6 +156,9 @@ export default function HoyScreen() {
   };
   const [vistaMentor, setVistaMentor] = useState<'ninguna' | 'celula' | 'alumno'>('ninguna');
   const [alumnoAbierto, setAlumnoAbierto] = useState<AlumnoConEstado | null>(null);
+  /* Spec 018: la ficha abierta desde la lista de «Mi grupo» de Hoy vuelve a Hoy; la que se abre desde la pantalla del
+     grupo (o desde un aviso) vuelve a esa pantalla, como siempre. */
+  const [alumnoVieneDeHoy, setAlumnoVieneDeHoy] = useState(false);
   /* Semaforo de cumplimiento (D-168). Lo que el dueño autorizo agregar a Hoy el 2026-09-25 es esto
      y nada mas (ver AGENTS.md): la tarjeta del semaforo con el detalle que abre, la tarjeta del lider
      de mentores (abajo) y las rutas de los avisos del sabado. El detalle es estado de esta pantalla,
@@ -178,6 +182,34 @@ export default function HoyScreen() {
      que existe) y su pantalla. Para cualquier otro rol no se pide nada. */
   const semaforoGrupos = useResumenPorGrupos(esLider);
   const [enSemaforoGrupos, setEnSemaforoGrupos] = useState(false);
+  /* Spec 018: el grupo cuya fila se tocó en «Mis mentores». Con él, la pantalla del líder abre directo en ese grupo;
+     sin él (el aviso del sábado) abre en el resumen de siempre. */
+  const [grupoDeLaFila, setGrupoDeLaFila] = useState<GrupoAbierto | null>(null);
+  /* Spec 018: quien lidera mentores ve en Hoy tres papeles —su programa, su grupo y sus mentores— y elige cuál con un
+     control de arriba. Lo que tiene cada cuenta lo dice lo que ya se lee acá (el servidor), no el rol suelto: sin grupo
+     no hay «Mi grupo», y una entrada apagada por Soporte TI no se ofrece. Quien no lidera no ve el control: su Hoy es el
+     de siempre. */
+  const tieneGrupoParaElControl =
+    entradaAlGrupoVisible({ esMentor, rol: user?.role, fallo: celula.fallo }) &&
+    esDisponible(CLAVES.mentorMiGrupo) &&
+    (celula.vista !== null || celula.fallo !== null);
+  const papeles = papelesDeHoy({
+    esLider,
+    tienePrograma: programaPropioActivo,
+    tieneGrupo: tieneGrupoParaElControl,
+    tieneMentores: esDisponible(CLAVES.lider) || esDisponible(CLAVES.tickets) || esDisponible(CLAVES.semaforo),
+  });
+  const { papel: papelLeido, recordado, elegir: elegirPapel } = usePapelDeHoy(user?.id, papeles);
+  const conControl = papeles.length > 0;
+  /* Quien se quedó en «Mi grupo» la última vez: mientras el servidor no diga si acompaña un grupo esa opción todavía no
+     existe, y dibujar «Mi programa» para saltar al grupo medio segundo después es peor que esperar. */
+  const esperandoAlGrupo =
+    conControl && recordado === 'grupo' && !papeles.includes('grupo') && celula.cargando && celula.vista === null;
+  const papel = esperandoAlGrupo ? null : papelLeido;
+  /* Con el papel de mentores o de grupo, lo del programa propio queda oculto pero montado: volver a «Mi programa» es
+     instantáneo y no pierde nada (la conversación del orbe, el borrador de una foto). */
+  const mostrarPrograma = !conControl || papel === 'programa';
+  const ocultoSiNoEsElPrograma = mostrarPrograma ? null : styles.oculto;
   /* El aviso del sabado al mentor abre su grupo con el semaforo a la vista. */
   const [enfocarSemaforoDelGrupo, setEnfocarSemaforoDelGrupo] = useState(false);
   /* El aviso del sabado a administracion entra directo al semaforo de Administracion. La clave
@@ -360,10 +392,15 @@ export default function HoyScreen() {
   );
 
   const recargarSemaforo = miSemaforo.recargar;
+  const recargarGrupo = celula.recargar;
+  const releerGruposDelLider = semaforoGrupos.volverAVigente;
   const recargarTodo = useCallback(async () => {
     setRefreshing(true);
     // Las barras de la tarjeta del semaforo: sin esto el resumen se refrescaria y ellas no.
     recargarSemaforo();
+    // Spec 018: deslizar con «Mi grupo» o «Mis mentores» a la vista relee ESA lista.
+    if (papel === 'grupo') recargarGrupo();
+    if (papel === 'mentores') releerGruposDelLider();
     await Promise.all([
       recargarResumen(),
       cargarRocas(),
@@ -372,7 +409,17 @@ export default function HoyScreen() {
       recargarCapacidades(),
     ]);
     setRefreshing(false);
-  }, [recargarResumen, cargarRocas, recargarUltimaPublicacion, recargarHabitoAhora, recargarSemaforo, recargarCapacidades]);
+  }, [
+    recargarResumen,
+    cargarRocas,
+    recargarUltimaPublicacion,
+    recargarHabitoAhora,
+    recargarSemaforo,
+    recargarCapacidades,
+    papel,
+    recargarGrupo,
+    releerGruposDelLider,
+  ]);
 
   // Roca Prioritaria de Hoy: Posición 1 (Pareto Verde) o la primera disponible
   const rocaPrioritaria = rocas.find(r => r.posicion === 1) || rocas[0] || null;
@@ -548,14 +595,26 @@ export default function HoyScreen() {
      el resumen por grupos baja al grupo y a la persona: `CumplimientoDelLiderScreen` lo envuelve y maneja esos
      niveles por dentro (persona ← grupo ← resumen ← Hoy), sin otra vista de Hoy. */
   if (enSemaforoGrupos && esLider) {
-    return <CumplimientoDelLiderScreen lectura={semaforoGrupos} onSalir={() => setEnSemaforoGrupos(false)} />;
+    return (
+      <CumplimientoDelLiderScreen
+        lectura={semaforoGrupos}
+        grupoInicial={grupoDeLaFila ?? undefined}
+        onSalir={() => {
+          setEnSemaforoGrupos(false);
+          setGrupoDeLaFila(null);
+        }}
+      />
+    );
   }
   if (esMentor && vistaMentor === 'alumno' && alumnoAbierto) {
     return (
       <AlumnoScreen
         alumno={alumnoAbierto}
         grupoId={celula.vista?.celula.id ?? null}
-        onVolver={() => setVistaMentor('celula')}
+        onVolver={() => {
+          setVistaMentor(alumnoVieneDeHoy ? 'ninguna' : 'celula');
+          setAlumnoVieneDeHoy(false);
+        }}
       />
     );
   }
@@ -569,6 +628,7 @@ export default function HoyScreen() {
         enfocarSemaforo={enfocarSemaforoDelGrupo}
         onAbrirAlumno={alumno => {
           setAlumnoAbierto(alumno);
+          setAlumnoVieneDeHoy(false);
           setVistaMentor('alumno');
         }}
         vista={celula.vista}
@@ -637,17 +697,26 @@ export default function HoyScreen() {
           </Text>
         </View>
 
+        {/* Spec 018: quien lidera mentores elige qué ve en Hoy —su programa, su grupo o sus mentores—. Solo existe para
+            esa cuenta y con más de un papel disponible; para el resto Hoy es el de siempre, sin control. Mientras se lee
+            lo último que eligió (unos milisegundos, una vez) no se dibuja, para que Hoy no salte de un papel a otro. */}
+        {conControl && papel !== null ? (
+          <View style={styles.controlDePapel}>
+            <ControlDePapelDeHoy papeles={papeles} valor={papel} onCambiar={elegirPapel} />
+          </View>
+        ) : null}
+
         {/* La frase de confrontación del día. Va acá —pegada a "DÍA n DE 90" y ANTES de las
             métricas— porque la guía del cliente es explícita sobre para qué sirve: revelar, no
             informar. Debajo de los números ya sería un dato más. */}
-        <TarjetaConfrontacion diaPrograma={diaConocido} />
+        {mostrarPrograma ? <TarjetaConfrontacion diaPrograma={diaConocido} /> : null}
 
         {/* ========================================================================= */}
         {/* 2. MÉTRICAS CLAVE REALES: COHERENCIA Y RACHA                              */}
         {/* ========================================================================= */}
         </Aparicion>
 
-        <Aparicion retardo={70}>
+        <Aparicion retardo={70} style={ocultoSiNoEsElPrograma}>
         {/* Eran dos tarjetas con borde y fondo, una dorada y la otra gris sin motivo. Ahora son
             dos columnas de texto sobre el fondo de la pantalla, separadas por UNA línea de pelo:
             el único borde que queda es el que de verdad hace falta, porque sin él las dos cifras
@@ -714,7 +783,7 @@ export default function HoyScreen() {
         {/* ========================================================================= */}
         </Aparicion>
 
-        <Aparicion retardo={140}>
+        <Aparicion retardo={140} style={ocultoSiNoEsElPrograma}>
         <View style={[styles.hero, { height: heroSize }]}>
           {/* Sin anillos ni partícula detrás: el fénix es el centro y va sin fondo (pedido del dueño, 2026-10-06). */}
           {/* El centro del hero es el acompañante por voz (pedido del dueño, 2026-09-23). Antes
@@ -780,7 +849,41 @@ export default function HoyScreen() {
         </Aparicion>
 
         <Aparicion retardo={210} style={{ paddingBottom: 24 }}>
-        <View style={{ gap: space.gap }}>
+        {/* Spec 018, «Mi grupo»: los aprendices del grupo que acompaña quien lidera mentores, con su color y su %. */}
+        {papel === 'grupo' ? (
+          <MiGrupoEnHoy
+            vista={celula.vista}
+            cargando={celula.cargando}
+            fallo={celula.fallo}
+            onReintentar={celula.recargar}
+            onAbrirGrupo={() => setVistaMentor('celula')}
+            onAbrirAlumno={alumno => {
+              setAlumnoAbierto(alumno);
+              setAlumnoVieneDeHoy(true);
+              setVistaMentor('alumno');
+            }}
+          />
+        ) : null}
+
+        {/* Spec 018, «Mis mentores», solo para el líder de mentores: el resultado por grupo y, debajo, las consultas de
+            mentores y el padrón. Reemplaza a las tres tarjetas sueltas que tenía (tickets, semáforo por grupos y «Mis
+            mentores»): abren las mismas pantallas. */}
+        {papel === 'mentores' && esLider ? (
+          <MisMentoresEnHoy
+            lectura={semaforoGrupos}
+            verGrupos={esDisponible(CLAVES.semaforo)}
+            verConsultas={esDisponible(CLAVES.tickets)}
+            verMentores={esDisponible(CLAVES.lider)}
+            onAbrirGrupo={(grupo, inicio) => {
+              setGrupoDeLaFila({ grupoId: grupo.grupoId, nombre: grupo.grupoNombre?.trim() || 'Grupo sin nombre', inicio });
+              setEnSemaforoGrupos(true);
+            }}
+            onAbrirConsultas={() => setEnBandejaTickets(true)}
+            onAbrirMentores={() => setEnMisMentores(true)}
+          />
+        ) : null}
+
+        <View style={[{ gap: space.gap }, ocultoSiNoEsElPrograma]}>
           {/* Solo para ADMIN/ALQUIMISTA. El resto de Hoy no cambia para nadie. */}
           {/* Spec 002, fase 2: una entrada que todavía no le toca a esta cuenta (despliegue, rol personalizado) no se dibuja. */}
           {capacidades.administrar && esDisponible(CLAVES.admin) ? <TarjetaAdminHoy onAbrir={() => setEnAdministracion(true)} /> : null}
@@ -791,29 +894,14 @@ export default function HoyScreen() {
               como mentor, pero el backend no le deja tener grupo asignado, asi que esta tarjeta
               le decia para siempre que no tiene aprendices. Para todos los demas roles la
               funcion devuelve exactamente lo que devolvia `esMentor`. */}
-          {entradaAlGrupoVisible({ esMentor, rol: user?.role, fallo: celula.fallo }) && esDisponible(CLAVES.mentorMiGrupo) ? (
+          {/* Con el control de papel, el grupo del líder es «Mi grupo» y no una tarjeta más (spec 018). */}
+          {!conControl && entradaAlGrupoVisible({ esMentor, rol: user?.role, fallo: celula.fallo }) && esDisponible(CLAVES.mentorMiGrupo) ? (
             <TarjetaMentorHoy
               onAbrir={() => setVistaMentor('celula')}
               vista={celula.vista}
               cargando={celula.cargando}
               fallo={celula.fallo}
             />
-          ) : null}
-
-          {/* Solo para el LIDER DE MENTORES: es su unica pantalla propia, y el permiso
-              `VIEW_ALL_MENTOR_TICKETS` ya lo tiene. Ningun otro rol ve esta tarjeta — los
-              administradores tienen su propia entrada, y para el resto esta condicion es falsa,
-              asi que Hoy no cambia para nadie mas. */}
-          {/* Solo para el LIDER DE MENTORES: su padron, la ficha de cada mentor y el reporte del mes
-              (SDD 002, D-241). Para el resto la condicion es falsa: Hoy no cambia. */}
-          {esLider && esDisponible(CLAVES.lider) ? <TarjetaMentoresHoy onAbrir={() => setEnMisMentores(true)} /> : null}
-
-          {esLider && esDisponible(CLAVES.tickets) ? <TarjetaBandejaHoy onAbrir={() => setEnBandejaTickets(true)} /> : null}
-
-          {/* Solo para el LIDER DE MENTORES, y solo si el servidor ya tiene el resumen por grupos
-              (con 404 o 403 no aparece). Para el resto esta condicion es falsa: Hoy no cambia. */}
-          {esLider && entradaDelResumenVisible(semaforoGrupos) && esDisponible(CLAVES.semaforo) ? (
-            <TarjetaSemaforoGruposHoy onAbrir={() => setEnSemaforoGrupos(true)} />
           ) : null}
 
           {/* El programa propio (D-260): «Hacer mi programa de 90 días» a quien no tiene fila y, a quien
@@ -1071,6 +1159,10 @@ const styles = StyleSheet.create({
   cifras: {
     fontVariant: ['tabular-nums'],
   },
+  /* Spec 018: el control de papel va pegado a la línea de fase y día, con aire antes de lo que cambia. */
+  controlDePapel: { marginTop: 14, marginBottom: 4 },
+  /* Lo del programa propio cuando se mira otro papel: oculto y montado (volver es instantáneo, sin releer). */
+  oculto: { display: 'none' },
   programStatusBar: {
     flexDirection: 'row',
     alignItems: 'center',

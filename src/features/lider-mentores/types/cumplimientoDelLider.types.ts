@@ -79,6 +79,21 @@ export interface ResumenDeLaSemana {
   sinCumplir: number;
 }
 
+/**
+ * Spec 018: si la persona «programó» su día de HOY (no de la ventana de siete días). Lo cuenta y lo decide el servidor
+ * —al menos la mitad de sus hábitos con la hora que ella eligió y todas las acciones de hoy agendadas—; la app solo lo
+ * dice: `programo` es el «Sí» / «No» y las cuentas son el detalle de abajo.
+ */
+export interface ProgramacionDeLaPersona {
+  /** De los hábitos que le tocan hoy (ni apagados ni en pausa), cuántos tienen hora propia. */
+  habitosConHora: number;
+  habitosTotal: number;
+  /** De las acciones de sus objetivos para hoy, cuántas tienen hora de inicio. */
+  accionesConHora: number;
+  accionesTotal: number;
+  programo: boolean;
+}
+
 /** `GET /api/v1/leadership/groups/{g}/people/{p}/week`. */
 export interface SemanaDePersona {
   grupoId: string | null;
@@ -113,6 +128,11 @@ export interface SemanaDePersona {
   noSeMide: boolean;
   porcentaje: number | null;
   dias: DiaDeLaPersona[];
+  /**
+   * `null` si el servidor no la manda: un backend anterior (la ficha queda como antes, sin la tarjeta «¿Programó?»), o no
+   * hay nada que programar hoy (ausente y `null` se leen igual). La app no la inventa ni la calcula.
+   */
+  programacion?: ProgramacionDeLaPersona | null;
 }
 
 /** `GET /api/v1/wall/{id}`: la publicación del Muro del post diario. */
