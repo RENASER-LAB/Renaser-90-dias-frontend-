@@ -1,5 +1,5 @@
 import { sumarDias } from './semanasDeHuecos';
-import type { DiaConHuecos, HuecoDelDia, HuecoQueSeRepite, ResumenDeHuecos, VentanaDelDia } from '../types/huecos.types';
+import type { ResumenDeHuecos } from '../types/huecos.types';
 
 /**
  * Los textos de la sección «Tiempo libre de la semana», en tipo oración y con tuteo de la app. Todo puro: la
@@ -11,12 +11,6 @@ const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', '
 const DIAS_LARGOS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 /** Lunes = 1 … domingo = 7, con la inicial en mayúscula solo al abrir la frase (ver `diasEnPalabras`). */
 const DIAS_CORTOS: Record<number, string> = { 1: 'lun', 2: 'mar', 3: 'mié', 4: 'jue', 5: 'vie', 6: 'sáb', 7: 'dom' };
-
-/** El menor hueco que el servidor cuenta. Se dice en la línea de un día sin huecos. */
-export const MINUTOS_DEL_HUECO_MINIMO = 30;
-
-export const TEXTO_DE_DIA_SIN_VENTANA = 'Sin hora de Despertar o de Dormir: se cuenta todo el día';
-export const TEXTO_DE_DIA_SIN_HUECOS = `Sin huecos de ${MINUTOS_DEL_HUECO_MINIMO} min o más`;
 
 /** `120` → `2 h`; `90` → `1 h 30 min`; `45` → `45 min`; `2870` → `47 h 50 min`. */
 export function duracionEnPalabras(minutos: number): string {
@@ -52,26 +46,6 @@ export function tramoEnPalabras(desde: string, hasta: string): string {
   return `${desde}–${hasta}`;
 }
 
-/** `15:00–17:00 · 2 h`. */
-export function lineaDelHueco(hueco: HuecoDelDia): string {
-  return `${tramoEnPalabras(hueco.desde, hueco.hasta)} · ${duracionEnPalabras(hueco.minutos)}`;
-}
-
-/** Lo que dice el lector de pantalla de un hueco: `De 15:00 a 17:00, 2 horas`. */
-export function huecoHablado(hueco: HuecoDelDia): string {
-  return `De ${hueco.desde} a ${hueco.hasta}, ${duracionHablada(hueco.minutos)}`;
-}
-
-/** `Lun, mié y jue · 15:00–17:00`. */
-export function lineaDelHuecoQueSeRepite(hueco: HuecoQueSeRepite): string {
-  return `${diasEnPalabras(hueco.dias)} · ${tramoEnPalabras(hueco.desde, hueco.hasta)}`;
-}
-
-/** `De 05:30 a 22:30`, o —sin Despertar ni Dormir— que cuenta el día entero. */
-export function ventanaEnPalabras(ventana: VentanaDelDia | null): string {
-  return ventana ? `De ${ventana.desde} a ${ventana.hasta}` : TEXTO_DE_DIA_SIN_VENTANA;
-}
-
 /**
  * Lo real de la semana: `32 a tiempo · 6 tarde · 4 sin cumplir`. `null` cuando no hay nada que contar (los tres en
  * cero o sin dato): una semana por venir no tiene «lo real» y escribir ceros parecería un resultado.
@@ -82,11 +56,6 @@ export function lineaDeLoReal(resumen: Pick<ResumenDeHuecos, 'cumplidosATiempo' 
   const sinCumplir = resumen.noCumplidos ?? 0;
   if (aTiempo + tarde + sinCumplir === 0) return null;
   return `${aTiempo} a tiempo · ${tarde} tarde · ${sinCumplir} sin cumplir`;
-}
-
-/** Una cifra de tiempo del resumen; sin dato, un guion (no un «0 min» inventado). */
-export function tiempoDelResumen(minutos: number | null): string {
-  return minutos === null ? '—' : duracionEnPalabras(minutos);
 }
 
 /**
@@ -111,11 +80,4 @@ export function diaCorto(iso: string): string {
   const d = new Date(`${iso}T00:00:00Z`);
   if (Number.isNaN(d.getTime())) return iso;
   return `${DIAS_LARGOS[d.getUTCDay()]} ${d.getUTCDate()}`;
-}
-
-/** `Sin huecos de 30 min o más`, `1 hueco` o `3 huecos`: la línea de un día plegado. */
-export function resumenDelDia(dia: Pick<DiaConHuecos, 'huecos'>): string {
-  const n = dia.huecos.length;
-  if (n === 0) return TEXTO_DE_DIA_SIN_HUECOS;
-  return n === 1 ? '1 hueco' : `${n} huecos`;
 }

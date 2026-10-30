@@ -341,6 +341,51 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       (`15:00–17:00 · 2 h`; un día sin ninguno dice «Sin huecos de 30 min o más»). **Si la semana trae 8 huecos o más, cada día
       se pliega** (botón de 48 con chevron y una línea «2 huecos»); con menos se lee de corrido. Abrir un día es instantáneo, sin
       animación, y al cambiar de semana vuelven a quedar plegados. Todo calculado por el servidor: la app no suma ni cuenta.
+      > **Corregido 2026-10-29 (el dueño, sobre la versión de arriba: «debe de estar mejor diseño como por día, ni un junior hace
+      > eso, más intuitivo»; diseño aprobado en la vista previa, pestaña «2 · Tiempo libre por día»).** Lo de arriba —el resumen en
+      > dos cifras, «Lo real de la semana», «Huecos que se repiten» y los siete días plegables con su lista de huecos— **ya no es
+      > cierto**; `FilaDelDia` y `ResumenDeLaSemana` se borraron. Ahora se lee **por día**. Lo que cambia y nada más:
+      > * **Arriba**, la semana con sus flechas (como antes) y una línea «**72 h 20 min** libres esta semana, de Despertar a Dormir»:
+      >   la suma de los días que tienen ventana. Un día sin ventana no suma (contaría el sueño como tiempo libre); si ningún día
+      >   la tiene, el total dice «—».
+      > * **Siete columnas de lunes a domingo** (`ColumnasDeLaSemana`): letra del día, una barra vertical cuyo dorado es la proporción
+      >   libre de la ventana de ese día (`minutosLibres` / ventana), las horas libres debajo («4.5 h», «13 h»; «—» sin ventana o
+      >   sin dato) y un punto en hoy. La columna entera es el botón («Jueves 29, 4 horas 30 minutos libres, hoy», con estado
+      >   elegido); ~43 dp de ancho en un teléfono de 360 y más de 110 de alto: siete columnas no dan 48 de ancho, el alto compensa.
+      >   La tarjeta de la sección baja su relleno lateral de 17 a 12 para eso. Tocar una columna vibra con `tacto.seleccion()`.
+      > * **El día elegido** (`AgendaDelDia`, abre en hoy; si hoy no cae en la semana, en el primer día con ventana): «Jueves 29 ·
+      >   hoy» con su ventana («05:30 a 22:30»); etiquetas «5 a tiempo · 1 tarde · 0 sin cumplir» (verde / dorado / rojo, siempre con
+      >   número y palabra) o «Todavía no llega» en un día por venir, y «10 h 20 min libres» con borde dorado. Tres ceros no se
+      >   escriben (un día sin registros no tiene resultado). Y la **agenda en una línea de tiempo vertical**
+      >   (`LineaDeTiempoDelDia`, con vistas posicionadas, sin SVG): de Despertar a Dormir, con marca cada 2 horas; lo ocupado en
+      >   bloques grises con el nombre del hábito, la acción o el evento (la agenda personal, solo «Ocupado»); cada hueco de 30
+      >   minutos o más en dorado con su duración y su rango. **Los bloques que se cruzan** van lado a lado, en columnas
+      >   (`acomodarEnCarriles`): dos cosas a la misma hora se ven las dos. Un bloque más corto que una línea de texto va sin
+      >   texto (su nombre lo lee el lector de pantalla: «Despertar, de 05:30 a 06:00»).
+      > * **Al final «Se repite»** (`SeRepite`): tres filas como máximo («Lunes a viernes · 08:00–09:00», «Casi todos los días»,
+      >   «Fin de semana»…), las que se apoyan en más días primero; sin ninguna, no se dibuja.
+      > * **Sin la hora de Despertar o de Dormir** (`TarjetaDeHoraQueFalta`): si NINGÚN día de la semana tiene ventana, una sola
+      >   tarjeta arriba dice «Falta su hora de Despertar» (o de Dormir, o las dos, o «Su hora de Dormir va antes que la de
+      >   Despertar») y pide elegirla en Training → Planificar; no hay columnas ni agenda, no se dibuja el sueño como tiempo libre y
+      >   el total dice «—». Si solo faltan en algunos días, esos días lo dicen en su agenda y no suman al total.
+      > * **Movimiento** (`emil-design-eng`, `animate-expo`): elegir un día se hace decenas de veces por visita, así que es
+      >   **instantáneo** (el cambio de fondo y de borde, la escala 0.97 de `Presionable` y el «tic»); nada se anima en la línea de
+      >   tiempo, y nunca la altura. Con «reducir movimiento» no hay nada que quitar.
+      > * **Letra grande**: la línea de tiempo mide `0,66 dp × minuto × la escala de la letra del sistema` (hasta 1,6): un bloque
+      >   de 30 minutos siempre tiene el alto de una línea de texto, también al 130 %. La cifra bajo cada barra se achica en vez de
+      >   cortarse.
+      > * **Lo que llega del servidor** (aditivo, spec 015 `FR-028`; el backend con esta corrección va primero): por día `ocupados`
+      >   (bloques con `desde`, `hasta`, `tipo` —`HABITO`, `ACCION`, `EVENTO`, `AGENDA`— y `titulo`), `cumplidosATiempo`,
+      >   `cumplidosTarde`, `noCumplidos` y `sinVentanaPor`; y por semana `hoy` (el día de hoy en la zona de la persona: la app no
+      >   usa el reloj del teléfono de quien acompaña para decir cuál es hoy). El esquema es tolerante: un tipo desconocido se dibuja
+      >   como un bloque más, un bloque roto se pierde solo él, y la agenda personal nunca lleva nombre aunque el servidor lo mande.
+      > * **Una semana cerrada no trae `ocupados` ni lo cumplido de cada día** (la foto semanal guarda tiempo, no nombres): ahí se
+      >   dibujan los huecos dorados sobre un fondo liso con la nota «De una semana cerrada solo queda guardado el tiempo libre.», no
+      >   hay etiquetas de lo cumplido por día y «32 a tiempo · 6 tarde · 4 sin cumplir en la semana» sale del resumen. Contra un
+      >   servidor sin esta corrección, la semana en curso dice «Todavía no hay detalle de lo que ocupa este día.».
+      > * **No cambian**: quién lo ve (solo el acompañamiento), las rutas, las flechas y sus topes, la lectura por semana, el 403 y el
+      >   404 que esconden la sección, los fallos con «Reintentar», ni las tres fichas que la usan. Sin dependencias nuevas.
+      >   **Hace falta un APK nuevo** y el backend con esta corrección.
     * **Semanas**: la primera lectura es la semana en curso de la persona (sin `semana`: el servidor sabe su zona). ‹ llega
       hasta `primeraSemana` y › hasta la semana en curso; nunca se pide el futuro ni antes de su primera semana (el servidor
       respondería 400). Sin `primeraSemana` no se inventa un tope: ‹ queda apagado. Las flechas dicen «Tiempo libre: semana
