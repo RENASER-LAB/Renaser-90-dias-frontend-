@@ -21,6 +21,10 @@ appId: com.renaser.app
 # Marcar el sábado: «Solo sáb», su interruptor y las horas que sigue (las de todos los días).
 - tapOn: "Sábado.*"
 - assertVisible: "Solo sáb"
+# «Tus horas» queda en el borde de abajo de la pantalla: el interruptor se baja a la vista antes de mirarlo.
+- scrollUntilVisible:
+    element: "Sin Radar ese día"
+    direction: DOWN
 - assertVisible: "Sin Radar ese día"
 # Con la fila de días, el contador queda debajo del interruptor: se baja hasta él.
 - scrollUntilVisible:
