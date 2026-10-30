@@ -11,7 +11,7 @@ appId: com.renaser.app
     direction: DOWN
     centerElement: true
     timeout: 30000
-- assertVisible: "Acción de tus objetivos"
+- assertVisible: ".*[Aa]cción de tus objetivos.*"
 - tapOn: ".*Llamar a mi mentor.*"
 - extendedWaitUntil:
     visible: "Marcar como hecha"
