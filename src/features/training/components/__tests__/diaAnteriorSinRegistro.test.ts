@@ -292,7 +292,7 @@ describe('un día ANTERIOR: no se monta ningún registro y nada escribe', () => 
     await pulsar(conEtiqueta(raiz!, 'Jueves 29, hoy'));
     await irAlDiaAnterior();
     expect(pedidosDeDias()).toHaveLength(1);
-    expect(textos(raiz!)).toContain('No pudimos leer ese día.');
+    expect(textos(raiz!)).toContain('No pudimos cargar este día.');
     mockRespuestas.set('/habit-tracks/day?date=2026-10-28', [registroDelServidor('hecho', 'Agua tibia', 'COMPLETADO', '06:00:00')]);
     const reintentar = raiz!.root.findAll(n => n.props.accessibilityRole === 'button' && typeof n.props.onPress === 'function' && textosDe(n) === 'Reintentar')[0];
     await pulsar(reintentar);

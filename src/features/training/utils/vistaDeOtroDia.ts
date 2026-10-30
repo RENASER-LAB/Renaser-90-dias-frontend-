@@ -28,7 +28,8 @@ export interface VistaDeOtroDia {
 
 export const TEXTO_PLANIFICACION_FUTURA = 'Es tu planificación. Para cambiar una hora, toca el engranaje.';
 export const TEXTO_LEYENDO_EL_DIA = 'Leyendo ese día…';
-export const TEXTO_LECTURA_FALLIDA = 'No pudimos leer ese día.';
+/** Pedido del dueño (2026-10-30): una línea y «Reintentar»; no se manda a otra pantalla cuando lo que toca es reintentar. */
+export const TEXTO_LECTURA_FALLIDA = 'No pudimos cargar este día.';
 /** El servidor respondió `[]`: ese día no hubo hábitos registrados. No se inventan ✓ ni candados. */
 export const TEXTO_SIN_HABITOS_REGISTRADOS = 'Ese día no tuviste hábitos registrados.';
 
@@ -93,7 +94,7 @@ export function vistaDeOtroDia(params: {
     items: params.itemsPlanificados(),
     conLectura: false,
     resumen: 'Así lo planificaste. Ese día ya cerró.',
-    nota: huboError ? `${TEXTO_LECTURA_FALLIDA} ${TEXTO_SIN_LECTURA_DEL_DIA}` : TEXTO_SIN_LECTURA_DEL_DIA,
+    nota: huboError ? TEXTO_LECTURA_FALLIDA : TEXTO_SIN_LECTURA_DEL_DIA,
     puedeReintentar: huboError,
   };
 }

@@ -65,14 +65,20 @@ describe('qué se ve en un día que no es hoy', () => {
     }
   });
 
-  for (const estado of ['sin-datos', 'error'] as const) {
-    it(`con ${estado}: lo planificado y «Lo que hiciste ese día está en Yo → Mis evidencias.»`, () => {
-      const { v } = vista('pasado', { estado });
-      expect(v.items).toBe(plan);
-      expect(v.conLectura).toBe(false);
-      expect(v.nota).toContain('Lo que hiciste ese día está en Yo → Mis evidencias.');
-    });
-  }
+  it('sin datos: lo planificado y «Lo que hiciste ese día está en Yo → Mis evidencias.»', () => {
+    const { v } = vista('pasado', { estado: 'sin-datos' });
+    expect(v.items).toBe(plan);
+    expect(v.conLectura).toBe(false);
+    expect(v.nota).toBe('Lo que hiciste ese día está en Yo → Mis evidencias.');
+  });
+
+  it('con error: lo planificado y una sola línea, «No pudimos cargar este día.», con «Reintentar» (pedido del dueño, 30/10)', () => {
+    const { v } = vista('pasado', { estado: 'error' });
+    expect(v.items).toBe(plan);
+    expect(v.conLectura).toBe(false);
+    expect(v.nota).toBe('No pudimos cargar este día.');
+    expect(v.puedeReintentar).toBe(true);
+  });
 
   it('solo el error ofrece «Reintentar»', () => {
     expect(vista('pasado', { estado: 'error' }).v.puedeReintentar).toBe(true);
