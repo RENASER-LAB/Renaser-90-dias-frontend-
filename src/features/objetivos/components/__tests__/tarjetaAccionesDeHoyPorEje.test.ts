@@ -158,7 +158,7 @@ describe('la hoja de un eje', () => {
   it('la acción que se pasó y la que espera a la verde se dicen con palabras, además del símbolo', () => {
     montar([roca('Llamar', 'RELACIONES', '13:00'), roca('Verde', 'CUERPO', '16:00'), roca('Amarilla', 'CUERPO', '17:00', { posicion: 2, bloqueada: true })]);
     act(() => tocable('Relaciones').props.onPress());
-    expect(textos()).toContain('Se te pasó la hora · todavía puedes registrarla hoy');
+    expect(textos()).toContain('Se te pasó la hora · todavía puedes cumplir tu compromiso');
     act(() => mockHojas[mockHojas.length - 1].alCerrar());
     act(() => tocable('Cuerpo').props.onPress());
     expect(textos()).toContain('Se abre al completar la primera');

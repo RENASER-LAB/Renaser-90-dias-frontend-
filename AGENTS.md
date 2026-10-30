@@ -367,7 +367,12 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       `/home`; lo que no se sabe no se inventa), una barrita por acción y una fila por eje que tenga acciones hoy, **en el orden
       de las prioridades** (el principal primero): ícono del eje (`iconoDelEje`), «n de m», un símbolo por acción y «Sigue: X ·
       16:00», «Se te pasó: X» o «Todo cumplido». Los símbolos tienen forma, no solo color: ✓ cumplida (`checkCircle`), círculo
-      vacío pendiente, reloj rojo «se te pasó la hora» (`clock`) y candado si espera a la verde por Pareto (`lock`).
+      vacío pendiente, reloj «se te pasó la hora» (`clock`) y candado si espera a la verde por Pareto (`lock`).
+      > **Corregido 2026-10-29 (mismo día, tras el E2E).** El reloj y «Se te pasó: X» iban en rojo y la hoja decía «todavía
+      > puedes registrarla hoy». Ahora van en dorado y la hoja dice «Se te pasó la hora · todavía puedes cumplir tu
+      > compromiso», como Training (pedido del dueño: lo atrasado no habla de puntos, invita a cumplir). «Registrar en
+      > Training» no abría la acción: al volver a Training se relee de cero y el pedido se buscaba en la lista todavía vacía;
+      > ahora se busca en lo que trajo `useTraining` (lo mismo para el aviso del teléfono que abre un hábito).
       Reglas (`objetivos/utils/accionesDeHoy.ts`): cumplida manda sobre todo; una bloqueada por Pareto es candado aunque su hora
       haya pasado; **«se te pasó» es solo «pendiente y su hora ya pasó»** (Training es más generoso: una acción queda atrasada
       cuando llega la hora del siguiente ítem del día, hábitos incluidos, y Plan no lee los hábitos); la que sigue es la primera

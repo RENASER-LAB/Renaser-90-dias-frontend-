@@ -80,6 +80,8 @@ export function FilaDelDia({
     item.hora ?? 'Sin hora',
     item.titulo,
     sub.marca,
+    item.tipo === 'evento' ? (item.lugar ? `evento, ${item.lugar}` : 'evento') : item.tipo === 'accion' ? 'acción de tus objetivos' : null,
+    sub.texto || null,
     modo === 'hecho' ? 'hecho' : modo === 'cerrado' ? 'ya no se puede registrar' : null,
   ]
     .filter(Boolean)
@@ -101,13 +103,13 @@ export function FilaDelDia({
           },
         ]}
       />
-      {sub.marca || sub.texto ? (
-        <Text style={[t.small, { color: c.textSoft }]} numberOfLines={fontScale > 1.15 ? 4 : 2}>
-          {sub.marca ? <Text style={{ color: c.goldInk, fontFamily: 'Jost_700Bold' }}>{sub.marca}</Text> : null}
-          {sub.marca && sub.texto ? ' · ' : ''}
-          {sub.texto ? (
-            <Text style={sub.tonoDeAviso ? { color: c.danger, fontFamily: 'Jost_500Medium' } : undefined}>{sub.texto}</Text>
-          ) : null}
+      {/* Solo lo atrasado lleva una línea; «Te toca ahora» y de qué es lo oye el lector (pedido del dueño, 29/10). */}
+      {sub.texto ? (
+        <Text
+          style={[t.small, { color: c.textSoft }, sub.tonoDeAviso ? { color: c.danger, fontFamily: 'Jost_500Medium' } : null]}
+          numberOfLines={fontScale > 1.15 ? 4 : 2}
+        >
+          {sub.texto}
         </Text>
       ) : null}
     </View>

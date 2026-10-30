@@ -118,7 +118,8 @@ export function textoDelEstado(estado: EstadoDeLaAccion, cumplidaA: string | nul
     case 'esperaALaVerde':
       return 'Se abre al completar la primera';
     case 'sePaso':
-      return 'Se te pasó la hora · todavía puedes registrarla hoy';
+      // Lo mismo que Training (pedido del dueño, 29/10): no se habla de puntos ni se alarma; se invita a cumplir.
+      return 'Se te pasó la hora · todavía puedes cumplir tu compromiso';
     case 'pendiente':
       return 'Pendiente';
   }

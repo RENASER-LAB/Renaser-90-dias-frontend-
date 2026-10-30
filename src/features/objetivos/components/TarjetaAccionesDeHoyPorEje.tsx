@@ -147,7 +147,7 @@ export function TarjetaAccionesDeHoyPorEje({
                   ))}
                 </View>
                 <Text
-                  style={[t.small, estilos.texto, { color: f.sigue?.estado === 'sePaso' ? c.danger : c.textSoft }]}
+                  style={[t.small, estilos.texto, { color: f.sigue?.estado === 'sePaso' ? c.goldInk : c.textSoft }]}
                 >
                   {fraseDeLaFila(f)}
                 </Text>
@@ -201,7 +201,7 @@ export function TarjetaAccionesDeHoyPorEje({
                       t.small,
                       estilos.texto,
                       {
-                        color: estado === 'cumplida' ? c.success : estado === 'sePaso' ? c.danger : c.textSoft,
+                        color: estado === 'cumplida' ? c.success : estado === 'sePaso' ? c.goldInk : c.textSoft,
                         fontFamily: estado === 'cumplida' ? 'Jost_700Bold' : 'Jost_400Regular',
                       },
                     ]}
@@ -231,7 +231,8 @@ function Simbolo({ estado, tamano }: { estado: EstadoDeLaAccion; tamano: number 
     case 'esperaALaVerde':
       return <Icon name="lock" size={tamano} color={c.textSoft} />;
     case 'sePaso':
-      return <Icon name="clock" size={tamano} color={c.danger} />;
+      // Dorado y no rojo, como «Se te pasó la hora» de Training (29/10): el reloj ya dice qué pasó sin depender del color.
+      return <Icon name="clock" size={tamano} color={c.goldInk} />;
     case 'pendiente':
       return (
         <View

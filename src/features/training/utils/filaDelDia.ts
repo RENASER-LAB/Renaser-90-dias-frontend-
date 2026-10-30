@@ -4,7 +4,7 @@ import type { MarcaDelPrimero } from './listaDelDia';
 import { TEXTO_DE_LA_MARCA } from './listaDelDia';
 import type { ItemDelDia } from './itemsDelDia';
 import { CLAVES_CON_FLUJO_PROPIO } from './registroConFotoEnTraining';
-import { avisoDeHoraPasada } from './tarjetaDelHabito';
+import { AVISO_DE_HORA_PASADA } from './tarjetaDelHabito';
 
 /**
  * Qué hace cada fila de Training y qué dice (spec 014). Lógica pura: no registra nada, solo decide a dónde lleva
@@ -157,16 +157,15 @@ export function subtituloDeLaFila(
   ahoraMs: number,
 ): { marca: string | null; texto: string; tonoDeAviso: boolean } {
   const textoDeLaMarca = marca ? TEXTO_DE_LA_MARCA[marca] : null;
-  if (item.tipo === 'evento') {
-    return { marca: textoDeLaMarca, texto: item.lugar ? `Evento · ${item.lugar}` : 'Evento', tonoDeAviso: false };
+  // Pedido del dueño (2026-10-29, dos veces): la fila es solo el nombre, sin «Cuerpo · 8 pts», «Acción de tus
+  // objetivos», «Evento · Zoom» ni «Te toca ahora» a la vista; eso va en la hoja o en lo que oye el lector de pantalla.
+  // Lo único que se escribe es lo atrasado (hábito o acción): la invitación a cumplir, sin hablar de puntos. Antes salía
+  // solo cuando el hábito ya pagaba menos, y en la misma sección unos lo decían y otros no (E2E del 29/10).
+  void ahoraMs;
+  if (modo === 'atrasado' && item.tipo !== 'evento') {
+    return { marca: textoDeLaMarca, texto: AVISO_DE_HORA_PASADA, tonoDeAviso: false };
   }
-  if (item.tipo === 'accion') {
-    return { marca: textoDeLaMarca, texto: 'Acción de tus objetivos', tonoDeAviso: false };
-  }
-  // Pedido del dueño (2026-10-29): la fila de un hábito es solo su nombre; la dimensión y los puntos van en la hoja.
-  // Atrasado, la invitación a cumplir, sin hablar de puntos.
-  const aviso = modo === 'atrasado' && item.habit ? avisoDeHoraPasada(item.habit, ahoraMs) : null;
-  return { marca: textoDeLaMarca, texto: aviso ?? '', tonoDeAviso: false };
+  return { marca: textoDeLaMarca, texto: '', tonoDeAviso: false };
 }
 
 /* ------------------------------------------------------------------------------------------------
