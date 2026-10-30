@@ -51,6 +51,10 @@ appId: com.renaser.app
 - tapOn: "20:00"
 - tapOn: "11:00"
 - assertVisible: "2 de 12 horas elegidas"
+# El botón queda debajo de la cuadrícula de horas: se baja hasta él.
+- scrollUntilVisible:
+    element: "Guardar horas · dom"
+    direction: DOWN
 - tapOn: "Guardar horas · dom"
 - extendedWaitUntil:
     visible: "Todos los días"
