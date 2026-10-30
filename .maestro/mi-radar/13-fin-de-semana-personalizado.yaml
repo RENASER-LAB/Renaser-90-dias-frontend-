@@ -1,20 +1,30 @@
 # 13 — Por día de la semana: el fin de semana en Personalizado con 3 veces; hoy y lo pasado con candado y sin poder marcarse
 # (spec 019, escenario 13). Se corre de LUNES A VIERNES: sábado y domingo son los días que vienen.
-# cuenta: aprendiz (día 10 con Mi Radar encendido en Automático, Despertar 05:30 y Dormir 22:30; correr después de 05 y antes
-# de 07). Después hay que mirar `dumpsys alarm`: el sábado y el domingo con tres alarmas semanales (06, 14 y 22) (lo hace el
+# cuenta: aprendiz (día 10 con Despertar 05:30 y Dormir 22:30; si Mi Radar está apagado —por ejemplo después de 07— el flujo lo
+# enciende primero, así que corre en cualquier orden). Después hay que mirar `dumpsys alarm`: el sábado y el domingo con tres alarmas semanales (06, 14 y 22) (lo hace el
 # informe, no el flujo).
 appId: com.renaser.app
 ---
 - evalScript: ${output.hoy = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'][new Date().getDay()]}
 - runFlow: ../comun/ya-adentro.yaml
 - tapOn: "YO"
+# La fila de Yo dice «Encendido · 05:30 a 22:30 · 17 veces» o «Apagado».
 - scrollUntilVisible:
-    element: "Encendido · .*"
+    element: "(Encendido · .*|Apagado)"
     direction: DOWN
-- tapOn: "Encendido · .*"
+- tapOn: "(Encendido · .*|Apagado)"
+- extendedWaitUntil:
+    visible: "Encendido"
+    timeout: 20000
+# Apagado: se enciende (rige en el acto) y queda en Automático.
+- runFlow:
+    when:
+      notVisible: "Personalizado"
+    commands:
+      - tapOn: "Encendido"
 - extendedWaitUntil:
     visible: "Personalizado"
-    timeout: 20000
+    timeout: 30000
 # Hoy no se puede marcar: no pasa a «Solo …».
 - tapOn: "${output.hoy}.*"
 - assertNotVisible: "Solo .*"

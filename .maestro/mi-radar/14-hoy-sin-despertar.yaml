@@ -20,8 +20,9 @@ appId: com.renaser.app
 - assertNotVisible: "Ahora: .*"
 - takeScreenshot: 14b-falta-el-despertar
 - tapOn: "Programar mi Despertar"
-# Lleva a Training, donde se programa el Despertar (y el Dormir).
+# Lleva a la pestaña Training (con la fase y el día arriba), donde se programa el Despertar y el Dormir.
 - extendedWaitUntil:
-    visible: "Planificar.*"
+    visible: "El Ciclo Alquímico · Día .*"
     timeout: 30000
+- assertNotVisible: "Programar mi Despertar"
 - takeScreenshot: 14c-training
