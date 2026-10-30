@@ -205,11 +205,17 @@ describe('lo que dice la fila', () => {
     expect(sub.tonoDeAviso).toBe(false);
   });
 
-  it('un evento dice dónde es; una acción, que es de los objetivos', () => {
+  it('un evento y una acción también son solo su nombre; atrasada, la acción invita a cumplir (pedido del dueño, 29/10)', () => {
     const ahora = Date.now();
-    expect(subtituloDeLaFila(item({ tipo: 'evento', lugar: 'Zoom' }, null), 'hoy', null, ahora).texto).toBe('Evento · Zoom');
-    expect(subtituloDeLaFila(item({ tipo: 'evento', lugar: null }, null), 'hoy', null, ahora).texto).toBe('Evento');
-    expect(subtituloDeLaFila(item({ tipo: 'accion' }, null), 'hoy', null, ahora).texto).toBe('Acción de tus objetivos');
+    expect(subtituloDeLaFila(item({ tipo: 'evento', lugar: 'Zoom' }, null), 'hoy', null, ahora).texto).toBe('');
+    expect(subtituloDeLaFila(item({ tipo: 'accion' }, null), 'hoy', 'ahora', ahora)).toEqual({ marca: 'Te toca ahora', texto: '', tonoDeAviso: false });
+    expect(subtituloDeLaFila(item({ tipo: 'accion' }, null), 'atrasado', null, ahora).texto).toBe('Todavía puedes cumplir tu compromiso hoy');
+    expect(subtituloDeLaFila(item({ tipo: 'evento' }, null), 'atrasado', null, ahora).texto).toBe('');
+  });
+
+  it('todo hábito atrasado invita a cumplir, aunque todavía pague completo (E2E del 29/10)', () => {
+    const atrasado = item({}, { estado: 'PENDIENTE', pointsAtStake: 10, maxPoints: 10, deadline: '2026-10-29T23:00:00Z' });
+    expect(subtituloDeLaFila(atrasado, 'atrasado', null, Date.parse('2026-10-29T12:00:00Z')).texto).toBe('Todavía puedes cumplir tu compromiso hoy');
   });
 
   it('un día planificado no promete puntos', () => {
