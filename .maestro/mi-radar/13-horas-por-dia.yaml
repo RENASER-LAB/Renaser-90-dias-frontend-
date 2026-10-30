@@ -22,6 +22,10 @@ appId: com.renaser.app
 - tapOn: "Sábado.*"
 - assertVisible: "Solo sáb"
 - assertVisible: "Sin Radar ese día"
+# Con la fila de días, el contador queda debajo del interruptor: se baja hasta él.
+- scrollUntilVisible:
+    element: "3 de 12 horas elegidas"
+    direction: DOWN
 - assertVisible: "3 de 12 horas elegidas"
 # Nada tocado, nada que guardar.
 - assertNotVisible: "Guardar horas · sáb"

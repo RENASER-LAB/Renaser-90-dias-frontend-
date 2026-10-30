@@ -11,6 +11,10 @@ appId: com.renaser.app
 - scrollUntilVisible:
     element: "Tus horas"
     direction: DOWN
+# Con la fila de días de la cuarta ronda, el contador queda debajo de «Tus horas»: se baja hasta él.
+- scrollUntilVisible:
+    element: "3 de 12 horas elegidas"
+    direction: DOWN
 - assertVisible: "3 de 12 horas elegidas"
 - scrollUntilVisible:
     element: "03:00"
