@@ -15,6 +15,10 @@ appId: com.renaser.app
     direction: DOWN
     timeout: 20000
 - assertVisible: "Listo por esta hora.*"
+# Al bajar, la barra de pestañas se esconde (D-246): un deslizamiento hacia arriba la devuelve antes de tocar PLAN.
+- swipe:
+    start: 50%,30%
+    end: 50%,70%
 - tapOn: "PLAN"
 - assertVisible: "PLAN"
 - tapOn: "HOY"
