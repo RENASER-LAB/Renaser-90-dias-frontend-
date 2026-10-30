@@ -48,6 +48,7 @@ export function FilaDelDia({
   esHoy = true,
   onAbrir,
   onMarcar,
+  onSubir,
 }: {
   item: ItemDelDia;
   modo: ModoDeLaFila;
@@ -64,6 +65,8 @@ export function FilaDelDia({
   esHoy?: boolean;
   onAbrir: (item: ItemDelDia, modo: ModoDeLaFila) => void;
   onMarcar?: (item: ItemDelDia) => void;
+  /** «Subir» de un hábito de evidencia opcional: abre directo las cuatro formas. */
+  onSubir?: (item: ItemDelDia) => void;
 }) {
   const { c, t } = useTheme();
   // La hora a ancho fijo mantiene las filas alineadas, pero con la letra grande del sistema «14:30» se partía en «14:3 / 0»:
@@ -125,7 +128,6 @@ export function FilaDelDia({
       case 'evento':
         return <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.chevron} />;
       case 'accion':
-      case 'check-y-accion':
         return accion ? (
           <View style={[estilos.pildora, { backgroundColor: c.goldWash }]} accessible={false} importantForAccessibility="no-hide-descendants">
             <Icon name={accion.icono} size={TAMANO_ICONO.chico} color={c.goldInk} />
@@ -154,12 +156,25 @@ export function FilaDelDia({
           style={estilos.areaDelTexto}
         >
           {contenido}
-          {control !== 'check' ? derecha : null}
+          {control !== 'check' && control !== 'subir' ? derecha : null}
         </Presionable>
       ) : (
         <View style={[estilos.areaDelTexto, { flex: 1 }]}>{contenido}</View>
       )}
-      {control === 'check' || control === 'check-y-accion' ? (
+      {control === 'subir' && accion ? (
+        // «Subir» es un botón aparte (abre las cuatro formas); el nombre abre la hoja con «Marcar como hecho» (30/10).
+        <Presionable
+          onPress={() => onSubir?.(item)}
+          hitSlop={6}
+          accessibilityRole="button"
+          accessibilityLabel={`Subir evidencia de ${item.titulo}`}
+          style={[estilos.pildora, { backgroundColor: c.goldWash }]}
+        >
+          <Icon name={accion.icono} size={TAMANO_ICONO.chico} color={c.goldInk} />
+          <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_500Medium' }]}>{accion.etiqueta}</Text>
+        </Presionable>
+      ) : null}
+      {control === 'check' ? (
         // El ✓ vive fuera del área de la fila para que tocarlo no abra la hoja. Mismo check de siempre.
         <Presionable
           onPress={() => {

@@ -33,12 +33,14 @@ export function ListaDeHoy({
   retenidos,
   onAbrir,
   onMarcar,
+  onSubir,
 }: {
   items: ItemDelDia[];
   ahoraMs: number;
   retenidos: ReadonlySet<string>;
   onAbrir: (item: ItemDelDia, modo: ModoDeLaFila) => void;
   onMarcar: (item: ItemDelDia) => void;
+  onSubir?: (item: ItemDelDia) => void;
 }) {
   const { c, t } = useTheme();
   const [hechosAbiertos, setHechosAbiertos] = useState(false);
@@ -64,6 +66,7 @@ export function ListaDeHoy({
         animada
         onAbrir={onAbrir}
         onMarcar={onMarcar}
+        onSubir={onSubir}
       />
     );
 

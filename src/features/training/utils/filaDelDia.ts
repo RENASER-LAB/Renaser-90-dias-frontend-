@@ -51,11 +51,12 @@ export type ControlDeLaFila =
   /** El ✓ de la derecha: marca sin abrir nada (Despertar y Dormir, que registran la hora). */
   | 'check'
   /**
-   * La píldora de siempre («Subir», que abre las cuatro formas: foto, texto, audio o video) Y el ✓ que cierra sin
-   * evidencia: los hábitos de evidencia OPCIONAL sin flujo propio, como en la tarjeta de hoy de master. Sin la píldora,
-   * escribir un texto solo se alcanzaba tocando el nombre y no se veía.
+   * Los hábitos de evidencia OPCIONAL sin flujo propio: solo la píldora «Subir», como botón aparte, que abre las cuatro
+   * formas (foto, texto, audio o video). Tocar el nombre abre la hoja con «Subir evidencia» y «Marcar como hecho».
+   * > Corregido 2026-10-30 (el dueño eligió «Solo «Subir»»: el círculo al lado le quitaba lo simple). Antes era
+   * > `check-y-accion`: la píldora y el ✓ en la misma fila.
    */
-  | 'check-y-accion'
+  | 'subir'
   /** La píldora con lo que pasa al tocar la fila («Tomar foto»…): no es un botón aparte, la fila entera lo es. */
   | 'accion'
   | 'hecho'
@@ -72,7 +73,7 @@ export function controlDeLaFila(item: ItemDelDia, modo: ModoDeLaFila, esHoy = tr
   if (!esHoy) return 'nada';
   if (item.tipo === 'evento') return 'evento';
   if (item.cerrado) return 'candado';
-  if (esOpcionalConEvidencia(item)) return 'check-y-accion';
+  if (esOpcionalConEvidencia(item)) return 'subir';
   return seCierraConElCheck(item) ? 'check' : 'accion';
 }
 
@@ -140,6 +141,8 @@ export function destinoDelToque(item: ItemDelDia, modo: ModoDeLaFila, esHoy = tr
   }
   if (item.tipo === 'accion') return 'hoja';
   if (item.guia || esSoloHora(item.habit?.systemKey)) return 'hoja';
+  // Evidencia opcional: la hoja trae «Subir evidencia» y «Marcar como hecho» (la fila ya no tiene el ✓; 30/10).
+  if (esOpcionalConEvidencia(item)) return 'hoja';
   return 'registro';
 }
 
