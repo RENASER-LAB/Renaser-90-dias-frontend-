@@ -60,6 +60,11 @@ appId: com.renaser.app
     element: "Guardar horas · dom"
     direction: DOWN
 - tapOn: "Guardar horas · dom"
+# Tras guardar, la pantalla se queda abajo (en la cuadrícula): se sube hasta la fila de días.
+- scrollUntilVisible:
+    element: "Todos los días"
+    direction: UP
+    timeout: 30000
 - extendedWaitUntil:
     visible: "Todos los días"
     timeout: 30000
