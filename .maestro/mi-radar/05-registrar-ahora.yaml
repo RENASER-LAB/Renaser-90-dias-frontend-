@@ -5,7 +5,7 @@
 # cuenta: aprendiz (día 10 con Mi Radar encendido, y la hora en curso SIN registro; correr después de 03)
 appId: com.renaser.app
 ---
-- evalScript: ${output.hora = new Date().getHours(); output.elegida = [9, 14, 20].indexOf(new Date().getHours()) >= 0; output.prevista = 'Prevista ' + (new Date().getHours() < 10 ? '0' : '') + new Date().getHours() + ':00 · respondida .*'}
+- evalScript: ${output.hora = new Date().getHours(); output.elegida = [9, 14, 20].indexOf(new Date().getHours()) >= 0; output.prevista = 'Prevista ' + ('0' + new Date().getHours()).slice(-2) + ':00 · respondida .*'}
 - runFlow: ../comun/ya-adentro.yaml
 - tapOn: "YO"
 - scrollUntilVisible:
