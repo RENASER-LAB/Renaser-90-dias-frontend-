@@ -224,6 +224,10 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **Ajuste del dueño, mismo día:** la fila de un hábito es solo su nombre (la dimensión y los puntos pasan a la hoja,
       abajo), y lo atrasado ya no habla de puntos: «Todavía puedes cumplir tu compromiso hoy». Cuándo se avisa no cambia, y
       el servidor paga igual que antes (D-259).
+    * **Ajuste del dueño, 2026-10-30:** en los hábitos de evidencia **opcional** (Día sin celular, Meditar, Escritura libre…) la
+      fila lleva **solo «Subir»**, como botón aparte que abre las cuatro formas; ya no lleva el círculo, que «le quitaba lo
+      simple». Tocar el nombre abre la hoja con «Subir evidencia» y «Marcar como hecho» (`ControlDeLaFila` `subir`). Un día
+      anterior que no se pudo cargar dice una sola línea, «No pudimos cargar este día.», con «Reintentar».
   * **Cambio por pedido del dueño — 2026-10-19 — alarmas como el despertador, aviso cuando el teléfono las
     borra y guía por marca (tab `Yo` → Alarmas, una hoja global y, en Training → Planificar, una oferta única de la
     guía)** (spec 007 del backend, `specs/007-alarmas-confiables/`; pedido: «los usuarios dicen que sus alarmas no

@@ -328,7 +328,7 @@ export function TrainingPorHora({
             </Presionable>
           </View>
         ) : esHoy ? (
-          <ListaDeHoy items={itemsHoy} ahoraMs={ahoraMs} retenidos={retenidos} onAbrir={alTocarLaFila} onMarcar={item => item.habit && onMarcar(item.habit)} />
+          <ListaDeHoy items={itemsHoy} ahoraMs={ahoraMs} retenidos={retenidos} onAbrir={alTocarLaFila} onMarcar={item => item.habit && onMarcar(item.habit)} onSubir={item => item.habit && onRegistrar(item.habit)} />
         ) : otroDia && otroDia.estado === 'cargando' ? (
           <Text style={[t.body, estilos.cargando, { color: c.textSoft }]} accessibilityLiveRegion="polite">
             {otroDia.resumen}

@@ -113,8 +113,10 @@ function caminoDelCheckEnMaster(h: HabitoDelCatalogo): Camino {
  */
 function ofrecidoEnLaRama(h: HabitoDelCatalogo): { pildora: Camino | null; check: Camino | null } {
   const control = controlDeLaFila(filaDe(h), 'hoy');
-  const pildora = control === 'accion' || control === 'check-y-accion' ? caminoDeLaPildoraEnMaster(h) : null;
-  const check = control === 'check' || control === 'check-y-accion' ? caminoDelCheckEnMaster(h) : null;
+  const pildora = control === 'accion' || control === 'subir' ? caminoDeLaPildoraEnMaster(h) : null;
+  // Desde el 30/10 el ✓ sin evidencia de lo opcional vive en la hoja («Marcar como hecho»), no en la fila.
+  const enLaHoja = accionSecundariaDeLaHoja(filaDe(h, true))?.tipo === 'marcar';
+  const check = control === 'check' || enLaHoja ? caminoDelCheckEnMaster(h) : null;
   return { pildora, check };
 }
 
@@ -154,12 +156,13 @@ describe('cada hábito del catálogo termina en el mismo camino de registro que 
         expect(accionSecundariaDeLaHoja(filaDe(h, true))).toBeNull();
       }
 
-      // 4. Lo opcional sin flujo propio tiene las DOS cosas: «Subir» (cuatro formas) y el ✓ (sin evidencia), en la fila y en la hoja.
+      // 4. Lo opcional sin flujo propio tiene las DOS cosas: «Subir» (cuatro formas) en la fila, y la hoja (al tocar el nombre)
+      //    con «Subir evidencia» y «Marcar como hecho». La fila ya no lleva el ✓ (pedido del dueño, 30/10).
       if (!h.requerida && !conFlujoPropio) {
         expect(enLaRama).toEqual({ pildora: 'cuatro-formas', check: 'check-sin-evidencia' });
-        expect(controlDeLaFila(filaDe(h), 'hoy')).toBe('check-y-accion');
-        expect(controlDeLaFila(filaDe(h), 'atrasado')).toBe('check-y-accion');
-        expect(destinoDelToque(filaDe(h), 'hoy')).toBe('registro'); // sin guía: directo a las cuatro formas
+        expect(controlDeLaFila(filaDe(h), 'hoy')).toBe('subir');
+        expect(controlDeLaFila(filaDe(h), 'atrasado')).toBe('subir');
+        expect(destinoDelToque(filaDe(h), 'hoy')).toBe('hoja'); // sin guía: también la hoja, con las dos opciones
         expect(destinoDelToque(filaDe(h, true), 'hoy')).toBe('hoja'); // con guía: la hoja…
         expect(accionDeLaHoja(filaDe(h, true))).toMatchObject({ tipo: 'registrar', etiqueta: 'Subir evidencia' }); // …abre las cuatro formas
         expect(accionSecundariaDeLaHoja(filaDe(h, true))).toMatchObject({ tipo: 'marcar', etiqueta: 'Marcar como hecho' }); // …y cierra sin evidencia
@@ -177,7 +180,7 @@ describe('cada hábito del catálogo termina en el mismo camino de registro que 
     expect(sinCheckEnLaRama.sort()).toEqual(['AUDIO_THERAPY_WEEKLY', 'PASTILLA_RENACER']);
   });
 
-  it('los hábitos de la observación del dueño tienen píldora y ✓', () => {
+  it('los hábitos de la observación del dueño tienen «Subir» en la fila y «Marcar como hecho» en la hoja', () => {
     for (const titulo of [
       'ESCRITURA LIBRE NOCTURNA',
       'DÍA SIN CELULAR',
@@ -186,8 +189,8 @@ describe('cada hábito del catálogo termina en el mismo camino de registro que 
       'AGUA E HIDRATACIÓN (domingo)',
     ]) {
       const h = CATALOGO.find(x => x.titulo === titulo)!;
-      expect(controlDeLaFila(filaDe(h), 'hoy')).toBe('check-y-accion');
+      expect(controlDeLaFila(filaDe(h), 'hoy')).toBe('subir');
     }
-    expect(controlDeLaFila(filaDe(PROPIO), 'hoy')).toBe('check-y-accion');
+    expect(controlDeLaFila(filaDe(PROPIO), 'hoy')).toBe('subir');
   });
 });

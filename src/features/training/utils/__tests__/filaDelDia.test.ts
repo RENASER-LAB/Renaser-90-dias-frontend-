@@ -69,17 +69,17 @@ describe('qué hábitos se cierran con el ✓ sin abrir nada', () => {
 });
 
 describe('el control de la derecha', () => {
-  it('hoy: ✓ en lo que registra la hora, píldora Y ✓ en lo opcional, la píldora en lo que abre su registro, chevron en el evento', () => {
+  it('hoy: ✓ en lo que registra la hora, solo «Subir» en lo opcional (30/10), la píldora en lo que abre su registro, chevron en el evento', () => {
     expect(controlDeLaFila(item({}, { systemKey: 'WAKE_UP' }), 'hoy')).toBe('check');
     expect(controlDeLaFila(item({}, { systemKey: 'SLEEP' }), 'hoy')).toBe('check');
-    // Evidencia OPCIONAL sin flujo propio: las dos cosas de la tarjeta de hoy de master (✓ sin evidencia y «Subir»).
-    expect(controlDeLaFila(item({}, {}), 'hoy')).toBe('check-y-accion');
-    expect(controlDeLaFila(item({}, { evidenceRequirement: 'OPTIONAL' }), 'hoy')).toBe('check-y-accion');
+    // Evidencia OPCIONAL sin flujo propio: solo «Subir» en la fila; «Marcar como hecho» está en la hoja (pedido del dueño, 30/10).
+    expect(controlDeLaFila(item({}, {}), 'hoy')).toBe('subir');
+    expect(controlDeLaFila(item({}, { evidenceRequirement: 'OPTIONAL' }), 'hoy')).toBe('subir');
     expect(controlDeLaFila(item({}, { evidenceRequirement: 'REQUIRED' }), 'hoy')).toBe('accion');
     expect(controlDeLaFila(item({ tipo: 'evento' }, null), 'hoy')).toBe('evento');
   });
   it('lo atrasado se registra igual que lo de hoy', () => {
-    expect(controlDeLaFila(item({}, {}), 'atrasado')).toBe('check-y-accion');
+    expect(controlDeLaFila(item({}, {}), 'atrasado')).toBe('subir');
     expect(controlDeLaFila(item({}, { systemKey: 'SLEEP' }), 'atrasado')).toBe('check');
   });
   it('lo hecho lleva ✓; lo cerrado, candado; lo planificado, nada', () => {
