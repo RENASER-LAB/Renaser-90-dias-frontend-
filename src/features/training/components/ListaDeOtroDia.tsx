@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Presionable } from '../../../components/Presionable';
+import { FilaDelCierre } from '../../cierre/components/FilaDelCierre';
 import { useTheme } from '../../../theme/ThemeContext';
 import { modoEnOtroDia, type ModoDeLaFila } from '../utils/filaDelDia';
 import type { ItemDelDia } from '../utils/itemsDelDia';
@@ -49,6 +50,8 @@ export function ListaDeOtroDia({
     <View>
       <View style={{ marginTop: 8 }}>
         {ordenados.map(item => {
+          // «Cerrado» / «Sin cerrar» (spec 017): solo texto. Un día que terminó no se cierra tarde.
+          if (item.tipo === 'cierre') return <FilaDelCierre key={item.clave} item={item} soloLectura />;
           const modo = modoEnOtroDia(item, relacion, conLectura);
           // Solo se toca un ✓ o un candado de un día leído, y solo para decir «Ya hecho» o que ese día ya cerró.
           const tocable = modo === 'hecho' || modo === 'cerrado';

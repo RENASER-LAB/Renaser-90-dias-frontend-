@@ -218,6 +218,8 @@ export default function TrainingScreen() {
   } = useTraining(trainingActivo);
   /* Spec 014: los eventos de la semana solo se piden si Eventos está prendido (Soporte TI). */
   const eventosPrendidos = useFuncionalidad(CLAVES.eventos);
+  /* Spec 017: «Cierra tu día» cuelga de las acciones del día, que tapa el interruptor `plan`. */
+  const planPrendido = useFuncionalidad(CLAVES.plan);
   useAlVolverAPrenderse(CLAVES.habitos, () => void recargarEntrenamiento());
   // Solo en desarrollo: pedidos al montar y tiempo hasta tener datos (V-1, 26/09/2026).
   useMedicionDePantalla('Training', !cargandoBackend);
@@ -1026,6 +1028,7 @@ export default function TrainingScreen() {
                 fase={fase}
                 titulos={renombre.titulos}
                 eventosPrendidos={eventosPrendidos.prendida}
+                cierrePrendido={planPrendido.prendida && planPrendido.disponible}
                 confirmacion={confirmacion}
                 onConfirmacionTerminada={() => setConfirmacion(null)}
                 aperturaPedida={aperturaPedida}

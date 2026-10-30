@@ -72,7 +72,7 @@ export function vistaDeOtroDia(params: {
 
   if (leible && lectura?.estado === 'datos') {
     const items = params.itemsLeidos();
-    const propios = items.filter(x => x.tipo !== 'evento');
+    const propios = items.filter(x => x.tipo !== 'evento' && x.tipo !== 'cierre');
     const hechos = propios.filter(x => x.hecho).length;
     if (propios.length === 0) {
       return { estado: 'listo', items, conLectura: true, resumen: TEXTO_SIN_HABITOS_REGISTRADOS, nota: null, puedeReintentar: false };

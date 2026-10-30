@@ -19,6 +19,9 @@ import { abrirConversacionDirecta } from '../../chat/api/chatApi';
 import { EvidenciaDeObligacion } from '../../lider-mentores/components/EvidenciaDeObligacion';
 import { VerPublicacion } from '../../lider-mentores/components/VisorDePublicacion';
 import { obtenerRadarDeAlumno } from '../api/mentorApi';
+import { obtenerCierresDeAlumno } from '../../cierre/api/cierreApi';
+import { CierresDelDia } from '../../cierre/components/CierresDelDia';
+import type { CargarCierres } from '../../cierre/types/cierre.types';
 import { obtenerHuecosDeAlumno } from '../../huecos/api/huecosApi';
 import { TiempoLibreDeLaSemana } from '../../huecos/components/TiempoLibreDeLaSemana';
 import type { CargarHuecos } from '../../huecos/types/huecos.types';
@@ -74,6 +77,11 @@ export function AlumnoScreen({
      que la sección guarda mientras la ficha está abierta. */
   const cargarHuecos = useMemo<CargarHuecos | null>(
     () => (grupoId ? (lunes?: string | null) => obtenerHuecosDeAlumno(grupoId, alumno.participanteId, lunes) : null),
+    [grupoId, alumno.participanteId],
+  );
+  /* Spec 017: lo que dijo al cerrar cada día, por la ruta del mentor. También estable por persona. */
+  const cargarCierres = useMemo<CargarCierres | null>(
+    () => (grupoId ? (lunes?: string | null) => obtenerCierresDeAlumno(grupoId, alumno.participanteId, lunes) : null),
     [grupoId, alumno.participanteId],
   );
 
@@ -354,6 +362,8 @@ export function AlumnoScreen({
         <CodigoRenaserDelAlumno cargar={cargarRadar} />
         {/* Spec 015: lo que le queda libre entre lo que planificó, de lunes a domingo (solo lectura). */}
         <TiempoLibreDeLaSemana cargar={cargarHuecos} />
+        {/* Spec 017: lo que dijo al cerrar cada día, de lunes a domingo (solo lectura). */}
+        <CierresDelDia cargar={cargarCierres} />
 
       </ScrollView>
     </SafeAreaView>

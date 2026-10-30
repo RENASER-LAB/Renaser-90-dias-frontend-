@@ -95,6 +95,8 @@ export function modoEnOtroDia(item: ItemDelDia, relacion: RelacionConHoy, conLec
  * ---------------------------------------------------------------------------------------------- */
 
 export type DestinoDelToque =
+  /** La hoja de «Cierra tu día» (spec 017). Solo HOY: en un día anterior la fila es solo texto. */
+  | 'cierre'
   /** La hoja del hábito: nombre, guía plegada y el registro de su tipo. Solo HOY. */
   | 'hoja'
   /** El registro de siempre, sin pasar por la hoja (no hay guía que mostrar, o es la ventana de solo lectura). Solo HOY. */
@@ -122,6 +124,7 @@ export type DestinoDelToque =
  *   hecho» o que ese día ya cerró. No abre hoja, ni cámara, ni evento, ni nada más; lo que viene no tiene botones.
  */
 export function destinoDelToque(item: ItemDelDia, modo: ModoDeLaFila, esHoy = true): DestinoDelToque {
+  if (item.tipo === 'cierre') return esHoy ? 'cierre' : 'nada';
   if (!esHoy) {
     if (modo === 'hecho') return 'ya-hecho';
     if (modo === 'cerrado') return 'candado';

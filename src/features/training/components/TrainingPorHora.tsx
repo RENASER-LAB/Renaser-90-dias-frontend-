@@ -3,12 +3,18 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { Presionable } from '../../../components/Presionable';
 
+import { Alert } from '../../../components/Alerta';
 import { ConfirmacionEnLinea } from '../../../components/ConfirmacionEnLinea';
 import { Icon, TAMANO_ICONO } from '../../../components/Icon';
 import { useTheme } from '../../../theme/ThemeContext';
 import type { HabitItem } from '../../../screens/TrainingScreen';
+import { HojaDelCierre, TEXTO_DE_DIA_CERRADO_TARDE } from '../../cierre/components/HojaDelCierre';
+import { useCierreDeHoy } from '../../cierre/hooks/useCierreDeHoy';
+import { useCierresAnteriores } from '../../cierre/hooks/useCierresAnteriores';
+import { horaDelCierre, yaEsHoraDelCierre } from '../../cierre/utils/horaDelCierre';
+import { itemDelCierreDeHoy, itemDelCierreDeUnDiaAnterior } from '../../cierre/utils/itemDelCierre';
 import { useAhora } from '../../eventos/hooks/useAhora';
-import { zonaDelTelefono } from '../../eventos/utils/zonaHoraria';
+import { sumarDiasIso, zonaDelTelefono } from '../../eventos/utils/zonaHoraria';
 import { useDiasCerrados } from '../hooks/useDiasCerrados';
 import { useEventosDeLaSemana } from '../hooks/useEventosDeLaSemana';
 import { useFilasQueSeDespiden } from '../hooks/useFilasQueSeDespiden';
@@ -28,7 +34,7 @@ import {
   type ItemDelDia,
 } from '../utils/itemsDelDia';
 import { lineaDelPrograma } from '../utils/lineaDelPrograma';
-import { contarElDia, textoDelResumenDeHoy } from '../utils/listaDelDia';
+import { contarElDia, minutosDeAhora, textoDelResumenDeHoy } from '../utils/listaDelDia';
 import { fechaDelDiaUno, semanaDe, sePuedeLeerElDia, tituloDelDia } from '../utils/semanaDeTraining';
 import { vistaDeOtroDia } from '../utils/vistaDeOtroDia';
 import { FilaDeSemana } from './FilaDeSemana';
@@ -64,6 +70,7 @@ export function TrainingPorHora({
   fase,
   titulos,
   eventosPrendidos,
+  cierrePrendido = true,
   confirmacion,
   onConfirmacionTerminada,
   aperturaPedida,
@@ -97,6 +104,11 @@ export function TrainingPorHora({
   fase: string | null;
   titulos: Readonly<Record<string, string>>;
   eventosPrendidos: boolean;
+  /**
+   * ¿«Cierra tu día» (spec 017) está disponible? Lo apaga el interruptor `plan` de Soporte TI. Apagado o sin la ruta en el
+   * servidor, la fila no existe y Training queda como siempre.
+   */
+  cierrePrendido?: boolean;
   confirmacion: { clave: number; texto: string } | null;
   onConfirmacionTerminada: () => void;
   /** Abrir un hábito de hoy desde el aviso del teléfono: el id de su registro. */
@@ -119,12 +131,15 @@ export function TrainingPorHora({
   const { pedir: pedirElDia, estadoDe } = useDiasCerrados({ cuentaId, semana: lunes });
   const { preferencias, acciones, cargar: cargarElPlan } = usePlanDeLaSemana({ cuentaId, semana: lunes });
   const retenidos = useFilasQueSeDespiden();
+  const { pedir: pedirElCierre, estadoDe: estadoDelCierre } = useCierresAnteriores({ cuentaId, semana: lunes });
 
   /* Lo que hace falta para MOSTRAR un día que no es hoy: el día anterior leído del servidor, o lo planificado. */
   const pedirLoDeUnDia = useCallback(
     (iso: string) => {
       if (iso === hoyIso) return;
       if (iso < hoyIso && sePuedeLeerElDia(iso, hoyIso, diaPrograma)) {
+        // «Cerrado» / «Sin cerrar» (spec 017): una lectura por fecha, solo al tocar el día.
+        if (cierrePrendido) void pedirElCierre(iso);
         // Con datos, no hace falta lo planificado; si el servidor no los tiene o falló, sí.
         void pedirElDia(iso).then(() => {
           if (estadoDe(iso)?.estado !== 'datos') cargarElPlan();
@@ -133,7 +148,7 @@ export function TrainingPorHora({
       }
       cargarElPlan();
     },
-    [hoyIso, diaPrograma, pedirElDia, estadoDe, cargarElPlan],
+    [hoyIso, diaPrograma, cierrePrendido, pedirElCierre, pedirElDia, estadoDe, cargarElPlan],
   );
 
   /* Tocar un día. Es la puerta por donde se pide un día anterior o lo planificado… */
@@ -155,11 +170,26 @@ export function TrainingPorHora({
   }, [activa, diaDeLaPantalla, cuentaId, lunes]);
 
   const contexto = useMemo(() => ({ hoyIso, zona, titulos }), [hoyIso, zona, titulos]);
-  const itemsHoy = useMemo(() => itemsDeHoy(habits, ocurrencias, contexto), [habits, ocurrencias, contexto]);
+
+  /* «Cierra tu día» (spec 017): aparece 30 min antes de Dormir (21:30 sin Dormir), la última de hoy. Solo se lee del servidor
+     cuando ya es su hora y Training está a la vista; sin lectura (backend anterior, plan apagado) no hay fila. */
+  const horaDelCierreDeHoy = useMemo(() => horaDelCierre(habits, hoyIso), [habits, hoyIso]);
+  const esLaHoraDelCierre = yaEsHoraDelCierre(horaDelCierreDeHoy, minutosDeAhora(ahoraMs));
+  const cierreDeHoy = useCierreDeHoy({ cuentaId, hoyIso, activo: activa && cierrePrendido && esLaHoraDelCierre });
+  const lecturaDelCierreDeHoy = cierreDeHoy.lectura;
+  const itemsHoy = useMemo(() => {
+    const items = itemsDeHoy(habits, ocurrencias, contexto);
+    return lecturaDelCierreDeHoy.estado === 'listo'
+      ? [...items, itemDelCierreDeHoy(hoyIso, horaDelCierreDeHoy, lecturaDelCierreDeHoy.vista)]
+      : items;
+  }, [habits, ocurrencias, contexto, lecturaDelCierreDeHoy, hoyIso, horaDelCierreDeHoy]);
 
   /* La hoja: el ítem que se abrió, aunque se esté cerrando (la hoja baja con lo último que mostró). */
   const [hoja, setHoja] = useState<{ item: ItemDelDia; modo: ModoDeLaFila } | null>(null);
   const [hojaAbierta, setHojaAbierta] = useState(false);
+  /* La hoja de «Cierra tu día» y el día para el que se abrió (el «ID original» que se compara antes de enviar). */
+  const [cierreAbierto, setCierreAbierto] = useState(false);
+  const [diaDelCierre, setDiaDelCierre] = useState(hoyIso);
   /** Lo que se hace cuando la hoja termina de irse: el registro no puede abrirse con la hoja todavía encima (Android). */
   const despuesDeLaHoja = useRef<(() => void) | null>(null);
 
@@ -188,6 +218,10 @@ export function TrainingPorHora({
         case 'registro':
           if (item.habit) onRegistrar(item.habit);
           return;
+        case 'cierre':
+          setDiaDelCierre(hoyIso);
+          setCierreAbierto(true);
+          return;
         case 'hoja':
           setHoja({ item, modo });
           setHojaAbierta(true);
@@ -196,7 +230,7 @@ export function TrainingPorHora({
           return;
       }
     },
-    [onAbrirEvento, onRegistrar],
+    [onAbrirEvento, onRegistrar, hoyIso],
   );
   const alTocarLaFila = useCallback((item: ItemDelDia, modo: ModoDeLaFila) => abrirFila(item, modo, esHoy), [abrirFila, esHoy]);
 
@@ -219,6 +253,7 @@ export function TrainingPorHora({
       return;
     }
     setHojaAbierta(false);
+    setCierreAbierto(false);
     despuesDeLaHoja.current = null;
     setAvisoDeFila(null);
   }, [dia.iso, hoyIso]);
@@ -242,12 +277,13 @@ export function TrainingPorHora({
     abrirFila(item, item.hecho ? 'hecho' : item.cerrado ? 'cerrado' : 'hoy', true);
   }, [aperturaPedida, itemsHoy, abrirFila, esHoy, onAperturaAtendida, onElegirDia]);
 
+  const lecturaDelCierreAnterior = estadoDelCierre(dia.iso);
   const otroDia = useMemo(() => {
     if (esHoy) return null;
     const relacion = dia.relacion as 'pasado' | 'futuro';
     const diaUno = fechaDelDiaUno(hoyIso, diaPrograma);
     const estado = estadoDe(dia.iso);
-    return vistaDeOtroDia({
+    const vista = vistaDeOtroDia({
       relacion,
       leible: sePuedeLeerElDia(dia.iso, hoyIso, diaPrograma),
       previoAlPrograma: relacion === 'pasado' && diaUno != null && dia.iso < diaUno,
@@ -264,10 +300,14 @@ export function TrainingPorHora({
           ocurrencias,
         }),
     });
+    // «Cerrado» / «Sin cerrar» (spec 017): solo de un día anterior ya leído, y solo cuando la lista está lista.
+    if (relacion !== 'pasado' || vista.estado !== 'listo' || lecturaDelCierreAnterior?.estado !== 'datos') return vista;
+    const filaDelCierre = itemDelCierreDeUnDiaAnterior(dia.iso, lecturaDelCierreAnterior.cierre);
+    return filaDelCierre ? { ...vista, items: [...vista.items, filaDelCierre] } : vista;
     // `estadoDe` no cambia de identidad cuando llega una lectura: se relee en cada dibujo, a propósito, y por eso
     // su valor entra a la lista de dependencias.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [esHoy, dia.iso, dia.relacion, hoyIso, diaPrograma, contexto, ocurrencias, planHabits, preferencias, acciones, estadoDe(dia.iso)]);
+  }, [esHoy, dia.iso, dia.relacion, hoyIso, diaPrograma, contexto, ocurrencias, planHabits, preferencias, acciones, estadoDe(dia.iso), lecturaDelCierreAnterior]);
 
   const resumen = esHoy
     ? estado !== 'listo'
@@ -345,6 +385,30 @@ export function TrainingPorHora({
           />
         ) : null}
       </View>
+
+      <HojaDelCierre
+        visible={cierreAbierto}
+        fecha={diaDelCierre}
+        hoyIso={hoyIso}
+        diaPrograma={diaPrograma}
+        habitosHechos={contarElDia(itemsHoy).hechos}
+        habitosTotal={contarElDia(itemsHoy).total}
+        puedeVerManana={dias.some(d => d.iso === sumarDiasIso(hoyIso, 1))}
+        onCerrar={() => setCierreAbierto(false)}
+        alTerminarDeCerrar={alIrseLaHoja}
+        alLeer={cierreDeHoy.reemplazar}
+        alGuardar={cierreDeHoy.reemplazar}
+        alSalirPorDiaCerrado={() => {
+          setCierreAbierto(false);
+          void cierreDeHoy.recargar();
+          Alert.alert('Ese día ya cerró', TEXTO_DE_DIA_CERRADO_TARDE);
+        }}
+        onVerManana={() => {
+          const manana = sumarDiasIso(hoyIso, 1);
+          despuesDeLaHoja.current = () => elegirDia(manana);
+          setCierreAbierto(false);
+        }}
+      />
 
       <HojaDelHabito
         visible={hojaAbierta}
