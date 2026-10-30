@@ -87,7 +87,7 @@ describe('la ventana del día', () => {
   });
 
   it('sin Despertar ni Dormir (`null`) cuenta el día entero y lo dice', () => {
-    expect(ventanaEnPalabras(null)).toBe('Sin Despertar ni Dormir: todo el día');
+    expect(ventanaEnPalabras(null)).toBe('Sin hora de Despertar o de Dormir: se cuenta todo el día');
   });
 });
 

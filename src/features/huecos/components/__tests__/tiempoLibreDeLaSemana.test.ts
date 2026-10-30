@@ -134,7 +134,7 @@ describe('TiempoLibreDeLaSemana: lo que muestra', () => {
     const { cargar } = cargarCon({
       actual: semana(ACTUAL, { dias: [dia(ACTUAL, { ventana: null })] }),
     });
-    expect(textos(await dibujar(cargar))).toContain('Sin Despertar ni Dormir: todo el día');
+    expect(textos(await dibujar(cargar))).toContain('Sin hora de Despertar o de Dormir: se cuenta todo el día');
   });
 
   it('un día sin huecos dice «Sin huecos de 30 min o más»', async () => {

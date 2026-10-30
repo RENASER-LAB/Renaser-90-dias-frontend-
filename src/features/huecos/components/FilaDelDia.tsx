@@ -15,7 +15,7 @@ import {
 } from '../utils/textosDeHuecos';
 
 /**
- * Un día de la semana de huecos: su nombre, su ventana («De 05:30 a 22:30», o «Sin Despertar ni Dormir: todo el día») y
+ * Un día de la semana de huecos: su nombre, su ventana («De 05:30 a 22:30», o «Sin hora de Despertar o de Dormir: se cuenta todo el día») y
  * sus huecos de 30 minutos o más, uno por renglón.
  *
  * **Plegable solo cuando la semana es larga** (`plegable`): entonces la cabecera es un botón de 48 con un chevron que dice

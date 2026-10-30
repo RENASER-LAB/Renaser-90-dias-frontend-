@@ -15,7 +15,7 @@ const DIAS_CORTOS: Record<number, string> = { 1: 'lun', 2: 'mar', 3: 'mié', 4: 
 /** El menor hueco que el servidor cuenta. Se dice en la línea de un día sin huecos. */
 export const MINUTOS_DEL_HUECO_MINIMO = 30;
 
-export const TEXTO_DE_DIA_SIN_VENTANA = 'Sin Despertar ni Dormir: todo el día';
+export const TEXTO_DE_DIA_SIN_VENTANA = 'Sin hora de Despertar o de Dormir: se cuenta todo el día';
 export const TEXTO_DE_DIA_SIN_HUECOS = `Sin huecos de ${MINUTOS_DEL_HUECO_MINIMO} min o más`;
 
 /** `120` → `2 h`; `90` → `1 h 30 min`; `45` → `45 min`; `2870` → `47 h 50 min`. */
