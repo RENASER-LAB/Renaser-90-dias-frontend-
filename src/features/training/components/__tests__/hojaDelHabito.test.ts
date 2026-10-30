@@ -79,6 +79,19 @@ describe('La hoja del hábito', () => {
     expect(textos()).toContain('Leer la guía no marca el hábito.');
   });
 
+  it('volver a abrir el MISMO hábito la encuentra plegada otra vez (la hoja sigue montada mientras está cerrada)', () => {
+    const it1 = item({ guia });
+    const propiedades = (visible: boolean) => ({ visible, item: it1, modo: 'hoy' as ModoDeLaFila, ahoraMs: Date.parse('2026-10-29T12:00:00Z'), onCerrar, onAccion });
+    montar(it1);
+    act(() => raiz!.root.findAll(n => n.props.accessibilityLabel === 'Guía de esta práctica' && typeof n.props.onPress === 'function')[0].props.onPress());
+    expect(textos()).toContain('Bebe un vaso de agua tibia.');
+    act(() => raiz!.update(React.createElement(HojaDelHabito, propiedades(false))));
+    act(() => raiz!.update(React.createElement(HojaDelHabito, propiedades(true))));
+    expect(textos()).not.toContain('Bebe un vaso de agua tibia.');
+    const cabecera = raiz!.root.findAll(n => n.props.accessibilityLabel === 'Guía de esta práctica' && typeof n.props.onPress === 'function')[0];
+    expect(cabecera.props.accessibilityState).toEqual({ expanded: false });
+  });
+
   it('sin guía cargada, la sección no aparece', () => {
     montar(item({ guia: null }));
     expect(textos()).not.toContain('Guía de esta práctica');
