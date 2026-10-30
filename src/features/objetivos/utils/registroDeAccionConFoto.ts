@@ -1,6 +1,7 @@
 import { ApiError } from '../../../services/http/apiClient';
 import { RechazoParaMostrar, type ReglasDelDestino } from '../../habits/utils/destinoDeFoto';
 import {
+  avisoParaFoto,
   mensajeDeAccionBloqueada,
   type EntradaDelRegistro,
   type EstadoParaFoto,
@@ -82,6 +83,49 @@ function rechazoLegible(error: ApiError, verde: string | null): Error {
     return new RechazoParaMostrar('La foto tiene que ser de este momento. Toca «Tomar otra» y sácala de nuevo.');
   }
   return error;
+}
+
+/**
+ * Training, antes de abrir el registro de una acción (VIDA Y NEGOCIO): si la lista FRESCA de hoy dice que está
+ * bloqueada por Pareto (en cada eje primero va la verde), devuelve el MISMO aviso que ya daba el registro con foto del
+ * acompañante, con el título de la verde. Sin aviso (`null`) se abre el registro de siempre; si la lista no se puede
+ * leer tampoco se inventa nada: el servidor sigue siendo quien decide.
+ */
+export async function avisoDeAccionBloqueada(
+  rocaId: string,
+  deps: Pick<DependenciasDeLaAccion, 'rocasDeHoy'> = DEPENDENCIAS,
+): Promise<{ titulo: string; mensaje: string } | null> {
+  let rocas: RocaDiariaApi[];
+  try {
+    rocas = await deps.rocasDeHoy();
+  } catch {
+    return null;
+  }
+  const estado = estadoDeAccionParaFoto(rocas, rocaId);
+  return estado.tipo === 'bloqueada' ? avisoParaFoto(estado, 'roca') : null;
+}
+
+/**
+ * Cierra una acción desde el registro de Training (texto, foto, audio o video). Si el servidor rechaza por el cerrojo
+ * Pareto (403 `GREEN_NOT_EVIDENCED`) el rechazo llega al modal ya escrito para la persona —el mismo texto del aviso—
+ * y no con el código interno. Todo lo demás pasa tal cual.
+ */
+export async function sellarAccionDeTraining(
+  rocaId: string,
+  datos: Parameters<typeof sellarRocaDiaria>[1],
+  deps: DependenciasDeLaAccion = DEPENDENCIAS,
+): Promise<number> {
+  try {
+    return await deps.sellar(rocaId, datos);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 403 && error.message.includes('GREEN_NOT_EVIDENCED')) {
+      const rocas = await deps.rocasDeHoy().catch(() => null);
+      const roca = rocas?.find(r => r.id === rocaId);
+      // Sigue siendo un ApiError 403: el modal de evidencia solo muestra el texto de los ApiError.
+      throw new ApiError(403, mensajeDeAccionBloqueada(rocas && roca ? verdeDelEje(rocas, roca)?.titulo ?? null : null), error.body);
+    }
+    throw error;
+  }
 }
 
 /** Las reglas que `useRegistroConFoto` usa para `destino: 'roca'`. */

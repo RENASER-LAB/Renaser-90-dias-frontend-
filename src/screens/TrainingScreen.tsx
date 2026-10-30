@@ -27,7 +27,7 @@ import { useRegistroConFoto } from '../features/habits/hooks/useRegistroConFoto'
 import { cerrarConRespuestaInmediata } from '../features/habits/celebracion/momentoEnLaTarjeta';
 import { estaVencido, seRegistraConFoto } from '../features/training/utils/registroConFotoEnTraining';
 import { avisoDeHabitoCerrado, preguntaQueSintio, type MedicionPedida } from '../features/habits/utils/registroConFoto';
-import { sellarRocaDiaria } from '../features/objetivos/utils/sellarRocaDiaria';
+import { avisoDeAccionBloqueada, sellarAccionDeTraining } from '../features/objetivos/utils/registroDeAccionConFoto';
 import { completarRegistro, confirmarEvidencia } from '../features/habits/api/evidenciaHabitoApi';
 import { crearCierreSinRepetir } from '../features/habits/utils/cierreDeRegistro';
 import { ejecutarEnRegistroVigente } from '../features/habits/api/registroVigente';
@@ -679,6 +679,9 @@ export default function TrainingScreen() {
     }
   };
 
+  /** Mientras se lee la lista de hoy para el aviso de Pareto, un segundo toque no abre un segundo aviso. */
+  const comprobandoAccion = useRef(false);
+
   const openEvidenceModal = (habit: HabitItem) => {
     // Ya cumplido: su estado se lee en la hoja del hábito (spec 014; antes, en la tarjeta). Va PRIMERO, antes
     // de las ramas por clave: la Audioterapia volvía a abrir su formulario y el post diario el Muro,
@@ -753,6 +756,26 @@ export default function TrainingScreen() {
         },
         habit.hasEvidence
       );
+      return;
+    }
+    // Una acción de los objetivos (VIDA Y NEGOCIO): en cada eje primero va la verde. Se avisa ANTES de abrir el registro,
+    // con el mismo texto del registro con foto del acompañante; antes se abría y el servidor rechazaba con su código.
+    // Si la lista de hoy no se puede leer se abre como siempre: el servidor sigue decidiendo.
+    if (habit.dimension === 'VIDA Y NEGOCIO') {
+      if (comprobandoAccion.current) return;
+      comprobandoAccion.current = true;
+      void avisoDeAccionBloqueada(habit.id)
+        .then(aviso => {
+          if (aviso) {
+            Alert.alert(aviso.titulo, aviso.mensaje);
+            return;
+          }
+          habitoDeLaEvidencia.current = habit;
+          setActiveEvidenceHabit(habit);
+        })
+        .finally(() => {
+          comprobandoAccion.current = false;
+        });
       return;
     }
     habitoDeLaEvidencia.current = habit;
@@ -1043,7 +1066,7 @@ export default function TrainingScreen() {
              */
             sellarPersonalizado={
               activeEvidenceHabit?.dimension === 'VIDA Y NEGOCIO' && activeEvidenceHabit
-                ? datos => sellarRocaDiaria(activeEvidenceHabit.id, datos)
+                ? datos => sellarAccionDeTraining(activeEvidenceHabit.id, datos)
                 : undefined
             }
             titulo={activeEvidenceHabit?.title ?? ''}

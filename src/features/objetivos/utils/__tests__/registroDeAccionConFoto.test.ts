@@ -8,9 +8,11 @@ import { ApiError } from '../../../../services/http/apiClient';
 import { RechazoParaMostrar } from '../../../habits/utils/destinoDeFoto';
 import type { RocaDiariaApi } from '../../types/objetivos.types';
 import {
+  avisoDeAccionBloqueada,
   estadoDeAccionParaFoto,
   reglasDeAccion,
   registrarAccionConFoto,
+  sellarAccionDeTraining,
   type DependenciasDeLaAccion,
 } from '../registroDeAccionConFoto';
 
@@ -135,5 +137,65 @@ describe('reglasDeAccion', () => {
     await expect(reglas.estadoFresco('amarilla-2')).resolves.toMatchObject({ tipo: 'bloqueada' });
     await expect(reglas.registrar(ENTRADA, alConfirmar)).resolves.toMatchObject({ puntosOtorgados: 20 });
     expect(alConfirmar).not.toHaveBeenCalled();
+  });
+});
+
+/* Training (VIDA Y NEGOCIO): el cerrojo Pareto se avisa antes de abrir el registro y, si igual llega al servidor, el rechazo
+   llega al modal ya escrito para la persona (antes se leía «GREEN_NOT_EVIDENCED: … la roca VERDE …»). */
+describe('Training: acción bloqueada por Pareto', () => {
+  const DATOS = { archivo: null, texto: 'Estiré diez minutos' };
+
+  it('avisoDeAccionBloqueada: la bloqueada da el aviso de siempre, con el título de la verde', async () => {
+    await expect(avisoDeAccionBloqueada('amarilla-2', deps())).resolves.toEqual({
+      titulo: 'Primero tu acción verde',
+      mensaje: 'En cada eje primero va la acción verde. Registra antes «Llamar a 3 clientes» y después se desbloquea esta.',
+    });
+  });
+
+  it('avisoDeAccionBloqueada: la desbloqueada, la ya completada y la que no está en la lista no avisan', async () => {
+    const d = deps({ rocasDeHoy: jest.fn(async () => [VERDE, AMARILLA, { ...VERDE, id: 'hecha', completada: true }]) });
+    await expect(avisoDeAccionBloqueada('verde-1', d)).resolves.toBeNull();
+    await expect(avisoDeAccionBloqueada('hecha', d)).resolves.toBeNull();
+    await expect(avisoDeAccionBloqueada('de-ayer', d)).resolves.toBeNull();
+  });
+
+  it('avisoDeAccionBloqueada: si la lista de hoy no se puede leer, no inventa nada (abre el registro)', async () => {
+    const d = deps({ rocasDeHoy: jest.fn(async () => { throw new ApiError(500, 'Error interno'); }) });
+    await expect(avisoDeAccionBloqueada('amarilla-2', d)).resolves.toBeNull();
+  });
+
+  it('sellarAccionDeTraining: sin rechazo devuelve los puntos', async () => {
+    const d = deps();
+    await expect(sellarAccionDeTraining('verde-1', DATOS, d)).resolves.toBe(20);
+    expect(d.sellar).toHaveBeenCalledWith('verde-1', DATOS);
+  });
+
+  it('sellarAccionDeTraining: el 403 GREEN_NOT_EVIDENCED llega como ApiError 403 con el texto del aviso, sin el código', async () => {
+    const d = deps({
+      sellar: jest.fn(async () => {
+        throw new ApiError(403, 'GREEN_NOT_EVIDENCED: primero hay que completar la roca VERDE de este eje');
+      }) as unknown as DependenciasDeLaAccion['sellar'],
+    });
+    const error = await sellarAccionDeTraining('amarilla-2', DATOS, d).catch(e => e);
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error.status).toBe(403);
+    expect(error.message).toBe('En cada eje primero va la acción verde. Registra antes «Llamar a 3 clientes» y después se desbloquea esta.');
+    expect(error.message).not.toMatch(/GREEN_NOT_EVIDENCED|roca/i);
+  });
+
+  it('sellarAccionDeTraining: sin poder leer la lista, el 403 igual sale legible (sin nombrar la verde)', async () => {
+    const d = deps({
+      sellar: jest.fn(async () => {
+        throw new ApiError(403, 'GREEN_NOT_EVIDENCED: primero hay que completar la roca VERDE de este eje');
+      }) as unknown as DependenciasDeLaAccion['sellar'],
+      rocasDeHoy: jest.fn(async () => { throw new ApiError(500, 'Error interno'); }),
+    });
+    await expect(sellarAccionDeTraining('amarilla-2', DATOS, d)).rejects.toThrow('Regístrala antes y después se desbloquea esta.');
+  });
+
+  it('sellarAccionDeTraining: cualquier otro error pasa tal cual', async () => {
+    const error = new ApiError(500, 'Error interno');
+    const d = deps({ sellar: jest.fn(async () => { throw error; }) as unknown as DependenciasDeLaAccion['sellar'] });
+    await expect(sellarAccionDeTraining('verde-1', DATOS, d)).rejects.toBe(error);
   });
 });
