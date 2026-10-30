@@ -21,6 +21,9 @@ appId: com.renaser.app
 # La fila de los siete días (por día de la semana): sin días marcados, «Todos los días» y las horas de siempre.
 - assertVisible: "Todos los días"
 - assertVisible: "Toca un día para darle sus propias horas o dejarlo sin Radar\\."
+- scrollUntilVisible:
+    element: "Guardar y encender"
+    direction: DOWN
 - assertVisible: "Guardar y encender"
 - takeScreenshot: 03a-encendido-sin-guardar
 - tapOn: "Guardar y encender"
