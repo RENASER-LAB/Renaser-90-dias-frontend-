@@ -24,6 +24,7 @@ import { MicroLabel, ScreenHeader } from '../components/ui';
 import { AdminScreen } from '../features/admin/screens/AdminScreen';
 import { useCapacidades } from '../features/admin/hooks/useCapacidades';
 import { EntradaAlProgramaPropio } from '../features/programa/components/EntradaAlProgramaPropio';
+import { useDiaUnoPorElegir } from '../features/programa/hooks/useDiaUnoPorElegir';
 import { Icon, TAMANO_ICONO, type IconName } from '../components/Icon';
 import { GoldButton } from '../components/GoldButton';
 import { Interruptor } from '../components/Interruptor';
@@ -87,7 +88,15 @@ import { EmergenciaScreen } from '../features/emergencia/screens/EmergenciaScree
 import { configDeMiRadar } from '../features/radar/hooks/useConfigDeMiRadar';
 import { useRadar } from '../features/radar/RadarContext';
 import { MiRadarScreen } from '../features/radar/screens/MiRadarScreen';
-import { miRadarCorresponde, textoDeMiRadar } from '../features/radar/utils/miRadar';
+import { textoDeMiRadar } from '../features/radar/utils/miRadar';
+import {
+  DETALLE_DE_LA_FILA_SIN_PROGRAMA,
+  hayQueAveriguarMiRadar,
+  hayQueCerrarLaPantallaDeMiRadar,
+  miRadarEnMarcha,
+  seDibujaLaPantallaDeMiRadar,
+  veLaFilaDeMiRadar,
+} from '../features/radar/utils/miRadarEnYo';
 import { ConsolaSoporteTiScreen } from '../features/soporte-ti/screens/ConsolaSoporteTiScreen';
 import { esSoporteTi } from '../features/soporte-ti/utils/rolSoporteTi';
 import { useDisponibilidad } from '../features/plataforma/estado/useFuncionalidad';
@@ -384,9 +393,29 @@ export default function YoScreen() {
      también el formulario. */
   const { miRadar: lecturaDeMiRadar } = useRadar();
   const configMiRadar = configDeMiRadar(lecturaDeMiRadar.lectura);
-  const veMiRadar = miRadarCorresponde(resumen?.diaPrograma) && configMiRadar !== null;
+  const diaDelPrograma = resumen?.diaPrograma;
+  const enMarchaMiRadar = miRadarEnMarcha(lecturaDeMiRadar.lectura, diaDelPrograma);
+  /* El personal que todavía no eligió su Día 1 (spec 019): Mi Radar es para todos los que hacen los 90 días, así que ve la fila igual y,
+     al tocarla, la pantalla le dice por qué todavía no y le deja elegirlo. La fila SOLO aparece cuando el servidor lo confirmó (403
+     `PROGRAMA_NO_ACTIVADO`): con un backend anterior —sin ese motivo— no hay fila (FR-010). Quien tiene programa o es aprendiz no cambia. */
+  const veMiRadar = veLaFilaDeMiRadar(lecturaDeMiRadar.lectura, diaDelPrograma);
+  /* ¿Hay que preguntarle al servidor? Solo a quien podría no tener programa activado: sin fila (`puedeIniciarPrograma`) o con la fila sin
+     Día 1. Al resto (aprendices, quien ya va por el programa) no se les pide nada antes del día 8. */
+  const diaUnoSinElegir = useDiaUnoPorElegir(resumen?.inscrito, diaDelPrograma, user?.id ?? null).porElegir;
+  const averiguarMiRadar = hayQueAveriguarMiRadar({ puedeIniciarPrograma: capacidades.puedeIniciarPrograma, diaUnoSinElegir });
+  const { solicitar: solicitarMiRadar } = lecturaDeMiRadar;
+  useEffect(() => {
+    if (averiguarMiRadar) solicitarMiRadar();
+  }, [averiguarMiRadar, solicitarMiRadar]);
   const [enMiRadar, setEnMiRadar] = useState(false);
   const [miRadarPorAviso, setMiRadarPorAviso] = useState(false);
+  /* Abierta desde la fila del personal sin programa: la pantalla sigue abierta mientras elige su Día 1 y vuelve a leer, aunque la fila
+     ya no corresponda (después de elegir, Mi Radar empieza en el día 8). */
+  const [miRadarSinPrograma, setMiRadarSinPrograma] = useState(false);
+  const cerrarMiRadar = () => {
+    setEnMiRadar(false);
+    setMiRadarSinPrograma(false);
+  };
   /* Consola Soporte TI (spec 002, aprobada por el dueño el 2026-10-13): solo para la cuenta con ese rol, que se asigna
      por script en la base. A pantalla completa, como Administración; el servidor responde 403 a cualquier otro rol. */
   const [enSoporteTi, setEnSoporteTi] = useState(false);
@@ -408,9 +437,12 @@ export default function YoScreen() {
   }, [rutaDeYo.params, navegacionDeYo]);
   useEffect(() => {
     // Un aviso viejo, o un backend que ya no lo ofrece, no deja la pantalla esperando abierta. Mientras se lee, espera.
-    const sinMiRadar = lecturaDeMiRadar.lectura.estado === 'no-disponible' || (resumen != null && !miRadarCorresponde(resumen.diaPrograma));
-    if (enMiRadar && sinMiRadar) setEnMiRadar(false);
-  }, [enMiRadar, lecturaDeMiRadar.lectura.estado, resumen]);
+    const estado = { abierta: enMiRadar, lectura: lecturaDeMiRadar.lectura, diaPrograma: diaDelPrograma, desdeLaFilaSinPrograma: miRadarSinPrograma };
+    if (hayQueCerrarLaPantallaDeMiRadar(estado)) {
+      setEnMiRadar(false);
+      setMiRadarSinPrograma(false);
+    }
+  }, [enMiRadar, lecturaDeMiRadar.lectura, diaDelPrograma, miRadarSinPrograma]);
   /* Spec 002, fase 2: al salir de «ver como» la franja trae de vuelta a Yo con `abrirSoporteTi`: se reabre la consola. */
   useEffect(() => {
     const params = rutaDeYo.params as { abrirSoporteTi?: boolean } | undefined;
@@ -596,11 +628,22 @@ export default function YoScreen() {
     );
   }
 
-  if (enMiRadar && veMiRadar) {
+  /* La pantalla se dibuja con Mi Radar a la vista, desde la fila del personal sin programa, o —al venir de un aviso desde el día 8— cuando
+     el servidor dijo por qué no (suspendida, sin permiso, sin red): ahí la pantalla lo explica en vez de quedar abierta sin dibujarse. */
+  if (
+    seDibujaLaPantallaDeMiRadar({
+      abierta: enMiRadar,
+      lectura: lecturaDeMiRadar.lectura,
+      diaPrograma: diaDelPrograma,
+      desdeLaFilaSinPrograma: miRadarSinPrograma,
+    })
+  ) {
     return (
       <MiRadarScreen
         abrirDesdeAviso={miRadarPorAviso}
-        onVolver={() => setEnMiRadar(false)}
+        // Sin saber el día (la lectura de Hoy falló) el personal sin programa está seguro antes del día 8: no se le muestra el formulario.
+        diaPrograma={resumen?.diaPrograma ?? (miRadarSinPrograma ? 0 : null)}
+        onVolver={cerrarMiRadar}
         // El Despertar y el Dormir se programan en Training → Planificar (spec 019).
         onProgramarHorario={() => (navegacionDeYo as unknown as { navigate: (pestana: string) => void }).navigate('Training')}
       />
@@ -897,15 +940,16 @@ export default function YoScreen() {
               />
             ) : null}
             {/* MI RADAR (spec 012): desde el día 8, justo debajo de la emergencia. Su estado en una línea. */}
-            {veMiRadar && configMiRadar ? (
+            {veMiRadar ? (
               <FilaDeAjuste
                 key="mi-radar"
                 icono="compass"
                 titulo="Mi Radar"
-                detalle={textoDeMiRadar(configMiRadar)}
-                etiqueta={`Mi Radar. ${textoDeMiRadar(configMiRadar)}`}
+                detalle={enMarchaMiRadar && configMiRadar ? textoDeMiRadar(configMiRadar) : DETALLE_DE_LA_FILA_SIN_PROGRAMA}
+                etiqueta={`Mi Radar. ${enMarchaMiRadar && configMiRadar ? textoDeMiRadar(configMiRadar) : DETALLE_DE_LA_FILA_SIN_PROGRAMA}`}
                 onPress={() => {
                   setMiRadarPorAviso(false);
+                  setMiRadarSinPrograma(!enMarchaMiRadar);
                   setEnMiRadar(true);
                 }}
               />

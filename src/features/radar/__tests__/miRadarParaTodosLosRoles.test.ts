@@ -50,7 +50,10 @@ describe('ninguna pieza de la spec 019 nombra un rol', () => {
     'components/FilaDeVecesPorDia.tsx',
     'components/HoraDeMiRadar.tsx',
     'components/VecesAlDia.tsx',
+    'components/SinMiRadar.tsx',
     'utils/vecesDeMiRadar.ts',
+    'utils/vistaDeMiRadar.ts',
+    'utils/miRadarEnYo.ts',
     'utils/miRadar.ts',
     'utils/mitadDelRadar.ts',
     'hooks/useConfigDeMiRadar.ts',
@@ -73,7 +76,9 @@ describe('ninguna pieza de la spec 019 nombra un rol', () => {
 
   it('la fila de Yo y la tarjeta de Hoy dependen del día y de lo que respondió el servidor, no del rol', () => {
     const yo = fs.readFileSync(path.resolve(RAIZ, '../../screens/YoScreen.tsx'), 'utf8');
-    expect(yo).toMatch(/const veMiRadar = miRadarCorresponde\(resumen\?\.diaPrograma\) && configMiRadar !== null;/);
+    // La decisión de la fila vive en `utils/miRadarEnYo` (que se barre arriba en busca de roles): Yo solo la aplica, sin mirar `user.role`.
+    expect(yo).toMatch(/const veMiRadar = veLaFilaDeMiRadar\(lecturaDeMiRadar\.lectura, diaDelPrograma\);/);
+    expect(yo).toMatch(/hayQueAveriguarMiRadar\(\{ puedeIniciarPrograma: capacidades\.puedeIniciarPrograma, diaUnoSinElegir \}\)/);
     const tarjeta = fs
       .readFileSync(path.resolve(RAIZ, '../home/components/TarjetaHabitoYRadar.tsx'), 'utf8')
       .replace(/\/\*[\s\S]*?\*\//g, '')

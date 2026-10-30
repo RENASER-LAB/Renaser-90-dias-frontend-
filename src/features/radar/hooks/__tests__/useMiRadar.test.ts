@@ -14,10 +14,11 @@ jest.mock('../../../../context/AuthContext', () => ({ useAuth: () => ({ user: { 
 type Config = MiRadarApi;
 const mockGuardar = jest.fn<(pedido: unknown) => Promise<Config>>();
 const mockRecargarConfig = jest.fn();
+const mockReiniciarConfig = jest.fn();
 const mockEnviar = jest.fn<(c: unknown) => Promise<boolean>>();
 const mockRadar = {
   actual: undefined as unknown as {
-    miRadar: { lectura: unknown; guardar: typeof mockGuardar; recargar: typeof mockRecargarConfig };
+    miRadar: { lectura: unknown; guardar: typeof mockGuardar; recargar: typeof mockRecargarConfig; reiniciar: typeof mockReiniciarConfig };
     enviar: typeof mockEnviar;
     enviando: boolean;
     error: string | null;
@@ -69,7 +70,7 @@ function Sonda() {
 async function montar(config: Config, hora = 15, minuto = 30, dia = 29) {
   jest.setSystemTime(new Date(2026, 9, dia, hora, minuto));
   mockRadar.actual = {
-    miRadar: { lectura: { estado: 'lista', config }, guardar: mockGuardar, recargar: mockRecargarConfig },
+    miRadar: { lectura: { estado: 'lista', config }, guardar: mockGuardar, recargar: mockRecargarConfig, reiniciar: mockReiniciarConfig },
     enviar: mockEnviar,
     enviando: false,
     error: null,
@@ -83,7 +84,7 @@ async function montar(config: Config, hora = 15, minuto = 30, dia = 29) {
 
 beforeEach(() => {
   jest.useFakeTimers({ doNotFake: ['setImmediate', 'nextTick'], now: new Date(2026, 9, 29, 15, 30) });
-  for (const m of [mockObtenerHistorial, mockGuardar, mockRecargarConfig, mockEnviar]) m.mockReset();
+  for (const m of [mockObtenerHistorial, mockGuardar, mockRecargarConfig, mockReiniciarConfig, mockEnviar]) m.mockReset();
   mockObtenerHistorial.mockResolvedValue({ entries: [], nextCursor: null });
 });
 afterEach(() => {
@@ -134,6 +135,61 @@ describe('guardar', () => {
     mockGuardar.mockRejectedValueOnce(new Error('boom'));
     const r = await llamar(() => visto.actual.guardarConfig(true));
     expect(r).toEqual({ ok: false, error: 'No pudimos guardar tu Mi Radar. Intenta de nuevo.' });
+  });
+});
+
+describe('cuando todavía no hay Mi Radar', () => {
+  const motivos = [
+    { estado: 'pendiente' },
+    { estado: 'sin-programa' },
+    { estado: 'bloqueada', motivo: 'suspendida' },
+    { estado: 'bloqueada', motivo: 'sin-permiso' },
+    { estado: 'no-disponible' },
+    { estado: 'fallo' },
+  ];
+
+  it.each(motivos)('«$estado»: expone lo leído, sin configuración, y NO pide el historial (no hay nada que contar y daría otro 403)', async lectura => {
+    mockRadar.actual = {
+      miRadar: { lectura, guardar: mockGuardar, recargar: mockRecargarConfig, reiniciar: mockReiniciarConfig },
+      enviar: mockEnviar,
+      enviando: false,
+      error: null,
+      limpiarError: () => undefined,
+    };
+    act(() => {
+      raiz = TestRenderer.create(React.createElement(Sonda));
+    });
+    await vaciar();
+    expect(visto.actual.lectura).toEqual(lectura);
+    expect(visto.actual.config).toBeNull();
+    expect(mockObtenerHistorial).not.toHaveBeenCalled();
+    expect(visto.actual.historial.registros).toEqual([]);
+    // «Reintentar» y volver de elegir el Día 1 usan la lectura que olvida el motivo; la de entrar es la silenciosa.
+    expect(visto.actual.reiniciarConfig).toBe(mockReiniciarConfig);
+    expect(mockRecargarConfig).toHaveBeenCalledTimes(1);
+    expect(mockReiniciarConfig).not.toHaveBeenCalled();
+  });
+
+  it('cuando llega la lectura buena, recién ahí lee el historial', async () => {
+    mockRadar.actual = {
+      miRadar: { lectura: { estado: 'sin-programa' }, guardar: mockGuardar, recargar: mockRecargarConfig, reiniciar: mockReiniciarConfig },
+      enviar: mockEnviar,
+      enviando: false,
+      error: null,
+      limpiarError: () => undefined,
+    };
+    act(() => {
+      raiz = TestRenderer.create(React.createElement(Sonda));
+    });
+    await vaciar();
+    expect(mockObtenerHistorial).not.toHaveBeenCalled();
+    mockRadar.actual = {
+      ...mockRadar.actual,
+      miRadar: { ...mockRadar.actual.miRadar, lectura: { estado: 'lista', config: miRadarConHoras([9], true) } },
+    };
+    act(() => raiz?.update(React.createElement(Sonda)));
+    await vaciar();
+    expect(mockObtenerHistorial).toHaveBeenCalledTimes(1);
   });
 });
 

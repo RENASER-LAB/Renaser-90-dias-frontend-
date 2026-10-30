@@ -1,6 +1,8 @@
 # 16 — El personal sin programa activado ve la fila «Mi Radar» en Yo con «Primero elige tu Día 1»; al tocarla, el motivo y el botón
 # «Elegir mi Día 1»; al elegir, la pantalla vuelve a leer y dice cuándo empieza (spec 019, escenario 16).
-# cuenta: líder (e2e-radar-lider) SIN fila en el programa. Elegir el Día 1 crea la fila: borrarla para repetir el flujo.
+# cuenta: líder (e2e-radar-lider@renaser.test) SIN fila en el programa. Elegir el Día 1 CREA esa fila, así que el flujo se corre una vez
+# por cuenta: para repetirlo, la otra cuenta sin fila (e2e-radar-mentor2@renaser.test) o volver a clonar la base. Hay que correrlo con el
+# backend de la spec 019 (403 con `codigo`): con uno anterior la fila no aparece, que también es lo que se espera de él (FR-010).
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml
@@ -11,12 +13,14 @@ appId: com.renaser.app
 - assertVisible: "Mi Radar"
 - takeScreenshot: 16a-yo-fila-sin-programa
 - tapOn: "Primero elige tu Día 1"
-# El motivo en una línea y el botón; ni interruptor ni nada de Mi Radar.
+# El motivo en una línea y el botón; ni interruptor ni nada de Mi Radar. Sin parpadeo: no pasa por «Cargando…» (el motivo ya se sabía).
 - extendedWaitUntil:
     visible: "Mi Radar empieza en tu día 8\\. Primero elige tu Día 1\\."
     timeout: 20000
 - assertVisible: "Elegir mi Día 1"
 - assertNotVisible: "Encendido"
+- assertNotVisible: "Automático"
+- assertNotVisible: "Registrar ahora"
 - assertNotVisible: "Cargando Mi Radar…"
 - takeScreenshot: 16b-motivo-y-boton
 - tapOn: "Elegir mi Día 1"
@@ -29,6 +33,17 @@ appId: com.renaser.app
 - extendedWaitUntil:
     visible: "Mi Radar empieza en tu día 8.*"
     timeout: 40000
-- assertNotVisible: "Primero elige tu Día 1"
+# El motivo de antes no vuelve a asomar, ni el botón, ni el formulario.
+- assertNotVisible: "Mi Radar empieza en tu día 8\\. Primero elige tu Día 1\\."
 - assertNotVisible: "Elegir mi Día 1"
+- assertNotVisible: "Encendido"
 - takeScreenshot: 16d-empieza-el-dia-8
+# Ya con Día 1 la fila de Yo desaparece (Mi Radar empieza en el día 8).
+- back
+- assertVisible: "Tu evolución"
+- scrollUntilVisible:
+    element: "Tuve una emergencia"
+    direction: DOWN
+    optional: true
+- assertNotVisible: "Primero elige tu Día 1"
+- takeScreenshot: 16e-yo-sin-la-fila

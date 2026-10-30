@@ -19,6 +19,7 @@ import { diasEnFrase } from '../../training/utils/avisoDeLosDias';
 import { CodigoRenaserModal } from '../components/CodigoRenaserModal';
 import { FilaDeVecesPorDia, isoDelDia } from '../components/FilaDeVecesPorDia';
 import { HoraDeMiRadar } from '../components/HoraDeMiRadar';
+import { SinMiRadar } from '../components/SinMiRadar';
 import { VecesAlDia } from '../components/VecesAlDia';
 import { useMiRadar } from '../hooks/useMiRadar';
 import type { MiRadarApi, ModoDeMiRadar } from '../types/radar.types';
@@ -34,6 +35,7 @@ import {
   textoDelHorario,
 } from '../utils/miRadar';
 import { horaEnPunto, type SlotRadar } from '../utils/slotsDelRadar';
+import { vistaDeMiRadar } from '../utils/vistaDeMiRadar';
 import {
   type BorradorDeMiRadar,
   type VistaDeUnDia,
@@ -76,6 +78,13 @@ const OPCIONES_DE_MODO = [
  *     respuestas de la persona** (ni «Hoy», ni «Historial», ni «Patrones»: pedido del dueño, 2026-10-30); las ven su mentor y su líder
  *     en la ficha.
  *
+ * ## Cuando todavía no hay Mi Radar, la pantalla dice POR QUÉ (el 403 del servidor lleva un motivo) y no se queda callada
+ *
+ * Lo decide `utils/vistaDeMiRadar` y lo dibuja `components/SinMiRadar`: sin programa activado, «Mi Radar empieza en tu día 8. Primero
+ * elige tu Día 1.» con «Elegir mi Día 1»; con Día 1 pero antes del día 8, cuándo empieza; cuenta suspendida o sin permiso, una línea y
+ * nada más; sin red o 5xx, «No pudimos cargar Mi Radar.» con «Reintentar». Mientras llega la respuesta, «Cargando Mi Radar…»: ni el
+ * motivo anterior ni la pantalla vacía.
+ *
  * Con días marcados («Solo sáb, dom») el modo y las veces cambian esos días; sin marcar, todos los que vienen. El borrador es
  * lo tocado aún sin guardar y se manda SOLO lo tocado. Sin «Cómo suena»: el Radar siempre suena, una vez por hora.
  *
@@ -89,10 +98,13 @@ export function MiRadarScreen({
   onVolver,
   abrirDesdeAviso = false,
   onProgramarHorario,
+  diaPrograma = null,
 }: {
   onVolver: () => void;
   abrirDesdeAviso?: boolean;
   onProgramarHorario?: () => void;
+  /** El día del programa (`/home`; `null` = no se sabe): con Mi Radar leído y antes del día 8, la pantalla dice cuándo empieza. */
+  diaPrograma?: number | null;
 }) {
   const { c, t } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
@@ -220,6 +232,18 @@ export function MiRadarScreen({
   const falta = hora?.tipo === 'falta' ? hora.motivo : null;
   const hoyLinea = guardado.encendido ? lineaDeHoy(guardado, historial.registros, mi.ahora) : null;
   const textoDelBotonFijo = hayCambios ? `Guardar · ${enModoDias ? frase : 'todos los días'}` : falta ? botonDeLaFalta(falta) : null;
+
+  /* Todavía no hay Mi Radar que editar: se dice por qué (y, si hay algo que hacer, se ofrece) en vez de mostrar un formulario vacío. */
+  const vista = vistaDeMiRadar(mi.lectura, diaPrograma, mi.ahora);
+  if (vista.tipo !== 'editor') {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
+        <CabeceraAdmin titulo="Mi Radar" onVolver={onVolver} />
+        {/* `reiniciarConfig` es estable: el selector del Día 1 se abre en un Modal que vuelve a cargar si su `onActivado` cambia. */}
+        <SinMiRadar vista={vista} alElegirElDiaUno={mi.reiniciarConfig} alReintentar={mi.reiniciarConfig} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>

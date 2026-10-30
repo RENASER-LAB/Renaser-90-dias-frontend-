@@ -30,13 +30,14 @@ export function useMiRadar() {
   const { user } = useAuth();
   const radar = useRadar();
   const ahora = useMinutoActual();
-  const historial = useHistorialDeRadar(obtenerHistorial);
-  const { recargar: recargarConfig, guardar } = radar.miRadar;
+  const { recargar: recargarConfig, reiniciar: reiniciarConfig, guardar, lectura } = radar.miRadar;
+  const config = configDeMiRadar(lectura);
+  /* El historial solo se lee con Mi Radar a la vista: sin programa, bloqueada o con un fallo no hay nada que contar y pedirlo daría otro 403. */
+  const historial = useHistorialDeRadar(config !== null ? obtenerHistorial : null);
   const { recargar: recargarHistorial } = historial;
-  const config = configDeMiRadar(radar.miRadar.lectura);
   const [guardando, setGuardando] = useState(false);
 
-  /* Al entrar, lo guardado se relee: pudo cambiarse desde otro teléfono o la web. */
+  /* Al entrar, lo guardado se relee en silencio (no vacía lo que ya se ve): pudo cambiarse desde otro teléfono o la web. */
   useEffect(() => {
     recargarConfig();
   }, [recargarConfig]);
@@ -79,6 +80,10 @@ export function useMiRadar() {
   return {
     usuarioId: user?.id ?? null,
     ahora,
+    /** Lo que se leyó de Mi Radar, con el motivo si no se pudo (sin programa, bloqueada, fallo). */
+    lectura,
+    /** «Reintentar» y volver de elegir el Día 1: olvida el motivo (queda «Cargando…») y lee. Estable: lo recibe un `Modal`. */
+    reiniciarConfig,
     config,
     guardando,
     guardarConfig,

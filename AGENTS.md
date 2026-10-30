@@ -275,6 +275,9 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **Yo → fila «Mi Radar»** (`compass`), justo debajo de «Tuve una emergencia», **solo desde el día 8** y solo si el
       servidor la ofrece (`GET /api/v1/radar/mi-radar`; un 404 o 403 la esconde). Dice `Encendido · 09:00, 14:00 y 20:00` o
       `Apagado` y abre `MiRadarScreen` a pantalla completa. Los días 1 a 7 no hay fila: el Código Renaser se abre solo.
+      > **Corregido 2026-10-30 (spec 019, el 403 dice por qué).** «Un 404 o 403 la esconde» ya no es cierto para el 403 que trae motivo: un
+      > `PROGRAMA_NO_ACTIVADO` (el personal que todavía no eligió su Día 1) **muestra** la fila, con «Primero elige tu Día 1». Siguen
+      > escondiéndola el 404 y un 403 sin motivo (un backend anterior) o con uno que la app no conoce. Ver la entrada de la spec 019, más abajo.
     * **`MiRadarScreen`**: el `InterruptorGrande` «Mi Radar» primero; apagado no hay registrar ni horarios. Encender muestra
       las horas (`ChipDeOpcion`, de 03:00 a 23:00, hasta 12; vienen 09:00, 14:00 y 20:00) y se guarda con «Guardar y
       encender»; apagar rige en el acto. Encendido: «Registrar ahora» (el `CodigoRenaserModal` de siempre, que se puede
@@ -678,6 +681,37 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       `InterruptorGrande` deja de dibujar la línea de descripción cuando va vacía.
     * **Compatibilidad:** `GET/PUT /radar/mi-radar` devuelven los siete días ya resueltos; una respuesta de un backend anterior a la 019 (con `horas`) se
       lee como un error y la fila de Yo no aparece. **Hace falta el backend con V122 antes y un APK nuevo** (la app no se actualiza por aire).
+    * **El 403 de Mi Radar dice por qué y lleva a elegir el Día 1** (último pedido del dueño sobre la spec 019: «no quiero bugs en esa parte»).
+      Hasta hoy un 403 de `GET/PUT /api/v1/radar/mi-radar` se leía como «no hay Mi Radar», en silencio. Ahora el cuerpo trae `codigo`
+      (`PROGRAMA_NO_ACTIVADO`, `CUENTA_SUSPENDIDA` o `SIN_PERMISO`; el formato `ApiErrorConCodigo` de siempre) y la lectura
+      (`useConfigDeMiRadar.lecturaDeUnError`) lo distingue; la pantalla dice lo que toca con `utils/vistaDeMiRadar` y
+      `components/SinMiRadar`:
+      * **Sin programa activado** (el personal —mentor, líder, administrador, alquimista— que no eligió su Día 1, con o sin fila de programa;
+        lo decide el servidor, no el rol): en lugar de la pantalla, «Mi Radar empieza en tu día 8. Primero elige tu Día 1.» y el botón
+        **«Elegir mi Día 1»** (`programa/components/BotonElegirDiaUno`, que abre `ActivarProgramaScreen` con su flecha para volver). Al
+        confirmar, la pantalla olvida el motivo («Cargando Mi Radar…», nunca el de antes ni la pantalla vacía) y vuelve a leer: con el
+        programa activado y antes del día 8 dice cuándo empieza («Mi Radar empieza en tu día 8, el domingo 1 de noviembre.», con la
+        fecha de hoy del servidor; sin Día 1 todavía, sin fecha). Desde el día 8, el formulario de siempre.
+      * **Suspendida o sin permiso**: una línea con el motivo («Tu cuenta está suspendida: Mi Radar no está disponible.» o «No tienes
+        permiso para usar Mi Radar.», textos de la app y no del servidor) y nada más: sin botones que no llevan a nada.
+      * **Sin red o 5xx**: «No pudimos cargar Mi Radar.» con «Reintentar» (que también pasa por «Cargando…»).
+      * **Con un backend anterior** (un 403 sin `codigo`, o con uno que esta app no conoce) **se lee como hoy**: «no hay Mi Radar», en
+        silencio, sin fila (FR-010). Un 404 también.
+      * **Yo → fila «Mi Radar» para el personal sin programa** («Primero elige tu Día 1»): **solo cuando el servidor lo confirmó**. Yo le
+        pregunta a `GET /radar/mi-radar` (una vez por cuenta, `solicitar`) únicamente a quien puede no tener programa activado
+        (`capacidades.puedeIniciarPrograma` —sin fila— o la fila sin Día 1), así que **para el aprendiz y para quien ya va por su programa
+        Yo no cambia** y antes del día 8 no se les pide nada. Elegir el Día 1 en cualquier lugar (Yo, Hoy, Training) invalida la lectura
+        (`escucharDiaUnoElegido`), de modo que la fila no se queda diciendo «Primero elige tu Día 1» después de elegirlo. Las decisiones
+        están en `radar/utils/miRadarEnYo` y se prueban sin pantalla.
+      * **Sin parpadeos**: `recargar` (al abrir la pantalla, al volver a Hoy tras un fallo) relee **en silencio**, sin vaciar lo que se ve;
+        `reiniciar` (elegir el Día 1, «Reintentar») deja la lectura en «pendiente» antes de pedir, y una respuesta vieja no pisa a la nueva.
+        Un fallo de red al releer **no borra** una lectura buena ni un motivo que el servidor ya dio. El historial del Código Renaser no se
+        pide mientras no hay Mi Radar a la vista.
+      * **Servidor** (backend, D-292): el 403 de la suspensión y de la falta de permiso lo escribe el filtro de permisos
+        (`PermissionEnforcementInterceptor`), así que el `codigo` aparece también en esos 403 de otros endpoints (aditivo: `message` no cambia).
+        Quien no tiene fila de programa recibe el mismo 403 `PROGRAMA_NO_ACTIVADO` (antes un 404 «Participante no encontrado»).
+      * **Hace falta publicar el backend antes que la app** (con la app nueva contra el backend anterior no aparece la fila ni cambia nada) y un
+        APK nuevo. Maestro: `.maestro/mi-radar/16-personal-sin-programa.yaml`.
     * **No cambian**: Training, Plan, los días 1 a 7, los hábitos, el formulario, los demás tabs ni la barra.
   * **Cambio por pedido del dueño — 2026-10-12 — Administración (estado de `Hoy`): «Hábitos del programa», con
     audiencia por rol** (backend D-264; spec y plan en `Renaser-90-dias-backend/specs/001-habitos-por-rol/`, flujo

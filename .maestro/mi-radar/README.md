@@ -24,7 +24,7 @@ build de desarrollo (ver `../README.md`).
 | `13-fin-de-semana-personalizado` | Día 10 encendido, después de 05 y **antes de 07**; **de lunes a viernes** | Sábado y domingo en Personalizado con 3 veces, hoy con candado que no se marca, domingo «Sin Radar» (13) |
 | `14-hoy-sin-despertar` | Día 10 encendido y SIN hora de Despertar | «Falta tu hora de Despertar», «Programar mi Despertar» que lleva a Training, y no hay «Registrar ahora» (14) |
 | `15-personal-con-programa` | Mentor con su programa propio (día 11), Despertar y Dormir, Mi Radar apagado | Mi Radar es para todos los roles: la mitad de Hoy «Planifica tu Radar», la pantalla y encender (15) |
-| `16-personal-sin-programa` | Líder sin fila en el programa | La fila de Yo «Primero elige tu Día 1», el motivo, «Elegir mi Día 1», elegir y volver; dice cuándo empieza (16) |
+| `16-personal-sin-programa` | Líder (`e2e-radar-lider@renaser.test`) sin fila en el programa; **una vez por cuenta** (elegir el Día 1 crea la fila: para repetirlo, `e2e-radar-mentor2@renaser.test` o volver a clonar la base) | La fila de Yo «Primero elige tu Día 1», el motivo del 403 en una línea con «Elegir mi Día 1», elegir y volver sin que asome el motivo de antes; dice cuándo empieza y la fila desaparece (16) |
 | `10-ficha-del-mentor` | Mentor del grupo | La ficha del aprendiz dice «Mi Radar: encendido · 05:30 a 22:30 · 17 veces» y sus registros (10) |
 | `11-ficha-de-administracion` | Admin o Alquimista | La ficha de la persona, con el mismo bloque (11) |
 | `12-ficha-del-lider` | Líder de mentores | Hoy → Mis mentores → persona: el mismo bloque (11) |

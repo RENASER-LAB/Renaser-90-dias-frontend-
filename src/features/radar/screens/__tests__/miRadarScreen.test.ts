@@ -34,12 +34,23 @@ jest.mock('../../components/CodigoRenaserModal', () => ({
   },
 }));
 
+/* El selector del Día 1 (un Modal con su propia pantalla) se reemplaza por un botón que avisa con lo que recibió. */
+const mockElegirDia: Array<{ onActivado: () => void }> = [];
+jest.mock('../../../programa/components/BotonElegirDiaUno', () => ({
+  BotonElegirDiaUno: (props: { onActivado: () => void }) => {
+    mockElegirDia.push(props);
+    return require('react').createElement('Text', { accessibilityLabel: 'Elegir mi Día 1', onPress: props.onActivado }, 'Elegir mi Día 1');
+  },
+}));
+
 const mockMi = { actual: undefined as unknown as ReturnType<typeof crearMi> };
 jest.mock('../../hooks/useMiRadar', () => ({ useMiRadar: () => mockMi.actual }));
 
 import * as tokens from '../../../../theme/tokens';
 import { diaDePrueba, miRadarDePrueba } from '../../__tests__/fixturasDeMiRadar';
+import type { LecturaDeMiRadar } from '../../hooks/useConfigDeMiRadar';
 import type { MiRadarApi, RegistroRadarApi } from '../../types/radar.types';
+import { MENSAJE_SIN_PROGRAMA } from '../../utils/vistaDeMiRadar';
 import { FUERA_DE_HORARIO, HOY_SIN_RADAR, MiRadarScreen } from '../MiRadarScreen';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -63,6 +74,8 @@ function crearMi(config: MiRadarApi | null, extra: Record<string, unknown> = {})
   return {
     usuarioId: 'u1',
     ahora: new Date(2026, 9, 29, 15, 30),
+    lectura: (config ? { estado: 'lista', config } : { estado: 'pendiente' }) as LecturaDeMiRadar,
+    reiniciarConfig: jest.fn(),
     config,
     guardando: false,
     guardarConfig: jest.fn(async (encendido: boolean, _dias: readonly unknown[] = []) => ({ ok: true as const, config: semana(encendido) })),
@@ -90,7 +103,7 @@ function crearMi(config: MiRadarApi | null, extra: Record<string, unknown> = {})
 }
 
 const montadas: ReactTestRenderer[] = [];
-function montar(props: { abrirDesdeAviso?: boolean; onProgramarHorario?: () => void; } = {}): ReactTestRenderer {
+function montar(props: { abrirDesdeAviso?: boolean; onProgramarHorario?: () => void; diaPrograma?: number | null } = {}): ReactTestRenderer {
   let r!: ReactTestRenderer;
   act(() => {
     r = TestRenderer.create(React.createElement(MiRadarScreen, { onVolver: () => undefined, ...props }));
@@ -135,6 +148,7 @@ beforeEach(() => {
   // La confirmación en línea se va sola a los 4 s: con el reloj de mentira no queda un temporizador vivo al terminar.
   jest.useFakeTimers({ doNotFake: ['setImmediate', 'nextTick'] });
   mockModal.length = 0;
+  mockElegirDia.length = 0;
 });
 afterEach(() => {
   act(() => montadas.splice(0).forEach(r => r.unmount()));
@@ -510,6 +524,125 @@ describe('«Hoy: 4 de 6»: una sola línea con las veces que respondió hoy de l
     mockMi.actual = mi;
     const r = montar();
     expect(lineaDeHoy(r).findAll(n => n.props.entering !== undefined || n.props.layout !== undefined)).toHaveLength(0);
+  });
+});
+
+describe('cuando todavía no hay Mi Radar, la pantalla dice por qué', () => {
+  const sinConfig = (lectura: LecturaDeMiRadar) => {
+    const mi = crearMi(null, { lectura });
+    mockMi.actual = mi;
+    return mi;
+  };
+  /** Lo único que no puede haber cuando no hay Mi Radar que editar. */
+  const sinFormulario = (r: ReactTestRenderer) => {
+    expect(hay(r, 'Encendido')).toBe(false);
+    expect(hay(r, 'Automático')).toBe(false);
+    expect(textos(r)).not.toContain('Registrar ahora');
+    expect(textos(r)).not.toContain('Guardar');
+  };
+
+  it('«pendiente»: «Cargando Mi Radar…», sin motivo, sin botones y sin pantalla vacía', () => {
+    sinConfig({ estado: 'pendiente' });
+    const r = montar();
+    expect(textos(r)).toContain('Cargando Mi Radar…');
+    expect(hay(r, 'Elegir mi Día 1')).toBe(false);
+    expect(hay(r, 'Reintentar')).toBe(false);
+    sinFormulario(r);
+  });
+
+  it('sin programa activado: la línea del motivo y «Elegir mi Día 1»; ni interruptor ni nada de Mi Radar', () => {
+    sinConfig({ estado: 'sin-programa' });
+    const r = montar();
+    expect(MENSAJE_SIN_PROGRAMA).toBe('Mi Radar empieza en tu día 8. Primero elige tu Día 1.');
+    expect(textos(r)).toContain('Mi Radar empieza en tu día 8. Primero elige tu Día 1.');
+    expect(hay(r, 'Elegir mi Día 1')).toBe(true);
+    expect(textos(r)).not.toContain('Cargando');
+    sinFormulario(r);
+  });
+
+  it('la cabecera sigue siendo «Mi Radar» con su volver (sin subtítulo de horario)', () => {
+    sinConfig({ estado: 'sin-programa' });
+    const r = montar();
+    expect(textos(r)).toContain('Mi Radar');
+    expect(r.root.findAll(n => n.props.accessibilityLabel === 'Volver' && typeof n.props.onPress === 'function').length).toBeGreaterThan(0);
+    expect(textos(r)).not.toContain('Ahora:');
+  });
+
+  it('al elegir el Día 1 la pantalla olvida el motivo y vuelve a leer (con un callback estable: lo recibe un Modal)', () => {
+    const mi = sinConfig({ estado: 'sin-programa' });
+    montar();
+    expect(mockElegirDia.length).toBeGreaterThan(0);
+    expect(mockElegirDia[mockElegirDia.length - 1].onActivado).toBe(mi.reiniciarConfig);
+    act(() => mockElegirDia[mockElegirDia.length - 1].onActivado());
+    expect(mi.reiniciarConfig).toHaveBeenCalledTimes(1);
+  });
+
+  it('cuenta suspendida: una línea con el motivo y nada más (sin botones)', () => {
+    sinConfig({ estado: 'bloqueada', motivo: 'suspendida' });
+    const r = montar();
+    expect(textos(r)).toContain('Tu cuenta está suspendida: Mi Radar no está disponible.');
+    expect(hay(r, 'Elegir mi Día 1')).toBe(false);
+    expect(hay(r, 'Reintentar')).toBe(false);
+    sinFormulario(r);
+  });
+
+  it('sin permiso: una línea con el motivo y nada más (sin botones)', () => {
+    sinConfig({ estado: 'bloqueada', motivo: 'sin-permiso' });
+    const r = montar();
+    expect(textos(r)).toContain('No tienes permiso para usar Mi Radar.');
+    expect(hay(r, 'Elegir mi Día 1')).toBe(false);
+    expect(hay(r, 'Reintentar')).toBe(false);
+    sinFormulario(r);
+  });
+
+  it('sin red o 5xx: «No pudimos cargar Mi Radar.» con «Reintentar», que olvida el fallo y vuelve a leer', () => {
+    const mi = sinConfig({ estado: 'fallo' });
+    const r = montar();
+    expect(textos(r)).toContain('No pudimos cargar Mi Radar.');
+    expect(hay(r, 'Elegir mi Día 1')).toBe(false);
+    pulsar(r, 'Reintentar');
+    expect(mi.reiniciarConfig).toHaveBeenCalledTimes(1);
+    sinFormulario(r);
+  });
+
+  it('un backend que no lo ofrece: «Mi Radar todavía no está disponible.» sin botones', () => {
+    sinConfig({ estado: 'no-disponible' });
+    const r = montar();
+    expect(textos(r)).toContain('Mi Radar todavía no está disponible.');
+    expect(hay(r, 'Reintentar')).toBe(false);
+    sinFormulario(r);
+  });
+
+  it('con el programa activado pero antes del día 8: cuándo empieza (con la fecha del servidor) y nada que editar', () => {
+    // Jueves 29/10, día 5 del programa: el día 8 es el domingo 1 de noviembre.
+    mockMi.actual = crearMi(miRadarDePrueba(false, {}, '2026-10-29'));
+    const r = montar({ diaPrograma: 5 });
+    expect(textos(r)).toContain('Mi Radar empieza en tu día 8, el domingo 1 de noviembre.');
+    expect(hay(r, 'Elegir mi Día 1')).toBe(false);
+    sinFormulario(r);
+  });
+
+  it('el Día 1 todavía no llegó (día 0): «Mi Radar empieza en tu día 8.», sin inventar fecha', () => {
+    mockMi.actual = crearMi(semana(false));
+    const r = montar({ diaPrograma: 0 });
+    expect(textos(r)).toContain('Mi Radar empieza en tu día 8.');
+    expect(textos(r)).not.toContain('domingo');
+    sinFormulario(r);
+  });
+
+  it('desde el día 8 —o sin saber el día, que es como entra quien viene de un aviso— es el formulario de siempre', () => {
+    mockMi.actual = crearMi(semana(true));
+    expect(hay(montar({ diaPrograma: 8 }), 'Encendido')).toBe(true);
+    expect(hay(montar({ diaPrograma: 30 }), 'Encendido')).toBe(true);
+    expect(hay(montar({ diaPrograma: null }), 'Encendido')).toBe(true);
+    expect(hay(montar(), 'Encendido')).toBe(true);
+  });
+
+  it('el lector de pantalla oye el motivo como texto', () => {
+    sinConfig({ estado: 'sin-programa' });
+    const r = montar();
+    const lineas = r.root.findAll(n => (n.type as unknown) === 'Text' && n.props.accessibilityRole === 'text');
+    expect(lineas.map(textosDe)).toContain('Mi Radar empieza en tu día 8. Primero elige tu Día 1.');
   });
 });
 

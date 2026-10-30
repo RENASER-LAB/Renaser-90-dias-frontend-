@@ -27,14 +27,26 @@ describe('la fila «Mi Radar» de Yo', () => {
     expect(grupo.slice(grupo.indexOf('key="mi-radar"'))).toMatch(/icono="compass"/);
   });
 
-  it('solo desde el día 8 y solo si el servidor respondió: ni fila ni pantalla antes', () => {
-    expect(yo).toMatch(/const veMiRadar = miRadarCorresponde\(resumen\?\.diaPrograma\) && configMiRadar !== null;/);
-    expect(yo).toMatch(/\{veMiRadar && configMiRadar \? \(\s*<FilaDeAjuste\s+key="mi-radar"/);
-    expect(yo).toMatch(/if \(enMiRadar && veMiRadar\) \{\s*return \(?\s*<MiRadarScreen/);
+  it('la fila y la pantalla las decide `utils/miRadarEnYo` (con pruebas propias): desde el día 8 con el servidor respondiendo, o el personal sin programa', () => {
+    expect(yo).toMatch(/const veMiRadar = veLaFilaDeMiRadar\(lecturaDeMiRadar\.lectura, diaDelPrograma\);/);
+    expect(yo).toMatch(/\{veMiRadar \? \(\s*<FilaDeAjuste\s+key="mi-radar"/);
+    expect(yo).toMatch(/if \(\s*seDibujaLaPantallaDeMiRadar\(\{[\s\S]*?\}\)\s*\) \{\s*return \(\s*<MiRadarScreen/);
+    expect(yo).toMatch(/hayQueCerrarLaPantallaDeMiRadar\(estado\)/);
   });
 
-  it('dice su estado en una línea', () => {
-    expect(yo).toMatch(/detalle=\{textoDeMiRadar\(configMiRadar\)\}/);
+  it('dice su estado en una línea; sin programa dice lo único que hay que hacer', () => {
+    expect(yo).toMatch(/detalle=\{enMarchaMiRadar && configMiRadar \? textoDeMiRadar\(configMiRadar\) : DETALLE_DE_LA_FILA_SIN_PROGRAMA\}/);
+  });
+
+  it('pregunta al servidor solo a quien podría no tener programa, y una vez (`solicitar` es idempotente)', () => {
+    expect(yo).toMatch(/hayQueAveriguarMiRadar\(\{ puedeIniciarPrograma: capacidades\.puedeIniciarPrograma, diaUnoSinElegir \}\)/);
+    expect(yo).toMatch(/if \(averiguarMiRadar\) solicitarMiRadar\(\);/);
+  });
+
+  it('la pantalla abierta desde la fila sin programa sigue abierta mientras elige su Día 1, y se entera del día para decir cuándo empieza', () => {
+    expect(yo).toMatch(/setMiRadarSinPrograma\(!enMarchaMiRadar\);\s*setEnMiRadar\(true\);/);
+    expect(yo).toMatch(/diaPrograma=\{resumen\?\.diaPrograma \?\? \(miRadarSinPrograma \? 0 : null\)\}/);
+    expect(yo).toMatch(/onVolver=\{cerrarMiRadar\}/);
   });
 
   it('el estado con días distintos («… · sáb 11:00 · dom sin Radar») se parte en renglones: la fila no lo corta', () => {
@@ -50,7 +62,7 @@ describe('la fila «Mi Radar» de Yo', () => {
     expect(yo).toMatch(/setMiRadarPorAviso\(true\);\s*setEnMiRadar\(true\);/);
     expect(yo).toMatch(/setParams\(\{ abrirMiRadar: undefined \}\)/);
     // Tocar la fila a mano no abre el formulario; venir de un aviso sí (si toca).
-    expect(yo).toMatch(/setMiRadarPorAviso\(false\);\s*setEnMiRadar\(true\);/);
+    expect(yo).toMatch(/setMiRadarPorAviso\(false\);\s*setMiRadarSinPrograma\(!enMarchaMiRadar\);\s*setEnMiRadar\(true\);/);
     expect(yo).toMatch(/<MiRadarScreen\s+abrirDesdeAviso=\{miRadarPorAviso\}/);
   });
 });

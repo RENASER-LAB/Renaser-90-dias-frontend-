@@ -49,8 +49,9 @@ export async function obtenerHistorial(cursor?: string | null): Promise<Historia
 
 /**
  * `GET /api/v1/radar/mi-radar` (spec 019): si la persona encendió Mi Radar y, para cada día de la semana, el modo, las veces y las
- * horas que el servidor calculó con su Despertar y su Dormir (`dias`, siete). Un 404 es un backend anterior y un 403 una cuenta sin
- * permiso o suspendida: quien llama los lee como «no hay Mi Radar», no como un fallo.
+ * horas que el servidor calculó con su Despertar y su Dormir (`dias`, siete). Un 404 es un backend anterior. Un 403 **dice por qué**
+ * en el `codigo` del cuerpo (`PROGRAMA_NO_ACTIVADO`, `CUENTA_SUSPENDIDA`, `SIN_PERMISO`; spec 019): `useConfigDeMiRadar.lecturaDeUnError` lo lee, y un
+ * 403 sin motivo (un backend anterior) sigue siendo «no hay Mi Radar», no un fallo.
  */
 export async function obtenerMiRadar(): Promise<MiRadarApi> {
   const r = await apiFetch<unknown>('/api/v1/radar/mi-radar');
