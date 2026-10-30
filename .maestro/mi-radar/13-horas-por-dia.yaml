@@ -83,6 +83,10 @@ appId: com.renaser.app
 - tapOn: "Sábado.*"
 - tapOn: "Domingo.*"
 - assertVisible: "Solo sáb, dom"
+# El botón queda debajo de la cuadrícula de horas: se baja hasta él.
+- scrollUntilVisible:
+    element: "Dejar sáb, dom como los demás días"
+    direction: DOWN
 - assertVisible: "Dejar sáb, dom como los demás días"
 - tapOn: "Dejar sáb, dom como los demás días"
 - extendedWaitUntil:
