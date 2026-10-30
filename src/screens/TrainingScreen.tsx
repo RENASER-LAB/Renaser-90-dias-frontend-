@@ -299,22 +299,26 @@ export default function TrainingScreen() {
   }, [route.params, navigation]);
   useEffect(() => {
     if (!accionPedida || cargandoBackend) return;
-    if (!errorBackend && habits.some(h => h.id === accionPedida && h.tieneTrackHoy)) {
+    // En lo que trajo `useTraining`, no en `habits`: ver el comentario del aviso, abajo (mismo E2E del 29/10).
+    if (!errorBackend && habitsDelBackend.some(h => h.id === accionPedida && h.tieneTrackHoy)) {
       setPracticas(PRACTICAS_CERRADAS);
       setAperturaPedida({ registroId: accionPedida, vez: Date.now() });
     }
     setAccionPedida(null);
-  }, [accionPedida, habits, cargandoBackend, errorBackend]);
+  }, [accionPedida, habitsDelBackend, cargandoBackend, errorBackend]);
+  /* Se busca en lo que trajo `useTraining` y no en `habits`: al volver a Training se relee de cero (spec 002), y en el
+     cuadro en que termina de cargar `habits` todavía es la lista vacía (la copia llega en el `useLayoutEffect` de
+     arriba). Con `habits` el pedido se descartaba sin abrir nada (E2E del 29/10). */
   useEffect(() => {
     if (!habitoPedido) return;
-    const habito = habitoAAbrir(habitoPedido, habits, cargandoBackend);
+    const habito = habitoAAbrir(habitoPedido, errorBackend ? [] : habitsDelBackend, cargandoBackend);
     if (habito === 'esperar') return;
     if (habito) {
       setPracticas(PRACTICAS_CERRADAS);
       setAperturaPedida({ registroId: habito.id, vez: Date.now() });
     }
     setHabitoPedido(null);
-  }, [habitoPedido, habits, cargandoBackend]);
+  }, [habitoPedido, habitsDelBackend, cargandoBackend, errorBackend]);
 
   /**
    * Refleja en la tarjeta un cierre que el SERVIDOR YA CONFIRMÓ, sin esperar a releer (V-2,

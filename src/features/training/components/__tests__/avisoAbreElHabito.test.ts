@@ -39,7 +39,7 @@ function Envoltorio({ apertura, diaInicial = null }: { apertura: { registroId: s
   const [dia, setDia] = React.useState<string | null>(diaInicial);
   return React.createElement(TrainingPorHora, {
     activa: true, estado: 'listo', mensajeDeError: null, onReintentar: () => undefined, cuentaId: 'cuenta-del-aviso',
-    habits: [habito('con-guia', { guia }), habito('sin-guia')], planHabits: [], hoyIso: HOY, diaElegido: dia, onElegirDia: setDia,
+    habits: [habito('con-guia', { guia }), habito('sin-guia'), habito('roca-1', { dimension: 'VIDA Y NEGOCIO', habitoId: null, systemKey: null, title: 'Revisar las facturas', time: '20:30' })], planHabits: [], hoyIso: HOY, diaElegido: dia, onElegirDia: setDia,
     diaPrograma: 40, fase: null, titulos: {}, eventosPrendidos: false, confirmacion: null, onConfirmacionTerminada: () => undefined,
     aperturaPedida: apertura, onAperturaAtendida, onRegistrar, onMarcar: () => undefined, onAbrirEvento: () => undefined,
   });
@@ -87,5 +87,13 @@ describe('el aviso del teléfono abre el hábito', () => {
   it('también si se estaba mirando otro día: vuelve a hoy y abre la hoja, que no se cierra por ese cambio de día', async () => {
     await montar({ registroId: 'con-guia', vez: 1 }, '2026-10-31');
     expect(hayModal()).toBe(true);
+  });
+
+  it('una acción del día pedida desde Plan con Training ya montado abre su hoja (spec 016)', async () => {
+    await montar(null);
+    expect(hayModal()).toBe(false);
+    await act(async () => { raiz!.update(React.createElement(Envoltorio, { apertura: { registroId: 'roca-1', vez: 3 } })); });
+    expect(hayModal()).toBe(true);
+    expect(onAperturaAtendida).toHaveBeenCalledTimes(1);
   });
 });

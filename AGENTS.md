@@ -372,9 +372,11 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     pedido sobre la vista previa: «así bro, pero más centrado, para que sea CX/UX» —Hoy, opción A «Lado a lado»— y «el de acá,
     el B, creo que me agrada más; procede y la spec» —Plan, opción B «Por eje»—). Lo que cambia y nada más:
     * **Hoy — «Hábitos de hoy» y el Radar en una tarjeta** (`features/home/components/TarjetaHabitoYRadar`, en el lugar de la
-      tarjeta de hábitos, después del Mapa): dos mitades **iguales y centradas** —ícono, rótulo con su chevron, una línea de
-      estado, título y detalle, al centro a lo ancho y a lo alto; la fila las estira a la más alta— con una línea fina entre
-      las dos. Con la letra grande del sistema (`fontScale` > 1,15) pasan una debajo de la otra y nada se corta. Mitades de 48
+      tarjeta de hábitos, después del Mapa): dos mitades **iguales** —ícono con el rótulo y su chevron, una línea de estado,
+      título y detalle; la fila las estira a la más alta— con una línea fina entre las dos.
+      > **Corregido 2026-10-29 (el dueño, sobre la captura: «esto alineado como estaba antes, que se vea mejor»).** Decía «al
+      > centro a lo ancho y a lo alto». Ahora el contenido de las dos mitades va a la izquierda y arriba, como la tarjeta
+      > «Hábitos de hoy» de antes: los renglones de una mitad quedan a la altura de los de la otra. Con la letra grande del sistema (`fontScale` > 1,15) pasan una debajo de la otra y nada se corta. Mitades de 48
       o más. Responden al dedo con el fondo lavado de oro, **no** con la escala de `Presionable` (una mitad que se hundiera
       dentro de una tarjeta de bordes comunes se vería rota); **sin movimiento propio** (es lo más visto de Hoy y lo que cambia
       tiene que leerse en el acto). Izquierda: la de siempre (cifra, hábito de esta hora, lo que queda) → Training. **Se borró
@@ -411,7 +413,12 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       `/home`; lo que no se sabe no se inventa), una barrita por acción y una fila por eje que tenga acciones hoy, **en el orden
       de las prioridades** (el principal primero): ícono del eje (`iconoDelEje`), «n de m», un símbolo por acción y «Sigue: X ·
       16:00», «Se te pasó: X» o «Todo cumplido». Los símbolos tienen forma, no solo color: ✓ cumplida (`checkCircle`), círculo
-      vacío pendiente, reloj rojo «se te pasó la hora» (`clock`) y candado si espera a la verde por Pareto (`lock`).
+      vacío pendiente, reloj «se te pasó la hora» (`clock`) y candado si espera a la verde por Pareto (`lock`).
+      > **Corregido 2026-10-29 (mismo día, tras el E2E).** El reloj y «Se te pasó: X» iban en rojo y la hoja decía «todavía
+      > puedes registrarla hoy». Ahora van en dorado y la hoja dice «Se te pasó la hora · todavía puedes cumplir tu
+      > compromiso», como Training (pedido del dueño: lo atrasado no habla de puntos, invita a cumplir). «Registrar en
+      > Training» no abría la acción: al volver a Training se relee de cero y el pedido se buscaba en la lista todavía vacía;
+      > ahora se busca en lo que trajo `useTraining` (lo mismo para el aviso del teléfono que abre un hábito).
       Reglas (`objetivos/utils/accionesDeHoy.ts`): cumplida manda sobre todo; una bloqueada por Pareto es candado aunque su hora
       haya pasado; **«se te pasó» es solo «pendiente y su hora ya pasó»** (Training es más generoso: una acción queda atrasada
       cuando llega la hora del siguiente ítem del día, hábitos incluidos, y Plan no lee los hábitos); la que sigue es la primera

@@ -88,5 +88,10 @@ describe('Plan: las acciones de hoy por eje', () => {
     const training = leer('screens/TrainingScreen.tsx');
     expect(training).toMatch(/abrirAccionId\?: string/);
     expect(training).toMatch(/h\.id === accionPedida && h\.tieneTrackHoy/);
+    // E2E del 29/10: al volver a Training se relee de cero y `habits` todavía es la lista vacía en el cuadro en que termina de
+    // cargar; con `habits` la acción pedida se descartaba sin abrir. Se busca en lo que trajo `useTraining`.
+    expect(training).toMatch(/habitsDelBackend\.some\(h => h\.id === accionPedida/);
+    expect(training).not.toMatch(/\bhabits\.some\(h => h\.id === accionPedida/);
+    expect(training).toMatch(/habitoAAbrir\(habitoPedido, errorBackend \? \[\] : habitsDelBackend/);
   });
 });

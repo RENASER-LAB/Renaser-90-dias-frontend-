@@ -355,7 +355,10 @@ describe('caso 5 · el reloj del teléfono no manda', () => {
       diaPrograma: 40,
       habits: [habito('temprano', '06:00'), habito('tarde', '22:00')],
     });
-    expect(textos()).toContain('Te toca ahora');
+    // «Te toca ahora» ya no se escribe en la fila (pedido del dueño, 29/10): lo oye el lector de pantalla.
+    const etiquetas = raiz!.root.findAll(n => typeof n.props.accessibilityLabel === 'string').map(n => n.props.accessibilityLabel as string);
+    expect(etiquetas.some(e => e.includes('Te toca ahora'))).toBe(true);
+    expect(textos()).not.toContain('Te toca ahora');
     expect(textos()).toContain('Se te pasó la hora');
   });
 });

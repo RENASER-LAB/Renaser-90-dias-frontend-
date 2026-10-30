@@ -196,7 +196,7 @@ describe('los textos', () => {
     expect(textoDelEstado('cumplida', '08:52')).toBe('Cumplida 08:52');
     expect(textoDelEstado('cumplida', null)).toBe('Cumplida');
     expect(textoDelEstado('esperaALaVerde', null)).toBe('Se abre al completar la primera');
-    expect(textoDelEstado('sePaso', null)).toBe('Se te pasó la hora · todavía puedes registrarla hoy');
+    expect(textoDelEstado('sePaso', null)).toBe('Se te pasó la hora · todavía puedes cumplir tu compromiso');
     expect(textoDelEstado('pendiente', null)).toBe('Pendiente');
   });
 
