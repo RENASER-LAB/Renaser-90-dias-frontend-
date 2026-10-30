@@ -244,7 +244,8 @@ describe('un día ANTERIOR: no se monta ningún registro y nada escribe', () => 
     for (const parte of ['Agua tibia', 'Ducha fría', 'Agua tibia', 'Ducha fría']) await pulsar(conEtiqueta(raiz!, parte));
     expect(mockPedidos.length).toBeGreaterThan(0);
     expect(mockPedidos.every(p => p.metodo === 'GET')).toBe(true);
-    expect(mockPedidos.filter(p => /\/complete|\/evidence|\/rocks\//.test(p.ruta))).toEqual([]);
+    // «Cerrado» / «Sin cerrar» (spec 017) es una LECTURA de `/rocks/day-closure?date=`: la única de `/rocks/` permitida.
+    expect(mockPedidos.filter(p => /\/complete|\/evidence|\/rocks\/(?!day-closure\?date=\d{4}-\d{2}-\d{2}$)/.test(p.ruta))).toEqual([]);
     expect(onRegistrar).not.toHaveBeenCalled();
     expect(onMarcar).not.toHaveBeenCalled();
   });

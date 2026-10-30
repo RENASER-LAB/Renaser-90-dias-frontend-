@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { Icon, TAMANO_ICONO } from '../../../components/Icon';
 import { Presionable } from '../../../components/Presionable';
+import { FilaDelCierre } from '../../cierre/components/FilaDelCierre';
 import { MicroLabel } from '../../../components/ui';
 import { useTheme } from '../../../theme/ThemeContext';
 import { modoDeHoy, type ModoDeLaFila } from '../utils/filaDelDia';
@@ -22,6 +23,9 @@ import { FilaDelDia } from './FilaDelDia';
  *
  * Lo hecho sale con un fundido y la lista se acomoda (`FilaDelDia`). Los que se acaban de cumplir (`retenidos`)
  * se quedan en su lugar el tiempo justo para que el check se llene y suba su «+N».
+ *
+ * **«Cierra tu día»** (spec 017) es una fila aparte (`FilaDelCierre`) que va entre lo que sigue, a su hora: no lleva
+ * «Te toca ahora», no se despide al cerrarse y no cuenta para «Terminaste lo de hoy».
  */
 export function ListaDeHoy({
   items,
@@ -39,24 +43,29 @@ export function ListaDeHoy({
   const { c, t } = useTheme();
   const [hechosAbiertos, setHechosAbiertos] = useState(false);
   const lista = useMemo(() => armarListaDelDia(items, minutosDeAhora(ahoraMs), retenidos), [items, ahoraMs, retenidos]);
-  const quedaAlgo = lista.enCurso.length + lista.sinHora.length + lista.atrasados.length + lista.cerrados.length > 0;
+  // La fila de «Cierra tu día» no es algo que quede por hacer: con ella sola a la vista, el día está terminado.
+  const enCursoSinElCierre = lista.enCurso.filter(x => x.tipo !== 'cierre');
+  const quedaAlgo = enCursoSinElCierre.length + lista.sinHora.length + lista.atrasados.length + lista.cerrados.length > 0;
   const hayHechos = lista.hechos.length > 0;
   // Los que se despiden cuentan como hechos para el plegado, pero siguen en su lugar hasta irse.
   const sumaDeHechos = lista.hechos.length;
 
-  const fila = (item: ItemDelDia, modo: ModoDeLaFila, primero = false) => (
-    <FilaDelDia
-      key={item.clave}
-      item={item}
-      modo={modo}
-      marca={primero ? lista.marcaDelPrimero : null}
-      ahoraMs={ahoraMs}
-      resaltada={primero}
-      animada
-      onAbrir={onAbrir}
-      onMarcar={onMarcar}
-    />
-  );
+  const fila = (item: ItemDelDia, modo: ModoDeLaFila, primero = false) =>
+    item.tipo === 'cierre' ? (
+      <FilaDelCierre key={item.clave} item={item} onAbrir={elegido => onAbrir(elegido, modo)} />
+    ) : (
+      <FilaDelDia
+        key={item.clave}
+        item={item}
+        modo={modo}
+        marca={primero ? lista.marcaDelPrimero : null}
+        ahoraMs={ahoraMs}
+        resaltada={primero}
+        animada
+        onAbrir={onAbrir}
+        onMarcar={onMarcar}
+      />
+    );
 
   return (
     <View>
@@ -68,7 +77,7 @@ export function ListaDeHoy({
       ) : null}
 
       {lista.enCurso.length > 0 ? (
-        <View style={estilos.grupo}>{lista.enCurso.map((item, i) => fila(item, 'hoy', i === 0))}</View>
+        <View style={estilos.grupo}>{lista.enCurso.map(item => fila(item, 'hoy', item === lista.primero))}</View>
       ) : null}
 
       {lista.sinHora.length > 0 ? (

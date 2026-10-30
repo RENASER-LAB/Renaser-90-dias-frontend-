@@ -12,6 +12,7 @@ import { indiceIsoDeLaFecha } from './semanaDeTraining';
 import { minutosDeLaHora, type ItemBase } from './listaDelDia';
 import { horaLocal } from './tarjetaDelHabito';
 import { estaVencido } from './registroConFotoEnTraining';
+import type { DatosDeLaFilaDelCierre } from '../../cierre/utils/itemDelCierre';
 
 /**
  * Lo que dibuja una fila de Training (spec 014): un hábito, una acción del día o un evento, de HOY, de un día
@@ -42,6 +43,8 @@ export interface ItemDelDia extends ItemBase {
   /** Solo eventos: «Zoom», una dirección, o `null`. */
   lugar?: string | null;
   cumplido?: DatosDeCumplido | null;
+  /** Solo la fila «Cierra tu día» (spec 017): si ya cerró, lo que dijo para mañana y a qué hora. */
+  cierre?: DatosDeLaFilaDelCierre | null;
 }
 
 /** El día de la semana como lo escribe la app (`LUN`…`DOM`), para `fechaIso`. */
@@ -140,9 +143,12 @@ export function itemsDeHoy(habits: HabitItem[], ocurrencias: Ocurrencia[], conte
   return [...deTraining, ...itemsDeEventos(ocurrencias, contexto.hoyIso, contexto.zona)];
 }
 
-/** Los puntos que sumó hoy lo ya cumplido (los que pagó el servidor; nada se calcula acá). */
+/** Los puntos que sumó hoy lo ya cumplido (los que pagó el servidor; nada se calcula acá). «Cierra tu día» no da puntos. */
 export function puntosDeHoy(items: ItemDelDia[]): number {
-  return items.reduce((suma, x) => (x.tipo !== 'evento' && !x.pausado && x.hecho ? suma + (x.puntos ?? 0) : suma), 0);
+  return items.reduce(
+    (suma, x) => (x.tipo !== 'evento' && x.tipo !== 'cierre' && !x.pausado && x.hecho ? suma + (x.puntos ?? 0) : suma),
+    0,
+  );
 }
 
 /* ------------------------------------------------------------------------------------------------

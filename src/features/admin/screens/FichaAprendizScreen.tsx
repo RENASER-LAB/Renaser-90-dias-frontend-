@@ -14,6 +14,9 @@ import { EvidenciaDeObligacion } from '../../lider-mentores/components/Evidencia
 import { VerPublicacion } from '../../lider-mentores/components/VisorDePublicacion';
 import { obtenerRadarDePersona } from '../../lider-mentores/api/cumplimientoDelLiderApi';
 import { CodigoRenaserDelAlumno } from '../../mentor/components/CodigoRenaserDelAlumno';
+import { obtenerCierresDePersona } from '../../cierre/api/cierreApi';
+import { CierresDelDia } from '../../cierre/components/CierresDelDia';
+import type { CargarCierres } from '../../cierre/types/cierre.types';
 import { obtenerHuecosDePersona } from '../../huecos/api/huecosApi';
 import { TiempoLibreDeLaSemana } from '../../huecos/components/TiempoLibreDeLaSemana';
 import type { CargarHuecos } from '../../huecos/types/huecos.types';
@@ -121,6 +124,11 @@ export function FichaAprendizScreen({
      persona: es la llave de lo que la sección guarda mientras la ficha está abierta. */
   const cargarHuecos = useMemo<CargarHuecos | null>(
     () => (grupoDelRadar ? (lunes?: string | null) => obtenerHuecosDePersona(grupoDelRadar, aprendiz.id, lunes) : null),
+    [grupoDelRadar, aprendiz.id],
+  );
+  /* Spec 017: lo que dijo al cerrar cada día, por la misma lectura del liderazgo y con el mismo grupo. */
+  const cargarCierres = useMemo<CargarCierres | null>(
+    () => (grupoDelRadar ? (lunes?: string | null) => obtenerCierresDePersona(grupoDelRadar, aprendiz.id, lunes) : null),
     [grupoDelRadar, aprendiz.id],
   );
   const nombre = aprendiz.fullName?.trim() || 'Aprendiz sin nombre';
@@ -438,6 +446,9 @@ export function FichaAprendizScreen({
 
         {/* Spec 015: lo que le queda libre entre lo que planificó, de lunes a domingo (solo lectura). */}
         <TiempoLibreDeLaSemana cargar={cargarHuecos} />
+
+        {/* Spec 017: lo que dijo al cerrar cada día, de lunes a domingo (solo lectura). */}
+        <CierresDelDia cargar={cargarCierres} />
 
         {/* D-243: solo ADMIN o ALQUIMISTA, nunca sobre sí mismo; sobre un ADMIN o ALQUIMISTA, solo un ADMIN. */}
         {ofrecerEliminar ? (

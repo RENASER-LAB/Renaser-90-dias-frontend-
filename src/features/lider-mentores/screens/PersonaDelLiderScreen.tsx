@@ -12,6 +12,9 @@ import { CargandoLectura, FalloDeLectura } from '../../semaforo/components/Estad
 import { EtiquetaSemaforo } from '../../semaforo/components/EtiquetaSemaforo';
 import { PALABRA_NO_SE_MIDE, palabraParaQuienAcompana, rolEnPalabras } from '../../semaforo/utils/ayudaDelSemaforo';
 import { formatearPorcentaje } from '../../semaforo/utils/lecturaDelSemaforo';
+import { obtenerCierresDePersona } from '../../cierre/api/cierreApi';
+import { CierresDelDia } from '../../cierre/components/CierresDelDia';
+import type { CargarCierres } from '../../cierre/types/cierre.types';
 import { obtenerHuecosDePersona } from '../../huecos/api/huecosApi';
 import { TiempoLibreDeLaSemana } from '../../huecos/components/TiempoLibreDeLaSemana';
 import type { CargarHuecos } from '../../huecos/types/huecos.types';
@@ -98,6 +101,11 @@ export function PersonaDelLiderScreen({
     () => (lunes?: string | null) => obtenerHuecosDePersona(grupoId, personaId, lunes),
     [grupoId, personaId],
   );
+  /* Spec 017: lo que dijo al cerrar cada día. También una sola vez por persona. */
+  const cargarCierres = useMemo<CargarCierres>(
+    () => (lunes?: string | null) => obtenerCierresDePersona(grupoId, personaId, lunes),
+    [grupoId, personaId],
+  );
 
   /* El día abierto se guarda junto con la semana a la que pertenece: al cambiar de semana vuelve solo al día
      más reciente con hábitos, sin un efecto que corra un render tarde. */
@@ -159,6 +167,7 @@ export function PersonaDelLiderScreen({
 
       <CodigoRenaserDelAlumno cargar={cargarRadar} />
       <TiempoLibreDeLaSemana cargar={cargarHuecos} />
+      <CierresDelDia cargar={cargarCierres} />
 
       <View style={estilos.acciones}>
         <BotonPrincipal

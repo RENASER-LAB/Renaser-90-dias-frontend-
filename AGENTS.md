@@ -440,6 +440,71 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       umbral y no se dibuja. Tampoco había diseño para «En espera» (antes del primer registro de los días 1 a 7) ni para el día
       sin Radar: llevan los textos de arriba (los de la tarjeta de antes y los de Yo → Mi Radar).
     * **Hace falta un APK nuevo** (la app no se actualiza por aire).
+  * **Cambio por pedido del dueño — 2026-10-29 — tab `Training` (y las fichas del mentor, del líder y de Administración):
+    Cierra tu día (spec 017)** (spec, vista previa aprobada y contrato en `Renaser-90-dias-backend/specs/017-cierre-del-dia/`;
+    origen: el encargo de gerencia «Cerrar y evaluar mi día»; el dueño pidió que esté en Training «para los aprendices», es decir,
+    para quien hace su programa de 90 días, también el personal que lo hace). Decisiones del dueño del mismo día: lo ven la persona
+    **y su acompañamiento** (mentor o guía, líder, Administración y Alquimista, en la ficha); es **opcional y sin puntos**, nunca
+    resta ni cuenta en el semáforo, y un día sin cerrar solo dice «Sin cerrar». Lo que cambia y nada más:
+    * **La fila** (`features/cierre/components/FilaDelCierre`, un tipo nuevo `cierre` de la lista de hoy): «Cierra tu día · 2
+      minutos», con fondo dorado suave (`goldWash`) y el ícono de luna; es **la última de hoy**, a la hora de Dormir de hoy **menos 30
+      minutos**, y **a las 21:30 si Dormir no tiene hora** (sin Dormir hoy, pausado, o sin hora legible). Si Dormir cae pasada la
+      medianoche (00:10), 30 minutos antes sería ayer, así que la fila se ancla a las 00:00. **La calcula la app**
+      (`cierre/utils/horaDelCierre`, con los hábitos que Training ya lee de hoy, `systemKey === 'SLEEP'`); el servidor no impone ninguna
+      hora, solo que el día sea el de hoy. Antes de su hora no existe y **no se lee nada** del cierre.
+    * **No es un hábito** (`training/utils/listaDelDia`): se ordena por hora entre el resto, pero **no cuenta** en «N de M hechos» ni en
+      los puntos, **no se atrasa** (nunca pasa a «Se te pasó la hora») ni atrasa a nadie, **no es el «primero»** de «Te toca ahora», no
+      cuenta para «Terminaste lo de hoy», no lleva ✓ ni «Subir» y **no se despide con fundido**: cerrada, se queda en su lugar en verde
+      («Día cerrado» y lo que dijo para mañana, «Mañana: «Revisar las facturas» a otra hora»). Tocarla, cerrada o no, abre la hoja.
+    * **La hoja** (`HojaDelCierre`, `HojaDesdeAbajo tamano="completa"`; sale de un toque a la fila y relee el día cada vez que se abre):
+      «Cierra tu día», «Jueves 29 · Día 20»; lo ya cumplido llega **marcado y no se pregunta**; por **cada acción que quedó pendiente**,
+      una tarjeta con «Era a las 20:30 · quedó pendiente» (o «Quedó pendiente» sin hora), **«¿Qué pasó?»** (No me alcanzó el tiempo ·
+      Surgió otra cosa · Me faltó energía · Lo dejé para después), **«¿Qué harás mañana?»** (Hacerla a otra hora · Hacerla más corta ·
+      Pedir ayuda · Dejarla) y una nota opcional de hasta 500 caracteres; después «Tus hábitos: N de M hechos hoy» y «Tu semana: N de M
+      acciones cumplidas hasta hoy» (solo lectura; la semana viene del servidor y, si no viene, la línea no se dibuja). Los textos
+      de las dos preguntas viven en `cierre/data/textosDelCierre`. «Guardar mi cierre» va fijo abajo y **se apaga hasta elegir los
+      dos chips de cada pendiente**, con una línea que dice qué falta nombrando la acción («Elige qué pasó y qué harás mañana con
+      «Revisar las facturas».»). Un **día sin acciones** dice «Hoy no tenías acciones.»; con todo cumplido, «No te quedó nada
+      pendiente»; en los dos hay una **nota del día** opcional. **Ya cerrado, abre con lo guardado** y se puede cambiar mientras el día
+      no termine. Al guardar, un fundido (solo `opacity`, `DURACION_MS.paso`; con «reducir movimiento», al instante) da paso a «Día
+      cerrado» con lo que dijo para mañana, «Ver mañana en Training» (elige el día de mañana de la semana; **el domingo no se ofrece**,
+      mañana cae fuera de la semana) y «Listo». Los chips no se animan (solo `Presionable`) y vibran con `tacto.seleccion()`;
+      `tacto.logro()` suena **una sola vez**, al quedar guardado.
+    * **Guardar NUNCA completa una acción ni anuncia puntos**: la hoja solo habla con `GET/PUT /api/v1/rocks/day-closure`
+      (`cierre/api/cierreApi`); no llama a `/rocks/{id}/evidence` ni a `/habit-tracks/{id}/complete`, no emite `habitoCumplido` y no
+      muestra «+N pts». Lo vigilan `useHojaDelCierre.test.ts` y `hojaDelCierre.test.ts`.
+    * **El día no se reasigna** (spec 002): antes de enviar se compara el día para el que se abrió la hoja con el de hoy. Si cambió (pasó
+      la medianoche con la hoja abierta), **no se envía nada**; un 409 del servidor («Ese día ya cerró y no se puede cerrar tarde.»)
+      es lo mismo. En los dos casos Training cierra la hoja, relee el cierre y avisa con un diálogo («Ese día ya cerró»); no anuncia
+      puntos ni pasa el cierre al día nuevo. Un fallo de red sale en un diálogo con «Reintentar», que vuelve a enviar lo mismo.
+    * **Días anteriores: solo lectura** (`cierre/utils/lecturaDeCierres`, `useCierresAnteriores`): al tocar un día anterior de la semana
+      (el mismo permiso que `GET /habit-tracks/day`: de ayer hacia atrás, hasta el lunes y desde el Día 1) la lista suma una fila
+      «Cierra tu día» que dice **«Cerrado»** o **«Sin cerrar»** (con la hora del cierre si lo hubo). Se lee **solo al tocar ese día, una vez
+      por fecha y cuenta** (nada al abrir Training ni al volver al foco; cambiar de cuenta o de semana limpia la memoria). La fila es solo
+      texto: **un día que terminó no se cierra tarde** (D-259; el servidor responde 409). Los días que vienen no tienen fila.
+    * **Cuándo no hay fila**: contra un backend sin la spec 017 (404, 403 o una respuesta que no es un cierre), con el interruptor `plan`
+      de Soporte TI apagado (`CLAVES.plan`, nueva), con Training fuera de vista, antes de su hora o mientras no se sabe (**nada de
+      parpadeos**: la fila solo existe con `listo`). Un fallo de red no la muestra y se reintenta al volver al foco. Al pasar la
+      medianoche la lectura de ayer se descarta: la fila de ayer no queda en hoy. Esquemas tolerantes (`cierre/api/cierreSchemas`): una
+      acción, un día o el resumen que no se entienden se pierden ELLOS; la hora de las acciones llega como `HH:mm:ss` y se acepta
+      también `HH:mm`; el orden de las acciones es el del servidor.
+    * **Las fichas** (`cierre/components/CierresDelDia`, **debajo del tiempo libre** de la spec 015, en `AlumnoScreen` —mentor o guía—,
+      `FichaAprendizScreen` —Administración y Alquimista, solo si la persona tiene grupo— y `PersonaDelLiderScreen`): «Cierres del día»,
+      solo lectura, semana de lunes a domingo con ‹ › (`Cierres del día: semana anterior` / `…siguiente`, nombres propios para no repetir los
+      del tiempo libre ni los del semáforo). Arriba el resumen («3 cerrados · 1 sin cerrar») y «Lo que más se repite» («No me alcanzó el
+      tiempo · 4 veces»); por día: «Jueves 29 · Cerrado» / «Sin cerrar» / «Hoy, todavía sin cerrar», cuántas acciones se cumplieron, cada
+      pendiente con lo que dijo («No me alcanzó el tiempo → Hacerla a otra hora») y su nota, y la nota del día. «Sin cerrar» **no se
+      dice como una falta**. Misma política que el tiempo libre: `cargar(semana)` estable por persona (el mentor pide
+      `GET /mentor/groups/{g}/learners/{u}/cierres`; los otros tres, `GET /leadership/groups/{g}/people/{p}/cierres`), una lectura por
+      semana, 403 o 404 esconden la sección, nada se dibuja mientras llega la primera lectura, «Reintentar» de 48. **Nada para la propia
+      persona** fuera de Training.
+    * **Textos y medidas**: tipo oración, tuteo de Perú, 16–17 px, áreas de 48 (chips, fila, flechas, «Reintentar»). Un solo scroll en la hoja
+      (`keyboardShouldPersistTaps="handled"`).
+    * **No cambian**: Hoy, Plan, Yo y Comunidad; los hábitos, las acciones y sus registros (cámara, Pastilla, Clase, evidencia), el
+      semáforo, los puntos, la coherencia y la racha; la lista de Training salvo la fila nueva; el tiempo libre ni el Radar de las fichas.
+      Sin dependencias nuevas ni código nativo.
+    * **Hace falta el backend con la spec 017 (V121) antes y un APK nuevo** (la app no se actualiza por aire). Contra un backend anterior no
+      aparece la fila ni la sección y Training queda como hoy.
   * **Cambio por pedido del dueño — 2026-10-12 — Administración (estado de `Hoy`): «Hábitos del programa», con
     audiencia por rol** (backend D-264; spec y plan en `Renaser-90-dias-backend/specs/001-habitos-por-rol/`, flujo
     spec-kit con las decisiones del dueño). Lo que cambia y nada más:

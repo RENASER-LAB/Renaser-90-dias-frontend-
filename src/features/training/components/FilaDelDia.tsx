@@ -189,7 +189,7 @@ export function FilaDelDia({
 }
 
 /** El ancho de la columna de la hora con la letra en su tamaño normal. */
-const ANCHO_DE_LA_HORA = 46;
+export const ANCHO_DE_LA_HORA = 46;
 
 const estilos = StyleSheet.create({
   fila: {

@@ -16,6 +16,8 @@ export const CLAVES = {
   muroComentarios: 'muro.comentarios',
   muroReacciones: 'muro.reacciones',
   habitos: 'habitos',
+  /* Rocas y objetivos (las acciones del día). También tapa «Cierra tu día» de Training (spec 017). */
+  plan: 'plan',
   eventos: 'eventos',
   eventosGestion: 'eventos.gestion',
   cursos: 'cursos',

@@ -63,6 +63,7 @@ jest.mock('../../../mentor/components/CodigoRenaserDelAlumno', () => {
   const R = jest.requireActual<typeof import('react')>('react');
   return { CodigoRenaserDelAlumno: () => R.createElement('SeccionDelRadar') };
 });
+jest.mock('../../../cierre/components/CierresDelDia', () => ({ CierresDelDia: () => null }));
 const mockTiempoLibre = jest.fn();
 jest.mock('../../../huecos/components/TiempoLibreDeLaSemana', () => {
   const R = jest.requireActual<typeof import('react')>('react');
