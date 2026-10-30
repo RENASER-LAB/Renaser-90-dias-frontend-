@@ -308,6 +308,46 @@ describe('la semana de una persona (contrato §2)', () => {
   });
 });
 
+describe('«¿Programó?» (spec 018, contrato leadership-programacion §1)', () => {
+  const PROGRAMACION = { habitosConHora: 5, habitosTotal: 17, accionesConHora: 0, accionesTotal: 2, programo: false };
+
+  it('lee las cuentas y el Sí/No que decide el servidor', () => {
+    expect(leerSemana(semana({ programacion: PROGRAMACION })).programacion).toEqual(PROGRAMACION);
+    expect(leerSemana(semana({ programacion: { ...PROGRAMACION, programo: true } })).programacion?.programo).toBe(true);
+  });
+
+  it('un servidor anterior no lo manda: sin programación, y la ficha sigue', () => {
+    expect(leerSemana(semana()).programacion).toBeNull();
+    expect(leerSemana(semana({ programacion: null })).programacion).toBeNull();
+  });
+
+  it('un campo mal formado se pierde SOLO él: la semana sigue entera', () => {
+    for (const roto of [
+      { ...PROGRAMACION, programo: 'si' },
+      { ...PROGRAMACION, habitosTotal: 'muchos' },
+      { ...PROGRAMACION, programo: undefined },
+      'programó',
+      [],
+    ]) {
+      const s = leerSemana(semana({ programacion: roto }));
+      expect(s.programacion).toBeNull();
+      expect(s.dias).toHaveLength(1);
+      expect(s.nombre).toBe('Ana Pérez');
+    }
+  });
+
+  it('una cuenta imposible no se muestra: «12 de 5» sería peor que nada', () => {
+    expect(leerSemana(semana({ programacion: { ...PROGRAMACION, habitosConHora: 18 } })).programacion).toBeNull();
+    expect(leerSemana(semana({ programacion: { ...PROGRAMACION, accionesConHora: 3 } })).programacion).toBeNull();
+    expect(leerSemana(semana({ programacion: { ...PROGRAMACION, habitosTotal: 0, habitosConHora: 0 } })).programacion).toBeNull();
+    expect(leerSemana(semana({ programacion: { ...PROGRAMACION, habitosConHora: -1 } })).programacion).toBeNull();
+  });
+
+  it('un campo nuevo del servidor no rompe', () => {
+    expect(leerSemana(semana({ programacion: { ...PROGRAMACION, algoNuevo: true } })).programacion).toEqual(PROGRAMACION);
+  });
+});
+
 describe('la publicación del Muro (contrato §4)', () => {
   it('lee el autor, el texto, la fecha y las fotos', () => {
     const p = aPublicacionDelMuro(

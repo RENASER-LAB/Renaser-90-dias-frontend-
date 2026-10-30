@@ -152,9 +152,15 @@ export function contadorDelDia(dia: Pick<DiaDeLaPersona, 'obligaciones'>): strin
   return `${cumplidos} de ${total} ${total === 1 ? 'hábito cumplido' : 'hábitos cumplidos'}`;
 }
 
-/** Las mismas palabras de la ficha del mentor: `30 cumplidos · 2 sin cumplir · 3 pendientes · 12 con evidencia`. */
+/**
+ * Las palabras de la ficha del mentor sin lo de la evidencia: `30 cumplidos · 2 sin cumplir · 3 pendientes`.
+ *
+ * > **Corregido 2026-10-29 (spec 018).** Terminaba en `· 12 con evidencia`. Ese dato pasó a la tarjeta «¿Subió evidencias?»
+ * > de arriba de la ficha («4 de 12», de los hábitos que la piden): dos cifras de evidencia distintas en la misma pantalla
+ * > se leían como una contradicción.
+ */
 export function resumenDeLaSemanaEnPalabras(r: ResumenDeLaSemana): string {
-  return `${r.cumplidas} cumplidos · ${r.sinCumplir} sin cumplir · ${r.pendientes} pendientes · ${r.conEntrega} con evidencia`;
+  return `${r.cumplidas} cumplidos · ${r.sinCumplir} sin cumplir · ${r.pendientes} pendientes`;
 }
 
 /** Quién es alguien que no se mide en el semáforo (el mentor y la guía con programa propio). */

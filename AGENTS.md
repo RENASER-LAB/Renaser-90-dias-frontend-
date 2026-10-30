@@ -550,6 +550,65 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       Sin dependencias nuevas ni código nativo.
     * **Hace falta el backend con la spec 017 (V121) antes y un APK nuevo** (la app no se actualiza por aire). Contra un backend anterior no
       aparece la fila ni la sección y Training queda como hoy.
+  * **Cambio por pedido del dueño — 2026-10-29 — tab `Hoy` (personal con más de un papel) y la ficha del líder
+    (spec 018)** (spec, plan y vista previa aprobada en `Renaser-90-dias-backend/specs/018-lider-limpio/`; decisión D-291 del
+    backend). Comentario del equipo que el dueño pegó: «[la líder] tiene mucho para ingresar, debería de verse por aprender,
+    ingreso y como mentora abre y aprendices, mentores y resultado por grupos» y «cuando le hago clic en persona ver si
+    programaron, si subieron evidencias»; del dueño: «falta que esté un poco más limpio y no mucho texto». **Se ignora, por
+    decisión del dueño, «por el momento no debería haber grupos»** (hoy son pocos alumnos y están decidiendo quién será el
+    mentor). Lo que cambia y nada más:
+    * **Hoy — el papel se elige con un control** (`features/hoy-por-papel/`; `ControlSegmentado` con «Mi programa» · «Mi
+      grupo» · «Mis mentores», bajo la línea de fase y día): **solo para quien lidera mentores** (`papelesDeHoy`, pura) y con al
+      menos dos papeles disponibles. «Mi programa» si hace su programa; «Mi grupo» si el servidor dice que acompaña un grupo (o
+      falló al decirlo, para poder reintentar) y su entrada está prendida; «Mis mentores» si alguna de sus tres entradas
+      (`lider`, `tickets`, `semaforo`) está prendida. **El aprendiz, el mentor, la guía, Administración y Alquimista ven Hoy
+      exactamente como hoy, sin control.** Cambiar de opción es instantáneo y **sin animación** (`ControlSegmentado` suma la
+      prop `sinAnimacion`, apagada por defecto: ningún otro control cambia), y la última opción se recuerda **por cuenta**
+      (`renaser.hoy.papel.<id>` en AsyncStorage; un almacenamiento roto no tumba Hoy). La primera vez abre en «Mi programa»; si
+      lo recordado ya no le corresponde, también. Quien se quedó en «Mi grupo» espera a que el servidor diga si acompaña uno, en
+      vez de dibujar «Mi programa» y saltar al grupo.
+    * **«Mi programa»** es el Hoy de siempre. Con otro papel a la vista, lo del programa propio (la frase del día,
+      coherencia y racha, el orbe y todas sus tarjetas) queda **oculto pero montado** (`display: 'none'`): volver es
+      instantáneo y no pierde la conversación del orbe. La línea de fase, día y puntos queda siempre.
+    * **«Mi grupo»** (`MiGrupoEnHoy`): el rótulo «Grupo Octubre · 6 aprendices» (abre el grupo entero, `MiCelulaScreen`) y una
+      fila por aprendiz con su foto, su punto de color y su % del semáforo del grupo (`GET /mentor/groups/{g}/semaforo`, en el
+      orden del servidor; sin número dice «—», nunca un 0 %). Tocar a uno abre su ficha de siempre (`AlumnoScreen`) y **volver
+      regresa a Hoy**; abierta desde la pantalla del grupo o desde un aviso, vuelve a esa pantalla, como antes. Sin el semáforo
+      (404, 403, sin red) la lista sale igual, con los nombres y sin color.
+    * **«Mis mentores»** (`MisMentoresEnHoy`, solo el líder): **Resultado por grupo · Últimos 7 días**, una fila por grupo con
+      su nombre, su mentor (o «Sin mentor asignado» en rojo), el punto de color y el % del promedio —los del servidor, sin
+      recalcular—; abajo, «Consultas de mentores» con «N sin responder» (abre la bandeja de tickets de siempre) y «Mentores y
+      reporte del mes» (abre `LiderMentoresScreen`; **no está en la vista previa**: sin esa fila el padrón, la ficha del
+      mentor, las observaciones y el reporte quedaban sin entrada). Un grupo con `puedeAbrirse` abre `CumplimientoDelLiderScreen`
+      **directo en ese grupo**, en los mismos 7 días de la fila (prop nueva `grupoInicial`); volver sale a Hoy. El aviso del
+      sábado `/semaforo/grupos` sigue abriendo el resumen por grupos de siempre, con sus totales. Al abrirse la lista vuelve a
+      los últimos 7 días y relee. La cifra de consultas sale de la primera página de la bandeja (30): si hay más páginas dice
+      «N+», y no afirma «nada sin responder» si no vio todas. Cada lista es independiente: sin una, las otras siguen.
+    * **Se borraron las tres tarjetas sueltas del líder** en Hoy (`TarjetaMentoresHoy`, `TarjetaBandejaHoy` y
+      `TarjetaSemaforoGruposHoy`): sus pantallas se abren desde las filas de arriba. Deslizar para recargar relee la lista que
+      está a la vista.
+    * **La ficha de la persona abre con dos respuestas** (`PersonaDelLiderScreen`, que usa también Administración con el mismo
+      endpoint; `RespuestasDeLaPersona`, dos tarjetas iguales arriba de los 7 días): **«¿Programó?»** —«Sí» / «No» con «5 de 17
+      hábitos con su hora · 0 de 2 acciones agendadas»— y **«¿Subió evidencias?»** —«4 de 12», «Estos 7 días»—. El «Sí» y el
+      «No» llevan ícono además del color; en un teléfono angosto la segunda baja debajo de la primera.
+      * **El «Sí» lo decide el servidor** (campo opcional `programacion` en `GET /leadership/groups/{g}/people/{p}/week`; la
+        app no lo recalcula). El umbral es **un supuesto del equipo a confirmar con el dueño**: al menos la mitad de los hábitos
+        de HOY con la hora que ella eligió (no la del catálogo) **y** todas las acciones de hoy con hora; sin acciones hoy
+        decide lo que sí tiene. Es de hoy en su zona, no de los 7 días. Sin el campo —servidor anterior, programa sin activar,
+        ningún hábito que le toque hoy— **no hay tarjeta**: nunca un «No» por falta de datos.
+      * **Las evidencias se cuentan de la ficha** (`utils/respuestasDeLaPersona`, sin backend): de los hábitos de los días
+        cerrados que piden evidencia, cuántos tienen entrega, archivo o publicación del Muro. Hoy y los días que no llegaron no
+        cuentan. Sin hábitos que la pidan no hay tarjeta (nunca un «0 de 0»).
+    * **Menos texto** en las pantallas del líder: se quitaron los párrafos de ayuda que repetían lo que ya se ve, sin quitar
+      datos ni funciones —la tabla completa, con el porqué de cada uno, está en la spec 018—: la ayuda de «Por grupo»
+      (`SemaforoGruposScreen`) y la de la lista del grupo, lo que explicaba «Avisar a su mentor», el párrafo del mentor que no
+      se mide, «De mayor a menor evaluación.» del reporte, y en `ObservarScreen` la línea de ayuda (ahora es el texto de relleno
+      del campo) y el subtítulo de la casilla. La línea de resumen de la semana ya no termina en «· N con evidencia»: esa cifra
+      es la de la tarjeta. `SemaforoAdminScreen` conserva su propia línea (no es del líder).
+    * **No cambian**: los otros tabs, el recorrido de Administración y Alquimista, la sección de tiempo libre de la ficha, los
+      permisos (el servidor autoriza cada lectura), ni los endpoints (solo suma un campo opcional).
+    * **Hace falta el backend con la spec 018 antes, solo para ver «¿Programó?»**, y un APK nuevo (la app no se actualiza por
+      aire). Un APK nuevo contra el backend anterior funciona sin esa tarjeta.
   * **Cambio por pedido del dueño — 2026-10-12 — Administración (estado de `Hoy`): «Hábitos del programa», con
     audiencia por rol** (backend D-264; spec y plan en `Renaser-90-dias-backend/specs/001-habitos-por-rol/`, flujo
     spec-kit con las decisiones del dueño). Lo que cambia y nada más:
@@ -1178,6 +1237,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * Para una cuenta **Líder de Mentores** (`esLiderDeMentores`), una tarjeta «Mis mentores» en Hoy, antes de la de
       tickets, que abre `LiderMentoresScreen` como estado de Hoy (sin sexta pestaña). Para cualquier otro rol Hoy no
       cambia.
+      > **Corregido 2026-10-29 (spec 018).** La tarjeta suelta se fue: «Mis mentores» es ahora una opción del control de arriba
+      > de Hoy (con «Mi programa» y «Mi grupo») y `LiderMentoresScreen` se abre desde la fila «Mentores y reporte del mes».
     * Todo vive en `src/features/lider-mentores/`: padrón (un mentor por fila: grupo y aprendices, semáforo de sus
       aprendices, consultas sin responder y evaluación del mes), ficha (grupos, consultas, evaluación, «Lo que le
       dijiste», «Escribirle» y Reconocer / Sugerir / Alertar), la pantalla para escribir una observación (con la casilla
@@ -2040,6 +2101,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       para cualquier otro rol, Hoy queda como estaba. También se agregaron las escuchas de los otros
       dos avisos del sábado: `/mentor/groups/{g}/semaforo` abre «Mi grupo» en su sección del semáforo,
       y `/semaforo/grupos` abre la pantalla del líder o el semáforo de Administración.
+      > **Corregido 2026-10-29 (spec 018).** Esta tarjeta y la de tickets se fueron de Hoy: el resultado por grupo es la lista de
+      > «Mis mentores» y la bandeja, su fila «Consultas de mentores». El aviso `/semaforo/grupos` sigue abriendo este resumen.
     Una excepción puntual **no abre** el tab: cualquier otro cambio sobre los cinco principales
     vuelve a necesitar autorización explícita.
   * **Excepción autorizada por el dueño del producto — 2026-09-22 — tabs `Training` y `Plan`.**
@@ -2330,6 +2393,9 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       resumen ← Hoy (cada nivel con su retroceso del sistema); no hay otra vista de Hoy ni pestaña nueva. Las tarjetas del
       resumen pasan a `Presionable`. **El recorrido de Administración y Alquimista (Semáforo → grupo → persona) no
       cambia**: sigue abriendo todos sus grupos como siempre.
+    > **Corregido 2026-10-29 (spec 018).** «Cada tarjeta de grupo» ya no está en una tarjeta de Hoy: son las filas de «Resultado
+    > por grupo» en «Mis mentores», y tocar una abre `CumplimientoDelLiderScreen` directo en la lista de ese grupo (`grupoInicial`).
+    > Sin `puedeAbrirse` la fila no se abre y dice «Sin mentor asignado».
     * **La lista del grupo** (`GrupoDelLiderScreen`, `VistaSemaforoDelGrupo` de siempre): nombre, color y % de la semana, en
       el orden del servidor (rojo primero; la app no reordena). El mentor o la guía con programa propio salen con su % y
       «No se mide en el semáforo» (`AprendizDelSemaforo.noSeMide`; el orden del servidor es rojo, amarillo, sin datos,

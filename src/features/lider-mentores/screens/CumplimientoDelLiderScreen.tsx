@@ -21,18 +21,24 @@ import { PersonaDelLiderScreen } from './PersonaDelLiderScreen';
  * mueven la ventana igual, de 7 en 7 días, sin llegar nunca al futuro. Es lo que ya hace Administración.
  *
  * El resumen por grupos conserva la semana en que estaba al volver de un grupo (`conservarSemana`).
+ *
+ * **Abierta desde la fila de un grupo** (spec 018: «Mis mentores» de Hoy lista los grupos con su resultado) llega con
+ * `grupoInicial` y arranca en la lista de ese grupo, en los mismos 7 días que mostraba la fila; volver sale a Hoy. Sin
+ * `grupoInicial` —el aviso del sábado, `/semaforo/grupos`— es el recorrido de siempre, desde el resumen.
  */
 export function CumplimientoDelLiderScreen({
   lectura,
   onSalir,
+  grupoInicial,
 }: {
   /** La MISMA lectura con la que Hoy decide si mostrar la entrada. */
   lectura: LecturaDeGrupos;
   onSalir: () => void;
+  grupoInicial?: GrupoAbierto;
 }) {
-  const [grupo, setGrupo] = useState<{ grupoId: string; nombre: string; inicio: InicioSemanal } | null>(null);
+  const [grupo, setGrupo] = useState<GrupoAbierto | null>(grupoInicial ?? null);
   /* Una vez abierto un grupo, el resumen ya no vuelve a la ventana vigente al reaparecer. */
-  const yaAbrioUnGrupo = useRef(false);
+  const yaAbrioUnGrupo = useRef(grupoInicial !== undefined);
 
   if (!grupo) {
     return (
@@ -53,20 +59,23 @@ export function CumplimientoDelLiderScreen({
     );
   }
   /* `key`: otro grupo es otra cosa que mirar, con su lista y sus personas desde cero. */
-  return <FlujoDelGrupo key={grupo.grupoId} grupo={grupo} onVolver={() => setGrupo(null)} />;
+  return (
+    <FlujoDelGrupo key={grupo.grupoId} grupo={grupo} onVolver={grupoInicial ? onSalir : () => setGrupo(null)} />
+  );
+}
+
+/** El grupo que se está mirando: el de la tarjeta que se tocó y los 7 días con que se estaba mirando. */
+export interface GrupoAbierto {
+  grupoId: string;
+  nombre: string;
+  inicio: InicioSemanal;
 }
 
 /**
  * Un grupo y las personas que se abren desde él. La lista del grupo vive acá, un nivel arriba de la persona:
  * al volver de una persona la lista sigue ahí, en la semana en que estaba, sin releerse.
  */
-function FlujoDelGrupo({
-  grupo,
-  onVolver,
-}: {
-  grupo: { grupoId: string; nombre: string; inicio: InicioSemanal };
-  onVolver: () => void;
-}) {
+function FlujoDelGrupo({ grupo, onVolver }: { grupo: GrupoAbierto; onVolver: () => void }) {
   const lista = useGrupoDelLider(grupo.grupoId, grupo.inicio);
   const [persona, setPersona] = useState<{ fila: AprendizDelSemaforo; inicio: InicioSemanal } | null>(null);
 
