@@ -20,7 +20,7 @@ appId: com.renaser.app
     direction: DOWN
     timeout: 30000
 - scrollUntilVisible:
-    element: "Se te pasó la hora · todavía puedes registrarlos hoy"
+    element: "Se te pasó la hora · todavía puedes cumplir tu compromiso"
     direction: DOWN
     timeout: 30000
 - takeScreenshot: T01b-sin-hora-y-se-te-paso
