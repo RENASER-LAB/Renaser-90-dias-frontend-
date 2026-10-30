@@ -29,6 +29,8 @@ module.exports = {
   modulePathIgnorePatterns: ['<rootDir>/.claude/'],
   clearMocks: true,
   setupFiles: ['<rootDir>/jest.setup.js'],
+  // Detiene al final de cada archivo las animaciones con retraso que quedaron pendientes (issue #52): ver el archivo.
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.afterEnv.js'],
   // El `.riv` del fénix (2026-10-06) se trata como cualquier asset: Jest no lo puede leer como código.
   transform: { '^.+\\.riv$': require.resolve('jest-expo/src/preset/assetFileTransformer.js') },
 };
