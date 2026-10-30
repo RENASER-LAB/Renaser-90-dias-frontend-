@@ -173,6 +173,12 @@ interface Props {
   onCerrar: () => void;
   /** Hubo cambios: Training recarga. Con texto, lo confirma en línea (el hábito recién creado). */
   onGuardado: (confirmacion?: string) => void;
+  /**
+   * Spec 014 (Training por hora), **opcional**: el `habitoId` de un hábito de esta dimensión. Con él, la hoja abre
+   * directo en el editor de ESE hábito en vez de en la lista (tocar un hábito en «Tus prácticas»). Sin esta prop la hoja
+   * es la de siempre; la ‹ del editor vuelve a la lista, como siempre.
+   */
+  abrirEnHabitoId?: string | null;
 }
 
 /** Los botones de la hoja, en tipo oración y a tamaño de lectura (no las versalitas de 11 del botón). */
@@ -248,7 +254,7 @@ function avisosDelServidor(p: PreferenciaHabitoApi | undefined): number[] {
   return [p.reminderMinutesBefore ?? 0];
 }
 
-export function PlanificarDimensionModal({ visible, dimension, nombreDimension, habits, onCerrar, onGuardado }: Props) {
+export function PlanificarDimensionModal({ visible, dimension, nombreDimension, habits, onCerrar, onGuardado, abrirEnHabitoId = null }: Props) {
   const { c, t } = useTheme();
   const insets = useSafeAreaInsets();
   const nombre = nombreDimension ?? dimension;
@@ -396,8 +402,21 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
    */
   const diasDelMes = useMemo(() => diasDelMesDeLaSemana(), [visible]);
 
+  /** `true` solo cuando las preferencias de ESTA apertura ya se leyeron (para abrir directo un hábito sin datos viejos). */
+  const cargaVigente = useRef(false);
+  const yaAbrioElHabito = useRef(false);
+  /** Spec 014: la hoja abrió el editor del hábito pedido (y no la lista). */
+  const editorDirectoAbierto = useRef(false);
+  const [habitoDirectoNoEncontrado, setHabitoDirectoNoEncontrado] = useState(false);
+
   useEffect(() => {
-    if (!visible) return;
+    if (!visible) {
+      yaAbrioElHabito.current = false;
+      editorDirectoAbierto.current = false;
+      setHabitoDirectoNoEncontrado(false);
+      return;
+    }
+    cargaVigente.current = false;
     setEstado('cargando');
     setHabitoEnEdicion(null);
     setPlegadas(new Set());
@@ -425,6 +444,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
               .map(d => d.habitId),
           ),
         );
+        cargaVigente.current = true;
         setEstado('listo');
       } catch (e) {
         setEstado('error');
@@ -456,6 +476,20 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
 
   /** Volver de un hábito a la lista sin guardar nada. */
   const volverALaLista = () => setHabitoEnEdicion(null);
+
+  /*
+   * Spec 014, bug visto por el dueño (2026-10-29): tocar un hábito en «Tus prácticas» mostraba un instante la lista
+   * con el interruptor de activar y desactivar (que es «Planificar Cuerpo», otra cosa) y, al volver o al guardar, se
+   * caía en esa lista. Abierta para UN hábito, la hoja es solo su editor: la lista no se dibuja, y volver o guardar
+   * cierran la hoja y dejan a la persona en la dimensión. Si el hábito no está entre los planificables, queda la lista.
+   */
+  const soloUnHabito = Boolean(abrirEnHabitoId) && !habitoDirectoNoEncontrado;
+  const cerrarElHabitoDirecto = () => (huboEscritura ? onGuardado(confirmacion?.texto) : onCerrar());
+  useEffect(() => {
+    if (!visible || !soloUnHabito || !editorDirectoAbierto.current || habitoEnEdicion || creando) return;
+    cerrarElHabitoDirecto();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, soloUnHabito, habitoEnEdicion, creando]);
 
   /**
    * Pide los siete días del hábito y los deja en pantalla: la hora de cada uno, si está apagado y, desde la
@@ -535,6 +569,24 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
     });
     setHabitoEnEdicion(h);
   };
+
+  /*
+   * Spec 014: abrir directo en el editor de un hábito (tocar un hábito en «Tus prácticas»). Espera a que las
+   * preferencias de esta apertura estén leídas (`cargaVigente`): el editor arranca con la hora y los avisos reales.
+   * Una sola vez por apertura; si el hábito no está entre los planificables de la dimensión, queda la lista.
+   */
+  useEffect(() => {
+    if (!visible || estado !== 'listo' || !cargaVigente.current || !abrirEnHabitoId || yaAbrioElHabito.current) return;
+    yaAbrioElHabito.current = true;
+    const habito = planificables.find(h => h.habitoId === abrirEnHabitoId);
+    if (habito) {
+      editorDirectoAbierto.current = true;
+      abrirHabito(habito);
+    } else {
+      setHabitoDirectoNoEncontrado(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, estado, abrirEnHabitoId, planificables]);
 
   /** Cambiar el alcance conserva la hora elegida, tanto al añadir días como al volver a todos. */
   const volverATodos = () => setDiasEnEdicion([]);
@@ -1428,8 +1480,8 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
       <HojaDesdeAbajo
         visible={visible}
         alCerrar={cerrar}
-        alVolver={paso === 'nuevo' ? () => setCreando(false) : paso === 'habito' ? volverALaLista : undefined}
-        etiquetaVolver="Volver a la lista"
+        alVolver={paso === 'nuevo' ? () => setCreando(false) : paso === 'habito' ? (soloUnHabito ? cerrarElHabitoDirecto : volverALaLista) : undefined}
+        etiquetaVolver={soloUnHabito ? 'Volver' : 'Volver a la lista'}
         etiquetaCerrar="Cerrar Planificar"
         titulo={tituloDeLaHoja}
         subtitulo={subtituloDeLaHoja}
@@ -1451,7 +1503,11 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
         {/* La ayuda de arriba quedó en una línea en el subtítulo de la hoja:   */}
         {/* el interruptor se explica solo (2026-10-05).                        */}
         {/* =================================================================== */}
-        {estado === 'listo' && paso === 'lista' && (
+        {estado === 'listo' && paso === 'lista' && soloUnHabito && (
+          <Text style={[t.body, styles.estadoCentrado, { color: c.textSoft }]}>Abriendo…</Text>
+        )}
+
+        {estado === 'listo' && paso === 'lista' && !soloUnHabito && (
           <ScrollView
             keyboardShouldPersistTaps="handled"
             style={{ flex: 1 }}

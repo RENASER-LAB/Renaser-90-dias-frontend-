@@ -1,0 +1,46 @@
+# T11 — Un hábito de evidencia OPCIONAL sin flujo propio (observación del dueño, 2026-10-29: «no es solo foto, sino también
+# escritura»). Su fila lleva la píldora «Subir» (que abre las cuatro formas: Foto, Texto, Audio, Video) Y el ✓ (que cierra sin
+# evidencia), como la tarjeta de hoy de master. ESCRITURA LIBRE NOCTURNA: se entrega un texto por la píldora; DÍA SIN CELULAR:
+# se cierra con el ✓. En la hoja de un hábito con guía: «Subir evidencia» y, aparte, «Marcar como hecho».
+# Precondición: `reset-hoy.sql`.
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-training.yaml
+- scrollUntilVisible:
+    element: "Marcar ESCRITURA LIBRE NOCTURNA"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- assertVisible: "Marcar DÍA SIN CELULAR|Marcar Meditar 10 minutos"
+- takeScreenshot: T11a-fila-con-subir-y-check
+# La fila empieza por su hora: «.*ESCRITURA…» también casaba con el ✓ («Marcar ESCRITURA LIBRE NOCTURNA») y lo marcaba.
+- tapOn: "[0-9:]+, ESCRITURA LIBRE NOCTURNA.*"
+- extendedWaitUntil:
+    visible: "Subir evidencia"
+    timeout: 10000
+- assertVisible: "Marcar como hecho"
+- takeScreenshot: T11b-hoja-subir-evidencia-y-marcar
+- tapOn: "Subir evidencia"
+- runFlow: ../comun/entregar-evidencia-de-texto.yaml
+- runFlow: ../comun/cerrar-aviso-dev.yaml
+- extendedWaitUntil:
+    visible: "Evidencia entregada.*"
+    timeout: 8000
+    optional: true   # el aviso en línea dura unos segundos: lo que se prueba es que la fila sale de la lista
+- takeScreenshot: T11c-escritura-entregada
+- extendedWaitUntil:
+    notVisible: "Marcar ESCRITURA LIBRE NOCTURNA"
+    timeout: 20000
+# Por separado, el ✓ cierra sin evidencia.
+- scrollUntilVisible:
+    element: "Marcar DÍA SIN CELULAR"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- tapOn: "Marcar DÍA SIN CELULAR"
+- extendedWaitUntil:
+    notVisible: "Marcar DÍA SIN CELULAR"
+    timeout: 20000
+- takeScreenshot: T11d-dia-sin-celular-con-check

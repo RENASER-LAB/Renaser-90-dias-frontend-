@@ -209,14 +209,14 @@ export async function obtenerHabitosDeAlumno(
 }
 
 /**
- * El Código Renaser de un aprendiz: sus registros horarios de los días 1 al 7.
+ * El Código Renaser de un aprendiz: sus registros horarios (los días 1 a 7 y, desde el 8, los de Mi Radar).
  *
  * Paginado por cursor, de lo más nuevo a lo más viejo, igual que `/api/v1/radar/history`.
  * `nextCursor` se normaliza a `null` —nunca `undefined`— para que quien llame tenga una sola
  * forma de preguntar si hay más páginas.
  *
- * Pasado el día 7 lo normal es que no haya nada: el Código Renaser se apaga el día 8 y no
- * vuelve (`radar/config/configRadar.ts`). Una lista vacía acá es el caso esperado, no un fallo.
+ * Una lista vacía acá es el caso esperado, no un fallo. Desde la spec 012 trae además `miRadar` (si la persona
+ * lo encendió y a qué horas) y sus registros siguen desde el día 8.
  */
 export async function obtenerRadarDeAlumno(
   grupoId: string,
@@ -232,7 +232,7 @@ export async function obtenerRadarDeAlumno(
     await apiFetch<unknown>(ruta),
     'GET /api/v1/mentor/groups/{g}/learners/{u}/radar',
   );
-  return { entries: datos.entries, nextCursor: datos.nextCursor ?? null };
+  return { entries: datos.entries, nextCursor: datos.nextCursor ?? null, miRadar: datos.miRadar ?? null };
 }
 
 /**

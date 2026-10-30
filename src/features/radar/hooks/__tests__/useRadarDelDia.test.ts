@@ -303,6 +303,18 @@ describe('useRadarDelDia: enviar', () => {
     expect(tipo()).toBe('abierto');
   });
 
+  it('spec 012: un 409 de una regla de Mi Radar (apagado, o fuera de 03:00–23:59) dice el motivo del servidor', async () => {
+    const { visto, tipo } = await montarAbierto();
+    mockRegistrar.mockRejectedValueOnce(new ApiError(409, 'Mi Radar funciona de 03:00 a 23:59'));
+    mockObtenerUltimo.mockResolvedValueOnce(enHora(9, 50).toISOString());
+
+    const ok = await enviar(visto);
+
+    expect(ok).toBe(false);
+    expect(visto.actual.error).toBe('Mi Radar funciona de 03:00 a 23:59');
+    expect(tipo()).toBe('abierto');
+  });
+
   it('el mensaje del 409 va en tuteo y es corto', () => {
     expect(MENSAJE_HORA_YA_REGISTRADA.length).toBeLessThan(100);
     expect(MENSAJE_HORA_YA_REGISTRADA).not.toMatch(/\b(tenés|intentá|probá|podés|volvé)\b/i);

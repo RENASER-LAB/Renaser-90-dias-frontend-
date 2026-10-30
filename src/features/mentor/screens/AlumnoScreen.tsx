@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -18,6 +18,13 @@ import { ChipDeCaja } from '../../caja/components/ChipDeCaja';
 import { abrirConversacionDirecta } from '../../chat/api/chatApi';
 import { EvidenciaDeObligacion } from '../../lider-mentores/components/EvidenciaDeObligacion';
 import { VerPublicacion } from '../../lider-mentores/components/VisorDePublicacion';
+import { obtenerRadarDeAlumno } from '../api/mentorApi';
+import { obtenerCierresDeAlumno } from '../../cierre/api/cierreApi';
+import { CierresDelDia } from '../../cierre/components/CierresDelDia';
+import type { CargarCierres } from '../../cierre/types/cierre.types';
+import { obtenerHuecosDeAlumno } from '../../huecos/api/huecosApi';
+import { TiempoLibreDeLaSemana } from '../../huecos/components/TiempoLibreDeLaSemana';
+import type { CargarHuecos } from '../../huecos/types/huecos.types';
 import { useSemanaDelAlumno } from '../hooks/useSemanaDelAlumno';
 import { diasDesde } from '../reglas';
 import { diaInicialDelDetalle } from '../utils/diaInicialDelDetalle';
@@ -61,6 +68,22 @@ export function AlumnoScreen({
     alumno.participanteId,
   );
   const [diaElegido, setDiaElegido] = useState<string | null>(null);
+  /* Cómo pide el mentor el Código Renaser de esta persona (la ruta de siempre). Sin grupo no hay a quién preguntarle. */
+  const cargarRadar = useMemo(
+    () => (grupoId ? (cursor?: string | null) => obtenerRadarDeAlumno(grupoId, alumno.participanteId, cursor) : null),
+    [grupoId, alumno.participanteId],
+  );
+  /* Spec 015: su tiempo libre de la semana, por la ruta del mentor. Una función estable por persona: es la llave de lo
+     que la sección guarda mientras la ficha está abierta. */
+  const cargarHuecos = useMemo<CargarHuecos | null>(
+    () => (grupoId ? (lunes?: string | null) => obtenerHuecosDeAlumno(grupoId, alumno.participanteId, lunes) : null),
+    [grupoId, alumno.participanteId],
+  );
+  /* Spec 017: lo que dijo al cerrar cada día, por la ruta del mentor. También estable por persona. */
+  const cargarCierres = useMemo<CargarCierres | null>(
+    () => (grupoId ? (lunes?: string | null) => obtenerCierresDeAlumno(grupoId, alumno.participanteId, lunes) : null),
+    [grupoId, alumno.participanteId],
+  );
 
   /* Al cambiar de semana se vuelve al día más reciente con contenido: hoy, en la semana en curso
      (E-439; antes el primero, el lunes). Conservar el día anterior dejaría seleccionada una fecha
@@ -336,7 +359,11 @@ export function AlumnoScreen({
           para decidir a quién escribirle ya está resuelto más arriba.
         */}
         <HabitosDelAlumno grupoId={grupoId} alumnoId={alumno.participanteId} />
-        <CodigoRenaserDelAlumno grupoId={grupoId} alumnoId={alumno.participanteId} />
+        <CodigoRenaserDelAlumno cargar={cargarRadar} />
+        {/* Spec 015: lo que le queda libre entre lo que planificó, de lunes a domingo (solo lectura). */}
+        <TiempoLibreDeLaSemana cargar={cargarHuecos} />
+        {/* Spec 017: lo que dijo al cerrar cada día, de lunes a domingo (solo lectura). */}
+        <CierresDelDia cargar={cargarCierres} />
 
       </ScrollView>
     </SafeAreaView>

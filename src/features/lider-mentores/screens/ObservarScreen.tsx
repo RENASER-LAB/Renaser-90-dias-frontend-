@@ -17,10 +17,14 @@ const TIPOS: TipoObservacion[] = ['RECONOCIMIENTO', 'SUGERENCIA', 'ALERTA'];
 
 const LARGO_MAXIMO = 1000;
 
+/**
+ * Qué escribir en cada tipo. Spec 018: es el texto de relleno del campo y no un renglón aparte encima: el título ya dice
+ * si es reconocer, sugerir o alertar, y la ayuda se va sola cuando la persona empieza a escribir.
+ */
 const AYUDA: Record<TipoObservacion, string> = {
-  RECONOCIMIENTO: 'Lo que hizo bien.',
-  SUGERENCIA: 'Lo que podría cambiar.',
-  ALERTA: 'Lo que va mal y hay que atender.',
+  RECONOCIMIENTO: 'Lo que hizo bien',
+  SUGERENCIA: 'Lo que podría cambiar',
+  ALERTA: 'Lo que va mal y hay que atender',
 };
 
 /**
@@ -101,13 +105,12 @@ export function ObservarScreen({
           />
         </>
       ) : null}
-      <Linea>{AYUDA[tipoElegido]}</Linea>
       <TextInput
         value={texto}
         onChangeText={setTexto}
         multiline
         maxLength={LARGO_MAXIMO}
-        placeholder="Escribe aquí"
+        placeholder={AYUDA[tipoElegido]}
         placeholderTextColor={c.textSoft}
         accessibilityLabel={`Texto de la observación para ${nombre}`}
         style={[estilos.campo, { borderColor: c.borderStrong, color: c.textStrong, backgroundColor: c.cardBg }]}
@@ -117,11 +120,6 @@ export function ObservarScreen({
         checked={enviar}
         onToggle={setEnviar}
         title="Enviárselo también por el chat"
-        subtitle={
-          sobre
-            ? `Le llega como mensaje tuyo, con el nombre de ${sobre.nombre.trim() || 'la persona'} y la semana al principio.`
-            : 'Le llega como mensaje tuyo, tal como lo escribiste.'
-        }
       />
       <BotonPrincipal etiqueta="Guardar" onPress={guardar} cargando={guardando} deshabilitado={vacio} />
     </MarcoDelLider>

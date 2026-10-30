@@ -114,6 +114,15 @@ export interface DestinoDeMiCaja {
 }
 
 /**
+ * Mi Radar: `/mi-radar` (spec 012, 2026-10-29), la ruta del aviso de cada hora elegida y de la invitación del día 8. Abre
+ * Yo → Mi Radar; si la hora en curso es una de las elegidas y no tiene registro, además el formulario. Lo programa el
+ * teléfono (`recordatoriosDeRadar`), no el servidor. Sin identificadores: es siempre el suyo.
+ */
+export interface DestinoDeMiRadar {
+  tipo: 'miRadar';
+}
+
+/**
  * La caja de un aprendiz, para Administración: `/admin/caja/{aprendizId}` (D-219), la ruta de los
  * avisos al Admin («X está lista para su Caja», la caja enviada hace 5 días sin confirmar). Abre
  * Administración → Caja Renaser en esa caja. Quien no administra no abre nada: el servidor autoriza.
@@ -147,6 +156,7 @@ export type DestinoDeAviso =
   | DestinoDelHabito
   | DestinoDelObjetivo
   | DestinoDeMiCaja
+  | DestinoDeMiRadar
   | DestinoDeCajaAdmin
   | DestinoDelChat;
 
@@ -175,6 +185,8 @@ const RUTA_DEL_HABITO = /^\/habitos\/([^/?]+)\/?(?:\?(.*))?$/;
 const RUTA_DEL_OBJETIVO = /^\/objetivos\/(\d{4}-\d{2}-\d{2})\/?(?:\?(.*))?$/;
 /** Con la barra final tolerada, como `/semaforo`. */
 const RUTA_DE_MI_CAJA = /^\/caja\/?$/;
+/** Spec 012: Mi Radar. Con la barra final tolerada. */
+const RUTA_DE_MI_RADAR = /^\/mi-radar\/?$/;
 const RUTA_DE_LA_CAJA_ADMIN = /^\/admin\/caja\/([^/?]+)\/?$/;
 /** D-221: el chat de un aviso de mensaje. Con la barra final tolerada. */
 const RUTA_DEL_CHAT = /^\/chat\/([^/?]+)\/?$/;
@@ -203,6 +215,7 @@ export function destinoDeRuta(ruta: unknown): DestinoDeAviso | null {
   if (RUTA_DEL_SEMAFORO.test(ruta)) return { tipo: 'semaforo' };
   if (RUTA_DEL_SEMAFORO_POR_GRUPOS.test(ruta)) return { tipo: 'semaforoGrupos' };
   if (RUTA_DE_MI_CAJA.test(ruta)) return { tipo: 'caja' };
+  if (RUTA_DE_MI_RADAR.test(ruta)) return { tipo: 'miRadar' };
   const deLaCaja = RUTA_DE_LA_CAJA_ADMIN.exec(ruta);
   if (deLaCaja) {
     const aprendizId = decodificar(deLaCaja[1]);

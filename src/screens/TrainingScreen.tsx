@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Platform, type StyleProp, type ViewStyle } from 'react-native';
 import { Alert } from '../components/Alerta';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BORDES_DE_UNA_PESTANA } from '../navigation/bordesDeUnaPestana';
@@ -10,34 +10,24 @@ import { useResponsive } from '../theme/responsive';
 import { useSystemBackHandler } from '../hooks/useSystemBackHandler';
 import { useMedicionDePantalla } from '../hooks/useMedicionDePantalla';
 import { ScreenHeader } from '../components/ui';
-import { Icon, IconName, TAMANO_ICONO } from '../components/Icon';
-import { Presionable } from '../components/Presionable';
-import { ConfirmacionEnLinea } from '../components/ConfirmacionEnLinea';
-import { Interruptor } from '../components/Interruptor';
-import { ControlSegmentado } from '../components/ControlSegmentado';
+import { Icon, IconName } from '../components/Icon';
 import { tacto } from '../utils/tacto';
 import {
-  accionDeLaTarjeta,
   avisoDeEvidenciaEntregada,
-  avisoDeHoraPasada,
-  detalleDelCumplido,
   muestraElCumplidoEnLaTarjeta,
-  seccionesDeLaDimension,
-  type SeccionDeLaDimension,
 } from '../features/training/utils/tarjetaDelHabito';
 import { useTraining } from '../features/training/hooks/useTraining';
-import { ProximoAVencerCard } from '../features/training/components/ProximoAVencerCard';
+import { TrainingPorHora } from '../features/training/components/TrainingPorHora';
+import { PracticasDeTraining } from '../features/training/components/PracticasDeTraining';
+import { DIMENSIONES_CONFIG } from '../features/training/data/dimensiones';
+import { PRACTICAS_ABIERTAS, PRACTICAS_CERRADAS, alRetroceder, type EstadoDePracticas } from '../features/training/utils/navegacionDePracticas';
 import { EvidenciaHabitoModal } from '../features/habits/components/EvidenciaHabitoModal';
 import { RegistroConFotoModal } from '../features/habits/components/RegistroConFotoModal';
 import { useRegistroConFoto } from '../features/habits/hooks/useRegistroConFoto';
-import { CheckDelHabito } from '../features/habits/celebracion/CheckDelHabito';
-import { BrilloDeLaTarjeta, TituloQueSeTacha } from '../features/habits/celebracion/TarjetaQueCelebra';
 import { cerrarConRespuestaInmediata } from '../features/habits/celebracion/momentoEnLaTarjeta';
-import { ESCALA_APRETADO_DEL_CHECK } from '../features/habits/celebracion/momentoDelHabito';
 import { estaVencido, seRegistraConFoto } from '../features/training/utils/registroConFotoEnTraining';
 import { avisoDeHabitoCerrado, preguntaQueSintio, type MedicionPedida } from '../features/habits/utils/registroConFoto';
-import { sellarRocaDiaria } from '../features/objetivos/utils/sellarRocaDiaria';
-import { PlanificarDimensionModal } from '../features/training/components/PlanificarDimensionModal';
+import { avisoDeAccionBloqueada, sellarAccionDeTraining } from '../features/objetivos/utils/registroDeAccionConFoto';
 import { completarRegistro, confirmarEvidencia } from '../features/habits/api/evidenciaHabitoApi';
 import { crearCierreSinRepetir } from '../features/habits/utils/cierreDeRegistro';
 import { ejecutarEnRegistroVigente } from '../features/habits/api/registroVigente';
@@ -46,7 +36,6 @@ import { CLAVE_SISTEMA_PASTILLA_RENACER } from '../features/spirit/api/spiritApi
 import { escucharPropuestaConfirmada } from '../features/renasia/events/avisoPropuestaConfirmada';
 import { escucharPostDiarioCerrado } from '../features/habits/events/avisoPostDiarioCerrado';
 import { PastillaRenacerModal } from '../features/spirit/components/PastillaRenacerModal';
-import type { AudioterapiaSemanal } from '../features/habits/api/audioterapiaApi';
 import { audioDeLaAudioterapia, audioDeLaPastilla } from '../features/spirit/types/audioGuiado';
 import { obtenerAudioterapiaSemanal } from '../features/habits/api/audioterapiaApi';
 import { useEspiritu } from '../features/spirit/hooks/useEspiritu';
@@ -54,11 +43,10 @@ import { ClaseDiariaModal } from '../features/academy/components/ClaseDiariaModa
 import { useClaseDiaria } from '../features/academy/hooks/useClaseDiaria';
 import type { ClaseDiariaApi } from '../features/academy/types/academy.types';
 import { irAPestana } from '../navigation/navegacionRef';
-import { dimensionAAbrir } from '../features/training/utils/aperturaDesdeAviso';
+import { habitoAAbrir } from '../features/training/utils/aperturaDesdeAviso';
 import type { DimensionDeTraining } from '../features/training/utils/dimensionDelHabito';
-import { iconoDeLaDimension } from '../features/training/utils/iconoDeLaDimension';
+import type { GuiaDelHabito } from '../features/training/utils/guiaDelHabito';
 import { useProgramaDia } from '../features/programa/hooks/useProgramaDia';
-import * as recordatorios from '../features/habits/notificaciones/recordatoriosDeHabito';
 import { alCumplirElHabito } from '../features/habits/notificaciones/repeticiones';
 import {
   diaAnterior,
@@ -72,15 +60,15 @@ import { AvisoConsultaDiaUno } from '../features/programa/components/AvisoConsul
 import { borradorEspiritu } from '../features/spirit/storage/borradorEspiritu';
 import type { DayOfWeek } from './PlanScreen';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
-import { RenombrarHabitoModal } from '../features/habits/components/RenombrarHabitoModal';
 import { useRenombreLocal } from '../features/habits/hooks/useRenombreDeHabito';
-import { esRenombrable, tituloVisible } from '../features/habits/utils/renombreDeHabito';
+import { tituloVisible } from '../features/habits/utils/renombreDeHabito';
 import { useAuth } from '../features/auth/context/AuthContext';
 import { useOcultarBarraAlDesplazar } from '../navigation/barraAlDesplazar/BarraInferior';
 import { SeccionEnMantenimiento } from '../features/plataforma/components/SeccionEnMantenimiento';
 import { SeccionNoDisponible } from '../features/plataforma/components/SeccionNoDisponible';
 import { useAlVolverAPrenderse, useFuncionalidad } from '../features/plataforma/estado/useFuncionalidad';
 import { CLAVES } from '../features/plataforma/utils/clavesDeLaApp';
+import { fechaEnZona, zonaDelTelefono } from '../features/eventos/utils/zonaHoraria';
 
 /**
  * Habitos con FLUJO PROPIO: no se cierran con el checkbox ni subiendo un archivo. Se ramifica por
@@ -186,50 +174,12 @@ export interface HabitItem {
   deadline?: string | null;
   /** D-226: el registro pide los km del día (KILÓMETROS DIARIOS), con el total acumulado previo. */
   medicion?: MedicionPedida | null;
+  /**
+   * Spec 014: la guía que el equipo cargó para este hábito (`guia` del registro de hoy), lista para la hoja del hábito.
+   * `null`/ausente = no hay guía y la hoja no muestra esa sección.
+   */
+  guia?: GuiaDelHabito | null;
 }
-
-/** El ícono de cada una NO está acá: sale de `ICONO_DE_LA_DIMENSION` (`iconoDeLaDimension`), la fuente única. */
-interface DimensionConfig {
-  key: DimensionDeTraining;
-  /** La clave en versales: la que entienden la hoja de Planificar y los recordatorios. */
-  title: string;
-  /** Lo que se LEE (2026-10-05): tipo oración, como el resto de la app. */
-  nombre: string;
-  sub: string;
-}
-
-const DIMENSIONES_CONFIG: DimensionConfig[] = [
-  {
-    key: 'CUERPO',
-    title: 'CUERPO',
-    nombre: 'Cuerpo',
-    sub: 'Fuerza somática · Movilidad · Energía',
-  },
-  {
-    key: 'MENTE',
-    title: 'MENTE',
-    nombre: 'Mente',
-    sub: 'Enfoque · Mentalidad · Aprendizaje',
-  },
-  {
-    key: 'EMOCIONES',
-    title: 'EMOCIONES',
-    nombre: 'Emociones',
-    sub: 'Gestión Emocional · Relaciones · Propósito',
-  },
-  {
-    key: 'ESPÍRITU',
-    title: 'ESPÍRITU',
-    nombre: 'Espíritu',
-    sub: 'Propósito · Fe · Gratitud',
-  },
-  {
-    key: 'VIDA Y NEGOCIO',
-    title: 'VIDA Y NEGOCIO',
-    nombre: 'Vida y negocio',
-    sub: 'Hábitos · Entorno · Estilo de Vida · Estrategia',
-  },
-];
 
 // `INITIAL_HABITS` se eliminó: eran 17 hábitos inventados que no existen en el catálogo, y 11 de
 // ellos venían con `done: true`, `hasEvidence: true` y `streak: 37` — es decir, la pantalla
@@ -243,12 +193,12 @@ export default function TrainingScreen() {
   /* Spec 002: el interruptor «Hábitos». Al volver de mantenimiento se relee lo que falló mientras estaba apagado. */
   const habitosPrendidos = useFuncionalidad(CLAVES.habitos);
   const { c, t } = useTheme();
-  const { rs, isTablet, horizontalPadding, contentMaxWidth } = useResponsive();
-  const medallionSize = rs(42);
+  const { isTablet, horizontalPadding, contentMaxWidth } = useResponsive();
 
-  // Selected Dimension State
-  const [selectedDimension, setSelectedDimension] = useState<DimensionConfig | null>(null);
-  const [innerTab, setInnerTab] = useState<SeccionDeLaDimension>('habitos');
+  /* Spec 014: «Tus prácticas» (el engranaje) y dónde está la persona adentro. Un solo estado, un solo retroceso. */
+  const [practicas, setPracticas] = useState<EstadoDePracticas>(PRACTICAS_CERRADAS);
+  /** El día que se mira en la lista (`null` = hoy). Lo necesita la pantalla: en un día anterior no monta ningún registro. */
+  const [diaElegido, setDiaElegido] = useState<string | null>(null);
 
   // Habits State
   // Los hábitos de CUERPO/MENTE/EMOCIONES/ESPÍRITU (habit-tracks/today) y la roca del día de VIDA
@@ -264,7 +214,12 @@ export default function TrainingScreen() {
     loading: cargandoBackend,
     error: errorBackend,
     recargar: recargarEntrenamiento,
+    fechaDeHoy,
   } = useTraining(trainingActivo);
+  /* Spec 014: los eventos de la semana solo se piden si Eventos está prendido (Soporte TI). */
+  const eventosPrendidos = useFuncionalidad(CLAVES.eventos);
+  /* Spec 017: «Cierra tu día» cuelga de las acciones del día, que tapa el interruptor `plan`. */
+  const planPrendido = useFuncionalidad(CLAVES.plan);
   useAlVolverAPrenderse(CLAVES.habitos, () => void recargarEntrenamiento());
   // Solo en desarrollo: pedidos al montar y tiempo hasta tener datos (V-1, 26/09/2026).
   useMedicionDePantalla('Training', !cargandoBackend);
@@ -283,6 +238,7 @@ export default function TrainingScreen() {
    */
   const {
     diaPrograma,
+    fase,
     inscrito,
     loading: cargandoDiaPrograma,
     recargar: recargarDiaPrograma,
@@ -300,8 +256,10 @@ export default function TrainingScreen() {
   /**
    * Entrada desde el aviso de un hábito (D-218, 2026-09-28): la deja `AbridorDeAvisos` con
    * `abrirHabitoId` y `abrirDimension`, cuando ya no hay ninguna capa obligatoria encima. Se consume el
-   * parámetro una vez (como `abrirEventoId` en Comunidad) y se guarda el pedido hasta saber qué
-   * dimensión abrir: si la ruta no la trajo, hay que esperar a que carguen los hábitos.
+   * parámetro una vez (como `abrirEventoId` en Comunidad) y se guarda el pedido hasta que carguen los hábitos.
+   *
+   * > Spec 014: antes abría la dimensión del hábito. Las dimensiones ya no se ven afuera: el aviso abre el hábito
+   * > mismo, como al tocar su fila (su hoja o su registro), en la lista de hoy.
    */
   const route = useRoute();
   const navigation = useNavigation();
@@ -326,17 +284,43 @@ export default function TrainingScreen() {
     }
   }, [cargandoBackend, errorBackend, habitsDelBackend, planHabitsDelBackend]);
 
+  /** El hábito de hoy que `TrainingPorHora` tiene que abrir (se consume al abrirlo). */
+  const [aperturaPedida, setAperturaPedida] = useState<{ registroId: string; vez: number } | null>(null);
+
+  /**
+   * Entrada desde Plan (spec 016, 2026-10-29): «Registrar en Training» de «Tus acciones de hoy» trae `abrirAccionId`, el id de
+   * la acción de hoy (una `RocaDiariaApi`: es el `id` de su fila). Se abre como al tocar su fila, en cuanto cargan; si ya
+   * no está entre las de hoy (se cumplió desde otro teléfono, o cambió el día) Training queda en su lista, sin error.
+   */
+  const [accionPedida, setAccionPedida] = useState<string | null>(null);
+  useEffect(() => {
+    const id = (route.params as { abrirAccionId?: string } | undefined)?.abrirAccionId;
+    if (!id) return;
+    setAccionPedida(id);
+    (navigation as unknown as { setParams: (p: Record<string, unknown>) => void }).setParams({ abrirAccionId: undefined });
+  }, [route.params, navigation]);
+  useEffect(() => {
+    if (!accionPedida || cargandoBackend) return;
+    // En lo que trajo `useTraining`, no en `habits`: ver el comentario del aviso, abajo (mismo E2E del 29/10).
+    if (!errorBackend && habitsDelBackend.some(h => h.id === accionPedida && h.tieneTrackHoy)) {
+      setPracticas(PRACTICAS_CERRADAS);
+      setAperturaPedida({ registroId: accionPedida, vez: Date.now() });
+    }
+    setAccionPedida(null);
+  }, [accionPedida, habitsDelBackend, cargandoBackend, errorBackend]);
+  /* Se busca en lo que trajo `useTraining` y no en `habits`: al volver a Training se relee de cero (spec 002), y en el
+     cuadro en que termina de cargar `habits` todavía es la lista vacía (la copia llega en el `useLayoutEffect` de
+     arriba). Con `habits` el pedido se descartaba sin abrir nada (E2E del 29/10). */
   useEffect(() => {
     if (!habitoPedido) return;
-    const dimension = dimensionAAbrir(habitoPedido, [...habits, ...planHabits], cargandoBackend);
-    if (dimension === 'esperar') return;
-    const config = dimension ? DIMENSIONES_CONFIG.find(d => d.key === dimension) ?? null : null;
-    if (config) {
-      setSelectedDimension(config);
-      setInnerTab('habitos');
+    const habito = habitoAAbrir(habitoPedido, errorBackend ? [] : habitsDelBackend, cargandoBackend);
+    if (habito === 'esperar') return;
+    if (habito) {
+      setPracticas(PRACTICAS_CERRADAS);
+      setAperturaPedida({ registroId: habito.id, vez: Date.now() });
     }
     setHabitoPedido(null);
-  }, [habitoPedido, habits, planHabits, cargandoBackend]);
+  }, [habitoPedido, habitsDelBackend, cargandoBackend, errorBackend]);
 
   /**
    * Refleja en la tarjeta un cierre que el SERVIDOR YA CONFIRMÓ, sin esperar a releer (V-2,
@@ -379,14 +363,6 @@ export default function TrainingScreen() {
     setConfirmacion({ clave: Date.now(), texto, habitoId });
   };
 
-  /**
-   * El hábito cumplido que está DESPLEGADO (decisión del dueño, 2026-10-05): tocar uno ya cumplido
-   * muestra en la misma tarjeta cuándo se cumplió y lo que escribió, en vez del diálogo «Ya está
-   * cumplido». Uno a la vez; tocarlo de nuevo lo pliega.
-   */
-  const [cumplidoAbierto, setCumplidoAbierto] = useState<string | null>(null);
-  const alternarCumplido = (id: string) => setCumplidoAbierto(actual => (actual === id ? null : id));
-
   // El habito de post diario lo cierra el compositor del Muro, en OTRA pestana (E-117). Sin esto,
   // la persona lee "hábito completado" alla y vuelve a encontrar la tarjeta sin tildar, porque
   // `useTraining` carga una sola vez al montarse. No se marca nada a mano: se recarga del backend,
@@ -427,19 +403,7 @@ export default function TrainingScreen() {
     void reanudarPendiente();
   }, [reanudarPendiente]);
 
-  /**
-   * "Planificar" — ahora es UNA opción grande de la dimensión entera, no un botón chico por
-   * hábito (pedido del dueño 2026-09-07).
-   *
-   * > Antes cada tarjeta tenía un "PLAN" al costado de "SUBIR", en la misma fila angosta. Eso era
-   * > el estorbo: la tarjeta tiene un solo trabajo, que es entregar la evidencia, y competía con
-   * > un botón que se usa una vez cada tanto. Planificar subió al encabezado de la categoría y la
-   * > hoja deja elegir a qué hábitos aplicar — a todos o a uno solo, que es el mismo caso de antes.
-   *
-   * Acá solo vive si la hoja está abierta; la edición en sí es de `PlanificarDimensionModal`.
-   */
-  const [planificarVisible, setPlanificarVisible] = useState(false);
-
+  /* "Planificar" ya no se ve afuera: vive en «Tus prácticas» (`PracticasDeTraining`, spec 014), que monta la hoja. */
 
   /**
    * "Pastilla Renacer" (modulo Espiritu). Es un habito con FLUJO PROPIO: no se cierra subiendo
@@ -470,41 +434,7 @@ export default function TrainingScreen() {
   // que el boton que vivia alla era inalcanzable. Esta lista, en cambio, es la que la persona
   // mira todos los dias. Comprobado en pantalla el 2026-09-15.
   const renombre = useRenombreLocal(user?.id ?? null);
-  const [habitoARenombrar, setHabitoARenombrar] = useState<HabitItem | null>(null);
-
-  /**
-   * El aviso de los domingos para armar la semana (pedido del dueño 2026-09-07).
-   *
-   * Vive acá y no en la hoja de planificar porque es del PROGRAMA, no de un hábito ni de una
-   * dimensión: uno solo por persona. Ponerlo en la hoja lo habría multiplicado por cuatro y habría
-   * dado a entender que es del hábito que estás mirando.
-   *
-   * `null` mientras no se sabe: en web y en Expo Go no hay alarmas locales y la tarjeta no aparece,
-   * en vez de ofrecer un aviso que nunca sonaría.
-   */
-  const [repasoSemanal, setRepasoSemanal] = useState<boolean | null>(null);
-  useEffect(() => {
-    if (!user?.id || !recordatorios.HAY_RECORDATORIOS_LOCALES) return;
-    void recordatorios.tieneRepasoSemanal(user.id).then(setRepasoSemanal);
-  }, [user?.id]);
-
-  const alternarRepasoSemanal = async (querido: boolean) => {
-    if (!user?.id) return;
-    setRepasoSemanal(querido);
-    if (!querido) {
-      await recordatorios.cancelarRepasoSemanal(user.id);
-      return;
-    }
-    const ok = await recordatorios.programarRepasoSemanal(user.id);
-    if (!ok) {
-      // Sin permiso no se promete nada: el interruptor vuelve solo y se dice por qué.
-      setRepasoSemanal(false);
-      Alert.alert(
-        'Falta el permiso de notificaciones',
-        'Habilita las notificaciones de la app para que podamos avisarte los domingos.',
-      );
-    }
-  };
+  /* «Cambiar nombre» y «Arma tu semana los domingos» viven en «Tus prácticas» (spec 014). */
   const espiritu = useEspiritu();
   /** ID elegido al abrir: una recarga nunca debe convertir una entrega de ayer en la de hoy. */
   const pastillaSolicitada = useRef<string | null>(null);
@@ -523,8 +453,6 @@ export default function TrainingScreen() {
   const [claseDiariaVisible, setClaseDiariaVisible] = useState(false);
   const [habitoClaseDiaria, setHabitoClaseDiaria] = useState<HabitItem | null>(null);
   const claseDiaria = useClaseDiaria();
-
-  // New Custom Habit Modal State
 
   // Interceptar gestos de retroceso en pantalla táctil (Xiaomi / Android / iOS Edge Swipe)
   useSystemBackHandler(() => {
@@ -552,19 +480,16 @@ export default function TrainingScreen() {
       setActiveEvidenceHabit(null);
       return true;
     }
-    // La hoja de planificar también tiene que cerrarse con el gesto lateral, no minimizar la app
-    // (AGENTS.md §6). Va después de la evidencia y antes de la dimensión: es una capa por encima
-    // del detalle de categoría y por debajo de un modal de evidencia abierto sobre ella.
-    if (planificarVisible) {
-      setPlanificarVisible(false);
-      return true;
-    }
-    if (selectedDimension !== null) {
-      setSelectedDimension(null);
+    // «Tus prácticas» (spec 014): la hoja de Planificar, la dimensión y la pantalla suben UN nivel por vez con el
+    // gesto lateral (AGENTS.md §6); nunca cierran la app desde una vista hija. La hoja de Planificar es un `Modal`
+    // con su propio atrás (la ‹ de sus pasos), así que acá solo llega lo que está por debajo de ella.
+    const atrasDePracticas = alRetroceder(practicas);
+    if (atrasDePracticas) {
+      setPracticas(atrasDePracticas);
       return true;
     }
     return false; // Permite el comportamiento por defecto si está en el menú raíz
-  }, registroConFoto.abierto || pastillaVisible || claseDiariaVisible || activeEvidenceHabit !== null || planificarVisible || selectedDimension !== null);
+  }, registroConFoto.abierto || pastillaVisible || claseDiariaVisible || activeEvidenceHabit !== null || practicas.abierta);
 
   /** Lleva al muro con el compositor abierto. Reusa el parametro que ComunidadScreen ya entiende. */
   const abrirMuroParaPublicar = () => {
@@ -653,11 +578,8 @@ export default function TrainingScreen() {
    * terminaba en el mismo 409 que el doble toque (TRN-02).
    */
   const registrarSoloHora = async (habit: HabitItem) => {
-    // Ya cumplido: se despliega en la tarjeta a qué hora quedó (decisión del dueño, 2026-10-05).
-    if (habit.done) {
-      alternarCumplido(habit.id);
-      return;
-    }
+    // Ya cumplido: nada que registrar. Lo que quedó se lee en la hoja del hábito (spec 014).
+    if (habit.done) return;
     try {
       // El check responde ya, en el mismo toque (2026-10-07); la tarjeta se marca recién con la respuesta.
       const resultado = await cerrarConRespuestaInmediata(habit.id, () => cerrarUnaVez(habit.id));
@@ -676,11 +598,10 @@ export default function TrainingScreen() {
     const habit = habits.find(h => h.id === id);
     // Deshacer no existe en el backend: no hay endpoint que reabra un registro cerrado. Antes esto
     // lo "deshacía" en memoria, o sea que mostraba algo que el servidor no iba a confirmar.
-    // Tocar el ✓ de uno cumplido muestra su estado en la tarjeta (antes: diálogo «Ya está cumplido»);
-    // la Pastilla, la Audioterapia y la Clase diaria abren su ventana, donde se relee lo entregado.
+    // Uno ya cumplido no se vuelve a cerrar. Lo que registró se lee en la hoja del hábito (spec 014); la Pastilla y
+    // la Clase diaria conservan su ventana de solo lectura (`openEvidenceModal`).
     if (habit?.done) {
-      if (muestraElCumplidoEnLaTarjeta(habit)) alternarCumplido(habit.id);
-      else openEvidenceModal(habit);
+      if (!muestraElCumplidoEnLaTarjeta(habit)) openEvidenceModal(habit);
       return;
     }
     if (habit && !habit.done) {
@@ -760,14 +681,14 @@ export default function TrainingScreen() {
     }
   };
 
+  /** Mientras se lee la lista de hoy para el aviso de Pareto, un segundo toque no abre un segundo aviso. */
+  const comprobandoAccion = useRef(false);
+
   const openEvidenceModal = (habit: HabitItem) => {
-    // Ya cumplido: su estado se lee en la tarjeta (decisión del dueño, 2026-10-05). Va PRIMERO, antes
+    // Ya cumplido: su estado se lee en la hoja del hábito (spec 014; antes, en la tarjeta). Va PRIMERO, antes
     // de las ramas por clave: la Audioterapia volvía a abrir su formulario y el post diario el Muro,
     // para algo ya entregado. La Pastilla y la Clase diaria siguen abriendo su ventana de solo lectura.
-    if (muestraElCumplidoEnLaTarjeta(habit)) {
-      alternarCumplido(habit.id);
-      return;
-    }
+    if (muestraElCumplidoEnLaTarjeta(habit)) return;
     /* La Audioterapia usa el MISMO modal de evidencia que el resto —y por lo tanto el mismo camino
        de cierre, que completa el hábito correcto—, pero con el audio de la semana arriba y las dos
        preguntas de D-97 en vez del selector de foto/video. Lo único que hace falta es traer el
@@ -816,14 +737,10 @@ export default function TrainingScreen() {
       void registrarSoloHora(habit);
       return;
     }
-    // Ya cumplido (el botón dice Ver): no se abre nada que suba y vuelva a cerrar. Antes abría el
-    // modal genérico y "sellar" subía el archivo y terminaba en un `/complete` que el backend
-    // rechaza porque el registro ya estaba cerrado (2026-09-26). Desde el 2026-10-05 (decisión del
-    // dueño) lo que escribió se lee en la misma tarjeta, no en un diálogo «Ya está cumplido».
-    if (habit.done) {
-      alternarCumplido(habit.id);
-      return;
-    }
+    // Ya cumplido: no se abre nada que suba y vuelva a cerrar. Antes abría el modal genérico y "sellar" subía el
+    // archivo y terminaba en un `/complete` que el backend rechaza porque el registro ya estaba cerrado
+    // (2026-09-26). Lo que escribió se lee en la hoja del hábito (spec 014).
+    if (habit.done) return;
     // D-259: su día ya cerró (EXPIRADO) o su sesión se rompió (FALLIDO). Va antes de elegir el camino para que
     // valga también en web y en el modal genérico, que antes abrían igual y terminaban en el 409 del servidor.
     if (estaVencido(habit.estado)) {
@@ -841,6 +758,26 @@ export default function TrainingScreen() {
         },
         habit.hasEvidence
       );
+      return;
+    }
+    // Una acción de los objetivos (VIDA Y NEGOCIO): en cada eje primero va la verde. Se avisa ANTES de abrir el registro,
+    // con el mismo texto del registro con foto del acompañante; antes se abría y el servidor rechazaba con su código.
+    // Si la lista de hoy no se puede leer se abre como siempre: el servidor sigue decidiendo.
+    if (habit.dimension === 'VIDA Y NEGOCIO') {
+      if (comprobandoAccion.current) return;
+      comprobandoAccion.current = true;
+      void avisoDeAccionBloqueada(habit.id)
+        .then(aviso => {
+          if (aviso) {
+            Alert.alert(aviso.titulo, aviso.mensaje);
+            return;
+          }
+          habitoDeLaEvidencia.current = habit;
+          setActiveEvidenceHabit(habit);
+        })
+        .finally(() => {
+          comprobandoAccion.current = false;
+        });
       return;
     }
     habitoDeLaEvidencia.current = habit;
@@ -909,33 +846,49 @@ export default function TrainingScreen() {
   };
 
 
-  // Filter habits for selected dimension
-  const currentDimensionHabits = selectedDimension && !cargandoBackend && !errorBackend
-    ? habits.filter(h => h.dimension === selectedDimension.key)
-    : [];
-
-  // Cuántos de esos se pueden planificar de verdad: solo los hábitos de catálogo tienen
-  // `habitoId`, que es lo que piden `habit-preferences` y `habit-unlocks`. Las rocas de VIDA Y
-  // NEGOCIO vienen de otro módulo y no lo traen — por eso ahí el botón grande no aparece, en vez
-  // de abrir una hoja vacía.
-  const habitosPlanificables = currentDimensionHabits.filter(h => h.habitoId).length;
-
-  // "CUMPLIDOS" cuenta hábitos/roca marcados como hechos (done). La barra de "Evidencias selladas
-  // hoy" usa el MISMO criterio que el badge de la lista de dimensiones (ver ahí el porqué, E-118):
-  // la prueba entregada en la forma que cada hábito acepta, no solo la fila de `evidencias`. Si no,
-  // la lista decía "1/1 EVIDENCIAS" y el detalle "Evidencias selladas hoy 0%" del mismo hábito.
-  const completedEvidencesCount = currentDimensionHabits.filter(h => h.done).length;
-  const sealedEvidencesCount = currentDimensionHabits.filter(h => h.done || h.hasEvidence).length;
-  const dimensionProgress = currentDimensionHabits.length > 0
-    ? Math.round((sealedEvidencesCount / currentDimensionHabits.length) * 100)
-    : 0;
-
+  /** El contenido de la pantalla: el mismo relleno y ancho en la lista de hoy y en «Tus prácticas». */
+  const estiloDelContenido: StyleProp<ViewStyle> = [
+    styles.content,
+    {
+      paddingHorizontal: horizontalPadding,
+      maxWidth: contentMaxWidth,
+      alignSelf: isTablet ? 'center' : 'stretch',
+      width: isTablet ? '100%' : undefined,
+    },
+  ];
+  /** Hoy según el servidor; el del teléfono solo con un backend que todavía no manda el snapshot del día. */
+  const hoyIso = fechaDeHoy ?? fechaEnZona(Date.now(), zonaDelTelefono());
   /**
-   * «Guías y audios» no tiene contenido en ninguna dimensión (no hay de dónde traerlo todavía), así
-   * que se esconde (decisión del dueño, 2026-10-05). Cuando exista, este número sale de esa fuente.
+   * Regla del dueño (spec 014): en un día anterior NO se monta ningún componente de registro —ni la cámara, ni la
+   * Pastilla, ni la Clase, ni la hoja de evidencia—, y la persona «nunca debería llegar» a subir algo. El servidor ya
+   * rechaza esos registros con 409 (D-259); la app no tiene que llegar ahí.
    */
-  const GUIAS_DE_LA_DIMENSION = 0;
-  const secciones = seccionesDeLaDimension(GUIAS_DE_LA_DIMENSION);
+  const viendoUnDiaAnterior = diaElegido !== null && diaElegido < hoyIso;
+  /* Al pasar a otro día (o a medianoche) vuelve a hoy, y ningún registro queda abierto de un día para otro. */
+  useEffect(() => {
+    setDiaElegido(null);
+  }, [hoyIso]);
+  /* El día del programa y la fase salen de `/home` y solo se leían al montar: al cambiar el día con la app abierta quedaban
+     del día anterior («Día 7 de 90» siendo el 8, y el Día 1 corrido). Se relee cuando cambia el día de hoy. */
+  const hoyDelDiaDelPrograma = useRef(hoyIso);
+  useEffect(() => {
+    if (hoyDelDiaDelPrograma.current === hoyIso) return;
+    hoyDelDiaDelPrograma.current = hoyIso;
+    void recargarDiaPrograma();
+  }, [hoyIso, recargarDiaPrograma]);
+  const alElegirDia = useCallback((iso: string | null) => {
+    setDiaElegido(iso);
+    if (iso !== null && iso < hoyIso) {
+      setPastillaVisible(false);
+      setClaseDiariaVisible(false);
+      setActiveEvidenceHabit(null);
+      setAudioterapiaAbierta(null);
+      registroConFoto.cerrar();
+    }
+  }, [hoyIso, registroConFoto]);
+  const estadoDeLaLista: 'cargando' | 'error' | 'listo' = cargandoBackend ? 'cargando' : errorBackend !== null ? 'error' : 'listo';
+  /** «Tus prácticas» no ofrece nada que planificar antes de que el programa arranque. */
+  const practicasDeshabilitadas = programaSinArrancar || programaSinConfirmar || sinProgramaPropio;
 
   /* Spec 002, fase 2: si «Hábitos» todavía no le toca a esta cuenta (despliegue, rol personalizado), la pestaña queda
      con un texto neutro, sin el ícono de mantenimiento: no está en arreglo, todavía no lo tiene. */
@@ -973,839 +926,233 @@ export default function TrainingScreen() {
 
   return (
     <SafeAreaView edges={BORDES_DE_UNA_PESTANA} style={{ flex: 1, backgroundColor: c.bg }}>
-      <ScreenHeader title="TRAINING" />
-
-      <ScrollView
-        {...barraAlDesplazar}
-        contentContainerStyle={[
-          styles.content,
-          {
-            paddingHorizontal: horizontalPadding,
-            maxWidth: contentMaxWidth,
-            alignSelf: isTablet ? 'center' : 'stretch',
-            width: isTablet ? '100%' : undefined,
-          },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        {arranque.estado === 'ERROR' || programaPropio.error ? (
-          <AvisoConsultaDiaUno mensaje={arranque.estado === 'ERROR' ? arranque.mensaje : undefined} reintentar={() => {
-            setVersionArranque(v => v + 1);
-            programaPropio.recargar();
-            void recargarDiaPrograma();
+      {practicas.abierta ? (
+        /* «Tus prácticas» (el engranaje, spec 014): pantalla completa, solo para planificar. Ninguna fila registra. */
+        <PracticasDeTraining
+          estado={practicas}
+          onEstado={setPracticas}
+          habits={habits}
+          planHabits={planHabits}
+          cargando={cargandoBackend}
+          error={errorBackend}
+          onReintentar={() => void recargarEntrenamiento(true)}
+          deshabilitada={practicasDeshabilitadas}
+          sinLista={programaSinConfirmar || sinProgramaPropio}
+          userId={user?.id}
+          renombre={renombre}
+          onGuardado={texto => {
             void recargarEntrenamiento();
-          }} />
-        ) : null}
-        {/* =================================================================== */}
-        {/* PROGRAMA SIN ARRANCAR — la misma compuerta que Plan tiene desde D-84.  */}
-        {/* Va arriba de las dos vistas porque el motivo no depende de si estás    */}
-        {/* mirando el catálogo de dimensiones o el detalle de una.                */}
-        {/* =================================================================== */}
-        {programaSinArrancar && (
-          <View
-            style={[styles.avisoSinArrancar, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
-            accessibilityLabel="Tu programa todavía no arrancó"
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Icon name="lock" size={15} color={c.goldInk} />
-              <Text style={[t.cardTitle, { color: c.textStrong }]}>
-                {arranque.estado === 'PENDIENTE_ELEGIR'
-                  ? 'Todavía no elegiste tu Día 1'
-                  : 'Tu programa arranca pronto'}
-              </Text>
-            </View>
-            <Text style={[t.body, { color: c.textSoft }]}>
-              {arranque.estado === 'PENDIENTE_ELEGIR'
-                ? 'Elige en qué día quieres empezar tus 90 días. Hasta entonces no hay evidencia que entregar.'
-                : `Empiezas el ${formatearFechaLarga(arranque.fechaInicio)}. Desde el ${formatearFechaLarga(
-                    diaAnterior(arranque.fechaInicio),
-                  )} vas a poder organizar tus hábitos y entregar evidencia; hasta entonces no hay nada que hacer acá.`}
-            </Text>
-            {/* D-260: el aviso pedía elegir y no había dónde. Abre el selector del onboarding. */}
-            {arranque.estado === 'PENDIENTE_ELEGIR' ? (
-              <View style={{ marginTop: 4 }}>
-                <BotonElegirDiaUno onActivado={alActivarProgramaPropio} />
-              </View>
+            // El hábito recién creado: se confirma en línea (2026-10-05).
+            if (texto) confirmar(texto, null);
+          }}
+          confirmacion={confirmacion}
+          onConfirmacionTerminada={() => setConfirmacion(null)}
+          scrollProps={barraAlDesplazar}
+          estiloDelContenido={estiloDelContenido}
+        />
+      ) : (
+        <>
+          {/* El engranaje a la derecha (24 en una caja de 44 con `hitSlop`): «Tus prácticas», para planificar. */}
+          <ScreenHeader
+            title="TRAINING"
+            right="settings"
+            onPressRight={() => setPracticas(PRACTICAS_ABIERTAS)}
+            etiquetaRight="Tus prácticas: planificar"
+          />
+
+          <ScrollView {...barraAlDesplazar} contentContainerStyle={estiloDelContenido} showsVerticalScrollIndicator={false}>
+            {arranque.estado === 'ERROR' || programaPropio.error ? (
+              <AvisoConsultaDiaUno mensaje={arranque.estado === 'ERROR' ? arranque.mensaje : undefined} reintentar={() => {
+                setVersionArranque(v => v + 1);
+                programaPropio.recargar();
+                void recargarDiaPrograma();
+                void recargarEntrenamiento();
+              }} />
             ) : null}
-          </View>
-        )}
-
-        {/* Sin programa propio (D-260): la invitación de Hoy, no el error técnico. */}
-        {sinProgramaPropio && selectedDimension === null ? (
-          <InvitacionProgramaPropio programa={programaPropio} onActivado={alActivarProgramaPropio} />
-        ) : null}
-
-        {/* ========================================================================= */}
-        {/* VISTA 1: CATÁLOGO DE LAS 5 DIMENSIONES PRINCIPALES                        */}
-        {/* ========================================================================= */}
-        {selectedDimension === null && (
-          <View style={{ gap: space.gapLg }}>
-            {/* Alineado a la IZQUIERDA (2026-09-14). Antes iba centrado: el par
-                "versalitas chicas centradas + subtítulo centrado" es el gesto de plantilla que
-                esta pasada viene a quitar, y además obliga al ojo a volver al centro en cada
-                línea. El rótulo queda de antetítulo y la frase pasa a tamaño de lectura.
-                2026-10-05: el antetítulo, en tipo oración (era versalitas de 12). */}
-            <View style={{ paddingTop: 4, gap: 4 }}>
-              <Text style={[t.cardTitle, styles.antetitulo, { color: c.goldInk }]}>Tu entrenamiento integral</Text>
-              <Text style={[t.body, { color: c.text }]}>Cinco dimensiones. Un sistema.</Text>
-            </View>
-
-            {/* Aviso de los domingos. Solo donde puede sonar de verdad. */}
-            {recordatorios.HAY_RECORDATORIOS_LOCALES && repasoSemanal !== null && !programaSinArrancar && !programaSinConfirmar && (
-              <View style={[styles.repasoSemanal, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
-                <Icon name="calendar" size={TAMANO_ICONO.normal} color={c.goldInk} />
-                <View style={{ flex: 1, flexShrink: 1, gap: 2 }}>
-                  <Text style={[t.body, { color: c.textStrong, fontFamily: 'Jost_500Medium' }]}>
-                    Arma tu semana los domingos
-                  </Text>
-                  <Text style={[t.small, { color: c.textSoft }]}>
-                    Te avisamos a las 19:00 para revisar a qué hora va cada hábito
+            {/* PROGRAMA SIN ARRANCAR — la misma compuerta que Plan tiene desde D-84. */}
+            {programaSinArrancar && (
+              <View
+                style={[styles.avisoSinArrancar, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}
+                accessibilityLabel="Tu programa todavía no arrancó"
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Icon name="lock" size={15} color={c.goldInk} />
+                  <Text style={[t.cardTitle, { color: c.textStrong }]}>
+                    {arranque.estado === 'PENDIENTE_ELEGIR'
+                      ? 'Todavía no elegiste tu Día 1'
+                      : 'Tu programa arranca pronto'}
                   </Text>
                 </View>
-                {/* `Interruptor` y no el `Switch` con colores a mano: en oscuro el pulgar encendido
-                    casi desaparecía y el riel apagado no se veía (prueba en Android, 2026-10-05). */}
-                <Interruptor
-                  valor={repasoSemanal}
-                  onCambiar={valor => void alternarRepasoSemanal(valor)}
-                  etiqueta="Arma tu semana los domingos"
-                />
+                <Text style={[t.body, { color: c.textSoft }]}>
+                  {arranque.estado === 'PENDIENTE_ELEGIR'
+                    ? 'Elige en qué día quieres empezar tus 90 días. Hasta entonces no hay evidencia que entregar.'
+                    : `Empiezas el ${formatearFechaLarga(arranque.fechaInicio)}. Desde el ${formatearFechaLarga(
+                        diaAnterior(arranque.fechaInicio),
+                      )} vas a poder organizar tus hábitos y entregar evidencia; hasta entonces no hay nada que hacer acá.`}
+                </Text>
+                {/* D-260: el aviso pedía elegir y no había dónde. Abre el selector del onboarding. */}
+                {arranque.estado === 'PENDIENTE_ELEGIR' ? (
+                  <View style={{ marginTop: 4 }}>
+                    <BotonElegirDiaUno onActivado={alActivarProgramaPropio} />
+                  </View>
+                ) : null}
               </View>
             )}
 
-            {/* El habito mas proximo a vencer, ARRIBA de las cinco dimensiones (pedido del dueno,
-                2026-09-05). Se dibuja solo si hay alguno vivo con plazo: cuando el dia esta
-                cerrado, la tarjeta simplemente no aparece. Tocarla abre ese habito directamente,
-                sin obligar a adivinar en que dimension estaba. */}
-            {!cargandoBackend && !programaSinConfirmar && !programaSinArrancar && errorBackend === null && (
-              <ProximoAVencerCard habits={habits} onAbrir={openEvidenceModal} />
-            )}
+            {/* Sin programa propio (D-260): la invitación de Hoy, no el error técnico. */}
+            {sinProgramaPropio ? (
+              <InvitacionProgramaPropio programa={programaPropio} onActivado={alActivarProgramaPropio} />
+            ) : null}
 
-            {/* Lo entregado desde «Próximo a vencer» se confirma acá, a la vista. */}
-            {confirmacion && (
-              <ConfirmacionEnLinea
-                key={confirmacion.clave}
-                texto={confirmacion.texto}
-                onTerminar={() => setConfirmacion(null)}
-              />
-            )}
-
-            {/* Mientras carga o si falla. Antes se dibujaban 17 hábitos inventados, 11 de ellos
-                ya marcados como hechos y con evidencia. */}
-            {(cargandoBackend || comprobandoPrograma) && (
-              <View style={{ gap: 12 }} accessibilityLabel="Cargando tu entrenamiento">
-                {[0, 1, 2, 3, 4].map(i => (
-                  <View
-                    key={i}
-                    style={[
-                      styles.dimensionCard,
-                      { borderColor: c.border, backgroundColor: c.cardBg, opacity: 0.45 },
-                    ]}
-                  />
+            {/* Training por hora (spec 014): el día, la semana y una sola lista por hora. Mientras se comprueba el
+                programa, el mismo esqueleto de siempre; sin programa propio o sin confirmar, no hay lista. */}
+            {comprobandoPrograma && !sinProgramaPropio ? (
+              <View accessibilityLabel="Cargando tu entrenamiento" style={{ gap: 12 }}>
+                {[0, 1, 2, 3].map(i => (
+                  <View key={i} style={[styles.esqueleto, { borderColor: c.border, backgroundColor: c.cardBg }]} />
                 ))}
               </View>
-            )}
-
-            {!cargandoBackend && !programaSinConfirmar && errorBackend !== null && !sinProgramaPropio && (
-              <View
-                style={{
-                  gap: 12,
-                  padding: space.cardPad,
-                  borderRadius: space.radius,
-                  borderWidth: 1,
-                  borderColor: c.danger,
-                  backgroundColor: c.cardBg,
-                }}
-              >
-                <Text style={[t.cardTitle, { color: c.text }]}>
-                  No pudimos cargar tu entrenamiento
-                </Text>
-                <Text style={[t.body, { color: c.textSoft }]}>{errorBackend}</Text>
-                {/* Relleno sólido, sin borde: es la única acción de la tarjeta y ya vive DENTRO de
-                    un recuadro. Un botón con borde acá era caja dentro de caja. */}
-                <Presionable
-                  onPress={() => {
-                    void recargarEntrenamiento();
-                  }}
-                  accessibilityRole="button"
-                  style={{
-                    minHeight: 48,
-                    borderRadius: space.radiusSm,
-                    backgroundColor: c.gold,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Text style={[t.cardTitle, { color: c.onGold }]}>Reintentar</Text>
-                </Presionable>
-              </View>
-            )}
-
-            <View style={{ gap: 12 }}>
-              {!cargandoBackend && !programaSinConfirmar && errorBackend === null && !sinProgramaPropio && DIMENSIONES_CONFIG.map(d => {
-                const dimHabits = habits.filter(h => h.dimension === d.key);
-                // Dice "CUMPLIDOS" y no "EVIDENCIAS" (2026-09-05, pedido del dueño: que se
-                // distingan). El número cuenta ítems del día ya dados por hechos — y la mitad
-                // de ellos (DESPERTAR, DORMIR, Clase Diaria, Post en Comunidad, Pastilla)
-                // NUNCA genera un archivo de evidencia, porque su prueba es la acción misma.
-                // Llamarlo "EVIDENCIAS" hacía que EMOCIONES mostrara "0/1" para siempre.
-                // "Evidencia" queda reservado para donde sí hay un archivo entregado: el chip
-                // VER/SUBIR de cada hábito.
-                // "EVIDENCIAS" cuenta los ítems del día cuya prueba YA está entregada, en la forma
-                // que cada hábito acepta. Mirar SOLO `hasEvidence` (= una fila en
-                // `renaser.evidencias`) dejaba el numerador clavado en 0: en el backend solo tres
-                // caminos crean esa fila —la subida genérica de archivo/texto, el Santuario y las
-                // rocas—, así que los hábitos cuya prueba ES la acción (DESPERTAR/DORMIR registran
-                // la hora, la Clase Diaria el resumen, el Post Diario la publicación, la Pastilla
-                // la respuesta) cierran el registro en COMPLETADO sin fila de evidencia. En
-                // EMOCIONES, cuyo único hábito es el Post Diario, ese 0 era permanente. El
-                // denominador es "todos los hábitos de la dimensión", así que el numerador tiene
-                // que poder alcanzarlo (E-118). `||` y no solo `done`: una evidencia subida sobre
-                // un registro que después venció sigue siendo una evidencia entregada.
-                // 2026-10-05: se lee «0 de 7 hoy» a 14 px (era «0/7 CUMPLIDOS» en versalitas de 10,5).
-                const evidenceCount = dimHabits.filter(h => h.done || h.hasEvidence).length;
-
-                return (
-                  <Presionable
-                    key={d.key}
-                    onPress={() => {
-                      setSelectedDimension(d);
-                      setInnerTab('habitos');
-                    }}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${d.nombre}: ${evidenceCount} de ${dimHabits.length} cumplidos hoy`}
-                    style={[styles.dimensionCard, { borderColor: c.border, backgroundColor: c.cardBg }]}
-                  >
-                    {/* Disco dorado tenue, sin anillo: el borde de este medallón vivía dentro del
-                        borde de la tarjeta. `goldWash` es el token que existe justo para esto
-                        (superficie suave), y distingue el disco sin dibujar una segunda caja. */}
-                    <View
-                      style={[
-                        styles.medallion,
-                        {
-                          width: medallionSize,
-                          height: medallionSize,
-                          borderRadius: medallionSize / 2,
-                          backgroundColor: c.goldWash,
-                        },
-                      ]}
-                    >
-                      <Icon name={iconoDeLaDimension(d.key)} size={TAMANO_ICONO.normal} color={c.goldInk} />
-                    </View>
-
-                    <View style={{ flex: 1, gap: 2 }}>
-                      <View style={styles.dimensionHeaderRow}>
-                        <Text
-                          numberOfLines={2}
-                          style={[t.cardTitle, styles.nombreDimension, { color: c.textStrong }]}
-                        >
-                          {d.nombre}
-                        </Text>
-                        <Text numberOfLines={1} style={[t.small, styles.cuentaDelDia, { color: c.goldInk }]}>
-                          {evidenceCount} de {dimHabits.length} hoy
-                        </Text>
-                      </View>
-                      <Text style={[t.small, { color: c.textSoft }]}>
-                        {d.sub}
-                      </Text>
-                    </View>
-
-                    <Icon name="chevron" size={TAMANO_ICONO.normal} color={c.chevron} />
-                  </Presionable>
-                );
-              })}
-            </View>
-          </View>
-        )}
-
-        {/* ========================================================================= */}
-        {/* VISTA 2: DETALLE DE LA DIMENSIÓN SELECCIONADA CON EVIDENCIAS FOTOGRÁFICAS  */}
-        {/* ========================================================================= */}
-        {selectedDimension !== null && (
-          <View style={{ gap: space.gapLg }}>
-            {/* Cabecera «‹ Cuerpo», como la de Administración (2026-10-05). Antes: «← VOLVER A
-                TRAINING» en versalitas de 10,5 a la izquierda y «DIMENSIÓN · CUERPO» a la derecha,
-                una miga de pan de página web sobre una línea divisoria. */}
-            <View style={styles.cabeceraDetalle}>
-              <Presionable
-                onPress={() => setSelectedDimension(null)}
-                accessibilityRole="button"
-                accessibilityLabel="Volver a Training"
-                contenedorStyle={styles.volverDetalleArea}
-                style={styles.volverDetalle}
-              >
-                {/* El chevron del proyecto apunta a la derecha y no acepta `style`: se rota el contenedor. */}
-                <View style={{ transform: [{ rotate: '180deg' }] }}>
-                  <Icon name="chevron" size={TAMANO_ICONO.normal} color={c.textSoft} />
-                </View>
-              </Presionable>
-              <Text
-                accessibilityRole="header"
-                numberOfLines={1}
-                style={[t.screenTitle, styles.tituloDetalle, { color: c.textStrong }]}
-              >
-                {selectedDimension.nombre}
-              </Text>
-            </View>
-
-            {/* Resumen de la dimensión. El nombre ya está en la cabecera: acá queda de qué se trata,
-                cuánto va del día y la barra (antes el título se repetía dos centímetros más abajo). */}
-            <View style={[styles.dimSummaryCard, { borderColor: c.border, backgroundColor: c.cardBg }]}>
-              <View style={styles.dimSummaryHeader}>
-                <View style={[styles.dimAvatarMedallion, { backgroundColor: c.goldWash }]}>
-                  <Icon name={iconoDeLaDimension(selectedDimension.key)} size={TAMANO_ICONO.grande} color={c.goldInk} />
-                </View>
-                <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={[t.body, { color: c.textSoft }]}>
-                    {selectedDimension.sub}
-                  </Text>
-                  <Text numberOfLines={1} style={[t.small, styles.cuentaDelDia, { color: c.goldInk }]}>
-                    {completedEvidencesCount} de {currentDimensionHabits.length} cumplidos hoy
-                  </Text>
-                </View>
-              </View>
-
-              {/* Dimension Progress Bar */}
-              <View style={{ gap: 6, marginTop: 16 }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <Text style={[t.small, { color: c.textSoft }]}>Cumplidos hoy</Text>
-                  <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>{dimensionProgress}%</Text>
-                </View>
-                <View style={[styles.progressBarBg, { backgroundColor: c.border }]}>
-                  <View style={[styles.progressBarFill, { backgroundColor: c.gold, width: `${dimensionProgress}%` }]} />
-                </View>
-              </View>
-            </View>
-
-            {/* «Hábitos y evidencias / Guías y audios». Guías y audios se ESCONDE mientras no tenga
-                contenido (decisión del dueño, 2026-10-05): hoy está vacío en las cinco dimensiones,
-                así que no se dibuja el selector y queda solo la lista. Cuando haya guías, vuelve como
-                `ControlSegmentado` (ver `seccionesDeLaDimension`).
-
-                > Antes: dos píldoras en versalitas y, en la segunda, una tarjeta «EN DESARROLLO» que
-                > prometía «la Pastilla Renaser y las audioterapias de tu programa». Ese contenido ya
-                > se entrega en la lista de hábitos (Pastilla Renacer, Audioterapia semanal). */}
-            {secciones.length > 1 && (
-              <ControlSegmentado
-                opciones={[
-                  { valor: 'habitos', etiqueta: `Hábitos y evidencias (${currentDimensionHabits.length})` },
-                  { valor: 'guias', etiqueta: 'Guías y audios' },
-                ]}
-                valor={innerTab}
-                onCambiar={setInnerTab}
-                accessibilityLabel={`Secciones de ${selectedDimension.nombre}`}
+            ) : !programaSinConfirmar && !sinProgramaPropio && !programaSinArrancar ? (
+              <TrainingPorHora
+                activa={trainingActivo}
+                estado={estadoDeLaLista}
+                mensajeDeError={errorBackend}
+                onReintentar={() => void recargarEntrenamiento(true)}
+                cuentaId={user?.id ?? 'anon'}
+                habits={habits}
+                planHabits={planHabits}
+                hoyIso={hoyIso}
+                diaElegido={diaElegido}
+                onElegirDia={alElegirDia}
+                diaPrograma={cargandoDiaPrograma ? null : diaPrograma}
+                fase={fase}
+                titulos={renombre.titulos}
+                eventosPrendidos={eventosPrendidos.prendida}
+                cierrePrendido={planPrendido.prendida && planPrendido.disponible}
+                confirmacion={confirmacion}
+                onConfirmacionTerminada={() => setConfirmacion(null)}
+                aperturaPedida={aperturaPedida}
+                onAperturaAtendida={() => setAperturaPedida(null)}
+                onRegistrar={openEvidenceModal}
+                onMarcar={habit => toggleHabitState(habit.id)}
+                onAbrirEvento={eventoId => irAPestana('Comunidad', { abrirEventoId: eventoId })}
               />
-            )}
-
-            {/* =================================================================== */}
-            {/* PESTAÑA A: LISTA DE HÁBITOS CON SUBIDA DE EVIDENCIA                 */}
-            {/* =================================================================== */}
-            {(innerTab === 'habitos' || secciones.length === 1) && (
-              <View style={{ gap: space.gapLg }}>
-                {/* =============================================================== */}
-                {/* PLANIFICAR LA CATEGORÍA — una sola opción, grande, arriba de     */}
-                {/* todo. Antes esto era un botón chico dentro de cada tarjeta, al   */}
-                {/* costado de "SUBIR": estorbaba lo único que la tarjeta tiene que  */}
-                {/* hacer fácil, que es entregar la evidencia. Acá arriba no compite */}
-                {/* con nada, y la hoja permite aplicar a todos o a uno solo.        */}
-                {/* Solo aparece si hay algo que planificar: las rocas de VIDA Y      */}
-                {/* NEGOCIO no son hábitos de este módulo y no traen `habitoId`.      */}
-                {/* =============================================================== */}
-                {habitosPlanificables > 0 && !programaSinArrancar && !programaSinConfirmar && (
-                  <Presionable
-                    onPress={() => setPlanificarVisible(true)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Planificar ${selectedDimension.nombre}`}
-                    style={[styles.planificarBigBtn, { backgroundColor: c.goldWash }]}
-                  >
-                    <View style={[styles.planificarIconBox, { backgroundColor: c.cardBgAlt }]}>
-                      <Icon name="clock" size={TAMANO_ICONO.normal} color={c.goldInk} />
-                    </View>
-                    <View style={{ flex: 1, flexShrink: 1, gap: 2 }}>
-                      <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 17 }]}>
-                        Planificar {selectedDimension.nombre}
-                      </Text>
-                      <Text style={[t.small, { color: c.textSoft }]}>
-                        Hora, días y pausa de tus {habitosPlanificables}{' '}
-                        {habitosPlanificables === 1 ? 'hábito' : 'hábitos'}
-                      </Text>
-                    </View>
-                    <Icon name="chevron" size={TAMANO_ICONO.normal} color={c.goldInk} />
-                  </Presionable>
-                )}
-
-                {/* El "AGREGAR HÁBITO" que vivía acá se eliminó (2026-09-07): armaba un objeto en
-                    memoria con un id inventado, anunciaba "¡Hábito Creado! 🦅" y desaparecía al
-                    recargar — el mismo bug que E-137 corrigió en Plan. Crear un hábito ahora vive
-                    en la hoja de Planificar y llama a `POST /api/v1/habits` de verdad. */}
-                {/* El rótulo y la lista son UN bloque: entre ellos va aire de lista (12), y el
-                    aire grande (`gapLg`) queda para separar este bloque de los de al lado. */}
-                <View style={{ gap: 12 }}>
-                  <View style={styles.habitsActionRow}>
-                    <Text style={[t.body, { color: c.textSoft, fontFamily: 'Jost_500Medium' }]}>
-                      Prácticas activas ({currentDimensionHabits.length})
-                    </Text>
-                  </View>
-
-                  {/* Un aviso que no es de ninguna tarjeta a la vista (el hábito nuevo de
-                      Planificar, o uno que ya no está en esta dimensión) va arriba de la lista. */}
-                  {confirmacion && !currentDimensionHabits.some(h => h.id === confirmacion.habitoId) && (
-                    <ConfirmacionEnLinea
-                      key={confirmacion.clave}
-                      texto={confirmacion.texto}
-                      onTerminar={() => setConfirmacion(null)}
-                    />
-                  )}
-
-                  {/* Sin hábitos en esta dimensión: es un estado legítimo (día 0, plan sin
-                      generar), no un hueco que haya que tapar con datos de relleno. */}
-                  {(cargandoBackend || errorBackend) && (
-                    <View style={{ gap: 12 }}>
-                      <Text style={[t.body, { color: c.textSoft }]} accessibilityLiveRegion="polite">
-                        {errorBackend ?? 'Actualizando tus hábitos…'}
-                      </Text>
-                      {errorBackend && (
-                        <Presionable
-                          onPress={() => void recargarEntrenamiento(true)}
-                          accessibilityRole="button"
-                          style={{ minHeight: 48, justifyContent: 'center' }}
-                        >
-                          <Text style={[t.body, { color: c.goldInk }]}>Reintentar</Text>
-                        </Presionable>
-                      )}
-                    </View>
-                  )}
-                  {!cargandoBackend && !errorBackend && currentDimensionHabits.length === 0 && (
-                    <View
-                      style={{
-                        gap: 8,
-                        padding: space.cardPad,
-                        borderRadius: space.radius,
-                        borderWidth: 1,
-                        borderColor: c.border,
-                        backgroundColor: c.cardBg,
-                      }}
-                    >
-                      <Text style={[t.cardTitle, { color: c.text }]}>
-                        Todavía no hay hábitos en {selectedDimension.nombre}
-                      </Text>
-                      <Text style={[t.body, { color: c.textSoft }]}>
-                        Cuando tu plan del día se genere, los vas a ver acá con su evidencia.
-                      </Text>
-                    </View>
-                  )}
-
-                  {/* Multiple Habits Card List */}
-                  {currentDimensionHabits.map(habit => {
-                    const operable = habit.tieneTrackHoy && !programaSinArrancar && !programaSinConfirmar;
-                    const accion = accionDeLaTarjeta(habit);
-                    const titulo = tituloVisible({ id: habit.habitoId ?? habit.id, title: habit.title }, renombre.titulos);
-                    const desplegado = cumplidoAbierto === habit.id && habit.done;
-                    const cumplido = desplegado ? detalleDelCumplido(habit) : null;
-                    return (
-                    <View key={habit.id} style={{ gap: 6 }}>
-                    <View
-                      style={[
-                        styles.habitCard,
-                        {
-                          borderColor: habit.done ? c.success : c.border,
-                          backgroundColor: habit.done ? c.cardBgAlt : c.cardBg,
-                        },
-                      ]}
-                    >
-                      {/* El brillo dorado del borde al cumplirse con la tarjeta a la vista (2026-10-07). Primero
-                          en la tarjeta: queda DEBAJO del contenido, y el «+N pts» que sube no lo cruza. */}
-                      <BrilloDeLaTarjeta registroId={habit.id} color={c.gold} radio={space.radius} />
-                      <View style={styles.habitFila}>
-                      {/* Checkbox circular interactivo — deshabilitado sin track de hoy: no hay
-                          ningún registro real que marcar (ver `tieneTrackHoy` en HabitItem).
-                          Su borde SE QUEDA: es la única forma de ver una casilla vacía. El
-                          `hitSlop` lo lleva a zona de toque cómoda sin agrandar el dibujo.
-                          2026-10-05: se hunde al tocarlo y vibra con el «tic» al marcar. */}
-                      <Presionable
-                        onPress={() => {
-                          if (!operable) return;
-                          if (!habit.done) tacto.seleccion();
-                          toggleHabitState(habit.id);
-                        }}
-                        disabled={!operable}
-                        hitSlop={12}
-                        escalaAlApretar={ESCALA_APRETADO_DEL_CHECK}
-                        accessibilityRole="checkbox"
-                        accessibilityState={{ checked: habit.done, disabled: !operable }}
-                        accessibilityLabel={habit.done ? `${titulo}, cumplido` : `Marcar ${titulo}`}
-                        style={[
-                          styles.habitCheckCircle,
-                          {
-                            borderColor: habit.done ? c.gold : c.tabInactive,
-                            opacity: operable ? 1 : 0.35,
-                          },
-                        ]}
-                      >
-                        {/* 2026-10-07 (pedido del dueño): al cumplirse, el disco se llena de DORADO con un
-                            rebote y sube el «+N» que pagó el servidor. Antes el ✓ aparecía de golpe en verde. */}
-                        <CheckDelHabito registroId={habit.id} cumplido={habit.done} />
-                      </Presionable>
-
-                      {/* Habit Info & Tap to open Evidence */}
-                      <Presionable
-                        onPress={() => operable && openEvidenceModal(habit)}
-                        accessibilityRole="button"
-                        accessibilityState={habit.done ? { expanded: desplegado } : undefined}
-                        accessibilityLabel={habit.done ? `${titulo}: ver lo que registraste` : titulo}
-                        contenedorStyle={{ flex: 1 }}
-                        style={{ gap: 4 }}
-                      >
-                        <View style={styles.habitMetaRow}>
-                          {/* Sin borde: la etiqueta vivía dentro del borde de la tarjeta, que ya
-                              la separa. Queda el lavado dorado, que además va con su texto. */}
-                          <View style={[styles.habitTagBadge, { backgroundColor: c.goldWash }]}>
-                            <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
-                              {habit.tag}
-                            </Text>
-                          </View>
-                          {/* La racha: llama de Lucide a 16 (la de 12 se leía como una gota). Solo si
-                              el servidor la mandó (D-254): sin dato no se dibuja, nunca «0 días». */}
-                          {habit.streak != null && (
-                            <View style={styles.racha} accessibilityLabel={`Racha de ${habit.streak} ${habit.streak === 1 ? 'día' : 'días'}`}>
-                              <Icon name="flame" size={TAMANO_ICONO.chico} color={habit.streak > 0 ? c.goldInk : c.chevron} />
-                              <Text style={[t.small, { color: c.textSoft, fontFamily: 'Jost_500Medium' }]}>
-                                {habit.streak} {habit.streak === 1 ? 'día' : 'días'}
-                              </Text>
-                            </View>
-                          )}
-                        </View>
-
-                        <View style={styles.tituloConIcono}>
-                          {/* El ícono propio del hábito (2026-10-05): de línea, por su clave del
-                              catálogo. Antes la tarjeta no tenía ninguno y Planificar usaba emojis. */}
-                          {habit.icon ? (
-                            <Icon name={habit.icon} size={TAMANO_ICONO.normal} color={habit.done ? c.success : c.goldInk} />
-                          ) : null}
-                          {/* 2026-10-07: si se cumple con la tarjeta a la vista, la raya se dibuja; si ya
-                              estaba cumplido, el `line-through` de siempre (`TituloQueSeTacha`). */}
-                          <TituloQueSeTacha
-                            registroId={habit.id}
-                            texto={titulo}
-                            cumplido={habit.done}
-                            colorDeLaRaya={c.textStrong}
-                            style={[
-                              t.body,
-                              {
-                                fontSize: 16,
-                                color: habit.done ? c.textStrong : c.text,
-                                fontFamily: habit.done ? 'Jost_500Medium' : 'Jost_400Regular',
-                                opacity: habit.done ? 0.85 : 1,
-                              },
-                            ]}
-                          />
-                        </View>
-
-                        {/* `flexWrap`: a tamaño de lectura, "Durante el día" + "Entregada"
-                            no entran en una línea en pantallas angostas. */}
-                        <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
-                          <Text style={[t.small, { color: c.textSoft }]}>
-                            {habit.time || 'Durante el día'}
-                          </Text>
-                          {habit.hasEvidence && (
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                              <Icon name="badgeCheck" size={TAMANO_ICONO.chico} color={c.success} />
-                              <Text style={[t.small, { color: c.success, fontFamily: 'Jost_500Medium' }]}>
-                                Entregada
-                              </Text>
-                            </View>
-                          )}
-                          {avisoDeHoraPasada(habit, Date.now()) && (
-                            <Text style={[t.small, { color: c.textSoft }]}>
-                              {avisoDeHoraPasada(habit, Date.now())}
-                            </Text>
-                          )}
-                          {!habit.tieneTrackHoy && (
-                            <Text style={[t.small, { color: c.textSoft, fontStyle: 'italic' }]}>
-                              Aún sin registro de hoy
-                            </Text>
-                          )}
-                        </View>
-                      </Presionable>
-
-                      {/* Botón de evidencia, SOLO. El de "PLAN" que lo acompañaba se movió al
-                          encabezado de la categoría (2026-09-07): en esta fila angosta competía con
-                          lo único que la tarjeta tiene que hacer fácil, que es entregar la prueba.
-                          Sin borde y con relleno: era un recuadro dentro del recuadro de la
-                          tarjeta. El lavado verde sale ahora de `successWash` en vez del
-                          'rgba(78, 159, 118, 0.12)' suelto, que no era ningún color de la paleta.
-                          2026-10-05: el ícono dice lo que pasa (cámara, audífonos, la clase, el
-                          Muro, el ojo de lo ya hecho), en tipo oración. Despertar y Dormir siguen
-                          con «Subir»: registran la hora al instante (decisión del dueño). */}
-                      <Presionable
-                        onPress={() => operable && openEvidenceModal(habit)}
-                        disabled={!operable}
-                        accessibilityRole="button"
-                        accessibilityLabel={`${accion.etiqueta}: ${titulo}`}
-                        style={[
-                          styles.evidenceBtn,
-                          {
-                            backgroundColor: habit.done || habit.hasEvidence ? c.successWash : c.goldWash,
-                            opacity: operable ? 1 : 0.35,
-                          },
-                        ]}
-                        hitSlop={8}
-                      >
-                        <Icon name={accion.icono} size={TAMANO_ICONO.normal} color={habit.done || habit.hasEvidence ? c.success : c.goldInk} />
-                        <Text
-                          numberOfLines={1}
-                          style={[
-                            t.small,
-                            {
-                              color: habit.done || habit.hasEvidence ? c.success : c.goldInk,
-                              fontFamily: 'Jost_500Medium',
-                            },
-                          ]}
-                        >
-                          {accion.etiqueta}
-                        </Text>
-                      </Presionable>
-                      </View>
-
-                      {/* Lo cumplido, EN LA TARJETA (decisión del dueño, 2026-10-05): cuándo, cuánto
-                          pagó y lo que escribió. Antes era el diálogo «Ya está cumplido». */}
-                      {cumplido && (
-                        <View style={[styles.cumplido, { borderTopColor: c.divider }]}>
-                          <View style={styles.lineaCumplido}>
-                            <Icon name="checkCircle" size={TAMANO_ICONO.chico} color={c.success} />
-                            <Text style={[t.small, { color: c.success, fontFamily: 'Jost_500Medium', flexShrink: 1 }]}>
-                              {cumplido.linea}
-                            </Text>
-                          </View>
-                          {cumplido.escrito ? (
-                            <Text style={[t.body, { color: c.text }]}>«{cumplido.escrito}»</Text>
-                          ) : null}
-                        </View>
-                      )}
-                    </View>
-
-                    {confirmacion?.habitoId === habit.id && (
-                      <ConfirmacionEnLinea
-                        key={confirmacion.clave}
-                        texto={confirmacion.texto}
-                        onTerminar={() => setConfirmacion(null)}
-                      />
-                    )}
-
-                    {/* Cambiarle el nombre a las dos bebidas (D-127). Fuera de la tarjeta y no
-                        adentro: la tarjeta entera ya es un Pressable que abre la evidencia, y un
-                        boton dentro de otro boton se traga el toque en nativo aunque en web
-                        parezca andar. Se dibuja solo en los dos habitos reemplazables.
-
-                        Opera con `habitoId` (el id del CATALOGO) y nunca con `id`, que aca es el
-                        id del track del dia: con ese, el backend responde "Habito no encontrado".
-                        Pasó el 2026-09-15 al escribir esto.
-
-                        2026-10-05: lápiz de 18 en una fila de 44 (era el asterisco de Espíritu a
-                        11 px y un toque de 39), y en tipo oración. */}
-                    {esRenombrable(habit.systemKey) && habit.habitoId && (
-                      <Presionable
-                        onPress={() => setHabitoARenombrar(habit)}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Cambiarle el nombre a ${tituloVisible({ id: habit.habitoId, title: habit.title }, renombre.titulos)}`}
-                        contenedorStyle={{ alignSelf: 'flex-start' }}
-                        style={styles.filaRenombrar}
-                      >
-                        <Icon name="pencil" size={18} color={c.goldInk} />
-                        <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_500Medium' }]}>
-                          {renombre.titulos[habit.habitoId] ? 'Cambiar o quitar el nombre' : 'Cambiar nombre'}
-                        </Text>
-                      </Presionable>
-                    )}
-                    </View>
-                    );
-                  })}
-                </View>
-
-                {/* Acá vivía "Consistencia de la Dimensión · 37 días consecutivos · 94 %".
-                    Se retira el 2026-09-15: las dos cifras estaban escritas a mano en el archivo,
-                    iguales para las cinco dimensiones y para cualquier persona. Se veían incluso
-                    en una dimensión con CERO hábitos, al lado de su propio "0/0 cumplidos" — que
-                    es como lo encontró el dueño. Vuelve cuando exista el dato: hoy nada calcula
-                    consistencia por dimensión, y el porcentaje real del día ya está arriba, en
-                    "Cumplidos hoy". */}
-              </View>
-            )}
-
-            {/* =================================================================== */}
-            {/* PESTAÑA B: GUÍAS Y AUDIOS DE LA DIMENSIÓN                          */}
-            {/* =================================================================== */}
-            {/*
-              ESCONDIDA mientras no tenga contenido (decisión del dueño, 2026-10-05).
-
-              Historia: acá había una maqueta entera presentada como contenido real (2026-09-05): una
-              "AUDIO GUIA RECOMENDADA" por dimension, un boton "ESCUCHAR SESION GUIADA" que solo abria
-              un Alert, y una "RUTA DE CLASES" de cinco clases inventadas de las cuales tres decian
-              "Completada". Se borraron los datos y quedó una tarjeta «EN DESARROLLO»; el 2026-10-05 el
-              dueño pidió no mostrar ni eso. Cuando se implemente de verdad, va la Pastilla Renacer y
-              las audioterapias (`/api/v1/spirit-audio/status`). Falta definir que muestra cada
-              dimension: las audioterapias del backend son de Espiritu, y esta pestana existe en las
-              cinco. Con contenido, `GUIAS_DE_LA_DIMENSION` deja de ser 0 y el selector de arriba vuelve.
-            */}
-          </View>
-        )}
-      </ScrollView>
-
-      {/* ========================================================================= */}
-      {/* MODAL: SUBIR EVIDENCIA (FOTO / TEXTO / AUDIO / VIDEO) — camino GENÉRICO   */}
-      {/* ========================================================================= */}
-      {/*
-        Antes esto era una maqueta: el recuadro de "foto" solo hacía
-        `setEvidencePhotoUploaded(true)` y "SELLAR" marcaba la tarjeta en memoria — no se elegía
-        ningún archivo, no se subía nada y el backend nunca se enteraba. Ahora todo el flujo real
-        (elegir/grabar, subir a S3 con URL prefirmada, confirmar la evidencia y completar el
-        registro) vive en `features/habits/components/EvidenciaHabitoModal`, para no seguir
-        engordando esta pantalla y para no chocar con los flujos ESPECIALES de evidencia que se
-        están construyendo en paralelo sobre este mismo archivo.
-      */}
-      <EvidenciaHabitoModal
-        registroId={activeEvidenceHabit?.id ?? null}
-        /*
-         * VIDA Y NEGOCIO no son hábitos: son las acciones del día que salen del plan semanal, y
-         * viven en otras tablas y otros endpoints (`/api/v1/rocks/...`). Antes esto no se notaba
-         * porque la dimensión estaba siempre vacía; ahora que se pueden agendar, mandar su id
-         * contra `habit-tracks` daría un 404. El modal no conoce rocas a propósito — se le pasa el
-         * camino ya armado, y quien compone las dos cosas es esta pantalla.
-         */
-        sellarPersonalizado={
-          activeEvidenceHabit?.dimension === 'VIDA Y NEGOCIO' && activeEvidenceHabit
-            ? datos => sellarRocaDiaria(activeEvidenceHabit.id, datos)
-            : undefined
-        }
-        titulo={activeEvidenceHabit?.title ?? ''}
-        medicion={activeEvidenceHabit?.medicion ?? null}
-        contexto={
-          activeEvidenceHabit
-            ? `${DIMENSIONES_CONFIG.find(d => d.key === activeEvidenceHabit.dimension)?.nombre ?? activeEvidenceHabit.dimension} · ${activeEvidenceHabit.tag}`
-            : undefined
-        }
-        notaInicial={activeEvidenceHabit?.respuestaTexto ?? activeEvidenceHabit?.note ?? ''}
-        onCerrar={() => setActiveEvidenceHabit(null)}
-        onCompletado={handleEvidenciaCompletada}
-      />
-
-      {/* REGISTRO CON FOTO: la foto arriba y "¿Qué sentiste?" abajo (hábitos que exigen evidencia). */}
-      <RegistroConFotoModal {...registroConFoto.modal} />
-
-      {/* ========================================================================= */}
-      {/* HOJA: PLANIFICAR LA CATEGORÍA                                             */}
-      {/* Hora y minutos, días, los hábitos que se marcan y el interruptor          */}
-      {/* activo/pausado, en ese orden. Aplica a lo seleccionado: a todos o a uno    */}
-      {/* solo. Sin backend nuevo — ver PlanificarDimensionModal.                    */}
-      {/* ========================================================================= */}
-      <PlanificarDimensionModal
-        visible={planificarVisible}
-        dimension={selectedDimension?.title ?? ''}
-        nombreDimension={selectedDimension?.nombre}
-        // Planificar necesita el inventario completo de la dimensión para poder reactivar un
-        // hábito pausado que, correctamente, no tiene track en Training hoy.
-        habits={planHabits.filter(h => h.dimension === selectedDimension?.key)}
-        onCerrar={() => setPlanificarVisible(false)}
-        onGuardado={texto => {
-          setPlanificarVisible(false);
-          void recargarEntrenamiento();
-          // El hábito recién creado: se confirma en línea arriba de la lista (2026-10-05).
-          if (texto) confirmar(texto, null);
-        }}
-      />
-
-      {/* ========================================================================= */}
-      {/* MODAL: PASTILLA RENACER (audio del día + preguntas)                       */}
-      {/* ========================================================================= */}
-      <PastillaRenacerModal
-        visible={pastillaVisible || audioterapiaAbierta !== null}
-        userId={user?.id ?? 'anon'}
-        /* El MISMO modal sirve a los dos audios (2026-09-22). La Audioterapia pedía exactamente
-           este flujo —escuchar y contestar las dos preguntas de D-97— y hasta hoy caía en el
-           selector genérico de evidencia, que le pedía una foto para probar que había escuchado
-           un audio que la app ni le mostraba. Lo único distinto es de dónde sale el audio y por
-           dónde se entrega; la pantalla es la misma. */
-        audio={
-          audioterapiaAbierta
-            ? audioDeLaAudioterapia(
-                audioterapiaAbierta.semana,
-                audioterapiaAbierta.titulo,
-                audioterapiaAbierta.url,
-                false
-              )
-            : diaDePastilla
-              ? audioDeLaPastilla(diaDePastilla)
-              : null
-        }
-        cargando={audioterapiaAbierta ? false : espiritu.cargando}
-        error={audioterapiaAbierta ? null : espiritu.error}
-        enviando={espiritu.enviando}
-        errorEnvio={espiritu.errorEnvio}
-        onEntregar={texto => {
-          if (audioterapiaAbierta) {
-            void handleEntregarAudioterapia(texto);
-            return;
-          }
-          if (diaDePastilla) void handleEntregarPastilla(diaDePastilla.day, texto);
-        }}
-        onCerrar={() => {
-          espiritu.limpiarError();
-          setPastillaVisible(false);
-          setAudioterapiaAbierta(null);
-        }}
-      />
-
-      {/* MODAL: CLASE DIARIA (leccion del dia + que entendiste)                    */}
-      {/* `resumenGuardado` sale de `respuestaTexto` del registro: si el habito ya se cerro, el
-          modal se abre en solo lectura mostrando lo que la persona escribio, en vez de volver a
-          pedirselo. Es la lectura de "ya no debe salir el modal" que dejo el flujo original. */}
-      <ClaseDiariaModal
-        visible={claseDiariaVisible}
-        clase={claseDiaria.clase}
-        cargando={claseDiaria.cargando}
-        error={claseDiaria.error}
-        resumenGuardado={habitoClaseDiaria?.respuestaTexto ?? null}
-        enviando={claseDiaria.enviando}
-        errorEnvio={claseDiaria.errorEnvio}
-        onEnviar={(leccionId, resumen) => {
-          void handleEnviarResumen(leccionId, resumen);
-        }}
-        onIrALaLeccion={irALaLeccionDelDia}
-        onCerrar={cerrarClaseDiaria}
-      />
-
-      {/* El mismo modal que abre el aviso del agente, montado tambien aca: el acceso permanente
-          al renombre tiene que existir despues de que la persona responde el aviso, que no vuelve
-          a aparecer nunca (D-127). */}
-      {habitoARenombrar?.habitoId && (
-        <RenombrarHabitoModal
-          visible
-          tituloCatalogo={habitoARenombrar.title}
-          tituloActual={renombre.titulos[habitoARenombrar.habitoId] ?? null}
-          onGuardar={(titulo, motivo) => renombre.renombrar(habitoARenombrar.habitoId!, titulo, motivo)}
-          onQuitar={
-            renombre.titulos[habitoARenombrar.habitoId]
-              ? () => renombre.quitarRenombre(habitoARenombrar.habitoId!)
-              : undefined
-          }
-          onCerrar={() => setHabitoARenombrar(null)}
-        />
+            ) : null}
+          </ScrollView>
+        </>
       )}
 
+      {/* Los cuatro registros (evidencia genérica, cámara con «¿Qué sentiste?», Pastilla/Audioterapia y Clase diaria) se
+          montan SOLO fuera de un día anterior (regla del dueño, spec 014): ahí no existe forma de subir nada. */}
+      {!viendoUnDiaAnterior ? (
+        <>
+          {/* ========================================================================= */}
+          {/* MODAL: SUBIR EVIDENCIA (FOTO / TEXTO / AUDIO / VIDEO) — camino GENÉRICO   */}
+          {/* ========================================================================= */}
+          {/*
+            Antes esto era una maqueta: el recuadro de "foto" solo hacía
+            `setEvidencePhotoUploaded(true)` y "SELLAR" marcaba la tarjeta en memoria — no se elegía
+            ningún archivo, no se subía nada y el backend nunca se enteraba. Ahora todo el flujo real
+            (elegir/grabar, subir a S3 con URL prefirmada, confirmar la evidencia y completar el
+            registro) vive en `features/habits/components/EvidenciaHabitoModal`, para no seguir
+            engordando esta pantalla y para no chocar con los flujos ESPECIALES de evidencia que se
+            están construyendo en paralelo sobre este mismo archivo.
+          */}
+          <EvidenciaHabitoModal
+            registroId={activeEvidenceHabit?.id ?? null}
+            /*
+             * VIDA Y NEGOCIO no son hábitos: son las acciones del día que salen del plan semanal, y
+             * viven en otras tablas y otros endpoints (`/api/v1/rocks/...`). Antes esto no se notaba
+             * porque la dimensión estaba siempre vacía; ahora que se pueden agendar, mandar su id
+             * contra `habit-tracks` daría un 404. El modal no conoce rocas a propósito — se le pasa el
+             * camino ya armado, y quien compone las dos cosas es esta pantalla.
+             */
+            sellarPersonalizado={
+              activeEvidenceHabit?.dimension === 'VIDA Y NEGOCIO' && activeEvidenceHabit
+                ? datos => sellarAccionDeTraining(activeEvidenceHabit.id, datos)
+                : undefined
+            }
+            titulo={activeEvidenceHabit?.title ?? ''}
+            medicion={activeEvidenceHabit?.medicion ?? null}
+            contexto={
+              activeEvidenceHabit
+                ? `${DIMENSIONES_CONFIG.find(d => d.key === activeEvidenceHabit.dimension)?.nombre ?? activeEvidenceHabit.dimension} · ${activeEvidenceHabit.tag}`
+                : undefined
+            }
+            notaInicial={activeEvidenceHabit?.respuestaTexto ?? activeEvidenceHabit?.note ?? ''}
+            onCerrar={() => setActiveEvidenceHabit(null)}
+            onCompletado={handleEvidenciaCompletada}
+          />
+
+          {/* REGISTRO CON FOTO: la foto arriba y "¿Qué sentiste?" abajo (hábitos que exigen evidencia). */}
+          <RegistroConFotoModal {...registroConFoto.modal} />
+
+          {/* ========================================================================= */}
+          {/* MODAL: PASTILLA RENACER (audio del día + preguntas)                       */}
+          {/* ========================================================================= */}
+          <PastillaRenacerModal
+            visible={pastillaVisible || audioterapiaAbierta !== null}
+            userId={user?.id ?? 'anon'}
+            /* El MISMO modal sirve a los dos audios (2026-09-22). La Audioterapia pedía exactamente
+               este flujo —escuchar y contestar las dos preguntas de D-97— y hasta hoy caía en el
+               selector genérico de evidencia, que le pedía una foto para probar que había escuchado
+               un audio que la app ni le mostraba. Lo único distinto es de dónde sale el audio y por
+               dónde se entrega; la pantalla es la misma. */
+            audio={
+              audioterapiaAbierta
+                ? audioDeLaAudioterapia(
+                    audioterapiaAbierta.semana,
+                    audioterapiaAbierta.titulo,
+                    audioterapiaAbierta.url,
+                    false
+                  )
+                : diaDePastilla
+                  ? audioDeLaPastilla(diaDePastilla)
+                  : null
+            }
+            cargando={audioterapiaAbierta ? false : espiritu.cargando}
+            error={audioterapiaAbierta ? null : espiritu.error}
+            enviando={espiritu.enviando}
+            errorEnvio={espiritu.errorEnvio}
+            onEntregar={texto => {
+              if (audioterapiaAbierta) {
+                void handleEntregarAudioterapia(texto);
+                return;
+              }
+              if (diaDePastilla) void handleEntregarPastilla(diaDePastilla.day, texto);
+            }}
+            onCerrar={() => {
+              espiritu.limpiarError();
+              setPastillaVisible(false);
+              setAudioterapiaAbierta(null);
+            }}
+          />
+
+          {/* MODAL: CLASE DIARIA (leccion del dia + que entendiste)                    */}
+          {/* `resumenGuardado` sale de `respuestaTexto` del registro: si el habito ya se cerro, el
+              modal se abre en solo lectura mostrando lo que la persona escribio, en vez de volver a
+              pedirselo. Es la lectura de "ya no debe salir el modal" que dejo el flujo original. */}
+          <ClaseDiariaModal
+            visible={claseDiariaVisible}
+            clase={claseDiaria.clase}
+            cargando={claseDiaria.cargando}
+            error={claseDiaria.error}
+            resumenGuardado={habitoClaseDiaria?.respuestaTexto ?? null}
+            enviando={claseDiaria.enviando}
+            errorEnvio={claseDiaria.errorEnvio}
+            onEnviar={(leccionId, resumen) => {
+              void handleEnviarResumen(leccionId, resumen);
+            }}
+            onIrALaLeccion={irALaLeccionDelDia}
+            onCerrar={cerrarClaseDiaria}
+          />
+        </>
+      ) : null}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  repasoSemanal: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    borderWidth: 1,
-    borderRadius: space.radius,
-    paddingHorizontal: space.cardPad,
-    paddingVertical: 14,
-    minHeight: 56,
-  },
   // Aviso de "tu programa todavía no arrancó". Mismo lenguaje visual que el de Plan: recuadro
   // tenue con candado, no una alerta roja — no es un error, es que todavía no es el momento.
   avisoSinArrancar: {
@@ -1815,199 +1162,16 @@ const styles = StyleSheet.create({
     marginBottom: space.gapLg,
     gap: 8,
   },
-  // "PLANIFICAR <DIMENSIÓN>": la opción grande del encabezado de la categoría. Alto mínimo 56
-  // para que se pulse cómodo con una mano (AGENTS.md §4) y `flexShrink` en el texto para que en
-  // pantallas angostas envuelva en vez de empujar el chevrón fuera de la tarjeta (§2).
-  // Sin borde: se distingue por RELLENO (`goldWash`), igual que la pestaña activa. Un borde
-  // dorado de 1.5 alrededor de un recuadro que ya tenía relleno propio, con otro recuadro con
-  // borde adentro, eran tres marcos para una sola acción.
-  planificarBigBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    minHeight: 56,
-    width: '100%',
-    borderRadius: space.radius,
-    paddingHorizontal: space.cardPad,
-    paddingVertical: 14,
-  },
-  planificarIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: space.radiusSm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   content: {
     flexGrow: 1,
     paddingHorizontal: 24,
     paddingBottom: ESPACIO_PARA_LANZADOR,
   },
-  antetitulo: {
-    fontSize: 17,
-  },
-  // Sin `flex: 1` desde que la tarjeta es un `Presionable` (2026-10-05): ese estilo va a la caja
-  // que se hunde, dentro del área táctil, y con `flex: 1` adentro de algo sin alto se aplastaba.
-  dimensionCard: {
-    minHeight: 80,
+  // El esqueleto mientras se comprueba el programa: filas apagadas, no datos de relleno.
+  esqueleto: {
+    minHeight: 66,
     borderWidth: 1,
     borderRadius: space.radius,
-    paddingHorizontal: space.cardPad,
-    paddingVertical: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  medallion: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dimensionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    /* `flex-start` y no `center`: si el titulo llega a dos lineas ("VIDA Y NEGOCIO" en
-       pantallas estrechas), el contador se queda arriba alineado con la primera, en vez de
-       flotar a media altura. El `gap` evita que se toquen al encogerse (AGENTS.md 2). */
-    alignItems: 'flex-start',
-    gap: 8,
-  },
-  nombreDimension: {
-    fontSize: 17,
-    lineHeight: 22,
-    flexShrink: 1,
-  },
-  /* «0 de 7 hoy»: cifra que cambia, con ancho fijo por dígito (AGENTS.md §4). */
-  cuentaDelDia: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontFamily: 'Jost_500Medium',
-    fontVariant: ['tabular-nums'],
-    flexShrink: 0,
-  },
-  // «‹ Cuerpo»: la ‹ en 48 × 48 y corrida a la izquierda para que el dibujo quede alineado con el
-  // borde del contenido, como en `CabeceraAdmin`.
-  cabeceraDetalle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: -4,
-  },
-  // El corrimiento va en el área táctil, no en el dibujo: así el toque sigue midiendo 48 × 48.
-  volverDetalleArea: {
-    marginLeft: -14,
-  },
-  volverDetalle: {
-    width: 48,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tituloDetalle: {
-    fontSize: 24,
-    lineHeight: 30,
-    flexShrink: 1,
-  },
-  dimSummaryCard: {
-    borderWidth: 1,
-    borderRadius: space.radius,
-    padding: space.cardPad,
-  },
-  dimSummaryHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  dimAvatarMedallion: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  progressBarBg: {
-    height: 5,
-    borderRadius: 2.5,
-    overflow: 'hidden',
-  },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: 2.5,
-  },
-  habitsActionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 2,
-  },
-  habitCard: {
-    borderWidth: 1,
-    borderRadius: space.radius,
-    padding: 14,
-    gap: 12,
-  },
-  habitFila: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  habitCheckCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  habitMetaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 8,
-  },
-  habitTagBadge: {
-    borderRadius: space.radiusSm,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  racha: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  tituloConIcono: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  // 72 de ancho para todos: entra «Escuchar» o «Publicar» a 13 px en un renglón, y los botones de
-  // la lista quedan alineados aunque digan cosas distintas.
-  evidenceBtn: {
-    minHeight: 52,
-    minWidth: 72,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderRadius: space.radiusSm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 3,
-  },
-  // Lo cumplido, desplegado dentro de la tarjeta: separado por una línea y alineado con el título.
-  cumplido: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    paddingTop: 10,
-    paddingLeft: 40,
-    gap: 6,
-  },
-  lineaCumplido: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  filaRenombrar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    minHeight: 44,
-    paddingHorizontal: 2,
+    opacity: 0.45,
   },
 });

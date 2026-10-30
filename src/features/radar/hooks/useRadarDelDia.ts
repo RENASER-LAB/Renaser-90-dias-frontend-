@@ -174,7 +174,10 @@ export function useRadarDelDia(
             return false;
           }
         }
-        setError(MENSAJE_HORA_YA_REGISTRADA);
+        /* Desde el día 8 el 409 también puede ser una regla de Mi Radar (apagado, o fuera de 03:00–23:59: el servidor lo
+           dice con un texto que empieza por «Mi Radar»). Ese texto sí le sirve a la persona; el de «ya hay un registro»
+           no sería cierto. Los días 1 a 7 el 409 nunca empieza así: el mensaje es el de siempre. */
+        setError(e.message.startsWith('Mi Radar') ? e.message : MENSAJE_HORA_YA_REGISTRADA);
         return false;
       }
       setError(mensajeDeError(e, 'No pudimos guardar tu Código Renaser. Intenta de nuevo.'));

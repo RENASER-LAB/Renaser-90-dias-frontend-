@@ -1,0 +1,38 @@
+# 02 — Día 10: Yo → «Mi Radar» llega apagado: solo el interruptor, sin «Registrar ahora» ni horarios (escenario 2).
+# cuenta: aprendiz (día 10 del programa, con Mi Radar apagado en el servidor: participantes_programa.horas_mi_radar nula)
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+# Desde el día 8 el Código Renaser ya no se abre solo.
+- assertNotVisible: "¿Dónde estás ahora mismo\\?"
+- tapOn: "YO"
+- assertVisible: "Tu evolución"
+- scrollUntilVisible:
+    element: "Tuve una emergencia"
+    direction: DOWN
+    optional: true
+- scrollUntilVisible:
+    element: "Apagado"
+    direction: DOWN
+- assertVisible: "Mi Radar"
+- takeScreenshot: 02a-yo-fila-mi-radar-apagado
+- tapOn: "Apagado"
+- extendedWaitUntil:
+    visible: "Te preguntamos cómo estás a las horas que elijas\\."
+    timeout: 15000
+- assertVisible: "Lo ves tú, tu mentor y el equipo que coordina tu grupo\\."
+# Apagado no hay registrar ni horarios: lo único que se puede hacer es encenderlo.
+- assertNotVisible: "Registrar ahora"
+- assertNotVisible: "Tus horas"
+- assertNotVisible: "Guardar y encender"
+- assertNotVisible: "[0-9]+ de 12 horas elegidas"
+# Ni la fila de los siete días (por día de la semana, cuarta ronda): solo aparece al encender.
+- assertNotVisible: "Todos los días"
+# El historial y los patrones siempre están.
+- scrollUntilVisible:
+    element: "Patrones"
+    direction: DOWN
+- assertVisible: "Historial"
+- takeScreenshot: 02b-mi-radar-apagado
+- back
+- assertVisible: "Tu evolución"

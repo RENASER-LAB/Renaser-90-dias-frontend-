@@ -11,11 +11,13 @@ import {
   EvidenciaNoSeAbrio,
   leerEvidencia,
   obtenerPublicacion,
+  obtenerRadarDePersona,
   obtenerSemanaDePersona,
   obtenerTablaDelLider,
   rutaDeLaPublicacion,
   rutaDeLaSemanaDePersona,
   rutaDeLaTablaDelLider,
+  rutaDelRadarDePersona,
 } from '../cumplimientoDelLiderApi';
 
 beforeEach(() => {
@@ -137,5 +139,46 @@ describe('abrir una evidencia', () => {
     await expect(leerEvidencia('b', 'FOTO')).rejects.toMatchObject({ motivo: 'sin_permiso' });
     mockApiFetch.mockRejectedValueOnce(new ApiError(500, 'Boom'));
     await expect(leerEvidencia('c', 'FOTO')).rejects.toMatchObject({ motivo: 'error' });
+  });
+});
+
+describe('el Código Renaser de una persona (spec 012)', () => {
+  it('la ruta del contrato, con o sin cursor, y escapada', () => {
+    expect(rutaDelRadarDePersona('g1', 'p1')).toBe('/api/v1/leadership/groups/g1/people/p1/radar');
+    expect(rutaDelRadarDePersona('g1', 'p1', '2026-10-20T10:00:00Z')).toBe(
+      '/api/v1/leadership/groups/g1/people/p1/radar?cursor=2026-10-20T10%3A00%3A00Z',
+    );
+    expect(rutaDelRadarDePersona('a/b', 'c%d')).toBe('/api/v1/leadership/groups/a%2Fb/people/c%25d/radar');
+  });
+
+  it('lee los registros con la hora prevista y el estado de Mi Radar', async () => {
+    mockApiFetch.mockResolvedValueOnce({
+      entries: [
+        {
+          id: 'r1',
+          whatAmIDoing: 'a',
+          whatAmIThinking: 'b',
+          whatAmIFeeling: 'c',
+          energyLevel: 6,
+          whatAmIAvoiding: 'd',
+          createdAt: '2026-10-29T19:06:00Z',
+          horaPrevista: 14,
+        },
+      ],
+      nextCursor: null,
+      miRadar: { encendido: true, horas: [9, 14, 20] },
+    });
+    const pagina = await obtenerRadarDePersona('g1', 'p1');
+    expect(mockApiFetch).toHaveBeenCalledWith('/api/v1/leadership/groups/g1/people/p1/radar', undefined);
+    expect(pagina.entries[0].horaPrevista).toBe(14);
+    expect(pagina.miRadar).toEqual({ encendido: true, horas: [9, 14, 20], dias: [] });
+    expect(pagina.nextCursor).toBeNull();
+  });
+
+  it('un 403 o un 404 llegan como ApiError: la ficha esconde la sección', async () => {
+    mockApiFetch.mockRejectedValueOnce(new ApiError(403, 'No puedes ver esto'));
+    await expect(obtenerRadarDePersona('g1', 'p1')).rejects.toMatchObject({ status: 403 });
+    mockApiFetch.mockRejectedValueOnce(new ApiError(404, 'No existe'));
+    await expect(obtenerRadarDePersona('g1', 'p1')).rejects.toMatchObject({ status: 404 });
   });
 });

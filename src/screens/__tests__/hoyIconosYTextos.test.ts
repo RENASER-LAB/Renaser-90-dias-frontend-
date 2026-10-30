@@ -23,6 +23,8 @@ function sinComentarios(codigo: string): string {
 }
 
 const HOY = sinComentarios(leer('screens/HoyScreen.tsx'));
+/** Spec 016: «Hábitos de hoy» y el Radar viven en una tarjeta propia, fuera de `HoyScreen`. */
+const TARJETA_DE_HABITOS = sinComentarios(leer('features/home/components/TarjetaHabitoYRadar.tsx'));
 /** Los nombres de ícono que dibuja un archivo (`name="…"`). */
 const iconos = (codigo: string) => [...codigo.matchAll(/<Icon\s+name="(\w+)"/g)].map(m => m[1]);
 
@@ -37,9 +39,11 @@ describe('Hoy: íconos', () => {
 
   it('los nuevos: medidor, llama, mapa, lista con tildes, imagen; el autor con foto o iniciales', () => {
     const usados = iconos(HOY);
-    for (const nuevo of ['gauge', 'flame', 'map', 'listChecks', 'image', 'calendar']) {
+    for (const nuevo of ['gauge', 'flame', 'map', 'image', 'calendar']) {
       expect({ nuevo, usado: usados.includes(nuevo) }).toEqual({ nuevo, usado: true });
     }
+    // «Hábitos de hoy» sigue con la lista con tildes, ahora en su tarjeta (spec 016).
+    expect(TARJETA_DE_HABITOS).toContain('icono="listChecks"');
     expect(HOY).toMatch(/<AvatarPersona[\s\S]*?avatarUrl=\{ultimaPublicacion\.authorAvatarUrl\}/);
   });
 
@@ -85,9 +89,9 @@ describe('Hoy: textos en tipo oración', () => {
 });
 
 describe('Hoy: tacto', () => {
-  it('las tarjetas de Hoy responden al dedo (Presionable): mapa, hábitos, acciones, evidencia y evento', () => {
+  it('las tarjetas de Hoy responden al dedo (Presionable): mapa, acciones, evidencia y evento', () => {
     const tarjetas = [...HOY.matchAll(/<Presionable\b/g)].length;
-    expect(tarjetas).toBeGreaterThanOrEqual(5);
+    expect(tarjetas).toBeGreaterThanOrEqual(4);
   });
 
   it('el orbe vibra al empezar a escuchar y al cerrar la conversación manteniéndolo', () => {
@@ -96,9 +100,10 @@ describe('Hoy: tacto', () => {
     expect(HOY).toMatch(/onTocar=\{tocarOrbe\}\s*onMantener=\{mantenerOrbe\}/);
   });
 
-  it('la tarjeta del semáforo y el Código Renaser también', () => {
+  it('la tarjeta del semáforo también; las mitades de hábitos y Radar, con el fondo lavado de oro', () => {
     expect(sinComentarios(leer('features/semaforo/components/TarjetaSemaforoHoy.tsx'))).toMatch(/<Presionable/);
-    expect(sinComentarios(leer('features/radar/components/TarjetaCodigoRenaser.tsx'))).toMatch(/<Presionable/);
+    // Una mitad que se hundiera (escala) dentro de una tarjeta de bordes comunes se vería rota: responde con el fondo.
+    expect(TARJETA_DE_HABITOS).toMatch(/pressed \|\| destacada \? c\.goldWash/);
   });
 });
 

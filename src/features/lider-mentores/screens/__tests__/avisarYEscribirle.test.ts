@@ -24,6 +24,11 @@ jest.mock('react-native-safe-area-context', () => {
   return { SafeAreaView: View, useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) };
 });
 jest.mock('../../../renasia/components/RenasiaLauncher', () => ({ ESPACIO_PARA_LANZADOR: 0 }));
+/* Spec 012: la ficha suma el Código Renaser de la persona (su propia lectura y su `Aparicion`); estas pruebas son de otra cosa. */
+jest.mock('../../../mentor/components/CodigoRenaserDelAlumno', () => ({ CodigoRenaserDelAlumno: () => null }));
+/* Spec 015: la ficha suma su tiempo libre de la semana (su propia lectura y su `Aparicion`); estas pruebas son de otra cosa. */
+jest.mock('../../../cierre/components/CierresDelDia', () => ({ CierresDelDia: () => null }));
+jest.mock('../../../huecos/components/TiempoLibreDeLaSemana', () => ({ TiempoLibreDeLaSemana: () => null }));
 jest.mock('../../../../navigation/barraAlDesplazar/BarraInferior', () => ({ useOcultarBarraAlDesplazar: () => ({}) }));
 jest.mock('../../../../hooks/useSystemBackHandler', () => ({ useSystemBackHandler: () => undefined }));
 jest.mock('../../../academy/components/LeccionVideoPlayer', () => ({ LeccionVideoPlayer: () => null }));
@@ -181,6 +186,22 @@ describe('«Avisar a su mentor»', () => {
     expect(textos(r)).toContain('Reconocer');
     expect(textos(r)).toContain('Sugerir');
     expect(textos(r)).toContain('Alertar');
+  });
+
+  it('spec 018: la ayuda de cada tipo es el texto de relleno del campo, no un renglón aparte; la casilla no se explica', async () => {
+    const r = await montar(semana());
+    await tocar(r, 'Avisar a su mentor sobre Ana Pérez');
+    const campo = () => r.root.findAll(n => typeof n.props.onChangeText === 'function' && n.props.multiline === true)[0];
+    expect(campo().props.placeholder).toBe('Lo que podría cambiar');
+    expect(textos(r)).not.toContain('Lo que podría cambiar');
+
+    const segmentado = r.root.findAll(n => typeof n.props.onCambiar === 'function')[0];
+    await act(async () => {
+      segmentado.props.onCambiar('ALERTA');
+    });
+    expect(campo().props.placeholder).toBe('Lo que va mal y hay que atender');
+    expect(textos(r)).toContain('Enviárselo también por el chat');
+    expect(textos(r)).not.toContain('Le llega como mensaje tuyo');
   });
 
   it('guarda con la persona y la semana, y manda por el chat un mensaje que empieza con su nombre', async () => {

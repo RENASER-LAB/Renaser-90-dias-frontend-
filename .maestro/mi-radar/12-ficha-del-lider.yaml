@@ -1,0 +1,36 @@
+# 12 — Líder de mentores: Hoy → «Mis mentores» → grupo → persona, y en su ficha el mismo bloque «CÓDIGO RENASER»
+# con el estado de Mi Radar y sus registros (escenario 11, rama del líder).
+# cuenta: admin (la ranura E2E_ADMIN_* apunta al LÍDER). E2E_PERSONA = parte del nombre del aprendiz y E2E_GRUPO = parte
+# del nombre de su grupo («Grupo Radar E2E»). Precondición: igual que el flujo 10.
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+# Spec 018: Hoy del líder tiene tres pestañas y el resultado por grupo está en «Mis mentores» (ya no hay una tarjeta
+# «Semáforo por grupos» ni la línea «Toca un grupo para ver a sus personas.»).
+- tapOn: "Mis mentores"
+- extendedWaitUntil:
+    visible: "Resultado por grupo"
+    timeout: 30000
+- scrollUntilVisible:
+    element: ".*${GRUPO}.*"
+    direction: DOWN
+    timeout: 60000
+- tapOn: ".*${GRUPO}.*"
+- extendedWaitUntil:
+    visible: ".*${PERSONA}.*Abrir su detalle.*"
+    timeout: 30000
+- tapOn: ".*${PERSONA}.*Abrir su detalle.*"
+- scrollUntilVisible:
+    element: "CÓDIGO RENASER"
+    direction: DOWN
+    timeout: 60000
+- scrollUntilVisible:
+    element: "Mi Radar: encendido · 09:00, 14:00 y 20:00"
+    direction: DOWN
+    timeout: 30000
+- assertVisible: "Mi Radar: encendido · 09:00, 14:00 y 20:00"
+- scrollUntilVisible:
+    element: "Prevista 14:00 · respondida .*"
+    direction: DOWN
+    timeout: 30000
+- takeScreenshot: 12-ficha-del-lider-codigo-renaser

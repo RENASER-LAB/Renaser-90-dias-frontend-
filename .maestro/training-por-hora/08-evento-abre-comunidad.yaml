@@ -1,0 +1,21 @@
+# T08 — Un evento de hoy al que dijo «Voy» está en la lista, con «Evento · Zoom»; tocarlo abre su detalle en Comunidad → Eventos
+# (no hay hoja de registro: un evento no se «hace»). El evento de la mañana, que ya terminó, no está.
+# Precondición: `reset-hoy.sql` y `sembrar-2-datos.sql` (evento «Sesión de grupo E2E (esta tarde)» 16:30-17:30; si ya terminó, no sale).
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-training.yaml
+- assertNotVisible: ".*Sesión en vivo E2E \\(ya terminó\\).*"
+- scrollUntilVisible:
+    element: ".*Sesión de grupo E2E \\(esta tarde\\).*"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- assertVisible: ".*Evento · Zoom.*"
+- tapOn: ".*Sesión de grupo E2E \\(esta tarde\\).*"
+- extendedWaitUntil:
+    visible: "Volver a Eventos"
+    timeout: 20000
+- assertVisible: "Sesión de grupo E2E \\(esta tarde\\)"
+- takeScreenshot: T08a-evento-en-comunidad

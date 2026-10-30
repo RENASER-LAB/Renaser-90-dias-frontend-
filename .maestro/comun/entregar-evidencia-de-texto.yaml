@@ -1,0 +1,11 @@
+# La hoja «Evidencia» de una acción del día o de un hábito de evidencia opcional: pestaña Texto, un texto corto y entregar.
+appId: com.renaser.app
+---
+- extendedWaitUntil:
+    visible: "Entregar evidencia"
+    timeout: 15000
+- tapOn: "Texto"
+- tapOn: "¿Cómo cumpliste tu palabra hoy\\?|Escribe.*"
+- inputText: "Listo"
+- hideKeyboard
+- tapOn: "Entregar evidencia"

@@ -1,0 +1,26 @@
+# T03 — Un hábito SIN guía (JUGO VERDE) abre directo la cámara, sin hoja intermedia ni otro «Subir»; al aceptar la foto se registra
+# (no pregunta «¿Qué sentiste?»: solo los rituales) y sale de la lista.
+# Precondición: `reset-hoy.sql`; fotos en local.
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-training.yaml
+- scrollUntilVisible:
+    element: ".*JUGO VERDE.*"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- tapOn: ".*JUGO VERDE.*"
+- assertNotVisible: "Guía de esta práctica"
+- runFlow: ../comun/tomar-foto.yaml
+- assertNotVisible: ".*sentiste.*"
+- runFlow: ../comun/cerrar-aviso-dev.yaml
+- extendedWaitUntil:
+    visible: "Evidencia entregada.*"
+    timeout: 8000
+    optional: true   # el aviso en línea dura unos segundos: lo que se prueba es que la fila sale de la lista
+- takeScreenshot: T03a-jugo-registrado
+- extendedWaitUntil:
+    notVisible: "09:00, JUGO VERDE.*"
+    timeout: 20000

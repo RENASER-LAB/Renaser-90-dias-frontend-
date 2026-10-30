@@ -1,0 +1,33 @@
+# 01 — Día 3: el Código Renaser se abre solo, como antes de la spec 012, y Yo NO tiene la fila «Mi Radar» (escenario 1).
+# cuenta: aprendiz (día 3 del programa; abrir la app entre las 08:00 y las 19:59 con la hora en curso sin registro)
+appId: com.renaser.app
+---
+- runFlow: ../comun/despejar-capas.yaml
+# El formulario innegociable de los días 1 a 7 se abre solo, sin botón de cerrar.
+- extendedWaitUntil:
+    visible: "¿Dónde estás ahora mismo\\?"
+    timeout: 40000
+- assertVisible: ".*Innegociable.*"
+- assertNotVisible: "Cerrar"
+- takeScreenshot: 01a-formulario-solo
+- runFlow: ../comun/llenar-formulario-radar.yaml
+- extendedWaitUntil:
+    visible: "TRAINING"
+    timeout: 30000
+- assertNotVisible: "¿Dónde estás ahora mismo\\?"
+# La tarjeta de Hoy dice «Registrado».
+- scrollUntilVisible:
+    element: "Registrado"
+    direction: DOWN
+    timeout: 20000
+- takeScreenshot: 01b-hoy-registrado
+# Yo no ofrece Mi Radar antes del día 8.
+- tapOn: "YO"
+- assertVisible: "Tu evolución"
+- scrollUntilVisible:
+    element: "Cerrar sesión|Tuve una emergencia"
+    direction: DOWN
+    optional: true
+- assertVisible: "Tuve una emergencia"
+- assertNotVisible: "Mi Radar.*"
+- takeScreenshot: 01c-yo-sin-mi-radar

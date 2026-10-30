@@ -1,0 +1,28 @@
+# Llena el formulario del Código Renaser (las cuatro preguntas con una letra y la energía en 5) y lo envía con «Registrar».
+# Los textos son de una letra a propósito: cada letra tarda ~10 s en Maestro con la build de desarrollo (ver ../README.md).
+# El teclado tapa los campos de abajo: se esconde y se baja con el scroll antes del cuarto campo y de la energía.
+# Precondición: el formulario está abierto.
+appId: com.renaser.app
+---
+# El aviso amarillo de la build de desarrollo tapa el pie del formulario («Registrar»): se cierra si está.
+- runFlow: cerrar-aviso-dev.yaml
+- tapOn: "Estoy…"
+- inputText: "a"
+- tapOn: "Estoy pensando en…"
+- inputText: "b"
+- tapOn: "Siento…"
+- inputText: "c"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Estoy evitando…"
+    direction: DOWN
+- tapOn: "Estoy evitando…"
+- inputText: "d"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Nivel de energía"
+    direction: DOWN
+# La etiqueta asoma antes que la escala 1–10: se baja un poco más.
+- scroll
+- tapOn: "5"
+- tapOn: "Registrar"

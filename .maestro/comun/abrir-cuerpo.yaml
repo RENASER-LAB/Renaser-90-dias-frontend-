@@ -1,8 +1,10 @@
-# Training → Cuerpo, desde cualquier pestaña.
+# Training → engranaje («Tus prácticas», solo para planificar) → Cuerpo. Spec 014: las cinco dimensiones ya no se ven
+# afuera, en la lista por hora; viven dentro del engranaje.
 appId: com.renaser.app
 ---
 - tapOn: "TRAINING"
-- tapOn: "Cuerpo: .*"
+- tapOn: "Tus prácticas: planificar"
+- tapOn: "Cuerpo: .* de .* cumplidos hoy"
 - extendedWaitUntil:
-    visible: "Prácticas activas.*"
+    visible: "Planificar Cuerpo"
     timeout: 15000

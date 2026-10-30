@@ -113,8 +113,9 @@ describe('respuesta inmediata al tocar (antes de que conteste el servidor)', () 
     const pressable = raiz.root.findAll(n => typeof n.props.onPressIn === 'function')[0];
     act(() => pressable.props.onPressIn({}));
     expect(mockAnimaciones).toContainEqual({ tipo: 'timing', destino: 0.92 });
-    const training = fs.readFileSync(path.join(__dirname, '../../../../screens/TrainingScreen.tsx'), 'utf8');
-    expect(training).toMatch(/escalaAlApretar=\{ESCALA_APRETADO_DEL_CHECK\}/);
+    // Spec 014: el check vive en la fila de la lista por hora (`FilaDelDia`), con la misma escala.
+    const fila = fs.readFileSync(path.join(__dirname, '../../../training/components/FilaDelDia.tsx'), 'utf8');
+    expect(fila).toMatch(/escalaAlApretar=\{ESCALA_APRETADO_DEL_CHECK\}/);
   });
 
   it('los cierres directos de Training avisan a la tarjeta ANTES de esperar al servidor', () => {

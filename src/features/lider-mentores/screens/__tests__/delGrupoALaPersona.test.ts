@@ -26,6 +26,11 @@ jest.mock('react-native-safe-area-context', () => {
   return { SafeAreaView: View, useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) };
 });
 jest.mock('../../../renasia/components/RenasiaLauncher', () => ({ ESPACIO_PARA_LANZADOR: 0 }));
+/* Spec 012: la ficha suma el Código Renaser de la persona (su propia lectura y su `Aparicion`); estas pruebas son de otra cosa. */
+jest.mock('../../../mentor/components/CodigoRenaserDelAlumno', () => ({ CodigoRenaserDelAlumno: () => null }));
+/* Spec 015: la ficha suma su tiempo libre de la semana (su propia lectura y su `Aparicion`); estas pruebas son de otra cosa. */
+jest.mock('../../../cierre/components/CierresDelDia', () => ({ CierresDelDia: () => null }));
+jest.mock('../../../huecos/components/TiempoLibreDeLaSemana', () => ({ TiempoLibreDeLaSemana: () => null }));
 jest.mock('../../../../navigation/barraAlDesplazar/BarraInferior', () => ({ useOcultarBarraAlDesplazar: () => ({}) }));
 jest.mock('../../../semaforo/components/graficos', () => ({ GraficoDeDias: () => null, GraficoDeSemanas: () => null }));
 /* El visor de evidencias trae el reproductor de las lecciones (WebView) y el de audio: módulos nativos que Jest no tiene. */
@@ -250,13 +255,64 @@ describe('las tarjetas del semáforo por grupos (FR-021)', () => {
     const abribles = botones(r).filter(b => b.includes('Abrir el semáforo del grupo'));
     expect(abribles).toHaveLength(1);
     expect(abribles[0]).toContain('Fénix');
-    expect(textos(r)).toContain('Toca un grupo para ver a sus personas.');
+    // Spec 018: la línea de ayuda ya no está; la tarjeta que se abre lleva su botón.
+    expect(textos(r)).not.toContain('Toca un grupo para ver a sus personas.');
   });
 
   it('contra un backend anterior (sin `puedeAbrirse`) ninguna se abre y el texto es el de siempre', async () => {
     const r = await montar(resumen([grupo('g1', 'Fénix', false)]));
     expect(botones(r).filter(b => b.includes('Abrir el semáforo del grupo'))).toHaveLength(0);
-    expect(textos(r)).toContain('Solo cantidades: a cada aprendiz lo acompaña y lo ve su mentor.');
+    expect(textos(r)).not.toContain('Solo cantidades: a cada aprendiz lo acompaña y lo ve su mentor.');
+    expect(mockTabla).not.toHaveBeenCalled();
+  });
+});
+
+describe('abierta desde la fila de un grupo de «Mis mentores» (spec 018)', () => {
+  async function montarEnElGrupo(onSalir = jest.fn()): Promise<ReactTestRenderer> {
+    let r!: ReactTestRenderer;
+    await act(async () => {
+      r = TestRenderer.create(
+        React.createElement(CumplimientoDelLiderScreen, {
+          lectura: resumen([grupo('g1', 'Fénix', true)]),
+          onSalir,
+          grupoInicial: { grupoId: 'g1', nombre: 'Fénix', inicio: { posicion: { modo: 'vigente' }, hastaVigente: '2026-10-18' } },
+        }),
+      );
+    });
+    return r;
+  }
+
+  it('arranca en la lista de ese grupo, en los mismos 7 días, sin pasar por el resumen', async () => {
+    mockTabla.mockResolvedValue(LISTA);
+    const r = await montarEnElGrupo();
+    expect(mockTabla).toHaveBeenCalledWith('g1', null);
+    const t = textos(r);
+    expect(t).toContain('Ana Pérez');
+    expect(t).toContain('Últimos 7 días');
+    // No es el resumen: ni «Por grupo» ni la tarjeta del grupo.
+    expect(t).not.toContain('Por grupo');
+    expect(botones(r).some(b => b.includes('Abrir el semáforo del grupo'))).toBe(false);
+  });
+
+  it('volver desde la lista sale a Hoy; desde una persona vuelve a la lista', async () => {
+    mockTabla.mockResolvedValue(LISTA);
+    mockSemana.mockResolvedValue(semana());
+    const onSalir = jest.fn();
+    const r = await montarEnElGrupo(onSalir);
+
+    await tocar(r, 'Ana Pérez');
+    expect(textos(r)).toContain('Ritual de la mañana');
+    await atras(); // persona → lista del grupo
+    expect(onSalir).not.toHaveBeenCalled();
+    expect(textos(r)).toContain('Ana Pérez');
+
+    await atras(); // lista del grupo → Hoy
+    expect(onSalir).toHaveBeenCalledTimes(1);
+  });
+
+  it('abierta sin grupo —el aviso del sábado— sigue empezando en el resumen de siempre', async () => {
+    const r = await montar(resumen([grupo('g1', 'Fénix', true)]));
+    expect(textos(r)).toContain('Por grupo');
     expect(mockTabla).not.toHaveBeenCalled();
   });
 });
@@ -344,7 +400,8 @@ describe('del grupo a la persona', () => {
     // Con color y porcentaje de la semana.
     expect(t).toContain('Con problemas');
     expect(t).toContain('30.5');
-    expect(t).toContain('3 cumplidos · 1 sin cumplir · 1 pendientes · 1 con evidencia');
+    expect(t).toContain('3 cumplidos · 1 sin cumplir · 1 pendientes');
+    expect(t).not.toContain('con evidencia');
   });
 
   it('la lista parada en una semana anterior abre a la persona en ESA semana', async () => {
@@ -434,7 +491,8 @@ describe('del grupo a la persona', () => {
     expect(t).toContain('88.2');
     // Sin días no hay nada que contar: ceros que parezcan incumplimiento, jamás.
     expect(t).not.toContain('0 cumplidos');
-    expect(t).toContain('Luisa Rojas lleva su propio programa y no se mide en el semáforo: no hay días que mostrar.');
+    // Spec 018: ya no se repite en un renglón aparte; lo dice el encabezado.
+    expect(t).not.toContain('lleva su propio programa y no se mide en el semáforo');
     expect(t).not.toContain('No hay nada que mostrar de estos días.');
     // Es el mentor del grupo: no hay a quién avisar.
     expect(botones(r).some(b => b.startsWith('Avisar a su mentor'))).toBe(false);
@@ -498,7 +556,8 @@ describe('el retroceso del sistema sube un nivel a la vez', () => {
     expect(textos(r)).toContain('Ritual de la mañana');
 
     await atras(); // persona → grupo
-    expect(textos(r)).toContain('Primero quienes más lo necesitan');
+    expect(textos(r)).toContain('Ana Pérez');
+    expect(textos(r)).not.toContain('Primero quienes más lo necesitan');
     expect(mockTabla).toHaveBeenCalledTimes(1);
 
     await atras(); // grupo → resumen

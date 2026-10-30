@@ -84,11 +84,22 @@ describe('Hoy: la cifra de la cabecera de cada tarjeta va con la letra del rótu
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .replace(/(^|[^:])\/\/.*$/gm, '$1');
 
-  it.each(['Hábitos de hoy', 'Acciones y objetivos', 'Última evidencia del muro'])('«%s»', rotulo => {
+  it.each(['Acciones y objetivos', 'Última evidencia del muro'])('«%s»', rotulo => {
     const desde = HOY.indexOf(`<MicroLabel>${rotulo}</MicroLabel>`);
     expect(desde).toBeGreaterThan(-1);
     const cabecera = HOY.slice(desde, HOY.indexOf('</Text>', desde));
     expect(cabecera).not.toContain('t.micro');
     expect(cabecera).toMatch(/<Text style=\{\[t\.small,[^\]]*fontFamily: 'Jost_700Bold'/);
+  });
+
+  /* Spec 016: «Hábitos de hoy» pasó a la mitad de `TarjetaHabitoYRadar`; su cifra («0/15») es la línea de estado. */
+  it('«Hábitos de hoy» (la mitad de la tarjeta con el Radar)', () => {
+    const MITAD = fs
+      .readFileSync(path.resolve(__dirname, '..', '..', 'features', 'home', 'components', 'TarjetaHabitoYRadar.tsx'), 'utf-8')
+      .replace(/\/\*[\s\S]*?\*\//g, '');
+    expect(MITAD).toContain('<MicroLabel>{etiqueta}</MicroLabel>');
+    const estado = MITAD.slice(MITAD.indexOf('{estado ? ('), MITAD.indexOf('{titulo ? ('));
+    expect(estado).not.toContain('t.micro');
+    expect(estado).toMatch(/<Text style=\{\[t\.small,[^\]]*fontFamily: 'Jost_700Bold'/);
   });
 });

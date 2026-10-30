@@ -1,11 +1,16 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
+import { ahoraConfiable } from '../../../services/http/relojServidor';
 import {
   HAY_RECORDATORIOS_LOCALES,
   cargarNotificaciones,
   pedirPermiso,
 } from '../../habits/notificaciones/recordatoriosDeHabito';
-import { CONFIG_RADAR } from '../config/configRadar';
+import { weekdayDeExpo } from '../../habits/notificaciones/utils/alarmasPorDia';
+import { CONFIG_RADAR, MI_RADAR } from '../config/configRadar';
+import type { MiRadarApi } from '../types/radar.types';
+import { DIAS_ISO, type AvisoDeRadar, type DiaIso, horasDeAviso, horasElegibles, miRadarCorresponde } from '../utils/miRadar';
 import { horaEnPunto, horasConSlot } from '../utils/slotsDelRadar';
 
 /**
@@ -34,9 +39,36 @@ import { horaEnPunto, horasConSlot } from '../utils/slotsDelRadar';
  *
  * Mismo límite que los recordatorios de hábitos, y por la misma razón: `HAY_RECORDATORIOS_LOCALES`.
  * Ahí estas funciones no hacen nada y no fingen que sí.
+ *
+ * ## Mi Radar desde el día 8 (spec 012, 2026-10-29)
+ *
+ * Es el mismo mecanismo con otras horas. {@link horasDeAviso} decide cuáles suenan: los días 1 a 7, las doce de
+ * siempre (de 08:00 a 19:00, **sin un solo cambio**); desde el día 8, las que la persona eligió en Yo → Mi Radar,
+ * solo si lo tiene encendido. Los identificadores, el canal y el minuto son los de siempre, así que cambiar las horas
+ * reprograma sin duplicar. Desde el día 8 el aviso lleva `data.route = '/mi-radar'`: tocarlo abre Mi Radar (la clave
+ * es `route`, la que lee `rutaDeAviso`; el contrato de la spec la llama `url`).
+ *
+ * ## Por día de la semana (cuarta ronda, 2026-10-29)
+ *
+ * Con Mi Radar **sin ningún día distinto** (el caso común) todo sigue como arriba: una alarma DIARIA por hora, con el id
+ * `renaser.radar.slot.HH`. Cuando algún día tiene horas propias o va sin Radar, el disparador diario ya no sirve (no sabe
+ * qué día es) y pasa a **una alarma SEMANAL por día y por hora** de ese día, con el id estable `renaser.radar.slot.d{1..7}.HH`
+ * (lunes = 1), igual que los hábitos con días distintos (spec 008). Un día sin Radar no tiene ninguna. {@link horasDeAviso}
+ * decide el esquema y esto solo lo programa; **cancelar cubre los dos esquemas**, así que pasar de uno al otro (o apagar)
+ * no deja alarmas viejas.
+ *
+ * **Tope de iOS: 64 avisos pendientes por app.** Con días distintos pueden ser hasta 84 (7 días × 12 horas). Hoy la app es solo
+ * Android, que no tiene tope; si algún día sale en iOS hay que recortar en `horasDeAviso` antes de programar.
+ *
+ * Y la **invitación del día 8**: durante los días 1 a 7 el teléfono deja programado UN aviso para el día 8 a las 09:00
+ * («Terminaste tu primera semana…»), una sola vez por cuenta. Sin servidor ni tabla. Si la persona enciende Mi Radar,
+ * se cancela.
  */
 
 const CANAL_ANDROID = 'recordatorios-codigo-renaser';
+
+/** Lo que lleva `data.route` desde el día 8: tocar el aviso abre Yo → Mi Radar (`destinoDeRuta`). */
+const RUTA_DE_MI_RADAR = '/mi-radar';
 
 /**
  * Minuto de la hora en que suena el aviso.
@@ -71,27 +103,42 @@ async function asegurarCanal(): Promise<void> {
 /**
  * Identificador estable por franja. Al ser el mismo en cada corrida, reprogramar no duplica:
  * primero se cancela por este id y después se vuelve a crear.
+ *
+ * Diario: `renaser.radar.slot.09`. Semanal (Mi Radar con días distintos): `renaser.radar.slot.d6.09` (sábado a las 09:00).
  */
-function identificador(hora: number): string {
-  return `renaser.radar.slot.${String(hora).padStart(2, '0')}`;
+function identificador(hora: number, dia: DiaIso | null = null): string {
+  const hh = String(hora).padStart(2, '0');
+  return dia === null ? `renaser.radar.slot.${hh}` : `renaser.radar.slot.d${dia}.${hh}`;
 }
 
-/** Quita las doce alarmas. Idempotente: cancelar una que no existe no es un error. */
-export async function cancelarRecordatoriosDeRadar(): Promise<void> {
-  const N = cargarNotificaciones();
-  if (!N) return;
-  await sinRomper(async () => {
-    for (const hora of horasConSlot()) {
-      await N.cancelScheduledNotificationAsync(identificador(hora));
-    }
-  }, undefined);
+/** Todos los ids que Mi Radar y el Código Renaser pueden haber programado: los diarios de 03 a 23 y los semanales de cada día. */
+function todosLosIdentificadores(): string[] {
+  const horas = [...new Set([...horasConSlot(), ...horasElegibles()])];
+  return [...horas.map(h => identificador(h)), ...DIAS_ISO.flatMap(dia => horas.map(h => identificador(h, dia)))];
 }
 
 /**
- * Programa las doce alarmas diarias. Devuelve `false` si no se pudo (sin permiso, web, Expo Go),
- * y en ese caso NO deja nada a medias.
+ * Quita las alarmas de las horas: las diarias (la semana 1 y Mi Radar de siempre) y las semanales de cada día. Idempotente:
+ * cancelar una que no existe no es un error, y una que falla no impide cancelar las demás.
  */
-export async function programarRecordatoriosDeRadar(): Promise<boolean> {
+export async function cancelarRecordatoriosDeRadar(): Promise<void> {
+  const N = cargarNotificaciones();
+  if (!N) return;
+  await sinRomper(
+    () => Promise.all(todosLosIdentificadores().map(id => sinRomper(() => N.cancelScheduledNotificationAsync(id), undefined))),
+    undefined,
+  );
+}
+
+/**
+ * Programa los avisos (`horasDeAviso`): una alarma DIARIA por hora, o —con días distintos— una SEMANAL por día y hora.
+ * Devuelve `false` si no se pudo (sin permiso, web, Expo Go), y en ese caso NO deja nada a medias. `deMiRadar`: desde el
+ * día 8 el aviso lleva la ruta que abre Mi Radar.
+ */
+export async function programarRecordatoriosDeRadar(
+  avisos: readonly AvisoDeRadar[] = horasConSlot().map(hora => ({ hora, dia: null })),
+  deMiRadar = false,
+): Promise<boolean> {
   const N = cargarNotificaciones();
   if (!N) return false;
   if (!(await pedirPermiso())) return false;
@@ -100,15 +147,19 @@ export async function programarRecordatoriosDeRadar(): Promise<boolean> {
     await asegurarCanal();
     // Se cancela antes de programar: sin esto, cada arranque de la app sumaría doce alarmas más.
     await cancelarRecordatoriosDeRadar();
-    for (const hora of horasConSlot()) {
+    for (const { hora, dia } of avisos) {
       await N.scheduleNotificationAsync({
-        identifier: identificador(hora),
+        identifier: identificador(hora, dia),
         content: {
           title: `Código Renaser · ${horaEnPunto(hora)}`,
           body: '¿Dónde estás ahora mismo? Cinco preguntas, un minuto.',
+          ...(deMiRadar ? { data: { route: RUTA_DE_MI_RADAR } } : {}),
         },
         trigger: {
-          type: N.SchedulableTriggerInputTypes.DAILY,
+          ...(dia === null
+            ? { type: N.SchedulableTriggerInputTypes.DAILY }
+            // `WEEKLY` numera al revés que ISO (1 = domingo): `weekdayDeExpo` lo traduce en un solo lugar.
+            : { type: N.SchedulableTriggerInputTypes.WEEKLY, weekday: weekdayDeExpo(dia) }),
           hour: hora,
           minute: MINUTO_DEL_AVISO,
           // BUG ENCONTRADO 2026-09-17: esto estaba en `content`, donde `expo-notifications` lo
@@ -130,24 +181,77 @@ export async function programarRecordatoriosDeRadar(): Promise<boolean> {
   }, false);
 }
 
+/** `renaser.radar.invitacion`: el único aviso de fecha, para el día 8. */
+const IDENTIFICADOR_DE_LA_INVITACION = 'renaser.radar.invitacion';
+/** La invitación llega por la mañana del día 8, a las 09:00 locales. */
+const HORA_DE_LA_INVITACION = 9;
+/** Marca por cuenta: «ya se programó la invitación». */
+const claveDeLaInvitacion = (usuarioId: string) => `radar.invitacionDia8.${usuarioId}`;
+
+/** Quita la invitación. Idempotente. */
+async function cancelarInvitacionDeMiRadar(): Promise<void> {
+  const N = cargarNotificaciones();
+  if (!N) return;
+  await sinRomper(() => N.cancelScheduledNotificationAsync(IDENTIFICADOR_DE_LA_INVITACION), undefined);
+}
+
 /**
- * Deja las alarmas como corresponda al día de programa: puestas dentro de la ventana, quitadas
- * fuera de ella.
+ * Deja programada la invitación del día 8, **una sola vez por cuenta** y solo durante los días 1 a 7. Si el permiso no
+ * está, no deja marca: la próxima vez que se abra la app dentro de la semana 1 se vuelve a intentar.
+ */
+async function programarInvitacionDeMiRadar(usuarioId: string, diaPrograma: number): Promise<void> {
+  const N = cargarNotificaciones();
+  if (!N) return;
+  await sinRomper(async () => {
+    if (await AsyncStorage.getItem(claveDeLaInvitacion(usuarioId))) return;
+    if (!(await pedirPermiso())) return;
+    await asegurarCanal();
+    // El día 8 es hoy más lo que falte: mañana si hoy es el 7, y así.
+    const cuando = ahoraConfiable();
+    cuando.setDate(cuando.getDate() + (MI_RADAR.primerDia - diaPrograma));
+    cuando.setHours(HORA_DE_LA_INVITACION, 0, 0, 0);
+    await N.scheduleNotificationAsync({
+      identifier: IDENTIFICADOR_DE_LA_INVITACION,
+      content: {
+        title: 'Terminaste tu primera semana del Código Renaser',
+        body: 'Si quieres seguir, enciende Mi Radar.',
+        data: { route: RUTA_DE_MI_RADAR },
+      },
+      trigger: { type: N.SchedulableTriggerInputTypes.DATE, date: cuando, channelId: CANAL_ANDROID },
+    });
+    await AsyncStorage.setItem(claveDeLaInvitacion(usuarioId), '1');
+  }, undefined);
+}
+
+/**
+ * Deja las alarmas como corresponda al día de programa y a Mi Radar: las doce de siempre los días 1 a 7, las horas
+ * elegidas desde el día 8 si está encendido (diarias, o semanales por día si algún día va distinto), y ninguna en
+ * cualquier otro caso.
  *
  * Es la única función que deberían llamar las pantallas. Que cancelar sea parte de esto —y no una
- * decisión de quien llama— es lo que impide que a alguien le siga sonando el aviso el día 8, que
- * es el fallo más probable de un disparador que se repite solo.
+ * decisión de quien llama— es lo que impide que a alguien le siga sonando un aviso que ya no corresponde (el de
+ * la semana 1 el día 8, o los de Mi Radar apagado), que es el fallo más probable de un disparador que se repite solo.
+ *
+ * `usuarioId` solo hace falta para la invitación del día 8; sin él (o fuera de los días 1 a 7) no se programa.
  */
-export async function sincronizarRecordatoriosDeRadar(diaPrograma: number | null): Promise<void> {
+export async function sincronizarRecordatoriosDeRadar(
+  diaPrograma: number | null,
+  miRadar: MiRadarApi | null = null,
+  usuarioId: string | null = null,
+): Promise<void> {
   if (!HAY_RECORDATORIOS_LOCALES) return;
-  const dentroDeLaVentana =
-    CONFIG_RADAR.activo &&
-    diaPrograma !== null &&
-    diaPrograma >= CONFIG_RADAR.primerDia &&
-    diaPrograma <= CONFIG_RADAR.ultimoDia;
-  if (dentroDeLaVentana) {
-    await programarRecordatoriosDeRadar();
+  const avisos = horasDeAviso(diaPrograma, miRadar);
+  if (avisos.length > 0) {
+    await programarRecordatoriosDeRadar(avisos, miRadarCorresponde(diaPrograma));
   } else {
     await cancelarRecordatoriosDeRadar();
+  }
+
+  if (diaPrograma === null || !usuarioId) return;
+  if (miRadarCorresponde(diaPrograma)) {
+    // Ya lo encendió: la invitación sobra, aunque todavía no haya sonado.
+    if (miRadar?.encendido) await cancelarInvitacionDeMiRadar();
+  } else if (CONFIG_RADAR.activo && diaPrograma >= CONFIG_RADAR.primerDia && diaPrograma <= CONFIG_RADAR.ultimoDia) {
+    await programarInvitacionDeMiRadar(usuarioId, diaPrograma);
   }
 }

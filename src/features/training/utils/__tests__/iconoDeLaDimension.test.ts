@@ -70,10 +70,12 @@ describe('ICONO_DE_LA_DIMENSION: la fuente única', () => {
     expect(Object.keys(ICONO_DE_LINEA_POR_CATEGORIA).sort()).toEqual(['BODY', 'CONSCIENCE', 'MIND', 'SPIRIT']);
   });
 
-  it('Training no tiene tabla propia: la lista y el detalle preguntan a la fuente única', () => {
+  it('Training no tiene tabla propia: «Tus prácticas» pregunta a la fuente única', () => {
     const training = sinComentarios(leer('screens/TrainingScreen.tsx'));
+    const practicas = sinComentarios(leer('features/training/components/PracticasDeTraining.tsx'));
     expect(training).not.toMatch(/\bicon:\s*'/);
-    expect((training.match(/<Icon name=\{iconoDeLaDimension\((d|selectedDimension)\.key\)\}/g) ?? []).length).toBe(2);
+    expect(practicas).not.toMatch(/\bicon:\s*'/);
+    expect((practicas.match(/<Icon name=\{iconoDeLaDimension\(d\.key\)\}/g) ?? []).length).toBe(1);
   });
 
   it('el paso «Hitos» del Mapa usa el ícono del eje, no una tabla propia', () => {

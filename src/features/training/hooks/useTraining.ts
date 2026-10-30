@@ -9,6 +9,7 @@ import type { HabitoCatalogoApi, TrackDelDiaApi } from '../../habits/types/habit
 import { cargarEntrenamiento, type DatosEntrenamiento } from '../api/cargarEntrenamiento';
 import type { RocaDiariaApi } from '../types/training.types';
 import { DIMENSION_POR_CATEGORIA } from '../utils/dimensionDelHabito';
+import { guiaDelHabito } from '../utils/guiaDelHabito';
 import { milisegundosDelDia } from '../../habits/api/diaDeHabitosApi';
 import { escucharDiaDeHabitosCambiado } from '../../habits/eventos/diaDeHabitosCambiado';
 import { useActualizacionDelDia } from './useActualizacionDelDia';
@@ -221,6 +222,8 @@ export function useTraining(activa = true) {
           // D-254: la racha la calcula el servidor (días programados seguidos cumplidos, la pausa la
           // congela, hoy pendiente no corta). Un backend anterior no la manda: `null` y no se dibuja.
           streak: track.rachaDias ?? null,
+          // Spec 014: la guía que el equipo cargó para este hábito, para la hoja del hábito. `null` si no hay.
+          guia: guiaDelHabito(track.guia),
         };
       })
       .filter((h): h is HabitItem => h !== null);
@@ -243,6 +246,9 @@ export function useTraining(activa = true) {
       isDeactivatable: undefined,
       diasCatalogo: undefined,
       respuestaTexto: null,
+      // Spec 014: lo que el servidor dice de una acción ya cumplida (la fila de hoy dice cuándo y cuánto pagó).
+      completadoEn: roca.completadaEn,
+      puntosOtorgados: roca.completada ? roca.puntosOtorgados : null,
       // Una roca no pasa por la escala de puntos de hábitos ni tiene plazo de evidencia
       // expuesto por su endpoint: se deja explícito en null en vez de fingir un valor.
       pointsAtStake: null,
@@ -260,5 +266,10 @@ export function useTraining(activa = true) {
     loading: loading || diaVencido,
     error,
     recargar,
+    /**
+     * `YYYY-MM-DD` de HOY según el servidor (`fechaLocal` del snapshot del día), o `null` si todavía no respondió o es
+     * un backend anterior al snapshot. Training por hora lo usa para saber qué día es hoy sin fiarse del reloj.
+     */
+    fechaDeHoy: vigentes?.contexto?.fechaLocal ?? null,
   };
 }

@@ -42,11 +42,20 @@ describe('Hoy: los rótulos que comparten fila no se cortan', () => {
     expect(sueltos).toEqual([]);
   });
 
-  it('los tres rótulos con algo a la derecha van en el contenedor que crece', () => {
-    for (const texto of ['Hábitos de hoy', 'Acciones y objetivos', 'Última evidencia del muro']) {
+  it('los dos rótulos con algo a la derecha van en el contenedor que crece', () => {
+    // «Hábitos de hoy» ya no está acá: desde la spec 016 vive en `TarjetaHabitoYRadar` (ver la prueba de abajo).
+    for (const texto of ['Acciones y objetivos', 'Última evidencia del muro']) {
       const envuelto = new RegExp(`<View style=\\{styles\\.rotuloDeLaFila\\}>\\s*<MicroLabel>${texto}</MicroLabel>`);
       expect({ texto, envuelto: envuelto.test(HOY) }).toEqual({ texto, envuelto: true });
     }
     expect(estilo('rotuloDeLaFila')).toMatch(/flex:\s*1\b/);
+  });
+});
+
+describe('Hoy: el rótulo de cada mitad de la tarjeta de hábitos y Radar (spec 016)', () => {
+  const TARJETA = sinComentarios(fs.readFileSync(path.join(RAIZ, 'features/home/components/TarjetaHabitoYRadar.tsx'), 'utf-8'));
+
+  it('va en un contenedor que se encoge, junto al chevron, y no suelto en la fila', () => {
+    expect(TARJETA).toMatch(/<View style=\{\{ flexShrink: 1 \}\}>\s*<MicroLabel>\{etiqueta\}<\/MicroLabel>/);
   });
 });

@@ -184,9 +184,9 @@ describe('el contador de un día', () => {
 });
 
 describe('el resumen de la semana', () => {
-  it('con las mismas palabras de la ficha del mentor', () => {
+  it('con las palabras de la ficha del mentor, sin la evidencia: esa cifra es la de «¿Subió evidencias?» (spec 018)', () => {
     expect(resumenDeLaSemanaEnPalabras({ obligaciones: 35, cumplidas: 30, conEntrega: 12, pendientes: 3, sinCumplir: 2 })).toBe(
-      '30 cumplidos · 2 sin cumplir · 3 pendientes · 12 con evidencia',
+      '30 cumplidos · 2 sin cumplir · 3 pendientes',
     );
   });
 });

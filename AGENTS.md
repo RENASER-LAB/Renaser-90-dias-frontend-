@@ -156,6 +156,78 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       pedidos), las alarmas y el backend (no se repiten las pruebas E2E de alarmas), Plan ni los demás tabs.
       **Hace falta un AAB/APK nuevo** (solo JavaScript: no hay código nativo nuevo, pero la app no se actualiza por
       aire).
+  * **Cambio por pedido del dueño — 2026-10-29 — tab `Training`: Training por hora (spec 014)** (spec, vista previa
+    aprobada y decisiones del dueño en `Renaser-90-dias-backend/specs/014-training-por-hora/`; pedido: «vamos con ese
+    diseño en Training, me gusta», con urgencia). Lo que cambia y nada más:
+    * **La pantalla** (`features/training/components/TrainingPorHora`): «TRAINING» con la fase y el día («El Espejo · Día
+      3 de 90») y el engranaje a la derecha; el día elegido en serif («Jueves 29») con su resumen («4 de 12 hechos · 46
+      pts», los puntos son los que pagó el servidor); la semana de lunes a domingo —la que se VIVE, el domingo no salta
+      a la siguiente como la de planificar— y, debajo, UNA lista con los hábitos, las acciones del día y los eventos,
+      por la hora planificada. **Ya no se ven afuera** las cinco dimensiones, «Arma tu semana los domingos» ni la tarjeta
+      «Próximo a vencer» (el primero de la lista ya lo es; `ProximoAVencerCard` queda sin uso, con su prueba).
+    * **La lista de hoy** (`utils/listaDelDia`, pura y probada): lo que sigue por hora, y el primero dice «Te toca ahora»
+      (su hora ya llegó) o «Lo que sigue»; después «Sin hora»; después «Se te pasó la hora · todavía puedes registrarlos
+      hoy», con el texto de menos puntos de D-259 que ya existe (`avisoDeHoraPasada`); al final, plegado, «N hechos
+      hoy». Un pendiente queda atrasado cuando llega la hora del siguiente ítem con hora del día (también lo hecho o un
+      evento); el último nunca. Los eventos terminados salen (sin duración se suponen 60 min, la misma hora de gracia de
+      `listarProximos`); un evento nunca se atrasa. Un hábito sin registro hoy (pausado, no le toca) no está; uno
+      pausado después de generarse su registro y aún sin hacer, tampoco. Un registro cuyo día ya cerró (`EXPIRADO`) va
+      aparte, con candado, y abre el aviso de siempre. Lo que se acaba de cumplir se despide en su lugar ~1,2 s (el check
+      se llena de dorado y sube su «+N», `habitoCumplido`), sale con un fundido de 160 ms y la lista se acomoda;
+      con «reducir movimiento», sin desplazamiento.
+    * **Un toque, una hoja** (`HojaDelHabito`, `HojaDesdeAbajo`): el nombre, la hora, los puntos y la racha del servidor;
+      la guía plegada («Guía de esta práctica», lo que el equipo cargó en `guia` del registro de hoy:
+      `queHacer`, `comoHacerlo` y el mantra; sin guía la sección no existe) y, fijo abajo, el botón del registro de su
+      tipo: «Tomar foto», «Escuchar el audio», «Ver la clase», «Publicar en el Muro», «Subir evidencia», «Marcar como
+      hecha» (acciones) y, en Despertar y Dormir, «Marcar como hecho», que registra la hora. El botón cierra la hoja y abre
+      **el registro de siempre por los mismos caminos** (`openEvidenceModal`, `useRegistroConFoto`, `PastillaRenacerModal`, la
+      Clase, el Muro, `sellarRocaDiaria`): no se tocó ningún pedido al servidor ni cómo se emite `habitoCumplido`. **Sin
+      guía no hay hoja**: el toque abre directo el registro de siempre (que ya es su hoja o la cámara), sin otro «Subir»;
+      Despertar y Dormir siempre pasan por la hoja (marcar es inmediato). El ✓ de la fila, solo en lo que se cierra sin
+      abrir nada (Despertar/Dormir y la evidencia opcional sin flujo propio), marca en el acto. Lo hecho abre su hoja con
+      «Cumplido a las 06:12 · +8 pts» y lo que escribió; la Pastilla y la Clase conservan su ventana de solo lectura. Un
+      evento lleva a su detalle en Comunidad → Eventos (`abrirEventoId`). El aviso del teléfono que abre un hábito
+      (`aperturaDesdeAviso.habitoAAbrir`) lo abre como al tocar su fila, ya no la dimensión.
+    * **Un día anterior: sin registrar NUNCA** (regla explícita del dueño: «nunca debería llegar» a subir algo). Se lee
+      `GET /api/v1/habit-tracks/day?date=` (solo de ayer hacia atrás, hasta el lunes y no antes del Día 1; el servidor
+      responde 400 a cualquier otra fecha y la app ni la pide) **solo cuando la persona toca ese día**: nunca al abrir
+      Training, al volver al foco ni en un efecto. Una lectura por fecha y por cuenta en memoria de la sesión
+      (`utils/lecturaDeDiasCerrados`, `useDiasCerrados`): tocar el mismo día otra vez usa la guardada, dos toques
+      seguidos comparten el pedido en vuelo, un error no se reintenta solo («Reintentar»), un 400/403/404 o una respuesta
+      que no calza es «sin datos» definitivo, y cambiar de cuenta o de semana limpia la memoria. Con datos: ✓ en lo hecho
+      y candado en lo demás, y tocar uno **solo dice** «Ya hecho» o «Ese día ya cerró. No se puede registrar.» (una línea
+      que se va sola). Un día sin registros dice «Ese día no tuviste hábitos registrados.». Sin lectura, con error o con
+      una respuesta que no calza: lo planificado, con «Lo que hiciste ese día está en Yo → Mis evidencias.», sin ✓ ni
+      candados inventados. Un día anterior no muestra puntos en juego, racha, «Se te pasó la hora» ni «Te toca ahora».
+      **En un día anterior no se monta ningún componente de registro** (`TrainingScreen` no monta la hoja de evidencia, la
+      cámara, la Pastilla ni la Clase) y lo que haya quedado abierto se cierra; si cambia el día con una hoja abierta, se
+      cierra y el registro de siempre vuelve a comprobar el día antes de enviar (spec 002). Pruebas:
+      `diaAnteriorSinRegistro.test.ts` (ningún registro ni escritura: `/complete`, `/evidence`, `/rocks/…`; un solo
+      pedido por día) y `trainingDiaAnteriorSinRegistro.test.ts`.
+    * **Un día que viene**: lo planificado de ese día de la semana (los hábitos con la hora de ESE día, `habit-preferences`
+      `weekdays[i].triggerTime` de la spec 008; las acciones de esa fecha, `GET /rocks/upcoming`; los eventos), sin
+      botones ni toques. Las horas y las acciones se piden recién al tocar un día que no es hoy, una vez por semana y cuenta.
+    * **El engranaje → «Tus prácticas»** (`PracticasDeTraining`, pantalla completa con `CabeceraAdmin`; el atrás del
+      sistema sube un nivel por vez: `navegacionDePracticas`): **solo para planificar, ninguna fila registra**. Lleva
+      «Arma tu semana los domingos» (el mismo `Interruptor`, ahora `useRepasoSemanal`) y las cinco dimensiones con su avance
+      de hoy; cada una abre su detalle: «Planificar <dimensión>» —el `PlanificarDimensionModal` de siempre, con su pausa
+      «Solo hoy» / «Hasta que yo lo reactive» y las specs 008 a 011—, la lista de sus hábitos (tocar uno abre su editor
+      en Planificar: prop nueva y opcional `abrirEnHabitoId`) y «Cambiar nombre» en las dos bebidas renombrables
+      (D-127). Las acciones de los objetivos se siguen planificando en Plan.
+    * **No cambia**: cómo se registra cada tipo ni los pedidos al servidor, `habitoCumplido`, la actualización al
+      cambiar de día (`useActualizacionDelDia`), abrir desde un aviso, los momentos del check y el «+N pts», las
+      confirmaciones en línea, el interruptor `habitos` de Soporte TI, la barra que se esconde al desplazar, la invitación
+      y los avisos del Día 1, ni Plan, Hoy, Yo y Comunidad. Sale de la pantalla principal, a «Tus prácticas» o a la hoja:
+      la racha de cada hábito ahora se lee en su hoja (no en la tarjeta).
+    * **Hace falta un APK nuevo** (la app no se actualiza por aire) y el backend con `GET /habit-tracks/day`; contra
+      un backend anterior los días anteriores muestran lo planificado.
+    * **Ajuste del dueño, mismo día:** la fila de un hábito es solo su nombre (la dimensión y los puntos pasan a la hoja,
+      abajo), y lo atrasado ya no habla de puntos: «Todavía puedes cumplir tu compromiso hoy». Cuándo se avisa no cambia, y
+      el servidor paga igual que antes (D-259).
+    * **Ajuste del dueño, 2026-10-30:** en los hábitos de evidencia **opcional** (Día sin celular, Meditar, Escritura libre…) la
+      fila lleva **solo «Subir»**, como botón aparte que abre las cuatro formas; ya no lleva el círculo, que «le quitaba lo
+      simple». Tocar el nombre abre la hoja con «Subir evidencia» y «Marcar como hecho» (`ControlDeLaFila` `subir`). Un día
+      anterior que no se pudo cargar dice una sola línea, «No pudimos cargar este día.», con «Reintentar».
   * **Cambio por pedido del dueño — 2026-10-19 — alarmas como el despertador, aviso cuando el teléfono las
     borra y guía por marca (tab `Yo` → Alarmas, una hoja global y, en Training → Planificar, una oferta única de la
     guía)** (spec 007 del backend, `specs/007-alarmas-confiables/`; pedido: «los usuarios dicen que sus alarmas no
@@ -189,6 +261,358 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **No cambian**: el resto de Yo, el resto de Planificar (horas, días, el pedido del permiso de alarmas exactas),
       los interruptores de avisos (`InterruptoresDeAvisos`, spec 005), los demás tabs.
       **Hace falta un APK nuevo** (código nativo) y, para el texto con la hora y el `tag`, el backend de la spec 007.
+  * **Cambio por pedido del dueño — 2026-10-29 — tab `Yo` (y las fichas del mentor, del líder y de Administración): Mi Radar
+    desde el día 8** (spec 012 del backend, `specs/012-mi-radar-en-yo/`; textual: «el radar son los primeros 7 días y se
+    activa… ahora la persona puede activarlo individualmente y que le aparezca»). Lo que cambia y nada más:
+    * **Yo → fila «Mi Radar»** (`compass`), justo debajo de «Tuve una emergencia», **solo desde el día 8** y solo si el
+      servidor la ofrece (`GET /api/v1/radar/mi-radar`; un 404 o 403 la esconde). Dice `Encendido · 09:00, 14:00 y 20:00` o
+      `Apagado` y abre `MiRadarScreen` a pantalla completa. Los días 1 a 7 no hay fila: el Código Renaser se abre solo.
+    * **`MiRadarScreen`**: el `InterruptorGrande` «Mi Radar» primero; apagado no hay registrar ni horarios. Encender muestra
+      las horas (`ChipDeOpcion`, de 03:00 a 23:00, hasta 12; vienen 09:00, 14:00 y 20:00) y se guarda con «Guardar y
+      encender»; apagar rige en el acto. Encendido: «Registrar ahora» (el `CodigoRenaserModal` de siempre, que se puede
+      cerrar, con el mismo envío y el mismo 409), «Hoy» (las horas elegidas que ya pasaron con su registro o «Sin
+      registro») y las horas. Siempre: historial por día con «Ver más» y Patrones (desde 3 registros, cada uno con «en N
+      registros»), y «Lo ves tú, tu mentor y el equipo que coordina tu grupo.». Las horas se validan en la app y en el
+      servidor (`utils/miRadar.ts`, `MI_RADAR`).
+    * **Avisos del teléfono**: los mismos identificadores, canal y minuto. Los días 1 a 7, las doce de 08:00 a 19:00 **sin
+      ningún cambio**; desde el día 8, solo las horas elegidas con Mi Radar encendido, con `data.route = '/mi-radar'`:
+      tocarlos abre Yo → Mi Radar y, si la hora en curso es una elegida sin registro, también el formulario. Una
+      invitación única el día 8 a las 09:00, que el teléfono programa una vez por cuenta durante los días 1 a 7 y se cancela
+      si se enciende Mi Radar.
+    * **Fichas** (solo lectura): `CodigoRenaserDelAlumno` recibe cómo cargar y muestra `Mi Radar: encendido · …` o
+      `apagado` y la hora prevista de cada registro. La usan `AlumnoScreen` (mentor), `FichaAprendizScreen` (administrador
+      y alquimista, solo con grupo) y `PersonaDelLiderScreen` (líder; estos dos con
+      `GET /api/v1/leadership/groups/{g}/people/{p}/radar`). Un 403 o 404 esconde la sección.
+    * **Por día de la semana, como los hábitos en Planificar (cuarta ronda, 2026-10-29)** (textual: «no harán la acción
+      todos los días, es molestoso… igual que los hábitos… recuerda la experiencia de uso para hacerlo más fácil»). Lo que
+      cambia y nada más, sobre lo de arriba (que sigue valiendo para «Todos los días»):
+      * **Forma**: `{ encendido, horas, dias: [{ dia: 1..7, horas }] }`, lunes = 1. `horas` valen para todos los días; un día en
+        `dias` tiene horas propias (de 1 a 12) y con `[]` es «Sin Radar ese día»; un día que no está sigue las de todos. El
+        esquema es tolerante: sin `dias` (backend anterior) ningún día tiene horas propias, y un día roto se pierde solo él.
+        **`horasDelDia(config, diaIso)` (`utils/miRadar.ts`) es la única función que dice qué horas tiene un día**: «Hoy»,
+        «Registrar ahora», los avisos y el resumen la usan. Lo de editar días marcados (borrador, qué se guarda) vive en
+        `utils/diasDeMiRadar.ts`.
+      * **Pantalla**: bajo «Tus horas», la fila de los siete días de Planificar (`FilaDeDiasDelPlan`, sin tocarla; ningún día con
+        candado: cambiar rige en el acto). Cada día con horas propias lleva la campana y el que va sin Radar, la campana tachada;
+        el lector de pantalla dice «Sábado 31, horas propias: 11:00» / «Domingo 1, sin Radar». **Sin días marcados**: «Todos los
+        días» y las horas de siempre, con «Guardar horarios» / «Guardar y encender» (conserva los días propios que ya había).
+        **Con días marcados**: «Solo sáb, dom», el `InterruptorGrande` «Sin Radar ese día» / «Sin Radar estos días» (con «Varía»
+        si no coinciden) y los mismos chips de horas, y se guarda con **«Guardar horas · sáb, dom»** (o «Guardar y encender · sáb»
+        si Mi Radar aún está apagado): solo lo tocado, y un día que queda con las mismas horas que todos **vuelve a seguirlos**.
+        Si los marcados tienen horas distintas no se marca ninguna y se lee «Estos días tienen horas distintas» (lo que se elija
+        se pone a todos). «Dejar sáb como los demás días» le quita lo propio. Sin horas y sin «Sin Radar»: «Elige al menos una hora
+        o marca «Sin Radar» para esos días». Cada modo tiene su borrador y no se mezclan. Sin animaciones nuevas (el interruptor
+        grande ya anima su pulgar); el tacto de siempre en cada toque y en los errores.
+      * **Avisos del teléfono**: sin ningún día distinto, las alarmas DIARIAS de siempre (`renaser.radar.slot.HH`); con algún día
+        distinto, **una alarma SEMANAL por día y por hora de ese día** (`renaser.radar.slot.d{1..7}.HH`, lunes = 1; el disparador
+        `WEEKLY` de expo numera el domingo como 1: `weekdayDeExpo`), como Planificar con los hábitos (spec 008). Un día sin Radar
+        no tiene ninguna. Cancelar cubre los dos esquemas. Los días 1 a 7 no cambian (las doce diarias, con su prueba). **Tope de
+        iOS: 64 avisos pendientes por app** y con días distintos pueden ser hasta 84; hoy la app es solo Android, que no tiene
+        tope. Si algún día sale en iOS hay que recortar en `horasDeAviso`.
+      * **«Hoy»** usa las horas de **hoy**; en un día sin Radar no hay «Registrar ahora»: dice «Hoy no tienes Mi Radar» (el
+        servidor lo rechaza con un 409). «Hoy» va **en orden de hora, del más temprano al más tarde** (registros y «Sin registro»
+        juntos); antes iba del más nuevo al más viejo. El historial de otros días sigue del más nuevo al más viejo.
+      * **Resumen de la fila de Yo y de las fichas** (`textoDeMiRadar`): `Encendido · 09:00, 14:00 y 20:00 · sáb 11:00 · dom sin
+        Radar`; los días que quedan igual van juntos (`sáb y dom 11:00`, `lun, mié y vie sin Radar`). Con todos los días iguales
+        es el de antes. Es una sola línea que, si es larga, se parte en renglones y nunca se corta con «…».
+      * **Hace falta el backend con `dias`** (`GET/PUT /radar/mi-radar`, `POST /radar` que rechaza un día sin Radar, y
+        `horaPrevista` calculada con las horas del día) y un APK nuevo. Un backend sin `dias` los ignora y devuelve solo las
+        horas de todos los días: la app lo lee como «ningún día tiene horas propias» y no inventa nada.
+    * **No cambian**: los días 1 a 7, **Hoy** (desde el día 8 no muestra nada del Radar, con Mi Radar encendido o apagado),
+      el formulario, los demás tabs ni Plan. Sin dependencias nuevas.
+      > **Corregido 2026-10-29 (spec 016, decisión del dueño).** Lo de **Hoy** ya no es cierto: desde el día 8, Hoy sí muestra
+      > el Radar, como la mitad derecha de la tarjeta «Hábitos de hoy» (apagado, «Tu hora», «Tu Radar de hoy»…). Ver la entrada
+      > «hábito y Radar en una tarjeta» de abajo. Los días 1 a 7, el formulario y el resto de lo que dice esta línea siguen igual.
+    * **Hace falta el backend con V119 antes y un APK nuevo** (la app no se actualiza por aire). Contra un backend anterior
+      no aparece la fila y los días 1 a 7 siguen igual.
+  * **Cambio por pedido del dueño — 2026-10-29 — fichas del mentor, del líder y de Administración: tiempo libre de la
+    semana (spec 015)** (spec 015 del backend, `specs/015-huecos-de-horario/`; pedido: buscar los huecos de horario que dejan
+    los hábitos, acciones y eventos que la persona planifica, para recapitular. Decisión del dueño del 2026-10-29: en esta
+    primera versión **la persona no lo ve**; lo ve solo su acompañamiento, en su ficha y en solo lectura —«no lo ve todavía;
+    solo en su ficha lo ven los mentores, y también los líderes, alquimista y administrador»—, y solo se calcula y se muestra,
+    sin sugerencias). Lo que cambia y nada más:
+    * **Una sección nueva «Tiempo libre de la semana»** (`features/huecos/components/TiempoLibreDeLaSemana`), **debajo de la del
+      Radar** (`CodigoRenaserDelAlumno`) en `AlumnoScreen` (mentor o guía), `FichaAprendizScreen` (administrador y alquimista,
+      solo si la persona tiene grupo) y `PersonaDelLiderScreen` (líder; Administración la usa igual). Recibe `cargar(semana)`, como
+      la del Radar, y no sabe de rutas ni de roles: el mentor pide `GET /api/v1/mentor/groups/{g}/learners/{u}/huecos?semana=` y
+      los otros tres `GET /api/v1/leadership/groups/{g}/people/{p}/huecos?semana=` (`huecos/api/huecosApi`; `semana` es el
+      lunes). **Nada para la propia persona**: ni Yo, ni Training, ni Plan, ni Hoy.
+    * **Qué se lee**: arriba, la semana de lunes a domingo con ‹ › («Semana en curso» o «Semana cerrada» cuando el servidor dice
+      `cerrada`, y «Del 26 de octubre al 1 de noviembre»); el resumen —«Tiempo ocupado» y «Tiempo libre» en horas y minutos, «Lo
+      real de la semana»: `32 a tiempo · 6 tarde · 4 sin cumplir` (no se escribe si no hay nada que contar) y «Huecos que se
+      repiten»: `Lun, mié y jue · 15:00–17:00`, o «Ningún hueco se repite esta semana.»—; y los siete días, cada uno con su
+      ventana (`De 05:30 a 22:30`, o «Sin Despertar ni Dormir: todo el día» si es `null`) y sus huecos de 30 minutos o más
+      (`15:00–17:00 · 2 h`; un día sin ninguno dice «Sin huecos de 30 min o más»). **Si la semana trae 8 huecos o más, cada día
+      se pliega** (botón de 48 con chevron y una línea «2 huecos»); con menos se lee de corrido. Abrir un día es instantáneo, sin
+      animación, y al cambiar de semana vuelven a quedar plegados. Todo calculado por el servidor: la app no suma ni cuenta.
+      > **Corregido 2026-10-29 (el dueño, sobre la versión de arriba: «debe de estar mejor diseño como por día, ni un junior hace
+      > eso, más intuitivo»; diseño aprobado en la vista previa, pestaña «2 · Tiempo libre por día»).** Lo de arriba —el resumen en
+      > dos cifras, «Lo real de la semana», «Huecos que se repiten» y los siete días plegables con su lista de huecos— **ya no es
+      > cierto**; `FilaDelDia` y `ResumenDeLaSemana` se borraron. Ahora se lee **por día**. Lo que cambia y nada más:
+      > * **Arriba**, la semana con sus flechas (como antes) y una línea «**72 h 20 min** libres esta semana, de Despertar a Dormir»:
+      >   la suma de los días que tienen ventana. Un día sin ventana no suma (contaría el sueño como tiempo libre); si ningún día
+      >   la tiene, el total dice «—».
+      > * **Siete columnas de lunes a domingo** (`ColumnasDeLaSemana`): letra del día, una barra vertical cuyo dorado es la proporción
+      >   libre de la ventana de ese día (`minutosLibres` / ventana), las horas libres debajo («4.5 h», «13 h»; «—» sin ventana o
+      >   sin dato) y un punto en hoy. La columna entera es el botón («Jueves 29, 4 horas 30 minutos libres, hoy», con estado
+      >   elegido); ~43 dp de ancho en un teléfono de 360 y más de 110 de alto: siete columnas no dan 48 de ancho, el alto compensa.
+      >   La tarjeta de la sección baja su relleno lateral de 17 a 12 para eso. Tocar una columna vibra con `tacto.seleccion()`.
+      > * **El día elegido** (`AgendaDelDia`, abre en hoy; si hoy no cae en la semana, en el primer día con ventana): «Jueves 29 ·
+      >   hoy» con su ventana («05:30 a 22:30»); etiquetas «5 a tiempo · 1 tarde · 0 sin cumplir» (verde / dorado / rojo, siempre con
+      >   número y palabra) o «Todavía no llega» en un día por venir, y «10 h 20 min libres» con borde dorado. Tres ceros no se
+      >   escriben (un día sin registros no tiene resultado). Y la **agenda en una línea de tiempo vertical**
+      >   (`LineaDeTiempoDelDia`, con vistas posicionadas, sin SVG): de Despertar a Dormir, con marca cada 2 horas; lo ocupado en
+      >   bloques grises con el nombre del hábito, la acción o el evento (la agenda personal, solo «Ocupado»); cada hueco de 30
+      >   minutos o más en dorado con su duración y su rango. **Los bloques que se cruzan** van lado a lado, en columnas
+      >   (`acomodarEnCarriles`): dos cosas a la misma hora se ven las dos. Un bloque más corto que una línea de texto va sin
+      >   texto (su nombre lo lee el lector de pantalla: «Despertar, de 05:30 a 06:00»).
+      > * **Al final «Se repite»** (`SeRepite`): tres filas como máximo («Lunes a viernes · 08:00–09:00», «Casi todos los días»,
+      >   «Fin de semana»…), las que se apoyan en más días primero; sin ninguna, no se dibuja.
+      > * **Sin la hora de Despertar o de Dormir** (`TarjetaDeHoraQueFalta`): si NINGÚN día de la semana tiene ventana, una sola
+      >   tarjeta arriba dice «Falta su hora de Despertar» (o de Dormir, o las dos, o «Su hora de Dormir va antes que la de
+      >   Despertar») y pide elegirla en Training → Planificar; no hay columnas ni agenda, no se dibuja el sueño como tiempo libre y
+      >   el total dice «—». Si solo faltan en algunos días, esos días lo dicen en su agenda y no suman al total.
+      > * **Movimiento** (`emil-design-eng`, `animate-expo`): elegir un día se hace decenas de veces por visita, así que es
+      >   **instantáneo** (el cambio de fondo y de borde, la escala 0.97 de `Presionable` y el «tic»); nada se anima en la línea de
+      >   tiempo, y nunca la altura. Con «reducir movimiento» no hay nada que quitar.
+      > * **Letra grande**: la línea de tiempo mide `0,66 dp × minuto × la escala de la letra del sistema` (hasta 1,6): un bloque
+      >   de 30 minutos siempre tiene el alto de una línea de texto, también al 130 %. La cifra bajo cada barra se achica en vez de
+      >   cortarse.
+      > * **Lo que llega del servidor** (aditivo, spec 015 `FR-028`; el backend con esta corrección va primero): por día `ocupados`
+      >   (bloques con `desde`, `hasta`, `tipo` —`HABITO`, `ACCION`, `EVENTO`, `AGENDA`— y `titulo`), `cumplidosATiempo`,
+      >   `cumplidosTarde`, `noCumplidos` y `sinVentanaPor`; y por semana `hoy` (el día de hoy en la zona de la persona: la app no
+      >   usa el reloj del teléfono de quien acompaña para decir cuál es hoy). El esquema es tolerante: un tipo desconocido se dibuja
+      >   como un bloque más, un bloque roto se pierde solo él, y la agenda personal nunca lleva nombre aunque el servidor lo mande.
+      > * **Una semana cerrada no trae `ocupados` ni lo cumplido de cada día** (la foto semanal guarda tiempo, no nombres): ahí se
+      >   dibujan los huecos dorados sobre un fondo liso con la nota «De una semana cerrada solo queda guardado el tiempo libre.», no
+      >   hay etiquetas de lo cumplido por día y «32 a tiempo · 6 tarde · 4 sin cumplir en la semana» sale del resumen. Contra un
+      >   servidor sin esta corrección, la semana en curso dice «Todavía no hay detalle de lo que ocupa este día.».
+      > * **No cambian**: quién lo ve (solo el acompañamiento), las rutas, las flechas y sus topes, la lectura por semana, el 403 y el
+      >   404 que esconden la sección, los fallos con «Reintentar», ni las tres fichas que la usan. Sin dependencias nuevas.
+      >   **Hace falta un APK nuevo** y el backend con esta corrección.
+    * **Semanas**: la primera lectura es la semana en curso de la persona (sin `semana`: el servidor sabe su zona). ‹ llega
+      hasta `primeraSemana` y › hasta la semana en curso; nunca se pide el futuro ni antes de su primera semana (el servidor
+      respondería 400). Sin `primeraSemana` no se inventa un tope: ‹ queda apagado. Las flechas dicen «Tiempo libre: semana
+      anterior» / «…siguiente» y no «Semana anterior», que ya son las del semáforo en la ficha del líder (`Flecha` de
+      `semaforo/components/NavegacionDeSemanas` pasó a exportarse, sin otro cambio).
+    * **Un pedido por semana**: `huecos/hooks/useHuecosDeLaSemana` guarda cada semana leída mientras la ficha está abierta (un
+      almacén por función `cargar`, que cada ficha arma con `useMemo` por persona y se libera con ella): ir y volver, volver a
+      dibujar, volver a montar la sección (la ficha del líder pasa por «Avisar a su mentor» y regresa) o que dos secciones pidan
+      lo mismo a la vez no repite ningún pedido. No hay lectura al enfocar ni sondeo. Un fallo se recuerda y no se reintenta
+      solo; «Reintentar» lo pide otra vez.
+    * **Cuándo no aparece**: un 403 (otro rol, cuenta suspendida o ya no la acompaña) o un 404 (backend sin la ruta) esconden la
+      sección, sin error; sin grupo no hay a quién preguntarle. **Mientras llega la primera lectura tampoco se dibuja nada**
+      (un marco con «Cargando…» que se retira con un 404 sería un parpadeo; la sección va al final de la ficha). Los demás
+      fallos se dicen («No se pudo cargar el tiempo libre de esta semana.» y, sin red, «Revisa tu conexión.») con «Reintentar» de
+      48. Al cambiar a una semana no leída, la tarjeta conserva las flechas y el rango y dice «Cargando el tiempo libre…» sin
+      mostrar los datos de otra semana.
+    * **Esquema tolerante** (`huecos/api/huecosSchemas`): lo único indispensable es `semana`; un día, un hueco, un hueco repetido
+      o el resumen que no se entienden se pierden ELLOS y no la sección; `ventana` ausente o rota cuenta el día entero; los
+      minutos que no llegan salen de las dos horas; una cifra que falta es «—», no «0 min». Acepta `HH:mm:ss` y `24:00`.
+    * **Textos**: tipo oración, 16–17 px, tuteo donde hable la app; áreas de 48 en flechas, días y «Reintentar»; el lector de
+      pantalla oye cada hueco como «De 15:00 a 17:00, 2 horas». Sin íconos nuevos ni colores de estado: es texto de lectura.
+      Entra con `Aparicion` como las otras secciones de la ficha.
+    * **No cambian**: el Radar, el semáforo, los 7 días de la ficha del líder, Hoy, Plan, Training, Yo ni los otros tabs. Sin
+      dependencias nuevas.
+    * **Hace falta el backend con la spec 015 antes y un APK nuevo** (la app no se actualiza por aire). Contra un backend anterior
+      la sección no aparece (404) y las fichas quedan como hoy.
+  * **Cambio por pedido del dueño — 2026-10-29 — tabs `Hoy` y `Plan`: hábito y Radar en una tarjeta, y las acciones de hoy por
+    eje (spec 016)** (spec, vista previa aprobada y decisiones del dueño en `Renaser-90-dias-backend/specs/016-hoy-y-plan/`;
+    pedido sobre la vista previa: «así bro, pero más centrado, para que sea CX/UX» —Hoy, opción A «Lado a lado»— y «el de acá,
+    el B, creo que me agrada más; procede y la spec» —Plan, opción B «Por eje»—). Lo que cambia y nada más:
+    * **Hoy — «Hábitos de hoy» y el Radar en una tarjeta** (`features/home/components/TarjetaHabitoYRadar`, en el lugar de la
+      tarjeta de hábitos, después del Mapa): dos mitades **iguales** —ícono con el rótulo y su chevron, una línea de estado,
+      título y detalle; la fila las estira a la más alta— con una línea fina entre las dos.
+      > **Corregido 2026-10-29 (el dueño, sobre la captura: «esto alineado como estaba antes, que se vea mejor»).** Decía «al
+      > centro a lo ancho y a lo alto». Ahora el contenido de las dos mitades va a la izquierda y arriba, como la tarjeta
+      > «Hábitos de hoy» de antes: los renglones de una mitad quedan a la altura de los de la otra. Con la letra grande del sistema (`fontScale` > 1,15) pasan una debajo de la otra y nada se corta. Mitades de 48
+      o más. Responden al dedo con el fondo lavado de oro, **no** con la escala de `Presionable` (una mitad que se hundiera
+      dentro de una tarjeta de bordes comunes se vería rota); **sin movimiento propio** (es lo más visto de Hoy y lo que cambia
+      tiene que leerse en el acto). Izquierda: la de siempre (cifra, hábito de esta hora, lo que queda) → Training. **Se borró
+      la tarjeta aparte del Código Renaser** (`TarjetaCodigoRenaser`), que en los días 1 a 7 iba primera: la mitad la reemplaza
+      y no se duplica.
+    * **La mitad del Radar** (qué dice y qué hace, en `radar/utils/mitadDelRadar.ts`, sin React):
+      | Cuándo | Dice | Al tocarla |
+      |---|---|---|
+      | Días 1 a 7, hora pendiente | «Código Renaser · 13:00 · Innegociable» (o «Abierto»), «¿Dónde estás ahora mismo?», cuándo cierra | el formulario de siempre, **obligatorio** para el aprendiz (`RadarContext.abrir`; el que se abre solo y por encima del navegador no cambió) |
+      | Días 1 a 7, hora registrada | «Registrado», «Listo por esta hora. El siguiente a las 14:00.» | hoja «Ya lo registraste»: lo respondido y cuándo es el siguiente |
+      | Antes del primer registro del día | «En espera», «El primer registro del día es a las 08:00.» | nada (no es un botón) |
+      | Día 8 o más, Mi Radar apagado | «Mi Radar · Apagado», «Planifica tu Radar» | Yo → Mi Radar (`abrirMiRadar`) |
+      | Encendido, una hora elegida pendiente | «Mi Radar · 14:00 · Tu hora», «Responde hasta las 15:00» | el formulario ahí mismo (`CodigoRenaserModal`, **se puede cerrar**, pie de Mi Radar) |
+      | Encendido, esa hora ya registrada | «Registrado», «La siguiente a las 20:00.» | hoja «Ya lo registraste» |
+      | Encendido, sin hora pendiente ahora | «Encendido», «Próxima a las 20:00», «Hoy respondiste 2 de 3.» | hoja «Tu Radar de hoy»: las horas de hoy con su estado (Respondida 09:04 / Sin registro / Es tu hora / Prevista), «Registrar ahora» si se puede y «Cambiar mis horas» → Yo → Mi Radar |
+      | Encendido, hoy sin Radar | «Hoy no tienes Mi Radar» | Yo → Mi Radar |
+      | Sin Día 1, backend sin Mi Radar (404/403), Mi Radar sin poder leerse, o **mientras no se sabe** | nada: queda solo la mitad de hábitos, a todo el ancho | — |
+      Lo que sigue a una hoja (el formulario, Yo) espera a que la hoja se vaya del todo (`alTerminarDeCerrar`, como las de
+      Training). «Registrar ahora» solo aparece cuando el servidor lo aceptaría; si no, dice por qué («Hoy no tienes Mi Radar»,
+      «Mi Radar funciona de 03:00 a 23:59.», «Ya registraste esta hora»).
+    * **Una sola lógica, sin duplicar**: las horas de hoy y la hora en curso salen de `resumenDeMiRadarHoy` (`utils/miRadar.ts`,
+      sobre `horasDelDia`), que ahora usa también `useMiRadar` de Yo; el envío es el de `RadarContext` (`radar.enviar`: el mismo
+      `POST /radar` y el mismo 409 que se relee y se da por registrado); `HOY_SIN_RADAR`, `FUERA_DE_HORARIO` y el pie del
+      formulario viven en `utils/miRadar.ts` (las pantallas los siguen exportando).
+    * **Sin pedidos nuevos que se repitan** (`radar/hooks/useRadarEnHoy`): los días 1 a 7 lee lo mismo que ya leía
+      (`/radar/latest`, por `RadarContext`) y **no** el historial, salvo cuando se abre una hoja; desde el día 8 usa la lectura
+      de Mi Radar de `RadarContext` y, solo con Mi Radar encendido, el historial de siempre (`GET /radar/history`, el de Yo → Mi
+      Radar). Al volver a Hoy relee en silencio lo respondido (pudo responderse desde Yo) y, si Mi Radar no se había podido
+      leer, lo intenta otra vez. **Mientras no se sabe qué hora está respondida no se dibuja la mitad** (la misma regla del
+      2026-10-19: «Tu hora» sin saberlo es el parpadeo que ya costó arreglar).
+    * **Plan — «Tus acciones de hoy», por eje** (`objetivos/components/TarjetaAccionesDeHoyPorEje`): **se quitó el arco
+      «Día 20 de 90»** (`ArcoDelDia` y su prueba se borraron: nada más lo usaba). En su lugar, arriba de «Fase actual», una
+      tarjeta con «Tus acciones de hoy · 2 de 6», el subtítulo «Jueves 29 · día 20 de 90» (la fecha de las acciones, el día de
+      `/home`; lo que no se sabe no se inventa), una barrita por acción y una fila por eje que tenga acciones hoy, **en el orden
+      de las prioridades** (el principal primero): ícono del eje (`iconoDelEje`), «n de m», un símbolo por acción y «Sigue: X ·
+      16:00», «Se te pasó: X» o «Todo cumplido». Los símbolos tienen forma, no solo color: ✓ cumplida (`checkCircle`), círculo
+      vacío pendiente, reloj «se te pasó la hora» (`clock`) y candado si espera a la verde por Pareto (`lock`).
+      > **Corregido 2026-10-29 (mismo día, tras el E2E).** El reloj y «Se te pasó: X» iban en rojo y la hoja decía «todavía
+      > puedes registrarla hoy». Ahora van en dorado y la hoja dice «Se te pasó la hora · todavía puedes cumplir tu
+      > compromiso», como Training (pedido del dueño: lo atrasado no habla de puntos, invita a cumplir). «Registrar en
+      > Training» no abría la acción: al volver a Training se relee de cero y el pedido se buscaba en la lista todavía vacía;
+      > ahora se busca en lo que trajo `useTraining` (lo mismo para el aviso del teléfono que abre un hábito).
+      Reglas (`objetivos/utils/accionesDeHoy.ts`): cumplida manda sobre todo; una bloqueada por Pareto es candado aunque su hora
+      haya pasado; **«se te pasó» es solo «pendiente y su hora ya pasó»** (Training es más generoso: una acción queda atrasada
+      cuando llega la hora del siguiente ítem del día, hábitos incluidos, y Plan no lee los hábitos); la que sigue es la primera
+      sin cumplir en orden de hora, sin contar las que esperan a la verde. Sin acciones hoy: «Hoy no tienes acciones agendadas.
+      Agéndalas desde tus objetivos: toca una prioridad clave y elige «Agendar mis acciones».».
+    * **La hoja de un eje** (`HojaDesdeAbajo`): sus acciones de hoy con hora, nombre, estado en palabras («Cumplida 10:14»,
+      «Pendiente», «Se te pasó la hora · todavía puedes registrarla hoy», «Se abre al completar la primera») y su símbolo, y
+      fijo abajo «Registrar en Training». **Plan solo muestra:** el botón no registra nada, lleva a Training con
+      `abrirAccionId` —la acción que sigue de ese eje—, cuando la hoja ya se fue. `TrainingScreen` consume ese parámetro una
+      vez (como `abrirHabitoId`): si la acción sigue entre las de hoy la abre como al tocar su fila; si no, Training queda en
+      su lista. Es lo único que cambia en Training.
+    * **Una lectura por visita** (`objetivos/hooks/useAccionesDeHoy`): `GET /rocks/today`, la misma que Hoy y Training ya
+      hacen, cada vez que Plan vuelve al foco (y al volver de Objetivos, porque la tarjeta solo existe en la vista principal).
+      Con un fallo conserva lo último que leyó y ofrece «Reintentar».
+    * **No cambian**: «Fase actual», «Prioridades clave», «Arquitectura de tiempo», la vista de Objetivos, las demás tarjetas
+      de Hoy, el formulario de los días 1 a 7, los avisos, Training (salvo `abrirAccionId`), Yo, Comunidad ni la barra.
+      Sin dependencias nuevas ni backend nuevo.
+    * **Anotado, no inventado**: la vista previa decía «Pendiente · en 20 min» en la hoja del eje; no hay regla para ese
+      umbral y no se dibuja. Tampoco había diseño para «En espera» (antes del primer registro de los días 1 a 7) ni para el día
+      sin Radar: llevan los textos de arriba (los de la tarjeta de antes y los de Yo → Mi Radar).
+    * **Hace falta un APK nuevo** (la app no se actualiza por aire).
+  * **Cambio por pedido del dueño — 2026-10-29 — tab `Training` (y las fichas del mentor, del líder y de Administración):
+    Cierra tu día (spec 017)** (spec, vista previa aprobada y contrato en `Renaser-90-dias-backend/specs/017-cierre-del-dia/`;
+    origen: el encargo de gerencia «Cerrar y evaluar mi día»; el dueño pidió que esté en Training «para los aprendices», es decir,
+    para quien hace su programa de 90 días, también el personal que lo hace). Decisiones del dueño del mismo día: lo ven la persona
+    **y su acompañamiento** (mentor o guía, líder, Administración y Alquimista, en la ficha); es **opcional y sin puntos**, nunca
+    resta ni cuenta en el semáforo, y un día sin cerrar solo dice «Sin cerrar». Lo que cambia y nada más:
+    * **La fila** (`features/cierre/components/FilaDelCierre`, un tipo nuevo `cierre` de la lista de hoy): «Cierra tu día · 2
+      minutos», con fondo dorado suave (`goldWash`) y el ícono de luna; es **la última de hoy**, a la hora de Dormir de hoy **menos 30
+      minutos**, y **a las 21:30 si Dormir no tiene hora** (sin Dormir hoy, pausado, o sin hora legible). Si Dormir cae pasada la
+      medianoche (00:10), 30 minutos antes sería ayer, así que la fila se ancla a las 00:00. **La calcula la app**
+      (`cierre/utils/horaDelCierre`, con los hábitos que Training ya lee de hoy, `systemKey === 'SLEEP'`); el servidor no impone ninguna
+      hora, solo que el día sea el de hoy. Antes de su hora no existe y **no se lee nada** del cierre.
+    * **No es un hábito** (`training/utils/listaDelDia`): se ordena por hora entre el resto, pero **no cuenta** en «N de M hechos» ni en
+      los puntos, **no se atrasa** (nunca pasa a «Se te pasó la hora») ni atrasa a nadie, **no es el «primero»** de «Te toca ahora», no
+      cuenta para «Terminaste lo de hoy», no lleva ✓ ni «Subir» y **no se despide con fundido**: cerrada, se queda en su lugar en verde
+      («Día cerrado» y lo que dijo para mañana, «Mañana: «Revisar las facturas» a otra hora»). Tocarla, cerrada o no, abre la hoja.
+    * **La hoja** (`HojaDelCierre`, `HojaDesdeAbajo tamano="completa"`; sale de un toque a la fila y relee el día cada vez que se abre):
+      «Cierra tu día», «Jueves 29 · Día 20»; lo ya cumplido llega **marcado y no se pregunta**; por **cada acción que quedó pendiente**,
+      una tarjeta con «Era a las 20:30 · quedó pendiente» (o «Quedó pendiente» sin hora), **«¿Qué pasó?»** (No me alcanzó el tiempo ·
+      Surgió otra cosa · Me faltó energía · Lo dejé para después), **«¿Qué harás mañana?»** (Hacerla a otra hora · Hacerla más corta ·
+      Pedir ayuda · Dejarla) y una nota opcional de hasta 500 caracteres; después «Tus hábitos: N de M hechos hoy» y «Tu semana: N de M
+      acciones cumplidas hasta hoy» (solo lectura; la semana viene del servidor y, si no viene, la línea no se dibuja). Los textos
+      de las dos preguntas viven en `cierre/data/textosDelCierre`. «Guardar mi cierre» va fijo abajo y **se apaga hasta elegir los
+      dos chips de cada pendiente**, con una línea que dice qué falta nombrando la acción («Elige qué pasó y qué harás mañana con
+      «Revisar las facturas».»). Un **día sin acciones** dice «Hoy no tenías acciones.»; con todo cumplido, «No te quedó nada
+      pendiente»; en los dos hay una **nota del día** opcional. **Ya cerrado, abre con lo guardado** y se puede cambiar mientras el día
+      no termine. Al guardar, un fundido (solo `opacity`, `DURACION_MS.paso`; con «reducir movimiento», al instante) da paso a «Día
+      cerrado» con lo que dijo para mañana, «Ver mañana en Training» (elige el día de mañana de la semana; **el domingo no se ofrece**,
+      mañana cae fuera de la semana) y «Listo». Los chips no se animan (solo `Presionable`) y vibran con `tacto.seleccion()`;
+      `tacto.logro()` suena **una sola vez**, al quedar guardado.
+    * **Guardar NUNCA completa una acción ni anuncia puntos**: la hoja solo habla con `GET/PUT /api/v1/rocks/day-closure`
+      (`cierre/api/cierreApi`); no llama a `/rocks/{id}/evidence` ni a `/habit-tracks/{id}/complete`, no emite `habitoCumplido` y no
+      muestra «+N pts». Lo vigilan `useHojaDelCierre.test.ts` y `hojaDelCierre.test.ts`.
+    * **El día no se reasigna** (spec 002): antes de enviar se compara el día para el que se abrió la hoja con el de hoy. Si cambió (pasó
+      la medianoche con la hoja abierta), **no se envía nada**; un 409 del servidor («Ese día ya cerró y no se puede cerrar tarde.»)
+      es lo mismo. En los dos casos Training cierra la hoja, relee el cierre y avisa con un diálogo («Ese día ya cerró»); no anuncia
+      puntos ni pasa el cierre al día nuevo. Un fallo de red sale en un diálogo con «Reintentar», que vuelve a enviar lo mismo.
+    * **Días anteriores: solo lectura** (`cierre/utils/lecturaDeCierres`, `useCierresAnteriores`): al tocar un día anterior de la semana
+      (el mismo permiso que `GET /habit-tracks/day`: de ayer hacia atrás, hasta el lunes y desde el Día 1) la lista suma una fila
+      «Cierra tu día» que dice **«Cerrado»** o **«Sin cerrar»** (con la hora del cierre si lo hubo). Se lee **solo al tocar ese día, una vez
+      por fecha y cuenta** (nada al abrir Training ni al volver al foco; cambiar de cuenta o de semana limpia la memoria). La fila es solo
+      texto: **un día que terminó no se cierra tarde** (D-259; el servidor responde 409). Los días que vienen no tienen fila.
+    * **Cuándo no hay fila**: contra un backend sin la spec 017 (404, 403 o una respuesta que no es un cierre), con el interruptor `plan`
+      de Soporte TI apagado (`CLAVES.plan`, nueva), con Training fuera de vista, antes de su hora o mientras no se sabe (**nada de
+      parpadeos**: la fila solo existe con `listo`). Un fallo de red no la muestra y se reintenta al volver al foco. Al pasar la
+      medianoche la lectura de ayer se descarta: la fila de ayer no queda en hoy. Esquemas tolerantes (`cierre/api/cierreSchemas`): una
+      acción, un día o el resumen que no se entienden se pierden ELLOS; la hora de las acciones llega como `HH:mm:ss` y se acepta
+      también `HH:mm`; el orden de las acciones es el del servidor.
+    * **Las fichas** (`cierre/components/CierresDelDia`, **debajo del tiempo libre** de la spec 015, en `AlumnoScreen` —mentor o guía—,
+      `FichaAprendizScreen` —Administración y Alquimista, solo si la persona tiene grupo— y `PersonaDelLiderScreen`): «Cierres del día»,
+      solo lectura, semana de lunes a domingo con ‹ › (`Cierres del día: semana anterior` / `…siguiente`, nombres propios para no repetir los
+      del tiempo libre ni los del semáforo). Arriba el resumen («3 cerrados · 1 sin cerrar») y «Lo que más se repite» («No me alcanzó el
+      tiempo · 4 veces»); por día: «Jueves 29 · Cerrado» / «Sin cerrar» / «Hoy, todavía sin cerrar», cuántas acciones se cumplieron, cada
+      pendiente con lo que dijo («No me alcanzó el tiempo → Hacerla a otra hora») y su nota, y la nota del día. «Sin cerrar» **no se
+      dice como una falta**. Misma política que el tiempo libre: `cargar(semana)` estable por persona (el mentor pide
+      `GET /mentor/groups/{g}/learners/{u}/cierres`; los otros tres, `GET /leadership/groups/{g}/people/{p}/cierres`), una lectura por
+      semana, 403 o 404 esconden la sección, nada se dibuja mientras llega la primera lectura, «Reintentar» de 48. **Nada para la propia
+      persona** fuera de Training.
+    * **Textos y medidas**: tipo oración, tuteo de Perú, 16–17 px, áreas de 48 (chips, fila, flechas, «Reintentar»). Un solo scroll en la hoja
+      (`keyboardShouldPersistTaps="handled"`).
+    * **No cambian**: Hoy, Plan, Yo y Comunidad; los hábitos, las acciones y sus registros (cámara, Pastilla, Clase, evidencia), el
+      semáforo, los puntos, la coherencia y la racha; la lista de Training salvo la fila nueva; el tiempo libre ni el Radar de las fichas.
+      Sin dependencias nuevas ni código nativo.
+    * **Hace falta el backend con la spec 017 (V121) antes y un APK nuevo** (la app no se actualiza por aire). Contra un backend anterior no
+      aparece la fila ni la sección y Training queda como hoy.
+  * **Cambio por pedido del dueño — 2026-10-29 — tab `Hoy` (personal con más de un papel) y la ficha del líder
+    (spec 018)** (spec, plan y vista previa aprobada en `Renaser-90-dias-backend/specs/018-lider-limpio/`; decisión D-291 del
+    backend). Comentario del equipo que el dueño pegó: «[la líder] tiene mucho para ingresar, debería de verse por aprender,
+    ingreso y como mentora abre y aprendices, mentores y resultado por grupos» y «cuando le hago clic en persona ver si
+    programaron, si subieron evidencias»; del dueño: «falta que esté un poco más limpio y no mucho texto». **Se ignora, por
+    decisión del dueño, «por el momento no debería haber grupos»** (hoy son pocos alumnos y están decidiendo quién será el
+    mentor). Lo que cambia y nada más:
+    * **Hoy — el papel se elige con un control** (`features/hoy-por-papel/`; `ControlSegmentado` con «Mi programa» · «Mi
+      grupo» · «Mis mentores», bajo la línea de fase y día): **solo para quien lidera mentores** (`papelesDeHoy`, pura) y con al
+      menos dos papeles disponibles. «Mi programa» si hace su programa; «Mi grupo» si el servidor dice que acompaña un grupo (o
+      falló al decirlo, para poder reintentar) y su entrada está prendida; «Mis mentores» si alguna de sus tres entradas
+      (`lider`, `tickets`, `semaforo`) está prendida. **El aprendiz, el mentor, la guía, Administración y Alquimista ven Hoy
+      exactamente como hoy, sin control.** Cambiar de opción es instantáneo y **sin animación** (`ControlSegmentado` suma la
+      prop `sinAnimacion`, apagada por defecto: ningún otro control cambia), y la última opción se recuerda **por cuenta**
+      (`renaser.hoy.papel.<id>` en AsyncStorage; un almacenamiento roto no tumba Hoy). La primera vez abre en «Mi programa»; si
+      lo recordado ya no le corresponde, también. Quien se quedó en «Mi grupo» espera a que el servidor diga si acompaña uno, en
+      vez de dibujar «Mi programa» y saltar al grupo.
+    * **«Mi programa»** es el Hoy de siempre. Con otro papel a la vista, lo del programa propio (la frase del día,
+      coherencia y racha, el orbe y todas sus tarjetas) queda **oculto pero montado** (`display: 'none'`): volver es
+      instantáneo y no pierde la conversación del orbe. La línea de fase, día y puntos queda siempre.
+    * **«Mi grupo»** (`MiGrupoEnHoy`): el rótulo «Grupo Octubre · 6 aprendices» (abre el grupo entero, `MiCelulaScreen`) y una
+      fila por aprendiz con su foto, su punto de color y su % del semáforo del grupo (`GET /mentor/groups/{g}/semaforo`, en el
+      orden del servidor; sin número dice «—», nunca un 0 %). Tocar a uno abre su ficha de siempre (`AlumnoScreen`) y **volver
+      regresa a Hoy**; abierta desde la pantalla del grupo o desde un aviso, vuelve a esa pantalla, como antes. Sin el semáforo
+      (404, 403, sin red) la lista sale igual, con los nombres y sin color.
+    * **«Mis mentores»** (`MisMentoresEnHoy`, solo el líder): **Resultado por grupo · Últimos 7 días**, una fila por grupo con
+      su nombre, su mentor (o «Sin mentor asignado» en rojo), el punto de color y el % del promedio —los del servidor, sin
+      recalcular—; abajo, «Consultas de mentores» con «N sin responder» (abre la bandeja de tickets de siempre) y «Mentores y
+      reporte del mes» (abre `LiderMentoresScreen`; **no está en la vista previa**: sin esa fila el padrón, la ficha del
+      mentor, las observaciones y el reporte quedaban sin entrada). Un grupo con `puedeAbrirse` abre `CumplimientoDelLiderScreen`
+      **directo en ese grupo**, en los mismos 7 días de la fila (prop nueva `grupoInicial`); volver sale a Hoy. El aviso del
+      sábado `/semaforo/grupos` sigue abriendo el resumen por grupos de siempre, con sus totales. Al abrirse la lista vuelve a
+      los últimos 7 días y relee. La cifra de consultas sale de la primera página de la bandeja (30): si hay más páginas dice
+      «N+», y no afirma «nada sin responder» si no vio todas. Cada lista es independiente: sin una, las otras siguen.
+    * **Se borraron las tres tarjetas sueltas del líder** en Hoy (`TarjetaMentoresHoy`, `TarjetaBandejaHoy` y
+      `TarjetaSemaforoGruposHoy`): sus pantallas se abren desde las filas de arriba. Deslizar para recargar relee la lista que
+      está a la vista.
+    * **La ficha de la persona abre con dos respuestas** (`PersonaDelLiderScreen`, que usa también Administración con el mismo
+      endpoint; `RespuestasDeLaPersona`, dos tarjetas iguales arriba de los 7 días): **«¿Programó?»** —«Sí» / «No» con «5 de 17
+      hábitos con su hora · 0 de 2 acciones agendadas»— y **«¿Subió evidencias?»** —«4 de 12», «Estos 7 días»—. El «Sí» y el
+      «No» llevan ícono además del color; en un teléfono angosto la segunda baja debajo de la primera.
+      * **El «Sí» lo decide el servidor** (campo opcional `programacion` en `GET /leadership/groups/{g}/people/{p}/week`; la
+        app no lo recalcula). El umbral es **un supuesto del equipo a confirmar con el dueño**: al menos la mitad de los hábitos
+        de HOY con la hora que ella eligió (no la del catálogo) **y** todas las acciones de hoy con hora; sin acciones hoy
+        decide lo que sí tiene. Es de hoy en su zona, no de los 7 días. Sin el campo —servidor anterior, programa sin activar,
+        ningún hábito que le toque hoy— **no hay tarjeta**: nunca un «No» por falta de datos.
+      * **Las evidencias se cuentan de la ficha** (`utils/respuestasDeLaPersona`, sin backend): de los hábitos de los días
+        cerrados que piden evidencia, cuántos tienen entrega, archivo o publicación del Muro. Hoy y los días que no llegaron no
+        cuentan. Sin hábitos que la pidan no hay tarjeta (nunca un «0 de 0»).
+    * **Menos texto** en las pantallas del líder: se quitaron los párrafos de ayuda que repetían lo que ya se ve, sin quitar
+      datos ni funciones —la tabla completa, con el porqué de cada uno, está en la spec 018—: la ayuda de «Por grupo»
+      (`SemaforoGruposScreen`) y la de la lista del grupo, lo que explicaba «Avisar a su mentor», el párrafo del mentor que no
+      se mide, «De mayor a menor evaluación.» del reporte, y en `ObservarScreen` la línea de ayuda (ahora es el texto de relleno
+      del campo) y el subtítulo de la casilla. La línea de resumen de la semana ya no termina en «· N con evidencia»: esa cifra
+      es la de la tarjeta. `SemaforoAdminScreen` conserva su propia línea (no es del líder).
+    * **No cambian**: los otros tabs, el recorrido de Administración y Alquimista, la sección de tiempo libre de la ficha, los
+      permisos (el servidor autoriza cada lectura), ni los endpoints (solo suma un campo opcional).
+    * **Hace falta el backend con la spec 018 antes, solo para ver «¿Programó?»**, y un APK nuevo (la app no se actualiza por
+      aire). Un APK nuevo contra el backend anterior funciona sin esa tarjeta.
   * **Cambio por pedido del dueño — 2026-10-12 — Administración (estado de `Hoy`): «Hábitos del programa», con
     audiencia por rol** (backend D-264; spec y plan en `Renaser-90-dias-backend/specs/001-habitos-por-rol/`, flujo
     spec-kit con las decisiones del dueño). Lo que cambia y nada más:
@@ -817,6 +1241,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * Para una cuenta **Líder de Mentores** (`esLiderDeMentores`), una tarjeta «Mis mentores» en Hoy, antes de la de
       tickets, que abre `LiderMentoresScreen` como estado de Hoy (sin sexta pestaña). Para cualquier otro rol Hoy no
       cambia.
+      > **Corregido 2026-10-29 (spec 018).** La tarjeta suelta se fue: «Mis mentores» es ahora una opción del control de arriba
+      > de Hoy (con «Mi programa» y «Mi grupo») y `LiderMentoresScreen` se abre desde la fila «Mentores y reporte del mes».
     * Todo vive en `src/features/lider-mentores/`: padrón (un mentor por fila: grupo y aprendices, semáforo de sus
       aprendices, consultas sin responder y evaluación del mes), ficha (grupos, consultas, evaluación, «Lo que le
       dijiste», «Escribirle» y Reconocer / Sugerir / Alertar), la pantalla para escribir una observación (con la casilla
@@ -1679,6 +2105,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       para cualquier otro rol, Hoy queda como estaba. También se agregaron las escuchas de los otros
       dos avisos del sábado: `/mentor/groups/{g}/semaforo` abre «Mi grupo» en su sección del semáforo,
       y `/semaforo/grupos` abre la pantalla del líder o el semáforo de Administración.
+      > **Corregido 2026-10-29 (spec 018).** Esta tarjeta y la de tickets se fueron de Hoy: el resultado por grupo es la lista de
+      > «Mis mentores» y la bandeja, su fila «Consultas de mentores». El aviso `/semaforo/grupos` sigue abriendo este resumen.
     Una excepción puntual **no abre** el tab: cualquier otro cambio sobre los cinco principales
     vuelve a necesitar autorización explícita.
   * **Excepción autorizada por el dueño del producto — 2026-09-22 — tabs `Training` y `Plan`.**
@@ -1969,6 +2397,9 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       resumen ← Hoy (cada nivel con su retroceso del sistema); no hay otra vista de Hoy ni pestaña nueva. Las tarjetas del
       resumen pasan a `Presionable`. **El recorrido de Administración y Alquimista (Semáforo → grupo → persona) no
       cambia**: sigue abriendo todos sus grupos como siempre.
+    > **Corregido 2026-10-29 (spec 018).** «Cada tarjeta de grupo» ya no está en una tarjeta de Hoy: son las filas de «Resultado
+    > por grupo» en «Mis mentores», y tocar una abre `CumplimientoDelLiderScreen` directo en la lista de ese grupo (`grupoInicial`).
+    > Sin `puedeAbrirse` la fila no se abre y dice «Sin mentor asignado».
     * **La lista del grupo** (`GrupoDelLiderScreen`, `VistaSemaforoDelGrupo` de siempre): nombre, color y % de la semana, en
       el orden del servidor (rojo primero; la app no reordena). El mentor o la guía con programa propio salen con su % y
       «No se mide en el semáforo» (`AprendizDelSemaforo.noSeMide`; el orden del servidor es rojo, amarillo, sin datos,

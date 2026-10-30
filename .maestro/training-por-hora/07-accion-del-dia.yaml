@@ -1,0 +1,30 @@
+# T07 — Una ACCIÓN del día con hora («Llamar a mi mentor», 17:00) está en la lista entre los hábitos; su hoja trae el botón y
+# lleva a la evidencia de siempre (foto, texto, audio o video); con una forma sale de la lista.
+# Precondición: `reset-hoy.sql` (las acciones «Enviar la propuesta al cliente» 10:00 y «Llamar a mi mentor» 17:00 de hoy).
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-training.yaml
+- scrollUntilVisible:
+    element: ".*Llamar a mi mentor.*"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- assertVisible: ".*[Aa]cción de tus objetivos.*"
+- tapOn: ".*Llamar a mi mentor.*"
+- extendedWaitUntil:
+    visible: "Marcar como hecha"
+    timeout: 10000
+- takeScreenshot: T07a-hoja-de-la-accion
+- tapOn: "Marcar como hecha"
+- runFlow: ../comun/entregar-evidencia-de-texto.yaml
+- runFlow: ../comun/cerrar-aviso-dev.yaml
+- extendedWaitUntil:
+    visible: "Evidencia entregada.*"
+    timeout: 8000
+    optional: true   # el aviso en línea dura unos segundos: lo que se prueba es que la fila sale de la lista
+- takeScreenshot: T07b-accion-registrada
+- extendedWaitUntil:
+    notVisible: "17:00, Llamar a mi mentor.*"
+    timeout: 20000

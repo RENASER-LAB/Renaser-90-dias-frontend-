@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -12,6 +12,14 @@ import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher'
 import { abrirConversacionDirecta } from '../../chat/api/chatApi';
 import { EvidenciaDeObligacion } from '../../lider-mentores/components/EvidenciaDeObligacion';
 import { VerPublicacion } from '../../lider-mentores/components/VisorDePublicacion';
+import { obtenerRadarDePersona } from '../../lider-mentores/api/cumplimientoDelLiderApi';
+import { CodigoRenaserDelAlumno } from '../../mentor/components/CodigoRenaserDelAlumno';
+import { obtenerCierresDePersona } from '../../cierre/api/cierreApi';
+import { CierresDelDia } from '../../cierre/components/CierresDelDia';
+import type { CargarCierres } from '../../cierre/types/cierre.types';
+import { obtenerHuecosDePersona } from '../../huecos/api/huecosApi';
+import { TiempoLibreDeLaSemana } from '../../huecos/components/TiempoLibreDeLaSemana';
+import type { CargarHuecos } from '../../huecos/types/huecos.types';
 import { RejillaSemanal } from '../../mentor/components/RejillaSemanal';
 import { diaInicialDelDetalle } from '../../mentor/utils/diaInicialDelDetalle';
 import { TarjetaSemaforoDeAprendiz } from '../../semaforo/components/TarjetaSemaforoDeAprendiz';
@@ -105,6 +113,24 @@ export function FichaAprendizScreen({
 
   const detalle = semana?.dias.find(d => d.fecha === diaElegido) ?? null;
   const grupoDeSusDias = onVerSusDias ? grupoParaVerSusDias(aprendiz) : null;
+  /* Spec 012: su Código Renaser y su Mi Radar, por la lectura del liderazgo, que pide el grupo de la persona. Sin grupo
+     (o en un grupo sin mentor, que el servidor responde 404) la sección no se dibuja. */
+  const grupoDelRadar = grupoParaVerSusDias(aprendiz);
+  const cargarRadar = useMemo(
+    () => (grupoDelRadar ? (cursor?: string | null) => obtenerRadarDePersona(grupoDelRadar, aprendiz.id, cursor) : null),
+    [grupoDelRadar, aprendiz.id],
+  );
+  /* Spec 015: su tiempo libre de la semana, por la misma lectura del liderazgo y con el mismo grupo. Una función estable por
+     persona: es la llave de lo que la sección guarda mientras la ficha está abierta. */
+  const cargarHuecos = useMemo<CargarHuecos | null>(
+    () => (grupoDelRadar ? (lunes?: string | null) => obtenerHuecosDePersona(grupoDelRadar, aprendiz.id, lunes) : null),
+    [grupoDelRadar, aprendiz.id],
+  );
+  /* Spec 017: lo que dijo al cerrar cada día, por la misma lectura del liderazgo y con el mismo grupo. */
+  const cargarCierres = useMemo<CargarCierres | null>(
+    () => (grupoDelRadar ? (lunes?: string | null) => obtenerCierresDePersona(grupoDelRadar, aprendiz.id, lunes) : null),
+    [grupoDelRadar, aprendiz.id],
+  );
   const nombre = aprendiz.fullName?.trim() || 'Aprendiz sin nombre';
   /* El día que trae el servidor al abrir la ficha gana sobre el de la fila que la abrió. */
   const datosDeCabecera = lineasDeCabecera(
@@ -414,6 +440,15 @@ export function FichaAprendizScreen({
             ) : null}
           </View>
         </SeccionPlegable>
+
+        {/* Spec 012: su Código Renaser (los días 1 a 7 y los de Mi Radar), solo lectura. */}
+        <CodigoRenaserDelAlumno cargar={cargarRadar} />
+
+        {/* Spec 015: lo que le queda libre entre lo que planificó, de lunes a domingo (solo lectura). */}
+        <TiempoLibreDeLaSemana cargar={cargarHuecos} />
+
+        {/* Spec 017: lo que dijo al cerrar cada día, de lunes a domingo (solo lectura). */}
+        <CierresDelDia cargar={cargarCierres} />
 
         {/* D-243: solo ADMIN o ALQUIMISTA, nunca sobre sí mismo; sobre un ADMIN o ALQUIMISTA, solo un ADMIN. */}
         {ofrecerEliminar ? (

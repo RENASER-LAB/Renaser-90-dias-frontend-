@@ -1,0 +1,76 @@
+# T10 — El engranaje es SOLO para planificar (spec 014): «Tus prácticas» trae «Arma tu semana los domingos» y las cinco dimensiones con su
+# avance; cada una abre «Planificar» y sus hábitos (tocar uno abre su editor); NINGUNA fila registra. Al apagar un hábito propio
+# («Meditar 10 minutos») se elige «Solo hoy» o «Hasta que yo lo reactive»; con «Solo hoy» desaparece de la lista de hoy.
+# Precondición: `reset-hoy.sql` (el hábito propio «Meditar 10 minutos», 20:15, sin pausa).
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-training.yaml
+- scrollUntilVisible:
+    element: ".*Meditar 10 minutos.*"
+    direction: DOWN
+    timeout: 30000
+- tapOn: "Tus prácticas: planificar"
+- extendedWaitUntil:
+    visible: "Tus prácticas"
+    timeout: 15000
+- assertVisible: "Arma tu semana los domingos"
+- assertVisible: "Cuerpo: .* de .* cumplidos hoy"
+- assertVisible: "Mente: .* de .* cumplidos hoy"
+- assertVisible: "Emociones: .* de .* cumplidos hoy"
+- assertVisible: "Espíritu: .* de .* cumplidos hoy"
+- assertVisible: "Vida y negocio: .* de .* cumplidos hoy"
+- assertNotVisible: "Subir|Tomar foto|Escuchar|Publicar|Marcar .*"
+- takeScreenshot: T10a-engranaje
+- tapOn: "Mente: .* de .* cumplidos hoy"
+- extendedWaitUntil:
+    visible: "Planificar Mente"
+    timeout: 15000
+- assertNotVisible: "Subir|Tomar foto|Escuchar|Publicar|Marcar .*"
+- assertVisible: "Meditar 10 minutos, 20:15\\. Abrir para planificarlo\\."
+- takeScreenshot: T10b-dimension-mente
+- tapOn: "Planificar Mente"
+- extendedWaitUntil:
+    visible: "Toca uno para cambiarle la hora\\."
+    timeout: 15000
+- takeScreenshot: T10c-planificar-mente
+# Tocar un hábito abre su editor (la hora, los días, el recordatorio y «Cómo suena»).
+- tapOn: "Meditar 10 minutos, a las 20:15"
+- extendedWaitUntil:
+    visible: "Guardar .*"
+    timeout: 15000
+- takeScreenshot: T10d-editor-del-habito
+# El atrás del sistema vuelve un paso (del editor a la lista de Planificar).
+- back
+- extendedWaitUntil:
+    visible: "Toca uno para cambiarle la hora\\."
+    timeout: 15000
+# Apagarlo: «Solo hoy» o «Hasta que yo lo reactive».
+- tapOn: "Meditar 10 minutos"
+- extendedWaitUntil:
+    visible: "Hasta que yo lo reactive"
+    timeout: 15000
+- assertVisible: "Solo hoy"
+- takeScreenshot: T10e-pausar-solo-hoy-o-hasta-reactivar
+- tapOn: "Solo hoy"
+- extendedWaitUntil:
+    visible: ".*Pausado.*"
+    timeout: 15000
+- takeScreenshot: T10f-pausado
+# Cerrar todo con el atrás del sistema: la hoja de Planificar, el detalle de la dimensión y «Tus prácticas».
+- back
+- back
+- back
+- extendedWaitUntil:
+    visible: "Tus prácticas: planificar"
+    timeout: 20000
+- extendedWaitUntil:
+    visible: ".* de .* hechos · .* pts"
+    timeout: 20000
+- scrollUntilVisible:
+    element: ".* hechos? hoy"
+    direction: DOWN
+    timeout: 30000
+- assertNotVisible: ".*Meditar 10 minutos.*"
+- takeScreenshot: T10g-meditar-ya-no-esta-en-hoy

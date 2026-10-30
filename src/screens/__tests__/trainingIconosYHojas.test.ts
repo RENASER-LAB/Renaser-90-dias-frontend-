@@ -28,12 +28,17 @@ const CLASE = sinComentarios(leer('features/academy/components/ClaseDiariaModal.
 const PASTILLA = sinComentarios(leer('features/spirit/components/PastillaRenacerModal.tsx'));
 const ELEGIR = sinComentarios(leer('features/habits/components/ElegirHabitoParaFotoModal.tsx'));
 const ICONOS = leer('components/Icon.tsx');
+// Spec 014 (Training por hora): lo que antes dibujaba la pantalla ahora lo dibujan estas piezas.
+const PRACTICAS = sinComentarios(leer('features/training/components/PracticasDeTraining.tsx'));
+const TRAINING_POR_HORA = sinComentarios(leer('features/training/components/TrainingPorHora.tsx'));
+const FILA = sinComentarios(leer('features/training/components/FilaDelDia.tsx'));
+const HOJA = sinComentarios(leer('features/training/components/HojaDelHabito.tsx'));
 
 const EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{25B0}-\u{25FF}\u{2298}]/u;
 
 describe('Training: sin emojis ni glifos de texto haciendo de ícono', () => {
   it('ni en la pantalla ni en sus hojas', () => {
-    for (const [nombre, codigo] of Object.entries({ TRAINING, PROXIMO, PLANIFICAR, EVIDENCIA, RENOMBRAR, CLASE, PASTILLA, ELEGIR })) {
+    for (const [nombre, codigo] of Object.entries({ TRAINING, PROXIMO, PLANIFICAR, EVIDENCIA, RENOMBRAR, CLASE, PASTILLA, ELEGIR, PRACTICAS, TRAINING_POR_HORA, FILA, HOJA })) {
       const conEmoji = codigo.split('\n').filter(l => EMOJI.test(l));
       expect({ nombre, conEmoji }).toEqual({ nombre, conEmoji: [] });
     }
@@ -48,7 +53,7 @@ describe('Training: sin emojis ni glifos de texto haciendo de ícono', () => {
     for (const icono of ['spark', 'sparkles', 'heart', 'brain', 'body', 'activity', 'briefcase']) {
       expect({ icono, veces: (TRAINING.match(new RegExp(`['"]${icono}['"]`, 'g')) ?? []).length }).toEqual({ icono, veces: 0 });
     }
-    expect(TRAINING).toMatch(/<Icon name="pencil"/);
+    expect(PRACTICAS).toMatch(/<Icon name="pencil"/);
   });
 
   it('los íconos nuevos están en su bloque «Training» de Icon.tsx y en una línea propia del tipo', () => {
@@ -78,9 +83,13 @@ describe('Training: tipo oración y respuesta al tacto', () => {
     expect(CLASE).not.toMatch(/CLASE DIARIA|ENVIAR Y COMPLETAR|CLASE COMPLETADA/);
   });
 
-  it('dimensiones, hábitos, ✓ y el botón de la derecha se hunden al tocarlos; marcar vibra', () => {
-    expect(TRAINING).not.toMatch(/<Pressable\b/);
-    expect(TRAINING).toMatch(/if \(!habit\.done\) tacto\.seleccion\(\);\s*toggleHabitState\(habit\.id\)/);
+  it('dimensiones, filas, ✓ y el botón de la derecha se hunden al tocarlos; marcar vibra', () => {
+    for (const codigo of [TRAINING, PRACTICAS, TRAINING_POR_HORA, FILA, HOJA]) expect(codigo).not.toMatch(/<Pressable\b/);
+    // El ✓ de la fila: el mismo «tic» y la misma casilla de siempre, y marca sin abrir nada.
+    expect(FILA).toMatch(/if \(!hecha\) tacto\.seleccion\(\);\s*onMarcar\?\.\(item\)/);
+    expect(FILA).toContain('<Presionable');
+    expect(PRACTICAS).toContain('<Presionable');
+    expect(TRAINING).toMatch(/onMarcar=\{habit => toggleHabitState\(habit\.id\)\}/);
     expect(PLANIFICAR).not.toMatch(/<Pressable\b/);
     expect(PROXIMO).toContain('<Presionable');
   });
@@ -90,20 +99,24 @@ describe('Training: avisos y hábitos cumplidos', () => {
   it('los avisos de éxito son una línea que se va sola, con el háptico de logro', () => {
     expect(TRAINING).not.toMatch(/Sellada|Pastilla Renaser registrada 🦅|Alert\.alert\(\s*'Ya está cumplido'/);
     expect(TRAINING).toMatch(/const confirmar = \(texto: string, habitoId: string \| null\) => \{\s*tacto\.logro\(\);/);
-    expect(TRAINING).toContain('<ConfirmacionEnLinea');
+    expect(TRAINING_POR_HORA).toContain('<ConfirmacionEnLinea');
+    expect(PRACTICAS).toContain('<ConfirmacionEnLinea');
     expect(PLANIFICAR).not.toMatch(/Alert\.alert\(\s*'Horario guardado'|Alert\.alert\('Hábito creado'|Alert\.alert\('Listo', mensaje\)/);
     expect(PLANIFICAR).toContain('<ConfirmacionEnLinea');
   });
 
-  it('tocar uno cumplido lo despliega en la tarjeta, sin diálogo', () => {
+  it('tocar uno cumplido muestra lo que se registró en su hoja, sin diálogo', () => {
     expect(TRAINING).not.toContain("'Ya está cumplido'");
-    expect(TRAINING).toMatch(/alternarCumplido\(habit\.id\)/);
-    expect(TRAINING).toContain('detalleDelCumplido(habit)');
+    expect(HOJA).toContain('lineaDelCumplido(item.cumplido)');
+    expect(HOJA).toMatch(/«\{item\.cumplido\.escrito\}»/);
   });
 
-  it('«Guías y audios» no se dibuja mientras no tenga contenido', () => {
-    expect(TRAINING).toMatch(/const GUIAS_DE_LA_DIMENSION = 0;/);
-    expect(TRAINING).toMatch(/secciones\.length > 1 && \(\s*<ControlSegmentado/);
+  it('«Guías y audios» no se dibuja: no tiene contenido y la guía de cada hábito vive en su hoja', () => {
+    for (const codigo of [TRAINING, PRACTICAS, TRAINING_POR_HORA]) {
+      expect(codigo).not.toContain('Guías y audios');
+      expect(codigo).not.toContain('ControlSegmentado');
+    }
+    expect(HOJA).toContain('Guía de esta práctica');
   });
 });
 

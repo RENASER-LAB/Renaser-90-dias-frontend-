@@ -15,10 +15,12 @@
  *  3. **Para todas las cuentas, sin excluir ningún rol.** La única diferencia es la salida:
  *     el aprendiz lo tiene que llenar sí o sí (pantalla completa, sin cerrar, el retroceso no lo
  *     descarta); el resto del staff lo ve igual pero lo puede cerrar. Ver `rolesObligados`.
- *  4. **Se apaga el día 8 y no vuelve.** Es el mismo corte que saca a la persona del grupo de
+ *  4. **Se apaga el día 8.** Es el mismo corte que saca a la persona del grupo de
  *     bienvenida (`PoliticaMentoria.DIA_TRASLADO_POR_DEFECTO = 8` en el backend): la etapa de
  *     recepción y el Código Renaser terminan juntos, a propósito, y por eso el número está
  *     escrito una sola vez en cada lado y no repartido por la pantalla.
+ *     *(Desde el 2026-10-29, spec 012: «no vuelve» dejó de ser cierto. Desde el día 8 la persona
+ *     puede encenderlo por su cuenta en Yo → Mi Radar; ver `MI_RADAR`, más abajo.)*
  *
  * ## La regla que NO es una perilla: no hay cola de atrasados
  *
@@ -98,6 +100,39 @@ export const CONFIG_RADAR: ConfigRadar = {
   rolesObligados: ['TRAINEE', 'APRENDIZ'],
   abrirAutomaticamente: true,
   minutosDeCortesia: 2,
+};
+
+/**
+ * Mi Radar (spec 012, pedido del dueño del 2026-10-29): el mismo Código Renaser, **desde el día 8 y encendido por
+ * la persona** en Yo → Mi Radar. Las perillas van acá, igual que las de la semana 1, y las reglas de las horas son
+ * las que el servidor vuelve a validar (`MiRadar` del backend): cambiar un número acá sin cambiarlo allá solo
+ * consigue que el servidor rechace lo que la app deja elegir.
+ */
+export interface ConfigMiRadar {
+  /** Primer día de programa en que se puede encender: el siguiente al último de la semana 1. */
+  primerDia: number;
+  /** Primera hora en punto que se puede elegir (03:00). Nada de madrugada. */
+  primeraHora: number;
+  /** Última hora en punto que se puede elegir (23:00). Nada después de la medianoche. */
+  ultimaHora: number;
+  /** Cuántas horas al día se pueden elegir: para todos los días y para cada día que tenga las suyas. */
+  maximoDeHoras: number;
+  /** Las que vienen marcadas al encenderlo por primera vez. */
+  horasSugeridas: readonly number[];
+  /** Desde cuántos registros aparecen los patrones. Con menos no se muestra ninguno. */
+  minimoParaPatrones: number;
+  /** Cuántos registros necesita una hora para que su energía promedio cuente en los patrones. */
+  minimoPorHora: number;
+}
+
+export const MI_RADAR: ConfigMiRadar = {
+  primerDia: CONFIG_RADAR.ultimoDia + 1,
+  primeraHora: 3,
+  ultimaHora: 23,
+  maximoDeHoras: 12,
+  horasSugeridas: [9, 14, 20],
+  minimoParaPatrones: 3,
+  minimoPorHora: 2,
 };
 
 /** Las cinco preguntas, con el campo del contrato HTTP que cada una llena. */

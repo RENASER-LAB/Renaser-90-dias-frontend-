@@ -1,0 +1,38 @@
+# T01 — Training por hora (spec 014): la lista de hoy ordenada por la hora planificada. Se ve el día, el resumen, la semana,
+# «Te toca ahora» o «Lo que sigue» en el primero, «Sin hora», lo atrasado al final en «Se te pasó la hora», lo hecho plegado en «N hechos hoy»,
+# sin los eventos que ya terminaron y SIN las cinco dimensiones afuera.
+# Precondición: `reset-hoy.sql` (AGUA TIBIA hecha; el resto pendiente; evento «Sesión en vivo E2E (ya terminó)» de las 09:00).
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-training.yaml
+- assertVisible: "Jueves 29|.* [0-9]+"
+- assertVisible: "L|M|J|V|S|D"
+- assertVisible: ".*(Te toca ahora|Lo que sigue).*"
+- assertNotVisible: "Cuerpo: .* cumplidos hoy"
+- assertNotVisible: "Mente: .* cumplidos hoy"
+- assertNotVisible: ".*Prácticas activas.*"
+- assertNotVisible: ".*Sesión en vivo E2E \\(ya terminó\\).*"
+- takeScreenshot: T01a-lista-arriba
+- scrollUntilVisible:
+    element: "Sin hora"
+    direction: DOWN
+    timeout: 30000
+- scrollUntilVisible:
+    element: "Se te pasó la hora · todavía puedes cumplir tu compromiso"
+    direction: DOWN
+    timeout: 30000
+- takeScreenshot: T01b-sin-hora-y-se-te-paso
+- scrollUntilVisible:
+    element: ".* hechos? hoy"
+    direction: DOWN
+    timeout: 30000
+- assertNotVisible: ".*Sesión en vivo E2E \\(ya terminó\\).*"
+- takeScreenshot: T01c-hechos-plegado
+- tapOn: ".* hechos? hoy"
+- scrollUntilVisible:
+    element: "06:00, AGUA TIBIA CON LIMÓN.*"
+    direction: DOWN
+    timeout: 20000
+- takeScreenshot: T01d-hechos-desplegado

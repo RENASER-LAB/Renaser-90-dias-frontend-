@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { ConfirmacionEnLinea } from '../../../components/ConfirmacionEnLinea';
@@ -6,12 +6,21 @@ import { BotonPrincipal, BotonSecundario } from '../../../components/Legible';
 import { AvatarPersona } from '../../../components/ui';
 import { useTheme } from '../../../theme/ThemeContext';
 import { tacto } from '../../../utils/tacto';
+import { CodigoRenaserDelAlumno } from '../../mentor/components/CodigoRenaserDelAlumno';
 import { diaInicialDelDetalle } from '../../mentor/utils/diaInicialDelDetalle';
 import { CargandoLectura, FalloDeLectura } from '../../semaforo/components/EstadoDeLectura';
 import { EtiquetaSemaforo } from '../../semaforo/components/EtiquetaSemaforo';
 import { PALABRA_NO_SE_MIDE, palabraParaQuienAcompana, rolEnPalabras } from '../../semaforo/utils/ayudaDelSemaforo';
 import { formatearPorcentaje } from '../../semaforo/utils/lecturaDelSemaforo';
+import { obtenerCierresDePersona } from '../../cierre/api/cierreApi';
+import { CierresDelDia } from '../../cierre/components/CierresDelDia';
+import type { CargarCierres } from '../../cierre/types/cierre.types';
+import { obtenerHuecosDePersona } from '../../huecos/api/huecosApi';
+import { TiempoLibreDeLaSemana } from '../../huecos/components/TiempoLibreDeLaSemana';
+import type { CargarHuecos } from '../../huecos/types/huecos.types';
+import { obtenerRadarDePersona } from '../api/cumplimientoDelLiderApi';
 import { DiaDeLaPersona } from '../components/DiaDeLaPersona';
+import { RespuestasDeLaPersona } from '../components/RespuestasDeLaPersona';
 import { Linea, MarcoDelLider } from '../components/MarcoDelLider';
 import { NavegacionDeSemanas } from '../../semaforo/components/NavegacionDeSemanas';
 import type { InicioSemanal } from '../../semaforo/hooks/useLecturaPorSemana';
@@ -49,6 +58,11 @@ import { ObservarScreen } from './ObservarScreen';
  *
  * Un único scroll (`MarcoDelLider`); el retroceso del sistema vuelve a la lista del grupo.
  *
+ * **Spec 018: arriba, dos respuestas.** Lo primero que se ve al tocar a una persona es «¿Programó?» (Sí o No, con sus hábitos
+ * con hora y sus acciones agendadas de hoy) y «¿Subió evidencias?» (de los hábitos de estos 7 días que la piden), en dos
+ * tarjetas iguales (`RespuestasDeLaPersona`); el detalle de los días va debajo, igual que antes. Y menos texto: se quitaron
+ * los párrafos que repetían lo que ya se ve (qué hace «Avisar a su mentor», por qué no hay días del mentor).
+ *
  * **Administración y Alquimista la usan igual** (2026-10-27): el servidor les da la misma lectura que al líder. Con las
  * dos props opcionales que siguen cambia solo lo que dice la pantalla; sin ellas es exactamente la del líder.
  */
@@ -82,6 +96,22 @@ export function PersonaDelLiderScreen({
 }) {
   const lectura = useSemanaDePersona(grupoId, personaId, inicio);
   const datos = lectura.datos;
+  /* Spec 012: su Código Renaser y su Mi Radar (solo lectura). Se pide una vez por persona, no al cambiar de semana. */
+  const cargarRadar = useMemo(
+    () => (cursor?: string | null) => obtenerRadarDePersona(grupoId, personaId, cursor),
+    [grupoId, personaId],
+  );
+  /* Spec 015: su tiempo libre de la semana. Una sola vez por persona (la sección tiene su propia semana y guarda lo que
+     lee), no al cambiar de semana de arriba. */
+  const cargarHuecos = useMemo<CargarHuecos>(
+    () => (lunes?: string | null) => obtenerHuecosDePersona(grupoId, personaId, lunes),
+    [grupoId, personaId],
+  );
+  /* Spec 017: lo que dijo al cerrar cada día. También una sola vez por persona. */
+  const cargarCierres = useMemo<CargarCierres>(
+    () => (lunes?: string | null) => obtenerCierresDePersona(grupoId, personaId, lunes),
+    [grupoId, personaId],
+  );
 
   /* El día abierto se guarda junto con la semana a la que pertenece: al cambiar de semana vuelve solo al día
      más reciente con hábitos, sin un efecto que corra un render tarde. */
@@ -131,6 +161,8 @@ export function PersonaDelLiderScreen({
         datos={datos}
       />
 
+      {datos ? <RespuestasDeLaPersona datos={datos} /> : null}
+
       <NavegacionDeSemanas lectura={lectura} />
 
       <CuerpoDeLaSemana
@@ -140,6 +172,10 @@ export function PersonaDelLiderScreen({
         alAlternarDia={alternarDia}
         avisoSiNoSeAbre={avisoSiNoSeAbre}
       />
+
+      <CodigoRenaserDelAlumno cargar={cargarRadar} />
+      <TiempoLibreDeLaSemana cargar={cargarHuecos} />
+      <CierresDelDia cargar={cargarCierres} />
 
       <View style={estilos.acciones}>
         <BotonPrincipal
@@ -158,7 +194,6 @@ export function PersonaDelLiderScreen({
               deshabilitado={!datos}
               accessibilityLabel={`Avisar a su mentor sobre ${nombreVisible}`}
             />
-            <Linea>{`Le deja a ${mentor.nombre?.trim() || 'su mentor'} una observación sobre ${nombreVisible} y los días que estás viendo.`}</Linea>
           </>
         ) : null}
         {alAbrirFicha ? (
@@ -247,13 +282,9 @@ function CuerpoDeLaSemana({
 }) {
   const datos = lectura.datos;
   if (datos) {
-    return datos.dias.length === 0 ? (
-      <Linea>
-        {datos.noSeMide
-          ? `${nombre} lleva su propio programa y no se mide en el semáforo: no hay días que mostrar.`
-          : 'No hay nada que mostrar de estos días.'}
-      </Linea>
-    ) : (
+    /* Quien no se mide ya lo dice su encabezado («Mentor · No se mide en el semáforo»): no se repite en un renglón más. */
+    if (datos.dias.length === 0) return datos.noSeMide ? null : <Linea>No hay nada que mostrar de estos días.</Linea>;
+    return (
       <View style={{ gap: 10 }}>
         {datos.dias.map(dia => (
           <DiaDeLaPersona key={dia.fecha} dia={dia} abierto={diaAbierto === dia.fecha} alAlternar={() => alAlternarDia(dia.fecha)} />
