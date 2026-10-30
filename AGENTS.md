@@ -326,9 +326,11 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     pedido sobre la vista previa: «así bro, pero más centrado, para que sea CX/UX» —Hoy, opción A «Lado a lado»— y «el de acá,
     el B, creo que me agrada más; procede y la spec» —Plan, opción B «Por eje»—). Lo que cambia y nada más:
     * **Hoy — «Hábitos de hoy» y el Radar en una tarjeta** (`features/home/components/TarjetaHabitoYRadar`, en el lugar de la
-      tarjeta de hábitos, después del Mapa): dos mitades **iguales y centradas** —ícono, rótulo con su chevron, una línea de
-      estado, título y detalle, al centro a lo ancho y a lo alto; la fila las estira a la más alta— con una línea fina entre
-      las dos. Con la letra grande del sistema (`fontScale` > 1,15) pasan una debajo de la otra y nada se corta. Mitades de 48
+      tarjeta de hábitos, después del Mapa): dos mitades **iguales** —ícono con el rótulo y su chevron, una línea de estado,
+      título y detalle; la fila las estira a la más alta— con una línea fina entre las dos.
+      > **Corregido 2026-10-29 (el dueño, sobre la captura: «esto alineado como estaba antes, que se vea mejor»).** Decía «al
+      > centro a lo ancho y a lo alto». Ahora el contenido de las dos mitades va a la izquierda y arriba, como la tarjeta
+      > «Hábitos de hoy» de antes: los renglones de una mitad quedan a la altura de los de la otra. Con la letra grande del sistema (`fontScale` > 1,15) pasan una debajo de la otra y nada se corta. Mitades de 48
       o más. Responden al dedo con el fondo lavado de oro, **no** con la escala de `Presionable` (una mitad que se hundiera
       dentro de una tarjeta de bordes comunes se vería rota); **sin movimiento propio** (es lo más visto de Hoy y lo que cambia
       tiene que leerse en el acto). Izquierda: la de siempre (cifra, hábito de esta hora, lo que queda) → Training. **Se borró

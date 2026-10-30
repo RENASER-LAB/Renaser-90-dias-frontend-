@@ -4,7 +4,7 @@ import { StyleSheet } from 'react-native';
 import TestRenderer, { act, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
 
 /**
- * «Hábitos de hoy» y el Radar en una tarjeta (spec 016, opción A): dos mitades iguales y centradas, la de hábitos lleva a
+ * «Hábitos de hoy» y el Radar en una tarjeta (spec 016, opción A): dos mitades iguales, alineadas a la izquierda (29/10), la de hábitos lleva a
  * Training y la del Radar hace lo de cada caso de la spec (formulario, lo respondido, «Tu Radar de hoy», Yo → Mi Radar). Con la
  * letra grande se apilan. Sin Radar queda solo la de hábitos. La lectura (`useRadarEnHoy`) se reemplaza: lo que decide cada
  * caso se prueba en `mitadDelRadar.test.ts`.
@@ -134,15 +134,16 @@ describe('las dos mitades', () => {
     expect(onAbrirTraining).toHaveBeenCalledTimes(1);
   });
 
-  it('miden lo mismo (reparto parejo del ancho) y su contenido va centrado', () => {
+  it('miden lo mismo (reparto parejo del ancho) y su contenido va a la izquierda y arriba, como antes (dueño, 29/10)', () => {
     mockRadar.actual = crearRadar();
     montar();
     for (const b of botones()) {
       const e = StyleSheet.flatten(b.props.style({ pressed: false }));
-      expect(e).toMatchObject({ flex: 1, alignItems: 'center', justifyContent: 'center' });
+      expect(e).toMatchObject({ flex: 1, alignItems: 'stretch', justifyContent: 'flex-start' });
     }
-    const centrados = raiz!.root.findAll(x => (x.type as unknown) === 'Text' && StyleSheet.flatten(x.props.style)?.textAlign === 'center');
-    expect(centrados.length).toBeGreaterThanOrEqual(6);
+    const textos = raiz!.root.findAll(x => (x.type as unknown) === 'Text' && StyleSheet.flatten(x.props.style)?.textAlign != null);
+    expect(textos.length).toBeGreaterThanOrEqual(6);
+    expect(textos.every(x => StyleSheet.flatten(x.props.style)?.textAlign === 'left')).toBe(true);
     expect(raiz!.root.findAll(x => StyleSheet.flatten(x.props.style)?.flexDirection === 'row' && x.props.accessibilityRole === undefined).length).toBeGreaterThan(0);
   });
 

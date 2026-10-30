@@ -24,7 +24,11 @@ import { horaEnPunto, type SlotRadar } from '../../radar/utils/slotsDelRadar';
  *    ancho: no hay una mitad vacía ni un «cargando».
  *  - **Letra grande** (`fontScale` > 1,15): las mitades pasan una debajo de la otra y nada se corta.
  *
- * Las dos mitades miden lo mismo (la fila las estira a la más alta) y su contenido va centrado, a lo ancho y a lo alto.
+ * Las dos mitades miden lo mismo (la fila las estira a la más alta) y su contenido va **alineado a la izquierda y arriba**, como
+ * la tarjeta «Hábitos de hoy» de antes. > Corregido 2026-10-29 (el dueño, sobre la captura de la mitad de hábitos: «esto alineado
+ * como estaba antes, que se vea mejor»). Iba centrado a lo ancho y a lo alto: con títulos de largo distinto, cada renglón de una
+ * mitad quedaba a otra altura que el de la otra, y un título en mayúsculas de tres renglones se leía en zigzag. Alineado a la
+ * izquierda y arriba, rótulo con rótulo, estado con estado y título con título quedan a la misma altura, y se lee de un tirón.
  *
  * **Movimiento** (`emil-design-eng`, `animate-expo`): ninguno. Es lo más visto de Hoy y lo que cambia (la hora, «Registrado») tiene
  * que leerse en el acto. El toque responde con el fondo lavado de oro (no con la escala de `Presionable`: una mitad que se
@@ -187,7 +191,7 @@ export function TarjetaHabitoYRadar({
   );
 }
 
-/** Una mitad: el ícono, el rótulo (con el chevron si se toca), una línea de estado, el título y el detalle, todo al centro. */
+/** Una mitad: el ícono con el rótulo (y el chevron si se toca), una línea de estado, el título y el detalle, a la izquierda. */
 function Mitad({
   apilada,
   icono,
@@ -215,22 +219,22 @@ function Mitad({
   const colorDelEstado = tono === 'ok' ? c.success : tono === 'suave' ? c.textSoft : c.goldInk;
   const contenido = (
     <>
-      <Icon name={icono} size={TAMANO_ICONO.normal} color={tono === 'ok' ? c.success : c.goldInk} />
       <View style={estilos.rotulo}>
+        <Icon name={icono} size={TAMANO_ICONO.normal} color={tono === 'ok' ? c.success : c.goldInk} />
         <View style={{ flexShrink: 1 }}>
           <MicroLabel>{etiqueta}</MicroLabel>
         </View>
         {onPress ? <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.chevron} /> : null}
       </View>
       {estado ? (
-        <Text style={[t.small, estilos.centrado, estilos.cifras, { color: colorDelEstado, fontFamily: 'Jost_700Bold' }]}>{estado}</Text>
+        <Text style={[t.small, estilos.texto, estilos.cifras, { color: colorDelEstado, fontFamily: 'Jost_700Bold' }]}>{estado}</Text>
       ) : null}
       {titulo ? (
-        <Text style={[t.cardTitle, estilos.centrado, { color: c.text, lineHeight: 21 }]} numberOfLines={3}>
+        <Text style={[t.cardTitle, estilos.texto, { color: c.text, lineHeight: 21 }]} numberOfLines={3}>
           {titulo}
         </Text>
       ) : null}
-      <Text style={[t.small, estilos.centrado, { color: c.textSoft }]}>{detalle}</Text>
+      <Text style={[t.small, estilos.texto, { color: c.textSoft }]}>{detalle}</Text>
     </>
   );
   const base = [estilos.mitad, apilada ? null : estilos.mitadEnFila];
@@ -255,15 +259,16 @@ function Mitad({
 
 const estilos = StyleSheet.create({
   tarjeta: { borderWidth: 1, borderRadius: 16, overflow: 'hidden' },
-  /* 48 de alto como mínimo; el contenido va al centro, a lo ancho y a lo alto, y la fila estira las dos mitades a la más alta. */
-  mitad: { minHeight: 48, paddingVertical: 18, paddingHorizontal: 12, alignItems: 'center', justifyContent: 'center', gap: 6 },
+  /* 48 de alto como mínimo; el contenido va a la izquierda y arriba (renglones parejos entre mitades), y la fila estira las dos
+     mitades a la más alta. 16 a los lados, como el `Card` de las demás tarjetas de Hoy. */
+  mitad: { minHeight: 48, paddingVertical: 16, paddingHorizontal: 16, alignItems: 'stretch', justifyContent: 'flex-start', gap: 6 },
   /* Reparto parejo del ancho solo en fila: apiladas, un `flex: 1` en una columna sin alto fijo colapsa la mitad. */
   mitadEnFila: { flex: 1 },
   divisorVertical: { width: 1 },
   divisorHorizontal: { height: 1 },
-  rotulo: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, maxWidth: '100%' },
+  rotulo: { flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: '100%' },
   /* Un padding mínimo en todo texto: el reciclado de vistas de Android con Fabric arrastra el de otro (E-419, `Legible`). */
-  centrado: { textAlign: 'center', alignSelf: 'stretch', paddingHorizontal: 1 },
+  texto: { textAlign: 'left', alignSelf: 'stretch', paddingHorizontal: 1 },
   /** Cifras que cambian en pantalla: ancho de dígito fijo (AGENTS.md §4). */
   cifras: { fontVariant: ['tabular-nums'] },
 });
