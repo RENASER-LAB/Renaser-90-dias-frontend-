@@ -4,7 +4,6 @@ import type { MarcaDelPrimero } from './listaDelDia';
 import { TEXTO_DE_LA_MARCA } from './listaDelDia';
 import type { ItemDelDia } from './itemsDelDia';
 import { CLAVES_CON_FLUJO_PROPIO } from './registroConFotoEnTraining';
-import { AVISO_DE_HORA_PASADA } from './tarjetaDelHabito';
 
 /**
  * Qué hace cada fila de Training y qué dice (spec 014). Lógica pura: no registra nada, solo decide a dónde lleva
@@ -159,12 +158,10 @@ export function subtituloDeLaFila(
   const textoDeLaMarca = marca ? TEXTO_DE_LA_MARCA[marca] : null;
   // Pedido del dueño (2026-10-29, dos veces): la fila es solo el nombre, sin «Cuerpo · 8 pts», «Acción de tus
   // objetivos», «Evento · Zoom» ni «Te toca ahora» a la vista; eso va en la hoja o en lo que oye el lector de pantalla.
-  // Lo único que se escribe es lo atrasado (hábito o acción): la invitación a cumplir, sin hablar de puntos. Antes salía
-  // solo cuando el hábito ya pagaba menos, y en la misma sección unos lo decían y otros no (E2E del 29/10).
+  // Lo atrasado tampoco repite nada: el encabezado de su sección ya dice «Se te pasó la hora · todavía puedes cumplir tu
+  // compromiso» una vez, y la hoja lo vuelve a decir al abrirlo. Repetido en cada fila era ruido (E2E del 29/10). El
+  // lector de pantalla lo oye en cada fila (`etiquetaDeLaFila`).
   void ahoraMs;
-  if (modo === 'atrasado' && item.tipo !== 'evento') {
-    return { marca: textoDeLaMarca, texto: AVISO_DE_HORA_PASADA, tonoDeAviso: false };
-  }
   return { marca: textoDeLaMarca, texto: '', tonoDeAviso: false };
 }
 

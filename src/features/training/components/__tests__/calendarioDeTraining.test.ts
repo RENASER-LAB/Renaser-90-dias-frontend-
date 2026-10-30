@@ -358,6 +358,9 @@ describe('caso 5 · el reloj del teléfono no manda', () => {
     // «Te toca ahora» ya no se escribe en la fila (pedido del dueño, 29/10): lo oye el lector de pantalla.
     const etiquetas = raiz!.root.findAll(n => typeof n.props.accessibilityLabel === 'string').map(n => n.props.accessibilityLabel as string);
     expect(etiquetas.some(e => e.includes('Te toca ahora'))).toBe(true);
+    // Lo atrasado: la sección lo dice una vez a la vista y cada fila lo dice al lector (29/10).
+    expect(etiquetas.some(e => e.includes('Hábito temprano') && e.includes('todavía puedes cumplir tu compromiso hoy'))).toBe(true);
+    expect(textos()).not.toContain('Todavía puedes cumplir tu compromiso hoy');
     expect(textos()).not.toContain('Te toca ahora');
     expect(textos()).toContain('Se te pasó la hora');
   });
