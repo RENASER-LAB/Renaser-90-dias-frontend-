@@ -166,12 +166,17 @@ describe('el Código Renaser de una persona (spec 012)', () => {
         },
       ],
       nextCursor: null,
-      miRadar: { encendido: true, horas: [9, 14, 20] },
+      miRadar: {
+        encendido: true,
+        hoy: '2026-10-29',
+        dias: [{ dia: 4, fecha: '2026-10-29', modo: 'AUTOMATICO', veces: 17, maximo: 17, sinRadar: false, editable: false, despertar: '05:30', dormir: '22:30', horas: [6, 7, 8], motivo: null }],
+      },
     });
     const pagina = await obtenerRadarDePersona('g1', 'p1');
     expect(mockApiFetch).toHaveBeenCalledWith('/api/v1/leadership/groups/g1/people/p1/radar', undefined);
     expect(pagina.entries[0].horaPrevista).toBe(14);
-    expect(pagina.miRadar).toEqual({ encendido: true, horas: [9, 14, 20], dias: [] });
+    expect(pagina.miRadar?.encendido).toBe(true);
+    expect(pagina.miRadar?.dias[0]).toMatchObject({ dia: 4, despertar: '05:30', dormir: '22:30', veces: 17 });
     expect(pagina.nextCursor).toBeNull();
   });
 

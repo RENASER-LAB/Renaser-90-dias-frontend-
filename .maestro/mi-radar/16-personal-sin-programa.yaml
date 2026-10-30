@@ -1,0 +1,34 @@
+# 16 — El personal sin programa activado ve la fila «Mi Radar» en Yo con «Primero elige tu Día 1»; al tocarla, el motivo y el botón
+# «Elegir mi Día 1»; al elegir, la pantalla vuelve a leer y dice cuándo empieza (spec 019, escenario 16).
+# cuenta: líder (e2e-radar-lider) SIN fila en el programa. Elegir el Día 1 crea la fila: borrarla para repetir el flujo.
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Primero elige tu Día 1"
+    direction: DOWN
+- assertVisible: "Mi Radar"
+- takeScreenshot: 16a-yo-fila-sin-programa
+- tapOn: "Primero elige tu Día 1"
+# El motivo en una línea y el botón; ni interruptor ni nada de Mi Radar.
+- extendedWaitUntil:
+    visible: "Mi Radar empieza en tu día 8\\. Primero elige tu Día 1\\."
+    timeout: 20000
+- assertVisible: "Elegir mi Día 1"
+- assertNotVisible: "Encendido"
+- assertNotVisible: "Cargando Mi Radar…"
+- takeScreenshot: 16b-motivo-y-boton
+- tapOn: "Elegir mi Día 1"
+- extendedWaitUntil:
+    visible: "Elige tu Día 1"
+    timeout: 20000
+- takeScreenshot: 16c-selector-del-dia-1
+- tapOn: "CONFIRMAR MI DÍA 1"
+# Al volver, vuelve a leer: ya no es «sin programa» y dice cuándo empieza.
+- extendedWaitUntil:
+    visible: "Mi Radar empieza en tu día 8.*"
+    timeout: 40000
+- assertNotVisible: "Primero elige tu Día 1"
+- assertNotVisible: "Elegir mi Día 1"
+- takeScreenshot: 16d-empieza-el-dia-8

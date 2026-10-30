@@ -30,7 +30,7 @@ describe('la fila «Mi Radar» de Yo', () => {
   it('solo desde el día 8 y solo si el servidor respondió: ni fila ni pantalla antes', () => {
     expect(yo).toMatch(/const veMiRadar = miRadarCorresponde\(resumen\?\.diaPrograma\) && configMiRadar !== null;/);
     expect(yo).toMatch(/\{veMiRadar && configMiRadar \? \(\s*<FilaDeAjuste\s+key="mi-radar"/);
-    expect(yo).toMatch(/if \(enMiRadar && veMiRadar\) \{\s*return <MiRadarScreen/);
+    expect(yo).toMatch(/if \(enMiRadar && veMiRadar\) \{\s*return \(?\s*<MiRadarScreen/);
   });
 
   it('dice su estado en una línea', () => {
@@ -51,6 +51,6 @@ describe('la fila «Mi Radar» de Yo', () => {
     expect(yo).toMatch(/setParams\(\{ abrirMiRadar: undefined \}\)/);
     // Tocar la fila a mano no abre el formulario; venir de un aviso sí (si toca).
     expect(yo).toMatch(/setMiRadarPorAviso\(false\);\s*setEnMiRadar\(true\);/);
-    expect(yo).toMatch(/<MiRadarScreen abrirDesdeAviso=\{miRadarPorAviso\}/);
+    expect(yo).toMatch(/<MiRadarScreen\s+abrirDesdeAviso=\{miRadarPorAviso\}/);
   });
 });

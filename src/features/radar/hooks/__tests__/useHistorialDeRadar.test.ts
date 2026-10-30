@@ -1,3 +1,4 @@
+import { miRadarConHoras } from '../../__tests__/fixturasDeMiRadar';
 import { describe, expect, it, jest } from '@jest/globals';
 import React from 'react';
 import TestRenderer, { act, type ReactTestRenderer } from 'react-test-renderer';
@@ -48,7 +49,7 @@ describe('useHistorialDeRadar', () => {
     const cargar = jest.fn<CargarHistorialDeRadar>(async () => ({
       entries: [registro('a', 20), registro('b', 19)],
       nextCursor: 'c1',
-      miRadar: { encendido: true, horas: [9, 14] },
+      miRadar: miRadarConHoras([9, 14]),
     }));
     const { visto, desmontar } = montar(cargar);
     expect(visto.actual.cargando).toBe(true);
@@ -56,7 +57,7 @@ describe('useHistorialDeRadar', () => {
     expect(visto.actual.cargando).toBe(false);
     expect(visto.actual.registros.map(r => r.id)).toEqual(['a', 'b']);
     expect(visto.actual.dias.map(d => d.fecha)).toEqual(['2026-10-20', '2026-10-19']);
-    expect(visto.actual.miRadar).toEqual({ encendido: true, horas: [9, 14] });
+    expect(visto.actual.miRadar).toEqual(miRadarConHoras([9, 14]));
     expect(visto.actual.hayMas).toBe(true);
     desmontar();
   });

@@ -12,7 +12,7 @@
  * | Días 1 a 7, hora registrada | … · Registrado | `resumen`: lo respondido y cuándo es el siguiente |
  * | Día 8 o más, Mi Radar apagado | Planifica tu Radar | `yo`: Yo → Mi Radar |
  * | Encendido, una hora elegida pendiente | Tu hora | `formulario`, que se puede cerrar |
- * | Encendido, sin hora pendiente ahora | Próxima a las HH:00 | `horas`: «Tu Radar de hoy» |
+ * | Encendido, sin hora pendiente ahora | Próxima a las HH:00 · 05:30 a 22:30 · 17 veces | `horas`: «Tu Radar de hoy» |
  * | Encendido, hoy sin Radar | Hoy no tienes Mi Radar | `yo` |
  * | Sin Día 1, backend sin Mi Radar, o aún sin saber | nada (`null`) | — |
  *
@@ -27,8 +27,16 @@ import type { IconName } from '../../../components/Icon';
 import { horaLocalDelRegistro } from '../../mentor/utils/agruparRegistrosRadar';
 import { CONFIG_RADAR } from '../config/configRadar';
 import type { LecturaDeMiRadar } from '../hooks/useConfigDeMiRadar';
-import type { RegistroRadarApi } from '../types/radar.types';
-import { HOY_SIN_RADAR, mismoDia, miRadarCorresponde, resumenDeMiRadarHoy } from './miRadar';
+import type { MiRadarApi, RegistroRadarApi } from '../types/radar.types';
+import {
+  HOY_SIN_RADAR,
+  diaDeHoyDeMiRadar,
+  mismoDia,
+  miRadarCorresponde,
+  resumenDeMiRadarHoy,
+  textoDeLasVeces,
+  textoDelHorario,
+} from './miRadar';
 import { envioEnElMismoSlot, horaEnPunto, type EstadoRadar } from './slotsDelRadar';
 
 /** Qué hace tocar la mitad. `ninguna` = no es un botón. */
@@ -158,7 +166,7 @@ function desdeElDiaOcho(e: EntradaDeLaMitad): MitadDelRadar | null {
       tono: 'suave',
       icono: 'compass',
       titulo: 'Planifica tu Radar',
-      detalle: 'Elige tus horas, por día. Es opcional.',
+      detalle: 'Cada hora entre tu Despertar y tu Dormir. Es opcional.',
       accion: 'yo',
       destacada: false,
     };
@@ -177,7 +185,7 @@ function desdeElDiaOcho(e: EntradaDeLaMitad): MitadDelRadar | null {
       tono: 'suave',
       icono: 'compass',
       titulo: HOY_SIN_RADAR,
-      detalle: 'Toca para cambiar tus horas.',
+      detalle: 'Toca para ver tu horario.',
       accion: 'yo',
       destacada: false,
     };
@@ -215,8 +223,6 @@ function desdeElDiaOcho(e: EntradaDeLaMitad): MitadDelRadar | null {
     };
   }
 
-  const filas = filasDeLasHorasDeHoy(hoy.horasDeHoy, e.registros, e.ahora);
-  const respondidas = filas.filter(f => f.estado === 'respondida').length;
   return {
     nombre: 'Mi Radar',
     hora: null,
@@ -224,10 +230,20 @@ function desdeElDiaOcho(e: EntradaDeLaMitad): MitadDelRadar | null {
     tono: 'suave',
     icono: 'compass',
     titulo: siguiente !== null ? `Próxima a las ${horaEnPunto(siguiente)}` : 'No quedan más horas hoy',
-    detalle: `Hoy respondiste ${respondidas} de ${filas.length}.`,
+    detalle: resumenDelDiaDeHoy(config, e.ahora) ?? `Hoy preguntamos ${textoDeLasVeces(hoy.horasDeHoy.length)}.`,
     accion: 'horas',
     destacada: false,
   };
+}
+
+/**
+ * Lo que dice Mi Radar de HOY en una línea: `05:30 a 22:30 · 17 veces` (el Despertar, el Dormir y cuántas veces pregunta), o
+ * `null` si esta lectura no trae el día de hoy o hoy no tiene Radar.
+ */
+export function resumenDelDiaDeHoy(config: MiRadarApi, ahora: Date): string | null {
+  const dia = diaDeHoyDeMiRadar(config, ahora);
+  const horario = dia ? textoDelHorario(dia) : null;
+  return dia && horario && dia.veces > 0 ? `${horario} · ${textoDeLasVeces(dia.veces)}` : null;
 }
 
 // ---------------------------------------------------------------------------------------------------------------

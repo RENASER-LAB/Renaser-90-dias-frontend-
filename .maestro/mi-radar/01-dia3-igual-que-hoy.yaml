@@ -15,9 +15,9 @@ appId: com.renaser.app
     visible: "TRAINING"
     timeout: 30000
 - assertNotVisible: "¿Dónde estás ahora mismo\\?"
-# La tarjeta de Hoy dice «Registrado».
+# La mitad del Radar de Hoy (spec 016) dice «HH:00 · Registrado» en un solo texto.
 - scrollUntilVisible:
-    element: "Registrado"
+    element: ".*· Registrado"
     direction: DOWN
     timeout: 20000
 - takeScreenshot: 01b-hoy-registrado

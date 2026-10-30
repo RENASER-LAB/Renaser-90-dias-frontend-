@@ -53,6 +53,7 @@ jest.mock('../../../radar/hooks/useRadarEnHoy', () => ({
 import type { LecturaDeMiRadar } from '../../../radar/hooks/useConfigDeMiRadar';
 import type { MiRadarApi, RegistroRadarApi } from '../../../radar/types/radar.types';
 import { mitadDelRadar, type EntradaDeLaMitad } from '../../../radar/utils/mitadDelRadar';
+import { miRadarConHoras } from '../../../radar/__tests__/fixturasDeMiRadar';
 import { TarjetaHabitoYRadar } from '../TarjetaHabitoYRadar';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -62,7 +63,7 @@ const registro = (id: string, hora: number, extra: Partial<RegistroRadarApi> = {
   id, whatAmIDoing: 'Revisando propuestas', whatAmIThinking: 'En cerrar bien el día', whatAmIFeeling: 'Algo de cansancio',
   energyLevel: 7, whatAmIAvoiding: 'Llamar a un cliente', createdAt: new Date(2026, 9, 29, hora, 6).toISOString(), ...extra,
 });
-const ENCENDIDO: MiRadarApi = { encendido: true, horas: [9, 14, 20], dias: [] };
+const ENCENDIDO: MiRadarApi = miRadarConHoras([9, 14, 20]);
 const lista = (config: MiRadarApi): LecturaDeMiRadar => ({ estado: 'lista', config });
 
 /** Arma lo que devolvería `useRadarEnHoy` para una entrada, con la regla real de la mitad. */
@@ -224,7 +225,7 @@ describe('la mitad del Radar, días 1 a 7', () => {
 
 describe('la mitad del Radar, desde el día 8', () => {
   it('apagado: «Planifica tu Radar» lleva a Yo → Mi Radar', () => {
-    mockRadar.actual = desdeElOcho({}, { encendido: false, horas: [], dias: [] });
+    mockRadar.actual = desdeElOcho({}, miRadarConHoras([], false));
     montar(10);
     expect(textos()).toContain('Mi Radar');
     expect(textos()).toContain('Planifica tu Radar');
@@ -234,7 +235,7 @@ describe('la mitad del Radar, desde el día 8', () => {
   });
 
   it('un día sin Radar: «Hoy no tienes Mi Radar» lleva a Yo → Mi Radar', () => {
-    mockRadar.actual = desdeElOcho({ ahora: new Date(2026, 9, 29, 14, 10) }, { encendido: true, horas: [9, 14, 20], dias: [{ dia: 4, horas: [] }] });
+    mockRadar.actual = desdeElOcho({ ahora: new Date(2026, 9, 29, 14, 10) }, miRadarConHoras([9, 14, 20], true, { 4: { horas: [], sinRadar: true } }));
     montar(10);
     expect(textos()).toContain('Hoy no tienes Mi Radar');
     pulsar(mitadDe('Mi Radar')!);
@@ -261,7 +262,7 @@ describe('la mitad del Radar, desde el día 8', () => {
     pulsar(mitadDe('Mi Radar')!);
     expect(visible('Tu Radar de hoy')).toBe(true);
     const t = textos();
-    for (const esperado of ['09:00', 'Respondida 09:06', '14:00', 'Respondida 14:06', '20:00', 'Prevista', 'Registrar ahora', 'Cambiar mis horas']) {
+    for (const esperado of ['09:00', 'Respondida 09:06', '14:00', 'Respondida 14:06', '20:00', 'Prevista', 'Registrar ahora', 'Abrir Mi Radar']) {
       expect(t).toContain(esperado);
     }
   });
@@ -276,11 +277,11 @@ describe('la mitad del Radar, desde el día 8', () => {
     expect(mockModal[mockModal.length - 1].visible).toBe(true);
   });
 
-  it('«Cambiar mis horas» lleva a Yo → Mi Radar cuando la hoja ya se fue', () => {
+  it('«Abrir Mi Radar» lleva a Yo → Mi Radar cuando la hoja ya se fue', () => {
     mockRadar.actual = desdeElOcho({ ahora: new Date(2026, 9, 29, 16, 30) });
     montar(10);
     pulsar(mitadDe('Mi Radar')!);
-    pulsar(raiz!.root.findAll(x => x.props.accessibilityLabel === 'Cambiar mis horas' && typeof x.props.onPress === 'function')[0]);
+    pulsar(raiz!.root.findAll(x => x.props.accessibilityLabel === 'Abrir Mi Radar' && typeof x.props.onPress === 'function')[0]);
     expect(onAbrirMiRadar).not.toHaveBeenCalled();
     act(() => hojaActual('Tu Radar de hoy').alTerminarDeCerrar?.());
     expect(onAbrirMiRadar).toHaveBeenCalledTimes(1);

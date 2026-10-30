@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 
 /**
- * Mi Radar contra el contrato (spec 012, `contracts/api.md`): el GET y el PUT, y la tolerancia de los campos nuevos
+ * Mi Radar contra el contrato (spec 019, `plan.md` del backend): el GET y el PUT, y la tolerancia de los campos nuevos
  * (`horaPrevista`, `miRadar`) para que ni un backend anterior ni un valor roto tumben lo que ya funcionaba.
  */
 
@@ -28,76 +28,68 @@ const registro = {
   createdAt: '2026-10-29T19:06:00Z',
 };
 
-describe('GET y PUT /api/v1/radar/mi-radar', () => {
-  it('lee encendido con sus horas', async () => {
-    mockApiFetch.mockResolvedValueOnce({ encendido: true, horas: [9, 14, 20] });
-    expect(await obtenerMiRadar()).toEqual({ encendido: true, horas: [9, 14, 20], dias: [] });
+/** Lo que responde el backend con la spec 019: un día con todo lo que el servidor resolvió. */
+const diaDelServidor = (dia: number, cambios: Record<string, unknown> = {}) => ({
+  dia, fecha: `2026-10-${25 + dia}`, modo: 'AUTOMATICO', veces: 17, maximo: 17, sinRadar: false, editable: dia > 4,
+  despertar: '05:30', dormir: '22:30', horas: [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22], motivo: null, ...cambios,
+});
+const semanaDelServidor = (encendido = true, cambios: Record<number, Record<string, unknown>> = {}) => ({
+  encendido, hoy: '2026-10-29', dias: [1, 2, 3, 4, 5, 6, 7].map(d => diaDelServidor(d, cambios[d])),
+});
+
+describe('GET y PUT /api/v1/radar/mi-radar (spec 019)', () => {
+  it('lee la semana: encendido, hoy y los siete días con modo, veces, máximo, editable, horario y horas', async () => {
+    mockApiFetch.mockResolvedValueOnce(semanaDelServidor());
+    const config = await obtenerMiRadar();
     expect(mockApiFetch).toHaveBeenCalledWith('/api/v1/radar/mi-radar', undefined);
+    expect(config.encendido).toBe(true);
+    expect(config.hoy).toBe('2026-10-29');
+    expect(config.dias).toHaveLength(7);
+    expect(config.dias[0]).toEqual({
+      dia: 1, fecha: '2026-10-26', modo: 'AUTOMATICO', veces: 17, maximo: 17, sinRadar: false, editable: false,
+      despertar: '05:30', dormir: '22:30', horas: [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22], motivo: null,
+    });
+    expect(config.dias[5].editable).toBe(true);
   });
 
-  it('lee los días con horas propias y los sin Radar (`horas: []`), ordenados por día', async () => {
+  it('un día sin Despertar llega sin horas y con su motivo', async () => {
+    mockApiFetch.mockResolvedValueOnce(semanaDelServidor(true, { 6: { despertar: null, horas: [], veces: 0, maximo: 0, motivo: 'SIN_DESPERTAR' } }));
+    const dia = (await obtenerMiRadar()).dias[5];
+    expect(dia).toMatchObject({ despertar: null, horas: [], veces: 0, maximo: 0, motivo: 'SIN_DESPERTAR' });
+  });
+
+  it('las horas fuera de 3 a 23, repetidas o no enteras se descartan y quedan ordenadas; las HH:mm se leen sin segundos', async () => {
+    mockApiFetch.mockResolvedValueOnce(semanaDelServidor(true, { 1: { horas: [20, 9, 9, 25, -1, 14.5, 2, 3], despertar: '05:30:00' } }));
+    const dia = (await obtenerMiRadar()).dias[0];
+    expect(dia.horas).toEqual([3, 9, 20]);
+    expect(dia.despertar).toBe('05:30');
+  });
+
+  it('«Sin Radar» deja las veces en 0 y un modo desconocido se lee como Automático', async () => {
+    mockApiFetch.mockResolvedValueOnce(semanaDelServidor(true, { 2: { sinRadar: true, horas: [], veces: 9, modo: 'RARO' } }));
+    expect((await obtenerMiRadar()).dias[1]).toMatchObject({ sinRadar: true, veces: 0, modo: 'AUTOMATICO' });
+  });
+
+  it('un día roto se pierde SOLO él; los repetidos o fuera de 1 a 7 también, y salen ordenados', async () => {
     mockApiFetch.mockResolvedValueOnce({
       encendido: true,
-      horas: [9, 14, 20],
-      dias: [{ dia: 7, horas: [] }, { dia: 6, horas: [14, 11] }],
+      hoy: null,
+      dias: [diaDelServidor(7), { dia: 3 }, diaDelServidor(8), diaDelServidor(0), 'basura', null, diaDelServidor(1), diaDelServidor(1, { veces: 3 })],
     });
-    expect(await obtenerMiRadar()).toEqual({
-      encendido: true,
-      horas: [9, 14, 20],
-      dias: [{ dia: 6, horas: [11, 14] }, { dia: 7, horas: [] }],
-    });
+    const config = await obtenerMiRadar();
+    expect(config.dias.map(d => d.dia)).toEqual([1, 7]);
+    expect(config.dias[0].veces).toBe(17);
   });
 
-  it('sin `dias` (un backend anterior, o nadie tiene horas propias) ningún día tiene horas propias', async () => {
+  it('una respuesta de un backend anterior a la 019 (con `horas` y sin días resueltos) es un ERROR, no un Mi Radar apagado', async () => {
+    mockApiFetch.mockResolvedValueOnce({ encendido: true, horas: [9, 14, 20], dias: [{ dia: 6, horas: [11] }] });
+    await expect(obtenerMiRadar()).rejects.toThrow(/GET \/api\/v1\/radar\/mi-radar/);
     mockApiFetch.mockResolvedValueOnce({ encendido: true, horas: [9] });
-    expect(await obtenerMiRadar()).toEqual({ encendido: true, horas: [9], dias: [] });
-    mockApiFetch.mockResolvedValueOnce({ encendido: true, horas: [9], dias: null });
-    expect(await obtenerMiRadar()).toEqual({ encendido: true, horas: [9], dias: [] });
-    mockApiFetch.mockResolvedValueOnce({ encendido: true, horas: [9], dias: 'sábado' });
-    expect(await obtenerMiRadar()).toEqual({ encendido: true, horas: [9], dias: [] });
-  });
-
-  it('un día roto se pierde SOLO él (ese día sigue a todos); no se lee como «Sin Radar»', async () => {
-    mockApiFetch.mockResolvedValueOnce({
-      encendido: true,
-      horas: [9],
-      dias: [
-        { dia: 6, horas: [11] },
-        { dia: 7 },
-        { dia: 'lunes', horas: [8] },
-        { horas: [8] },
-        'basura',
-        null,
-        { dia: 8, horas: [8] },
-        { dia: 0, horas: [8] },
-        { dia: 6, horas: [12] },
-        { dia: 3, horas: [20, 20, 24, 9.5] },
-      ],
-    });
-    // 6 gana el primero; 3 conserva solo las horas que valen; 7 sin la lista de horas no es «sin Radar».
-    expect(await obtenerMiRadar()).toEqual({
-      encendido: true,
-      horas: [9],
-      dias: [{ dia: 3, horas: [20] }, { dia: 6, horas: [11] }],
-    });
-  });
-
-  it('apagado: sin horas, aunque el servidor mande alguna', async () => {
-    mockApiFetch.mockResolvedValueOnce({ encendido: false, horas: [], dias: [] });
-    expect(await obtenerMiRadar()).toEqual({ encendido: false, horas: [], dias: [] });
-    mockApiFetch.mockResolvedValueOnce({ encendido: false, horas: [9], dias: [{ dia: 6, horas: [11] }] });
-    expect(await obtenerMiRadar()).toEqual({ encendido: false, horas: [], dias: [] });
-  });
-
-  it('`horas` ausente, repetidas o fuera de un día se leen como lo que sirve (ordenadas, sin repetir)', async () => {
-    mockApiFetch.mockResolvedValueOnce({ encendido: true });
-    expect(await obtenerMiRadar()).toEqual({ encendido: true, horas: [], dias: [] });
-    mockApiFetch.mockResolvedValueOnce({ encendido: true, horas: [20, 9, 9, 25, -1, 14.5] });
-    expect(await obtenerMiRadar()).toEqual({ encendido: true, horas: [9, 20], dias: [] });
+    await expect(obtenerMiRadar()).rejects.toThrow(/GET \/api\/v1\/radar\/mi-radar/);
   });
 
   it('una respuesta sin `encendido` es un error (no se inventa un estado)', async () => {
-    mockApiFetch.mockResolvedValueOnce({ horas: [9] });
+    mockApiFetch.mockResolvedValueOnce({ dias: [diaDelServidor(1)] });
     await expect(obtenerMiRadar()).rejects.toThrow(/GET \/api\/v1\/radar\/mi-radar/);
   });
 
@@ -106,35 +98,25 @@ describe('GET y PUT /api/v1/radar/mi-radar', () => {
     await expect(obtenerMiRadar()).rejects.toMatchObject({ status: 404 });
   });
 
-  it('guarda con PUT y el cuerpo crudo (apiFetch ya lo serializa), y devuelve lo guardado', async () => {
-    mockApiFetch.mockResolvedValueOnce({ encendido: true, horas: [9, 14, 20] });
-    const guardada = await guardarMiRadar({ encendido: true, horas: [9, 14, 20] });
-    expect(guardada).toEqual({ encendido: true, horas: [9, 14, 20], dias: [] });
-    expect(mockApiFetch).toHaveBeenCalledWith('/api/v1/radar/mi-radar', {
-      method: 'PUT',
-      body: { encendido: true, horas: [9, 14, 20] },
-    });
+  it('guarda con PUT, el cuerpo crudo (apiFetch ya lo serializa) y SOLO los días tocados; devuelve la semana', async () => {
+    mockApiFetch.mockResolvedValueOnce(semanaDelServidor());
+    const pedido = { encendido: true, dias: [{ dia: 6, modo: 'PERSONALIZADO' as const, veces: 3, sinRadar: false }] };
+    const guardada = await guardarMiRadar(pedido);
+    expect(guardada.dias).toHaveLength(7);
+    expect(mockApiFetch).toHaveBeenCalledWith('/api/v1/radar/mi-radar', { method: 'PUT', body: pedido });
   });
 
-  it('guarda también los días con horas propias (`dias`), con lunes = 1', async () => {
-    const config = { encendido: true, horas: [9, 14, 20], dias: [{ dia: 6, horas: [11] }, { dia: 7, horas: [] }] };
-    mockApiFetch.mockResolvedValueOnce(config);
-    expect(await guardarMiRadar(config)).toEqual(config);
-    expect(mockApiFetch).toHaveBeenCalledWith('/api/v1/radar/mi-radar', { method: 'PUT', body: config });
+  it('encender o apagar manda solo `encendido`', async () => {
+    mockApiFetch.mockResolvedValueOnce(semanaDelServidor(false));
+    await guardarMiRadar({ encendido: false });
+    expect(mockApiFetch).toHaveBeenCalledWith('/api/v1/radar/mi-radar', { method: 'PUT', body: { encendido: false } });
   });
 
-  it('apagar manda `encendido: false` sin horas', async () => {
-    mockApiFetch.mockResolvedValueOnce({ encendido: false, horas: [], dias: [] });
-    await guardarMiRadar({ encendido: false, horas: [] });
-    expect(mockApiFetch).toHaveBeenCalledWith('/api/v1/radar/mi-radar', {
-      method: 'PUT',
-      body: { encendido: false, horas: [] },
-    });
-  });
-
-  it('un 400 del servidor (una hora fuera de las reglas) llega con su mensaje', async () => {
-    mockApiFetch.mockRejectedValueOnce(new ApiError(400, 'Las horas van de 3 a 23'));
-    await expect(guardarMiRadar({ encendido: true, horas: [2] })).rejects.toMatchObject({ status: 400 });
+  it('un 400 (veces fuera de las reglas) y un 409 (hoy o un día pasado) llegan con su mensaje', async () => {
+    mockApiFetch.mockRejectedValueOnce(new ApiError(400, 'Las veces por día van de 1 a 21'));
+    await expect(guardarMiRadar({ encendido: true, dias: [{ dia: 6, veces: 0 }] })).rejects.toMatchObject({ status: 400 });
+    mockApiFetch.mockRejectedValueOnce(new ApiError(409, 'Hoy y los días que pasaron no se pueden cambiar'));
+    await expect(guardarMiRadar({ encendido: true, dias: [{ dia: 5, sinRadar: true }] })).rejects.toMatchObject({ status: 409 });
   });
 });
 
@@ -151,12 +133,20 @@ describe('los campos nuevos del historial son opcionales y tolerantes', () => {
     mockApiFetch.mockResolvedValueOnce({
       entries: [{ ...registro, horaPrevista: 14 }, { ...registro, id: 'r2', horaPrevista: null }],
       nextCursor: '2026-10-29T18:00:00Z',
-      miRadar: { encendido: true, horas: [9, 14, 20], dias: [{ dia: 7, horas: [] }] },
+      miRadar: { encendido: true, hoy: '2026-10-29', dias: [diaDelServidor(4)] },
     });
     const pagina = await obtenerHistorial();
     expect(pagina.entries.map(e => e.horaPrevista)).toEqual([14, null]);
-    expect(pagina.miRadar).toEqual({ encendido: true, horas: [9, 14, 20], dias: [{ dia: 7, horas: [] }] });
+    expect(pagina.miRadar?.dias).toHaveLength(1);
+    expect(pagina.miRadar?.dias[0]).toMatchObject({ dia: 4, despertar: '05:30', dormir: '22:30', veces: 17 });
     expect(pagina.nextCursor).toBe('2026-10-29T18:00:00Z');
+  });
+
+  it('un `miRadar` con la forma de un backend anterior (horas a mano) se pierde SOLO él', async () => {
+    mockApiFetch.mockResolvedValueOnce({ entries: [registro], nextCursor: null, miRadar: { encendido: true, horas: [9, 14, 20] } });
+    const pagina = await obtenerHistorial();
+    expect(pagina.entries).toHaveLength(1);
+    expect(pagina.miRadar).toBeNull();
   });
 
   it('un `horaPrevista` o un `miRadar` rotos se pierden SOLOS: los registros siguen', async () => {

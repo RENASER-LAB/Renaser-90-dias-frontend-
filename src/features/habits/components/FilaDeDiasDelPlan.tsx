@@ -96,6 +96,12 @@ interface FilaDeDiasDelPlanProps {
    * (el aviso propio lleva su campana) y la etiqueta del lector lo suma. Plan no la pasa y no cambia.
    */
   alarmaDelDia?: (dia: DiaDelPlan) => AlarmaDeUnDiaEnLaFila | null;
+  /**
+   * Mi Radar (spec 019), **opcional**: lo que oye el lector de pantalla de cada pastilla, completo («Sábado 31, 15 veces»).
+   * Recibe el día y su nombre con la fecha («Sábado 31»). Sin esta prop —Training y Plan no la pasan— la fila es exactamente
+   * la de siempre.
+   */
+  etiquetaPropiaDelDia?: (dia: DiaDelPlan, nombreYFecha: string) => string;
   onAlternarDia: (dia: DiaDelPlan) => void;
 }
 
@@ -113,6 +119,7 @@ export function FilaDeDiasDelPlan({
   planificable = esPlanificable,
   avisoDelDia,
   alarmaDelDia,
+  etiquetaPropiaDelDia,
   onAlternarDia,
 }: FilaDeDiasDelPlanProps) {
   const { c, t } = useTheme();
@@ -142,6 +149,9 @@ export function FilaDeDiasDelPlan({
         const alarma = alarmaDelDia && corriendo && sePuede ? alarmaDelDia(dia) : null;
         const colorDelAviso = editando ? c.onGold : c.goldInk;
         const conAmbos = aviso !== null && alarma !== null;
+        const etiquetaDelDiaPropia = etiquetaPropiaDelDia
+          ? etiquetaPropiaDelDia(dia, `${NOMBRE_COMPLETO_DEL_DIA[dia]} ${diasDelMes[dia]}`)
+          : null;
 
         // La hora que rige ese día, o el candado si ya no se puede cambiar.
         const horaOCandado = (
@@ -183,7 +193,13 @@ export function FilaDeDiasDelPlan({
                 accessibilityLabel: etiquetaDelDia(dia, diasDelMes[dia], delDia, corriendo, sePuede, aviso, alarma),
                 accessibilityState: { selected: editando, disabled: bloqueado },
               }
-              : {})}
+              : etiquetaDelDiaPropia
+                ? {
+                  accessibilityRole: 'button' as const,
+                  accessibilityLabel: etiquetaDelDiaPropia,
+                  accessibilityState: { selected: editando, disabled: bloqueado },
+                }
+                : {})}
             style={[
               estilos.pastilla,
               conBanda && estilos.pastillaConBanda,

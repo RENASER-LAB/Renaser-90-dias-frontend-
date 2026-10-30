@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 
 import { ApiError } from '../../../services/http/apiClient';
 import { guardarMiRadar, obtenerMiRadar } from '../api/radarApi';
-import type { MiRadarApi } from '../types/radar.types';
+import type { MiRadarApi, PedidoDeMiRadarApi } from '../types/radar.types';
 import { miRadarCorresponde } from '../utils/miRadar';
 
 /**
- * Lo que la app sabe de Mi Radar de esta cuenta (spec 012).
+ * Lo que la app sabe de Mi Radar de esta cuenta (spec 012, rehecha por la 019).
  *
  * - `pendiente`: todavía no se leyó, o no corresponde leerlo (antes del día 8, sin sesión).
  * - `no-disponible`: el servidor no lo ofrece (404: backend anterior; 403: cuenta sin permiso o suspendida). La fila de
@@ -34,7 +35,12 @@ export function configDeMiRadar(lectura: LecturaDeMiRadar): MiRadarApi | null {
  *
  * **Solo se lee desde el día 8.** Los días 1 a 7 no se pide nada: ahí el Código Renaser es el de siempre y este
  * endpoint no tiene nada que decir (FR-001).
+ *
+ * **Se vuelve a leer al volver la app al frente** (con 10 minutos de por medio): las horas salen del Despertar y el Dormir
+ * que la persona programa en Training, y es así como las alarmas se rehacen cuando cambian (spec 019).
  */
+const MINUTOS_ENTRE_LECTURAS = 10;
+
 export function useConfigDeMiRadar(diaPrograma: number | null, usuarioId: string | null) {
   const corresponde = usuarioId !== null && miRadarCorresponde(diaPrograma);
   const [lectura, setLectura] = useState<LecturaDeMiRadar>(MI_RADAR_PENDIENTE);
@@ -68,9 +74,24 @@ export function useConfigDeMiRadar(diaPrograma: number | null, usuarioId: string
 
   const recargar = useCallback(() => setVersion(v => v + 1), []);
 
+  /* Al volver la app al frente se relee, a lo sumo cada `MINUTOS_ENTRE_LECTURAS`. */
+  const ultimaLectura = useRef(Date.now());
+  useEffect(() => {
+    ultimaLectura.current = Date.now();
+  }, [version]);
+  useEffect(() => {
+    if (!corresponde) return;
+    const suscripcion = AppState.addEventListener('change', estado => {
+      if (estado !== 'active') return;
+      if (Date.now() - ultimaLectura.current < MINUTOS_ENTRE_LECTURAS * 60_000) return;
+      setVersion(v => v + 1);
+    });
+    return () => suscripcion.remove();
+  }, [corresponde]);
+
   /** Guarda y deja a la vista lo que el servidor respondió. Si falla, el error llega a quien lo pidió. */
-  const guardar = useCallback(async (config: MiRadarApi): Promise<MiRadarApi> => {
-    const guardada = await guardarMiRadar(config);
+  const guardar = useCallback(async (pedido: PedidoDeMiRadarApi): Promise<MiRadarApi> => {
+    const guardada = await guardarMiRadar(pedido);
     setLectura({ estado: 'lista', config: guardada });
     return guardada;
   }, []);

@@ -15,7 +15,7 @@ import {
 } from './hooks/useConfigDeMiRadar';
 import { useRadarDelDia } from './hooks/useRadarDelDia';
 import { claveDeMiRadar, miRadarCorresponde } from './utils/miRadar';
-import type { CheckInRadarApi, MiRadarApi } from './types/radar.types';
+import type { CheckInRadarApi, MiRadarApi, PedidoDeMiRadarApi } from './types/radar.types';
 import type { EstadoRadar, SlotRadar } from './utils/slotsDelRadar';
 
 /**
@@ -67,10 +67,12 @@ interface ValorRadar {
    */
   miRadar: {
     lectura: LecturaDeMiRadar;
-    guardar: (config: MiRadarApi) => Promise<MiRadarApi>;
+    guardar: (pedido: PedidoDeMiRadarApi) => Promise<MiRadarApi>;
     recargar: () => void;
   };
 }
+
+const SIN_MI_RADAR: MiRadarApi = { encendido: false, hoy: null, dias: [] };
 
 const SIN_RADAR: ValorRadar = {
   estado: { tipo: 'apagado', motivo: 'desactivado' },
@@ -84,7 +86,7 @@ const SIN_RADAR: ValorRadar = {
   error: null,
   enviar: async () => false,
   limpiarError: () => {},
-  miRadar: { lectura: MI_RADAR_PENDIENTE, guardar: async config => config, recargar: () => {} },
+  miRadar: { lectura: MI_RADAR_PENDIENTE, guardar: async () => SIN_MI_RADAR, recargar: () => {} },
 };
 
 const RadarContext = createContext<ValorRadar>(SIN_RADAR);

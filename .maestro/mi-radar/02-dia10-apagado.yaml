@@ -1,5 +1,5 @@
-# 02 — Día 10: Yo → «Mi Radar» llega apagado: solo el interruptor, sin «Registrar ahora» ni horarios (escenario 2).
-# cuenta: aprendiz (día 10 del programa, con Mi Radar apagado en el servidor: participantes_programa.horas_mi_radar nula)
+# 02 — Día 10: Yo → «Mi Radar» llega apagado: solo «Encendido», sin modo, horario ni registrar (spec 019, escenario 2).
+# cuenta: aprendiz (día 10 del programa, con Mi Radar apagado: participantes_programa.mi_radar_encendido = false)
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml
@@ -18,21 +18,21 @@ appId: com.renaser.app
 - takeScreenshot: 02a-yo-fila-mi-radar-apagado
 - tapOn: "Apagado"
 - extendedWaitUntil:
-    visible: "Te preguntamos cómo estás a las horas que elijas\\."
+    visible: "Encendido"
     timeout: 15000
-- assertVisible: "Lo ves tú, tu mentor y el equipo que coordina tu grupo\\."
-# Apagado no hay registrar ni horarios: lo único que se puede hacer es encenderlo.
-- assertNotVisible: "Registrar ahora"
-- assertNotVisible: "Tus horas"
-- assertNotVisible: "Guardar y encender"
-- assertNotVisible: "[0-9]+ de 12 horas elegidas"
-# Ni la fila de los siete días (por día de la semana, cuarta ronda): solo aparece al encender.
+# Apagado no hay modo, horario, días ni registrar: lo único que se puede hacer es encenderlo.
+- assertNotVisible: "Automático"
+- assertNotVisible: "Personalizado"
+- assertNotVisible: "Hora"
 - assertNotVisible: "Todos los días"
-# El historial y los patrones siempre están.
-- scrollUntilVisible:
-    element: "Patrones"
-    direction: DOWN
-- assertVisible: "Historial"
+- assertNotVisible: "Registrar ahora"
+# Sin los textos de explicación de la versión anterior.
+- assertNotVisible: "Lo ves tú, tu mentor.*"
+- assertNotVisible: "Te preguntamos cómo estás.*"
+# Ni las respuestas de la persona (ni «Hoy», ni «Historial», ni «Patrones»): eso lo ven su mentor y su líder en la ficha.
+- assertNotVisible: "Historial"
+- assertNotVisible: "Patrones"
+- assertNotVisible: "Hoy: .*"
 - takeScreenshot: 02b-mi-radar-apagado
 - back
 - assertVisible: "Tu evolución"

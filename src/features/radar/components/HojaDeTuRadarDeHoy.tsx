@@ -9,8 +9,8 @@ import { useTheme } from '../../../theme/ThemeContext';
 import { textoDeLaFilaDeHoy, type FilaDeHoraDeHoy } from '../utils/mitadDelRadar';
 
 /**
- * «Tu Radar de hoy» (spec 016): las horas que la persona eligió para hoy con su estado, «Registrar ahora» si se puede y
- * «Cambiar mis horas» (Yo → Mi Radar). Se abre al tocar la mitad del Radar de Hoy cuando Mi Radar está encendido y la hora
+ * «Tu Radar de hoy» (spec 016): las horas en que Mi Radar pregunta hoy (con su Despertar y su Dormir) con su estado,
+ * «Registrar ahora» si se puede y «Abrir Mi Radar» (Yo → Mi Radar). Se abre al tocar la mitad del Radar de Hoy cuando Mi Radar está encendido y la hora
  * en curso no es una de las elegidas pendientes (esa abre el formulario directo).
  *
  * Las horas son las de HOY (`horasDelDia`): un día con horas propias no usa las de todos. Una hora que pasó sin respuesta
@@ -24,6 +24,7 @@ import { textoDeLaFilaDeHoy, type FilaDeHoraDeHoy } from '../utils/mitadDelRadar
 export function HojaDeTuRadarDeHoy({
   visible,
   filas,
+  resumen = null,
   leyendo,
   motivoSinRegistrar,
   onRegistrarAhora,
@@ -33,6 +34,8 @@ export function HojaDeTuRadarDeHoy({
 }: {
   visible: boolean;
   filas: readonly FilaDeHoraDeHoy[];
+  /** `05:30 a 22:30 · 17 veces`: lo que pregunta hoy, o `null` si no se sabe. */
+  resumen?: string | null;
   /** Todavía se leen las respuestas de hoy: las horas se ven, su estado llega enseguida. */
   leyendo: boolean;
   /** Por qué no se puede registrar ahora (`null` = sí se puede y aparece «Registrar ahora»). */
@@ -51,7 +54,7 @@ export function HojaDeTuRadarDeHoy({
       alCerrar={onCerrar}
       alTerminarDeCerrar={alTerminarDeCerrar}
       titulo="Tu Radar de hoy"
-      subtitulo="Mi Radar · Encendido"
+      subtitulo={resumen ? `Mi Radar · Encendido · ${resumen}` : 'Mi Radar · Encendido'}
       tamano="contenido"
       pie={
         <View style={{ gap: 4 }}>
@@ -63,11 +66,11 @@ export function HojaDeTuRadarDeHoy({
           <Presionable
             onPress={onCambiarHoras}
             accessibilityRole="button"
-            accessibilityLabel="Cambiar mis horas"
+            accessibilityLabel="Abrir Mi Radar"
             style={estilos.enlace}
           >
             <Text style={[t.body, estilos.texto, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 16 }]}>
-              Cambiar mis horas
+              Abrir Mi Radar
             </Text>
             <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.goldInk} />
           </Presionable>

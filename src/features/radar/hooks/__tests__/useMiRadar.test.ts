@@ -3,7 +3,7 @@ import React from 'react';
 import TestRenderer, { act, type ReactTestRenderer } from 'react-test-renderer';
 
 /**
- * El hook de la pantalla Mi Radar (spec 012): guardar valida igual que el servidor antes de pedirle nada, registrar usa el
+ * El hook de la pantalla Mi Radar (spec 012, rehecha por la 019): guardar manda solo lo tocado, registrar usa el
  * envío de siempre y vuelve a leer el historial, y lo derivado (hoy, esta hora ya registrada, dentro del horario).
  */
 
@@ -11,8 +11,8 @@ const mockObtenerHistorial = jest.fn<(cursor?: string | null) => Promise<unknown
 jest.mock('../../api/radarApi', () => ({ obtenerHistorial: (c?: string | null) => mockObtenerHistorial(c) }));
 jest.mock('../../../../context/AuthContext', () => ({ useAuth: () => ({ user: { id: 'u1' } }) }));
 
-type Config = { encendido: boolean; horas: number[]; dias?: Array<{ dia: number; horas: number[] }> };
-const mockGuardar = jest.fn<(c: Config) => Promise<Config>>();
+type Config = MiRadarApi;
+const mockGuardar = jest.fn<(pedido: unknown) => Promise<Config>>();
 const mockRecargarConfig = jest.fn();
 const mockEnviar = jest.fn<(c: unknown) => Promise<boolean>>();
 const mockRadar = {
@@ -27,7 +27,8 @@ const mockRadar = {
 jest.mock('../../RadarContext', () => ({ useRadar: () => mockRadar.actual }));
 
 import { ApiError } from '../../../../services/http/apiClient';
-import type { RegistroRadarApi } from '../../types/radar.types';
+import { miRadarConHoras } from '../../__tests__/fixturasDeMiRadar';
+import type { MiRadarApi, RegistroRadarApi } from '../../types/radar.types';
 import { useMiRadar } from '../useMiRadar';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -93,93 +94,52 @@ afterEach(() => {
 
 describe('guardar', () => {
   it('al entrar relee lo guardado', async () => {
-    await montar({ encendido: false, horas: [] });
+    await montar(miRadarConHoras([], false));
     expect(mockRecargarConfig).toHaveBeenCalledTimes(1);
   });
 
-  it('encendido sin horas, o con horas que no valen, no le pide nada al servidor', async () => {
-    await montar({ encendido: false, horas: [] });
-    let r = await llamar(() => visto.actual.guardarConfig(true, []));
-    expect(r).toEqual({ ok: false, error: 'Elige al menos una hora' });
-    r = await llamar(() => visto.actual.guardarConfig(true, [2, 9]));
-    expect(r.ok).toBe(false);
-    r = await llamar(() => visto.actual.guardarConfig(true, Array.from({ length: 13 }, (_, i) => 3 + i)));
-    expect(r).toEqual({ ok: false, error: 'Puedes elegir hasta 12' });
-    expect(mockGuardar).not.toHaveBeenCalled();
+  it('encender o apagar manda solo `encendido`; sin días no manda `dias`', async () => {
+    await montar(miRadarConHoras([], false));
+    mockGuardar.mockResolvedValueOnce(miRadarConHoras([9]));
+    expect(await llamar(() => visto.actual.guardarConfig(true))).toEqual({ ok: true, config: miRadarConHoras([9]) });
+    expect(mockGuardar).toHaveBeenLastCalledWith({ encendido: true });
+    mockGuardar.mockResolvedValueOnce(miRadarConHoras([], false));
+    await llamar(() => visto.actual.guardarConfig(false, []));
+    expect(mockGuardar).toHaveBeenLastCalledWith({ encendido: false });
   });
 
-  it('encender manda las horas ordenadas; apagar manda sin horas', async () => {
-    await montar({ encendido: false, horas: [] });
-    mockGuardar.mockResolvedValueOnce({ encendido: true, horas: [9, 14, 20] });
-    expect(await llamar(() => visto.actual.guardarConfig(true, [20, 9, 14]))).toEqual({ ok: true, config: { encendido: true, horas: [9, 14, 20] } });
-    expect(mockGuardar).toHaveBeenLastCalledWith({ encendido: true, horas: [9, 14, 20] });
-    mockGuardar.mockResolvedValueOnce({ encendido: false, horas: [] });
-    await llamar(() => visto.actual.guardarConfig(false, [9, 14]));
-    expect(mockGuardar).toHaveBeenLastCalledWith({ encendido: false, horas: [] });
+  it('manda SOLO los días tocados, con su modo, sus veces y «sin Radar»', async () => {
+    await montar(miRadarConHoras([9]));
+    mockGuardar.mockImplementation(async () => miRadarConHoras([9]));
+    const dias = [
+      { dia: 6, modo: 'PERSONALIZADO' as const, veces: 3, sinRadar: false },
+      { dia: 7, modo: 'AUTOMATICO' as const, sinRadar: true },
+    ];
+    await llamar(() => visto.actual.guardarConfig(true, dias));
+    expect(mockGuardar).toHaveBeenLastCalledWith({ encendido: true, dias });
   });
 
-  it('si el servidor lo rechaza, devuelve su motivo en vez de lanzar', async () => {
-    await montar({ encendido: false, horas: [] });
-    mockGuardar.mockRejectedValueOnce(new ApiError(400, 'Las horas van de 3 a 23'));
-    expect(await llamar(() => visto.actual.guardarConfig(true, [9]))).toEqual({ ok: false, error: 'Las horas van de 3 a 23' });
+  it('si el servidor lo rechaza (400 o 409 de hoy), devuelve su motivo en vez de lanzar', async () => {
+    await montar(miRadarConHoras([], false));
+    mockGuardar.mockRejectedValueOnce(new ApiError(409, 'Hoy y los días que pasaron no se pueden cambiar'));
+    expect(await llamar(() => visto.actual.guardarConfig(true, [{ dia: 5, sinRadar: true }]))).toEqual({
+      ok: false,
+      error: 'Hoy y los días que pasaron no se pueden cambiar',
+    });
     expect(visto.actual.guardando).toBe(false);
   });
 
   it('sin red dice algo que se entiende', async () => {
-    await montar({ encendido: false, horas: [] });
+    await montar(miRadarConHoras([], false));
     mockGuardar.mockRejectedValueOnce(new Error('boom'));
-    const r = await llamar(() => visto.actual.guardarConfig(true, [9]));
+    const r = await llamar(() => visto.actual.guardarConfig(true));
     expect(r).toEqual({ ok: false, error: 'No pudimos guardar tu Mi Radar. Intenta de nuevo.' });
-  });
-});
-
-describe('guardar con días propios', () => {
-  const sabado = { dia: 6, horas: [11] };
-
-  it('manda las horas de todos los días y los días propios, ordenados por día; sin días no manda `dias`', async () => {
-    await montar({ encendido: false, horas: [] });
-    mockGuardar.mockImplementation(async c => c);
-    await llamar(() => visto.actual.guardarConfig(true, [9, 14], [{ dia: 7, horas: [] }, sabado]));
-    expect(mockGuardar).toHaveBeenLastCalledWith({
-      encendido: true,
-      horas: [9, 14],
-      dias: [sabado, { dia: 7, horas: [] }],
-    });
-    await llamar(() => visto.actual.guardarConfig(true, [9, 14], []));
-    expect(mockGuardar).toHaveBeenLastCalledWith({ encendido: true, horas: [9, 14] });
-    await llamar(() => visto.actual.guardarConfig(true, [9, 14]));
-    expect(mockGuardar).toHaveBeenLastCalledWith({ encendido: true, horas: [9, 14] });
-  });
-
-  it('apagar no manda ni horas ni días, aunque se los den', async () => {
-    await montar({ encendido: true, horas: [9], dias: [sabado] });
-    mockGuardar.mockImplementation(async c => c);
-    await llamar(() => visto.actual.guardarConfig(false, [9], [sabado]));
-    expect(mockGuardar).toHaveBeenLastCalledWith({ encendido: false, horas: [] });
-  });
-
-  it('valida los días como el servidor antes de pedirle nada', async () => {
-    await montar({ encendido: false, horas: [] });
-    expect(await llamar(() => visto.actual.guardarConfig(true, [9], [{ dia: 8, horas: [9] }]))).toEqual({
-      ok: false,
-      error: 'Hay un día que no existe',
-    });
-    expect(await llamar(() => visto.actual.guardarConfig(true, [9], [sabado, sabado]))).toEqual({
-      ok: false,
-      error: 'Hay un día repetido',
-    });
-    expect(await llamar(() => visto.actual.guardarConfig(true, [9], [{ dia: 6, horas: [2] }]))).toMatchObject({ ok: false });
-    expect(await llamar(() => visto.actual.guardarConfig(true, [9], [{ dia: 6, horas: [9, 9] }]))).toEqual({
-      ok: false,
-      error: 'Hay una hora repetida',
-    });
-    expect(mockGuardar).not.toHaveBeenCalled();
   });
 });
 
 describe('registrar', () => {
   it('usa el envío de siempre y, si quedó, vuelve a leer el historial', async () => {
-    await montar({ encendido: true, horas: [9, 14] });
+    await montar(miRadarConHoras([9, 14]));
     expect(mockObtenerHistorial).toHaveBeenCalledTimes(1);
     mockEnviar.mockResolvedValueOnce(true);
     const checkIn = { whatAmIDoing: 'a', whatAmIThinking: 'b', whatAmIFeeling: 'c', energyLevel: 5, whatAmIAvoiding: 'd' };
@@ -189,7 +149,7 @@ describe('registrar', () => {
   });
 
   it('si no quedó (error, 409 sin confirmar), no vuelve a leer', async () => {
-    await montar({ encendido: true, horas: [9, 14] });
+    await montar(miRadarConHoras([9, 14]));
     mockEnviar.mockResolvedValueOnce(false);
     expect(await llamar(() => visto.actual.registrar({} as never))).toBe(false);
     expect(mockObtenerHistorial).toHaveBeenCalledTimes(1);
@@ -197,83 +157,83 @@ describe('registrar', () => {
 });
 
 describe('lo que se deriva', () => {
-  it('Hoy: solo con Mi Radar encendido, y trae las horas elegidas que ya pasaron sin respuesta', async () => {
+  it('respondidasHoy: cuántas de las horas de hoy ya tienen su respuesta', async () => {
     mockObtenerHistorial.mockResolvedValue({ entries: [registro('a', 9, { horaPrevista: 9 })], nextCursor: null });
-    await montar({ encendido: true, horas: [9, 14, 20] });
-    // En orden de hora, del más temprano al más tarde.
-    expect(visto.actual.hoy.map(e => (e.tipo === 'registro' ? e.registro.id : `sin-${e.hora}`))).toEqual(['a', 'sin-14']);
+    await montar(miRadarConHoras([9, 14, 20]));
+    expect(visto.actual.horasDeHoy).toEqual([9, 14, 20]);
+    expect(visto.actual.respondidasHoy).toBe(1);
   });
 
   // 29/10/2026 es jueves; el 31 es sábado y el 1/11 domingo.
-  it('«Hoy» usa las horas de HOY: un día con horas propias no usa las de todos', async () => {
+  it('usa las horas de HOY: cada día de la semana tiene las suyas', async () => {
     mockObtenerHistorial.mockResolvedValue({ entries: [], nextCursor: null });
-    // Jueves 29 a las 15:30: las de todos los días (9, 14, 20) → pasaron 9 y 14.
-    await montar({ encendido: true, horas: [9, 14, 20], dias: [{ dia: 6, horas: [11] }] });
-    expect(visto.actual.hoy).toEqual([{ tipo: 'sin-registro', hora: 9 }, { tipo: 'sin-registro', hora: 14 }]);
+    // Jueves 29: las de todos los días.
+    await montar(miRadarConHoras([9, 14, 20], true, { 6: { horas: [11] } }));
+    expect(visto.actual.horasDeHoy).toEqual([9, 14, 20]);
     act(() => raiz?.unmount());
-    // Sábado 31 a las 15:30: solo las 11:00 de ese día.
-    await montar({ encendido: true, horas: [9, 14, 20], dias: [{ dia: 6, horas: [11] }] }, 15, 30, 31);
-    expect(visto.actual.hoy).toEqual([{ tipo: 'sin-registro', hora: 11 }]);
+    // Sábado 31: solo las 11:00 de ese día.
+    await montar(miRadarConHoras([9, 14, 20], true, { 6: { horas: [11] } }), 15, 30, 31);
+    expect(visto.actual.horasDeHoy).toEqual([11]);
     expect(visto.actual.hoyTieneRadar).toBe(true);
   });
 
-  it('un día «Sin Radar»: no hay Radar hoy, «Hoy» solo trae lo que ya se registró y nada espera respuesta', async () => {
+  it('un día «Sin Radar»: no hay Radar hoy, ninguna hora que contar y nada espera respuesta', async () => {
     mockObtenerHistorial.mockResolvedValue({ entries: [registro('a', 9, {}, 31)], nextCursor: null });
-    // Sábado 31 a las 15:30, sábado sin Radar.
-    await montar({ encendido: true, horas: [9, 14, 15], dias: [{ dia: 6, horas: [] }] }, 15, 30, 31);
+    await montar(miRadarConHoras([9, 14, 15], true, { 6: { horas: [], sinRadar: true } }), 15, 30, 31);
     expect(visto.actual.hoyTieneRadar).toBe(false);
-    expect(visto.actual.hoy.map(e => (e.tipo === 'registro' ? e.registro.id : `sin-${e.hora}`))).toEqual(['a']);
+    expect(visto.actual.horasDeHoy).toEqual([]);
+    expect(visto.actual.respondidasHoy).toBe(0);
     expect(visto.actual.horaEnCursoPendiente).toBe(false);
   });
 
   it('con Mi Radar encendido y un día con Radar, hoy hay Radar; apagado, no', async () => {
-    await montar({ encendido: true, horas: [9, 14, 20] });
+    await montar(miRadarConHoras([9, 14, 20]));
     expect(visto.actual.hoyTieneRadar).toBe(true);
     act(() => raiz?.unmount());
-    await montar({ encendido: false, horas: [] });
+    await montar(miRadarConHoras([], false));
     expect(visto.actual.hoyTieneRadar).toBe(false);
   });
 
   it('la hora en curso espera respuesta con las horas de HOY, no con las de todos', async () => {
     // Sábado 31 a las 15:xx: todos los días tienen 15, pero el sábado solo las 11.
-    await montar({ encendido: true, horas: [15], dias: [{ dia: 6, horas: [11] }] }, 15, 30, 31);
+    await montar(miRadarConHoras([15], true, { 6: { horas: [11] } }), 15, 30, 31);
     expect(visto.actual.horaEnCursoPendiente).toBe(false);
     act(() => raiz?.unmount());
-    await montar({ encendido: true, horas: [9], dias: [{ dia: 6, horas: [15] }] }, 15, 30, 31);
+    await montar(miRadarConHoras([9], true, { 6: { horas: [15] } }), 15, 30, 31);
     expect(visto.actual.horaEnCursoPendiente).toBe(true);
   });
 
-  it('apagado, «Hoy» queda vacío aunque haya registros', async () => {
+  it('apagado, no hay nada que contar aunque haya registros (y el historial no se lee sin Mi Radar a la vista)', async () => {
     mockObtenerHistorial.mockResolvedValue({ entries: [registro('a', 9)], nextCursor: null });
-    await montar({ encendido: false, horas: [] });
-    expect(visto.actual.hoy).toEqual([]);
-    expect(visto.actual.historial.registros).toHaveLength(1);
+    await montar(miRadarConHoras([], false));
+    expect(visto.actual.respondidasHoy).toBe(0);
+    expect(visto.actual.horasDeHoy).toEqual([]);
   });
 
   it('esta hora ya registrada, y si la hora en curso espera respuesta (elegida y sin registro)', async () => {
-    await montar({ encendido: true, horas: [15] });
+    await montar(miRadarConHoras([15]));
     expect(visto.actual.yaRegistroEstaHora).toBe(false);
     expect(visto.actual.horaEnCursoPendiente).toBe(true);
     act(() => raiz?.unmount());
     mockObtenerHistorial.mockResolvedValue({ entries: [registro('a', 15)], nextCursor: null });
-    await montar({ encendido: true, horas: [15] });
+    await montar(miRadarConHoras([15]));
     expect(visto.actual.yaRegistroEstaHora).toBe(true);
     expect(visto.actual.horaEnCursoPendiente).toBe(false);
   });
 
   it('una hora en curso que no es una de las elegidas no espera nada', async () => {
-    await montar({ encendido: true, horas: [9, 20] });
+    await montar(miRadarConHoras([9, 20]));
     expect(visto.actual.horaEnCursoPendiente).toBe(false);
   });
 
   it('de madrugada (antes de las 03:00) queda fuera del horario; desde las 03:00, dentro', async () => {
-    await montar({ encendido: true, horas: [9] }, 2, 30);
+    await montar(miRadarConHoras([9]), 2, 30);
     expect(visto.actual.dentroDelHorario).toBe(false);
     act(() => raiz?.unmount());
-    await montar({ encendido: true, horas: [9] }, 3, 0);
+    await montar(miRadarConHoras([9]), 3, 0);
     expect(visto.actual.dentroDelHorario).toBe(true);
     act(() => raiz?.unmount());
-    await montar({ encendido: true, horas: [9] }, 23, 59);
+    await montar(miRadarConHoras([9]), 23, 59);
     expect(visto.actual.dentroDelHorario).toBe(true);
   });
 });

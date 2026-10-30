@@ -9,7 +9,7 @@ import { HojaDeTuRadarDeHoy } from '../../radar/components/HojaDeTuRadarDeHoy';
 import { HojaDelRegistroDeEstaHora } from '../../radar/components/HojaDelRegistroDeEstaHora';
 import { useRadarEnHoy } from '../../radar/hooks/useRadarEnHoy';
 import { FUERA_DE_HORARIO, HOY_SIN_RADAR, miRadarCorresponde, resumenDeMiRadarHoy, TEXTO_DEL_PIE_DE_MI_RADAR } from '../../radar/utils/miRadar';
-import { etiquetaDeLaMitad, filasDeLasHorasDeHoy } from '../../radar/utils/mitadDelRadar';
+import { etiquetaDeLaMitad, filasDeLasHorasDeHoy, resumenDelDiaDeHoy } from '../../radar/utils/mitadDelRadar';
 import { horaEnPunto, type SlotRadar } from '../../radar/utils/slotsDelRadar';
 
 /**
@@ -166,6 +166,7 @@ export function TarjetaHabitoYRadar({
       <HojaDeTuRadarDeHoy
         visible={hoja === 'horas'}
         filas={filas}
+        resumen={radar.config ? resumenDelDiaDeHoy(radar.config, ahora) : null}
         leyendo={radar.leyendoRegistros}
         motivoSinRegistrar={motivoSinRegistrar}
         onRegistrarAhora={() => cerrarHoja(() => setFormularioAbierto(true))}

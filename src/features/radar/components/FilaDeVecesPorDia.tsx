@@ -5,44 +5,36 @@ import { Icon, TAMANO_ICONO } from '../../../components/Icon';
 import { Presionable } from '../../../components/Presionable';
 import { MicroLabel } from '../../../components/ui';
 import { useTheme } from '../../../theme/ThemeContext';
-import { FilaDeDiasDelPlan } from '../../habits/components/FilaDeDiasDelPlan';
+import { FilaDeDiasDelPlan, type HoraDelDia } from '../../habits/components/FilaDeDiasDelPlan';
 import { DIAS_DEL_PLAN, type DiaDelPlan } from '../../habits/utils/semanaDelPlan';
-import type { MiRadarApi } from '../types/radar.types';
-import { resumenDelDiaEnLaFila } from '../utils/diasDeMiRadar';
 import type { DiaIso } from '../utils/miRadar';
+import { type VistaDeUnDia, textoDelDiaEnLaFila } from '../utils/vecesDeMiRadar';
 
-/** Mi Radar corre los siete días: ningún día de la fila está de más. */
+/** El día de la pantalla (LUN … DOM) como día ISO (1 … 7): el que habla el contrato. */
+export const isoDelDia = (dia: DiaDelPlan): DiaIso => (DIAS_DEL_PLAN.indexOf(dia) + 1) as DiaIso;
+/** El día ISO como el de la pantalla. */
+export const diaDeLaPantalla = (iso: number): DiaDelPlan => DIAS_DEL_PLAN[iso - 1];
+
 const CORRE_TODOS_LOS_DIAS: Record<DiaDelPlan, boolean> = {
   LUN: true, MAR: true, 'MIÉ': true, JUE: true, VIE: true, 'SÁB': true, DOM: true,
 };
 
-/** Ningún día va con candado: cambiar las horas de Mi Radar rige en el acto (a diferencia de los hábitos, D-91). */
-const TODOS_SE_PUEDEN_TOCAR = () => true;
-
-/** El día de la pantalla (LUN … DOM) como día ISO (1 … 7): el que habla el contrato. */
-export const isoDelDia = (dia: DiaDelPlan): DiaIso => (DIAS_DEL_PLAN.indexOf(dia) + 1) as DiaIso;
-
 /**
- * Los siete días de la semana de Mi Radar (spec 012, cuarta ronda): la fila de «Planificar» de los hábitos
- * (`FilaDeDiasDelPlan`, sin tocarla), con su rótulo y su ayuda.
+ * Los siete días de Mi Radar (spec 019): la fila de «Planificar» de los hábitos (`FilaDeDiasDelPlan`, sin tocar su forma) con,
+ * en cada pastilla, **solo cuántas veces pregunta ese día**, la cifra en dorado. Hoy y lo pasado llevan candado; un día sin
+ * Radar, «—». El lector de pantalla dice «Sábado 31, 15 veces».
  *
- * - **Sin días marcados** el rótulo dice «Todos los días» y lo que se edita abajo vale para todos.
- * - **Con días marcados** dice «Solo sáb, dom» y aparece «Todos» para volver.
- * - Cada día dibuja un ícono si tiene horas propias (la campana) o si va sin Radar (la campana tachada); el lector de pantalla
- *   dice el estado completo («Sábado 24, horas propias: 11:00», «Domingo 25, sin Radar»). Un día que sigue a todos queda sin ícono.
- * - Ningún día va con candado: cambiar las horas rige en el acto.
- *
- * No guarda nada ni sabe de horas: recibe lo que hay (`base`) y avisa qué día se tocó.
+ * - **Sin días marcados** el rótulo dice «Todos los días»; **con días marcados**, «Solo sáb, dom» y aparece «Todos» para volver.
+ * - No guarda nada ni sabe de horas: recibe cómo se ve cada día (`vistas`) y avisa qué día se tocó.
  */
-export function DiasDeMiRadar({
-  base,
+export function FilaDeVecesPorDia({
+  vistas,
   marcados,
   frase,
   alAlternarDia,
   alVolverATodos,
 }: {
-  /** Lo que hay: las horas de todos los días y los días con las suyas (con `encendido` aunque aún no se haya guardado). */
-  base: MiRadarApi;
+  vistas: ReadonlyArray<VistaDeUnDia>;
   marcados: readonly DiaDelPlan[];
   /** Los marcados dichos en una línea: `sáb, dom`. */
   frase: string;
@@ -51,6 +43,13 @@ export function DiasDeMiRadar({
 }) {
   const { c } = useTheme();
   const enModoDias = marcados.length > 0;
+  const vistaDe = (dia: DiaDelPlan) => vistas.find(v => v.dia === isoDelDia(dia));
+
+  const horarios: Partial<Record<DiaDelPlan, HoraDelDia>> = {};
+  for (const dia of DIAS_DEL_PLAN) {
+    const vista = vistaDe(dia);
+    if (vista) horarios[dia] = { hora: textoDelDiaEnLaFila(vista), propio: vista.veces > 0 };
+  }
 
   return (
     <View>
@@ -72,16 +71,16 @@ export function DiasDeMiRadar({
       </View>
       <FilaDeDiasDelPlan
         corre={CORRE_TODOS_LOS_DIAS}
+        horarios={horarios}
         enEdicion={[...marcados]}
-        planificable={TODOS_SE_PUEDEN_TOCAR}
-        avisoDelDia={dia => resumenDelDiaEnLaFila(base, isoDelDia(dia))}
+        planificable={dia => vistaDe(dia)?.editable === true}
+        etiquetaPropiaDelDia={(dia, nombreYFecha) => {
+          const vista = vistaDe(dia);
+          if (!vista?.editable) return `${nombreYFecha}, ya no se puede cambiar`;
+          return `${nombreYFecha}, ${vista.veces > 0 ? (vista.veces === 1 ? '1 vez' : `${vista.veces} veces`) : 'sin Radar'}`;
+        }}
         onAlternarDia={alAlternarDia}
       />
-      <Text style={[estilos.ayuda, { color: c.textSoft }]}>
-        {enModoDias
-          ? `Solo ${frase}, todas las semanas.`
-          : 'Toca un día para darle sus propias horas o dejarlo sin Radar.'}
-      </Text>
     </View>
   );
 }
@@ -91,5 +90,4 @@ const estilos = StyleSheet.create({
   rotulo: { flexShrink: 1, minHeight: 24, justifyContent: 'center' },
   enlaceTodos: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 48, paddingHorizontal: 8 },
   textoDelEnlace: { fontFamily: 'Jost_500Medium', fontSize: 16, lineHeight: 22 },
-  ayuda: { fontFamily: 'Jost_400Regular', fontSize: 16, lineHeight: 22, marginTop: 6 },
 });

@@ -1,3 +1,5 @@
+import { diaDePrueba } from '../../../radar/__tests__/fixturasDeMiRadar';
+import type { DiaDeMiRadarApi, MiRadarApi } from '../../../radar/types/radar.types';
 import { describe, expect, it, jest } from '@jest/globals';
 import React from 'react';
 import { StyleSheet } from 'react-native';
@@ -38,6 +40,11 @@ const registro = (id: string, dia: number, hora: number, extra: Partial<Registro
   ...extra,
 });
 
+/** Como llega en una ficha: encendido y solo el día de hoy (2026-10-29: jueves), con 05:30 a 22:30. */
+function deHoy(cambios: Partial<DiaDeMiRadarApi> = {}): MiRadarApi {
+  return { encendido: true, hoy: '2026-10-29', dias: [diaDePrueba(4, { fecha: '2026-10-29', ...cambios })] };
+}
+
 async function dibujar(cargar: ((cursor?: string | null) => Promise<HistorialRadarApi>) | null): Promise<ReactTestRenderer> {
   let r!: ReactTestRenderer;
   await act(async () => {
@@ -55,14 +62,14 @@ function textos(r: ReactTestRenderer): string {
 }
 
 describe('CodigoRenaserDelAlumno en la ficha', () => {
-  it('dice si encendió Mi Radar y a qué horas, y la hora prevista de cada registro', async () => {
+  it('dice si encendió Mi Radar y qué pregunta hoy (horario y veces), y la hora prevista de cada registro', async () => {
     const r = await dibujar(async () => ({
       entries: [registro('a', 25, 14, { horaPrevista: 14 }), registro('b', 25, 11)],
       nextCursor: null,
-      miRadar: { encendido: true, horas: [9, 14, 20] },
+      miRadar: deHoy(),
     }));
     const t = textos(r);
-    expect(t).toContain('Mi Radar: encendido · 09:00, 14:00 y 20:00');
+    expect(t).toContain('Mi Radar: encendido · 05:30 a 22:30 · 17 veces');
     expect(t).toContain('Prevista 14:00 · respondida 14:06');
     // Un registro libre: solo la hora en que respondió.
     expect(t).toContain('11:06');
@@ -70,25 +77,20 @@ describe('CodigoRenaserDelAlumno en la ficha', () => {
     expect(t).toContain('haciendo a');
   });
 
-  it('con días que van distinto, la ficha los dice: «… · sáb 11:00 · dom sin Radar»', async () => {
+  it('si hoy no tiene Radar (sin Despertar o «Sin Radar») la ficha lo dice', async () => {
     const r = await dibujar(async () => ({
       entries: [],
       nextCursor: null,
-      miRadar: { encendido: true, horas: [9, 14, 20], dias: [{ dia: 6, horas: [11] }, { dia: 7, horas: [] }] },
+      miRadar: deHoy({ despertar: null, motivo: 'SIN_DESPERTAR' }),
     }));
-    expect(textos(r)).toContain('Mi Radar: encendido · 09:00, 14:00 y 20:00 · sáb 11:00 · dom sin Radar');
+    expect(textos(r)).toContain('Mi Radar: encendido · hoy no tiene Radar');
   });
 
-  it('esa línea larga se parte en renglones: nunca se corta con «…»', async () => {
-    const r = await dibujar(async () => ({
-      entries: [],
-      nextCursor: null,
-      miRadar: { encendido: true, horas: [9, 14, 20], dias: [{ dia: 1, horas: [8] }, { dia: 6, horas: [10, 15] }, { dia: 7, horas: [] }] },
-    }));
+  it('esa línea se parte en renglones si es larga: nunca se corta con «…»', async () => {
+    const r = await dibujar(async () => ({ entries: [], nextCursor: null, miRadar: deHoy() }));
     const linea = r.root.findAll(n => (n.type as unknown) === 'Text' && String(n.props.children).startsWith('Mi Radar:'))[0];
     expect(linea.props.numberOfLines).toBeUndefined();
     expect(linea.props.ellipsizeMode).toBeUndefined();
-    expect(String(linea.props.children)).toContain('lun 08:00 · sáb 10:00 y 15:00 · dom sin Radar');
   });
 
   it('«Prevista … respondida …» se parte en dos renglones y no empuja la energía fuera de la tarjeta', async () => {
@@ -97,7 +99,7 @@ describe('CodigoRenaserDelAlumno en la ficha', () => {
     const r = await dibujar(async () => ({
       entries: [registro('a', 25, 14, { horaPrevista: 14 })],
       nextCursor: null,
-      miRadar: { encendido: true, horas: [14] },
+      miRadar: deHoy(),
     }));
     const estiloDe = (empieza: string) => {
       const nodo = r.root.findAll(n => (n.type as unknown) === 'Text' && String(n.props.children).startsWith(empieza))[0];
@@ -108,7 +110,7 @@ describe('CodigoRenaserDelAlumno en la ficha', () => {
   });
 
   it('apagado también se dice, y sin registros dice «Sin registros.»', async () => {
-    const r = await dibujar(async () => ({ entries: [], nextCursor: null, miRadar: { encendido: false, horas: [] } }));
+    const r = await dibujar(async () => ({ entries: [], nextCursor: null, miRadar: { ...deHoy(), encendido: false } }));
     const t = textos(r);
     expect(t).toContain('Mi Radar: apagado');
     expect(t).toContain('Sin registros.');

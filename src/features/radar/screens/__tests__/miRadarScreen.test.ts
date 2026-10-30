@@ -1,11 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import React from 'react';
+import { StyleSheet } from 'react-native';
 import TestRenderer, { act, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
 
 /**
- * Yo → Mi Radar (spec 012), lo básico de la pantalla: el interruptor manda (apagado no hay registrar ni horarios),
- * encender muestra las horas sugeridas y se guarda con «Guardar y encender», las reglas de las horas se dicen en línea,
- * apagar rige en el acto, y venir de un aviso abre el formulario cuando toca. El hook (red, historial) se reemplaza.
+ * Yo → Mi Radar (spec 019): «Encendido» manda (apagado no hay modo ni horario), el modo Automático o Personalizado, «Hora»
+ * de solo lectura, «Veces al día» con − / +, la fila de los siete días con solo las veces (hoy y lo pasado con candado), «Sin
+ * Radar estos días», «Guardar · sáb, dom» con SOLO lo tocado, y «Programar mi Despertar» si falta. Venir de un aviso abre el
+ * formulario cuando toca. El hook (red, historial) se reemplaza.
+ *
+ * El «hoy» de las pruebas es el jueves 29/10/2026 a las 15:30: lunes a jueves llevan candado y viernes a domingo se editan.
  */
 
 jest.mock('../../../../theme/ThemeContext', () => {
@@ -33,9 +37,10 @@ jest.mock('../../components/CodigoRenaserModal', () => ({
 const mockMi = { actual: undefined as unknown as ReturnType<typeof crearMi> };
 jest.mock('../../hooks/useMiRadar', () => ({ useMiRadar: () => mockMi.actual }));
 
-import type { DiaDeMiRadarApi, MiRadarApi, RegistroRadarApi } from '../../types/radar.types';
-import { validarHoras } from '../../utils/miRadar';
-import { FUERA_DE_HORARIO, HOY_SIN_RADAR, MiRadarScreen, QUIEN_LO_VE } from '../MiRadarScreen';
+import * as tokens from '../../../../theme/tokens';
+import { diaDePrueba, miRadarDePrueba } from '../../__tests__/fixturasDeMiRadar';
+import type { MiRadarApi, RegistroRadarApi } from '../../types/radar.types';
+import { FUERA_DE_HORARIO, HOY_SIN_RADAR, MiRadarScreen } from '../MiRadarScreen';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -50,17 +55,17 @@ const registro = (id: string, dia: number, hora: number, extra: Partial<Registro
   ...extra,
 });
 
+/** El jueves 29: lunes a jueves con candado (`editable: false`); viernes, sábado y domingo se editan. */
+const semana = (encendido = true, porDia: Parameters<typeof miRadarDePrueba>[1] = {}): MiRadarApi =>
+  miRadarDePrueba(encendido, { 1: { editable: false }, 2: { editable: false }, 3: { editable: false }, 4: { editable: false }, ...porDia });
+
 function crearMi(config: MiRadarApi | null, extra: Record<string, unknown> = {}) {
   return {
     usuarioId: 'u1',
     ahora: new Date(2026, 9, 29, 15, 30),
     config,
     guardando: false,
-    guardarConfig: jest.fn(async (encendido: boolean, horas: readonly number[], dias: readonly DiaDeMiRadarApi[] = []) => {
-      if (!encendido) return { ok: true as const, config: { encendido: false, horas: [], dias: [] } };
-      const v = validarHoras(horas);
-      return v.ok ? { ok: true as const, config: { encendido: true, horas: v.horas, dias: [...dias] } } : { ok: false as const, error: v.error };
-    }),
+    guardarConfig: jest.fn(async (encendido: boolean, _dias: readonly unknown[] = []) => ({ ok: true as const, config: semana(encendido) })),
     historial: {
       registros: [] as RegistroRadarApi[],
       dias: [] as Array<{ fecha: string | null; registros: Array<{ registro: RegistroRadarApi; hora: string | null }> }>,
@@ -72,8 +77,6 @@ function crearMi(config: MiRadarApi | null, extra: Record<string, unknown> = {})
       cargarMas: jest.fn(async () => undefined),
       recargar: jest.fn(async () => undefined),
     },
-    hoy: [] as unknown[],
-    patrones: { registros: 0, hayPatrones: false, masEnergia: null, menosEnergia: null, evitando: null },
     hoyTieneRadar: true,
     yaRegistroEstaHora: false,
     dentroDelHorario: true,
@@ -87,7 +90,7 @@ function crearMi(config: MiRadarApi | null, extra: Record<string, unknown> = {})
 }
 
 const montadas: ReactTestRenderer[] = [];
-function montar(props: { abrirDesdeAviso?: boolean } = {}): ReactTestRenderer {
+function montar(props: { abrirDesdeAviso?: boolean; onProgramarHorario?: () => void; } = {}): ReactTestRenderer {
   let r!: ReactTestRenderer;
   act(() => {
     r = TestRenderer.create(React.createElement(MiRadarScreen, { onVolver: () => undefined, ...props }));
@@ -112,7 +115,20 @@ const tocable = (r: ReactTestRenderer, etiqueta: string): ReactTestInstance =>
   r.root.findAll(n => n.props.accessibilityLabel === etiqueta && typeof n.props.onPress === 'function')[0];
 const hay = (r: ReactTestRenderer, etiqueta: string) =>
   r.root.findAll(n => n.props.accessibilityLabel === etiqueta && typeof n.props.onPress === 'function').length > 0;
-const elegida = (r: ReactTestRenderer, hora: string) => tocable(r, hora).props.accessibilityState.selected === true;
+/** El chip de un día de la fila de los siete días, por su nombre (la fecha del mes depende del día en que corra la prueba). */
+const chipDelDia = (r: ReactTestRenderer, nombre: string): ReactTestInstance =>
+  r.root.findAll(
+    n => typeof n.props.accessibilityLabel === 'string' && n.props.accessibilityLabel.startsWith(`${nombre} `) && typeof n.props.onPress === 'function',
+  )[0];
+const etiquetaDelChip = (r: ReactTestRenderer, nombre: string): string => chipDelDia(r, nombre).props.accessibilityLabel;
+const chipEnEdicion = (r: ReactTestRenderer, nombre: string) => chipDelDia(r, nombre).props.accessibilityState.selected === true;
+const chipConCandado = (r: ReactTestRenderer, nombre: string) => chipDelDia(r, nombre).props.accessibilityState.disabled === true;
+const pulsar = (r: ReactTestRenderer, etiqueta: string) => act(() => tocable(r, etiqueta).props.onPress());
+const marcar = (r: ReactTestRenderer, ...dias: string[]) => dias.forEach(d => act(() => chipDelDia(r, d).props.onPress()));
+const modoElegido = (r: ReactTestRenderer) => (tocable(r, 'Personalizado').props.accessibilityState.selected ? 'PERSONALIZADO' : 'AUTOMATICO');
+/** La cifra grande de «Veces al día». */
+const cifraDeLasVeces = (r: ReactTestRenderer): string =>
+  String(r.root.findAll(n => n.props.accessibilityLiveRegion === 'polite')[0].props.children);
 const visibleElFormulario = () => mockModal[mockModal.length - 1]?.visible === true;
 
 beforeEach(() => {
@@ -126,453 +142,392 @@ afterEach(() => {
 });
 
 describe('Mi Radar apagado', () => {
-  it('lo primero es el interruptor apagado, y no hay registrar ni horarios; sí quién lo ve, historial y patrones', () => {
-    mockMi.actual = crearMi({ encendido: false, horas: [] });
+  it('lo primero es «Encendido» apagado y no hay modo, hora, fila de días ni registrar', () => {
+    mockMi.actual = crearMi(semana(false));
     const r = montar();
-    const interruptor = tocable(r, 'Mi Radar');
+    const interruptor = tocable(r, 'Encendido');
     expect(interruptor.props.accessibilityRole).toBe('switch');
     expect(interruptor.props.accessibilityState.checked).toBe(false);
     const t = textos(r);
-    expect(t).toContain(QUIEN_LO_VE);
-    expect(QUIEN_LO_VE).toBe('Lo ves tú, tu mentor y el equipo que coordina tu grupo.');
     expect(t).not.toContain('Registrar ahora');
-    expect(t).not.toContain('Tus horas');
-    expect(hay(r, '09:00')).toBe(false);
-    expect(t).toContain('Historial');
-    expect(t).toContain('Patrones');
-    expect(t).toContain('Todavía no tienes registros.');
-    expect(t).toContain('Con 0 registros todavía no hay patrones. Aparecen desde 3.');
+    expect(t).not.toContain('Hora');
+    expect(t).not.toContain('Todos los días');
+    expect(hay(r, 'Automático')).toBe(false);
+    expect(t).not.toContain('Hoy: ');
   });
 
-  it('el historial se ve aunque esté apagado, con todo lo que hubo (también lo de hoy)', () => {
-    const mi = crearMi({ encendido: false, horas: [] });
+  it('no queda ningún texto de explicación de la versión anterior', () => {
+    mockMi.actual = crearMi(semana(true));
+    const t = textos(montar());
+    for (const quitado of ['Lo ves tú, tu mentor', 'Aquí verás tus registros de hoy', 'De 03:00 a 23:00', 'Toca un día para', 'Cómo suena', 'horas por día', 'Tus horas', 'Historial', 'Patrones', 'Sin registro', 'Ver más', 'Todavía no tienes registros']) {
+      expect(t).not.toContain(quitado);
+    }
+  });
+
+  it('no muestra las respuestas de la persona (ni hoy ni el historial), aunque las haya: eso lo ven su mentor y su líder en la ficha', () => {
+    const mi = crearMi(semana(true));
     const a = registro('a', 29, 11, { horaPrevista: 11 });
     mi.historial.registros = [a];
     mi.historial.dias = [{ fecha: '2026-10-29', registros: [{ registro: a, hora: '11:06' }] }];
     mockMi.actual = mi;
-    const r = montar();
-    expect(textos(r)).toContain('Prevista 11:00 · respondida 11:06');
+    const t = textos(montar());
+    expect(t).not.toContain('haciendo a');
+    expect(t).not.toContain('Prevista 11:00');
+    expect(t).not.toContain('Sentí');
+    expect(t).not.toContain('Energía');
   });
 
-  it('encender muestra las horas con 09:00, 14:00 y 20:00 marcadas, sin guardar todavía', () => {
-    mockMi.actual = crearMi({ encendido: false, horas: [] });
+  it('encender rige en el acto: manda solo «encendido» y confirma en línea', async () => {
+    mockMi.actual = crearMi(semana(false));
     const r = montar();
-    act(() => tocable(r, 'Mi Radar').props.onPress());
-    const t = textos(r);
-    expect(t).toContain('Tus horas');
-    expect(t).toContain('3 de 12 horas elegidas');
-    expect(['09:00', '14:00', '20:00'].every(h => elegida(r, h))).toBe(true);
-    expect(elegida(r, '10:00')).toBe(false);
-    // Solo 03:00 a 23:00: 21 horas, ninguna de madrugada ni pasada la medianoche.
-    expect(hay(r, '03:00')).toBe(true);
-    expect(hay(r, '23:00')).toBe(true);
-    expect(hay(r, '00:00')).toBe(false);
-    expect(hay(r, '02:00')).toBe(false);
-    expect(mockMi.actual.guardarConfig).not.toHaveBeenCalled();
-    // Todavía no está guardado: no hay registrar.
-    expect(t).not.toContain('Registrar ahora');
-  });
-
-  it('«Guardar y encender» guarda las horas y confirma en línea', async () => {
-    mockMi.actual = crearMi({ encendido: false, horas: [] });
-    const r = montar();
-    act(() => tocable(r, 'Mi Radar').props.onPress());
-    act(() => tocable(r, '10:00').props.onPress());
     await act(async () => {
-      tocable(r, 'Guardar y encender').props.onPress();
+      tocable(r, 'Encendido').props.onPress();
     });
-    expect(mockMi.actual.guardarConfig).toHaveBeenCalledWith(true, [9, 10, 14, 20], []);
-    expect(textos(r)).toContain('Mi Radar encendido · 09:00, 10:00, 14:00 y 20:00');
-  });
-
-  it('con ninguna hora marcada, guardar dice «Elige al menos una hora» y no guarda', async () => {
-    mockMi.actual = crearMi({ encendido: false, horas: [] });
-    const r = montar();
-    act(() => tocable(r, 'Mi Radar').props.onPress());
-    for (const h of ['09:00', '14:00', '20:00']) act(() => tocable(r, h).props.onPress());
-    await act(async () => {
-      tocable(r, 'Guardar y encender').props.onPress();
-    });
-    expect(textos(r)).toContain('Elige al menos una hora');
-    expect(textos(r)).not.toContain('Mi Radar encendido');
-  });
-
-  it('con 12 marcadas, una más no se marca y se lee «Puedes elegir hasta 12»', () => {
-    mockMi.actual = crearMi({ encendido: false, horas: [] });
-    const r = montar();
-    act(() => tocable(r, 'Mi Radar').props.onPress());
-    for (const h of ['03:00', '04:00', '05:00', '06:00', '07:00', '08:00', '10:00', '11:00', '12:00']) {
-      act(() => tocable(r, h).props.onPress());
-    }
-    expect(textos(r)).toContain('12 de 12 horas elegidas');
-    act(() => tocable(r, '13:00').props.onPress());
-    expect(textos(r)).toContain('Puedes elegir hasta 12');
-    expect(elegida(r, '13:00')).toBe(false);
-    expect(textos(r)).toContain('12 de 12 horas elegidas');
+    expect(mockMi.actual.guardarConfig).toHaveBeenCalledWith(true);
+    expect(textos(r)).toContain('Mi Radar encendido');
   });
 });
 
-describe('Mi Radar encendido', () => {
-  const encendido = { encendido: true, horas: [9, 14, 20] };
-
-  it('muestra registrar, hoy y las horas guardadas; no pide guardar mientras nada cambió', () => {
-    mockMi.actual = crearMi(encendido, { hoy: [{ tipo: 'sin-registro', hora: 14 }, { tipo: 'sin-registro', hora: 9 }] });
+describe('Mi Radar encendido, Automático', () => {
+  it('la cabecera dice «Ahora: 05:30 a 22:30»; el modo es Automático; «Hora» muestra Despertar y Dormir; no hay «Veces al día»', () => {
+    mockMi.actual = crearMi(semana());
     const r = montar();
     const t = textos(r);
-    expect(tocable(r, 'Mi Radar').props.accessibilityState.checked).toBe(true);
-    expect(hay(r, 'Registrar ahora') || t.includes('Registrar ahora')).toBe(true);
-    expect(t).toContain('14:00 · Sin registro');
-    expect(t).toContain('09:00 · Sin registro');
-    expect(['09:00', '14:00', '20:00'].every(h => elegida(r, h))).toBe(true);
-    expect(t).not.toContain('Guardar horarios');
+    expect(tocable(r, 'Encendido').props.accessibilityState.checked).toBe(true);
+    expect(t).toContain('Ahora: 05:30 a 22:30');
+    expect(modoElegido(r)).toBe('AUTOMATICO');
+    expect(t).toContain('Hora');
+    expect(t).toContain('05:30');
+    expect(t).toContain('22:30');
+    expect(t).toContain('Despertar');
+    expect(t).toContain('Dormir');
+    expect(t).not.toContain('Veces al día');
+    expect(t).toContain('Todos los días');
   });
 
-  it('cambiar una hora ofrece «Guardar horarios» y guarda solo las elegidas', async () => {
-    mockMi.actual = crearMi(encendido);
+  it('la fila de los siete días lleva solo las veces: hoy y lo pasado con candado, y el lector de pantalla dice «Sábado 31, 17 veces»', () => {
+    mockMi.actual = crearMi(semana());
     const r = montar();
-    act(() => tocable(r, '20:00').props.onPress());
-    await act(async () => {
-      tocable(r, 'Guardar horarios').props.onPress();
-    });
-    expect(mockMi.actual.guardarConfig).toHaveBeenCalledWith(true, [9, 14], []);
-    expect(textos(r)).toContain('Horarios guardados · 09:00 y 14:00');
+    for (const dia of ['Lunes', 'Martes', 'Miércoles', 'Jueves']) {
+      expect(chipConCandado(r, dia)).toBe(true);
+      expect(etiquetaDelChip(r, dia)).toMatch(/ya no se puede cambiar$/);
+    }
+    for (const dia of ['Viernes', 'Sábado', 'Domingo']) {
+      expect(chipConCandado(r, dia)).toBe(false);
+      expect(etiquetaDelChip(r, dia)).toMatch(/^[^,]+ \d+, 17 veces$/);
+    }
   });
 
-  it('«Registrar ahora» abre el formulario de siempre, que se puede cerrar', () => {
-    mockMi.actual = crearMi(encendido);
+  it('un día sin Radar (sin Despertar o «Sin Radar») dice «—» y «sin Radar»', () => {
+    mockMi.actual = crearMi(semana(true, { 6: { despertar: null }, 7: { sinRadar: true } }));
     const r = montar();
-    expect(visibleElFormulario()).toBe(false);
-    act(() => tocable(r, 'Registrar ahora').props.onPress());
-    expect(visibleElFormulario()).toBe(true);
-    const modal = mockModal[mockModal.length - 1];
-    expect(modal.obligatorio).toBe(false);
-    expect(modal.slot?.etiqueta).toBe('15:00');
-    expect(modal.textoDelPie).toBeTruthy();
+    expect(etiquetaDelChip(r, 'Sábado')).toMatch(/, sin Radar$/);
+    expect(etiquetaDelChip(r, 'Domingo')).toMatch(/, sin Radar$/);
+    expect(textos(r)).toContain('—');
+  });
+
+  it('hoy y lo pasado no se pueden marcar: tocar un día con candado no hace nada', () => {
+    mockMi.actual = crearMi(semana());
+    const r = montar();
+    marcar(r, 'Jueves', 'Lunes');
+    expect(chipEnEdicion(r, 'Jueves')).toBe(false);
+    expect(textos(r)).toContain('Todos los días');
+    marcar(r, 'Sábado');
+    expect(chipEnEdicion(r, 'Sábado')).toBe(true);
+    expect(textos(r)).toContain('Solo sáb');
+  });
+
+  it('sin tocar nada no hay botón de guardar', () => {
+    mockMi.actual = crearMi(semana());
+    expect(textos(montar())).not.toContain('Guardar');
   });
 
   it('apagar rige en el acto', async () => {
-    mockMi.actual = crearMi(encendido);
+    mockMi.actual = crearMi(semana());
     const r = montar();
     await act(async () => {
-      tocable(r, 'Mi Radar').props.onPress();
+      tocable(r, 'Encendido').props.onPress();
     });
-    expect(mockMi.actual.guardarConfig).toHaveBeenCalledWith(false, []);
+    expect(mockMi.actual.guardarConfig).toHaveBeenCalledWith(false);
     expect(textos(r)).toContain('Mi Radar apagado');
+  });
+});
+
+describe('Personalizado: «Veces al día»', () => {
+  it('al pasar a Personalizado, sin días marcados, cambian los días que vienen y se propone 6; hoy y lo pasado no', () => {
+    mockMi.actual = crearMi(semana());
+    const r = montar();
+    pulsar(r, 'Personalizado');
+    expect(modoElegido(r)).toBe('PERSONALIZADO');
+    expect(textos(r)).toContain('Veces al día');
+    expect(cifraDeLasVeces(r)).toBe('6');
+    expect(etiquetaDelChip(r, 'Viernes')).toMatch(/, 6 veces$/);
+    expect(etiquetaDelChip(r, 'Domingo')).toMatch(/, 6 veces$/);
+    expect(etiquetaDelChip(r, 'Jueves')).toMatch(/ya no se puede cambiar$/);
+    expect(textos(r)).toContain('Guardar · todos los días');
+  });
+
+  it('+ y − suben y bajan de a una, y las horas no se muestran: solo la cifra', () => {
+    mockMi.actual = crearMi(semana());
+    const r = montar();
+    pulsar(r, 'Personalizado');
+    pulsar(r, 'Una vez más');
+    expect(cifraDeLasVeces(r)).toBe('7');
+    pulsar(r, 'Una vez menos');
+    pulsar(r, 'Una vez menos');
+    expect(cifraDeLasVeces(r)).toBe('5');
+    expect(textos(r)).not.toMatch(/\d\d:00/);
+  });
+
+  it('− se apaga en 1 y + se apaga en lo que cabe (17)', () => {
+    mockMi.actual = crearMi(semana());
+    const r = montar();
+    pulsar(r, 'Personalizado');
+    for (let i = 0; i < 8; i++) pulsar(r, 'Una vez menos');
+    expect(cifraDeLasVeces(r)).toBe('1');
+    expect(tocable(r, 'Una vez menos').props.accessibilityState.disabled).toBe(true);
+    for (let i = 0; i < 20; i++) if (!tocable(r, 'Una vez más').props.accessibilityState.disabled) pulsar(r, 'Una vez más');
+    expect(cifraDeLasVeces(r)).toBe('17');
+    expect(tocable(r, 'Una vez más').props.accessibilityState.disabled).toBe(true);
+  });
+
+  it('con días marcados − / + cambian solo esos días, y el botón dice «Guardar · sáb, dom»', () => {
+    mockMi.actual = crearMi(semana());
+    const r = montar();
+    marcar(r, 'Sábado', 'Domingo');
+    pulsar(r, 'Personalizado');
+    pulsar(r, 'Una vez menos');
+    expect(cifraDeLasVeces(r)).toBe('5');
+    expect(etiquetaDelChip(r, 'Sábado')).toMatch(/, 5 veces$/);
+    expect(etiquetaDelChip(r, 'Viernes')).toMatch(/, 17 veces$/);
+    expect(textos(r)).toContain('Solo sáb, dom');
+    expect(textos(r)).toContain('Guardar · sáb, dom');
+  });
+
+  it('con veces distintas entre los marcados la cifra dice «—»', () => {
+    mockMi.actual = crearMi(semana(true, { 6: { modo: 'PERSONALIZADO', veces: 4, horas: [6, 12, 17, 22] }, 7: { modo: 'PERSONALIZADO', veces: 9, horas: [6, 7, 8, 9, 10, 11, 12, 13, 14] } }));
+    const r = montar();
+    marcar(r, 'Sábado', 'Domingo');
+    expect(cifraDeLasVeces(r)).toBe('—');
+  });
+
+  it('«Guardar · todos los días» manda SOLO los días que vienen con su modo y sus veces, y confirma', async () => {
+    mockMi.actual = crearMi(semana());
+    const r = montar();
+    pulsar(r, 'Personalizado');
+    await act(async () => {
+      tocable(r, 'Guardar · todos los días').props.onPress();
+    });
+    expect(mockMi.actual.guardarConfig).toHaveBeenCalledWith(true, [
+      { dia: 5, modo: 'PERSONALIZADO', veces: 6, sinRadar: false },
+      { dia: 6, modo: 'PERSONALIZADO', veces: 6, sinRadar: false },
+      { dia: 7, modo: 'PERSONALIZADO', veces: 6, sinRadar: false },
+    ]);
+    expect(textos(r)).toContain('Guardado · todos los días');
+    expect(textos(r)).not.toContain('Guardar ·');
+  });
+
+  it('con días marcados se manda solo lo de esos días', async () => {
+    mockMi.actual = crearMi(semana());
+    const r = montar();
+    marcar(r, 'Sábado', 'Domingo');
+    pulsar(r, 'Personalizado');
+    pulsar(r, 'Una vez más');
+    await act(async () => {
+      tocable(r, 'Guardar · sáb, dom').props.onPress();
+    });
+    expect(mockMi.actual.guardarConfig).toHaveBeenCalledWith(true, [
+      { dia: 6, modo: 'PERSONALIZADO', veces: 7, sinRadar: false },
+      { dia: 7, modo: 'PERSONALIZADO', veces: 7, sinRadar: false },
+    ]);
+  });
+
+  it('volver a Automático sin guardar deja todo como estaba y quita el botón', () => {
+    mockMi.actual = crearMi(semana());
+    const r = montar();
+    pulsar(r, 'Personalizado');
+    pulsar(r, 'Automático');
+    expect(textos(r)).not.toContain('Guardar ·');
+    expect(etiquetaDelChip(r, 'Sábado')).toMatch(/, 17 veces$/);
+  });
+
+  it('si el servidor lo rechaza, dice el motivo y no pierde lo tocado', async () => {
+    const mi = crearMi(semana());
+    mi.guardarConfig.mockResolvedValueOnce({ ok: false, error: 'Hoy y los días que pasaron no se pueden cambiar' } as never);
+    mockMi.actual = mi;
+    const r = montar();
+    pulsar(r, 'Personalizado');
+    await act(async () => {
+      tocable(r, 'Guardar · todos los días').props.onPress();
+    });
+    expect(textos(r)).toContain('Hoy y los días que pasaron no se pueden cambiar');
+    expect(textos(r)).toContain('Guardar · todos los días');
+    expect(modoElegido(r)).toBe('PERSONALIZADO');
+  });
+});
+
+describe('«Sin Radar estos días»', () => {
+  it('aparece al marcar días; se guarda solo para esos días', async () => {
+    mockMi.actual = crearMi(semana());
+    const r = montar();
+    expect(hay(r, 'Sin Radar estos días')).toBe(false);
+    marcar(r, 'Domingo');
+    expect(tocable(r, 'Sin Radar estos días').props.accessibilityState.checked).toBe(false);
+    pulsar(r, 'Sin Radar estos días');
+    expect(tocable(r, 'Sin Radar estos días').props.accessibilityState.checked).toBe(true);
+    expect(etiquetaDelChip(r, 'Domingo')).toMatch(/, sin Radar$/);
+    await act(async () => {
+      tocable(r, 'Guardar · dom').props.onPress();
+    });
+    expect(mockMi.actual.guardarConfig).toHaveBeenCalledWith(true, [{ dia: 7, modo: 'AUTOMATICO', sinRadar: true }]);
+  });
+
+  it('«Varía» cuando solo algunos de los marcados van sin Radar', () => {
+    mockMi.actual = crearMi(semana(true, { 7: { sinRadar: true } }));
+    const r = montar();
+    marcar(r, 'Sábado', 'Domingo');
+    expect(tocable(r, 'Sin Radar estos días').props.accessibilityState.checked).toBe('mixed');
+  });
+});
+
+describe('«Hora»: sin Despertar o con horarios distintos', () => {
+  it('un día sin Despertar: en lugar de «Hora», «Falta tu hora de Despertar» y fijo abajo «Programar mi Despertar», que lleva a Training', () => {
+    const irAPlanificar = jest.fn();
+    mockMi.actual = crearMi(semana(true, { 4: { despertar: null } }), { hoyTieneRadar: false });
+    const r = montar({ onProgramarHorario: irAPlanificar });
+    const t = textos(r);
+    expect(t).toContain('Falta tu hora de Despertar');
+    expect(t).not.toContain('Ahora:');
+    expect(t).toContain(HOY_SIN_RADAR);
+    pulsar(r, 'Programar mi Despertar');
+    expect(irAPlanificar).toHaveBeenCalledTimes(1);
+  });
+
+  it('sin Dormir el botón dice «Programar mi Dormir»', () => {
+    mockMi.actual = crearMi(semana(true, { 4: { dormir: null } }), { hoyTieneRadar: false });
+    const r = montar();
+    expect(textos(r)).toContain('Falta tu hora de Dormir');
+    expect(hay(r, 'Programar mi Dormir')).toBe(true);
+  });
+
+  it('si hay algo que guardar, el botón fijo es «Guardar» y no «Programar»', () => {
+    mockMi.actual = crearMi(semana(true, { 4: { despertar: null } }));
+    const r = montar();
+    pulsar(r, 'Personalizado');
+    expect(hay(r, 'Programar mi Despertar')).toBe(false);
+    expect(textos(r)).toContain('Guardar · todos los días');
+  });
+
+  it('días marcados con horarios distintos: «Estos días tienen horas distintas»', () => {
+    mockMi.actual = crearMi(semana(true, { 7: { despertar: '08:00', dormir: '23:00' } }));
+    const r = montar();
+    marcar(r, 'Sábado', 'Domingo');
+    expect(textos(r)).toContain('Estos días tienen horas distintas');
+    expect(textos(r)).toContain('Ahora: 05:30 a 22:30');
+  });
+});
+
+describe('registrar y lo de hoy', () => {
+  it('«Registrar ahora» abre el formulario de siempre, que se puede cerrar', () => {
+    mockMi.actual = crearMi(semana());
+    const r = montar();
+    expect(visibleElFormulario()).toBe(false);
+    pulsar(r, 'Registrar ahora');
+    expect(visibleElFormulario()).toBe(true);
+    expect(mockModal[mockModal.length - 1].obligatorio).toBe(false);
+    expect(mockModal[mockModal.length - 1].textoDelPie).toBe('Puedes cerrarlo; tu borrador queda guardado en este teléfono.');
   });
 
   it('si ya registró esta hora lo dice y no ofrece registrar; de madrugada dice que funciona de 03:00 a 23:59', () => {
-    mockMi.actual = crearMi(encendido, { yaRegistroEstaHora: true });
+    mockMi.actual = crearMi(semana(), { yaRegistroEstaHora: true });
     let r = montar();
     expect(textos(r)).toContain('Ya registraste esta hora');
     expect(hay(r, 'Registrar ahora')).toBe(false);
 
-    mockMi.actual = crearMi(encendido, { dentroDelHorario: false });
+    mockMi.actual = crearMi(semana(), { dentroDelHorario: false });
     r = montar();
     expect(textos(r)).toContain(FUERA_DE_HORARIO);
     expect(FUERA_DE_HORARIO).toBe('Mi Radar funciona de 03:00 a 23:59.');
     expect(hay(r, 'Registrar ahora')).toBe(false);
   });
-});
 
-/** El chip de un día de la fila de los siete días, por su nombre (la fecha del mes depende del día en que corra la prueba). */
-const chipDelDia = (r: ReactTestRenderer, nombre: string): ReactTestInstance => {
-  const encontrados = r.root.findAll(
-    n => typeof n.props.accessibilityLabel === 'string' && n.props.accessibilityLabel.startsWith(`${nombre} `) && typeof n.props.onPress === 'function',
-  );
-  return encontrados[0];
-};
-const chipEnEdicion = (r: ReactTestRenderer, nombre: string) => chipDelDia(r, nombre).props.accessibilityState.selected === true;
-const etiquetaDelChip = (r: ReactTestRenderer, nombre: string): string => chipDelDia(r, nombre).props.accessibilityLabel;
-
-describe('los horarios por día de la semana', () => {
-  const encendido: MiRadarApi = { encendido: true, horas: [9, 14, 20], dias: [] };
-  const conPropios: MiRadarApi = { encendido: true, horas: [9, 14, 20], dias: [{ dia: 6, horas: [11] }, { dia: 7, horas: [] }] };
-
-  it('sin días marcados: «Todos los días», la fila de los siete días y las horas de siempre', () => {
-    mockMi.actual = crearMi(encendido);
-    const r = montar();
-    const t = textos(r);
-    expect(t).toContain('Todos los días');
-    expect(t).toContain('Toca un día para darle sus propias horas o dejarlo sin Radar.');
-    for (const dia of ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']) {
-      expect(chipDelDia(r, dia)).toBeDefined();
-      expect(chipEnEdicion(r, dia)).toBe(false);
-    }
-    expect(['09:00', '14:00', '20:00'].every(h => elegida(r, h))).toBe(true);
-    expect(t).toContain('3 de 12 horas elegidas');
-    expect(t).not.toContain('Sin Radar ese día');
-    expect(t).not.toContain('Guardar horas');
-  });
-
-  it('ningún día lleva candado: se puede tocar cualquiera, también hoy', () => {
-    mockMi.actual = crearMi(encendido);
-    const r = montar();
-    for (const dia of ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']) {
-      expect(chipDelDia(r, dia).props.accessibilityState.disabled).toBe(false);
-    }
-  });
-
-  it('cada día dice su estado: los que siguen a todos, nada; con horas propias o sin Radar, también al lector de pantalla', () => {
-    mockMi.actual = crearMi(conPropios);
-    const r = montar();
-    expect(etiquetaDelChip(r, 'Lunes')).not.toMatch(/horas propias|sin Radar/i);
-    expect(etiquetaDelChip(r, 'Sábado')).toMatch(/, horas propias: 11:00$/);
-    expect(etiquetaDelChip(r, 'Domingo')).toMatch(/, sin Radar$/);
-  });
-
-  it('marcar un día: «Solo sáb», «Sin Radar ese día» y las horas que tiene (las de todos, si las sigue); sin botón hasta tocar algo', () => {
-    mockMi.actual = crearMi(encendido);
-    const r = montar();
-    act(() => chipDelDia(r, 'Sábado').props.onPress());
-    const t = textos(r);
-    expect(chipEnEdicion(r, 'Sábado')).toBe(true);
-    expect(t).toContain('Solo sáb');
-    expect(t).toContain('Solo sáb, todas las semanas.');
-    expect(tocable(r, 'Sin Radar ese día').props.accessibilityState.checked).toBe(false);
-    expect(['09:00', '14:00', '20:00'].every(h => elegida(r, h))).toBe(true);
-    expect(t).not.toContain('Guardar horas');
-    expect(hay(r, 'Volver a todos los días')).toBe(true);
-  });
-
-  it('varios días: «Solo sáb, dom» y el interruptor dice «estos días»', () => {
-    mockMi.actual = crearMi(encendido);
-    const r = montar();
-    act(() => chipDelDia(r, 'Sábado').props.onPress());
-    act(() => chipDelDia(r, 'Domingo').props.onPress());
-    expect(textos(r)).toContain('Solo sáb, dom, todas las semanas.');
-    expect(hay(r, 'Sin Radar estos días')).toBe(true);
-    expect(hay(r, 'Sin Radar ese día')).toBe(false);
-  });
-
-  it('«Sin Radar ese día» se guarda con «Guardar horas · sáb», solo lo tocado, y confirma', async () => {
-    mockMi.actual = crearMi(encendido);
-    const r = montar();
-    act(() => chipDelDia(r, 'Sábado').props.onPress());
-    act(() => tocable(r, 'Sin Radar ese día').props.onPress());
-    // Sin Radar esconde las horas.
-    expect(hay(r, '09:00')).toBe(false);
-    expect(tocable(r, 'Sin Radar ese día').props.accessibilityState.checked).toBe(true);
-    await act(async () => {
-      tocable(r, 'Guardar horas · sáb').props.onPress();
-    });
-    expect(mockMi.actual.guardarConfig).toHaveBeenCalledWith(true, [9, 14, 20], [{ dia: 6, horas: [] }]);
-    expect(textos(r)).toContain('Guardado para sáb.');
-    // Después de guardar vuelve a «Todos los días».
-    expect(textos(r)).toContain('Todos los días');
-    expect(chipEnEdicion(r, 'Sábado')).toBe(false);
-  });
-
-  it('horas propias de un día: se eligen con los mismos chips y se guardan solo para ese día', async () => {
-    mockMi.actual = crearMi(encendido);
-    const r = montar();
-    act(() => chipDelDia(r, 'Sábado').props.onPress());
-    act(() => tocable(r, '14:00').props.onPress());
-    act(() => tocable(r, '20:00').props.onPress());
-    act(() => tocable(r, '11:00').props.onPress());
-    expect(elegida(r, '11:00')).toBe(true);
-    expect(elegida(r, '14:00')).toBe(false);
-    expect(textos(r)).toContain('2 de 12 horas elegidas');
-    await act(async () => {
-      tocable(r, 'Guardar horas · sáb').props.onPress();
-    });
-    // Las horas de todos los días son las guardadas (9, 14, 20), no lo que se tocó para el sábado.
-    expect(mockMi.actual.guardarConfig).toHaveBeenCalledWith(true, [9, 14, 20], [{ dia: 6, horas: [9, 11] }]);
-  });
-
-  it('lo que queda igual que todos los días no se guarda como propio, y no hay botón si nada cambió', () => {
-    mockMi.actual = crearMi(encendido);
-    const r = montar();
-    act(() => chipDelDia(r, 'Sábado').props.onPress());
-    act(() => tocable(r, '14:00').props.onPress());
-    expect(textos(r)).toContain('Guardar horas · sáb');
-    act(() => tocable(r, '14:00').props.onPress());
-    expect(textos(r)).not.toContain('Guardar horas');
-    expect(mockMi.actual.guardarConfig).not.toHaveBeenCalled();
-  });
-
-  it('marcar y desmarcar días no pierde las horas de todos los días que se estaban eligiendo', () => {
-    mockMi.actual = crearMi(encendido);
-    const r = montar();
-    act(() => tocable(r, '10:00').props.onPress());
-    expect(textos(r)).toContain('4 de 12 horas elegidas');
-    act(() => chipDelDia(r, 'Sábado').props.onPress());
-    expect(elegida(r, '10:00')).toBe(false);
-    act(() => tocable(r, 'Volver a todos los días').props.onPress());
-    expect(textos(r)).toContain('Todos los días');
-    expect(elegida(r, '10:00')).toBe(true);
-    expect(textos(r)).toContain('Guardar horarios');
-  });
-
-  it('con 12 horas en un día, una más no se marca y se lee «Puedes elegir hasta 12»', () => {
-    mockMi.actual = crearMi(encendido);
-    const r = montar();
-    act(() => chipDelDia(r, 'Sábado').props.onPress());
-    for (const h of ['03:00', '04:00', '05:00', '06:00', '07:00', '08:00', '10:00', '11:00', '12:00']) {
-      act(() => tocable(r, h).props.onPress());
-    }
-    expect(textos(r)).toContain('12 de 12 horas elegidas');
-    act(() => tocable(r, '13:00').props.onPress());
-    expect(textos(r)).toContain('Puedes elegir hasta 12');
-    expect(elegida(r, '13:00')).toBe(false);
-  });
-
-  it('sin ninguna hora y sin «Sin Radar», guardar dice qué hacer y no guarda', async () => {
-    mockMi.actual = crearMi({ encendido: true, horas: [9, 14, 20], dias: [] });
-    const r = montar();
-    act(() => chipDelDia(r, 'Sábado').props.onPress());
-    for (const h of ['09:00', '14:00', '20:00']) act(() => tocable(r, h).props.onPress());
-    await act(async () => {
-      tocable(r, 'Guardar horas · sáb').props.onPress();
-    });
-    expect(textos(r)).toContain('Elige al menos una hora o marca «Sin Radar» para esos días');
-    expect(mockMi.actual.guardarConfig).not.toHaveBeenCalled();
-  });
-
-  it('días con horas distintas: «Estos días tienen horas distintas», sin horas marcadas, «Varía» y lo que se elija va a todos', async () => {
-    mockMi.actual = crearMi(conPropios);
-    const r = montar();
-    // Sábado (11:00) y lunes (las de todos) no coinciden.
-    act(() => chipDelDia(r, 'Sábado').props.onPress());
-    act(() => chipDelDia(r, 'Lunes').props.onPress());
-    expect(textos(r)).toContain('Estos días tienen horas distintas');
-    expect(['09:00', '11:00', '14:00', '20:00'].some(h => elegida(r, h))).toBe(false);
-    act(() => tocable(r, '16:00').props.onPress());
-    expect(textos(r)).not.toContain('Estos días tienen horas distintas');
-    await act(async () => {
-      tocable(r, 'Guardar horas · lun, sáb').props.onPress();
-    });
-    expect(mockMi.actual.guardarConfig).toHaveBeenCalledWith(true, [9, 14, 20], [
-      { dia: 1, horas: [16] },
-      { dia: 6, horas: [16] },
-      { dia: 7, horas: [] },
-    ]);
-  });
-
-  it('«Varía» en «Sin Radar» cuando solo algunos de los marcados van sin Radar; tocarlo los pone a todos sin Radar', () => {
-    mockMi.actual = crearMi(conPropios);
-    const r = montar();
-    act(() => chipDelDia(r, 'Domingo').props.onPress());
-    expect(tocable(r, 'Sin Radar ese día').props.accessibilityState.checked).toBe(true);
-    act(() => chipDelDia(r, 'Lunes').props.onPress());
-    expect(tocable(r, 'Sin Radar estos días').props.accessibilityState.checked).toBe('mixed');
-    act(() => tocable(r, 'Sin Radar estos días').props.onPress());
-    expect(tocable(r, 'Sin Radar estos días').props.accessibilityState.checked).toBe(true);
-    expect(textos(r)).toContain('Guardar horas · lun, dom');
-  });
-
-  it('apagar «Sin Radar» de un día que iba sin Radar le devuelve las horas de todos', async () => {
-    mockMi.actual = crearMi(conPropios);
-    const r = montar();
-    act(() => chipDelDia(r, 'Domingo').props.onPress());
-    act(() => tocable(r, 'Sin Radar ese día').props.onPress());
-    expect(['09:00', '14:00', '20:00'].every(h => elegida(r, h))).toBe(true);
-    await act(async () => {
-      tocable(r, 'Guardar horas · dom').props.onPress();
-    });
-    // El domingo vuelve a seguir a todos; el sábado conserva sus 11:00.
-    expect(mockMi.actual.guardarConfig).toHaveBeenCalledWith(true, [9, 14, 20], [{ dia: 6, horas: [11] }]);
-  });
-
-  it('«Dejar sáb como los demás días» solo aparece si ese día tiene lo suyo, y se guarda en el acto', async () => {
-    mockMi.actual = crearMi(conPropios);
-    const r = montar();
-    act(() => chipDelDia(r, 'Lunes').props.onPress());
-    expect(textos(r)).not.toContain('Dejar lun como los demás días');
-    act(() => chipDelDia(r, 'Lunes').props.onPress());
-    act(() => chipDelDia(r, 'Sábado').props.onPress());
-    expect(textos(r)).toContain('Dejar sáb como los demás días');
-    await act(async () => {
-      r.root.findAll(n => typeof n.props.onPress === 'function' && n.props.accessibilityRole === 'button' && textosDe(n).includes('Dejar sáb como los demás días'))[0].props.onPress();
-    });
-    expect(mockMi.actual.guardarConfig).toHaveBeenCalledWith(true, [9, 14, 20], [{ dia: 7, horas: [] }]);
-    expect(textos(r)).toContain('Quedó igual que los demás días: sáb.');
-  });
-
-  it('«Guardar horarios» de todos los días conserva los días propios que ya había', async () => {
-    mockMi.actual = crearMi(conPropios);
-    const r = montar();
-    act(() => tocable(r, '20:00').props.onPress());
-    await act(async () => {
-      tocable(r, 'Guardar horarios').props.onPress();
-    });
-    expect(mockMi.actual.guardarConfig).toHaveBeenCalledWith(true, [9, 14], conPropios.dias);
-  });
-
-  it('aún apagado: encender y darle horas propias a un día se guarda junto, con «Guardar y encender · sáb»', async () => {
-    mockMi.actual = crearMi({ encendido: false, horas: [], dias: [] });
-    const r = montar();
-    act(() => tocable(r, 'Mi Radar').props.onPress());
-    act(() => chipDelDia(r, 'Sábado').props.onPress());
-    act(() => tocable(r, 'Sin Radar ese día').props.onPress());
-    await act(async () => {
-      tocable(r, 'Guardar y encender · sáb').props.onPress();
-    });
-    // Las horas de todos los días son las sugeridas que se estaban viendo.
-    expect(mockMi.actual.guardarConfig).toHaveBeenCalledWith(true, [9, 14, 20], [{ dia: 6, horas: [] }]);
-    expect(textos(r)).toContain('Mi Radar encendido · guardado para sáb.');
-  });
-
-  it('si el servidor lo rechaza, dice el motivo y no pierde lo tocado', async () => {
-    const mi = crearMi(encendido);
-    mi.guardarConfig.mockResolvedValueOnce({ ok: false as const, error: 'Las horas van de 3 a 23' } as never);
-    mockMi.actual = mi;
-    const r = montar();
-    act(() => chipDelDia(r, 'Sábado').props.onPress());
-    act(() => tocable(r, 'Sin Radar ese día').props.onPress());
-    await act(async () => {
-      tocable(r, 'Guardar horas · sáb').props.onPress();
-    });
-    expect(textos(r)).toContain('Las horas van de 3 a 23');
-    expect(chipEnEdicion(r, 'Sábado')).toBe(true);
-    expect(tocable(r, 'Sin Radar ese día').props.accessibilityState.checked).toBe(true);
-  });
-});
-
-describe('hoy, según el día de la semana', () => {
-  const encendido = { encendido: true, horas: [9, 14, 20] };
-
-  it('un día «Sin Radar» no ofrece «Registrar ahora»: dice «Hoy no tienes Mi Radar»', () => {
-    mockMi.actual = crearMi(encendido, { hoyTieneRadar: false });
+  it('un día sin Radar no ofrece «Registrar ahora»: dice «Hoy no tienes Mi Radar»', () => {
+    mockMi.actual = crearMi(semana(), { hoyTieneRadar: false });
     const r = montar();
     expect(textos(r)).toContain(HOY_SIN_RADAR);
-    expect(HOY_SIN_RADAR).toBe('Hoy no tienes Mi Radar');
     expect(hay(r, 'Registrar ahora')).toBe(false);
     expect(textos(r)).not.toContain('Ya registraste esta hora');
   });
 
-  it('un día con Radar sigue ofreciendo «Registrar ahora» y no dice que no hay Radar', () => {
-    mockMi.actual = crearMi(encendido);
+});
+
+describe('«Hoy: 4 de 6»: una sola línea con las veces que respondió hoy de las que le tocaban', () => {
+  /* Jueves 29, 15:30. Seis horas hoy: 06, 09, 12, 15, 18 y 21; respondidas las cuatro primeras. */
+  const delJueves = () =>
+    semana(true, { 4: { horas: [6, 9, 12, 15, 18, 21] } });
+  const respondidas = (...horas: number[]) => horas.map(h => registro(`r${h}`, 29, h, { horaPrevista: h }));
+  const lineaDeHoy = (r: ReactTestRenderer) =>
+    r.root.findAll(n => (n.type as unknown) === 'Text' && typeof n.props.accessibilityLabel === 'string' && n.props.accessibilityLabel.startsWith('Hoy respondiste'))[0];
+
+  it('con datos: «Hoy: 4 de 6» en tabular-nums, 16 px, sin color de estado, y el lector de pantalla dice «Hoy respondiste 4 de 6 veces»', () => {
+    const mi = crearMi(delJueves());
+    mi.historial.registros = respondidas(6, 9, 12, 15);
+    mockMi.actual = mi;
     const r = montar();
-    expect(hay(r, 'Registrar ahora')).toBe(true);
-    expect(textos(r)).not.toContain(HOY_SIN_RADAR);
+    const linea = lineaDeHoy(r);
+    expect(textos(r)).toContain('Hoy: 4 de 6');
+    expect(linea.props.accessibilityLabel).toBe('Hoy respondiste 4 de 6 veces');
+    const estilo = StyleSheet.flatten(linea.props.style) as { fontSize: number; fontVariant: string[]; color: string };
+    expect(estilo.fontSize).toBe(16);
+    expect(estilo.fontVariant).toContain('tabular-nums');
+    // Sin colores de estado: el del texto de siempre, ni el verde del éxito ni el rojo del error.
+    expect(estilo.color).not.toBe(tokens.light.success);
+    expect(estilo.color).not.toBe(tokens.light.danger);
   });
 
-  it('«Hoy» muestra lo que trae el hook, en el orden que trae (de la mañana a la noche)', () => {
-    mockMi.actual = crearMi(encendido, { hoy: [{ tipo: 'sin-registro', hora: 9 }, { tipo: 'sin-registro', hora: 14 }] });
+  it('«Hoy: 0 de 6» también se dice', () => {
+    mockMi.actual = crearMi(delJueves());
     const r = montar();
-    const t = textos(r);
-    expect(t.indexOf('09:00 · Sin registro')).toBeGreaterThan(-1);
-    expect(t.indexOf('09:00 · Sin registro')).toBeLessThan(t.indexOf('14:00 · Sin registro'));
+    expect(textos(r)).toContain('Hoy: 0 de 6');
+    expect(lineaDeHoy(r).props.accessibilityLabel).toBe('Hoy respondiste 0 de 6 veces');
+  });
+
+  it('sin Radar hoy (sin Despertar o «Sin Radar»), apagado o con 0 que tocan: no se muestra', () => {
+    for (const config of [
+      semana(true, { 4: { despertar: null } }),
+      semana(true, { 4: { sinRadar: true } }),
+      semana(false),
+      semana(true, { 4: { horas: [] } }),
+    ]) {
+      mockMi.actual = crearMi(config);
+      expect(textos(montar())).not.toContain('Hoy: ');
+    }
+  });
+
+  it('no usa más estilo que el texto: sin animación y sin ícono', () => {
+    const mi = crearMi(delJueves());
+    mi.historial.registros = respondidas(6);
+    mockMi.actual = mi;
+    const r = montar();
+    expect(lineaDeHoy(r).findAll(n => n.props.entering !== undefined || n.props.layout !== undefined)).toHaveLength(0);
   });
 });
 
 describe('venir de un aviso', () => {
-  const encendido = { encendido: true, horas: [9, 14, 20] };
-
-  it('con la hora en curso elegida y sin registro, abre también el formulario', () => {
-    mockMi.actual = crearMi(encendido, { horaEnCursoPendiente: true });
+  it('con la hora en curso de Mi Radar y sin registro, abre también el formulario', () => {
+    mockMi.actual = crearMi(semana(), { horaEnCursoPendiente: true });
     montar({ abrirDesdeAviso: true });
     expect(visibleElFormulario()).toBe(true);
   });
 
-  it('si esa hora ya tiene registro (o no es una elegida), abre solo Mi Radar', () => {
-    mockMi.actual = crearMi(encendido, { horaEnCursoPendiente: false });
+  it('si esa hora ya tiene registro (o no es una de Mi Radar), abre solo Mi Radar', () => {
+    mockMi.actual = crearMi(semana(), { horaEnCursoPendiente: false });
     montar({ abrirDesdeAviso: true });
     expect(visibleElFormulario()).toBe(false);
   });
 
   it('espera a saber si esa hora ya tiene registro (el historial carga)', () => {
-    const mi = crearMi(encendido, { horaEnCursoPendiente: true });
+    const mi = crearMi(semana(), { horaEnCursoPendiente: true });
     mi.historial.cargando = true;
     mockMi.actual = mi;
     montar({ abrirDesdeAviso: true });
@@ -580,7 +535,7 @@ describe('venir de un aviso', () => {
   });
 
   it('sin venir de un aviso, nunca se abre solo', () => {
-    mockMi.actual = crearMi(encendido, { horaEnCursoPendiente: true });
+    mockMi.actual = crearMi(semana(), { horaEnCursoPendiente: true });
     montar();
     expect(visibleElFormulario()).toBe(false);
   });

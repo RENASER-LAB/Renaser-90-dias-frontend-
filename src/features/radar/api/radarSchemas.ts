@@ -28,38 +28,72 @@ function horasValidas(horas: readonly number[] | null | undefined): number[] {
   return [...new Set((horas ?? []).filter(h => Number.isInteger(h) && h >= 0 && h <= 23))].sort((a, b) => a - b);
 }
 
-/**
- * Un día con horas propias (cuarta ronda): `dia` ISO 1..7 y sus horas (`[]` = sin Radar ese día). Un día roto (sin `dia`
- * o sin la lista de horas) se pierde SOLO él y ese día sigue las de todos: no se lo lee como «sin Radar», que sería
- * apagarle los avisos a alguien por un campo que no se entendió.
- */
-const diaDeMiRadarSchema = z
-  .object({ dia: z.number(), horas: z.array(z.number()) })
-  .passthrough()
-  .transform(d => ({ dia: d.dia, horas: horasValidas(d.horas) }));
+const horaLegible = z.string().regex(/^\d{2}:\d{2}/);
+const entero = (minimo: number) => z.number().int().min(minimo);
 
 /**
- * Mi Radar (spec 012): encendido o apagado, las horas de todos los días y las de los días que tienen las suyas.
- * `horas` ausente o con basura se lee como «ninguna»; las que no son horas en punto de un día se descartan acá y no más
- * adelante (`normalizarMiRadar`). **`dias` ausente (un backend anterior) es «ningún día tiene horas propias»**: siempre
- * sale un arreglo, ordenado por día, sin días fuera de 1..7 ni repetidos (gana el primero).
+ * Un día de Mi Radar (spec 019): `dia` ISO 1..7 y lo que el servidor resolvió. Un día roto (sin `dia`, sin `maximo` ni `veces`,
+ * que es como llega una respuesta de un backend anterior a la 019) se pierde SOLO él y, si no queda ninguno, la lectura entera
+ * se lee como un backend sin Mi Radar nuevo (`miRadarSchema`).
+ */
+const diaDeMiRadarSchema = z
+  .object({
+    dia: entero(1).max(7),
+    fecha: z.string().nullish().catch(null),
+    modo: z.enum(['AUTOMATICO', 'PERSONALIZADO']).catch('AUTOMATICO'),
+    veces: entero(0),
+    maximo: entero(0),
+    sinRadar: z.boolean().catch(false),
+    editable: z.boolean().catch(false),
+    despertar: horaLegible.nullish().catch(null),
+    dormir: horaLegible.nullish().catch(null),
+    horas: z.array(z.number()).nullish().catch(null),
+    motivo: z.enum(['SIN_DESPERTAR', 'SIN_DORMIR', 'HORARIO_INVALIDO']).nullish().catch(null),
+  })
+  .passthrough()
+  .transform(d => {
+    const horas = horasValidas(d.horas).filter(h => h >= 3);
+    return {
+      dia: d.dia,
+      fecha: d.fecha ?? null,
+      modo: d.modo,
+      veces: d.sinRadar ? 0 : Math.max(d.veces, 0),
+      maximo: d.maximo,
+      sinRadar: d.sinRadar,
+      editable: d.editable,
+      despertar: d.despertar ? d.despertar.slice(0, 5) : null,
+      dormir: d.dormir ? d.dormir.slice(0, 5) : null,
+      horas,
+      motivo: d.motivo ?? null,
+    };
+  });
+
+/**
+ * Mi Radar (spec 019): encendido, la fecha de hoy y los días que el servidor resolvió con el Despertar y el Dormir. Siempre
+ * sale un arreglo ordenado por día, sin días fuera de 1..7 ni repetidos (gana el primero). **Una respuesta sin ningún día
+ * entendible (un backend anterior a la 019, que mandaba `horas`) NO es un Mi Radar apagado: es un error de lectura**, y quien
+ * llama no ofrece nada en vez de inventar un estado.
  */
 const miRadarSchema = z
   .object({
     encendido: z.boolean(),
-    horas: z.array(z.number()).nullish().catch(null),
-    dias: z.array(z.unknown()).nullish().catch(null),
+    hoy: z.string().nullish().catch(null),
+    dias: z.array(z.unknown()),
   })
   .passthrough()
+  .superRefine((m, ctx) => {
+    if (!m.dias.some(d => diaDeMiRadarSchema.safeParse(d).success)) {
+      ctx.addIssue({ code: 'custom', message: 'Mi Radar sin días (¿backend anterior a la spec 019?)', path: ['dias'] });
+    }
+  })
   .transform(m => {
-    if (!m.encendido) return { encendido: false, horas: [] as number[], dias: [] as { dia: number; horas: number[] }[] };
     const vistos = new Set<number>();
-    const dias = (m.dias ?? [])
+    const dias = m.dias
       .map(d => diaDeMiRadarSchema.safeParse(d))
       .flatMap(r => (r.success ? [r.data] : []))
-      .filter(d => Number.isInteger(d.dia) && d.dia >= 1 && d.dia <= 7 && !vistos.has(d.dia) && vistos.add(d.dia))
+      .filter(d => !vistos.has(d.dia) && vistos.add(d.dia))
       .sort((a, b) => a.dia - b.dia);
-    return { encendido: true, horas: horasValidas(m.horas), dias };
+    return { encendido: m.encendido, hoy: m.hoy ?? null, dias };
   });
 
 /**

@@ -1,3 +1,4 @@
+import { miRadarConHoras } from '../../__tests__/fixturasDeMiRadar';
 import { describe, expect, it } from '@jest/globals';
 
 /**
@@ -32,7 +33,7 @@ const registro = (id: string, hora: number, extra: Partial<RegistroRadarApi> = {
 });
 
 const lista = (config: MiRadarApi): LecturaDeMiRadar => ({ estado: 'lista', config });
-const ENCENDIDO: MiRadarApi = { encendido: true, horas: [9, 14, 20], dias: [] };
+const ENCENDIDO: MiRadarApi = miRadarConHoras([9, 14, 20]);
 
 function entrada(extra: Partial<EntradaDeLaMitad> = {}): EntradaDeLaMitad {
   return {
@@ -139,9 +140,9 @@ describe('desde el día 8', () => {
   });
 
   it('apagado: «Planifica tu Radar» y lleva a Yo → Mi Radar', () => {
-    const m = mitadDelRadar(desdeElOcho({ miRadar: lista({ encendido: false, horas: [], dias: [] }), registros: null }))!;
+    const m = mitadDelRadar(desdeElOcho({ miRadar: lista(miRadarConHoras([], false)), registros: null }))!;
     expect(m).toMatchObject({ nombre: 'Mi Radar', hora: null, estado: 'Apagado', tono: 'suave', titulo: 'Planifica tu Radar', accion: 'yo', destacada: false });
-    expect(m.detalle).toBe('Elige tus horas, por día. Es opcional.');
+    expect(m.detalle).toBe('Cada hora entre tu Despertar y tu Dormir. Es opcional.');
   });
 
   it('encendido pero aún sin saber qué hora está respondida: no dice nada (sin parpadeo)', () => {
@@ -171,24 +172,24 @@ describe('desde el día 8', () => {
       desdeElOcho({ ahora: A_LAS(16, 30), registros: [registro('a', 9, { horaPrevista: 9 }), registro('b', 14, { horaPrevista: 14 })] }),
     )!;
     expect(m).toMatchObject({ nombre: 'Mi Radar', hora: null, estado: 'Encendido', tono: 'suave', titulo: 'Próxima a las 20:00', accion: 'horas', destacada: false });
-    expect(m.detalle).toBe('Hoy respondiste 2 de 3.');
+    expect(m.detalle).toBe('05:30 a 22:30 · 3 veces');
   });
 
   it('pasadas todas las horas de hoy, lo dice y sigue abriendo las horas', () => {
     const m = mitadDelRadar(desdeElOcho({ ahora: A_LAS(21, 15), registros: [registro('a', 9, { horaPrevista: 9 })] }))!;
     expect(m.titulo).toBe('No quedan más horas hoy');
-    expect(m.detalle).toBe('Hoy respondiste 1 de 3.');
+    expect(m.detalle).toBe('05:30 a 22:30 · 3 veces');
     expect(m.accion).toBe('horas');
   });
 
   it('un día sin Radar (la spec 012, por día): «Hoy no tienes Mi Radar» y lleva a Yo', () => {
-    const config: MiRadarApi = { encendido: true, horas: [9, 14, 20], dias: [{ dia: 4, horas: [] }] };
+    const config: MiRadarApi = miRadarConHoras([9, 14, 20], true, { 4: { horas: [], sinRadar: true } });
     const m = mitadDelRadar(desdeElOcho({ miRadar: lista(config), ahora: A_LAS(14, 10) }))!;
     expect(m).toMatchObject({ nombre: 'Mi Radar', estado: 'Encendido', titulo: 'Hoy no tienes Mi Radar', accion: 'yo' });
   });
 
   it('un día con horas propias usa las suyas, no las de todos', () => {
-    const config: MiRadarApi = { encendido: true, horas: [9, 14, 20], dias: [{ dia: 4, horas: [11] }] };
+    const config: MiRadarApi = miRadarConHoras([9, 14, 20], true, { 4: { horas: [11] } });
     expect(mitadDelRadar(desdeElOcho({ miRadar: lista(config), ahora: A_LAS(11, 5) }))!.estado).toBe('Tu hora');
     expect(mitadDelRadar(desdeElOcho({ miRadar: lista(config), ahora: A_LAS(14, 5) }))!.accion).toBe('horas');
   });
@@ -202,7 +203,7 @@ describe('desde el día 8', () => {
 describe('etiqueta para el lector de pantalla', () => {
   it('nombre, hora, estado y lo que se pide', () => {
     expect(etiquetaDeLaMitad(mitadDelRadar(entrada())!)).toBe('Código Renaser 13:00, Innegociable. ¿Dónde estás ahora mismo?');
-    expect(etiquetaDeLaMitad(mitadDelRadar(desdeElOcho({ miRadar: lista({ encendido: false, horas: [], dias: [] }) }))!)).toBe(
+    expect(etiquetaDeLaMitad(mitadDelRadar(desdeElOcho({ miRadar: lista(miRadarConHoras([], false)) }))!)).toBe(
       'Mi Radar, Apagado. Planifica tu Radar',
     );
     expect(etiquetaDeLaMitad(mitadDelRadar(entrada({ estadoDelDia: { tipo: 'respondido', slot: slot(13), proximaHora: 14 } }))!)).toBe(

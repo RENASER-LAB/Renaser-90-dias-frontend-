@@ -597,7 +597,14 @@ export default function YoScreen() {
   }
 
   if (enMiRadar && veMiRadar) {
-    return <MiRadarScreen abrirDesdeAviso={miRadarPorAviso} onVolver={() => setEnMiRadar(false)} />;
+    return (
+      <MiRadarScreen
+        abrirDesdeAviso={miRadarPorAviso}
+        onVolver={() => setEnMiRadar(false)}
+        // El Despertar y el Dormir se programan en Training → Planificar (spec 019).
+        onProgramarHorario={() => (navegacionDeYo as unknown as { navigate: (pestana: string) => void }).navigate('Training')}
+      />
+    );
   }
 
 

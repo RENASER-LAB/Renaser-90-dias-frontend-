@@ -103,36 +103,28 @@ export const CONFIG_RADAR: ConfigRadar = {
 };
 
 /**
- * Mi Radar (spec 012, pedido del dueño del 2026-10-29): el mismo Código Renaser, **desde el día 8 y encendido por
- * la persona** en Yo → Mi Radar. Las perillas van acá, igual que las de la semana 1, y las reglas de las horas son
- * las que el servidor vuelve a validar (`MiRadar` del backend): cambiar un número acá sin cambiarlo allá solo
- * consigue que el servidor rechace lo que la app deja elegir.
+ * Mi Radar (spec 012, rehecha por la 019): el mismo Código Renaser, **desde el día 8 y encendido por la persona** en Yo → Mi
+ * Radar. Las horas **no se eligen**: el servidor las calcula con el Despertar y el Dormir de cada día (cada hora en punto
+ * entre los dos, de 03:00 a 23:00, sin tope) y, en Personalizado, la persona elige cuántas veces (`VECES_POR_DEFECTO` al
+ * pasar a ese modo, recortado a lo que cabe). Las perillas van acá igual que las de la semana 1; los límites son los del
+ * servidor (`HorarioDelRadar`, `DiaDeMiRadar`): cambiar uno acá sin cambiarlo allá consigue que lo rechace.
  */
 export interface ConfigMiRadar {
   /** Primer día de programa en que se puede encender: el siguiente al último de la semana 1. */
   primerDia: number;
-  /** Primera hora en punto que se puede elegir (03:00). Nada de madrugada. */
+  /** Primera hora en punto que puede preguntar (03:00). Nada de madrugada. */
   primeraHora: number;
-  /** Última hora en punto que se puede elegir (23:00). Nada después de la medianoche. */
+  /** Última hora en punto que puede preguntar (23:00). Nada después de la medianoche. */
   ultimaHora: number;
-  /** Cuántas horas al día se pueden elegir: para todos los días y para cada día que tenga las suyas. */
-  maximoDeHoras: number;
-  /** Las que vienen marcadas al encenderlo por primera vez. */
-  horasSugeridas: readonly number[];
-  /** Desde cuántos registros aparecen los patrones. Con menos no se muestra ninguno. */
-  minimoParaPatrones: number;
-  /** Cuántos registros necesita una hora para que su energía promedio cuente en los patrones. */
-  minimoPorHora: number;
+  /** Las veces por día que se proponen al pasar a Personalizado (recortadas a las que caben ese día). */
+  vecesPorDefecto: number;
 }
 
 export const MI_RADAR: ConfigMiRadar = {
   primerDia: CONFIG_RADAR.ultimoDia + 1,
   primeraHora: 3,
   ultimaHora: 23,
-  maximoDeHoras: 12,
-  horasSugeridas: [9, 14, 20],
-  minimoParaPatrones: 3,
-  minimoPorHora: 2,
+  vecesPorDefecto: 6,
 };
 
 /** Las cinco preguntas, con el campo del contrato HTTP que cada una llena. */
