@@ -52,7 +52,11 @@ export function HojaDelHabito({
   const { height } = useWindowDimensions();
   const [guiaAbierta, setGuiaAbierta] = useState(false);
   const clave = item?.clave ?? null;
-  useEffect(() => setGuiaAbierta(false), [clave]);
+  // Plegada cada vez que la hoja se abre: la hoja queda montada con el último hábito mientras está cerrada, así que volver
+  // a abrir el MISMO hábito (misma `clave`) la encontraba desplegada de la vez anterior.
+  useEffect(() => {
+    if (visible) setGuiaAbierta(false);
+  }, [clave, visible]);
 
   if (!item) return null;
 
