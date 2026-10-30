@@ -1,6 +1,15 @@
 import { z } from 'zod';
 
-import type { DiaConHuecos, HuecoDelDia, HuecoQueSeRepite, HuecosDeLaSemana, ResumenDeHuecos } from '../types/huecos.types';
+import type {
+  BloqueOcupado,
+  DiaConHuecos,
+  HuecoDelDia,
+  HuecoQueSeRepite,
+  HuecosDeLaSemana,
+  ResumenDeHuecos,
+  SinVentanaPor,
+  TipoDeOcupado,
+} from '../types/huecos.types';
 
 /**
  * Validación en runtime de lo que responde el servidor (contrato de la spec 015). Mismo criterio que el resto de la app:
@@ -66,18 +75,64 @@ const ventanaSchema = z
   .catch(null)
   .transform(v => v ?? null);
 
+const TIPOS_CONOCIDOS: readonly string[] = ['HABITO', 'ACCION', 'EVENTO', 'AGENDA'];
+
+/**
+ * Un bloque ocupado de la agenda de un día. Un tipo que la app no conoce no lo pierde: se dibuja como `OTRO`. El nombre
+ * vacío o que no es texto es «sin nombre» (`null`), y la agenda personal NUNCA lleva nombre aunque el servidor lo mande:
+ * se dice solo «Ocupado».
+ */
+const bloqueSchema = z
+  .object({
+    desde: horaSchema,
+    hasta: horaSchema,
+    tipo: z.string().nullish().catch(null),
+    titulo: z.string().nullish().catch(null),
+  })
+  .passthrough()
+  .transform((b): BloqueOcupado => {
+    const tipo = (typeof b.tipo === 'string' && TIPOS_CONOCIDOS.includes(b.tipo) ? b.tipo : 'OTRO') as TipoDeOcupado;
+    const titulo = tipo === 'AGENDA' ? '' : (b.titulo ?? '').trim();
+    return { desde: b.desde, hasta: b.hasta, tipo, titulo: titulo === '' ? null : titulo };
+  })
+  .refine(b => aMinutos(b.hasta) > aMinutos(b.desde), 'el bloque termina antes de empezar');
+
+const MOTIVOS: readonly string[] = ['SIN_DESPERTAR', 'SIN_DORMIR', 'SIN_DESPERTAR_NI_DORMIR', 'DORMIR_ANTES_DE_DESPERTAR'];
+
+const sinVentanaPorSchema = z
+  .string()
+  .nullish()
+  .catch(null)
+  .transform((v): SinVentanaPor | null => (typeof v === 'string' && MOTIVOS.includes(v) ? (v as SinVentanaPor) : null));
+
+/** Un conteo del día: entero no negativo, o `null` (no lo sé). Un cero es un dato; la ausencia no. */
+const conteoDelDiaSchema = z
+  .number()
+  .finite()
+  .nonnegative()
+  .transform(n => Math.round(n))
+  .nullish()
+  .catch(null)
+  .transform(n => n ?? null);
+
 const diaSchema = z
   .object({
     fecha: fechaSchema,
     ventana: ventanaSchema,
+    sinVentanaPor: sinVentanaPorSchema,
     minutosOcupados: minutosOpcionales,
     minutosLibres: minutosOpcionales,
     huecos: z.array(z.unknown()).nullish().catch(null),
+    ocupados: z.array(z.unknown()).nullish().catch(null),
+    cumplidosATiempo: conteoDelDiaSchema,
+    cumplidosTarde: conteoDelDiaSchema,
+    noCumplidos: conteoDelDiaSchema,
   })
   .passthrough()
   .transform((d): DiaConHuecos => ({
     fecha: d.fecha,
     ventana: d.ventana,
+    sinVentanaPor: d.sinVentanaPor,
     minutosOcupados: d.minutosOcupados,
     minutosLibres: d.minutosLibres,
     huecos: (d.huecos ?? [])
@@ -86,6 +141,18 @@ const diaSchema = z
         return r.success ? [r.data] : [];
       })
       .sort((a, b) => a.desde.localeCompare(b.desde)),
+    /* Ausente o no es una lista = el servidor no la dice (`null`). Una lista vacía es «nada planificado». */
+    ocupados: d.ocupados
+      ? d.ocupados
+          .flatMap(b => {
+            const r = bloqueSchema.safeParse(b);
+            return r.success ? [r.data] : [];
+          })
+          .sort((a, b) => a.desde.localeCompare(b.desde) || a.hasta.localeCompare(b.hasta))
+      : null,
+    cumplidosATiempo: d.cumplidosATiempo,
+    cumplidosTarde: d.cumplidosTarde,
+    noCumplidos: d.noCumplidos,
   }));
 
 /** Un hueco que se repite: sus días en ISO 1..7, sin repetir y en orden. Sin ningún día válido no se entiende. */
@@ -134,6 +201,7 @@ const huecosDeLaSemanaSchema = z
   .object({
     semana: fechaSchema,
     primeraSemana: fechaSchema.nullish().catch(null),
+    hoy: fechaSchema.nullish().catch(null),
     cerrada: z.boolean().catch(false),
     dias: z.array(z.unknown()).nullish().catch(null),
     /* Un resumen roto se pierde SOLO él: los días, que son lo que se mira, siguen. */
@@ -153,6 +221,7 @@ const huecosDeLaSemanaSchema = z
     return {
       semana: r.semana,
       primeraSemana: r.primeraSemana ?? null,
+      hoy: r.hoy ?? null,
       cerrada: r.cerrada,
       dias,
       resumen: r.resumen ?? null,

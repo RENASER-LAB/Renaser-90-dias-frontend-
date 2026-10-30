@@ -8,9 +8,17 @@ import { useTheme } from '../../../theme/ThemeContext';
 import { Flecha } from '../../semaforo/components/NavegacionDeSemanas';
 import { useHuecosDeLaSemana, type FalloDeHuecos } from '../hooks/useHuecosDeLaSemana';
 import type { CargarHuecos, HuecosDeLaSemana } from '../types/huecos.types';
-import { rangoDeLaSemana, tituloDeLaSemana } from '../utils/textosDeHuecos';
-import { FilaDelDia } from './FilaDelDia';
-import { ResumenDeLaSemana } from './ResumenDeLaSemana';
+import {
+  avisoDeLaSemanaSinHoras,
+  diaInicial,
+  momentoDelDia,
+  totalLibreDeLaSemana,
+} from '../utils/agendaDelDia';
+import { duracionEnPalabras, duracionHablada, lineaDeLoReal, rangoDeLaSemana, tituloDeLaSemana } from '../utils/textosDeHuecos';
+import { AgendaDelDia } from './AgendaDelDia';
+import { ColumnasDeLaSemana } from './ColumnasDeLaSemana';
+import { SeRepite } from './SeRepite';
+import { TarjetaDeHoraQueFalta } from './TarjetaDeHoraQueFalta';
 
 /**
  * Lo que dice el lector de pantalla de cada flecha. **No son «Semana anterior» / «Semana siguiente»**: la ficha del líder
@@ -19,9 +27,6 @@ import { ResumenDeLaSemana } from './ResumenDeLaSemana';
  */
 export const ETIQUETA_ANTERIOR = 'Tiempo libre: semana anterior';
 export const ETIQUETA_SIGUIENTE = 'Tiempo libre: semana siguiente';
-
-/** Desde cuántos huecos en la semana cada día pasa a plegarse: con más de uno por día en promedio, ya es largo. */
-export const HUECOS_PARA_PLEGAR = 8;
 
 /**
  * «Tiempo libre de la semana» de una persona (spec 015): lo que le queda libre entre lo que planificó, semana por
@@ -46,7 +51,15 @@ export const HUECOS_PARA_PLEGAR = 8;
  * pedido más y queda guardada mientras la ficha está abierta: ir y volver no pide nada, ni tampoco volver a dibujar o
  * enfocar la ficha. Sin ir al futuro ni antes de `primeraSemana`.
  *
- * Entra con `Aparicion` como las otras secciones de la ficha; el cambio de semana y abrir un día son instantáneos.
+ * ## Por día (corregido 2026-10-29)
+ *
+ * El dueño pidió verlo «como por día, más intuitivo»: arriba la semana con sus flechas y las horas libres de toda ella; siete
+ * columnas de lunes a domingo con lo libre de cada día (`ColumnasDeLaSemana`); el día elegido como una agenda de Despertar a
+ * Dormir (`AgendaDelDia`); y al final «Se repite», tres filas como máximo (`SeRepite`). Si falta la hora de Despertar o de
+ * Dormir de toda la semana, una sola tarjeta lo dice y NO se dibuja el sueño como tiempo libre ni se cuenta un total
+ * inventado (`TarjetaDeHoraQueFalta`). Todo viene calculado del servidor; la app solo lo acomoda.
+ *
+ * Entra con `Aparicion` como las otras secciones de la ficha; el cambio de semana y de día son instantáneos.
  */
 export function TiempoLibreDeLaSemana({ cargar }: { cargar: CargarHuecos | null }) {
   const lectura = useHuecosDeLaSemana(cargar);
@@ -138,50 +151,89 @@ function Fallo({ fallo, alReintentar }: { fallo: FalloDeHuecos; alReintentar: ()
 
 function Cuerpo({ datos }: { datos: HuecosDeLaSemana }) {
   const { c, t } = useTheme();
-  const totalDeHuecos = datos.dias.reduce((suma, dia) => suma + dia.huecos.length, 0);
-  const plegable = totalDeHuecos >= HUECOS_PARA_PLEGAR;
-  /* Los días abiertos son de UNA semana: al cambiar de semana vuelven a estar plegados, sin un efecto que corra un
-     dibujo tarde. */
-  const [abiertos, setAbiertos] = useState<{ semana: string; fechas: string[] }>({ semana: datos.semana, fechas: [] });
-  const fechasAbiertas = abiertos.semana === datos.semana ? abiertos.fechas : [];
-  const alternar = (fecha: string) =>
-    setAbiertos({
-      semana: datos.semana,
-      fechas: fechasAbiertas.includes(fecha) ? fechasAbiertas.filter(f => f !== fecha) : [...fechasAbiertas, fecha],
-    });
+  /* El día elegido es de UNA semana: al cambiar de semana vuelve al día inicial, sin un efecto que corra un dibujo tarde. */
+  const [eleccion, setEleccion] = useState<{ semana: string; fecha: string } | null>(null);
+  const elegido =
+    eleccion && eleccion.semana === datos.semana && datos.dias.some(d => d.fecha === eleccion.fecha)
+      ? eleccion.fecha
+      : diaInicial(datos);
+  const dia = datos.dias.find(d => d.fecha === elegido) ?? null;
 
+  if (datos.dias.length === 0) {
+    return (
+      <View style={estilos.cuerpo}>
+        <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23 }]}>No hay días para mostrar en esta semana.</Text>
+      </View>
+    );
+  }
+
+  const aviso = avisoDeLaSemanaSinHoras(datos.dias);
   return (
     <View style={estilos.cuerpo}>
-      {datos.resumen ? <ResumenDeLaSemana resumen={datos.resumen} /> : null}
+      {aviso ? <TarjetaDeHoraQueFalta aviso={aviso} /> : null}
+      <TotalLibre datos={datos} />
+      {aviso ? null : (
+        <>
+          <ColumnasDeLaSemana
+            dias={datos.dias}
+            hoy={datos.hoy}
+            cerrada={datos.cerrada}
+            elegido={elegido}
+            alElegir={fecha => setEleccion({ semana: datos.semana, fecha })}
+          />
+          {dia ? (
+            <AgendaDelDia dia={dia} momento={momentoDelDia(dia.fecha, datos.hoy, datos.cerrada)} cerrada={datos.cerrada} />
+          ) : null}
+          {datos.resumen ? <SeRepite huecos={datos.resumen.huecosQueSeRepiten} /> : null}
+        </>
+      )}
+    </View>
+  );
+}
 
-      <View style={[estilos.dias, datos.resumen ? { borderTopWidth: 1, borderTopColor: c.divider, paddingTop: 6 } : null]}>
-        {datos.dias.length === 0 ? (
-          <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 23, paddingVertical: 8 }]}>
-            No hay días para mostrar en esta semana.
-          </Text>
-        ) : (
-          datos.dias.map((dia, indice) => (
-            <FilaDelDia
-              key={dia.fecha}
-              dia={dia}
-              primera={indice === 0}
-              plegable={plegable}
-              abierto={fechasAbiertas.includes(dia.fecha)}
-              alAlternar={() => alternar(dia.fecha)}
-            />
-          ))
-        )}
+/**
+ * «27 h libres esta semana, de Despertar a Dormir». La suma es de los días que tienen ventana; si ninguno la tiene el total
+ * dice «—» (no se cuenta el día entero como tiempo libre). En una semana cerrada, cuyos días no traen lo cumplido, la línea de
+ * lo real de la semana sale de su resumen para no perderla.
+ */
+function TotalLibre({ datos }: { datos: HuecosDeLaSemana }) {
+  const { c, t } = useTheme();
+  const total = totalLibreDeLaSemana(datos.dias);
+  const sinConteosPorDia = datos.dias.every(d => d.cumplidosATiempo === null);
+  const real = sinConteosPorDia && datos.resumen ? lineaDeLoReal(datos.resumen) : null;
+
+  return (
+    <View style={estilos.total}>
+      <View
+        accessible
+        accessibilityLabel={
+          total === null
+            ? 'Tiempo libre de la semana: no se calcula'
+            : `${duracionHablada(total)} libres esta semana, de Despertar a Dormir`
+        }
+        style={estilos.totalFila}
+      >
+        <Text style={[estilos.totalCifra, { color: c.textStrong }]}>{total === null ? '—' : duracionEnPalabras(total)}</Text>
+        <Text style={[t.body, estilos.totalTexto, { color: c.textSoft }]}>
+          {total === null ? 'libres esta semana' : 'libres esta semana, de Despertar a Dormir'}
+        </Text>
       </View>
+      {real ? <Text style={[t.body, estilos.real, { color: c.text }]}>{`${real} en la semana`}</Text> : null}
     </View>
   );
 }
 
 const estilos = StyleSheet.create({
-  tarjeta: { marginTop: 8 },
+  /* Menos relleno a los lados que la `Card` de siempre (17): las siete columnas ganan ancho y cada una se acerca a los 44 dp. */
+  tarjeta: { marginTop: 8, paddingHorizontal: 12 },
   encabezado: { flexDirection: 'row', alignItems: 'center', gap: 10, width: '100%' },
   centro: { flex: 1, minWidth: 0, alignItems: 'center', gap: 2 },
-  cuerpo: { marginTop: 16, gap: 14 },
-  dias: { gap: 0 },
+  cuerpo: { marginTop: 16 },
+  total: { marginTop: 14 },
+  totalFila: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 8 },
+  totalCifra: { fontFamily: 'Jost_700Bold', fontSize: 26, lineHeight: 32, letterSpacing: -0.3, fontVariant: ['tabular-nums'] },
+  totalTexto: { fontSize: 15, lineHeight: 21, flexShrink: 1 },
+  real: { fontSize: 15, lineHeight: 21, marginTop: 4 },
   cargando: { minHeight: 96, justifyContent: 'center', alignItems: 'center', marginTop: 8 },
   fallo: { marginTop: 14, gap: 12, alignItems: 'flex-start' },
   /* 48 px: pulsable con el pulgar sin apuntar (A-1, 26/09). */

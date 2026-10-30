@@ -5,15 +5,10 @@ import {
   diasEnPalabras,
   duracionEnPalabras,
   duracionHablada,
-  huecoHablado,
   lineaDeLoReal,
-  lineaDelHueco,
-  lineaDelHuecoQueSeRepite,
   rangoDeLaSemana,
-  resumenDelDia,
-  tiempoDelResumen,
   tituloDeLaSemana,
-  ventanaEnPalabras,
+  tramoEnPalabras,
 } from '../textosDeHuecos';
 
 describe('duraciones', () => {
@@ -40,27 +35,9 @@ describe('duraciones', () => {
   });
 });
 
-describe('los huecos', () => {
-  it('«15:00–17:00 · 2 h»', () => {
-    expect(lineaDelHueco({ desde: '15:00', hasta: '17:00', minutos: 120 })).toBe('15:00–17:00 · 2 h');
-    expect(lineaDelHueco({ desde: '08:00', hasta: '08:45', minutos: 45 })).toBe('08:00–08:45 · 45 min');
-  });
-
-  it('el lector de pantalla lo oye sin símbolos', () => {
-    expect(huecoHablado({ desde: '15:00', hasta: '17:00', minutos: 120 })).toBe('De 15:00 a 17:00, 2 horas');
-  });
-
-  it('un día dice cuántos huecos tiene, o que no tiene', () => {
-    expect(resumenDelDia({ huecos: [] })).toBe('Sin huecos de 30 min o más');
-    expect(resumenDelDia({ huecos: [{ desde: '15:00', hasta: '17:00', minutos: 120 }] })).toBe('1 hueco');
-    expect(
-      resumenDelDia({
-        huecos: [
-          { desde: '10:00', hasta: '11:00', minutos: 60 },
-          { desde: '15:00', hasta: '17:00', minutos: 120 },
-        ],
-      }),
-    ).toBe('2 huecos');
+describe('los tramos', () => {
+  it('«15:00–17:00»', () => {
+    expect(tramoEnPalabras('15:00', '17:00')).toBe('15:00–17:00');
   });
 });
 
@@ -74,20 +51,6 @@ describe('los días que se repiten', () => {
     [[], ''],
   ])('%j → «%s»', (dias, texto) => {
     expect(diasEnPalabras(dias)).toBe(texto);
-  });
-
-  it('«Lun, mié y jue · 15:00–17:00»', () => {
-    expect(lineaDelHuecoQueSeRepite({ desde: '15:00', hasta: '17:00', dias: [1, 3, 4] })).toBe('Lun, mié y jue · 15:00–17:00');
-  });
-});
-
-describe('la ventana del día', () => {
-  it('«De 05:30 a 22:30»', () => {
-    expect(ventanaEnPalabras({ desde: '05:30', hasta: '22:30' })).toBe('De 05:30 a 22:30');
-  });
-
-  it('sin Despertar ni Dormir (`null`) cuenta el día entero y lo dice', () => {
-    expect(ventanaEnPalabras(null)).toBe('Sin hora de Despertar o de Dormir: se cuenta todo el día');
   });
 });
 
@@ -103,12 +66,6 @@ describe('lo real de la semana', () => {
   it('sin nada que contar (todo en cero o sin dato) no se escribe: una semana por venir no tiene resultado', () => {
     expect(lineaDeLoReal({ cumplidosATiempo: 0, cumplidosTarde: 0, noCumplidos: 0 })).toBeNull();
     expect(lineaDeLoReal({ cumplidosATiempo: null, cumplidosTarde: null, noCumplidos: null })).toBeNull();
-  });
-
-  it('el tiempo del resumen, sin dato, es un guion y no un «0 min» inventado', () => {
-    expect(tiempoDelResumen(2870)).toBe('47 h 50 min');
-    expect(tiempoDelResumen(0)).toBe('0 min');
-    expect(tiempoDelResumen(null)).toBe('—');
   });
 });
 
