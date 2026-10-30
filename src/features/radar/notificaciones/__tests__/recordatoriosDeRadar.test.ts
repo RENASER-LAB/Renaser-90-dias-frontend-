@@ -5,7 +5,7 @@ import { beforeEach, afterEach, describe, expect, it, jest } from '@jest/globals
  *
  * Lo que más importa: **los días 1 a 7 programan exactamente lo mismo que antes** (las doce de 08:00 a 19:00, mismo
  * identificador, canal, minuto y contenido, sin `data`), y desde el día 8 solo suenan las horas que la persona eligió,
- * con Mi Radar encendido: DIARIAS si todos los días son iguales y SEMANALES por día si alguno va distinto (cuarta ronda).
+ * con Mi Radar encendido, una alarma SEMANAL por día y por hora de las que calculó el servidor con su Despertar y su Dormir (spec 019).
  * La invitación del día 8 se programa una sola vez por cuenta.
  */
 
@@ -35,6 +35,7 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { miRadarConHoras, miRadarConHorario, miRadarDePrueba } from '../../__tests__/fixturasDeMiRadar';
 import { sincronizarRecordatoriosDeRadar } from '../recordatoriosDeRadar';
 
 const pad = (h: number) => String(h).padStart(2, '0');
@@ -75,7 +76,7 @@ describe('días 1 a 7: exactamente como antes de Mi Radar', () => {
   });
 
   it('con Mi Radar lleno de datos (no debería existir antes del día 8) sigue igual', async () => {
-    await sincronizarRecordatoriosDeRadar(4, { encendido: true, horas: [9, 14] }, 'u1');
+    await sincronizarRecordatoriosDeRadar(4, miRadarConHoras([9, 14]), 'u1');
     expect(delasHoras().map(p => p.trigger.hour)).toEqual([8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]);
   });
 
@@ -93,7 +94,7 @@ describe('días 1 a 7: exactamente como antes de Mi Radar', () => {
 
 describe('desde el día 8', () => {
   it('apagado: ninguna hora, y se cancelan las que hubiera de la semana 1', async () => {
-    await sincronizarRecordatoriosDeRadar(8, { encendido: false, horas: [] }, 'u1');
+    await sincronizarRecordatoriosDeRadar(8, miRadarConHoras([], false), 'u1');
     expect(programadas).toEqual([]);
     expect(canceladas).toContain('renaser.radar.slot.08');
     expect(canceladas).toContain('renaser.radar.slot.19');
@@ -104,52 +105,57 @@ describe('desde el día 8', () => {
     expect(programadas).toEqual([]);
   });
 
-  it('encendido: solo las elegidas, con los mismos ids, canal y minuto, y la ruta que abre Mi Radar', async () => {
-    await sincronizarRecordatoriosDeRadar(10, { encendido: true, horas: [9, 14, 20] }, 'u1');
-    expect(delasHoras()).toEqual(
-      [9, 14, 20].map(h => ({
-        identifier: `renaser.radar.slot.${pad(h)}`,
-        content: { title: `Código Renaser · ${pad(h)}:00`, body: CUERPO, data: { route: '/mi-radar' } },
-        trigger: { type: 'daily', hour: h, minute: 2, channelId: CANAL },
-      })),
+  it('encendido: una SEMANAL por día y por hora de ese día, con el canal y el minuto de siempre y la ruta que abre Mi Radar; ninguna diaria', async () => {
+    await sincronizarRecordatoriosDeRadar(10, miRadarConHoras([9, 14]), 'u1');
+    expect(delasHorasPorTipo('daily')).toEqual([]);
+    expect(delasHorasPorTipo('weekly')).toHaveLength(14);
+    expect(delasHoras()[0]).toEqual({
+      identifier: 'renaser.radar.slot.d1.09',
+      content: { title: 'Código Renaser · 09:00', body: CUERPO, data: { route: '/mi-radar' } },
+      trigger: { type: 'weekly', weekday: 2, hour: 9, minute: 2, channelId: CANAL },
+    });
+  });
+
+  it('automático de 05:30 a 22:30: de 06 a 22 todos los días, 17 por día y 119 en la semana', async () => {
+    await sincronizarRecordatoriosDeRadar(10, miRadarDePrueba(true), 'u1');
+    expect(delasHoras()).toHaveLength(7 * 17);
+    expect(delasHoras().filter(p => p.identifier.startsWith('renaser.radar.slot.d3.')).map(p => p.trigger.hour)).toEqual(
+      [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22],
     );
   });
 
-  it('cambiar las horas no deja las viejas: se cancelan todas y se programan las nuevas', async () => {
-    await sincronizarRecordatoriosDeRadar(10, { encendido: true, horas: [9, 14, 20] }, 'u1');
-    programadas.length = 0;
-    canceladas.length = 0;
-    await sincronizarRecordatoriosDeRadar(10, { encendido: true, horas: [7] }, 'u1');
-    expect(delasHoras().map(p => p.trigger.hour)).toEqual([7]);
-    for (const h of [9, 14, 20]) expect(canceladas).toContain(`renaser.radar.slot.${pad(h)}`);
+  it('personalizado: el sábado con 6 de 17 suena a las 06, 09, 12, 16, 19 y 22', async () => {
+    await sincronizarRecordatoriosDeRadar(10, miRadarDePrueba(true, { 6: { horas: [6, 9, 12, 16, 19, 22], modo: 'PERSONALIZADO' } }), 'u1');
+    expect(delasHoras().filter(p => p.identifier.startsWith('renaser.radar.slot.d6.')).map(p => p.trigger.hour)).toEqual([6, 9, 12, 16, 19, 22]);
   });
 
-  it('encendido con las mismas horas todos los días (aunque `dias` venga con entradas iguales): sigue siendo diario', async () => {
-    await sincronizarRecordatoriosDeRadar(10, { encendido: true, horas: [9, 14], dias: [{ dia: 3, horas: [9, 14] }] }, 'u1');
-    expect(delasHoras().map(p => p.identifier)).toEqual(['renaser.radar.slot.09', 'renaser.radar.slot.14']);
-    expect(delasHorasPorTipo('weekly')).toEqual([]);
-    expect(delasHorasPorTipo('daily')).toHaveLength(2);
+  it('cambiar el modo, las veces o el Despertar no deja las viejas: se cancelan todas y se programan las nuevas', async () => {
+    await sincronizarRecordatoriosDeRadar(10, miRadarConHoras([9, 14, 20]), 'u1');
+    programadas.length = 0;
+    canceladas.length = 0;
+    await sincronizarRecordatoriosDeRadar(10, miRadarConHoras([7]), 'u1');
+    expect(delasHoras().map(p => p.trigger.hour)).toEqual([7, 7, 7, 7, 7, 7, 7]);
+    for (const h of [9, 14, 20]) expect(canceladas).toContain(`renaser.radar.slot.d1.${pad(h)}`);
   });
 
   it('el día 90 y después, igual que cualquier otro día: como la persona lo dejó', async () => {
-    await sincronizarRecordatoriosDeRadar(90, { encendido: true, horas: [9] }, 'u1');
-    expect(delasHoras().map(p => p.trigger.hour)).toEqual([9]);
+    await sincronizarRecordatoriosDeRadar(90, miRadarConHoras([9]), 'u1');
+    expect(delasHoras().map(p => p.trigger.hour)).toEqual([9, 9, 9, 9, 9, 9, 9]);
   });
 
   it('sin permiso de avisos no programa nada (y no falla)', async () => {
     mockPermiso.mockResolvedValue(false);
-    await sincronizarRecordatoriosDeRadar(10, { encendido: true, horas: [9] }, 'u1');
+    await sincronizarRecordatoriosDeRadar(10, miRadarConHoras([9]), 'u1');
     expect(programadas).toEqual([]);
   });
 });
 
-describe('desde el día 8, con algún día distinto: una alarma SEMANAL por día y por hora', () => {
+describe('desde el día 8: cada día con su propio horario', () => {
   // Sábado con 11:00 y domingo sin Radar; el resto, 09:00 y 14:00.
-  const conDias = { encendido: true, horas: [9, 14], dias: [{ dia: 6, horas: [11] }, { dia: 7, horas: [] }] };
+  const conDias = miRadarConHoras([9, 14], true, { 6: { horas: [11] }, 7: { horas: [], sinRadar: true } });
 
-  it('programa 11 semanales (5 días × 2 + el sábado) con el id `renaser.radar.slot.d{día}.HH`, ninguna diaria', async () => {
+  it('programa 11 semanales (5 días × 2 + el sábado) con el id `renaser.radar.slot.d{día}.HH`', async () => {
     await sincronizarRecordatoriosDeRadar(10, conDias, 'u1');
-    expect(delasHorasPorTipo('daily')).toEqual([]);
     expect(delasHoras().map(p => p.identifier)).toEqual([
       'renaser.radar.slot.d1.09', 'renaser.radar.slot.d1.14',
       'renaser.radar.slot.d2.09', 'renaser.radar.slot.d2.14',
@@ -160,9 +166,12 @@ describe('desde el día 8, con algún día distinto: una alarma SEMANAL por día
     ]);
   });
 
-  it('el domingo (sin Radar) no tiene ninguna', async () => {
-    await sincronizarRecordatoriosDeRadar(10, conDias, 'u1');
-    expect(delasHoras().filter(p => p.identifier.startsWith('renaser.radar.slot.d7.'))).toEqual([]);
+  it('un día sin Despertar, sin Dormir o «Sin Radar» no tiene ninguna', async () => {
+    await sincronizarRecordatoriosDeRadar(10, miRadarDePrueba(true, { 3: { despertar: null }, 4: { dormir: null }, 7: { sinRadar: true } }), 'u1');
+    for (const dia of [3, 4, 7]) {
+      expect(delasHoras().filter(p => p.identifier.startsWith(`renaser.radar.slot.d${dia}.`))).toEqual([]);
+    }
+    expect(delasHoras().filter(p => p.identifier.startsWith('renaser.radar.slot.d1.'))).toHaveLength(17);
   });
 
   it('cada una es semanal con el día de `expo-notifications` (1 = domingo): el lunes es 2 y el sábado es 7', async () => {
@@ -183,28 +192,20 @@ describe('desde el día 8, con algún día distinto: una alarma SEMANAL por día
     expect(delasHoras().every(p => (p.content.data as { route: string }).route === '/mi-radar')).toBe(true);
   });
 
-  it('pasar de diario a semanal cancela las diarias viejas, y de semanal a diario cancela las semanales', async () => {
-    await sincronizarRecordatoriosDeRadar(10, { encendido: true, horas: [9, 14], dias: [] }, 'u1');
+  it('pasar de la semana 1 (diarias) a Mi Radar cancela las diarias viejas', async () => {
+    await sincronizarRecordatoriosDeRadar(7, null, 'u1');
     programadas.length = 0;
     canceladas.length = 0;
-    await sincronizarRecordatoriosDeRadar(10, conDias, 'u1');
-    expect(canceladas).toContain('renaser.radar.slot.09');
-    expect(canceladas).toContain('renaser.radar.slot.14');
-
-    programadas.length = 0;
-    canceladas.length = 0;
-    await sincronizarRecordatoriosDeRadar(10, { encendido: true, horas: [9, 14], dias: [] }, 'u1');
-    for (const id of ['renaser.radar.slot.d1.09', 'renaser.radar.slot.d6.11', 'renaser.radar.slot.d7.14']) {
-      expect(canceladas).toContain(id);
-    }
-    expect(delasHorasPorTipo('weekly')).toEqual([]);
+    await sincronizarRecordatoriosDeRadar(8, conDias, 'u1');
+    for (const h of [8, 9, 14, 19]) expect(canceladas).toContain(`renaser.radar.slot.${pad(h)}`);
+    expect(delasHorasPorTipo('daily')).toEqual([]);
   });
 
   it('apagar cancela las diarias Y las semanales de cualquier día y hora de 03 a 23, y no programa nada', async () => {
     await sincronizarRecordatoriosDeRadar(10, conDias, 'u1');
     programadas.length = 0;
     canceladas.length = 0;
-    await sincronizarRecordatoriosDeRadar(10, { encendido: false, horas: [], dias: [] }, 'u1');
+    await sincronizarRecordatoriosDeRadar(10, miRadarConHoras([], false), 'u1');
     expect(programadas).toEqual([]);
     for (const dia of [1, 2, 3, 4, 5, 6, 7]) {
       for (const hora of [3, 9, 14, 23]) expect(canceladas).toContain(`renaser.radar.slot.d${dia}.${pad(hora)}`);
@@ -218,14 +219,9 @@ describe('desde el día 8, con algún día distinto: una alarma SEMANAL por día
     expect(delasHorasPorTipo('weekly')).toEqual([]);
   });
 
-  it('con los siete días distintos y 12 horas son 84 alarmas semanales (iOS admite 64: hoy la app es solo Android)', async () => {
-    const doce = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
-    await sincronizarRecordatoriosDeRadar(
-      20,
-      { encendido: true, horas: [9], dias: [1, 2, 3, 4, 5, 6, 7].map(dia => ({ dia, horas: doce })) },
-      'u1',
-    );
-    expect(delasHorasPorTipo('weekly')).toHaveLength(84);
+  it('con el Radar al máximo (21 horas los siete días) son 147 alarmas semanales: por debajo de las 500 de Android', async () => {
+    await sincronizarRecordatoriosDeRadar(20, miRadarConHorario('02:00', '23:30'), 'u1');
+    expect(delasHorasPorTipo('weekly')).toHaveLength(147);
   });
 
   it('sin permiso de avisos no programa nada (y no falla)', async () => {
@@ -234,12 +230,8 @@ describe('desde el día 8, con algún día distinto: una alarma SEMANAL por día
     expect(programadas).toEqual([]);
   });
 
-  it('un día sin Radar y todos los demás también: encendido pero sin ningún aviso', async () => {
-    await sincronizarRecordatoriosDeRadar(
-      10,
-      { encendido: true, horas: [9], dias: [1, 2, 3, 4, 5, 6, 7].map(dia => ({ dia, horas: [] as number[] })) },
-      'u1',
-    );
+  it('todos los días sin Radar: encendido pero sin ningún aviso', async () => {
+    await sincronizarRecordatoriosDeRadar(10, miRadarConHoras([], true, Object.fromEntries([1, 2, 3, 4, 5, 6, 7].map(d => [d, { sinRadar: true }]))), 'u1');
     expect(programadas.filter(p => p.identifier.startsWith('renaser.radar.slot.'))).toEqual([]);
   });
 });
@@ -290,15 +282,15 @@ describe('la invitación del día 8', () => {
   });
 
   it('desde el día 8 no se programa (quien ya pasó el día 8 al salir esta versión no la recibe)', async () => {
-    await sincronizarRecordatoriosDeRadar(8, { encendido: false, horas: [] }, 'u1');
-    await sincronizarRecordatoriosDeRadar(20, { encendido: false, horas: [] }, 'u1');
+    await sincronizarRecordatoriosDeRadar(8, miRadarConHoras([], false), 'u1');
+    await sincronizarRecordatoriosDeRadar(20, miRadarConHoras([], false), 'u1');
     expect(laInvitacion()).toEqual([]);
   });
 
   it('si la persona enciende Mi Radar, se cancela; apagado, no se toca', async () => {
-    await sincronizarRecordatoriosDeRadar(8, { encendido: false, horas: [] }, 'u1');
+    await sincronizarRecordatoriosDeRadar(8, miRadarConHoras([], false), 'u1');
     expect(canceladas).not.toContain(INVITACION);
-    await sincronizarRecordatoriosDeRadar(8, { encendido: true, horas: [9] }, 'u1');
+    await sincronizarRecordatoriosDeRadar(8, miRadarConHoras([9]), 'u1');
     expect(canceladas).toContain(INVITACION);
   });
 

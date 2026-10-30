@@ -5,8 +5,8 @@ import { useMinutoActual } from '../../../hooks/useMinutoActual';
 import { mensajeDeError } from '../../../services/http/apiClient';
 import { obtenerHistorial } from '../api/radarApi';
 import { useRadar } from '../RadarContext';
-import type { CheckInRadarApi, DiaDeMiRadarApi, MiRadarApi } from '../types/radar.types';
-import { patronesDeMiRadar, resumenDeMiRadarHoy, validarDias, validarHoras } from '../utils/miRadar';
+import type { CambioDeDiaApi, CheckInRadarApi, MiRadarApi } from '../types/radar.types';
+import { resumenDeMiRadarHoy } from '../utils/miRadar';
 import { configDeMiRadar } from './useConfigDeMiRadar';
 import { useHistorialDeRadar } from './useHistorialDeRadar';
 
@@ -16,60 +16,48 @@ export type ResultadoDeGuardar = { ok: true; config: MiRadarApi } | { ok: false;
 /**
  * Todo lo que necesita la pantalla Yo → Mi Radar (spec 012), armado con piezas que ya existen:
  *
- *  - la configuración (encendido, horas de todos los días y de los días que tienen las suyas) es la de `RadarContext`, la
- *    misma que dispara los avisos del teléfono;
- *  - **«Hoy» usa las horas de HOY** (`horasDelDia`): un día con horas propias o sin Radar no usa las de todos los días;
- *  - el historial es el de siempre (`useHistorialDeRadar`, `GET /radar/history`);
+ *  - la configuración (encendido y los siete días con las horas que el servidor calculó con el Despertar y el Dormir) es la de
+ *    `RadarContext`, la misma que dispara los avisos del teléfono;
+ *  - **«Hoy» usa las horas de HOY** (`horasDelDia`): un día sin horario o sin Radar no tiene ninguna;
+ *  - lo respondido hoy sale del historial de siempre (`useHistorialDeRadar`, `GET /radar/history`): la pantalla solo dice cuántas de las de
+ *    hoy ya tienen su respuesta (`respondidasHoy`), no las respuestas;
  *  - registrar usa el MISMO envío del Código Renaser (`radar.enviar`): el mismo `POST /radar`, y el mismo 409 que se
  *    relee y se da por registrado. No hay una segunda lógica de envío.
  *
- * Todo lo que se decide (qué se muestra en «Hoy», qué patrones salen) está en `utils/miRadar.ts`, sin React.
+ * Todo lo que se decide (qué se muestra de hoy) está en `utils/miRadar.ts`, sin React.
  */
 export function useMiRadar() {
   const { user } = useAuth();
   const radar = useRadar();
   const ahora = useMinutoActual();
-  const historial = useHistorialDeRadar(obtenerHistorial);
-  const { recargar: recargarConfig, guardar } = radar.miRadar;
+  const { recargar: recargarConfig, reiniciar: reiniciarConfig, guardar, lectura } = radar.miRadar;
+  const config = configDeMiRadar(lectura);
+  /* El historial solo se lee con Mi Radar a la vista: sin programa, bloqueada o con un fallo no hay nada que contar y pedirlo daría otro 403. */
+  const historial = useHistorialDeRadar(config !== null ? obtenerHistorial : null);
   const { recargar: recargarHistorial } = historial;
-  const config = configDeMiRadar(radar.miRadar.lectura);
   const [guardando, setGuardando] = useState(false);
 
-  /* Al entrar, lo guardado se relee: pudo cambiarse desde otro teléfono o la web. */
+  /* Al entrar, lo guardado se relee en silencio (no vacía lo que ya se ve): pudo cambiarse desde otro teléfono o la web. */
   useEffect(() => {
     recargarConfig();
   }, [recargarConfig]);
 
   /* Lo de HOY (horas de hoy, si hay Mi Radar hoy, lo respondido, el horario y si la hora en curso pide un registro) sale
      de una sola cuenta, `resumenDeMiRadarHoy`, la misma que usa la mitad del Radar de Hoy. */
-  const { hoyTieneRadar, hoy, yaRegistroEstaHora, dentroDelHorario, horaEnCursoPendiente } = useMemo(
+  const { hoyTieneRadar, horasDeHoy, respondidasHoy, yaRegistroEstaHora, dentroDelHorario, horaEnCursoPendiente } = useMemo(
     () => resumenDeMiRadarHoy(config, historial.registros, ahora),
     [config, historial.registros, ahora],
   );
 
-  const patrones = useMemo(() => patronesDeMiRadar(historial.registros), [historial.registros]);
-
   /**
-   * Enciende (con estas horas para todos los días y estos días con horas propias), cambia las horas o apaga. Valida igual
-   * que el servidor antes de pedirle nada. Sin días propios el pedido es el de antes de la cuarta ronda (sin `dias`).
+   * Enciende, apaga o guarda SOLO los días tocados (modo, veces, «Sin Radar»). Hoy y lo pasado no se editan: el servidor lo
+   * rechaza con un 409 y la app ni los manda. Encender y apagar rigen en el acto.
    */
   const guardarConfig = useCallback(
-    async (
-      encendido: boolean,
-      elegidas: readonly number[],
-      dias: readonly DiaDeMiRadarApi[] = [],
-    ): Promise<ResultadoDeGuardar> => {
-      let pedido: MiRadarApi = { encendido: false, horas: [] };
-      if (encendido) {
-        const revisadas = validarHoras(elegidas);
-        if (!revisadas.ok) return { ok: false, error: revisadas.error };
-        const revisados = validarDias(dias);
-        if (!revisados.ok) return { ok: false, error: revisados.error };
-        pedido = { encendido: true, horas: revisadas.horas, ...(revisados.dias.length > 0 ? { dias: revisados.dias } : {}) };
-      }
+    async (encendido: boolean, dias: readonly CambioDeDiaApi[] = []): Promise<ResultadoDeGuardar> => {
       setGuardando(true);
       try {
-        return { ok: true, config: await guardar(pedido) };
+        return { ok: true, config: await guardar({ encendido, ...(dias.length > 0 ? { dias: [...dias] } : {}) }) };
       } catch (e) {
         return { ok: false, error: mensajeDeError(e, 'No pudimos guardar tu Mi Radar. Intenta de nuevo.') };
       } finally {
@@ -92,12 +80,16 @@ export function useMiRadar() {
   return {
     usuarioId: user?.id ?? null,
     ahora,
+    /** Lo que se leyó de Mi Radar, con el motivo si no se pudo (sin programa, bloqueada, fallo). */
+    lectura,
+    /** «Reintentar» y volver de elegir el Día 1: olvida el motivo (queda «Cargando…») y lee. Estable: lo recibe un `Modal`. */
+    reiniciarConfig,
     config,
     guardando,
     guardarConfig,
     historial,
-    hoy,
-    patrones,
+    horasDeHoy,
+    respondidasHoy,
     hoyTieneRadar,
     yaRegistroEstaHora,
     dentroDelHorario,

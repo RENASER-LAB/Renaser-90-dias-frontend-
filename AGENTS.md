@@ -264,9 +264,20 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
   * **Cambio por pedido del dueño — 2026-10-29 — tab `Yo` (y las fichas del mentor, del líder y de Administración): Mi Radar
     desde el día 8** (spec 012 del backend, `specs/012-mi-radar-en-yo/`; textual: «el radar son los primeros 7 días y se
     activa… ahora la persona puede activarlo individualmente y que le aparezca»). Lo que cambia y nada más:
+    > **Corregido 2026-10-30 (spec 019, decisión del dueño).** Todo lo de **elegir las horas a mano** de esta entrada —los `ChipDeOpcion` de
+    > 03:00 a 23:00, «hasta 12», las horas sugeridas 09:00, 14:00 y 20:00, «Guardar horarios» / «Guardar y encender», las horas propias por día,
+    > `horasDelDia` leyendo `dias[].horas` elegidas, y `Encendido · 09:00, 14:00 y 20:00`— **ya no es cierto** (y nunca llegó a producción). Mi
+    > Radar es **Automático** (cada hora entre el Despertar y el Dormir, sin tope) o **Personalizado** (cuántas veces por día, repartidas parejo),
+    > por día de la semana; las horas las calcula el servidor. Ver la entrada «Mi Radar automático y personalizado (spec 019)», más abajo. Siguen
+    > igual: los días 1 a 7, la fila de Yo desde el día 8, el interruptor opcional, la invitación del día 8, los canales y el minuto de los avisos,
+    > el formulario y las fichas (salvo su línea de resumen). **Ya no están en Yo → Mi Radar** los registros de hoy, el «Historial» ni los
+    > «Patrones» (corregido el mismo día: ver «Mi Radar automático y personalizado (spec 019)»).
     * **Yo → fila «Mi Radar»** (`compass`), justo debajo de «Tuve una emergencia», **solo desde el día 8** y solo si el
       servidor la ofrece (`GET /api/v1/radar/mi-radar`; un 404 o 403 la esconde). Dice `Encendido · 09:00, 14:00 y 20:00` o
       `Apagado` y abre `MiRadarScreen` a pantalla completa. Los días 1 a 7 no hay fila: el Código Renaser se abre solo.
+      > **Corregido 2026-10-30 (spec 019, el 403 dice por qué).** «Un 404 o 403 la esconde» ya no es cierto para el 403 que trae motivo: un
+      > `PROGRAMA_NO_ACTIVADO` (el personal que todavía no eligió su Día 1) **muestra** la fila, con «Primero elige tu Día 1». Siguen
+      > escondiéndola el 404 y un 403 sin motivo (un backend anterior) o con uno que la app no conoce. Ver la entrada de la spec 019, más abajo.
     * **`MiRadarScreen`**: el `InterruptorGrande` «Mi Radar» primero; apagado no hay registrar ni horarios. Encender muestra
       las horas (`ChipDeOpcion`, de 03:00 a 23:00, hasta 12; vienen 09:00, 14:00 y 20:00) y se guarda con «Guardar y
       encender»; apagar rige en el acto. Encendido: «Registrar ahora» (el `CodigoRenaserModal` de siempre, que se puede
@@ -431,6 +442,11 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       tiene que leerse en el acto). Izquierda: la de siempre (cifra, hábito de esta hora, lo que queda) → Training. **Se borró
       la tarjeta aparte del Código Renaser** (`TarjetaCodigoRenaser`), que en los días 1 a 7 iba primera: la mitad la reemplaza
       y no se duplica.
+    > **Corregido 2026-10-30 (spec 019).** Las «horas elegidas» de la tabla de abajo ya no se eligen: son las que el servidor calcula con el
+    > Despertar y el Dormir de hoy (Automático) o las repartidas por «Veces al día» (Personalizado). Cambia el texto de la mitad: apagado
+    > «Cada hora entre tu Despertar y tu Dormir. Es opcional.»; encendido sin hora pendiente «Próxima a las 20:00» con `05:30 a 22:30 · 17 veces`
+    > (ya no «Hoy respondiste 2 de 3»: eso está en la hoja); hoy sin Radar «Toca para ver tu horario.»; y la hoja «Tu Radar de hoy» dice el
+    > horario y las veces en su subtítulo y «Abrir Mi Radar» (era «Cambiar mis horas»). El resto de la tabla sigue igual.
     * **La mitad del Radar** (qué dice y qué hace, en `radar/utils/mitadDelRadar.ts`, sin React):
       | Cuándo | Dice | Al tocarla |
       |---|---|---|
@@ -613,6 +629,90 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       permisos (el servidor autoriza cada lectura), ni los endpoints (solo suma un campo opcional).
     * **Hace falta el backend con la spec 018 antes, solo para ver «¿Programó?»**, y un APK nuevo (la app no se actualiza por
       aire). Un APK nuevo contra el backend anterior funciona sin esa tarjeta.
+  * **Cambio por pedido del dueño — 2026-10-30 — tab `Yo` (Mi Radar) y `Hoy`: Mi Radar automático y personalizado (spec 019)** (spec,
+    plan y vista previa aprobada en `Renaser-90-dias-backend/specs/019-radar-automatico/`; decisión D-292 del backend; textual: «aplicar ese
+    rediseño, nada más»). **Reemplaza lo de elegir las horas a mano de la spec 012.** Lo que cambia y nada más:
+    * **Los días 1 a 7 no cambian** (08:00 a 19:00, obligatorio). Desde el día 8, «Encendido» sigue opcional, con la invitación del día 8.
+    * **Dos modos** (`ControlSegmentado`, sin animación al cambiar): **Automático** (por defecto) pregunta cada hora en punto entre el Despertar y
+      el Dormir de ese día, de 03:00 a 23:00 y **sin el tope de 12** (05:30 y 22:30 dan 17; 08:00 y 23:00, 15); **Personalizado**: «Veces al día»
+      con − / + (botones de 48), de 1 a las horas que caben ese día, repartidas parejo con `round(i·(n_slots−1)/(n−1))` (6 de 17 dan 06, 09, 12, 16,
+      19, 22). **Las horas no se muestran, solo la cifra.** Al pasar a Personalizado se propone `min(6, las que caben)` (supuesto). Un día sin
+      Despertar o sin Dormir (sin hora, apagado, en pausa, o Dormir ≤ Despertar) **no tiene Mi Radar**, en los dos modos: no se inventa un horario.
+      Las horas las calcula el **servidor** (`HorarioDelDiaFinder`) y la app las lee ya resueltas: `utils/vecesDeMiRadar.ts` repite la cuenta
+      (`horasQueCaben`, `repartirHoras`) solo para ajustar − / + y para fijar la regla en las pruebas.
+    * **Yo → Mi Radar**, con la forma del editor de un hábito en Planificar (`screens/MiRadarScreen`): cabecera «‹ Mi Radar» con «Ahora: 05:30 a 22:30»
+      y **sin ✕** (se vuelve con ‹ y con el atrás del sistema); fila «Encendido» (`InterruptorGrande`, sin descripción); el modo; **«Hora»** de solo
+      lectura con la estética de la rueda (líneas doradas, «05:30 a 22:30» con «Despertar» y «Dormir» chicos; con horarios distintos «Estos días
+      tienen horas distintas»); «Veces al día» solo en Personalizado; la fila de los siete días de Planificar (`FilaDeDiasDelPlan`, sin cambiar su
+      forma) con **solo cuántas veces pregunta ese día** en dorado, candado en hoy y lo pasado y «—» en un día sin Radar (el lector de pantalla dice
+      «Sábado 31, 15 veces»); «Todos los días» / «Solo sáb, dom»; «Sin Radar estos días» al marcar días; y **«Guardar · sáb, dom»** fijo abajo, con
+      SOLO lo tocado. Sin «Cómo suena»: el Radar siempre suena, una vez por hora, sin repeticiones nuevas.
+    * **Hoy y lo pasado no se editan** (candado, como en Planificar): `editable` lo dice el servidor por día y la app ni los marca ni los manda;
+      el servidor también responde **409** («Hoy y los días que pasaron no se pueden cambiar»). **El modo y las veces son de cada día de la semana:**
+      el control de modo cambia los días marcados o, sin marcar, todos los que vienen; hoy y lo pasado conservan lo suyo. «Encendido» rige en el
+      acto. **El domingo** el domingo mismo queda con candado y de lunes a sábado se edita (la regla es por día de la semana, sin fecha).
+    * **Sin Despertar (o sin Dormir):** en lugar de «Hora», una tarjeta de una línea («Falta tu hora de Despertar») y, fijo abajo, **«Programar mi
+      Despertar»** (o «Dormir»), que lleva a **la pestaña Training** (`onProgramarHorario` → `navigate('Training')`). **No abre Planificar directo en
+      ese hábito:** hoy no existe ese parámetro y Training no se toca en esta spec; queda anotado.
+    * **Se quitan** «Lo ves tú, tu mentor y el equipo que coordina tu grupo.», «Aquí verás tus registros de hoy», «De 03:00 a 23:00, hasta 12 horas
+      por día», «Toca un día para…», la elección de horas a mano (`HorariosDeMiRadar`, `HorasDeLosDias`, `DiasDeMiRadar`, `diasDeMiRadar.ts`) y la
+      fila cortada debajo del botón flotante de SER: al final solo queda su relleno, y el botón de guardar fijo se corre lo justo para no quedar
+      debajo de él (`entradaParaElLanzador`). **Tampoco están más las respuestas de la persona** (decisión del dueño, mismo día): ni los registros
+      de hoy (`RegistroDeMiRadar`), ni la sección «Historial», ni «Patrones» (sus componentes, hooks y pruebas sin uso se borraron); eso lo ven su
+      mentor y su líder en la ficha, que no cambia. Queda «Registrar ahora» y, en su lugar, **una sola línea «Hoy: 4 de 6»** (las veces que
+      respondió hoy de las que le tocaban; el total son las horas de hoy de `GET /radar/mi-radar`): 16 px, `tabular-nums`, tipo oración, sin color
+      de estado ni animación, y el lector de pantalla dice «Hoy respondiste 4 de 6 veces». Solo se dibuja con Mi Radar encendido y un día con Radar
+      (no apagado, no «Sin Radar» hoy, no los días 1 a 7, no con 0 que tocan); `utils/miRadar.lineaDeHoy`.
+    * **Para todos los roles que hacen los 90 días** (aprendiz, guía, mentor, líder, administrador y alquimista con su programa propio): ni Mi
+      Radar ni la mitad de Hoy filtran por rol; la puerta es tener el programa activado desde el día 8 (lo decide el servidor). Lo fijan
+      `radarConMiRadar.test.ts` y `miRadarParaTodosLosRoles.test.ts` (que además barre el código de `features/radar` buscando nombres de rol).
+    * **Avisos del teléfono:** desde el día 8 y con Mi Radar encendido, **una alarma semanal por hora y por día de la semana de las que tocan**
+      (`renaser.radar.slot.d{1..7}.HH`, lunes = 1; hasta 21 × 7 = 147 pendientes, por debajo de las 500 de Android; ya no hay diarias). Los días 1 a 7,
+      las doce diarias de siempre. **Se rehacen** al cambiar el modo, las veces o «Sin Radar» (guardar relee), y cuando cambian el Despertar o el Dormir:
+      `useConfigDeMiRadar` vuelve a leer Mi Radar al abrir la app y al volver a primer plano (con 10 minutos de por medio) y la huella de las horas
+      (`claveDeMiRadar`) dispara la sincronización. **No se tocó Planificar para avisar al instante**; si el Despertar o el Dormir cambian, las
+      alarmas se rehacen la próxima vez que se abre la app.
+    * **Hoy (la mitad del Radar, spec 016) y las fichas** dicen lo que toca: la mitad «Próxima a las 20:00 · 05:30 a 22:30 · 17 veces» (la hoja «Tu
+      Radar de hoy» lo repite y su enlace pasa a «Abrir Mi Radar»), «Hoy no tienes Mi Radar» y la fila de Yo `Encendido · 05:30 a 22:30 · 17 veces`.
+      Las fichas del mentor, del líder y de Administración (`CodigoRenaserDelAlumno`): `Mi Radar: encendido · 05:30 a 22:30 · 17 veces`, `… · hoy no
+      tiene Radar` o `apagado`.
+    * **Lo único que se toca fuera de Yo, Hoy y las fichas** son dos cambios **aditivos**: `FilaDeDiasDelPlan` suma la prop opcional
+      `etiquetaPropiaDelDia` (lo que oye el lector de pantalla de cada pastilla; Training y Plan no la pasan y su fila es la de siempre) e
+      `InterruptorGrande` deja de dibujar la línea de descripción cuando va vacía.
+    * **Compatibilidad:** `GET/PUT /radar/mi-radar` devuelven los siete días ya resueltos; una respuesta de un backend anterior a la 019 (con `horas`) se
+      lee como un error y la fila de Yo no aparece. **Hace falta el backend con V122 antes y un APK nuevo** (la app no se actualiza por aire).
+    * **El 403 de Mi Radar dice por qué y lleva a elegir el Día 1** (último pedido del dueño sobre la spec 019: «no quiero bugs en esa parte»).
+      Hasta hoy un 403 de `GET/PUT /api/v1/radar/mi-radar` se leía como «no hay Mi Radar», en silencio. Ahora el cuerpo trae `codigo`
+      (`PROGRAMA_NO_ACTIVADO`, `CUENTA_SUSPENDIDA` o `SIN_PERMISO`; el formato `ApiErrorConCodigo` de siempre) y la lectura
+      (`useConfigDeMiRadar.lecturaDeUnError`) lo distingue; la pantalla dice lo que toca con `utils/vistaDeMiRadar` y
+      `components/SinMiRadar`:
+      * **Sin programa activado** (el personal —mentor, líder, administrador, alquimista— que no eligió su Día 1, con o sin fila de programa;
+        lo decide el servidor, no el rol): en lugar de la pantalla, «Mi Radar empieza en tu día 8. Primero elige tu Día 1.» y el botón
+        **«Elegir mi Día 1»** (`programa/components/BotonElegirDiaUno`, que abre `ActivarProgramaScreen` con su flecha para volver). Al
+        confirmar, la pantalla olvida el motivo («Cargando Mi Radar…», nunca el de antes ni la pantalla vacía) y vuelve a leer: con el
+        programa activado y antes del día 8 dice cuándo empieza («Mi Radar empieza en tu día 8, el domingo 1 de noviembre.», con la
+        fecha de hoy del servidor; sin Día 1 todavía, sin fecha). Desde el día 8, el formulario de siempre.
+      * **Suspendida o sin permiso**: una línea con el motivo («Tu cuenta está suspendida: Mi Radar no está disponible.» o «No tienes
+        permiso para usar Mi Radar.», textos de la app y no del servidor) y nada más: sin botones que no llevan a nada.
+      * **Sin red o 5xx**: «No pudimos cargar Mi Radar.» con «Reintentar» (que también pasa por «Cargando…»).
+      * **Con un backend anterior** (un 403 sin `codigo`, o con uno que esta app no conoce) **se lee como hoy**: «no hay Mi Radar», en
+        silencio, sin fila (FR-010). Un 404 también.
+      * **Yo → fila «Mi Radar» para el personal sin programa** («Primero elige tu Día 1»): **solo cuando el servidor lo confirmó**. Yo le
+        pregunta a `GET /radar/mi-radar` (una vez por cuenta, `solicitar`) únicamente a quien puede no tener programa activado
+        (`capacidades.puedeIniciarPrograma` —sin fila— o la fila sin Día 1), así que **para el aprendiz y para quien ya va por su programa
+        Yo no cambia** y antes del día 8 no se les pide nada. Elegir el Día 1 en cualquier lugar (Yo, Hoy, Training) invalida la lectura
+        (`escucharDiaUnoElegido`), de modo que la fila no se queda diciendo «Primero elige tu Día 1» después de elegirlo. Las decisiones
+        están en `radar/utils/miRadarEnYo` y se prueban sin pantalla.
+      * **Sin parpadeos**: `recargar` (al abrir la pantalla, al volver a Hoy tras un fallo) relee **en silencio**, sin vaciar lo que se ve;
+        `reiniciar` (elegir el Día 1, «Reintentar») deja la lectura en «pendiente» antes de pedir, y una respuesta vieja no pisa a la nueva.
+        Un fallo de red al releer **no borra** una lectura buena ni un motivo que el servidor ya dio. El historial del Código Renaser no se
+        pide mientras no hay Mi Radar a la vista.
+      * **Servidor** (backend, D-292): el 403 de la suspensión y de la falta de permiso lo escribe el filtro de permisos
+        (`PermissionEnforcementInterceptor`), así que el `codigo` aparece también en esos 403 de otros endpoints (aditivo: `message` no cambia).
+        Quien no tiene fila de programa recibe el mismo 403 `PROGRAMA_NO_ACTIVADO` (antes un 404 «Participante no encontrado»).
+      * **Hace falta publicar el backend antes que la app** (con la app nueva contra el backend anterior no aparece la fila ni cambia nada) y un
+        APK nuevo. Maestro: `.maestro/mi-radar/16-personal-sin-programa.yaml`.
+    * **No cambian**: Training, Plan, los días 1 a 7, los hábitos, el formulario, los demás tabs ni la barra.
   * **Cambio por pedido del dueño — 2026-10-12 — Administración (estado de `Hoy`): «Hábitos del programa», con
     audiencia por rol** (backend D-264; spec y plan en `Renaser-90-dias-backend/specs/001-habitos-por-rol/`, flujo
     spec-kit con las decisiones del dueño). Lo que cambia y nada más:

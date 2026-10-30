@@ -1,11 +1,11 @@
 # 05 — Mi Radar encendido: «Registrar ahora» abre el formulario de siempre (que se puede cerrar), y lo registrado queda en
 # «Hoy» y en el historial (escenario 5, la parte que no depende del aviso del teléfono). Sirve en cualquier hora de
-# 03:00 a 23:59: si la hora en curso es una de las elegidas, el registro dice «Prevista HH:00 · respondida HH:MM»; si no
-# lo es, solo la hora en que se respondió.
-# cuenta: aprendiz (día 10 con Mi Radar encendido, y la hora en curso SIN registro; correr después de 03)
+# 03:00 a 23:59: si la hora en curso es una de las de Mi Radar (de 06 a 22 con Despertar 05:30 y Dormir 22:30), el registro
+# dice «Prevista HH:00 · respondida HH:MM»; si no lo es, solo la hora en que se respondió.
+# cuenta: aprendiz (día 10 con Mi Radar encendido, Despertar 05:30 y Dormir 22:30, y la hora en curso SIN registro; correr después de 03)
 appId: com.renaser.app
 ---
-- evalScript: ${output.hora = new Date().getHours(); output.elegida = [9, 14, 20].indexOf(new Date().getHours()) >= 0; output.prevista = 'Prevista ' + ('0' + new Date().getHours()).slice(-2) + ':00 · respondida .*'}
+- evalScript: ${output.hora = new Date().getHours(); output.elegida = new Date().getHours() >= 6 && new Date().getHours() <= 22; output.prevista = 'Prevista ' + ('0' + new Date().getHours()).slice(-2) + ':00 · respondida .*'}
 - runFlow: ../comun/ya-adentro.yaml
 - tapOn: "YO"
 - scrollUntilVisible:
@@ -38,19 +38,16 @@ appId: com.renaser.app
     timeout: 30000
 - assertNotVisible: "Registrar ahora"
 - takeScreenshot: 05b-registrado
-- scrollUntilVisible:
-    element: "Sentí: c"
-    direction: DOWN
-    optional: true
-- assertVisible: "Energía 5 / 10"
+# La pantalla no muestra las respuestas, solo cuántas de las de hoy ya tienen la suya: «Hoy: 1 de 17».
+- assertNotVisible: "Sentí: c"
+- assertNotVisible: "Energía .*"
 - runFlow:
     when:
       true: ${output.elegida}
     commands:
-      - assertVisible: ${output.prevista}
-- runFlow:
-    when:
-      true: ${!output.elegida}
-    commands:
-      # Solo la de la hora en curso: el historial puede traer otras «Prevista HH:00» de horas elegidas más temprano.
-      - assertNotVisible: ${output.prevista}
+      - scrollUntilVisible:
+          element: "Hoy: [1-9][0-9]* de 17"
+          direction: UP
+          optional: true
+      - assertVisible: "Hoy: [1-9][0-9]* de 17"
+- takeScreenshot: 05c-hoy-n-de-m

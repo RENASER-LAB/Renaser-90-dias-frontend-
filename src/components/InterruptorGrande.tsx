@@ -85,7 +85,10 @@ export function InterruptorGrande({
 }: {
   /** El rótulo de la fila, a 17 px. También es el nombre para el lector de pantalla. */
   etiqueta: string;
-  /** Lo que pasa, en una línea corta, a 15 px. El lector de pantalla la oye como ayuda. */
+  /**
+   * Lo que pasa, en una línea corta, a 15 px. El lector de pantalla la oye como ayuda. Vacía (`''`) no dibuja la línea:
+   * el rótulo se explica solo (Mi Radar, spec 019: «Encendido»).
+   */
   descripcion: string;
   valor: ValorDelInterruptorGrande;
   /** Recibe el valor NUEVO (de «Varía» pasa a `true`). */
@@ -140,7 +143,7 @@ export function InterruptorGrande({
       disabled={deshabilitado}
       accessibilityRole="switch"
       accessibilityLabel={etiqueta}
-      accessibilityHint={descripcion}
+      accessibilityHint={descripcion || undefined}
       accessibilityState={{ checked: varia ? 'mixed' : valor, disabled: deshabilitado }}
       accessibilityValue={varia ? { text: 'Varía según el día' } : undefined}
       // react-native-web 0.21 ignora `accessibilityState`: sin `aria-checked` el lector de la web no dice el estado.
@@ -150,7 +153,7 @@ export function InterruptorGrande({
     >
       <View style={estilos.textos}>
         <Text style={[estilos.etiqueta, { color: c.text }]}>{etiqueta}</Text>
-        <Text style={[estilos.descripcion, { color: c.textSoft }]}>{descripcion}</Text>
+        {descripcion ? <Text style={[estilos.descripcion, { color: c.textSoft }]}>{descripcion}</Text> : null}
       </View>
 
       <View style={estilos.columnaDelRiel}>

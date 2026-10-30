@@ -1,8 +1,8 @@
-# 10 — Mentor del grupo: en la ficha del aprendiz, «CÓDIGO RENASER» dice «Mi Radar: encendido · 09:00, 14:00 y 20:00» y
-# lista sus registros con «Prevista 14:00 · respondida HH:MM» (escenario 10).
+# 10 — Mentor del grupo: en la ficha del aprendiz, «CÓDIGO RENASER» dice «Mi Radar: encendido · 05:30 a 22:30 · 17 veces» y
+# lista sus registros con «Prevista HH:00 · respondida HH:MM» (escenario 10).
 # cuenta: admin (la ranura E2E_ADMIN_* apunta al MENTOR del grupo; ver README). E2E_PERSONA = parte del nombre del aprendiz
 # (por defecto «a»: la primera que coincida). Precondición: ese aprendiz está en el día 10 con Mi Radar encendido en
-# 09:00, 14:00 y 20:00 y con un registro de las 14:00 de hoy (flujos 03 y 05).
+# Automático (Despertar 05:30, Dormir 22:30) y con un registro de esta hora (flujos 03 y 05).
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml
@@ -19,12 +19,12 @@ appId: com.renaser.app
     direction: DOWN
     timeout: 60000
 - scrollUntilVisible:
-    element: "Mi Radar: encendido · 09:00, 14:00 y 20:00"
+    element: "Mi Radar: encendido · 05:30 a 22:30 · 17 veces"
     direction: DOWN
     timeout: 30000
-- assertVisible: "Mi Radar: encendido · 09:00, 14:00 y 20:00"
+- assertVisible: "Mi Radar: encendido · 05:30 a 22:30 · 17 veces"
 - scrollUntilVisible:
-    element: "Prevista 14:00 · respondida .*"
+    element: "Prevista [0-9][0-9]:00 · respondida .*"
     direction: DOWN
     timeout: 30000
 - takeScreenshot: 10-ficha-del-mentor-codigo-renaser

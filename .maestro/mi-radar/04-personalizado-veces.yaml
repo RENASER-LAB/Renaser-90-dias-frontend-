@@ -1,0 +1,52 @@
+# 04 — Modo Personalizado: «Veces al día» con − / +, de 1 a las que caben (17 con 05:30 a 22:30); se propone 6 y se ve solo la
+# cifra, no las horas (spec 019, escenario 4). No se guarda nada.
+# cuenta: aprendiz (día 10 con Mi Radar encendido en Automático, Despertar 05:30 y Dormir 22:30; correr después de 03)
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Encendido · 05:30 a 22:30 · 17 veces"
+    direction: DOWN
+- tapOn: "Encendido · 05:30 a 22:30 · 17 veces"
+- extendedWaitUntil:
+    visible: "Personalizado"
+    timeout: 20000
+# El primer toque puede llegar antes de que la pantalla termine de armarse: se repite hasta que aparece «Veces al día».
+- repeat:
+    while:
+      notVisible: "Veces al día"
+    times: 4
+    commands:
+      - tapOn: "Personalizado"
+      - extendedWaitUntil:
+          visible: "Veces al día"
+          timeout: 4000
+          optional: true
+- assertVisible: "Veces al día"
+# Se propone 6, y no hay horas a mano: solo la cifra.
+- assertVisible: "6"
+- assertNotVisible: "[0-9][0-9]:00"
+- assertVisible: "Guardar · todos los días"
+- assertVisible: "Sábado.*6 veces"
+- takeScreenshot: 04a-personalizado-6
+# + sube de a una y − baja de a una.
+- tapOn: "Una vez más"
+- assertVisible: "7"
+- tapOn: "Una vez menos"
+- tapOn: "Una vez menos"
+- assertVisible: "5"
+- assertVisible: "Sábado.*5 veces"
+- takeScreenshot: 04b-personalizado-5
+# El límite de abajo es 1: − se apaga.
+- repeat:
+    times: 6
+    commands:
+      - tapOn:
+          text: "Una vez menos"
+          optional: true
+- assertVisible: "1"
+- takeScreenshot: 04c-personalizado-minimo
+# Nada se guardó: al volver, la fila de Yo sigue diciendo 17 veces.
+- back
+- assertVisible: "Encendido · 05:30 a 22:30 · 17 veces"

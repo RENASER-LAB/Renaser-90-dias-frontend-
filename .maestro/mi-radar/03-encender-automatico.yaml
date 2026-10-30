@@ -1,0 +1,53 @@
+# 03 — Encender Mi Radar: rige en el acto, queda en Automático con el Despertar y el Dormir del hábito y pregunta cada hora
+# (spec 019, escenario 3). Con Despertar 05:30 y Dormir 22:30 son 17 veces por día.
+# cuenta: aprendiz (día 10, Mi Radar apagado, Despertar 05:30 y Dormir 22:30 en preferencias_horario; correr después de 02)
+# Después hay que mirar `adb shell dumpsys alarm`: alarmas semanales `renaser.radar.slot.d{día}.HH` de 06 a 22 (lo hace el
+# informe, no el flujo).
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Apagado"
+    direction: DOWN
+- tapOn: "Apagado"
+- extendedWaitUntil:
+    visible: "Encendido"
+    timeout: 15000
+# Encender no pide guardar: rige en el acto.
+- tapOn: "Encendido"
+# La confirmación en línea se va sola a los pocos segundos y Maestro tarda ~10 s por toque: no se exige. Lo que prueba que
+# quedó guardado es lo que solo existe encendido: el modo, «Hora» y «Registrar ahora» (o «Ya registraste esta hora»).
+- extendedWaitUntil:
+    visible: "Automático"
+    timeout: 30000
+- assertVisible: "Personalizado"
+- assertVisible: "Ahora: 05:30 a 22:30"
+- assertVisible: "Despertar"
+- assertVisible: "Dormir"
+- assertVisible: "05:30"
+- assertVisible: "22:30"
+- assertVisible: "Todos los días"
+# Una sola línea de lo respondido hoy: «Hoy: 0 de 17» (o las que ya tiene respondidas), sin las respuestas.
+- scrollUntilVisible:
+    element: "Hoy: [0-9]+ de 17"
+    direction: DOWN
+- assertNotVisible: "Historial"
+- assertNotVisible: "Patrones"
+# Automático no tiene «Veces al día» y no hay nada que guardar.
+- assertNotVisible: "Veces al día"
+- assertNotVisible: "Guardar ·.*"
+- takeScreenshot: 03a-encendido-automatico
+# Hoy y lo pasado van con candado; lo que viene, con sus veces.
+- assertVisible: "Lunes.*ya no se puede cambiar"
+- assertVisible: "Sábado.*17 veces"
+- assertVisible: "Domingo.*17 veces"
+- scrollUntilVisible:
+    element: "Registrar ahora|Ya registraste esta hora"
+    direction: DOWN
+- takeScreenshot: 03b-registrar
+- back
+- extendedWaitUntil:
+    visible: "Encendido · 05:30 a 22:30 · 17 veces"
+    timeout: 15000
+- takeScreenshot: 03c-yo-fila-encendida

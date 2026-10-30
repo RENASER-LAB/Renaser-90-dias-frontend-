@@ -15,7 +15,7 @@ import {
 } from './hooks/useConfigDeMiRadar';
 import { useRadarDelDia } from './hooks/useRadarDelDia';
 import { claveDeMiRadar, miRadarCorresponde } from './utils/miRadar';
-import type { CheckInRadarApi, MiRadarApi } from './types/radar.types';
+import type { CheckInRadarApi, MiRadarApi, PedidoDeMiRadarApi } from './types/radar.types';
 import type { EstadoRadar, SlotRadar } from './utils/slotsDelRadar';
 
 /**
@@ -63,14 +63,21 @@ interface ValorRadar {
   limpiarError: () => void;
   /**
    * Mi Radar de esta cuenta (spec 012): lo guardado en el servidor, desde el día 8. La fila de Yo, su pantalla y los avisos
-   * del teléfono leen esto y nada más. Los días 1 a 7 no se pide: queda `pendiente`.
+   * del teléfono leen esto y nada más. Los días 1 a 7 no se pide: queda `pendiente`, salvo que alguien lo pida (`solicitar`).
    */
   miRadar: {
     lectura: LecturaDeMiRadar;
-    guardar: (config: MiRadarApi) => Promise<MiRadarApi>;
+    guardar: (pedido: PedidoDeMiRadarApi) => Promise<MiRadarApi>;
+    /** Lee de nuevo sin vaciar lo que se ve. */
     recargar: () => void;
+    /** Antes del día 8: pide que el servidor diga si hay Mi Radar o por qué no (el personal que todavía no eligió su Día 1). */
+    solicitar: () => void;
+    /** Olvida un motivo o un fallo (queda «pendiente») y lee: para «Reintentar» y para después de elegir el Día 1. */
+    reiniciar: () => void;
   };
 }
+
+const SIN_MI_RADAR: MiRadarApi = { encendido: false, hoy: null, dias: [] };
 
 const SIN_RADAR: ValorRadar = {
   estado: { tipo: 'apagado', motivo: 'desactivado' },
@@ -84,7 +91,7 @@ const SIN_RADAR: ValorRadar = {
   error: null,
   enviar: async () => false,
   limpiarError: () => {},
-  miRadar: { lectura: MI_RADAR_PENDIENTE, guardar: async config => config, recargar: () => {} },
+  miRadar: { lectura: MI_RADAR_PENDIENTE, guardar: async () => SIN_MI_RADAR, recargar: () => {}, solicitar: () => {}, reiniciar: () => {} },
 };
 
 const RadarContext = createContext<ValorRadar>(SIN_RADAR);
@@ -161,7 +168,8 @@ export function RadarProvider({ children }: { children: React.ReactNode }) {
   const puedePedirse = arranqueTerminado && !mapaAbierto;
   const radar = useRadarDelDia(puedePedirse ? diaPrograma : null, user?.id ?? null);
 
-  /* Mi Radar (spec 012): se lee solo desde el día 8. Los días 1 a 7 este hook no pide nada. */
+  /* Mi Radar (spec 012): se lee solo desde el día 8. Los días 1 a 7 este hook no pide nada, salvo que Yo lo pida para el personal
+     que todavía no eligió su Día 1 (spec 019: el 403 dice por qué). */
   const miRadar = useConfigDeMiRadar(diaPrograma, user?.id ?? null);
   const configMiRadar = configDeMiRadar(miRadar.lectura);
   /* La clave de lo que importa a los avisos (encendido, horas y días con horas propias): leer de nuevo lo mismo (al abrir

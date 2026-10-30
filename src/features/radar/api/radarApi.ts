@@ -3,6 +3,7 @@ import type {
   CheckInRadarApi,
   HistorialRadarApi,
   MiRadarApi,
+  PedidoDeMiRadarApi,
   RegistroRadarApi,
   UltimoRadarApi,
 } from '../types/radar.types';
@@ -47,9 +48,10 @@ export async function obtenerHistorial(cursor?: string | null): Promise<Historia
 }
 
 /**
- * `GET /api/v1/radar/mi-radar` (spec 012): si la persona encendió Mi Radar, a qué horas y qué días tienen las suyas
- * (`dias`, cuarta ronda; sin ellos, ningún día tiene horas propias). Un 404 es un backend anterior
- * y un 403 una cuenta sin permiso o suspendida: quien llama los lee como «no hay Mi Radar», no como un fallo.
+ * `GET /api/v1/radar/mi-radar` (spec 019): si la persona encendió Mi Radar y, para cada día de la semana, el modo, las veces y las
+ * horas que el servidor calculó con su Despertar y su Dormir (`dias`, siete). Un 404 es un backend anterior. Un 403 **dice por qué**
+ * en el `codigo` del cuerpo (`PROGRAMA_NO_ACTIVADO`, `CUENTA_SUSPENDIDA`, `SIN_PERMISO`; spec 019): `useConfigDeMiRadar.lecturaDeUnError` lo lee, y un
+ * 403 sin motivo (un backend anterior) sigue siendo «no hay Mi Radar», no un fallo.
  */
 export async function obtenerMiRadar(): Promise<MiRadarApi> {
   const r = await apiFetch<unknown>('/api/v1/radar/mi-radar');
@@ -57,12 +59,11 @@ export async function obtenerMiRadar(): Promise<MiRadarApi> {
 }
 
 /**
- * `PUT /api/v1/radar/mi-radar`: enciende o apaga Mi Radar y guarda las horas de todos los días y, si hay, las de los días
- * que tienen las suyas (`dias`; sin él, todos los días siguen `horas`). Con `encendido: false` el servidor ignora las
- * horas y los días. Responde lo guardado, con la forma del GET; un 400 es una hora fuera de las reglas (la app las
- * valida antes, pero el servidor decide).
+ * `PUT /api/v1/radar/mi-radar`: enciende o apaga Mi Radar (rige en el acto) y guarda SOLO los días que se tocan (`dias`:
+ * modo, veces, sin Radar). Responde la semana ya resuelta, con la forma del GET. Un 400 es un modo o unas veces fuera de las
+ * reglas (la app las valida antes, pero el servidor decide) y un 409, un pedido que cambia hoy o un día pasado.
  */
-export async function guardarMiRadar(config: MiRadarApi): Promise<MiRadarApi> {
-  const r = await apiFetch<unknown>('/api/v1/radar/mi-radar', { method: 'PUT', body: config });
+export async function guardarMiRadar(pedido: PedidoDeMiRadarApi): Promise<MiRadarApi> {
+  const r = await apiFetch<unknown>('/api/v1/radar/mi-radar', { method: 'PUT', body: pedido });
   return validarRespuesta<MiRadarApi>(radarSchemas.miRadar, r, 'PUT /api/v1/radar/mi-radar');
 }

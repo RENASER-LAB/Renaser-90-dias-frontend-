@@ -47,6 +47,7 @@ const mockRadar = {
 };
 jest.mock('../../RadarContext', () => ({ useRadar: () => mockRadar.actual }));
 
+import { miRadarConHoras } from '../../__tests__/fixturasDeMiRadar';
 import type { RegistroRadarApi } from '../../types/radar.types';
 import { useRadarEnHoy } from '../useRadarEnHoy';
 
@@ -58,7 +59,7 @@ const registro = (id: string, hora: number, extra: Partial<RegistroRadarApi> = {
 });
 const pagina = (entries: RegistroRadarApi[]) => ({ entries, nextCursor: null, miRadar: null });
 
-const ENCENDIDO = { encendido: true, horas: [9, 14, 20], dias: [] };
+const ENCENDIDO = miRadarConHoras([9, 14, 20]);
 
 function configurar(lectura: Lectura, estado: unknown = { tipo: 'apagado', motivo: 'etapa-terminada' }) {
   mockRadar.actual = {
@@ -123,7 +124,7 @@ describe('lo que lee', () => {
   });
 
   it.each([
-    ['apagado', { estado: 'lista', config: { encendido: false, horas: [], dias: [] } }],
+    ['apagado', { estado: 'lista', config: miRadarConHoras([], false) }],
     ['sin Mi Radar en el backend', { estado: 'no-disponible' }],
     ['leyendo', { estado: 'pendiente' }],
   ])('desde el día 8, con Mi Radar %s, no lee el historial', async (_caso, lectura) => {

@@ -10,7 +10,7 @@ import {
 import { weekdayDeExpo } from '../../habits/notificaciones/utils/alarmasPorDia';
 import { CONFIG_RADAR, MI_RADAR } from '../config/configRadar';
 import type { MiRadarApi } from '../types/radar.types';
-import { DIAS_ISO, type AvisoDeRadar, type DiaIso, horasDeAviso, horasElegibles, miRadarCorresponde } from '../utils/miRadar';
+import { DIAS_ISO, type AvisoDeRadar, type DiaIso, horasDeAviso, miRadarCorresponde } from '../utils/miRadar';
 import { horaEnPunto, horasConSlot } from '../utils/slotsDelRadar';
 
 /**
@@ -48,17 +48,18 @@ import { horaEnPunto, horasConSlot } from '../utils/slotsDelRadar';
  * reprograma sin duplicar. Desde el día 8 el aviso lleva `data.route = '/mi-radar'`: tocarlo abre Mi Radar (la clave
  * es `route`, la que lee `rutaDeAviso`; el contrato de la spec la llama `url`).
  *
- * ## Por día de la semana (cuarta ronda, 2026-10-29)
+ * ## Mi Radar automático (spec 019, 2026-10-30)
  *
- * Con Mi Radar **sin ningún día distinto** (el caso común) todo sigue como arriba: una alarma DIARIA por hora, con el id
- * `renaser.radar.slot.HH`. Cuando algún día tiene horas propias o va sin Radar, el disparador diario ya no sirve (no sabe
- * qué día es) y pasa a **una alarma SEMANAL por día y por hora** de ese día, con el id estable `renaser.radar.slot.d{1..7}.HH`
- * (lunes = 1), igual que los hábitos con días distintos (spec 008). Un día sin Radar no tiene ninguna. {@link horasDeAviso}
- * decide el esquema y esto solo lo programa; **cancelar cubre los dos esquemas**, así que pasar de uno al otro (o apagar)
- * no deja alarmas viejas.
+ * Cada día de la semana tiene su propio horario (el Despertar y el Dormir de ese día), así que desde el día 8 **no hay alarmas
+ * diarias: hay una alarma SEMANAL por día y por hora** de las que el servidor calculó, con el id estable
+ * `renaser.radar.slot.d{1..7}.HH` (lunes = 1), igual que los hábitos con días distintos (spec 008). Un día sin Radar no tiene
+ * ninguna. {@link horasDeAviso} decide cuáles y esto solo las programa; **cancelar cubre los dos esquemas** (los diarios de la
+ * semana 1 y los semanales), así que pasar de uno al otro (o apagar) no deja alarmas viejas. Se rehacen al cambiar el modo, las
+ * veces o el Despertar y el Dormir: `useConfigDeMiRadar` vuelve a leer al abrir la app y al volver a primer plano, y la huella
+ * de las horas (`claveDeMiRadar`) dispara la sincronización.
  *
- * **Tope de iOS: 64 avisos pendientes por app.** Con días distintos pueden ser hasta 84 (7 días × 12 horas). Hoy la app es solo
- * Android, que no tiene tope; si algún día sale en iOS hay que recortar en `horasDeAviso` antes de programar.
+ * **Límite de alarmas:** hasta 21 horas × 7 días = 147 pendientes. Android admite 500 por app; iOS, 64, pero hoy la app es solo
+ * Android. Si algún día sale en iOS hay que recortar en `horasDeAviso` antes de programar.
  *
  * Y la **invitación del día 8**: durante los días 1 a 7 el teléfono deja programado UN aviso para el día 8 a las 09:00
  * («Terminaste tu primera semana…»), una sola vez por cuenta. Sin servidor ni tabla. Si la persona enciende Mi Radar,
@@ -111,9 +112,11 @@ function identificador(hora: number, dia: DiaIso | null = null): string {
   return dia === null ? `renaser.radar.slot.${hh}` : `renaser.radar.slot.d${dia}.${hh}`;
 }
 
+const horasDeLaSemana = (desde: number, hasta: number) => Array.from({ length: hasta - desde + 1 }, (_, i) => desde + i);
+
 /** Todos los ids que Mi Radar y el Código Renaser pueden haber programado: los diarios de 03 a 23 y los semanales de cada día. */
 function todosLosIdentificadores(): string[] {
-  const horas = [...new Set([...horasConSlot(), ...horasElegibles()])];
+  const horas = [...new Set([...horasConSlot(), ...horasDeLaSemana(MI_RADAR.primeraHora, MI_RADAR.ultimaHora)])];
   return [...horas.map(h => identificador(h)), ...DIAS_ISO.flatMap(dia => horas.map(h => identificador(h, dia)))];
 }
 

@@ -13,22 +13,20 @@ import TestRenderer, { act, type ReactTestRenderer } from 'react-test-renderer';
 
 const mockObtenerUltimo = jest.fn<() => Promise<string | null>>();
 const mockRegistrar = jest.fn<(c: unknown) => Promise<{ createdAt: string }>>();
-const mockObtenerMiRadar = jest.fn<() => Promise<{ encendido: boolean; horas: number[]; dias?: Array<{ dia: number; horas: number[] }> }>>();
-const mockGuardarMiRadar = jest.fn<(c: { encendido: boolean; horas: number[] }) => Promise<{ encendido: boolean; horas: number[] }>>();
+const mockObtenerMiRadar = jest.fn<() => Promise<MiRadarApi>>();
+const mockGuardarMiRadar = jest.fn<(c: unknown) => Promise<MiRadarApi>>();
 jest.mock('../api/radarApi', () => ({
   obtenerUltimoCheckIn: () => mockObtenerUltimo(),
   registrarCheckIn: (c: unknown) => mockRegistrar(c),
   obtenerMiRadar: () => mockObtenerMiRadar(),
-  guardarMiRadar: (c: { encendido: boolean; horas: number[] }) => mockGuardarMiRadar(c),
+  guardarMiRadar: (c: unknown) => mockGuardarMiRadar(c),
 }));
 
 const mockObtenerResumenHome = jest.fn<() => Promise<{ inscrito: boolean; diaPrograma: number }>>();
 jest.mock('../../home/api/homeApi', () => ({ obtenerResumenHome: () => mockObtenerResumenHome() }));
 
-jest.mock('../../../context/AuthContext', () => {
-  const sesion = { user: { id: 'u1', role: 'TRAINEE' }, isOnboardingCompleted: true, onboardingResuelto: true };
-  return { useAuth: () => sesion };
-});
+const mockSesion = { user: { id: 'u1', role: 'TRAINEE' }, isOnboardingCompleted: true, onboardingResuelto: true };
+jest.mock('../../../context/AuthContext', () => ({ useAuth: () => mockSesion }));
 jest.mock('../../sparkie/hooks/useArranqueGuiado', () => {
   const arranque = { estado: { paso: 'NINGUNO' } };
   return { useArranqueGuiado: () => arranque };
@@ -52,6 +50,8 @@ jest.mock('../components/CodigoRenaserModal', () => ({
   },
 }));
 
+import type { MiRadarApi } from '../types/radar.types';
+import { miRadarConHoras, miRadarDePrueba } from './fixturasDeMiRadar';
 import { hayCapaObligatoriaAbierta, olvidarCapasObligatorias } from '../../../navigation/capasObligatorias';
 import { ApiError } from '../../../services/http/apiClient';
 import { CodigoRenaserOverlay } from '../components/CodigoRenaserOverlay';
@@ -118,7 +118,7 @@ describe('días 1 a 7: sin ningún cambio', () => {
 describe('desde el día 8, Hoy no muestra nada del Radar', () => {
   it.each([8, 9, 90])('el día %i, con Mi Radar encendido: no se lee /latest, no hay formulario ni capa obligatoria', async dia => {
     mockObtenerResumenHome.mockResolvedValue({ inscrito: true, diaPrograma: dia });
-    mockObtenerMiRadar.mockResolvedValue({ encendido: true, horas: [10, 14] });
+    mockObtenerMiRadar.mockResolvedValue(miRadarConHoras([10, 14]));
     await montar();
     expect(visto.estado).toEqual({ tipo: 'apagado', motivo: 'etapa-terminada' });
     expect(visto.slot).toBeNull();
@@ -130,7 +130,7 @@ describe('desde el día 8, Hoy no muestra nada del Radar', () => {
 
   it('y con Mi Radar apagado, igual', async () => {
     mockObtenerResumenHome.mockResolvedValue({ inscrito: true, diaPrograma: 10 });
-    mockObtenerMiRadar.mockResolvedValue({ encendido: false, horas: [] });
+    mockObtenerMiRadar.mockResolvedValue(miRadarConHoras([], false));
     await montar();
     expect(visto.estado).toEqual({ tipo: 'apagado', motivo: 'etapa-terminada' });
     expect(mockObtenerUltimo).not.toHaveBeenCalled();
@@ -138,25 +138,42 @@ describe('desde el día 8, Hoy no muestra nada del Radar', () => {
   });
 });
 
+describe('Mi Radar es para todos los roles que hacen los 90 días (spec 019)', () => {
+  /* Aprendiz, guía de aprendiz, mentor, líder, admin y alquimista con su programa propio: ninguna pieza filtra por rol. */
+  it.each(['TRAINEE', 'APRENDIZ', 'TRAINEE_GUIDE', 'GUIA_APRENDIZ', 'MENTOR', 'MENTOR_LEAD', 'LIDER_MENTORES', 'ADMIN', 'ALCHEMIST', 'ALQUIMISTA'])(
+    'con el rol %s: desde el día 8 se lee Mi Radar y salen sus avisos',
+    async rol => {
+      mockSesion.user = { id: 'u1', role: rol };
+      mockObtenerResumenHome.mockResolvedValue({ inscrito: true, diaPrograma: 10 });
+      mockObtenerMiRadar.mockResolvedValue(miRadarDePrueba(true));
+      await montar();
+      expect(mockObtenerMiRadar).toHaveBeenCalledTimes(1);
+      expect(visto.miRadar.lectura.estado).toBe('lista');
+      expect(mockSincronizar).toHaveBeenLastCalledWith(10, miRadarDePrueba(true), 'u1');
+      mockSesion.user = { id: 'u1', role: 'TRAINEE' };
+    },
+  );
+});
+
 describe('Mi Radar y los avisos', () => {
   it('desde el día 8 se lee una vez y de ahí salen los avisos', async () => {
     mockObtenerResumenHome.mockResolvedValue({ inscrito: true, diaPrograma: 8 });
-    mockObtenerMiRadar.mockResolvedValue({ encendido: true, horas: [9, 14, 20] });
+    mockObtenerMiRadar.mockResolvedValue(miRadarConHoras([9, 14, 20]));
     await montar();
     expect(mockObtenerMiRadar).toHaveBeenCalledTimes(1);
-    expect(visto.miRadar.lectura).toEqual({ estado: 'lista', config: { encendido: true, horas: [9, 14, 20] } });
-    expect(mockSincronizar).toHaveBeenLastCalledWith(8, { encendido: true, horas: [9, 14, 20] }, 'u1');
+    expect(visto.miRadar.lectura).toEqual({ estado: 'lista', config: miRadarConHoras([9, 14, 20]) });
+    expect(mockSincronizar).toHaveBeenLastCalledWith(8, miRadarConHoras([9, 14, 20]), 'u1');
   });
 
   it('mientras se lee no se toca lo programado', async () => {
     mockObtenerResumenHome.mockResolvedValue({ inscrito: true, diaPrograma: 8 });
-    let resolver!: (m: { encendido: boolean; horas: number[] }) => void;
+    let resolver!: (m: MiRadarApi) => void;
     mockObtenerMiRadar.mockReturnValue(new Promise(r => (resolver = r)));
     await montar();
     expect(mockSincronizar).not.toHaveBeenCalled();
-    await act(async () => resolver({ encendido: false, horas: [] }));
+    await act(async () => resolver(miRadarConHoras([], false)));
     await vaciar();
-    expect(mockSincronizar).toHaveBeenLastCalledWith(8, { encendido: false, horas: [] }, 'u1');
+    expect(mockSincronizar).toHaveBeenLastCalledWith(8, miRadarConHoras([], false), 'u1');
   });
 
   it('un 404 (backend anterior) es «no hay Mi Radar»: la fila no aparece y no suena ningún aviso de Mi Radar', async () => {
@@ -179,26 +196,26 @@ describe('Mi Radar y los avisos', () => {
 
   it('guardar deja a la vista lo que respondió el servidor y reprograma los avisos con eso', async () => {
     mockObtenerResumenHome.mockResolvedValue({ inscrito: true, diaPrograma: 9 });
-    mockObtenerMiRadar.mockResolvedValue({ encendido: false, horas: [] });
+    mockObtenerMiRadar.mockResolvedValue(miRadarConHoras([], false));
     await montar();
-    mockGuardarMiRadar.mockResolvedValue({ encendido: true, horas: [9, 14, 20] });
+    mockGuardarMiRadar.mockResolvedValue(miRadarConHoras([9, 14, 20]));
     await act(async () => {
-      await visto.miRadar.guardar({ encendido: true, horas: [9, 14, 20] });
+      await visto.miRadar.guardar({ encendido: true });
     });
-    expect(mockGuardarMiRadar).toHaveBeenCalledWith({ encendido: true, horas: [9, 14, 20] });
-    expect(visto.miRadar.lectura).toEqual({ estado: 'lista', config: { encendido: true, horas: [9, 14, 20] } });
-    expect(mockSincronizar).toHaveBeenLastCalledWith(9, { encendido: true, horas: [9, 14, 20] }, 'u1');
+    expect(mockGuardarMiRadar).toHaveBeenCalledWith({ encendido: true });
+    expect(visto.miRadar.lectura).toEqual({ estado: 'lista', config: miRadarConHoras([9, 14, 20]) });
+    expect(mockSincronizar).toHaveBeenLastCalledWith(9, miRadarConHoras([9, 14, 20]), 'u1');
   });
 
   it('con días que van distinto, los avisos se programan con ellos; cambiar solo un día los reprograma', async () => {
     mockObtenerResumenHome.mockResolvedValue({ inscrito: true, diaPrograma: 9 });
-    const conSabado = { encendido: true, horas: [9, 14], dias: [{ dia: 6, horas: [11] }] };
+    const conSabado = miRadarConHoras([9, 14], true, { 6: { horas: [11] } });
     mockObtenerMiRadar.mockResolvedValue(conSabado);
     await montar();
     expect(mockSincronizar).toHaveBeenLastCalledWith(9, conSabado, 'u1');
     const llamadas = mockSincronizar.mock.calls.length;
-    // Las mismas horas de todos los días, pero el sábado cambia: es otra huella, hay que reprogramar.
-    const conOtroSabado = { encendido: true, horas: [9, 14], dias: [{ dia: 6, horas: [12] }] };
+    // Los mismos días salvo el sábado, que cambia: es otra huella, hay que reprogramar.
+    const conOtroSabado = miRadarConHoras([9, 14], true, { 6: { horas: [12] } });
     mockObtenerMiRadar.mockResolvedValue(conOtroSabado);
     act(() => visto.miRadar.recargar());
     await vaciar();
@@ -208,7 +225,7 @@ describe('Mi Radar y los avisos', () => {
 
   it('releer lo mismo no reprograma los avisos', async () => {
     mockObtenerResumenHome.mockResolvedValue({ inscrito: true, diaPrograma: 9 });
-    mockObtenerMiRadar.mockResolvedValue({ encendido: true, horas: [9] });
+    mockObtenerMiRadar.mockResolvedValue(miRadarConHoras([9]));
     await montar();
     const llamadas = mockSincronizar.mock.calls.length;
     act(() => visto.miRadar.recargar());

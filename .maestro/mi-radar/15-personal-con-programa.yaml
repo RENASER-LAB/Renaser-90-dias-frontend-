@@ -1,0 +1,36 @@
+# 15 — Mi Radar es para todos los roles que hacen los 90 días: un MENTOR con su programa propio desde el día 8 ve la mitad del Radar
+# en Hoy («Planifica tu Radar»), la abre, lo enciende y queda en Automático (spec 019, escenario 15).
+# cuenta: mentor (e2e-radar-mentor) con su programa activado, día 11, Despertar 05:30 y Dormir 22:30, y Mi Radar apagado. Se corre de
+# cualquier día de la semana.
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+# Hoy del mentor: «Mi programa» es donde está la tarjeta «Hábitos de hoy» con las dos mitades.
+- tapOn:
+    text: "Mi programa"
+    optional: true
+- scrollUntilVisible:
+    element: "Planifica tu Radar"
+    direction: DOWN
+    timeout: 40000
+- assertVisible: "Mi Radar"
+- takeScreenshot: 15a-hoy-mitad-del-radar-del-mentor
+- tapOn: "Planifica tu Radar"
+# La mitad lleva a Yo → Mi Radar.
+- extendedWaitUntil:
+    visible: "Encendido"
+    timeout: 30000
+- assertVisible: "Mi Radar"
+- tapOn: "Encendido"
+- extendedWaitUntil:
+    visible: "Automático"
+    timeout: 30000
+- assertVisible: "Ahora: 05:30 a 22:30"
+- assertVisible: "Todos los días"
+- assertNotVisible: "Historial"
+- takeScreenshot: 15b-mi-radar-del-mentor
+- back
+- extendedWaitUntil:
+    visible: "Encendido · 05:30 a 22:30 · 17 veces"
+    timeout: 15000
+- takeScreenshot: 15c-yo-fila-del-mentor
