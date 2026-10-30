@@ -196,12 +196,11 @@ describe('lo que dice la fila', () => {
     expect(subtituloDeLaFila(item({ puntos: 8 }), 'hoy', 'sigue', ahora).marca).toBe('Lo que sigue');
   });
 
-  it('atrasado, invita a cumplir el compromiso, sin hablar de puntos ni en rojo (pedido del dueño, 2026-10-29)', () => {
+  it('atrasado, la fila no dice nada más que el nombre (pedido del dueño, 2026-10-29)', () => {
     const ahora = Date.parse('2026-10-29T12:00:00Z');
     const atrasado = item({}, { estado: 'PENDIENTE', pointsAtStake: 6, maxPoints: 10, deadline: '2026-10-29T20:00:00Z' });
     const sub = subtituloDeLaFila(atrasado, 'atrasado', null, ahora);
-    expect(sub.texto).toBe('Todavía puedes cumplir tu compromiso hoy');
-    expect(sub.texto).not.toMatch(/punto/i);
+    expect(sub.texto).toBe('');
     expect(sub.tonoDeAviso).toBe(false);
   });
 
@@ -209,13 +208,13 @@ describe('lo que dice la fila', () => {
     const ahora = Date.now();
     expect(subtituloDeLaFila(item({ tipo: 'evento', lugar: 'Zoom' }, null), 'hoy', null, ahora).texto).toBe('');
     expect(subtituloDeLaFila(item({ tipo: 'accion' }, null), 'hoy', 'ahora', ahora)).toEqual({ marca: 'Te toca ahora', texto: '', tonoDeAviso: false });
-    expect(subtituloDeLaFila(item({ tipo: 'accion' }, null), 'atrasado', null, ahora).texto).toBe('Todavía puedes cumplir tu compromiso hoy');
+    expect(subtituloDeLaFila(item({ tipo: 'accion' }, null), 'atrasado', null, ahora).texto).toBe('');
     expect(subtituloDeLaFila(item({ tipo: 'evento' }, null), 'atrasado', null, ahora).texto).toBe('');
   });
 
-  it('todo hábito atrasado invita a cumplir, aunque todavía pague completo (E2E del 29/10)', () => {
+  it('lo atrasado tampoco repite la invitación: la dice una vez el encabezado de su sección (E2E del 29/10)', () => {
     const atrasado = item({}, { estado: 'PENDIENTE', pointsAtStake: 10, maxPoints: 10, deadline: '2026-10-29T23:00:00Z' });
-    expect(subtituloDeLaFila(atrasado, 'atrasado', null, Date.parse('2026-10-29T12:00:00Z')).texto).toBe('Todavía puedes cumplir tu compromiso hoy');
+    expect(subtituloDeLaFila(atrasado, 'atrasado', null, Date.parse('2026-10-29T12:00:00Z')).texto).toBe('');
   });
 
   it('un día planificado no promete puntos', () => {

@@ -13,7 +13,7 @@ import { ESCALA_APRETADO_DEL_CHECK } from '../../habits/celebracion/momentoDelHa
 import type { ItemDelDia } from '../utils/itemsDelDia';
 import { controlDeLaFila, subtituloDeLaFila, type ModoDeLaFila } from '../utils/filaDelDia';
 import type { MarcaDelPrimero } from '../utils/listaDelDia';
-import { accionDeLaTarjeta } from '../utils/tarjetaDelHabito';
+import { accionDeLaTarjeta, AVISO_DE_HORA_PASADA } from '../utils/tarjetaDelHabito';
 
 /**
  * Lo que se mueve al acomodarse la lista (spec 014): lo hecho se va con un fundido corto y lo que queda sube a su lugar
@@ -81,7 +81,7 @@ export function FilaDelDia({
     item.titulo,
     sub.marca,
     item.tipo === 'evento' ? (item.lugar ? `evento, ${item.lugar}` : 'evento') : item.tipo === 'accion' ? 'acción de tus objetivos' : null,
-    sub.texto || null,
+    modo === 'atrasado' && item.tipo !== 'evento' ? `se te pasó la hora, ${AVISO_DE_HORA_PASADA.toLowerCase()}` : null,
     modo === 'hecho' ? 'hecho' : modo === 'cerrado' ? 'ya no se puede registrar' : null,
   ]
     .filter(Boolean)
@@ -103,15 +103,7 @@ export function FilaDelDia({
           },
         ]}
       />
-      {/* Solo lo atrasado lleva una línea; «Te toca ahora» y de qué es lo oye el lector (pedido del dueño, 29/10). */}
-      {sub.texto ? (
-        <Text
-          style={[t.small, { color: c.textSoft }, sub.tonoDeAviso ? { color: c.danger, fontFamily: 'Jost_500Medium' } : null]}
-          numberOfLines={fontScale > 1.15 ? 4 : 2}
-        >
-          {sub.texto}
-        </Text>
-      ) : null}
+      {/* Solo el nombre (pedido del dueño, 29/10): «Te toca ahora», de qué es y lo atrasado lo oye el lector de pantalla. */}
     </View>
   );
 
