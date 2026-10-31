@@ -72,13 +72,29 @@ describe('etiquetaDeLaAccion', () => {
 });
 
 describe('lineaDelObjetivo', () => {
+  const NBSP = '\u00A0';
   it('«Inicio 82 · Actual 81 · Meta 80 kg»', () => {
-    expect(lineaDelObjetivo({ lineaBase: 82, avance: 81, meta: 80, unidad: 'kg' })).toBe('Inicio 82 · Actual 81 · Meta 80 kg');
-    expect(lineaDelObjetivo({ lineaBase: 0, avance: 1, meta: 3, unidad: null })).toBe('Inicio 0 · Actual 1 · Meta 3');
+    expect(lineaDelObjetivo({ lineaBase: 82, avance: 81, meta: 80, unidad: 'kg' })).toBe(
+      `Inicio${NBSP}82 · Actual${NBSP}81 · Meta${NBSP}80${NBSP}kg`,
+    );
+    expect(lineaDelObjetivo({ lineaBase: 0, avance: 1, meta: 3, unidad: null })).toBe(`Inicio${NBSP}0 · Actual${NBSP}1 · Meta${NBSP}3`);
   });
   it('sin punto de partida, sin «Inicio»; sin meta medible, no hay línea', () => {
-    expect(lineaDelObjetivo({ lineaBase: null, avance: 4, meta: 10, unidad: 'USD' })).toBe('Actual 4 · Meta 10 USD');
+    expect(lineaDelObjetivo({ lineaBase: null, avance: 4, meta: 10, unidad: 'USD' })).toBe(`Actual${NBSP}4 · Meta${NBSP}10${NBSP}USD`);
     expect(lineaDelObjetivo({ lineaBase: null, avance: null, meta: null, unidad: null })).toBeNull();
+  });
+  it('los miles se separan como en el resto de la app («30 000», con espacio duro) y la unidad va pegada a la cifra', () => {
+    const linea = lineaDelObjetivo({ lineaBase: 10000, avance: 14000, meta: 30000, unidad: 'S/' }) as string;
+    expect(linea).toBe(`Inicio${NBSP}10${NBSP}000 · Actual${NBSP}14${NBSP}000 · Meta${NBSP}30${NBSP}000${NBSP}S/`);
+    expect(linea).not.toContain('30000');
+  });
+  it('si el renglón se parte, es entre partes (en « · »): ningún espacio normal queda dentro de una cifra ni antes de la unidad', () => {
+    const linea = lineaDelObjetivo({ lineaBase: 1500000, avance: 14000.5, meta: 30000, unidad: 'S/' }) as string;
+    // Lo único que puede partirse son los espacios normales, y todos están pegados a un «·».
+    const espaciosNormales = linea.split('').flatMap((ch, i) => (ch === ' ' ? [i] : []));
+    for (const i of espaciosNormales) expect(linea[i - 1] === '·' || linea[i + 1] === '·').toBe(true);
+    expect(linea).toContain(`1${NBSP}500${NBSP}000`);
+    expect(linea).toContain(`14${NBSP}000.5`);
   });
 });
 

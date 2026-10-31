@@ -1,6 +1,7 @@
 import type { Palette } from '../../../theme/tokens';
 import { minutosDeLaHora } from '../../training/utils/listaDelDia';
 import type { ColorPareto, RocaDiariaApi, RocaMaestraApi } from '../types/objetivos.types';
+import { formatearNumero } from './cifraDelObjetivo';
 
 /**
  * La pantalla principal de Plan (2026-10-31, pedido del dueño: «en Plan replica este formato»): el eje elegido con su objetivo
@@ -55,16 +56,23 @@ export function etiquetaDeLaAccion(roca: Pick<RocaDiariaApi, 'fecha' | 'horaInic
   return hora ? `${dia} · ${hora}` : dia;
 }
 
+/** Un espacio que no deja partir el renglón: la etiqueta, la cifra y la unidad van juntas. */
+const NBSP = '\u00A0';
+
 /**
  * La línea de números del objetivo de 90 días: «Inicio 82 · Actual 81 · Meta 80 kg». Sin número de partida: «Actual 81 · Meta 80 kg».
  * Un objetivo sin meta medible (Relaciones, por ejemplo) no tiene línea: `null`.
+ *
+ * Las cifras llevan el separador de miles de la app (`formatearNumero`: «30 000», con espacio duro) y cada parte —«Meta 30 000 S/»—
+ * va con espacios duros, así que si el renglón se parte (lo hace en un teléfono angosto) es entre partes, en el « · », y nunca a la
+ * mitad de una cifra ni entre la cifra y su unidad (2026-10-31, E2E del rediseño: «Meta / 30000 S/»).
  */
 export function lineaDelObjetivo(roca: Pick<RocaMaestraApi, 'lineaBase' | 'avance' | 'meta' | 'unidad'>): string | null {
   if (roca.meta == null || roca.avance == null) return null;
-  const unidad = roca.unidad?.trim() ? ` ${roca.unidad.trim()}` : '';
+  const unidad = roca.unidad?.trim() ? `${NBSP}${roca.unidad.trim()}` : '';
   const partes: string[] = [];
-  if (roca.lineaBase != null) partes.push(`Inicio ${roca.lineaBase}`);
-  partes.push(`Actual ${roca.avance}`, `Meta ${roca.meta}${unidad}`);
+  if (roca.lineaBase != null) partes.push(`Inicio${NBSP}${formatearNumero(roca.lineaBase)}`);
+  partes.push(`Actual${NBSP}${formatearNumero(roca.avance)}`, `Meta${NBSP}${formatearNumero(roca.meta)}${unidad}`);
   return partes.join(' · ');
 }
 

@@ -84,7 +84,7 @@ export function TarjetaDelObjetivo({
                 <Text style={[t.cardTitle, estilos.cifras, estilos.porcentaje, { color: c.goldInk }]}>{roca.porcentaje}%</Text>
               </View>
               <View
-                style={[estilos.barra, { backgroundColor: c.border }]}
+                style={[estilos.barra, estilos.barraDelObjetivo, { backgroundColor: c.border }]}
                 accessible
                 accessibilityRole="progressbar"
                 accessibilityLabel={`Avance de tu objetivo: ${roca.porcentaje} por ciento`}
@@ -434,6 +434,8 @@ const estilos = StyleSheet.create({
   linea: { flex: 1, fontSize: 15 },
   porcentaje: { fontSize: 18, fontFamily: fuentes.negrita },
   barra: { height: 8, borderRadius: 4, overflow: 'hidden', marginTop: 8 },
+  // La línea «Inicio · Actual · Meta» puede ocupar dos renglones: 12 de aire hasta la barra para que no quede pegada.
+  barraDelObjetivo: { marginTop: 12 },
   relleno: { height: '100%', borderRadius: 4 },
   puntos: { width: 48, height: 48, marginRight: -12, marginVertical: -10, alignItems: 'center', justifyContent: 'center' },
   esteMes: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 4 },
