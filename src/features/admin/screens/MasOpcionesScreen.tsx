@@ -31,6 +31,7 @@ export function MasOpcionesScreen({
   onAbrirBienvenida,
   onAbrirImagenesDeFases,
   onAbrirHabitosDelPrograma,
+  onAbrirPublicacionesOcultas,
 }: {
   onVolver: () => void;
   onAbrirStaff: () => void;
@@ -38,6 +39,7 @@ export function MasOpcionesScreen({
   onAbrirBienvenida: () => void;
   onAbrirImagenesDeFases: () => void;
   onAbrirHabitosDelPrograma: () => void;
+  onAbrirPublicacionesOcultas: () => void;
 }) {
   const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
@@ -73,6 +75,14 @@ export function MasOpcionesScreen({
       detalle: 'Crear y editar los hábitos de todos, y elegir a qué roles llega cada uno',
       onPress: onAbrirHabitosDelPrograma,
       clave: CLAVES.adminHabitos,
+    },
+    /* Lo que se ocultó del Muro, para devolverlo o eliminarlo para siempre (pedido del dueño del 31/10). Sigue al Muro:
+       si el Muro no le toca a esta cuenta, la fila tampoco. */
+    {
+      titulo: 'Publicaciones ocultas',
+      detalle: 'Devolver al Muro lo que se ocultó, o eliminarlo para siempre',
+      onPress: onAbrirPublicacionesOcultas,
+      clave: CLAVES.muro,
     },
     {
       titulo: 'Equipo y roles',
@@ -124,8 +134,8 @@ export function MasOpcionesScreen({
     },
     {
       titulo: 'Categorías del muro y conocimiento',
-      detalle: 'Moderación y base de conocimiento',
-      motivo: 'Moderar exige ver la publicación entera con sus adjuntos.',
+      detalle: 'Las categorías del Muro y la base de conocimiento',
+      motivo: 'Son catálogos con textos largos y adjuntos: piden teclado y pantalla grande.',
     },
   ];
 

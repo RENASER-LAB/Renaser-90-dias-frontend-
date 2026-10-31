@@ -18,7 +18,8 @@ export type IconName =
   | 'timer' | 'badgeCheck' | 'hourglass' | 'ban' | 'rotateCcw' | 'audioLines' | 'sunrise' | 'sunMedium' | 'moonStar' | 'glassWater' | 'showerHead' | 'footprints' | 'salad' | 'utensils' | 'utensilsCrossed' | 'bookOpenText' | 'headphones' | 'notebookPen' | 'handHeart' | 'smartphoneOff'
   | 'sparkles'
   | 'wrench' | 'toggleRight'
-  | 'bellOff';
+  | 'bellOff'
+  | 'ellipsis';
 
 /**
  * Grosor del trazo, en píxeles REALES de pantalla, a cualquier tamaño (decisión del dueño,
@@ -959,6 +960,16 @@ export function Icon({ name, size = 20, color, strokeWidth }: Props) {
         <Svg width={size} height={size} viewBox="0 0 24 24">
           <Circle {...s24} cx={15} cy={12} r={3} />
           <Rect {...s24} x={2} y={5} width={20} height={14} rx={7} />
+        </Svg>
+      );
+    /* Moderación del Muro (2026-10-31): el «…» de una publicación para ADMIN y ALCHEMIST. Forma de Lucide (ISC), caja de 24 y
+       trazo `s24`; los tres puntos son círculos de radio 1 con el trazo común, así que a 24 px miden lo que miden los demás. */
+    case 'ellipsis':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Circle {...s24} cx={12} cy={12} r={1} />
+          <Circle {...s24} cx={19} cy={12} r={1} />
+          <Circle {...s24} cx={5} cy={12} r={1} />
         </Svg>
       );
     case 'chevron':
