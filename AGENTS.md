@@ -2738,6 +2738,20 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **Hace falta un APK nuevo y el backend con V110** (la capacidad la publica el backend; contra uno anterior no hay
       botón).
 
+  * **Cambio por pedido del dueño — 2026-10-29 — tab `Comunidad` → Ranking: «TÚ» y «Tu posición» solo por id** (issue #43;
+    autorizado el 2026-10-29). Se buscaba a la persona por id o, si no, por nombre con `includes`: «Ana» o «Luis» están
+    dentro de «Ana María Torres» o «Luis Pérez», que pueden estar más arriba en la tabla, y se marcaba a otra persona como
+    «TÚ» con su posición. Lo que cambia y nada más:
+    * **Solo por id de la cuenta**, en las cuatro tablas (General, Coherencia, Kilómetros y Gimnasio): `participanteId` de
+      cada fila de `GET /ranking` es el `UserId` (`EntradaRankingResponse`) y el de la sesión es `UserResponse.id`: el
+      mismo texto. `esMiEntrada` / `nombreEnElRanking` / `miEntradaEnLaTabla` (`ranking/utils/tablasDeRanking`) lo deciden
+      para las filas de la tabla («TÚ (nombre)» y la fila resaltada), los tres lugares del podio y «Tu posición»;
+      `QuienMira` ya no tiene `name`. **Sin id** (de la sesión, o en una fila) **no se marca a nadie**: no se adivina por
+      nombre.
+    * **No cambian**: los textos, el diseño, las tablas, el podio, «Descargar» (esa imagen usa siempre el nombre que
+      manda el servidor) ni los demás tabs. Sin backend nuevo.
+    * **Hace falta un APK nuevo** (la app no se actualiza por aire).
+
   * **Cambio por pedido del dueño — 2026-10-20 — tab `Training` → Planificar: el recordatorio por día** (spec 008 del
     backend, `specs/008-recordatorio-por-dia/`, D-282 y E-640). Textual, sobre la captura del editor de GIMNASIO: «los
     recordatorios también deben de ser por día, no en general, arregla eso para continuar». Lo que cambia y nada más:

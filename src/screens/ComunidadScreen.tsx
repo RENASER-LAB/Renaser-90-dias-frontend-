@@ -146,7 +146,9 @@ import { useRanking } from '../features/ranking/hooks/useRanking';
 import { BotonDescargarPodio } from '../features/ranking/components/BotonDescargarPodio';
 import {
   entradasDeLaTabla,
+  esMiEntrada,
   miEntradaEnLaTabla,
+  nombreEnElRanking,
   invitacionSinPosiciones,
   TABLAS_DE_RANKING,
   textoDeMiPuntaje,
@@ -1566,11 +1568,8 @@ export default function ComunidadScreen() {
     return apiRankingEntries.map(item => ({
       id: item.participanteId,
       rank: item.posicion,
-      name:
-        item.participanteId === user?.id ||
-        (user?.name && item.fullName.toLowerCase().includes(user.name.toLowerCase()))
-          ? `TÚ (${nombreUsuario})`
-          : item.fullName,
+      // Solo por id (#43): un nombre corto o común («Ana», «Luis») marcaba como «TÚ» a otra persona.
+      name: nombreEnElRanking(item, { id: user?.id }, nombreUsuario),
       scoreText: textoDelPuntaje(tipoRanking, item.puntaje),
       medal:
         item.posicion === 1
@@ -1580,61 +1579,47 @@ export default function ComunidadScreen() {
           : item.posicion === 3
           ? ('bronze' as const)
           : undefined,
-      isCurrentUser:
-        item.participanteId === user?.id ||
-        (user?.name && item.fullName.toLowerCase().includes(user.name.toLowerCase())),
+      isCurrentUser: esMiEntrada(item, { id: user?.id }),
     }));
-  }, [apiRankingEntries, tipoRanking, user?.id, user?.name, nombreUsuario]);
+  }, [apiRankingEntries, tipoRanking, user?.id, nombreUsuario]);
 
   // Podio Top 3 100% Real de la API (null si no hay datos)
   const podioTop1 = useMemo(() => {
     if (apiRankingEntries.length >= 1) {
       const p = apiRankingEntries[0];
       return {
-        name:
-          p.participanteId === user?.id ||
-          (user?.name && p.fullName.toLowerCase().includes(user.name.toLowerCase()))
-            ? `TÚ (${nombreUsuario})`
-            : p.fullName,
+        name: nombreEnElRanking(p, { id: user?.id }, nombreUsuario),
         score: textoDelPuntaje(tipoRanking, p.puntaje),
       };
     }
     return null;
-  }, [apiRankingEntries, tipoRanking, user?.id, user?.name, nombreUsuario]);
+  }, [apiRankingEntries, tipoRanking, user?.id, nombreUsuario]);
 
   const podioTop2 = useMemo(() => {
     if (apiRankingEntries.length >= 2) {
       const p = apiRankingEntries[1];
       return {
-        name:
-          p.participanteId === user?.id ||
-          (user?.name && p.fullName.toLowerCase().includes(user.name.toLowerCase()))
-            ? `TÚ (${nombreUsuario})`
-            : p.fullName,
+        name: nombreEnElRanking(p, { id: user?.id }, nombreUsuario),
         score: textoDelPuntaje(tipoRanking, p.puntaje),
       };
     }
     return null;
-  }, [apiRankingEntries, tipoRanking, user?.id, user?.name, nombreUsuario]);
+  }, [apiRankingEntries, tipoRanking, user?.id, nombreUsuario]);
 
   const podioTop3 = useMemo(() => {
     if (apiRankingEntries.length >= 3) {
       const p = apiRankingEntries[2];
       return {
-        name:
-          p.participanteId === user?.id ||
-          (user?.name && p.fullName.toLowerCase().includes(user.name.toLowerCase()))
-            ? `TÚ (${nombreUsuario})`
-            : p.fullName,
+        name: nombreEnElRanking(p, { id: user?.id }, nombreUsuario),
         score: textoDelPuntaje(tipoRanking, p.puntaje),
       };
     }
     return null;
-  }, [apiRankingEntries, tipoRanking, user?.id, user?.name, nombreUsuario]);
+  }, [apiRankingEntries, tipoRanking, user?.id, nombreUsuario]);
 
   // Posición del usuario autenticado actual desde la API
   const userRankEntry = useMemo(() => {
-    const found = miEntradaEnLaTabla(apiRankingEntries, { id: user?.id, name: user?.name });
+    const found = miEntradaEnLaTabla(apiRankingEntries, { id: user?.id });
     /* Las tres tablas ordenan a TODOS los aprendices activos, no a los de tu grupo (la de
        Coherencia es el tipo `CELL` del servidor, que pese al nombre es global). Hasta el 01/10 acá
        iba el nombre de tu grupo —«Grupo Fénix · #12»— y se leía como «12.º de mi grupo». */
@@ -1651,7 +1636,7 @@ export default function ComunidadScreen() {
       rank: '-',
       cellText: `${celulaNombre} · Tu primer avance te pone en la tabla`,
     };
-  }, [apiRankingEntries, tipoRanking, user?.id, user?.name]);
+  }, [apiRankingEntries, tipoRanking, user?.id]);
 
   // =========================================================================
   // GESTOS TÁCTILES DEL SISTEMA (BACKHANDLER)

@@ -72,27 +72,42 @@ export function invitacionSinPosiciones(clave: ClaveDeTabla): string {
 /** Quién mira el ranking: lo mínimo para encontrarse en una tabla. */
 export interface QuienMira {
   id?: string | null;
-  name?: string | null;
+}
+
+/**
+ * Si esta fila es de quien mira. **Solo por id** (#43, 2026-10-29): `participanteId` es el `UserId` de la cuenta
+ * (`EntradaRankingResponse`, las cuatro tablas) y `id` es el de la sesión (`UserResponse.id`): el mismo texto.
+ *
+ * Antes, si el id no coincidía, se buscaba por nombre con `includes`: «Ana» o «Luis» entraban en «Ana María» o
+ * «Luis Pérez», que podían estar MÁS ARRIBA en la tabla, y se marcaba a otra persona como «TÚ» con su posición.
+ * Un nombre no identifica a nadie —dos aprendices pueden llamarse igual—, así que no se adivina: sin id de la
+ * sesión, o en una fila sin id, no se marca a nadie.
+ */
+export function esMiEntrada(entrada: Pick<EntradaRankingDto, 'participanteId'>, quien: QuienMira): boolean {
+  const miId = quien.id;
+  return typeof miId === 'string' && miId !== '' && entrada.participanteId === miId;
+}
+
+/** El nombre de la fila en la pantalla: «TÚ (…)» solo en la de quien mira, el que manda el servidor en las demás. */
+export function nombreEnElRanking(
+  entrada: Pick<EntradaRankingDto, 'participanteId' | 'fullName'>,
+  quien: QuienMira,
+  nombreDeQuienMira: string,
+): string {
+  return esMiEntrada(entrada, quien) ? `TÚ (${nombreDeQuienMira})` : entrada.fullName;
 }
 
 /**
  * La fila de quien mira, en la tabla que se está mirando, o `null` si no figura.
  *
  * Se busca SIEMPRE en las filas de la pestaña activa (`entradasDeLaTabla`): es la misma lista de la
- * que sale el podio, así que «Tu posición» y el podio no pueden hablar de tablas distintas. Por id y,
- * como respaldo (cuentas viejas cuyo id no coincidía), por nombre.
+ * que sale el podio, así que «Tu posición» y el podio no pueden hablar de tablas distintas. Solo por id
+ * ({@link esMiEntrada}): nunca por nombre.
  *
  * Que no figure en «General» no es un error de la pantalla: el servidor solo ordena aprendices
  * activos con programa (`RankingPersistenceAdapter.aprendicesActivosConPuntaje`). Una cuenta de
  * mentor o de administración no aparece en ninguna tabla.
  */
 export function miEntradaEnLaTabla(entradas: EntradaRankingDto[], quien: QuienMira): EntradaRankingDto | null {
-  const nombre = quien.name?.toLowerCase();
-  return (
-    entradas.find(
-      entrada =>
-        (quien.id != null && entrada.participanteId === quien.id) ||
-        (Boolean(nombre) && entrada.fullName.toLowerCase().includes(nombre as string))
-    ) ?? null
-  );
+  return entradas.find(entrada => esMiEntrada(entrada, quien)) ?? null;
 }
