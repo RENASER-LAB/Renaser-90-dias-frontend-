@@ -9,7 +9,7 @@ import { tacto } from '../../../utils/tacto';
 import { mensajeDeError } from '../../../services/http/apiClient';
 import { obtenerCatalogo, obtenerTracksDeHoy } from '../api/habitsApi';
 import { habitosParaFotoDeHoy, type HabitoParaFoto } from '../utils/habitosParaFotoDeHoy';
-import { tituloVisible } from '../utils/renombreDeHabito';
+import { tituloParaMostrar } from '../utils/tituloEnTipoOracion';
 
 /**
  * Elegir DE CUÁL hábito de hoy es la foto que se va a subir. Solo elige: la cámara, la pantalla
@@ -86,7 +86,7 @@ export function ElegirHabitoParaFotoModal({ visible, onCerrar, onElegir, titulos
         <ScrollView style={{ maxHeight: Math.round(altoVentana * 0.5) }} showsVerticalScrollIndicator={false}>
           {opciones.map(opcion => {
             const { track } = opcion;
-            const titulo = tituloVisible({ id: track.habitoId, title: track.tituloHabito }, titulos);
+            const titulo = tituloParaMostrar({ id: track.habitoId, title: track.tituloHabito }, titulos);
             return (
               <Presionable
                 key={track.id}

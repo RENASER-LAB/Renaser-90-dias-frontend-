@@ -1,3 +1,4 @@
+import { tituloEnTipoOracion } from '../../habits/utils/tituloEnTipoOracion';
 import { fuentes } from '../../../theme/fuentes';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -418,7 +419,7 @@ export function FichaAprendizScreen({
                     key={o.registroId}
                     style={[estilos.tarjeta, { backgroundColor: c.cardBg, borderColor: c.border, gap: 4 }]}
                   >
-                    <Text style={[t.body, { color: c.textStrong, fontSize: 16 }]}>{o.titulo}</Text>
+                    <Text style={[t.body, { color: c.textStrong, fontSize: 16 }]}>{tituloEnTipoOracion(o.titulo)}</Text>
                     {/* Estado en PALABRAS además de color: el color solo no alcanza (AGENTS.md §4). */}
                     <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>
                       {etiquetaDeEstado(o.estadoHabito)} · {etiquetaDeEntrega(o.entrega)}
@@ -428,13 +429,13 @@ export function FichaAprendizScreen({
                         navegador. El enlace se pide al abrirla (vence a los diez minutos) y el tipo se averigua al abrir. */}
                     {o.evidenciaId ? (
                       <EvidenciaDeObligacion
-                        titulo={o.titulo}
+                        titulo={tituloEnTipoOracion(o.titulo)}
                         evidencias={[{ id: o.evidenciaId, tipo: null, subidaEn: null }]}
                       />
                     ) : null}
                     {/* Spec 005 (R-6): el post diario se cumple publicando en el Muro, y esa publicación es su
                         evidencia; antes la ficha decía «sin evidencia». */}
-                    {o.publicacionId ? <VerPublicacion publicacionId={o.publicacionId} titulo={o.titulo} /> : null}
+                    {o.publicacionId ? <VerPublicacion publicacionId={o.publicacionId} titulo={tituloEnTipoOracion(o.titulo)} /> : null}
                   </View>
                 ))}
               </View>

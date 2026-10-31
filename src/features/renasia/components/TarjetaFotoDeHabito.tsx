@@ -6,7 +6,7 @@ import { GoldButton } from '../../../components/GoldButton';
 import { Icon } from '../../../components/Icon';
 import { useTheme } from '../../../theme/ThemeContext';
 import type { PedidoDeFotoUI } from '../types/renasia.types';
-import { estadoVisibleDelPedido, TEXTO_ACCION_REGISTRADA, TEXTO_REGISTRADO } from '../utils/pedidosDeFoto';
+import { estadoVisibleDelPedido, TEXTO_ACCION_REGISTRADA, TEXTO_REGISTRADO, tituloDelPedido } from '../utils/pedidosDeFoto';
 
 type Props = {
   pedido: PedidoDeFotoUI;
@@ -30,7 +30,7 @@ export function TarjetaFotoDeHabito({ pedido, onTomarFoto }: Props) {
       <Text style={[t.micro, { color: c.goldInk, fontFamily: fuentes.negrita }]}>
         {pedido.destino === 'roca' ? 'EVIDENCIA DE TU ACCIÓN' : 'EVIDENCIA DE TU HÁBITO'}
       </Text>
-      <Text style={[t.body, { color: c.text, fontSize: 14.5 }]}>{pedido.titulo}</Text>
+      <Text style={[t.body, { color: c.text, fontSize: 14.5 }]}>{tituloDelPedido(pedido)}</Text>
 
       {estado === 'registrado' ? (
         <View style={styles.cierre}>

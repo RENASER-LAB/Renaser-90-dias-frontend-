@@ -7,7 +7,7 @@ import { Icon, TAMANO_ICONO, type IconName } from '../../../components/Icon';
 import { useTheme } from '../../../theme/ThemeContext';
 import type { EstadoPropuestaUI, PedidoDeFotoUI, PropuestaUI } from '../types/renasia.types';
 import { elegirAccionVisible, elegirPedidoVisible, primeraFrase, resumenCorto } from '../utils/accionDelOrbe';
-import { TEXTO_ACCION_REGISTRADA, TEXTO_REGISTRADO } from '../utils/pedidosDeFoto';
+import { TEXTO_ACCION_REGISTRADA, TEXTO_REGISTRADO, tituloDelPedido } from '../utils/pedidosDeFoto';
 import { estadoVisible } from '../utils/propuestas';
 import { FenixDeSerQuieto } from '../../fenix/components/FenixDeSerQuieto';
 import { ESPACIO_PARA_LANZADOR } from './RenasiaLauncher';
@@ -162,8 +162,8 @@ function HojaPedidoDeFoto({ pedido, onTomarFoto }: { pedido: PedidoDeFotoUI; onT
   const texto = registrado
     ? pedido.mensaje || (pedido.destino === 'roca' ? TEXTO_ACCION_REGISTRADA : TEXTO_REGISTRADO)
     : cerrado
-      ? `${pedido.titulo} · ${pedido.mensaje || 'Ya venció'}`
-      : pedido.titulo;
+      ? `${tituloDelPedido(pedido)} · ${pedido.mensaje || 'Ya venció'}`
+      : tituloDelPedido(pedido);
   return (
     <View
       style={[styles.hoja, { bottom: ESPACIO_PARA_LANZADOR, backgroundColor: c.cardBgAlt, borderColor: c.borderStrong }]}

@@ -442,6 +442,21 @@ ser **global, como un CSS global**.
   mostraba como «Récord histórico» antes de quitarse (punto 2). **Sin dato** (`/home` caído o sin el campo) **no se dibuja** (un récord
   de 0 sí se dice: «Récord: 0 días»). 13 px, el gris secundario (`textSoft`) y `tabular-nums`. El texto sale de `home/utils/textoDelRecord`.
 
+### Los nombres de los hábitos en tipo oración en TODA la app (punto 15)
+El dueño pidió que lo del punto 6 no sea solo de Training. Se usa la misma `habits/utils/tituloEnTipoOracion` (o `tituloParaMostrar`, que
+respeta el nombre propio) **en el punto donde se pinta el nombre**:
+* **Hoy:** la tarjeta «Hábitos de hoy» (el hábito de esta hora) y lo que oye el lector de pantalla.
+* **SER:** la tarjeta y la hoja del pedido de foto del acompañante (`tituloDelPedido`: el hábito en tipo oración; una **acción del día** —`destino:
+  'roca'— la escribió la persona y no se toca) y el título del registro con foto que abre.
+* **Yo:** «+ Subir foto» (el elegir hábito y el título del registro). «Mis evidencias» no nombra hábitos.
+* **Fichas:** del mentor o la guía (los 7 días, la rejilla semanal, el visor de evidencia y de publicación), del líder (`DiaDeLaPersona` y lo que dice el
+  lector, `dichoDeLaObligacion`) y de Administración («Detalle de hábitos»).
+* **Tiempo libre de la ficha:** los bloques de HÁBITO de la agenda del día (`nombreDelBloque`); las acciones, los eventos y la agenda personal, tal cual.
+* **«Mi agenda»** (Comunidad → Eventos), el selector de hora y el aviso de cambiar el nombre de una bebida.
+* **No nombran hábitos** y no se tocaron: el semáforo, el cierre, el Radar y «Mis evidencias».
+* **No cambia** lo que se guarda, lo que se manda al servidor ni **el texto de las alarmas**; los esquemas de lo que llega no transforman el título.
+  Prueba: `tituloEnTodaLaApp.test.ts` (dónde se usa, la lógica pura y lo que no cambia).
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:

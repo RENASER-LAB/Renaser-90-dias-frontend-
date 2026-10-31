@@ -1,3 +1,4 @@
+import { tituloEnTipoOracion } from '../../habits/utils/tituloEnTipoOracion';
 import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -308,7 +309,7 @@ export function AlumnoScreen({
                         detalleDelDia.obligaciones.map(o => (
                           <View key={o.registroId} style={[estilos.obligacion, { borderColor: c.border }]}>
                             <Text style={[t.body, { color: c.text, fontSize: 16, flexShrink: 1 }]}>
-                              {o.titulo}
+                              {tituloEnTipoOracion(o.titulo)}
                             </Text>
                             <View style={estilos.estados}>
                               <Text
@@ -330,13 +331,13 @@ export function AlumnoScreen({
                                   averigua al abrir. El servidor deja leerla al mentor o la guía asignados a este aprendiz. */}
                               {o.evidenciaId ? (
                                 <EvidenciaDeObligacion
-                                  titulo={o.titulo}
+                                  titulo={tituloEnTipoOracion(o.titulo)}
                                   evidencias={[{ id: o.evidenciaId, tipo: null, subidaEn: null }]}
                                 />
                               ) : null}
                               {/* Spec 005 (R-6): el post diario se cumple publicando en el Muro, y esa publicación es
                                   su evidencia; antes decía «sin evidencia». */}
-                              {o.publicacionId ? <VerPublicacion publicacionId={o.publicacionId} titulo={o.titulo} /> : null}
+                              {o.publicacionId ? <VerPublicacion publicacionId={o.publicacionId} titulo={tituloEnTipoOracion(o.titulo)} /> : null}
                             </View>
                           </View>
                         ))

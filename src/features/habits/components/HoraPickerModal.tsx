@@ -1,3 +1,4 @@
+import { tituloEnTipoOracion } from '../utils/tituloEnTipoOracion';
 import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -70,7 +71,7 @@ export function HoraPickerModal({
             <View style={{ flex: 1 }}>
               <Text style={[t.micro, { color: c.goldInk, fontFamily: fuentes.negrita }]}>ELEGIR HORA</Text>
               <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 13 }]} numberOfLines={1}>
-                {tituloHabito}
+                {tituloEnTipoOracion(tituloHabito)}
               </Text>
             </View>
             <Pressable onPress={onCerrar} hitSlop={10}>

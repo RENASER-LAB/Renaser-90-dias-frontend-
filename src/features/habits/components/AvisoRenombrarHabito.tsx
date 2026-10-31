@@ -1,3 +1,4 @@
+import { tituloEnTipoOracion } from '../utils/tituloEnTipoOracion';
 import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -78,7 +79,7 @@ export function AvisoRenombrarHabito({
     >
       <Aparicion desplazamiento={12}>
         <View
-          accessibilityLabel={`Puedes cambiarle el nombre a ${tituloHabito}`}
+          accessibilityLabel={`Puedes cambiarle el nombre a ${tituloEnTipoOracion(tituloHabito)}`}
           style={[styles.tarjeta, { borderColor: c.borderStrong }]}
         >
           {/* Capa de fondo, aparte del contenido: la opacidad vive acá para que el texto de
@@ -89,7 +90,7 @@ export function AvisoRenombrarHabito({
           <View style={styles.fila}>
             <View style={styles.texto}>
               <Text style={[t.micro, { color: c.goldInk, fontFamily: fuentes.negrita }]} numberOfLines={1}>
-                {tituloHabito}
+                {tituloEnTipoOracion(tituloHabito)}
               </Text>
               <Text style={[t.small, { color: c.text, marginTop: 3 }]}>
                 Si no te cae bien, puedes ponerle el nombre que sí vayas a hacer.
@@ -112,7 +113,7 @@ export function AvisoRenombrarHabito({
             <Pressable
               onPress={onAceptar}
               accessibilityRole="button"
-              accessibilityLabel={`Cambiarle el nombre a ${tituloHabito}`}
+              accessibilityLabel={`Cambiarle el nombre a ${tituloEnTipoOracion(tituloHabito)}`}
               style={[styles.accion, { backgroundColor: c.gold }]}
             >
               <Text style={[t.micro, { color: c.onGold, fontFamily: fuentes.negrita }]}>

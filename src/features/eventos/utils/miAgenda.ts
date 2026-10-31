@@ -1,3 +1,4 @@
+import { tituloEnTipoOracion } from '../../habits/utils/tituloEnTipoOracion';
 import type { Ocurrencia } from '../types/eventos.types';
 import { fechaEnZona, horaEnZona, sumarDiasIso } from './zonaHoraria';
 
@@ -82,7 +83,7 @@ export function armarAgenda(params: {
     }
     for (const h of habitos) {
       if (h.bloqueado || !h.hora || !h.diasActivos[indice]) continue;
-      entradas.push({ tipo: 'habito', hora: h.hora.slice(0, 5), titulo: h.titulo, eventoId: null, voy: false });
+      entradas.push({ tipo: 'habito', hora: h.hora.slice(0, 5), titulo: tituloEnTipoOracion(h.titulo), eventoId: null, voy: false });
     }
     for (const a of acciones) {
       if (a.fecha !== fecha || !a.hora) continue;

@@ -111,7 +111,7 @@ import { ElegirHabitoParaFotoModal } from '../features/habits/components/ElegirH
 import { RegistroConFotoModal } from '../features/habits/components/RegistroConFotoModal';
 import { useRegistroConFoto } from '../features/habits/hooks/useRegistroConFoto';
 import { useRenombreLocal } from '../features/habits/hooks/useRenombreDeHabito';
-import { tituloVisible } from '../features/habits/utils/renombreDeHabito';
+import { tituloParaMostrar } from '../features/habits/utils/tituloEnTipoOracion';
 import type { HabitoParaFoto } from '../features/habits/utils/habitosParaFotoDeHoy';
 import { medicionPedidaDe } from '../features/habits/utils/registroConFoto';
 import { useOcultarBarraAlDesplazar } from '../navigation/barraAlDesplazar/BarraInferior';
@@ -336,7 +336,7 @@ export default function YoScreen() {
         void iniciarRegistroConFoto(
           {
             registroId: track.id,
-            titulo: tituloVisible({ id: track.habitoId, title: track.tituloHabito }, renombre.titulos),
+            titulo: tituloParaMostrar({ id: track.habitoId, title: track.tituloHabito }, renombre.titulos),
             conPregunta,
             // D-226: pista para los km (la que manda es la del registro fresco).
             medicion: medicionPedidaDe(track),

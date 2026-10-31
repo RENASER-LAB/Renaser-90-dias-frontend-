@@ -1,3 +1,4 @@
+import { tituloEnTipoOracion } from '../../habits/utils/tituloEnTipoOracion';
 import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -149,20 +150,20 @@ function FilaDeObligacion({ obligacion, primera }: { obligacion: ObligacionDeLaP
       <View style={{ flex: 1, minWidth: 0, gap: 6 }}>
         <View accessible accessibilityLabel={dichoDeLaObligacion(obligacion)} style={{ gap: 2 }}>
           <Text style={[t.body, { color: c.textStrong, fontSize: 16, lineHeight: 22, fontFamily: fuentes.media }]}>
-            {obligacion.titulo}
+            {tituloEnTipoOracion(obligacion.titulo)}
           </Text>
           <Text style={[t.body, { color: colorDelEstado(obligacion.estado, c), fontSize: 16, lineHeight: 22 }]}>{estado}</Text>
           {entrega ? <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 22 }]}>{entrega}</Text> : null}
         </View>
         {abrir.evidencia ? (
           <EvidenciaDeObligacion
-            titulo={obligacion.titulo}
+            titulo={tituloEnTipoOracion(obligacion.titulo)}
             evidencias={obligacion.evidencias}
             respuestaTexto={obligacion.respuestaTexto}
           />
         ) : null}
         {abrir.publicacion && obligacion.publicacionId ? (
-          <VerPublicacion publicacionId={obligacion.publicacionId} titulo={obligacion.titulo} />
+          <VerPublicacion publicacionId={obligacion.publicacionId} titulo={tituloEnTipoOracion(obligacion.titulo)} />
         ) : null}
       </View>
     </View>

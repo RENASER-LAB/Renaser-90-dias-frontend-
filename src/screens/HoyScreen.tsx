@@ -1,3 +1,4 @@
+import { tituloEnTipoOracion } from '../features/habits/utils/tituloEnTipoOracion';
 import { fuentes } from '../theme/fuentes';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -484,7 +485,8 @@ export default function HoyScreen() {
      redacta. `sin-datos` cae al texto genérico de siempre —Día 0, cuenta recién aprobada, o el
      endpoint falló— porque inventar un hábito sería peor que no decir nada. */
   const tituloHabitoAhora = useMemo(() => {
-    if (habitoAhora.titulo) return habitoAhora.titulo;
+    // El nombre del hábito llega en mayúsculas del catálogo: se muestra en tipo oración (2026-10-31).
+    if (habitoAhora.titulo) return tituloEnTipoOracion(habitoAhora.titulo);
     if (habitoAhora.estado === 'todo-hecho') return '¡Todos los hábitos completados!';
     return 'Lidera tu energía diaria.';
   }, [habitoAhora]);
@@ -881,7 +883,7 @@ export default function HoyScreen() {
             habitos={{
               cifra: cifrasDeHabitos(resumen?.habitosHoy),
               titulo: tituloHabitoAhora,
-              etiquetaAccesible: habitoAhora.titulo ? `Abrir Training: ${habitoAhora.titulo}` : 'Abrir Training',
+              etiquetaAccesible: habitoAhora.titulo ? `Abrir Training: ${tituloEnTipoOracion(habitoAhora.titulo)}` : 'Abrir Training',
             }}
             onAbrirTraining={() => (navigation as any).navigate('Training')}
             diaPrograma={resumen?.diaPrograma}

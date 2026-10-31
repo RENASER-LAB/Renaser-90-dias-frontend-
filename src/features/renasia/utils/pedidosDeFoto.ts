@@ -1,3 +1,4 @@
+import { tituloEnTipoOracion } from '../../habits/utils/tituloEnTipoOracion';
 import type { ResultadoDeInicio, SolicitudDeFoto } from '../../habits/hooks/useRegistroConFoto';
 import { destinoDeEvidencia, type DestinoDeFoto } from '../../habits/utils/destinoDeFoto';
 import type { EstadoPedidoDeFotoUI, PedidoDeFotoUI, RenasiaEventoEvidencia } from '../types/renasia.types';
@@ -27,11 +28,19 @@ export function pedidoDesdeEvento(evento: RenasiaEventoEvidencia): PedidoDeFotoU
   };
 }
 
+/**
+ * El nombre del pedido TAL COMO SE LEE (2026-10-31): el de un hábito del catálogo llega en mayúsculas y se muestra en tipo oración; el
+ * de una acción del día (`destino: 'roca'`) lo escribió la persona y no se toca.
+ */
+export function tituloDelPedido(pedido: Pick<PedidoDeFotoUI, 'titulo' | 'destino'>): string {
+  return pedido.destino === 'roca' ? pedido.titulo : tituloEnTipoOracion(pedido.titulo);
+}
+
 /** Lo que se le pasa a `useRegistroConFoto.iniciar` desde una tarjeta del acompañante. */
 export function solicitudDelPedido(pedido: PedidoDeFotoUI): SolicitudDeFoto {
   return {
     registroId: pedido.registroId,
-    titulo: pedido.titulo,
+    titulo: tituloDelPedido(pedido),
     conPregunta: pedido.conPregunta,
     destino: pedido.destino,
   };

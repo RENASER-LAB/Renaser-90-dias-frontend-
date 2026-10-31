@@ -1,3 +1,4 @@
+import { tituloEnTipoOracion } from '../../habits/utils/tituloEnTipoOracion';
 import type {
   AccionDeLaPersona,
   DiaDeLaPersona,
@@ -120,7 +121,7 @@ export function textoDelDiaVacio(motivo: string | null): string {
 
 /** Lo que oye quien no ve la fila: `Ritual de la mañana. Cumplido. Evidencia entregada · verificada.` */
 export function dichoDeLaObligacion(o: ObligacionDeLaPersona): string {
-  return [o.titulo, estadoDeLaObligacionEnPalabras(o), entregaEnPalabras(o)]
+  return [tituloEnTipoOracion(o.titulo), estadoDeLaObligacionEnPalabras(o), entregaEnPalabras(o)]
     .filter((parte): parte is string => Boolean(parte))
     .map(parte => `${parte}.`)
     .join(' ');

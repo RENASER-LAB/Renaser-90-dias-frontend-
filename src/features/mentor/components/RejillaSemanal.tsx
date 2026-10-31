@@ -1,3 +1,4 @@
+import { tituloEnTipoOracion } from '../../habits/utils/tituloEnTipoOracion';
 import React, { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -72,7 +73,7 @@ export function RejillaSemanal({ dias }: { dias: DiaAlumnoApi[] }) {
         <View
           key={dia.fecha}
           accessible
-          accessibilityLabel={`${titulo}, ${diaLargoDe(dia.fecha)}: ${estadoEnPalabras(obligacion)}`}
+          accessibilityLabel={`${tituloEnTipoOracion(titulo)}, ${diaLargoDe(dia.fecha)}: ${estadoEnPalabras(obligacion)}`}
           style={celdaDia}
         >
           <Marca obligacion={obligacion} />
@@ -127,7 +128,7 @@ export function RejillaSemanal({ dias }: { dias: DiaAlumnoApi[] }) {
             apilada ? (
               <View key={titulo} style={[estilos.bloque, { borderTopWidth: 1, borderTopColor: c.border }]}>
                 <Text style={[t.body, { color: c.text, fontSize: 16 }]} numberOfLines={2}>
-                  {titulo}
+                  {tituloEnTipoOracion(titulo)}
                 </Text>
                 <View style={estilos.fila}>{celdasDe(titulo)}</View>
               </View>
