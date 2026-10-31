@@ -271,6 +271,11 @@ Pedidos del dueño del 31/10 con capturas; **todo es de la app, sin backend**. C
   quedó sin uso: `objetivos/utils/arquitecturaDeTiempo` (y su prueba) y los estilos del riel de fases. `faseEnCurso` sigue siendo la
   única cuenta de la fase (Plan, Yo y la vista previa de Administración).
 
+### Training: la cabecera sin la línea de fase y día (punto 5)
+* **Se quita «El Maestro Interno · Día 55 de 90»** de la cabecera de `TrainingPorHora`. Quedan el día elegido en grande («Sábado
+  31») y su resumen («0 de 17 hechos · 0 pts»). Se borró `lineaDelPrograma` y la prop `fase` de `TrainingPorHora` (nada más la
+  leía); `diaPrograma` se queda (decide qué días se pueden leer). El día y la fase del programa siguen en Hoy y en Yo.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
@@ -342,6 +347,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       a la siguiente como la de planificar— y, debajo, UNA lista con los hábitos, las acciones del día y los eventos,
       por la hora planificada. **Ya no se ven afuera** las cinco dimensiones, «Arma tu semana los domingos» ni la tarjeta
       «Próximo a vencer» (el primero de la lista ya lo es; `ProximoAVencerCard` queda sin uso, con su prueba).
+      > **Corregido 2026-10-31 (pedido del dueño).** La línea de la fase y el día («El Espejo · Día 3 de 90») ya no se dibuja; la
+      > cabecera queda con el día elegido y su resumen (y el engranaje). Ver la entrada del 2026-10-31.
     * **La lista de hoy** (`utils/listaDelDia`, pura y probada): lo que sigue por hora, y el primero dice «Te toca ahora»
       (su hora ya llegó) o «Lo que sigue»; después «Sin hora»; después «Se te pasó la hora · todavía puedes registrarlos
       hoy», con el texto de menos puntos de D-259 que ya existe (`avisoDeHoraPasada`); al final, plegado, «N hechos

@@ -238,7 +238,6 @@ export default function TrainingScreen() {
    */
   const {
     diaPrograma,
-    fase,
     inscrito,
     loading: cargandoDiaPrograma,
     recargar: recargarDiaPrograma,
@@ -868,8 +867,8 @@ export default function TrainingScreen() {
   useEffect(() => {
     setDiaElegido(null);
   }, [hoyIso]);
-  /* El día del programa y la fase salen de `/home` y solo se leían al montar: al cambiar el día con la app abierta quedaban
-     del día anterior («Día 7 de 90» siendo el 8, y el Día 1 corrido). Se relee cuando cambia el día de hoy. */
+  /* El día del programa sale de `/home` y solo se leía al montar: al cambiar el día con la app abierta quedaba
+     del día anterior (el Día 1 corrido). Se relee cuando cambia el día de hoy. */
   const hoyDelDiaDelPrograma = useRef(hoyIso);
   useEffect(() => {
     if (hoyDelDiaDelPrograma.current === hoyIso) return;
@@ -1025,7 +1024,6 @@ export default function TrainingScreen() {
                 diaElegido={diaElegido}
                 onElegirDia={alElegirDia}
                 diaPrograma={cargandoDiaPrograma ? null : diaPrograma}
-                fase={fase}
                 titulos={renombre.titulos}
                 eventosPrendidos={eventosPrendidos.prendida}
                 cierrePrendido={planPrendido.prendida && planPrendido.disponible}
