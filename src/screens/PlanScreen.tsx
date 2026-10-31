@@ -35,7 +35,6 @@ import { conPrincipalPrimero, usePrioridadPrincipal } from '../features/objetivo
 import { cifraDeEscala, cifraDelObjetivo, primeraClausula } from '../features/objetivos/utils/cifraDelObjetivo';
 import { definicionConAvance, LINEA_OBJETIVO_FIJO } from '../features/objetivos/utils/objetivoFijo';
 import { iconoDelEje } from '../features/objetivos/utils/iconoDelEje';
-import { tramosDeLasFases } from '../features/objetivos/utils/arquitecturaDeTiempo';
 import {
   SEMANAS_DEL_PROGRAMA,
   etiquetaDelMes,
@@ -164,18 +163,6 @@ export default function PlanScreen() {
      tiempo no debe mostrar avance inventado, igual que Hoy no muestra un dia que no sabe. */
   const diaConocido = cargandoDiaPrograma || diaPrograma <= 0 ? null : diaPrograma;
   const faseActual = faseEnCurso(fase, diaConocido);
-  /**
-   * «Arquitectura de tiempo»: las cuatro fases con su largo real (2026-10-05, decisión del dueño).
-   *
-   * > **Corregido 2026-10-05.** Dibujaba tres tramos parejos de 30 días (1–30 / 31–60 / 61–90)
-   * > justo debajo de «Fase actual · 02 · Días 8–34». El 2026-09-14 se les había quitado el nombre
-   * > («FUNDACIÓN / ACELERACIÓN / EXPANSIÓN», inventados) pero seguían siendo una segunda partición
-   * > de los 90 días que no existe en el método. El dueño eligió las fases: salen de `FASES_EN_ORDEN`,
-   * > la misma fuente que el rótulo de arriba, y la que está en curso la marca el backend.
-   */
-  const tramos = useMemo(() => tramosDeLasFases(diaConocido, fase), [diaConocido, fase]);
-  const tramoEnCurso = tramos.find(tramo => tramo.estado === 'en_curso') ?? null;
-
   // Modal / hoja del objetivo de 90 días
   const [editGoalModalVisible, setEditGoalModalVisible] = useState(false);
 
@@ -532,7 +519,7 @@ export default function PlanScreen() {
           </View>
 
           {/* PRIORIDADES CLAVE */}
-          <View style={styles.section}>
+          <View style={[styles.section, { paddingBottom: 24 }]}>
             <MicroLabel>Prioridades clave</MicroLabel>
             {EJES.some(eje => !rocaDeEje(eje)?.objetivo?.trim()) && puerta === 'abierta' && (
               <Text style={[t.small, { color: c.textSoft, marginTop: 6 }]}>
@@ -636,62 +623,6 @@ export default function PlanScreen() {
                     </View>
                     <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.chevron} />
                   </Presionable>
-                );
-              })}
-            </View>
-          </View>
-
-          {/* ARQUITECTURA DE TIEMPO — las cuatro fases, cada una del largo que tiene. */}
-          <View style={[styles.section, { flex: 1, justifyContent: 'flex-end', paddingBottom: 24 }]}>
-            <MicroLabel>Arquitectura de tiempo</MicroLabel>
-            <View
-              style={styles.rielDeFases}
-              accessible
-              accessibilityLabel={
-                tramoEnCurso && diaConocido !== null
-                  ? `Fase ${tramoEnCurso.numero} de ${tramos.length}, día ${diaConocido} de 90`
-                  : `Las ${tramos.length} fases del programa`
-              }
-            >
-              {tramos.map(tramo => (
-                <View key={tramo.clave} style={[estiloTramo.riel, { flex: tramo.dias, backgroundColor: c.border }]}>
-                  <View style={[estiloTramo.relleno, { backgroundColor: c.gold, width: `${tramo.avance * 100}%` }]} />
-                </View>
-              ))}
-            </View>
-            <View style={{ marginTop: 14, gap: 8 }}>
-              {tramos.map(tramo => {
-                const enCurso = tramo.estado === 'en_curso';
-                const estado = enCurso ? ', en curso' : tramo.estado === 'cumplida' ? ', cumplida' : '';
-                return (
-                  <View
-                    key={tramo.clave}
-                    style={styles.filaDeFase}
-                    accessible
-                    accessibilityLabel={`Fase ${tramo.numero}, ${tramo.nombre}, ${tramo.rango.toLowerCase()}${estado}`}
-                  >
-                    <Text style={[t.small, styles.cifras, styles.numeroDeFase, { color: enCurso ? c.goldInk : c.micro }]}>
-                      {String(tramo.numero).padStart(2, '0')}
-                    </Text>
-                    <Text
-                      style={[
-                        t.body,
-                        {
-                          flex: 1,
-                          color: enCurso ? c.textStrong : c.textSoft,
-                          fontFamily: enCurso ? 'Jost_500Medium' : 'Jost_400Regular',
-                        },
-                      ]}
-                    >
-                      {tramo.nombre}
-                    </Text>
-                    <Text style={[t.small, styles.cifras, { color: enCurso ? c.goldInk : c.micro }]}>{tramo.rango}</Text>
-                    <View style={styles.marcaDeFase}>
-                      {tramo.estado === 'cumplida' ? (
-                        <Icon name="checkCircle" size={TAMANO_ICONO.chico} color={c.goldInk} />
-                      ) : null}
-                    </View>
-                  </View>
                 );
               })}
             </View>
@@ -1051,11 +982,6 @@ export default function PlanScreen() {
   );
 }
 
-const estiloTramo = StyleSheet.create({
-  riel: { height: 8, borderRadius: 4, overflow: 'hidden' },
-  relleno: { height: '100%', borderRadius: 4 },
-});
-
 const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
@@ -1103,27 +1029,6 @@ const styles = StyleSheet.create({
   barraObjetivoRelleno: {
     height: '100%',
     borderRadius: 3,
-  },
-  /** Las cuatro fases en un solo riel, separadas por 4 px: cada tramo mide lo que dura su fase. */
-  rielDeFases: {
-    flexDirection: 'row',
-    gap: 4,
-    marginTop: 16,
-  },
-  filaDeFase: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    minHeight: 28,
-  },
-  numeroDeFase: {
-    width: 22,
-    fontFamily: 'Jost_700Bold',
-  },
-  /** Lugar fijo para el ✓ de las fases cumplidas, para que los rangos queden alineados. */
-  marcaDeFase: {
-    width: 16,
-    alignItems: 'center',
   },
   encabezadoObjetivos: {
     flexDirection: 'row',

@@ -265,6 +265,12 @@ Pedidos del dueño del 31/10 con capturas; **todo es de la app, sin backend**. C
 * **Pruebas:** Jest `vistaDeLaAccionDeHoy`, `tarjetaAccionDeHoy`, `metaDeLaAccion`, `useMetaDeLaAccion`,
   `useLecturaDelEstadoDelMapa` y `accionesDeHoy` (la que sigue y la hora); se ajustaron las que leían el código de Hoy.
 
+### Plan: sin «Arquitectura de tiempo» (punto 4)
+* **Se quita la sección «Arquitectura de tiempo»** (las cuatro fases con su barra y su lista) de la pantalla principal de Plan: ya
+  está en Yo (la tarjeta de fase, «Fase 2 de 4 · Días 8–34» con su avance). «Fase actual» y lo demás quedan. Se borró lo que
+  quedó sin uso: `objetivos/utils/arquitecturaDeTiempo` (y su prueba) y los estilos del riel de fases. `faseEnCurso` sigue siendo la
+  única cuenta de la fase (Plan, Yo y la vista previa de Administración).
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
@@ -681,6 +687,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **No cambian**: «Fase actual», «Prioridades clave», «Arquitectura de tiempo», la vista de Objetivos, las demás tarjetas
       de Hoy, el formulario de los días 1 a 7, los avisos, Training (salvo `abrirAccionId`), Yo, Comunidad ni la barra.
       Sin dependencias nuevas ni backend nuevo.
+      > **Corregido 2026-10-31.** «Arquitectura de tiempo» salió de Plan; el resto de esta lista sigue (hasta el rediseño de Plan del
+      > mismo día, más abajo).
     * **Anotado, no inventado**: la vista previa decía «Pendiente · en 20 min» en la hoja del eje; no hay regla para ese
       umbral y no se dibuja. Tampoco había diseño para «En espera» (antes del primer registro de los días 1 a 7) ni para el día
       sin Radar: llevan los textos de arriba (los de la tarjeta de antes y los de Yo → Mi Radar).
@@ -984,6 +992,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       su nombre, y marca la que dice el backend; antes eran tres tramos de 30 días que contradecían la «Fase
       actual» de arriba. Los días salen de `FASES_EN_ORDEN` (`home/hooks/useResumenHome`, que ahora trae
       `primerDia`/`ultimoDia` y arma el rótulo con ellos), vía `objetivos/utils/arquitecturaDeTiempo`.
+      > **Corregido 2026-10-31 (pedido del dueño).** «Arquitectura de tiempo» ya no está en Plan (ya está en Yo); se borró con su
+      > cuenta (`arquitecturaDeTiempo`). `FASES_EN_ORDEN` y `faseEnCurso` siguen siendo la tabla única de fases.
     * **Íconos** (bloque `/* Plan */` de `Icon.tsx`: `activity`, `heartHandshake`, `calendarRange`; `flag` es el de
       Hoy y `compass` el de Yo):
       cada eje con el suyo (`objetivos/utils/iconoDelEje`: Cuerpo `activity`, Negocio `briefcase`, Relaciones

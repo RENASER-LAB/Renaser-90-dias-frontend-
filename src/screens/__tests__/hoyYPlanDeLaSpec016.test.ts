@@ -65,13 +65,13 @@ describe('Plan: las acciones de hoy por eje', () => {
     expect(fs.existsSync(path.join(RAIZ, 'features/programa/components/ArcoDelDia.tsx'))).toBe(false);
   });
 
-  it('va arriba, antes de «Fase actual»; Fase actual, Prioridades clave y Arquitectura de tiempo quedan igual', () => {
+  it('va arriba, antes de «Fase actual»; Fase actual y Prioridades clave quedan igual (Arquitectura de tiempo se quitó el 2026-10-31)', () => {
     const tarjeta = PLAN.indexOf('<TarjetaAccionesDeHoyPorEje');
     const fase = PLAN.indexOf('<MicroLabel>Fase actual</MicroLabel>');
     expect(tarjeta).toBeGreaterThan(0);
     expect(tarjeta).toBeLessThan(fase);
     expect(PLAN).toContain('<MicroLabel>Prioridades clave</MicroLabel>');
-    expect(PLAN).toContain('<MicroLabel>Arquitectura de tiempo</MicroLabel>');
+    expect(PLAN).not.toContain('<MicroLabel>Arquitectura de tiempo</MicroLabel>');
   });
 
   it('solo está en la vista principal: Objetivos no la monta (y no pide nada de más)', () => {

@@ -120,10 +120,10 @@ describe('Plan: Objetivos', () => {
     expect(PLAN).toMatch(/onCambiar=\{cambiarEje\}/);
   });
 
-  it('«Arquitectura de tiempo» dibuja las fases de la fuente, no tres tramos de 30 días', () => {
-    expect(PLAN).not.toMatch(/DÍAS 1–30|DÍAS 31–60|DÍAS 61–90|TRAMOS_DEL_RECORRIDO|i \* 30/);
-    expect(PLAN).toMatch(/tramosDeLasFases\(diaConocido, fase\)/);
-    expect(PLAN).toMatch(/flex: tramo\.dias/);
+  it('«Arquitectura de tiempo» ya no está en Plan (2026-10-31, pedido del dueño: ya está en Yo) y no deja nada sin uso', () => {
+    expect(PLAN).not.toContain('Arquitectura de tiempo');
+    expect(PLAN).not.toMatch(/tramosDeLasFases|tramoEnCurso|rielDeFases|estiloTramo|filaDeFase|marcaDeFase/);
+    expect(fs.existsSync(path.join(RAIZ, 'features/objetivos/utils/arquitecturaDeTiempo.ts'))).toBe(false);
   });
 });
 
