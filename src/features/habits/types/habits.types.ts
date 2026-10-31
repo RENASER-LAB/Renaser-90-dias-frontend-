@@ -177,6 +177,76 @@ export interface DiaDeLaSemanaApi extends DiaDelHabitoApi {
   custom: boolean;
 }
 
+/**
+ * Spec 028: una FECHA concreta de un hábito, ya resuelta por el servidor (el plan de siempre con lo «solo esta semana» encima).
+ * Es un `DiaDelHabitoApi` con su fecha: los campos de aviso y alarma valen igual, y `customTime`/`customReminder`/`customAlarm` son
+ * `true` si el valor es propio del día de la semana O de la fecha. `customDate` dice si la fecha tiene fila propia («solo esta semana»).
+ */
+export interface FechaDelHabitoApi extends DiaDelHabitoApi {
+  /** `YYYY-MM-DD`, en la zona de la persona. */
+  date: string;
+  /** `HH:mm:ss` o null. Solo en `GET …/{habitId}/week`. */
+  limitTime?: string | null;
+  /** La fecha tiene fila propia: es un cambio «solo esta semana». */
+  customDate?: boolean;
+  /** La fecha es posterior a hoy: se puede cambiar. Solo en `GET …/{habitId}/week`. */
+  editable?: boolean;
+}
+
+/** `GET /api/v1/habit-preferences/{habitId}/week?weekStart=` — los siete días de una semana de un hábito. */
+export interface SemanaDelHabitoApi {
+  weekStart: string;
+  weekEnd: string;
+  days: FechaDelHabitoApi[];
+}
+
+/** Un día de `PUT …/{habitId}/week`: solo lo tocado; `reset` lo devuelve al plan de siempre. */
+export interface CambioDeFechaApi {
+  date: string;
+  reset?: boolean;
+  active?: boolean;
+  /** `HH:mm` o `HH:mm:ss`. */
+  triggerTime?: string;
+  limitTime?: string | null;
+  reminderEnabled?: boolean;
+  reminderMinutesList?: number[];
+  alarm?: CombinacionDeAlarmaApi;
+}
+
+/** Un día de la oferta de repetir: lo que quedaría en la fecha destino. */
+export interface DiaDeLaOfertaApi {
+  date: string;
+  weekday: string;
+  active: boolean;
+  triggerTime?: string | null;
+  reminderEnabled?: boolean | null;
+  reminderMinutesList?: number[] | null;
+  customTime?: boolean;
+  customReminder?: boolean;
+  alarm?: CombinacionDeAlarmaApi | null;
+  /** Esa fecha ya tenía un cambio propio distinto, que se reemplazaría. */
+  replaces?: boolean;
+}
+
+/** `GET /api/v1/habit-preferences/week-repeat` — repetir la semana en curso en la siguiente. */
+export interface OfertaDeRepetirApi {
+  sourceWeekStart: string;
+  targetWeekStart: string;
+  fingerprint: string;
+  replacesOwnChanges: boolean;
+  habits: { habitId: string; title: string; days: DiaDeLaOfertaApi[] }[];
+  excluded: { habitId: string; title: string; reason: string }[];
+}
+
+/** `POST /api/v1/habit-preferences/week-repeat`. */
+export interface ResultadoDeRepetirApi {
+  targetWeekStart: string;
+  copiedDays: number;
+  removedDays: number;
+  habits: number;
+  excluded: { habitId: string; title: string; reason: string }[];
+}
+
 /** Un ítem de `GET /api/v1/habit-preferences` — el horario, propio o el del catálogo. */
 export interface PreferenciaHabitoApi {
   habitId: string;
@@ -221,6 +291,11 @@ export interface PreferenciaHabitoApi {
    * pantalla no ofrece «Cómo suena» y las alarmas suenan como siempre.
    */
   alarm?: CombinacionDeAlarmaApi | null;
+  /**
+   * Spec 028: las fechas de este hábito con cambio «solo esta semana», desde hoy y hasta 20 días, ya resueltas. Ausente o vacío = ninguna
+   * (backend anterior): las alarmas son las de siempre.
+   */
+  dateOverrides?: FechaDelHabitoApi[];
 }
 
 /** `effectiveDate` es `YYYY-MM-DD`; las horas son `HH:mm:ss` crudas, igual que el resto del wire. */

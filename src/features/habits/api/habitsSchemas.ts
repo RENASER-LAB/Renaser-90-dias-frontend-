@@ -111,6 +111,80 @@ const diasDeLaListaSchema = z
   .optional()
   .catch(undefined);
 
+/**
+ * Spec 028: una fecha de un hábito (`dateOverrides` de la lista y `days` de la semana). Igual que `weekdays`, un `dateOverrides` que no se
+ * entienda se descarta SOLO (`.catch(undefined)`): no puede tumbar la lista de la que dependen las alarmas de todos los hábitos.
+ */
+const fechaDelHabitoCampos = {
+  ...diaDelHabitoCampos,
+  date: z.string(),
+  triggerTime: z.string().nullish(),
+  limitTime: z.string().nullish(),
+  customDate: z.boolean().optional(),
+  editable: z.boolean().optional(),
+};
+
+const fechasDeLaListaSchema = z
+  .array(z.object(fechaDelHabitoCampos).passthrough())
+  .optional()
+  .catch(undefined);
+
+/** `GET /api/v1/habit-preferences/{habitId}/week` — los siete días de una semana de un hábito. */
+const semanaDelHabitoSchema = z
+  .object({
+    weekStart: z.string(),
+    weekEnd: z.string(),
+    days: z.array(z.object(fechaDelHabitoCampos).passthrough()),
+  })
+  .passthrough();
+
+const motivoSchema = z.object({ habitId: z.string(), title: z.string(), reason: z.string() }).passthrough();
+
+/** `GET /api/v1/habit-preferences/week-repeat` — la oferta de repetir (`null` si es 204). */
+const ofertaDeRepetirSchema = z
+  .object({
+    sourceWeekStart: z.string(),
+    targetWeekStart: z.string(),
+    fingerprint: z.string(),
+    replacesOwnChanges: z.boolean(),
+    habits: z.array(
+      z
+        .object({
+          habitId: z.string(),
+          title: z.string(),
+          days: z.array(
+            z
+              .object({
+                date: z.string(),
+                weekday: z.string(),
+                active: z.boolean(),
+                triggerTime: z.string().nullish(),
+                reminderEnabled: z.boolean().nullish(),
+                reminderMinutesList: z.array(z.number()).nullish(),
+                customTime: z.boolean().optional(),
+                customReminder: z.boolean().optional(),
+                alarm: combinacionDeAlarmaSchema,
+                replaces: z.boolean().optional(),
+              })
+              .passthrough(),
+          ),
+        })
+        .passthrough(),
+    ),
+    excluded: z.array(motivoSchema).catch([]),
+  })
+  .passthrough();
+
+const resultadoDeRepetirSchema = z
+  .object({
+    targetWeekStart: z.string(),
+    copiedDays: z.number(),
+    removedDays: z.number(),
+    habits: z.number(),
+    excluded: z.array(motivoSchema).catch([]),
+  })
+  .passthrough();
+
 const preferenciaHabitoSchema = z
   .object({
     habitId: z.string(),
@@ -128,6 +202,8 @@ const preferenciaHabitoSchema = z
     weekdays: diasDeLaListaSchema,
     // Spec 009: cómo suena la alarma del hábito (la general). Ausente contra un backend anterior.
     alarm: combinacionDeAlarmaSchema,
+    // Spec 028: las fechas con cambio «solo esta semana». Ausente contra un backend anterior.
+    dateOverrides: fechasDeLaListaSchema,
     // Se valida de verdad en vez de `z.unknown()`: es el dato que sostiene el aviso "desde
     // cuándo rige el horario nuevo", así que si el backend cambia su forma conviene enterarse
     // acá y no con un `undefined` silencioso dentro de la tarjeta.
@@ -264,6 +340,10 @@ export const habitsSchemas = {
   preferencias: z.object({ habits: z.array(preferenciaHabitoSchema) }).passthrough(),
   tracksDeHoy: z.array(trackDelDiaSchema),
   cambioHorario: cambioHorarioSchema,
+  semanaDelHabito: semanaDelHabitoSchema,
+  ofertaDeRepetir: ofertaDeRepetirSchema,
+  resultadoDeRepetir: resultadoDeRepetirSchema,
+  semanaDeshecha: z.object({ removedDays: z.number() }).passthrough(),
 };
 
 export function validarRespuesta<T>(esquema: z.ZodType<T>, datos: unknown, origen: string): T {
