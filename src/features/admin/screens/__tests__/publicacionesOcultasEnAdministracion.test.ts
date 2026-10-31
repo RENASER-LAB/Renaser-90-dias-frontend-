@@ -15,6 +15,7 @@ jest.mock('../../../../theme/ThemeContext', () => {
 });
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
+  SafeAreaInsetsContext: require('react').createContext(null),
 }));
 jest.mock('../../../../navigation/barraAlDesplazar/BarraInferior', () => ({ useOcultarBarraAlDesplazar: () => ({}) }));
 jest.mock('../../../renasia/components/RenasiaLauncher', () => ({ ESPACIO_PARA_LANZADOR: 0 }));
@@ -121,6 +122,22 @@ describe('cableado en Administración', () => {
     });
     expect(mockVolver()).toBe(true);
     expect(onVolver).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('el aviso de «Publicación devuelta al Muro»', () => {
+  it('es el snackbar de abajo (opaco, encima de los botones flotantes), no una línea flotando arriba', () => {
+    const fuentePantalla = leer('PublicacionesOcultasScreen.tsx');
+    expect(fuentePantalla).toMatch(/<AvisoDeAbajo aviso=\{aviso\} onTerminar=\{estado\.cerrarAviso\} \/>/);
+    expect(fuentePantalla).not.toMatch(/ConfirmacionEnLinea/);
+    expect(fuentePantalla).not.toMatch(/top: 8/);
+  });
+
+  it('se dibuja cuando el hook tiene un aviso', () => {
+    const r = dibujar({ filas: [], aviso: { clave: 1, texto: 'Publicación devuelta al Muro' } });
+    expect(textos(r)).toContain('Publicación devuelta al Muro');
+    expect(r.root.findAll(n => n.type === 'View' && n.props.testID === 'aviso-de-abajo')).toHaveLength(1);
+    expect(textos(dibujar({ filas: [] }))).not.toContain('Publicación devuelta al Muro');
   });
 });
 

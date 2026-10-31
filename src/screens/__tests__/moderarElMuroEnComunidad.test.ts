@@ -44,10 +44,13 @@ describe('ComunidadScreen', () => {
     expect(fuente.match(/<HojaDeModeracionDelMuro/g)).toHaveLength(1);
   });
 
-  it('al moderar, la publicación sale de la lista y se avisa con la línea que flota sobre el Muro', () => {
+  it('al moderar, la publicación sale de la lista y se avisa con el snackbar de ABAJO (no sobre la cabecera)', () => {
     expect(fuente).toMatch(/useModeracionDelMuro\(\{\s*quitarPublicacion,/);
     expect(fuente).toMatch(/anunciar: texto => setConfirmacionModeracion\(/);
-    expect(fuente).toMatch(/seccionActiva === 'muro' && confirmacionModeracion/);
+    expect(fuente).toMatch(/<AvisoDeAbajo aviso=\{confirmacionModeracion\}/);
+    // El aviso de arriba (absoluto, bajo el encabezado, semitransparente sobre los círculos de secciones) ya no existe.
+    expect(fuente).not.toMatch(/top: encabezado\.relleno \+ 8/);
+    expect(fuente).not.toMatch(/seccionActiva === 'muro' && confirmacionModeracion \?/);
   });
 });
 

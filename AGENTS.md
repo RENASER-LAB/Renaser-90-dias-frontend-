@@ -3405,6 +3405,17 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       **en silencio** (`releerEnSilencio`: sin `loading`, sin volver arriba, conservando los comentarios abiertos, las que se están
       publicando y lo traído más abajo; `fusionarPrimeraPagina` decide el cursor) y la tarjeta «última evidencia» de Hoy da por
       vencida su lectura. Los dos avisos viajan por un emisor de pocas líneas (`community/events/muroModerado`).
+      > **Corregido 2026-10-31 (el dueño, tras el E2E: «salió de fondo y se sobreponía a lo que había, arruinando la experiencia del
+      > usuario»).** Decía que la línea «Publicación oculta / eliminada» era una `ConfirmacionEnLinea` que flotaba arriba del Muro.
+      > Salía semitransparente y encima de los círculos de las secciones («Muro», «Eventos»). Ahora es **`AvisoDeAbajo`**
+      > (`components/AvisoDeAbajo.tsx`), un snackbar como los de WhatsApp o Instagram: **abajo**, nunca sobre la cabecera ni los
+      > círculos; fondo **opaco** (`cardBgAlt`), borde (`borderStrong`) y sombra suave; el ✓ dorado y el texto de 16 px; sin recibir
+      > toques. Va **encima de los botones flotantes de SER** con la cuenta del «Deshacer» de Pasar lista (`alturaDelAviso` =
+      > `ALTO_TAB_BAR + SEPARACION + DIAMETRO + 8` + borde seguro, de `renasia/components/lugarDelLanzador`): como el orbe baja con
+      > la barra de pestañas cuando se esconde al desplazar, encima de él el aviso queda a la vista con la barra a la vista o
+      > escondida. Movimiento: entra con fundido y 8 px en 200 ms con ease-out fuerte y sale en 150 ms; con «reducir movimiento», solo
+      > fundido; se va solo a los 2,5 s; un aviso nuevo con otro a la vista reinicia la cuenta. Lo usan el Muro y «Publicaciones
+      > ocultas» de Administración («Publicación devuelta al Muro»). `ConfirmacionEnLinea` no cambió. Prueba: `avisoDeAbajo`.
     * **Errores**: un 403 dice «No tienes permiso para moderar el Muro.»; un 404 saca la publicación de la lista sin error ni
       aviso; los demás, en un diálogo con el mensaje del servidor. El 503 de «Muro apagado» y el 403 de «solo lectura» de Soporte TI
       siguen su camino de siempre (`apiFetch`).

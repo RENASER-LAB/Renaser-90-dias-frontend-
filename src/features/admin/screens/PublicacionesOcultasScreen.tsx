@@ -2,7 +2,7 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ConfirmacionEnLinea } from '../../../components/ConfirmacionEnLinea';
+import { AvisoDeAbajo } from '../../../components/AvisoDeAbajo';
 import { Icon } from '../../../components/Icon';
 import { BotonPeligro, BotonSecundario } from '../../../components/Legible';
 import { AvatarPersona } from '../../../components/ui';
@@ -22,8 +22,8 @@ import { usePublicacionesOcultas } from '../hooks/usePublicacionesOcultas';
  * para devolverlo o eliminarlo para siempre. Cada publicación muestra a su autor (foto o iniciales), la fecha, el texto
  * recortado a dos líneas (o «Sin texto») y la miniatura de su primera foto, si tiene.
  *
- * Movimiento (`emil-design-eng`): nada nuevo se anima. Los botones son los de siempre; la línea «Publicación devuelta al
- * Muro» es la `ConfirmacionEnLinea` de la app y flota arriba (la publicación que se tocó ya salió de la lista).
+ * Movimiento (`emil-design-eng`): los botones son los de siempre; «Publicación devuelta al Muro» es el aviso de abajo
+ * (`AvisoDeAbajo`, un snackbar opaco encima de los botones flotantes: la publicación que se tocó ya salió de la lista).
  * El atrás del sistema vuelve a «Más opciones».
  */
 export function PublicacionesOcultasScreen({ onVolver }: { onVolver: () => void }) {
@@ -102,14 +102,7 @@ export function PublicacionesOcultasScreen({ onVolver }: { onVolver: () => void 
           ) : null}
         </ScrollView>
 
-        {aviso ? (
-          <View
-            pointerEvents="none"
-            style={{ position: 'absolute', top: 8, left: horizontalPadding, right: horizontalPadding, alignItems: 'center' }}
-          >
-            <ConfirmacionEnLinea key={aviso.clave} texto={aviso.texto} onTerminar={estado.cerrarAviso} />
-          </View>
-        ) : null}
+        <AvisoDeAbajo aviso={aviso} onTerminar={estado.cerrarAviso} />
       </View>
     </SafeAreaView>
   );

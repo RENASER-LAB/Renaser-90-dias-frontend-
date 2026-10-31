@@ -39,6 +39,7 @@ import { MicroLabel, ScreenHeader, AvatarPersona } from '../components/ui';
 import { Icon, IconName, TAMANO_ICONO } from '../components/Icon';
 import { GoldButton } from '../components/GoldButton';
 import { Presionable } from '../components/Presionable';
+import { AvisoDeAbajo } from '../components/AvisoDeAbajo';
 import { ConfirmacionEnLinea } from '../components/ConfirmacionEnLinea';
 import { tacto } from '../utils/tacto';
 import { separacionDeLaFila } from '../features/community/utils/filaDeMedallones';
@@ -1403,8 +1404,9 @@ export default function ComunidadScreen() {
   const [confirmacionMuro, setConfirmacionMuro] = useState<Confirmacion | null>(null);
   const [confirmacionDePublicacion, setConfirmacionDePublicacion] = useState<(Confirmacion & { postId: string }) | null>(null);
   const [confirmacionCursos, setConfirmacionCursos] = useState<Confirmacion | null>(null);
-  /* Moderar el Muro (ADMIN y ALCHEMIST, 2026-10-31). La línea «Publicación oculta / eliminada» flota arriba del Muro y no va
-     en el encabezado de la lista: quien modera suele estar a mitad del Muro y la tarjeta que tocó ya no está. */
+  /* Moderar el Muro (ADMIN y ALCHEMIST, 2026-10-31). El aviso «Publicación oculta / eliminada» es un snackbar de abajo
+     (`AvisoDeAbajo`) y no va en el encabezado de la lista: quien modera suele estar a mitad del Muro y la tarjeta que
+     tocó ya no está. */
   const [confirmacionModeracion, setConfirmacionModeracion] = useState<Confirmacion | null>(null);
   const puedeModerarMuro = usePuedeModerarElMuro();
   const moderacion = useModeracionDelMuro({
@@ -3064,27 +3066,11 @@ export default function ComunidadScreen() {
           removeClippedSubviews={false}
         />
       )}
-      {/* «Publicación oculta» / «Publicación eliminada» (moderación, 2026-10-31): una línea que flota sobre el Muro, a la
-          vista aunque se haya llegado a la publicación bajando. No recibe toques. */}
-      {seccionActiva === 'muro' && confirmacionModeracion ? (
-        <View
-          pointerEvents="none"
-          style={{
-            position: 'absolute',
-            top: encabezado.relleno + 8,
-            left: horizontalPadding,
-            right: horizontalPadding,
-            alignItems: 'center',
-            zIndex: 10,
-            elevation: 10,
-          }}
-        >
-          <ConfirmacionEnLinea
-            key={confirmacionModeracion.clave}
-            texto={confirmacionModeracion.texto}
-            onTerminar={() => setConfirmacionModeracion(null)}
-          />
-        </View>
+      {/* «Publicación oculta» / «Publicación eliminada» (moderación, 2026-10-31): un aviso tipo snackbar ABAJO, encima de los
+          botones flotantes de SER y de la barra de pestañas, con fondo opaco. Nunca sobre la cabecera ni los círculos de las
+          secciones (el primero se vio flotando arriba, transparente, mezclado con «Muro» y «Eventos»). No recibe toques. */}
+      {seccionActiva === 'muro' ? (
+        <AvisoDeAbajo aviso={confirmacionModeracion} onTerminar={() => setConfirmacionModeracion(null)} />
       ) : null}
 
       {/* ========================================================================= */}
