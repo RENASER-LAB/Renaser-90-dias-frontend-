@@ -54,6 +54,27 @@ describe('itemsDeHoy', () => {
     expect(itemsDeHoy([habito('a', { time: '' })], [], ctx)[0].hora).toBeNull();
   });
 
+  it('un título del catálogo que llega TODO en mayúsculas se muestra en tipo oración (2026-10-31); el nombre propio y las acciones, tal cual', () => {
+    const items = itemsDeHoy(
+      [
+        habito('a', { title: 'AGUA TIBIA CON LIMÓN', habitoId: 'h-a' }),
+        habito('b', { title: 'RITUAL TIERRA - AGUA - FUEGO (mañana)', habitoId: 'h-b' }),
+        habito('c', { title: 'AGUA TIBIA CON LIMÓN', habitoId: 'h-c' }),
+        habito('d', { title: 'Clase diaria', habitoId: 'h-d' }),
+        habito('r1', { title: 'LLAMAR A MI HIJO', dimension: 'VIDA Y NEGOCIO', habitoId: null }),
+      ],
+      [],
+      { ...ctx, titulos: { 'h-c': 'MI AGUA' } },
+    );
+    expect(items.map(x => x.titulo)).toEqual([
+      'Agua tibia con limón',
+      'Ritual tierra - agua - fuego (mañana)',
+      'MI AGUA',
+      'Clase diaria',
+      'LLAMAR A MI HIJO',
+    ]);
+  });
+
   it('usa el nombre que la persona le puso al hábito (D-127)', () => {
     const [item] = itemsDeHoy([habito('a', { title: 'Agua tibia', habitoId: 'h-agua' })], [], { ...ctx, titulos: { 'h-agua': 'Mi agua' } });
     expect(item.titulo).toBe('Mi agua');

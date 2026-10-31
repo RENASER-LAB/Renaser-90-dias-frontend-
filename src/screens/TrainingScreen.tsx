@@ -61,7 +61,7 @@ import { borradorEspiritu } from '../features/spirit/storage/borradorEspiritu';
 import type { DayOfWeek } from './PlanScreen';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
 import { useRenombreLocal } from '../features/habits/hooks/useRenombreDeHabito';
-import { tituloVisible } from '../features/habits/utils/renombreDeHabito';
+import { tituloEnTipoOracion, tituloParaMostrar } from '../features/habits/utils/tituloEnTipoOracion';
 import { useAuth } from '../features/auth/context/AuthContext';
 import { useOcultarBarraAlDesplazar } from '../navigation/barraAlDesplazar/BarraInferior';
 import { SeccionEnMantenimiento } from '../features/plataforma/components/SeccionEnMantenimiento';
@@ -751,7 +751,8 @@ export default function TrainingScreen() {
       void registroConFoto.iniciar(
         {
           registroId: habit.id,
-          titulo: tituloVisible({ id: habit.habitoId ?? habit.id, title: habit.title }, renombre.titulos),
+          // Una acción de los objetivos lleva el título que escribió la persona: no se toca (solo los hábitos del catálogo, 2026-10-31).
+          titulo: habit.dimension === 'VIDA Y NEGOCIO' ? habit.title : tituloParaMostrar({ id: habit.habitoId ?? habit.id, title: habit.title }, renombre.titulos),
           conPregunta: preguntaQueSintio(habit.systemKey),
           medicion: habit.medicion ?? null,
         },
@@ -1070,7 +1071,7 @@ export default function TrainingScreen() {
                 ? datos => sellarAccionDeTraining(activeEvidenceHabit.id, datos)
                 : undefined
             }
-            titulo={activeEvidenceHabit?.title ?? ''}
+            titulo={activeEvidenceHabit?.dimension === 'VIDA Y NEGOCIO' ? activeEvidenceHabit.title : tituloEnTipoOracion(activeEvidenceHabit?.title ?? '')}
             medicion={activeEvidenceHabit?.medicion ?? null}
             contexto={
               activeEvidenceHabit

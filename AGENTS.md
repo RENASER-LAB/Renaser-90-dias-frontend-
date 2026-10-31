@@ -276,6 +276,22 @@ Pedidos del dueño del 31/10 con capturas; **todo es de la app, sin backend**. C
   31») y su resumen («0 de 17 hechos · 0 pts»). Se borró `lineaDelPrograma` y la prop `fase` de `TrainingPorHora` (nada más la
   leía); `diaPrograma` se queda (decide qué días se pueden leer). El día y la fase del programa siguen en Hoy y en Yo.
 
+### Training: los nombres de los hábitos «no tan mayúsculas» (punto 6)
+* **Un título que llega del servidor TODO en mayúsculas se muestra en tipo oración**: «AGUA TIBIA CON LIMÓN» → «Agua tibia con
+  limón»; «RITUAL TIERRA - AGUA - FUEGO (mañana)» → «Ritual tierra - agua - fuego (mañana)». Lo hace una sola función pura,
+  `habits/utils/tituloEnTipoOracion` (con pruebas), y se usa al DIBUJAR en Training: la lista de hoy y la de otro día, la hoja
+  del hábito (`itemsDelDia` → `tituloParaMostrar`), «Tus prácticas» → Planificar (la lista, el título del editor, la pausa y
+  «Cambiar nombre»), y los títulos del registro con foto y de la hoja de evidencia.
+* **Reglas:** (1) solo cambia si el título «llega todo en mayúsculas», y lo que va entre paréntesis **no cuenta** para decidirlo
+  (el catálogo escribe «(mañana)» en minúsculas, y por eso «RITUAL … (mañana)» tiene minúsculas aunque lo demás grite); (2) un
+  título que ya tiene minúsculas —el que la persona puso con «Cambiar nombre», «Clase diaria», «Pastilla Renacer»— se deja tal
+  cual, aunque el nombre propio lo haya escrito en mayúsculas; (3) **siglas y nombres propios:** «SER» (y «IA», «TV», «USD») siguen
+  en mayúsculas, «RENASER» queda «Renaser» y «RENACER» (la «Pastilla Renacer») «Renacer»; para sumar una sigla, es una línea en
+  `SIGLAS`. Los títulos de las **acciones de los objetivos** (los escribe la persona) no se tocan.
+* **Solo cambia lo que se muestra.** No cambia lo que se guarda ni lo que se manda al servidor, ni el texto de las alarmas
+  (`recordatorios.programar(…, h.title, …)` sigue con el título del catálogo), ni cómo se empareja la voz de la alarma (por id y
+  por título del catálogo). Hoy (la tarjeta de hábitos) y Yo no cambian: el pedido era de Training.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
@@ -372,6 +388,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       «Cumplido a las 06:12 · +8 pts» y lo que escribió; la Pastilla y la Clase conservan su ventana de solo lectura. Un
       evento lleva a su detalle en Comunidad → Eventos (`abrirEventoId`). El aviso del teléfono que abre un hábito
       (`aperturaDesdeAviso.habitoAAbrir`) lo abre como al tocar su fila, ya no la dimensión.
+      > **Corregido 2026-10-31.** El nombre de un hábito del catálogo que llega en mayúsculas se ve en tipo oración («Agua tibia
+      > con limón»); ver la entrada del 2026-10-31.
     * **Un día anterior: sin registrar NUNCA** (regla explícita del dueño: «nunca debería llegar» a subir algo). Se lee
       `GET /api/v1/habit-tracks/day?date=` (solo de ayer hacia atrás, hasta el lunes y no antes del Día 1; el servidor
       responde 400 a cualquier otra fecha y la app ni la pide) **solo cuando la persona toca ese día**: nunca al abrir

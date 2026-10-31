@@ -31,7 +31,8 @@ import {
 } from '../../habits/notificaciones/utils/combinacionDeAlarma';
 import type { SonidoDeAlarma } from '../../alarmas/sonidoDeAlarma';
 import { ICONOS_ELEGIBLES } from '../../habits/utils/iconosDeHabito';
-import { esRenombrable, tituloVisible } from '../../habits/utils/renombreDeHabito';
+import { esRenombrable } from '../../habits/utils/renombreDeHabito';
+import { tituloEnTipoOracion, tituloParaMostrar } from '../../habits/utils/tituloEnTipoOracion';
 import * as recordatorios from '../../habits/notificaciones/recordatoriosDeHabito';
 import { formatearFechaLarga } from '../../programa/hooks/useArranqueDelPrograma';
 import {
@@ -265,9 +266,10 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
   const [pausando, setPausando] = useState<HabitoPlanificable | null>(null);
   /** El hábito al que se le está cambiando el nombre (D-127), desde su editor. */
   const [renombrando, setRenombrando] = useState<HabitoPlanificable | null>(null);
-  /** El nombre que se LEE: el propio si la persona puso uno; el del catálogo si no. Las alarmas siguen con el del catálogo. */
+  /** El nombre que se LEE: el propio si la persona puso uno; el del catálogo si no, en tipo oración (2026-10-31, `tituloParaMostrar`).
+   *  Las alarmas siguen con el del catálogo, tal cual. */
   const nombreDe = (h: HabitoPlanificable): string =>
-    renombre ? tituloVisible({ id: h.habitoId, title: h.title }, renombre.titulos) : h.title;
+    renombre ? tituloParaMostrar({ id: h.habitoId, title: h.title }, renombre.titulos) : tituloEnTipoOracion(h.title);
   /**
    * Lo que se acaba de guardar, en una línea que se va sola (2026-10-05). Antes cada guardado abría
    * un diálogo («Horario guardado», «Listo») que había que cerrar para seguir.
@@ -1977,7 +1979,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
       {renombre && renombrando ? (
         <RenombrarHabitoModal
           visible
-          tituloCatalogo={renombrando.title}
+          tituloCatalogo={tituloEnTipoOracion(renombrando.title)}
           tituloActual={renombre.titulos[renombrando.habitoId] ?? null}
           onGuardar={(titulo, motivo) => renombre.renombrar(renombrando.habitoId, titulo, motivo)}
           onQuitar={
