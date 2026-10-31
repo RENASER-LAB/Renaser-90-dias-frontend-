@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -113,7 +114,7 @@ function Paso({
         { borderColor: c.borderStrong, backgroundColor: pressed ? c.goldWash : c.cardBg, opacity: deshabilitado ? 0.4 : 1 },
       ]}
     >
-      <Text style={{ fontFamily: 'Jost_500Medium', fontSize: 24, lineHeight: 28, color: c.goldInk }}>{signo}</Text>
+      <Text style={{ fontFamily: fuentes.media, fontSize: 24, lineHeight: 28, color: c.goldInk }}>{signo}</Text>
     </Pressable>
   );
 }
@@ -154,7 +155,7 @@ function Boton({
         <Text
           style={[
             t.body,
-            { fontSize: 16, textAlign: 'center', color: principal ? c.onGold : c.textStrong, fontFamily: 'Jost_700Bold' },
+            { fontSize: 16, textAlign: 'center', color: principal ? c.onGold : c.textStrong, fontFamily: fuentes.negrita },
           ]}
         >
           {texto}

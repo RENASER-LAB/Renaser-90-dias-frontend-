@@ -1,0 +1,31 @@
+# Yo después de los cambios del 2026-10-31. ESCRITO Y SIN CORRER. Sin la tira «Evidencia» (queda «Mis evidencias» en Ajustes →
+# Tu proceso); la tarjeta del semáforo (la de Hoy) en lugar del gráfico «Tu cumplimiento»; tocarla abre el detalle con su flecha de
+# volver a Yo. Precondición: aprendiz que se mide (el servidor manda `semaforo` en /home). cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- extendedWaitUntil:
+    visible: "Tu evolución"
+    timeout: 30000
+- assertNotVisible: "Evidencia"
+- assertNotVisible: "Tu cumplimiento · últimos .* días"
+- assertVisible: "Coherencia"
+- assertVisible: "Racha"
+- assertVisible: "Tu semáforo · últimos 7 días"
+- takeScreenshot: Y05a-yo-con-semaforo
+- tapOn: "Tu semáforo · últimos 7 días"
+- extendedWaitUntil:
+    visible: ".*(Cómo se calcula|Semanas cerradas).*"
+    timeout: 20000
+- takeScreenshot: Y05b-detalle-del-semaforo
+- back
+- extendedWaitUntil:
+    visible: "Tu evolución"
+    timeout: 10000
+# «Mis evidencias» sigue en Ajustes → Tu proceso.
+- tapOn: "Ajustes"
+- extendedWaitUntil:
+    visible: "Mis evidencias"
+    timeout: 10000
+- takeScreenshot: Y05c-mis-evidencias-en-ajustes

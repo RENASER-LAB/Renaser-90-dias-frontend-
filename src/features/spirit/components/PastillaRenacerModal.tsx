@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import { useAudioPlayer, useAudioPlayerStatus, setAudioModeAsync } from 'expo-audio';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -318,7 +319,7 @@ export function PastillaRenacerModal({
               <View style={styles.bloque}>
                 <View style={styles.filaHecho}>
                   <Icon name="checkCircle" size={TAMANO_ICONO.normal} color={c.success} />
-                  <Text style={[t.body, { color: c.success, fontFamily: 'Jost_500Medium' }]}>
+                  <Text style={[t.body, { color: c.success, fontFamily: fuentes.media }]}>
                     Registrado. Ya contestaste este audio.
                   </Text>
                 </View>

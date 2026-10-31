@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -330,7 +331,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 13,
     paddingVertical: 11,
     minHeight: 76,
-    fontFamily: 'Jost_400Regular',
+    fontFamily: fuentes.regular,
     fontSize: 15,
     lineHeight: 21,
     textAlignVertical: 'top',

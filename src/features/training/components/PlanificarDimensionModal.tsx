@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 import Animated, { FadeIn, ReduceMotion } from 'react-native-reanimated';
@@ -31,7 +32,8 @@ import {
 } from '../../habits/notificaciones/utils/combinacionDeAlarma';
 import type { SonidoDeAlarma } from '../../alarmas/sonidoDeAlarma';
 import { ICONOS_ELEGIBLES } from '../../habits/utils/iconosDeHabito';
-import { esRenombrable, tituloVisible } from '../../habits/utils/renombreDeHabito';
+import { esRenombrable } from '../../habits/utils/renombreDeHabito';
+import { tituloEnTipoOracion, tituloParaMostrar } from '../../habits/utils/tituloEnTipoOracion';
 import * as recordatorios from '../../habits/notificaciones/recordatoriosDeHabito';
 import { formatearFechaLarga } from '../../programa/hooks/useArranqueDelPrograma';
 import {
@@ -265,9 +267,10 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
   const [pausando, setPausando] = useState<HabitoPlanificable | null>(null);
   /** El hábito al que se le está cambiando el nombre (D-127), desde su editor. */
   const [renombrando, setRenombrando] = useState<HabitoPlanificable | null>(null);
-  /** El nombre que se LEE: el propio si la persona puso uno; el del catálogo si no. Las alarmas siguen con el del catálogo. */
+  /** El nombre que se LEE: el propio si la persona puso uno; el del catálogo si no, en tipo oración (2026-10-31, `tituloParaMostrar`).
+   *  Las alarmas siguen con el del catálogo, tal cual. */
   const nombreDe = (h: HabitoPlanificable): string =>
-    renombre ? tituloVisible({ id: h.habitoId, title: h.title }, renombre.titulos) : h.title;
+    renombre ? tituloParaMostrar({ id: h.habitoId, title: h.title }, renombre.titulos) : tituloEnTipoOracion(h.title);
   /**
    * Lo que se acaba de guardar, en una línea que se va sola (2026-10-05). Antes cada guardado abría
    * un diálogo («Horario guardado», «Listo») que había que cerrar para seguir.
@@ -1527,7 +1530,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
                 <View style={[styles.iconoHabito, { backgroundColor: c.goldWash }]}>
                   <Icon name="plus" size={TAMANO_ICONO.normal} color={c.goldInk} />
                 </View>
-                <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_500Medium', fontSize: 16 }]}>
+                <Text style={[t.body, { color: c.goldInk, fontFamily: fuentes.media, fontSize: 16 }]}>
                   Crear un hábito
                 </Text>
               </Presionable>
@@ -1557,7 +1560,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
                 style={styles.cambiarNombre}
               >
                 <Icon name="pencil" size={18} color={c.goldInk} />
-                <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_500Medium', fontSize: 16 }]}>
+                <Text style={[t.body, { color: c.goldInk, fontFamily: fuentes.media, fontSize: 16 }]}>
                   {renombre.titulos[habitoEnEdicion.habitoId] ? 'Cambiar o quitar el nombre' : 'Cambiar nombre'}
                 </Text>
               </Presionable>
@@ -1977,7 +1980,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
       {renombre && renombrando ? (
         <RenombrarHabitoModal
           visible
-          tituloCatalogo={renombrando.title}
+          tituloCatalogo={tituloEnTipoOracion(renombrando.title)}
           tituloActual={renombre.titulos[renombrando.habitoId] ?? null}
           onGuardar={(titulo, motivo) => renombre.renombrar(renombrando.habitoId, titulo, motivo)}
           onQuitar={
@@ -2031,7 +2034,7 @@ const styles = StyleSheet.create({
   rotulo: {
     fontSize: 15,
     lineHeight: 20,
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
   },
   // La fila tiene dos partes (PLN-03): lo que abre el editor y, al lado, el interruptor o el candado.
   // El relleno de siempre (10 por lado) quedó repartido: el derecho acá, el resto en `filaHabitoAbrir`.
@@ -2082,7 +2085,7 @@ const styles = StyleSheet.create({
   },
   marcaTexto: {
     fontSize: 14,
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
   },
   // 48×48 y no 44: es el mínimo cómodo de AGENTS.md §4, y hace innecesario el `hitSlop` que le
   // robaba el toque al chevron de la fila. Crece 2px por lado, que caben en el `gap` de 8.
@@ -2141,7 +2144,7 @@ const styles = StyleSheet.create({
   },
   textoDelEnlace: {
     fontSize: 16,
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
   },
   rotuloDeLosDias: {
     flexShrink: 1,
@@ -2183,7 +2186,7 @@ const styles = StyleSheet.create({
   lineaDeAvisosDistintos: {
     fontSize: 15,
     lineHeight: 21,
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
     marginTop: 2,
   },
   // Reservado para los tipos de alarma: sin alto ni margen, no se ve ni mueve nada.
@@ -2209,7 +2212,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   textoAccion: {
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
     flexShrink: 1,
   },
   filaAntelaciones: {
@@ -2237,7 +2240,7 @@ const styles = StyleSheet.create({
   },
   textoPastilla: {
     fontSize: 14,
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
   },
   conIcono: {
     flexDirection: 'row',
@@ -2262,7 +2265,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   signoDeOtra: {
-    fontFamily: 'Jost_700Bold',
+    fontFamily: fuentes.negrita,
     fontSize: 26,
     lineHeight: 30,
     includeFontPadding: false,
@@ -2271,7 +2274,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     minWidth: 128,
     textAlign: 'center',
-    fontFamily: 'Jost_700Bold',
+    fontFamily: fuentes.negrita,
     fontSize: 18,
     lineHeight: 24,
     fontVariant: ['tabular-nums'],
@@ -2282,7 +2285,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     minHeight: 52,
     fontSize: 16,
-    fontFamily: 'Jost_400Regular',
+    fontFamily: fuentes.regular,
   },
   // Tira HORIZONTAL y no una grilla que envuelve: 17 iconos en dos o tres filas empujaban la rueda
   // fuera de la hoja, y un ScrollView vertical acá adentro se pelearía con las ruedas por el dedo

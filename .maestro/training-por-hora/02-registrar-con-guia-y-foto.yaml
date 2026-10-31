@@ -1,22 +1,24 @@
-# T02 — Un toque, una hoja (spec 014): un hábito CON guía (RITUAL TIERRA - AGUA - FUEGO (mañana), atrasado) abre la hoja con la
-# guía plegada y «Tomar foto»; la guía se despliega sin marcar nada; la foto abre «¿Qué sentiste?» (los rituales preguntan) y,
-# al terminar, el ritual sale de la lista y sube a «hechos hoy».
-# Precondición: `reset-hoy.sql`; fotos en local (fotos-local + adb reverse tcp:9002).
+# T02 — Un toque, una hoja (spec 014): un hábito CON guía (Ritual tierra - agua - fuego (mañana), atrasado) abre la hoja con la
+# guía plegada y «Escribir cómo me siento» (2026-10-31: los rituales piden solo texto, ya no «Tomar foto»); la guía se despliega sin
+# marcar nada; el botón abre «¿Cómo te sientes después de realizar el ritual?» y, al enviar, el ritual sale de la lista y sube a
+# «hechos hoy». El nombre se ve en tipo oración (viene en mayúsculas del servidor).
+# Precondición: `reset-hoy.sql`.
 # cuenta: aprendiz
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml
 - runFlow: ../comun/abrir-training.yaml
 - scrollUntilVisible:
-    element: ".*RITUAL TIERRA - AGUA - FUEGO \\(mañana\\).*"
+    element: "(?i).*RITUAL TIERRA - AGUA - FUEGO \\(mañana\\).*"
     direction: DOWN
     centerElement: true
     timeout: 30000
-- tapOn: ".*RITUAL TIERRA - AGUA - FUEGO \\(mañana\\).*"
+- tapOn: "(?i).*RITUAL TIERRA - AGUA - FUEGO \\(mañana\\).*"
 - extendedWaitUntil:
     visible: "Guía de esta práctica"
     timeout: 10000
-- assertVisible: "Tomar foto"
+- assertVisible: "Escribir cómo me siento"
+- assertNotVisible: "Tomar foto"
 - assertVisible: ".*Se te pasó la hora.*"
 - assertNotVisible: "Qué hacer"
 - takeScreenshot: T02a-hoja-con-guia-plegada
@@ -24,16 +26,16 @@ appId: com.renaser.app
 - assertVisible: "Qué hacer"
 - assertVisible: "Leer la guía no marca el hábito."
 - takeScreenshot: T02b-hoja-con-guia-abierta
-- tapOn: "Tomar foto"
-- runFlow: ../comun/tomar-foto.yaml
+- tapOn: "Escribir cómo me siento"
 - extendedWaitUntil:
-    visible: "¿Qué sentiste\\?"
-    timeout: 20000
-- takeScreenshot: T02c-foto-y-que-sentiste
+    visible: "¿Cómo te sientes después de realizar el ritual\\?"
+    timeout: 10000
+- takeScreenshot: T02c-pregunta-del-ritual
+# La respuesta es obligatoria: sin escribir nada, «Enviar» no hace nada.
 - tapOn: "Cuéntalo con tus palabras"
-- inputText: "Bien"
+- inputText: "Me siento en calma"
 - hideKeyboard
-- tapOn: "TERMINAR"
+- tapOn: "Enviar"
 - runFlow: ../comun/cerrar-aviso-dev.yaml
 - extendedWaitUntil:
     visible: "Evidencia entregada.*"
@@ -41,5 +43,5 @@ appId: com.renaser.app
     optional: true   # el aviso en línea dura unos segundos: lo que se prueba es que la fila sale de la lista
 - takeScreenshot: T02d-ritual-registrado
 - extendedWaitUntil:
-    notVisible: ".*RITUAL TIERRA - AGUA - FUEGO \\(mañana\\), Se te pasó.*|06:45, RITUAL TIERRA - AGUA - FUEGO \\(mañana\\)"
+    notVisible: "(?i).*RITUAL TIERRA - AGUA - FUEGO \\(mañana\\), Se te pasó.*|06:45, RITUAL TIERRA - AGUA - FUEGO \\(mañana\\)"
     timeout: 20000

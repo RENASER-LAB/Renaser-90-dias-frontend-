@@ -186,13 +186,13 @@ afterEach(() => {
 describe('«Cambiar nombre» en el editor de Planificar (D-127)', () => {
   it('no está en la lista: solo dentro del editor', async () => {
     const r = await montar([AGUA, JUGO, GIMNASIO], nuevoRenombre());
-    expect(textos(r)).toContain('AGUA TIBIA CON LIMÓN');
+    expect(textos(r)).toContain('Agua tibia con limón');
     expect(textos(r)).not.toContain('Cambiar nombre');
     expect(botonCambiarNombre(r)).toBeUndefined();
   });
 
   it('en Agua tibia con limón y en Jugo verde, arriba del editor: ícono de 18, texto de 16 y área de 48', async () => {
-    for (const titulo of ['AGUA TIBIA CON LIMÓN', 'JUGO VERDE']) {
+    for (const titulo of ['Agua tibia con limón', 'Jugo verde']) {
       const r = await montar([AGUA, JUGO, GIMNASIO], nuevoRenombre());
       await abrirElHabito(r, titulo);
       const boton = botonCambiarNombre(r)!;
@@ -212,32 +212,32 @@ describe('«Cambiar nombre» en el editor de Planificar (D-127)', () => {
 
   it('en los demás hábitos no hay «Cambiar nombre»', async () => {
     const r = await montar([AGUA, JUGO, GIMNASIO], nuevoRenombre());
-    await abrirElHabito(r, 'GIMNASIO');
+    await abrirElHabito(r, 'Gimnasio');
     expect(textos(r)).not.toContain('Cambiar nombre');
     expect(botonCambiarNombre(r)).toBeUndefined();
   });
 
   it('sin el renombre del teléfono (otra pantalla que monte la hoja) la hoja es la de siempre', async () => {
     const r = await montar([JUGO], undefined);
-    await abrirElHabito(r, 'JUGO VERDE');
+    await abrirElHabito(r, 'Jugo verde');
     expect(botonCambiarNombre(r)).toBeUndefined();
   });
 
   it('tocarlo abre la hoja de renombre de siempre, con el título del catálogo y sin «quitar» si nunca lo renombró', async () => {
     const renombre = nuevoRenombre();
     const r = await montar([AGUA, JUGO], renombre);
-    await abrirElHabito(r, 'JUGO VERDE');
+    await abrirElHabito(r, 'Jugo verde');
     expect(mockRenombrarHoja).not.toHaveBeenCalled();
     await act(async () => { botonCambiarNombre(r)!.props.onPress(); });
     const props = mockRenombrarHoja.mock.lastCall![0];
-    expect(props).toMatchObject({ visible: true, tituloCatalogo: 'JUGO VERDE', tituloActual: null });
+    expect(props).toMatchObject({ visible: true, tituloCatalogo: 'Jugo verde', tituloActual: null });
     expect(props.onQuitar).toBeUndefined();
   });
 
   it('guardar llama al mismo renombrar del servidor y el nombre nuevo se ve en el título del editor y en la lista, sin recargar', async () => {
     const renombre = nuevoRenombre();
     const r = await montar([AGUA, JUGO], renombre);
-    await abrirElHabito(r, 'JUGO VERDE');
+    await abrirElHabito(r, 'Jugo verde');
     await act(async () => { botonCambiarNombre(r)!.props.onPress(); });
     await act(async () => { await mockRenombrarHoja.mock.lastCall![0].onGuardar('Jugo de manzana', 'Me cae mal el verde'); });
     expect(renombre.renombrar).toHaveBeenCalledWith('h-jugo', 'Jugo de manzana', 'Me cae mal el verde');
@@ -252,8 +252,8 @@ describe('«Cambiar nombre» en el editor de Planificar (D-127)', () => {
     await act(async () => { hojaPlanificar(r).props.alVolver(); });
     const t = textos(r);
     expect(t).toContain('Jugo de manzana');
-    expect(t).not.toContain('JUGO VERDE');
-    expect(t).toContain('AGUA TIBIA CON LIMÓN');
+    expect(t).not.toContain('Jugo verde');
+    expect(t).toContain('Agua tibia con limón');
     expect(r.root.findAll(n => String(n.props.accessibilityLabel ?? '').startsWith('Jugo de manzana, a las')).length).toBeGreaterThan(0);
   });
 
@@ -263,20 +263,20 @@ describe('«Cambiar nombre» en el editor de Planificar (D-127)', () => {
     await abrirElHabito(r, 'Té tibio');
     await act(async () => { botonCambiarNombre(r)!.props.onPress(); });
     const props = mockRenombrarHoja.mock.lastCall![0];
-    expect(props).toMatchObject({ tituloCatalogo: 'AGUA TIBIA CON LIMÓN', tituloActual: 'Té tibio' });
+    expect(props).toMatchObject({ tituloCatalogo: 'Agua tibia con limón', tituloActual: 'Té tibio' });
     await act(async () => { await props.onQuitar!(); });
     expect(renombre.quitarRenombre).toHaveBeenCalledWith('h-agua');
   });
 
   it('cerrar la hoja de renombre deja el editor como estaba', async () => {
     const r = await montar([JUGO], nuevoRenombre());
-    await abrirElHabito(r, 'JUGO VERDE');
+    await abrirElHabito(r, 'Jugo verde');
     await act(async () => { botonCambiarNombre(r)!.props.onPress(); });
     const antes = mockRenombrarHoja.mock.calls.length;
     await act(async () => { mockRenombrarHoja.mock.lastCall![0].onCerrar(); });
     await esperar();
     expect(mockRenombrarHoja.mock.calls.length).toBe(antes); // ya no se monta
-    expect(hojaPlanificar(r).props.titulo).toBe('JUGO VERDE');
+    expect(hojaPlanificar(r).props.titulo).toBe('Jugo verde');
     expect(botonCambiarNombre(r)).toBeDefined();
   });
 });
@@ -286,8 +286,8 @@ describe('La hoja abierta desde «Tus prácticas»', () => {
     const r = await montar([AGUA, JUGO, GIMNASIO], nuevoRenombre());
     expect(hojaPlanificar(r).props.titulo).toBe('Planificar CUERPO');
     expect(hojaPlanificar(r).props.alVolver).toBeUndefined();
-    await abrirElHabito(r, 'GIMNASIO');
-    expect(hojaPlanificar(r).props.titulo).toBe('GIMNASIO');
+    await abrirElHabito(r, 'Gimnasio');
+    expect(hojaPlanificar(r).props.titulo).toBe('Gimnasio');
     expect(hojaPlanificar(r).props.etiquetaVolver).toBe('Volver a la lista');
     await act(async () => { hojaPlanificar(r).props.alVolver(); });
     expect(hojaPlanificar(r).props.titulo).toBe('Planificar CUERPO');

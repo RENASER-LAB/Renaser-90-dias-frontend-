@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { Alert } from '../../../components/Alerta';
@@ -234,7 +235,7 @@ export function CuestionarioProfundoScreen({ onComplete, onBack }: CuestionarioP
           <View style={[styles.progressBg, { backgroundColor: c.cardBg, borderColor: c.border }]}>
             <View style={[styles.progressFill, { width: `${porcentaje}%`, backgroundColor: c.gold }]} />
           </View>
-          <Text style={[t.micro, { color: c.textSoft, textAlign: 'right', fontSize: 11, fontFamily: 'Jost_500Medium' }]}>
+          <Text style={[t.micro, { color: c.textSoft, textAlign: 'right', fontSize: 11, fontFamily: fuentes.media }]}>
             {porcentaje}% completado
           </Text>
         </View>

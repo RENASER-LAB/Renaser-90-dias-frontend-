@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -102,7 +103,7 @@ const estilos = StyleSheet.create({
   cabecera: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   nombre: { flex: 1, minWidth: 0 },
   /* Cifras tabulares: 78.3 y 100 no bailan de ancho de una fila a la otra. */
-  cifra: { fontFamily: 'Jost_700Bold', fontSize: 18, lineHeight: 24, fontVariant: ['tabular-nums'] },
+  cifra: { fontFamily: fuentes.negrita, fontSize: 18, lineHeight: 24, fontVariant: ['tabular-nums'] },
   estado: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', columnGap: 12, rowGap: 2 },
   dias: { marginTop: 4 },
 });

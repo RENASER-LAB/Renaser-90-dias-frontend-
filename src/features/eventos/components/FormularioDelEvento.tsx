@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -224,13 +225,13 @@ export function FormularioDelEvento({
 }
 
 const estilos = StyleSheet.create({
-  titulo: { fontFamily: 'Jost_500Medium', fontSize: LETRA.grande, lineHeight: 28 },
-  rotulo: { fontFamily: 'Jost_500Medium', fontSize: 17, lineHeight: 22 },
+  titulo: { fontFamily: fuentes.media, fontSize: LETRA.grande, lineHeight: 28 },
+  rotulo: { fontFamily: fuentes.media, fontSize: 17, lineHeight: 22 },
   opcion: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52, borderWidth: 1.5, borderRadius: 14, paddingHorizontal: 14 },
-  opcionTexto: { fontFamily: 'Jost_500Medium', fontSize: 17, lineHeight: 22, flexShrink: 1 },
+  opcionTexto: { fontFamily: fuentes.media, fontSize: 17, lineHeight: 22, flexShrink: 1 },
   paso: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   flecha: { width: 56 },
-  valor: { flex: 1, textAlign: 'center', fontFamily: 'Jost_500Medium', fontSize: 17 },
+  valor: { flex: 1, textAlign: 'center', fontFamily: fuentes.media, fontSize: 17 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   chip: { minHeight: 52, borderWidth: 1.5, borderRadius: 14, paddingHorizontal: 16, justifyContent: 'center' },
   portada: { height: 185, borderRadius: 20, borderWidth: 1, overflow: 'hidden' },

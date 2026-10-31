@@ -25,6 +25,7 @@ describe('el cableado de los integrantes en ComunidadScreen', () => {
   });
 
   it('el Admin/Alquimista abre la ficha de administración desde «Ver ficha»', () => {
-    expect(pantalla).toContain("irAPestana('Hoy', { abrirFichaAprendiz:");
+    // 2026-10-31: Administración vive en Yo, junto a «Mi grupo» y «Mis mentores».
+    expect(pantalla).toContain("irAPestana('Yo', { abrirFichaAprendiz:");
   });
 });

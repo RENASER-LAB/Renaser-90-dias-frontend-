@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -43,7 +44,7 @@ export function SeRepite({ huecos }: { huecos: HuecoQueSeRepite[] }) {
 const estilos = StyleSheet.create({
   bloque: { gap: 6, marginTop: 22 },
   /* Rótulo en tipo oración: 13 px, negrita y sin espaciar (decisión del dueño, 2026-10-05). */
-  rotulo: { fontFamily: 'Jost_700Bold', fontSize: 13, lineHeight: 18, letterSpacing: 0 },
+  rotulo: { fontFamily: fuentes.negrita, fontSize: 13, lineHeight: 18, letterSpacing: 0 },
   fila: {
     flexDirection: 'row',
     flexWrap: 'wrap',

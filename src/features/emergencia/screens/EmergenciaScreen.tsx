@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -188,13 +189,13 @@ export function EmergenciaScreen({
 }
 
 const estilos = StyleSheet.create({
-  titulo: { fontFamily: 'Jost_700Bold', fontSize: 22, lineHeight: 28 },
+  titulo: { fontFamily: fuentes.negrita, fontSize: 22, lineHeight: 28 },
   parrafo: { fontSize: 17, lineHeight: 24 },
-  rotulo: { fontFamily: 'Jost_500Medium', fontSize: 18, lineHeight: 24 },
+  rotulo: { fontFamily: fuentes.media, fontSize: 18, lineHeight: 24 },
   campo: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, minHeight: 96, fontSize: 17, textAlignVertical: 'top' },
   fila: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   paso: { width: 64, height: 64, borderRadius: 16, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
-  signo: { fontFamily: 'Jost_500Medium', fontSize: 32, lineHeight: 36 },
+  signo: { fontFamily: fuentes.media, fontSize: 32, lineHeight: 36 },
   numero: {
     flex: 1,
     flexBasis: 0,
@@ -205,7 +206,7 @@ const estilos = StyleSheet.create({
     borderRadius: 14,
     overflow: 'hidden',
     textAlign: 'center',
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
     fontSize: 28,
     fontVariant: ['tabular-nums'],
   },

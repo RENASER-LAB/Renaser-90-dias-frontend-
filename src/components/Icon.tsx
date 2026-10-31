@@ -18,7 +18,8 @@ export type IconName =
   | 'timer' | 'badgeCheck' | 'hourglass' | 'ban' | 'rotateCcw' | 'audioLines' | 'sunrise' | 'sunMedium' | 'moonStar' | 'glassWater' | 'showerHead' | 'footprints' | 'salad' | 'utensils' | 'utensilsCrossed' | 'bookOpenText' | 'headphones' | 'notebookPen' | 'handHeart' | 'smartphoneOff'
   | 'sparkles'
   | 'wrench' | 'toggleRight'
-  | 'bellOff';
+  | 'bellOff'
+  | 'chartNoAxesColumn';
 
 /**
  * Grosor del trazo, en píxeles REALES de pantalla, a cualquier tamaño (decisión del dueño,
@@ -864,6 +865,17 @@ export function Icon({ name, size = 20, color, strokeWidth }: Props) {
           <Path {...s24} d="M17 17H4a1 1 0 0 1-.74-1.673C4.59 13.956 6 12.499 6 8a6 6 0 0 1 .258-1.742" />
           <Path {...s24} d="m2 2 20 20" />
           <Path {...s24} d="M8.668 3.01A6 6 0 0 1 18 8c0 2.687.77 4.653 1.707 6.05" />
+        </Svg>
+      );
+    /* Plan (2026-10-31) */
+    /* Las tres barras de «Tu 80/20» en Plan (prioriza lo que más acerca tu meta). Forma de Lucide (ISC,
+       `chart-no-axes-column`) en caja de 24 y trazo `s24`. */
+    case 'chartNoAxesColumn':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24">
+          <Path {...s24} d="M5 21v-6" />
+          <Path {...s24} d="M12 21V3" />
+          <Path {...s24} d="M19 21V9" />
         </Svg>
       );
     /* Barra de pestañas */

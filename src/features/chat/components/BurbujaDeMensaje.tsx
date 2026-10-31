@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Image, type ImageSource } from 'expo-image';
@@ -369,7 +370,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 12,
   },
   remitente: {
-    fontFamily: 'Jost_700Bold',
+    fontFamily: fuentes.negrita,
     fontSize: 15,
     marginBottom: 2,
   },
@@ -378,7 +379,7 @@ const styles = StyleSheet.create({
     paddingTop: 3,
   },
   texto: {
-    fontFamily: 'Jost_400Regular',
+    fontFamily: fuentes.regular,
     fontSize: 17,
     lineHeight: 24,
   },
@@ -396,7 +397,7 @@ const styles = StyleSheet.create({
     bottom: 5,
   },
   horaTexto: {
-    fontFamily: 'Jost_400Regular',
+    fontFamily: fuentes.regular,
     fontSize: 12.5,
     fontVariant: ['tabular-nums'],
   },
@@ -421,7 +422,7 @@ const styles = StyleSheet.create({
   },
   horaSobreFotoTexto: {
     color: '#FFFFFF',
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
     fontSize: 12.5,
   },
   adjuntosSinUrl: {
@@ -434,7 +435,7 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   textoChico: {
-    fontFamily: 'Jost_700Bold',
+    fontFamily: fuentes.negrita,
     fontSize: 14,
   },
   /* La nota de voz vive dentro de la burbuja: la caja no pone fondo ni borde propios y deja
@@ -461,7 +462,7 @@ const styles = StyleSheet.create({
 /**
  * El hueco al final del texto que deja sitio a la hora. Son espacios que no se parten (U+00A0):
  * con el texto de la hora en `color: 'transparent'`, Android dibujaba igual la hora anidada y se
- * veía dos veces, una encima de la otra (e2e del 26/09). Un espacio de Jost a 12,5 px mide cerca
+ * veía dos veces, una encima de la otra (e2e del 26/09). Un espacio de la fuente a 12,5 px mide cerca
  * de un tercio de un dígito: por eso ~2,2 espacios por carácter de la hora.
  */
 export function huecoParaLaHora(pie: string): string {

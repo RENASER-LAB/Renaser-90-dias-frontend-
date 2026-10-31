@@ -1,3 +1,4 @@
+import { fuentes } from '../theme/fuentes';
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
@@ -996,7 +997,7 @@ export default function LoginScreen() {
                 <Text style={[t.small, { color: c.textSoft, textAlign: 'center', lineHeight: 18, marginTop: 4 }]}>
                   Hemos enviado un código de 6 dígitos a:
                 </Text>
-                <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_500Medium' }]}>{email}</Text>
+                <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.media }]}>{email}</Text>
               </View>
 
               {errorMessage ? (
@@ -1047,7 +1048,7 @@ export default function LoginScreen() {
                   {loading ? (
                     <ActivityIndicator color={c.onGold} size="small" />
                   ) : (
-                    <Text style={[t.cardTitle, { color: c.onGold, letterSpacing: 0.1, fontFamily: 'Jost_500Medium', fontSize: 15 }]}>
+                    <Text style={[t.cardTitle, { color: c.onGold, letterSpacing: 0.1, fontFamily: fuentes.media, fontSize: 15 }]}>
                       CONFIRMAR Y ENVIAR SOLICITUD
                     </Text>
                   )}
@@ -1117,7 +1118,7 @@ export default function LoginScreen() {
                     onSubmitEditing={() => void handleForgotPasswordSubmit()}
                     onFocus={evento => enfocarCampo('forgot_email', evento)}
                     onBlur={desenfocarCampo}
-                    style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
+                    style={[styles.input, { color: c.text, fontFamily: fuentes.regular }]}
                     autoFocus
                   />
                 </View>
@@ -1140,7 +1141,7 @@ export default function LoginScreen() {
                   {loading ? (
                     <ActivityIndicator color={c.onGold} size="small" />
                   ) : (
-                    <Text style={[t.cardTitle, { color: c.onGold, letterSpacing: 0.1, fontFamily: 'Jost_500Medium', fontSize: 15 }]}>
+                    <Text style={[t.cardTitle, { color: c.onGold, letterSpacing: 0.1, fontFamily: fuentes.media, fontSize: 15 }]}>
                       ENVIARME UN CÓDIGO
                     </Text>
                   )}
@@ -1176,7 +1177,7 @@ export default function LoginScreen() {
                 <Text style={[t.small, { color: c.textSoft, textAlign: 'center', lineHeight: 18, marginTop: 4 }]}>
                   Si el correo tiene cuenta, te enviamos un código de 6 dígitos a:
                 </Text>
-                <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_500Medium' }]}>{email}</Text>
+                <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.media }]}>{email}</Text>
               </View>
 
               {errorMessage ? (
@@ -1225,7 +1226,7 @@ export default function LoginScreen() {
                   {loading ? (
                     <ActivityIndicator color={c.onGold} size="small" />
                   ) : (
-                    <Text style={[t.cardTitle, { color: c.onGold, letterSpacing: 0.1, fontFamily: 'Jost_500Medium', fontSize: 15 }]}>
+                    <Text style={[t.cardTitle, { color: c.onGold, letterSpacing: 0.1, fontFamily: fuentes.media, fontSize: 15 }]}>
                       VERIFICAR CÓDIGO
                     </Text>
                   )}
@@ -1293,7 +1294,7 @@ export default function LoginScreen() {
                     textContentType="newPassword"
                     onFocus={evento => enfocarCampo('forgot_password', evento)}
                     onBlur={desenfocarCampo}
-                    style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
+                    style={[styles.input, { color: c.text, fontFamily: fuentes.regular }]}
                     autoFocus
                   />
                   <Pressable
@@ -1338,7 +1339,7 @@ export default function LoginScreen() {
                     onFocus={evento => enfocarCampo('forgot_confirm', evento)}
                     onBlur={desenfocarCampo}
                     onSubmitEditing={handleChangePassword}
-                    style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
+                    style={[styles.input, { color: c.text, fontFamily: fuentes.regular }]}
                   />
                 </View>
               </View>
@@ -1359,7 +1360,7 @@ export default function LoginScreen() {
                   {loading ? (
                     <ActivityIndicator color={c.onGold} size="small" />
                   ) : (
-                    <Text style={[t.cardTitle, { color: c.onGold, letterSpacing: 0.1, fontFamily: 'Jost_500Medium', fontSize: 15 }]}>
+                    <Text style={[t.cardTitle, { color: c.onGold, letterSpacing: 0.1, fontFamily: fuentes.media, fontSize: 15 }]}>
                       GUARDAR Y VOLVER AL LOGIN
                     </Text>
                   )}
@@ -1422,7 +1423,7 @@ export default function LoginScreen() {
                     placeholderTextColor={c.tabInactive}
                     onFocus={evento => enfocarCampo('social_nombres', evento)}
                     onBlur={desenfocarCampo}
-                    style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
+                    style={[styles.input, { color: c.text, fontFamily: fuentes.regular }]}
                     autoCapitalize="words"
                     autoFocus
                   />
@@ -1449,7 +1450,7 @@ export default function LoginScreen() {
                     placeholderTextColor={c.tabInactive}
                     onFocus={evento => enfocarCampo('social_apellidos', evento)}
                     onBlur={desenfocarCampo}
-                    style={[styles.input, { color: c.text, fontFamily: 'Jost_400Regular' }]}
+                    style={[styles.input, { color: c.text, fontFamily: fuentes.regular }]}
                     autoCapitalize="words"
                   />
                 </View>
@@ -1473,7 +1474,7 @@ export default function LoginScreen() {
                     value={email}
                     accessibilityLabel="Correo electrónico"
                     editable={false}
-                    style={[styles.input, { color: c.textSoft, fontFamily: 'Jost_400Regular' }]}
+                    style={[styles.input, { color: c.textSoft, fontFamily: fuentes.regular }]}
                   />
                 </View>
               </View>
@@ -1495,7 +1496,7 @@ export default function LoginScreen() {
                   {loading ? (
                     <ActivityIndicator color={c.onGold} size="small" />
                   ) : (
-                    <Text style={[t.cardTitle, { color: c.onGold, letterSpacing: 0.1, fontFamily: 'Jost_500Medium', fontSize: 15 }]}>
+                    <Text style={[t.cardTitle, { color: c.onGold, letterSpacing: 0.1, fontFamily: fuentes.media, fontSize: 15 }]}>
                       ENVIAR SOLICITUD
                     </Text>
                   )}
@@ -1535,7 +1536,7 @@ export default function LoginScreen() {
                   Confirmamos tu correo y registramos tu solicitud. Un administrador tiene que
                   aprobarla antes de que puedas ingresar; te avisaremos a:
                 </Text>
-                <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_500Medium', textAlign: 'center' }]}>
+                <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.media, textAlign: 'center' }]}>
                   {email}
                 </Text>
               </View>
@@ -1565,7 +1566,7 @@ export default function LoginScreen() {
                   end={{ x: 0.9, y: 1 }}
                   style={styles.gradientBtn}
                 >
-                  <Text style={[t.cardTitle, { color: c.onGold, letterSpacing: 0.1, fontFamily: 'Jost_500Medium', fontSize: 15 }]}>
+                  <Text style={[t.cardTitle, { color: c.onGold, letterSpacing: 0.1, fontFamily: fuentes.media, fontSize: 15 }]}>
                     VOLVER AL INICIO DE SESIÓN
                   </Text>
                 </LinearGradient>
@@ -1685,7 +1686,7 @@ const styles = StyleSheet.create({
   /* La serif del tema en grande, con el tracking cerrado de los títulos de display
      (`apple-design` §15: el texto grande pide tracking negativo). */
   titulo: {
-    fontFamily: 'Fraunces_600SemiBold',
+    fontFamily: fuentes.display,
     fontSize: 34,
     lineHeight: 40,
     letterSpacing: -0.8,
@@ -1714,7 +1715,7 @@ const styles = StyleSheet.create({
     marginTop: -10,
   },
   textoOlvido: {
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
   },
   fundidoInferior: {
     position: 'absolute',
@@ -1739,7 +1740,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   textoCambioFuerte: {
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
   },
   /* 32 de alto más el `hitSlop` de 6 arriba y abajo: 44 táctiles sin agrandar el pie. */
   enlacePrivacidad: {

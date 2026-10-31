@@ -1,0 +1,48 @@
+# Training después de los cambios del 2026-10-31. ESCRITO Y SIN CORRER.
+#  - La cabecera ya no lleva «El Maestro Interno · Día N de 90»: queda el día elegido y «N de M hechos · P pts».
+#  - Los nombres de los hábitos en tipo oración («Agua tibia con limón», «Ritual tierra - agua - fuego (mañana)»).
+#  - El ritual pide solo texto: «Escribir cómo me siento» → «¿Cómo te sientes después de realizar el ritual?» (obligatoria).
+#  - «Última comida del día» (opcional) lleva el círculo en lugar de «Subir»; los demás opcionales siguen con «Subir».
+# Precondición: `reset-hoy.sql`. cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-training.yaml
+- assertNotVisible: ".*· Día .* de 90"
+- assertVisible: ".* de .* hechos · .* pts"
+- takeScreenshot: T04a-cabecera-sin-fase
+# Nombres en tipo oración (sin el modo insensible: lo que se prueba es la caja).
+- scrollUntilVisible:
+    element: "[0-9:]+, Agua tibia con limón.*"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- assertNotVisible: "[0-9:]+, AGUA TIBIA CON LIMÓN.*"
+- takeScreenshot: T04b-nombre-en-tipo-oracion
+# El ritual: solo texto, sin cámara.
+- scrollUntilVisible:
+    element: "[0-9:]+, Ritual tierra - agua - fuego \\(mañana\\).*"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- tapOn: "[0-9:]+, Ritual tierra - agua - fuego \\(mañana\\).*"
+- extendedWaitUntil:
+    visible: "Escribir cómo me siento"
+    timeout: 10000
+- assertNotVisible: "Tomar foto"
+- tapOn: "Escribir cómo me siento"
+- extendedWaitUntil:
+    visible: "¿Cómo te sientes después de realizar el ritual\\?"
+    timeout: 10000
+- takeScreenshot: T04c-ritual-con-texto
+- back
+# «Última comida del día»: círculo, no «Subir».
+- scrollUntilVisible:
+    element: "Marcar Última comida del día"
+    direction: DOWN
+    centerElement: true
+    timeout: 30000
+- assertNotVisible: "Subir evidencia de Última comida del día"
+- takeScreenshot: T04d-ultima-comida-con-circulo
+# Otro opcional sigue con «Subir».
+- assertVisible: "Subir evidencia de .*"

@@ -11,7 +11,7 @@ import type { FalloCelula } from '../hooks/useCelulaQueAcompano';
  * ese rol tiene en toda la app.</blockquote>
  *
  * La condición se escribe acá, pura, por dos motivos: se prueba sin montar la pantalla, y las
- * dos entradas que existen —la tarjeta de Hoy y la fila de Comunidad— preguntan lo mismo en vez
+ * dos entradas que existen —la fila «Mi grupo» de Yo (hasta el 2026-10-31, la tarjeta de Hoy) y la fila de Comunidad— preguntan lo mismo en vez
  * de repetir la condición y desincronizarse.
  */
 

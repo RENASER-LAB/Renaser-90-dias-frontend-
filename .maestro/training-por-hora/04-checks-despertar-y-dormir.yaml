@@ -6,23 +6,23 @@ appId: com.renaser.app
 - runFlow: ../comun/ya-adentro.yaml
 - runFlow: ../comun/abrir-training.yaml
 - scrollUntilVisible:
-    element: "Marcar DORMIR"
+    element: "(?i)Marcar DORMIR"
     direction: DOWN
     centerElement: true
     timeout: 30000
-- tapOn: "Marcar DORMIR"
+- tapOn: "(?i)Marcar DORMIR"
 - assertNotVisible: "Guía de esta práctica"
 - extendedWaitUntil:
-    notVisible: "Marcar DORMIR"
+    notVisible: "(?i)Marcar DORMIR"
     timeout: 20000
 - scrollUntilVisible:
-    element: "Marcar DESPERTAR"
+    element: "(?i)Marcar DESPERTAR"
     direction: DOWN
     centerElement: true
     timeout: 30000
-- tapOn: "Marcar DESPERTAR"
+- tapOn: "(?i)Marcar DESPERTAR"
 - extendedWaitUntil:
-    notVisible: "Marcar DESPERTAR"
+    notVisible: "(?i)Marcar DESPERTAR"
     timeout: 20000
 - scrollUntilVisible:
     element: ".* hechos? hoy"
@@ -30,7 +30,7 @@ appId: com.renaser.app
     timeout: 30000
 - tapOn: ".* hechos? hoy"
 - scrollUntilVisible:
-    element: "22:30, DORMIR.*"
+    element: "(?i)22:30, DORMIR.*"
     direction: DOWN
     timeout: 20000
 - takeScreenshot: T04a-dormir-y-despertar-hechos

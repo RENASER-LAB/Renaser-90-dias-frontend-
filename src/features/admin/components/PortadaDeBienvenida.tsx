@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
 
@@ -261,6 +262,6 @@ const estilos = StyleSheet.create({
   vacia: { alignItems: 'center', justifyContent: 'center', padding: 20 },
   errorSobreImagen: { padding: 10 },
   candidata: { borderWidth: 1.5, borderRadius: 16, padding: 14, gap: 12 },
-  subtitulo: { fontFamily: 'Jost_500Medium', fontSize: 18, lineHeight: 24 },
+  subtitulo: { fontFamily: fuentes.media, fontSize: 18, lineHeight: 24 },
   fila: { flexDirection: 'row', alignItems: 'center', gap: 10 },
 });

@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, ScrollView, TextInput, StyleSheet } from 'react-native';
 import { Alert } from '../../../components/Alerta';
@@ -435,7 +436,7 @@ const estilos = StyleSheet.create({
   },
   rotulo: {
     fontSize: 16,
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
   },
   accion: {
     minHeight: 52,
@@ -452,7 +453,7 @@ const estilos = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 14,
     fontSize: 20,
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
   },
   campo: {
     minHeight: 96,
@@ -461,7 +462,7 @@ const estilos = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 16,
-    fontFamily: 'Jost_400Regular',
+    fontFamily: fuentes.regular,
     textAlignVertical: 'top',
   },
   adjunto: {

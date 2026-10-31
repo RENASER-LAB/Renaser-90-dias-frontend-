@@ -1,3 +1,4 @@
+import { fuentes } from '../../../../theme/fuentes';
 import { describe, expect, it } from '@jest/globals';
 import React from 'react';
 import { StyleSheet } from 'react-native';
@@ -136,14 +137,14 @@ describe('el diseño', () => {
     expect(avisos).toBe(2);
   });
 
-  it('el título es la serif (Fraunces, ≥ 24); todo lo demás, Jost en tipo oración y sin espaciar letras', () => {
+  it('el título es la fuente display (≥ 24); todo lo demás, el resto de los roles en tipo oración y sin espaciar letras', () => {
     const r = dibujar(DIEZ);
     const todos = r.root.findAll(n => (n.type as unknown) === 'Text');
     const familias = new Set(todos.map(n => estiloDe(n).fontFamily));
-    expect([...familias].sort()).toEqual(['Fraunces_700Bold', 'Jost_400Regular', 'Jost_500Medium', 'Jost_700Bold']);
-    const conFraunces = todos.filter(n => estiloDe(n).fontFamily === 'Fraunces_700Bold');
-    expect(conFraunces).toHaveLength(1);
-    expect(estiloDe(conFraunces[0]).fontSize as number).toBeGreaterThanOrEqual(24);
+    // `display` es la Bold (Inter no trae corte Display): el título se reconoce por su tamaño (≥ 24) y su espaciado negativo, y es el único así.
+    expect([...familias].sort()).toEqual([fuentes.regular, fuentes.media, fuentes.negrita].sort());
+    const conDisplay = todos.filter(n => estiloDe(n).fontFamily === fuentes.display && Number(estiloDe(n).fontSize) >= 24 && Number(estiloDe(n).letterSpacing ?? 0) < 0);
+    expect(conDisplay).toHaveLength(1);
     for (const n of todos) expect(Number(estiloDe(n).letterSpacing ?? 0)).toBeLessThanOrEqual(0);
   });
 

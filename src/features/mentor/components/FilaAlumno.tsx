@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -38,7 +39,7 @@ export function FilaAlumno({ alumno, onPress }: { alumno: AlumnoConEstado; onPre
       ]}
     >
       <View style={[estilos.inicial, { borderColor: c.border, backgroundColor: c.goldWash }]}>
-        <Text style={[t.body, { color: c.goldInk, fontSize: 16, fontFamily: 'Jost_700Bold' }]}>
+        <Text style={[t.body, { color: c.goldInk, fontSize: 16, fontFamily: fuentes.negrita }]}>
           {inicial || '·'}
         </Text>
       </View>

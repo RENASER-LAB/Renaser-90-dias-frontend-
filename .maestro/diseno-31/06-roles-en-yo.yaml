@@ -1,0 +1,63 @@
+# Los paneles de rol en Yo, no en Hoy (2026-10-31, pedido del dueño: «debe ir dentro de Administración, lo mismo de cada uno, no en
+# Hoy de cada rol»). ESCRITO Y SIN CORRER: necesita un emulador libre.
+# cuenta: LÍDER DE MENTORES con un grupo que acompaña (la ranura E2E_ADMIN_* apunta al líder, como en `mi-radar/12`). Con otra
+# cuenta, las filas cambian: el mentor o la guía ve solo «Mi grupo»; el aprendiz, ninguna.
+#
+# Hoy es solo su programa: sin el control «Mi programa · Mi grupo · Mis mentores». En Yo, «Mi grupo» y «Mis mentores» son filas de
+# la lista, junto a Administración. Cada una abre su pantalla completa con su flecha «‹» y el atrás sube un nivel por vez hasta Yo.
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+# Hoy: nada de tres pestañas ni tarjetas de rol.
+- tapOn: "HOY"
+- assertNotVisible: "Mis mentores"
+- assertNotVisible: "Mi grupo"
+- assertNotVisible: "Abrir Administración"
+- takeScreenshot: Y06a-hoy-sin-roles
+# Yo: las filas, una debajo de otra.
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Mis mentores"
+    direction: DOWN
+    timeout: 40000
+- assertVisible: "Mi grupo"
+- takeScreenshot: Y06b-yo-con-las-filas-de-rol
+# «Mis mentores»: resultado por grupo, consultas, mentores y reporte del mes, todos los aprendices.
+- tapOn: "Mis mentores"
+- extendedWaitUntil:
+    visible: "Resultado por grupo"
+    timeout: 30000
+- assertVisible: "Mis mentores"
+- takeScreenshot: Y06c-mis-mentores
+# Un nivel más adentro y de vuelta: el atrás sube un nivel, no sale de golpe a Yo.
+- scrollUntilVisible:
+    element: "Mentores y reporte del mes"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Mentores y reporte del mes"
+- extendedWaitUntil:
+    visible: ".*Mentores.*"
+    timeout: 30000
+- back
+- extendedWaitUntil:
+    visible: "Resultado por grupo"
+    timeout: 20000
+# Del panel a Yo.
+- back
+- extendedWaitUntil:
+    visible: "Tu evolución"
+    timeout: 20000
+# «Mi grupo»: su pantalla con la cabecera «‹ Mi grupo»; el atrás vuelve a Yo.
+- scrollUntilVisible:
+    element: "Mi grupo"
+    direction: DOWN
+    timeout: 40000
+- tapOn: "Mi grupo"
+- extendedWaitUntil:
+    visible: ".*(Mi grupo|aprendices).*"
+    timeout: 30000
+- takeScreenshot: Y06d-mi-grupo
+- back
+- extendedWaitUntil:
+    visible: "Tu evolución"
+    timeout: 20000

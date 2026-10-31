@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useState } from 'react';
 import { Text, View, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
@@ -120,28 +121,28 @@ export function TarjetaDeFase({
       <View style={{ flex: 1, minHeight: ALTO - 2, padding: PADDING_DE_LA_TARJETA, paddingRight: reservaDerecha, justifyContent: 'space-between', gap: 14 }}>
         <View>
           {celebrar ? (
-            <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', marginBottom: 2 }]}>
+            <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.negrita, marginBottom: 2 }]}>
               ¡Entraste en la Fase {numero}!
             </Text>
           ) : null}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 10 }}>
-            <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1.4 }]}>
+            <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.negrita, letterSpacing: 1.4 }]}>
               FASE {numero} DE {totalDeFases}
             </Text>
             <Text style={[t.small, { color: c.micro }]}>{rango}</Text>
           </View>
-          <Text style={{ fontFamily: 'Fraunces_700Bold', ...tamanoDelTitulo(nombreDeLaFase), letterSpacing: -0.5, color: c.textStrong, marginTop: 6 }}>
+          <Text style={{ fontFamily: fuentes.display, ...tamanoDelTitulo(nombreDeLaFase), letterSpacing: -0.5, color: c.textStrong, marginTop: 6 }}>
             {nombreDeLaFase}
           </Text>
           <Text style={[t.body, { color: c.textSoft, marginTop: 8, fontSize: 16 }]}>
-            Tu animal: <Text style={{ fontFamily: 'Jost_500Medium', color: c.textStrong }}>{animal.nombre}</Text>
+            Tu animal: <Text style={{ fontFamily: fuentes.media, color: c.textStrong }}>{animal.nombre}</Text>
           </Text>
         </View>
         {/* El número grande es el MISMO día que Plan y Hoy («Día 30 de 90»); la barra y la línea de abajo cuentan la
             fase. Antes el grande era «Día 23 de 27 de esta fase» y no coincidía con el día que el dueño ve en Plan. */}
         <View>
           {dichoDelDia ? (
-            <Text style={[t.body, { color: c.textStrong, fontFamily: 'Jost_500Medium', fontSize: 17 }]}>{dichoDelDia}</Text>
+            <Text style={[t.body, { color: c.textStrong, fontFamily: fuentes.media, fontSize: 17 }]}>{dichoDelDia}</Text>
           ) : null}
           {diasDeLaFase ? (
             <>

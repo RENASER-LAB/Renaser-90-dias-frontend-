@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -201,7 +202,7 @@ function Linea({ texto }: { texto: string }) {
 }
 
 const estilos = StyleSheet.create({
-  rotulo: { fontSize: 16, fontFamily: 'Jost_500Medium' },
+  rotulo: { fontSize: 16, fontFamily: fuentes.media },
   campo: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, minHeight: 52, fontSize: 17 },
   codigo: { fontVariant: ['tabular-nums'] },
 });

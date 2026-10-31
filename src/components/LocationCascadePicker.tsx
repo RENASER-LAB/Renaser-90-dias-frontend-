@@ -1,3 +1,4 @@
+import { fuentes } from '../theme/fuentes';
 import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, TextInput, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
 import { Alert } from './Alerta';
@@ -337,7 +338,7 @@ export function LocationCascadePicker({ data, onChange, error }: LocationCascade
           style={[styles.gpsBtn, { borderColor: c.gold, backgroundColor: isDetectingGPS ? c.cardBg : c.goldWash }]}
         >
           {isDetectingGPS ? <ActivityIndicator size="small" color={c.goldInk} /> : null}
-          <Text style={[t.micro, { color: c.goldInk, fontSize: 10.5, fontFamily: 'Jost_700Bold' }]}>
+          <Text style={[t.micro, { color: c.goldInk, fontSize: 10.5, fontFamily: fuentes.negrita }]}>
             {isDetectingGPS ? 'DETECTANDO...' : '📍 MI UBICACIÓN'}
           </Text>
         </Presionable>
@@ -446,7 +447,7 @@ const styles = StyleSheet.create({
   },
   valorFila: {
     fontSize: 16,
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
   },
   divisor: {
     position: 'absolute',
@@ -464,7 +465,7 @@ const styles = StyleSheet.create({
   },
   addressTextInput: {
     fontSize: 16,
-    fontFamily: 'Jost_400Regular',
+    fontFamily: fuentes.regular,
   },
   sugerencias: {
     paddingBottom: 4,

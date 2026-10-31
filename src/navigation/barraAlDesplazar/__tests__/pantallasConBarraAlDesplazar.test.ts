@@ -19,7 +19,7 @@ const usos = (fuente: string) => fuente.split('{...barraAlDesplazar}').length - 
 const PANTALLAS: Record<string, number> = {
   'src/screens/HoyScreen.tsx': 1,
   // Plan: la vista principal y Objetivos (la sub-vista «Hábitos 7 días» se borró el 2026-10-05).
-  'src/screens/PlanScreen.tsx': 2,
+  'src/screens/PlanScreen.tsx': 1,
   // Training y, con «Hábitos» apagado por Soporte TI, su aviso de mantenimiento (spec 002); y, si «Hábitos» todavía no
   // le toca a la cuenta, el texto neutro (fase 2).
   'src/screens/TrainingScreen.tsx': 3,
@@ -28,6 +28,8 @@ const PANTALLAS: Record<string, number> = {
   'src/screens/ComunidadScreen.tsx': 9,
   'src/features/eventos/components/SeccionEventos.tsx': 1,
   'src/screens/YoScreen.tsx': 11,
+  // «Mis mentores» del líder, una fila de Yo (2026-10-31).
+  'src/features/paneles-de-rol/screens/MisMentoresEnYo.tsx': 1,
   // Administración
   'src/features/admin/screens/AdminInicioScreen.tsx': 1,
   'src/features/admin/screens/BienvenidaAdminScreen.tsx': 1,
@@ -63,8 +65,8 @@ describe('pantallas con «ocultar la barra al desplazar»', () => {
     expect(usos(fuente)).toBe(cantidad);
   });
 
-  it('las sub-vistas de Plan, Yo y Comunidad devuelven la barra al cambiar', () => {
-    expect(leer('src/screens/PlanScreen.tsx')).toMatch(/useOcultarBarraAlDesplazar\(\{ vista: activeSubView \}\)/);
+  it('las sub-vistas de Yo y Comunidad devuelven la barra al cambiar (Plan ya no tiene sub-vistas desde el 2026-10-31)', () => {
+    expect(leer('src/screens/PlanScreen.tsx')).toMatch(/useOcultarBarraAlDesplazar\(\)/);
     expect(leer('src/screens/YoScreen.tsx')).toMatch(/useOcultarBarraAlDesplazar\(\{ vista: activeView \}\)/);
     expect(leer('src/screens/ComunidadScreen.tsx')).toMatch(/vista: `\$\{seccionActiva\}/);
   });

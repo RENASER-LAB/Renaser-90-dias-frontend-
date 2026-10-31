@@ -328,3 +328,82 @@ describe('aviso de un hábito cuyo día ya cerró', () => {
     expect(estadoParaFoto([tarde], 'r-1', AHORA).tipo).toBe('disponible');
   });
 });
+
+/**
+ * Los rituales piden SOLO TEXTO (2026-10-31): la respuesta es la evidencia (TEXTO) y el cierre, por los mismos pasos de siempre,
+ * sin subida de archivo.
+ */
+import { MAXIMO_RESPUESTA_DEL_REGISTRO, registrarConTexto, seRegistraConTexto, PREGUNTA_DEL_RITUAL } from '../registroConFoto';
+
+describe('seRegistraConTexto', () => {
+  it('son los tres rituales, por su clave de sistema', () => {
+    for (const clave of ['RITUAL_MORNING', 'RITUAL_MIDDAY', 'RITUAL_NIGHT']) expect(seRegistraConTexto(clave)).toBe(true);
+    for (const clave of ['WAKE_UP', 'SLEEP', 'GYM', 'GREEN_JUICE', null, undefined, '']) expect(seRegistraConTexto(clave)).toBe(false);
+  });
+
+  it('la pregunta es la que pidió el dueño y el límite el del servidor', () => {
+    expect(PREGUNTA_DEL_RITUAL).toBe('¿Cómo te sientes después de realizar el ritual?');
+    expect(MAXIMO_RESPUESTA_DEL_REGISTRO).toBe(4000);
+  });
+});
+
+describe('registrarConTexto', () => {
+  const crear = () => {
+    const llamadas: string[] = [];
+    const deps = {
+      subirTexto: jest.fn(async (id: string, texto: string) => { llamadas.push(`texto:${id}:${texto}`); return {}; }),
+      completar: jest.fn(async (id: string, respuesta: string) => { llamadas.push(`completar:${id}:${respuesta}`); return { puntosOtorgados: 8 }; }),
+      tracksDeHoy: jest.fn(async () => []),
+    };
+    return { llamadas, deps };
+  };
+
+  it('guarda la respuesta como evidencia de TEXTO y cierra con ella, en ese orden', async () => {
+    const { llamadas, deps } = crear();
+    const alConfirmar = jest.fn();
+    const r = await registrarConTexto({ registroId: 'r1', respuesta: '  Me siento en calma  ', evidenciaYaSubida: false }, alConfirmar, deps);
+    expect(llamadas).toEqual(['texto:r1:Me siento en calma', 'completar:r1:Me siento en calma']);
+    expect(alConfirmar).toHaveBeenCalledTimes(1);
+    expect(r).toEqual({ puntosOtorgados: 8, yaEstabaCompletado: false });
+  });
+
+  it('la respuesta es obligatoria: vacía o con puros espacios no manda nada', async () => {
+    const { llamadas, deps } = crear();
+    for (const vacia of ['', '   ', '\n']) {
+      await expect(registrarConTexto({ registroId: 'r1', respuesta: vacia, evidenciaYaSubida: false }, jest.fn(), deps)).rejects.toThrow(/cómo te sientes/);
+    }
+    expect(llamadas).toEqual([]);
+  });
+
+  it('más del límite del servidor no se manda', async () => {
+    const { llamadas, deps } = crear();
+    await expect(
+      registrarConTexto({ registroId: 'r1', respuesta: 'a'.repeat(MAXIMO_RESPUESTA_DEL_REGISTRO + 1), evidenciaYaSubida: false }, jest.fn(), deps),
+    ).rejects.toThrow(/4000/);
+    expect(llamadas).toEqual([]);
+    await registrarConTexto({ registroId: 'r1', respuesta: 'a'.repeat(MAXIMO_RESPUESTA_DEL_REGISTRO), evidenciaYaSubida: false }, jest.fn(), deps);
+    expect(llamadas).toHaveLength(2);
+  });
+
+  it('si el texto ya quedó guardado y el cierre falló, reintentar solo cierra (no duplica la evidencia)', async () => {
+    const { llamadas, deps } = crear();
+    await registrarConTexto({ registroId: 'r1', respuesta: 'Bien', evidenciaYaSubida: true }, jest.fn(), deps);
+    expect(llamadas).toEqual(['completar:r1:Bien']);
+  });
+
+  it('si el cierre falla después de guardar el texto, avisa que la evidencia ya quedó', async () => {
+    const { deps } = crear();
+    deps.completar.mockRejectedValueOnce(new Error('sin red'));
+    const alConfirmar = jest.fn();
+    await expect(registrarConTexto({ registroId: 'r1', respuesta: 'Bien', evidenciaYaSubida: false }, alConfirmar, deps)).rejects.toThrow();
+    expect(alConfirmar).toHaveBeenCalledTimes(1);
+  });
+
+  it('un rechazo del servidor de un registro que ya figura completado se da por bueno', async () => {
+    const { deps } = crear();
+    deps.completar.mockRejectedValueOnce(new ApiError(409, 'Este registro no puede completarse: COMPLETADO'));
+    deps.tracksDeHoy.mockResolvedValueOnce([{ id: 'r1', estado: 'COMPLETADO', puntosOtorgados: 5 } as never]);
+    const r = await registrarConTexto({ registroId: 'r1', respuesta: 'Bien', evidenciaYaSubida: true }, jest.fn(), deps);
+    expect(r).toEqual({ puntosOtorgados: 5, yaEstabaCompletado: true });
+  });
+});

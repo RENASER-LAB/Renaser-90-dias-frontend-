@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -148,11 +149,11 @@ export function MiAgenda({
 }
 
 const estilos = StyleSheet.create({
-  titulo: { fontFamily: 'Jost_500Medium', fontSize: LETRA.grande, lineHeight: 28 },
-  dia: { fontFamily: 'Jost_700Bold', fontSize: 17, lineHeight: 22 },
+  titulo: { fontFamily: fuentes.media, fontSize: LETRA.grande, lineHeight: 28 },
+  dia: { fontFamily: fuentes.negrita, fontSize: 17, lineHeight: 22 },
   lista: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 14 },
   fila: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 60, paddingVertical: 10 },
-  hora: { fontFamily: 'Jost_500Medium', fontSize: 17, width: 54, fontVariant: ['tabular-nums'] },
-  entrada: { fontFamily: 'Jost_500Medium', fontSize: LETRA.cuerpo, lineHeight: 21 },
-  tipo: { fontFamily: 'Jost_400Regular', fontSize: 16, lineHeight: 21 },
+  hora: { fontFamily: fuentes.media, fontSize: 17, width: 54, fontVariant: ['tabular-nums'] },
+  entrada: { fontFamily: fuentes.media, fontSize: LETRA.cuerpo, lineHeight: 21 },
+  tipo: { fontFamily: fuentes.regular, fontSize: 16, lineHeight: 21 },
 });

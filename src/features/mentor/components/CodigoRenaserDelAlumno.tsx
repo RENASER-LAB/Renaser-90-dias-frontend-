@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -66,14 +67,14 @@ export function CodigoRenaserDelAlumno({ cargar }: { cargar: CargarHistorialDeRa
                 backend anterior no lo manda y la línea no está. Es una sola línea que, si es larga, se parte en renglones:
                 nunca se corta con «…». */}
             {miRadar ? (
-              <Text style={[t.body, { color: c.textStrong, fontSize: 16, lineHeight: 23, fontFamily: 'Jost_500Medium', marginBottom: 4 }]}>
+              <Text style={[t.body, { color: c.textStrong, fontSize: 16, lineHeight: 23, fontFamily: fuentes.media, marginBottom: 4 }]}>
                 {textoDeMiRadarEnLaFicha(miRadar)}
               </Text>
             ) : null}
             {dias.length === 0 ? <Text style={[t.body, { color: c.textSoft, fontSize: 16 }]}>Sin registros.</Text> : null}
             {dias.map((dia, indice) => (
               <View key={dia.fecha ?? 'sin-fecha'} style={indice > 0 ? estilos.diaSiguiente : undefined}>
-                <Text style={[t.body, { color: c.text, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>
+                <Text style={[t.body, { color: c.text, fontSize: 16, fontFamily: fuentes.media }]}>
                   {/* `null` sólo aparece si `createdAt` llegó ilegible. El registro se muestra
                       igual: perder lo que alguien escribió por no poder ubicarlo en el
                       calendario sería peor que mostrarlo sin fecha. */}
@@ -94,7 +95,7 @@ export function CodigoRenaserDelAlumno({ cargar }: { cargar: CargarHistorialDeRa
                 accessibilityState={{ disabled: cargandoMas }}
                 style={[estilos.verMas, { borderColor: c.border, opacity: cargandoMas ? 0.6 : 1 }]}
               >
-                <Text style={[t.body, { color: c.goldInk, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>
+                <Text style={[t.body, { color: c.goldInk, fontSize: 16, fontFamily: fuentes.media }]}>
                   {cargandoMas ? 'Cargando…' : 'Ver registros anteriores'}
                 </Text>
               </Pressable>

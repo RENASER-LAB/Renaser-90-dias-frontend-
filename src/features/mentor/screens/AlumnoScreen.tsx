@@ -1,3 +1,5 @@
+import { tituloEnTipoOracion } from '../../habits/utils/tituloEnTipoOracion';
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -147,7 +149,7 @@ export function AlumnoScreen({
           style={estilos.volver}
         >
           <Icon name="arrowLeft" size={15} color={c.goldInk} />
-          <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_500Medium', fontSize: 16 }]}>
+          <Text style={[t.body, { color: c.goldInk, fontFamily: fuentes.media, fontSize: 16 }]}>
             Mi grupo
           </Text>
         </Pressable>
@@ -283,7 +285,7 @@ export function AlumnoScreen({
                               {
                                 color: activo ? c.goldInk : c.textSoft,
                                 fontSize: 16,
-                                fontFamily: activo ? 'Jost_700Bold' : 'Jost_400Regular',
+                                fontFamily: activo ? fuentes.negrita : fuentes.regular,
                               },
                             ]}
                           >
@@ -296,7 +298,7 @@ export function AlumnoScreen({
 
                   {detalleDelDia ? (
                     <View style={estilos.detalleDia}>
-                      <Text style={[t.body, { color: c.text, fontSize: 17, fontFamily: 'Jost_500Medium' }]}>
+                      <Text style={[t.body, { color: c.text, fontSize: 17, fontFamily: fuentes.media }]}>
                         {diaLargo(detalleDelDia.fecha)}
                       </Text>
                       {detalleDelDia.obligaciones.length === 0 ? (
@@ -307,14 +309,14 @@ export function AlumnoScreen({
                         detalleDelDia.obligaciones.map(o => (
                           <View key={o.registroId} style={[estilos.obligacion, { borderColor: c.border }]}>
                             <Text style={[t.body, { color: c.text, fontSize: 16, flexShrink: 1 }]}>
-                              {o.titulo}
+                              {tituloEnTipoOracion(o.titulo)}
                             </Text>
                             <View style={estilos.estados}>
                               <Text
                                 style={[
                                   t.body,
                                   { color: colorDeEstado(o.estadoHabito, c), fontSize: 16,
-                                    fontFamily: 'Jost_500Medium' },
+                                    fontFamily: fuentes.media },
                                 ]}
                               >
                                 {etiquetaDeEstado(o.estadoHabito)}
@@ -329,13 +331,13 @@ export function AlumnoScreen({
                                   averigua al abrir. El servidor deja leerla al mentor o la guía asignados a este aprendiz. */}
                               {o.evidenciaId ? (
                                 <EvidenciaDeObligacion
-                                  titulo={o.titulo}
+                                  titulo={tituloEnTipoOracion(o.titulo)}
                                   evidencias={[{ id: o.evidenciaId, tipo: null, subidaEn: null }]}
                                 />
                               ) : null}
                               {/* Spec 005 (R-6): el post diario se cumple publicando en el Muro, y esa publicación es
                                   su evidencia; antes decía «sin evidencia». */}
-                              {o.publicacionId ? <VerPublicacion publicacionId={o.publicacionId} titulo={o.titulo} /> : null}
+                              {o.publicacionId ? <VerPublicacion publicacionId={o.publicacionId} titulo={tituloEnTipoOracion(o.titulo)} /> : null}
                             </View>
                           </View>
                         ))

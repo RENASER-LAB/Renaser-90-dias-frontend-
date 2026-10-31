@@ -9,14 +9,14 @@ appId: com.renaser.app
 - runFlow: ../comun/ya-adentro.yaml
 - runFlow: ../comun/abrir-training.yaml
 - scrollUntilVisible:
-    element: "Marcar ESCRITURA LIBRE NOCTURNA"
+    element: "(?i)Marcar ESCRITURA LIBRE NOCTURNA"
     direction: DOWN
     centerElement: true
     timeout: 30000
-- assertVisible: "Marcar DÍA SIN CELULAR|Marcar Meditar 10 minutos"
+- assertVisible: "(?i)Marcar DÍA SIN CELULAR|Marcar Meditar 10 minutos"
 - takeScreenshot: T11a-fila-con-subir-y-check
 # La fila empieza por su hora: «.*ESCRITURA…» también casaba con el ✓ («Marcar ESCRITURA LIBRE NOCTURNA») y lo marcaba.
-- tapOn: "[0-9:]+, ESCRITURA LIBRE NOCTURNA.*"
+- tapOn: "(?i)[0-9:]+, ESCRITURA LIBRE NOCTURNA.*"
 - extendedWaitUntil:
     visible: "Subir evidencia"
     timeout: 10000
@@ -31,16 +31,16 @@ appId: com.renaser.app
     optional: true   # el aviso en línea dura unos segundos: lo que se prueba es que la fila sale de la lista
 - takeScreenshot: T11c-escritura-entregada
 - extendedWaitUntil:
-    notVisible: "Marcar ESCRITURA LIBRE NOCTURNA"
+    notVisible: "(?i)Marcar ESCRITURA LIBRE NOCTURNA"
     timeout: 20000
 # Por separado, el ✓ cierra sin evidencia.
 - scrollUntilVisible:
-    element: "Marcar DÍA SIN CELULAR"
+    element: "(?i)Marcar DÍA SIN CELULAR"
     direction: DOWN
     centerElement: true
     timeout: 30000
-- tapOn: "Marcar DÍA SIN CELULAR"
+- tapOn: "(?i)Marcar DÍA SIN CELULAR"
 - extendedWaitUntil:
-    notVisible: "Marcar DÍA SIN CELULAR"
+    notVisible: "(?i)Marcar DÍA SIN CELULAR"
     timeout: 20000
 - takeScreenshot: T11d-dia-sin-celular-con-check

@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -120,8 +121,8 @@ const estilos = StyleSheet.create({
   seccion: { marginTop: 22 },
   rotulo: { minHeight: 24, justifyContent: 'center', marginBottom: 2 },
   motivo: { paddingVertical: 8, gap: 2 },
-  motivoTitulo: { fontSize: 16, lineHeight: 22, fontFamily: 'Jost_700Bold', letterSpacing: 0 },
-  motivoAyuda: { fontSize: 15, lineHeight: 21, fontFamily: 'Jost_400Regular', letterSpacing: 0 },
+  motivoTitulo: { fontSize: 16, lineHeight: 22, fontFamily: fuentes.negrita, letterSpacing: 0 },
+  motivoAyuda: { fontSize: 15, lineHeight: 21, fontFamily: fuentes.regular, letterSpacing: 0 },
   // La regla en línea: a 15 px, pegada a la fila que la causa y sin ícono de más.
-  mensaje: { fontSize: 15, lineHeight: 21, fontFamily: 'Jost_500Medium', letterSpacing: 0, paddingBottom: 10, marginTop: -2 },
+  mensaje: { fontSize: 15, lineHeight: 21, fontFamily: fuentes.media, letterSpacing: 0, paddingBottom: 10, marginTop: -2 },
 });

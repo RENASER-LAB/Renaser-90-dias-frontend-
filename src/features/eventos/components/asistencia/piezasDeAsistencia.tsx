@@ -1,3 +1,4 @@
+import { fuentes } from '../../../../theme/fuentes';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -98,10 +99,10 @@ const estilos = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   punto: { width: 8, height: 8, borderRadius: 4 },
-  etiquetaTexto: { fontFamily: 'Jost_500Medium', fontSize: 15 },
+  etiquetaTexto: { fontFamily: fuentes.media, fontSize: 15 },
   fila: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 68, paddingVertical: 10 },
   textos: { flex: 1, gap: 2 },
-  nombre: { fontFamily: 'Jost_500Medium', fontSize: 17, lineHeight: 22 },
-  linea: { fontFamily: 'Jost_400Regular', fontSize: LETRA.cuerpo - 1, lineHeight: 21 },
-  vacio: { fontFamily: 'Jost_400Regular', fontSize: LETRA.cuerpo, lineHeight: 23, paddingVertical: 20, textAlign: 'center' },
+  nombre: { fontFamily: fuentes.media, fontSize: 17, lineHeight: 22 },
+  linea: { fontFamily: fuentes.regular, fontSize: LETRA.cuerpo - 1, lineHeight: 21 },
+  vacio: { fontFamily: fuentes.regular, fontSize: LETRA.cuerpo, lineHeight: 23, paddingVertical: 20, textAlign: 'center' },
 });

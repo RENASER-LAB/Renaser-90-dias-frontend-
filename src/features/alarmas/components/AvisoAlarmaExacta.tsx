@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useState } from 'react';
 import { AppState, Platform, StyleSheet, Text, View } from 'react-native';
 
@@ -57,6 +58,6 @@ export function AvisoAlarmaExacta() {
 
 const estilos = StyleSheet.create({
   caja: { borderWidth: 1.5, borderRadius: 16, padding: 14, gap: 10 },
-  titulo: { fontFamily: 'Jost_700Bold', fontSize: 19, lineHeight: 25 },
-  cuerpo: { fontFamily: 'Jost_400Regular', fontSize: 17, lineHeight: 24 },
+  titulo: { fontFamily: fuentes.negrita, fontSize: 19, lineHeight: 25 },
+  cuerpo: { fontFamily: fuentes.regular, fontSize: 17, lineHeight: 24 },
 });

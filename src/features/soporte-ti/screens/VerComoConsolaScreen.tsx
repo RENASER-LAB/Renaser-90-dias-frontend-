@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -140,7 +141,7 @@ function FilaDeOpcion({ opcion, entrando, deshabilitada, onPress }: { opcion: Op
       style={[estilos.opcion, { backgroundColor: c.cardBg, borderColor: entrando ? c.gold : c.border, opacity: deshabilitada && !entrando ? 0.55 : 1 }]}
     >
       <View style={{ flex: 1, flexShrink: 1, gap: 2 }}>
-        <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>{opcion.titulo}</Text>
+        <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: fuentes.media }]}>{opcion.titulo}</Text>
         {opcion.detalle ? <Text style={[t.small, { color: c.textSoft, fontSize: 13 }]}>{opcion.detalle}</Text> : null}
       </View>
       {entrando ? (

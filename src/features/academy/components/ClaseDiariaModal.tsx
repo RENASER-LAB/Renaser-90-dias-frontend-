@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -200,7 +201,7 @@ export function ClaseDiariaModal({
                 <Text style={[t.small, { color: c.textSoft }]}>
                   Día {clase.programDay} · {clase.cursoTitulo ?? 'Tu curso'}
                 </Text>
-                <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>
+                <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: fuentes.media }]}>
                   Volver a ver la clase
                 </Text>
               </View>
@@ -292,7 +293,7 @@ const styles = StyleSheet.create({
   },
   rotulo: {
     fontSize: 16,
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
   },
   centrado: {
     alignItems: 'center',
@@ -320,7 +321,7 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     lineHeight: 22,
-    fontFamily: 'Jost_400Regular',
+    fontFamily: fuentes.regular,
     minHeight: 132,
     width: '100%',
   },

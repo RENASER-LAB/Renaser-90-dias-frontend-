@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useState } from 'react';
 import { Linking, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -141,7 +142,7 @@ export function MiCajaScreen({ caja, onVolver, onCambio }: { caja: MiCaja; onVol
                         {
                           color: paso.hecho || paso.actual ? c.textStrong : c.textSoft,
                           fontSize: 17,
-                          fontFamily: paso.actual ? 'Jost_700Bold' : 'Jost_400Regular',
+                          fontFamily: paso.actual ? fuentes.negrita : fuentes.regular,
                         },
                       ]}
                     >
@@ -223,7 +224,7 @@ function OtroDestino({ caja, onListo }: { caja: MiCaja; onListo: () => Promise<v
       </Text>
       {CAMPOS_DEL_DESTINO.map(campo => (
         <View key={campo.clave} style={{ gap: 6 }}>
-          <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>{campo.rotulo}</Text>
+          <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: fuentes.media }]}>{campo.rotulo}</Text>
           <TextInput
             value={formulario[campo.clave]}
             onChangeText={v => setFormulario(f => ({ ...f, [campo.clave]: v }))}
@@ -244,7 +245,7 @@ function OtroDestino({ caja, onListo }: { caja: MiCaja; onListo: () => Promise<v
 }
 
 const estilos = StyleSheet.create({
-  estado: { fontFamily: 'Fraunces_600SemiBold', fontSize: 26, lineHeight: 32 },
+  estado: { fontFamily: fuentes.display, fontSize: 26, lineHeight: 32 },
   paso: { flexDirection: 'row', gap: 14 },
   columnaDelPunto: { alignItems: 'center', width: 26 },
   punto: { width: 26, height: 26, borderRadius: 13, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },

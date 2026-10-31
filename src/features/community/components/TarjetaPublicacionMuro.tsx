@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { memo } from 'react';
 import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -113,7 +114,7 @@ function TarjetaPublicacionMuroBase({
           {/* Sin día no hay insignia. Dibujar "Día 0" era peor que no dibujar nada. */}
           {post.diaPrograma !== null ? (
             <View style={[styles.dayBadge, { backgroundColor: c.goldWash }]}>
-              <Text style={[t.micro, { color: c.goldInk, fontSize: 11, fontFamily: 'Jost_700Bold' }]}>
+              <Text style={[t.micro, { color: c.goldInk, fontSize: 11, fontFamily: fuentes.negrita }]}>
                 Día {post.diaPrograma}
               </Text>
             </View>
@@ -133,7 +134,7 @@ function TarjetaPublicacionMuroBase({
               onPress={() => acciones.alternarExpandida(post.id)}
               style={{ minHeight: 48, justifyContent: 'center' }}
             >
-              <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
+              <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.negrita }]}>
                 {isExpanded ? 'Ver menos' : 'Ver más...'}
               </Text>
             </Pressable>
@@ -154,7 +155,7 @@ function TarjetaPublicacionMuroBase({
                   { backgroundColor: c.placeholderA },
                 ]}
               >
-                <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
+                <Text style={[t.micro, { color: c.goldInk, fontFamily: fuentes.negrita, fontSize: 11 }]}>
                   {post.media[0].title}
                 </Text>
                 {/* Overlay DESPUÉS del texto a propósito: si la foto carga, lo tapa; si es
@@ -176,7 +177,7 @@ function TarjetaPublicacionMuroBase({
                     onPress={() => acciones.abrirFotos(post, idx)}
                     style={[styles.mediaHalfBox, { backgroundColor: c.placeholderA }]}
                   >
-                    <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
+                    <Text style={[t.micro, { color: c.goldInk, fontFamily: fuentes.negrita }]}>
                       {m.title}
                     </Text>
                     <FotoMuro url={m.url} mimeType={m.mimeType} radioBorde={10} colorFondo={c.cardBgAlt} />
@@ -192,7 +193,7 @@ function TarjetaPublicacionMuroBase({
                   onPress={() => acciones.abrirFotos(post, 0)}
                   style={[styles.mediaLargeLeft, { backgroundColor: c.placeholderA }]}
                 >
-                  <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
+                  <Text style={[t.micro, { color: c.goldInk, fontFamily: fuentes.negrita, fontSize: 11 }]}>
                     {post.media[0].title}
                   </Text>
                   <FotoMuro
@@ -209,7 +210,7 @@ function TarjetaPublicacionMuroBase({
                       onPress={() => acciones.abrirFotos(post, idx + 1)}
                       style={[styles.mediaSmallRight, { backgroundColor: c.placeholderA }]}
                     >
-                      <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 11 }]}>
+                      <Text style={[t.micro, { color: c.goldInk, fontFamily: fuentes.negrita, fontSize: 11 }]}>
                         {m.title}
                       </Text>
                       <FotoMuro url={m.url} mimeType={m.mimeType} radioBorde={8} colorFondo={c.cardBgAlt} />
@@ -279,7 +280,7 @@ function TarjetaPublicacionMuroBase({
               style={[
                 styles.actionTexto,
                 post.userReaction === 'like'
-                  ? { color: c.goldInk, fontFamily: 'Jost_700Bold' }
+                  ? { color: c.goldInk, fontFamily: fuentes.negrita }
                   : { color: c.textSoft },
               ]}
             >
@@ -352,7 +353,7 @@ function TarjetaPublicacionMuroBase({
                       hitSlop={6}
                       style={{ minHeight: 48, justifyContent: 'center' }}
                     >
-                      <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>
+                      <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.negrita }]}>
                         {isExpanded ? 'Ver menos' : 'Ver más...'}
                       </Text>
                     </Pressable>
@@ -392,7 +393,7 @@ function TarjetaPublicacionMuroBase({
                           t.small,
                           styles.cifras,
                           cItem.userReaction === 'like'
-                            ? { color: c.goldInk, fontFamily: 'Jost_700Bold' }
+                            ? { color: c.goldInk, fontFamily: fuentes.negrita }
                             : { color: c.textSoft },
                         ]}
                       >
@@ -431,7 +432,7 @@ function TarjetaPublicacionMuroBase({
                   <View style={{ flex: 1 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <Icon name="image" size={TAMANO_ICONO.chico} color={c.goldInk} />
-                      <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>Foto adjunta</Text>
+                      <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.negrita }]}>Foto adjunta</Text>
                     </View>
                     <Text style={[t.small, { color: c.textSoft }]}>
                       Lista para enviar con tu comentario
@@ -563,7 +564,7 @@ const styles = StyleSheet.create({
   },
   rxCountTexto: {
     fontSize: 13,
-    fontFamily: 'Jost_700Bold',
+    fontFamily: fuentes.negrita,
     fontVariant: ['tabular-nums'],
   },
   actionButtonsRow: {
@@ -601,7 +602,7 @@ const styles = StyleSheet.create({
   },
   /** Texto de lectura (14), no versal de 10,5: es la acción más usada del Muro. */
   actionTexto: {
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
     fontSize: 14,
     flexShrink: 1,
   },

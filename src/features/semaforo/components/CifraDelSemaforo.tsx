@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -31,7 +32,7 @@ export function CifraDelSemaforo({
       <Text style={[t.metric, { color: tinta, fontSize: grande ? 44 : 28, lineHeight: grande ? 50 : 34 }]}>
         {String(porcentaje)}
       </Text>
-      <Text style={{ fontFamily: 'Jost_500Medium', fontSize: grande ? 20 : 15, color: tinta }}>%</Text>
+      <Text style={{ fontFamily: fuentes.media, fontSize: grande ? 20 : 15, color: tinta }}>%</Text>
     </View>
   );
 }

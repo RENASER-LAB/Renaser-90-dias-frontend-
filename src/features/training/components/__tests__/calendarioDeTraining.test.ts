@@ -158,7 +158,6 @@ function Cuerpo(props: { hoyIso: string; diaPrograma: number | null; habits: Hab
     diaElegido: dia,
     onElegirDia: setDia,
     diaPrograma: props.diaPrograma,
-    fase: null,
     titulos: {},
     eventosPrendidos: false,
     confirmacion: null,
@@ -210,6 +209,17 @@ describe('caso 1 · DOMINGO (hoyIso = dom 1/11)', () => {
     // La semana que viene NO se ofrece el domingo (a diferencia de la fila de Planificar): no hay un «Lunes 2».
     expect(rotulosDeLaSemana()).not.toContain('Lunes 2');
     expect(rotulosDeLaSemana()).not.toContain('Lunes 2, hoy');
+  });
+
+  it('la cabecera ya no lleva la línea «El Maestro Interno · Día 55 de 90» (2026-10-31): quedan el día elegido y su resumen', async () => {
+    await montarCuerpo({ hoyIso: '2026-11-01', diaPrograma: 55, habits: [habito('a', '06:00')] });
+    const textos = raiz!.root
+      .findAll(n => (n.type as unknown) === 'Text')
+      .map(n => React.Children.toArray(n.props.children).filter(h => typeof h === 'string' || typeof h === 'number').join(''));
+    expect(textos).toContain('Domingo 1');
+    expect(textos.some(x => /de 90\b/.test(x))).toBe(false);
+    expect(textos.some(x => /El Maestro Interno|El Espejo|El Ciclo Alquímico|Sistema de Alto Rendimiento/.test(x))).toBe(false);
+    expect(textos.some(x => /hechos? · \d+ pts/.test(x) || /de \d+ hechos/.test(x))).toBe(true);
   });
 
   it('DOMINGO: abrir Training el domingo no pide ningún día al servidor', async () => {
@@ -419,7 +429,6 @@ describe('caso 3 · CRUCE DE MEDIANOCHE domingo 23:59 → lunes 00:00 con la app
       diaElegido: dia,
       onElegirDia: setDia,
       diaPrograma: 40,
-      fase: null,
       titulos: {},
       eventosPrendidos: false,
       confirmacion: null,

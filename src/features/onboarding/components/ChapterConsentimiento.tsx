@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../../../theme/ThemeContext';
@@ -70,7 +71,7 @@ export function ChapterConsentimiento({ data, onChange }: ChapterConsentimientoP
 
         {/* Textos de la tarjeta */}
         <View style={styles.textColumn}>
-          <Text style={[t.body, { color: c.textStrong, fontSize: 15, fontFamily: 'Jost_700Bold', lineHeight: 21 }]}>
+          <Text style={[t.body, { color: c.textStrong, fontSize: 15, fontFamily: fuentes.negrita, lineHeight: 21 }]}>
             Autorizo el uso de mis datos y me comprometo a los 90 días
           </Text>
           <Text style={[t.small, { color: c.textSoft, fontSize: 13.5, lineHeight: 19, marginTop: 2 }]}>

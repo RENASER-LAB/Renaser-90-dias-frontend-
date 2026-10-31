@@ -29,7 +29,6 @@ import {
   type ContextoPlanificado,
   type ItemDelDia,
 } from '../itemsDelDia';
-import { lineaDelPrograma } from '../lineaDelPrograma';
 import {
   fechaDelDiaUno,
   indiceIsoDeLaFecha,
@@ -642,9 +641,6 @@ describe('caso 9 · pasado el día 90 (graduado), sin día del programa, sin fas
       }
       const diaUno = fechaDelDiaUno(hoy, diaPrograma);
       expect(diaUno === null || /^\d{4}-\d{2}-\d{2}$/.test(diaUno)).toBe(true);
-      const linea = lineaDelPrograma(null, diaPrograma);
-      expect(linea === null || esTextoLimpio(linea)).toBe(true);
-      expect(() => lineaDelPrograma('FASE_QUE_NO_EXISTE', diaPrograma)).not.toThrow();
     }
   });
 
@@ -656,17 +652,6 @@ describe('caso 9 · pasado el día 90 (graduado), sin día del programa, sin fas
     // Pasado el día 90 el Día 1 queda lejos: los días anteriores de ESTA semana son leíbles.
     expect(fechaDelDiaUno(hoy, 120)).toBe('2026-07-02');
     expect(['2026-10-26', '2026-10-27', '2026-10-28'].map(d => sePuedeLeerElDia(d, hoy, 120))).toEqual([true, true, true]);
-  });
-
-  it('GRADUADO: la línea del programa se dibuja o no, pero nunca con NaN/undefined/null', () => {
-    expect(lineaDelPrograma(null, null)).toBeNull();
-    expect(lineaDelPrograma(null, 0)).toBeNull();
-    expect(lineaDelPrograma(null, NaN)).toBeNull();
-    expect(lineaDelPrograma(undefined, 90)).toBe('Día 90 de 90');
-    for (const dia of [91, 150]) for (const fase of [null, undefined, '', 'GRADUADO', 'FASE_4_MAESTRIA']) {
-      const linea = lineaDelPrograma(fase, dia);
-      expect(esTextoLimpio(linea)).toBe(true);
-    }
   });
 
   it('GRADUADO: itemsDeHoy / itemsPlanificados / itemsDeUnDiaCerrado con listas vacías y datos nulos no lanzan', () => {

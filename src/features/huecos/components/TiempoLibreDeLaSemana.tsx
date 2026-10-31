@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -143,7 +144,7 @@ function Fallo({ fallo, alReintentar }: { fallo: FalloDeHuecos; alReintentar: ()
           { borderColor: c.border, backgroundColor: pressed ? c.goldWash : 'transparent' },
         ]}
       >
-        <Text style={[t.body, { color: c.goldInk, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>Reintentar</Text>
+        <Text style={[t.body, { color: c.goldInk, fontSize: 16, fontFamily: fuentes.media }]}>Reintentar</Text>
       </Pressable>
     </View>
   );
@@ -231,7 +232,7 @@ const estilos = StyleSheet.create({
   cuerpo: { marginTop: 16 },
   total: { marginTop: 14 },
   totalFila: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 8 },
-  totalCifra: { fontFamily: 'Jost_700Bold', fontSize: 26, lineHeight: 32, letterSpacing: -0.3, fontVariant: ['tabular-nums'] },
+  totalCifra: { fontFamily: fuentes.negrita, fontSize: 26, lineHeight: 32, letterSpacing: -0.3, fontVariant: ['tabular-nums'] },
   totalTexto: { fontSize: 15, lineHeight: 21, flexShrink: 1 },
   real: { fontSize: 15, lineHeight: 21, marginTop: 4 },
   cargando: { minHeight: 96, justifyContent: 'center', alignItems: 'center', marginTop: 8 },

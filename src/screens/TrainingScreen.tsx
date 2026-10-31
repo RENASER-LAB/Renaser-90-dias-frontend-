@@ -26,7 +26,8 @@ import { RegistroConFotoModal } from '../features/habits/components/RegistroConF
 import { useRegistroConFoto } from '../features/habits/hooks/useRegistroConFoto';
 import { cerrarConRespuestaInmediata } from '../features/habits/celebracion/momentoEnLaTarjeta';
 import { estaVencido, seRegistraConFoto } from '../features/training/utils/registroConFotoEnTraining';
-import { avisoDeHabitoCerrado, preguntaQueSintio, type MedicionPedida } from '../features/habits/utils/registroConFoto';
+import { RegistroDeRitualConTexto } from '../features/training/components/RegistroDeRitualConTexto';
+import { avisoDeHabitoCerrado, preguntaQueSintio, seRegistraConTexto, type MedicionPedida } from '../features/habits/utils/registroConFoto';
 import { avisoDeAccionBloqueada, sellarAccionDeTraining } from '../features/objetivos/utils/registroDeAccionConFoto';
 import { completarRegistro, confirmarEvidencia } from '../features/habits/api/evidenciaHabitoApi';
 import { crearCierreSinRepetir } from '../features/habits/utils/cierreDeRegistro';
@@ -61,7 +62,7 @@ import { borradorEspiritu } from '../features/spirit/storage/borradorEspiritu';
 import type { DayOfWeek } from './PlanScreen';
 import { ESPACIO_PARA_LANZADOR } from '../features/renasia/components/RenasiaLauncher';
 import { useRenombreLocal } from '../features/habits/hooks/useRenombreDeHabito';
-import { tituloVisible } from '../features/habits/utils/renombreDeHabito';
+import { tituloEnTipoOracion, tituloParaMostrar } from '../features/habits/utils/tituloEnTipoOracion';
 import { useAuth } from '../features/auth/context/AuthContext';
 import { useOcultarBarraAlDesplazar } from '../navigation/barraAlDesplazar/BarraInferior';
 import { SeccionEnMantenimiento } from '../features/plataforma/components/SeccionEnMantenimiento';
@@ -238,7 +239,6 @@ export default function TrainingScreen() {
    */
   const {
     diaPrograma,
-    fase,
     inscrito,
     loading: cargandoDiaPrograma,
     recargar: recargarDiaPrograma,
@@ -397,6 +397,13 @@ export default function TrainingScreen() {
     // La pantalla quedó abierta de un día para otro: se recargan los registros de hoy.
     onDiaCambiado: () => void recargarEntrenamiento(),
   });
+  /**
+   * Los rituales piden SOLO TEXTO (2026-10-31, pedido del dueño): sin cámara. Su registro es una hoja con la pregunta «¿Cómo te
+   * sientes después de realizar el ritual?» (`RegistroDeRitualConTexto`). Se guarda el hábito aparte de `abierto` para que la
+   * hoja siga sabiendo de cuál es mientras baja.
+   */
+  const [ritual, setRitual] = useState<{ habit: HabitItem; abierto: boolean } | null>(null);
+  const cerrarElRitual = () => setRitual(previo => (previo ? { ...previo, abierto: false } : previo));
   const { reanudarPendiente } = registroConFoto;
   // Android puede matar la app con la cámara abierta: al volver, se retoma esa foto.
   useEffect(() => {
@@ -480,6 +487,10 @@ export default function TrainingScreen() {
       setActiveEvidenceHabit(null);
       return true;
     }
+    if (ritual?.abierto) {
+      cerrarElRitual();
+      return true;
+    }
     // «Tus prácticas» (spec 014): la hoja de Planificar, la dimensión y la pantalla suben UN nivel por vez con el
     // gesto lateral (AGENTS.md §6); nunca cierran la app desde una vista hija. La hoja de Planificar es un `Modal`
     // con su propio atrás (la ‹ de sus pasos), así que acá solo llega lo que está por debajo de ella.
@@ -489,7 +500,7 @@ export default function TrainingScreen() {
       return true;
     }
     return false; // Permite el comportamiento por defecto si está en el menú raíz
-  }, registroConFoto.abierto || pastillaVisible || claseDiariaVisible || activeEvidenceHabit !== null || practicas.abierta);
+  }, registroConFoto.abierto || pastillaVisible || claseDiariaVisible || activeEvidenceHabit !== null || ritual?.abierto === true || practicas.abierta);
 
   /** Lleva al muro con el compositor abierto. Reusa el parametro que ComunidadScreen ya entiende. */
   const abrirMuroParaPublicar = () => {
@@ -748,11 +759,17 @@ export default function TrainingScreen() {
       Alert.alert(aviso.titulo, aviso.mensaje);
       return;
     }
+    // Los tres rituales piden solo texto (2026-10-31): una hoja con su pregunta, sin cámara (también en web).
+    if (seRegistraConTexto(habit.systemKey)) {
+      setRitual({ habit, abierto: true });
+      return;
+    }
     if (seRegistraConFoto(habit, Platform.OS === 'web')) {
       void registroConFoto.iniciar(
         {
           registroId: habit.id,
-          titulo: tituloVisible({ id: habit.habitoId ?? habit.id, title: habit.title }, renombre.titulos),
+          // Una acción de los objetivos lleva el título que escribió la persona: no se toca (solo los hábitos del catálogo, 2026-10-31).
+          titulo: habit.dimension === 'VIDA Y NEGOCIO' ? habit.title : tituloParaMostrar({ id: habit.habitoId ?? habit.id, title: habit.title }, renombre.titulos),
           conPregunta: preguntaQueSintio(habit.systemKey),
           medicion: habit.medicion ?? null,
         },
@@ -868,8 +885,8 @@ export default function TrainingScreen() {
   useEffect(() => {
     setDiaElegido(null);
   }, [hoyIso]);
-  /* El día del programa y la fase salen de `/home` y solo se leían al montar: al cambiar el día con la app abierta quedaban
-     del día anterior («Día 7 de 90» siendo el 8, y el Día 1 corrido). Se relee cuando cambia el día de hoy. */
+  /* El día del programa sale de `/home` y solo se leía al montar: al cambiar el día con la app abierta quedaba
+     del día anterior (el Día 1 corrido). Se relee cuando cambia el día de hoy. */
   const hoyDelDiaDelPrograma = useRef(hoyIso);
   useEffect(() => {
     if (hoyDelDiaDelPrograma.current === hoyIso) return;
@@ -1025,7 +1042,6 @@ export default function TrainingScreen() {
                 diaElegido={diaElegido}
                 onElegirDia={alElegirDia}
                 diaPrograma={cargandoDiaPrograma ? null : diaPrograma}
-                fase={fase}
                 titulos={renombre.titulos}
                 eventosPrendidos={eventosPrendidos.prendida}
                 cierrePrendido={planPrendido.prendida && planPrendido.disponible}
@@ -1072,7 +1088,7 @@ export default function TrainingScreen() {
                 ? datos => sellarAccionDeTraining(activeEvidenceHabit.id, datos)
                 : undefined
             }
-            titulo={activeEvidenceHabit?.title ?? ''}
+            titulo={activeEvidenceHabit?.dimension === 'VIDA Y NEGOCIO' ? activeEvidenceHabit.title : tituloEnTipoOracion(activeEvidenceHabit?.title ?? '')}
             medicion={activeEvidenceHabit?.medicion ?? null}
             contexto={
               activeEvidenceHabit
@@ -1086,6 +1102,19 @@ export default function TrainingScreen() {
 
           {/* REGISTRO CON FOTO: la foto arriba y "¿Qué sentiste?" abajo (hábitos que exigen evidencia). */}
           <RegistroConFotoModal {...registroConFoto.modal} />
+          <RegistroDeRitualConTexto
+            visible={ritual?.abierto === true}
+            registroId={ritual?.habit.id ?? null}
+            titulo={ritual ? tituloParaMostrar({ id: ritual.habit.habitoId ?? ritual.habit.id, title: ritual.habit.title }, renombre.titulos) : ''}
+            alCerrar={cerrarElRitual}
+            alCompletado={(registroId, resultado) => {
+              cerrarElRitual();
+              reflejarCierreConfirmado(registroId, true);
+              // Igual que el registro con foto: «Evidencia entregada» y los puntos solo si el servidor los dio.
+              confirmar(avisoDeEvidenciaEntregada(resultado.puntosOtorgados), registroId);
+            }}
+            alCambiarElDia={() => void recargarEntrenamiento()}
+          />
 
           {/* ========================================================================= */}
           {/* MODAL: PASTILLA RENACER (audio del día + preguntas)                       */}

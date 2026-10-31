@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -180,7 +181,7 @@ function FilaDeLaLista({ fila, primera, onPress }: { fila: FilaDeCaja; primera: 
 const estilos = StyleSheet.create({
   pestanas: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   pestana: { minHeight: 44, paddingHorizontal: 14, borderRadius: 22, borderWidth: 1, justifyContent: 'center' },
-  textoPestana: { fontFamily: 'Jost_500Medium', fontSize: 16, lineHeight: 22 },
+  textoPestana: { fontFamily: fuentes.media, fontSize: 16, lineHeight: 22 },
   buscador: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, minHeight: 52, fontSize: 17 },
   lista: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 14 },
   fila: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 64, paddingVertical: 12 },

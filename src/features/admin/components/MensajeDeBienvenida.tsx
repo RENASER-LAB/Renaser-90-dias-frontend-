@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -230,8 +231,8 @@ function Previa({ texto }: { texto: string }) {
 
 const estilos = StyleSheet.create({
   tarjeta: { borderWidth: 1, borderRadius: 16, padding: 16, gap: 10 },
-  titulo: { fontFamily: 'Jost_500Medium', fontSize: 18, lineHeight: 24 },
-  rotulo: { fontFamily: 'Jost_500Medium', fontSize: 16, lineHeight: 22 },
+  titulo: { fontFamily: fuentes.media, fontSize: 18, lineHeight: 24 },
+  rotulo: { fontFamily: fuentes.media, fontSize: 16, lineHeight: 22 },
   editor: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, minHeight: 160, textAlignVertical: 'top' },
   previa: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12 },
 });

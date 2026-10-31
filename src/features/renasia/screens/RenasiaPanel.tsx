@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
@@ -242,7 +243,7 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
                     accessibilityRole="button"
                     style={[styles.reintentarHistorialBtn, { borderColor: c.gold }]}
                   >
-                    <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_700Bold' }]}>Reintentar</Text>
+                    <Text style={[t.body, { color: c.goldInk, fontFamily: fuentes.negrita }]}>Reintentar</Text>
                   </Pressable>
                 </View>
               ) : mensajes.length === 0 ? (
@@ -272,7 +273,7 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
                       {cargandoMasAntiguos ? (
                         <ActivityIndicator size="small" color={c.goldInk} />
                       ) : (
-                        <Text style={[t.small, { color: c.goldInk, fontSize: 14, fontFamily: 'Jost_700Bold' }]}>
+                        <Text style={[t.small, { color: c.goldInk, fontSize: 14, fontFamily: fuentes.negrita }]}>
                           Ver mensajes anteriores
                         </Text>
                       )}

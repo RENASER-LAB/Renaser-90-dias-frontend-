@@ -10,7 +10,7 @@ appId: com.renaser.app
     timeout: 10000
 # La fila se anuncia «DESPERTAR, sin hora» o «DESPERTAR, a las 22:00». Con «DESPERTAR» a secas se tocaba el
 # interruptor, que se llama igual y abre «Pausar».
-- tapOn: "DESPERTAR, (sin hora|a las .*)"
+- tapOn: "(?i)DESPERTAR, (sin hora|a las .*)"
 - extendedWaitUntil:
     visible: "Guardar .*"
     timeout: 10000

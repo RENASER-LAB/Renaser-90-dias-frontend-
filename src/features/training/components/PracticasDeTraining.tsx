@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, View, type ScrollViewProps, type StyleProp, type ViewStyle } from 'react-native';
 
@@ -99,7 +100,7 @@ export function PracticasDeTraining({
             <View style={[estilos.repaso, { borderColor: c.border, backgroundColor: c.cardBgAlt }]}>
               <Icon name="calendar" size={TAMANO_ICONO.normal} color={c.goldInk} />
               <View style={{ flex: 1, flexShrink: 1, gap: 2 }}>
-                <Text style={[t.body, { color: c.textStrong, fontFamily: 'Jost_500Medium' }]}>Arma tu semana los domingos</Text>
+                <Text style={[t.body, { color: c.textStrong, fontFamily: fuentes.media }]}>Arma tu semana los domingos</Text>
                 <Text style={[t.small, { color: c.textSoft }]}>Te avisamos a las 19:00 para revisar a qué hora va cada hábito</Text>
               </View>
               <Interruptor valor={repaso.valor} onCambiar={valor => void repaso.alternar(valor)} etiqueta="Arma tu semana los domingos" />
@@ -115,7 +116,7 @@ export function PracticasDeTraining({
             <View style={{ gap: 4 }}>
               <Text style={[t.body, { color: c.textSoft }]}>{error}</Text>
               <Presionable onPress={onReintentar} accessibilityRole="button" style={{ minHeight: 48, justifyContent: 'center' }}>
-                <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_500Medium' }]}>Reintentar</Text>
+                <Text style={[t.body, { color: c.goldInk, fontFamily: fuentes.media }]}>Reintentar</Text>
               </Presionable>
             </View>
           ) : null}
@@ -201,5 +202,5 @@ const estilos = StyleSheet.create({
   // `flex-start`: si el nombre llega a dos líneas, el contador se queda arriba alineado con la primera.
   cabeceraDeLaDimension: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 },
   nombre: { fontSize: 17, lineHeight: 22, flexShrink: 1 },
-  cuenta: { fontSize: 14, lineHeight: 20, fontFamily: 'Jost_500Medium', fontVariant: ['tabular-nums'], flexShrink: 0 },
+  cuenta: { fontSize: 14, lineHeight: 20, fontFamily: fuentes.media, fontVariant: ['tabular-nums'], flexShrink: 0 },
 });

@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -57,6 +58,7 @@ export function MiCelulaScreen({
   recargar,
   onElegirGrupo,
   enfocarSemaforo = false,
+  rotuloDeVolver = 'Volver',
 }: {
   onSalir: () => void;
   onAbrirAlumno: (alumno: AlumnoConEstado) => void;
@@ -69,6 +71,8 @@ export function MiCelulaScreen({
   onElegirGrupo: (grupoId: string) => Promise<VistaCelula | null>;
   /** Llegó por el aviso del semáforo del grupo: abrir con esa sección a la vista. */
   enfocarSemaforo?: boolean;
+  /** Lo que dice la barra de arriba junto a la flecha (2026-10-31: desde Yo dice «Mi grupo», como las demás pantallas de Yo). */
+  rotuloDeVolver?: string;
 }) {
   const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
@@ -121,16 +125,16 @@ export function MiCelulaScreen({
           onPress={onSalir}
           hitSlop={12}
           accessibilityRole="button"
-          accessibilityLabel="Volver"
+          accessibilityLabel={rotuloDeVolver === 'Volver' ? 'Volver' : `Volver a Yo desde ${rotuloDeVolver}`}
           style={estilos.volver}
         >
           <Icon name="arrowLeft" size={15} color={c.goldInk} />
-          <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_500Medium', fontSize: 16 }]}>
-            Volver
+          <Text style={[t.body, { color: c.goldInk, fontFamily: fuentes.media, fontSize: 16 }]}>
+            {rotuloDeVolver}
           </Text>
         </Pressable>
         <View style={[estilos.insignia, { borderColor: c.gold, backgroundColor: c.goldWash }]}>
-          <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', fontSize: 14 /* metadato */ }]}>
+          <Text style={[t.micro, { color: c.goldInk, fontFamily: fuentes.negrita, fontSize: 14 /* metadato */ }]}>
             {insignia}
           </Text>
         </View>
@@ -210,7 +214,7 @@ export function MiCelulaScreen({
                   {
                     color: vista.celula.cobertura === 'soporte' ? c.goldInk : c.danger,
                     fontSize: 16,
-                    fontFamily: 'Jost_500Medium',
+                    fontFamily: fuentes.media,
                   },
                 ]}
               >
@@ -323,7 +327,7 @@ export function MiCelulaScreen({
                         : `${Math.round(evaluacion.porcentaje)}%`}
                     </Text>
                     <View style={{ flex: 1 }}>
-                      <Text style={[t.body, { color: c.text, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>
+                      <Text style={[t.body, { color: c.text, fontSize: 16, fontFamily: fuentes.media }]}>
                         {textoDeEstado(evaluacion.estado)}
                       </Text>
                       {evaluacion.estado === 'CALCULADA' ? (
@@ -403,7 +407,7 @@ function Pildora({ texto, activa, onPress }: { texto: string; activa: boolean; o
     >
       <Text
         numberOfLines={1}
-        style={[t.body, { color: activa ? c.goldInk : c.textSoft, fontFamily: activa ? 'Jost_700Bold' : 'Jost_500Medium', fontSize: 16 }]}
+        style={[t.body, { color: activa ? c.goldInk : c.textSoft, fontFamily: activa ? fuentes.negrita : fuentes.media, fontSize: 16 }]}
       >
         {texto}
       </Text>
@@ -452,7 +456,7 @@ const estilos = StyleSheet.create({
   insignia: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 },
   contenido: { flexGrow: 1, paddingTop: 8, paddingBottom: ESPACIO_PARA_LANZADOR },
   cifraValor: {
-    fontFamily: 'Jost_500Medium', fontSize: 23, lineHeight: 27,
+    fontFamily: fuentes.media, fontSize: 23, lineHeight: 27,
     fontVariant: ['tabular-nums'],
   },
   lista: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 14, marginTop: 8 },

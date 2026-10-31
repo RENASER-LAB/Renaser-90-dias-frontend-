@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { ActivityIndicator, StyleSheet, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -64,7 +65,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   texto: {
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
     fontSize: 16,
     letterSpacing: 0.1,
   },

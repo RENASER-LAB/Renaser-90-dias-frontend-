@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -116,7 +117,7 @@ function FilaDeRol({ rol, onPress }: { rol: RolPersonalizadoConsola; onPress: ()
     >
       <View style={{ flex: 1, flexShrink: 1, gap: 2 }}>
         <View style={estilos.titulo}>
-          <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_500Medium', flexShrink: 1 }]}>{rol.nombre}</Text>
+          <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: fuentes.media, flexShrink: 1 }]}>{rol.nombre}</Text>
           {activo ? null : <Insignia texto="Inactivo" />}
         </View>
         <Text style={[t.body, { color: c.textSoft, fontSize: 16, lineHeight: 22 }]}>{resumen}</Text>

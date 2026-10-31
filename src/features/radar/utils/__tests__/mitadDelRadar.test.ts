@@ -78,37 +78,31 @@ describe('días 1 a 7', () => {
       accion: 'formulario',
       destacada: true,
     });
-    expect(m.detalle).toBe('Cinco preguntas, un minuto. Cierra a las 14:00 · quedan 12 min.');
   });
 
   it('quien puede cerrarlo ve «Abierto»; con más de 15 minutos no se dicen los que quedan', () => {
     const m = mitadDelRadar(entrada({ obligatorio: false, estadoDelDia: { tipo: 'abierto', slot: slot(13), minutosParaCerrar: 40 } }))!;
     expect(m.estado).toBe('Abierto');
-    expect(m.detalle).toBe('Cinco preguntas, un minuto. Cierra a las 14:00.');
   });
 
   it('en los minutos de cortesía dice cuándo se abre solo y que se puede empezar ya', () => {
     const m = mitadDelRadar(entrada({ minutosParaAbrir: 2 }))!;
-    expect(m.detalle).toBe('Cinco preguntas, un minuto. Se abre en 2 min, o toca para empezar ya.');
     expect(m.accion).toBe('formulario');
   });
 
   it('hora registrada: «Registrado», lo siguiente, y abre la hoja con lo respondido', () => {
     const m = mitadDelRadar(entrada({ estadoDelDia: { tipo: 'respondido', slot: slot(13), proximaHora: 14 } }))!;
     expect(m).toMatchObject({ nombre: 'Código Renaser', hora: '13:00', estado: 'Registrado', tono: 'ok', icono: 'checkCircle', titulo: null, accion: 'resumen', destacada: false });
-    expect(m.detalle).toBe('Listo por esta hora. El siguiente a las 14:00.');
     expect(m.siguiente).toBe('El siguiente a las 14:00.');
   });
 
   it('el último registro del día lo dice', () => {
     const m = mitadDelRadar(entrada({ estadoDelDia: { tipo: 'respondido', slot: slot(19), proximaHora: null } }))!;
-    expect(m.detalle).toBe('Listo. Era el último registro del día.');
   });
 
   it('antes del primer registro del día, «En espera» y no es un botón', () => {
     const m = mitadDelRadar(entrada({ estadoDelDia: { tipo: 'fuera-de-ventana', proximaHora: 8 } }))!;
     expect(m).toMatchObject({ estado: 'En espera', hora: null, accion: 'ninguna', icono: 'clock' });
-    expect(m.detalle).toBe('El primer registro del día es a las 08:00.');
   });
 
   it.each<[string, EstadoRadar]>([
@@ -130,6 +124,39 @@ describe('días 1 a 7', () => {
   });
 });
 
+describe('sin línea de detalle (2026-10-31, pedido del dueño: «en Mi Radar esa información no aporta»)', () => {
+  const casos: Array<[string, () => ReturnType<typeof mitadDelRadar>]> = [
+    ['abierto', () => mitadDelRadar(entrada())],
+    ['en los minutos de cortesía', () => mitadDelRadar(entrada({ minutosParaAbrir: 2 }))],
+    ['registrado', () => mitadDelRadar(entrada({ estadoDelDia: { tipo: 'respondido', slot: slot(13), proximaHora: 14 } }))],
+    ['el último registro del día', () => mitadDelRadar(entrada({ estadoDelDia: { tipo: 'respondido', slot: slot(19), proximaHora: null } }))],
+    ['en espera', () => mitadDelRadar(entrada({ estadoDelDia: { tipo: 'fuera-de-ventana', proximaHora: 8 } }))],
+    ['Mi Radar apagado', () => mitadDelRadar(desdeElOcho({ miRadar: lista(miRadarConHoras([], false)), registros: null }))],
+    ['Tu hora', () => mitadDelRadar(desdeElOcho({ ahora: A_LAS(14, 10) }))],
+    ['Registrado', () => mitadDelRadar(desdeElOcho({ ahora: A_LAS(14, 30), registros: [registro('a', 14, { horaPrevista: 14 })] }))],
+    ['Próxima a las…', () => mitadDelRadar(desdeElOcho({ ahora: A_LAS(16, 30), registros: [registro('a', 9, { horaPrevista: 9 })] }))],
+  ];
+
+  it.each(casos)('%s: la mitad no trae detalle, ni lo dice el lector de pantalla', (_caso, armar) => {
+    const m = armar()!;
+    expect(m).not.toHaveProperty('detalle');
+    const voz = etiquetaDeLaMitad(m);
+    for (const sobra of ['Cinco preguntas', 'Responde hasta', 'Cierra a las', 'Listo por esta hora', 'veces', 'Cada hora entre']) {
+      expect({ sobra, dicho: voz.includes(sobra) }).toEqual({ sobra, dicho: false });
+    }
+  });
+
+  it('el lector de pantalla dice lo que se ve: el rótulo, la hora, el estado y el título', () => {
+    expect(etiquetaDeLaMitad(mitadDelRadar(entrada())!)).toBe('Código Renaser 13:00, Innegociable. ¿Dónde estás ahora mismo?');
+    expect(etiquetaDeLaMitad(mitadDelRadar(entrada({ estadoDelDia: { tipo: 'respondido', slot: slot(13), proximaHora: 14 } }))!)).toBe('Código Renaser 13:00, Registrado');
+    expect(etiquetaDeLaMitad(mitadDelRadar(desdeElOcho({ ahora: A_LAS(16, 30), registros: [registro('a', 9, { horaPrevista: 9 })] }))!)).toBe('Mi Radar, Encendido. Próxima a las 20:00');
+  });
+
+  it('lo que sigue en la hoja de lo respondido (`siguiente`) no se tocó', () => {
+    expect(mitadDelRadar(entrada({ estadoDelDia: { tipo: 'respondido', slot: slot(13), proximaHora: 14 } }))!.siguiente).toBe('El siguiente a las 14:00.');
+  });
+});
+
 describe('desde el día 8', () => {
   it.each<[string, LecturaDeMiRadar]>([
     ['leyendo', { estado: 'pendiente' }],
@@ -142,7 +169,6 @@ describe('desde el día 8', () => {
   it('apagado: «Planifica tu Radar» y lleva a Yo → Mi Radar', () => {
     const m = mitadDelRadar(desdeElOcho({ miRadar: lista(miRadarConHoras([], false)), registros: null }))!;
     expect(m).toMatchObject({ nombre: 'Mi Radar', hora: null, estado: 'Apagado', tono: 'suave', titulo: 'Planifica tu Radar', accion: 'yo', destacada: false });
-    expect(m.detalle).toBe('Cada hora entre tu Despertar y tu Dormir. Es opcional.');
   });
 
   it('encendido pero aún sin saber qué hora está respondida: no dice nada (sin parpadeo)', () => {
@@ -152,13 +178,11 @@ describe('desde el día 8', () => {
   it('una hora elegida pendiente: «Tu hora», responde ahí mismo con el formulario', () => {
     const m = mitadDelRadar(desdeElOcho({ ahora: A_LAS(14, 10) }))!;
     expect(m).toMatchObject({ nombre: 'Mi Radar', hora: '14:00', estado: 'Tu hora', tono: 'dorado', titulo: '¿Dónde estás ahora mismo?', accion: 'formulario', destacada: true });
-    expect(m.detalle).toBe('Cinco preguntas, un minuto. Responde hasta las 15:00.');
   });
 
   it('esa hora ya registrada: «Registrado», cuándo es la siguiente y abre lo respondido', () => {
     const m = mitadDelRadar(desdeElOcho({ ahora: A_LAS(14, 30), registros: [registro('a', 14, { horaPrevista: 14 })] }))!;
     expect(m).toMatchObject({ hora: '14:00', estado: 'Registrado', tono: 'ok', accion: 'resumen' });
-    expect(m.detalle).toBe('Listo por esta hora. La siguiente a las 20:00.');
     expect(m.siguiente).toBe('La siguiente a las 20:00.');
   });
 
@@ -172,13 +196,11 @@ describe('desde el día 8', () => {
       desdeElOcho({ ahora: A_LAS(16, 30), registros: [registro('a', 9, { horaPrevista: 9 }), registro('b', 14, { horaPrevista: 14 })] }),
     )!;
     expect(m).toMatchObject({ nombre: 'Mi Radar', hora: null, estado: 'Encendido', tono: 'suave', titulo: 'Próxima a las 20:00', accion: 'horas', destacada: false });
-    expect(m.detalle).toBe('05:30 a 22:30 · 3 veces');
   });
 
   it('pasadas todas las horas de hoy, lo dice y sigue abriendo las horas', () => {
     const m = mitadDelRadar(desdeElOcho({ ahora: A_LAS(21, 15), registros: [registro('a', 9, { horaPrevista: 9 })] }))!;
     expect(m.titulo).toBe('No quedan más horas hoy');
-    expect(m.detalle).toBe('05:30 a 22:30 · 3 veces');
     expect(m.accion).toBe('horas');
   });
 
@@ -201,13 +223,13 @@ describe('desde el día 8', () => {
 });
 
 describe('etiqueta para el lector de pantalla', () => {
-  it('nombre, hora, estado y lo que se pide', () => {
+  it('nombre, hora, estado y lo que se pide (sin la línea de detalle, 2026-10-31)', () => {
     expect(etiquetaDeLaMitad(mitadDelRadar(entrada())!)).toBe('Código Renaser 13:00, Innegociable. ¿Dónde estás ahora mismo?');
     expect(etiquetaDeLaMitad(mitadDelRadar(desdeElOcho({ miRadar: lista(miRadarConHoras([], false)) }))!)).toBe(
       'Mi Radar, Apagado. Planifica tu Radar',
     );
     expect(etiquetaDeLaMitad(mitadDelRadar(entrada({ estadoDelDia: { tipo: 'respondido', slot: slot(13), proximaHora: 14 } }))!)).toBe(
-      'Código Renaser 13:00, Registrado. Listo por esta hora. El siguiente a las 14:00.',
+      'Código Renaser 13:00, Registrado',
     );
   });
 });

@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing, Platform, StyleProp, ViewStyle } from 'react-native';
 import Svg, {
@@ -551,7 +552,7 @@ function ColumnaPodio({
           styles.nombre,
           // Sobre el escenario: con el fondo ahora claro en modo claro, un '#F0EDE6' fijo
           // quedaba ilegible. Sale de la paleta, que ya resuelve los dos temas.
-          { color: vacio ? c.micro : destacado ? c.goldInk : c.textStrong, fontFamily: 'Jost_700Bold' },
+          { color: vacio ? c.micro : destacado ? c.goldInk : c.textStrong, fontFamily: fuentes.negrita },
         ]}
       >
         {vacio ? nombreVacio : puesto.name}
@@ -598,7 +599,7 @@ function ColumnaPodio({
               t.micro,
               styles.etiqueta,
               { color: vacio ? '#C3BAAA' : colorEtiqueta },
-              destacado && !vacio && { fontFamily: 'Jost_700Bold' },
+              destacado && !vacio && { fontFamily: fuentes.negrita },
             ]}
           >
             {vacio ? etiquetaVacia : etiqueta}
@@ -802,14 +803,14 @@ const styles = StyleSheet.create({
   },
   numero: {
     fontSize: 24,
-    fontFamily: 'Jost_700Bold',
+    fontFamily: fuentes.negrita,
   },
   numeroGrande: {
     fontSize: 30,
   },
   etiqueta: {
     fontSize: 10.5,
-    fontFamily: 'Jost_700Bold',
+    fontFamily: fuentes.negrita,
     letterSpacing: 0.4,
   },
   brillo: {

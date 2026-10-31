@@ -1,0 +1,37 @@
+# Los estados de la tarjeta de acciones de Hoy (2026-10-31). ESCRITO Y SIN CORRER. Cada estado pide su cuenta/precondición; se
+# corre de a uno cambiando ESTADO (mapa | sin-acciones | todo-cumplido).
+#  - mapa: aprendiz SIN el Mapa de Renacimiento activo y sin acciones hoy → «Hacer mi Mapa ›».
+#  - sin-acciones: Mapa activo, nada agendado hoy → «Agendar en Plan ›».
+#  - todo-cumplido: todas las acciones de hoy selladas → «Cumpliste tus acciones de hoy» (sin botón).
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "HOY"
+- extendedWaitUntil:
+    visible: "Día .* de 90"
+    timeout: 30000
+- runFlow:
+    when:
+      true: ${ESTADO == 'mapa'}
+    commands:
+      - assertVisible: "Tu objetivo de 90 días nace de tu Mapa de Renacimiento\\."
+      - assertVisible: "Hacer mi Mapa"
+      - takeScreenshot: D02a-tarjeta-sin-mapa
+- runFlow:
+    when:
+      true: ${ESTADO == 'sin-acciones'}
+    commands:
+      - assertVisible: "Hoy no tienes acciones agendadas"
+      - tapOn: "Agendar en Plan"
+      - extendedWaitUntil:
+          visible: "Tu dirección en 90 días"
+          timeout: 20000
+      - takeScreenshot: D02b-tarjeta-sin-acciones
+- runFlow:
+    when:
+      true: ${ESTADO == 'todo-cumplido'}
+    commands:
+      - assertVisible: "Cumpliste tus acciones de hoy"
+      - assertNotVisible: "Empezar ahora"
+      - takeScreenshot: D02c-tarjeta-todo-cumplido

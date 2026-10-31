@@ -1,3 +1,4 @@
+import { fuentes } from '../../theme/fuentes';
 import React, { useCallback, useMemo } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -176,7 +177,7 @@ export function OpcionDeHoja({
         style={[
           t.body,
           styles.etiqueta,
-          { color: c.textStrong, fontFamily: elegida ? 'Jost_500Medium' : 'Jost_400Regular' },
+          { color: c.textStrong, fontFamily: elegida ? fuentes.media : fuentes.regular },
         ]}
       >
         {etiqueta}

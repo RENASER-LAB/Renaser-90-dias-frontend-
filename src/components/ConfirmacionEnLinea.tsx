@@ -1,3 +1,4 @@
+import { fuentes } from '../theme/fuentes';
 import React, { useEffect, useRef } from 'react';
 import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native';
 import Animated, { ReduceMotion, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -98,7 +99,7 @@ const estilos = StyleSheet.create({
   },
   texto: {
     flex: 1,
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
     fontSize: 14,
     lineHeight: 20,
   },

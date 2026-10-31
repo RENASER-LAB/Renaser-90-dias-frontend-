@@ -21,16 +21,23 @@ describe('las miniaturas de evidencia de Yo', () => {
     expect(codigo).not.toMatch(/<Icon name=\{iconoDeTipo\(ev\.tipo\)\}/);
   });
 
-  it('la tira de Yo y la grilla del registro pintan la foto real con MiniaturaDeEvidencia', () => {
+  it('la grilla del registro pinta la foto real con MiniaturaDeEvidencia', () => {
     const usos = codigo.match(/<MiniaturaDeEvidencia[\s\S]*?\/>/g) ?? [];
-    expect(usos).toHaveLength(2);
+    expect(usos).toHaveLength(1);
     expect(usos.every(uso => uso.includes('evidencia={ev}'))).toBe(true);
   });
 
-  it('solo la del registro se amplía al tocarla; la de la tira sigue llevando al registro', () => {
-    const [tira, registro] = codigo.match(/<MiniaturaDeEvidencia[\s\S]*?\/>/g) ?? [];
-    expect(tira).not.toContain('ampliable');
+  it('la miniatura del registro se amplía al tocarla', () => {
+    const [registro] = codigo.match(/<MiniaturaDeEvidencia[\s\S]*?\/>/g) ?? [];
     expect(registro).toContain('ampliable');
-    expect(codigo).toMatch(/onPress=\{\(\) => setActiveView\('evidencias'\)\}[\s\S]{0,400}<MiniaturaDeEvidencia/);
+  });
+
+  it('la tira «Evidencia» de Yo se quitó el 2026-10-31 (pedido del dueño): «Mis evidencias» sigue en Ajustes → Tu proceso', () => {
+    expect(codigo).not.toContain('<MicroLabel>Evidencia</MicroLabel>');
+    expect(codigo).not.toMatch(/evidencias\.slice\(0, 3\)/);
+    expect(codigo).not.toContain('Todavía no subiste evidencias.');
+    // La puerta de Ajustes y su sub-vista siguen.
+    expect(codigo).toContain("{activeView === 'evidencias' && (");
+    expect(codigo).toMatch(/Mis evidencias/);
   });
 });

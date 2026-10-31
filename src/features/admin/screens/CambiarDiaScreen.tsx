@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -230,10 +231,10 @@ export function CambiarDiaScreen({
 }
 
 const estilos = StyleSheet.create({
-  rotulo: { fontFamily: 'Jost_500Medium', fontSize: 18, lineHeight: 24 },
+  rotulo: { fontFamily: fuentes.media, fontSize: 18, lineHeight: 24 },
   fila: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   paso: { width: 64, height: 64, borderRadius: 16, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
-  signo: { fontFamily: 'Jost_500Medium', fontSize: 32, lineHeight: 36 },
+  signo: { fontFamily: fuentes.media, fontSize: 32, lineHeight: 36 },
   campo: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, fontSize: 18 },
   // minWidth/flexBasis 0: en web el <input> trae un ancho propio y empujaba el «+» fuera de la
   // pantalla a 360 px (e2e del 26/09).

@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -127,9 +128,9 @@ const estilos = StyleSheet.create({
     borderWidth: 1,
     minHeight: 112,
   },
-  letra: { fontFamily: 'Jost_700Bold', fontSize: 13, lineHeight: 17 },
+  letra: { fontFamily: fuentes.negrita, fontSize: 13, lineHeight: 17 },
   barra: { width: 20, height: ALTO_DE_LA_BARRA, borderRadius: 7, overflow: 'hidden', justifyContent: 'flex-end' },
   relleno: { width: '100%', borderRadius: 7 },
-  horas: { fontFamily: 'Jost_700Bold', fontSize: 13, lineHeight: 17, fontVariant: ['tabular-nums'], maxWidth: '100%' },
+  horas: { fontFamily: fuentes.negrita, fontSize: 13, lineHeight: 17, fontVariant: ['tabular-nums'], maxWidth: '100%' },
   punto: { width: 6, height: 6, borderRadius: 3 },
 });

@@ -52,7 +52,6 @@ export interface MitadDelRadar {
   tono: 'dorado' | 'ok' | 'suave';
   icono: Extract<IconName, 'compass' | 'checkCircle' | 'clock'>;
   titulo: string | null;
-  detalle: string;
   /** Solo registrada: cuándo es el siguiente («El siguiente a las 14:00.»), para repetirlo en la hoja de lo respondido. */
   siguiente?: string;
   accion: AccionDeLaMitad;
@@ -79,7 +78,8 @@ export interface EntradaDeLaMitad {
 
 /** Lo que dice la mitad en voz alta para el lector de pantalla. */
 export function etiquetaDeLaMitad(m: MitadDelRadar): string {
-  return `${m.nombre}${m.hora ? ` ${m.hora}` : ''}, ${m.estado}. ${m.titulo ?? m.detalle}`;
+  // Lo que se ve (2026-10-31: la línea de detalle se quitó de la tarjeta de Hoy): el rótulo, la hora, el estado y el título.
+  return `${m.nombre}${m.hora ? ` ${m.hora}` : ''}, ${m.estado}${m.titulo ? `. ${m.titulo}` : ''}`;
 }
 
 const PREGUNTA = '¿Dónde estás ahora mismo?';
@@ -111,7 +111,6 @@ function deLosPrimerosSieteDias(e: EntradaDeLaMitad): MitadDelRadar | null {
         tono: 'suave',
         icono: 'clock',
         titulo: null,
-        detalle: `El primer registro del día es a las ${horaEnPunto(estado.proximaHora)}.`,
         accion: 'ninguna',
         destacada: false,
       };
@@ -125,7 +124,6 @@ function deLosPrimerosSieteDias(e: EntradaDeLaMitad): MitadDelRadar | null {
         tono: 'ok',
         icono: 'checkCircle',
         titulo: null,
-        detalle: estado.proximaHora !== null ? `Listo por esta hora. ${siguiente}` : `Listo. ${siguiente}`,
         siguiente,
         accion: 'resumen',
         destacada: false,
@@ -140,10 +138,6 @@ function deLosPrimerosSieteDias(e: EntradaDeLaMitad): MitadDelRadar | null {
         tono: 'dorado',
         icono: 'compass',
         titulo: PREGUNTA,
-        detalle:
-          e.minutosParaAbrir > 0
-            ? `Cinco preguntas, un minuto. Se abre en ${e.minutosParaAbrir} min, o toca para empezar ya.`
-            : `Cinco preguntas, un minuto. Cierra a las ${estado.slot.cierraA}${queda}.`,
         accion: 'formulario',
         destacada: true,
       };
@@ -166,7 +160,6 @@ function desdeElDiaOcho(e: EntradaDeLaMitad): MitadDelRadar | null {
       tono: 'suave',
       icono: 'compass',
       titulo: 'Planifica tu Radar',
-      detalle: 'Cada hora entre tu Despertar y tu Dormir. Es opcional.',
       accion: 'yo',
       destacada: false,
     };
@@ -185,7 +178,6 @@ function desdeElDiaOcho(e: EntradaDeLaMitad): MitadDelRadar | null {
       tono: 'suave',
       icono: 'compass',
       titulo: HOY_SIN_RADAR,
-      detalle: 'Toca para ver tu horario.',
       accion: 'yo',
       destacada: false,
     };
@@ -201,7 +193,6 @@ function desdeElDiaOcho(e: EntradaDeLaMitad): MitadDelRadar | null {
       tono: 'dorado',
       icono: 'compass',
       titulo: PREGUNTA,
-      detalle: `Cinco preguntas, un minuto. Responde hasta las ${horaEnPunto(hora + 1)}.`,
       accion: 'formulario',
       destacada: true,
     };
@@ -216,7 +207,6 @@ function desdeElDiaOcho(e: EntradaDeLaMitad): MitadDelRadar | null {
       tono: 'ok',
       icono: 'checkCircle',
       titulo: null,
-      detalle: `Listo por esta hora. ${cuando}`,
       siguiente: cuando,
       accion: 'resumen',
       destacada: false,
@@ -230,7 +220,6 @@ function desdeElDiaOcho(e: EntradaDeLaMitad): MitadDelRadar | null {
     tono: 'suave',
     icono: 'compass',
     titulo: siguiente !== null ? `Próxima a las ${horaEnPunto(siguiente)}` : 'No quedan más horas hoy',
-    detalle: resumenDelDiaDeHoy(config, e.ahora) ?? `Hoy preguntamos ${textoDeLasVeces(hoy.horasDeHoy.length)}.`,
     accion: 'horas',
     destacada: false,
   };

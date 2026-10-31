@@ -27,7 +27,7 @@ build de desarrollo (ver `../README.md`).
 | `16-personal-sin-programa` | Líder (`e2e-radar-lider@renaser.test`) sin fila en el programa; **una vez por cuenta** (elegir el Día 1 crea la fila: para repetirlo, `e2e-radar-mentor2@renaser.test` o volver a clonar la base) | La fila de Yo «Primero elige tu Día 1», el motivo del 403 en una línea con «Elegir mi Día 1», elegir y volver sin que asome el motivo de antes; dice cuándo empieza y la fila desaparece (16) |
 | `10-ficha-del-mentor` | Mentor del grupo | La ficha del aprendiz dice «Mi Radar: encendido · 05:30 a 22:30 · 17 veces» y sus registros (10) |
 | `11-ficha-de-administracion` | Admin o Alquimista | La ficha de la persona, con el mismo bloque (11) |
-| `12-ficha-del-lider` | Líder de mentores | Hoy → Mis mentores → persona: el mismo bloque (11) |
+| `12-ficha-del-lider` | Líder de mentores | Yo → Mis mentores → persona: el mismo bloque (11) |
 
 Los escenarios 8, 9 y 12 (409, 400 y 403) son de la API y se prueban con curl o con los `*IT` del backend; el 5, tocando el aviso
 del teléfono, y los avisos programados (`dumpsys alarm` / `dumpsys notification`) se miran a mano con mobile-mcp: deben verse

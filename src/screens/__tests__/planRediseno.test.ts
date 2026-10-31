@@ -28,7 +28,9 @@ const HOJAS = [
   `${OBJETIVOS}/RevisionSemanalModal.tsx`,
   `${OBJETIVOS}/EditarObjetivoDelMesModal.tsx`,
 ];
-const DE_PLAN = ['screens/PlanScreen.tsx', ...HOJAS, `${OBJETIVOS}/TarjetaPlanSemanal.tsx`, `${OBJETIVOS}/TarjetaAccionesDelDia.tsx`];
+/** Desde el 2026-10-31 la pantalla principal de Plan se arma con estos dos (reemplazan a TarjetaPlanSemanal y TarjetaAccionesDelDia). */
+const TARJETAS = sinComentarios(leer(`${OBJETIVOS}/TarjetasDelPlan.tsx`));
+const DE_PLAN = ['screens/PlanScreen.tsx', ...HOJAS, `${OBJETIVOS}/TarjetasDelPlan.tsx`, `${OBJETIVOS}/PlanDelEje.tsx`];
 const EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
 
 describe('Plan: la sub-vista muerta «Hábitos 7 días»', () => {
@@ -36,7 +38,8 @@ describe('Plan: la sub-vista muerta «Hábitos 7 días»', () => {
     for (const viejo of ["'habitos'", 'HÁBITOS (7 DÍAS)', 'Crear Hábito', 'CREAR NUEVO HÁBITO', 'REUBICAR HÁBITO', 'HoraPickerModal', 'RenombrarHabitoModal', 'usePlanHabitos']) {
       expect(PLAN).not.toContain(viejo);
     }
-    expect(PLAN).toMatch(/useState<'main' \| 'objetivos'>\('main'\)/);
+    // La sub-vista «Objetivos» (con su flecha de volver) se integró a la pantalla principal el 2026-10-31.
+    expect(PLAN).not.toMatch(/activeSubView|setActiveSubView/);
   });
 
   it('los tipos que usan hábitos y Training siguen exportados', () => {
@@ -50,13 +53,20 @@ describe('Plan: textos', () => {
     for (const viejo of ['Enfocado. Estratégico. Real.', 'VOLVER A PLAN', '02. OBJETIVOS (3 NIVELES)', '1. OBJETIVO PRINCIPAL (90 DÍAS)', 'CUMPLIDO', 'PRINCIPAL<', 'Avance cuantitativo']) {
       expect(PLAN).not.toContain(viejo);
     }
-    expect(PLAN).toContain('Tu mapa de los próximos 90 días');
-    expect(PLAN).toContain('Tu objetivo de 90 días');
+    expect(TARJETAS).toContain('Tu objetivo de 90 días');
+  });
+
+  it('la cabecera: «Plan» y debajo, en dorado, «Tu dirección en 90 días»; sin la diana de la maqueta', () => {
+    expect(PLAN).toContain('<ScreenHeader title="Plan" />');
+    expect(PLAN).toMatch(/color: c\.goldInk,[^}]*\}\]\}>Tu dirección en 90 días<\/Text>/);
+    expect(PLAN).not.toContain('Tu mapa de los próximos 90 días');
+    // La diana de la maqueta no hace nada: no se dibuja (el ScreenHeader solo pinta un botón con ícono y acción).
+    expect(PLAN).not.toMatch(/<ScreenHeader[^>]*right=/);
   });
 
   it('el estado vacío del objetivo entra en dos renglones', () => {
     expect(PLAN).not.toContain('Si se puede medir con un número, agrégalo');
-    expect(PLAN).toContain('Todavía no lo definiste. Toca Editar y escribe a dónde quieres llegar.');
+    expect(TARJETAS).toContain('Todavía no lo definiste. Toca los tres puntos y escribe a dónde quieres llegar.');
   });
 
   it('los ejemplos del formulario van con «Ej.:» y en gris tenue', () => {
@@ -76,33 +86,24 @@ describe('Plan: textos', () => {
 });
 
 describe('Plan: íconos', () => {
-  it('cada prioridad lleva el ícono de su eje y un chevron gris de 16, no «01 / 02 / 03»', () => {
-    expect(PLAN).toMatch(/<Icon name=\{iconoDelEje\(eje\)\} size=\{TAMANO_ICONO\.normal\}/);
-    expect(PLAN).toMatch(/<Icon name="chevron" size=\{TAMANO_ICONO\.chico\} color=\{c\.chevron\} \/>/);
-    expect(PLAN).not.toMatch(/String\(indice \+ 1\)\.padStart\(2, '0'\)/);
+  it('el selector lleva el ícono de su eje; la acción lleva el del eje, el candado o el ✓ de línea', () => {
+    expect(PLAN).toMatch(/icono: iconoDelEje\(eje\),/);
+    expect(TARJETAS).toMatch(/accion\.completada \? 'checkCircle' : accion\.bloqueada \? 'lock' : iconoDelEje\(accion\.eje\)/);
+    expect(TARJETAS).not.toMatch(/>✓</);
+    expect(TARJETAS).toMatch(/<Icon name="chevron" size=\{TAMANO_ICONO\.chico\} color=\{c\.chevron\} \/>/);
   });
 
-  it('objetivo con bandera, lápiz de línea y la flecha de volver de 24', () => {
-    expect(PLAN).not.toContain('name="trophy"');
-    expect(PLAN).toMatch(/<Icon name="flag" size=\{TAMANO_ICONO\.normal\}/);
-    expect((PLAN.match(/<Icon name="pencil" size=\{TAMANO_ICONO\.chico\}/g) ?? []).length).toBe(2);
-    expect(PLAN).toMatch(/<Icon name="arrowLeft" size=\{TAMANO_ICONO\.grande\}/);
-    expect(PLAN).toMatch(/<Icon name="calendar" size=\{TAMANO_ICONO\.chico\}/);
+  it('objetivo con bandera, lápiz de línea en la cifra del mes y tres puntos para las opciones', () => {
+    for (const fuente of [PLAN, TARJETAS]) expect(fuente).not.toContain('name="trophy"');
+    expect(TARJETAS).toMatch(/<Icon name="flag" size=\{TAMANO_ICONO\.chico\}/);
+    expect(TARJETAS).toMatch(/<Icon name="pencil" size=\{TAMANO_ICONO\.chico\}/);
+    expect(TARJETAS).toMatch(/<Icon name="dots" size=\{TAMANO_ICONO\.normal\}/);
   });
 
-  it('la semana con `calendarRange` dorado; `target` queda solo en «Tus acciones»', () => {
-    const semana = sinComentarios(leer(`${OBJETIVOS}/TarjetaPlanSemanal.tsx`));
-    expect(semana).toMatch(/<Icon name="calendarRange" size=\{TAMANO_ICONO\.normal\} color=\{c\.goldInk\} \/>/);
-    expect(semana).not.toContain('name="zap"');
-    expect(semana).not.toMatch(/color: c\.success, fontFamily/);
-    const conTarget = DE_PLAN.filter(a => sinComentarios(leer(a)).includes('name="target"'));
-    expect(conTarget).toEqual([`${OBJETIVOS}/TarjetaAccionesDelDia.tsx`]);
-  });
-
-  it('la acción cumplida con su ícono, no con el carácter ✓', () => {
-    const acciones = sinComentarios(leer(`${OBJETIVOS}/TarjetaAccionesDelDia.tsx`));
-    expect(acciones).toMatch(/<Icon name="checkCircle" size=\{TAMANO_ICONO\.normal\} color=\{c\.success\} \/>/);
-    expect(acciones).not.toContain('>✓<');
+  it('la semana con `calendar` dorado y «Tu 80/20» con las tres barras', () => {
+    expect(TARJETAS).toMatch(/<Icon name="calendar" size=\{TAMANO_ICONO\.chico\} color=\{c\.goldInk\} \/>/);
+    expect(TARJETAS).toMatch(/<Icon name="chartNoAxesColumn"/);
+    expect(TARJETAS).not.toContain('name="zap"');
   });
 
   it('el Mapa usa el mismo ícono por eje que Plan (Relaciones ya no es `users`)', () => {
@@ -114,16 +115,23 @@ describe('Plan: íconos', () => {
   });
 });
 
-describe('Plan: Objetivos', () => {
-  it('se cambia de eje arriba, sin volver a Plan, en el orden de las tarjetas', () => {
+describe('Plan: el eje y su objetivo', () => {
+  it('se cambia de eje arriba, en el orden de las prioridades, con el ícono de cada eje', () => {
     expect(PLAN).toMatch(/<ControlSegmentado\s+opciones=\{ejesOrdenados\.map\(eje => \(\{\s*valor: eje,\s*etiqueta: ETIQUETA_CORTA_EJE\[eje\],/);
     expect(PLAN).toMatch(/onCambiar=\{cambiarEje\}/);
+    expect(PLAN).toMatch(/achicarTexto/);
   });
 
-  it('«Arquitectura de tiempo» dibuja las fases de la fuente, no tres tramos de 30 días', () => {
-    expect(PLAN).not.toMatch(/DÍAS 1–30|DÍAS 31–60|DÍAS 61–90|TRAMOS_DEL_RECORRIDO|i \* 30/);
-    expect(PLAN).toMatch(/tramosDeLasFases\(diaConocido, fase\)/);
-    expect(PLAN).toMatch(/flex: tramo\.dias/);
+  it('Fase actual, Prioridades clave, las acciones de hoy por eje y la sub-vista de Objetivos ya no están', () => {
+    for (const viejo of ['Fase actual', 'Prioridades clave', 'TarjetaAccionesDeHoyPorEje', 'NivelesDelPlan', 'faseEnCurso', 'abrirObjetivoDe']) {
+      expect(PLAN).not.toContain(viejo);
+    }
+  });
+
+  it('«Arquitectura de tiempo» ya no está en Plan (2026-10-31, pedido del dueño: ya está en Yo) y no deja nada sin uso', () => {
+    expect(PLAN).not.toContain('Arquitectura de tiempo');
+    expect(PLAN).not.toMatch(/tramosDeLasFases|tramoEnCurso|rielDeFases|estiloTramo|filaDeFase|marcaDeFase/);
+    expect(fs.existsSync(path.join(RAIZ, 'features/objetivos/utils/arquitecturaDeTiempo.ts'))).toBe(false);
   });
 });
 
@@ -148,10 +156,10 @@ describe('Plan: hojas y avisos', () => {
 });
 
 describe('Plan: respuesta al tacto', () => {
-  it('prioridades, volver y «Más detalles» se hunden al tocarlas', () => {
-    expect(PLAN).toMatch(/<Presionable\s+key=\{eje\}\s+onPress=\{\(\) => abrirObjetivoDe\(eje\)\}/);
-    expect(PLAN).toMatch(/<Presionable\s+onPress=\{\(\) => setActiveSubView\('main'\)\}/);
-    expect(PLAN).toMatch(/<Presionable\s+onPress=\{\(\) => setExplicacionNivelesAbierta/);
+  it('las acciones, «Tu 80/20» y los tres puntos se hunden al tocarlos (Presionable)', () => {
+    expect(TARJETAS).toMatch(/<Presionable\s+onPress=\{alAbrirOpciones\}/);
+    expect(TARJETAS).toMatch(/<Presionable key=\{accion\.id\} onPress=\{\(\) => alTocarUna\(accion, esDeHoy\)\}/);
+    expect(TARJETAS).toMatch(/<Presionable\s+onPress=\{alAbrir\}/);
   });
 
   it('la escala 1–10 y la fila de días vibran al elegir', () => {
@@ -166,15 +174,17 @@ describe('Plan: respuesta al tacto', () => {
     expect(agendar).toMatch(/onAlternarDia=\{elegirDia\}/);
   });
 
-  it('«Agendar otro día» y «Este mes» tienen área propia de 44–48', () => {
-    expect(sinComentarios(leer(`${OBJETIVOS}/TarjetaAccionesDelDia.tsx`))).toMatch(/enlace: \{ minHeight: 48,/);
-    expect(PLAN).toMatch(/areaDelLapiz: \{\s*width: 44,\s*height: 44,/);
+  it('«Agendar otro día», «Este mes» y los tres puntos tienen área propia de 48', () => {
+    expect(TARJETAS).toMatch(/enlace: \{ minHeight: 48,/);
+    expect(TARJETAS).toMatch(/esteMes: \{ minHeight: 48,/);
+    expect(TARJETAS).toMatch(/puntos: \{ width: 48, height: 48,/);
   });
 });
 
-describe('Objetivos: el título no repite el eje del segmentado (decisión del dueño, 2026-10-05)', () => {
-  it('arriba dice «Objetivos» y el eje solo lo dice el segmentado', () => {
-    expect(PLAN).toMatch(/accessibilityRole="header"[\s\S]{0,200}>\s*Objetivos\s*<\/Text>/);
-    expect(PLAN).not.toContain('{ETIQUETA_EJE[ejeAbierto]}\n            </Text>');
+describe('Plan: el botón de abajo', () => {
+  it('«Organizar mi semana ›» es el botón dorado de siempre, a todo el ancho y en tipo oración', () => {
+    const eje = sinComentarios(leer(`${OBJETIVOS}/PlanDelEje.tsx`));
+    expect(eje).toMatch(/<GoldButton label="Organizar mi semana" onPress=\{organizarMiSemana\} icon="chevron"/);
+    expect(eje).toMatch(/textoDelBoton: \{ fontSize: 16, letterSpacing: 0 \}/);
   });
 });

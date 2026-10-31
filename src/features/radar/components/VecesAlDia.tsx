@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -73,6 +74,6 @@ const estilos = StyleSheet.create({
   fila: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 18, marginTop: 6 },
   boton: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   apagado: { opacity: 0.35 },
-  signo: { fontFamily: 'Jost_700Bold', fontSize: 24, lineHeight: 28 },
-  cifra: { fontFamily: 'Jost_700Bold', fontSize: 30, lineHeight: 36, minWidth: 52, textAlign: 'center', fontVariant: ['tabular-nums'] },
+  signo: { fontFamily: fuentes.negrita, fontSize: 24, lineHeight: 28 },
+  cifra: { fontFamily: fuentes.negrita, fontSize: 30, lineHeight: 36, minWidth: 52, textAlign: 'center', fontVariant: ['tabular-nums'] },
 });

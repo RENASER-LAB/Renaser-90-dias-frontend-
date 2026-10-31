@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -90,8 +91,8 @@ export function InterruptoresDeAvisos() {
 }
 
 const estilos = StyleSheet.create({
-  cuerpo: { fontFamily: 'Jost_400Regular', fontSize: 16, lineHeight: 23 },
-  nombre: { fontFamily: 'Jost_500Medium', fontSize: 17, lineHeight: 22 },
+  cuerpo: { fontFamily: fuentes.regular, fontSize: 16, lineHeight: 23 },
+  nombre: { fontFamily: fuentes.media, fontSize: 17, lineHeight: 22 },
   caja: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 14 },
   fila: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 72, paddingVertical: 12 },
 });

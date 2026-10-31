@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -97,9 +98,9 @@ function FilaDeSonido({ opcion, elegida, ocupado, onElegir, onEscuchar }: {
 
 const estilos = StyleSheet.create({
   cabecera: { marginTop: 10, gap: 2 },
-  subtitulo: { fontFamily: 'Jost_500Medium', fontSize: 17, lineHeight: 22 },
-  cuerpo: { fontFamily: 'Jost_400Regular', fontSize: 16, lineHeight: 23 },
-  nombre: { fontFamily: 'Jost_500Medium', fontSize: 17, lineHeight: 22 },
+  subtitulo: { fontFamily: fuentes.media, fontSize: 17, lineHeight: 22 },
+  cuerpo: { fontFamily: fuentes.regular, fontSize: 16, lineHeight: 23 },
+  nombre: { fontFamily: fuentes.media, fontSize: 17, lineHeight: 22 },
   opcion: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 64, borderWidth: 1.5, borderRadius: 14, paddingRight: 10 },
   eleccion: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 64, paddingLeft: 14, paddingVertical: 10 },
   escuchar: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },

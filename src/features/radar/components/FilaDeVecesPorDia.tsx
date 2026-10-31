@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -89,5 +90,5 @@ const estilos = StyleSheet.create({
   filaDelRotulo: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 36 },
   rotulo: { flexShrink: 1, minHeight: 24, justifyContent: 'center' },
   enlaceTodos: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 48, paddingHorizontal: 8 },
-  textoDelEnlace: { fontFamily: 'Jost_500Medium', fontSize: 16, lineHeight: 22 },
+  textoDelEnlace: { fontFamily: fuentes.media, fontSize: 16, lineHeight: 22 },
 });

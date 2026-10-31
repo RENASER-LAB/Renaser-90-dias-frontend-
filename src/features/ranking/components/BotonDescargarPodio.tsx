@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -98,7 +99,7 @@ const estilos = StyleSheet.create({
     gap: 8,
     alignSelf: 'flex-start',
   },
-  texto: { fontFamily: 'Jost_700Bold', fontSize: 15, lineHeight: 20 },
+  texto: { fontFamily: fuentes.negrita, fontSize: 15, lineHeight: 20 },
   fueraDePantalla: {
     position: 'absolute',
     top: 0,

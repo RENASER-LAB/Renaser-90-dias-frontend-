@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native';
 import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -93,7 +94,7 @@ export function FranjaVerComo() {
       <View style={estilos.fila}>
         <Icon name="eye" size={TAMANO_ICONO.normal} color={c.goldInk} />
         <View style={{ flex: 1, flexShrink: 1 }} accessible accessibilityRole="header" accessibilityLabel={`Viendo como ${verComo.etiqueta}. ${avisoALaVista ? TEXTO_SOLO_LECTURA : 'Solo lectura'}`}>
-          <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_500Medium' }]} numberOfLines={1}>
+          <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: fuentes.media }]} numberOfLines={1}>
             Viendo como {verComo.etiqueta}
           </Text>
           <View>
@@ -116,7 +117,7 @@ export function FranjaVerComo() {
           accessibilityLabel={`Salir de ver como ${verComo.etiqueta}`}
           style={[estilos.salir, { borderColor: c.gold, opacity: saliendo ? 0.6 : 1 }]}
         >
-          <Text style={[t.body, { color: c.goldInk, fontSize: 16, fontFamily: 'Jost_700Bold' }]}>{saliendo ? 'Saliendo…' : 'Salir'}</Text>
+          <Text style={[t.body, { color: c.goldInk, fontSize: 16, fontFamily: fuentes.negrita }]}>{saliendo ? 'Saliendo…' : 'Salir'}</Text>
         </Presionable>
       </View>
     </View>

@@ -1,6 +1,8 @@
 import { describe, expect, it } from '@jest/globals';
 import type { HabitItem } from '../../../../screens/TrainingScreen';
 import {
+  ID_DE_LA_PLANTILLA_ULTIMA_COMIDA,
+  esUltimaComidaDelDia,
   accionDeLaHoja,
   accionSecundariaDeLaHoja,
   controlDeLaFila,
@@ -14,6 +16,7 @@ import {
   type ModoDeLaFila,
 } from '../filaDelDia';
 import type { ItemDelDia } from '../itemsDelDia';
+import { accionDeLaTarjeta } from '../tarjetaDelHabito';
 
 const habit = (extra: Partial<HabitItem> = {}): HabitItem => ({
   id: 'r1',
@@ -271,5 +274,71 @@ describe('la hoja', () => {
     expect(metaDeLaHoja(item({}, { streak: 12 }), 'cerrado')).not.toContain('racha');
     expect(metaDeLaHoja(item({}, { streak: 12 }), 'planificado')).not.toContain('racha');
     expect(metaDeLaHoja(item({}, { streak: 12 }), 'cerrado')).not.toContain('pts');
+  });
+});
+
+describe('los rituales piden solo texto (2026-10-31)', () => {
+  const ritual = (systemKey: string): ItemDelDia =>
+    ({
+      clave: 'r', tipo: 'habito', titulo: 'Ritual tierra - agua - fuego (mañana)', hora: '06:30', hecho: false,
+      habit: { id: 'r', habitoId: 'h', dimension: 'CUERPO', title: 'RITUAL', time: '06:30', tag: 'CUERPO', streak: 0, done: false, hasEvidence: false, tieneTrackHoy: true, estado: 'PENDIENTE', evidenceRequirement: 'REQUIRED', systemKey },
+    } as unknown as ItemDelDia);
+
+  it.each(['RITUAL_MORNING', 'RITUAL_MIDDAY', 'RITUAL_NIGHT'])('%s: en la hoja, «Escribir cómo me siento» y no «Tomar foto»', clave => {
+    const accion = accionDeLaHoja(ritual(clave));
+    expect(accion).toMatchObject({ tipo: 'registrar', etiqueta: 'Escribir cómo me siento', icono: 'pencil' });
+    expect(accion.icono).not.toBe('camera');
+  });
+
+  it('en la fila, la píldora dice «Escribir» con el lápiz (no «Subir» con la cámara)', () => {
+    expect(accionDeLaTarjeta({ done: false, hasEvidence: false, systemKey: 'RITUAL_NIGHT' })).toEqual({ icono: 'pencil', etiqueta: 'Escribir' });
+    expect(accionDeLaTarjeta({ done: false, hasEvidence: false, systemKey: 'GYM' })).toEqual({ icono: 'camera', etiqueta: 'Subir' });
+  });
+
+  it('el toque abre su registro (la hoja de escribir) y no se cierra con el ✓', () => {
+    expect(controlDeLaFila(ritual('RITUAL_MORNING'), 'hoy')).toBe('accion');
+    expect(seCierraConElCheck(ritual('RITUAL_MORNING'))).toBe(false);
+  });
+});
+
+describe('«Última comida del día» es opcional y se marca con el círculo (2026-10-31)', () => {
+  const habito = (habitoId: string, extra: Record<string, unknown> = {}): ItemDelDia =>
+    ({
+      clave: 'u', tipo: 'habito', titulo: 'Última comida del día', hora: '18:00', hecho: false,
+      habit: { id: 'u', habitoId, dimension: 'CUERPO', title: 'ÚLTIMA COMIDA DEL DÍA', time: '18:00', tag: 'Opcional', streak: 0, done: false, hasEvidence: false, tieneTrackHoy: true, estado: 'PENDIENTE', evidenceRequirement: 'OPTIONAL', systemKey: null, ...extra },
+    } as unknown as ItemDelDia);
+
+  it('se reconoce por el id de su plantilla de catálogo, no por el título', () => {
+    expect(esUltimaComidaDelDia(habito(ID_DE_LA_PLANTILLA_ULTIMA_COMIDA))).toBe(true);
+    const otroTitulo = habito(ID_DE_LA_PLANTILLA_ULTIMA_COMIDA, { title: 'Cena liviana' });
+    expect(esUltimaComidaDelDia(otroTitulo)).toBe(true);
+    expect(esUltimaComidaDelDia(habito('otro-id', { title: 'ÚLTIMA COMIDA DEL DÍA' }))).toBe(false);
+  });
+
+  it('su fila lleva el círculo (✓) y no «Subir»; los demás opcionales siguen con «Subir»', () => {
+    expect(controlDeLaFila(habito(ID_DE_LA_PLANTILLA_ULTIMA_COMIDA), 'hoy')).toBe('check');
+    expect(controlDeLaFila(habito(ID_DE_LA_PLANTILLA_ULTIMA_COMIDA), 'atrasado')).toBe('check');
+    expect(controlDeLaFila(habito('h-celular', { title: 'DÍA SIN CELULAR' }), 'hoy')).toBe('subir');
+    expect(controlDeLaFila(habito('h-meditar', { title: 'MEDITAR' }), 'hoy')).toBe('subir');
+  });
+
+  it('lo hecho, lo cerrado y los otros días siguen como siempre (✓ hecho, candado, nada)', () => {
+    const u = habito(ID_DE_LA_PLANTILLA_ULTIMA_COMIDA);
+    expect(controlDeLaFila(u, 'hecho')).toBe('hecho');
+    expect(controlDeLaFila(u, 'cerrado')).toBe('candado');
+    expect(controlDeLaFila(u, 'hoy', false)).toBe('nada');
+    expect(controlDeLaFila(u, 'planificado')).toBe('nada');
+  });
+
+  it('el toque sigue abriendo la hoja, con «Subir evidencia» y «Marcar como hecho»', () => {
+    const u = habito(ID_DE_LA_PLANTILLA_ULTIMA_COMIDA);
+    expect(destinoDelToque(u, 'hoy')).toBe('hoja');
+    expect(accionDeLaHoja(u).etiqueta).toBe('Subir evidencia');
+    expect(accionSecundariaDeLaHoja(u)?.etiqueta).toBe('Marcar como hecho');
+  });
+
+  it('si en algún entorno la evidencia fuera obligatoria no se cierra con el círculo: pide su registro', () => {
+    const u = habito(ID_DE_LA_PLANTILLA_ULTIMA_COMIDA, { evidenceRequirement: 'REQUIRED' });
+    expect(controlDeLaFila(u, 'hoy')).toBe('accion');
   });
 });

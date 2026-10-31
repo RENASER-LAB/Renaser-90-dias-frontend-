@@ -1,3 +1,4 @@
+import { fuentes } from '../theme/fuentes';
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TextInputProps, ViewStyle } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
@@ -95,7 +96,7 @@ export function FormField({
             styles.input,
             {
               color: c.text,
-              fontFamily: 'Jost_400Regular',
+              fontFamily: fuentes.regular,
               textAlignVertical: multiline ? 'top' : 'center',
             },
             style,

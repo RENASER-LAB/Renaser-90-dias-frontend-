@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -63,7 +64,7 @@ export function AvisoDeEmergenciaEnSoporte({
       accessibilityRole="summary"
       style={[estilos.franja, { backgroundColor: c.cardBg, borderColor: c.danger }]}
     >
-      <Text style={[t.micro, { color: c.danger, fontFamily: 'Jost_700Bold' }]}>EMERGENCIA</Text>
+      <Text style={[t.micro, { color: c.danger, fontFamily: fuentes.negrita }]}>EMERGENCIA</Text>
       <Text style={[t.body, { color: c.textStrong, fontSize: 16, lineHeight: 22 }]}>{resumenParaSoporte(emergencia)}</Text>
       <View style={estilos.botones}>
         {puedeCambiar ? (

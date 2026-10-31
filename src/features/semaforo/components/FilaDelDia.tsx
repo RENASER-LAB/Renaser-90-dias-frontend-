@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -24,7 +25,7 @@ export function FilaDelDia({ dia, primera }: { dia: DiaDelSemaforo; primera: boo
       accessibilityLabel={dichoDelDia(dia)}
       style={[estilos.dia, { borderTopColor: c.divider, borderTopWidth: primera ? 0 : 1 }]}
     >
-      <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>
+      <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: fuentes.media }]}>
         {primeraEnMayuscula(fechaLarga(dia.fecha))}
       </Text>
       {medido ? <EtiquetaSemaforo color={dia.color} /> : null}

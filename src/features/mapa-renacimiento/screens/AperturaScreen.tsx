@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { Text, View } from 'react-native';
 
@@ -25,8 +26,8 @@ export function AperturaScreen({ estado, onSalir, dias }: PropsPaso) {
       boton={{ label: hayProgreso ? 'Continuar mi mapa' : 'Diseñar mi mapa', onPress: siguiente }}
     >
       {/* Mientras no se sabe el día el renglón queda vacío y no salta: mismo alto que con texto. */}
-      <Text style={[t.small, { color: c.goldInk, fontFamily: 'Jost_700Bold', marginTop: 24 }]}>{textos.dia ?? ' '}</Text>
-      <Text style={[t.hero, { color: c.textStrong, fontSize: 30, letterSpacing: 0.5, marginTop: 8, fontFamily: 'Jost_400Regular' }]}>
+      <Text style={[t.small, { color: c.goldInk, fontFamily: fuentes.negrita, marginTop: 24 }]}>{textos.dia ?? ' '}</Text>
+      <Text style={[t.hero, { color: c.textStrong, fontSize: 30, letterSpacing: 0.5, marginTop: 8, fontFamily: fuentes.regular }]}>
         Diseña tu mapa
       </Text>
       <View style={{ width: 36, height: 1, backgroundColor: c.gold, marginVertical: 18 }} />

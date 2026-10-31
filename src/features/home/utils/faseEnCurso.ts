@@ -15,8 +15,8 @@ export interface FaseEnCurso extends FaseDelPrograma {
 
 /**
  * La fase en la que está alguien, **lo único que Plan y Yo leen para decirla** (2026-10-06, pedido del
- * dueño: «En Yo las fases deben ser iguales que en Plan»). Plan la usa para «Fase actual» y para marcar
- * el tramo en curso de «Arquitectura de tiempo»; Yo, para su tarjeta de fase. Así el número, el nombre,
+ * dueño: «En Yo las fases deben ser iguales que en Plan»). Plan la usa para «Fase actual»; Yo, para su tarjeta de fase.
+ * (> 2026-10-31: «Arquitectura de tiempo» se quitó de Plan, ya está en Yo.) Así el número, el nombre,
  * el rango («Días 8–34») y el día dentro de la fase salen de una sola cuenta.
  *
  * - **Cuál es la fase lo dice el backend** (`fase` de `GET /api/v1/home`, `users.api.FasePrograma`); acá
@@ -26,7 +26,7 @@ export interface FaseEnCurso extends FaseDelPrograma {
  * - **El día dentro de la fase** se acota a la fase: un ajuste de días no desborda la barra.
  *
  * > Antes Yo hacía esta cuenta aparte (`yo/utils/diasDeLaFase.ts`) y Plan la suya
- * > (`descripcionDeFase` + `arquitecturaDeTiempo`); daban lo mismo, pero eran dos.
+ * > (`descripcionDeFase` + `arquitecturaDeTiempo`, que se borró el 2026-10-31); daban lo mismo, pero eran dos.
  */
 export function faseEnCurso(faseDelBackend: string | null | undefined, diaDelPrograma: number | null | undefined): FaseEnCurso | null {
   const fase = FASES_EN_ORDEN.find(f => f.clave === faseDelBackend);

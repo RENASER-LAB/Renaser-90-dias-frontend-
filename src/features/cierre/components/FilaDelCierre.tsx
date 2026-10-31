@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 
@@ -57,11 +58,11 @@ export function FilaDelCierre({
     <View style={[estilos.tarjeta, { backgroundColor: cerrado ? c.successWash : c.goldWash }]}>
       <Icon name={cerrado ? 'checkCircle' : 'moon'} size={TAMANO_ICONO.normal} color={cerrado ? c.success : c.goldInk} />
       <View style={estilos.texto}>
-        <Text style={[t.body, { fontSize: 16, color: c.textStrong, fontFamily: 'Jost_500Medium' }]}>{item.titulo}</Text>
+        <Text style={[t.body, { fontSize: 16, color: c.textStrong, fontFamily: fuentes.media }]}>{item.titulo}</Text>
         {segundaLinea ? <Text style={[t.small, { color: c.textSoft }]}>{segundaLinea}</Text> : null}
       </View>
       {soloLectura ? (
-        <Text style={[t.small, { color: cerrado ? c.success : c.textSoft, fontFamily: 'Jost_500Medium' }]}>
+        <Text style={[t.small, { color: cerrado ? c.success : c.textSoft, fontFamily: fuentes.media }]}>
           {cerrado ? TEXTO_DE_DIA_CERRADO_EN_LA_FILA : TEXTO_DE_DIA_SIN_CERRAR_EN_LA_FILA}
         </Text>
       ) : (

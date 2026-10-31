@@ -1,3 +1,4 @@
+import { fuentes } from '../../../../theme/fuentes';
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import Svg, { Line, Rect } from 'react-native-svg';
@@ -33,7 +34,7 @@ const COLUMNA_COMODA = 46;
  * Columnas de color sobre una línea de base, con `react-native-svg`. Es la pieza común de
  * `BarrasDeDias` y `TendenciaSemanal`; no se exporta fuera de `graficos/`.
  *
- * - Las barras se dibujan en SVG; los rótulos, con `Text` de la app — así usan Jost y respetan el
+ * - Las barras se dibujan en SVG; los rótulos, con `Text` de la app — así usan la fuente de la app y respetan el
  *   tamaño de letra del sistema, cosa que el texto dentro de un SVG no hace.
  * - El ancho se mide (`onLayout`) en vez de estirar un `viewBox`: estirado, el redondeo de las barras
  *   se deforma según el ancho del teléfono.
@@ -82,7 +83,7 @@ export function Columnas({
                 estilos.celda,
                 {
                   color: col.valor === null ? c.chevron : coloresDelSemaforo(col.color, c).tinta,
-                  fontFamily: 'Jost_500Medium',
+                  fontFamily: fuentes.media,
                   fontSize: estrecho ? 11 : 12,
                 },
               ]}

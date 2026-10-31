@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 import Animated, {
@@ -224,7 +225,7 @@ const styles = StyleSheet.create({
   },
   /* Una pastilla con el fondo de la tarjeta: se lee aunque suba por encima del borde o de la tarjeta de arriba. */
   textoPuntos: {
-    fontFamily: 'Jost_700Bold',
+    fontFamily: fuentes.negrita,
     fontSize: 16,
     lineHeight: 20,
     letterSpacing: 0.2,

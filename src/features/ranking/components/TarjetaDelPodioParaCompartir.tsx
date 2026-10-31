@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { forwardRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
@@ -24,7 +25,7 @@ import type { PodioParaCompartir, PuestoParaCompartir } from '../utils/podioPara
  *   quién la genere. Usa la paleta oscura de la marca (`dark` de los tokens) y los metales del podio de la app
  *   (`PodioRanking`: oro, plata y bronce), sin el 3D: el podio es PLANO a propósito, porque los transformados y
  *   las animaciones del de la app no se capturan bien.
- * - **Tipografía de la app**: Fraunces solo en el título (≥ 24); todo lo demás Jost, en tipo oración y sin
+ * - **Tipografía de la app**: la fuente display solo en el título (≥ 24); todo lo demás, los otros roles, en tipo oración y sin
  *   espaciar letras. Las cifras, tabulares.
  * - **Nada se sale de su lugar.** Los nombres ya llegan recortados con «…» (`recortarNombre`) y además cada uno
  *   vive en una caja de ancho fijo con `numberOfLines` (2 en el podio, 1 en la lista): si un nombre con letras
@@ -188,12 +189,12 @@ const estilos = StyleSheet.create({
     backgroundColor: '#F7F1EA',
   },
   fenixImagen: { width: '100%', height: '100%' },
-  marca: { marginTop: 12, fontFamily: 'Jost_700Bold', fontSize: 16, lineHeight: 20, color: dark.gold },
+  marca: { marginTop: 12, fontFamily: fuentes.negrita, fontSize: 16, lineHeight: 20, color: dark.gold },
   titulo: {
     marginTop: 12,
     alignSelf: 'stretch',
     textAlign: 'center',
-    fontFamily: 'Fraunces_700Bold',
+    fontFamily: fuentes.display,
     fontSize: 34,
     lineHeight: 40,
     letterSpacing: -0.4,
@@ -203,12 +204,12 @@ const estilos = StyleSheet.create({
     marginTop: 6,
     alignSelf: 'stretch',
     textAlign: 'center',
-    fontFamily: 'Jost_400Regular',
+    fontFamily: fuentes.regular,
     fontSize: 17,
     lineHeight: 22,
     color: dark.textSoft,
   },
-  fecha: { marginTop: 6, fontFamily: 'Jost_700Bold', fontSize: 16, lineHeight: 22, color: dark.gold },
+  fecha: { marginTop: 6, fontFamily: fuentes.negrita, fontSize: 16, lineHeight: 22, color: dark.gold },
 
   podio: {
     marginTop: 28,
@@ -221,7 +222,7 @@ const estilos = StyleSheet.create({
   columnaNombre: {
     alignSelf: 'stretch',
     textAlign: 'center',
-    fontFamily: 'Jost_700Bold',
+    fontFamily: fuentes.negrita,
     fontSize: 17,
     lineHeight: 22,
     color: dark.textStrong,
@@ -230,13 +231,13 @@ const estilos = StyleSheet.create({
   columnaPuntaje: {
     marginTop: 2,
     marginBottom: 10,
-    fontFamily: 'Jost_700Bold',
+    fontFamily: fuentes.negrita,
     fontSize: 17,
     lineHeight: 22,
     color: dark.gold,
     fontVariant: CIFRAS,
   },
-  columnaLibre: { color: dark.micro, fontFamily: 'Jost_400Regular' },
+  columnaLibre: { color: dark.micro, fontFamily: fuentes.regular },
   pedestal: {
     alignSelf: 'stretch',
     borderTopLeftRadius: 14,
@@ -250,7 +251,7 @@ const estilos = StyleSheet.create({
     borderColor: dark.borderStrong,
     backgroundColor: dark.goldWash,
   },
-  pedestalNumero: { fontFamily: 'Jost_700Bold', fontVariant: CIFRAS },
+  pedestalNumero: { fontFamily: fuentes.negrita, fontVariant: CIFRAS },
 
   lista: {
     marginTop: 24,
@@ -263,9 +264,9 @@ const estilos = StyleSheet.create({
   },
   fila: { height: ALTO_DE_FILA, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, gap: 12 },
   filaConLinea: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: dark.divider },
-  filaPosicion: { width: 46, fontFamily: 'Jost_700Bold', fontSize: 18, color: dark.gold, fontVariant: CIFRAS },
-  filaNombre: { flex: 1, flexShrink: 1, fontFamily: 'Jost_500Medium', fontSize: 19, color: dark.textStrong },
-  filaPuntaje: { fontFamily: 'Jost_700Bold', fontSize: 18, color: dark.gold, fontVariant: CIFRAS, textAlign: 'right' },
+  filaPosicion: { width: 46, fontFamily: fuentes.negrita, fontSize: 18, color: dark.gold, fontVariant: CIFRAS },
+  filaNombre: { flex: 1, flexShrink: 1, fontFamily: fuentes.media, fontSize: 19, color: dark.textStrong },
+  filaPuntaje: { fontFamily: fuentes.negrita, fontSize: 18, color: dark.gold, fontVariant: CIFRAS, textAlign: 'right' },
 
   /* Pegado al fondo: con menos de 10 personas la lista termina antes y el pie sigue abajo, no flota a medias. */
   pie: {
@@ -274,7 +275,7 @@ const estilos = StyleSheet.create({
     right: 0,
     bottom: 36,
     textAlign: 'center',
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
     fontSize: 15,
     lineHeight: 18,
     color: dark.textSoft,

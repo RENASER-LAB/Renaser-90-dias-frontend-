@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -114,7 +115,7 @@ function DetalleDeOtraPersona({ detalle }: { detalle: DetalleDelSemaforo }) {
       </View>
 
       <View style={{ gap: 4 }}>
-        <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>
+        <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: fuentes.media }]}>
           Últimos 7 días
         </Text>
         {vigente ? (
@@ -136,7 +137,7 @@ function DetalleDeOtraPersona({ detalle }: { detalle: DetalleDelSemaforo }) {
 
       {/* 3. La tendencia: las semanas cerradas, sábado a viernes. */}
       <View style={{ gap: 8 }}>
-        <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: 'Jost_500Medium' }]}>
+        <Text style={[t.body, { color: c.textStrong, fontSize: 16, fontFamily: fuentes.media }]}>
           Semanas cerradas
         </Text>
         {detalle.semanas.length > 0 ? (

@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -58,7 +59,7 @@ export function SemaforoDeLaAgenda() {
 
 const estilos = StyleSheet.create({
   caja: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 12, gap: 8 },
-  rotulo: { fontFamily: 'Jost_400Regular', fontSize: LETRA.cuerpo, lineHeight: 21 },
+  rotulo: { fontFamily: fuentes.regular, fontSize: LETRA.cuerpo, lineHeight: 21 },
   dias: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 12, rowGap: 6 },
   dia: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   punto: { width: 11, height: 11, borderRadius: 6 },

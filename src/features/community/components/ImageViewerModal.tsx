@@ -1,3 +1,4 @@
+import { fuentes } from '../../../theme/fuentes';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
@@ -468,7 +469,7 @@ export function ImageViewerModal({
                   <Text
                     style={[
                       styles.actionBtnText,
-                      userReaction === 'like' && { color: VERDE_SOBRE_NEGRO, fontFamily: 'Jost_700Bold' },
+                      userReaction === 'like' && { color: VERDE_SOBRE_NEGRO, fontFamily: fuentes.negrita },
                     ]}
                   >
                     Me gusta
@@ -621,7 +622,7 @@ export function ImageViewerModal({
                               <Text
                                 style={[
                                   styles.commentVoteCount,
-                                  cItem.userReaction === 'like' && { color: VERDE_SOBRE_NEGRO, fontFamily: 'Jost_700Bold' },
+                                  cItem.userReaction === 'like' && { color: VERDE_SOBRE_NEGRO, fontFamily: fuentes.negrita },
                                 ]}
                               >
                                 {cItem.likes}
@@ -806,7 +807,7 @@ const styles = StyleSheet.create({
   closeBtnText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontFamily: 'Jost_700Bold',
+    fontFamily: fuentes.negrita,
     lineHeight: 18,
   },
   counterBadge: {
@@ -819,7 +820,7 @@ const styles = StyleSheet.create({
   },
   counterText: {
     color: '#FFFFFF',
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
     fontSize: 12,
     letterSpacing: 0.5,
   },
@@ -829,12 +830,12 @@ const styles = StyleSheet.create({
   },
   authorHeaderText: {
     color: '#FFFFFF',
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
     fontSize: 12,
   },
   timeAgoHeaderText: {
     color: 'rgba(255,255,255,0.7)',
-    fontFamily: 'Jost_400Regular',
+    fontFamily: fuentes.regular,
     fontSize: 10,
   },
   bottomOverlay: {
@@ -849,23 +850,23 @@ const styles = StyleSheet.create({
   },
   captionAuthor: {
     color: '#E5C689',
-    fontFamily: 'Jost_700Bold',
+    fontFamily: fuentes.negrita,
     fontSize: 13,
   },
   captionTime: {
     color: 'rgba(255,255,255,0.6)',
-    fontFamily: 'Jost_400Regular',
+    fontFamily: fuentes.regular,
     fontSize: 11,
   },
   captionText: {
     color: '#FFFFFF',
-    fontFamily: 'Jost_400Regular',
+    fontFamily: fuentes.regular,
     fontSize: 13.5,
     lineHeight: 19,
   },
   verMasBtnText: {
     color: '#E5C689',
-    fontFamily: 'Jost_700Bold',
+    fontFamily: fuentes.negrita,
     fontSize: 11,
   },
   actionsBar: {
@@ -903,12 +904,12 @@ const styles = StyleSheet.create({
   },
   rxChipVisorTexto: {
     color: '#FFFFFF',
-    fontFamily: 'Jost_700Bold',
+    fontFamily: fuentes.negrita,
     fontSize: 11.5,
   },
   actionBtnText: {
     color: '#FFFFFF',
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
     fontSize: 12.5,
   },
 
@@ -939,7 +940,7 @@ const styles = StyleSheet.create({
   },
   commentsSheetTitle: {
     color: '#FFFFFF',
-    fontFamily: 'Jost_700Bold',
+    fontFamily: fuentes.negrita,
     fontSize: 14,
   },
   closeSheetBtn: {
@@ -955,13 +956,13 @@ const styles = StyleSheet.create({
   },
   emptyCommentsTitle: {
     color: '#FFFFFF',
-    fontFamily: 'Jost_700Bold',
+    fontFamily: fuentes.negrita,
     fontSize: 13,
     marginTop: 4,
   },
   emptyCommentsSub: {
     color: 'rgba(255,255,255,0.6)',
-    fontFamily: 'Jost_400Regular',
+    fontFamily: fuentes.regular,
     fontSize: 11,
   },
   commentItemCard: {
@@ -972,23 +973,23 @@ const styles = StyleSheet.create({
   },
   commentAuthorName: {
     color: '#E5C689',
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
     fontSize: 11.5,
   },
   commentTimeText: {
     color: 'rgba(255,255,255,0.5)',
-    fontFamily: 'Jost_400Regular',
+    fontFamily: fuentes.regular,
     fontSize: 11,
   },
   commentItemBody: {
     color: '#FFFFFF',
-    fontFamily: 'Jost_400Regular',
+    fontFamily: fuentes.regular,
     fontSize: 12,
     lineHeight: 17,
   },
   commentVerMasText: {
     color: '#E5C689',
-    fontFamily: 'Jost_700Bold',
+    fontFamily: fuentes.negrita,
     fontSize: 10,
   },
   commentPhotoAttachBox: {
@@ -1018,7 +1019,7 @@ const styles = StyleSheet.create({
   },
   commentVoteCount: {
     color: 'rgba(255,255,255,0.6)',
-    fontFamily: 'Jost_400Regular',
+    fontFamily: fuentes.regular,
     fontSize: 10,
   },
   emojisStrip: {
@@ -1051,12 +1052,12 @@ const styles = StyleSheet.create({
   },
   photoCompactTitle: {
     color: '#E5C689',
-    fontFamily: 'Jost_500Medium',
+    fontFamily: fuentes.media,
     fontSize: 10.5,
   },
   photoCompactSub: {
     color: 'rgba(255,255,255,0.5)',
-    fontFamily: 'Jost_400Regular',
+    fontFamily: fuentes.regular,
     fontSize: 10.5,
   },
   removePhotoCompactBtn: {
@@ -1091,7 +1092,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     color: '#FFFFFF',
-    fontFamily: 'Jost_400Regular',
+    fontFamily: fuentes.regular,
     fontSize: 12,
   },
   sendBtn: {
@@ -1104,7 +1105,7 @@ const styles = StyleSheet.create({
   },
   sendBtnText: {
     color: 'rgba(255,255,255,0.6)',
-    fontFamily: 'Jost_700Bold',
+    fontFamily: fuentes.negrita,
     fontSize: 11,
   },
 });

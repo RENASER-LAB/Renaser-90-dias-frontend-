@@ -2,7 +2,8 @@
  * Cuándo se dibuja la entrada a «Mi grupo».
  *
  * **La prueba que falla contra el código viejo es la primera.** Hasta ahora la condición era
- * `esMentor ? <TarjetaMentorHoy/> : null`, es decir: siempre que la persona contara como mentor.
+ * `esMentor ? <TarjetaMentorHoy/> : null`, es decir: siempre que la persona contara como mentor (desde el 2026-10-31 esa
+ * tarjeta es la fila «Mi grupo» de Yo, con la misma regla).
  * Para un LÍDER DE MENTORES eso significaba una tarjeta permanentemente muerta, porque el backend
  * no le deja tener grupo asignado.
  *
