@@ -94,6 +94,37 @@ Al cumplir solo se cancelaban las repeticiones +5/+10 (spec 009). Lo que cambia 
   `sellarRocaYRepeticiones.test.ts` (el aviso de la acción sellada).
 * **Hace falta un APK nuevo** (solo JavaScript: no hay código nativo nuevo, pero la app no se actualiza por aire).
 
+## Corrección — 2026-10-31 — un aviso de inicio de hábito ya no se muestra ni se queda en la bandeja después de su hora (issue #40)
+
+El 28/10 llegó a las 8:58 un aviso de GIMNASIO que decía «te toca a las 07:00». **Esa vez la causa fue el push de respaldo del
+servidor** (el dueño nunca configuró un recordatorio para ese hábito, así que el teléfono no tenía ninguna alarma local; el push
+salía sin `expiration` y FCM lo guardó; ya arreglado en el backend, #22/#23). En la app no había una causa de ese caso; lo que sí
+había son dos huecos reales para las alarmas locales atrasadas: `ExpoSchedulingDelegate.triggerNotification` muestra la alarma sin
+mirar qué tan tarde llegó (sin el permiso «Alarmas y recordatorios» es inexacta: el rearmado documenta `window=+1h` y el e2e del
+26/10 midió `+40m59s`), y nada quita de la bandeja un aviso cuya hora ya pasó. Regla (la misma que el dueño aceptó para el
+servidor, FR-015): **un aviso de inicio vale hasta la hora del hábito; después no se muestra.** El hábito se sigue registrando todo
+su día (D-259). Lo que cambia y nada más (ni diseño, ni textos, ni canales, ni sonidos):
+* **Al entregarse (Android, parche de `postinstall`):** `scripts/arreglar-aviso-tardio.js` parcha `triggerNotification`. El aviso
+  de inicio lleva ahora `data.vigenteMin` (su antelación + 2 min de gracia, `vigenciaDelAvisoMin`); si el atraso desde su hora
+  nominal lo pasa, no se muestra, y la alarma diaria o semanal se vuelve a armar igual para mañana. Sin `vigenteMin` (eventos,
+  acciones, Código Renaser, repeticiones, prueba de sonido) todo es como siempre. **El Kotlin no se compiló al escribirlo**: se
+  valida al armar el APK. Convive con el parche de las alarmas tipo despertador (otras líneas, cualquier orden; este va antes en
+  `postinstall` y el otro sigue de último).
+* **Las ya programadas lo reciben solas:** el rearmado que corre al abrir la app (`planDeRearmado`) le pone `vigenteMin` a los
+  avisos de inicio que se programaron antes, sin cambiar su hora, su identificador ni su texto.
+* **Al abrir la app o volver al frente (JavaScript):** `limpiarAvisosVencidos` (en `RearmadorDeAlarmas`, sin el intervalo de 10 min)
+  quita de la bandeja los avisos de inicio cuya hora ya pasó y los de un hábito cumplido ese día (nota de `cumplidoDeHoy`, issue
+  #33). Los reconoce por su cuerpo «Te toca a las HH:mm.» y su ruta `/habitos/…`, así que alcanza también a los que mostró una versión
+  anterior y a los de un grupo de avisos (E-410). Un hábito de después de la medianoche solo se quita al vencer, no por cumplido.
+* **No se tocan:** las repeticiones («Te tocaba a las …»), las acciones de los objetivos, los eventos, los mensajes ni los push del
+  servidor (esos los cubre su `expiration`).
+* **Supuestos a confirmar con el dueño:** la gracia de 2 min (sin ella, el aviso «a la hora» se descartaría por llegar a las 07:00:03;
+  con ella, un Despertar sin el permiso de alarmas exactas que llegue más de 2 min tarde ya no se muestra) y que la regla valga
+  también para Despertar.
+* **Pruebas:** `vigenciaDelAviso`, `vigenciaEnLasAlarmas`, `limpiarAvisosVencidos` y `avisoTardio` (el parche, sobre un paquete falso).
+  Maestro: `.maestro/aviso-tardio/01-limpiar-la-bandeja.yaml`.
+* **Hace falta un APK nuevo** (código nativo parchado). Sin backend nuevo.
+
 ## Decisión del dueño — 2026-10-30 — Mentoría del Alquimista solo con semáforo verde (sin cambios en la app)
 
 Textual: «en eventos, si eres aprendiz solo te saldrá la mentoría con alquimista si tienes semáforo verde». El filtro es 100 % del
