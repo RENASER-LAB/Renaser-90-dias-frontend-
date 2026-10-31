@@ -65,10 +65,10 @@ describe('tocar el aviso de la Caja', () => {
     soltar();
   });
 
-  it('el del Admin abre Hoy (donde vive Administración) con esa caja', () => {
+  it('el del Admin abre Yo (donde vive Administración) con esa caja', () => {
     const { irAPestana, soltar } = navegador();
     anotarRutaDeAviso('/admin/caja/a-7');
-    expect(irAPestana).toHaveBeenCalledWith('Hoy', { abrirCajaAprendizId: 'a-7' });
+    expect(irAPestana).toHaveBeenCalledWith('Yo', { abrirCajaAprendizId: 'a-7' });
     soltar();
   });
 

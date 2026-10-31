@@ -2198,10 +2198,10 @@ export default function ComunidadScreen() {
   const abrirFichaDesdeLaInfo = (integrante: IntegranteDeLaInfo) => {
     if (!integrante.usuarioId) return;
     /* D-222: el ADMIN/ALQUIMISTA abre la ficha de administración (la de Personas), que sirve a cualquier
-       aprendiz, esté o no en un grupo: se pide a Hoy, que es donde vive Administración. */
+       aprendiz, esté o no en un grupo: se pide a Yo, donde vive Administración (2026-10-31; antes, a Hoy). */
     if (esAdministracionDeGrupos(user?.role)) {
       setGroupInfoVisible(false);
-      irAPestana('Hoy', { abrirFichaAprendiz: { id: integrante.usuarioId, fullName: integrante.nombreCompleto } });
+      irAPestana('Yo', { abrirFichaAprendiz: { id: integrante.usuarioId, fullName: integrante.nombreCompleto } });
       return;
     }
     if (!celulaIdAbierto) return;

@@ -24,8 +24,10 @@ local (nunca contra producción).
 
 - `diseno-31/` (2026-10-31): los cambios de diseño del día (Hoy con la tarjeta de acciones y sin la frase ni Coherencia / Racha,
   Plan con el formato de la referencia, Training con la cabecera sin fase, los nombres en tipo oración, los rituales con texto y la
-  última comida con círculo, y Yo con el semáforo y sin la tira «Evidencia»). **Escritos y sin correr**; cada archivo dice su
-  precondición. Los nombres de los hábitos ahora se ven en tipo oración: los flujos viejos que los buscaban en mayúsculas usan
+  última comida con círculo, Yo con el semáforo y sin la tira «Evidencia», y —`06-roles-en-yo`— Hoy solo con el programa propio y las
+  filas «Mi grupo» / «Mis mentores» en Yo, junto a Administración). **Escritos y sin correr**; cada archivo dice su
+  precondición. Desde ese día Administración, «Mi grupo» y «Mis mentores» se abren desde **Yo** (los flujos de `regresion/20–24`,
+  `mi-radar/11–12` y `lider-ve-a-todos/01` ya entran por ahí). Los nombres de los hábitos ahora se ven en tipo oración: los flujos viejos que los buscaban en mayúsculas usan
   `(?i)` desde ese día.
 
 ## Cómo correrla

@@ -1,9 +1,9 @@
-# 20 — Administración: entrar desde Hoy y volver con el atrás del sistema (gesto lateral, AGENTS.md §6).
+# 20 — Administración: entrar desde Yo y volver con el atrás del sistema (gesto lateral, AGENTS.md §6).
 # cuenta: admin
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml
-- tapOn: "HOY"
+- tapOn: "YO"
 - scrollUntilVisible:
     element: "Abrir Administración"
     direction: DOWN

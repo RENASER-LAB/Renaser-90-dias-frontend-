@@ -8,7 +8,7 @@ import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { useOcultarBarraAlDesplazar } from '../../../navigation/barraAlDesplazar/BarraInferior';
 import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
-import { FilaDeLista, ListaDeFilas } from '../../hoy-por-papel/components/FilaDeLista';
+import { FilaDeLista, ListaDeFilas } from '../../paneles-de-rol/components/FilaDeLista';
 import { ESPACIO_PARA_LANZADOR } from '../../renasia/components/RenasiaLauncher';
 import { CargandoLectura, FalloDeLectura } from '../../semaforo/components/EstadoDeLectura';
 import { AvatarDeLaLista } from '../components/AvatarDeLaLista';

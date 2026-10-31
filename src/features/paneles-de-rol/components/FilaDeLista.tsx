@@ -6,7 +6,7 @@ import { Presionable } from '../../../components/Presionable';
 import { useTheme } from '../../../theme/ThemeContext';
 
 /**
- * Una lista de filas para Hoy (spec 018): la caja con borde y las filas de 56 que se tocan, sin tarjeta por fila. Es la
+ * Una lista de filas de los paneles de rol (spec 018; antes en Hoy, desde el 2026-10-31 en Yo): la caja con borde y las filas de 56 que se tocan, sin tarjeta por fila. Es la
  * forma de «Mi grupo» y «Mis mentores»: nombre, una línea gris debajo si hace falta, lo que importa a la derecha y el
  * chevron de 16 de todas las tarjetas de Hoy.
  */

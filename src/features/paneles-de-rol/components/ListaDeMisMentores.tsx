@@ -18,12 +18,12 @@ import {
 import { FilaDeLista, ListaDeFilas } from './FilaDeLista';
 
 /**
- * «Mis mentores» de Hoy, para el líder de mentores (spec 018): el resultado de los últimos 7 días POR GRUPO, una fila por
+ * «Mis mentores», para el líder de mentores (spec 018; desde el 2026-10-31 vive en Yo, como Administración, y no en Hoy): el resultado de los últimos 7 días POR GRUPO, una fila por
  * grupo con su nombre, su mentor, el color y el porcentaje; y debajo, las consultas de mentores sin responder y el
  * padrón de mentores con el reporte del mes. Sin textos de ayuda: lo que cada fila abre se lee en la fila.
  *
  * Reemplaza a las tres tarjetas que el líder tenía sueltas en Hoy (tickets, semáforo por grupos y «Mis mentores»); abren
- * las mismas pantallas de siempre, ahora desde acá.
+ * las mismas pantallas de siempre, ahora desde acá, y esta lista se abre desde la fila «Mis mentores» de Yo.
  *
  * - **Los datos son del servidor**: el resumen por grupos es la lectura que Hoy ya hace para el líder; el color y el
  *   porcentaje de cada fila son los del promedio de su grupo, sin recalcular nada.
@@ -36,7 +36,7 @@ import { FilaDeLista, ListaDeFilas } from './FilaDeLista';
  *   todas las personas con su ficha, estén o no en un grupo. Solo existe si el servidor la ofrece (`verTodos`: la primera
  *   página de la lista respondió 200); con un backend anterior o con otro rol no se dibuja.
  */
-export function MisMentoresEnHoy({
+export function ListaDeMisMentores({
   lectura,
   verGrupos,
   verConsultas,

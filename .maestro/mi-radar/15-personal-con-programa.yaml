@@ -5,10 +5,9 @@
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml
-# Hoy del mentor: «Mi programa» es donde está la tarjeta «Hábitos de hoy» con las dos mitades.
-- tapOn:
-    text: "Mi programa"
-    optional: true
+# Hoy del mentor es solo su programa (2026-10-31: ya no hay control «Mi programa · Mi grupo»): ahí está la tarjeta «Hábitos de hoy»
+# con las dos mitades.
+- assertNotVisible: "Mis mentores"
 - scrollUntilVisible:
     element: "Planifica tu Radar"
     direction: DOWN

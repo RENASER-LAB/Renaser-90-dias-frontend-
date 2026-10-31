@@ -17,10 +17,23 @@ import type { DestinoDeAviso } from '../features/mentor/api/avisosApi';
  * 3. Si no, se consume la ruta y se navega. Consumirla recién ahí es lo que hace que la espera no la
  *    pierda.
  *
- * Las rutas del mentor y del semáforo no pasan por acá: las atienden sus pantallas, como siempre.
+ * Las rutas del mentor y del semáforo también pasan por acá desde el 2026-10-31 (antes las atendía Hoy): llevan a Yo, y quien decide
+ * si esa cuenta puede abrirlo es Yo (el rol, el padrón del grupo, lo que dice el servidor). No esperan a las capas obligatorias,
+ * como antes.
  */
 
-export type TipoQueAbreUnaPestana = 'evento' | 'habito' | 'objetivo' | 'caja' | 'miRadar' | 'cajaAdmin' | 'chat';
+export type TipoQueAbreUnaPestana =
+  | 'evento'
+  | 'habito'
+  | 'objetivo'
+  | 'caja'
+  | 'miRadar'
+  | 'cajaAdmin'
+  | 'chat'
+  | 'semaforo'
+  | 'alumno'
+  | 'semaforoGrupo'
+  | 'semaforoGrupos';
 
 export const TIPOS_QUE_ABREN_UNA_PESTANA: readonly TipoQueAbreUnaPestana[] = [
   'evento',
@@ -30,11 +43,20 @@ export const TIPOS_QUE_ABREN_UNA_PESTANA: readonly TipoQueAbreUnaPestana[] = [
   'miRadar',
   'cajaAdmin',
   'chat',
+  // 2026-10-31: los paneles de rol viven en Yo, así que sus avisos también entran por acá (antes los atendía Hoy).
+  'semaforo',
+  'alumno',
+  'semaforoGrupo',
+  'semaforoGrupos',
 ];
 
 /**
- * La Caja Renaser (D-219, 2026-09-28): la del aprendiz vive en Yo; la del Admin, en Administración,
- * que se abre desde Hoy (es estado de `HoyScreen`, no una ruta del navegador).
+ * La Caja Renaser (D-219, 2026-09-28): la del aprendiz vive en Yo; la del Admin, en Administración.
+ *
+ * > **Corregido 2026-10-31 (pedido del dueño: «lo de cada rol entra desde Yo, como Administración, no en Hoy»).** Administración, «Mi
+ * > grupo» y «Mis mentores» se abren desde la lista de Yo, así que los avisos que abrían esas vistas desde Hoy —la caja del Admin, la
+ * > ficha de un alumno, el semáforo del grupo, el resumen por grupos y el semáforo propio del sábado— ahora traen a Yo con un
+ * > parámetro que Yo consume una vez.
  */
 const PESTANA: Record<TipoQueAbreUnaPestana, string> = {
   evento: 'Comunidad',
@@ -43,10 +65,14 @@ const PESTANA: Record<TipoQueAbreUnaPestana, string> = {
   caja: 'Yo',
   // Spec 012: el aviso de Mi Radar abre Yo → Mi Radar, con el mismo estilo de parámetro que la Caja.
   miRadar: 'Yo',
-  cajaAdmin: 'Hoy',
+  cajaAdmin: 'Yo',
   // D-221 (2026-09-29): el aviso de un mensaje abre esa conversación en Comunidad → Tribu, con el
   // mismo parámetro que ya usa «Escribirle» desde la ficha de un aprendiz.
   chat: 'Comunidad',
+  semaforo: 'Yo',
+  alumno: 'Yo',
+  semaforoGrupo: 'Yo',
+  semaforoGrupos: 'Yo',
 };
 
 /** La pestaña y los parámetros que cada pantalla ya sabe consumir una vez. */
@@ -68,6 +94,14 @@ export function pestanaDelDestino(
       return { pestana: PESTANA.cajaAdmin, params: { abrirCajaAprendizId: destino.aprendizId } };
     case 'chat':
       return { pestana: PESTANA.chat, params: { abrirChatConversacionId: destino.conversacionId } };
+    case 'semaforo':
+      return { pestana: PESTANA.semaforo, params: { abrirSemaforo: true } };
+    case 'alumno':
+      return { pestana: PESTANA.alumno, params: { abrirAlumno: { grupoId: destino.grupoId, alumnoId: destino.alumnoId } } };
+    case 'semaforoGrupo':
+      return { pestana: PESTANA.semaforoGrupo, params: { abrirSemaforoDelGrupo: destino.grupoId } };
+    case 'semaforoGrupos':
+      return { pestana: PESTANA.semaforoGrupos, params: { abrirSemaforoPorGrupos: true } };
   }
 }
 
@@ -88,6 +122,7 @@ export type ResultadoDeApertura = 'abierto' | 'esperando' | 'nada';
  */
 /* D-221: el chat también espera. Un mensaje del grupo no puede tapar el Código Renaser ni el Pacto. */
 const ESPERAN_A_LAS_CAPAS: ReadonlySet<TipoQueAbreUnaPestana> = new Set(['habito', 'objetivo', 'caja', 'miRadar', 'cajaAdmin', 'chat']);
+// Los de rol y el semáforo del sábado NO esperan: no esperaban cuando los atendía Hoy.
 
 export function intentarAbrirAvisoPendiente(deps: DependenciasDeApertura): ResultadoDeApertura {
   let esperando = false;

@@ -156,11 +156,64 @@ describe('las otras rutas que abren una pestaña', () => {
     soltar();
   });
 
-  it('la ruta de un alumno la deja para la pantalla del mentor', () => {
+});
+
+/**
+ * 2026-10-31 (pedido del dueño: «lo de cada rol entra desde Yo, como Administración, no en Hoy»): «Mi grupo», «Mis mentores» y el
+ * semáforo del sábado se abren desde Yo, así que los avisos que los abrían desde Hoy ahora traen a Yo con un parámetro que Yo
+ * consume una vez. Antes no pasaban por acá: los atendía una escucha de `HoyScreen`.
+ */
+describe('los avisos del mentor, del líder y del semáforo entran por Yo', () => {
+  it('la ficha de un alumno abre Yo con el grupo y el alumno', () => {
     const { irAPestana, soltar } = navegador(PESTANAS);
     anotarRutaDeAviso('/mentor/groups/g/learners/a');
+    expect(irAPestana).toHaveBeenCalledWith('Yo', { abrirAlumno: { grupoId: 'g', alumnoId: 'a' } });
+    soltar();
+  });
+
+  it('el semáforo de un grupo (revisión del líder, resumen del sábado del mentor) abre Yo con ese grupo', () => {
+    const { irAPestana, soltar } = navegador(PESTANAS);
+    anotarRutaDeAviso('/mentor/groups/g-9/semaforo');
+    expect(irAPestana).toHaveBeenCalledWith('Yo', { abrirSemaforoDelGrupo: 'g-9' });
+    soltar();
+  });
+
+  it('el resumen por grupos del líder o de Administración abre Yo', () => {
+    const { irAPestana, soltar } = navegador(PESTANAS);
+    anotarRutaDeAviso('/semaforo/grupos');
+    expect(irAPestana).toHaveBeenCalledWith('Yo', { abrirSemaforoPorGrupos: true });
+    soltar();
+  });
+
+  it('el semáforo propio del sábado abre Yo', () => {
+    const { irAPestana, soltar } = navegador(PESTANAS);
+    anotarRutaDeAviso('/semaforo');
+    expect(irAPestana).toHaveBeenCalledWith('Yo', { abrirSemaforo: true });
+    soltar();
+  });
+
+  it('con la app cerrada (arranque en frío) esperan a que existan las pestañas y se abren una sola vez', () => {
+    anotarRutaDeAviso('/mentor/groups/g/learners/a');
+    const { irAPestana, aparecenLasPestanas, soltar } = navegador([]);
     expect(irAPestana).not.toHaveBeenCalled();
-    expect(consumirRutaPendiente('alumno')).toEqual({ tipo: 'alumno', grupoId: 'g', alumnoId: 'a' });
+    aparecenLasPestanas(PESTANAS);
+    expect(irAPestana).toHaveBeenCalledTimes(1);
+    expect(irAPestana).toHaveBeenCalledWith('Yo', { abrirAlumno: { grupoId: 'g', alumnoId: 'a' } });
+    soltar();
+  });
+
+  it('no esperan al Código Renaser: no esperaban cuando los atendía Hoy', () => {
+    const { irAPestana, soltar } = navegador(PESTANAS);
+    marcarCapaObligatoria('codigoRenaser', true);
+    anotarRutaDeAviso('/semaforo/grupos');
+    expect(irAPestana).toHaveBeenCalledWith('Yo', { abrirSemaforoPorGrupos: true });
+    soltar();
+  });
+
+  it('la ruta queda consumida: nadie más la recibe', () => {
+    const { soltar } = navegador(PESTANAS);
+    anotarRutaDeAviso('/mentor/groups/g/learners/a');
+    expect(consumirRutaPendiente('alumno')).toBeNull();
     soltar();
   });
 });

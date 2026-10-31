@@ -21,7 +21,9 @@ import { InterruptoresDeAvisos } from '../features/alarmas/components/Interrupto
 import { SeccionAlarmas } from '../features/alarmas/components/SeccionAlarmas';
 import { useSystemBackHandler } from '../hooks/useSystemBackHandler';
 import { MicroLabel, ScreenHeader } from '../components/ui';
-import { AdminScreen } from '../features/admin/screens/AdminScreen';
+import { AdminScreen, type EntradaDeAdmin } from '../features/admin/screens/AdminScreen';
+import { usePanelesDeRol } from '../features/paneles-de-rol/hooks/usePanelesDeRol';
+import { PantallaDelPanelDeRol } from '../features/paneles-de-rol/screens/PantallaDelPanelDeRol';
 import { useCapacidades } from '../features/admin/hooks/useCapacidades';
 import { EntradaAlProgramaPropio } from '../features/programa/components/EntradaAlProgramaPropio';
 import { useDiaUnoPorElegir } from '../features/programa/hooks/useDiaUnoPorElegir';
@@ -373,8 +375,13 @@ export default function YoScreen() {
   const memoriaRenasia = useMemoriaDeRenasia(activeView === 'hub' || activeView === 'memoria_renasia');
   /* Segunda puerta a Administracion, ademas de la de Hoy. Dos entradas y ningun sexto tab: el
      administrador llega desde donde este, y los cinco tabs quedan como estaban (SDD 003, ARF-01). */
-  const { capacidades, error: errorCapacidades, recargar: recargarCapacidades } = useCapacidades();
+  const { capacidades, cargando: cargandoCapacidades, error: errorCapacidades, recargar: recargarCapacidades } = useCapacidades();
   const [enAdministracion, setEnAdministracion] = useState(false);
+  /* Por dónde entra Administración: `inicio` desde la fila; el aviso del sábado entra al semáforo, el de una caja a esa caja y «Ver
+     ficha» desde la info de un chat a esa ficha (2026-10-31: antes lo atendía Hoy). La clave vuelve a montar la pila de vistas
+     para que entre por ahí aunque ya estuviera abierta. */
+  const [adminAbreEn, setAdminAbreEn] = useState<EntradaDeAdmin>('inicio');
+  const [montajeAdmin, setMontajeAdmin] = useState(0);
   /* Caja Renaser (D-219, pedido del dueño del 28/09): la fila «Tu Caja Renaser» y su pantalla. La
      fila aparece solo si el servidor dice que hay algo que mostrarle (desde el día 8, sin pausa y en
      Perú). El aviso `/caja` llega con `abrirCaja` (lo deja `AbridorDeAvisos`, D-218). */
@@ -426,6 +433,43 @@ export default function YoScreen() {
   const veSoporteTi = esSoporteTi(user?.role);
   const rutaDeYo = useRoute();
   const navegacionDeYo = useNavigation();
+  /* Quita parámetros de la ruta de Yo: se consumen una sola vez (volver atrás no los repite). */
+  const limpiarParametros = useCallback(
+    (claves: readonly string[]) => {
+      (navegacionDeYo as unknown as { setParams: (p: Record<string, unknown>) => void }).setParams(
+        Object.fromEntries(claves.map(clave => [clave, undefined])),
+      );
+    },
+    [navegacionDeYo],
+  );
+  const abrirAdministracionEn = useCallback((entrada: EntradaDeAdmin) => {
+    setAdminAbreEn(entrada);
+    setMontajeAdmin(n => n + 1);
+    setEnAdministracion(true);
+  }, []);
+  /* Los paneles de rol —«Mi grupo» (mentor o guía) y «Mis mentores» (líder)— como filas de esta lista, junto a Administración
+     (2026-10-31, pedido del dueño: «debe ir dentro de Administración, lo mismo de cada uno, no en Hoy de cada rol»). Hoy es solo el
+     programa propio. Los avisos que abrían esas vistas desde Hoy traen a Yo con un parámetro y los atiende el hook. */
+  const abrirElSemaforoDeAdministracion = useCallback(() => abrirAdministracionEn('semaforo'), [abrirAdministracionEn]);
+  const paneles = usePanelesDeRol({
+    params: rutaDeYo.params,
+    limpiarParametros,
+    administrar: capacidades.administrar,
+    cargandoCapacidades,
+    abrirElSemaforoDeAdministracion,
+  });
+  /* Avisos de Administración: la caja de un aprendiz (`/admin/caja/{id}`, D-219) y «Ver ficha» desde la info de un chat
+     (D-222). Esperan a saber si la cuenta administra (lo dice el servidor); si no, se descartan. */
+  useEffect(() => {
+    const p = rutaDeYo.params as { abrirCajaAprendizId?: string; abrirFichaAprendiz?: { id: string; fullName: string | null } } | undefined;
+    const aprendizId = p?.abrirCajaAprendizId;
+    const persona = p?.abrirFichaAprendiz;
+    if ((!aprendizId && !persona?.id) || cargandoCapacidades) return;
+    limpiarParametros(['abrirCajaAprendizId', 'abrirFichaAprendiz']);
+    if (!capacidades.administrar) return;
+    if (aprendizId) abrirAdministracionEn({ caja: aprendizId });
+    else if (persona?.id) abrirAdministracionEn({ ficha: { id: persona.id, fullName: persona.fullName } });
+  }, [rutaDeYo.params, cargandoCapacidades, capacidades.administrar, limpiarParametros, abrirAdministracionEn]);
   useEffect(() => {
     const params = rutaDeYo.params as { abrirCaja?: boolean } | undefined;
     if (!params?.abrirCaja) return;
@@ -622,7 +666,21 @@ export default function YoScreen() {
   }
 
   if (enAdministracion && capacidades.administrar) {
-    return <AdminScreen onSalir={() => setEnAdministracion(false)} />;
+    return (
+      <AdminScreen
+        key={montajeAdmin}
+        abrirEn={adminAbreEn}
+        onSalir={() => {
+          setEnAdministracion(false);
+          setAdminAbreEn('inicio');
+        }}
+      />
+    );
+  }
+
+  /* Un panel de rol a pantalla completa: «Mi grupo» o «Mis mentores», con las pantallas que cuelgan de ellos. */
+  if (paneles.abierto) {
+    return <PantallaDelPanelDeRol paneles={paneles} />;
   }
 
   if (eliminandoCuenta) {
@@ -881,6 +939,28 @@ export default function YoScreen() {
                 detalle="Grupos, personas y solicitudes"
                 etiqueta="Abrir Administración"
                 onPress={() => setEnAdministracion(true)}
+              />
+            ) : null}
+            {/* MI GRUPO (mentor o guía que acompaña un grupo) y MIS MENTORES (líder): como Administración, no en Hoy (2026-10-31).
+                Las reglas son las de siempre: el rol, si acompaña un grupo y las entradas de Soporte TI. */}
+            {paneles.filas.miGrupo ? (
+              <FilaDeAjuste
+                key="mi-grupo"
+                icono="users"
+                titulo="Mi grupo"
+                detalle="Tus aprendices"
+                etiqueta="Abrir Mi grupo"
+                onPress={() => paneles.ir({ tipo: 'miGrupo', enfocarSemaforo: false })}
+              />
+            ) : null}
+            {paneles.filas.misMentores ? (
+              <FilaDeAjuste
+                key="mis-mentores"
+                icono="award"
+                titulo="Mis mentores"
+                detalle="Grupos, consultas y reporte del mes"
+                etiqueta="Abrir Mis mentores"
+                onPress={() => paneles.ir({ tipo: 'misMentores' })}
               />
             ) : null}
             {/* TUVE UNA EMERGENCIA (D-244): solo si el servidor dice que esta cuenta puede pedirlo. */}

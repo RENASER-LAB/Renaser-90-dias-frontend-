@@ -231,6 +231,10 @@ Hasta hoy el líder llegaba a una persona solo por Hoy → «Mis mentores» → 
 * **Hace falta un APK nuevo** (solo JavaScript: ni `package.json`, ni `app.json`, ni código nativo; la app no se actualiza por aire) y
   **el backend con `/leadership/people` antes**: contra uno anterior la fila no se dibuja y Hoy queda como estaba.
 
+> **Corregido 2026-10-31 (punto 16, más tarde el mismo día).** «Mis mentores» ya no está en Hoy: es una fila de **Yo**, y «Todos los
+> aprendices» sigue siendo una de sus filas. Donde esta entrada dice «Hoy → Mis mentores» o «estado de Hoy», léase Yo → Mis mentores. El
+> atrás sube un nivel: persona → lista → «Mis mentores» → Yo. El flujo de Maestro `lider-ve-a-todos/01` entra ahora por Yo.
+
 ## Cambio por pedido del dueño — 2026-10-31 — diseño de Hoy, Plan y Training, y la fuente Inter en toda la app
 
 Pedidos del dueño del 31/10 con capturas; **todo es de la app, sin backend**. Cada punto es un commit aparte de la rama
@@ -263,6 +267,7 @@ Pedidos del dueño del 31/10 con capturas; **todo es de la app, sin backend**. C
   cumplido → «Cumpliste tus acciones de hoy» (sin botón); mientras carga, nada (sin parpadeo). Con acciones por hacer, la acción
   manda sobre el Mapa. **Se quitó la tarjeta vieja de abajo** (no se duplica).
 * **No cambian** el resto de Hoy, los papeles del líder, el orbe ni los demás tabs. Sin animaciones nuevas.
+  > **Corregido el mismo día (punto 16):** los papeles del líder ya no están en Hoy; ver «Los paneles de rol viven en Yo» más abajo.
 * **Pruebas:** Jest `vistaDeLaAccionDeHoy`, `tarjetaAccionDeHoy`, `metaDeLaAccion`, `useMetaDeLaAccion`,
   `useLecturaDelEstadoDelMapa` y `accionesDeHoy` (la que sigue y la hora); se ajustaron las que leían el código de Hoy.
 
@@ -456,6 +461,60 @@ respeta el nombre propio) **en el punto donde se pinta el nombre**:
 * **No nombran hábitos** y no se tocaron: el semáforo, el cierre, el Radar y «Mis evidencias».
 * **No cambia** lo que se guarda, lo que se manda al servidor ni **el texto de las alarmas**; los esquemas de lo que llega no transforman el título.
   Prueba: `tituloEnTodaLaApp.test.ts` (dónde se usa, la lógica pura y lo que no cambia).
+
+### Los paneles de rol viven en Yo; Hoy es solo el programa propio (punto 16)
+Textual: «¿qué fue eso? Debe ir dentro de Administración, lo mismo de cada uno, no en Hoy de cada rol; se ve feo, respeta pues». Deshace
+la spec 018 en Hoy (el control «Mi programa · Mi grupo · Mis mentores») y las tarjetas de rol que Hoy tenía desde septiembre. Lo que
+cambia y nada más:
+* **Hoy es SOLO el programa propio de la persona, para todos los roles.** Se quitaron: el control de papel (`ControlDePapelDeHoy`,
+  `usePapelDeHoy`, `papelesDeHoy`, `papelRecordado` y la memoria `renaser.hoy.papel.<id>`), «Mi grupo» y «Mis mentores» como listas de Hoy
+  (`MiGrupoEnHoy`, `MisMentoresEnHoy`), las tarjetas de rol (`TarjetaMentorHoy`, `TarjetaAdminHoy`), las pantallas de rol que Hoy abría como
+  estado propio (grupo, ficha del aprendiz, tickets, mentores, todos los aprendices, resumen del líder, Administración) y **todas sus
+  escuchas de avisos** y de `abrirCajaAprendizId` / `abrirFichaAprendiz`. La raya dorada ya no depende de ningún papel y nada queda
+  «oculto pero montado». **Se conserva** la invitación «Elegir mi Día 1» para el personal que no hace su programa
+  (`EntradaAlProgramaPropio`) y el color del semáforo que recibe el fénix (`usePublicarSemaforoDeHoy(resumen?.semaforo, …, null)`).
+* **Yo suma una fila por panel de rol, con la misma forma que «Administración»** (`FilaDeAjuste`, en la misma lista, entre
+  «Administración» y «Tuve una emergencia»): **«Mi grupo»** (ícono `users`, «Tus aprendices») y **«Mis mentores»** (ícono `award`,
+  «Grupos, consultas y reporte del mes»; no `usersThree`, que es el de la pestaña Comunidad y `barraDePestanasIconos.test.ts` no deja usar en otra parte). **Las reglas de quién las ve son las de siempre, sin inventar ninguna** (`paneles-de-rol/utils/
+  filasDeRol`, pura): «Mi grupo» para el mentor o la guía que acompaña un grupo (un mentor sin grupo la conserva, todavía no se lo
+  asignaron; el líder solo si de verdad acompaña uno, y no antes de saberlo, para no dibujarla un instante), con la entrada `mentor.mi_grupo`
+  prendida; «Mis mentores» solo para el líder de mentores y con alguna de sus tres entradas (`lider`, `tickets`, `semaforo`) prendida;
+  «Administración» no cambia (`canAdminister`). **El aprendiz no ve ninguna** y su Yo queda como estaba.
+* **Cada fila abre una pantalla completa de Yo** (como la Caja y Administración; `PantallaDelPanelDeRol`): «Mi grupo» abre `MiCelulaScreen`
+  con la cabecera «‹ Mi grupo» (prop nueva y opcional `rotuloDeVolver`, por defecto «Volver»); «Mis mentores» abre `MisMentoresEnYo`, con
+  la cabecera «‹ Mis mentores» y el contenido de la spec 018 (`ListaDeMisMentores`): Resultado por grupo, Consultas de mentores, Mentores y
+  reporte del mes y Todos los aprendices. **El atrás (la flecha y el del sistema) sube un nivel por vez hasta Yo**
+  (`vistaDeRegreso`): ficha → «Mi grupo» → Yo; consultas / mentores / todos / resultado de un grupo → «Mis mentores» → Yo. Una fila de grupo
+  sigue abriendo la pantalla del líder directo en ese grupo. Lo que Hoy mostraba como lista de aprendices con su % en «Mi grupo» lo muestra
+  ahora `MiCelulaScreen`, que ya listaba a los aprendices con su semáforo (es la pantalla del grupo que pidió el dueño).
+* **Los avisos del teléfono que abrían esas vistas desde Hoy abren lo mismo, ahora desde Yo** (`navigation/abrirAviso.ts` los lleva a Yo
+  con un parámetro; `usePanelesDeRol` y `YoScreen` los consumen una sola vez y limpian la ruta, para que volver no los reabra):
+  | Aviso | Ruta | Abre |
+  |---|---|---|
+  | Resumen del sábado del mentor / revisión del líder | `/mentor/groups/{g}/semaforo` | Yo → «Mi grupo» con la sección del semáforo a la vista (de otro de sus grupos: pasa a ese grupo) |
+  | Un aprendiz del grupo | `/mentor/groups/{g}/learners/{a}` | Yo → «Mi grupo» → la ficha de ese aprendiz (si ya no está en el padrón, abre el grupo y nada más) |
+  | Resumen por grupos del sábado | `/semaforo/grupos` | Líder: Yo → «Mis mentores» → resultado por grupo. Administración y Alquimista: Yo → Administración → Semáforo |
+  | Semáforo propio del sábado | `/semaforo` | Yo → el detalle de su semáforo |
+  | Caja de un aprendiz | `/admin/caja/{id}` | Yo → Administración → Caja Renaser → esa caja (solo si la cuenta administra) |
+  | «Ver ficha» desde la info de un chat | `abrirFichaAprendiz` | Yo → Administración → la ficha (Comunidad ahora navega a Yo, no a Hoy) |
+  Como antes, los de rol **no esperan** a las capas obligatorias (el de la caja del Admin sí) y quien no puede abrirlos (otro rol, sin
+  grupo, sin permiso) no ve nada: el aviso se descarta. No hay una ruta de aviso de tickets en la app: no había nada que mover.
+* **Dónde vive el código:** `features/paneles-de-rol/` (la carpeta `hoy-por-papel` renombrada): `utils/filasDeRol`, `vistasDeLosPaneles`,
+  `avisosDeLosPaneles` (puras), `hooks/usePanelesDeRol` (UNA lectura de su grupo, UNA del resumen por grupos del líder, la vista abierta y
+  el aviso pendiente; solo pide lo que le toca a la cuenta), `screens/PantallaDelPanelDeRol` y `MisMentoresEnYo`, `components/ListaDeMisMentores`
+  y `FilaDeLista`. **Donde esta guía dice «Administración (estado de `Hoy`)» o «Hoy → Administración», léase Yo → Administración.**
+* **No cambian:** las pantallas de rol por dentro (`MiCelulaScreen`, `AlumnoScreen`, bandeja de tickets, mentores, todos los aprendices,
+  resumen del líder, Administración y su raíz, incluido su botón «Mi programa», que ahora sale a Yo), los permisos (los decide el servidor),
+  las entradas de Soporte TI, «Mi grupo» de Comunidad → Tribu, los demás tabs ni la barra. Sin animaciones, íconos ni dependencias nuevas.
+* **Pruebas:** Jest `filasDeRol` (el líder ve «Mis mentores»; el mentor y la guía, «Mi grupo»; el aprendiz, ninguna; el líder espera al grupo y
+  la esconde con `sin_celula`; las tres entradas de Soporte TI), `vistasDeLosPaneles` (el atrás un nivel por vez), `avisosDeLosPaneles`
+  (parámetros, ficha, otro grupo, padrón que falta, resumen general), `panelesDeRol` (las filas montadas de «Mis mentores»),
+  `panelesDeRolEnYo` (Hoy sin control ni tarjetas ni escuchas; Yo con las filas y el panel; el hook; la pantalla) y `abrirAviso` /
+  `avisosDeLaCaja` (cada aviso lleva a Yo con su parámetro, sin esperar a las capas los de rol). Se actualizaron `semaforoEnYo`, `cajaEnLaApp`,
+  `loNoDisponible` e `infoDelChatIntegrantes`. Maestro, escrito y sin correr: `.maestro/diseno-31/06-roles-en-yo.yaml`; los flujos que
+  entraban a Administración, «Mis mentores» o «Todos los aprendices» desde Hoy (`regresion/20–24`, `mi-radar/11–12`, `15`, `lider-ve-a-todos/01`)
+  y el `abrirAdministracion` de `e2e/admin-alquimista` entran ahora por Yo (sin correr).
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
 
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
@@ -1024,16 +1083,26 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       (`renaser.hoy.papel.<id>` en AsyncStorage; un almacenamiento roto no tumba Hoy). La primera vez abre en «Mi programa»; si
       lo recordado ya no le corresponde, también. Quien se quedó en «Mi grupo» espera a que el servidor diga si acompaña uno, en
       vez de dibujar «Mi programa» y saltar al grupo.
+      > **Corregido 2026-10-31 (pedido del dueño, punto 16: «debe ir dentro de Administración, lo mismo de cada uno, no en Hoy de cada
+      > rol; se ve feo»).** El control «Mi programa · Mi grupo · Mis mentores» **ya no existe**: Hoy es SOLO el programa propio, para todos
+      > los roles. Se borraron `ControlDePapelDeHoy`, `usePapelDeHoy`, `papelesDeHoy` y `papelRecordado` (la memoria por cuenta
+      > `renaser.hoy.papel.<id>` queda sin leer en el teléfono), `MiGrupoEnHoy`, `TarjetaMentorHoy` y `TarjetaAdminHoy`, y la carpeta
+      > `features/hoy-por-papel/` pasó a `features/paneles-de-rol/`. «Mi grupo» y «Mis mentores» son filas de **Yo**, junto a
+      > «Administración». Ver la entrada del 2026-10-31.
     * **«Mi programa»** es el Hoy de siempre. Con otro papel a la vista, lo del programa propio (la frase del día,
       coherencia y racha, el orbe y todas sus tarjetas) queda **oculto pero montado** (`display: 'none'`): volver es
       instantáneo y no pierde la conversación del orbe. La línea de fase, día y puntos queda siempre.
       > **Corregido 2026-10-31 (pedido del dueño).** Ya no hay frase del día ni Coherencia / Racha en Hoy (están en Yo); lo del
       > programa que se oculta es la raya dorada, la tarjeta de acciones, el orbe y las demás tarjetas. Ver la entrada del 2026-10-31.
+      > **Corregido 2026-10-31 (punto 16).** Lo de «Mi programa» oculto pero montado ya no aplica: no hay otro papel que mostrar en Hoy.
     * **«Mi grupo»** (`MiGrupoEnHoy`): el rótulo «Grupo Octubre · 6 aprendices» (abre el grupo entero, `MiCelulaScreen`) y una
       fila por aprendiz con su foto, su punto de color y su % del semáforo del grupo (`GET /mentor/groups/{g}/semaforo`, en el
       orden del servidor; sin número dice «—», nunca un 0 %). Tocar a uno abre su ficha de siempre (`AlumnoScreen`) y **volver
       regresa a Hoy**; abierta desde la pantalla del grupo o desde un aviso, vuelve a esa pantalla, como antes. Sin el semáforo
       (404, 403, sin red) la lista sale igual, con los nombres y sin color.
+      > **Corregido 2026-10-31 (punto 16).** «Mi grupo» ya no es una lista en Hoy: es la fila «Mi grupo» de Yo, que abre `MiCelulaScreen`
+      > (que ya lista a los aprendices con su semáforo) a pantalla completa con la cabecera «‹ Mi grupo». Tocar a un aprendiz abre su
+      > ficha de siempre y volver regresa a «Mi grupo»; la flecha y el atrás del sistema suben un nivel por vez hasta Yo.
     * **«Mis mentores»** (`MisMentoresEnHoy`, solo el líder): **Resultado por grupo · Últimos 7 días**, una fila por grupo con
       su nombre, su mentor (o «Sin mentor asignado» en rojo), el punto de color y el % del promedio —los del servidor, sin
       recalcular—; abajo, «Consultas de mentores» con «N sin responder» (abre la bandeja de tickets de siempre) y «Mentores y
@@ -1043,6 +1112,10 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       sábado `/semaforo/grupos` sigue abriendo el resumen por grupos de siempre, con sus totales. Al abrirse la lista vuelve a
       los últimos 7 días y relee. La cifra de consultas sale de la primera página de la bandeja (30): si hay más páginas dice
       «N+», y no afirma «nada sin responder» si no vio todas. Cada lista es independiente: sin una, las otras siguen.
+      > **Corregido 2026-10-31 (punto 16).** «Mis mentores» es la fila «Mis mentores» de Yo (`MisMentoresEnYo`, con la cabecera «‹ Mis
+      > mentores»; la lista es la misma, `ListaDeMisMentores`): Resultado por grupo, Consultas de mentores, Mentores y reporte del mes y
+      > Todos los aprendices, con las mismas reglas. Cada pantalla que cuelga de ella vuelve a «Mis mentores» y esta, a Yo (un nivel por
+      > vez, `vistaDeRegreso`). Las rutas del aviso `/semaforo/grupos` no cambian: abre el mismo resumen, ahora desde Yo.
     * **Se borraron las tres tarjetas sueltas del líder** en Hoy (`TarjetaMentoresHoy`, `TarjetaBandejaHoy` y
       `TarjetaSemaforoGruposHoy`): sus pantallas se abren desde las filas de arriba. Deslizar para recargar relee la lista que
       está a la vista.
@@ -1794,6 +1867,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       cambia.
       > **Corregido 2026-10-29 (spec 018).** La tarjeta suelta se fue: «Mis mentores» es ahora una opción del control de arriba
       > de Hoy (con «Mi programa» y «Mi grupo») y `LiderMentoresScreen` se abre desde la fila «Mentores y reporte del mes».
+      > **Corregido 2026-10-31 (punto 16).** «Mis mentores» ya no está en Hoy: es una fila de Yo (ver la entrada del 2026-10-31).
+      > `LiderMentoresScreen` se abre desde la fila «Mentores y reporte del mes» de esa pantalla.
     * Todo vive en `src/features/lider-mentores/`: padrón (un mentor por fila: grupo y aprendices, semáforo de sus
       aprendices, consultas sin responder y evaluación del mes), ficha (grupos, consultas, evaluación, «Lo que le
       dijiste», «Escribirle» y Reconocer / Sugerir / Alertar), la pantalla para escribir una observación (con la casilla
@@ -1942,6 +2017,9 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **Avisos** (D-218): `/caja` abre Yo con su caja y `/admin/caja/{aprendizId}` abre Hoy →
       Administración → Caja Renaser → esa caja. Los dos esperan a que se cierre una capa obligatoria
       (Código Renaser, arranque guiado, Pacto), como los de hábitos (`navigation/abrirAviso.ts`).
+      > **Corregido 2026-10-31 (punto 16).** El aviso del Admin abre ahora **Yo** → Administración → Caja Renaser → esa caja:
+      > `abrirCajaAprendizId` lo lee `YoScreen` (si la cuenta administra; si no, lo descarta), no Hoy, que ya no tiene nada de Administración.
+      > Lo mismo para «Ver ficha» desde la info de un chat (`abrirFichaAprendiz`). Sigue esperando a las capas obligatorias.
     * **Administración**: «Caja Renaser» en «Más» de la raíz (lista con pestañas por estado y conteo,
       buscador, «Descargar» la planilla), el detalle de cada caja (datos de envío, checklist, foto de
       la caja, formulario del envío, comprobante, carta, historial y un botón por acción) y «Contenido
@@ -2419,6 +2497,10 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
   * **Excepción autorizada por el dueño del producto — 2026-09-26 — tab `Hoy`, tarjetas del mentor
     y de administración (retroalimentación del 26/09, spec `docs/specs/RETROALIMENTACION_2026-09-26.md`
     del backend, S-1, S-6 y A-1).** Lo único que cambia en `Hoy`:
+    > **Corregido 2026-10-31 (pedido del dueño, punto 16).** Las dos tarjetas ya no están en Hoy (`TarjetaMentorHoy` y `TarjetaAdminHoy` se
+    > borraron): «Mi grupo» (mentor o guía que acompaña un grupo) y «Administración» son filas de **Yo**, junto a «Mis mentores» del líder.
+    > Las reglas de cuándo salen no cambian (el rol, si acompaña un grupo y las entradas de Soporte TI). Los rótulos «MI GRUPO» y
+    > «OPERACIÓN» de abajo ya no existen. El semáforo del grupo sigue dentro de «Mi grupo». Ver la entrada del 2026-10-31.
     * **Tarjeta «Mi grupo» (solo mentores):** su línea la dice el semáforo del grupo
       (`GET /api/v1/mentor/groups/{g}/semaforo`): «N necesitan tu ayuda esta semana» (rojo + amarillo),
       «Nadie necesita ayuda esta semana» o «N aprendices · todavía sin actividad para medir». Antes
@@ -2665,6 +2747,11 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       > «Mis mentores» y la bandeja, su fila «Consultas de mentores». El aviso `/semaforo/grupos` sigue abriendo este resumen.
     Una excepción puntual **no abre** el tab: cualquier otro cambio sobre los cinco principales
     vuelve a necesitar autorización explícita.
+      > **Corregido 2026-10-31 (punto 16).** Las escuchas de estos avisos ya no viven en `HoyScreen`: `/semaforo`, `/mentor/groups/{g}/semaforo`,
+      > `/mentor/groups/{g}/learners/{a}` y `/semaforo/grupos` entran por `navigation/abrirAviso.ts`, que lleva a **Yo** con un parámetro
+      > (`abrirSemaforo`, `abrirSemaforoDelGrupo`, `abrirAlumno`, `abrirSemaforoPorGrupos`) que Yo consume una sola vez. «Mi grupo» y la
+      > ficha esperan al padrón del grupo; el resumen por grupos abre «Mis mentores» al líder y el semáforo de Administración a quien
+      > administra. No esperan a las capas obligatorias, como antes.
   * **Excepción autorizada por el dueño del producto — 2026-09-22 — tabs `Training` y `Plan`.**
     Dos pedidos del dueño ese día, sobre capturas:
     * **`Training` — la Audioterapia Semanal abre con la MISMA hoja que la Pastilla Renacer.**
@@ -3417,6 +3504,9 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       «Más opciones»). El fénix de Hoy, sin SER, queda como imagen (su ánimo a la vista). **«Eliminar mi cuenta» nunca se
       esconde** (Google Play exige que se encuentre): con `cuenta.eliminar` no disponible, la fila abre la página pública
       `/eliminar-cuenta` en el navegador (`abrirEliminarCuentaEnLaWeb`, `features/legal/enlacesLegales.ts`).
+      > **Corregido 2026-10-31 (punto 16).** «En Hoy las tarjetas de Administración, Mi grupo, Mis mentores, tickets, semáforo»: esas
+      > entradas ya no están en Hoy sino en Yo (filas «Administración», «Mi grupo» y «Mis mentores»; el semáforo propio, en su tarjeta de
+      > Yo) y se esconden con los mismos interruptores. En Hoy queda el próximo evento.
     * **Pestaña sin nada disponible**: Training, o Comunidad sin ninguna sección con interruptor (Testimonios sola no la
       sostiene), quedan con «Esta sección todavía no está disponible para tu cuenta.» (`SeccionNoDisponible`), sin el
       ícono de mantenimiento ni «Reintentar». Las pestañas nunca desaparecen.

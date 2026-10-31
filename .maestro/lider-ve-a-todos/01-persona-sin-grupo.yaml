@@ -1,15 +1,21 @@
 # «Todos los aprendices» (2026-10-31, pedido del dueño: «el líder de mentores puede ver la ficha de todos los aprendices sin
 # necesidad de estar en grupo, solo para este rol»). ESCRITO Y SIN CORRER: necesita el backend con `GET /leadership/people` y
 # un emulador libre.
-# El líder → Hoy → «Mis mentores» → «Todos los aprendices» → buscar a una persona SIN grupo → se ven sus días → atrás (vuelve
-# a la lista con la búsqueda) → atrás (vuelve a Hoy).
+# El líder → Yo → «Mis mentores» → «Todos los aprendices» → buscar a una persona SIN grupo → se ven sus días → atrás (vuelve
+# a la lista con la búsqueda) → atrás (vuelve a «Mis mentores»).
+# Corregido 2026-10-31: «Mis mentores» ya no es una pestaña de Hoy; es una fila de Yo, junto a Administración.
 # cuenta: admin (la ranura E2E_ADMIN_* apunta al LÍDER DE MENTORES, como en `mi-radar/12`).
 # PERSONA_SIN_GRUPO = parte del nombre de una persona que no está en ningún grupo (la búsqueda es del servidor, sin tildes).
 # Precondición: el líder ya entró, el servidor ofrece la lista y esa persona existe sin grupo.
 appId: com.renaser.app
 ---
 - runFlow: ../comun/ya-adentro.yaml
-# Hoy del líder: «Mis mentores» es una de sus pestañas.
+# Yo del líder: «Mis mentores» es una fila de la lista, junto a Administración.
+- tapOn: "YO"
+- scrollUntilVisible:
+    element: "Mis mentores"
+    direction: DOWN
+    timeout: 40000
 - tapOn: "Mis mentores"
 - extendedWaitUntil:
     visible: "Resultado por grupo"
@@ -50,7 +56,7 @@ appId: com.renaser.app
     visible: "Buscar por nombre"
     timeout: 20000
 - assertVisible: ".*${PERSONA_SIN_GRUPO}.*"
-# …y de la lista a Hoy.
+# …y de la lista a «Mis mentores».
 - back
 - extendedWaitUntil:
     visible: "Resultado por grupo"

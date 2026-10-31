@@ -10,7 +10,7 @@ import { usePublicarSemaforoDeHoy } from '../../features/semaforo/estado/useSema
 /**
  * El semáforo propio pasa de Hoy a Yo (2026-10-31, pedido del dueño): en Yo, la tarjeta de Hoy tal cual ocupa el lugar del gráfico
  * «Tu cumplimiento · últimos 7 días»; en Hoy desaparece. Tocarla abre el detalle desde Yo; el aviso del sábado (`/semaforo`) sigue
- * abriéndolo; y el fénix de Hoy sigue recibiendo el color. Las pantallas montan medio app: se lee el código sin comentarios y se
+ * abriéndolo (ahora por `abrirAviso`); y el fénix de Hoy sigue recibiendo el color. Las pantallas montan medio app: se lee el código sin comentarios y se
  * prueba aparte el comportamiento que importa (el color que publica Hoy).
  */
 const RAIZ = path.resolve(__dirname, '..', '..');
@@ -18,6 +18,7 @@ const sinComentarios = (c: string) => c.replace(/\/\*[\s\S]*?\*\//g, '').replace
 const leer = (r: string) => sinComentarios(fs.readFileSync(path.join(RAIZ, r), 'utf-8'));
 const YO = leer('screens/YoScreen.tsx');
 const HOY = leer('screens/HoyScreen.tsx');
+const PANELES = leer('features/paneles-de-rol/utils/avisosDeLosPaneles.ts') + leer('features/paneles-de-rol/hooks/usePanelesDeRol.ts');
 
 describe('Yo muestra la tarjeta del semáforo', () => {
   it('es la de Hoy, tal cual, en el lugar del gráfico, y solo si /home trae `semaforo` (y la entrada no está apagada)', () => {
@@ -48,9 +49,12 @@ describe('Hoy ya no tiene la tarjeta del semáforo', () => {
     expect(HOY).not.toMatch(/\benSemaforo\b|\bsetEnSemaforo\b/);
   });
 
-  it('lo del mentor, el líder y administración en Hoy sigue: «Mi grupo», «Mis mentores», el resumen por grupos y el aviso del grupo', () => {
-    for (const sigue of ['comoAbrirElSemaforoDelGrupo', 'quienAbreElResumenPorGrupos', 'useResumenPorGrupos', '<MiGrupoEnHoy', '<MisMentoresEnHoy', 'CumplimientoDelLiderScreen']) {
-      expect({ sigue, esta: HOY.includes(sigue) }).toEqual({ sigue, esta: true });
+  it('ni el resumen por grupos del líder ni las tarjetas de rol: los paneles de rol viven en Yo (2026-10-31)', () => {
+    for (const fuera of ['comoAbrirElSemaforoDelGrupo', 'quienAbreElResumenPorGrupos', 'useResumenPorGrupos', 'MiGrupoEnHoy', 'MisMentoresEnHoy', 'CumplimientoDelLiderScreen']) {
+      expect({ fuera, esta: HOY.includes(fuera) }).toEqual({ fuera, esta: false });
+    }
+    for (const sigue of ['comoAbrirElSemaforoDelGrupo', 'quienAbreElResumenPorGrupos']) {
+      expect({ sigue, esta: PANELES.includes(sigue) }).toEqual({ sigue, esta: true });
     }
   });
 });
@@ -63,12 +67,15 @@ describe('el detalle se abre desde Yo', () => {
     expect(detalle).toContain('onVolver');
   });
 
-  it('el aviso del sábado `/semaforo` lo recibe Hoy (siempre montada) y trae a Yo con `abrirSemaforo`; Yo lo abre y lo olvida', () => {
-    expect(HOY).toMatch(/if \(!consumirRutaPendiente\('semaforo'\)\) return;\s*\(navigation as any\)\.navigate\('Yo', \{ abrirSemaforo: true \}\);/);
+  it('el aviso del sábado `/semaforo` entra por `abrirAviso` (ya no por una escucha de Hoy) y trae a Yo con `abrirSemaforo`; Yo lo abre y lo olvida', () => {
+    const abrir = leer('navigation/abrirAviso.ts');
+    expect(abrir).toMatch(/case 'semaforo':\s*return \{ pestana: PESTANA\.semaforo, params: \{ abrirSemaforo: true \} \};/);
+    expect(abrir).toMatch(/semaforo: 'Yo'/);
+    expect(HOY).not.toMatch(/consumirRutaPendiente|alAbrirAviso/);
     expect(YO).toMatch(/abrirSemaforo\?: boolean[\s\S]{0,200}setEnSemaforo\(true\);[\s\S]{0,200}setParams\(\{ abrirSemaforo: undefined \}\)/);
   });
 
-  it('la ruta del aviso no cambió: `/semaforo` sigue siendo una ruta pendiente que Hoy consume', () => {
+  it('la ruta del aviso no cambió: `/semaforo` sigue siendo una ruta pendiente de clase `semaforo`', () => {
     expect(anotarRutaDeAviso('/semaforo')).toBe(true);
     expect(consumirRutaPendiente('semaforo')).toEqual({ tipo: 'semaforo' });
     expect(consumirRutaPendiente('semaforo')).toBeNull();

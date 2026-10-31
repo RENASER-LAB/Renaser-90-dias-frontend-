@@ -28,6 +28,8 @@ const PANTALLAS: Record<string, number> = {
   'src/screens/ComunidadScreen.tsx': 9,
   'src/features/eventos/components/SeccionEventos.tsx': 1,
   'src/screens/YoScreen.tsx': 11,
+  // «Mis mentores» del líder, una fila de Yo (2026-10-31).
+  'src/features/paneles-de-rol/screens/MisMentoresEnYo.tsx': 1,
   // Administración
   'src/features/admin/screens/AdminInicioScreen.tsx': 1,
   'src/features/admin/screens/BienvenidaAdminScreen.tsx': 1,

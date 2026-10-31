@@ -1,8 +1,8 @@
 import type { ColorSemaforo, GrupoDelResumen } from '../../semaforo/types/semaforo.types';
-import { aprendicesEnPalabras, formatearPorcentaje, palabraDelSemaforo, PALABRA_SIN_ACTIVIDAD } from '../../semaforo/utils/lecturaDelSemaforo';
+import { formatearPorcentaje, palabraDelSemaforo, PALABRA_SIN_ACTIVIDAD } from '../../semaforo/utils/lecturaDelSemaforo';
 
 /**
- * Cómo se DICEN las filas de «Mi grupo» y «Mis mentores» (spec 018). Puras, para probarlas sin montar Hoy.
+ * Cómo se DICEN las filas de «Mis mentores» (spec 018). Puras, para probarlas sin montar la pantalla.
  *
  * Dos reglas: el color nunca va solo (siempre lo acompaña su palabra para quien no lo ve, RL-30) y la falta de datos
  * no es un cero (sin número, «—» a la vista y «sin actividad para medir» al lector de pantalla).
@@ -46,9 +46,4 @@ export function consultasSinResponderEnPalabras(sinResponder: number | null, hay
   if (sinResponder === null) return null;
   if (sinResponder === 0) return hayMas ? null : 'Nada sin responder';
   return `${sinResponder}${hayMas ? '+' : ''} sin responder`;
-}
-
-/** `Grupo Octubre · 6 aprendices`: el rótulo de la lista de «Mi grupo». */
-export function rotuloDelGrupo(nombre: string | null | undefined, aprendices: number): string {
-  return `${nombre?.trim() || 'Tu grupo'} · ${aprendicesEnPalabras(aprendices)}`;
 }

@@ -58,6 +58,7 @@ export function MiCelulaScreen({
   recargar,
   onElegirGrupo,
   enfocarSemaforo = false,
+  rotuloDeVolver = 'Volver',
 }: {
   onSalir: () => void;
   onAbrirAlumno: (alumno: AlumnoConEstado) => void;
@@ -70,6 +71,8 @@ export function MiCelulaScreen({
   onElegirGrupo: (grupoId: string) => Promise<VistaCelula | null>;
   /** Llegó por el aviso del semáforo del grupo: abrir con esa sección a la vista. */
   enfocarSemaforo?: boolean;
+  /** Lo que dice la barra de arriba junto a la flecha (2026-10-31: desde Yo dice «Mi grupo», como las demás pantallas de Yo). */
+  rotuloDeVolver?: string;
 }) {
   const barraAlDesplazar = useOcultarBarraAlDesplazar();
   const { c, t } = useTheme();
@@ -122,12 +125,12 @@ export function MiCelulaScreen({
           onPress={onSalir}
           hitSlop={12}
           accessibilityRole="button"
-          accessibilityLabel="Volver"
+          accessibilityLabel={rotuloDeVolver === 'Volver' ? 'Volver' : `Volver a Yo desde ${rotuloDeVolver}`}
           style={estilos.volver}
         >
           <Icon name="arrowLeft" size={15} color={c.goldInk} />
           <Text style={[t.body, { color: c.goldInk, fontFamily: fuentes.media, fontSize: 16 }]}>
-            Volver
+            {rotuloDeVolver}
           </Text>
         </Pressable>
         <View style={[estilos.insignia, { borderColor: c.gold, backgroundColor: c.goldWash }]}>
