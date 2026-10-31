@@ -1,5 +1,6 @@
-# 01 — KILÓMETROS DIARIOS (D-226): Training (lista por hora, spec 014) → su fila → («Tomar foto» si el hábito trae guía) → foto →
-# «¿Cuántos km recorriste hoy?» → 3,5 → sale de la lista y queda en «N hechos hoy».
+# 01 — KILÓMETROS DIARIOS (D-226): Training (lista por hora, spec 014) → su fila → («Tomar foto» si el hábito trae guía) →
+# hoja «Tomar foto / Elegir de la galería» (#41) → «Tomar foto» → foto → «¿Cuántos km recorriste hoy?» → 3,5 → sale de la
+# lista y queda en «N hechos hoy».
 # Precondición: el aprendiz tiene el hábito en su día de hoy y sin registrar; fotos en local (fotos-local + adb reverse).
 # Lo de días anteriores no importa: el flujo mide cuánto sube el total.
 # cuenta: aprendiz
@@ -14,12 +15,20 @@ appId: com.renaser.app
     centerElement: true
     timeout: 30000
 - tapOn: ".*KILÓMETROS DIARIOS.*"
-# Con guía cargada, la fila abre la hoja con «Tomar foto»; sin guía, abre la cámara directo.
+# Con guía cargada, la fila abre la hoja del hábito con «Tomar foto» (la etiqueta es solo esas dos palabras); sin guía,
+# abre directo la hoja de origen.
 - runFlow:
     when:
       visible: "Tomar foto"
     commands:
       - tapOn: "Tomar foto"
+# #41: solo este hábito pregunta de dónde sale la foto (la galería es para la captura de la app de actividad). Los demás
+# hábitos con foto abren la cámara directo (flujo 10). La fila se anuncia «Tomar foto. Con la cámara del teléfono».
+- extendedWaitUntil:
+    visible: "Elegir de la galería.*"
+    timeout: 15000
+- takeScreenshot: 01-kilometros-hoja-de-origen
+- tapOn: "Tomar foto.*"
 - runFlow: ../comun/tomar-foto.yaml
 - extendedWaitUntil:
     visible: "¿Cuántos km recorriste hoy?"

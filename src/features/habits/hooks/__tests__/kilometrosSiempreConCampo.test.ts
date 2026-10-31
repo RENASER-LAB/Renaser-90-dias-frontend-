@@ -104,11 +104,30 @@ async function vaciar() {
   });
 }
 
+/**
+ * #41: el registro que pide los km pregunta de dónde sale la foto («Tomar foto» / «Elegir de la galería»). Estas pruebas
+ * son del campo de km, no de la hoja: cuando aparece, se elige la cámara y el toque sigue hasta `terminado()`.
+ */
+async function elegirLaCamaraSiPregunta(terminado: () => boolean) {
+  for (let i = 0; i < 20 && !terminado(); i++) {
+    await act(async () => {
+      for (let j = 0; j < 4; j++) await Promise.resolve();
+      api.modal.origen?.onElegir('camara');
+    });
+  }
+}
+
 async function iniciar(...args: Parameters<Api['iniciar']>) {
-  let resultado!: Awaited<ReturnType<Api['iniciar']>>;
+  let promesa!: ReturnType<Api['iniciar']>;
+  let terminado = false;
   await act(async () => {
-    resultado = await api.iniciar(...args);
+    promesa = api.iniciar(...args);
+    void promesa.finally(() => {
+      terminado = true;
+    });
   });
+  await elegirLaCamaraSiPregunta(() => terminado);
+  const resultado = await promesa;
   await vaciar();
   return resultado;
 }
@@ -179,6 +198,8 @@ describe('si no se puede leer el registro (sin red)', () => {
     await act(async () => {
       reintentar.onPress?.();
     });
+    // El «Reintentar» no devuelve la promesa del toque: se deja correr y se contesta la hoja de origen si aparece.
+    await elegirLaCamaraSiPregunta(() => mockCamara.mock.calls.length > 0);
     await vaciar();
     expect(mockCamara).toHaveBeenCalledTimes(1);
     expect(api.modal.registro?.medicion).toEqual({ unidad: 'KILOMETROS', totalPrevio: 12.5 });

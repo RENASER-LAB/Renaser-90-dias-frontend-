@@ -32,6 +32,28 @@ export function preguntaQueSintio(systemKey: string | null | undefined): boolean
  */
 export const PREGUNTA_DE_KILOMETROS = '¿Cuántos km recorriste hoy?';
 
+/**
+ * De dónde sale la foto del registro. La cámara es lo de siempre; la galería solo se ofrece en
+ * KILÓMETROS DIARIOS (#41, pedido del dueño, 2026-10-29): el hábito pide «la captura de tu app de
+ * actividad» (Strava, Google Fit, el reloj), y una captura de pantalla del mismo teléfono no se puede
+ * sacar con su cámara.
+ */
+export type OrigenDeLaFoto = 'camara' | 'galeria';
+
+/**
+ * Si, antes de abrir nada, se le pregunta a la persona de dónde sale la foto. **Solo** el registro que
+ * pide los km (`medicion`: lo marca el servidor, hoy únicamente KILÓMETROS DIARIOS) y solo un hábito:
+ * una acción del día (`'roca'`) exige el EXIF de una foto tomada ahora (Ley VI, ±15 min), que una
+ * captura de la galería no trae. Todos los demás hábitos con evidencia obligatoria abren la cámara
+ * directo, como desde el 2026-09-26.
+ */
+export function seOfreceGaleria(
+  medicion: MedicionPedida | null | undefined,
+  destino: DestinoDeFoto = 'habito',
+): boolean {
+  return destino === 'habito' && !!medicion;
+}
+
 /** El mismo tope del servidor (`PoliticaKilometros`, supuesto a confirmar con el dueño). */
 export const TOPE_KM_POR_DIA = 100;
 

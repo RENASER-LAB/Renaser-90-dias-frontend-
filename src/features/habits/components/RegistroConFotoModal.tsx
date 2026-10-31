@@ -20,6 +20,7 @@ import { useSystemBackHandler } from '../../../hooks/useSystemBackHandler';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useResponsive } from '../../../theme/responsive';
 import type { PropsRegistroConFotoModal } from '../hooks/useRegistroConFoto';
+import { HojaDeOrigenDeLaFoto } from './HojaDeOrigenDeLaFoto';
 import {
   formatoKm,
   leerKilometros,
@@ -42,11 +43,16 @@ import {
  * Solo dibuja: el estado y la subida viven en `useRegistroConFoto`, y es el mismo componente en
  * Training, en el chat del acompañante y en la hoja del orbe.
  *
+ * También dibuja la hoja «Tomar foto / Elegir de la galería» (`origen`, #41), que solo se abre en
+ * KILÓMETROS DIARIOS: antes de que haya foto, sola; y con la pantalla partida abierta («Cambiar
+ * foto»), DENTRO de su `Modal` —en iOS un `Modal` hermano no se presenta sobre otro—.
+ *
  * **Dónde se monta importa en iOS:** si se abre desde algo que ya es un `Modal` (el chat), tiene
  * que montarse DENTRO de ese modal; montado al lado, iOS no lo presenta.
  */
 export function RegistroConFotoModal({
   registro,
+  origen,
   respuesta,
   enviando,
   error,
@@ -73,7 +79,7 @@ export function RegistroConFotoModal({
     visible,
   );
 
-  if (!registro) return null;
+  if (!registro) return <HojaDeOrigenDeLaFoto origen={origen} />;
 
   return (
     <Modal visible animationType="slide" onRequestClose={() => !enviando && onCerrar()} statusBarTranslucent>
@@ -104,12 +110,12 @@ export function RegistroConFotoModal({
                 onPress={onRetomarFoto}
                 disabled={enviando}
                 accessibilityRole="button"
-                accessibilityLabel="Tomar otra foto"
+                accessibilityLabel={medicion ? 'Cambiar la foto' : 'Tomar otra foto'}
                 style={[estilos.retomar, { backgroundColor: c.bg, borderColor: c.borderStrong, opacity: enviando ? 0.5 : 1 }]}
               >
                 <Icon name="camera" size={16} color={c.goldInk} />
                 <Text style={[t.micro, { color: c.textStrong, fontFamily: 'Jost_700Bold', fontSize: 11.5 }]}>
-                  TOMAR OTRA
+                  {medicion ? 'CAMBIAR FOTO' : 'TOMAR OTRA'}
                 </Text>
               </Pressable>
             ) : null}
@@ -217,6 +223,7 @@ export function RegistroConFotoModal({
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
+      <HojaDeOrigenDeLaFoto origen={origen} />
     </Modal>
   );
 }

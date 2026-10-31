@@ -12,7 +12,12 @@ import {
 import { obtenerTracksDeHoy } from '../api/habitsApi';
 import { DiaDeHabitosCambiadoError, MENSAJE_SIN_CONEXION_PARA_REGISTRAR } from '../api/registroVigente';
 import { fotoPendiente } from '../storage/fotoPendiente';
-import { archivoDeResultadoDeCamara, tomarFotoConCamara, type ArchivoEvidencia } from '../utils/capturarEvidencia';
+import {
+  archivoDeResultadoDeCamara,
+  elegirFotoDeGaleria,
+  tomarFotoConCamara,
+  type ArchivoEvidencia,
+} from '../utils/capturarEvidencia';
 import { RechazoParaMostrar, type DestinoDeFoto, type ReglasDelDestino } from '../utils/destinoDeFoto';
 import {
   avisoParaFoto,
@@ -20,9 +25,11 @@ import {
   medicionQueSeSabe,
   pideLosKm,
   registrarConFoto,
+  seOfreceGaleria,
   type DependenciasDelRegistro,
   type EstadoParaFoto,
   type MedicionPedida,
+  type OrigenDeLaFoto,
   type ResultadoDelRegistro,
 } from '../utils/registroConFoto';
 
@@ -84,9 +91,21 @@ export type OpcionesRegistroConFoto = {
   destinos?: { roca?: ReglasDelDestino };
 };
 
+/**
+ * La hoja «Tomar foto / Elegir de la galería» (#41, solo kilómetros). `null` = cerrada. La dibuja
+ * `RegistroConFotoModal`, así que cada pantalla que ya lo monta la recibe sin tocar nada más.
+ */
+export type OrigenPorElegir = {
+  titulo: string;
+  onElegir: (origen: OrigenDeLaFoto) => void;
+  /** Gesto, fondo, ✕ o atrás de Android: no se saca ninguna foto. */
+  onCancelar: () => void;
+};
+
 /** Lo que `RegistroConFotoModal` necesita. Se pasa entero: `<RegistroConFotoModal {...r.modal} />`. */
 export type PropsRegistroConFotoModal = {
   registro: RegistroConFotoAbierto | null;
+  origen: OrigenPorElegir | null;
   respuesta: string;
   enviando: boolean;
   error: string | null;
@@ -123,6 +142,10 @@ export function reglasPara(
  */
 const ESPERA_CIERRE_CAMARA_IOS_MS = 650;
 
+/**
+ * Sirve también para la hoja «de dónde sale la foto» (#41): es un `Modal` y, en iOS, abrir la cámara o la
+ * galería mientras todavía baja se pierde. Y para el selector de la galería, que también se despide con animación.
+ */
 function esperarCierreDeLaCamara(): Promise<void> {
   if (Platform.OS !== 'ios') return Promise.resolve();
   return new Promise(resolver => setTimeout(resolver, ESPERA_CIERRE_CAMARA_IOS_MS));
@@ -196,8 +219,10 @@ export function useRegistroConFoto(opciones: OpcionesRegistroConFoto) {
   const [respuesta, setRespuesta] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [origen, setOrigen] = useState<{ titulo: string } | null>(null);
 
   const ocupadoRef = useRef(false);
+  const origenRef = useRef<((elegido: OrigenDeLaFoto | null) => void) | null>(null);
   const registroRef = useRef<RegistroConFotoAbierto | null>(null);
   registroRef.current = registro;
   const opcionesRef = useRef(opciones);
@@ -255,14 +280,56 @@ export function useRegistroConFoto(opciones: OpcionesRegistroConFoto) {
     return 'sin-conexion';
   }, []);
 
-  const sacarFoto = useCallback(async (solicitud: SolicitudDeFoto): Promise<ArchivoEvidencia | null> => {
-    if (Platform.OS === 'android') await fotoPendiente.guardar(solicitud);
-    try {
-      return await tomarFotoConCamara();
-    } finally {
-      if (Platform.OS === 'android') await fotoPendiente.borrar();
-    }
+  /**
+   * Abre la hoja «Tomar foto / Elegir de la galería» y espera lo que elija la persona (`null` si la
+   * cierra). Quien la llama sigue con `ocupadoRef` puesto: ningún toque abre otra cámara mientras tanto.
+   */
+  const pedirOrigen = useCallback(
+    (titulo: string) =>
+      new Promise<OrigenDeLaFoto | null>(resolver => {
+        origenRef.current = resolver;
+        setOrigen({ titulo });
+      }),
+    [],
+  );
+
+  const responderOrigen = useCallback((elegido: OrigenDeLaFoto | null) => {
+    const resolver = origenRef.current;
+    origenRef.current = null;
+    setOrigen(null);
+    resolver?.(elegido);
   }, []);
+
+  /**
+   * Cámara, o galería (solo kilómetros, #41). La galería pasa por el mismo `normalizarFoto` que la
+   * cámara —JPEG a 1440 px y calidad 0,8— y también se anota en `fotoPendiente`: Android puede matar la
+   * app con el selector abierto igual que con la cámara.
+   */
+  const sacarFoto = useCallback(
+    async (solicitud: SolicitudDeFoto, desde: OrigenDeLaFoto = 'camara'): Promise<ArchivoEvidencia | null> => {
+      if (Platform.OS === 'android') await fotoPendiente.guardar(solicitud);
+      try {
+        return desde === 'galeria' ? await elegirFotoDeGaleria() : await tomarFotoConCamara();
+      } finally {
+        if (Platform.OS === 'android') await fotoPendiente.borrar();
+      }
+    },
+    [],
+  );
+
+  /**
+   * De dónde sale la foto: si el registro pide los km, se le pregunta a la persona; en todo lo demás,
+   * cámara directo sin preguntar nada. `null`: cerró la hoja y no hay foto que sacar.
+   */
+  const origenDeLaFoto = useCallback(
+    async (titulo: string, medicion: MedicionPedida | null | undefined, destino?: DestinoDeFoto) => {
+      if (!seOfreceGaleria(medicion, destino)) return 'camara' as const;
+      const elegido = await pedirOrigen(titulo);
+      if (elegido) await esperarCierreDeLaCamara();
+      return elegido;
+    },
+    [pedirOrigen],
+  );
 
   /**
    * Toque sobre un hábito (o sobre "Tomar foto" en el chat o el orbe). `evidenciaYaSubida` es la
@@ -295,8 +362,11 @@ export function useRegistroConFoto(opciones: OpcionesRegistroConFoto) {
           abrir({ ...solicitud, archivo: null, evidenciaYaSubida: true, medicion });
           return 'abierto';
         }
-        // La foto pendiente de Android se anota con lo que ya se sabe de los km (`previa`).
-        const archivo = await sacarFoto({ ...solicitud, medicion: previa });
+        // De dónde sale la foto: solo en kilómetros se le pregunta a la persona (#41). La foto pendiente de
+        // Android se anota con lo que ya se sabe de los km (`previa`).
+        const desde = await origenDeLaFoto(solicitud.titulo, previa, solicitud.destino);
+        if (!desde) return 'cancelado';
+        const archivo = await sacarFoto({ ...solicitud, medicion: previa }, desde);
         if (!archivo) return 'cancelado';
         await esperarCierreDeLaCamara();
         const medicion = await medicionDelRegistro(reglas, solicitud, previa);
@@ -307,7 +377,7 @@ export function useRegistroConFoto(opciones: OpcionesRegistroConFoto) {
         ocupadoRef.current = false;
       }
     },
-    [abrir, avisarSiNoSePuede, avisarSinConexion, sacarFoto, verificar],
+    [abrir, avisarSiNoSePuede, avisarSinConexion, origenDeLaFoto, sacarFoto, verificar],
   );
   iniciarRef.current = iniciar;
 
@@ -317,7 +387,10 @@ export function useRegistroConFoto(opciones: OpcionesRegistroConFoto) {
     if (!actual || actual.evidenciaYaSubida || ocupadoRef.current || enviando) return;
     ocupadoRef.current = true;
     try {
-      const archivo = await sacarFoto(actual);
+      // En kilómetros también se puede cambiar por otra captura de la galería.
+      const desde = await origenDeLaFoto(actual.titulo, actual.medicion, actual.destino);
+      if (!desde) return;
+      const archivo = await sacarFoto(actual, desde);
       if (archivo) {
         setError(null);
         setRegistro(previo => (previo && previo.registroId === actual.registroId ? { ...previo, archivo } : previo));
@@ -325,7 +398,7 @@ export function useRegistroConFoto(opciones: OpcionesRegistroConFoto) {
     } finally {
       ocupadoRef.current = false;
     }
-  }, [enviando, sacarFoto]);
+  }, [enviando, origenDeLaFoto, sacarFoto]);
 
   const terminar = useCallback(async () => {
     const actual = registroRef.current;
@@ -375,11 +448,13 @@ export function useRegistroConFoto(opciones: OpcionesRegistroConFoto) {
   }, [registro, enviando, error, terminar]);
 
   const cerrar = useCallback(() => {
+    // Si lo que hay abierto es la hoja de «de dónde sale la foto», se cierra ella y no se saca nada.
+    if (origenRef.current) responderOrigen(null);
     if (enviando) return;
     setRegistro(null);
     setRespuesta('');
     setError(null);
-  }, [enviando]);
+  }, [enviando, responderOrigen]);
 
   /**
    * Android mató la app con la cámara abierta y la volvió a abrir: la foto está en
@@ -426,6 +501,7 @@ export function useRegistroConFoto(opciones: OpcionesRegistroConFoto) {
 
   const modal: PropsRegistroConFotoModal = {
     registro,
+    origen: origen ? { titulo: origen.titulo, onElegir: responderOrigen, onCancelar: () => responderOrigen(null) } : null,
     respuesta,
     enviando,
     error,

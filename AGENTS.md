@@ -3145,6 +3145,26 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). No cambian los otros tabs ni nada más
       de Hoy.
 
+  * **Cambio por pedido del dueño — 2026-10-29 — tabs `Training` y `Yo` (y las tarjetas «Tomar foto» de `Hoy` y del chat
+    de SER): KILÓMETROS DIARIOS deja elegir la captura de la galería** (issue #41; autorizado el 2026-10-29). El hábito
+    dice «Sube la captura de tu app de actividad… y escribe cuántos km recorriste», pero la app solo abría la cámara:
+    una captura de Strava, Google Fit o el reloj no se puede sacar con la cámara del mismo teléfono. Lo que cambia y
+    nada más:
+    * **Solo el registro que pide los km** (`seOfreceGaleria`: lleva `medicion`, que marca el servidor —D-226, hoy solo
+      KILÓMETROS DIARIOS, `DAILY_KM`— y no una lista de claves de este lado; también desde «+ Subir foto» de Yo y desde
+      el chat y el orbe de SER, que leen el registro fresco). Al tocarlo se abre `HojaDeOrigenDeLaFoto`, una
+      `HojaDesdeAbajo` con dos filas de 72: **«Tomar foto»** («Con la cámara del teléfono») y **«Elegir de la galería»**
+      («Para la captura de tu app de actividad»); texto de 17 y 16 px, `Presionable` y `tacto.seleccion()`. Cerrarla (✕,
+      fondo, arrastre, atrás de Android) no saca ninguna foto. Después sigue la MISMA pantalla partida con «¿Cuántos km
+      recorriste hoy?»; en esa pantalla, para km, el botón de la foto dice «Cambiar foto» y vuelve a abrir la hoja.
+    * **La galería** reutiliza `elegirFotoDeGaleria` (el selector y el permiso de galería de siempre) y pasa por el
+      mismo procesamiento que la cámara: JPEG a 1440 px de ancho y calidad 0,8. Una acción del día (`'roca'`) nunca la
+      ofrece: su foto exige el EXIF de una toma de ahora (Ley VI, ±15 min).
+    * **No cambia**: ningún otro hábito con evidencia obligatoria (siguen abriendo la cámara directo, decisión del
+      2026-09-26), los rituales, las acciones del día, el build web (el modal de las cuatro formas ya tenía galería),
+      el backend (acepta cualquier foto) ni los tabs.
+    * **Hace falta un APK nuevo** (la app no se actualiza por aire).
+
 ## 2. 📱 RESPONSIVIDAD UNIVERSAL (XIAOMI, ANDROID, IOS Y TABLETS)
 * **Cero Doble Scroll**: NUNCA coloques un contenedor con `maxHeight` fijo o scroll interno dentro de otro `ScrollView`. Toda pantalla debe tener UN ÚNICO contenedor de scroll fluido con `contentContainerStyle={{ flexGrow: 1, paddingBottom: 36 }}`.
 * **Adaptabilidad a Xiaomi y Pantallas Altas (20:9 / 19.5:9)**:
