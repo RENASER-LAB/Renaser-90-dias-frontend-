@@ -368,6 +368,11 @@ Pedido del dueño: «en Plan replica este formato de acuerdo a lo que tenemos».
 * **Pruebas:** `planDelEje` (con todo, sin semana, sin acciones, el domingo, bloqueada y errores), `planPrincipal` (la lógica pura),
   `controlSegmentadoConIcono`, `planRediseno` y `planEsperaAlMapa` (el Mapa y el selector) reescritas.
 
+### Yo: sin la tira «Evidencia» (punto 11)
+* **Se quita de Yo la tira «Evidencia»** (las tres miniaturas con `MiniaturaDeEvidencia`, debajo de Coherencia, Puntos de liga y
+  Racha, con su «Todavía no subiste evidencias.» y el «+N»). **«Mis evidencias» sigue en Ajustes → Tu proceso**, sin tocar (su grilla
+  con la foto real y el visor en grande). Se borró lo que quedó sin uso: la medida de la miniatura y los estilos `more` y `rowCard`.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
@@ -1168,6 +1173,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       (`evidence/components/MiniaturaDeEvidencia`, `expo-image`) encima del ícono del tipo, que sigue de
       respaldo: sin `fotoUrl` (texto, video, audio, o un backend anterior a D-252), con una URL que no es de
       la red, o si la foto no carga. La foto entra con un fundido de `DURACION_MS.fundido`.
+      > **Corregido 2026-10-31 (pedido del dueño).** La tira de tres miniaturas de Yo se quitó; queda la grilla de «Mis evidencias»
+      > (Ajustes → Tu proceso).
     * En la grilla del registro, tocar una foto la abre en grande en el visor que ya existía
       (`ImageViewerModal`, sin reacciones ni comentarios). En la tira, tocar sigue llevando al registro.
     * `fotoUrl` es opcional y tolerante en `evidenceSchemas.ts`; la clave de caché es la URL sin la firma

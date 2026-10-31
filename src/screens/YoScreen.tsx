@@ -289,7 +289,6 @@ export default function YoScreen() {
     resumen ? { rachaActual: resumen.rachaActual, habitosHoy: resumen.habitosHoy, fase: resumen.fase } : null,
   );
   const animalesConfigurados = useAnimalesDeFase();
-  const moreSize = rs(56);
 
   /* «Tu Evolución»: el cumplimiento de cada día de la ventana del semáforo. Mismas fuentes que la
      tarjeta de Hoy: los días del campo `semaforo` de `/home` y, si un backend viejo no los manda,
@@ -817,69 +816,8 @@ export default function YoScreen() {
             </View>
           </View>
 
-          {/* EVIDENCIA */}
-          {esDisponible(CLAVES.evidencias) ? (
-          <View>
-            <MicroLabel>Evidencia</MicroLabel>
-            {/* Antes: tres cajas "FOTO" fijas y un "+6" escrito a mano, que daban a entender
-                nueve evidencias a cualquiera. Ahora sale del mismo listado real que la
-                sub-pantalla, y cuando no hay ninguna se dice, no se rellena. */}
-            {cargandoEvidencias ? (
-              <Text style={[t.body, { color: c.textSoft, marginTop: 12 }]}>
-                Cargando tus evidencias…
-              </Text>
-            ) : evidencias.length === 0 ? (
-              <Pressable
-                onPress={() => setActiveView('evidencias')}
-                accessibilityRole="button"
-                accessibilityLabel="Ver tus evidencias"
-                style={[styles.rowCard, { borderColor: c.border, backgroundColor: c.cardBg, marginTop: 12 }]}
-              >
-                <Icon name="camera" size={18} color={c.chevron} />
-                {/* Era 12.5: es el texto principal de la fila, no una etiqueta de ayuda. */}
-                <Text style={[t.body, { color: c.textSoft, flex: 1 }]}>
-                  {errorEvidencias ? 'No se pudieron cargar tus evidencias.' : 'Todavía no subiste evidencias.'}
-                </Text>
-                <Icon name="chevron" size={12} color={c.chevron} />
-              </Pressable>
-            ) : (
-              <View style={{ flexDirection: 'row', gap: space.gap, marginTop: 12 }}>
-                {evidencias.slice(0, 3).map(ev => (
-                  <Pressable
-                    key={ev.id}
-                    onPress={() => setActiveView('evidencias')}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Ver evidencia del ${fechaDeEvidencia(ev.subidaEn ?? ev.timestampExif)}`}
-                    style={{ flex: 1 }}
-                  >
-                    {/* El borde se queda: estas miniaturas se tocan. Lo que se fue es el
-                        `borderRadius: 10` suelto — ahora sale del token de radio interno.
-                        2026-10-05 (D-252): la foto real, con el ícono del tipo de respaldo. */}
-                    <MiniaturaDeEvidencia
-                      evidencia={ev}
-                      style={[
-                        styles.more,
-                        { height: moreSize, borderColor: c.border, backgroundColor: c.cardBg },
-                      ]}
-                      tamanoIcono={18}
-                      colorIcono={c.goldInk}
-                    />
-                  </Pressable>
-                ))}
-                {evidencias.length > 3 && (
-                  <Pressable
-                    onPress={() => setActiveView('evidencias')}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Ver las otras ${evidencias.length - 3} evidencias`}
-                    style={[styles.more, { width: moreSize, height: moreSize, borderColor: c.border, backgroundColor: c.cardBg }]}
-                  >
-                    <Text style={[t.body, { color: c.textSoft }]}>+{evidencias.length - 3}</Text>
-                  </Pressable>
-                )}
-              </View>
-            )}
-          </View>
-          ) : null}
+          {/* La tira «Evidencia» (las tres miniaturas) se quitó el 2026-10-31, pedido del dueño: «Mis evidencias» sigue en
+              Ajustes → Tu proceso. */}
 
           {/* Corregido 2026-09-29: acá estaban «Reflexión diaria» e «Identidad», dos tarjetas que al
               tocarlas solo mostraban un aviso con una frase fija, y «Patrones», un gráfico dibujado
@@ -1941,8 +1879,6 @@ const styles = StyleSheet.create({
   rotulo: { fontFamily: 'Jost_700Bold', letterSpacing: 0 },
   statCifra: { flexDirection: 'row', alignItems: 'baseline', gap: 2, marginTop: 6 },
   statSeparador: { width: 1, alignSelf: 'stretch' },
-  more: { borderRadius: space.radiusSm, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  rowCard: { borderWidth: 1, borderRadius: space.radius, minHeight: 48, paddingVertical: 14, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   /* Una barra de 6 px de alto no necesita contorno; el contraste lo da el color del riel. */
   progressBarBg: { height: 6, borderRadius: 3, overflow: 'hidden' },
   progressBarFill: { height: '100%', borderRadius: 3 },
