@@ -30,6 +30,7 @@ import { RegistroConFotoModal } from '../../habits/components/RegistroConFotoMod
 import { MensajeBurbuja } from '../components/MensajeBurbuja';
 import { FenixDeSerQuieto } from '../../fenix/components/FenixDeSerQuieto';
 import { AGENTES, nombreVisible } from '../data/agentes';
+import { useMarcarPanelDeSerAbierto } from '../state/panelDeSerAbierto';
 import type { AgenteRenasia, PedidoDeFotoUI } from '../types/renasia.types';
 import { AvisoDeMantenimiento } from '../../plataforma/components/AvisoDeMantenimiento';
 import { useFuncionalidad } from '../../plataforma/estado/useFuncionalidad';
@@ -140,6 +141,9 @@ export function RenasiaPanel({ agent, visible, onClose, contexto }: RenasiaPanel
     onClose();
     return true;
   }, visible);
+
+  // Issue #50: la guía de arranque (otro `Modal`) no se abre encima de este chat mientras esté a la vista.
+  useMarcarPanelDeSerAbierto(visible && serDisponible);
 
   useEffect(() => {
     if (visible && chatDeSer.prendida) {

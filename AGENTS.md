@@ -102,6 +102,28 @@ cambia ni suma textos: un aprendiz sin verde deja de recibir la mentoría en `GE
 su detalle recibe el 403 de siempre («Este evento ya no está disponible…»), y la alarma local de un «Voy» se quita sola en la
 siguiente lectura (`planDeSincronizacion`). No hace falta APK nuevo. Flujos de Maestro: `.maestro/mentoria-semaforo/`.
 
+## Corrección — 2026-10-31 — la guía de arranque de SER ya no se monta sobre el panel de SER (issue #50)
+
+E2E del 29/10: con una cuenta sin el Pacto firmado, la guía de arranque (`SparkieOverlay`, la burbuja «✳ SER») apareció encima
+del panel de SER y su «Ahora no» no respondía (solo el «atrás» la cerraba). Dos causas en el código, ambas arregladas; no cambian
+diseño, textos, ni la secuencia saludo → primer post → Pacto. Lo que cambia y nada más:
+* **La guía espera al panel.** El panel y la guía son dos `Modal` y en Android el que se crea después queda encima. El panel de SER
+  (`RenasiaPanel`, el del botón flotante, el orbe de Hoy y el botón del curso) se anota mientras está a la vista
+  (`renasia/state/panelDeSerAbierto`, un contador como `chatEnPantalla`) y la tarjeta de la guía no se dibuja mientras haya uno:
+  no se minimiza ni se pierde, vuelve al cerrar el chat. Mientras tanto no intercepta el «atrás» (es del panel). Una guía
+  que espera sigue contando como capa obligatoria (D-218): un aviso del teléfono sigue esperándola.
+* **Una guía pospuesta no se reabre sola.** `SparkieOverlay` volvía a abrirla ante CUALQUIER cambio de `estado.paso`, y
+  `useArranqueGuiado` cae en «ninguno» ante cualquier lectura fallida (lo más común al volver de la cámara o de segundo plano) y
+  vuelve a «publicar» en la lectura siguiente. Ahora solo la reabre un avance real («publicar» → «firmar el Pacto»), o entrar con
+  otra cuenta (`sparkie/utils/tarjetaDelArranque`, puro).
+* **Las lecturas del arranque se ordenan.** Si dos quedaban en vuelo (el sondeo de 8 s y el regreso de segundo plano), la que
+  llegaba última pisaba a la más nueva. Ahora solo escribe la más reciente, y firmar el Pacto anula las que ya habían salido.
+* **No comprobado todavía en el emulador:** el toque muerto de «Ahora no» sobre el panel se atribuye a la ventana apilada y deja de
+  poder ocurrir con el panel; con la guía sobre otro `Modal` (no el panel) no se probó. Flujo de Maestro listo:
+  `.maestro/guia-de-ser/01-la-guia-no-tapa-el-panel.yaml`. Pruebas: `guiaYPanelDeSer`, `lecturasDelArranque`, `tarjetaDelArranque`
+  y `panelDeSerAbierto`.
+* **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
