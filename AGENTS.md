@@ -244,6 +244,11 @@ Pedidos del dueño del 31/10 con capturas; **todo es de la app, sin backend**. C
 * **Se quita la frase del día** (la frase en serif bajo la cabecera). La cabecera queda: fase, «Día N de 90», los puntos y **la raya
   dorada corta** (el dueño: «la cabecera queda: fase, día, puntos y la raya»), que ahora es de la pantalla y no de la frase. Lo de
   abajo sube. `TarjetaConfrontacion` ya no se monta; su contenido (`confrontacion/data`, `fraseDelDia`) queda en el repo, sin uso.
+  > **Corregido 2026-10-31 (el dueño, al verlo en el emulador: «entendiste mal: la frase sí debe ir; esta parte se debería quitar»).**
+  > Era al revés: **la frase del día se queda** (`TarjetaConfrontacion`, con su raya dorada) y lo que se quita es **la cabecera** (la
+  > fase, «Día N de 90» y los puntos, que ya están en Yo). Hoy es ahora «HOY», la frase y lo demás. Y la tarjeta de acciones **sin Mapa**
+  > es una fila compacta («Haz tu Mapa de Renacimiento · De ahí nace tu objetivo de 90 días ›», toda tocable, del alto que tenía
+  > Coherencia / Racha: «no tan grande»), sin botón dorado. Los otros estados de la tarjeta no cambian. Hace falta APK nuevo.
 * **Se quita el bloque Coherencia / Racha** («Coherencia 0 %», «Consistencia del día», «Racha 2 días», «Récord histórico»): **Yo ya
   los muestra** (Coherencia con su %, Puntos de liga y Racha con «días»). Comprobado en `YoScreen`. Lo único que Hoy mostraba y Yo no
   es el «Récord histórico» (`rachaMaxima`) y las dos líneas de apoyo («Consistencia del día», «Nivel de excelencia»): se van con el

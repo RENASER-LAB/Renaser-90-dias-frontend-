@@ -9,6 +9,7 @@ import {
   RefreshControl,
   Pressable,
 } from 'react-native';
+import { TarjetaConfrontacion } from '../features/confrontacion/components/TarjetaConfrontacion';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BORDES_DE_UNA_PESTANA } from '../navigation/bordesDeUnaPestana';
 import { useNavigation } from '@react-navigation/native';
@@ -25,11 +26,7 @@ import { EntradaAlProgramaPropio } from '../features/programa/components/Entrada
 import { usePublicarSemaforoDeHoy } from '../features/semaforo/estado/useSemaforoVigente';
 import { useCelebracionDelDia } from '../features/fenix/hooks/useCelebracionDelDia';
 import { useCapacidades } from '../features/admin/hooks/useCapacidades';
-import {
-  useResumenHome,
-  rotuloDeFase,
-  DIAS_DEL_PROGRAMA,
-} from '../features/home/hooks/useResumenHome';
+import { useResumenHome } from '../features/home/hooks/useResumenHome';
 import { useHabitoDelMomento } from '../features/habits/hooks/useHabitoDelMomento';
 import { TarjetaHabitoYRadar } from '../features/home/components/TarjetaHabitoYRadar';
 import { useUltimaPublicacionMuro } from '../features/community/hooks/useUltimaPublicacionMuro';
@@ -195,7 +192,6 @@ export default function HoyScreen() {
      > **Corregido 2026-10-05 (decisión del dueño).** Sin `/home` (o con una fase que la app no conoce)
      > decía «Programa activo»: un dato inventado, el mismo error que los «100 pts» y el «DÍA 1 DE 90».
      > Ahora dice «—», como los puntos y la racha. */
-  const faseNombre = rotuloDeFase(resumen?.fase);
   /**
    * `null` = todavía no sabemos en qué día está, porque la carga falló o no terminó.
    *
@@ -270,11 +266,6 @@ export default function HoyScreen() {
     return 'Lidera tu energía diaria.';
   }, [habitoAhora]);
 
-  /* `null` = no se sabe (`/home` falló, todavía carga o no trajo el dato): la pantalla dice «—».
-     > **Corregido 2026-10-05.** Acá había `?? 100`: con `/home` caído Hoy decía «100 pts», un dato inventado (el mismo error
-     > que el «DÍA 1 DE 90» del 2026-09-07). Yo ya decía «—».
-     > **Corregido 2026-10-31.** Coherencia y racha se fueron de Hoy (pedido del dueño: ya están en Yo); quedan los puntos. */
-  const puntosLiga = typeof resumen?.puntosLiga === 'number' ? resumen.puntosLiga : null;
 
   /* El orbe responde también al tacto (rediseño de Hoy, 2026-10-05): un «tic» cuando el toque
      EMPIEZA a escuchar y el «toc» del sistema cuando mantenerlo presionado cierra la conversación.
@@ -322,43 +313,12 @@ export default function HoyScreen() {
         }
       >
         {/* ========================================================================= */}
-        {/* 1. BARRA DE ESTADO DEL PROGRAMA & PUNTOS                                  */}
+        {/* 1. LA FRASE DEL DÍA                                                       */}
         {/* ========================================================================= */}
         <Aparicion>
-        {/* Era una tarjeta con borde que contenía otra caja con borde (la píldora de puntos):
-            dos rectángulos anidados para decir dos datos. Ahora es una línea de encabezado
-            —fase arriba, día debajo, puntos al margen— sin borde ni fondo propios. Lo que la
-            separa de lo que sigue es el espacio, no un contorno. */}
-        <View style={styles.programStatusBar}>
-          <View style={{ flex: 1 }}>
-            <Text
-              style={[t.small, { color: c.goldInk, fontFamily: fuentes.negrita }]}
-              accessibilityLabel={`Fase del programa: ${faseNombre ?? 'sin datos'}`}
-            >
-              {faseNombre ?? '—'}
-            </Text>
-            <Text style={[t.cardTitle, styles.cifras, { color: c.textStrong, fontSize: 15, marginTop: 3 }]}>
-              Día {diaConocido ?? '—'} de {DIAS_DEL_PROGRAMA}
-            </Text>
-          </View>
-
-          {/* La cifra sola, como en Ranking (rediseño de Hoy, 2026-10-05). Llevaba un rayo, que en
-              Plan es «Tu semana», dentro de una píldora en versales. */}
-          <Text
-            style={[t.small, styles.cifras, { color: c.goldInk, fontFamily: fuentes.negrita, fontSize: 14 }]}
-            accessibilityLabel={puntosLiga === null ? 'Puntos de la liga: sin datos' : `${puntosLiga} puntos de la liga`}
-          >
-            {puntosLiga ?? '—'} pts
-          </Text>
-        </View>
-
-        {/* La raya dorada corta que iba sobre la frase del día se queda bajo la cabecera (pedido del dueño, 2026-10-31: «la
-            cabecera queda: fase, día, puntos y la raya»). Es solo adorno: el lector de pantalla no la lee. */}
-        <View
-          style={[styles.raya, { backgroundColor: c.gold }]}
-          accessibilityElementsHidden
-          importantForAccessibility="no-hide-descendants"
-        />
+        {/* Corregido 2026-10-31 (el dueño): lo que se quita de Hoy es la cabecera (fase, «Día n de 90» y puntos, que ya están
+            en Yo), NO la frase del día. La frase sube y ocupa su lugar, con su raya dorada corta. */}
+        <TarjetaConfrontacion diaPrograma={diaConocido} />
 
         {/* ========================================================================= */}
         {/* 2. LA ACCIÓN QUE SIGUE HOY (2026-10-31)                                   */}
@@ -668,13 +628,6 @@ const styles = StyleSheet.create({
   /** Cifras que cambian en pantalla: ancho de dígito fijo para que nada salte (AGENTS.md §4). */
   cifras: {
     fontVariant: ['tabular-nums'],
-  },
-  raya: { width: 34, height: 2, borderRadius: 1, marginTop: 20 },
-  programStatusBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 4,
   },
   /* Regla lateral en vez de recuadro completo: el mismo gesto que usa la frase del día, y no
      mete otra caja con borde en una pantalla que acaba de perder tres. */

@@ -71,9 +71,10 @@ describe('Hoy: textos en tipo oración', () => {
     for (const viejo of ['COHERENCIA', 'RACHA ACTUAL', '>DÍAS<', 'TU ACOMPAÑANTE', 'PROGRAMA ACTIVO', ' PTS', 'DÍA {', 'toUpperCase()']) {
       expect({ viejo, esta: HOY.includes(viejo) }).toEqual({ viejo, esta: false });
     }
-    expect(HOY).toMatch(/Día \{diaConocido \?\? '—'\} de \{DIAS_DEL_PROGRAMA\}/);
-    // Desde el 2026-10-05 sin dato dice «— pts» (ver `hoySinDatosInventados.test.ts`).
-    expect(HOY).toMatch(/\{puntosLiga \?\? '—'\} pts/);
+    // Desde el 2026-10-31 Hoy ya no lleva la cabecera de fase, día y puntos (están en Yo): arriba va la frase del día.
+    expect(HOY).not.toMatch(/Día \{diaConocido/);
+    expect(HOY).not.toMatch(/\} pts/);
+    expect(HOY).toContain('<TarjetaConfrontacion diaPrograma={diaConocido} />');
     expect(HOY).toMatch(/>\s*Tu acompañante\s*</);
   });
 

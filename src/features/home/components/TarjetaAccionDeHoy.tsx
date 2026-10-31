@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { GoldButton } from '../../../components/GoldButton';
 import { Icon, TAMANO_ICONO, type IconName } from '../../../components/Icon';
+import { Presionable } from '../../../components/Presionable';
 import { useTheme } from '../../../theme/ThemeContext';
 import { rangoDeHoraDeLaAccion } from '../../objetivos/utils/accionesDeHoy';
 import type { VistaDeLaAccionDeHoy } from '../utils/vistaDeLaAccionDeHoy';
@@ -34,6 +35,30 @@ export function TarjetaAccionDeHoy({
 }) {
   const { c, t } = useTheme();
 
+  /* Sin Mapa (corregido 2026-10-31, el dueño: «que ocupe el mismo tamaño que Coherencia y Racha, no tan grande»): una fila
+     compacta, toda tocable, en lugar de la tarjeta con botón dorado. */
+  if (vista.tipo === 'mapa') {
+    return (
+      <Presionable
+        onPress={alHacerElMapa}
+        accessibilityRole="button"
+        accessibilityLabel="Haz tu Mapa de Renacimiento. De ahí nace tu objetivo de 90 días."
+        style={[estilos.tarjeta, estilos.compacta, { borderColor: c.border, backgroundColor: c.cardBg }]}
+      >
+        <Icon name="map" size={TAMANO_ICONO.normal} color={c.goldInk} />
+        <View style={estilos.textos}>
+          <Text style={[t.cardTitle, estilos.tituloCompacto, { color: c.textStrong }]} numberOfLines={1}>
+            Haz tu Mapa de Renacimiento
+          </Text>
+          <Text style={[t.small, estilos.lineaCompacta, { color: c.textSoft }]} numberOfLines={2}>
+            De ahí nace tu objetivo de 90 días.
+          </Text>
+        </View>
+        <Icon name="chevron" size={TAMANO_ICONO.chico} color={c.textSoft} />
+      </Presionable>
+    );
+  }
+
   let icono: IconName = 'calendar';
   let arriba: string;
   let titulo: string;
@@ -43,12 +68,6 @@ export function TarjetaAccionDeHoy({
       arriba = rangoDeHoraDeLaAccion(vista.accion);
       titulo = vista.accion.titulo;
       boton = { texto: 'Empezar ahora', alPulsar: () => alEmpezar(vista.accion.id) };
-      break;
-    case 'mapa':
-      icono = 'map';
-      arriba = 'Tu Mapa de Renacimiento';
-      titulo = 'Tu objetivo de 90 días nace de tu Mapa de Renacimiento.';
-      boton = { texto: 'Hacer mi Mapa', alPulsar: alHacerElMapa };
       break;
     case 'sin-acciones':
       arriba = 'Hoy';
@@ -95,6 +114,10 @@ export function TarjetaAccionDeHoy({
 
 const estilos = StyleSheet.create({
   tarjeta: { borderWidth: 1, borderRadius: 16, padding: 17 },
+  compacta: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, minHeight: 72 },
+  textos: { flex: 1, gap: 2 },
+  tituloCompacto: { fontSize: 16, lineHeight: 22, fontFamily: fuentes.negrita },
+  lineaCompacta: { fontSize: 14, lineHeight: 20 },
   fila: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   /** Cifras que cambian: ancho de dígito fijo (AGENTS.md §4). */
   hora: { fontSize: 16, lineHeight: 22, fontFamily: fuentes.negrita, fontVariant: ['tabular-nums'], flexShrink: 1 },

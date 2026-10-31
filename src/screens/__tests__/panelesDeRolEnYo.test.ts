@@ -75,8 +75,8 @@ describe('Hoy: solo el programa propio', () => {
     expect(HOY).toContain('usePublicarSemaforoDeHoy(resumen?.semaforo, Boolean(resumen), null);');
   });
 
-  it('la raya dorada bajo la cabecera ya no depende de ningún papel', () => {
-    expect(HOY).toMatch(/<View\s+style=\{\[styles\.raya,/);
+  it('la frase del día (con su raya dorada) ya no depende de ningún papel', () => {
+    expect(HOY).toContain('<TarjetaConfrontacion diaPrograma={diaConocido} />');
     expect(HOY).not.toMatch(/\{mostrarPrograma \?/);
   });
 });

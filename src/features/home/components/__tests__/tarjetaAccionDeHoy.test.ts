@@ -107,13 +107,14 @@ describe('la acción que sigue', () => {
 });
 
 describe('los otros contenidos, con el mismo esqueleto', () => {
-  it('sin Mapa activo: dice que el objetivo nace del Mapa, con «Hacer mi Mapa»', () => {
+  it('sin Mapa activo: una fila compacta «Haz tu Mapa de Renacimiento», toda tocable, sin botón dorado', () => {
     montar({ tipo: 'mapa' });
-    expect(textosDe()).toContain('Tu objetivo de 90 días nace de tu Mapa de Renacimiento.');
-    expect(iconos()).toContain('map');
+    expect(textosDe()).toContain('Haz tu Mapa de Renacimiento');
+    expect(textosDe()).toContain('De ahí nace tu objetivo de 90 días.');
+    expect(iconos()).toEqual(expect.arrayContaining(['map', 'chevron']));
+    expect(textosDe().some(x => x.includes('Hacer mi Mapa'))).toBe(false);
     act(() => botones()[0].props.onPress());
     expect(alHacerElMapa).toHaveBeenCalledTimes(1);
-    expect(textosDe().some(x => x.includes('Hacer mi Mapa'))).toBe(true);
   });
 
   it('sin acciones hoy: «Hoy no tienes acciones agendadas», con «Agendar en Plan»', () => {
