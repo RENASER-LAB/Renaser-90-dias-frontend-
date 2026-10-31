@@ -94,6 +94,14 @@ Al cumplir solo se cancelaban las repeticiones +5/+10 (spec 009). Lo que cambia 
   `sellarRocaYRepeticiones.test.ts` (el aviso de la acción sellada).
 * **Hace falta un APK nuevo** (solo JavaScript: no hay código nativo nuevo, pero la app no se actualiza por aire).
 
+## Decisión del dueño — 2026-10-30 — Mentoría del Alquimista solo con semáforo verde (sin cambios en la app)
+
+Textual: «en eventos, si eres aprendiz solo te saldrá la mentoría con alquimista si tienes semáforo verde». El filtro es 100 % del
+servidor (backend spec 020, D-293, cierra D-213): lista, calendario, «Mi agenda», «Próximo evento» de Hoy, detalle, «Voy» y avisos. La app no
+cambia ni suma textos: un aprendiz sin verde deja de recibir la mentoría en `GET /calendar/events` y en `/home → proximoEvento`; si abre
+su detalle recibe el 403 de siempre («Este evento ya no está disponible…»), y la alarma local de un «Voy» se quita sola en la
+siguiente lectura (`planDeSincronizacion`). No hace falta APK nuevo. Flujos de Maestro: `.maestro/mentoria-semaforo/`.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:

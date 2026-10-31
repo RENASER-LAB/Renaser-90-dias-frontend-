@@ -1,0 +1,30 @@
+# Spec 020 (backend), US4: el personal no cambia. Un MENTOR la ve aunque su semáforo esté en rojo («Con problemas»): en Hoy, y en
+# Comunidad → Eventos.
+# Precondición: la de 01. Como `correr.sh` solo conoce «aprendiz», «admin» y «soporte», el mentor va por E2E_ADMIN_EMAIL /
+# E2E_ADMIN_PASSWORD (la cuenta de este flujo es el mentor, no un administrador).
+# cuenta: admin
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- scrollUntilVisible:
+    element: "Próximo evento"
+    direction: DOWN
+    centerElement: true
+    timeout: 40000
+- assertVisible: ".*Mentoría con la Alquimista.*"
+- takeScreenshot: M03a-mentor-hoy-proximo-evento
+- tapOn: ".*Mentoría con la Alquimista.*"
+- extendedWaitUntil:
+    visible: "Volver a Eventos"
+    timeout: 20000
+- assertVisible: ".*Mentoría con la Alquimista.*"
+- takeScreenshot: M03b-mentor-detalle-de-la-mentoria
+- tapOn: "Volver a Eventos"
+- extendedWaitUntil:
+    visible: "Ver en tarjetas"
+    timeout: 20000
+- tapOn: "Ver en tarjetas"
+- extendedWaitUntil:
+    visible: ".*MENTORÍA DEL ALQUIMISTA.*"
+    timeout: 20000
+- takeScreenshot: M03c-mentor-eventos-tarjetas
