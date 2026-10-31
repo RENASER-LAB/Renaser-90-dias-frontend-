@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
+import fs from 'fs';
+import path from 'path';
 import React from 'react';
 import TestRenderer, { act, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
 
@@ -21,7 +23,6 @@ const mockRueda = jest.fn<(props: { horaInicial: number; minutoInicial: number; 
 const mockPreferencias = jest.fn<() => Promise<PreferenciaHabitoApi[]>>();
 const mockCambiarHorario = jest.fn<(...args: unknown[]) => Promise<{ deferred: boolean; deferredEffectiveDate?: string | null }>>();
 const mockPedirPermisoExacto = jest.fn<() => Promise<boolean>>();
-const mockOfrecerGuia = jest.fn<(userId: string) => Promise<boolean>>();
 
 jest.mock('../../../../theme/ThemeContext', () => {
   const tokens = jest.requireActual<typeof import('../../../../theme/tokens')>('../../../../theme/tokens');
@@ -68,10 +69,6 @@ jest.mock('../../../alarmas/pedirAlarmaExacta', () => ({
   abrirPermisoDeAlarmasExactas: async () => 'ninguna',
   TEXTO_PEDIDO_ALARMA_EXACTA: '',
   LINEA_ALARMA_EXACTA_PENDIENTE: '',
-}));
-// Spec 007 (FR-021): la guía de la marca se ofrece al guardar un recordatorio. Acá no hay marca ni hoja que la muestre.
-jest.mock('../../../alarmas/guiaPreventiva', () => ({
-  ofrecerLaGuiaPreventiva: (userId: string) => mockOfrecerGuia(userId),
 }));
 jest.mock('../../../habits/api/habitsApi', () => ({
   obtenerPreferencias: () => mockPreferencias(),
@@ -172,7 +169,6 @@ beforeEach(() => {
   mockAntelacionesDe.mockReset();
   mockAntelacionesDe.mockImplementation(async () => []);
   mockPedirPermisoExacto.mockReset().mockResolvedValue(false);
-  mockOfrecerGuia.mockReset().mockResolvedValue(false);
 });
 
 afterEach(() => {
@@ -341,10 +337,10 @@ describe('E-408: lo que se ve en el recordatorio es lo que se guarda', () => {
 });
 
 /**
- * Spec 007, refuerzo FR-021: en las marcas que detienen apps, la primera vez que se guarda un recordatorio se ofrece
- * la guía de la marca. Acá se prueba CUÁNDO la pide la hoja (la decisión de marca y la hoja viven en `alarmas/`).
+ * 2026-10-31 (alarmas silenciosas): guardar un recordatorio ya NO ofrece la guía de la marca («Un ajuste para tus alarmas»,
+ * spec 007, FR-021, retirada por decisión del dueño). Lo que sigue igual es el pedido del permiso de alarmas exactas.
  */
-describe('FR-021: la guía de la marca al guardar un recordatorio', () => {
+describe('guardar un recordatorio: sin guía de la marca, con el permiso de alarmas exactas como siempre', () => {
   const alternarALaHora = async (r: ReactTestRenderer) => {
     const [aLaHora] = r.root.findAll(n => typeof n.props.onPress === 'function'
       && typeof n.props.accessibilityLabel === 'string' && n.props.accessibilityLabel.startsWith('A la hora exacta'));
@@ -361,22 +357,18 @@ describe('FR-021: la guía de la marca al guardar un recordatorio', () => {
     mockCambiarHorario.mockResolvedValue({ deferred: true, deferredEffectiveDate: '2026-09-29' });
   });
 
-  it('al guardar un hábito CON recordatorio, la pide para esta cuenta', async () => {
+  it('al guardar un hábito CON recordatorio, solo se guarda: ningún diálogo ni hoja de guía', async () => {
     raiz = await montar();
     await abrir(raiz, 'JUGO VERDE');
     await alternarALaHora(raiz);
     await guardar(raiz);
     expect(mockCambiarHorario).toHaveBeenCalledTimes(1);
-    expect(mockOfrecerGuia).toHaveBeenCalledTimes(1);
-    expect(mockOfrecerGuia).toHaveBeenCalledWith('u-1');
+    expect(mockAlerta).not.toHaveBeenCalled();
   });
 
-  it('al guardar una hora SIN recordatorio, no', async () => {
-    raiz = await montar();
-    await abrir(raiz, 'JUGO VERDE');
-    await guardar(raiz);
-    expect(mockCambiarHorario).toHaveBeenCalledTimes(1);
-    expect(mockOfrecerGuia).not.toHaveBeenCalled();
+  it('la hoja de Planificar ya no conoce la guía preventiva', () => {
+    const fuente = fs.readFileSync(path.join(__dirname, '../PlanificarDimensionModal.tsx'), 'utf8');
+    expect(fuente).not.toMatch(/guiaPreventiva|ofrecerLaGuiaPreventiva|pidioElPermiso/);
   });
 
   it('si ese mismo guardado ya pide el permiso de alarmas exactas, no se le suma otra hoja encima', async () => {
@@ -386,6 +378,5 @@ describe('FR-021: la guía de la marca al guardar un recordatorio', () => {
     await alternarALaHora(raiz);
     await guardar(raiz);
     expect(mockAlerta).toHaveBeenCalledWith('Listo', expect.any(String));
-    expect(mockOfrecerGuia).not.toHaveBeenCalled();
   });
 });

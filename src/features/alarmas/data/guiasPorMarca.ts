@@ -1,28 +1,25 @@
 import type { MarcaDelTelefono } from '../utils/marcaDelTelefono';
 
 /**
- * Qué cambiar en el teléfono para que NO cierre Renaser y borre las alarmas, marca por marca (spec 007,
- * historia 2, `data-model.md` §Guía por marca).
+ * Qué ajustar en el teléfono para que Renaser siga funcionando en segundo plano y sus recordatorios suenen siempre,
+ * marca por marca (spec 007, historia 2, `data-model.md` §Guía por marca). Solo se lee en Yo → Alarmas.
  *
  * Honor y Huawei (y a veces Xiaomi, Oppo o Vivo) tratan «quitar de recientes» o el ahorro de batería como
  * una detención forzada, y Android borra todas las alarmas de la app hasta que se vuelve a abrir. La guía
  * genérica de antes, «Batería → Sin restricciones», no existe en Honor: ahí el ajuste está en «Inicio de
  * aplicaciones» → «Gestionar automáticamente».
  *
- * Regla del dueño (28/09): una línea, dos frases como máximo, en tuteo. Las pantallas que abre el botón
+ * Regla del dueño (28/09): una línea, dos frases como máximo, en tuteo. Desde el 2026-10-31 el texto va en positivo («Para que
+ * tus recordatorios suenen siempre»): sin culpar al teléfono ni decir «no cierres la app a la fuerza». Las pantallas que abre el botón
  * están en el módulo nativo (`modules/renaser-alarmas`); acá solo el camino escrito.
  */
 
-/** Dos frases como máximo (dueño, 28/09: «mucho texto marea al usuario»). Es la guía de una marca desconocida. */
-export const TEXTO_DE_BATERIA =
-  'Para que tus alarmas no se borren, en Batería elige «Sin restricciones» y no cierres Renaser a la fuerza.';
+/** El título de la guía de Yo → Alarmas y el botón que abre la pantalla de la marca (dueño, 31/10/2026). */
+export const TITULO_DE_LA_GUIA = 'Para que tus recordatorios suenen siempre';
+export const BOTON_DE_LA_GUIA = 'Revisar';
 
-/**
- * La hoja de la guía preventiva (spec 007, refuerzo FR-021): la misma hoja del aviso de «tu teléfono cerró Renaser»,
- * antes de que pase. Una frase de texto; la línea de la marca va aparte, debajo.
- */
-export const TITULO_PREVENTIVO = 'Un ajuste para tus alarmas';
-export const TEXTO_PREVENTIVO = 'En tu teléfono, Renaser necesita un ajuste para que tus alarmas suenen siempre.';
+/** Dos frases como máximo (dueño, 28/09: «mucho texto marea al usuario»). Es la guía de una marca desconocida. */
+export const TEXTO_DE_BATERIA = 'En Batería, elige «Sin restricciones» para Renaser.';
 
 const HONOR_Y_HUAWEI = 'Inicio de aplicaciones → Renaser → apaga «Gestionar automáticamente» y deja todo encendido.';
 

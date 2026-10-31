@@ -24,16 +24,6 @@ const PISTAS_POR_MARCA: readonly (readonly [MarcaDelTelefono, RegExp])[] = [
   ['vivo', /vivo|iqoo/],
 ];
 
-/**
- * ¿Esta marca detiene apps al quitarlas de recientes o por el ahorro de batería, y con eso borra sus alarmas?
- * (spec 007, refuerzos FR-021 y FR-022.) Son todas las que tienen guía propia: Honor, Huawei, Xiaomi (Redmi y POCO),
- * Samsung, Oppo (Realme y OnePlus) y Vivo (iQOO). El módulo nativo lleva la misma lista
- * (`MARCAS_QUE_DETIENEN_APPS`) y `moduloNativoDeAlarmas.test.ts` vigila que no se desfasen.
- */
-export function marcaQueDetieneApps(marca: MarcaDelTelefono): boolean {
-  return marca !== 'otra';
-}
-
 function marcaDeUnTexto(texto: unknown): MarcaDelTelefono {
   if (typeof texto !== 'string') return 'otra';
   const minusculas = texto.trim().toLowerCase();

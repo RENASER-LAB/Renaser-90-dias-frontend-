@@ -130,6 +130,25 @@ describe('las alarmas locales son de una cuenta (E-413)', () => {
     expect(await recordatorios.idsDeRecordatoriosDeHabitos('u-admin')).toEqual([]);
   });
 
+  it('al cerrar sesión se borran también los restos de la hoja «Tu teléfono cerró Renaser», retirada el 2026-10-31', async () => {
+    const { sesion } = await montar();
+    await entrarComo(sesion, 'u-admin');
+    // Teléfonos que ya habían anotado la revisión de la detención forzada y la guía preventiva: ahora nada las escribe.
+    await AsyncStorage.multiSet([
+      ['renaser.alarmas.detencionRevisada.u-admin', '1760000000000'],
+      ['renaser.alarmas.avisoDetencion.u-admin', '2026-10-19'],
+      ['renaser.alarmas.guiaPreventiva.u-admin', '2026-10-19T12:00:00.000Z'],
+    ]);
+
+    await act(async () => {
+      sesion().logout();
+      await new Promise(r => setTimeout(r, 0));
+    });
+
+    const quedan = (await AsyncStorage.getAllKeys()).filter(k => k.startsWith('renaser.alarmas.') && k !== 'renaser.alarmas.cuenta');
+    expect(quedan).toEqual([]);
+  });
+
   it('al entrar con otra cuenta sin haber cerrado sesión, se sueltan las de la anterior', async () => {
     const { sesion } = await montar();
     await entrarComo(sesion, 'u-admin');

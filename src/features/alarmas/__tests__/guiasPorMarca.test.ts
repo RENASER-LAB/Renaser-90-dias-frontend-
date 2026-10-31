@@ -54,10 +54,9 @@ describe('la línea de la guía según Manufacturer y Brand', () => {
     expect(marcaDelTelefono({ Manufacturer: 12 as unknown as string, Brand: null as unknown as string }, 'android')).toBe('otra');
   });
 
-  it('el genérico es el texto de antes, sin cambiar una palabra', () => {
-    expect(TEXTO_DE_BATERIA).toBe(
-      'Para que tus alarmas no se borren, en Batería elige «Sin restricciones» y no cierres Renaser a la fuerza.',
-    );
+  it('el genérico va en positivo (2026-10-31): sin «a la fuerza» ni «se borren»', () => {
+    expect(TEXTO_DE_BATERIA).toBe('En Batería, elige «Sin restricciones» para Renaser.');
+    expect(TEXTO_DE_BATERIA).not.toMatch(/a la fuerza|se borren|cierres/i);
   });
 
   it('cada marca reconocida tiene su línea; Honor y Huawei comparten la suya', () => {

@@ -1,9 +1,12 @@
 /**
  * Spec 007, historia 2 (T023): Yo → Alarmas muestra la guía de la marca y el botón abre la pantalla de la
- * marca; con una marca desconocida se comporta como antes.
+ * marca; con una marca desconocida cae a la lista de batería o a los ajustes de Renaser.
  *
  * Contra el código de antes falla: la guía decía a todos «Batería → Sin restricciones» y el botón solo abría
  * los ajustes de la app (`Linking.openSettings`), sin saber de «Inicio de aplicaciones» de Honor.
+ *
+ * 2026-10-31 (alarmas silenciosas): es el único lugar donde se habla de esto. El título dice «Para que tus recordatorios
+ * suenen siempre», el botón «Revisar», y no hay culpa al teléfono ni «no cierres la app a la fuerza».
  */
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import React from 'react';
@@ -19,6 +22,7 @@ jest.mock('../../../components/Alerta', () => ({ Alert: { alert: (...a: unknown[
 
 import { usarModuloDeAlarmas } from '../alarmaExactaNativa';
 import { GuiaDeBateria, TEXTO_DE_BATERIA } from '../components/GuiaDeBateria';
+import { BOTON_DE_LA_GUIA, TITULO_DE_LA_GUIA } from '../data/guiasPorMarca';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -67,6 +71,45 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
+describe('el texto y el botón (2026-10-31)', () => {
+  it('el título es «Para que tus recordatorios suenen siempre» y el botón, «Revisar»', () => {
+    comoAndroid({ Brand: 'HONOR', Manufacturer: 'HONOR' });
+    montar();
+    expect(TITULO_DE_LA_GUIA).toBe('Para que tus recordatorios suenen siempre');
+    expect(BOTON_DE_LA_GUIA).toBe('Revisar');
+    expect(textos()).toContain('Para que tus recordatorios suenen siempre');
+    expect(textos()).toContain('Revisar');
+    expect(textos()).not.toContain('Abrir ajustes');
+  });
+
+  it.each([
+    ['HONOR', 'HONOR'],
+    ['Xiaomi', 'Redmi'],
+    ['samsung', 'samsung'],
+    ['OPPO', 'OPPO'],
+    ['vivo', 'vivo'],
+    ['Google', 'google'],
+  ])('%s / %s: nada de «teléfono cerró», «a la fuerza» ni «se borren»', (fabricante, marca) => {
+    comoAndroid({ Brand: marca, Manufacturer: fabricante });
+    montar();
+    const todo = textos().join(' ');
+    expect(todo).not.toMatch(/cerr[óo] Renaser|a la fuerza|se borren|no sonaron/i);
+  });
+
+  it('el botón mide al menos 48 (área de toque) y el texto no baja de 16', () => {
+    comoAndroid({ Brand: 'HONOR', Manufacturer: 'HONOR' });
+    montar();
+    const aplanar = (e: unknown): Record<string, unknown> => Object.assign({}, ...[e].flat(Infinity).filter(Boolean));
+    const estiloDelBoton = aplanar(
+      raiz!.root.findAll(n => typeof n.props?.onPress === 'function' && n.props.accessibilityRole === 'button')[0].props.style({ pressed: false }),
+    );
+    expect(Number(estiloDelBoton.minHeight)).toBeGreaterThanOrEqual(48);
+    for (const texto of raiz!.root.findAll(n => (n.type as unknown) === 'Text')) {
+      expect(Number(aplanar(texto.props.style).fontSize)).toBeGreaterThanOrEqual(16);
+    }
+  });
+});
+
 describe('con una marca conocida', () => {
   it('Honor: muestra la línea de Honor, no el texto genérico', () => {
     comoAndroid({ Brand: 'HONOR', Manufacturer: 'HONOR' });
@@ -75,7 +118,7 @@ describe('con una marca conocida', () => {
     expect(textos()).not.toContain(TEXTO_DE_BATERIA);
   });
 
-  it('el botón abre la pantalla de la marca y no los ajustes genéricos', async () => {
+  it('«Revisar» abre la pantalla de la marca y no los ajustes genéricos', async () => {
     comoAndroid({ Brand: 'HONOR', Manufacturer: 'HONOR' });
     const ajustes = jest.spyOn(Linking, 'openSettings').mockResolvedValue(undefined);
     montar();
@@ -129,9 +172,7 @@ describe('la sección', () => {
     expect(textos()).toEqual([]);
   });
 
-  it('TEXTO_DE_BATERIA sigue exportado desde el componente, sin cambiar una palabra', () => {
-    expect(TEXTO_DE_BATERIA).toBe(
-      'Para que tus alarmas no se borren, en Batería elige «Sin restricciones» y no cierres Renaser a la fuerza.',
-    );
+  it('TEXTO_DE_BATERIA sigue exportado desde el componente, ya en positivo', () => {
+    expect(TEXTO_DE_BATERIA).toBe('En Batería, elige «Sin restricciones» para Renaser.');
   });
 });
