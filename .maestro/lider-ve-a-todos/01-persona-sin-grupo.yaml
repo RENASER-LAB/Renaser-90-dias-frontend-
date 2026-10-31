@@ -1,0 +1,58 @@
+# «Todos los aprendices» (2026-10-31, pedido del dueño: «el líder de mentores puede ver la ficha de todos los aprendices sin
+# necesidad de estar en grupo, solo para este rol»). ESCRITO Y SIN CORRER: necesita el backend con `GET /leadership/people` y
+# un emulador libre.
+# El líder → Hoy → «Mis mentores» → «Todos los aprendices» → buscar a una persona SIN grupo → se ven sus días → atrás (vuelve
+# a la lista con la búsqueda) → atrás (vuelve a Hoy).
+# cuenta: admin (la ranura E2E_ADMIN_* apunta al LÍDER DE MENTORES, como en `mi-radar/12`).
+# PERSONA_SIN_GRUPO = parte del nombre de una persona que no está en ningún grupo (la búsqueda es del servidor, sin tildes).
+# Precondición: el líder ya entró, el servidor ofrece la lista y esa persona existe sin grupo.
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+# Hoy del líder: «Mis mentores» es una de sus pestañas.
+- tapOn: "Mis mentores"
+- extendedWaitUntil:
+    visible: "Resultado por grupo"
+    timeout: 30000
+# La fila nueva está junto a «Consultas de mentores» y «Mentores y reporte del mes».
+- scrollUntilVisible:
+    element: "Todos los aprendices"
+    direction: DOWN
+    timeout: 60000
+- takeScreenshot: L01a-mis-mentores-todos-los-aprendices
+- tapOn: "Todos los aprendices"
+- extendedWaitUntil:
+    visible: "Buscar por nombre"
+    timeout: 30000
+# El buscador pide al servidor; al escribir, quedan las coincidencias.
+- tapOn: "Buscar por nombre"
+- inputText: "${PERSONA_SIN_GRUPO}"
+- hideKeyboard
+- extendedWaitUntil:
+    visible: ".*${PERSONA_SIN_GRUPO}.*Sin grupo.*"
+    timeout: 30000
+- takeScreenshot: L01b-busqueda-persona-sin-grupo
+# Su ficha de siempre, leída sin grupo: sus días, y «Escribirle» sin «Avisar a su mentor» (no tiene grupo).
+- tapOn: ".*${PERSONA_SIN_GRUPO}.*Ver su ficha.*"
+- extendedWaitUntil:
+    visible: "Últimos 7 días.*"
+    timeout: 30000
+- assertVisible: "Sin grupo"
+- scrollUntilVisible:
+    element: "Escribirle a .*"
+    direction: DOWN
+    timeout: 60000
+- assertNotVisible: "Avisar a su mentor.*"
+- takeScreenshot: L01c-ficha-de-la-persona-sin-grupo
+# Atrás: de la ficha a la lista, con la búsqueda conservada…
+- back
+- extendedWaitUntil:
+    visible: "Buscar por nombre"
+    timeout: 20000
+- assertVisible: ".*${PERSONA_SIN_GRUPO}.*"
+# …y de la lista a Hoy.
+- back
+- extendedWaitUntil:
+    visible: "Resultado por grupo"
+    timeout: 20000
+- takeScreenshot: L01d-de-vuelta-en-mis-mentores

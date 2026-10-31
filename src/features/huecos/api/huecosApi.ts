@@ -17,6 +17,11 @@ import { leerHuecosDeLaSemana } from './huecosSchemas';
 /** Un tramo de la ruta, escapado: un id con `/` o `%` no puede cambiar a qué ruta se llama. */
 const tramo = encodeURIComponent;
 
+/** De qué ruta vino la respuesta, para el mensaje de un error: la de la persona sin grupo o la del grupo. */
+function origenDeLaPersona(grupoId: string | null, que: string): string {
+  return grupoId === null ? `GET /leadership/people/{p}/${que}` : `GET /leadership/groups/{g}/people/{p}/${que}`;
+}
+
 function conSemana(ruta: string, semana?: string | null): string {
   return semana ? `${ruta}?semana=${tramo(semana)}` : ruta;
 }
@@ -25,8 +30,13 @@ export function rutaDeLosHuecosDelAlumno(grupoId: string, alumnoId: string, sema
   return conSemana(`/api/v1/mentor/groups/${tramo(grupoId)}/learners/${tramo(alumnoId)}/huecos`, semana);
 }
 
-export function rutaDeLosHuecosDePersona(grupoId: string, personaId: string, semana?: string | null): string {
-  return conSemana(`/api/v1/leadership/groups/${tramo(grupoId)}/people/${tramo(personaId)}/huecos`, semana);
+/** Con `grupoId` en `null`, la puerta sin grupo del líder: `/leadership/people/{p}/huecos` (2026-10-31). */
+export function rutaDeLosHuecosDePersona(grupoId: string | null, personaId: string, semana?: string | null): string {
+  const base =
+    grupoId === null
+      ? `/api/v1/leadership/people/${tramo(personaId)}`
+      : `/api/v1/leadership/groups/${tramo(grupoId)}/people/${tramo(personaId)}`;
+  return conSemana(`${base}/huecos`, semana);
 }
 
 /** Para la ficha del mentor. */
@@ -41,10 +51,10 @@ export async function obtenerHuecosDeAlumno(
 
 /** Para las fichas del líder, de Administración y del alquimista. */
 export async function obtenerHuecosDePersona(
-  grupoId: string,
+  grupoId: string | null,
   personaId: string,
   semana?: string | null,
 ): Promise<HuecosDeLaSemana> {
   const respuesta = await apiFetch<unknown>(rutaDeLosHuecosDePersona(grupoId, personaId, semana));
-  return leerHuecosDeLaSemana(respuesta, 'GET /leadership/groups/{g}/people/{p}/huecos');
+  return leerHuecosDeLaSemana(respuesta, origenDeLaPersona(grupoId, 'huecos'));
 }

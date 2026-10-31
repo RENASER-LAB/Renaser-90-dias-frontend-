@@ -37,6 +37,11 @@ export async function guardarCierreDelDia(cuerpo: CuerpoDelCierre): Promise<Cier
   return leerCierreDelDia(respuesta, 'PUT /rocks/day-closure');
 }
 
+/** De qué ruta vino la respuesta, para el mensaje de un error: la de la persona sin grupo o la del grupo. */
+function origenDeLaPersona(grupoId: string | null, que: string): string {
+  return grupoId === null ? `GET /leadership/people/{p}/${que}` : `GET /leadership/groups/{g}/people/{p}/${que}`;
+}
+
 function conSemana(ruta: string, semana?: string | null): string {
   return semana ? `${ruta}?semana=${tramo(semana)}` : ruta;
 }
@@ -45,8 +50,13 @@ export function rutaDeLosCierresDelAlumno(grupoId: string, alumnoId: string, sem
   return conSemana(`/api/v1/mentor/groups/${tramo(grupoId)}/learners/${tramo(alumnoId)}/cierres`, semana);
 }
 
-export function rutaDeLosCierresDePersona(grupoId: string, personaId: string, semana?: string | null): string {
-  return conSemana(`/api/v1/leadership/groups/${tramo(grupoId)}/people/${tramo(personaId)}/cierres`, semana);
+/** Con `grupoId` en `null`, la puerta sin grupo del líder: `/leadership/people/{p}/cierres` (2026-10-31). */
+export function rutaDeLosCierresDePersona(grupoId: string | null, personaId: string, semana?: string | null): string {
+  const base =
+    grupoId === null
+      ? `/api/v1/leadership/people/${tramo(personaId)}`
+      : `/api/v1/leadership/groups/${tramo(grupoId)}/people/${tramo(personaId)}`;
+  return conSemana(`${base}/cierres`, semana);
 }
 
 /** Para la ficha del mentor o de la guía. */
@@ -61,10 +71,10 @@ export async function obtenerCierresDeAlumno(
 
 /** Para las fichas del líder, de Administración y del alquimista. */
 export async function obtenerCierresDePersona(
-  grupoId: string,
+  grupoId: string | null,
   personaId: string,
   semana?: string | null,
 ): Promise<CierresDeLaSemana> {
   const respuesta = await apiFetch<unknown>(rutaDeLosCierresDePersona(grupoId, personaId, semana));
-  return leerCierresDeLaSemana(respuesta, 'GET /leadership/groups/{g}/people/{p}/cierres');
+  return leerCierresDeLaSemana(respuesta, origenDeLaPersona(grupoId, 'cierres'));
 }

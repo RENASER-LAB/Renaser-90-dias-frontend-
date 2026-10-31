@@ -33,19 +33,44 @@ function conSemana(ruta: string, semanaHasta?: string | null): string {
   return semanaHasta ? `${ruta}?semanaHasta=${tramo(semanaHasta)}` : ruta;
 }
 
+/** De qué ruta vino la respuesta, para el mensaje de un error: la de la persona sin grupo o la del grupo. */
+function origenDeLaPersona(grupoId: string | null, que: string): string {
+  return grupoId === null ? `GET /leadership/people/{p}/${que}` : `GET /leadership/groups/{g}/people/{p}/${que}`;
+}
+
 /** §1: la tabla del semáforo del grupo, con nombres, en el orden del líder. */
 export function rutaDeLaTablaDelLider(grupoId: string, semanaHasta?: string | null): string {
   return conSemana(`${BASE}/groups/${tramo(grupoId)}/semaforo`, semanaHasta);
 }
 
-/** §2: la semana de una persona del grupo. */
-export function rutaDeLaSemanaDePersona(grupoId: string, personaId: string, semanaHasta?: string | null): string {
-  return conSemana(`${BASE}/groups/${tramo(grupoId)}/people/${tramo(personaId)}/week`, semanaHasta);
+/**
+ * La puerta de una persona: `/leadership/groups/{g}/people/{p}` (la de siempre, desde un grupo) o, con `grupoId` en
+ * `null`, `/leadership/people/{p}` (2026-10-31: el líder ve a todos los aprendices, con grupo o sin él; el servidor
+ * responde lo mismo por las dos). Quien abre a la persona desde «Todos los aprendices» pasa `null` aunque ella tenga
+ * grupo: así todas sus lecturas salen por la misma puerta.
+ */
+export function rutaDeLaPersona(grupoId: string | null, personaId: string): string {
+  return grupoId === null
+    ? `${BASE}/people/${tramo(personaId)}`
+    : `${BASE}/groups/${tramo(grupoId)}/people/${tramo(personaId)}`;
 }
 
-/** Spec 012: el Código Renaser de una persona del grupo, con el estado de su Mi Radar. Paginado por cursor. */
-export function rutaDelRadarDePersona(grupoId: string, personaId: string, cursor?: string | null): string {
-  const ruta = `${BASE}/groups/${tramo(grupoId)}/people/${tramo(personaId)}/radar`;
+/**
+ * §2: la semana de una persona del grupo o, con `grupoId` en `null`, de cualquier persona.
+ *
+ * Por la puerta sin grupo la fecha viaja como `semanaHasta` (el nombre de la ruta del grupo) **y** como `hasta` (el
+ * nombre con que se pidió la ruta nueva): el servidor lee uno y el otro sobra, y una fecha que se pierde en silencio
+ * mostraría la ventana vigente diciendo que es otra.
+ */
+export function rutaDeLaSemanaDePersona(grupoId: string | null, personaId: string, semanaHasta?: string | null): string {
+  const ruta = `${rutaDeLaPersona(grupoId, personaId)}/week`;
+  if (grupoId !== null) return conSemana(ruta, semanaHasta);
+  return semanaHasta ? `${ruta}?semanaHasta=${tramo(semanaHasta)}&hasta=${tramo(semanaHasta)}` : ruta;
+}
+
+/** Spec 012: el Código Renaser de una persona del grupo (o de cualquiera), con el estado de su Mi Radar. Paginado por cursor. */
+export function rutaDelRadarDePersona(grupoId: string | null, personaId: string, cursor?: string | null): string {
+  const ruta = `${rutaDeLaPersona(grupoId, personaId)}/radar`;
   return cursor ? `${ruta}?cursor=${tramo(cursor)}` : ruta;
 }
 
@@ -71,13 +96,13 @@ export async function obtenerTablaDelLider(grupoId: string, semanaHasta?: string
  * por eso se pide al abrir la ficha y al cambiar de semana, y no más seguido.
  */
 export async function obtenerSemanaDePersona(
-  grupoId: string,
+  grupoId: string | null,
   personaId: string,
   semanaHasta?: string | null,
 ): Promise<SemanaDePersona> {
   const respuesta = await apiFetch<unknown>(rutaDeLaSemanaDePersona(grupoId, personaId, semanaHasta));
   const semana = aSemanaDePersona(
-    validarRespuesta(cumplimientoDelLiderSchemas.semana, respuesta, 'GET /leadership/groups/{g}/people/{p}/week'),
+    validarRespuesta(cumplimientoDelLiderSchemas.semana, respuesta, origenDeLaPersona(grupoId, 'week')),
   );
   /* Si el servidor no repitió quién es, es a quien se pidió. */
   return semana.personaId ? semana : { ...semana, personaId };
@@ -89,7 +114,7 @@ export async function obtenerSemanaDePersona(
  * de consulta** (la ficha ya lo dejó al abrirse). Un 404 o un 403 los lee quien la muestra como «no hay sección».
  */
 export async function obtenerRadarDePersona(
-  grupoId: string,
+  grupoId: string | null,
   personaId: string,
   cursor?: string | null,
 ): Promise<HistorialRadarApi> {
@@ -97,7 +122,7 @@ export async function obtenerRadarDePersona(
   const pagina = validarRespuestaDelRadar<HistorialRadarApi>(
     radarSchemas.historial,
     respuesta,
-    'GET /leadership/groups/{g}/people/{p}/radar',
+    origenDeLaPersona(grupoId, 'radar'),
   );
   return { entries: pagina.entries, nextCursor: pagina.nextCursor ?? null, miRadar: pagina.miRadar ?? null };
 }

@@ -32,15 +32,20 @@ import { FilaDeLista, ListaDeFilas } from './FilaDeLista';
  *   grupo, con las flechas de siempre.
  * - **Un grupo sin mentor no se abre** (`puedeAbrirse` del servidor): su fila lo dice en rojo.
  * - **Cada lista es independiente**: si una lectura falla o su entrada no está disponible, las otras siguen.
+ * - **«Todos los aprendices»** (2026-10-31): la última fila de las tres, con la misma forma que las otras. Abre la lista de
+ *   todas las personas con su ficha, estén o no en un grupo. Solo existe si el servidor la ofrece (`verTodos`: la primera
+ *   página de la lista respondió 200); con un backend anterior o con otro rol no se dibuja.
  */
 export function MisMentoresEnHoy({
   lectura,
   verGrupos,
   verConsultas,
   verMentores,
+  verTodos = false,
   onAbrirGrupo,
   onAbrirConsultas,
   onAbrirMentores,
+  onAbrirTodos,
 }: {
   lectura: LecturaDeGrupos;
   /** El resultado por grupo está disponible para esta cuenta (interruptor `semaforo`). */
@@ -49,9 +54,12 @@ export function MisMentoresEnHoy({
   verConsultas: boolean;
   /** El padrón de mentores y el reporte del mes (interruptor `lider`). */
   verMentores: boolean;
+  /** La lista de todos los aprendices está disponible: el servidor respondió 200 a su primera página. */
+  verTodos?: boolean;
   onAbrirGrupo: (grupo: GrupoDelResumen, inicio: InicioSemanal) => void;
   onAbrirConsultas: () => void;
   onAbrirMentores: () => void;
+  onAbrirTodos?: () => void;
 }) {
   /* Solo al abrir: la función cambia en cada render y no tiene que volver a correr. */
   const volverAVigente = useRef(lectura.volverAVigente);
@@ -60,7 +68,7 @@ export function MisMentoresEnHoy({
     if (verGrupos) volverAVigente.current();
   }, [verGrupos]);
 
-  const enlaces = verConsultas || verMentores;
+  const enlaces = verConsultas || verMentores || (verTodos && onAbrirTodos !== undefined);
   return (
     <View style={estilos.cuerpo}>
       {verGrupos ? <ResultadoPorGrupo lectura={lectura} onAbrirGrupo={onAbrirGrupo} /> : null}
@@ -73,6 +81,14 @@ export function MisMentoresEnHoy({
               titulo="Mentores y reporte del mes"
               onPress={onAbrirMentores}
               etiquetaAccesible="Mentores y reporte del mes. Abrir."
+            />
+          ) : null}
+          {verTodos && onAbrirTodos ? (
+            <FilaDeLista
+              primera={!verConsultas && !verMentores}
+              titulo="Todos los aprendices"
+              onPress={onAbrirTodos}
+              etiquetaAccesible="Todos los aprendices. Abrir."
             />
           ) : null}
         </ListaDeFilas>

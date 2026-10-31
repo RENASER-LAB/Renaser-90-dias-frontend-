@@ -21,12 +21,14 @@ export type LecturaDeLaSemana = LecturaPorSemana<SemanaDePersona>;
  * - **Cada lectura deja un registro de consulta en el servidor** (FR-016): se pide al abrir la ficha y al cambiar de
  *   ventana, no en cada foco ni en un sondeo.
  *
+ * @param grupoId el grupo desde el que se abrió a la persona; `null` = la puerta sin grupo del líder
+ *   (`/leadership/people/{p}/week`, 2026-10-31: «Todos los aprendices»).
  * @param inicio la posición con que se abre (la que tenía la lista); ausente = la ventana vigente.
  */
-export function useSemanaDePersona(grupoId: string, personaId: string, inicio?: InicioSemanal): LecturaDeLaSemana {
+export function useSemanaDePersona(grupoId: string | null, personaId: string, inicio?: InicioSemanal): LecturaDeLaSemana {
   return useLecturaPorSemana(
     semanaHasta => obtenerSemanaDePersona(grupoId, personaId, semanaHasta),
-    `lider:${grupoId}|${personaId}`,
+    `lider:${grupoId ?? '*'}|${personaId}`,
     inicio,
     { primerViernes: semana => primerViernesDelPrograma(semana.primeraSemana) },
   );

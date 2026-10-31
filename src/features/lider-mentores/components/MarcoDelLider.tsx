@@ -24,7 +24,7 @@ export function MarcoDelLider({
   children: React.ReactNode;
 }) {
   const barraAlDesplazar = useOcultarBarraAlDesplazar();
-  const { c, t } = useTheme();
+  const { c } = useTheme();
   const { horizontalPadding, contentMaxWidth } = useResponsive();
 
   useSystemBackHandler(() => {
@@ -34,15 +34,7 @@ export function MarcoDelLider({
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: c.bg }}>
-      <View style={[estilos.barra, { paddingHorizontal: horizontalPadding }]}>
-        <Pressable onPress={onVolver} hitSlop={12} accessibilityRole="button" accessibilityLabel="Volver" style={estilos.volver}>
-          <Icon name="arrowLeft" size={15} color={c.goldInk} />
-          <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>VOLVER</Text>
-        </Pressable>
-        <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 18, flex: 1 }]} numberOfLines={1}>
-          {titulo}
-        </Text>
-      </View>
+      <BarraDelLider titulo={titulo} onVolver={onVolver} />
       <ScrollView
         {...barraAlDesplazar}
         style={{ flex: 1 }}
@@ -62,6 +54,26 @@ export function MarcoDelLider({
         {children}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+/**
+ * La barra de arriba de cada pantalla del líder: «VOLVER» y el título. Es del marco (`MarcoDelLider`) y de la lista de
+ * «Todos los aprendices», que tiene su propio scroll (una lista que se pide de a páginas) pero la misma barra.
+ */
+export function BarraDelLider({ titulo, onVolver }: { titulo: string; onVolver: () => void }) {
+  const { c, t } = useTheme();
+  const { horizontalPadding } = useResponsive();
+  return (
+    <View style={[estilos.barra, { paddingHorizontal: horizontalPadding }]}>
+      <Pressable onPress={onVolver} hitSlop={12} accessibilityRole="button" accessibilityLabel="Volver" style={estilos.volver}>
+        <Icon name="arrowLeft" size={15} color={c.goldInk} />
+        <Text style={[t.micro, { color: c.goldInk, fontFamily: 'Jost_700Bold', letterSpacing: 1 }]}>VOLVER</Text>
+      </Pressable>
+      <Text style={[t.cardTitle, { color: c.textStrong, fontSize: 18, flex: 1 }]} numberOfLines={1}>
+        {titulo}
+      </Text>
+    </View>
   );
 }
 
