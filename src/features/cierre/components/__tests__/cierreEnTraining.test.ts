@@ -635,3 +635,53 @@ describe('caso 4 · día normal (Despertar 06:00, Dormir 22:30) cierra a las 21:
     expect(fila).toContain('Mañana: «Revisar las facturas» a otra hora');
   });
 });
+
+describe('solo se pregunta por lo que ya llegó a su hora (decisión del dueño, 2026-10-30)', () => {
+  /* El servidor simulado hace lo que hace el de verdad: con SU reloj y la zona de la persona (Lima) marca `exigeRespuesta`
+     de cada pendiente: `true` si no tiene hora o su hora ya llegó, `false` si todavía no. */
+  const comoLoDiceElServidor = (accion: typeof PENDIENTE) => {
+    const ahora = new Date();
+    const hhmm = `${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}`;
+    return { ...accion, exigeRespuesta: !accion.horaInicio || accion.horaInicio.slice(0, 5) <= hhmm };
+  };
+  const cierreSegunLaHora = () => cierreDe(JUEVES, { acciones: [comoLoDiceElServidor(PENDIENTE)] });
+
+  it('a las 06:00 la hoja NO pregunta por la de las 20:30: se puede guardar sin responder y el PUT no lleva esa acción', async () => {
+    mockRespuestas.set(`day-closure?date=${JUEVES}`, cierreSegunLaHora);
+    mockRespuestas.set('PUT /api/v1/rocks/day-closure', () => CERRADO_CON(JUEVES, { acciones: [{ ...PENDIENTE, exigeRespuesta: false }] }));
+    await montar({}, lima(JUEVES, '06:00'));
+    await pulsar(filaDelCierre()!);
+    expect(hay('Revisar las facturas')).toBe(true);
+    expect(hay('Es a las 20:30 · todavía no llega')).toBe(true);
+    expect(hay('¿Qué pasó?')).toBe(false);
+    await tocarTexto('Guardar mi cierre');
+    expect(cuerposDelPut()).toEqual([{ fecha: JUEVES, acciones: [] }]);
+    expect(String(filaDelCierre()!.props.accessibilityLabel)).toContain('Día cerrado');
+    expect(mockLogro).toHaveBeenCalledTimes(1);
+  });
+
+  it('a las 21:00 SÍ pregunta por la de las 20:30: sin responder no se puede guardar', async () => {
+    mockRespuestas.set(`day-closure?date=${JUEVES}`, cierreSegunLaHora);
+    await montar({}, lima(JUEVES, '21:00'));
+    await pulsar(filaDelCierre()!);
+    expect(hay('Era a las 20:30 · quedó pendiente')).toBe(true);
+    expect(hay('¿Qué pasó?')).toBe(true);
+    expect(hay('todavía no llega')).toBe(false);
+    expect(hay('Elige qué pasó y qué harás mañana con «Revisar las facturas».')).toBe(true);
+    expect(mockPedidos.filter(p => p.metodo === 'PUT')).toEqual([]);
+  });
+
+  it('la hora llega con Training abierto: al volver a abrir la hoja (relee el día) ya pregunta', async () => {
+    mockRespuestas.set(`day-closure?date=${JUEVES}`, cierreSegunLaHora);
+    await montar({}, lima(JUEVES, '20:00'));
+    await pulsar(filaDelCierre()!);
+    expect(hay('¿Qué pasó?')).toBe(false);
+    jest.setSystemTime(lima(JUEVES, '20:31'));
+    await avanzar(31_000);
+    // Cerrar y volver a abrir la hoja relee el día con el reloj del servidor.
+    const hoja = raiz!.root.findAll(n => typeof n.props.alCerrar === 'function')[0];
+    if (hoja) await act(async () => { hoja.props.alCerrar(); });
+    await pulsar(filaDelCierre()!);
+    expect(hay('¿Qué pasó?')).toBe(true);
+  });
+});

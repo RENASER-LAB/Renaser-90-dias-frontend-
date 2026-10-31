@@ -25,6 +25,10 @@ import {
  * - **Antes de enviar compara el día**: la hoja se abrió para `fecha`; si el día de hoy ya es otro (pasó la medianoche
  *   con la hoja abierta) NO envía nada y avisa (`dia-cambio`). Un 409 del servidor por día cerrado es lo mismo
  *   (`dia-cerrado`). Ninguno reasigna el cierre al día nuevo.
+ * - **Solo se pregunta por lo que ya llegó a su hora** (decisión del dueño, 2026-10-30): el servidor marca con `exigeRespuesta` las
+ *   pendientes por las que se pregunta. Si la hora de otra acción llega con la hoja abierta, el servidor responde 400 («Cuenta
+ *   qué pasó con «X»…»): la hoja relee el día SIN perder lo ya elegido, la acción nueva aparece con sus preguntas y se avisa
+ *   (`falta`); no se reintenta a ciegas lo mismo.
  * - `tacto.logro()` una sola vez, al quedar guardado.
  */
 
@@ -35,6 +39,8 @@ export type ResultadoDeGuardar =
   | { resultado: 'incompleto' }
   | { resultado: 'dia-cambio' }
   | { resultado: 'dia-cerrado' }
+  /** El servidor pide la respuesta de otra acción (llegó su hora con la hoja abierta): ya se releyó el día. */
+  | { resultado: 'falta'; mensaje: string }
   | { resultado: 'fallo'; mensaje: string };
 
 const MENSAJE_SIN_CONEXION = 'No pudimos guardar tu cierre. Revisa tu conexión e inténtalo de nuevo.';
@@ -119,6 +125,18 @@ export function useHojaDelCierre({
   const faltan = vista ? loQueFalta(vista, borrador) : [];
   const listo = vista !== null && puedeGuardar(vista, borrador);
 
+  /** Vuelve a leer el día y conserva lo que la persona ya eligió: la acción nueva se suma y queda por responder. */
+  const releerConservandoLoElegido = useCallback(async () => {
+    try {
+      const leida = await obtenerCierreDelDia(fecha);
+      if (!leida.puedeCerrar) return;
+      setVista(leida);
+      callbacks.current.alLeer?.(leida);
+    } catch {
+      /* Sin red se queda con lo que había: el mensaje del servidor ya dice qué falta. */
+    }
+  }, [fecha]);
+
   const guardar = useCallback(async (): Promise<ResultadoDeGuardar> => {
     if (!vista || fase !== 'formulario' || !puedeGuardar(vista, borrador)) return { resultado: 'incompleto' };
     // El día cambió con la hoja abierta: no se manda nada, ni se reasigna a otro día.
@@ -136,9 +154,13 @@ export function useHojaDelCierre({
       if (esRechazoPorDiaCerrado(error) || (error instanceof ApiError && error.status === 409)) {
         return { resultado: 'dia-cerrado' };
       }
+      if (error instanceof ApiError && error.status === 400) {
+        await releerConservandoLoElegido();
+        return { resultado: 'falta', mensaje: mensajeDeError(error, MENSAJE_SIN_CONEXION) };
+      }
       return { resultado: 'fallo', mensaje: mensajeDeError(error, MENSAJE_SIN_CONEXION) };
     }
-  }, [vista, fase, borrador, fecha]);
+  }, [vista, fase, borrador, fecha, releerConservandoLoElegido]);
 
   return {
     fase,

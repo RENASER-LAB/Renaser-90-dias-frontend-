@@ -33,6 +33,13 @@ export interface AccionDelCierre {
   cumplidaEn: string | null;
   /** `null` en una cumplida y en una pendiente sin respuesta guardada. */
   cierre: RespuestaDelCierre | null;
+  /**
+   * ¿Al cerrar hoy se pregunta por esta acción? Lo dice el servidor con SU reloj y la zona de la persona (decisión del dueño,
+   * 2026-10-30): solo se pregunta por las pendientes cuya hora ya llegó, o que no tienen hora. `false` = pendiente cuya hora
+   * todavía no llega (no se pregunta ni se exige). `null` o ausente = el servidor no lo dijo (uno anterior, o la ficha del
+   * acompañamiento): se trata como siempre, o sea que se pregunta.
+   */
+  exigeRespuesta?: boolean | null;
 }
 
 export interface DiaDelCierre {

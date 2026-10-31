@@ -6,7 +6,10 @@ import type { MotivoDelCierre, PlanDeManana } from '../types/cierre.types';
  * Lo que la persona va eligiendo en la hoja antes de guardar (spec 017). Lógica pura: la hoja la dibuja y el botón
  * «Guardar mi cierre» se apaga con `puedeGuardar`.
  *
- * Las respuestas son por acción PENDIENTE. Lo cumplido no se pregunta: llega marcado y no entra al borrador ni al `PUT`.
+ * Las respuestas son por acción PENDIENTE **cuya hora ya llegó** (o que no tiene hora). Lo cumplido no se pregunta: llega marcado
+ * y no entra al borrador ni al `PUT`. Una pendiente de hora futura tampoco se pregunta ni se exige (decisión del dueño,
+ * 2026-10-30): el servidor lo dice con `exigeRespuesta: false`, con su reloj y la zona de la persona. Sin ese dato (un servidor
+ * anterior) se pregunta por todas las pendientes, como siempre.
  */
 
 /** El mismo tope del servidor (`CierreDelDia.NOTA_MAXIMA`). */
@@ -26,6 +29,16 @@ export interface BorradorDelCierre {
 
 export function pendientesDe(vista: Pick<CierreDelDia, 'acciones'>): AccionDelCierre[] {
   return vista.acciones.filter(a => !a.cumplida);
+}
+
+/** Las pendientes por las que se pregunta: cuya hora ya llegó o sin hora. Sin el dato del servidor, todas. */
+export function aPreguntarDe(vista: Pick<CierreDelDia, 'acciones'>): AccionDelCierre[] {
+  return pendientesDe(vista).filter(a => a.exigeRespuesta !== false);
+}
+
+/** Las pendientes cuya hora todavía no llega: no se preguntan ni se exigen. */
+export function porLlegarDe(vista: Pick<CierreDelDia, 'acciones'>): AccionDelCierre[] {
+  return pendientesDe(vista).filter(a => a.exigeRespuesta === false);
 }
 
 export function cumplidasDe(vista: Pick<CierreDelDia, 'acciones'>): AccionDelCierre[] {
@@ -62,9 +75,9 @@ export function recortarNota(texto: string): string {
   return letras.length > NOTA_MAXIMA ? letras.slice(0, NOTA_MAXIMA).join('') : texto;
 }
 
-/** Las pendientes a las que todavía les falta elegir qué pasó o qué harás mañana. */
+/** Las pendientes por las que se pregunta y a las que todavía les falta elegir qué pasó o qué harás mañana. */
 export function loQueFalta(vista: Pick<CierreDelDia, 'acciones'>, borrador: BorradorDelCierre): AccionDelCierre[] {
-  return pendientesDe(vista).filter(a => {
+  return aPreguntarDe(vista).filter(a => {
     const b = borrador.porAccion[a.id];
     return !b || b.motivo === null || b.manana === null;
   });
@@ -91,18 +104,19 @@ function conTexto(texto: string): string | undefined {
 }
 
 /**
- * El cuerpo del `PUT`: una respuesta por cada pendiente (las cumplidas no viajan), las notas sin espacios de más y sin
- * el campo si están vacías. La nota del día viaja la que se escribió cuando no queda nada pendiente; con pendientes la
- * hoja no la muestra, así que se vuelve a mandar la que ya había (guardar no la borra).
+ * El cuerpo del `PUT`: una respuesta por cada pendiente por la que se pregunta (las cumplidas y las de hora futura no
+ * viajan), las notas sin espacios de más y sin el campo si están vacías. La nota del día viaja la que se escribió cuando no
+ * queda nada por preguntar; con preguntas en pantalla la hoja no la muestra, así que se vuelve a mandar la que ya había
+ * (guardar no la borra).
  */
 export function cuerpoDelCierre(fecha: string, vista: Pick<CierreDelDia, 'acciones' | 'nota'>, borrador: BorradorDelCierre): CuerpoDelCierre {
-  const pendientes = pendientesDe(vista);
-  const acciones = pendientes.flatMap(a => {
+  const preguntadas = aPreguntarDe(vista);
+  const acciones = preguntadas.flatMap(a => {
     const b = borrador.porAccion[a.id];
     if (!b || b.motivo === null || b.manana === null) return [];
     const nota = conTexto(b.nota);
     return [{ id: a.id, motivo: b.motivo, manana: b.manana, ...(nota ? { nota } : {}) }];
   });
-  const notaDelDia = conTexto(pendientes.length === 0 ? borrador.notaDelDia : (vista.nota ?? ''));
+  const notaDelDia = conTexto(preguntadas.length === 0 ? borrador.notaDelDia : (vista.nota ?? ''));
   return { fecha, acciones, ...(notaDelDia ? { nota: notaDelDia } : {}) };
 }

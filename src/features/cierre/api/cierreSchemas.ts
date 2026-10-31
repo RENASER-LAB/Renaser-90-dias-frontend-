@@ -67,6 +67,8 @@ const accionSchema = z
     cumplidaEn: instanteOpcional,
     /* Una respuesta rota se pierde sola: la acción sigue a la vista. */
     cierre: respuestaSchema.nullish().catch(null),
+    /* Opcional: un servidor anterior no lo manda. Un valor que no es verdadero/falso se lee como «no lo dijo». */
+    exigeRespuesta: z.boolean().nullish().catch(null),
   })
   .passthrough()
   .transform((a): AccionDelCierre => ({
@@ -76,6 +78,7 @@ const accionSchema = z
     cumplida: a.cumplida,
     cumplidaEn: a.cumplidaEn,
     cierre: a.cierre ?? null,
+    exigeRespuesta: a.exigeRespuesta ?? null,
   }));
 
 const ESTADOS: ReadonlySet<string> = new Set<EstadoDelCierre>(['ABIERTO', 'CERRADO', 'SIN_CERRAR']);
