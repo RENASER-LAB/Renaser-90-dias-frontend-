@@ -29,6 +29,11 @@ import type { CampoRadar } from '../config/configRadar';
 export interface BorradorRadar {
   respuestas: Record<CampoRadar, string>;
   energia: number | null;
+  /**
+   * Spec 030: qué respuestas llevan algo dictado, para que «dictado» sobreviva a cerrar y reabrir el formulario como el texto
+   * mismo. Un borrador anterior no lo trae: se lee como «ninguna».
+   */
+  dictados?: CampoRadar[];
   guardadoEn: string;
 }
 
