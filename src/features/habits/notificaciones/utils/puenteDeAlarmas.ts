@@ -1,12 +1,13 @@
 import {
+  hayFechasVigentes,
   identificadorDelAvisoDelDia,
   isoDe,
-  ordenadas,
   usaEsquemaPorDia,
+  valoresDelDia,
   type DiaIso,
 } from './alarmasPorDia';
-import { combinacionDelDia, type CombinacionDeAlarma } from './combinacionDeAlarma';
-import { fechaCompacta, horaDelDia, type EntradaDeRepeticiones } from './repeticionesDeAlarma';
+import { type CombinacionDeAlarma } from './combinacionDeAlarma';
+import { fechaCompacta, type EntradaDeRepeticiones } from './repeticionesDeAlarma';
 
 /**
  * El puente de un hábito cumplido (issue #33, 2026-10-27): qué alarmas de FECHA reemplazan a las que se repiten
@@ -39,6 +40,13 @@ import { fechaCompacta, horaDelDia, type EntradaDeRepeticiones } from './repetic
  * días ninguno se repite); en el diario, el primer aviso del primer día lleva `habito-{id}-inicio` y los demás
  * `habito-{id}-pte-{AAAAMMDD}-{n}` (una alarma de fecha por día no puede compartir identificador). Con eso, volver al
  * esquema normal (`programar`) con el mismo identificador REEMPLAZA la alarma en vez de duplicarla.
+ *
+ * ## Las fechas propias (spec 028)
+ *
+ * Si el hábito tiene fechas con cambio «solo esta semana» (`entrada.fechas`), el puente lee de cada día lo mismo que el plan
+ * de alarmas (`valoresDelDia`): la hora, el aviso, el apagado y «cómo suena» de la fecha propia mandan sobre los del día de
+ * la semana. Así cumplir un hábito el día de un cambio no devuelve la hora de siempre. Con fechas vigentes el hábito va por
+ * día, y los identificadores son los del esquema por día.
  *
  * ## Cuándo hace falta
  *
@@ -82,21 +90,17 @@ export function identificadorDelPuente(habitoId: string, fecha: string, n: numbe
  * hora general, el aviso general, lo propio de cada día, cómo suena y un cambio de hora pendiente.
  */
 export function planDelPuente(entrada: EntradaDeRepeticiones, ahora: Date): PlanDelPuente {
-  const propios = new Map((entrada.dias ?? []).map(d => [d.iso, d]));
-  const porDia = usaEsquemaPorDia(entrada.dias);
+  const porDia = usaEsquemaPorDia(entrada.dias) || hayFechasVigentes(entrada.fechas, ahora);
   const pedidos: PedidoDelPuente[] = [];
   let quedanHoy = 0;
   let yaTieneElInicio = false;
   for (let i = 0; i <= DIAS_DEL_PUENTE; i++) {
     const dia = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() + i, 12, 0, 0, 0);
     const iso = isoDe(dia);
-    const propio = propios.get(iso);
-    if (propio && !propio.activo) continue;
-    const avisos = ordenadas(propio?.avisos ?? entrada.avisosGenerales);
+    const { activo, avisos, hora, alarma } = valoresDelDia(entrada, dia);
+    if (!activo) continue;
     if (avisos.length === 0) continue;
-    const hora = horaDelDia(entrada, propio, dia);
     if (!hora) continue;
-    const alarma = combinacionDelDia(entrada.alarmaGeneral, propio?.alarma);
     const [h, m] = hora.split(':').map(Number);
     const fecha = fechaCompacta(dia);
     avisos.forEach((antes, n) => {
