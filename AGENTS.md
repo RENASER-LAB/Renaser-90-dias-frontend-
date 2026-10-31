@@ -393,6 +393,19 @@ Pedido del dueño: «en Plan replica este formato de acuerdo a lo que tenemos».
 * **No cambia** lo del mentor, el líder y Administración en Hoy («Mi grupo», «Mis mentores», el resumen por grupos y sus avisos): esto es solo
   la tarjeta del semáforo propio del aprendiz.
 
+### Hoy: «Hábitos de hoy» y el Radar sin la línea de detalle (punto 13)
+Textual del dueño: «desaparece la información no relevante en Hábitos de hoy, y en Mi Radar esa información no aporta».
+* **En `TarjetaHabitoYRadar` se quita la línea de detalle de abajo de cada mitad.** Hábitos: «Te toca ahora · 11:00 · quedan 17 pendientes» y
+  sus variantes. Radar: «Cinco preguntas, un minuto. Responde hasta las 13:00.» y las de los demás estados («Cierra a las…», «Se abre en
+  2 min…», «La siguiente a las…», «05:30 a 22:30 · 17 veces», «Cada hora entre tu Despertar y tu Dormir…», «Toca para ver tu horario.»).
+* **Quedan:** el ícono con el rótulo y su chevron, la línea de estado y el título de cada mitad (la cifra o el hábito de esta hora;
+  «Código Renaser · 13:00 · Innegociable», «Registrado», «Próxima a las 20:00»…). Las dos mitades siguen alineadas a la izquierda y arriba,
+  con el mismo alto mínimo de 48 y sin renglón vacío abajo.
+* **Lo que hace cada mitad al tocarla no cambia**; la hoja «Tu Radar de hoy» (sigue diciendo el horario y las veces), la hoja de lo
+  respondido (`siguiente`) y Training conservan su detalle. `MitadDelRadar` ya no tiene `detalle`, y `DatosDeLaMitadDeHabitos` tampoco.
+* **La lectura de pantalla queda con lo que se ve:** `etiquetaDeLaMitad` dice el rótulo, la hora, el estado y el título («Código Renaser
+  13:00, Registrado»). Pruebas: `mitadDelRadar` y `tarjetaHabitoYRadar` (que el detalle no aparece ni en pantalla ni en voz).
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
@@ -777,6 +790,9 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       Lo que sigue a una hoja (el formulario, Yo) espera a que la hoja se vaya del todo (`alTerminarDeCerrar`, como las de
       Training). «Registrar ahora» solo aparece cuando el servidor lo aceptaría; si no, dice por qué («Hoy no tienes Mi Radar»,
       «Mi Radar funciona de 03:00 a 23:59.», «Ya registraste esta hora»).
+      > **Corregido 2026-10-31 (pedido del dueño).** La columna «Dice» ya no incluye la línea de abajo («Cinco preguntas, un minuto…»,
+      > «Responde hasta…», «Listo por esta hora. El siguiente a las 14:00.»…): quedan el rótulo, el estado y el título. Lo que hace cada
+      > mitad al tocarla no cambia.
     * **Una sola lógica, sin duplicar**: las horas de hoy y la hora en curso salen de `resumenDeMiRadarHoy` (`utils/miRadar.ts`,
       sobre `horasDelDia`), que ahora usa también `useMiRadar` de Yo; el envío es el de `RadarContext` (`radar.enviar`: el mismo
       `POST /radar` y el mismo 409 que se relee y se da por registrado); `HOY_SIN_RADAR`, `FUERA_DE_HORARIO` y el pie del
@@ -1048,6 +1064,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       Radar de hoy» lo repite y su enlace pasa a «Abrir Mi Radar»), «Hoy no tienes Mi Radar» y la fila de Yo `Encendido · 05:30 a 22:30 · 17 veces`.
       Las fichas del mentor, del líder y de Administración (`CodigoRenaserDelAlumno`): `Mi Radar: encendido · 05:30 a 22:30 · 17 veces`, `… · hoy no
       tiene Radar` o `apagado`.
+      > **Corregido 2026-10-31.** En Hoy ya no se dice la línea «05:30 a 22:30 · 17 veces» ni «Toca para ver tu horario.»: la mitad queda con
+      > su estado y su título («Próxima a las 20:00»). La hoja «Tu Radar de hoy» sigue diciendo el horario y las veces.
     * **Lo único que se toca fuera de Yo, Hoy y las fichas** son dos cambios **aditivos**: `FilaDeDiasDelPlan` suma la prop opcional
       `etiquetaPropiaDelDia` (lo que oye el lector de pantalla de cada pastilla; Training y Plan no la pasan y su fila es la de siempre) e
       `InterruptorGrande` deja de dibujar la línea de descripción cuando va vacía.
@@ -3053,6 +3071,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       —uno por persona y por día, con su nombre, el hábito que más le cuesta o el que mejor le va y cuánto le falta para
       el siguiente color—: la app NO transforma el texto. Sale todos los días, también sin color (inicio, pausa, sin
       programa, cuenta en pausa, graduado). El lector de pantalla lo lee: el texto se suma a la etiqueta de la tarjeta.
+      > **Corregido 2026-10-31.** La tarjeta (con este mensaje y su búho) ya no está en Hoy: pasó a Yo, en el lugar del gráfico «Tu
+      > cumplimiento». El mensaje se dibuja igual (`MensajeDelSemaforo` dentro de `TarjetaSemaforoHoy`) y sale de `/home` como siempre.
     * **Los 15 stickers** (WebP de 512, sin texto en la imagen, 5 dorados para lo que se celebra y 10 azules) viven en
       `assets/stickers/semaforo/`, y `semaforo/data/stickersDelSemaforo.ts` es el único lugar que los nombra (la prueba
       frena que el catálogo del servidor use uno que falte). Un nombre desconocido, vacío o una imagen que no carga

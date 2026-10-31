@@ -488,24 +488,6 @@ export default function HoyScreen() {
     return 'Lidera tu energía diaria.';
   }, [habitoAhora]);
 
-  const detalleHabitoAhora = useMemo(() => {
-    const quedan = habitoAhora.pendientes === 1 ? 'queda 1 pendiente' : `quedan ${habitoAhora.pendientes} pendientes`;
-    if (habitoAhora.estado === 'ahora') {
-      return habitoAhora.hora ? `Te toca ahora · ${habitoAhora.hora} · ${quedan}` : `Te toca ahora · ${quedan}`;
-    }
-    if (habitoAhora.estado === 'proximo') {
-      return `Empieza a las ${habitoAhora.hora} · ${quedan}`;
-    }
-    if (habitoAhora.estado === 'todo-hecho') {
-      return resumen?.habitosHoy
-        ? `${resumen.habitosHoy.completados} de ${resumen.habitosHoy.total} hábitos cumplidos en esta jornada.`
-        : 'No queda nada pendiente en esta jornada.';
-    }
-    return resumen?.habitosHoy
-      ? `${resumen.habitosHoy.completados} de ${resumen.habitosHoy.total} hábitos cumplidos en esta jornada.`
-      : 'Todo lo demás se alinea cuando cumples tu disciplina.';
-  }, [habitoAhora, resumen]);
-
   /* `null` = no se sabe (`/home` falló, todavía carga o no trajo el dato): la pantalla dice «—».
      > **Corregido 2026-10-05.** Acá había `?? 100`: con `/home` caído Hoy decía «100 pts», un dato inventado (el mismo error
      > que el «DÍA 1 DE 90» del 2026-09-07). Yo ya decía «—».
@@ -898,7 +880,6 @@ export default function HoyScreen() {
             habitos={{
               cifra: cifrasDeHabitos(resumen?.habitosHoy),
               titulo: tituloHabitoAhora,
-              detalle: detalleHabitoAhora,
               etiquetaAccesible: habitoAhora.titulo ? `Abrir Training: ${habitoAhora.titulo}` : 'Abrir Training',
             }}
             onAbrirTraining={() => (navigation as any).navigate('Training')}
