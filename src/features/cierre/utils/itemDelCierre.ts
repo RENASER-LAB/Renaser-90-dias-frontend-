@@ -4,8 +4,12 @@ import type { CierreDelDia, DiaDelCierre } from '../types/cierre.types';
 import { pendientesDe } from './borradorDelCierre';
 
 /**
- * La fila «Cierra tu día» como un ítem más de la lista de Training (spec 017). Es un tipo aparte (`cierre`): la lista
- * por hora lo ordena entre el resto, pero no cuenta como hecho ni da puntos, no se atrasa y no se despide.
+ * La fila «Cierra tu día» como un ítem más de la lista de Training (spec 017). Es un tipo aparte (`cierre`): la lista de
+ * hoy lo dibuja de última, siempre, y no cuenta como hecho ni da puntos, no se atrasa y no se despide.
+ *
+ * **No lleva hora** (pedido del dueño, 2026-10-30): ni la de Dormir menos 30 minutos ni las 21:30 de antes. Quien trabaja
+ * de noche no tiene una hora «normal» de dormir, y el cierre es de todos los días. `hora` es siempre `null`; lo único que
+ * se sabe de un cierre ya hecho es CUÁNDO se hizo (`cerradoA`), y eso se dice en el texto, no en la columna de la hora.
  */
 
 export const TITULO_DEL_CIERRE = 'Cierra tu día';
@@ -48,14 +52,14 @@ export interface DatosDeLaFilaDelCierre {
   cerradoA: string | null;
 }
 
-/** El ítem de HOY: `hora` es la que dice `horaDelCierre`. */
-export function itemDelCierreDeHoy(hoyIso: string, hora: string, vista: CierreDelDia): ItemDelDia {
+/** El ítem de HOY: sin hora, cerrado o no. */
+export function itemDelCierreDeHoy(hoyIso: string, vista: CierreDelDia): ItemDelDia {
   const cerrado = vista.estado === 'CERRADO';
   return {
     clave: `cierre-${hoyIso}`,
     tipo: 'cierre',
     titulo: cerrado ? TITULO_DEL_DIA_CERRADO : TITULO_DEL_CIERRE,
-    hora,
+    hora: null,
     hecho: cerrado,
     icono: 'moon',
     dimension: null,
@@ -70,8 +74,9 @@ export function itemDelCierreDeHoy(hoyIso: string, hora: string, vista: CierreDe
 }
 
 /**
- * El ítem de un día ANTERIOR (solo lectura): «Cerrado» o «Sin cerrar». Su hora es la del cierre, si lo hubo. Si el
- * servidor no dijo cómo quedó ese día (o dijo que sigue abierto), no hay fila: no se afirma lo que no se sabe.
+ * El ítem de un día ANTERIOR (solo lectura): «Cerrado» o «Sin cerrar». Va de última, como en hoy: sin hora (cuándo se cerró,
+ * si se cerró, lo dice `cerradoA` en su texto). Si el servidor no dijo cómo quedó ese día (o dijo que sigue abierto), no hay
+ * fila: no se afirma lo que no se sabe.
  */
 export function itemDelCierreDeUnDiaAnterior(fechaIso: string, vista: CierreDelDia): ItemDelDia | null {
   if (vista.estado !== 'CERRADO' && vista.estado !== 'SIN_CERRAR') return null;
@@ -81,7 +86,7 @@ export function itemDelCierreDeUnDiaAnterior(fechaIso: string, vista: CierreDelD
     clave: `cierre-${fechaIso}`,
     tipo: 'cierre',
     titulo: cerrado ? TITULO_DEL_DIA_CERRADO : TITULO_DEL_CIERRE,
-    hora: cerradoA,
+    hora: null,
     hecho: cerrado,
     icono: 'moon',
     dimension: null,

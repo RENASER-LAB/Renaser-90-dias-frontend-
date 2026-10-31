@@ -300,3 +300,45 @@ describe('CierresDelDia: las semanas', () => {
     expect(textos(b)).toContain('Cierres del día');
   });
 });
+
+describe('CierresDelDia: lo que ve quien acompaña de una persona que trabaja de noche o cierra a otra hora', () => {
+  // Jueves 29 empezó su turno de noche y no cerró antes de la medianoche; el viernes 30 (el día nuevo) sí cerró. Solo se
+  // DESCRIBE lo que dice el servidor: no hay regla de «el día de quien trabaja de noche».
+  const TURNO_DE_NOCHE = (): CierresDeLaSemana =>
+    semana(ACTUAL, {
+      dias: [
+        dia('2026-10-29', { estado: 'SIN_CERRAR', cerradoEn: null, acciones: [PENDIENTE(null)] }),
+        dia('2026-10-30', { estado: 'CERRADO', cerradoEn: '2026-10-30T07:10:00Z', acciones: [PENDIENTE('Terminé el turno a las 2') ] }),
+      ],
+      resumen: { cerrados: 1, sinCerrar: 1, motivos: [{ motivo: 'SIN_TIEMPO', veces: 2 }] },
+    });
+
+  it('el día en que cerró después de la medianoche dice «Cerrado» y el anterior «Sin cerrar» (sin tono de falta)', async () => {
+    const t = textos(await dibujar(cargarCon({ actual: TURNO_DE_NOCHE() }).cargar));
+    expect(t).toContain('Jueves 29 · Sin cerrar');
+    expect(t).toContain('Viernes 30 · Cerrado');
+    expect(t).toContain('1 cerrado · 1 sin cerrar');
+    expect(t).toContain('«Terminé el turno a las 2»');
+    expect(t).not.toMatch(/incumpl|falt[óa] a|no cumpli/i);
+  });
+
+  it('un día cerrado temprano y cuya acción se cumplió después ya no muestra lo que dijo de ella', async () => {
+    const cumplidaDespues = { ...PENDIENTE(), cumplida: true, cumplidaEn: '2026-10-29T17:00:00Z', cierre: null };
+    const t = textos(await dibujar(cargarCon({ actual: semana(ACTUAL, { dias: [dia('2026-10-29', { acciones: [cumplidaDespues] })] }) }).cargar));
+    expect(t).toContain('Jueves 29 · Cerrado');
+    expect(t).toContain('1 de 1 acción cumplida');
+    expect(t).not.toContain('quedó pendiente');
+    expect(t).not.toContain('→');
+  });
+
+  it('un día normal cerrado a las 21:00 se ve «Cerrado» con lo que dijo de cada pendiente', async () => {
+    const normal = semana(ACTUAL, {
+      dias: [dia('2026-10-29', { cerradoEn: '2026-10-30T02:00:00Z', acciones: [CUMPLIDA, PENDIENTE('Se alargó la reunión')] })],
+      resumen: { cerrados: 1, sinCerrar: 0, motivos: [{ motivo: 'SIN_TIEMPO', veces: 1 }] },
+    });
+    const t = textos(await dibujar(cargarCon({ actual: normal }).cargar));
+    expect(t).toContain('Jueves 29 · Cerrado');
+    expect(t).toContain('No me alcanzó el tiempo → Hacerla a otra hora');
+    expect(t).toContain('«Se alargó la reunión»');
+  });
+});

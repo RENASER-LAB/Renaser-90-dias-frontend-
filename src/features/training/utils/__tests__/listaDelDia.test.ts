@@ -192,7 +192,7 @@ describe('La lista de hoy, por hora (spec 014)', () => {
 
   it('un día sin nada devuelve todo vacío', () => {
     const lista = armarListaDelDia([], m('10:00'));
-    expect(lista).toEqual({ enCurso: [], primero: null, marcaDelPrimero: null, sinHora: [], atrasados: [], cerrados: [], hechos: [] });
+    expect(lista).toEqual({ enCurso: [], primero: null, marcaDelPrimero: null, sinHora: [], atrasados: [], cerrados: [], hechos: [], cierre: null });
   });
 });
 

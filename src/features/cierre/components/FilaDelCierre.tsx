@@ -15,7 +15,8 @@ export const TEXTO_DE_DIA_SIN_CERRAR_EN_LA_FILA = 'Sin cerrar';
 /**
  * La fila «Cierra tu día» de Training (spec 017). Se distingue de los hábitos por su fondo dorado suave y el ícono de
  * luna; ya cerrada queda verde, con «Día cerrado» y lo que dijo para mañana. No lleva ✓, ni «Subir», ni puntos, ni
- * «Te toca ahora»: es opcional y no cuenta.
+ * «Te toca ahora»: es opcional y no cuenta. **No lleva hora** (pedido del dueño, 2026-10-30): la columna de la hora queda
+ * vacía —solo guarda el lugar para que la tarjeta alinee con las de arriba— y la etiqueta del lector no dice ninguna.
  *
  * - **Hoy** (`soloLectura` en `false`): toda la fila es un botón que abre la hoja. Cerrada, vuelve a abrirla para cambiar.
  * - **Un día anterior** (`soloLectura`): solo texto, «Cerrado» o «Sin cerrar». No se cierra tarde; tocarla no hace nada.
@@ -44,7 +45,6 @@ export function FilaDelCierre({
       : DURACION_DEL_CIERRE;
 
   const etiqueta = [
-    item.hora ?? 'Sin hora',
     item.titulo,
     soloLectura ? (cerrado ? TEXTO_DE_DIA_CERRADO_EN_LA_FILA : TEXTO_DE_DIA_SIN_CERRAR_EN_LA_FILA) : null,
     segundaLinea,
@@ -72,9 +72,8 @@ export function FilaDelCierre({
 
   return (
     <View style={estilos.fila}>
-      <Text numberOfLines={1} style={[t.small, estilos.hora, { width: anchoDeLaHora, color: item.hora ? c.textStrong : c.chevron }]}>
-        {item.hora ?? '—'}
-      </Text>
+      {/* Sin hora: la columna solo guarda el lugar, para que la tarjeta alinee con las filas de arriba. */}
+      <View style={{ width: anchoDeLaHora }} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
       {soloLectura ? (
         <View style={{ flex: 1 }} accessible accessibilityLabel={etiqueta}>
           {tarjeta}
@@ -95,7 +94,6 @@ export function FilaDelCierre({
 
 const estilos = StyleSheet.create({
   fila: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 66, paddingVertical: 6 },
-  hora: { fontFamily: 'Jost_700Bold', fontSize: 14, fontVariant: ['tabular-nums'] },
   tarjeta: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 14 },
   texto: { flex: 1, minWidth: 0, gap: 2 },
 });

@@ -11,7 +11,6 @@ import type { HabitItem } from '../../../screens/TrainingScreen';
 import { HojaDelCierre, TEXTO_DE_DIA_CERRADO_TARDE } from '../../cierre/components/HojaDelCierre';
 import { useCierreDeHoy } from '../../cierre/hooks/useCierreDeHoy';
 import { useCierresAnteriores } from '../../cierre/hooks/useCierresAnteriores';
-import { horaDelCierre, yaEsHoraDelCierre } from '../../cierre/utils/horaDelCierre';
 import { itemDelCierreDeHoy, itemDelCierreDeUnDiaAnterior } from '../../cierre/utils/itemDelCierre';
 import { useAhora } from '../../eventos/hooks/useAhora';
 import { sumarDiasIso, zonaDelTelefono } from '../../eventos/utils/zonaHoraria';
@@ -34,7 +33,7 @@ import {
   type ItemDelDia,
 } from '../utils/itemsDelDia';
 import { lineaDelPrograma } from '../utils/lineaDelPrograma';
-import { contarElDia, minutosDeAhora, textoDelResumenDeHoy } from '../utils/listaDelDia';
+import { contarElDia, textoDelResumenDeHoy } from '../utils/listaDelDia';
 import { fechaDelDiaUno, semanaDe, sePuedeLeerElDia, tituloDelDia } from '../utils/semanaDeTraining';
 import { vistaDeOtroDia } from '../utils/vistaDeOtroDia';
 import { FilaDeSemana } from './FilaDeSemana';
@@ -171,18 +170,15 @@ export function TrainingPorHora({
 
   const contexto = useMemo(() => ({ hoyIso, zona, titulos }), [hoyIso, zona, titulos]);
 
-  /* «Cierra tu día» (spec 017): aparece 30 min antes de Dormir (21:30 sin Dormir), la última de hoy. Solo se lee del servidor
-     cuando ya es su hora y Training está a la vista; sin lectura (backend anterior, plan apagado) no hay fila. */
-  const horaDelCierreDeHoy = useMemo(() => horaDelCierre(habits, hoyIso), [habits, hoyIso]);
-  const esLaHoraDelCierre = yaEsHoraDelCierre(horaDelCierreDeHoy, minutosDeAhora(ahoraMs));
-  const cierreDeHoy = useCierreDeHoy({ cuentaId, hoyIso, activo: activa && cierrePrendido && esLaHoraDelCierre });
+  /* «Cierra tu día» (spec 017): está SIEMPRE, todos los días y a cualquier hora, como la última fila de hoy. No depende de
+     Despertar, de Dormir ni de ninguna hora (pedido del dueño, 2026-10-30: quien trabaja de noche no tiene una hora «normal»
+     de dormir). Se lee del servidor cuando Training está a la vista; sin lectura (backend anterior, plan apagado) no hay fila. */
+  const cierreDeHoy = useCierreDeHoy({ cuentaId, hoyIso, activo: activa && cierrePrendido });
   const lecturaDelCierreDeHoy = cierreDeHoy.lectura;
   const itemsHoy = useMemo(() => {
     const items = itemsDeHoy(habits, ocurrencias, contexto);
-    return lecturaDelCierreDeHoy.estado === 'listo'
-      ? [...items, itemDelCierreDeHoy(hoyIso, horaDelCierreDeHoy, lecturaDelCierreDeHoy.vista)]
-      : items;
-  }, [habits, ocurrencias, contexto, lecturaDelCierreDeHoy, hoyIso, horaDelCierreDeHoy]);
+    return lecturaDelCierreDeHoy.estado === 'listo' ? [...items, itemDelCierreDeHoy(hoyIso, lecturaDelCierreDeHoy.vista)] : items;
+  }, [habits, ocurrencias, contexto, lecturaDelCierreDeHoy, hoyIso]);
 
   /* La hoja: el ítem que se abrió, aunque se esté cerrando (la hoja baja con lo último que mostró). */
   const [hoja, setHoja] = useState<{ item: ItemDelDia; modo: ModoDeLaFila } | null>(null);
