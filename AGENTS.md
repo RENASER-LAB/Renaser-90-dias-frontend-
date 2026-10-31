@@ -187,6 +187,50 @@ diseño, textos, ni la secuencia saludo → primer post → Pacto. Lo que cambia
   y `panelDeSerAbierto`.
 * **Hace falta un APK nuevo** (solo JavaScript: la app no se actualiza por aire). Sin backend nuevo.
 
+## Cambio por pedido del dueño — 2026-10-31 — Hoy → «Mis mentores»: el líder ve la ficha de todos los aprendices, estén o no en un grupo
+
+Textual: «el líder de mentores puede ver la ficha de todos los aprendices sin necesidad de estar en grupo, solo para este rol».
+Hasta hoy el líder llegaba a una persona solo por Hoy → «Mis mentores» → «Resultado por grupo» → un grupo con mentor → la persona
+(`PersonaDelLiderScreen`, specs 005 y 018): quien no tenía grupo, o cuyo grupo no tenía mentor, no se veía. Lo que cambia y nada más:
+* **Una fila nueva «Todos los aprendices»** en `MisMentoresEnHoy`, la última de las tres que van bajo «Resultado por grupo» (junto
+  a «Consultas de mentores» y «Mentores y reporte del mes»), con su misma forma (`FilaDeLista`: título y chevron; sin ícono propio,
+  porque las otras dos no lo llevan). **Solo existe si el servidor la ofrece**: Hoy pregunta con la primera página del listado
+  (`useAprendicesDisponibles`, `size=1`) y la fila se dibuja únicamente con un 200; con 404 o 403 (backend anterior u otro rol), con
+  cualquier otro fallo o mientras no se sabe, no se dibuja. Se pregunta solo si la cuenta lidera mentores y tiene prendida la entrada
+  `lider`. **Para otros roles, Hoy no cambia.**
+* **`AprendicesDelLiderScreen`** (estado de Hoy, como las otras pantallas del líder: sin pestaña nueva): el buscador «Buscar por
+  nombre» (pide al servidor, `GET /api/v1/leadership/people?q=&page=&size=30`, sin tildes lo resuelve el servidor, 300 ms después de la
+  última tecla; cada lectura toma un turno y solo la última escribe), la lista de a 30 (la página siguiente al acercarse al final, sin
+  repetir a nadie; si esa página falla, lo leído se queda y hay «Reintentar»), y por fila la foto o las iniciales, el nombre y una
+  línea «Grupo Fénix · Día 12» o «Sin grupo · Día 3». Estados: cargando, vacío («Todavía no hay aprendices.»), sin coincidencias
+  («Sin resultados para «…».») y error con «Reintentar» de 48. Un único scroll (la lista); sin animaciones nuevas más que `Presionable`
+  en las filas. El esquema es tolerante (`aprendicesDelLiderSchemas`): una fila rota se pierde sola, no la lista; un nombre vacío no
+  esconde a la persona («Persona sin nombre»); el día 0 no se dice. La foto (`photoPath`) es una URL completa o una ruta del servidor
+  que se pide con la sesión como las del chat (`AvatarDeLaLista`); si no carga, quedan las iniciales.
+* **Tocar a una persona abre `PersonaDelLiderScreen`** —la de siempre: sus días, evidencias, Radar, tiempo libre y cierres— con la prop
+  nueva `desdeTodos`: las cuatro lecturas salen por la puerta sin grupo, `/leadership/people/{p}/week`, `/radar`, `/huecos?semana=` y
+  `/cierres?semana=`, **aunque la persona tenga grupo** (los cuatro `obtener…DePersona` aceptan `grupoId: null`). El rótulo es el
+  nombre de su grupo o «Sin grupo». **«Avisar a su mentor» solo si la persona tiene grupo, el grupo tiene mentor y el servidor no dice
+  que no** (`puedeAvisarAlMentor`, campo opcional de la semana —también de la del grupo—: con `false` no se ofrece; si el campo falta,
+  vale la regla de siempre). `ObservarScreen` no usa el grupo: el mentor sale del cuerpo de la semana. «Escribirle» como siempre. Un
+  404 de la ficha dice «Esta persona ya no está disponible para ver.». **Desde un grupo o desde Administración la pantalla no
+  cambia en nada**: sigue pidiendo las rutas del grupo.
+* **La fecha de la semana por la puerta sin grupo** viaja con los dos nombres (`semanaHasta` y `hasta`): la ruta del grupo la lee como
+  `semanaHasta` y el contrato de la ruta nueva decía `hasta`; si el servidor lee solo uno, el otro sobra, y una fecha que se perdiera en
+  silencio mostraría la ventana vigente diciendo que es otra. Por las rutas del grupo viaja solo `semanaHasta`, como siempre.
+* **El atrás** (sistema y flecha) sube un nivel: persona → lista → Hoy. La lista queda montada, oculta, mientras se mira a la persona
+  (como lo del programa propio en Hoy): al volver conserva la búsqueda, lo leído y la posición, sin releer. `MarcoDelLider` suma
+  `BarraDelLider` (la misma barra «VOLVER» + título) para la lista, que lleva su propio scroll.
+* **No cambian**: los demás tabs y papeles de Hoy, el resultado por grupo, el semáforo, las fichas del mentor y de Administración, los
+  permisos (los decide el servidor: 403 para otros roles, 404 si la persona no se muestra o el backend es anterior), ni la barra de
+  pestañas (la fila no suma ícono). Sin dependencias nuevas ni código nativo.
+* **Pruebas:** Jest `aprendicesDelLider` (rutas, esquema, `puedeAvisarAlMentor`), `useAprendicesDisponibles`, `todosLosAprendices`
+  (buscador, páginas, ficha sin grupo y con grupo, «Avisar a su mentor», el atrás, el grupo sigue con sus rutas), `hoyPorPapel`
+  («Todos los aprendices» en «Mis mentores») y `hoyTodosLosAprendices` (cableado de Hoy). Maestro, escrito y sin correr:
+  `.maestro/lider-ve-a-todos/01-persona-sin-grupo.yaml`.
+* **Hace falta un APK nuevo** (solo JavaScript: ni `package.json`, ni `app.json`, ni código nativo; la app no se actualiza por aire) y
+  **el backend con `/leadership/people` antes**: contra uno anterior la fila no se dibuja y Hoy queda como estaba.
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:

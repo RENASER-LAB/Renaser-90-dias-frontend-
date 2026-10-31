@@ -65,6 +65,13 @@ import { ObservarScreen } from './ObservarScreen';
  *
  * **Administración y Alquimista la usan igual** (2026-10-27): el servidor les da la misma lectura que al líder. Con las
  * dos props opcionales que siguen cambia solo lo que dice la pantalla; sin ellas es exactamente la del líder.
+ *
+ * **«Todos los aprendices»** (2026-10-31, pedido del dueño: «el líder de mentores puede ver la ficha de todos los
+ * aprendices sin necesidad de estar en grupo»): con `desdeTodos` la ficha, su Código Renaser, su tiempo libre y sus cierres
+ * se leen por `/leadership/people/{p}/…` —la puerta sin grupo— aunque la persona tenga grupo; el grupo (`grupoId`, que puede
+ * ser `null`) solo dice si hay a quién avisar. Sin `desdeTodos` la pantalla pide las rutas de siempre, las del grupo.
+ * «Avisar a su mentor» exige además que el servidor lo permita (`puedeAvisarAlMentor`; si no lo dice, vale la regla de
+ * siempre: que haya mentor).
  */
 export function PersonaDelLiderScreen({
   grupoId,
@@ -76,8 +83,11 @@ export function PersonaDelLiderScreen({
   onVolver,
   avisoSiNoSeAbre,
   alAbrirFicha,
+  desdeTodos = false,
 }: {
-  grupoId: string;
+  /** El grupo de la persona; `null` = no tiene (solo se llega así desde «Todos los aprendices»). */
+  grupoId: string | null;
+  /** Lo que se lee junto al nombre: el grupo, o «Sin grupo» (lo escribe quien abre la ficha). */
   grupoNombre: string;
   personaId: string;
   /** El de la fila que se tocó: está a la vista antes de que llegue la semana. */
@@ -93,24 +103,31 @@ export function PersonaDelLiderScreen({
   avisoSiNoSeAbre?: string;
   /** Un botón «Ver su ficha» al pie, para quien tiene otra vista de la persona (la ficha de administración). */
   alAbrirFicha?: () => void;
+  /**
+   * Se abrió desde «Todos los aprendices» (2026-10-31): todo se lee por `/leadership/people/{p}/…`, con grupo o sin él.
+   * Ausente = desde un grupo o desde Administración, por las rutas del grupo de siempre.
+   */
+  desdeTodos?: boolean;
 }) {
-  const lectura = useSemanaDePersona(grupoId, personaId, inicio);
+  /* La puerta de las cuatro lecturas: la del grupo, o `null` = la que no pregunta por grupo. */
+  const grupoDeRuta = desdeTodos ? null : grupoId;
+  const lectura = useSemanaDePersona(grupoDeRuta, personaId, inicio);
   const datos = lectura.datos;
   /* Spec 012: su Código Renaser y su Mi Radar (solo lectura). Se pide una vez por persona, no al cambiar de semana. */
   const cargarRadar = useMemo(
-    () => (cursor?: string | null) => obtenerRadarDePersona(grupoId, personaId, cursor),
-    [grupoId, personaId],
+    () => (cursor?: string | null) => obtenerRadarDePersona(grupoDeRuta, personaId, cursor),
+    [grupoDeRuta, personaId],
   );
   /* Spec 015: su tiempo libre de la semana. Una sola vez por persona (la sección tiene su propia semana y guarda lo que
      lee), no al cambiar de semana de arriba. */
   const cargarHuecos = useMemo<CargarHuecos>(
-    () => (lunes?: string | null) => obtenerHuecosDePersona(grupoId, personaId, lunes),
-    [grupoId, personaId],
+    () => (lunes?: string | null) => obtenerHuecosDePersona(grupoDeRuta, personaId, lunes),
+    [grupoDeRuta, personaId],
   );
   /* Spec 017: lo que dijo al cerrar cada día. También una sola vez por persona. */
   const cargarCierres = useMemo<CargarCierres>(
-    () => (lunes?: string | null) => obtenerCierresDePersona(grupoId, personaId, lunes),
-    [grupoId, personaId],
+    () => (lunes?: string | null) => obtenerCierresDePersona(grupoDeRuta, personaId, lunes),
+    [grupoDeRuta, personaId],
   );
 
   /* El día abierto se guarda junto con la semana a la que pertenece: al cambiar de semana vuelve solo al día
@@ -125,8 +142,13 @@ export function PersonaDelLiderScreen({
   };
 
   const nombreVisible = datos?.nombre ?? nombre;
-  /* A quién se le avisa: el mentor del grupo, y nunca a la persona sobre sí misma (si ella es el mentor). */
-  const mentor = datos?.mentor && datos.mentor.id !== personaId ? datos.mentor : null;
+  /* A quién se le avisa: el mentor del grupo, y nunca a la persona sobre sí misma (si ella es el mentor). Sin grupo no hay
+     a quién, y si el servidor dice que no se puede (`puedeAvisarAlMentor` en `false`) tampoco; si no lo dice (un backend
+     anterior), vale la regla de siempre. */
+  const mentor =
+    grupoId !== null && datos?.puedeAvisarAlMentor !== false && datos?.mentor && datos.mentor.id !== personaId
+      ? datos.mentor
+      : null;
 
   const escribirle = async () => {
     setAbriendoChat(true);

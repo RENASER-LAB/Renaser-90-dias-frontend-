@@ -128,6 +128,8 @@ const semanaSchema = z
     porcentaje: z.number().nullish(),
     dias: z.array(diaSchema).nullish(),
     programacion: programacionSchema.nullish().catch(null),
+    /** 2026-10-31: lo dice el servidor; ausente (backend anterior) o que no es un booleano = «no lo dijo». */
+    puedeAvisarAlMentor: z.boolean().nullish().catch(null),
   })
   .passthrough();
 
@@ -294,6 +296,7 @@ export function aSemanaDePersona(crudo: SemanaCruda): SemanaDePersona {
     dias: (crudo.dias ?? [])
       .map(aDia)
       .sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0)),
+    puedeAvisarAlMentor: crudo.puedeAvisarAlMentor ?? null,
     programacion: crudo.programacion
       ? {
           habitosConHora: crudo.programacion.habitosConHora,

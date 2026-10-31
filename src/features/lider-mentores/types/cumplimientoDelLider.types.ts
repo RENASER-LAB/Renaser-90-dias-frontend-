@@ -121,6 +121,11 @@ export interface SemanaDePersona {
    * casos «Avisar a su mentor» no aparece.
    */
   mentor: MentorDeLaPersona | null;
+  /**
+   * Si el servidor deja avisar al mentor de esta persona (2026-10-31). `null` = no lo dijo (un backend anterior): vale la
+   * regla de siempre, que es haber mentor. Con `false`, «Avisar a su mentor» no se ofrece aunque haya mentor.
+   */
+  puedeAvisarAlMentor?: boolean | null;
   resumen: ResumenDeLaSemana | null;
   /** Sin porcentaje no hay color (`SIN_DATOS`). Con `noSeMide`, el color es `SIN_DATOS` y el % sí se muestra. */
   color: ColorSemaforo;

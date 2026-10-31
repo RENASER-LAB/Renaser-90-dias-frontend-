@@ -416,6 +416,39 @@ function miGrupo(extra: Partial<React.ComponentProps<typeof MiGrupoEnHoy>> = {})
   });
 }
 
+describe('«Todos los aprendices» en «Mis mentores» (2026-10-31)', () => {
+  const GRUPOS = [grupo('g1', 'Grupo Octubre', 'Carla Ríos', 41.5, true)];
+
+  it('la fila existe solo si el servidor la ofrece (`verTodos`); sin ello, «Mis mentores» es el de siempre', async () => {
+    const sin = await montar(mentores(lectura(GRUPOS), { onAbrirTodos: jest.fn() }));
+    expect(textos(sin)).not.toContain('Todos los aprendices');
+    expect(botones(sin).some(b => b.includes('Todos los aprendices'))).toBe(false);
+    const sinAbrir = await montar(mentores(lectura(GRUPOS), { verTodos: true }));
+    expect(textos(sinAbrir)).not.toContain('Todos los aprendices');
+
+    const con = await montar(mentores(lectura(GRUPOS), { verTodos: true, onAbrirTodos: jest.fn() }));
+    expect(textos(con)).toContain('Todos los aprendices');
+    expect(botones(con)).toContain('Todos los aprendices. Abrir.');
+  });
+
+  it('va junto a las consultas y al padrón (la última de las tres) y tocarla la abre', async () => {
+    const onAbrirTodos = jest.fn();
+    const r = await montar(mentores(lectura(GRUPOS), { verTodos: true, onAbrirTodos }));
+    const orden = botones(r).filter(b => /Consultas de mentores|Mentores y reporte|Todos los aprendices/.test(b));
+    expect(orden.map(b => b.split('.')[0])).toEqual(['Consultas de mentores', 'Mentores y reporte del mes', 'Todos los aprendices']);
+    await tocar(r, 'Todos los aprendices');
+    expect(onAbrirTodos).toHaveBeenCalledTimes(1);
+  });
+
+  it('sola (sin consultas ni padrón) sigue siendo la primera fila de su caja, y sin texto de ayuda', async () => {
+    const r = await montar(
+      mentores(lectura(GRUPOS), { verConsultas: false, verMentores: false, verTodos: true, onAbrirTodos: jest.fn() }),
+    );
+    expect(botones(r)).toContain('Todos los aprendices. Abrir.');
+    expect(textos(r)).not.toContain('Consultas de mentores');
+  });
+});
+
 describe('«Mi grupo»', () => {
   it('lista a los aprendices con su nombre, su color y su porcentaje, en el orden del servidor', async () => {
     mockSemaforoDelGrupo.mockReturnValue({ datos: delSemaforo(), fallo: null });

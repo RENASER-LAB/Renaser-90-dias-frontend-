@@ -26,6 +26,8 @@ import { entradaAlGrupoVisible, esLiderDeMentores, esOtroDeMisGrupos } from '../
 import { BandejaTicketsScreen } from '../features/tickets/screens/BandejaTicketsScreen';
 import { CumplimientoDelLiderScreen, type GrupoAbierto } from '../features/lider-mentores/screens/CumplimientoDelLiderScreen';
 import { LiderMentoresScreen } from '../features/lider-mentores/screens/LiderMentoresScreen';
+import { AprendicesDelLiderScreen } from '../features/lider-mentores/screens/AprendicesDelLiderScreen';
+import { useAprendicesDisponibles } from '../features/lider-mentores/hooks/useAprendicesDisponibles';
 import { alAbrirAviso, consumirRutaPendiente } from '../features/mentor/notificaciones/rutaDeAviso';
 import { TarjetaSemaforoHoy } from '../features/semaforo/components/TarjetaSemaforoHoy';
 import { ControlDePapelDeHoy } from '../features/hoy-por-papel/components/ControlDePapelDeHoy';
@@ -123,6 +125,10 @@ export default function HoyScreen() {
   /* «Mis mentores» (SDD 002, backend D-241): la gestion del cuerpo de mentores, tercera pantalla
      propia del lider. Mismo patron: estado de Hoy, no un tab nuevo. */
   const [enMisMentores, setEnMisMentores] = useState(false);
+  /* «Todos los aprendices» (2026-10-31): la lista de todas las personas, con o sin grupo, para el líder. La fila de «Mis
+     mentores» existe solo si el servidor la ofrece (la primera página respondió 200); Hoy se queda con la respuesta para
+     que la fila no parpadee al volver de la lista. */
+  const [enTodosLosAprendices, setEnTodosLosAprendices] = useState(false);
   // El orbe del centro (2026-09-23): conversación por voz con el acompañante, y su chat para
   // confirmar propuestas o leer la respuesta completa.
   const voz = useVozDelOrbe();
@@ -189,6 +195,7 @@ export default function HoyScreen() {
      tickets. UNA lectura, compartida por su tarjeta (que aparece solo si el servidor ya respondio
      que existe) y su pantalla. Para cualquier otro rol no se pide nada. */
   const semaforoGrupos = useResumenPorGrupos(esLider);
+  const aprendicesDisponibles = useAprendicesDisponibles(esLider && esDisponible(CLAVES.lider));
   const [enSemaforoGrupos, setEnSemaforoGrupos] = useState(false);
   /* Spec 018: el grupo cuya fila se tocó en «Mis mentores». Con él, la pantalla del líder abre directo en ese grupo;
      sin él (el aviso del sábado) abre en el resumen de siempre. */
@@ -599,6 +606,10 @@ export default function HoyScreen() {
   if (enMisMentores && esLider) {
     return <LiderMentoresScreen onSalir={() => setEnMisMentores(false)} />;
   }
+  /* Misma forma: la lista de todas las personas del programa, abierta desde «Mis mentores». */
+  if (enTodosLosAprendices && esLider) {
+    return <AprendicesDelLiderScreen onSalir={() => setEnTodosLosAprendices(false)} />;
+  }
   /* Misma forma que la bandeja: la otra pantalla propia del lider de mentores. Desde la spec 005 (2026-10-19)
      el resumen por grupos baja al grupo y a la persona: `CumplimientoDelLiderScreen` lo envuelve y maneja esos
      niveles por dentro (persona ← grupo ← resumen ← Hoy), sin otra vista de Hoy. */
@@ -882,6 +893,8 @@ export default function HoyScreen() {
             verGrupos={esDisponible(CLAVES.semaforo)}
             verConsultas={esDisponible(CLAVES.tickets)}
             verMentores={esDisponible(CLAVES.lider)}
+            verTodos={aprendicesDisponibles === true}
+            onAbrirTodos={() => setEnTodosLosAprendices(true)}
             onAbrirGrupo={(grupo, inicio) => {
               setGrupoDeLaFila({ grupoId: grupo.grupoId, nombre: grupo.grupoNombre?.trim() || 'Grupo sin nombre', inicio });
               setEnSemaforoGrupos(true);
