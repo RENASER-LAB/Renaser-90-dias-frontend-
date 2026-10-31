@@ -2494,6 +2494,32 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       opciones en 360 dp el texto se achica hasta un 85 % en vez de cortarse con «…». Solo el ranking lo usa.
     * **Hace falta un APK nuevo** para la pestaña; el APK publicado ya ve y registra el hábito.
 
+  * **Cambio por pedido del dueño — 2026-10-29 — tabs `Training`, `Yo` y `Hoy` (registro con foto): KILÓMETROS DIARIOS
+    siempre muestra el campo de km y nunca se envía sin el número** (issue #42; autorizado el 2026-10-29). El campo
+    «¿Cuántos km recorriste hoy?» solo salía si el registro fresco (`GET /habit-tracks/today`) decía que el hábito mide
+    algo. El chat y el orbe de SER no traen esa pista, la foto pendiente de Android no la guardaba y, si esa consulta
+    fallaba, la pantalla se abría SIN campo y se enviaba sola: el servidor respondía 400 «Escribe cuántos km recorriste
+    hoy…» y «Reintentar» repetía el mismo envío, en bucle. Lo que cambia y nada más:
+    * **Tres respuestas en vez de dos** (`medicionQueSeSabe`, `habits/utils/registroConFoto`): pide los km (objeto), no
+      pide nada (`null`) o **no se sabe** (`undefined`: no se pudo leer el registro y quien llamó no trae la pista). Training
+      y Yo siempre saben (leen el track: objeto o `null`); el chat y el orbe, no. Antes lo que no se sabía se tomaba por
+      «no pide nada».
+    * **Si no se sabe, no se abre a ciegas**: antes de la cámara, un diálogo «Sin conexión» con el mensaje de siempre
+      («Necesitamos actualizar tus hábitos antes de registrar. Revisa tu conexión e inténtalo de nuevo.»,
+      `MENSAJE_SIN_CONEXION_PARA_REGISTRAR`, el mismo de `ejecutarEnRegistroVigente`) y «Ahora no» / «Reintentar» (repite el
+      toque desde cero). Resultado nuevo de `iniciar`: `'sin-conexion'` (las tarjetas del chat y del orbe lo leen como «sigue
+      pendiente»). En web, que no lee el registro antes de la cámara, el mismo aviso sale tras la foto, sin enviar nada.
+    * **La foto pendiente de Android recuerda los km** (`fotoPendiente.medicion`: objeto, `null` o ausente; un valor roto
+      se lee como «no se sabe»): al recuperarla sin red abre con el campo; sin ninguna pista, avisa (sin «Reintentar»: la
+      foto pendiente se ofrece una sola vez).
+    * **Si el servidor pide los km igual** (400 con «km» en el mensaje, `pideLosKm`) y la pantalla no tenía el campo, se
+      muestra el campo (con el total recorrido si se puede leer el registro) y NO se repite el envío; la evidencia ya subida
+      no se vuelve a subir y los km viajan al registrar. Cualquier otro error sigue siendo el de siempre con «Reintentar».
+    * **No cambian**: ningún texto ni diseño de la pantalla de foto, los demás hábitos con foto (se registran solos como
+      siempre; Training y Yo con pista `null` siguen abriéndose sin red), las acciones del día, el backend (el evento de
+      SER no trae la clave ni la medición: hacerlo es trabajo de backend) ni los tabs.
+    * **Hace falta un APK nuevo** (la app no se actualiza por aire).
+
   * **Cambio por pedido del dueño — 2026-10-13 — los cinco tabs: aviso de mantenimiento cuando una funcionalidad está
     apagada (spec 002)** (interruptores de Soporte TI, fase 1; spec, plan §D8 y contrato en
     `Renaser-90-dias-backend/specs/002-soporte-ti-interruptores/`, aprobados por el dueño el 2026-10-13). Lo que cambia y

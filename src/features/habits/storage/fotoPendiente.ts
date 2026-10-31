@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { destinoDeEvidencia, type DestinoDeFoto } from '../utils/destinoDeFoto';
+import type { MedicionPedida } from '../utils/registroConFoto';
 
 /**
  * Para qué registro se abrió la cámara (registro con foto, 2026-09-26).
@@ -23,8 +24,25 @@ export type FotoPendiente = {
   conPregunta: boolean;
   /** D-178: `'roca'` si era una acción del día. Lo guardado por una versión anterior no lo trae: hábito. */
   destino?: DestinoDeFoto;
+  /**
+   * #42: lo que se sabía de si el registro pide los km al abrir la cámara (`null`: no pide nada; un objeto: los
+   * pide). Sin el campo —lo guardado por una versión anterior, o un valor roto— no se sabe. Si al volver no se puede
+   * leer el registro, esto evita abrir el hábito de kilómetros sin su campo.
+   */
+  medicion?: MedicionPedida | null;
   guardadaEnMs: number;
 };
+
+function esMedicion(valor: unknown): valor is MedicionPedida {
+  const v = valor as Partial<MedicionPedida> | null;
+  return v?.unidad === 'KILOMETROS' && typeof v.totalPrevio === 'number' && Number.isFinite(v.totalPrevio);
+}
+
+/** `null` y una medición válida se conservan; cualquier otra cosa es «no se sabe». */
+function medicionGuardada(valor: unknown): MedicionPedida | null | undefined {
+  if (valor === null) return null;
+  return esMedicion(valor) ? { unidad: 'KILOMETROS', totalPrevio: valor.totalPrevio } : undefined;
+}
 
 function esFotoPendiente(valor: unknown): valor is FotoPendiente {
   const v = valor as Partial<FotoPendiente> | null;
@@ -38,11 +56,19 @@ function esFotoPendiente(valor: unknown): valor is FotoPendiente {
 }
 
 export const fotoPendiente = {
-  async guardar({ registroId, titulo, conPregunta, destino }: Omit<FotoPendiente, 'guardadaEnMs'>): Promise<void> {
+  async guardar({ registroId, titulo, conPregunta, destino, medicion }: Omit<FotoPendiente, 'guardadaEnMs'>): Promise<void> {
     try {
       await AsyncStorage.setItem(
         CLAVE,
-        JSON.stringify({ registroId, titulo, conPregunta, destino: destino ?? 'habito', guardadaEnMs: Date.now() }),
+        JSON.stringify({
+          registroId,
+          titulo,
+          conPregunta,
+          destino: destino ?? 'habito',
+          // `undefined` no se guarda (JSON lo omite): al volver se lee como «no se sabe».
+          medicion,
+          guardadaEnMs: Date.now(),
+        }),
       );
     } catch {
       // Best-effort: sin esto solo se pierde la recuperación tras un cierre de Android.
@@ -57,7 +83,10 @@ export const fotoPendiente = {
       if (!crudo) return null;
       const valor: unknown = JSON.parse(crudo);
       if (!esFotoPendiente(valor)) return null;
-      return ahoraMs - valor.guardadaEnMs <= VIGENCIA_FOTO_PENDIENTE_MS ? valor : null;
+      if (ahoraMs - valor.guardadaEnMs > VIGENCIA_FOTO_PENDIENTE_MS) return null;
+      const { medicion: medicionLeida, ...resto } = valor as FotoPendiente;
+      const medicion = medicionGuardada(medicionLeida);
+      return medicion === undefined ? resto : { ...resto, medicion };
     } catch {
       return null;
     }

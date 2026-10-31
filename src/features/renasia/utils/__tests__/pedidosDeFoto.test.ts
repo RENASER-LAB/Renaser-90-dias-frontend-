@@ -52,6 +52,15 @@ describe('solicitudDelPedido', () => {
   });
 });
 
+describe('solicitudDelPedido y los km (#42)', () => {
+  it('no inventa una pista: el evento de SER no dice si el hábito pide los km, y eso no es «no pide nada»', () => {
+    const solicitud = solicitudDelPedido(pedidoDesdeEvento(EVENTO));
+    // `undefined` (no se sabe) y NO `null` (se sabe que no): sin red el registro con foto no abre a ciegas.
+    expect(solicitud.medicion).toBeUndefined();
+    expect('medicion' in solicitud && solicitud.medicion === null).toBe(false);
+  });
+});
+
 describe('agregarPedido', () => {
   it('no repite el mismo registro', () => {
     const uno = agregarPedido(undefined, pedidoDesdeEvento(EVENTO));
@@ -81,6 +90,11 @@ describe('cambioTrasIniciar', () => {
     expect(cambioTrasIniciar('cancelado')).toEqual({ estado: 'pendiente' });
     expect(cambioTrasIniciar('ocupado')).toEqual({ estado: 'pendiente' });
     expect(cambioTrasIniciar('abierto')).toEqual({ estado: 'pendiente' });
+  });
+
+  it('#42: sin conexión (no se pudo leer el registro) la tarjeta sigue disponible para reintentar', () => {
+    expect(cambioTrasIniciar('sin-conexion')).toEqual({ estado: 'pendiente' });
+    expect(cambioTrasIniciar('sin-conexion', 'roca')).toEqual({ estado: 'pendiente' });
   });
 
   it('si ya estaba completado la marca como registrada', () => {
