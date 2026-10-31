@@ -7,6 +7,7 @@ import {
   HAY_RECORDATORIOS_LOCALES,
   rutaDelAvisoDeHabito,
 } from '../habits/notificaciones/recordatoriosDeHabito';
+import { leerAvisoDeInicio, vigenciaDelAvisoMin } from '../habits/notificaciones/utils/vigenciaDelAviso';
 import { estadoDeAlarmaExacta, type EstadoDeAlarmaExacta } from './alarmaExactaNativa';
 import { ARCHIVO_CAMPANA, archivoDelCanal } from './sonidoDeAlarma';
 
@@ -135,6 +136,26 @@ function contenidoDeEntrada(c: AlarmaProgramada['content'], canalId: unknown): T
   return contenido;
 }
 
+/**
+ * Issue #40: el aviso de inicio de un hábito que se programó antes de que existiera `data.vigenteMin` lo recibe acá, en el
+ * mismo rearmado que ya lo vuelve a programar tal cual. Sin esto, la alarma de un hábito que la persona no vuelve a tocar
+ * seguiría sin la vigencia que lee Android al entregarla (`scripts/arreglar-aviso-tardio.js`): al sonar, la librería re-arma
+ * el MISMO pedido guardado, sin el campo. Lo demás del contenido queda igual. Idempotente: si ya lo trae, no lo toca.
+ */
+function conLaVigenciaDelAviso(
+  contenido: TipoNotificaciones.NotificationContentInput,
+): TipoNotificaciones.NotificationContentInput {
+  const datos = contenido.data as Registro | undefined;
+  if (datos && typeof datos.vigenteMin === 'number') return contenido;
+  const aviso = leerAvisoDeInicio({
+    title: contenido.title,
+    body: contenido.body,
+    data: datos ?? null,
+  });
+  if (!aviso || !datos) return contenido;
+  return { ...contenido, data: { ...datos, vigenteMin: vigenciaDelAvisoMin(aviso.minutosAntes) } };
+}
+
 /** Cuánto hace que tocó por última vez una alarma diaria/semanal (hora del teléfono), en ms. */
 function desdeLaUltimaHoraNominal(ahora: Date, hora: number, minuto: number, weekday?: number): number {
   const nominal = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), hora, minuto, 0, 0);
@@ -201,7 +222,11 @@ export function planDeRearmado(
     if (!trigger) continue;
     vistos.add(alarma.identifier);
     const canalId = (alarma.trigger as Registro | null)?.channelId;
-    pedidos.push({ identifier: alarma.identifier, content: contenidoDeEntrada(alarma.content ?? {}, canalId), trigger });
+    pedidos.push({
+      identifier: alarma.identifier,
+      content: conLaVigenciaDelAviso(contenidoDeEntrada(alarma.content ?? {}, canalId)),
+      trigger,
+    });
   }
   return pedidos;
 }

@@ -3,6 +3,7 @@ import { AppState } from 'react-native';
 
 import { useAuth } from '../../../context/AuthContext';
 import { ponerAlDiaLasAlarmas } from '../ponerAlDiaLasAlarmas';
+import { limpiarAvisosVencidos } from '../limpiarAvisosVencidos';
 import { rearmarLoLocalDeLaCuenta } from '../alarmasDeLaCuenta';
 import { atenderAlCumplirUnHabito } from '../../habits/notificaciones/repeticiones';
 
@@ -18,6 +19,10 @@ import { atenderAlCumplirUnHabito } from '../../habits/notificaciones/repeticion
  * («Repetir si no la atiendo»; `habits/notificaciones/repeticiones.ts`). Desde el issue #33 (2026-10-27) eso incluye todo
  * lo demás que le quedaba por sonar ese día: un hábito cumplido no suena más hasta mañana.
  *
+ * Issue #40 (2026-10-31): en cada apertura y cada regreso al frente (sin intervalo mínimo: es una lectura de la bandeja) quita
+ * de la bandeja los avisos de inicio de un hábito que ya no sirven: pasó su hora o el hábito ya se cumplió
+ * (`limpiarAvisosVencidos.ts`).
+ *
  * Vive en `App.tsx`, por encima del navegador, como `AbridorDeAvisos`: ninguna pestaña cambia.
  * No pinta nada.
  */
@@ -26,11 +31,14 @@ export function RearmadorDeAlarmas(): null {
   const userId = user?.id ?? null;
 
   useEffect(() => {
+    void limpiarAvisosVencidos(userId).catch(() => {});
     void ponerAlDiaLasAlarmas(userId).catch(() => {});
     // E-413: lo que solo sabe el teléfono (aviso diario, repaso) vuelve si esta cuenta ya lo tenía.
     if (userId) void rearmarLoLocalDeLaCuenta(userId).catch(() => {});
     const suscripcion = AppState.addEventListener('change', estado => {
-      if (estado === 'active') void ponerAlDiaLasAlarmas(userId).catch(() => {});
+      if (estado !== 'active') return;
+      void limpiarAvisosVencidos(userId).catch(() => {});
+      void ponerAlDiaLasAlarmas(userId).catch(() => {});
     });
     return () => suscripcion.remove();
   }, [userId]);

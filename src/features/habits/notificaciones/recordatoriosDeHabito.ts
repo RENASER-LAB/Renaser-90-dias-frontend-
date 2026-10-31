@@ -39,6 +39,7 @@ import {
 } from './cumplidoDeHoy';
 import { planDelPuente, puenteQueCorresponde } from './utils/puenteDeAlarmas';
 import { fechaCompacta, type EntradaDeRepeticiones } from './utils/repeticionesDeAlarma';
+import { vigenciaDelAvisoMin } from './utils/vigenciaDelAviso';
 // SOLO tipos: `import type` se borra al compilar, así que esto NO carga el módulo en runtime. Ver
 // el bloque "POR QUÉ NO SE IMPORTA ARRIBA" más abajo — importarlo de verdad rompe Expo Go.
 import type * as TipoNotificaciones from 'expo-notifications';
@@ -613,7 +614,11 @@ function contenidoDelAviso(
     sound: canal.sonidoDelAviso,
     // Spec 009: cómo suena, SOLO si no es lo de siempre. Así el cambio de sonido de Yo → Alarmas y el aviso agrupado
     // (que re-programan la alarma ya puesta, sin saber del hábito) mantienen el canal que le toca. Ausente = la de siempre.
-    data: alarma && !esLaCombinacionPorDefecto(alarma) ? { route: ruta, alarma } : { route: ruta },
+    // Issue #40: `vigenteMin`, hasta cuántos minutos después de su hora nominal el aviso sigue siendo verdad. Android lo lee
+    // al entregar la alarma (`scripts/arreglar-aviso-tardio.js`) y no muestra el que llegó cuando el hábito ya pasó.
+    data: alarma && !esLaCombinacionPorDefecto(alarma)
+      ? { route: ruta, alarma, vigenteMin: vigenciaDelAvisoMin(minutosAntes) }
+      : { route: ruta, vigenteMin: vigenciaDelAvisoMin(minutosAntes) },
   };
 }
 
