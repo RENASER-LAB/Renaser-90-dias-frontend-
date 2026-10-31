@@ -244,6 +244,7 @@ Pedidos del dueño del 31/10 con capturas; **todo es de la app, sin backend**. C
   los muestra** (Coherencia con su %, Puntos de liga y Racha con «días»). Comprobado en `YoScreen`. Lo único que Hoy mostraba y Yo no
   es el «Récord histórico» (`rachaMaxima`) y las dos líneas de apoyo («Consistencia del día», «Nivel de excelencia»): se van con el
   bloque, sin pasarlas a Yo.
+  > **Corregido el mismo día (punto 14):** el récord sí pasó a Yo, como una línea bajo la Racha. Las dos líneas de apoyo se quedaron afuera.
 * **En su lugar, la tarjeta de «Acciones y objetivos»**, antes de «Tu acompañante» (`home/components/TarjetaAccionDeHoy`), con el
   diseño de la referencia del dueño y nuestras palabras: tarjeta con el fondo y el borde del tema; arriba el ícono `calendar` de 16 y
   la hora de la acción («09:00 – 09:45» con inicio y fin; «09:00» con solo inicio; «Sin hora»); el título en negrita (18); «Meta: …»
@@ -435,6 +436,11 @@ ser **global, como un CSS global**.
   opciones del Ranking y el selector de eje de Plan, que lleva ícono) pasa a relleno lateral de 4 y a achicarse hasta el 80 % en vez del 85 %.
   **Sin emulador en esta corrida:** el aspecto en pantalla se confirma con las capturas en claro y oscuro.
 * **No se tocó** `public/privacidad` ni `public/eliminar-cuenta` (páginas web estáticas con su propia fuente de Google Fonts, no son la app).
+
+### Yo: el récord de racha bajo la Racha (punto 14)
+* Debajo de la **Racha** de Yo va una línea chica, «**Récord: 3 días**» (o «Récord: 1 día»), con `rachaMaxima` de `/home`, lo mismo que Hoy
+  mostraba como «Récord histórico» antes de quitarse (punto 2). **Sin dato** (`/home` caído o sin el campo) **no se dibuja** (un récord
+  de 0 sí se dice: «Récord: 0 días»). 13 px, el gris secundario (`textSoft`) y `tabular-nums`. El texto sale de `home/utils/textoDelRecord`.
 
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 

@@ -39,6 +39,7 @@ import { PactoFirmado } from '../features/yo/components/PactoFirmado';
 import { TarjetaDeFase } from '../features/yo/components/TarjetaDeFase';
 import { animalConfigurado } from '../features/yo/utils/animalConfigurado';
 import { faseEnCurso } from '../features/home/utils/faseEnCurso';
+import { textoDelRecord } from '../features/home/utils/textoDelRecord';
 import { useAnimalesDeFase } from '../features/yo/hooks/useAnimalesDeFase';
 import { ANIMAL_DE_FASE } from '../features/yo/data/animalesDeFase';
 import { useCelebracionDelDia } from '../features/fenix/hooks/useCelebracionDelDia';
@@ -823,6 +824,11 @@ export default function YoScreen() {
                   <Text style={[t.small, { color: c.textSoft }]}>{resumen.rachaActual === 1 ? 'día' : 'días'}</Text>
                 )}
               </View>
+              {/* El récord de racha (2026-10-31, pedido del dueño: lo que Hoy mostraba como «Récord histórico» y se quitó con
+                  Coherencia / Racha): una línea chica bajo la racha. Sin dato (`/home` caído o sin el campo) no se dibuja. */}
+              {typeof resumen?.rachaMaxima === 'number' ? (
+                <Text style={[t.small, styles.statRecord, { color: c.textSoft }]}>{textoDelRecord(resumen.rachaMaxima)}</Text>
+              ) : null}
             </View>
           </View>
 
@@ -1887,6 +1893,8 @@ const styles = StyleSheet.create({
   /* Rótulo de bloque en tipo oración: 13 px en negrita y sin espaciar, el de «Coherencia» y «Racha»
      de Hoy (2026-10-05). Reemplaza las versales de `t.micro` con su `letterSpacing: 1.1`. */
   rotulo: { fontFamily: fuentes.negrita, letterSpacing: 0 },
+  /** «Récord: 3 días»: 13 px, el gris secundario y cifras tabulares. */
+  statRecord: { fontSize: 13, lineHeight: 18, marginTop: 2, fontVariant: ['tabular-nums'] },
   statCifra: { flexDirection: 'row', alignItems: 'baseline', gap: 2, marginTop: 6 },
   statSeparador: { width: 1, alignSelf: 'stretch' },
   /* Una barra de 6 px de alto no necesita contorno; el contraste lo da el color del riel. */
