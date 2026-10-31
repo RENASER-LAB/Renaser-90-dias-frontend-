@@ -26,7 +26,8 @@ import { RegistroConFotoModal } from '../features/habits/components/RegistroConF
 import { useRegistroConFoto } from '../features/habits/hooks/useRegistroConFoto';
 import { cerrarConRespuestaInmediata } from '../features/habits/celebracion/momentoEnLaTarjeta';
 import { estaVencido, seRegistraConFoto } from '../features/training/utils/registroConFotoEnTraining';
-import { avisoDeHabitoCerrado, preguntaQueSintio, type MedicionPedida } from '../features/habits/utils/registroConFoto';
+import { RegistroDeRitualConTexto } from '../features/training/components/RegistroDeRitualConTexto';
+import { avisoDeHabitoCerrado, preguntaQueSintio, seRegistraConTexto, type MedicionPedida } from '../features/habits/utils/registroConFoto';
 import { avisoDeAccionBloqueada, sellarAccionDeTraining } from '../features/objetivos/utils/registroDeAccionConFoto';
 import { completarRegistro, confirmarEvidencia } from '../features/habits/api/evidenciaHabitoApi';
 import { crearCierreSinRepetir } from '../features/habits/utils/cierreDeRegistro';
@@ -396,6 +397,13 @@ export default function TrainingScreen() {
     // La pantalla quedó abierta de un día para otro: se recargan los registros de hoy.
     onDiaCambiado: () => void recargarEntrenamiento(),
   });
+  /**
+   * Los rituales piden SOLO TEXTO (2026-10-31, pedido del dueño): sin cámara. Su registro es una hoja con la pregunta «¿Cómo te
+   * sientes después de realizar el ritual?» (`RegistroDeRitualConTexto`). Se guarda el hábito aparte de `abierto` para que la
+   * hoja siga sabiendo de cuál es mientras baja.
+   */
+  const [ritual, setRitual] = useState<{ habit: HabitItem; abierto: boolean } | null>(null);
+  const cerrarElRitual = () => setRitual(previo => (previo ? { ...previo, abierto: false } : previo));
   const { reanudarPendiente } = registroConFoto;
   // Android puede matar la app con la cámara abierta: al volver, se retoma esa foto.
   useEffect(() => {
@@ -479,6 +487,10 @@ export default function TrainingScreen() {
       setActiveEvidenceHabit(null);
       return true;
     }
+    if (ritual?.abierto) {
+      cerrarElRitual();
+      return true;
+    }
     // «Tus prácticas» (spec 014): la hoja de Planificar, la dimensión y la pantalla suben UN nivel por vez con el
     // gesto lateral (AGENTS.md §6); nunca cierran la app desde una vista hija. La hoja de Planificar es un `Modal`
     // con su propio atrás (la ‹ de sus pasos), así que acá solo llega lo que está por debajo de ella.
@@ -488,7 +500,7 @@ export default function TrainingScreen() {
       return true;
     }
     return false; // Permite el comportamiento por defecto si está en el menú raíz
-  }, registroConFoto.abierto || pastillaVisible || claseDiariaVisible || activeEvidenceHabit !== null || practicas.abierta);
+  }, registroConFoto.abierto || pastillaVisible || claseDiariaVisible || activeEvidenceHabit !== null || ritual?.abierto === true || practicas.abierta);
 
   /** Lleva al muro con el compositor abierto. Reusa el parametro que ComunidadScreen ya entiende. */
   const abrirMuroParaPublicar = () => {
@@ -745,6 +757,11 @@ export default function TrainingScreen() {
     if (estaVencido(habit.estado)) {
       const aviso = avisoDeHabitoCerrado(habit.estado, habit.fechaEjecucion);
       Alert.alert(aviso.titulo, aviso.mensaje);
+      return;
+    }
+    // Los tres rituales piden solo texto (2026-10-31): una hoja con su pregunta, sin cámara (también en web).
+    if (seRegistraConTexto(habit.systemKey)) {
+      setRitual({ habit, abierto: true });
       return;
     }
     if (seRegistraConFoto(habit, Platform.OS === 'web')) {
@@ -1085,6 +1102,19 @@ export default function TrainingScreen() {
 
           {/* REGISTRO CON FOTO: la foto arriba y "¿Qué sentiste?" abajo (hábitos que exigen evidencia). */}
           <RegistroConFotoModal {...registroConFoto.modal} />
+          <RegistroDeRitualConTexto
+            visible={ritual?.abierto === true}
+            registroId={ritual?.habit.id ?? null}
+            titulo={ritual ? tituloParaMostrar({ id: ritual.habit.habitoId ?? ritual.habit.id, title: ritual.habit.title }, renombre.titulos) : ''}
+            alCerrar={cerrarElRitual}
+            alCompletado={(registroId, resultado) => {
+              cerrarElRitual();
+              reflejarCierreConfirmado(registroId, true);
+              // Igual que el registro con foto: «Evidencia entregada» y los puntos solo si el servidor los dio.
+              confirmar(avisoDeEvidenciaEntregada(resultado.puntosOtorgados), registroId);
+            }}
+            alCambiarElDia={() => void recargarEntrenamiento()}
+          />
 
           {/* ========================================================================= */}
           {/* MODAL: PASTILLA RENACER (audio del día + preguntas)                       */}

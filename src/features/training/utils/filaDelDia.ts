@@ -3,6 +3,7 @@ import type { RelacionConHoy } from './semanaDeTraining';
 import type { MarcaDelPrimero } from './listaDelDia';
 import { TEXTO_DE_LA_MARCA } from './listaDelDia';
 import type { ItemDelDia } from './itemsDelDia';
+import { ETIQUETA_DEL_BOTON_DEL_RITUAL, seRegistraConTexto } from '../../habits/utils/registroConFoto';
 import { CLAVES_CON_FLUJO_PROPIO } from './registroConFotoEnTraining';
 
 /**
@@ -206,6 +207,10 @@ export function accionDeLaHoja(item: ItemDelDia): AccionDeLaHoja {
   }
   if (item.tipo === 'accion') {
     return { tipo: 'registrar', etiqueta: 'Marcar como hecha', icono: 'check', nota: 'Para cambiar su hora: Plan → Agendar.' };
+  }
+  // Los rituales piden solo texto (2026-10-31): en lugar de «Tomar foto», un botón para escribir.
+  if (seRegistraConTexto(h?.systemKey)) {
+    return { tipo: 'registrar', etiqueta: ETIQUETA_DEL_BOTON_DEL_RITUAL, icono: 'pencil', nota: null };
   }
   if (h?.evidenceRequirement === 'REQUIRED') {
     return { tipo: 'registrar', etiqueta: 'Tomar foto', icono: 'camera', nota: null };

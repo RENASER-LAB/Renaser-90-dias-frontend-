@@ -292,6 +292,29 @@ Pedidos del dueño del 31/10 con capturas; **todo es de la app, sin backend**. C
   (`recordatorios.programar(…, h.title, …)` sigue con el título del catálogo), ni cómo se empareja la voz de la alarma (por id y
   por título del catálogo). Hoy (la tarjeta de hábitos) y Yo no cambian: el pedido era de Training.
 
+### Training: los rituales piden solo texto (punto 7)
+* **Los tres «Ritual Tierra - Agua - Fuego» (mañana, mediodía y noche; claves `RITUAL_MORNING`, `RITUAL_MIDDAY`, `RITUAL_NIGHT`)
+  se registran escribiendo, sin cámara.** En la hoja, en lugar de «Tomar foto», el botón **«Escribir cómo me siento»** (ícono
+  `pencil`; en la fila, la píldora «Escribir» en lugar de «Subir»). Abre `RegistroDeRitualConTexto` (una `HojaDesdeAbajo`) con la
+  pregunta **«¿Cómo te sientes después de realizar el ritual?»**, obligatoria, y «Enviar» fijo abajo; el campo llega a 4000
+  caracteres, que es lo que acepta el servidor (`respuestaTexto` de `/complete` es `@Size(max = 4000)`; «¿Qué sentiste?» no pone
+  tope en la app).
+* **Por los mismos caminos de siempre:** `confirmarEvidencia` con evidencia `TEXTO` y `completarRegistro` con esa misma respuesta
+  (`respuestaTexto`), que emite `habitoCumplido` (alarmas, celebraciones, puntos). La regla es `registrarConTexto`
+  (`habits/utils/registroConFoto`, con pruebas): el mismo orden que el registro con foto, sin subida a S3; si el texto ya quedó
+  guardado y el cierre falla, reintentar solo cierra (no duplica la evidencia); un rechazo de un registro que ya figura
+  completado se da por bueno. Ambos pasos comprueban que el registro siga siendo de HOY (spec 002): si pasó la medianoche no se
+  manda nada, se avisa («Tu día cambió…») y se recarga. Lo escrito se guarda como borrador en memoria por registro y se pierde al
+  enviar; un doble toque manda un solo pedido. El aviso al terminar es el de «Evidencia entregada» de siempre.
+* **El servidor lo acepta** (comprobado leyendo el backend, solo lectura): el catálogo dice evidencia `OBLIGATORIA` sin tipo, y
+  `RegistroService.requireEvidenciaSiLaExige` solo pide que el registro tenga **alguna** evidencia (`registrosHabitoConEvidencia`
+  no mira el tipo); `POST /habit-tracks/{id}/evidence` acepta `TEXTO` con `contenidoTexto`, sin restricción por hábito. Es el mismo
+  camino de la Audioterapia. El texto del servidor «Este hábito pide una foto: súbela…» solo sale si no hay ninguna evidencia.
+* **«RITUAL DE MAÑANA (domingo)» no cambia:** es de evidencia **opcional** y no tiene clave de sistema (V69 solo se la dio a los tres
+  de Tierra - Agua - Fuego), así que sigue con «Subir» y las cuatro formas. SER, desde el orbe o el chat, todavía puede pedir la
+  foto de un ritual y se registra con el camino de la foto y «¿Qué sentiste?» (`preguntaQueSintio`); Yo → «+ Subir foto» ya no
+  ofrece los rituales (`habitosParaFotoDeHoy`, porque `seRegistraConFoto` es falso para ellos).
+
 # 📱 REGLAS Y BUENAS PRÁCTICAS DE DESARROLLO MÓVIL (REACT NATIVE / EXPO)
 
 Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel especializado en React Native, Expo y TypeScript. Al crear, refactorizar o modificar cualquier pantalla o componente, debes cumplir OBLIGATORIAMENTE con los siguientes estándares:
@@ -390,6 +413,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       (`aperturaDesdeAviso.habitoAAbrir`) lo abre como al tocar su fila, ya no la dimensión.
       > **Corregido 2026-10-31.** El nombre de un hábito del catálogo que llega en mayúsculas se ve en tipo oración («Agua tibia
       > con limón»); ver la entrada del 2026-10-31.
+      > **Corregido 2026-10-31.** En los rituales (`RITUAL_MORNING`, `RITUAL_MIDDAY`, `RITUAL_NIGHT`) el botón no es «Tomar foto»
+      > sino «Escribir cómo me siento».
     * **Un día anterior: sin registrar NUNCA** (regla explícita del dueño: «nunca debería llegar» a subir algo). Se lee
       `GET /api/v1/habit-tracks/day?date=` (solo de ayer hacia atrás, hasta el lunes y no antes del Día 1; el servidor
       responde 400 a cualquier otra fecha y la app ni la pide) **solo cuando la persona toca ese día**: nunca al abrir
@@ -2274,6 +2299,8 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       (`DAILY_CLASS`, Audioterapia, Pastilla, post de Comunidad, Despertar/Dormir), las rocas y el
       build web, que siguen con lo de antes. **Los de evidencia opcional no cambian**: siguen con el
       modal de las cuatro formas.
+      > **Corregido 2026-10-31 (pedido del dueño).** Los tres rituales ya no abren la cámara: piden solo texto («Escribir cómo me
+      > siento» y «¿Cómo te sientes después de realizar el ritual?»). Ver la entrada del 2026-10-31.
     * **`Training` — VER sobre un hábito ya cumplido ya no abre el modal de subida**: muestra lo
       que se escribió. Antes subía otra vez y terminaba en un `/complete` que el backend rechaza.
       Tampoco se abre la cámara para un registro `EXPIRADO`/`FALLIDO`.

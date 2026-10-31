@@ -1,3 +1,5 @@
+import { seRegistraConTexto } from '../../habits/utils/registroConFoto';
+
 /**
  * Qué hábitos de Training se registran con la cámara directa (pedido del dueño, 2026-09-26).
  *
@@ -29,6 +31,8 @@ export type HabitoParaRegistro = {
 export function seRegistraConFoto(habito: HabitoParaRegistro, esWeb: boolean): boolean {
   if (esWeb || habito.dimension === 'VIDA Y NEGOCIO') return false;
   if (habito.systemKey && CLAVES_CON_FLUJO_PROPIO.has(habito.systemKey)) return false;
+  // Los rituales piden solo texto (2026-10-31): sin cámara. Ver `seRegistraConTexto`.
+  if (seRegistraConTexto(habito.systemKey)) return false;
   return habito.evidenceRequirement === 'REQUIRED';
 }
 

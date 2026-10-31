@@ -20,6 +20,12 @@ describe('seRegistraConFoto', () => {
     }
   });
 
+  it('los tres rituales piden solo texto: la cámara no se abre (2026-10-31)', () => {
+    for (const clave of ['RITUAL_MORNING', 'RITUAL_MIDDAY', 'RITUAL_NIGHT']) {
+      expect(seRegistraConFoto({ ...EXIGE, systemKey: clave }, false)).toBe(false);
+    }
+  });
+
   it('una clave de sistema sin flujo propio no lo impide', () => {
     expect(seRegistraConFoto({ ...EXIGE, systemKey: 'COLD_SHOWER' }, false)).toBe(true);
   });

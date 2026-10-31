@@ -14,6 +14,7 @@ import {
   type ModoDeLaFila,
 } from '../filaDelDia';
 import type { ItemDelDia } from '../itemsDelDia';
+import { accionDeLaTarjeta } from '../tarjetaDelHabito';
 
 const habit = (extra: Partial<HabitItem> = {}): HabitItem => ({
   id: 'r1',
@@ -271,5 +272,29 @@ describe('la hoja', () => {
     expect(metaDeLaHoja(item({}, { streak: 12 }), 'cerrado')).not.toContain('racha');
     expect(metaDeLaHoja(item({}, { streak: 12 }), 'planificado')).not.toContain('racha');
     expect(metaDeLaHoja(item({}, { streak: 12 }), 'cerrado')).not.toContain('pts');
+  });
+});
+
+describe('los rituales piden solo texto (2026-10-31)', () => {
+  const ritual = (systemKey: string): ItemDelDia =>
+    ({
+      clave: 'r', tipo: 'habito', titulo: 'Ritual tierra - agua - fuego (mañana)', hora: '06:30', hecho: false,
+      habit: { id: 'r', habitoId: 'h', dimension: 'CUERPO', title: 'RITUAL', time: '06:30', tag: 'CUERPO', streak: 0, done: false, hasEvidence: false, tieneTrackHoy: true, estado: 'PENDIENTE', evidenceRequirement: 'REQUIRED', systemKey },
+    } as unknown as ItemDelDia);
+
+  it.each(['RITUAL_MORNING', 'RITUAL_MIDDAY', 'RITUAL_NIGHT'])('%s: en la hoja, «Escribir cómo me siento» y no «Tomar foto»', clave => {
+    const accion = accionDeLaHoja(ritual(clave));
+    expect(accion).toMatchObject({ tipo: 'registrar', etiqueta: 'Escribir cómo me siento', icono: 'pencil' });
+    expect(accion.icono).not.toBe('camera');
+  });
+
+  it('en la fila, la píldora dice «Escribir» con el lápiz (no «Subir» con la cámara)', () => {
+    expect(accionDeLaTarjeta({ done: false, hasEvidence: false, systemKey: 'RITUAL_NIGHT' })).toEqual({ icono: 'pencil', etiqueta: 'Escribir' });
+    expect(accionDeLaTarjeta({ done: false, hasEvidence: false, systemKey: 'GYM' })).toEqual({ icono: 'camera', etiqueta: 'Subir' });
+  });
+
+  it('el toque abre su registro (la hoja de escribir) y no se cierra con el ✓', () => {
+    expect(controlDeLaFila(ritual('RITUAL_MORNING'), 'hoy')).toBe('accion');
+    expect(seCierraConElCheck(ritual('RITUAL_MORNING'))).toBe(false);
   });
 });
