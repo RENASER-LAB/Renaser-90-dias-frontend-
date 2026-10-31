@@ -86,6 +86,9 @@ describe('Hoy: lo dice desde el inicio, solo con texto', () => {
   it('el Mapa sigue opcional en Hoy: la tarjeta no se vuelve obligatoria ni tapa nada', () => {
     expect(HOY).toContain('const MAPA_DIA7_HABILITADO = mapaHabilitado();');
     expect(HOY).toMatch(/const mostrarMapa = MAPA_DIA7_HABILITADO && !!user;/);
+    // Sin Mapa, la tarjeta de abajo no se repite: la invitación ya está arriba, en la fila compacta (2026-10-31).
+    expect(HOY).toContain("const mostrarTarjetaDelMapa = mostrarMapa && vistaDeLaAccion?.tipo !== 'mapa';");
+    expect(HOY).toMatch(/\{mostrarTarjetaDelMapa \? \(/);
     expect(HOY).toMatch(/<Presionable onPress=\{abrirMapa\}/);
   });
 });

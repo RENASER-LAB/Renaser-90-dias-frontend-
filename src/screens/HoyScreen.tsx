@@ -250,6 +250,9 @@ export default function HoyScreen() {
     [accionesDeHoy, MAPA_DIA7_HABILITADO, user, estadoMapa, estadoMapaConfirmado],
   );
   const metaDeLaAccion = useMetaDeLaAccion(vistaDeLaAccion?.tipo === 'accion' ? vistaDeLaAccion.accion : null);
+  /* La tarjeta del Mapa de más abajo no se repite (pedido del dueño, 2026-10-31): sin Mapa, la invitación ya está arriba, en la
+     fila compacta «Haz tu Mapa de Renacimiento». Con el Mapa empezado o activo sigue saliendo, porque es la entrada para verlo. */
+  const mostrarTarjetaDelMapa = mostrarMapa && vistaDeLaAccion?.tipo !== 'mapa';
   const tituloMapa = estadoMapa === 'activo'
     ? 'Tu mapa está activo'
     : estadoMapa === 'en_progreso' || estadoMapa === 'listo_para_revision' ? 'Continúa tu mapa' : 'Diseña tu mapa';
@@ -433,7 +436,7 @@ export default function HoyScreen() {
           />
 
           {/* Tarjeta Mapa de Renacimiento */}
-          {mostrarMapa ? (
+          {mostrarTarjetaDelMapa ? (
             <Presionable onPress={abrirMapa} accessibilityRole="button" accessibilityLabel={`${tituloMapa}. ${detalleMapa}`}>
               {/* Sin el `borderColor: c.gold`: subrayar una tarjeta con un contorno dorado es
                   destacar por adorno. Esta tarjeta ya destaca por lo que dice y por el círculo

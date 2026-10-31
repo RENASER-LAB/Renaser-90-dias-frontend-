@@ -249,6 +249,8 @@ Pedidos del dueño del 31/10 con capturas; **todo es de la app, sin backend**. C
   > fase, «Día N de 90» y los puntos, que ya están en Yo). Hoy es ahora «HOY», la frase y lo demás. Y la tarjeta de acciones **sin Mapa**
   > es una fila compacta («Haz tu Mapa de Renacimiento · De ahí nace tu objetivo de 90 días ›», toda tocable, del alto que tenía
   > Coherencia / Racha: «no tan grande»), sin botón dorado. Los otros estados de la tarjeta no cambian. Hace falta APK nuevo.
+  > Y sin Mapa **no se repite la tarjeta «Mapa de renacimiento · Diseña tu mapa»** de más abajo (el dueño: «sí, quita la de abajo»):
+  > la invitación ya está arriba. Con el Mapa empezado o activo esa tarjeta sigue, porque es la entrada para verlo (`mostrarTarjetaDelMapa`).
 * **Se quita el bloque Coherencia / Racha** («Coherencia 0 %», «Consistencia del día», «Racha 2 días», «Récord histórico»): **Yo ya
   los muestra** (Coherencia con su %, Puntos de liga y Racha con «días»). Comprobado en `YoScreen`. Lo único que Hoy mostraba y Yo no
   es el «Récord histórico» (`rachaMaxima`) y las dos líneas de apoyo («Consistencia del día», «Nivel de excelencia»): se van con el
