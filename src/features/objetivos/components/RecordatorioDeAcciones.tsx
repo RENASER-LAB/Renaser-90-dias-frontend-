@@ -29,6 +29,7 @@ import {
   resumenDeLaCombinacion,
 } from '../../training/utils/comoSuena';
 import * as objetivosApi from '../api/objetivosApi';
+import { useAlarmasAlDiaConLasAcciones } from '../hooks/useAlarmasAlDiaConLasAcciones';
 import { huellaDelDiario, planDelRecordatorioDiario } from '../notificaciones/planDelDiario';
 import {
   FILAS_DE_COMO_SUENA_DE_LAS_ACCIONES,
@@ -103,9 +104,15 @@ export function RecordatorioDeAcciones({
   userId,
   rocas,
   tonoDeYo: tonoQueLlega,
+  sincronizarConLaLista = true,
 }: {
   userId: string;
   rocas?: RocaDiariaApi[];
+  /**
+   * Con `rocas`, poner al día las alarmas de cada acción cuando la lista cambia (por defecto, sí). Plan lo apaga: lo hace
+   * `useAlarmasAlDiaConLasAcciones` en la pantalla, que siempre está, y no cuando la hoja con este control se abre.
+   */
+  sincronizarConLaLista?: boolean;
   /**
    * El tono de Yo → Alarmas, si la pantalla ya lo tiene (Yo lo tiene y lo cambia en la misma pantalla). Sin él, se lee al
    * abrir. Decide qué avisa «Cómo suena»: con el tono «Voz» la voz ya habla; con «Solo vibrar» el sonido no suena.
@@ -132,16 +139,9 @@ export function RecordatorioDeAcciones({
     void preferenciasDeAlarmas(userId).then(p => setTonoLeido(p.sonido)).catch(() => undefined);
   }, [userId]);
 
-  // Qué de la lista le importa a las alarmas: si esto no cambia, no se toca nada.
-  const huella = useMemo(
-    () => (rocas ?? []).map(r => `${r.id}|${r.fecha}|${r.horaInicio ?? ''}|${r.completada}`).join(','),
-    [rocas],
-  );
-  useEffect(() => {
-    if (!HAY_RECORDATORIOS_LOCALES || !rocas) return;
-    void sincronizarAlarmasDeAcciones(userId, rocas).catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, huella]);
+  // Poner al día las alarmas de cada acción cuando la lista cambia. Plan lo hace por fuera (la fila «Recordatorios de tus
+  // acciones» abre este control en una hoja, y con la hoja cerrada no está dibujado): ahí va `sincronizarConLaLista={false}`.
+  useAlarmasAlDiaConLasAcciones(userId, sincronizarConLaLista ? rocas : undefined);
 
   const marcados = useMemo(() => diasEnEdicion.map(isoDelDia), [diasEnEdicion]);
   const enModoDias = marcados.length > 0;

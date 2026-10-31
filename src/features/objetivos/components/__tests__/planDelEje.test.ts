@@ -19,7 +19,14 @@ jest.mock('../../../../context/AuthContext', () => ({ useAuth: () => ({ user: { 
 const mockNavigate = jest.fn();
 jest.mock('@react-navigation/native', () => ({ useNavigation: () => ({ navigate: mockNavigate }), useFocusEffect: () => undefined }));
 jest.mock('../../../mapa-renacimiento/hooks/useAccionesDelMapa', () => ({ useAccionesDelMapa: () => ({}) }));
-jest.mock('../RecordatorioDeAcciones', () => ({ RecordatorioDeAcciones: () => null }));
+// «Recordatorios de tus acciones ›» (fila + hoja) tiene su propia prueba; acá solo importa dónde y cuándo se dibuja.
+const mockRecordatorios: { userId: string; rocas?: unknown }[] = [];
+jest.mock('../RecordatoriosDeLasAcciones', () => ({
+  RecordatoriosDeLasAcciones: (p: { userId: string; rocas?: unknown }) => {
+    mockRecordatorios.push(p);
+    return null;
+  },
+}));
 jest.mock('../../../../components/Alerta', () => ({ Alert: { alert: jest.fn() } }));
 
 type PropsDeHoja = { visible?: boolean; titulo?: string; children?: React.ReactNode };
@@ -101,6 +108,7 @@ const pulsar = (b: ReactTestInstance | undefined) => { if (!b) throw new Error('
 beforeEach(() => {
   mockDiaDePrograma = 20;
   mockModalesAbiertos.length = 0;
+  mockRecordatorios.length = 0;
   mockNavigate.mockReset();
   mockSemanal = semanal('planificada', 'Caminar 5 días');
   mockQueEmpieza = semanal('cargando');
@@ -135,6 +143,15 @@ describe('con todo: la semana, las acciones del eje, 80/20 y el botón', () => {
     expect(t).toContain('Mar 27 oct · 09:00');
     expect(t).toContain('Jue 29 oct · 07:00');
     expect(t).not.toContain('De otro eje');
+  });
+
+  it('los recordatorios son UNA fila dentro de la tarjeta de acciones (con la hoja), no el bloque entero', () => {
+    const t = todo();
+    expect(mockRecordatorios.length).toBeGreaterThan(0);
+    expect(mockRecordatorios[mockRecordatorios.length - 1].userId).toBe('u1');
+    // El bloque viejo (rótulo «Recordatorios» y «Cómo suena» a la vista) ya no está en Plan.
+    expect(t).not.toContain('Cómo suena');
+    expect(t).not.toContain('Aviso antes de cada acción con hora');
   });
 
   it('tocar una de HOY lleva a Training con abrirAccionId; una que viene abre «Agendar»', () => {
@@ -190,6 +207,8 @@ describe('sin semana armada', () => {
     mockSemanal = semanal('sin_planificar');
     montar();
     expect(todo()).toContain('Primero arma tu semana: de ahí salen tus acciones.');
+    // Sin semana armada no hay recordatorios que ofrecer (como antes del cambio a la fila).
+    expect(mockRecordatorios).toHaveLength(0);
   });
 
   it('sin los tres objetivos de 90 días (bloqueada): ofrece el Mapa, no armar', () => {

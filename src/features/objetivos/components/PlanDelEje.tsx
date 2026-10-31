@@ -1,4 +1,3 @@
-import { fuentes } from '../../../theme/fuentes';
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -6,7 +5,6 @@ import { useNavigation } from '@react-navigation/native';
 import { Alert } from '../../../components/Alerta';
 import { GoldButton } from '../../../components/GoldButton';
 import { useAuth } from '../../../context/AuthContext';
-import { useTheme } from '../../../theme/ThemeContext';
 import { useAccionesDelMapa } from '../../mapa-renacimiento/hooks/useAccionesDelMapa';
 import { useRocasDiarias } from '../hooks/useRocasDiarias';
 import { useRocasSemanales } from '../hooks/useRocasSemanales';
@@ -16,7 +14,7 @@ import { accionesDelEje, avanceDeLasAcciones, unirAcciones } from '../utils/plan
 import { semanaAPlanificar } from '../utils/periodoDelPrograma';
 import { AgendarAccionesModal } from './AgendarAccionesModal';
 import { PlanSemanalModal } from './PlanSemanalModal';
-import { RecordatorioDeAcciones } from './RecordatorioDeAcciones';
+import { RecordatoriosDeLasAcciones } from './RecordatoriosDeLasAcciones';
 import { RevisionSemanalModal } from './RevisionSemanalModal';
 import { AccionesQueMuevenLaMeta, HojaOchentaVeinte, TarjetaEstaSemana, TarjetaOchentaVeinte } from './TarjetasDelPlan';
 
@@ -51,7 +49,6 @@ export function PlanDelEje({
   objetivoSugeridoDe: (eje: EjeObjetivo) => string;
   onIrAlMapa?: () => void;
 }) {
-  const { c, t } = useTheme();
   const { user } = useAuth();
   const navigation = useNavigation();
   const semanal = useRocasSemanales(maestras);
@@ -156,13 +153,8 @@ export function PlanDelEje({
         alAgendar={() => setAgendando(true)}
       >
         {/* Recordatorios de las acciones (2026-09-26): con TODAS las de hoy y mañana, no solo las del eje abierto —las
-            alarmas son de todas—. Mismo control que Yo → Alarmas. */}
-        {hayPlanSemanal && user?.id ? (
-          <View style={estilos.recordatorios}>
-            <Text style={[t.small, estilos.rotulo, { color: c.goldInk }]}>Recordatorios</Text>
-            <RecordatorioDeAcciones userId={user.id} rocas={rocasParaAlarmas} />
-          </View>
-        ) : null}
+            alarmas son de todas—. Desde el 2026-10-31 es una fila que abre una hoja con el mismo control que Yo → Alarmas. */}
+        {hayPlanSemanal && user?.id ? <RecordatoriosDeLasAcciones userId={user.id} rocas={rocasParaAlarmas} /> : null}
       </AccionesQueMuevenLaMeta>
 
       <TarjetaOchentaVeinte alAbrir={() => setOchentaVeinte(true)} />
@@ -211,8 +203,6 @@ function estaArmada(semanal: ReturnType<typeof useRocasSemanales>): boolean {
 
 const estilos = StyleSheet.create({
   columna: { gap: 14 },
-  recordatorios: { marginTop: 16, gap: 8 },
-  rotulo: { fontFamily: fuentes.media, fontSize: 15, lineHeight: 21, letterSpacing: 0 },
   /** El botón de siempre trae versalitas espaciadas de 11 px: acá es una frase en tipo oración de 16. */
   textoDelBoton: { fontSize: 16, letterSpacing: 0 },
 });
