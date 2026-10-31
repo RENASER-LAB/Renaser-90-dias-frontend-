@@ -59,7 +59,6 @@ import {
   LINEA_ALARMA_EXACTA_PENDIENTE,
   TEXTO_PEDIDO_ALARMA_EXACTA,
 } from '../../alarmas/pedirAlarmaExacta';
-import { ofrecerLaGuiaPreventiva } from '../../alarmas/guiaPreventiva';
 import { horaDelEditor, preferenciaTrasGuardar, textoDelCambioProgramado } from '../utils/horaDelEditor';
 import {
   abrirOtra,
@@ -863,8 +862,8 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
           ? `Queda a las ${horaTexto}, ${aviso.length > 0 ? `con aviso ${avisoEnFrase(aviso)}` : 'sin aviso'}, los ${cuales}, desde mañana.` + sumaAlarma
           : `Queda a las ${horaTexto} los ${cuales}, desde mañana.` + sumaAlarma;
     // El aviso nuevo se oye con la alarma del teléfono: igual que al guardar la hora general, la primera vez se
-    // pide «Alarmas y recordatorios» y se ofrece la guía de la marca. Sin alarma puesta (sin permiso de avisos)
-    // se dice, en un diálogo: es algo que hay que leer.
+    // pide «Alarmas y recordatorios». Sin alarma puesta (sin permiso de avisos) se dice, en un diálogo: es algo
+    // que hay que leer.
     // Solo «cómo suena»: el aviso que suena es el que ya estaba (la sección se atenúa sin aviso).
     const hayAviso = aviso ? aviso.length > 0 : que === 'ninguno';
     const conAviso = hayAviso && alarmaPuesta === true;
@@ -872,9 +871,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
       Alert.alert('Aviso guardado', `${corto}\n\nEl aviso quedó guardado, pero este teléfono no tiene permiso para avisarte. Habilita las notificaciones para recibirlo.`);
       return;
     }
-    let pidioElPermiso = false;
     if (conAviso && (await hayQuePedirAlarmaExactaAlGuardar(claveUsuario))) {
-      pidioElPermiso = true;
       await anotarQueSePidioAlarmaExacta(claveUsuario);
       Alert.alert('Listo', `${corto}\n\n${TEXTO_PEDIDO_ALARMA_EXACTA}`, [
         { text: 'Ahora no', style: 'cancel' },
@@ -885,7 +882,6 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
     } else {
       confirmar(corto);
     }
-    if (conAviso && !pidioElPermiso) void ofrecerLaGuiaPreventiva(claveUsuario);
   };
 
   /** Devuelve un día al horario general: sin hora, aviso ni «cómo suena» propios. */
@@ -1104,9 +1100,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
       // sola vez— en vez de dejar que suene hasta 40 min tarde sin que nadie lo sepa.
       // Después, si sigue negado, solo una línea corta; el diálogo no vuelve a abrirse (dueño, 28/09).
       const conAviso = antelaciones.length > 0 && ok;
-      let pidioElPermiso = false;
       if (conAviso && (await hayQuePedirAlarmaExactaAlGuardar(claveUsuario))) {
-        pidioElPermiso = true;
         await anotarQueSePidioAlarmaExacta(claveUsuario);
         Alert.alert('Listo', `${mensaje}\n\n${TEXTO_PEDIDO_ALARMA_EXACTA}`, [
           { text: 'Ahora no', style: 'cancel' },
@@ -1120,10 +1114,6 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
       } else {
         confirmar(corto);
       }
-      // Spec 007 (FR-021): en las marcas que detienen apps (Honor, Xiaomi, Samsung…), la primera vez que se activa un
-      // recordatorio se ofrece, una vez, la guía de la marca ANTES de que el teléfono borre la alarma. Si este guardado
-      // ya pidió el permiso de alarmas exactas no se le suma otra hoja encima: queda para el próximo. Nunca bloquea.
-      if (conAviso && !pidioElPermiso) void ofrecerLaGuiaPreventiva(claveUsuario);
     } catch (e) {
       Alert.alert('No pudimos guardar la hora', mensajeDeError(e, 'Intenta de nuevo en unos segundos.'));
     } finally {

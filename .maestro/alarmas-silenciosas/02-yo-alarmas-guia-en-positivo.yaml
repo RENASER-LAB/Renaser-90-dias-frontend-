@@ -1,0 +1,34 @@
+# 02 — Alarmas silenciosas (2026-10-31): Yo → Ajustes → Alarmas es el ÚNICO lugar donde se habla del ajuste del teléfono, y
+# lo dice en positivo: «Para que tus recordatorios suenen siempre», la línea de la marca y el botón «Revisar».
+# Sin «Tu teléfono cerró Renaser», sin «no cierres Renaser a la fuerza» y sin culpar al teléfono.
+# Precondición: un teléfono Android (el emulador es de marca «Google»: ve la línea genérica). En un Honor, Xiaomi, Samsung,
+# Oppo o Vivo la línea es la de su marca y el assert de «En Batería…» se cambia por esa (data/guiasPorMarca.ts).
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "YO"
+- assertVisible: "Tu evolución"
+- tapOn: "Ajustes"
+- extendedWaitUntil:
+    visible: "Perfil"
+    timeout: 10000
+- scrollUntilVisible:
+    element: "Alarmas"
+    direction: DOWN
+- tapOn: "Alarmas"
+- extendedWaitUntil:
+    visible: "Para que tus recordatorios suenen siempre"
+    timeout: 15000
+- assertVisible: "Revisar"
+- assertVisible: "En Batería, elige «Sin restricciones» para Renaser."
+- takeScreenshot: 02a-guia-en-positivo
+# Lo de antes ya no está.
+- assertNotVisible: "Abrir ajustes"
+- assertNotVisible: ".*a la fuerza.*"
+- assertNotVisible: ".*se borren.*"
+- assertNotVisible: "Tu teléfono cerró Renaser"
+# El aviso de «Alarmas y recordatorios» (permiso de alarmas exactas) no se tocó: sigue su camino de siempre.
+- assertVisible: "Despertar"
+- back
+- assertVisible: "Perfil"

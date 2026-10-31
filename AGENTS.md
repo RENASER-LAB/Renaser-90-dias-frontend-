@@ -125,6 +125,38 @@ su día (D-259). Lo que cambia y nada más (ni diseño, ni textos, ni canales, n
   Maestro: `.maestro/aviso-tardio/01-limpiar-la-bandeja.yaml`.
 * **Hace falta un APK nuevo** (código nativo parchado). Sin backend nuevo.
 
+## Decisión del dueño — 2026-10-31 — Alarmas silenciosas: se quita la hoja «Tu teléfono cerró Renaser»
+
+Textual, viendo la hoja «Tu teléfono cerró Renaser» («Por eso no sonaron tus alarmas. Ya las volvimos a poner. Para que tus alarmas no se
+borren, en Batería elige «Sin restricciones» y no cierres Renaser a la fuerza.», con «Arreglarlo» y «Ahora no»): «creo que el usuario no debe
+saber esto… no me gusta… ¿no hay otras opciones, como lo hace WhatsApp, Facebook, Instagram, TikTok?». Eligió **«Silencioso, como WhatsApp»**.
+Spec 007 (2026-10-19) corregida; solo la app. Lo que cambia y nada más:
+* **Se quitó la hoja** `AvisoDeAlarmasBorradas` (y su montaje en `App.tsx`), con lo que solo servía para decidir si mostrarla:
+  `detencionForzada.ts`, `alarmasVivas.ts` (la «foto» de si las alarmas siguen vivas), `esperarLaPuestaAlDia` y el paso 0 de
+  `ponerAlDiaLasAlarmas` (`fotoDeLasAlarmas`). Nada le dice a la persona que el teléfono cerró la app.
+* **El rearmado sigue igual y en silencio** (`RearmadorDeAlarmas`, `rearmarAlarmas.ts`, `ponerAlDiaLasAlarmas`): al abrir la app y al volver a
+  primer plano, con su intervalo de 10 min. El push de respaldo del servidor (`habito-{id}-inicio`) cubre el primer aviso de cada hábito
+  mientras tanto. No cambian los canales, las voces, «cómo suena», las repeticiones ni el aviso agrupado.
+* **Se quitó la oferta preventiva** «Un ajuste para tus alarmas» (`guiaPreventiva.ts`, `pedidoDeLaGuia.ts`) al guardar un recordatorio en
+  Training → Planificar (`PlanificarDimensionModal`). El pedido del permiso «Alarmas y recordatorios», cuando hace falta, **sigue igual**.
+* **Yo → Alarmas: la guía de batería queda, en positivo** (`GuiaDeBateria`, `data/guiasPorMarca.ts`): título «Para que tus recordatorios
+  suenen siempre» (19 px, negrita), la línea de la marca del teléfono y el botón **«Revisar»** (52 de alto; era «Abrir ajustes»), que abre lo
+  mismo que antes (la pantalla de la marca, o la lista de batería, o los ajustes de Renaser: `abrirGuiaDeLaMarca`). La línea de una marca
+  desconocida pasó de «Para que tus alarmas no se borren, en Batería elige «Sin restricciones» y no cierres Renaser a la fuerza.» a «En Batería,
+  elige «Sin restricciones» para Renaser.»: sin culpar al teléfono ni pedir «no cierres la app a la fuerza». Las líneas de Honor, Huawei,
+  Xiaomi, Samsung, Oppo y Vivo no cambian. Quieta, sin animación (se ve de vez en cuando y quien llega ahí la está buscando). El aviso de
+  «Alarmas y recordatorios» de arriba no se tocó.
+* **Módulo nativo `renaser-alarmas`: no se tocó** (borrar sus funciones exigiría un APK nativo nuevo). JavaScript ya no llama a
+  `detencionForzadaDesde` ni a `proximaAlarmaPropia` (se quitaron sus envoltorios y `marcaQueDetieneApps`); el Kotlin las conserva sin uso.
+* **Almacenamiento:** nada escribe ya `renaser.alarmas.detencionRevisada.`, `renaser.alarmas.avisoDetencion.` ni
+  `renaser.alarmas.guiaPreventiva.`. Se dejan en la lista de lo que se borra al cerrar sesión (`alarmasDeLaCuenta.ts`) solo para no dejar
+  restos en los teléfonos que ya las tenían; se pueden quitar de esa lista cuando ya no queden versiones anteriores en uso.
+* **Pruebas:** se borraron `avisoDeAlarmasBorradas`, `guiaPreventiva`, `detencionForzada` y `alarmasVivas`; `esperarLaPuestaAlDia.test.ts` pasó a
+  `puestaAlDiaConLaCuentaQueEntra.test.ts` (conserva lo que no era de la hoja); `guiaDeBateria`, `guiasPorMarca`, `moduloNativoDeAlarmas`,
+  `alarmasDeLaCuentaAlSalir` y las de Planificar (`planificarDimension` y tres más) se ajustaron. Maestro, escritos y sin correr:
+  `.maestro/alarmas-silenciosas/` (cerrar a la fuerza y reabrir sin hoja; Yo → Alarmas con el texto nuevo).
+* **Hace falta un APK nuevo** (solo JavaScript: no hay código nativo nuevo, pero la app no se actualiza por aire). Sin backend nuevo.
+
 ## Decisión del dueño — 2026-10-30 — Mentoría del Alquimista solo con semáforo verde (sin cambios en la app)
 
 Textual: «en eventos, si eres aprendiz solo te saldrá la mentoría con alquimista si tienes semáforo verde». El filtro es 100 % del
@@ -323,6 +355,11 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **Yo → Alarmas**: la guía de batería dice el camino de la marca del teléfono (Honor/Huawei «Inicio de
       aplicaciones», Xiaomi, Samsung, Oppo/Realme/OnePlus, Vivo) y su botón abre esa pantalla si existe; si no, la
       lista de batería o los ajustes de Renaser. Nunca se pide la excepción directa de batería (política de Play).
+      > **Corregido 2026-10-31 (decisión del dueño, «alarmas silenciosas»).** Ya no es cierto lo de la **hoja al abrir la app**
+      > («Tu teléfono cerró Renaser», `AvisoDeAlarmasBorradas`, con sus dos señales `detencionForzada.ts` y `alarmasVivas.ts`), ni
+      > lo de la **misma hoja antes de que pase** («Un ajuste para tus alarmas», `guiaPreventiva.ts`, `pedidoDeLaGuia.ts`): las
+      > tres cosas se borraron. El rearmado en silencio (`RearmadorDeAlarmas`) sigue. La guía de batería de Yo → Alarmas queda,
+      > con otro texto y otro botón. Ver la entrada «Alarmas silenciosas» de arriba.
     * **No cambian**: el resto de Yo, el resto de Planificar (horas, días, el pedido del permiso de alarmas exactas),
       los interruptores de avisos (`InterruptoresDeAvisos`, spec 005), los demás tabs.
       **Hace falta un APK nuevo** (código nativo) y, para el texto con la hora y el `tag`, el backend de la spec 007.

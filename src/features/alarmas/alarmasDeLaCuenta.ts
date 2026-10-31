@@ -55,10 +55,10 @@ const PREFIJOS_DE_ALARMAS = [
   'renaser.objetivos.recordatorios.diario.',
   // Spec 010: qué repeticiones de las acciones y del recordatorio diario ya se atendieron. Sin sus alarmas no sirven.
   'renaser.objetivos.recordatorios.atendidas',
-  // Spec 007: lo que el teléfono anota de la detención forzada. Es de la cuenta y de su día: no pasa a la siguiente.
+  // 2026-10-31: la hoja «Tu teléfono cerró Renaser» y la guía preventiva (spec 007) se retiraron y ya nada escribe estas
+  // tres claves. Se siguen borrando al cerrar sesión solo para no dejar restos en los teléfonos que ya las tenían.
   'renaser.alarmas.detencionRevisada.',
   'renaser.alarmas.avisoDetencion.',
-  // Spec 007, refuerzo FR-021: si ya se le ofreció la guía de su marca antes de que pasara. También es de la cuenta.
   'renaser.alarmas.guiaPreventiva.',
 ];
 const PREFIJO_REPASO = 'renaser.habitos.repasoSemanal.';
