@@ -1,9 +1,8 @@
-import React, { useContext, useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
-import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 
-import { ALTO_TAB_BAR, DIAMETRO, SEPARACION } from '../features/renasia/components/lugarDelLanzador';
+import { DIAMETRO, SEPARACION } from '../features/renasia/components/lugarDelLanzador';
 import { CURVA_SALIDA } from '../theme/movimiento';
 import { useTheme } from '../theme/ThemeContext';
 import { Icon, TAMANO_ICONO } from './Icon';
@@ -19,20 +18,16 @@ export const RECORRIDO = 8;
 const AIRE = 8;
 
 /**
- * Dónde va el aviso, contado desde el borde de abajo de la sección: justo ENCIMA de los botones flotantes (el orbe de SER y,
- * mientras no se firma el Pacto, la burbuja del arranque guiado), que se ubican a `ALTO_TAB_BAR + SEPARACION` del borde
- * de la pantalla con `DIAMETRO` de alto. Es la misma cuenta del «Deshacer» de Pasar lista (`alturaSobreFlotantes`, Eventos):
- * como los botones bajan con la barra de pestañas cuando se esconde al desplazar, encima de ellos el aviso queda a la vista
- * y sin taparlos con la barra a la vista o escondida.
+ * Dónde va el aviso, contado desde el borde de abajo de la SECCIÓN que lo dibuja: justo encima del orbe de SER. Las
+ * secciones (el Muro, «Publicaciones ocultas») ya terminan sobre la caja de la barra de pestañas, que reserva su alto y el
+ * borde seguro, así que acá no se vuelven a sumar `ALTO_TAB_BAR` ni el borde seguro: sumarlos dejaba el aviso ~110 dp por
+ * encima del orbe, tapando la foto de la publicación (E2E del 2026-10-31). Cuando la barra se esconde al desplazar, la
+ * sección crece y el orbe baja lo mismo, así que la distancia entre los dos no cambia.
  */
-export function alturaDelAviso(insetAbajo: number): number {
-  return ALTO_TAB_BAR + SEPARACION + DIAMETRO + AIRE + insetAbajo;
+export function alturaDelAviso(): number {
+  return SEPARACION + DIAMETRO + AIRE;
 }
 
-/** El borde seguro de abajo, sin exigir un `SafeAreaProvider` (el aviso también se dibuja en pruebas sueltas). */
-function useInsetAbajo(): number {
-  return useContext(SafeAreaInsetsContext)?.bottom ?? 0;
-}
 
 /**
  * Un aviso «snackbar», abajo (pedido del dueño, 2026-10-31, tras ver «Publicación oculta» flotando con fondo transparente
@@ -62,7 +57,6 @@ export function AvisoDeAbajo({
 }) {
   const { c } = useTheme();
   const reducir = useReducedMotion();
-  const insetAbajo = useInsetAbajo();
   const visible = useSharedValue(0);
   const alTerminar = useRef(onTerminar);
   alTerminar.current = onTerminar;
@@ -101,7 +95,7 @@ export function AvisoDeAbajo({
       style={[
         estilos.aviso,
         // Opaco: `cardBgAlt` es blanco en claro y la superficie elevada en oscuro, sin transparencia.
-        { bottom: abajo ?? alturaDelAviso(insetAbajo), backgroundColor: c.cardBgAlt, borderColor: c.borderStrong },
+        { bottom: abajo ?? alturaDelAviso(), backgroundColor: c.cardBgAlt, borderColor: c.borderStrong },
         estilo,
       ]}
     >
@@ -116,8 +110,8 @@ export function AvisoDeAbajo({
 const estilos = StyleSheet.create({
   aviso: {
     position: 'absolute',
-    left: 12,
-    right: 12,
+    left: 16,
+    right: 16,
     minHeight: 52,
     borderRadius: 16,
     borderWidth: 1,

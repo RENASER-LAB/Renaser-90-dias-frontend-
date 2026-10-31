@@ -78,15 +78,21 @@ describe('el aviso de abajo', () => {
     expect(typeof e.bottom).toBe('number');
   });
 
-  it('queda encima de los botones flotantes de SER (y del borde seguro), con la barra a la vista o escondida', () => {
-    // Los botones flotantes ocupan hasta `ALTO_TAB_BAR + SEPARACION + DIAMETRO` desde el borde de la pantalla.
-    const techoDelBoton = ALTO_TAB_BAR + SEPARACION + DIAMETRO;
-    expect(alturaDelAviso(0)).toBeGreaterThan(techoDelBoton);
-    expect(estiloDe(caja(dibujar({ clave: 1, texto: 'x' }))).bottom).toBe(alturaDelAviso(0));
+  it('queda justo encima del orbe de SER, contado desde el borde de abajo de la sección (que ya termina sobre la barra)', () => {
+    // La sección termina sobre la caja de la barra de pestañas (que reserva su alto y el borde seguro): el aviso no vuelve
+    // a sumarlos. Antes los sumaba y quedaba ~110 dp por encima del orbe, tapando la foto de la publicación (E2E 31/10).
+    expect(alturaDelAviso()).toBe(SEPARACION + DIAMETRO + 8);
+    expect(alturaDelAviso()).toBeLessThan(ALTO_TAB_BAR + SEPARACION + DIAMETRO);
+    expect(estiloDe(caja(dibujar({ clave: 1, texto: 'x' }))).bottom).toBe(alturaDelAviso());
     act(() => raiz?.unmount());
-    // Con borde seguro (teléfono con barra de gestos) sube lo mismo.
-    expect(estiloDe(caja(dibujar({ clave: 1, texto: 'x' }, jest.fn(), 24))).bottom).toBe(alturaDelAviso(24));
-    expect(alturaDelAviso(24)).toBe(alturaDelAviso(0) + 24);
+    // El borde seguro no lo mueve: ya lo reserva la caja de la barra.
+    expect(estiloDe(caja(dibujar({ clave: 1, texto: 'x' }, jest.fn(), 24))).bottom).toBe(alturaDelAviso());
+  });
+
+  it('se alinea con las tarjetas del Muro: 16 a cada lado', () => {
+    const e = estiloDe(caja(dibujar({ clave: 1, texto: 'x' })));
+    expect(e.left).toBe(16);
+    expect(e.right).toBe(16);
   });
 
   it('tiene fondo OPACO (sin transparencia), borde y una sombra suave', () => {
