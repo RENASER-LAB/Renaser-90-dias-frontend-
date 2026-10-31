@@ -219,7 +219,9 @@ const estilos = StyleSheet.create({
   // La hora, a ancho fijo: las filas quedan alineadas aunque una diga «—».
   hora: { fontFamily: fuentes.negrita, fontSize: 14, fontVariant: ['tabular-nums'] },
   areaDelTexto: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 48, paddingVertical: 6 },
-  texto: { flex: 1, minWidth: 0, gap: 2 },
+  // `justifyContent: 'center'`: si la columna del nombre queda más alta que su texto (el área de la fila mide 48 como mínimo),
+  // el título de una línea se centra en vez de quedarse arriba, a la altura de la hora y del botón.
+  texto: { flex: 1, minWidth: 0, gap: 2, justifyContent: 'center' },
   hecho: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   pildora: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 38, paddingHorizontal: 14, borderRadius: 19 },
   // 34 de dibujo y 10 de `hitSlop`: el área de toque pasa los 48 sin agrandar el círculo.
