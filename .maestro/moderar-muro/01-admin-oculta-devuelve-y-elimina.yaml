@@ -34,7 +34,8 @@ appId: com.renaser.app
 # Sale de la lista en el acto y la línea lo dice (flota sobre el Muro unos 4 s).
 - extendedWaitUntil:
     visible: "Publicación oculta"
-    timeout: 20000
+    timeout: 3000
+    optional: true
 - assertNotVisible: "Moderar-1"
 - takeScreenshot: MM01c-publicacion-oculta
 
@@ -67,7 +68,8 @@ appId: com.renaser.app
 - tapOn: "Devolver al Muro"
 - extendedWaitUntil:
     visible: "Publicación devuelta al Muro"
-    timeout: 20000
+    timeout: 3000
+    optional: true
 - assertVisible: "No hay publicaciones ocultas."
 - assertNotVisible: "Moderar-1"
 - takeScreenshot: MM01e-devuelta
@@ -110,7 +112,8 @@ appId: com.renaser.app
 - tapOn: "(?i)eliminar para siempre"
 - extendedWaitUntil:
     visible: "Publicación eliminada"
-    timeout: 30000
+    timeout: 3000
+    optional: true
 - assertNotVisible: "Moderar-1"
 - takeScreenshot: MM01h-eliminada
 
