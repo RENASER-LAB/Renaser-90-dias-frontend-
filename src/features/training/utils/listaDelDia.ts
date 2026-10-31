@@ -12,9 +12,11 @@
  * - **Sin hora** va antes de lo atrasado.
  * - **Los eventos que ya terminaron salen**; un evento nunca queda «atrasado» (no se registra).
  * - **Un hábito pausado no aparece hoy.**
- * - **«Cierra tu día» (spec 017) es de otra naturaleza** (`tipo: 'cierre'`): aparece desde su hora (30 min antes de Dormir),
- *   queda en su lugar entre lo que sigue —cerrado o no—, nunca se atrasa, no hace atrasar a nadie, no pasa a «hechos» ni
- *   cuenta como hecho, y no es el «primero» («Te toca ahora» es de un hábito o una acción).
+ * - **«Cierra tu día» (spec 017) es de otra naturaleza** (`tipo: 'cierre'`) y va aparte, en `cierre`: está SIEMPRE, todos los
+ *   días y a cualquier hora, y la lista de hoy la dibuja de última, después de todo lo del día (incluido Dormir). No depende
+ *   de Despertar, de Dormir ni de ninguna hora (pedido del dueño, 2026-10-30: quien trabaja de noche no tiene una hora
+ *   «normal» de dormir). Cerrada o no, nunca se atrasa, no hace atrasar a nadie, no pasa a «hechos» ni cuenta como hecho, y no
+ *   es el «primero» («Te toca ahora» es de un hábito o una acción).
  *
  * Trabaja con minutos desde la medianoche del día de la persona; quien llama decide de dónde sale «ahora».
  */
@@ -46,12 +48,9 @@ export const DURACION_SUPUESTA_DEL_EVENTO_MIN = 60;
 export type MarcaDelPrimero = 'ahora' | 'sigue';
 
 export interface ListaDelDia<T extends ItemBase> {
-  /**
-   * Lo pendiente con hora y a tiempo, por hora. El primero (sin contar «Cierra tu día») lleva {@link marcaDelPrimero}.
-   * La fila de «Cierra tu día» también está acá, en su hora, cerrada o no.
-   */
+  /** Lo pendiente con hora y a tiempo, por hora. El primero lleva {@link marcaDelPrimero}. «Cierra tu día» no está acá. */
   enCurso: T[];
-  /** El ítem que lleva la marca de «Te toca ahora» / «Lo que sigue»: el primero de `enCurso` que no es el cierre. */
+  /** El ítem que lleva la marca de «Te toca ahora» / «Lo que sigue»: el primero de `enCurso`. */
   primero: T | null;
   /** `null` si no hay nada en curso. */
   marcaDelPrimero: MarcaDelPrimero | null;
@@ -62,6 +61,11 @@ export interface ListaDelDia<T extends ItemBase> {
   cerrados: T[];
   /** Lo hecho, por hora. Plegado al final. */
   hechos: T[];
+  /**
+   * «Cierra tu día» (spec 017), cerrado o no: **la última fila de hoy**, siempre, sin hora y sin depender de ningún hábito.
+   * `null` si la lista no trae el ítem (todavía no se sabe, o el servidor no lo tiene).
+   */
+  cierre: T | null;
 }
 
 /** `HH:mm` (o `HH:mm:ss`) → minutos desde medianoche; `null` si no se entiende. */
@@ -108,10 +112,9 @@ export function armarListaDelDia<T extends ItemBase>(
   ahoraMin: number,
   retenidos: ReadonlySet<string> = new Set(),
 ): ListaDelDia<T> {
-  // «Cierra tu día» solo se ve desde su hora: antes no es parte del día de la persona.
-  const visibles = items.filter(x => !x.pausado && !(x.tipo === 'cierre' && !yaLlegoSuHora(x, ahoraMin)));
+  const visibles = items.filter(x => !x.pausado);
   // La hora del «siguiente» sale de TODO lo del día con hora (también lo hecho y los eventos): es lo que viene
-  // en la agenda, no solo lo pendiente. El cierre no es agenda: su hora no atrasa a nadie.
+  // en la agenda, no solo lo pendiente. El cierre no es agenda: no tiene hora y, si la trajera, no atrasaría a nadie.
   const horas = visibles
     .filter(x => x.tipo !== 'cierre')
     .map(x => minutosDeLaHora(x.hora))
@@ -126,14 +129,15 @@ export function armarListaDelDia<T extends ItemBase>(
   const atrasados: T[] = [];
   const cerrados: T[] = [];
   const hechos: T[] = [];
+  let cierre: T | null = null;
 
   for (const item of visibles) {
-    if (eventoTerminado(item, ahoraMin)) continue;
-    // El cierre se queda en su lugar: ni «hechos», ni «atrasados», ni se despide.
+    // El cierre va aparte y al final: ni «hechos», ni «atrasados», ni se despide, ni depende de la hora.
     if (item.tipo === 'cierre') {
-      enCurso.push(item);
+      cierre = item;
       continue;
     }
+    if (eventoTerminado(item, ahoraMin)) continue;
     const seDespide = retenidos.has(item.clave);
     if (item.hecho && !seDespide) {
       hechos.push(item);
@@ -154,7 +158,7 @@ export function armarListaDelDia<T extends ItemBase>(
   }
 
   const ordenadoEnCurso = porHora(enCurso);
-  const primero = ordenadoEnCurso.find(x => x.tipo !== 'cierre');
+  const primero = ordenadoEnCurso[0];
   const minPrimero = primero ? minutosDeLaHora(primero.hora) : null;
   return {
     enCurso: ordenadoEnCurso,
@@ -164,13 +168,8 @@ export function armarListaDelDia<T extends ItemBase>(
     atrasados: porHora(atrasados),
     cerrados: porHora(cerrados),
     hechos: porHora(hechos),
+    cierre,
   };
-}
-
-/** ¿Ya llegó la hora de este ítem? Sin hora legible, no. */
-function yaLlegoSuHora(item: ItemBase, ahoraMin: number): boolean {
-  const desde = minutosDeLaHora(item.hora);
-  return desde != null && ahoraMin >= desde;
 }
 
 /** Los textos de la marca del primero. */

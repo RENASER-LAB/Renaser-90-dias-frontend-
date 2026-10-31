@@ -2,11 +2,15 @@
  * «Cierra tu día» dentro de Training por hora (spec 017), con el cuerpo MONTADO (`TrainingPorHora`), el reloj fijo y la red
  * reemplazada por un doble que anota cada pedido:
  *
- * - la fila aparece 30 min antes de Dormir (21:30 sin Dormir), nunca antes, y solo entonces se lee el cierre;
- * - es la última de hoy y no cuenta: ni «N de M hechos», ni puntos, ni atraso, ni «Te toca ahora»;
+ * - la fila está SIEMPRE (corrección del dueño, 2026-10-30), a cualquier hora, con o sin Dormir y sin hora propia; el cierre
+ *   de hoy se lee desde que Training está a la vista;
+ * - es la última de hoy, después de todo (también de Dormir y de lo hecho), y no cuenta: ni «N de M hechos», ni puntos, ni
+ *   atraso, ni «Te toca ahora»;
  * - tocarla abre la hoja; al guardar queda en verde «Día cerrado» con lo de mañana y se queda en su lugar;
  * - sin la ruta (404), con el plan apagado o al pasar la medianoche, no hay fila;
- * - un día anterior dice «Cerrado» o «Sin cerrar», se lee SOLO al tocarlo, una vez por fecha, y no se abre.
+ * - un día anterior dice «Cerrado» o «Sin cerrar», se lee SOLO al tocarlo, una vez por fecha, y no se abre;
+ * - los casos de quien trabaja de noche, cierra temprano o tiene un día normal (pedido del dueño, 2026-10-30): se DESCRIBE
+ *   lo que pasa, no se inventa ninguna regla.
  *
  * Calendario de 2026 (jest corre en `America/Lima`, UTC−5): jue 29/10 · vie 30 · sáb 31 · dom 1/11.
  */
@@ -200,39 +204,61 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-describe('cuándo aparece la fila', () => {
-  it('con Dormir a las 22:30 aparece a las 22:00 y no antes; hasta entonces no se lee nada del cierre', async () => {
-    await montar({}, lima(JUEVES, '21:40'));
-    expect(filaDelCierre()).toBeUndefined();
-    expect(pedidosDelCierre()).toEqual([]);
-
-    await irA(lima(JUEVES, '21:59'));
-    expect(filaDelCierre()).toBeUndefined();
-    expect(pedidosDelCierre()).toEqual([]);
-
-    await irA(lima(JUEVES, '22:00'));
+describe('la fila está siempre, y de última', () => {
+  it.each(['00:30', '06:00', '14:00', '21:00', '23:30'])('con Dormir a las 22:30 está a las %s, y el cierre de hoy se lee desde que Training está a la vista', async hora => {
+    await montar({}, lima(JUEVES, hora));
     expect(filaDelCierre()).toBeDefined();
     expect(hay('Cierra tu día')).toBe(true);
     expect(hay('2 minutos')).toBe(true);
     expect(pedidosDelCierre().map(p => p.ruta)).toEqual([`/api/v1/rocks/day-closure?date=${JUEVES}`]);
   });
 
-  it('sin Dormir hoy aparece a las 21:30', async () => {
-    await montar({ habits: [ESCRITURA] }, lima(JUEVES, '21:29'));
-    expect(filaDelCierre()).toBeUndefined();
-    await irA(lima(JUEVES, '21:31'));
+  it('no depende de Dormir: sin Dormir hoy, con Dormir a las 08:00 (turno de noche) o a las 00:10, está igual', async () => {
+    for (const habits of [[ESCRITURA], [habito('dormir', 'Dormir', '08:00', { systemKey: 'SLEEP' })], [habito('dormir', 'Dormir', '00:10', { systemKey: 'SLEEP' })]]) {
+      await montar({ habits }, lima(JUEVES, '06:00'));
+      expect(filaDelCierre()).toBeDefined();
+      act(() => raiz?.unmount());
+      raiz = null;
+    }
+  });
+
+  it('no depende de nada del día: sin ningún hábito la fila está', async () => {
+    await montar({ habits: [] }, lima(JUEVES, '14:00'));
     expect(filaDelCierre()).toBeDefined();
   });
 
-  it('con Dormir pasada la medianoche (00:10) la fila está desde las 00:00', async () => {
-    await montar({ habits: [habito('dormir', 'Dormir', '00:10', { systemKey: 'SLEEP' })] }, lima(JUEVES, '09:00'));
-    expect(filaDelCierre()).toBeDefined();
-  });
-
-  it('es la última de hoy: queda entre lo último y Dormir, por su hora', async () => {
+  it('es la última de hoy: viene DESPUÉS de Dormir y de todo lo del día', async () => {
     await montar({}, lima(JUEVES, '22:10'));
-    const horas = textos().filter(t => ['21:30', '22:00', '22:30'].includes(t));
-    expect(horas).toEqual(['21:30', '22:00', '22:30']);
+    const t = textos();
+    expect(t.indexOf('Escritura libre nocturna')).toBeGreaterThan(-1);
+    expect(t.indexOf('Dormir')).toBeGreaterThan(t.indexOf('Escritura libre nocturna'));
+    expect(t.indexOf('Cierra tu día')).toBeGreaterThan(t.indexOf('Dormir'));
+  });
+
+  it('es la última aunque Dormir ya esté hecho y plegado en «1 hecho hoy»', async () => {
+    const habits = [ESCRITURA, habito('dormir', 'Dormir', '22:30', { systemKey: 'SLEEP', done: true })];
+    await montar({ habits }, lima(JUEVES, '23:00'));
+    const t = textos();
+    expect(t.indexOf('1 hecho hoy')).toBeGreaterThan(-1);
+    expect(t.indexOf('Cierra tu día')).toBeGreaterThan(t.indexOf('1 hecho hoy'));
+  });
+
+  it('NO lleva hora: ni «22:00» (Dormir menos 30) ni «21:30» como suya, ni en lo que oye el lector de pantalla', async () => {
+    await montar({ habits: [DORMIR] }, lima(JUEVES, '22:10'));
+    expect(textos()).not.toContain('22:00');
+    expect(textos().filter(h => /^\d{1,2}:\d{2}$/.test(h))).toEqual(['22:30']); // solo la de Dormir
+    const etiqueta = String(filaDelCierre()!.props.accessibilityLabel);
+    expect(etiqueta).not.toMatch(/\d{1,2}:\d{2}|Sin hora/);
+    expect(etiqueta.startsWith('Cierra tu día')).toBe(true);
+  });
+
+  it('cerrada, tampoco lleva hora de fila: cuándo cerró lo dice su texto', async () => {
+    mockRespuestas.set(`day-closure?date=${JUEVES}`, () => cierreDe(JUEVES, { estado: 'CERRADO', cerradoEn: '2026-10-30T04:50:00Z', acciones: [] }));
+    await montar({ habits: [DORMIR] }, lima(JUEVES, '23:55'));
+    const etiqueta = String(filaDelCierre()!.props.accessibilityLabel);
+    expect(etiqueta).toContain('Día cerrado');
+    expect(etiqueta).toContain('Cerrado a las 23:50');
+    expect(textos().filter(h => /^\d{1,2}:\d{2}$/.test(h))).toEqual(['22:30']);
   });
 
   it('no cuenta: «N de M hechos» y los puntos no la incluyen', async () => {
@@ -245,6 +271,8 @@ describe('cuándo aparece la fila', () => {
     const etiqueta = String(filaDelCierre()!.props.accessibilityLabel);
     expect(etiqueta).not.toMatch(/se te pasó la hora/i);
     expect(hay('Se te pasó la hora')).toBe(true); // lo atrasado es Dormir; el cierre sigue en su lugar
+    const t = textos();
+    expect(t.indexOf('Cierra tu día')).toBeGreaterThan(t.indexOf('Dormir'));
   });
 
   it('con todo lo demás hecho, «Terminaste lo de hoy» sigue saliendo: la fila del cierre no es algo que quede por hacer', async () => {
@@ -291,17 +319,17 @@ describe('cuándo NO hay fila', () => {
     expect(pedidosDelCierre()).toEqual([]);
   });
 
-  it('al pasar la medianoche la fila de ayer no queda en hoy', async () => {
+  it('al pasar la medianoche la fila de ayer no queda en hoy: es la del día nuevo, sin cerrar', async () => {
+    mockRespuestas.set(`day-closure?date=${JUEVES}`, () => cierreDe(JUEVES, { estado: 'CERRADO', cerradoEn: '2026-10-30T03:30:00Z', acciones: [] }));
     await montar({}, lima(JUEVES, '23:00'));
-    expect(filaDelCierre()).toBeDefined();
+    expect(String(filaDelCierre()!.props.accessibilityLabel)).toContain('Día cerrado');
     jest.setSystemTime(lima('2026-10-30', '00:05'));
     mockRespuestas.set('day-closure?date=2026-10-30', () => cierreDe('2026-10-30'));
     await actualizar({ hoyIso: '2026-10-30' });
     await avanzar(31_000);
-    expect(filaDelCierre()).toBeUndefined();
     expect(hay('Día cerrado')).toBe(false);
-    // Todavía no es la hora del día nuevo (22:00): ni siquiera se lee.
-    expect(pedidosDelCierre().map(p => p.ruta)).not.toContain('/api/v1/rocks/day-closure?date=2026-10-30');
+    expect(String(filaDelCierre()!.props.accessibilityLabel)).toContain('Cierra tu día, 2 minutos');
+    expect(pedidosDelCierre().map(p => p.ruta)).toContain('/api/v1/rocks/day-closure?date=2026-10-30');
   });
 });
 
@@ -403,16 +431,16 @@ describe('un día anterior', () => {
     mockRespuestas.set('day-closure?date=2026-10-27', () => cierreDe('2026-10-27', { estado: 'SIN_CERRAR', puedeCerrar: false, semana: null }));
   });
 
-  it('abrir Training no lee ningún cierre anterior (y antes de la hora, ninguno)', async () => {
+  it('abrir Training no lee ningún cierre anterior: solo el de hoy, que la fila necesita desde que Training está a la vista', async () => {
     await montar({}, lima(JUEVES, '10:00'));
-    expect(pedidosDelCierre()).toEqual([]);
+    expect(pedidosDelCierre().map(p => p.ruta)).toEqual([`/api/v1/rocks/day-closure?date=${JUEVES}`]);
     expect(new Set(etiquetasDeLaSemana()).size).toBe(7);
   });
 
   it('tocar el miércoles lee SU cierre una vez y dice «Cerrado»; el martes dice «Sin cerrar»', async () => {
     await montar({}, lima(JUEVES, '10:00'));
     await pulsar(dia('Miércoles 28'));
-    expect(pedidosDelCierre().map(p => p.ruta)).toEqual(['/api/v1/rocks/day-closure?date=2026-10-28']);
+    expect(pedidosDelCierre().map(p => p.ruta)).toEqual([`/api/v1/rocks/day-closure?date=${JUEVES}`, '/api/v1/rocks/day-closure?date=2026-10-28']);
     const textosDelMiercoles = textos();
     expect(textosDelMiercoles).toContain('Día cerrado');
     expect(textosDelMiercoles).toContain('Cerrado');
@@ -453,5 +481,207 @@ describe('un día anterior', () => {
     await montar({ cierrePrendido: false }, lima(JUEVES, '10:00'));
     await pulsar(dia('Miércoles 28'));
     expect(pedidosDelCierre()).toEqual([]);
+  });
+});
+
+/* ------------------------------------------------------------------------------------------------
+ * Casos pedidos por el dueño (2026-10-30). Aquí se DESCRIBE cómo se comporta la regla nueva con quien trabaja de noche o
+ * cierra temprano; no se inventa ninguna regla nueva. El día es siempre el día calendario de la persona (Lima).
+ * ---------------------------------------------------------------------------------------------- */
+
+const VIERNES = '2026-10-30';
+const DESPERTAR_16 = habito('despertar', 'Despertar', '16:00', { systemKey: 'WAKE_UP' });
+const DORMIR_08 = habito('dormir', 'Dormir', '08:00', { systemKey: 'SLEEP' });
+const TURNO_DE_NOCHE = [DESPERTAR_16, DORMIR_08];
+const cuerposDelPut = () => mockPedidos.filter(p => p.metodo === 'PUT').map(p => p.cuerpo as { fecha: string; acciones: Array<{ id: string }> });
+const guardarElCierre = async () => {
+  await tocarTexto('No me alcanzó el tiempo');
+  await tocarTexto('Hacerla a otra hora');
+  await tocarTexto('Guardar mi cierre');
+};
+const CERRADO_CON = (fecha: string, extra: object = {}) =>
+  cierreDe(fecha, { estado: 'CERRADO', cerradoEn: `${fecha}T05:00:00Z`, acciones: [{ ...PENDIENTE, cierre: { motivo: 'SIN_TIEMPO', manana: 'OTRA_HORA', nota: null } }], ...extra });
+
+describe('caso 1 · turno de noche (Despertar 16:00, Dormir 08:00) cierra su día a las 23:50', () => {
+  it('el cierre se guarda en el día de hoy (el calendario de su zona), la fila queda en verde y sin hora', async () => {
+    mockRespuestas.set('PUT /api/v1/rocks/day-closure', () => CERRADO_CON(JUEVES));
+    await montar({ habits: TURNO_DE_NOCHE }, lima(JUEVES, '23:50'));
+    expect(filaDelCierre()).toBeDefined();
+    await pulsar(filaDelCierre()!);
+    await guardarElCierre();
+    expect(cuerposDelPut()).toHaveLength(1);
+    expect(cuerposDelPut()[0].fecha).toBe(JUEVES);
+    expect(cuerposDelPut()[0].acciones.map(a => a.id)).toEqual(['a-2']);
+    const fila = String(filaDelCierre()!.props.accessibilityLabel);
+    expect(fila).toContain('Día cerrado');
+    expect(fila).toContain('Mañana: «Revisar las facturas» a otra hora');
+    expect(fila).not.toMatch(/\d{1,2}:\d{2}|Sin hora/);
+    expect(mockLogro).toHaveBeenCalledTimes(1);
+    expect(mockAlert).not.toHaveBeenCalled();
+  });
+
+  it('la fila está a las 06:00 y a las 14:00 aunque su Dormir sea a las 08:00 (no espera a ninguna hora)', async () => {
+    await montar({ habits: TURNO_DE_NOCHE }, lima(JUEVES, '06:00'));
+    expect(filaDelCierre()).toBeDefined();
+    await irA(lima(JUEVES, '14:00'));
+    expect(filaDelCierre()).toBeDefined();
+  });
+});
+
+describe('caso 2 · la misma persona abre Training después de la medianoche (00:30 y 02:00)', () => {
+  beforeEach(() => {
+    // Jueves: no lo cerró. Viernes: el día nuevo, todavía abierto.
+    mockRespuestas.set(`day-closure?date=${JUEVES}`, () => cierreDe(JUEVES, { estado: 'SIN_CERRAR', puedeCerrar: false, semana: null }));
+    mockRespuestas.set(`day-closure?date=${VIERNES}`, () => cierreDe(VIERNES));
+  });
+
+  it('ve el día NUEVO (viernes 30) y la fila «Cierra tu día» es del día nuevo, con su propia lectura', async () => {
+    await montar({ habits: TURNO_DE_NOCHE, hoyIso: VIERNES }, lima(VIERNES, '00:30'));
+    expect(hay('Viernes 30')).toBe(true);
+    expect(String(filaDelCierre()!.props.accessibilityLabel)).toContain('Cierra tu día, 2 minutos');
+    expect(pedidosDelCierre().map(p => p.ruta)).toEqual([`/api/v1/rocks/day-closure?date=${VIERNES}`]);
+    await irA(lima(VIERNES, '02:00'));
+    expect(hay('Viernes 30')).toBe(true);
+    expect(filaDelCierre()).toBeDefined();
+  });
+
+  it('cerrar a las 00:30 o a las 02:00 cierra el día NUEVO (viernes), no el jueves en que empezó su turno', async () => {
+    mockRespuestas.set('PUT /api/v1/rocks/day-closure', () => CERRADO_CON(VIERNES));
+    await montar({ habits: TURNO_DE_NOCHE, hoyIso: VIERNES }, lima(VIERNES, '02:00'));
+    await pulsar(filaDelCierre()!);
+    await guardarElCierre();
+    expect(cuerposDelPut().map(c => c.fecha)).toEqual([VIERNES]);
+  });
+
+  it('el jueves queda «Sin cerrar» y ya no se puede cerrar: la fila es solo texto y no se envía nada', async () => {
+    await montar({ habits: TURNO_DE_NOCHE, hoyIso: VIERNES }, lima(VIERNES, '00:30'));
+    await pulsar(dia('Jueves 29'));
+    expect(pedidosDelCierre().map(p => p.ruta)).toContain(`/api/v1/rocks/day-closure?date=${JUEVES}`);
+    expect(textos()).toContain('Sin cerrar');
+    const solo = raiz!.root.findAll(n => String(n.props.accessibilityLabel ?? '').includes('Cierra tu día') && n.props.accessible === true);
+    expect(solo.length).toBeGreaterThan(0);
+    expect(solo.every(n => typeof n.props.onPress !== 'function')).toBe(true);
+    expect(mockPedidos.filter(p => p.metodo !== 'GET')).toEqual([]);
+  });
+
+  it('una hoja abierta a las 23:55 que cruza la medianoche se cierra; no se reasigna el cierre al viernes', async () => {
+    mockRespuestas.set(`day-closure?date=${JUEVES}`, () => cierreDe(JUEVES)); // a las 23:55 el jueves todavía está abierto
+    await montar({ habits: TURNO_DE_NOCHE }, lima(JUEVES, '23:55'));
+    await pulsar(filaDelCierre()!);
+    expect(hay('Guardar mi cierre')).toBe(true);
+    jest.setSystemTime(lima(VIERNES, '00:05'));
+    await actualizar({ habits: TURNO_DE_NOCHE, hoyIso: VIERNES });
+    await avanzar(31_000);
+    expect(hay('Guardar mi cierre')).toBe(false);
+    expect(mockPedidos.filter(p => p.metodo === 'PUT')).toEqual([]);
+    expect(mockLogro).not.toHaveBeenCalled();
+  });
+});
+
+describe('caso 3 · cierra temprano (06:00) y después cumple algo más ese mismo día', () => {
+  it('a las 06:00 la fila está al final y se puede cerrar; el cierre es del día de hoy', async () => {
+    mockRespuestas.set('PUT /api/v1/rocks/day-closure', () => CERRADO_CON(JUEVES));
+    await montar({}, lima(JUEVES, '06:00'));
+    const t = textos();
+    expect(t.indexOf('Cierra tu día')).toBeGreaterThan(t.indexOf('Dormir'));
+    await pulsar(filaDelCierre()!);
+    await guardarElCierre();
+    expect(cuerposDelPut()[0].fecha).toBe(JUEVES);
+    expect(String(filaDelCierre()!.props.accessibilityLabel)).toContain('Día cerrado');
+  });
+
+  it('si después cumple esa acción, el día SIGUE cerrado (verde), pero ya no dice lo que dijo de ella', async () => {
+    mockRespuestas.set(`day-closure?date=${JUEVES}`, () => CERRADO_CON(JUEVES));
+    await montar({}, lima(JUEVES, '06:00'));
+    expect(String(filaDelCierre()!.props.accessibilityLabel)).toContain('Mañana: «Revisar las facturas» a otra hora');
+    // Cumplió la acción desde Plan/Hoy: el servidor ya no entrega la respuesta de una acción cumplida (spec 017, contrato).
+    mockRespuestas.set(`day-closure?date=${JUEVES}`, () =>
+      CERRADO_CON(JUEVES, { acciones: [{ ...PENDIENTE, cumplida: true, cumplidaEn: '2026-10-29T17:00:00Z', cierre: null }] }),
+    );
+    await irA(lima(JUEVES, '12:00'));
+    await pulsar(filaDelCierre()!); // volver a abrir relee el día
+    expect(raiz!.root.findAll(n => n.props.accessibilityLabel === 'Revisar las facturas, cumplida a las 12:00').length).toBeGreaterThan(0);
+    expect(hay('¿Qué pasó?')).toBe(false); // ya no se le pregunta por esa acción
+    expect(hay('No te quedó nada pendiente. No hace falta responder nada.')).toBe(true);
+  });
+
+  it('se puede volver a abrir y editar el MISMO día: el cierre nuevo reemplaza al anterior', async () => {
+    mockRespuestas.set(`day-closure?date=${JUEVES}`, () => CERRADO_CON(JUEVES));
+    mockRespuestas.set('PUT /api/v1/rocks/day-closure', () => CERRADO_CON(JUEVES, { acciones: [{ ...PENDIENTE, cierre: { motivo: 'SIN_ENERGIA', manana: 'DEJARLA', nota: null } }] }));
+    await montar({}, lima(JUEVES, '06:00'));
+    await pulsar(filaDelCierre()!);
+    await tocarTexto('Me faltó energía');
+    await tocarTexto('Dejarla');
+    await tocarTexto('Guardar mi cierre');
+    expect(cuerposDelPut()).toHaveLength(1);
+    expect(cuerposDelPut()[0].fecha).toBe(JUEVES);
+    expect(String(filaDelCierre()!.props.accessibilityLabel)).toContain('Mañana: «Revisar las facturas» la dejas');
+  });
+});
+
+describe('caso 4 · día normal (Despertar 06:00, Dormir 22:30) cierra a las 21:00', () => {
+  const DIA_NORMAL = [habito('despertar', 'Despertar', '06:00', { systemKey: 'WAKE_UP' }), DORMIR];
+
+  it('la fila está al final, se cierra y queda en verde en el día de hoy', async () => {
+    mockRespuestas.set('PUT /api/v1/rocks/day-closure', () => CERRADO_CON(JUEVES, { cerradoEn: '2026-10-30T02:00:00Z' }));
+    await montar({ habits: DIA_NORMAL }, lima(JUEVES, '21:00'));
+    const t = textos();
+    expect(t.indexOf('Cierra tu día')).toBeGreaterThan(t.indexOf('Dormir'));
+    await pulsar(filaDelCierre()!);
+    await guardarElCierre();
+    expect(cuerposDelPut().map(c => c.fecha)).toEqual([JUEVES]);
+    const fila = String(filaDelCierre()!.props.accessibilityLabel);
+    expect(fila).toContain('Día cerrado');
+    expect(fila).toContain('Mañana: «Revisar las facturas» a otra hora');
+  });
+});
+
+describe('solo se pregunta por lo que ya llegó a su hora (decisión del dueño, 2026-10-30)', () => {
+  /* El servidor simulado hace lo que hace el de verdad: con SU reloj y la zona de la persona (Lima) marca `exigeRespuesta`
+     de cada pendiente: `true` si no tiene hora o su hora ya llegó, `false` si todavía no. */
+  const comoLoDiceElServidor = (accion: typeof PENDIENTE) => {
+    const ahora = new Date();
+    const hhmm = `${String(ahora.getHours()).padStart(2, '0')}:${String(ahora.getMinutes()).padStart(2, '0')}`;
+    return { ...accion, exigeRespuesta: !accion.horaInicio || accion.horaInicio.slice(0, 5) <= hhmm };
+  };
+  const cierreSegunLaHora = () => cierreDe(JUEVES, { acciones: [comoLoDiceElServidor(PENDIENTE)] });
+
+  it('a las 06:00 la hoja NO pregunta por la de las 20:30: se puede guardar sin responder y el PUT no lleva esa acción', async () => {
+    mockRespuestas.set(`day-closure?date=${JUEVES}`, cierreSegunLaHora);
+    mockRespuestas.set('PUT /api/v1/rocks/day-closure', () => CERRADO_CON(JUEVES, { acciones: [{ ...PENDIENTE, exigeRespuesta: false }] }));
+    await montar({}, lima(JUEVES, '06:00'));
+    await pulsar(filaDelCierre()!);
+    expect(hay('Revisar las facturas')).toBe(true);
+    expect(hay('Es a las 20:30 · todavía no llega')).toBe(true);
+    expect(hay('¿Qué pasó?')).toBe(false);
+    await tocarTexto('Guardar mi cierre');
+    expect(cuerposDelPut()).toEqual([{ fecha: JUEVES, acciones: [] }]);
+    expect(String(filaDelCierre()!.props.accessibilityLabel)).toContain('Día cerrado');
+    expect(mockLogro).toHaveBeenCalledTimes(1);
+  });
+
+  it('a las 21:00 SÍ pregunta por la de las 20:30: sin responder no se puede guardar', async () => {
+    mockRespuestas.set(`day-closure?date=${JUEVES}`, cierreSegunLaHora);
+    await montar({}, lima(JUEVES, '21:00'));
+    await pulsar(filaDelCierre()!);
+    expect(hay('Era a las 20:30 · quedó pendiente')).toBe(true);
+    expect(hay('¿Qué pasó?')).toBe(true);
+    expect(hay('todavía no llega')).toBe(false);
+    expect(hay('Elige qué pasó y qué harás mañana con «Revisar las facturas».')).toBe(true);
+    expect(mockPedidos.filter(p => p.metodo === 'PUT')).toEqual([]);
+  });
+
+  it('la hora llega con Training abierto: al volver a abrir la hoja (relee el día) ya pregunta', async () => {
+    mockRespuestas.set(`day-closure?date=${JUEVES}`, cierreSegunLaHora);
+    await montar({}, lima(JUEVES, '20:00'));
+    await pulsar(filaDelCierre()!);
+    expect(hay('¿Qué pasó?')).toBe(false);
+    jest.setSystemTime(lima(JUEVES, '20:31'));
+    await avanzar(31_000);
+    // Cerrar y volver a abrir la hoja relee el día con el reloj del servidor.
+    const hoja = raiz!.root.findAll(n => typeof n.props.alCerrar === 'function')[0];
+    if (hoja) await act(async () => { hoja.props.alCerrar(); });
+    await pulsar(filaDelCierre()!);
+    expect(hay('¿Qué pasó?')).toBe(true);
   });
 });

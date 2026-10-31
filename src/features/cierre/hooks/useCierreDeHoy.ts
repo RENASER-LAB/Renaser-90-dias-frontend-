@@ -31,7 +31,7 @@ export function esCierreNoDisponible(error: unknown): boolean {
 }
 
 /**
- * Lee `GET /rocks/day-closure` (hoy) cuando `activo` —Training a la vista y ya es la hora de la fila— y vuelve a leer
+ * Lee `GET /rocks/day-closure` (hoy) cuando `activo` —Training a la vista— y vuelve a leer
  * cada vez que se activa de nuevo (volver al foco). Cambiar de cuenta o pasar la medianoche descarta lo leído: la fila
  * de ayer no puede quedar en hoy.
  *

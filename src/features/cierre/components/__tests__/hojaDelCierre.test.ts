@@ -364,3 +364,118 @@ describe('los estados de la lectura', () => {
     expect(textos()).toEqual([]);
   });
 });
+
+/* ------------------------------------------------------------------------------------------------
+ * Solo se pregunta por lo que ya llegó a su hora (decisión del dueño, 2026-10-30). La hora la decide el servidor, con su reloj
+ * y la zona de la persona, y lo dice en `exigeRespuesta`: a las 06:00 la de las 20:30 viene con `false`; a las 21:00, con `true`.
+ * Las acciones sin hora se preguntan como siempre. Sin el dato (un servidor anterior) se pregunta por todas.
+ * ---------------------------------------------------------------------------------------------- */
+describe('solo se pregunta por lo que ya llegó a su hora', () => {
+  const A_LAS_SEIS = { ...PENDIENTE, exigeRespuesta: false };
+  const A_LAS_NUEVE_DE_LA_NOCHE = { ...PENDIENTE, exigeRespuesta: true };
+  const SIN_HORA = { id: 'a-3', titulo: 'Ordenar el escritorio', horaInicio: null, cumplida: false, cumplidaEn: null, cierre: null, exigeRespuesta: true };
+
+  it('a las 06:00 NO pregunta por la de las 20:30: se ve como «todavía no llega», sin preguntas ni chips', async () => {
+    mockRespuesta = () => dia({ acciones: [CUMPLIDA, A_LAS_SEIS] });
+    await montar();
+    expect(hay('Revisar las facturas')).toBe(true);
+    expect(hay('Es a las 20:30 · todavía no llega')).toBe(true);
+    expect(hay('¿Qué pasó?')).toBe(false);
+    expect(hay('¿Qué harás mañana?')).toBe(false);
+    expect(hay('Era a las 20:30 · quedó pendiente')).toBe(false);
+    expect(hay('Lo que falta por hacer todavía no llega a su hora. No hace falta responder nada.')).toBe(true);
+    expect(hay('No te quedó nada pendiente')).toBe(false); // sí le queda algo: solo que todavía no es su hora
+  });
+
+  it('a las 06:00 «Guardar mi cierre» está encendido sin responder nada, y el PUT no lleva la de las 20:30', async () => {
+    mockRespuesta = (_r, metodo) => (metodo === 'PUT' ? dia({ estado: 'CERRADO', cerradoEn: '2026-10-29T11:02:00Z', acciones: [CUMPLIDA, A_LAS_SEIS] }) : dia({ acciones: [CUMPLIDA, A_LAS_SEIS] }));
+    await montar();
+    expect(apagado(tocableCon('Guardar mi cierre'))).toBe(false);
+    await guardar();
+    const put = mockPedidos.filter(p => p.metodo === 'PUT');
+    expect(put).toHaveLength(1);
+    expect(put[0].cuerpo).toEqual({ fecha: HOY, acciones: [] });
+    expect(hay('Día cerrado')).toBe(true);
+    expect(mockLogro).toHaveBeenCalledTimes(1);
+  });
+
+  it('a las 06:00, sin nada por preguntar, ofrece la nota del día (no hay tarjetas con nota propia)', async () => {
+    mockRespuesta = () => dia({ acciones: [CUMPLIDA, A_LAS_SEIS] });
+    await montar();
+    expect(hay('Tu nota del día')).toBe(true);
+  });
+
+  it('a las 21:00 SÍ pregunta por la de las 20:30: «Guardar mi cierre» se apaga hasta responder las dos preguntas', async () => {
+    mockRespuesta = () => dia({ acciones: [CUMPLIDA, A_LAS_NUEVE_DE_LA_NOCHE] });
+    await montar();
+    expect(hay('Era a las 20:30 · quedó pendiente')).toBe(true);
+    expect(hay('¿Qué pasó?')).toBe(true);
+    expect(hay('¿Qué harás mañana?')).toBe(true);
+    expect(hay('todavía no llega')).toBe(false);
+    expect(apagado(tocableCon('Guardar mi cierre'))).toBe(true);
+    expect(hay('Elige qué pasó y qué harás mañana con «Revisar las facturas».')).toBe(true);
+    await elegir('No me alcanzó el tiempo');
+    await elegir('Hacerla a otra hora');
+    expect(apagado(tocableCon('Guardar mi cierre'))).toBe(false);
+    await guardar();
+    const cuerpo = mockPedidos.find(p => p.metodo === 'PUT')?.cuerpo as { acciones: Array<{ id: string; motivo: string; manana: string }> };
+    expect(cuerpo.acciones).toEqual([{ id: 'a-2', motivo: 'SIN_TIEMPO', manana: 'OTRA_HORA' }]);
+  });
+
+  it('mezcla: la ya pasada y la sin hora se preguntan; la de hora futura queda como línea y no viaja en el PUT', async () => {
+    const pasada = { id: 'a-4', titulo: 'Llamar a mi mentor', horaInicio: '17:30:00', cumplida: false, cumplidaEn: null, cierre: null, exigeRespuesta: true };
+    mockRespuesta = () => dia({ acciones: [CUMPLIDA, pasada, SIN_HORA, A_LAS_SEIS] });
+    await montar();
+    expect(hay('Era a las 17:30 · quedó pendiente')).toBe(true);
+    expect(hay('Quedó pendiente')).toBe(true); // la sin hora, como hoy
+    expect(hay('Es a las 20:30 · todavía no llega')).toBe(true);
+    expect(apagado(tocableCon('Guardar mi cierre'))).toBe(true);
+    // Responde las dos preguntadas (cada tarjeta tiene sus chips con el mismo texto: se eligen por tarjeta).
+    const chips = (texto: string) => raiz!.root.findAll(n => n.props.accessibilityRole === 'radio' && n.props.accessibilityLabel === texto && typeof n.props.onPress === 'function');
+    for (const n of [...chips('No me alcanzó el tiempo'), ...chips('Hacerla a otra hora')]) await act(async () => { n.props.onPress(); });
+    expect(apagado(tocableCon('Guardar mi cierre'))).toBe(false);
+    await guardar();
+    const cuerpo = mockPedidos.find(p => p.metodo === 'PUT')?.cuerpo as { acciones: Array<{ id: string }> };
+    expect(cuerpo.acciones.map(a => a.id).sort()).toEqual(['a-3', 'a-4']);
+  });
+
+  it('con un servidor anterior (sin el dato) se pregunta por todas las pendientes, como siempre', async () => {
+    mockRespuesta = () => dia({ acciones: [CUMPLIDA, PENDIENTE] }); // sin `exigeRespuesta`
+    await montar();
+    expect(hay('¿Qué pasó?')).toBe(true);
+    expect(hay('todavía no llega')).toBe(false);
+    expect(apagado(tocableCon('Guardar mi cierre'))).toBe(true);
+  });
+
+  it('un valor raro en `exigeRespuesta` se lee como «no lo dijo»: se pregunta', async () => {
+    mockRespuesta = () => dia({ acciones: [CUMPLIDA, { ...PENDIENTE, exigeRespuesta: 'si' }] });
+    await montar();
+    expect(hay('¿Qué pasó?')).toBe(true);
+  });
+
+  it('si llega la hora de la acción con la hoja abierta: el servidor responde 400, se relee SIN perder lo elegido y se avisa; no hay «Reintentar»', async () => {
+    const pasada = { id: 'a-4', titulo: 'Llamar a mi mentor', horaInicio: '17:30:00', cumplida: false, cumplidaEn: null, cierre: null, exigeRespuesta: true };
+    let yaLlegoLaHora = false;
+    mockRespuesta = (_r, metodo) => {
+      if (metodo === 'PUT') throw new ApiError(400, 'Cuenta qué pasó con «Revisar las facturas» y qué harás mañana');
+      return dia({ acciones: [CUMPLIDA, pasada, yaLlegoLaHora ? A_LAS_NUEVE_DE_LA_NOCHE : A_LAS_SEIS] });
+    };
+    await montar();
+    await elegir('No me alcanzó el tiempo');
+    await elegir('Hacerla a otra hora');
+    expect(apagado(tocableCon('Guardar mi cierre'))).toBe(false);
+
+    yaLlegoLaHora = true; // pasan las 20:30 con la hoja abierta
+    await guardar();
+
+    expect(mockAlert).toHaveBeenCalledTimes(1);
+    expect(mockAlert.mock.calls[0][0]).toBe('Falta una respuesta');
+    expect(String(mockAlert.mock.calls[0][1])).toContain('Revisar las facturas');
+    expect((mockAlert.mock.calls[0][2] as Array<{ text: string }>).map(b => b.text)).toEqual(['Entendido']);
+    // La acción que ya llegó a su hora aparece con sus preguntas, y lo que ya se había elegido sigue elegido.
+    expect(hay('Era a las 20:30 · quedó pendiente')).toBe(true);
+    expect(chipsElegidos()).toEqual(expect.arrayContaining(['No me alcanzó el tiempo', 'Hacerla a otra hora']));
+    expect(apagado(tocableCon('Guardar mi cierre'))).toBe(true);
+    expect(mockLogro).not.toHaveBeenCalled();
+  });
+});

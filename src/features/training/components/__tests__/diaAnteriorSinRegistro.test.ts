@@ -206,8 +206,8 @@ describe('HOY: lo que ofrece la lista (la línea base de las pruebas de abajo)',
   it('abrir Training no pide ningún día anterior (ni nada de planificación)', async () => {
     await montar();
     expect(pedidosDeDias()).toHaveLength(0);
-    // Spec 017: desde su hora (Dormir − 30, o 21:30), Training lee el cierre de HOY. No es un día anterior ni planificación;
-    // sin esta excepción la prueba dependía de la hora a la que se corría (fallaba después de las 21:30).
+    // Spec 017: Training lee el cierre de HOY siempre (la fila «Cierra tu día» está todo el día, 2026-10-30). No es un día
+    // anterior ni planificación, y es la única lectura de `/rocks/` que se permite al abrir.
     const cierre = (ruta: string) => ruta.startsWith('/api/v1/rocks/day-closure');
     expect(mockPedidos.filter(p => p.ruta.includes('/habit-preferences') || (p.ruta.includes('/rocks/') && !cierre(p.ruta)))).toHaveLength(0);
     expect(mockPedidos.filter(p => cierre(p.ruta) && !p.ruta.endsWith(`date=${HOY}`))).toHaveLength(0);

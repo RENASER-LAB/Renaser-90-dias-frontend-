@@ -21,13 +21,16 @@ import {
 } from '../data/textosDelCierre';
 import { useHojaDelCierre, type ResultadoDeGuardar } from '../hooks/useHojaDelCierre';
 import type { AccionDelCierre, CierreDelDia } from '../types/cierre.types';
-import { NOTA_MAXIMA, cumplidasDe, pendientesDe } from '../utils/borradorDelCierre';
+import { NOTA_MAXIMA, aPreguntarDe, cumplidasDe, pendientesDe, porLlegarDe } from '../utils/borradorDelCierre';
 import { horaDeUnInstante } from '../utils/itemDelCierre';
 import { ChipDelCierre } from './ChipDelCierre';
 
 export const TITULO_DE_LA_HOJA = 'Cierra tu día';
 export const TEXTO_DE_DIA_CERRADO_TARDE = 'Ese día ya cerró y no se puede cerrar tarde. Tu cierre no se guardó.';
 export const TEXTO_SIN_ACCIONES = 'Hoy no tenías acciones.';
+export const TEXTO_SIN_PENDIENTES = 'No te quedó nada pendiente. No hace falta responder nada.';
+/** Todo lo que sigue pendiente es de una hora que todavía no llega: no se pregunta (decisión del dueño, 2026-10-30). */
+export const TEXTO_SOLO_POR_LLEGAR = 'Lo que falta por hacer todavía no llega a su hora. No hace falta responder nada.';
 export const TEXTO_DEL_CAMPO_DE_NOTA = 'Si quieres, cuéntalo con tus palabras';
 
 /** «14 de 18 hechos hoy»: lo que Training ya sabe de los hábitos de hoy, sin contar el cierre. */
@@ -95,6 +98,9 @@ export function HojaDelCierre({
     const r: ResultadoDeGuardar = await hoja.guardar();
     if (r.resultado === 'dia-cambio' || r.resultado === 'dia-cerrado') {
       alSalirPorDiaCerrado();
+    } else if (r.resultado === 'falta') {
+      // Llegó la hora de otra acción con la hoja abierta: ya se releyó y la acción nueva está en pantalla con sus preguntas.
+      Alert.alert('Falta una respuesta', r.mensaje, [{ text: 'Entendido', style: 'cancel' }]);
     } else if (r.resultado === 'fallo') {
       Alert.alert('No se guardó tu cierre', r.mensaje, [
         { text: 'Ahora no', style: 'cancel' },
@@ -200,7 +206,8 @@ function Formulario({
 }) {
   const { c, t } = useTheme();
   const cumplidas = cumplidasDe(vista);
-  const pendientes = pendientesDe(vista);
+  const aPreguntar = aPreguntarDe(vista);
+  const porLlegar = porLlegarDe(vista);
 
   return (
     <>
@@ -212,16 +219,19 @@ function Formulario({
           {cumplidas.map(accion => (
             <LineaCumplida key={accion.id} accion={accion} />
           ))}
-          {pendientes.map(accion => (
+          {aPreguntar.map(accion => (
             <TarjetaPendiente key={accion.id} accion={accion} hoja={hoja} />
           ))}
-          {pendientes.length === 0 ? (
-            <Text style={[t.body, { color: c.textSoft }]}>No te quedó nada pendiente. No hace falta responder nada.</Text>
+          {porLlegar.map(accion => (
+            <LineaPorLlegar key={accion.id} accion={accion} />
+          ))}
+          {aPreguntar.length === 0 ? (
+            <Text style={[t.body, { color: c.textSoft }]}>{porLlegar.length === 0 ? TEXTO_SIN_PENDIENTES : TEXTO_SOLO_POR_LLEGAR}</Text>
           ) : null}
         </View>
       )}
 
-      {pendientes.length === 0 ? (
+      {aPreguntar.length === 0 ? (
         <View style={{ gap: 6 }}>
           <MicroLabel>Tu nota del día</MicroLabel>
           <CampoDeNota
@@ -261,6 +271,26 @@ function LineaCumplida({ accion }: { accion: AccionDelCierre }) {
       <Icon name="check" size={TAMANO_ICONO.chico} color={c.success} />
       <Text style={[t.body, { flex: 1, color: c.textStrong, fontSize: 16 }]}>{accion.titulo}</Text>
       {hora ? <Text style={[t.small, { color: c.textSoft, fontVariant: ['tabular-nums'] }]}>{hora}</Text> : null}
+    </View>
+  );
+}
+
+/** Una pendiente cuya hora todavía no llega: se ve, para que no parezca que falta, pero no se pregunta. */
+function LineaPorLlegar({ accion }: { accion: AccionDelCierre }) {
+  const { c, t } = useTheme();
+  const hora = accion.horaInicio ? accion.horaInicio.slice(0, 5) : null;
+  const cuando = hora ? `Es a las ${hora} · todavía no llega` : 'Todavía no llega';
+  return (
+    <View
+      style={[estilos.lineaCumplida, { backgroundColor: c.cardBgAlt }]}
+      accessible
+      accessibilityLabel={`${accion.titulo}, ${cuando.toLowerCase()}, no hace falta responder`}
+    >
+      <Icon name="clock" size={TAMANO_ICONO.chico} color={c.textSoft} />
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={[t.body, { color: c.textStrong, fontSize: 16 }]}>{accion.titulo}</Text>
+        <Text style={[t.small, { color: c.textSoft, fontVariant: ['tabular-nums'] }]}>{cuando}</Text>
+      </View>
     </View>
   );
 }

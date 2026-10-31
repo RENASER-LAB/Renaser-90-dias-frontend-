@@ -578,6 +578,57 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       Sin dependencias nuevas ni código nativo.
     * **Hace falta el backend con la spec 017 (V121) antes y un APK nuevo** (la app no se actualiza por aire). Contra un backend anterior no
       aparece la fila ni la sección y Training queda como hoy.
+    > **Corregido 2026-10-30 (pedido del dueño: «Cierra tu día» está siempre y no depende de Dormir).** Textual: «el tema de Dormir, y que
+    > salga ahí "Cerrar tu día", está mal. Motivo: personas que trabajan en la noche o de día. No debiste juntar lógica de ese lado… como
+    > botón: ingresa "Cerrar el día", y es todos los días, y debe guardarse y mostrarse en su ficha». La entrada de arriba decía que la fila
+    > era «la última de hoy, a la hora de Dormir de hoy **menos 30 minutos**, y **a las 21:30 si Dormir no tiene hora**» (00:00 si Dormir cae
+    > pasada la medianoche), que se calculaba en la app (`cierre/utils/horaDelCierre`), que «antes de su hora no existe y **no se lee nada**
+    > del cierre», que «se ordena por hora entre el resto» y que la fila llevaba hora. Eso **ya no rige**. Lo que cambia y nada más:
+    > * **La fila está SIEMPRE**, todos los días y a cualquier hora, como **la última fila de la lista de hoy en Training**: después de todo
+    >   lo del día, también de lo atrasado, de «N hechos hoy» (plegado o abierto) y de Dormir. **No depende** de Despertar, de Dormir ni de
+    >   ninguna hora, y **no lleva hora**: ni «22:00» ni otra calculada. La columna de la hora queda vacía —guarda el lugar para que la
+    >   tarjeta alinee con las de arriba— y lo que oye el lector de pantalla empieza por «Cierra tu día» (ya no dice «Sin hora»). Ya cerrada,
+    >   la hora en que se cerró se dice en su texto («Cerrado a las 23:50»), no en la columna. Un día anterior también va de última y sin
+    >   hora.
+    > * **Dónde**: se borró `cierre/utils/horaDelCierre` (y su prueba). `armarListaDelDia` entrega el cierre aparte (`cierre`, nuevo campo
+    >   de `ListaDelDia`; ya no está en `enCurso`) y `ListaDeHoy` lo dibuja al final. `TrainingPorHora` lee el cierre de hoy en cuanto
+    >   Training está a la vista (antes esperaba a su hora). `itemDelCierreDeHoy(hoyIso, vista)` ya no recibe hora.
+    > * **Sigue igual**: la hoja, lo cumplido que llega marcado y solo se pregunta por lo pendiente y por mañana, que no da puntos ni cumple
+    >   acciones y es opcional, el verde al cerrar (tocarla de nuevo abre la hoja para cambiarlo), «Cerrado» / «Sin cerrar» en los días
+    >   anteriores (que no se cierran tarde, D-259), el 409 que recarga y avisa sin reasignar el cierre, y las fichas del mentor, el líder y
+    >   Administración («Cierres del día»). **El día sigue siendo el día calendario de la persona** (su zona).
+    > * **Sin lectura no hay fila** (backend anterior: 404; interruptor `plan` apagado; mientras no se sabe): eso no cambia.
+    > * **Casos de quien trabaja de noche, descritos y probados sin inventar regla** (`cierreEnTraining.test.ts`, «caso 1…4», y
+    >   `cierresDelDia.test.ts`): (1) turno de noche (Despertar 16:00, Dormir 08:00) que cierra a las 23:50: se guarda en el día de hoy y la
+    >   fila queda verde; (2) a las 00:30 o las 02:00 del día siguiente ve el día **nuevo**, la fila es la del día nuevo y cerrar guarda
+    >   ese; el día anterior queda «Sin cerrar» y ya no se cierra (409); una hoja abierta al pasar la medianoche se cierra y no envía nada;
+    >   (3) cerrar temprano (06:00) se puede: el servidor pide respuesta por cada acción que **siga pendiente** en ese momento, aunque su hora
+    >   no haya llegado (la hoja dice «Era a las 20:30 · quedó pendiente»); si después cumple algo, el día sigue cerrado y se puede reabrir
+    >   y cambiar el mismo día; (4) un día normal que cierra a las 21:00 se ve en la ficha. Qué conviene hacer en cada uno es del dueño
+    >   (preguntas en el informe de esta corrección y en D-290 del backend).
+    > * **Hace falta un APK nuevo** (solo JavaScript; la app no se actualiza por aire). Backend: sin cambios (nunca validó una hora).
+    >
+    > **Corregido 2026-10-30, segunda parte (decisiones del dueño sobre los casos de quien trabaja de noche).** (1) *Cerrar después de
+    > medianoche: se queda como está* («déjalo como está; con los hábitos, lo de no cruzar el horario ya se soluciona para esas
+    > personas»): el día es el del calendario, el anterior queda «Sin cerrar» y no se cierra tarde; sin código nuevo. (2) *Cerrar temprano:
+    > se pregunta SOLO por las acciones cuya hora ya pasó.* Lo de arriba decía que la hoja preguntaba por **cada acción que quedó
+    > pendiente**. Ahora solo por las pendientes **cuya hora ya llegó** o **sin hora** (esas se preguntan como siempre); las de hora futura
+    > no se preguntan ni se exigen. La decisión la toma el **servidor** (con su reloj y la zona de la persona) y la dice en
+    > `exigeRespuesta` de cada acción de `GET /rocks/day-closure` (`AccionDelCierre.exigeRespuesta`, opcional: sin el dato —un backend
+    > anterior— se pregunta por todas); la app no compara horas ni usa el reloj del teléfono. Qué cambia en la hoja:
+    > * **Una pendiente de hora futura** se ve como una línea quieta (`LineaPorLlegar`: reloj, su nombre y «Es a las 20:30 · todavía no
+    >   llega»), sin chips ni nota. «Guardar mi cierre» no la espera, el `PUT` no la lleva, y con solo de esas el texto dice «Lo que falta por
+    >   hacer todavía no llega a su hora. No hace falta responder nada.» y se ofrece la nota del día. «Era a las 20:30 · quedó pendiente» queda
+    >   para las que sí se preguntan (su hora ya pasó). Textos nuevos en tipo oración y tuteo; sin íconos nuevos (`clock`).
+    > * **Si la hora llega con la hoja abierta**, el servidor responde 400 («Cuenta qué pasó con «X»…»): la hoja relee el día **sin perder lo
+    >   ya elegido**, la acción nueva aparece con sus preguntas y se avisa con «Falta una respuesta» («Entendido», sin «Reintentar» a
+    >   ciegas; resultado `falta` de `useHojaDelCierre`).
+    > * **Dónde**: `cierre/utils/borradorDelCierre` (`aPreguntarDe`, `porLlegarDe`; `loQueFalta` y `cuerpoDelCierre` usan solo las
+    >   preguntadas), `cierre/api/cierreSchemas` (campo opcional y tolerante), `cierre/components/HojaDelCierre`, `cierre/hooks/useHojaDelCierre`.
+    >   Pruebas: `hojaDelCierre.test.ts` y `cierreEnTraining.test.ts` (a las 06:00 no pregunta por la de las 20:30 y a las 21:00 sí).
+    > (3) *Cerrar temprano y luego cumplir una acción: se queda como está.* El cierre sigue verde y se puede reabrir; lo que dijo de la
+    > acción cumplida ya no se muestra. **Hace falta el backend con esta corrección** para que las de hora futura no se exijan (un backend
+    > anterior las exige: la app, sin `exigeRespuesta`, pregunta por todas) y un APK nuevo.
   * **Cambio por pedido del dueño — 2026-10-29 — tab `Hoy` (personal con más de un papel) y la ficha del líder
     (spec 018)** (spec, plan y vista previa aprobada en `Renaser-90-dias-backend/specs/018-lider-limpio/`; decisión D-291 del
     backend). Comentario del equipo que el dueño pegó: «[la líder] tiene mucho para ingresar, debería de verse por aprender,

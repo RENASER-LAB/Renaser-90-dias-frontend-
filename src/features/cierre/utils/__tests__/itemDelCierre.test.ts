@@ -49,13 +49,13 @@ describe('lo que dijo para mañana, en una línea', () => {
 });
 
 describe('el ítem de hoy', () => {
-  it('sin cerrar: «Cierra tu día», a su hora, sin puntos, sin guía, ni hecho', () => {
-    const item = itemDelCierreDeHoy('2026-10-29', '22:00', cierre([], { estado: 'ABIERTO', cerradoEn: null }));
+  it('sin cerrar: «Cierra tu día», SIN hora, sin puntos, sin guía, ni hecho', () => {
+    const item = itemDelCierreDeHoy('2026-10-29', cierre([], { estado: 'ABIERTO', cerradoEn: null }));
     expect(item).toMatchObject({
       clave: 'cierre-2026-10-29',
       tipo: 'cierre',
       titulo: 'Cierra tu día',
-      hora: '22:00',
+      hora: null,
       hecho: false,
       icono: 'moon',
       puntos: null,
@@ -64,9 +64,10 @@ describe('el ítem de hoy', () => {
     });
   });
 
-  it('cerrado: «Día cerrado», hecho, con lo de mañana y la hora en que cerró', () => {
-    const item = itemDelCierreDeHoy('2026-10-29', '22:00', cierre([accion('b', 'Revisar las facturas', 'OTRA_HORA')]));
+  it('cerrado: «Día cerrado», hecho, con lo de mañana y la hora en que cerró (no una hora de la fila)', () => {
+    const item = itemDelCierreDeHoy('2026-10-29', cierre([accion('b', 'Revisar las facturas', 'OTRA_HORA')]));
     expect(item.titulo).toBe('Día cerrado');
+    expect(item.hora).toBeNull();
     expect(item.hecho).toBe(true);
     expect(item.cierre?.estado).toBe('CERRADO');
     expect(item.cierre?.lineaDeManana).toBe('Mañana: «Revisar las facturas» a otra hora');
@@ -75,9 +76,9 @@ describe('el ítem de hoy', () => {
 });
 
 describe('el ítem de un día anterior', () => {
-  it('«Cerrado» con la hora del cierre', () => {
+  it('«Cerrado» sin hora de fila: cuándo cerró lo dice su texto (`cerradoA`)', () => {
     const item = itemDelCierreDeUnDiaAnterior('2026-10-28', cierre([], { fecha: '2026-10-28' }));
-    expect(item).toMatchObject({ clave: 'cierre-2026-10-28', hecho: true, hora: '22:02', cierre: { estado: 'CERRADO' } });
+    expect(item).toMatchObject({ clave: 'cierre-2026-10-28', hecho: true, hora: null, cierre: { estado: 'CERRADO', cerradoA: '22:02' } });
   });
 
   it('«Sin cerrar» no tiene hora (no se inventa una)', () => {
