@@ -2,7 +2,7 @@ import { describe, expect, it, jest } from '@jest/globals';
 import fs from 'fs';
 import path from 'path';
 import React from 'react';
-import TestRenderer, { act } from 'react-test-renderer';
+import TestRenderer, { act, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer';
 
 /**
  * Las pantallas del líder llevan todas la misma cabecera que «Mis mentores» y Administración: «‹ Título» (`CabeceraAdmin`), no
@@ -30,17 +30,17 @@ const leer = (relativo: string) => fs.readFileSync(path.join(RAIZ, relativo), 'u
 describe('la barra de las pantallas del líder', () => {
   it('es la cabecera «‹ Título» de Administración y su botón vuelve', () => {
     const volver = jest.fn();
-    let r!: TestRenderer.ReactTestRenderer;
+    let r!: ReactTestRenderer;
     act(() => {
       r = TestRenderer.create(React.createElement(BarraDelLider, { titulo: 'Todos los aprendices', onVolver: volver }));
     });
-    expect(r.root.findAllByType(CabeceraAdmin)).toHaveLength(1);
+    expect(r.root.findAll((n: ReactTestInstance) => n.type === CabeceraAdmin)).toHaveLength(1);
     const texto = r.root
-      .findAll(n => (n.type as unknown) === 'Text')
-      .map(n => React.Children.toArray(n.props.children).join(''));
+      .findAll((n: ReactTestInstance) => (n.type as unknown) === 'Text')
+      .map((n: ReactTestInstance) => React.Children.toArray(n.props.children).join(''));
     expect(texto).toContain('Todos los aprendices');
     expect(texto).not.toContain('VOLVER');
-    const boton = r.root.findAll(n => n.props.accessibilityLabel === 'Volver' && typeof n.props.onPress === 'function')[0];
+    const boton = r.root.findAll((n: ReactTestInstance) => n.props.accessibilityLabel === 'Volver' && typeof n.props.onPress === 'function')[0];
     act(() => boton.props.onPress());
     expect(volver).toHaveBeenCalledTimes(1);
   });
