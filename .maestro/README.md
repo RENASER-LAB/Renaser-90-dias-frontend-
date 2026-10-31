@@ -9,6 +9,8 @@ local (nunca contra producción).
   cuenta que pide el flujo (`# cuenta: aprendiz|admin`, arriba del archivo).
 - `comun/`: subflujos (`ya-adentro`, despejar capas, abrir Cuerpo, tomar una foto con la cámara del emulador).
 - `regresion/`: un flujo por caso, ordenados por número. Cada uno dice arriba qué prueba y su precondición.
+- `guia-de-ser/` (issue #50): la guía de arranque de SER no se monta sobre el panel de SER y «Ahora no» responde. Pide una
+  cuenta de aprendiz con el Día 1 elegido y sin el Pacto firmado; ver su `README.md`.
 - `interruptores/` (spec 002): el aviso de mantenimiento en Tribu, el Muro, Training y SER. **No corren solos**: cada uno
   necesita que antes se apague una funcionalidad por la consola Soporte TI (lo dice arriba de cada archivo) y que después
   se vuelva a prender. Se corren de a uno, `.maestro/correr.sh .maestro/interruptores/<flujo>.yaml`, con la precondición

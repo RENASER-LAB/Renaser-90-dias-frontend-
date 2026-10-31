@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -10,6 +10,7 @@ import { useCapaObligatoria } from '../../../navigation/capasObligatorias';
 import { useResponsive } from '../../../theme/responsive';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useAuth } from '../../auth/context/AuthContext';
+import { useHayPanelDeSerAbierto } from '../../renasia/state/panelDeSerAbierto';
 import { PactoScreen } from '../../onboarding/screens/PactoScreen';
 import {
   ANTESALA_PACTO,
@@ -19,6 +20,7 @@ import {
   saludoDeBienvenida,
 } from '../data/asistente';
 import { useArranqueGuiado } from '../hooks/useArranqueGuiado';
+import { esPasoAccionable, reabreLaGuia, tarjetaPendiente, tarjetaVisible as tarjetaSeDibuja, type PasoAccionable } from '../utils/tarjetaDelArranque';
 
 /**
  * El acompañamiento del arranque, sobrepuesto a la app.
@@ -60,20 +62,39 @@ export function SparkieOverlay() {
   /** El Pacto se muestra a pantalla completa, encima de todo. */
   const [pactoAbierto, setPactoAbierto] = useState(false);
 
-  // Cambiar de paso siempre vuelve a llamar la atención: minimizar "publicá tu primer post" no
-  // puede dejar escondido el Pacto, que es el paso que de verdad hay que cerrar.
+  // Cambiar de paso vuelve a llamar la atención: minimizar "publica tu primer post" no puede dejar
+  // escondido el Pacto, que es el paso que de verdad hay que cerrar. Pero solo cuenta AVANZAR de un paso
+  // a otro. Pasar por "ninguno" (cualquier lectura que falla al volver de la cámara o de segundo plano)
+  // y regresar al mismo paso no es avanzar: antes reabría la guía sola, encima de lo que la persona
+  // estuviera haciendo, que es lo que pasó con el panel de SER (issue #50).
+  const ultimoPaso = useRef<PasoAccionable | null>(null);
   useEffect(() => {
-    setMinimizado(false);
+    if (reabreLaGuia(ultimoPaso.current, estado.paso)) setMinimizado(false);
+    if (esPasoAccionable(estado.paso)) ultimoPaso.current = estado.paso;
   }, [estado.paso]);
 
-  const tarjetaVisible = habilitado && !pactoAbierto && !minimizado
-    && (estado.paso === 'PUBLICAR_PRIMER_POST' || estado.paso === 'FIRMAR_PACTO');
+  // Otra cuenta (o la misma después de salir) empieza el arranque de cero: la guía le toca completa.
+  useEffect(() => {
+    if (habilitado) return;
+    ultimoPaso.current = null;
+    setMinimizado(false);
+  }, [habilitado]);
+
+  // El panel de SER es un `Modal` a pantalla completa. Una guía abierta con el chat a la vista se monta
+  // ENCIMA de él (la ventana nueva queda arriba) y, en Android, su «Ahora no» no recibía el toque. La
+  // guía espera a que el chat se cierre; no se pierde, no se minimiza: aparece al volver.
+  const panelDeSerAbierto = useHayPanelDeSerAbierto();
+
+  const entradaDeLaTarjeta = { habilitado, minimizado, pactoAbierto, paso: estado.paso };
+  const tarjetaVisible = tarjetaSeDibuja({ ...entradaDeLaTarjeta, panelDeSerAbierto });
 
   // D-218: con la tarjeta del arranque o el Pacto a la vista, tocar un aviso no navega por debajo:
   // espera a que se guarde la tarjeta o se firme el Pacto. Minimizada (la burbuja) ya no frena nada.
-  useCapaObligatoria('arranqueGuiado', habilitado && (tarjetaVisible || pactoAbierto));
+  // También cuenta la tarjeta que espera a que se cierre el chat de SER: sigue siendo lo pendiente.
+  useCapaObligatoria('arranqueGuiado', habilitado && (tarjetaPendiente(entradaDeLaTarjeta) || pactoAbierto));
 
-  // Gesto lateral / botón atrás con la tarjeta abierta: la guarda, nunca cierra la app.
+  // Gesto lateral / botón atrás con la tarjeta abierta: la guarda, nunca cierra la app. Solo con la
+  // tarjeta a la vista: con el panel de SER abierto el «atrás» es del panel.
   useSystemBackHandler(() => {
     setMinimizado(true);
     return true;

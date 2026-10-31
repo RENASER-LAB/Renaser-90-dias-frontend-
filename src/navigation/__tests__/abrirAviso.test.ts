@@ -177,7 +177,8 @@ describe('las capas se anotan de verdad', () => {
   it('el Código Renaser y el arranque guiado (con el Pacto) se declaran capas obligatorias', () => {
     expect(fuente('features/radar/components/CodigoRenaserOverlay.tsx')).toContain("useCapaObligatoria('codigoRenaser', visible)");
     expect(fuente('features/sparkie/components/SparkieOverlay.tsx')).toMatch(
-      /useCapaObligatoria\('arranqueGuiado', habilitado && \(tarjetaVisible \|\| pactoAbierto\)\)/,
+      // Issue #50: cuenta también la tarjeta que espera a que se cierre el panel de SER (sigue pendiente).
+      /useCapaObligatoria\('arranqueGuiado', habilitado && \(tarjetaPendiente\(entradaDeLaTarjeta\) \|\| pactoAbierto\)\)/,
     );
   });
 

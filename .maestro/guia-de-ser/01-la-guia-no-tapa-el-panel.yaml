@@ -1,0 +1,71 @@
+# 01 — La guía de arranque («✳ SER») no se monta sobre el panel de SER y «Ahora no» funciona (issue #50).
+# Precondición: el aprendiz ya eligió su Día 1 pero NO firmó el Pacto ni publicó su primer post (si no, no hay guía).
+# Una cuenta que ya publicó ve «Ya eres parte.» en vez de «Tu primera publicación»: el flujo vale igual, el botón es el mismo.
+# cuenta: aprendiz
+#
+# Lo que prueba, en este orden:
+#   1. «Ahora no» deja la guía en su burbuja.
+#   2. Con el panel de SER abierto, salir de la app y volver (la lectura del arranque se repite al volver) NO deja la
+#      guía encima del chat, y el chat sigue ahí.
+#   3. Cerrar el panel NO reabre una guía pospuesta: sigue la burbuja.
+#   4. La burbuja reabre la guía y «Ahora no» la cierra (el toque responde).
+#
+# A mano (Maestro no puede cambiar el servidor): con la guía pospuesta y el panel abierto, publicar un post desde otra
+# sesión de la misma cuenta; en ≤ 8 s el arranque pasa a «Firmar el Pacto». Con el panel abierto NO debe aparecer nada
+# encima; al cerrarlo, aparece «Ya eres parte.» y «Más tarde» responde.
+appId: com.renaser.app
+---
+- runFlow: ../comun/despejar-capas.yaml
+# La guía llega unos segundos después de entrar (tres lecturas al servidor): se espera a verla o a que se vea la barra.
+- extendedWaitUntil:
+    visible: "Posponer la guía de SER"
+    timeout: 20000
+    optional: true
+- runFlow:
+    when:
+      visible: "Posponer la guía de SER"
+    commands:
+      - tapOn: "Posponer la guía de SER"
+- extendedWaitUntil:
+    visible: "Volver a la guía de SER"
+    timeout: 10000
+- takeScreenshot: 01a-guia-pospuesta
+
+# 2. El panel abierto, y salir y volver a la app.
+- tapOn: "Hablar con SER, tu acompañante.*"
+- extendedWaitUntil:
+    visible: "Cerrar SER"
+    timeout: 15000
+- pressKey: home
+- launchApp:
+    appId: com.renaser.app
+    stopApp: false
+# La lectura del arranque se repite al volver al frente: se le da tiempo a terminar (y a equivocarse, si pudiera).
+- waitForAnimationToEnd:
+    timeout: 6000
+- extendedWaitUntil:
+    visible: "Cerrar SER"
+    timeout: 15000
+- assertNotVisible: "Posponer la guía de SER"
+- assertNotVisible: "Más tarde"
+- takeScreenshot: 01b-panel-sin-guia-encima
+
+# 3. Cerrar el panel: la guía pospuesta sigue en su burbuja y no se reabre sola.
+- tapOn: "Cerrar SER"
+- extendedWaitUntil:
+    visible: "Volver a la guía de SER"
+    timeout: 10000
+- assertNotVisible: "Posponer la guía de SER"
+
+# 4. La burbuja reabre la guía y «Ahora no» responde.
+- tapOn: "Volver a la guía de SER"
+- extendedWaitUntil:
+    visible: "Posponer la guía de SER"
+    timeout: 10000
+- takeScreenshot: 01c-guia-reabierta
+- tapOn: "Posponer la guía de SER"
+- extendedWaitUntil:
+    visible: "Volver a la guía de SER"
+    timeout: 10000
+- assertNotVisible: "Posponer la guía de SER"
+- takeScreenshot: 01d-guia-pospuesta-otra-vez

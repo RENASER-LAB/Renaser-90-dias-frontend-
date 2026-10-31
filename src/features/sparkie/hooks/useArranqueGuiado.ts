@@ -46,7 +46,18 @@ export function useArranqueGuiado(habilitado: boolean) {
    */
   const terminadoRef = useRef(false);
 
+  /**
+   * Número de la última revisión que arrancó. Las revisiones se pisan: el sondeo de 8 s, el regreso de
+   * segundo plano (la cámara, por ejemplo) y el aviso de «publicó» pueden dejar dos en vuelo, y la que
+   * llega última NO siempre es la que arrancó última (una puede fallar rápido y la otra tardar). Solo la
+   * más nueva escribe el estado: una respuesta vieja no puede deshacer lo que dijo la nueva (issue #50:
+   * la guía saltaba sola porque el paso iba y volvía entre «ninguno» y «publicar»).
+   */
+  const secuenciaRef = useRef(0);
+
   const revisar = useCallback(async () => {
+    const mia = ++secuenciaRef.current;
+    const vigente = () => mia === secuenciaRef.current;
     if (!habilitado || terminadoRef.current) {
       setEstado({ paso: 'NINGUNO' });
       return;
@@ -56,6 +67,7 @@ export function useArranqueGuiado(habilitado: boolean) {
       // en el caso guiado: quien ya lo firmó es la enorme mayoría y para siempre, y no hay por qué
       // cobrarle tres llamadas en cada arranque de la app para dibujar algo que nunca va a ver.
       const estadoOnboarding = await onboardingApi.obtenerEstado();
+      if (!vigente()) return;
       if (estadoOnboarding.pactSignedAt) {
         terminadoRef.current = true;
         setEstado({ paso: 'NINGUNO' });
@@ -68,6 +80,7 @@ export function useArranqueGuiado(habilitado: boolean) {
         onboardingApi.consultarActivacionPrograma(),
         wallApi.contarMisPublicaciones(),
       ]);
+      if (!vigente()) return;
 
       // Sin Día 1 elegido no hay nada que acompañar: el aprendiz todavía está en el paso anterior
       // (`ActivarProgramaScreen`), y el saludo llegaría antes de tiempo.
@@ -78,6 +91,7 @@ export function useArranqueGuiado(habilitado: boolean) {
 
       setEstado({ paso: conteoPosts > 0 ? 'FIRMAR_PACTO' : 'PUBLICAR_PRIMER_POST' });
     } catch (error) {
+      if (!vigente()) return;
       // Acompañar es decoración: si no se pudo averiguar en qué punto está, la app se usa como
       // siempre. Nunca bloquear ni tapar la pantalla por no saber (mismo criterio que
       // `useArranqueDelPrograma`).
@@ -122,6 +136,8 @@ export function useArranqueGuiado(habilitado: boolean) {
   /** La firma del Pacto ya quedó guardada: se cierra el arranque sin esperar otra vuelta de red. */
   const marcarPactoFirmado = useCallback(() => {
     terminadoRef.current = true;
+    // Una lectura que ya salió (y que todavía dice «firmar el Pacto») no puede volver a abrir la guía.
+    secuenciaRef.current += 1;
     setEstado({ paso: 'NINGUNO' });
   }, []);
 
