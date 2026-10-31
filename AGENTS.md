@@ -275,6 +275,10 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
       «Solo hoy» / «Hasta que yo lo reactive» y las specs 008 a 011—, la lista de sus hábitos (tocar uno abre su editor
       en Planificar: prop nueva y opcional `abrirEnHabitoId`) y «Cambiar nombre» en las dos bebidas renombrables
       (D-127). Las acciones de los objetivos se siguen planificando en Plan.
+      > **Corregido 2026-10-31 (pedido del dueño).** Lo de «cada una abre su detalle», la lista de sus hábitos, la prop
+      > `abrirEnHabitoId` y «Cambiar nombre» en esa lista **ya no es cierto**: tocar una dimensión abre DIRECTO la hoja
+      > «Planificar <dimensión>» y «Cambiar nombre» pasó al editor de cada bebida. `abrirEnHabitoId` se borró (nadie más la
+      > usaba). Ver «tab `Training` → Tus prácticas: la dimensión abre Planificar directo», al final de esta lista.
     * **No cambia**: cómo se registra cada tipo ni los pedidos al servidor, `habitoCumplido`, la actualización al
       cambiar de día (`useActualizacionDelDia`), abrir desde un aviso, los momentos del check y el «+N pts», las
       confirmaciones en línea, el interruptor `habitos` de Soporte TI, la barra que se esconde al desplazar, la invitación
@@ -3252,6 +3256,44 @@ Actúa como un Desarrollador Móvil Senior y Diseñador UX/IA de Alto Nivel espe
     * **Pruebas:** `fotoTrasMorirElProceso.test.ts`, `fotoHuerfanaDeLaCamara.test.ts`, `subidaDeEvidencia.test.ts`,
       `reintentarTrasFalloDeRed.test.ts`; Maestro `regresion/12-foto-tras-matar-la-app.yaml` y `13-reintentar-sube-la-foto.yaml`.
     * **Hace falta un APK nuevo** (solo JavaScript: no hay código nativo nuevo, pero la app no se actualiza por aire).
+
+  * **Cambio por pedido del dueño — 2026-10-31 — tab `Training` → Tus prácticas: la dimensión abre Planificar directo**
+    (solo visual y de navegación; sin backend). Textual: «más simple, como dijiste: sacar lo de Planificar cuando entres a
+    una categoría; no requiere nada de código backend, solo es visual». Eligió la opción A de la vista «Tus prácticas, sin la
+    lista repetida»: la lista de hábitos salía dos veces (en el detalle de la dimensión y en «Planificar»). Lo que cambia y
+    nada más:
+    * **Tocar una dimensión en «Tus prácticas» abre DIRECTO la hoja «Planificar <dimensión>»** (`PlanificarDimensionModal`,
+      `HojaDesdeAbajo tamano="completa"`, la de siempre: «Sin hora todavía» y «Tu día», interruptores, pausa «Solo hoy» /
+      «Hasta que yo lo reactive», editor y «Crear un hábito»). Se quitó la pantalla del detalle intermedio con la tarjeta
+      «Planificar Cuerpo», «Tus hábitos (N)» y «Aquí solo se planifica. Para registrar, vuelve a Training.». Cerrar la hoja
+      (✕, arrastrar, el atrás del sistema, o guardar) vuelve a «Tus prácticas». La raíz sigue igual: «Arma tu semana los
+      domingos» y las cinco dimensiones con su avance.
+    * **«Cambiar nombre» pasó al editor del hábito**, solo en las dos bebidas renombrables (D-127: Agua tibia con limón y
+      Jugo verde; misma regla `esRenombrable`, misma hoja `RenombrarHabitoModal` y mismo `useRenombreLocal`: guarda en el
+      servidor y después en el teléfono). Va arriba del editor, junto al nombre que lleva el título de la hoja: `pencil` de
+      18, texto de 16 y área de 48; dice «Cambiar o quitar el nombre» si ya tiene uno propio. `PlanificarDimensionModal`
+      recibe `renombre` (prop opcional) y con el nombre propio lo muestra en el título del editor, en la fila de la lista,
+      en «Pausar…» y en los avisos de guardado, sin recargar. Las alarmas siguen con el título del catálogo, como hoy.
+    * **Vida y negocio** también abre la hoja; su aviso «Las acciones de tus objetivos se planifican en Plan, al agendarlas.»
+      (el mismo texto de antes) lo dice ahora la hoja cuando la dimensión no tiene hábitos. Sin hábitos en otra dimensión
+      sigue «Todavía no hay hábitos en esta dimensión.» con «Crear un hábito».
+    * **El atrás del sistema sube un nivel por vez** (AGENTS.md §6): editor → lista de la hoja (la ‹ y el atrás de la hoja)
+      → «Tus prácticas» (se cierra la hoja) → Training. `navegacionDePracticas` pierde el nivel de la dimensión y el de
+      «planificando»: el estado es solo `{ abierta, dimension }`, y `dimension` con valor es la hoja abierta.
+    * **Se borró** (sin uso): del detalle, todo el bloque de `PracticasDeTraining` (tarjeta «Planificar», lista de hábitos,
+      «Cambiar nombre» y el `RenombrarHabitoModal` de ahí); de `PlanificarDimensionModal`, la prop `abrirEnHabitoId` y toda
+      su maquinaria (`soloUnHabito`, `cargaVigente`, `editorDirectoAbierto`, `yaAbrioElHabito`,
+      `habitoDirectoNoEncontrado`, `cerrarElHabitoDirecto` y el «Abriendo…»): solo la usaba «Tus prácticas». El aviso del
+      teléfono que abre un hábito (`aperturaDesdeAviso.habitoAAbrir`) abre su fila en Training, no Planificar: no cambia.
+    * **No cambia**: la hoja de Planificar por dentro (hora, días, «No hacerlo los…», recordatorio, cómo suena, guardar,
+      pausa, crear un hábito: specs 008 a 011), la pantalla principal de Training, Plan, ningún pedido al servidor ni
+      animación nueva (la hoja ya tenía las suyas).
+    * **Pruebas**: `navegacionDePracticas.test.ts`, `practicasSinRegistro.test.ts` (la dimensión abre la hoja, sin detalle),
+      `planificarCambiarNombre.test.ts` («Cambiar nombre» en el editor y el nombre nuevo en la lista) y Maestro
+      `.maestro/training-por-hora/12-practicas-dimension-directo-y-cambiar-nombre.yaml` (se actualizaron también el 10,
+      `regresion/08` y `comun/abrir-cuerpo.yaml`).
+    * **Hace falta un APK nuevo** (solo JavaScript: ni `package.json`, ni `app.json`, ni código nativo; la app no se
+      actualiza por aire). Backend nuevo, ninguno.
 
 ## 2. 📱 RESPONSIVIDAD UNIVERSAL (XIAOMI, ANDROID, IOS Y TABLETS)
 * **Cero Doble Scroll**: NUNCA coloques un contenedor con `maxHeight` fijo o scroll interno dentro de otro `ScrollView`. Toda pantalla debe tener UN ÚNICO contenedor de scroll fluido con `contentContainerStyle={{ flexGrow: 1, paddingBottom: 36 }}`.

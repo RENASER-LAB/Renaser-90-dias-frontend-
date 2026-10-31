@@ -1,0 +1,97 @@
+# T12 — «Tus prácticas»: tocar una dimensión abre DIRECTO «Planificar <dimensión>» (sin la pantalla de detalle que repetía la
+# lista), «Cambiar nombre» vive en el editor de Jugo verde (D-127) y el atrás del sistema sube un nivel por vez:
+# editor → lista de la hoja → «Tus prácticas» → Training. Cambio del dueño del 2026-10-31 (solo visual y de navegación).
+# Precondición: un aprendiz con «Jugo verde» en Cuerpo y SIN nombre propio (el flujo lo cambia y lo deja como estaba; si se
+# corta a la mitad, «Volver al nombre original» en el editor lo repone). Textos cortos a propósito (ver ../README.md).
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- runFlow: ../comun/abrir-training.yaml
+- tapOn: "Tus prácticas: planificar"
+- extendedWaitUntil:
+    visible: "Tus prácticas"
+    timeout: 15000
+- assertVisible: "Cuerpo: .* de .* cumplidos hoy"
+- takeScreenshot: T12a-tus-practicas
+
+# 1. La dimensión abre la hoja de Planificar directo: sus grupos e interruptores, y nada del detalle de antes.
+- tapOn: "Cuerpo: .* de .* cumplidos hoy"
+- extendedWaitUntil:
+    visible: "Toca uno para cambiarle la hora\\."
+    timeout: 15000
+- assertVisible: "Planificar Cuerpo"
+- assertNotVisible: "Tus hábitos \\(.*"
+- assertNotVisible: "Aquí solo se planifica.*"
+- assertNotVisible: "Cambiar nombre"
+- takeScreenshot: T12b-planificar-cuerpo-directo
+
+# 2. «Cambiar nombre» está en el editor de Jugo verde (no en la lista), arriba, junto al nombre.
+- tapOn: "(?i)jugo verde, (a las .*|sin hora)"
+- extendedWaitUntil:
+    visible: "Guardar .*"
+    timeout: 15000
+- assertVisible: "Cambiar nombre"
+- takeScreenshot: T12c-editor-con-cambiar-nombre
+- tapOn: "Cambiar nombre"
+- extendedWaitUntil:
+    visible: "Guardar el nombre"
+    timeout: 15000
+- tapOn: "Cómo lo vas a llamar"
+- inputText: "Jugo suave"
+- hideKeyboard
+- tapOn: "¿Por qué te queda mejor así?"
+- inputText: "Me cae mal"
+- hideKeyboard
+- takeScreenshot: T12d-hoja-de-renombre
+- tapOn: "Guardar el nombre"
+- extendedWaitUntil:
+    notVisible: "Guardar el nombre"
+    timeout: 20000
+# El nombre nuevo se ve en el editor, sin recargar, y ahora ofrece cambiarlo o quitarlo.
+- assertVisible: "Jugo suave"
+- assertVisible: "Cambiar o quitar el nombre"
+- takeScreenshot: T12e-editor-con-el-nombre-nuevo
+
+# 3. El atrás del sistema, un nivel por vez. Del editor a la lista de la hoja: la fila ya dice el nombre nuevo.
+- back
+- extendedWaitUntil:
+    visible: "Toca uno para cambiarle la hora\\."
+    timeout: 15000
+- assertVisible: "Jugo suave, a las .*|Jugo suave, sin hora"
+- assertNotVisible: "(?i)jugo verde, (a las .*|sin hora)"
+- takeScreenshot: T12f-lista-con-el-nombre-nuevo
+
+# Se repone el nombre original (y de paso se prueba «Volver al nombre original»).
+- tapOn: "Jugo suave, (a las .*|sin hora)"
+- extendedWaitUntil:
+    visible: "Cambiar o quitar el nombre"
+    timeout: 15000
+- tapOn: "Cambiar o quitar el nombre"
+- extendedWaitUntil:
+    visible: "Volver al nombre original"
+    timeout: 15000
+- tapOn: "Volver al nombre original"
+- extendedWaitUntil:
+    notVisible: "Volver al nombre original"
+    timeout: 20000
+- assertVisible: "Cambiar nombre"
+- assertNotVisible: "Cambiar o quitar el nombre"
+- back
+- extendedWaitUntil:
+    visible: "Toca uno para cambiarle la hora\\."
+    timeout: 15000
+- assertVisible: "(?i)jugo verde, (a las .*|sin hora)"
+
+# De la lista de la hoja a «Tus prácticas» (la hoja se cierra) y de ahí a Training.
+- back
+- extendedWaitUntil:
+    visible: "Arma tu semana los domingos|Cuerpo: .* de .* cumplidos hoy"
+    timeout: 15000
+- assertVisible: "Cuerpo: .* de .* cumplidos hoy"
+- takeScreenshot: T12g-de-vuelta-en-tus-practicas
+- back
+- extendedWaitUntil:
+    visible: "Tus prácticas: planificar"
+    timeout: 20000
+- takeScreenshot: T12h-de-vuelta-en-training

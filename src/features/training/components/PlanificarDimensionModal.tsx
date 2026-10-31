@@ -19,6 +19,8 @@ import { mensajeDeError } from '../../../services/http/apiClient';
 import { useAuth } from '../../auth/context/AuthContext';
 import * as habitsApi from '../../habits/api/habitsApi';
 import { FilaDeDiasDelPlan } from '../../habits/components/FilaDeDiasDelPlan';
+import { RenombrarHabitoModal } from '../../habits/components/RenombrarHabitoModal';
+import type { useRenombreLocal } from '../../habits/hooks/useRenombreDeHabito';
 import { RuedaHoraPicker } from '../../habits/components/RuedaHoraPicker';
 import {
   combinacionALaApi,
@@ -29,6 +31,7 @@ import {
 } from '../../habits/notificaciones/utils/combinacionDeAlarma';
 import type { SonidoDeAlarma } from '../../alarmas/sonidoDeAlarma';
 import { ICONOS_ELEGIBLES } from '../../habits/utils/iconosDeHabito';
+import { esRenombrable, tituloVisible } from '../../habits/utils/renombreDeHabito';
 import * as recordatorios from '../../habits/notificaciones/recordatoriosDeHabito';
 import { formatearFechaLarga } from '../../programa/hooks/useArranqueDelPrograma';
 import {
@@ -174,11 +177,12 @@ interface Props {
   /** Hubo cambios: Training recarga. Con texto, lo confirma en línea (el hábito recién creado). */
   onGuardado: (confirmacion?: string) => void;
   /**
-   * Spec 014 (Training por hora), **opcional**: el `habitoId` de un hábito de esta dimensión. Con él, la hoja abre
-   * directo en el editor de ESE hábito en vez de en la lista (tocar un hábito en «Tus prácticas»). Sin esta prop la hoja
-   * es la de siempre; la ‹ del editor vuelve a la lista, como siempre.
+   * **Opcional.** El renombre de las dos bebidas (D-127: Agua tibia con limón y Jugo verde): con él, el editor de esos
+   * dos hábitos suma «Cambiar nombre» y la lista y el editor muestran el nombre propio. Sin él la hoja es la de siempre.
+   * Es el mismo `useRenombreLocal` que usa Training; renombrar guarda en el servidor y el espejo local, y el nombre
+   * nuevo se ve al instante porque `titulos` es estado del hook.
    */
-  abrirEnHabitoId?: string | null;
+  renombre?: Pick<ReturnType<typeof useRenombreLocal>, 'titulos' | 'renombrar' | 'quitarRenombre'>;
 }
 
 /** Los botones de la hoja, en tipo oración y a tamaño de lectura (no las versalitas de 11 del botón). */
@@ -254,12 +258,17 @@ function avisosDelServidor(p: PreferenciaHabitoApi | undefined): number[] {
   return [p.reminderMinutesBefore ?? 0];
 }
 
-export function PlanificarDimensionModal({ visible, dimension, nombreDimension, habits, onCerrar, onGuardado, abrirEnHabitoId = null }: Props) {
+export function PlanificarDimensionModal({ visible, dimension, nombreDimension, habits, onCerrar, onGuardado, renombre }: Props) {
   const { c, t } = useTheme();
   const insets = useSafeAreaInsets();
   const nombre = nombreDimension ?? dimension;
   /** El hábito al que se le está eligiendo hasta cuándo pausarlo (hoja de opciones). */
   const [pausando, setPausando] = useState<HabitoPlanificable | null>(null);
+  /** El hábito al que se le está cambiando el nombre (D-127), desde su editor. */
+  const [renombrando, setRenombrando] = useState<HabitoPlanificable | null>(null);
+  /** El nombre que se LEE: el propio si la persona puso uno; el del catálogo si no. Las alarmas siguen con el del catálogo. */
+  const nombreDe = (h: HabitoPlanificable): string =>
+    renombre ? tituloVisible({ id: h.habitoId, title: h.title }, renombre.titulos) : h.title;
   /**
    * Lo que se acaba de guardar, en una línea que se va sola (2026-10-05). Antes cada guardado abría
    * un diálogo («Horario guardado», «Listo») que había que cerrar para seguir.
@@ -402,21 +411,8 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
    */
   const diasDelMes = useMemo(() => diasDelMesDeLaSemana(), [visible]);
 
-  /** `true` solo cuando las preferencias de ESTA apertura ya se leyeron (para abrir directo un hábito sin datos viejos). */
-  const cargaVigente = useRef(false);
-  const yaAbrioElHabito = useRef(false);
-  /** Spec 014: la hoja abrió el editor del hábito pedido (y no la lista). */
-  const editorDirectoAbierto = useRef(false);
-  const [habitoDirectoNoEncontrado, setHabitoDirectoNoEncontrado] = useState(false);
-
   useEffect(() => {
-    if (!visible) {
-      yaAbrioElHabito.current = false;
-      editorDirectoAbierto.current = false;
-      setHabitoDirectoNoEncontrado(false);
-      return;
-    }
-    cargaVigente.current = false;
+    if (!visible) return;
     setEstado('cargando');
     setHabitoEnEdicion(null);
     setPlegadas(new Set());
@@ -427,6 +423,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
     setHuboEscritura(false);
     setConfirmacion(null);
     setPausando(null);
+    setRenombrando(null);
     (async () => {
       try {
         const [prefs, desbloqueos] = await Promise.all([
@@ -444,7 +441,6 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
               .map(d => d.habitId),
           ),
         );
-        cargaVigente.current = true;
         setEstado('listo');
       } catch (e) {
         setEstado('error');
@@ -476,20 +472,6 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
 
   /** Volver de un hábito a la lista sin guardar nada. */
   const volverALaLista = () => setHabitoEnEdicion(null);
-
-  /*
-   * Spec 014, bug visto por el dueño (2026-10-29): tocar un hábito en «Tus prácticas» mostraba un instante la lista
-   * con el interruptor de activar y desactivar (que es «Planificar Cuerpo», otra cosa) y, al volver o al guardar, se
-   * caía en esa lista. Abierta para UN hábito, la hoja es solo su editor: la lista no se dibuja, y volver o guardar
-   * cierran la hoja y dejan a la persona en la dimensión. Si el hábito no está entre los planificables, queda la lista.
-   */
-  const soloUnHabito = Boolean(abrirEnHabitoId) && !habitoDirectoNoEncontrado;
-  const cerrarElHabitoDirecto = () => (huboEscritura ? onGuardado(confirmacion?.texto) : onCerrar());
-  useEffect(() => {
-    if (!visible || !soloUnHabito || !editorDirectoAbierto.current || habitoEnEdicion || creando) return;
-    cerrarElHabitoDirecto();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, soloUnHabito, habitoEnEdicion, creando]);
 
   /**
    * Pide los siete días del hábito y los deja en pantalla: la hora de cada uno, si está apagado y, desde la
@@ -569,24 +551,6 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
     });
     setHabitoEnEdicion(h);
   };
-
-  /*
-   * Spec 014: abrir directo en el editor de un hábito (tocar un hábito en «Tus prácticas»). Espera a que las
-   * preferencias de esta apertura estén leídas (`cargaVigente`): el editor arranca con la hora y los avisos reales.
-   * Una sola vez por apertura; si el hábito no está entre los planificables de la dimensión, queda la lista.
-   */
-  useEffect(() => {
-    if (!visible || estado !== 'listo' || !cargaVigente.current || !abrirEnHabitoId || yaAbrioElHabito.current) return;
-    yaAbrioElHabito.current = true;
-    const habito = planificables.find(h => h.habitoId === abrirEnHabitoId);
-    if (habito) {
-      editorDirectoAbierto.current = true;
-      abrirHabito(habito);
-    } else {
-      setHabitoDirectoNoEncontrado(true);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible, estado, abrirEnHabitoId, planificables]);
 
   /** Cambiar el alcance conserva la hora elegida, tanto al añadir días como al volver a todos. */
   const volverATodos = () => setDiasEnEdicion([]);
@@ -1131,7 +1095,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
       const cuando = resultado.deferredEffectiveDate
         ? `el ${formatearFechaLarga(resultado.deferredEffectiveDate)}`
         : 'mañana';
-      const corto = `«${h.title}» queda a las ${horaTexto}` + (resultado.deferred ? ` desde ${cuando}.` : '.');
+      const corto = `«${nombreDe(h)}» queda a las ${horaTexto}` + (resultado.deferred ? ` desde ${cuando}.` : '.');
       const mensaje = corto +
         (avisoImposible
           ? `\n\nEl recordatorio quedó guardado, pero ${recordatorios.HAY_RECORDATORIOS_WEB ? 'este navegador no tiene el permiso Web Push' : 'este teléfono no tiene permiso para avisarte'}. Habilita las notificaciones para recibir las dos alertas.`
@@ -1188,7 +1152,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
       const alarmaPuesta = await releerYReprogramar(h, nueva);
       setHabitoEnEdicion(null);
       const resumen = resumenDeLaCombinacion(nueva);
-      const corto = `«${h.title}» suena así: ${resumen}.`;
+      const corto = `«${nombreDe(h)}» suena así: ${resumen}.`;
       if (alarmaPuesta === false) {
         Alert.alert('Guardado', `${corto}\n\nEl teléfono no tiene permiso para avisarte. Habilita las notificaciones para que suene.`);
       } else {
@@ -1361,7 +1325,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
         <Presionable
           onPress={() => abrirHabito(h)}
           accessibilityRole="button"
-          accessibilityLabel={`${h.title}, ${tieneHora ? `a las ${horaActual}` : 'sin hora'}${activo ? '' : ', pausado'}`}
+          accessibilityLabel={`${nombreDe(h)}, ${tieneHora ? `a las ${horaActual}` : 'sin hora'}${activo ? '' : ', pausado'}`}
           contenedorStyle={styles.filaHabitoAbrirArea}
           style={styles.filaHabitoAbrir}
         >
@@ -1371,7 +1335,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
 
           <View style={{ flex: 1, flexShrink: 1, gap: 2 }}>
             <Text style={[t.body, { color: c.text, fontSize: 16 }]} numberOfLines={2}>
-              {h.title}
+              {nombreDe(h)}
             </Text>
             <View style={styles.filaMeta}>
               <Text style={[t.small, styles.hora, { color: c.textSoft }]}>
@@ -1402,7 +1366,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
           <Presionable
             onPress={() => alternarActivo(h)}
             accessibilityRole="button"
-            accessibilityLabel={`${h.title} es obligatorio del programa`}
+            accessibilityLabel={`${nombreDe(h)} es obligatorio del programa`}
             style={styles.candado}
           >
             <Icon name="lock" size={TAMANO_ICONO.normal} color={c.tabInactive} />
@@ -1414,7 +1378,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
             valor={activo}
             deshabilitado={enVuelo.has(h.habitoId)}
             onCambiar={() => alternarActivo(h)}
-            etiqueta={h.title}
+            etiqueta={nombreDe(h)}
           />
         )}
       </View>
@@ -1441,7 +1405,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
 
   const paso: 'lista' | 'habito' | 'nuevo' = creando ? 'nuevo' : habitoEnEdicion ? 'habito' : 'lista';
   const tituloDeLaHoja =
-    paso === 'habito' && habitoEnEdicion ? habitoEnEdicion.title
+    paso === 'habito' && habitoEnEdicion ? nombreDe(habitoEnEdicion)
       : paso === 'nuevo' ? `Hábito nuevo en ${nombre}`
         : `Planificar ${nombre}`;
   const subtituloDeLaHoja =
@@ -1480,8 +1444,8 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
       <HojaDesdeAbajo
         visible={visible}
         alCerrar={cerrar}
-        alVolver={paso === 'nuevo' ? () => setCreando(false) : paso === 'habito' ? (soloUnHabito ? cerrarElHabitoDirecto : volverALaLista) : undefined}
-        etiquetaVolver={soloUnHabito ? 'Volver' : 'Volver a la lista'}
+        alVolver={paso === 'nuevo' ? () => setCreando(false) : paso === 'habito' ? volverALaLista : undefined}
+        etiquetaVolver="Volver a la lista"
         etiquetaCerrar="Cerrar Planificar"
         titulo={tituloDeLaHoja}
         subtitulo={subtituloDeLaHoja}
@@ -1503,11 +1467,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
         {/* La ayuda de arriba quedó en una línea en el subtítulo de la hoja:   */}
         {/* el interruptor se explica solo (2026-10-05).                        */}
         {/* =================================================================== */}
-        {estado === 'listo' && paso === 'lista' && soloUnHabito && (
-          <Text style={[t.body, styles.estadoCentrado, { color: c.textSoft }]}>Abriendo…</Text>
-        )}
-
-        {estado === 'listo' && paso === 'lista' && !soloUnHabito && (
+        {estado === 'listo' && paso === 'lista' && (
           <ScrollView
             keyboardShouldPersistTaps="handled"
             style={{ flex: 1 }}
@@ -1517,8 +1477,11 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
             {lineaConfirmacion}
 
             {planificables.length === 0 && (
+              // Vida y negocio no tiene hábitos de catálogo: sus acciones son las de los objetivos y se planifican en Plan.
               <Text style={[t.body, { color: c.textSoft, paddingVertical: 16 }]}>
-                Todavía no hay hábitos en esta dimensión.
+                {dimension === 'VIDA Y NEGOCIO'
+                  ? 'Las acciones de tus objetivos se planifican en Plan, al agendarlas.'
+                  : 'Todavía no hay hábitos en esta dimensión.'}
               </Text>
             )}
 
@@ -1593,6 +1556,23 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
         {/* =================================================================== */}
         {estado === 'listo' && paso === 'habito' && habitoEnEdicion && (
           <View style={styles.cuerpo}>
+            {/* «Cambiar nombre» (D-127): solo en Agua tibia con limón y Jugo verde, junto al nombre que va en el título
+                de la hoja. Antes vivía en el detalle de la dimensión, fuera del editor. */}
+            {renombre && esRenombrable(habitoEnEdicion.systemKey) && (
+              <Presionable
+                onPress={() => setRenombrando(habitoEnEdicion)}
+                accessibilityRole="button"
+                accessibilityLabel={`Cambiarle el nombre a ${nombreDe(habitoEnEdicion)}`}
+                contenedorStyle={{ alignSelf: 'flex-start' }}
+                style={styles.cambiarNombre}
+              >
+                <Icon name="pencil" size={18} color={c.goldInk} />
+                <Text style={[t.body, { color: c.goldInk, fontFamily: 'Jost_500Medium', fontSize: 16 }]}>
+                  {renombre.titulos[habitoEnEdicion.habitoId] ? 'Cambiar o quitar el nombre' : 'Cambiar nombre'}
+                </Text>
+              </Presionable>
+            )}
+
             {lineaConfirmacion}
 
             {/* El cambio ya guardado que todavía no rige (D-91), con la misma frase que la tarjeta
@@ -2002,12 +1982,29 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
         )}
       </HojaDesdeAbajo>
 
+      {/* «Cambiar nombre» (D-127): la hoja de siempre, encima del editor. Guarda en el servidor y recién después en el
+          teléfono (`renombre.renombrar`); el nombre nuevo se ve en el título del editor y en la lista sin recargar. */}
+      {renombre && renombrando ? (
+        <RenombrarHabitoModal
+          visible
+          tituloCatalogo={renombrando.title}
+          tituloActual={renombre.titulos[renombrando.habitoId] ?? null}
+          onGuardar={(titulo, motivo) => renombre.renombrar(renombrando.habitoId, titulo, motivo)}
+          onQuitar={
+            renombre.titulos[renombrando.habitoId]
+              ? () => renombre.quitarRenombre(renombrando.habitoId)
+              : undefined
+          }
+          onCerrar={() => setRenombrando(null)}
+        />
+      ) : null}
+
       {/* «¿Hasta cuándo lo pausamos?» (2026-10-05): una hoja con las dos opciones que el backend sabe
           cumplir, encima de la de Planificar. Era un diálogo de tres botones; cancelar es cerrarla. */}
       <HojaDesdeAbajo
         visible={pausando !== null}
         alCerrar={() => setPausando(null)}
-        titulo={pausando ? `Pausar «${pausando.title}»` : 'Pausar'}
+        titulo={pausando ? `Pausar «${nombreDe(pausando)}»` : 'Pausar'}
         subtitulo="¿Hasta cuándo?"
         etiquetaCerrar="No pausar"
       >
@@ -2025,6 +2022,7 @@ export function PlanificarDimensionModal({ visible, dimension, nombreDimension, 
 }
 
 const styles = StyleSheet.create({
+  cambiarNombre: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 48, paddingHorizontal: 2 },
   estadoCentrado: {
     textAlign: 'center',
     paddingVertical: 40,
