@@ -76,11 +76,14 @@ export function CabeceraDelIngreso({
   variante,
   alVolver,
   accesibilidadVolver = 'Volver a iniciar sesión',
+  altoMaximo,
 }: {
   variante: VarianteDeCabecera;
   /** Si viene, una flecha arriba a la izquierda (todo menos el login mismo). */
   alVolver?: () => void;
   accesibilidadVolver?: string;
+  /** Tope de alto (`topeDeAltoParaElFormulario`): la cabecera cede para que el formulario quepa. */
+  altoMaximo?: number;
 }) {
   const { c, mode } = useTheme();
   const insets = useSafeAreaInsets();
@@ -89,7 +92,7 @@ export function CabeceraDelIngreso({
   // Para qué tema falló la imagen (si falló): al cambiar de tema se vuelve a intentar con la otra.
   const [falloEn, setFalloEn] = useState<typeof mode | null>(null);
 
-  const alto = altoDeLaCabecera(altoDeLaVentana, variante);
+  const alto = Math.min(altoDeLaCabecera(altoDeLaVentana, variante), altoMaximo ?? Infinity);
   const solape = solapeDelTitulo(variante);
   const corrimiento = corrimientoDeLaImagen({ ancho, alto, margenSuperior: insets.top, variante });
   const inicio = inicioDelDegradado(alto, variante);

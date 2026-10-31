@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Keyboard,
   ActivityIndicator,
+  useWindowDimensions,
   type LayoutChangeEvent,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
@@ -37,6 +38,7 @@ import { useRecuperacionContrasena } from '../features/auth/hooks/useRecuperacio
 import { useDisponibilidadCorreo } from '../features/auth/hooks/useDisponibilidadCorreo';
 import { CodigoOtpInput, LARGO_CODIGO } from '../features/auth/components/CodigoOtpInput';
 import { desplazamientoParaVerElCampo } from '../features/auth/utils/campoBajoElTeclado';
+import { topeDeAltoParaElFormulario } from '../features/auth/utils/cabeceraDelIngreso';
 import { CabeceraDelIngreso } from '../features/auth/components/CabeceraDelIngreso';
 import { CampoDelIngreso, MensajeBajoElCampo } from '../features/auth/components/CampoDelIngreso';
 import { BotonDelIngreso } from '../features/auth/components/BotonDelIngreso';
@@ -65,6 +67,9 @@ type CampoDelError = 'email' | 'password' | null;
 
 /** Menos que esto no es un teclado en pantalla (ver `tecladoAbierto`). */
 const ALTO_MINIMO_DE_UN_TECLADO = 120;
+
+/** El relleno de abajo del scroll en el formulario: lo que queda entre el último renglón y el pie fijo. */
+const AIRE_DE_ABAJO_DEL_FORMULARIO = 16;
 
 /** Aire bajo el campo enfocado en el formulario: lo que mide «¿Olvidaste tu contraseña?» y su separación. */
 const MARGEN_EN_EL_FORMULARIO = 56;
@@ -234,6 +239,16 @@ export default function LoginScreen() {
    */
   const alAcomodarLaLista = (evento: LayoutChangeEvent) => {
     const alto = evento.nativeEvent.layout.height;
+    /* Lo que se ve del scroll con el pie del formulario y SIN teclado es el mayor alto que tiene en
+       esta pantalla (el teclado solo lo achica). Con los otros pasos no hay pie y mide más: no
+       cuentan. Si cambia la ventana (plegable) se vuelve a empezar. */
+    if (step === 'form') {
+      setAltoLibre(previo => {
+        const libre =
+          previo.ventana === altoDeLaVentana ? Math.max(previo.libre, Math.round(alto)) : Math.round(alto);
+        return previo.ventana === altoDeLaVentana && previo.libre === libre ? previo : { ventana: altoDeLaVentana, libre };
+      });
+    }
     const encogio = altoDeLaLista.current > 0 && alto < altoDeLaLista.current;
     altoDeLaLista.current = alto;
     if (encogio) asegurarCampoVisible(alto);
@@ -271,6 +286,11 @@ export default function LoginScreen() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [campoDelError, setCampoDelError] = useState<CampoDelError>(null);
   const sacudida = useSacudida();
+  /* Medidas para que el formulario del login quepa entero sin desplazar (ver
+     `topeDeAltoParaElFormulario`): lo que se ve del scroll y lo que mide el cuerpo sin avisos. */
+  const { height: altoDeLaVentana } = useWindowDimensions();
+  const [altoLibre, setAltoLibre] = useState({ ventana: 0, libre: 0 });
+  const [altoDelCuerpo, setAltoDelCuerpo] = useState(0);
 
   /**
    * El ingreso no se pudo: el mensaje va debajo del campo que hay que corregir, el borde de ese
@@ -704,6 +724,18 @@ export default function LoginScreen() {
   /* El login es la única vista con la cabecera alta; «Solicitar acceso» y los pasos que siguen
      (código, recuperación, acuse) llevan la baja, con la flecha para volver. */
   const enElLogin = step === 'form' && activeTab === 'login';
+  /* Un aviso de error o de éxito agranda el cuerpo un rato: no es lo que hay que dejar libre. */
+  const alMedirElCuerpo = (evento: LayoutChangeEvent) => {
+    if (enElLogin && !errorMessage && !successMessage) setAltoDelCuerpo(Math.round(evento.nativeEvent.layout.height));
+  };
+  const topeDeLaCabecera = enElLogin
+    ? topeDeAltoParaElFormulario({
+        variante: 'alta',
+        altoLibre: altoLibre.ventana === altoDeLaVentana ? altoLibre.libre : 0,
+        altoDelCuerpo,
+        aireDeAbajo: AIRE_DE_ABAJO_DEL_FORMULARIO,
+      })
+    : undefined;
   const anchoDelContenido = {
     paddingHorizontal: horizontalPadding,
     maxWidth: isTablet ? 460 : undefined,
@@ -746,7 +778,7 @@ export default function LoginScreen() {
           ref={listaRef}
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingBottom: step === 'form' ? 16 : insets.bottom + 28 },
+            { paddingBottom: step === 'form' ? AIRE_DE_ABAJO_DEL_FORMULARIO : insets.bottom + 28 },
           ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -758,10 +790,11 @@ export default function LoginScreen() {
         >
           <CabeceraDelIngreso
             variante={enElLogin ? 'alta' : 'baja'}
+            altoMaximo={topeDeLaCabecera}
             alVolver={enElLogin ? undefined : step === 'form' ? () => irA('login') : handleReturnToLogin}
           />
 
-          <View style={[styles.cuerpo, anchoDelContenido]}>
+          <View style={[styles.cuerpo, anchoDelContenido]} onLayout={alMedirElCuerpo}>
           {/* ========================================================================= */}
           {/* VISTA 1: INICIAR SESIÓN / SOLICITAR ACCESO                                 */}
           {/* ========================================================================= */}
@@ -1707,12 +1740,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  /* Pegado a la contraseña (el `gap` de 18 menos 10) y a la derecha, con 44 de alto táctil. */
+  /* Pegado a la contraseña (el `gap` de 18 menos 12) y a la derecha. */
+  /* 48 de alto táctil (2026-10-31); el -12 deja el texto donde estaba con los 44 y el -10. */
   olvido: {
     alignSelf: 'flex-end',
-    minHeight: 44,
+    minHeight: 48,
     justifyContent: 'center',
-    marginTop: -10,
+    marginTop: -12,
   },
   textoOlvido: {
     fontFamily: fuentes.media,

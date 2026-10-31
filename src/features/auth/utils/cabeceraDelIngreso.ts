@@ -64,6 +64,44 @@ export function altoDeLaCabecera(altoDeLaVentana: number, variante: VarianteDeCa
   return Math.round(Math.min(maximo, Math.max(minimo, altoDeLaVentana * f)));
 }
 
+/**
+ * Lo más bajo que baja la cabecera para dejarle lugar al formulario (cabeza y alas del fénix; la
+ * cola ya se funde con el fondo). Debajo de esto es mejor que el formulario se desplace.
+ */
+const MINIMO_PARA_EL_FORMULARIO: Record<VarianteDeCabecera, number> = { alta: 176, baja: 150 };
+
+/**
+ * El tope de alto de la cabecera para que el formulario del login quepa entero SIN desplazar, con
+ * el teclado cerrado (2026-10-31, E2E del rediseño: «¿Olvidaste tu contraseña?» quedaba bajo el
+ * borde de arriba del botón fijo y no se podía tocar).
+ *
+ * La cabecera mide un porcentaje de la pantalla, pero lo que va debajo (título, campos, enlace) y
+ * el pie fijo miden lo que miden —y más con la letra grande del sistema—, así que a veces el
+ * contenido pasa de lo que se ve. Se mide lo real y la cabecera cede lo justo:
+ *
+ *     alto ≤ altoLibre − altoDelCuerpo − aireDeAbajo + solape
+ *
+ * porque el contenido del scroll es `alto − solape` (cabecera) + cuerpo + aire. Con `altoLibre` =
+ * lo que se ve del scroll (la pantalla menos el pie fijo), el último renglón queda justo sobre el
+ * pie. Devuelve el tope (la cabecera usa el menor entre este y su alto de siempre), o `undefined`
+ * sin medidas todavía; en una pantalla tan corta que ni con el mínimo cabe, el resto se desplaza,
+ * como antes.
+ */
+export function topeDeAltoParaElFormulario(medidas: {
+  variante: VarianteDeCabecera;
+  /** Lo que se ve del scroll con el teclado cerrado: la pantalla menos el pie fijo. 0 = sin medir. */
+  altoLibre: number;
+  /** Título, campos y enlace, sin avisos de error. 0 = sin medir. */
+  altoDelCuerpo: number;
+  /** El relleno de abajo del scroll. */
+  aireDeAbajo: number;
+}): number | undefined {
+  const { variante, altoLibre, altoDelCuerpo, aireDeAbajo } = medidas;
+  if (altoLibre <= 0 || altoDelCuerpo <= 0) return undefined;
+  const cabe = Math.floor(altoLibre - altoDelCuerpo - aireDeAbajo + solapeDelTitulo(variante));
+  return Math.max(MINIMO_PARA_EL_FORMULARIO[variante], cabe);
+}
+
 export function solapeDelTitulo(variante: VarianteDeCabecera): number {
   return MEDIDAS[variante].solapeDelTitulo;
 }
