@@ -75,8 +75,10 @@ describe('Hoy: lo dice desde el inicio, solo con texto', () => {
   it('la tarjeta de acciones no manda a definirlo en Plan si el Mapa no está activo: dice que nace del Mapa y abre el Mapa', () => {
     // Desde el 2026-10-31 la tarjeta es `TarjetaAccionDeHoy` y qué muestra lo decide `vistaDeLaAccionDeHoy` (probada aparte).
     const TARJETA = sinComentarios(leer('features/home/components/TarjetaAccionDeHoy.tsx'));
-    expect(TARJETA).toContain("titulo = 'Tu objetivo de 90 días nace de tu Mapa de Renacimiento.';");
-    expect(TARJETA).toContain("texto: 'Hacer mi Mapa'");
+    // Corregido 2026-10-31 (el dueño): sin Mapa es una fila compacta, del alto que tenía Coherencia / Racha.
+    expect(TARJETA).toContain('Haz tu Mapa de Renacimiento');
+    expect(TARJETA).toContain('De ahí nace tu objetivo de 90 días.');
+    expect(TARJETA).toMatch(/onPress=\{alHacerElMapa\}/);
     expect(HOY).not.toContain('Define tu objetivo en Plan para sostener la dirección.');
     expect(HOY).toMatch(/alHacerElMapa=\{abrirMapa\}/);
   });

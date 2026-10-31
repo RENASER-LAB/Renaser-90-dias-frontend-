@@ -28,9 +28,9 @@ describe('Hoy sin datos inventados', () => {
     },
   );
 
-  it('sin dato, los puntos dicen «—»', () => {
-    expect(HOY).toMatch(/const puntosLiga = typeof resumen\?\.puntosLiga === 'number' \? resumen\.puntosLiga : null;/);
-    expect(HOY).toContain("{puntosLiga ?? '—'} pts");
+  it('los puntos ya no están en Hoy (2026-10-31): viven en Yo, que no inventa datos', () => {
+    expect(HOY).not.toContain('puntosLiga');
+    expect(HOY).not.toMatch(/\} pts/);
   });
 
   it('Coherencia y racha ya no están en Hoy (2026-10-31): viven en Yo, que no inventa datos', () => {
@@ -40,12 +40,10 @@ describe('Hoy sin datos inventados', () => {
     expect(HOY).not.toContain('coherenciaScore');
   });
 
-  it('sin fase, el nombre de la fase dice «—» y no «Programa activo»', () => {
+  it('la fase ya no está en Hoy (2026-10-31): vive en Yo; Hoy no dice «Programa activo» ni inventa una fase', () => {
     expect(HOY).not.toContain('Programa activo');
-    expect(HOY).toContain('const faseNombre = rotuloDeFase(resumen?.fase);');
-    expect(HOY).toContain("{faseNombre ?? '—'}");
-    // El lector de pantalla no lee «raya»: dice que no hay dato.
-    expect(HOY).toContain("accessibilityLabel={`Fase del programa: ${faseNombre ?? 'sin datos'}`}");
+    expect(HOY).not.toContain('faseNombre');
+    expect(HOY).not.toContain('Fase del programa');
   });
 
   it('la tarjeta del Mapa usa la cuenta de la apertura del Mapa: sin día conocido, sin número', () => {
