@@ -25,7 +25,7 @@ appId: com.renaser.app
     optional: true
 - assertNotVisible: "Tomar foto|Ver la clase|Guía de esta práctica"
 - takeScreenshot: T09b-candado
-- tapOn: "06:00, AGUA TIBIA CON LIMÓN.*"
+- tapOn: "(?i)06:00, AGUA TIBIA CON LIMÓN.*"
 - assertVisible:
     text: "Ya hecho"
     optional: true

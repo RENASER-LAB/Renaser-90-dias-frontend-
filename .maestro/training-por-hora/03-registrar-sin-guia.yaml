@@ -7,11 +7,11 @@ appId: com.renaser.app
 - runFlow: ../comun/ya-adentro.yaml
 - runFlow: ../comun/abrir-training.yaml
 - scrollUntilVisible:
-    element: ".*JUGO VERDE.*"
+    element: "(?i).*JUGO VERDE.*"
     direction: DOWN
     centerElement: true
     timeout: 30000
-- tapOn: ".*JUGO VERDE.*"
+- tapOn: "(?i).*JUGO VERDE.*"
 - assertNotVisible: "Guía de esta práctica"
 - runFlow: ../comun/tomar-foto.yaml
 - assertNotVisible: ".*sentiste.*"
@@ -22,5 +22,5 @@ appId: com.renaser.app
     optional: true   # el aviso en línea dura unos segundos: lo que se prueba es que la fila sale de la lista
 - takeScreenshot: T03a-jugo-registrado
 - extendedWaitUntil:
-    notVisible: "09:00, JUGO VERDE.*"
+    notVisible: "(?i)09:00, JUGO VERDE.*"
     timeout: 20000

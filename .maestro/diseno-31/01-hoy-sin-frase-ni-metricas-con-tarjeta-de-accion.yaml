@@ -1,0 +1,47 @@
+# Hoy después de los cambios de diseño del 2026-10-31. ESCRITO Y SIN CORRER (el emulador está ocupado con otro E2E).
+# Sin la frase del día ni Coherencia / Racha; la cabecera queda con la fase, «Día N de 90», los puntos y la raya; la tarjeta de
+# acciones va antes de «Tu acompañante» («Empezar ahora ›» lleva a Training con la acción abierta); «Hábitos de hoy» y el Radar
+# sin la línea de detalle; y el semáforo ya no está en Hoy.
+# Precondición: aprendiz con una acción agendada hoy (Plan → Agendar) y el Mapa activo; `reset-hoy.sql`.
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- tapOn: "HOY"
+- extendedWaitUntil:
+    visible: "Día .* de 90"
+    timeout: 30000
+# Lo que se quitó.
+- assertNotVisible: "Coherencia"
+- assertNotVisible: "Racha"
+- assertNotVisible: "Récord histórico"
+- assertNotVisible: "Consistencia del día"
+- assertNotVisible: "Tu semáforo · últimos 7 días"
+- assertNotVisible: "Prioridad #1 del día"
+# La tarjeta nueva, antes de «Tu acompañante».
+- assertVisible: "Empezar ahora"
+- assertVisible: "Meta: .*"
+- assertNotVisible: "Iniciar enfoque"
+- takeScreenshot: D01a-hoy-con-la-tarjeta-de-accion
+- scrollUntilVisible:
+    element: "Tu acompañante"
+    direction: DOWN
+    timeout: 30000
+# «Hábitos de hoy» y el Radar, sin la línea de detalle.
+- scrollUntilVisible:
+    element: "Hábitos de hoy"
+    direction: DOWN
+    timeout: 30000
+- assertNotVisible: "Te toca ahora.*"
+- assertNotVisible: "Cinco preguntas, un minuto.*"
+- takeScreenshot: D01b-habitos-y-radar-sin-detalle
+# «Empezar ahora ›» abre la acción en Training.
+- scrollUntilVisible:
+    element: "Empezar ahora"
+    direction: UP
+    timeout: 30000
+- tapOn: "Empezar ahora"
+- extendedWaitUntil:
+    visible: ".* de .* hechos · .* pts|Marcar como hecha|Se te pasó la hora.*"
+    timeout: 20000
+- takeScreenshot: D01c-training-con-la-accion

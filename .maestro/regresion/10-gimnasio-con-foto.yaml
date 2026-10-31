@@ -8,12 +8,12 @@ appId: com.renaser.app
 - runFlow: ../comun/abrir-training.yaml
 # Centrada: abajo a la derecha, la fila queda debajo del botón flotante de SER y el toque abre su chat.
 - scrollUntilVisible:
-    element: ".*GIMNASIO.*"
+    element: "(?i).*GIMNASIO.*"
     direction: DOWN
     centerElement: true
     timeout: 30000
 - takeScreenshot: 10a-gimnasio-en-la-lista
-- tapOn: ".*GIMNASIO.*"
+- tapOn: "(?i).*GIMNASIO.*"
 # Con guía cargada, la fila abre la hoja con «Tomar foto»; sin guía, abre la cámara directo.
 - runFlow:
     when:
@@ -24,7 +24,7 @@ appId: com.renaser.app
 - assertNotVisible: ".*sentiste.*"
 - runFlow: ../comun/cerrar-aviso-dev.yaml
 - extendedWaitUntil:
-    notVisible: "[0-9:]+, GIMNASIO(, Te toca ahora|, Lo que sigue)?"
+    notVisible: "(?i)[0-9:]+, GIMNASIO(, Te toca ahora|, Lo que sigue)?"
     timeout: 30000
 - scrollUntilVisible:
     element: ".* hechos? hoy"
@@ -32,7 +32,7 @@ appId: com.renaser.app
     timeout: 30000
 - tapOn: ".* hechos? hoy"
 - scrollUntilVisible:
-    element: ".*GIMNASIO, hecho"
+    element: "(?i).*GIMNASIO, hecho"
     direction: DOWN
     timeout: 20000
 - takeScreenshot: 10c-gimnasio-cumplido
