@@ -1,0 +1,56 @@
+# Spec 020 (backend), US2: un APRENDIZ con el semáforo en AMARILLO no ve la Mentoría del Alquimista en ninguna parte: ni en Hoy
+# («Próximo evento» es el siguiente que sí le toca), ni en Comunidad → Eventos (tarjetas y calendario). Los demás tipos de evento
+# los sigue viendo.
+# Precondición: la de 01 (`siembra.sql`, la Mentoría y «Evento semanal E2E» / «Sesión especial para todos» visibles para todos).
+# E2E_APRENDIZ_EMAIL = el aprendiz en amarillo.
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- scrollUntilVisible:
+    element: "Próximo evento"
+    direction: DOWN
+    centerElement: true
+    timeout: 40000
+- assertNotVisible: ".*Mentoría con la Alquimista.*"
+- assertVisible: ".*Evento semanal E2E.*"
+- takeScreenshot: M02a-amarillo-hoy-proximo-evento
+# Sube un poco para que vuelva la barra de pestañas (D-246).
+- repeat:
+    times: 6
+    commands:
+      - swipe:
+          start: 50%,25%
+          end: 50%,80%
+- tapOn: "COMUNIDAD"
+- extendedWaitUntil:
+    visible: "Eventos"
+    timeout: 20000
+- tapOn: "Eventos"
+- extendedWaitUntil:
+    visible: "Ver en tarjetas"
+    timeout: 20000
+# Calendario: el sábado 31 de octubre, donde está la Mentoría para los demás, no tiene eventos.
+- scrollUntilVisible:
+    element: "Sábado 31 de octubre, sin eventos"
+    direction: DOWN
+    timeout: 20000
+- takeScreenshot: M02b-amarillo-calendario-31-oct
+- repeat:
+    times: 3
+    commands:
+      - swipe:
+          start: 50%,25%
+          end: 50%,80%
+- tapOn: "Ver en tarjetas"
+- extendedWaitUntil:
+    visible: ".*ENCUENTRO ESPONTÁNEO.*"
+    timeout: 20000
+- assertNotVisible: ".*MENTORÍA DEL ALQUIMISTA.*"
+- takeScreenshot: M02c-amarillo-eventos-tarjetas
+- scrollUntilVisible:
+    element: ".*SESIÓN ESPECIAL.*"
+    direction: DOWN
+    timeout: 20000
+- assertNotVisible: ".*MENTORÍA DEL ALQUIMISTA.*"
+- takeScreenshot: M02d-amarillo-ve-la-sesion-especial

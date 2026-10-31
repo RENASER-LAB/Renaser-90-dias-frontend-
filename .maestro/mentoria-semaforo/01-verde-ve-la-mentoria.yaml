@@ -1,0 +1,31 @@
+# Spec 020 (backend), US1: un APRENDIZ con el semáforo en VERDE ve la Mentoría del Alquimista en Hoy («Próximo evento»), abre su
+# detalle desde ahí y la ve en Comunidad → Eventos (tarjetas).
+# Precondición: `siembra.sql` en la base local clonada (nunca producción) y una Mentoría del Alquimista «Mentoría con la Alquimista»
+# para todos, antes que cualquier otro evento. E2E_APRENDIZ_EMAIL = el aprendiz en verde.
+# cuenta: aprendiz
+appId: com.renaser.app
+---
+- runFlow: ../comun/ya-adentro.yaml
+- scrollUntilVisible:
+    element: "Próximo evento"
+    direction: DOWN
+    centerElement: true
+    timeout: 40000
+- assertVisible: ".*Mentoría con la Alquimista.*"
+- takeScreenshot: M01a-verde-hoy-proximo-evento
+- tapOn: ".*Mentoría con la Alquimista.*"
+- extendedWaitUntil:
+    visible: "Volver a Eventos"
+    timeout: 20000
+- assertVisible: ".*Mentoría con la Alquimista.*"
+- takeScreenshot: M01b-verde-detalle-de-la-mentoria
+- tapOn: "Volver a Eventos"
+- extendedWaitUntil:
+    visible: "Ver en tarjetas"
+    timeout: 20000
+- tapOn: "Ver en tarjetas"
+- extendedWaitUntil:
+    visible: ".*MENTORÍA DEL ALQUIMISTA.*"
+    timeout: 20000
+- assertVisible: ".*Mentoría con la Alquimista.*"
+- takeScreenshot: M01c-verde-eventos-tarjetas
